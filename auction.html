@@ -177,6 +177,16 @@ body.proj .wrap{max-width:none;padding:10px 18px}
 .pf-stat .v{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
 .legend{display:flex;gap:10px;font-size:11px;color:var(--ink-2);align-items:center}
 .lg{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:3px;vertical-align:middle}
+/* ---------- SUPER BOWL SUPER BROWNS ---------- */
+#celebrate{position:fixed;inset:0;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;background:rgba(10,8,6,0.55)}
+#celebrate canvas{position:absolute;inset:0;width:100%;height:100%}
+.cb-line{font-weight:900;letter-spacing:.04em;line-height:1.02;text-align:center;
+  text-shadow:0 0 30px rgba(255,60,0,.8), 0 4px 0 #2b1a12;position:relative}
+.cb-1{font-size:min(11vw,120px);color:#ff3c00;animation:cbIn .5s cubic-bezier(.2,2.2,.4,1) both, cbShake .12s .5s 14 alternate}
+.cb-2{font-size:min(13vw,150px);color:#fff;-webkit-text-stroke:3px #ff3c00;animation:cbIn .5s .18s cubic-bezier(.2,2.2,.4,1) both, cbShake .12s .6s 14 alternate}
+.cb-p{font-size:min(3vw,30px);color:#e8b48a;font-weight:800;margin-top:14px;animation:cbIn .4s .4s both}
+@keyframes cbIn{from{transform:scale(.2) rotate(-8deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+@keyframes cbShake{from{transform:scale(1) rotate(-1.6deg)}to{transform:scale(1.04) rotate(1.6deg)}}
 </style>
 </head>
 <body>
@@ -539,14 +549,14 @@ function bindOp(d){
     const price=Math.max(0,Math.round(+priceIn.value||0));
     const ti=+teamIn.value;
     const pk={player:p?p.name:name, pos:p?p.pos:posIn.value, ti, price,
-              keeper:keeperIn.checked, etr:p?val(p):0, ts:Date.now()};
+              keeper:keeperIn.checked, etr:p?val(p):0, nfl:p?p.team:"", ts:Date.now()};
     S.picks.push(pk);
     if(!pk.keeper){
       S.nomIdx=(S.nomIdx+1)%S.settings.teams.length;
     }
     S.timerEnd=0;
     markTaken(pk.player, ti===S.settings.myTeam);
-    save(); renderOp();
+    save(); renderOp(); checkBrowns();
     const npin=document.getElementById("playerIn"); npin.focus();
   }
   document.getElementById("addBtn").addEventListener("click",add);
@@ -632,8 +642,48 @@ function renderRecap(rb){
    }).join("")}</div>`;
 }
 
+// ---------- SUPER BOWL SUPER BROWNS ----------
+let cbSeenTs=null;
+function nflOf(pk){ if(pk.nfl) return pk.nfl; const p=byName[pk.player]; return p?p.team:""; }
+function checkBrowns(){
+  const last=S.picks.length?S.picks[S.picks.length-1]:null;
+  if(cbSeenTs===null){ cbSeenTs=last?last.ts:0; return; }   // don't replay on page load
+  if(last && last.ts>cbSeenTs){
+    cbSeenTs=last.ts;
+    if(!last.keeper && nflOf(last)==="CLE") celebrate(last);
+  }
+}
+function celebrate(pk){
+  const old=document.getElementById("celebrate"); if(old) old.remove();
+  const o=document.createElement("div"); o.id="celebrate";
+  o.innerHTML=`<canvas></canvas>
+    <div class="cb-line cb-1">SUPER BOWL</div>
+    <div class="cb-line cb-2">SUPER BROWNS</div>
+    <div class="cb-p">${esc(pk.player)} · $${pk.price} · THE LAND HAS SPOKEN</div>`;
+  document.body.appendChild(o);
+  const cv=o.querySelector("canvas"), ctx=cv.getContext("2d");
+  cv.width=innerWidth; cv.height=innerHeight;
+  const COLS=["#ff3c00","#ffffff","#e8720c","#5c4033","#ffb27a"];
+  const parts=Array.from({length:220},()=>({
+    x:innerWidth/2+(Math.random()-.5)*innerWidth*.5, y:innerHeight*.62,
+    vx:(Math.random()-.5)*16, vy:-(6+Math.random()*15),
+    s:4+Math.random()*7, c:COLS[(Math.random()*COLS.length)|0],
+    r:Math.random()*Math.PI, vr:(Math.random()-.5)*.35}));
+  let frames=0;
+  const iv=setInterval(()=>{
+    frames++;
+    ctx.clearRect(0,0,cv.width,cv.height);
+    parts.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy; p.vy+=.35; p.r+=p.vr;
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.r);
+      ctx.fillStyle=p.c; ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*1.6); ctx.restore();
+    });
+    if(frames>170){ clearInterval(iv); o.remove(); }
+  }, 26);
+}
+
 // ---------- boot & sync ----------
-function render(){ IS_PROJ ? renderProj() : renderOp(); }
+function render(){ IS_PROJ ? renderProj() : renderOp(); checkBrowns(); }
 addEventListener("storage",e=>{ if(e.key===LS_STATE){ load(); render(); } });
 if(IS_PROJ){ setInterval(()=>{ if(S.timerEnd>Date.now()-2000 && S.timerEnd>0) render(); }, 500); }
 render();
