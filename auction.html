@@ -209,6 +209,17 @@ body.proj .wrap{max-width:none;padding:10px 18px}
 .scline b{font-variant-numeric:tabular-nums;color:var(--ink-1)}
 .scline.zero b{color:var(--bad)}
 .sctop{margin-top:8px;font-size:13.5px;color:var(--ink-3)}
+/* on the block */
+.blockbar{display:flex;align-items:baseline;gap:14px;background:color-mix(in srgb,var(--accent) 12%,var(--surface-1));border:2px solid var(--accent);border-radius:12px;padding:8px 18px;margin-bottom:8px;animation:blockPulse 1.6s infinite alternate}
+@keyframes blockPulse{from{box-shadow:0 0 0 0 rgba(255,106,2,.35)}to{box-shadow:0 0 18px 4px rgba(255,106,2,.25)}}
+.blockbar .bb-l{font-size:13px;font-weight:800;letter-spacing:.08em;color:var(--accent);white-space:nowrap}
+.blockbar .bb-p{font-size:24px;font-weight:800;white-space:nowrap}
+.blockbar .bb-m{color:var(--ink-2);font-size:15px;white-space:nowrap}
+.blockbar .bb-v{margin-left:auto;font-size:19px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums;white-space:nowrap}
+.blockbar .bb-x{background:none;border:none;color:var(--ink-3);cursor:pointer;font-size:16px}
+body.proj .blockbar .bb-p{font-size:34px}
+body.proj .blockbar .bb-l{font-size:16px}
+body.proj .blockbar .bb-v{font-size:26px}
 /* ---------- SUPER BOWL SUPER BROWNS ---------- */
 #celebrate{position:fixed;inset:0;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;background:rgba(10,8,6,0.55)}
 #celebrate canvas{position:absolute;inset:0;width:100%;height:100%}
@@ -282,18 +293,20 @@ const DEFAULT_TEAMS=[
 function freshState(){
   return {v:1,
     settings:{budget:200, spots:15, scoring:"half", timerSecs:15, myTeam:0,
-      announcer:true, snark:true,
+      announcer:true, snark:true, voiceName:"",
       teams:DEFAULT_TEAMS.map(t=>({name:t[0],owner:t[1]}))},
-    picks:[], nomIdx:0, timerEnd:0, projView:"board", queue:[], ts:0};
+    picks:[], nomIdx:0, timerEnd:0, projView:"board", queue:[], onBlock:null, ts:0};
 }
 let S;
 function load(){
   try{ S=JSON.parse(localStorage.getItem(LS_STATE))||freshState(); }catch(e){ S=freshState(); }
   // migrate older saves
   if(S.projView===undefined) S.projView="board";
+  if(S.onBlock===undefined) S.onBlock=null;
   if(!Array.isArray(S.queue)) S.queue=[];
   if(S.settings.announcer===undefined) S.settings.announcer=true;
   if(S.settings.snark===undefined) S.settings.snark=true;
+  if(S.settings.voiceName===undefined) S.settings.voiceName="";
 }
 function save(){ S.ts=Date.now(); try{ localStorage.setItem(LS_STATE, JSON.stringify(S)); }catch(e){} }
 load();
@@ -391,8 +404,29 @@ function detectRun(){
 // ---------- v4: voice announcer (operator window only) ----------
 const SNARK_OVER=["That is criminal.","Someone confiscate his wallet.","The room thanks you for the inflation.","Bold strategy.","ETR just fainted."];
 const SNARK_STEAL=["Highway robbery.","Somebody was not paying attention.","A crime in broad daylight.","The Dawgs approve."];
+let VOICES=[];
+function refreshVoices(){ try{ VOICES=speechSynthesis.getVoices().filter(v=>v.lang.startsWith("en")); }catch(e){ VOICES=[]; } }
+if("speechSynthesis" in window){ refreshVoices(); speechSynthesis.onvoiceschanged=refreshVoices; }
+function pickVoice(){
+  if(!VOICES.length) refreshVoices();
+  if(S.settings.voiceName){ const v=VOICES.find(v=>v.name===S.settings.voiceName); if(v) return v; }
+  // default preference: deeper/male-coded voices first
+  const prefs=["Google UK English Male","Microsoft David","Microsoft Mark","Daniel","Alex","Fred","Male"];
+  for(const p of prefs){ const v=VOICES.find(v=>v.name.includes(p)); if(v) return v; }
+  return VOICES[0]||null;
+}
+function speak(msg){
+  if(!("speechSynthesis" in window)) return;
+  try{
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(msg);
+    const v=pickVoice(); if(v) u.voice=v;
+    u.rate=1.05; u.pitch=0.95;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
 function announce(pk){
-  if(!S.settings.announcer || !("speechSynthesis" in window)) return;
+  if(!S.settings.announcer) return;
   const t=S.settings.teams[pk.ti]||{};
   let msg=`Sold! ${pk.player}, ${pk.price} dollar${pk.price===1?"":"s"}, to ${t.name}.`;
   if(S.settings.snark && pk.etr>0){
@@ -401,12 +435,7 @@ function announce(pk){
     else if(diff<=-10) msg+=` ${-diff} under value. `+SNARK_STEAL[(Math.random()*SNARK_STEAL.length)|0];
   }
   if(nflOf(pk)==="CLE" && !pk.keeper) msg+=" Super Bowl! Super Browns!";
-  try{
-    speechSynthesis.cancel();
-    const u=new SpeechSynthesisUtterance(msg);
-    u.rate=1.05; u.pitch=1.0;
-    speechSynthesis.speak(u);
-  }catch(e){}
+  speak(msg);
 }
 
 // ---------- v4: speech-to-text pick entry ----------
@@ -467,18 +496,64 @@ function parseSpeech(raw){
   }
   return {player:best, playerScore:bestScore, rawPlayer:q, ti, price, keeper};
 }
+// ---------- on the block ----------
+function setBlock(p){
+  if(!p) return;
+  S.onBlock={player:p.name,pos:p.pos,nfl:p.team,etr:val(p),ts:Date.now()};
+  save(); render();
+  if(S.settings.announcer && !IS_PROJ){
+    const d=derive();
+    const adj=Math.round(val(p)*d.infl);
+    speak(`On the block: ${p.name}. E T R says ${val(p)} dollars. Adjusted, ${adj}.`);
+  }
+}
+function clearBlock(){ S.onBlock=null; save(); render(); }
+function blockBarHTML(d){
+  if(!S.onBlock) return "";
+  const b=S.onBlock;
+  const adj=Math.round((b.etr||0)*d.infl);
+  return `<div class="blockbar"><span class="bb-l">🔨 ON THE BLOCK</span>
+    <span class="bb-p">${esc(b.player)}</span>
+    <span class="bb-m">${esc(b.pos)}${b.nfl?" · "+esc(b.nfl):""}</span>
+    <span class="bb-v">${b.etr?`ETR ${fmt$(b.etr)} · adj ${fmt$(adj)}`:""}</span>
+    ${IS_PROJ?"":'<button class="bb-x" id="blockClear" title="clear">✕</button>'}</div>`;
+}
+
 let recog=null, listening=false;
+const MIC_ERRORS={
+  "not-allowed":"Mic blocked. Click the mic/camera icon in Chrome's address bar → Allow, then retry.",
+  "service-not-allowed":"Mic blocked by browser settings. Chrome Settings → Privacy → Site Settings → Microphone.",
+  "audio-capture":"No microphone found. Check Chrome's mic device (address bar icon → mic dropdown).",
+  "no-speech":"Didn't hear anything — mic is on, but no speech came through. Check input device/volume.",
+  "network":"Speech service unreachable — Chrome's recognizer needs internet.",
+  "aborted":"Listening cancelled."
+};
 function initSpeech(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR) return false;
   recog=new SR();
-  recog.lang="en-US"; recog.interimResults=false; recog.maxAlternatives=1;
+  recog.lang="en-US"; recog.interimResults=true; recog.maxAlternatives=1;
   recog.onresult=e=>{
-    const heard=e.results[0][0].transcript;
-    applySpeech(heard);
+    let interim="", final="";
+    for(let i=0;i<e.results.length;i++){
+      if(e.results[i].isFinal) final+=e.results[i][0].transcript;
+      else interim+=e.results[i][0].transcript;
+    }
+    const hint=document.getElementById("entryHint");
+    if(final) applySpeech(final.trim());
+    else if(hint && interim) hint.textContent=`🎤 hearing: "${interim.trim()}…"`;
+  };
+  recog.onstart=()=>{
+    const hint=document.getElementById("entryHint");
+    if(hint) hint.textContent="🎤 Listening… say 'nominate {player}' or '{player}, {team}, {price}'";
   };
   recog.onend=()=>{ listening=false; const b=document.getElementById("micBtn"); if(b) b.classList.remove("listening"); };
-  recog.onerror=()=>{ listening=false; const b=document.getElementById("micBtn"); if(b) b.classList.remove("listening"); };
+  recog.onerror=e=>{
+    listening=false;
+    const b=document.getElementById("micBtn"); if(b) b.classList.remove("listening");
+    const hint=document.getElementById("entryHint");
+    if(hint) hint.textContent="🎤 "+(MIC_ERRORS[e.error]||("Error: "+e.error));
+  };
   return true;
 }
 function applySpeech(heard){
@@ -487,14 +562,24 @@ function applySpeech(heard){
         teamIn=document.getElementById("teamIn"), posIn=document.getElementById("posIn"),
         keepIn=document.getElementById("keeperIn"), hint=document.getElementById("entryHint");
   if(!pin) return;
-  if(r.player){ pin.value=r.player.name; posIn.value=r.player.pos; window.__chosen=r.player; }
+  // NOMINATION: explicit keyword, or a player with no team and no price
+  const nomWord=/nominat|on the block|up next|next up/.test(heard.toLowerCase());
+  if(r.player && (nomWord || (r.ti===null && r.price===null && !r.keeper))){
+    setBlock(r.player);
+    hint.textContent=`🎤 "${heard}" → 🔨 ${r.player.name} is ON THE BLOCK`;
+    return;
+  }
+  // SALE: fall back to the on-block player if no player heard
+  let player=r.player;
+  if(!player && S.onBlock){ player=byName[S.onBlock.player]||{name:S.onBlock.player,pos:S.onBlock.pos}; }
+  if(player){ pin.value=player.name; posIn.value=player.pos; window.__chosen=player; }
   else if(r.rawPlayer){ pin.value=r.rawPlayer; window.__chosen=null; }
   if(r.ti!==null) teamIn.value=String(r.ti);
   if(r.price!==null) priceIn.value=String(r.price);
   if(keepIn) keepIn.checked=r.keeper;
-  const missing=[!r.player&&"player",r.ti===null&&"team",r.price===null&&"price"].filter(Boolean);
-  hint.textContent=`🎤 "${heard}" → ${r.player?r.player.name:"??"} / ${r.ti!==null?(S.settings.teams[r.ti]||{}).name:"??"} / ${r.price!==null?"$"+r.price:"$??"}${missing.length?" — fix "+missing.join(", "):" — Enter to confirm"}`;
-  (missing.includes("player")?pin:missing.includes("price")?priceIn:priceIn).focus();
+  const missing=[!player&&"player",r.ti===null&&"team",r.price===null&&"price"].filter(Boolean);
+  hint.textContent=`🎤 "${heard}" → ${player?player.name:"??"} / ${r.ti!==null?(S.settings.teams[r.ti]||{}).name:"??"} / ${r.price!==null?"$"+r.price:"$??"}${missing.length?" — fix "+missing.join(", "):" — Enter to confirm"}`;
+  (missing.includes("player")?pin:priceIn).focus();
 }
 function toggleMic(){
   if(!recog && !initSpeech()){
@@ -632,6 +717,7 @@ function renderProj(){
      <div class="onclock-banner">ON THE CLOCK: ${esc(team(S.nomIdx))}</div>
    </div>
    <div class="ticker"><div class="tk-track" style="--tkdur:${tkDur}s">${tkItems}${tkItems}</div></div>
+   ${blockBarHTML(d)}
    ${content}
    ${foot}`;
 }
@@ -664,6 +750,7 @@ function renderOp(){
   </div>
   <div id="setupPanel" class="setup" style="display:none"></div>
   ${teamCardsHTML(d,false)}
+  ${blockBarHTML(d)}
   <div class="entrybar">
     <div class="acwrap">
       <label>Player</label>
@@ -676,8 +763,9 @@ function renderOp(){
       <select id="teamIn">${S.settings.teams.map((t,i)=>`<option value="${i}" ${i===S.nomIdx?"selected":""}>${esc(t.name)}</option>`).join("")}</select></div>
     <div><label>Price $</label><input type="number" id="priceIn" min="0" step="1" value=""></div>
     <label class="klabel"><input type="checkbox" id="keeperIn"> Keeper</label>
+    <button class="btn" id="blockBtn" title="Put entered player on the block" style="padding:9px 12px">🔨 Block</button>
     <button class="bigbtn" id="addBtn">SOLD</button>
-    <button id="micBtn" title="Voice entry (V): say player, team, price">🎤</button>
+    <button id="micBtn" title="Voice (V): 'nominate {player}' or '{player} {team} {price}'">🎤</button>
     <span id="entryHint" style="font-size:12px;color:var(--ink-3);align-self:center"></span>
   </div>
   <div class="oplayout">
@@ -774,13 +862,13 @@ function bindOp(d){
   }
   function pick(i){
     const p=acMatches[i]; if(!p) return;
-    chosen=p; pin.value=p.name; posIn.value=p.pos;
+    chosen=p; window.__chosen=p; pin.value=p.name; posIn.value=p.pos;
     list.style.display="none"; acSel=-1;
     hint.textContent = d.soldSet.has(p.name) ? "⚠ ALREADY SOLD — check the log" :
       `ETR ${fmt$(val(p))} · adj ${fmt$(Math.round(val(p)*d.infl))}${p.note?" · "+p.note:""}`;
     priceIn.focus();
   }
-  pin.addEventListener("input",()=>{chosen=null; hint.textContent=""; showAC();});
+  pin.addEventListener("input",()=>{chosen=null; window.__chosen=null; hint.textContent=""; showAC();});
   pin.addEventListener("keydown",e=>{
     if(list.style.display!=="none"){
       if(e.key==="ArrowDown"){acSel=Math.min(acSel+1,acMatches.length-1);showAC();e.preventDefault();}
@@ -808,6 +896,8 @@ function bindOp(d){
     // pop from nomination queue if this player was queued
     const qi=S.queue.findIndex(n=>n.toLowerCase()===pk.player.toLowerCase());
     if(qi>=0) S.queue.splice(qi,1);
+    // clear the block if this sale resolves it
+    if(S.onBlock && S.onBlock.player.toLowerCase()===pk.player.toLowerCase()) S.onBlock=null;
     markTaken(pk.player, ti===S.settings.myTeam);
     save(); renderOp(); checkBrowns(); announce(pk);
     const npin=document.getElementById("playerIn"); npin.focus();
@@ -821,6 +911,14 @@ function bindOp(d){
     S.projView=e.target.value; save();
   });
   document.getElementById("micBtn").addEventListener("click",toggleMic);
+  document.getElementById("blockBtn").addEventListener("click",()=>{
+    const name=document.getElementById("playerIn").value.trim();
+    const p=window.__chosen||byName[name];
+    if(p) setBlock(p);
+    else { const hint=document.getElementById("entryHint"); hint.textContent="Pick a player from the list first, then Block."; }
+  });
+  const bc=document.getElementById("blockClear");
+  if(bc) bc.addEventListener("click",clearBlock);
   if(!window.__vkeyInstalled){
     window.__vkeyInstalled=true;
     document.addEventListener("keydown",e=>{
@@ -883,12 +981,23 @@ function renderSetup(sp){
      <label style="font-size:13px">My team: <select id="setMy">${S.settings.teams.map((t,i)=>`<option value="${i}" ${i===S.settings.myTeam?"selected":""}>${esc(t.name)}</option>`).join("")}</select></label>
      <label style="font-size:13px"><input type="checkbox" id="setAnn" ${S.settings.announcer?"checked":""}> Voice announcer</label>
      <label style="font-size:13px"><input type="checkbox" id="setSnark" ${S.settings.snark?"checked":""}> Snark mode</label>
+     <label style="font-size:13px">Announcer voice: <select id="setVoice">
+       <option value="">Auto (prefers deeper voices)</option>
+       ${VOICES.map(v=>`<option value="${esc(v.name)}" ${S.settings.voiceName===v.name?"selected":""}>${esc(v.name)}</option>`).join("")}
+     </select></label>
+     <button class="btn" id="voiceTest" type="button">▶ Preview</button>
    </div>
    <table><tbody>${S.settings.teams.map((t,i)=>`<tr><td>${i+1}</td>
      <td><input class="set-name" data-i="${i}" value="${esc(t.name)}"></td>
      <td><input class="set-owner" data-i="${i}" value="${esc(t.owner)}"></td></tr>`).join("")}</tbody></table>
    <div class="ctlrow"><button class="bigbtn" id="setSave">Save setup</button>
    <span class="muted">Team order = nomination order.</span></div>`;
+  sp.querySelector("#voiceTest").addEventListener("click",()=>{
+    const sel=sp.querySelector("#setVoice").value;
+    const prev=S.settings.voiceName; S.settings.voiceName=sel;
+    speak("Sold! Jahmyr Gibbs, eighty one dollars, to Data Dawgs. Super Bowl! Super Browns!");
+    S.settings.voiceName=prev;
+  });
   sp.querySelector("#setSave").addEventListener("click",()=>{
     S.settings.budget=Math.max(1,+sp.querySelector("#setBudget").value||200);
     S.settings.spots=Math.max(1,+sp.querySelector("#setSpots").value||15);
@@ -897,6 +1006,7 @@ function renderSetup(sp){
     S.settings.myTeam=+sp.querySelector("#setMy").value;
     S.settings.announcer=sp.querySelector("#setAnn").checked;
     S.settings.snark=sp.querySelector("#setSnark").checked;
+    S.settings.voiceName=sp.querySelector("#setVoice").value;
     sp.querySelectorAll(".set-name").forEach(el=>S.settings.teams[+el.dataset.i].name=el.value.trim()||("Team "+(+el.dataset.i+1)));
     sp.querySelectorAll(".set-owner").forEach(el=>S.settings.teams[+el.dataset.i].owner=el.value.trim());
     save(); renderOp();
