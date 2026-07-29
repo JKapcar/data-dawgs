@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Draft Board — Data Dawgs</title>
+<style>
+:root{
+  color-scheme: light;
+  --surface-1:#fcfcfb; --page:#f9f9f7;
+  --ink-1:#0b0b0b; --ink-2:#52514e; --ink-3:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,0.10);
+  --accent:#2a78d6; --good:#006300; --bad:#d03b3b; --warn:#eda100;
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --surface-1:#1a1a19; --page:#0d0d0d;
+  --ink-1:#ffffff; --ink-2:#c3c2b7; --ink-3:#898781;
+  --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+  --accent:#3987e5; --good:#0ca30c; --bad:#e66767; --warn:#c98500;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --surface-1:#1a1a19; --page:#0d0d0d;
+    --ink-1:#ffffff; --ink-2:#c3c2b7; --ink-3:#898781;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+    --accent:#3987e5; --good:#0ca30c; --bad:#e66767; --warn:#c98500;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink-1);
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px 60px}
+/* ---- site nav ---- */
+.sitenav{display:flex;align-items:center;gap:22px;padding:14px 0;border-bottom:1px solid var(--grid);margin-bottom:24px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:10px;text-decoration:none;color:var(--ink-1)}
+.brand .logo{font-size:19px;font-weight:800;letter-spacing:.02em}
+.brand .logo span{color:var(--accent)}
+.brand .tag{font-size:11.5px;color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase}
+.sitenav .links{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
+.sitenav .links a{color:var(--ink-2);text-decoration:none;padding:6px 12px;border-radius:8px;font-size:14px;font-weight:550}
+.sitenav .links a:hover{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--ink-1)}
+.sitenav .links a.on{color:var(--ink-1);box-shadow:inset 0 -2px 0 var(--accent);border-radius:8px 8px 0 0}
+.theme-btn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--ink-2);padding:4px 10px;cursor:pointer;font-size:12.5px}
+/* ---- cards & type ---- */
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:18px}
+.card h2{font-size:17px;font-weight:700;margin:0 0 8px}
+.card h3{font-size:14.5px;font-weight:650;margin:16px 0 6px}
+.card p{margin:8px 0;color:var(--ink-1)}
+.muted{color:var(--ink-3);font-size:12.5px}
+.callout{border-left:3px solid var(--accent);padding:10px 14px;background:color-mix(in srgb, var(--accent) 6%, transparent);border-radius:0 8px 8px 0;margin:12px 0;font-size:14px}
+.callout.warn{border-left-color:var(--warn);background:color-mix(in srgb, var(--warn) 8%, transparent)}
+a{color:var(--accent)}
+.pill{display:inline-block;font-size:11px;font-weight:650;letter-spacing:.03em;border-radius:6px;padding:2px 8px;margin-right:4px}
+.pill.buy{background:color-mix(in srgb, var(--good) 14%, transparent);color:var(--good)}
+.pill.fade{background:color-mix(in srgb, var(--bad) 13%, transparent);color:var(--bad)}
+.pill.zrb{background:color-mix(in srgb, var(--accent) 13%, transparent);color:var(--accent)}
+.pill.pos{background:color-mix(in srgb, var(--ink-3) 15%, transparent);color:var(--ink-2)}
+/* ---- tables ---- */
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:14px}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3);font-weight:600;text-align:right;padding:6px 8px;border-bottom:1px solid var(--grid);white-space:nowrap}
+th.tl,td.tl{text-align:left}
+td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--grid);white-space:nowrap}
+tr:last-child td{border-bottom:none}
+/* ---- landing ---- */
+.hero{padding:44px 0 10px;text-align:left;max-width:760px}
+.hero h1{font-size:40px;font-weight:800;margin:0 0 4px;letter-spacing:.01em}
+.hero h1 span{color:var(--accent)}
+.hero .tagline{font-size:17px;color:var(--ink-2);margin:0 0 18px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:26px}
+.tile{display:block;text-decoration:none;color:var(--ink-1);background:var(--surface-1);border:1px solid var(--border);border-radius:14px;padding:20px 22px;transition:border-color .15s}
+.tile:hover{border-color:var(--accent)}
+.tile h2{margin:0 0 6px;font-size:16.5px;font-weight:700}
+.tile p{margin:0;color:var(--ink-2);font-size:13.5px}
+.tile .go{display:block;margin-top:12px;color:var(--accent);font-size:13px;font-weight:600}
+footer{color:var(--ink-3);font-size:12px;margin-top:26px;border-top:1px solid var(--grid);padding-top:14px}
+footer a{color:var(--accent)}
+/* ---- controls ---- */
+.controls{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-bottom:14px}
+.controls input[type=text]{background:var(--surface-1);color:var(--ink-1);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:14px;width:220px}
+.chip{border:1px solid var(--border);background:none;color:var(--ink-2);border-radius:7px;padding:4px 10px;cursor:pointer;font-size:13px}
+.chip.on{background:var(--accent);color:#fff;border-color:transparent}
+.btn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--ink-2);padding:5px 12px;cursor:pointer;font-size:13px}
+.btn:hover{color:var(--ink-1);border-color:var(--accent)}
+
+</style>
+<style>
+tr.taken td{opacity:.38;text-decoration:line-through}
+tr.mine td{background:color-mix(in srgb, var(--good) 9%, transparent)}
+tr.mine td:first-child{box-shadow:inset 3px 0 0 var(--good)}
+.rowbtn{border:1px solid var(--border);background:none;color:var(--ink-3);border-radius:6px;padding:1px 8px;cursor:pointer;font-size:11.5px;margin-left:4px}
+.rowbtn.on-taken{background:var(--ink-3);color:var(--page);border-color:transparent}
+.rowbtn.on-mine{background:var(--good);color:#fff;border-color:transparent}
+td .note{color:var(--ink-3);font-size:12px;white-space:normal}
+th.sortable{cursor:pointer;user-select:none}
+th.sortable:hover{color:var(--ink-1)}
+#dropzone{display:none}
+.counts{font-size:12.5px;color:var(--ink-3);margin-left:auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="nav"></div>
+  <script data-page="board">
+// Shared nav + theme toggle. Each page includes: <div id="nav"></div> then this script with data-page attr.
+(function(){
+  const page = document.currentScript.getAttribute('data-page') || "";
+  const pages = [
+    ["index.html","Home","home"],
+    ["stats.html","EPA Stats","stats"],
+    ["strategy.html","2026 Strategy","strategy"],
+    ["board.html","Draft Board","board"],
+  ];
+  const nav = document.getElementById("nav");
+  nav.className = "sitenav";
+  const brand = document.createElement("a");
+  brand.className = "brand"; brand.href = "index.html";
+  brand.innerHTML = '<span class="logo">DATA <span>DAWGS</span></span><span class="tag">Data, Not Dogma</span>';
+  nav.appendChild(brand);
+  const links = document.createElement("div"); links.className = "links";
+  pages.forEach(([href,label,key])=>{
+    const a = document.createElement("a");
+    a.href = href; a.textContent = label;
+    if(key===page) a.className = "on";
+    links.appendChild(a);
+  });
+  nav.appendChild(links);
+  const btn = document.createElement("button");
+  btn.className = "theme-btn"; btn.textContent = "Theme"; btn.id = "themeBtn";
+  btn.addEventListener("click", ()=>{
+    const cur = document.documentElement.dataset.theme ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    const next = cur === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    try{ localStorage.setItem("dd-theme", next); }catch(e){}
+    if(window.onThemeChange) window.onThemeChange();
+  });
+  nav.appendChild(btn);
+  try{
+    const saved = localStorage.getItem("dd-theme");
+    if(saved) document.documentElement.dataset.theme = saved;
+  }catch(e){}
+})();
+
+</script>
+
+  <h1 style="font-size:26px;font-weight:750;margin:6px 0 2px">Draft Board</h1>
+  <p class="muted" style="margin:0 0 14px">Seeded from the ETR digest (7/28/26): Silva ranks and ADP where the digest states them, tier order where it doesn't (marked ~). Zero-RB targets carry their list ADP. Import a CSV for a full board — columns: <code>rank,name,pos,team,silva,adp,tags,note</code>. Progress saves in your browser.</p>
+
+  <div class="controls">
+    <input type="text" id="search" placeholder="Search player or team…">
+    <div class="chips" id="posChips">
+      <button class="chip on" data-v="ALL">All</button>
+      <button class="chip" data-v="RB">RB</button>
+      <button class="chip" data-v="WR">WR</button>
+      <button class="chip" data-v="QB">QB</button>
+      <button class="chip" data-v="TE">TE</button>
+    </div>
+    <button class="chip" id="hideDrafted">Hide taken</button>
+    <button class="btn" id="importBtn">Import CSV</button>
+    <button class="btn" id="exportBtn">Export CSV</button>
+    <button class="btn" id="resetBtn">Reset marks</button>
+    <input type="file" id="fileInput" accept=".csv" style="display:none">
+    <span class="counts" id="counts"></span>
+  </div>
+
+  <div class="card" style="padding:8px 16px">
+    <div style="overflow-x:auto"><table id="board"></table></div>
+  </div>
+
+  <footer>
+    Ranks/ADP: ETR Draft Kit Pro snapshot 7/28/26 (personal use). ADP moves daily in August — re-import a fresh CSV before draft night.
+  </footer>
+</div>
+
+<script>
+const SEED = [
+ {rank:1,  name:"Jahmyr Gibbs",        pos:"RB", team:"DET", silva:"1",   adp:"",     tags:["buy"],  note:"Clear #1 for Silva: 38 TDs in 2 yrs, Montgomery gone, softest schedule."},
+ {rank:2,  name:"Bijan Robinson",      pos:"RB", team:"ATL", silva:"2",   adp:"",     tags:[],       note:"Clear top-2 with Gibbs."},
+ {rank:3,  name:"Puka Nacua",          pos:"WR", team:"LA",  silva:"~3",  adp:"",     tags:[],       note:"WR tier 1."},
+ {rank:4,  name:"Christian McCaffrey", pos:"RB", team:"SF",  silva:"~4",  adp:"",     tags:[],       note:"Next RB group after top two."},
+ {rank:5,  name:"Ja'Marr Chase",       pos:"WR", team:"CIN", silva:"~5",  adp:"",     tags:[],       note:"WR tier 1. Bengals = scoring-leader favorites."},
+ {rank:6,  name:"Jonathan Taylor",     pos:"RB", team:"IND", silva:"~6",  adp:"",     tags:[],       note:"Next RB group; IND pace up under Steichen."},
+ {rank:7,  name:"Jaxon Smith-Njigba",  pos:"WR", team:"SEA", silva:"~7",  adp:"",     tags:[],       note:"WR tier 1."},
+ {rank:8,  name:"James Cook",          pos:"RB", team:"BUF", silva:"~8",  adp:"",     tags:[],       note:"Next RB group; BUF slogger pace."},
+ {rank:9,  name:"Amon-Ra St. Brown",   pos:"WR", team:"DET", silva:"~9",  adp:"",     tags:[],       note:"WR tier 1."},
+ {rank:10, name:"Kenneth Walker",      pos:"RB", team:"KC",  silva:"10",  adp:"21.3", tags:["buy"],  note:"Now in KC, got paid; Chiefs went RB-centric. Silva 10 vs ADP 21."},
+ {rank:11, name:"CeeDee Lamb",         pos:"WR", team:"DAL", silva:"~11", adp:"",     tags:[],       note:"WR tier 1; DAL pace up (Dak constant)."},
+ {rank:15, name:"Ashton Jeanty",       pos:"RB", team:"LV",  silva:"15",  adp:"11",   tags:["fade"], note:"Modest fade at cost: Silva 15 vs ADP 11. LV slogger pace."},
+ {rank:18, name:"Breece Hall",         pos:"RB", team:"NYJ", silva:"18",  adp:"33.3", tags:["buy"],  note:"Silva 18 vs ADP 33."},
+ {rank:19, name:"Chris Olave",         pos:"WR", team:"NO",  silva:"19",  adp:"29",   tags:["buy"],  note:"Saints fastest pace, indoor, Shough breakout profile."},
+ {rank:24, name:"Jeremiyah Love",      pos:"RB", team:"ARI", silva:"24",  adp:"",     tags:["fade"], note:"ARI committee, bad team."},
+ {rank:29, name:"Ladd McConkey",       pos:"WR", team:"LAC", silva:"29",  adp:"45.3", tags:["buy"],  note:"Silva 29 vs ADP 45."},
+ {rank:30, name:"De'Von Achane",       pos:"RB", team:"MIA", silva:"30",  adp:"13",   tags:["fade"], note:"Biggest fade: McDaniel gone, Willis at QB craters receptions; 2nd-toughest schedule."},
+ {rank:33, name:"Terry McLaurin",      pos:"WR", team:"WAS", silva:"33",  adp:"55",   tags:["buy"],  note:"Silva 33 vs ADP 55."},
+ {rank:34, name:"Mike Evans",          pos:"WR", team:"TB",  silva:"34",  adp:"61",   tags:["buy"],  note:"Silva 34 vs ADP 61."},
+ {rank:36, name:"Trey McBride",        pos:"TE", team:"ARI", silva:"36",  adp:"19.7", tags:["fade"], note:"Volume monster but Carson Beck / offense-transition risk; fade at TE1 cost."},
+ {rank:38, name:"Luther Burden",       pos:"WR", team:"CHI", silva:"38",  adp:"49.3", tags:["buy"],  note:"Silva 38 vs ADP 49."},
+ {rank:43, name:"Tetairoa McMillan",   pos:"WR", team:"CAR", silva:"43",  adp:"37",   tags:["fade"], note:"Bryce caps the ceiling."},
+ {rank:50, name:"Brock Bowers",        pos:"TE", team:"LV",  silva:"",    adp:"",     tags:[],       note:"TE1 for ETR: big QB + play-caller upgrades. (TE tiers file was stale at capture.)"},
+ {rank:51, name:"Colston Loveland",    pos:"TE", team:"CHI", silva:"",    adp:"",     tags:[],       note:"Ascending; Caleb's alpha target."},
+ {rank:60, name:"Josh Allen",          pos:"QB", team:"BUF", silva:"",    adp:"",     tags:[],       note:"Pay up only in small/casual leagues; structural QB edge is best-ball-only."},
+ {rank:61, name:"Lamar Jackson",       pos:"QB", team:"BAL", silva:"",    adp:"",     tags:[],       note:"Same logic as Allen."},
+ {rank:62, name:"Jayden Daniels",      pos:"QB", team:"WAS", silva:"",    adp:"",     tags:[],       note:"Same tier of decision."},
+ {rank:70, name:"Brock Purdy",         pos:"QB", team:"SF",  silva:"",    adp:"",     tags:["buy"],  note:"QB2-tier efficiency out — the wait-at-QB plan."},
+ {rank:71, name:"Matthew Stafford",    pos:"QB", team:"LA",  silva:"",    adp:"",     tags:["buy"],  note:"QB2-tier efficiency out."},
+ {rank:72, name:"Jaxson Dart",         pos:"QB", team:"NYG", silva:"",    adp:"",     tags:["buy"],  note:"8.5 rush PPG — QB2 tier with rushing juice."},
+ {rank:73, name:"Malik Willis",        pos:"QB", team:"MIA", silva:"",    adp:"",     tags:["buy"],  note:"6.0 rush PPG; late-round rushing floor."},
+ {rank:74, name:"Kyler Murray",        pos:"QB", team:"MIN", silva:"",    adp:"",     tags:["buy"],  note:"~4.7 rush PPG; Vikings revival bet."},
+ {rank:87, name:"Rico Dowdle",         pos:"RB", team:"",    silva:"",    adp:"87",   tags:["zrb"],  note:"Zero-RB list."},
+ {rank:91, name:"Blake Corum",         pos:"RB", team:"LA",  silva:"",    adp:"91",   tags:["zrb"],  note:"Zero-RB list."},
+ {rank:94, name:"Roman Monangai",      pos:"RB", team:"CHI", silva:"",    adp:"94",   tags:["zrb"],  note:"Zero-RB list."},
+ {rank:98, name:"Jordyn Brooks",       pos:"RB", team:"",    silva:"",    adp:"98",   tags:["zrb"],  note:"Zero-RB list."},
+ {rank:99, name:"J.K. Dobbins",        pos:"RB", team:"",    silva:"",    adp:"99",   tags:["zrb"],  note:"Zero-RB list."},
+ {rank:109,name:"Rachaad White",       pos:"RB", team:"TB",  silva:"",    adp:"109",  tags:["zrb"],  note:"Zero-RB list."},
+ {rank:114,name:"Jordan Mason",        pos:"RB", team:"MIN", silva:"",    adp:"114",  tags:["zrb"],  note:"Zero-RB list."},
+ {rank:134,name:"Tyrone Tracy",        pos:"RB", team:"NYG", silva:"",    adp:"134",  tags:["zrb"],  note:"Zero-RB list."},
+ {rank:137,name:"Keaton Mitchell",     pos:"RB", team:"BAL", silva:"",    adp:"137",  tags:["zrb"],  note:"Zero-RB list; better in redraft (cuttable)."},
+ {rank:162,name:"Tyler Allgeier",      pos:"RB", team:"ATL", silva:"",    adp:"162",  tags:["zrb"],  note:"Zero-RB list."},
+ {rank:163,name:"Tank Bigsby",         pos:"RB", team:"",    silva:"",    adp:"163",  tags:["zrb"],  note:"Zero-RB list."},
+ {rank:173,name:"Roschon Johnson",     pos:"RB", team:"",    silva:"",    adp:"173",  tags:["zrb"],  note:"Zero-RB list (Sampson also 173)."},
+ {rank:194,name:"Damien Blue",         pos:"RB", team:"",    silva:"",    adp:"194",  tags:["zrb"],  note:"Zero-RB list."},
+ {rank:210,name:"Jordan James",        pos:"RB", team:"SF",  silva:"",    adp:"210",  tags:["zrb"],  note:"Zero-RB list; contingent upside, better in redraft."}
+];
+
+const LS_BOARD="dd-board-v1", LS_MARKS="dd-marks-v1";
+let board;
+try{ board = JSON.parse(localStorage.getItem(LS_BOARD)) || SEED; }catch(e){ board = SEED; }
+let marks;
+try{ marks = JSON.parse(localStorage.getItem(LS_MARKS)) || {}; }catch(e){ marks = {}; }
+function saveMarks(){ try{ localStorage.setItem(LS_MARKS, JSON.stringify(marks)); }catch(e){} }
+function saveBoard(){ try{ localStorage.setItem(LS_BOARD, JSON.stringify(board)); }catch(e){} }
+
+const state = {q:"", pos:"ALL", hideTaken:false, sort:{key:"rank", dir:1}};
+
+document.getElementById("search").addEventListener("input", e=>{state.q=e.target.value.toLowerCase(); render();});
+document.getElementById("posChips").addEventListener("click", e=>{
+  const b=e.target.closest(".chip"); if(!b) return;
+  document.querySelectorAll("#posChips .chip").forEach(c=>c.classList.remove("on"));
+  b.classList.add("on"); state.pos=b.dataset.v; render();
+});
+document.getElementById("hideDrafted").addEventListener("click", e=>{
+  state.hideTaken=!state.hideTaken; e.target.classList.toggle("on", state.hideTaken); render();
+});
+document.getElementById("resetBtn").addEventListener("click", ()=>{ marks={}; saveMarks(); render(); });
+document.getElementById("importBtn").addEventListener("click", ()=>document.getElementById("fileInput").click());
+document.getElementById("exportBtn").addEventListener("click", ()=>{
+  const head="rank,name,pos,team,silva,adp,tags,note";
+  const lines=board.map(r=>[r.rank,r.name,r.pos,r.team,r.silva,r.adp,(r.tags||[]).join("|"),
+    '"'+String(r.note||"").replace(/"/g,'""')+'"'].join(","));
+  const blob=new Blob([head+"\n"+lines.join("\n")],{type:"text/csv"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="data-dawgs-board.csv"; a.click();
+});
+document.getElementById("fileInput").addEventListener("change", e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const rows=parseCSV(rd.result);
+      if(!rows.length) throw new Error("empty");
+      board=rows; saveBoard(); render();
+    }catch(err){ alert("Could not parse CSV: "+err.message); }
+    e.target.value="";
+  };
+  rd.readAsText(f);
+});
+function parseCSV(text){
+  const lines=text.replace(/\r/g,"").split("\n").filter(l=>l.trim());
+  const head=splitCSV(lines[0]).map(h=>h.trim().toLowerCase());
+  const idx=k=>head.indexOf(k);
+  if(idx("name")<0) throw new Error("needs a 'name' column");
+  return lines.slice(1).map(l=>{
+    const c=splitCSV(l);
+    const g=k=>{const i=idx(k); return i>=0?(c[i]||"").trim():"";};
+    return {rank:+g("rank")||9999, name:g("name"), pos:(g("pos")||"").toUpperCase(),
+      team:(g("team")||"").toUpperCase(), silva:g("silva"), adp:g("adp"),
+      tags:g("tags")?g("tags").split("|").map(s=>s.trim()).filter(Boolean):[], note:g("note")};
+  }).filter(r=>r.name);
+}
+function splitCSV(line){
+  const out=[]; let cur="", inQ=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(inQ){ if(ch==='"'){ if(line[i+1]==='"'){cur+='"';i++;} else inQ=false; } else cur+=ch; }
+    else{ if(ch==='"') inQ=true; else if(ch===","){out.push(cur);cur="";} else cur+=ch; }
+  }
+  out.push(cur); return out;
+}
+
+function delta(r){
+  const s=parseFloat(String(r.silva).replace("~","")), a=parseFloat(r.adp);
+  if(isNaN(s)||isNaN(a)) return NaN;
+  return a-s; // positive = market cheaper than Silva rank = value
+}
+const COLS=[
+  {key:"rank",label:"Rk",sortable:true},
+  {key:"name",label:"Player",tl:true,sortable:true},
+  {key:"pos",label:"Pos",sortable:true},
+  {key:"team",label:"Team",sortable:true},
+  {key:"silva",label:"Silva",sortable:true},
+  {key:"adp",label:"ADP",sortable:true},
+  {key:"delta",label:"Δ vs ADP",sortable:true},
+  {key:"tags",label:"Tags"},
+  {key:"note",label:"Note",tl:true},
+  {key:"mark",label:""},
+];
+function sortVal(r,k){
+  if(k==="delta") return delta(r);
+  if(k==="silva"||k==="adp") { const v=parseFloat(String(r[k]).replace("~","")); return isNaN(v)?Infinity:v; }
+  if(k==="rank") return r.rank;
+  return String(r[k]||"");
+}
+function render(){
+  const el=document.getElementById("board");
+  let rows=board.filter(r=>{
+    if(state.pos!=="ALL" && r.pos!==state.pos) return false;
+    if(state.q && !(r.name.toLowerCase().includes(state.q)||String(r.team).toLowerCase().includes(state.q))) return false;
+    if(state.hideTaken && marks[r.name]==="taken") return false;
+    return true;
+  });
+  const {key,dir}=state.sort;
+  rows.sort((a,b)=>{
+    const x=sortVal(a,key), y=sortVal(b,key);
+    if(typeof x==="string") return dir*x.localeCompare(y);
+    const xx=isNaN(x)?Infinity*dir:x, yy=isNaN(y)?Infinity*dir:y;
+    return dir*(xx-yy);
+  });
+  el.textContent="";
+  const thead=document.createElement("thead"),trh=document.createElement("tr");
+  COLS.forEach(c=>{
+    const th=document.createElement("th"); th.textContent=c.label;
+    if(c.tl) th.classList.add("tl");
+    if(c.sortable){ th.classList.add("sortable");
+      if(state.sort.key===c.key) th.textContent+=state.sort.dir<0?" ▼":" ▲";
+      th.addEventListener("click",()=>{
+        if(state.sort.key===c.key) state.sort.dir*=-1;
+        else state.sort={key:c.key,dir:c.key==="name"||c.key==="pos"||c.key==="team"?1:1};
+        render();
+      });
+    }
+    trh.appendChild(th);
+  });
+  thead.appendChild(trh); el.appendChild(thead);
+  const tb=document.createElement("tbody");
+  rows.forEach(r=>{
+    const tr=document.createElement("tr");
+    const m=marks[r.name];
+    if(m==="taken") tr.classList.add("taken");
+    if(m==="mine") tr.classList.add("mine");
+    const dv=delta(r);
+    const cells=[
+      [String(r.rank===9999?"–":r.rank),false],
+      [r.name,true],[r.pos,false],[r.team,false],
+      [r.silva||"–",false],[r.adp||"–",false],
+      [isNaN(dv)?"–":(dv>0?"+":"")+dv.toFixed(0),false],
+    ];
+    cells.forEach(([v,tl],i)=>{
+      const td=document.createElement("td"); if(tl) td.classList.add("tl");
+      td.textContent=v;
+      if(i===6&&!isNaN(dv)){ if(dv>=5) td.style.color="var(--good)"; else if(dv<=-3) td.style.color="var(--bad)"; }
+      if(i===1) td.style.fontWeight=600;
+      tr.appendChild(td);
+    });
+    const tdT=document.createElement("td");
+    (r.tags||[]).forEach(t=>{
+      const s=document.createElement("span");
+      s.className="pill "+(t==="buy"?"buy":t==="fade"?"fade":t==="zrb"?"zrb":"pos");
+      s.textContent=t==="zrb"?"zero-RB":t;
+      tdT.appendChild(s);
+    });
+    tr.appendChild(tdT);
+    const tdN=document.createElement("td"); tdN.classList.add("tl");
+    const nd=document.createElement("div"); nd.className="note"; nd.textContent=r.note||""; tdN.appendChild(nd);
+    tr.appendChild(tdN);
+    const tdM=document.createElement("td");
+    const b1=document.createElement("button"); b1.className="rowbtn"+(m==="taken"?" on-taken":""); b1.textContent="Taken";
+    b1.addEventListener("click",()=>{ marks[r.name]=m==="taken"?undefined:"taken"; saveMarks(); render(); });
+    const b2=document.createElement("button"); b2.className="rowbtn"+(m==="mine"?" on-mine":""); b2.textContent="Mine";
+    b2.addEventListener("click",()=>{ marks[r.name]=m==="mine"?undefined:"mine"; saveMarks(); render(); });
+    tdM.appendChild(b1); tdM.appendChild(b2);
+    tr.appendChild(tdM);
+    tb.appendChild(tr);
+  });
+  el.appendChild(tb);
+  const taken=Object.values(marks).filter(v=>v==="taken").length,
+        mine=Object.values(marks).filter(v=>v==="mine").length;
+  document.getElementById("counts").textContent=`${board.length} players · ${taken} taken · ${mine} mine`;
+}
+render();
+</script>
+</body>
+</html>

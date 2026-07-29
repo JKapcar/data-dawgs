@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026 Draft Strategy — Data Dawgs</title>
+<style>
+:root{
+  color-scheme: light;
+  --surface-1:#fcfcfb; --page:#f9f9f7;
+  --ink-1:#0b0b0b; --ink-2:#52514e; --ink-3:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,0.10);
+  --accent:#2a78d6; --good:#006300; --bad:#d03b3b; --warn:#eda100;
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --surface-1:#1a1a19; --page:#0d0d0d;
+  --ink-1:#ffffff; --ink-2:#c3c2b7; --ink-3:#898781;
+  --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+  --accent:#3987e5; --good:#0ca30c; --bad:#e66767; --warn:#c98500;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --surface-1:#1a1a19; --page:#0d0d0d;
+    --ink-1:#ffffff; --ink-2:#c3c2b7; --ink-3:#898781;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+    --accent:#3987e5; --good:#0ca30c; --bad:#e66767; --warn:#c98500;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink-1);
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px 60px}
+/* ---- site nav ---- */
+.sitenav{display:flex;align-items:center;gap:22px;padding:14px 0;border-bottom:1px solid var(--grid);margin-bottom:24px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:10px;text-decoration:none;color:var(--ink-1)}
+.brand .logo{font-size:19px;font-weight:800;letter-spacing:.02em}
+.brand .logo span{color:var(--accent)}
+.brand .tag{font-size:11.5px;color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase}
+.sitenav .links{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
+.sitenav .links a{color:var(--ink-2);text-decoration:none;padding:6px 12px;border-radius:8px;font-size:14px;font-weight:550}
+.sitenav .links a:hover{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--ink-1)}
+.sitenav .links a.on{color:var(--ink-1);box-shadow:inset 0 -2px 0 var(--accent);border-radius:8px 8px 0 0}
+.theme-btn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--ink-2);padding:4px 10px;cursor:pointer;font-size:12.5px}
+/* ---- cards & type ---- */
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:18px}
+.card h2{font-size:17px;font-weight:700;margin:0 0 8px}
+.card h3{font-size:14.5px;font-weight:650;margin:16px 0 6px}
+.card p{margin:8px 0;color:var(--ink-1)}
+.muted{color:var(--ink-3);font-size:12.5px}
+.callout{border-left:3px solid var(--accent);padding:10px 14px;background:color-mix(in srgb, var(--accent) 6%, transparent);border-radius:0 8px 8px 0;margin:12px 0;font-size:14px}
+.callout.warn{border-left-color:var(--warn);background:color-mix(in srgb, var(--warn) 8%, transparent)}
+a{color:var(--accent)}
+.pill{display:inline-block;font-size:11px;font-weight:650;letter-spacing:.03em;border-radius:6px;padding:2px 8px;margin-right:4px}
+.pill.buy{background:color-mix(in srgb, var(--good) 14%, transparent);color:var(--good)}
+.pill.fade{background:color-mix(in srgb, var(--bad) 13%, transparent);color:var(--bad)}
+.pill.zrb{background:color-mix(in srgb, var(--accent) 13%, transparent);color:var(--accent)}
+.pill.pos{background:color-mix(in srgb, var(--ink-3) 15%, transparent);color:var(--ink-2)}
+/* ---- tables ---- */
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:14px}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3);font-weight:600;text-align:right;padding:6px 8px;border-bottom:1px solid var(--grid);white-space:nowrap}
+th.tl,td.tl{text-align:left}
+td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--grid);white-space:nowrap}
+tr:last-child td{border-bottom:none}
+/* ---- landing ---- */
+.hero{padding:44px 0 10px;text-align:left;max-width:760px}
+.hero h1{font-size:40px;font-weight:800;margin:0 0 4px;letter-spacing:.01em}
+.hero h1 span{color:var(--accent)}
+.hero .tagline{font-size:17px;color:var(--ink-2);margin:0 0 18px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:26px}
+.tile{display:block;text-decoration:none;color:var(--ink-1);background:var(--surface-1);border:1px solid var(--border);border-radius:14px;padding:20px 22px;transition:border-color .15s}
+.tile:hover{border-color:var(--accent)}
+.tile h2{margin:0 0 6px;font-size:16.5px;font-weight:700}
+.tile p{margin:0;color:var(--ink-2);font-size:13.5px}
+.tile .go{display:block;margin-top:12px;color:var(--accent);font-size:13px;font-weight:600}
+footer{color:var(--ink-3);font-size:12px;margin-top:26px;border-top:1px solid var(--grid);padding-top:14px}
+footer a{color:var(--accent)}
+/* ---- controls ---- */
+.controls{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-bottom:14px}
+.controls input[type=text]{background:var(--surface-1);color:var(--ink-1);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:14px;width:220px}
+.chip{border:1px solid var(--border);background:none;color:var(--ink-2);border-radius:7px;padding:4px 10px;cursor:pointer;font-size:13px}
+.chip.on{background:var(--accent);color:#fff;border-color:transparent}
+.btn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--ink-2);padding:5px 12px;cursor:pointer;font-size:13px}
+.btn:hover{color:var(--ink-1);border-color:var(--accent)}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="nav"></div>
+  <script data-page="strategy">
+// Shared nav + theme toggle. Each page includes: <div id="nav"></div> then this script with data-page attr.
+(function(){
+  const page = document.currentScript.getAttribute('data-page') || "";
+  const pages = [
+    ["index.html","Home","home"],
+    ["stats.html","EPA Stats","stats"],
+    ["strategy.html","2026 Strategy","strategy"],
+    ["board.html","Draft Board","board"],
+  ];
+  const nav = document.getElementById("nav");
+  nav.className = "sitenav";
+  const brand = document.createElement("a");
+  brand.className = "brand"; brand.href = "index.html";
+  brand.innerHTML = '<span class="logo">DATA <span>DAWGS</span></span><span class="tag">Data, Not Dogma</span>';
+  nav.appendChild(brand);
+  const links = document.createElement("div"); links.className = "links";
+  pages.forEach(([href,label,key])=>{
+    const a = document.createElement("a");
+    a.href = href; a.textContent = label;
+    if(key===page) a.className = "on";
+    links.appendChild(a);
+  });
+  nav.appendChild(links);
+  const btn = document.createElement("button");
+  btn.className = "theme-btn"; btn.textContent = "Theme"; btn.id = "themeBtn";
+  btn.addEventListener("click", ()=>{
+    const cur = document.documentElement.dataset.theme ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    const next = cur === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    try{ localStorage.setItem("dd-theme", next); }catch(e){}
+    if(window.onThemeChange) window.onThemeChange();
+  });
+  nav.appendChild(btn);
+  try{
+    const saved = localStorage.getItem("dd-theme");
+    if(saved) document.documentElement.dataset.theme = saved;
+  }catch(e){}
+})();
+
+</script>
+
+  <h1 style="font-size:26px;font-weight:750;margin:6px 0 2px">2026 Draft Strategy</h1>
+  <p class="muted" style="margin:0 0 16px">Synthesized from Establish The Run's 2026 Draft Kit Pro, captured 7/28/26. ETR updates daily — rankings below are a snapshot; the structural arguments age better than the player takes.</p>
+
+  <div class="callout warn">
+    <b>Read this first.</b> Everything here mixes two kinds of claims. <i>Structural</i> claims (how positional scoring curves behave, where the dead zone sits) are testable across many seasons. <i>Player-level</i> calls are one analyst's priors — and a subscription product has an incentive to ship differentiated takes. Big Silva-vs-ADP deltas are part signal, part product.
+  </div>
+
+  <div class="card">
+    <h2>The macro thesis: the RB dead zone is back</h2>
+    <p>RB ADP is at a five-year high, which re-arms the classic inefficiency: in 12-team leagues, RBs drafted in Rounds 3–6 tend to underperform their cost while WRs in the same range outperform. The structural shape behind it: RB scoring falls off a cliff early and then runs nearly flat from about Round 3 through Round 10, while WR scoring stays flat through Rounds 5–6 and then drops fast.</p>
+    <p>The playbook that follows: secure one or two elite RBs early, or punt the position past the dead zone entirely. What you should not do is pay sticker price for mid-round RBs.</p>
+    <h3>Anchor rules (12–14 team, half-PPR or fuller)</h3>
+    <p>At least one RB in the first two rounds. At least three WRs by the end of Round 6. In 14+ team leagues the dead zone shifts up to Rounds 2–5. In 10-team-or-smaller leagues you get 8–9 rounds of WR runway — use it for elite QB/TE swings or early RB stacking, then backfill.</p>
+  </div>
+
+  <div class="card">
+    <h2>QB is a trap this year</h2>
+    <p>The projection gap between the low-end QB1s and the mid-range QB2s is only about 10 total points across a season. The QB2 tier carries real rushing value (Dart ~8.5 rush PPG, Willis ~6.0, Murray ~4.7) plus efficiency outs like Purdy and Stafford. In sharp or larger redraft leagues: wait, and let someone else overdraft QB7–12.</p>
+    <p>One honest caveat ETR itself makes: the famous "wait forever on QB" structural edge from Allen/Lamar analysis is a <i>best ball</i> edge. It largely evaporates in one-QB redraft. And in small or casual leagues where opponents let value slip, paying up for Allen, Lamar, or Daniels is defensible — even correct.</p>
+    <h3>TE mirrors QB</h3>
+    <p>Bowers (major QB and play-caller upgrades), McBride (volume monster, with Carson Beck / offense-transition risk), and Loveland (ascending, Caleb's alpha target) head the position. Early TE swings are viable in small leagues and an opportunity-cost problem in big ones. Note: ETR's TE tiers file was still the 2025 version at capture — treat TE specifics as stale.</p>
+  </div>
+
+  <div class="card">
+    <h2>Build for Weeks 15–17, not Week 1</h2>
+    <p>Championships are won in the fantasy playoffs, so the bench should tell a story: ascension archetypes late (rookies, contingent-value backups) mixed with floor veterans.</p>
+    <h3>Week 17 stack targets</h3>
+    <p>CHI–DET, JAX–WAS, BAL–CIN, LAR–TB, NYG–DAL.</p>
+    <h3>Playoff schedules</h3>
+    <p>Strong closes: MIN, ATL (WAS/TB/NO), ARI, and JAX/NYG after Week 15. Rough closes: PHI, SF, KC, HOU. Early-season notes: fade JAX/ARI in September (buy low late October); Stroud and Goff profile as elite September streamers; LAC/BAL/NYG open easy.</p>
+  </div>
+
+  <div class="card">
+    <h2>The top of the board (Silva, 7/28 snapshot)</h2>
+    <p>Gibbs then Bijan as a clear top two — the Gibbs case: 38 TDs in two years, Montgomery gone, softest schedule. Then CMC / Taylor / Walker (now in KC) / Cook, and a WR tier 1 of Nacua, Chase, JSN, ARSB, Lamb.</p>
+    <h3>Biggest buys vs. ADP</h3>
+    <p>Kenneth Walker (Silva 10 vs. ADP 21), Breece Hall (18 vs. 33), Chris Olave (19 vs. 29), Ladd McConkey (29 vs. 45), Terry McLaurin (33 vs. 55), Mike Evans (34 vs. 61), Luther Burden (38 vs. 49).</p>
+    <h3>Biggest fades</h3>
+    <p>De'Von Achane (Silva 30 vs. ADP 13 — McDaniel gone, Willis at QB craters the reception profile), Trey McBride at TE cost (36 vs. 20), Ashton Jeanty (15 vs. 11), Jeremiyah Love (ARI committee, bad team), Tet McMillan (43 vs. 37 — Bryce caps the ceiling).</p>
+    <p class="muted">Outside-view reminder: analyst-vs-ADP deltas of this size have a mixed historical hit rate. Treat each as a hypothesis, not a verdict — the full board lives on the Draft Board page.</p>
+  </div>
+
+  <div class="card">
+    <h2>2026 storylines priced into the tiers</h2>
+    <p>Chiefs went RB-centric (Walker paid, Mahomes coming off ACL/LCL, Rice suspension risk, Kelce at 37). The Saints are suddenly fantasy-relevant (fastest pace, indoors, Shough breakout profile, Etienne as the fulcrum). Vikings are a revival bet on Kyler. Dolphins read as toxic (Achane pricing, tempo questions, second-toughest schedule). Bengals are scoring-leader favorites. The Patriots added A.J. Brown for Maye.</p>
+    <h3>Pace layer (Thorman)</h3>
+    <p>Up in pace: CIN (via pass rate), DAL, DEN, IND, MIN, NO (fastest), TEN. Sloggers: BUF, LAC, LV, MIA, NYG, PIT, SF. League-wide, pace and pass rates keep sinking — motion, short passes, clock grind.</p>
+  </div>
+
+  <div class="card">
+    <h2>Format playbooks</h2>
+    <h3>Redraft vs. best ball</h3>
+    <p>Better in redraft: contingent-upside lottery tickets you can cut when the contingency dies (Jordan James/Kaelon Black, Giddens/McGowan, MarShawn Lloyd, the Houston WR2 trio, Travis Hunter, Chig Okonkwo, Keaton Mitchell, Terrance Ferguson). Worse in redraft: spike-week specialists you can't time (Pierce, Watson, Tate, TeSlaa) and elite QBs.</p>
+    <h3>Auction</h3>
+    <p>Write a plan with target prices before the room opens. Nominate with an objective — drain budgets on players you don't want, and throw your actual targets out early before the room calibrates. Never price-enforce. Don't wait for the last player in a tier. Track budgets, spend to roughly zero, and budget the endgame.</p>
+    <h3>Large leagues (14+)</h3>
+    <p>RB/WR early and often, QB late, ride 3–4 week defense stretches instead of streaming weekly, spend FAAB early and hard, archetype-fit the bench.</p>
+    <h3>Small leagues (≤10)</h3>
+    <p>Elite QB/TE swings are viable, stream D/K freely, stay hyperactive on a loaded wire, and build max-upside benches.</p>
+  </div>
+
+  <div class="card">
+    <h2>Late-round RB targets (zero-RB list, ~weekly updates)</h2>
+    <p>With ADP at capture: Dowdle (87), Corum (91), Monangai (94), Brooks (98), Dobbins (99), White (109), Mason (114), Tracy (134), Mitchell (137), Allgeier (162), Bigsby (163), Sampson (173), B. Robinson (173), Blue (194), James (210), Claiborne (213).</p>
+  </div>
+
+  <div class="callout">
+    <b>What wasn't published yet at capture:</b> Levitan's flagship strategy piece and Perfect Draft, Miller's draft-slot guides, Silva's Shy Away List and Sleepers, the default-rankings exploitation piece, and the 2026 TE tiers update. ETR ships these through August — this page is worth a refresh mid-August and again pre-Labor Day.
+  </div>
+
+  <footer>
+    Source: Establish The Run, 2026 Draft Kit Pro (subscriber content, personal-use synthesis), captured 2026-07-28. Structural claims and player takes deliberately separated per house rules.
+  </footer>
+</div>
+</body>
+</html>
