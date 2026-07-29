@@ -177,6 +177,38 @@ body.proj .wrap{max-width:none;padding:10px 18px}
 .pf-stat .v{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
 .legend{display:flex;gap:10px;font-size:11px;color:var(--ink-2);align-items:center}
 .lg{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:3px;vertical-align:middle}
+/* ---------- v4: mic, queue, lenses ---------- */
+#micBtn{background:none;border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:16px;cursor:pointer;color:var(--ink-2)}
+#micBtn.listening{background:var(--bad);color:#fff;border-color:transparent;animation:micPulse 1s infinite alternate}
+@keyframes micPulse{from{box-shadow:0 0 0 0 rgba(255,107,107,.6)}to{box-shadow:0 0 0 8px rgba(255,107,107,0)}}
+.qrow{display:flex;gap:6px;align-items:center;font-size:13px;padding:2px 0}
+.qrow .qn{cursor:pointer;font-weight:600}
+.qrow .qn:hover{color:var(--accent)}
+.qrow .qx{margin-left:auto;color:var(--bad);cursor:pointer;background:none;border:none}
+.qadd{display:flex;gap:6px;margin-top:6px}
+.qadd input{flex:1;background:var(--page);color:var(--ink-1);border:1px solid var(--border);border-radius:7px;padding:4px 8px;font-size:13px}
+/* rosters lens */
+.rgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;height:calc(100vh - 150px);overflow:hidden}
+.rcard{background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:8px 10px;overflow:hidden}
+.rcard h4{margin:0 0 4px;font-size:15px;display:flex;justify-content:space-between}
+.rcard h4 .rm{color:var(--accent)}
+.rrow{display:flex;gap:6px;font-size:12.5px;padding:1.5px 0;align-items:baseline}
+.rrow .rp{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rrow .rpos{font-size:10px;font-weight:700;width:26px;flex:none;text-align:center;border-radius:4px}
+.rrow .rdol{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--ink-2)}
+/* grades lens */
+.gtable{width:auto;margin:0 auto;font-size:22px}
+.gtable td,.gtable th{padding:8px 18px}
+.gletter{font-size:30px;font-weight:900}
+.gA{color:var(--good)} .gB{color:#8bc34a} .gC{color:var(--warn)} .gD{color:var(--bad)}
+/* scarcity lens */
+.scgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:8px}
+.sccard{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.sccard h4{margin:0 0 8px;font-size:20px}
+.scline{display:flex;justify-content:space-between;font-size:16px;padding:2px 0;color:var(--ink-2)}
+.scline b{font-variant-numeric:tabular-nums;color:var(--ink-1)}
+.scline.zero b{color:var(--bad)}
+.sctop{margin-top:8px;font-size:13.5px;color:var(--ink-3)}
 /* ---------- SUPER BOWL SUPER BROWNS ---------- */
 #celebrate{position:fixed;inset:0;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;background:rgba(10,8,6,0.55)}
 #celebrate canvas{position:absolute;inset:0;width:100%;height:100%}
@@ -250,11 +282,19 @@ const DEFAULT_TEAMS=[
 function freshState(){
   return {v:1,
     settings:{budget:200, spots:15, scoring:"half", timerSecs:15, myTeam:0,
+      announcer:true, snark:true,
       teams:DEFAULT_TEAMS.map(t=>({name:t[0],owner:t[1]}))},
-    picks:[], nomIdx:0, timerEnd:0, ts:0};
+    picks:[], nomIdx:0, timerEnd:0, projView:"board", queue:[], ts:0};
 }
 let S;
-function load(){ try{ S=JSON.parse(localStorage.getItem(LS_STATE))||freshState(); }catch(e){ S=freshState(); } }
+function load(){
+  try{ S=JSON.parse(localStorage.getItem(LS_STATE))||freshState(); }catch(e){ S=freshState(); }
+  // migrate older saves
+  if(S.projView===undefined) S.projView="board";
+  if(!Array.isArray(S.queue)) S.queue=[];
+  if(S.settings.announcer===undefined) S.settings.announcer=true;
+  if(S.settings.snark===undefined) S.settings.snark=true;
+}
 function save(){ S.ts=Date.now(); try{ localStorage.setItem(LS_STATE, JSON.stringify(S)); }catch(e){} }
 load();
 
@@ -317,6 +357,157 @@ function lastSale(){
   return nonK.length? nonK[nonK.length-1] : null;
 }
 
+// ---------- v4 shared computations ----------
+function gradesData(d){
+  const rows=S.settings.teams.map((t,ti)=>{
+    const ps=S.picks.filter(p=>p.ti===ti);
+    const spent=ps.reduce((a,p)=>a+p.price,0);
+    const value=ps.reduce((a,p)=>a+(p.etr||0),0);
+    return {ti, name:t.name, n:ps.length, spent, value, surplus:value-spent};
+  });
+  rows.sort((a,b)=>b.surplus-a.surplus);
+  const G=["A+","A","A-","B+","B+","B","B","B-","B-","C+","C+","C","C-","D"];
+  rows.forEach((r,i)=>{ r.grade = r.n===0 ? "–" : (G[Math.round(i*(G.length-1)/Math.max(1,rows.length-1))]); });
+  return rows;
+}
+function scarcityData(d){
+  const POSN=["QB","RB","WR","TE","DST"];
+  return POSN.map(pos=>{
+    const rem=POOL.filter(p=>!d.soldSet.has(p.name)&&p.pos===pos);
+    const tier=v=>rem.filter(p=>val(p)>=v).length;
+    return {pos, t20:tier(20), t10:tier(10), t5:tier(5), t1:tier(1),
+      top:rem.filter(p=>val(p)>=1).sort((a,b)=>val(b)-val(a)).slice(0,3)};
+  });
+}
+function detectRun(){
+  const recent=S.picks.filter(p=>!p.keeper).slice(-6);
+  if(recent.length<4) return null;
+  const counts={};
+  recent.forEach(p=>{const k=p.pos==="D"?"DST":p.pos; counts[k]=(counts[k]||0)+1;});
+  for(const k in counts) if(counts[k]>=4) return k;
+  return null;
+}
+
+// ---------- v4: voice announcer (operator window only) ----------
+const SNARK_OVER=["That is criminal.","Someone confiscate his wallet.","The room thanks you for the inflation.","Bold strategy.","ETR just fainted."];
+const SNARK_STEAL=["Highway robbery.","Somebody was not paying attention.","A crime in broad daylight.","The Dawgs approve."];
+function announce(pk){
+  if(!S.settings.announcer || !("speechSynthesis" in window)) return;
+  const t=S.settings.teams[pk.ti]||{};
+  let msg=`Sold! ${pk.player}, ${pk.price} dollar${pk.price===1?"":"s"}, to ${t.name}.`;
+  if(S.settings.snark && pk.etr>0){
+    const diff=pk.price-pk.etr;
+    if(diff>=10) msg+=` That's ${diff} over value. `+SNARK_OVER[(Math.random()*SNARK_OVER.length)|0];
+    else if(diff<=-10) msg+=` ${-diff} under value. `+SNARK_STEAL[(Math.random()*SNARK_STEAL.length)|0];
+  }
+  if(nflOf(pk)==="CLE" && !pk.keeper) msg+=" Super Bowl! Super Browns!";
+  try{
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(msg);
+    u.rate=1.05; u.pitch=1.0;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+
+// ---------- v4: speech-to-text pick entry ----------
+const NUMWORD={zero:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,
+  eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19,
+  twenty:20,thirty:30,forty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90,hundred:100};
+function parseSpeech(raw){
+  const txt=raw.toLowerCase().replace(/[^a-z0-9' ]/g," ").replace(/\s+/g," ").trim();
+  let tokens=txt.split(" ");
+  const keeper=tokens.includes("keeper");
+  tokens=tokens.filter(w=>!["to","for","goes","sold","dollars","dollar","bucks","keeper","the"].includes(w));
+  // price: combine number words / digits, take the LAST number expression
+  let price=null, priceIdx=[];
+  for(let i=0;i<tokens.length;i++){
+    const w=tokens[i];
+    if(/^\d+$/.test(w)){ price=+w; priceIdx=[i]; }
+    else if(w in NUMWORD){
+      let v=NUMWORD[w], idxs=[i], j=i+1;
+      while(j<tokens.length && tokens[j] in NUMWORD){
+        const nv=NUMWORD[tokens[j]];
+        if(nv===100) v=v*100; else v+=nv;
+        idxs.push(j); j++;
+      }
+      price=v; priceIdx=idxs; i=j-1;
+    }
+  }
+  tokens=tokens.filter((w,i)=>!priceIdx.includes(i));
+  // team: find LAST occurrence of any team name/owner (multi-word phrases first)
+  let ti=null, tSpan=null;
+  S.settings.teams.forEach((t,idx)=>{
+    [t.name,t.owner].forEach(label=>{
+      if(!label) return;
+      const lw=label.toLowerCase().split(/\s+/);
+      for(let i=tokens.length-lw.length;i>=0;i--){
+        if(lw.every((w,k)=>tokens[i+k]===w)){
+          if(tSpan===null || i>tSpan[0] || (i===tSpan[0]&&lw.length>tSpan[1])){ ti=idx; tSpan=[i,lw.length]; }
+          break;
+        }
+      }
+    });
+  });
+  if(tSpan) tokens.splice(tSpan[0],tSpan[1]);
+  // player: fuzzy match remaining tokens against pool
+  const q=tokens.join(" ");
+  let best=null,bestScore=0;
+  if(q.length>=2){
+    POOL.forEach(p=>{
+      const pn=p.name.toLowerCase().replace(/[^a-z0-9' ]/g,"");
+      const ptoks=pn.split(" ");
+      let score=0;
+      tokens.forEach(w=>{
+        if(ptoks.includes(w)) score+=2;
+        else if(ptoks.some(t=>t.startsWith(w)&&w.length>=3)) score+=1;
+      });
+      if(pn===q) score+=4;
+      if(score>bestScore){bestScore=score;best=p;}
+    });
+  }
+  return {player:best, playerScore:bestScore, rawPlayer:q, ti, price, keeper};
+}
+let recog=null, listening=false;
+function initSpeech(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR) return false;
+  recog=new SR();
+  recog.lang="en-US"; recog.interimResults=false; recog.maxAlternatives=1;
+  recog.onresult=e=>{
+    const heard=e.results[0][0].transcript;
+    applySpeech(heard);
+  };
+  recog.onend=()=>{ listening=false; const b=document.getElementById("micBtn"); if(b) b.classList.remove("listening"); };
+  recog.onerror=()=>{ listening=false; const b=document.getElementById("micBtn"); if(b) b.classList.remove("listening"); };
+  return true;
+}
+function applySpeech(heard){
+  const r=parseSpeech(heard);
+  const pin=document.getElementById("playerIn"), priceIn=document.getElementById("priceIn"),
+        teamIn=document.getElementById("teamIn"), posIn=document.getElementById("posIn"),
+        keepIn=document.getElementById("keeperIn"), hint=document.getElementById("entryHint");
+  if(!pin) return;
+  if(r.player){ pin.value=r.player.name; posIn.value=r.player.pos; window.__chosen=r.player; }
+  else if(r.rawPlayer){ pin.value=r.rawPlayer; window.__chosen=null; }
+  if(r.ti!==null) teamIn.value=String(r.ti);
+  if(r.price!==null) priceIn.value=String(r.price);
+  if(keepIn) keepIn.checked=r.keeper;
+  const missing=[!r.player&&"player",r.ti===null&&"team",r.price===null&&"price"].filter(Boolean);
+  hint.textContent=`🎤 "${heard}" → ${r.player?r.player.name:"??"} / ${r.ti!==null?(S.settings.teams[r.ti]||{}).name:"??"} / ${r.price!==null?"$"+r.price:"$??"}${missing.length?" — fix "+missing.join(", "):" — Enter to confirm"}`;
+  (missing.includes("player")?pin:missing.includes("price")?priceIn:priceIn).focus();
+}
+function toggleMic(){
+  if(!recog && !initSpeech()){
+    const hint=document.getElementById("entryHint");
+    if(hint) hint.textContent="Speech recognition not available in this browser.";
+    return;
+  }
+  if(listening){ recog.stop(); return; }
+  listening=true;
+  document.getElementById("micBtn").classList.add("listening");
+  try{ recog.start(); }catch(e){ listening=false; }
+}
+
 // ================= PROJECTOR VIEW =================
 function shortName(n){
   if(n.length<=16 || n.includes(" DST")) return n;
@@ -335,10 +526,17 @@ function renderProj(){
     const s=Math.ceil((S.timerEnd-Date.now())/1000);
     timerHTML=`<div class="timerbig ${s<=5?"urgent":""}">${s}</div>`;
   }
-  // ticker (content doubled for seamless loop)
-  const tkItems=d.T.map((t,i)=>`<span class="tk-item ${i===S.nomIdx?"onclock":""} ${t.spotsLeft<0?"over":""}">
+  // ticker (content doubled for seamless loop): budgets + recent sales + run detection
+  let tkItems=d.T.map((t,i)=>`<span class="tk-item ${i===S.nomIdx?"onclock":""} ${t.spotsLeft<0?"over":""}">
      <span class="tn">${esc(t.name)}</span><span class="tm">${fmt$(t.left)}</span><span class="ts">${t.spotsLeft<0?(t.count+"/"+S.settings.spots+" OVER"):t.spotsLeft+" spots"}</span></span>`).join("");
-  const tkDur=Math.max(30, d.T.length*4);
+  const recent=S.picks.filter(p=>!p.keeper).slice(-5).reverse();
+  if(recent.length){
+    tkItems+=`<span class="tk-item"><span class="ts" style="color:var(--accent);font-weight:700">RECENT:</span></span>`;
+    tkItems+=recent.map(p=>`<span class="tk-item"><span class="tn" style="font-weight:600">${esc(shortName(p.player))}</span><span class="tm">${fmt$(p.price)}</span></span>`).join("");
+  }
+  const run=detectRun();
+  if(run) tkItems+=`<span class="tk-item"><span class="tn" style="color:var(--bad)">🔥 RUN ON ${run}S — 4+ of last 6 sales</span></span>`;
+  const tkDur=Math.max(30, (d.T.length+recent.length+2)*4);
   // matrix: position-grouped bands (QB/RB/WR/TE/D), cols = teams
   const POS_ORDER=["QB","RB","WR","TE","DST"];
   const MIN_ROWS={QB:1,RB:2,WR:2,TE:1,DST:1};
@@ -373,6 +571,51 @@ function renderProj(){
     }
   });
   mx+=`</div>`;
+  // ---- lens content ----
+  const view=S.projView||"board";
+  let content="", foot="";
+  if(view==="board"){
+    content=mx;
+    foot=`<div class="projfoot">
+     <div class="pf-sale">${ls? `
+        <span class="p">${esc(ls.player)} <span style="color:var(--accent)">${fmt$(ls.price)}</span></span>
+        <span class="d">${esc(ls.pos)} · to <b>${esc(team(ls.ti))}</b>${ls.etr?` · ETR ${fmt$(ls.etr)} (<span style="color:${ls.price<=ls.etr?'var(--good)':'var(--bad)'}">${ls.price<=ls.etr?"−":"+"}$${Math.abs(ls.price-ls.etr)}</span>)`:""}</span>`
+        : '<span class="p">Waiting for first sale…</span>'}
+     </div>
+     <div class="pf-stat"><div class="l">League $</div><div class="v">${fmt$(d.remDollars)}</div></div>
+     <div class="pf-stat"><div class="l">Value left</div><div class="v">${fmt$(Math.round(d.remValue))}</div></div>
+     <div class="pf-stat"><div class="l">Inflation</div><div class="v" style="color:${d.infl>1.05?"var(--bad)":d.infl<0.95?"var(--good)":"var(--ink-1)"}">${d.infl.toFixed(2)}×</div></div>
+     <div class="pf-stat"><div class="l">Next up (adj)</div><div class="v" style="font-size:14.5px">${d.best.slice(0,3).map(p=>`${esc(shortName(p.name))} ${fmt$(Math.round(val(p)*d.infl))}`).join(" · ")}</div></div>
+   </div>`;
+  } else if(view==="rosters"){
+    const POS_COLOR2={QB:"#e66767",RB:"#199e70",WR:"#3987e5",TE:"#c98500",DST:"#8a8378",D:"#8a8378"};
+    content=`<div class="rgrid">`+d.T.map((t,ti)=>{
+      const ps=S.picks.filter(p=>p.ti===ti);
+      return `<div class="rcard"><h4>${esc(t.name)}<span class="rm">${fmt$(t.left)}</span></h4>
+        ${ps.map(p=>`<div class="rrow"><span class="rpos" style="background:color-mix(in srgb,${POS_COLOR2[p.pos]||"#8a8378"} 40%,var(--surface-1))">${p.pos==="DST"?"D":p.pos}</span><span class="rp">${esc(shortName(p.player))}${p.keeper?" ·K":""}</span><span class="rdol">$${p.price}</span></div>`).join("")||'<div class="rrow" style="color:var(--ink-3)">—</div>'}
+      </div>`;
+    }).join("")+`</div>`;
+  } else if(view==="grades"){
+    const g=gradesData(d);
+    content=`<h2 style="text-align:center;font-size:30px;margin:10px 0">DRAFT REPORT CARD</h2>
+      <table class="gtable"><thead><tr><th></th><th class="tl">Team</th><th>Players</th><th>Spent</th><th>ETR Value</th><th>Surplus</th><th>Grade</th></tr></thead><tbody>
+      ${g.map((r,i)=>`<tr><td class="rk">${i+1}</td><td class="tl" style="font-weight:700">${esc(r.name)}</td><td>${r.n}</td><td>${fmt$(r.spent)}</td><td>${fmt$(Math.round(r.value))}</td>
+        <td style="font-weight:800;color:${r.surplus>=0?"var(--good)":"var(--bad)"}">${r.surplus>=0?"+":"−"}$${Math.abs(Math.round(r.surplus))}</td>
+        <td class="gletter ${r.grade[0]==="A"?"gA":r.grade[0]==="B"?"gB":r.grade[0]==="C"?"gC":"gD"}">${r.grade}</td></tr>`).join("")}
+      </tbody></table>
+      <div style="text-align:center;color:var(--ink-3);margin-top:10px;font-size:14px">Surplus = ETR value acquired − dollars spent · grades on a curve</div>`;
+  } else if(view==="scarcity"){
+    const sc=scarcityData(d);
+    content=`<h2 style="text-align:center;font-size:30px;margin:10px 0">WHAT'S LEFT</h2>
+      <div class="scgrid">${sc.map(s=>`<div class="sccard"><h4>${s.pos==="DST"?"D/ST":s.pos}</h4>
+        <div class="scline ${s.t20===0?"zero":""}"><span>worth $20+</span><b>${s.t20}</b></div>
+        <div class="scline ${s.t10===0?"zero":""}"><span>worth $10+</span><b>${s.t10}</b></div>
+        <div class="scline ${s.t5===0?"zero":""}"><span>worth $5+</span><b>${s.t5}</b></div>
+        <div class="scline ${s.t1===0?"zero":""}"><span>worth $1+</span><b>${s.t1}</b></div>
+        <div class="sctop">${s.top.map(p=>`${esc(shortName(p.name))} ${fmt$(val(p))} <span style="color:var(--ink-3)">adj ${fmt$(Math.round(val(p)*d.infl))}</span>`).join("<br>")||"cupboard is bare"}</div>
+      </div>`).join("")}</div>
+      <div style="text-align:center;color:var(--ink-3);margin-top:14px;font-size:15px">Inflation ${d.infl.toFixed(2)}× · League ${fmt$(d.remDollars)} chasing ${fmt$(Math.round(d.remValue))} of value</div>`;
+  }
   const app=document.getElementById("app");
   app.innerHTML=`
    <div class="projtop">
@@ -389,18 +632,8 @@ function renderProj(){
      <div class="onclock-banner">ON THE CLOCK: ${esc(team(S.nomIdx))}</div>
    </div>
    <div class="ticker"><div class="tk-track" style="--tkdur:${tkDur}s">${tkItems}${tkItems}</div></div>
-   ${mx}
-   <div class="projfoot">
-     <div class="pf-sale">${ls? `
-        <span class="p">${esc(ls.player)} <span style="color:var(--accent)">${fmt$(ls.price)}</span></span>
-        <span class="d">${esc(ls.pos)} · to <b>${esc(team(ls.ti))}</b>${ls.etr?` · ETR ${fmt$(ls.etr)} (<span style="color:${ls.price<=ls.etr?'var(--good)':'var(--bad)'}">${ls.price<=ls.etr?"−":"+"}$${Math.abs(ls.price-ls.etr)}</span>)`:""}</span>`
-        : '<span class="p">Waiting for first sale…</span>'}
-     </div>
-     <div class="pf-stat"><div class="l">League $</div><div class="v">${fmt$(d.remDollars)}</div></div>
-     <div class="pf-stat"><div class="l">Value left</div><div class="v">${fmt$(Math.round(d.remValue))}</div></div>
-     <div class="pf-stat"><div class="l">Inflation</div><div class="v" style="color:${d.infl>1.05?"var(--bad)":d.infl<0.95?"var(--good)":"var(--ink-1)"}">${d.infl.toFixed(2)}×</div></div>
-     <div class="pf-stat"><div class="l">Next up (adj)</div><div class="v" style="font-size:14.5px">${d.best.slice(0,3).map(p=>`${esc(shortName(p.name))} ${fmt$(Math.round(val(p)*d.infl))}`).join(" · ")}</div></div>
-   </div>`;
+   ${content}
+   ${foot}`;
 }
 
 // ================= OPERATOR VIEW =================
@@ -419,6 +652,13 @@ function renderOp(){
     <button class="btn" id="setupBtn">Setup</button>
     <button class="btn" id="timerBtn">Start ${S.settings.timerSecs}s timer</button>
     <button class="btn" id="nomBtn">Advance nomination →</button>
+    <label style="font-size:13px;color:var(--ink-2)">Projector shows:
+      <select id="lensSel" class="numin" style="padding:4px 8px">
+        <option value="board" ${S.projView==="board"?"selected":""}>Draft Board</option>
+        <option value="rosters" ${S.projView==="rosters"?"selected":""}>Rosters</option>
+        <option value="scarcity" ${S.projView==="scarcity"?"selected":""}>What's Left</option>
+        <option value="grades" ${S.projView==="grades"?"selected":""}>Report Card</option>
+      </select></label>
     <span style="font-size:13.5px;color:var(--ink-2)">On the clock: <b style="color:var(--accent)">${esc(team(S.nomIdx))}</b></span>
     <span class="counts" style="margin-left:auto">Inflation <b style="color:${d.infl>1.05?"var(--bad)":d.infl<0.95?"var(--good)":"var(--ink-1)"}">${d.infl.toFixed(2)}×</b> · League ${fmt$(d.remDollars)} vs value ${fmt$(Math.round(d.remValue))}</span>
   </div>
@@ -437,6 +677,7 @@ function renderOp(){
     <div><label>Price $</label><input type="number" id="priceIn" min="0" step="1" value=""></div>
     <label class="klabel"><input type="checkbox" id="keeperIn"> Keeper</label>
     <button class="bigbtn" id="addBtn">SOLD</button>
+    <button id="micBtn" title="Voice entry (V): say player, team, price">🎤</button>
     <span id="entryHint" style="font-size:12px;color:var(--ink-3);align-self:center"></span>
   </div>
   <div class="oplayout">
@@ -448,6 +689,15 @@ function renderOp(){
       <div class="sidebox">
         <h3>Best available (ETR $ · adj)</h3>
         ${d.best.map(p=>`<div class="bestrow"><b>${esc(p.name)}</b><span style="color:var(--ink-3);font-size:11.5px">${p.pos} ${p.team}${p.tags&&p.tags.length?" · "+p.tags.join("/"):""}</span><span class="val">${fmt$(val(p))}</span><span class="adj">adj ${fmt$(Math.round(val(p)*d.infl))}</span></div>`).join("")}
+      </div>
+      <div class="sidebox">
+        <h3>Nomination queue (only you see this)</h3>
+        <div id="qList">${(S.queue||[]).map((n,i)=>`<div class="qrow"><span class="qn" data-n="${esc(n)}" title="click to load into entry">${i+1}. ${esc(n)}</span><button class="qx" data-i="${i}">✕</button></div>`).join("")||'<div class="muted" style="font-size:12px">Plan your nominations — price-enforce early, targets late.</div>'}</div>
+        <div class="qadd"><input type="text" id="qIn" placeholder="Add player…"><button class="btn" id="qAdd">+</button></div>
+      </div>
+      <div class="sidebox">
+        <h3>What's left</h3>
+        ${scarcityData(d).map(s=>`<div class="scline" style="font-size:12.5px"><span><b style="color:var(--ink-1)">${s.pos==="DST"?"D":s.pos}</b> $20+/$10+/$5+</span><b>${s.t20} / ${s.t10} / ${s.t5}</b></div>`).join("")}
       </div>
       <div class="sidebox">
         <h3>Tools</h3>
@@ -555,8 +805,11 @@ function bindOp(d){
       S.nomIdx=(S.nomIdx+1)%S.settings.teams.length;
     }
     S.timerEnd=0;
+    // pop from nomination queue if this player was queued
+    const qi=S.queue.findIndex(n=>n.toLowerCase()===pk.player.toLowerCase());
+    if(qi>=0) S.queue.splice(qi,1);
     markTaken(pk.player, ti===S.settings.myTeam);
-    save(); renderOp(); checkBrowns();
+    save(); renderOp(); checkBrowns(); announce(pk);
     const npin=document.getElementById("playerIn"); npin.focus();
   }
   document.getElementById("addBtn").addEventListener("click",add);
@@ -564,6 +817,30 @@ function bindOp(d){
   document.getElementById("nomBtn").addEventListener("click",()=>{
     S.nomIdx=(S.nomIdx+1)%S.settings.teams.length; save(); renderOp();
   });
+  document.getElementById("lensSel").addEventListener("change",e=>{
+    S.projView=e.target.value; save();
+  });
+  document.getElementById("micBtn").addEventListener("click",toggleMic);
+  if(!window.__vkeyInstalled){
+    window.__vkeyInstalled=true;
+    document.addEventListener("keydown",e=>{
+      if(e.key==="v"&&document.activeElement.tagName!=="INPUT"&&document.activeElement.tagName!=="SELECT"){ toggleMic(); }
+    });
+  }
+  document.getElementById("qAdd").addEventListener("click",()=>{
+    const qi=document.getElementById("qIn"); const v=qi.value.trim();
+    if(v){ S.queue.push(v); save(); renderOp(); }
+  });
+  document.getElementById("qIn").addEventListener("keydown",e=>{
+    if(e.key==="Enter"){ document.getElementById("qAdd").click(); }
+  });
+  document.querySelectorAll(".qx").forEach(el=>el.addEventListener("click",()=>{
+    S.queue.splice(+el.dataset.i,1); save(); renderOp();
+  }));
+  document.querySelectorAll(".qn").forEach(el=>el.addEventListener("click",()=>{
+    const npin=document.getElementById("playerIn");
+    npin.value=el.dataset.n; npin.dispatchEvent(new Event("input")); npin.focus();
+  }));
   document.getElementById("timerBtn").addEventListener("click",()=>{
     S.timerEnd=Date.now()+S.settings.timerSecs*1000; save(); renderOp();
   });
@@ -604,6 +881,8 @@ function renderSetup(sp){
        <option value="sf" ${S.settings.scoring==="sf"?"selected":""}>Superflex</option></select></label>
      <label style="font-size:13px">Timer secs <input type="number" id="setTimer" value="${S.settings.timerSecs}" style="width:55px"></label>
      <label style="font-size:13px">My team: <select id="setMy">${S.settings.teams.map((t,i)=>`<option value="${i}" ${i===S.settings.myTeam?"selected":""}>${esc(t.name)}</option>`).join("")}</select></label>
+     <label style="font-size:13px"><input type="checkbox" id="setAnn" ${S.settings.announcer?"checked":""}> Voice announcer</label>
+     <label style="font-size:13px"><input type="checkbox" id="setSnark" ${S.settings.snark?"checked":""}> Snark mode</label>
    </div>
    <table><tbody>${S.settings.teams.map((t,i)=>`<tr><td>${i+1}</td>
      <td><input class="set-name" data-i="${i}" value="${esc(t.name)}"></td>
@@ -616,6 +895,8 @@ function renderSetup(sp){
     S.settings.scoring=sp.querySelector("#setScoring").value;
     S.settings.timerSecs=Math.max(3,+sp.querySelector("#setTimer").value||15);
     S.settings.myTeam=+sp.querySelector("#setMy").value;
+    S.settings.announcer=sp.querySelector("#setAnn").checked;
+    S.settings.snark=sp.querySelector("#setSnark").checked;
     sp.querySelectorAll(".set-name").forEach(el=>S.settings.teams[+el.dataset.i].name=el.value.trim()||("Team "+(+el.dataset.i+1)));
     sp.querySelectorAll(".set-owner").forEach(el=>S.settings.teams[+el.dataset.i].owner=el.value.trim());
     save(); renderOp();
@@ -630,8 +911,10 @@ function renderRecap(rb){
   const team=i=>S.settings.teams[i]?S.settings.teams[i].name:"?";
   const posSpend={};
   S.picks.forEach(pk=>{ posSpend[pk.pos]=(posSpend[pk.pos]||0)+pk.price; });
+  const g=gradesData(d);
   rb.innerHTML=`<h3>Recap</h3>
-   <div style="font-size:13px"><b>Biggest steals</b>${steals.map(p=>`<div class="bestrow">${esc(p.player)} — ${esc(team(p.ti))}<span class="val" style="color:var(--good)">−$${p.etr-p.price}</span></div>`).join("")||"<div class='muted'>—</div>"}
+   <div style="font-size:13px"><b>Report card</b>${g.map((r,i)=>`<div class="bestrow">${i+1}. ${esc(r.name)}<span style="color:${r.surplus>=0?"var(--good)":"var(--bad)"};font-size:12px">${r.surplus>=0?"+":"−"}$${Math.abs(Math.round(r.surplus))}</span><span class="val">${r.grade}</span></div>`).join("")}
+   <b style="display:block;margin-top:8px">Biggest steals</b>${steals.map(p=>`<div class="bestrow">${esc(p.player)} — ${esc(team(p.ti))}<span class="val" style="color:var(--good)">−$${p.etr-p.price}</span></div>`).join("")||"<div class='muted'>—</div>"}
    <b style="display:block;margin-top:8px">Biggest overpays</b>${overs.filter(p=>p.price>p.etr).map(p=>`<div class="bestrow">${esc(p.player)} — ${esc(team(p.ti))}<span class="val" style="color:var(--bad)">+$${p.price-p.etr}</span></div>`).join("")||"<div class='muted'>—</div>"}
    <b style="display:block;margin-top:8px">$ by position</b>${Object.entries(posSpend).sort((a,b)=>b[1]-a[1]).map(([p,v])=>`<div class="bestrow">${p}<span class="val">${fmt$(v)}</span></div>`).join("")}
    <b style="display:block;margin-top:8px">Yahoo read-off (by team)</b>
