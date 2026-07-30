@@ -111,6 +111,17 @@ tr.taken td{opacity:.38;text-decoration:line-through}
 .bmx-c .p{font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bmx-c .m{font-size:9.5px;color:var(--ink-2)}
 .bmx-s{font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;position:sticky;left:0;background:var(--surface-1);z-index:2;border-radius:3px}
+/* full-page live mode: 95% board */
+body.livefull .bd-h1, body.livefull .bd-intro, body.livefull .controls, body.livefull #sheetCard, body.livefull footer, body.livefull .sitenav{display:none}
+body.livefull #liveCard{border:none;background:none;padding:0;margin:0}
+body.livefull .wrap{padding:10px 14px 10px}
+body.livefull .bmx{height:calc(100vh - 108px);min-height:430px}
+.lc-head{display:flex;align-items:center;gap:10px;margin:2px 0 8px}
+.lc-head h2{font-size:15px;margin:0}
+.lc-head .muted{margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lc-exit{background:none;border:1px solid var(--border);border-radius:8px;color:var(--ink-2);padding:4px 12px;cursor:pointer;font-size:12.5px;white-space:nowrap}
+.lc-exit:hover{color:var(--accent);border-color:var(--accent)}
+@media(max-width:760px){ body.livefull .bmx{height:calc(100vh - 118px);min-height:380px} }
 tr.mine td{background:color-mix(in srgb, var(--good) 9%, transparent)}
 tr.mine td:first-child{box-shadow:inset 3px 0 0 var(--good)}
 .rowbtn{border:1px solid var(--border);background:none;color:var(--ink-3);border-radius:6px;padding:1px 8px;cursor:pointer;font-size:11.5px;margin-left:4px}
@@ -201,8 +212,8 @@ th.sortable:hover{color:var(--ink-1)}
 
 </script>
 
-  <h1 style="font-size:26px;font-weight:750;margin:6px 0 2px">Draft Board</h1>
-  <p class="muted" style="margin:0 0 14px">All 459 players from ETR's auction values (12-team, $200 budget), updated <b>Jul 29, 2026 2:23 PM EDT</b> — ranked by half-PPR value. Silva ranks and buy/fade/zero-RB tags overlaid from the 7/28 digest (~ = tier-order estimate). Progress saves in your browser. CSV import columns: <code>rank,name,pos,team,full,half,sf,silva,tags,note</code>.</p>
+  <h1 class="bd-h1" style="font-size:26px;font-weight:750;margin:6px 0 2px">Draft Board</h1>
+  <p class="muted bd-intro" style="margin:0 0 14px">All 459 players from ETR's auction values (12-team, $200 budget), updated <b>Jul 29, 2026 2:23 PM EDT</b> — ranked by half-PPR value. Silva ranks and buy/fade/zero-RB tags overlaid from the 7/28 digest (~ = tier-order estimate). Progress saves in your browser. CSV import columns: <code>rank,name,pos,team,full,half,sf,silva,tags,note</code>.</p>
 
   <div class="controls">
     <input type="text" id="search" placeholder="Search player or team…">
@@ -229,8 +240,11 @@ th.sortable:hover{color:var(--ink-1)}
     <div style="overflow-x:auto"><table id="board"></table></div>
   </div>
   <div class="card" id="liveCard" style="display:none">
-    <h2 style="font-size:15px;margin:4px 0 2px">The draft so far</h2>
-    <p class="muted" style="margin:0 0 10px" id="liveNote"></p>
+    <div class="lc-head">
+      <h2>The draft so far</h2>
+      <p class="muted" id="liveNote"></p>
+      <button class="lc-exit" id="liveExit">✕ Cheat sheet</button>
+    </div>
     <div id="liveTicker"></div>
     <div class="bmx-wrap" id="liveGrid"></div>
   </div>
@@ -272,6 +286,11 @@ document.getElementById("hideDrafted").addEventListener("click", e=>{
 });
 document.getElementById("liveView").addEventListener("click", e=>{
   state.live=!state.live; e.target.classList.toggle("on", state.live); render();
+});
+document.getElementById("liveExit").addEventListener("click", ()=>{
+  state.live=false;
+  document.getElementById("liveView").classList.remove("on");
+  render();
 });
 addEventListener("storage", e=>{ if(e.key===LS_AUCTION||e.key===LS_MARKS) render(); });
 document.getElementById("tagOnly").addEventListener("click", e=>{
@@ -383,6 +402,7 @@ function renderLive(A){
   mx.className="bmx";
   mx.style.gridTemplateColumns=`26px repeat(${A.teams.length}, minmax(92px,1fr))`;
   mx.style.minWidth=(26+A.teams.length*95)+"px";
+  mx.style.gridTemplateRows=`auto repeat(${totalRows}, 1fr)`;
   // header row
   mx.appendChild(document.createElement("div"));
   A.teams.forEach((t,ti)=>{
@@ -414,7 +434,9 @@ function renderLive(A){
 function escT(s){const d=document.createElement("span");d.textContent=s==null?"":String(s);return d.innerHTML;}
 function render(){
   const A=auctionData();
-  if(state.live && A.teams.length){ renderLive(A); }
+  const full=state.live && A.teams.length>0;
+  document.body.classList.toggle("livefull", full);
+  if(full){ renderLive(A); }
   else {
     document.getElementById("sheetCard").style.display="";
     document.getElementById("liveCard").style.display="none";
