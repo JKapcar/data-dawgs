@@ -209,6 +209,17 @@ body.proj .wrap{max-width:none;padding:10px 18px}
 .scline b{font-variant-numeric:tabular-nums;color:var(--ink-1)}
 .scline.zero b{color:var(--bad)}
 .sctop{margin-top:8px;font-size:13.5px;color:var(--ink-3)}
+/* ---------- operator v2: minimalist ---------- */
+.ophead{display:flex;gap:14px;align-items:center;margin:6px 0 10px;flex-wrap:wrap}
+.ophead .oph-title{font-size:18px;font-weight:750}
+.ophead .oph-clock{font-size:14px;color:var(--ink-2)}
+.ophead .oph-clock b{color:var(--accent)}
+.ophead .oph-infl{font-size:13px;color:var(--ink-3);margin-left:auto}
+.drawer{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.helpline{font-size:12.5px;color:var(--ink-3);margin:-6px 0 12px;text-align:center}
+.helpline b{color:var(--ink-2)}
+.acwrap{flex:1;min-width:240px}
+#playerIn{width:100%;font-size:17px}
 /* ---------- mobile ---------- */
 @media (max-width:760px){
   .grid14{grid-template-columns:repeat(2,1fr)}
@@ -796,28 +807,39 @@ function renderOp(){
   const team=i=>S.settings.teams[i]?S.settings.teams[i].name:"?";
   const ls=lastSale();
   app.innerHTML=`
-  <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap">
-    <h1 style="font-size:24px;font-weight:750;margin:4px 0">Auction Room</h1>
-    <span class="muted">Operator console — open the <a href="auction.html?view=board" target="_blank">projector view</a> in a second window (it syncs live).</span>
+  <div class="ophead">
+    <span class="oph-title">Auction Room</span>
+    <span class="oph-clock">ON THE CLOCK: <b>${esc(team(S.nomIdx))}</b></span>
+    <span class="oph-infl">Inflation <b style="color:${d.infl>1.05?"var(--bad)":d.infl<0.95?"var(--good)":"var(--ink-2)"}">${d.infl.toFixed(2)}×</b> · ${fmt$(d.remDollars)} chasing ${fmt$(Math.round(d.remValue))}</span>
+    <a class="btn" href="auction.html?view=board" target="_blank" title="Open this in a second window and drag it to the projector">🖥 Projector view</a>
+    <button class="btn" id="menuBtn">⚙ Menu</button>
   </div>
-  <div class="ctlrow">
-    <button class="btn" id="setupBtn">Setup</button>
-    <button class="btn" id="timerBtn">Start ${S.settings.timerSecs}s timer</button>
-    <button class="btn" id="nomBtn">Advance nomination →</button>
-    <label style="font-size:13px;color:var(--ink-2)">Projector shows:
-      <select id="lensSel" class="numin" style="padding:4px 8px">
-        <option value="board" ${S.projView==="board"?"selected":""}>Draft Board</option>
-        <option value="rosters" ${S.projView==="rosters"?"selected":""}>Rosters</option>
-        <option value="scarcity" ${S.projView==="scarcity"?"selected":""}>What's Left</option>
-        <option value="grades" ${S.projView==="grades"?"selected":""}>Report Card</option>
-      </select></label>
-    <span style="font-size:13.5px;color:var(--ink-2)">On the clock: <b style="color:var(--accent)">${esc(team(S.nomIdx))}</b></span>
-    <span class="counts" style="margin-left:auto">Inflation <b style="color:${d.infl>1.05?"var(--bad)":d.infl<0.95?"var(--good)":"var(--ink-1)"}">${d.infl.toFixed(2)}×</b> · League ${fmt$(d.remDollars)} vs value ${fmt$(Math.round(d.remValue))}</span>
+  <div id="menuDrawer" class="drawer" style="display:${window.__drawerOpen?"":"none"}">
+    <div class="ctlrow" style="margin:0 0 8px">
+      <button class="btn" id="setupBtn">Setup</button>
+      <button class="btn" id="timerBtn">Start ${S.settings.timerSecs}s timer</button>
+      <button class="btn" id="nomBtn">Advance nomination →</button>
+      <label style="font-size:13px;color:var(--ink-2)">Projector shows:
+        <select id="lensSel" class="numin" style="padding:4px 8px">
+          <option value="board" ${S.projView==="board"?"selected":""}>Draft Board</option>
+          <option value="rosters" ${S.projView==="rosters"?"selected":""}>Rosters</option>
+          <option value="scarcity" ${S.projView==="scarcity"?"selected":""}>What's Left</option>
+          <option value="grades" ${S.projView==="grades"?"selected":""}>Report Card</option>
+        </select></label>
+      <button class="btn" id="recapBtn">Recap</button>
+      <button class="btn" id="csvBtn">Export CSV</button>
+      <button class="btn" id="resetBtn">${armReset?"Click again to RESET ALL":"Reset draft"}</button>
+    </div>
+    <div id="setupPanel" class="setup" style="display:none;margin:0 0 8px"></div>
+    <div class="sidebox" style="margin:0 0 8px">
+      <h3>Nomination queue (only you see this)</h3>
+      <div id="qList">${(S.queue||[]).map((n,i)=>`<div class="qrow"><span class="qn" data-n="${esc(n)}" title="click to load into entry">${i+1}. ${esc(n)}</span><button class="qx" data-i="${i}">✕</button></div>`).join("")||'<div class="muted" style="font-size:12px">Plan your nominations — price-enforce early, targets late.</div>'}</div>
+      <div class="qadd"><input type="text" id="qIn" placeholder="Add player…"><button class="btn" id="qAdd">+</button></div>
+    </div>
+    <div class="sidebox" id="recapBox" style="display:none;margin:0"></div>
   </div>
-  <div id="setupPanel" class="setup" style="display:none"></div>
-  ${teamCardsHTML(d,false)}
   <div id="blockSlot">${blockBarHTML(d)}</div>
-  <div class="entrybar">
+  <div class="entrybar" style="margin-top:4px">
     <div class="acwrap">
       <label>Player (select = on the block)</label>
       <input type="text" id="playerIn" placeholder="Type a name…" autocomplete="off">
@@ -832,7 +854,9 @@ function renderOp(){
     <button id="micBtn" title="Voice (V): 'nominate {player}' or '{player} {team} {price}'">🎤</button>
     <span id="entryHint" style="font-size:12px;color:var(--ink-3);align-self:center"></span>
   </div>
-  <div class="oplayout">
+  <div class="helpline"><b>Type a name → Enter</b> = on the block · <b>price → Enter</b> = SOLD · <b>Esc</b> = cancel · <b>🎤</b> say "nominate Bijan" or "Bijan, Dirty Mike, 65"</div>
+  ${teamCardsHTML(d,false)}
+  <div class="oplayout" style="margin-top:14px">
     <div class="card" style="margin:0">
       <h2 style="font-size:15px">Pick log</h2>
       <div style="overflow-x:auto;max-height:420px;overflow-y:auto"><table class="log" id="logT"></table></div>
@@ -843,23 +867,9 @@ function renderOp(){
         ${d.best.map(p=>`<div class="bestrow"><b>${esc(p.name)}</b><span style="color:var(--ink-3);font-size:11.5px">${p.pos} ${p.team}${p.tags&&p.tags.length?" · "+p.tags.join("/"):""}</span><span class="val">${fmt$(val(p))}</span><span class="adj">adj ${fmt$(Math.round(val(p)*d.infl))}</span></div>`).join("")}
       </div>
       <div class="sidebox">
-        <h3>Nomination queue (only you see this)</h3>
-        <div id="qList">${(S.queue||[]).map((n,i)=>`<div class="qrow"><span class="qn" data-n="${esc(n)}" title="click to load into entry">${i+1}. ${esc(n)}</span><button class="qx" data-i="${i}">✕</button></div>`).join("")||'<div class="muted" style="font-size:12px">Plan your nominations — price-enforce early, targets late.</div>'}</div>
-        <div class="qadd"><input type="text" id="qIn" placeholder="Add player…"><button class="btn" id="qAdd">+</button></div>
-      </div>
-      <div class="sidebox">
         <h3>What's left</h3>
         ${scarcityData(d).map(s=>`<div class="scline" style="font-size:12.5px"><span><b style="color:var(--ink-1)">${s.pos==="DST"?"D":s.pos}</b> $20+/$10+/$5+</span><b>${s.t20} / ${s.t10} / ${s.t5}</b></div>`).join("")}
       </div>
-      <div class="sidebox">
-        <h3>Tools</h3>
-        <div class="ctlrow" style="margin:0">
-          <button class="btn" id="recapBtn">Recap</button>
-          <button class="btn" id="csvBtn">Export CSV</button>
-          <button class="btn" id="resetBtn">${armReset?"Click again to RESET ALL":"Reset draft"}</button>
-        </div>
-      </div>
-      <div class="sidebox" id="recapBox" style="display:none"></div>
     </div>
   </div>`;
   renderLog(d);
@@ -1002,6 +1012,10 @@ function bindOp(d){
     S.projView=e.target.value; save();
   });
   document.getElementById("micBtn").addEventListener("click",toggleMic);
+  document.getElementById("menuBtn").addEventListener("click",()=>{
+    window.__drawerOpen=!window.__drawerOpen;
+    document.getElementById("menuDrawer").style.display=window.__drawerOpen?"":"none";
+  });
   bindBlockClear();
   if(!window.__vkeyInstalled){
     window.__vkeyInstalled=true;
