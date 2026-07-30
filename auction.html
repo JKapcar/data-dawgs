@@ -497,17 +497,43 @@ function parseSpeech(raw){
   return {player:best, playerScore:bestScore, rawPlayer:q, ti, price, keeper};
 }
 // ---------- on the block ----------
-function setBlock(p){
+let blockTTSTimer=null;
+function announceBlock(p){
+  if(!S.settings.announcer || IS_PROJ) return;
+  const d=derive();
+  const adj=Math.round(val(p)*d.infl);
+  speak(`On the block: ${p.name}. E T R says ${val(p)} dollars. Adjusted, ${adj}.`);
+}
+function updateBlockUI(){
+  // partial update: never rebuild the operator UI mid-entry
+  const slot=document.getElementById("blockSlot");
+  if(slot){ slot.innerHTML=blockBarHTML(derive()); bindBlockClear(); }
+}
+function bindBlockClear(){
+  const bc=document.getElementById("blockClear");
+  if(bc) bc.addEventListener("click",clearBlock);
+}
+function setBlock(p, opts){
   if(!p) return;
+  opts=opts||{};
+  clearTimeout(blockTTSTimer);
   S.onBlock={player:p.name,pos:p.pos,nfl:p.team,etr:val(p),ts:Date.now()};
-  save(); render();
-  if(S.settings.announcer && !IS_PROJ){
-    const d=derive();
-    const adj=Math.round(val(p)*d.infl);
-    speak(`On the block: ${p.name}. E T R says ${val(p)} dollars. Adjusted, ${adj}.`);
+  save();
+  if(IS_PROJ){ render(); } else { updateBlockUI(); }
+  if(opts.announceNow) announceBlock(p);
+  else if(opts.announceDelayed){
+    // announce only if still on the block with no price typed after a beat
+    blockTTSTimer=setTimeout(()=>{
+      const priceIn=document.getElementById("priceIn");
+      if(S.onBlock && S.onBlock.player===p.name && (!priceIn || !priceIn.value)) announceBlock(p);
+    }, 1800);
   }
 }
-function clearBlock(){ S.onBlock=null; save(); render(); }
+function clearBlock(){
+  clearTimeout(blockTTSTimer);
+  S.onBlock=null; save();
+  if(IS_PROJ){ render(); } else { updateBlockUI(); }
+}
 function blockBarHTML(d){
   if(!S.onBlock) return "";
   const b=S.onBlock;
@@ -565,8 +591,10 @@ function applySpeech(heard){
   // NOMINATION: explicit keyword, or a player with no team and no price
   const nomWord=/nominat|on the block|up next|next up/.test(heard.toLowerCase());
   if(r.player && (nomWord || (r.ti===null && r.price===null && !r.keeper))){
-    setBlock(r.player);
+    setBlock(r.player,{announceNow:true});
+    pin.value=r.player.name; posIn.value=r.player.pos; window.__chosen=r.player;
     hint.textContent=`🎤 "${heard}" → 🔨 ${r.player.name} is ON THE BLOCK`;
+    priceIn.focus();
     return;
   }
   // SALE: fall back to the on-block player if no player heard
@@ -750,20 +778,19 @@ function renderOp(){
   </div>
   <div id="setupPanel" class="setup" style="display:none"></div>
   ${teamCardsHTML(d,false)}
-  ${blockBarHTML(d)}
+  <div id="blockSlot">${blockBarHTML(d)}</div>
   <div class="entrybar">
     <div class="acwrap">
-      <label>Player</label>
+      <label>Player (select = on the block)</label>
       <input type="text" id="playerIn" placeholder="Type a name…" autocomplete="off">
       <div class="aclist" id="acList" style="display:none"></div>
     </div>
-    <div><label>Pos (custom)</label>
+    <div id="posWrap" style="display:none"><label>Pos (custom)</label>
       <select id="posIn"><option>RB</option><option>WR</option><option>QB</option><option>TE</option><option>DST</option></select></div>
     <div><label>Team</label>
       <select id="teamIn">${S.settings.teams.map((t,i)=>`<option value="${i}" ${i===S.nomIdx?"selected":""}>${esc(t.name)}</option>`).join("")}</select></div>
     <div><label>Price $</label><input type="number" id="priceIn" min="0" step="1" value=""></div>
     <label class="klabel"><input type="checkbox" id="keeperIn"> Keeper</label>
-    <button class="btn" id="blockBtn" title="Put entered player on the block" style="padding:9px 12px">🔨 Block</button>
     <button class="bigbtn" id="addBtn">SOLD</button>
     <button id="micBtn" title="Voice (V): 'nominate {player}' or '{player} {team} {price}'">🎤</button>
     <span id="entryHint" style="font-size:12px;color:var(--ink-3);align-self:center"></span>
@@ -863,12 +890,38 @@ function bindOp(d){
   function pick(i){
     const p=acMatches[i]; if(!p) return;
     chosen=p; window.__chosen=p; pin.value=p.name; posIn.value=p.pos;
+    document.getElementById("posWrap").style.display="none";
     list.style.display="none"; acSel=-1;
-    hint.textContent = d.soldSet.has(p.name) ? "⚠ ALREADY SOLD — check the log" :
-      `ETR ${fmt$(val(p))} · adj ${fmt$(Math.round(val(p)*d.infl))}${p.note?" · "+p.note:""}`;
+    if(d.soldSet.has(p.name)){
+      hint.textContent="⚠ ALREADY SOLD — check the log";
+    } else {
+      hint.textContent=`ETR ${fmt$(val(p))} · adj ${fmt$(Math.round(val(p)*d.infl))}${p.note?" · "+p.note:""}`;
+      // selecting a player IS the nomination (unless entering keepers)
+      if(!keeperIn.checked) setBlock(p,{announceDelayed:true});
+    }
     priceIn.focus();
   }
-  pin.addEventListener("input",()=>{chosen=null; window.__chosen=null; hint.textContent=""; showAC();});
+  pin.addEventListener("input",()=>{
+    chosen=null; window.__chosen=null; hint.textContent=""; showAC();
+    // custom-player pos picker only when nothing matches
+    const q=pin.value.trim();
+    document.getElementById("posWrap").style.display = (q.length>=2 && !byName[q] && acMatches.length===0) ? "" : "none";
+  });
+  if(!window.__escInstalled){
+    window.__escInstalled=true;
+    document.addEventListener("keydown",e=>{
+      if(e.key!=="Escape") return;
+      const list=document.getElementById("acList");
+      if(list && list.style.display!=="none") return; // first Esc just closes the list
+      const pin2=document.getElementById("playerIn"), price2=document.getElementById("priceIn");
+      if(S.onBlock || (pin2&&pin2.value)){
+        if(pin2) pin2.value=""; if(price2) price2.value="";
+        window.__chosen=null; clearBlock();
+        const hint2=document.getElementById("entryHint"); if(hint2) hint2.textContent="";
+        if(pin2) pin2.focus();
+      }
+    });
+  }
   pin.addEventListener("keydown",e=>{
     if(list.style.display!=="none"){
       if(e.key==="ArrowDown"){acSel=Math.min(acSel+1,acMatches.length-1);showAC();e.preventDefault();}
@@ -893,6 +946,7 @@ function bindOp(d){
       S.nomIdx=(S.nomIdx+1)%S.settings.teams.length;
     }
     S.timerEnd=0;
+    clearTimeout(blockTTSTimer);
     // pop from nomination queue if this player was queued
     const qi=S.queue.findIndex(n=>n.toLowerCase()===pk.player.toLowerCase());
     if(qi>=0) S.queue.splice(qi,1);
@@ -911,14 +965,7 @@ function bindOp(d){
     S.projView=e.target.value; save();
   });
   document.getElementById("micBtn").addEventListener("click",toggleMic);
-  document.getElementById("blockBtn").addEventListener("click",()=>{
-    const name=document.getElementById("playerIn").value.trim();
-    const p=window.__chosen||byName[name];
-    if(p) setBlock(p);
-    else { const hint=document.getElementById("entryHint"); hint.textContent="Pick a player from the list first, then Block."; }
-  });
-  const bc=document.getElementById("blockClear");
-  if(bc) bc.addEventListener("click",clearBlock);
+  bindBlockClear();
   if(!window.__vkeyInstalled){
     window.__vkeyInstalled=true;
     document.addEventListener("keydown",e=>{
