@@ -790,7 +790,6 @@ function renderOp(){
     <div><label>Team</label>
       <select id="teamIn">${S.settings.teams.map((t,i)=>`<option value="${i}" ${i===S.nomIdx?"selected":""}>${esc(t.name)}</option>`).join("")}</select></div>
     <div><label>Price $</label><input type="number" id="priceIn" min="0" step="1" value=""></div>
-    <label class="klabel"><input type="checkbox" id="keeperIn"> Keeper</label>
     <button class="bigbtn" id="addBtn">SOLD</button>
     <button id="micBtn" title="Voice (V): 'nominate {player}' or '{player} {team} {price}'">🎤</button>
     <span id="entryHint" style="font-size:12px;color:var(--ink-3);align-self:center"></span>
@@ -896,8 +895,8 @@ function bindOp(d){
       hint.textContent="⚠ ALREADY SOLD — check the log";
     } else {
       hint.textContent=`ETR ${fmt$(val(p))} · adj ${fmt$(Math.round(val(p)*d.infl))}${p.note?" · "+p.note:""}`;
-      // selecting a player IS the nomination (unless entering keepers)
-      if(!keeperIn.checked) setBlock(p,{announceDelayed:true});
+      // selecting a player IS the nomination
+      setBlock(p,{announceDelayed:true});
     }
     priceIn.focus();
   }
@@ -940,7 +939,7 @@ function bindOp(d){
     const price=Math.max(0,Math.round(+priceIn.value||0));
     const ti=+teamIn.value;
     const pk={player:p?p.name:name, pos:p?p.pos:posIn.value, ti, price,
-              keeper:keeperIn.checked, etr:p?val(p):0, nfl:p?p.team:"", ts:Date.now()};
+              keeper:!!(keeperIn&&keeperIn.checked), etr:p?val(p):0, nfl:p?p.team:"", ts:Date.now()};
     S.picks.push(pk);
     if(!pk.keeper){
       S.nomIdx=(S.nomIdx+1)%S.settings.teams.length;
