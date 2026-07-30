@@ -95,16 +95,22 @@ footer a{color:var(--accent)}
 <style>
 tr.taken td{opacity:.38;text-decoration:line-through}
 .soldchip{font-size:10.5px;font-weight:700;color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent);border-radius:5px;padding:1px 6px;margin-left:6px;text-decoration:none;display:inline-block}
-/* live draft view */
-.lgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
-.lcard{background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:9px 11px}
-.lcard h4{margin:0 0 4px;font-size:14px;display:flex;justify-content:space-between;gap:6px}
-.lcard h4 .lm{color:var(--accent);font-variant-numeric:tabular-nums}
-.lrow{display:flex;gap:6px;font-size:12px;padding:1.5px 0;align-items:baseline}
-.lrow .lpos{font-size:9.5px;font-weight:700;width:24px;flex:none;text-align:center;border-radius:4px}
-.lrow .lp{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lrow .ld{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--ink-2)}
-.lcard .lempty{color:var(--ink-3);font-size:11.5px}
+/* live draft view: picks ticker + results matrix */
+.btick{overflow:hidden;background:var(--surface-1);border:1px solid var(--accent);border-radius:10px;margin-bottom:10px;white-space:nowrap}
+.btick .bt-track{display:inline-block;white-space:nowrap;padding:7px 0;animation:btscroll var(--btdur,30s) linear infinite}
+.btick .bt-i{display:inline-flex;gap:7px;align-items:baseline;margin:0 20px;font-size:13.5px}
+.btick .bt-i .n{font-weight:700}
+.btick .bt-i .d{color:var(--accent);font-weight:800;font-variant-numeric:tabular-nums}
+.btick .bt-i .t{color:var(--ink-3);font-size:11.5px}
+@keyframes btscroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.bmx-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.bmx{display:grid;gap:3px;font-variant-numeric:tabular-nums}
+.bmx-h{font-size:11.5px;font-weight:800;text-align:center;padding:5px 3px;background:var(--page);border-radius:6px 6px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bmx-h .m{color:var(--accent);font-size:10.5px;display:block}
+.bmx-c{font-size:10.5px;line-height:1.15;padding:3px 4px;background:var(--page);border-radius:3px;min-height:30px;overflow:hidden;display:flex;flex-direction:column;justify-content:center}
+.bmx-c .p{font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bmx-c .m{font-size:9.5px;color:var(--ink-2)}
+.bmx-s{font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;position:sticky;left:0;background:var(--surface-1);z-index:2;border-radius:3px}
 tr.mine td{background:color-mix(in srgb, var(--good) 9%, transparent)}
 tr.mine td:first-child{box-shadow:inset 3px 0 0 var(--good)}
 .rowbtn{border:1px solid var(--border);background:none;color:var(--ink-3);border-radius:6px;padding:1px 8px;cursor:pointer;font-size:11.5px;margin-left:4px}
@@ -225,7 +231,8 @@ th.sortable:hover{color:var(--ink-1)}
   <div class="card" id="liveCard" style="display:none">
     <h2 style="font-size:15px;margin:4px 0 2px">The draft so far</h2>
     <p class="muted" style="margin:0 0 10px" id="liveNote"></p>
-    <div class="lgrid" id="liveGrid"></div>
+    <div id="liveTicker"></div>
+    <div class="bmx-wrap" id="liveGrid"></div>
   </div>
 
   <footer>
@@ -334,38 +341,77 @@ function sortVal(r,k){
   if(k==="rank"||k==="half"||k==="full"||k==="sf") return +r[k]||0;
   return String(r[k]||"");
 }
+function shortName(n){
+  if(n.length<=15 || n.includes(" DST")) return n;
+  const parts=n.split(" ");
+  if(parts.length<2) return n;
+  return parts[0][0]+". "+parts.slice(1).join(" ");
+}
 function renderLive(A){
   document.getElementById("sheetCard").style.display="none";
   const lc=document.getElementById("liveCard"); lc.style.display="";
   document.getElementById("liveNote").textContent =
-    A.picks.length ? `${A.picks.length} picks in · updates live from the Auction Operator on this device` :
+    A.picks.length ? `${A.picks.length} picks in · newest first in the ticker · updates live from the Auction Operator on this device` :
     "No picks yet — this fills in as the Auction Operator logs sales (on this device).";
+  // ---- recent picks ticker ----
+  const tk=document.getElementById("liveTicker"); tk.textContent="";
+  const recent=A.picks.slice(-12).reverse();
+  if(recent.length){
+    const items=recent.map(pk=>{
+      const tn=(A.teams[pk.ti]||{}).name||"?";
+      const idx=A.picks.indexOf(pk)+1;
+      return `<span class="bt-i"><span class="t">#${idx}</span><span class="n">${escT(shortName(pk.player))}</span><span class="t">${escT(pk.pos==="DST"?"D":pk.pos)}</span><span class="d">$${pk.price}</span><span class="t">${escT(tn)}</span></span>`;
+    }).join("");
+    const dur=Math.max(18, recent.length*3);
+    tk.innerHTML=`<div class="btick"><div class="bt-track" style="--btdur:${dur}s">${items}${items}</div></div>`;
+  }
+  // ---- results matrix: teams × position bands ----
   const grid=document.getElementById("liveGrid"); grid.textContent="";
-  A.teams.forEach((t,ti)=>{
-    const ps=A.picks.filter(p=>p.ti===ti);
-    const spent=ps.reduce((a,p)=>a+p.price,0);
-    const card=document.createElement("div"); card.className="lcard";
-    const h=document.createElement("h4");
-    const n=document.createElement("span"); n.textContent=t.name;
-    const m=document.createElement("span"); m.className="lm"; m.textContent="$"+(A.budget-spent);
-    h.appendChild(n); h.appendChild(m); card.appendChild(h);
-    if(!ps.length){
-      const e=document.createElement("div"); e.className="lempty"; e.textContent="—"; card.appendChild(e);
-    }
-    ps.slice().sort((a,b)=>b.price-a.price).forEach(pk=>{
-      const row=document.createElement("div"); row.className="lrow";
-      const pos=document.createElement("span"); pos.className="lpos";
-      const P=pk.pos==="DST"?"D":pk.pos;
-      pos.style.background=`color-mix(in srgb, ${POS_COLOR[pk.pos]||"#8a8378"} 38%, var(--surface-1))`;
-      pos.textContent=P;
-      const nm=document.createElement("span"); nm.className="lp"; nm.textContent=pk.player;
-      const d=document.createElement("span"); d.className="ld"; d.textContent="$"+pk.price;
-      row.appendChild(pos); row.appendChild(nm); row.appendChild(d);
-      card.appendChild(row);
-    });
-    grid.appendChild(card);
+  const POSN=["QB","RB","WR","TE","DST"];
+  const MIN={QB:1,RB:2,WR:2,TE:1,DST:1};
+  const normP=p=>p==="D"?"DST":p;
+  const byPos=A.teams.map((t,ti)=>{
+    const g={QB:[],RB:[],WR:[],TE:[],DST:[]};
+    A.picks.filter(p=>p.ti===ti).forEach(p=>{ (g[normP(p.pos)]||g.DST).push(p); });
+    for(const k in g) g[k].sort((a,b)=>b.price-a.price);
+    return g;
   });
+  const bandRows={};
+  POSN.forEach(P=>{ bandRows[P]=Math.max(MIN[P], ...byPos.map(g=>g[P].length)); });
+  const totalRows=Object.values(bandRows).reduce((a,b)=>a+b,0);
+  const mx=document.createElement("div");
+  mx.className="bmx";
+  mx.style.gridTemplateColumns=`26px repeat(${A.teams.length}, minmax(92px,1fr))`;
+  mx.style.minWidth=(26+A.teams.length*95)+"px";
+  // header row
+  mx.appendChild(document.createElement("div"));
+  A.teams.forEach((t,ti)=>{
+    const spent=A.picks.filter(p=>p.ti===ti).reduce((a,p)=>a+p.price,0);
+    const h=document.createElement("div"); h.className="bmx-h";
+    h.innerHTML=`${escT(t.name)}<span class="m">$${A.budget-spent}</span>`;
+    mx.appendChild(h);
+  });
+  POSN.forEach(P=>{
+    for(let r=0;r<bandRows[P];r++){
+      const s=document.createElement("div"); s.className="bmx-s";
+      if(r===0){ s.textContent=P==="DST"?"D":P; s.style.color=POS_COLOR[P];
+        s.style.borderTop=`2px solid ${POS_COLOR[P]}55`; }
+      mx.appendChild(s);
+      A.teams.forEach((t,ti)=>{
+        const pk=byPos[ti][P][r];
+        const c=document.createElement("div"); c.className="bmx-c";
+        if(r===0) c.style.borderTop=`2px solid ${POS_COLOR[P]}55`;
+        if(pk){
+          c.style.background=`color-mix(in srgb, ${POS_COLOR[P]} 30%, var(--page))`;
+          c.innerHTML=`<span class="p">${escT(shortName(pk.player))}</span><span class="m">$${pk.price}</span>`;
+        }
+        mx.appendChild(c);
+      });
+    }
+  });
+  grid.appendChild(mx);
 }
+function escT(s){const d=document.createElement("span");d.textContent=s==null?"":String(s);return d.innerHTML;}
 function render(){
   const A=auctionData();
   if(state.live && A.teams.length){ renderLive(A); }
