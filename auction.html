@@ -209,6 +209,44 @@ body.proj .wrap{max-width:none;padding:10px 18px}
 .scline b{font-variant-numeric:tabular-nums;color:var(--ink-1)}
 .scline.zero b{color:var(--bad)}
 .sctop{margin-top:8px;font-size:13.5px;color:var(--ink-3)}
+/* ---------- mobile ---------- */
+@media (max-width:760px){
+  .grid14{grid-template-columns:repeat(2,1fr)}
+  .tcard .money{font-size:22px}
+  .entrybar{flex-direction:column;align-items:stretch}
+  .entrybar .acwrap,#playerIn{width:100%}
+  .aclist{width:100%;max-height:260px}
+  #priceIn{width:100%}
+  .bigbtn,#micBtn{width:100%;padding:12px;font-size:17px}
+  .oplayout{grid-template-columns:1fr}
+  .ctlrow{gap:6px}
+  .ctlrow .counts{margin-left:0;width:100%}
+  /* projector lenses on small screens */
+  body.proj{overflow:auto;font-size:15px}
+  body.proj .wrap{padding:8px 10px}
+  .projtop{flex-wrap:wrap;gap:8px}
+  .projtop .ttl{font-size:16px}
+  .onclock-banner{font-size:14px;padding:5px 12px;margin-left:0;width:100%;text-align:center}
+  .legend{display:none}
+  .matrix{height:auto !important;overflow-x:auto;grid-auto-rows:minmax(30px,auto) !important;
+    grid-template-columns:24px repeat(14,minmax(86px,1fr)) !important;min-width:1250px}
+  .mxwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .projbottom,.projfoot{flex-direction:column;grid-template-columns:1fr;gap:8px}
+  .pf-stat{text-align:left}
+  .rgrid{grid-template-columns:repeat(2,1fr);height:auto;overflow:visible}
+  .scgrid{grid-template-columns:repeat(2,1fr)}
+  .sccard h4{font-size:16px}
+  .scline{font-size:13.5px}
+  .sctop{font-size:12px}
+  .gtable{font-size:13px}
+  .gtable td,.gtable th{padding:4px 8px}
+  .gletter{font-size:18px}
+  .blockbar{flex-wrap:wrap;gap:6px}
+  .blockbar .bb-p{font-size:18px}
+  body.proj .blockbar .bb-p{font-size:20px}
+  .blockbar .bb-v{margin-left:0;font-size:14px}
+  .timerbig{font-size:34px}
+}
 /* on the block */
 .blockbar{display:flex;align-items:baseline;gap:14px;background:color-mix(in srgb,var(--accent) 12%,var(--surface-1));border:2px solid var(--accent);border-radius:12px;padding:8px 18px;margin-bottom:8px;animation:blockPulse 1.6s infinite alternate}
 @keyframes blockPulse{from{box-shadow:0 0 0 0 rgba(255,106,2,.35)}to{box-shadow:0 0 18px 4px rgba(255,106,2,.25)}}
@@ -688,7 +726,7 @@ function renderProj(){
   const view=S.projView||"board";
   let content="", foot="";
   if(view==="board"){
-    content=mx;
+    content=`<div class="mxwrap">${mx}</div>`;
     foot=`<div class="projfoot">
      <div class="pf-sale">${ls? `
         <span class="p">${esc(ls.player)} <span style="color:var(--accent)">${fmt$(ls.price)}</span></span>
