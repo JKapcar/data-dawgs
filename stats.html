@@ -16,12 +16,37 @@
 }
 :root[data-theme="light"]{
   color-scheme: light;
-  --surface-1:#fffdf9; --page:#f8f4ee;
-  --ink-1:#171310; --ink-2:#544e45; --ink-3:#8a8378;
-  --grid:#e6dfd4; --axis:#c8c0b2; --border:rgba(23,19,16,0.12);
-  --accent:#c2410c; --accent-ink:#ffffff;
-  --good:#006300; --bad:#d03b3b; --warn:#b97a00;
+  --surface-1:#fffdf7; --page:#f2ecdf;
+  --ink-1:#2b1c0e; --ink-2:#5b4a37; --ink-3:#8c7b66;
+  --grid:#e3dac6; --axis:#c4b8a2; --border:rgba(49,29,0,0.15);
+  --accent:#d13a00; --accent-ink:#ffffff;
+  --good:#006300; --bad:#c73030; --warn:#a86e00;
+  --navbar:#2a1a06; --navink:#ecdfc9; --navink2:#b7a488;
 }
+/* light theme: paper texture (Browns-style: warm paper field, seal-brown nav) */
+:root[data-theme="light"] body{
+  background-color:var(--page);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23p)' opacity='0.07'/%3E%3C/svg%3E"),
+    radial-gradient(1200px 500px at 50% -100px, rgba(209,58,0,0.06), transparent 70%);
+  background-size:220px 220px, auto;
+  overflow-x:clip;
+}
+:root[data-theme="light"] .card{box-shadow:0 1px 3px rgba(49,29,0,0.07)}
+:root[data-theme="light"] .sitenav{
+  background:var(--navbar);
+  border-bottom:3px solid var(--accent);
+  margin:0 calc(50% - 50vw) 24px;
+  padding:12px calc(50vw - 50% + 24px);
+}
+:root[data-theme="light"] .brand{color:var(--navink)}
+:root[data-theme="light"] .brand .tag{color:var(--navink2)}
+:root[data-theme="light"] .sitenav .links a,
+:root[data-theme="light"] .grpbtn{color:var(--navink)}
+:root[data-theme="light"] .sitenav .links a:hover,
+:root[data-theme="light"] .grpbtn:hover{background:rgba(255,106,2,0.16);color:#fff}
+:root[data-theme="light"] .sitenav .links a.on,
+:root[data-theme="light"] .grpbtn.on{color:#ff8a4d;box-shadow:inset 0 -2px 0 #ff8a4d}
+:root[data-theme="light"] .theme-btn{border-color:rgba(236,223,201,0.35);color:var(--navink2)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--page);color:var(--ink-1);
   font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:15px;line-height:1.55}
