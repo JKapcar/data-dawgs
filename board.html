@@ -150,6 +150,20 @@ body.livefull .bmx{height:calc(100vh - 108px);min-height:430px}
 .lc-head .muted{margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lc-exit{background:none;border:1px solid var(--border);border-radius:8px;color:var(--ink-2);padding:4px 12px;cursor:pointer;font-size:12.5px;white-space:nowrap}
 .lc-exit:hover{color:var(--accent);border-color:var(--accent)}
+/* SUPER BOWL SUPER BROWNS celebration */
+#cbo{position:fixed;inset:0;z-index:999;pointer-events:none;overflow:hidden;background:rgba(5,3,2,.8)}
+#cbo .shot{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0}
+#cbo .shot.show{opacity:1;animation:cbzoom .5s linear}
+@keyframes cbzoom{from{transform:scale(1.07)}to{transform:scale(1)}}
+#cbo canvas{position:absolute;inset:0;width:100%;height:100%}
+#cbo .flash{position:absolute;inset:0;background:#fff;opacity:0;transition:opacity .12s}
+#cbo .cb-t{position:absolute;left:0;right:0;top:22%;text-align:center;font-weight:900;color:#fff;
+  text-shadow:0 4px 30px #000,0 0 70px #ff3c00;font-size:clamp(34px,9vw,110px);letter-spacing:.04em;
+  animation:cbpulse .55s ease-in-out infinite alternate}
+#cbo .cb-t2{top:auto;bottom:28%;color:#ff6a02}
+@keyframes cbpulse{from{transform:scale(1)}to{transform:scale(1.08)}}
+#cbo .cb-p{position:absolute;left:0;right:0;bottom:15%;text-align:center;color:#ffe0c2;
+  font-size:clamp(15px,3vw,28px);font-weight:700;text-shadow:0 2px 12px #000}
 @media(max-width:760px){ body.livefull .bmx{height:calc(100vh - 118px);min-height:380px} }
 tr.mine td{background:color-mix(in srgb, var(--good) 9%, transparent)}
 tr.mine td:first-child{box-shadow:inset 3px 0 0 var(--good)}
@@ -275,7 +289,7 @@ th.sortable:hover{color:var(--ink-1)}
     <div class="lc-head">
       <h2>The draft so far</h2>
       <p class="muted" id="liveNote"></p>
-      <button class="lc-exit" id="liveExit">✕ Cheat sheet</button>
+      <button class="lc-exit" id="vizToggle">⇄ Data Viz</button>
     </div>
     <div id="liveTicker"></div>
     <div class="bmx-wrap" id="liveGrid"></div>
@@ -323,11 +337,8 @@ document.getElementById("hideDrafted").addEventListener("click", e=>{
 document.getElementById("liveView").addEventListener("click", e=>{
   state.live=!state.live; e.target.classList.toggle("on", state.live); render();
 });
-document.getElementById("liveExit").addEventListener("click", ()=>{
-  state.live=false;
-  document.getElementById("liveView").classList.remove("on");
-  try{ history.replaceState(null,"",location.pathname); }catch(e){}
-  render();
+document.getElementById("vizToggle").addEventListener("click", ()=>{
+  location.href="dataviz.html";
 });
 addEventListener("storage", e=>{ if(e.key===LS_AUCTION||e.key===LS_MARKS) render(); });
 document.getElementById("tagOnly").addEventListener("click", e=>{
@@ -468,6 +479,78 @@ function renderLive(A){
   });
   grid.appendChild(mx);
 }
+// ---- SUPER BOWL SUPER BROWNS: fireworks + rapid shots of Cleveland ----
+const CLE_SHOTS=[
+ "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Cleveland%2C_Ohio_Skyline_at_Sunrise_at_Edgewater_Park_%288669269938%29.jpg/960px-Cleveland%2C_Ohio_Skyline_at_Sunrise_at_Edgewater_Park_%288669269938%29.jpg",
+ "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Cleveland_Browns_Stadium_2012.jpg/960px-Cleveland_Browns_Stadium_2012.jpg",
+ "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Terminal_Tower_from_Cuyahoga_River_Cropped.jpg/960px-Terminal_Tower_from_Cuyahoga_River_Cropped.jpg",
+ "https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Cleveland_Sign_at_Edgewater_Park_%2827624106630%29.jpg/960px-Cleveland_Sign_at_Edgewater_Park_%2827624106630%29.jpg"
+];
+let cleImgs=null;
+function armCle(){ if(cleImgs) return; cleImgs=CLE_SHOTS.map(u=>{const im=new Image(); im.src=u; return im;}); }
+let NAMEIDX=null;
+function nflOfPick(pk){
+  if(pk.nfl) return pk.nfl;
+  if(!NAMEIDX){ NAMEIDX={}; board.forEach(r=>{ NAMEIDX[r.name.toLowerCase()]=r.team; }); }
+  return NAMEIDX[(pk.player||"").toLowerCase()]||"";
+}
+let cbSeen=null;
+function checkBrownsLive(A){
+  const last=A.picks[A.picks.length-1];
+  const cur=last?(last.ts||A.picks.length):0;
+  if(cbSeen===null){ cbSeen=cur; return; }   // don't replay on page load
+  if(last && cur>cbSeen){
+    cbSeen=cur;
+    if(nflOfPick(last)==="CLE") celebrateBrowns(last);
+  }
+}
+function celebrateBrowns(pk){
+  armCle();
+  const old=document.getElementById("cbo"); if(old) old.remove();
+  const o=document.createElement("div"); o.id="cbo";
+  o.innerHTML=CLE_SHOTS.map((u,i)=>`<div class="shot" style="background-image:url('${u}')"></div>`).join("")
+    +`<div class="flash"></div><canvas></canvas>
+    <div class="cb-t">SUPER BOWL!</div>
+    <div class="cb-t cb-t2">SUPER BROWNS!</div>
+    <div class="cb-p">${escT(pk.player)} · $${pk.price} · THE LAND HAS SPOKEN</div>`;
+  document.body.appendChild(o);
+  // rapid Cleveland cuts with camera flash
+  const shots=[...o.querySelectorAll(".shot")], flash=o.querySelector(".flash");
+  let si=0;
+  const cutIv=setInterval(()=>{
+    shots.forEach(s=>s.classList.remove("show"));
+    shots[si++%shots.length].classList.add("show");
+    flash.style.opacity=.85;
+    setTimeout(()=>{ flash.style.opacity=0; },70);
+  },450);
+  // fireworks
+  const cv=o.querySelector("canvas"), ctx=cv.getContext("2d");
+  cv.width=innerWidth; cv.height=innerHeight;
+  const COLS=["#ff3c00","#ffffff","#ff8a33","#ffd9b8","#e8720c"];
+  let parts=[];
+  function burst(){
+    const bx=innerWidth*(0.15+Math.random()*0.7), by=innerHeight*(0.10+Math.random()*0.45);
+    const n=60+(Math.random()*40|0), c=COLS[(Math.random()*COLS.length)|0];
+    for(let i=0;i<n;i++){
+      const a=Math.PI*2*i/n+Math.random()*.2, sp=2.5+Math.random()*5;
+      parts.push({x:bx,y:by,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,
+        life:55+Math.random()*30,c:Math.random()<.25?"#fff":c,s:2+Math.random()*2.5});
+    }
+  }
+  burst(); burst();
+  const bIv=setInterval(burst,650);
+  const anim=setInterval(()=>{
+    ctx.clearRect(0,0,cv.width,cv.height);
+    parts.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy; p.vy+=.045; p.vx*=.985; p.vy*=.99; p.life--;
+      ctx.globalAlpha=Math.max(0,Math.min(1,p.life/40));
+      ctx.fillStyle=p.c; ctx.fillRect(p.x,p.y,p.s,p.s);
+    });
+    ctx.globalAlpha=1;
+    parts=parts.filter(p=>p.life>0);
+  },16);
+  setTimeout(()=>{ clearInterval(cutIv); clearInterval(bIv); clearInterval(anim); o.remove(); },9000);
+}
 // Assign a team's picks to roster slots (mirror of the auction pages).
 function assignSlots(picks){
   const norm=p=>p==="D"?"DST":p;
@@ -500,6 +583,7 @@ function applyLiveTheme(){
 function render(){
   applyLiveTheme();
   const A=auctionData();
+  if(state.live){ armCle(); checkBrownsLive(A); }
   const full=state.live && A.teams.length>0;
   document.body.classList.toggle("livefull", full);
   if(full){ renderLive(A); }
