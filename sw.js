@@ -1,7 +1,7 @@
 // Data Dawgs service worker — draft-night insurance.
 // HTML is network-first (so deploys land immediately) with a cache fallback,
 // so a dead venue wifi can't take the draft down mid-auction.
-const VERSION = "e8e8799533";
+const VERSION = "c85f31d6c3";
 const CACHE = "dd-" + VERSION;
 
 // the pages that must survive a network drop (stats.html is 2MB — cached on first visit instead)
@@ -51,6 +51,8 @@ self.addEventListener("fetch", e=>{
   // leave YouTube alone entirely — the player API and its media segments are versioned and
   // range-requested; a cache-first SW in front of them breaks playback in confusing ways.
   if(/(^|\.)(youtube\.com|youtube-nocookie\.com|ytimg\.com|googlevideo\.com)$/.test(url.hostname)) return;
+  // video is range-requested; a cached full-body response breaks seeking — let it through
+  if(url.pathname.endsWith(".mp4") || url.pathname.endsWith(".webm")) return;
 
   if(isHTML(req)){
     // network-first, 4s budget, fall back to whatever we cached
