@@ -455,6 +455,8 @@ function load(){
 }
 const norm=p=>p==="D"?"DST":p;
 const fmt$=n=>(n<0?"−$":"$")+Math.abs(Math.round(n));
+// signed form — never render "+−$9" by gluing a + onto a negative
+const sgn$=n=>(Math.round(n)<0?"−$":"+$")+Math.abs(Math.round(n));
 const esc=s=>{const d=document.createElement("span");d.textContent=s==null?"":String(s);return d.innerHTML;};
 const byName={}; POOL.forEach(p=>byName[p.name]=p);
 function etrOf(pk){
@@ -761,7 +763,7 @@ function render(){
       <div class="td2">value − price, per team</div></div>
     <div class="tile2"><div class="tl2">Biggest steal</div>
       <div class="tv2" style="font-size:16px">${esc(shortName(steals[0].player))}</div>
-      <div class="td2 pos">+${fmt$(steals[0].delta)} · ${esc(steals[0].team)}</div></div>
+      <div class="td2 ${steals[0].delta>=0?"pos":"neg"}">${sgn$(steals[0].delta)} · ${esc(steals[0].team)}</div></div>
     <div class="tile2"><div class="tl2">Biggest reach</div>
       <div class="tv2" style="font-size:16px">${esc(shortName(reaches[0].player))}</div>
       <div class="td2 neg">${fmt$(reaches[0].delta)} · ${esc(reaches[0].team)}</div></div>
@@ -794,7 +796,7 @@ function render(){
       <div class="srlist">${steals.slice(0,10).map(p=>`<div class="sr">
         <span class="p">${esc(shortName(p.player))}</span>
         <span class="t">${esc(p.team)} · ${fmt$(p.price)}</span>
-        <span class="d pos">+${fmt$(p.delta)}</span></div>`).join("")}</div>
+        <span class="d ${p.delta>=0?"pos":"neg"}">${sgn$(p.delta)}</span></div>`).join("")}</div>
     </div>
     <div class="vcard">
       <h2>Ten biggest overpays</h2>
@@ -884,7 +886,7 @@ function teamCard(t, myTi){
     </div>`).join("")}</div>
     <div class="tc-note">
       <div><span class="lbl">Best buy:</span> <b>${esc(shortName(t.best.player))}</b>
-        ${fmt$(t.best.price)} <span class="pos">(+${fmt$(t.best.delta)})</span></div>
+        ${fmt$(t.best.price)} <span class="${t.best.delta>=0?"pos":"neg"}">(${sgn$(t.best.delta)})</span></div>
       <div><span class="lbl">Worst buy:</span> <b>${esc(shortName(t.worst.player))}</b>
         ${fmt$(t.worst.price)} <span class="${t.worst.delta>=0?"pos":"neg"}">(${t.worst.delta>=0?"+":""}${fmt$(t.worst.delta)})</span></div>
       ${t.n>=6?`<div><span class="lbl">Shape:</span> top 3 players took <b>${Math.round(t.top3Share*100)}%</b> of spend
