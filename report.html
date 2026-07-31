@@ -201,6 +201,21 @@ footer a{color:var(--accent)}
 .legend2{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-2);margin:6px 0 2px}
 .legend2 .sw{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 svg text{font-family:inherit}
+/* radar small multiples */
+.radars{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:12px}
+.rcard{background:var(--page);border:1px solid var(--border);border-radius:11px;padding:9px 10px 7px}
+.rcard.me{border-color:var(--accent)}
+.rc-h{display:flex;align-items:center;gap:7px;margin-bottom:2px}
+.rc-h .rn{font-weight:700;font-size:12.5px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rc-h .gr{min-width:0;font-size:11.5px;padding:1px 6px}
+.rbox svg{display:block}
+.rfoot{font-size:11px;color:var(--ink-3);text-align:center;margin-top:-2px}
+.rfoot b{color:var(--ink-1);font-variant-numeric:tabular-nums}
+/* league-average benchmark row */
+.rc tr.avgrow td{border-top:2px solid var(--grid);color:var(--ink-2);font-style:italic;background:color-mix(in srgb,var(--ink-3) 6%,transparent)}
+.rc tr.avgrow td:first-child{font-style:normal}
+.vsavg{font-size:11px;color:var(--ink-3)}
+.vsavg b{font-variant-numeric:tabular-nums}
 .empty-state{text-align:center;padding:46px 20px;color:var(--ink-3)}
 .empty-state b{display:block;font-size:17px;color:var(--ink-1);margin-bottom:6px}
 </style>
@@ -555,12 +570,10 @@ function posStrengthChart(container, T){
   const rowH=narrow?22:24, m={t:6,r:56,b:22,l:narrow?78:104};
   const H=m.t+m.b+T.length*rowH;
   const groups=["QB","RB","WR","TE","DST"];
-  const vals=T.map(t=>{
-    const g={QB:0,RB:0,WR:0,TE:0,DST:0};
-    t.slots.forEach(s=>{ if(s.pk) g[norm(s.pk.pos)]+=etrOf(s.pk); });
-    return {name:t.name, g, total:Object.values(g).reduce((a,b)=>a+b,0)};
-  });
+  const vals=T.map(t=>({name:t.name, g:posValues(t), total:t.startValue}))
+              .sort((a,b)=>b.total-a.total);           // strongest lineup at the top
   const max=Math.max(1,...vals.map(v=>v.total));
+  const avgTotal=vals.length?vals.reduce((a,v)=>a+v.total,0)/vals.length:0;
   const iw=W-m.l-m.r;
   const svg=svgEl("svg",{width:"100%",height:H,viewBox:`0 0 ${W} ${H}`});
   const ink3=css("--ink-3"), ink2=css("--ink-2"), grid=css("--grid");
@@ -588,6 +601,64 @@ function posStrengthChart(container, T){
     });
     const tv=svgEl("text",{x:m.l+v.total/max*iw+7,y:y+h/2+4,"font-size":11.5,fill:ink2,"font-weight":700});
     tv.textContent="$"+Math.round(v.total); svg.appendChild(tv);
+  });
+  // league-average benchmark
+  const ax=m.l+avgTotal/max*iw;
+  svg.appendChild(svgEl("line",{x1:ax,x2:ax,y1:m.t-2,y2:m.t+T.length*rowH,
+    stroke:css("--ink-1"),"stroke-width":1.5,"stroke-dasharray":"4 3","stroke-opacity":.55}));
+  const al=svgEl("text",{x:ax,y:H-6,"text-anchor":"middle","font-size":10,fill:css("--ink-2"),"font-weight":650});
+  al.textContent="avg $"+Math.round(avgTotal); svg.appendChild(al);
+  container.appendChild(svg);
+}
+
+// starting-lineup ETR value split by position (flex players count at their real position)
+function posValues(t){
+  const g={QB:0,RB:0,WR:0,TE:0,DST:0};
+  t.slots.forEach(s=>{ if(s.pk) g[norm(s.pk.pos)]+=etrOf(s.pk); });
+  return g;
+}
+
+// ---------- radar: one team vs the league average, five positional axes ----------
+function radarChart(container, g, avg, axMax){
+  const AX=["QB","RB","WR","TE","DST"];
+  const S=176, cx=S/2, cy=S/2+4, R=56;
+  const svg=svgEl("svg",{width:"100%",viewBox:`0 0 ${S} ${S}`});
+  const grid=css("--grid"), ink3=css("--ink-3"), ink2=css("--ink-2");
+  const pt=(i,f)=>{
+    const a=-Math.PI/2 + i*2*Math.PI/AX.length;
+    return [cx+Math.cos(a)*R*f, cy+Math.sin(a)*R*f];
+  };
+  [0.25,0.5,0.75,1].forEach(f=>{
+    const d=AX.map((_,i)=>pt(i,f).join(",")).join(" ");
+    svg.appendChild(svgEl("polygon",{points:d,fill:"none",stroke:grid,"stroke-width":1}));
+  });
+  AX.forEach((_,i)=>{
+    const [x,y]=pt(i,1);
+    svg.appendChild(svgEl("line",{x1:cx,y1:cy,x2:x,y2:y,stroke:grid,"stroke-width":1}));
+  });
+  const poly=(vals,attrs)=>{
+    const d=AX.map((k,i)=>pt(i, Math.min(1,(vals[k]||0)/(axMax[k]||1))).join(",")).join(" ");
+    return svgEl("polygon",Object.assign({points:d},attrs));
+  };
+  // league average first, so the team sits on top of it
+  svg.appendChild(poly(avg,{fill:css("--ink-3"),"fill-opacity":.14,
+    stroke:css("--ink-2"),"stroke-width":1.2,"stroke-dasharray":"4 3","stroke-opacity":.8}));
+  svg.appendChild(poly(g,{fill:css("--accent"),"fill-opacity":.28,
+    stroke:css("--accent"),"stroke-width":2,"stroke-linejoin":"round"}));
+  AX.forEach((k,i)=>{
+    const [x,y]=pt(i,1);
+    const v=g[k]||0, a=avg[k]||0;
+    const dot=svgEl("circle",{cx:pt(i,Math.min(1,v/(axMax[k]||1)))[0],cy:pt(i,Math.min(1,v/(axMax[k]||1)))[1],
+      r:2.6,fill:css("--accent")});
+    dot.addEventListener("pointermove",e=>showTT(e.clientX,e.clientY,k==="DST"?"D/ST":k,
+      [["This team","$"+Math.round(v)],["League avg","$"+Math.round(a)],
+       ["vs avg",(v-a>=0?"+":"−")+"$"+Math.abs(Math.round(v-a))]]));
+    dot.addEventListener("pointerleave",hideTT);
+    svg.appendChild(dot);
+    const lx=cx+Math.cos(-Math.PI/2+i*2*Math.PI/AX.length)*(R+15);
+    const ly=cy+Math.sin(-Math.PI/2+i*2*Math.PI/AX.length)*(R+15)+3.5;
+    const tl=svgEl("text",{x:lx,y:ly,"text-anchor":"middle","font-size":10,fill:v>=a?ink2:ink3,"font-weight":700});
+    tl.textContent=k==="DST"?"D":k; svg.appendChild(tl);
   });
   container.appendChild(svg);
 }
@@ -656,6 +727,11 @@ function render(){
   const reaches=[...steals].reverse();
   const avgSurplus=drafted.reduce((a,t)=>a+t.surplus,0)/drafted.length;
   const myTi=S.settings.myTeam;
+  LEAGUE_AVG={
+    spent:      drafted.reduce((a,t)=>a+t.spent,0)/drafted.length,
+    startValue: drafted.reduce((a,t)=>a+t.startValue,0)/drafted.length,
+    surplus:    avgSurplus
+  };
 
   let html=`
   <div class="tiles2">
@@ -714,6 +790,12 @@ function render(){
   </div>
 
   <div class="vcard">
+    <h2>Shape of every roster</h2>
+    <p class="note">Each team's starting-lineup value at the five positions, scaled so the outer ring is the league's best at that position. The dashed grey shape is the <b>league average</b> — anything of yours poking outside it is a strength. Hover a point for the numbers.</p>
+    <div class="radars" id="radars"></div>
+  </div>
+
+  <div class="vcard">
     <h2>Team by team</h2>
     <p class="note">Starting lineup, positional spend, and each team's single best and worst buy.</p>
     <div class="tcards">${T.map(t=>teamCard(t,myTi)).join("")}</div>
@@ -729,8 +811,29 @@ function render(){
   buildTable(T, myTi);
   posStrengthChart(document.getElementById("chartPos"), T);
   priceValueChart(document.getElementById("chartPV"), T);
+  buildRadars(T, myTi);
 }
 
+function buildRadars(T, myTi){
+  const host=document.getElementById("radars"); if(!host) return;
+  const AX=["QB","RB","WR","TE","DST"];
+  const vals=T.map(t=>({t, g:posValues(t)}));
+  const axMax={}, avg={};
+  AX.forEach(k=>{
+    axMax[k]=Math.max(1,...vals.map(v=>v.g[k]));
+    avg[k]=vals.length?vals.reduce((a,v)=>a+v.g[k],0)/vals.length:0;
+  });
+  host.innerHTML=vals.map(v=>`<div class="rcard ${v.t.ti===myTi?"me":""}">
+    <div class="rc-h"><span class="rn">${esc(v.t.name)}</span>
+      <span class="gr ${gClass(v.t.gRoster)}" title="Roster grade">${v.t.gRoster}</span></div>
+    <div class="rbox"></div>
+    <div class="rfoot">Starters <b>${fmt$(v.t.startValue)}</b></div>
+  </div>`).join("");
+  const boxes=host.querySelectorAll(".rbox");
+  vals.forEach((v,i)=>radarChart(boxes[i], v.g, avg, axMax));
+}
+
+let LEAGUE_AVG={spent:0,startValue:0,surplus:0};
 function teamCard(t, myTi){
   if(!t.n) return `<div class="tcard"><div class="tc-h"><span class="nm">${esc(t.name)}</span>
     <span class="gr gD">–</span></div><div class="tc-sub">No picks yet</div></div>`;
@@ -746,6 +849,11 @@ function teamCard(t, myTi){
       <span>Spent <b>${fmt$(t.spent)}</b></span>
       <span>Surplus <b class="${t.surplus>=0?"pos":"neg"}">${t.surplus>=0?"+":""}${fmt$(t.surplus)}</b></span>
       ${t.left!==0?`<span>Left <b>${fmt$(t.left)}</b></span>`:""}
+    </div>
+    <div class="vsavg">vs league avg —
+      spend <b class="${t.spent>=LEAGUE_AVG.spent?"pos":"neg"}">${t.spent>=LEAGUE_AVG.spent?"+":"−"}${fmt$(Math.abs(t.spent-LEAGUE_AVG.spent))}</b> ·
+      starters <b class="${t.startValue>=LEAGUE_AVG.startValue?"pos":"neg"}">${t.startValue>=LEAGUE_AVG.startValue?"+":"−"}${fmt$(Math.abs(t.startValue-LEAGUE_AVG.startValue))}</b> ·
+      surplus <b class="${t.surplus>=LEAGUE_AVG.surplus?"pos":"neg"}">${t.surplus>=LEAGUE_AVG.surplus?"+":"−"}${fmt$(Math.abs(t.surplus-LEAGUE_AVG.surplus))}</b>
     </div>
     <div class="psbar">${POS_ORDER.map(p=>{
       const w=t.posSpend[p]/psTotal*100;
@@ -792,10 +900,25 @@ function buildTable(T, myTi){
     if(typeof x==="string") return sortDir*x.localeCompare(y);
     return sortDir*(x-y);
   });
+  // league-average benchmark row, pinned to the bottom regardless of sort
+  const d=T.filter(t=>t.n>0), n=Math.max(1,d.length);
+  const A={spent:0,value:0,surplus:0,startValue:0,n:0,holes:0,left:0};
+  d.forEach(t=>{ for(const k in A) A[k]+=t[k]; });
+  for(const k in A) A[k]/=n;
+  const avgCell=c=>{
+    if(c.k==="rank") return "";
+    if(c.k==="name") return "League average";
+    if(["grade","gValue","gRoster"].includes(c.k)) return "—";
+    if(c.k==="n") return A.n.toFixed(1)+"/"+S.settings.spots;
+    if(c.k==="holes") return A.holes.toFixed(1);
+    if(c.k==="surplus") return (A.surplus>=0?"+":"")+fmt$(A.surplus);
+    return fmt$(A[c.k]!==undefined?A[c.k]:0);
+  };
   el.innerHTML=`<thead><tr>${COLS.map(c=>
     `<th class="${c.tl?"tl":""}" data-k="${c.k}">${c.t}${sortKey===c.k?(sortDir<0?" ▾":" ▴"):""}</th>`).join("")}</tr></thead>
     <tbody>${rows.map(t=>`<tr class="${t.ti===myTi?"me":""}">${COLS.map(c=>
-      `<td class="${c.tl?"tl":""}">${c.f(t)}</td>`).join("")}</tr>`).join("")}</tbody>`;
+      `<td class="${c.tl?"tl":""}">${c.f(t)}</td>`).join("")}</tr>`).join("")}
+      <tr class="avgrow">${COLS.map(c=>`<td class="${c.tl?"tl":""}">${avgCell(c)}</td>`).join("")}</tr></tbody>`;
   el.querySelectorAll("th").forEach(th=>th.addEventListener("click",()=>{
     const k=th.dataset.k;
     if(sortKey===k) sortDir=-sortDir;
