@@ -705,6 +705,13 @@ function priceValueChart(container, T){
     transform:`rotate(-90 12 ${m.t+ih/2})`});
   yt.textContent="price paid →"; svg.appendChild(yt);
   container.appendChild(svg);
+  // knock the dashed line out from behind the label so it doesn't read as a strikethrough.
+  // must happen AFTER the svg is in the document — getBBox is 0 on a detached node.
+  try{
+    const bb=dl.getBBox();
+    if(bb.width) svg.insertBefore(svgEl("rect",{x:bb.x-4,y:bb.y-2,width:bb.width+8,
+      height:bb.height+4,fill:css("--surface-1"),rx:3}), dl);
+  }catch(e){}
 }
 
 // ---------- render ----------

@@ -172,6 +172,11 @@ footer a{color:var(--accent)}
 .tooltip .tt-row b{color:var(--ink-1);font-variant-numeric:tabular-nums}
 svg text{font-family:inherit}
 .rostab td{padding:4px 8px}
+/* filters embedded in a chart header */
+.vsel{background:var(--surface-1);color:var(--ink-1);border:1px solid var(--border);border-radius:8px;
+  padding:6px 10px;font-size:13.5px;font-weight:500;font-family:inherit;max-width:46vw}
+.vfilters{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap}
+.vfilters .fl{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3);font-weight:650}
 </style>
 </head>
 <body>
@@ -510,6 +515,64 @@ function hBarChart(container, rows, opts){
   container.appendChild(svg);
 }
 
+function niceTicks(lo,hi,n){
+  const span=hi-lo||1, raw=span/n, mag=Math.pow(10,Math.floor(Math.log10(raw)));
+  const step=[1,2,2.5,5,10].map(m=>m*mag).find(s=>s>=raw)||mag*10;
+  const out=[]; for(let v=Math.ceil(lo/step)*step; v<=hi+1e-9; v+=step) out.push(+v.toFixed(6));
+  return out;
+}
+
+// ---------- every pick: price paid vs ETR value ----------
+// picks: [{player, team, pos, price, v}] — already filtered by the two selects,
+// so the axes rescale to whatever slice is showing (that's the point of filtering).
+function priceValueChart(container, picks){
+  container.textContent="";
+  if(!picks.length){ container.innerHTML='<p class="note">No picks match those filters yet.</p>'; return; }
+  const W=container.clientWidth||900, narrow=W<620;
+  const H=narrow?Math.max(300,Math.round(W*0.88)):420;
+  const m=narrow?{t:12,r:14,b:40,l:44}:{t:14,r:18,b:44,l:56};
+  const iw=W-m.l-m.r, ih=H-m.t-m.b;
+  const maxV=Math.max(6,...picks.map(p=>p.v), ...picks.map(p=>p.price))*1.06;
+  const X=v=>m.l+v/maxV*iw, Y=v=>m.t+ih-v/maxV*ih;
+  const svg=svgEl("svg",{width:"100%",height:H,viewBox:`0 0 ${W} ${H}`});
+  const grid=css("--grid"), ink3=css("--ink-3"), ink2=css("--ink-2");
+  niceTicks(0,maxV,5).forEach(v=>{
+    svg.appendChild(svgEl("line",{x1:X(v),x2:X(v),y1:m.t,y2:m.t+ih,stroke:grid,"stroke-width":1}));
+    svg.appendChild(svgEl("line",{x1:m.l,x2:m.l+iw,y1:Y(v),y2:Y(v),stroke:grid,"stroke-width":1}));
+    const a=svgEl("text",{x:X(v),y:H-10,"text-anchor":"middle","font-size":10,fill:ink3}); a.textContent="$"+v; svg.appendChild(a);
+    const b=svgEl("text",{x:m.l-6,y:Y(v)+4,"text-anchor":"end","font-size":10,fill:ink3}); b.textContent="$"+v; svg.appendChild(b);
+  });
+  // fair-value diagonal
+  svg.appendChild(svgEl("line",{x1:X(0),y1:Y(0),x2:X(maxV),y2:Y(maxV),
+    stroke:css("--ink-3"),"stroke-width":1.5,"stroke-dasharray":"5 4"}));
+  const dl=svgEl("text",{x:X(maxV)-6,y:Y(maxV)+16,"text-anchor":"end","font-size":10.5,fill:ink3});
+  dl.textContent="paid = ETR value"; svg.appendChild(dl);
+  picks.forEach(p=>{
+    const P=norm(p.pos);
+    const c=svgEl("circle",{cx:X(p.v),cy:Y(p.price),r:narrow?4:5,
+      fill:POS_COLOR[P]||POS_COLOR.DST,"fill-opacity":.82,stroke:css("--surface-1"),"stroke-width":1});
+    const d=p.v-p.price;
+    c.addEventListener("pointermove",e=>showTT(e.clientX,e.clientY,p.player,
+      [["Team",p.team],["Pos",P==="DST"?"D/ST":P],["Paid","$"+p.price],["ETR value","$"+Math.round(p.v)],
+       [d>=0?"Value gained":"Overpaid by","$"+Math.abs(Math.round(d))]]));
+    c.addEventListener("pointerleave",hideTT);
+    svg.appendChild(c);
+  });
+  const xt=svgEl("text",{x:m.l+iw/2,y:H-24,"text-anchor":"middle","font-size":11,fill:ink2,"font-weight":600});
+  xt.textContent="ETR value →"; svg.appendChild(xt);
+  const yt=svgEl("text",{x:13,y:m.t+ih/2,"text-anchor":"middle","font-size":11,fill:ink2,"font-weight":600,
+    transform:`rotate(-90 13 ${m.t+ih/2})`});
+  yt.textContent="price paid →"; svg.appendChild(yt);
+  container.appendChild(svg);
+  // knock the dashed line out from behind the label so it doesn't read as a strikethrough.
+  // must happen AFTER the svg is in the document — getBBox is 0 on a detached node.
+  try{
+    const bb=dl.getBBox();
+    if(bb.width) svg.insertBefore(svgEl("rect",{x:bb.x-4,y:bb.y-2,width:bb.width+8,
+      height:bb.height+4,fill:css("--surface-1"),rx:3}), dl);
+  }catch(e){}
+}
+
 function cliffChart(container, players, sold, infl){
   container.textContent="";
   const n=players.length;
@@ -573,7 +636,7 @@ function cliffChart(container, players, sold, infl){
 }
 
 // ---------- render ----------
-let scope=-1, cliffPos="ALL";
+let scope=-1, cliffPos="ALL", pvTeam="ALL", pvPos="ALL";
 function render(){
   load();
   const d=derive();
@@ -627,6 +690,34 @@ function render(){
     <p class="note">Every ${pos==="ALL"?"player":pos==="DST"?"D/ST":pos} worth $1+, ranked by ETR value. <b style="color:${pos==="ALL"?"var(--accent)":POS_COLOR[pos]}">Colored = available</b>${pos==="ALL"?" (color = position)":""}, grey = gone. When the colored bars stop, that's the cliff.</p>
     <div id="chartCliff"></div></div>`;
 
+  // ---- every pick: paid vs value, with its own team + position filters ----
+  const pvAll=[];
+  d.T.forEach(t=>t.picks.forEach(pk=>pvAll.push({
+    player:pk.player, team:t.name, ti:t.ti, pos:norm(pk.pos), price:pk.price,
+    v: pk.etr!=null ? pk.etr : (d.byName[pk.player] ? val(d.byName[pk.player]) : 0)
+  })));
+  if(pvTeam!=="ALL" && !d.T[+pvTeam]) pvTeam="ALL";
+  const pvPicks=pvAll.filter(p=>(pvTeam==="ALL"||p.ti===+pvTeam) && (pvPos==="ALL"||p.pos===pvPos));
+  const pvSurplus=pvPicks.reduce((a,p)=>a+(p.v-p.price),0);
+  const pvUnder=pvPicks.filter(p=>p.v>p.price).length;
+  html+=`<div class="vcard" style="margin-bottom:16px">
+    <h2 style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">Every pick: paid vs value
+      <span class="vfilters">
+        <select id="pvTeamSel" class="vsel" aria-label="Filter by team">
+          <option value="ALL"${pvTeam==="ALL"?" selected":""}>All teams</option>
+          ${d.T.map(t=>`<option value="${t.ti}"${String(pvTeam)===String(t.ti)?" selected":""}>${esc(t.name)}</option>`).join("")}
+        </select>
+        <select id="pvPosSel" class="vsel" aria-label="Filter by position">
+          <option value="ALL"${pvPos==="ALL"?" selected":""}>All positions</option>
+          ${POS_ORDER.map(P=>`<option value="${P}"${pvPos===P?" selected":""}>${P==="DST"?"D/ST":P}</option>`).join("")}
+        </select>
+      </span></h2>
+    <p class="note">Dots under the dashed line were bought below ETR's price; dots above it went for a premium. Distance from the line is the surplus.
+      ${pvPicks.length?`<b>${pvPicks.length} pick${pvPicks.length===1?"":"s"}</b> shown · ${pvUnder} under the line · net ${pvSurplus>=0?"+":"−"}$${Math.abs(Math.round(pvSurplus))} of value.`:""}</p>
+    <div id="chartPV"></div>
+    <div class="legend2">${POS_ORDER.map(P=>`<span><span class="sw" style="background:${POS_COLOR[P]}"></span>${P==="DST"?"D/ST":P}</span>`).join("")}</div>
+  </div>`;
+
   if(teamMode){
     html+=`<div class="vcard"><h2>${esc(T.name)} — roster</h2>
       <div style="overflow-x:auto"><table class="rostab"><thead><tr><th class="tl">Player</th><th>Pos</th><th>$</th><th>ETR</th><th>±</th></tr></thead><tbody>
@@ -662,6 +753,11 @@ function render(){
   const cliffPlayers=POOL.filter(p=>(pos==="ALL"?p.pos!=="K":p.pos===pos) && (val(p)>=1 || d.sold[p.name])).sort((a,b)=>val(b)-val(a));
   cliffChart(document.getElementById("chartCliff"), cliffPlayers, d.sold, d.infl);
   document.getElementById("posSel").addEventListener("change",e=>{ cliffPos=e.target.value; render(); });
+
+  // paid vs value
+  priceValueChart(document.getElementById("chartPV"), pvPicks);
+  document.getElementById("pvTeamSel").addEventListener("change",e=>{ pvTeam=e.target.value; render(); });
+  document.getElementById("pvPosSel").addEventListener("change",e=>{ pvPos=e.target.value; render(); });
 }
 
 document.getElementById("scopeSel").addEventListener("change",e=>{scope=+e.target.value; render();});
