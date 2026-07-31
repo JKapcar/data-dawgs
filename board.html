@@ -227,6 +227,8 @@ tr.mine td:first-child{box-shadow:inset 3px 0 0 var(--good)}
 .rowbtn{border:1px solid var(--border);background:none;color:var(--ink-3);border-radius:6px;padding:1px 8px;cursor:pointer;font-size:11.5px;margin-left:4px}
 .rowbtn.on-taken{background:var(--ink-3);color:var(--page);border-color:transparent}
 .rowbtn.on-mine{background:var(--good);color:#fff;border-color:transparent}
+.ownchip{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);border:1px solid var(--border);border-radius:5px;padding:2px 6px}
+.ownchip.me{color:var(--good);border-color:var(--good)}
 td .note{color:var(--ink-3);font-size:12px;white-space:normal;max-width:340px}
 th.sortable{cursor:pointer;user-select:none}
 th.sortable:hover{color:var(--ink-1)}
@@ -393,6 +395,7 @@ th.sortable:hover{color:var(--ink-1)}
       ["auction.html","Auction Operator","auction","","sep"],
     ]},
     {label:"Data", items:[
+      ["master.html","Master Data","master"],
       ["strategy.html","2026 Strategy","strategy"],
       ["stats.html","NFL EPA Stats","stats"],
     ]},
@@ -545,8 +548,23 @@ Rules:
                    .sort((a,b)=>val(b)-val(a)).slice(0,8);
       L.push(P+": "+(av.map(p=>`${p.name} $${val(p)} (adj $${Math.max(1,Math.round(val(p)*infl))}${p.tags&&p.tags.length?", "+p.tags.join("/"):""})`).join("; ")||"none left worth $1+"));
     });
-    const noted=POOL.filter(p=>!sold.has(p.name)&&p.note&&val(p)>=1).sort((a,b)=>val(b)-val(a)).slice(0,12);
-    if(noted.length){ L.push(`ANALYST NOTES on available players (opinions, not facts):`); noted.forEach(p=>L.push(`- ${p.name}: ${p.note}`)); }
+    // master-data layer: tags + commentary, so Toto can say WHY a player is a target or a fade
+    const tagged=POOL.filter(p=>!sold.has(p.name) && val(p)>=1 && ((p.tags||[]).length || p.note))
+                     .sort((a,b)=>val(b)-val(a)).slice(0,16);
+    if(tagged.length){
+      L.push(`SCOUTING on available players (one analyst's opinions, not facts — tags: buy = target, fade = avoid, zrb = late-round RB plan):`);
+      tagged.forEach(p=>{
+        const tg=(p.tags||[]).length ? " ["+p.tags.join(", ")+"]" : "";
+        L.push(`- ${p.name} $${val(p)}${tg}${p.note?": "+p.note:""}`);
+      });
+    }
+    const lastPick = picks.length ? picks[picks.length-1] : null;
+    if(lastPick){
+      const lp = POOL.find(x=>x.name===lastPick.player);
+      const own=(teams[lastPick.ti]||{}).name||"?";
+      const d=(lastPick.etr||0)-lastPick.price;
+      L.push(`MOST RECENT SALE: ${lastPick.player} to ${own} for $${lastPick.price} (MV $${lastPick.etr||0}, ${d>=0?"under":"over"} by $${Math.abs(d)})${lp&&lp.note?" — scouting: "+lp.note:""}`);
+    }
     const rec=picks.slice(-6).reverse();
     if(rec.length){ L.push(`LAST ${rec.length} SALES:`); rec.forEach(p=>L.push(`- ${p.player} (${norm(p.pos)}) $${p.price} to ${(teams[p.ti]||{}).name||"?"} (MV $${p.etr||0})`)); }
     return L.join("\n");
@@ -942,6 +960,7 @@ document.getElementById("vizToggle").addEventListener("click", ()=>{
   location.href="dataviz.html";
 });
 addEventListener("storage", e=>{ if(e.key===LS_AUCTION||e.key===LS_MARKS) render(); });
+window.ddRerender = render;   // identity picker re-renders in place
 // live mirror: picks land here even when the operator is on another device
 if(window.DDSync && window.DDSync.on){
   window.DDSync.subscribe(state=>{
@@ -1216,7 +1235,12 @@ function render(){
   let rows=board.filter(r=>{
     if(state.pos!=="ALL" && r.pos!==state.pos) return false;
     if(state.q && !(r.name.toLowerCase().includes(state.q)||String(r.team).toLowerCase().includes(state.q))) return false;
-    if(state.hideTaken && (marks[r.name]==="taken" || A.sold[r.name.toLowerCase()])) return false;
+    if(state.hideTaken){
+      const pk=A.sold[r.name.toLowerCase()];
+      const meT=(window.DDMe && window.DDMe.idx(A.teams));
+      const mineNow = pk && meT!=null && pk.ti===meT;
+      if((pk && !mineNow) || (!pk && marks[r.name]==="taken")) return false;   // keep your own guys visible
+    }
     if(state.tagOnly && !(r.tags&&r.tags.length)) return false;
     return true;
   });
@@ -1248,8 +1272,16 @@ function render(){
     const tr=document.createElement("tr");
     const m=marks[r.name];
     const pk=A.sold[r.name.toLowerCase()];
-    if(m==="taken"||(pk&&m!=="mine")) tr.classList.add("taken");
-    if(m==="mine") tr.classList.add("mine");
+    // The draft is the source of truth. Manual marks are a PRE-draft planning overlay and
+    // only apply to players nobody has bought yet. Before this, a player your own team
+    // won showed up struck through as "taken" — because "mine" was a manual toggle that
+    // knew nothing about who you are.
+    const meTi = (window.DDMe && window.DDMe.idx(A.teams));
+    const soldToMe = !!pk && meTi!=null && pk.ti===meTi;
+    const isMine  = soldToMe || (!pk && m==="mine");
+    const isTaken = (!!pk && !soldToMe) || (!pk && m==="taken");
+    if(isTaken) tr.classList.add("taken");
+    if(isMine)  tr.classList.add("mine");
     const cells=[
       [String(r.rank),false,false],
       [r.name,true,false],[r.pos,false,false],[r.team,false,false],
@@ -1280,18 +1312,33 @@ function render(){
     const nd=document.createElement("div"); nd.className="note"; nd.textContent=r.note||""; tdN.appendChild(nd);
     tr.appendChild(tdN);
     const tdM=document.createElement("td");
-    const b1=document.createElement("button"); b1.className="rowbtn"+(m==="taken"?" on-taken":""); b1.textContent="Taken";
-    b1.addEventListener("click",()=>{ marks[r.name]=m==="taken"?undefined:"taken"; saveMarks(); render(); });
-    const b2=document.createElement("button"); b2.className="rowbtn"+(m==="mine"?" on-mine":""); b2.textContent="Mine";
-    b2.addEventListener("click",()=>{ marks[r.name]=m==="mine"?undefined:"mine"; saveMarks(); render(); });
-    tdM.appendChild(b1); tdM.appendChild(b2);
+    if(pk){
+      const s=document.createElement("span");
+      s.className="ownchip"+(soldToMe?" me":"");
+      s.textContent = soldToMe ? "YOURS" : "sold";
+      tdM.appendChild(s);
+    }else{
+      const b1=document.createElement("button"); b1.className="rowbtn"+(m==="taken"?" on-taken":""); b1.textContent="Taken";
+      b1.addEventListener("click",()=>{ marks[r.name]=m==="taken"?undefined:"taken"; saveMarks(); render(); });
+      const b2=document.createElement("button"); b2.className="rowbtn"+(m==="mine"?" on-mine":""); b2.textContent="Target";
+      b2.title="Pre-draft planning — once the player is actually sold this is replaced by the real owner";
+      b2.addEventListener("click",()=>{ marks[r.name]=m==="mine"?undefined:"mine"; saveMarks(); render(); });
+      tdM.appendChild(b1); tdM.appendChild(b2);
+    }
     tr.appendChild(tdM);
     tb.appendChild(tr);
   });
   el.appendChild(tb);
-  const taken=Object.values(marks).filter(v=>v==="taken").length,
-        mine=Object.values(marks).filter(v=>v==="mine").length;
-  document.getElementById("counts").textContent=`${rows.length} shown of ${board.length} · ${taken} taken · ${mine} mine`;
+  const meTiC = (window.DDMe && window.DDMe.idx(A.teams));
+  let soldN=0, mineN=0;
+  board.forEach(r=>{
+    const pk=A.sold[r.name.toLowerCase()];
+    if(pk){ soldN++; if(meTiC!=null && pk.ti===meTiC) mineN++; }
+  });
+  const planned=Object.values(marks).filter(v=>v==="mine").length;
+  document.getElementById("counts").textContent =
+    `${rows.length} shown of ${board.length} · ${soldN} drafted · ${mineN} yours` +
+    (planned?` · ${planned} targeted`:"");
 }
 render();
 </script>

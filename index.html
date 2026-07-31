@@ -327,6 +327,7 @@ footer a{color:var(--accent)}
       ["auction.html","Auction Operator","auction","","sep"],
     ]},
     {label:"Data", items:[
+      ["master.html","Master Data","master"],
       ["strategy.html","2026 Strategy","strategy"],
       ["stats.html","NFL EPA Stats","stats"],
     ]},
@@ -479,8 +480,23 @@ Rules:
                    .sort((a,b)=>val(b)-val(a)).slice(0,8);
       L.push(P+": "+(av.map(p=>`${p.name} $${val(p)} (adj $${Math.max(1,Math.round(val(p)*infl))}${p.tags&&p.tags.length?", "+p.tags.join("/"):""})`).join("; ")||"none left worth $1+"));
     });
-    const noted=POOL.filter(p=>!sold.has(p.name)&&p.note&&val(p)>=1).sort((a,b)=>val(b)-val(a)).slice(0,12);
-    if(noted.length){ L.push(`ANALYST NOTES on available players (opinions, not facts):`); noted.forEach(p=>L.push(`- ${p.name}: ${p.note}`)); }
+    // master-data layer: tags + commentary, so Toto can say WHY a player is a target or a fade
+    const tagged=POOL.filter(p=>!sold.has(p.name) && val(p)>=1 && ((p.tags||[]).length || p.note))
+                     .sort((a,b)=>val(b)-val(a)).slice(0,16);
+    if(tagged.length){
+      L.push(`SCOUTING on available players (one analyst's opinions, not facts — tags: buy = target, fade = avoid, zrb = late-round RB plan):`);
+      tagged.forEach(p=>{
+        const tg=(p.tags||[]).length ? " ["+p.tags.join(", ")+"]" : "";
+        L.push(`- ${p.name} $${val(p)}${tg}${p.note?": "+p.note:""}`);
+      });
+    }
+    const lastPick = picks.length ? picks[picks.length-1] : null;
+    if(lastPick){
+      const lp = POOL.find(x=>x.name===lastPick.player);
+      const own=(teams[lastPick.ti]||{}).name||"?";
+      const d=(lastPick.etr||0)-lastPick.price;
+      L.push(`MOST RECENT SALE: ${lastPick.player} to ${own} for $${lastPick.price} (MV $${lastPick.etr||0}, ${d>=0?"under":"over"} by $${Math.abs(d)})${lp&&lp.note?" — scouting: "+lp.note:""}`);
+    }
     const rec=picks.slice(-6).reverse();
     if(rec.length){ L.push(`LAST ${rec.length} SALES:`); rec.forEach(p=>L.push(`- ${p.player} (${norm(p.pos)}) $${p.price} to ${(teams[p.ti]||{}).name||"?"} (MV $${p.etr||0})`)); }
     return L.join("\n");
