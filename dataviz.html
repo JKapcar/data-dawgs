@@ -275,13 +275,16 @@ svg text{font-family:inherit}
 (function(){
   const page = window.DD_PAGE || document.currentScript.getAttribute('data-page') || "";
   // ---- per-page theme: each page remembers its own light/dark ----
-  const TKEY = "dd-theme-" + (page || "home");
+  // key bumped to v2 when light became the default — old saved prefs (mostly from testing)
+  // would otherwise pin existing visitors to dark forever
+  const TKEY = "dd-theme2-" + (page || "home");
+  const GKEY = "dd-theme2";
   window.DDTheme = {
     current(){
       // light is the site default; the live draft board overrides via DD_THEME_DEFAULT
       try{
         return localStorage.getItem(TKEY) || window.DD_THEME_DEFAULT
-            || localStorage.getItem("dd-theme") || "light";
+            || localStorage.getItem(GKEY) || "light";
       }catch(e){ return window.DD_THEME_DEFAULT || "light"; }
     },
     apply(){
@@ -294,7 +297,7 @@ svg text{font-family:inherit}
     },
     toggle(){
       const next = this.current() === "dark" ? "light" : "dark";
-      try{ localStorage.setItem(TKEY, next); localStorage.setItem("dd-theme", next); }catch(e){}
+      try{ localStorage.setItem(TKEY, next); localStorage.setItem(GKEY, next); }catch(e){}
       this.apply();
       if(window.onThemeChange) window.onThemeChange();
     }

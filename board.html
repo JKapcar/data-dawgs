@@ -201,7 +201,7 @@ th.sortable:hover{color:var(--ink-1)}
   <script>if(new URLSearchParams(location.search).get("view")==="live"){
     window.DD_PAGE="live"; window.DD_THEME_DEFAULT="dark";
     // flip immediately so the projector/phone never flashes the light default
-    try{ if(!localStorage.getItem("dd-theme-live")) document.documentElement.dataset.theme="dark"; }catch(e){}
+    try{ if(!localStorage.getItem("dd-theme2-live")) document.documentElement.dataset.theme="dark"; }catch(e){}
   }</script>
   <script data-page="board">
 // Shared nav + theme + live-sync client. Each page: <div id="nav"></div> then this script with data-page attr.
@@ -313,13 +313,16 @@ th.sortable:hover{color:var(--ink-1)}
 (function(){
   const page = window.DD_PAGE || document.currentScript.getAttribute('data-page') || "";
   // ---- per-page theme: each page remembers its own light/dark ----
-  const TKEY = "dd-theme-" + (page || "home");
+  // key bumped to v2 when light became the default — old saved prefs (mostly from testing)
+  // would otherwise pin existing visitors to dark forever
+  const TKEY = "dd-theme2-" + (page || "home");
+  const GKEY = "dd-theme2";
   window.DDTheme = {
     current(){
       // light is the site default; the live draft board overrides via DD_THEME_DEFAULT
       try{
         return localStorage.getItem(TKEY) || window.DD_THEME_DEFAULT
-            || localStorage.getItem("dd-theme") || "light";
+            || localStorage.getItem(GKEY) || "light";
       }catch(e){ return window.DD_THEME_DEFAULT || "light"; }
     },
     apply(){
@@ -332,7 +335,7 @@ th.sortable:hover{color:var(--ink-1)}
     },
     toggle(){
       const next = this.current() === "dark" ? "light" : "dark";
-      try{ localStorage.setItem(TKEY, next); localStorage.setItem("dd-theme", next); }catch(e){}
+      try{ localStorage.setItem(TKEY, next); localStorage.setItem(GKEY, next); }catch(e){}
       this.apply();
       if(window.onThemeChange) window.onThemeChange();
     }
