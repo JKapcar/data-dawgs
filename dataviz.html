@@ -40,8 +40,14 @@
 }
 :root[data-theme="light"] .brand{color:var(--navink)}
 :root[data-theme="light"] .brand .tag{color:var(--navink2)}
-:root[data-theme="light"] .sitenav .links a,
+/* cream nav text applies to the bar itself, NOT to the dropdown panel —
+   the panel is near-white, so cream-on-white made the items unreadable */
+:root[data-theme="light"] .sitenav .links > a,
 :root[data-theme="light"] .grpbtn{color:var(--navink)}
+:root[data-theme="light"] .grpmenu a{color:var(--ink-1);font-weight:650}
+:root[data-theme="light"] .grpmenu a:hover,
+:root[data-theme="light"] .grpmenu a.on,
+:root[data-theme="light"] .grpmenu a.hot{color:var(--accent)}
 :root[data-theme="light"] .sitenav .links a:hover,
 :root[data-theme="light"] .grpbtn:hover{background:rgba(255,106,2,0.16);color:#fff}
 :root[data-theme="light"] .sitenav .links a.on,
@@ -72,8 +78,8 @@ body{margin:0;background:var(--page);color:var(--ink-1);
 .grpmenu::before{content:"";position:absolute;top:-8px;left:0;right:0;height:8px}
 .navgrp.open .grpmenu{display:block}
 @media (hover:hover){ .navgrp:hover .grpmenu{display:block} }
-.grpmenu a{display:block;padding:8px 12px;border-radius:7px;color:var(--ink-2);text-decoration:none;font-size:14px;font-weight:550;white-space:nowrap}
-.grpmenu a:hover{background:color-mix(in srgb, var(--accent) 12%, transparent);color:var(--ink-1)}
+.grpmenu a{display:block;padding:9px 13px;border-radius:7px;color:var(--ink-1);text-decoration:none;font-size:14px;font-weight:650;white-space:nowrap}
+.grpmenu a:hover{background:color-mix(in srgb, var(--accent) 14%, transparent);color:var(--accent)}
 .grpmenu a.on{color:var(--accent)}
 .grpmenu a.hot{color:var(--accent);font-weight:750}
 .grpmenu a.hot::before{content:"●";font-size:9px;margin-right:7px;vertical-align:1px;animation:ddpulse 1.6s ease-in-out infinite}
@@ -101,10 +107,12 @@ td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--grid);white-sp
 tr:last-child td{border-bottom:none}
 /* ---- landing ---- */
 .hero{padding:34px 0 6px;text-align:center;max-width:720px;margin:0 auto}
-/* logo art is brown binary + burnt-orange wordmark; dark theme lifts it so it reads on black */
-.hero img{width:min(360px,74vw);height:auto;display:block;margin:0 auto 6px;
-  filter:brightness(1.75) saturate(1.1) drop-shadow(0 12px 46px rgba(255,106,2,0.18))}
-:root[data-theme="light"] .hero img{filter:drop-shadow(0 10px 26px rgba(49,29,0,0.14))}
+/* Two hero files, one per theme — colors baked to the exact page accent so no CSS filter is
+   needed. NO drop-shadow: at 46px blur it haloed into a visible box around the artwork. */
+.hero img{width:min(360px,74vw);height:auto;display:block;margin:0 auto 6px;filter:none}
+.hero .hero-light{display:none}
+:root[data-theme="light"] .hero .hero-dark{display:none}
+:root[data-theme="light"] .hero .hero-light{display:block}
 .hero .tagline{font-size:17px;color:var(--ink-2);margin:10px 0 8px;letter-spacing:.01em}
 /* ---- manifesto (home) ---- */
 .manifesto{max-width:660px;margin:12px auto 0}
