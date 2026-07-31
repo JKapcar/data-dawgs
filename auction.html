@@ -1128,9 +1128,15 @@ let acSel=-1, acMatches=[], armReset=false;
 // Config lives in dd-ai-v1, its OWN localStorage key — never inside S, so the API key
 // can never ride a DDSync push out to the league's phones. Transcript is session-only.
 const LS_AI="dd-ai-v1";
-const AI_DEFAULTS={url:"https://api.x.ai/v1",key:"",model:"grok-4.1-fast"};
+const AI_DEFAULTS={url:"https://api.x.ai/v1",key:"",model:"grok-4-1-fast"};
+// xAI model ids use hyphens: "grok-4.1-fast" 400s with "Model not found". Heal saved configs.
+const AI_MODEL_FIX={"grok-4.1-fast":"grok-4-1-fast","grok-4.1":"grok-4-1-fast"};
 const AI={
-  cfg(){ try{ return Object.assign({},AI_DEFAULTS,JSON.parse(localStorage.getItem(LS_AI)||"{}")); }catch(e){ return Object.assign({},AI_DEFAULTS); } },
+  cfg(){ try{
+      const c=Object.assign({},AI_DEFAULTS,JSON.parse(localStorage.getItem(LS_AI)||"{}"));
+      if(AI_MODEL_FIX[c.model]) c.model=AI_MODEL_FIX[c.model];
+      return c;
+    }catch(e){ return Object.assign({},AI_DEFAULTS); } },
   save(url,key,model){ try{ localStorage.setItem(LS_AI, JSON.stringify({
       url:(url||"").trim().replace(/\/+$/,"")||AI_DEFAULTS.url,
       key:(key||"").trim(),
@@ -1201,8 +1207,9 @@ async function aiAsk(q){
                   ...AI.hist.slice(-8)]})});
     if(!r.ok){
       const t=await r.text().catch(()=>"");
-      const hint = r.status===401||r.status===403 ? " — key rejected; re-check it in Setup"
-                 : r.status===404 ? " — model or endpoint URL wrong; check Setup"
+      const hint = /model not found/i.test(t) ? " — model name wrong; check Setup (xAI ids use hyphens, e.g. grok-4-1-fast)"
+                 : /api key/i.test(t) || r.status===401 || r.status===403 ? " — key rejected; re-check it in Setup"
+                 : r.status===404 ? " — endpoint URL wrong; check Setup"
                  : r.status===429 ? " — rate limited; wait a beat and re-ask" : "";
       throw new Error("HTTP "+r.status+hint+(t?" · "+t.slice(0,140):""));
     }
@@ -1242,7 +1249,6 @@ function ensureAIDock(){
   dv.querySelectorAll(".chip").forEach(c=>c.addEventListener("click",()=>{ if(!AI.busy) aiAsk(c.dataset.q); }));
   if(!AI.cfg().key) aiSay("sys","Paste your API key in ⚙ Menu → Setup → AI assistant (it stays on this device), then ask away.");
 }
-
 function renderOp(){
   const d=derive();
   const app=document.getElementById("app");
@@ -1253,7 +1259,7 @@ function renderOp(){
     <span class="oph-title">Auction Room</span>
     <span class="oph-clock">ON THE CLOCK: <b>${esc(team(S.nomIdx))}</b></span>
     <span class="oph-infl">Inflation <b style="color:${d.infl>1.05?"var(--bad)":d.infl<0.95?"var(--good)":"var(--ink-2)"}">${d.infl.toFixed(2)}×</b> · ${fmt$(d.remDollars)} chasing ${fmt$(Math.round(d.remValue))}</span>
-    <button class="btn" id="aiBtn">🤖 AI</button>
+    ${IS_PROJ?"":`<button class="btn" id="aiBtn">🤖 AI</button>`}
     <button class="btn" id="menuBtn">⚙ Menu</button>
   </div>
   <div id="menuDrawer" class="drawer" style="display:${window.__drawerOpen?"":"none"}">
@@ -1519,7 +1525,8 @@ function bindOp(d){
     window.__drawerOpen=!window.__drawerOpen;
     document.getElementById("menuDrawer").style.display=window.__drawerOpen?"":"none";
   });
-  document.getElementById("aiBtn").addEventListener("click",()=>{
+  const aiB=document.getElementById("aiBtn");
+  if(aiB) aiB.addEventListener("click",()=>{
     ensureAIDock();
     const dv=document.getElementById("aiDock");
     const opening = dv.style.display==="none";
