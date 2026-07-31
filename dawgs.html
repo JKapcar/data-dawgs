@@ -174,62 +174,65 @@ footer a{color:var(--accent)}
 </style>
 <style>
 .dh1{font-size:24px;font-weight:750;margin:6px 0 2px}
-.dsub{color:var(--ink-3);font-size:13.5px;margin:0 0 14px;max-width:62ch}
+.dsub{color:var(--ink-3);font-size:13.5px;margin:0 0 14px;max-width:64ch}
 
-/* The stage is always near-black regardless of theme — photos read better against it,
-   and it makes the play button the only bright thing on screen. */
-.stage{position:relative;width:100%;height:min(72vh,640px);min-height:320px;
-  background:#0d0805;border:1px solid var(--border);border-radius:14px;overflow:hidden;
+.stage{position:relative;width:100%;height:min(74vh,660px);min-height:320px;
+  background:#000;border:1px solid var(--border);border-radius:14px;overflow:hidden;
   user-select:none;-webkit-user-select:none}
-.stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
-  opacity:0;transition:opacity 1.05s ease;will-change:opacity,transform}
-.stage img.on{opacity:1}
-/* slow drift so a still photo doesn't sit dead on screen for six seconds */
-.stage img.on.kb{animation:kb var(--slide,6s) linear forwards}
-@keyframes kb{from{transform:scale(1.02) translate3d(0,0,0)}to{transform:scale(1.11) translate3d(-1.2%,-1.4%,0)}}
-.stage.paused img.on.kb{animation-play-state:paused}
+.stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0}
 
-/* vignette keeps the caption legible over a bright photo */
-.stage::after{content:"";position:absolute;inset:0;pointer-events:none;
-  background:linear-gradient(to top,rgba(0,0,0,.55) 0%,rgba(0,0,0,0) 34%,rgba(0,0,0,0) 74%,rgba(0,0,0,.35) 100%)}
+/* SPINE — the slow chronological part. Long crossfade, slow drift. */
+.sp{transition:opacity 1.1s ease}
+.sp.on{opacity:1}
+.sp.on.kb{animation:kb var(--slide,5s) linear forwards}
+@keyframes kb{from{transform:scale(1.02)}to{transform:scale(1.10)}}
+.stage.paused .sp.on.kb{animation-play-state:paused}
 
-.curtain{position:absolute;inset:0;display:grid;place-items:center;gap:14px;z-index:3;
-  background:rgba(10,6,3,.52);backdrop-filter:blur(2px);transition:opacity .5s ease}
+/* FLASH — hard cuts, no transition. A fade here would smear the whole effect into mush. */
+#flash{transition:none}
+#flash.on{opacity:1}
+
+/* FINAL — the one we hold on */
+#finalimg{transition:opacity 1.4s ease}
+#finalimg.on{opacity:1}
+
+/* short transition only — the opacity target is recomputed every frame, so a long one
+   would just lag the fade a second behind the music */
+#blackout{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;z-index:6;
+  transition:opacity .3s linear}
+
+.stage::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:2;
+  background:linear-gradient(to top,rgba(0,0,0,.5) 0%,rgba(0,0,0,0) 30%,rgba(0,0,0,0) 76%,rgba(0,0,0,.3) 100%)}
+
+.curtain{position:absolute;inset:0;display:grid;place-items:center;z-index:8;
+  background:rgba(8,5,3,.55);backdrop-filter:blur(2px);transition:opacity .55s ease}
 .curtain.gone{opacity:0;pointer-events:none}
 .curtain .inner{text-align:center;padding:0 20px}
 .playbtn{appearance:none;border:0;cursor:pointer;width:96px;height:96px;border-radius:999px;
   background:var(--accent);color:#fff;display:grid;place-items:center;
-  box-shadow:0 10px 34px rgba(0,0,0,.45);transition:transform .15s ease,box-shadow .15s ease}
-.playbtn:hover{transform:scale(1.06);box-shadow:0 14px 40px rgba(0,0,0,.55)}
+  box-shadow:0 10px 34px rgba(0,0,0,.5);transition:transform .15s ease}
+.playbtn:hover{transform:scale(1.06)}
 .playbtn:active{transform:scale(.97)}
 .playbtn svg{width:38px;height:38px;margin-left:5px;fill:#fff}
-.curtain .ct{color:#fff;font-weight:750;font-size:19px;margin-top:16px;letter-spacing:.01em}
+.curtain .ct{color:#fff;font-weight:750;font-size:19px;margin-top:16px}
 .curtain .cs{color:rgba(255,255,255,.72);font-size:13px;margin-top:5px}
 
-/* bottom strip: only visible while playing */
-.bar{position:absolute;left:0;right:0;bottom:0;z-index:4;display:flex;align-items:center;gap:12px;
+.bar{position:absolute;left:0;right:0;bottom:0;z-index:7;display:flex;align-items:center;gap:10px;
   padding:11px 14px;opacity:0;transition:opacity .35s ease}
 .stage:hover .bar,.stage.showbar .bar{opacity:1}
-.bar button{appearance:none;background:rgba(0,0,0,.42);border:1px solid rgba(255,255,255,.22);
+.bar button{appearance:none;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.22);
   color:#fff;font-family:inherit;font-size:12.5px;font-weight:650;border-radius:8px;
   padding:6px 11px;cursor:pointer;backdrop-filter:blur(3px)}
-.bar button:hover{background:rgba(0,0,0,.62)}
-.bar .count{color:rgba(255,255,255,.8);font-size:12px;font-variant-numeric:tabular-nums;margin-left:auto}
-.prog{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.16);z-index:5}
-.prog i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s linear}
+.bar button:hover{background:rgba(0,0,0,.65)}
+.bar .phase{color:rgba(255,255,255,.85);font-size:12px;margin-left:auto;
+  font-variant-numeric:tabular-nums;letter-spacing:.03em}
+.prog{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.15);z-index:7}
+.prog i{display:block;height:100%;width:0;background:var(--accent)}
 
 .credit{color:var(--ink-3);font-size:12px;margin:10px 0 0}
 .credit a{color:var(--ink-2)}
-.empty{color:rgba(255,255,255,.75);text-align:center;padding:0 24px;font-size:14px;line-height:1.6}
-
-/* the YouTube player has to be rendered to play — parking it off-screen rather than
-   display:none, which some mobile browsers treat as "not visible" and refuse to start */
 #ytwrap{position:fixed;left:-9999px;top:0;width:320px;height:180px;pointer-events:none;opacity:.01}
-@media(max-width:620px){
-  .stage{height:min(62vh,520px)}
-  .playbtn{width:84px;height:84px}
-  .bar{opacity:1}
-}
+@media(max-width:620px){ .stage{height:min(64vh,540px)} .playbtn{width:84px;height:84px} .bar{opacity:1} }
 </style>
 </head>
 <body>
@@ -868,20 +871,23 @@ Rules:
 
 </script>
   <h1 class="dh1">Rollo</h1>
-  <p class="dsub">The original Data Dawg. Hit play — the song runs, the photos follow it, and the whole thing lands on the last beat.</p>
+  <p class="dsub">Nine years, in order. It runs slow — then near the end everything that didn't
+    make the cut goes past at once, and it stops on the last one.</p>
 
   <div class="stage" id="stage">
+    <div id="spine"></div>
+    <img id="flash" alt="">
+    <img id="finalimg" alt="Rollo">
+    <div id="blackout"></div>
     <div class="prog"><i id="prog"></i></div>
     <div class="bar" id="bar">
       <button type="button" id="btnPause">Pause</button>
-      <button type="button" id="btnPrev">‹ Back</button>
-      <button type="button" id="btnNext">Next ›</button>
       <button type="button" id="btnFull">Fullscreen</button>
-      <span class="count" id="count"></span>
+      <span class="phase" id="phase"></span>
     </div>
     <div class="curtain" id="curtain">
       <div class="inner">
-        <button class="playbtn" id="btnPlay" aria-label="Play the slideshow with music">
+        <button class="playbtn" id="btnPlay" aria-label="Play">
           <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
         </button>
         <div class="ct" id="ctTitle">Play</div>
@@ -889,67 +895,131 @@ Rules:
       </div>
     </div>
   </div>
-  <p class="credit">Music is not hosted here — it streams from YouTube's player:
+  <p class="credit" id="credit">Music is not hosted here — it streams from YouTube's player:
     <a href="https://www.youtube.com/watch?v=1B6PMhd7RlM" target="_blank" rel="noopener">HUSKY by RiFF RAFF</a>.
     Sound needs one tap to start; browsers block audio that starts on its own.</p>
 </div>
 <div id="ytwrap"><div id="ytplayer"></div></div>
 
 <script>
-const PHOTOS = ["rollo-01.jpg", "rollo-02.jpg", "rollo-03.jpg", "rollo-04.jpg", "rollo-05.jpg", "rollo-06.jpg", "rollo-07.jpg", "rollo-08.jpg", "rollo-09.jpg", "rollo-10.jpg"];
-const YTID = "1B6PMhd7RlM";
+const SPINE = ["sp-00.jpg", "sp-01.jpg", "sp-02.jpg", "sp-03.jpg", "sp-04.jpg", "sp-05.jpg", "sp-06.jpg", "sp-07.jpg", "sp-08.jpg", "sp-09.jpg", "sp-10.jpg", "sp-11.jpg", "sp-12.jpg", "sp-13.jpg", "sp-14.jpg", "sp-15.jpg", "sp-16.jpg", "sp-17.jpg", "sp-18.jpg", "sp-19.jpg", "sp-20.jpg", "sp-21.jpg", "sp-22.jpg", "sp-23.jpg", "sp-24.jpg", "sp-25.jpg", "sp-26.jpg", "sp-27.jpg"];          // chronological, one per era
+const FLASH = ["fl-000.jpg", "fl-001.jpg", "fl-002.jpg", "fl-003.jpg", "fl-004.jpg", "fl-005.jpg", "fl-006.jpg", "fl-007.jpg", "fl-008.jpg", "fl-009.jpg", "fl-010.jpg", "fl-011.jpg", "fl-012.jpg", "fl-013.jpg", "fl-014.jpg", "fl-015.jpg", "fl-016.jpg", "fl-017.jpg", "fl-018.jpg", "fl-019.jpg", "fl-020.jpg", "fl-021.jpg", "fl-022.jpg", "fl-023.jpg", "fl-024.jpg", "fl-025.jpg", "fl-026.jpg", "fl-027.jpg", "fl-028.jpg", "fl-029.jpg", "fl-030.jpg", "fl-031.jpg", "fl-032.jpg", "fl-033.jpg", "fl-034.jpg", "fl-035.jpg", "fl-036.jpg", "fl-037.jpg", "fl-038.jpg", "fl-039.jpg", "fl-040.jpg", "fl-041.jpg", "fl-042.jpg", "fl-043.jpg", "fl-044.jpg", "fl-045.jpg", "fl-046.jpg", "fl-047.jpg", "fl-048.jpg", "fl-049.jpg", "fl-050.jpg", "fl-051.jpg", "fl-052.jpg", "fl-053.jpg", "fl-054.jpg", "fl-055.jpg", "fl-056.jpg", "fl-057.jpg", "fl-058.jpg", "fl-059.jpg", "fl-060.jpg", "fl-061.jpg", "fl-062.jpg", "fl-063.jpg", "fl-064.jpg", "fl-065.jpg", "fl-066.jpg", "fl-067.jpg", "fl-068.jpg", "fl-069.jpg", "fl-070.jpg", "fl-071.jpg", "fl-072.jpg", "fl-073.jpg", "fl-074.jpg", "fl-075.jpg", "fl-076.jpg", "fl-077.jpg", "fl-078.jpg", "fl-079.jpg", "fl-080.jpg", "fl-081.jpg", "fl-082.jpg", "fl-083.jpg", "fl-084.jpg", "fl-085.jpg", "fl-086.jpg", "fl-087.jpg", "fl-088.jpg", "fl-089.jpg", "fl-090.jpg", "fl-091.jpg", "fl-092.jpg", "fl-093.jpg", "fl-094.jpg", "fl-095.jpg", "fl-096.jpg", "fl-097.jpg", "fl-098.jpg", "fl-099.jpg", "fl-100.jpg", "fl-101.jpg", "fl-102.jpg", "fl-103.jpg", "fl-104.jpg", "fl-105.jpg", "fl-106.jpg", "fl-107.jpg", "fl-108.jpg", "fl-109.jpg", "fl-110.jpg", "fl-111.jpg", "fl-112.jpg", "fl-113.jpg", "fl-114.jpg", "fl-115.jpg", "fl-116.jpg", "fl-117.jpg", "fl-118.jpg", "fl-119.jpg", "fl-120.jpg", "fl-121.jpg", "fl-122.jpg", "fl-123.jpg", "fl-124.jpg", "fl-125.jpg", "fl-126.jpg", "fl-127.jpg", "fl-128.jpg", "fl-129.jpg", "fl-130.jpg", "fl-131.jpg", "fl-132.jpg", "fl-133.jpg", "fl-134.jpg", "fl-135.jpg", "fl-136.jpg", "fl-137.jpg", "fl-138.jpg", "fl-139.jpg", "fl-140.jpg", "fl-141.jpg", "fl-142.jpg", "fl-143.jpg", "fl-144.jpg", "fl-145.jpg", "fl-146.jpg", "fl-147.jpg", "fl-148.jpg", "fl-149.jpg", "fl-150.jpg", "fl-151.jpg", "fl-152.jpg", "fl-153.jpg", "fl-154.jpg", "fl-155.jpg", "fl-156.jpg", "fl-157.jpg", "fl-158.jpg", "fl-159.jpg", "fl-160.jpg", "fl-161.jpg", "fl-162.jpg", "fl-163.jpg", "fl-164.jpg", "fl-165.jpg", "fl-166.jpg", "fl-167.jpg", "fl-168.jpg", "fl-169.jpg", "fl-170.jpg", "fl-171.jpg", "fl-172.jpg", "fl-173.jpg", "fl-174.jpg", "fl-175.jpg", "fl-176.jpg", "fl-177.jpg", "fl-178.jpg", "fl-179.jpg", "fl-180.jpg", "fl-181.jpg", "fl-182.jpg", "fl-183.jpg", "fl-184.jpg", "fl-185.jpg", "fl-186.jpg", "fl-187.jpg", "fl-188.jpg", "fl-189.jpg", "fl-190.jpg", "fl-191.jpg", "fl-192.jpg", "fl-193.jpg", "fl-194.jpg", "fl-195.jpg", "fl-196.jpg"];          // everything else, in order
+const FINAL = "final.jpg";
+const YTID  = "1B6PMhd7RlM";
+
+// ---- the shape of the thing ----------------------------------------------------
+// Everything is driven off the song's clock, not a setInterval, so the finale lands on
+// the last beat even if a slide render hitches. Phase lengths are seconds off the END
+// of the track, so a 2:40 or a 4:00 upload both work — only the spine stretches.
+const LINGER_S = 14;   // final photo alone on screen
+const FLASH_S  = 26;   // the whole-life-flashing-by part
+const FADE_S   = 6;    // fade to black, inside the linger
+const FALLBACK_DUR = 185;   // HUSKY is ~3:05; only used if the player never reports
+
 const stage=document.getElementById("stage"), curtain=document.getElementById("curtain");
-const prog=document.getElementById("prog"), count=document.getElementById("count");
+const spineBox=document.getElementById("spine"), flashImg=document.getElementById("flash");
+const finalImg=document.getElementById("finalimg"), blackout=document.getElementById("blackout");
+const prog=document.getElementById("prog"), phaseEl=document.getElementById("phase");
 const btnPlay=document.getElementById("btnPlay"), btnPause=document.getElementById("btnPause");
 
-// ---------- slides ----------
-const imgs=[];
-if(!PHOTOS.length){
-  curtain.querySelector(".inner").innerHTML =
-    '<p class="empty">No photos of Rollo loaded yet.<br>Send them over and they land right here.</p>';
-} else {
-  PHOTOS.forEach((src,i)=>{
-    const im=new Image();
-    im.src=src; im.alt="Rollo";
-    // first two eager so the opening crossfade never shows a blank frame
-    im.loading = i<2 ? "eager" : "lazy";
-    im.decoding="async";
-    stage.insertBefore(im, stage.firstChild);
-    imgs.push(im);
-  });
+// ---- spine slides ----
+const spineImgs=SPINE.map((src,i)=>{
+  const im=new Image(); im.className="sp"; im.src=src; im.alt="Rollo";
+  im.loading = i<3 ? "eager" : "lazy"; im.decoding="async";
+  spineBox.appendChild(im); return im;
+});
+finalImg.src=FINAL;
+
+// ---- flash preloading ---------------------------------------------------------
+// 197 frames at ~130ms each leaves no room to fetch anything live, so the bytes are
+// pulled during the spine — there's ~2.5 minutes of runway. Holding 197 *decoded*
+// bitmaps would be hundreds of MB, so only a rolling window is kept decoded; the rest
+// sit in HTTP cache where a re-decode costs a few ms.
+const cache=new Map();
+function warm(i){
+  if(i<0||i>=FLASH.length||cache.has(i)) return;
+  const im=new Image(); im.src=FLASH[i]; cache.set(i,im);
+  if(im.decode) im.decode().catch(()=>{});
+}
+let preloadAt=0, preloading=false;
+function preloadSome(){
+  if(preloading||preloadAt>=FLASH.length) return;
+  preloading=true;
+  const im=new Image();
+  const next=()=>{ preloading=false; preloadAt++; setTimeout(preloadSome, 30); };
+  im.onload=next; im.onerror=next; im.src=FLASH[preloadAt];
 }
 
-let idx=-1, timer=null, slideMs=6000, playing=false, ended=false;
+let playing=false, ended=false, silent=false, t0=0, curSpine=-1, curFlash=-1, phase="";
 
-function show(n){
-  if(!imgs.length) return;
-  const next=(n+imgs.length)%imgs.length;
-  if(next===idx) return;
-  if(idx>=0) imgs[idx].classList.remove("on","kb");
-  idx=next;
-  const im=imgs[idx];
-  im.style.setProperty("--slide", slideMs+"ms");
-  im.classList.add("on");
-  // restart the drift animation from scratch on every slide
-  void im.offsetWidth;
-  im.classList.add("kb");
-  count.textContent=(idx+1)+" / "+imgs.length;
-  // keep the next one warm
-  const nx=imgs[(idx+1)%imgs.length];
-  if(nx && nx.loading==="lazy"){ nx.loading="eager"; }
+function duration(){
+  if(!silent){ try{ const d=yt.getDuration(); if(d>5) return d; }catch(e){} }
+  return FALLBACK_DUR;
+}
+function clock(){
+  if(silent) return (performance.now()-t0)/1000;
+  try{ return yt.getCurrentTime()||0; }catch(e){ return 0; }
 }
 
-function startTimer(){ clearInterval(timer); timer=setInterval(()=>show(idx+1), slideMs); }
-function stopTimer(){ clearInterval(timer); timer=null; }
+function showSpine(i){
+  if(i===curSpine||i<0||i>=spineImgs.length) return;
+  if(curSpine>=0) spineImgs[curSpine].classList.remove("on","kb");
+  curSpine=i;
+  const im=spineImgs[i];
+  im.style.setProperty("--slide", spineMs+"ms");
+  im.classList.add("on"); void im.offsetWidth; im.classList.add("kb");
+  const nx=spineImgs[i+1]; if(nx && nx.loading==="lazy") nx.loading="eager";
+}
+let spineMs=5000;
 
-// ---------- YouTube ----------
-// The player is a real embed, off-screen. We never touch the audio file itself — YouTube
-// serves it, which is what keeps this legitimate.
-let yt=null, ytReady=false, pendingPlay=false;
+function showFlash(i){
+  if(i===curFlash||i<0||i>=FLASH.length) return;
+  curFlash=i;
+  warm(i); for(let k=1;k<=8;k++) warm(i+k);
+  flashImg.src=FLASH[i];
+}
+
+function tick(){
+  if(!playing) return;
+  const D=duration(), t=Math.min(clock(), D);
+  const flashStart = Math.max(D*0.45, D - LINGER_S - FLASH_S);
+  const lingerStart = D - LINGER_S;
+  spineMs = Math.round(flashStart*1000/Math.max(1,spineImgs.length));
+
+  // the blackout only belongs to the final phase — clear it in the others, or seeking
+  // backwards out of the fade leaves the picture permanently dimmed
+  if(t < lingerStart && blackout.style.opacity !== "0") blackout.style.opacity = 0;
+
+  if(t < flashStart){
+    if(phase!=="spine"){ phase="spine"; flashImg.classList.remove("on"); finalImg.classList.remove("on"); }
+    showSpine(Math.min(spineImgs.length-1, Math.floor(t/flashStart*spineImgs.length)));
+    phaseEl.textContent = (curSpine+1)+" / "+spineImgs.length;
+  } else if(t < lingerStart){
+    if(phase!=="flash"){
+      phase="flash";
+      if(curSpine>=0) spineImgs[curSpine].classList.remove("on","kb");
+      flashImg.classList.add("on");
+      stage.classList.remove("showbar");
+    }
+    showFlash(Math.min(FLASH.length-1, Math.floor((t-flashStart)/(lingerStart-flashStart)*FLASH.length)));
+    phaseEl.textContent = (curFlash+1)+" / "+FLASH.length;
+  } else {
+    if(phase!=="final"){
+      phase="final"; flashImg.classList.remove("on"); finalImg.classList.add("on");
+      phaseEl.textContent="";
+    }
+    blackout.style.opacity = t > D-FADE_S ? Math.min(1,(t-(D-FADE_S))/FADE_S) : 0;
+  }
+  prog.style.width = (t/D*100)+"%";
+  if(silent && t>=D) finish();
+  requestAnimationFrame(tick);
+}
+
+// ---- YouTube ------------------------------------------------------------------
+let yt=null, ytReady=false, pendingPlay=false, waitTimer=null;
 window.onYouTubeIframeAPIReady=function(){
   yt=new YT.Player("ytplayer",{
-    videoId: YTID,
-    playerVars:{playsinline:1, controls:0, rel:0, modestbranding:1},
+    videoId:YTID, playerVars:{playsinline:1,controls:0,rel:0,modestbranding:1},
     events:{
       onReady:()=>{ ytReady=true; if(pendingPlay){ pendingPlay=false; clearTimeout(waitTimer); begin(true); } },
       onStateChange:e=>{
@@ -960,105 +1030,63 @@ window.onYouTubeIframeAPIReady=function(){
     }
   });
 };
-(function loadYT(){
-  const s=document.createElement("script");
-  s.src="https://www.youtube.com/iframe_api";
-  document.head.appendChild(s);
-})();
-
-let silent=false;   // true when YouTube never loaded and we run the photos on their own
+(function(){ const s=document.createElement("script"); s.src="https://www.youtube.com/iframe_api"; document.head.appendChild(s); })();
 
 function begin(withAudio){
-  playing=true; ended=false; silent=!withAudio;
+  playing=true; ended=false; silent=!withAudio; t0=performance.now();
+  phase=""; curSpine=-1; curFlash=-1;
+  blackout.style.opacity=0; finalImg.classList.remove("on");
   curtain.classList.add("gone");
-  stage.classList.add("showbar");
-  setTimeout(()=>stage.classList.remove("showbar"), 2600);
-  if(withAudio){
-    try{ yt.playVideo(); }catch(e){}
-    // Pace the slides to the actual track so the last photo lands with the last beat.
-    // getDuration() is 0 until metadata arrives, so re-check for a couple of seconds.
-    const pace=()=>{
-      let d=0; try{ d=yt.getDuration()||0; }catch(e){}
-      if(d>5 && imgs.length){
-        slideMs=Math.max(2200, Math.min(9000, Math.round(d*1000/imgs.length)));
-        if(idx>=0) imgs[idx].style.setProperty("--slide", slideMs+"ms");
-        startTimer();
-        return true;
-      }
-      return false;
-    };
-    if(!pace()){ startTimer(); [400,900,1600,2600].forEach(t=>setTimeout(pace,t)); }
-  } else {
-    startTimer();
-  }
-  show(0);
-  requestAnimationFrame(tickProgress);
-}
-
-function tickProgress(){
-  if(!playing) return;
-  if(silent){
-    // no song to track — the bar just walks the photo count
-    prog.style.width = imgs.length ? ((idx+1)/imgs.length*100)+"%" : "0%";
-  } else {
-    let d=0,c=0;
-    try{ d=yt.getDuration()||0; c=yt.getCurrentTime()||0; }catch(e){}
-    prog.style.width = d>0 ? Math.min(100, c/d*100)+"%" : "0%";
-  }
-  setTimeout(()=>requestAnimationFrame(tickProgress), 250);
+  stage.classList.add("showbar"); setTimeout(()=>stage.classList.remove("showbar"),2600);
+  if(withAudio){ try{ yt.playVideo(); }catch(e){} }
+  preloadSome();                       // start pulling the flash frames immediately
+  requestAnimationFrame(tick);
 }
 
 function setPaused(p){
   stage.classList.toggle("paused", p);
   btnPause.textContent = p ? "Play" : "Pause";
-  if(p) stopTimer(); else if(playing && !ended) startTimer();
-}
-
-// In silent mode there's no player to pause, so the button drives the timer directly.
-function togglePausedSilent(){
-  const nowPaused = !stage.classList.contains("paused");
-  setPaused(nowPaused);
+  if(!p && playing) requestAnimationFrame(tick);
 }
 
 function finish(){
-  playing=false; ended=true; stopTimer();
-  prog.style.width="100%";
+  playing=false; ended=true;
+  prog.style.width="100%"; blackout.style.opacity=1;
   curtain.classList.remove("gone");
   document.getElementById("ctTitle").textContent="Again";
-  document.getElementById("ctSub").textContent="HUSKY — RiFF RAFF · plays from YouTube";
 }
 
-let waitTimer=null;
 btnPlay.addEventListener("click",()=>{
-  if(!imgs.length) return;
   if(ended){ try{ yt.seekTo(0,true); }catch(e){} }
-  // playVideo() has to happen inside this click for mobile to allow sound — if the API
-  // hasn't finished loading we flag it and fire the instant it's ready.
   if(ytReady){ begin(true); return; }
   pendingPlay=true;
   document.getElementById("ctTitle").textContent="Loading…";
-  // An ad-blocker or a locked-down network can mean YouTube never answers. Rather than
-  // spinning forever, run the photos on their own after a few seconds and say why.
   clearTimeout(waitTimer);
   waitTimer=setTimeout(()=>{
     if(!ytReady && pendingPlay){
       pendingPlay=false;
-      document.querySelector(".credit").innerHTML =
-        "<b>Couldn't reach YouTube</b>, so this is running without the song — an ad-blocker or " +
-        "a blocked network will do that. The track is " +
-        '<a href="https://www.youtube.com/watch?v=' + YTID + '" target="_blank" rel="noopener">HUSKY by RiFF RAFF</a>.';
+      document.getElementById("credit").innerHTML =
+        "<b>Couldn't reach YouTube</b>, so this is running without the song — an ad-blocker or a " +
+        'blocked network will do that. The track is <a href="https://www.youtube.com/watch?v=' +
+        YTID + '" target="_blank" rel="noopener">HUSKY by RiFF RAFF</a>.';
       begin(false);
     }
   }, 6000);
 });
 btnPause.addEventListener("click",()=>{
   if(!playing) return;
-  if(silent){ togglePausedSilent(); return; }
+  if(silent){
+    const p=!stage.classList.contains("paused");
+    // in silent mode there's no player, so pausing means freezing our own clock
+    if(p){ silentPausedAt=performance.now(); playing=false; }
+    else { t0+=performance.now()-silentPausedAt; playing=true; requestAnimationFrame(tick); }
+    setPaused(p); playing = !p ? true : playing;
+    return;
+  }
   let st=-1; try{ st=yt.getPlayerState(); }catch(e){}
   try{ st===YT.PlayerState.PLAYING ? yt.pauseVideo() : yt.playVideo(); }catch(e){}
 });
-document.getElementById("btnNext").addEventListener("click",()=>{ show(idx+1); if(playing) startTimer(); });
-document.getElementById("btnPrev").addEventListener("click",()=>{ show(idx-1); if(playing) startTimer(); });
+let silentPausedAt=0;
 document.getElementById("btnFull").addEventListener("click",()=>{
   if(document.fullscreenElement) document.exitFullscreen();
   else if(stage.requestFullscreen) stage.requestFullscreen().catch(()=>{});
@@ -1066,16 +1094,12 @@ document.getElementById("btnFull").addEventListener("click",()=>{
 addEventListener("keydown",e=>{
   if(e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA") return;
   if(e.key===" "){ e.preventDefault(); playing ? btnPause.click() : btnPlay.click(); }
-  if(e.key==="ArrowRight") document.getElementById("btnNext").click();
-  if(e.key==="ArrowLeft")  document.getElementById("btnPrev").click();
 });
-// tapping the stage on a phone reveals the controls for a few seconds
 stage.addEventListener("pointerdown",()=>{
   stage.classList.add("showbar");
-  clearTimeout(stage._t); stage._t=setTimeout(()=>stage.classList.remove("showbar"), 2600);
+  clearTimeout(stage._t); stage._t=setTimeout(()=>stage.classList.remove("showbar"),2600);
 });
-
-if(imgs.length) show(0);
+showSpine(0);
 </script>
 </body>
 </html>
