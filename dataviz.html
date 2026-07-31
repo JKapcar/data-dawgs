@@ -210,6 +210,14 @@ svg text{font-family:inherit}
   padding:6px 10px;font-size:13.5px;font-weight:500;font-family:inherit;max-width:46vw}
 .vfilters{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap}
 .vfilters .fl{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3);font-weight:650}
+/* segmented toggle — same footprint as a .vsel so it sits in the same header row */
+.vtog{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface-1)}
+.vtog button{appearance:none;background:transparent;border:0;border-right:1px solid var(--border);
+  color:var(--ink-3);font-family:inherit;font-size:12.5px;font-weight:650;padding:6px 11px;cursor:pointer;
+  transition:background .12s,color .12s;white-space:nowrap}
+.vtog button:last-child{border-right:0}
+.vtog button:hover{color:var(--ink-1)}
+.vtog button.on{background:var(--accent);color:#fff}
 </style>
 </head>
 <body>
@@ -866,6 +874,12 @@ window.DD_POOL = POOL;   // lets Toto (nav.js) read the board
 const LS_STATE="dd-auction-v1";
 const POS_ORDER=["QB","RB","WR","TE","DST"];
 const POS_COLOR={QB:"#e66767",RB:"#199e70",WR:"#3987e5",TE:"#c98500",DST:"#8a8378"};
+// 14 categorical colors for colour-by-team. Chosen to stay distinguishable on both the
+// cream and the dark surface, and deliberately NOT the position palette — so a glance at
+// the legend tells you which mode you're in.
+const TEAM_COLORS=["#f26200","#199e70","#3987e5","#c98500","#a06bd1","#e05c8a","#2bb3c0",
+                   "#7f9c2f","#e66767","#5566cc","#b4703a","#3f8f5c","#c94f9e","#6b7280"];
+const teamColor=ti=>TEAM_COLORS[((ti%TEAM_COLORS.length)+TEAM_COLORS.length)%TEAM_COLORS.length];
 const TIERS=[{k:"t20",label:"$20+",min:20,max:1e9,c:"#f26200"},
              {k:"t10",label:"$10–19",min:10,max:19.999,c:"#ff8a33"},
              {k:"t5",label:"$5–9",min:5,max:9.999,c:"#ffb377"},
@@ -923,6 +937,9 @@ function showTT(x,y,name,rows){
   tt.style.left=px+"px"; tt.style.top=py+"px";
 }
 function hideTT(){tt.style.display="none";}
+// On a phone the tooltip is opened by a tap and has to survive the finger lifting, so it
+// isn't dismissed on pointerleave for touch. Scrolling away is the natural dismiss.
+addEventListener("scroll", hideTT, {passive:true, capture:true});
 function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
 function svgEl(t,a){const e=document.createElementNS("http://www.w3.org/2000/svg",t);for(const k in a)e.setAttribute(k,a[k]);return e;}
 
@@ -980,10 +997,11 @@ function niceTicks(lo,hi,n){
 // ---------- every pick: price paid vs market value ----------
 // Dot labels switch on below this many points — above it they'd overlap into mush.
 const PV_LABEL_MAX = narrow => narrow ? 10 : 24;
-// picks: [{player, team, pos, price, v}] — already filtered by the two selects,
+// picks: [{player, team, ti, pos, price, v}] — already filtered by the two selects,
 // so the axes rescale to whatever slice is showing (that's the point of filtering).
-function priceValueChart(container, picks){
-  container.textContent="";
+// colorMode: "pos" | "team"
+function priceValueChart(container, picks, colorMode){
+  container.textContent=""; hideTT();
   if(!picks.length){ container.innerHTML='<p class="note">No picks match those filters yet.</p>'; return; }
   const W=container.clientWidth||900, narrow=W<620;
   const H=narrow?Math.max(300,Math.round(W*0.88)):420;
@@ -1020,14 +1038,10 @@ function priceValueChart(container, picks){
   picks.forEach(p=>{
     const P=norm(p.pos), x=X(p.v), y=Y(p.price);
     const c=svgEl("circle",{cx:x,cy:y,r:R,
-      fill:POS_COLOR[P]||POS_COLOR.DST,"fill-opacity":.82,stroke:css("--surface-1"),"stroke-width":1});
-    const d=p.v-p.price;
-    c.addEventListener("pointermove",e=>showTT(e.clientX,e.clientY,p.player,
-      [["Team",p.team],["Pos",P==="DST"?"D/ST":P],["Paid","$"+p.price],["Market value","$"+Math.round(p.v)],
-       [d>=0?"Value gained":"Overpaid by","$"+Math.abs(Math.round(d))]]));
-    c.addEventListener("pointerleave",hideTT);
+      fill: colorMode==="team" ? teamColor(p.ti) : (POS_COLOR[P]||POS_COLOR.DST),
+      "fill-opacity":.82,stroke:css("--surface-1"),"stroke-width":1});
     svg.appendChild(c);
-    pts.push({x,y,p});
+    pts.push({x,y,p,c});
   });
 
   // ---- direct labels, but only when the slice is sparse enough to stay readable ----
@@ -1061,6 +1075,49 @@ function priceValueChart(container, picks){
   const yt=svgEl("text",{x:13,y:m.t+ih/2,"text-anchor":"middle","font-size":11,fill:ink2,"font-weight":600,
     transform:`rotate(-90 13 ${m.t+ih/2})`});
   yt.textContent="price paid →"; svg.appendChild(yt);
+
+  // ---- nearest-dot hit testing -------------------------------------------------
+  // A 5px circle is a miserable hover target with a mouse and impossible with a thumb,
+  // so one transparent rect covers the plot and resolves the pointer to the CLOSEST dot
+  // within a generous radius. Added last so it sits above everything and wins the event.
+  const hit=svgEl("rect",{x:m.l,y:m.t,width:iw,height:ih,fill:"transparent"});
+  hit.style.cursor="crosshair";
+  let cur=null;
+  const unhighlight=()=>{ if(cur){ cur.c.setAttribute("r",R); cur.c.removeAttribute("stroke-width");
+    cur.c.setAttribute("stroke",css("--surface-1")); cur.c.setAttribute("fill-opacity",.82); cur=null; } };
+  const clear=()=>{ unhighlight(); hideTT(); };
+  function pickAt(e){
+    const b=svg.getBoundingClientRect();
+    if(!b.width) return;
+    const k=W/b.width;                                   // CSS px -> viewBox units
+    const sx=(e.clientX-b.left)*k, sy=(e.clientY-b.top)*k;
+    let best=null, bd=Infinity;
+    pts.forEach(q=>{ const dx=q.x-sx, dy=q.y-sy, d=dx*dx+dy*dy; if(d<bd){ bd=d; best=q; } });
+    const reach=(narrow?32:24)*k;                        // finger-sized on phones
+    if(!best || bd>reach*reach){ clear(); return; }
+    if(best!==cur){
+      unhighlight();
+      cur=best;
+      best.c.setAttribute("r",R+2.5);
+      best.c.setAttribute("stroke",css("--ink-1"));
+      best.c.setAttribute("stroke-width",1.6);
+      best.c.setAttribute("fill-opacity",1);
+    }
+    const p=best.p, P=norm(p.pos), diff=p.v-p.price;
+    const rows=[["Team",p.team],["Pos",P==="DST"?"D/ST":P],["Paid","$"+p.price],
+      ["Market value","$"+Math.round(p.v)],
+      [diff>=0?"Value gained":"Overpaid by","$"+Math.abs(Math.round(diff))]];
+    // Cheap picks pile up on the same coordinate — say so instead of silently showing one.
+    const stacked=pts.filter(q=>q!==best && Math.abs(q.x-best.x)<R*1.1 && Math.abs(q.y-best.y)<R*1.1);
+    if(stacked.length) rows.push(["Also here", stacked.length===1
+      ? shortName(stacked[0].p.player) : stacked.length+" more picks"]);
+    showTT(e.clientX, e.clientY, p.player, rows);
+  }
+  hit.addEventListener("pointermove",e=>{ if(e.pointerType!=="touch") pickAt(e); });
+  hit.addEventListener("pointerdown",pickAt);            // tap-to-inspect on phones
+  hit.addEventListener("pointerleave",e=>{ if(e.pointerType!=="touch") clear(); });
+  svg.appendChild(hit);
+
   container.appendChild(svg);
   // knock the dashed line out from behind the label so it doesn't read as a strikethrough.
   // must happen AFTER the svg is in the document — getBBox is 0 on a detached node.
@@ -1107,7 +1164,12 @@ function cliffChart(container, players, sold, infl){
     else rows.push(["Status","AVAILABLE"]);
     hit.addEventListener("pointerenter",()=>{ bar.setAttribute("stroke",css("--ink-1")); bar.setAttribute("stroke-width","1.5"); });
     hit.addEventListener("pointermove",e=>showTT(e.clientX,e.clientY,p.name,rows));
-    hit.addEventListener("pointerleave",()=>{ bar.removeAttribute("stroke"); hideTT(); });
+    // tap-to-inspect: on touch, pointerleave fires the instant the finger lifts, so the
+    // tooltip has to be opened on pointerdown and left standing.
+    hit.addEventListener("pointerdown",e=>{ bar.setAttribute("stroke",css("--ink-1"));
+      bar.setAttribute("stroke-width","1.5"); showTT(e.clientX,e.clientY,p.name,rows); });
+    hit.addEventListener("pointerleave",e=>{ bar.removeAttribute("stroke");
+      if(e.pointerType!=="touch") hideTT(); });
     svg.appendChild(hit);
   });
   // direct-label top 2 available with full name + price
@@ -1135,6 +1197,8 @@ function cliffChart(container, players, sold, infl){
 
 // ---------- render ----------
 let scope=-1, cliffPos="ALL", pvTeam="ALL", pvPos="ALL";
+let pvColor="pos";        // "pos" | "team" — how the scatter dots are coloured
+let cliffHide=false;      // true = drop drafted players so the chart shrinks to what's left
 // first load on a device that knows who it is → open on THEIR team, not the league
 let scopeTouched=false;
 function render(){
@@ -1183,16 +1247,24 @@ function render(){
       <div class="legend2">${TIERS.map(t=>`<span><span class="sw" style="background:${t.c}"></span>${t.label}</span>`).join("")}</div></div>
   </div>
   <div class="vcard" style="margin-bottom:16px">
-    <h2 style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">The cliff — ${pos==="ALL"?"all positions":pos==="DST"?"D/ST":pos} by value, drafted &amp; available
-      <select id="posSel" style="margin-left:auto;background:var(--surface-1);color:var(--ink-1);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:13.5px;font-weight:500">
-        <option value="ALL" ${pos==="ALL"?"selected":""}>All positions</option>
-        <option value="RB" ${pos==="RB"?"selected":""}>RB</option>
-        <option value="WR" ${pos==="WR"?"selected":""}>WR</option>
-        <option value="QB" ${pos==="QB"?"selected":""}>QB</option>
-        <option value="TE" ${pos==="TE"?"selected":""}>TE</option>
-        <option value="DST" ${pos==="DST"?"selected":""}>D/ST</option>
-      </select></h2>
-    <p class="note">Every ${pos==="ALL"?"player":pos==="DST"?"D/ST":pos} worth $1+, ranked by market value. <b style="color:${pos==="ALL"?"var(--accent)":POS_COLOR[pos]}">Colored = available</b>${pos==="ALL"?" (color = position)":""}, grey = gone. When the colored bars stop, that's the cliff.</p>
+    <h2 style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">The cliff — ${pos==="ALL"?"all positions":pos==="DST"?"D/ST":pos} by value${cliffHide?", still available":", drafted &amp; available"}
+      <span class="vfilters">
+        <select id="posSel" class="vsel">
+          <option value="ALL" ${pos==="ALL"?"selected":""}>All positions</option>
+          <option value="RB" ${pos==="RB"?"selected":""}>RB</option>
+          <option value="WR" ${pos==="WR"?"selected":""}>WR</option>
+          <option value="QB" ${pos==="QB"?"selected":""}>QB</option>
+          <option value="TE" ${pos==="TE"?"selected":""}>TE</option>
+          <option value="DST" ${pos==="DST"?"selected":""}>D/ST</option>
+        </select>
+        <span class="vtog" id="cliffTog">
+          <button type="button" data-v="0"${cliffHide?"":' class="on"'}>All players</button>
+          <button type="button" data-v="1"${cliffHide?' class="on"':""}>Hide drafted</button>
+        </span>
+      </span></h2>
+    <p class="note">${cliffHide
+      ? `Only players still on the board, ranked by market value${pos==="ALL"?" (color = position)":""}. The chart shrinks as the draft goes — when it gets short at the left, the run is over.`
+      : `Every ${pos==="ALL"?"player":pos==="DST"?"D/ST":pos} worth $1+, ranked by market value. <b style="color:${pos==="ALL"?"var(--accent)":POS_COLOR[pos]}">Colored = available</b>${pos==="ALL"?" (color = position)":""}, grey = gone. When the colored bars stop, that's the cliff.`}</p>
     <div id="chartCliff"></div></div>`;
 
   // ---- every pick: paid vs value, with its own team + position filters ----
@@ -1216,12 +1288,23 @@ function render(){
           <option value="ALL"${pvPos==="ALL"?" selected":""}>All positions</option>
           ${POS_ORDER.map(P=>`<option value="${P}"${pvPos===P?" selected":""}>${P==="DST"?"D/ST":P}</option>`).join("")}
         </select>
+        <span class="vtog" id="pvColorTog" aria-label="Color dots by">
+          <button type="button" data-v="pos"${pvColor==="pos"?' class="on"':""}>Color: position</button>
+          <button type="button" data-v="team"${pvColor==="team"?' class="on"':""}>Color: team</button>
+        </span>
       </span></h2>
     <p class="note">Dots under the dashed line were bought below market value; dots above it went for a premium. Distance from the line is the surplus.
       ${pvPicks.length?`<b>${pvPicks.length} pick${pvPicks.length===1?"":"s"}</b> shown · ${pvUnder} under the line · net ${pvSurplus>=0?"+":"−"}$${Math.abs(Math.round(pvSurplus))} of value.`:""}
-      ${pvPicks.length>PV_LABEL_MAX(innerWidth<620)?`<span style="color:var(--ink-2)">Filter to a team or a position to label the dots.</span>`:""}</p>
+      ${pvPicks.length>PV_LABEL_MAX(innerWidth<620)?`<span style="color:var(--ink-2)">Filter to a team or a position to label the dots.</span>`:""}
+      <span style="color:var(--ink-2)">Hover${matchMedia("(pointer:coarse)").matches?" or tap":""} near a dot for the player.</span></p>
     <div id="chartPV"></div>
-    <div class="legend2">${POS_ORDER.map(P=>`<span><span class="sw" style="background:${POS_COLOR[P]}"></span>${P==="DST"?"D/ST":P}</span>`).join("")}</div>
+    <div class="legend2">${
+      pvColor==="team"
+        // only the teams actually on screen — 14 swatches under a one-team filter is noise
+        ? [...new Set(pvPicks.map(p=>p.ti))].sort((a,b)=>a-b)
+            .map(ti=>`<span><span class="sw" style="background:${teamColor(ti)}"></span>${esc((d.T[ti]||{}).name||"?")}</span>`).join("")
+        : POS_ORDER.map(P=>`<span><span class="sw" style="background:${POS_COLOR[P]}"></span>${P==="DST"?"D/ST":P}</span>`).join("")
+    }</div>
   </div>`;
 
   if(teamMode){
@@ -1256,14 +1339,25 @@ function render(){
   hBarChart(document.getElementById("chartTiers"), tierRows, {});
 
   // cliff
-  const cliffPlayers=POOL.filter(p=>(pos==="ALL"?p.pos!=="K":p.pos===pos) && (val(p)>=1 || d.sold[p.name])).sort((a,b)=>val(b)-val(a));
+  const cliffPlayers=POOL.filter(p=>(pos==="ALL"?p.pos!=="K":p.pos===pos)
+      && (val(p)>=1 || d.sold[p.name])
+      && !(cliffHide && d.sold[p.name]))
+    .sort((a,b)=>val(b)-val(a));
   cliffChart(document.getElementById("chartCliff"), cliffPlayers, d.sold, d.infl);
   document.getElementById("posSel").addEventListener("change",e=>{ cliffPos=e.target.value; render(); });
+  document.getElementById("cliffTog").addEventListener("click",e=>{
+    const b=e.target.closest("button"); if(!b) return;
+    cliffHide = b.dataset.v==="1"; render();
+  });
 
   // paid vs value
-  priceValueChart(document.getElementById("chartPV"), pvPicks);
+  priceValueChart(document.getElementById("chartPV"), pvPicks, pvColor);
   document.getElementById("pvTeamSel").addEventListener("change",e=>{ pvTeam=e.target.value; render(); });
   document.getElementById("pvPosSel").addEventListener("change",e=>{ pvPos=e.target.value; render(); });
+  document.getElementById("pvColorTog").addEventListener("click",e=>{
+    const b=e.target.closest("button"); if(!b) return;
+    pvColor=b.dataset.v; render();
+  });
 }
 
 document.getElementById("scopeSel").addEventListener("change",e=>{scope=+e.target.value; scopeTouched=true; render();});
