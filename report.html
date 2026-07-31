@@ -493,17 +493,19 @@ Rules:
     L.push(`MV = Market Value, a market-consensus auction-dollar snapshot dated 2026-07-29. It is not a points projection.`);
     L.push(`STATE: ${picks.length} sold. Inflation ${infl.toFixed(2)}x — $${remDollars} chasing $${Math.round(remValue)} of MV still on the board.`);
     L.push(`TEAMS (name | $ left = max bid | spots open | QB/RB/WR/TE/DST drafted):`);
-    const my = st.myTeam;
-    T.forEach((t,i)=>L.push(`${i===my?"*":"-"} ${t.name} | $${t.left} | ${t.open} | ${t.pos.QB}/${t.pos.RB}/${t.pos.WR}/${t.pos.TE}/${t.pos.DST}${i===my?"  <-- OPERATOR'S TEAM":""}`));
+    // whoever is looking at this device — falls back to the operator's team if unset
+    const me = (window.DDMe && window.DDMe.idx(teams));
+    const my = (me==null ? st.myTeam : me);
+    T.forEach((t,i)=>L.push(`${i===my?"*":"-"} ${t.name} | $${t.left} | ${t.open} | ${t.pos.QB}/${t.pos.RB}/${t.pos.WR}/${t.pos.TE}/${t.pos.DST}${i===my?"  <-- THE TEAM I AM ASKING ABOUT (mine)":""}`));
 
     if(T[my]){
       const mine=picks.filter(p=>p.ti===my);
-      L.push(`OPERATOR ROSTER${mine.length?"":" (no picks yet)"}:`);
+      L.push(`MY ROSTER${mine.length?"":" (no picks yet)"}:`);
       mine.forEach(p=>L.push(`- ${p.player} (${norm(p.pos)}) paid $${p.price}, MV $${p.etr||0}`));
       const c=T[my].pos, flexUsed=Math.max(0,c.RB-2)+Math.max(0,c.WR-2)+Math.max(0,c.TE-1), holes=[];
       if(c.QB<1)holes.push("QB"); if(c.RB<2)holes.push((2-c.RB)+" RB"); if(c.WR<2)holes.push((2-c.WR)+" WR");
       if(c.TE<1)holes.push("TE"); const fl=Math.max(0,2-flexUsed); if(fl)holes.push(fl+" FLEX"); if(c.DST<1)holes.push("DEF");
-      L.push(`OPERATOR OPEN STARTING SLOTS: ${holes.length?holes.join(", "):"none — starters filled, bench only"}. $${T[my].left} for ${T[my].open} open spots.`);
+      L.push(`MY OPEN STARTING SLOTS: ${holes.length?holes.join(", "):"none — starters filled, bench only"}. I have $${T[my].left} for ${T[my].open} open spots.`);
     }
 
     L.push(`BEST AVAILABLE by position (MV, inflation-adjusted in parens):`);
@@ -536,6 +538,10 @@ Rules:
     const direct = !!ai.key;                        // operator override: own key, straight to xAI
     if(!direct && !BOT_URL){ say("sys","Toto isn't wired up yet — no proxy configured."); return; }
     if(!direct && !pass){ askPass(); return; }
+    if(window.DDMe && !window.DDMe.isSet && window.DD_POOL){
+      say("sys","First — which team are you? Tap the “Who are you?” chip at the bottom-left, then ask again. Otherwise I'd be advising the operator's team, not yours.");
+      return;
+    }
     say("you",q); HIST.push({role:"user",content:q});
     busy=true; const th=say("bot","…thinking");
     try{
@@ -708,6 +714,111 @@ Rules:
       });
       document.body.appendChild(b);
     }, 300);
+  });
+})();
+
+/* ---------- DDMe: who is looking at THIS device ----------
+   The mirrored draft state carries the OPERATOR's `settings.myTeam`. Every other device
+   needs its own answer to "which team am I", so identity lives in its own localStorage
+   key that DDSync never touches. Resolve by NAME first — team order can change. */
+(function(){
+  const KEY="dd-me-v1", listeners=[];
+  const raw=()=>{ try{ return JSON.parse(localStorage.getItem(KEY)||"null"); }catch(e){ return null; } };
+  const teams=()=>{ try{ const S=JSON.parse(localStorage.getItem("dd-auction-v1")||"null");
+      return (S&&S.settings&&S.settings.teams)||[]; }catch(e){ return []; } };
+  const fire=()=>listeners.forEach(f=>{ try{ f(); }catch(e){} });
+
+  window.DDMe={
+    get isSet(){ return !!raw(); },
+    get name(){ const m=raw(); return m?m.name:null; },
+    teams,
+    idx(list){
+      const t=list||teams(), m=raw();
+      if(!m || !t.length) return null;
+      const byName=t.findIndex(x=>x && x.name===m.name);
+      if(byName>=0) return byName;                                   // name wins
+      if(typeof m.ti==="number" && m.ti>=0 && m.ti<t.length) return m.ti;
+      return null;
+    },
+    set(ti){
+      const t=teams(), nm=(t[ti]||{}).name||null;
+      try{ localStorage.setItem(KEY, JSON.stringify({ti:+ti, name:nm})); }catch(e){}
+      fire(); return nm;
+    },
+    clear(){ try{ localStorage.removeItem(KEY); }catch(e){} fire(); },
+    onChange(fn){ listeners.push(fn); },
+    openPicker(){ openPicker(); }
+  };
+
+  function style(){
+    if(document.getElementById("ddmeCSS")) return;
+    const s=document.createElement("style"); s.id="ddmeCSS";
+    s.textContent=`
+#ddmeChip{position:fixed;left:16px;bottom:18px;z-index:58;display:flex;align-items:center;gap:7px;
+  border:1px solid var(--border);background:var(--surface-1);color:var(--ink-2);border-radius:999px;
+  padding:8px 15px;font-size:13.5px;font-weight:650;cursor:pointer;font-family:inherit;
+  box-shadow:0 5px 18px rgba(0,0,0,.20)}
+#ddmeChip:hover{border-color:var(--accent);color:var(--accent)}
+#ddmeChip .who{color:var(--ink-1);font-weight:750}
+#ddmeChip.unset{background:var(--accent);color:var(--accent-ink,#fff);border-color:transparent;font-size:14.5px}
+#ddmeChip.unset .who{color:inherit}
+#ddmePanel{position:fixed;left:16px;bottom:64px;z-index:59;background:var(--surface-1);
+  border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 34px rgba(0,0,0,.28);
+  padding:8px;min-width:214px;max-height:60vh;overflow-y:auto;display:none}
+#ddmePanel .hd{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);
+  font-weight:700;padding:5px 9px 7px}
+#ddmePanel button{display:block;width:100%;text-align:left;background:none;border:0;font-family:inherit;
+  padding:8px 10px;border-radius:8px;color:var(--ink-1);font-size:14px;cursor:pointer}
+#ddmePanel button:hover{background:color-mix(in srgb, var(--accent) 13%, transparent);color:var(--accent)}
+#ddmePanel button.on{color:var(--accent);font-weight:750}
+@media(max-width:760px){#ddmeChip{left:10px;bottom:12px;font-size:12.5px;padding:7px 12px}
+  #ddmePanel{left:10px;bottom:56px}}
+@media print{#ddmeChip,#ddmePanel{display:none!important}}`;
+    document.head.appendChild(s);
+  }
+
+  function openPicker(){
+    style();
+    let p=document.getElementById("ddmePanel");
+    if(!p){ p=document.createElement("div"); p.id="ddmePanel"; document.body.appendChild(p);
+      addEventListener("click",e=>{ if(p.style.display!=="none" &&
+        !p.contains(e.target) && e.target.id!=="ddmeChip" && !e.target.closest("#ddmeChip")) p.style.display="none"; });
+    }
+    const t=teams(), cur=window.DDMe.idx(t);
+    p.textContent="";
+    const h=document.createElement("div"); h.className="hd"; h.textContent="Which team are you?"; p.appendChild(h);
+    t.forEach((tm,i)=>{
+      const b=document.createElement("button");
+      b.textContent=tm.name + (tm.owner && tm.owner!==tm.name ? "  ·  "+tm.owner : "");
+      if(i===cur) b.className="on";
+      b.addEventListener("click",()=>{ window.DDMe.set(i); p.style.display="none"; render();
+        if(typeof window.ddRerender==="function") window.ddRerender(); else location.reload(); });
+      p.appendChild(b);
+    });
+    p.style.display="block";
+  }
+
+  function render(){
+    const c=document.getElementById("ddmeChip"); if(!c) return;
+    const nm=window.DDMe.idx()!=null ? teams()[window.DDMe.idx()].name : null;
+    c.className = nm ? "" : "unset";
+    c.innerHTML = nm ? `You: <span class="who">${nm.replace(/[<>&]/g,"")}</span> ▾`
+                     : `👤 Who are you? ▾`;
+    c.title = nm ? "Change which team you are" : "Pick your team to personalize this page";
+  }
+
+  addEventListener("load",()=>{
+    setTimeout(()=>{
+      if(!window.DD_POOL || !window.DD_POOL.length) return;      // draft pages only
+      if(document.getElementById("ddmeChip")) return;
+      style();
+      const b=document.createElement("button");
+      b.id="ddmeChip"; b.type="button";
+      b.addEventListener("click",e=>{ e.stopPropagation(); openPicker(); });
+      document.body.appendChild(b);
+      render();
+      window.DDMe.onChange(render);
+    }, 340);
   });
 })();
 
@@ -1028,7 +1139,9 @@ function render(){
   const steals=[...allPicks].sort((a,b)=>b.delta-a.delta);
   const reaches=[...steals].reverse();
   const avgSurplus=drafted.reduce((a,t)=>a+t.surplus,0)/drafted.length;
-  const myTi=S.settings.myTeam;
+  // the mirrored state carries the operator's myTeam — prefer this device's identity
+  const meIdx=(window.DDMe && window.DDMe.idx(S.settings.teams));
+  const myTi=(meIdx==null ? S.settings.myTeam : meIdx);
   LEAGUE_AVG={
     spent:      drafted.reduce((a,t)=>a+t.spent,0)/drafted.length,
     startValue: drafted.reduce((a,t)=>a+t.startValue,0)/drafted.length,
@@ -1239,6 +1352,7 @@ if(window.DDSync && DDSync.on){
   });
 }
 let rt; addEventListener("resize",()=>{ clearTimeout(rt); rt=setTimeout(render,220); });
+window.ddRerender=render;
 window.onThemeChange=render;
 </script>
 </body>
