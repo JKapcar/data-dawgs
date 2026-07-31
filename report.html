@@ -457,7 +457,10 @@ svg text{font-family:inherit}
   // Single live control: it IS the status light AND the way to the board. Previously the
   // dataviz page carried a "● live" chip *and* a separate "⇄ Live Board" link — two things
   // doing one job. On the board itself it would be a link to the page you're on, so skip it.
-  if(page!=="live"){
+  // Skipped on the homepage too (Kap, 7/31): that page is the manifesto, not a draft tool —
+  // a status light for a draft the reader hasn't been told about yet just looks out of place.
+  // The Draft ▾ menu still gets you there.
+  if(page!=="live" && page!=="home"){
     const lv = document.createElement("a");
     lv.className="livebtn"; lv.id="navLive"; lv.href="board.html?view=live";
     lv.innerHTML='<span class="dot"></span>LIVE DRAFT';
