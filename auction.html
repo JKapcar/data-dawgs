@@ -291,6 +291,23 @@ body.proj .wrap{max-width:none;padding:10px 18px}
 .ophead .oph-clock b{color:var(--accent)}
 .ophead .oph-infl{font-size:13px;color:var(--ink-3);margin-left:auto}
 .drawer{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+/* Dawg Bot — draft assistant dock (lives outside #app so renderOp never wipes the transcript) */
+#aiDock{position:fixed;right:14px;bottom:14px;z-index:60;width:min(400px,calc(100vw - 28px));max-height:min(560px,78vh);display:flex;flex-direction:column;background:var(--surface-1);border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.28);overflow:hidden}
+#aiDock .aihead{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--grid)}
+#aiDock .aix{margin-left:auto;background:none;border:0;color:var(--ink-2);font-size:15px;cursor:pointer;padding:2px 6px}
+.aichips{display:flex;gap:6px;flex-wrap:wrap;padding:8px 10px 0}
+.aichips .chip{font-size:11.5px;padding:4px 9px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--ink-2);cursor:pointer}
+.aichips .chip:hover{color:var(--accent);border-color:var(--accent)}
+.aimsgs{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px;min-height:120px}
+.aim{font-size:13px;line-height:1.45;white-space:pre-wrap;border-radius:10px;padding:7px 10px;max-width:94%;overflow-wrap:anywhere}
+.aim.you{align-self:flex-end;background:var(--accent);color:var(--accent-ink,#fff)}
+.aim.bot{align-self:flex-start;background:transparent;border:1px solid var(--grid);color:var(--ink-1)}
+.aim.sys{align-self:center;color:var(--ink-3);font-size:12px;text-align:center}
+.aim.dim{opacity:.6}
+.aim.err{color:var(--bad);border-color:var(--bad)}
+.airow{display:flex;gap:8px;padding:10px;border-top:1px solid var(--grid)}
+.airow input{flex:1;min-width:0;background:var(--surface-1);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--ink-1);font-size:14px}
+@media (max-width:760px){#aiDock{right:0;left:0;bottom:0;width:100vw;border-radius:14px 14px 0 0;max-height:72vh}}
 .helpline{font-size:12.5px;color:var(--ink-3);margin:-6px 0 12px;text-align:center}
 .helpline b{color:var(--ink-2)}
 /* money-by-team */
@@ -1107,6 +1124,125 @@ function renderProj(){
 
 // ================= OPERATOR VIEW =================
 let acSel=-1, acMatches=[], armReset=false;
+// ---------- Dawg Bot: draft assistant ----------
+// Config lives in dd-ai-v1, its OWN localStorage key — never inside S, so the API key
+// can never ride a DDSync push out to the league's phones. Transcript is session-only.
+const LS_AI="dd-ai-v1";
+const AI_DEFAULTS={url:"https://api.x.ai/v1",key:"",model:"grok-4.1-fast"};
+const AI={
+  cfg(){ try{ return Object.assign({},AI_DEFAULTS,JSON.parse(localStorage.getItem(LS_AI)||"{}")); }catch(e){ return Object.assign({},AI_DEFAULTS); } },
+  save(url,key,model){ try{ localStorage.setItem(LS_AI, JSON.stringify({
+      url:(url||"").trim().replace(/\/+$/,"")||AI_DEFAULTS.url,
+      key:(key||"").trim(),
+      model:(model||"").trim()||AI_DEFAULTS.model })); }catch(e){} },
+  hist:[], busy:false
+};
+const AI_SYS=`You are Dawg Bot, the live auction assistant for Data Dawgs ("Data, not dogma"). You advise the operator's own team mid-draft in a 14-team fantasy football auction.
+Rules:
+- Use ONLY the numbers in the provided draft state. Never invent players, prices, or values not listed there.
+- MV is a dated market-consensus value snapshot, not a point projection. Surplus vs MV measures buying below consensus, not winning.
+- Reason from: dollars left, open starting slots, positional scarcity on the board, inflation, and each rival's max bid. $1-3 endgame fills are a real plan, not a failure.
+- Be direct and short — draft-night answers. 3-8 sentences or a tight list. Plain text only: no markdown, no headers, no tables.
+- When asked to decide, decide: name the player(s), the price you'd pay, and the one thing that would change your mind.`;
+
+function aiContext(){
+  const d=derive();
+  const my=S.settings.myTeam, mt=d.T[my]||d.T[0];
+  const scoreLabel={half:"Half PPR",full:"Full PPR",sf:"Superflex"}[S.settings.scoring]||S.settings.scoring;
+  const L=[];
+  L.push(`LEAGUE: 14-team offline auction, $${S.settings.budget} budget, ${S.settings.spots} roster spots each (QB, 2 RB, 2 WR, TE, 2 FLEX W/R/T, DEF, 6 bench; no kicker). Scoring: ${scoreLabel}. $0 bids are legal, so a team's max bid = its dollars left.`);
+  L.push(`MV = Market Value, a market-consensus auction-dollar snapshot dated 2026-07-29.`);
+  L.push(`STATE: ${S.picks.length} sold. Inflation ${d.infl.toFixed(2)}x — $${d.remDollars} chasing $${Math.round(d.remValue)} of MV still on the board.`);
+  L.push(`TEAMS (name | $ left = max bid | spots open | QB/RB/WR/TE/DST drafted):`);
+  d.T.forEach((t,i)=>L.push(`${i===my?"*":"-"} ${t.name} | $${t.left} | ${t.spotsLeft} | ${t.pos.QB}/${t.pos.RB}/${t.pos.WR}/${t.pos.TE}/${t.pos.DST}${i===my?"  <-- MY TEAM":""}`));
+  const mine=S.picks.filter(p=>p.ti===my);
+  L.push(`MY ROSTER${mine.length?"":" (no picks yet)"}:`);
+  mine.forEach(p=>L.push(`- ${p.player} (${p.pos}) paid $${p.price}, MV $${p.etr||0}`));
+  const c=mt.pos, flexUsed=Math.max(0,c.RB-2)+Math.max(0,c.WR-2)+Math.max(0,c.TE-1);
+  const holes=[];
+  if(c.QB<1)holes.push("QB"); if(c.RB<2)holes.push((2-c.RB)+" RB"); if(c.WR<2)holes.push((2-c.WR)+" WR");
+  if(c.TE<1)holes.push("TE"); const fl=Math.max(0,2-flexUsed); if(fl)holes.push(fl+" FLEX"); if(c.DST<1)holes.push("DEF");
+  L.push(`MY OPEN STARTING SLOTS: ${holes.length?holes.join(", "):"none — starters filled, bench only"}. I have $${mt.left} for ${mt.spotsLeft} open spots.`);
+  L.push(`BEST AVAILABLE by position (MV, then inflation-adjusted in parens; tags buy/fade/zrb = late-round RB target):`);
+  ["QB","RB","WR","TE"].forEach(P=>{
+    const av=POOL.filter(p=>p.pos===P && !d.soldSet.has(p.name) && val(p)>=1).sort((a,b)=>val(b)-val(a)).slice(0,8);
+    L.push(P+": "+(av.map(p=>`${p.name} $${val(p)} (adj $${Math.max(1,Math.round(val(p)*d.infl))}${p.tags&&p.tags.length?", "+p.tags.join("/"):""})`).join("; ")||"none left worth $1+"));
+  });
+  const noted=POOL.filter(p=>!d.soldSet.has(p.name) && p.note && val(p)>=1).sort((a,b)=>val(b)-val(a)).slice(0,14);
+  if(noted.length){ L.push(`ANALYST NOTES on available players (opinions, not facts):`); noted.forEach(p=>L.push(`- ${p.name}: ${p.note}`)); }
+  const rec=S.picks.slice(-6).reverse();
+  if(rec.length){ L.push(`LAST ${rec.length} SALES:`); rec.forEach(p=>L.push(`- ${p.player} (${p.pos}) $${p.price} to ${(S.settings.teams[p.ti]||{}).name||"?"} (MV $${p.etr||0})`)); }
+  if(S.onBlock && (S.onBlock.name||S.onBlock.player)) L.push(`ON THE BLOCK RIGHT NOW: ${S.onBlock.name||S.onBlock.player}`);
+  return L.join("\n");
+}
+
+function aiSay(who,txt){
+  const box=document.getElementById("aiMsgs"); if(!box) return null;
+  const el=document.createElement("div");
+  el.className="aim "+who+(txt==="…thinking"?" dim":"");
+  el.textContent=txt;
+  box.appendChild(el); box.scrollTop=box.scrollHeight;
+  return el;
+}
+
+async function aiAsk(q){
+  const cfg=AI.cfg();
+  if(!cfg.key){ aiSay("sys","No API key yet — ⚙ Menu → Setup → AI assistant. The key stays on this device only."); return; }
+  aiSay("you",q);
+  AI.hist.push({role:"user",content:q});
+  AI.busy=true;
+  const th=aiSay("bot","…thinking");
+  try{
+    const r=await fetch(cfg.url+"/chat/completions",{method:"POST",
+      headers:{"Content-Type":"application/json","Authorization":"Bearer "+cfg.key},
+      body:JSON.stringify({model:cfg.model,max_tokens:700,
+        messages:[{role:"system",content:AI_SYS},
+                  {role:"system",content:"CURRENT DRAFT STATE (regenerated for every question):\n"+aiContext()},
+                  ...AI.hist.slice(-8)]})});
+    if(!r.ok){
+      const t=await r.text().catch(()=>"");
+      const hint = r.status===401||r.status===403 ? " — key rejected; re-check it in Setup"
+                 : r.status===404 ? " — model or endpoint URL wrong; check Setup"
+                 : r.status===429 ? " — rate limited; wait a beat and re-ask" : "";
+      throw new Error("HTTP "+r.status+hint+(t?" · "+t.slice(0,140):""));
+    }
+    const data=await r.json();
+    const txt=(((data.choices||[])[0]||{}).message||{}).content||"(empty reply)";
+    AI.hist.push({role:"assistant",content:txt});
+    if(th){ th.textContent=txt; th.classList.remove("dim"); }
+  }catch(e){
+    if(th){
+      th.classList.add("err"); th.classList.remove("dim");
+      th.textContent = (e instanceof TypeError)
+        ? "Couldn't reach the AI endpoint. If this device is online, the provider is probably blocking direct browser calls (CORS) — that's the known open question; the fix is a small proxy. ("+e.message+")"
+        : "AI error: "+e.message;
+    }
+    AI.hist.pop(); // don't leave an unanswered turn poisoning the history
+  }finally{ AI.busy=false; }
+}
+
+function ensureAIDock(){
+  if(document.getElementById("aiDock")) return;
+  const myName=(S.settings.teams[S.settings.myTeam]||{}).name||"my team";
+  const dv=document.createElement("div");
+  dv.id="aiDock"; dv.style.display="none";
+  dv.innerHTML=`<div class="aihead"><b>🤖 Dawg Bot</b><span class="muted" style="font-size:11px">reads the live draft state</span><button class="aix" id="aiClose" title="Close">✕</button></div>
+    <div class="aichips">
+      <button class="chip" data-q="What should ${esc(myName)} do with the rest of its picks?">Rest-of-draft plan</button>
+      <button class="chip" data-q="Who is the best value on the board right now, and what would you pay?">Best value now</button>
+      <button class="chip" data-q="Where is the next positional cliff, and should I pay to beat it?">Next cliff</button>
+    </div>
+    <div id="aiMsgs" class="aimsgs"></div>
+    <div class="airow"><input type="text" id="aiIn" placeholder="Ask about the draft…" autocomplete="off"><button class="bigbtn" id="aiGo">Ask</button></div>`;
+  document.body.appendChild(dv);
+  const go=()=>{ const i=document.getElementById("aiIn"); const v=i.value.trim(); if(v&&!AI.busy){ i.value=""; aiAsk(v); } };
+  dv.querySelector("#aiGo").addEventListener("click",go);
+  dv.querySelector("#aiIn").addEventListener("keydown",e=>{ if(e.key==="Enter") go(); e.stopPropagation(); });
+  dv.querySelector("#aiClose").addEventListener("click",()=>{ dv.style.display="none"; });
+  dv.querySelectorAll(".chip").forEach(c=>c.addEventListener("click",()=>{ if(!AI.busy) aiAsk(c.dataset.q); }));
+  if(!AI.cfg().key) aiSay("sys","Paste your API key in ⚙ Menu → Setup → AI assistant (it stays on this device), then ask away.");
+}
+
 function renderOp(){
   const d=derive();
   const app=document.getElementById("app");
@@ -1117,6 +1253,7 @@ function renderOp(){
     <span class="oph-title">Auction Room</span>
     <span class="oph-clock">ON THE CLOCK: <b>${esc(team(S.nomIdx))}</b></span>
     <span class="oph-infl">Inflation <b style="color:${d.infl>1.05?"var(--bad)":d.infl<0.95?"var(--good)":"var(--ink-2)"}">${d.infl.toFixed(2)}×</b> · ${fmt$(d.remDollars)} chasing ${fmt$(Math.round(d.remValue))}</span>
+    <button class="btn" id="aiBtn">🤖 AI</button>
     <button class="btn" id="menuBtn">⚙ Menu</button>
   </div>
   <div id="menuDrawer" class="drawer" style="display:${window.__drawerOpen?"":"none"}">
@@ -1382,6 +1519,13 @@ function bindOp(d){
     window.__drawerOpen=!window.__drawerOpen;
     document.getElementById("menuDrawer").style.display=window.__drawerOpen?"":"none";
   });
+  document.getElementById("aiBtn").addEventListener("click",()=>{
+    ensureAIDock();
+    const dv=document.getElementById("aiDock");
+    const opening = dv.style.display==="none";
+    dv.style.display = opening ? "" : "none";
+    if(opening){ const i=document.getElementById("aiIn"); if(i && window.innerWidth>760) i.focus(); }
+  });
   bindBlockClear();
   if(!window.__vkeyInstalled){
     window.__vkeyInstalled=true;
@@ -1464,6 +1608,16 @@ function renderSetup(sp){
         : "Off — phones only see the draft on this device. Paste a Firebase Realtime Database URL to turn it on."}</span>
      <input type="text" id="syncLink" readonly style="width:100%;font-size:12px" value="${esc(window.DDSync?DDSync.link("board.html?view=live"):"")}">
    </div>
+   <div class="ctlrow" style="margin:0 0 8px;padding:0 0 8px;border-bottom:1px solid var(--grid);align-items:flex-end;flex-wrap:wrap">
+     <label style="font-size:13px">AI endpoint
+       <input type="text" id="setAiUrl" value="${esc(AI.cfg().url)}" placeholder="https://api.x.ai/v1" style="width:220px"></label>
+     <label style="font-size:13px">API key
+       <input type="password" id="setAiKey" value="${esc(AI.cfg().key)}" placeholder="xai-…" autocomplete="off" style="width:200px"></label>
+     <label style="font-size:13px">Model
+       <input type="text" id="setAiModel" value="${esc(AI.cfg().model)}" style="width:140px"></label>
+     <button class="btn" id="aiSaveBtn" type="button">Save AI</button>
+     <span class="muted" id="aiMsg" style="flex-basis:100%">Powers the 🤖 Dawg Bot in the header. The key lives only in this browser's localStorage — never synced to the league mirror, never exported, sent only to the endpoint above.</span>
+   </div>
    <table><tbody>${S.settings.teams.map((t,i)=>`<tr><td>${i+1}</td>
      <td><input class="set-name" data-i="${i}" value="${esc(t.name)}"></td>
      <td><input class="set-owner" data-i="${i}" value="${esc(t.owner)}"></td></tr>`).join("")}</tbody></table>
@@ -1495,6 +1649,13 @@ function renderSetup(sp){
     (navigator.clipboard ? navigator.clipboard.writeText(el.value) : Promise.reject())
       .then(()=>{ sp.querySelector("#syncMsg").textContent="Link copied — text it to the league."; })
       .catch(()=>{ try{ document.execCommand("copy"); sp.querySelector("#syncMsg").textContent="Link copied."; }catch(e){} });
+  });
+  sp.querySelector("#aiSaveBtn").addEventListener("click",()=>{
+    AI.save(sp.querySelector("#setAiUrl").value, sp.querySelector("#setAiKey").value, sp.querySelector("#setAiModel").value);
+    const m=sp.querySelector("#aiMsg");
+    m.textContent = AI.cfg().key
+      ? "✓ Saved. Open 🤖 AI in the header and ask a test question."
+      : "Saved, but no key — Dawg Bot stays off until one is pasted.";
   });
   sp.querySelector("#setSave").addEventListener("click",()=>{
     S.settings.budget=Math.max(1,+sp.querySelector("#setBudget").value||200);
