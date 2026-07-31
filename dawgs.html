@@ -918,8 +918,8 @@ Rules:
 <div id="ytwrap"><div id="ytplayer"></div></div>
 
 <script>
-const SPINE = ["sp-00.jpg", "sp-01.jpg", "sp-02.jpg", "sp-03.jpg", "sp-04.jpg", "sp-05.jpg", "sp-06.jpg", "sp-07.jpg", "sp-08.jpg", "sp-09.jpg", "sp-10.jpg", "sp-11.jpg", "sp-12.jpg", "sp-13.jpg", "sp-14.jpg", "sp-15.jpg", "sp-16.jpg", "sp-17.jpg", "sp-18.jpg", "sp-19.jpg", "sp-20.jpg", "sp-21.jpg", "sp-22.jpg", "sp-23.jpg", "sp-24.jpg", "sp-25.jpg", "sp-26.jpg", "sp-27.jpg", "sp-28.jpg", "sp-29.jpg", "sp-30.jpg", "sp-31.jpg", "sp-32.jpg", "sp-33.jpg", "sp-34.jpg", "sp-35.jpg", "sp-36.jpg", "sp-37.jpg"];          // chronological, one per era
-const FOCAL = {"sp-00.jpg": "40% 25%", "sp-01.jpg": "52% 30%", "sp-02.jpg": "40% 42%", "sp-03.jpg": "55% 25%", "sp-04.jpg": "50% 50%", "sp-05.jpg": "38% 40%", "sp-06.jpg": "58% 60%", "sp-07.jpg": "60% 45%", "sp-08.jpg": "48% 30%", "sp-09.jpg": "30% 33%", "sp-10.jpg": "32% 28%", "sp-11.jpg": "52% 48%", "sp-12.jpg": "25% 45%", "sp-13.jpg": "55% 32%", "sp-14.jpg": "42% 45%", "sp-15.jpg": "42% 45%", "sp-16.jpg": "32% 52%", "sp-17.jpg": "48% 33%", "sp-18.jpg": "42% 30%", "sp-19.jpg": "48% 28%", "sp-20.jpg": "40% 88%", "sp-21.jpg": "40% 70%", "sp-22.jpg": "50% 32%", "sp-23.jpg": "50% 60%", "sp-24.jpg": "42% 32%", "sp-25.jpg": "45% 60%", "sp-26.jpg": "45% 35%", "sp-27.jpg": "62% 55%", "sp-28.jpg": "27% 38%", "sp-29.jpg": "50% 45%", "sp-30.jpg": "82% 62%", "sp-31.jpg": "60% 45%", "sp-32.jpg": "30% 33%", "sp-33.jpg": "60% 32%", "sp-34.jpg": "62% 40%", "sp-35.jpg": "30% 72%", "sp-36.jpg": "52% 32%", "sp-37.jpg": "48% 42%"};          // per-slide subject position, hand-marked from the photos
+const SPINE = ["sp-00.jpg", "sp-01.jpg", "sp-02.jpg", "sp-03.jpg", "sp-04.jpg", "sp-05.jpg", "sp-06.jpg", "sp-07.jpg", "sp-08.jpg", "sp-09.jpg", "sp-10.jpg", "sp-11.jpg", "sp-12.jpg", "sp-13.jpg", "sp-14.jpg", "sp-15.jpg", "sp-16.jpg", "sp-17.jpg", "sp-18.jpg", "sp-19.jpg", "sp-20.jpg", "sp-21.jpg", "sp-22.jpg", "sp-23.jpg", "sp-24.jpg", "sp-25.jpg", "sp-26.jpg", "sp-27.jpg", "sp-28.jpg", "sp-29.jpg", "sp-30.jpg", "sp-31.jpg", "sp-32.jpg", "sp-33.jpg", "sp-34.jpg", "sp-35.jpg", "sp-36.jpg", "sp-37.jpg", "sp-38.jpg", "sp-39.jpg", "sp-40.jpg", "sp-41.jpg", "sp-42.jpg", "sp-43.jpg"];          // chronological, one per era
+const FOCAL = {"sp-00.jpg": "40% 25%", "sp-01.jpg": "45% 30%", "sp-02.jpg": "52% 30%", "sp-03.jpg": "40% 42%", "sp-04.jpg": "55% 25%", "sp-05.jpg": "50% 50%", "sp-06.jpg": "38% 40%", "sp-07.jpg": "58% 60%", "sp-08.jpg": "60% 45%", "sp-09.jpg": "48% 30%", "sp-10.jpg": "30% 33%", "sp-11.jpg": "32% 28%", "sp-12.jpg": "52% 48%", "sp-13.jpg": "25% 45%", "sp-14.jpg": "55% 32%", "sp-15.jpg": "42% 45%", "sp-16.jpg": "42% 45%", "sp-17.jpg": "32% 52%", "sp-18.jpg": "48% 33%", "sp-19.jpg": "42% 30%", "sp-20.jpg": "48% 28%", "sp-21.jpg": "40% 88%", "sp-22.jpg": "40% 70%", "sp-23.jpg": "50% 32%", "sp-24.jpg": "50% 60%", "sp-25.jpg": "42% 32%", "sp-26.jpg": "45% 60%", "sp-27.jpg": "45% 35%", "sp-28.jpg": "62% 55%", "sp-29.jpg": "27% 38%", "sp-30.jpg": "50% 45%", "sp-31.jpg": "82% 62%", "sp-32.jpg": "40% 65%", "sp-33.jpg": "60% 45%", "sp-34.jpg": "35% 55%", "sp-35.jpg": "32% 42%", "sp-36.jpg": "60% 32%", "sp-37.jpg": "44% 65%", "sp-38.jpg": "62% 40%", "sp-39.jpg": "30% 72%", "sp-40.jpg": "45% 38%", "sp-41.jpg": "52% 32%", "sp-42.jpg": "48% 42%", "sp-43.jpg": "52% 45%"};          // per-slide subject position, hand-marked from the photos
 const FLASH = ["fl-000.jpg", "fl-001.jpg", "fl-002.jpg", "fl-003.jpg", "fl-004.jpg", "fl-005.jpg", "fl-006.jpg", "fl-007.jpg", "fl-008.jpg", "fl-009.jpg", "fl-010.jpg", "fl-011.jpg", "fl-012.jpg", "fl-013.jpg", "fl-014.jpg", "fl-015.jpg", "fl-016.jpg", "fl-017.jpg", "fl-018.jpg", "fl-019.jpg", "fl-020.jpg", "fl-021.jpg", "fl-022.jpg", "fl-023.jpg", "fl-024.jpg", "fl-025.jpg", "fl-026.jpg", "fl-027.jpg", "fl-028.jpg", "fl-029.jpg", "fl-030.jpg", "fl-031.jpg", "fl-032.jpg", "fl-033.jpg", "fl-034.jpg", "fl-035.jpg", "fl-036.jpg", "fl-037.jpg", "fl-038.jpg", "fl-039.jpg", "fl-040.jpg", "fl-041.jpg", "fl-042.jpg", "fl-043.jpg", "fl-044.jpg", "fl-045.jpg", "fl-046.jpg", "fl-047.jpg", "fl-048.jpg", "fl-049.jpg", "fl-050.jpg", "fl-051.jpg", "fl-052.jpg", "fl-053.jpg", "fl-054.jpg", "fl-055.jpg", "fl-056.jpg", "fl-057.jpg", "fl-058.jpg", "fl-059.jpg", "fl-060.jpg", "fl-061.jpg", "fl-062.jpg", "fl-063.jpg", "fl-064.jpg", "fl-065.jpg", "fl-066.jpg", "fl-067.jpg", "fl-068.jpg", "fl-069.jpg", "fl-070.jpg", "fl-071.jpg", "fl-072.jpg", "fl-073.jpg", "fl-074.jpg", "fl-075.jpg", "fl-076.jpg", "fl-077.jpg", "fl-078.jpg", "fl-079.jpg", "fl-080.jpg", "fl-081.jpg", "fl-082.jpg", "fl-083.jpg", "fl-084.jpg", "fl-085.jpg", "fl-086.jpg", "fl-087.jpg", "fl-088.jpg", "fl-089.jpg", "fl-090.jpg", "fl-091.jpg", "fl-092.jpg", "fl-093.jpg", "fl-094.jpg", "fl-095.jpg", "fl-096.jpg", "fl-097.jpg", "fl-098.jpg", "fl-099.jpg", "fl-100.jpg", "fl-101.jpg", "fl-102.jpg", "fl-103.jpg", "fl-104.jpg", "fl-105.jpg", "fl-106.jpg", "fl-107.jpg", "fl-108.jpg", "fl-109.jpg", "fl-110.jpg", "fl-111.jpg", "fl-112.jpg", "fl-113.jpg", "fl-114.jpg", "fl-115.jpg", "fl-116.jpg", "fl-117.jpg", "fl-118.jpg", "fl-119.jpg", "fl-120.jpg", "fl-121.jpg", "fl-122.jpg", "fl-123.jpg", "fl-124.jpg", "fl-125.jpg", "fl-126.jpg", "fl-127.jpg", "fl-128.jpg", "fl-129.jpg", "fl-130.jpg", "fl-131.jpg", "fl-132.jpg", "fl-133.jpg", "fl-134.jpg", "fl-135.jpg", "fl-136.jpg", "fl-137.jpg", "fl-138.jpg", "fl-139.jpg", "fl-140.jpg", "fl-141.jpg", "fl-142.jpg", "fl-143.jpg", "fl-144.jpg", "fl-145.jpg", "fl-146.jpg", "fl-147.jpg", "fl-148.jpg", "fl-149.jpg", "fl-150.jpg", "fl-151.jpg", "fl-152.jpg", "fl-153.jpg", "fl-154.jpg", "fl-155.jpg", "fl-156.jpg", "fl-157.jpg", "fl-158.jpg", "fl-159.jpg", "fl-160.jpg", "fl-161.jpg", "fl-162.jpg", "fl-163.jpg", "fl-164.jpg", "fl-165.jpg", "fl-166.jpg", "fl-167.jpg", "fl-168.jpg", "fl-169.jpg", "fl-170.jpg", "fl-171.jpg", "fl-172.jpg", "fl-173.jpg", "fl-174.jpg", "fl-175.jpg", "fl-176.jpg", "fl-177.jpg", "fl-178.jpg", "fl-179.jpg", "fl-180.jpg", "fl-181.jpg", "fl-182.jpg", "fl-183.jpg", "fl-184.jpg", "fl-185.jpg", "fl-186.jpg", "fl-187.jpg", "fl-188.jpg", "fl-189.jpg", "fl-190.jpg", "fl-191.jpg", "fl-192.jpg", "fl-193.jpg", "fl-194.jpg", "fl-195.jpg", "fl-196.jpg", "fl-197.jpg", "fl-198.jpg", "fl-199.jpg", "fl-200.jpg", "fl-201.jpg", "fl-202.jpg"];          // everything else, in order
 const FINAL = "final.jpg";
 const YTID  = "1B6PMhd7RlM";
@@ -938,6 +938,10 @@ const LINGER_S = 6*BAR;     // 19.2s — final photo through the outro
 const FLASH_S  = 8*BAR;     // 25.6s — the life-flashing-by chorus
 const FADE_S   = 2*BAR;     //  6.4s — fade to black over the last two bars
 const FALLBACK_DUR = 185;   // HUSKY is 3:05; only used if the player never reports
+// The slow roll has two tempos before the burst: the first SPLIT slides run TEMPO×
+// longer than the rest, so the show starts slow, picks up a little, then explodes.
+const SPLIT = 20;
+const TEMPO = 1.4;
 
 const stage=document.getElementById("stage"), curtain=document.getElementById("curtain");
 const spineBox=document.getElementById("spine");
@@ -1048,7 +1052,6 @@ function tick(){
   const D=duration(), t=Math.min(clock(), D);
   const flashStart = Math.max(D*0.45, D - LINGER_S - FLASH_S);
   const lingerStart = D - LINGER_S;
-  spineMs = Math.round(flashStart*1000/Math.max(1,spineImgs.length));
 
   // the blackout only belongs to the final phase — clear it in the others, or seeking
   // backwards out of the fade leaves the picture permanently dimmed
@@ -1056,8 +1059,13 @@ function tick(){
 
   if(t < flashStart){
     if(phase!=="spine"){ phase="spine"; hideFlash(); finalImg.classList.remove("on"); }
-    showSpine(Math.min(spineImgs.length-1, Math.floor(t/flashStart*spineImgs.length)));
-    phaseEl.textContent = (curSpine+1)+" / "+spineImgs.length;
+    const N=spineImgs.length, S=Math.min(SPLIT,N);
+    const d2=flashStart/Math.max(1, S*TEMPO+(N-S)), d1=TEMPO*d2, t1=S*d1;
+    let idx;
+    if(t<t1){ idx=Math.floor(t/d1); spineMs=Math.round(d1*1000); }
+    else { idx=S+Math.floor((t-t1)/d2); spineMs=Math.round(d2*1000); }
+    showSpine(Math.min(N-1, idx));
+    phaseEl.textContent = (curSpine+1)+" / "+N;
   } else if(t < lingerStart){
     if(phase!=="flash"){
       phase="flash";
