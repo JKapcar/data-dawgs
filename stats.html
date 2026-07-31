@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -107,12 +107,9 @@ td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--grid);white-sp
 tr:last-child td{border-bottom:none}
 /* ---- landing ---- */
 .hero{padding:34px 0 6px;text-align:center;max-width:720px;margin:0 auto}
-/* Two hero files, one per theme — colors baked to the exact page accent so no CSS filter is
-   needed. NO drop-shadow: at 46px blur it haloed into a visible box around the artwork. */
+/* One hero file, brand orange #ff6a02 — the same orange as the nav logo, both themes.
+   NO filter and NO drop-shadow: at 46px blur the shadow haloed into a visible box. */
 .hero img{width:min(360px,74vw);height:auto;display:block;margin:0 auto 6px;filter:none}
-.hero .hero-light{display:none}
-:root[data-theme="light"] .hero .hero-dark{display:none}
-:root[data-theme="light"] .hero .hero-light{display:block}
 .hero .tagline{font-size:17px;color:var(--ink-2);margin:10px 0 8px;letter-spacing:.01em}
 /* ---- manifesto (home) ---- */
 .manifesto{max-width:660px;margin:12px auto 0}
@@ -149,12 +146,13 @@ footer a{color:var(--accent)}
   --chip-on:#ff6a02; --chip-on-ink:#140a02;
 }
 :root[data-theme="light"]{
+  /* kept in sync with site.css light theme so stats doesn't read as a different site */
   color-scheme: light;
-  --surface-1:#fffdf9; --page:#f8f4ee;
-  --ink-1:#171310; --ink-2:#544e45; --ink-3:#8a8378;
-  --grid:#e6dfd4; --axis:#c8c0b2; --border:rgba(23,19,16,0.12);
-  --accent:#c2410c; --good:#006300; --bad:#d03b3b;
-  --chip-on:#c2410c; --chip-on-ink:#ffffff;
+  --surface-1:#fffdf7; --page:#f2ecdf;
+  --ink-1:#2b1c0e; --ink-2:#5b4a37; --ink-3:#8c7b66;
+  --grid:#e3dac6; --axis:#c4b8a2; --border:rgba(49,29,0,0.15);
+  --accent:#d13a00; --good:#006300; --bad:#c73030;
+  --chip-on:#d13a00; --chip-on-ink:#ffffff;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--page);color:var(--ink-1);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px;line-height:1.45}
@@ -319,10 +317,11 @@ footer a{color:var(--accent)}
   const TKEY = "dd-theme-" + (page || "home");
   window.DDTheme = {
     current(){
+      // light is the site default; the live draft board overrides via DD_THEME_DEFAULT
       try{
         return localStorage.getItem(TKEY) || window.DD_THEME_DEFAULT
-            || localStorage.getItem("dd-theme") || "dark";
-      }catch(e){ return window.DD_THEME_DEFAULT || "dark"; }
+            || localStorage.getItem("dd-theme") || "light";
+      }catch(e){ return window.DD_THEME_DEFAULT || "light"; }
     },
     apply(){
       const t = this.current();

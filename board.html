@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -107,12 +107,9 @@ td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--grid);white-sp
 tr:last-child td{border-bottom:none}
 /* ---- landing ---- */
 .hero{padding:34px 0 6px;text-align:center;max-width:720px;margin:0 auto}
-/* Two hero files, one per theme — colors baked to the exact page accent so no CSS filter is
-   needed. NO drop-shadow: at 46px blur it haloed into a visible box around the artwork. */
+/* One hero file, brand orange #ff6a02 — the same orange as the nav logo, both themes.
+   NO filter and NO drop-shadow: at 46px blur the shadow haloed into a visible box. */
 .hero img{width:min(360px,74vw);height:auto;display:block;margin:0 auto 6px;filter:none}
-.hero .hero-light{display:none}
-:root[data-theme="light"] .hero .hero-dark{display:none}
-:root[data-theme="light"] .hero .hero-light{display:block}
 .hero .tagline{font-size:17px;color:var(--ink-2);margin:10px 0 8px;letter-spacing:.01em}
 /* ---- manifesto (home) ---- */
 .manifesto{max-width:660px;margin:12px auto 0}
@@ -201,7 +198,11 @@ th.sortable:hover{color:var(--ink-1)}
 <body>
 <div class="wrap">
   <div id="nav"></div>
-  <script>if(new URLSearchParams(location.search).get("view")==="live"){ window.DD_PAGE="live"; window.DD_THEME_DEFAULT="dark"; }</script>
+  <script>if(new URLSearchParams(location.search).get("view")==="live"){
+    window.DD_PAGE="live"; window.DD_THEME_DEFAULT="dark";
+    // flip immediately so the projector/phone never flashes the light default
+    try{ if(!localStorage.getItem("dd-theme-live")) document.documentElement.dataset.theme="dark"; }catch(e){}
+  }</script>
   <script data-page="board">
 // Shared nav + theme + live-sync client. Each page: <div id="nav"></div> then this script with data-page attr.
 
@@ -315,10 +316,11 @@ th.sortable:hover{color:var(--ink-1)}
   const TKEY = "dd-theme-" + (page || "home");
   window.DDTheme = {
     current(){
+      // light is the site default; the live draft board overrides via DD_THEME_DEFAULT
       try{
         return localStorage.getItem(TKEY) || window.DD_THEME_DEFAULT
-            || localStorage.getItem("dd-theme") || "dark";
-      }catch(e){ return window.DD_THEME_DEFAULT || "dark"; }
+            || localStorage.getItem("dd-theme") || "light";
+      }catch(e){ return window.DD_THEME_DEFAULT || "light"; }
     },
     apply(){
       const t = this.current();
