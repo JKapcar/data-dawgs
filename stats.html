@@ -75,6 +75,9 @@ body{margin:0;background:var(--page);color:var(--ink-1);
 .grpmenu a{display:block;padding:8px 12px;border-radius:7px;color:var(--ink-2);text-decoration:none;font-size:14px;font-weight:550;white-space:nowrap}
 .grpmenu a:hover{background:color-mix(in srgb, var(--accent) 12%, transparent);color:var(--ink-1)}
 .grpmenu a.on{color:var(--accent)}
+.grpmenu a.hot{color:var(--accent);font-weight:750}
+.grpmenu a.hot::before{content:"●";font-size:9px;margin-right:7px;vertical-align:1px;animation:ddpulse 1.6s ease-in-out infinite}
+@keyframes ddpulse{0%,100%{opacity:1}50%{opacity:.3}}
 .theme-btn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--ink-2);padding:4px 10px;cursor:pointer;font-size:12.5px}
 /* ---- cards & type ---- */
 .card{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:18px}
@@ -187,12 +190,13 @@ footer a{color:var(--accent)}
 <script data-page="stats">
 // Shared nav with dropdown groups + theme toggle. Each page includes: <div id="nav"></div> then this script with data-page attr.
 (function(){
-  const page = document.currentScript.getAttribute('data-page') || "";
+  const page = window.DD_PAGE || document.currentScript.getAttribute('data-page') || "";
   const NAV = [
     {label:"Home", href:"index.html", key:"home"},
     {label:"Draft", items:[
+      ["board.html?view=live","Live Draft","live","hot"],
+      ["board.html","Cheat Sheet","board"],
       ["strategy.html","2026 Strategy","strategy"],
-      ["board.html","Draft Board","board"],
       ["auction.html","Auction Operator","auction"],
       ["bigboard.html","Big Board","bigboard"],
       ["dataviz.html","Draft Data Viz","dataviz"],
@@ -228,10 +232,11 @@ footer a{color:var(--accent)}
       if(!wasOpen) grp.classList.add("open");
     });
     const menu = document.createElement("div"); menu.className = "grpmenu";
-    entry.items.forEach(([href,label,key])=>{
+    entry.items.forEach(([href,label,key,hot])=>{
       const a = document.createElement("a");
       a.href = href; a.textContent = label;
-      if(key===page) a.className = "on";
+      if(key===page) a.classList.add("on");
+      if(hot) a.classList.add("hot");
       menu.appendChild(a);
     });
     grp.appendChild(btn); grp.appendChild(menu);
