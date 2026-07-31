@@ -107,9 +107,12 @@ td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--grid);white-sp
 tr:last-child td{border-bottom:none}
 /* ---- landing ---- */
 .hero{padding:34px 0 6px;text-align:center;max-width:720px;margin:0 auto}
-/* One hero file, brand orange #ff6a02 — the same orange as the nav logo, both themes.
+/* Dark hero = all brand orange. Light hero = banner-brown binary with orange eyes + wordmark.
    NO filter and NO drop-shadow: at 46px blur the shadow haloed into a visible box. */
 .hero img{width:min(360px,74vw);height:auto;display:block;margin:0 auto 6px;filter:none}
+.hero .hero-light{display:none}
+:root[data-theme="light"] .hero .hero-dark{display:none}
+:root[data-theme="light"] .hero .hero-light{display:block}
 .hero .tagline{font-size:17px;color:var(--ink-2);margin:10px 0 8px;letter-spacing:.01em}
 /* ---- manifesto (home) ---- */
 .manifesto{max-width:660px;margin:12px auto 0}
