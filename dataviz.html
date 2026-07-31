@@ -354,49 +354,64 @@ function hBarChart(container, rows, opts){
 
 function cliffChart(container, players, sold, infl){
   container.textContent="";
-  const W=container.clientWidth||1100, H=300, m={t:14,r:10,b:26,l:40};
-  const iw=W-m.l-m.r, ih=H-m.t-m.b;
   const n=players.length;
+  const BW=14, GAP=3, step=BW+GAP;                       // fat, fixed-width bars; chart scrolls
+  const m={t:18,r:14,b:44,l:40}, H=330;
+  const cw=container.clientWidth||1100;
+  const W=Math.max(cw, m.l+m.r+n*step);
+  const ih=H-m.t-m.b;
   const maxV=Math.max(1,...players.map(p=>val(p)));
-  const bw=Math.max(2,Math.min(18, iw/n-2));
-  const X=i=>m.l+i*(iw/n)+1;
+  const X=i=>m.l+i*step;
   const Y=v=>m.t+ih-(v/maxV)*ih;
-  const svg=svgEl("svg",{width:"100%",height:H,viewBox:`0 0 ${W} ${H}`});
+  const svg=svgEl("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,style:"display:block"});
   const grid=css("--grid"), ink3=css("--ink-3"), ink2=css("--ink-2"), surf=css("--surface-1");
   [0.25,0.5,0.75,1].forEach(f=>{
     const v=Math.round(maxV*f);
     svg.appendChild(svgEl("line",{x1:m.l,x2:W-m.r,y1:Y(v),y2:Y(v),stroke:grid,"stroke-width":1}));
-    const t=svgEl("text",{x:m.l-6,y:Y(v)+4,"text-anchor":"end","font-size":10,fill:ink3});
+    const t=svgEl("text",{x:m.l-6,y:Y(v)+4,"text-anchor":"end","font-size":10.5,fill:ink3});
     t.textContent="$"+v; svg.appendChild(t);
   });
   players.forEach((p,i)=>{
     const v=val(p), pk=sold[p.name];
     const color = pk ? css("--ink-3") : POS_COLOR[p.pos];
-    const bar=svgEl("rect",{x:X(i), y:Y(v), width:bw, height:Math.max(1,m.t+ih-Y(v)),
-      fill:color, rx:2, opacity: pk?0.35:1});
+    const bar=svgEl("rect",{x:X(i), y:Y(v), width:BW, height:Math.max(2,m.t+ih-Y(v)),
+      fill:color, rx:2.5, opacity: pk?0.35:1});
     svg.appendChild(bar);
-    const hit=svgEl("rect",{x:X(i)-1, y:m.t, width:Math.max(bw+2, iw/n), height:ih, fill:"transparent"});
-    const rows=[["ETR value",fmt$(v)],["Adj value",fmt$(Math.round(v*infl))]];
+    // last-name label under every bar, rotated
+    const nm=svgEl("text",{x:X(i)+BW/2, y:H-30, "font-size":9, fill:pk?ink3:ink2,
+      "text-anchor":"end", transform:`rotate(-42 ${X(i)+BW/2} ${H-30})`, opacity:pk?.55:1});
+    nm.textContent=p.name.includes(" DST")?p.name.replace(" DST"," D"):p.name.split(" ").slice(-1)[0];
+    svg.appendChild(nm);
+    const hit=svgEl("rect",{x:X(i)-GAP/2, y:m.t, width:step, height:H-m.t, fill:"transparent"});
+    const rows=[["Position",p.pos==="DST"?"D/ST":p.pos],["ETR value",fmt$(v)],["Adj value",fmt$(Math.round(v*infl))]];
     if(pk){rows.push(["Sold for","$"+pk.price]); rows.push(["To", (S.settings.teams[pk.ti]||{}).name||"?"]);}
     else rows.push(["Status","AVAILABLE"]);
+    hit.addEventListener("pointerenter",()=>{ bar.setAttribute("stroke",css("--ink-1")); bar.setAttribute("stroke-width","1.5"); });
     hit.addEventListener("pointermove",e=>showTT(e.clientX,e.clientY,p.name,rows));
-    hit.addEventListener("pointerleave",hideTT);
+    hit.addEventListener("pointerleave",()=>{ bar.removeAttribute("stroke"); hideTT(); });
     svg.appendChild(hit);
   });
-  // direct-label top 2 available
+  // direct-label top 2 available with full name + price
   let labeled=0;
   for(let i=0;i<n && labeled<2;i++){
     const p=players[i];
     if(!sold[p.name]){
-      const t=svgEl("text",{x:Math.min(X(i)+bw/2, W-60), y:Y(val(p))-6,"text-anchor":"middle","font-size":10.5,fill:ink2,"font-weight":600,
+      const t=svgEl("text",{x:Math.max(X(i)+BW/2, 76), y:Y(val(p))-7,"text-anchor":"middle","font-size":11,fill:ink2,"font-weight":650,
         stroke:surf,"stroke-width":3,"paint-order":"stroke"});
       t.textContent=p.name.split(" ").slice(-1)[0]+" $"+val(p);
       svg.appendChild(t); labeled++;
     }
   }
-  const xt=svgEl("text",{x:m.l+iw/2,y:H-6,"text-anchor":"middle","font-size":11,fill:ink3});
-  xt.textContent="players ranked by ETR value →"; svg.appendChild(xt);
-  container.appendChild(svg);
+  const sc=document.createElement("div");
+  sc.style.cssText="overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px";
+  sc.appendChild(svg);
+  container.appendChild(sc);
+  if(W>cw){
+    const hint=document.createElement("div");
+    hint.className="note"; hint.style.marginTop="4px";
+    hint.textContent="Scroll right for the rest of the board →";
+    container.appendChild(hint);
+  }
 }
 
 // ---------- render ----------
