@@ -174,9 +174,13 @@ footer a{color:var(--accent)}
 </style>
 <style>
 .vh1{font-size:24px;font-weight:750;margin:6px 0 2px}
-.controls2{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:12px 0 16px}
-.controls2 label{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3);font-weight:600;display:flex;gap:8px;align-items:center}
-.controls2 select{background:var(--surface-1);color:var(--ink-1);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:14px}
+/* A "dashboard" is a titled strip of stat tiles with one scope control of its own.
+   There will be more of these, so it's a shape, not a one-off. */
+.dash{margin:14px 0 16px}
+.dash-h{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.dash-t{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--ink-3);margin:0}
+.dash-h .vsel{margin-left:auto}
 .livechip{font-size:11.5px;color:var(--good);border:1px solid color-mix(in srgb,var(--good) 40%,transparent);border-radius:999px;padding:3px 10px;margin-left:auto}
 .tiles2{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
 .gotile{display:flex;align-items:center;gap:14px;text-decoration:none;color:var(--ink-1);
@@ -858,10 +862,6 @@ Rules:
   <h1 class="vh1">Draft Data Viz</h1>
   <p class="muted" style="margin:0">Live view of the auction — updates as sales land. Same data as the Operator and Big Board on this device.
     <b>MV</b> = Market Value, a market-consensus estimate of what a player should cost on a 12-team, $200 basis.</p>
-  <div class="controls2">
-    <label>Scope
-      <select id="scopeSel"><option value="-1">Whole league</option></select></label>
-  </div>
   <a class="gotile" href="report.html">
     <span class="gt-i">🅰️</span>
     <span><span class="gt-t">Draft Report Card</span>
@@ -1207,11 +1207,33 @@ function cliffChart(container, players, sold, infl){
 }
 
 // ---------- render ----------
-let scope=-1, cliffPos="ALL", pvTeam="ALL", pvPos="ALL";
+let cliffPos="ALL", pvTeam="ALL", pvPos="ALL";
 let pvColor="pos";        // "pos" | "team" — how the scatter dots are coloured
 let cliffHide=false;      // true = drop drafted players so the chart shrinks to what's left
-// first load on a device that knows who it is → open on THEIR team, not the league
-let scopeTouched=false;
+// Every display owns its own scope now — there is no page-level control. The tiles are
+// the exception only in that they're a *dashboard*: one toggle for the whole strip.
+let tileScope   = -1;   // -1 = whole league
+let spendScope  = -1;   // -1 = all teams
+let rosterScope = 0;    // always a real team; a roster has no "whole league" reading
+// A device that knows who it is opens on THAT team everywhere, once, until touched.
+let seeded=false;
+
+// One titled tile strip with one control. Adding another dashboard later means calling
+// this again with a different set of tiles — not laying out another header by hand.
+function dashboardHTML(id, title, scopeVal, tiles, teams, allLabel){
+  return `<section class="dash">
+    <div class="dash-h">
+      <h2 class="dash-t">${esc(title)}</h2>
+      <select id="${id}" class="vsel" aria-label="${esc(title)} scope">
+        <option value="-1"${scopeVal<0?" selected":""}>${esc(allLabel||"Whole league")}</option>
+        ${teams.map((t,i)=>`<option value="${i}"${scopeVal===i?" selected":""}>${esc(t.name)}</option>`).join("")}
+      </select>
+    </div>
+    <div class="tiles2">${tiles.map(t=>
+      `<div class="tile2"><div class="tl2">${t[0]}</div><div class="tv2">${t[1]}</div><div class="td2">${t[2]}</div></div>`
+    ).join("")}</div>
+  </section>`;
+}
 function render(){
   // Re-rendering blows away #viz, the document briefly collapses, and the browser clamps
   // the scroll position to the top. Mid-draft that means every toggle throws you back to
@@ -1219,24 +1241,20 @@ function render(){
   const _sy=scrollY;
   load();
   const d=derive();
-  // scope select options
-  if(!scopeTouched && window.DDMe){
-    const me=window.DDMe.idx(S.settings.teams);
-    if(me!=null) scope=me;
-    scopeTouched=true;
+  const teams=S.settings.teams;
+  if(!seeded){
+    const me = window.DDMe ? window.DDMe.idx(teams) : null;
+    if(me!=null){ tileScope=me; spendScope=me; rosterScope=me; }
+    seeded=true;
   }
-  const sel=document.getElementById("scopeSel");
-  if(sel.options.length!==S.settings.teams.length+1){
-    sel.innerHTML='<option value="-1">Whole league</option>'+S.settings.teams.map((t,i)=>`<option value="${i}">${esc(t.name)}</option>`).join("");
-  }
-  sel.value=String(scope);
+  if(rosterScope>=teams.length) rosterScope=0;
   const pos=cliffPos;
   const viz=document.getElementById("viz");
-  const teamMode=scope>=0, T=teamMode?d.T[scope]:null;
 
-  // tiles
+  // ---- dashboard: one toggle for the whole tile strip ----
+  const TL = tileScope>=0 ? d.T[tileScope] : null;
   let tiles;
-  if(!teamMode){
+  if(!TL){
     const spent=d.T.reduce((a,t)=>a+t.spent,0);
     tiles=[["League spent",fmt$(spent),`${(S.picks||[]).length} picks`],
       ["League $ left",fmt$(d.remDollars),`of ${fmt$(S.settings.budget*d.T.length)}`],
@@ -1244,17 +1262,25 @@ function render(){
       ["Inflation",d.infl.toFixed(2)+"×", d.infl>1?"prices running hot":"value out there"],
       ["Avg $ left/team",fmt$(d.remDollars/d.T.length),""]];
   } else {
-    tiles=[["Spent",fmt$(T.spent),`${T.count}/${S.settings.spots} drafted`],
-      ["Budget left",fmt$(T.left),`${Math.max(0,S.settings.spots-T.count)} spots left`],
-      ["Market value acquired",fmt$(T.value),""],
-      ["Surplus",(T.surplus>=0?"+":"−")+"$"+Math.abs(Math.round(T.surplus)),"value − spent"],
-      ["Max sensible bid",fmt$(T.left),"$0 bids are legal, so ceiling = budget"]];
+    tiles=[["Spent",fmt$(TL.spent),`${TL.count}/${S.settings.spots} drafted`],
+      ["Budget left",fmt$(TL.left),`${Math.max(0,S.settings.spots-TL.count)} spots left`],
+      ["Market value acquired",fmt$(TL.value),""],
+      ["Surplus",(TL.surplus>=0?"+":"−")+"$"+Math.abs(Math.round(TL.surplus)),"value − spent"],
+      ["Max sensible bid",fmt$(TL.left),"$0 bids are legal, so ceiling = budget"]];
   }
-  let html=`<div class="tiles2">${tiles.map(t=>`<div class="tile2"><div class="tl2">${t[0]}</div><div class="tv2">${t[1]}</div><div class="td2">${t[2]}</div></div>`).join("")}</div>`;
+  let html=dashboardHTML("tileSel", TL?esc(TL.name)+" — auction totals":"Auction totals",
+                         tileScope, tiles, teams);
 
+  const SP = spendScope>=0 ? d.T[spendScope] : null;
   html+=`<div class="vizgrid">
-    <div class="vcard"><h2>Where the money went</h2>
-      <p class="note">${teamMode?esc(T.name)+"'s":"League"} auction dollars by position${teamMode?"":" (all teams)"}.</p>
+    <div class="vcard"><h2 style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">Where the money went
+      <span class="vfilters">
+        <select id="spendSel" class="vsel" aria-label="Filter by team">
+          <option value="-1"${SP?"":" selected"}>All teams</option>
+          ${teams.map((t,i)=>`<option value="${i}"${spendScope===i?" selected":""}>${esc(t.name)}</option>`).join("")}
+        </select>
+      </span></h2>
+      <p class="note">${SP?esc(SP.name)+"'s":"League"} auction dollars by position${SP?"":" (all teams)"}.</p>
       <div id="chartSpend"></div></div>
     <div class="vcard"><h2>Value remaining, in tiers</h2>
       <p class="note">Sum of MV $ still on the board per position, stacked by player tier. Hover a segment for the count.</p>
@@ -1322,20 +1348,26 @@ function render(){
     }</div>
   </div>`;
 
-  if(teamMode){
-    html+=`<div class="vcard"><h2>${esc(T.name)} — roster</h2>
-      <div style="overflow-x:auto"><table class="rostab"><thead><tr><th class="tl">Player</th><th>Pos</th><th>$</th><th>MV</th><th>±</th></tr></thead><tbody>
-      ${T.picks.map(pk=>{const dv=pk.etr?pk.price-pk.etr:null;
-        return `<tr><td class="tl" style="font-weight:600">${esc(pk.player)}</td><td>${esc(norm(pk.pos))}</td><td>$${pk.price}</td><td>${pk.etr?"$"+pk.etr:"–"}</td>
-        <td style="font-weight:700;color:${dv==null?"var(--ink-3)":dv>0?"var(--bad)":"var(--good)"}">${dv==null?"–":(dv>0?"+":"")+"$"+dv}</td></tr>`;}).join("")||'<tr><td class="tl muted">No picks yet</td></tr>'}
-      </tbody></table></div></div>`;
-  }
+  // ---- roster: always on screen now, with its own team picker. It used to appear only
+  // when the page scope happened to be a team, which meant it silently vanished. ----
+  const RT = d.T[rosterScope] || d.T[0];
+  html+=`<div class="vcard"><h2 style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">Roster
+      <span class="vfilters">
+        <select id="rosterSel" class="vsel" aria-label="Roster team">
+          ${teams.map((t,i)=>`<option value="${i}"${rosterScope===i?" selected":""}>${esc(t.name)}</option>`).join("")}
+        </select>
+      </span></h2>
+    <div style="overflow-x:auto"><table class="rostab"><thead><tr><th class="tl">Player</th><th>Pos</th><th>$</th><th>MV</th><th>±</th></tr></thead><tbody>
+    ${RT.picks.map(pk=>{const dv=pk.etr?pk.price-pk.etr:null;
+      return `<tr><td class="tl" style="font-weight:600">${esc(pk.player)}</td><td>${esc(norm(pk.pos))}</td><td>$${pk.price}</td><td>${pk.etr?"$"+pk.etr:"–"}</td>
+      <td style="font-weight:700;color:${dv==null?"var(--ink-3)":dv>0?"var(--bad)":"var(--good)"}">${dv==null?"–":(dv>0?"+":"")+"$"+dv}</td></tr>`;}).join("")||'<tr><td class="tl muted">No picks yet</td></tr>'}
+    </tbody></table></div></div>`;
   viz.innerHTML=html;
 
   // chart: spend by position
   const spendRows=POS_ORDER.map(P=>{
-    const v=teamMode?T.posSpend[P]:d.T.reduce((a,t)=>a+t.posSpend[P],0);
-    const cnt=teamMode?T.pos[P]:d.T.reduce((a,t)=>a+t.pos[P],0);
+    const v=SP?SP.posSpend[P]:d.T.reduce((a,t)=>a+t.posSpend[P],0);
+    const cnt=SP?SP.pos[P]:d.T.reduce((a,t)=>a+t.pos[P],0);
     return {label:P==="DST"?"D":P, segs:[{v, color:POS_COLOR[P], ttName:(P==="DST"?"D/ST":P),
       tt:[["Spent",fmt$(v)],["Players bought",cnt]]}]};
   });
@@ -1374,10 +1406,14 @@ function render(){
     pvColor=b.dataset.v; render();
   });
 
+  // each display owns its scope; none of them reach outside their own card
+  document.getElementById("tileSel").addEventListener("change",e=>{ tileScope=+e.target.value; render(); });
+  document.getElementById("spendSel").addEventListener("change",e=>{ spendScope=+e.target.value; render(); });
+  document.getElementById("rosterSel").addEventListener("change",e=>{ rosterScope=+e.target.value; render(); });
+
   if(_sy) scrollTo(0,_sy);
 }
 
-document.getElementById("scopeSel").addEventListener("change",e=>{scope=+e.target.value; scopeTouched=true; render();});
 addEventListener("storage",e=>{ if(e.key===LS_STATE) render(); });
 if(window.DDSync && window.DDSync.on){
   window.DDSync.subscribe(state=>{
@@ -1386,7 +1422,8 @@ if(window.DDSync && window.DDSync.on){
     render();
   });
 }
-window.ddRerender=()=>{ scopeTouched=false; render(); };
+// identity changed on this device → re-seed every display to the new team
+window.ddRerender=()=>{ seeded=false; render(); };
 addEventListener("resize",()=>render());
 window.onThemeChange=()=>render();
 render();
