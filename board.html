@@ -156,7 +156,7 @@ body.livefull .bmx{height:calc(100vh - 108px);min-height:430px}
 #cbo .shot.show{opacity:1;animation:cbzoom .5s linear}
 @keyframes cbzoom{from{transform:scale(1.07)}to{transform:scale(1)}}
 #cbo canvas{position:absolute;inset:0;width:100%;height:100%}
-#cbo .flash{position:absolute;inset:0;background:#fff;opacity:0;transition:opacity .12s}
+#cbo .flash{position:absolute;inset:0;background:#fff;opacity:0;transition:opacity .07s}
 #cbo .cb-t{position:absolute;left:0;right:0;top:22%;text-align:center;font-weight:900;color:#fff;
   text-shadow:0 4px 30px #000,0 0 70px #ff3c00;font-size:clamp(34px,9vw,110px);letter-spacing:.04em;
   animation:cbpulse .55s ease-in-out infinite alternate}
@@ -517,12 +517,12 @@ function celebrateBrowns(pk){
   // rapid Cleveland cuts with camera flash
   const shots=[...o.querySelectorAll(".shot")], flash=o.querySelector(".flash");
   let si=0;
+  shots[0].classList.add("show");
   const cutIv=setInterval(()=>{
     shots.forEach(s=>s.classList.remove("show"));
-    shots[si++%shots.length].classList.add("show");
-    flash.style.opacity=.85;
-    setTimeout(()=>{ flash.style.opacity=0; },70);
-  },450);
+    shots[++si%shots.length].classList.add("show");
+    if(si%2===0){ flash.style.opacity=.45; setTimeout(()=>{ flash.style.opacity=0; },50); }
+  },500);
   // fireworks
   const cv=o.querySelector("canvas"), ctx=cv.getContext("2d");
   cv.width=innerWidth; cv.height=innerHeight;
