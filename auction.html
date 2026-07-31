@@ -419,7 +419,9 @@ body.proj .blockbar .bb-v{font-size:26px}
 // localStorage-first: a failed push never blocks a sale.
 (function(){
   const LS_CFG = "dd-sync-v1";
-  const DEFAULT = { url: "", room: "pepperoninipples" };   // fill url once the DB exists
+  // Permanent league DB (created 7/31/26). Baked in so leaguemates need no ?sync= link —
+  // the normal Live Draft URL just works. Rules allow read+write on /drafts only.
+  const DEFAULT = { url: "https://data-dawgs-draft-default-rtdb.firebaseio.com", room: "pepperoninipples" };
   let cfg = null;
 
   function readCfg(){
