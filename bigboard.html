@@ -534,7 +534,6 @@ body.proj .blockbar .bb-v{font-size:26px}
     ]},
     {label:"Data", items:[
       ["board.html","Cheat Sheet","board"],
-      ["bigboard.html","Big Board","bigboard"],
       ["strategy.html","2026 Strategy","strategy"],
       ["stats.html","NFL EPA Stats","stats"],
     ]},
@@ -1106,7 +1105,6 @@ function renderOp(){
     <span class="oph-title">Auction Room</span>
     <span class="oph-clock">ON THE CLOCK: <b>${esc(team(S.nomIdx))}</b></span>
     <span class="oph-infl">Inflation <b style="color:${d.infl>1.05?"var(--bad)":d.infl<0.95?"var(--good)":"var(--ink-2)"}">${d.infl.toFixed(2)}×</b> · ${fmt$(d.remDollars)} chasing ${fmt$(Math.round(d.remValue))}</span>
-    <a class="btn" href="bigboard.html" target="_blank" title="Open this in a second window and drag it to the projector">🖥 Big Board</a>
     <button class="btn" id="menuBtn">⚙ Menu</button>
   </div>
   <div id="menuDrawer" class="drawer" style="display:${window.__drawerOpen?"":"none"}">
