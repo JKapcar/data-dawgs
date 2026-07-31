@@ -231,12 +231,6 @@ svg text{font-family:inherit}
   <div class="controls2">
     <label>Scope
       <select id="scopeSel"><option value="-1">Whole league</option></select></label>
-    <label>Position (cliff)
-      <select id="posSel">
-        <option value="ALL" selected>All</option>
-        <option value="RB">RB</option><option value="WR">WR</option><option value="QB">QB</option>
-        <option value="TE">TE</option><option value="DST">D/ST</option>
-      </select></label>
     <span class="livechip" id="liveChip">● live</span>
     <a class="btn" href="board.html?view=live" style="text-decoration:none">⇄ Live Board</a>
   </div>
@@ -415,7 +409,7 @@ function cliffChart(container, players, sold, infl){
 }
 
 // ---------- render ----------
-let scope=-1;
+let scope=-1, cliffPos="ALL";
 function render(){
   load();
   const d=derive();
@@ -425,7 +419,7 @@ function render(){
     sel.innerHTML='<option value="-1">Whole league</option>'+S.settings.teams.map((t,i)=>`<option value="${i}">${esc(t.name)}</option>`).join("");
   }
   sel.value=String(scope);
-  const pos=document.getElementById("posSel").value;
+  const pos=cliffPos;
   const viz=document.getElementById("viz");
   const teamMode=scope>=0, T=teamMode?d.T[scope]:null;
 
@@ -456,7 +450,16 @@ function render(){
       <div id="chartTiers"></div>
       <div class="legend2">${TIERS.map(t=>`<span><span class="sw" style="background:${t.c}"></span>${t.label}</span>`).join("")}</div></div>
   </div>
-  <div class="vcard" style="margin-bottom:16px"><h2>The cliff — ${pos==="ALL"?"all positions":pos==="DST"?"D/ST":pos} by value, drafted &amp; available</h2>
+  <div class="vcard" style="margin-bottom:16px">
+    <h2 style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">The cliff — ${pos==="ALL"?"all positions":pos==="DST"?"D/ST":pos} by value, drafted &amp; available
+      <select id="posSel" style="margin-left:auto;background:var(--surface-1);color:var(--ink-1);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:13.5px;font-weight:500">
+        <option value="ALL" ${pos==="ALL"?"selected":""}>All positions</option>
+        <option value="RB" ${pos==="RB"?"selected":""}>RB</option>
+        <option value="WR" ${pos==="WR"?"selected":""}>WR</option>
+        <option value="QB" ${pos==="QB"?"selected":""}>QB</option>
+        <option value="TE" ${pos==="TE"?"selected":""}>TE</option>
+        <option value="DST" ${pos==="DST"?"selected":""}>D/ST</option>
+      </select></h2>
     <p class="note">Every ${pos==="ALL"?"player":pos==="DST"?"D/ST":pos} worth $1+, ranked by ETR value. <b style="color:${pos==="ALL"?"var(--accent)":POS_COLOR[pos]}">Colored = available</b>${pos==="ALL"?" (color = position)":""}, grey = gone. When the colored bars stop, that's the cliff.</p>
     <div id="chartCliff"></div></div>`;
 
@@ -494,10 +497,10 @@ function render(){
   // cliff
   const cliffPlayers=POOL.filter(p=>(pos==="ALL"?p.pos!=="K":p.pos===pos) && (val(p)>=1 || d.sold[p.name])).sort((a,b)=>val(b)-val(a));
   cliffChart(document.getElementById("chartCliff"), cliffPlayers, d.sold, d.infl);
+  document.getElementById("posSel").addEventListener("change",e=>{ cliffPos=e.target.value; render(); });
 }
 
 document.getElementById("scopeSel").addEventListener("change",e=>{scope=+e.target.value; render();});
-document.getElementById("posSel").addEventListener("change",render);
 addEventListener("storage",e=>{ if(e.key===LS_STATE) render(); });
 addEventListener("resize",()=>render());
 window.onThemeChange=()=>render();
