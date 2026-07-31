@@ -1,0 +1,88 @@
+// Data Dawgs service worker — draft-night insurance.
+// HTML is network-first (so deploys land immediately) with a cache fallback,
+// so a dead venue wifi can't take the draft down mid-auction.
+const VERSION = "81004fefba";
+const CACHE = "dd-" + VERSION;
+
+// the pages that must survive a network drop (stats.html is 2MB — cached on first visit instead)
+const CORE = [
+  "/", "/index.html", "/board.html", "/auction.html",
+  "/bigboard.html", "/dataviz.html", "/strategy.html"
+];
+// celebration photos, so SUPER BOWL SUPER BROWNS still fires offline
+const MEDIA = [
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Cleveland%2C_Ohio_Skyline_at_Sunrise_at_Edgewater_Park_%288669269938%29.jpg/960px-Cleveland%2C_Ohio_Skyline_at_Sunrise_at_Edgewater_Park_%288669269938%29.jpg",
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Cleveland_Browns_Stadium_2012.jpg/960px-Cleveland_Browns_Stadium_2012.jpg",
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Terminal_Tower_from_Cuyahoga_River_Cropped.jpg/960px-Terminal_Tower_from_Cuyahoga_River_Cropped.jpg",
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Cleveland_Sign_at_Edgewater_Park_%2827624106630%29.jpg/960px-Cleveland_Sign_at_Edgewater_Park_%2827624106630%29.jpg"
+];
+
+self.addEventListener("install", e=>{
+  e.waitUntil((async()=>{
+    const c = await caches.open(CACHE);
+    // core pages must all land; media is best-effort (cross-origin, opaque)
+    await c.addAll(CORE).catch(()=>{});
+    await Promise.all(MEDIA.map(u =>
+      fetch(u, {mode:"no-cors"}).then(r=>c.put(u, r)).catch(()=>{})
+    ));
+    self.skipWaiting();
+  })());
+});
+
+self.addEventListener("activate", e=>{
+  e.waitUntil((async()=>{
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(k=>k.startsWith("dd-") && k!==CACHE).map(k=>caches.delete(k)));
+    await self.clients.claim();
+  })());
+});
+
+const isHTML = req =>
+  req.mode === "navigate" ||
+  (req.headers.get("accept")||"").includes("text/html");
+
+self.addEventListener("fetch", e=>{
+  const req = e.request;
+  if(req.method !== "GET") return;
+  const url = new URL(req.url);
+
+  // never cache the live-sync stream or any firebase traffic
+  if(/firebaseio\.com$/.test(url.hostname) || url.hostname.endsWith("firebasedatabase.app")) return;
+
+  if(isHTML(req)){
+    // network-first, 4s budget, fall back to whatever we cached
+    e.respondWith((async()=>{
+      try{
+        const net = await Promise.race([
+          fetch(req),
+          new Promise((_,rej)=>setTimeout(()=>rej(new Error("slow")), 4000))
+        ]);
+        const c = await caches.open(CACHE);
+        c.put(new Request(url.pathname), net.clone()).catch(()=>{});
+        return net;
+      }catch(err){
+        const c = await caches.open(CACHE);
+        return (await c.match(new Request(url.pathname)))
+            || (await c.match(url.pathname))
+            || (await c.match("/index.html"))
+            || new Response("<h1>Offline</h1><p>This page hasn't been cached yet.</p>",
+                            {headers:{"Content-Type":"text/html"}});
+      }
+    })());
+    return;
+  }
+
+  // images / fonts / everything else: cache-first, fill the cache in the background
+  e.respondWith((async()=>{
+    const c = await caches.open(CACHE);
+    const hit = await c.match(req);
+    if(hit) return hit;
+    try{
+      const net = await fetch(req);
+      if(net && (net.ok || net.type === "opaque")) c.put(req, net.clone()).catch(()=>{});
+      return net;
+    }catch(err){
+      return hit || Response.error();
+    }
+  })());
+});
