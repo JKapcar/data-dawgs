@@ -122,6 +122,14 @@ tr:last-child td{border-bottom:none}
 .manifesto p{font-size:16px;line-height:1.72;color:var(--ink-1);margin:0 0 15px}
 .manifesto p em{color:var(--ink-2);font-style:italic}
 .manifesto section+section{border-top:1px solid var(--grid);padding-top:30px}
+/* the four practice items: a rule instead of bullets — reads as field notes, not a list */
+.manifesto .field{border-left:2px solid color-mix(in srgb, var(--accent) 42%, transparent);
+  padding-left:16px;margin:0 0 20px}
+.manifesto .field .lead{display:block;font-weight:750;color:var(--ink-1);margin-bottom:3px}
+/* closing line — the landing */
+.manifesto .kicker{font-size:20px;font-weight:800;line-height:1.5;text-align:center;
+  color:var(--accent);max-width:520px;margin:22px auto 0;letter-spacing:.005em}
+@media(max-width:560px){.manifesto .kicker{font-size:17.5px}}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:26px}
 .tile{display:block;text-decoration:none;color:var(--ink-1);background:var(--surface-1);border:1px solid var(--border);border-radius:14px;padding:20px 22px;transition:border-color .15s}
 .tile:hover{border-color:var(--accent)}

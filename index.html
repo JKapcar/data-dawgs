@@ -122,6 +122,14 @@ tr:last-child td{border-bottom:none}
 .manifesto p{font-size:16px;line-height:1.72;color:var(--ink-1);margin:0 0 15px}
 .manifesto p em{color:var(--ink-2);font-style:italic}
 .manifesto section+section{border-top:1px solid var(--grid);padding-top:30px}
+/* the four practice items: a rule instead of bullets — reads as field notes, not a list */
+.manifesto .field{border-left:2px solid color-mix(in srgb, var(--accent) 42%, transparent);
+  padding-left:16px;margin:0 0 20px}
+.manifesto .field .lead{display:block;font-weight:750;color:var(--ink-1);margin-bottom:3px}
+/* closing line — the landing */
+.manifesto .kicker{font-size:20px;font-weight:800;line-height:1.5;text-align:center;
+  color:var(--accent);max-width:520px;margin:22px auto 0;letter-spacing:.005em}
+@media(max-width:560px){.manifesto .kicker{font-size:17.5px}}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:26px}
 .tile{display:block;text-decoration:none;color:var(--ink-1);background:var(--surface-1);border:1px solid var(--border);border-radius:14px;padding:20px 22px;transition:border-color .15s}
 .tile:hover{border-color:var(--accent)}
@@ -632,16 +640,48 @@ Rules:
   <div class="manifesto">
     <section>
       <h2>Data, not dogma</h2>
-      <p>Dogma is a belief that stopped paying rent. It got repeated because it was true once, or because someone confident said it, or because everyone in the room already agreed — and somewhere in there it quit being tested and started being defended.</p>
-      <p>Data is what you test it against. Not because numbers are sacred; they're noisy, they're collected by people with incentives, and a bad number held confidently is worse than none at all. But a number can be checked. A number can be wrong in a way you're able to see. Dogma can't.</p>
-      <p>So this is a sandbox. Ideas come in as hunches, get pointed at real numbers, and most don't survive. Strong claims get an outside-view check first — what's the base rate, across how many seasons? Estimates are ranges, not points. Everything carries a date. The honest answer is often <em>we don't know yet</em>, or <em>less than you'd think</em>. And when the argument is for a conclusion we already liked, the job is catching ourselves selecting the evidence.</p>
-      <p>Being wrong early and quietly is cheap. Being wrong late and loudly is what costs you.</p>
+      <p>Dogma is a belief that stopped paying rent. It got repeated because it was true once, or because the most confident guy in the room said it, and somewhere in there it quit being tested and started being defended.</p>
+      <p>Every market runs on dogma. That's not a complaint, it's the whole opportunity. When most of the room is defending beliefs, the edge belongs to whoever is still testing them.</p>
+      <p>The job is easy to say and hard to do: find the signal, fade the noise. Most of what passes for information is noise in a nice suit — a hot streak, a highlight, a take delivered loudly enough to sound like evidence. Noise is cheap and everywhere. Signal is thin, quiet, and usually boring. Anybody telling you the answer is obvious is selling you noise.</p>
+    </section>
+
+    <section>
+      <h2>Break it before the market does</h2>
+      <p>Some of us came up doing model risk inside a bank — the unglamorous job of trying to break the model before the market does. That work leaves a few permanent habits. A model that hasn't been attacked isn't validated, it's just unchallenged. If it didn't hold out of sample, it didn't hold. Every model dies at its assumptions, so you go find those first. And nobody grades their own homework: the person who built it is the last person who should certify it.</p>
+      <p>Swap the collateral for a draft board and none of that changes.</p>
+    </section>
+
+    <section>
+      <h2>What it looks like in practice</h2>
+      <p class="field"><span class="lead">"He passed the eye test."</span>The eye test is one guy's memory of three highlights. Target share, routes run, and draft capital tell you about next season. Your memory of a Week 9 catch does not. When the room pays for highlights, we buy volume.</p>
+      <p class="field"><span class="lead">Every auction has the same shape.</span>First twenty minutes, money flies at names everyone recognizes. Last hour, real production goes at half price because the room is broke and bored. That isn't a cheat code, it's discipline with a budget, and it wins every single year. We built a 14-team auction room so you can watch it happen live.</p>
+      <p class="field"><span class="lead">When a line moves, it moved for a reason.</span>And the reason is not sitting on Twitter for free. Respect sharp markets, attack soft ones. Your 12-man league is a soft market. That's where the edges live, not at the sportsbook window.</p>
+      <p class="field"><span class="lead">The cash-out button exists because it makes the book money.</span>If you never cashed out a single bet you'd finish ahead of the guy who always does, because cashing out has juice baked in. Most "features" in this space are priced against you. We check the price.</p>
+    </section>
+
+    <section>
+      <h2>Keep score</h2>
+      <p>Forecasting is a skill, not a personality trait. The people who are good at it aren't smarter. They work in ranges instead of fake point estimates, update in small steps when new information shows up instead of flipping or digging in, and keep score whether it went well or not. So everything here carries a date, a range, and a record you can check later. When we're wrong, the receipts stay up.</p>
+      <p>We also pay attention to the losses you don't see. The guy telling you about his 11–2 season isn't lying, he's just the one who's still talking — the other eleven went quiet. Small samples make geniuses. Fat tails eat them. Any strategy that can't survive its worst week isn't a strategy, it's a story with good timing.</p>
+      <p>And the honest part: numbers lie too. They're noisy, they're collected by people with incentives, and the fastest way to fool yourself is a stat that agrees with what you already wanted. Being wrong early and quietly is cheap. Being wrong late and loudly is what costs you.</p>
+    </section>
+
+    <section>
+      <h2>The dog who pulled the curtain</h2>
+      <p>Everybody remembers the wizard. Almost nobody remembers what actually beat him: a small dog wandered over and pulled the curtain back. Toto didn't argue with the giant floating head. He went and looked.</p>
+      <p>Parlor tricks only work at a distance. That's why the assistant riding along on every draft page is named Toto — he reads the live board and tells you what the numbers support, including when the honest answer is <em>not much</em>. You can out-talk a man. You can't out-talk a dog that goes and looks.</p>
     </section>
 
     <section>
       <h2>What's here, and what's coming</h2>
       <p>Today it's built out for fantasy football: an EPA explorer running on public play-by-play, a 2026 draft thesis with its sources and its expiration date attached, and a live auction room that runs a 14-team draft off a laptop and a projector.</p>
       <p>That's the first tenant, not the blueprint. Next through the door: prediction markets, forecasting and calibration tracking, sports betting models, game theory, and AI — anything where you can state a claim, write down a number, and find out later whether you were right.</p>
+    </section>
+
+    <section>
+      <h2>From Cleveland</h2>
+      <p>We've had a lifetime of expensive practice at believing things because we wanted them to be true. We still do it every September. We just don't bet on it.</p>
+      <p class="kicker">Nose down, ears up. We sniff out the signal.<br>Everything else is barking.</p>
     </section>
   </div>
 
