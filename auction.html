@@ -68,7 +68,8 @@ body{margin:0;background:var(--page);color:var(--ink-1);
 .grpbtn:hover{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--ink-1)}
 .grpbtn.on{color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent);border-radius:8px 8px 0 0}
 .grpbtn .caret{font-size:10px;opacity:.7}
-.grpmenu{position:absolute;top:calc(100% + 4px);left:0;min-width:190px;background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:6px;display:none;z-index:60;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.grpmenu{position:absolute;top:100%;left:0;min-width:190px;background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:6px;display:none;z-index:60;box-shadow:0 10px 30px rgba(0,0,0,.35);margin-top:4px}
+.grpmenu::before{content:"";position:absolute;top:-8px;left:0;right:0;height:8px}
 .navgrp.open .grpmenu{display:block}
 @media (hover:hover){ .navgrp:hover .grpmenu{display:block} }
 .grpmenu a{display:block;padding:8px 12px;border-radius:7px;color:var(--ink-2);text-decoration:none;font-size:14px;font-weight:550;white-space:nowrap}
@@ -205,6 +206,7 @@ body.proj .wrap{max-width:none;padding:10px 18px}
 .mx-c.pWR{background:color-mix(in srgb,#3987e5 28%,var(--surface-1))}
 .mx-c.pTE{background:color-mix(in srgb,#c98500 30%,var(--surface-1))}
 .mx-c.pDST{background:color-mix(in srgb,#8a8378 30%,var(--surface-1))}
+.mx-c.bn{opacity:.72}
 .mx-s{font-size:10px;color:var(--ink-3);display:flex;align-items:center;justify-content:center}
 .projfoot{display:flex;gap:14px;align-items:center;margin-top:8px;font-size:15px}
 .pf-sale{background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:8px 16px;display:flex;gap:12px;align-items:baseline;flex:1;min-width:0}
@@ -260,13 +262,13 @@ body.proj .wrap{max-width:none;padding:10px 18px}
 /* money-by-team */
 .tmwrap{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin-top:12px}
 .tmwrap h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3)}
-.tmrow{display:flex;align-items:center;gap:10px;padding:4.5px 0}
+.tmrow{display:flex;align-items:center;gap:10px;padding:5px 0}
 .tmrow .tmn{width:110px;font-weight:650;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tmrow.onclock .tmn{color:var(--accent)}
-.tmbar{flex:1;height:13px;background:color-mix(in srgb,var(--accent) 10%,var(--page));border-radius:7px;overflow:hidden}
-.tmbar .fill{height:100%;background:var(--accent);border-radius:7px 0 0 7px;min-width:0}
-.tmrow .tml{width:56px;text-align:right;font-weight:800;font-size:15px;font-variant-numeric:tabular-nums;color:var(--accent)}
-.tmrow .tms{width:92px;font-size:11.5px;color:var(--ink-3);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tmbar{flex:1;height:19px;background:color-mix(in srgb,var(--accent) 8%,var(--page));border-radius:7px;overflow:hidden}
+.tmbar .fill{height:100%;background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 82%,#fff),var(--accent));border-radius:7px;min-width:0;transition:width .4s}
+.tmrow .tml{width:60px;text-align:right;font-weight:800;font-size:16.5px;font-variant-numeric:tabular-nums;color:var(--accent)}
+.tmrow .tms{width:110px;font-size:11.5px;color:var(--ink-3);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 @media(max-width:760px){.tmrow .tmn{width:84px;font-size:12.5px}.tmrow .tms{width:70px}}
 .acwrap{flex:1;min-width:240px}
 #playerIn{width:100%;font-size:17px}
@@ -753,6 +755,23 @@ function toggleMic(){
 }
 
 // ================= PROJECTOR VIEW =================
+// Assign a team's picks to roster slots: QB, RB×2, WR×2, TE, FLX×2 (best remaining RB/WR/TE), DEF, bench (rest, price desc).
+function assignSlots(picks){
+  const norm=p=>p==="D"?"DST":p;
+  const by={QB:[],RB:[],WR:[],TE:[],DST:[],OTH:[]};
+  picks.forEach(p=>{ (by[norm(p.pos)]||by.OTH).push(p); });
+  for(const k in by) by[k].sort((a,b)=>b.price-a.price);
+  const s={};
+  s.QB=[by.QB.shift()||null];
+  s.RB=[by.RB.shift()||null, by.RB.shift()||null];
+  s.WR=[by.WR.shift()||null, by.WR.shift()||null];
+  s.TE=[by.TE.shift()||null];
+  const flexPool=[...by.RB,...by.WR,...by.TE].sort((a,b)=>b.price-a.price);
+  s.FLX=[flexPool.shift()||null, flexPool.shift()||null];
+  s.DEF=[by.DST.shift()||null];
+  s.BN=[...by.QB,...flexPool,...by.DST,...by.OTH].sort((a,b)=>b.price-a.price);
+  return s;
+}
 function shortName(n){
   if(n.length<=16 || n.includes(" DST")) return n;
   const parts=n.split(" ");
@@ -780,36 +799,34 @@ function renderProj(){
   const run=detectRun();
   if(run) tkItems+=`<span class="tk-item"><span class="tn" style="color:var(--bad)">🔥 RUN ON ${run}S — 4+ of last 6 sales</span></span>`;
   const tkDur=Math.max(30, (d.T.length+recent.length+2)*4);
-  // matrix: position-grouped bands (QB/RB/WR/TE/D), cols = teams
-  const POS_ORDER=["QB","RB","WR","TE","DST"];
-  const MIN_ROWS={QB:1,RB:2,WR:2,TE:1,DST:1};
-  const norm=p=>p==="D"?"DST":p;
-  const byPos=d.T.map((t,ti)=>{
-    const g={QB:[],RB:[],WR:[],TE:[],DST:[]};
-    S.picks.filter(p=>p.ti===ti).forEach(p=>{ (g[norm(p.pos)]||g.DST).push(p); });
-    for(const k in g) g[k].sort((a,b)=>b.price-a.price);
-    return g;
-  });
-  const bandRows={};
-  POS_ORDER.forEach(p=>{ bandRows[p]=Math.max(MIN_ROWS[p], ...byPos.map(g=>g[p].length)); });
-  const totalRows=POS_ORDER.reduce((a,p)=>a+bandRows[p],0);
-  let mx=`<div class="matrix" style="grid-template-columns:30px repeat(${d.T.length},1fr);grid-template-rows:auto repeat(${totalRows},1fr);height:calc(100vh - 196px)">`;
+  // matrix: full roster slots (QB / RB×2 / WR×2 / TE / FLX×2 / DEF / BN×6+), cols = teams
+  const POS_COLOR={QB:"#e66767",RB:"#199e70",WR:"#3987e5",TE:"#c98500",DST:"#8a8378",D:"#8a8378"};
+  const SLOT_COLOR={QB:"#e66767",RB:"#199e70",WR:"#3987e5",TE:"#c98500",FLX:"#a06bd1",DEF:"#8a8378",BN:"#8f897d"};
+  const teamSlots=d.T.map((t,ti)=>assignSlots(S.picks.filter(p=>p.ti===ti)));
+  const benchRows=Math.max(6, ...teamSlots.map(s=>s.BN.length));
+  const rows=[];
+  rows.push({g:"QB",lab:"QB",get:s=>s.QB[0],first:true});
+  [0,1].forEach(i=>rows.push({g:"RB",lab:i?"":"RB",get:s=>s.RB[i],first:i===0}));
+  [0,1].forEach(i=>rows.push({g:"WR",lab:i?"":"WR",get:s=>s.WR[i],first:i===0}));
+  rows.push({g:"TE",lab:"TE",get:s=>s.TE[0],first:true});
+  [0,1].forEach(i=>rows.push({g:"FLX",lab:i?"":"FLX",get:s=>s.FLX[i],first:i===0}));
+  rows.push({g:"DEF",lab:"D",get:s=>s.DEF[0],first:true});
+  for(let i=0;i<benchRows;i++) rows.push({g:"BN",lab:i?"":"BN",get:s=>s.BN[i]||null,first:i===0});
+  let mx=`<div class="matrix" style="grid-template-columns:30px repeat(${d.T.length},1fr);grid-template-rows:auto repeat(${rows.length},1fr);height:calc(100vh - 196px)">`;
   mx+=`<div></div>`+d.T.map((t,i)=>`<div class="mx-h ${i===S.nomIdx?"onclock":""}">${esc(t.name)}<br><span class="mh-m">${fmt$(t.left)}</span></div>`).join("");
-  const POS_LABEL={QB:"QB",RB:"RB",WR:"WR",TE:"TE",DST:"D"};
-  const POS_COLOR={QB:"#e66767",RB:"#199e70",WR:"#3987e5",TE:"#c98500",DST:"#8a8378"};
-  POS_ORDER.forEach(pos=>{
-    for(let r=0;r<bandRows[pos];r++){
-      mx += r===0
-        ? `<div class="mx-s" style="grid-row:span 1;color:${POS_COLOR[pos]};font-weight:800;font-size:11px;border-top:2px solid ${POS_COLOR[pos]}55">${POS_LABEL[pos]}</div>`
-        : `<div class="mx-s"></div>`;
-      for(let ti=0;ti<d.T.length;ti++){
-        const pk=byPos[ti][pos][r];
-        const topB = r===0 ? `style="border-top:2px solid ${POS_COLOR[pos]}55"` : "";
-        if(pk){
-          mx+=`<div class="mx-c p${pos} ${pk.keeper?"k":""}" ${topB}><span class="mp">${esc(shortName(pk.player))}</span><span class="mm">$${pk.price}</span></div>`;
-        } else {
-          mx+=`<div class="mx-c" ${topB}></div>`;
-        }
+  rows.forEach(row=>{
+    const sc=SLOT_COLOR[row.g];
+    mx += row.first
+      ? `<div class="mx-s" style="color:${sc};font-weight:800;font-size:10.5px;border-top:2px solid ${sc}55">${row.lab}</div>`
+      : `<div class="mx-s"></div>`;
+    for(let ti=0;ti<d.T.length;ti++){
+      const pk=row.get(teamSlots[ti]);
+      const topB = row.first ? `style="border-top:2px solid ${sc}55"` : "";
+      if(pk){
+        const pp=pk.pos==="D"?"DST":pk.pos;
+        mx+=`<div class="mx-c p${pp} ${row.g==="BN"?"bn":""} ${pk.keeper?"k":""}" ${topB}><span class="mp">${esc(shortName(pk.player))}</span><span class="mm">$${pk.price}</span></div>`;
+      } else {
+        mx+=`<div class="mx-c" ${topB}></div>`;
       }
     }
   });
@@ -940,12 +957,12 @@ function renderOp(){
     <span id="entryHint" style="font-size:12px;color:var(--ink-3);align-self:center"></span>
   </div>
   <div class="tmwrap">
-    <h3>Money spent by team</h3>
-    ${d.T.map((t,i)=>`<div class="tmrow ${i===S.nomIdx?"onclock":""}">
+    <h3>The money pile — $ remaining</h3>
+    ${d.T.map((t,i)=>({t,i})).sort((a,b)=>b.t.left-a.t.left || a.i-b.i).map(({t,i})=>`<div class="tmrow ${i===S.nomIdx?"onclock":""}">
       <span class="tmn">${esc(t.name)}</span>
-      <div class="tmbar"><div class="fill" style="width:${Math.min(100,Math.max(0,t.spent/S.settings.budget*100))}%"></div></div>
+      <div class="tmbar"><div class="fill" style="width:${Math.min(100,Math.max(0,t.left/S.settings.budget*100))}%"></div></div>
       <span class="tml">${fmt$(t.left)}</span>
-      <span class="tms">$${t.spent} · ${t.count}/${S.settings.spots}</span>
+      <span class="tms">$${t.spent} spent · ${t.count}/${S.settings.spots}</span>
     </div>`).join("")}
   </div>`;
   renderLog(d);

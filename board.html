@@ -68,7 +68,8 @@ body{margin:0;background:var(--page);color:var(--ink-1);
 .grpbtn:hover{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--ink-1)}
 .grpbtn.on{color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent);border-radius:8px 8px 0 0}
 .grpbtn .caret{font-size:10px;opacity:.7}
-.grpmenu{position:absolute;top:calc(100% + 4px);left:0;min-width:190px;background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:6px;display:none;z-index:60;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.grpmenu{position:absolute;top:100%;left:0;min-width:190px;background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:6px;display:none;z-index:60;box-shadow:0 10px 30px rgba(0,0,0,.35);margin-top:4px}
+.grpmenu::before{content:"";position:absolute;top:-8px;left:0;right:0;height:8px}
 .navgrp.open .grpmenu{display:block}
 @media (hover:hover){ .navgrp:hover .grpmenu{display:block} }
 .grpmenu a{display:block;padding:8px 12px;border-radius:7px;color:var(--ink-2);text-decoration:none;font-size:14px;font-weight:550;white-space:nowrap}
@@ -409,25 +410,24 @@ function renderLive(A){
     const dur=Math.max(18, recent.length*3);
     tk.innerHTML=`<div class="btick"><div class="bt-track" style="--btdur:${dur}s">${items}${items}</div></div>`;
   }
-  // ---- results matrix: teams × position bands ----
+  // ---- results matrix: teams × full roster slots (QB/RB×2/WR×2/TE/FLX×2/DEF/BN×6+) ----
   const grid=document.getElementById("liveGrid"); grid.textContent="";
-  const POSN=["QB","RB","WR","TE","DST"];
-  const MIN={QB:1,RB:2,WR:2,TE:1,DST:1};
-  const normP=p=>p==="D"?"DST":p;
-  const byPos=A.teams.map((t,ti)=>{
-    const g={QB:[],RB:[],WR:[],TE:[],DST:[]};
-    A.picks.filter(p=>p.ti===ti).forEach(p=>{ (g[normP(p.pos)]||g.DST).push(p); });
-    for(const k in g) g[k].sort((a,b)=>b.price-a.price);
-    return g;
-  });
-  const bandRows={};
-  POSN.forEach(P=>{ bandRows[P]=Math.max(MIN[P], ...byPos.map(g=>g[P].length)); });
-  const totalRows=Object.values(bandRows).reduce((a,b)=>a+b,0);
+  const SLOT_COLOR={QB:"#e66767",RB:"#199e70",WR:"#3987e5",TE:"#c98500",FLX:"#a06bd1",DEF:"#8a8378",BN:"#8f897d"};
+  const teamSlots=A.teams.map((t,ti)=>assignSlots(A.picks.filter(p=>p.ti===ti)));
+  const benchRows=Math.max(6, ...teamSlots.map(s=>s.BN.length));
+  const rows=[];
+  rows.push({g:"QB",lab:"QB",get:s=>s.QB[0],first:true});
+  [0,1].forEach(i=>rows.push({g:"RB",lab:i?"":"RB",get:s=>s.RB[i],first:i===0}));
+  [0,1].forEach(i=>rows.push({g:"WR",lab:i?"":"WR",get:s=>s.WR[i],first:i===0}));
+  rows.push({g:"TE",lab:"TE",get:s=>s.TE[0],first:true});
+  [0,1].forEach(i=>rows.push({g:"FLX",lab:i?"":"FLX",get:s=>s.FLX[i],first:i===0}));
+  rows.push({g:"DEF",lab:"D",get:s=>s.DEF[0],first:true});
+  for(let i=0;i<benchRows;i++) rows.push({g:"BN",lab:i?"":"BN",get:s=>s.BN[i]||null,first:i===0});
   const mx=document.createElement("div");
   mx.className="bmx";
   mx.style.gridTemplateColumns=`26px repeat(${A.teams.length}, minmax(92px,1fr))`;
   mx.style.minWidth=(26+A.teams.length*95)+"px";
-  mx.style.gridTemplateRows=`auto repeat(${totalRows}, 1fr)`;
+  mx.style.gridTemplateRows=`auto repeat(${rows.length}, 1fr)`;
   // header row
   mx.appendChild(document.createElement("div"));
   A.teams.forEach((t,ti)=>{
@@ -436,25 +436,43 @@ function renderLive(A){
     h.innerHTML=`${escT(t.name)}<span class="m">$${A.budget-spent}</span>`;
     mx.appendChild(h);
   });
-  POSN.forEach(P=>{
-    for(let r=0;r<bandRows[P];r++){
-      const s=document.createElement("div"); s.className="bmx-s";
-      if(r===0){ s.textContent=P==="DST"?"D":P; s.style.color=POS_COLOR[P];
-        s.style.borderTop=`2px solid ${POS_COLOR[P]}55`; }
-      mx.appendChild(s);
-      A.teams.forEach((t,ti)=>{
-        const pk=byPos[ti][P][r];
-        const c=document.createElement("div"); c.className="bmx-c";
-        if(r===0) c.style.borderTop=`2px solid ${POS_COLOR[P]}55`;
-        if(pk){
-          c.style.background=`color-mix(in srgb, ${POS_COLOR[P]} 30%, var(--page))`;
-          c.innerHTML=`<span class="p">${escT(shortName(pk.player))}</span><span class="m">$${pk.price}</span>`;
-        }
-        mx.appendChild(c);
-      });
-    }
+  rows.forEach(row=>{
+    const sc=SLOT_COLOR[row.g];
+    const s=document.createElement("div"); s.className="bmx-s";
+    if(row.first){ s.textContent=row.lab; s.style.color=sc;
+      s.style.borderTop=`2px solid ${sc}55`; s.style.fontWeight="800"; }
+    mx.appendChild(s);
+    A.teams.forEach((t,ti)=>{
+      const pk=row.get(teamSlots[ti]);
+      const c=document.createElement("div"); c.className="bmx-c";
+      if(row.first) c.style.borderTop=`2px solid ${sc}55`;
+      if(pk){
+        const pp=pk.pos==="D"?"DST":pk.pos;
+        c.style.background=`color-mix(in srgb, ${POS_COLOR[pp]||POS_COLOR.DST} 30%, var(--page))`;
+        if(row.g==="BN") c.style.opacity=".72";
+        c.innerHTML=`<span class="p">${escT(shortName(pk.player))}</span><span class="m">$${pk.price}</span>`;
+      }
+      mx.appendChild(c);
+    });
   });
   grid.appendChild(mx);
+}
+// Assign a team's picks to roster slots (mirror of the auction pages).
+function assignSlots(picks){
+  const norm=p=>p==="D"?"DST":p;
+  const by={QB:[],RB:[],WR:[],TE:[],DST:[],OTH:[]};
+  picks.forEach(p=>{ (by[norm(p.pos)]||by.OTH).push(p); });
+  for(const k in by) by[k].sort((a,b)=>b.price-a.price);
+  const s={};
+  s.QB=[by.QB.shift()||null];
+  s.RB=[by.RB.shift()||null, by.RB.shift()||null];
+  s.WR=[by.WR.shift()||null, by.WR.shift()||null];
+  s.TE=[by.TE.shift()||null];
+  const flexPool=[...by.RB,...by.WR,...by.TE].sort((a,b)=>b.price-a.price);
+  s.FLX=[flexPool.shift()||null, flexPool.shift()||null];
+  s.DEF=[by.DST.shift()||null];
+  s.BN=[...by.QB,...flexPool,...by.DST,...by.OTH].sort((a,b)=>b.price-a.price);
+  return s;
 }
 function escT(s){const d=document.createElement("span");d.textContent=s==null?"":String(s);return d.innerHTML;}
 function render(){
