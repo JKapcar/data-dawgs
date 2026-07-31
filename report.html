@@ -686,8 +686,18 @@ function priceValueChart(container, T){
   // fair-value diagonal
   svg.appendChild(svgEl("line",{x1:X(0),y1:Y(0),x2:X(maxV),y2:Y(maxV),
     stroke:css("--ink-3"),"stroke-width":1.5,"stroke-dasharray":"5 4"}));
-  const dl=svgEl("text",{x:X(maxV)-6,y:Y(maxV)+16,"text-anchor":"end","font-size":10.5,fill:ink3});
-  dl.textContent="paid = ETR value"; svg.appendChild(dl);
+  // the annotation sits where the diagonal ends, which is also where the priciest dots land:
+  // nudge it past a dot, and skip it on phones (the caption above already explains the line)
+  let dl=null;
+  if(!narrow){
+    const taken=y0=>picks.some(p=>X(etrOf(p))>X(maxV)-104 && Y(p.price)>y0-13 && Y(p.price)<y0+5);
+    let ly=Y(maxV)+16;
+    if(taken(ly)) ly+=17;
+    if(!taken(ly)){
+      dl=svgEl("text",{x:X(maxV)-6,y:ly,"text-anchor":"end","font-size":10.5,fill:ink3});
+      dl.textContent="paid = ETR value"; svg.appendChild(dl);
+    }
+  }
   picks.forEach(p=>{
     const v=etrOf(p), P=norm(p.pos);
     const c=svgEl("circle",{cx:X(v),cy:Y(p.price),r:narrow?4:5,
@@ -708,8 +718,8 @@ function priceValueChart(container, T){
   // knock the dashed line out from behind the label so it doesn't read as a strikethrough.
   // must happen AFTER the svg is in the document — getBBox is 0 on a detached node.
   try{
-    const bb=dl.getBBox();
-    if(bb.width) svg.insertBefore(svgEl("rect",{x:bb.x-4,y:bb.y-2,width:bb.width+8,
+    const bb=dl && dl.getBBox();
+    if(bb && bb.width) svg.insertBefore(svgEl("rect",{x:bb.x-4,y:bb.y-2,width:bb.width+8,
       height:bb.height+4,fill:css("--surface-1"),rx:3}), dl);
   }catch(e){}
 }
