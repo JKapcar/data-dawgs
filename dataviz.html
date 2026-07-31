@@ -233,6 +233,7 @@ svg text{font-family:inherit}
       <select id="scopeSel"><option value="-1">Whole league</option></select></label>
     <label>Position (cliff)
       <select id="posSel">
+        <option value="ALL" selected>All</option>
         <option value="RB">RB</option><option value="WR">WR</option><option value="QB">QB</option>
         <option value="TE">TE</option><option value="DST">D/ST</option>
       </select></label>
@@ -440,8 +441,8 @@ function render(){
       <div id="chartTiers"></div>
       <div class="legend2">${TIERS.map(t=>`<span><span class="sw" style="background:${t.c}"></span>${t.label}</span>`).join("")}</div></div>
   </div>
-  <div class="vcard" style="margin-bottom:16px"><h2>The cliff — ${pos==="DST"?"D/ST":pos} by value, drafted &amp; available</h2>
-    <p class="note">Every ${pos==="DST"?"D/ST":pos} worth $1+, ranked by ETR value. <b style="color:${POS_COLOR[pos]}">Colored = available</b>, grey = gone. When the colored bars stop, that's the cliff.</p>
+  <div class="vcard" style="margin-bottom:16px"><h2>The cliff — ${pos==="ALL"?"all positions":pos==="DST"?"D/ST":pos} by value, drafted &amp; available</h2>
+    <p class="note">Every ${pos==="ALL"?"player":pos==="DST"?"D/ST":pos} worth $1+, ranked by ETR value. <b style="color:${pos==="ALL"?"var(--accent)":POS_COLOR[pos]}">Colored = available</b>${pos==="ALL"?" (color = position)":""}, grey = gone. When the colored bars stop, that's the cliff.</p>
     <div id="chartCliff"></div></div>`;
 
   if(teamMode){
@@ -476,7 +477,7 @@ function render(){
   hBarChart(document.getElementById("chartTiers"), tierRows, {});
 
   // cliff
-  const cliffPlayers=POOL.filter(p=>p.pos===pos && (val(p)>=1 || d.sold[p.name])).sort((a,b)=>val(b)-val(a));
+  const cliffPlayers=POOL.filter(p=>(pos==="ALL"?p.pos!=="K":p.pos===pos) && (val(p)>=1 || d.sold[p.name])).sort((a,b)=>val(b)-val(a));
   cliffChart(document.getElementById("chartCliff"), cliffPlayers, d.sold, d.infl);
 }
 
