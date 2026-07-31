@@ -101,9 +101,10 @@ td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--grid);white-sp
 tr:last-child td{border-bottom:none}
 /* ---- landing ---- */
 .hero{padding:34px 0 6px;text-align:center;max-width:720px;margin:0 auto}
+/* logo art is brown binary + burnt-orange wordmark; dark theme lifts it so it reads on black */
 .hero img{width:min(360px,74vw);height:auto;display:block;margin:0 auto 6px;
-  filter:drop-shadow(0 12px 46px rgba(255,106,2,0.22))}
-:root[data-theme="light"] .hero img{filter:brightness(.88) saturate(1.18) drop-shadow(0 10px 30px rgba(209,58,0,0.16))}
+  filter:brightness(1.75) saturate(1.1) drop-shadow(0 12px 46px rgba(255,106,2,0.18))}
+:root[data-theme="light"] .hero img{filter:drop-shadow(0 10px 26px rgba(49,29,0,0.14))}
 .hero .tagline{font-size:17px;color:var(--ink-2);margin:10px 0 8px;letter-spacing:.01em}
 /* ---- manifesto (home) ---- */
 .manifesto{max-width:660px;margin:12px auto 0}
@@ -190,6 +191,18 @@ body.proj .wrap{max-width:none;padding:10px 18px}
 .projtop img{width:38px;height:47px}
 .projtop .ttl{font-size:21px;font-weight:800;white-space:nowrap}
 .projtop .ttl span{color:var(--accent)}
+/* best-available suggestions (operator) */
+.sugwrap{margin-top:12px}
+.sugwrap h3{margin:0 0 7px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3)}
+.sugrow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.sug{display:flex;flex-direction:column;align-items:flex-start;gap:1px;background:var(--surface-1);
+  border:1px solid var(--border);border-left:3px solid var(--pc);border-radius:10px;padding:8px 11px;
+  cursor:pointer;font-family:inherit;text-align:left;color:var(--ink-1);min-width:0;transition:border-color .12s}
+.sug:hover{border-color:var(--accent);border-left-color:var(--pc)}
+.sug .sp{font-size:10.5px;font-weight:800;color:var(--pc);letter-spacing:.06em}
+.sug .sn{font-size:13.5px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.sug .sv{font-size:12px;color:var(--accent);font-weight:750;font-variant-numeric:tabular-nums}
+@media(max-width:760px){.sugrow{grid-template-columns:repeat(2,1fr)}}
 .projtheme{margin-left:auto;font-size:12px;padding:4px 10px;white-space:nowrap}
 .onclock-banner{font-size:20px;font-weight:800;background:var(--accent);color:var(--accent-ink);border-radius:12px;padding:7px 20px;white-space:nowrap}
 .timerbig{font-size:44px;font-weight:800;color:var(--warn);font-variant-numeric:tabular-nums}
@@ -477,6 +490,7 @@ function save(){ S.ts=Date.now(); try{ localStorage.setItem(LS_STATE, JSON.strin
 load();
 
 const byName={}; POOL.forEach(p=>byName[p.name]=p);
+const POSCOL={QB:"#e66767",RB:"#199e70",WR:"#3987e5",TE:"#c98500",DST:"#8a8378"};
 const val = p => p ? (+p[S.settings.scoring]||0) : 0;
 const fmt$ = n => "$"+n;
 
@@ -497,7 +511,12 @@ function derive(){
   POOL.forEach(p=>{ if(!soldSet.has(p.name) && val(p)>=1) remValue+=val(p); });
   const infl = remValue>0 ? remDollars/remValue : 1;
   const best = POOL.filter(p=>!soldSet.has(p.name) && val(p)>=1).sort((a,b)=>val(b)-val(a)).slice(0,12);
-  return {T, soldSet, remDollars, remValue, infl, best};
+  // top available at each position (no defense) — suggested next nomination
+  const topPos={};
+  ["QB","RB","WR","TE"].forEach(P=>{
+    topPos[P]=POOL.filter(p=>p.pos===P && !soldSet.has(p.name)).sort((a,b)=>val(b)-val(a))[0]||null;
+  });
+  return {T, soldSet, remDollars, remValue, infl, best, topPos};
 }
 
 // ---------- board-page integration ----------
@@ -989,6 +1008,19 @@ function renderOp(){
     <button id="micBtn" title="Voice (V): 'nominate {player}' or '{player} {team} {price}'">🎤</button>
     <span id="entryHint" style="font-size:12px;color:var(--ink-3);align-self:center"></span>
   </div>
+  <div class="sugwrap">
+    <h3>Best available — tap to nominate</h3>
+    <div class="sugrow">
+      ${["QB","RB","WR","TE"].map(P=>{
+        const p=d.topPos[P]; if(!p) return "";
+        return `<button class="sug" data-sug="${esc(p.name)}" style="--pc:${POSCOL[P]}">
+          <span class="sp">${P}</span>
+          <span class="sn">${esc(shortName(p.name))}</span>
+          <span class="sv">${fmt$(Math.round(val(p)*d.infl))} adj</span>
+        </button>`;
+      }).join("")}
+    </div>
+  </div>
   <div class="tmwrap">
     <h3>The money pile — $ remaining</h3>
     ${d.T.map((t,i)=>({t,i})).sort((a,b)=>b.t.left-a.t.left || a.i-b.i).map(({t,i})=>`<div class="tmrow ${i===S.nomIdx?"onclock":""}">
@@ -1060,8 +1092,8 @@ function bindOp(d){
       ev.preventDefault(); pick(+el.dataset.i);
     }));
   }
-  function pick(i){
-    const p=acMatches[i]; if(!p) return;
+  function choose(p){
+    if(!p) return;
     chosen=p; window.__chosen=p; pin.value=p.name; posIn.value=p.pos;
     document.getElementById("posWrap").style.display="none";
     list.style.display="none"; acSel=-1;
@@ -1074,6 +1106,10 @@ function bindOp(d){
     }
     priceIn.focus();
   }
+  function pick(i){ choose(acMatches[i]); }
+  document.querySelectorAll(".sug[data-sug]").forEach(el=>el.addEventListener("click",()=>{
+    choose(byName[el.dataset.sug]);
+  }));
   pin.addEventListener("input",()=>{
     chosen=null; window.__chosen=null; hint.textContent=""; showAC();
     // custom-player pos picker only when nothing matches
