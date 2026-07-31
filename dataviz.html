@@ -1202,6 +1202,10 @@ let cliffHide=false;      // true = drop drafted players so the chart shrinks to
 // first load on a device that knows who it is → open on THEIR team, not the league
 let scopeTouched=false;
 function render(){
+  // Re-rendering blows away #viz, the document briefly collapses, and the browser clamps
+  // the scroll position to the top. Mid-draft that means every toggle throws you back to
+  // the tiles. Capture and restore.
+  const _sy=scrollY;
   load();
   const d=derive();
   // scope select options
@@ -1358,6 +1362,8 @@ function render(){
     const b=e.target.closest("button"); if(!b) return;
     pvColor=b.dataset.v; render();
   });
+
+  if(_sy) scrollTo(0,_sy);
 }
 
 document.getElementById("scopeSel").addEventListener("change",e=>{scope=+e.target.value; scopeTouched=true; render();});
