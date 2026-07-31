@@ -349,6 +349,243 @@ footer a{color:var(--accent)}
   }
 })();
 
+/* ---------- Dawg Bot: shared draft assistant, available on every draft page ----------
+   The API key is NOT here and must never be. datadawgs216.com is a static site in a
+   public repo, so anything in this file is world-readable. The key lives in a Cloudflare
+   Worker; this talks to the Worker and sends a shared league passphrase instead.
+   Any page that sets window.DD_POOL (the player pool) gets the bot automatically. */
+(function(){
+  const BOT_URL = "https://toto.jkapcar4.workers.dev/";              // Worker endpoint, baked at build time
+  const LS_PASS = "dd-bot-pass";             // league passphrase, per browser
+  const LS_AI   = "dd-ai-v1";                // optional personal-key override (operator)
+  const LS_STATE= "dd-auction-v1";
+
+  const cfgAI = () => { try{ return JSON.parse(localStorage.getItem(LS_AI)||"{}"); }catch(e){ return {}; } };
+  const getPass = () => { try{ return localStorage.getItem(LS_PASS)||""; }catch(e){ return ""; } };
+  const setPass = v => { try{ localStorage.setItem(LS_PASS, v); }catch(e){} };
+  const state = () => { try{ return JSON.parse(localStorage.getItem(LS_STATE)||"null"); }catch(e){ return null; } };
+
+  const SYS = `You are Dawg Bot, the live auction assistant for Data Dawgs ("Data, not dogma"). You advise whoever is asking, mid-draft, in a 14-team fantasy football auction.
+Rules:
+- Use ONLY the numbers in the provided draft state. Never invent players, prices, or values not listed there.
+- MV is a dated market-consensus value snapshot, not a point projection. Surplus vs MV measures buying below consensus, not winning.
+- Reason from: dollars left, open starting slots, positional scarcity on the board, inflation, and each rival's max bid. $1-3 endgame fills are a real plan, not a failure.
+- Be direct and short — draft-night answers. 3-8 sentences or a tight list. Plain text only: no markdown, no headers, no tables.
+- When asked to decide, decide: name the player(s), the price you'd pay, and the one thing that would change your mind.
+- If the state shows no picks yet, say so and talk strategy rather than pretending to see a board.`;
+
+  function ctx(){
+    const POOL = window.DD_POOL || [];
+    const S = state();
+    if(!S || !S.settings) return "No draft state on this device yet.";
+    const st = S.settings, picks = S.picks || [];
+    const scoring = st.scoring || "half";
+    const val = p => +p[scoring] || 0;
+    const norm = p => p==="D" ? "DST" : p;
+    const teams = st.teams || [];
+    const sold = new Set(picks.map(p=>p.player));
+
+    const T = teams.map((t,i)=>({name:t.name, ti:i, spent:0, n:0,
+      pos:{QB:0,RB:0,WR:0,TE:0,DST:0}}));
+    picks.forEach(pk=>{ const t=T[pk.ti]; if(!t) return;
+      t.spent+=pk.price; t.n++; const P=norm(pk.pos); if(t.pos[P]!==undefined) t.pos[P]++; });
+    T.forEach(t=>{ t.left=(st.budget||200)-t.spent; t.open=(st.spots||15)-t.n; });
+
+    let remValue=0;
+    POOL.forEach(p=>{ if(!sold.has(p.name) && val(p)>=1) remValue+=val(p); });
+    const remDollars=T.reduce((a,t)=>a+Math.max(0,t.left),0);
+    const infl = remValue>0 ? remDollars/remValue : 1;
+
+    const L=[];
+    L.push(`LEAGUE: 14-team offline auction, $${st.budget} budget, ${st.spots} roster spots each (QB, 2 RB, 2 WR, TE, 2 FLEX W/R/T, DEF, rest bench; no kicker). Scoring: ${{half:"Half PPR",full:"Full PPR",sf:"Superflex"}[scoring]||scoring}. $0 bids are legal, so a team's max bid = its dollars left.`);
+    L.push(`MV = Market Value, a market-consensus auction-dollar snapshot dated 2026-07-29. It is not a points projection.`);
+    L.push(`STATE: ${picks.length} sold. Inflation ${infl.toFixed(2)}x — $${remDollars} chasing $${Math.round(remValue)} of MV still on the board.`);
+    L.push(`TEAMS (name | $ left = max bid | spots open | QB/RB/WR/TE/DST drafted):`);
+    const my = st.myTeam;
+    T.forEach((t,i)=>L.push(`${i===my?"*":"-"} ${t.name} | $${t.left} | ${t.open} | ${t.pos.QB}/${t.pos.RB}/${t.pos.WR}/${t.pos.TE}/${t.pos.DST}${i===my?"  <-- OPERATOR'S TEAM":""}`));
+
+    if(T[my]){
+      const mine=picks.filter(p=>p.ti===my);
+      L.push(`OPERATOR ROSTER${mine.length?"":" (no picks yet)"}:`);
+      mine.forEach(p=>L.push(`- ${p.player} (${norm(p.pos)}) paid $${p.price}, MV $${p.etr||0}`));
+      const c=T[my].pos, flexUsed=Math.max(0,c.RB-2)+Math.max(0,c.WR-2)+Math.max(0,c.TE-1), holes=[];
+      if(c.QB<1)holes.push("QB"); if(c.RB<2)holes.push((2-c.RB)+" RB"); if(c.WR<2)holes.push((2-c.WR)+" WR");
+      if(c.TE<1)holes.push("TE"); const fl=Math.max(0,2-flexUsed); if(fl)holes.push(fl+" FLEX"); if(c.DST<1)holes.push("DEF");
+      L.push(`OPERATOR OPEN STARTING SLOTS: ${holes.length?holes.join(", "):"none — starters filled, bench only"}. $${T[my].left} for ${T[my].open} open spots.`);
+    }
+
+    L.push(`BEST AVAILABLE by position (MV, inflation-adjusted in parens):`);
+    ["QB","RB","WR","TE"].forEach(P=>{
+      const av=POOL.filter(p=>p.pos===P && !sold.has(p.name) && val(p)>=1)
+                   .sort((a,b)=>val(b)-val(a)).slice(0,8);
+      L.push(P+": "+(av.map(p=>`${p.name} $${val(p)} (adj $${Math.max(1,Math.round(val(p)*infl))}${p.tags&&p.tags.length?", "+p.tags.join("/"):""})`).join("; ")||"none left worth $1+"));
+    });
+    const noted=POOL.filter(p=>!sold.has(p.name)&&p.note&&val(p)>=1).sort((a,b)=>val(b)-val(a)).slice(0,12);
+    if(noted.length){ L.push(`ANALYST NOTES on available players (opinions, not facts):`); noted.forEach(p=>L.push(`- ${p.name}: ${p.note}`)); }
+    const rec=picks.slice(-6).reverse();
+    if(rec.length){ L.push(`LAST ${rec.length} SALES:`); rec.forEach(p=>L.push(`- ${p.player} (${norm(p.pos)}) $${p.price} to ${(teams[p.ti]||{}).name||"?"} (MV $${p.etr||0})`)); }
+    return L.join("\n");
+  }
+
+  const HIST=[]; let busy=false;
+
+  function say(who,txt){
+    const box=document.getElementById("ddbMsgs"); if(!box) return null;
+    const el=document.createElement("div");
+    el.className="ddb-m "+who+(txt==="…thinking"?" dim":"");
+    el.textContent=txt;                     // textContent, never innerHTML — no XSS from a reply
+    box.appendChild(el); box.scrollTop=box.scrollHeight;
+    return el;
+  }
+
+  async function ask(q){
+    if(busy) return;
+    const ai=cfgAI(), pass=getPass();
+    const direct = !!ai.key;                        // operator override: own key, straight to xAI
+    if(!direct && !BOT_URL){ say("sys","Dawg Bot isn't wired up yet — no proxy configured."); return; }
+    if(!direct && !pass){ askPass(); return; }
+    say("you",q); HIST.push({role:"user",content:q});
+    busy=true; const th=say("bot","…thinking");
+    try{
+      const url = direct ? (ai.url||"https://api.x.ai/v1")+"/chat/completions" : BOT_URL;
+      const headers = direct
+        ? {"Content-Type":"application/json","Authorization":"Bearer "+ai.key}
+        : {"Content-Type":"application/json","X-Dawg-Pass":pass};
+      const payload = {max_tokens:700,
+        messages:[{role:"system",content:SYS},
+                  {role:"system",content:"CURRENT DRAFT STATE (regenerated for every question):\n"+ctx()},
+                  ...HIST.slice(-8)]};
+      if(direct) payload.model = window.DDBot.cfg().model;
+      const r=await fetch(url,{method:"POST",headers,body:JSON.stringify(payload)});
+      const t=await r.text();
+      if(!r.ok){
+        let msg=t.slice(0,200);
+        try{ const j=JSON.parse(t); msg=j.error||msg; }catch(e){}
+        if(r.status===401 && !direct){ setPass(""); throw new Error(msg+" Tap 🤖 again to re-enter it."); }
+        throw new Error(msg);
+      }
+      const data=JSON.parse(t);
+      const out=(((data.choices||[])[0]||{}).message||{}).content||"(empty reply)";
+      HIST.push({role:"assistant",content:out});
+      if(th){ th.textContent=out; th.classList.remove("dim"); }
+    }catch(e){
+      if(th){ th.classList.add("err"); th.classList.remove("dim");
+        th.textContent = (e instanceof TypeError)
+          ? "Couldn't reach Dawg Bot. Check this device is online. ("+e.message+")"
+          : String(e.message||e); }
+      HIST.pop();
+    }finally{ busy=false; }
+  }
+
+  function askPass(){
+    const box=document.getElementById("ddbMsgs"); if(!box) return;
+    if(document.getElementById("ddbPass")) return;
+    const w=document.createElement("div"); w.className="ddb-m sys"; w.id="ddbPass";
+    w.innerHTML='<div style="margin-bottom:6px">Enter the league passphrase to use Dawg Bot.</div>';
+    const i=document.createElement("input");
+    i.type="password"; i.placeholder="league passphrase"; i.autocomplete="off";
+    i.style.cssText="width:100%;padding:7px 9px;border-radius:8px;border:1px solid var(--border);background:var(--surface-1);color:var(--ink-1);font-size:14px";
+    const go=()=>{ const v=i.value.trim(); if(!v) return; setPass(v); w.remove(); say("sys","Saved on this device. Ask away."); };
+    i.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); go(); } e.stopPropagation(); });
+    const b=document.createElement("button"); b.className="ddb-go"; b.textContent="Save"; b.style.marginTop="6px";
+    b.addEventListener("click",go);
+    w.appendChild(i); w.appendChild(b); box.appendChild(w); i.focus();
+  }
+
+  function style(){
+    if(document.getElementById("ddbCSS")) return;
+    const s=document.createElement("style"); s.id="ddbCSS";
+    s.textContent=`
+#ddbLaunch{position:fixed;right:16px;bottom:16px;z-index:58;border:1px solid var(--border);
+  background:var(--surface-1);color:var(--ink-1);border-radius:999px;padding:9px 15px;font-size:14px;
+  font-weight:650;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.22);font-family:inherit}
+#ddbLaunch:hover{border-color:var(--accent);color:var(--accent)}
+#ddbDock{position:fixed;right:14px;bottom:14px;z-index:60;width:min(400px,calc(100vw - 28px));
+  max-height:min(560px,78vh);display:flex;flex-direction:column;background:var(--surface-1);
+  border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.28);overflow:hidden}
+#ddbDock .ddb-h{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--grid);font-size:14px}
+#ddbDock .ddb-h .sub{color:var(--ink-3);font-size:11px}
+#ddbDock .ddb-x{margin-left:auto;background:none;border:0;color:var(--ink-2);font-size:15px;cursor:pointer;padding:2px 6px}
+.ddb-chips{display:flex;gap:6px;flex-wrap:wrap;padding:8px 10px 0}
+.ddb-chips button{font-size:11.5px;padding:4px 9px;border-radius:999px;border:1px solid var(--border);
+  background:transparent;color:var(--ink-2);cursor:pointer;font-family:inherit}
+.ddb-chips button:hover{color:var(--accent);border-color:var(--accent)}
+.ddb-msgs{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px;min-height:120px}
+.ddb-m{font-size:13px;line-height:1.45;white-space:pre-wrap;border-radius:10px;padding:7px 10px;max-width:94%;overflow-wrap:anywhere}
+.ddb-m.you{align-self:flex-end;background:var(--accent);color:var(--accent-ink,#fff)}
+.ddb-m.bot{align-self:flex-start;background:transparent;border:1px solid var(--grid);color:var(--ink-1)}
+.ddb-m.sys{align-self:stretch;color:var(--ink-3);font-size:12px;text-align:center}
+.ddb-m.dim{opacity:.6}
+.ddb-m.err{color:var(--bad);border-color:var(--bad)}
+.ddb-row{display:flex;gap:8px;padding:10px;border-top:1px solid var(--grid)}
+.ddb-row input{flex:1;min-width:0;background:var(--surface-1);border:1px solid var(--border);
+  border-radius:8px;padding:8px 10px;color:var(--ink-1);font-size:14px;font-family:inherit}
+.ddb-go{background:var(--accent);color:var(--accent-ink,#fff);border:0;border-radius:8px;
+  padding:8px 14px;font-size:13.5px;font-weight:650;cursor:pointer;font-family:inherit}
+@media (max-width:760px){#ddbDock{right:0;left:0;bottom:0;width:100vw;border-radius:14px 14px 0 0;max-height:74vh}}
+@media print{#ddbLaunch,#ddbDock{display:none!important}}`;
+    document.head.appendChild(s);
+  }
+
+  function mount(){
+    if(document.getElementById("ddbDock")) return;
+    style();
+    const d=document.createElement("div"); d.id="ddbDock"; d.style.display="none";
+    d.innerHTML=`<div class="ddb-h"><b>🤖 Dawg Bot</b><span class="sub">reads the live draft state</span>
+        <button class="ddb-x" id="ddbClose" title="Close">✕</button></div>
+      <div class="ddb-chips">
+        <button data-q="What should I do with the rest of my picks?">Rest-of-draft plan</button>
+        <button data-q="Who is the best value on the board right now, and what would you pay?">Best value now</button>
+        <button data-q="Where is the next positional cliff, and should I pay to beat it?">Next cliff</button>
+      </div>
+      <div id="ddbMsgs" class="ddb-msgs"></div>
+      <div class="ddb-row"><input type="text" id="ddbIn" placeholder="Ask about the draft…" autocomplete="off">
+        <button class="ddb-go" id="ddbGo">Ask</button></div>`;
+    document.body.appendChild(d);
+    const go=()=>{ const i=document.getElementById("ddbIn"); const v=i.value.trim(); if(v&&!busy){ i.value=""; ask(v); } };
+    d.querySelector("#ddbGo").addEventListener("click",go);
+    d.querySelector("#ddbIn").addEventListener("keydown",e=>{ if(e.key==="Enter") go(); e.stopPropagation(); });
+    d.querySelector("#ddbClose").addEventListener("click",()=>{ d.style.display="none"; });
+    d.querySelectorAll(".ddb-chips button").forEach(b=>b.addEventListener("click",()=>ask(b.dataset.q)));
+    if(!cfgAI().key && !getPass()) askPass();
+  }
+
+  const AI_DEFAULTS={url:"https://api.x.ai/v1",key:"",model:"grok-4-1-fast"};
+  const AI_MODEL_FIX={"grok-4.1-fast":"grok-4-1-fast","grok-4.1":"grok-4-1-fast"};
+
+  window.DDBot={
+    // personal-key override (operator only) — everyone else goes through the proxy
+    cfg(){ const c=Object.assign({},AI_DEFAULTS,cfgAI());
+           if(AI_MODEL_FIX[c.model]) c.model=AI_MODEL_FIX[c.model];
+           return c; },
+    saveCfg(url,key,model){ try{ localStorage.setItem(LS_AI, JSON.stringify({
+        url:(url||"").trim().replace(/\/+$/,"")||AI_DEFAULTS.url,
+        key:(key||"").trim(),
+        model:(model||"").trim()||AI_DEFAULTS.model })); }catch(e){} },
+    open(){ mount(); document.getElementById("ddbDock").style.display="";
+            const i=document.getElementById("ddbIn"); if(i&&innerWidth>760) i.focus(); },
+    toggle(){ mount(); const d=document.getElementById("ddbDock");
+              const opening=d.style.display==="none"; d.style.display=opening?"":"none";
+              if(opening){ const i=document.getElementById("ddbIn"); if(i&&innerWidth>760) i.focus(); } },
+    forgetPass(){ setPass(""); }
+  };
+
+  // Auto-launcher on any page that exposes a player pool — unless the page supplies its
+  // own button (#aiBtn on the operator). Deferred so page scripts can define DD_POOL first.
+  addEventListener("load", ()=>{
+    setTimeout(()=>{
+      if(!window.DD_POOL || !window.DD_POOL.length) return;
+      style();
+      if(document.getElementById("aiBtn")) return;
+      if(document.getElementById("ddbLaunch")) return;
+      const b=document.createElement("button");
+      b.id="ddbLaunch"; b.type="button"; b.textContent="🤖 Dawg Bot";
+      b.addEventListener("click",()=>window.DDBot.toggle());
+      document.body.appendChild(b);
+    }, 300);
+  });
+})();
+
 </script>
 
   <h1 style="font-size:26px;font-weight:750;margin:6px 0 2px">2026 Draft Strategy</h1>
