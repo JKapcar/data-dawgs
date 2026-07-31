@@ -175,13 +175,13 @@ th.sortable:hover{color:var(--ink-1)}
     {label:"Home", href:"index.html", key:"home"},
     {label:"Draft", items:[
       ["board.html?view=live","Live Draft","live","hot"],
-      ["board.html","Cheat Sheet","board"],
-      ["strategy.html","2026 Strategy","strategy"],
       ["auction.html","Auction Operator","auction"],
-      ["bigboard.html","Big Board","bigboard"],
       ["dataviz.html","Draft Data Viz","dataviz"],
     ]},
-    {label:"Analytics", items:[
+    {label:"Data", items:[
+      ["board.html","Cheat Sheet","board"],
+      ["bigboard.html","Big Board","bigboard"],
+      ["strategy.html","2026 Strategy","strategy"],
       ["stats.html","NFL EPA Stats","stats"],
     ]},
   ];
@@ -486,7 +486,19 @@ function assignSlots(picks){
   return s;
 }
 function escT(s){const d=document.createElement("span");d.textContent=s==null?"":String(s);return d.innerHTML;}
+function applyLiveTheme(){
+  // Live draft always shows in dark mode; restore the viewer's theme on exit.
+  const root=document.documentElement;
+  if(state.live){
+    if(window.__prevTheme===undefined) window.__prevTheme=root.dataset.theme||"";
+    root.dataset.theme="dark";
+  } else if(window.__prevTheme!==undefined){
+    if(window.__prevTheme) root.dataset.theme=window.__prevTheme; else root.dataset.theme="dark";
+    window.__prevTheme=undefined;
+  }
+}
 function render(){
+  applyLiveTheme();
   const A=auctionData();
   const full=state.live && A.teams.length>0;
   document.body.classList.toggle("livefull", full);
