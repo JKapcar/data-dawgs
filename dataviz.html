@@ -1172,17 +1172,24 @@ function cliffChart(container, players, sold, infl){
       if(e.pointerType!=="touch") hideTT(); });
     svg.appendChild(hit);
   });
-  // direct-label top 2 available with full name + price
-  let labeled=0;
-  for(let i=0;i<n && labeled<2;i++){
+  // direct-label the top 2 available with full name + price. Adjacent bars are 17px apart,
+  // so the two labels always collide horizontally — force a vertical gap instead of letting
+  // them print on top of each other.
+  const lab=[];
+  for(let i=0;i<n && lab.length<2;i++){
     const p=players[i];
-    if(!sold[p.name]){
-      const t=svgEl("text",{x:Math.max(X(i)+BW/2, 76), y:Y(val(p))-7,"text-anchor":"middle","font-size":11,fill:ink2,"font-weight":650,
-        stroke:surf,"stroke-width":3,"paint-order":"stroke"});
-      t.textContent=p.name.split(" ").slice(-1)[0]+" $"+val(p);
-      svg.appendChild(t); labeled++;
-    }
+    // clamp inside the plot BEFORE the collision check — the tallest bar's label would
+    // otherwise sit above the top edge, and clamping afterwards re-stacks the two.
+    if(!sold[p.name]) lab.push({p, x:Math.max(X(i)+BW/2, 76), y:Math.max(Y(val(p))-7, m.t+9)});
   }
+  if(lab.length===2 && Math.abs(lab[1].x-lab[0].x)<74 && lab[1].y-lab[0].y<14)
+    lab[1].y = lab[0].y + 14;
+  lab.forEach(L=>{
+    const t=svgEl("text",{x:L.x, y:L.y,"text-anchor":"middle","font-size":11,fill:ink2,"font-weight":650,
+      stroke:surf,"stroke-width":3,"paint-order":"stroke"});
+    t.textContent=L.p.name.split(" ").slice(-1)[0]+" $"+val(L.p);
+    svg.appendChild(t);
+  });
   const sc=document.createElement("div");
   sc.style.cssText="overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px";
   sc.appendChild(svg);
