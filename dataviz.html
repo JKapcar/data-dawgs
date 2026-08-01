@@ -215,22 +215,6 @@ footer a{color:var(--accent)}
 .tmwrap{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin:0 0 16px}
 .tmwrap h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3)}
 .tmwrap .note{margin:-4px 0 10px;font-size:12.5px;color:var(--ink-3)}
-.tmrow{display:flex;align-items:center;gap:9px;padding:4px 0}
-.tmrow .tmn{width:96px;font-weight:650;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tmrow.mine .tmn{color:var(--accent)}
-.tmbar{flex:1;height:26px;background:color-mix(in srgb,var(--good) 9%,var(--page));border-radius:8px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--border)}
-.tmbar .fill{height:100%;background:linear-gradient(180deg,color-mix(in srgb,var(--good) 78%,#fff),var(--good));border-radius:8px;min-width:0;transition:width .4s}
-.tmrow .tml{width:56px;text-align:right;font-weight:800;font-size:17px;font-variant-numeric:tabular-nums;color:var(--good)}
-.tmrow .tml.neg{color:var(--bad)}
-.tmrow .tms{width:102px;font-size:11.5px;color:var(--ink-3);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
-@media(max-width:760px){
-  .tmrow{display:grid;grid-template-columns:1fr auto auto;grid-template-areas:"name val spots" "bar bar bar";gap:1px 9px;padding:7px 0}
-  .tmrow .tmn{grid-area:name;width:auto;font-size:13.5px}
-  .tmrow .tml{grid-area:val;width:auto}
-  .tmrow .tms{grid-area:spots;width:auto}
-  .tmrow .tmspent{display:none}
-  .tmbar{grid-area:bar;height:18px}
-}
 .tile2{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
 .tile2 .tl2{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3);font-weight:600}
 .tile2 .tv2{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:2px}
@@ -1177,6 +1161,58 @@ function priceValueChart(container, picks, colorMode){
   }catch(e){}
 }
 
+// Money remaining as vertical columns rather than stacked rows: 14 bars side by side read
+// as a distribution, where 14 stacked rows read as a list. Y runs 0..budget on purpose —
+// scaling to the largest remaining stack would exaggerate the spread and lose the "how much
+// powder is left in the league at all" signal that the empty space above each bar carries.
+function moneyPileChart(container, T, budget, spots, myIdx){
+  container.textContent="";
+  const rows=T.map((t,i)=>({t,i})).sort((a,b)=>b.t.left-a.t.left || a.i-b.i);
+  const n=rows.length;
+  const m={t:30,r:10,b:52,l:40}, H=258;
+  const cw=container.clientWidth||900;
+  const W=Math.max(300,cw);
+  const iw=W-m.l-m.r, ih=H-m.t-m.b;
+  const step=iw/n, BW=Math.max(8,Math.min(46,step-8));
+  const maxV=Math.max(1,budget);
+  const X=i=>m.l+step*i+(step-BW)/2;
+  const Y=v=>m.t+ih-(Math.max(0,v)/maxV)*ih;
+  const svg=svgEl("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,style:"display:block"});
+  const grid=css("--grid"), ink3=css("--ink-3"), ink2=css("--ink-2"), surf=css("--surface-1");
+  const good=css("--good"), accent=css("--accent"), bad=css("--bad");
+  [0,0.25,0.5,0.75,1].forEach(f=>{
+    const v=Math.round(maxV*f);
+    svg.appendChild(svgEl("line",{x1:m.l,x2:W-m.r,y1:Y(v),y2:Y(v),stroke:grid,"stroke-width":1}));
+    const t=svgEl("text",{x:m.l-6,y:Y(v)+4,"text-anchor":"end","font-size":10.5,fill:ink3});
+    t.textContent="$"+v; svg.appendChild(t);
+  });
+  rows.forEach(({t,i},k)=>{
+    const mine = i===myIdx, neg = t.left<0;
+    const color = neg ? bad : mine ? accent : good;
+    const x=X(k), h=Math.max(2,m.t+ih-Y(t.left));
+    svg.appendChild(svgEl("rect",{x, y:Y(t.left), width:BW, height:h, fill:color, rx:3}));
+    if(BW>=15){
+      const v=svgEl("text",{x:x+BW/2, y:Math.max(11,Y(t.left)-6), "text-anchor":"middle",
+        "font-size":BW>=26?11:9.5, "font-weight":750, fill:color,
+        stroke:surf,"stroke-width":3,"paint-order":"stroke"});
+      v.textContent=fmt$(t.left); svg.appendChild(v);
+    }
+    const nm=svgEl("text",{x:x+BW/2, y:H-38, "font-size":9.5, fill:mine?accent:ink2,
+      "text-anchor":"end", "font-weight":mine?700:400,
+      transform:`rotate(-42 ${x+BW/2} ${H-38})`});
+    nm.textContent=t.name.length>13?t.name.slice(0,12)+"…":t.name;
+    svg.appendChild(nm);
+    const hit=svgEl("rect",{x:m.l+step*k, y:m.t, width:step, height:ih, fill:"transparent"});
+    const tips=[["Budget left",fmt$(t.left)],["Spent","$"+t.spent],
+                ["Roster",t.count+"/"+spots],["Spots open",Math.max(0,spots-t.count)]];
+    hit.addEventListener("pointermove",e=>showTT(e.clientX,e.clientY,t.name,tips));
+    hit.addEventListener("pointerdown",e=>showTT(e.clientX,e.clientY,t.name,tips));
+    hit.addEventListener("pointerleave",e=>{ if(e.pointerType!=="touch") hideTT(); });
+    svg.appendChild(hit);
+  });
+  container.appendChild(svg);
+}
+
 function cliffChart(container, players, sold, infl){
   container.textContent="";
   const n=players.length;
@@ -1316,13 +1352,8 @@ function render(){
   const myIdx = window.DDMe ? window.DDMe.idx(teams) : null;
   let html=`<div class="tmwrap">
     <h3>The money pile — $ remaining</h3>
-    <p class="note">Who still has powder. Sorted by budget left${myIdx!=null?"; your team in orange":""}.</p>
-    ${d.T.map((t,i)=>({t,i})).sort((a,b)=>b.t.left-a.t.left || a.i-b.i).map(({t,i})=>`<div class="tmrow ${i===myIdx?"mine":""}">
-      <span class="tmn">${esc(t.name)}</span>
-      <div class="tmbar"><div class="fill" style="width:${Math.min(100,Math.max(0,t.left/S.settings.budget*100))}%"></div></div>
-      <span class="tml ${t.left<0?"neg":""}">${fmt$(t.left)}</span>
-      <span class="tms"><span class="tmspent">$${t.spent} spent · </span>${t.count}/${S.settings.spots}</span>
-    </div>`).join("")}
+    <p class="note">Every team's unspent budget against the full $${S.settings.budget}${myIdx!=null?"; your bar in orange":""}. Bar height is the share of budget still in hand, so the gap above each bar is what's already gone.</p>
+    <div id="chartMoney"></div>
   </div>`;
   html+=dashboardHTML("tileSel", TL?esc(TL.name)+" — auction totals":"Auction totals",
                          tileScope, tiles, teams);
@@ -1427,6 +1458,7 @@ function render(){
     return {label:P==="DST"?"D":P, segs:[{v, color:POS_COLOR[P], ttName:(P==="DST"?"D/ST":P),
       tt:[["Spent",fmt$(v)],["Players bought",cnt]]}]};
   });
+  moneyPileChart(document.getElementById("chartMoney"), d.T, S.settings.budget, S.settings.spots, myIdx);
   hBarChart(document.getElementById("chartSpend"), spendRows, {});
 
   // chart: remaining value tiers
