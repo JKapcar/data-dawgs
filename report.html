@@ -251,6 +251,16 @@ footer a{color:var(--accent)}
 .tooltip .tt-row{display:flex;justify-content:space-between;gap:14px;color:var(--ink-2)}
 .tooltip .tt-row b{color:var(--ink-1);font-variant-numeric:tabular-nums}
 .legend2{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-2);margin:6px 0 2px}
+.vsel{background:var(--surface-1);color:var(--ink-1);border:1px solid var(--border);border-radius:8px;
+  padding:6px 10px;font-size:13.5px;font-weight:500;font-family:inherit;max-width:46vw}
+.vfilters{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap}
+.vtog{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface-1)}
+.vtog button{appearance:none;background:transparent;border:0;border-right:1px solid var(--border);
+  color:var(--ink-3);font-family:inherit;font-size:12.5px;font-weight:650;padding:6px 11px;cursor:pointer;
+  transition:background .12s,color .12s;white-space:nowrap}
+.vtog button:last-child{border-right:0}
+.vtog button:hover{color:var(--ink-1)}
+.vtog button.on{background:var(--accent);color:#fff}
 .legend2 .sw{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 svg text{font-family:inherit}
 /* radar small multiples */
@@ -1053,7 +1063,7 @@ function niceTicks(lo,hi,n){
 function posStrengthChart(container, T){
   container.textContent="";
   const W=container.clientWidth||900, narrow=W<620;
-  const rowH=narrow?22:24, m={t:6,r:56,b:22,l:narrow?78:104};
+  const rowH=narrow?22:24, m={t:22,r:56,b:22,l:narrow?90:104};
   const H=m.t+m.b+T.length*rowH;
   const groups=["QB","RB","WR","TE","DST"];
   const vals=T.map(t=>({name:t.name, g:posValues(t), total:t.startValue}))
@@ -1072,7 +1082,7 @@ function posStrengthChart(container, T){
   vals.forEach((v,i)=>{
     const y=m.t+i*rowH+3, h=rowH-8;
     const lb=svgEl("text",{x:m.l-8,y:y+h/2+4,"text-anchor":"end","font-size":narrow?11:12,fill:ink2,"font-weight":600});
-    lb.textContent=narrow?v.name.slice(0,10):v.name; svg.appendChild(lb);
+    lb.textContent=narrow&&v.name.length>11?v.name.slice(0,10)+"…":v.name; svg.appendChild(lb);
     let x=m.l;
     groups.forEach(g=>{
       const w=v.g[g]/max*iw;
@@ -1092,7 +1102,9 @@ function posStrengthChart(container, T){
   const ax=m.l+avgTotal/max*iw;
   svg.appendChild(svgEl("line",{x1:ax,x2:ax,y1:m.t-2,y2:m.t+T.length*rowH,
     stroke:css("--ink-1"),"stroke-width":1.5,"stroke-dasharray":"4 3","stroke-opacity":.55}));
-  const al=svgEl("text",{x:ax,y:H-6,"text-anchor":"middle","font-size":10,fill:css("--ink-2"),"font-weight":650});
+  const al=svgEl("text",{x:Math.min(W-6,Math.max(m.l+4,ax)),y:m.t-7,
+    "text-anchor":ax>W-70?"end":"middle","font-size":10,fill:css("--ink-2"),"font-weight":650,
+    stroke:css("--surface-1"),"stroke-width":3,"paint-order":"stroke"});
   al.textContent="avg $"+Math.round(avgTotal); svg.appendChild(al);
   container.appendChild(svg);
 }
@@ -1150,10 +1162,13 @@ function radarChart(container, g, avg, axMax){
 }
 
 // ---------- every pick: price paid vs market value ----------
-function priceValueChart(container, T){
+const TEAM_COLORS=["#f26200","#199e70","#3987e5","#c98500","#a06bd1","#e05c8a","#2bb3c0",
+                   "#7f9c2f","#e66767","#5566cc","#b4703a","#3f8f5c","#c94f9e","#6b7280"];
+const teamColor=ti=>TEAM_COLORS[((ti%TEAM_COLORS.length)+TEAM_COLORS.length)%TEAM_COLORS.length];
+let pvTeam="ALL", pvPos="ALL", pvColor="pos";
+
+function priceValueChart(container, picks, colorMode){
   container.textContent="";
-  const picks=[];
-  T.forEach(t=>t.picks.forEach(p=>picks.push({...p, team:t.name})));
   if(!picks.length){ container.innerHTML='<p class="note">No picks yet.</p>'; return; }
   const W=container.clientWidth||900, narrow=W<620;
   const H=narrow?Math.max(260,Math.round(W*0.78)):380;
@@ -1187,7 +1202,8 @@ function priceValueChart(container, T){
   picks.forEach(p=>{
     const v=etrOf(p), P=norm(p.pos);
     const c=svgEl("circle",{cx:X(v),cy:Y(p.price),r:narrow?4:5,
-      fill:POS_COLOR[P]||POS_COLOR.DST, "fill-opacity":.82, stroke:css("--surface-1"),"stroke-width":1});
+      fill:colorMode==="team"?teamColor(p.ti):(POS_COLOR[P]||POS_COLOR.DST),
+      "fill-opacity":.82, stroke:css("--surface-1"),"stroke-width":1});
     const d=v-p.price;
     c.addEventListener("pointermove",e=>showTT(e.clientX,e.clientY,p.player,
       [["Team",p.team],["Paid","$"+p.price],["Market value","$"+Math.round(v)],
@@ -1224,7 +1240,13 @@ function render(){
       grades appear after the first sale.</div></div>`;
     return;
   }
-  const allPicks=[]; T.forEach(t=>t.picks.forEach(p=>allPicks.push({...p, team:t.name, delta:etrOf(p)-p.price})));
+  const allPicks=[]; T.forEach((t,ti)=>t.picks.forEach(p=>allPicks.push({...p, team:t.name, ti, delta:etrOf(p)-p.price})));
+  // paid-vs-value filters (team / position / colour-by), same controls as the Data Viz page
+  if(pvTeam!=="ALL" && !T[pvTeam]) pvTeam="ALL";
+  const pvPicks=allPicks.filter(p=>(pvTeam==="ALL"||String(p.ti)===String(pvTeam))
+                                && (pvPos==="ALL"||norm(p.pos)===pvPos));
+  const pvSurplus=pvPicks.reduce((a,p)=>a+p.delta,0);
+  const pvUnder=pvPicks.filter(p=>p.delta>0).length;
   const spent=T.reduce((a,t)=>a+t.spent,0);
   const steals=[...allPicks].sort((a,b)=>b.delta-a.delta);
   const reaches=[...steals].reverse();
@@ -1269,9 +1291,30 @@ function render(){
       <div class="legend2">${POS_ORDER.map(p=>`<span><span class="sw" style="background:${POS_COLOR[p]}"></span>${p==="DST"?"D/ST":p}</span>`).join("")}</div>
     </div>
     <div class="vcard">
-      <h2>Every pick: paid vs value</h2>
-      <p class="note">Dots under the dashed line were bought below market value; dots above it went for a premium. Distance from the line is the surplus.</p>
+      <h2 style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">Every pick: paid vs value
+        <span class="vfilters">
+          <select id="pvTeamSel" class="vsel" aria-label="Filter by team">
+            <option value="ALL"${pvTeam==="ALL"?" selected":""}>All teams</option>
+            ${T.map((t,ti)=>`<option value="${ti}"${String(pvTeam)===String(ti)?" selected":""}>${esc(t.name)}</option>`).join("")}
+          </select>
+          <select id="pvPosSel" class="vsel" aria-label="Filter by position">
+            <option value="ALL"${pvPos==="ALL"?" selected":""}>All positions</option>
+            ${POS_ORDER.map(P=>`<option value="${P}"${pvPos===P?" selected":""}>${P==="DST"?"D/ST":P}</option>`).join("")}
+          </select>
+          <span class="vtog" id="pvColorTog" aria-label="Color dots by">
+            <button type="button" data-v="pos"${pvColor==="pos"?' class="on"':""}>Color: position</button>
+            <button type="button" data-v="team"${pvColor==="team"?' class="on"':""}>Color: team</button>
+          </span>
+        </span></h2>
+      <p class="note">Dots under the dashed line were bought below market value; dots above it went for a premium. Distance from the line is the surplus.
+        ${pvPicks.length?`<b>${pvPicks.length} pick${pvPicks.length===1?"":"s"}</b> shown · ${pvUnder} under the line · net ${pvSurplus>=0?"+":"−"}$${Math.abs(Math.round(pvSurplus))} of value.`:""}</p>
       <div id="chartPV"></div>
+      <div class="legend2">${
+        pvColor==="team"
+          ? [...new Set(pvPicks.map(p=>p.ti))].sort((a,b)=>a-b).map(ti=>
+              `<span><span class="sw" style="background:${teamColor(ti)}"></span>${esc(T[ti]?T[ti].name:"?")}</span>`).join("")
+          : POS_ORDER.map(P=>`<span><span class="sw" style="background:${POS_COLOR[P]}"></span>${P==="DST"?"D/ST":P}</span>`).join("")
+      }</div>
     </div>
   </div>
 
@@ -1315,7 +1358,16 @@ function render(){
   app.innerHTML=html;
   buildTable(T, myTi);
   posStrengthChart(document.getElementById("chartPos"), T);
-  priceValueChart(document.getElementById("chartPV"), T);
+  priceValueChart(document.getElementById("chartPV"), pvPicks, pvColor);
+  const pvT=document.getElementById("pvTeamSel");
+  if(pvT) pvT.addEventListener("change",e=>{ pvTeam=e.target.value; render(); });
+  const pvP=document.getElementById("pvPosSel");
+  if(pvP) pvP.addEventListener("change",e=>{ pvPos=e.target.value; render(); });
+  const pvC=document.getElementById("pvColorTog");
+  if(pvC) pvC.addEventListener("click",e=>{
+    const b=e.target.closest("button"); if(!b) return;
+    pvColor=b.dataset.v; render();
+  });
   buildRadars(T, myTi);
 }
 
