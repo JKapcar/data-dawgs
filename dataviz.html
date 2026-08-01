@@ -230,6 +230,16 @@ footer a{color:var(--accent)}
   transform:translateX(-1.5px);box-shadow:0 0 0 2px var(--surface-1)}
 .gauge .gneedle.pin{background:var(--bad)}
 .gauge .gticks{display:flex;justify-content:space-between;font-size:10px;color:var(--ink-3);margin-top:4px}
+.gauge.pow .gtrack{background:linear-gradient(90deg,color-mix(in srgb,var(--bad) 55%,var(--surface-1)),var(--grid),var(--good))}
+.pips{display:flex;gap:2px;margin:11px 0 8px}
+.pips .pip{flex:1 1 0;min-width:0;max-width:14px;height:11px;border-radius:3px;background:var(--grid);box-shadow:inset 0 0 0 1px var(--border)}
+.pips .pip.on{background:var(--accent);box-shadow:none}
+.twin{margin:9px 0 7px;display:flex;flex-direction:column;gap:4px}
+.twin .trow{display:flex;align-items:center;gap:7px}
+.twin .tk{font-size:10px;color:var(--ink-3);width:26px;text-transform:uppercase;letter-spacing:.04em}
+.twin .tb{flex:1;height:8px;border-radius:5px;background:var(--grid);overflow:hidden;box-shadow:inset 0 0 0 1px var(--border)}
+.twin .tf{height:100%;border-radius:5px}
+.twin .tvv{font-size:11px;font-variant-numeric:tabular-nums;color:var(--ink-2);width:38px;text-align:right}
 .donutwrap{display:flex;align-items:center;gap:12px;margin:8px 0 6px}
 .donutwrap .dnum{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}
 .vizgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
@@ -953,15 +963,32 @@ function depleteBar(left, total, color){
 // Pressure gauge. Scale is fixed 0.5x-2.0x and the needle pins at the ends —
 // late in a draft inflation can run well past 2x (a pile of $1 bids chasing
 // almost no value), so the printed number, not the needle, is the source of truth.
-function gauge(v){
-  const LO=0.5, HI=2.0;
+function gauge(v,o){
+  o=o||{};
+  const LO=o.lo!=null?o.lo:0.5, HI=o.hi!=null?o.hi:2.0, MID=o.mid!=null?o.mid:1.0;
   const pct=Math.max(0,Math.min(100,(v-LO)/(HI-LO)*100));
+  const midPct=(MID-LO)/(HI-LO)*100;
   const pinned = v<LO || v>HI;
-  return `<div class="gauge">
+  const L=o.labels||[LO+"×", MID.toFixed(2).replace(/0$/,"")+"×", HI+"×"];
+  return `<div class="gauge ${o.cls||""}">
     <div class="gtrack"></div>
-    <div class="gmid" title="1.00x — dollars and value in balance"></div>
+    <div class="gmid" style="left:${midPct.toFixed(2)}%"></div>
     <div class="gneedle${pinned?" pin":""}" style="left:${pct.toFixed(1)}%"></div>
-    <div class="gticks"><span>0.5x</span><span>1.0x</span><span>2.0x</span></div>
+    <div class="gticks"><span>${L[0]}</span><span>${L[1]}</span><span>${L[2]}</span></div>
+  </div>`;
+}
+// Roster slots as pips — 15 squares reads as "how full am I" faster than "3/15".
+function pips(filled,total){
+  let out="";
+  for(let i=0;i<total;i++) out+=`<span class="pip${i<filled?" on":""}"></span>`;
+  return `<div class="pips">${out}</div>`;
+}
+// Paid vs market value on a shared scale: the overhang IS the surplus.
+function twinBar(paid,value){
+  const mx=Math.max(1,paid,value);
+  return `<div class="twin">
+    <div class="trow"><span class="tk">paid</span><div class="tb"><div class="tf" style="width:${(paid/mx*100).toFixed(1)}%;background:var(--ink-3)"></div></div><span class="tvv">${fmt$(paid)}</span></div>
+    <div class="trow"><span class="tk">MV</span><div class="tb"><div class="tf" style="width:${(value/mx*100).toFixed(1)}%;background:var(--accent)"></div></div><span class="tvv">${fmt$(value)}</span></div>
   </div>`;
 }
 // Two-slice donut: this team's remaining dollars against everyone else's.
@@ -1404,19 +1431,30 @@ function render(){
       ["Inflation", d.infl.toFixed(2)+"×",
         d.infl>1.05?"dollars outnumber value — prices running hot"
           :d.infl<0.95?"value outnumbers dollars — bargains out there":"dollars and value in balance",
-        gauge(d.infl)],
+        gauge(d.infl,{labels:["0.5×","1.0×","2.0×"]})],
       ["Avg $ left/team", fmt$(d.remDollars/d.T.length), `${d.T.length} teams`],
     ];
   } else {
     const openSlots=Math.max(0,S.settings.spots-TL.count);
+    const perSlot=openSlots?TL.left/openSlots:0;
+    const lgOpen=d.T.reduce((a,t)=>a+Math.max(0,S.settings.spots-t.count),0);
+    const lgPerSlot=lgOpen?d.remDollars/lgOpen:0;
+    const power=lgPerSlot>0&&openSlots?perSlot/lgPerSlot:1;
     tiles=[
-      ["Spent",fmt$(TL.spent),`${TL.count}/${S.settings.spots} drafted`],
-      ["Budget left",fmt$(TL.left),`${openSlots} spots left`],
-      ["Market value acquired",fmt$(TL.value),""],
-      ["Surplus",(TL.surplus>=0?"+":"−")+"$"+Math.abs(Math.round(TL.surplus)),"value − spent"],
-      ["Max sensible bid",fmt$(TL.left),"$0 bids are legal, so ceiling = budget"],
+      ["Budget", `${fmt$(TL.left)} <span class="tsub">left of ${fmt$(S.settings.budget)}</span>`,
+        `${fmt$(TL.spent)} spent`,
+        depleteBar(TL.left, S.settings.budget, GREEN)],
+      ["Roster", `${TL.count}<span class="tsub">/${S.settings.spots}</span>`,
+        `${openSlots} spots open`,
+        pips(TL.count, S.settings.spots)],
+      ["Surplus", (TL.surplus>=0?"+":"−")+"$"+Math.abs(Math.round(TL.surplus)),
+        TL.surplus>=0?"bought under market":"paid over market",
+        twinBar(TL.spent, TL.value)],
+      ["Buying power", openSlots?power.toFixed(2)+"×":"—",
+        openSlots?`${fmt$(perSlot)} per open slot vs ${fmt$(lgPerSlot)} league average`:"roster full",
+        openSlots?gauge(power,{lo:0.4,hi:2.0,mid:1,cls:"pow",labels:["thin","parity","deep"]}):""],
       ["Share of money left", "",
-        `${fmt$(TL.left)} of ${fmtK(d.remDollars)} still unspent league-wide · ${openSlots?fmt$(TL.left/openSlots):"—"} per open slot`,
+        `${fmt$(TL.left)} of ${fmtK(d.remDollars)} still unspent league-wide`,
         donut(TL.left, d.remDollars)],
     ];
   }
