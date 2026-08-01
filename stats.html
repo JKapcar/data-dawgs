@@ -110,6 +110,25 @@ body{margin:0;background:var(--page);color:var(--ink-1);
   text-transform:uppercase;opacity:.6}
 .grpmenu a.sep:hover{color:var(--accent)!important}
 .theme-btn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--ink-2);padding:4px 10px;cursor:pointer;font-size:12.5px}
+.sitenav .links .theme-btn{margin-left:10px}
+.navbrk{display:none}
+@media(max-width:760px){
+  /* phone: brand centred on its own row, then every control centred in one wrapping run.
+     Previously links, the LIVE DRAFT pill and the theme button each landed on their own
+     left-ragged line. */
+  .sitenav{justify-content:center;gap:10px 12px;padding:12px 0}
+  .sitenav .brand{width:100%;justify-content:center}
+  .sitenav .links{width:100%;margin-left:0;justify-content:center;gap:6px 5px}
+  .sitenav .links .navbrk{display:block;flex:0 0 100%;height:0;margin:0}
+  .sitenav .links a{padding:6px 7px;font-size:13px}
+  .sitenav .links .grpbtn{padding:6px 7px;font-size:13px}
+  .sitenav .brand img{width:30px;height:37px}
+  .sitenav .brand .logo{white-space:nowrap;font-size:17px}
+  .sitenav .brand .tag{white-space:nowrap;font-size:10.5px}
+  .sitenav .links .theme-btn{margin-left:0}
+  .sitenav .links a.livebtn{margin-left:0}
+  :root[data-theme="light"] .sitenav .links > a.livebtn{margin-left:0}
+}
 /* ---- cards & type ---- */
 .card{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:18px}
 .card h2{font-size:17px;font-weight:700;margin:0 0 8px}
@@ -439,6 +458,12 @@ footer a{color:var(--accent)}
   document.addEventListener("click", ()=>{
     document.querySelectorAll(".navgrp.open").forEach(g=>g.classList.remove("open"));
   });
+  // Forced flex line-break: on phones the nav links fill row 1 and the LIVE DRAFT pill +
+  // theme button get row 2 to themselves, both rows centred. Without it the wrap lands
+  // wherever the widths happen to fall (3 links / 1 link + pill + button) and looks arbitrary.
+  const brk = document.createElement("i"); brk.className = "navbrk";
+  links.appendChild(brk);
+
   // Single live control: it IS the status light AND the way to the board. Previously the
   // dataviz page carried a "● live" chip *and* a separate "⇄ Live Board" link — two things
   // doing one job. On the board itself it would be a link to the page you're on, so skip it.
@@ -463,7 +488,7 @@ footer a{color:var(--accent)}
   btn.className = "theme-btn"; btn.id = "themeBtn";
   btn.setAttribute("data-ddtheme-btn","");
   btn.addEventListener("click", ()=>window.DDTheme.toggle());
-  nav.appendChild(btn);
+  links.appendChild(btn);   // in .links, not nav: one flex run, so it wraps with the rest on mobile
   window.DDTheme.apply();
 
   // offline insurance: cache the draft pages so a dead venue wifi can't kill the room

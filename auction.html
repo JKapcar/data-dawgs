@@ -110,6 +110,25 @@ body{margin:0;background:var(--page);color:var(--ink-1);
   text-transform:uppercase;opacity:.6}
 .grpmenu a.sep:hover{color:var(--accent)!important}
 .theme-btn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--ink-2);padding:4px 10px;cursor:pointer;font-size:12.5px}
+.sitenav .links .theme-btn{margin-left:10px}
+.navbrk{display:none}
+@media(max-width:760px){
+  /* phone: brand centred on its own row, then every control centred in one wrapping run.
+     Previously links, the LIVE DRAFT pill and the theme button each landed on their own
+     left-ragged line. */
+  .sitenav{justify-content:center;gap:10px 12px;padding:12px 0}
+  .sitenav .brand{width:100%;justify-content:center}
+  .sitenav .links{width:100%;margin-left:0;justify-content:center;gap:6px 5px}
+  .sitenav .links .navbrk{display:block;flex:0 0 100%;height:0;margin:0}
+  .sitenav .links a{padding:6px 7px;font-size:13px}
+  .sitenav .links .grpbtn{padding:6px 7px;font-size:13px}
+  .sitenav .brand img{width:30px;height:37px}
+  .sitenav .brand .logo{white-space:nowrap;font-size:17px}
+  .sitenav .brand .tag{white-space:nowrap;font-size:10.5px}
+  .sitenav .links .theme-btn{margin-left:0}
+  .sitenav .links a.livebtn{margin-left:0}
+  :root[data-theme="light"] .sitenav .links > a.livebtn{margin-left:0}
+}
 /* ---- cards & type ---- */
 .card{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:18px}
 .card h2{font-size:17px;font-weight:700;margin:0 0 8px}
@@ -634,6 +653,12 @@ body.proj .blockbar .bb-v{font-size:26px}
   document.addEventListener("click", ()=>{
     document.querySelectorAll(".navgrp.open").forEach(g=>g.classList.remove("open"));
   });
+  // Forced flex line-break: on phones the nav links fill row 1 and the LIVE DRAFT pill +
+  // theme button get row 2 to themselves, both rows centred. Without it the wrap lands
+  // wherever the widths happen to fall (3 links / 1 link + pill + button) and looks arbitrary.
+  const brk = document.createElement("i"); brk.className = "navbrk";
+  links.appendChild(brk);
+
   // Single live control: it IS the status light AND the way to the board. Previously the
   // dataviz page carried a "● live" chip *and* a separate "⇄ Live Board" link — two things
   // doing one job. On the board itself it would be a link to the page you're on, so skip it.
@@ -658,7 +683,7 @@ body.proj .blockbar .bb-v{font-size:26px}
   btn.className = "theme-btn"; btn.id = "themeBtn";
   btn.setAttribute("data-ddtheme-btn","");
   btn.addEventListener("click", ()=>window.DDTheme.toggle());
-  nav.appendChild(btn);
+  links.appendChild(btn);   // in .links, not nav: one flex run, so it wraps with the rest on mobile
   window.DDTheme.apply();
 
   // offline insurance: cache the draft pages so a dead venue wifi can't kill the room
@@ -1576,7 +1601,6 @@ function renderOp(){
   const ls=lastSale();
   app.innerHTML=`
   <div class="ophead">
-    <span class="oph-title">Auctioneer Controls</span>
     <span class="oph-clock">ON THE CLOCK: <b>${esc(team(S.nomIdx))}</b></span>
     <span class="oph-infl">Inflation <b style="color:${d.infl>1.05?"var(--bad)":d.infl<0.95?"var(--good)":"var(--ink-2)"}">${d.infl.toFixed(2)}×</b> · ${fmt$(d.remDollars)} chasing ${fmt$(Math.round(d.remValue))}</span>
     <button class="btn aibtn" id="aiBtn" title="Ask Toto"><img src="data:image/png;base64,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" alt="">Toto</button>
