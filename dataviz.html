@@ -192,6 +192,26 @@ footer a{color:var(--accent)}
 .gotile .gt-d{font-size:12.5px;color:var(--ink-3);margin-top:2px}
 .gotile .gt-go{margin-left:auto;color:var(--accent);font-weight:700;font-size:13.5px;white-space:nowrap}
 @media(max-width:520px){.gotile .gt-go{display:none}}
+/* ---- money pile (ported from Auctioneer Controls; green = money) ---- */
+.tmwrap{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin:0 0 16px}
+.tmwrap h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3)}
+.tmwrap .note{margin:-4px 0 10px;font-size:12.5px;color:var(--ink-3)}
+.tmrow{display:flex;align-items:center;gap:9px;padding:4px 0}
+.tmrow .tmn{width:96px;font-weight:650;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tmrow.mine .tmn{color:var(--accent)}
+.tmbar{flex:1;height:26px;background:color-mix(in srgb,var(--good) 9%,var(--page));border-radius:8px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--border)}
+.tmbar .fill{height:100%;background:linear-gradient(180deg,color-mix(in srgb,var(--good) 78%,#fff),var(--good));border-radius:8px;min-width:0;transition:width .4s}
+.tmrow .tml{width:56px;text-align:right;font-weight:800;font-size:17px;font-variant-numeric:tabular-nums;color:var(--good)}
+.tmrow .tml.neg{color:var(--bad)}
+.tmrow .tms{width:102px;font-size:11.5px;color:var(--ink-3);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+@media(max-width:760px){
+  .tmrow{display:grid;grid-template-columns:1fr auto auto;grid-template-areas:"name val spots" "bar bar bar";gap:1px 9px;padding:7px 0}
+  .tmrow .tmn{grid-area:name;width:auto;font-size:13.5px}
+  .tmrow .tml{grid-area:val;width:auto}
+  .tmrow .tms{grid-area:spots;width:auto}
+  .tmrow .tmspent{display:none}
+  .tmbar{grid-area:bar;height:18px}
+}
 .tile2{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
 .tile2 .tl2{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3);font-weight:600}
 .tile2 .tv2{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:2px}
@@ -375,7 +395,7 @@ svg text{font-family:inherit}
       ["report.html","Report Card","report"],
       ["board.html","Cheat Sheet","board"],
       // everything below the rule is operator-only — it gets locked down on draft day
-      ["auction.html","Auction Operator","auction","","sep"],
+      ["auction.html","Auctioneer Controls","auction","","sep"],
     ]},
     {label:"Data", items:[
       ["master.html","Master Data","master"],
@@ -862,13 +882,13 @@ Rules:
   <h1 class="vh1">Draft Data Viz</h1>
   <p class="muted" style="margin:0">Live view of the auction — updates as sales land. Same data as the Operator and Big Board on this device.
     <b>MV</b> = Market Value, a market-consensus estimate of what a player should cost on a 12-team, $200 basis.</p>
+  <div id="viz"></div>
   <a class="gotile" href="report.html">
     <span class="gt-i">🅰️</span>
     <span><span class="gt-t">Draft Report Card</span>
       <span class="gt-d">Grades by team — who bought value, and whose starting lineup is actually good.</span></span>
     <span class="gt-go">Open →</span>
   </a>
-  <div id="viz"></div>
 </div>
 <div class="tooltip" id="tt"></div>
 
@@ -1268,7 +1288,18 @@ function render(){
       ["Surplus",(TL.surplus>=0?"+":"−")+"$"+Math.abs(Math.round(TL.surplus)),"value − spent"],
       ["Max sensible bid",fmt$(TL.left),"$0 bids are legal, so ceiling = budget"]];
   }
-  let html=dashboardHTML("tileSel", TL?esc(TL.name)+" — auction totals":"Auction totals",
+  const myIdx = window.DDMe ? window.DDMe.idx(teams) : null;
+  let html=`<div class="tmwrap">
+    <h3>The money pile — $ remaining</h3>
+    <p class="note">Who still has powder. Sorted by budget left${myIdx!=null?"; your team in orange":""}.</p>
+    ${d.T.map((t,i)=>({t,i})).sort((a,b)=>b.t.left-a.t.left || a.i-b.i).map(({t,i})=>`<div class="tmrow ${i===myIdx?"mine":""}">
+      <span class="tmn">${esc(t.name)}</span>
+      <div class="tmbar"><div class="fill" style="width:${Math.min(100,Math.max(0,t.left/S.settings.budget*100))}%"></div></div>
+      <span class="tml ${t.left<0?"neg":""}">${fmt$(t.left)}</span>
+      <span class="tms"><span class="tmspent">$${t.spent} spent · </span>${t.count}/${S.settings.spots}</span>
+    </div>`).join("")}
+  </div>`;
+  html+=dashboardHTML("tileSel", TL?esc(TL.name)+" — auction totals":"Auction totals",
                          tileScope, tiles, teams);
 
   const SP = spendScope>=0 ? d.T[spendScope] : null;

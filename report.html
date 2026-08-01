@@ -404,7 +404,7 @@ svg text{font-family:inherit}
       ["report.html","Report Card","report"],
       ["board.html","Cheat Sheet","board"],
       // everything below the rule is operator-only — it gets locked down on draft day
-      ["auction.html","Auction Operator","auction","","sep"],
+      ["auction.html","Auctioneer Controls","auction","","sep"],
     ]},
     {label:"Data", items:[
       ["master.html","Master Data","master"],
@@ -1195,7 +1195,7 @@ function render(){
   if(!drafted.length){
     app.innerHTML=`<div class="vcard"><div class="empty-state">
       <b>No picks yet</b>
-      This fills in as the auction runs. Open the Auction Operator to start the draft —
+      This fills in as the auction runs. Open Auctioneer Controls to start the draft —
       grades appear after the first sale.</div></div>`;
     return;
   }

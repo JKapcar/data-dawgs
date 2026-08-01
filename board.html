@@ -392,7 +392,7 @@ th.sortable:hover{color:var(--ink-1)}
       ["report.html","Report Card","report"],
       ["board.html","Cheat Sheet","board"],
       // everything below the rule is operator-only — it gets locked down on draft day
-      ["auction.html","Auction Operator","auction","","sep"],
+      ["auction.html","Auctioneer Controls","auction","","sep"],
     ]},
     {label:"Data", items:[
       ["master.html","Master Data","master"],
@@ -1063,8 +1063,8 @@ function renderLive(A){
   document.getElementById("sheetCard").style.display="none";
   const lc=document.getElementById("liveCard"); lc.style.display="";
   document.getElementById("liveNote").textContent =
-    A.picks.length ? `${A.picks.length} picks in · newest first in the ticker · updates live from the Auction Operator on this device` :
-    "No picks yet — this fills in as the Auction Operator logs sales (on this device).";
+    A.picks.length ? `${A.picks.length} picks in · newest first in the ticker · updates live from Auctioneer Controls on this device` :
+    "No picks yet — this fills in as the auctioneer logs sales (on this device).";
   // ---- recent picks ticker ----
   const tk=document.getElementById("liveTicker"); tk.textContent="";
   const recent=A.picks.slice(-12).reverse();
@@ -1227,7 +1227,7 @@ function render(){
     // live requested but the draft hasn't been set up yet
     document.getElementById("sheetCard").style.display="none";
     document.getElementById("liveCard").style.display="";
-    document.getElementById("liveNote").textContent="Draft hasn't started yet — this page lights up automatically once the Auction Operator is set up (on the operator's device).";
+    document.getElementById("liveNote").textContent="Draft hasn't started yet — this page lights up automatically once Auctioneer Controls is set up (on the operator's device).";
     document.getElementById("liveTicker").textContent="";
     document.getElementById("liveGrid").textContent="";
   }
