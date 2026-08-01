@@ -1190,6 +1190,11 @@ function moneyPileChart(container, T, budget, spots, myIdx){
     const mine = i===myIdx, neg = t.left<0;
     const color = neg ? bad : mine ? accent : good;
     const x=X(k), h=Math.max(2,m.t+ih-Y(t.left));
+    // spent portion, muted, stacked above: the column always reaches the budget line, so the
+    // chart reads as "how the $200 split" rather than leaving half the plot empty.
+    const sh=Math.max(0,Y(t.left)-Y(budget));
+    if(sh>0.5) svg.appendChild(svgEl("rect",{x, y:Y(budget), width:BW, height:sh,
+      fill:grid, rx:3}));
     svg.appendChild(svgEl("rect",{x, y:Y(t.left), width:BW, height:h, fill:color, rx:3}));
     if(BW>=15){
       const v=svgEl("text",{x:x+BW/2, y:Math.max(11,Y(t.left)-6), "text-anchor":"middle",
@@ -1352,7 +1357,7 @@ function render(){
   const myIdx = window.DDMe ? window.DDMe.idx(teams) : null;
   let html=`<div class="tmwrap">
     <h3>The money pile — $ remaining</h3>
-    <p class="note">Every team's unspent budget against the full $${S.settings.budget}${myIdx!=null?"; your bar in orange":""}. Bar height is the share of budget still in hand, so the gap above each bar is what's already gone.</p>
+    <p class="note">Each team's $${S.settings.budget}, split into what's still in hand and what's already spent (grey)${myIdx!=null?". Your bar is orange":""}. Sorted by money left.</p>
     <div id="chartMoney"></div>
   </div>`;
   html+=dashboardHTML("tileSel", TL?esc(TL.name)+" — auction totals":"Auction totals",
