@@ -231,6 +231,8 @@ footer a{color:var(--accent)}
 .gauge .gneedle.pin{background:var(--bad)}
 .gauge .gticks{display:flex;justify-content:space-between;font-size:10px;color:var(--ink-3);margin-top:4px}
 .gauge.pow .gtrack{background:linear-gradient(90deg,color-mix(in srgb,var(--bad) 55%,var(--surface-1)),var(--grid),var(--good))}
+.dial{margin:8px auto 2px;max-width:184px}
+.dial svg{display:block;overflow:visible}
 .pips{display:flex;gap:2px;margin:11px 0 8px}
 .pips .pip{flex:1 1 0;min-width:0;max-width:14px;height:11px;border-radius:3px;background:var(--grid);box-shadow:inset 0 0 0 1px var(--border)}
 .pips .pip.on{background:var(--accent);box-shadow:none}
@@ -977,6 +979,37 @@ function gauge(v,o){
     <div class="gticks"><span>${L[0]}</span><span>${L[1]}</span><span>${L[2]}</span></div>
   </div>`;
 }
+// Inflation as a round dial — a real gauge face, for variety against the linear
+// buying-power meter. Same fixed 0.5x-2.0x scale; the needle turns red and pins at
+// the stops, and the printed number above stays the source of truth.
+function dialGauge(v,o){
+  o=o||{};
+  const LO=o.lo!=null?o.lo:0.5, HI=o.hi!=null?o.hi:2.0;
+  const A0=160, A1=380, SW=A1-A0, cx=70, cy=70, R=52;
+  const rad=d=>d*Math.PI/180;
+  const pt=(a,r)=>[cx+r*Math.cos(rad(a)), cy+r*Math.sin(rad(a))];
+  const f=Math.max(0,Math.min(1,(v-LO)/(HI-LO)));
+  const pinned = v<LO || v>HI;
+  const N=44; let ticks="";
+  for(let i=0;i<=N;i++){
+    const t=i/N, a=A0+t*SW, major=(i%11===0);
+    const [x0,y0]=pt(a,R-(major?10:5)), [x1,y1]=pt(a,R+(major?3:1));
+    const col = t<0.5
+      ? `color-mix(in srgb, var(--warn) ${Math.round(t*200)}%, var(--grid))`
+      : `color-mix(in srgb, var(--bad) ${Math.round((t-0.5)*200)}%, var(--warn))`;
+    ticks+=`<line x1="${x0.toFixed(2)}" y1="${y0.toFixed(2)}" x2="${x1.toFixed(2)}" y2="${y1.toFixed(2)}" stroke="${col}" stroke-width="${major?2.4:1.3}" stroke-linecap="round"/>`;
+  }
+  const [nx,ny]=pt(A0+f*SW, R-15);
+  const [tx,ty]=pt(A0, R+11), [ux,uy]=pt(A1, R+11);
+  return `<div class="dial"><svg viewBox="0 0 140 96" width="100%" aria-hidden="true">
+    ${ticks}
+    <line x1="${cx}" y1="${cy}" x2="${nx.toFixed(2)}" y2="${ny.toFixed(2)}"
+      stroke="${pinned?"var(--bad)":"var(--ink-1)"}" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="${cx}" cy="${cy}" r="5" fill="var(--surface-1)" stroke="var(--ink-1)" stroke-width="2.5"/>
+    <text x="${tx.toFixed(1)}" y="${(ty+4).toFixed(1)}" text-anchor="middle" font-size="9" fill="var(--ink-3)">${LO.toFixed(1)}×</text>
+    <text x="${ux.toFixed(1)}" y="${(uy+4).toFixed(1)}" text-anchor="middle" font-size="9" fill="var(--ink-3)">${HI.toFixed(1)}×</text>
+  </svg></div>`;
+}
 // Roster slots as pips — 15 squares reads as "how full am I" faster than "3/15".
 function pips(filled,total){
   let out="";
@@ -1431,7 +1464,7 @@ function render(){
       ["Inflation", d.infl.toFixed(2)+"×",
         d.infl>1.05?"dollars outnumber value — prices running hot"
           :d.infl<0.95?"value outnumbers dollars — bargains out there":"dollars and value in balance",
-        gauge(d.infl,{labels:["0.5×","1.0×","2.0×"]})],
+        dialGauge(d.infl)],
       ["Avg $ left/team", fmt$(d.remDollars/d.T.length), `${d.T.length} teams`],
     ];
   } else {
