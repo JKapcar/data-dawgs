@@ -201,7 +201,7 @@ footer a{color:var(--accent)}
   color:var(--ink-3);margin:0}
 .dash-h .vsel{margin-left:auto}
 .livechip{font-size:11.5px;color:var(--good);border:1px solid color-mix(in srgb,var(--good) 40%,transparent);border-radius:999px;padding:3px 10px;margin-left:auto}
-.tiles2{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.tiles2{display:grid;grid-template-columns:repeat(auto-fit,minmax(212px,1fr));gap:10px;margin-bottom:16px}
 .gotile{display:flex;align-items:center;gap:14px;text-decoration:none;color:var(--ink-1);
   background:var(--surface-1);border:1px solid var(--border);border-left:4px solid var(--accent);
   border-radius:12px;padding:14px 16px;margin-bottom:16px;transition:border-color .15s}
@@ -219,6 +219,19 @@ footer a{color:var(--accent)}
 .tile2 .tl2{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3);font-weight:600}
 .tile2 .tv2{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:2px}
 .tile2 .td2{font-size:11.5px;color:var(--ink-3)}
+.tile2 .tv2:empty{display:none}
+.tile2 .tv2 .tsub{font-size:12.5px;font-weight:600;color:var(--ink-3)}
+.dbar{height:9px;border-radius:6px;background:var(--grid);overflow:hidden;margin:9px 0 7px;box-shadow:inset 0 0 0 1px var(--border)}
+.dbar .dfill{height:100%;border-radius:6px;transition:width .4s}
+.gauge{position:relative;margin:11px 0 7px}
+.gauge .gtrack{height:9px;border-radius:6px;background:linear-gradient(90deg,var(--grid),var(--warn),var(--bad));box-shadow:inset 0 0 0 1px var(--border)}
+.gauge .gmid{position:absolute;left:33.33%;top:-3px;width:1px;height:15px;background:var(--ink-3);opacity:.55}
+.gauge .gneedle{position:absolute;top:-4px;width:3px;height:17px;border-radius:2px;background:var(--ink-1);
+  transform:translateX(-1.5px);box-shadow:0 0 0 2px var(--surface-1)}
+.gauge .gneedle.pin{background:var(--bad)}
+.gauge .gticks{display:flex;justify-content:space-between;font-size:10px;color:var(--ink-3);margin-top:4px}
+.donutwrap{display:flex;align-items:center;gap:12px;margin:8px 0 6px}
+.donutwrap .dnum{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}
 .vizgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
 @media(max-width:900px){.vizgrid{grid-template-columns:1fr}}
 .vcard{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
@@ -928,6 +941,40 @@ function load(){
 const val=p=>+p[S.settings.scoring]||0;
 const norm=p=>p==="D"?"DST":p;
 const fmt$=n=>"$"+Math.round(n);
+const fmtK=n=>"$"+Math.round(n).toLocaleString("en-US");
+
+// ---- tile widgets -------------------------------------------------------
+// A depleting bar: the fill is what REMAINS, so it drains left-to-right as the
+// draft runs. Same reading as the money pile's green, deliberately.
+function depleteBar(left, total, color){
+  const pct=total>0?Math.max(0,Math.min(100,left/total*100)):0;
+  return `<div class="dbar"><div class="dfill" style="width:${pct.toFixed(1)}%;background:${color}"></div></div>`;
+}
+// Pressure gauge. Scale is fixed 0.5x-2.0x and the needle pins at the ends —
+// late in a draft inflation can run well past 2x (a pile of $1 bids chasing
+// almost no value), so the printed number, not the needle, is the source of truth.
+function gauge(v){
+  const LO=0.5, HI=2.0;
+  const pct=Math.max(0,Math.min(100,(v-LO)/(HI-LO)*100));
+  const pinned = v<LO || v>HI;
+  return `<div class="gauge">
+    <div class="gtrack"></div>
+    <div class="gmid" title="1.00x — dollars and value in balance"></div>
+    <div class="gneedle${pinned?" pin":""}" style="left:${pct.toFixed(1)}%"></div>
+    <div class="gticks"><span>0.5x</span><span>1.0x</span><span>2.0x</span></div>
+  </div>`;
+}
+// Two-slice donut: this team's remaining dollars against everyone else's.
+function donut(part, whole){
+  const R=26, C=2*Math.PI*R, frac=whole>0?Math.max(0,Math.min(1,part/whole)):0;
+  return `<div class="donutwrap"><svg viewBox="0 0 72 72" width="72" height="72" aria-hidden="true">
+    <circle cx="36" cy="36" r="${R}" fill="none" stroke="var(--grid)" stroke-width="9"></circle>
+    <circle cx="36" cy="36" r="${R}" fill="none" stroke="var(--accent)" stroke-width="9"
+      stroke-dasharray="${(C*frac).toFixed(2)} ${(C*(1-frac)).toFixed(2)}"
+      stroke-linecap="butt"
+      transform="rotate(-90 36 36)"></circle>
+  </svg><div class="dnum">${(frac*100).toFixed(1)}%</div></div>`;
+}
 const esc=s=>{const d=document.createElement("span");d.textContent=s==null?"":String(s);return d.innerHTML;};
 const shortName=n=>{const p=String(n).split(" ");return (n.length<=15||p.length<2)?n:p[0][0]+". "+p.slice(1).join(" ");};
 
@@ -949,7 +996,9 @@ function derive(){
   const remaining=POOL.filter(p=>!sold[p.name]);
   remaining.forEach(p=>{ if(val(p)>=1) remValue+=val(p); });
   const infl=remValue>0?remDollars/remValue:1;
-  return {T, sold, remaining, remDollars, remValue, infl, byName};
+  let poolValue=0, remCount=0;
+  POOL.forEach(p=>{ if(val(p)>=1){ poolValue+=val(p); if(!sold[p.name]) remCount++; } });
+  return {T, sold, remaining, remDollars, remValue, poolValue, remCount, infl, byName};
 }
 
 // ---------- tooltip ----------
@@ -1316,7 +1365,7 @@ function dashboardHTML(id, title, scopeVal, tiles, teams, allLabel){
       </select>
     </div>
     <div class="tiles2">${tiles.map(t=>
-      `<div class="tile2"><div class="tl2">${t[0]}</div><div class="tv2">${t[1]}</div><div class="td2">${t[2]}</div></div>`
+      `<div class="tile2"><div class="tl2">${t[0]}</div><div class="tv2">${t[1]}</div>${t[3]||""}<div class="td2">${t[2]}</div></div>`
     ).join("")}</div>
   </section>`;
 }
@@ -1339,22 +1388,38 @@ function render(){
 
   // ---- dashboard: one toggle for the whole tile strip ----
   const TL = tileScope>=0 ? d.T[tileScope] : null;
+  const myIdx = window.DDMe ? window.DDMe.idx(teams) : null;
+  const GREEN=css("--good"), ORANGE=css("--accent");
   let tiles;
   if(!TL){
     const spent=d.T.reduce((a,t)=>a+t.spent,0);
-    tiles=[["League spent",fmt$(spent),`${(S.picks||[]).length} picks`],
-      ["League $ left",fmt$(d.remDollars),`of ${fmt$(S.settings.budget*d.T.length)}`],
-      ["Value left on board",fmt$(d.remValue),"MV $, players ≥$1"],
-      ["Inflation",d.infl.toFixed(2)+"×", d.infl>1?"prices running hot":"value out there"],
-      ["Avg $ left/team",fmt$(d.remDollars/d.T.length),""]];
+    const totalBudget=S.settings.budget*d.T.length;
+    tiles=[
+      ["League money", `${fmtK(d.remDollars)} <span class="tsub">left of ${fmtK(totalBudget)}</span>`,
+        `${fmtK(spent)} spent across ${(S.picks||[]).length} picks`,
+        depleteBar(d.remDollars, totalBudget, GREEN)],
+      ["Value on the board", `${fmtK(d.remValue)} <span class="tsub">of ${fmtK(d.poolValue)} MV</span>`,
+        `${d.remCount} players still worth $1+`,
+        depleteBar(d.remValue, d.poolValue, ORANGE)],
+      ["Inflation", d.infl.toFixed(2)+"×",
+        d.infl>1.05?"dollars outnumber value — prices running hot"
+          :d.infl<0.95?"value outnumbers dollars — bargains out there":"dollars and value in balance",
+        gauge(d.infl)],
+      ["Avg $ left/team", fmt$(d.remDollars/d.T.length), `${d.T.length} teams`],
+    ];
   } else {
-    tiles=[["Spent",fmt$(TL.spent),`${TL.count}/${S.settings.spots} drafted`],
-      ["Budget left",fmt$(TL.left),`${Math.max(0,S.settings.spots-TL.count)} spots left`],
+    const openSlots=Math.max(0,S.settings.spots-TL.count);
+    tiles=[
+      ["Spent",fmt$(TL.spent),`${TL.count}/${S.settings.spots} drafted`],
+      ["Budget left",fmt$(TL.left),`${openSlots} spots left`],
       ["Market value acquired",fmt$(TL.value),""],
       ["Surplus",(TL.surplus>=0?"+":"−")+"$"+Math.abs(Math.round(TL.surplus)),"value − spent"],
-      ["Max sensible bid",fmt$(TL.left),"$0 bids are legal, so ceiling = budget"]];
+      ["Max sensible bid",fmt$(TL.left),"$0 bids are legal, so ceiling = budget"],
+      ["Share of money left", "",
+        `${fmt$(TL.left)} of ${fmtK(d.remDollars)} still unspent league-wide · ${openSlots?fmt$(TL.left/openSlots):"—"} per open slot`,
+        donut(TL.left, d.remDollars)],
+    ];
   }
-  const myIdx = window.DDMe ? window.DDMe.idx(teams) : null;
   let html=`<div class="tmwrap">
     <h3>The money pile — $ remaining</h3>
     <p class="note">Each team's $${S.settings.budget}, split into what's still in hand and what's already spent (grey)${myIdx!=null?". Your bar is orange":""}. Sorted by money left.</p>
