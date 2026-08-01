@@ -464,7 +464,29 @@ Rules:
 - Be direct and short — draft-night answers. 3-8 sentences or a tight list. Plain text only: no markdown, no headers, no tables.
 - When asked to decide, decide: name the player(s), the price you'd pay, and the one thing that would change your mind.
 - When the state does not support a confident answer, say so plainly instead of dressing a guess up as analysis. That is the whole point of you.
-- If the state shows no picks yet, say so and talk strategy rather than pretending to see a board.`;
+- If the state shows no picks yet, say so and talk strategy rather than pretending to see a board.
+How-to questions about the site are also yours to answer, from the SITE MANUAL supplied below.
+- Answer how-to questions from the manual ONLY. If a step is not in it, say you do not know and suggest what is — never invent a button, menu or shortcut. Made-up UI steps mid-draft are worse than no answer.
+- Reason across the manual freely: combine steps to solve a problem it does not spell out (e.g. wrong player AND wrong team = undo, then re-enter). Just do not invent the steps themselves.
+- Same voice for how-to as for draft advice: short, plain text, no markdown.`;
+
+// Site manual — single source of truth for Toto's how-to answers. If the UI changes,
+// change this in the SAME commit or Toto starts confidently lying about it.
+const HELP = `AUCTIONEER CONTROLS (auction.html) — the operator's page. One device runs the draft.
+ENTERING A SALE: type into "Player (select = on the block)". An autocomplete list appears; Down/Up arrows move, Enter selects, Escape closes. Selecting a player puts them on the block. Then pick the winning Team, type Price $, and press SOLD. A player not in the pool gets a "Pos (custom)" dropdown so you can set the position by hand.
+VOICE: the microphone button, or press V when you are not typing in a field. Say "nominate {player}" to put someone on the block, or "{player} {team} {price}" to log a sale. Including the word "keeper" marks that pick as a keeper.
+UNDO THE LAST SALE: the "Last sale" row sits under the entry bar and has an "Undo this pick" button. It asks to confirm — "Yes, undo" or "Cancel".
+FIX AN OLDER PICK: open the gear Menu, then "Pick log (undo / edit)". Every pick there has an editable price box and a team dropdown, and both save the moment you change them. The x button on a row deletes that pick. Price edits are clamped so a team cannot be pushed past $0.
+NOMINATION QUEUE (gear Menu): type a name and press +. Click a queued name to load it into the entry bar. The x removes it. Only the operator sees this.
+BEST AVAILABLE: four buttons under the entry bar showing the top remaining QB, RB, WR and TE with an inflation-adjusted price. Tapping one loads that player.
+THE MONEY PILE: every team's remaining budget, sorted, at the bottom of the operator page.
+GEAR MENU also holds: Setup, "Start <n>s timer", "Advance nomination", "Projector shows" (Draft Board / Rosters / What's Left / Report Card), Recap, Export CSV, and Reset draft.
+RESET DRAFT is deliberately two clicks: the first turns it into "Click again to RESET ALL", and it disarms itself after about 4 seconds.
+SETUP holds: Budget $, Roster spots, Values (Half PPR / Full PPR / Superflex), Timer secs, My team, Voice announcer, Snark mode, and Announcer voice.
+EXPORT CSV columns: pick, player, pos, team, owner, price, etr_value, keeper.
+ON THE CLOCK is shown in the page header. "Advance nomination" moves it to the next team. Undoing a non-keeper pick steps it back one.
+OTHER PAGES: Big Board is the projector view — it is deliberately not in the nav, open it by URL on the projector machine, and what it displays is set from "Projector shows". LIVE DRAFT in the nav is the read-only board for everyone else. Draft Data Viz, Report Card, Cheat Sheet and Master Data are read-only views of the same draft.
+STATE: everything saves in the browser on that device. A different device shows a different draft unless the live mirror is switched on. Pages are cached for offline so the draft survives losing wifi — but Toto itself needs the network, so say so if someone asks for help while offline.`;
 
   function ctx(){
     const POOL = window.DD_POOL || [];
@@ -566,6 +588,7 @@ Rules:
         : {"Content-Type":"application/json","X-Dawg-Pass":pass};
       const payload = {max_tokens:700,
         messages:[{role:"system",content:SYS},
+                  {role:"system",content:"SITE MANUAL (how the site works — use for how-to questions):\n"+HELP},
                   {role:"system",content:"CURRENT DRAFT STATE (regenerated for every question):\n"+ctx()},
                   ...HIST.slice(-8)]};
       if(direct) payload.model = window.DDBot.cfg().model;
