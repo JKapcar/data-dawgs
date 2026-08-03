@@ -157,6 +157,9 @@ tr:last-child td{border-bottom:none}
 .hero .hero-light{display:none}
 :root[data-theme="light"] .hero .hero-dark{display:none}
 :root[data-theme="light"] .hero .hero-light{display:block}
+.hero .mxrain{position:absolute;pointer-events:none;z-index:1}
+.hero .hero-dark.mxon,.hero .hero-light.mxon{clip-path:inset(72.9% 0 0 0)}
+@media (prefers-reduced-motion:reduce){.hero .mxrain{display:none}}
 .hero .tagline{font-size:17px;color:var(--ink-2);margin:10px 0 8px;letter-spacing:.01em}
 /* ---- manifesto (home) ---- */
 .frame{max-width:660px;margin:20px auto 0;padding-bottom:26px;border-bottom:1px solid var(--grid)}
@@ -926,5 +929,122 @@ STATE: everything saves in the browser on that device. A different device shows 
     Data Dawgs · Play-by-play data from <a href="https://github.com/nflverse" target="_blank" rel="noopener">nflverse</a> · Strategy synthesized from Establish The Run's 2026 Draft Kit (subscriber content, personal use) · Stats format inspired by <a href="https://rbsdm.com/stats/stats/" target="_blank" rel="noopener">rbsdm.com</a>
   </footer>
 </div>
+<script>
+/* ---------- live logo: binary rain inside the dog's head (homepage hero) ----------
+   The head is drawn by the canvas at low opacity and the falling glyphs supply the
+   brightness, so the motion carries the image instead of shimmering over a solid logo.
+   Mask comes from the PNG's own alpha, so the rain is clipped to the silhouette.
+   Runs in both themes with inverted palettes; the wordmark below is never touched. */
+(function(){
+  const HEAD_FRAC = 408/560;                 // head is the top 73% of the art; wordmark below
+  const hero  = document.querySelector('.hero');
+  const dark  = hero && hero.querySelector('.hero-dark');
+  const light = hero && hero.querySelector('.hero-light');
+  if(!hero || !dark || !light) return;
+  if(getComputedStyle(hero).position === 'static') hero.style.position = 'relative';
+
+  const PALETTE = {
+    dark:  { base:0.46, lead:'rgba(255,248,240,1)',
+             near:k=>'rgba(255,214,170,'+(0.95-k*0.12).toFixed(3)+')',
+             tail:f=>'rgba(255,132,26,'+(f*0.95).toFixed(3)+')' },
+    light: { base:0.58, lead:'rgba(24,18,12,1)',
+             near:k=>'rgba(96,58,22,'+(0.90-k*0.12).toFixed(3)+')',
+             tail:f=>'rgba(209,58,0,'+(f*0.80).toFixed(3)+')' }
+  };
+
+  const cv = document.createElement('canvas');
+  cv.className = 'mxrain';
+  hero.insertBefore(cv, light.nextSibling);
+  const ctx = cv.getContext('2d');
+
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  let mask=null, cols=[], cell=10, W=0, H=0, dpr=1, raf=0, last=0, visible=true, pal=PALETTE.dark, img=dark;
+
+  const isLight = () => document.documentElement.getAttribute('data-theme') === 'light';
+
+  function buildMask(){
+    img = isLight() ? light : dark;
+    pal = isLight() ? PALETTE.light : PALETTE.dark;
+    if(!img.complete || !img.naturalWidth) return false;
+    const r = img.getBoundingClientRect();
+    if(!r.width || !r.height) return false;                 // hidden or not laid out yet
+    dpr = Math.min(2, devicePixelRatio || 1);
+    W = Math.round(r.width); H = Math.round(r.height);
+    cv.width = W*dpr; cv.height = H*dpr;
+    cv.style.width = W+'px'; cv.style.height = H+'px';
+    cv.style.left = img.offsetLeft+'px'; cv.style.top = img.offsetTop+'px';
+    const m = document.createElement('canvas');
+    m.width = cv.width; m.height = cv.height;
+    const mc = m.getContext('2d');
+    mc.drawImage(img, 0, 0, cv.width, cv.height);
+    mc.clearRect(0, Math.round(cv.height*HEAD_FRAC), cv.width, cv.height);   // head only
+    mask = m;
+    cell = Math.max(6, Math.round(W/40));
+    const n = Math.ceil(W/cell);
+    cols = Array.from({length:n}, ()=>({
+      y: Math.random() * (H*HEAD_FRAC)/cell,
+      speed: 3.5 + Math.random()*6,
+      glyphs: Array.from({length:18}, ()=> Math.random()<0.5 ? '0' : '1')
+    }));
+    return true;
+  }
+
+  function frame(t){
+    raf = requestAnimationFrame(frame);
+    const dt = Math.min(0.05, (t-last)/1000 || 0); last = t;
+    if(!mask) return;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,W,H);
+    ctx.globalAlpha = pal.base;
+    ctx.drawImage(img, 0, 0, img.naturalWidth, Math.round(img.naturalHeight*HEAD_FRAC),
+                       0, 0, W, H*HEAD_FRAC);
+    ctx.globalAlpha = 1;
+    ctx.font = '700 ' + Math.round(cell*0.95) + 'px ui-monospace, SFMono-Regular, Menlo, monospace';
+    ctx.textBaseline = 'top';
+    const rows = (H*HEAD_FRAC)/cell;
+    for(let i=0;i<cols.length;i++){
+      const c = cols[i];
+      c.y += c.speed*dt;
+      if(c.y - c.glyphs.length > rows){ c.y = -Math.random()*6; c.speed = 3.5 + Math.random()*6; }
+      if(Math.random() < 0.10) c.glyphs[(Math.random()*c.glyphs.length)|0] = Math.random()<0.5?'0':'1';
+      for(let k=0;k<c.glyphs.length;k++){
+        const ry = Math.floor(c.y) - k;
+        if(ry < 0 || ry > rows) continue;
+        const f = 1 - k/c.glyphs.length;
+        ctx.fillStyle = k===0 ? pal.lead : k<3 ? pal.near(k) : pal.tail(f);
+        ctx.fillText(c.glyphs[k], i*cell, ry*cell);
+      }
+    }
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.globalCompositeOperation = 'destination-in';
+    ctx.drawImage(mask, 0, 0);
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function stop(){
+    if(raf){ cancelAnimationFrame(raf); raf = 0; }
+    dark.classList.remove('mxon'); light.classList.remove('mxon');
+    ctx.clearRect(0,0,cv.width,cv.height);
+  }
+  function start(){
+    const on = !reduce.matches && !document.hidden && visible;
+    if(on){
+      stop();
+      if(buildMask()){ img.classList.add('mxon'); last = 0; raf = requestAnimationFrame(frame); }
+    } else stop();
+  }
+
+  if('IntersectionObserver' in window)
+    new IntersectionObserver(es=>{ visible = es[0].isIntersecting; start(); },{threshold:0.05}).observe(hero);
+  addEventListener('resize', ()=>{ if(raf) start(); });
+  document.addEventListener('visibilitychange', start);
+  if(reduce.addEventListener) reduce.addEventListener('change', start);
+  new MutationObserver(start).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+  let pending = 0;
+  [dark, light].forEach(el=>{ if(!el.complete){ pending++; el.addEventListener('load', ()=>{ if(--pending<=0) start(); }); } });
+  if(!pending) start();
+})();
+</script>
 </body>
 </html>
