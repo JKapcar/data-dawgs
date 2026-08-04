@@ -79,10 +79,16 @@ function corsFor(origin) {
   };
 }
 
+// ⚠️ no-store is load-bearing, not decoration. Without it Cloudflare's edge
+// cached GET /bozo/roster and served "nobody has claimed" to a player who HAD
+// just claimed — so the page showed them the claim form instead of sign-in.
+// Caught live 8/4: a plain fetch returned [] while the same URL with a cache
+// buster returned ["Kap"]. Every Bozo response is per-player state; none of it
+// is cacheable. (/scores builds its own Response and keeps max-age=60.)
 const json = (obj, status, cors) =>
   new Response(JSON.stringify(obj), {
     status,
-    headers: { ...cors, "Content-Type": "application/json" },
+    headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" },
   });
 
 export default {
@@ -321,8 +327,14 @@ async function hmac(secret, msg) {
   return b64(sig).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-async function makeSession(env, name) {
-  const payload = b64urlStr(JSON.stringify({ n: name, e: Date.now() + SESSION_DAYS * 864e5 }));
+// `p` pins the session to the password that created it. Change your password or
+// get reset by the admin and every older session stops authenticating — without
+// it, a reset would leave a stolen session working forever, which defeats the
+// point of having a reset.
+async function makeSession(env, name, setAt) {
+  const payload = b64urlStr(JSON.stringify({
+    n: name, e: Date.now() + SESSION_DAYS * 864e5, p: setAt || 0,
+  }));
   return payload + "." + (await hmac(env.BOZO_PEPPER, payload));
 }
 
@@ -333,7 +345,7 @@ async function readSession(env, tok) {
   let o;
   try { o = JSON.parse(unb64urlStr(payload)); } catch { return null; }
   if (!o || !o.n || !o.e || Date.now() > o.e) return null;
-  return o.n;
+  return o;
 }
 
 function bozoConfig(env) {
@@ -353,11 +365,20 @@ async function sessionAuth(request, env) {
   if (cfg) return { err: cfg, code: 500 };
   const map = tokenMap(env);
   if (!map) return { err: "Worker misconfigured: BOZO_TOKENS is not valid JSON.", code: 500 };
-  const name = await readSession(env, request.headers.get("X-Bozo-Session") || "");
-  if (!name) return { err: "Sign in first.", code: 401 };
+  const sess = await readSession(env, request.headers.get("X-Bozo-Session") || "");
+  if (!sess) return { err: "Sign in first.", code: 401 };
   const players = Object.values(map);
-  if (!players.includes(name)) return { err: "Unknown player.", code: 403 };
-  return { name, players };
+  if (!players.includes(sess.n)) return { err: "Unknown player.", code: 403 };
+
+  // The session must still match the password on file (see makeSession).
+  let rec;
+  try { rec = (await fbGet(env, authPath(sess.n))).data; }
+  catch (e) { return { err: "Database unreachable: " + e.message, code: 502 }; }
+  if (!rec) return { err: "Your password was reset — use your join link again.", code: 401 };
+  if ((rec.setAt || 0) !== (sess.p || 0))
+    return { err: "Your password changed — sign in again.", code: 401 };
+
+  return { name: sess.n, players };
 }
 
 // GET /bozo/roster — who exists and who has set a password. No secrets: it is
@@ -404,8 +425,9 @@ async function bozoClaim(request, env, cors) {
     crypto.getRandomValues(saltBytes);
     const salt = b64(saltBytes);
     const hash = await pbkdf2(pw, env.BOZO_PEPPER, salt, PBKDF2_ITERS);
-    await fbPut(env, authPath(name), { v: 1, salt, hash, iters: PBKDF2_ITERS, setAt: Date.now() });
-    return json({ ok: true, name, session: await makeSession(env, name) }, 200, cors);
+    const setAt = Date.now();
+    await fbPut(env, authPath(name), { v: 1, salt, hash, iters: PBKDF2_ITERS, setAt });
+    return json({ ok: true, name, session: await makeSession(env, name, setAt) }, 200, cors);
   } catch (e) {
     return json({ error: "Database write failed: " + e.message }, 502, cors);
   }
@@ -447,7 +469,7 @@ async function bozoLogin(request, env, cors) {
       }
       return json({ error: "Wrong password." }, 401, cors);
     }
-    return json({ ok: true, name, session: await makeSession(env, name) }, 200, cors);
+    return json({ ok: true, name, session: await makeSession(env, name, rec.setAt || 0) }, 200, cors);
   } catch (e) {
     return json({ error: "Database unreachable: " + e.message }, 502, cors);
   }
@@ -476,8 +498,9 @@ async function bozoPasswd(request, env, cors) {
     crypto.getRandomValues(saltBytes);
     const salt = b64(saltBytes);
     const hash = await pbkdf2(newPw, env.BOZO_PEPPER, salt, PBKDF2_ITERS);
-    await fbPut(env, authPath(auth.name), { v: 1, salt, hash, iters: PBKDF2_ITERS, setAt: Date.now() });
-    return json({ ok: true, session: await makeSession(env, auth.name) }, 200, cors);
+    const setAt = Date.now();
+    await fbPut(env, authPath(auth.name), { v: 1, salt, hash, iters: PBKDF2_ITERS, setAt });
+    return json({ ok: true, session: await makeSession(env, auth.name, setAt) }, 200, cors);
   } catch (e) {
     return json({ error: "Database write failed: " + e.message }, 502, cors);
   }
