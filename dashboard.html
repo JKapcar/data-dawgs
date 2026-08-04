@@ -314,6 +314,15 @@ svg text{font-family:inherit}
 .dbview iframe.on{opacity:1}
 .dbview iframe:not(.on){position:absolute;left:0;top:0;height:0!important;pointer-events:none}
 .dbload{padding:40px 0;text-align:center;color:var(--ink-3);font-size:13.5px}
+.dbexit{display:none}
+.dbview:fullscreen{background:var(--page);overflow:auto}
+.dbview:fullscreen iframe.on{height:100vh!important}
+.dbview:fullscreen .dbexit{display:inline-flex;align-items:center;gap:6px;position:fixed;
+  top:14px;right:16px;z-index:9;appearance:none;cursor:pointer;
+  background:var(--surface-1);border:1px solid var(--border);border-radius:9px;
+  color:var(--ink-2);font:inherit;font-size:13px;font-weight:650;padding:8px 13px;
+  box-shadow:0 4px 16px rgba(0,0,0,.28);opacity:.55;transition:opacity .15s,border-color .15s}
+.dbview:fullscreen .dbexit:hover{opacity:1;border-color:var(--accent);color:var(--accent)}
 .dbnote{font-size:12.5px;color:var(--ink-3);margin:10px 0 0}
 @media(max-width:620px){
   .dbwrap{padding:0 14px 30px}
@@ -342,10 +351,10 @@ svg text{font-family:inherit}
     <button data-v="analysis" >Analysis<span class="kbd">3</span></button>
     <button data-v="grades"   >Grades<span class="kbd">4</span></button>
     <span class="grow"></span>
-    <button class="dbpresent" id="dbPresent" title="Full-screen the live board for the projector">⤢ Present</button>
+    <button class="dbpresent" id="dbPresent" title="Full-screen the live board for the projector">⤢ Full screen</button>
   </div>
 
-  <div class="dbview" id="dbView"><div class="dbload">Loading…</div></div>
+  <div class="dbview" id="dbView"><button class="dbexit" id="dbExit">✕ Exit full screen</button><div class="dbload">Loading…</div></div>
   <p class="dbnote" id="dbNote"></p>
 </div>
 
@@ -1124,8 +1133,20 @@ STATE: everything saves in the browser on that device. A different device shows 
     if(b) show(b.dataset.v);
   });
   document.getElementById("dbPresent").addEventListener("click", ()=>{
-    const f = frames.live; if(!f) return;
-    (f.requestFullscreen ? f.requestFullscreen() : f.webkitRequestFullscreen && f.webkitRequestFullscreen());
+    if(!frames.live) return;
+    show("live");
+    // fullscreen the viewport rather than the frame itself — the exit button has to
+    // travel into fullscreen with it, and a bare iframe has no room for one
+    (view.requestFullscreen ? view.requestFullscreen()
+      : view.webkitRequestFullscreen && view.webkitRequestFullscreen());
+  });
+  document.getElementById("dbExit").addEventListener("click", ()=>{
+    (document.exitFullscreen ? document.exitFullscreen()
+      : document.webkitExitFullscreen && document.webkitExitFullscreen());
+  });
+  document.addEventListener("fullscreenchange", ()=>{
+    const f = frames[active]; if(!f) return;
+    f.style.height = document.fullscreenElement ? "100vh" : (f.dataset.h || 420)+"px";
   });
   addEventListener("keydown", e=>{
     if(/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName)) return;
