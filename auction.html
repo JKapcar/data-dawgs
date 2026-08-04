@@ -1272,7 +1272,9 @@ function announce(pk){
     if(diff>=10) msg+=` That's ${diff} over value. `+SNARK_OVER[(Math.random()*SNARK_OVER.length)|0];
     else if(diff<=-10) msg+=` ${-diff} under value. `+SNARK_STEAL[(Math.random()*SNARK_STEAL.length)|0];
   }
-  if(nflOf(pk)==="CLE" && !pk.keeper) msg+=" Super Bowl! Super Browns!";
+  // The Browns line is no longer spoken — celebrate() plays the real recording
+  // instead. Leaving it here too would have the announcer say it a beat before
+  // the horn says it, which sounds like a stutter, not a callback.
   speak(msg);
 }
 
@@ -1982,7 +1984,8 @@ function renderSetup(sp){
   sp.querySelector("#voiceTest").addEventListener("click",()=>{
     const sel=sp.querySelector("#setVoice").value;
     const prev=S.settings.voiceName; S.settings.voiceName=sel;
-    speak("Sold! Jahmyr Gibbs, eighty one dollars, to Data Dawgs. Super Bowl! Super Browns!");
+    // No Browns line here any more — the announcer doesn't say it, the horn does.
+    speak("Sold! Jahmyr Gibbs, eighty one dollars, to Data Dawgs. That is criminal.");
     S.settings.voiceName=prev;
   });
   sp.querySelector("#syncSave").addEventListener("click",()=>{
@@ -2051,6 +2054,14 @@ function renderRecap(rb){
 }
 
 // ---------- SUPER BOWL SUPER BROWNS ----------
+// The horn is a real recording, not TTS. Preloaded at page load so the first
+// Browns pick of the night doesn't wait on a 120KB download mid-celebration.
+const SBSB_URL = "superbowlsuperbrowns.m4a";
+// The file measures -11.3 LUFS — hot, several dB above the announcer voice.
+// That is deliberate on a celebration, but this is the knob if the room says
+// otherwise. Set to 1 for the file as recorded.
+const SBSB_VOL = 0.85;
+try{ const pre=new Audio(SBSB_URL); pre.preload="auto"; }catch(e){}
 let cbSeenTs=null;
 function nflOf(pk){ if(pk.nfl) return pk.nfl; const p=byName[pk.player]; return p?p.team:""; }
 function checkBrowns(){
@@ -2086,8 +2097,27 @@ function celebrate(pk){
       ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.r);
       ctx.fillStyle=p.c; ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*1.6); ctx.restore();
     });
-    if(frames>170){ clearInterval(iv); o.remove(); }
+    if(frames>170) clearInterval(iv);      // particles have fallen off screen
   }, 26);
+
+  // The overlay now outlives the confetti so the horn can finish. 7.5s of audio
+  // against 4.4s of particles read as the celebration dying mid-shout.
+  const done=()=>{ clearInterval(iv); const el=document.getElementById("celebrate"); if(el) el.remove(); };
+
+  // Audio only on the operator window. The projector mirrors the same state, so
+  // playing in both puts the horn through two sets of speakers a beat apart —
+  // and the announcer voice is already operator-only, so all sound stays in one place.
+  if(IS_PROJ){ setTimeout(done, 4600); return; }
+
+  let horn=null;
+  try{ horn=new Audio(SBSB_URL); horn.volume=SBSB_VOL; }catch(e){}
+  if(!horn){ setTimeout(done, 4600); return; }
+  horn.addEventListener("ended", done);
+  // Autoplay needs a prior user gesture. The operator just clicked to record the
+  // sale, so this is satisfied in practice — but never let a blocked play()
+  // leave the overlay stuck on screen.
+  horn.play().catch(()=>{});
+  setTimeout(done, 11000);                 // hard stop if the file never loads
 }
 
 // ---------- boot & sync ----------
