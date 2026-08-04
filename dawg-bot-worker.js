@@ -149,6 +149,28 @@ async function handleChat(request, env, origin, cors) {
 // ESPN's site API is public and unauthenticated; proxying gives CORS + cache.
 // Upstream is undocumented and can move — fail loudly (502) so the page falls
 // back to manual entry instead of silently grading nothing.
+//
+// ⚠️ 8/4/26: ESPN answered 403 to Worker egress while answering 200 to a browser
+// on the identical path. It fingerprints the caller, so we present as a browser.
+// The variants below are tried in order and the winner is reported as `via` in
+// the payload — if ESPN tightens again, `via` says which shape still worked
+// instead of leaving a bare 403 to re-diagnose from scratch.
+
+const UA_CHROME =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+  "(KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36";
+
+const FETCH_SHAPES = [
+  { name: "browser", headers: {
+      "User-Agent": UA_CHROME,
+      "Accept": "application/json, text/plain, */*",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Referer": "https://www.espn.com/",
+      "Origin": "https://www.espn.com",
+    } },
+  { name: "ua-only", headers: { "User-Agent": UA_CHROME } },
+  { name: "bare", headers: {} },
+];
 
 async function handleScores(url, cors) {
   const sport = url.searchParams.get("sport");
@@ -159,16 +181,21 @@ async function handleScores(url, cors) {
   let src = `https://site.api.espn.com/apis/site/v2/sports/${path}/scoreboard`;
   if (dates) src += `?dates=${encodeURIComponent(dates)}&limit=400`;
 
-  let raw;
-  try {
-    const r = await fetch(src, {
-      cf: { cacheTtl: 60, cacheEverything: true },
-      headers: { "User-Agent": "data-dawgs-bozo/1" },
-    });
-    if (!r.ok) throw new Error("upstream " + r.status);
-    raw = await r.json();
-  } catch (e) {
-    return json({ error: "scores unavailable", detail: String(e) }, 502, cors);
+  let raw, via = null;
+  const tried = [];
+  for (const shape of FETCH_SHAPES) {
+    try {
+      const r = await fetch(src, { cf: { cacheTtl: 60, cacheEverything: true }, headers: shape.headers });
+      if (!r.ok) { tried.push(`${shape.name}:${r.status}`); continue; }
+      raw = await r.json();
+      via = shape.name;
+      break;
+    } catch (e) {
+      tried.push(`${shape.name}:${e.message}`);
+    }
+  }
+  if (!via) {
+    return json({ error: "scores unavailable", detail: tried.join(", ") }, 502, cors);
   }
 
   const games = (raw.events || []).map(ev => {
@@ -190,7 +217,7 @@ async function handleScores(url, cors) {
     };
   });
 
-  return new Response(JSON.stringify({ sport, games, fetched: Date.now() }), {
+  return new Response(JSON.stringify({ sport, games, via, fetched: Date.now() }), {
     headers: { "Content-Type": "application/json", "Cache-Control": "max-age=60", ...cors },
   });
 }
