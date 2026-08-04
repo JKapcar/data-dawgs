@@ -1449,8 +1449,16 @@ STATE: everything saves in the browser on that device. A different device shows 
     if(!list.length){ vsel.hidden=true; return; }
     const cur=localStorage.getItem(LS_VID)||"";
     const houseName=(list.find(v=>v.id===(data.current||""))||{}).name;
+    // ElevenLabs hands back ~25 stock voices alongside the three Kap actually cloned.
+    // Flat, that buries Pepperoni among Bella and Roger. His own go first; the stock
+    // ones stay reachable in a group rather than being filtered out, because guessing
+    // that he'll never want one of them is not my call to make permanent.
+    const mine=list.filter(v=>v.category!=="premade");
+    const stock=list.filter(v=>v.category==="premade");
+    const opt=v=>'<option value="'+esc(v.id)+'">'+esc(v.name)+'</option>';
     vsel.innerHTML='<option value="">'+(houseName?("House voice — "+esc(houseName)):"House voice")+'</option>'
-      + list.map(v=>'<option value="'+esc(v.id)+'">'+esc(v.name)+'</option>').join("");
+      + mine.map(opt).join("")
+      + (stock.length?'<optgroup label="ElevenLabs stock">'+stock.map(opt).join("")+'</optgroup>':"");
     // A stored id that is no longer on the account falls back to the house voice rather
     // than silently selecting nothing and sending a dead id to ElevenLabs.
     vsel.value = list.some(v=>v.id===cur) ? cur : "";
