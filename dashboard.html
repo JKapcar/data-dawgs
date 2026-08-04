@@ -379,6 +379,7 @@ svg text{font-family:inherit}
     <button data-v="analysis" >Analysis<span class="kbd">3</span></button>
     <button data-v="grades"   >Grades<span class="kbd">4</span></button>
     <span class="grow"></span>
+    <button class="dbpresent" id="dbAnn" title="Auctioneer voice on this device">🔊 Voice</button>
     <button class="dbpresent" id="dbPresent" title="Full-screen the live board for the projector">⤢ Full screen</button>
   </div>
 
@@ -1265,9 +1266,121 @@ STATE: everything saves in the browser on that device. A different device shows 
   /* keep every open frame on the shell's theme */
   new MutationObserver(syncTheme).observe(document.documentElement, {attributes:true, attributeFilter:["data-theme"]});
 
-  addEventListener("storage", e=>{ if(e.key===LS_STATE) renderStrip(); });
-  addEventListener("ddsync", renderStrip);
-  setInterval(renderStrip, 4000);
+  /* ============================================================
+     AUCTIONEER VOICE — lives in the dashboard shell, not the operator page.
+     Moved here 8/4 for two reasons: the operator's laptop is usually muted, and
+     this file is the SHELL around the four view iframes, so an announcement
+     fires no matter which tab is showing. Putting it in a view would mean the
+     voice stopped when you clicked Analysis, and would double up because
+     inactive frames stay loaded.
+
+     ⚠️ Every open dashboard announces. That is intended for the room screen —
+     but it means a leaguemate with this page open on their phone hears it too,
+     which is why the 🔊 Voice button is per-device and defaults to OFF on
+     anything that has not explicitly turned it on.
+     ============================================================ */
+  const TTS_URL  = "https://toto.jkapcar4.workers.dev/tts";
+  const LS_VOICE = "dd-ann-on";          // per-device, deliberately not synced
+  const SNARK_OVER =["That is criminal.","Someone confiscate his wallet.","The room thanks you for the inflation.","Bold strategy.","The market just fainted."];
+  const SNARK_STEAL=["Highway robbery.","Somebody was not paying attention.","A crime in broad daylight.","The Dawgs approve."];
+  const annOn = ()=> localStorage.getItem(LS_VOICE)==="1";
+  let annSeenPick=null, annSeenBlock=null, annBusy=false;
+  const annQ=[];
+
+  function browserSay(text){                 // fallback: never let the room go silent
+    return new Promise(res=>{
+      if(!("speechSynthesis" in window)) return res();
+      try{
+        const u=new SpeechSynthesisUtterance(text);
+        u.rate=1.05; u.pitch=0.95; u.onend=res; u.onerror=res;
+        speechSynthesis.speak(u);
+        setTimeout(res,15000);               // some engines never fire onend
+      }catch(e){ res(); }
+    });
+  }
+  async function annSpeak(text){
+    if(!annOn()) return;
+    annQ.push(text);
+    if(annBusy) return;                      // serialize — two clips at once is worse than a beat of lag
+    annBusy=true;
+    while(annQ.length){
+      const t=annQ.shift();
+      let done=false;
+      const pass=localStorage.getItem("dd-bot-pass");   // same passphrase Dawg Bot uses
+      if(pass){
+        try{
+          const r=await fetch(TTS_URL,{method:"POST",
+            headers:{"Content-Type":"application/json","X-Dawg-Pass":pass},
+            body:JSON.stringify({text:t})});
+          if(r.ok && (r.headers.get("content-type")||"").includes("audio")){
+            const a=new Audio(URL.createObjectURL(await r.blob()));
+            await new Promise(res=>{ a.onended=res; a.onerror=res; a.play().catch(res); setTimeout(res,20000); });
+            done=true;
+          }
+        }catch(e){}
+      }
+      if(!done) await browserSay(t);         // no passphrase, quota hit, or ElevenLabs down
+    }
+    annBusy=false;
+  }
+  function annCheck(){
+    const A=state(); if(!A||!A.settings) return;
+    const picks=Array.isArray(A.picks)?A.picks:[];
+    const last=picks.length?picks[picks.length-1]:null;
+    const lastTs=last?(last.ts||picks.length):0;
+    const blockTs=A.onBlock?(A.onBlock.ts||0):0;
+    // First pass only records where we are — otherwise opening the page
+    // mid-draft replays the last sale as if it just happened.
+    if(annSeenPick===null){ annSeenPick=lastTs; annSeenBlock=blockTs; return; }
+    if(!A.settings.announcer) return;        // operator's master switch, synced from the auctioneer
+    if(A.onBlock && blockTs>annSeenBlock){
+      annSeenBlock=blockTs;
+      annSpeak(`On the block: ${A.onBlock.player}.`);
+    }
+    if(last && lastTs>annSeenPick){
+      annSeenPick=lastTs;
+      const t=(A.settings.teams||[])[last.ti]||{};
+      let msg=`Sold! ${last.player}, ${last.price} dollar${last.price===1?"":"s"}, to ${t.name||"the room"}.`;
+      if(A.settings.snark && last.etr>0){
+        const diff=last.price-last.etr;
+        if(diff>=10)      msg+=` That's ${diff} over value. `+SNARK_OVER[(Math.random()*SNARK_OVER.length)|0];
+        else if(diff<=-10)msg+=` ${-diff} under value. `+SNARK_STEAL[(Math.random()*SNARK_STEAL.length)|0];
+      }
+      annSpeak(msg);
+    }
+  }
+  const annBtn=document.getElementById("dbAnn");
+  function paintAnn(){
+    annBtn.textContent = annOn() ? "🔊 Voice" : "🔇 Voice";
+    annBtn.style.opacity = annOn() ? "1" : ".55";
+  }
+  annBtn.addEventListener("click", ()=>{
+    const on=!annOn();
+    localStorage.setItem(LS_VOICE, on?"1":"0");
+    paintAnn();
+    // Turning it on IS the user gesture that unlocks autoplay — say something
+    // immediately so a silent first announcement never surprises anyone.
+    if(on) annSpeak("Auctioneer voice on.");
+  });
+  paintAnn();
+  // Establish the "already seen" baseline NOW, not on the first 4s tick. Without
+  // this the window between load and the first tick is a blind spot: a sale that
+  // lands in it is read as history on the first check and never announced.
+  annCheck();
+
+  /* The shell subscribes to sync itself. Previously only the view iframes did,
+     so the strip (and now the voice) depended on which tab happened to be open. */
+  if(window.DDSync && DDSync.on && DDSync.subscribe){
+    DDSync.subscribe(s=>{
+      if(!s || !s.settings || !Array.isArray(s.picks)) return;
+      try{ localStorage.setItem(LS_STATE, JSON.stringify(s)); }catch(e){}
+      renderStrip(); annCheck();
+    });
+  }
+
+  addEventListener("storage", e=>{ if(e.key===LS_STATE){ renderStrip(); annCheck(); } });
+  addEventListener("ddsync", ()=>{ renderStrip(); annCheck(); });
+  setInterval(()=>{ renderStrip(); annCheck(); }, 4000);
 
   const S = state();
   const started = S && (S.picks||[]).length > 0;

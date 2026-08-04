@@ -1239,7 +1239,12 @@ function detectRun(){
   return null;
 }
 
-// ---------- v4: voice announcer (operator window only) ----------
+// ---------- v4: voice announcer ----------
+// ⚠️ Automatic announcements moved to the Draft Dashboard on 8/4 — the operator
+// laptop is usually muted and the dashboard is what the room sees. Flip this to
+// true to bring them back here (both pages talking = the room hears double).
+// The ▶ Preview button below still speaks, because that is an explicit test.
+const ANNOUNCE_HERE = false;
 const SNARK_OVER=["That is criminal.","Someone confiscate his wallet.","The room thanks you for the inflation.","Bold strategy.","The market just fainted."];
 const SNARK_STEAL=["Highway robbery.","Somebody was not paying attention.","A crime in broad daylight.","The Dawgs approve."];
 let VOICES=[];
@@ -1264,6 +1269,7 @@ function speak(msg){
   }catch(e){}
 }
 function announce(pk){
+  if(ANNOUNCE_HERE===false) return;      // see announceBlock — the dashboard talks now
   if(!S.settings.announcer) return;
   const t=S.settings.teams[pk.ti]||{};
   let msg=`Sold! ${pk.player}, ${pk.price} dollar${pk.price===1?"":"s"}, to ${t.name}.`;
@@ -1339,6 +1345,11 @@ function parseSpeech(raw){
 // ---------- on the block ----------
 let blockTTSTimer=null;
 function announceBlock(p){
+  // Silent here by design (8/4). The auctioneer is the operator's control panel
+  // and that laptop is usually muted; announcements now fire from the Draft
+  // Dashboard shell, which is what the room is looking at. The settings on this
+  // page still drive it — `announcer` and `snark` ride the sync to the dashboard.
+  if(ANNOUNCE_HERE===false) return;
   if(!S.settings.announcer || IS_PROJ) return;
   const d=derive();
   const adj=Math.round(val(p)*d.infl);
@@ -1953,6 +1964,7 @@ function renderSetup(sp){
      </select></label>
      <button class="btn" id="voiceTest" type="button">▶ Preview</button>
      <button class="btn" id="hornTest" type="button">▶ Test horn</button>
+     <span class="muted" style="font-size:12px">Announcements play on the Draft Dashboard, not here — turn on 🔊 Voice there.</span>
    </div>
    <div class="ctlrow" style="margin:0 0 8px;padding:8px 0;border-top:1px solid var(--grid);border-bottom:1px solid var(--grid);align-items:flex-start;flex-wrap:wrap">
      <label style="font-size:13px">Live sync URL
