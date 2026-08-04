@@ -292,6 +292,15 @@ svg text{font-family:inherit}
 .dbstat .v{font-size:21px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:1px;line-height:1.15}
 .dbstat .s{font-size:11px;color:var(--ink-3)}
 .dbstat .v.hot{color:var(--bad)} .dbstat .v.good{color:var(--good)}
+.dbstat.wide{grid-column:span 2}
+@media(max-width:340px){.dbstat.wide{grid-column:span 1}}
+.posbars{display:flex;align-items:flex-end;gap:10px;height:66px;margin-top:12px}
+.posbars .pb{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
+.posbars .pbv{font-size:9.5px;color:var(--ink-3);font-variant-numeric:tabular-nums;line-height:1}
+.posbars .pbt{width:100%;max-width:34px;background:var(--grid);border-radius:4px 4px 2px 2px;
+  position:relative;overflow:hidden;box-shadow:inset 0 0 0 1px var(--border)}
+.posbars .pbf{position:absolute;left:0;right:0;bottom:0;border-radius:0 0 2px 2px;transition:height .4s}
+.posbars .pbl{font-size:9.5px;font-weight:700;color:var(--ink-3);letter-spacing:.03em;line-height:1}
 
 /* tab bar */
 .dbtabs{display:flex;gap:4px;align-items:center;flex-wrap:wrap;
@@ -1039,6 +1048,7 @@ STATE: everything saves in the browser on that device. A different device shows 
   }
   const fmt$ = n => "$" + Math.round(n);
   const fmtK = n => "$" + Math.round(n).toLocaleString("en-US");
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
   /* the LIVE pill used to be the DDSync status light; that job lands here now */
   function syncLabel(){
@@ -1049,7 +1059,14 @@ STATE: everything saves in the browser on that device. A different device shows 
     try { return JSON.parse(localStorage.getItem(LS_STATE)); } catch(e){ return null; }
   }
 
-  /* the numbers you need constantly, visible in every view */
+  /* the numbers you need constantly, visible in every view.
+     Strip v2 (researched 8/2): max bid beats raw money, $/slot beats totals, and
+     position-level supply beats one aggregate — so the strip carries the last sale
+     as a live market thermometer, a personalised money tile when this device has
+     an identity, recent heat next to cumulative inflation, and five depleting
+     columns of remaining MV by position. */
+  const POS_COLOR = {QB:"#e66767",RB:"#199e70",WR:"#3987e5",TE:"#c98500",DST:"#8a8378"};
+  const POSL = ["QB","RB","WR","TE","DST"];
   function renderStrip(){
     const S = state();
     if(!S || !S.settings){
@@ -1061,31 +1078,83 @@ STATE: everything saves in the browser on that device. A different device shows 
     const st = S.settings, picks = S.picks || [], teams = st.teams || [];
     const scoring = st.scoring || "half";
     const POOL = window.DD_POOL || [];
+    const val = p => +p[scoring] || 0;
+    const norm = p => p === "D" ? "DST" : p;
     const sold = new Set(picks.map(p=>p.player));
     const spent = picks.reduce((a,p)=>a+(+p.price||0),0);
     const budget = (st.budget||200) * teams.length;
     const left = budget - spent;
     const spots = (st.spots||15) * teams.length;
     const openSpots = spots - picks.length;
-    let remValue = 0;
-    POOL.forEach(p=>{ if(!sold.has(p.name)){ const v = +p[scoring]||0; if(v>=1) remValue += v; } });
+    const perSpot = openSpots>0 ? left/openSpots : 0;
+
+    /* per-position MV: original pool vs still on the board */
+    const tot = {QB:0,RB:0,WR:0,TE:0,DST:0}, rem = {QB:0,RB:0,WR:0,TE:0,DST:0};
+    POOL.forEach(p=>{
+      const v = val(p); if(v < 1) return;
+      const P = norm(p.pos); if(tot[P] === undefined) return;
+      tot[P] += v; if(!sold.has(p.name)) rem[P] += v;
+    });
+    const remValue = POSL.reduce((a,P)=>a+rem[P],0);
     const infl = remValue>0 ? left/remValue : 1;
-    const onClock = teams[S.nomIdx] ? teams[S.nomIdx].name : "—";
+
+    /* last sale + rolling heat: the market right now, not the whole night averaged */
+    const lp = picks[picks.length-1];
+    const lpT = lp && teams[lp.ti] ? teams[lp.ti].name : "";
+    const lpD = lp && lp.etr>0 ? lp.price - lp.etr : null;
+    const recent = picks.filter(p=>p.etr>0).slice(-5);
+    const heat = recent.length ? recent.reduce((a,p)=>a+(p.price-p.etr),0)/recent.length : null;
+
+    /* personalised tile when this device knows whose it is */
+    const me = (window.DDMe && teams.length) ? window.DDMe.idx(teams) : null;
+    let mine = null;
+    if(me != null && teams[me]){
+      const mSpent = picks.filter(p=>p.ti===me).reduce((a,p)=>a+(+p.price||0),0);
+      const mCount = picks.filter(p=>p.ti===me).length;
+      const mLeft = (st.budget||200) - mSpent;
+      const mOpen = (st.spots||15) - mCount;
+      mine = ["Your money", fmt$(mLeft),
+        "max bid " + fmt$(mLeft) + " · " + mOpen + " spots · "
+          + (mOpen>0 ? (mLeft/mOpen<10 ? "$"+(mLeft/mOpen).toFixed(2) : fmt$(mLeft/mOpen)) + "/spot" : "roster full"),
+        mLeft <= perSpot*Math.max(1,mOpen) ? "" : "good"];
+    }
+
+    const maxTot = Math.max(1, ...POSL.map(P=>tot[P]));
+    const bars = '<div class="posbars">' + POSL.map(P=>{
+      const th = Math.max(8, Math.round(tot[P]/maxTot*44));
+      const fh = tot[P]>0 ? Math.round(rem[P]/tot[P]*th) : 0;
+      return '<div class="pb" title="'+P+': '+fmt$(rem[P])+' of '+fmt$(tot[P])+' MV left">'
+        + '<span class="pbv">$'+Math.round(rem[P])+'</span>'
+        + '<span class="pbt" style="height:'+th+'px"><span class="pbf" style="height:'+fh+'px;background:'+POS_COLOR[P]+'"></span></span>'
+        + '<span class="pbl">'+(P==="DST"?"D":P)+'</span></div>';
+    }).join("") + '</div>';
+
     const cells = [
-      ["On the clock", onClock, picks.length + " picks in" + syncLabel(), ""],
-      ["League money", fmtK(left), fmtK(spent) + " spent of " + fmtK(budget), ""],
-      ["Value on board", fmtK(remValue), "MV $, players ≥$1", ""],
-      ["Inflation", infl.toFixed(2)+"×", infl>1.05?"prices running hot":infl<0.95?"value out there":"in balance",
+      ["On the clock", teams[S.nomIdx] ? teams[S.nomIdx].name : "—",
+        picks.length + " picks in" + syncLabel(), ""],
+      ["Last sale",
+        lp ? esc(lp.player.split(" ").slice(-1)[0]) + " <span class=\"tsub\">$" + lp.price + "</span>" : "—",
+        lp ? (norm(lp.pos)==="DST"?"D/ST":norm(lp.pos)) + " → " + esc(lpT)
+             + (lpD==null ? "" : " · MV $" + Math.round(lp.etr) + " (" + (lpD>0?"+$"+lpD:lpD<0?"−$"+(-lpD):"even") + ")")
+           : "waiting on the first nomination", ""],
+      mine,
+      ["Inflation", infl.toFixed(2)+"×",
+        heat==null ? (infl>1.05?"prices running hot":infl<0.95?"value out there":"in balance")
+          : "last " + recent.length + " sales " + (heat>=0?"+":"−") + "$" + Math.abs(heat).toFixed(0) + " vs MV avg",
         infl>1.05?"hot":infl<0.95?"good":""],
-      ["$ per open spot", openSpots>0 ? (left/openSpots<10 ? "$"+(left/openSpots).toFixed(2) : fmt$(left/openSpots)) : "—",
-        openSpots>0 ? openSpots+" spots open" : "rosters full", ""]
-    ];
-    strip.innerHTML = cells.map(c=>
-      '<div class="dbstat"><div class="k">'+c[0]+'</div><div class="v '+c[3]+'">'+c[1]+'</div><div class="s">'+c[2]+'</div></div>'
-    ).join("");
+      ["League money", fmtK(left),
+        fmtK(spent) + " spent · " + (openSpots>0 ? (perSpot<10?"$"+perSpot.toFixed(2):fmt$(perSpot))+"/open spot" : "rosters full"), ""],
+      ["Value left by position", bars, "", "wide"]
+    ].filter(Boolean);
+
+    strip.innerHTML = cells.map(c=>{
+      const wide = c[3]==="wide";
+      return '<div class="dbstat'+(wide?' wide':'')+'"><div class="k">'+c[0]+'</div>'
+        + (wide ? c[1] : '<div class="v '+c[3]+'">'+c[1]+'</div><div class="s">'+c[2]+'</div>')
+        + '</div>';
+    }).join("");
     note.textContent = "";
   }
-
   function ensureFrame(name){
     if(frames[name]) return frames[name];
     syncTheme();
