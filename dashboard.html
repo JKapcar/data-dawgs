@@ -281,6 +281,10 @@ svg text{font-family:inherit}
 <style>
 /* ================= dashboard shell ================= */
 .dbwrap{max-width:1180px;margin:0 auto;padding:0 24px 40px}
+/* The Live tab is the only view that is wider than it is readable — 14 team columns do
+   not fit a 1180px column, and the last two got sliced. Widen the page for this tab
+   only; the other three stay at reading width where long prose and charts belong. */
+:root.db-live .dbwrap{max-width:min(1680px,100%)}
 .dbhead{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:6px 0 12px}
 .dbhead h1{font-size:23px;font-weight:800;margin:0;letter-spacing:-.01em}
 .dbhead .who{margin-left:auto;font-size:12.5px;color:var(--ink-3)}
@@ -379,7 +383,7 @@ svg text{font-family:inherit}
     <button data-v="analysis" >Analysis<span class="kbd">3</span></button>
     <button data-v="grades"   >Grades<span class="kbd">4</span></button>
     <span class="grow"></span>
-    <button class="dbpresent" id="dbAnn" title="Auctioneer voice on this device">🔊 Voice</button>
+    <button class="dbpresent" id="dbAnn" title="Auctioneer voice + Browns horn on this device (shift-click to test the horn)">🔊 Sound</button>
     <button class="dbpresent" id="dbPresent" title="Full-screen the live board for the projector">⤢ Full screen</button>
   </div>
 
@@ -1224,6 +1228,7 @@ STATE: everything saves in the browser on that device. A different device shows 
     [...tabs.querySelectorAll("button[data-v]")].forEach(b=>b.classList.toggle("on", b.dataset.v===name));
     if(push !== false && location.hash.slice(1) !== name) history.replaceState(null,"","#"+name);
     document.getElementById("dbPresent").style.visibility = name==="live" ? "" : "hidden";
+    document.documentElement.classList.toggle("db-live", name==="live");   // widens .dbwrap
   }
 
   addEventListener("message", e=>{
@@ -1276,16 +1281,32 @@ STATE: everything saves in the browser on that device. A different device shows 
 
      ⚠️ Every open dashboard announces. That is intended for the room screen —
      but it means a leaguemate with this page open on their phone hears it too,
-     which is why the 🔊 Voice button is per-device and defaults to OFF on
+     which is why the 🔊 Sound button is per-device and defaults to OFF on
      anything that has not explicitly turned it on.
+
+     One button covers BOTH the voice and the Browns horn. Kap is running the
+     auctioneer laptop muted, so this page is the only speaker in the room —
+     splitting them into two toggles would just be two things to forget.
      ============================================================ */
   const TTS_URL  = "https://toto.jkapcar4.workers.dev/tts";
   const LS_VOICE = "dd-ann-on";          // per-device, deliberately not synced
   const SNARK_OVER =["That is criminal.","Someone confiscate his wallet.","The room thanks you for the inflation.","Bold strategy.","The market just fainted."];
   const SNARK_STEAL=["Highway robbery.","Somebody was not paying attention.","A crime in broad daylight.","The Dawgs approve."];
+  const HORN_URL = "superbowlsuperbrowns.m4a";
+  const HORN_VOL = 0.85;                 // the file measures -11.3 LUFS — hot next to the voice
+  try{ const pre=new Audio(HORN_URL); pre.preload="auto"; }catch(e){}
   const annOn = ()=> localStorage.getItem(LS_VOICE)==="1";
-  let annSeenPick=null, annSeenBlock=null, annBusy=false;
+  let annSeenPick=null, annSeenBlock=null, annSeenHorn=null, annBusy=false;
   const annQ=[];
+
+  /* Which NFL team a pick belongs to. Picks logged by voice don't always carry `nfl`,
+     so fall back to the pool the page already ships. */
+  let NFLIDX=null;
+  function nflOfPick(pk){
+    if(pk.nfl) return pk.nfl;
+    if(!NFLIDX){ NFLIDX={}; (window.DD_POOL||[]).forEach(r=>{ NFLIDX[r.name.toLowerCase()]=r.team; }); }
+    return NFLIDX[(pk.player||"").toLowerCase()]||"";
+  }
 
   function browserSay(text){                 // fallback: never let the room go silent
     return new Promise(res=>{
@@ -1298,31 +1319,45 @@ STATE: everything saves in the browser on that device. A different device shows 
       }catch(e){ res(); }
     });
   }
-  async function annSpeak(text){
-    if(!annOn()) return;
-    annQ.push(text);
-    if(annBusy) return;                      // serialize — two clips at once is worse than a beat of lag
+  function annHorn(){                        // the real SUPER BOWL SUPER BROWNS recording
+    return new Promise(res=>{
+      let a=null;
+      try{ a=new Audio(HORN_URL); a.volume=HORN_VOL; }catch(e){ return res(); }
+      a.onended=res; a.onerror=res;
+      a.play().catch(res);
+      setTimeout(res,12000);                 // hard stop if the file never loads (clip is 7.5s)
+    });
+  }
+  async function annSay(t){
+    let done=false;
+    const pass=localStorage.getItem("dd-bot-pass");     // same passphrase Dawg Bot uses
+    if(pass){
+      try{
+        const r=await fetch(TTS_URL,{method:"POST",
+          headers:{"Content-Type":"application/json","X-Dawg-Pass":pass},
+          body:JSON.stringify({text:t})});
+        if(r.ok && (r.headers.get("content-type")||"").includes("audio")){
+          const a=new Audio(URL.createObjectURL(await r.blob()));
+          await new Promise(res=>{ a.onended=res; a.onerror=res; a.play().catch(res); setTimeout(res,20000); });
+          done=true;
+        }
+      }catch(e){}
+    }
+    if(!done) await browserSay(t);           // no passphrase, quota hit, or ElevenLabs down
+  }
+  // One queue for both clip types — serialize, because the horn talking over the
+  // announcer is worse than either one landing a beat late.
+  async function annPump(){
+    if(annBusy) return;
     annBusy=true;
     while(annQ.length){
-      const t=annQ.shift();
-      let done=false;
-      const pass=localStorage.getItem("dd-bot-pass");   // same passphrase Dawg Bot uses
-      if(pass){
-        try{
-          const r=await fetch(TTS_URL,{method:"POST",
-            headers:{"Content-Type":"application/json","X-Dawg-Pass":pass},
-            body:JSON.stringify({text:t})});
-          if(r.ok && (r.headers.get("content-type")||"").includes("audio")){
-            const a=new Audio(URL.createObjectURL(await r.blob()));
-            await new Promise(res=>{ a.onended=res; a.onerror=res; a.play().catch(res); setTimeout(res,20000); });
-            done=true;
-          }
-        }catch(e){}
-      }
-      if(!done) await browserSay(t);         // no passphrase, quota hit, or ElevenLabs down
+      const it=annQ.shift();
+      if(it.horn) await annHorn(); else await annSay(it.say);
     }
     annBusy=false;
   }
+  function annSpeak(text){ if(!annOn()) return; annQ.push({say:text}); annPump(); }
+  function annPlayHorn(){ if(!annOn()) return; annQ.push({horn:true}); annPump(); }
   function annCheck(){
     const A=state(); if(!A||!A.settings) return;
     const picks=Array.isArray(A.picks)?A.picks:[];
@@ -1331,7 +1366,21 @@ STATE: everything saves in the browser on that device. A different device shows 
     const blockTs=A.onBlock?(A.onBlock.ts||0):0;
     // First pass only records where we are — otherwise opening the page
     // mid-draft replays the last sale as if it just happened.
-    if(annSeenPick===null){ annSeenPick=lastTs; annSeenBlock=blockTs; return; }
+    if(annSeenPick===null){ annSeenPick=annSeenHorn=lastTs; annSeenBlock=blockTs; return; }
+
+    /* The horn sits ABOVE the announcer gate on purpose. `settings.announcer` is the
+       operator's switch for play-by-play; the Browns horn is the celebration that goes
+       with the fireworks the Live view is already drawing. Turning the commentary off
+       should not mute the party. The 🔊 Sound button still gates it per device.
+       Queued BEFORE the sold line so the horn lands with the visual, not after it.
+       ⚠️ It needs its OWN seen-marker: annSeenPick is advanced below the announcer
+       gate, so with commentary off it would never move and the horn would re-fire on
+       every 4s tick. */
+    if(last && lastTs>annSeenHorn){
+      annSeenHorn=lastTs;
+      if(!last.keeper && nflOfPick(last)==="CLE") annPlayHorn();
+    }
+
     if(!A.settings.announcer) return;        // operator's master switch, synced from the auctioneer
     if(A.onBlock && blockTs>annSeenBlock){
       annSeenBlock=blockTs;
@@ -1351,7 +1400,7 @@ STATE: everything saves in the browser on that device. A different device shows 
   }
   const annBtn=document.getElementById("dbAnn");
   function paintAnn(){
-    annBtn.textContent = annOn() ? "🔊 Voice" : "🔇 Voice";
+    annBtn.textContent = annOn() ? "🔊 Sound" : "🔇 Sound";
     annBtn.style.opacity = annOn() ? "1" : ".55";
   }
   annBtn.addEventListener("click", ()=>{
@@ -1362,6 +1411,9 @@ STATE: everything saves in the browser on that device. A different device shows 
     // immediately so a silent first announcement never surprises anyone.
     if(on) annSpeak("Auctioneer voice on.");
   });
+  // Shift-click tests the horn without waiting for a Browns pick. Deliberately not a
+  // second button: the tab bar is already tight at 390px.
+  annBtn.addEventListener("click", e=>{ if(e.shiftKey){ annQ.length=0; annQ.push({horn:true}); annPump(); } });
   paintAnn();
   // Establish the "already seen" baseline NOW, not on the first 4s tick. Without
   // this the window between load and the first tick is a blind spot: a sale that

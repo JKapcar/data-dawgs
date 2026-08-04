@@ -216,7 +216,11 @@ tr.taken td{opacity:.38;text-decoration:line-through}
 .bmx-c.me{background:color-mix(in srgb, var(--accent) 9%, transparent)}
 body.livefull .bd-h1, body.livefull .bd-intro, body.livefull .controls, body.livefull #sheetCard, body.livefull footer, body.livefull .sitenav{display:none}
 body.livefull #liveCard{border:none;background:none;padding:0;margin:0}
-body.livefull .wrap{padding:10px 14px 10px}
+/* ⚠️ max-width:none is the fix for the clipped right edge. `.wrap` is a 1180px reading
+   column, which is right for the cheat sheet and wrong for a 14-team matrix: 14 × 95px
+   + the slot gutter is ~1356px, so the last two teams fell off the edge — including in
+   full screen on the projector, where there was a foot of unused screen beside them. */
+body.livefull .wrap{padding:10px 14px 10px;max-width:none}
 body.livefull .bmx{height:calc(100vh - 108px);min-height:430px}
 .lc-head{display:flex;align-items:center;gap:10px;margin:2px 0 8px}
 .lc-head h2{font-size:15px;margin:0}
@@ -1117,7 +1121,11 @@ function renderLive(A){
   const grid=document.getElementById("liveGrid"); grid.textContent="";
   const SLOT_COLOR={QB:"#e66767",RB:"#199e70",WR:"#3987e5",TE:"#c98500",FLX:"#a06bd1",DEF:"#8a8378",BN:"#8f897d"};
   const teamSlots=A.teams.map((t,ti)=>assignSlots(A.picks.filter(p=>p.ti===ti)));
-  const benchRows=Math.max(6, ...teamSlots.map(s=>s.BN.length));
+  // ⚠️ This was a hard floor of 6. Early in a draft nobody has a bench yet, so the
+  // board reserved six empty rows — roughly 200px of grey under the last real pick,
+  // which is most of what made the desktop view look broken. Grow with the deepest
+  // bench instead, keeping one spare row so the slot is visibly there.
+  const benchRows=Math.max(1, ...teamSlots.map(s=>s.BN.length+1));
   const rows=[];
   rows.push({g:"QB",lab:"QB",get:s=>s.QB[0],first:true});
   [0,1].forEach(i=>rows.push({g:"RB",lab:i?"":"RB",get:s=>s.RB[i],first:i===0}));
@@ -1128,8 +1136,13 @@ function renderLive(A){
   for(let i=0;i<benchRows;i++) rows.push({g:"BN",lab:i?"":"BN",get:s=>s.BN[i]||null,first:i===0});
   const mx=document.createElement("div");
   mx.className="bmx";
-  mx.style.gridTemplateColumns=`26px repeat(${A.teams.length}, minmax(92px,1fr))`;
-  mx.style.minWidth=(26+A.teams.length*95)+"px";
+  // ⚠️ 88, not 92. With the 3px gap counted, 14 teams at 92px demand 1356px and a
+  // 1366-wide laptop only offers ~1338 of scrollport — so the last column hung off the
+  // edge by 18px, which reads as "the board is broken" rather than "scroll right".
+  // 88px brings 14 teams to 1300 and fits. The 1fr still expands them on a big screen,
+  // so this floor only ever applies when space is genuinely tight.
+  mx.style.gridTemplateColumns=`26px repeat(${A.teams.length}, minmax(88px,1fr))`;
+  mx.style.minWidth=(26+A.teams.length*91)+"px";
   mx.style.gridTemplateRows=`auto repeat(${rows.length}, 1fr)`;
   // header row
   mx.appendChild(document.createElement("div"));
@@ -1392,7 +1405,21 @@ render();
     // cross-links between the views are redundant once they are tabs of one page
     + ".dd-embed #vizToggle,.dd-embed #liveView,.dd-embed #lcTheme,.dd-embed .gotile{display:none!important}"
     + ".dd-embed body{background:transparent}"
-    + ".dd-embed .wrap{padding-top:0;padding-bottom:14px}";
+    + ".dd-embed .wrap{padding-top:0;padding-bottom:14px}"
+    /* ⚠️ The live board's `height:calc(100vh - 108px)` is written for a standalone
+       projector window. Inside an iframe 100vh IS the iframe height, and the shell
+       sizes that iframe from a *default* 420px — so the grid was locked to its 430px
+       min while 15 roster rows needed ~530. Result on a desktop: team names sliced in
+       half at the top, the last column cut off, and dead grey below. Measured 8/4 at
+       1440/1920/2560 wide — the frame sat at 533px on all three, never using the screen.
+
+       height:auto lets the grid be as tall as its rows, so the posted height is honest
+       and the iframe grows to fit. min-height keeps the projector fill: in full screen
+       the shell pins the iframe to 100vh, so 100vh-108px is the real screen again and
+       the board stretches into it. The two rules do not fight — chrome above the grid
+       (~90px) is smaller than the 108px subtracted, so the loop converges downward to
+       the content height instead of ratcheting. */
+    + ".dd-embed body.livefull .bmx{height:auto;min-height:calc(100vh - 108px)}";
   document.head.appendChild(css);
   const post = () => {
     const h = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);

@@ -1,7 +1,7 @@
 // Data Dawgs service worker — draft-night insurance.
 // HTML is network-first (so deploys land immediately) with a cache fallback,
 // so a dead venue wifi can't take the draft down mid-auction.
-const VERSION = "7427c18ec4";
+const VERSION = "4b83e7d9a0";
 const CACHE = "dd-" + VERSION;
 
 // the pages that must survive a network drop (stats.html is 2MB — cached on first visit instead)
@@ -9,6 +9,9 @@ const CORE = [
   "/", "/index.html", "/dashboard.html", "/board.html", "/auction.html",
   "/bigboard.html", "/dataviz.html", "/report.html", "/master.html", "/strategy.html"
 ];
+// the horn is precached, not left to cache-first on first play: draft night is the
+// first time it ever fires, and a venue wifi hiccup at that exact moment would eat it
+const CORE_MEDIA = ["/superbowlsuperbrowns.m4a"];
 // celebration photos, so SUPER BOWL SUPER BROWNS still fires offline
 const MEDIA = [
   "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Cleveland%2C_Ohio_Skyline_at_Sunrise_at_Edgewater_Park_%288669269938%29.jpg/960px-Cleveland%2C_Ohio_Skyline_at_Sunrise_at_Edgewater_Park_%288669269938%29.jpg",
@@ -22,6 +25,7 @@ self.addEventListener("install", e=>{
     const c = await caches.open(CACHE);
     // core pages must all land; media is best-effort (cross-origin, opaque)
     await c.addAll(CORE).catch(()=>{});
+    await c.addAll(CORE_MEDIA).catch(()=>{});
     await Promise.all(MEDIA.map(u =>
       fetch(u, {mode:"no-cors"}).then(r=>c.put(u, r)).catch(()=>{})
     ));
