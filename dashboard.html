@@ -399,7 +399,6 @@ select.dbpresent[hidden]{display:none}
     <button data-v="grades"   >Grades<span class="kbd">4</span></button>
     <span class="grow"></span>
     <button class="dbpresent" id="dbAnn" title="Auctioneer voice + Browns horn on this device (shift-click to test the horn)">🔊 Sound</button>
-    <select class="dbpresent" id="dbVoice" title="Which ElevenLabs voice announces (this device only)" hidden></select>
     <button class="dbpresent" id="dbPresent" title="Full-screen the live board for the projector">⤢ Full screen</button>
   </div>
   <p class="dbwarn" id="dbSoundWhy" hidden></p>
@@ -1307,8 +1306,6 @@ STATE: everything saves in the browser on that device. A different device shows 
      ============================================================ */
   const TTS_URL  = "https://toto.jkapcar4.workers.dev/tts";
   const LS_VOICE = "dd-ann-on";          // per-device, deliberately not synced
-  const LS_VID   = "dd-ann-voice";       // chosen ElevenLabs voice id ("" = house default)
-  const LS_VLIST = "dd-ann-voices";      // cached {t, voices[], current} from /tts/voices
   const SNARK_OVER =["That is criminal.","Someone confiscate his wallet.","The room thanks you for the inflation.","Bold strategy.","The market just fainted."];
   const SNARK_STEAL=["Highway robbery.","Somebody was not paying attention.","A crime in broad daylight.","The Dawgs approve."];
   const HORN_URL = "superbowlsuperbrowns.m4a";
@@ -1372,10 +1369,11 @@ STATE: everything saves in the browser on that device. A different device shows 
       annWhy="nopass";
     } else {
       try{
-        // Omit `voice` entirely when nothing is picked — the Worker then uses
-        // ELEVEN_VOICE, so the house voice can be swapped in the Cloudflare dashboard
-        // without touching this page. Sending "" would look like a deliberate blank.
-        const vid=localStorage.getItem(LS_VID)||"";
+        // The voice comes from the SYNCED draft state, not from anything on this
+        // device — the operator sets it on auction.html and every listener follows.
+        // Omit `voice` entirely when it's blank so the Worker falls back to
+        // ELEVEN_VOICE; sending "" would read as a deliberate empty voice id.
+        const A=state()||{}; const vid=(A.settings&&A.settings.ttsVoice)||"";
         const payload=vid?{text:t,voice:vid}:{text:t};
         const r=await fetch(TTS_URL,{method:"POST",
           headers:{"Content-Type":"application/json","X-Dawg-Pass":pass},
@@ -1467,70 +1465,15 @@ STATE: everything saves in the browser on that device. A different device shows 
   // second button: the tab bar is already tight at 390px.
   annBtn.addEventListener("click", e=>{ if(e.shiftKey){ annQ.length=0; annQ.push({horn:true}); annPump(); } });
 
-  /* ---------- voice picker ----------
-     The auctioneer voice has been swapped three times already (personal clone →
-     unhingedman → Pepperoni_football_announcer). Rather than bake a list into a page
-     that then needs a deploy every time, the options come from the account itself via
-     GET /tts/voices — clone something in ElevenLabs and it is in this dropdown on the
-     next load.
+  /* The voice picker used to live here, per-device. Kap, 8/4: "fix it so everyone
+     hears the same voice which should be dictated at the auction operator page. I
+     don't want the toggle anywhere else."
 
-     Per-device, like the Sound button: only the machine wired to the room speaker is
-     making noise, so a synced setting would just be one more thing to fight over.
-     Choosing nothing leaves it on the house default (the Worker's ELEVEN_VOICE), which
-     is how the voice gets changed for everyone at once. */
-  const VOICES_URL = "https://toto.jkapcar4.workers.dev/tts/voices";
-  const VLIST_TTL  = 6*3600e3;           // voices change rarely; don't hit the API every load
-  const vsel = document.getElementById("dbVoice");
-
-  function paintVoices(data){
-    const list=(data && data.voices)||[];
-    if(!list.length){ vsel.hidden=true; return; }
-    const cur=localStorage.getItem(LS_VID)||"";
-    const houseName=(list.find(v=>v.id===(data.current||""))||{}).name;
-    // ElevenLabs hands back ~25 stock voices alongside the three Kap actually cloned.
-    // Flat, that buries Pepperoni among Bella and Roger. His own go first; the stock
-    // ones stay reachable in a group rather than being filtered out, because guessing
-    // that he'll never want one of them is not my call to make permanent.
-    const mine=list.filter(v=>v.category!=="premade");
-    const stock=list.filter(v=>v.category==="premade");
-    const opt=v=>'<option value="'+esc(v.id)+'">'+esc(v.name)+'</option>';
-    vsel.innerHTML='<option value="">'+(houseName?("House voice — "+esc(houseName)):"House voice")+'</option>'
-      + mine.map(opt).join("")
-      + (stock.length?'<optgroup label="ElevenLabs stock">'+stock.map(opt).join("")+'</optgroup>':"");
-    // A stored id that is no longer on the account falls back to the house voice rather
-    // than silently selecting nothing and sending a dead id to ElevenLabs.
-    vsel.value = list.some(v=>v.id===cur) ? cur : "";
-    if(vsel.value!==cur) localStorage.setItem(LS_VID, vsel.value);
-    vsel.hidden=false;
-  }
-  // NB: `esc` is the shell's existing helper, declared above with the strip code.
-  // Redeclaring it here as a function threw "Identifier 'esc' has already been
-  // declared" — same scope, and a function declaration collides with a const.
-
-  async function loadVoices(){
-    const pass=localStorage.getItem("dd-bot-pass");
-    if(!pass) return;                    // no passphrase → no ElevenLabs at all, so no picker
-    let cached=null;
-    try{ cached=JSON.parse(localStorage.getItem(LS_VLIST)||"null"); }catch(e){}
-    if(cached && cached.voices) paintVoices(cached);            // paint instantly, refresh below
-    if(cached && cached.t && Date.now()-cached.t < VLIST_TTL) return;
-    try{
-      const r=await fetch(VOICES_URL,{headers:{"X-Dawg-Pass":pass}});
-      if(!r.ok) return;                  // keep whatever was cached; the picker is a nicety
-      const d=await r.json();
-      if(!d || !Array.isArray(d.voices) || !d.voices.length) return;
-      d.t=Date.now();
-      try{ localStorage.setItem(LS_VLIST, JSON.stringify(d)); }catch(e){}
-      paintVoices(d);
-    }catch(e){}
-  }
-  vsel.addEventListener("change", ()=>{
-    localStorage.setItem(LS_VID, vsel.value);
-    // Changing it IS a user gesture, so speak a sample — otherwise you don't find out
-    // you picked the wrong one until the next sale, in front of everyone.
-    if(annOn()){ annQ.length=0; annSpeak(`${vsel.options[vsel.selectedIndex].text}. Ready to call the draft.`); }
-  });
-  loadVoices();
+     So it's gone from this page entirely. The voice now rides the draft state as
+     `settings.ttsVoice`, set once on auction.html and synced out with everything else
+     — see annSay(). Blank means the Worker's ELEVEN_VOICE. Do not reintroduce a
+     per-device override here: the whole point is that the room and every phone say
+     the same thing in the same voice. */
   paintAnn();
   // Sound already on from a previous visit, still no passphrase → say so on load,
   // rather than waiting for the first sale to reveal it in front of everyone.

@@ -1,7 +1,7 @@
 // Data Dawgs service worker — draft-night insurance.
 // HTML is network-first (so deploys land immediately) with a cache fallback,
 // so a dead venue wifi can't take the draft down mid-auction.
-const VERSION = "e504241fd8";
+const VERSION = "588976d1a4";
 const CACHE = "dd-" + VERSION;
 
 // the pages that must survive a network drop (stats.html is 2MB — cached on first visit instead)
@@ -52,6 +52,12 @@ self.addEventListener("fetch", e=>{
 
   // never cache the live-sync stream or any firebase traffic
   if(/firebaseio\.com$/.test(url.hostname) || url.hostname.endsWith("firebasedatabase.app")) return;
+  // ⚠️ Never touch the Worker. POSTs already bypass (the handler ignores non-GET), but
+  // GET /tts/voices is an AUTHENTICATED request — the cache-first branch below would
+  // store its response under a key with no notion of the passphrase, and keep serving
+  // a stale voice list after Kap clones a new voice. Caught 8/4 when the list came back
+  // empty on the operator page: the request was being answered by the SW, not the net.
+  if(url.hostname === "toto.jkapcar4.workers.dev") return;
   // leave YouTube alone entirely — the player API and its media segments are versioned and
   // range-requested; a cache-first SW in front of them breaks playback in confusing ways.
   if(/(^|\.)(youtube\.com|youtube-nocookie\.com|ytimg\.com|googlevideo\.com)$/.test(url.hostname)) return;

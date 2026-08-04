@@ -332,14 +332,20 @@ async function ttsVoices(request, env, cors) {
   const pass = request.headers.get("X-Dawg-Pass") || "";
   if (!timingSafeEqual(pass, env.DAWG_PASS || "")) return json({ error: "Wrong league passphrase." }, 401, cors);
   try {
-    const r = await fetch("https://api.elevenlabs.io/v2/voices?page_size=100", {
+    const r = await fetch("https://api.elevenlabs.io/v2/voices?page_size=100&voice_type=personal", {
       headers: { "xi-api-key": env.ELEVEN_KEY },
     });
     const raw = await r.json();
     if (!r.ok) return json({ error: "ElevenLabs " + r.status, detail: JSON.stringify(raw).slice(0, 300) }, 502, cors);
     const list = Array.isArray(raw && raw.voices) ? raw.voices : [];
+    // ⚠️ Kap's voices ONLY. ElevenLabs returns ~21 stock voices (Bella, Roger, Sarah…)
+    // alongside the three he cloned, and he asked for them gone — an auctioneer list
+    // where "Laura - Quirky Attitude" outnumbers Pepperoni 7:1 is not a control, it's
+    // a haystack. `voice_type=personal` asks the API to do it; the category filter is
+    // the belt to that suspenders, because the param is silently ignored on some
+    // account tiers and one stray premade voice puts the whole list back.
     const voices = list.map(v => ({ id: v.voice_id, name: v.name, category: v.category }))
-                       .filter(v => v.id && v.name);
+                       .filter(v => v.id && v.name && v.category !== "premade");
     // `current` lets the page show which one is the house default without a second call
     return json({ voices, current: env.ELEVEN_VOICE || "" }, 200, cors);
   } catch (e) {

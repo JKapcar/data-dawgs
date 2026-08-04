@@ -1958,13 +1958,10 @@ function renderSetup(sp){
      <label style="font-size:13px">My team: <select id="setMy">${S.settings.teams.map((t,i)=>`<option value="${i}" ${i===S.settings.myTeam?"selected":""}>${esc(t.name)}</option>`).join("")}</select></label>
      <label style="font-size:13px"><input type="checkbox" id="setAnn" ${S.settings.announcer?"checked":""}> Voice announcer</label>
      <label style="font-size:13px"><input type="checkbox" id="setSnark" ${S.settings.snark?"checked":""}> Snark mode</label>
-     <label style="font-size:13px">Announcer voice: <select id="setVoice">
-       <option value="">Auto (prefers deeper voices)</option>
-       ${VOICES.map(v=>`<option value="${esc(v.name)}" ${S.settings.voiceName===v.name?"selected":""}>${esc(v.name)}</option>`).join("")}
-     </select></label>
+     <label style="font-size:13px">Announcer voice: <select id="setVoice"><option value="">Loading…</option></select></label>
      <button class="btn" id="voiceTest" type="button">▶ Preview</button>
      <button class="btn" id="hornTest" type="button">▶ Test horn</button>
-     <span class="muted" style="font-size:12px">Announcements play on the Draft Dashboard, not here — turn on 🔊 Voice there.</span>
+     <span class="muted" id="voiceMsg" style="font-size:12px;flex-basis:100%">The voice is set <b>here and only here</b> — it rides the live sync, so every dashboard in the league announces in the same voice. Announcements play on the Draft Dashboard, not on this page; each device still turns its own 🔊 Sound on.</span>
    </div>
    <div class="ctlrow" style="margin:0 0 8px;padding:8px 0;border-top:1px solid var(--grid);border-bottom:1px solid var(--grid);align-items:flex-start;flex-wrap:wrap">
      <label style="font-size:13px">Live sync URL
@@ -1994,12 +1991,69 @@ function renderSetup(sp){
      <td><input class="set-owner" data-i="${i}" value="${esc(t.owner)}"></td></tr>`).join("")}</tbody></table>
    <div class="ctlrow"><button class="bigbtn" id="setSave">Save setup</button>
    <span class="muted">Team order = nomination order.</span></div>`;
-  sp.querySelector("#voiceTest").addEventListener("click",()=>{
-    const sel=sp.querySelector("#setVoice").value;
-    const prev=S.settings.voiceName; S.settings.voiceName=sel;
-    // No Browns line here any more — the announcer doesn't say it, the horn does.
-    speak("Sold! Jahmyr Gibbs, eighty one dollars, to Data Dawgs. That is criminal.");
-    S.settings.voiceName=prev;
+  /* ---------- the league's announcer voice, set here and nowhere else ----------
+     Kap, 8/4: "fix it so everyone hears the same voice which should be dictated at the
+     auction operator page. I don't want the toggle anywhere else."
+
+     So the voice lives in `S.settings.ttsVoice` — draft state, which already rides
+     DDSync out to every phone and the room screen. Change it here and every dashboard
+     announces in the new voice within a sync tick; no per-device setting to drift, and
+     nothing for a leaguemate to fiddle with mid-draft.
+
+     Empty means the Worker's ELEVEN_VOICE (currently Pepperoni), which is the escape
+     hatch if this page is not the one running the draft. */
+  const vsel=sp.querySelector("#setVoice"), vmsg=sp.querySelector("#voiceMsg");
+  let VOICE_LIST=[];
+  function paintVoiceList(){
+    const cur=S.settings.ttsVoice||"";
+    // The Worker already strips ElevenLabs' ~21 stock voices; this repeats the filter
+    // because it is one predicate and the failure mode is Kap re-opening this dropdown
+    // to find Bella and Roger back in it. Two cheap filters beat one load-bearing one.
+    const mine=VOICE_LIST.filter(v=>v.category!=="premade");
+    vsel.innerHTML='<option value="">House voice (Worker default)</option>'
+      + mine.map(v=>`<option value="${esc(v.id)}" ${cur===v.id?"selected":""}>${esc(v.name)}</option>`).join("");
+    // A voice deleted in ElevenLabs must not stay selected — it would 502 every
+    // announcement for the whole league and the operator would never see it.
+    if(cur && !mine.some(v=>v.id===cur)){ S.settings.ttsVoice=""; vsel.value=""; save(); }
+  }
+  (async()=>{
+    const pass=localStorage.getItem("dd-bot-pass");
+    if(!pass){ vsel.innerHTML='<option value="">House voice (Worker default)</option>';
+      vmsg.innerHTML="Enter the league passphrase in <b>Ask Toto</b> to choose a voice. Until then the league hears the Worker's default."; return; }
+    try{
+      const r=await fetch("https://toto.jkapcar4.workers.dev/tts/voices",{headers:{"X-Dawg-Pass":pass}});
+      const d=await r.json();
+      if(!r.ok || !Array.isArray(d.voices) || !d.voices.length){
+        vsel.innerHTML='<option value="">House voice (Worker default)</option>';
+        vmsg.textContent="Couldn't load the voice list — the league stays on the house voice."; return;
+      }
+      VOICE_LIST=d.voices; paintVoiceList();
+    }catch(e){ vsel.innerHTML='<option value="">House voice (Worker default)</option>'; }
+  })();
+  // Apply on change, not on "Save setup" — this is the one setting people will want to
+  // flip mid-draft, and making them find a save button to do it invites the mistake.
+  vsel.addEventListener("change",()=>{ S.settings.ttsVoice=vsel.value; save(); });
+
+  sp.querySelector("#voiceTest").addEventListener("click",async()=>{
+    const pass=localStorage.getItem("dd-bot-pass");
+    const line="Sold! Jahmyr Gibbs, 81 dollars, to Data Dawgs. That is criminal.";
+    const btn=sp.querySelector("#voiceTest"); const was=btn.textContent;
+    btn.textContent="…";
+    try{
+      if(!pass) throw new Error("no pass");
+      const vid=vsel.value;
+      const r=await fetch("https://toto.jkapcar4.workers.dev/tts",{method:"POST",
+        headers:{"Content-Type":"application/json","X-Dawg-Pass":pass},
+        body:JSON.stringify(vid?{text:line,voice:vid}:{text:line})});
+      if(!r.ok || !(r.headers.get("content-type")||"").includes("audio")) throw new Error("tts "+r.status);
+      const a=new Audio(URL.createObjectURL(await r.blob()));
+      await new Promise(res=>{ a.onended=res; a.onerror=res; a.play().catch(res); setTimeout(res,20000); });
+    }catch(e){
+      // Degrade exactly the way the room would, so a silent-ish preview is informative
+      // rather than mysterious: hearing the robot here means the league hears it too.
+      speak(line);
+    }
+    btn.textContent=was;
   });
   // Dry-run the whole celebration — confetti and horn — without faking a sale.
   // Check this on the projector too: that machine is usually the one wired to
@@ -2043,7 +2097,12 @@ function renderSetup(sp){
     S.settings.myTeam=+sp.querySelector("#setMy").value;
     S.settings.announcer=sp.querySelector("#setAnn").checked;
     S.settings.snark=sp.querySelector("#setSnark").checked;
-    S.settings.voiceName=sp.querySelector("#setVoice").value;
+    // ⚠️ #setVoice is now an ElevenLabs voice id, NOT a speechSynthesis voice name.
+    // It applies on `change` already; writing it here too keeps Save setup honest
+    // rather than appearing to discard the selection. `voiceName` is left alone —
+    // it is dead weight from the browser-voice era, harmless, and not worth a
+    // migration on state that is already live in the league's Firebase room.
+    S.settings.ttsVoice=sp.querySelector("#setVoice").value;
     sp.querySelectorAll(".set-name").forEach(el=>S.settings.teams[+el.dataset.i].name=el.value.trim()||("Team "+(+el.dataset.i+1)));
     sp.querySelectorAll(".set-owner").forEach(el=>S.settings.teams[+el.dataset.i].owner=el.value.trim());
     save(); renderOp();
