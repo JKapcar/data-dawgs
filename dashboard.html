@@ -295,19 +295,19 @@ svg text{font-family:inherit}
 .dbstat.wide{grid-column:span 2}
 @media(max-width:340px){.dbstat.wide{grid-column:span 1}}
 .posbars{display:flex;align-items:flex-end;gap:12px;margin-top:10px}
-.posbars .pb{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
+.posbars .pb{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;justify-content:flex-end}
 .posbars .pbv{font-size:10.5px;font-weight:700;color:var(--ink-2);font-variant-numeric:tabular-nums;line-height:1}
-.posbars .pbt{width:100%;max-width:44px;height:88px;background:var(--grid);border-radius:5px 5px 3px 3px;
+/* track height ∝ that position's ORIGINAL pool MV (shared $ scale), so the colored
+   remainders are directly comparable in dollars across positions — the allocation read */
+.posbars .pbt{width:100%;max-width:44px;background:var(--grid);border-radius:5px 5px 3px 3px;
   position:relative;overflow:hidden;box-shadow:inset 0 0 0 1px var(--border)}
-/* measuring-cup lines at 25/50/75% so fullness reads at a glance */
+/* quarter marks of THAT pool, so depletion still reads within each track */
 .posbars .pbt::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
   background-image:linear-gradient(var(--border),var(--border)),linear-gradient(var(--border),var(--border)),linear-gradient(var(--border),var(--border));
   background-size:100% 1px;background-position:0 25%,0 50%,0 75%;background-repeat:no-repeat}
 .posbars .pbf{position:absolute;left:0;right:0;bottom:0;border-radius:0 0 3px 3px;transition:height .4s}
-.posbars .pbp{position:absolute;left:0;right:0;text-align:center;font-size:9px;font-weight:800;
-  color:var(--ink-1);pointer-events:none;
-  text-shadow:0 0 2px var(--surface-1),0 0 2px var(--surface-1),0 0 4px var(--surface-1)}
-.posbars .pbl{font-size:10px;font-weight:700;color:var(--ink-3);letter-spacing:.03em;line-height:1}
+.posbars .pbl{font-size:10px;font-weight:700;color:var(--ink-3);letter-spacing:.03em;line-height:1.35;text-align:center}
+.posbars .pbl .pct{color:var(--ink-2)}
 
 /* tab bar */
 .dbtabs{display:flex;gap:4px;align-items:center;flex-wrap:wrap;
@@ -1126,15 +1126,15 @@ STATE: everything saves in the browser on that device. A different device shows 
         mLeft <= perSpot*Math.max(1,mOpen) ? "" : "good"];
     }
 
+    const maxTot = Math.max(1, ...POSL.map(P=>tot[P]));
+    const TH = 128;                                     // px height of the deepest pool's track
     const bars = '<div class="posbars">' + POSL.map(P=>{
       const pct = tot[P]>0 ? rem[P]/tot[P]*100 : 0;
-      // % label rides just above the fill line; near the extremes it would clip, so clamp
-      const lblBottom = Math.max(4, Math.min(76, pct-12));
+      const th = Math.max(6, Math.round(tot[P]/maxTot*TH));
       return '<div class="pb" title="'+P+': '+fmt$(rem[P])+' of '+fmt$(tot[P])+' MV left ('+pct.toFixed(0)+'%)">'
         + '<span class="pbv">$'+Math.round(rem[P])+'</span>'
-        + '<span class="pbt"><span class="pbf" style="height:'+pct.toFixed(1)+'%;background:'+POS_COLOR[P]+'"></span>'
-        + '<span class="pbp" style="bottom:'+lblBottom.toFixed(0)+'%">'+pct.toFixed(0)+'%</span></span>'
-        + '<span class="pbl">'+(P==="DST"?"D":P)+'</span></div>';
+        + '<span class="pbt" style="height:'+th+'px"><span class="pbf" style="height:'+pct.toFixed(1)+'%;background:'+POS_COLOR[P]+'"></span></span>'
+        + '<span class="pbl">'+(P==="DST"?"D":P)+'<br><span class="pct">'+pct.toFixed(0)+'%</span></span></div>';
     }).join("") + '</div>';
 
     const cells = [
