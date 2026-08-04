@@ -108,6 +108,8 @@ export default {
     if (url.pathname === "/bozo/grade")   return bozoGrade(request, env, cors);
     if (url.pathname === "/bozo/next")    return bozoNext(request, env, cors);
     if (url.pathname === "/bozo/reset")   return bozoReset(request, env, cors);
+    if (url.pathname === "/tts")          return handleTts(request, env, cors);
+    if (url.pathname === "/tts/models")   return ttsModels(request, env, cors);
 
     return handleChat(request, env, origin, cors);
   },
@@ -239,6 +241,97 @@ async function handleScores(url, cors) {
   return new Response(JSON.stringify({ sport, games, via, fetched: Date.now() }), {
     headers: { "Content-Type": "application/json", "Cache-Control": "max-age=60", ...cors },
   });
+}
+
+/* ================================== /tts ================================== */
+// ElevenLabs voice clone for the auctioneer. The key is a Worker secret for the
+// usual reason: the repo is public, so a key in the page is scraped within hours.
+//
+// Access is the league passphrase (X-Dawg-Pass) — the same one Dawg Bot already
+// uses, so the operator's browser has it in localStorage and nobody has to
+// remember a second thing. Without that gate anyone who read the page source
+// could burn the ElevenLabs balance for laughs.
+//
+// ⚠️ The page MUST keep its speechSynthesis fallback. Draft night cannot hinge
+// on a third party being up, and a 429 here should degrade to the robot voice,
+// not to silence.
+
+const TTS_MAX_CHARS = 300;          // one announcement; anything longer is a bug
+const TTS_DEFAULT_MODEL = "eleven_turbo_v2_5";
+
+async function handleTts(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  if (!env.ELEVEN_KEY) return json({ error: "Worker misconfigured: ELEVEN_KEY not set." }, 500, cors);
+  if (!env.DAWG_PASS)  return json({ error: "Worker misconfigured: DAWG_PASS not set." }, 500, cors);
+
+  const pass = request.headers.get("X-Dawg-Pass") || "";
+  if (!timingSafeEqual(pass, env.DAWG_PASS)) return json({ error: "Wrong league passphrase." }, 401, cors);
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const text = String(body.text || "").trim().slice(0, TTS_MAX_CHARS);
+  if (!text) return json({ error: "No text." }, 400, cors);
+
+  // Daily character cap. A render loop or a bored leaguemate should cost pennies,
+  // not the plan. Needs the RL binding; without it this is inert (same as DAILY_CAP).
+  if (env.RL) {
+    const day = new Date().toISOString().slice(0, 10);
+    const key = "tts:" + day;
+    const cap = parseInt(env.TTS_DAILY_CHARS || "60000", 10);
+    const used = parseInt((await env.RL.get(key)) || "0", 10);
+    if (used + text.length > cap) {
+      return json({ error: `Voice hit its daily character cap (${cap}). Falling back to the browser voice.` }, 429, cors);
+    }
+    await env.RL.put(key, String(used + text.length), { expirationTtl: 172800 });
+  }
+
+  const voice = String(body.voice || env.ELEVEN_VOICE || "");
+  if (!voice) return json({ error: "No voice id configured." }, 500, cors);
+  const model = String(body.model || env.ELEVEN_MODEL || TTS_DEFAULT_MODEL);
+
+  let up;
+  try {
+    up = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voice)}?output_format=mp3_44100_128`, {
+      method: "POST",
+      headers: { "xi-api-key": env.ELEVEN_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ text, model_id: model }),
+    });
+  } catch (e) {
+    return json({ error: "Couldn't reach ElevenLabs: " + e.message }, 502, cors);
+  }
+
+  if (!up.ok) {
+    // Pass the upstream detail through — "voice not found" and "quota exceeded"
+    // need different fixes and a generic 502 hides which one you have.
+    const detail = (await up.text()).slice(0, 300);
+    return json({ error: "ElevenLabs " + up.status, detail }, 502, cors);
+  }
+
+  return new Response(up.body, {
+    headers: { ...cors, "Content-Type": "audio/mpeg", "Cache-Control": "no-store" },
+  });
+}
+
+// GET /tts/models — model ids change and guessing one wastes a deploy cycle
+// (see the xAI notes in data-dawgs-dawg-bot.md). Ask, don't assume.
+async function ttsModels(request, env, cors) {
+  if (!env.ELEVEN_KEY) return json({ error: "Worker misconfigured: ELEVEN_KEY not set." }, 500, cors);
+  const pass = request.headers.get("X-Dawg-Pass") || "";
+  if (!timingSafeEqual(pass, env.DAWG_PASS || "")) return json({ error: "Wrong league passphrase." }, 401, cors);
+  try {
+    const r = await fetch("https://api.elevenlabs.io/v1/models", { headers: { "xi-api-key": env.ELEVEN_KEY } });
+    const raw = await r.json();
+    const models = (Array.isArray(raw) ? raw : []).map(m => ({
+      id: m.model_id, name: m.name,
+      tts: m.can_do_text_to_speech === true,
+      cost: m.model_rates && m.model_rates.character_cost_multiplier,
+    }));
+    return json({ models }, 200, cors);
+  } catch (e) {
+    return json({ error: "models lookup failed: " + e.message }, 502, cors);
+  }
 }
 
 /* ============================== RTDB plumbing ============================= */
