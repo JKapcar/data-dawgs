@@ -310,9 +310,11 @@ svg text{font-family:inherit}
 .posbars .pbl .pct{color:var(--ink-2)}
 .lgrow{display:flex;align-items:center;gap:9px;margin-top:14px}
 .lgrow .lgk{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3);font-weight:700;white-space:nowrap}
-.lgrow .lgbar{flex:1;height:12px;background:var(--grid);border-radius:7px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--border)}
-.lgrow .lgfill{height:100%;background:linear-gradient(180deg,color-mix(in srgb,var(--good) 78%,#fff),var(--good));border-radius:7px;transition:width .4s}
 .lgrow .lgv{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--good)}
+.lgrow .lgbar{flex:1;height:13px;background:var(--grid);border-radius:7px;overflow:hidden;
+  box-shadow:inset 0 0 0 1px var(--border);display:flex;gap:1px}
+.lgrow .lgbar .seg{height:100%;min-width:2px;cursor:default}
+.lgrow .lgbar .seg.me{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--ink-1) 55%,transparent)}
 .lgsub{font-size:10.5px;color:var(--ink-3);margin-top:4px;text-align:right}
 
 /* tab bar */
@@ -1079,6 +1081,9 @@ STATE: everything saves in the browser on that device. A different device shows 
      an identity, recent heat next to cumulative inflation, and five depleting
      columns of remaining MV by position. */
   const POS_COLOR = {QB:"#e66767",RB:"#199e70",WR:"#3987e5",TE:"#c98500",DST:"#8a8378"};
+  const TEAM_COLORS=["#f26200","#199e70","#3987e5","#c98500","#a06bd1","#e05c8a","#2bb3c0",
+                     "#7f9c2f","#e66767","#5566cc","#b4703a","#3f8f5c","#c94f9e","#6b7280"];
+  const teamColor = ti => TEAM_COLORS[((ti%TEAM_COLORS.length)+TEAM_COLORS.length)%TEAM_COLORS.length];
   const POSL = ["QB","RB","WR","TE","DST"];
   function renderStrip(){
     const S = state();
@@ -1142,9 +1147,16 @@ STATE: everything saves in the browser on that device. A different device shows 
         + '<span class="pbt" style="height:'+th+'px"><span class="pbf" style="height:'+pct.toFixed(1)+'%;background:'+POS_COLOR[P]+'"></span></span>'
         + '<span class="pbl">'+(P==="DST"?"D":P)+'<br><span class="pct">'+pct.toFixed(0)+'%</span></span></div>';
     }).join("")
-      + '</div><div class="lgrow"><span class="lgk">League $</span>'
-      + '<div class="lgbar"><div class="lgfill" style="width:'+(budget>0?(left/budget*100).toFixed(1):0)+'%"></div></div>'
-      + '<span class="lgv">'+fmtK(left)+'</span></div>'
+      + '</div><div class="lgrow"><span class="lgk">League $</span><span class="lgv">'+fmtK(left)+'</span>'
+      + '<div class="lgbar">'
+      + teams.map((t,ti)=>{
+          const tl = Math.max(0, (st.budget||200) - picks.filter(p=>p.ti===ti).reduce((a,p)=>a+(+p.price||0),0));
+          return {ti, name:t.name, tl};
+        }).filter(x=>x.tl>0).sort((x,y)=>y.tl-x.tl || x.ti-y.ti)
+        .map(x=>'<span class="seg'+(x.ti===me?' me':'')+'" style="flex:'+x.tl+' 0 0;background:'+teamColor(x.ti)+'" '
+          + 'title="'+esc(x.name)+': '+fmt$(x.tl)+' left'+(x.ti===me?' (you)':'')+'"></span>').join("")
+      + (spent>0 ? '<span class="seg" style="flex:'+spent+' 0 0;background:transparent" title="'+fmtK(spent)+' already spent"></span>' : '')
+      + '</div></div>'
       + '<div class="lgsub">'+fmtK(spent)+' spent of '+fmtK(budget)
       + (openSpots>0 ? ' · '+(perSpot<10?"$"+perSpot.toFixed(2):fmt$(perSpot))+'/open spot' : ' · rosters full')+'</div>';
 
