@@ -1952,6 +1952,7 @@ function renderSetup(sp){
        ${VOICES.map(v=>`<option value="${esc(v.name)}" ${S.settings.voiceName===v.name?"selected":""}>${esc(v.name)}</option>`).join("")}
      </select></label>
      <button class="btn" id="voiceTest" type="button">▶ Preview</button>
+     <button class="btn" id="hornTest" type="button">▶ Test horn</button>
    </div>
    <div class="ctlrow" style="margin:0 0 8px;padding:8px 0;border-top:1px solid var(--grid);border-bottom:1px solid var(--grid);align-items:flex-start;flex-wrap:wrap">
      <label style="font-size:13px">Live sync URL
@@ -1987,6 +1988,12 @@ function renderSetup(sp){
     // No Browns line here any more — the announcer doesn't say it, the horn does.
     speak("Sold! Jahmyr Gibbs, eighty one dollars, to Data Dawgs. That is criminal.");
     S.settings.voiceName=prev;
+  });
+  // Dry-run the whole celebration — confetti and horn — without faking a sale.
+  // Check this on the projector too: that machine is usually the one wired to
+  // the room, and its speakers are the ones that matter.
+  sp.querySelector("#hornTest").addEventListener("click",()=>{
+    celebrate({player:"TEST — Myles Garrett", price:41});
   });
   sp.querySelector("#syncSave").addEventListener("click",()=>{
     if(!window.DDSync) return;
@@ -2104,11 +2111,10 @@ function celebrate(pk){
   // against 4.4s of particles read as the celebration dying mid-shout.
   const done=()=>{ clearInterval(iv); const el=document.getElementById("celebrate"); if(el) el.remove(); };
 
-  // Audio only on the operator window. The projector mirrors the same state, so
-  // playing in both puts the horn through two sets of speakers a beat apart —
-  // and the announcer voice is already operator-only, so all sound stays in one place.
-  if(IS_PROJ){ setTimeout(done, 4600); return; }
-
+  // ⚠️ The horn fires in BOTH views on purpose (Kap, 8/4). The operator laptop is
+  // often muted and the projector is what's wired to the room, so gating it to one
+  // window risks the celebration landing silent. Two devices unmuted will echo
+  // slightly — that is the accepted trade, not a bug to "fix".
   let horn=null;
   try{ horn=new Audio(SBSB_URL); horn.volume=SBSB_VOL; }catch(e){}
   if(!horn){ setTimeout(done, 4600); return; }
