@@ -944,12 +944,12 @@ STATE: everything saves in the browser on that device. A different device shows 
   if(getComputedStyle(hero).position === 'static') hero.style.position = 'relative';
 
   const PALETTE = {
-    dark:  { base:0.46, lead:'rgba(255,248,240,1)',
+    dark:  { base:0.46, hot:3, lead:'rgba(255,248,240,1)',
              near:k=>'rgba(255,214,170,'+(0.95-k*0.12).toFixed(3)+')',
              tail:f=>'rgba(255,132,26,'+(f*0.95).toFixed(3)+')' },
-    light: { base:0.58, lead:'rgba(24,18,12,1)',
-             near:k=>'rgba(96,58,22,'+(0.90-k*0.12).toFixed(3)+')',
-             tail:f=>'rgba(209,58,0,'+(f*0.80).toFixed(3)+')' }
+    light: { base:0.52, hot:5, lead:'rgba(14,10,6,1)',
+             near:k=>'rgba(209,58,0,'+(1-k*0.05).toFixed(3)+')',
+             tail:f=>'rgba(209,58,0,'+(f*0.98).toFixed(3)+')' }
   };
 
   const cv = document.createElement('canvas');
@@ -1011,7 +1011,7 @@ STATE: everything saves in the browser on that device. A different device shows 
         const ry = Math.floor(c.y) - k;
         if(ry < 0 || ry > rows) continue;
         const f = 1 - k/c.glyphs.length;
-        ctx.fillStyle = k===0 ? pal.lead : k<3 ? pal.near(k) : pal.tail(f);
+        ctx.fillStyle = k===0 ? pal.lead : k<(pal.hot||3) ? pal.near(k) : pal.tail(f);
         ctx.fillText(c.glyphs[k], i*cell, ry*cell);
       }
     }
