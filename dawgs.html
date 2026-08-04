@@ -473,25 +473,9 @@ footer a{color:var(--accent)}
   const brk = document.createElement("i"); brk.className = "navbrk";
   links.appendChild(brk);
 
-  // Single live control: it IS the status light AND the way to the board. Previously the
-  // dataviz page carried a "● live" chip *and* a separate "⇄ Live Board" link — two things
-  // doing one job. On the board itself it would be a link to the page you're on, so skip it.
-  // Skipped on the homepage too (Kap, 7/31): that page is the manifesto, not a draft tool —
-  // a status light for a draft the reader hasn't been told about yet just looks out of place.
-  // The Draft ▾ menu still gets you there.
-  if(page!=="live" && page!=="home"){
-    const lv = document.createElement("a");
-    lv.className="livebtn"; lv.id="navLive"; lv.href="dashboard.html#live";
-    lv.innerHTML='<span class="dot"></span>LIVE DRAFT';
-    lv.title="Jump to the live draft board";
-    links.appendChild(lv);
-    const tick=()=>{ const up = !(window.DDSync && DDSync.on) || DDSync.connected;
-      lv.classList.toggle("off", !up); };
-    // EventSource takes a moment to open; without the early ticks the pill would sit
-    // grey for up to 4s on every page load and look broken.
-    tick(); [700,1600,3000].forEach(ms=>setTimeout(tick,ms));
-    addEventListener("ddsync", tick); setInterval(tick, 4000);
-  }
+  // The LIVE DRAFT pill is gone (8/1): Live is a tab inside the Dashboard, so the pill
+  // was a second route to the same place. Its other job — showing DDSync connection —
+  // moved to the dashboard's summary strip.
 
   const btn = document.createElement("button");
   btn.className = "theme-btn"; btn.id = "themeBtn";
