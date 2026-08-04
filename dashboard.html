@@ -338,6 +338,12 @@ svg text{font-family:inherit}
 .dbpresent{appearance:none;background:none;border:1px solid var(--border);border-radius:8px;
   color:var(--ink-2);font:inherit;font-size:12.5px;font-weight:650;padding:6px 12px;cursor:pointer}
 .dbpresent:hover{border-color:var(--accent);color:var(--accent)}
+/* the voice picker — same chip as the buttons beside it, but a real <select> so the
+   OS gives us a native, touch-friendly list on the phone */
+select.dbpresent{padding-right:26px;background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
+  background-position:calc(100% - 14px) 12px,calc(100% - 9px) 12px;background-size:5px 5px;background-repeat:no-repeat}
+select.dbpresent[hidden]{display:none}
+@media(max-width:620px){select.dbpresent{max-width:132px;text-overflow:ellipsis}}
 
 /* viewport */
 .dbview{position:relative;min-height:340px}
@@ -384,6 +390,7 @@ svg text{font-family:inherit}
     <button data-v="grades"   >Grades<span class="kbd">4</span></button>
     <span class="grow"></span>
     <button class="dbpresent" id="dbAnn" title="Auctioneer voice + Browns horn on this device (shift-click to test the horn)">🔊 Sound</button>
+    <select class="dbpresent" id="dbVoice" title="Which ElevenLabs voice announces (this device only)" hidden></select>
     <button class="dbpresent" id="dbPresent" title="Full-screen the live board for the projector">⤢ Full screen</button>
   </div>
 
@@ -1290,6 +1297,8 @@ STATE: everything saves in the browser on that device. A different device shows 
      ============================================================ */
   const TTS_URL  = "https://toto.jkapcar4.workers.dev/tts";
   const LS_VOICE = "dd-ann-on";          // per-device, deliberately not synced
+  const LS_VID   = "dd-ann-voice";       // chosen ElevenLabs voice id ("" = house default)
+  const LS_VLIST = "dd-ann-voices";      // cached {t, voices[], current} from /tts/voices
   const SNARK_OVER =["That is criminal.","Someone confiscate his wallet.","The room thanks you for the inflation.","Bold strategy.","The market just fainted."];
   const SNARK_STEAL=["Highway robbery.","Somebody was not paying attention.","A crime in broad daylight.","The Dawgs approve."];
   const HORN_URL = "superbowlsuperbrowns.m4a";
@@ -1333,9 +1342,14 @@ STATE: everything saves in the browser on that device. A different device shows 
     const pass=localStorage.getItem("dd-bot-pass");     // same passphrase Dawg Bot uses
     if(pass){
       try{
+        // Omit `voice` entirely when nothing is picked — the Worker then uses
+        // ELEVEN_VOICE, so the house voice can be swapped in the Cloudflare dashboard
+        // without touching this page. Sending "" would look like a deliberate blank.
+        const vid=localStorage.getItem(LS_VID)||"";
+        const payload=vid?{text:t,voice:vid}:{text:t};
         const r=await fetch(TTS_URL,{method:"POST",
           headers:{"Content-Type":"application/json","X-Dawg-Pass":pass},
-          body:JSON.stringify({text:t})});
+          body:JSON.stringify(payload)});
         if(r.ok && (r.headers.get("content-type")||"").includes("audio")){
           const a=new Audio(URL.createObjectURL(await r.blob()));
           await new Promise(res=>{ a.onended=res; a.onerror=res; a.play().catch(res); setTimeout(res,20000); });
@@ -1414,6 +1428,63 @@ STATE: everything saves in the browser on that device. A different device shows 
   // Shift-click tests the horn without waiting for a Browns pick. Deliberately not a
   // second button: the tab bar is already tight at 390px.
   annBtn.addEventListener("click", e=>{ if(e.shiftKey){ annQ.length=0; annQ.push({horn:true}); annPump(); } });
+
+  /* ---------- voice picker ----------
+     The auctioneer voice has been swapped three times already (personal clone →
+     unhingedman → Pepperoni_football_announcer). Rather than bake a list into a page
+     that then needs a deploy every time, the options come from the account itself via
+     GET /tts/voices — clone something in ElevenLabs and it is in this dropdown on the
+     next load.
+
+     Per-device, like the Sound button: only the machine wired to the room speaker is
+     making noise, so a synced setting would just be one more thing to fight over.
+     Choosing nothing leaves it on the house default (the Worker's ELEVEN_VOICE), which
+     is how the voice gets changed for everyone at once. */
+  const VOICES_URL = "https://toto.jkapcar4.workers.dev/tts/voices";
+  const VLIST_TTL  = 6*3600e3;           // voices change rarely; don't hit the API every load
+  const vsel = document.getElementById("dbVoice");
+
+  function paintVoices(data){
+    const list=(data && data.voices)||[];
+    if(!list.length){ vsel.hidden=true; return; }
+    const cur=localStorage.getItem(LS_VID)||"";
+    const houseName=(list.find(v=>v.id===(data.current||""))||{}).name;
+    vsel.innerHTML='<option value="">'+(houseName?("House voice — "+esc(houseName)):"House voice")+'</option>'
+      + list.map(v=>'<option value="'+esc(v.id)+'">'+esc(v.name)+'</option>').join("");
+    // A stored id that is no longer on the account falls back to the house voice rather
+    // than silently selecting nothing and sending a dead id to ElevenLabs.
+    vsel.value = list.some(v=>v.id===cur) ? cur : "";
+    if(vsel.value!==cur) localStorage.setItem(LS_VID, vsel.value);
+    vsel.hidden=false;
+  }
+  // NB: `esc` is the shell's existing helper, declared above with the strip code.
+  // Redeclaring it here as a function threw "Identifier 'esc' has already been
+  // declared" — same scope, and a function declaration collides with a const.
+
+  async function loadVoices(){
+    const pass=localStorage.getItem("dd-bot-pass");
+    if(!pass) return;                    // no passphrase → no ElevenLabs at all, so no picker
+    let cached=null;
+    try{ cached=JSON.parse(localStorage.getItem(LS_VLIST)||"null"); }catch(e){}
+    if(cached && cached.voices) paintVoices(cached);            // paint instantly, refresh below
+    if(cached && cached.t && Date.now()-cached.t < VLIST_TTL) return;
+    try{
+      const r=await fetch(VOICES_URL,{headers:{"X-Dawg-Pass":pass}});
+      if(!r.ok) return;                  // keep whatever was cached; the picker is a nicety
+      const d=await r.json();
+      if(!d || !Array.isArray(d.voices) || !d.voices.length) return;
+      d.t=Date.now();
+      try{ localStorage.setItem(LS_VLIST, JSON.stringify(d)); }catch(e){}
+      paintVoices(d);
+    }catch(e){}
+  }
+  vsel.addEventListener("change", ()=>{
+    localStorage.setItem(LS_VID, vsel.value);
+    // Changing it IS a user gesture, so speak a sample — otherwise you don't find out
+    // you picked the wrong one until the next sale, in front of everyone.
+    if(annOn()){ annQ.length=0; annSpeak(`${vsel.options[vsel.selectedIndex].text}. Ready to call the draft.`); }
+  });
+  loadVoices();
   paintAnn();
   // Establish the "already seen" baseline NOW, not on the first 4s tick. Without
   // this the window between load and the first tick is a blind spot: a sale that

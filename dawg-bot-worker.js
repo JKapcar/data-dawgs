@@ -110,6 +110,7 @@ export default {
     if (url.pathname === "/bozo/reset")   return bozoReset(request, env, cors);
     if (url.pathname === "/tts")          return handleTts(request, env, cors);
     if (url.pathname === "/tts/models")   return ttsModels(request, env, cors);
+    if (url.pathname === "/tts/voices")   return ttsVoices(request, env, cors);
 
     return handleChat(request, env, origin, cors);
   },
@@ -312,6 +313,38 @@ async function handleTts(request, env, cors) {
   return new Response(up.body, {
     headers: { ...cors, "Content-Type": "audio/mpeg", "Cache-Control": "no-store" },
   });
+}
+
+// GET /tts/voices — powers the voice picker on the dashboard.
+//
+// Why a proxy instead of a hardcoded list in the page: voice ids are not secret, but
+// they ARE churn. Kap has already swapped the auctioneer voice three times (clone →
+// unhingedman → Pepperoni_football_announcer). A list in the page means a site deploy
+// every time he clones something in ElevenLabs; a list from the account means he
+// clones it and it shows up in the dropdown on the next page load.
+//
+// ⚠️ /v2/voices, not /v1. v1 is the old flat list; v2 is the current endpoint and
+// returns {voices:[...], has_more, total_count, next_page_token}. Verified against
+// the docs 8/4/26 rather than guessed — the /tts/models route shipped broken because
+// its response shape was assumed (it mapped `Array.isArray(raw)` against an object).
+async function ttsVoices(request, env, cors) {
+  if (!env.ELEVEN_KEY) return json({ error: "Worker misconfigured: ELEVEN_KEY not set." }, 500, cors);
+  const pass = request.headers.get("X-Dawg-Pass") || "";
+  if (!timingSafeEqual(pass, env.DAWG_PASS || "")) return json({ error: "Wrong league passphrase." }, 401, cors);
+  try {
+    const r = await fetch("https://api.elevenlabs.io/v2/voices?page_size=100", {
+      headers: { "xi-api-key": env.ELEVEN_KEY },
+    });
+    const raw = await r.json();
+    if (!r.ok) return json({ error: "ElevenLabs " + r.status, detail: JSON.stringify(raw).slice(0, 300) }, 502, cors);
+    const list = Array.isArray(raw && raw.voices) ? raw.voices : [];
+    const voices = list.map(v => ({ id: v.voice_id, name: v.name, category: v.category }))
+                       .filter(v => v.id && v.name);
+    // `current` lets the page show which one is the house default without a second call
+    return json({ voices, current: env.ELEVEN_VOICE || "" }, 200, cors);
+  } catch (e) {
+    return json({ error: "voices lookup failed: " + e.message }, 502, cors);
+  }
 }
 
 // GET /tts/models — model ids change and guessing one wastes a deploy cycle
