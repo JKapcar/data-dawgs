@@ -1,12 +1,12 @@
 // Data Dawgs service worker — draft-night insurance.
 // HTML is network-first (so deploys land immediately) with a cache fallback,
 // so a dead venue wifi can't take the draft down mid-auction.
-const VERSION = "74d7ee1df9";
+const VERSION = "28aec73120";
 const CACHE = "dd-" + VERSION;
 
 // the pages that must survive a network drop (stats.html is 2MB — cached on first visit instead)
 const CORE = [
-  "/", "/index.html", "/board.html", "/auction.html",
+  "/", "/index.html", "/dashboard.html", "/board.html", "/auction.html",
   "/bigboard.html", "/dataviz.html", "/report.html", "/master.html", "/strategy.html"
 ];
 // celebration photos, so SUPER BOWL SUPER BROWNS still fires offline

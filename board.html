@@ -406,10 +406,9 @@ th.sortable:hover{color:var(--ink-1)}
   const NAV = [
     {label:"Home", href:"index.html", key:"home"},
     {label:"Draft", items:[
-      ["board.html?view=live","Live Draft","live","hot"],
-      ["dataviz.html","Draft Data Viz","dataviz"],
-      ["report.html","Report Card","report"],
-      ["board.html","Cheat Sheet","board"],
+      // Live / Sheet / Analysis / Grades are now tabs inside the dashboard, not
+      // four sibling pages. The old URLs still work and stay reachable directly.
+      ["dashboard.html","Dashboard","dashboard","hot"],
       // everything below the rule is operator-only — it gets locked down on draft day
       ["auction.html","Auctioneer Controls","auction","","sep"],
     ]},
@@ -476,7 +475,7 @@ th.sortable:hover{color:var(--ink-1)}
   // The Draft ▾ menu still gets you there.
   if(page!=="live" && page!=="home"){
     const lv = document.createElement("a");
-    lv.className="livebtn"; lv.id="navLive"; lv.href="board.html?view=live";
+    lv.className="livebtn"; lv.id="navLive"; lv.href="dashboard.html#live";
     lv.innerHTML='<span class="dot"></span>LIVE DRAFT';
     lv.title="Jump to the live draft board";
     links.appendChild(lv);
@@ -1393,6 +1392,32 @@ function render(){
     (planned?` · ${planned} targeted`:"");
 }
 render();
+</script>
+<script>
+/* ---- embedded-in-dashboard mode: the shell owns the chrome ---- */
+(function(){
+  if(!/[?&]embed=1/.test(location.search)) return;
+  document.documentElement.classList.add("dd-embed");
+  const css = document.createElement("style");
+  css.textContent = ".dd-embed .sitenav,.dd-embed footer,.dd-embed #ddbLaunch,.dd-embed #ddmeChip{display:none!important}"
+    + ".dd-embed body{background:transparent}"
+    + ".dd-embed .wrap{padding-top:0;padding-bottom:14px}";
+  document.head.appendChild(css);
+  const post = () => {
+    const h = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+    parent.postMessage({dd:"height", h}, location.origin);
+  };
+  addEventListener("load", post);
+  addEventListener("resize", post);
+  if(window.ResizeObserver) new ResizeObserver(post).observe(document.body);
+  setInterval(post, 900);                       // charts redraw async; cheap insurance
+  addEventListener("message", e=>{
+    if(e.origin!==location.origin || !e.data || e.data.dd!=="theme") return;
+    document.documentElement.setAttribute("data-theme", e.data.theme);
+    if(window.DDTheme && DDTheme.apply) DDTheme.apply();
+    setTimeout(post, 60);
+  });
+})();
 </script>
 </body>
 </html>

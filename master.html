@@ -381,10 +381,9 @@ table.md tr.mine td{background:color-mix(in srgb, var(--good) 9%, transparent)}
   const NAV = [
     {label:"Home", href:"index.html", key:"home"},
     {label:"Draft", items:[
-      ["board.html?view=live","Live Draft","live","hot"],
-      ["dataviz.html","Draft Data Viz","dataviz"],
-      ["report.html","Report Card","report"],
-      ["board.html","Cheat Sheet","board"],
+      // Live / Sheet / Analysis / Grades are now tabs inside the dashboard, not
+      // four sibling pages. The old URLs still work and stay reachable directly.
+      ["dashboard.html","Dashboard","dashboard","hot"],
       // everything below the rule is operator-only — it gets locked down on draft day
       ["auction.html","Auctioneer Controls","auction","","sep"],
     ]},
@@ -451,7 +450,7 @@ table.md tr.mine td{background:color-mix(in srgb, var(--good) 9%, transparent)}
   // The Draft ▾ menu still gets you there.
   if(page!=="live" && page!=="home"){
     const lv = document.createElement("a");
-    lv.className="livebtn"; lv.id="navLive"; lv.href="board.html?view=live";
+    lv.className="livebtn"; lv.id="navLive"; lv.href="dashboard.html#live";
     lv.innerHTML='<span class="dot"></span>LIVE DRAFT';
     lv.title="Jump to the live draft board";
     links.appendChild(lv);
