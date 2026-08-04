@@ -362,6 +362,15 @@ select.dbpresent[hidden]{display:none}
   box-shadow:0 4px 16px rgba(0,0,0,.28);opacity:.55;transition:opacity .15s,border-color .15s}
 .dbview:fullscreen .dbexit:hover{opacity:1;border-color:var(--accent);color:var(--accent)}
 .dbnote{font-size:12.5px;color:var(--ink-3);margin:10px 0 0}
+/* ⚠️ Why you are hearing a robot instead of the announcer. Only ever visible when
+   Sound is ON *and* the ElevenLabs path fell through. A silent fallback is what sent
+   a leaguemate to Discord with "there's no voice toggle and I get a woman's voice" —
+   both symptoms of one invisible cause (no league passphrase on that device). */
+.dbwarn{font-size:12.5px;line-height:1.5;color:var(--ink-2);margin:-4px 0 12px;padding:8px 12px;
+  background:color-mix(in srgb,var(--warn) 13%,transparent);border-radius:9px;
+  border:1px solid color-mix(in srgb,var(--warn) 42%,transparent)}
+.dbwarn[hidden]{display:none}
+.dbwarn b{color:var(--ink-1)}
 @media(max-width:620px){
   .dbwrap{padding:0 14px 30px}
   .dbtabs button{padding:8px 10px;font-size:13.5px}
@@ -393,6 +402,7 @@ select.dbpresent[hidden]{display:none}
     <select class="dbpresent" id="dbVoice" title="Which ElevenLabs voice announces (this device only)" hidden></select>
     <button class="dbpresent" id="dbPresent" title="Full-screen the live board for the projector">⤢ Full screen</button>
   </div>
+  <p class="dbwarn" id="dbSoundWhy" hidden></p>
 
   <div class="dbview" id="dbView"><button class="dbexit" id="dbExit">✕ Exit full screen</button><div class="dbload">Loading…</div></div>
   <p class="dbnote" id="dbNote"></p>
@@ -1328,6 +1338,24 @@ STATE: everything saves in the browser on that device. A different device shows 
       }catch(e){ res(); }
     });
   }
+  /* Say WHY the voice is wrong instead of letting it degrade silently. Lunchbox turned
+     Sound on, saw no voice picker, heard a stock robot, and went to Discord — three
+     symptoms, one cause, none of it visible on the page. Each reason below has a
+     different fix, so they are not collapsed into a generic "unavailable". */
+  const soundWhy = document.getElementById("dbSoundWhy");
+  let annWhy = null;
+  const WHY = {
+    nopass:  "That's your device's built-in voice. Tap <b>Ask Toto</b> and enter the league passphrase to hear the real announcer.",
+    badpass: "That league passphrase was rejected, so you're hearing your device's built-in voice. Tap <b>Ask Toto</b> to enter it again.",
+    cap:     "The announcer hit today's character limit — falling back to your device's built-in voice.",
+    err:     "Can't reach the announcer voice right now, so this is your device's built-in voice."
+  };
+  function paintWhy(){
+    const msg = annOn() && annWhy ? WHY[annWhy] : "";
+    soundWhy.innerHTML = msg;
+    soundWhy.hidden = !msg;
+  }
+
   function annHorn(){                        // the real SUPER BOWL SUPER BROWNS recording
     return new Promise(res=>{
       let a=null;
@@ -1340,7 +1368,9 @@ STATE: everything saves in the browser on that device. A different device shows 
   async function annSay(t){
     let done=false;
     const pass=localStorage.getItem("dd-bot-pass");     // same passphrase Dawg Bot uses
-    if(pass){
+    if(!pass){
+      annWhy="nopass";
+    } else {
       try{
         // Omit `voice` entirely when nothing is picked — the Worker then uses
         // ELEVEN_VOICE, so the house voice can be swapped in the Cloudflare dashboard
@@ -1353,10 +1383,14 @@ STATE: everything saves in the browser on that device. A different device shows 
         if(r.ok && (r.headers.get("content-type")||"").includes("audio")){
           const a=new Audio(URL.createObjectURL(await r.blob()));
           await new Promise(res=>{ a.onended=res; a.onerror=res; a.play().catch(res); setTimeout(res,20000); });
-          done=true;
+          done=true; annWhy=null;
+        } else {
+          // Each of these needs a different fix, so don't collapse them into "broken".
+          annWhy = r.status===401 ? "badpass" : r.status===429 ? "cap" : "err";
         }
-      }catch(e){}
+      }catch(e){ annWhy="err"; }
     }
+    paintWhy();
     if(!done) await browserSay(t);           // no passphrase, quota hit, or ElevenLabs down
   }
   // One queue for both clip types — serialize, because the horn talking over the
@@ -1421,6 +1455,10 @@ STATE: everything saves in the browser on that device. A different device shows 
     const on=!annOn();
     localStorage.setItem(LS_VOICE, on?"1":"0");
     paintAnn();
+    // Don't wait for the round trip to say the obvious — if there's no passphrase we
+    // already know the answer, and the banner should be up before the robot speaks.
+    if(on && !localStorage.getItem("dd-bot-pass")) annWhy="nopass";
+    paintWhy();
     // Turning it on IS the user gesture that unlocks autoplay — say something
     // immediately so a silent first announcement never surprises anyone.
     if(on) annSpeak("Auctioneer voice on.");
@@ -1494,6 +1532,10 @@ STATE: everything saves in the browser on that device. A different device shows 
   });
   loadVoices();
   paintAnn();
+  // Sound already on from a previous visit, still no passphrase → say so on load,
+  // rather than waiting for the first sale to reveal it in front of everyone.
+  if(annOn() && !localStorage.getItem("dd-bot-pass")) annWhy="nopass";
+  paintWhy();
   // Establish the "already seen" baseline NOW, not on the first 4s tick. Without
   // this the window between load and the first tick is a blind spot: a sale that
   // lands in it is read as history on the first check and never announced.
