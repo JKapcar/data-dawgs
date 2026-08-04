@@ -318,14 +318,18 @@ svg text{font-family:inherit}
 .lgsub{font-size:10.5px;color:var(--ink-3);margin-top:4px;text-align:right}
 
 /* tab bar */
-.dbtabs{display:flex;gap:4px;align-items:center;flex-wrap:wrap;
-  border-bottom:1px solid var(--grid);margin:0 0 4px;padding-bottom:0}
-.dbtabs button{appearance:none;background:none;border:0;border-bottom:2px solid transparent;
-  color:var(--ink-3);font:inherit;font-size:14.5px;font-weight:700;letter-spacing:.01em;
-  padding:9px 14px;cursor:pointer;border-radius:8px 8px 0 0;transition:color .13s,background .13s}
-.dbtabs button:hover{color:var(--ink-1);background:color-mix(in srgb,var(--accent) 9%,transparent)}
-.dbtabs button.on{color:var(--accent);border-bottom-color:var(--accent)}
-.dbtabs .kbd{font-size:10px;opacity:.5;margin-left:5px;font-weight:600}
+.dbtabs{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:2px 0 12px}
+.dbtabs button[data-v]{appearance:none;background:var(--surface-1);
+  border:1.5px solid var(--border);border-radius:11px;
+  color:var(--ink-1);font:inherit;font-size:15.5px;font-weight:800;letter-spacing:.01em;
+  padding:11px 18px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.06);
+  transition:color .13s,background .13s,border-color .13s,transform .1s}
+.dbtabs button[data-v]:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
+.dbtabs button[data-v].on{background:var(--accent);color:#fff;border-color:transparent;
+  box-shadow:0 3px 12px color-mix(in srgb,var(--accent) 40%,transparent)}
+.dbtabs .kbd{font-size:10px;opacity:.55;margin-left:7px;font-weight:700;
+  border:1px solid currentColor;border-radius:4px;padding:1px 4px}
+@media(max-width:620px){.dbtabs{gap:6px}.dbtabs button[data-v]{padding:9px 13px;font-size:14px}.dbtabs .kbd{display:none}}
 .dbtabs .grow{margin-left:auto}
 .dbpresent{appearance:none;background:none;border:1px solid var(--border);border-radius:8px;
   color:var(--ink-2);font:inherit;font-size:12.5px;font-weight:650;padding:6px 12px;cursor:pointer}
@@ -371,7 +375,7 @@ svg text{font-family:inherit}
 
   <div class="dbtabs" id="dbTabs">
     <button data-v="live"     >Live<span class="kbd">1</span></button>
-    <button data-v="sheet"    >Sheet<span class="kbd">2</span></button>
+    <button data-v="sheet"    >Cheat Sheet<span class="kbd">2</span></button>
     <button data-v="analysis" >Analysis<span class="kbd">3</span></button>
     <button data-v="grades"   >Grades<span class="kbd">4</span></button>
     <span class="grow"></span>
@@ -1037,7 +1041,7 @@ STATE: everything saves in the browser on that device. A different device shows 
 (function(){
   const VIEWS = {
     live:     {src:"board.html?view=live&embed=1", label:"Live"},
-    sheet:    {src:"board.html?embed=1",           label:"Sheet"},
+    sheet:    {src:"board.html?embed=1",           label:"Cheat Sheet"},
     analysis: {src:"dataviz.html?embed=1",         label:"Analysis"},
     grades:   {src:"report.html?embed=1",          label:"Grades"}
   };
