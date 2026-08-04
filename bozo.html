@@ -1,0 +1,1608 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bozo — Data Dawgs</title>
+<link rel="icon" href="data:image/png;base64,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">
+<style>
+:root{
+  color-scheme: dark;
+  --surface-1:#16120d; --page:#0a0806;
+  --ink-1:#f5f1ea; --ink-2:#c8c1b4; --ink-3:#8f897d;
+  --grid:#2b251d; --axis:#3b3428; --border:rgba(255,255,255,0.10);
+  --accent:#ff6a02; --accent-ink:#140a02;
+  --good:#2fbf3f; --bad:#ff6b6b; --warn:#eda100;
+}
+:root[data-theme="light"]{
+  color-scheme: light;
+  --surface-1:#fffdf7; --page:#f2ecdf;
+  --ink-1:#2b1c0e; --ink-2:#5b4a37; --ink-3:#8c7b66;
+  --grid:#e3dac6; --axis:#c4b8a2; --border:rgba(49,29,0,0.15);
+  --accent:#d13a00; --accent-ink:#ffffff;
+  --good:#006300; --bad:#c73030; --warn:#a86e00;
+  --navbar:#2a1a06; --navink:#ecdfc9; --navink2:#b7a488;
+}
+/* light theme: paper texture (Browns-style: warm paper field, seal-brown nav) */
+:root[data-theme="light"] body{
+  background-color:var(--page);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23p)' opacity='0.07'/%3E%3C/svg%3E"),
+    radial-gradient(1200px 500px at 50% -100px, rgba(209,58,0,0.06), transparent 70%);
+  background-size:220px 220px, auto;
+  overflow-x:clip;
+}
+:root[data-theme="light"] .card{box-shadow:0 1px 3px rgba(49,29,0,0.07)}
+:root[data-theme="light"] .sitenav{
+  background:var(--navbar);
+  border-bottom:3px solid var(--accent);
+  margin:0 calc(50% - 50vw) 24px;
+  padding:12px calc(50vw - 50% + 24px);
+}
+:root[data-theme="light"] .brand{color:var(--navink)}
+:root[data-theme="light"] .brand .tag{color:var(--navink2)}
+/* cream nav text applies to the bar itself, NOT to the dropdown panel —
+   the panel is near-white, so cream-on-white made the items unreadable */
+:root[data-theme="light"] .sitenav .links > a,
+:root[data-theme="light"] .grpbtn{color:var(--navink)}
+:root[data-theme="light"] .grpmenu a{color:var(--ink-1);font-weight:650}
+:root[data-theme="light"] .grpmenu a:hover,
+:root[data-theme="light"] .grpmenu a.on,
+:root[data-theme="light"] .grpmenu a.hot{color:var(--accent)}
+:root[data-theme="light"] .sitenav .links a:hover,
+:root[data-theme="light"] .grpbtn:hover{background:rgba(255,106,2,0.16);color:#fff}
+:root[data-theme="light"] .sitenav .links a.on,
+:root[data-theme="light"] .grpbtn.on{color:#ff8a4d;box-shadow:inset 0 -2px 0 #ff8a4d}
+:root[data-theme="light"] .theme-btn{border-color:rgba(236,223,201,0.35);color:var(--navink2)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink-1);
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px 60px}
+/* ---- site nav ---- */
+.sitenav{display:flex;align-items:center;gap:22px;padding:14px 0;border-bottom:1px solid var(--grid);margin-bottom:24px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:var(--ink-1)}
+.brand img{width:34px;height:42px;object-fit:contain}
+.brand .logo{font-size:19px;font-weight:800;letter-spacing:.02em}
+.brand .logo span{color:var(--accent)}
+.brand .tag{font-size:11.5px;color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase;align-self:center}
+.sitenav .links{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
+.sitenav .links a{color:var(--ink-2);text-decoration:none;padding:6px 12px;border-radius:8px;font-size:14px;font-weight:550}
+.sitenav .links a:hover{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--ink-1)}
+.sitenav .links a.on{color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent);border-radius:8px 8px 0 0}
+/* nav dropdown groups */
+.navgrp{position:relative}
+.grpbtn{background:none;border:none;color:var(--ink-2);padding:6px 12px;border-radius:8px;font-size:14px;font-weight:550;cursor:pointer;font-family:inherit}
+.grpbtn:hover{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--ink-1)}
+.grpbtn.on{color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent);border-radius:8px 8px 0 0}
+.grpbtn .caret{font-size:10px;opacity:.7}
+.grpmenu{position:absolute;top:100%;left:0;min-width:190px;background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:6px;display:none;z-index:60;box-shadow:0 10px 30px rgba(0,0,0,.35);margin-top:4px}
+.grpmenu::before{content:"";position:absolute;top:-8px;left:0;right:0;height:8px}
+.navgrp.open .grpmenu{display:block}
+@media (hover:hover){ .navgrp:hover .grpmenu{display:block} }
+.grpmenu a{display:block;padding:9px 13px;border-radius:7px;color:var(--ink-1);text-decoration:none;font-size:14px;font-weight:650;white-space:nowrap}
+.grpmenu a:hover{background:color-mix(in srgb, var(--accent) 14%, transparent);color:var(--accent)}
+.grpmenu a.on{color:var(--accent)}
+.grpmenu a.hot{color:var(--accent);font-weight:750}
+.grpmenu a.hot::before{content:"●";font-size:9px;margin-right:7px;vertical-align:1px;animation:ddpulse 1.6s ease-in-out infinite}
+@keyframes ddpulse{0%,100%{opacity:1}50%{opacity:.3}}
+/* The one live control — status light and route to the board in a single button.
+   Selectors must out-specify `.sitenav .links a`, which otherwise reclaims padding,
+   radius and weight and flattens the pill into plain text. */
+.sitenav .links a.livebtn,
+:root[data-theme="light"] .sitenav .links > a.livebtn{
+  display:inline-flex;align-items:center;gap:7px;
+  background:var(--accent);color:#fff;text-decoration:none;border-radius:999px;
+  padding:6px 15px;font-size:12.5px;font-weight:800;letter-spacing:.06em;margin-left:8px;
+  box-shadow:0 2px 10px color-mix(in srgb, var(--accent) 45%, transparent)}
+.sitenav .links a.livebtn:hover,
+:root[data-theme="light"] .sitenav .links a.livebtn:hover{
+  background:var(--accent);color:#fff;filter:brightness(1.12)}
+.sitenav .links a.livebtn .dot{width:7px;height:7px;border-radius:50%;background:#fff;
+  animation:ddpulse 1.6s ease-in-out infinite;flex:none}
+.sitenav .links a.livebtn.off,
+:root[data-theme="light"] .sitenav .links > a.livebtn.off{
+  background:none;box-shadow:none;border:1px solid var(--border);color:var(--ink-3);font-weight:700}
+.sitenav .links a.livebtn.off .dot{animation:none;opacity:.45;background:currentColor}
+/* operator sits below a rule — its own zone, locked down on draft day */
+.grpmenu a.sep{border-top:1px solid var(--grid);margin-top:5px;padding-top:10px;
+  color:var(--ink-3)!important;font-weight:600}
+.grpmenu a.sep{display:flex;align-items:baseline;gap:10px}
+.grpmenu a.sep::after{content:"operator";margin-left:auto;font-size:9.5px;letter-spacing:.06em;
+  text-transform:uppercase;opacity:.6}
+.grpmenu a.sep:hover{color:var(--accent)!important}
+.theme-btn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--ink-2);padding:4px 10px;cursor:pointer;font-size:12.5px}
+.sitenav .links .theme-btn{margin-left:10px}
+.navbrk{display:none}
+@media(max-width:760px){
+  /* phone: brand centred on its own row, then every control centred in one wrapping run.
+     Previously links, the LIVE DRAFT pill and the theme button each landed on their own
+     left-ragged line. */
+  .sitenav{justify-content:center;gap:10px 12px;padding:12px 0}
+  .sitenav .brand{width:100%;justify-content:center}
+  .sitenav .links{width:100%;margin-left:0;justify-content:center;gap:6px 5px}
+  .sitenav .links .navbrk{display:block;flex:0 0 100%;height:0;margin:0}
+  .sitenav .links a{padding:6px 7px;font-size:13px}
+  .sitenav .links .grpbtn{padding:6px 7px;font-size:13px}
+  .sitenav .brand img{width:30px;height:37px}
+  .sitenav .brand .logo{white-space:nowrap;font-size:17px}
+  .sitenav .brand .tag{white-space:nowrap;font-size:10.5px}
+  .sitenav .links .theme-btn{margin-left:0}
+  .sitenav .links a.livebtn{margin-left:0}
+  :root[data-theme="light"] .sitenav .links > a.livebtn{margin-left:0}
+}
+/* ---- cards & type ---- */
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:18px}
+.card h2{font-size:17px;font-weight:700;margin:0 0 8px}
+.card h3{font-size:14.5px;font-weight:650;margin:16px 0 6px}
+.card p{margin:8px 0;color:var(--ink-1)}
+.muted{color:var(--ink-3);font-size:12.5px}
+.callout{border-left:3px solid var(--accent);padding:10px 14px;background:color-mix(in srgb, var(--accent) 6%, transparent);border-radius:0 8px 8px 0;margin:12px 0;font-size:14px}
+.callout.warn{border-left-color:var(--warn);background:color-mix(in srgb, var(--warn) 8%, transparent)}
+a{color:var(--accent)}
+.pill{display:inline-block;font-size:11px;font-weight:650;letter-spacing:.03em;border-radius:6px;padding:2px 8px;margin-right:4px}
+.pill.buy{background:color-mix(in srgb, var(--good) 14%, transparent);color:var(--good)}
+.pill.fade{background:color-mix(in srgb, var(--bad) 13%, transparent);color:var(--bad)}
+.pill.zrb{background:color-mix(in srgb, var(--accent) 13%, transparent);color:var(--accent)}
+.pill.pos{background:color-mix(in srgb, var(--ink-3) 15%, transparent);color:var(--ink-2)}
+/* ---- tables ---- */
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:14px}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3);font-weight:600;text-align:right;padding:6px 8px;border-bottom:1px solid var(--grid);white-space:nowrap}
+th.tl,td.tl{text-align:left}
+td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--grid);white-space:nowrap}
+tr:last-child td{border-bottom:none}
+/* ---- landing ---- */
+.hero{padding:34px 0 6px;text-align:center;max-width:720px;margin:0 auto}
+/* Dark hero = all brand orange. Light hero = banner-brown binary with orange eyes + wordmark.
+   NO filter and NO drop-shadow: at 46px blur the shadow haloed into a visible box. */
+.hero img{width:min(360px,74vw);height:auto;display:block;margin:0 auto 6px;filter:none}
+.hero .hero-light{display:none}
+:root[data-theme="light"] .hero .hero-dark{display:none}
+:root[data-theme="light"] .hero .hero-light{display:block}
+.hero .tagline{font-size:17px;color:var(--ink-2);margin:10px 0 8px;letter-spacing:.01em}
+/* ---- manifesto (home) ---- */
+.manifesto{max-width:660px;margin:12px auto 0}
+.manifesto section{margin:34px 0}
+.manifesto h2{font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;
+  color:var(--accent);margin:0 0 12px}
+.manifesto p{font-size:16px;line-height:1.72;color:var(--ink-1);margin:0 0 15px}
+.manifesto p em{color:var(--ink-2);font-style:italic}
+.manifesto section+section{border-top:1px solid var(--grid);padding-top:30px}
+/* the four practice items: a rule instead of bullets — reads as field notes, not a list */
+.manifesto .field{border-left:2px solid color-mix(in srgb, var(--accent) 42%, transparent);
+  padding-left:16px;margin:0 0 20px}
+.manifesto .field .lead{display:block;font-weight:750;color:var(--ink-1);margin-bottom:3px}
+/* closing line — the landing */
+.manifesto .kicker{font-size:20px;font-weight:800;line-height:1.5;text-align:center;
+  color:var(--accent);max-width:520px;margin:22px auto 0;letter-spacing:.005em}
+@media(max-width:560px){.manifesto .kicker{font-size:17.5px}}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:26px}
+.tile{display:block;text-decoration:none;color:var(--ink-1);background:var(--surface-1);border:1px solid var(--border);border-radius:14px;padding:20px 22px;transition:border-color .15s}
+.tile:hover{border-color:var(--accent)}
+.tile h2{margin:0 0 6px;font-size:16.5px;font-weight:700}
+.tile p{margin:0;color:var(--ink-2);font-size:13.5px}
+.tile .go{display:block;margin-top:12px;color:var(--accent);font-size:13px;font-weight:600}
+footer{color:var(--ink-3);font-size:12px;margin-top:26px;border-top:1px solid var(--grid);padding-top:14px}
+footer a{color:var(--accent)}
+/* ---- controls ---- */
+.controls{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-bottom:14px}
+.controls input[type=text]{background:var(--surface-1);color:var(--ink-1);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:14px;width:220px}
+.chip{border:1px solid var(--border);background:none;color:var(--ink-2);border-radius:7px;padding:4px 10px;cursor:pointer;font-size:13px}
+.chip.on{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.btn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--ink-2);padding:5px 12px;cursor:pointer;font-size:13px}
+.btn:hover{color:var(--ink-1);border-color:var(--accent)}
+
+/* ================= Bozo ================= */
+.bz-hdr{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+.bz-hdr h1{font-size:28px;margin:0;letter-spacing:-.4px;font-weight:800}
+.bz-sub{color:var(--ink-2);margin:6px 0 22px;max-width:62ch}
+.card{background:var(--surface-1);border:1px solid var(--grid);border-radius:12px;padding:18px;margin-bottom:16px}
+h2.bz{font-size:13px;letter-spacing:1.3px;text-transform:uppercase;color:var(--ink-3);margin:0 0 12px;font-weight:700}
+.chip{font:700 11px/1 ui-monospace,Menlo,monospace;letter-spacing:1.2px;text-transform:uppercase;padding:5px 9px;border-radius:5px;background:var(--grid);color:var(--ink-2);white-space:nowrap}
+.chip.open{background:var(--accent);color:var(--accent-ink)}
+.chip.placed{background:var(--warn);color:#1a1206}
+.chip.graded{background:var(--good);color:#fff}
+.frm{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.f.w2{grid-column:span 2}.f.w4{grid-column:span 4}
+.bz label{font:700 10.5px/1 ui-monospace,monospace;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink-3)}
+.bz input,.bz select{background:var(--page);border:1px solid var(--grid);color:var(--ink-1);border-radius:7px;
+  padding:9px 10px;font:15px system-ui;width:100%;min-width:0}
+.bz input:focus,.bz select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.btn{background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:11px 18px;
+  font:800 13px/1 system-ui;letter-spacing:1px;text-transform:uppercase;cursor:pointer}
+.btn.ghost{background:none;color:var(--ink-2);border:1px solid var(--grid)}
+.btn.sm{padding:7px 12px;font-size:11px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.err{color:var(--bad);font-size:13px;margin-top:9px;font-weight:600;min-height:18px}
+.err.ok{color:var(--good)}
+/* ⚠️ The site's base stylesheet sets a bare `th,td{text-align:right;white-space:nowrap}`
+   for the stats tables. This table needs left-aligned prose that wraps, and a bare
+   `td` rule beats "no declaration at all" — so both must be stated explicitly here
+   or the columns drift right of their headers and long legs refuse to wrap. */
+table.bz{width:100%;border-collapse:collapse;font-size:14px}
+table.bz th{text-align:left;font:700 10.5px/1 ui-monospace,monospace;letter-spacing:1.1px;text-transform:uppercase;
+  color:var(--ink-3);padding:0 8px 9px;border-bottom:1px solid var(--grid);white-space:nowrap}
+table.bz td{padding:10px 8px;border-bottom:1px solid var(--grid);vertical-align:top;
+  text-align:left;white-space:normal}
+table.bz td.px,table.bz td.tm{white-space:nowrap}
+table.bz tr:last-child td{border-bottom:0}
+tr.me td{background:color-mix(in srgb, var(--accent) 7%, transparent)}
+tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
+.who{font-weight:750}.pk{color:var(--ink-2);font-size:13.5px}
+.px{font:700 14px ui-monospace,monospace;white-space:nowrap}
+/* .tm wraps by default — it is used for prose captions as well as table cells.
+   Only the cells that must stay on one line get nowrap back (see table.bz above).
+   As nowrap it shot the "scores come from ESPN" caption off the card on a phone. */
+.tm{font:11px ui-monospace,monospace;color:var(--ink-3)}
+.pend{color:var(--ink-3);font-style:italic}
+.tag{display:inline-block;font:700 9.5px/1 ui-monospace,monospace;letter-spacing:.8px;padding:3px 6px;
+  border-radius:4px;text-transform:uppercase;margin-left:6px}
+.tag.w{background:var(--good);color:#fff}.tag.l{background:var(--bad);color:#fff}.tag.p{background:var(--ink-3);color:#fff}
+.tick{display:flex;gap:22px;flex-wrap:wrap;align-items:baseline;border-top:1px solid var(--grid);margin-top:14px;padding-top:14px}
+.big{font:800 29px/1 ui-monospace,monospace;color:var(--accent);letter-spacing:-1px}
+.lil{font:700 10.5px/1 ui-monospace,monospace;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink-3)}
+/* slot machine */
+.machine{background:#16120d;border-radius:12px;border-top:3px solid var(--accent);padding:18px 16px;display:flex;gap:16px}
+.reels{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;flex:1;min-width:0}
+.pos{font:700 9.5px/1 ui-monospace,monospace;letter-spacing:1.4px;color:#b7a488;text-transform:uppercase;margin-bottom:5px;text-align:center}
+.win{position:relative;height:70px;overflow:hidden;border-radius:7px;background:var(--surface-1);
+  border:2px solid rgba(255,255,255,.09);transition:border-color .18s,box-shadow .18s}
+.win.locked{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent)}
+.cell{height:70px;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 5px;
+  font-weight:800;font-size:12px;line-height:1.2;text-transform:uppercase;border-bottom:1px solid var(--grid)}
+.lever{width:50px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;flex:0 0 50px}
+.rod{width:7px;flex:1;background:linear-gradient(90deg,#6b5636,#c9b287,#6b5636);border-radius:4px;min-height:48px;
+  transform-origin:50% 100%;transition:transform .42s cubic-bezier(.3,1.5,.5,1)}
+.knob{width:28px;height:28px;border-radius:50%;background:var(--accent);margin-top:-6px;box-shadow:inset 0 -4px 8px rgba(0,0,0,.32)}
+.lever.pulled .rod{transform:rotate(24deg) scaleY(.7)}
+.ord{list-style:none;padding:0;margin:14px 0 0;display:grid;gap:6px}
+.ord li{display:flex;gap:10px;align-items:baseline;opacity:0;transform:translateY(4px);
+  transition:opacity .3s,transform .3s;font-size:14px}
+.ord li.on{opacity:1;transform:none}
+.ord .n{font:800 11px ui-monospace,monospace;color:var(--accent);flex:0 0 16px}
+.ord li:first-child b{color:var(--accent)}.ord .d{color:var(--ink-3);font-size:13px}
+.verdict{background:#16120d;color:#ecdfc9;border-radius:12px;padding:22px;margin-bottom:16px;text-align:center}
+.verdict .nm{font:800 34px/1 system-ui;color:#fff;letter-spacing:-.8px;margin:6px 0}
+.verdict .why{color:#b7a488;font-size:14px}
+.note{font-size:13px;color:var(--ink-3);margin:12px 0 0;border-top:1px solid var(--grid);padding-top:11px}
+.row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.gr{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:8px 0;
+  border-bottom:1px solid var(--grid);font-size:13.5px}
+.gr input{width:96px}
+/* auth */
+.who-strip{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13.5px}
+.who-strip .nm{font-weight:750}
+.auth{max-width:420px}
+.auth .f{margin-bottom:10px}
+.readonly{border-left:3px solid var(--warn);padding-left:12px;color:var(--ink-2);font-size:13.5px}
+@media(max-width:640px){
+  .frm{grid-template-columns:1fr 1fr}.f.w4{grid-column:span 2}
+  .reels{grid-template-columns:1fr 1fr}.machine{flex-direction:column}
+  .lever{flex-direction:row;width:100%;flex:0 0 auto;gap:12px;align-items:center}
+  .rod{flex:1;min-height:0;height:8px;transform-origin:0 50%}
+  .lever.pulled .rod{transform:scaleX(.72)}.knob{margin:0}
+  table.bz td,table.bz th{padding-left:5px;padding-right:5px}
+  .bz-hdr h1{font-size:24px}
+}
+@media(prefers-reduced-motion:reduce){.strip,.rod,.ord li{transition:none!important}}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="nav"></div>
+<script data-page="bozo">
+// Shared nav + theme + live-sync client. Each page: <div id="nav"></div> then this script with data-page attr.
+
+// ---------- DDSync: one-way live mirror (operator writes, everyone else reads) ----------
+// Firebase Realtime Database over plain REST — no SDK. Writes are PUT; reads are an
+// EventSource stream, so phones get pushes instead of polling. The operator stays
+// localStorage-first: a failed push never blocks a sale.
+(function(){
+  const LS_CFG = "dd-sync-v1";
+  // Permanent league DB (created 7/31/26). Baked in so leaguemates need no ?sync= link —
+  // the normal Live Draft URL just works. Rules allow read+write on /drafts only.
+  const DEFAULT = { url: "https://data-dawgs-draft-default-rtdb.firebaseio.com", room: "pepperoninipples" };
+  let cfg = null;
+
+  function readCfg(){
+    if(cfg) return cfg;
+    let c = null;
+    try{
+      const q = new URLSearchParams(location.search).get("sync");
+      if(q){
+        c = JSON.parse(atob(q.replace(/-/g,"+").replace(/_/g,"/")));
+        localStorage.setItem(LS_CFG, JSON.stringify(c));   // shared link sticks on this device
+      }
+    }catch(e){}
+    if(!c){ try{ c = JSON.parse(localStorage.getItem(LS_CFG)); }catch(e){} }
+    if(!c || !c.url) c = DEFAULT;
+    c.url = (c.url||"").replace(/\/+$/,"");
+    c.room = (c.room||"pepperoninipples").replace(/[.#$\[\]\/]/g,"-");
+    cfg = c; return c;
+  }
+
+  let pushTimer = null, lastSent = "";
+  window.DDSync = {
+    get config(){ return readCfg(); },
+    get on(){ return !!readCfg().url },
+    save(url, room){
+      const c = { url:(url||"").trim().replace(/\/+$/,""), room:(room||"pepperoninipples").trim() };
+      try{ localStorage.setItem(LS_CFG, JSON.stringify(c)); }catch(e){}
+      cfg = null; return readCfg();
+    },
+    endpoint(){ const c = readCfg(); return c.url ? `${c.url}/drafts/${c.room}.json` : null; },
+    // shareable link for the league: carries the config so phones need no setup
+    link(page){
+      const c = readCfg();
+      if(!c.url) return location.origin + "/" + (page||"board.html?view=live");
+      const tok = btoa(JSON.stringify(c)).replace(/\+/g,"-").replace(/\//g,"_");
+      const p = page || "board.html?view=live";
+      return location.origin + "/" + p + (p.includes("?") ? "&" : "?") + "sync=" + tok;
+    },
+    // operator → cloud. debounced, best-effort, never throws into the caller
+    push(state){
+      const ep = this.endpoint(); if(!ep) return;
+      clearTimeout(pushTimer);
+      pushTimer = setTimeout(()=>{
+        let body;
+        try{ body = JSON.stringify({ ts: Date.now(), state }); }catch(e){ return; }
+        if(body === lastSent) return;
+        lastSent = body;
+        fetch(ep, { method:"PUT", body, headers:{"Content-Type":"application/json"} })
+          .then(()=>window.dispatchEvent(new CustomEvent("ddsync", {detail:{ok:true,dir:"up"}})))
+          .catch(()=>window.dispatchEvent(new CustomEvent("ddsync", {detail:{ok:false,dir:"up"}})));
+      }, 500);
+    },
+    // live when the stream is open OR we heard from it in the last 30s
+    get connected(){
+      const es = this._es;
+      if(es && es.readyState === 1) return true;
+      return (Date.now() - (this._lastHeard||0)) < 30000;
+    },
+    // readers ← cloud. cb(state) whenever the operator publishes something newer
+    subscribe(cb){
+      const ep = this.endpoint(); if(!ep) return null;
+      const self = this;
+      let es, lastTs = 0, retry = 0;
+      const open = ()=>{
+        try{ es = new EventSource(ep); self._es = es; }catch(e){ return; }
+        es.addEventListener("open", ()=>{ retry = 0; self._lastHeard = Date.now();
+          window.dispatchEvent(new CustomEvent("ddsync",{detail:{ok:true,dir:"down"}})); });
+        const handle = ev=>{
+          self._lastHeard = Date.now();
+          let msg; try{ msg = JSON.parse(ev.data); }catch(e){ return; }
+          const d = msg && msg.data;
+          const payload = d && (d.state || (d.ts ? null : d));
+          const ts = d && d.ts;
+          if(!payload) return;
+          if(ts && ts <= lastTs) return;
+          lastTs = ts || Date.now();
+          window.dispatchEvent(new CustomEvent("ddsync",{detail:{ok:true,dir:"down"}}));
+          try{ cb(payload); }catch(e){}
+        };
+        es.addEventListener("put", handle);
+        es.addEventListener("patch", handle);
+        es.addEventListener("error", ()=>{
+          try{ es.close(); }catch(e){}
+          retry = Math.min(retry + 1, 6);
+          setTimeout(()=>{
+            open();
+            // only call it down once a reconnect has actually failed to land
+            setTimeout(()=>window.dispatchEvent(new CustomEvent("ddsync",
+              {detail:{ok:self.connected,dir:"down"}})), 1200);
+          }, 1000 * retry);
+        });
+      };
+      open();
+      return ()=>{ try{ es.close(); }catch(e){} };
+    }
+  };
+})();
+
+(function(){
+  const page = window.DD_PAGE || document.currentScript.getAttribute('data-page') || "";
+  // ---- per-page theme: each page remembers its own light/dark ----
+  // key bumped to v2 when light became the default — old saved prefs (mostly from testing)
+  // would otherwise pin existing visitors to dark forever
+  const TKEY = "dd-theme2-" + (page || "home");
+  const GKEY = "dd-theme2";
+  window.DDTheme = {
+    current(){
+      // light is the site default; the live draft board overrides via DD_THEME_DEFAULT
+      try{
+        return localStorage.getItem(TKEY) || window.DD_THEME_DEFAULT
+            || localStorage.getItem(GKEY) || "light";
+      }catch(e){ return window.DD_THEME_DEFAULT || "light"; }
+    },
+    apply(){
+      const t = this.current();
+      document.documentElement.dataset.theme = t;
+      document.querySelectorAll("[data-ddtheme-btn]").forEach(b=>{
+        b.textContent = t === "dark" ? "☀ Light" : "☾ Dark";
+      });
+      return t;
+    },
+    toggle(){
+      const next = this.current() === "dark" ? "light" : "dark";
+      try{ localStorage.setItem(TKEY, next); localStorage.setItem(GKEY, next); }catch(e){}
+      this.apply();
+      if(window.onThemeChange) window.onThemeChange();
+    }
+  };
+  window.DDTheme.apply();
+  const NAV = [
+    {label:"Home", href:"index.html", key:"home"},
+    {label:"Draft", items:[
+      // Live / Sheet / Analysis / Grades are now tabs inside the dashboard, not
+      // four sibling pages. The old URLs still work and stay reachable directly.
+      ["dashboard.html","Dashboard","dashboard","hot"],
+      // everything below the rule is operator-only — it gets locked down on draft day
+      ["auction.html","Auctioneer Controls","auction","","sep"],
+    ]},
+    {label:"Data", items:[
+      ["master.html","Master Data","master"],
+      ["strategy.html","2026 Strategy","strategy"],
+      ["stats.html","NFL EPA Stats","stats"],
+    ]},
+    {label:"Dawgs", href:"dawgs.html", key:"dawgs"},
+  ];
+  const nav = document.getElementById("nav");
+  nav.className = "sitenav";
+  const brand = document.createElement("a");
+  brand.className = "brand"; brand.href = "index.html";
+  brand.innerHTML = '<img src="data:image/png;base64,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" alt="Data Dawgs logo"><span class="logo">DATA <span>DAWGS</span></span><span class="tag">Data, Not Dogma</span>';
+  nav.appendChild(brand);
+  const links = document.createElement("div"); links.className = "links";
+  NAV.forEach(entry=>{
+    if(entry.href){
+      const a = document.createElement("a");
+      a.href = entry.href; a.textContent = entry.label;
+      if(entry.key===page) a.className = "on";
+      links.appendChild(a);
+      return;
+    }
+    const grp = document.createElement("div"); grp.className = "navgrp";
+    const active = entry.items.some(it=>it[2]===page);
+    const btn = document.createElement("button");
+    btn.className = "grpbtn"+(active?" on":"");
+    btn.innerHTML = entry.label+' <span class="caret">▾</span>';
+    btn.addEventListener("click", e=>{
+      e.stopPropagation();
+      const wasOpen = grp.classList.contains("open");
+      document.querySelectorAll(".navgrp.open").forEach(g=>g.classList.remove("open"));
+      if(!wasOpen) grp.classList.add("open");
+    });
+    const menu = document.createElement("div"); menu.className = "grpmenu";
+    entry.items.forEach(([href,label,key,hot,sep])=>{
+      const a = document.createElement("a");
+      a.href = href; a.textContent = label;
+      if(key===page) a.classList.add("on");
+      if(hot) a.classList.add("hot");
+      if(sep) a.classList.add("sep");            // rule above = operator territory
+      menu.appendChild(a);
+    });
+    grp.appendChild(btn); grp.appendChild(menu);
+    links.appendChild(grp);
+  });
+  nav.appendChild(links);
+  document.addEventListener("click", ()=>{
+    document.querySelectorAll(".navgrp.open").forEach(g=>g.classList.remove("open"));
+  });
+  // Forced flex line-break: on phones the nav links fill row 1 and the LIVE DRAFT pill +
+  // theme button get row 2 to themselves, both rows centred. Without it the wrap lands
+  // wherever the widths happen to fall (3 links / 1 link + pill + button) and looks arbitrary.
+  const brk = document.createElement("i"); brk.className = "navbrk";
+  links.appendChild(brk);
+
+  // The LIVE DRAFT pill is gone (8/1): Live is a tab inside the Dashboard, so the pill
+  // was a second route to the same place. Its other job — showing DDSync connection —
+  // moved to the dashboard's summary strip.
+
+  const btn = document.createElement("button");
+  btn.className = "theme-btn"; btn.id = "themeBtn";
+  btn.setAttribute("data-ddtheme-btn","");
+  btn.addEventListener("click", ()=>window.DDTheme.toggle());
+  links.appendChild(btn);   // in .links, not nav: one flex run, so it wraps with the rest on mobile
+  window.DDTheme.apply();
+
+  // offline insurance: cache the draft pages so a dead venue wifi can't kill the room
+  if("serviceWorker" in navigator &&
+     (location.protocol === "https:" || location.hostname === "localhost")){
+    navigator.serviceWorker.register("/sw.js").catch(()=>{});
+  }
+})();
+
+/* ---------- Toto: shared draft assistant, available on every draft page ----------
+   The API key is NOT here and must never be. datadawgs216.com is a static site in a
+   public repo, so anything in this file is world-readable. The key lives in a Cloudflare
+   Worker; this talks to the Worker and sends a shared league passphrase instead.
+   Any page that sets window.DD_POOL (the player pool) gets the bot automatically. */
+(function(){
+  const BOT_URL = "https://toto.jkapcar4.workers.dev/";              // Worker endpoint, baked at build time
+  const LS_PASS = "dd-bot-pass";             // league passphrase, per browser
+  const LS_AI   = "dd-ai-v1";                // optional personal-key override (operator)
+  const LS_STATE= "dd-auction-v1";
+
+  const cfgAI = () => { try{ return JSON.parse(localStorage.getItem(LS_AI)||"{}"); }catch(e){ return {}; } };
+  const getPass = () => { try{ return localStorage.getItem(LS_PASS)||""; }catch(e){ return ""; } };
+  const setPass = v => { try{ localStorage.setItem(LS_PASS, v); }catch(e){} };
+  const state = () => { try{ return JSON.parse(localStorage.getItem(LS_STATE)||"null"); }catch(e){ return null; } };
+
+  const SYS = `You are Toto, the live auction assistant for Data Dawgs ("Data, not dogma"). You advise whoever is asking, mid-draft, in a 14-team fantasy football auction.
+You are named for the dog in The Wizard of Oz — the one who pulled back the curtain and showed the wizard was just a man working levers. That is the job: cut through draft-night theater and say what the numbers actually support.
+Rules:
+- Use ONLY the numbers in the provided draft state. Never invent players, prices, or values not listed there.
+- MV is a dated market-consensus value snapshot, not a points projection. Surplus vs MV measures buying below consensus, not winning.
+- Reason from: dollars left, open starting slots, positional scarcity on the board, inflation, and each rival's max bid. $1-3 endgame fills are a real plan, not a failure.
+- Be direct and short — draft-night answers. 3-8 sentences or a tight list. Plain text only: no markdown, no headers, no tables.
+- When asked to decide, decide: name the player(s), the price you'd pay, and the one thing that would change your mind.
+- When the state does not support a confident answer, say so plainly instead of dressing a guess up as analysis. That is the whole point of you.
+- If the state shows no picks yet, say so and talk strategy rather than pretending to see a board.
+How-to questions about the site are also yours to answer, from the SITE MANUAL supplied below.
+- Answer how-to questions from the manual ONLY. If a step is not in it, say you do not know and suggest what is — never invent a button, menu or shortcut. Made-up UI steps mid-draft are worse than no answer.
+- Reason across the manual freely: combine steps to solve a problem it does not spell out (e.g. wrong player AND wrong team = undo, then re-enter). Just do not invent the steps themselves.
+- Same voice for how-to as for draft advice: short, plain text, no markdown.`;
+
+// Site manual — single source of truth for Toto's how-to answers. If the UI changes,
+// change this in the SAME commit or Toto starts confidently lying about it.
+const HELP = `AUCTIONEER CONTROLS (auction.html) — the operator's page. One device runs the draft.
+ENTERING A SALE: type into "Player (select = on the block)". An autocomplete list appears; Down/Up arrows move, Enter selects, Escape closes. Selecting a player puts them on the block. Then pick the winning Team, type Price $, and press SOLD. A player not in the pool gets a "Pos (custom)" dropdown so you can set the position by hand.
+VOICE: the microphone button, or press V when you are not typing in a field. Say "nominate {player}" to put someone on the block, or "{player} {team} {price}" to log a sale. Including the word "keeper" marks that pick as a keeper.
+UNDO THE LAST SALE: the "Last sale" row sits under the entry bar and has an "Undo this pick" button. It asks to confirm — "Yes, undo" or "Cancel".
+FIX AN OLDER PICK: open the gear Menu, then "Pick log (undo / edit)". Every pick there has an editable price box and a team dropdown, and both save the moment you change them. The x button on a row deletes that pick. Price edits are clamped so a team cannot be pushed past $0.
+NOMINATION QUEUE (gear Menu): type a name and press +. Click a queued name to load it into the entry bar. The x removes it. Only the operator sees this.
+BEST AVAILABLE: four buttons under the entry bar showing the top remaining QB, RB, WR and TE with an inflation-adjusted price. Tapping one loads that player.
+THE MONEY PILE: every team's remaining budget, sorted, at the bottom of the operator page.
+GEAR MENU also holds: Setup, "Start <n>s timer", "Advance nomination", "Projector shows" (Draft Board / Rosters / What's Left / Report Card), Recap, Export CSV, and Reset draft.
+RESET DRAFT is deliberately two clicks: the first turns it into "Click again to RESET ALL", and it disarms itself after about 4 seconds.
+SETUP holds: Budget $, Roster spots, Values (Half PPR / Full PPR / Superflex), Timer secs, My team, Voice announcer, Snark mode, and Announcer voice.
+EXPORT CSV columns: pick, player, pos, team, owner, price, etr_value, keeper.
+ON THE CLOCK is shown in the page header. "Advance nomination" moves it to the next team. Undoing a non-keeper pick steps it back one.
+OTHER PAGES: Big Board is the projector view — it is deliberately not in the nav, open it by URL on the projector machine, and what it displays is set from "Projector shows". LIVE DRAFT in the nav is the read-only board for everyone else. Draft Data Viz, Report Card, Cheat Sheet and Master Data are read-only views of the same draft.
+STATE: everything saves in the browser on that device. A different device shows a different draft unless the live mirror is switched on. Pages are cached for offline so the draft survives losing wifi — but Toto itself needs the network, so say so if someone asks for help while offline.`;
+
+  function ctx(){
+    const POOL = window.DD_POOL || [];
+    const S = state();
+    if(!S || !S.settings) return "No draft state on this device yet.";
+    const st = S.settings, picks = S.picks || [];
+    const scoring = st.scoring || "half";
+    const val = p => +p[scoring] || 0;
+    const norm = p => p==="D" ? "DST" : p;
+    const teams = st.teams || [];
+    const sold = new Set(picks.map(p=>p.player));
+
+    const T = teams.map((t,i)=>({name:t.name, ti:i, spent:0, n:0,
+      pos:{QB:0,RB:0,WR:0,TE:0,DST:0}}));
+    picks.forEach(pk=>{ const t=T[pk.ti]; if(!t) return;
+      t.spent+=pk.price; t.n++; const P=norm(pk.pos); if(t.pos[P]!==undefined) t.pos[P]++; });
+    T.forEach(t=>{ t.left=(st.budget||200)-t.spent; t.open=(st.spots||15)-t.n; });
+
+    let remValue=0;
+    POOL.forEach(p=>{ if(!sold.has(p.name) && val(p)>=1) remValue+=val(p); });
+    const remDollars=T.reduce((a,t)=>a+Math.max(0,t.left),0);
+    const infl = remValue>0 ? remDollars/remValue : 1;
+
+    const L=[];
+    L.push(`LEAGUE: 14-team offline auction, $${st.budget} budget, ${st.spots} roster spots each (QB, 2 RB, 2 WR, TE, 2 FLEX W/R/T, DEF, rest bench; no kicker). Scoring: ${{half:"Half PPR",full:"Full PPR",sf:"Superflex"}[scoring]||scoring}. $0 bids are legal, so a team's max bid = its dollars left.`);
+    L.push(`MV = Market Value, a market-consensus auction-dollar snapshot dated 2026-07-29. It is not a points projection.`);
+    L.push(`STATE: ${picks.length} sold. Inflation ${infl.toFixed(2)}x — $${remDollars} chasing $${Math.round(remValue)} of MV still on the board.`);
+    L.push(`TEAMS (name | $ left = max bid | spots open | QB/RB/WR/TE/DST drafted):`);
+    // whoever is looking at this device — falls back to the operator's team if unset
+    const me = (window.DDMe && window.DDMe.idx(teams));
+    const my = (me==null ? st.myTeam : me);
+    T.forEach((t,i)=>L.push(`${i===my?"*":"-"} ${t.name} | $${t.left} | ${t.open} | ${t.pos.QB}/${t.pos.RB}/${t.pos.WR}/${t.pos.TE}/${t.pos.DST}${i===my?"  <-- THE TEAM I AM ASKING ABOUT (mine)":""}`));
+
+    if(T[my]){
+      const mine=picks.filter(p=>p.ti===my);
+      L.push(`MY ROSTER${mine.length?"":" (no picks yet)"}:`);
+      mine.forEach(p=>L.push(`- ${p.player} (${norm(p.pos)}) paid $${p.price}, MV $${p.etr||0}`));
+      const c=T[my].pos, flexUsed=Math.max(0,c.RB-2)+Math.max(0,c.WR-2)+Math.max(0,c.TE-1), holes=[];
+      if(c.QB<1)holes.push("QB"); if(c.RB<2)holes.push((2-c.RB)+" RB"); if(c.WR<2)holes.push((2-c.WR)+" WR");
+      if(c.TE<1)holes.push("TE"); const fl=Math.max(0,2-flexUsed); if(fl)holes.push(fl+" FLEX"); if(c.DST<1)holes.push("DEF");
+      L.push(`MY OPEN STARTING SLOTS: ${holes.length?holes.join(", "):"none — starters filled, bench only"}. I have $${T[my].left} for ${T[my].open} open spots.`);
+    }
+
+    L.push(`BEST AVAILABLE by position (MV, inflation-adjusted in parens):`);
+    ["QB","RB","WR","TE"].forEach(P=>{
+      const av=POOL.filter(p=>p.pos===P && !sold.has(p.name) && val(p)>=1)
+                   .sort((a,b)=>val(b)-val(a)).slice(0,8);
+      L.push(P+": "+(av.map(p=>`${p.name} $${val(p)} (adj $${Math.max(1,Math.round(val(p)*infl))}${p.tags&&p.tags.length?", "+p.tags.join("/"):""})`).join("; ")||"none left worth $1+"));
+    });
+    // master-data layer: tags + commentary, so Toto can say WHY a player is a target or a fade
+    const tagged=POOL.filter(p=>!sold.has(p.name) && val(p)>=1 && ((p.tags||[]).length || p.note))
+                     .sort((a,b)=>val(b)-val(a)).slice(0,16);
+    if(tagged.length){
+      L.push(`SCOUTING on available players (one analyst's opinions, not facts — tags: buy = target, fade = avoid, zrb = late-round RB plan):`);
+      tagged.forEach(p=>{
+        const tg=(p.tags||[]).length ? " ["+p.tags.join(", ")+"]" : "";
+        L.push(`- ${p.name} $${val(p)}${tg}${p.note?": "+p.note:""}`);
+      });
+    }
+    const lastPick = picks.length ? picks[picks.length-1] : null;
+    if(lastPick){
+      const lp = POOL.find(x=>x.name===lastPick.player);
+      const own=(teams[lastPick.ti]||{}).name||"?";
+      const d=(lastPick.etr||0)-lastPick.price;
+      L.push(`MOST RECENT SALE: ${lastPick.player} to ${own} for $${lastPick.price} (MV $${lastPick.etr||0}, ${d>=0?"under":"over"} by $${Math.abs(d)})${lp&&lp.note?" — scouting: "+lp.note:""}`);
+    }
+    const rec=picks.slice(-6).reverse();
+    if(rec.length){ L.push(`LAST ${rec.length} SALES:`); rec.forEach(p=>L.push(`- ${p.player} (${norm(p.pos)}) $${p.price} to ${(teams[p.ti]||{}).name||"?"} (MV $${p.etr||0})`)); }
+    return L.join("\n");
+  }
+
+  const HIST=[]; let busy=false;
+
+  function say(who,txt){
+    const box=document.getElementById("ddbMsgs"); if(!box) return null;
+    const el=document.createElement("div");
+    el.className="ddb-m "+who+(txt==="…thinking"?" dim":"");
+    el.textContent=txt;                     // textContent, never innerHTML — no XSS from a reply
+    box.appendChild(el); box.scrollTop=box.scrollHeight;
+    return el;
+  }
+
+  async function ask(q){
+    if(busy) return;
+    const ai=cfgAI(), pass=getPass();
+    const direct = !!ai.key;                        // operator override: own key, straight to xAI
+    if(!direct && !BOT_URL){ say("sys","Toto isn't wired up yet — no proxy configured."); return; }
+    if(!direct && !pass){ askPass(); return; }
+    if(window.DDMe && !window.DDMe.isSet && window.DD_POOL){
+      say("sys","First — which team are you? Tap the “Who are you?” chip at the bottom-left, then ask again. Otherwise I'd be advising the operator's team, not yours.");
+      return;
+    }
+    say("you",q); HIST.push({role:"user",content:q});
+    busy=true; const th=say("bot","…thinking");
+    try{
+      const url = direct ? (ai.url||"https://api.x.ai/v1")+"/chat/completions" : BOT_URL;
+      const headers = direct
+        ? {"Content-Type":"application/json","Authorization":"Bearer "+ai.key}
+        : {"Content-Type":"application/json","X-Dawg-Pass":pass};
+      const payload = {max_tokens:700,
+        messages:[{role:"system",content:SYS},
+                  {role:"system",content:"SITE MANUAL (how the site works — use for how-to questions):\n"+HELP},
+                  {role:"system",content:"CURRENT DRAFT STATE (regenerated for every question):\n"+ctx()},
+                  ...HIST.slice(-8)]};
+      if(direct) payload.model = window.DDBot.cfg().model;
+      const r=await fetch(url,{method:"POST",headers,body:JSON.stringify(payload)});
+      const t=await r.text();
+      if(!r.ok){
+        let msg=t.slice(0,200);
+        try{ const j=JSON.parse(t); msg=j.error||msg; }catch(e){}
+        if(r.status===401 && !direct){ setPass(""); throw new Error(msg+" Tap 🤖 again to re-enter it."); }
+        throw new Error(msg);
+      }
+      const data=JSON.parse(t);
+      const out=(((data.choices||[])[0]||{}).message||{}).content||"(empty reply)";
+      HIST.push({role:"assistant",content:out});
+      if(th){ th.textContent=out; th.classList.remove("dim"); }
+    }catch(e){
+      if(th){ th.classList.add("err"); th.classList.remove("dim");
+        th.textContent = (e instanceof TypeError)
+          ? "Couldn't reach Toto. Check this device is online. ("+e.message+")"
+          : String(e.message||e); }
+      HIST.pop();
+    }finally{ busy=false; }
+  }
+
+  function askPass(){
+    const box=document.getElementById("ddbMsgs"); if(!box) return;
+    if(document.getElementById("ddbPass")) return;
+    const w=document.createElement("div"); w.className="ddb-m sys"; w.id="ddbPass";
+    w.innerHTML='<div style="margin-bottom:6px">Enter the league passphrase to use Toto.</div>';
+    const i=document.createElement("input");
+    i.type="password"; i.placeholder="league passphrase"; i.autocomplete="off";
+    i.style.cssText="width:100%;padding:7px 9px;border-radius:8px;border:1px solid var(--border);background:var(--surface-1);color:var(--ink-1);font-size:14px";
+    const go=()=>{ const v=i.value.trim(); if(!v) return; setPass(v); w.remove(); say("sys","Saved on this device. Ask away."); };
+    i.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); go(); } e.stopPropagation(); });
+    const b=document.createElement("button"); b.className="ddb-go"; b.textContent="Save"; b.style.marginTop="6px";
+    b.addEventListener("click",go);
+    w.appendChild(i); w.appendChild(b); box.appendChild(w); i.focus();
+  }
+
+  function style(){
+    if(document.getElementById("ddbCSS")) return;
+    const s=document.createElement("style"); s.id="ddbCSS";
+    s.textContent=`
+/* Launcher: deliberately loud. Casual leaguemates need to spot this without being told. */
+#ddbLaunch{position:fixed;right:18px;bottom:18px;z-index:58;border:0;
+  display:flex;align-items:center;gap:11px;padding:8px 22px 8px 8px;
+  background:var(--accent);color:var(--accent-ink,#fff);border-radius:999px;
+  font-size:16px;font-weight:750;letter-spacing:.01em;cursor:pointer;font-family:inherit;
+  box-shadow:0 8px 26px rgba(0,0,0,.30);transition:transform .13s ease, box-shadow .13s ease}
+#ddbLaunch:hover{transform:translateY(-2px);box-shadow:0 13px 32px rgba(0,0,0,.36)}
+#ddbLaunch:active{transform:translateY(0)}
+/* seal-brown badge + orange dawg = the same pairing as the site banner. On white the
+   thin binary artwork washed out; on brown it reads at 40px. */
+#ddbLaunch .dg{width:40px;height:40px;border-radius:50%;background:#2a1a06;flex:none;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
+#ddbLaunch .dg img{width:26px;height:33px;object-fit:contain;display:block}
+#ddbLaunch .lb{white-space:nowrap}
+/* one-time nudge so first-timers notice it, then it goes quiet forever */
+#ddbLaunch.nudge{animation:ddbNudge 2.6s ease-in-out 3}
+@keyframes ddbNudge{
+  0%,100%{box-shadow:0 8px 26px rgba(0,0,0,.30), 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent)}
+  50%    {box-shadow:0 8px 26px rgba(0,0,0,.30), 0 0 0 14px color-mix(in srgb, var(--accent) 0%, transparent)}
+}
+@media (prefers-reduced-motion:reduce){#ddbLaunch.nudge{animation:none}}
+/* avatar in the dock header */
+#ddbDock .ddb-av{width:26px;height:26px;border-radius:50%;background:var(--accent);flex:none;
+  display:flex;align-items:center;justify-content:center;overflow:hidden}
+#ddbDock .ddb-av img{width:17px;height:21px;object-fit:contain;display:block;filter:brightness(0) invert(1)}
+#ddbDock{position:fixed;right:14px;bottom:14px;z-index:60;width:min(400px,calc(100vw - 28px));
+  max-height:min(560px,78vh);display:flex;flex-direction:column;background:var(--surface-1);
+  border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.28);overflow:hidden}
+#ddbDock .ddb-h{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--grid);font-size:14px}
+#ddbDock .ddb-h .sub{color:var(--ink-3);font-size:11px}
+#ddbDock .ddb-x{margin-left:auto;background:none;border:0;color:var(--ink-2);font-size:15px;cursor:pointer;padding:2px 6px}
+.ddb-chips{display:flex;gap:6px;flex-wrap:wrap;padding:8px 10px 0}
+.ddb-chips button{font-size:11.5px;padding:4px 9px;border-radius:999px;border:1px solid var(--border);
+  background:transparent;color:var(--ink-2);cursor:pointer;font-family:inherit}
+.ddb-chips button:hover{color:var(--accent);border-color:var(--accent)}
+.ddb-msgs{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px;min-height:120px}
+.ddb-m{font-size:13px;line-height:1.45;white-space:pre-wrap;border-radius:10px;padding:7px 10px;max-width:94%;overflow-wrap:anywhere}
+.ddb-m.you{align-self:flex-end;background:var(--accent);color:var(--accent-ink,#fff)}
+.ddb-m.bot{align-self:flex-start;background:transparent;border:1px solid var(--grid);color:var(--ink-1)}
+.ddb-m.sys{align-self:stretch;color:var(--ink-3);font-size:12px;text-align:center}
+.ddb-m.dim{opacity:.6}
+.ddb-m.err{color:var(--bad);border-color:var(--bad)}
+.ddb-row{display:flex;gap:8px;padding:10px;border-top:1px solid var(--grid)}
+.ddb-row input{flex:1;min-width:0;background:var(--surface-1);border:1px solid var(--border);
+  border-radius:8px;padding:8px 10px;color:var(--ink-1);font-size:14px;font-family:inherit}
+.ddb-go{background:var(--accent);color:var(--accent-ink,#fff);border:0;border-radius:8px;
+  padding:8px 14px;font-size:13.5px;font-weight:650;cursor:pointer;font-family:inherit}
+@media (max-width:760px){#ddbDock{right:0;left:0;bottom:0;width:100vw;border-radius:14px 14px 0 0;max-height:74vh}
+  #ddbLaunch{right:12px;bottom:12px;font-size:15px;padding:7px 18px 7px 7px}
+  #ddbLaunch .dg{width:36px;height:36px} #ddbLaunch .dg img{width:23px;height:29px}}
+@media print{#ddbLaunch,#ddbDock{display:none!important}}`;
+    document.head.appendChild(s);
+  }
+
+  function mount(){
+    if(document.getElementById("ddbDock")) return;
+    style();
+    const d=document.createElement("div"); d.id="ddbDock"; d.style.display="none";
+    d.innerHTML=`<div class="ddb-h"><span class="ddb-av"><img src="data:image/png;base64,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" alt=""></span>
+        <b>Toto</b><span class="sub">reads the live draft</span>
+        <button class="ddb-x" id="ddbClose" title="Close">✕</button></div>
+      <div class="ddb-chips">
+        <button data-q="What should I do with the rest of my picks?">Rest-of-draft plan</button>
+        <button data-q="Who is the best value on the board right now, and what would you pay?">Best value now</button>
+        <button data-q="Where is the next positional cliff, and should I pay to beat it?">Next cliff</button>
+      </div>
+      <div id="ddbMsgs" class="ddb-msgs"></div>
+      <div class="ddb-row"><input type="text" id="ddbIn" placeholder="Ask Toto about the draft…" autocomplete="off">
+        <button class="ddb-go" id="ddbGo">Ask</button></div>`;
+    document.body.appendChild(d);
+    const go=()=>{ const i=document.getElementById("ddbIn"); const v=i.value.trim(); if(v&&!busy){ i.value=""; ask(v); } };
+    d.querySelector("#ddbGo").addEventListener("click",go);
+    d.querySelector("#ddbIn").addEventListener("keydown",e=>{ if(e.key==="Enter") go(); e.stopPropagation(); });
+    d.querySelector("#ddbClose").addEventListener("click",()=>{ d.style.display="none"; });
+    d.querySelectorAll(".ddb-chips button").forEach(b=>b.addEventListener("click",()=>ask(b.dataset.q)));
+    if(!cfgAI().key && !getPass()) askPass();
+  }
+
+  const AI_DEFAULTS={url:"https://api.x.ai/v1",key:"",model:"grok-4-1-fast"};
+  const AI_MODEL_FIX={"grok-4.1-fast":"grok-4-1-fast","grok-4.1":"grok-4-1-fast"};
+
+  window.DDBot={
+    // personal-key override (operator only) — everyone else goes through the proxy
+    cfg(){ const c=Object.assign({},AI_DEFAULTS,cfgAI());
+           if(AI_MODEL_FIX[c.model]) c.model=AI_MODEL_FIX[c.model];
+           return c; },
+    saveCfg(url,key,model){ try{ localStorage.setItem(LS_AI, JSON.stringify({
+        url:(url||"").trim().replace(/\/+$/,"")||AI_DEFAULTS.url,
+        key:(key||"").trim(),
+        model:(model||"").trim()||AI_DEFAULTS.model })); }catch(e){} },
+    open(){ mount(); document.getElementById("ddbDock").style.display="";
+            const i=document.getElementById("ddbIn"); if(i&&innerWidth>760) i.focus(); },
+    toggle(){ mount(); const d=document.getElementById("ddbDock");
+              const opening=d.style.display==="none"; d.style.display=opening?"":"none";
+              if(opening){ const i=document.getElementById("ddbIn"); if(i&&innerWidth>760) i.focus(); } },
+    forgetPass(){ setPass(""); }
+  };
+
+  // Auto-launcher on any page that exposes a player pool — unless the page supplies its
+  // own button (#aiBtn on the operator). Deferred so page scripts can define DD_POOL first.
+  addEventListener("load", ()=>{
+    setTimeout(()=>{
+      if(!window.DD_POOL || !window.DD_POOL.length) return;
+      style();
+      if(document.getElementById("aiBtn")) return;
+      if(document.getElementById("ddbLaunch")) return;
+      const b=document.createElement("button");
+      b.id="ddbLaunch"; b.type="button";
+      b.title="Ask Toto — he reads the live draft board";
+      b.innerHTML='<span class="dg"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHAAAACMCAMAAACTbt0bAAAAwFBMVEUAAAD+agP+aAL+aQP+ZwX+aAP+cAb/bAP+aQL/cAj+cAb+cAb/exQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABU7ULNAAAAQHRSTlMAj1JvFDalyLMmZULhAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOmwTNAAAEtlJREFUeNrtW9ty3DoOHJIgxYv+/3u3uwFq5LGT2OOqfdha55zEliVSxKXRaHIej/9//Ve+ZinlVwPUMot9//bcjuOov5mQAxw/uD3nlH81YUm5tPztu1vKKf3KpinVko7xTYOevY92pN+48DxqSsf5zYhZeTxy/Y1JbeWH1fW9uEktwfp4P/uFC1syDvQdo9ajtI67jzP/woUHhii9fydScx205qi/CdNa14Nj1PxPM6WzpY67S2/tfRfiYczUe+vn+Fd49ZR4c2o/SdxXKyHrOQa8c/zjtWe2UWkGq1bejppRl/yx7F+eSUhBWeORez/fTv2GURxvOob5y3uvM+FLr1SO43zXiQaL6lmbmPBvRoVBbfgLWa1jve3DYRErFeNN+zPEM65G+L23d1O/HG2HeIOHjrP+CUNbKokQanwIWfumE1maAokXJkx/ive16rAaq8I3lt+0aYU/tnEMTqrzyyW21hFURTdhduT/cY63cA0GbSnGMSBzS18ZFUWplZ4ecWMlEL4Vp4xRNynHIaK28lWhykC+cVsRIbXOdybEc6M+483knfE5QrH27u/lpuDX+caMsCAiZfpIfPPekNzHSzyUE6YuaVwTyqTv2LQi6cOkQxM+Up+lvxp1rTHqsA+hZkj9n9dEgCcGyi9D2Uuhwpq57lhfmBTX2ll/blE9mPdYBDAN3+qdESA+D5mZecOVCg/fsOk4kV6HY8aICQHiCJE7cE0kah3bfLajNI+8fsrdRqmWXys9A7fezMwSAVCzy6JcIS7ANvmnTrQs5zxNGktE7xB1SJQnATrLRrTwYW/5LaDBGMlNypE8IcGKy617YMZvGmqXSePWpgRqM8HReM+GN80gPbM/8N3ktalrHhPJIz3muWU/Jlj1btKW9m9suEnxPyDpPKLb6J1TMqnLgdYqH5gQ0Jva7IUVwduthAdoucLBxwiLsj26SrvgDm+ZLnT3m8bDTjxNS5MPLdCGhXV04FHDRcOEcFfPvMZU6BOPPEZveGrycWHpNeGHxMj4+oLZN9bHss3sf/jf8NEe+yp/tEf1SQqS7ovsHZigrm3ifrAwyWMbAAk+IBy5ZiEF+o2ySp2llpqLIaCRLzlPXsu6NnjNuwokWH6a6+EUqTE9N55m5KHfM+4EDjW/K9oQNx1hLKvAhwxqMAK4nrDc+Ye/KI8mwOBT542qjcjEMi9y01JQC9SobfVywqKHr/tAb4OgafQXK0FHLbCOvhwQNvGbpmv5IUtiJFbS4wr6yhlXYdCMq0Qj4JoD7+VAIk2AA96M3CM/VNhgZVoD/RjimdcGyPMymKLIt4KoJ6sw2a6Sol5Bs2DRNR53/x1dENy8vtTI4aFiWuksi2uMfV3LzJ1N1GDiTaN9zLHAmK6q3EgJu17GvW3n4RDskYRnE5kCvNX8a24f9uc1ezjSF390t3s5M+F5sR8bJ9dcMqZt+jodzavnyuSElYmf8kFKdKRJYGAepplW1zV0IsGx8aiBANboTbh8BC/C8goaYXd5upAJ2EmKvYGlHJEHhmeWpJVTpffLg6GtayXzGuD3iOEaEy1FqBpXmBWXF3jj5Rk0VneHAXCEK0LICKZwIaPdMfJ+zTzPKuOD4wd6mSacMOq6gmbIoTFfmvAwXnzzixO+KcrB5m5MPbsP9SNTEb5MYDPBufDw4rrnDglvVa6gsd4jaDxEzi4C5U2lJgSq1CYfdoH3nKgi7kNdA/9C6bEe/ACYgXhj6Jzp0rYQNH0HzUwzp3RLyjyVpxHY8Af8hfUMwFuHtQugxwhtSK4xK55IacKnLWw4aE/8dqbIK+Ek/DRu4L2L1Sz8adKg+32u3uuT514v785kwZ4r8++8QxWQuzZ4gy/BhrYDlHTn6Jc4x3JzshAnVkNWYTCuipLG4FaFLGQjKIAZEOrJV2DTnY3nNtxx5aHNeWU8UkwrBAWZoiUYIx1EjaYC3Ev3Yos0oMmuAgykA71uPqMBqOvCEHMWZwyImvwE77LVUWuFU+GvEEzzeXr4ANRTQwFWRJae3YcIUCSmQpWE9Eg7TrIG4YxkHz7JfEqwKD0z4lFmYMweWv9cpiI7/pqHQYJIEuDG5KyWUCbSf3o5rsdTLgRaWGQgwAM5hIDxOgEoS17tcLNiL02AGWAfrwuTzsa1MJwHxjuYmDFs5kiZI62ZI5Ke75m0wCmi4xyV9zSsax7eJ56o1rXAX8o5kij3IW7Gtck2m4BKSBN3Y27EVwvEyek2YXaNk1SDM/BnQxFVr58OZ/26rwluAK6of8V9mLnAdCJ9mdzJA5sDcLUOIUIgS5/anjXU5HsXhTgTlrPZYMVbN946PmUkYMt2HhqKjwKS1VrV2MUCe+VoXV8If2NJOuVvrZEv7tUMiwK8MC4ySiISO4GqGFutg6Hae9wfXVDyIfvFOD5qJk3RIaMUVeDmKhK/KwwdQmLBCx0ly4ewIf5nLegCgQ5AgNdb2RUZ8EBcb+2zoG0sETlogIFbApWAB0XhBIyqa9ayxKDDh56Hie1V5e/rUvuVBRwIUcQzPaKIX7DDejWo4Ex2W5HtJ6GKwaKsCt/ngXGdHTuJwr8pUjeL7O1Sg6eL0u+4Q9xlUaK776YMGkqAI7hgxNYGoEI7k7wS5D6Uh1g/jciqAXuwnlspQuzJfwF7Sw9omBd5QpdLdn08ZZ/RmzpGPbtFjYFoKbkj6oqbVMXc72QFT/6UQyMmbo5zs9yTMLQHGtTuTSTaxoOWPsm+wYOPAEoms+ohCI44P0C7S3GpNCZ8fIiCW+gh9Ej08x90E/hVhBWNgqpZZbAwcPCCQwVNpmFfIh/WaLQK9aOiHkQ2IDtTcWDHgb6jaPD8SSfMGizniLGlGS2p2CX5EW7QPUX2AeGhuyrMmLwQGOs+q0P1estOH69cqg/7SZHrZDWiPjR/FOeIsZPNcjtO9jYGLFvqnrgyFIietEvxEJSGfsEVsgCiqDIweMenZhAoS4TijTehDGGQQw+wpn9odAQIeSiGjBVnsdeyYf8JliRwVJo/7/O4g8f8JCSQ7Q09htaPYV4LfQhSzpcr2pvULwmbnzZGBvexGECfhu0uY3ymR9bcrEXlJBQQYx4iLQomYAUJXtS/0JDNW7jX3xAo6uNLnYsCitQ6k0ZIxM6mtIDH6euEuFhN5fBLVWcA7z7tQhECuYf33Mzp7Sa8DOlUY8p0czAmM81VPQZNQTKe4mB6kl5WToMf0ot+hA7SHk9loZ538EssPhzGFOH0iiO1gr7BNjmV+5aq4+h+XfaB66N3sxN7EZLqGt15F7zZnhgYuprX4SxVQg6jhqIZy9f4MOEKkWLSGWQNH8w9k0zYiEDeZ/dTDOMRfE5Jw/QWlUajUYvPSEfoVylY135YxjSSqyZk7OmjPGbRn1voVsbahDgILk1PYHXxNpm9vatlNC1/FdsrmEkPyTy8gfzEs65+DES+gZFBEUuETmd8xY2k9x5WtVMgx72tXBNG06LXjIesBOhj0YzSe+pnwjkbPIITCK3jYeeTz9sk8VT5GxNmEnvO6NLPRZL9IeEwAsqh0f+9C/bDdSluqAgras1/E7VtMSnYYP5lK1y7sgMxpqZJmHk/VyB9lo045UjG+/zDUAt3zkTyplL7p9MIq2RFGIsN4JtHM1K67aV0mZLSiH9HTqWqqG7xZvzK3h8mFUdTuzTv2VzUq7PgJAL8kZqj4lDJeXpnLhUskCuUHBUU0i7VXjRA+UPVlEQPJxd1Gur3b+viyliqJy20CqnQ5Hgc7bnFKyoi3BexEbfR+ggQpe5dpNiBMMqXFvW+qmnaG1aI2ek8kQ7Lm4tVdYSaeBMa7vE5aSb9JaE1Eo0SnWMdu63jb3kDqbhk2c2WI33JC7IbFL1F977k4VBzy4t6bUtTmc4KqDGooikMd87CZRgLqbPTIvE7vGR9rpH7XAzfCMz6HPge0YXvvA9ibAVcBmYhEAOkoJdXsep935QONXBhVlar5eJE3Y/5yQNu0jjjQKz1ct/dKFs1YgBS6pHd2ZVXj9IBb6nyg9OjK8qmlwfZyFZAqFQ8TDPix6L+BoBeukOQTZi+fiyH67kxK9ImSsGKJYZTAalAM3lQZixqfWRSXAAQZndjDYG0BP97KjPrhWEcYReyWWZjZ1gbYktePHkApciHPXwoWUMTZlQm33UdFGYYZ9owF4uQNywdL/1TyJduXwa2ZCPbgFTkHXNVlssYzrok1uKPMekd0DzMxEsj81iIPp07KTzxERerEI4KdQ05ajaEwUIvr8ZEXYYgoFA0QbEn8O9OnhsS5KqXxg02wQL00iBWNq8jCDmVRynUETBo4I+p8ydkrwS2g4oQtabE70GRAV5NCo0ChxwOkeejUVWz1Mvrpljd3NT35NSaes/OQ1mAdt91pw+p7FM1R+Qc+PuY7eQRo3bGlpo4TF3jRnjXK2E1Bg2hum4O0yWUxN7Chjd77tLcd2zG8Ah1oS2zkh9bj6b5L7H4nhhZmvcFmkViwVYbYNF8UNrT1jT/0e5iovZGBQ7+y+ySz2BO+doVoQAyxE5e6yWDhrpRDjynyy0oMhs+uKhRaqKoQJm9+baM+5NJRCVD2oVJFIpxHMgt2edjTM5mIw/I30Nxr0W1C8x0JipdTVrHszylvsRJVT3bDkHHV+TV8gm/OKngSRTIAv7nbU07vOlGAvzxQCbnLi5K+rGWEfKk+YBjy+8fnwLSTBRQL1vUrbLL143fadP7TwRmMEYmt1e2enmQpAtOWF0Dar94UPvg3iGUSMFMxOajkz9T8lHkNAk2UvrZlE7RrgqGoR4CKDxtn20B2/qTaC3hwa1hAlNFSpICpTLTuIXiNTAnyYfMPq48ScFiYXPNq2mF5CnzQ4/6usKq3ayrtslITKODesWDKaGDoI0KP9aWPUVYgnJ3+onUsL2lppMDH8+wvMKNMxnZkgRwNN9HHdIxMFlVGLAaApoW/+YfsRYBMWktUX/JINw8ewr7X7JJObn4+YmqnKdeME/ygfOM/Z2mlN/iK7+h6ujqXxwrG5oQCFm9o/vznr+s6ht+0sDZZcGwidvaDc08RT8VE8vTv2XtIIqWnjBtPhxuQmolwbG/H2yYTuvUgzH4HHhrbKfEqQBSDJKtIHNohJlqKoWYYaoNF02dufzjwCEP0TCMwTQoDfY+QpqWarI3PYvkuM0zs44EkEPCHKP3MwV2ogex8a/jFdmBTBM2yWwse+xW0xNpwJxtzXnrN8w7sJMdL5tR1SYGzD8PjxjpryKap16yCzBh06cCgF/ceKarurhJO8nVC49ajfqNk3FW696gbNof4CayE4RrK4eJcFNAvQzq0MTBk7obA2ut3zlsuEoEcmFRLmci40ovPdu0/HIQvInXA2dsnxOtpXzvgNM2lsJtLlI3+/gk5e38clKVds+SKeveOavfPGpoF8/IVJj8gJZ2osYzsuDrbVIdt8uxDcMN6rTZxXdPbzqVMcbo5JlhkLOkU6AleQ+BZLUcaVEdxXhW4/DTVzVOIv/gGHUNZCVVVf9irpGwxfVYkJbIA4E5xZHi5SaFFSw27H9wQm24BAgGXxwsU5AU85aVqQrmIX3aiV0qG16Z+60E4f7ZqU2qH4URqlMR3idoFa6IawPEoXL0JJP6sctxvPfBgsVdDB7NQesPi87gc0RkxfHYJ7TpdPShE+CzyISsvHcIvvGA/yySSdRRpIi6OtXpPOUG36uI7QttBr9zLrVqHwN2ZeKT6x7PHavBqa+sVvOdYiOX96R+vrHEKnKDtx7c5aHcj17pCzJUqZpqTztEED30xoRFW02FB60kpRR2CbufupGS9dDJBsolhSxTuwbpjY9OFBE1bupSp0gyabfBKmy36glv6pzU3aTlrQ/cdPU/sM7i5tnKCh4aemWPQu0MsuDlhRWBkPpBq6ze641PMpRKsKSMvnQKDuxs8NBOjazYjQExZ/HULM+zidczQ3++wnVINObeLq2VXL1gDrKpljzF/VQ2dS1sLilCUfrOx7RmPNvV65LykhN6g1UkgZAEqoPl9joIXNPJUmp95WCL/uOzxUtnmSQBrTFEeZdruLETxuWy23SJiLyY95IGrzV/fDRVZzLsQcM21/KovIAD5mflNZ28eYTNVZ7CD8fxY6zR7r1x+wBJpi6C5VWc9G4HwvicLUyadM5Fh/V/fiLdKOU9qKYJvAdNOh+vRBo0Vgf/9IkjqYfSMPI7n9QopPlJhy49CBtNaltoz5dmSXP2tM1e2Ei990GNebBjaItFeBa1n5svsam9xCxKkZMm5Suh9s63P9g3fNgVFtunbP3TBjp1G71GdWTg+Rkefn3/Q2/crBGJUuLHNpQ2Oci81z7lNdUMN9eKEbWP33yltqYSv3kFCDzLflYyKCz3JmTS50G2t7+4YTC19R1KLpJa0rTkCZSkYGgomgT5X37WVV0hRddL7jS7TmbfvhW5Qhrl/LtPnv5vfP0HOX2SYkO1T+AAAAAASUVORK5CYII=" alt=""></span><span class="lb">Ask Toto</span>';
+      // gentle attention ring until it's been opened once on this device
+      try{ if(!localStorage.getItem("dd-bot-seen")) b.classList.add("nudge"); }catch(e){}
+      b.addEventListener("click",()=>{
+        try{ localStorage.setItem("dd-bot-seen","1"); }catch(e){}
+        b.classList.remove("nudge");
+        window.DDBot.toggle();
+      });
+      document.body.appendChild(b);
+    }, 300);
+  });
+})();
+
+/* ---------- DDMe: who is looking at THIS device ----------
+   The mirrored draft state carries the OPERATOR's `settings.myTeam`. Every other device
+   needs its own answer to "which team am I", so identity lives in its own localStorage
+   key that DDSync never touches. Resolve by NAME first — team order can change. */
+(function(){
+  const KEY="dd-me-v1", listeners=[];
+  const raw=()=>{ try{ return JSON.parse(localStorage.getItem(KEY)||"null"); }catch(e){ return null; } };
+  const teams=()=>{ try{ const S=JSON.parse(localStorage.getItem("dd-auction-v1")||"null");
+      return (S&&S.settings&&S.settings.teams)||[]; }catch(e){ return []; } };
+  const fire=()=>listeners.forEach(f=>{ try{ f(); }catch(e){} });
+
+  window.DDMe={
+    get isSet(){ return !!raw(); },
+    get name(){ const m=raw(); return m?m.name:null; },
+    teams,
+    idx(list){
+      const t=list||teams(), m=raw();
+      if(!m || !t.length) return null;
+      const byName=t.findIndex(x=>x && x.name===m.name);
+      if(byName>=0) return byName;                                   // name wins
+      if(typeof m.ti==="number" && m.ti>=0 && m.ti<t.length) return m.ti;
+      return null;
+    },
+    set(ti){
+      const t=teams(), nm=(t[ti]||{}).name||null;
+      try{ localStorage.setItem(KEY, JSON.stringify({ti:+ti, name:nm})); }catch(e){}
+      fire(); return nm;
+    },
+    clear(){ try{ localStorage.removeItem(KEY); }catch(e){} fire(); },
+    onChange(fn){ listeners.push(fn); },
+    openPicker(){ openPicker(); }
+  };
+
+  function style(){
+    if(document.getElementById("ddmeCSS")) return;
+    const s=document.createElement("style"); s.id="ddmeCSS";
+    s.textContent=`
+#ddmeChip{position:fixed;left:16px;bottom:18px;z-index:58;display:flex;align-items:center;gap:7px;
+  border:1px solid var(--border);background:var(--surface-1);color:var(--ink-2);border-radius:999px;
+  padding:8px 15px;font-size:13.5px;font-weight:650;cursor:pointer;font-family:inherit;
+  box-shadow:0 5px 18px rgba(0,0,0,.20)}
+#ddmeChip:hover{border-color:var(--accent);color:var(--accent)}
+#ddmeChip .who{color:var(--ink-1);font-weight:750}
+#ddmeChip.unset{background:var(--accent);color:var(--accent-ink,#fff);border-color:transparent;font-size:14.5px}
+#ddmeChip.unset .who{color:inherit}
+#ddmePanel{position:fixed;left:16px;bottom:64px;z-index:59;background:var(--surface-1);
+  border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 34px rgba(0,0,0,.28);
+  padding:8px;min-width:214px;max-height:60vh;overflow-y:auto;display:none}
+#ddmePanel .hd{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);
+  font-weight:700;padding:5px 9px 7px}
+#ddmePanel button{display:block;width:100%;text-align:left;background:none;border:0;font-family:inherit;
+  padding:8px 10px;border-radius:8px;color:var(--ink-1);font-size:14px;cursor:pointer}
+#ddmePanel button:hover{background:color-mix(in srgb, var(--accent) 13%, transparent);color:var(--accent)}
+#ddmePanel button.on{color:var(--accent);font-weight:750}
+@media(max-width:760px){#ddmeChip{left:10px;bottom:12px;font-size:12.5px;padding:7px 12px}
+  #ddmePanel{left:10px;bottom:56px}}
+@media print{#ddmeChip,#ddmePanel{display:none!important}}`;
+    document.head.appendChild(s);
+  }
+
+  function openPicker(){
+    style();
+    let p=document.getElementById("ddmePanel");
+    if(!p){ p=document.createElement("div"); p.id="ddmePanel"; document.body.appendChild(p);
+      addEventListener("click",e=>{ if(p.style.display!=="none" &&
+        !p.contains(e.target) && e.target.id!=="ddmeChip" && !e.target.closest("#ddmeChip")) p.style.display="none"; });
+    }
+    const t=teams(), cur=window.DDMe.idx(t);
+    p.textContent="";
+    const h=document.createElement("div"); h.className="hd"; h.textContent="Which team are you?"; p.appendChild(h);
+    t.forEach((tm,i)=>{
+      const b=document.createElement("button");
+      b.textContent=tm.name + (tm.owner && tm.owner!==tm.name ? "  ·  "+tm.owner : "");
+      if(i===cur) b.className="on";
+      b.addEventListener("click",()=>{ window.DDMe.set(i); p.style.display="none"; render();
+        if(typeof window.ddRerender==="function") window.ddRerender(); else location.reload(); });
+      p.appendChild(b);
+    });
+    p.style.display="block";
+  }
+
+  function render(){
+    const c=document.getElementById("ddmeChip"); if(!c) return;
+    const nm=window.DDMe.idx()!=null ? teams()[window.DDMe.idx()].name : null;
+    c.className = nm ? "" : "unset";
+    c.innerHTML = nm ? `You: <span class="who">${nm.replace(/[<>&]/g,"")}</span> ▾`
+                     : `👤 Who are you? ▾`;
+    c.title = nm ? "Change which team you are" : "Pick your team to personalize this page";
+  }
+
+  addEventListener("load",()=>{
+    setTimeout(()=>{
+      if(!window.DD_POOL || !window.DD_POOL.length) return;      // draft pages only
+      if(document.getElementById("ddmeChip")) return;
+      style();
+      const b=document.createElement("button");
+      b.id="ddmeChip"; b.type="button";
+      b.addEventListener("click",e=>{ e.stopPropagation(); openPicker(); });
+      document.body.appendChild(b);
+      render();
+      window.DDMe.onChange(render);
+    }, 340);
+  });
+})();
+
+</script>
+
+<div class="bz">
+
+<div class="bz-hdr"><h1>Bozo</h1><span class="chip" id="statusChip">—</span></div>
+<p class="bz-sub">One favorite each, one big parlay. Whoever busts it worst wears it — and funds next week's ticket.</p>
+
+<!-- ---------- identity ---------- -->
+<div class="card" id="authCard">
+  <h2 class="bz" id="authH">Sign in</h2>
+  <div id="authBody"></div>
+  <div class="err" id="authErr"></div>
+</div>
+
+<div class="card" id="meCard" style="display:none;padding:12px 16px">
+  <div class="who-strip">
+    <span>Signed in as <span class="nm" id="meName">—</span></span>
+    <span class="tm" id="adminBadge"></span>
+    <span style="margin-left:auto"></span>
+    <button class="btn ghost sm" id="chgPw">Change password</button>
+    <button class="btn ghost sm" id="signOut">Sign out</button>
+  </div>
+  <div id="pwBox" style="display:none;margin-top:12px">
+    <div class="frm">
+      <div class="f w2"><label>Current password</label><input id="pwOld" type="password" autocomplete="current-password"></div>
+      <div class="f w2"><label>New password</label><input id="pwNew" type="password" autocomplete="new-password"></div>
+      <div class="f w4"><div class="row" style="justify-content:flex-end">
+        <button class="btn ghost sm" id="pwCancel">Cancel</button>
+        <button class="btn sm" id="pwSave">Save</button>
+      </div></div>
+    </div>
+    <div class="err" id="pwErr"></div>
+  </div>
+</div>
+
+<!-- ---------- submit ---------- -->
+<div class="card" id="submitCard" style="display:none">
+  <h2 class="bz" id="submitH">Your leg</h2>
+  <div class="frm">
+    <div class="f"><label>Sport</label><select id="fSport"></select></div>
+    <div class="f w2"><label>Game</label><select id="fGame"><option value="">Loading…</option></select></div>
+    <div class="f"><label>Market</label><select id="fMkt">
+      <option value="spread">Spread</option><option value="ml">Moneyline</option>
+      <option value="total">Total</option><option value="prop">Player prop</option></select></div>
+    <div class="f w2"><label>Side</label><select id="fSide"></select></div>
+    <div class="f" id="lineWrap"><label id="lineLbl">Number</label><input id="fLine" type="number" step="0.5" placeholder="6.5"></div>
+    <div class="f"><label>Price</label><input id="fPrice" type="number" step="5" placeholder="-175"></div>
+    <div class="f w2" id="propWrap" style="display:none"><label>Player &amp; stat</label><input id="fProp" placeholder="Kelce receiving yards"></div>
+    <div class="f w4"><div class="row" style="justify-content:flex-end">
+      <button class="btn ghost sm" id="clearMine" style="display:none">Remove my leg</button>
+      <button class="btn" id="save">Submit leg</button>
+    </div></div>
+  </div>
+  <div class="err" id="err"></div>
+  <p class="note">Favorites only, −100 to −300. No exact duplicates. Editing resets your clock <em>and</em> your price. The ticket locks the moment the last leg lands.</p>
+</div>
+
+<!-- ---------- the ticket ---------- -->
+<div class="card">
+  <div class="bz-hdr"><h2 class="bz" style="margin:0">The ticket</h2><span class="tm" id="fill"></span></div>
+  <table class="bz" id="board"><tbody></tbody></table>
+  <div class="tick">
+    <div><div class="lil">Legs</div><div class="big" id="tLegs">0</div></div>
+    <div><div class="lil">Parlay price</div><div class="big" id="tOdds">—</div></div>
+    <div><div class="lil">$50 returns</div><div class="big" id="tPay">—</div></div>
+  </div>
+  <p class="note" id="placeNote"></p>
+</div>
+
+<!-- ---------- hierarchy ---------- -->
+<div class="card" id="drawCard" style="display:none">
+  <h2 class="bz">This week's hierarchy</h2>
+  <div class="machine"><div class="reels" id="reels"></div>
+    <div class="lever" id="lever"><div class="rod"></div><div class="knob"></div></div></div>
+  <ol class="ord" id="ord"></ol>
+  <p class="note">Drawn on the server the moment the last leg landed — the reels are showing you a result that already exists. Only legs that lost are eligible. Ties fall to the next rule down.</p>
+</div>
+
+<!-- ---------- grading (admin) ---------- -->
+<div class="card" id="gradeCard" style="display:none">
+  <h2 class="bz">Grade the week</h2>
+  <div class="row"><button class="btn" id="autoGrade">Pull results</button>
+    <span class="tm">Scores come straight from ESPN. Props and closing prices are the only manual bits.</span></div>
+  <div class="err" id="gerr"></div>
+  <div id="manual" style="margin-top:14px"></div>
+</div>
+
+<div class="verdict" id="verdict" style="display:none">
+  <div class="lil" style="color:#b7a488">This week's bozo</div>
+  <div class="nm" id="vName">—</div><div class="why" id="vWhy"></div>
+</div>
+
+<!-- ---------- season ---------- -->
+<div class="card">
+  <h2 class="bz">Season</h2><table class="bz" id="lb"><tbody></tbody></table>
+  <div class="row" style="margin-top:14px" id="adminRow" style="display:none">
+    <button class="btn ghost sm" id="next">Start next week</button>
+  </div>
+  <p class="note" id="srcNote"></p>
+</div>
+
+</div>
+
+</div>
+<script>
+/* ============================================================
+   Bozo — the trust layer lives in the Worker, not here.
+   Reads come straight from RTDB (/bozo is world-readable, so the board is
+   public and needs no credential). Every WRITE goes to the toto Worker with a
+   session header; the Worker stamps the timestamp, enforces the price band and
+   draws the tiebreaker permutation. Nothing here is load-bearing for fairness —
+   if you forged this whole file you still could not write a pick.
+   ============================================================ */
+const WORKER = 'https://toto.jkapcar4.workers.dev';
+const DB     = 'https://data-dawgs-draft-default-rtdb.firebaseio.com';
+const SESS_K = 'dd-bozo-sess';
+
+// The Worker is the authority on who may grade (BOZO_ADMIN). This constant only
+// decides whether to SHOW the admin controls — a wrong value here gets a 403,
+// it does not grant anything. The repo is public; this was never a secret.
+const ADMIN = 'Kap';
+
+const SPORTS = {nfl:{n:'NFL',sd:13.5,tot:10.5}, cfb:{n:'CFB',sd:16,tot:14},
+  nba:{n:'NBA',sd:11.5,tot:17}, cbb:{n:'CBB',sd:10.5,tot:13},
+  mlb:{n:'MLB',sd:4.4,tot:4.2}, nhl:{n:'NHL',sd:2.3,tot:2.1}};
+const ESPN_PATH = {nfl:'football/nfl', cfb:'football/college-football',
+  nba:'basketball/nba', cbb:'basketball/mens-college-basketball',
+  mlb:'baseball/mlb', nhl:'hockey/nhl'};
+const LEVERS = [{k:'odds',name:'Shortest Odds',desc:'biggest favorite in the pool'},
+  {k:'beat',name:'Worst Beat',desc:'finished furthest under its number'},
+  {k:'last',name:'Last In',desc:'final leg submitted'},
+  {k:'clv', name:'Worst CLV', desc:'price moved most against it'}];
+
+let S = {};                 // live state from RTDB
+let ROSTER = [];            // [{name, claimed}]
+let ME = null;              // {name, session}
+let GAMES = {};             // sport -> games[]
+let drawnOrder = null;      // so the reels only animate once per draw
+
+/* ---------------- session ---------------- */
+// The session is an HMAC-signed blob the Worker minted. We decode the payload
+// only to show a name and notice expiry — the signature is what matters and only
+// the Worker can check it.
+function loadSession(){
+  const raw = localStorage.getItem(SESS_K);
+  if(!raw) return null;
+  try{
+    const body = JSON.parse(atob(raw.split('.')[0].replace(/-/g,'+').replace(/_/g,'/')));
+    if(!body.n || !body.e || Date.now() > body.e){ localStorage.removeItem(SESS_K); return null; }
+    return {name:body.n, session:raw};
+  }catch(e){ localStorage.removeItem(SESS_K); return null; }
+}
+function setSession(tok){ localStorage.setItem(SESS_K, tok); ME = loadSession(); }
+function clearSession(){ localStorage.removeItem(SESS_K); ME = null; }
+
+// Every Worker GET gets a cache-buster. The Worker sends no-store now, but a
+// stale roster once showed a player the claim form after they had already
+// claimed — belt and braces, it costs nothing.
+const bust = () => 'cb=' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+
+async function wGet(path){
+  const r = await fetch(WORKER + path + (path.includes('?')?'&':'?') + bust());
+  const j = await r.json().catch(()=>({error:'bad response'}));
+  if(!r.ok) throw new Error(j.error || ('HTTP '+r.status));
+  return j;
+}
+async function wPost(path, body){
+  const h = {'Content-Type':'application/json'};
+  if(ME) h['X-Bozo-Session'] = ME.session;
+  const r = await fetch(WORKER + path, {method:'POST', headers:h, body:JSON.stringify(body||{})});
+  const j = await r.json().catch(()=>({error:'bad response'}));
+  if(!r.ok){
+    // The Worker kills sessions when a password changes or an admin resets you.
+    if(r.status === 401 && /sign in|password/i.test(j.error||'')){ clearSession(); renderAuth(); }
+    throw new Error(j.error || ('HTTP '+r.status));
+  }
+  return j;
+}
+
+/* ---------------- math (unchanged from the design session) ---------------- */
+const dec  = a => a<0 ? 1+100/Math.abs(a) : 1+a/100;
+const imp  = a => a<0 ? Math.abs(a)/(Math.abs(a)+100) : 100/(a+100);
+const amer = d => d>=2 ? '+'+Math.round((d-1)*100) : '-'+Math.round(100/(d-1));
+// Acklam's inverse normal — turns a price into an expected margin.
+function invNorm(p){
+  if(p<=0)return -6; if(p>=1)return 6;
+  const a=[-39.696830286653757,220.94609842452050,-275.92851044696869,138.35775186726900,-30.664798066147160,2.5066282774592392],
+        b=[-54.476098798224058,161.58583685804089,-155.69897985988661,66.801311887719720,-13.280681552885721],
+        c=[-0.0077848940024302926,-0.32239645804113648,-2.4007582771618381,-2.5497325393437338,4.3746641414649678,2.9381639826987831],
+        d=[0.0077846957090414622,0.32246712907003983,2.4451340770184519,3.7544086619074162];
+  const pl=0.02425; let q,r;
+  if(p<pl){ q=Math.sqrt(-2*Math.log(p));
+    return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+  if(p>1-pl){ q=Math.sqrt(-2*Math.log(1-p));
+    return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+  q=p-.5; r=q*q;
+  return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
+}
+function sdOf(x){ const s=SPORTS[x.sport];
+  return x.mkt==='total' ? s.tot : x.mkt==='prop' ? Math.max(Math.abs(x.line)*.55,1) : s.sd; }
+/* Expected result = the number, shifted by what the price says. A −175 favorite
+   laying 3 is expected to clear 3; a −110 laying 3 is expected to land on it.
+   That shift is why moneylines need no reference spread typed in: line is 0 and
+   the price alone carries the whole expectation. */
+function expected(x){
+  const sd=sdOf(x), p=Math.min(.98,Math.max(.02, imp(x.price)-.022));   // crude de-vig
+  const shift=sd*invNorm(p), base = x.mkt==='ml' ? 0 : x.line;
+  return x.dir==='under' ? base-shift : base+shift;
+}
+
+/* ---------------- scores: the page calls ESPN itself ---------------- */
+// The Worker's /scores proxy is dead — ESPN answers 403 to Cloudflare egress and
+// 200 to a browser, verified across three header shapes. ESPN's CORS is
+// permissive from datadawgs216.com, so we fetch direct and keep the Worker route
+// only as a fallback if that ever closes.
+function dateRange(){
+  const p=n=>String(n).padStart(2,'0'), f=x=>x.getFullYear()+p(x.getMonth()+1)+p(x.getDate());
+  const now=Date.now();
+  return f(new Date(now-3*864e5)) + '-' + f(new Date(now+10*864e5));
+}
+function slim(raw){
+  return (raw.events||[]).map(ev=>{
+    const comp=(ev.competitions&&ev.competitions[0])||{};
+    const teams=(comp.competitors||[]).map(c=>({
+      abbr:(c.team&&(c.team.abbreviation||c.team.shortDisplayName))||'?',
+      name:(c.team&&c.team.displayName)||'?',
+      home:c.homeAway==='home',
+      score:c.score==null?null:Number(c.score)}));
+    const st=(ev.status&&ev.status.type)||{};
+    return {id:String(ev.id), short:ev.shortName||ev.name||'', start:ev.date||null,
+            state:st.state||'pre', final:st.completed===true, teams};
+  });
+}
+async function fetchScores(sport){
+  const url = `https://site.api.espn.com/apis/site/v2/sports/${ESPN_PATH[sport]}/scoreboard?dates=${dateRange()}&limit=400`;
+  try{
+    const r = await fetch(url);
+    if(!r.ok) throw new Error('ESPN '+r.status);
+    return slim(await r.json());
+  }catch(e){
+    const j = await wGet(`/scores?sport=${sport}&dates=${dateRange()}`);   // fallback
+    return j.games||[];
+  }
+}
+async function loadGames(sport){
+  const sel=document.getElementById('fGame');
+  sel.innerHTML='<option value="">Loading…</option>';
+  try{
+    GAMES[sport]=await fetchScores(sport);
+    document.getElementById('srcNote').textContent='';
+  }catch(e){
+    GAMES[sport]=[];
+    document.getElementById('srcNote').textContent='Scores unreachable — '+e.message+'. Grading falls back to manual entry.';
+  }
+  paintGames();
+}
+function paintGames(){
+  const sp=document.getElementById('fSport').value, sel=document.getElementById('fGame');
+  const g=GAMES[sp]||[];
+  sel.innerHTML = g.length
+    ? g.map(x=>`<option value="${x.id}">${esc(x.short)}${x.final?' · final':''}</option>`).join('')
+    : '<option value="">no games in window</option>';
+  paintSides();
+}
+function paintSides(){
+  const sp=document.getElementById('fSport').value, id=document.getElementById('fGame').value;
+  const g=(GAMES[sp]||[]).find(x=>x.id===id), mk=document.getElementById('fMkt').value;
+  const sel=document.getElementById('fSide');
+  if(mk==='total'||mk==='prop') sel.innerHTML='<option value="over">Over</option><option value="under">Under</option>';
+  else sel.innerHTML=(g?g.teams:[]).map(t=>`<option value="${esc(t.abbr)}">${esc(t.name)}</option>`).join('');
+  document.getElementById('lineWrap').style.display = mk==='ml' ? 'none' : '';
+  document.getElementById('lineLbl').textContent = mk==='spread'?'Spread':mk==='total'?'Total':'Number';
+  document.getElementById('propWrap').style.display = mk==='prop' ? '' : 'none';
+}
+
+/* ---------------- live state ---------------- */
+// /bozo is world-readable, so the board streams straight from RTDB with no
+// credential. EventSource = push; the poll is only a safety net.
+function watchState(){
+  let es=null;
+  try{
+    es = new EventSource(DB + '/bozo.json');
+    es.addEventListener('put', ev=>{
+      try{
+        const m=JSON.parse(ev.data);
+        if(m.path === '/') { S = m.data || {}; render(); }
+        else refresh();
+      }catch(e){ refresh(); }
+    });
+    es.addEventListener('patch', refresh);
+    es.onerror = ()=>{ /* browser retries on its own; the poll covers gaps */ };
+  }catch(e){ /* no EventSource — poll only */ }
+  setInterval(refresh, 15000);
+  refresh();
+}
+async function refresh(){
+  try{
+    const r = await fetch(DB + '/bozo.json?' + bust());
+    S = (await r.json()) || {};
+    render();
+  }catch(e){ /* transient — the next tick retries */ }
+}
+
+/* ---------------- render ---------------- */
+const esc = s => String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+const when = ts => !ts ? '' : new Date(ts).toLocaleDateString(undefined,{weekday:'short'}) + ' ' +
+  new Date(ts).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
+const names = () => ROSTER.map(p=>p.name);
+const isAdmin = () => !!ME && ME.name === ADMIN;
+
+function render(){
+  const players = names();
+  const picks = S.picks || {};
+  const status = S.status || 'open';
+  const live = players.map(p=>({p, ...(picks[p]||{})})).filter(x=>x.price!=null);
+
+  const c=document.getElementById('statusChip');
+  c.className='chip '+status;
+  c.textContent='Week '+(S.week||1)+' · '+status;
+  document.getElementById('fill').textContent = live.length+' of '+players.length+' in';
+
+  const open = status==='open';
+  const mine = ME ? picks[ME.name] : null;
+  document.getElementById('submitCard').style.display = (ME && open) ? '' : 'none';
+  document.getElementById('submitH').textContent = mine ? 'Your leg — editing resets your clock and price' : 'Your leg';
+  const cm=document.getElementById('clearMine'); if(cm) cm.style.display = mine ? '' : 'none';
+
+  document.querySelector('#board tbody').innerHTML =
+    '<tr><th>Who</th><th>Leg</th><th>Price</th><th>In</th></tr>' +
+    players.map(p=>{
+      const x = picks[p] || {};
+      const r = (S.results||{})[p] || {};
+      let tag='';
+      if(status==='graded' && x.price!=null)
+        tag = r.won===true ? '<span class="tag w">W</span>'
+            : r.won===false ? '<span class="tag l">L</span>'
+            : '<span class="tag p">—</span>';
+      const cls = (ME && p===ME.name ? 'me ' : '') + (S.bozo===p ? 'bz-loser' : '');
+      if(x.price==null)
+        return `<tr class="${cls}"><td class="who">${esc(p)}</td><td class="pend" colspan="3">no leg yet</td></tr>`;
+      return `<tr class="${cls}"><td class="who">${esc(p)}</td><td class="pk">${esc(x.label)}${tag}
+        <br><span class="tm">${SPORTS[x.sport]?SPORTS[x.sport].n:x.sport} · ${esc(x.game)}${r.actual!=null?' · finished '+r.actual:''}</span></td>
+        <td class="px">${x.price}</td><td class="tm">${when(x.ts)}</td></tr>`;
+    }).join('');
+
+  document.getElementById('tLegs').textContent = live.length;
+  if(live.length){
+    const d = live.reduce((a,x)=>a*dec(x.price),1);
+    document.getElementById('tOdds').textContent = amer(d);
+    document.getElementById('tPay').textContent = '$'+Math.round(d*50).toLocaleString();
+  }else{
+    document.getElementById('tOdds').textContent='—';
+    document.getElementById('tPay').textContent='—';
+  }
+  document.getElementById('placeNote').textContent = open
+    ? `Locks when every leg is in — ${players.length-live.length} to go. That moment is the close, and the server draws the hierarchy on the spot.`
+    : 'Placed. Prices frozen; CLV is graded against the last leg in.';
+
+  // hierarchy
+  const ord = S.order;
+  document.getElementById('drawCard').style.display = ord ? '' : 'none';
+  if(ord){
+    const key = ord.join(',');
+    if(drawnOrder !== key){ const first = drawnOrder===null; drawnOrder=key; first ? paintOrder(ord) : spin(ord); }
+  } else drawnOrder = null;
+
+  // grading — the Worker is the authority; this only decides what to show
+  document.getElementById('gradeCard').style.display = (isAdmin() && status==='placed') ? '' : 'none';
+  if(isAdmin() && status==='placed') paintManual(live);
+  const ar=document.getElementById('adminRow');
+  if(ar) ar.style.display = (isAdmin() && status==='graded') ? '' : 'none';
+
+  document.getElementById('verdict').style.display = S.bozo ? '' : 'none';
+  if(S.bozo){
+    document.getElementById('vName').textContent = S.bozo;
+    document.getElementById('vWhy').textContent = S.bozoWhy||'';
+  }
+
+  // season table
+  const t={}; players.forEach(p=>t[p]=0);
+  (S.history||[]).forEach(h=>{ if(h && h.bozo && t[h.bozo]!=null) t[h.bozo]++; });
+  if(S.bozo && t[S.bozo]!=null) t[S.bozo]++;
+  const mx=Math.max(0,...Object.values(t));
+  document.querySelector('#lb tbody').innerHTML =
+    '<tr><th>#</th><th>Who</th><th>Bozos</th><th></th></tr>' +
+    players.slice().sort((a,b)=>t[b]-t[a]||a.localeCompare(b))
+      .map((p,i)=>`<tr class="${ME&&p===ME.name?'me':''}"><td class="tm">${i+1}</td>
+        <td class="who">${esc(p)}</td><td class="px">${t[p]}</td>
+        <td class="tm">${t[p]===mx&&mx>0?'funding this week':''}</td></tr>`).join('');
+}
+
+/* ---------------- submit ---------------- */
+async function submitLeg(){
+  const e=document.getElementById('err'); e.className='err'; e.textContent='';
+  const sp=fSport.value, id=fGame.value, mk=fMkt.value, side=fSide.value;
+  const price=+fPrice.value, line=+fLine.value;
+  const g=(GAMES[sp]||[]).find(x=>x.id===id);
+  if(!g) return e.textContent='Pick a game.';
+  if(!fPrice.value) return e.textContent='Price is required.';
+  if(price>-100||price<-300) return e.textContent=`${price} is outside the −100 to −300 band.`;
+  if(mk!=='ml' && !fLine.value) return e.textContent='Number is required for that market.';
+  const label = mk==='ml' ? side+' ML'
+    : mk==='spread' ? `${side} ${line>0?'-':''}${Math.abs(line)}`
+    : mk==='total' ? `${g.short} ${side==='over'?'o':'u'}${line}`
+    : `${fProp.value} ${side==='over'?'o':'u'}${line}`;
+  const pick = {sport:sp, eventId:id, game:g.short, mkt:mk, side, line: mk==='ml'?0:line,
+    price, label, prop: fProp.value||null};
+  const btn=document.getElementById('save'); btn.disabled=true;
+  try{
+    const res = await wPost('/bozo/pick', {pick});
+    e.className='err ok';
+    e.textContent = res.placed ? 'In — and that was the last leg. Ticket is locked.' : 'Submitted.';
+    await refresh();
+  }catch(err){ e.className='err'; e.textContent=err.message; }
+  btn.disabled=false;
+}
+
+/* ---------------- slot machine ---------------- */
+const REP=9, N=4, strips=[], wins=[];
+(function(){
+  const r=document.getElementById('reels');
+  for(let i=0;i<N;i++){
+    const s=document.createElement('div');
+    s.innerHTML=`<div class="pos">${['1st','2nd','3rd','4th'][i]}</div>`;
+    const w=document.createElement('div'); w.className='win';
+    const st=document.createElement('div'); st.className='strip';
+    for(let k=0;k<REP;k++) LEVERS.forEach(l=>{
+      const c=document.createElement('div'); c.className='cell'; c.textContent=l.name; st.appendChild(c);
+    });
+    w.appendChild(st); s.appendChild(w); r.appendChild(s); strips.push(st); wins.push(w);
+  }
+})();
+const reduced = matchMedia('(prefers-reduced-motion:reduce)').matches;
+function spin(order){
+  document.getElementById('drawCard').style.display='';
+  const lv=document.getElementById('lever');
+  lv.classList.add('pulled'); setTimeout(()=>lv.classList.remove('pulled'),430);
+  document.getElementById('ord').innerHTML=''; wins.forEach(w=>w.classList.remove('locked'));
+  const H=wins[0].getBoundingClientRect().height||70;
+  order.forEach((lev,slot)=>{
+    const s=strips[slot];
+    s.style.transition='none'; s.style.transform='translateY(0)'; void s.offsetHeight;
+    const dur = reduced ? 0 : 2000+slot*450;
+    s.style.transition=`transform ${dur}ms cubic-bezier(.11,.7,.14,1)`;
+    s.style.transform=`translateY(-${((REP-3)*N+lev)*H}px)`;
+    setTimeout(()=>{ wins[slot].classList.add('locked'); addOrd(lev,slot); }, dur+30);
+  });
+}
+function addOrd(lev,slot){
+  const l=LEVERS[lev], li=document.createElement('li');
+  li.innerHTML=`<span class="n">${slot+1}</span><span><b>${l.name}</b> <span class="d">— ${l.desc}</span></span>`;
+  document.getElementById('ord').appendChild(li);
+  requestAnimationFrame(()=>li.classList.add('on'));
+}
+function paintOrder(order){
+  const H=wins[0].getBoundingClientRect().height||70;
+  document.getElementById('ord').innerHTML='';
+  order.forEach((lev,slot)=>{
+    strips[slot].style.transition='none';
+    strips[slot].style.transform=`translateY(-${((REP-3)*N+lev)*H}px)`;
+    wins[slot].classList.add('locked'); addOrd(lev,slot);
+  });
+}
+
+/* ---------------- grading (admin) ---------------- */
+async function autoGrade(){
+  const e=document.getElementById('gerr'); e.className='err'; e.textContent='Pulling…';
+  const picks=S.picks||{}, entries=Object.entries(picks);
+  const results = JSON.parse(JSON.stringify(S.results||{}));
+  const sports=[...new Set(entries.map(([,x])=>x.sport))];
+  let got=0, missed=[];
+  for(const sp of sports){
+    let games;
+    try{ games=await fetchScores(sp); }
+    catch(err){ games=GAMES[sp]||[]; e.textContent='Scores unreachable — '+err.message; }
+    for(const [p,x] of entries){
+      if(x.sport!==sp) continue;
+      if(x.mkt==='prop'){ missed.push(p+' (prop)'); continue; }
+      const g=games.find(y=>y.id===x.eventId);
+      if(!g||!g.final){ missed.push(p); continue; }
+      results[p]=results[p]||{};
+      if(x.mkt==='total'){
+        const tot=g.teams.reduce((a,t)=>a+(t.score||0),0);
+        results[p].actual=tot; results[p].won = x.dir==='over' ? tot>x.line : tot<x.line;
+      }else{
+        const mineT=g.teams.find(t=>t.abbr===x.side), opp=g.teams.find(t=>t.abbr!==x.side);
+        if(!mineT||!opp){ missed.push(p); continue; }
+        const m=mineT.score-opp.score;
+        results[p].actual=m; results[p].won = x.mkt==='ml' ? m>0 : m>x.line;
+      }
+      got++;
+    }
+  }
+  S.results=results;
+  try{ await wPost('/bozo/grade', {results}); }
+  catch(err){ e.className='err'; e.textContent=err.message; return; }
+  e.textContent = `Graded ${got} leg${got===1?'':'s'}.` + (missed.length?` Needs you: ${missed.join(', ')}.`:'');
+  if(!missed.length) e.className='err ok';
+  await refresh();
+}
+function paintManual(live){
+  const need = live.filter(x => x.mkt==='prop' || ((S.results||{})[x.p]||{}).won==null);
+  document.getElementById('manual').innerHTML =
+    (need.length ? `<div class="lil" style="margin-bottom:6px">Manual — props and anything ESPN didn't cover</div>` +
+      need.map(x=>`<div class="gr"><span><b>${esc(x.p)}</b> <span class="pk">${esc(x.label)}</span></span>
+        <select data-w="${esc(x.p)}"><option value="">—</option><option value="1">Won</option><option value="0">Lost</option></select>
+        <input type="number" step="0.5" data-a="${esc(x.p)}" placeholder="actual"></div>`).join('') : '')
+    + `<div class="lil" style="margin:14px 0 6px">Closing prices — from the placed-ticket screenshot (optional)</div>`
+    + live.map(x=>`<div class="gr"><span><b>${esc(x.p)}</b> <span class="pk">${esc(x.label)}</span></span>
+        <span class="tm">took ${x.price}</span>
+        <input type="number" step="5" data-c="${esc(x.p)}" placeholder="close" value="${((S.results||{})[x.p]||{}).close ?? ''}"></div>`).join('')
+    + `<div class="row" style="margin-top:14px"><button class="btn" id="finish">Name the bozo</button></div>`;
+  document.getElementById('finish').onclick = decide;
+}
+async function decide(){
+  const e=document.getElementById('gerr'); e.className='err'; e.textContent='';
+  const results = JSON.parse(JSON.stringify(S.results||{}));
+  document.querySelectorAll('[data-w]').forEach(s=>{ if(s.value===''){return;}
+    results[s.dataset.w]=results[s.dataset.w]||{}; results[s.dataset.w].won = s.value==='1'; });
+  document.querySelectorAll('[data-a]').forEach(i=>{ if(i.value===''){return;}
+    results[i.dataset.a]=results[i.dataset.a]||{}; results[i.dataset.a].actual=+i.value; });
+  document.querySelectorAll('[data-c]').forEach(i=>{ const p=i.dataset.c;
+    results[p]=results[p]||{}; results[p].close = i.value===''?null:+i.value; });
+
+  const picks=S.picks||{};
+  let pool = Object.keys(picks).filter(p => (results[p]||{}).won === false);
+  if(!pool.length){
+    try{ await wPost('/bozo/grade',{results, bozo:null, bozoWhy:'Ticket cashed. Nobody wears it.', graded:true}); }
+    catch(err){ e.textContent=err.message; return; }
+    return refresh();
+  }
+  const M={};
+  pool.forEach(p=>{
+    const x=picks[p], r=results[p]||{}, sd=sdOf(x);
+    let beat=0;
+    if(r.actual!=null){
+      // A zero on a market where zero is possible takes the floor rather than
+      // pretending a Bernoulli outcome sits on the same scale as a point margin.
+      if(r.actual===0 && (x.mkt==='prop'||x.mkt==='total') && x.dir==='over') beat=999;
+      else { const exp=expected(x); beat = (x.dir==='under' ? (r.actual-exp) : (exp-r.actual))/sd; }
+    }
+    const close = r.close!=null ? r.close : x.price;
+    M[p]={odds:imp(x.price), beat, last:x.ts, clv:imp(close)-imp(x.price)};
+  });
+  const R={odds:p=>M[p].odds, beat:p=>M[p].beat, last:p=>M[p].last, clv:p=>-M[p].clv};
+  let why='';
+  for(const li of (S.order||[0,1,2,3])){
+    const k=LEVERS[li].k, mx=Math.max(...pool.map(R[k]));
+    const surv=pool.filter(p=>R[k](p)===mx);
+    if(surv.length<pool.length || surv.length===1){ pool=surv; why=LEVERS[li].name; }
+    if(pool.length===1) break;
+  }
+  const bozo=pool[0], b=picks[bozo];
+  const bozoWhy=`${why||'Coin flip'} · lost ${b.label} at ${b.price} · funds next week`;
+  try{ await wPost('/bozo/grade',{results, bozo, bozoWhy, graded:true}); }
+  catch(err){ e.textContent=err.message; return; }
+  refresh();
+}
+
+/* ---------------- auth UI ---------------- */
+function renderAuth(){
+  const card=document.getElementById('authCard'), body=document.getElementById('authBody');
+  const meCard=document.getElementById('meCard');
+  const err=document.getElementById('authErr'); err.className='err'; err.textContent='';
+  const joinTok = new URLSearchParams(location.search).get('join');
+
+  if(ME){
+    card.style.display='none'; meCard.style.display='';
+    document.getElementById('meName').textContent=ME.name;
+    document.getElementById('adminBadge').textContent = isAdmin() ? '· admin' : '';
+    render();
+    return;
+  }
+  meCard.style.display='none'; card.style.display='';
+
+  if(joinTok){
+    document.getElementById('authH').textContent='Claim your slot';
+    body.innerHTML = `<div class="auth">
+      <p class="bz-sub" style="margin-top:0">This link works once. Set a password and it's yours — after that the link is dead, so forwarding it does nothing.</p>
+      <div class="f"><label>Password (8+ characters)</label><input id="cPw" type="password" autocomplete="new-password"></div>
+      <div class="f"><label>Confirm</label><input id="cPw2" type="password" autocomplete="new-password"></div>
+      <div class="row"><button class="btn" id="cGo">Claim it</button></div>
+    </div>`;
+    document.getElementById('cGo').onclick = async ()=>{
+      const a=document.getElementById('cPw').value, b=document.getElementById('cPw2').value;
+      if(a.length<8) { err.textContent='Password must be at least 8 characters.'; return; }
+      if(a!==b){ err.textContent="Those don't match."; return; }
+      try{
+        const r=await wPost('/bozo/claim',{token:joinTok, password:a});
+        setSession(r.session);
+        history.replaceState(null,'',location.pathname);   // burn the token out of the URL
+        await loadRoster(); renderAuth();
+      }catch(e2){ err.textContent=e2.message; }
+    };
+    return;
+  }
+
+  document.getElementById('authH').textContent='Sign in';
+  const claimed = ROSTER.filter(p=>p.claimed);
+  body.innerHTML = `<div class="auth">
+    ${claimed.length ? `
+      <div class="f"><label>You are</label><select id="lName">${claimed.map(p=>`<option>${esc(p.name)}</option>`).join('')}</select></div>
+      <div class="f"><label>Password</label><input id="lPw" type="password" autocomplete="current-password"></div>
+      <div class="row"><button class="btn" id="lGo">Sign in</button></div>`
+    : `<p class="readonly">Nobody has set up an account yet. Use the join link Kap texted you.</p>`}
+    <p class="note">No account yet? Open the link Kap texted you — that's the only way in. Until then you can watch: the board, the ticket and the season table are all public.</p>
+  </div>`;
+  const go=document.getElementById('lGo');
+  if(go){
+    const submit = async ()=>{
+      try{
+        const r=await wPost('/bozo/login',{name:document.getElementById('lName').value,
+                                           password:document.getElementById('lPw').value});
+        setSession(r.session); await loadRoster(); renderAuth();
+      }catch(e2){ err.textContent=e2.message; }
+    };
+    go.onclick=submit;
+    document.getElementById('lPw').addEventListener('keydown',ev=>{ if(ev.key==='Enter') submit(); });
+  }
+  render();
+}
+
+async function loadRoster(){
+  try{ ROSTER=(await wGet('/bozo/roster')).players||[]; }
+  catch(e){ ROSTER=[]; document.getElementById('srcNote').textContent='Roster unreachable — '+e.message; }
+}
+
+/* ---------------- wiring ---------------- */
+document.getElementById('save').onclick = submitLeg;
+document.getElementById('clearMine').onclick = async ()=>{
+  const e=document.getElementById('err'); e.className='err'; e.textContent='';
+  try{ await wPost('/bozo/pick',{action:'remove'}); await refresh(); }
+  catch(err){ e.textContent=err.message; }
+};
+document.getElementById('autoGrade').onclick = autoGrade;
+document.getElementById('next').onclick = async ()=>{
+  try{ await wPost('/bozo/next',{}); drawnOrder=null; await refresh(); }
+  catch(err){ document.getElementById('srcNote').textContent=err.message; }
+};
+document.getElementById('signOut').onclick = ()=>{ clearSession(); renderAuth(); };
+document.getElementById('chgPw').onclick = ()=>{
+  const b=document.getElementById('pwBox'); b.style.display = b.style.display==='none' ? '' : 'none';
+};
+document.getElementById('pwCancel').onclick = ()=>{ document.getElementById('pwBox').style.display='none'; };
+document.getElementById('pwSave').onclick = async ()=>{
+  const e=document.getElementById('pwErr'); e.className='err'; e.textContent='';
+  const oldPassword=document.getElementById('pwOld').value, newPassword=document.getElementById('pwNew').value;
+  if(newPassword.length<8){ e.textContent='New password must be at least 8 characters.'; return; }
+  try{
+    const r=await wPost('/bozo/passwd',{oldPassword,newPassword});
+    setSession(r.session);                      // the old one is dead server-side
+    e.className='err ok'; e.textContent='Changed.';
+    document.getElementById('pwOld').value=''; document.getElementById('pwNew').value='';
+  }catch(err){ e.textContent=err.message; }
+};
+
+document.getElementById('fSport').innerHTML =
+  Object.entries(SPORTS).map(([k,v])=>`<option value="${k}">${v.n}</option>`).join('');
+document.getElementById('fSport').onchange = ()=>loadGames(fSport.value);
+document.getElementById('fGame').onchange = paintSides;
+document.getElementById('fMkt').onchange = paintSides;
+
+(async function init(){
+  ME = loadSession();
+  await loadRoster();
+  renderAuth();
+  watchState();
+  loadGames('nfl');
+})();
+</script>
+
+</body>
+</html>
