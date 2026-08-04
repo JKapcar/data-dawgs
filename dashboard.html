@@ -294,13 +294,20 @@ svg text{font-family:inherit}
 .dbstat .v.hot{color:var(--bad)} .dbstat .v.good{color:var(--good)}
 .dbstat.wide{grid-column:span 2}
 @media(max-width:340px){.dbstat.wide{grid-column:span 1}}
-.posbars{display:flex;align-items:flex-end;gap:10px;height:66px;margin-top:12px}
-.posbars .pb{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
-.posbars .pbv{font-size:9.5px;color:var(--ink-3);font-variant-numeric:tabular-nums;line-height:1}
-.posbars .pbt{width:100%;max-width:34px;background:var(--grid);border-radius:4px 4px 2px 2px;
+.posbars{display:flex;align-items:flex-end;gap:12px;margin-top:10px}
+.posbars .pb{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
+.posbars .pbv{font-size:10.5px;font-weight:700;color:var(--ink-2);font-variant-numeric:tabular-nums;line-height:1}
+.posbars .pbt{width:100%;max-width:44px;height:88px;background:var(--grid);border-radius:5px 5px 3px 3px;
   position:relative;overflow:hidden;box-shadow:inset 0 0 0 1px var(--border)}
-.posbars .pbf{position:absolute;left:0;right:0;bottom:0;border-radius:0 0 2px 2px;transition:height .4s}
-.posbars .pbl{font-size:9.5px;font-weight:700;color:var(--ink-3);letter-spacing:.03em;line-height:1}
+/* measuring-cup lines at 25/50/75% so fullness reads at a glance */
+.posbars .pbt::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background-image:linear-gradient(var(--border),var(--border)),linear-gradient(var(--border),var(--border)),linear-gradient(var(--border),var(--border));
+  background-size:100% 1px;background-position:0 25%,0 50%,0 75%;background-repeat:no-repeat}
+.posbars .pbf{position:absolute;left:0;right:0;bottom:0;border-radius:0 0 3px 3px;transition:height .4s}
+.posbars .pbp{position:absolute;left:0;right:0;text-align:center;font-size:9px;font-weight:800;
+  color:var(--ink-1);pointer-events:none;
+  text-shadow:0 0 2px var(--surface-1),0 0 2px var(--surface-1),0 0 4px var(--surface-1)}
+.posbars .pbl{font-size:10px;font-weight:700;color:var(--ink-3);letter-spacing:.03em;line-height:1}
 
 /* tab bar */
 .dbtabs{display:flex;gap:4px;align-items:center;flex-wrap:wrap;
@@ -1119,13 +1126,14 @@ STATE: everything saves in the browser on that device. A different device shows 
         mLeft <= perSpot*Math.max(1,mOpen) ? "" : "good"];
     }
 
-    const maxTot = Math.max(1, ...POSL.map(P=>tot[P]));
     const bars = '<div class="posbars">' + POSL.map(P=>{
-      const th = Math.max(8, Math.round(tot[P]/maxTot*44));
-      const fh = tot[P]>0 ? Math.round(rem[P]/tot[P]*th) : 0;
-      return '<div class="pb" title="'+P+': '+fmt$(rem[P])+' of '+fmt$(tot[P])+' MV left">'
+      const pct = tot[P]>0 ? rem[P]/tot[P]*100 : 0;
+      // % label rides just above the fill line; near the extremes it would clip, so clamp
+      const lblBottom = Math.max(4, Math.min(76, pct-12));
+      return '<div class="pb" title="'+P+': '+fmt$(rem[P])+' of '+fmt$(tot[P])+' MV left ('+pct.toFixed(0)+'%)">'
         + '<span class="pbv">$'+Math.round(rem[P])+'</span>'
-        + '<span class="pbt" style="height:'+th+'px"><span class="pbf" style="height:'+fh+'px;background:'+POS_COLOR[P]+'"></span></span>'
+        + '<span class="pbt"><span class="pbf" style="height:'+pct.toFixed(1)+'%;background:'+POS_COLOR[P]+'"></span>'
+        + '<span class="pbp" style="bottom:'+lblBottom.toFixed(0)+'%">'+pct.toFixed(0)+'%</span></span>'
         + '<span class="pbl">'+(P==="DST"?"D":P)+'</span></div>';
     }).join("") + '</div>';
 
