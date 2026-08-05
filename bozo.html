@@ -315,6 +315,11 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
 .rule-row .rl{font-weight:750}
 .rule-row .rd{color:var(--ink-3);font-size:12.5px;display:block;margin-top:2px}
 .rule-row .rv{font:700 14px ui-monospace,monospace;white-space:nowrap;color:var(--ink-1)}
+/* ---- league switcher ---- */
+.lgbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+.lgbar select{background:var(--surface-1);border:1px solid var(--grid);color:var(--ink-1);
+  border-radius:8px;padding:7px 10px;font:700 13px system-ui;max-width:min(320px,70vw)}
+.lgbar .sz{font:700 10.5px/1 ui-monospace,monospace;letter-spacing:1px;text-transform:uppercase;color:var(--ink-3)}
 /* ---- roster / invite management ---- */
 .ros{display:grid;grid-template-columns:1fr auto auto;gap:8px 10px;align-items:center;
   padding:9px 0;border-bottom:1px solid var(--grid);font-size:14px}
@@ -1007,6 +1012,13 @@ STATE: everything saves in the browser on that device. A different device shows 
 <div class="bz-hdr"><h1>Bozo</h1><span class="chip" id="statusChip">—</span></div>
 <p class="bz-sub">One favorite each, one big parlay. Whoever busts it worst wears it — and funds next week's ticket.</p>
 
+<!-- ---------- which league ---------- -->
+<div class="lgbar" id="lgbar" style="display:none">
+  <label class="lil" for="lgPick" style="margin:0">League</label>
+  <select id="lgPick"></select>
+  <span class="sz" id="lgSize"></span>
+</div>
+
 <!-- ---------- sheet nav: the board, one sheet per player, the league ---------- -->
 <div class="snav" id="snav"></div>
 
@@ -1087,11 +1099,41 @@ STATE: everything saves in the browser on that device. A different device shows 
     </div>
     <div class="err" id="lgErr"></div>
 
-    <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:22px 0 4px">Roster &amp; invites</h3>
-    <p class="tm" style="margin:0 0 8px">Join links are stored hashed, so a lost one can't be looked up — only re-issued. Re-issuing kills the old link.</p>
+    <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:22px 0 4px">Who's in this league</h3>
+    <p class="tm" style="margin:0 0 8px">The roster <em>is</em> the size — the ticket locks when everyone here has a leg in. Join links are stored hashed, so a lost one can't be looked up, only re-issued.</p>
     <div id="rosBody"></div>
+    <div class="row" style="margin-top:12px;align-items:flex-end;gap:10px">
+      <div class="f" style="flex:1;min-width:170px"><label>Add someone who already has an account</label>
+        <select id="addPick"></select></div>
+      <button class="btn ghost sm" id="addGo">Add</button>
+    </div>
+    <div class="row" style="margin-top:10px;align-items:flex-end;gap:10px">
+      <div class="f" style="flex:1;min-width:170px"><label>Or invite someone new</label>
+        <input id="invName" placeholder="Name as it should appear"></div>
+      <button class="btn ghost sm" id="invGo">Create &amp; get link</button>
+    </div>
     <div id="rosOut"></div>
     <div class="err" id="rosErr"></div>
+
+    <div id="lockRow" style="display:none;margin-top:18px;border-top:1px solid var(--grid);padding-top:14px">
+      <div class="row" style="align-items:center;gap:10px">
+        <button class="btn ghost sm" id="forceLock">Place the ticket now</button>
+        <span class="tm" id="lockWho"></span>
+      </div>
+    </div>
+  </div>
+
+  <div id="mkLeague" style="display:none;margin-top:18px;border-top:1px solid var(--grid);padding-top:16px">
+    <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:0 0 4px">New league</h3>
+    <p class="tm" style="margin:0 0 10px">A separate group with its own roster size, band, week and ledger. You pick who runs it.</p>
+    <div class="frm">
+      <div class="f w2"><label>Name</label><input id="nlName" placeholder="Sunday Crew"></div>
+      <div class="f"><label>Id (for the link)</label><input id="nlId" placeholder="sunday"></div>
+      <div class="f"><label>Manager</label><select id="nlMgr"></select></div>
+      <div class="f w4"><div class="row" style="justify-content:flex-end">
+        <button class="btn sm" id="nlGo">Create league</button></div></div>
+    </div>
+    <div class="err" id="nlErr"></div>
   </div>
   <p class="note" id="lgNote"></p>
 </div>
@@ -1172,8 +1214,10 @@ const LEVERS = [{k:'odds',name:'Shortest Odds',desc:'biggest favorite in the poo
   {k:'last',name:'Last In',desc:'final leg submitted'},
   {k:'clv', name:'Worst CLV', desc:'price moved most against it'}];
 
-let S = {};                 // live state from RTDB
-let ROSTER = [];            // [{name, claimed}]
+let S = {};                 // live state for the SELECTED league, from RTDB
+let LEAGUES = [];           // [{id,name,manager,size,members,week,status}]
+let LID = 'main';           // which league we're looking at (?l=)
+let ROSTER = [];            // every account on the site, [{name, claimed}]
 let ME = null;              // {name, session}
 let GAMES = {};             // sport -> games[]
 let drawnOrder = null;      // so the reels only animate once per draw
@@ -1205,10 +1249,13 @@ async function wGet(path){
   if(!r.ok) throw new Error(j.error || ('HTTP '+r.status));
   return j;
 }
+// Every write names its league. The Worker defaults to "main" when absent, but being
+// explicit means a stale tab can never write into the wrong league after a switch.
 async function wPost(path, body){
   const h = {'Content-Type':'application/json'};
-  if(ME) h['X-Bozo-Session'] = ME.session;
-  const r = await fetch(WORKER + path, {method:'POST', headers:h, body:JSON.stringify(body||{})});
+  if(ME) h['X-Dawg-Session'] = ME.session;
+  const r = await fetch(WORKER + path, {method:'POST', headers:h,
+    body:JSON.stringify({league:LID, ...(body||{})})});
   const j = await r.json().catch(()=>({error:'bad response'}));
   if(!r.ok){
     // The Worker kills sessions when a password changes or an admin resets you.
@@ -1317,10 +1364,12 @@ function paintSides(){
 /* ---------------- live state ---------------- */
 // /bozo is world-readable, so the board streams straight from RTDB with no
 // credential. EventSource = push; the poll is only a safety net.
+let esHandle = null;
 function watchState(){
   let es=null;
   try{
-    es = new EventSource(DB + '/bozo.json');
+    es = new EventSource(DB + '/bozo/leagues/' + LID + '.json');
+    esHandle = es;
     es.addEventListener('put', ev=>{
       try{
         const m=JSON.parse(ev.data);
@@ -1336,7 +1385,7 @@ function watchState(){
 }
 async function refresh(){
   try{
-    const r = await fetch(DB + '/bozo.json?' + bust());
+    const r = await fetch(DB + '/bozo/leagues/' + LID + '.json?' + bust());
     S = (await r.json()) || {};
     render();
   }catch(e){ /* transient — the next tick retries */ }
@@ -1346,8 +1395,16 @@ async function refresh(){
 const esc = s => String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
 const when = ts => !ts ? '' : new Date(ts).toLocaleDateString(undefined,{weekday:'short'}) + ' ' +
   new Date(ts).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
-const names = () => ROSTER.map(p=>p.name);
+// ⚠️ The chips, the board and the season table are the LEAGUE's members — not every
+// account on the site. A four-person league shows four names next to an eight.
+const league = () => LEAGUES.find(l=>l.id===LID) || null;
+const names = () => (league()?.members) || [];
+const allAccounts = () => ROSTER.map(p=>p.name);
+
+// Two different powers. isAdmin is the site owner (creates leagues, can act anywhere);
+// isManager runs THIS league. The Worker enforces both — this only decides what shows.
 const isAdmin = () => !!ME && ME.name === ADMIN;
+const isManager = () => !!ME && (isAdmin() || (league()?.manager) === ME.name);
 
 /* ---------------- league config (the manager's dials) ---------------- */
 // The Worker is the enforcer (validatePick reads /bozo/config); this mirror only
@@ -1357,6 +1414,40 @@ const band = () => ({
   ceil:  (S.config && Number.isFinite(S.config.bandCeil))  ? S.config.bandCeil  : -100,
   floor: (S.config && Number.isFinite(S.config.bandFloor)) ? S.config.bandFloor : -500,
 });
+
+/* ---------------- the league switcher ---------------- */
+// League in the QUERY string, view in the hash: bozo.html?l=smallball#s=Tony. They are
+// orthogonal — the same sheet exists in every league — so they get separate slots.
+function paintLeagueBar(){
+  const bar = document.getElementById('lgbar');
+  const sel = document.getElementById('lgPick');
+  if(LEAGUES.length <= 1){ bar.style.display = 'none'; return; }
+  bar.style.display = '';
+  sel.innerHTML = LEAGUES.map(l=>`<option value="${esc(l.id)}"${l.id===LID?' selected':''}>${esc(l.name)}</option>`).join('');
+  const lg = league();
+  document.getElementById('lgSize').textContent =
+    lg ? `${lg.size} player${lg.size===1?'':'s'} · week ${lg.week}` : '';
+}
+document.getElementById('lgPick').onchange = e => {
+  // Full reload: the EventSource, the state and every sheet are league-scoped, and a
+  // reload re-subscribes cleanly instead of leaving a stream open on the old league.
+  const u = new URL(location.href);
+  u.searchParams.set('l', e.target.value);
+  u.hash = '';
+  location.href = u.toString();
+};
+async function loadLeagues(){
+  try{
+    const r = await wGet('/league/list');
+    LEAGUES = r.leagues || [];
+    const want = new URLSearchParams(location.search).get('l');
+    LID = (want && LEAGUES.some(l=>l.id===want)) ? want
+        : (LEAGUES.some(l=>l.id===r.defaultLeague) ? r.defaultLeague : (LEAGUES[0]||{}).id || 'main');
+  }catch(e){
+    LEAGUES = []; 
+    document.getElementById('srcNote').textContent = 'Leagues unreachable — '+e.message;
+  }
+}
 
 /* ---------------- sheets: board / one per player / league ---------------- */
 // Hash-routed so a sheet is linkable: #s=Kap, #league, nothing = the board.
@@ -1396,6 +1487,7 @@ function render(){
   const live = players.map(p=>({p, ...(picks[kEnc(p)]||{})})).filter(x=>x.price!=null);
   const v = view();
   const onBoard = v==='board';
+  paintLeagueBar();
   paintSnav(v);
 
   const c=document.getElementById('statusChip');
@@ -1461,10 +1553,10 @@ function render(){
   } else drawnOrder = null;
 
   // grading — the Worker is the authority; this only decides what to show
-  document.getElementById('gradeCard').style.display = (isAdmin() && status==='placed' && onBoard) ? '' : 'none';
-  if(isAdmin() && status==='placed' && onBoard) paintManual(live);
+  document.getElementById('gradeCard').style.display = (isManager() && status==='placed' && onBoard) ? '' : 'none';
+  if(isManager() && status==='placed' && onBoard) paintManual(live);
   const ar=document.getElementById('adminRow');
-  if(ar) ar.style.display = (isAdmin() && status==='graded') ? '' : 'none';
+  if(ar) ar.style.display = (isManager() && status==='graded') ? '' : 'none';
 
   document.getElementById('verdict').style.display = (S.bozo && onBoard) ? '' : 'none';
   if(S.bozo){
@@ -1557,29 +1649,39 @@ function paintSheet(player){
 /* ---------------- league sheet ---------------- */
 let lgDirty = false;   // don't clobber the manager's typing on the 15s refresh
 function paintLeague(){
-  const bd = band(), cfg = S.config||{};
-  const claimed = ROSTER.filter(p=>p.claimed).length;
+  const bd = band(), cfg = S.config||{}, lg = league();
   const row=(rl,rd,rv)=>`<div class="rule-row"><span><span class="rl">${rl}</span><span class="rd">${rd}</span></span><span class="rv">${rv}</span></div>`;
+  const inCount = Object.keys(S.picks||{}).length;
   document.getElementById('lgRules').innerHTML =
+    row('League', lg ? esc(lg.name) : '—', esc(LID)) +
+    row('Manager','sets this league\'s band and roster', esc(lg?.manager || '—')) +
+    row('Players','the roster is the size — the ticket locks when every one of them is in',
+        `${names().length}${(S.status||'open')==='open' ? ` · ${inCount} in` : ''}`) +
     row('Legal price band','favorites only — the band bounds the parlay price, not individual embarrassment',`${bd.ceil} to ${bd.floor}`) +
     row('One leg each','one pick per person per week','fixed') +
     row('No duplicate legs','no two people on the exact same bet','fixed') +
     row('Editing','allowed until the ticket is placed — resets your timestamp and your price','fixed') +
     row('The lock','the ticket is placed when the last leg lands; that moment is the close','fixed') +
-    row('Tiebreak','fresh random hierarchy of all four levers, drawn server-side each week','fixed') +
-    row('Roster', 'claimed a slot / total', `${claimed}/${ROSTER.length}`);
+    row('Tiebreak','fresh random hierarchy of all four levers, drawn server-side each week','fixed');
   document.getElementById('lgNote').textContent = cfg.updatedTs
     ? `Band last set by ${cfg.updatedBy||'?'} · ${new Date(cfg.updatedTs).toLocaleDateString()} — enforced by the server, so the dial is the rule.`
     : 'Band is at its defaults — enforced by the server, so the dial is the rule.';
 
   const adm = document.getElementById('lgAdmin');
-  adm.style.display = isAdmin() ? '' : 'none';
-  if(isAdmin() && !lgDirty){
+  adm.style.display = isManager() ? '' : 'none';
+  if(isManager() && !lgDirty){
     document.getElementById('dCeil').value = bd.ceil;
     document.getElementById('dFloor').value = bd.floor;
   }
+  // Site admin only: spinning up a whole new group.
+  const mk = document.getElementById('mkLeague');
+  mk.style.display = isAdmin() ? '' : 'none';
+  if(isAdmin())
+    document.getElementById('nlMgr').innerHTML =
+      allAccounts().map(n=>`<option${n===ME?.name?' selected':''}>${esc(n)}</option>`).join('');
   paintRoster();
 }
+
 document.getElementById('lgAdmin').addEventListener('click', e=>{
   const b=e.target.closest('button[data-dial]'); if(!b) return;
   const inp=document.getElementById(b.dataset.dial==='ceil'?'dCeil':'dFloor');
@@ -1596,51 +1698,144 @@ document.getElementById('dReset').onclick = ()=>{ lgDirty=false; paintLeague();
    from here. The raw token is shown ONCE and never stored anywhere we can read. */
 function paintRoster(){
   const body = document.getElementById('rosBody');
-  if(!isAdmin()){ body.innerHTML=''; return; }
-  body.innerHTML = ROSTER.map(p=>`<div class="ros">
-      <span class="who">${esc(p.name)}${p.name===ADMIN?' <span class="tm">· manager</span>':''}</span>
-      <span class="st ${p.claimed?'yes':'no'}">${p.claimed?'claimed':'not claimed'}</span>
+  if(!isManager()){ body.innerHTML=''; return; }
+  const claimedOf = n => !!(ROSTER.find(p=>p.name===n)||{}).claimed;
+  const mine = names(), picks = S.picks||{}, open = (S.status||'open')==='open';
+  const mgr = league()?.manager;
+  body.innerHTML = mine.map(n=>{
+    const hasLeg = !!picks[kEnc(n)];
+    return `<div class="ros">
+      <span class="who">${esc(n)}${n===mgr?' <span class="tm">· manager</span>':''}${hasLeg?' <span class="tm">· leg in</span>':''}</span>
+      <span class="st ${claimedOf(n)?'yes':'no'}">${claimedOf(n)?'claimed':'not claimed'}</span>
       <span class="row">
-        <button class="btn ghost sm" data-invite="${esc(p.name)}">${p.claimed?'New link':'Get link'}</button>
-        ${p.claimed?`<button class="btn ghost sm" data-reset="${esc(p.name)}">Reset</button>`:''}
+        <button class="btn ghost sm" data-invite="${esc(n)}">${claimedOf(n)?'New link':'Get link'}</button>
+        ${(claimedOf(n) && isAdmin()) ? `<button class="btn ghost sm" data-reset="${esc(n)}">Reset</button>` : ''}
+        ${n===mgr ? '' : `<button class="btn ghost sm" data-drop="${esc(n)}"${(!open||hasLeg)?' disabled title="Roster changes wait for an open board with no leg in"':''}>Remove</button>`}
       </span>
-    </div>`).join('');
+    </div>`;
+  }).join('') || '<p class="pend">Nobody in this league yet.</p>';
+
+  // Add existing accounts who aren't in this league yet.
+  const spare = allAccounts().filter(n=>!mine.includes(n));
+  const sel = document.getElementById('addPick');
+  sel.innerHTML = spare.length ? spare.map(n=>`<option>${esc(n)}</option>`).join('')
+                               : '<option value="">everyone already has a seat</option>';
+  document.getElementById('addGo').disabled = !spare.length || !open;
+
+  // The flake escape hatch — only worth showing when it would actually do something.
+  const lockRow = document.getElementById('lockRow');
+  const waiting = mine.filter(n=>!picks[kEnc(n)]);
+  const show = open && Object.keys(picks).length >= 2 && waiting.length > 0;
+  lockRow.style.display = show ? '' : 'none';
+  if(show) document.getElementById('lockWho').textContent =
+    `Places the ticket with ${Object.keys(picks).length} of ${mine.length} legs. Still waiting on ${waiting.join(', ')}.`;
 }
+
+const rosErr = m => { const e=document.getElementById('rosErr'); e.className='err'; e.textContent=m||''; return e; };
+
+async function reloadLeagues(){ await Promise.all([loadRoster(), loadLeagues()]); await refresh(); }
+
+function showLink(who, url, claimed){
+  document.getElementById('rosOut').innerHTML =
+    `<div class="linkout"><b>${esc(who)}</b> — copy this now, it is shown once.
+      <code>${esc(url)}</code>
+      ${claimed?`<span class="tm">⚠️ ${esc(who)} already has a password, so this link does nothing until you hit Reset.</span>`
+               :`<span class="tm">Text it to them. Opening it makes their account and puts them in this league.</span>`}
+      <div class="row" style="margin-top:8px"><button class="btn sm" id="cpLink">Copy</button></div></div>`;
+  document.getElementById('cpLink').onclick=()=>{
+    navigator.clipboard?.writeText(url).then(
+      ()=>{ document.getElementById('cpLink').textContent='Copied'; },
+      ()=>{ rosErr('Clipboard blocked — select the link above and copy it.'); });
+  };
+}
+
 document.getElementById('rosBody').addEventListener('click', async e=>{
-  const inv=e.target.closest('[data-invite]'), rst=e.target.closest('[data-reset]');
-  const err=document.getElementById('rosErr'); err.className='err'; err.textContent='';
-  const out=document.getElementById('rosOut');
-  if(inv){
-    const who=inv.dataset.invite;
-    inv.disabled=true;
-    try{
-      const r=await wPost('/auth/invite',{player:who});
-      const url=location.origin+'/bozo.html?join='+r.token;
-      out.innerHTML=`<div class="linkout"><b>${esc(who)}</b> — copy this now, it is shown once.
-        <code>${esc(url)}</code>
-        ${r.claimed?`<span class="tm">⚠️ ${esc(who)} already has a password, so this link does nothing until you hit Reset.</span>`
-                   :`<span class="tm">Text it to them. The old link, if any, is now dead.</span>`}
-        <div class="row" style="margin-top:8px"><button class="btn sm" id="cpLink">Copy</button></div></div>`;
-      document.getElementById('cpLink').onclick=()=>{
-        navigator.clipboard?.writeText(url).then(
-          ()=>{ document.getElementById('cpLink').textContent='Copied'; },
-          ()=>{ err.textContent='Clipboard blocked — select the link above and copy it.'; });
-      };
-      await loadRoster(); paintRoster();
-    }catch(e2){ err.textContent=e2.message; }
-    inv.disabled=false;
-  }
+  const inv=e.target.closest('[data-invite]'), drop=e.target.closest('[data-drop]'),
+        rst=e.target.closest('[data-reset]');
+  rosErr('');
   if(rst){
+    // A password is a SITE credential, not a league one — /auth/reset is admin-only,
+    // so the button only renders for the site admin. Two-step: it kills their sessions.
     const who=rst.dataset.reset;
-    // Deliberately a two-step: resetting kills their sessions and their password.
     if(rst.dataset.armed!=='1'){ rst.dataset.armed='1'; rst.textContent='Confirm reset';
       setTimeout(()=>{ rst.dataset.armed='0'; rst.textContent='Reset'; }, 4000); return; }
     try{ await wPost('/auth/reset',{player:who});
-      err.className='err ok'; err.textContent=`${who} cleared — issue them a new link.`;
-      await loadRoster(); paintRoster();
-    }catch(e2){ err.textContent=e2.message; }
+      const e4=rosErr(`${who} cleared — issue them a new link.`); e4.className='err ok';
+      await reloadLeagues();
+    }catch(e2){ rosErr(e2.message); }
+    return;
+  }
+  if(inv){
+    const who=inv.dataset.invite; inv.disabled=true;
+    try{
+      const r=await wPost('/league/invite',{player:who});
+      showLink(who, location.origin+'/bozo.html?join='+r.token, r.claimed);
+      await reloadLeagues();
+    }catch(e2){ rosErr(e2.message); }
+    inv.disabled=false;
+  }
+  if(drop){
+    const who=drop.dataset.drop;
+    // Two-step: removing someone changes the lock threshold for the whole league.
+    if(drop.dataset.armed!=='1'){ drop.dataset.armed='1'; drop.textContent='Confirm';
+      setTimeout(()=>{ drop.dataset.armed='0'; drop.textContent='Remove'; }, 4000); return; }
+    try{
+      const r=await wPost('/league/member',{player:who, action:'remove'});
+      const e3=rosErr(`${who} removed — ${r.size} player${r.size===1?'':'s'} now.`); e3.className='err ok';
+      await reloadLeagues();
+    }catch(e2){ rosErr(e2.message); }
   }
 });
+
+document.getElementById('addGo').onclick = async ()=>{
+  const who=document.getElementById('addPick').value;
+  if(!who) return;
+  rosErr('');
+  try{
+    const r=await wPost('/league/member',{player:who, action:'add'});
+    const e3=rosErr(`${who} added — ${r.size} player${r.size===1?'':'s'} now.`); e3.className='err ok';
+    await reloadLeagues();
+  }catch(e2){ rosErr(e2.message); }
+};
+
+document.getElementById('invGo').onclick = async ()=>{
+  const who=document.getElementById('invName').value.trim();
+  if(!who) return rosErr('Give them a name first.');
+  rosErr('');
+  try{
+    const r=await wPost('/league/invite',{player:who});
+    showLink(who, location.origin+'/bozo.html?join='+r.token, r.claimed);
+    document.getElementById('invName').value='';
+    await reloadLeagues();
+  }catch(e2){ rosErr(e2.message); }
+};
+
+document.getElementById('forceLock').onclick = async (ev)=>{
+  const b=ev.target;
+  if(b.dataset.armed!=='1'){ b.dataset.armed='1'; b.textContent='Confirm — place it';
+    setTimeout(()=>{ b.dataset.armed='0'; b.textContent='Place the ticket now'; }, 5000); return; }
+  rosErr('');
+  try{
+    const r=await wPost('/league/lock',{});
+    const e3=rosErr(`Placed with ${r.legs} legs.` + (r.waitingOn?.length?` ${r.waitingOn.join(', ')} missed the week.`:'')); e3.className='err ok';
+    await refresh();
+  }catch(e2){ rosErr(e2.message); }
+};
+
+document.getElementById('nlGo').onclick = async ()=>{
+  const e=document.getElementById('nlErr'); e.className='err'; e.textContent='';
+  const id=document.getElementById('nlId').value.trim().toLowerCase();
+  const nm=document.getElementById('nlName').value.trim();
+  const mgr=document.getElementById('nlMgr').value;
+  if(!id||!nm) { e.textContent='Name and id are both required.'; return; }
+  try{
+    // ⚠️ league:id, not the currently-viewed league — this call creates rather than edits.
+    await wPost('/league/create',{league:LID, id, name:nm, manager:mgr});
+    e.className='err ok'; e.textContent=`Created — switching to ${nm}.`;
+    const u=new URL(location.href); u.searchParams.set('l', id); u.hash='league';
+    setTimeout(()=>{ location.href=u.toString(); }, 600);
+  }catch(e2){ e.textContent=e2.message; }
+};
 
 document.getElementById('dSave').onclick = async ()=>{
   const e=document.getElementById('lgErr'); e.className='err'; e.textContent='';
@@ -1927,7 +2122,7 @@ document.getElementById('fMkt').onchange = paintSides;
 
 (async function init(){
   ME = loadSession();
-  await loadRoster();
+  await Promise.all([loadRoster(), loadLeagues()]);
   renderAuth();
   watchState();
   loadGames('nfl');
