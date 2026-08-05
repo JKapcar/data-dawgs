@@ -262,6 +262,11 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
 .tag{display:inline-block;font:700 9.5px/1 ui-monospace,monospace;letter-spacing:.8px;padding:3px 6px;
   border-radius:4px;text-transform:uppercase;margin-left:6px}
 .tag.w{background:var(--good);color:#fff}.tag.l{background:var(--bad);color:#fff}.tag.p{background:var(--ink-3);color:#fff}
+.rvw{display:inline-block;font:700 9.5px/1 ui-monospace,monospace;letter-spacing:.8px;text-transform:uppercase;
+  padding:3px 6px;border-radius:4px;margin-left:6px;cursor:help;white-space:nowrap}
+.rvw.review{background:color-mix(in srgb,var(--warn) 22%,transparent);color:var(--warn);
+  border:1px solid color-mix(in srgb,var(--warn) 45%,transparent)}
+.rvw.hard{background:var(--warn);color:#1a1206}
 .tick{display:flex;gap:22px;flex-wrap:wrap;align-items:baseline;border-top:1px solid var(--grid);margin-top:14px;padding-top:14px}
 .big{font:800 29px/1 ui-monospace,monospace;color:var(--accent);letter-spacing:-1px}
 .lil{font:700 10.5px/1 ui-monospace,monospace;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink-3)}
@@ -1594,6 +1599,56 @@ function expected(x){
   return dirOf(x)==='under' ? base-shift : base+shift;
 }
 
+/* ---------------- close-vs-submitted review flags ----------------
+   ⚠️ DORMANT TODAY. Every check below returns null while `close` is missing, and no
+   closing price is captured yet. That is the honest state: nothing is being checked
+   right now. It lights up by itself the moment closes land — no further page work.
+
+   ⚠️ CLV MEASURES THE MOVE. THIS MEASURES IMPLAUSIBILITY. Do not conflate them. A
+   large adverse move is exactly what the CLV lever exists to punish and is NOT
+   suspicious — it is the lever working. What is suspicious is a gap too large to be
+   a market move at all: -110 closing -130 is Tuesday; -110 closing -400 is not a
+   line move, it is a wrong number.
+
+   ⚠️ DIRECTION CARRIES MOST OF THE INFORMATION. Understating your price — claiming
+   -110 on a -400 favourite — makes the close look far SHORTER than what you
+   submitted, and that is the direction that flatters you on both Shortest Odds and
+   Worst Beat. The opposite direction costs the submitter, so the same magnitude is
+   far more likely to be a typo. Same number, different prior. Label them apart and
+   let a human decide — this flags for review, it never accuses.
+
+   ⚠️ THE THRESHOLDS BELOW ARE A FIRST GUESS AND ARE NOT CALIBRATED. They should be
+   re-cut against real closes after a season, and probably become league dials. */
+const FLAG_PP = {review:10, hard:20};      // implied-probability points on the price
+const FLAG_SD = {review:0.25, hard:0.5};   // line movement, in that sport's SDs
+function reviewFlag(r){
+  if(!r || !Number.isFinite(+r.price)) return null;
+  const out=[];
+  if(Number.isFinite(+r.close)){
+    // signed: positive means the SUBMITTED price was longer than the close
+    const d = imp(+r.close) - imp(+r.price), pp = Math.abs(d)*100;
+    if(pp >= FLAG_PP.review) out.push({
+      level: pp >= FLAG_PP.hard ? 'hard' : 'review',
+      why: `submitted ${r.price}, closed ${r.close} — ${pp.toFixed(1)}pp of implied probability, `
+         + (d > 0 ? 'in the direction that would flatter the submitter'
+                  : 'in the direction that costs the submitter (more likely a typo)')});
+  }
+  if(r.mkt && r.mkt!=='ml' && Number.isFinite(+r.mainLine) && Number.isFinite(+r.line)){
+    const sd = sdOf(r) || 1, dl = Math.abs(+r.mainLine - +r.line), sds = dl/sd;
+    if(sds >= FLAG_SD.review) out.push({
+      level: sds >= FLAG_SD.hard ? 'hard' : 'review',
+      why: `the number moved ${dl.toFixed(1)} (${sds.toFixed(2)} SD) from ${r.line} to ${r.mainLine}`});
+  }
+  if(!out.length) return null;
+  return {level: out.some(o=>o.level==='hard') ? 'hard' : 'review', why: out.map(o=>o.why).join('; ')};
+}
+const flagBadge = f => !f ? '' :
+  `<span class="rvw ${f.level}" title="${esc(f.why)}">${f.level==='hard'?'check this':'review'}</span>`;
+// Every flagged row across the whole league ledger — what a manager actually wants.
+function flaggedRows(){
+  return Object.values(S.ledger||{}).map(r=>({r, f:reviewFlag(r)})).filter(x=>x.f);
+}
+
 /* ---------------- price/line sanity ----------------
    ⚠️ THIS IS NOT VERIFICATION. Nothing here talks to a book. DraftKings has no
    public odds API — no developer portal, no key programme — so the only compliant
@@ -2069,7 +2124,7 @@ function paintSheet(player){
           <td class="pk">${esc(r.label)}${r.bozo?' <span class="tag l">BOZO</span>':''}
             <br><span class="tm">${SPORTS[r.sport]?SPORTS[r.sport].n:esc(r.sport)} · ${esc(r.game)}${r.shortestOdds?' · chalkiest':''}${r.rank?' · #'+r.rank+' in':''}</span></td>
           <td class="px">${r.price}</td><td>${tag}</td>
-          <td class="px">${r.actual??'—'}</td><td class="px">${r.close??'—'}</td></tr>`;
+          <td class="px">${r.actual??'—'}</td><td class="px">${r.close??'—'}${flagBadge(reviewFlag(r))}</td></tr>`;
       }).join('')
     : '';
   document.getElementById('shNote').textContent = rows.length
@@ -2575,6 +2630,17 @@ function paintDiag(live, players, status){
     flags.push(`<div class="flag"><span>⚠</span><span><b>${props.length} prop leg${props.length===1?'':'s'}</b>
       — ${props.map(x=>esc(teamOf(x.p))).join(', ')}. Prop standard deviation is <code>line × 0.55</code>, a placeholder the
       brief calls the weakest number in the build. Their Worst Beat exposure is the softest column on this page.</span></div>`);
+  // ⚠️ Ordered first on purpose: an integrity flag outranks a modelling caveat.
+  const fl = flaggedRows();
+  if(fl.length){
+    const hard = fl.filter(x=>x.f.level==='hard').length;
+    flags.push(`<div class="flag corr"><span>⚠</span><span><b>${fl.length} leg${fl.length===1?'':'s'} flagged for review</b>`
+      + (hard?` (${hard} well outside plausible line movement)`:'')
+      + `. The submitted price is a long way from where the market closed. That is <b>not</b> an accusation — a real steam move can do it — but it is worth a look:<br>`
+      + fl.slice(0,6).map(x=>`· <b>${esc(teamOf(x.r.player))}</b> w${x.r.week} ${esc(x.r.label)} — ${esc(x.f.why)}`).join('<br>')
+      + (fl.length>6?`<br>· …and ${fl.length-6} more, on the player sheets.`:'')
+      + `</span></div>`);
+  }
   if(levers.includes(3))
     flags.push(`<div class="flag"><span>⚠</span><span><b>Worst CLV is unmeasured.</b> No closing prices are captured yet,
       so in the simulation CLV picks uniformly among whoever is still tied — that is what "no information" means.
@@ -2605,7 +2671,10 @@ function paintDiag(live, players, status){
     `<b>Bozo odds</b> is the chance you wear it: the week simulated ${R.sims.toLocaleString()} times, each run drawing a fresh
      hierarchy from the ${levers.length} live lever${levers.length===1?'':'s'} and walking the same cascade the grader walks.
      <b>Killed it alone</b> is the chance your leg is the only loser on the ticket.
-     Both are model output, not observation — they inherit whatever the SD table gets wrong.`;
+     Both are model output, not observation — they inherit whatever the SD table gets wrong.
+     <b>Review flags</b> compare the submitted price against where the market closed and mark anything too far
+     apart to be ordinary line movement. ⚠️ No closing prices are captured yet, so that check is dormant —
+     an empty list means nothing has been checked, not that everything is clean.`;
 }
 
 /* ---------------- season, as a split-flap board ---------------- */
@@ -2710,6 +2779,11 @@ function bozoCtx(){
     ? `HIERARCHY DRAWN for this week: ${ord.map((li,i)=>`${i+1}. ${LEVERS[li].name}`).join(', ')}.`
     : `HIERARCHY NOT DRAWN YET — the order is decided on the server when the last leg lands. Do not guess it.`);
   if(S.bozo) L.push(`THIS WEEK'S BOZO: ${teamOf(playerName(S.bozo))} — ${S.bozoWhy||''}`);
+  const fl = flaggedRows();
+  L.push(fl.length
+    ? `FLAGGED FOR REVIEW (${fl.length}): submitted price far from the close. NOT an accusation — a real steam move can do this. Report it neutrally if asked and never call anyone a cheat:\n`
+      + fl.slice(0,8).map(x=>`- ${teamOf(x.r.player)} w${x.r.week} ${x.r.label}: ${x.f.why}`).join('\n')
+    : `FLAGGED FOR REVIEW: none. ⚠️ Note that closing prices are not captured yet, so this check is DORMANT rather than passing — say "nothing is being checked yet", not "everything looks clean".`);
 
   const t={}; players.forEach(p=>t[p]=0);
   (S.history||[]).forEach(h=>{ const b=h&&h.bozo&&playerName(h.bozo); if(b&&t[b]!=null) t[b]++; });
