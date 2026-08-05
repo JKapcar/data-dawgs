@@ -1330,7 +1330,8 @@ STATE: everything saves in the browser on that device. A different device shows 
     <div class="f w2"><label>Game</label><select id="fGame"><option value="">Loading…</option></select></div>
     <div class="f"><label>Market</label><select id="fMkt">
       <option value="spread">Spread</option><option value="ml">Moneyline</option>
-      <option value="total">Total</option><option value="prop">Player prop</option></select></div>
+      <option value="total">Total</option><option value="prop">Player prop</option>
+      <option value="other">Other</option></select></div>
     <div class="f w2"><label>Side</label><select id="fSide"></select></div>
     <div class="f" id="lineWrap"><label id="lineLbl">Number</label><input id="fLine" type="number" step="0.5" placeholder="6.5"></div>
     <div class="f"><label>Price</label><input id="fPrice" type="number" step="5" placeholder="-175"></div>
@@ -1588,7 +1589,11 @@ function invNorm(p){
   return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
 }
 function sdOf(x){ const s=SPORTS[x.sport];
-  return x.mkt==='total' ? s.tot : x.mkt==='prop' ? Math.max(Math.abs(x.line)*.55,1) : s.sd; }
+  // ⚠️ "other" inherits the PROP guess (line x 0.55) because that is honestly all we
+  // know about an arbitrary number. It is flagged as soft everywhere props are.
+  return x.mkt==='total' ? s.tot
+       : (x.mkt==='prop' || x.mkt==='other') ? Math.max(Math.abs(x.line)*.55,1)
+       : s.sd; }
 /* Expected result = the number, shifted by what the price says. A −175 favorite
    laying 3 is expected to clear 3; a −110 laying 3 is expected to land on it.
    That shift is why moneylines need no reference spread typed in: line is 0 and
@@ -1739,11 +1744,21 @@ function paintSides(){
   const sp=document.getElementById('fSport').value, id=document.getElementById('fGame').value;
   const g=(GAMES[sp]||[]).find(x=>x.id===id), mk=document.getElementById('fMkt').value;
   const sel=document.getElementById('fSide');
-  if(mk==='total'||mk==='prop') sel.innerHTML='<option value="over">Over</option><option value="under">Under</option>';
+  // ⚠️ "other" is a NUMBER + over/under + a price, not a free-for-all. Kap's call was
+  // "require a number anyway": a leg with nothing to measure would be immune to Worst
+  // Beat, and a lever you can opt out of defeats the randomised hierarchy. So it takes
+  // the same shape as a prop and every lever stays computable.
+  const OU = mk==='total' || mk==='prop' || mk==='other';
+  if(OU) sel.innerHTML='<option value="over">Over</option><option value="under">Under</option>';
   else sel.innerHTML=(g?g.teams:[]).map(t=>`<option value="${esc(t.abbr)}">${esc(t.name)}</option>`).join('');
   document.getElementById('lineWrap').style.display = mk==='ml' ? 'none' : '';
-  document.getElementById('lineLbl').textContent = mk==='spread'?'Spread':mk==='total'?'Total':'Number';
-  document.getElementById('propWrap').style.display = mk==='prop' ? '' : 'none';
+  document.getElementById('lineLbl').textContent =
+    mk==='spread'?'Spread':mk==='total'?'Total':'Number';
+  const pw=document.getElementById('propWrap');
+  pw.style.display = (mk==='prop'||mk==='other') ? '' : 'none';
+  const pl=document.getElementById('fProp');
+  document.querySelector('#propWrap label').textContent = mk==='other' ? 'Describe the bet' : 'Player & stat';
+  pl.placeholder = mk==='other' ? 'ARI 1H team total · alt line · whatever it is' : 'Kelce receiving yards';
 }
 
 /* ---------------- live state ---------------- */
@@ -2413,6 +2428,9 @@ async function submitLeg(){
   const bd=band();
   if(price>bd.ceil||price<bd.floor) return e.textContent=`${price} is outside the ${bd.ceil} to ${bd.floor} band.`;
   if(mk!=='ml' && !fLine.value) return e.textContent='Number is required for that market.';
+  // mirrors the Worker: an "other" leg that doesn't say what it is cannot be graded
+  if(mk==='other' && !fProp.value.trim())
+    return e.textContent='Describe the bet — an "other" leg needs to say what it actually is.';
   const label = mk==='ml' ? side+' ML'
     : mk==='spread' ? `${side} ${line>0?'-':''}${Math.abs(line)}`
     : mk==='total' ? `${g.short} ${side==='over'?'o':'u'}${line}`
@@ -2461,7 +2479,7 @@ function paintSlip(players, picks, status, live){
         <span class="sel">no leg yet</span></span>
         <span class="rt"><span class="pxv">—</span></span></li>`;
     const sub = `${SPORTS[x.sport]?SPORTS[x.sport].n:esc(x.sport)} · ${esc(x.game)}`
-      + (x.mkt==='prop' ? ' · prop' : '')
+      + (x.mkt==='prop' ? ' · prop' : x.mkt==='other' ? ' · other' : '')
       + (r.actual!=null ? ` · finished ${r.actual}` : '');
     return `<li class="${cls}"><span class="mk">${mark}</span>
       <span><span class="who2">${esc(teamOf(p))}</span>
@@ -2625,9 +2643,9 @@ function paintDiag(live, players, status){
       If they move together the real cash probability is <b>higher</b> than shown; if they fight each other it is lower.
       Nothing here corrects for it.</span></div>`);
   }
-  const props = live.filter(x=>x.mkt==='prop');
+  const props = live.filter(x=>x.mkt==='prop' || x.mkt==='other');
   if(props.length)
-    flags.push(`<div class="flag"><span>⚠</span><span><b>${props.length} prop leg${props.length===1?'':'s'}</b>
+    flags.push(`<div class="flag"><span>⚠</span><span><b>${props.length} soft-SD leg${props.length===1?'':'s'} (prop or other)</b>
       — ${props.map(x=>esc(teamOf(x.p))).join(', ')}. Prop standard deviation is <code>line × 0.55</code>, a placeholder the
       brief calls the weakest number in the build. Their Worst Beat exposure is the softest column on this page.</span></div>`);
   // ⚠️ Ordered first on purpose: an integrity flag outranks a modelling caveat.
@@ -2659,7 +2677,7 @@ function paintDiag(live, players, status){
       const mine = ME && x.p===ME.name ? ' class="me"' : '';
       const by = R.by[i];
       return `<tr${mine}><td class="who">${esc(teamOf(x.p))}</td>
-        <td class="pk">${esc(x.label)} <span class="px">${x.price>0?'+':''}${x.price}</span>${x.mkt==='prop'?' <span class="tm">· prop</span>':''}</td>
+        <td class="pk">${esc(x.label)} <span class="px">${x.price>0?'+':''}${x.price}</span>${(x.mkt==='prop'||x.mkt==='other')?` <span class="tm">· ${x.mkt}</span>`:''}</td>
         <td><span class="mcell"><span class="v">${pct(R.win[i])}</span>${meter(R.win[i])}</span></td>
         <td><span class="mcell"><span class="v">${pct(R.bozo[i])}</span>${meter(R.bozo[i],true)}</span></td>
         <td class="px">${pct(R.solo[i])}</td>
@@ -2751,7 +2769,7 @@ function bozoCtx(){
   live.slice().sort((a,b)=>(a.ts||0)-(b.ts||0)).forEach((x,i)=>{
     const r=res[kEnc(x.p)]||{};
     const outcome = status==='graded' ? (r.won===true?' WON':r.won===false?' LOST':' push/void') : '';
-    L.push(`${i+1}. ${teamOf(x.p)} | ${x.label} | ${x.price} | ${SPORTS[x.sport]?SPORTS[x.sport].n:x.sport} ${x.game}${x.mkt==='prop'?' (PROP — soft SD)':''} | in ${when(x.ts)}${outcome}${r.actual!=null?` | finished ${r.actual}`:''}`);
+    L.push(`${i+1}. ${teamOf(x.p)} | ${x.label} | ${x.price} | ${SPORTS[x.sport]?SPORTS[x.sport].n:x.sport} ${x.game}${(x.mkt==='prop'||x.mkt==='other')?` (${x.mkt.toUpperCase()} — soft SD, manual grading)`:''} | in ${when(x.ts)}${outcome}${r.actual!=null?` | finished ${r.actual}`:''}`);
   });
   const missing = players.filter(p=>picks[kEnc(p)]==null);
   if(missing.length) L.push(`NOT IN YET: ${missing.map(teamOf).join(', ')}. The ticket cannot place until they are${st.lockRule==='count'?' (unless the leg count trips first)':''}.`);
@@ -2933,7 +2951,7 @@ async function autoGrade(){
     catch(err){ games=GAMES[sp]||[]; e.textContent='Scores unreachable — '+err.message; }
     for(const [p,x] of entries){
       if(x.sport!==sp) continue;
-      if(x.mkt==='prop'){ missed.push(p+' (prop)'); continue; }
+      if(x.mkt==='prop' || x.mkt==='other'){ missed.push(p+' ('+x.mkt+')'); continue; }
       const g=games.find(y=>y.id===x.eventId);
       if(!g||!g.final){ missed.push(p); continue; }
       results[p]=results[p]||{};
@@ -2957,7 +2975,7 @@ async function autoGrade(){
   await refresh();
 }
 function paintManual(live){
-  const need = live.filter(x => x.mkt==='prop' || ((S.results||{})[x.p]||{}).won==null);
+  const need = live.filter(x => x.mkt==='prop' || x.mkt==='other' || ((S.results||{})[x.p]||{}).won==null);
   document.getElementById('manual').innerHTML =
     (need.length ? `<div class="lil" style="margin-bottom:6px">Manual — props and anything ESPN didn't cover</div>` +
       need.map(x=>`<div class="gr"><span><b>${esc(x.p)}</b> <span class="pk">${esc(x.label)}</span></span>
@@ -2994,7 +3012,7 @@ async function decide(){
     if(r.actual!=null){
       // A zero on a market where zero is possible takes the floor rather than
       // pretending a Bernoulli outcome sits on the same scale as a point margin.
-      if(r.actual===0 && (x.mkt==='prop'||x.mkt==='total') && dirOf(x)==='over') beat=999;
+      if(r.actual===0 && (x.mkt==='prop'||x.mkt==='total'||x.mkt==='other') && dirOf(x)==='over') beat=999;
       else { const exp=expected(x); beat = (dirOf(x)==='under' ? (r.actual-exp) : (exp-r.actual))/sd; }
     }
     const close = r.close!=null ? r.close : x.price;
