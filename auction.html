@@ -657,11 +657,14 @@ body.proj .blockbar .bb-v{font-size:26px}
       ["guillotine.html","Guillotine Companion","guillotine"],
       ["receipts.html","Receipts","receipts"],
     ]},
+    /* ⚠️ Auctioneer Controls left this menu on 8/5 — it is now a tab inside the
+       Dashboard (auction.html?embed=1), behind an acknowledgement gate. The standalone
+       page is STILL LIVE at /auction.html and is still what runs draft night on the
+       operator machine; it is simply unlinked, same treatment as bigboard.html. Do not
+       "restore" it here without checking whether the Dashboard tab was removed too. */
     {label:"Field-Tested", href:"index.html#tiers", items:[
       ["stats.html","NFL EPA Stats","stats"],
-      ["dashboard.html","Dashboard","dashboard","hot"],
-      // everything below the rule is operator-only — it gets locked down on draft day
-      ["auction.html","Auctioneer Controls","auction","","sep"],
+      ["dashboard.html","Fantasy Draft Dashboard","dashboard","hot"],
     ]},
     {label:"Data", items:[
       ["master.html","Master Data","master"],
@@ -2455,6 +2458,39 @@ if(IS_PROJ && window.DDSync && window.DDSync.on){
 }
 if(IS_PROJ){ setInterval(()=>{ if(S.timerEnd>Date.now()-2000 && S.timerEnd>0) render(); }, 500); }
 render();
+</script>
+<script>
+/* ---- embedded-in-dashboard mode: the shell owns the chrome ----
+   Ported from board.html 8/5 so Auctioneer Controls can be a Dashboard tab. Same
+   contract as the other four views: hide our own chrome, post our height up, accept
+   the shell's theme down. The page stays fully functional standalone at /auction.html
+   — that is still how draft night runs on the operator machine. */
+(function(){
+  if(!/[?&]embed=1/.test(location.search)) return;
+  document.documentElement.classList.add("dd-embed");
+  const css = document.createElement("style");
+  css.textContent = ".dd-embed .sitenav,.dd-embed footer,.dd-embed #ddbLaunch,.dd-embed #ddmeChip{display:none!important}"
+    + ".dd-embed body{background:transparent}"
+    + ".dd-embed .wrap{padding:0 0 14px;max-width:none}";
+  document.head.appendChild(css);
+  const post = () => {
+    const h = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+    parent.postMessage({dd:"height", h}, location.origin);
+  };
+  addEventListener("load", post);
+  addEventListener("resize", post);
+  if(window.ResizeObserver) new ResizeObserver(post).observe(document.body);
+  /* ⚠️ The operator page rewrites large blocks on every pick, and a bid can land from
+     DDSync with no DOM event we observe. The interval is the honest safety net, same
+     as the other views. */
+  setInterval(post, 900);
+  addEventListener("message", e=>{
+    if(e.origin!==location.origin || !e.data || e.data.dd!=="theme") return;
+    document.documentElement.setAttribute("data-theme", e.data.theme);
+    if(window.DDTheme && DDTheme.apply) DDTheme.apply();
+    setTimeout(post, 60);
+  });
+})();
 </script>
 </body>
 </html>

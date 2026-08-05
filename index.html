@@ -412,11 +412,14 @@ footer a{color:var(--accent)}
       ["guillotine.html","Guillotine Companion","guillotine"],
       ["receipts.html","Receipts","receipts"],
     ]},
+    /* ⚠️ Auctioneer Controls left this menu on 8/5 — it is now a tab inside the
+       Dashboard (auction.html?embed=1), behind an acknowledgement gate. The standalone
+       page is STILL LIVE at /auction.html and is still what runs draft night on the
+       operator machine; it is simply unlinked, same treatment as bigboard.html. Do not
+       "restore" it here without checking whether the Dashboard tab was removed too. */
     {label:"Field-Tested", href:"index.html#tiers", items:[
       ["stats.html","NFL EPA Stats","stats"],
-      ["dashboard.html","Dashboard","dashboard","hot"],
-      // everything below the rule is operator-only — it gets locked down on draft day
-      ["auction.html","Auctioneer Controls","auction","","sep"],
+      ["dashboard.html","Fantasy Draft Dashboard","dashboard","hot"],
     ]},
     {label:"Data", items:[
       ["master.html","Master Data","master"],
@@ -1026,7 +1029,7 @@ STATE: everything saves in the browser on that device. A different device shows 
           <div class="lc-txt">
             <span class="lc-chip">Field-Tested</span>
             <h3>The Field</h3>
-            <p><b>Three tools.</b> The gate is validation: does it work, and can it be trusted? <em>Field-Tested</em> is the label — <em>validated</em> is what it means. What counts as evidence depends on the tool: receipts against a benchmark set in advance for anything that forecasts, named sources and reproducible maths for anything that measures. It is never awarded for feeling finished.</p><p style="margin-top:8px"><a href="stats.html" style="color:var(--accent);font-weight:700;text-decoration:none">NFL EPA Stats</a>, the <a href="dashboard.html" style="color:var(--accent);font-weight:700;text-decoration:none">Draft Dashboard</a> and <a href="auction.html" style="color:var(--accent);font-weight:700;text-decoration:none">Auctioneer Controls</a> — the draft rig has run a live 14-team auction end to end.</p>
+            <p><b>Two tools.</b> The gate is validation: does it work, and can it be trusted? <em>Field-Tested</em> is the label — <em>validated</em> is what it means. What counts as evidence depends on the tool: receipts against a benchmark set in advance for anything that forecasts, named sources and reproducible maths for anything that measures. It is never awarded for feeling finished.</p><p style="margin-top:8px"><a href="stats.html" style="color:var(--accent);font-weight:700;text-decoration:none">NFL EPA Stats</a> and the <a href="dashboard.html" style="color:var(--accent);font-weight:700;text-decoration:none">Fantasy Draft Dashboard</a>, auctioneer console included — the draft rig has run a live 14-team auction end to end.</p>
           </div>
         </div>
 

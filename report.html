@@ -458,11 +458,14 @@ svg text{font-family:inherit}
       ["guillotine.html","Guillotine Companion","guillotine"],
       ["receipts.html","Receipts","receipts"],
     ]},
+    /* ⚠️ Auctioneer Controls left this menu on 8/5 — it is now a tab inside the
+       Dashboard (auction.html?embed=1), behind an acknowledgement gate. The standalone
+       page is STILL LIVE at /auction.html and is still what runs draft night on the
+       operator machine; it is simply unlinked, same treatment as bigboard.html. Do not
+       "restore" it here without checking whether the Dashboard tab was removed too. */
     {label:"Field-Tested", href:"index.html#tiers", items:[
       ["stats.html","NFL EPA Stats","stats"],
-      ["dashboard.html","Dashboard","dashboard","hot"],
-      // everything below the rule is operator-only — it gets locked down on draft day
-      ["auction.html","Auctioneer Controls","auction","","sep"],
+      ["dashboard.html","Fantasy Draft Dashboard","dashboard","hot"],
     ]},
     {label:"Data", items:[
       ["master.html","Master Data","master"],
