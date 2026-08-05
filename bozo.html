@@ -69,12 +69,12 @@ body{margin:0;background:var(--page);color:var(--ink-1);
 .brand .logo{font-size:19px;font-weight:800;letter-spacing:.02em}
 .brand .logo span{color:var(--accent)}
 .brand .tag{font-size:11.5px;color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase;align-self:center}
-/* ⚠️ Banner armour. `.tag` is a tempting class name and bozo.html already took it for
+/* ⚠️ Banner armour. `.tag` is a tempting class name and THIS FILE already took it for
    its own W/L chips — `.tag{font:700 9.5px/1 ui-monospace...;padding:3px 6px}`. That is
-   specificity 0-1-0 against this rule's 0-2-0, which loses on every property this rule
-   declares and WINS on every one it does not. Result: the tagline rendered monospace
-   with 6px of side padding on exactly one page, and the banner stopped matching the
-   other fourteen. Caught 8/5 by measuring computed styles, not by looking.
+   specificity 0-1-0 against the rule above's 0-2-0, which loses on every property that
+   rule declares and WINS on every one it does not. Result: the tagline rendered
+   monospace with 6px of side padding on exactly this page, and the banner stopped
+   matching the other fourteen. Caught 8/5 by measuring computed styles, not by looking.
    These declarations are the reset, so no page's local CSS can reach the banner again.
    ⚠️ Do NOT add font-size or white-space here — the narrow-width media query below
    overrides both at the same specificity and would lose to this earlier-but-equal rule. */
@@ -215,12 +215,6 @@ footer a{color:var(--accent)}
 .btn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--ink-2);padding:5px 12px;cursor:pointer;font-size:13px}
 .btn:hover{color:var(--ink-1);border-color:var(--accent)}
 
-.tierchip{display:inline-block;vertical-align:middle;margin-left:10px;font-size:10px;
-  font-weight:800;letter-spacing:.13em;text-transform:uppercase;padding:4px 9px;border-radius:5px;
-  text-decoration:none;background:var(--surface-1);color:var(--good);
-  border:1px solid color-mix(in srgb,var(--good) 55%,transparent)}
-.tierchip:hover{border-color:var(--good)}
-
 /* ================= Bozo ================= */
 .bz-hdr{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px}
 .bz-hdr h1{font-size:28px;margin:0;letter-spacing:-.4px;font-weight:800}
@@ -315,6 +309,67 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
   .bz-hdr h1{font-size:24px}
 }
 @media(prefers-reduced-motion:reduce){.strip,.rod,.ord li{transition:none!important}}
+/* ---- sheets nav: board / one chip per player / league ---- */
+.snav{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 16px}
+.snav button{background:none;border:1px solid var(--grid);color:var(--ink-2);border-radius:999px;
+  padding:6px 13px;cursor:pointer;font:700 12px/1 ui-monospace,monospace;letter-spacing:.6px;text-transform:uppercase}
+.snav button:hover{border-color:var(--accent);color:var(--ink-1)}
+.snav button.on{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.snav button .yu{font-size:9px;opacity:.8;margin-left:5px}
+/* ---- sheet stat tiles ---- */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:14px 22px;margin:4px 0 2px}
+.stat-grid .big{font-size:24px}
+/* ---- league dials ---- */
+.dial{display:flex;align-items:center;gap:8px}
+.dial button{background:none;border:1px solid var(--grid);color:var(--ink-2);border-radius:7px;
+  width:34px;height:34px;cursor:pointer;font:800 16px/1 ui-monospace,monospace}
+.dial button:hover{border-color:var(--accent);color:var(--ink-1)}
+.dial input{width:86px;text-align:center;font:700 15px ui-monospace,monospace}
+.rule-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;
+  padding:11px 0;border-bottom:1px solid var(--grid);font-size:14px}
+.rule-row:last-child{border-bottom:0}
+.rule-row .rl{font-weight:750}
+.rule-row .rd{color:var(--ink-3);font-size:12.5px;display:block;margin-top:2px}
+.rule-row .rv{font:700 14px ui-monospace,monospace;white-space:nowrap;color:var(--ink-1)}
+/* ---- league switcher ---- */
+.lgbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+.lgbar select{background:var(--surface-1);border:1px solid var(--grid);color:var(--ink-1);
+  border-radius:8px;padding:7px 10px;font:700 13px system-ui;max-width:min(320px,70vw)}
+.lgbar .sz{font:700 10.5px/1 ui-monospace,monospace;letter-spacing:1px;text-transform:uppercase;color:var(--ink-3)}
+/* ---- league hub ---- */
+.hub{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:4px}
+.hcard{display:block;text-decoration:none;color:var(--ink-1);background:var(--page);
+  border:1px solid var(--grid);border-radius:12px;padding:16px 18px;transition:border-color .15s}
+.hcard:hover{border-color:var(--accent)}
+.hcard h3{margin:0 0 3px;font-size:16.5px;font-weight:750;color:var(--ink-1)}
+.hcard .meta{font:11px ui-monospace,monospace;color:var(--ink-3);margin-bottom:9px}
+.hcard .bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.hcard .yours{background:color-mix(in srgb, var(--accent) 14%, transparent);color:var(--accent);
+  font:700 9.5px/1 ui-monospace,monospace;letter-spacing:.8px;text-transform:uppercase;padding:3px 6px;border-radius:4px}
+.backlink{display:inline-block;font-size:13px;margin:0 0 10px;text-decoration:none}
+/* ---- editable settings ---- */
+.setgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px 18px;margin:6px 0 4px}
+.setgrid .f{gap:5px}
+.lev{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.lev label{display:flex;align-items:center;gap:6px;border:1px solid var(--grid);border-radius:8px;
+  padding:7px 11px;cursor:pointer;font:600 12.5px system-ui;color:var(--ink-2);text-transform:none;letter-spacing:0}
+.lev label.on{border-color:var(--accent);color:var(--ink-1);background:color-mix(in srgb, var(--accent) 8%, transparent)}
+.warnbox{border-left:3px solid var(--warn);background:color-mix(in srgb, var(--warn) 9%, transparent);
+  padding:10px 13px;border-radius:0 8px 8px 0;font-size:13px;margin:10px 0 0;color:var(--ink-1)}
+.ros input.team{width:150px;font:600 13px system-ui;padding:5px 8px}
+/* ---- roster / invite management ---- */
+.ros{display:grid;grid-template-columns:1fr auto auto;gap:8px 10px;align-items:center;
+  padding:9px 0;border-bottom:1px solid var(--grid);font-size:14px}
+.ros:last-of-type{border-bottom:0}
+.ros .st{font:700 10px/1 ui-monospace,monospace;letter-spacing:.9px;text-transform:uppercase;
+  padding:3px 7px;border-radius:4px;white-space:nowrap}
+.ros .st.yes{background:color-mix(in srgb, var(--good) 16%, transparent);color:var(--good)}
+.ros .st.no{background:color-mix(in srgb, var(--warn) 18%, transparent);color:var(--warn)}
+.linkout{margin-top:10px;padding:12px 14px;border-radius:9px;
+  background:color-mix(in srgb, var(--accent) 8%, transparent);border-left:3px solid var(--accent)}
+.linkout code{display:block;font:12px ui-monospace,monospace;word-break:break-all;
+  margin:7px 0;color:var(--ink-1)}
+@media(max-width:640px){ .ros{grid-template-columns:1fr auto;row-gap:6px} .ros .who{grid-column:1/-1} }
 
 </style>
 </head>
@@ -997,6 +1052,37 @@ STATE: everything saves in the browser on that device. A different device shows 
 <div class="bz-hdr"><h1>Bozo</h1><span class="chip" id="statusChip">—</span></div>
 <p class="bz-sub">One favorite each, one big parlay. Whoever busts it worst wears it — and funds next week's ticket.</p>
 
+<!-- ---------- the hub: every league, plus admin ---------- -->
+<div class="card" id="hubCard" style="display:none">
+  <div class="bz-hdr"><h2 class="bz" style="margin:0">Leagues</h2><span class="tm" id="hubCount"></span></div>
+  <div class="hub" id="hubList"></div>
+  <div id="mkLeague" style="display:none;margin-top:20px;border-top:1px solid var(--grid);padding-top:16px">
+    <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:0 0 4px">New league</h3>
+    <p class="tm" style="margin:0 0 10px">A separate group with its own roster size, band, week and ledger. You pick who runs it.</p>
+    <div class="frm">
+      <div class="f w2"><label>Name</label><input id="nlName" placeholder="Sunday Crew"></div>
+      <div class="f"><label>Id (for the link)</label><input id="nlId" placeholder="sunday"></div>
+      <div class="f"><label>Manager</label><select id="nlMgr"></select></div>
+      <div class="f w4"><div class="row" style="justify-content:flex-end">
+        <button class="btn sm" id="nlGo">Create league</button></div></div>
+    </div>
+    <div class="err" id="nlErr"></div>
+  </div>
+  <p class="note" id="hubNote"></p>
+</div>
+
+<!-- ---------- which league ---------- -->
+<div class="lgbar" id="lgbar" style="display:none">
+  <label class="lil" for="lgPick" style="margin:0">League</label>
+  <select id="lgPick"></select>
+  <span class="sz" id="lgSize"></span>
+</div>
+
+<a class="backlink" id="backHub" href="bozo.html" style="display:none">← All leagues</a>
+
+<!-- ---------- sheet nav: the board, one sheet per player, the league ---------- -->
+<div class="snav" id="snav"></div>
+
 <!-- ---------- identity ---------- -->
 <div class="card" id="authCard">
   <h2 class="bz" id="authH">Sign in</h2>
@@ -1009,6 +1095,7 @@ STATE: everything saves in the browser on that device. A different device shows 
     <span>Signed in as <span class="nm" id="meName">—</span></span>
     <span class="tm" id="adminBadge"></span>
     <span style="margin-left:auto"></span>
+    <button class="btn ghost sm" id="mySheet">My sheet</button>
     <button class="btn ghost sm" id="chgPw">Change password</button>
     <button class="btn ghost sm" id="signOut">Sign out</button>
   </div>
@@ -1044,11 +1131,87 @@ STATE: everything saves in the browser on that device. A different device shows 
     </div></div>
   </div>
   <div class="err" id="err"></div>
-  <p class="note">Favorites only, −100 to −300. No exact duplicates. Editing resets your clock <em>and</em> your price. The ticket locks the moment the last leg lands.</p>
+  <p class="note" id="bandNote">Favorites only. No exact duplicates. Editing resets your clock <em>and</em> your price. The ticket locks the moment the last leg lands.</p>
+</div>
+
+<!-- ---------- player sheet (view: one per player; the bet form docks here on YOUR sheet) ---------- -->
+<div class="card" id="sheetCard" style="display:none">
+  <div class="bz-hdr"><h2 class="bz" style="margin:0" id="shName">—</h2><span class="tm" id="shMeta"></span></div>
+  <div class="stat-grid" id="shStats"></div>
+  <div id="shWeek" style="margin-top:14px"></div>
+  <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink-3);margin:18px 0 8px">Every leg, on the record</h3>
+  <table class="bz" id="shHist"><tbody></tbody></table>
+  <p class="note" id="shNote"></p>
+</div>
+
+<!-- ---------- league sheet: the rules, and the manager's dials ---------- -->
+<div class="card" id="leagueCard" style="display:none">
+  <h2 class="bz">League — the rules</h2>
+  <div id="lgRules"></div>
+  <div id="lgAdmin" style="display:none;margin-top:16px">
+    <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:0 0 10px">Manager controls</h3>
+
+    <div class="setgrid">
+      <div class="f"><label>League name</label><input id="sName" maxlength="60"></div>
+      <div class="f"><label>Manager</label><select id="sMgr"></select></div>
+      <div class="f"><label>Stake ($ on the ticket)</label><input id="sStake" type="number" min="1" step="5"></div>
+    </div>
+
+    <div class="rule-row"><span><span class="rl">Band ceiling</span><span class="rd">shortest price allowed — favorites only, so it can't rise above −100</span></span>
+      <span class="dial"><button data-dial="ceil" data-d="-25">−</button><input id="dCeil" type="number" step="5" max="-100"><button data-dial="ceil" data-d="25">+</button></span></div>
+    <div class="rule-row"><span><span class="rl">Band floor</span><span class="rd">deepest favorite allowed — deeper floor = ticket cashes more often, for less</span></span>
+      <span class="dial"><button data-dial="floor" data-d="-25">−</button><input id="dFloor" type="number" step="5"><button data-dial="floor" data-d="25">+</button></span></div>
+
+    <div class="rule-row"><span><span class="rl">Duplicate legs</span><span class="rd">can two people take the exact same bet</span></span>
+      <span><select id="sDupes"><option value="no">Not allowed</option><option value="yes">Allowed</option></select></span></div>
+    <div class="rule-row"><span><span class="rl">Editing after you submit</span><span class="rd">open editing resets your timestamp and your price, which is what makes Last In and CLV bite</span></span>
+      <span><select id="sEdit"><option value="yes">Open until the ticket is placed</option><option value="no">Locked once your leg is in</option></select></span></div>
+    <div class="rule-row"><span><span class="rl">When the ticket locks</span><span class="rd">everyone-in keeps the close honest; a fixed count turns Last In into a race someone can miss</span></span>
+      <span class="row" style="gap:8px">
+        <select id="sLockRule"><option value="all">When every member is in</option><option value="count">At a fixed number of legs</option></select>
+        <input id="sLockCount" type="number" min="2" max="64" style="width:72px;display:none"></span></div>
+
+    <div style="padding:11px 0;border-bottom:1px solid var(--grid)">
+      <span class="rl">Tiebreakers in the weekly draw</span>
+      <span class="rd">the hierarchy is a fresh random permutation of whichever of these are on</span>
+      <div class="lev" id="sLevers"></div>
+      <div class="warnbox" id="leverWarn" style="display:none"></div>
+    </div>
+
+    <div class="row" style="margin-top:12px;justify-content:flex-end">
+      <button class="btn ghost sm" id="dReset">Back to current</button>
+      <button class="btn sm" id="dSave">Save settings</button>
+    </div>
+    <div class="err" id="lgErr"></div>
+
+    <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:22px 0 4px">Who's in this league</h3>
+    <p class="tm" style="margin:0 0 8px">The roster <em>is</em> the size — the ticket locks when everyone here has a leg in. Join links are stored hashed, so a lost one can't be looked up, only re-issued.</p>
+    <div id="rosBody"></div>
+    <div class="row" style="margin-top:12px;align-items:flex-end;gap:10px">
+      <div class="f" style="flex:1;min-width:170px"><label>Add someone who already has an account</label>
+        <select id="addPick"></select></div>
+      <button class="btn ghost sm" id="addGo">Add</button>
+    </div>
+    <div class="row" style="margin-top:10px;align-items:flex-end;gap:10px">
+      <div class="f" style="flex:1;min-width:170px"><label>Or invite someone new</label>
+        <input id="invName" placeholder="Name as it should appear"></div>
+      <button class="btn ghost sm" id="invGo">Create &amp; get link</button>
+    </div>
+    <div id="rosOut"></div>
+    <div class="err" id="rosErr"></div>
+
+    <div id="lockRow" style="display:none;margin-top:18px;border-top:1px solid var(--grid);padding-top:14px">
+      <div class="row" style="align-items:center;gap:10px">
+        <button class="btn ghost sm" id="forceLock">Place the ticket now</button>
+        <span class="tm" id="lockWho"></span>
+      </div>
+    </div>
+  </div>
+  <p class="note" id="lgNote"></p>
 </div>
 
 <!-- ---------- the ticket ---------- -->
-<div class="card">
+<div class="card" id="ticketCard">
   <div class="bz-hdr"><h2 class="bz" style="margin:0">The ticket</h2><span class="tm" id="fill"></span></div>
   <table class="bz" id="board"><tbody></tbody></table>
   <div class="tick">
@@ -1083,7 +1246,7 @@ STATE: everything saves in the browser on that device. A different device shows 
 </div>
 
 <!-- ---------- season ---------- -->
-<div class="card">
+<div class="card" id="seasonCard">
   <h2 class="bz">Season</h2><table class="bz" id="lb"><tbody></tbody></table>
   <div class="row" style="margin-top:14px" id="adminRow" style="display:none">
     <button class="btn ghost sm" id="next">Start next week</button>
@@ -1123,8 +1286,10 @@ const LEVERS = [{k:'odds',name:'Shortest Odds',desc:'biggest favorite in the poo
   {k:'last',name:'Last In',desc:'final leg submitted'},
   {k:'clv', name:'Worst CLV', desc:'price moved most against it'}];
 
-let S = {};                 // live state from RTDB
-let ROSTER = [];            // [{name, claimed}]
+let S = {};                 // live state for the SELECTED league, from RTDB
+let LEAGUES = [];           // [{id,name,manager,size,members,week,status}]
+let LID = 'main';           // which league we're looking at (?l=)
+let ROSTER = [];            // every account on the site, [{name, claimed}]
 let ME = null;              // {name, session}
 let GAMES = {};             // sport -> games[]
 let drawnOrder = null;      // so the reels only animate once per draw
@@ -1156,10 +1321,13 @@ async function wGet(path){
   if(!r.ok) throw new Error(j.error || ('HTTP '+r.status));
   return j;
 }
+// Every write names its league. The Worker defaults to "main" when absent, but being
+// explicit means a stale tab can never write into the wrong league after a switch.
 async function wPost(path, body){
   const h = {'Content-Type':'application/json'};
-  if(ME) h['X-Bozo-Session'] = ME.session;
-  const r = await fetch(WORKER + path, {method:'POST', headers:h, body:JSON.stringify(body||{})});
+  if(ME) h['X-Dawg-Session'] = ME.session;
+  const r = await fetch(WORKER + path, {method:'POST', headers:h,
+    body:JSON.stringify({league:LID, ...(body||{})})});
   const j = await r.json().catch(()=>({error:'bad response'}));
   if(!r.ok){
     // The Worker kills sessions when a password changes or an admin resets you.
@@ -1268,10 +1436,12 @@ function paintSides(){
 /* ---------------- live state ---------------- */
 // /bozo is world-readable, so the board streams straight from RTDB with no
 // credential. EventSource = push; the poll is only a safety net.
+let esHandle = null;
 function watchState(){
   let es=null;
   try{
-    es = new EventSource(DB + '/bozo.json');
+    es = new EventSource(DB + '/bozo/leagues/' + LID + '.json');
+    esHandle = es;
     es.addEventListener('put', ev=>{
       try{
         const m=JSON.parse(ev.data);
@@ -1287,7 +1457,7 @@ function watchState(){
 }
 async function refresh(){
   try{
-    const r = await fetch(DB + '/bozo.json?' + bust());
+    const r = await fetch(DB + '/bozo/leagues/' + LID + '.json?' + bust());
     S = (await r.json()) || {};
     render();
   }catch(e){ /* transient — the next tick retries */ }
@@ -1297,14 +1467,151 @@ async function refresh(){
 const esc = s => String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
 const when = ts => !ts ? '' : new Date(ts).toLocaleDateString(undefined,{weekday:'short'}) + ' ' +
   new Date(ts).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
-const names = () => ROSTER.map(p=>p.name);
+// ⚠️ The chips, the board and the season table are the LEAGUE's members — not every
+// account on the site. A four-person league shows four names next to an eight.
+const league = () => LEAGUES.find(l=>l.id===LID) || null;
+const names = () => (league()?.members) || [];
+const allAccounts = () => ROSTER.map(p=>p.name);
+
+// Two different powers. isAdmin is the site owner (creates leagues, can act anywhere);
+// isManager runs THIS league. The Worker enforces both — this only decides what shows.
 const isAdmin = () => !!ME && ME.name === ADMIN;
+const isManager = () => !!ME && (isAdmin() || (league()?.manager) === ME.name);
+
+/* ---------------- league config (the manager's dials) ---------------- */
+// The Worker is the enforcer (validatePick reads /bozo/config); this mirror only
+// decides what the form says and rejects early. Defaults MUST match the Worker's
+// BAND_DEFAULT or the page would promise a band the Worker refuses.
+const band = () => ({
+  ceil:  (S.config && Number.isFinite(S.config.bandCeil))  ? S.config.bandCeil  : -100,
+  floor: (S.config && Number.isFinite(S.config.bandFloor)) ? S.config.bandFloor : -500,
+});
+
+/* ---------------- team names ---------------- */
+// A display name inside ONE league. The account name stays the key everywhere — picks,
+// ledger rows, sheet links — so renaming what the board calls someone can never orphan
+// a receipt, and the same person can be different things in different leagues.
+const teamOf = n => (league()?.teams || {})[kEnc(n)] || (S.teams||{})[kEnc(n)] || n;
+
+/* ---------------- the hub: every league in one place ---------------- */
+// bozo.html with no ?l= is the general Bozo page: the league directory plus, for the
+// site admin, the controls to create more. ?l=<id> opens that league's board.
+const onHub = () => !new URLSearchParams(location.search).get('l');
+
+function paintHub(){
+  const card = document.getElementById('hubCard');
+  if(!onHub()){ card.style.display='none'; return; }
+  card.style.display='';
+  document.getElementById('hubCount').textContent =
+    LEAGUES.length + (LEAGUES.length===1 ? ' league' : ' leagues');
+  document.getElementById('hubList').innerHTML = LEAGUES.map(l=>{
+    const mine = ME && (l.members||[]).includes(ME.name);
+    const chip = l.status==='open' ? 'open' : l.status;
+    return `<a class="hcard" href="bozo.html?l=${encodeURIComponent(l.id)}">
+      <h3>${esc(l.name)}</h3>
+      <div class="meta">${l.size} player${l.size===1?'':'s'} · week ${l.week} · run by ${esc(l.manager||'—')}</div>
+      <div class="bar"><span class="chip ${esc(chip)}">${esc(chip)}</span>
+        ${mine?'<span class="yours">you\u2019re in</span>':''}</div>
+    </a>`;
+  }).join('') || '<p class="pend">No leagues yet.</p>';
+  // Site admin only: spinning up a whole new group. Lives on the hub, because that is
+  // where you go to manage leagues rather than to play in one.
+  const mk = document.getElementById('mkLeague');
+  mk.style.display = isAdmin() ? '' : 'none';
+  if(isAdmin())
+    document.getElementById('nlMgr').innerHTML =
+      allAccounts().map(n=>`<option${n===ME?.name?' selected':''}>${esc(n)}</option>`).join('');
+
+  document.getElementById('hubNote').textContent = ME
+    ? (isAdmin() ? 'You can edit any league. Open one to manage its roster and rules.'
+                 : 'Open a league to see its board.')
+    : 'Sign in to submit a leg. The boards are public either way.';
+}
+
+/* ---------------- the league switcher ---------------- */
+// League in the QUERY string, view in the hash: bozo.html?l=smallball#s=Tony. They are
+// orthogonal — the same sheet exists in every league — so they get separate slots.
+function paintLeagueBar(){
+  const bar = document.getElementById('lgbar');
+  const sel = document.getElementById('lgPick');
+  if(LEAGUES.length <= 1){ bar.style.display = 'none'; return; }
+  bar.style.display = '';
+  sel.innerHTML = LEAGUES.map(l=>`<option value="${esc(l.id)}"${l.id===LID?' selected':''}>${esc(l.name)}</option>`).join('');
+  const lg = league();
+  document.getElementById('lgSize').textContent =
+    lg ? `${lg.size} player${lg.size===1?'':'s'} · week ${lg.week}` : '';
+}
+document.getElementById('lgPick').onchange = e => {
+  // Full reload: the EventSource, the state and every sheet are league-scoped, and a
+  // reload re-subscribes cleanly instead of leaving a stream open on the old league.
+  const u = new URL(location.href);
+  u.searchParams.set('l', e.target.value);
+  u.hash = '';
+  location.href = u.toString();
+};
+async function loadLeagues(){
+  try{
+    const r = await wGet('/league/list');
+    LEAGUES = r.leagues || [];
+    const want = new URLSearchParams(location.search).get('l');
+    LID = (want && LEAGUES.some(l=>l.id===want)) ? want
+        : (LEAGUES.some(l=>l.id===r.defaultLeague) ? r.defaultLeague : (LEAGUES[0]||{}).id || 'main');
+  }catch(e){
+    LEAGUES = []; 
+    document.getElementById('srcNote').textContent = 'Leagues unreachable — '+e.message;
+  }
+}
+
+/* ---------------- sheets: board / one per player / league ---------------- */
+// Hash-routed so a sheet is linkable: #s=Kap, #league, nothing = the board.
+function view(){
+  const h = decodeURIComponent(location.hash.slice(1));
+  if(h === 'league') return 'league';
+  if(h.startsWith('s=') && names().includes(h.slice(2))) return h.slice(2);
+  return 'board';
+}
+function goto(v){
+  location.hash = v==='board' ? '' : v==='league' ? 'league' : 's='+encodeURIComponent(v);
+}
+function paintSnav(v){
+  const el = document.getElementById('snav');
+  const btn = (id,label,extra) =>
+    `<button data-v="${esc(id)}"${v===id?' class="on"':''}>${esc(label)}${extra||''}</button>`;
+  el.innerHTML = btn('board','The Board')
+    + names().map(p=>btn(p, teamOf(p), (ME&&p===ME.name)?'<span class="yu">— you</span>':'')).join('')
+    + btn('league','League');
+}
+document.getElementById('snav').addEventListener('click', e=>{
+  const b = e.target.closest('button[data-v]'); if(b) goto(b.dataset.v);
+});
+window.addEventListener('hashchange', ()=>render());
+
+// ⚠️ /bozo/picks and /bozo/results are keyed with encodeURIComponent(name) by the
+// Worker, so "The Kid" lives under "The%20Kid". Roster names are decoded. This maps
+// a display name onto whichever key the data actually uses. (Pre-existing board bug:
+// a player with a space in their name showed "no leg yet" after submitting.)
+const kEnc = p => (S.picks && S.picks[p]) ? p : encodeURIComponent(p);
 
 function render(){
   const players = names();
   const picks = S.picks || {};
   const status = S.status || 'open';
-  const live = players.map(p=>({p, ...(picks[p]||{})})).filter(x=>x.price!=null);
+  // ⚠️ keys via kEnc — picks are stored URL-encoded, roster names aren't
+  const live = players.map(p=>({p, ...(picks[kEnc(p)]||{})})).filter(x=>x.price!=null);
+  const hub = onHub();
+  paintHub();
+  // The chip reports one league's week and status — nonsense on a directory of several.
+  document.getElementById('statusChip').style.display = hub ? 'none' : '';
+  document.getElementById('backHub').style.display = (hub || LEAGUES.length<2) ? 'none' : '';
+  // On the hub every league-scoped card is hidden; the directory is the whole page.
+  for(const id of ['snav','lgbar','submitCard','ticketCard','seasonCard','sheetCard','leagueCard','drawCard','gradeCard','verdict'])
+    { const el=document.getElementById(id); if(el && hub) el.style.display='none'; }
+  if(hub) return;
+
+  const v = view();
+  const onBoard = v==='board';
+  paintLeagueBar();
+  paintSnav(v);
 
   const c=document.getElementById('statusChip');
   c.className='chip '+status;
@@ -1312,16 +1619,28 @@ function render(){
   document.getElementById('fill').textContent = live.length+' of '+players.length+' in';
 
   const open = status==='open';
-  const mine = ME ? picks[ME.name] : null;
-  document.getElementById('submitCard').style.display = (ME && open) ? '' : 'none';
+  const mine = ME ? picks[kEnc(ME.name)] : null;
+  const bd = band();
+  // The bet form lives on YOUR sheet — that's the "place their bet" surface.
+  document.getElementById('submitCard').style.display = (ME && open && v===ME.name) ? '' : 'none';
   document.getElementById('submitH').textContent = mine ? 'Your leg — editing resets your clock and price' : 'Your leg';
+  document.getElementById('bandNote').textContent =
+    `Favorites only, ${bd.ceil} to ${bd.floor}. No exact duplicates. Editing resets your clock and your price. The ticket locks the moment the last leg lands.`;
   const cm=document.getElementById('clearMine'); if(cm) cm.style.display = mine ? '' : 'none';
+
+  // the sheets themselves
+  document.getElementById('ticketCard').style.display = onBoard ? '' : 'none';
+  document.getElementById('seasonCard').style.display = onBoard ? '' : 'none';
+  document.getElementById('sheetCard').style.display = players.includes(v) ? '' : 'none';
+  if(players.includes(v)) paintSheet(v);
+  document.getElementById('leagueCard').style.display = v==='league' ? '' : 'none';
+  if(v==='league') paintLeague();
 
   document.querySelector('#board tbody').innerHTML =
     '<tr><th>Who</th><th>Leg</th><th>Price</th><th>In</th></tr>' +
     players.map(p=>{
-      const x = picks[p] || {};
-      const r = (S.results||{})[p] || {};
+      const x = picks[kEnc(p)] || {};
+      const r = (S.results||{})[kEnc(p)] || {};
       let tag='';
       if(status==='graded' && x.price!=null)
         tag = r.won===true ? '<span class="tag w">W</span>'
@@ -1329,8 +1648,8 @@ function render(){
             : '<span class="tag p">—</span>';
       const cls = (ME && p===ME.name ? 'me ' : '') + (S.bozo===p ? 'bz-loser' : '');
       if(x.price==null)
-        return `<tr class="${cls}"><td class="who">${esc(p)}</td><td class="pend" colspan="3">no leg yet</td></tr>`;
-      return `<tr class="${cls}"><td class="who">${esc(p)}</td><td class="pk">${esc(x.label)}${tag}
+        return `<tr class="${cls}"><td class="who">${esc(teamOf(p))}</td><td class="pend" colspan="3">no leg yet</td></tr>`;
+      return `<tr class="${cls}"><td class="who">${esc(teamOf(p))}</td><td class="pk">${esc(x.label)}${tag}
         <br><span class="tm">${SPORTS[x.sport]?SPORTS[x.sport].n:x.sport} · ${esc(x.game)}${r.actual!=null?' · finished '+r.actual:''}</span></td>
         <td class="px">${x.price}</td><td class="tm">${when(x.ts)}</td></tr>`;
     }).join('');
@@ -1339,7 +1658,9 @@ function render(){
   if(live.length){
     const d = live.reduce((a,x)=>a*dec(x.price),1);
     document.getElementById('tOdds').textContent = amer(d);
-    document.getElementById('tPay').textContent = '$'+Math.round(d*50).toLocaleString();
+    const stake = league()?.settings?.stake ?? 50;
+    document.querySelector('#tPay').previousElementSibling.textContent = '$'+stake+' returns';
+    document.getElementById('tPay').textContent = '$'+Math.round(d*stake).toLocaleString();
   }else{
     document.getElementById('tOdds').textContent='—';
     document.getElementById('tPay').textContent='—';
@@ -1350,21 +1671,21 @@ function render(){
 
   // hierarchy
   const ord = S.order;
-  document.getElementById('drawCard').style.display = ord ? '' : 'none';
+  document.getElementById('drawCard').style.display = (ord && onBoard) ? '' : 'none';
   if(ord){
     const key = ord.join(',');
     if(drawnOrder !== key){ const first = drawnOrder===null; drawnOrder=key; first ? paintOrder(ord) : spin(ord); }
   } else drawnOrder = null;
 
   // grading — the Worker is the authority; this only decides what to show
-  document.getElementById('gradeCard').style.display = (isAdmin() && status==='placed') ? '' : 'none';
-  if(isAdmin() && status==='placed') paintManual(live);
+  document.getElementById('gradeCard').style.display = (isManager() && status==='placed' && onBoard) ? '' : 'none';
+  if(isManager() && status==='placed' && onBoard) paintManual(live);
   const ar=document.getElementById('adminRow');
-  if(ar) ar.style.display = (isAdmin() && status==='graded') ? '' : 'none';
+  if(ar) ar.style.display = (isManager() && status==='graded') ? '' : 'none';
 
-  document.getElementById('verdict').style.display = S.bozo ? '' : 'none';
+  document.getElementById('verdict').style.display = (S.bozo && onBoard) ? '' : 'none';
   if(S.bozo){
-    document.getElementById('vName').textContent = S.bozo;
+    document.getElementById('vName').textContent = teamOf(playerName(S.bozo));
     document.getElementById('vWhy').textContent = S.bozoWhy||'';
   }
 
@@ -1377,9 +1698,348 @@ function render(){
     '<tr><th>#</th><th>Who</th><th>Bozos</th><th></th></tr>' +
     players.slice().sort((a,b)=>t[b]-t[a]||a.localeCompare(b))
       .map((p,i)=>`<tr class="${ME&&p===ME.name?'me':''}"><td class="tm">${i+1}</td>
-        <td class="who">${esc(p)}</td><td class="px">${t[p]}</td>
+        <td class="who">${esc(teamOf(p))}</td><td class="px">${t[p]}</td>
         <td class="tm">${t[p]===mx&&mx>0?'funding this week':''}</td></tr>`).join('');
 }
+
+/* ---------------- player sheet ---------------- */
+// Everything here derives from /bozo/ledger at read time — imp/CLV are computed
+// from the stored raw prices, never persisted (the SD table will be retuned and
+// stored derivatives would rot). The ledger starts writing the moment a week locks.
+const resOf = r => r.result || (r.won===true?'won':r.won===false?'lost':null);
+function sheetRows(player){
+  return Object.values(S.ledger||{}).filter(r=>r && r.player===player)
+    .sort((a,b)=>(b.season-a.season)||(b.week-a.week));
+}
+function paintSheet(player){
+  const rows = sheetRows(player);
+  const isMe = ME && ME.name===player;
+  document.getElementById('shName').textContent = teamOf(player) + (isMe?' — your sheet':'');
+  document.getElementById('shMeta').textContent =
+    (player===ADMIN?'league manager · ':'') +
+    ((ROSTER.find(p=>p.name===player)||{}).claimed ? 'claimed' : 'not claimed yet');
+
+  const w  = rows.filter(r=>resOf(r)==='won').length;
+  const l  = rows.filter(r=>resOf(r)==='lost').length;
+  const pv = rows.filter(r=>['push','void'].includes(resOf(r))).length;
+  const bozos = (S.history||[]).filter(h=>h && h.bozo===player).length + (S.bozo===player?1:0);
+  const priced = rows.filter(r=>Number.isFinite(r.price));
+  const avgPx = priced.length ? Math.round(priced.reduce((a,r)=>a+r.price,0)/priced.length) : null;
+  const chalk = rows.filter(r=>r.shortestOdds).length;
+  const lastIn = names().length ? rows.filter(r=>r.rank===names().length).length : 0;
+  const withClose = rows.filter(r=>Number.isFinite(r.close));
+  const clv = withClose.length
+    ? withClose.reduce((a,r)=>a+(imp(r.close)-imp(r.price)),0)/withClose.length : null;
+
+  const tile=(lil,big)=>`<div><div class="lil">${lil}</div><div class="big">${big}</div></div>`;
+  document.getElementById('shStats').innerHTML =
+    tile('Record', `${w}–${l}${pv?'–'+pv:''}`) +
+    tile('Bozos', bozos) +
+    tile('Legs', rows.length) +
+    tile('Avg price', avgPx==null?'—':avgPx) +
+    tile('Chalkiest in pool', chalk+'×') +
+    tile('Last in', lastIn+'×') +
+    tile('Avg CLV', clv==null?'—':((clv>0?'+':'')+(clv*100).toFixed(1)+'pp'));
+
+  // this week
+  const x = (S.picks||{})[kEnc(player)];
+  const open = (S.status||'open')==='open';
+  document.getElementById('shWeek').innerHTML = x && x.price!=null
+    ? `<div class="lil" style="margin-bottom:4px">This week</div>
+       <span class="who">${esc(x.label)}</span> <span class="px">${x.price}</span>
+       <span class="tm">· ${SPORTS[x.sport]?SPORTS[x.sport].n:esc(x.sport)} · ${esc(x.game)} · in ${when(x.ts)}</span>`
+    : `<div class="lil" style="margin-bottom:4px">This week</div><span class="pend">${
+        open ? (isMe ? 'No leg in yet — the form above is yours.' : 'No leg in yet.') : 'Sat this one out.'}</span>`;
+
+  // full history
+  document.querySelector('#shHist tbody').innerHTML = rows.length
+    ? '<tr><th>Wk</th><th>Leg</th><th>Price</th><th>Result</th><th>Actual</th><th>Close</th></tr>' +
+      rows.map(r=>{
+        const res = resOf(r);
+        const tag = res==='won' ? '<span class="tag w">W</span>'
+                  : res==='lost' ? '<span class="tag l">L</span>'
+                  : res ? `<span class="tag p">${esc(res)}</span>` : '<span class="pend">open</span>';
+        return `<tr${r.bozo?' class="bz-loser"':''}><td class="tm">${r.season}·w${r.week}</td>
+          <td class="pk">${esc(r.label)}${r.bozo?' <span class="tag l">BOZO</span>':''}
+            <br><span class="tm">${SPORTS[r.sport]?SPORTS[r.sport].n:esc(r.sport)} · ${esc(r.game)}${r.shortestOdds?' · chalkiest':''}${r.rank?' · #'+r.rank+' in':''}</span></td>
+          <td class="px">${r.price}</td><td>${tag}</td>
+          <td class="px">${r.actual??'—'}</td><td class="px">${r.close??'—'}</td></tr>`;
+      }).join('')
+    : '';
+  document.getElementById('shNote').textContent = rows.length
+    ? 'Raw inputs from the season ledger. CLV and averages are derived on the fly — the receipts stay up.'
+    : 'The ledger starts writing the moment a week locks. Nothing on the record yet.';
+}
+
+/* ---------------- league sheet ---------------- */
+let lgDirty = false;   // don't clobber the manager's typing on the 15s refresh
+function paintLeague(){
+  const bd = band(), cfg = S.config||{}, lg = league();
+  const row=(rl,rd,rv)=>`<div class="rule-row"><span><span class="rl">${rl}</span><span class="rd">${rd}</span></span><span class="rv">${rv}</span></div>`;
+  const inCount = Object.keys(S.picks||{}).length;
+  document.getElementById('lgRules').innerHTML =
+    row('League', lg ? esc(lg.name) : '—', esc(LID)) +
+    row('Manager','sets this league\'s band and roster', esc(lg?.manager || '—')) +
+    row('Players','the roster is the size — the ticket locks when every one of them is in',
+        `${names().length}${(S.status||'open')==='open' ? ` · ${inCount} in` : ''}`) +
+    row('Legal price band','favorites only — the band bounds the parlay price, not individual embarrassment',`${bd.ceil} to ${bd.floor}`) +
+    row('One leg each','one pick per person per week','fixed') +
+    row('No duplicate legs','no two people on the exact same bet','fixed') +
+    row('Editing','allowed until the ticket is placed — resets your timestamp and your price','fixed') +
+    row('The lock','the ticket is placed when the last leg lands; that moment is the close','fixed') +
+    row('Tiebreak','fresh random hierarchy of all four levers, drawn server-side each week','fixed');
+  document.getElementById('lgNote').textContent = cfg.updatedTs
+    ? `Band last set by ${cfg.updatedBy||'?'} · ${new Date(cfg.updatedTs).toLocaleDateString()} — enforced by the server, so the dial is the rule.`
+    : 'Band is at its defaults — enforced by the server, so the dial is the rule.';
+
+  const adm = document.getElementById('lgAdmin');
+  adm.style.display = isManager() ? '' : 'none';
+  if(isManager() && !lgDirty) fillSettings();
+  paintRoster();
+}
+
+function settings(){ return league()?.settings || {stake:50,allowDupes:false,allowEdit:true,lockRule:'all',lockCount:0,levers:[0,1,2,3]}; }
+
+function fillSettings(){
+  const bd = band(), st = settings(), lg = league();
+  document.getElementById('sName').value = lg?.name || '';
+  document.getElementById('sMgr').innerHTML =
+    allAccounts().map(n=>`<option${n===lg?.manager?' selected':''}>${esc(n)}</option>`).join('');
+  document.getElementById('sStake').value = st.stake;
+  document.getElementById('dCeil').value = bd.ceil;
+  document.getElementById('dFloor').value = bd.floor;
+  document.getElementById('sDupes').value = st.allowDupes ? 'yes' : 'no';
+  document.getElementById('sEdit').value  = st.allowEdit ? 'yes' : 'no';
+  document.getElementById('sLockRule').value = st.lockRule;
+  const lc = document.getElementById('sLockCount');
+  lc.style.display = st.lockRule==='count' ? '' : 'none';
+  lc.value = st.lockCount || Math.max(2, names().length);
+  paintLevers(st.levers);
+}
+function paintLevers(active){
+  document.getElementById('sLevers').innerHTML = LEVERS.map((l,i)=>
+    `<label class="${active.includes(i)?'on':''}"><input type="checkbox" data-lev="${i}"${active.includes(i)?' checked':''}> ${esc(l.name)}</label>`).join('');
+  markLeverWarning();
+}
+const leverPick = () => [...document.querySelectorAll('[data-lev]')].filter(c=>c.checked).map(c=>+c.dataset.lev);
+function markLeverWarning(){
+  const n = leverPick().length, w = document.getElementById('leverWarn');
+  document.querySelectorAll('[data-lev]').forEach(c=>c.parentElement.classList.toggle('on', c.checked));
+  // ⚠️ The one setting on this panel with a game-theory cost, so it says so out loud.
+  // The randomised hierarchy is what keeps the meta unsolvable — a composite score was
+  // rejected for exactly this reason. Fewer levers = a more deterministic objective.
+  if(n === 0){ w.style.display=''; w.textContent='At least one tiebreaker has to stay in the draw.'; return; }
+  if(n < 3){
+    w.style.display='';
+    w.innerHTML = n===1
+      ? '⚠️ <b>One lever is a solved game.</b> With only one objective live, optimising against it is strictly dominant and the whole league converges on the same move. The randomisation across four is what stops that.'
+      : '⚠️ <b>Two levers is most of the way to a solved game.</b> The draw exists so no single objective can be optimised against; the fewer that are live, the more predictable the target.';
+  } else w.style.display='none';
+}
+document.getElementById('sLevers').addEventListener('change', ()=>{ lgDirty=true; markLeverWarning(); });
+document.getElementById('sLockRule').addEventListener('change', e=>{
+  lgDirty=true;
+  document.getElementById('sLockCount').style.display = e.target.value==='count' ? '' : 'none';
+});
+['sName','sMgr','sStake','sDupes','sEdit','sLockCount'].forEach(id=>
+  document.getElementById(id).addEventListener('input', ()=>{ lgDirty=true; }));
+
+document.getElementById('lgAdmin').addEventListener('click', e=>{
+  const b=e.target.closest('button[data-dial]'); if(!b) return;
+  const inp=document.getElementById(b.dataset.dial==='ceil'?'dCeil':'dFloor');
+  inp.value = (+inp.value||0) + (+b.dataset.d);
+  lgDirty = true;
+});
+['dCeil','dFloor'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{ lgDirty=true; }));
+document.getElementById('dReset').onclick = ()=>{ lgDirty=false; fillSettings();
+  document.getElementById('lgErr').textContent=''; };
+/* ---- roster & invites (admin) ----
+   The join-link problem this solves: Cloudflare secrets are write-only, so the
+   original token map became unreadable the moment it was saved and there was no way
+   to re-send anyone their link. Tokens now live hashed in /users and are re-issued
+   from here. The raw token is shown ONCE and never stored anywhere we can read. */
+function paintRoster(){
+  const body = document.getElementById('rosBody');
+  if(!isManager()){ body.innerHTML=''; return; }
+  const claimedOf = n => !!(ROSTER.find(p=>p.name===n)||{}).claimed;
+  const mine = names(), picks = S.picks||{}, open = (S.status||'open')==='open';
+  const mgr = league()?.manager;
+  body.innerHTML = mine.map(n=>{
+    const hasLeg = !!picks[kEnc(n)];
+    return `<div class="ros">
+      <span class="who">${esc(n)}${n===mgr?' <span class="tm">· manager</span>':''}${hasLeg?' <span class="tm">· leg in</span>':''}
+        <br><input class="team" data-team="${esc(n)}" value="${esc((league()?.teams||{})[kEnc(n)]||'')}" placeholder="team name (optional)"></span>
+      <span class="st ${claimedOf(n)?'yes':'no'}">${claimedOf(n)?'claimed':'not claimed'}</span>
+      <span class="row">
+        <button class="btn ghost sm" data-invite="${esc(n)}">${claimedOf(n)?'New link':'Get link'}</button>
+        ${(claimedOf(n) && isAdmin()) ? `<button class="btn ghost sm" data-reset="${esc(n)}">Reset</button>` : ''}
+        ${n===mgr ? '' : `<button class="btn ghost sm" data-drop="${esc(n)}"${(!open||hasLeg)?' disabled title="Roster changes wait for an open board with no leg in"':''}>Remove</button>`}
+      </span>
+    </div>`;
+  }).join('') || '<p class="pend">Nobody in this league yet.</p>';
+
+  // Add existing accounts who aren't in this league yet.
+  const spare = allAccounts().filter(n=>!mine.includes(n));
+  const sel = document.getElementById('addPick');
+  sel.innerHTML = spare.length ? spare.map(n=>`<option>${esc(n)}</option>`).join('')
+                               : '<option value="">everyone already has a seat</option>';
+  document.getElementById('addGo').disabled = !spare.length || !open;
+
+  // The flake escape hatch — only worth showing when it would actually do something.
+  const lockRow = document.getElementById('lockRow');
+  const waiting = mine.filter(n=>!picks[kEnc(n)]);
+  const show = open && Object.keys(picks).length >= 2 && waiting.length > 0;
+  lockRow.style.display = show ? '' : 'none';
+  if(show) document.getElementById('lockWho').textContent =
+    `Places the ticket with ${Object.keys(picks).length} of ${mine.length} legs. Still waiting on ${waiting.join(', ')}.`;
+}
+
+const rosErr = m => { const e=document.getElementById('rosErr'); e.className='err'; e.textContent=m||''; return e; };
+
+async function reloadLeagues(){ await Promise.all([loadRoster(), loadLeagues()]); await refresh(); }
+
+function showLink(who, url, claimed){
+  document.getElementById('rosOut').innerHTML =
+    `<div class="linkout"><b>${esc(who)}</b> — copy this now, it is shown once.
+      <code>${esc(url)}</code>
+      ${claimed?`<span class="tm">⚠️ ${esc(who)} already has a password, so this link does nothing until you hit Reset.</span>`
+               :`<span class="tm">Text it to them. Opening it makes their account and puts them in this league.</span>`}
+      <div class="row" style="margin-top:8px"><button class="btn sm" id="cpLink">Copy</button></div></div>`;
+  document.getElementById('cpLink').onclick=()=>{
+    navigator.clipboard?.writeText(url).then(
+      ()=>{ document.getElementById('cpLink').textContent='Copied'; },
+      ()=>{ rosErr('Clipboard blocked — select the link above and copy it.'); });
+  };
+}
+
+document.getElementById('rosBody').addEventListener('click', async e=>{
+  const inv=e.target.closest('[data-invite]'), drop=e.target.closest('[data-drop]'),
+        rst=e.target.closest('[data-reset]');
+  rosErr('');
+  if(rst){
+    // A password is a SITE credential, not a league one — /auth/reset is admin-only,
+    // so the button only renders for the site admin. Two-step: it kills their sessions.
+    const who=rst.dataset.reset;
+    if(rst.dataset.armed!=='1'){ rst.dataset.armed='1'; rst.textContent='Confirm reset';
+      setTimeout(()=>{ rst.dataset.armed='0'; rst.textContent='Reset'; }, 4000); return; }
+    try{ await wPost('/auth/reset',{player:who});
+      const e4=rosErr(`${who} cleared — issue them a new link.`); e4.className='err ok';
+      await reloadLeagues();
+    }catch(e2){ rosErr(e2.message); }
+    return;
+  }
+  if(inv){
+    const who=inv.dataset.invite; inv.disabled=true;
+    try{
+      const r=await wPost('/league/invite',{player:who});
+      showLink(who, location.origin+'/bozo.html?join='+r.token, r.claimed);
+      await reloadLeagues();
+    }catch(e2){ rosErr(e2.message); }
+    inv.disabled=false;
+  }
+  if(drop){
+    const who=drop.dataset.drop;
+    // Two-step: removing someone changes the lock threshold for the whole league.
+    if(drop.dataset.armed!=='1'){ drop.dataset.armed='1'; drop.textContent='Confirm';
+      setTimeout(()=>{ drop.dataset.armed='0'; drop.textContent='Remove'; }, 4000); return; }
+    try{
+      const r=await wPost('/league/member',{player:who, action:'remove'});
+      const e3=rosErr(`${who} removed — ${r.size} player${r.size===1?'':'s'} now.`); e3.className='err ok';
+      await reloadLeagues();
+    }catch(e2){ rosErr(e2.message); }
+  }
+});
+
+// Team names commit on blur or Enter — no Save button, because the value is scoped to
+// one league and can't break anything if it's wrong.
+document.getElementById('rosBody').addEventListener('change', async e=>{
+  const t = e.target.closest('[data-team]'); if(!t) return;
+  const who = t.dataset.team;
+  rosErr('');
+  try{
+    await wPost('/league/team',{player:who, team:t.value.trim()});
+    const ok2=rosErr(t.value.trim() ? `${who} shows as "${t.value.trim()}" in this league.`
+                                    : `${who} shows under their own name again.`);
+    ok2.className='err ok';
+    await reloadLeagues();
+  }catch(e2){ rosErr(e2.message); }
+});
+document.getElementById('rosBody').addEventListener('keydown', e=>{
+  if(e.key==='Enter' && e.target.closest('[data-team]')) e.target.blur();
+});
+
+document.getElementById('addGo').onclick = async ()=>{
+  const who=document.getElementById('addPick').value;
+  if(!who) return;
+  rosErr('');
+  try{
+    const r=await wPost('/league/member',{player:who, action:'add'});
+    const e3=rosErr(`${who} added — ${r.size} player${r.size===1?'':'s'} now.`); e3.className='err ok';
+    await reloadLeagues();
+  }catch(e2){ rosErr(e2.message); }
+};
+
+document.getElementById('invGo').onclick = async ()=>{
+  const who=document.getElementById('invName').value.trim();
+  if(!who) return rosErr('Give them a name first.');
+  rosErr('');
+  try{
+    const r=await wPost('/league/invite',{player:who});
+    showLink(who, location.origin+'/bozo.html?join='+r.token, r.claimed);
+    document.getElementById('invName').value='';
+    await reloadLeagues();
+  }catch(e2){ rosErr(e2.message); }
+};
+
+document.getElementById('forceLock').onclick = async (ev)=>{
+  const b=ev.target;
+  if(b.dataset.armed!=='1'){ b.dataset.armed='1'; b.textContent='Confirm — place it';
+    setTimeout(()=>{ b.dataset.armed='0'; b.textContent='Place the ticket now'; }, 5000); return; }
+  rosErr('');
+  try{
+    const r=await wPost('/league/lock',{});
+    const e3=rosErr(`Placed with ${r.legs} legs.` + (r.waitingOn?.length?` ${r.waitingOn.join(', ')} missed the week.`:'')); e3.className='err ok';
+    await refresh();
+  }catch(e2){ rosErr(e2.message); }
+};
+
+document.getElementById('nlGo').onclick = async ()=>{
+  const e=document.getElementById('nlErr'); e.className='err'; e.textContent='';
+  const id=document.getElementById('nlId').value.trim().toLowerCase();
+  const nm=document.getElementById('nlName').value.trim();
+  const mgr=document.getElementById('nlMgr').value;
+  if(!id||!nm) { e.textContent='Name and id are both required.'; return; }
+  try{
+    // ⚠️ league:id, not the currently-viewed league — this call creates rather than edits.
+    await wPost('/league/create',{league:LID, id, name:nm, manager:mgr});
+    e.className='err ok'; e.textContent=`Created — switching to ${nm}.`;
+    const u=new URL(location.href); u.searchParams.set('l', id); u.hash='league';
+    setTimeout(()=>{ location.href=u.toString(); }, 600);
+  }catch(e2){ e.textContent=e2.message; }
+};
+
+document.getElementById('dSave').onclick = async ()=>{
+  const e=document.getElementById('lgErr'); e.className='err'; e.textContent='';
+  const levers = leverPick();
+  if(!levers.length) return e.textContent='At least one tiebreaker has to stay in the draw.';
+  const body = {
+    name: document.getElementById('sName').value,
+    manager: document.getElementById('sMgr').value,
+    stake: +document.getElementById('sStake').value,
+    bandCeil: +document.getElementById('dCeil').value,
+    bandFloor: +document.getElementById('dFloor').value,
+    allowDupes: document.getElementById('sDupes').value==='yes',
+    allowEdit: document.getElementById('sEdit').value==='yes',
+    lockRule: document.getElementById('sLockRule').value,
+    levers,
+  };
+  if(body.lockRule==='count') body.lockCount = +document.getElementById('sLockCount').value;
+  try{
+    await wPost('/league/settings', body);
+    lgDirty=false; e.className='err ok'; e.textContent='Saved — live for everyone in this league.';
+    await reloadLeagues();
+  }catch(err){ e.textContent=err.message; }
+};
 
 /* ---------------- submit ---------------- */
 async function submitLeg(){
@@ -1389,7 +2049,8 @@ async function submitLeg(){
   const g=(GAMES[sp]||[]).find(x=>x.id===id);
   if(!g) return e.textContent='Pick a game.';
   if(!fPrice.value) return e.textContent='Price is required.';
-  if(price>-100||price<-300) return e.textContent=`${price} is outside the −100 to −300 band.`;
+  const bd=band();
+  if(price>bd.ceil||price<bd.floor) return e.textContent=`${price} is outside the ${bd.ceil} to ${bd.floor} band.`;
   if(mk!=='ml' && !fLine.value) return e.textContent='Number is required for that market.';
   const label = mk==='ml' ? side+' ML'
     : mk==='spread' ? `${side} ${line>0?'-':''}${Math.abs(line)}`
@@ -1578,7 +2239,7 @@ function renderAuth(){
       if(a.length<8) { err.textContent='Password must be at least 8 characters.'; return; }
       if(a!==b){ err.textContent="Those don't match."; return; }
       try{
-        const r=await wPost('/bozo/claim',{token:joinTok, password:a});
+        const r=await wPost('/auth/claim',{token:joinTok, password:a});
         setSession(r.session);
         history.replaceState(null,'',location.pathname);   // burn the token out of the URL
         await loadRoster(); renderAuth();
@@ -1601,7 +2262,7 @@ function renderAuth(){
   if(go){
     const submit = async ()=>{
       try{
-        const r=await wPost('/bozo/login',{name:document.getElementById('lName').value,
+        const r=await wPost('/auth/login',{name:document.getElementById('lName').value,
                                            password:document.getElementById('lPw').value});
         setSession(r.session); await loadRoster(); renderAuth();
       }catch(e2){ err.textContent=e2.message; }
@@ -1613,7 +2274,7 @@ function renderAuth(){
 }
 
 async function loadRoster(){
-  try{ ROSTER=(await wGet('/bozo/roster')).players||[]; }
+  try{ ROSTER=(await wGet('/auth/roster')).players||[]; }
   catch(e){ ROSTER=[]; document.getElementById('srcNote').textContent='Roster unreachable — '+e.message; }
 }
 
@@ -1630,6 +2291,7 @@ document.getElementById('next').onclick = async ()=>{
   catch(err){ document.getElementById('srcNote').textContent=err.message; }
 };
 document.getElementById('signOut').onclick = ()=>{ clearSession(); renderAuth(); };
+document.getElementById('mySheet').onclick = ()=>{ if(ME) goto(ME.name); };
 document.getElementById('chgPw').onclick = ()=>{
   const b=document.getElementById('pwBox'); b.style.display = b.style.display==='none' ? '' : 'none';
 };
@@ -1639,7 +2301,7 @@ document.getElementById('pwSave').onclick = async ()=>{
   const oldPassword=document.getElementById('pwOld').value, newPassword=document.getElementById('pwNew').value;
   if(newPassword.length<8){ e.textContent='New password must be at least 8 characters.'; return; }
   try{
-    const r=await wPost('/bozo/passwd',{oldPassword,newPassword});
+    const r=await wPost('/auth/passwd',{oldPassword,newPassword});
     setSession(r.session);                      // the old one is dead server-side
     e.className='err ok'; e.textContent='Changed.';
     document.getElementById('pwOld').value=''; document.getElementById('pwNew').value='';
@@ -1654,7 +2316,7 @@ document.getElementById('fMkt').onchange = paintSides;
 
 (async function init(){
   ME = loadSession();
-  await loadRoster();
+  await Promise.all([loadRoster(), loadLeagues()]);
   renderAuth();
   watchState();
   loadGames('nfl');
