@@ -92,7 +92,12 @@ const LEAGUE = {
   mlb: "baseball/mlb",
   nhl: "hockey/nhl",
 };
-const MARKETS = ["spread", "ml", "total", "prop"];
+// ⚠️ "other" is deliberately LAST and deliberately constrained. It is a number +
+// over/under + a price + a written description — NOT a free-for-all. Kap's call was
+// "require a number anyway": an unscoreable leg would be immune to Worst Beat, and a
+// lever you can opt out of is exactly what the randomised hierarchy exists to prevent.
+// So an "other" leg carries a line and gets a result typed in at grading, like a prop.
+const MARKETS = ["spread", "ml", "total", "prop", "other"];
 
 // Legal-bet band, league-manager adjustable via POST /bozo/config. `ceil` is the
 // closest-to-even price allowed, `floor` the deepest favorite. Favorites only, so
@@ -1437,10 +1442,20 @@ async function bozoPick(request, env, cors) {
       sport: p.sport, eventId: String(p.eventId), game: String(p.game).slice(0, 80),
       mkt: p.mkt, side: String(p.side).slice(0, 40),
       line: p.mkt === "ml" ? 0 : Number(p.line),
-      dir: (p.mkt === "total" || p.mkt === "prop") ? p.side : "over",
+      // market-agnostic: a side of over/under sets the direction, anything else
+      // (a team abbreviation on a spread or ML) resolves to "over", which is the
+      // branch expected() has always wanted for those.
+      dir: (p.side === "over" || p.side === "under") ? p.side : "over",
       price: Math.round(Number(p.price)),
       label: String(p.label).slice(0, 90),
       prop: p.prop ? String(p.prop).slice(0, 80) : null,
+      // ⚠️ Where the PRICE came from, not where the pick came from. "self" means a
+      // human typed it and nothing checked it; "market" is reserved for the day a
+      // licensed odds source writes it server-side. Recorded now, before any such
+      // source exists, so that legs entered under the honour system stay honestly
+      // labelled forever instead of becoming indistinguishable from verified ones.
+      // The client cannot assert "market" — only this file may ever set that.
+      priceSource: "self",
       ts: Date.now(),                 // SERVER time — the reason this route exists
     };
     await fbPut(env, LG(lid) + "/picks/" + encodeURIComponent(name), pick);
@@ -1467,6 +1482,8 @@ function validatePick(p, name, existing, band, allowDupes) {
   if (!MARKETS.includes(p.mkt)) return "Unknown market.";
   if (!p.eventId || !p.game) return "Pick a game.";
   if (!p.label || !p.side) return "Incomplete pick.";
+  if (p.mkt === "other" && !String(p.prop || "").trim())
+    return "Describe the bet — an \"other\" leg needs to say what it actually is.";
   const price = Number(p.price);
   if (!isFinite(price) || price > band.ceil || price < band.floor)
     return `${p.price} is outside the ${band.ceil} to ${band.floor} band.`;
@@ -1569,6 +1586,7 @@ function ledgerEntries(lid, season, week, picks, order) {
       season, week, player: playerName(n),
       sport: x.sport, eventId: x.eventId, game: x.game,
       mkt: x.mkt, side: x.side, dir: x.dir,
+      priceSource: x.priceSource || "self",     // see the note in bozoPick
       line: x.line == null ? null : x.line,     // numeric, and separate from the label,
       label: x.label,                           // or the Bozo Index can't be computed
       prop: x.prop || null,
