@@ -320,6 +320,27 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
 .lgbar select{background:var(--surface-1);border:1px solid var(--grid);color:var(--ink-1);
   border-radius:8px;padding:7px 10px;font:700 13px system-ui;max-width:min(320px,70vw)}
 .lgbar .sz{font:700 10.5px/1 ui-monospace,monospace;letter-spacing:1px;text-transform:uppercase;color:var(--ink-3)}
+/* ---- league hub ---- */
+.hub{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:4px}
+.hcard{display:block;text-decoration:none;color:var(--ink-1);background:var(--page);
+  border:1px solid var(--grid);border-radius:12px;padding:16px 18px;transition:border-color .15s}
+.hcard:hover{border-color:var(--accent)}
+.hcard h3{margin:0 0 3px;font-size:16.5px;font-weight:750;color:var(--ink-1)}
+.hcard .meta{font:11px ui-monospace,monospace;color:var(--ink-3);margin-bottom:9px}
+.hcard .bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.hcard .yours{background:color-mix(in srgb, var(--accent) 14%, transparent);color:var(--accent);
+  font:700 9.5px/1 ui-monospace,monospace;letter-spacing:.8px;text-transform:uppercase;padding:3px 6px;border-radius:4px}
+.backlink{display:inline-block;font-size:13px;margin:0 0 10px;text-decoration:none}
+/* ---- editable settings ---- */
+.setgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px 18px;margin:6px 0 4px}
+.setgrid .f{gap:5px}
+.lev{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.lev label{display:flex;align-items:center;gap:6px;border:1px solid var(--grid);border-radius:8px;
+  padding:7px 11px;cursor:pointer;font:600 12.5px system-ui;color:var(--ink-2);text-transform:none;letter-spacing:0}
+.lev label.on{border-color:var(--accent);color:var(--ink-1);background:color-mix(in srgb, var(--accent) 8%, transparent)}
+.warnbox{border-left:3px solid var(--warn);background:color-mix(in srgb, var(--warn) 9%, transparent);
+  padding:10px 13px;border-radius:0 8px 8px 0;font-size:13px;margin:10px 0 0;color:var(--ink-1)}
+.ros input.team{width:150px;font:600 13px system-ui;padding:5px 8px}
 /* ---- roster / invite management ---- */
 .ros{display:grid;grid-template-columns:1fr auto auto;gap:8px 10px;align-items:center;
   padding:9px 0;border-bottom:1px solid var(--grid);font-size:14px}
@@ -1012,12 +1033,33 @@ STATE: everything saves in the browser on that device. A different device shows 
 <div class="bz-hdr"><h1>Bozo</h1><span class="chip" id="statusChip">—</span></div>
 <p class="bz-sub">One favorite each, one big parlay. Whoever busts it worst wears it — and funds next week's ticket.</p>
 
+<!-- ---------- the hub: every league, plus admin ---------- -->
+<div class="card" id="hubCard" style="display:none">
+  <div class="bz-hdr"><h2 class="bz" style="margin:0">Leagues</h2><span class="tm" id="hubCount"></span></div>
+  <div class="hub" id="hubList"></div>
+  <div id="mkLeague" style="display:none;margin-top:20px;border-top:1px solid var(--grid);padding-top:16px">
+    <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:0 0 4px">New league</h3>
+    <p class="tm" style="margin:0 0 10px">A separate group with its own roster size, band, week and ledger. You pick who runs it.</p>
+    <div class="frm">
+      <div class="f w2"><label>Name</label><input id="nlName" placeholder="Sunday Crew"></div>
+      <div class="f"><label>Id (for the link)</label><input id="nlId" placeholder="sunday"></div>
+      <div class="f"><label>Manager</label><select id="nlMgr"></select></div>
+      <div class="f w4"><div class="row" style="justify-content:flex-end">
+        <button class="btn sm" id="nlGo">Create league</button></div></div>
+    </div>
+    <div class="err" id="nlErr"></div>
+  </div>
+  <p class="note" id="hubNote"></p>
+</div>
+
 <!-- ---------- which league ---------- -->
 <div class="lgbar" id="lgbar" style="display:none">
   <label class="lil" for="lgPick" style="margin:0">League</label>
   <select id="lgPick"></select>
   <span class="sz" id="lgSize"></span>
 </div>
+
+<a class="backlink" id="backHub" href="bozo.html" style="display:none">← All leagues</a>
 
 <!-- ---------- sheet nav: the board, one sheet per player, the league ---------- -->
 <div class="snav" id="snav"></div>
@@ -1088,14 +1130,38 @@ STATE: everything saves in the browser on that device. A different device shows 
   <h2 class="bz">League — the rules</h2>
   <div id="lgRules"></div>
   <div id="lgAdmin" style="display:none;margin-top:16px">
-    <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:0 0 10px">Manager dials</h3>
+    <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:0 0 10px">Manager controls</h3>
+
+    <div class="setgrid">
+      <div class="f"><label>League name</label><input id="sName" maxlength="60"></div>
+      <div class="f"><label>Manager</label><select id="sMgr"></select></div>
+      <div class="f"><label>Stake ($ on the ticket)</label><input id="sStake" type="number" min="1" step="5"></div>
+    </div>
+
     <div class="rule-row"><span><span class="rl">Band ceiling</span><span class="rd">shortest price allowed — favorites only, so it can't rise above −100</span></span>
       <span class="dial"><button data-dial="ceil" data-d="-25">−</button><input id="dCeil" type="number" step="5" max="-100"><button data-dial="ceil" data-d="25">+</button></span></div>
     <div class="rule-row"><span><span class="rl">Band floor</span><span class="rd">deepest favorite allowed — deeper floor = ticket cashes more often, for less</span></span>
       <span class="dial"><button data-dial="floor" data-d="-25">−</button><input id="dFloor" type="number" step="5"><button data-dial="floor" data-d="25">+</button></span></div>
+
+    <div class="rule-row"><span><span class="rl">Duplicate legs</span><span class="rd">can two people take the exact same bet</span></span>
+      <span><select id="sDupes"><option value="no">Not allowed</option><option value="yes">Allowed</option></select></span></div>
+    <div class="rule-row"><span><span class="rl">Editing after you submit</span><span class="rd">open editing resets your timestamp and your price, which is what makes Last In and CLV bite</span></span>
+      <span><select id="sEdit"><option value="yes">Open until the ticket is placed</option><option value="no">Locked once your leg is in</option></select></span></div>
+    <div class="rule-row"><span><span class="rl">When the ticket locks</span><span class="rd">everyone-in keeps the close honest; a fixed count turns Last In into a race someone can miss</span></span>
+      <span class="row" style="gap:8px">
+        <select id="sLockRule"><option value="all">When every member is in</option><option value="count">At a fixed number of legs</option></select>
+        <input id="sLockCount" type="number" min="2" max="64" style="width:72px;display:none"></span></div>
+
+    <div style="padding:11px 0;border-bottom:1px solid var(--grid)">
+      <span class="rl">Tiebreakers in the weekly draw</span>
+      <span class="rd">the hierarchy is a fresh random permutation of whichever of these are on</span>
+      <div class="lev" id="sLevers"></div>
+      <div class="warnbox" id="leverWarn" style="display:none"></div>
+    </div>
+
     <div class="row" style="margin-top:12px;justify-content:flex-end">
       <button class="btn ghost sm" id="dReset">Back to current</button>
-      <button class="btn sm" id="dSave">Save band</button>
+      <button class="btn sm" id="dSave">Save settings</button>
     </div>
     <div class="err" id="lgErr"></div>
 
@@ -1121,19 +1187,6 @@ STATE: everything saves in the browser on that device. A different device shows 
         <span class="tm" id="lockWho"></span>
       </div>
     </div>
-  </div>
-
-  <div id="mkLeague" style="display:none;margin-top:18px;border-top:1px solid var(--grid);padding-top:16px">
-    <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:0 0 4px">New league</h3>
-    <p class="tm" style="margin:0 0 10px">A separate group with its own roster size, band, week and ledger. You pick who runs it.</p>
-    <div class="frm">
-      <div class="f w2"><label>Name</label><input id="nlName" placeholder="Sunday Crew"></div>
-      <div class="f"><label>Id (for the link)</label><input id="nlId" placeholder="sunday"></div>
-      <div class="f"><label>Manager</label><select id="nlMgr"></select></div>
-      <div class="f w4"><div class="row" style="justify-content:flex-end">
-        <button class="btn sm" id="nlGo">Create league</button></div></div>
-    </div>
-    <div class="err" id="nlErr"></div>
   </div>
   <p class="note" id="lgNote"></p>
 </div>
@@ -1415,6 +1468,47 @@ const band = () => ({
   floor: (S.config && Number.isFinite(S.config.bandFloor)) ? S.config.bandFloor : -500,
 });
 
+/* ---------------- team names ---------------- */
+// A display name inside ONE league. The account name stays the key everywhere — picks,
+// ledger rows, sheet links — so renaming what the board calls someone can never orphan
+// a receipt, and the same person can be different things in different leagues.
+const teamOf = n => (league()?.teams || {})[kEnc(n)] || (S.teams||{})[kEnc(n)] || n;
+
+/* ---------------- the hub: every league in one place ---------------- */
+// bozo.html with no ?l= is the general Bozo page: the league directory plus, for the
+// site admin, the controls to create more. ?l=<id> opens that league's board.
+const onHub = () => !new URLSearchParams(location.search).get('l');
+
+function paintHub(){
+  const card = document.getElementById('hubCard');
+  if(!onHub()){ card.style.display='none'; return; }
+  card.style.display='';
+  document.getElementById('hubCount').textContent =
+    LEAGUES.length + (LEAGUES.length===1 ? ' league' : ' leagues');
+  document.getElementById('hubList').innerHTML = LEAGUES.map(l=>{
+    const mine = ME && (l.members||[]).includes(ME.name);
+    const chip = l.status==='open' ? 'open' : l.status;
+    return `<a class="hcard" href="bozo.html?l=${encodeURIComponent(l.id)}">
+      <h3>${esc(l.name)}</h3>
+      <div class="meta">${l.size} player${l.size===1?'':'s'} · week ${l.week} · run by ${esc(l.manager||'—')}</div>
+      <div class="bar"><span class="chip ${esc(chip)}">${esc(chip)}</span>
+        ${mine?'<span class="yours">you\u2019re in</span>':''}</div>
+    </a>`;
+  }).join('') || '<p class="pend">No leagues yet.</p>';
+  // Site admin only: spinning up a whole new group. Lives on the hub, because that is
+  // where you go to manage leagues rather than to play in one.
+  const mk = document.getElementById('mkLeague');
+  mk.style.display = isAdmin() ? '' : 'none';
+  if(isAdmin())
+    document.getElementById('nlMgr').innerHTML =
+      allAccounts().map(n=>`<option${n===ME?.name?' selected':''}>${esc(n)}</option>`).join('');
+
+  document.getElementById('hubNote').textContent = ME
+    ? (isAdmin() ? 'You can edit any league. Open one to manage its roster and rules.'
+                 : 'Open a league to see its board.')
+    : 'Sign in to submit a leg. The boards are public either way.';
+}
+
 /* ---------------- the league switcher ---------------- */
 // League in the QUERY string, view in the hash: bozo.html?l=smallball#s=Tony. They are
 // orthogonal — the same sheet exists in every league — so they get separate slots.
@@ -1465,7 +1559,7 @@ function paintSnav(v){
   const btn = (id,label,extra) =>
     `<button data-v="${esc(id)}"${v===id?' class="on"':''}>${esc(label)}${extra||''}</button>`;
   el.innerHTML = btn('board','The Board')
-    + names().map(p=>btn(p, p, (ME&&p===ME.name)?'<span class="yu">— you</span>':'')).join('')
+    + names().map(p=>btn(p, teamOf(p), (ME&&p===ME.name)?'<span class="yu">— you</span>':'')).join('')
     + btn('league','League');
 }
 document.getElementById('snav').addEventListener('click', e=>{
@@ -1485,6 +1579,16 @@ function render(){
   const status = S.status || 'open';
   // ⚠️ keys via kEnc — picks are stored URL-encoded, roster names aren't
   const live = players.map(p=>({p, ...(picks[kEnc(p)]||{})})).filter(x=>x.price!=null);
+  const hub = onHub();
+  paintHub();
+  // The chip reports one league's week and status — nonsense on a directory of several.
+  document.getElementById('statusChip').style.display = hub ? 'none' : '';
+  document.getElementById('backHub').style.display = (hub || LEAGUES.length<2) ? 'none' : '';
+  // On the hub every league-scoped card is hidden; the directory is the whole page.
+  for(const id of ['snav','lgbar','submitCard','ticketCard','seasonCard','sheetCard','leagueCard','drawCard','gradeCard','verdict'])
+    { const el=document.getElementById(id); if(el && hub) el.style.display='none'; }
+  if(hub) return;
+
   const v = view();
   const onBoard = v==='board';
   paintLeagueBar();
@@ -1525,8 +1629,8 @@ function render(){
             : '<span class="tag p">—</span>';
       const cls = (ME && p===ME.name ? 'me ' : '') + (S.bozo===p ? 'bz-loser' : '');
       if(x.price==null)
-        return `<tr class="${cls}"><td class="who">${esc(p)}</td><td class="pend" colspan="3">no leg yet</td></tr>`;
-      return `<tr class="${cls}"><td class="who">${esc(p)}</td><td class="pk">${esc(x.label)}${tag}
+        return `<tr class="${cls}"><td class="who">${esc(teamOf(p))}</td><td class="pend" colspan="3">no leg yet</td></tr>`;
+      return `<tr class="${cls}"><td class="who">${esc(teamOf(p))}</td><td class="pk">${esc(x.label)}${tag}
         <br><span class="tm">${SPORTS[x.sport]?SPORTS[x.sport].n:x.sport} · ${esc(x.game)}${r.actual!=null?' · finished '+r.actual:''}</span></td>
         <td class="px">${x.price}</td><td class="tm">${when(x.ts)}</td></tr>`;
     }).join('');
@@ -1535,7 +1639,9 @@ function render(){
   if(live.length){
     const d = live.reduce((a,x)=>a*dec(x.price),1);
     document.getElementById('tOdds').textContent = amer(d);
-    document.getElementById('tPay').textContent = '$'+Math.round(d*50).toLocaleString();
+    const stake = league()?.settings?.stake ?? 50;
+    document.querySelector('#tPay').previousElementSibling.textContent = '$'+stake+' returns';
+    document.getElementById('tPay').textContent = '$'+Math.round(d*stake).toLocaleString();
   }else{
     document.getElementById('tOdds').textContent='—';
     document.getElementById('tPay').textContent='—';
@@ -1560,7 +1666,7 @@ function render(){
 
   document.getElementById('verdict').style.display = (S.bozo && onBoard) ? '' : 'none';
   if(S.bozo){
-    document.getElementById('vName').textContent = S.bozo;
+    document.getElementById('vName').textContent = teamOf(playerName(S.bozo));
     document.getElementById('vWhy').textContent = S.bozoWhy||'';
   }
 
@@ -1573,7 +1679,7 @@ function render(){
     '<tr><th>#</th><th>Who</th><th>Bozos</th><th></th></tr>' +
     players.slice().sort((a,b)=>t[b]-t[a]||a.localeCompare(b))
       .map((p,i)=>`<tr class="${ME&&p===ME.name?'me':''}"><td class="tm">${i+1}</td>
-        <td class="who">${esc(p)}</td><td class="px">${t[p]}</td>
+        <td class="who">${esc(teamOf(p))}</td><td class="px">${t[p]}</td>
         <td class="tm">${t[p]===mx&&mx>0?'funding this week':''}</td></tr>`).join('');
 }
 
@@ -1589,7 +1695,7 @@ function sheetRows(player){
 function paintSheet(player){
   const rows = sheetRows(player);
   const isMe = ME && ME.name===player;
-  document.getElementById('shName').textContent = player + (isMe?' — your sheet':'');
+  document.getElementById('shName').textContent = teamOf(player) + (isMe?' — your sheet':'');
   document.getElementById('shMeta').textContent =
     (player===ADMIN?'league manager · ':'') +
     ((ROSTER.find(p=>p.name===player)||{}).claimed ? 'claimed' : 'not claimed yet');
@@ -1669,18 +1775,55 @@ function paintLeague(){
 
   const adm = document.getElementById('lgAdmin');
   adm.style.display = isManager() ? '' : 'none';
-  if(isManager() && !lgDirty){
-    document.getElementById('dCeil').value = bd.ceil;
-    document.getElementById('dFloor').value = bd.floor;
-  }
-  // Site admin only: spinning up a whole new group.
-  const mk = document.getElementById('mkLeague');
-  mk.style.display = isAdmin() ? '' : 'none';
-  if(isAdmin())
-    document.getElementById('nlMgr').innerHTML =
-      allAccounts().map(n=>`<option${n===ME?.name?' selected':''}>${esc(n)}</option>`).join('');
+  if(isManager() && !lgDirty) fillSettings();
   paintRoster();
 }
+
+function settings(){ return league()?.settings || {stake:50,allowDupes:false,allowEdit:true,lockRule:'all',lockCount:0,levers:[0,1,2,3]}; }
+
+function fillSettings(){
+  const bd = band(), st = settings(), lg = league();
+  document.getElementById('sName').value = lg?.name || '';
+  document.getElementById('sMgr').innerHTML =
+    allAccounts().map(n=>`<option${n===lg?.manager?' selected':''}>${esc(n)}</option>`).join('');
+  document.getElementById('sStake').value = st.stake;
+  document.getElementById('dCeil').value = bd.ceil;
+  document.getElementById('dFloor').value = bd.floor;
+  document.getElementById('sDupes').value = st.allowDupes ? 'yes' : 'no';
+  document.getElementById('sEdit').value  = st.allowEdit ? 'yes' : 'no';
+  document.getElementById('sLockRule').value = st.lockRule;
+  const lc = document.getElementById('sLockCount');
+  lc.style.display = st.lockRule==='count' ? '' : 'none';
+  lc.value = st.lockCount || Math.max(2, names().length);
+  paintLevers(st.levers);
+}
+function paintLevers(active){
+  document.getElementById('sLevers').innerHTML = LEVERS.map((l,i)=>
+    `<label class="${active.includes(i)?'on':''}"><input type="checkbox" data-lev="${i}"${active.includes(i)?' checked':''}> ${esc(l.name)}</label>`).join('');
+  markLeverWarning();
+}
+const leverPick = () => [...document.querySelectorAll('[data-lev]')].filter(c=>c.checked).map(c=>+c.dataset.lev);
+function markLeverWarning(){
+  const n = leverPick().length, w = document.getElementById('leverWarn');
+  document.querySelectorAll('[data-lev]').forEach(c=>c.parentElement.classList.toggle('on', c.checked));
+  // ⚠️ The one setting on this panel with a game-theory cost, so it says so out loud.
+  // The randomised hierarchy is what keeps the meta unsolvable — a composite score was
+  // rejected for exactly this reason. Fewer levers = a more deterministic objective.
+  if(n === 0){ w.style.display=''; w.textContent='At least one tiebreaker has to stay in the draw.'; return; }
+  if(n < 3){
+    w.style.display='';
+    w.innerHTML = n===1
+      ? '⚠️ <b>One lever is a solved game.</b> With only one objective live, optimising against it is strictly dominant and the whole league converges on the same move. The randomisation across four is what stops that.'
+      : '⚠️ <b>Two levers is most of the way to a solved game.</b> The draw exists so no single objective can be optimised against; the fewer that are live, the more predictable the target.';
+  } else w.style.display='none';
+}
+document.getElementById('sLevers').addEventListener('change', ()=>{ lgDirty=true; markLeverWarning(); });
+document.getElementById('sLockRule').addEventListener('change', e=>{
+  lgDirty=true;
+  document.getElementById('sLockCount').style.display = e.target.value==='count' ? '' : 'none';
+});
+['sName','sMgr','sStake','sDupes','sEdit','sLockCount'].forEach(id=>
+  document.getElementById(id).addEventListener('input', ()=>{ lgDirty=true; }));
 
 document.getElementById('lgAdmin').addEventListener('click', e=>{
   const b=e.target.closest('button[data-dial]'); if(!b) return;
@@ -1689,7 +1832,7 @@ document.getElementById('lgAdmin').addEventListener('click', e=>{
   lgDirty = true;
 });
 ['dCeil','dFloor'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{ lgDirty=true; }));
-document.getElementById('dReset').onclick = ()=>{ lgDirty=false; paintLeague();
+document.getElementById('dReset').onclick = ()=>{ lgDirty=false; fillSettings();
   document.getElementById('lgErr').textContent=''; };
 /* ---- roster & invites (admin) ----
    The join-link problem this solves: Cloudflare secrets are write-only, so the
@@ -1705,7 +1848,8 @@ function paintRoster(){
   body.innerHTML = mine.map(n=>{
     const hasLeg = !!picks[kEnc(n)];
     return `<div class="ros">
-      <span class="who">${esc(n)}${n===mgr?' <span class="tm">· manager</span>':''}${hasLeg?' <span class="tm">· leg in</span>':''}</span>
+      <span class="who">${esc(n)}${n===mgr?' <span class="tm">· manager</span>':''}${hasLeg?' <span class="tm">· leg in</span>':''}
+        <br><input class="team" data-team="${esc(n)}" value="${esc((league()?.teams||{})[kEnc(n)]||'')}" placeholder="team name (optional)"></span>
       <span class="st ${claimedOf(n)?'yes':'no'}">${claimedOf(n)?'claimed':'not claimed'}</span>
       <span class="row">
         <button class="btn ghost sm" data-invite="${esc(n)}">${claimedOf(n)?'New link':'Get link'}</button>
@@ -1787,6 +1931,24 @@ document.getElementById('rosBody').addEventListener('click', async e=>{
   }
 });
 
+// Team names commit on blur or Enter — no Save button, because the value is scoped to
+// one league and can't break anything if it's wrong.
+document.getElementById('rosBody').addEventListener('change', async e=>{
+  const t = e.target.closest('[data-team]'); if(!t) return;
+  const who = t.dataset.team;
+  rosErr('');
+  try{
+    await wPost('/league/team',{player:who, team:t.value.trim()});
+    const ok2=rosErr(t.value.trim() ? `${who} shows as "${t.value.trim()}" in this league.`
+                                    : `${who} shows under their own name again.`);
+    ok2.className='err ok';
+    await reloadLeagues();
+  }catch(e2){ rosErr(e2.message); }
+});
+document.getElementById('rosBody').addEventListener('keydown', e=>{
+  if(e.key==='Enter' && e.target.closest('[data-team]')) e.target.blur();
+});
+
 document.getElementById('addGo').onclick = async ()=>{
   const who=document.getElementById('addPick').value;
   if(!who) return;
@@ -1839,11 +2001,24 @@ document.getElementById('nlGo').onclick = async ()=>{
 
 document.getElementById('dSave').onclick = async ()=>{
   const e=document.getElementById('lgErr'); e.className='err'; e.textContent='';
+  const levers = leverPick();
+  if(!levers.length) return e.textContent='At least one tiebreaker has to stay in the draw.';
+  const body = {
+    name: document.getElementById('sName').value,
+    manager: document.getElementById('sMgr').value,
+    stake: +document.getElementById('sStake').value,
+    bandCeil: +document.getElementById('dCeil').value,
+    bandFloor: +document.getElementById('dFloor').value,
+    allowDupes: document.getElementById('sDupes').value==='yes',
+    allowEdit: document.getElementById('sEdit').value==='yes',
+    lockRule: document.getElementById('sLockRule').value,
+    levers,
+  };
+  if(body.lockRule==='count') body.lockCount = +document.getElementById('sLockCount').value;
   try{
-    await wPost('/bozo/config',{bandCeil:+document.getElementById('dCeil').value,
-                                bandFloor:+document.getElementById('dFloor').value});
-    lgDirty=false; e.className='err ok'; e.textContent='Saved — the band is live for everyone.';
-    await refresh();
+    await wPost('/league/settings', body);
+    lgDirty=false; e.className='err ok'; e.textContent='Saved — live for everyone in this league.';
+    await reloadLeagues();
   }catch(err){ e.textContent=err.message; }
 };
 
