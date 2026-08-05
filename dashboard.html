@@ -1341,11 +1341,11 @@ STATE: everything saves in the browser on that device. A different device shows 
      different fix, so they are not collapsed into a generic "unavailable". */
   const soundWhy = document.getElementById("dbSoundWhy");
   let annWhy = null;
+  // `nopass` and `badpass` are gone: /tts no longer asks who you are, so a stock
+  // robot can only mean the cap tripped or the service is unreachable.
   const WHY = {
-    nopass:  "That's your device's built-in voice. Tap <b>Ask Toto</b> and enter the league passphrase to hear the real announcer.",
-    badpass: "That league passphrase was rejected, so you're hearing your device's built-in voice. Tap <b>Ask Toto</b> to enter it again.",
-    cap:     "The announcer hit today's character limit — falling back to your device's built-in voice.",
-    err:     "Can't reach the announcer voice right now, so this is your device's built-in voice."
+    cap: "The announcer hit today's character limit — falling back to your device's built-in voice.",
+    err: "Can't reach the announcer voice right now, so this is your device's built-in voice."
   };
   function paintWhy(){
     const msg = annOn() && annWhy ? WHY[annWhy] : "";
@@ -1364,32 +1364,31 @@ STATE: everything saves in the browser on that device. A different device shows 
   }
   async function annSay(t){
     let done=false;
-    const pass=localStorage.getItem("dd-bot-pass");     // same passphrase Dawg Bot uses
-    if(!pass){
-      annWhy="nopass";
-    } else {
-      try{
-        // The voice comes from the SYNCED draft state, not from anything on this
-        // device — the operator sets it on auction.html and every listener follows.
-        // Omit `voice` entirely when it's blank so the Worker falls back to
-        // ELEVEN_VOICE; sending "" would read as a deliberate empty voice id.
-        const A=state()||{}; const vid=(A.settings&&A.settings.ttsVoice)||"";
-        const payload=vid?{text:t,voice:vid}:{text:t};
-        const r=await fetch(TTS_URL,{method:"POST",
-          headers:{"Content-Type":"application/json","X-Dawg-Pass":pass},
-          body:JSON.stringify(payload)});
-        if(r.ok && (r.headers.get("content-type")||"").includes("audio")){
-          const a=new Audio(URL.createObjectURL(await r.blob()));
-          await new Promise(res=>{ a.onended=res; a.onerror=res; a.play().catch(res); setTimeout(res,20000); });
-          done=true; annWhy=null;
-        } else {
-          // Each of these needs a different fix, so don't collapse them into "broken".
-          annWhy = r.status===401 ? "badpass" : r.status===429 ? "cap" : "err";
-        }
-      }catch(e){ annWhy="err"; }
-    }
+    // ⚠️ No passphrase check. /tts is open (Kap, 8/4: "regardless if you're signed in
+    // or not") — a leaguemate who never opened Ask Toto still hears the league's voice.
+    // The header is sent when we happen to have it; the Worker ignores it on this route.
+    const pass=localStorage.getItem("dd-bot-pass");
+    try{
+      // The voice comes from the SYNCED draft state, not from anything on this
+      // device — the operator sets it on auction.html and every listener follows.
+      // Omit `voice` entirely when it's blank so the Worker falls back to
+      // ELEVEN_VOICE; sending "" would read as a deliberate empty voice id.
+      const A=state()||{}; const vid=(A.settings&&A.settings.ttsVoice)||"";
+      const payload=vid?{text:t,voice:vid}:{text:t};
+      const hdr={"Content-Type":"application/json"};
+      if(pass) hdr["X-Dawg-Pass"]=pass;
+      const r=await fetch(TTS_URL,{method:"POST",headers:hdr,body:JSON.stringify(payload)});
+      if(r.ok && (r.headers.get("content-type")||"").includes("audio")){
+        const a=new Audio(URL.createObjectURL(await r.blob()));
+        await new Promise(res=>{ a.onended=res; a.onerror=res; a.play().catch(res); setTimeout(res,20000); });
+        done=true; annWhy=null;
+      } else {
+        // Each of these needs a different fix, so don't collapse them into "broken".
+        annWhy = r.status===429 ? "cap" : "err";
+      }
+    }catch(e){ annWhy="err"; }
     paintWhy();
-    if(!done) await browserSay(t);           // no passphrase, quota hit, or ElevenLabs down
+    if(!done) await browserSay(t);           // quota hit, or ElevenLabs down
   }
   // One queue for both clip types — serialize, because the horn talking over the
   // announcer is worse than either one landing a beat late.
@@ -1453,9 +1452,6 @@ STATE: everything saves in the browser on that device. A different device shows 
     const on=!annOn();
     localStorage.setItem(LS_VOICE, on?"1":"0");
     paintAnn();
-    // Don't wait for the round trip to say the obvious — if there's no passphrase we
-    // already know the answer, and the banner should be up before the robot speaks.
-    if(on && !localStorage.getItem("dd-bot-pass")) annWhy="nopass";
     paintWhy();
     // Turning it on IS the user gesture that unlocks autoplay — say something
     // immediately so a silent first announcement never surprises anyone.
@@ -1475,9 +1471,6 @@ STATE: everything saves in the browser on that device. A different device shows 
      per-device override here: the whole point is that the room and every phone say
      the same thing in the same voice. */
   paintAnn();
-  // Sound already on from a previous visit, still no passphrase → say so on load,
-  // rather than waiting for the first sale to reveal it in front of everyone.
-  if(annOn() && !localStorage.getItem("dd-bot-pass")) annWhy="nopass";
   paintWhy();
   // Establish the "already seen" baseline NOW, not on the first 4s tick. Without
   // this the window between load and the first tick is a blind spot: a sale that

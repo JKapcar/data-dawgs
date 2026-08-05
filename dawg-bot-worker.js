@@ -260,13 +260,30 @@ async function handleScores(url, cors) {
 const TTS_MAX_CHARS = 300;          // one announcement; anything longer is a bug
 const TTS_DEFAULT_MODEL = "eleven_turbo_v2_5";
 
+// Cache key for a rendered line. Same voice + model + text = same audio, forever.
+async function ttsCacheKey(voice, model, text) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(voice + "|" + model + "|" + text));
+  const hex = [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+  // A synthetic https URL: caches.default keys on the Request, and it must be a GET.
+  return new Request("https://tts-cache.datadawgs.invalid/" + hex);
+}
+
 async function handleTts(request, env, cors) {
   if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
   if (!env.ELEVEN_KEY) return json({ error: "Worker misconfigured: ELEVEN_KEY not set." }, 500, cors);
-  if (!env.DAWG_PASS)  return json({ error: "Worker misconfigured: DAWG_PASS not set." }, 500, cors);
 
-  const pass = request.headers.get("X-Dawg-Pass") || "";
-  if (!timingSafeEqual(pass, env.DAWG_PASS)) return json({ error: "Wrong league passphrase." }, 401, cors);
+  // ⚠️ NO passphrase on this route (Kap, 8/4: "I want it to be the voice of what's
+  // selected in the operator controls, regardless if you're signed in or not").
+  // Leaguemates who never opened Ask Toto were getting their phone's stock robot,
+  // which defeats the point of a single league voice.
+  //
+  // What replaces the gate, in order of how much they actually matter:
+  //  1. The response cache below — 14 phones announcing the same sale now cost ONE
+  //     generation instead of 14. This is the change that makes open access affordable.
+  //  2. TTS_DAILY_CHARS via the RL binding (which IS bound — verified 8/4), counted
+  //     only on a cache MISS, so it bounds generation rather than playback.
+  //  3. TTS_MAX_CHARS 300 per request.
+  // The admin surface (/tts/voices) stays passphrase-gated — only the operator needs it.
 
   let body;
   try { body = await readBody(request); }
@@ -275,8 +292,25 @@ async function handleTts(request, env, cors) {
   const text = String(body.text || "").trim().slice(0, TTS_MAX_CHARS);
   if (!text) return json({ error: "No text." }, 400, cors);
 
-  // Daily character cap. A render loop or a bored leaguemate should cost pennies,
-  // not the plan. Needs the RL binding; without it this is inert (same as DAILY_CAP).
+  const voice = String(body.voice || env.ELEVEN_VOICE || "");
+  if (!voice) return json({ error: "No voice id configured." }, 500, cors);
+  const model = String(body.model || env.ELEVEN_MODEL || TTS_DEFAULT_MODEL);
+
+  // ---- cache first ----
+  // Draft night is the perfect shape for this: every listening device asks for the
+  // identical sentence within a second or two of each other. The first one pays,
+  // everyone else is served from the edge — faster AND free.
+  const ck = await ttsCacheKey(voice, model, text);
+  const cache = caches.default;
+  const hit = await cache.match(ck);
+  if (hit) {
+    return new Response(hit.body, {
+      headers: { ...cors, "Content-Type": "audio/mpeg", "Cache-Control": "no-store", "X-Dawg-TTS": "hit" },
+    });
+  }
+
+  // Daily character cap. A render loop or a bored stranger should cost pennies, not
+  // the plan. Counted on misses only — a replayed line has already been paid for.
   if (env.RL) {
     const day = new Date().toISOString().slice(0, 10);
     const key = "tts:" + day;
@@ -287,10 +321,6 @@ async function handleTts(request, env, cors) {
     }
     await env.RL.put(key, String(used + text.length), { expirationTtl: 172800 });
   }
-
-  const voice = String(body.voice || env.ELEVEN_VOICE || "");
-  if (!voice) return json({ error: "No voice id configured." }, 500, cors);
-  const model = String(body.model || env.ELEVEN_MODEL || TTS_DEFAULT_MODEL);
 
   let up;
   try {
@@ -310,8 +340,20 @@ async function handleTts(request, env, cors) {
     return json({ error: "ElevenLabs " + up.status, detail }, 502, cors);
   }
 
-  return new Response(up.body, {
-    headers: { ...cors, "Content-Type": "audio/mpeg", "Cache-Control": "no-store" },
+  // Read the whole clip so it can be both stored and served. These are ~50-120KB —
+  // streaming would save nothing worth the complexity of teeing the body.
+  const audio = await up.arrayBuffer();
+
+  // ⚠️ The CACHED copy needs a real max-age; caches.default refuses to store a
+  // no-store response, and a silent refusal here would quietly restore the old
+  // one-generation-per-device cost. The copy sent to the browser keeps no-store,
+  // because that one is per-request and CORS-bearing.
+  await cache.put(ck, new Response(audio, {
+    headers: { "Content-Type": "audio/mpeg", "Cache-Control": "public, max-age=604800" },
+  }));
+
+  return new Response(audio, {
+    headers: { ...cors, "Content-Type": "audio/mpeg", "Cache-Control": "no-store", "X-Dawg-TTS": "miss" },
   });
 }
 
