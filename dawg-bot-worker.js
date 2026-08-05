@@ -5,7 +5,8 @@
  * in a page. This Worker holds every secret and does every privileged write.
  *
  * ROUTES
- *   POST /             — Dawg Bot chat proxy (unchanged from the original Worker)
+ *   POST /             — Dawg Bot chat proxy. Accepts a site session (preferred, gives
+ *                        a per-user rate bucket) OR the shared DAWG_PASS (fallback).
  *   GET  /scores       — ESPN scoreboard proxy. DEAD: ESPN 403s Cloudflare egress
  *                        (see the note above handleScores). The page calls ESPN
  *                        itself; this stays only as a fallback.
@@ -19,6 +20,15 @@
  *   POST /bozo/reset   — admin clears a player's password so their original
  *                        join link works again (the no-email recovery path)
  *   POST /bozo/config  — league-manager dials: the legal-bet price band (admin)
+ *
+ * IDENTITY IS SITE-WIDE. The five auth routes answer on BOTH /auth/* and /bozo/*:
+ *   GET  /auth/roster  POST /auth/claim  /auth/login  /auth/passwd  /auth/reset
+ *   POST /auth/invite  — admin re-issues a join link (returns the raw token ONCE)
+ * The roster lives at /users in RTDB — Worker-only (no rule, so RTDB default-denies
+ * every browser; the Worker reads it with FB_SECRET). BOZO_TOKENS is now only a
+ * BOOTSTRAP: /users is seeded from it on first read, and after that it is the truth.
+ * ⚠️ /users stores an invite HASH, never the raw token — so a database dump hands
+ * nobody a live invite, and "I lost my link" is answered by minting a new one.
  *
  * SECRETS (dashboard → Worker → Settings → Variables → Encrypt):
  *   XAI_KEY      = xai-... key
@@ -116,14 +126,20 @@ export default {
     if (request.method === "OPTIONS") return new Response(null, { headers: cors });
 
     if (url.pathname === "/scores")       return handleScores(url, cors);
-    if (url.pathname === "/bozo/roster")  return bozoRoster(env, cors);
-    if (url.pathname === "/bozo/claim")   return bozoClaim(request, env, cors);
-    if (url.pathname === "/bozo/login")   return bozoLogin(request, env, cors);
-    if (url.pathname === "/bozo/passwd")  return bozoPasswd(request, env, cors);
+
+    // ⚠️ Identity is SITE-WIDE, not Bozo's. /auth/* is canonical; the /bozo/* spellings
+    // are permanent aliases because bozo.html in the wild (and any phone with a cached
+    // page) still calls them. Never remove the aliases — a stale service-worker copy of
+    // the page would lose the ability to sign in.
+    const AUTH = { "/roster": bozoRoster, "/claim": bozoClaim, "/login": bozoLogin,
+                   "/passwd": bozoPasswd, "/reset": bozoReset, "/invite": authInvite };
+    for (const [suffix, fn] of Object.entries(AUTH)) {
+      if (url.pathname === "/auth" + suffix || url.pathname === "/bozo" + suffix)
+        return suffix === "/roster" ? fn(env, cors) : fn(request, env, cors);
+    }
     if (url.pathname === "/bozo/pick")    return bozoPick(request, env, cors);
     if (url.pathname === "/bozo/grade")   return bozoGrade(request, env, cors);
     if (url.pathname === "/bozo/next")    return bozoNext(request, env, cors);
-    if (url.pathname === "/bozo/reset")   return bozoReset(request, env, cors);
     if (url.pathname === "/bozo/config")  return bozoConfigSet(request, env, cors);
     if (url.pathname === "/tts")          return handleTts(request, env, cors);
     if (url.pathname === "/tts/models")   return ttsModels(request, env, cors);
@@ -141,18 +157,40 @@ async function handleChat(request, env, origin, cors) {
   if (!env.XAI_KEY) return json({ error: "Worker misconfigured: XAI_KEY secret not set." }, 500, cors);
   if (!env.DAWG_PASS) return json({ error: "Worker misconfigured: DAWG_PASS secret not set." }, 500, cors);
 
-  const pass = request.headers.get("X-Dawg-Pass") || "";
-  if (!timingSafeEqual(pass, env.DAWG_PASS)) {
-    return json({ error: "Wrong league passphrase." }, 401, cors);
+  // Two ways in, and the order matters. A real session is preferred; DAWG_PASS is the
+  // fallback so a phone with a cached page (or anyone who hasn't claimed yet) keeps
+  // working through the transition.
+  //
+  // ⚠️ DAWG_PASS is one shared string in fourteen browsers. It cannot be revoked for
+  // one person — a single leak means rotating for everybody. That is why sessions are
+  // preferred, and why the cap below is PER USER once you have one: a signed-in
+  // leaguemate can't burn the whole league's daily budget, and if someone does go
+  // haywire you reset that one account instead of re-texting a new passphrase to all.
+  let who = null;
+  const sess = await readSession(env,
+    request.headers.get("X-Dawg-Session") || request.headers.get("X-Bozo-Session") || "");
+  if (sess) {
+    who = sess.n;
+  } else {
+    const pass = request.headers.get("X-Dawg-Pass") || "";
+    if (!env.DAWG_PASS || !timingSafeEqual(pass, env.DAWG_PASS)) {
+      return json({ error: "Sign in, or enter the league passphrase." }, 401, cors);
+    }
   }
 
   const cap = parseInt(env.DAILY_CAP || "400", 10);
   if (env.RL) {
     const day = new Date().toISOString().slice(0, 10);
-    const key = "count:" + day;
+    // Signed-in users get their own bucket at a fraction of the shared cap; the
+    // passphrase path keeps the single global bucket it always had.
+    const perUser = Math.max(20, Math.round(cap / 4));
+    const key = who ? `count:${day}:${encodeURIComponent(who)}` : "count:" + day;
+    const limit = who ? perUser : cap;
     const used = parseInt((await env.RL.get(key)) || "0", 10);
-    if (used >= cap) {
-      return json({ error: `Dawg Bot hit its daily cap (${cap} questions). Resets at midnight UTC.` }, 429, cors);
+    if (used >= limit) {
+      return json({ error: who
+        ? `You have hit your daily Dawg Bot cap (${limit} questions). Resets at midnight UTC.`
+        : `Dawg Bot hit its daily cap (${limit} questions). Resets at midnight UTC.` }, 429, cors);
     }
     await env.RL.put(key, String(used + 1), { expirationTtl: 172800 });
   }
@@ -584,8 +622,11 @@ async function readSession(env, tok) {
   return o;
 }
 
+// ⚠️ BOZO_TOKENS is deliberately NOT required any more. Once /users is seeded it is
+// the roster of record, and the secret can be deleted or left stale forever — which is
+// the whole point of moving off a value nobody can read back.
 function bozoConfig(env) {
-  if (!env.FB_SECRET || !env.BOZO_TOKENS || !env.BOZO_PEPPER)
+  if (!env.FB_SECRET || !env.BOZO_PEPPER)
     return "Worker misconfigured: Bozo secrets not set.";
   return null;
 }
@@ -599,11 +640,17 @@ const authPath = name => "/bozoauth/" + encodeURIComponent(name);
 async function sessionAuth(request, env) {
   const cfg = bozoConfig(env);
   if (cfg) return { err: cfg, code: 500 };
-  const map = tokenMap(env);
-  if (!map) return { err: "Worker misconfigured: BOZO_TOKENS is not valid JSON.", code: 500 };
-  const sess = await readSession(env, request.headers.get("X-Bozo-Session") || "");
+  // Either header is accepted: X-Dawg-Session is the site-wide name, X-Bozo-Session
+  // the one bozo.html has always sent. A cached page must keep working.
+  const tok = request.headers.get("X-Dawg-Session") || request.headers.get("X-Bozo-Session") || "";
+  const sess = await readSession(env, tok);
   if (!sess) return { err: "Sign in first.", code: 401 };
-  const players = Object.values(map);
+
+  let players;
+  try { players = userNames(await loadUsers(env)); }
+  catch (e) { return { err: e.message, code: 502 }; }
+  // Membership is checked against /users, so removing someone from the roster kills
+  // their session on the next request rather than leaving it valid until expiry.
   if (!players.includes(sess.n)) return { err: "Unknown player.", code: 403 };
 
   // The session must still match the password on file (see makeSession).
@@ -617,17 +664,127 @@ async function sessionAuth(request, env) {
   return { name: sess.n, players };
 }
 
-// GET /bozo/roster — who exists and who has set a password. No secrets: it is
+/* ============================ the /users roster =========================== */
+// The roster used to live ONLY inside the BOZO_TOKENS secret. Cloudflare secrets are
+// write-only — Kap lost the token map on 8/5 and had no way to read it back, so eight
+// people could not be invited without minting a whole new set. That is the bug this
+// node fixes.
+//
+// /users/<name> = { invite: <hash|null>, invitedTs, apps: {bozo:true,…} }
+// ⚠️ No RTDB rule covers /users, so it default-DENIES every browser. Only the Worker
+// (which authenticates with FB_SECRET) can read or write it. Nothing here is exposed
+// by /bozo being world-readable, and no rules change is needed.
+//
+// ⚠️ The stored `invite` is an HMAC of the token, never the token. A database dump
+// therefore hands nobody a working join link. The cost is that a lost link cannot be
+// recovered — only re-minted, which is what POST /auth/invite is for. That is the
+// right trade: re-issuing is a button, and the raw secret exists in exactly one place
+// (Kap's text message) instead of two.
+
+const inviteHash = (env, token) => hmac(env.BOZO_PEPPER, "invite|" + token);
+
+// BOZO_TOKENS is the bootstrap, not the truth. First read seeds /users from it and
+// from then on /users wins — so the secret can be left alone forever after setup.
+async function loadUsers(env) {
+  let users = null;
+  try { users = (await fbGet(env, "/users")).data; }
+  catch (e) { throw new Error("Database unreachable: " + e.message); }
+  if (users && Object.keys(users).length) return users;
+
+  const map = tokenMap(env);
+  if (!map) return {};
+  const seed = {};
+  for (const [tok, name] of Object.entries(map)) {
+    seed[encodeURIComponent(name)] = {
+      invite: await inviteHash(env, tok),
+      invitedTs: Date.now(),
+      apps: { bozo: true },
+      src: "seed",
+    };
+  }
+  try { await fbPatch(env, "/users", seed); } catch (e) { /* next read retries */ }
+  return seed;
+}
+
+const userNames = users => Object.keys(users).map(playerName);
+
+// POST /auth/invite {player} — admin mints a FRESH join token for one player and
+// returns it ONCE. Replaces "edit an encrypted secret you cannot read".
+// ⚠️ Minting does not clear an existing password. Re-inviting someone who has already
+// claimed is a no-op for them until an admin /auth/reset clears their hash — otherwise
+// anyone who saw an old text could re-claim a live account.
+async function authInvite(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const auth = await requireAdmin(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const player = String(body.player || "");
+  if (!player) return json({ error: "Which player?" }, 400, cors);
+
+  let users;
+  try { users = await loadUsers(env); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+  if (!userNames(users).includes(player)) return json({ error: "Unknown player." }, 400, cors);
+
+  // 16 random bytes, base64url — same shape as the originals, URL-safe for ?join=
+  const raw = new Uint8Array(16);
+  crypto.getRandomValues(raw);
+  const token = btoa(String.fromCharCode(...raw))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+  try {
+    await fbPatch(env, "/users/" + encodeURIComponent(player), {
+      invite: await inviteHash(env, token), invitedTs: Date.now(),
+      // ⚠️ Provenance decides precedence. Once an admin has minted for someone, the
+      // bootstrap secret stops being authoritative for them — otherwise a stale token
+      // sitting in BOZO_TOKENS would out-rank the link you just deliberately issued.
+      src: "mint", seeded: null,
+    });
+  } catch (e) {
+    return json({ error: "Database write failed: " + e.message }, 502, cors);
+  }
+  const claimed = !!(await fbGet(env, authPath(player))).data;
+  return json({ ok: true, player, token, claimed }, 200, cors);
+}
+
+// GET /auth/roster — who exists and who has set a password. No secrets: it is
 // exactly what the login screen needs to decide "claim" vs "sign in".
 async function bozoRoster(env, cors) {
   const cfg = bozoConfig(env);
   if (cfg) return json({ error: cfg }, 500, cors);
-  const map = tokenMap(env);
-  if (!map) return json({ error: "Worker misconfigured: BOZO_TOKENS is not valid JSON." }, 500, cors);
-  let auth = {};
-  try { auth = (await fbGet(env, "/bozoauth")).data || {}; }
-  catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
-  const players = Object.values(map).map(n => ({ name: n, claimed: !!auth[n] }));
+  let users, auth = {};
+  try {
+    users = await loadUsers(env);
+    auth = (await fbGet(env, "/bozoauth")).data || {};
+  } catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+
+  // ⚠️ Rotation has to actually revoke. /users holds hashes, so once seeded it would
+  // happily keep honouring a token you rotated the secret to kill. This reconciles the
+  // two on every roster read (i.e. every page load): for anyone who has NOT claimed,
+  // the bootstrap secret is authoritative — its token is re-armed and the previous one
+  // dies. Claimed accounts are never touched; their password is the credential now.
+  // This is the only place both /users and /bozoauth are already in hand, so it costs
+  // no extra read.
+  const map = tokenMap(env) || {};
+  const fix = {};
+  for (const [tok, name] of Object.entries(map)) {
+    if (auth[name]) continue;                       // claimed — hands off
+    const key = encodeURIComponent(name);
+    if (users[key] && users[key].src === "mint") continue;   // admin-issued link wins
+    const h = await inviteHash(env, tok);
+    if (!users[key] || users[key].invite !== h)
+      fix[key + "/invite"] = h, fix[key + "/invitedTs"] = Date.now();
+  }
+  if (Object.keys(fix).length) {
+    try { await fbPatch(env, "/users", fix); } catch (e) { /* next read retries */ }
+  }
+
+  const players = userNames(users).map(n => ({ name: n, claimed: !!auth[n] }));
+  if (!players.length) return json({ error: "No roster configured." }, 500, cors);
   return json({ players }, 200, cors);
 }
 
@@ -635,16 +792,45 @@ async function bozoClaim(request, env, cors) {
   if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
   const cfg = bozoConfig(env);
   if (cfg) return json({ error: cfg }, 500, cors);
-  const map = tokenMap(env);
-  if (!map) return json({ error: "Worker misconfigured: BOZO_TOKENS is not valid JSON." }, 500, cors);
 
   let body;
   try { body = await readBody(request); }
   catch { return json({ error: "Bad JSON." }, 400, cors); }
 
   const token = String(body.token || "");
-  let name = null;
-  for (const [t, n] of Object.entries(map)) if (timingSafeEqual(token, t)) name = n;
+  if (!token) return json({ error: "That claim link isn't valid." }, 403, cors);
+
+  // The token is matched by HASH — /users never holds the raw value. Hash once, then
+  // timing-safe compare against every row so a wrong token leaks no timing signal
+  // about which player it nearly matched.
+  let users, name = null;
+  try { users = await loadUsers(env); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+  const h = await inviteHash(env, token);
+  for (const [key, u] of Object.entries(users))
+    if (u && u.invite && timingSafeEqual(h, u.invite)) name = playerName(key);
+
+  // ⚠️ BREAK-GLASS. /users seeds itself from BOZO_TOKENS on first read — which happens
+  // on any page load — so if the secret is updated AFTER that first read, the new
+  // tokens would be ignored forever and nobody could claim. Since claiming is the only
+  // route to admin, and admin is the only route to minting invites, that deadlocks the
+  // whole roster with no way out.
+  //
+  // So: a token straight out of the bootstrap secret is ALWAYS honoured for a player
+  // who has not claimed yet, and heals the stored hash on the way through. The secret
+  // can re-arm unclaimed slots at any time; it can never touch a claimed account
+  // (bozoClaim 409s below on an existing password, same as any other path).
+  if (!name) {
+    const map = tokenMap(env) || {};
+    for (const [t, n] of Object.entries(map)) if (timingSafeEqual(token, t)) name = n;
+    // An admin-minted link supersedes the secret for that player — don't let a stale
+    // bootstrap token walk in behind it.
+    if (name && (users[encodeURIComponent(name)] || {}).src === "mint") name = null;
+    if (name) {
+      try { await fbPatch(env, "/users/" + encodeURIComponent(name), { invite: h, invitedTs: Date.now() }); }
+      catch (e) { /* the claim below still stands; the heal retries next time */ }
+    }
+  }
   if (!name) return json({ error: "That claim link isn't valid." }, 403, cors);
 
   const pw = String(body.password || "");
@@ -673,8 +859,6 @@ async function bozoLogin(request, env, cors) {
   if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
   const cfg = bozoConfig(env);
   if (cfg) return json({ error: cfg }, 500, cors);
-  const map = tokenMap(env);
-  if (!map) return json({ error: "Worker misconfigured: BOZO_TOKENS is not valid JSON." }, 500, cors);
 
   let body;
   try { body = await readBody(request); }
@@ -682,7 +866,10 @@ async function bozoLogin(request, env, cors) {
 
   const name = String(body.name || "");
   const pw = String(body.password || "");
-  if (!Object.values(map).includes(name)) return json({ error: "Unknown player." }, 403, cors);
+  let players;
+  try { players = userNames(await loadUsers(env)); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+  if (!players.includes(name)) return json({ error: "Unknown player." }, 403, cors);
 
   // Online brute force is the only realistic attack on an 8-person password.
   // The RL binding makes this real; without it the cap is inert.
