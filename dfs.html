@@ -36,7 +36,12 @@
   background:var(--navbar);
   border-bottom:3px solid var(--accent);
   margin:0 calc(50% - 50vw) 24px;
-  padding:12px calc(50vw - 50% + 24px);
+  /* ⚠️ NO `+ 24px` here. The 50% resolves against this element's containing block
+     — the page column's CONTENT box, which is already inside the column's own 24px
+     padding. Adding 24 again double-counted it and pushed the logo 24px right of
+     every page title. Measured 8/5 at 1512/1180/900/390: 24.0px off on all 15 pages,
+     light theme only (dark is not full-bleed, so dark always looked correct). */
+  padding:12px calc(50vw - 50%);
 }
 :root[data-theme="light"] .brand{color:var(--navink)}
 :root[data-theme="light"] .brand .tag{color:var(--navink2)}
@@ -64,6 +69,17 @@ body{margin:0;background:var(--page);color:var(--ink-1);
 .brand .logo{font-size:19px;font-weight:800;letter-spacing:.02em}
 .brand .logo span{color:var(--accent)}
 .brand .tag{font-size:11.5px;color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase;align-self:center}
+/* ⚠️ Banner armour. `.tag` is a tempting class name and bozo.html already took it for
+   its own W/L chips — `.tag{font:700 9.5px/1 ui-monospace...;padding:3px 6px}`. That is
+   specificity 0-1-0 against this rule's 0-2-0, which loses on every property this rule
+   declares and WINS on every one it does not. Result: the tagline rendered monospace
+   with 6px of side padding on exactly one page, and the banner stopped matching the
+   other fourteen. Caught 8/5 by measuring computed styles, not by looking.
+   These declarations are the reset, so no page's local CSS can reach the banner again.
+   ⚠️ Do NOT add font-size or white-space here — the narrow-width media query below
+   overrides both at the same specificity and would lose to this earlier-but-equal rule. */
+.sitenav .brand .tag{font-family:inherit;font-weight:400;font-style:normal;line-height:inherit;
+  padding:0;margin:0;background:none;border:0;border-radius:0;box-shadow:none}
 .sitenav .links{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
 .sitenav .links a{color:var(--ink-2);text-decoration:none;padding:6px 12px;border-radius:8px;font-size:14px;font-weight:550}
 .sitenav .links a:hover{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--ink-1)}
