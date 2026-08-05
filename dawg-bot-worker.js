@@ -19,7 +19,19 @@
  *   POST /bozo/next    — archive week, open the next (admin session)
  *   POST /bozo/reset   — admin clears a player's password so their original
  *                        join link works again (the no-email recovery path)
- *   POST /bozo/config  — league-manager dials: the legal-bet price band (admin)
+ *   POST /bozo/config  — alias of /league/config
+ *
+ * BOZO IS MULTI-LEAGUE. Several groups, each with its OWN roster size, band, week,
+ * picks and ledger, at /bozo/leagues/<id> (under /bozo, so it inherits the public-read
+ * rule — no rules change). Every Bozo route takes an optional {league}; absent means
+ * "main", so pre-league callers keep working.
+ *   GET  /league/list    — public directory: id, name, manager, size, week, status
+ *   POST /league/create  — SITE ADMIN only: {id, name, manager}
+ *   POST /league/member  — manager: {league, player, action:"add"|"remove"}  ← the size dial
+ *   POST /league/invite  — manager: mints a join link, CREATES the account if new
+ *   POST /league/lock    — manager: force-place when someone never submits
+ *   POST /league/config  — manager: the price band for that league
+ * ⚠️ The lock threshold is THAT LEAGUE'S member count, never the global roster.
  *
  * IDENTITY IS SITE-WIDE. The five auth routes answer on BOTH /auth/* and /bozo/*:
  *   GET  /auth/roster  POST /auth/claim  /auth/login  /auth/passwd  /auth/reset
@@ -137,6 +149,13 @@ export default {
       if (url.pathname === "/auth" + suffix || url.pathname === "/bozo" + suffix)
         return suffix === "/roster" ? fn(env, cors) : fn(request, env, cors);
     }
+    if (url.pathname === "/league/list")   return leagueList(env, cors);
+    if (url.pathname === "/league/create") return leagueCreate(request, env, cors);
+    if (url.pathname === "/league/member") return leagueMember(request, env, cors);
+    if (url.pathname === "/league/lock")   return leagueLock(request, env, cors);
+    if (url.pathname === "/league/config") return bozoConfigSet(request, env, cors);
+    if (url.pathname === "/league/invite") return authInvite(request, env, cors);
+
     if (url.pathname === "/bozo/pick")    return bozoPick(request, env, cors);
     if (url.pathname === "/bozo/grade")   return bozoGrade(request, env, cors);
     if (url.pathname === "/bozo/next")    return bozoNext(request, env, cors);
@@ -715,22 +734,31 @@ const userNames = users => Object.keys(users).map(playerName);
 // anyone who saw an old text could re-claim a live account.
 async function authInvite(request, env, cors) {
   if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
-  const auth = await requireAdmin(request, env);
-  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
 
   let body;
   try { body = await readBody(request); }
   catch { return json({ error: "Bad JSON." }, 400, cors); }
 
-  const player = String(body.player || "");
+  const lid = leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+  // A league manager invites into their own league; the site admin into any.
+  const auth = await requireManager(request, env, lid);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  const player = String(body.player || "").trim();
   if (!player) return json({ error: "Which player?" }, 400, cors);
+  if (player.length > 40) return json({ error: "That name is too long." }, 400, cors);
+  // Firebase keys are the encoded name; these characters break the path even encoded.
+  if (/[.#$\[\]\/]/.test(player)) return json({ error: "Name can't contain . # $ [ ] or /" }, 400, cors);
 
   let users;
   try { users = await loadUsers(env); }
   catch (e) { return json({ error: e.message }, 502, cors); }
-  if (!userNames(users).includes(player)) return json({ error: "Unknown player." }, 400, cors);
 
-  // 16 random bytes, base64url — same shape as the originals, URL-safe for ?join=
+  // Inviting someone brand new CREATES the account. That is how a second league full
+  // of different people gets off the ground without editing a secret.
+  const isNew = !userNames(users).includes(player);
+
   const raw = new Uint8Array(16);
   crypto.getRandomValues(raw);
   const token = btoa(String.fromCharCode(...raw))
@@ -742,13 +770,21 @@ async function authInvite(request, env, cors) {
       // ⚠️ Provenance decides precedence. Once an admin has minted for someone, the
       // bootstrap secret stops being authoritative for them — otherwise a stale token
       // sitting in BOZO_TOKENS would out-rank the link you just deliberately issued.
-      src: "mint", seeded: null,
+      src: "mint",
+      // Consumed by /auth/claim: claiming this link also joins that league, so one
+      // click gets a new person both an account and a seat.
+      pendingLeague: lid,
     });
   } catch (e) {
     return json({ error: "Database write failed: " + e.message }, 502, cors);
   }
   const claimed = !!(await fbGet(env, authPath(player))).data;
-  return json({ ok: true, player, token, claimed }, 200, cors);
+  // Someone who already has a password won't go through claim, so seat them now.
+  if (claimed) {
+    try { await fbPatch(env, LG(lid) + "/members", { [encodeURIComponent(player)]: true }); }
+    catch (e) { /* the manager can still add them by hand */ }
+  }
+  return json({ ok: true, player, token, claimed, isNew, league: lid }, 200, cors);
 }
 
 // GET /auth/roster — who exists and who has set a password. No secrets: it is
@@ -849,7 +885,20 @@ async function bozoClaim(request, env, cors) {
     const hash = await pbkdf2(pw, env.BOZO_PEPPER, salt, PBKDF2_ITERS);
     const setAt = Date.now();
     await fbPut(env, authPath(name), { v: 1, salt, hash, iters: PBKDF2_ITERS, setAt });
-    return json({ ok: true, name, session: await makeSession(env, name, setAt) }, 200, cors);
+
+    // The invite was minted FOR a league — claiming it takes the seat. One click gets
+    // a new person an account and membership; without this they would land signed in
+    // to a league they are not in and be told so.
+    const pending = (users[encodeURIComponent(name)] || {}).pendingLeague;
+    let joined = null;
+    if (pending && validLeagueId(pending)) {
+      try {
+        await fbPatch(env, LG(pending) + "/members", { [encodeURIComponent(name)]: true });
+        await fbPatch(env, "/users/" + encodeURIComponent(name), { pendingLeague: null });
+        joined = pending;
+      } catch (e) { /* the manager can add them by hand */ }
+    }
+    return json({ ok: true, name, joined, session: await makeSession(env, name, setAt) }, 200, cors);
   } catch (e) {
     return json({ error: "Database write failed: " + e.message }, 502, cors);
   }
@@ -956,12 +1005,16 @@ async function bozoReset(request, env, cors) {
 // PATCHed, and deliberately NOT in bozoNext's null list, so it survives rollovers.
 async function bozoConfigSet(request, env, cors) {
   if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
-  const auth = await requireAdmin(request, env);
-  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
 
   let body;
   try { body = await readBody(request); }
   catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const lid = leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+  // Each league sets its own band — this is a league manager's dial, not a site one.
+  const auth = await requireManager(request, env, lid);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
 
   const ceil = Math.round(Number(body.bandCeil));
   const floor = Math.round(Number(body.bandFloor));
@@ -974,11 +1027,209 @@ async function bozoConfigSet(request, env, cors) {
   if (floor < -2000) return json({ error: "Floor below −2000? That's not a band, that's a typo." }, 400, cors);
 
   try {
-    await fbPatch(env, "/bozo/config", { bandCeil: ceil, bandFloor: floor, updatedTs: Date.now(), updatedBy: auth.name });
-    return json({ ok: true, bandCeil: ceil, bandFloor: floor }, 200, cors);
+    await fbPatch(env, LG(lid) + "/config", { bandCeil: ceil, bandFloor: floor, updatedTs: Date.now(), updatedBy: auth.name });
+    return json({ ok: true, league: lid, bandCeil: ceil, bandFloor: floor }, 200, cors);
   } catch (e) {
     return json({ error: "Database write failed: " + e.message }, 502, cors);
   }
+}
+
+/* ================================ Leagues ================================= */
+// Bozo is multi-tenant: several groups, each with its own roster size, band, week,
+// picks and ledger. A league of 8 and a league of 4 run side by side.
+//
+// Leagues live at /bozo/leagues/<id> — deliberately UNDER /bozo so they inherit its
+// {".read":true,".write":false} rule. Reads stream straight to the page for free;
+// every write still goes through this Worker. No rules change was needed.
+//
+// ⚠️ Identity stays GLOBAL. One account per person at /users + /bozoauth, and
+// membership is per league. The same human in two leagues is one login, not two.
+//
+// ⚠️ THE LOCK THRESHOLD IS THE LEAGUE'S MEMBER COUNT, never the global roster. That
+// is the whole point of per-league size: an 8-person league locks on the 8th leg, a
+// 4-person league on the 4th.
+
+const DEFAULT_LEAGUE = "main";
+const LG = lid => "/bozo/leagues/" + lid;
+
+// Firebase keys cannot contain . $ # [ ] / — and these ids show up in URLs, so keep
+// them boring on purpose.
+function validLeagueId(id) {
+  return typeof id === "string" && /^[a-z0-9][a-z0-9-]{1,23}$/.test(id);
+}
+
+const memberNames = lg => Object.keys((lg && lg.members) || {}).map(playerName);
+const isMember = (lg, name) =>
+  !!((lg && lg.members) || {})[encodeURIComponent(name)] || !!((lg && lg.members) || {})[name];
+
+// Everything that existed before leagues belongs to DEFAULT_LEAGUE. It is created on
+// first touch with the whole current /users roster, so the setup that ran yesterday
+// keeps running today without a migration step anyone has to remember.
+async function loadLeagues(env) {
+  let leagues = null;
+  try { leagues = (await fbGet(env, "/bozo/leagues")).data; }
+  catch (e) { throw new Error("Database unreachable: " + e.message); }
+  if (leagues && Object.keys(leagues).length) return leagues;
+
+  const users = await loadUsers(env);
+  const members = {};
+  for (const key of Object.keys(users)) members[key] = true;
+  const seed = {
+    name: "Data Dawgs", manager: env.BOZO_ADMIN || "", members,
+    season: SEASON, week: 1, status: "open", createdTs: Date.now(), createdBy: "seed",
+  };
+  try { await fbPatch(env, LG(DEFAULT_LEAGUE), seed); } catch (e) { /* next read retries */ }
+  return { [DEFAULT_LEAGUE]: seed };
+}
+
+async function loadLeague(env, lid) {
+  const leagues = await loadLeagues(env);
+  return leagues[lid] || null;
+}
+
+// The league id a request is talking about. Absent = the default, so every pre-league
+// caller (including a cached copy of the page) keeps working untouched.
+const leagueOf = body => {
+  const id = (body && body.league) || DEFAULT_LEAGUE;
+  return validLeagueId(id) ? id : null;
+};
+
+// A league manager runs their own league and nobody else's. The site admin can act in
+// any league — they created them.
+async function requireManager(request, env, lid) {
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return auth;
+  let lg;
+  try { lg = await loadLeague(env, lid); }
+  catch (e) { return { err: e.message, code: 502 }; }
+  if (!lg) return { err: "No such league.", code: 404 };
+  const siteAdmin = env.BOZO_ADMIN && auth.name === env.BOZO_ADMIN;
+  if (!siteAdmin && lg.manager !== auth.name)
+    return { err: "That's not your league to manage.", code: 403 };
+  return { ...auth, league: lg, lid, siteAdmin };
+}
+
+// GET /league/list — public. The board is public, so the league directory is too.
+// Deliberately thin: no picks, no ledger, just enough to draw a switcher.
+async function leagueList(env, cors) {
+  let leagues;
+  try { leagues = await loadLeagues(env); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+  const out = Object.entries(leagues).map(([id, lg]) => ({
+    id, name: lg.name || id, manager: lg.manager || null,
+    size: memberNames(lg).length,
+    members: memberNames(lg),
+    week: lg.week || 1, status: lg.status || "open",
+  })).sort((a, b) => a.id === DEFAULT_LEAGUE ? -1 : b.id === DEFAULT_LEAGUE ? 1 : a.name.localeCompare(b.name));
+  return json({ leagues: out, defaultLeague: DEFAULT_LEAGUE }, 200, cors);
+}
+
+// POST /league/create {id, name, manager} — SITE ADMIN only. Kap makes leagues and
+// names who runs each one; managers cannot mint more leagues on his Firebase.
+async function leagueCreate(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const auth = await requireAdmin(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const id = String(body.id || "").toLowerCase().trim();
+  if (!validLeagueId(id))
+    return json({ error: "League id must be 2–24 chars: lowercase letters, numbers and dashes." }, 400, cors);
+
+  let leagues;
+  try { leagues = await loadLeagues(env); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+  if (leagues[id]) return json({ error: "A league with that id already exists." }, 409, cors);
+
+  // The manager must be a real account, or nobody can administer the league.
+  const manager = String(body.manager || auth.name);
+  const users = await loadUsers(env);
+  if (!userNames(users).includes(manager))
+    return json({ error: manager + " doesn't have an account yet — invite them first." }, 400, cors);
+
+  const lg = {
+    name: String(body.name || id).slice(0, 60),
+    manager,
+    // The manager starts as the only member; size grows from here. A league of 4 is
+    // just a league whose manager stopped adding people at 4.
+    members: { [encodeURIComponent(manager)]: true },
+    season: SEASON, week: 1, status: "open",
+    createdTs: Date.now(), createdBy: auth.name,
+  };
+  try { await fbPatch(env, LG(id), lg); }
+  catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  return json({ ok: true, id, league: lg }, 200, cors);
+}
+
+// POST /league/member {league, player, action:"add"|"remove"} — the size dial.
+// Adding requires an existing account; use /league/invite for someone brand new.
+async function leagueMember(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const lid = leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+  const auth = await requireManager(request, env, lid);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  const player = String(body.player || "");
+  const remove = body.action === "remove";
+  const users = await loadUsers(env);
+  if (!remove && !userNames(users).includes(player))
+    return json({ error: player + " doesn't have an account yet — send them a join link instead." }, 400, cors);
+
+  // ⚠️ Changing the roster mid-week moves the lock threshold under a live board.
+  // Removing the last person you were waiting on would otherwise silently place the
+  // ticket; refuse while picks are in and the board is open, and say why.
+  const lg = auth.league;
+  if ((lg.status || "open") !== "open")
+    return json({ error: "The ticket is placed — roster changes wait for next week." }, 409, cors);
+  if (remove && (lg.picks || {})[encodeURIComponent(player)])
+    return json({ error: player + " already has a leg in this week. Remove the leg first." }, 409, cors);
+  if (remove && lg.manager === player)
+    return json({ error: "The manager can't leave their own league." }, 400, cors);
+
+  try {
+    await fbPatch(env, LG(lid) + "/members", { [encodeURIComponent(player)]: remove ? null : true });
+  } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+
+  // Re-read so the caller sees the real size, and so a removal that just completed the
+  // board can lock immediately rather than waiting for someone to resubmit.
+  const after = await loadLeague(env, lid);
+  const picks = after.picks || {};
+  let placed = false;
+  if (!remove ? false : Object.keys(picks).length >= memberNames(after).length && memberNames(after).length > 0)
+    placed = await placeAndDraw(env, lid, picks, after);
+  return json({ ok: true, size: memberNames(after).length, members: memberNames(after), placed }, 200, cors);
+}
+
+// POST /league/lock {league} — the escape hatch. The board otherwise waits forever for
+// a member who never submits, which with eight friends is a matter of when, not if.
+// Legs that are in make the ticket; anyone who didn't submit simply isn't on it.
+async function leagueLock(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const lid = leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+  const auth = await requireManager(request, env, lid);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  const lg = auth.league;
+  if ((lg.status || "open") !== "open") return json({ error: "Already placed." }, 409, cors);
+  const picks = lg.picks || {};
+  const n = Object.keys(picks).length;
+  if (n < 2) return json({ error: "Need at least two legs to make a parlay." }, 400, cors);
+
+  const placed = await placeAndDraw(env, lid, picks, lg);
+  return json({ ok: true, placed, legs: n, waitingOn: memberNames(lg).filter(p => !picks[encodeURIComponent(p)]) }, 200, cors);
 }
 
 /* =============================== /bozo/pick =============================== */
@@ -991,15 +1242,23 @@ async function bozoPick(request, env, cors) {
   if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
   const auth = await sessionAuth(request, env);
   if (auth.err) return json({ error: auth.err }, auth.code, cors);
-  const { name, players } = auth;
+  const { name } = auth;
 
   let body;
   try { body = await readBody(request); }
   catch { return json({ error: "Bad JSON." }, 400, cors); }
 
+  const lid = leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+
   let state;
-  try { state = (await fbGet(env, "/bozo")).data || {}; }
-  catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+  try { state = await loadLeague(env, lid); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+  if (!state) return json({ error: "No such league." }, 404, cors);
+
+  // Having an account is not the same as being in THIS league.
+  if (!isMember(state, name))
+    return json({ error: "You're not in this league." }, 403, cors);
 
   if ((state.status || "open") !== "open") {
     return json({ error: "The ticket is placed. Board is locked." }, 409, cors);
@@ -1007,7 +1266,7 @@ async function bozoPick(request, env, cors) {
 
   try {
     if (body.action === "remove") {
-      await fbDelete(env, "/bozo/picks/" + encodeURIComponent(name));
+      await fbDelete(env, LG(lid) + "/picks/" + encodeURIComponent(name));
       return json({ ok: true, removed: true }, 200, cors);
     }
 
@@ -1025,14 +1284,17 @@ async function bozoPick(request, env, cors) {
       prop: p.prop ? String(p.prop).slice(0, 80) : null,
       ts: Date.now(),                 // SERVER time — the reason this route exists
     };
-    await fbPut(env, "/bozo/picks/" + encodeURIComponent(name), pick);
+    await fbPut(env, LG(lid) + "/picks/" + encodeURIComponent(name), pick);
 
-    const picks = (await fbGet(env, "/bozo/picks")).data || {};
+    const picks = (await fbGet(env, LG(lid) + "/picks")).data || {};
+    // ⚠️ THIS league's member count, not the global roster. An 8-person league locks
+    // on the 8th leg; a 4-person league on the 4th.
+    const size = memberNames(state).length;
     let placed = false;
-    if (Object.keys(picks).length >= players.length) {
-      placed = await placeAndDraw(env, picks, state);
+    if (size > 0 && Object.keys(picks).length >= size) {
+      placed = await placeAndDraw(env, lid, picks, state);
     }
-    return json({ ok: true, ts: pick.ts, placed }, 200, cors);
+    return json({ ok: true, ts: pick.ts, placed, size }, 200, cors);
   } catch (e) {
     return json({ error: "Database write failed: " + e.message }, 502, cors);
   }
@@ -1057,8 +1319,8 @@ function validatePick(p, name, existing, band) {
 
 // Server-side Fisher–Yates over the four levers, crypto-seeded, written once.
 // The ETag guard means two simultaneous final submissions can't both draw.
-async function placeAndDraw(env, picks, state) {
-  const cur = await fbGet(env, "/bozo/order", true);
+async function placeAndDraw(env, lid, picks, state) {
+  const cur = await fbGet(env, LG(lid) + "/order", true);
   if (cur.data != null) return true;                 // already drawn — never redraw
 
   const order = [0, 1, 2, 3];
@@ -1069,16 +1331,16 @@ async function placeAndDraw(env, picks, state) {
     [order[i], order[j]] = [order[j], order[i]];
   }
 
-  const wrote = await fbPut(env, "/bozo/order", order, cur.etag);
+  const wrote = await fbPut(env, LG(lid) + "/order", order, cur.etag);
   if (!wrote) return true;                           // lost the race — other draw stands
 
   const closeTs = Math.max(...Object.values(picks).map(x => x.ts || 0));
-  await fbPut(env, "/bozo/status", "placed");
-  await fbPut(env, "/bozo/closeTs", closeTs);
+  await fbPut(env, LG(lid) + "/status", "placed");
+  await fbPut(env, LG(lid) + "/closeTs", closeTs);
 
   // ⚠️ The ledger is written HERE, at lock — not at grade, and not in bozoNext. A week
   // that locks but never gets graded must still leave a complete record of the entry.
-  await ledgerWriteEntries(env, (state && state.season) || SEASON, (state && state.week) || 1, picks, order);
+  await ledgerWriteEntries(env, lid, (state && state.season) || SEASON, (state && state.week) || 1, picks, order);
   return true;
 }
 
@@ -1121,7 +1383,7 @@ const ledgerKey = (season, week, playerKey) => `${season}-w${week}-${playerKey}`
 const playerName = k => { try { return decodeURIComponent(k); } catch { return k; } };
 
 // Entry-stage rows. Everything here is known the instant the board locks.
-function ledgerEntries(season, week, picks, order) {
+function ledgerEntries(lid, season, week, picks, order) {
   const names = Object.keys(picks);
   const byTs = names.slice().sort((a, b) => (picks[a].ts || 0) - (picks[b].ts || 0));
   const closeTs = Math.max(...names.map(n => picks[n].ts || 0));
@@ -1136,6 +1398,7 @@ function ledgerEntries(season, week, picks, order) {
   for (const n of names) {
     const x = picks[n];
     rows[ledgerKey(season, week, n)] = {
+      league: lid,                              // so a CSV across leagues stays sortable
       season, week, player: playerName(n),
       sport: x.sport, eventId: x.eventId, game: x.game,
       mkt: x.mkt, side: x.side, dir: x.dir,
@@ -1158,9 +1421,9 @@ function ledgerEntries(season, week, picks, order) {
 // ⚠️ Never throws into the caller. At lock the ticket is already placed and the
 // permutation already drawn; failing the last submitter's request over a bookkeeping
 // write would be worse than a missing row. bozoGrade backfills anything that didn't land.
-async function ledgerWriteEntries(env, season, week, picks, order) {
+async function ledgerWriteEntries(env, lid, season, week, picks, order) {
   try {
-    await fbPatch(env, "/bozo/ledger", ledgerEntries(season, week, picks, order));
+    await fbPatch(env, LG(lid) + "/ledger", ledgerEntries(lid, season, week, picks, order));
     return true;
   } catch (e) {
     console.log("ledger: entry write failed — " + e.message);
@@ -1170,19 +1433,19 @@ async function ledgerWriteEntries(env, season, week, picks, order) {
 
 // Idempotent by construction: writes only rows that are absent, so it can never clobber
 // a field a later stage already patched in.
-async function ledgerBackfill(env, state) {
+async function ledgerBackfill(env, lid, state) {
   const picks = state.picks || {};
   if (!Object.keys(picks).length) return false;
   let have = {};
-  try { have = (await fbGet(env, "/bozo/ledger")).data || {}; }
+  try { have = (await fbGet(env, LG(lid) + "/ledger")).data || {}; }
   catch (e) { console.log("ledger: backfill read failed — " + e.message); return false; }
 
-  const rows = ledgerEntries(state.season || SEASON, state.week || 1, picks, state.order || null);
+  const rows = ledgerEntries(lid, state.season || SEASON, state.week || 1, picks, state.order || null);
   const missing = {};
   for (const k of Object.keys(rows)) if (!have[k]) missing[k] = rows[k];
   if (!Object.keys(missing).length) return false;
 
-  try { await fbPatch(env, "/bozo/ledger", missing); return true; }
+  try { await fbPatch(env, LG(lid) + "/ledger", missing); return true; }
   catch (e) { console.log("ledger: backfill write failed — " + e.message); return false; }
 }
 
@@ -1239,31 +1502,34 @@ async function requireAdmin(request, env) {
 
 async function bozoGrade(request, env, cors) {
   if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
-  const auth = await requireAdmin(request, env);
-  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
 
   let body;
   try { body = await readBody(request); }
   catch { return json({ error: "Bad JSON." }, 400, cors); }
 
+  const lid = leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+  const auth = await requireManager(request, env, lid);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
   try {
-    const state = (await fbGet(env, "/bozo")).data || {};
+    const state = auth.league;
     const status = state.status;
     if (status !== "placed" && status !== "graded")
       return json({ error: "Nothing to grade — ticket isn't placed." }, 409, cors);
 
     if (body.results && typeof body.results === "object")
-      await fbPut(env, "/bozo/results", body.results);
-    if (body.bozo !== undefined) await fbPut(env, "/bozo/bozo", body.bozo);
-    if (body.bozoWhy !== undefined) await fbPut(env, "/bozo/bozoWhy", String(body.bozoWhy).slice(0, 200));
+      await fbPut(env, LG(lid) + "/results", body.results);
+    if (body.bozo !== undefined) await fbPut(env, LG(lid) + "/bozo", body.bozo);
+    if (body.bozoWhy !== undefined) await fbPut(env, LG(lid) + "/bozoWhy", String(body.bozoWhy).slice(0, 200));
 
-    // Ledger last, before the status flip: if it fails the admin gets a 502, status is
+    // Ledger last, before the status flip: if it fails the manager gets a 502, status is
     // still "placed", and hitting Decide again replays the whole thing idempotently.
-    const backfilled = await ledgerBackfill(env, state);
+    const backfilled = await ledgerBackfill(env, lid, state);
     const upd = ledgerGradeUpdate(state.season || SEASON, state.week || 1, body.results, body.bozo, state.picks);
-    if (Object.keys(upd).length) await fbPatch(env, "/bozo/ledger", upd);
+    if (Object.keys(upd).length) await fbPatch(env, LG(lid) + "/ledger", upd);
 
-    if (body.graded) await fbPut(env, "/bozo/status", "graded");
+    if (body.graded) await fbPut(env, LG(lid) + "/status", "graded");
     return json({ ok: true, backfilled }, 200, cors);
   } catch (e) {
     return json({ error: "Database write failed: " + e.message }, 502, cors);
@@ -1272,20 +1538,27 @@ async function bozoGrade(request, env, cors) {
 
 async function bozoNext(request, env, cors) {
   if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
-  const auth = await requireAdmin(request, env);
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const lid = leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+  const auth = await requireManager(request, env, lid);
   if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
 
   try {
-    const state = (await fbGet(env, "/bozo")).data || {};
+    const state = auth.league;
     const history = Array.isArray(state.history) ? state.history : [];
     history.push({ week: state.week || 1, bozo: state.bozo || null });
 
-    // ⚠️ PATCH, not PUT. A wholesale PUT of /bozo replaces the whole node, which under
-    // the write-at-lock ledger would delete /bozo/ledger every single week — the site
-    // whose thesis is "the receipts stay up" quietly shredding its receipts. The nulls
-    // clear this week's children explicitly; anything not named here survives, so a
-    // node added later can't be silently destroyed the same way.
-    await fbPatch(env, "/bozo", {
+    // ⚠️ PATCH, not PUT. A wholesale PUT of the league node would delete its ledger,
+    // members and config every single week — the site whose thesis is "the receipts
+    // stay up" quietly shredding its receipts. The nulls clear this week's children
+    // explicitly; anything not named here survives, so a node added later can't be
+    // silently destroyed the same way.
+    await fbPatch(env, LG(lid), {
       season: state.season || SEASON,
       week: (state.week || 1) + 1,
       status: "open",
