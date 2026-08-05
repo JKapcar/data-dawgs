@@ -260,9 +260,13 @@ async function handleScores(url, cors) {
 const TTS_MAX_CHARS = 300;          // one announcement; anything longer is a bug
 const TTS_DEFAULT_MODEL = "eleven_turbo_v2_5";
 
-// Cache key for a rendered line. Same voice + model + text = same audio, forever.
-async function ttsCacheKey(voice, model, text) {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(voice + "|" + model + "|" + text));
+// Cache key for a rendered line. Same voice + model + settings + text = same audio.
+// ⚠️ `settings` MUST be in the key. Without it, the first render of a line would be
+// replayed for every stability/style/speed variant — which is exactly the tuning
+// bench's job to compare, and it would have compared the same clip against itself.
+async function ttsCacheKey(voice, model, text, settings) {
+  const buf = await crypto.subtle.digest("SHA-256",
+    new TextEncoder().encode(voice + "|" + model + "|" + (settings || "") + "|" + text));
   const hex = [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
   // A synthetic https URL: caches.default keys on the Request, and it must be a GET.
   return new Request("https://tts-cache.datadawgs.invalid/" + hex);
@@ -296,11 +300,34 @@ async function handleTts(request, env, cors) {
   if (!voice) return json({ error: "No voice id configured." }, 500, cors);
   const model = String(body.model || env.ELEVEN_MODEL || TTS_DEFAULT_MODEL);
 
+  // Voice settings, whitelisted and clamped. Passing the caller's object straight
+  // through would let anyone hand ElevenLabs arbitrary JSON; these five are the only
+  // knobs that exist, and out-of-range values degrade the audio rather than erroring,
+  // which would be a confusing thing to debug live.
+  //   stability        v3: 0.0 Creative / 0.5 Natural / 1.0 Robust (discrete)
+  //                    v2: continuous 0–1
+  //   similarity_boost 0–1   style 0–1   speed 0.7–1.2 (ignored by v3, which takes
+  //                    pace direction from audio tags instead)
+  const num = (v, lo, hi) => (typeof v === "number" && isFinite(v)) ? Math.min(hi, Math.max(lo, v)) : undefined;
+  let vs;
+  if (body.voice_settings && typeof body.voice_settings === "object") {
+    const b = body.voice_settings;
+    vs = {};
+    const st = num(b.stability, 0, 1);          if (st !== undefined) vs.stability = st;
+    const sb = num(b.similarity_boost, 0, 1);   if (sb !== undefined) vs.similarity_boost = sb;
+    const sy = num(b.style, 0, 1);              if (sy !== undefined) vs.style = sy;
+    const sp = num(b.speed, 0.7, 1.2);          if (sp !== undefined) vs.speed = sp;
+    if (typeof b.use_speaker_boost === "boolean") vs.use_speaker_boost = b.use_speaker_boost;
+    if (!Object.keys(vs).length) vs = undefined;
+  }
+  // Stable stringify so {stability,style} and {style,stability} share a cache entry.
+  const vsKey = vs ? JSON.stringify(Object.keys(vs).sort().map(k => [k, vs[k]])) : "";
+
   // ---- cache first ----
   // Draft night is the perfect shape for this: every listening device asks for the
   // identical sentence within a second or two of each other. The first one pays,
   // everyone else is served from the edge — faster AND free.
-  const ck = await ttsCacheKey(voice, model, text);
+  const ck = await ttsCacheKey(voice, model, text, vsKey);
   const cache = caches.default;
   const hit = await cache.match(ck);
   if (hit) {
@@ -327,7 +354,8 @@ async function handleTts(request, env, cors) {
     up = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voice)}?output_format=mp3_44100_128`, {
       method: "POST",
       headers: { "xi-api-key": env.ELEVEN_KEY, "Content-Type": "application/json" },
-      body: JSON.stringify({ text, model_id: model }),
+      body: JSON.stringify(vs ? { text, model_id: model, voice_settings: vs }
+                                : { text, model_id: model }),
     });
   } catch (e) {
     return json({ error: "Couldn't reach ElevenLabs: " + e.message }, 502, cors);
