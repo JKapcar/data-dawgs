@@ -74,6 +74,15 @@ body{margin:0;background:var(--page);color:var(--ink-1);
 .grpbtn:hover{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--ink-1)}
 .grpbtn.on{color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent);border-radius:8px 8px 0 0}
 .grpbtn .caret{font-size:10px;opacity:.7}
+/* ⚠️ The Labs header is an <a>, so `.sitenav .links a` (0-2-1) reclaims its colour and
+   out-specifies `:root[data-theme="light"] .grpbtn` (0-2-0) — dark ink on the dark nav
+   bar, i.e. invisible in light theme. Style it as `a.grpbtn`, never bare `.grpbtn`. */
+.sitenav .links a.grpbtn{color:var(--ink-2);text-decoration:none}
+.sitenav .links a.grpbtn:hover{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--ink-1)}
+.sitenav .links a.grpbtn.on{color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent);border-radius:8px 8px 0 0}
+:root[data-theme="light"] .sitenav .links a.grpbtn{color:var(--navink)}
+:root[data-theme="light"] .sitenav .links a.grpbtn:hover{background:rgba(255,106,2,0.16);color:#fff}
+:root[data-theme="light"] .sitenav .links a.grpbtn.on{color:#ff8a4d;box-shadow:inset 0 -2px 0 #ff8a4d}
 .grpmenu{position:absolute;top:100%;left:0;min-width:190px;background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:6px;display:none;z-index:60;box-shadow:0 10px 30px rgba(0,0,0,.35);margin-top:4px}
 .grpmenu::before{content:"";position:absolute;top:-8px;left:0;right:0;height:8px}
 .navgrp.open .grpmenu{display:block}
@@ -569,7 +578,7 @@ select.dbpresent[hidden]{display:none}
        along is it". They are orthogonal on purpose, which is why a FIELD-TESTED tool
        sits in a menu called Lab alongside three mockups — intended, not a contradiction.
        EPA Stats leads the list because it is the only one of the five that works. */
-    {label:"Lab", items:[
+    {label:"Labs", href:"index.html#tiers", items:[
       ["stats.html","NFL EPA Stats","stats"],
       ["bozo.html","Bozo","bozo"],
       ["dfs.html","DFS Solver","dfs"],
@@ -585,7 +594,7 @@ select.dbpresent[hidden]{display:none}
   nav.appendChild(brand);
   const links = document.createElement("div"); links.className = "links";
   NAV.forEach(entry=>{
-    if(entry.href){
+    if(entry.href && !entry.items){          // a group may ALSO carry an href
       const a = document.createElement("a");
       a.href = entry.href; a.textContent = entry.label;
       if(entry.key===page) a.className = "on";
@@ -594,10 +603,19 @@ select.dbpresent[hidden]{display:none}
     }
     const grp = document.createElement("div"); grp.className = "navgrp";
     const active = entry.items.some(it=>it[2]===page);
-    const btn = document.createElement("button");
+    /* A group header that also navigates. ⚠️ It has to keep working on touch, where
+       there is no hover to open the menu with — so: hover-capable devices navigate on
+       click (the menu is already showing), touch devices open the menu on the first tap
+       and follow the link on the second. Navigating on the first tap would make the
+       dropdown unreachable on a phone. */
+    const btn = document.createElement(entry.href ? "a" : "button");
+    if(entry.href) btn.href = entry.href;
     btn.className = "grpbtn"+(active?" on":"");
     btn.innerHTML = entry.label+' <span class="caret">▾</span>';
     btn.addEventListener("click", e=>{
+      const hoverable = !window.matchMedia || matchMedia("(hover: hover)").matches;
+      if(entry.href && (hoverable || grp.classList.contains("open"))) return;   // let it navigate
+      e.preventDefault();
       e.stopPropagation();
       const wasOpen = grp.classList.contains("open");
       document.querySelectorAll(".navgrp.open").forEach(g=>g.classList.remove("open"));
