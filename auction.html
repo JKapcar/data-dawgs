@@ -364,8 +364,12 @@ body.proj .wrap{max-width:none;padding:10px 18px}
     repeating-linear-gradient(90deg,rgba(255,255,255,.022) 0 1px,transparent 1px 3px),
     linear-gradient(180deg,var(--chas2),var(--chas));
   border:1px solid #000; border-top:3px solid var(--accent); border-radius:12px;
-  padding:0 0 14px; margin-top:12px; color:var(--lbl); position:relative; overflow:hidden;
+  padding:0 0 14px; margin-top:12px; color:var(--lbl); position:relative;
   box-shadow:0 14px 34px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.06)}
+/* ⚠️ No `overflow:hidden` here. It was on this rule until the help layer went in, and
+   it silently clipped every hover tooltip that reached past the chassis edge — which
+   is most of them, since the master row sits on the bottom edge. border-radius still
+   clips the backgrounds on its own, so nothing was lost by dropping it. */
 /* rack screws — four corners, the cheapest possible "this is hardware" cue */
 .acon::before,.acon::after{content:"";position:absolute;width:7px;height:7px;border-radius:50%;
   background:radial-gradient(circle at 35% 30%,#6b5c45,#241a0c);box-shadow:0 1px 0 rgba(255,255,255,.10);top:12px}
@@ -471,6 +475,49 @@ input[type=range].fad:focus-visible{outline:2px solid var(--accent);outline-offs
 .acon-mas select{min-width:200px} .acon-mas input[type=text]{min-width:260px}
 .acon-msg{flex-basis:100%;font-size:11.5px;color:var(--lbl2);line-height:1.5;margin:2px 0 0}
 .acon-msg b{color:var(--lbl)}
+/* ============================================================
+   THE HELP LAYER — two ways to read the same sentence
+   ============================================================
+   Kap, 8/5: "explain to me what these buttons do. I want instructions written into it,
+   probably with hover."
+
+   ⚠️ Hover alone would have been a phone-shaped bug. The screenshot that prompted this
+   was taken on a phone, and touch devices have no hover — so the instructions would
+   have been invisible on the device most likely to need them. Hence two surfaces:
+
+   1. `data-tip` → a bubble on hover/focus. Desktop, per-control, precise.
+   2. the HELP switch → pins a static legend inside each channel and under the master
+      row. Works on touch, works with a keyboard, works if you just want to read it.
+
+   Both render from the same `ATIP` strings in JS, so there is exactly one copy of every
+   sentence. If you edit a tooltip, the legend changes with it. */
+[data-tip]{position:relative}
+[data-tip]:hover::after,[data-tip]:focus-within::after{
+  content:attr(data-tip);position:absolute;z-index:60;left:0;top:calc(100% + 7px);
+  width:max-content;max-width:min(260px,58vw);padding:8px 10px;border-radius:5px;
+  background:#080502;border:1px solid var(--accent);color:var(--lbl);
+  font:500 11px/1.5 inherit;letter-spacing:0;text-transform:none;text-align:left;
+  box-shadow:0 10px 26px rgba(0,0,0,.7);pointer-events:none;white-space:normal}
+/* master-row controls sit on the chassis edge, so their bubbles open UPWARD */
+.acon-mas [data-tip]:hover::after,.acon-mas [data-tip]:focus-within::after{
+  top:auto;bottom:calc(100% + 7px)}
+.atipw{display:inline-block}
+/* the HELP switch */
+.acon-help{margin-left:6px}
+/* the pinned legend */
+.ahelp{display:none;margin-top:11px;padding-top:10px;border-top:1px dashed rgba(236,223,201,.16)}
+.ahelp-wide{margin:14px 18px 0}
+.acon.help .ahelp{display:block}
+/* ⚠️ The "Who are you?" chip is fixed to the bottom-left of the viewport, and in HELP
+   mode the legend becomes the last thing on the page — so the chip parks on top of the
+   final two lines. This is the clearance for it. */
+.acon.help{padding-bottom:58px}
+@media(max-width:760px){ .ahelp-wide{margin:12px 12px 0} }
+.ahelp p{margin:0 0 7px;font-size:11px;line-height:1.5;color:var(--lbl2);text-transform:none;letter-spacing:0}
+.ahelp p:last-child{margin-bottom:0}
+.ahelp b{color:var(--accent);font-weight:800}
+/* in HELP mode the pinned legend is the instruction; don't also fire bubbles */
+.acon.help [data-tip]:hover::after,.acon.help [data-tip]:focus-within::after{display:none}
 @media(max-width:760px){
   .acon-body{padding:12px 12px 0} .acon-mas{padding:12px 12px 0}
   .acon-hd{padding-left:24px;padding-right:24px}
@@ -2106,9 +2153,42 @@ function livePid(){
   return hit ? hit.id : "madden";
 }
 
+/* ============================================================
+   ATIP — one sentence per control, rendered twice
+   ============================================================
+   These strings feed BOTH the hover bubble (`data-tip`) and the pinned HELP legend.
+   ⚠️ Never hardcode an explanation into the markup instead of adding it here — the
+   whole point is that the two surfaces cannot disagree.
+
+   Plain text only: they go into an HTML attribute via esc(), so no markup survives.
+   Keep them to one or two sentences; the bubble caps at 260px. */
+const ATIP = {
+  stability:"Three fixed positions, not a range. CREATIVE is the most expressive and follows the [shouting] / [whispers] tags hardest, but can garble a word. NATURAL sits closest to the source recording. ROBUST is the steadiest but largely IGNORES the tags — which flattens Cage, since the tags are the whole performance.",
+  style:"Exaggerates this voice's characteristic delivery. Higher is more theatrical and more likely to hallucinate; 0 is a plain read.",
+  similar:"How hard the model chases the original clone's timbre. High also faithfully reproduces whatever was wrong with the source audio, so 1.00 is not automatically better than 0.85.",
+  boost:"Speaker boost — a little extra clarity and adherence to the clone, slightly slower to generate. Usually leave it on.",
+  cue:"Auditions THIS channel at its current dial positions, on this device only. Uses your Cue line if you typed one. The same line at the same settings renders once, then replays instantly.",
+  announcer:"League master for play-by-play, synced to everyone. Off means no nomination or sold lines anywhere. The Browns horn still fires — that is deliberate. Each device also has its own Sound button, and announcements only ever play on the Draft Dashboard, never on this page.",
+  voice:"The clone every dashboard announces with. Whichever channel above matches it lights up LIVE — that is the strip whose dials are actually in play.",
+  line:"Type any line to audition it on either channel. Leave it blank to use a stock line for each. Words in [brackets] are audio tags: the v3 model performs them rather than reading them aloud.",
+  horn:"Dry-run of the whole Browns celebration — confetti and the real recording — without faking a sale. Worth testing on the projector, since that machine is wired to the room.",
+  factory:"Puts both channels back to their shipped starting positions: Madden on Natural 0.35 / 0.85, Cage on Creative 0.60 / 0.85.",
+};
+const tipw = (html, k) => `<span class="atipw" data-tip="${esc(ATIP[k])}">${html}</span>`;
+// The pinned legend, built from the same strings the bubbles use.
+// ⚠️ The channel legend renders ONCE for both strips, not inside channelHTML. The
+// first cut put it in each channel and printed the same five paragraphs twice —
+// ~460px of identical reading, and the controls it described are the same controls.
+const legend = (rows, cls) => `<div class="ahelp ${cls||""}">${rows.map(([lab,k])=>
+  `<p><b>${lab}</b> — ${esc(ATIP[k])}</p>`).join("")}</div>`;
+const CH_LEGEND = [["Stability","stability"],["Style","style"],["Similar","similar"],
+                   ["Boost","boost"],["Cue","cue"]];
+
 function channelHTML(P){
   const t=tuneOf(P.id);
-  const fad=(k,lab)=>`<div class="afad">
+  // ⚠️ data-tip goes on the .afad WRAPPER, never on the <input>. Range inputs are
+  // replaced elements — ::after does not render on them and the tooltip vanishes.
+  const fad=(k,lab,tip)=>`<div class="afad" data-tip="${esc(ATIP[tip])}">
       <div class="aslot"><input type="range" class="fad" data-p="${P.id}" data-k="${k}"
         min="0" max="1" step="0.05" value="${t[k]}" aria-label="${lab}, ${esc(P.label)}"></div>
       <div class="aval" id="av-${P.id}-${k}">${(+t[k]).toFixed(2)}</div>
@@ -2117,16 +2197,16 @@ function channelHTML(P){
     <div class="ach-t"><span class="ach-n">${P.ch}</span><span class="ach-l">${esc(P.label)}</span>
       <span class="ach-live">●&nbsp;LIVE</span></div>
     <p class="acap">Stability</p>
-    <div class="asw" data-sw="${P.id}">
+    <div class="asw" data-sw="${P.id}" data-tip="${esc(ATIP.stability)}">
       <button type="button" data-v="0">Creative</button>
       <button type="button" data-v="0.5">Natural</button>
       <button type="button" data-v="1">Robust</button>
     </div>
     <div class="ach-mid">
-      <div class="afads">${fad("style","Style")}${fad("similarity_boost","Similar")}</div>
+      <div class="afads">${fad("style","Style","style")}${fad("similarity_boost","Similar","similar")}</div>
       <div class="ach-btm">
-        <button type="button" class="abtn" data-boost="${P.id}">Boost</button>
-        <button type="button" class="abtn cue" data-cue="${P.id}">▶&nbsp;Cue</button>
+        ${tipw(`<button type="button" class="abtn" data-boost="${P.id}">Boost</button>`,"boost")}
+        ${tipw(`<button type="button" class="abtn cue" data-cue="${P.id}">▶&nbsp;Cue</button>`,"cue")}
       </div>
     </div>
   </div>`;
@@ -2142,16 +2222,20 @@ function renderAudioBoard(){
     <div class="acon-hd">
       <span class="acon-brand">Data <i>Dawgs</i> Audio</span>
       <span class="acon-lamp" id="aconLamp"><b></b>On Air</span>
+      <button type="button" class="abtn acon-help" id="aconHelp">?&nbsp;Help</button>
       <span class="acon-vu" id="aconVu">${Array.from({length:14},()=>"<i></i>").join("")}</span>
     </div>
     <div class="acon-body">${TTS_PERSONAS.map(channelHTML).join("")}</div>
+    ${legend(CH_LEGEND,"ahelp-wide")}
     <div class="acon-mas">
-      <button type="button" class="abtn" id="aconAnn">Announcer</button>
-      <label>League voice<select id="aconVoice"><option value="">Loading…</option></select></label>
-      <label>Cue line<input type="text" id="aconLine" placeholder="Type a line to audition…"></label>
-      <button type="button" class="abtn" id="aconHorn">▶&nbsp;Horn</button>
-      <button type="button" class="abtn" id="aconReset">Factory</button>
+      ${tipw('<button type="button" class="abtn" id="aconAnn">Announcer</button>',"announcer")}
+      <label data-tip="${esc(ATIP.voice)}">League voice<select id="aconVoice"><option value="">Loading…</option></select></label>
+      <label data-tip="${esc(ATIP.line)}">Cue line<input type="text" id="aconLine" placeholder="Type a line to audition…"></label>
+      ${tipw('<button type="button" class="abtn" id="aconHorn">▶&nbsp;Horn</button>',"horn")}
+      ${tipw('<button type="button" class="abtn" id="aconReset">Factory</button>',"factory")}
       <p class="acon-msg" id="aconMsg"></p>
+      ${legend([["Announcer","announcer"],["League voice","voice"],["Cue line","line"],
+                ["Horn","horn"],["Factory","factory"]])}
     </div>`;
   bindAudioBoard();
   syncAudioBoard();
@@ -2212,6 +2296,22 @@ function bindAudioBoard(){
   }));
 
   el.querySelectorAll("[data-cue]").forEach(b=>b.addEventListener("click",()=>aconCue(b.dataset.cue,b)));
+
+  /* HELP is per-device, NOT synced. It is a reading preference, not a draft setting —
+     pushing it through DDSync would flip open every leaguemate's legend because the
+     operator wanted to check what Robust meant. */
+  const helpBtn=document.getElementById("aconHelp");
+  const paintHelp=()=>{
+    const on=localStorage.getItem("dd-acon-help")==="1";
+    el.classList.toggle("help",on);
+    helpBtn.setAttribute("aria-pressed",on?"true":"false");
+    helpBtn.innerHTML=on?"?&nbsp;Hide":"?&nbsp;Help";
+  };
+  helpBtn.addEventListener("click",()=>{
+    localStorage.setItem("dd-acon-help", localStorage.getItem("dd-acon-help")==="1"?"0":"1");
+    paintHelp();
+  });
+  paintHelp();
 
   document.getElementById("aconAnn").addEventListener("click",()=>{
     S.settings.announcer=!S.settings.announcer; save(); syncAudioBoard();
