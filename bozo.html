@@ -315,6 +315,19 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
 .rule-row .rl{font-weight:750}
 .rule-row .rd{color:var(--ink-3);font-size:12.5px;display:block;margin-top:2px}
 .rule-row .rv{font:700 14px ui-monospace,monospace;white-space:nowrap;color:var(--ink-1)}
+/* ---- roster / invite management ---- */
+.ros{display:grid;grid-template-columns:1fr auto auto;gap:8px 10px;align-items:center;
+  padding:9px 0;border-bottom:1px solid var(--grid);font-size:14px}
+.ros:last-of-type{border-bottom:0}
+.ros .st{font:700 10px/1 ui-monospace,monospace;letter-spacing:.9px;text-transform:uppercase;
+  padding:3px 7px;border-radius:4px;white-space:nowrap}
+.ros .st.yes{background:color-mix(in srgb, var(--good) 16%, transparent);color:var(--good)}
+.ros .st.no{background:color-mix(in srgb, var(--warn) 18%, transparent);color:var(--warn)}
+.linkout{margin-top:10px;padding:12px 14px;border-radius:9px;
+  background:color-mix(in srgb, var(--accent) 8%, transparent);border-left:3px solid var(--accent)}
+.linkout code{display:block;font:12px ui-monospace,monospace;word-break:break-all;
+  margin:7px 0;color:var(--ink-1)}
+@media(max-width:640px){ .ros{grid-template-columns:1fr auto;row-gap:6px} .ros .who{grid-column:1/-1} }
 
 </style>
 </head>
@@ -1073,6 +1086,12 @@ STATE: everything saves in the browser on that device. A different device shows 
       <button class="btn sm" id="dSave">Save band</button>
     </div>
     <div class="err" id="lgErr"></div>
+
+    <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:22px 0 4px">Roster &amp; invites</h3>
+    <p class="tm" style="margin:0 0 8px">Join links are stored hashed, so a lost one can't be looked up — only re-issued. Re-issuing kills the old link.</p>
+    <div id="rosBody"></div>
+    <div id="rosOut"></div>
+    <div class="err" id="rosErr"></div>
   </div>
   <p class="note" id="lgNote"></p>
 </div>
@@ -1559,6 +1578,7 @@ function paintLeague(){
     document.getElementById('dCeil').value = bd.ceil;
     document.getElementById('dFloor').value = bd.floor;
   }
+  paintRoster();
 }
 document.getElementById('lgAdmin').addEventListener('click', e=>{
   const b=e.target.closest('button[data-dial]'); if(!b) return;
@@ -1569,6 +1589,59 @@ document.getElementById('lgAdmin').addEventListener('click', e=>{
 ['dCeil','dFloor'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{ lgDirty=true; }));
 document.getElementById('dReset').onclick = ()=>{ lgDirty=false; paintLeague();
   document.getElementById('lgErr').textContent=''; };
+/* ---- roster & invites (admin) ----
+   The join-link problem this solves: Cloudflare secrets are write-only, so the
+   original token map became unreadable the moment it was saved and there was no way
+   to re-send anyone their link. Tokens now live hashed in /users and are re-issued
+   from here. The raw token is shown ONCE and never stored anywhere we can read. */
+function paintRoster(){
+  const body = document.getElementById('rosBody');
+  if(!isAdmin()){ body.innerHTML=''; return; }
+  body.innerHTML = ROSTER.map(p=>`<div class="ros">
+      <span class="who">${esc(p.name)}${p.name===ADMIN?' <span class="tm">· manager</span>':''}</span>
+      <span class="st ${p.claimed?'yes':'no'}">${p.claimed?'claimed':'not claimed'}</span>
+      <span class="row">
+        <button class="btn ghost sm" data-invite="${esc(p.name)}">${p.claimed?'New link':'Get link'}</button>
+        ${p.claimed?`<button class="btn ghost sm" data-reset="${esc(p.name)}">Reset</button>`:''}
+      </span>
+    </div>`).join('');
+}
+document.getElementById('rosBody').addEventListener('click', async e=>{
+  const inv=e.target.closest('[data-invite]'), rst=e.target.closest('[data-reset]');
+  const err=document.getElementById('rosErr'); err.className='err'; err.textContent='';
+  const out=document.getElementById('rosOut');
+  if(inv){
+    const who=inv.dataset.invite;
+    inv.disabled=true;
+    try{
+      const r=await wPost('/auth/invite',{player:who});
+      const url=location.origin+'/bozo.html?join='+r.token;
+      out.innerHTML=`<div class="linkout"><b>${esc(who)}</b> — copy this now, it is shown once.
+        <code>${esc(url)}</code>
+        ${r.claimed?`<span class="tm">⚠️ ${esc(who)} already has a password, so this link does nothing until you hit Reset.</span>`
+                   :`<span class="tm">Text it to them. The old link, if any, is now dead.</span>`}
+        <div class="row" style="margin-top:8px"><button class="btn sm" id="cpLink">Copy</button></div></div>`;
+      document.getElementById('cpLink').onclick=()=>{
+        navigator.clipboard?.writeText(url).then(
+          ()=>{ document.getElementById('cpLink').textContent='Copied'; },
+          ()=>{ err.textContent='Clipboard blocked — select the link above and copy it.'; });
+      };
+      await loadRoster(); paintRoster();
+    }catch(e2){ err.textContent=e2.message; }
+    inv.disabled=false;
+  }
+  if(rst){
+    const who=rst.dataset.reset;
+    // Deliberately a two-step: resetting kills their sessions and their password.
+    if(rst.dataset.armed!=='1'){ rst.dataset.armed='1'; rst.textContent='Confirm reset';
+      setTimeout(()=>{ rst.dataset.armed='0'; rst.textContent='Reset'; }, 4000); return; }
+    try{ await wPost('/auth/reset',{player:who});
+      err.className='err ok'; err.textContent=`${who} cleared — issue them a new link.`;
+      await loadRoster(); paintRoster();
+    }catch(e2){ err.textContent=e2.message; }
+  }
+});
+
 document.getElementById('dSave').onclick = async ()=>{
   const e=document.getElementById('lgErr'); e.className='err'; e.textContent='';
   try{
@@ -1777,7 +1850,7 @@ function renderAuth(){
       if(a.length<8) { err.textContent='Password must be at least 8 characters.'; return; }
       if(a!==b){ err.textContent="Those don't match."; return; }
       try{
-        const r=await wPost('/bozo/claim',{token:joinTok, password:a});
+        const r=await wPost('/auth/claim',{token:joinTok, password:a});
         setSession(r.session);
         history.replaceState(null,'',location.pathname);   // burn the token out of the URL
         await loadRoster(); renderAuth();
@@ -1800,7 +1873,7 @@ function renderAuth(){
   if(go){
     const submit = async ()=>{
       try{
-        const r=await wPost('/bozo/login',{name:document.getElementById('lName').value,
+        const r=await wPost('/auth/login',{name:document.getElementById('lName').value,
                                            password:document.getElementById('lPw').value});
         setSession(r.session); await loadRoster(); renderAuth();
       }catch(e2){ err.textContent=e2.message; }
@@ -1812,7 +1885,7 @@ function renderAuth(){
 }
 
 async function loadRoster(){
-  try{ ROSTER=(await wGet('/bozo/roster')).players||[]; }
+  try{ ROSTER=(await wGet('/auth/roster')).players||[]; }
   catch(e){ ROSTER=[]; document.getElementById('srcNote').textContent='Roster unreachable — '+e.message; }
 }
 
@@ -1839,7 +1912,7 @@ document.getElementById('pwSave').onclick = async ()=>{
   const oldPassword=document.getElementById('pwOld').value, newPassword=document.getElementById('pwNew').value;
   if(newPassword.length<8){ e.textContent='New password must be at least 8 characters.'; return; }
   try{
-    const r=await wPost('/bozo/passwd',{oldPassword,newPassword});
+    const r=await wPost('/auth/passwd',{oldPassword,newPassword});
     setSession(r.session);                      // the old one is dead server-side
     e.className='err ok'; e.textContent='Changed.';
     document.getElementById('pwOld').value=''; document.getElementById('pwNew').value='';
