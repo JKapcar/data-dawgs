@@ -1306,8 +1306,104 @@ STATE: everything saves in the browser on that device. A different device shows 
      ============================================================ */
   const TTS_URL  = "https://toto.jkapcar4.workers.dev/tts";
   const LS_VOICE = "dd-ann-on";          // per-device, deliberately not synced
-  const SNARK_OVER =["That is criminal.","Someone confiscate his wallet.","The room thanks you for the inflation.","Bold strategy.","The market just fainted."];
-  const SNARK_STEAL=["Highway robbery.","Somebody was not paying attention.","A crime in broad daylight.","The Dawgs approve."];
+  /* ============================================================
+     PERSONAS — the announcer's script, keyed to the voice
+     ============================================================
+     Kap, 8/5: Pepperoni should be "Frank Caliendo doing a John Madden
+     impersonation with all of the catchphrases"; UnhingedMan should be "an unhinged
+     Nicolas Cage that's all over the place... even during the same pick he can go
+     from quiet to crazy", both punning their catchphrases into fantasy football.
+
+     ⚠️ The persona follows the VOICE, not a separate setting. Operator picks the
+     voice on auction.html; the script comes with it. One control, not two.
+
+     Bracketed words are Eleven v3 **audio tags** — real stage directions the model
+     performs, not text. [whispers]…[shouting] inside one line is how Cage gets his
+     range. They are stripped automatically for any other model, which would read the
+     brackets aloud.
+
+     These are impressions — short famous catchphrases plus original fantasy material
+     written in the style. Nobody is being quoted saying anything they didn't say.
+
+     Every line is a function of the pick context:
+       c.p player · c.$ price · c.t team · c.d |price − value| · c.e the value
+       c.m the price spoken properly — "1 dollar" / "64 dollars". Templates that
+           hardcoded "dollars" produced "1 dollars" on every flyer. Use c.m. */
+  const MADDEN = {
+    id:"madden", label:"Madden-style color man", model:"eleven_v3",
+    block:[
+      c=>`[excited] Now here's a guy. ${c.p}. And when you got a guy like this, you got a guy.`,
+      c=>`${c.p} is on the block. And the thing about the block is, somebody's gotta get off it.`,
+      c=>`[excited] ${c.p}! This is a football player, and he plays football.`,
+      c=>`Here's a guy who, if he gets the ball, he's gonna have the ball. ${c.p}.`,
+    ],
+    sold:[
+      c=>`[shouting] BOOM! ${c.p}, ${c.m}, to ${c.t}!`,
+      c=>`[excited] DOINK! ${c.p} goes to ${c.t}. ${c.m}.`,
+      c=>`${c.t} takes ${c.p} for ${c.m}. And if he scores points, that's gonna help ${c.t} win.`,
+      c=>`[excited] ${c.p} to ${c.t}, ${c.m}. WHAP! That's the sound of a roster spot closing.`,
+    ],
+    over:[
+      c=>`[laughs] That's ${c.d} over. Here's a guy who just paid ${c.$} for a ${c.e} dollar guy, and that is a lot of dollars.`,
+      c=>`${c.d} over value. That's turducken money for a turkey leg.`,
+      c=>`[sarcastic] ${c.d} over. When you spend big, you've spent big.`,
+      c=>`[laughs] ${c.d} over value! Somebody get the telestrator, I wanna circle that budget.`,
+    ],
+    steal:[
+      c=>`[whispers] ${c.d} under value. Don't tell anybody. [shouting] BOOM! I told everybody.`,
+      c=>`${c.d} under. You know what the key to this auction is? Points. And ${c.t} just got 'em on sale.`,
+      c=>`[excited] ${c.d} under value! That's a big guy at a little guy price, and that's a big deal.`,
+    ],
+    // ⚠️ Do NOT restate the price here — the sold line just said it. And the "one
+    // dollar" gag only works at exactly one dollar; it fired on a $3 pick in testing.
+    cheap:[
+      c=>c.$===1 ? `[laughs] One dollar. That's not a bid, that's a tip.`
+                 : `[laughs] Here's a guy who cost less than the turkey legs.`,
+      c=>`And that is a bargain, because it's cheap.`,
+    ],
+  };
+  const CAGE = {
+    id:"cage", label:"unhinged Cage", model:"eleven_v3",
+    block:[
+      c=>`[whispers] ${c.p}. [shouting] ${c.p}!! NOMINATE HIM!`,
+      c=>`[whispers] Put the bunny... back... in the box. [shouting] AND PUT ${c.p} ON THE BLOCK!`,
+      c=>`[curious] ${c.p}? [shouting] ${c.p}! [whispers] ...${c.p}.`,
+    ],
+    sold:[
+      c=>`[whispers] ${c.p}. ${c.m}. ${c.t}. [shouting] NOT THE BENCH! NOT THE BENCH!`,
+      c=>`[shouting] ${c.m.toUpperCase()}?! [whispers] ...I could roster that man for hours.`,
+      c=>`[excited] ${c.t} takes ${c.p} for ${c.m}! [shouting] HOW'D IT GET BURNED?! HOW'D YOUR BUDGET GET BURNED?!`,
+      c=>`[whispers] I'll be taking ${c.p}... [shouting] AND WHATEVER CASH YOU GOT! ${c.m}, ${c.t}.`,
+      c=>`[whispers] ${c.p} to ${c.t}. ${c.m}. [laughs] [shouting] THAT'S HIGH! THAT'S ALL THE WAY HIGH!`,
+    ],
+    over:[
+      c=>`[shouting] ${c.d} OVER VALUE! [whispers] ...that's not a draft pick. That's a hostage situation.`,
+      c=>`[laughs] ${c.d} over. [shouting] NOT THE FEES! NOT THE FEES! THEY'RE IN MY BUDGET!`,
+      c=>`[whispers] ${c.d} over value. [shouting] SNAP OUT OF IT!`,
+      c=>`[shouting] ${c.$} FOR A ${c.e} DOLLAR MAN?! [whispers] ...I'm gonna steal the Declaration of Independence to pay for that.`,
+      c=>`[whispers] ${c.d} over. [shouting] PUT THE MONEY BACK IN THE BOX!`,
+    ],
+    steal:[
+      c=>`[whispers] ${c.d} under value... [shouting] GRAND THEFT ROSTER!`,
+      c=>`[excited] ${c.d} under! [whispers] ...nobody saw it. [shouting] NOBODY SAW IT!`,
+      c=>`[whispers] ${c.t} just got him for ${c.$}. [laughs] [shouting] THAT'S A CRIME! I LOVE CRIME!`,
+    ],
+    cheap:[
+      c=>c.$===1 ? `[whispers] One dollar. [shouting] ONE DOLLAR!! [whispers] ...I've paid more for a peach.`
+                 : `[whispers] ${c.m}. [shouting] THAT'S NOT A BID, THAT'S A DARE!`,
+      c=>`[laughs] [whispers] Nobody wanted him. [shouting] I WANT HIM!`,
+    ],
+  };
+  /* Voice id → persona. Anything unrecognised gets Madden: Pepperoni is the house
+     voice, so the default script should be the one that matches it. */
+  const PERSONAS = {
+    "1bLhIC6iHGxxaQhUlUN7": MADDEN,   // Pepperoni_Football_Announcer
+    "32Kj6C8up2SwVyk2E5Z3": CAGE,     // UnhingedMan_Scream
+  };
+  const personaFor = A => PERSONAS[(A && A.settings && A.settings.ttsVoice) || ""] || MADDEN;
+  const annPick = (arr, c) => arr[(Math.random()*arr.length)|0](c);
+  // v3 performs [tags]; every other model would say the word "bracket sarcastic".
+  const annStripTags = s => s.replace(/\[[a-z0-9 _-]{2,20}\]\s*/gi, "").replace(/\s+/g," ").trim();
   const HORN_URL = "superbowlsuperbrowns.m4a";
   const HORN_VOL = 0.85;                 // the file measures -11.3 LUFS — hot next to the voice
   try{ const pre=new Audio(HORN_URL); pre.preload="auto"; }catch(e){}
@@ -1325,6 +1421,7 @@ STATE: everything saves in the browser on that device. A different device shows 
   }
 
   function browserSay(text){                 // fallback: never let the room go silent
+    text = annStripTags(text);               // speechSynthesis would read the brackets
     return new Promise(res=>{
       if(!("speechSynthesis" in window)) return res();
       try{
@@ -1362,7 +1459,11 @@ STATE: everything saves in the browser on that device. A different device shows 
       setTimeout(res,12000);                 // hard stop if the file never loads (clip is 7.5s)
     });
   }
-  async function annSay(t){
+  async function annSay(t, P){
+    // The persona decides the model; the model decides whether [tags] are performed
+    // or read out loud. Get this pairing wrong and the room hears "bracket shouting".
+    const model=(P&&P.model)||"eleven_turbo_v2_5";
+    if(model!=="eleven_v3") t=annStripTags(t);
     let done=false;
     // ⚠️ No passphrase check. /tts is open (Kap, 8/4: "regardless if you're signed in
     // or not") — a leaguemate who never opened Ask Toto still hears the league's voice.
@@ -1374,7 +1475,7 @@ STATE: everything saves in the browser on that device. A different device shows 
       // Omit `voice` entirely when it's blank so the Worker falls back to
       // ELEVEN_VOICE; sending "" would read as a deliberate empty voice id.
       const A=state()||{}; const vid=(A.settings&&A.settings.ttsVoice)||"";
-      const payload=vid?{text:t,voice:vid}:{text:t};
+      const payload=vid?{text:t,voice:vid,model}:{text:t,model};
       const hdr={"Content-Type":"application/json"};
       if(pass) hdr["X-Dawg-Pass"]=pass;
       const r=await fetch(TTS_URL,{method:"POST",headers:hdr,body:JSON.stringify(payload)});
@@ -1397,11 +1498,11 @@ STATE: everything saves in the browser on that device. A different device shows 
     annBusy=true;
     while(annQ.length){
       const it=annQ.shift();
-      if(it.horn) await annHorn(); else await annSay(it.say);
+      if(it.horn) await annHorn(); else await annSay(it.say, it.P);
     }
     annBusy=false;
   }
-  function annSpeak(text){ if(!annOn()) return; annQ.push({say:text}); annPump(); }
+  function annSpeak(text, persona){ if(!annOn()) return; annQ.push({say:text, P:persona}); annPump(); }
   function annPlayHorn(){ if(!annOn()) return; annQ.push({horn:true}); annPump(); }
   function annCheck(){
     const A=state(); if(!A||!A.settings) return;
@@ -1427,20 +1528,27 @@ STATE: everything saves in the browser on that device. A different device shows 
     }
 
     if(!A.settings.announcer) return;        // operator's master switch, synced from the auctioneer
+    const P=personaFor(A);
     if(A.onBlock && blockTs>annSeenBlock){
       annSeenBlock=blockTs;
-      annSpeak(`On the block: ${A.onBlock.player}.`);
+      annSpeak(annPick(P.block, {p:A.onBlock.player}), P);
     }
     if(last && lastTs>annSeenPick){
       annSeenPick=lastTs;
       const t=(A.settings.teams||[])[last.ti]||{};
-      let msg=`Sold! ${last.player}, ${last.price} dollar${last.price===1?"":"s"}, to ${t.name||"the room"}.`;
-      if(A.settings.snark && last.etr>0){
-        const diff=last.price-last.etr;
-        if(diff>=10)      msg+=` That's ${diff} over value. `+SNARK_OVER[(Math.random()*SNARK_OVER.length)|0];
-        else if(diff<=-10)msg+=` ${-diff} under value. `+SNARK_STEAL[(Math.random()*SNARK_STEAL.length)|0];
+      const diff=last.price-(last.etr||0);
+      const c={ p:last.player, $:last.price, t:t.name||"the room",
+                d:Math.abs(diff), e:last.etr||0,
+                m:last.price+" dollar"+(last.price===1?"":"s") };
+      let msg=annPick(P.sold, c);
+      if(A.settings.snark){
+        // A $1 flyer is funnier than "3 under value", so cheap wins over the value
+        // test — otherwise the dollar jokes would almost never fire.
+        if(last.price<=3 && P.cheap)      msg+=" "+annPick(P.cheap, c);
+        else if(last.etr>0 && diff>=10)   msg+=" "+annPick(P.over, c);
+        else if(last.etr>0 && diff<=-10)  msg+=" "+annPick(P.steal, c);
       }
-      annSpeak(msg);
+      annSpeak(msg, P);
     }
   }
   const annBtn=document.getElementById("dbAnn");
@@ -1454,8 +1562,10 @@ STATE: everything saves in the browser on that device. A different device shows 
     paintAnn();
     paintWhy();
     // Turning it on IS the user gesture that unlocks autoplay — say something
-    // immediately so a silent first announcement never surprises anyone.
-    if(on) annSpeak("Auctioneer voice on.");
+    // immediately so a silent first announcement never surprises anyone. Route it
+    // through the live persona so this also WARMS THE RIGHT MODEL: v3's cold start
+    // is ~10s, and warming turbo instead would leave the first real call cold.
+    if(on){ const P=personaFor(state()); annSpeak(annPick(P.block, {p:"the Data Dawgs draft"}), P); }
   });
   // Shift-click tests the horn without waiting for a Browns pick. Deliberately not a
   // second button: the tab bar is already tight at 390px.
