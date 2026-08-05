@@ -687,6 +687,23 @@ STATE: everything saves in the browser on that device. A different device shows 
     busy=true; const th=say("bot","…thinking");
     try{
       const SF = surface();
+      /* ⚠️ The Worker rejects any body over 24,000 bytes with a 413, which surfaces to
+         the user as a bare error with no hint about what went wrong. Every surface's
+         state block competes for that budget with the core prompt, the manual and the
+         history — and a page like the EPA explorer can generate a lot of text. So
+         budget it explicitly rather than hoping, and TELL the model it was cut, so it
+         says "I can't see that part" instead of answering from a half-table. */
+      const BODY_CAP = 20000;
+      let stateTxt = SF.ctx();
+      const frame = () => JSON.stringify({max_tokens:700, messages:[
+        {role:"system",content:SYS+"\n\n"+SF.sys},
+        {role:"system",content:HELP},
+        {role:"system",content:SF.label},
+        ...HIST.slice(-8)]}).length;
+      const room = BODY_CAP - frame();
+      if(stateTxt.length > room)
+        stateTxt = stateTxt.slice(0, Math.max(400, room))
+          + "\n[TRUNCATED to fit the request size limit. If a question needs the part that was cut, say so plainly rather than guessing.]";
       const url = direct ? (ai.url||"https://api.x.ai/v1")+"/chat/completions" : BOT_URL;
       const headers = direct
         ? {"Content-Type":"application/json","Authorization":"Bearer "+ai.key}
@@ -695,7 +712,7 @@ STATE: everything saves in the browser on that device. A different device shows 
       const payload = {max_tokens:700,
         messages:[{role:"system",content:SYS+"\n\n"+SF.sys},
                   {role:"system",content:"SITE MANUAL (how the site works — use for how-to questions):\n"+HELP},
-                  {role:"system",content:SF.label+" (regenerated for every question):\n"+SF.ctx()},
+                  {role:"system",content:SF.label+" (regenerated for every question):\n"+stateTxt},
                   ...HIST.slice(-8)]};
       if(direct) payload.model = window.DDBot.cfg().model;
       const r=await fetch(url,{method:"POST",headers,body:JSON.stringify(payload)});
@@ -1043,5 +1060,59 @@ STATE: everything saves in the browser on that device. A different device shows 
     Source: Establish The Run, 2026 Draft Kit Pro (subscriber content, personal-use synthesis), captured 2026-07-28. Structural claims and player takes deliberately separated per house rules.
   </footer>
 </div>
+<script>
+/* ---------------- Toto's surface: the 2026 draft thesis ----------------
+   This page is static prose, so the "state" is a compressed restatement of what the
+   article actually argues. It is hand-written rather than scraped: the point is that
+   Toto answers from the thesis, and refuses to answer from anything else.
+   ⚠️ It carries the capture date because the whole page is a dated snapshot. */
+window.DD_BOTCTX = {
+  label: 'THE 2026 STRATEGY PAGE (the full argument, summarised)',
+  title: 'Ask Toto — he has read this page',
+  chrome: {sub:'has read this page', ph:'Ask Toto about the strategy…', chips:[
+    ['Where is the RB dead zone this year and how do I avoid it?','The dead zone'],
+    ['Should I wait on QB in a 12-team redraft, or is that a best-ball edge?','Wait on QB?'],
+    ['How stale is this page and what should I re-check before I draft?','How stale?']]},
+  sys: `RIGHT NOW you are on the 2026 Draft Strategy page — a written thesis synthesised from ETR's Draft Kit Pro, captured 2026-07-28. There is no live tool here; the page is the argument.
+- Answer from the summary below and from nothing else. If it is not in there, say so and say what would answer it.
+- SEPARATE the two kinds of claim, every time. STRUCTURAL claims (the dead-zone shape, positional scoring curves, pace) are testable across seasons. PLAYER-LEVEL calls (buys, fades, rankings) are one analyst's priors on one day. Never present the second as if it had the weight of the first.
+- ETR is a subscription product that needs differentiated takes. A large Silva-vs-ADP delta is part signal and part product; say which you think it is when it matters.
+- EVERY number here is a 2026-07-28 snapshot, and ADP moves daily. Volunteer the date whenever someone leans on a specific ADP or ranking.
+- Give probability ranges, not point estimates, on anything that resolves in the future.`,
+  ctx: () => `CAPTURED 2026-07-28 from ETR Draft Kit Pro. Everything below is as of that date.
+
+MACRO THESIS — the RB dead zone is back. RB ADP is at a five-year high, which re-arms the inefficiency. In 12-team leagues, Rounds 3-6 RBs underperform their cost and WRs in that range outperform.
+STRUCTURE (this is the testable part): RB scoring cliffs early then runs FLAT from R3 to R10 — so mid-round RB pays sticker for a flat curve. WR stays flat through R5-6 then drops fast.
+PLAYBOOK: one or two elite RBs early, or punt past the dead zone entirely. Never pay sticker in the middle.
+ANCHOR RULES (12-14 team, half-PPR+): at least 1 RB in the first two rounds; at least 3 WRs by the end of R6. In 14+ team the dead zone shifts UP to R2-5. In 10-team or smaller you get 8-9 rounds of WR runway.
+
+QB IS A TRAP THIS YEAR. Only about 10 total season points separate low-end QB1s from mid QB2s. The QB2 tier carries rushing value (Dart ~8.5 rush PPG, Willis ~6.0, Murray ~4.7) plus Purdy/Stafford efficiency. Wait in sharp or large leagues.
+⚠️ HONEST CAVEAT the page makes itself: "wait forever on QB" is largely a BEST BALL edge and it mostly evaporates in 1QB redraft. Paying up for Allen/Lamar/Daniels is defensible in small or casual leagues.
+TE mirrors QB: Bowers, then McBride (volume, but Carson Beck risk), then Loveland. ⚠️ The TE tiers file was still the 2025 version at capture — treat TE tiers as stale.
+
+BUILD FOR WEEKS 15-17, NOT WEEK 1. Bench = ascension archetypes (rookies, contingent backups) plus floor vets.
+Week 17 stacks: CHI-DET, JAX-WAS, BAL-CIN, LAR-TB, NYG-DAL.
+Strong closes: MIN, ATL, ARI, and JAX/NYG after W15. Rough closes: PHI, SF, KC, HOU.
+September: fade JAX and ARI. Stroud and Goff are elite September streamers. LAC, BAL, NYG open easy.
+
+TOP OF THE BOARD (Silva, 7/28): Gibbs then Bijan (Gibbs: 38 TDs in two years, Montgomery gone, softest schedule), then CMC / Taylor / Walker (now KC) / Cook. WR tier 1: Nacua, Chase, JSN, ARSB, Lamb.
+BIGGEST BUYS vs ADP (his rank v ADP): K. Walker 10 v 21 · Breece Hall 18 v 33 · Olave 19 v 29 · McConkey 29 v 45 · McLaurin 33 v 55 · Evans 34 v 61 · Burden 38 v 49.
+BIGGEST FADES: Achane 30 v 13 (McDaniel gone, Willis craters receptions) · McBride 36 v 20 · Jeanty 15 v 11 · Jeremiyah Love · Tet McMillan 43 v 37.
+⚠️ The page itself notes deltas this size have a MIXED historical hit rate. Do not quote one as if it were established.
+
+2026 STORYLINES PRICED INTO TIERS: KC is RB-centric (Walker paid, Mahomes off ACL/LCL, Rice suspension risk, Kelce 37). NO is fantasy-relevant (fastest pace, indoors, Shough, Etienne). MIN is a Kyler revival bet. MIA toxic. CIN favoured for scoring lead. NE added A.J. Brown for Maye.
+PACE (Thorman): up = CIN, DAL, DEN, IND, MIN, NO (fastest), TEN. Sloggers = BUF, LAC, LV, MIA, NYG, PIT, SF. League-wide pace and pass rates are sinking.
+
+FORMAT PLAYBOOKS.
+Better in REDRAFT than best ball (cuttable contingent tickets): Jordan James, Kaelon Black, Giddens, McGowan, MarShawn Lloyd, the Houston WR2 trio, Travis Hunter, Okonkwo, Keaton Mitchell, Ferguson. Worse in redraft (spike-week specialists): Pierce, Watson, Tate, TeSlaa — and elite QBs.
+AUCTION: write target prices BEFORE the room. Nominate with an objective. Drain budgets on players you do not want. Throw your targets out early. Never price-enforce. Do not wait for the last player in a tier. Spend to roughly zero and budget the endgame.
+14+ TEAMS: RB/WR early and often, QB late, ride 3-4 week defense stretches, FAAB early and hard.
+10 TEAMS OR FEWER: elite QB/TE swings are viable, stream D/K, stay hyperactive on the wire.
+
+LATE-ROUND / ZERO-RB LIST (ADP at capture): Dowdle 87, Corum 91, Monangai 94, Brooks 98, Dobbins 99, White 109, Mason 114, Tracy 134, Mitchell 137, Allgeier 162, Bigsby 163, Sampson 173, B. Robinson 173, Blue 194, James 210, Claiborne 213.
+
+NOT PUBLISHED YET AT CAPTURE (so this page cannot speak to them): Levitan's flagship strategy piece and Perfect Draft, Miller's draft-slot guides, Silva's Shy Away List and Sleepers, the default-rankings exploitation piece, and the 2026 TE tiers update. The page wants a refresh mid-August and again pre-Labor Day.`
+};
+</script>
 </body>
 </html>

@@ -731,6 +731,23 @@ STATE: everything saves in the browser on that device. A different device shows 
     busy=true; const th=say("bot","…thinking");
     try{
       const SF = surface();
+      /* ⚠️ The Worker rejects any body over 24,000 bytes with a 413, which surfaces to
+         the user as a bare error with no hint about what went wrong. Every surface's
+         state block competes for that budget with the core prompt, the manual and the
+         history — and a page like the EPA explorer can generate a lot of text. So
+         budget it explicitly rather than hoping, and TELL the model it was cut, so it
+         says "I can't see that part" instead of answering from a half-table. */
+      const BODY_CAP = 20000;
+      let stateTxt = SF.ctx();
+      const frame = () => JSON.stringify({max_tokens:700, messages:[
+        {role:"system",content:SYS+"\n\n"+SF.sys},
+        {role:"system",content:HELP},
+        {role:"system",content:SF.label},
+        ...HIST.slice(-8)]}).length;
+      const room = BODY_CAP - frame();
+      if(stateTxt.length > room)
+        stateTxt = stateTxt.slice(0, Math.max(400, room))
+          + "\n[TRUNCATED to fit the request size limit. If a question needs the part that was cut, say so plainly rather than guessing.]";
       const url = direct ? (ai.url||"https://api.x.ai/v1")+"/chat/completions" : BOT_URL;
       const headers = direct
         ? {"Content-Type":"application/json","Authorization":"Bearer "+ai.key}
@@ -739,7 +756,7 @@ STATE: everything saves in the browser on that device. A different device shows 
       const payload = {max_tokens:700,
         messages:[{role:"system",content:SYS+"\n\n"+SF.sys},
                   {role:"system",content:"SITE MANUAL (how the site works — use for how-to questions):\n"+HELP},
-                  {role:"system",content:SF.label+" (regenerated for every question):\n"+SF.ctx()},
+                  {role:"system",content:SF.label+" (regenerated for every question):\n"+stateTxt},
                   ...HIST.slice(-8)]};
       if(direct) payload.model = window.DDBot.cfg().model;
       const r=await fetch(url,{method:"POST",headers,body:JSON.stringify(payload)});
@@ -1273,6 +1290,39 @@ STATE: everything saves in the browser on that device. A different device shows 
   [dark, light].forEach(el=>{ if(!el.complete){ pending++; el.addEventListener('load', ()=>{ if(--pending<=0) start(); }); } });
   if(!pending) start();
 })();
+</script>
+<script>
+/* ---------------- Toto's surface: the homepage manifesto ---------------- */
+window.DD_BOTCTX = {
+  label: 'THE HOMEPAGE (a manifesto — summarised)',
+  title: 'Ask Toto — he can explain the site',
+  chrome: {sub:'can explain this site', ph:'Ask Toto about Data Dawgs…', chips:[
+    ['What is Data Dawgs actually for?','What is this?'],
+    ['What do Labs, Field-Tested and The Pound mean?','The three tiers'],
+    ['Why is the assistant named Toto?','Why "Toto"?']]},
+  sys: `RIGHT NOW you are on the Data Dawgs homepage. It is a manifesto, not a tool — there is no data to read here, only the argument the site is built on. Answer from the summary below. This is the one surface where you are being asked about YOURSELF and the project, so it is fine to speak about both plainly. Do not oversell the tools: the tier system exists precisely to be honest about what is and is not trustworthy yet.`,
+  ctx: () => `WHAT IT IS: a personal sandbox for better decision-making — forecasting, fantasy sports, food, entertainment. The animating question is "how do we know what we think we know?" Tools get built to beat a market; receipts get kept to check whether they did.
+
+DATA, NOT DOGMA: dogma is "a belief that stopped paying rent." Every market runs on dogma, and that is the opportunity. Noise is cheap; signal is thin and boring.
+
+BREAK IT BEFORE THE MARKET DOES (from a bank model-risk background): an unattacked model is not a validated model. If it did not hold out of sample, it did not hold. Every model dies at its assumptions. Nobody grades their own homework.
+
+IN PRACTICE, four worked examples: the eye test versus target share / routes / draft capital; the shape of every auction (money goes early on names, production sells at half price late); line moves have reasons — respect sharp markets and attack soft ones, and "your 12-man league is a soft market"; the cash-out button has juice baked in.
+
+KEEP SCORE: forecasting is a skill. Ranges, not point estimates. Small updates. Keep score either way. Everything carries a date, a range and a checkable record. It also names its own enemies: survivorship ("the other eleven went quiet"), fat tails, and the fact that numbers lie too.
+
+THE DOG WHO PULLED THE CURTAIN: Toto, not the wizard, is the model — he went and looked. That is why the assistant is named Toto. The job is to read what is actually there and say what it supports, including "not much."
+
+WHAT'S HERE: today it is fantasy football — an EPA explorer over public play-by-play, a 2026 draft thesis with sources and an expiration date, and a live auction room that has run a 14-team draft off a laptop and a projector. Coming: prediction markets, forecasting and calibration tracking, sports betting models, game theory, AI.
+
+THE THREE TIERS (a lifecycle, not a rating):
+- LABS — under construction. Most of the site lives here. Labs is a STAGE, not a status: a tool arrives here the day it goes live.
+- FIELD-TESTED — two tools today. The gate is validation: does it work, and can it be trusted? Evidence means receipts against a pre-set benchmark for forecasting tools, and named sources plus reproducible maths for measuring tools. It is NEVER awarded for feeling finished. The two: NFL EPA Stats (stats.html) and the Fantasy Draft Dashboard (dashboard.html, auctioneer console included — the rig has run a live 14-team auction end to end).
+- THE POUND — empty. Nothing has failed yet. It will. Shelved is not dead: every card in there carries why it went in, the one change that might get it out, and a date to look again.
+
+FROM CLEVELAND: "Nose down, ears up. We sniff out the signal. Everything else is barking."
+SOURCES: nflverse play-by-play; ETR 2026 Draft Kit (subscriber content, personal use); format inspired by rbsdm.com.`
+};
 </script>
 </body>
 </html>

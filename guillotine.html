@@ -806,6 +806,23 @@ STATE: everything saves in the browser on that device. A different device shows 
     busy=true; const th=say("bot","…thinking");
     try{
       const SF = surface();
+      /* ⚠️ The Worker rejects any body over 24,000 bytes with a 413, which surfaces to
+         the user as a bare error with no hint about what went wrong. Every surface's
+         state block competes for that budget with the core prompt, the manual and the
+         history — and a page like the EPA explorer can generate a lot of text. So
+         budget it explicitly rather than hoping, and TELL the model it was cut, so it
+         says "I can't see that part" instead of answering from a half-table. */
+      const BODY_CAP = 20000;
+      let stateTxt = SF.ctx();
+      const frame = () => JSON.stringify({max_tokens:700, messages:[
+        {role:"system",content:SYS+"\n\n"+SF.sys},
+        {role:"system",content:HELP},
+        {role:"system",content:SF.label},
+        ...HIST.slice(-8)]}).length;
+      const room = BODY_CAP - frame();
+      if(stateTxt.length > room)
+        stateTxt = stateTxt.slice(0, Math.max(400, room))
+          + "\n[TRUNCATED to fit the request size limit. If a question needs the part that was cut, say so plainly rather than guessing.]";
       const url = direct ? (ai.url||"https://api.x.ai/v1")+"/chat/completions" : BOT_URL;
       const headers = direct
         ? {"Content-Type":"application/json","Authorization":"Bearer "+ai.key}
@@ -814,7 +831,7 @@ STATE: everything saves in the browser on that device. A different device shows 
       const payload = {max_tokens:700,
         messages:[{role:"system",content:SYS+"\n\n"+SF.sys},
                   {role:"system",content:"SITE MANUAL (how the site works — use for how-to questions):\n"+HELP},
-                  {role:"system",content:SF.label+" (regenerated for every question):\n"+SF.ctx()},
+                  {role:"system",content:SF.label+" (regenerated for every question):\n"+stateTxt},
                   ...HIST.slice(-8)]};
       if(direct) payload.model = window.DDBot.cfg().model;
       const r=await fetch(url,{method:"POST",headers,body:JSON.stringify(payload)});
@@ -1332,6 +1349,19 @@ STATE: everything saves in the browser on that device. A different device shows 
     var saved = cfg();
     var me = live.filter(function(t){ return t.rid === saved.me; })[0] || null;
 
+    /* Toto's window onto this page. Everything above lives in this IIFE and escapes
+       only into the DOM, so stash the finished numbers where DD_BOTCTX can read them.
+       ⚠️ Stash AFTER the sort and AFTER `me` resolves, so the ordering the model sees
+       is the ordering on screen. Observed and simulated fields travel together and are
+       labelled apart in the context builder — do not collapse them here. */
+    window.__GX = {
+      league: league.name, season: league.season, teamCount: teams.length,
+      done: done, chop: res.chop, excluded: teams.length - live.length,
+      me: me && {name: me.name, surv: me.surv, mean: me.mean},
+      teams: live.map(function(t){ return {name:t.name, owner:t.owner, surv:t.surv,
+        mean:t.mean, sd:t.sd, low:t.low, last:t.last}; })
+    };
+
     elLive.style.display="";
     elState.textContent = me ? "Live · your league" : "Live · pick your team";
     if(me){
@@ -1384,6 +1414,44 @@ STATE: everything saves in the browser on that device. A different device shows 
   var saved=cfg();
   if(saved.id){ elId.value=saved.id; sync(saved.id); }
 })();
+</script>
+<script>
+/* ---------------- Toto's surface: the Guillotine companion ----------------
+   The page's own sim state lives inside an IIFE and escapes only into the DOM, so
+   sync() stashes what matters on window.__GX. If nobody has connected a league there
+   is nothing to stash and Toto says exactly that. */
+window.DD_BOTCTX = {
+  label: 'THE USER\'S GUILLOTINE LEAGUE',
+  title: 'Ask Toto — he reads your league',
+  chrome: {sub:'reads your league', ph:'Ask Toto about your league…', chips:[
+    ['What are my odds this week, and who is most likely to get chopped?','Am I safe?'],
+    ['What is the chop line and how far above it am I?','The chop line'],
+    ['If I am 90% to survive each week, what are my odds of lasting to week 12?','Compounding']]},
+  sys: `RIGHT NOW you are on the Guillotine Companion. In a guillotine league the LOWEST weekly scorer is eliminated, every week, until one team is left. The page reads the user's Sleeper league and estimates who is likely to go.
+- ⚠️ EVERY survival number is MONTE CARLO OUTPUT over 20,000 draws, not a fact. Say so when you quote one.
+- ⚠️ THREE MODELLING ASSUMPTIONS the user deserves to hear when the numbers matter: weekly scores are drawn NORMAL (real ones are mildly right-skewed); teams are drawn INDEPENDENTLY, with no opponent effect; and there are NO projections, injuries or byes in the model at all — a team's future is its own past mean and standard deviation, nothing else.
+- ⚠️ The sample is this league's completed weeks only. Early in a season that is a handful of games and the estimates are close to worthless. Say that plainly rather than quoting three significant figures off four data points.
+- The chop line is the MEDIAN of the simulated weekly minimum. It is not a target score and not a guarantee.
+- Averages, standard deviations, low and last scores ARE observed. Survival odds, the chop line and margin are not. Keep the two apart.
+- A team missing from the table has fewer than 2 completed weeks or a zero standard deviation. That is the answer to "why am I not listed", not a bug.`,
+  ctx: () => {
+    const G = window.__GX;
+    if(!G || !G.teams || !G.teams.length)
+      return 'No league is connected on this device yet. The user pastes a Sleeper league ID into the connect box and the page pulls their league read-only. Until then there is nothing to read — say so.';
+    const L=[];
+    L.push(`LEAGUE: ${G.league} (${G.season}). ${G.teamCount} teams, ${G.done} completed week(s) of scoring history. Next week is week ${G.done+1}.`);
+    L.push(G.me
+      ? `THE USER'S TEAM: ${G.me.name} — simulated ${Math.round(G.me.surv*100)}% to survive week ${G.done+1}. Average ${G.me.mean.toFixed(1)}, margin over the projected chop line ${(G.me.mean-G.chop>=0?'+':'')+(G.me.mean-G.chop).toFixed(1)}.`
+      : `THE USER HAS NOT PICKED THEIR TEAM YET — they click their row in the table. Until then you do not know which team is theirs, so do not assume one.`);
+    L.push(`PROJECTED CHOP LINE: ${G.chop.toFixed(1)} — the MEDIAN simulated weekly low score, from 20,000 runs.`);
+    L.push(`TEAMS, most at risk first (survive% is simulated; avg/sd/low/last are observed):`);
+    L.push('team | owner | survive% | avg | sd | low | last');
+    G.teams.forEach(t=>L.push(`${t.name} | ${t.owner} | ${Math.round(t.surv*100)}% | ${t.mean.toFixed(1)} | ${t.sd.toFixed(1)} | ${t.low.toFixed(1)} | ${t.last.toFixed(1)}`));
+    if(G.done < 4) L.push(`⚠️ ONLY ${G.done} COMPLETED WEEK(S). The standard deviations are barely estimated and these probabilities are soft. Lead with that if anyone leans on a number.`);
+    if(G.excluded) L.push(`${G.excluded} team(s) are excluded from the simulation for having under 2 weeks of scores or a zero standard deviation.`);
+    return L.join('\n');
+  }
+};
 </script>
 </body>
 </html>

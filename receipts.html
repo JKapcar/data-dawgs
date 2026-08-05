@@ -800,6 +800,23 @@ STATE: everything saves in the browser on that device. A different device shows 
     busy=true; const th=say("bot","…thinking");
     try{
       const SF = surface();
+      /* ⚠️ The Worker rejects any body over 24,000 bytes with a 413, which surfaces to
+         the user as a bare error with no hint about what went wrong. Every surface's
+         state block competes for that budget with the core prompt, the manual and the
+         history — and a page like the EPA explorer can generate a lot of text. So
+         budget it explicitly rather than hoping, and TELL the model it was cut, so it
+         says "I can't see that part" instead of answering from a half-table. */
+      const BODY_CAP = 20000;
+      let stateTxt = SF.ctx();
+      const frame = () => JSON.stringify({max_tokens:700, messages:[
+        {role:"system",content:SYS+"\n\n"+SF.sys},
+        {role:"system",content:HELP},
+        {role:"system",content:SF.label},
+        ...HIST.slice(-8)]}).length;
+      const room = BODY_CAP - frame();
+      if(stateTxt.length > room)
+        stateTxt = stateTxt.slice(0, Math.max(400, room))
+          + "\n[TRUNCATED to fit the request size limit. If a question needs the part that was cut, say so plainly rather than guessing.]";
       const url = direct ? (ai.url||"https://api.x.ai/v1")+"/chat/completions" : BOT_URL;
       const headers = direct
         ? {"Content-Type":"application/json","Authorization":"Bearer "+ai.key}
@@ -808,7 +825,7 @@ STATE: everything saves in the browser on that device. A different device shows 
       const payload = {max_tokens:700,
         messages:[{role:"system",content:SYS+"\n\n"+SF.sys},
                   {role:"system",content:"SITE MANUAL (how the site works — use for how-to questions):\n"+HELP},
-                  {role:"system",content:SF.label+" (regenerated for every question):\n"+SF.ctx()},
+                  {role:"system",content:SF.label+" (regenerated for every question):\n"+stateTxt},
                   ...HIST.slice(-8)]};
       if(direct) payload.model = window.DDBot.cfg().model;
       const r=await fetch(url,{method:"POST",headers,body:JSON.stringify(payload)});
@@ -1142,5 +1159,32 @@ STATE: everything saves in the browser on that device. A different device shows 
     Data Dawgs · Play-by-play data from <a href="https://github.com/nflverse" target="_blank" rel="noopener">nflverse</a> · Strategy synthesized from Establish The Run's 2026 Draft Kit (subscriber content, personal use) · Stats format inspired by <a href="https://rbsdm.com/stats/stats/" target="_blank" rel="noopener">rbsdm.com</a>
   </footer>
 </div>
+<script>
+/* ---------------- Toto's surface: Receipts ----------------
+   The page is empty BY DESIGN and says so. The failure mode to avoid is Toto treating
+   emptiness as breakage, or worse, inventing a track record. */
+window.DD_BOTCTX = {
+  label: 'THE RECEIPTS PAGE (a design mockup — nothing logged yet)',
+  title: 'Ask Toto about this page',
+  chrome: {sub:'knows what this page is', ph:'Ask Toto about calibration…', chips:[
+    ['Why is this empty?','Why empty?'],
+    ['What is a Brier score and what does the reliability diagram show?','Brier score?'],
+    ['What does a receipt actually record?','What gets logged?']]},
+  sys: `RIGHT NOW you are on Receipts — the page that WOULD track every forecast made on this site and score it. ⚠️ IT IS NOT BUILT, and nothing has been predicted or resolved.
+- ⚠️ There is NO track record. Zero resolved, zero open, no Brier score. If asked how the site's predictions have done, the answer is that nothing has been logged yet — never estimate, never characterise a record that does not exist.
+- The emptiness is accurate, not a bug. The page says so itself. Say so too.
+- The CONCEPTS are real: explain Brier scores, reliability diagrams and calibration freely.`,
+  ctx: () => `WHAT IT WOULD DO: record every forecast at the moment it is made — with a locked probability RANGE, the base rate, a resolve-by date, and a pre-declared "what would change my mind" — then score them with a reliability diagram and a Brier score.
+
+CURRENT STATE: Brier score — · Relative Brier — · Resolved 0 · Open 0. The chart is empty axes and a dashed 45-degree perfect-calibration reference line. Nothing has been logged.
+
+THE HONESTY SECTION IS THE SUBSTANCE, and it is the answer to most questions here:
+- This is SELF-REPORTED data. Its only defence is procedural: log at creation, never delete, date every resolution.
+- Early calibration buckets are noise and should stay greyed out below a minimum count.
+- Padding the log with easy high-confidence calls flatters a Brier score without demonstrating any skill. A good score on a soft question set means nothing.
+
+WHY THE CRITERIA LOCK AT SAVE TIME: if you can edit what counted as being right after you see the outcome, you are not keeping score, you are writing history.`
+};
+</script>
 </body>
 </html>

@@ -761,6 +761,23 @@ STATE: everything saves in the browser on that device. A different device shows 
     busy=true; const th=say("bot","…thinking");
     try{
       const SF = surface();
+      /* ⚠️ The Worker rejects any body over 24,000 bytes with a 413, which surfaces to
+         the user as a bare error with no hint about what went wrong. Every surface's
+         state block competes for that budget with the core prompt, the manual and the
+         history — and a page like the EPA explorer can generate a lot of text. So
+         budget it explicitly rather than hoping, and TELL the model it was cut, so it
+         says "I can't see that part" instead of answering from a half-table. */
+      const BODY_CAP = 20000;
+      let stateTxt = SF.ctx();
+      const frame = () => JSON.stringify({max_tokens:700, messages:[
+        {role:"system",content:SYS+"\n\n"+SF.sys},
+        {role:"system",content:HELP},
+        {role:"system",content:SF.label},
+        ...HIST.slice(-8)]}).length;
+      const room = BODY_CAP - frame();
+      if(stateTxt.length > room)
+        stateTxt = stateTxt.slice(0, Math.max(400, room))
+          + "\n[TRUNCATED to fit the request size limit. If a question needs the part that was cut, say so plainly rather than guessing.]";
       const url = direct ? (ai.url||"https://api.x.ai/v1")+"/chat/completions" : BOT_URL;
       const headers = direct
         ? {"Content-Type":"application/json","Authorization":"Bearer "+ai.key}
@@ -769,7 +786,7 @@ STATE: everything saves in the browser on that device. A different device shows 
       const payload = {max_tokens:700,
         messages:[{role:"system",content:SYS+"\n\n"+SF.sys},
                   {role:"system",content:"SITE MANUAL (how the site works — use for how-to questions):\n"+HELP},
-                  {role:"system",content:SF.label+" (regenerated for every question):\n"+SF.ctx()},
+                  {role:"system",content:SF.label+" (regenerated for every question):\n"+stateTxt},
                   ...HIST.slice(-8)]};
       if(direct) payload.model = window.DDBot.cfg().model;
       const r=await fetch(url,{method:"POST",headers,body:JSON.stringify(payload)});
@@ -1353,6 +1370,30 @@ stage.addEventListener("pointerdown",()=>{
   clearTimeout(stage._t); stage._t=setTimeout(()=>stage.classList.remove("showbar"),2600);
 });
 showSpine(0);
+</script>
+<script>
+/* ---------------- Toto's surface: Rollo ----------------
+   ⚠️ This is a memorial. There is no analysis to do here and no numbers to be clever
+   about. The surface block exists so Toto knows what he is sitting on and answers
+   plainly and briefly — not so he has something to say. */
+window.DD_BOTCTX = {
+  label: 'THE ROLLO PAGE',
+  title: 'Ask Toto about this page',
+  chrome: {sub:'knows this page', ph:'Ask Toto…', chips:[
+    ['Why is there no sound?','No sound?'],
+    ['How long is this and can I pause it?','How long?'],
+    ['What am I looking at?','What is this?']]},
+  sys: `RIGHT NOW you are on the Rollo page — a memorial slideshow for Kap's dog, "the OG Data Dawg. Ride or Die." It is a music-synced photo tribute, not a tool.
+- Keep it short, warm and plain. Do not analyse, do not offer insight, do not fill silence.
+- If someone asks a practical question about playback, answer it from the notes below and stop.
+- If someone just wants to talk about Rollo, let them. Do not steer back to the site.`,
+  ctx: () => `A music-synced photo tribute to Rollo, played against a song's clock in three phases.
+- Roughly 250 photos. 44 in the slow chronological opening (long crossfades, slow push into the subject), then a burst of 203 more, then one held final photo and a fade to black.
+- The music is HUSKY by RiFF RAFF, streamed from YouTube — it is not hosted on the site.
+- ⚠️ SILENT PLAYBACK IS NORMAL AND EXPECTED. Browsers block audio until the user taps. One tap on play starts the track. This is the most common question on this page and it is not a bug.
+- Controls: play, pause, fullscreen. A progress bar and a photo counter run along the bottom.
+- The timing is measured backwards in bars from the end of the track, so the opening runs slow and accelerates. Swapping in a different-length song just stretches the opening rather than breaking the sync.`
+};
 </script>
 </body>
 </html>

@@ -800,6 +800,23 @@ STATE: everything saves in the browser on that device. A different device shows 
     busy=true; const th=say("bot","…thinking");
     try{
       const SF = surface();
+      /* ⚠️ The Worker rejects any body over 24,000 bytes with a 413, which surfaces to
+         the user as a bare error with no hint about what went wrong. Every surface's
+         state block competes for that budget with the core prompt, the manual and the
+         history — and a page like the EPA explorer can generate a lot of text. So
+         budget it explicitly rather than hoping, and TELL the model it was cut, so it
+         says "I can't see that part" instead of answering from a half-table. */
+      const BODY_CAP = 20000;
+      let stateTxt = SF.ctx();
+      const frame = () => JSON.stringify({max_tokens:700, messages:[
+        {role:"system",content:SYS+"\n\n"+SF.sys},
+        {role:"system",content:HELP},
+        {role:"system",content:SF.label},
+        ...HIST.slice(-8)]}).length;
+      const room = BODY_CAP - frame();
+      if(stateTxt.length > room)
+        stateTxt = stateTxt.slice(0, Math.max(400, room))
+          + "\n[TRUNCATED to fit the request size limit. If a question needs the part that was cut, say so plainly rather than guessing.]";
       const url = direct ? (ai.url||"https://api.x.ai/v1")+"/chat/completions" : BOT_URL;
       const headers = direct
         ? {"Content-Type":"application/json","Authorization":"Bearer "+ai.key}
@@ -808,7 +825,7 @@ STATE: everything saves in the browser on that device. A different device shows 
       const payload = {max_tokens:700,
         messages:[{role:"system",content:SYS+"\n\n"+SF.sys},
                   {role:"system",content:"SITE MANUAL (how the site works — use for how-to questions):\n"+HELP},
-                  {role:"system",content:SF.label+" (regenerated for every question):\n"+SF.ctx()},
+                  {role:"system",content:SF.label+" (regenerated for every question):\n"+stateTxt},
                   ...HIST.slice(-8)]};
       if(direct) payload.model = window.DDBot.cfg().model;
       const r=await fetch(url,{method:"POST",headers,body:JSON.stringify(payload)});
@@ -1137,5 +1154,32 @@ STATE: everything saves in the browser on that device. A different device shows 
     Data Dawgs · Play-by-play data from <a href="https://github.com/nflverse" target="_blank" rel="noopener">nflverse</a> · Strategy synthesized from Establish The Run's 2026 Draft Kit (subscriber content, personal use) · Stats format inspired by <a href="https://rbsdm.com/stats/stats/" target="_blank" rel="noopener">rbsdm.com</a>
   </footer>
 </div>
+<script>
+/* ---------------- Toto's surface: the DFS mockup ----------------
+   ⚠️ Every number on this page is INVENTED sample data, not model output. The single
+   most important job of this block is to stop Toto reading the table out loud as if
+   it meant something. The page says so itself in a banner; Toto has to say it too. */
+window.DD_BOTCTX = {
+  label: 'THE DFS PAGE (a design mockup — nothing computes)',
+  title: 'Ask Toto about this page',
+  chrome: {sub:'knows what this page is', ph:'Ask Toto about the DFS idea…', chips:[
+    ['Why is the highest-projected lineup the worst row in the table?','Why is chalk bad?'],
+    ['What is leverage, and how do I read Optimal% minus Own%?','What is leverage?'],
+    ['Does any of this work yet?','Is it built?']]},
+  sys: `RIGHT NOW you are on the DFS Solver & Contest Simulator page. ⚠️ IT IS NOT BUILT. It is a design mockup arguing for a tool that does not exist yet.
+- ⚠️ EVERY figure in the table on this page is INVENTED illustrative data. It is not a projection, not a simulation result, and not a backtest. If someone asks about a number on screen, say that first, before anything else.
+- Nothing here computes, connects to a slate, uploads a CSV, or exports lineups. If asked whether it works, the answer is no.
+- The CONCEPTS are real and worth explaining — leverage, ownership, optimal rate, ROI versus raw projection. Teach those freely. Just never dress the sample rows up as evidence for them.`,
+  ctx: () => `WHAT THE PAGE ARGUES, in two steps:
+1. A solver builds the highest-projected lineups it can.
+2. A contest simulator then RE-RANKS that pool by ROI and win rate — because the highest-projected lineup is usually the most-owned one, and in a tournament you are paid for being right AND different.
+
+The vocabulary it uses: Proj (projected points) · Own% (share of the field on that player or build) · Optimal% (how often it shows up in the winning lineup across simulations) · Leverage (Optimal% minus Own% — positive means the field is underweight) · ROI · Cash% · Win%.
+
+The table on the page shows four builds where leverage falls as ownership rises, ending with the chalkiest build at the worst ROI despite the highest projection. ⚠️ THOSE ROWS ARE FABRICATED to illustrate the shape of the argument. They are not output from anything.
+
+STATUS: mockup only. No solver, no slate connection, no CSV import, no export. Exposure caps and uniques are discussed as design ideas, not implemented features.`
+};
+</script>
 </body>
 </html>
