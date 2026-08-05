@@ -198,6 +198,42 @@ footer a{color:var(--accent)}
 .btn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--ink-2);padding:5px 12px;cursor:pointer;font-size:13px}
 .btn:hover{color:var(--ink-1);border-color:var(--accent)}
 
+/* ---- lifecycle tiers (slot 6) — index-scoped on purpose ----------------------
+   site.css is inlined into all twelve pages, so putting these here keeps a
+   three-section homepage change to a one-file commit instead of a full redeploy.
+   If the construction treatment is ever wanted on another page, lift this block
+   into site.css then — not before.
+
+   ⚠️ EVERY selector is namespaced `lc-` and scoped under `.manifesto`. `.field` is
+   already taken by the four practice items in slot 3; reusing it would restyle
+   them. And `.manifesto p` has the same specificity as a bare `.lc p`, so an
+   unscoped rule would win or lose on source order alone — the same trap that
+   flattened the nav pill once (see -website.md). Scope, don't gamble. */
+/* ⚠️ The manifesto is a 660px reading column, not a page-width grid. Three cards
+   side by side would be ~208px each — too narrow for the captions, and it would
+   break the vertical reading rhythm of the seven sections around it. Horizontal
+   strips instead: art left, words right, stacked. Same shape as the practice
+   items in slot 3, which is the visual language this page already speaks. */
+.manifesto .lifecycle{display:grid;gap:14px;margin:24px 0 2px}
+.manifesto .lc{display:grid;grid-template-columns:120px 1fr;gap:20px;align-items:center;
+  border:1px solid var(--grid);border-radius:14px;padding:16px 20px;
+  background:var(--surface-1)}
+/* ⚠️ The words live in ONE child, not three. As bare grid items the chip, the h3 and
+   the caption each take their own cell, which drops the heading into the art column. */
+.manifesto .lc-txt{min-width:0}
+.manifesto .lc-art{display:block;width:120px;height:auto;color:var(--ink-3)}
+.manifesto .lc-art .hi{color:var(--accent)}
+.manifesto .lc-chip{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.13em;
+  text-transform:uppercase;padding:4px 9px;border-radius:5px;border:1px solid var(--grid);
+  color:var(--ink-3);background:var(--page)}
+.manifesto .lc-chip.on{border-color:color-mix(in srgb,var(--accent) 55%,transparent);color:var(--accent)}
+.manifesto .lc h3{margin:8px 0 6px;font-size:16px;font-weight:750;line-height:1.3;color:var(--ink-1)}
+.manifesto .lc p{margin:0;font-size:13.5px;line-height:1.62;color:var(--ink-2)}
+.manifesto .lc p b{color:var(--ink-1);font-weight:750}
+@media(max-width:560px){
+  .manifesto .lc{grid-template-columns:1fr;gap:10px;justify-items:start}
+  .manifesto .lc-art{width:132px}
+}
 </style>
 </head>
 <body>
@@ -904,6 +940,86 @@ STATE: everything saves in the browser on that device. A different device shows 
       <h2>What's here, and what's coming</h2>
       <p>Today it's built out for fantasy football: an EPA explorer running on public play-by-play, a 2026 draft thesis with its sources and its expiration date attached, and a live auction room that runs a 14-team draft off a laptop and a projector.</p>
       <p>That's the first tenant, not the blueprint. Next through the door: prediction markets, forecasting and calibration tracking, sports betting models, game theory, and AI — anything where you can state a claim, write down a number, and find out later whether you were right.</p>
+      <p>Everything lands in one of three places, and nothing gets to skip the first one.</p>
+
+      <div class="lifecycle">
+
+        <div class="lc">
+          <!-- Labs: dog in a hard hat, digging, dirt arcing behind it -->
+          <svg class="lc-art" viewBox="0 0 132 76" role="img" aria-labelledby="lcLabsT"
+               fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <title id="lcLabsT">A shovel in a mound of dirt beside a hard hat</title>
+            <!-- ⚠️ This was drawn four different ways as a dog in a hard hat, per the
+                 brief, and it would not read at 120px — body and head merge into one
+                 blob and the hat floats. A construction site that is instantly legible
+                 beats a dog that isn't. Same line family, same accent hat. Worth
+                 revisiting if the art column ever gets wider. -->
+            <path d="M6 64 H126" stroke-width="2.4"/>
+            <path d="M24 64 q18 -22 38 0"/>
+            <path d="M47 56 L54 49 L62 56 L55 63 Z"/>
+            <path d="M57 51 L88 24" stroke-width="2.4"/>
+            <path d="M83 22 L92 27"/>
+            <g class="hi" stroke="currentColor" stroke-width="2.4">
+              <path d="M83 62 H109"/>
+              <path d="M87 62 A 10 10 0 0 1 105 62"/>
+            </g>
+            <path d="M16 52 q0 -17 15 -23" stroke-width="1.8"/>
+            <circle cx="20" cy="40" r="2.2" fill="currentColor" stroke="none"/>
+            <circle cx="12" cy="49" r="2.2" fill="currentColor" stroke="none"/>
+            <circle cx="29" cy="27" r="2.2" fill="currentColor" stroke="none"/>
+          </svg>
+          <div class="lc-txt">
+            <span class="lc-chip on">Labs</span>
+            <h3>Data Dawgs Labs</h3>
+            <p><b>Under construction.</b> Everything on the site lives here right now; the tier chips go up next. Labs is a stage, not a status — a tool arrives here the day it goes live.</p>
+          </div>
+        </div>
+
+        <div class="lc">
+          <!-- The Field: fenced, empty, one surveyor's stake. No dog, on purpose. -->
+          <svg class="lc-art" viewBox="0 0 132 76" role="img" aria-labelledby="lcFieldT"
+               fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <title id="lcFieldT">An empty fenced field with a single surveyor's stake</title>
+            <path d="M6 62 H126" stroke-width="2.4"/>
+            <path d="M14 36 H118 M14 45 H118"/>
+            <path d="M14 28 V52 M40 28 V52 M66 28 V52 M92 28 V52 M118 28 V52"/>
+            <g class="hi" stroke="currentColor">
+              <path d="M52 62 V30" stroke-width="2.4"/>
+              <path d="M52 30 L70 36 L52 42 Z" stroke-width="2.4"/>
+            </g>
+          </svg>
+          <div class="lc-txt">
+            <span class="lc-chip">Field-Tested</span>
+            <h3>The Field</h3>
+            <p><b>Empty.</b> Nothing has cleared the gate yet. A tool moves here when its receipts say it beat the market — not when it feels finished.</p>
+          </div>
+        </div>
+
+        <div class="lc">
+          <!-- The Pound: a kennel run with the gate standing open -->
+          <svg class="lc-art" viewBox="0 0 132 76" role="img" aria-labelledby="lcPoundT"
+               fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <title id="lcPoundT">An empty kennel run with its gate standing open</title>
+            <path d="M6 62 H126" stroke-width="2.4"/>
+            <path d="M34 20 H110 M34 20 V62 M110 20 V62"/>
+            <path d="M45 25 V58 M56 25 V58 M67 25 V58 M78 25 V58 M89 25 V58 M100 25 V58"
+                  stroke-width="1.8"/>
+            <g class="hi" stroke="currentColor">
+              <path d="M34 24 L12 33 L12 61 L34 55 Z" stroke-width="2.4"/>
+              <path d="M19 31 V58.6 M26 28 V56.8" stroke-width="1.8"/>
+            </g>
+          </svg>
+          <div class="lc-txt">
+            <span class="lc-chip">The Pound</span>
+            <h3>The Pound</h3>
+            <p><b>Empty.</b> Nothing has failed yet. It will. Shelved isn't dead — every card in here carries why it went in, the one change that might get it out, and a date to look again.</p>
+          </div>
+        </div>
+
+      </div>
     </section>
 
     <section>

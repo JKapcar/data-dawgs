@@ -1164,6 +1164,34 @@ function load(){
   if(S.settings.announcer===undefined) S.settings.announcer=true;
   if(S.settings.snark===undefined) S.settings.snark=true;
   if(S.settings.voiceName===undefined) S.settings.voiceName="";
+
+  /* ⚠️ 8/5 migration — ttsTune was keyed by PERSONA id ("madden" / "cage") until
+     7bc38ef re-keyed it by VOICE id. Nothing carried the old entries across, so every
+     dial the operator had already set was orphaned under a key nothing reads and the
+     board came up at factory defaults. That is what happened to the live room: Cage
+     had been moved to Natural with Likeness 1.00 and reverted on its own.
+
+     ⚠️ The map is a literal ON PURPOSE. load() runs at the top of the file, long before
+     VB_VOICES / VB_DEFAULTS are evaluated — referencing them here is a TDZ
+     ReferenceError, and it would fire on every page load, not just migrating ones. */
+  const TUNE_MIGRATE = {madden:"1bLhIC6iHGxxaQhUlUN7", cage:"32Kj6C8up2SwVyk2E5Z3"};
+  const tune = S.settings.ttsTune;
+  let tuneMoved = false;
+  if(tune && typeof tune==="object"){
+    Object.keys(TUNE_MIGRATE).forEach(old=>{
+      const vid = TUNE_MIGRATE[old];
+      if(!tune[old] || typeof tune[old]!=="object") return;
+      // Fill a gap only. A dial already set under the new key wins — the operator
+      // touched that one more recently than whatever the old scheme was holding.
+      // `speed` leads so an old entry (which predates the dial) picks up a sane 1.0×.
+      if(!tune[vid]) tune[vid] = {speed:1.0, ...tune[old]};
+      delete tune[old];                 // drop it, so the two schemes cannot drift
+      tuneMoved = true;
+    });
+  }
+  // Persist immediately rather than waiting for the next sale: until this reaches the
+  // synced state, every dashboard in the league is still announcing at the fallback.
+  if(tuneMoved) save();
 }
 function save(){
   S.ts=Date.now();
