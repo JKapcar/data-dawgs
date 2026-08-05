@@ -348,27 +348,135 @@ body.proj .wrap{max-width:none;padding:10px 18px}
 .aibtn:hover{background:color-mix(in srgb, var(--accent) 12%, transparent)}
 .helpline{font-size:12.5px;color:var(--ink-3);margin:-6px 0 12px;text-align:center}
 .helpline b{color:var(--ink-2)}
-/* money-by-team */
-.tmwrap{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin-top:12px}
-.tmwrap h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3)}
-.tmrow{display:flex;align-items:center;gap:9px;padding:4px 0}
-.tmrow .tmn{width:96px;font-weight:650;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tmrow.onclock .tmn{color:var(--accent)}
-.tmbar{flex:1;height:26px;background:color-mix(in srgb,var(--accent) 9%,var(--page));border-radius:8px;overflow:hidden;
-  box-shadow:inset 0 0 0 1px var(--border)}
-.tmbar .fill{height:100%;background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 80%,#fff),var(--accent));border-radius:8px;min-width:0;transition:width .4s}
-.tmrow .tml{width:56px;text-align:right;font-weight:800;font-size:17px;font-variant-numeric:tabular-nums;color:var(--accent)}
-.tmrow .tml.neg{color:var(--bad)}
-.tmrow .tms{width:102px;font-size:11.5px;color:var(--ink-3);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+/* ============================================================
+   THE AUDIO BOARD — a 70s broadcast console, in the money pile's old slot
+   ============================================================
+   Kap, 8/5: "I want all the controls to look like a radio station or 70s style
+   music board to match the data dawgs colors."
+
+   ⚠️ The chassis is DARK IN BOTH THEMES, on purpose — same call the nav bar makes
+   in `-brand.md`. A cream-paper mixing desk is not a mixing desk. So this block
+   uses literal hex, not the theme vars, everywhere except the accent, which
+   deliberately stays --accent so the board tracks the brand orange in both themes.
+   ============================================================ */
+.acon{--chas:#1c1206; --chas2:#241705; --face:#120c04; --lbl:#ecdfc9; --lbl2:#a8967a;
+  background:
+    repeating-linear-gradient(90deg,rgba(255,255,255,.022) 0 1px,transparent 1px 3px),
+    linear-gradient(180deg,var(--chas2),var(--chas));
+  border:1px solid #000; border-top:3px solid var(--accent); border-radius:12px;
+  padding:0 0 14px; margin-top:12px; color:var(--lbl); position:relative; overflow:hidden;
+  box-shadow:0 14px 34px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.06)}
+/* rack screws — four corners, the cheapest possible "this is hardware" cue */
+.acon::before,.acon::after{content:"";position:absolute;width:7px;height:7px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#6b5c45,#241a0c);box-shadow:0 1px 0 rgba(255,255,255,.10);top:12px}
+.acon::before{left:11px} .acon::after{right:11px}
+.acon-hd{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:11px 30px 11px; border-bottom:1px solid #000;
+  background:linear-gradient(180deg,rgba(255,255,255,.05),transparent)}
+.acon-brand{font-size:12px;font-weight:800;letter-spacing:.20em;text-transform:uppercase;color:var(--lbl)}
+.acon-brand i{font-style:normal;color:var(--accent)}
+/* ON AIR lamp — reads the announcer toggle, not the preview */
+.acon-lamp{display:inline-flex;align-items:center;gap:7px;font-size:10px;font-weight:800;
+  letter-spacing:.16em;padding:4px 10px;border-radius:4px;border:1px solid #000;
+  background:#0d0903;color:#6c5f4a;text-transform:uppercase}
+.acon-lamp b{width:8px;height:8px;border-radius:50%;background:#3a2f20;display:block}
+.acon-lamp.on{color:#ffd8b0;background:linear-gradient(180deg,#6d1d00,#3a0f00)}
+.acon-lamp.on b{background:#ff5a1f;box-shadow:0 0 7px 2px rgba(255,90,31,.75)}
+/* VU meter — 14 segments, driven by an AnalyserNode while a cue plays */
+.acon-vu{display:flex;gap:2px;align-items:flex-end;height:18px;margin-left:auto}
+.acon-vu i{width:5px;height:100%;border-radius:1px;background:#2e2313;transition:background .05s linear;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.6)}
+.acon-vu i.lit{background:#3fbf4a} .acon-vu i.lit.mid{background:var(--accent)} .acon-vu i.lit.hot{background:#ff4b4b}
+.acon-body{display:flex;gap:14px;flex-wrap:wrap;padding:14px 18px 0}
+/* a channel strip */
+.ach{flex:1 1 260px;min-width:245px;background:linear-gradient(180deg,var(--face),#0b0703);
+  border:1px solid #000;border-radius:9px;padding:11px 13px 13px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.ach-t{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}
+.ach-n{font-size:9.5px;font-weight:800;letter-spacing:.15em;color:var(--lbl2)}
+.ach-l{font-size:13.5px;font-weight:800;letter-spacing:.02em;color:var(--lbl)}
+.ach.live{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),inset 0 1px 0 rgba(255,255,255,.05)}
+.ach-live{margin-left:auto;font-size:8.5px;font-weight:800;letter-spacing:.14em;color:var(--accent);opacity:0}
+.ach.live .ach-live{opacity:1}
+.acap{font-size:9px;font-weight:800;letter-spacing:.14em;color:var(--lbl2);text-transform:uppercase;margin:0 0 5px}
+/* stability is THREE DISCRETE VALUES on v3, so it gets switches, not a fader.
+   A continuous slider here would imply 0.3 is a thing. It is not. */
+.asw{display:flex;gap:4px;margin-bottom:11px}
+.asw button{flex:1;font:inherit;font-size:9.5px;font-weight:800;letter-spacing:.07em;cursor:pointer;
+  padding:7px 2px;border-radius:4px;border:1px solid #000;color:var(--lbl2);text-transform:uppercase;
+  background:linear-gradient(180deg,#2a1e0d,#150e05);box-shadow:0 1px 0 rgba(255,255,255,.06)}
+.asw button:hover{color:var(--lbl)}
+.asw button[aria-pressed="true"]{background:linear-gradient(180deg,var(--accent),#a63f00);
+  color:#170a00;box-shadow:inset 0 2px 5px rgba(0,0,0,.45)}
+/* the faders
+   ⚠️ `appearance:slider-vertical` is the OLD way and Chrome dropped it — leaving it in
+   makes the browser ignore ::-webkit-slider-thumb entirely and you get the stock blue
+   slider on a walnut console. The modern recipe is appearance:none + writing-mode,
+   and `direction:rtl` is what puts zero at the BOTTOM where a fader's zero belongs. */
+.ach-mid{display:flex;gap:14px;align-items:flex-start}
+/* Only two continuous knobs exist on v3 — style and similarity. `speed` is in the API
+   but v3 ignores it (see `-voice-tuning.md`), so there is no third fader to draw and
+   faking one would be a lie in walnut. Spread the two instead of leaving dead panel. */
+.afads{display:flex;gap:14px;align-items:flex-start;flex:1;justify-content:space-evenly;max-width:280px}
+.afad{text-align:center;width:50px}
+.afad .aslot{position:relative;padding:6px 0;border-radius:5px;
+  background:linear-gradient(180deg,#050301,#0d0904);box-shadow:inset 0 2px 6px rgba(0,0,0,.9),0 1px 0 rgba(255,255,255,.05)}
+/* the slot the cap rides in, plus tick marks either side */
+.afad .aslot::before{content:"";position:absolute;left:50%;top:9px;bottom:9px;width:3px;margin-left:-1.5px;
+  border-radius:2px;background:#000;box-shadow:inset 0 0 3px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.06)}
+/* tick scale — two columns EITHER SIDE of the slot. Running them across the middle
+   turns the strip into graph paper and you lose the slot the cap rides in. */
+.afad .aslot::after{content:"";position:absolute;left:5px;right:5px;top:10px;bottom:10px;pointer-events:none;
+  background-image:repeating-linear-gradient(180deg,rgba(236,223,201,.30) 0 1px,transparent 1px 11px),
+                   repeating-linear-gradient(180deg,rgba(236,223,201,.30) 0 1px,transparent 1px 11px);
+  background-size:7px 100%,7px 100%; background-position:left top,right top; background-repeat:no-repeat}
+input[type=range].fad{position:relative;z-index:1;-webkit-appearance:none;appearance:none;
+  writing-mode:vertical-lr;direction:rtl;
+  width:34px;height:104px;background:transparent;cursor:ns-resize;margin:0;display:block}
+input[type=range].fad::-webkit-slider-runnable-track{background:transparent;border:0;width:34px}
+input[type=range].fad::-moz-range-track{background:transparent;border:0;width:34px}
+/* the cap: brushed knurl with a bright centre line, like every fader ever made */
+input[type=range].fad::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:32px;height:17px;border-radius:3px;
+  border:1px solid #000;box-shadow:0 3px 6px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.30);
+  background:linear-gradient(180deg,#9a7f5c,#6b563a 40%,#f7eeda 40% 60%,#4a3a24 60%,#241a0c)}
+input[type=range].fad::-moz-range-thumb{width:32px;height:17px;border-radius:3px;border:1px solid #000;
+  box-shadow:0 3px 6px rgba(0,0,0,.8);
+  background:linear-gradient(180deg,#9a7f5c,#6b563a 40%,#f7eeda 40% 60%,#4a3a24 60%,#241a0c)}
+input[type=range].fad:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.afad .aval{font:600 11px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  color:var(--accent);margin-top:5px;font-variant-numeric:tabular-nums}
+.afad .alab{font-size:8.5px;font-weight:800;letter-spacing:.10em;color:var(--lbl2);text-transform:uppercase;margin-top:1px}
+/* channel buttons stack down the right of the faders — otherwise a wide strip is
+   two-thirds dead panel, which is the one thing a console never is */
+.ach-btm{display:flex;flex-direction:column;gap:7px;margin-left:auto;min-width:96px;align-self:stretch}
+.ach-btm .abtn{width:100%}
+.abtn{font:inherit;font-size:10px;font-weight:800;letter-spacing:.08em;cursor:pointer;text-transform:uppercase;
+  padding:7px 11px;border-radius:4px;border:1px solid #000;color:var(--lbl);
+  background:linear-gradient(180deg,#2a1e0d,#150e05);box-shadow:0 1px 0 rgba(255,255,255,.06)}
+.abtn:hover{color:#fff;border-color:#000}
+.abtn.cue{background:linear-gradient(180deg,var(--accent),#a63f00);color:#170a00}
+.abtn.cue:disabled{opacity:.5;cursor:default}
+/* Engaged toggles get an amber lamp, NOT a green one. Green on this chassis reads as
+   a go/stop light and fights the brand orange; the only red-adjacent thing on the
+   board should be ON AIR. */
+.abtn[aria-pressed="true"]{background:linear-gradient(180deg,#f0a500,#9c5f00);color:#1a0f00;
+  box-shadow:inset 0 2px 5px rgba(0,0,0,.4),0 0 9px rgba(240,165,0,.28)}
+/* master strip */
+.acon-mas{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;padding:14px 18px 0;margin-top:12px;
+  border-top:1px solid #000;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.acon-mas label{font-size:9px;font-weight:800;letter-spacing:.14em;color:var(--lbl2);text-transform:uppercase;
+  display:flex;flex-direction:column;gap:4px}
+.acon-mas select,.acon-mas input[type=text]{font:inherit;font-size:12.5px;background:#0a0703;color:var(--lbl);
+  border:1px solid #000;border-radius:4px;padding:6px 8px;box-shadow:inset 0 1px 3px rgba(0,0,0,.6)}
+.acon-mas select{min-width:200px} .acon-mas input[type=text]{min-width:260px}
+.acon-msg{flex-basis:100%;font-size:11.5px;color:var(--lbl2);line-height:1.5;margin:2px 0 0}
+.acon-msg b{color:var(--lbl)}
 @media(max-width:760px){
-  /* phone: name/$ on top, bar spans the full width underneath — the bar IS the point */
-  .tmrow{display:grid;grid-template-columns:1fr auto auto;
-    grid-template-areas:"name val spots" "bar bar bar";gap:1px 9px;padding:7px 0}
-  .tmrow .tmn{grid-area:name;width:auto;font-size:13.5px}
-  .tmrow .tml{grid-area:val;width:auto}
-  .tmrow .tms{grid-area:spots;width:auto}
-  .tmrow .tmspent{display:none}   /* $ spent is just 200 − remaining; the bar needs the room */
-  .tmbar{grid-area:bar;height:18px}
+  .acon-body{padding:12px 12px 0} .acon-mas{padding:12px 12px 0}
+  .acon-hd{padding-left:24px;padding-right:24px}
+  .ach{min-width:0;flex-basis:100%}
+  .acon-mas select,.acon-mas input[type=text]{min-width:0;width:100%}
+  .acon-mas label{flex-basis:100%}
 }
 /* last sale + undo */
 .lastrow{display:flex;align-items:center;gap:9px;margin-top:9px;font-size:13px;flex-wrap:wrap}
@@ -1104,6 +1212,11 @@ STATE: everything saves in the browser on that device. A different device shows 
 
 </script>
   <div id="app"></div>
+  <!-- ⚠️ The audio board sits OUTSIDE #app on purpose. renderOp() blows away #app on
+       every sale, sync tick and timer start — a fader inside it would be ripped out
+       from under your thumb mid-drag. This renders once; syncAudioBoard() patches the
+       readouts afterwards without touching the DOM you might be holding. -->
+  <div id="acon" class="acon" hidden></div>
 </div>
 
 <script>
@@ -1117,6 +1230,30 @@ const DEFAULT_TEAMS=[
  ["Dan","Dan"],["Hoyt","Hoyt"],["JW","JW"],["Pat","Pat"],["Oliver","Oliver"],
  ["Lowe","Lowe"],["Jay","Jay"],["Nick","Nick"],["Corrigan","Corrigan"],["Mark","Mark"]];
 
+/* ============================================================
+   AUDIO BOARD CONSTANTS — the channel list and the factory dial positions
+   ============================================================
+   ⚠️ These two voice ids also appear in dashboard.html's PERSONAS map. They are
+   duplicated because both files are flattened standalone; there is no shared module
+   to put them in. If a voice id changes, it changes in BOTH files or the board will
+   tune a channel the announcer never plays.
+
+   The `id` is what keys `S.settings.ttsTune` and what dashboard.html's `personaFor()`
+   returns — keep them equal or the dials silently stop reaching the announcer. */
+const TTS_PERSONAS = [
+  {id:"madden", vid:"1bLhIC6iHGxxaQhUlUN7", ch:"CH 1", label:"Madden-style color man",
+   line:"[excited] BOOM! Jahmyr Gibbs, 81 dollars, to Data Dawgs. And that is a lot of dollars."},
+  {id:"cage",   vid:"32Kj6C8up2SwVyk2E5Z3", ch:"CH 2", label:"Unhinged Cage",
+   line:"[whispers] Jahmyr Gibbs. 81 dollars. [shouting] THAT'S A CRIME! I LOVE CRIME!"},
+];
+/* Factory settings. These are the PREDICTIONS from `-voice-tuning.md`, not measured
+   winners: Cage gets Creative because instability is the joke, Madden gets Natural
+   because deadpan authority reads better than an over-cooked one. Both are meant to
+   be argued with by ear — that is what the board is for. */
+const TTS_DEFAULT_TUNE = {
+  madden:{stability:0.5, style:0.35, similarity_boost:0.85, use_speaker_boost:true},
+  cage:  {stability:0.0, style:0.60, similarity_boost:0.85, use_speaker_boost:true},
+};
 function freshState(){
   return {v:1,
     settings:{budget:200, spots:15, scoring:"half", timerSecs:15, myTeam:0,
@@ -1134,6 +1271,12 @@ function load(){
   if(S.settings.announcer===undefined) S.settings.announcer=true;
   if(S.settings.snark===undefined) S.settings.snark=true;
   if(S.settings.voiceName===undefined) S.settings.voiceName="";
+  // The audio board's dials. Synced state, not per-device — Kap, 8/5: one operator
+  // turns a knob, the whole room hears it. Same reasoning as ttsVoice above it.
+  if(!S.settings.ttsTune || typeof S.settings.ttsTune!=="object") S.settings.ttsTune={};
+  Object.keys(TTS_DEFAULT_TUNE).forEach(k=>{
+    S.settings.ttsTune[k]={...TTS_DEFAULT_TUNE[k], ...(S.settings.ttsTune[k]||{})};
+  });
 }
 function save(){
   S.ts=Date.now();
@@ -1699,17 +1842,10 @@ function renderOp(){
       }).join("")}
     </div>
   </div>
-  <div class="tmwrap">
-    <h3>The money pile — $ remaining</h3>
-    ${d.T.map((t,i)=>({t,i})).sort((a,b)=>b.t.left-a.t.left || a.i-b.i).map(({t,i})=>`<div class="tmrow ${i===S.nomIdx?"onclock":""}">
-      <span class="tmn">${esc(t.name)}</span>
-      <div class="tmbar"><div class="fill" style="width:${Math.min(100,Math.max(0,t.left/S.settings.budget*100))}%"></div></div>
-      <span class="tml ${t.left<0?"neg":""}">${fmt$(t.left)}</span>
-      <span class="tms"><span class="tmspent">$${t.spent} spent · </span>${t.count}/${S.settings.spots}</span>
-    </div>`).join("")}
-  </div>`;
+  `;
   renderLog(d);
   bindOp(d);
+  syncAudioBoard();   // the console lives OUTSIDE #app; keep its readouts current
 }
 
 function renderLog(d){
@@ -1945,6 +2081,254 @@ function bindOp(d){
   });
 }
 
+/* ============================================================
+   THE AUDIO BOARD — render, bind, sync, cue
+   ============================================================
+   Everything audio now lives on this console: the league voice, the announcer
+   master, the horn, and the per-persona dials. Kap, 8/5: "I want to cut the pile of
+   money section from the auctioneer operator controls page and put all of the audio
+   settings there."
+
+   Two rules this file keeps:
+   1. The dials are SYNCED, not per-device (`S.settings.ttsTune`). Turning one here
+      changes what every dashboard in the league renders, same as the voice picker.
+   2. Nothing here is behind the Setup panel. These are meant to be fiddled with
+      mid-draft; a control you have to go find is a control you don't use.
+   ============================================================ */
+let ACON_VOICES=[], aconAudio=null, aconCtx=null, aconAnal=null, aconRAF=0;
+
+const tuneOf = pid => (S.settings.ttsTune&&S.settings.ttsTune[pid]) || TTS_DEFAULT_TUNE[pid] || {};
+// Which channel the league is actually hearing. Mirrors dashboard.html's personaFor():
+// anything unrecognised falls through to Madden, because Pepperoni is the house voice.
+function livePid(){
+  const cur=S.settings.ttsVoice||"";
+  const hit=TTS_PERSONAS.find(p=>p.vid===cur);
+  return hit ? hit.id : "madden";
+}
+
+function channelHTML(P){
+  const t=tuneOf(P.id);
+  const fad=(k,lab)=>`<div class="afad">
+      <div class="aslot"><input type="range" class="fad" data-p="${P.id}" data-k="${k}"
+        min="0" max="1" step="0.05" value="${t[k]}" aria-label="${lab}, ${esc(P.label)}"></div>
+      <div class="aval" id="av-${P.id}-${k}">${(+t[k]).toFixed(2)}</div>
+      <div class="alab">${lab}</div></div>`;
+  return `<div class="ach" id="ach-${P.id}">
+    <div class="ach-t"><span class="ach-n">${P.ch}</span><span class="ach-l">${esc(P.label)}</span>
+      <span class="ach-live">●&nbsp;LIVE</span></div>
+    <p class="acap">Stability</p>
+    <div class="asw" data-sw="${P.id}">
+      <button type="button" data-v="0">Creative</button>
+      <button type="button" data-v="0.5">Natural</button>
+      <button type="button" data-v="1">Robust</button>
+    </div>
+    <div class="ach-mid">
+      <div class="afads">${fad("style","Style")}${fad("similarity_boost","Similar")}</div>
+      <div class="ach-btm">
+        <button type="button" class="abtn" data-boost="${P.id}">Boost</button>
+        <button type="button" class="abtn cue" data-cue="${P.id}">▶&nbsp;Cue</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderAudioBoard(){
+  const el=document.getElementById("acon");
+  if(!el) return;
+  // The projector is a display, not a control surface. Never give the room a fader.
+  if(IS_PROJ){ el.hidden=true; return; }
+  el.hidden=false;
+  el.innerHTML=`
+    <div class="acon-hd">
+      <span class="acon-brand">Data <i>Dawgs</i> Audio</span>
+      <span class="acon-lamp" id="aconLamp"><b></b>On Air</span>
+      <span class="acon-vu" id="aconVu">${Array.from({length:14},()=>"<i></i>").join("")}</span>
+    </div>
+    <div class="acon-body">${TTS_PERSONAS.map(channelHTML).join("")}</div>
+    <div class="acon-mas">
+      <button type="button" class="abtn" id="aconAnn">Announcer</button>
+      <label>League voice<select id="aconVoice"><option value="">Loading…</option></select></label>
+      <label>Cue line<input type="text" id="aconLine" placeholder="Type a line to audition…"></label>
+      <button type="button" class="abtn" id="aconHorn">▶&nbsp;Horn</button>
+      <button type="button" class="abtn" id="aconReset">Factory</button>
+      <p class="acon-msg" id="aconMsg"></p>
+    </div>`;
+  bindAudioBoard();
+  syncAudioBoard();
+  loadAconVoices();
+}
+
+/* Patch the readouts without rebuilding the DOM. renderOp() calls this on every
+   sale and sync tick, so it must never touch an element the operator is holding —
+   hence the `!== document.activeElement` guard on the faders and the select. */
+function syncAudioBoard(){
+  const el=document.getElementById("acon");
+  if(!el || el.hidden || !el.firstChild) return;
+  const lamp=document.getElementById("aconLamp");
+  if(lamp) lamp.classList.toggle("on", !!S.settings.announcer);
+  const ann=document.getElementById("aconAnn");
+  if(ann) ann.setAttribute("aria-pressed", S.settings.announcer?"true":"false");
+  const live=livePid();
+  TTS_PERSONAS.forEach(P=>{
+    const t=tuneOf(P.id), ch=document.getElementById("ach-"+P.id);
+    if(ch) ch.classList.toggle("live", P.id===live);
+    const sw=el.querySelector('[data-sw="'+P.id+'"]');
+    if(sw) [...sw.children].forEach(b=>b.setAttribute("aria-pressed", (+b.dataset.v===+t.stability)?"true":"false"));
+    ["style","similarity_boost"].forEach(k=>{
+      const inp=el.querySelector('.fad[data-p="'+P.id+'"][data-k="'+k+'"]');
+      if(inp && inp!==document.activeElement) inp.value=t[k];
+      const out=document.getElementById("av-"+P.id+"-"+k);
+      if(out) out.textContent=(+t[k]).toFixed(2);
+    });
+    const bo=el.querySelector('[data-boost="'+P.id+'"]');
+    if(bo) bo.setAttribute("aria-pressed", t.use_speaker_boost?"true":"false");
+  });
+  const vs=document.getElementById("aconVoice");
+  if(vs && vs!==document.activeElement && vs.value!==(S.settings.ttsVoice||"") &&
+     [...vs.options].some(o=>o.value===(S.settings.ttsVoice||""))) vs.value=S.settings.ttsVoice||"";
+}
+
+function bindAudioBoard(){
+  const el=document.getElementById("acon");
+
+  // Stability: three discrete v3 values, so three switches. Applied immediately —
+  // there is no Save on this board by design.
+  el.querySelectorAll(".asw").forEach(sw=>sw.addEventListener("click",e=>{
+    const b=e.target.closest("button[data-v]"); if(!b) return;
+    S.settings.ttsTune[sw.dataset.sw].stability=+b.dataset.v; save(); syncAudioBoard();
+  }));
+
+  // Faders: paint the readout on every input event, but only write state on change,
+  // so a drag across the whole travel is one save and one sync push, not thirty.
+  el.querySelectorAll(".fad").forEach(inp=>{
+    const out=document.getElementById("av-"+inp.dataset.p+"-"+inp.dataset.k);
+    inp.addEventListener("input",()=>{ if(out) out.textContent=(+inp.value).toFixed(2); });
+    inp.addEventListener("change",()=>{ S.settings.ttsTune[inp.dataset.p][inp.dataset.k]=+inp.value; save(); });
+  });
+
+  el.querySelectorAll("[data-boost]").forEach(b=>b.addEventListener("click",()=>{
+    const t=S.settings.ttsTune[b.dataset.boost];
+    t.use_speaker_boost=!t.use_speaker_boost; save(); syncAudioBoard();
+  }));
+
+  el.querySelectorAll("[data-cue]").forEach(b=>b.addEventListener("click",()=>aconCue(b.dataset.cue,b)));
+
+  document.getElementById("aconAnn").addEventListener("click",()=>{
+    S.settings.announcer=!S.settings.announcer; save(); syncAudioBoard();
+  });
+  document.getElementById("aconVoice").addEventListener("change",e=>{
+    S.settings.ttsVoice=e.target.value; save(); syncAudioBoard();
+  });
+  document.getElementById("aconHorn").addEventListener("click",()=>{
+    celebrate({player:"TEST — Myles Garrett", price:41});
+  });
+  document.getElementById("aconReset").addEventListener("click",()=>{
+    S.settings.ttsTune=JSON.parse(JSON.stringify(TTS_DEFAULT_TUNE)); save(); syncAudioBoard();
+    aconMsg("Dials back to factory — Madden on Natural, Cage on Creative.");
+  });
+}
+
+function aconMsg(html){ const m=document.getElementById("aconMsg"); if(m) m.innerHTML=html; }
+
+/* The voice list. Lifted wholesale out of renderSetup() — same two filters, same
+   dead-voice reset, same passphrase gate. The Worker already strips ElevenLabs' stock
+   voices; the `premade` filter repeats it because the failure mode is Bella and Roger
+   turning up in this dropdown and nobody noticing until draft night. */
+async function loadAconVoices(){
+  const vsel=document.getElementById("aconVoice"); if(!vsel) return;
+  const house='<option value="">House voice (Worker default)</option>';
+  const paint=()=>{
+    const cur=S.settings.ttsVoice||"";
+    const mine=ACON_VOICES.filter(v=>v.category!=="premade");
+    vsel.innerHTML=house+mine.map(v=>`<option value="${esc(v.id)}" ${cur===v.id?"selected":""}>${esc(v.name)}</option>`).join("");
+    // A voice deleted in ElevenLabs must not stay selected — it would 502 every
+    // announcement for the whole league and the operator would never see why.
+    if(cur && !mine.some(v=>v.id===cur)){ S.settings.ttsVoice=""; vsel.value=""; save(); }
+    syncAudioBoard();
+  };
+  const pass=localStorage.getItem("dd-bot-pass");
+  if(!pass){ vsel.innerHTML=house;
+    aconMsg("Enter the league passphrase in <b>Ask Toto</b> to choose a voice. Until then the league hears the Worker's default."); return; }
+  try{
+    const r=await fetch("https://toto.jkapcar4.workers.dev/tts/voices",{headers:{"X-Dawg-Pass":pass}});
+    const d=await r.json();
+    if(!r.ok || !Array.isArray(d.voices) || !d.voices.length){
+      vsel.innerHTML=house; aconMsg("Couldn't load the voice list — the league stays on the house voice."); return; }
+    ACON_VOICES=d.voices; paint();
+    aconMsg("Set here and <b>only</b> here — the dials ride the live sync, so every dashboard in the league announces with these settings. Announcements play on the Draft Dashboard, not on this page; each device still turns its own 🔊 Sound on.");
+  }catch(e){ vsel.innerHTML=house; aconMsg("Couldn't reach the voice service — the league stays on the house voice."); }
+}
+
+/* Cue a channel. Sends the dials as `voice_settings`, which the Worker whitelists,
+   clamps, and — critically — folds into its audio cache key. Without that last part
+   every variant would replay the first render and the whole board would feel broken
+   while being wired correctly. */
+async function aconCue(pid, btn){
+  const P=TTS_PERSONAS.find(x=>x.id===pid); if(!P) return;
+  const typed=(document.getElementById("aconLine").value||"").trim();
+  const line=typed||P.line;
+  const t=tuneOf(pid), pass=localStorage.getItem("dd-bot-pass");
+  const was=btn.innerHTML; btn.disabled=true; btn.innerHTML="●&nbsp;…";
+  try{
+    if(!pass) throw new Error("no pass");
+    const r=await fetch("https://toto.jkapcar4.workers.dev/tts",{method:"POST",
+      headers:{"Content-Type":"application/json","X-Dawg-Pass":pass},
+      body:JSON.stringify({text:line, voice:P.vid, model:"eleven_v3", voice_settings:{
+        stability:t.stability, style:t.style,
+        similarity_boost:t.similarity_boost, use_speaker_boost:!!t.use_speaker_boost}})});
+    if(!r.ok || !(r.headers.get("content-type")||"").includes("audio")) throw new Error("tts "+r.status);
+    await aconPlay(URL.createObjectURL(await r.blob()));
+  }catch(e){
+    // Degrade exactly the way the room would, so a robot here is informative rather
+    // than mysterious: if you hear it on the board, the league hears it too.
+    aconMsg("Couldn't reach the announcer voice — that was your device's built-in one.");
+    speak(line.replace(/\[[a-z0-9 _-]{2,20}\]\s*/gi,""));
+  }
+  btn.disabled=false; btn.innerHTML=was;
+}
+
+/* Play the cue and drive the VU off it. The meter is not decoration — it is the
+   fastest way to tell "the render failed" apart from "the laptop is muted", which
+   are the two things that actually go wrong here. */
+function aconPlay(url){
+  return new Promise(res=>{
+    try{ if(aconAudio){ aconAudio.pause(); } }catch(e){}
+    const a=new Audio(url); aconAudio=a;
+    try{
+      aconCtx=aconCtx||new (window.AudioContext||window.webkitAudioContext)();
+      if(aconCtx.state==="suspended") aconCtx.resume();
+      const src=aconCtx.createMediaElementSource(a);
+      aconAnal=aconCtx.createAnalyser(); aconAnal.fftSize=256;
+      src.connect(aconAnal); aconAnal.connect(aconCtx.destination);
+      aconMeter();
+    }catch(e){ aconAnal=null; }   // no WebAudio: the cue still plays, the meter just sits
+    const done=()=>{ aconStopMeter(); res(); };
+    a.onended=done; a.onerror=done;
+    a.play().catch(done);
+    setTimeout(done, 30000);
+  });
+}
+function aconMeter(){
+  const vu=document.getElementById("aconVu"); if(!vu||!aconAnal) return;
+  const bars=[...vu.children], buf=new Uint8Array(aconAnal.frequencyBinCount);
+  const tick=()=>{
+    aconAnal.getByteFrequencyData(buf);
+    let sum=0; for(let i=0;i<buf.length;i++) sum+=buf[i]*buf[i];
+    const lit=Math.round(Math.min(1, Math.sqrt(sum/buf.length)/110)*bars.length);
+    bars.forEach((b,i)=>{
+      b.className = i<lit ? ("lit"+(i>=bars.length-2?" hot":i>=bars.length-5?" mid":"")) : "";
+      b.style.height = (34 + i*(66/bars.length)) + "%";
+    });
+    aconRAF=requestAnimationFrame(tick);
+  };
+  tick();
+}
+function aconStopMeter(){
+  cancelAnimationFrame(aconRAF); aconRAF=0;
+  const vu=document.getElementById("aconVu");
+  if(vu) [...vu.children].forEach(b=>{ b.className=""; });
+}
+
 function renderSetup(sp){
   sp.innerHTML=`<h2 style="font-size:14px;margin:0 0 8px">Setup</h2>
    <div class="ctlrow" style="margin:0 0 8px">
@@ -1956,12 +2340,8 @@ function renderSetup(sp){
        <option value="sf" ${S.settings.scoring==="sf"?"selected":""}>Superflex</option></select></label>
      <label style="font-size:13px">Timer secs <input type="number" id="setTimer" value="${S.settings.timerSecs}" style="width:55px"></label>
      <label style="font-size:13px">My team: <select id="setMy">${S.settings.teams.map((t,i)=>`<option value="${i}" ${i===S.settings.myTeam?"selected":""}>${esc(t.name)}</option>`).join("")}</select></label>
-     <label style="font-size:13px"><input type="checkbox" id="setAnn" ${S.settings.announcer?"checked":""}> Voice announcer</label>
      <label style="font-size:13px"><input type="checkbox" id="setSnark" ${S.settings.snark?"checked":""}> Snark mode</label>
-     <label style="font-size:13px">Announcer voice: <select id="setVoice"><option value="">Loading…</option></select></label>
-     <button class="btn" id="voiceTest" type="button">▶ Preview</button>
-     <button class="btn" id="hornTest" type="button">▶ Test horn</button>
-     <span class="muted" id="voiceMsg" style="font-size:12px;flex-basis:100%">The voice is set <b>here and only here</b> — it rides the live sync, so every dashboard in the league announces in the same voice. Announcements play on the Draft Dashboard, not on this page; each device still turns its own 🔊 Sound on.</span>
+     <span class="muted" style="font-size:12px;flex-basis:100%">🎛 <b>Announcer, voice, dials and horn moved to the audio board</b> at the bottom of this page — no Setup trip, no save button, and nothing to forget mid-draft.</span>
    </div>
    <div class="ctlrow" style="margin:0 0 8px;padding:8px 0;border-top:1px solid var(--grid);border-bottom:1px solid var(--grid);align-items:flex-start;flex-wrap:wrap">
      <label style="font-size:13px">Live sync URL
@@ -1991,76 +2371,13 @@ function renderSetup(sp){
      <td><input class="set-owner" data-i="${i}" value="${esc(t.owner)}"></td></tr>`).join("")}</tbody></table>
    <div class="ctlrow"><button class="bigbtn" id="setSave">Save setup</button>
    <span class="muted">Team order = nomination order.</span></div>`;
-  /* ---------- the league's announcer voice, set here and nowhere else ----------
-     Kap, 8/4: "fix it so everyone hears the same voice which should be dictated at the
-     auction operator page. I don't want the toggle anywhere else."
-
-     So the voice lives in `S.settings.ttsVoice` — draft state, which already rides
-     DDSync out to every phone and the room screen. Change it here and every dashboard
-     announces in the new voice within a sync tick; no per-device setting to drift, and
-     nothing for a leaguemate to fiddle with mid-draft.
-
-     Empty means the Worker's ELEVEN_VOICE (currently Pepperoni), which is the escape
-     hatch if this page is not the one running the draft. */
-  const vsel=sp.querySelector("#setVoice"), vmsg=sp.querySelector("#voiceMsg");
-  let VOICE_LIST=[];
-  function paintVoiceList(){
-    const cur=S.settings.ttsVoice||"";
-    // The Worker already strips ElevenLabs' ~21 stock voices; this repeats the filter
-    // because it is one predicate and the failure mode is Kap re-opening this dropdown
-    // to find Bella and Roger back in it. Two cheap filters beat one load-bearing one.
-    const mine=VOICE_LIST.filter(v=>v.category!=="premade");
-    vsel.innerHTML='<option value="">House voice (Worker default)</option>'
-      + mine.map(v=>`<option value="${esc(v.id)}" ${cur===v.id?"selected":""}>${esc(v.name)}</option>`).join("");
-    // A voice deleted in ElevenLabs must not stay selected — it would 502 every
-    // announcement for the whole league and the operator would never see it.
-    if(cur && !mine.some(v=>v.id===cur)){ S.settings.ttsVoice=""; vsel.value=""; save(); }
-  }
-  (async()=>{
-    const pass=localStorage.getItem("dd-bot-pass");
-    if(!pass){ vsel.innerHTML='<option value="">House voice (Worker default)</option>';
-      vmsg.innerHTML="Enter the league passphrase in <b>Ask Toto</b> to choose a voice. Until then the league hears the Worker's default."; return; }
-    try{
-      const r=await fetch("https://toto.jkapcar4.workers.dev/tts/voices",{headers:{"X-Dawg-Pass":pass}});
-      const d=await r.json();
-      if(!r.ok || !Array.isArray(d.voices) || !d.voices.length){
-        vsel.innerHTML='<option value="">House voice (Worker default)</option>';
-        vmsg.textContent="Couldn't load the voice list — the league stays on the house voice."; return;
-      }
-      VOICE_LIST=d.voices; paintVoiceList();
-    }catch(e){ vsel.innerHTML='<option value="">House voice (Worker default)</option>'; }
-  })();
-  // Apply on change, not on "Save setup" — this is the one setting people will want to
-  // flip mid-draft, and making them find a save button to do it invites the mistake.
-  vsel.addEventListener("change",()=>{ S.settings.ttsVoice=vsel.value; save(); });
-
-  sp.querySelector("#voiceTest").addEventListener("click",async()=>{
-    const pass=localStorage.getItem("dd-bot-pass");
-    const line="Sold! Jahmyr Gibbs, 81 dollars, to Data Dawgs. That is criminal.";
-    const btn=sp.querySelector("#voiceTest"); const was=btn.textContent;
-    btn.textContent="…";
-    try{
-      if(!pass) throw new Error("no pass");
-      const vid=vsel.value;
-      const r=await fetch("https://toto.jkapcar4.workers.dev/tts",{method:"POST",
-        headers:{"Content-Type":"application/json","X-Dawg-Pass":pass},
-        body:JSON.stringify(vid?{text:line,voice:vid}:{text:line})});
-      if(!r.ok || !(r.headers.get("content-type")||"").includes("audio")) throw new Error("tts "+r.status);
-      const a=new Audio(URL.createObjectURL(await r.blob()));
-      await new Promise(res=>{ a.onended=res; a.onerror=res; a.play().catch(res); setTimeout(res,20000); });
-    }catch(e){
-      // Degrade exactly the way the room would, so a silent-ish preview is informative
-      // rather than mysterious: hearing the robot here means the league hears it too.
-      speak(line);
-    }
-    btn.textContent=was;
-  });
-  // Dry-run the whole celebration — confetti and horn — without faking a sale.
-  // Check this on the projector too: that machine is usually the one wired to
-  // the room, and its speakers are the ones that matter.
-  sp.querySelector("#hornTest").addEventListener("click",()=>{
-    celebrate({player:"TEST — Myles Garrett", price:41});
-  });
+  /* ---------- audio moved out of Setup (8/5) ----------
+     The voice picker, preview, horn test and announcer master used to live in this
+     panel. They are all on the audio board now — see renderAudioBoard(). Kap, 8/4's
+     rule still holds and is unchanged by the move: the voice is set on the operator
+     page and nowhere else, and it rides `S.settings.ttsVoice` out through DDSync so
+     every dashboard announces in the same voice. The board just makes it visible
+     instead of two clicks deep. */
   sp.querySelector("#syncSave").addEventListener("click",()=>{
     if(!window.DDSync) return;
     DDSync.save(sp.querySelector("#setSyncUrl").value, sp.querySelector("#setSyncRoom").value);
@@ -2095,14 +2412,12 @@ function renderSetup(sp){
     S.settings.scoring=sp.querySelector("#setScoring").value;
     S.settings.timerSecs=Math.max(3,+sp.querySelector("#setTimer").value||15);
     S.settings.myTeam=+sp.querySelector("#setMy").value;
-    S.settings.announcer=sp.querySelector("#setAnn").checked;
     S.settings.snark=sp.querySelector("#setSnark").checked;
-    // ⚠️ #setVoice is now an ElevenLabs voice id, NOT a speechSynthesis voice name.
-    // It applies on `change` already; writing it here too keeps Save setup honest
-    // rather than appearing to discard the selection. `voiceName` is left alone —
-    // it is dead weight from the browser-voice era, harmless, and not worth a
-    // migration on state that is already live in the league's Firebase room.
-    S.settings.ttsVoice=sp.querySelector("#setVoice").value;
+    // ⚠️ Do NOT reintroduce announcer / ttsVoice reads here. Those controls live on
+    // the audio board and apply on change; re-reading them from a panel that no
+    // longer renders them would write `undefined` over live league state on every
+    // Save setup. `voiceName` is left alone — dead weight from the browser-voice era,
+    // harmless, and not worth a migration on state already live in the league room.
     sp.querySelectorAll(".set-name").forEach(el=>S.settings.teams[+el.dataset.i].name=el.value.trim()||("Team "+(+el.dataset.i+1)));
     sp.querySelectorAll(".set-owner").forEach(el=>S.settings.teams[+el.dataset.i].owner=el.value.trim());
     save(); renderOp();
@@ -2210,6 +2525,9 @@ if(IS_PROJ && window.DDSync && window.DDSync.on){
 }
 if(IS_PROJ){ setInterval(()=>{ if(S.timerEnd>Date.now()-2000 && S.timerEnd>0) render(); }, 500); }
 render();
+// The board is built ONCE, after the first render. Everything after this is
+// syncAudioBoard() patching values in place — see the comment on the #acon div.
+renderAudioBoard();
 </script>
 </body>
 </html>

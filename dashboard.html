@@ -1401,6 +1401,15 @@ STATE: everything saves in the browser on that device. A different device shows 
     "32Kj6C8up2SwVyk2E5Z3": CAGE,     // UnhingedMan_Scream
   };
   const personaFor = A => PERSONAS[(A && A.settings && A.settings.ttsVoice) || ""] || MADDEN;
+  /* Factory dial positions, mirrored from auction.html's TTS_DEFAULT_TUNE.
+     ⚠️ Duplicated on purpose — both files are flattened standalone with no shared
+     module. Keep the two in step, or a dashboard that opens before the operator has
+     ever touched the board will announce at different settings than one that opens
+     after. Keys must equal the persona `id`s above. */
+  const TTS_FALLBACK_TUNE = {
+    madden:{stability:0.5, style:0.35, similarity_boost:0.85, use_speaker_boost:true},
+    cage:  {stability:0.0, style:0.60, similarity_boost:0.85, use_speaker_boost:true},
+  };
   const annPick = (arr, c) => arr[(Math.random()*arr.length)|0](c);
   // v3 performs [tags]; every other model would say the word "bracket sarcastic".
   const annStripTags = s => s.replace(/\[[a-z0-9 _-]{2,20}\]\s*/gi, "").replace(/\s+/g," ").trim();
@@ -1476,6 +1485,16 @@ STATE: everything saves in the browser on that device. A different device shows 
       // ELEVEN_VOICE; sending "" would read as a deliberate empty voice id.
       const A=state()||{}; const vid=(A.settings&&A.settings.ttsVoice)||"";
       const payload=vid?{text:t,voice:vid,model}:{text:t,model};
+      // ⚠️ The dials. Until 8/5 nothing sent these, so every clip the league ever
+      // heard ran at ElevenLabs' defaults even though the Worker had accepted
+      // `voice_settings` since a32c70f. They come from the SYNCED state, keyed by
+      // persona id, so the operator's board sets them for the whole room.
+      // Fall back to the same factory values auction.html ships — a listener who
+      // joined before the operator touched the board must not be the odd one out.
+      const tune=((A.settings&&A.settings.ttsTune)||{})[P&&P.id] || TTS_FALLBACK_TUNE[P&&P.id];
+      if(tune) payload.voice_settings={
+        stability:tune.stability, style:tune.style,
+        similarity_boost:tune.similarity_boost, use_speaker_boost:!!tune.use_speaker_boost};
       const hdr={"Content-Type":"application/json"};
       if(pass) hdr["X-Dawg-Pass"]=pass;
       const r=await fetch(TTS_URL,{method:"POST",headers:hdr,body:JSON.stringify(payload)});
