@@ -31,6 +31,9 @@
  *   POST /league/invite  — manager: mints a join link, CREATES the account if new
  *   POST /league/lock    — manager: force-place when someone never submits
  *   POST /league/config  — manager: the price band for that league
+ *   POST /league/settings — manager: name, manager, stake, allowDupes, allowEdit,
+ *                          lockRule/lockCount, levers, band — the whole rules panel
+ *   POST /league/team    — manager: {player, team} display name inside this league
  * ⚠️ The lock threshold is THAT LEAGUE'S member count, never the global roster.
  *
  * IDENTITY IS SITE-WIDE. The five auth routes answer on BOTH /auth/* and /bozo/*:
@@ -154,6 +157,8 @@ export default {
     if (url.pathname === "/league/member") return leagueMember(request, env, cors);
     if (url.pathname === "/league/lock")   return leagueLock(request, env, cors);
     if (url.pathname === "/league/config") return bozoConfigSet(request, env, cors);
+    if (url.pathname === "/league/settings") return leagueSettings(request, env, cors);
+    if (url.pathname === "/league/team")   return leagueTeam(request, env, cors);
     if (url.pathname === "/league/invite") return authInvite(request, env, cors);
 
     if (url.pathname === "/bozo/pick")    return bozoPick(request, env, cors);
@@ -1119,6 +1124,8 @@ async function leagueList(env, cors) {
     id, name: lg.name || id, manager: lg.manager || null,
     size: memberNames(lg).length,
     members: memberNames(lg),
+    teams: lg.teams || null,
+    settings: settingsOf(lg),
     week: lg.week || 1, status: lg.status || "open",
   })).sort((a, b) => a.id === DEFAULT_LEAGUE ? -1 : b.id === DEFAULT_LEAGUE ? 1 : a.name.localeCompare(b.name));
   return json({ leagues: out, defaultLeague: DEFAULT_LEAGUE }, 200, cors);
@@ -1162,6 +1169,146 @@ async function leagueCreate(request, env, cors) {
   try { await fbPatch(env, LG(id), lg); }
   catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
   return json({ ok: true, id, league: lg }, 200, cors);
+}
+
+
+// League settings, one patch route. Everything here is a MANAGER'S PREFERENCE — the
+// site admin can edit any league, a manager only their own (requireManager handles both).
+//
+// ⚠️ One of these is not like the others. `levers` decides which of the four tiebreakers
+// go into the weekly draw, and the randomisation is what keeps the game unsolvable: the
+// brief rejected a composite score because "any weighted blend of the four is just a new
+// deterministic objective with a new optimum someone will solve". Cut to one lever and
+// you have rebuilt exactly that — under pure shortest-odds-loses, undercutting to the
+// floor is strictly dominant and the whole league converges there. It is allowed, it is
+// warned about in the UI, and it is the only setting here with a game-theory cost.
+const LEVER_COUNT = 4;
+const SETTING_DEFAULTS = {
+  stake: 50, allowDupes: false, allowEdit: true, lockRule: "all", lockCount: 0,
+};
+const settingsOf = lg => ({
+  stake: Number.isFinite(lg?.stake) ? lg.stake : SETTING_DEFAULTS.stake,
+  allowDupes: lg?.allowDupes === true,
+  allowEdit: lg?.allowEdit !== false,
+  lockRule: lg?.lockRule === "count" ? "count" : "all",
+  lockCount: Number.isFinite(lg?.lockCount) ? lg.lockCount : 0,
+  levers: Array.isArray(lg?.levers) && lg.levers.length ? lg.levers : [0, 1, 2, 3],
+});
+
+async function leagueSettings(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const lid = leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+  const auth = await requireManager(request, env, lid);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  const lg = auth.league;
+  const patch = {};
+  const has = k => Object.prototype.hasOwnProperty.call(body, k);
+
+  if (has("name")) {
+    const n = String(body.name).trim();
+    if (!n || n.length > 60) return json({ error: "Name must be 1–60 characters." }, 400, cors);
+    patch.name = n;
+  }
+
+  if (has("manager")) {
+    const m = String(body.manager);
+    let users;
+    try { users = await loadUsers(env); }
+    catch (e) { return json({ error: e.message }, 502, cors); }
+    if (!userNames(users).includes(m))
+      return json({ error: m + " doesn't have an account yet." }, 400, cors);
+    patch.manager = m;
+    // A manager who isn't in their own league can't submit a leg and can't be counted
+    // toward the lock. Seat them rather than leaving that inconsistency lying around.
+    if (!isMember(lg, m)) patch["members/" + encodeURIComponent(m)] = true;
+  }
+
+  if (has("stake")) {
+    const v = Math.round(Number(body.stake));
+    if (!Number.isFinite(v) || v < 1 || v > 100000)
+      return json({ error: "Stake must be between 1 and 100000." }, 400, cors);
+    patch.stake = v;
+  }
+
+  if (has("allowDupes")) patch.allowDupes = body.allowDupes === true;
+  if (has("allowEdit"))  patch.allowEdit  = body.allowEdit !== false;
+
+  if (has("lockRule")) {
+    const r = body.lockRule === "count" ? "count" : "all";
+    patch.lockRule = r;
+    if (r === "count") {
+      const c = Math.round(Number(body.lockCount));
+      if (!Number.isFinite(c) || c < 2 || c > 64)
+        return json({ error: "Lock count must be between 2 and 64." }, 400, cors);
+      patch.lockCount = c;
+    } else {
+      patch.lockCount = null;
+    }
+  }
+
+  if (has("levers")) {
+    const raw = Array.isArray(body.levers) ? body.levers : [];
+    const set = [...new Set(raw.map(Number))].filter(n => Number.isInteger(n) && n >= 0 && n < LEVER_COUNT);
+    if (!set.length) return json({ error: "At least one tiebreaker has to stay in the draw." }, 400, cors);
+    patch.levers = set.sort();
+  }
+
+  // The band lives here too, so one Save covers the whole rules panel.
+  if (has("bandCeil") || has("bandFloor")) {
+    const cur = bandOf(lg);
+    const ceil = has("bandCeil") ? Math.round(Number(body.bandCeil)) : cur.ceil;
+    const floor = has("bandFloor") ? Math.round(Number(body.bandFloor)) : cur.floor;
+    if (!Number.isFinite(ceil) || !Number.isFinite(floor))
+      return json({ error: "Band values must be numbers." }, 400, cors);
+    if (ceil > -100) return json({ error: "Ceiling can't be shorter than −100 — favorites only." }, 400, cors);
+    if (floor >= ceil) return json({ error: "Floor must be deeper (more negative) than the ceiling." }, 400, cors);
+    if (floor < -2000) return json({ error: "Floor below −2000? That's not a band, that's a typo." }, 400, cors);
+    patch["config/bandCeil"] = ceil;
+    patch["config/bandFloor"] = floor;
+    patch["config/updatedTs"] = Date.now();
+    patch["config/updatedBy"] = auth.name;
+  }
+
+  if (!Object.keys(patch).length) return json({ error: "Nothing to change." }, 400, cors);
+  patch.settingsTs = Date.now();
+  patch.settingsBy = auth.name;
+
+  try { await fbPatch(env, LG(lid), patch); }
+  catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  const after = await loadLeague(env, lid);
+  return json({ ok: true, league: lid, settings: settingsOf(after), name: after.name, manager: after.manager }, 200, cors);
+}
+
+// POST /league/team {league, player, team} — the display name inside THIS league.
+// ⚠️ Deliberately not a rename. The account name stays the identity key everywhere —
+// /users, the password record, pick keys, ledger rows — so changing what the board
+// calls someone costs nothing and can never orphan a receipt. The same person can be
+// one thing here and another in a different league.
+async function leagueTeam(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const lid = leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+  const auth = await requireManager(request, env, lid);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  const player = String(body.player || "");
+  if (!isMember(auth.league, player)) return json({ error: player + " isn't in this league." }, 400, cors);
+  const team = String(body.team == null ? "" : body.team).trim().slice(0, 40);
+
+  try {
+    await fbPatch(env, LG(lid) + "/teams", { [encodeURIComponent(player)]: team || null });
+  } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  return json({ ok: true, player, team: team || null }, 200, cors);
 }
 
 // POST /league/member {league, player, action:"add"|"remove"} — the size dial.
@@ -1227,6 +1374,7 @@ async function leagueLock(request, env, cors) {
   const picks = lg.picks || {};
   const n = Object.keys(picks).length;
   if (n < 2) return json({ error: "Need at least two legs to make a parlay." }, 400, cors);
+  // (A forced lock deliberately ignores lockRule — that is the entire point of it.)
 
   const placed = await placeAndDraw(env, lid, picks, lg);
   return json({ ok: true, placed, legs: n, waitingOn: memberNames(lg).filter(p => !picks[encodeURIComponent(p)]) }, 200, cors);
@@ -1270,8 +1418,16 @@ async function bozoPick(request, env, cors) {
       return json({ ok: true, removed: true }, 200, cors);
     }
 
+    const set = settingsOf(state);
+
+    // "Editing is allowed until the ticket is placed" is the default, not a law. A
+    // league can lock a leg the moment it lands — which removes the edit-resets-your-
+    // clock dynamic entirely, so it is a real change to how the game plays.
+    if (!set.allowEdit && (state.picks || {})[encodeURIComponent(name)])
+      return json({ error: "This league locks your leg once it's in — no edits." }, 409, cors);
+
     const p = body.pick || {};
-    const err = validatePick(p, name, state.picks || {}, bandOf(state));
+    const err = validatePick(p, name, state.picks || {}, bandOf(state), set.allowDupes);
     if (err) return json({ error: err }, 400, cors);
 
     const pick = {
@@ -1287,20 +1443,23 @@ async function bozoPick(request, env, cors) {
     await fbPut(env, LG(lid) + "/picks/" + encodeURIComponent(name), pick);
 
     const picks = (await fbGet(env, LG(lid) + "/picks")).data || {};
-    // ⚠️ THIS league's member count, not the global roster. An 8-person league locks
-    // on the 8th leg; a 4-person league on the 4th.
+    // ⚠️ THIS league's threshold, never the global roster. Default is "everyone in",
+    // where the size IS the member count — an 8-person league locks on the 8th leg and
+    // a 4-person league on the 4th. A league can instead lock at a fixed count, which
+    // turns Last In into a race with a real risk of not making the ticket at all.
     const size = memberNames(state).length;
+    const need = set.lockRule === "count" ? Math.min(set.lockCount || size, size || set.lockCount) : size;
     let placed = false;
-    if (size > 0 && Object.keys(picks).length >= size) {
+    if (need > 0 && Object.keys(picks).length >= need) {
       placed = await placeAndDraw(env, lid, picks, state);
     }
-    return json({ ok: true, ts: pick.ts, placed, size }, 200, cors);
+    return json({ ok: true, ts: pick.ts, placed, size, need }, 200, cors);
   } catch (e) {
     return json({ error: "Database write failed: " + e.message }, 502, cors);
   }
 }
 
-function validatePick(p, name, existing, band) {
+function validatePick(p, name, existing, band, allowDupes) {
   if (!LEAGUE[p.sport]) return "Unknown sport.";
   if (!MARKETS.includes(p.mkt)) return "Unknown market.";
   if (!p.eventId || !p.game) return "Pick a game.";
@@ -1309,10 +1468,13 @@ function validatePick(p, name, existing, band) {
   if (!isFinite(price) || price > band.ceil || price < band.floor)
     return `${p.price} is outside the ${band.ceil} to ${band.floor} band.`;
   if (p.mkt !== "ml" && !isFinite(Number(p.line))) return "Number is required for that market.";
-  const label = String(p.label).toLowerCase();
-  for (const [who, x] of Object.entries(existing)) {
-    if (who !== name && x && String(x.label).toLowerCase() === label)
-      return `${who} already has that exact leg.`;
+  if (!allowDupes) {
+    const label = String(p.label).toLowerCase();
+    for (const [who, x] of Object.entries(existing)) {
+      if (who !== playerName(name) && who !== encodeURIComponent(name) && x &&
+          String(x.label).toLowerCase() === label)
+        return `${playerName(who)} already has that exact leg.`;
+    }
   }
   return null;
 }
@@ -1323,10 +1485,12 @@ async function placeAndDraw(env, lid, picks, state) {
   const cur = await fbGet(env, LG(lid) + "/order", true);
   if (cur.data != null) return true;                 // already drawn — never redraw
 
-  const order = [0, 1, 2, 3];
-  const rnd = new Uint32Array(4);
+  // Only the levers this league kept in the draw. With all four this is the original
+  // behaviour; with fewer the hierarchy is shorter and the meta gets easier to solve.
+  const order = settingsOf(state).levers.slice();
+  const rnd = new Uint32Array(Math.max(order.length, 1));
   crypto.getRandomValues(rnd);
-  for (let i = 3; i > 0; i--) {
+  for (let i = order.length - 1; i > 0; i--) {
     const j = rnd[i] % (i + 1);
     [order[i], order[j]] = [order[j], order[i]];
   }
