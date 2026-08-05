@@ -190,6 +190,11 @@ footer a{color:var(--accent)}
 .btn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--ink-2);padding:5px 12px;cursor:pointer;font-size:13px}
 .btn:hover{color:var(--ink-1);border-color:var(--accent)}
 
+.tierchip{display:inline-block;vertical-align:middle;margin-left:10px;font-size:10px;
+  font-weight:800;letter-spacing:.13em;text-transform:uppercase;padding:4px 9px;border-radius:5px;
+  text-decoration:none;background:var(--surface-1);color:var(--good);
+  border:1px solid color-mix(in srgb,var(--good) 55%,transparent)}
+.tierchip:hover{border-color:var(--good)}
 </style>
 <style>
 :root{
@@ -912,7 +917,7 @@ STATE: everything saves in the browser on that device. A different device shows 
 
 </script>
 <header>
-  <h1>NFL EPA Stats</h1>
+  <h1>NFL EPA Stats <a class="tierchip" href="index.html#tiers" title="What the tiers mean">Field-Tested</a></h1>
   <span class="sub">nflverse play-by-play · EPA/CPOE from nflfastR · snapshot 2026-07-29</span>
 </header>
 
