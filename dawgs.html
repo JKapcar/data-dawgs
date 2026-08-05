@@ -80,13 +80,28 @@ body{margin:0;background:var(--page);color:var(--ink-1);
    overrides both at the same specificity and would lose to this earlier-but-equal rule. */
 .sitenav .brand .tag{font-family:inherit;font-weight:400;font-style:normal;line-height:inherit;
   padding:0;margin:0;background:none;border:0;border-radius:0;box-shadow:none}
-.sitenav .links{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
+/* ⚠️ align-items:center, not the default stretch. The nav row holds THREE different
+   box models — a plain <a> (Home, The Pound, Dawgs), an <a class=grpbtn> inside a
+   .navgrp (a group header that also links: Labs, Field-Tested), and a <button
+   class=grpbtn> inside a .navgrp (a group header that does not link: Data) — plus the
+   theme pill. Under stretch each one resolved its own height and its text landed on a
+   different baseline: measured 8/5 at 1512px, text tops were 24.2 / 19.2 / 22.2 / 26.5.
+   Labs and Field-Tested sat 5px high because an inline <a> inside a stretched .navgrp
+   overflows its line box upward. Centering makes every item size to its own content and
+   share one axis; the .navgrp and .grpbtn rules below finish the job by giving the two
+   header variants the same block box and line-height as a plain link. */
+.sitenav .links{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap;align-items:center}
 .sitenav .links a{color:var(--ink-2);text-decoration:none;padding:6px 12px;border-radius:8px;font-size:14px;font-weight:550}
 .sitenav .links a:hover{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--ink-1)}
 .sitenav .links a.on{color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent);border-radius:8px 8px 0 0}
 /* nav dropdown groups */
-.navgrp{position:relative}
-.grpbtn{background:none;border:none;color:var(--ink-2);padding:6px 12px;border-radius:8px;font-size:14px;font-weight:550;cursor:pointer;font-family:inherit}
+.navgrp{position:relative;display:flex;align-items:center}
+.grpbtn{background:none;border:none;color:var(--ink-2);padding:6px 12px;border-radius:8px;font-size:14px;font-weight:550;cursor:pointer;font-family:inherit;
+  /* ⚠️ display:block and an explicit line-height are what put a group header on the
+     same baseline as a plain link. <a> defaults to inline (wrong height, overflows
+     upward) and <button> to inline-block with line-height:normal (~16px vs the 21.7px
+     a 14px/1.55 link gets). Both drifted. Do not drop either declaration. */
+  display:block;line-height:1.55}
 .grpbtn:hover{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--ink-1)}
 .grpbtn.on{color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent);border-radius:8px 8px 0 0}
 .grpbtn .caret{font-size:10px;opacity:.7}
