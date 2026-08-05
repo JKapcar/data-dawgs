@@ -113,7 +113,10 @@ function corsFor(origin) {
   const allow = ORIGINS.includes(origin) ? origin : ORIGINS[0];
   return {
     "Access-Control-Allow-Origin": allow,
-    "Access-Control-Allow-Headers": "Content-Type, X-Dawg-Pass, X-Bozo-Session",
+    // Must list EVERY custom header any page sends. A header that is accepted by
+    // the handler but missing here is still killed by the browser at preflight,
+    // and the page only sees "Failed to fetch" with no status and no console body.
+    "Access-Control-Allow-Headers": "Content-Type, X-Dawg-Pass, X-Bozo-Session, X-Dawg-Session",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin",

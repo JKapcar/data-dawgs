@@ -1316,7 +1316,13 @@ async function wGet(path){
 // explicit means a stale tab can never write into the wrong league after a switch.
 async function wPost(path, body){
   const h = {'Content-Type':'application/json'};
-  if(ME) h['X-Dawg-Session'] = ME.session;
+  // ⚠️ This header name is load-bearing. The Worker ACCEPTS both X-Dawg-Session
+  // and X-Bozo-Session, but its CORS Access-Control-Allow-Headers only ADVERTISES
+  // X-Bozo-Session. A custom header the preflight doesn't advertise is rejected by
+  // the browser before the request is ever sent — every authenticated write died
+  // with a bare "Failed to fetch". Do not rename this without shipping the Worker's
+  // allow-list in the same deploy. test_headers.mjs pins the two together.
+  if(ME) h['X-Bozo-Session'] = ME.session;
   const r = await fetch(WORKER + path, {method:'POST', headers:h,
     body:JSON.stringify({league:LID, ...(body||{})})});
   const j = await r.json().catch(()=>({error:'bad response'}));
