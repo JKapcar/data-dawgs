@@ -1335,6 +1335,7 @@ STATE: everything saves in the browser on that device. A different device shows 
       <button class="btn" id="save">Submit leg</button>
     </div></div>
   </div>
+  <div class="warnbox" id="priceWarn" style="display:none"></div>
   <div class="err" id="err"></div>
   <p class="note" id="bandNote">Favorites only. No exact duplicates. Editing resets your clock <em>and</em> your price. The ticket locks the moment the last leg lands.</p>
 </div>
@@ -1591,6 +1592,38 @@ function expected(x){
   const sd=sdOf(x), p=Math.min(.98,Math.max(.02, imp(x.price)-.022));   // crude de-vig
   const shift=sd*invNorm(p), base = x.mkt==='ml' ? 0 : x.line;
   return dirOf(x)==='under' ? base-shift : base+shift;
+}
+
+/* ---------------- price/line sanity ----------------
+   ⚠️ THIS IS NOT VERIFICATION. Nothing here talks to a book. DraftKings has no
+   public odds API — no developer portal, no key programme — so the only compliant
+   sources are licensed aggregators (SGO is scoped in bozo-ledger.md and blocked on
+   a key). Until one is wired in, every price on this board is SELF-REPORTED.
+
+   What this DOES catch: a price that contradicts the number typed beside it.
+   Books move the NUMBER, not the price — a real spread or total goes off near even
+   money, -110 typically, -125 often, past -145 rarely. A spread claiming -300 is
+   not a market that exists; either the line or the price is wrong. That covers the
+   honest mistake (a moneyline price pasted onto a spread leg) and the lazy lie.
+
+   ⚠️ MONEYLINES GET NO CHECK, and that is not an oversight. line is 0 and the price
+   carries the entire expectation, so there is nothing internal to contradict. A
+   deliberate misreport hides exactly there. Never present this as a safety net.
+   ⚠️ Props get no check either — prop pricing is genuinely wide. */
+const SANE_FLAT_PRICE = -160;
+function priceWarning(mkt, price){
+  if(!Number.isFinite(price) || price >= SANE_FLAT_PRICE) return '';
+  if(mkt !== 'spread' && mkt !== 'total') return '';
+  const what = mkt === 'spread' ? 'spread' : 'total';
+  return `⚠️ ${price} is far off market for a ${what}. Books move the number, not the price — `
+    + `a real ${what} prices near -110 and rarely past -145. Check you haven't put a `
+    + `moneyline price on a ${what} leg. You can still submit; nothing here is verified against a book.`;
+}
+function paintPriceWarn(){
+  const el = document.getElementById('priceWarn'); if(!el) return;
+  const mk = document.getElementById('fMkt'), px = document.getElementById('fPrice');
+  const w = (mk && px) ? priceWarning(mk.value, +px.value) : '';
+  el.textContent = w; el.style.display = w ? '' : 'none';
 }
 
 /* ---------------- scores: the page calls ESPN itself ---------------- */
@@ -1936,6 +1969,11 @@ function render(){
   document.getElementById('placeNote').textContent = open
     ? `Locks when every leg is in — ${players.length-live.length} to go. That moment is the close, and the server draws the hierarchy on the spot.`
     : 'Placed. Prices frozen; CLV is graded against the last leg in.';
+  // Standing disclosure, not a per-leg badge: right now EVERY price here is
+  // self-reported, so badging each one would be noise. When a market source is
+  // wired in and picks carry a priceSource, this becomes a per-leg mark instead.
+  document.getElementById('placeNote').textContent +=
+    ' Prices are entered by each player and are not checked against the book.';
 
   // hierarchy — the machine is on the board at ALL times now. Before the draw it
   // idles (armed); the reels STOP only when the server has actually drawn, so a
@@ -2619,6 +2657,8 @@ HOW TO TALK ABOUT THE NUMBERS:
 - The simulation draws every leg INDEPENDENTLY. Two legs on the same game are not independent. If the state flags correlated legs, mention it rather than quoting the cash probability as if it were clean.
 - Prop legs use a placeholder standard deviation (line x 0.55) that is openly a guess. Flag a prop before leaning on its Worst Beat exposure.
 - Worst CLV is UNMEASURED — no closing prices are captured yet. Never state anyone's CLV. If asked, say it is not measured yet and that the simulation treats it as a coin flip among whoever is still tied.
+- ⚠️ EVERY PRICE ON THIS BOARD IS SELF-REPORTED. Nothing verifies it against DraftKings or any book. If asked whether a price is right, say plainly that the system does not check prices and you cannot confirm one — never vouch for a number, and never accuse anyone either. Report what was entered, flag what looks off market, and stop there.
+- A spread or total priced past about -145 is off market and worth mentioning if you see one. A moneyline has no internal cross-check at all.
 - You may NOT place, edit or remove anyone's leg, and you must never tell someone their bet is guaranteed. Prices and probabilities, never certainties.`;
 
 function bozoCtx(){
@@ -3003,7 +3043,8 @@ document.getElementById('fSport').innerHTML =
   Object.entries(SPORTS).map(([k,v])=>`<option value="${k}">${v.n}</option>`).join('');
 document.getElementById('fSport').onchange = ()=>loadGames(fSport.value);
 document.getElementById('fGame').onchange = paintSides;
-document.getElementById('fMkt').onchange = paintSides;
+document.getElementById('fMkt').onchange = ()=>{ paintSides(); paintPriceWarn(); };
+document.getElementById('fPrice').addEventListener('input', paintPriceWarn);
 
 (async function init(){
   ME = loadSession();
