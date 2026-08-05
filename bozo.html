@@ -265,15 +265,19 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
 .tick{display:flex;gap:22px;flex-wrap:wrap;align-items:baseline;border-top:1px solid var(--grid);margin-top:14px;padding-top:14px}
 .big{font:800 29px/1 ui-monospace,monospace;color:var(--accent);letter-spacing:-1px}
 .lil{font:700 10.5px/1 ui-monospace,monospace;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink-3)}
+/* accent carries the headline numbers only — a cost painted the same orange as
+   the payout reads as good news */
+.big.cost{color:var(--ink-1)}
 /* slot machine */
 .machine{background:#16120d;border-radius:12px;border-top:3px solid var(--accent);padding:18px 16px;display:flex;gap:16px}
 .reels{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;flex:1;min-width:0}
 .pos{font:700 9.5px/1 ui-monospace,monospace;letter-spacing:1.4px;color:#b7a488;text-transform:uppercase;margin-bottom:5px;text-align:center}
-.win{position:relative;height:70px;overflow:hidden;border-radius:7px;background:var(--surface-1);
+.win{position:relative;height:70px;overflow:hidden;border-radius:7px;background:#f7f1e6;
   border:2px solid rgba(255,255,255,.09);transition:border-color .18s,box-shadow .18s}
 .win.locked{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent)}
-.cell{height:70px;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 5px;
-  font-weight:800;font-size:12px;line-height:1.2;text-transform:uppercase;border-bottom:1px solid var(--grid)}
+.cell{height:70px;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 4px;
+  font-weight:800;font-size:12px;line-height:1.2;text-transform:uppercase;color:#2b1c0e;
+  border-bottom:1px solid rgba(43,28,14,.14)}
 .lever{width:50px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;flex:0 0 50px}
 .rod{width:7px;flex:1;background:linear-gradient(90deg,#6b5636,#c9b287,#6b5636);border-radius:4px;min-height:48px;
   transform-origin:50% 100%;transition:transform .42s cubic-bezier(.3,1.5,.5,1)}
@@ -288,6 +292,107 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
 .verdict{background:#16120d;color:#ecdfc9;border-radius:12px;padding:22px;margin-bottom:16px;text-align:center}
 .verdict .nm{font:800 34px/1 system-ui;color:#fff;letter-spacing:-.8px;margin:6px 0}
 .verdict .why{color:#b7a488;font-size:14px}
+/* ---- the ticket, as a printed parlay slip ---- */
+.slip{position:relative;background:var(--page);border:1px solid var(--grid);border-radius:4px;
+  padding:8px 0 0;margin:4px 0 0;font-family:ui-monospace,Menlo,monospace;overflow:hidden}
+/* perforated top/bottom: half-circles punched in the CARD colour, so the slip
+   reads as torn off a roll. Uses --surface-1 because the card is what's behind it. */
+.slip::before,.slip::after{content:"";position:absolute;left:0;right:0;height:8px;pointer-events:none;
+  background:radial-gradient(circle at 6px 0,var(--surface-1) 0 5px,transparent 5.5px) 0 0/12px 8px repeat-x}
+.slip::before{top:0}
+.slip::after{bottom:0;transform:rotate(180deg)}
+.slip-hd{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;
+  padding:10px 16px 10px;border-bottom:2px solid var(--ink-1);margin:0 0 2px}
+.slip-hd .t{font:800 12.5px/1 ui-monospace,monospace;letter-spacing:2.2px;text-transform:uppercase;color:var(--ink-1)}
+.slip-hd .s{font:700 10.5px/1 ui-monospace,monospace;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink-3)}
+.legs{list-style:none;margin:0;padding:0}
+.leg{position:relative;display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:0 12px;
+  padding:11px 16px;border-bottom:1px dashed var(--grid);align-items:start}
+.leg:last-child{border-bottom:0}
+/* the parlay rail — one line chaining every leg together, which is the whole
+   visual point of a parlay vs. eight singles */
+.leg::before{content:"";position:absolute;left:28px;top:0;bottom:0;width:1px;background:var(--grid)}
+.leg:first-child::before{top:22px}
+.leg:last-child::before{bottom:calc(100% - 22px)}
+.mk{position:relative;z-index:1;width:21px;height:21px;border-radius:50%;margin-top:1px;
+  display:flex;align-items:center;justify-content:center;background:var(--page);
+  border:2px solid var(--ink-3);color:var(--ink-2);font:800 10px/1 ui-monospace,monospace}
+.leg.on .mk{border-color:var(--accent);color:var(--accent)}
+.leg.won .mk{background:var(--good);border-color:var(--good);color:#fff}
+.leg.lost .mk{background:var(--bad);border-color:var(--bad);color:#fff}
+.leg.void .mk{background:var(--ink-3);border-color:var(--ink-3);color:#fff}
+.leg.empty .mk{border-style:dashed;opacity:.6}
+.leg .who2{font:800 12px/1.35 ui-monospace,monospace;letter-spacing:1.3px;text-transform:uppercase;color:var(--ink-1)}
+.leg .sel{font-family:system-ui,-apple-system,sans-serif;font-weight:650;font-size:14.5px;
+  color:var(--ink-1);margin-top:2px;overflow-wrap:anywhere}
+.leg .mkt{font:11px/1.5 ui-monospace,monospace;color:var(--ink-3);margin-top:2px;overflow-wrap:anywhere}
+.leg.empty .sel{color:var(--ink-3);font-style:italic;font-weight:500}
+.leg.bz{background:color-mix(in srgb,var(--bad) 10%,transparent)}
+.leg.mine{box-shadow:inset 3px 0 0 var(--accent)}
+.leg .rt{text-align:right;white-space:nowrap}
+.leg .pxv{font:800 15px/1.2 ui-monospace,monospace;color:var(--ink-1);font-variant-numeric:tabular-nums}
+.leg.empty .pxv{color:var(--ink-3);font-weight:600;font-size:12px}
+.leg .tin{font:10.5px/1.6 ui-monospace,monospace;color:var(--ink-3)}
+.slip-ft{display:flex;gap:24px;flex-wrap:wrap;align-items:baseline;
+  border-top:2px solid var(--ink-1);margin:2px 0 0;padding:14px 112px 20px 16px}
+/* Anchored to the FOOTER, not the first leg — at top:44px it landed squarely on
+   leg one's price in every theme and width. The footer reserves 112px of right
+   padding so the stamp can never sit on a number. */
+.stamp{position:absolute;right:14px;bottom:16px;transform:rotate(-11deg);pointer-events:none;
+  font:800 15px/1 ui-monospace,monospace;letter-spacing:3px;text-transform:uppercase;
+  padding:6px 10px;border:2.5px solid currentColor;border-radius:5px;opacity:.5}
+.stamp.open{color:var(--accent)}.stamp.placed{color:var(--warn)}.stamp.graded{color:var(--good)}
+/* ---- diagnostics ---- */
+.meter{display:block;width:100%;min-width:56px;height:8px;border-radius:4px;overflow:hidden;
+  background:color-mix(in srgb,var(--accent) 15%,transparent)}
+.meter i{display:block;height:100%;border-radius:4px;background:var(--accent)}
+.meter.risk{background:color-mix(in srgb,var(--bad) 15%,transparent)}
+.meter.risk i{background:var(--bad)}
+.mcell{display:flex;flex-direction:column;gap:4px;min-width:74px}
+.mcell .v{font:700 12.5px/1 ui-monospace,monospace;color:var(--ink-1);font-variant-numeric:tabular-nums}
+.tbd{font:700 10px/1 ui-monospace,monospace;letter-spacing:1px;color:var(--ink-3);
+  border:1px dashed var(--grid);border-radius:4px;padding:3px 5px;display:inline-block}
+.flag{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;color:var(--ink-2);
+  border-left:3px solid var(--warn);padding:8px 0 8px 11px;margin:12px 0 0}
+.flag b{color:var(--ink-1)}
+.flag.corr{border-left-color:var(--bad)}
+.tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+/* ---- season, as a split-flap board ---- */
+/* Dark plate in BOTH themes on purpose — same call as .machine and .verdict.
+   A chalkboard was considered and rejected: green + handwriting fights the
+   mono/terminal identity the rest of this page is built on. */
+.tboard{background:#0d0a06;border:1px solid #2b2318;border-top:3px solid var(--accent);
+  border-radius:11px;padding:12px 10px 8px;box-shadow:inset 0 14px 26px rgba(0,0,0,.5)}
+.thead,.trow{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:12px;align-items:center;padding:7px 8px}
+.thead{border-bottom:1px solid #2f2619;padding-bottom:9px;margin-bottom:2px}
+.thead span{font:700 9.5px/1 ui-monospace,monospace;letter-spacing:1.6px;text-transform:uppercase;color:#7a6a52}
+.thead span:last-child{text-align:right}
+.trow{border-bottom:1px solid #241d15}
+.trow:last-child{border-bottom:0}
+.trow .rk{font:800 12px/1 ui-monospace,monospace;color:#7a6a52;font-variant-numeric:tabular-nums}
+.trow .nm2{font:800 15px/1.2 ui-monospace,monospace;letter-spacing:1.7px;text-transform:uppercase;
+  color:#ecdfc9;display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0}
+.trow.me2 .nm2{color:#ff9146}
+.fund{font:700 9px/1 ui-monospace,monospace;letter-spacing:1.2px;text-transform:uppercase;
+  color:#1a1206;background:var(--accent);padding:4px 7px;border-radius:4px;white-space:nowrap}
+.flap{display:flex;gap:3px;perspective:280px}
+.flap b{position:relative;min-width:21px;height:30px;border-radius:3px;background:#241d15;color:#ffcf9a;
+  font:800 18px/30px ui-monospace,monospace;text-align:center;padding:0 2px;
+  box-shadow:inset 0 -2px 0 rgba(0,0,0,.5),0 1px 0 rgba(255,255,255,.04)}
+.flap b::after{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(0,0,0,.55)}
+.flap b.zero{color:#93805f}
+@keyframes flap{0%{transform:rotateX(-90deg);filter:brightness(1.8)}100%{transform:none}}
+.flap b.flip{animation:flap .45s cubic-bezier(.2,.9,.3,1);transform-origin:50% 0}
+/* ---- machine: armed (pre-draw) idle state ---- */
+.machine.armed .win{border-color:rgba(255,255,255,.09)}
+@keyframes reelidle{from{transform:translateY(0)}to{transform:translateY(calc(-1 * var(--spin,280px)))}}
+.machine.armed .strip{animation:reelidle 2.9s linear infinite}
+.machine.armed .cell{opacity:.55}
+@keyframes knobpulse{0%,100%{transform:none}50%{transform:translateY(2px)}}
+.machine.armed .knob{animation:knobpulse 2.1s ease-in-out infinite}
+.ord li.ghost{opacity:1}
+.ord li.ghost b{color:var(--ink-3);font-weight:650}
+.ord li.ghost .n{color:var(--ink-3)}
 .note{font-size:13px;color:var(--ink-3);margin:12px 0 0;border-top:1px solid var(--grid);padding-top:11px}
 .row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
 .gr{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:8px 0;
@@ -301,11 +406,27 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
 .readonly{border-left:3px solid var(--warn);padding-left:12px;color:var(--ink-2);font-size:13.5px}
 @media(max-width:640px){
   .frm{grid-template-columns:1fr 1fr}.f.w4{grid-column:span 2}
-  .reels{grid-template-columns:1fr 1fr}.machine{flex-direction:column}
+  /* buildReels sets grid-template-columns inline to the live lever count, so the
+     reels stay in a single left-to-right row at every width. Shrink the type
+     instead of wrapping — the row IS the hierarchy. */
+  .machine{flex-direction:column;padding:14px 10px}
+  .cell{font-size:9.5px;letter-spacing:0;padding:0 2px}
+  .pos{font-size:8.5px;letter-spacing:.8px}
   .lever{flex-direction:row;width:100%;flex:0 0 auto;gap:12px;align-items:center}
   .rod{flex:1;min-height:0;height:8px;transform-origin:0 50%}
   .lever.pulled .rod{transform:scaleX(.72)}.knob{margin:0}
   table.bz td,table.bz th{padding-left:5px;padding-right:5px}
+  /* the leg itself is already spelled out on the slip above, and "usually named by"
+     is the least load-bearing column — drop both rather than shrink everything */
+  #dgTable td:nth-child(2),#dgTable th:nth-child(2),
+  #dgTable td:nth-child(7),#dgTable th:nth-child(7){display:none}
+  .mcell{min-width:54px}
+  .slip-ft{gap:16px;padding-right:96px}
+  .stamp{font-size:12px;top:auto;right:10px;bottom:14px;padding:5px 8px;letter-spacing:2px}
+  .leg{grid-template-columns:24px minmax(0,1fr) auto;padding:10px 12px}
+  .leg::before{left:26px}
+  .trow,.thead{grid-template-columns:22px minmax(0,1fr) auto;gap:8px}
+  .trow .nm2{font-size:13px;letter-spacing:1.1px}
   .bz-hdr h1{font-size:24px}
 }
 @media(prefers-reduced-motion:reduce){.strip,.rod,.ord li{transition:none!important}}
@@ -1220,25 +1341,31 @@ STATE: everything saves in the browser on that device. A different device shows 
   <p class="note" id="lgNote"></p>
 </div>
 
-<!-- ---------- the ticket ---------- -->
+<!-- ---------- hierarchy: the machine sits ABOVE the ticket now, because it is
+     the frame you read the ticket through. It is visible on an OPEN board in an
+     armed/idle state — the reels only STOP when the server has actually drawn. -->
+<div class="card" id="drawCard">
+  <div class="bz-hdr"><h2 class="bz" style="margin:0">This week's hierarchy</h2><span class="tm" id="drawState"></span></div>
+  <div class="machine" id="machine"><div class="reels" id="reels"></div>
+    <div class="lever" id="lever"><div class="rod"></div><div class="knob"></div></div></div>
+  <ol class="ord" id="ord"></ol>
+  <p class="note" id="drawNote"></p>
+</div>
+
+<!-- ---------- the ticket, as a parlay slip ---------- -->
 <div class="card" id="ticketCard">
   <div class="bz-hdr"><h2 class="bz" style="margin:0">The ticket</h2><span class="tm" id="fill"></span></div>
-  <table class="bz" id="board"><tbody></tbody></table>
-  <div class="tick">
-    <div><div class="lil">Legs</div><div class="big" id="tLegs">0</div></div>
-    <div><div class="lil">Parlay price</div><div class="big" id="tOdds">—</div></div>
-    <div><div class="lil">$50 returns</div><div class="big" id="tPay">—</div></div>
-  </div>
+  <div class="slip" id="board"></div>
   <p class="note" id="placeNote"></p>
 </div>
 
-<!-- ---------- hierarchy ---------- -->
-<div class="card" id="drawCard" style="display:none">
-  <h2 class="bz">This week's hierarchy</h2>
-  <div class="machine"><div class="reels" id="reels"></div>
-    <div class="lever" id="lever"><div class="rod"></div><div class="knob"></div></div></div>
-  <ol class="ord" id="ord"></ol>
-  <p class="note">Drawn on the server the moment the last leg landed — the reels are showing you a result that already exists. Only legs that lost are eligible. Ties fall to the next rule down.</p>
+<!-- ---------- diagnostics ---------- -->
+<div class="card" id="diagCard" style="display:none">
+  <div class="bz-hdr"><h2 class="bz" style="margin:0">Diagnostics</h2><span class="tm" id="dgMeta"></span></div>
+  <div class="stat-grid" id="dgTiles"></div>
+  <div id="dgFlags"></div>
+  <div class="tscroll"><table class="bz" id="dgTable"><tbody></tbody></table></div>
+  <p class="note" id="dgNote"></p>
 </div>
 
 <!-- ---------- grading (admin) ---------- -->
@@ -1257,7 +1384,8 @@ STATE: everything saves in the browser on that device. A different device shows 
 
 <!-- ---------- season ---------- -->
 <div class="card" id="seasonCard">
-  <h2 class="bz">Season</h2><table class="bz" id="lb"><tbody></tbody></table>
+  <div class="bz-hdr"><h2 class="bz" style="margin:0">Season</h2><span class="tm" id="lbMeta"></span></div>
+  <div class="tboard" id="lb"></div>
   <div class="row" style="margin-top:14px" id="adminRow" style="display:none">
     <button class="btn ghost sm" id="next">Start next week</button>
   </div>
@@ -1354,6 +1482,13 @@ async function wPost(path, body){
 }
 
 /* ---------------- math (unchanged from the design session) ---------------- */
+/* ⚠️ A pick stores `side` — 'over'/'under' for totals and props, a team abbr for
+   spreads and moneylines. Nothing has ever written `dir`, so every `x.dir` test in
+   this file was silently false: unders got the OVER expectation, and auto-grading a
+   total marked every over as a loss. dirOf() is the one place that reads it now. A
+   team abbreviation is never 'under', so spreads and MLs fall through to 'over',
+   which is the branch they always wanted. */
+const dirOf = x => ((x && (x.dir || x.side)) === 'under') ? 'under' : 'over';
 const dec  = a => a<0 ? 1+100/Math.abs(a) : 1+a/100;
 const imp  = a => a<0 ? Math.abs(a)/(Math.abs(a)+100) : 100/(a+100);
 const amer = d => d>=2 ? '+'+Math.round((d-1)*100) : '-'+Math.round(100/(d-1));
@@ -1381,7 +1516,7 @@ function sdOf(x){ const s=SPORTS[x.sport];
 function expected(x){
   const sd=sdOf(x), p=Math.min(.98,Math.max(.02, imp(x.price)-.022));   // crude de-vig
   const shift=sd*invNorm(p), base = x.mkt==='ml' ? 0 : x.line;
-  return x.dir==='under' ? base-shift : base+shift;
+  return dirOf(x)==='under' ? base-shift : base+shift;
 }
 
 /* ---------------- scores: the page calls ESPN itself ---------------- */
@@ -1475,8 +1610,12 @@ async function refresh(){
   try{
     const r = await fetch(DB + '/bozo/leagues/' + LID + '.json?' + bust());
     S = (await r.json()) || {};
-    render();
-  }catch(e){ /* transient — the next tick retries */ }
+  }catch(e){ return; /* transient network — the next tick retries */ }
+  // ⚠️ render() is OUTSIDE the catch on purpose. It used to sit inside, which meant
+  // a plain ReferenceError in a paint function looked exactly like a dropped fetch:
+  // no console error, no visual break, just some cards quietly not updating. That
+  // hid a dead function call through an entire build. Let paint bugs be loud.
+  render();
 }
 
 /* ---------------- render ---------------- */
@@ -1508,6 +1647,19 @@ const band = () => ({
 // ledger rows, sheet links — so renaming what the board calls someone can never orphan
 // a receipt, and the same person can be different things in different leagues.
 const teamOf = n => (league()?.teams || {})[kEnc(n)] || (S.teams||{})[kEnc(n)] || n;
+
+/* ⚠️ S.bozo and history[].bozo are PICK KEYS, not roster names. decide() takes the
+   bozo out of Object.keys(picks), and the Worker stores those URL-encoded — "The
+   Kid" is "The%20Kid". Every other comparison in this file uses the decoded name.
+   playerName() was CALLED by the verdict card and defined nowhere, so naming a bozo
+   threw a ReferenceError; because refresh() swallowed render() exceptions, the
+   symptom was not a crash but the season board silently freezing at the moment of
+   grading — everything after the verdict card in render() stopped running. */
+function playerName(key){
+  if(key==null) return '';
+  let d=key; try{ d=decodeURIComponent(key); }catch(e){}
+  return names().includes(d) ? d : key;
+}
 
 /* ---------------- the hub: every league in one place ---------------- */
 // bozo.html with no ?l= is the general Bozo page: the league directory plus, for the
@@ -1673,7 +1825,7 @@ function render(){
   document.getElementById('statusChip').style.display = hub ? 'none' : '';
   document.getElementById('backHub').style.display = (hub || LEAGUES.length<2) ? 'none' : '';
   // On the hub every league-scoped card is hidden; the directory is the whole page.
-  for(const id of ['snav','lgbar','submitCard','ticketCard','seasonCard','sheetCard','leagueCard','drawCard','gradeCard','verdict'])
+  for(const id of ['snav','lgbar','submitCard','ticketCard','seasonCard','sheetCard','leagueCard','drawCard','diagCard','gradeCard','verdict'])
     { const el=document.getElementById(id); if(el && hub) el.style.display='none'; }
   if(hub) return;
 
@@ -1705,46 +1857,22 @@ function render(){
   document.getElementById('leagueCard').style.display = v==='league' ? '' : 'none';
   if(v==='league') paintLeague();
 
-  document.querySelector('#board tbody').innerHTML =
-    '<tr><th>Who</th><th>Leg</th><th>Price</th><th>In</th></tr>' +
-    players.map(p=>{
-      const x = picks[kEnc(p)] || {};
-      const r = (S.results||{})[kEnc(p)] || {};
-      let tag='';
-      if(status==='graded' && x.price!=null)
-        tag = r.won===true ? '<span class="tag w">W</span>'
-            : r.won===false ? '<span class="tag l">L</span>'
-            : '<span class="tag p">—</span>';
-      const cls = (ME && p===ME.name ? 'me ' : '') + (S.bozo===p ? 'bz-loser' : '');
-      if(x.price==null)
-        return `<tr class="${cls}"><td class="who">${esc(teamOf(p))}</td><td class="pend" colspan="3">no leg yet</td></tr>`;
-      return `<tr class="${cls}"><td class="who">${esc(teamOf(p))}</td><td class="pk">${esc(x.label)}${tag}
-        <br><span class="tm">${SPORTS[x.sport]?SPORTS[x.sport].n:x.sport} · ${esc(x.game)}${r.actual!=null?' · finished '+r.actual:''}</span></td>
-        <td class="px">${x.price}</td><td class="tm">${when(x.ts)}</td></tr>`;
-    }).join('');
+  paintSlip(players, picks, status, live);
 
-  document.getElementById('tLegs').textContent = live.length;
-  if(live.length){
-    const d = live.reduce((a,x)=>a*dec(x.price),1);
-    document.getElementById('tOdds').textContent = amer(d);
-    const stake = league()?.settings?.stake ?? 50;
-    document.querySelector('#tPay').previousElementSibling.textContent = '$'+stake+' returns';
-    document.getElementById('tPay').textContent = '$'+Math.round(d*stake).toLocaleString();
-  }else{
-    document.getElementById('tOdds').textContent='—';
-    document.getElementById('tPay').textContent='—';
-  }
   document.getElementById('placeNote').textContent = open
     ? `Locks when every leg is in — ${players.length-live.length} to go. That moment is the close, and the server draws the hierarchy on the spot.`
     : 'Placed. Prices frozen; CLV is graded against the last leg in.';
 
-  // hierarchy
+  // hierarchy — the machine is on the board at ALL times now. Before the draw it
+  // idles (armed); the reels STOP only when the server has actually drawn, so a
+  // stopped reel always means a real, written-once result.
   const ord = S.order;
-  document.getElementById('drawCard').style.display = (ord && onBoard) ? '' : 'none';
-  if(ord){
-    const key = ord.join(',');
-    if(drawnOrder !== key){ const first = drawnOrder===null; drawnOrder=key; first ? paintOrder(ord) : spin(ord); }
-  } else drawnOrder = null;
+  document.getElementById('drawCard').style.display = onBoard ? '' : 'none';
+  if(onBoard) paintMachine(ord);
+
+  // diagnostics
+  if(onBoard) paintDiag(live, players, status);
+  else document.getElementById('diagCard').style.display='none';
 
   // grading — the Worker is the authority; this only decides what to show
   document.getElementById('gradeCard').style.display = (isManager() && status==='placed' && onBoard) ? '' : 'none';
@@ -1760,15 +1888,11 @@ function render(){
 
   // season table
   const t={}; players.forEach(p=>t[p]=0);
-  (S.history||[]).forEach(h=>{ if(h && h.bozo && t[h.bozo]!=null) t[h.bozo]++; });
-  if(S.bozo && t[S.bozo]!=null) t[S.bozo]++;
+  (S.history||[]).forEach(h=>{ const b=h&&h.bozo&&playerName(h.bozo); if(b && t[b]!=null) t[b]++; });
+  const bzNow = S.bozo && playerName(S.bozo);
+  if(bzNow && t[bzNow]!=null) t[bzNow]++;
   const mx=Math.max(0,...Object.values(t));
-  document.querySelector('#lb tbody').innerHTML =
-    '<tr><th>#</th><th>Who</th><th>Bozos</th><th></th></tr>' +
-    players.slice().sort((a,b)=>t[b]-t[a]||a.localeCompare(b))
-      .map((p,i)=>`<tr class="${ME&&p===ME.name?'me':''}"><td class="tm">${i+1}</td>
-        <td class="who">${esc(teamOf(p))}</td><td class="px">${t[p]}</td>
-        <td class="tm">${t[p]===mx&&mx>0?'funding this week':''}</td></tr>`).join('');
+  paintTicker(players, t, mx);
 }
 
 /* ---------------- player sheet ---------------- */
@@ -1791,7 +1915,8 @@ function paintSheet(player){
   const w  = rows.filter(r=>resOf(r)==='won').length;
   const l  = rows.filter(r=>resOf(r)==='lost').length;
   const pv = rows.filter(r=>['push','void'].includes(resOf(r))).length;
-  const bozos = (S.history||[]).filter(h=>h && h.bozo===player).length + (S.bozo===player?1:0);
+  const bozos = (S.history||[]).filter(h=>h && playerName(h.bozo)===player).length
+    + (S.bozo && playerName(S.bozo)===player ? 1 : 0);
   const priced = rows.filter(r=>Number.isFinite(r.price));
   const avgPx = priced.length ? Math.round(priced.reduce((a,r)=>a+r.price,0)/priced.length) : null;
   const chalk = rows.filter(r=>r.shortestOdds).length;
@@ -2137,35 +2262,350 @@ async function submitLeg(){
   btn.disabled=false;
 }
 
-/* ---------------- slot machine ---------------- */
-const REP=9, N=4, strips=[], wins=[];
-(function(){
-  const r=document.getElementById('reels');
-  for(let i=0;i<N;i++){
+/* ---------------- the ticket, as a parlay slip ----------------
+   Legs are listed in SUBMISSION order, not roster order. That is not decoration:
+   Last In is one of the four levers, so the bottom leg on the slip is the one
+   currently exposed to it, and you can see that without reading a timestamp. */
+function paintSlip(players, picks, status, live){
+  const stake = settings().stake ?? 50;
+  const res = S.results || {};
+  const rows = players.map(p=>({p, x:picks[kEnc(p)]||{}, r:res[kEnc(p)]||{}}))
+    .sort((a,b)=>{
+      const ai=a.x.price!=null, bi=b.x.price!=null;
+      if(ai!==bi) return ai?-1:1;                       // legs in first, blanks last
+      if(ai) return (a.x.ts||0)-(b.x.ts||0);            // then by when they landed
+      return a.p.localeCompare(b.p);
+    });
+  const graded = status==='graded';
+  const nIn = live.length;
+  const html = rows.map((row,i)=>{
+    const {p,x,r} = row;
+    const inPool = x.price!=null;
+    let state = !inPool ? 'empty'
+      : graded ? (r.won===true?'won':r.won===false?'lost':'void')
+      : 'on';
+    const cls = [ 'leg', state,
+      (ME && p===ME.name) ? 'mine' : '',
+      (S.bozo && playerName(S.bozo)===p) ? 'bz' : '' ].filter(Boolean).join(' ');
+    const mark = state==='won' ? '✓' : state==='lost' ? '✕' : state==='void' ? '—' : (i+1);
+    if(!inPool)
+      return `<li class="${cls}"><span class="mk">${mark}</span>
+        <span><span class="who2">${esc(teamOf(p))}</span>
+        <span class="sel">no leg yet</span></span>
+        <span class="rt"><span class="pxv">—</span></span></li>`;
+    const sub = `${SPORTS[x.sport]?SPORTS[x.sport].n:esc(x.sport)} · ${esc(x.game)}`
+      + (x.mkt==='prop' ? ' · prop' : '')
+      + (r.actual!=null ? ` · finished ${r.actual}` : '');
+    return `<li class="${cls}"><span class="mk">${mark}</span>
+      <span><span class="who2">${esc(teamOf(p))}</span>
+      <span class="sel">${esc(x.label)}</span>
+      <span class="mkt">${sub}</span></span>
+      <span class="rt"><span class="pxv">${x.price>0?'+':''}${x.price}</span>
+      <span class="tin">${when(x.ts)}</span></span></li>`;
+  }).join('');
+
+  let odds='—', pay='—';
+  if(nIn){
+    const d = live.reduce((a,x)=>a*dec(x.price),1);
+    odds = amer(d); pay = '$'+Math.round(d*stake).toLocaleString();
+  }
+  const stamp = status==='open'?'open':status==='placed'?'placed':'graded';
+  document.getElementById('board').innerHTML =
+    `<div class="stamp ${stamp}">${stamp}</div>
+     <div class="slip-hd"><span class="t">Parlay · ${nIn} leg${nIn===1?'':'s'}</span>
+       <span class="s">Week ${S.week||1} · ${esc(league()?.name || 'Data Dawgs')}</span></div>
+     <ul class="legs">${html}</ul>
+     <div class="slip-ft">
+       <div><div class="lil">Legs</div><div class="big" id="tLegs">${nIn}</div></div>
+       <div><div class="lil">Parlay price</div><div class="big" id="tOdds">${odds}</div></div>
+       <div><div class="lil">$${stake} returns</div><div class="big" id="tPay">${pay}</div></div>
+     </div>`;
+}
+
+/* ---------------- diagnostics ----------------
+   Every number here is DERIVED at read time from prices already on the board —
+   nothing is persisted, for the same reason the player sheets derive CLV on the
+   fly: the SD table will be retuned and stored derivatives would rot.
+
+   ⚠️ The simulation introduces NO new assumption. It draws each leg's result from
+   actual ~ Normal(expected(x), sdOf(x)) — the exact model the Worst Beat index
+   already uses to score the week. That model is self-consistent by construction:
+   P(the leg clears its number) works out to precisely the de-vigged price that was
+   typed in. So the sim is the scoring rules, run forward.
+
+   ⚠️ What it does NOT model: correlation. Legs are drawn independently. Two legs
+   on the same game are not independent, and the flag under the table says so.
+   ⚠️ Prop SD is line×0.55 — the brief's own words are "the weakest number in the
+   build." Prop legs are marked in the table. */
+const SIMS = 20000;
+let simKey = '', simOut = null;
+
+function gauss(){
+  let u=0,v=0; while(u===0)u=Math.random(); while(v===0)v=Math.random();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+}
+function shuffled(a){
+  a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=a[i]; a[i]=a[j]; a[j]=t; }
+  return a;
+}
+const devig = px => Math.min(.98, Math.max(.02, imp(px)-.022));
+
+function simulate(live, levers){
+  const n = live.length;
+  const L = live.map(x=>({
+    sd: sdOf(x), base: x.mkt==='ml' ? 0 : x.line, exp: expected(x),
+    under: dirOf(x)==='under', odds: imp(x.price), last: x.ts||0
+  }));
+  const win=new Array(n).fill(0), bz=new Array(n).fill(0), solo=new Array(n).fill(0);
+  const named=live.map(()=>({}));
+  const idx=new Array(n), lost=[];
+  let cash=0;
+  for(let s=0;s<SIMS;s++){
+    lost.length=0;
+    for(let i=0;i<n;i++){
+      const l=L[i], actual = l.exp + l.sd*gauss();
+      // the Bozo Index, exactly as decide() computes it
+      idx[i] = (l.under ? (actual-l.exp) : (l.exp-actual)) / l.sd;
+      if(l.under ? actual < l.base : actual > l.base) win[i]++; else lost.push(i);
+    }
+    if(!lost.length){ cash++; continue; }
+    if(lost.length===1) solo[lost[0]]++;
+    let pool=lost.slice(), why=null;
+    for(const li of shuffled(levers)){
+      const k=LEVERS[li].k;
+      let surv;
+      if(k==='clv'){
+        // No closing prices are captured yet, so CLV carries no information.
+        // Uniform over the survivors is what "no information" actually means —
+        // treating it as a constant would silently delete a live lever from the draw.
+        surv=[pool[(Math.random()*pool.length)|0]];
+      }else{
+        const f = k==='odds' ? (i=>L[i].odds) : k==='beat' ? (i=>idx[i]) : (i=>L[i].last);
+        let mx=-Infinity; for(const i of pool){ const v=f(i); if(v>mx) mx=v; }
+        surv=pool.filter(i=>f(i)===mx);
+      }
+      if(surv.length<pool.length || surv.length===1){ pool=surv; why=li; }
+      if(pool.length===1) break;
+    }
+    const b=pool[0]; bz[b]++;
+    if(why!==null) named[b][why]=(named[b][why]||0)+1;
+  }
+  return {
+    n, sims:SIMS, cash:cash/SIMS,
+    win: win.map(c=>c/SIMS), bozo: bz.map(c=>c/SIMS), solo: solo.map(c=>c/SIMS),
+    by: named.map((m,i)=>{ let best=null,bc=0;
+      for(const k in m) if(m[k]>bc){ bc=m[k]; best=+k; }
+      return best===null ? null : {name:LEVERS[best].name, share: bc/Math.max(1,bz[i])}; })
+  };
+}
+
+const pct = v => (v*100).toFixed(v>=.1?0:1)+'%';
+function meter(v, risk){
+  return `<span class="meter${risk?' risk':''}"><i style="width:${Math.max(2,Math.min(100,v*100)).toFixed(1)}%"></i></span>`;
+}
+
+function paintDiag(live, players, status){
+  const card=document.getElementById('diagCard');
+  if(!live.length){
+    card.style.display='';
+    document.getElementById('dgMeta').textContent='';
+    document.getElementById('dgTiles').innerHTML='';
+    document.getElementById('dgFlags').innerHTML='';
+    document.querySelector('#dgTable tbody').innerHTML='';
+    document.getElementById('dgNote').textContent =
+      'Nothing to measure yet. The first leg in turns this on.';
+    return;
+  }
+  card.style.display='';
+  const st = settings(), levers = (st.levers && st.levers.length) ? st.levers : [0,1,2,3];
+  const stake = st.stake ?? 50;
+  const key = live.map(x=>`${x.p}:${x.price}:${x.ts}:${x.line}:${x.mkt}:${x.side}`).join('|')
+    + '#' + levers.join(',') + '#' + status;
+  if(key!==simKey){ simKey=key; simOut=simulate(live,levers); }
+  const R=simOut;
+
+  const offDec  = live.reduce((a,x)=>a*dec(x.price),1);
+  const fairDec = 1/live.reduce((a,x)=>a*devig(x.price),1);
+  const hold    = 1 - offDec/fairDec;                 // what the book keeps
+  const ev      = stake*(offDec*R.cash - 1);
+
+  const tile=(lil,big,sub,cost)=>`<div><div class="lil">${lil}</div><div class="big${cost?' cost':''}">${big}</div>`
+    + (sub?`<div class="tm">${sub}</div>`:'') + `</div>`;
+  document.getElementById('dgMeta').textContent =
+    R.sims.toLocaleString()+' simulations · re-run whenever a leg changes';
+  document.getElementById('dgTiles').innerHTML =
+    tile('Ticket cashes', pct(R.cash), `all ${R.n} legs land`) +
+    tile('Parlay price', amer(offDec), 'what you are laying') +
+    tile('Fair price', amer(fairDec), 'de-vigged, same legs') +
+    tile("Book's edge", pct(hold), 'compounded across the legs', 1) +
+    tile('EV on $'+stake, (ev<0?'−$':'$')+Math.abs(ev).toFixed(2), 'per ticket, long run', 1) +
+    tile('Legs in', R.n+' / '+players.length, status);
+
+  // ---- flags: the things the numbers above are quietly assuming ----
+  const flags=[];
+  const byEvent={};
+  live.forEach(x=>{ const k=x.eventId||x.game; if(k){ (byEvent[k]=byEvent[k]||[]).push(x); } });
+  const stacked = Object.values(byEvent).filter(g=>g.length>1);
+  if(stacked.length){
+    const who = stacked.map(g=>`${esc(g[0].game)} (${g.map(x=>esc(teamOf(x.p))).join(', ')})`).join('; ');
+    flags.push(`<div class="flag corr"><span>⚠</span><span><b>Correlated legs — the cash number above is wrong.</b>
+      ${who}. The simulation draws every leg independently, which is false for legs on the same game.
+      If they move together the real cash probability is <b>higher</b> than shown; if they fight each other it is lower.
+      Nothing here corrects for it.</span></div>`);
+  }
+  const props = live.filter(x=>x.mkt==='prop');
+  if(props.length)
+    flags.push(`<div class="flag"><span>⚠</span><span><b>${props.length} prop leg${props.length===1?'':'s'}</b>
+      — ${props.map(x=>esc(teamOf(x.p))).join(', ')}. Prop standard deviation is <code>line × 0.55</code>, a placeholder the
+      brief calls the weakest number in the build. Their Worst Beat exposure is the softest column on this page.</span></div>`);
+  if(levers.includes(3))
+    flags.push(`<div class="flag"><span>⚠</span><span><b>Worst CLV is unmeasured.</b> No closing prices are captured yet,
+      so in the simulation CLV picks uniformly among whoever is still tied — that is what "no information" means.
+      It stays TBD in the table until the close snapshot ships.</span></div>`);
+  if(levers.length<4)
+    flags.push(`<div class="flag"><span>⚠</span><span><b>Only ${levers.length} of 4 levers are in the draw.</b>
+      Fewer levers is a more deterministic objective, which is the thing the randomised hierarchy exists to prevent.</span></div>`);
+  document.getElementById('dgFlags').innerHTML = flags.join('');
+
+  // ---- per-player table ----
+  const order = live.map((x,i)=>i).sort((a,b)=>R.bozo[b]-R.bozo[a]);
+  document.querySelector('#dgTable tbody').innerHTML =
+    `<tr><th>Who</th><th>Leg</th><th>Leg wins</th><th>Bozo odds</th><th>Killed it alone</th><th>CLV</th><th>Usually named by</th></tr>`
+    + order.map(i=>{
+      const x=live[i];
+      const mine = ME && x.p===ME.name ? ' class="me"' : '';
+      const by = R.by[i];
+      return `<tr${mine}><td class="who">${esc(teamOf(x.p))}</td>
+        <td class="pk">${esc(x.label)} <span class="px">${x.price>0?'+':''}${x.price}</span>${x.mkt==='prop'?' <span class="tm">· prop</span>':''}</td>
+        <td><span class="mcell"><span class="v">${pct(R.win[i])}</span>${meter(R.win[i])}</span></td>
+        <td><span class="mcell"><span class="v">${pct(R.bozo[i])}</span>${meter(R.bozo[i],true)}</span></td>
+        <td class="px">${pct(R.solo[i])}</td>
+        <td><span class="tbd">TBD</span></td>
+        <td class="tm">${by ? esc(by.name)+' · '+pct(by.share) : '—'}</td></tr>`;
+    }).join('');
+
+  document.getElementById('dgNote').innerHTML =
+    `<b>Bozo odds</b> is the chance you wear it: the week simulated ${R.sims.toLocaleString()} times, each run drawing a fresh
+     hierarchy from the ${levers.length} live lever${levers.length===1?'':'s'} and walking the same cascade the grader walks.
+     <b>Killed it alone</b> is the chance your leg is the only loser on the ticket.
+     Both are model output, not observation — they inherit whatever the SD table gets wrong.`;
+}
+
+/* ---------------- season, as a split-flap board ---------------- */
+// Dark plate in both themes, same call as .machine and .verdict. A chalkboard was
+// considered: green field and handwriting fight the mono/terminal identity every
+// other surface on this page uses, and it has no natural way to show a count change.
+let lbPrev = {};
+function paintTicker(players, t, mx){
+  const el=document.getElementById('lb');
+  const rows = players.slice().sort((a,b)=>t[b]-t[a]||a.localeCompare(b));
+  el.innerHTML =
+    '<div class="thead"><span>#</span><span>Dawg</span><span>Bozos</span></div>' +
+    rows.map((p,i)=>{
+      const n=String(t[p]||0);
+      const flaps=n.split('').map(ch=>`<b class="${t[p]?'':'zero'}">${ch}</b>`).join('');
+      return `<div class="trow${ME&&p===ME.name?' me2':''}">
+        <span class="rk">${i+1}</span>
+        <span class="nm2">${esc(teamOf(p))}${t[p]===mx&&mx>0?'<span class="fund">funds this week</span>':''}</span>
+        <span class="flap">${flaps}</span></div>`;
+    }).join('');
+  const trs=el.querySelectorAll('.trow');
+  rows.forEach((p,i)=>{
+    if(lbPrev[p]!==undefined && lbPrev[p]!==t[p] && trs[i])
+      trs[i].querySelectorAll('.flap b').forEach(b=>b.classList.add('flip'));
+    lbPrev[p]=t[p];
+  });
+  const total=Object.values(t).reduce((a,b)=>a+b,0);
+  document.getElementById('lbMeta').textContent =
+    total ? total+' ticket'+(total===1?'':'s')+' worn this season' : 'nobody has worn one yet';
+}
+
+/* ---------------- slot machine ----------------
+   Four reels in a row: left to right is 1st through 4th in the hierarchy.
+   The machine now lives on the board at ALL times. Before the draw it is ARMED —
+   reels idling, nothing decided. It stops only when the server has actually drawn,
+   so a stopped reel is always a result that already exists on the server, never a
+   client-side roll. That distinction is the whole reason the draw is server-side.
+   Reel COUNT follows the league's live levers, so a three-lever league gets three
+   reels rather than a fourth that never stops. */
+const REP=9;
+let strips=[], wins=[], reelSet=[];
+const reduced = matchMedia('(prefers-reduced-motion:reduce)').matches;
+const ORD_LBL=['1st','2nd','3rd','4th','5th','6th','7th','8th'];
+
+function buildReels(active){
+  if(reelSet.join(',')===active.join(',')) return;
+  reelSet=active.slice(); strips=[]; wins=[];
+  const r=document.getElementById('reels'); r.innerHTML='';
+  r.style.gridTemplateColumns=`repeat(${active.length},minmax(0,1fr))`;
+  for(let i=0;i<active.length;i++){
     const s=document.createElement('div');
-    s.innerHTML=`<div class="pos">${['1st','2nd','3rd','4th'][i]}</div>`;
+    s.innerHTML=`<div class="pos">${ORD_LBL[i]||(i+1)}</div>`;
     const w=document.createElement('div'); w.className='win';
     const st=document.createElement('div'); st.className='strip';
-    for(let k=0;k<REP;k++) LEVERS.forEach(l=>{
-      const c=document.createElement('div'); c.className='cell'; c.textContent=l.name; st.appendChild(c);
+    st.style.animationDelay=(-0.62*i)+'s';
+    for(let k=0;k<REP;k++) active.forEach(li=>{
+      const c=document.createElement('div'); c.className='cell';
+      c.textContent=LEVERS[li].name; st.appendChild(c);
     });
     w.appendChild(st); s.appendChild(w); r.appendChild(s); strips.push(st); wins.push(w);
   }
-})();
-const reduced = matchMedia('(prefers-reduced-motion:reduce)').matches;
+  // the idle loop scrolls exactly one full lever set, so it seams invisibly.
+  // Measure rather than assume 70px — the cell height is CSS and will get retuned.
+  const H=cellH();
+  strips.forEach(st=>st.style.setProperty('--spin',(active.length*H)+'px'));
+}
+function cellH(){ return (wins[0] && wins[0].getBoundingClientRect().height) || 70; }
+function reelStop(lev){
+  const pos=Math.max(0, reelSet.indexOf(lev));
+  return ((REP-3)*reelSet.length + pos)*cellH();
+}
+/* Which levers are on the machine. Once a draw exists, the machine shows THAT
+   draw's levers — a manager who edits the lever set mid-week must not silently
+   repaint a hierarchy that has already been written. */
+function activeLevers(ord){
+  if(ord && ord.length) return ord.slice().sort((a,b)=>a-b);
+  const l=(settings().levers||[]).slice().sort((a,b)=>a-b);
+  return l.length ? l : [0,1,2,3];
+}
+function paintMachine(ord){
+  const m=document.getElementById('machine');
+  buildReels(activeLevers(ord));
+  if(!ord || !ord.length){
+    m.classList.add('armed');
+    wins.forEach(w=>w.classList.remove('locked'));
+    // '' rather than null: null means "nothing has ever been painted", which is
+    // what makes a page loaded onto an already-drawn week render statically
+    // instead of replaying an animation for a draw that happened days ago.
+    drawnOrder='';
+    document.getElementById('drawState').textContent='armed · not drawn';
+    document.getElementById('ord').innerHTML = reelSet.map(li=>
+      `<li class="on ghost"><span class="n">·</span><span><b>${LEVERS[li].name}</b>`
+      + `<span class="d"> — ${LEVERS[li].desc}</span></span></li>`).join('');
+    document.getElementById('drawNote').textContent =
+      `${reelSet.length} lever${reelSet.length===1?'':'s'} are in the draw; the order is not decided yet. `
+      + 'The server draws a fresh permutation the moment the last leg lands and writes it once — these reels stop on that. Nothing on this page can re-roll it.';
+    return;
+  }
+  m.classList.remove('armed');
+  document.getElementById('drawState').textContent =
+    'drawn ' + (S.closeTs ? when(S.closeTs) : 'at the close');
+  document.getElementById('drawNote').textContent =
+    'Drawn on the server the moment the last leg landed — the reels are showing a result that already exists. Only legs that lost are eligible. Ties fall to the next rule down.';
+  const key=ord.join(',');
+  if(drawnOrder!==key){ const first = drawnOrder===null; drawnOrder=key; first?paintOrder(ord):spin(ord); }
+}
 function spin(order){
-  document.getElementById('drawCard').style.display='';
   const lv=document.getElementById('lever');
   lv.classList.add('pulled'); setTimeout(()=>lv.classList.remove('pulled'),430);
   document.getElementById('ord').innerHTML=''; wins.forEach(w=>w.classList.remove('locked'));
-  const H=wins[0].getBoundingClientRect().height||70;
   order.forEach((lev,slot)=>{
-    const s=strips[slot];
+    const s=strips[slot]; if(!s) return;
     s.style.transition='none'; s.style.transform='translateY(0)'; void s.offsetHeight;
     const dur = reduced ? 0 : 2000+slot*450;
     s.style.transition=`transform ${dur}ms cubic-bezier(.11,.7,.14,1)`;
-    s.style.transform=`translateY(-${((REP-3)*N+lev)*H}px)`;
-    setTimeout(()=>{ wins[slot].classList.add('locked'); addOrd(lev,slot); }, dur+30);
+    s.style.transform=`translateY(-${reelStop(lev)}px)`;
+    setTimeout(()=>{ if(wins[slot]) wins[slot].classList.add('locked'); addOrd(lev,slot); }, dur+30);
   });
 }
 function addOrd(lev,slot){
@@ -2175,11 +2615,11 @@ function addOrd(lev,slot){
   requestAnimationFrame(()=>li.classList.add('on'));
 }
 function paintOrder(order){
-  const H=wins[0].getBoundingClientRect().height||70;
   document.getElementById('ord').innerHTML='';
   order.forEach((lev,slot)=>{
-    strips[slot].style.transition='none';
-    strips[slot].style.transform=`translateY(-${((REP-3)*N+lev)*H}px)`;
+    const s=strips[slot]; if(!s) return;
+    s.style.transition='none';
+    s.style.transform=`translateY(-${reelStop(lev)}px)`;
     wins[slot].classList.add('locked'); addOrd(lev,slot);
   });
 }
@@ -2203,7 +2643,7 @@ async function autoGrade(){
       results[p]=results[p]||{};
       if(x.mkt==='total'){
         const tot=g.teams.reduce((a,t)=>a+(t.score||0),0);
-        results[p].actual=tot; results[p].won = x.dir==='over' ? tot>x.line : tot<x.line;
+        results[p].actual=tot; results[p].won = dirOf(x)==='over' ? tot>x.line : tot<x.line;
       }else{
         const mineT=g.teams.find(t=>t.abbr===x.side), opp=g.teams.find(t=>t.abbr!==x.side);
         if(!mineT||!opp){ missed.push(p); continue; }
@@ -2258,8 +2698,8 @@ async function decide(){
     if(r.actual!=null){
       // A zero on a market where zero is possible takes the floor rather than
       // pretending a Bernoulli outcome sits on the same scale as a point margin.
-      if(r.actual===0 && (x.mkt==='prop'||x.mkt==='total') && x.dir==='over') beat=999;
-      else { const exp=expected(x); beat = (x.dir==='under' ? (r.actual-exp) : (exp-r.actual))/sd; }
+      if(r.actual===0 && (x.mkt==='prop'||x.mkt==='total') && dirOf(x)==='over') beat=999;
+      else { const exp=expected(x); beat = (dirOf(x)==='under' ? (r.actual-exp) : (exp-r.actual))/sd; }
     }
     const close = r.close!=null ? r.close : x.price;
     M[p]={odds:imp(x.price), beat, last:x.ts, clv:imp(close)-imp(x.price)};
