@@ -18,6 +18,7 @@
  *   POST /bozo/next    — archive week, open the next (admin session)
  *   POST /bozo/reset   — admin clears a player's password so their original
  *                        join link works again (the no-email recovery path)
+ *   POST /bozo/config  — league-manager dials: the legal-bet price band (admin)
  *
  * SECRETS (dashboard → Worker → Settings → Variables → Encrypt):
  *   XAI_KEY      = xai-... key
@@ -68,6 +69,21 @@ const LEAGUE = {
 };
 const MARKETS = ["spread", "ml", "total", "prop"];
 
+// Legal-bet band, league-manager adjustable via POST /bozo/config. `ceil` is the
+// closest-to-even price allowed, `floor` the deepest favorite. Favorites only, so
+// ceil never rises above −100. Defaults apply when /bozo/config is absent.
+// ⚠️ Kap changed the rule 8/5: floor moved −300 → −500. The band bounds the PARLAY
+// price, not individual embarrassment — a deeper floor makes the ticket likelier
+// to cash for less. Taste dial, not fairness dial (brief).
+const BAND_DEFAULT = { ceil: -100, floor: -500 };
+
+function bandOf(state) {
+  const c = (state && state.config) || {};
+  const ceil = Number.isFinite(c.bandCeil) ? c.bandCeil : BAND_DEFAULT.ceil;
+  const floor = Number.isFinite(c.bandFloor) ? c.bandFloor : BAND_DEFAULT.floor;
+  return { ceil, floor };
+}
+
 function corsFor(origin) {
   const allow = ORIGINS.includes(origin) ? origin : ORIGINS[0];
   return {
@@ -108,6 +124,7 @@ export default {
     if (url.pathname === "/bozo/grade")   return bozoGrade(request, env, cors);
     if (url.pathname === "/bozo/next")    return bozoNext(request, env, cors);
     if (url.pathname === "/bozo/reset")   return bozoReset(request, env, cors);
+    if (url.pathname === "/bozo/config")  return bozoConfigSet(request, env, cors);
     if (url.pathname === "/tts")          return handleTts(request, env, cors);
     if (url.pathname === "/tts/models")   return ttsModels(request, env, cors);
     if (url.pathname === "/tts/voices")   return ttsVoices(request, env, cors);
@@ -526,9 +543,13 @@ const unb64urlStr = s => atob(s.replace(/-/g, "+").replace(/_/g, "/"));
 
 // The pepper is mixed into the password itself, so the stored hash is useless
 // to anyone who steals the database but not the Worker's secrets.
+// ⚠️ fromCharCode(0), NOT a backslash-u escape: the NUL separator must stay, but the
+// escape spelling of it corrupted twice in clipboard transcription (collapsing to a
+// real NUL, which truncates the Windows clipboard). Identical runtime string; every
+// existing hash still verifies. Do not "simplify" back to the escape.
 async function pbkdf2(password, pepper, saltB64, iters) {
   const key = await crypto.subtle.importKey(
-    "raw", te.encode(password + "\u0000" + pepper), "PBKDF2", false, ["deriveBits"]);
+    "raw", te.encode(password + String.fromCharCode(0) + pepper), "PBKDF2", false, ["deriveBits"]);
   const salt = Uint8Array.from(atob(saltB64), c => c.charCodeAt(0));
   const bits = await crypto.subtle.deriveBits(
     { name: "PBKDF2", hash: "SHA-256", salt, iterations: iters }, key, 256);
@@ -742,8 +763,39 @@ async function bozoReset(request, env, cors) {
   }
 }
 
+// POST /bozo/config — league-manager dials. v1: the price band. Lives at
+// /bozo/config (world-readable like the rest of /bozo — the page reads it straight
+// from Firebase to mirror the check client-side; the Worker is the enforcer).
+// PATCHed, and deliberately NOT in bozoNext's null list, so it survives rollovers.
+async function bozoConfigSet(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const auth = await requireAdmin(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const ceil = Math.round(Number(body.bandCeil));
+  const floor = Math.round(Number(body.bandFloor));
+  // Favorites only: the ceiling can never rise above −100. Floor below the ceiling,
+  // and bounded so a typo (−50000) can't turn the band meaningless.
+  if (!Number.isFinite(ceil) || !Number.isFinite(floor))
+    return json({ error: "Band values must be numbers." }, 400, cors);
+  if (ceil > -100) return json({ error: "Ceiling can't be shorter than −100 — favorites only." }, 400, cors);
+  if (floor >= ceil) return json({ error: "Floor must be deeper (more negative) than the ceiling." }, 400, cors);
+  if (floor < -2000) return json({ error: "Floor below −2000? That's not a band, that's a typo." }, 400, cors);
+
+  try {
+    await fbPatch(env, "/bozo/config", { bandCeil: ceil, bandFloor: floor, updatedTs: Date.now(), updatedBy: auth.name });
+    return json({ ok: true, bandCeil: ceil, bandFloor: floor }, 200, cors);
+  } catch (e) {
+    return json({ error: "Database write failed: " + e.message }, 502, cors);
+  }
+}
+
 /* =============================== /bozo/pick =============================== */
-// One leg per person. Favorites only, −100 to −300. No exact duplicates.
+// One leg per person. Favorites only, band from /bozo/config. No exact duplicates.
 // Editing is allowed while the board is open — the Worker stamps a fresh server
 // timestamp, which is what "editing resets your clock and your price" means.
 // When the last leg lands, the board locks and the permutation is drawn.
@@ -773,7 +825,7 @@ async function bozoPick(request, env, cors) {
     }
 
     const p = body.pick || {};
-    const err = validatePick(p, name, state.picks || {});
+    const err = validatePick(p, name, state.picks || {}, bandOf(state));
     if (err) return json({ error: err }, 400, cors);
 
     const pick = {
@@ -799,14 +851,14 @@ async function bozoPick(request, env, cors) {
   }
 }
 
-function validatePick(p, name, existing) {
+function validatePick(p, name, existing, band) {
   if (!LEAGUE[p.sport]) return "Unknown sport.";
   if (!MARKETS.includes(p.mkt)) return "Unknown market.";
   if (!p.eventId || !p.game) return "Pick a game.";
   if (!p.label || !p.side) return "Incomplete pick.";
   const price = Number(p.price);
-  if (!isFinite(price) || price > -100 || price < -300)
-    return `${p.price} is outside the −100 to −300 band.`;
+  if (!isFinite(price) || price > band.ceil || price < band.floor)
+    return `${p.price} is outside the ${band.ceil} to ${band.floor} band.`;
   if (p.mkt !== "ml" && !isFinite(Number(p.line))) return "Number is required for that market.";
   const label = String(p.label).toLowerCase();
   for (const [who, x] of Object.entries(existing)) {
@@ -867,7 +919,7 @@ async function placeAndDraw(env, picks, state) {
 //
 // ⚠️ mainLine (the market's main number, e.g. −6.5 when someone bought down to −9.5) is
 // reserved and stays null until the odds-API spike lands. A stored altLine BOOLEAN was
-// rejected: the −100/−300 band forces almost every spread and total to be an alt line,
+// rejected: the band forces almost every spread and total to be an alt line,
 // and moneylines can't be one, so the flag would be constant wherever it's derivable.
 // The distance from the main number is the part that actually varies between players.
 
