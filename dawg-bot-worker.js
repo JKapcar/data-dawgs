@@ -464,6 +464,19 @@ async function fbPut(env, path, value, etag) {
   return true;
 }
 
+// PATCH updates only the children named. Keys may carry slashes for a deep write
+// ("2026-w1-Kap/won"), and a null value deletes that child. Both properties matter
+// for the ledger: stages patch only the fields they own, and bozoNext can clear the
+// week without replacing the node.
+async function fbPatch(env, path, value) {
+  const r = await fetch(fbUrl(env, path), {
+    method: "PATCH",
+    body: JSON.stringify(value),
+  });
+  if (!r.ok) throw new Error("RTDB patch " + r.status);
+  return true;
+}
+
 async function fbDelete(env, path) {
   const r = await fetch(fbUrl(env, path), { method: "DELETE" });
   if (!r.ok) throw new Error("RTDB delete " + r.status);
@@ -778,7 +791,7 @@ async function bozoPick(request, env, cors) {
     const picks = (await fbGet(env, "/bozo/picks")).data || {};
     let placed = false;
     if (Object.keys(picks).length >= players.length) {
-      placed = await placeAndDraw(env, picks);
+      placed = await placeAndDraw(env, picks, state);
     }
     return json({ ok: true, ts: pick.ts, placed }, 200, cors);
   } catch (e) {
@@ -805,7 +818,7 @@ function validatePick(p, name, existing) {
 
 // Server-side Fisher–Yates over the four levers, crypto-seeded, written once.
 // The ETag guard means two simultaneous final submissions can't both draw.
-async function placeAndDraw(env, picks) {
+async function placeAndDraw(env, picks, state) {
   const cur = await fbGet(env, "/bozo/order", true);
   if (cur.data != null) return true;                 // already drawn — never redraw
 
@@ -823,7 +836,153 @@ async function placeAndDraw(env, picks) {
   const closeTs = Math.max(...Object.values(picks).map(x => x.ts || 0));
   await fbPut(env, "/bozo/status", "placed");
   await fbPut(env, "/bozo/closeTs", closeTs);
+
+  // ⚠️ The ledger is written HERE, at lock — not at grade, and not in bozoNext. A week
+  // that locks but never gets graded must still leave a complete record of the entry.
+  await ledgerWriteEntries(env, (state && state.season) || SEASON, (state && state.week) || 1, picks, order);
   return true;
+}
+
+/* =============================== Bozo ledger ============================== */
+// A flat, one-row-per-leg record of the season, keyed <season>-w<week>-<player>.
+// ~8 players × ~18 weeks ≈ 150 rows ≈ 45 KB by season's end.
+//
+// Lives at /bozo/ledger — deliberately INSIDE /bozo, which is already
+// {".read":true,".write":false}, so it needs no Firebase rules change. A sibling node
+// would have no rule at all and default to deny.
+//
+// Keyed object, never an array: each stage PATCHes only the fields it owns, retries are
+// idempotent, and no stage has to read-modify-write 150 rows to change 8.
+//
+// Four write stages:
+//   LOCK       entry, drawn hierarchy, submission timing   → placeAndDraw
+//   KICKOFF    close, closeTs, closeSource                 → cron (not built)
+//   PLACEMENT  placedPrice, mainLine                       → slip parse (not built)
+//   GRADE      actual, result, won, bozo                   → bozoGrade
+//
+// ⚠️ Raw inputs only. imp, clv, beat and altLine are pure functions of price, close,
+// actual, line, mainLine and the sport SD. The SD table is flagged as needing
+// calibration, so persisting derivatives would freeze today's formulas into last
+// year's rows. Derive them in the page and in the CSV export.
+//
+// ⚠️ mainLine (the market's main number, e.g. −6.5 when someone bought down to −9.5) is
+// reserved and stays null until the odds-API spike lands. A stored altLine BOOLEAN was
+// rejected: the −100/−300 band forces almost every spread and total to be an alt line,
+// and moneylines can't be one, so the flag would be constant wherever it's derivable.
+// The distance from the main number is the part that actually varies between players.
+
+const SEASON = 2026;
+
+const ledgerKey = (season, week, playerKey) => `${season}-w${week}-${playerKey}`;
+
+// ⚠️ /bozo/picks and /bozoauth are keyed with encodeURIComponent(name), so "The Kid"
+// is stored as "The%20Kid" and nothing on the page decodes it. The ledger KEY keeps
+// that encoding — it stays URL-safe for a targeted row read and for deep-path PATCH
+// keys — but the player COLUMN is decoded, because that column is what lands in the CSV.
+const playerName = k => { try { return decodeURIComponent(k); } catch { return k; } };
+
+// Entry-stage rows. Everything here is known the instant the board locks.
+function ledgerEntries(season, week, picks, order) {
+  const names = Object.keys(picks);
+  const byTs = names.slice().sort((a, b) => (picks[a].ts || 0) - (picks[b].ts || 0));
+  const closeTs = Math.max(...names.map(n => picks[n].ts || 0));
+
+  // Shortest odds = the biggest favorite = the MOST negative price. This has to match
+  // decide(), which takes max(imp(price)): −300 is chalkier than −110.
+  // ⚠️ An earlier spec snippet sorted the other way and called −100 "chalkiest".
+  let chalk = null;
+  for (const n of names) if (chalk === null || picks[n].price < picks[chalk].price) chalk = n;
+
+  const rows = {};
+  for (const n of names) {
+    const x = picks[n];
+    rows[ledgerKey(season, week, n)] = {
+      season, week, player: playerName(n),
+      sport: x.sport, eventId: x.eventId, game: x.game,
+      mkt: x.mkt, side: x.side, dir: x.dir,
+      line: x.line == null ? null : x.line,     // numeric, and separate from the label,
+      label: x.label,                           // or the Bozo Index can't be computed
+      prop: x.prop || null,
+      price: x.price,
+      mainLine: null,                           // reserved — see the note above
+      ts: x.ts || null,                         // server time, the reason /bozo/pick exists
+      rank: byTs.indexOf(n) + 1,                // 1 = first in, N = Last In
+      secToClose: x.ts && closeTs ? Math.round((closeTs - x.ts) / 1000) : null,
+      tiebreak: order || null,                  // the week's drawn lever hierarchy
+      shortestOdds: n === chalk,
+      slipKey: x.slipKey || null,
+    };
+  }
+  return rows;
+}
+
+// ⚠️ Never throws into the caller. At lock the ticket is already placed and the
+// permutation already drawn; failing the last submitter's request over a bookkeeping
+// write would be worse than a missing row. bozoGrade backfills anything that didn't land.
+async function ledgerWriteEntries(env, season, week, picks, order) {
+  try {
+    await fbPatch(env, "/bozo/ledger", ledgerEntries(season, week, picks, order));
+    return true;
+  } catch (e) {
+    console.log("ledger: entry write failed — " + e.message);
+    return false;
+  }
+}
+
+// Idempotent by construction: writes only rows that are absent, so it can never clobber
+// a field a later stage already patched in.
+async function ledgerBackfill(env, state) {
+  const picks = state.picks || {};
+  if (!Object.keys(picks).length) return false;
+  let have = {};
+  try { have = (await fbGet(env, "/bozo/ledger")).data || {}; }
+  catch (e) { console.log("ledger: backfill read failed — " + e.message); return false; }
+
+  const rows = ledgerEntries(state.season || SEASON, state.week || 1, picks, state.order || null);
+  const missing = {};
+  for (const k of Object.keys(rows)) if (!have[k]) missing[k] = rows[k];
+  if (!Object.keys(missing).length) return false;
+
+  try { await fbPatch(env, "/bozo/ledger", missing); return true; }
+  catch (e) { console.log("ledger: backfill write failed — " + e.message); return false; }
+}
+
+// Grade-stage deep-path update. Keys carry slashes, so each field is written on its own
+// and nothing written at lock is touched.
+function ledgerGradeUpdate(season, week, results, bozo, picks) {
+  // ⚠️ Results arrive keyed however the page keyed them, and the page keys off
+  // Object.keys(picks) — which is URL-encoded. Map any decoded name back onto the
+  // stored key, or the day someone fixes the "The%20Kid" display bug the grade stage
+  // starts writing a SECOND, orphaned row per player instead of patching the real one.
+  const keys = Object.keys(picks || {});
+  const norm = k => keys.includes(k) ? k
+    : keys.includes(encodeURIComponent(k)) ? encodeURIComponent(k)
+    : (keys.find(x => playerName(x) === k) || k);
+  const bozoKey = bozo === undefined || bozo === null ? bozo : norm(bozo);
+
+  const upd = {};
+  for (const [p0, r] of Object.entries(results || {})) {
+    if (!r || typeof r !== "object") continue;
+    const p = norm(p0);
+    const k = ledgerKey(season, week, p);
+
+    // result is the four-state truth; won is the boolean derived from it, and null on
+    // push/void so a push can never silently count as a loss.
+    const result = r.result || (r.won === true ? "won" : r.won === false ? "lost" : null);
+    if (result) {
+      upd[`${k}/result`] = result;
+      upd[`${k}/won`] = result === "won" ? true : result === "lost" ? false : null;
+    }
+    if (r.actual !== undefined) upd[`${k}/actual`] = r.actual ?? null;
+    if (r.close !== undefined) {
+      upd[`${k}/close`] = r.close ?? null;
+      // ⚠️ Record WHERE a close came from. Hand-entered and cron-captured closes must
+      // never end up silently mixed in the same column.
+      upd[`${k}/closeSource`] = r.close == null ? null : "manual";
+    }
+    if (bozoKey !== undefined) upd[`${k}/bozo`] = p === bozoKey;
+  }
+  return upd;
 }
 
 /* ========================== /bozo/grade, /bozo/next ======================= */
@@ -849,7 +1008,8 @@ async function bozoGrade(request, env, cors) {
   catch { return json({ error: "Bad JSON." }, 400, cors); }
 
   try {
-    const status = (await fbGet(env, "/bozo/status")).data;
+    const state = (await fbGet(env, "/bozo")).data || {};
+    const status = state.status;
     if (status !== "placed" && status !== "graded")
       return json({ error: "Nothing to grade — ticket isn't placed." }, 409, cors);
 
@@ -857,8 +1017,15 @@ async function bozoGrade(request, env, cors) {
       await fbPut(env, "/bozo/results", body.results);
     if (body.bozo !== undefined) await fbPut(env, "/bozo/bozo", body.bozo);
     if (body.bozoWhy !== undefined) await fbPut(env, "/bozo/bozoWhy", String(body.bozoWhy).slice(0, 200));
+
+    // Ledger last, before the status flip: if it fails the admin gets a 502, status is
+    // still "placed", and hitting Decide again replays the whole thing idempotently.
+    const backfilled = await ledgerBackfill(env, state);
+    const upd = ledgerGradeUpdate(state.season || SEASON, state.week || 1, body.results, body.bozo, state.picks);
+    if (Object.keys(upd).length) await fbPatch(env, "/bozo/ledger", upd);
+
     if (body.graded) await fbPut(env, "/bozo/status", "graded");
-    return json({ ok: true }, 200, cors);
+    return json({ ok: true, backfilled }, 200, cors);
   } catch (e) {
     return json({ error: "Database write failed: " + e.message }, 502, cors);
   }
@@ -873,10 +1040,19 @@ async function bozoNext(request, env, cors) {
     const state = (await fbGet(env, "/bozo")).data || {};
     const history = Array.isArray(state.history) ? state.history : [];
     history.push({ week: state.week || 1, bozo: state.bozo || null });
-    await fbPut(env, "/bozo", {
+
+    // ⚠️ PATCH, not PUT. A wholesale PUT of /bozo replaces the whole node, which under
+    // the write-at-lock ledger would delete /bozo/ledger every single week — the site
+    // whose thesis is "the receipts stay up" quietly shredding its receipts. The nulls
+    // clear this week's children explicitly; anything not named here survives, so a
+    // node added later can't be silently destroyed the same way.
+    await fbPatch(env, "/bozo", {
+      season: state.season || SEASON,
       week: (state.week || 1) + 1,
       status: "open",
       history,
+      picks: null, order: null, results: null,
+      bozo: null, bozoWhy: null, closeTs: null,
     });
     return json({ ok: true, week: (state.week || 1) + 1 }, 200, cors);
   } catch (e) {
