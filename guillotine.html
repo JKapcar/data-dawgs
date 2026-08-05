@@ -303,6 +303,12 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 .emptystate{text-align:center;padding:10px 0 2px}
 .emptystate .big{font-size:15px;font-weight:750;color:var(--ink-1);margin-bottom:4px}
 .emptystate p{font-size:13px;color:var(--ink-2);margin:0 auto;max-width:460px;line-height:1.6}
+.mstat{font-size:8.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;
+  padding:2px 6px;border-radius:4px;border:1px solid var(--grid);color:var(--ink-3);
+  vertical-align:middle;margin-left:5px}
+.mstat.on{border-color:color-mix(in srgb,var(--good) 55%,transparent);color:var(--good)}
+#gxTab td.me{font-weight:800;color:var(--accent)}
+#gxTab tr.risk td{background:color-mix(in srgb,var(--bad) 7%,transparent)}
 </style>
 </head>
 <body>
@@ -964,35 +970,51 @@ STATE: everything saves in the browser on that device. A different device shows 
   <div class="lab-hd"><span class="lab-chip">Labs</span></div>
   <h1 style="margin:10px 0 0;font-size:27px;font-weight:800;letter-spacing:-.01em">Guillotine Companion</h1>
   <p class="lab-sub">Every week the lowest-scoring team is eliminated and its roster hits waivers. You do not need the best team &mdash; you need to not be last. That is a different problem, and it needs a different tool.</p>
-  <div class="notbuilt"><b>Not built yet.</b> This page is a design mockup. Every figure below is illustrative sample data &mdash; no league is connected, nothing is simulated, and no probability on this page was computed.</div>
+  <div class="notbuilt"><b>Partly built.</b> The Sleeper sync and the survival maths are live and run on your league&rsquo;s own scoring history. Everything marked <em>Planned</em> below is still a mockup. Nothing here writes to your league &mdash; Sleeper&rsquo;s API is read-only and takes no login.</div>
 
   <div class="hero-card">
-    <h2>Survival, not scoring <span class="samp">Sample data · nothing computed</span></h2>
-    <div class="bigstat">
-      <span class="v">71%</span>
-      <span class="l">chance of surviving Week&nbsp;6 &mdash; the probability your team is <em>not</em> the lowest scorer, which is the only question this format asks.</span>
+    <h2>Survival, not scoring <span class="samp" id="gxState">Not connected</span></h2>
+
+    <div id="gxConnect">
+      <p style="margin:0 0 12px;font-size:13.5px;line-height:1.65;color:var(--ink-2)">
+        Paste a Sleeper league ID. The API is read-only and needs no login, so there is nothing to
+        authorize and nothing here can change your league. The ID is the long number in your league
+        URL &mdash; <code style="font-size:12px;color:var(--ink-1)">sleeper.com/leagues/<b>1234567890123456789</b>/team</code>.
+      </p>
+      <div class="controls" style="margin-bottom:6px">
+        <input type="text" id="gxId" placeholder="League ID" style="width:260px" inputmode="numeric">
+        <button class="btn" id="gxGo" type="button">Connect</button>
+        <button class="btn" id="gxClear" type="button" style="display:none">Disconnect</button>
+      </div>
+      <p id="gxMsg" class="legend" style="margin-top:4px"></p>
     </div>
-    <div class="gauge"><svg viewBox="0 0 560 74" width="100%" style="height:auto" role="img" aria-label="Illustrative gauge: projected score 118.7 against a projected chop line of 96.4"><title>Sample chop-line gauge</title><rect x="12" y="28" width="536" height="14" rx="7" fill="var(--grid)"/><rect x="12" y="28" width="176.9" height="14" rx="7" fill="color-mix(in srgb,var(--bad) 55%,transparent)"/><line x1="188.9" y1="20" x2="188.9" y2="50" stroke="var(--bad)" stroke-width="2.5"/><text x="188.9" y="15" font-size="9.5" font-weight="700" fill="var(--bad)" text-anchor="middle">CHOP LINE 96.4</text><line x1="338.3" y1="18" x2="338.3" y2="52" stroke="var(--accent)" stroke-width="3"/><circle cx="338.3" cy="35" r="6" fill="var(--accent)"/><text x="338.3" y="66" font-size="10" font-weight="800" fill="var(--accent)" text-anchor="middle">YOU 118.7</text><text x="12" y="66" font-size="8.5" fill="var(--ink-3)">70</text><text x="548" y="66" font-size="8.5" fill="var(--ink-3)" text-anchor="end">150</text></svg></div>
-    <div class="statrow">
-      <div class="s"><div class="sv">118.7</div><div class="sl">Projected score</div></div>
-      <div class="s"><div class="sv">96.4</div><div class="sl">Projected chop line</div></div>
-      <div class="s"><div class="sv">+22.3</div><div class="sl">Margin</div></div>
-      <div class="s"><div class="sv">12</div><div class="sl">Teams left</div></div>
-      <div class="s"><div class="sv">$3,140</div><div class="sl">FAAB in pool</div></div>
+
+    <div id="gxLive" style="display:none">
+      <div class="bigstat">
+        <span class="v" id="gxPct">&mdash;</span>
+        <span class="l" id="gxPctL"></span>
+      </div>
+      <div class="gauge" id="gxGauge"></div>
+      <div class="statrow" id="gxStats"></div>
+      <div class="tscroll" style="margin-top:20px"><table class="dtab" id="gxTab"></table></div>
+      <p class="legend" id="gxNote"></p>
     </div>
-    <p class="legend" style="margin-top:20px"><b>Survival probability by week</b> &mdash; the compounding is the point. Six weeks of 90% survival is not 90%, it is 53%.</p>
-    <svg viewBox="0 0 560 132" width="100%" style="height:auto" role="img" aria-label="Illustrative survival probability declining from 99 percent in week 1 to 24 percent by week 12"><title>Sample survival probability by week</title><line x1="34" y1="10.0" x2="550" y2="10.0" stroke="var(--grid)" stroke-width="1"/><text x="29" y="10.0" font-size="8" fill="var(--ink-3)" text-anchor="end" dy="3">100%</text><line x1="34" y1="59.0" x2="550" y2="59.0" stroke="var(--grid)" stroke-width="1"/><text x="29" y="59.0" font-size="8" fill="var(--ink-3)" text-anchor="end" dy="3">50%</text><line x1="34" y1="108.0" x2="550" y2="108.0" stroke="var(--grid)" stroke-width="1"/><text x="29" y="108.0" font-size="8" fill="var(--ink-3)" text-anchor="end" dy="3">0%</text><polyline points="34.0,11.0 80.9,13.9 127.8,19.8 174.7,25.7 221.6,32.5 268.5,38.4 315.5,46.3 362.4,51.2 409.3,60.0 456.2,67.8 503.1,75.7 550.0,84.5" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="34.0" cy="11.0" r="2.4" fill="var(--accent)"/><circle cx="80.9" cy="13.9" r="2.4" fill="var(--accent)"/><circle cx="127.8" cy="19.8" r="2.4" fill="var(--accent)"/><circle cx="174.7" cy="25.7" r="2.4" fill="var(--accent)"/><circle cx="221.6" cy="32.5" r="2.4" fill="var(--accent)"/><circle cx="268.5" cy="38.4" r="2.4" fill="var(--accent)"/><circle cx="315.5" cy="46.3" r="2.4" fill="var(--accent)"/><circle cx="362.4" cy="51.2" r="2.4" fill="var(--accent)"/><circle cx="409.3" cy="60.0" r="2.4" fill="var(--accent)"/><circle cx="456.2" cy="67.8" r="2.4" fill="var(--accent)"/><circle cx="503.1" cy="75.7" r="2.4" fill="var(--accent)"/><circle cx="550.0" cy="84.5" r="2.4" fill="var(--accent)"/><text x="34.0" y="124" font-size="8" fill="var(--ink-3)" text-anchor="middle">1</text><text x="174.7" y="124" font-size="8" fill="var(--ink-3)" text-anchor="middle">4</text><text x="315.5" y="124" font-size="8" fill="var(--ink-3)" text-anchor="middle">7</text><text x="456.2" y="124" font-size="8" fill="var(--ink-3)" text-anchor="middle">10</text><text x="550.0" y="124" font-size="8" fill="var(--ink-3)" text-anchor="middle">12</text></svg>
-    <p class="legend">⚠️ This is the visualization no competing product ships. Host platforms show a binary <em>On the Block</em> flag for the current week; strategy sites give heuristics. Nobody computes a probability, and nobody compounds it forward.</p>
   </div>
+
+  <div class="hero-card">
+    <h2>How survival compounds <span class="samp">Illustration &mdash; not your league</span></h2>
+    <p class="legend" style="margin:0 0 6px">Six weeks of 90% survival is not 90%. It is 53%. That
+      compounding is the whole reason a weekly &ldquo;On the Block&rdquo; flag is not enough.</p>
+<svg viewBox="0 0 560 132" width="100%" style="height:auto" role="img" aria-label="Illustrative survival probability declining from 99 percent in week 1 to 24 percent by week 12"><title>Sample survival probability by week</title><line x1="34" y1="10.0" x2="550" y2="10.0" stroke="var(--grid)" stroke-width="1"/><text x="29" y="10.0" font-size="8" fill="var(--ink-3)" text-anchor="end" dy="3">100%</text><line x1="34" y1="59.0" x2="550" y2="59.0" stroke="var(--grid)" stroke-width="1"/><text x="29" y="59.0" font-size="8" fill="var(--ink-3)" text-anchor="end" dy="3">50%</text><line x1="34" y1="108.0" x2="550" y2="108.0" stroke="var(--grid)" stroke-width="1"/><text x="29" y="108.0" font-size="8" fill="var(--ink-3)" text-anchor="end" dy="3">0%</text><polyline points="34.0,11.0 80.9,13.9 127.8,19.8 174.7,25.7 221.6,32.5 268.5,38.4 315.5,46.3 362.4,51.2 409.3,60.0 456.2,67.8 503.1,75.7 550.0,84.5" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="34.0" cy="11.0" r="2.4" fill="var(--accent)"/><circle cx="80.9" cy="13.9" r="2.4" fill="var(--accent)"/><circle cx="127.8" cy="19.8" r="2.4" fill="var(--accent)"/><circle cx="174.7" cy="25.7" r="2.4" fill="var(--accent)"/><circle cx="221.6" cy="32.5" r="2.4" fill="var(--accent)"/><circle cx="268.5" cy="38.4" r="2.4" fill="var(--accent)"/><circle cx="315.5" cy="46.3" r="2.4" fill="var(--accent)"/><circle cx="362.4" cy="51.2" r="2.4" fill="var(--accent)"/><circle cx="409.3" cy="60.0" r="2.4" fill="var(--accent)"/><circle cx="456.2" cy="67.8" r="2.4" fill="var(--accent)"/><circle cx="503.1" cy="75.7" r="2.4" fill="var(--accent)"/><circle cx="550.0" cy="84.5" r="2.4" fill="var(--accent)"/><text x="34.0" y="124" font-size="8" fill="var(--ink-3)" text-anchor="middle">1</text><text x="174.7" y="124" font-size="8" fill="var(--ink-3)" text-anchor="middle">4</text><text x="315.5" y="124" font-size="8" fill="var(--ink-3)" text-anchor="middle">7</text><text x="456.2" y="124" font-size="8" fill="var(--ink-3)" text-anchor="middle">10</text><text x="550.0" y="124" font-size="8" fill="var(--ink-3)" text-anchor="middle">12</text></svg>  </div>
 
   <h2 class="secn">Modules</h2>
   <div class="mods">
-    <div class="mod"><div class="n">01</div><h3>Sleeper sync</h3><p>Paste a league ID. Sleeper's read-only API needs no login and no token, so there is nothing to authorize and nothing that can write to your league.</p></div>
-    <div class="mod"><div class="n">02</div><h3>Chop-line projector</h3><p>The projected weekly minimum across surviving teams, and your margin above or below it. The number that decides the week.</p></div>
-    <div class="mod"><div class="n">03</div><h3>Survival odds</h3><p>Monte Carlo over projected team scores and their variance &mdash; this week, and compounded across the rest of the season.</p></div>
-    <div class="mod"><div class="n">04</div><h3>FAAB pacing</h3><p>Dollars appreciate as the pool shrinks: ~$18,000 across 18 teams in week 1 is nearly worthless; ~$400 across five teams in December is not.</p></div>
-    <div class="mod"><div class="n">05</div><h3>Floor-first lineup</h3><p>Maximizes P(score &gt; chop line) rather than expected points. Guillotine is a floor problem and ceiling optimizers get it backwards.</p></div>
-    <div class="mod"><div class="n">06</div><h3>Waiver value</h3><p>Every elimination dumps a full roster into the pool. What just became available, and what it is worth against your remaining budget.</p></div>
+    <div class="mod"><div class="n">01</div><h3>Sleeper sync <span class="mstat on">Live</span></h3><p>Paste a league ID. Sleeper's read-only API needs no login and no token, so there is nothing to authorize and nothing that can write to your league.</p></div>
+    <div class="mod"><div class="n">02</div><h3>Chop-line projector <span class="mstat">Planned</span></h3><p>The projected weekly minimum across surviving teams, and your margin above or below it. The number that decides the week.</p></div>
+    <div class="mod"><div class="n">03</div><h3>Survival odds <span class="mstat on">Live</span></h3><p>Monte Carlo over projected team scores and their variance &mdash; this week, and compounded across the rest of the season.</p></div>
+    <div class="mod"><div class="n">04</div><h3>FAAB pacing <span class="mstat">Planned</span></h3><p>Dollars appreciate as the pool shrinks: ~$18,000 across 18 teams in week 1 is nearly worthless; ~$400 across five teams in December is not.</p></div>
+    <div class="mod"><div class="n">05</div><h3>Floor-first lineup <span class="mstat">Planned</span></h3><p>Maximizes P(score &gt; chop line) rather than expected points. Guillotine is a floor problem and ceiling optimizers get it backwards.</p></div>
+    <div class="mod"><div class="n">06</div><h3>Waiver value <span class="mstat">Planned</span></h3><p>Every elimination dumps a full roster into the pool. What just became available, and what it is worth against your remaining budget.</p></div>
   </div>
 
   <div class="honesty">
@@ -1004,5 +1026,243 @@ STATE: everything saves in the browser on that device. A different device shows 
     Data Dawgs · Play-by-play data from <a href="https://github.com/nflverse" target="_blank" rel="noopener">nflverse</a> · Strategy synthesized from Establish The Run's 2026 Draft Kit (subscriber content, personal use) · Stats format inspired by <a href="https://rbsdm.com/stats/stats/" target="_blank" rel="noopener">rbsdm.com</a>
   </footer>
 </div>
+<script>
+/* ============================================================================
+   SLEEPER SYNC — the real one
+   ============================================================================
+   Sleeper's v1 API is read-only and unauthenticated: there is no token, no OAuth,
+   and no endpoint here that can modify a league. Base https://api.sleeper.app/v1.
+   CORS verified from the datadawgs216.com origin on 8/5/26.
+
+   ⚠️ WHERE THE SURVIVAL NUMBER COMES FROM. It is built from THIS LEAGUE'S OWN
+   completed weeks — each team's mean and standard deviation of weekly score — and
+   nothing else. No external projection feed, no rankings, no ADP. That is a real
+   limitation (it cannot see a bye week or an injury) but it is also why the tool
+   works at all: the research flagged "settle the weekly projection source" as the
+   blocking dependency, and a league's own scoring distribution sidesteps it.
+
+   ⚠️ It needs at least TWO completed weeks. One week gives a mean and no spread,
+   and a survival probability without a spread is a coin flip wearing a lab coat.
+
+   ⚠️ /players/nfl is deliberately NOT fetched. It is ~5MB and Sleeper's own docs say
+   to pull it at most once a day and cache it server-side. Team names come from
+   /users + /rosters, and scores come from /matchups — none of which need it. It
+   becomes necessary only for the roster and waiver modules, which are not built.
+   ========================================================================== */
+(function(){
+  var API = "https://api.sleeper.app/v1";
+  var LS  = "dd-guillotine-v1";
+  var SIMS = 20000;
+
+  var elId=document.getElementById("gxId"), elGo=document.getElementById("gxGo"),
+      elClear=document.getElementById("gxClear"), elMsg=document.getElementById("gxMsg"),
+      elLive=document.getElementById("gxLive"), elState=document.getElementById("gxState"),
+      elPct=document.getElementById("gxPct"), elPctL=document.getElementById("gxPctL"),
+      elGauge=document.getElementById("gxGauge"), elStats=document.getElementById("gxStats"),
+      elTab=document.getElementById("gxTab"), elNote=document.getElementById("gxNote");
+  if(!elId) return;
+
+  function cfg(){ try{ return JSON.parse(localStorage.getItem(LS))||{}; }catch(e){ return {}; } }
+  function setCfg(o){ try{ localStorage.setItem(LS, JSON.stringify(o)); }catch(e){} }
+  function esc(t){ var d=document.createElement("span"); d.textContent=t==null?"":String(t); return d.innerHTML; }
+  function msg(html, bad){ elMsg.innerHTML=html; elMsg.style.color = bad ? "var(--bad)" : ""; }
+
+  async function jget(path){
+    var r = await fetch(API + path);
+    if(r.status === 404) throw new Error("not-found");
+    if(!r.ok) throw new Error("http " + r.status);
+    var j = await r.json();
+    if(j === null) throw new Error("empty");
+    return j;
+  }
+
+  // Box-Muller. Normal is an assumption about weekly fantasy scores, not a fact —
+  // real distributions are mildly right-skewed. Named in the honesty card.
+  var spare=null;
+  function gauss(){
+    if(spare!==null){ var v=spare; spare=null; return v; }
+    var u,v2,s2;
+    do{ u=Math.random()*2-1; v2=Math.random()*2-1; s2=u*u+v2*v2; }while(s2>=1||s2===0);
+    var m=Math.sqrt(-2*Math.log(s2)/s2); spare=v2*m; return u*m;
+  }
+
+  function stats(xs){
+    var n=xs.length; if(!n) return {n:0};
+    var m=xs.reduce(function(a,b){return a+b;},0)/n;
+    var sd=0;
+    if(n>1){ sd=Math.sqrt(xs.reduce(function(a,b){return a+(b-m)*(b-m);},0)/(n-1)); }
+    return {n:n, mean:m, sd:sd, last:xs[xs.length-1], low:Math.min.apply(null,xs)};
+  }
+
+  /* Monte Carlo: draw a week for every live team, find who is lowest, repeat.
+     Survival = the share of runs in which you are NOT the lowest. Also collects the
+     distribution of the weekly minimum, which IS the chop line. */
+  function simulate(teams){
+    var k=teams.length, lose=new Array(k).fill(0), mins=[];
+    for(var i=0;i<SIMS;i++){
+      var lo=Infinity, li=-1;
+      for(var j=0;j<k;j++){
+        var x = teams[j].mean + gauss()*teams[j].sd;
+        if(x<lo){ lo=x; li=j; }
+      }
+      lose[li]++; mins.push(lo);
+    }
+    mins.sort(function(a,b){return a-b;});
+    return { surv: lose.map(function(c){ return 1 - c/SIMS; }),
+             chop: mins[Math.floor(SIMS*0.5)] };
+  }
+
+  function gauge(chop, you){
+    var lo=Math.min(chop,you)-25, hi=Math.max(chop,you)+25, W=560;
+    var px=function(v){ return 12 + (v-lo)/(hi-lo)*(W-24); };
+    return '<svg viewBox="0 0 '+W+' 74" width="100%" style="height:auto" role="img" aria-label="Projected score '
+      +you.toFixed(1)+' against a projected chop line of '+chop.toFixed(1)+'">'
+      +'<rect x="12" y="28" width="'+(W-24)+'" height="14" rx="7" fill="var(--grid)"/>'
+      +'<rect x="12" y="28" width="'+(px(chop)-12).toFixed(1)+'" height="14" rx="7" fill="color-mix(in srgb,var(--bad) 55%,transparent)"/>'
+      +'<line x1="'+px(chop).toFixed(1)+'" y1="20" x2="'+px(chop).toFixed(1)+'" y2="50" stroke="var(--bad)" stroke-width="2.5"/>'
+      +'<text x="'+px(chop).toFixed(1)+'" y="15" font-size="9.5" font-weight="700" fill="var(--bad)" text-anchor="middle">CHOP LINE '+chop.toFixed(1)+'</text>'
+      +'<line x1="'+px(you).toFixed(1)+'" y1="18" x2="'+px(you).toFixed(1)+'" y2="52" stroke="var(--accent)" stroke-width="3"/>'
+      +'<circle cx="'+px(you).toFixed(1)+'" cy="35" r="6" fill="var(--accent)"/>'
+      +'<text x="'+px(you).toFixed(1)+'" y="66" font-size="10" font-weight="800" fill="var(--accent)" text-anchor="middle">YOU '+you.toFixed(1)+'</text>'
+      +'</svg>';
+  }
+
+  function paintEmpty(league, teams, weeksDone, why){
+    elLive.style.display="";
+    elState.textContent = "Connected · no maths yet";
+    elPct.innerHTML = "&mdash;";
+    elPctL.textContent = why;
+    elGauge.innerHTML = "";
+    elStats.innerHTML =
+      tile(esc(league.name), "League") + tile(teams.length, "Teams") +
+      tile(weeksDone, "Completed weeks") + tile(esc(league.season), "Season");
+    elTab.innerHTML = "<thead><tr><th>Team</th><th>Manager</th><th>Roster</th></tr></thead><tbody>"
+      + teams.map(function(t){ return "<tr><td>"+esc(t.name)+"</td><td>"+esc(t.owner)
+        +"</td><td>"+t.roster+"</td></tr>"; }).join("") + "</tbody>";
+    elNote.innerHTML = "⚠️ Survival needs at least two completed weeks — one week gives a mean with "
+      + "no spread, and a probability without a spread is not a probability. The league, its teams "
+      + "and its managers are live; the maths turns on by itself once the scores exist.";
+  }
+
+  function tile(v,l){ return '<div class="s"><div class="sv">'+v+'</div><div class="sl">'+l+'</div></div>'; }
+
+  async function sync(id){
+    msg("Loading…");
+    var state, league, users, rosters;
+    try{
+      state   = await jget("/state/nfl");
+      league  = await jget("/league/"+id);
+      users   = await jget("/league/"+id+"/users");
+      rosters = await jget("/league/"+id+"/rosters");
+    }catch(e){
+      if(String(e).indexOf("not-found")>-1 || String(e).indexOf("empty")>-1)
+        msg("No league with that ID. Check the long number in your Sleeper league URL.", true);
+      else
+        msg("Couldn't reach Sleeper ("+esc(String(e.message||e))+"). Nothing was changed.", true);
+      return;
+    }
+    setCfg({id:id});
+    elClear.style.display=""; elGo.textContent="Refresh";
+
+    var uById={}; (users||[]).forEach(function(u){ uById[u.user_id]=u; });
+    var teams=(rosters||[]).map(function(r){
+      var u=uById[r.owner_id]||{};
+      var nm=(u.metadata&&u.metadata.team_name) || u.display_name || ("Roster "+r.roster_id);
+      return { rid:r.roster_id, name:nm, owner:u.display_name||"—",
+               roster:(r.players||[]).length, scores:[] };
+    });
+    var byRid={}; teams.forEach(function(t){ byRid[t.rid]=t; });
+
+    // Completed weeks only. display_week is the week currently being played, so the
+    // last COMPLETED week is display_week - 1.
+    var done = Math.max(0, (state.display_week||0) - 1);
+    if((state.season_type||"") === "pre") done = 0;
+    done = Math.min(done, 18);
+
+    for(var w=1; w<=done; w++){
+      try{
+        var ms = await jget("/league/"+id+"/matchups/"+w);
+        (ms||[]).forEach(function(m){
+          var t=byRid[m.roster_id];
+          if(t && typeof m.points === "number" && m.points > 0) t.scores.push(m.points);
+        });
+      }catch(e){ /* a missing week is not fatal — keep whatever we have */ }
+    }
+
+    teams.forEach(function(t){ var st=stats(t.scores); for(var k in st) t[k]=st[k]; });
+    var live = teams.filter(function(t){ return t.n >= 2 && t.sd > 0; });
+
+    if(live.length < 2){
+      paintEmpty(league, teams, done,
+        done===0 ? "The season hasn't started — Sleeper reports week 0 of "+esc(league.season)+"."
+                 : "Only "+done+" completed week"+(done===1?"":"s")+" of scores so far.");
+      msg("Connected to <b>"+esc(league.name)+"</b> — "+teams.length+" teams.");
+      return;
+    }
+
+    var res = simulate(live);
+    live.forEach(function(t,i){ t.surv = res.surv[i]; });
+    live.sort(function(a,b){ return a.surv - b.surv; });
+
+    /* ⚠️ Do NOT fall back to an arbitrary team. The first cut defaulted to the last
+       row and printed that team's number as the hero — which, since the table is
+       sorted by survival, meant the SAFEST team's 100% was presented as yours. A
+       confident wrong number is worse than a blank one. No pick, no hero number. */
+    var saved = cfg();
+    var me = live.filter(function(t){ return t.rid === saved.me; })[0] || null;
+
+    elLive.style.display="";
+    elState.textContent = me ? "Live · your league" : "Live · pick your team";
+    if(me){
+      elPct.textContent = Math.round(me.surv*100) + "%";
+      elPctL.innerHTML = "chance <b>"+esc(me.name)+"</b> survives week "+(done+1)
+        + " — the probability of not being the lowest scorer, from "+done+" weeks of this league's own scoring.";
+      elGauge.innerHTML = gauge(res.chop, me.mean);
+      elStats.innerHTML = tile(me.mean.toFixed(1),"Your average")
+        + tile(res.chop.toFixed(1),"Projected chop line")
+        + tile((me.mean-res.chop>=0?"+":"")+(me.mean-res.chop).toFixed(1),"Margin")
+        + tile(live.length,"Teams simulated") + tile(done,"Weeks of history");
+    } else {
+      elPct.innerHTML = "&mdash;";
+      elPctL.innerHTML = "Click your team in the table below and this becomes your survival odds. "
+        + "Until then there is nothing here that is <em>yours</em>.";
+      elGauge.innerHTML = "";
+      elStats.innerHTML = tile(res.chop.toFixed(1),"Projected chop line")
+        + tile(live.length,"Teams simulated") + tile(done,"Weeks of history");
+    }
+
+    elTab.innerHTML = "<thead><tr><th>Team</th><th>Avg</th><th>Std dev</th><th>Low</th><th>Last</th><th>Survive</th></tr></thead><tbody>"
+      + live.map(function(t){
+          return '<tr class="'+(t.surv<0.75?"risk":"")+'"><td class="'+(me&&t.rid===me.rid?"me":"")+'">'+esc(t.name)+"</td>"
+            + "<td>"+t.mean.toFixed(1)+"</td><td>"+t.sd.toFixed(1)+"</td><td>"+t.low.toFixed(1)+"</td>"
+            + "<td>"+t.last.toFixed(1)+"</td><td class='"+(t.surv<0.75?"neg":"pos")+"'>"+Math.round(t.surv*100)+"%</td></tr>";
+        }).join("") + "</tbody>";
+
+    elNote.innerHTML = "⚠️ "+SIMS.toLocaleString()+" simulated weeks from each team's own mean and spread over "
+      + done + " completed week" + (done===1?"":"s") + ". Teams with fewer than two scores are excluded — "
+      + (teams.length-live.length) + " of " + teams.length + " sit out. Click a row's team to set which one is yours.";
+
+    Array.prototype.forEach.call(elTab.querySelectorAll("tbody tr"), function(tr,i){
+      tr.style.cursor="pointer";
+      tr.addEventListener("click", function(){ var c=cfg(); c.me=live[i].rid; setCfg(c); sync(id); });
+    });
+    msg("Connected to <b>"+esc(league.name)+"</b> — "+teams.length+" teams, "+done+" completed weeks.");
+  }
+
+  elGo.addEventListener("click", function(){
+    var v=(elId.value||"").trim().replace(/[^0-9]/g,"");
+    if(!v){ msg("Paste the league ID first — it is the long number in your Sleeper league URL.", true); return; }
+    sync(v);
+  });
+  elId.addEventListener("keydown", function(e){ if(e.key==="Enter") elGo.click(); });
+  elClear.addEventListener("click", function(){
+    setCfg({}); elId.value=""; elLive.style.display="none"; elClear.style.display="none";
+    elGo.textContent="Connect"; elState.textContent="Not connected"; msg("");
+  });
+
+  var saved=cfg();
+  if(saved.id){ elId.value=saved.id; sync(saved.id); }
+})();
+</script>
 </body>
 </html>
