@@ -140,6 +140,73 @@ const json = (obj, status, cors) =>
     headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" },
   });
 
+
+// ============================================================
+//  /survivor-picks — weekly survivor pick popularity for survivor.html
+//
+//  ⚠️ PUSH, not pull, on purpose. SurvivorGrid / PoolGenius / TeamRankings are
+//  commercial products with no documented API and terms that may forbid
+//  automated collection, and a scraper breaks silently on a class-name change.
+//  A survivor board running on stale ownership is worse than one that admits it
+//  has none. So: POST the week's numbers, KV stores them, every device reads the
+//  same figures. There is deliberately no upstream fetch here.
+//
+//  ⚠️ Storage reuses the EXISTING `RL` namespace rather than a new binding.
+//  Keys are prefixed `survivor:` so they cannot collide with the rate-limit
+//  counters, and it means this route needs no dashboard change to work. If a
+//  dedicated DD_KV is ever bound it is preferred automatically.
+// ============================================================
+const survivorKV = (env) => env.DD_KV || env.RL || null;
+const survivorKey = (season, week) => `survivor:${season}:${week}`;
+
+// Normalise to { TEAM: share } summing to 1. Rejects a row rather than guessing.
+function survivorNormalise(raw) {
+  const out = {}; const bad = [];
+  for (const k of Object.keys(raw || {})) {
+    const code = String(k).toUpperCase().replace(/[^A-Z]/g, "");
+    const v = Number(raw[k]);
+    if (!code || !Number.isFinite(v) || v < 0) { bad.push(k); continue; }
+    out[code] = (out[code] || 0) + v;
+  }
+  let tot = 0; for (const k in out) tot += out[k];
+  if (tot <= 0) return { picks: {}, bad, total: 0 };
+  for (const k in out) out[k] = out[k] / tot;
+  return { picks: out, bad, total: tot };
+}
+
+async function handleSurvivorPicks(request, url, env, cors) {
+  const kv = survivorKV(env);
+  if (!kv) return json({ error: "no KV binding available" }, 500, cors);
+
+  const season = Number(url.searchParams.get("season")) || new Date().getUTCFullYear();
+  const week = Number(url.searchParams.get("week"));
+  if (!(week >= 1 && week <= 18)) return json({ error: "week must be 1-18" }, 400, cors);
+
+  if (request.method === "POST") {
+    // ⚠️ Gated. Without this anyone can rewrite the ownership every device reads,
+    // which is a quiet way to make the board recommend whatever they like.
+    const pass = request.headers.get("X-Dawg-Pass");
+    if (!env.DAWG_PASS || pass !== env.DAWG_PASS) return json({ error: "unauthorised" }, 401, cors);
+    let body;
+    try { body = await request.json(); } catch (e) { return json({ error: "bad json" }, 400, cors); }
+    const { picks, bad, total } = survivorNormalise(body && body.picks);
+    if (!Object.keys(picks).length) return json({ error: "no usable rows", bad }, 400, cors);
+    const rec = { season, week, picks, source: (body && body.source) || "manual",
+                  stored: Date.now(), rows: Object.keys(picks).length, rawTotal: total };
+    await kv.put(survivorKey(season, week), JSON.stringify(rec));
+    return json({ ok: true, ...rec, ignored: bad }, 200, cors);
+  }
+
+  const hit = await kv.get(survivorKey(season, week));
+  if (!hit) return json({ error: "no pick data stored for this week",
+                          hint: "POST it to this route, or paste it into the board" }, 404, cors);
+  const rec = JSON.parse(hit);
+  const ageH = (Date.now() - rec.stored) / 3.6e6;
+  // Ownership moves all week. Serve it, but never let the page believe a Tuesday
+  // number is a Sunday number — the page decides what to do with this.
+  return json({ ...rec, ageHours: Math.round(ageH * 10) / 10, stale: ageH > 72 }, 200, cors);
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -149,6 +216,7 @@ export default {
     if (request.method === "OPTIONS") return new Response(null, { headers: cors });
 
     if (url.pathname === "/scores")       return handleScores(url, cors);
+    if (url.pathname === "/survivor-picks") return handleSurvivorPicks(request, url, env, cors);
 
     // ⚠️ Identity is SITE-WIDE, not Bozo's. /auth/* is canonical; the /bozo/* spellings
     // are permanent aliases because bozo.html in the wild (and any phone with a cached
