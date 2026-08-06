@@ -236,42 +236,26 @@ tr:last-child td{border-bottom:none}
 @media (prefers-reduced-motion:reduce){.hero .mxrain{display:none}}
 .hero .tagline{font-size:17px;color:var(--ink-2);margin:10px 0 8px;letter-spacing:.01em}
 /* ---- manifesto (home) ---- */
-/* This is the site's proposition, not a preamble. Give it enough visual gravity to
-   compete with the hero mark and enough contrast to scan before the long-form copy. */
-.frame{position:relative;isolation:isolate;overflow:hidden;max-width:780px;margin:28px auto 8px;
-  padding:32px 38px 30px;border:1px solid color-mix(in srgb,var(--accent) 42%,var(--border));
-  border-top:4px solid var(--accent);border-radius:20px;
-  background:linear-gradient(132deg,color-mix(in srgb,var(--accent) 10%,var(--surface-1)) 0%,
-    var(--surface-1) 48%,color-mix(in srgb,var(--accent) 3%,var(--surface-1)) 100%);
-  box-shadow:0 24px 64px rgba(0,0,0,.16),inset 0 1px 0 color-mix(in srgb,#fff 8%,transparent)}
-.frame::before{content:"";position:absolute;z-index:-1;width:270px;height:270px;right:-168px;top:-188px;
-  border:42px solid color-mix(in srgb,var(--accent) 9%,transparent);border-radius:50%;pointer-events:none}
-.frame::after{content:"";position:absolute;z-index:-1;right:0;bottom:0;width:150px;height:4px;
-  background:linear-gradient(90deg,transparent,var(--accent));opacity:.72;pointer-events:none}
-.frame .frame-label{display:flex;align-items:center;gap:9px;margin:0 0 16px;color:var(--accent);
-  font-size:11.5px;font-weight:800;letter-spacing:.15em;text-transform:uppercase}
-.frame .frame-label::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent);
-  box-shadow:0 0 0 5px color-mix(in srgb,var(--accent) 13%,transparent)}
-.frame .question{font-size:35px;line-height:1.12;font-weight:900;letter-spacing:-.035em;
-  color:var(--ink-1);margin:0 0 18px;max-width:650px;text-wrap:balance}
-.frame .question span{display:block;color:var(--accent)}
-.frame .answer{font-size:18px;line-height:1.62;color:var(--ink-2);margin:0 0 24px;max-width:680px}
-.frame .answer strong{display:block;margin-top:2px;color:var(--ink-1);font-weight:750}
-.frame .thesis{display:flex;align-items:baseline;gap:12px;margin:0;padding-top:18px;
-  border-top:1px solid color-mix(in srgb,var(--accent) 24%,var(--grid));font-size:14.5px;
-  line-height:1.55;color:var(--ink-2)}
-.frame .thesis b{flex:0 0 auto;color:var(--accent);font-size:10.5px;font-weight:850;
-  letter-spacing:.13em;text-transform:uppercase}
-:root[data-theme="light"] .frame{box-shadow:0 24px 64px rgba(54,31,7,.13),
-  inset 0 1px 0 rgba(255,255,255,.72)}
+/* The proposition echoes the wordmark's lockup: open space, a compact orange label,
+   and short flanking rules. It should feel important without becoming a second logo. */
+.frame{max-width:700px;margin:18px auto 0;padding:20px 20px 26px;text-align:center;
+  border-bottom:1px solid var(--grid)}
+.frame .frame-label{display:flex;align-items:center;justify-content:center;gap:10px;
+  margin:0 0 11px;color:var(--accent);font-size:10.5px;font-weight:800;
+  letter-spacing:.16em;text-transform:uppercase}
+.frame .frame-label::before,.frame .frame-label::after{content:"";width:38px;height:2px;background:var(--accent)}
+.frame .question{font-size:26px;line-height:1.25;font-weight:800;letter-spacing:-.018em;
+  color:var(--navbar,var(--ink-1));margin:0 0 12px;text-wrap:balance}
+.frame .answer{font-size:17px;line-height:1.65;color:var(--ink-2);margin:0 auto 11px;max-width:660px}
+.frame .thesis{font-size:13.5px;line-height:1.55;color:var(--ink-3);margin:0}
+.frame .thesis b{color:var(--accent);font-weight:750}
 @media(max-width:600px){
-  .frame{margin-top:22px;padding:25px 22px 24px;border-radius:17px}
-  .frame::before{width:210px;height:210px;right:-145px;top:-155px;border-width:34px}
-  .frame .frame-label{font-size:10.5px;margin-bottom:13px}
-  .frame .question{font-size:27px;line-height:1.15;margin-bottom:15px}
-  .frame .answer{font-size:16.5px;line-height:1.58;margin-bottom:20px}
-  .frame .thesis{display:block;font-size:13.5px;padding-top:15px}
-  .frame .thesis b{display:block;margin-bottom:5px}
+  .frame{margin-top:14px;padding:18px 0 23px}
+  .frame .frame-label{gap:8px;font-size:9.5px;letter-spacing:.13em}
+  .frame .frame-label::before,.frame .frame-label::after{width:25px}
+  .frame .question{font-size:22px;line-height:1.3}
+  .frame .answer{font-size:15.5px;line-height:1.62}
+  .frame .thesis{font-size:12.5px}
 }
 .manifesto{max-width:660px;margin:12px auto 0}
 .manifesto section{margin:34px 0}
@@ -281,19 +265,31 @@ tr:last-child td{border-bottom:none}
 .manifesto p em{color:var(--ink-2);font-style:italic}
 .manifesto section+section{border-top:1px solid var(--grid);padding-top:30px}
 /* the four practice items: a rule instead of bullets — reads as field notes, not a list */
-.manifesto .dawg-callout{margin:22px 0;padding:22px 24px;border:1px solid color-mix(in srgb,var(--accent) 34%,var(--border));
-  border-radius:14px;background:color-mix(in srgb,var(--accent) 5%,var(--surface-1))}
+.manifesto .dawg-callout{display:grid;grid-template-columns:minmax(0,1fr) 184px;gap:20px;align-items:end;
+  margin:22px 0;padding:22px 20px 22px 24px;border:1px solid color-mix(in srgb,var(--navbar,var(--ink-1)) 24%,var(--border));
+  border-left:3px solid var(--accent);border-radius:14px;background:var(--surface-1);overflow:hidden}
+.manifesto .dawg-callout .dawg-copy{min-width:0}
 .manifesto .dawg-callout .big{font-size:22px;line-height:1.35;font-weight:850;letter-spacing:-.015em;
   color:var(--ink-1);margin:0 0 10px}
 .manifesto .dawg-callout .byod{font-size:20px;font-weight:850;color:var(--accent);margin:18px 0 2px}
 .manifesto .dawg-callout .promise{font-size:13.5px;color:var(--ink-3);margin:0;font-weight:650;letter-spacing:.015em}
+.manifesto .dawg-callout .dawg-portrait{display:block;width:100%;max-width:184px;height:auto;align-self:end;
+  filter:drop-shadow(0 8px 10px rgba(42,26,6,.12))}
 .manifesto .rules{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:20px 0 4px}
 .manifesto .rule{border:1px solid var(--grid);border-radius:12px;background:var(--surface-1);padding:15px 16px}
 .manifesto .rule b{display:block;font-size:14px;color:var(--ink-1);margin-bottom:4px}
 .manifesto .rule span{display:block;font-size:12.5px;line-height:1.55;color:var(--ink-2)}
 .manifesto .status-note{font-size:13px;line-height:1.6;color:var(--ink-3);padding:11px 14px;
   border-left:2px solid var(--warn);background:color-mix(in srgb,var(--warn) 5%,transparent);margin:18px 0 0}
-@media(max-width:560px){.manifesto .rules{grid-template-columns:1fr}.manifesto .dawg-callout{padding:19px 18px}}
+.manifesto .toto-scene{margin:15px 0 22px;border:1px solid color-mix(in srgb,var(--navbar,var(--ink-1)) 22%,var(--border));
+  border-radius:14px;background:var(--surface-1);overflow:hidden}
+.manifesto .toto-scene img{display:block;width:100%;height:auto}
+@media(max-width:560px){
+  .manifesto .rules{grid-template-columns:1fr}
+  .manifesto .dawg-callout{grid-template-columns:1fr;padding:19px 18px 0;gap:8px}
+  .manifesto .dawg-callout .dawg-portrait{width:156px;justify-self:center;margin-top:2px}
+  .manifesto .toto-scene{margin:13px 0 19px;border-radius:11px}
+}
 /* closing line — the landing */
 .manifesto .kicker{font-size:20px;font-weight:800;line-height:1.5;text-align:center;
   color:var(--accent);max-width:520px;margin:22px auto 0;letter-spacing:.005em}
@@ -1141,9 +1137,9 @@ STATE: everything saves in the browser on that device. A different device shows 
 
   <div class="frame" aria-labelledby="core-question">
     <p class="frame-label">The question behind the work</p>
-    <p class="question" id="core-question">How do we know <span>what we think we know?</span></p>
-    <p class="answer">Data Dawgs is a personal laboratory for making better decisions under uncertainty — <strong>with evidence meant to be inspected by you and your AI.</strong></p>
-    <p class="thesis"><b>The commitment</b><span>Data, Not Dogma. Bring Your Own Dawg. The subject changes; the method stays the same.</span></p>
+    <p class="question" id="core-question">How do we know what we think we know?</p>
+    <p class="answer">Data Dawgs is a personal laboratory for making better decisions under uncertainty — with evidence meant to be inspected by you and your AI.</p>
+    <p class="thesis"><b>Data, Not Dogma.</b> Bring Your Own Dawg. The subject changes; the method stays the same.</p>
   </div>
 
   <div class="manifesto">
@@ -1170,11 +1166,14 @@ STATE: everything saves in the browser on that device. A different device shows 
     <section>
       <h2>Bring your own Dawg</h2>
       <div class="dawg-callout">
-        <p class="big">For generations, we've called the dog man's best friend. AI is becoming a new kind of dawg beside us.</p>
-        <p>Dogs earned that trust as companions and collaborators in the physical world. AI can play a different role — helping us navigate information, uncertainty, and decisions.</p>
-        <p>That changes what a useful website should be. The page you read should not be the end of the evidence trail. Your AI should be able to inspect the underlying state, trace a number to its source, challenge the method, and check the record too.</p>
-        <p class="byod">Bring Your Own Dawg.</p>
-        <p class="promise">Built for you. Readable by your AI. Verifiable by either.</p>
+        <div class="dawg-copy">
+          <p class="big">For generations, we've called the dog man's best friend. AI is becoming a new kind of dawg beside us.</p>
+          <p>Dogs earned that trust as companions and collaborators in the physical world. AI can play a different role — helping us navigate information, uncertainty, and decisions.</p>
+          <p>That changes what a useful website should be. The page you read should not be the end of the evidence trail. Your AI should be able to inspect the underlying state, trace a number to its source, challenge the method, and check the record too.</p>
+          <p class="byod">Bring Your Own Dawg.</p>
+          <p class="promise">Built for you. Readable by your AI. Verifiable by either.</p>
+        </div>
+        <img class="dawg-portrait" src="assets/byod-digital-dawg.png" alt="A friendly digital dog wearing an orange collar and circuit-patterned tag">
       </div>
       <p>This does not mean handing judgment to a chatbot. The point is the opposite: another reader means another chance to catch a bad assumption. Ask your dawg to reproduce the math. Ask what evidence would reverse the conclusion. Ask it to compare today's claim with yesterday's receipt.</p>
       <p>AI should make Data Dawgs easier to interrogate, not easier to believe.</p>
@@ -1189,6 +1188,9 @@ STATE: everything saves in the browser on that device. A different device shows 
 
     <section>
       <h2>The dog who pulled the curtain</h2>
+      <figure class="toto-scene">
+        <img src="assets/toto-pulls-curtain.webp" width="1320" height="743" loading="lazy" decoding="async" alt="A digital dog pulls back an orange theater curtain, revealing an elderly wizard operating a projector and levers.">
+      </figure>
       <p>Everybody remembers the wizard. Almost nobody remembers what actually beat him: a small dog wandered over and pulled the curtain back. Toto didn't argue with the giant floating head. He went and looked.</p>
       <p>That's why the Data Dawgs assistant is Toto. His job is not to sound smart. His job is to look behind the answer: read the state he actually has, separate model output from observation, and say <em>not much</em> when the evidence does not support much.</p>
       <p>Toto is the first version of the idea. Bring Your Own Dawg is the bigger one: the same evidence should be inspectable by the AI you choose, not only the one built into this site.</p>
