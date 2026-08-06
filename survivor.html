@@ -81,12 +81,12 @@ body{margin:0;background:var(--page);color:var(--ink-1);
 .sitenav .brand .tag{font-family:inherit;font-weight:400;font-style:normal;line-height:inherit;
   padding:0;margin:0;background:none;border:0;border-radius:0;box-shadow:none}
 /* ⚠️ align-items:center, not the default stretch. The nav row holds THREE different
-   box models — a plain <a> (Home, The Pound, Dawgs), an <a class=grpbtn> inside a
-   .navgrp (a group header that also links: Labs, Field-Tested), and a <button
+   box models — a plain <a> (Home, The Pound), an <a class=grpbtn> inside a
+   .navgrp (a group header that also links: Labs, Dawgs), and a <button
    class=grpbtn> inside a .navgrp (a group header that does not link: Data) — plus the
    theme pill. Under stretch each one resolved its own height and its text landed on a
    different baseline: measured 8/5 at 1512px, text tops were 24.2 / 19.2 / 22.2 / 26.5.
-   Labs and Field-Tested sat 5px high because an inline <a> inside a stretched .navgrp
+   Labs and Dawgs sat 5px high because an inline <a> inside a stretched .navgrp
    overflows its line box upward. Centering makes every item size to its own content and
    share one axis; the .navgrp and .grpbtn rules below finish the job by giving the two
    header variants the same block box and line-height as a plain link. */
@@ -664,21 +664,20 @@ tr.sv-used td{opacity:.42}
   };
   window.DDTheme.apply();
   /* ⚠️ 8/5, second nav change today: the menu IS the tier ladder now. Kap set the order
-     — Home · The Pound · Labs · Field-Tested · Data · Dawgs. This SUPERSEDES the note that
+     — Home · The Pound · Labs · Data · Dawgs. This SUPERSEDES the note that
      sat here this morning claiming the nav ("what kind of thing is this") and the tier
      ("how far along is it") were orthogonal on purpose. They are now the same axis.
-     `Draft` is gone as a group; Dashboard and Auctioneer Controls sit in Field-Tested on
+     `Draft` is gone as a group; Dashboard and Auctioneer Controls sit in Dawgs on
      Kap's call. Order runs worst-to-best left to right, which is deliberate: the shelf
-     comes before the workbench comes before the field.
+     comes before the workbench; Dawgs have earned a job.
      ⚠️ The Pound is a plain link, not a dropdown — it is empty, and an empty menu reads
      as broken. Give it an `items` array the day something actually gets shelved. */
   const NAV = [
     {label:"Home", href:"index.html", key:"home"},
     /* `short` is the phone label. BOTH labels are rendered and CSS picks one, so
        there is no resize listener and nothing reflows on rotate. Only entries whose
-       full label will not fit need one. ⚠️ Six full labels need 462px of content inside
-       a 312px container at 360px — measured, not guessed — so something has to give,
-       and shortening two words costs less than dropping to 9px type. */
+       full label will not fit need one. `Pound` stays shortened on phones so the
+       five-item nav keeps breathing room without shrinking the type. */
     {label:"The Pound", short:"Pound", href:"index.html#tiers", key:"pound"},
     {label:"Labs", href:"index.html#tiers", items:[
       ["bozo.html","Bozo","bozo"],
@@ -692,16 +691,16 @@ tr.sv-used td{opacity:.42}
        page is STILL LIVE at /auction.html and is still what runs draft night on the
        operator machine; it is simply unlinked, same treatment as bigboard.html. Do not
        "restore" it here without checking whether the Dashboard tab was removed too. */
-    {label:"Field-Tested", short:"Field", href:"index.html#tiers", items:[
-      ["stats.html","NFL EPA Stats","stats"],
-      ["nfelo.html","nfelo Power Ratings","nfelo"],
-      ["dashboard.html","Fantasy Draft Dashboard","dashboard","hot"],
-    ]},
     {label:"Data", items:[
       ["master.html","Master Data","master"],
       ["strategy.html","2026 Strategy","strategy"],
     ]},
-    {label:"Dawgs", href:"dawgs.html", key:"dawgs"},
+    {label:"Dawgs", href:"index.html#tiers", items:[
+      ["stats.html","NFL EPA Stats","stats"],
+      ["nfelo.html","nfelo Power Ratings","nfelo"],
+      ["dashboard.html","Fantasy Draft Dashboard","dashboard","hot"],
+      ["dawgs.html","Rollo · OG Data Dawg","dawgs"],
+    ]},
   ];
   const nav = document.getElementById("nav");
   nav.className = "sitenav";
