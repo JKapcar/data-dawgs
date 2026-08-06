@@ -382,8 +382,420 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 .emptystate{text-align:center;padding:10px 0 2px}
 .emptystate .big{font-size:15px;font-weight:750;color:var(--ink-1);margin-bottom:4px}
 .emptystate p{font-size:13px;color:var(--ink-2);margin:0 auto;max-width:460px;line-height:1.6}
+
+/* ================= DFS workbench ================= */
+/* Sheet bar — same control vocabulary as the Fantasy Draft Dashboard so the two rigs
+   feel like one site. Kept as in-page sections rather than iframes: every sheet reads
+   the same loaded slate out of one in-memory object, and postMessage plumbing between
+   frames to keep five copies of that in sync would be all cost and no benefit. */
+.fstabs{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:16px 0 16px}
+.fstabs button[data-s]{appearance:none;background:var(--surface-1);
+  border:1.5px solid var(--border);border-radius:11px;
+  color:var(--ink-1);font:inherit;font-size:15px;font-weight:800;letter-spacing:.01em;
+  padding:10px 16px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.06);
+  transition:color .13s,background .13s,border-color .13s,transform .1s}
+.fstabs button[data-s]:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
+.fstabs button[data-s].on{background:var(--accent);color:#fff;border-color:transparent;
+  box-shadow:0 3px 12px color-mix(in srgb,var(--accent) 40%,transparent)}
+.fstabs button[data-s][disabled]{opacity:.42;cursor:not-allowed;transform:none;
+  border-style:dashed;box-shadow:none}
+.fstabs button[data-s][disabled]:hover{border-color:var(--border);color:var(--ink-1)}
+.fstabs .kbd{font-size:10px;opacity:.55;margin-left:7px;font-weight:700;
+  border:1px solid currentColor;border-radius:4px;padding:1px 4px}
+.fstabs .grow{margin-left:auto}
+@media(max-width:760px){.fstabs button[data-s]{padding:8px 11px;font-size:13.5px}.fstabs .kbd{display:none}}
+
+.sheet[hidden]{display:none}
+.fsstrip{display:flex;gap:9px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--ink-3);margin:2px 0 0}
+.fsstrip b{color:var(--ink-1);font-weight:750}
+.fsstrip .dot{width:5px;height:5px;border-radius:50%;background:var(--ink-3);display:inline-block}
+.fsstrip .live{background:var(--good)}
+
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:15px;
+  padding:20px 22px;margin:0 0 16px}
+.card>h3{margin:0 0 4px;font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;
+  color:var(--ink-3);font-weight:800}
+.card>h3 .rt{float:right;text-transform:none;letter-spacing:0;font-weight:650;color:var(--ink-3)}
+.card .sub{margin:0 0 14px;font-size:13px;color:var(--ink-2);line-height:1.6}
+.card .sub b{color:var(--ink-1)}
+@media(max-width:620px){.card{padding:16px 14px}}
+
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+
+label.fld{display:block;margin:0 0 11px}
+label.fld>span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--ink-3);font-weight:800;margin-bottom:4px}
+label.fld>span .hint{text-transform:none;letter-spacing:0;font-weight:600;color:var(--ink-3);opacity:.85}
+input.fi,select.fi,textarea.fi{width:100%;box-sizing:border-box;background:var(--page);
+  border:1px solid var(--grid);border-radius:9px;color:var(--ink-1);font:inherit;font-size:14px;
+  padding:9px 11px;font-variant-numeric:tabular-nums}
+textarea.fi{min-height:110px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.5;resize:vertical}
+input.fi:focus,select.fi:focus,textarea.fi:focus{outline:2px solid color-mix(in srgb,var(--accent) 55%,transparent);outline-offset:1px}
+input.fi[type=checkbox]{width:auto}
+.chkrow{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink-1);margin:0 0 9px}
+.chkrow input{width:16px;height:16px;accent-color:var(--accent)}
+
+button.btn{appearance:none;background:var(--accent);color:#fff;border:0;border-radius:10px;
+  font:inherit;font-size:14.5px;font-weight:800;padding:11px 20px;cursor:pointer}
+button.btn:hover{filter:brightness(1.07)}
+button.btn[disabled]{opacity:.45;cursor:not-allowed;filter:none}
+button.btn.ghost{background:none;color:var(--ink-2);border:1px solid var(--border);font-weight:700;font-size:13px;padding:9px 14px}
+button.btn.ghost:hover{border-color:var(--accent);color:var(--accent);filter:none}
+button.btn.sm{font-size:12.5px;padding:7px 12px}
+.btnrow{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:4px}
+
+.note{font-size:12.5px;line-height:1.6;color:var(--ink-3);margin:9px 0 0}
+.note.warn{color:var(--warn)}
+.note.bad{color:var(--bad)}
+.note.good{color:var(--good)}
+.banner{border:1px solid color-mix(in srgb,var(--warn) 50%,transparent);
+  background:color-mix(in srgb,var(--warn) 11%,transparent);border-radius:11px;
+  padding:11px 14px;font-size:13px;line-height:1.6;color:var(--ink-2);margin:0 0 14px}
+.banner b{color:var(--warn);font-weight:800}
+.banner.err{border-color:color-mix(in srgb,var(--bad) 55%,transparent);background:color-mix(in srgb,var(--bad) 11%,transparent)}
+.banner.err b{color:var(--bad)}
+.banner.ok{border-color:color-mix(in srgb,var(--good) 50%,transparent);background:color-mix(in srgb,var(--good) 10%,transparent)}
+.banner.ok b{color:var(--good)}
+.banner[hidden]{display:none}
+
+.tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.dtab td.l,.dtab th.l{text-align:left}
+.dtab tbody tr:hover{background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.dtab .mut{color:var(--ink-3)}
+.dtab input.cell{width:66px;background:transparent;border:1px solid transparent;border-radius:6px;
+  color:var(--ink-1);font:inherit;font-size:12.5px;text-align:right;padding:2px 4px;font-variant-numeric:tabular-nums}
+.dtab input.cell:hover{border-color:var(--grid)}
+.dtab input.cell:focus{border-color:var(--accent);outline:none;background:var(--page)}
+.dtab tr.off td{opacity:.4}
+.dtab tr.lockd td{background:color-mix(in srgb,var(--good) 9%,transparent)}
+.tag{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  padding:2px 6px;border-radius:5px;border:1px solid var(--grid);color:var(--ink-3)}
+.tag.qb{color:#c77dff;border-color:#c77dff5c}.tag.rb{color:#4cc9a7;border-color:#4cc9a75c}
+.tag.wr{color:#4ea8ff;border-color:#4ea8ff5c}.tag.te{color:#ffa94d;border-color:#ffa94d5c}
+.tag.dst{color:#9aa0a6;border-color:#9aa0a65c}
+.toggle{appearance:none;background:none;border:1px solid var(--grid);border-radius:6px;cursor:pointer;
+  color:var(--ink-3);font:inherit;font-size:11px;font-weight:800;padding:3px 7px;line-height:1.2}
+.toggle:hover{border-color:var(--accent);color:var(--accent)}
+.toggle.on{background:var(--good);border-color:transparent;color:#06240c}
+.toggle.on.ex{background:var(--bad);color:#2a0606}
+:root[data-theme="light"] .toggle.on{color:#fff}
+
+.prog{height:6px;background:var(--grid);border-radius:4px;overflow:hidden;margin:12px 0 0}
+.prog i{display:block;height:100%;background:var(--accent);width:0;transition:width .18s}
+.prog[hidden]{display:none}
+
+.bars{margin-top:6px}
+.bars .b{display:grid;grid-template-columns:150px 1fr 52px;gap:9px;align-items:center;margin:0 0 5px;font-size:12.5px}
+.bars .b .nm{color:var(--ink-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bars .b .tr{height:11px;background:var(--grid);border-radius:6px;overflow:hidden;position:relative}
+.bars .b .tr i{display:block;height:100%;background:var(--accent);border-radius:6px}
+.bars .b .tr .mark{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink-2);opacity:.8}
+.bars .b .vv{text-align:right;color:var(--ink-2);font-variant-numeric:tabular-nums;font-weight:700}
+@media(max-width:620px){.bars .b{grid-template-columns:104px 1fr 46px;font-size:11.5px}}
+
+.lu{border:1px solid var(--grid);border-radius:11px;padding:10px 12px;margin:0 0 8px;background:var(--page)}
+.lu .hd{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;font-size:12px;color:var(--ink-3);margin-bottom:6px}
+.lu .hd .r{font-weight:800;color:var(--ink-1);font-size:13px}
+.lu .hd .sp{margin-left:auto;font-variant-numeric:tabular-nums}
+.lu .ps{display:flex;flex-wrap:wrap;gap:5px}
+.lu .ps .p{font-size:11.5px;border:1px solid var(--grid);border-radius:6px;padding:2px 7px;color:var(--ink-1);
+  background:var(--surface-1);white-space:nowrap}
+.lu .ps .p em{font-style:normal;color:var(--ink-3);font-size:10px;margin-right:4px;font-weight:800}
+.lu .ps .p.cpt{border-color:var(--accent);color:var(--accent)}
+
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px;margin:0}
+.kv dt{color:var(--ink-3)}
+.kv dd{margin:0;color:var(--ink-1);font-variant-numeric:tabular-nums;text-align:right}
+
+.mx{width:100%;border-collapse:collapse;font-size:11px;font-variant-numeric:tabular-nums}
+.mx th{color:var(--ink-3);font-weight:800;padding:3px 5px;text-align:right}
+.mx th:first-child{text-align:left}
+.mx td{padding:3px 5px;text-align:right;color:var(--ink-1)}
+.mx td:first-child{text-align:left;color:var(--ink-3);font-weight:800}
+
+/* ================= DFS workbench ================= */
+/* Sheet bar — same control vocabulary as the Fantasy Draft Dashboard so the two rigs
+   feel like one site. Kept as in-page sections rather than iframes: every sheet reads
+   the same loaded slate out of one in-memory object, and postMessage plumbing between
+   frames to keep five copies of that in sync would be all cost and no benefit. */
+.fstabs{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:16px 0 16px}
+.fstabs button[data-s]{appearance:none;background:var(--surface-1);
+  border:1.5px solid var(--border);border-radius:11px;
+  color:var(--ink-1);font:inherit;font-size:15px;font-weight:800;letter-spacing:.01em;
+  padding:10px 16px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.06);
+  transition:color .13s,background .13s,border-color .13s,transform .1s}
+.fstabs button[data-s]:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
+.fstabs button[data-s].on{background:var(--accent);color:#fff;border-color:transparent;
+  box-shadow:0 3px 12px color-mix(in srgb,var(--accent) 40%,transparent)}
+.fstabs button[data-s][disabled]{opacity:.42;cursor:not-allowed;transform:none;
+  border-style:dashed;box-shadow:none}
+.fstabs button[data-s][disabled]:hover{border-color:var(--border);color:var(--ink-1)}
+.fstabs .kbd{font-size:10px;opacity:.55;margin-left:7px;font-weight:700;
+  border:1px solid currentColor;border-radius:4px;padding:1px 4px}
+.fstabs .grow{margin-left:auto}
+@media(max-width:760px){.fstabs button[data-s]{padding:8px 11px;font-size:13.5px}.fstabs .kbd{display:none}}
+
+.sheet[hidden]{display:none}
+.fsstrip{display:flex;gap:9px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--ink-3);margin:2px 0 0}
+.fsstrip b{color:var(--ink-1);font-weight:750}
+.fsstrip .dot{width:5px;height:5px;border-radius:50%;background:var(--ink-3);display:inline-block}
+.fsstrip .live{background:var(--good)}
+
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:15px;
+  padding:20px 22px;margin:0 0 16px}
+.card>h3{margin:0 0 4px;font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;
+  color:var(--ink-3);font-weight:800}
+.card>h3 .rt{float:right;text-transform:none;letter-spacing:0;font-weight:650;color:var(--ink-3)}
+.card .sub{margin:0 0 14px;font-size:13px;color:var(--ink-2);line-height:1.6}
+.card .sub b{color:var(--ink-1)}
+@media(max-width:620px){.card{padding:16px 14px}}
+
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+
+label.fld{display:block;margin:0 0 11px}
+label.fld>span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--ink-3);font-weight:800;margin-bottom:4px}
+label.fld>span .hint{text-transform:none;letter-spacing:0;font-weight:600;color:var(--ink-3);opacity:.85}
+input.fi,select.fi,textarea.fi{width:100%;box-sizing:border-box;background:var(--page);
+  border:1px solid var(--grid);border-radius:9px;color:var(--ink-1);font:inherit;font-size:14px;
+  padding:9px 11px;font-variant-numeric:tabular-nums}
+textarea.fi{min-height:110px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.5;resize:vertical}
+input.fi:focus,select.fi:focus,textarea.fi:focus{outline:2px solid color-mix(in srgb,var(--accent) 55%,transparent);outline-offset:1px}
+input.fi[type=checkbox]{width:auto}
+.chkrow{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink-1);margin:0 0 9px}
+.chkrow input{width:16px;height:16px;accent-color:var(--accent)}
+
+button.btn{appearance:none;background:var(--accent);color:#fff;border:0;border-radius:10px;
+  font:inherit;font-size:14.5px;font-weight:800;padding:11px 20px;cursor:pointer}
+button.btn:hover{filter:brightness(1.07)}
+button.btn[disabled]{opacity:.45;cursor:not-allowed;filter:none}
+button.btn.ghost{background:none;color:var(--ink-2);border:1px solid var(--border);font-weight:700;font-size:13px;padding:9px 14px}
+button.btn.ghost:hover{border-color:var(--accent);color:var(--accent);filter:none}
+button.btn.sm{font-size:12.5px;padding:7px 12px}
+.btnrow{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:4px}
+
+.note{font-size:12.5px;line-height:1.6;color:var(--ink-3);margin:9px 0 0}
+.note.warn{color:var(--warn)}
+.note.bad{color:var(--bad)}
+.note.good{color:var(--good)}
+.banner{border:1px solid color-mix(in srgb,var(--warn) 50%,transparent);
+  background:color-mix(in srgb,var(--warn) 11%,transparent);border-radius:11px;
+  padding:11px 14px;font-size:13px;line-height:1.6;color:var(--ink-2);margin:0 0 14px}
+.banner b{color:var(--warn);font-weight:800}
+.banner.err{border-color:color-mix(in srgb,var(--bad) 55%,transparent);background:color-mix(in srgb,var(--bad) 11%,transparent)}
+.banner.err b{color:var(--bad)}
+.banner.ok{border-color:color-mix(in srgb,var(--good) 50%,transparent);background:color-mix(in srgb,var(--good) 10%,transparent)}
+.banner.ok b{color:var(--good)}
+.banner[hidden]{display:none}
+
+.tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.dtab td.l,.dtab th.l{text-align:left}
+.dtab tbody tr:hover{background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.dtab .mut{color:var(--ink-3)}
+.dtab input.cell{width:66px;background:transparent;border:1px solid transparent;border-radius:6px;
+  color:var(--ink-1);font:inherit;font-size:12.5px;text-align:right;padding:2px 4px;font-variant-numeric:tabular-nums}
+.dtab input.cell:hover{border-color:var(--grid)}
+.dtab input.cell:focus{border-color:var(--accent);outline:none;background:var(--page)}
+.dtab tr.off td{opacity:.4}
+.dtab tr.lockd td{background:color-mix(in srgb,var(--good) 9%,transparent)}
+.tag{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  padding:2px 6px;border-radius:5px;border:1px solid var(--grid);color:var(--ink-3)}
+.tag.qb{color:#c77dff;border-color:#c77dff5c}.tag.rb{color:#4cc9a7;border-color:#4cc9a75c}
+.tag.wr{color:#4ea8ff;border-color:#4ea8ff5c}.tag.te{color:#ffa94d;border-color:#ffa94d5c}
+.tag.dst{color:#9aa0a6;border-color:#9aa0a65c}
+.toggle{appearance:none;background:none;border:1px solid var(--grid);border-radius:6px;cursor:pointer;
+  color:var(--ink-3);font:inherit;font-size:11px;font-weight:800;padding:3px 7px;line-height:1.2}
+.toggle:hover{border-color:var(--accent);color:var(--accent)}
+.toggle.on{background:var(--good);border-color:transparent;color:#06240c}
+.toggle.on.ex{background:var(--bad);color:#2a0606}
+:root[data-theme="light"] .toggle.on{color:#fff}
+
+.prog{height:6px;background:var(--grid);border-radius:4px;overflow:hidden;margin:12px 0 0}
+.prog i{display:block;height:100%;background:var(--accent);width:0;transition:width .18s}
+.prog[hidden]{display:none}
+
+.bars{margin-top:6px}
+.bars .b{display:grid;grid-template-columns:150px 1fr 52px;gap:9px;align-items:center;margin:0 0 5px;font-size:12.5px}
+.bars .b .nm{color:var(--ink-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bars .b .tr{height:11px;background:var(--grid);border-radius:6px;overflow:hidden;position:relative}
+.bars .b .tr i{display:block;height:100%;background:var(--accent);border-radius:6px}
+.bars .b .tr .mark{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink-2);opacity:.8}
+.bars .b .vv{text-align:right;color:var(--ink-2);font-variant-numeric:tabular-nums;font-weight:700}
+@media(max-width:620px){.bars .b{grid-template-columns:104px 1fr 46px;font-size:11.5px}}
+
+.lu{border:1px solid var(--grid);border-radius:11px;padding:10px 12px;margin:0 0 8px;background:var(--page)}
+.lu .hd{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;font-size:12px;color:var(--ink-3);margin-bottom:6px}
+.lu .hd .r{font-weight:800;color:var(--ink-1);font-size:13px}
+.lu .hd .sp{margin-left:auto;font-variant-numeric:tabular-nums}
+.lu .ps{display:flex;flex-wrap:wrap;gap:5px}
+.lu .ps .p{font-size:11.5px;border:1px solid var(--grid);border-radius:6px;padding:2px 7px;color:var(--ink-1);
+  background:var(--surface-1);white-space:nowrap}
+.lu .ps .p em{font-style:normal;color:var(--ink-3);font-size:10px;margin-right:4px;font-weight:800}
+.lu .ps .p.cpt{border-color:var(--accent);color:var(--accent)}
+
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px;margin:0}
+.kv dt{color:var(--ink-3)}
+.kv dd{margin:0;color:var(--ink-1);font-variant-numeric:tabular-nums;text-align:right}
+
+.mx{width:100%;border-collapse:collapse;font-size:11px;font-variant-numeric:tabular-nums}
+.mx th{color:var(--ink-3);font-weight:800;padding:3px 5px;text-align:right}
+.mx th:first-child{text-align:left}
+.mx td{padding:3px 5px;text-align:right;color:var(--ink-1)}
+.mx td:first-child{text-align:left;color:var(--ink-3);font-weight:800}
+
+/* ⚠️ The `hidden` attribute is a UA rule of specificity 0,0,1 — it loses to any selector
+   here that sets `display`. The custom payout box shipped visible for exactly that
+   reason: `label.fld{display:block}` beat `[hidden]`. Enumerated rather than blanket so
+   nothing in the shared nav changes behaviour. Found by looking at a screenshot. */
+label.fld[hidden], .statrow[hidden], .card[hidden], .sheet[hidden], .banner[hidden],
+.prog[hidden], .bars[hidden], .grid2[hidden], .grid3[hidden], .chkrow[hidden],
+.btnrow[hidden], .fstabs[hidden], .lu[hidden]{display:none !important}
+
+/* ================= DFS workbench ================= */
+/* Sheet bar — same control vocabulary as the Fantasy Draft Dashboard so the two rigs
+   feel like one site. Kept as in-page sections rather than iframes: every sheet reads
+   the same loaded slate out of one in-memory object, and postMessage plumbing between
+   frames to keep five copies of that in sync would be all cost and no benefit. */
+.fstabs{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:16px 0 16px}
+.fstabs button[data-s]{appearance:none;background:var(--surface-1);
+  border:1.5px solid var(--border);border-radius:11px;
+  color:var(--ink-1);font:inherit;font-size:15px;font-weight:800;letter-spacing:.01em;
+  padding:10px 16px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.06);
+  transition:color .13s,background .13s,border-color .13s,transform .1s}
+.fstabs button[data-s]:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
+.fstabs button[data-s].on{background:var(--accent);color:#fff;border-color:transparent;
+  box-shadow:0 3px 12px color-mix(in srgb,var(--accent) 40%,transparent)}
+.fstabs button[data-s][disabled]{opacity:.42;cursor:not-allowed;transform:none;
+  border-style:dashed;box-shadow:none}
+.fstabs button[data-s][disabled]:hover{border-color:var(--border);color:var(--ink-1)}
+.fstabs .kbd{font-size:10px;opacity:.55;margin-left:7px;font-weight:700;
+  border:1px solid currentColor;border-radius:4px;padding:1px 4px}
+.fstabs .grow{margin-left:auto}
+@media(max-width:760px){.fstabs button[data-s]{padding:8px 11px;font-size:13.5px}.fstabs .kbd{display:none}}
+
+.sheet[hidden]{display:none}
+.fsstrip{display:flex;gap:9px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--ink-3);margin:2px 0 0}
+.fsstrip b{color:var(--ink-1);font-weight:750}
+.fsstrip .dot{width:5px;height:5px;border-radius:50%;background:var(--ink-3);display:inline-block}
+.fsstrip .live{background:var(--good)}
+
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:15px;
+  padding:20px 22px;margin:0 0 16px}
+.card>h3{margin:0 0 4px;font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;
+  color:var(--ink-3);font-weight:800}
+.card>h3 .rt{float:right;text-transform:none;letter-spacing:0;font-weight:650;color:var(--ink-3)}
+.card .sub{margin:0 0 14px;font-size:13px;color:var(--ink-2);line-height:1.6}
+.card .sub b{color:var(--ink-1)}
+@media(max-width:620px){.card{padding:16px 14px}}
+
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+
+label.fld{display:block;margin:0 0 11px}
+label.fld>span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--ink-3);font-weight:800;margin-bottom:4px}
+label.fld>span .hint{text-transform:none;letter-spacing:0;font-weight:600;color:var(--ink-3);opacity:.85}
+input.fi,select.fi,textarea.fi{width:100%;box-sizing:border-box;background:var(--page);
+  border:1px solid var(--grid);border-radius:9px;color:var(--ink-1);font:inherit;font-size:14px;
+  padding:9px 11px;font-variant-numeric:tabular-nums}
+textarea.fi{min-height:110px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.5;resize:vertical}
+input.fi:focus,select.fi:focus,textarea.fi:focus{outline:2px solid color-mix(in srgb,var(--accent) 55%,transparent);outline-offset:1px}
+input.fi[type=checkbox]{width:auto}
+.chkrow{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink-1);margin:0 0 9px}
+.chkrow input{width:16px;height:16px;accent-color:var(--accent)}
+
+button.btn{appearance:none;background:var(--accent);color:#fff;border:0;border-radius:10px;
+  font:inherit;font-size:14.5px;font-weight:800;padding:11px 20px;cursor:pointer}
+button.btn:hover{filter:brightness(1.07)}
+button.btn[disabled]{opacity:.45;cursor:not-allowed;filter:none}
+button.btn.ghost{background:none;color:var(--ink-2);border:1px solid var(--border);font-weight:700;font-size:13px;padding:9px 14px}
+button.btn.ghost:hover{border-color:var(--accent);color:var(--accent);filter:none}
+button.btn.sm{font-size:12.5px;padding:7px 12px}
+.btnrow{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:4px}
+
+.note{font-size:12.5px;line-height:1.6;color:var(--ink-3);margin:9px 0 0}
+.note.warn{color:var(--warn)}
+.note.bad{color:var(--bad)}
+.note.good{color:var(--good)}
+.banner{border:1px solid color-mix(in srgb,var(--warn) 50%,transparent);
+  background:color-mix(in srgb,var(--warn) 11%,transparent);border-radius:11px;
+  padding:11px 14px;font-size:13px;line-height:1.6;color:var(--ink-2);margin:0 0 14px}
+.banner b{color:var(--warn);font-weight:800}
+.banner.err{border-color:color-mix(in srgb,var(--bad) 55%,transparent);background:color-mix(in srgb,var(--bad) 11%,transparent)}
+.banner.err b{color:var(--bad)}
+.banner.ok{border-color:color-mix(in srgb,var(--good) 50%,transparent);background:color-mix(in srgb,var(--good) 10%,transparent)}
+.banner.ok b{color:var(--good)}
+.banner[hidden]{display:none}
+
+.tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.dtab td.l,.dtab th.l{text-align:left}
+.dtab tbody tr:hover{background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.dtab .mut{color:var(--ink-3)}
+.dtab input.cell{width:66px;background:transparent;border:1px solid transparent;border-radius:6px;
+  color:var(--ink-1);font:inherit;font-size:12.5px;text-align:right;padding:2px 4px;font-variant-numeric:tabular-nums}
+.dtab input.cell:hover{border-color:var(--grid)}
+.dtab input.cell:focus{border-color:var(--accent);outline:none;background:var(--page)}
+.dtab tr.off td{opacity:.4}
+.dtab tr.lockd td{background:color-mix(in srgb,var(--good) 9%,transparent)}
+.tag{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  padding:2px 6px;border-radius:5px;border:1px solid var(--grid);color:var(--ink-3)}
+.tag.qb{color:#c77dff;border-color:#c77dff5c}.tag.rb{color:#4cc9a7;border-color:#4cc9a75c}
+.tag.wr{color:#4ea8ff;border-color:#4ea8ff5c}.tag.te{color:#ffa94d;border-color:#ffa94d5c}
+.tag.dst{color:#9aa0a6;border-color:#9aa0a65c}
+.toggle{appearance:none;background:none;border:1px solid var(--grid);border-radius:6px;cursor:pointer;
+  color:var(--ink-3);font:inherit;font-size:11px;font-weight:800;padding:3px 7px;line-height:1.2}
+.toggle:hover{border-color:var(--accent);color:var(--accent)}
+.toggle.on{background:var(--good);border-color:transparent;color:#06240c}
+.toggle.on.ex{background:var(--bad);color:#2a0606}
+:root[data-theme="light"] .toggle.on{color:#fff}
+
+.prog{height:6px;background:var(--grid);border-radius:4px;overflow:hidden;margin:12px 0 0}
+.prog i{display:block;height:100%;background:var(--accent);width:0;transition:width .18s}
+.prog[hidden]{display:none}
+
+.bars{margin-top:6px}
+.bars .b{display:grid;grid-template-columns:150px 1fr 52px;gap:9px;align-items:center;margin:0 0 5px;font-size:12.5px}
+.bars .b .nm{color:var(--ink-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bars .b .tr{height:11px;background:var(--grid);border-radius:6px;overflow:hidden;position:relative}
+.bars .b .tr i{display:block;height:100%;background:var(--accent);border-radius:6px}
+.bars .b .tr .mark{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink-2);opacity:.8}
+.bars .b .vv{text-align:right;color:var(--ink-2);font-variant-numeric:tabular-nums;font-weight:700}
+@media(max-width:620px){.bars .b{grid-template-columns:104px 1fr 46px;font-size:11.5px}}
+
+.lu{border:1px solid var(--grid);border-radius:11px;padding:10px 12px;margin:0 0 8px;background:var(--page)}
+.lu .hd{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;font-size:12px;color:var(--ink-3);margin-bottom:6px}
+.lu .hd .r{font-weight:800;color:var(--ink-1);font-size:13px}
+.lu .hd .sp{margin-left:auto;font-variant-numeric:tabular-nums}
+.lu .ps{display:flex;flex-wrap:wrap;gap:5px}
+.lu .ps .p{font-size:11.5px;border:1px solid var(--grid);border-radius:6px;padding:2px 7px;color:var(--ink-1);
+  background:var(--surface-1);white-space:nowrap}
+.lu .ps .p em{font-style:normal;color:var(--ink-3);font-size:10px;margin-right:4px;font-weight:800}
+.lu .ps .p.cpt{border-color:var(--accent);color:var(--accent)}
+
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px;margin:0}
+.kv dt{color:var(--ink-3)}
+.kv dd{margin:0;color:var(--ink-1);font-variant-numeric:tabular-nums;text-align:right}
+
+.mx{width:100%;border-collapse:collapse;font-size:11px;font-variant-numeric:tabular-nums}
+.mx th{color:var(--ink-3);font-weight:800;padding:3px 5px;text-align:right}
+.mx th:first-child{text-align:left}
+.mx td{padding:3px 5px;text-align:right;color:var(--ink-1)}
+.mx td:first-child{text-align:left;color:var(--ink-3);font-weight:800}
+
+/* ⚠️ The `hidden` attribute is a UA rule of specificity 0,0,1 — it loses to any selector
+   here that sets `display`. The custom payout box shipped visible for exactly that
+   reason: `label.fld{display:block}` beat `[hidden]`. Enumerated rather than blanket so
+   nothing in the shared nav changes behaviour. Found by looking at a screenshot. */
+label.fld[hidden], .statrow[hidden], .card[hidden], .sheet[hidden], .banner[hidden],
+.prog[hidden], .bars[hidden], .grid2[hidden], .grid3[hidden], .chkrow[hidden],
+.btnrow[hidden], .fstabs[hidden], .lu[hidden]{display:none !important}
 </style>
 </head>
+
+
+
 <body>
 <div class="wrap">
   <div id="nav"></div>
@@ -1162,85 +1574,2644 @@ STATE: everything saves in the browser on that device. A different device shows 
 
   <div class="lab-hd"><span class="lab-chip">Labs</span></div>
   <h1 style="margin:10px 0 0;font-size:27px;font-weight:800;letter-spacing:-.01em">DFS Solver &amp; Contest Simulator</h1>
-  <p class="lab-sub">Build a lineup pool against real constraints, then find out which of those lineups actually wins the contest you are entering.</p>
-  <div class="notbuilt"><b>Not built yet.</b> This page is a design mockup. Every figure below is illustrative sample data &mdash; nothing on this page computes, connects to a slate, or exports anything.</div>
+  <p class="lab-sub">Build a lineup pool against real constraints, then find out which of those lineups actually wins the contest you are entering. Bring your own projections; the maths is yours to check.</p>
 
-  <div class="hero-card">
-    <h2>The split that runs this category <span class="samp">Sample data · nothing computed</span></h2>
-    <div class="flow">
-      <div class="step">
-        <div class="k">Step 1 — Solver</div>
-        <h4>Builds the highest-projected lineup</h4>
-        <p>An exact solve against the salary cap, subject to exposure caps, uniques, stack rules and bring-back. It answers <em>what scores most</em>.</p>
-      </div>
-      <div class="arrow">&rarr;</div>
-      <div class="step">
-        <div class="k">Step 2 — Simulator</div>
-        <h4>Ranks those lineups by how often they <em>win</em></h4>
-        <p>Generates a field that mirrors projected ownership, plays the slate thousands of times, and sorts by ROI. It answers <em>what beats the room</em>.</p>
-      </div>
-    </div>
-    <p class="legend"><b>These are different questions.</b> The highest-projected lineup is frequently a bad tournament entry: if everyone else builds it too, the payout splits. Build a pool with the Solver, then pick your entries with the Simulator.</p>
-    <div class="tscroll" style="margin-top:18px">
-    <table class="dtab">
-      <thead><tr><th>Lineup</th><th>Proj</th><th>Own%</th><th>Optimal%</th><th>Leverage</th><th>ROI</th><th>Cash%</th><th>Win%</th></tr></thead>
-      <tbody>
-        <tr><td>QB-WR-WR + bring-back</td><td>148.2</td><td>4.1</td><td>11.8</td><td class="pos">+7.7</td><td class="pos">+38%</td><td>31.0</td><td>0.42</td></tr>
-        <tr><td>QB-WR-TE, 4-4</td><td>151.6</td><td>9.7</td><td>13.2</td><td class="pos">+3.5</td><td class="pos">+21%</td><td>34.5</td><td>0.36</td></tr>
-        <tr><td>QB-RB-WR, 5-2</td><td>153.9</td><td>18.4</td><td>15.1</td><td class="neg">&minus;3.3</td><td class="neg">&minus;9%</td><td>38.2</td><td>0.28</td></tr>
-        <tr><td>Chalk build (no stack)</td><td>155.1</td><td>31.6</td><td>16.4</td><td class="neg">&minus;15.2</td><td class="neg">&minus;27%</td><td>41.7</td><td>0.19</td></tr>
-      </tbody>
-    </table>
-    </div>
-    <p class="legend">⚠️ Read the last two rows against each other. The <b>chalk build projects highest and finishes worst</b> — that is the entire argument for the Simulator. <b>Leverage</b> = optimal-lineup% minus projected ownership; positive means under-owned relative to how often the player actually belongs in the winning lineup.</p>
+  <div class="fsstrip" id="fsStrip"></div>
+
+  <div class="fstabs" id="fsTabs">
+    <button data-s="slate">Slate<span class="kbd">1</span></button>
+    <button data-s="solver">Solver<span class="kbd">2</span></button>
+    <button data-s="sim">Simulator<span class="kbd">3</span></button>
+    <button data-s="exposure">Exposure<span class="kbd">4</span></button>
+    <button data-s="bankroll">Bankroll<span class="kbd">5</span></button>
+    <button data-s="method">Method<span class="kbd">6</span></button>
   </div>
 
-  <h2 class="secn">Modules</h2>
-  <div class="mods">
-    <div class="mod"><div class="n">01</div><h3>Slate &amp; paste-in projections</h3><p>Site, game type and slate. Salary CSV plus your own projections — the tool never pretends to have a better number than you do.</p></div>
-    <div class="mod"><div class="n">02</div><h3>Ownership &amp; leverage</h3><p>Ownership is a separate data layer, per contest. Everything game-theoretic downstream is only as good as this estimate.</p></div>
-    <div class="mod"><div class="n">03</div><h3>Solver settings</h3><p>Lock / exclude, min-max salary, per-player and positional exposure caps, uniques between lineups, stack type and bring-back.</p></div>
-    <div class="mod"><div class="n">04</div><h3>Exact solver</h3><p>A real integer program, not a greedy fill. MIT-licensed and running in the browser — no lineup-count paywall.</p></div>
-    <div class="mod"><div class="n">05</div><h3>Three-factor contest sim</h3><p>Game environment &times; team share &times; individual variance, then a generated field. Outputs ROI, cash rate, win rate and duplication risk.</p></div>
-    <div class="mod"><div class="n">06</div><h3>Exposure &amp; portfolio</h3><p>Running exposure by player and by team stack, so a 150-lineup pool is a portfolio rather than 150 copies of one opinion.</p></div>
-    <div class="mod"><div class="n">07</div><h3>DraftKings CSV export</h3><p>Upload-ready in the site's own format.</p></div>
+<!-- ======================================================= SLATE -->
+<section class="sheet" id="sh-slate" hidden>
+  <div class="card">
+    <h3>1 · The slate <span class="rt" id="slateState"></span></h3>
+    <p class="sub">Upload the salary file DraftKings gives you on the contest page (<b>Export to CSV</b> next to the player list). Nothing is uploaded anywhere — the file is read in your browser and stays on this device.</p>
+    <div class="grid2">
+      <div>
+        <label class="fld"><span>Site &amp; game type</span>
+          <select class="fi" id="siteSel">
+            <option value="dk_classic">DraftKings · Classic (QB/2RB/3WR/TE/FLEX/DST, $50,000)</option>
+            <option value="dk_showdown">DraftKings · Showdown Captain Mode (CPT + 5 FLEX, $50,000)</option>
+          </select>
+        </label>
+        <label class="fld"><span>Salary file</span>
+          <input class="fi" type="file" id="salFile" accept=".csv,text/csv,text/plain">
+        </label>
+        <p class="note">…or paste the contents below.</p>
+        <textarea class="fi" id="salPaste" placeholder="Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame&#10;QB,Josh Allen (39...),Josh Allen,39...,QB,7800,BUF@MIA 09/13/2026 01:00PM ET,BUF,21.8"></textarea>
+        <div class="btnrow"><button class="btn sm" id="salGo">Read salaries</button>
+          <button class="btn ghost sm" id="salDemo">Load a demo slate</button></div>
+      </div>
+      <div>
+        <label class="fld"><span>Projections &amp; ownership <span class="hint">— name column plus a points column; ownership optional</span></span>
+          <textarea class="fi" id="projPaste" placeholder="Player,Proj,Own%&#10;Josh Allen,21.8,14.2&#10;Ja'Marr Chase,18.4,22.9"></textarea>
+        </label>
+        <div id="mapBox" hidden>
+          <div class="grid3">
+            <label class="fld"><span>Name column</span><select class="fi" id="mapName"></select></label>
+            <label class="fld"><span>Projection column</span><select class="fi" id="mapProj"></select></label>
+            <label class="fld"><span>Ownership % <span class="hint">optional</span></span><select class="fi" id="mapOwn"></select></label>
+            <label class="fld"><span>Team <span class="hint">optional, improves matching</span></span><select class="fi" id="mapTeam"></select></label>
+          </div>
+        </div>
+        <div class="btnrow"><button class="btn sm" id="projGo">Match to the slate</button>
+          <button class="btn ghost sm" id="projClear">Clear projections</button></div>
+        <p class="note" id="matchNote"></p>
+      </div>
+    </div>
+    <div class="banner" id="slateWarn" hidden></div>
+  </div>
+
+  <div class="card">
+    <h3>2 · The player pool <span class="rt" id="poolCount"></span></h3>
+    <p class="sub">Edit any projection or ownership number directly. <b>Lock</b> forces a player into every lineup, <b>Out</b> removes them entirely, and <b>Max%</b> caps how many of your lineups may contain them. A player with no projection is left out of the pool — a blank is not a zero.</p>
+    <div class="btnrow" style="margin-bottom:12px">
+      <select class="fi" id="poolPos" style="width:auto"><option value="">All positions</option><option>QB</option><option>RB</option><option>WR</option><option>TE</option><option>DST</option></select>
+      <input class="fi" id="poolFind" placeholder="Find a player…" style="width:auto;min-width:180px">
+      <select class="fi" id="poolSort" style="width:auto">
+        <option value="proj">Sort: projection</option>
+        <option value="val">Sort: points per $1,000</option>
+        <option value="sal">Sort: salary</option>
+        <option value="own">Sort: ownership</option>
+      </select>
+      <span class="grow" style="flex:1"></span>
+      <button class="btn ghost sm" id="poolResetFlags">Clear all locks / outs / caps</button>
+    </div>
+    <div class="tscroll"><table class="dtab" id="poolTab"></table></div>
+    <div class="emptystate" id="poolEmpty"><div class="big">No slate loaded</div>
+      <p>Read a DraftKings salary file above, or load the demo slate to see the whole rig work end to end.</p></div>
+  </div>
+</section>
+
+<!-- ======================================================= SOLVER -->
+<section class="sheet" id="sh-solver" hidden>
+  <div class="card">
+    <h3>Solver settings</h3>
+    <p class="sub">An exact integer solve, not a greedy fill: for every lineup it returns <b>the</b> highest-projected roster that satisfies every constraint below, and it is checked against exhaustive enumeration on small slates. There is no lineup-count paywall.</p>
+    <div class="grid3">
+      <label class="fld"><span>Lineups</span><input class="fi" type="number" id="cfCount" min="1" max="1000" value="20"></label>
+      <label class="fld"><span>Min salary</span><input class="fi" type="number" id="cfMinSal" step="100" value="49000"></label>
+      <label class="fld"><span>Max salary</span><input class="fi" type="number" id="cfMaxSal" step="100" value="50000"></label>
+      <label class="fld"><span>Uniques <span class="hint">players differing between any two lineups</span></span><input class="fi" type="number" id="cfUniq" min="0" max="6" value="2"></label>
+      <label class="fld"><span>Randomness <span class="hint">% projection jitter per lineup</span></span><input class="fi" type="number" id="cfRand" min="0" max="60" value="15"></label>
+      <label class="fld"><span>Default max exposure %</span><input class="fi" type="number" id="cfMaxExp" min="1" max="100" value="100"></label>
+      <label class="fld"><span>Max players per team</span><input class="fi" type="number" id="cfTeam" min="1" max="9" value="4"></label>
+      <label class="fld"><span>Max players per game</span><input class="fi" type="number" id="cfGame" min="1" max="9" value="6"></label>
+      <label class="fld"><span>Time limit <span class="hint">seconds</span></span><input class="fi" type="number" id="cfTime" min="5" max="600" value="60"></label>
+    </div>
+  </div>
+
+  <div class="card" id="stackCard">
+    <h3>Stacking</h3>
+    <p class="sub">Correlation is the only free lunch in a tournament: a quarterback and his receiver score the same touchdown twice. The estimated size of that effect is on the <a href="#" data-goto="method">Method</a> sheet.</p>
+    <div class="grid3">
+      <label class="fld"><span>QB + N teammates</span><input class="fi" type="number" id="cfQbMin" min="0" max="4" value="1"></label>
+      <label class="fld"><span>Stack positions</span>
+        <select class="fi" id="cfQbPos"><option value="WR,TE">WR or TE</option><option value="WR">WR only</option><option value="WR,TE,RB">WR, TE or RB</option></select></label>
+      <label class="fld"><span>Bring-back from the opponent</span><input class="fi" type="number" id="cfBring" min="0" max="3" value="0"></label>
+    </div>
+    <div class="chkrow"><input type="checkbox" id="cfNoRbDst"><label for="cfNoRbDst">Never roster a running back playing against my defence</label></div>
+    <div class="chkrow"><input type="checkbox" id="cfNoOppDst"><label for="cfNoOppDst">Never roster any player facing my defence</label></div>
+  </div>
+
+  <div class="card">
+    <h3>Build <span class="rt" id="solveState"></span></h3>
+    <div class="btnrow">
+      <button class="btn" id="solveGo">Build lineups</button>
+      <button class="btn ghost sm" id="solveStop" hidden>Stop</button>
+      <button class="btn ghost sm" id="exportCsv">Export DraftKings CSV</button>
+      <button class="btn ghost sm" id="clearLu">Clear pool</button>
+    </div>
+    <div class="prog" id="solveProg" hidden><i></i></div>
+    <div class="banner" id="solveWarn" hidden></div>
+    <div class="statrow" id="solveStats" hidden></div>
+  </div>
+
+  <div class="card" id="luCard" hidden>
+    <h3>Lineups <span class="rt" id="luCount"></span></h3>
+    <div id="luList"></div>
+    <p class="note" id="luMore"></p>
+  </div>
+</section>
+
+<!-- ======================================================= SIMULATOR -->
+<section class="sheet" id="sh-sim" hidden>
+  <div class="card">
+    <h3>The contest</h3>
+    <p class="sub">The solver asks <b>what scores most</b>. This asks <b>what beats the room</b> — and in a top-heavy tournament those are rarely the same lineup.</p>
+    <div class="grid3">
+      <label class="fld"><span>Contest entries</span><input class="fi" type="number" id="siField" min="2" value="20000"></label>
+      <label class="fld"><span>Entry fee $</span><input class="fi" type="number" id="siFee" min="0" step="0.25" value="20"></label>
+      <label class="fld"><span>Payout shape</span>
+        <select class="fi" id="siPayout">
+          <option value="gpp">Tournament — top-heavy (20% paid)</option>
+          <option value="gppflat">Tournament — flat (25% paid)</option>
+          <option value="cash">Double-up / 50-50 (44% paid)</option>
+          <option value="custom">Custom payout table</option>
+        </select></label>
+      <label class="fld"><span>Places paid %</span><input class="fi" type="number" id="siPaid" min="0.1" max="100" step="0.1" value="20"></label>
+      <label class="fld"><span>Top-heaviness <span class="hint">higher = more on first</span></span><input class="fi" type="number" id="siAlpha" min="0" max="3" step="0.05" value="1.15"></label>
+      <label class="fld"><span>Rake %</span><input class="fi" type="number" id="siRake" min="0" max="40" step="0.5" value="15"></label>
+    </div>
+    <label class="fld" id="siCustomBox" hidden><span>Custom payout table <span class="hint">— one line per tier: fromPlace, toPlace, prize</span></span>
+      <textarea class="fi" id="siCustom" placeholder="1,1,1000000&#10;2,2,150000&#10;3,5,50000&#10;6,20,10000"></textarea></label>
+  </div>
+
+  <div class="card">
+    <h3>The field</h3>
+    <p class="sub">Opponent lineups are generated to hit the ownership you supplied, spending close to the cap the way real entries do. <b>The field is a sample</b> — your finishing rank is measured against it and then scaled to the real contest size.</p>
+    <div class="grid3">
+      <label class="fld"><span>Simulations</span><input class="fi" type="number" id="siSims" min="500" max="50000" step="500" value="10000"></label>
+      <label class="fld"><span>Field sample size</span><input class="fi" type="number" id="siSample" min="200" max="10000" step="100" value="2500"></label>
+      <label class="fld"><span>Share of field stacked %</span><input class="fi" type="number" id="siStack" min="0" max="100" value="60"></label>
+      <label class="fld"><span>Field min salary</span><input class="fi" type="number" id="siFieldSal" step="100" value="49000"></label>
+    </div>
+    <div class="btnrow">
+      <button class="btn" id="simGo">Run the simulation</button>
+      <button class="btn ghost sm" id="simStop" hidden>Stop</button>
+    </div>
+    <div class="prog" id="simProg" hidden><i></i></div>
+    <div class="banner" id="simWarn" hidden></div>
+  </div>
+
+  <div class="card" id="fieldCard" hidden>
+    <h3>Is the modelled field believable?</h3>
+    <p class="sub">Read this before you read the ROI column. If the simulated room is weaker than the room you are actually in, every ROI on this page is too high.</p>
+    <div class="statrow" id="fieldStats"></div>
+    <p class="note" id="fieldNote"></p>
+  </div>
+
+  <div class="card" id="simCard" hidden>
+    <h3>Your lineups, ranked by return <span class="rt" id="simMeta"></span></h3>
+    <div class="tscroll"><table class="dtab" id="simTab"></table></div>
+    <p class="note">Proj is the sum of your projections. Mean is what the lineup actually averaged across the simulations — it differs from Proj because scoring is skewed. <b>Dupes</b> is the expected number of other entries holding exactly this lineup.</p>
+  </div>
+
+  <div class="card" id="levCard" hidden>
+    <h3>Leverage</h3>
+    <p class="sub"><b>Win-lineup %</b> is how often a player appears in the best lineup on the slate across the simulations. <b>Leverage</b> is that minus projected ownership: positive means the room is underweight relative to how often they belong in the winner.</p>
+    <div class="btnrow" style="margin-bottom:10px">
+      <select class="fi" id="levPos" style="width:auto"><option value="">All positions</option><option>QB</option><option>RB</option><option>WR</option><option>TE</option><option>DST</option></select>
+      <select class="fi" id="levSort" style="width:auto"><option value="lev">Sort: leverage</option><option value="win">Sort: win-lineup %</option><option value="own">Sort: ownership</option></select>
+    </div>
+    <div class="tscroll"><table class="dtab" id="levTab"></table></div>
+  </div>
+</section>
+
+<!-- ======================================================= EXPOSURE -->
+<section class="sheet" id="sh-exposure" hidden>
+  <div class="card">
+    <h3>Portfolio <span class="rt" id="expMeta"></span></h3>
+    <p class="sub">A 150-lineup pool is only worth building if it is a portfolio rather than 150 copies of one opinion. The grey mark on each bar is projected ownership, so a bar past the mark is where you are overweight the field.</p>
+    <div class="statrow" id="expStats"></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Player exposure</h3>
+      <div class="btnrow" style="margin-bottom:10px">
+        <select class="fi" id="expPos" style="width:auto"><option value="">All positions</option><option>QB</option><option>RB</option><option>WR</option><option>TE</option><option>DST</option></select>
+      </div>
+      <div class="bars" id="expPlayers"></div></div>
+    <div class="card"><h3>Team &amp; stack exposure</h3><div class="bars" id="expTeams"></div>
+      <h3 style="margin-top:18px">Game exposure</h3><div class="bars" id="expGames"></div></div>
+  </div>
+  <div class="card"><h3>Salary used</h3><div id="expSal"></div></div>
+  <div class="emptystate" id="expEmpty"><div class="big">No lineups yet</div><p>Build a pool on the Solver sheet and this fills in.</p></div>
+</section>
+
+<!-- ======================================================= BANKROLL -->
+<section class="sheet" id="sh-bankroll" hidden>
+  <div class="card">
+    <h3>Results <span class="rt" id="brMeta"></span></h3>
+    <p class="sub">Every contest you have entered, and what it actually returned. Stored on this device only — nothing is sent anywhere.</p>
+    <div class="statrow" id="brStats"></div>
+    <p class="note" id="brSig"></p>
+  </div>
+
+  <div class="card"><h3>Running profit</h3><div id="brChart"></div>
+    <p class="note" id="brChartNote"></p></div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Log a contest</h3>
+      <div class="grid3">
+        <label class="fld"><span>Date</span><input class="fi" type="date" id="brDate"></label>
+        <label class="fld"><span>Type</span><select class="fi" id="brType"><option>GPP</option><option>Cash</option><option>Showdown</option><option>Satellite</option><option>Other</option></select></label>
+        <label class="fld"><span>Entries</span><input class="fi" type="number" id="brEntries" min="1" value="1"></label>
+        <label class="fld"><span>Entry fee $ <span class="hint">each</span></span><input class="fi" type="number" id="brFee" min="0" step="0.25" value="20"></label>
+        <label class="fld"><span>Winnings $ <span class="hint">total</span></span><input class="fi" type="number" id="brWin" min="0" step="0.01" value="0"></label>
+        <label class="fld"><span>Contest</span><input class="fi" id="brName" placeholder="NFL $5M Fantasy Football Millionaire"></label>
+      </div>
+      <div class="btnrow"><button class="btn sm" id="brAdd">Add</button></div>
+    </div>
+    <div class="card">
+      <h3>Import DraftKings history</h3>
+      <p class="sub">DraftKings → <b>My Contests → History → Export</b>. The columns it writes are detected automatically; each row is one entry.</p>
+      <input class="fi" type="file" id="brFile" accept=".csv,text/csv"><br>
+      <textarea class="fi" id="brPaste" style="margin-top:10px" placeholder="Sport,Game_Type,Entry_Key,Contest_Key,Contest_Date_EST,Place,Points,Entry_Fee,Winnings_Non_Ticket,…"></textarea>
+      <div class="btnrow"><button class="btn sm" id="brImport">Import</button>
+        <button class="btn ghost sm" id="brExport">Export my log</button>
+        <button class="btn ghost sm" id="brWipe">Delete everything</button></div>
+      <p class="note" id="brImportNote"></p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>By type</h3><div class="tscroll"><table class="dtab" id="brByType"></table></div>
+    <h3 style="margin-top:20px">Every contest</h3>
+    <div class="tscroll"><table class="dtab" id="brTab"></table></div>
+    <p class="note" id="brMore"></p>
+  </div>
+</section>
+
+<!-- ======================================================= METHOD -->
+<section class="sheet" id="sh-method" hidden>
+  <div class="card">
+    <h3>Where the correlation numbers come from</h3>
+    <p class="sub">The simulator does not assume how a quarterback and his receiver move together — it measures it. Every cell below is estimated from nflverse weekly stats, regular season only, scored under DraftKings rules including the 100/300-yard bonuses and the defence points-allowed tiers.</p>
+    <div class="statrow" id="mCorrMeta"></div>
+    <p class="note" style="margin-top:14px">Weekly scores are converted to z-scores <em>inside each player-season</em> before correlating. Without that step the number would mostly measure which player is better, not how their outcomes move together in a game. Roles are assigned by season usage — targets for pass catchers, carries plus targets for backs — never by fantasy points, because ranking by the outcome would let the outcome pick the role and inflate the very correlation being measured.</p>
+    <h3 style="margin-top:22px">Same team</h3>
+    <div class="tscroll"><table class="mx" id="mSame"></table></div>
+    <h3 style="margin-top:22px">Opposing team</h3>
+    <div class="tscroll"><table class="mx" id="mOpp"></table></div>
+    <p class="note">Read the pairs that matter: a quarterback with his top receiver, a quarterback with the opposing quarterback (the shootout), and a defence with the quarterback it is facing.</p>
+  </div>
+
+  <div class="card">
+    <h3>How wide each player's range is</h3>
+    <p class="sub">Coefficient of variation — one week's standard deviation as a share of the average — by position and scoring level, from the same sample. Cheap players are wildly more volatile than expensive ones, which is most of why punt plays win tournaments and lose cash games.</p>
+    <div class="tscroll"><table class="dtab" id="mCv"></table></div>
+    <p class="note">Outside the estimated range the nearest band is reused rather than extrapolated. Skill positions are drawn lognormal so the mean is preserved and the tail is on the right side; defences are drawn normal, because a DraftKings defence can finish below zero and a lognormal cannot.</p>
   </div>
 
   <div class="honesty">
     <h3>What this can't do</h3>
-    <p>These are projections, not promises &mdash; every point total is a median on a distribution, and the sim only shows the range of finishes <em>given our correlation assumptions</em>. It cannot know late injury news, weather after lock, or the true shape of the field. Ownership is an estimate, not DraftKings' actuals, and leverage is only ever as good as the ownership guess underneath it. Paid incumbents run $97&ndash;$297 a month and gate the simulator behind lineup-count caps; this being free is not evidence that it is better.</p>
+    <p>These are projections, not promises — and they are <em>your</em> projections. This tool has no opinion about how good a player is; feed it a bad number and it will optimise that bad number perfectly. The correlation structure is measured, but it is the league-average structure across seven seasons, not this specific game. Nothing here knows about news after you pasted your file, weather at kickoff, or a late inactive.</p>
+    <p style="margin-top:10px">The simulated field is the weakest link. It is generated from your ownership estimate, and ownership is itself a guess; the room is also modelled as a sample of a few thousand lineups and extrapolated, so finishing positions deep in a large field are approximate. If the modelled field is softer than the real one — and a field built from ownership alone usually is — the ROI column reads high. The field-strength card on the Simulator sheet exists so you can check that rather than take it on faith.</p>
+    <p style="margin-top:10px">There are no receipts here yet. This tool has not been run forward against a declared benchmark for a single week, so it sits in Labs and it stays in Labs until it has. Paid incumbents run $25–$200 a month and gate the simulator behind lineup-count caps; this being free is not evidence that it is better.</p>
   </div>
+</section>
 
   <footer>
     Data Dawgs · Play-by-play data from <a href="https://github.com/nflverse" target="_blank" rel="noopener">nflverse</a> · Strategy synthesized from Establish The Run's 2026 Draft Kit (subscriber content, personal use) · Stats format inspired by <a href="https://rbsdm.com/stats/stats/" target="_blank" rel="noopener">rbsdm.com</a>
   </footer>
 </div>
-<script>
-/* ---------------- Toto's surface: the DFS mockup ----------------
-   ⚠️ Every number on this page is INVENTED sample data, not model output. The single
-   most important job of this block is to stop Toto reading the table out loud as if
-   it meant something. The page says so itself in a banner; Toto has to say it too. */
-window.DD_BOTCTX = {
-  label: 'THE DFS PAGE (a design mockup — nothing computes)',
-  title: 'Ask Toto about this page',
-  chrome: {sub:'knows what this page is', ph:'Ask Toto about the DFS idea…', chips:[
-    ['Why is the highest-projected lineup the worst row in the table?','Why is chalk bad?'],
-    ['What is leverage, and how do I read Optimal% minus Own%?','What is leverage?'],
-    ['Does any of this work yet?','Is it built?']]},
-  sys: `RIGHT NOW you are on the DFS Solver & Contest Simulator page. ⚠️ IT IS NOT BUILT. It is a design mockup arguing for a tool that does not exist yet.
-- ⚠️ EVERY figure in the table on this page is INVENTED illustrative data. It is not a projection, not a simulation result, and not a backtest. If someone asks about a number on screen, say that first, before anything else.
-- Nothing here computes, connects to a slate, uploads a CSV, or exports lineups. If asked whether it works, the answer is no.
-- The CONCEPTS are real and worth explaining — leverage, ownership, optimal rate, ROI versus raw projection. Teach those freely. Just never dress the sample rows up as evidence for them.`,
-  ctx: () => `WHAT THE PAGE ARGUES, in two steps:
-1. A solver builds the highest-projected lineups it can.
-2. A contest simulator then RE-RANKS that pool by ROI and win rate — because the highest-projected lineup is usually the most-owned one, and in a tournament you are paid for being right AND different.
 
-The vocabulary it uses: Proj (projected points) · Own% (share of the field on that player or build) · Optimal% (how often it shows up in the winning lineup across simulations) · Leverage (Optimal% minus Own% — positive means the field is underweight) · ROI · Cash% · Win%.
+<!-- The engine is parsed twice from this one block: once into a Blob-URL Web Worker so a
+     long solve cannot freeze the page, and once on the main thread so the Method sheet can
+     read the correlation matrix directly and so everything still works where Blob workers
+     are blocked. type="text/plain" keeps the browser from executing it here. -->
+<script type="text/plain" id="ddfsEngine">
+/* ============================================================================
+   DFS engine — exact lineup solver + correlated contest simulator.
 
-The table on the page shows four builds where leverage falls as ownership rises, ending with the chalkiest build at the worst ROI despite the highest projection. ⚠️ THOSE ROWS ARE FABRICATED to illustrate the shape of the argument. They are not output from anything.
+   Pure computation. No DOM. Loaded three ways:
+     1. node, for the benchmark + tests in the build dir
+     2. inlined into dfs.html as a Blob-URL Web Worker (keeps the page self-contained)
+     3. inlined into dfs.html on the main thread if Worker/Blob is unavailable
 
-STATUS: mockup only. No solver, no slate connection, no CSV import, no export. Exposure caps and uniques are discussed as design ideas, not implemented features.`
+   ⚠️ Everything here consumes projections the USER supplies. The engine has no opinion
+   about how good a player is and never invents a number. A missing projection is a
+   missing player, not a zero.
+   ========================================================================== */
+(function (root) {
+"use strict";
+
+/* ---------------------------------------------------------------- constants */
+
+const POS = ["QB", "RB", "WR", "TE", "DST"];
+
+const SITES = {
+  dk_classic: {
+    key: "dk_classic", label: "DraftKings · Classic", cap: 50000, size: 9,
+    // FLEX is resolved by enumerating the three legal position splits rather than
+    // carrying a wildcard slot — a wildcard slot generates the same lineup up to
+    // three times and de-duplicating after the fact costs more than not making them.
+    patterns: [
+      { QB: 1, RB: 3, WR: 3, TE: 1, DST: 1 },
+      { QB: 1, RB: 2, WR: 4, TE: 1, DST: 1 },
+      { QB: 1, RB: 2, WR: 3, TE: 2, DST: 1 }
+    ],
+    minGames: 2,          // DK requires two different games on a classic slate
+    showdown: false
+  },
+  dk_showdown: {
+    key: "dk_showdown", label: "DraftKings · Showdown Captain Mode", cap: 50000, size: 6,
+    patterns: null, minTeams: 2, cptMult: 1.5, cptSalMult: 1.5, showdown: true
+  }
 };
+
+const SAL_STEP = 100;     // DK salaries are multiples of 100 — the DP bound rides on this
+
+/* ------------------------------------------------------------------ helpers */
+
+// Mulberry32 — seeded, so a run is reproducible and so is any bug in it.
+function rng(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function gauss(rand) {
+  let u = 0, v = 0;
+  while (u === 0) u = rand();
+  while (v === 0) v = rand();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+/* ============================================================================
+   SOLVER
+
+   Branch and bound over slots, one position group at a time, players inside a
+   group visited in projection order with a strictly increasing index so a set is
+   only ever generated once.
+
+   ⚠️ The whole thing lives or dies on the bound. A first cut used "sum of the top
+   k projections still available", which ignores salary — with a salary floor of
+   $49,000 that bound never fires and a single main-slate solve did not finish in
+   two minutes. The bound below is a real salary-aware DP relaxation:
+
+     SUF[gi][k][b] = the most projection obtainable by taking k more players from
+                     group gi PLUS the full requirement from every later group,
+                     spending at most b.
+
+   Built by knapsack per group then a (max,+) convolution backwards through the
+   groups. It ignores the increasing-index rule and lets a group re-pick a player
+   already taken, so it is a genuine upper bound — just a tight one.
+   ========================================================================== */
+
+/**
+ * players: [{pos, team, opp, gid, sal, proj, lock, excl, maxExp}]  (array index = id)
+ * cfg: { site, count, minSalary, maxSalary, uniques, randomness, seed,
+ *        maxPerTeam, maxPerGame, timeLimitMs,
+ *        stack:{qbMin, qbPos, bringBack, noRbVsDst, noOppDst},
+ *        groups:[{mode:"atMost"|"atLeast"|"exactly", n, ids:[]}] }
+ */
+function solveLineups(players, cfg, onProgress) {
+  const site = SITES[cfg.site] || SITES.dk_classic;
+  return site.showdown ? solveShowdown(players, cfg, site, onProgress)
+                       : solveClassic(players, cfg, site, onProgress);
+}
+
+function activePool(players, cfg, expCount, made) {
+  // Excluded, or already at the exposure cap, means the player is simply absent from
+  // this solve. That is exact — no penalty term, no soft nudge.
+  const out = [];
+  for (let i = 0; i < players.length; i++) {
+    const p = players[i];
+    if (p.excl) continue;
+    if (!(p.proj > 0) && !p.lock) continue;
+    if (!p.lock && p.maxExp != null && made > 0 && expCount[i] / made >= p.maxExp - 1e-9) continue;
+    out.push(i);
+  }
+  return out;
+}
+
+/* ---- per-group DP tables, rebuilt whenever the pool or the projections move ---- */
+
+/* Rows are stored windowed: {a, lo, hi}. `a` is indexed by absolute salary bucket but
+   only [lo..hi] is meaningful — below lo the row is -Infinity (cannot be afforded),
+   above hi it is flat at a[hi] (money left over buys nothing more). Windowing is not a
+   micro-optimisation: full 0..500 convolutions made the DP rebuild, not the tree search,
+   the dominant cost of a solve. A QB slot spans ~30 buckets, not 501. */
+function rowGet(r, b) { return b < r.lo ? -Infinity : r.a[b > r.hi ? r.hi : b]; }
+
+// exact-k knapsack over one group: best proj taking exactly k, salary <= b*100
+function groupKnap(ids, players, proj, kMax, B) {
+  const raw = [];
+  for (let k = 0; k <= kMax; k++) raw.push(new Float64Array(B + 1).fill(k === 0 ? 0 : -Infinity));
+  const sals = ids.map(id => (players[id].sal / SAL_STEP) | 0).sort((x, y) => x - y);
+  for (const id of ids) {
+    const s = (players[id].sal / SAL_STEP) | 0, v = proj[id];
+    for (let k = kMax; k >= 1; k--) {
+      const cur = raw[k], prev = raw[k - 1];
+      for (let b = B; b >= s; b--) {
+        const alt = prev[b - s] + v;
+        if (alt > cur[b]) cur[b] = alt;
+      }
+    }
+  }
+  const K = [];
+  for (let k = 0; k <= kMax; k++) {
+    const r = raw[k];
+    for (let b = 1; b <= B; b++) if (r[b - 1] > r[b]) r[b] = r[b - 1];
+    let lo = 0, hi = 0;
+    for (let j = 0; j < k; j++) lo += sals[j];
+    for (let j = 0; j < k; j++) hi += sals[sals.length - 1 - j];
+    if (lo > B) { K.push({ a: r, lo: B + 1, hi: B }); continue; }
+    if (hi > B) hi = B;
+    K.push({ a: r, lo, hi });
+  }
+  return K;
+}
+
+// windowed (max,+) convolution: out[b] = max_s A[s] + C[b-s]
+function maxPlusConv(A, C, B) {
+  const out = new Float64Array(B + 1).fill(-Infinity);
+  const lo = A.lo + C.lo, hiRaw = A.hi + C.hi;
+  const hi = hiRaw > B ? B : hiRaw;
+  if (lo > B) return { a: out, lo: B + 1, hi: B };
+  for (let s = A.lo; s <= A.hi; s++) {
+    const a = A.a[s];
+    if (a === -Infinity) continue;
+    const bEnd = Math.min(B, s + C.hi);
+    for (let b = s + C.lo; b <= bEnd; b++) {
+      const alt = a + C.a[b - s];
+      if (alt > out[b]) out[b] = alt;
+    }
+  }
+  for (let b = lo + 1; b <= hi; b++) if (out[b - 1] > out[b]) out[b] = out[b - 1];
+  return { a: out, lo, hi };
+}
+
+function solveClassic(players, cfg, site, onProgress) {
+  const N = players.length;
+  const count = Math.max(1, cfg.count | 0);
+  const cap = Math.min(cfg.maxSalary || site.cap, site.cap);
+  const floor = cfg.minSalary || 0;
+  const uniques = Math.max(0, cfg.uniques | 0);
+  const maxOverlap = site.size - uniques;
+  const stack = cfg.stack || {};
+  const rand = rng(cfg.seed || 1);
+  const noise = cfg.randomness || 0;
+  // ⚠️ Always have a deadline. An impossible constraint set (a salary window no roster can
+  // hit, say) has no solution to prune toward, so the search enumerates the whole tree and
+  // a caller that forgot a limit would simply hang.
+  const deadline = Date.now() + (cfg.timeLimitMs || 120000);
+
+  const expCount = new Int32Array(N);
+  const acceptedSets = [];               // Uint8Array membership per accepted lineup
+  const inLineups = [];                  // id -> [accepted lineup indexes]  (sparse)
+  for (let i = 0; i < N; i++) inLineups.push([]);
+  const out = [];
+  let infeasible = null, timedOut = false;
+
+  for (let n = 0; n < count; n++) {
+    if (Date.now() > deadline) { timedOut = true; break; }
+    // Projections are re-drawn per lineup when randomness is on. That is what turns a
+    // pool into a portfolio instead of N near-copies of one opinion.
+    const proj = new Float64Array(N);
+    for (let i = 0; i < N; i++) {
+      const base = players[i].proj || 0;
+      proj[i] = noise > 0 ? Math.max(0, base * (1 + noise * gauss(rand))) : base;
+    }
+    const pool = activePool(players, cfg, expCount, n);
+    const res = bestClassic(players, proj, pool, cfg, site, cap, floor,
+                            acceptedSets, inLineups, maxOverlap, stack, deadline);
+    if (res && !res.ids) { timedOut = true; break; }   // deadline hit mid-search
+    if (!res) { infeasible = n === 0 ? "no lineup satisfies these constraints"
+                                     : "ran out of lineups that meet the uniqueness rule"; break; }
+    if (res.aborted) timedOut = true;
+
+    const set = new Uint8Array(N);
+    for (const id of res.ids) { set[id] = 1; expCount[id]++; inLineups[id].push(acceptedSets.length); }
+    acceptedSets.push(set);
+    // Report the TRUE projection of the lineup, never the perturbed one used to find it.
+    let trueProj = 0; for (const id of res.ids) trueProj += players[id].proj || 0;
+    out.push({ ids: res.ids.slice().sort((a, b) => POS.indexOf(players[a].pos) - POS.indexOf(players[b].pos)),
+               proj: trueProj, drawnProj: res.proj, sal: res.sal });
+    if (onProgress && (n % 5 === 0 || n === count - 1)) onProgress(n + 1, count);
+  }
+  return { lineups: out, infeasible, timedOut, exposure: expCount };
+}
+
+function bestClassic(players, proj, pool, cfg, site, cap, floor,
+                     acceptedSets, inLineups, maxOverlap, stack, deadline) {
+  const B = (cap / SAL_STEP) | 0;
+  const byPos = {}; for (const p of POS) byPos[p] = [];
+  const locks = [];
+  for (const id of pool) {
+    const p = players[id];
+    if (byPos[p.pos]) byPos[p.pos].push(id);
+    if (p.lock) locks.push(id);
+  }
+  for (const p of POS) byPos[p].sort((a, b) => proj[b] - proj[a]);
+
+  let best = null, bestVal = -1;
+  const nAcc = acceptedSets.length;
+  const overlap = new Int32Array(nAcc);
+  let nodes = 0;
+  // ⚠️ A deadline has to LATCH. Returning from only the one frame that happened to notice
+  // the clock leaves the rest of the tree to be explored normally, so the "time limit"
+  // merely slowed the search instead of ending it — an impossible constraint set still ran
+  // for minutes. `aborted` is checked at the top of every node, which is cheap; the clock
+  // is read once every 1,024 nodes, which is not.
+  let aborted = false;
+
+  const qbPosArr = stack.qbPos && stack.qbPos.length ? stack.qbPos : ["WR", "TE"];
+  const stacking = (stack.qbMin || 0) > 0 || (stack.bringBack || 0) > 0;
+
+  for (const pat of site.patterns) {
+    // Group order matters a lot. Default: small, heavily constrained groups first, so
+    // the tree narrows at the top.
+    // ⚠️ When a QB stack is required that order is exactly wrong. The DP bound knows
+    // nothing about stacking, so it stays optimistic all the way down; the only thing
+    // that can cut a stackless subtree is the stack constraint itself, and that cannot
+    // fire until the groups the stack partners live in have been visited. Leaving WR
+    // last took a 150-lineup stacked run from 2s to over 60s. Pass-catchers first.
+    const order = stacking ? ["QB", "TE", "WR", "RB", "DST"]
+                           : ["QB", "DST", "TE", "RB", "WR"];
+    const need = order.map(g => pat[g]);
+    const grp = order.map(g => byPos[g]);
+    const G = order.length;
+    if (grp.some((g, i) => g.length < need[i])) continue;
+
+    // Locks have to fit this pattern or the pattern cannot produce a lineup at all.
+    const lockNeed = order.map(() => 0);
+    let ok = true;
+    for (const id of locks) {
+      const gi = order.indexOf(players[id].pos);
+      if (gi < 0) { ok = false; break; }
+      lockNeed[gi]++;
+    }
+    if (!ok || lockNeed.some((v, i) => v > need[i])) continue;
+
+    /* ---- the DP bound ---- */
+    const KN = grp.map((g, i) => groupKnap(g, players, proj, need[i], B));
+    // SUF[gi][k] = best proj from k more of group gi plus all of gi+1..G-1, salary <= b
+    const SUF = [];
+    for (let gi = 0; gi <= G; gi++) SUF.push([]);
+    SUF[G][0] = { a: new Float64Array(B + 1), lo: 0, hi: 0 };   // nothing left to buy
+    for (let gi = G - 1; gi >= 0; gi--) {
+      const tail = SUF[gi + 1][need[gi + 1] === undefined ? 0 : need[gi + 1]] || SUF[gi + 1][0];
+      for (let k = 0; k <= need[gi]; k++) SUF[gi][k] = maxPlusConv(KN[gi][k], tail, B);
+    }
+
+    /* ---- O(1) salary/projection suffix tables inside each group ---- */
+    // minSal[gi][from][k] / maxSal[gi][from][k] — cheapest / priciest k at or after `from`
+    const MINS = [], MAXS = [], TOPP = [];
+    for (let gi = 0; gi < G; gi++) {
+      const list = grp[gi], L = list.length, k = need[gi];
+      const mn = [], mx = [], tp = [];
+      for (let f = 0; f <= L; f++) { mn.push(new Float64Array(k + 1)); mx.push(new Float64Array(k + 1)); }
+      for (let j = 1; j <= k; j++) { mn[L][j] = Infinity; mx[L][j] = -Infinity; }
+      for (let f = L - 1; f >= 0; f--) {
+        const s = players[list[f]].sal;
+        for (let j = 1; j <= k; j++) {
+          mn[f][j] = Math.min(mn[f + 1][j], s + mn[f + 1][j - 1]);
+          mx[f][j] = Math.max(mx[f + 1][j], s + mx[f + 1][j - 1]);
+        }
+      }
+      // list is proj-descending, so the top k from `from` is just the next k entries
+      const pre = new Float64Array(L + 1);
+      for (let j = 0; j < L; j++) pre[j + 1] = pre[j] + proj[list[j]];
+      for (let f = 0; f <= L; f++) {
+        const row = new Float64Array(k + 1);
+        for (let j = 0; j <= k; j++) row[j] = f + j <= L ? pre[f + j] - pre[f] : -Infinity;
+        tp.push(row);
+      }
+      MINS.push(mn); MAXS.push(mx); TOPP.push(tp);
+    }
+    // whole-group minima for the groups still entirely ahead of us
+    const sufMinAll = new Float64Array(G + 1), sufMaxAll = new Float64Array(G + 1);
+    for (let gi = G - 1; gi >= 0; gi--) {
+      sufMinAll[gi] = sufMinAll[gi + 1] + MINS[gi][0][need[gi]];
+      sufMaxAll[gi] = sufMaxAll[gi + 1] + MAXS[gi][0][need[gi]];
+    }
+    // ⚠️ Stack feasibility has to count only the slots a stack partner could OCCUPY.
+    // Counting every remaining slot (including DST and RB for a WR/TE stack) makes the
+    // prune almost never fire, which is most of why the stacked run was slow.
+    const sufStackSlots = new Int32Array(G + 1), sufBringSlots = new Int32Array(G + 1);
+    for (let gi = G - 1; gi >= 0; gi--) {
+      sufStackSlots[gi] = sufStackSlots[gi + 1] + (qbPosArr.indexOf(order[gi]) >= 0 ? need[gi] : 0);
+      sufBringSlots[gi] = sufBringSlots[gi + 1] + (order[gi] === "RB" || order[gi] === "WR" || order[gi] === "TE" ? need[gi] : 0);
+    }
+
+    const picked = [];
+    const teamCt = {}, gameCt = {};
+    let qbTeam = null, qbOpp = null, stackHave = 0, bringHave = 0;
+    const qbPos = stack.qbPos && stack.qbPos.length ? stack.qbPos : ["WR", "TE"];
+    const qbMin = stack.qbMin || 0, bringMin = stack.bringBack || 0;
+    let hasRb = 0, hasDstOpp = null;
+
+    function rec(gi, si, from, curProj, curSal) {
+      if (aborted) return;
+      if ((++nodes & 1023) === 0 && Date.now() > deadline) { aborted = true; return; }
+      if (gi === G) {
+        if (curSal < floor) return;
+        if (qbMin && stackHave < qbMin) return;
+        if (bringMin && bringHave < bringMin) return;
+        if (site.minGames) { let g = 0; for (const k in gameCt) if (gameCt[k] > 0) g++; if (g < site.minGames) return; }
+        for (const id of locks) if (picked.indexOf(id) < 0) return;
+        if (cfg.groups) for (const gr of cfg.groups) {
+          let c = 0; for (const id of picked) if (gr.ids.indexOf(id) >= 0) c++;
+          if (gr.mode === "atMost" && c > gr.n) return;
+          if (gr.mode === "atLeast" && c < gr.n) return;
+          if (gr.mode === "exactly" && c !== gr.n) return;
+        }
+        if (curProj > bestVal) { bestVal = curProj; best = { ids: picked.slice(), proj: curProj, sal: curSal }; }
+        return;
+      }
+
+      const list = grp[gi], k = need[gi], left = k - si;
+
+      // ---- bounds, cheapest first ----
+      const minRem = MINS[gi][from][left] + sufMinAll[gi + 1];
+      if (curSal + minRem > cap) return;
+      const maxRem = MAXS[gi][from][left] + sufMaxAll[gi + 1];
+      if (curSal + maxRem < floor) return;
+      // salary-aware projection bound
+      const budget = ((cap - curSal) / SAL_STEP) | 0;
+      if (budget < 0) return;
+      const ub = rowGet(SUF[gi][left], budget);
+      if (ub === -Infinity || curProj + ub <= bestVal) return;
+      // index-order bound: nothing after `from` can beat the next `left` entries
+      if (curProj + TOPP[gi][from][left] + (gi + 1 < G ? rowGet(SUF[gi + 1][need[gi + 1]], budget) : 0) <= bestVal) return;
+
+      const isStackGrp = qbPosArr.indexOf(order[gi]) >= 0;
+      const isBringGrp = order[gi] === "RB" || order[gi] === "WR" || order[gi] === "TE";
+      const stackAfter = (isStackGrp ? left - 1 : 0) + sufStackSlots[gi + 1];
+      const bringAfter = (isBringGrp ? left - 1 : 0) + sufBringSlots[gi + 1];
+      const last = list.length - left;
+      for (let j = from; j <= last; j++) {
+        const id = list[j], p = players[id], sal = p.sal;
+        // cheapest completion once this player is in
+        if (curSal + sal + MINS[gi][j + 1][left - 1] + sufMinAll[gi + 1] > cap) continue;
+
+        const isDst = p.pos === "DST";
+        const tc = (teamCt[p.team] || 0) + (isDst ? 0 : 1);
+        if (cfg.maxPerTeam && tc > cfg.maxPerTeam) continue;
+        const gc = (gameCt[p.gid] || 0) + 1;
+        if (cfg.maxPerGame && gc > cfg.maxPerGame) continue;
+        if (stack.noRbVsDst) {
+          if (isDst && hasRb && picked.some(x => players[x].pos === "RB" && players[x].team === p.opp)) continue;
+          if (p.pos === "RB" && hasDstOpp === p.team) continue;
+        }
+        if (stack.noOppDst) {
+          if (!isDst && hasDstOpp === p.team) continue;
+          if (isDst && picked.some(x => players[x].pos !== "DST" && players[x].team === p.opp)) continue;
+        }
+
+        // overlap prune — overlap is monotone, so a violation kills the whole subtree
+        const inL = inLineups[id];
+        let over = false, oi = 0;
+        for (; oi < inL.length; oi++) if (++overlap[inL[oi]] > maxOverlap) { over = true; oi++; break; }
+        if (over) { for (let z = 0; z < oi; z++) overlap[inL[z]]--; continue; }
+
+        // stack bookkeeping
+        let dQb = false, dStack = 0, dBring = 0;
+        if (p.pos === "QB") { qbTeam = p.team; qbOpp = p.opp; dQb = true; }
+        else if (qbTeam) {
+          if (p.team === qbTeam && qbPos.indexOf(p.pos) >= 0) { stackHave++; dStack = 1; }
+          if (p.team === qbOpp && !isDst) { bringHave++; dBring = 1; }
+        }
+        const infeasStack = qbTeam && ((qbMin && stackHave + stackAfter < qbMin) ||
+                                       (bringMin && bringHave + bringAfter < bringMin));
+        if (infeasStack) {
+          if (dQb) { qbTeam = null; qbOpp = null; }
+          stackHave -= dStack; bringHave -= dBring;
+          for (let z = 0; z < inL.length; z++) overlap[inL[z]]--;
+          continue;
+        }
+
+        picked.push(id);
+        teamCt[p.team] = tc; gameCt[p.gid] = gc;
+        if (p.pos === "RB") hasRb++;
+        const prevDstOpp = hasDstOpp; if (isDst) hasDstOpp = p.opp;
+
+        if (si + 1 < k) rec(gi, si + 1, j + 1, curProj + proj[id], curSal + sal);
+        else rec(gi + 1, 0, 0, curProj + proj[id], curSal + sal);
+
+        picked.pop();
+        teamCt[p.team] = tc - (isDst ? 0 : 1); gameCt[p.gid] = gc - 1;
+        if (p.pos === "RB") hasRb--;
+        hasDstOpp = prevDstOpp;
+        if (dQb) { qbTeam = null; qbOpp = null; }
+        stackHave -= dStack; bringHave -= dBring;
+        for (let z = 0; z < inL.length; z++) overlap[inL[z]]--;
+      }
+    }
+    rec(0, 0, 0, 0, 0);
+    if (aborted) break;
+  }
+  if (best) { best.nodes = nodes; best.aborted = aborted; }
+  return best ? best : (aborted ? { aborted: true } : null);
+}
+
+function sufSlots(need, gi, G) { let s = 0; for (let x = gi + 1; x < G; x++) s += need[x]; return s; }
+
+/* --------------------------------------------------------------- showdown */
+
+function solveShowdown(players, cfg, site, onProgress) {
+  const N = players.length;
+  const count = Math.max(1, cfg.count | 0);
+  const cap = Math.min(cfg.maxSalary || site.cap, site.cap);
+  const floor = cfg.minSalary || 0;
+  const maxOverlap = site.size - Math.max(0, cfg.uniques | 0);
+  const rand = rng(cfg.seed || 1);
+  const noise = cfg.randomness || 0;
+  // ⚠️ Always have a deadline. An impossible constraint set (a salary window no roster can
+  // hit, say) has no solution to prune toward, so the search enumerates the whole tree and
+  // a caller that forgot a limit would simply hang.
+  const deadline = Date.now() + (cfg.timeLimitMs || 120000);
+  const expCount = new Int32Array(N);
+  const acceptedSets = [];
+  const inLineups = []; for (let i = 0; i < N; i++) inLineups.push([]);
+  const out = [];
+  let infeasible = null, timedOut = false;
+
+  for (let n = 0; n < count; n++) {
+    if (Date.now() > deadline) { timedOut = true; break; }
+    const proj = new Float64Array(N);
+    for (let i = 0; i < N; i++) {
+      const base = players[i].proj || 0;
+      proj[i] = noise > 0 ? Math.max(0, base * (1 + noise * gauss(rand))) : base;
+    }
+    const pool = activePool(players, cfg, expCount, n);
+    const res = bestShowdown(players, proj, pool, cfg, site, cap, floor,
+                             acceptedSets, inLineups, maxOverlap, deadline);
+    if (res && !res.ids) { timedOut = true; break; }
+    if (!res) { infeasible = n === 0 ? "no lineup satisfies these constraints"
+                                     : "ran out of lineups that meet the uniqueness rule"; break; }
+    if (res.aborted) timedOut = true;
+    const set = new Uint8Array(N);
+    for (const id of res.ids) { set[id] = 1; expCount[id]++; inLineups[id].push(acceptedSets.length); }
+    acceptedSets.push(set);
+    let trueProj = (players[res.cpt].proj || 0) * site.cptMult;
+    for (const id of res.ids) if (id !== res.cpt) trueProj += players[id].proj || 0;
+    out.push({ ids: res.ids, cpt: res.cpt, proj: trueProj, drawnProj: res.proj, sal: res.sal });
+    if (onProgress && (n % 5 === 0 || n === count - 1)) onProgress(n + 1, count);
+  }
+  return { lineups: out, infeasible, timedOut, exposure: expCount };
+}
+
+function bestShowdown(players, proj, pool, cfg, site, cap, floor,
+                      acceptedSets, inLineups, maxOverlap, deadline) {
+  const flexN = site.size - 1;
+  let best = null, bestVal = -1;
+  const locks = pool.filter(i => players[i].lock);
+  const nAcc = acceptedSets.length;
+  const overlap = new Int32Array(nAcc);
+  let nodes = 0, aborted = false;
+
+  const cptList = pool.slice().sort((a, b) => proj[b] * site.cptMult - proj[a] * site.cptMult);
+  for (const cpt of cptList) {
+    if (aborted || Date.now() > deadline) break;
+    const cptSal = Math.round(players[cpt].sal * site.cptSalMult);
+    const cptProj = proj[cpt] * site.cptMult;
+    if (cptSal > cap) continue;
+    const list = pool.filter(i => i !== cpt).sort((a, b) => proj[b] - proj[a]);
+    if (list.length < flexN) continue;
+
+    // suffix tables for this captain's flex list
+    const L = list.length;
+    const mn = [], mx = [], pre = new Float64Array(L + 1);
+    for (let f = 0; f <= L; f++) { mn.push(new Float64Array(flexN + 1)); mx.push(new Float64Array(flexN + 1)); }
+    for (let j = 1; j <= flexN; j++) { mn[L][j] = Infinity; mx[L][j] = -Infinity; }
+    for (let f = L - 1; f >= 0; f--) {
+      const s = players[list[f]].sal;
+      for (let j = 1; j <= flexN; j++) {
+        mn[f][j] = Math.min(mn[f + 1][j], s + mn[f + 1][j - 1]);
+        mx[f][j] = Math.max(mx[f + 1][j], s + mx[f + 1][j - 1]);
+      }
+    }
+    for (let j = 0; j < L; j++) pre[j + 1] = pre[j] + proj[list[j]];
+
+    const picked = [cpt];
+    const teamCt = {}; teamCt[players[cpt].team] = 1;
+    for (let a = 0; a < nAcc; a++) overlap[a] = 0;
+    for (const a of inLineups[cpt]) overlap[a] = 1;
+    let cptOver = false;
+    for (const a of inLineups[cpt]) if (overlap[a] > maxOverlap) cptOver = true;
+    if (cptOver) continue;
+
+    (function rec(from, k, curProj, curSal) {
+      if (aborted) return;
+      if ((++nodes & 1023) === 0 && Date.now() > deadline) { aborted = true; return; }
+      if (k === 0) {
+        if (curSal < floor) return;
+        let teams = 0; for (const t in teamCt) if (teamCt[t] > 0) teams++;
+        if (site.minTeams && teams < site.minTeams) return;
+        for (const id of locks) if (picked.indexOf(id) < 0) return;
+        if (curProj > bestVal) { bestVal = curProj; best = { ids: picked.slice(), cpt, proj: curProj, sal: curSal }; }
+        return;
+      }
+      if (curSal + mn[from][k] > cap) return;
+      if (curSal + mx[from][k] < floor) return;
+      if (curProj + (from + k <= L ? pre[from + k] - pre[from] : -Infinity) <= bestVal) return;
+      for (let j = from; j <= L - k; j++) {
+        const id = list[j], p = players[id];
+        if (curSal + p.sal + mn[j + 1][k - 1] > cap) continue;
+        if (cfg.maxPerTeam && (teamCt[p.team] || 0) + 1 > cfg.maxPerTeam) continue;
+        const inL = inLineups[id];
+        let over = false, oi = 0;
+        for (; oi < inL.length; oi++) if (++overlap[inL[oi]] > maxOverlap) { over = true; oi++; break; }
+        if (over) { for (let z = 0; z < oi; z++) overlap[inL[z]]--; continue; }
+        picked.push(id); teamCt[p.team] = (teamCt[p.team] || 0) + 1;
+        rec(j + 1, k - 1, curProj + proj[id], curSal + p.sal);
+        picked.pop(); teamCt[p.team]--;
+        for (let z = 0; z < inL.length; z++) overlap[inL[z]]--;
+      }
+    })(0, flexN, cptProj, cptSal);
+  }
+  if (best) { best.nodes = nodes; best.aborted = aborted; }
+  return best ? best : (aborted ? { aborted: true } : null);
+}
+
+/* ------------------------------------------------------------------ export */
+
+root.DDFS = { SITES, POS, solveLineups, rng, gauss };
+
+/* ============================================================================
+   CONTEST SIMULATOR
+
+   Three layers, and the page names all three:
+
+   1. CORRELATION — measured, not assumed. DDFS.CORR is the within-game correlation
+      of DraftKings scoring by role, estimated from seven regular seasons of nflverse
+      weekly stats (see the meta block for provenance and sample sizes). Weekly scores
+      are z-scored inside player-season before correlating, so the numbers describe how
+      outcomes MOVE TOGETHER inside a game rather than how much better one player is
+      than another. Each game on the slate gets its own correlation matrix assembled
+      from those cells and Cholesky-factored once.
+
+   2. SHAPE — each player's score is a lognormal with the user's projection as its mean
+      and a coefficient of variation read off the same data, by position and scoring
+      level. DST is drawn normal instead, because a DK defence can finish negative and a
+      lognormal cannot.
+
+   3. FIELD — opponent lineups sampled to hit the ownership projections the user
+      supplied, with a configurable share of them stacked. ⚠️ The field is a SAMPLE,
+      typically 2,000-5,000 lineups, and the finishing rank is extrapolated to the real
+      contest size. That is a real approximation and the page says so.
+
+   ⚠️ What none of this can see: news after the projections were written, weather,
+   snap-count surprises, or a field that is smarter than the ownership estimate.
+   ========================================================================== */
+
+const CORR = {"meta":{"source":"nflverse-data stats_player_week + stats_team_week + nfldata games.csv","seasons":[2019,2025],"regularSeasonOnly":true,"games":1871,"playerWeeks":35587,"minGamesPerPlayerSeason":6,"minPairObservations":400,"psdEigenvaluesClipped":0,"psdMaxCellDrift":0.0,"scoring":"DraftKings full-PPR incl. 100/300-yard bonuses; DST incl. points-allowed tiers"},"roles":["QB","RB1","RB2","RBx","WR1","WR2","WR3","WRx","TE1","TEx","DST"],"same":[[1.0,0.0642,0.0583,0.0201,0.3525,0.3134,0.2414,0.1697,0.2715,0.1671,-0.1101],[0.0642,1.0,-0.0077,-0.0418,-0.0263,-0.0214,-0.0295,-0.0096,-0.0013,0.0357,0.0609],[0.0583,-0.0077,1.0,0.0615,-0.0051,-0.057,-0.0084,-0.0173,-0.0191,0.0144,0.0192],[0.0201,-0.0418,0.0615,1.0,-0.041,0.039,-0.0047,-0.0005,0.0253,0.0106,-0.0002],[0.3525,-0.0263,-0.0051,-0.041,1.0,0.0057,-0.0152,-0.0085,0.0103,0.0178,-0.0666],[0.3134,-0.0214,-0.057,0.039,0.0057,1.0,-0.0123,0.0217,-0.0134,-0.0142,-0.0697],[0.2414,-0.0295,-0.0084,-0.0047,-0.0152,-0.0123,1.0,0.042,0.0193,0.0143,-0.0697],[0.1697,-0.0096,-0.0173,-0.0005,-0.0085,0.0217,0.042,1.0,0.0385,0.0398,-0.0277],[0.2715,-0.0013,-0.0191,0.0253,0.0103,-0.0134,0.0193,0.0385,1.0,0.0167,-0.0751],[0.1671,0.0357,0.0144,0.0106,0.0178,-0.0142,0.0143,0.0398,0.0167,1.0,-0.0483],[-0.1101,0.0609,0.0192,-0.0002,-0.0666,-0.0697,-0.0697,-0.0277,-0.0751,-0.0483,1.0]],"opp":[[0.1888,0.0394,0.0083,-0.0042,0.0894,0.0723,0.0752,0.0521,0.0723,0.053,-0.3114],[0.0394,-0.0847,-0.0165,-0.0108,0.0126,0.0034,0.0238,0.0132,0.0022,0.0207,-0.208],[0.0083,-0.0165,-0.0382,-0.0292,0.0245,0.011,0.0028,-0.0082,0.0147,-0.0224,-0.1308],[-0.0042,-0.0108,-0.0292,0.0634,0.03,-0.0413,-0.027,0.0218,-0.0075,0.01,-0.0296],[0.0894,0.0126,0.0245,0.03,0.076,0.0239,0.0407,0.0193,0.0539,0.0087,-0.1349],[0.0723,0.0034,0.011,-0.0413,0.0239,0.0463,0.0292,0.0395,0.0556,0.0551,-0.111],[0.0752,0.0238,0.0028,-0.027,0.0407,0.0292,-0.0002,0.0463,-0.0051,0.0151,-0.0751],[0.0521,0.0132,-0.0082,0.0218,0.0193,0.0395,0.0463,0.0268,-0.0148,0.0073,-0.0587],[0.0723,0.0022,0.0147,-0.0075,0.0539,0.0556,-0.0051,-0.0148,0.0479,-0.006,-0.0689],[0.053,0.0207,-0.0224,0.01,0.0087,0.0551,0.0151,0.0073,-0.006,0.0209,-0.0786],[-0.3114,-0.208,-0.1308,-0.0296,-0.1349,-0.111,-0.0751,-0.0587,-0.0689,-0.0786,-0.2075]],"cv":{"DST":[{"lo":0.0,"hi":6.0,"cv":1.0644,"n":148},{"lo":6.0,"hi":10.0,"cv":0.7407,"n":75}],"QB":[{"lo":10.0,"hi":14.0,"cv":0.6249,"n":62},{"lo":14.0,"hi":18.0,"cv":0.4637,"n":93},{"lo":18.0,"hi":24.0,"cv":0.3987,"n":88}],"RB":[{"lo":0.0,"hi":6.0,"cv":1.1329,"n":375},{"lo":6.0,"hi":10.0,"cv":0.7495,"n":165},{"lo":10.0,"hi":14.0,"cv":0.6153,"n":120},{"lo":14.0,"hi":18.0,"cv":0.5245,"n":87},{"lo":18.0,"hi":24.0,"cv":0.483,"n":39}],"TE":[{"lo":0.0,"hi":6.0,"cv":0.9846,"n":396},{"lo":6.0,"hi":10.0,"cv":0.7185,"n":141},{"lo":10.0,"hi":14.0,"cv":0.6303,"n":64}],"WR":[{"lo":0.0,"hi":6.0,"cv":1.1486,"n":527},{"lo":6.0,"hi":10.0,"cv":0.7723,"n":271},{"lo":10.0,"hi":14.0,"cv":0.6508,"n":195},{"lo":14.0,"hi":18.0,"cv":0.5796,"n":127},{"lo":18.0,"hi":24.0,"cv":0.5333,"n":48}]}};
+
+const POS_OF_ROLE = { QB: "QB", RB1: "RB", RB2: "RB", RBx: "RB", WR1: "WR", WR2: "WR",
+                      WR3: "WR", WRx: "WR", TE1: "TE", TEx: "TE", DST: "DST" };
+// Two players sharing a depth role (a third RB, a fourth WR) are not the same player.
+// The estimation forces a role's self-correlation to 1, so a small measured-neighbour
+// value is used instead of 1 for duplicates. WR3-WRx measured 0.042; this is that,
+// rounded down. It is an assumption, and it only ever touches bench-level players.
+const SAME_ROLE_RHO = 0.03;
+
+function assignRoles(players) {
+  // Role is read off the user's own projections: the highest-projected WR on a team is
+  // WR1. It is the only ordering available before kickoff, and it is the same ordering
+  // the field will use.
+  const byTeamPos = {};
+  players.forEach((p, i) => {
+    const k = p.team + "|" + p.pos;
+    (byTeamPos[k] || (byTeamPos[k] = [])).push(i);
+  });
+  const role = new Array(players.length).fill(null);
+  for (const k in byTeamPos) {
+    const list = byTeamPos[k].sort((a, b) => (players[b].proj || 0) - (players[a].proj || 0));
+    const pos = k.split("|")[1];
+    list.forEach((id, n) => {
+      if (pos === "QB") role[id] = "QB";
+      else if (pos === "DST") role[id] = "DST";
+      else if (pos === "RB") role[id] = n === 0 ? "RB1" : n === 1 ? "RB2" : "RBx";
+      else if (pos === "WR") role[id] = n === 0 ? "WR1" : n === 1 ? "WR2" : n === 2 ? "WR3" : "WRx";
+      else if (pos === "TE") role[id] = n === 0 ? "TE1" : "TEx";
+    });
+  }
+  return role;
+}
+
+function corrBetween(roleA, roleB, sameTeam, sameSlot) {
+  const i = CORR.roles.indexOf(roleA), j = CORR.roles.indexOf(roleB);
+  if (i < 0 || j < 0) return 0;
+  if (sameTeam) return sameSlot ? SAME_ROLE_RHO : CORR.same[i][j];
+  return CORR.opp[i][j];
+}
+
+// Cholesky with a jitter retry. The assembled per-game matrix mixes cells estimated on
+// different subsets, so it is not guaranteed positive definite even though the source
+// matrix is; jitter is cheaper and clearer than an eigen decomposition in the browser.
+function cholesky(M, n) {
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const jitter = attempt === 0 ? 0 : Math.pow(10, -9 + attempt);
+    const L = new Float64Array(n * n);
+    let ok = true;
+    for (let i = 0; i < n && ok; i++) {
+      for (let j = 0; j <= i; j++) {
+        let s = M[i * n + j] + (i === j ? jitter : 0);
+        for (let k = 0; k < j; k++) s -= L[i * n + k] * L[j * n + k];
+        if (i === j) {
+          if (s <= 0) { ok = false; break; }
+          L[i * n + i] = Math.sqrt(s);
+        } else {
+          L[i * n + j] = s / L[j * n + j];
+        }
+      }
+    }
+    if (ok) return { L, jitter };
+  }
+  // Last resort: independence. Never silently — the caller surfaces this.
+  const L = new Float64Array(n * n);
+  for (let i = 0; i < n; i++) L[i * n + i] = 1;
+  return { L, jitter: null, failed: true };
+}
+
+function cvFor(pos, mean) {
+  const rows = CORR.cv[pos] || CORR.cv.WR;
+  if (!rows || !rows.length) return 0.7;
+  for (const r of rows) if (mean >= r.lo && mean < r.hi) return r.cv;
+  // ⚠️ Outside the estimated range the nearest bin is reused rather than extrapolated.
+  // Thin bins are exactly where an extrapolated CV would be least trustworthy.
+  return mean < rows[0].lo ? rows[0].cv : rows[rows.length - 1].cv;
+}
+
+/**
+ * players: [{pos, team, opp, gid, sal, proj, own}]   own is a PERCENT, 0-100
+ * lineups: [{ids:[...], cpt?}]   the pool being evaluated
+ * cfg: { sims, fieldSample, fieldSize, entries, entryFee, seed, fieldStackRate,
+ *        payout: {kind:'param', paidFrac, alpha, rake} | {kind:'table', rows:[{from,to,prize}]},
+ *        site }
+ */
+function simulate(players, lineups, cfg, onProgress) {
+  const N = players.length;
+  const site = SITES[cfg.site] || SITES.dk_classic;
+  const sims = Math.max(200, cfg.sims | 0 || 10000);
+  const fieldSize = Math.max(2, cfg.fieldSize | 0 || 10000);
+  const ourN = lineups.length;
+  const sampleN = Math.max(50, Math.min(cfg.fieldSample | 0 || 2000, Math.max(2, fieldSize - ourN)));
+  const rand = rng(cfg.seed || 99);
+  const roles = assignRoles(players);
+
+  /* ---- per-game correlation ---- */
+  const games = {};
+  players.forEach((p, i) => (games[p.gid] || (games[p.gid] = [])).push(i));
+  const gameKeys = Object.keys(games);
+  const chol = {}, warn = [];
+  for (const g of gameKeys) {
+    const ids = games[g], n = ids.length;
+    const M = new Float64Array(n * n);
+    const seen = {};
+    for (let a = 0; a < n; a++) {
+      const ra = roles[ids[a]], ta = players[ids[a]].team;
+      for (let b = 0; b < n; b++) {
+        if (a === b) { M[a * n + b] = 1; continue; }
+        const rb = roles[ids[b]], tb = players[ids[b]].team;
+        M[a * n + b] = corrBetween(ra, rb, ta === tb, ta === tb && ra === rb);
+      }
+    }
+    const c = cholesky(M, n);
+    if (c.failed) warn.push("game " + g + ": correlation matrix would not factor, players drawn independently");
+    chol[g] = { L: c.L, ids, n };
+  }
+
+  /* ---- score shape ---- */
+  const mu = new Float64Array(N), sigma = new Float64Array(N), isNorm = new Uint8Array(N);
+  for (let i = 0; i < N; i++) {
+    const p = players[i], m = Math.max(0, p.proj || 0);
+    mu[i] = m;
+    const cv = cvFor(p.pos, m);
+    if (p.pos === "DST") { isNorm[i] = 1; sigma[i] = cv * Math.max(m, 3); }
+    else sigma[i] = Math.sqrt(Math.log(1 + cv * cv));
+  }
+
+  /* ---- field ---- */
+  const field = buildField(players, roles, cfg, site, sampleN, rand, onProgress);
+  if (field.tooHard || field.length < 25) {
+    warn.push("Could not build a believable field from these salaries and ownership — " +
+              (field.length ? "only " + field.length + " valid opponent lineups were found." :
+               "no valid opponent lineup could be assembled.") +
+              " Check that ownership is set and that the salary cap is reachable.");
+  }
+
+  /* ---- payout curve ---- */
+  const pay = payoutFn(cfg.payout || {}, fieldSize, cfg.entryFee || 1);
+
+  /* ---- simulate ---- */
+  const score = new Float64Array(N);
+  const z = new Float64Array(N);
+  const fieldScore = new Float64Array(field.length);
+  const ourScore = new Float64Array(ourN);
+  const BINS = 4096;
+  const hist = new Int32Array(BINS + 1);
+
+  const accPay = new Float64Array(ourN), accCash = new Int32Array(ourN),
+        accWin = new Int32Array(ourN), accTop1 = new Int32Array(ourN),
+        accScore = new Float64Array(ourN), accScore2 = new Float64Array(ourN),
+        accRank = new Float64Array(ourN);
+  const winLineup = new Int32Array(N);
+  const cptMult = site.showdown ? site.cptMult : 1;
+
+  for (let s = 0; s < sims; s++) {
+    // correlated draws, one game at a time
+    for (const g of gameKeys) {
+      const { L, ids, n } = chol[g];
+      for (let a = 0; a < n; a++) z[a] = gauss(rand);
+      for (let a = 0; a < n; a++) {
+        let v = 0, row = a * n;
+        for (let b = 0; b <= a; b++) v += L[row + b] * z[b];
+        const id = ids[a];
+        score[id] = isNorm[id] ? mu[id] + sigma[id] * v
+                               : mu[id] * Math.exp(sigma[id] * v - sigma[id] * sigma[id] / 2);
+      }
+    }
+
+    let lo = Infinity, hi = -Infinity, fieldMax = -Infinity;
+    for (let f = 0; f < field.length; f++) {
+      const L9 = field[f]; let t = 0;
+      for (let k = 0; k < L9.length; k++) t += score[L9[k]];
+      if (L9.cpt !== undefined) t += score[L9.cpt] * (cptMult - 1);
+      fieldScore[f] = t;
+      if (t < lo) lo = t;
+      if (t > hi) hi = t;
+      if (t > fieldMax) fieldMax = t;
+    }
+    for (let o = 0; o < ourN; o++) {
+      const l = lineups[o]; let t = 0;
+      for (let k = 0; k < l.ids.length; k++) t += score[l.ids[k]];
+      if (l.cpt !== undefined) t += score[l.cpt] * (cptMult - 1);
+      ourScore[o] = t;
+      if (t < lo) lo = t;
+      if (t > hi) hi = t;
+    }
+
+    // histogram rank: counting how many field lineups beat us, without sorting the field
+    const span = hi - lo || 1, inv = BINS / span;
+    hist.fill(0);
+    for (let f = 0; f < field.length; f++) {
+      let b = ((fieldScore[f] - lo) * inv) | 0;
+      if (b > BINS) b = BINS;
+      hist[b]++;
+    }
+    for (let b = BINS - 1; b >= 0; b--) hist[b] += hist[b + 1];   // count at or above bin
+
+    // best lineup on the slate this week, for win-lineup share
+    let bestF = -Infinity, bestIdx = -1, bestIsOurs = false;
+    for (let f = 0; f < field.length; f++) if (fieldScore[f] > bestF) { bestF = fieldScore[f]; bestIdx = f; bestIsOurs = false; }
+    for (let o = 0; o < ourN; o++) if (ourScore[o] > bestF) { bestF = ourScore[o]; bestIdx = o; bestIsOurs = true; }
+    const bestL = bestIsOurs ? lineups[bestIdx].ids : field[bestIdx];
+    for (let k = 0; k < bestL.length; k++) winLineup[bestL[k]]++;
+
+    const scale = (fieldSize - ourN) / field.length;
+    for (let o = 0; o < ourN; o++) {
+      const v = ourScore[o];
+      let b = ((v - lo) * inv) | 0; if (b > BINS) b = BINS; if (b < 0) b = 0;
+      // hist[b+1] counts field lineups in strictly higher bins — a conservative "above"
+      const above = (b < BINS ? hist[b + 1] : 0) * scale;
+      let ours = 0;
+      for (let q = 0; q < ourN; q++) if (q !== o && ourScore[q] > v) ours++;
+      const rank = 1 + above + ours;
+      const prize = pay(rank);
+      accPay[o] += prize;
+      if (prize > 0) accCash[o]++;
+      // ⚠️ Win rate is decided on the EXACT field maximum, not on the histogram. The
+      // histogram counts "lineups in a strictly higher bin", so anything sharing our bin
+      // reads as beaten — harmless 300 places deep, but at the very top that is the
+      // difference between winning the tournament and not, and it biases win% upward.
+      if (v > fieldMax && ours === 0) accWin[o]++;
+      if (rank <= Math.max(1, fieldSize * 0.01)) accTop1[o]++;
+      accScore[o] += v; accScore2[o] += v * v; accRank[o] += rank;
+    }
+    if (onProgress && (s % 250 === 0)) onProgress("sim", s, sims);
+  }
+
+  const fee = cfg.entryFee || 1;
+  const perLineup = [];
+  for (let o = 0; o < ourN; o++) {
+    const m = accScore[o] / sims;
+    perLineup.push({
+      i: o,
+      mean: m,
+      sd: Math.sqrt(Math.max(0, accScore2[o] / sims - m * m)),
+      ev: accPay[o] / sims,
+      roi: (accPay[o] / sims - fee) / fee,
+      cash: accCash[o] / sims,
+      win: accWin[o] / sims,
+      top1: accTop1[o] / sims,
+      meanRank: accRank[o] / sims
+    });
+  }
+
+  // per-player exposure vs how often they show up in the slate's best lineup
+  const inOurs = new Int32Array(N);
+  lineups.forEach(l => l.ids.forEach(i => inOurs[i]++));
+  const perPlayer = [];
+  for (let i = 0; i < N; i++) {
+    if (!(players[i].proj > 0)) continue;
+    const wl = winLineup[i] / sims;
+    perPlayer.push({
+      i,
+      own: players[i].own || 0,
+      winLineup: wl * 100,
+      leverage: wl * 100 - (players[i].own || 0),
+      ourExposure: ourN ? (inOurs[i] / ourN) * 100 : 0
+    });
+  }
+
+  // duplication, measured off the sampled field and scaled
+  const key = l => (l.cpt !== undefined ? l.cpt + "c|" : "") + l.slice().sort((a, b) => a - b).join(",");
+  const fieldKeys = {};
+  for (const f of field) { const k = key(f); fieldKeys[k] = (fieldKeys[k] || 0) + 1; }
+  const scaleF = (fieldSize - ourN) / field.length;
+  lineups.forEach((l, o) => {
+    const k = key(l.ids);
+    perLineup[o].dupes = (fieldKeys[k] || 0) * scaleF;
+  });
+
+  return {
+    perLineup, perPlayer, warn,
+    meta: {
+      sims, fieldSize, fieldSample: field.length, entries: ourN,
+      entryFee: fee, payout: cfg.payout,
+      corr: CORR.meta,
+      fieldOwnershipError: field.ownErr,
+      fieldMedianProj: field.medProj,
+      fieldP90Proj: field.p90Proj,
+      fieldMedianSalary: field.medSal,
+      ourMedianProj: (() => {
+        const a = lineups.map(l => l.proj != null ? l.proj
+          : l.ids.reduce((t, i) => t + (players[i].proj || 0), 0)).sort((x, y) => x - y);
+        return a.length ? a[a.length >> 1] : null;
+      })()
+    }
+  };
+}
+
+/* ---- field construction -------------------------------------------------- */
+
+function buildField(players, roles, cfg, site, sampleN, rand, onProgress) {
+  const N = players.length;
+  const target = new Float64Array(N);
+  for (let i = 0; i < N; i++) target[i] = Math.max(0, (players[i].own || 0)) / 100;
+  const eligible = [];
+  for (let i = 0; i < N; i++) if (players[i].proj > 0 && target[i] > 0) eligible.push(i);
+  const byPos = { QB: [], RB: [], WR: [], TE: [], DST: [] };
+  for (const i of eligible) if (byPos[players[i].pos]) byPos[players[i].pos].push(i);
+
+  const w = new Float64Array(N);
+  for (const i of eligible) w[i] = target[i];
+  const stackRate = cfg.fieldStackRate == null ? 0.6 : cfg.fieldStackRate;
+  const cap = site.cap;
+  const floor = cfg.fieldMinSalary == null ? Math.round(cap * 0.98) : cfg.fieldMinSalary;
+
+  let out = [];
+  // ⚠️ Sampling by raw ownership does NOT reproduce the ownership you asked for — the
+  // salary cap and the roster shape distort it. Three calibration passes reweight toward
+  // the target and the residual error is reported, rather than quietly presenting the
+  // first pass as if it hit.
+  let ownErr = null;
+  for (let pass = 0; pass < 3; pass++) {
+    out = [];
+    let guard = 0, tries = 0;
+    // ⚠️ Bail out loudly rather than grinding. A slate where almost nothing fits under the
+    // cap used to burn three passes of 120,000 attempts and hand back an empty field.
+    while (out.length < sampleN && guard < sampleN * 12) {
+      guard++; tries++;
+      const l = site.showdown ? sampleShowdown(players, byPos, w, cap, rand, site, eligible, floor)
+                              : sampleClassic(players, roles, byPos, w, cap, rand, stackRate, floor);
+      if (l) out.push(l);
+      if (tries === 500 && out.length < 25) break;
+    }
+    if (out.length < 25) { out.tooHard = true; break; }
+    const got = new Float64Array(N);
+    for (const l of out) for (const id of l) got[id]++;
+    let err = 0, n = 0;
+    for (const i of eligible) {
+      const realized = got[i] / out.length;
+      err += Math.abs(realized - target[i]); n++;
+      if (pass < 2) {
+        const ratio = realized > 1e-6 ? target[i] / realized : 3;
+        w[i] = Math.max(1e-6, w[i] * Math.min(3, Math.max(0.33, ratio)));
+      }
+    }
+    ownErr = n ? (err / n) * 100 : null;
+    if (onProgress) onProgress("field", pass + 1, 3);
+  }
+  out.ownErr = ownErr;
+  // how strong the modelled field turned out, so the page can show it rather than assume it
+  if (out.length) {
+    const pr = out.map(l => {
+      let t = 0;
+      for (const id of l) t += players[id].proj || 0;
+      if (l.cpt !== undefined) t += (players[l.cpt].proj || 0) * 0.5;
+      return t;
+    }).sort((a, b) => a - b);
+    const sa = out.map(l => l.sal || 0).sort((a, b) => a - b);
+    out.medProj = pr[pr.length >> 1];
+    out.p90Proj = pr[Math.floor(pr.length * 0.9)];
+    out.medSal = sa[sa.length >> 1];
+  }
+  return out;
+}
+
+/* ⚠️ Budget-aware weighted pick. A plain ownership-weighted draw with a salary-cap
+   rejection at the end does not work: on a real-priced slate the overwhelming majority
+   of randomly assembled lineups are over the cap, so the sampler returned an EMPTY
+   field and every downstream metric quietly became NaN. Candidates are filtered to what
+   is still affordable once the cheapest completion of the remaining slots is reserved. */
+function pick(list, w, rand, used, maxSal, players, minSal) {
+  const fits = id => !used[id] && (maxSal == null || players[id].sal <= maxSal)
+                              && (minSal == null || players[id].sal >= minSal);
+  let tot = 0;
+  for (const id of list) if (fits(id)) tot += w[id];
+  if (tot <= 0) {
+    // the salary floor is a preference, the cap is a rule — drop the floor before failing
+    if (minSal != null) return pick(list, w, rand, used, maxSal, players, null);
+    return -1;
+  }
+  let r = rand() * tot;
+  for (const id of list) { if (!fits(id)) continue; r -= w[id]; if (r <= 0) return id; }
+  for (let k = list.length - 1; k >= 0; k--) if (fits(list[k])) return list[k];
+  return -1;
+}
+
+// priciest k players in `list` that are not already used
+function costliestK(list, k, used, players) {
+  if (k <= 0) return 0;
+  const best = [];
+  for (const id of list) {
+    if (used[id]) continue;
+    const s = players[id].sal;
+    if (best.length < k) { best.push(s); best.sort((a, b) => b - a); }
+    else if (s > best[k - 1]) { best[k - 1] = s; best.sort((a, b) => b - a); }
+  }
+  return best.length < k ? 0 : best.reduce((a, b) => a + b, 0);
+}
+
+// cheapest k players in `list` that are not already used
+function cheapestK(list, k, used, players) {
+  if (k <= 0) return 0;
+  const best = [];
+  for (const id of list) {
+    if (used[id]) continue;
+    const s = players[id].sal;
+    if (best.length < k) { best.push(s); best.sort((a, b) => a - b); }
+    else if (s < best[k - 1]) { best[k - 1] = s; best.sort((a, b) => a - b); }
+  }
+  return best.length < k ? Infinity : best.reduce((a, b) => a + b, 0);
+}
+
+function sampleClassic(players, roles, byPos, w, cap, rand, stackRate, floor) {
+  const FLEX = byPos.RB.concat(byPos.WR, byPos.TE);
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const used = {}, ids = [];
+    let sal = 0, ok = true;
+    const want = { QB: 1, RB: 2, WR: 3, TE: 1, DST: 1 };
+    let flexLeft = 1;
+    // cheapest / priciest way to finish the roster from here
+    const minLeft = (excl) => {
+      let mn = 0;
+      for (const pos of ["QB", "RB", "WR", "TE", "DST"])
+        mn += cheapestK(byPos[pos], want[pos] - (excl === pos ? 1 : 0), used, players);
+      if (flexLeft && excl !== "FLEX") mn += cheapestK(FLEX, 1, used, players);
+      return mn;
+    };
+    const maxLeft = (excl) => {
+      let mx = 0;
+      for (const pos of ["QB", "RB", "WR", "TE", "DST"])
+        mx += costliestK(byPos[pos], want[pos] - (excl === pos ? 1 : 0), used, players);
+      if (flexLeft && excl !== "FLEX") mx += costliestK(FLEX, 1, used, players);
+      return mx;
+    };
+    const take = (id) => { used[id] = 1; ids.push(id); sal += players[id].sal; };
+    // ⚠️ Real DraftKings entries spend nearly the whole cap. A field sampled without a
+    // salary floor is systematically cheaper — and therefore weaker — than the room you
+    // are actually playing against, which inflates every ROI the simulator reports.
+    const roomFor = (pos) => ({
+      max: cap - sal - minLeft(pos),
+      min: floor ? floor - sal - maxLeft(pos) : null
+    });
+
+    let r = roomFor("QB");
+    const qb = pick(byPos.QB, w, rand, used, r.max, players, r.min);
+    if (qb < 0) return null;
+    take(qb); want.QB = 0;
+
+    if (rand() < stackRate) {
+      const mates = byPos.WR.concat(byPos.TE).filter(i => players[i].team === players[qb].team);
+      const n = rand() < 0.45 ? 2 : 1;
+      for (let k = 0; k < n; k++) {
+        const pool = mates.filter(i => !used[i] && want[players[i].pos] > 0);
+        if (!pool.length) break;
+        const pos = players[pool[0]].pos;
+        r = roomFor(pos);
+        const m = pick(pool, w, rand, used, r.max, players, r.min);
+        if (m < 0) break;
+        take(m); want[players[m].pos]--;
+      }
+    }
+
+    for (const pos of ["RB", "WR", "TE", "DST"]) {
+      while (want[pos] > 0) {
+        r = roomFor(pos);
+        const p = pick(byPos[pos], w, rand, used, r.max, players, r.min);
+        if (p < 0) { ok = false; break; }
+        take(p); want[pos]--;
+      }
+      if (!ok) break;
+    }
+    if (!ok) continue;
+
+    const fx = pick(FLEX, w, rand, used, cap - sal, players, floor ? floor - sal : null);
+    if (fx < 0) continue;
+    take(fx); flexLeft = 0;
+
+    if (ids.length !== 9 || sal > cap) continue;
+    let ng = 0; const games = {};
+    for (const id of ids) if (!games[players[id].gid]) { games[players[id].gid] = 1; ng++; }
+    if (ng >= 2) { ids.sal = sal; return ids; }
+  }
+  return null;
+}
+
+function sampleShowdown(players, byPos, w, cap, rand, site, eligible, floor) {
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const used = {}, ids = [];
+    let left = site.size - 1;
+    const cptRoom = cap - cheapestK(eligible, left, used, players);
+    const cpt = pick(eligible, w, rand, used, cptRoom / site.cptSalMult, players, null);
+    if (cpt < 0) return null;
+    used[cpt] = 1; ids.push(cpt);
+    let sal = Math.round(players[cpt].sal * site.cptSalMult), ok = true;
+    while (left > 0) {
+      const max = cap - sal - cheapestK(eligible, left - 1, used, players);
+      const min = floor ? floor - sal - costliestK(eligible, left - 1, used, players) : null;
+      const p = pick(eligible, w, rand, used, max, players, min);
+      if (p < 0) { ok = false; break; }
+      used[p] = 1; ids.push(p); sal += players[p].sal; left--;
+    }
+    if (!ok || sal > cap) continue;
+    const teams = {}; let nt = 0;
+    for (const id of ids) if (!teams[players[id].team]) { teams[players[id].team] = 1; nt++; }
+    if (nt < 2) continue;
+    ids.cpt = cpt; ids.sal = sal;
+    return ids;
+  }
+  return null;
+}
+
+/* ---- payouts ------------------------------------------------------------- */
+
+function payoutFn(spec, fieldSize, entryFee) {
+  if (spec.kind === "table" && spec.rows && spec.rows.length) {
+    const rows = spec.rows.slice().sort((a, b) => a.from - b.from);
+    return function (rank) {
+      const r = Math.round(rank);
+      for (const row of rows) if (r >= row.from && r <= row.to) return row.prize;
+      return 0;
+    };
+  }
+  // parametric: prize(r) proportional to r^-alpha over the paid places.
+  // alpha is "how top-heavy" — 1.15 puts roughly 15-18% of the pool on first in a
+  // large field, which is about where DraftKings' big tournaments sit.
+  const paidFrac = spec.paidFrac == null ? 0.2 : spec.paidFrac;
+  const alpha = spec.alpha == null ? 1.15 : spec.alpha;
+  const rake = spec.rake == null ? 0.15 : spec.rake;
+  const paid = Math.max(1, Math.round(fieldSize * paidFrac));
+  const pool = fieldSize * entryFee * (1 - rake);
+  if (spec.kind === "flat") {
+    const prize = pool / paid;
+    return rank => (rank <= paid ? prize : 0);
+  }
+  let H = 0;
+  const step = paid > 5000 ? Math.ceil(paid / 5000) : 1;
+  for (let r = 1; r <= paid; r += step) H += Math.pow(r, -alpha) * step;
+  return function (rank) {
+    if (rank > paid || rank < 1) return 0;
+    return pool * Math.pow(rank, -alpha) / H;
+  };
+}
+
+root.DDFS.simulate = simulate;
+root.DDFS.CORR = CORR;
+root.DDFS.assignRoles = assignRoles;
+root.DDFS.payoutFn = payoutFn;
+
+})(typeof module !== "undefined" && module.exports ? module.exports : (typeof self !== "undefined" ? self : this));
+</script>
+
+<script>
+/* =========================================================================
+   DFS workbench — slate ingest, solver + simulator wiring, exposure, bankroll.
+
+   The maths lives in the #ddfsEngine block above. It is parsed twice on purpose:
+   once into a Blob-URL Worker so a 60-second solve never freezes the page, and once
+   on this thread so the Method sheet can render the correlation matrix without
+   round-tripping, and so the whole thing still works if Blob workers are blocked.
+   ========================================================================= */
+(function () {
+"use strict";
+
+/* ---------------------------------------------------------------- engine boot */
+
+const SRC = document.getElementById("ddfsEngine").textContent;
+try { new Function(SRC).call(window); } catch (e) { console.error("engine parse failed", e); }
+const E = window.DDFS;
+
+let WORKER_URL = null;
+try {
+  WORKER_URL = URL.createObjectURL(new Blob([SRC + "\n" + WORKER_TAIL()], { type: "text/javascript" }));
+} catch (e) { WORKER_URL = null; }
+
+function WORKER_TAIL() {
+  return `
+self.onmessage = function (e) {
+  var d = e.data, R = self.DDFS;
+  try {
+    if (d.op === "solve") {
+      var r = R.solveLineups(d.players, d.cfg, function (n, t) { self.postMessage({ type: "progress", n: n, t: t }); });
+      self.postMessage({ type: "done", result: r });
+    } else if (d.op === "sim") {
+      var s = R.simulate(d.players, d.lineups, d.cfg, function (phase, n, t) { self.postMessage({ type: "progress", phase: phase, n: n, t: t }); });
+      self.postMessage({ type: "done", result: s });
+    }
+  } catch (err) {
+    self.postMessage({ type: "error", message: (err && err.message) || String(err), stack: err && err.stack });
+  }
+};`;
+}
+
+/* ---------------------------------------------------------------- state */
+
+const LS = "dd-dfs-v1";
+const DEF = {
+  site: "dk_classic",
+  players: [],
+  lineups: [],
+  bankroll: [],
+  cfg: { count: 20, minSal: 49000, maxSal: 50000, uniq: 2, rand: 15, maxExp: 100, team: 4, game: 6,
+         time: 60, qbMin: 1, qbPos: "WR,TE", bring: 0, noRbDst: false, noOppDst: false },
+  sim: { field: 20000, fee: 20, payout: "gpp", paid: 20, alpha: 1.15, rake: 15, custom: "",
+         sims: 10000, sample: 2500, stack: 60, fieldSal: 49000 },
+  sheet: "slate"
+};
+let S = load();
+function load() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(LS) || "{}");
+    // fill-a-gap merge, so a config saved before a setting existed gains it rather than
+    // handing `undefined` to a number input
+    const out = JSON.parse(JSON.stringify(DEF));
+    for (const k in raw) {
+      if (k === "cfg" || k === "sim") Object.assign(out[k], raw[k] || {});
+      else out[k] = raw[k];
+    }
+    return out;
+  } catch (e) { return JSON.parse(JSON.stringify(DEF)); }
+}
+let saveT = null;
+function save() {
+  clearTimeout(saveT);
+  saveT = setTimeout(() => {
+    try { localStorage.setItem(LS, JSON.stringify(S)); }
+    catch (e) { banner("slateWarn", "err", "Could not save to this device — storage is full or blocked. Everything still works this session, but it will not survive a reload."); }
+  }, 250);
+}
+
+let SIM = null;      // last simulation result, not persisted (large, and cheap to redo)
+
+/* ---------------------------------------------------------------- tiny helpers */
+
+const $ = id => document.getElementById(id);
+const el = (t, c, h) => { const n = document.createElement(t); if (c) n.className = c; if (h != null) n.innerHTML = h; return n; };
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmt = (v, d) => (v == null || !isFinite(v)) ? "—" : v.toFixed(d == null ? 1 : d);
+const pct = (v, d) => (v == null || !isFinite(v)) ? "—" : (v * 100).toFixed(d == null ? 1 : d) + "%";
+const money = v => (v == null || !isFinite(v)) ? "—" : (v < 0 ? "−$" : "$") + Math.abs(v).toLocaleString(undefined, { maximumFractionDigits: Math.abs(v) < 100 ? 2 : 0 });
+function banner(id, kind, html) {
+  const n = $(id); if (!n) return;
+  if (!html) { n.hidden = true; return; }
+  n.className = "banner" + (kind ? " " + kind : ""); n.innerHTML = html; n.hidden = false;
+}
+
+/* ---- CSV ---- */
+function parseCSV(text) {
+  const rows = []; let row = [], cur = "", q = false;
+  text = String(text).replace(/\r\n?/g, "\n");
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; }
+      else cur += c;
+    } else if (c === '"') q = true;
+    else if (c === "," || c === "\t") { row.push(cur); cur = ""; }
+    else if (c === "\n") { row.push(cur); rows.push(row); row = []; cur = ""; }
+    else cur += c;
+  }
+  if (cur !== "" || row.length) { row.push(cur); rows.push(row); }
+  return rows.filter(r => r.some(c => String(c).trim() !== ""));
+}
+
+const TEAM_ALIAS = { JAC: "JAX", WSH: "WAS", LAR: "LA", STL: "LA", SD: "LAC", OAK: "LV", ARZ: "ARI", CLV: "CLE", HST: "HOU", BLT: "BAL", GNB: "GB", KAN: "KC", NWE: "NE", NOR: "NO", SFO: "SF", TAM: "TB" };
+const team = t => { const u = String(t || "").toUpperCase().trim(); return TEAM_ALIAS[u] || u; };
+
+// ⚠️ Name matching is where every projections import quietly goes wrong. Suffixes,
+// punctuation and accents all differ between sources, so both sides get flattened the
+// same way before anything is compared.
+function normName(s) {
+  return String(s || "").toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/\b(jr|sr|ii|iii|iv|v)\b\.?/g, "")
+    .replace(/[^a-z ]/g, "").replace(/\s+/g, " ").trim();
+}
+function nameKeys(name, tm) {
+  const n = normName(name), parts = n.split(" ");
+  const last = parts[parts.length - 1], first = parts[0] || "";
+  const keys = [n];
+  if (tm) keys.unshift(n + "|" + tm);
+  if (parts.length > 1) keys.push(first.slice(0, 1) + " " + last + (tm ? "|" + tm : ""));
+  return keys;
+}
+
+/* ---------------------------------------------------------------- slate ingest */
+
+function readSalaries(text) {
+  const rows = parseCSV(text);
+  if (!rows.length) return { error: "That file was empty." };
+  // ⚠️ DraftKings has shipped more than one layout: some exports carry an entry template
+  // in the left columns and the player list further right. Locating the header ROW by its
+  // contents, then reading column offsets from that row, survives both.
+  let hdr = -1, idx = null;
+  for (let i = 0; i < Math.min(rows.length, 12); i++) {
+    const cells = rows[i].map(c => String(c).trim().toLowerCase());
+    const find = (...names) => { for (const nm of names) { const j = cells.indexOf(nm); if (j >= 0) return j; } return -1; };
+    const cSal = find("salary"), cPos = find("position"), cName = find("name");
+    if (cSal >= 0 && cPos >= 0 && cName >= 0) {
+      hdr = i;
+      idx = { pos: cPos, name: cName, sal: cSal,
+              id: find("id"), rp: find("roster position"), gi: find("game info", "gameinfo"),
+              tm: find("teamabbrev", "team"), avg: find("avgpointspergame") };
+      break;
+    }
+  }
+  if (hdr < 0) return { error: "This does not look like a DraftKings salary export — no row with Position, Name and Salary columns was found." };
+
+  const bySlot = {};
+  for (let i = hdr + 1; i < rows.length; i++) {
+    const r = rows[i];
+    const name = String(r[idx.name] || "").trim();
+    const sal = parseInt(String(r[idx.sal] || "").replace(/[^0-9]/g, ""), 10);
+    if (!name || !isFinite(sal) || sal <= 0) continue;
+    let pos = String(r[idx.pos] || "").trim().toUpperCase();
+    if (pos === "D" || pos === "DEF" || pos === "D/ST") pos = "DST";
+    if (["QB", "RB", "WR", "TE", "DST"].indexOf(pos) < 0) continue;
+    const tm = team(idx.tm >= 0 ? r[idx.tm] : "");
+    const gi = idx.gi >= 0 ? String(r[idx.gi] || "") : "";
+    const m = gi.match(/([A-Za-z]{2,4})\s*@\s*([A-Za-z]{2,4})/);
+    const away = m ? team(m[1]) : "", home = m ? team(m[2]) : "";
+    const rp = idx.rp >= 0 ? String(r[idx.rp] || "").trim().toUpperCase() : "";
+    const id = idx.id >= 0 ? String(r[idx.id] || "").trim() : "";
+    const key = normName(name) + "|" + tm + "|" + pos;
+    const rec = bySlot[key] || (bySlot[key] = { name, pos, team: tm, gid: m ? away + "@" + home : (tm || "?"),
+      opp: tm === away ? home : away, sal: 0, dkId: "", cptId: "", cptSal: 0,
+      avg: idx.avg >= 0 ? parseFloat(r[idx.avg]) || 0 : 0, proj: null, own: 0 });
+    // Showdown files list the same player twice — once as CPT at 1.5x salary, once as
+    // FLEX. FLEX is the base row; the CPT id is kept because the export needs it.
+    if (rp === "CPT" || rp === "CAPTAIN") { rec.cptId = id; rec.cptSal = sal; }
+    else { rec.sal = sal; rec.dkId = id; }
+    if (!rec.sal && sal) { rec.sal = rp === "CPT" ? Math.round(sal / 1.5 / 100) * 100 : sal; rec.dkId = rec.dkId || id; }
+  }
+  const players = Object.keys(bySlot).map(k => bySlot[k]).filter(p => p.sal > 0);
+  if (!players.length) return { error: "Found the header but no player rows underneath it." };
+  const showdown = players.some(p => p.cptId);
+  const games = {}; players.forEach(p => games[p.gid] = 1);
+  return { players, showdown, games: Object.keys(games).length };
+}
+
+function applyProjections(text, map) {
+  const rows = parseCSV(text);
+  if (rows.length < 2) return { error: "Paste a header row and at least one player." };
+  const head = rows[0].map(c => String(c).trim());
+  const low = head.map(h => h.toLowerCase());
+  const guess = (cands, exclude) => {
+    for (const c of cands) { const j = low.findIndex(h => h === c); if (j >= 0 && j !== exclude) return j; }
+    for (const c of cands) { const j = low.findIndex(h => h.indexOf(c) >= 0); if (j >= 0 && j !== exclude) return j; }
+    return -1;
+  };
+  const iName = map && map.name >= 0 ? map.name : guess(["player", "name", "playername", "player name"]);
+  const iProj = map && map.proj >= 0 ? map.proj : guess(["dk proj", "proj", "projection", "fpts", "points", "median", "dk points", "proj points"]);
+  const iOwn = map && map.own >= -1 ? map.own : guess(["own", "ownership", "own%", "proj own", "roster%", "pown"]);
+  const iTeam = map && map.team >= -1 ? map.team : guess(["team", "tm", "teamabbrev"]);
+  if (iName < 0 || iProj < 0) return { error: "Could not tell which column is the player name and which is the projection. Pick them below.", head };
+
+  const index = {};
+  S.players.forEach((p, i) => {
+    for (const k of nameKeys(p.name, p.team)) if (!(k in index)) index[k] = i;
+  });
+  let matched = 0; const missed = [], seen = {};
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+    const nm = String(row[iName] || "").trim();
+    if (!nm) continue;
+    const pv = parseFloat(String(row[iProj]).replace(/[^0-9.\-]/g, ""));
+    if (!isFinite(pv)) continue;
+    const tm = iTeam >= 0 ? team(row[iTeam]) : "";
+    let hit = -1;
+    for (const k of nameKeys(nm, tm)) if (k in index) { hit = index[k]; break; }
+    if (hit < 0) { missed.push(nm); continue; }
+    if (seen[hit]) continue;
+    seen[hit] = 1;
+    S.players[hit].proj = pv;
+    if (iOwn >= 0) {
+      const ov = parseFloat(String(row[iOwn]).replace(/[^0-9.\-]/g, ""));
+      if (isFinite(ov)) S.players[hit].own = ov <= 1 && ov > 0 ? ov * 100 : ov;
+    }
+    matched++;
+  }
+  return { matched, missed, head, cols: { name: iName, proj: iProj, own: iOwn, team: iTeam } };
+}
+
+/* ---------------------------------------------------------------- demo slate */
+
+function demoSlate() {
+  // A synthetic but DraftKings-shaped slate. Labelled as such everywhere it appears —
+  // it exists to prove the pipeline works, not to be played.
+  const R = E.rng(20260906);
+  const TEAMS = [["BUF", "MIA"], ["KC", "LAC"], ["PHI", "DAL"], ["SF", "SEA"], ["DET", "GB"],
+                 ["BAL", "CIN"], ["HOU", "IND"], ["TB", "NO"], ["LA", "ARI"], ["NYJ", "NE"],
+                 ["MIN", "CHI"], ["JAX", "TEN"], ["DEN", "LV"]];
+  const FIRST = ["Jalen", "Marcus", "Trey", "Devon", "Kayvon", "Rome", "Bijan", "Amari", "Chris", "Elijah",
+                 "Tank", "Quentin", "Rashid", "Dallas", "Malik", "Cooper", "Jaxon", "Brock", "Zay", "Nico"];
+  const LAST = ["Hollis", "Bramwell", "Okafor", "Vance", "Stroud", "Kinlaw", "Whitmore", "Ellison", "Pryor",
+                "Dumont", "Reasor", "Achebe", "Sandoval", "Kittredge", "Barlow", "Ferraro", "Nwosu", "Delgado"];
+  let seq = 0;
+  const nm = () => FIRST[(R() * FIRST.length) | 0] + " " + LAST[(R() * LAST.length) | 0] + (++seq % 7 === 0 ? " Jr." : "");
+  const out = [];
+  const push = (pos, tm, opp, gid, sal, proj, own) => out.push({
+    name: nm(), pos, team: tm, opp, gid, sal: Math.max(2000, Math.round(sal / 100) * 100),
+    proj: +Math.max(0.6, proj).toFixed(1), own: +Math.max(0.2, own).toFixed(1),
+    dkId: "D" + (100000 + out.length), cptId: "", avg: 0
+  });
+  TEAMS.forEach(([a, b], g) => {
+    const gid = a + "@" + b;
+    for (const [t, o] of [[a, b], [b, a]]) {
+      const q = 13 + R() * 11;
+      push("QB", t, o, gid, 4200 + q * 190, q, 2 + R() * 14);
+      for (let i = 0; i < 3; i++) { const p = (15 - i * 5) * (0.7 + R() * 0.6); push("RB", t, o, gid, 2800 + p * 320, p, 1 + R() * (i === 0 ? 22 : 8)); }
+      for (let i = 0; i < 5; i++) { const p = (16 - i * 3.1) * (0.7 + R() * 0.6); push("WR", t, o, gid, 2900 + p * 300, p, 0.8 + R() * (i < 2 ? 20 : 7)); }
+      for (let i = 0; i < 2; i++) { const p = (10 - i * 4.5) * (0.7 + R() * 0.6); push("TE", t, o, gid, 2600 + p * 330, p, 0.8 + R() * (i === 0 ? 14 : 5)); }
+      push("DST", t, o, gid, 2100 + R() * 1500, 4 + R() * 6, 1 + R() * 12);
+    }
+  });
+  return out;
+}
+
+/* ---------------------------------------------------------------- pool table */
+
+function enginePlayers() {
+  const maxExpDef = (S.cfg.maxExp || 100) / 100;
+  return S.players.map(p => ({
+    pos: p.pos, team: p.team, opp: p.opp, gid: p.gid, sal: p.sal,
+    proj: p.proj == null ? 0 : p.proj, own: p.own || 0,
+    lock: !!p.lock, excl: !!p.excl,
+    maxExp: p.maxExp != null ? p.maxExp / 100 : (maxExpDef < 1 ? maxExpDef : null)
+  }));
+}
+
+function poolStats() {
+  const withProj = S.players.filter(p => p.proj != null && p.proj > 0 && !p.excl);
+  const own = S.players.reduce((t, p) => t + (p.own || 0), 0);
+  const games = {}; S.players.forEach(p => games[p.gid] = 1);
+  return { total: S.players.length, priced: withProj.length, own, games: Object.keys(games).length };
+}
+
+function renderStrip() {
+  const st = poolStats();
+  const site = E.SITES[S.site];
+  const bits = [];
+  bits.push(`<span><b>${esc(site.label)}</b></span>`);
+  if (st.total) bits.push(`<span class="dot"></span><span><b>${st.total}</b> players · <b>${st.games}</b> game${st.games === 1 ? "" : "s"}</span>`);
+  if (st.total) bits.push(`<span class="dot"></span><span><b>${st.priced}</b> projected</span>`);
+  if (S.lineups.length) bits.push(`<span class="dot live"></span><span><b>${S.lineups.length}</b> lineup${S.lineups.length === 1 ? "" : "s"} built</span>`);
+  if (S.bankroll.length) bits.push(`<span class="dot"></span><span><b>${S.bankroll.length}</b> contests logged</span>`);
+  if (S.demo) bits.push(`<span class="dot"></span><span style="color:var(--warn);font-weight:750">demo slate — invented players</span>`);
+  $("fsStrip").innerHTML = bits.join("");
+  $("poolCount").textContent = st.total ? `${st.priced} of ${st.total} have a projection` : "";
+  for (const b of $("fsTabs").querySelectorAll("button[data-s]")) {
+    const need = { solver: st.priced > 0, sim: S.lineups.length > 0, exposure: S.lineups.length > 0 };
+    b.disabled = b.dataset.s in need ? !need[b.dataset.s] : false;
+  }
+}
+
+function renderPool() {
+  const t = $("poolTab"), empty = $("poolEmpty");
+  if (!S.players.length) { t.innerHTML = ""; empty.hidden = false; return; }
+  empty.hidden = true;
+  const fpos = $("poolPos").value, q = normName($("poolFind").value), sort = $("poolSort").value;
+  let list = S.players.map((p, i) => ({ p, i }));
+  if (fpos) list = list.filter(x => x.p.pos === fpos);
+  if (q) list = list.filter(x => normName(x.p.name).indexOf(q) >= 0 || x.p.team.toLowerCase().indexOf(q) >= 0);
+  const val = p => (p.proj || 0) / (p.sal / 1000);
+  list.sort((a, b) => sort === "sal" ? b.p.sal - a.p.sal
+    : sort === "own" ? (b.p.own || 0) - (a.p.own || 0)
+    : sort === "val" ? val(b.p) - val(a.p)
+    : (b.p.proj || 0) - (a.p.proj || 0));
+  const CAP = 400, shown = list.slice(0, CAP);
+  let h = `<thead><tr><th class="l">Pos</th><th class="l">Player</th><th class="l">Team</th><th class="l">Game</th>
+    <th>Salary</th><th>Proj</th><th>Pts/$1k</th><th>Own%</th><th>Max%</th><th></th></tr></thead><tbody>`;
+  for (const { p, i } of shown) {
+    const v = p.proj ? val(p) : null;
+    h += `<tr data-i="${i}" class="${p.excl ? "off" : ""}${p.lock ? " lockd" : ""}">
+      <td class="l"><span class="tag ${p.pos.toLowerCase()}">${p.pos}</span></td>
+      <td class="l">${esc(p.name)}</td>
+      <td class="l mut">${esc(p.team)}</td>
+      <td class="l mut">${esc(p.gid)}</td>
+      <td>$${p.sal.toLocaleString()}</td>
+      <td><input class="cell" data-f="proj" value="${p.proj == null ? "" : p.proj}" inputmode="decimal"></td>
+      <td class="mut">${v == null ? "—" : v.toFixed(2)}</td>
+      <td><input class="cell" data-f="own" value="${p.own || ""}" inputmode="decimal"></td>
+      <td><input class="cell" data-f="maxExp" value="${p.maxExp == null ? "" : p.maxExp}" inputmode="decimal" placeholder="—"></td>
+      <td style="white-space:nowrap"><button class="toggle${p.lock ? " on" : ""}" data-t="lock">Lock</button>
+        <button class="toggle${p.excl ? " on ex" : ""}" data-t="excl">Out</button></td></tr>`;
+  }
+  h += "</tbody>";
+  t.innerHTML = h;
+  // ⚠️ Say what was dropped. A silently truncated table reads as "that is the whole pool".
+  const note = $("poolTrunc") || (() => { const n = el("p", "note"); n.id = "poolTrunc"; t.parentNode.parentNode.appendChild(n); return n; })();
+  note.textContent = list.length > CAP
+    ? `Showing the top ${CAP} of ${list.length} matching players. Filter or search to reach the rest — the solver still sees all ${S.players.length}.` : "";
+}
+
+
+/* ---------------------------------------------------------------- solver */
+
+let solveWorker = null;
+function runSolve() {
+  const st = poolStats();
+  if (!st.priced) { banner("solveWarn", "err", "<b>No projections.</b> Nothing can be optimised until at least one player has a projection."); return; }
+  readCfg();
+  const cfg = {
+    site: S.site, count: S.cfg.count, minSalary: S.cfg.minSal, maxSalary: S.cfg.maxSal,
+    uniques: S.cfg.uniq, randomness: S.cfg.rand / 100, seed: (Date.now() % 100000) | 0,
+    maxPerTeam: S.cfg.team, maxPerGame: S.cfg.game, timeLimitMs: S.cfg.time * 1000,
+    stack: { qbMin: S.cfg.qbMin, qbPos: S.cfg.qbPos.split(","), bringBack: S.cfg.bring,
+             noRbVsDst: S.cfg.noRbDst, noOppDst: S.cfg.noOppDst }
+  };
+  banner("solveWarn", null, null);
+  $("solveProg").hidden = false; $("solveProg").firstElementChild.style.width = "3%";
+  $("solveGo").disabled = true; $("solveStop").hidden = false;
+  $("solveState").textContent = "working…";
+  const t0 = Date.now();
+  const players = enginePlayers();
+
+  const finish = (r) => {
+    $("solveProg").hidden = true; $("solveGo").disabled = false; $("solveStop").hidden = true;
+    const ms = Date.now() - t0;
+    S.lineups = r.lineups.map(l => ({ ids: l.ids, cpt: l.cpt, proj: l.proj, sal: l.sal }));
+    S.lineupsMeta = { ms, asked: cfg.count, site: S.site, stamp: Date.now() };
+    SIM = null;
+    save();
+    $("solveState").textContent = `${r.lineups.length} in ${(ms / 1000).toFixed(1)}s`;
+    const msgs = [];
+    if (r.infeasible && !r.lineups.length)
+      msgs.push(`<b>Nothing to build.</b> ${esc(r.infeasible)} — loosen the salary window, the stack rule, or the per-team cap.`);
+    else if (r.infeasible)
+      msgs.push(`<b>Stopped at ${r.lineups.length} of ${cfg.count}.</b> ${esc(r.infeasible)}. Lower the uniques setting or widen the pool.`);
+    if (r.timedOut && !r.lineups.length)
+      // ⚠️ Searching for a lineup that cannot exist is the slowest thing this solver does:
+      // with no valid roster to compare against, nothing prunes. Timing out at zero almost
+      // always means the constraints are impossible, not that the machine is slow.
+      msgs.push(`<b>Nothing found in ${S.cfg.time}s.</b> When a constraint set has no answer the search has nothing to prune against, so it runs to the limit. Check that the salary window is reachable — DraftKings salaries move in $100 steps — and that the stack rule can be satisfied by the players still in the pool.`);
+    else if (r.timedOut)
+      msgs.push(`<b>Hit the ${S.cfg.time}s time limit at ${r.lineups.length} of ${cfg.count}.</b> Every lineup you have is exact; the run just did not finish the whole request. Raise the limit, or cut the uniques and randomness settings.`);
+    banner("solveWarn", r.lineups.length ? "warn" : "err", msgs.join(" "));
+    renderSolveStats(); renderLineups(); renderStrip(); renderExposure();
+  };
+
+  if (WORKER_URL) {
+    try {
+      if (solveWorker) solveWorker.terminate();
+      solveWorker = new Worker(WORKER_URL);
+      solveWorker.onmessage = (e) => {
+        const d = e.data;
+        if (d.type === "progress") $("solveProg").firstElementChild.style.width = Math.max(3, (d.n / d.t) * 100) + "%";
+        else if (d.type === "done") { finish(d.result); solveWorker.terminate(); solveWorker = null; }
+        else if (d.type === "error") {
+          $("solveProg").hidden = true; $("solveGo").disabled = false; $("solveStop").hidden = true;
+          $("solveState").textContent = "";
+          banner("solveWarn", "err", "<b>The solver failed.</b> " + esc(d.message));
+        }
+      };
+      solveWorker.onerror = () => { solveWorker = null; finish(E.solveLineups(players, cfg)); };
+      solveWorker.postMessage({ op: "solve", players, cfg });
+      return;
+    } catch (e) { solveWorker = null; }
+  }
+  // no worker available: run inline. The page will freeze for the duration, so say so.
+  banner("solveWarn", "warn", "<b>Running on the main thread.</b> This browser blocked the background worker, so the page will be unresponsive until the solve finishes.");
+  setTimeout(() => finish(E.solveLineups(players, cfg)), 30);
+}
+
+function renderSolveStats() {
+  const box = $("solveStats");
+  if (!S.lineups.length) { box.hidden = true; return; }
+  const P = S.players;
+  const projs = S.lineups.map(l => l.proj), sals = S.lineups.map(l => l.sal);
+  const owns = S.lineups.map(l => l.ids.reduce((t, i) => t + (P[i].own || 0), 0));
+  const uniq = new Set(); S.lineups.forEach(l => l.ids.forEach(i => uniq.add(i)));
+  const avg = a => a.reduce((x, y) => x + y, 0) / a.length;
+  box.hidden = false;
+  box.innerHTML = [
+    ["Lineups", S.lineups.length],
+    ["Best projection", fmt(Math.max(...projs))],
+    ["Median projection", fmt(projs.slice().sort((a, b) => a - b)[projs.length >> 1])],
+    ["Distinct players used", uniq.size],
+    ["Avg salary used", "$" + Math.round(avg(sals)).toLocaleString()],
+    ["Avg cumulative own", fmt(avg(owns), 0) + "%"]
+  ].map(([l, v]) => `<div class="s"><div class="sv">${v}</div><div class="sl">${l}</div></div>`).join("");
+}
+
+function lineupSlots(l) {
+  // Order a lineup into DraftKings' slot sequence. Which player takes FLEX follows from
+  // the position counts — the solver only ever produces the three legal splits.
+  const P = S.players;
+  if (E.SITES[S.site].showdown) {
+    const rest = l.ids.filter(i => i !== l.cpt);
+    return [{ slot: "CPT", i: l.cpt }].concat(rest.map(i => ({ slot: "FLEX", i })));
+  }
+  const by = { QB: [], RB: [], WR: [], TE: [], DST: [] };
+  l.ids.forEach(i => by[P[i].pos].push(i));
+  for (const k in by) by[k].sort((a, b) => (P[b].proj || 0) - (P[a].proj || 0));
+  const out = [{ slot: "QB", i: by.QB[0] }];
+  out.push({ slot: "RB", i: by.RB[0] }, { slot: "RB", i: by.RB[1] });
+  out.push({ slot: "WR", i: by.WR[0] }, { slot: "WR", i: by.WR[1] }, { slot: "WR", i: by.WR[2] });
+  out.push({ slot: "TE", i: by.TE[0] });
+  const flex = by.RB[2] != null ? by.RB[2] : by.WR[3] != null ? by.WR[3] : by.TE[1];
+  out.push({ slot: "FLEX", i: flex });
+  out.push({ slot: "DST", i: by.DST[0] });
+  return out;
+}
+
+function renderLineups() {
+  const card = $("luCard"), list = $("luList");
+  if (!S.lineups.length) { card.hidden = true; return; }
+  card.hidden = false;
+  $("luCount").textContent = `${S.lineups.length} built`;
+  const P = S.players, CAP = 60;
+  const order = SIM ? SIM.perLineup.slice().sort((a, b) => b.roi - a.roi).map(x => x.i)
+                    : S.lineups.map((_, i) => i);
+  let h = "";
+  order.slice(0, CAP).forEach((li, n) => {
+    const l = S.lineups[li];
+    const own = l.ids.reduce((t, i) => t + (P[i].own || 0), 0);
+    const sim = SIM ? SIM.perLineup.find(x => x.i === li) : null;
+    h += `<div class="lu"><div class="hd"><span class="r">#${n + 1}</span>
+      <span>${fmt(l.proj)} proj</span><span>${fmt(own, 0)}% own</span>
+      ${sim ? `<span>${(sim.roi * 100).toFixed(0)}% ROI</span><span>${pct(sim.win, 2)} win</span>` : ""}
+      <span class="sp">$${l.sal.toLocaleString()}</span></div><div class="ps">`;
+    for (const s of lineupSlots(l)) {
+      const p = P[s.i];
+      if (!p) continue;
+      h += `<span class="p${s.slot === "CPT" ? " cpt" : ""}"><em>${s.slot}</em>${esc(p.name)} <span class="mut">${esc(p.team)}</span></span>`;
+    }
+    h += "</div></div>";
+  });
+  list.innerHTML = h;
+  $("luMore").textContent = S.lineups.length > CAP ? `Showing the first ${CAP}. Export the CSV for all ${S.lineups.length}.` : "";
+}
+
+function exportCsv() {
+  if (!S.lineups.length) return;
+  const P = S.players, sd = E.SITES[S.site].showdown;
+  const head = sd ? ["CPT", "FLEX", "FLEX", "FLEX", "FLEX", "FLEX"]
+                  : ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"];
+  const lines = [head.join(",")];
+  let missing = 0;
+  for (const l of S.lineups) {
+    const cells = lineupSlots(l).map(s => {
+      const p = P[s.i];
+      if (!p) { missing++; return ""; }
+      const id = s.slot === "CPT" ? (p.cptId || p.dkId) : p.dkId;
+      if (!id) { missing++; return p.name; }
+      return id;
+    });
+    lines.push(cells.join(","));
+  }
+  const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "dd-lineups-" + new Date().toISOString().slice(0, 10) + ".csv";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  if (missing) banner("solveWarn", "warn", `<b>${missing} slot${missing === 1 ? "" : "s"} had no DraftKings player ID</b> and were written as names instead. That happens with the demo slate or a hand-built pool; a real salary export always carries IDs.`);
+}
+
+/* ---------------------------------------------------------------- simulator */
+
+let simWorker = null;
+function runSim() {
+  if (!S.lineups.length) { banner("simWarn", "err", "<b>No lineups.</b> Build a pool on the Solver sheet first."); return; }
+  readSim();
+  const ownTotal = S.players.reduce((t, p) => t + (p.own || 0), 0);
+  if (ownTotal < 50) {
+    banner("simWarn", "err", "<b>No ownership projections.</b> The field is generated from ownership — without it there is nothing to be contrarian against, and every number here would be meaningless. Paste an ownership column on the Slate sheet.");
+    return;
+  }
+  const payout = S.sim.payout === "custom"
+    ? { kind: "table", rows: parsePayoutTable(S.sim.custom) }
+    : S.sim.payout === "cash" ? { kind: "flat", paidFrac: S.sim.paid / 100, rake: S.sim.rake / 100 }
+    : S.sim.payout === "gppflat" ? { kind: "flat", paidFrac: S.sim.paid / 100, rake: S.sim.rake / 100 }
+    : { kind: "param", paidFrac: S.sim.paid / 100, alpha: S.sim.alpha, rake: S.sim.rake / 100 };
+  if (payout.kind === "table" && !payout.rows.length) {
+    banner("simWarn", "err", "<b>The custom payout table did not parse.</b> One tier per line: from place, to place, prize."); return;
+  }
+  const cfg = {
+    site: S.site, sims: S.sim.sims, fieldSize: S.sim.field, fieldSample: S.sim.sample,
+    entryFee: S.sim.fee, fieldStackRate: S.sim.stack / 100, fieldMinSalary: S.sim.fieldSal,
+    seed: (Date.now() % 90000) + 7, payout
+  };
+  banner("simWarn", null, null);
+  $("simProg").hidden = false; $("simProg").firstElementChild.style.width = "3%";
+  $("simGo").disabled = true; $("simStop").hidden = false;
+  const t0 = Date.now();
+  const players = enginePlayers();
+  const lineups = S.lineups.map(l => ({ ids: l.ids, cpt: l.cpt, proj: l.proj }));
+
+  const finish = (r) => {
+    $("simProg").hidden = true; $("simGo").disabled = false; $("simStop").hidden = true;
+    SIM = r; SIM.ms = Date.now() - t0;
+    banner("simWarn", "warn", r.warn && r.warn.length ? "<b>Heads up.</b> " + r.warn.map(esc).join(" ") : null);
+    renderSim(); renderLineups();
+  };
+  if (WORKER_URL) {
+    try {
+      if (simWorker) simWorker.terminate();
+      simWorker = new Worker(WORKER_URL);
+      simWorker.onmessage = (e) => {
+        const d = e.data;
+        if (d.type === "progress") {
+          const w = d.phase === "field" ? (d.n / d.t) * 15 : 15 + (d.n / d.t) * 85;
+          $("simProg").firstElementChild.style.width = Math.max(3, w) + "%";
+        } else if (d.type === "done") { finish(d.result); simWorker.terminate(); simWorker = null; }
+        else if (d.type === "error") {
+          $("simProg").hidden = true; $("simGo").disabled = false; $("simStop").hidden = true;
+          banner("simWarn", "err", "<b>The simulation failed.</b> " + esc(d.message));
+        }
+      };
+      simWorker.onerror = () => { simWorker = null; finish(E.simulate(players, lineups, cfg)); };
+      simWorker.postMessage({ op: "sim", players, lineups, cfg });
+      return;
+    } catch (e) { simWorker = null; }
+  }
+  banner("simWarn", "warn", "<b>Running on the main thread.</b> The page will be unresponsive until this finishes.");
+  setTimeout(() => finish(E.simulate(players, lineups, cfg)), 30);
+}
+
+function parsePayoutTable(text) {
+  const rows = [];
+  for (const line of String(text || "").split("\n")) {
+    const m = line.split(/[,\t]/).map(x => parseFloat(String(x).replace(/[^0-9.\-]/g, "")));
+    if (m.length >= 3 && isFinite(m[0]) && isFinite(m[1]) && isFinite(m[2])) rows.push({ from: m[0], to: m[1], prize: m[2] });
+  }
+  return rows;
+}
+
+function renderSim() {
+  if (!SIM) { $("simCard").hidden = $("levCard").hidden = $("fieldCard").hidden = true; return; }
+  const P = S.players;
+  $("simCard").hidden = $("levCard").hidden = $("fieldCard").hidden = false;
+  $("simMeta").textContent = `${SIM.meta.sims.toLocaleString()} sims · field of ${SIM.meta.fieldSize.toLocaleString()} · ${(SIM.ms / 1000).toFixed(1)}s`;
+
+  // --- field believability ---
+  const m = SIM.meta;
+  const gap = m.ourMedianProj && m.fieldMedianProj ? m.ourMedianProj - m.fieldMedianProj : null;
+  $("fieldStats").innerHTML = [
+    ["Field lineups simulated", m.fieldSample.toLocaleString()],
+    ["Median field projection", fmt(m.fieldMedianProj)],
+    ["90th pct field projection", fmt(m.fieldP90Proj)],
+    ["Your median projection", fmt(m.ourMedianProj)],
+    ["Median field salary", m.fieldMedianSalary ? "$" + Math.round(m.fieldMedianSalary).toLocaleString() : "—"],
+    ["Ownership miss", m.fieldOwnershipError == null ? "—" : fmt(m.fieldOwnershipError, 2) + "pp"]
+  ].map(([l, v]) => `<div class="s"><div class="sv">${v}</div><div class="sl">${l}</div></div>`).join("");
+  let note = "";
+  if (gap != null) {
+    const rel = gap / (m.fieldMedianProj || 1);
+    note = rel > 0.09
+      ? `<span class="bad">Your median lineup projects ${fmt(gap)} points above the median simulated opponent (${(rel * 100).toFixed(0)}%). That is a big edge to assume. Real tournament fields are largely optimiser output too, so this gap is probably an artefact of modelling the room from ownership alone — treat the ROI column as an upper bound.</span>`
+      : rel > 0.04
+      ? `<span class="warn">Your median lineup projects ${fmt(gap)} points above the median simulated opponent. Some of that is real edge and some is the field model being soft. Take the ordering seriously and the level with salt.</span>`
+      : `<span class="good">Your lineups and the simulated field project within ${fmt(Math.abs(gap))} points of each other, so the room is being modelled as roughly as strong as you. That is the regime where these ROI numbers are worth reading.</span>`;
+  }
+  $("fieldNote").innerHTML = note + ` Ownership miss is the average gap between the ownership you supplied and what the generated field actually produced; the cap and the roster shape make an exact match impossible.`;
+
+  // --- lineups ---
+  const rows = SIM.perLineup.slice().sort((a, b) => b.roi - a.roi);
+  let h = `<thead><tr><th class="l">#</th><th class="l">Lineup</th><th>Proj</th><th>Own%</th><th>Mean</th><th>SD</th>
+    <th>Cash%</th><th>Top 1%</th><th>Win%</th><th>Dupes</th><th>ROI</th></tr></thead><tbody>`;
+  rows.slice(0, 200).forEach((r, n) => {
+    const l = S.lineups[r.i];
+    const own = l.ids.reduce((t, i) => t + (P[i].own || 0), 0);
+    const names = lineupSlots(l).map(s => P[s.i] ? P[s.i].name.split(" ").slice(-1)[0] : "?").join(" · ");
+    h += `<tr><td class="l">${n + 1}</td><td class="l" style="max-width:340px;font-size:11.5px" class="mut">${esc(names)}</td>
+      <td>${fmt(l.proj)}</td><td>${fmt(own, 0)}</td><td>${fmt(r.mean)}</td><td>${fmt(r.sd)}</td>
+      <td>${pct(r.cash, 1)}</td><td>${pct(r.top1, 2)}</td><td>${pct(r.win, 3)}</td>
+      <td>${r.dupes == null ? "—" : r.dupes.toFixed(1)}</td>
+      <td class="${r.roi >= 0 ? "pos" : "neg"}">${(r.roi * 100).toFixed(0)}%</td></tr>`;
+  });
+  $("simTab").innerHTML = h + "</tbody>";
+  renderLev();
+}
+
+function renderLev() {
+  if (!SIM) return;
+  const P = S.players;
+  const fpos = $("levPos").value, sort = $("levSort").value;
+  let rows = SIM.perPlayer.filter(r => P[r.i] && (!fpos || P[r.i].pos === fpos));
+  rows.sort((a, b) => sort === "win" ? b.winLineup - a.winLineup : sort === "own" ? b.own - a.own : b.leverage - a.leverage);
+  let h = `<thead><tr><th class="l">Pos</th><th class="l">Player</th><th class="l">Team</th><th>Salary</th><th>Proj</th>
+    <th>Own%</th><th>Win-lineup%</th><th>Leverage</th><th>Your%</th></tr></thead><tbody>`;
+  for (const r of rows.slice(0, 120)) {
+    const p = P[r.i];
+    h += `<tr><td class="l"><span class="tag ${p.pos.toLowerCase()}">${p.pos}</span></td><td class="l">${esc(p.name)}</td>
+      <td class="l mut">${esc(p.team)}</td><td>$${p.sal.toLocaleString()}</td><td>${fmt(p.proj)}</td>
+      <td>${fmt(r.own)}</td><td>${fmt(r.winLineup, 2)}</td>
+      <td class="${r.leverage >= 0 ? "pos" : "neg"}">${r.leverage >= 0 ? "+" : "−"}${fmt(Math.abs(r.leverage), 2)}</td>
+      <td class="mut">${fmt(r.ourExposure, 0)}</td></tr>`;
+  }
+  $("levTab").innerHTML = h + "</tbody>";
+}
+
+/* ---------------------------------------------------------------- exposure */
+
+function renderExposure() {
+  const has = S.lineups.length > 0;
+  $("expEmpty").hidden = has;
+  for (const id of ["expPlayers", "expTeams", "expGames", "expSal", "expStats"]) if (!has) $(id).innerHTML = "";
+  document.querySelectorAll("#sh-exposure .card").forEach(c => c.hidden = !has);
+  if (!has) return;
+  const P = S.players, N = S.lineups.length;
+  const ct = {}, tct = {}, gct = {}, stackCt = {};
+  for (const l of S.lineups) {
+    l.ids.forEach(i => ct[i] = (ct[i] || 0) + 1);
+    const teams = {}, games = {};
+    l.ids.forEach(i => { if (P[i].pos !== "DST") teams[P[i].team] = (teams[P[i].team] || 0) + 1; games[P[i].gid] = 1; });
+    for (const t in teams) tct[t] = (tct[t] || 0) + 1;
+    for (const g in games) gct[g] = (gct[g] || 0) + 1;
+    const qb = l.ids.find(i => P[i].pos === "QB");
+    if (qb != null) {
+      const n = l.ids.filter(i => i !== qb && P[i].team === P[qb].team && (P[i].pos === "WR" || P[i].pos === "TE")).length;
+      const bb = l.ids.filter(i => P[i].team === P[qb].opp && P[i].pos !== "DST").length;
+      const key = `QB+${n}${bb ? " · bring-back " + bb : ""}`;
+      stackCt[key] = (stackCt[key] || 0) + 1;
+    }
+  }
+  const uniq = Object.keys(ct).length;
+  const avgOwn = S.lineups.reduce((t, l) => t + l.ids.reduce((x, i) => x + (P[i].own || 0), 0), 0) / N;
+  const topExp = Math.max(...Object.values(ct)) / N;
+  $("expMeta").textContent = `${N} lineups`;
+  $("expStats").innerHTML = [
+    ["Lineups", N], ["Distinct players", uniq],
+    ["Highest exposure", (topExp * 100).toFixed(0) + "%"],
+    ["Avg cumulative own", avgOwn.toFixed(0) + "%"],
+    ["Distinct stacks", Object.keys(stackCt).length]
+  ].map(([l, v]) => `<div class="s"><div class="sv">${v}</div><div class="sl">${l}</div></div>`).join("");
+
+  const fpos = $("expPos").value;
+  const pl = Object.keys(ct).map(i => +i).filter(i => !fpos || P[i].pos === fpos)
+    .sort((a, b) => ct[b] - ct[a]).slice(0, 40);
+  $("expPlayers").innerHTML = pl.map(i => {
+    const e = ct[i] / N, own = (P[i].own || 0) / 100;
+    return bar(`${P[i].name} <span class="mut">${P[i].pos}</span>`, e, (e * 100).toFixed(0) + "%", own);
+  }).join("") || `<p class="note">No players at this position.</p>`;
+
+  const tk = Object.keys(tct).sort((a, b) => tct[b] - tct[a]).slice(0, 20);
+  $("expTeams").innerHTML =
+    Object.keys(stackCt).sort((a, b) => stackCt[b] - stackCt[a])
+      .map(k => bar(k, stackCt[k] / N, (stackCt[k] / N * 100).toFixed(0) + "%")).join("")
+    + `<div style="height:10px"></div>`
+    + tk.map(t => bar(t, tct[t] / N, (tct[t] / N * 100).toFixed(0) + "%")).join("");
+  const gk = Object.keys(gct).sort((a, b) => gct[b] - gct[a]);
+  $("expGames").innerHTML = gk.map(g => bar(g, gct[g] / N, (gct[g] / N * 100).toFixed(0) + "%")).join("");
+
+  const sals = S.lineups.map(l => l.sal).sort((a, b) => a - b);
+  const bins = {}; sals.forEach(s => { const b = Math.floor(s / 250) * 250; bins[b] = (bins[b] || 0) + 1; });
+  const keys = Object.keys(bins).map(Number).sort((a, b) => a - b);
+  const mx = Math.max(...keys.map(k => bins[k]));
+  $("expSal").innerHTML = `<div class="bars">` + keys.map(k =>
+    bar("$" + k.toLocaleString() + "–" + (k + 249).toLocaleString(), bins[k] / mx, bins[k])).join("") + `</div>
+    <p class="note">Median $${sals[sals.length >> 1].toLocaleString()} · minimum $${sals[0].toLocaleString()} · maximum $${sals[sals.length - 1].toLocaleString()}.</p>`;
+}
+
+function bar(name, frac, label, mark) {
+  const w = Math.max(0, Math.min(1, frac)) * 100;
+  return `<div class="b"><div class="nm">${name}</div><div class="tr"><i style="width:${w.toFixed(1)}%"></i>${
+    mark != null ? `<span class="mark" style="left:${(Math.min(1, mark) * 100).toFixed(1)}%" title="projected ownership"></span>` : ""
+  }</div><div class="vv">${label}</div></div>`;
+}
+
+/* ---------------------------------------------------------------- bankroll */
+
+function brAdd(rec) { S.bankroll.push(rec); S.bankroll.sort((a, b) => (a.date || "").localeCompare(b.date || "")); save(); renderBankroll(); renderStrip(); }
+
+function brImport(text) {
+  const rows = parseCSV(text);
+  if (rows.length < 2) return { error: "Nothing to import." };
+  const head = rows[0].map(h => String(h).trim().toLowerCase().replace(/[^a-z0-9]/g, ""));
+  const at = (...names) => { for (const n of names) { const j = head.indexOf(n); if (j >= 0) return j; } return -1; };
+  const iFee = at("entryfee", "entry_fee", "fee");
+  const iWin = at("winningsnonticket", "winnings", "winningsnonticketwinningsticket", "prize");
+  const iWinT = at("winningsticket");
+  const iDate = at("contestdateest", "contestdate", "date", "entrydate");
+  const iName = at("contestname", "contest", "title", "contestkey");
+  const iType = at("gametype", "type", "contesttype", "sport");
+  const iPlace = at("place", "rank", "position");
+  const iEntries = at("contestentries", "entries");
+  if (iFee < 0) return { error: "Could not find an entry-fee column. This does not look like a DraftKings contest-history export." };
+  const num = v => { const x = parseFloat(String(v || "").replace(/[^0-9.\-]/g, "")); return isFinite(x) ? x : 0; };
+  let added = 0;
+  const seen = {};
+  S.bankroll.forEach(b => { if (b.k) seen[b.k] = 1; });
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+    const fee = num(row[iFee]);
+    if (!isFinite(fee)) continue;
+    const win = (iWin >= 0 ? num(row[iWin]) : 0) + (iWinT >= 0 ? num(row[iWinT]) : 0);
+    let date = iDate >= 0 ? String(row[iDate] || "").trim() : "";
+    const dm = date.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/) || date.match(/(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+    if (dm) date = dm[1].length === 4 ? `${dm[1]}-${String(dm[2]).padStart(2, "0")}-${String(dm[3]).padStart(2, "0")}`
+                                      : `${dm[3]}-${String(dm[1]).padStart(2, "0")}-${String(dm[2]).padStart(2, "0")}`;
+    else date = date.slice(0, 10);
+    const name = iName >= 0 ? String(row[iName] || "").trim() : "";
+    const rawType = iType >= 0 ? String(row[iType] || "").trim() : "";
+    const type = /double|50|fifty|head|h2h|cash/i.test(rawType + name) ? "Cash"
+               : /showdown|single game|captain/i.test(rawType + name) ? "Showdown"
+               : /satellite|qualifier|ticket/i.test(rawType + name) ? "Satellite" : "GPP";
+    // ⚠️ De-duplicated on a content key so re-importing an overlapping export does not
+    // silently double the bankroll. Exports overlap constantly.
+    const k = [date, name, fee, win, iPlace >= 0 ? row[iPlace] : r].join("~");
+    if (seen[k]) continue;
+    seen[k] = 1;
+    S.bankroll.push({ date, name, type, entries: 1, fee, win, k,
+                      place: iPlace >= 0 ? num(row[iPlace]) : null,
+                      size: iEntries >= 0 ? num(row[iEntries]) : null });
+    added++;
+  }
+  S.bankroll.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  save();
+  return { added, total: rows.length - 1 };
+}
+
+function brSummary(list) {
+  let staked = 0, won = 0, entries = 0;
+  for (const b of list) { const e = b.entries || 1; staked += e * b.fee; won += b.win; entries += e; }
+  return { staked, won, net: won - staked, roi: staked ? (won - staked) / staked : null, entries, n: list.length };
+}
+
+// Bootstrap the ROI confidence band by resampling CONTESTS, not entries. A 150-entry
+// night is one correlated bet on one slate, and resampling entries would pretend it was
+// 150 independent ones — which is exactly the error that makes a small sample look like
+// an edge.
+function brBootstrap(list, iters) {
+  if (list.length < 5) return null;
+  const R = E.rng(20260101), n = list.length, out = [];
+  const stake = list.map(b => (b.entries || 1) * b.fee), win = list.map(b => b.win);
+  for (let k = 0; k < (iters || 3000); k++) {
+    let s = 0, w = 0;
+    for (let i = 0; i < n; i++) { const j = (R() * n) | 0; s += stake[j]; w += win[j]; }
+    if (s > 0) out.push((w - s) / s);
+  }
+  if (!out.length) return null;
+  out.sort((a, b) => a - b);
+  return { lo: out[Math.floor(out.length * 0.025)], hi: out[Math.floor(out.length * 0.975)], n };
+}
+
+function renderBankroll() {
+  const L = S.bankroll;
+  $("brMeta").textContent = L.length ? `${L.length} contests` : "";
+  const s = brSummary(L);
+  $("brStats").innerHTML = [
+    ["Contests", s.n], ["Entries", s.entries],
+    ["Staked", money(s.staked)], ["Won", money(s.won)],
+    ["Net", money(s.net)], ["ROI", s.roi == null ? "—" : (s.roi * 100).toFixed(1) + "%"]
+  ].map(([l, v]) => `<div class="s"><div class="sv">${v}</div><div class="sl">${l}</div></div>`).join("");
+
+  const bs = brBootstrap(L);
+  $("brSig").innerHTML = !L.length ? "Nothing logged yet."
+    : !bs ? `<span class="warn">Five contests is the minimum before a confidence band means anything. With ${L.length}, this is a ledger, not evidence.</span>`
+    : (() => {
+        const lo = (bs.lo * 100).toFixed(0), hi = (bs.hi * 100).toFixed(0);
+        const spans0 = bs.lo < 0 && bs.hi > 0;
+        return `Bootstrapped 95% band on ROI: <b>${lo}% to ${hi}%</b>, resampling ${bs.n} contests. ` + (spans0
+          ? `<span class="warn">That band contains zero, so this sample cannot distinguish your results from breaking even — in either direction. Nothing here is yet evidence of an edge or of a leak.</span>`
+          : bs.lo > 0
+            ? `<span class="good">The whole band is above zero. That is real for this sample; it is still one sample, and DFS results are heavy-tailed enough that a single tournament score can carry it.</span>`
+            : `<span class="bad">The whole band is below zero. Over this sample you are losing money at a rate the noise does not explain.</span>`);
+      })();
+
+  drawBrChart();
+
+  // by type
+  const types = {};
+  L.forEach(b => (types[b.type || "Other"] = types[b.type || "Other"] || []).push(b));
+  let h = `<thead><tr><th class="l">Type</th><th>Contests</th><th>Entries</th><th>Staked</th><th>Won</th><th>Net</th><th>ROI</th></tr></thead><tbody>`;
+  for (const t of Object.keys(types).sort()) {
+    const x = brSummary(types[t]);
+    h += `<tr><td class="l">${esc(t)}</td><td>${x.n}</td><td>${x.entries}</td><td>${money(x.staked)}</td>
+      <td>${money(x.won)}</td><td class="${x.net >= 0 ? "pos" : "neg"}">${money(x.net)}</td>
+      <td class="${x.roi >= 0 ? "pos" : "neg"}">${x.roi == null ? "—" : (x.roi * 100).toFixed(0) + "%"}</td></tr>`;
+  }
+  $("brByType").innerHTML = L.length ? h + "</tbody>" : "";
+
+  const CAP = 150, recent = L.slice().reverse();
+  let t = `<thead><tr><th class="l">Date</th><th class="l">Contest</th><th class="l">Type</th><th>Entries</th>
+    <th>Fee</th><th>Won</th><th>Net</th><th></th></tr></thead><tbody>`;
+  recent.slice(0, CAP).forEach((b) => {
+    const i = L.indexOf(b), net = b.win - (b.entries || 1) * b.fee;
+    t += `<tr><td class="l mut">${esc(b.date || "—")}</td><td class="l" style="max-width:280px">${esc(b.name || "—")}</td>
+      <td class="l mut">${esc(b.type || "")}</td><td>${b.entries || 1}</td><td>${money(b.fee)}</td>
+      <td>${money(b.win)}</td><td class="${net >= 0 ? "pos" : "neg"}">${money(net)}</td>
+      <td><button class="toggle" data-del="${i}">Delete</button></td></tr>`;
+  });
+  $("brTab").innerHTML = L.length ? t + "</tbody>" : "";
+  $("brMore").textContent = L.length > CAP ? `Showing the ${CAP} most recent of ${L.length}.` : "";
+}
+
+function drawBrChart() {
+  const box = $("brChart"), L = S.bankroll;
+  if (!L.length) { box.innerHTML = `<p class="note">Log or import some contests and the running profit line appears here.</p>`; $("brChartNote").textContent = ""; return; }
+  // ⚠️ Size the viewBox to the live container in CSS pixels. A fixed viewBox plus
+  // width:100% silently shrinks every label on a phone.
+  const W = Math.max(280, box.clientWidth || 640), H = 210, PADL = 52, PADB = 26, PADT = 12, PADR = 12;
+  let cum = 0;
+  const pts = L.map((b, i) => { cum += b.win - (b.entries || 1) * b.fee; return { x: i, y: cum, d: b.date }; });
+  const ys = pts.map(p => p.y).concat([0]);
+  const y0 = Math.min(...ys), y1 = Math.max(...ys), span = (y1 - y0) || 1;
+  const X = i => PADL + (i / Math.max(1, pts.length - 1)) * (W - PADL - PADR);
+  const Y = v => PADT + (1 - (v - y0) / span) * (H - PADT - PADB);
+  const path = pts.map((p, i) => (i ? "L" : "M") + X(p.x).toFixed(1) + " " + Y(p.y).toFixed(1)).join(" ");
+  const zero = Y(0);
+  const ticks = [y0, y0 + span / 2, y1].map(v => `<text x="${PADL - 8}" y="${(Y(v) + 4).toFixed(1)}" text-anchor="end"
+      font-size="10" fill="var(--ink-3)">${money(v)}</text>
+      <line x1="${PADL}" y1="${Y(v).toFixed(1)}" x2="${W - PADR}" y2="${Y(v).toFixed(1)}" stroke="var(--grid)" stroke-width="1"/>`).join("");
+  const last = pts[pts.length - 1];
+  box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="height:auto;display:block" role="img"
+      aria-label="Running profit across ${pts.length} logged contests, ending at ${money(last.y)}">
+    ${ticks}
+    <line x1="${PADL}" y1="${zero.toFixed(1)}" x2="${W - PADR}" y2="${zero.toFixed(1)}" stroke="var(--ink-3)" stroke-dasharray="3 3" stroke-width="1"/>
+    <path d="${path}" fill="none" stroke="${last.y >= 0 ? "var(--good)" : "var(--bad)"}" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="${X(last.x).toFixed(1)}" cy="${Y(last.y).toFixed(1)}" r="3.5" fill="${last.y >= 0 ? "var(--good)" : "var(--bad)"}"/>
+    <text x="${(W - PADR)}" y="${H - 8}" text-anchor="end" font-size="10" fill="var(--ink-3)">${esc(L[L.length - 1].date || "")}</text>
+    <text x="${PADL}" y="${H - 8}" font-size="10" fill="var(--ink-3)">${esc(L[0].date || "")}</text>
+  </svg>`;
+  $("brChartNote").innerHTML = `Cumulative net across ${pts.length} logged contests, in the order they were entered. ` +
+    `Ending at <b>${money(last.y)}</b>. A line like this is a story, not a test — the confidence band above is the test.`;
+}
+
+/* ---------------------------------------------------------------- method sheet */
+
+function renderMethod() {
+  const C = E.CORR, m = C.meta;
+  $("mCorrMeta").innerHTML = [
+    ["Seasons", m.seasons[0] + "–" + m.seasons[1]],
+    ["Games", m.games.toLocaleString()],
+    ["Player-weeks", m.playerWeeks.toLocaleString()],
+    ["Min weeks per player-season", m.minGamesPerPlayerSeason],
+    ["Min observations per cell", m.minPairObservations.toLocaleString()],
+    ["Eigenvalues clipped", m.psdEigenvaluesClipped]
+  ].map(([l, v]) => `<div class="s"><div class="sv">${v}</div><div class="sl">${l}</div></div>`).join("");
+
+  const heat = v => {
+    const a = Math.min(1, Math.abs(v) / 0.4);
+    const c = v >= 0 ? "var(--good)" : "var(--bad)";
+    return `background:color-mix(in srgb,${c} ${(a * 42).toFixed(0)}%,transparent)`;
+  };
+  const tbl = (M) => {
+    let h = `<thead><tr><th></th>${C.roles.map(r => `<th>${r}</th>`).join("")}</tr></thead><tbody>`;
+    C.roles.forEach((r, i) => {
+      h += `<tr><td>${r}</td>` + C.roles.map((_, j) =>
+        `<td style="${heat(M[i][j])}">${M[i][j].toFixed(2)}</td>`).join("") + "</tr>";
+    });
+    return h + "</tbody>";
+  };
+  $("mSame").innerHTML = tbl(C.same);
+  $("mOpp").innerHTML = tbl(C.opp);
+
+  let h = `<thead><tr><th class="l">Position</th><th class="l">Average points per week</th><th>Coefficient of variation</th><th>Player-seasons</th></tr></thead><tbody>`;
+  for (const pos of ["QB", "RB", "WR", "TE", "DST"]) {
+    for (const r of (C.cv[pos] || [])) {
+      h += `<tr><td class="l"><span class="tag ${pos.toLowerCase()}">${pos}</span></td>
+        <td class="l mut">${r.lo} – ${r.hi > 900 ? "∞" : r.hi}</td><td>${r.cv.toFixed(2)}</td><td class="mut">${r.n}</td></tr>`;
+    }
+  }
+  $("mCv").innerHTML = h + "</tbody>";
+}
+
+/* ---------------------------------------------------------------- config i/o */
+
+const CFG_MAP = { cfCount: "count", cfMinSal: "minSal", cfMaxSal: "maxSal", cfUniq: "uniq", cfRand: "rand",
+  cfMaxExp: "maxExp", cfTeam: "team", cfGame: "game", cfTime: "time", cfQbMin: "qbMin", cfBring: "bring" };
+const SIM_MAP = { siField: "field", siFee: "fee", siPaid: "paid", siAlpha: "alpha", siRake: "rake",
+  siSims: "sims", siSample: "sample", siStack: "stack", siFieldSal: "fieldSal" };
+
+function writeCfg() {
+  for (const id in CFG_MAP) if ($(id)) $(id).value = S.cfg[CFG_MAP[id]];
+  $("cfQbPos").value = S.cfg.qbPos;
+  $("cfNoRbDst").checked = !!S.cfg.noRbDst;
+  $("cfNoOppDst").checked = !!S.cfg.noOppDst;
+  for (const id in SIM_MAP) if ($(id)) $(id).value = S.sim[SIM_MAP[id]];
+  $("siPayout").value = S.sim.payout;
+  $("siCustom").value = S.sim.custom || "";
+  $("siCustomBox").hidden = S.sim.payout !== "custom";
+  $("siAlpha").parentElement.style.opacity = S.sim.payout === "gpp" ? 1 : 0.45;
+  $("siteSel").value = S.site;
+}
+function readCfg() {
+  for (const id in CFG_MAP) if ($(id)) { const v = parseFloat($(id).value); if (isFinite(v)) S.cfg[CFG_MAP[id]] = v; }
+  S.cfg.qbPos = $("cfQbPos").value;
+  S.cfg.noRbDst = $("cfNoRbDst").checked;
+  S.cfg.noOppDst = $("cfNoOppDst").checked;
+  save();
+}
+function readSim() {
+  for (const id in SIM_MAP) if ($(id)) { const v = parseFloat($(id).value); if (isFinite(v)) S.sim[SIM_MAP[id]] = v; }
+  S.sim.payout = $("siPayout").value;
+  S.sim.custom = $("siCustom").value;
+  save();
+}
+
+/* ---------------------------------------------------------------- sheets */
+
+const SHEETS = ["slate", "solver", "sim", "exposure", "bankroll", "method"];
+function show(name) {
+  if (SHEETS.indexOf(name) < 0) name = "slate";
+  const btn = $("fsTabs").querySelector(`button[data-s="${name}"]`);
+  if (btn && btn.disabled) name = "slate";
+  S.sheet = name; save();
+  SHEETS.forEach(s => { const n = $("sh-" + s); if (n) n.hidden = s !== name; });
+  for (const b of $("fsTabs").querySelectorAll("button[data-s]")) b.classList.toggle("on", b.dataset.s === name);
+  if (location.hash.slice(1) !== name) history.replaceState(null, "", "#" + name);
+  if (name === "exposure") renderExposure();
+  if (name === "bankroll") { renderBankroll(); }
+  if (name === "method") renderMethod();
+  if (name === "sim") renderSim();
+  botContext();
+}
+
+/* ---------------------------------------------------------------- wiring */
+
+function boot() {
+  writeCfg();
+  renderStrip(); renderPool(); renderSolveStats(); renderLineups();
+  show(location.hash.slice(1) || S.sheet || "slate");
+
+  $("fsTabs").addEventListener("click", e => {
+    const b = e.target.closest("button[data-s]");
+    if (b && !b.disabled) show(b.dataset.s);
+  });
+  document.addEventListener("click", e => {
+    const g = e.target.closest("[data-goto]");
+    if (g) { e.preventDefault(); show(g.dataset.goto); }
+  });
+  addEventListener("keydown", e => {
+    if (/input|textarea|select/i.test((e.target.tagName || ""))) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const n = parseInt(e.key, 10);
+    if (n >= 1 && n <= SHEETS.length) show(SHEETS[n - 1]);
+  });
+
+  // ---- slate ----
+  $("siteSel").addEventListener("change", () => {
+    S.site = $("siteSel").value;
+    S.lineups = []; SIM = null; save();
+    renderStrip(); renderLineups(); renderSolveStats(); renderExposure();
+    $("stackCard").hidden = E.SITES[S.site].showdown;
+  });
+  $("salFile").addEventListener("change", e => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => { $("salPaste").value = String(r.result).slice(0, 2000000); doSalaries(String(r.result)); };
+    r.readAsText(f);
+  });
+  $("salGo").addEventListener("click", () => doSalaries($("salPaste").value));
+  $("salDemo").addEventListener("click", () => {
+    S.site = "dk_classic"; $("siteSel").value = "dk_classic";
+    S.players = demoSlate(); S.demo = true; S.lineups = []; SIM = null;
+    save(); renderStrip(); renderPool(); renderLineups(); renderSolveStats(); renderExposure();
+    banner("slateWarn", "warn", "<b>Demo slate loaded — every player on it is invented.</b> The names, salaries, projections and ownership are all synthetic. It exists so you can watch the solver and the simulator work end to end; do not read a single number off it as advice.");
+    $("matchNote").textContent = "";
+  });
+  $("projGo").addEventListener("click", () => doProjections());
+  $("projClear").addEventListener("click", () => {
+    S.players.forEach(p => { p.proj = null; p.own = 0; });
+    save(); renderPool(); renderStrip(); $("matchNote").textContent = "";
+  });
+  ["poolPos", "poolFind", "poolSort"].forEach(id => $(id).addEventListener("input", renderPool));
+  $("poolResetFlags").addEventListener("click", () => {
+    S.players.forEach(p => { delete p.lock; delete p.excl; delete p.maxExp; });
+    save(); renderPool();
+  });
+  $("poolTab").addEventListener("input", e => {
+    const inp = e.target.closest("input.cell"); if (!inp) return;
+    const i = +inp.closest("tr").dataset.i, f = inp.dataset.f;
+    const raw = inp.value.trim();
+    if (raw === "") S.players[i][f] = f === "proj" ? null : (f === "own" ? 0 : null);
+    else { const v = parseFloat(raw); if (isFinite(v)) S.players[i][f] = v; }
+    save(); renderStrip();
+  });
+  $("poolTab").addEventListener("click", e => {
+    const b = e.target.closest("button[data-t]"); if (!b) return;
+    const i = +b.closest("tr").dataset.i, f = b.dataset.t;
+    S.players[i][f] = !S.players[i][f];
+    if (f === "lock" && S.players[i].lock) S.players[i].excl = false;
+    if (f === "excl" && S.players[i].excl) S.players[i].lock = false;
+    save(); renderPool();
+  });
+
+  // ---- solver ----
+  Object.keys(CFG_MAP).forEach(id => $(id) && $(id).addEventListener("change", readCfg));
+  ["cfQbPos", "cfNoRbDst", "cfNoOppDst"].forEach(id => $(id).addEventListener("change", readCfg));
+  $("solveGo").addEventListener("click", runSolve);
+  $("solveStop").addEventListener("click", () => {
+    if (solveWorker) { solveWorker.terminate(); solveWorker = null; }
+    $("solveProg").hidden = true; $("solveGo").disabled = false; $("solveStop").hidden = true;
+    $("solveState").textContent = "stopped";
+  });
+  $("exportCsv").addEventListener("click", exportCsv);
+  $("clearLu").addEventListener("click", () => {
+    S.lineups = []; SIM = null; save();
+    renderLineups(); renderSolveStats(); renderStrip(); renderExposure(); renderSim();
+  });
+
+  // ---- sim ----
+  Object.keys(SIM_MAP).forEach(id => $(id) && $(id).addEventListener("change", readSim));
+  $("siPayout").addEventListener("change", () => {
+    readSim();
+    $("siCustomBox").hidden = S.sim.payout !== "custom";
+    if (S.sim.payout === "cash") { $("siPaid").value = 44; $("siRake").value = 10; }
+    if (S.sim.payout === "gpp") { $("siPaid").value = 20; $("siRake").value = 15; }
+    if (S.sim.payout === "gppflat") { $("siPaid").value = 25; $("siRake").value = 15; }
+    $("siAlpha").parentElement.style.opacity = S.sim.payout === "gpp" ? 1 : 0.45;
+    readSim();
+  });
+  $("siCustom").addEventListener("change", readSim);
+  $("simGo").addEventListener("click", runSim);
+  $("simStop").addEventListener("click", () => {
+    if (simWorker) { simWorker.terminate(); simWorker = null; }
+    $("simProg").hidden = true; $("simGo").disabled = false; $("simStop").hidden = true;
+  });
+  ["levPos", "levSort"].forEach(id => $(id).addEventListener("change", renderLev));
+  $("expPos").addEventListener("change", renderExposure);
+
+  // ---- bankroll ----
+  $("brDate").value = new Date().toISOString().slice(0, 10);
+  $("brAdd").addEventListener("click", () => {
+    const fee = parseFloat($("brFee").value) || 0, win = parseFloat($("brWin").value) || 0;
+    const entries = Math.max(1, parseInt($("brEntries").value, 10) || 1);
+    if (!$("brDate").value) { $("brDate").value = new Date().toISOString().slice(0, 10); }
+    brAdd({ date: $("brDate").value, name: $("brName").value.trim(), type: $("brType").value, entries, fee, win });
+    $("brName").value = ""; $("brWin").value = "0";
+  });
+  $("brFile").addEventListener("change", e => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => { $("brPaste").value = String(r.result).slice(0, 4000000); doBrImport(); };
+    r.readAsText(f);
+  });
+  $("brImport").addEventListener("click", doBrImport);
+  $("brExport").addEventListener("click", () => {
+    const lines = ["date,contest,type,entries,fee,winnings,net"];
+    S.bankroll.forEach(b => lines.push([b.date, '"' + String(b.name || "").replace(/"/g, '""') + '"',
+      b.type, b.entries || 1, b.fee, b.win, b.win - (b.entries || 1) * b.fee].join(",")));
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/csv" }));
+    a.download = "dd-bankroll.csv"; document.body.appendChild(a); a.click(); a.remove();
+  });
+  $("brWipe").addEventListener("click", () => {
+    if (!S.bankroll.length) return;
+    if (!confirm(`Delete all ${S.bankroll.length} logged contests from this device? This cannot be undone.`)) return;
+    S.bankroll = []; save(); renderBankroll(); renderStrip();
+  });
+  $("brTab").addEventListener("click", e => {
+    const b = e.target.closest("button[data-del]"); if (!b) return;
+    S.bankroll.splice(+b.dataset.del, 1); save(); renderBankroll(); renderStrip();
+  });
+
+  // charts follow the container and the theme; an SVG fill baked at load does not
+  let rt = null;
+  addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (S.sheet === "bankroll") drawBrChart(); }, 160); });
+  if (window.DDTheme) { const p = window.onThemeChange; window.onThemeChange = function () { if (p) p.apply(this, arguments); if (S.sheet === "bankroll") drawBrChart(); }; }
+  addEventListener("hashchange", () => show(location.hash.slice(1)));
+  $("stackCard").hidden = E.SITES[S.site].showdown;
+  botContext();
+}
+
+function doSalaries(text) {
+  if (!String(text || "").trim()) { banner("slateWarn", "err", "<b>Nothing to read.</b> Choose the DraftKings CSV or paste its contents."); return; }
+  const r = readSalaries(text);
+  if (r.error) { banner("slateWarn", "err", "<b>Could not read that file.</b> " + esc(r.error)); return; }
+  const wantShowdown = r.showdown;
+  S.site = wantShowdown ? "dk_showdown" : "dk_classic";
+  $("siteSel").value = S.site;
+  S.players = r.players; S.demo = false; S.lineups = []; SIM = null;
+  save();
+  renderStrip(); renderPool(); renderLineups(); renderSolveStats(); renderExposure();
+  $("stackCard").hidden = E.SITES[S.site].showdown;
+  banner("slateWarn", "ok", `<b>${r.players.length} players across ${r.games} game${r.games === 1 ? "" : "s"}.</b> ` +
+    (wantShowdown ? "Captain-mode rows were detected, so this is set up as a Showdown slate. " : "") +
+    "Now paste your projections — nothing can be optimised without them.");
+  $("slateState").textContent = "";
+}
+
+function doProjections(map) {
+  const text = $("projPaste").value;
+  if (!S.players.length) { banner("slateWarn", "err", "<b>Load a slate first.</b> Projections are matched against the salary file."); return; }
+  if (!String(text || "").trim()) { banner("slateWarn", "err", "<b>Nothing pasted.</b> Copy your projections in with a header row."); return; }
+  const r = applyProjections(text, map);
+  if (r.error) {
+    if (r.head) {
+      const fill = (sel, allowNone) => {
+        const s = $(sel); s.innerHTML = (allowNone ? `<option value="-1">— none —</option>` : "") +
+          r.head.map((h, i) => `<option value="${i}">${esc(h || "column " + (i + 1))}</option>`).join("");
+      };
+      fill("mapName"); fill("mapProj"); fill("mapOwn", true); fill("mapTeam", true);
+      $("mapBox").hidden = false;
+    }
+    banner("slateWarn", "err", "<b>" + esc(r.error) + "</b>");
+    return;
+  }
+  $("mapBox").hidden = true;
+  save(); renderPool(); renderStrip();
+  const ownCount = S.players.filter(p => p.own > 0).length;
+  $("matchNote").innerHTML = `Matched <b>${r.matched}</b> players` +
+    (ownCount ? `, ownership on <b>${ownCount}</b>` : `, <span class="warn">no ownership column found — the simulator needs one</span>`) +
+    (r.missed.length ? `. <span class="warn">${r.missed.length} row${r.missed.length === 1 ? "" : "s"} did not match the slate: ${esc(r.missed.slice(0, 8).join(", "))}${r.missed.length > 8 ? "…" : ""}</span>` : ". Everything matched.");
+  banner("slateWarn", r.missed.length ? "warn" : "ok",
+    r.missed.length ? `<b>${r.matched} matched, ${r.missed.length} did not.</b> Unmatched rows are usually a name spelled differently or a player who is not on this slate. Anything still without a projection is left out of the pool.`
+                    : `<b>All ${r.matched} rows matched.</b>`);
+}
+document.addEventListener("change", e => {
+  if (!e.target || ["mapName", "mapProj", "mapOwn", "mapTeam"].indexOf(e.target.id) < 0) return;
+  doProjections({ name: +$("mapName").value, proj: +$("mapProj").value,
+                  own: +$("mapOwn").value, team: +$("mapTeam").value });
+});
+
+function doBrImport() {
+  const r = brImport($("brPaste").value);
+  if (r.error) { $("brImportNote").innerHTML = `<span class="bad">${esc(r.error)}</span>`; return; }
+  $("brImportNote").innerHTML = `Imported <b>${r.added}</b> of ${r.total} rows` +
+    (r.added < r.total ? ` — the rest were already logged, or had no entry fee.` : ".");
+  renderBankroll(); renderStrip();
+}
+
+/* ---------------------------------------------------------------- Toto */
+// The assistant's view of this page has to move when the page moves, or the copy lies
+// about what he can see. Regenerated on every sheet change and after every run.
+function botContext() {
+  const st = poolStats();
+  window.DD_BOTCTX = {
+    label: "THE DFS SOLVER & CONTEST SIMULATOR",
+    title: "Ask Toto about this page",
+    chrome: { sub: "reads your slate, your lineups and your simulation", ph: "Ask Toto about this slate…", chips: [
+      ["Why is the highest-projected lineup often a bad tournament entry?", "Why is chalk bad?"],
+      ["What is leverage, and how should I read the win-lineup column?", "What is leverage?"],
+      ["Are my results good enough to say I have an edge?", "Do I have an edge?"]] },
+    sys: `RIGHT NOW you are on the DFS Solver & Contest Simulator. It is BUILT and it computes — the solver, the contest simulator, the exposure view and the bankroll tracker all run in the browser.
+- ⚠️ The PROJECTIONS ARE THE USER'S OWN. This tool has no player opinions and generates no projections. Never present a projection as the site's view, and never rate a player yourself as if the page had done so.
+- ⚠️ The correlation structure IS measured — seven seasons of nflverse weekly stats, ${E.CORR.meta.games} games — but it is a league-average structure, not this game.
+- ⚠️ The simulated FIELD is the weak link: it is built from the user's ownership estimate, it is a sample of a few thousand lineups extrapolated to contest size, and a field built from ownership alone is usually softer than a real one. Say so whenever ROI comes up.
+- ⚠️ There are NO RECEIPTS. Nothing here has been run forward against a declared benchmark. If asked whether it beats anything, the answer is that nobody knows yet.
+${S.demo ? "- ⚠️ THE LOADED SLATE IS THE DEMO SLATE. Every player name, salary, projection and ownership figure on screen right now is INVENTED. Say that before discussing any number on it." : ""}`,
+    ctx: () => {
+      const L = [];
+      L.push(`SHEET ON SCREEN: ${S.sheet}.`);
+      L.push(`SLATE: ${E.SITES[S.site].label}. ${st.total} players, ${st.games} games, ${st.priced} with a projection.` +
+             (S.demo ? " ⚠️ THIS IS THE INVENTED DEMO SLATE." : ""));
+      if (!st.total) L.push("No slate is loaded — the user has not read in a salary file yet.");
+      if (st.total && !st.priced) L.push("No projections have been pasted, so nothing can be optimised yet.");
+      if (st.own < 50 && st.priced) L.push("No meaningful ownership has been supplied, so the simulator cannot run.");
+      if (S.lineups.length) {
+        const P = S.players;
+        L.push(`LINEUPS BUILT: ${S.lineups.length}. Best projection ${Math.max(...S.lineups.map(l => l.proj)).toFixed(1)}.`);
+        const ct = {}; S.lineups.forEach(l => l.ids.forEach(i => ct[i] = (ct[i] || 0) + 1));
+        const top = Object.keys(ct).map(Number).sort((a, b) => ct[b] - ct[a]).slice(0, 12);
+        L.push("HIGHEST EXPOSURE: " + top.map(i => `${P[i].name} ${P[i].pos} ${(ct[i] / S.lineups.length * 100).toFixed(0)}%`).join(", "));
+      } else L.push("No lineups have been built yet.");
+      if (SIM) {
+        L.push(`SIMULATION: ${SIM.meta.sims} runs, field of ${SIM.meta.fieldSize} modelled from a sample of ${SIM.meta.fieldSample}, $${SIM.meta.entryFee} entry.`);
+        L.push(`⚠️ FIELD STRENGTH CHECK: median simulated opponent projects ${(SIM.meta.fieldMedianProj || 0).toFixed(1)}; the user's median lineup projects ${(SIM.meta.ourMedianProj || 0).toFixed(1)}. If the second is far above the first, every ROI below is optimistic and you must say so.`);
+        const best = SIM.perLineup.slice().sort((a, b) => b.roi - a.roi).slice(0, 5);
+        L.push("BEST LINEUPS BY SIMULATED ROI: " + best.map(r =>
+          `${(r.roi * 100).toFixed(0)}% ROI, ${(r.cash * 100).toFixed(1)}% cash, ${(r.win * 100).toFixed(3)}% win`).join(" | "));
+        const lev = SIM.perPlayer.slice().sort((a, b) => b.leverage - a.leverage).slice(0, 10);
+        L.push("HIGHEST LEVERAGE: " + lev.map(r => `${S.players[r.i].name} ${(r.leverage).toFixed(1)}`).join(", "));
+      } else L.push("No simulation has been run in this session.");
+      if (S.bankroll.length) {
+        const s = brSummary(S.bankroll), bs = brBootstrap(S.bankroll, 800);
+        L.push(`BANKROLL: ${s.n} contests, ${s.entries} entries, staked $${s.staked.toFixed(0)}, won $${s.won.toFixed(0)}, net $${s.net.toFixed(0)}, ROI ${(s.roi * 100).toFixed(1)}%.`);
+        L.push(bs ? `⚠️ Bootstrapped 95% band on that ROI: ${(bs.lo * 100).toFixed(0)}% to ${(bs.hi * 100).toFixed(0)}%, resampling contests not entries. LEAD WITH THIS BAND, never with the point estimate.`
+                  : `⚠️ Fewer than five contests logged — there is no confidence band and you must not imply the ROI figure means anything.`);
+      } else L.push("Nothing is logged in the bankroll tracker.");
+      L.push(`VOCABULARY: Proj = sum of the user's projections. Mean = average simulated score. Own% = projected ownership. Win-lineup% = how often a player is in the best lineup on the slate across simulations. Leverage = win-lineup% minus ownership. Dupes = expected number of other entries holding the identical lineup. Cash% = share of simulations finishing in the money.`);
+      return L.join("\n");
+    }
+  };
+}
+
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+else boot();
+
+})();
 </script>
 </body>
 </html>
