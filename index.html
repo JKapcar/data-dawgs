@@ -236,16 +236,43 @@ tr:last-child td{border-bottom:none}
 @media (prefers-reduced-motion:reduce){.hero .mxrain{display:none}}
 .hero .tagline{font-size:17px;color:var(--ink-2);margin:10px 0 8px;letter-spacing:.01em}
 /* ---- manifesto (home) ---- */
-.frame{max-width:660px;margin:20px auto 0;padding-bottom:26px;border-bottom:1px solid var(--grid)}
-.frame p{font-size:16.5px;line-height:1.68;color:var(--ink-2);margin:0 0 13px}
-.frame p:first-child{font-size:20px;line-height:1.5;font-weight:700;color:var(--ink-1);margin-bottom:15px}
-.frame p:last-child{margin-bottom:0}
-@media(max-width:600px){.frame p{font-size:15.5px}.frame p:first-child{font-size:18px}}
-.frame .question{font-size:28px;line-height:1.22;font-weight:850;letter-spacing:-.025em;
-  color:var(--ink-1);margin:0 0 12px}
-.frame .answer{font-size:17px;color:var(--ink-2);margin:0 0 14px}
-.frame .thesis{font-size:15px;color:var(--ink-3);margin:0}
-@media(max-width:600px){.frame .question{font-size:23px}.frame .answer{font-size:16px}}
+/* This is the site's proposition, not a preamble. Give it enough visual gravity to
+   compete with the hero mark and enough contrast to scan before the long-form copy. */
+.frame{position:relative;isolation:isolate;overflow:hidden;max-width:780px;margin:28px auto 8px;
+  padding:32px 38px 30px;border:1px solid color-mix(in srgb,var(--accent) 42%,var(--border));
+  border-top:4px solid var(--accent);border-radius:20px;
+  background:linear-gradient(132deg,color-mix(in srgb,var(--accent) 10%,var(--surface-1)) 0%,
+    var(--surface-1) 48%,color-mix(in srgb,var(--accent) 3%,var(--surface-1)) 100%);
+  box-shadow:0 24px 64px rgba(0,0,0,.16),inset 0 1px 0 color-mix(in srgb,#fff 8%,transparent)}
+.frame::before{content:"";position:absolute;z-index:-1;width:270px;height:270px;right:-168px;top:-188px;
+  border:42px solid color-mix(in srgb,var(--accent) 9%,transparent);border-radius:50%;pointer-events:none}
+.frame::after{content:"";position:absolute;z-index:-1;right:0;bottom:0;width:150px;height:4px;
+  background:linear-gradient(90deg,transparent,var(--accent));opacity:.72;pointer-events:none}
+.frame .frame-label{display:flex;align-items:center;gap:9px;margin:0 0 16px;color:var(--accent);
+  font-size:11.5px;font-weight:800;letter-spacing:.15em;text-transform:uppercase}
+.frame .frame-label::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent);
+  box-shadow:0 0 0 5px color-mix(in srgb,var(--accent) 13%,transparent)}
+.frame .question{font-size:35px;line-height:1.12;font-weight:900;letter-spacing:-.035em;
+  color:var(--ink-1);margin:0 0 18px;max-width:650px;text-wrap:balance}
+.frame .question span{display:block;color:var(--accent)}
+.frame .answer{font-size:18px;line-height:1.62;color:var(--ink-2);margin:0 0 24px;max-width:680px}
+.frame .answer strong{display:block;margin-top:2px;color:var(--ink-1);font-weight:750}
+.frame .thesis{display:flex;align-items:baseline;gap:12px;margin:0;padding-top:18px;
+  border-top:1px solid color-mix(in srgb,var(--accent) 24%,var(--grid));font-size:14.5px;
+  line-height:1.55;color:var(--ink-2)}
+.frame .thesis b{flex:0 0 auto;color:var(--accent);font-size:10.5px;font-weight:850;
+  letter-spacing:.13em;text-transform:uppercase}
+:root[data-theme="light"] .frame{box-shadow:0 24px 64px rgba(54,31,7,.13),
+  inset 0 1px 0 rgba(255,255,255,.72)}
+@media(max-width:600px){
+  .frame{margin-top:22px;padding:25px 22px 24px;border-radius:17px}
+  .frame::before{width:210px;height:210px;right:-145px;top:-155px;border-width:34px}
+  .frame .frame-label{font-size:10.5px;margin-bottom:13px}
+  .frame .question{font-size:27px;line-height:1.15;margin-bottom:15px}
+  .frame .answer{font-size:16.5px;line-height:1.58;margin-bottom:20px}
+  .frame .thesis{display:block;font-size:13.5px;padding-top:15px}
+  .frame .thesis b{display:block;margin-bottom:5px}
+}
 .manifesto{max-width:660px;margin:12px auto 0}
 .manifesto section{margin:34px 0}
 .manifesto h2{font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;
@@ -1112,10 +1139,11 @@ STATE: everything saves in the browser on that device. A different device shows 
     <h1 style="position:absolute;left:-9999px">Data Dawgs — Data, Not Dogma</h1>
   </div>
 
-  <div class="frame">
-    <p class="question">How do we know what we think we know?</p>
-    <p class="answer">Data Dawgs is a personal laboratory for making better decisions under uncertainty — with evidence meant to be inspected by you and your AI.</p>
-    <p class="thesis">Data, Not Dogma. Bring Your Own Dawg. The subject changes; the method stays the same.</p>
+  <div class="frame" aria-labelledby="core-question">
+    <p class="frame-label">The question behind the work</p>
+    <p class="question" id="core-question">How do we know <span>what we think we know?</span></p>
+    <p class="answer">Data Dawgs is a personal laboratory for making better decisions under uncertainty — <strong>with evidence meant to be inspected by you and your AI.</strong></p>
+    <p class="thesis"><b>The commitment</b><span>Data, Not Dogma. Bring Your Own Dawg. The subject changes; the method stays the same.</span></p>
   </div>
 
   <div class="manifesto">
