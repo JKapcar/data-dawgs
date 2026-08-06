@@ -11,7 +11,12 @@
      phone. Deleting it would 404 those; a redirect costs 400 bytes.
      ⚠️ replace(), not href = — assigning would leave the stub in history and trap the
      back button in a loop between the two. -->
-<script>location.replace("survivor.html#settings"+location.search);</script>
+<script>/* ⚠️ Query string goes BEFORE the fragment. Appending location.search after
+     "#settings" produces "#settings?v=abc", which is not a known sheet id, so the
+     sheet router falls back to the first sheet and the redirect silently lands on
+     the wrong surface. Caught live, not by the suite — the test navigated without
+     a query string. */
+location.replace("survivor.html"+location.search+"#settings");</script>
 <meta http-equiv="refresh" content="0;url=survivor.html#settings">
 <style>body{font:15px system-ui,sans-serif;background:#0a0806;color:#c8c1b4;margin:0;
   display:grid;place-items:center;height:100vh;text-align:center;padding:24px}
