@@ -1,4 +1,7 @@
 {
+ "source_page": "/bozo.html",
+ "tier": "labs",
+ "graded": false,
  "as_of": "2026-08-06",
  "source": "bozo.html ruleset and the Worker-enforced write path, as deployed.",
  "note": "The board is fully open by design — every leg, price and timestamp is visible to everyone and to everyone's bots before they place. That was a decision, not an oversight.",
@@ -55,6 +58,7 @@
    "A spread or total priced past about -145 is off market. A moneyline has no internal cross-check at all."
   ]
  },
+ "tier_meaning": "Labs — useful and live, still being challenged. Open questions may remain about calibration, assumptions, data quality or edge. Use with your eyes open.",
  "built": "2026-08-07",
  "canonical_url": "https://datadawgs216.com/data/bozo-rules.json"
 }

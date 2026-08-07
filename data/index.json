@@ -9,66 +9,74 @@
    {
     "path": "/data/pool.json",
     "url": "https://datadawgs216.com/data/pool.json",
-    "bytes": 81875,
+    "bytes": 82117,
     "as_of": "2026-07-29",
-    "sha256": "ff839cc7722599d1d637bd3d222de40a57e3bc5f33f74c86592b21be84724cea",
+    "sha256": "d90bb83c9f9d862fb03d4f2dad0b835ddc090e9ed224d27c513580e752753fd7",
     "note": "MV is a market-consensus auction-dollar value, NOT a points projection. STALENESS WARNING: this snapshot is 9 days old as of the build date and the underlying market moves through August. Do not quote these dollars as current without saying the date out loud."
    },
    {
     "path": "/data/receipts.json",
     "url": "https://datadawgs216.com/data/receipts.json",
-    "bytes": 42720,
+    "bytes": 42964,
     "as_of": "2026-08-06",
-    "sha256": "e2bf7bd3b46d425aaa67edb19cf48ea05510aee9717c3eaf14a737cd1ca95136",
+    "sha256": "a6ce27eb3b2753c977c13f1ef3942b9e202171ec4911d1bbf50123b83c3f3fee",
     "note": "These are PRE-REGISTERED calls: written down before the season and locked with a SHA-256 hash. n=272 games, 51 of them carrying a devigged closing-line benchmark. None are graded yet — the 2026 season has not started. Anything claiming a hit rate for these is wrong."
    },
    {
     "path": "/data/nfelo.json",
     "url": "https://datadawgs216.com/data/nfelo.json",
-    "bytes": 9716,
+    "bytes": 9992,
     "as_of": "2026-08-06",
-    "sha256": "f78228f8d1bae83614d2c68b63ab21d2cd777bcaa2a0c5d0baf57f0c6540048f",
+    "sha256": "192883013675ba20214f5b9c171a37ec7686f071db6546b70030ea8fb53f0f0a",
     "note": "Backtest figures span 2009-2025 and OVERLAP the model's own optimisation window, so they are in-sample-ish and should not be read as out-of-sample skill. nfelo straight-up 0.6674 vs market 0.6677 over n=4053 is a difference well inside noise (SE 0.20 pp)."
    },
    {
     "path": "/data/models.json",
     "url": "https://datadawgs216.com/data/models.json",
-    "bytes": 2525,
+    "bytes": 2769,
     "as_of": "2026-08-06",
-    "sha256": "2c8ff96fc84b82d0acc9e2cf7ea4ddde1e8cd0708cbc135688e3996aa822b5e7",
+    "sha256": "ba9696d855b76ba5565a8ff84b56a3319a406e857b586059d7673bdb991a1acf",
     "note": "These are the exact parameters the site uses. Return them alongside any number you derive from them. The margin model is a linear Elo-to-points map with a normal residual — it is deliberately simple and its residual SD (13.18) is larger than most people intuit, which is the whole point."
    },
    {
     "path": "/data/survivor.json",
     "url": "https://datadawgs216.com/data/survivor.json",
-    "bytes": 52631,
+    "bytes": 52875,
     "as_of": "2026-08-06",
-    "sha256": "d53475c0516e91accae73ddcb7a82bc20f962d8826930afb433c8ba552368b6f",
+    "sha256": "27430c7fbfef4a0bc05b35a3e883ac99621c2eda6780082d00dd0a1ccb57ca53",
     "note": "Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: \"market\" = derived from a real line, \"model\" = Elo-only. Ownership is modelled, not observed."
    },
    {
     "path": "/data/epa-teams.json",
     "url": "https://datadawgs216.com/data/epa-teams.json",
-    "bytes": 84945,
+    "bytes": 85221,
     "as_of": "2026-07-29",
-    "sha256": "aec75513da24ed75a88b38f5ea0e2335efe4b1391a00f18f80ea433815e044bd",
+    "sha256": "e155a8132d47ad052e430c6b8f5f08dbf32d4186bb2ae06d0b98c587f9f4fb37",
     "note": "Regular season only, plays with a down (excludes kickoffs/XPs/etc). Per-season tables use a 200-dropback minimum for QBs; the pooled table uses 500. These are descriptive aggregates, not projections — team EPA is famously unstable year to year, so do not read 2025 as 2026."
    },
    {
     "path": "/data/league.json",
     "url": "https://datadawgs216.com/data/league.json",
-    "bytes": 1712,
+    "bytes": 1992,
     "as_of": "2026-08-06",
-    "sha256": "85d1bba3fdcbf93434849027fce132457349c6e6f1cf332871675d024685c575",
+    "sha256": "dbbd66e1584a6fc8a21f6d1c78955e807462511031197e935ead1f83e88a05e2",
     "note": "Public configuration only. No rosters, no tokens, nothing league-private lives in this repo."
    },
    {
     "path": "/data/bozo-rules.json",
     "url": "https://datadawgs216.com/data/bozo-rules.json",
-    "bytes": 2854,
+    "bytes": 3094,
     "as_of": "2026-08-06",
-    "sha256": "7cf16b27e4a3e897282290a164c1075612bd51f328f708efdd408cb92676a76b",
+    "sha256": "5cb283e4db2cbef855de1725143b909c7541987eb06eb89d9241729e24ad6bfa",
     "note": "The board is fully open by design — every leg, price and timestamp is visible to everyone and to everyone's bots before they place. That was a decision, not an oversight."
+   },
+   {
+    "path": "/data/surfaces.json",
+    "url": "https://datadawgs216.com/data/surfaces.json",
+    "bytes": 6024,
+    "as_of": "2026-08-07",
+    "sha256": "cfe56a89b0ee94bf1c8e6f751f7dada1ed9727fa1d0960e83a4de9f46152e984",
+    "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    }
   ],
   "markdown": [
@@ -103,8 +111,8 @@
    {
     "path": "/data/toto-philosophy.md",
     "url": "https://datadawgs216.com/data/toto-philosophy.md",
-    "bytes": 2594,
-    "sha256": "bf45d488134d799b0c983b8871036dc817b32e4a20d4fd243ec5a9192ac46d9d",
+    "bytes": 2713,
+    "sha256": "317bc66cf62df8de90b49176f80b63e20c45af42da309e080c3eff999c574ae3",
     "as_of": "2026-08-06"
    }
   ]

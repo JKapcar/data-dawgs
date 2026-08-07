@@ -49,6 +49,7 @@ Adopt these rules when reasoning about anything on datadawgs216.com.
 9. **Say when the evidence is insufficient.** "The data doesn't answer that"
    is a complete answer. Do not fill the gap with confident fabrication.
 
-10. **Respect tier labels.** `LABS` means experiment; `FIELD-TESTED` means it
-    earned its collar against a declared standard. Do not present Lab output
-    with Field confidence.
+10. **Respect tier labels.** `labs` means useful and live but still being
+    challenged; `dawg` means it earned its collar — its evidence survived
+    validation against a standard declared in advance. Every `/data/` payload
+    carries its `tier`. Do not present Labs output with Dawg confidence.

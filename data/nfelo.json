@@ -1,4 +1,7 @@
 {
+ "source_page": "/nfelo.html",
+ "tier": "dawg",
+ "graded": false,
  "as_of": "2026-08-06",
  "source": "nfelo 4.3.0 (greerreNFL/nfelo) at commit 0d3f8418.",
  "note": "Backtest figures span 2009-2025 and OVERLAP the model's own optimisation window, so they are in-sample-ish and should not be read as out-of-sample skill. nfelo straight-up 0.6674 vs market 0.6677 over n=4053 is a difference well inside noise (SE 0.20 pp).",
@@ -583,6 +586,7 @@
    "model_version": "4.3.0"
   }
  },
+ "tier_meaning": "Working Dawg — earned its collar. Evidence survived validation: receipts against a benchmark chosen in advance for forecasters, named sources and reproducible maths for measurement tools.",
  "built": "2026-08-07",
  "canonical_url": "https://datadawgs216.com/data/nfelo.json"
 }
