@@ -46,23 +46,29 @@ test('forecast contract retains nullable unsupported fields', () => {
   assert.match(contracts.data.calculator_contracts.normal_translation.formula, /0\.5/);
   assert.match(contracts.data.calculator_contracts.belief_summary.note, /not a validated consensus blend/i);
 });
-test('surface generator keeps live and staged MCP tools distinct', () => {
-  assert.equal(surfaces.counts.mcp_tools_live, 13);
-  assert.equal(surfaces.counts.mcp_tools_staged, 8);
+test('surface generator reports the deployed Pound MCP tools as live', () => {
+  const poundMcp = ['dd_convert_odds', 'dd_devig_market', 'dd_price_parlay',
+    'dd_calculate_bet_ev', 'dd_calculate_hedge', 'dd_nfl_passer_rating',
+    'dd_score_forecast', 'dd_summarize_beliefs'];
+  assert.equal(surfaces.counts.mcp_tools_live, 21);
+  assert.equal(surfaces.counts.mcp_tools_staged, 0);
   assert.ok(surfaces.mcp.tools_live.includes('dd_survivor_ev'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_analyze_matchup'));
-  assert.ok(surfaces.mcp.tools_staged.includes('dd_convert_odds'));
-  assert.ok(!surfaces.mcp.tools_live.includes('dd_convert_odds'));
+  poundMcp.forEach(name => assert.ok(surfaces.mcp.tools_live.includes(name), name));
+  assert.deepEqual(surfaces.mcp.tools_staged, []);
 });
-test('ready Pound tools name staged MCP implementations without claiming they are live', () => {
-  const ready = tools.data.filter(t => t.status === 'ready');
-  assert.equal(ready.length, 8);
-  ready.forEach(t => {
-    assert.match(t.staged_worker_mcp_implementation, /^dd_/);
-    assert.equal(t.existing_worker_mcp_implementation, null);
-    assert.match(t.exact_blocker, /not been deployed|not deployed/i);
+test('deployed Pound tools name live MCP implementations without staged claims', () => {
+  const ids = new Set(['disagreement', 'market', 'cover-ev', 'odds', 'parlay', 'hedge', 'passer', 'grader']);
+  const deployed = tools.data.filter(t => ids.has(t.id));
+  assert.equal(deployed.length, 8);
+  deployed.forEach(t => {
+    assert.equal(t.status, 'complete');
+    assert.match(t.existing_worker_mcp_implementation, /^dd_/);
+    assert.equal(t.staged_worker_mcp_implementation, null);
+    assert.equal(t.exact_blocker, null);
   });
-  assert.equal(contracts.data.calculator_contracts.odds_converter.staged_mcp_tool, 'dd_convert_odds');
+  assert.equal(contracts.data.contract_version, '1.1.0');
+  assert.equal(contracts.data.calculator_contracts.odds_converter.mcp_tool, 'dd_convert_odds');
 });
 test('new data surfaces are in the generated manifest', () => {
   const paths = new Set(index.data.files.map(x => x.path));
@@ -86,7 +92,8 @@ test('Pound page declares its tier and accessible result regions', () => {
   assert.ok((html.match(/aria-live="polite"/g) || []).length >= 10);
   assert.match(html, /MODELLED:/);
   assert.match(html, /<option>ready<\/option>/);
-  assert.match(html, /not live until production deployment and verification/i);
+  assert.match(html, /live, read-only Worker tools/i);
+  assert.match(html, /<b>Live MCP:<\/b>/);
 });
 
 console.log(`\n${pass} passed / 0 failed`);

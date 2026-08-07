@@ -72,7 +72,7 @@ CSS = r'''
 CONTENT = r'''
 <main>
   <header class="p-hero">
-    <div class="p-kicker">The Pound · staged 2026-08-07</div>
+    <div class="p-kicker">The Pound · Worker tools live 2026-08-07</div>
     <h1>Tools that show their work. <a class="tierchip" href="index.html#tiers" title="Why this work is in The Pound">The Pound</a></h1>
     <p class="p-lead">A transparent model scoreboard and a set of deterministic football calculators. Useful now; still earning their collar. Missing data, licensing limits and ungraded claims stay visible.</p>
   </header>
@@ -105,7 +105,7 @@ CONTENT = r'''
   </section>
 
   <section class="p-section" id="inventory">
-    <header><div><h2>Every requested tool</h2><p class="dek">Nothing disappears because it is hard. Ready means coded and tested but not yet deployed; blocked work keeps its exact blocker and minimum path.</p></div><label class="p-meta" for="toolFilter">Filter status<br><select class="p-filter" id="toolFilter"><option value="all">All</option><option>complete</option><option>ready</option><option>frontend-only</option><option>backend-blocked</option><option>data-blocked</option></select></label></header>
+    <header><div><h2>Every requested tool</h2><p class="dek">Nothing disappears because it is hard. Complete means the requested human, contract and MCP layers are live; blocked work keeps its exact blocker and minimum path.</p></div><label class="p-meta" for="toolFilter">Filter status<br><select class="p-filter" id="toolFilter"><option value="all">All</option><option>complete</option><option>ready</option><option>frontend-only</option><option>backend-blocked</option><option>data-blocked</option></select></label></header>
     <div class="inventory" id="toolInventory"><div class="p-loading">Loading the public inventory…</div></div>
   </section>
 
@@ -122,7 +122,7 @@ CONTENT = r'''
       <li><a href="/data/upstream-models.json"><code>/data/upstream-models.json</code></a> — repository, commit, license status and integration mode.</li>
       <li><a href="/data/nfelo.json"><code>/data/nfelo.json</code></a> + <a href="/data/survivor.json"><code>/data/survivor.json</code></a> — the dated inputs behind the staged scoreboard.</li>
       <li><code>dd_analyze_matchup</code> — live Worker tool for the current matchup view.</li>
-      <li><code>dd_convert_odds</code>, <code>dd_devig_market</code>, <code>dd_price_parlay</code>, <code>dd_calculate_bet_ev</code>, <code>dd_calculate_hedge</code>, <code>dd_nfl_passer_rating</code>, <code>dd_score_forecast</code> and <code>dd_summarize_beliefs</code> — staged and tested in Worker source; not live until production deployment and verification.</li>
+      <li><code>dd_convert_odds</code>, <code>dd_devig_market</code>, <code>dd_price_parlay</code>, <code>dd_calculate_bet_ev</code>, <code>dd_calculate_hedge</code>, <code>dd_nfl_passer_rating</code>, <code>dd_score_forecast</code> and <code>dd_summarize_beliefs</code> — live, read-only Worker tools for deterministic calculations over caller-supplied inputs.</li>
     </ul><p class="assumption">The AI explains these outputs. It does not invent the underlying number, fill nulls or promote an ungraded tool.</p></div>
   </section>
 </main>
@@ -163,7 +163,7 @@ CONTROLLER = r'''
     }catch(err){$("scoreLoad").className="p-error";$("scoreLoad").textContent="Scoreboard unavailable: "+err.message}
   }
   let allTools=[];
-  function renderTools(status){const rows=status==="all"?allTools:allTools.filter(t=>t.status===status);$("toolInventory").innerHTML=rows.map(t=>`<article class="tool"><span class="status status-${esc(t.status)}">${esc(t.status)}</span><h3>${esc(t.name)}</h3><p>${esc(t.intended_user_value)}</p><p><b>Machine:</b> <code>${esc(t.machine_readable_requirement)}</code>${t.staged_worker_mcp_implementation?`<br><b>Staged MCP:</b> <code>${esc(t.staged_worker_mcp_implementation)}</code>`:""}</p>${t.exact_blocker?`<p class="block"><b>Blocker:</b> ${esc(t.exact_blocker)}<br><b>Minimum path:</b> ${esc(t.minimum_path_to_completion)}</p>`:""}</article>`).join("")||'<div class="p-loading">No tools match.</div>'}
+  function renderTools(status){const rows=status==="all"?allTools:allTools.filter(t=>t.status===status);$("toolInventory").innerHTML=rows.map(t=>`<article class="tool"><span class="status status-${esc(t.status)}">${esc(t.status)}</span><h3>${esc(t.name)}</h3><p>${esc(t.intended_user_value)}</p><p><b>Machine:</b> <code>${esc(t.machine_readable_requirement)}</code>${t.existing_worker_mcp_implementation?`<br><b>Live MCP:</b> <code>${esc(t.existing_worker_mcp_implementation)}</code>`:""}${t.staged_worker_mcp_implementation?`<br><b>Staged MCP:</b> <code>${esc(t.staged_worker_mcp_implementation)}</code>`:""}</p>${t.exact_blocker?`<p class="block"><b>Blocker:</b> ${esc(t.exact_blocker)}<br><b>Minimum path:</b> ${esc(t.minimum_path_to_completion)}</p>`:""}</article>`).join("")||'<div class="p-loading">No tools match.</div>'}
   async function loadInventory(){try{const env=await json("/data/pound-tools.json");if(!Array.isArray(env.data))throw new Error("inventory payload is malformed");allTools=env.data;renderTools("all");$("toolFilter").addEventListener("change",e=>renderTools(e.target.value))}catch(err){$("toolInventory").innerHTML='<div class="p-error">Inventory unavailable: '+esc(err.message)+'</div>'}}
   async function loadProvenance(){try{const env=await json("/data/upstream-models.json");if(!Array.isArray(env.data))throw new Error("provenance payload is malformed");$("provGrid").innerHTML=env.data.map(x=>`<article class="prov"><h3>${esc(x.id)}</h3><p><a href="https://github.com/${esc(x.repository)}" target="_blank" rel="noopener">${esc(x.repository)}</a></p><p><b>License:</b> ${esc(x.license||"unverified")} · ${esc(x.license_status)}</p><p><b>Mode:</b> ${esc(x.integration_mode)}</p><p>${esc(x.notes)}</p></article>`).join("")}catch(err){$("provGrid").innerHTML='<div class="p-error">Provenance unavailable: '+esc(err.message)+'</div>'}}
   loadScoreboard();loadInventory();loadProvenance();
