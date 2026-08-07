@@ -107,6 +107,12 @@ console.log('\nsurfaces.json — a coverage claim must be true');
     for (const m of s.machine) {
       if (m.status === 'live') {
         liveClaims++;
+        // An MCP entry names a tool, not a file — its truth is checked against
+        // mcp.tools_live below, not against the filesystem.
+        if (m.kind === 'mcp') {
+          if (!m.tool) fail(`surfaces.json: ${s.id} claims a live mcp surface with no tool name`);
+          continue;
+        }
         if (!m.url) { fail(`surfaces.json: ${s.id} claims a live surface with no url`); continue; }
         if (!fs.existsSync(path.join(ROOT, m.url.replace(/^\//, ''))))
           fail(`surfaces.json: ${s.id} claims ${m.url} is live, but the file does not exist`);
@@ -119,9 +125,18 @@ console.log('\nsurfaces.json — a coverage claim must be true');
     if (!['labs', 'dawg', 'pound'].includes(s.tier)) fail(`surfaces.json: ${s.id} tier "${s.tier}"`);
   }
   // The whole point of the file is that it cannot overstate coverage.
-  if (S.counts.mcp_tools_live !== 0)
-    fail(`surfaces.json: claims ${S.counts.mcp_tools_live} live MCP tools — none are deployed`);
-  const covered = new Set(S.data.flatMap(s => s.machine.filter(m => m.status === 'live').map(m => path.basename(m.url))));
+  // The MCP server shipped 8/7/26 (nine read-only tools on the toto Worker).
+  // The count must equal the declared tool roster, and a non-empty roster must
+  // name its endpoint — a number with no callable address is a coverage claim.
+  const mcpLive = (S.mcp && Array.isArray(S.mcp.tools_live)) ? S.mcp.tools_live : [];
+  if (S.counts.mcp_tools_live !== mcpLive.length)
+    fail(`surfaces.json: counts.mcp_tools_live=${S.counts.mcp_tools_live} but mcp.tools_live names ${mcpLive.length}`);
+  if (mcpLive.length > 0 && !(S.mcp && S.mcp.path && S.mcp.host))
+    fail('surfaces.json: live MCP tools claimed but no endpoint declared');
+  const perSurface = new Set(S.data.flatMap(s => s.machine.filter(m => m.kind === 'mcp' && m.status === 'live').map(m => m.tool)));
+  for (const t of perSurface)
+    if (!mcpLive.includes(t)) fail(`surfaces.json: surface lists live MCP tool ${t} not in mcp.tools_live`);
+  const covered = new Set(S.data.flatMap(s => s.machine.filter(m => m.status === 'live' && m.url).map(m => path.basename(m.url))));
   for (const f of jsons) {
     if (['index.json', 'surfaces.json'].includes(f)) continue;
     if (!covered.has(f)) warn(`${f} is published but not referenced by any surface in surfaces.json`);
