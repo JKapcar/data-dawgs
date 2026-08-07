@@ -22,7 +22,7 @@ and a REST route. That is the standing design rule, applied as the site grows.
 that has actually got**: every human page, what an agent can call instead, and an honest
 `status` of `live`, `planned` or `none`. Gaps are listed on purpose. **`planned` means not
 built — don't tell a user you can call it.** Today: 9 of 11 surfaces have live machine access,
-**0 MCP tools are deployed**, and the DFS solver and live draft state are not callable at all.
+**9 read-only MCP tools live** — endpoint and roster: `surfaces.json` → `mcp`.
 
 Every payload also carries `tier` — `labs` (useful, live, still being challenged) or `dawg`
 (earned its collar; evidence survived validation). The tier is read from the page's own chip
