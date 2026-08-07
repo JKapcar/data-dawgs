@@ -174,6 +174,38 @@
     return url.toString();
   }
 
+  function mountIndicator(){
+    if(!hasWindow || new URLSearchParams(location.search).get("embed") === "1") return;
+    const league=DDLeague.current;
+    if(!league) return;
+    document.documentElement.style.setProperty("--dd-team-count",league.config.teamCount);
+    document.documentElement.style.setProperty("--dd-matrix-min",`${30+league.config.teamCount*89}px`);
+    let bar=document.getElementById("ddLeagueIndicator");
+    if(!bar){
+      const style=document.createElement("style");
+      style.textContent="#ddLeagueIndicator{position:fixed;z-index:9998;right:12px;bottom:12px;display:flex;align-items:center;gap:10px;max-width:calc(100vw - 24px);padding:8px 10px;border:1px solid rgba(255,255,255,.18);border-radius:10px;background:rgba(20,19,17,.94);color:#f6f1e7;box-shadow:0 5px 24px rgba(0,0,0,.28);font:700 12px/1.25 system-ui,sans-serif}#ddLeagueIndicator .ddli-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#ddLeagueIndicator .ddli-meta{color:#aaa397;font-weight:600;text-transform:capitalize}#ddLeagueIndicator a{color:#ff8a33;text-decoration:none;white-space:nowrap}@media(max-width:600px){#ddLeagueIndicator .ddli-meta{display:none}}";
+      document.head.appendChild(style);
+      bar=document.createElement("aside"); bar.id="ddLeagueIndicator"; document.body.appendChild(bar);
+    }
+    const custom=league.config.scoring.mode==="custom" ? " · Custom scoring — verify settings" : "";
+    bar.innerHTML=`<span class="ddli-name"></span><span class="ddli-meta"></span><a href="draft-leagues.html">Switch League</a>`;
+    bar.querySelector(".ddli-name").textContent=league.name;
+    bar.querySelector(".ddli-meta").textContent=`${league.config.teamCount} teams · ${league.provider.name}${custom}`;
+  }
+
+  function decorateDraftLinks(){
+    if(!hasWindow || !DDLeague.id) return;
+    const pages=new Set(["dashboard.html","auction.html","board.html","bigboard.html","dataviz.html","report.html"]);
+    document.querySelectorAll("a[href]").forEach(anchor=>{
+      let url; try{ url=new URL(anchor.getAttribute("href"),location.href); }catch(e){ return; }
+      const page=url.pathname.split("/").pop();
+      if(url.origin===location.origin && pages.has(page) && !url.searchParams.has("league")){
+        url.searchParams.set("league",DDLeague.id);
+        anchor.href=url.toString();
+      }
+    });
+  }
+
   function remoteEndpoint(id){
     return `${FIREBASE_URL}/drafts/${encodeURIComponent(id)}.json`;
   }
@@ -214,7 +246,7 @@
     get isInstance(){ return !!activeLeagueId(); },
     activeLeagueId, generateId, normalize:normalizeLeague, stateFromLeague,
     storageKey, list, remember, save:saveLeague, load:loadLeague, removeLocal,
-    createManual, leagueURL, remoteEndpoint, publishLeague, hydrateEnvelope
+    createManual, leagueURL, remoteEndpoint, publishLeague, hydrateEnvelope, mountIndicator, decorateDraftLinks
   };
 
   root.DDLeague = DDLeague;
@@ -323,13 +355,22 @@
 
     const id=activeLeagueId();
     if(id){
+      const hadLocalState=!!getJSON(storageKey("dd-auction-v1",id),null);
       const local=loadLeague(id); if(local) remember(local);
       fetch(remoteEndpoint(id)).then(r=>r.ok?r.json():null).then(envelope=>{
         if(!envelope) return;
         hydrateEnvelope(envelope);
         window.dispatchEvent(new CustomEvent("ddleaguehydrate",{detail:{envelope}}));
+        // A capability link may be this browser's first contact with the league. Page
+        // scripts are intentionally synchronous/local-first, so reload once after the
+        // first remote hydration and let them start from the now-local state.
+        if(!hadLocalState && envelope.state) location.reload();
       }).catch(()=>{});
     }
+    const decorate=()=>{ mountIndicator(); decorateDraftLinks(); };
+    if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",decorate);
+    else decorate();
+    window.addEventListener("ddleaguechange",decorate);
   }
 
   if(typeof module !== "undefined" && module.exports){
