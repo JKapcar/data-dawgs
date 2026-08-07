@@ -1,0 +1,338 @@
+(function(root){
+  "use strict";
+
+  const FIREBASE_URL = "https://data-dawgs-draft-default-rtdb.firebaseio.com";
+  const LEGACY_ROOM = "pepperoninipples";
+  const LEAGUE_DIR_KEY = "dd-leagues-v1";
+  const LEAGUE_KEY_PREFIX = "dd-league-v2:";
+  const LEGACY_SYNC_KEY = "dd-sync-v1";
+  const LEAGUE_RE = /^dd_[A-Za-z0-9_-]{22,}$/;
+
+  const hasWindow = typeof window !== "undefined" && root === window;
+  const storage = hasWindow ? window.localStorage : null;
+  const now = ()=>Date.now();
+  const clone = value=>value == null ? value : JSON.parse(JSON.stringify(value));
+
+  function getJSON(key, fallback){
+    if(!storage) return fallback;
+    try{
+      const value = JSON.parse(storage.getItem(key));
+      return value == null ? fallback : value;
+    }catch(e){ return fallback; }
+  }
+
+  function setJSON(key, value){
+    if(!storage) return false;
+    try{ storage.setItem(key, JSON.stringify(value)); return true; }catch(e){ return false; }
+  }
+
+  function activeLeagueId(search){
+    if(search === undefined) search = hasWindow ? location.search : "";
+    try{
+      const id = new URLSearchParams(search).get("league") || "";
+      return LEAGUE_RE.test(id) ? id : null;
+    }catch(e){ return null; }
+  }
+
+  function generateId(cryptoImpl){
+    const source = cryptoImpl || (hasWindow && window.crypto);
+    if(!source || typeof source.getRandomValues !== "function"){
+      throw new Error("Secure browser randomness is required to create a league.");
+    }
+    const bytes = new Uint8Array(16);
+    source.getRandomValues(bytes);
+    return "dd_" + Array.from(bytes, b=>b.toString(16).padStart(2,"0")).join("");
+  }
+
+  function normalizeSlot(slot){
+    const name = String((slot && slot.slot) || "").trim().toUpperCase();
+    const count = Math.max(0, Math.floor(Number(slot && slot.count) || 0));
+    return name && count ? {slot:name, count} : null;
+  }
+
+  function normalizeLeague(input){
+    const source = input || {};
+    const config = source.config || {};
+    const teams = Array.isArray(config.teams) ? config.teams : [];
+    const rosterSlots = (Array.isArray(config.rosterSlots) ? config.rosterSlots : [])
+      .map(normalizeSlot).filter(Boolean);
+    const scoring = config.scoring || {};
+    const provider = source.provider || {};
+    const id = LEAGUE_RE.test(source.id || "") ? source.id : generateId();
+    return {
+      schemaVersion: 2,
+      id,
+      name: String(source.name || "Untitled League").trim().slice(0,100) || "Untitled League",
+      season: Math.max(2000, Math.min(2100, Math.floor(Number(source.season) || new Date().getFullYear()))),
+      provider: {
+        name: ["manual","sleeper","yahoo","espn"].includes(provider.name) ? provider.name : "manual",
+        leagueId: provider.leagueId == null ? null : String(provider.leagueId),
+        draftId: provider.draftId == null ? null : String(provider.draftId),
+        sourceUrl: provider.sourceUrl || null,
+        syncMode: ["manual","config-only","live-read"].includes(provider.syncMode) ? provider.syncMode : "manual",
+        status: provider.status || "ready",
+        lastSyncedAt: provider.lastSyncedAt || null,
+        lastError: provider.lastError || null
+      },
+      config: {
+        draftType: config.draftType === "snake" ? "snake" : "auction",
+        teamCount: Math.max(2, Math.min(32, Math.floor(Number(config.teamCount) || teams.length || 12))),
+        budget: config.draftType === "snake" ? null : Math.max(1, Math.floor(Number(config.budget) || 200)),
+        rosterSlots: rosterSlots.length ? rosterSlots : [
+          {slot:"QB",count:1},{slot:"RB",count:2},{slot:"WR",count:2},
+          {slot:"TE",count:1},{slot:"FLEX",count:2},{slot:"DST",count:1},{slot:"BN",count:6}
+        ],
+        scoring: {
+          mode: ["half","full","sf","custom"].includes(scoring.mode) ? scoring.mode : "custom",
+          ppr: Number.isFinite(Number(scoring.ppr)) ? Number(scoring.ppr) : null,
+          superflex: !!scoring.superflex,
+          raw: scoring.raw && typeof scoring.raw === "object" ? clone(scoring.raw) : {}
+        },
+        teams: Array.from({length:Math.max(2, Math.min(32, Math.floor(Number(config.teamCount) || teams.length || 12)))}, (_,i)=>{
+          const team = teams[i] || {};
+          return {
+            id: team.id || `team_${i+1}`,
+            name: String(team.name || `Team ${i+1}`).trim().slice(0,80) || `Team ${i+1}`,
+            owner: String(team.owner || "").trim().slice(0,80),
+            providerId: team.providerId == null ? null : String(team.providerId),
+            draftSlot: team.draftSlot == null ? null : Number(team.draftSlot)
+          };
+        })
+      },
+      raw: source.raw && typeof source.raw === "object" ? clone(source.raw) : undefined
+    };
+  }
+
+  function stateFromLeague(league){
+    const L = normalizeLeague(league);
+    const scoring = L.config.scoring.mode === "custom" ? "half" : L.config.scoring.mode;
+    return {
+      v: 2,
+      leagueId: L.id,
+      settings: {
+        budget: L.config.budget == null ? 200 : L.config.budget,
+        spots: L.config.rosterSlots.reduce((sum,s)=>sum+s.count,0),
+        scoring,
+        scoringConfig: clone(L.config.scoring),
+        draftType: L.config.draftType,
+        rosterSlots: clone(L.config.rosterSlots),
+        timerSecs: 15,
+        myTeam: 0,
+        announcer: true,
+        snark: true,
+        voiceName: "",
+        teams: L.config.teams.map(t=>({
+          id:t.id, name:t.name, owner:t.owner, providerId:t.providerId, draftSlot:t.draftSlot
+        }))
+      },
+      picks: [], nomIdx: 0, timerEnd: 0, projView: "board", queue: [], onBlock: null, ts: now()
+    };
+  }
+
+  function storageKey(base, id){
+    const leagueId = id === undefined ? activeLeagueId() : id;
+    return leagueId ? `${base}:${leagueId}` : base;
+  }
+
+  function list(){
+    const rows = getJSON(LEAGUE_DIR_KEY, []);
+    return Array.isArray(rows) ? rows.sort((a,b)=>(b.lastOpened||0)-(a.lastOpened||0)) : [];
+  }
+
+  function remember(league){
+    const L = normalizeLeague(league);
+    const row = {id:L.id,name:L.name,provider:L.provider.name,season:L.season,lastOpened:now()};
+    const rows = list().filter(x=>x && x.id !== L.id);
+    rows.unshift(row);
+    setJSON(LEAGUE_DIR_KEY, rows.slice(0,50));
+    return row;
+  }
+
+  function saveLeague(league, options){
+    const L = normalizeLeague(league);
+    setJSON(LEAGUE_KEY_PREFIX + L.id, L);
+    if(!options || options.remember !== false) remember(L);
+    if(hasWindow) window.dispatchEvent(new CustomEvent("ddleaguechange", {detail:{league:clone(L)}}));
+    return L;
+  }
+
+  function loadLeague(id){
+    if(!LEAGUE_RE.test(id || "")) return null;
+    const value = getJSON(LEAGUE_KEY_PREFIX + id, null);
+    return value ? normalizeLeague(value) : null;
+  }
+
+  function removeLocal(id){
+    setJSON(LEAGUE_DIR_KEY, list().filter(x=>x && x.id !== id));
+    if(storage){ try{ storage.removeItem(LEAGUE_KEY_PREFIX + id); }catch(e){} }
+  }
+
+  function leagueURL(page, id, origin){
+    const base = origin || (hasWindow ? location.origin : "https://datadawgs216.com");
+    const url = new URL(page || "/dashboard.html", base);
+    url.searchParams.set("league", id);
+    return url.toString();
+  }
+
+  function remoteEndpoint(id){
+    return `${FIREBASE_URL}/drafts/${encodeURIComponent(id)}.json`;
+  }
+
+  function publishLeague(league, state){
+    const L = normalizeLeague(league);
+    if(!hasWindow || typeof fetch !== "function") return Promise.resolve(false);
+    const body = JSON.stringify({ts:now(),league:L,state:state || stateFromLeague(L)});
+    return fetch(remoteEndpoint(L.id), {method:"PUT",body,headers:{"Content-Type":"application/json"}})
+      .then(r=>r.ok).catch(()=>false);
+  }
+
+  function createManual(input){
+    const config = input || {};
+    const L = saveLeague(normalizeLeague({
+      id: generateId(), name: config.name, season: config.season,
+      provider:{name:"manual",syncMode:"manual",status:"ready"},
+      config
+    }));
+    const state = stateFromLeague(L);
+    setJSON(storageKey("dd-auction-v1", L.id), state);
+    publishLeague(L, state);
+    return L;
+  }
+
+  function hydrateEnvelope(envelope){
+    if(!envelope || typeof envelope !== "object") return null;
+    let league = null;
+    if(envelope.league) league = saveLeague(envelope.league);
+    if(envelope.state && activeLeagueId()) setJSON(storageKey("dd-auction-v1"), envelope.state);
+    return {league,state:envelope.state || null,ts:envelope.ts || 0};
+  }
+
+  const DDLeague = {
+    FIREBASE_URL, LEGACY_ROOM, LEAGUE_RE,
+    get id(){ return activeLeagueId(); },
+    get current(){ const id=activeLeagueId(); return id ? loadLeague(id) : null; },
+    get isInstance(){ return !!activeLeagueId(); },
+    activeLeagueId, generateId, normalize:normalizeLeague, stateFromLeague,
+    storageKey, list, remember, save:saveLeague, load:loadLeague, removeLocal,
+    createManual, leagueURL, remoteEndpoint, publishLeague, hydrateEnvelope
+  };
+
+  root.DDLeague = DDLeague;
+
+  if(hasWindow){
+    let cachedCfg = null, pushTimer = null, lastState = "";
+
+    function decodeLegacyToken(token){
+      try{
+        const padded = String(token).replace(/-/g,"+").replace(/_/g,"/");
+        return JSON.parse(atob(padded));
+      }catch(e){ return null; }
+    }
+
+    function readSyncConfig(){
+      if(cachedCfg) return cachedCfg;
+      const leagueId = activeLeagueId();
+      if(leagueId) return (cachedCfg={url:FIREBASE_URL,room:leagueId,leagueId,isLeague:true});
+      let config = null;
+      const token = new URLSearchParams(location.search).get("sync");
+      if(token){
+        config = decodeLegacyToken(token);
+        if(config && config.url) setJSON(LEGACY_SYNC_KEY, config);
+      }
+      if(!config) config = getJSON(LEGACY_SYNC_KEY, null);
+      if(!config || !config.url) config = {url:FIREBASE_URL,room:LEGACY_ROOM};
+      config.url = String(config.url || "").replace(/\/+$/,"");
+      config.room = String(config.room || LEGACY_ROOM).replace(/[.#$\[\]\/]/g,"-");
+      return (cachedCfg=config);
+    }
+
+    window.DDSync = {
+      get config(){ return readSyncConfig(); },
+      get on(){ return !!readSyncConfig().url; },
+      save(url, room){
+        if(activeLeagueId()) return readSyncConfig();
+        setJSON(LEGACY_SYNC_KEY,{url:String(url||"").trim().replace(/\/+$/,"") ,room:String(room||LEGACY_ROOM).trim()});
+        cachedCfg=null; return readSyncConfig();
+      },
+      endpoint(){ const c=readSyncConfig(); return c.url ? `${c.url}/drafts/${encodeURIComponent(c.room)}.json` : null; },
+      link(page){
+        const c=readSyncConfig();
+        const target = new URL(page || "board.html?view=live", location.origin + "/");
+        if(c.isLeague){ target.searchParams.set("league",c.leagueId); return target.toString(); }
+        if(!c.url) return target.toString();
+        const token=btoa(JSON.stringify({url:c.url,room:c.room})).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+        target.searchParams.set("sync",token); return target.toString();
+      },
+      push(state){
+        const endpoint=this.endpoint(); if(!endpoint) return;
+        clearTimeout(pushTimer);
+        pushTimer=setTimeout(()=>{
+          let body;
+          try{
+            const league=DDLeague.current;
+            body=JSON.stringify(league ? {ts:now(),league,state} : {ts:now(),state});
+          }catch(e){ return; }
+          if(body===lastState) return;
+          lastState=body;
+          fetch(endpoint,{method:"PUT",body,headers:{"Content-Type":"application/json"}})
+            .then(r=>{ if(!r.ok) throw new Error(String(r.status)); window.dispatchEvent(new CustomEvent("ddsync",{detail:{ok:true,dir:"up"}})); })
+            .catch(()=>window.dispatchEvent(new CustomEvent("ddsync",{detail:{ok:false,dir:"up"}})));
+        },500);
+      },
+      get connected(){
+        return !!(this._es && this._es.readyState===1) || now()-(this._lastHeard||0)<30000;
+      },
+      subscribe(callback){
+        const endpoint=this.endpoint(); if(!endpoint) return null;
+        const self=this; let source,lastTs=0,retry=0,closed=false;
+        const open=()=>{
+          if(closed) return;
+          try{ source=new EventSource(endpoint); self._es=source; }catch(e){ return; }
+          source.addEventListener("open",()=>{ retry=0; self._lastHeard=now(); window.dispatchEvent(new CustomEvent("ddsync",{detail:{ok:true,dir:"down"}})); });
+          const handle=event=>{
+            self._lastHeard=now();
+            let message; try{ message=JSON.parse(event.data); }catch(e){ return; }
+            const data=message && message.data;
+            if(!data) return;
+            if(data.league) saveLeague(data.league);
+            const payload=data.state || (data.ts ? null : data);
+            const ts=data.ts || now();
+            if(!payload || ts<=lastTs) return;
+            lastTs=ts;
+            window.dispatchEvent(new CustomEvent("ddsync",{detail:{ok:true,dir:"down"}}));
+            try{ callback(payload,data); }catch(e){}
+          };
+          source.addEventListener("put",handle);
+          source.addEventListener("patch",handle);
+          source.addEventListener("error",()=>{
+            try{ source.close(); }catch(e){}
+            retry=Math.min(retry+1,6);
+            setTimeout(open,1000*retry);
+            setTimeout(()=>window.dispatchEvent(new CustomEvent("ddsync",{detail:{ok:self.connected,dir:"down"}})),1200);
+          });
+        };
+        open();
+        return ()=>{ closed=true; try{ source.close(); }catch(e){} };
+      }
+    };
+
+    // The historical sync client is inlined later in each flattened HTML page. Keep the
+    // shared implementation authoritative while those duplicated blocks are retired in
+    // a separate cleanup; non-strict legacy assignments fail harmlessly.
+    try{ Object.defineProperty(window,"DDSync",{value:window.DDSync,writable:false,configurable:false}); }catch(e){}
+
+    const id=activeLeagueId();
+    if(id){
+      const local=loadLeague(id); if(local) remember(local);
+      fetch(remoteEndpoint(id)).then(r=>r.ok?r.json():null).then(envelope=>{
+        if(!envelope) return;
+        hydrateEnvelope(envelope);
+        window.dispatchEvent(new CustomEvent("ddleaguehydrate",{detail:{envelope}}));
+      }).catch(()=>{});
+    }
+  }
+
+  if(typeof module !== "undefined" && module.exports){
+    module.exports={activeLeagueId,generateId,normalizeLeague,stateFromLeague,storageKey,LEAGUE_RE};
+  }
+})(typeof window !== "undefined" ? window : globalThis);
