@@ -1412,6 +1412,73 @@ Locked <b>2026-08-06</b> &middot; <b id="rcN">&mdash;</b> calls &middot;
     benchmark on the identical game set. Calibration by bin. Every figure recomputed from
     resolved games only &mdash; nothing is projected, nothing is back-filled.</p>
   </div>
+
+  <div class="card">
+    <h2>Tier audit &mdash; 2026-08-07</h2>
+    <p class="muted">A receipt is not only a forecast. This is the same question the site asks
+    of a prediction, asked of <b>our own tools</b>: is each one in the right lane? The gate is
+    <em>does it work, and can it be trusted</em> &mdash; forecasts need receipts against a
+    benchmark chosen in advance, measurement tools need named sources and reproducible math.
+    Full rationale, tool by tool, in
+    <a href="data/tier-audit.md">the write-up</a> &middot;
+    <a href="data/tier-audit.json">machine-readable</a>.</p>
+
+    <p><b>Result: no promotions, no demotions.</b> That is a suspiciously comfortable outcome
+    for a self-audit and is worth saying so plainly. It survives only because every collar came
+    back with a condition attached, and because the tool closest to promotion is blocked for a
+    specific stated reason rather than a vague one. <b>This is one reviewer, on one day,
+    reasoning from the code and the published data. It is a judgment, not a measurement.</b>
+    It is published so the next person can find where it was wrong.</p>
+
+    <h3>The three Dawgs keep their collars, with conditions</h3>
+    <p><b>NFL EPA Stats.</b> Sources named, snapshot dated, and the aggregation was
+    independently re-implemented outside the page and reproduces. <b>What was not done:</b> any
+    external cross-check against a published nflfastR table. Re-implementing a page&rsquo;s own
+    algorithm proves the maths is <em>reproducible</em>, not that it is <em>right</em> &mdash;
+    two implementations of the same wrong filter agree perfectly. One spot-check is owed.</p>
+
+    <p><b>nfelo Power Ratings.</b> The collar is for the <em>mirror</em>, not the forecasts. It
+    certifies that this site faithfully renders nfelo&rsquo;s published ratings. It does not
+    certify that nfelo predicts well, and the evidence on file says it does not beat the market:
+    nfelo 0.6674 straight-up against the market&rsquo;s 0.6677 over 4,053 games &mdash; behind
+    by 0.02 points against a 0.196-point standard error, and in-sample-ish besides.</p>
+
+    <p><b>Fantasy Draft Dashboard.</b> It ran a live 14-team draft end to end, which is the
+    right evidence for an operational tool. Three conditions: the Dashboard is a frame over
+    <code>board</code>, <code>dataviz</code>, <code>report</code> and <code>auction</code>, and
+    those are reachable standalone with <b>no tier chip</b> &mdash; same code, different verdict
+    depending on how you arrive. The Grades view is a <em>measurement dressed as a judgment</em>:
+    it scores buying value relative to the room, not whether a roster will win. And the whole rig
+    runs on a market snapshot dated 2026-07-29, from a source that publishes through August. The
+    collar is conditional on refreshing it before draft night.</p>
+
+    <h3>Receipts is the closest thing to a Dawg, and stays in Labs for one reason</h3>
+    <p>Everything else clears: sources named, math reproducible, dated, failure threshold
+    pre-registered before a single 2026 game. <b>The blocker is that the trust mechanism is
+    self-anchored.</b> This site hosts the ledger, the hash, and the spec that connects them.
+    Recomputing proves today&rsquo;s file matches today&rsquo;s hash &mdash; it cannot prove
+    these were the predictions made <em>before the games</em>, because both could have been
+    replaced together. A page whose entire purpose is verifiability cannot earn a collar on
+    verification that is not independently checkable. Anchor the hash externally and timestamp
+    it, and this clears. Nothing else about the page needs to change.</p>
+
+    <h3>The empty Pound is the biggest finding</h3>
+    <p>The Pound exists to keep failures visible next to the wins. It has no residents. Either
+    nothing here has ever failed, or things are being abandoned rather than recorded &mdash; and
+    the first is not plausible. <b>An empty Pound is survivorship bias appearing in the one
+    structure built to prevent it.</b> There are real candidates already: a Worker route that
+    died when ESPN blocked Cloudflare egress, two rejected definitions of this very gate, blind
+    Bozo submission, the composite-score tiebreaker. Populate it, or say on the page that nothing
+    has been retired yet and why that is true. Silence reads as &ldquo;we don&rsquo;t fail.&rdquo;</p>
+
+    <h3>What would change these verdicts</h3>
+    <p class="muted">EPA Stats &mdash; an external cross-check that disagrees with the page.
+    nfelo &mdash; nothing this season; that comparison is unresolvable in one year by this
+    site&rsquo;s own pre-registered arithmetic. The draft rig &mdash; a draft night where it
+    fails under load, or a refusal to refresh the snapshot before it. Receipts &mdash; an
+    external, timestamped anchor would promote it, and nothing else would. Any Labs tool &mdash;
+    receipts against a benchmark declared in advance.</p>
+  </div>
 </div>
 
   <footer>
