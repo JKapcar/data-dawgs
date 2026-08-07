@@ -151,6 +151,77 @@ body{margin:0;background:var(--page);color:var(--ink-1);
 .grpmenu a.sep:hover{color:var(--accent)!important}
 .theme-btn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--ink-2);padding:4px 10px;cursor:pointer;font-size:12.5px}
 .sitenav .links .theme-btn{margin-left:10px}
+/* ---- 🙃 The Upside Down: the machine-readable mirror, made visible ----
+   Sits NEXT TO the theme pill but is deliberately not part of it: dashed border, no
+   word label. The everyday light/dark toggle stays binary — this is a third door, not
+   a third state. See the .livebtn note above for why every selector here is scoped
+   `.sitenav .links`: a bare `.udbtn` loses to `.sitenav .links a` on anything it
+   shares, and would silently flatten the day the button becomes an <a>. */
+.udbtn{background:none;border:1px dashed var(--border);border-radius:8px;color:var(--ink-2);
+  padding:4px 9px;cursor:pointer;font-size:13px;line-height:1.55;font-family:inherit;
+  display:block}
+.sitenav .links .udbtn{margin-left:8px;flex:0 0 auto}
+.udbtn:hover{border-color:var(--accent);color:var(--accent)}
+:root[data-theme="light"] .udbtn{border-color:rgba(236,223,201,0.40);color:var(--navink2)}
+:root[data-theme="light"] .udbtn:hover{border-color:#ff8a4d;color:#ff8a4d}
+
+/* ---- the overlay itself ----
+   ALWAYS dark, whatever the page is set to — the Upside Down is one fixed place, and
+   a light-mode version of it would be a fourth theme nobody asked for. Colours are
+   therefore hard-coded to the dark tokens, NOT var(--page)/var(--ink-*), which would
+   flip to cream under :root[data-theme="light"]. Do not "tidy" them into variables. */
+.ud-ov{position:fixed;inset:0;z-index:9000;display:none;background:#0a0806;color:#c8c1b4;
+  overflow:auto;overscroll-behavior:contain;
+  font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.ud-ov.on{display:block}
+.ud-cv{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;opacity:.55}
+.ud-in{position:relative;max-width:1040px;margin:0 auto;padding:18px 20px 70px}
+.ud-hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  border-bottom:1px solid #2b251d;padding-bottom:12px;margin-bottom:14px}
+.ud-ttl{font-size:15px;font-weight:800;color:#f5f1ea;letter-spacing:.02em;
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.ud-ttl b{color:#ff6a02}
+.ud-path{color:#8f897d;font-size:11.5px;word-break:break-all}
+.ud-path a{color:#ff6a02}
+.ud-x{margin-left:auto;background:none;border:1px solid rgba(255,255,255,.18);
+  border-radius:8px;color:#c8c1b4;padding:5px 11px;cursor:pointer;font:inherit;flex:0 0 auto}
+.ud-x:hover{border-color:#ff6a02;color:#ff6a02}
+.ud-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.ud-chip{border:1px solid #2b251d;background:#16120d;border-radius:999px;
+  padding:4px 12px;font-size:11.5px;color:#c8c1b4;max-width:100%;overflow-wrap:anywhere}
+.ud-chip b{color:#ff6a02;font-weight:800;text-transform:uppercase;letter-spacing:.07em;
+  font-size:9.5px;margin-right:7px}
+.ud-chip.dawg{border-color:#2fbf3f}
+.ud-chip.dawg b{color:#2fbf3f}
+.ud-note{background:#16120d;border:1px solid #2b251d;border-left:2px solid #ff6a02;
+  border-radius:0 8px 8px 0;padding:10px 13px;margin:0 0 12px;color:#c8c1b4;
+  font:13px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+.ud-note b{color:#f5f1ea}
+/* ⚠️ inline-block + anywhere, not a plain inline run with margin-right: at 360px the
+   third path ran straight off the right edge of the overlay. Caught by looking, not by
+   a bounds check — the overlay scrolls, so nothing reported an overflow. */
+.ud-also{margin:0 0 12px;color:#8f897d;font-size:11.5px;overflow-wrap:anywhere}
+.ud-also a{color:#ff6a02;display:inline-block;margin:0 12px 4px 0}
+.ud-body{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;
+  background:#16120d;border:1px solid #2b251d;border-radius:10px;padding:14px 16px;
+  color:#c8c1b4;font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.ud-k{color:#8f897d}
+.ud-s{color:#ffab6b}
+.ud-n{color:#2fbf3f}
+.ud-w{color:#ff6b6b}
+.ud-foot{margin:14px 0 0;color:#8f897d;font-size:11.5px;
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+@media(max-width:760px){
+  .ud-in{padding:14px 13px 60px}
+  .ud-body{font-size:11.5px;padding:11px 12px}
+}
+
+/* Copy A — index.html only. A footnote to the manifesto, not a line of it: the
+   manifesto still ends on the Cleveland kicker and this sits after that block closes. */
+.udnote{margin:22px 0 0;padding:12px 16px;border:1px dashed var(--border);border-radius:10px;
+  color:var(--ink-2);font-size:13.5px;line-height:1.55;
+  background:color-mix(in srgb, var(--accent) 5%, transparent)}
+.udmach{white-space:nowrap}
 .navbrk{display:none}
 /* A few nav items ship BOTH a full label and a phone label; exactly one is ever shown.
    Desktop gets the full one. The phone rule below flips them.
@@ -180,6 +251,10 @@ body{margin:0;background:var(--page);color:var(--ink-1);
   .sitenav .links .caret{display:none}
   .sitenav .links .theme-btn{margin-left:4px;padding:4px 6px;font-size:12px;flex:0 0 auto}
   .theme-btn .tword{display:none}
+  /* ⚠️ Measured at 360px the one-row nav had ~28px of slack (see the 419px note below).
+     🙃 spends most of it, so it runs tighter than the theme pill: icon only, no word,
+     minimum padding. If a nav item is ever added back, re-measure here first. */
+  .sitenav .links .udbtn{margin-left:3px;padding:3px 5px;font-size:12px}
   .nlg{display:none} .nsm{display:inline}
 }
 /* ⚠️ Second breakpoint, and it is not cosmetic. Measured at 360px: the brand (105px)
@@ -194,6 +269,15 @@ body{margin:0;background:var(--page);color:var(--ink-1);
    and comes back. */
 @media(max-width:419px){
   .sitenav .brand .logo{display:none}
+  /* ⚠️ 🙃 joins a row that was already at its limit. Measured at 320px BEFORE this
+     tightening: the links run needed 243.4px inside a 244.0px box — 0.6px of margin,
+     which is not margin. Two pixels off each link's horizontal padding buys 12px back.
+     At 360px (the width the one-row layout was designed against) there is 40px spare,
+     and the tightest point on the whole curve is 420px — the last width that still
+     shows the wordmark — where 11px separates the wordmark from the first nav item.
+     Re-measure all three if anything is ever added to this row again. */
+  .sitenav .links a,.sitenav .links .grpbtn{padding:4px 2px}
+  .sitenav .links .udbtn{margin-left:1px;padding:3px 4px;font-size:11.5px}
 
   /* ⚠️ The old two-row phone rules were DELETED here, not commented out. They sat AFTER
      these, at the same specificity, and quietly won the cascade — the one-row layout
@@ -782,6 +866,287 @@ tr.sv-used td{opacity:.42}
   btn.setAttribute("data-ddtheme-btn","");
   btn.addEventListener("click", ()=>window.DDTheme.toggle());
   links.appendChild(btn);   // in .links, not nav: one flex run, so it wraps with the rest on mobile
+
+  /* ---------- 🙃 The Upside Down — this page's machine-readable mirror ----------
+     An OVERLAY, not a third theme. It writes NOTHING: dd-theme2-* is untouched, there
+     is no dd-upsidedown key, and it closes on a second tap or Esc. Nobody wants to
+     reload into JSON tomorrow morning, so it deliberately cannot persist.
+     Always dark regardless of the page's own theme — the Upside Down is one fixed
+     place. Exiting restores whatever the user actually had, because we never changed
+     documentElement.dataset.theme in the first place.
+     ⚠️ The content is FETCHED from the served file, never inlined. The joke only lands
+     because it is the genuine article; an inlined copy would drift the first time a
+     /data/ file was rebuilt and the mirror would quietly start lying. */
+  const UD = {
+    /* page → mirror. One object, so a new /data/ file is a one-line edit here and not
+       a sitewide pass. Keys are the page's filename stem (location.pathname), NOT the
+       nav `page` key — board.html sets DD_PAGE="live", which would miss.
+       Verified against /data/surfaces.json on 8/7/26: every url below is status:live.
+       Anything not listed falls through to llms.txt, which is the correct answer for
+       dfs and guillotine — surfaces.json records those as having no machine surface. */
+    map:{
+      "":"/llms.txt", "index":"/llms.txt",
+      "board":"/data/pool.json", "master":"/data/pool.json",
+      "bigboard":"/data/pool.json", "auction":"/data/pool.json",
+      "report":"/data/pool.json",
+      "dashboard":"/data/league.json",
+      "receipts":"/data/receipts.json",
+      "stats":"/data/epa-teams.json",
+      "nfelo":"/data/nfelo.json",
+      "survivor":"/data/survivor.json",
+      "bozo":"/data/bozo-rules.json",
+      "strategy":"/data/strategy.md"
+    },
+    /* secondary live mirrors — linked, not rendered, so the primary view stays one file */
+    also:{
+      "receipts":["/data/receipts-method.md","/data/tier-audit.json"],
+      "nfelo":["/data/models.json"],
+      "bozo":["/data/bozo-rules.md"],
+      "survivor":["/data/models.json"],
+      "index":["/data/index.json","/data/method.md","/data/surfaces.json"],
+      "":["/data/index.json","/data/method.md","/data/surfaces.json"]
+    },
+    stem(){
+      const f = (location.pathname.split("/").pop()||"").replace(/\.html?$/,"");
+      return f;
+    },
+    url(){ const s=this.stem(); return this.map[s] || "/llms.txt"; },
+    ov:null, cv:null, raf:0, loaded:"",
+
+    build(){
+      if(this.ov) return this.ov;
+      const ov = document.createElement("div");
+      ov.className = "ud-ov"; ov.id = "udOverlay";
+      ov.setAttribute("role","dialog");
+      ov.setAttribute("aria-label","The Upside Down — machine-readable mirror of this page");
+      const cv = document.createElement("canvas"); cv.className = "ud-cv"; cv.setAttribute("aria-hidden","true");
+      const inr = document.createElement("div"); inr.className = "ud-in";
+      inr.innerHTML =
+        '<div class="ud-hd">'+
+          '<span class="ud-ttl">🙃 THE <b>UPSIDE DOWN</b></span>'+
+          '<span class="ud-path" id="udPath"></span>'+
+          /* ⚠️ The close control carries 🙃 on purpose. The overlay is fixed inset:0,
+             so the nav button underneath it is unreachable while it is open — "tap 🙃
+             again" has to land on something that is actually on top. This is it, and
+             it sits in the same top-right corner the nav button does. */
+          '<button class="ud-x" id="udX" type="button">🙃 close · esc</button>'+
+        '</div>'+
+        '<div class="ud-chips" id="udChips"></div>'+
+        '<div id="udNote"></div>'+
+        '<div class="ud-also" id="udAlso"></div>'+
+        '<pre class="ud-body" id="udBody">loading the served file…</pre>'+
+        '<p class="ud-foot">This is the actual file your AI reads, fetched live from this site — '+
+        'not a copy pasted into the page. Same data, dated and sourced. '+
+        'Start at <a href="/data/index.json" style="color:#ff6a02">/data/index.json</a>.</p>';
+      ov.append(cv, inr);
+      document.body.appendChild(ov);
+      inr.querySelector("#udX").addEventListener("click", ()=>this.close());
+      this.ov = ov; this.cv = cv;
+      return ov;
+    },
+
+    esc(s){ return String(s).replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); },
+
+    /* ⚠️ ONE regex with alternation, not three chained replaces. Chaining them nests
+       spans — the number pass finds the digits inside a string span it just wrote
+       ("captured 2026-07-29") and repaints them green mid-sentence. One sweep, one
+       decision per token.
+       Only JSON gets coloured: llms.txt and strategy.md are prose, where quoted words
+       would light up at random. Capped at 300KB — pool.json (82KB) and epa-teams
+       (85KB) are fine; past that, plain text beats spending a phone's frame budget
+       building a hundred thousand spans. */
+    hilite(t, json){
+      const e = this.esc(t);
+      if(!json || t.length > 300000) return e;
+      return e.replace(
+        /("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false|null)\b|(-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?)/g,
+        (m, str, colon, lit, num)=>{
+          if(str) return colon
+            ? '<span class="ud-k">'+str+'</span>'+colon
+            : '<span class="ud-s">'+str+'</span>';
+          if(lit) return '<span class="ud-n">'+lit+'</span>';
+          return '<span class="ud-n">'+num+'</span>';
+        });
+    },
+
+    chip(label, value, cls){
+      return '<span class="ud-chip'+(cls?" "+cls:"")+'"><b>'+this.esc(label)+'</b>'+this.esc(value)+'</span>';
+    },
+
+    render(url, text, manifest){
+      const path = this.ov.querySelector("#udPath");
+      const chips = this.ov.querySelector("#udChips");
+      const note  = this.ov.querySelector("#udNote");
+      const also  = this.ov.querySelector("#udAlso");
+      const body  = this.ov.querySelector("#udBody");
+      path.innerHTML = '<a href="'+this.esc(url)+'" target="_blank" rel="noopener">'+this.esc(url)+'</a> · '+
+                       (text.length>1024 ? Math.round(text.length/1024)+" KB" : text.length+" B");
+
+      let d = null;
+      if(/\.json$/.test(url)){ try{ d = JSON.parse(text); }catch(e){ d = null; } }
+
+      const c = [];
+      if(d && typeof d === "object"){
+        if(d.as_of) c.push(this.chip("as_of", d.as_of));
+        if(d.tier)  c.push(this.chip("tier", d.tier==="dawg" ? "Working Dawg" : d.tier, d.tier==="dawg"?"dawg":""));
+        if(d.graded === false) c.push(this.chip("graded","not yet"));
+        if(d.built) c.push(this.chip("built", d.built));
+        if(d.count != null) c.push(this.chip("rows", d.count));
+        if(d.source) c.push(this.chip("source", d.source));
+        /* receipts is the one file whose whole point is that you can check it without
+           trusting us, so the hash and the canonical-string spec come to the top. */
+        if(d.integrity && d.integrity.sha256){
+          c.push(this.chip("sha256", d.integrity.sha256));
+        }
+      } else {
+        /* markdown mirrors carry the same envelope in YAML front matter */
+        const fm = text.match(/^(?:<!--[^]*?-->\s*)?---\r?\n([^]*?)\r?\n---/);
+        if(fm){
+          fm[1].split(/\r?\n/).forEach(line=>{
+            const m = line.match(/^(as_of|source|title|tier|staleness):\s*(.+)$/);
+            if(m) c.push(this.chip(m[1], m[2]));
+          });
+        }
+      }
+      /* llms.txt is prose — it is the one live surface with no envelope of its own, so
+         its dates come from the manifest and are LABELLED as the manifest's, not as
+         llms.txt's. Borrowing a date without saying where it came from is the exact
+         failure mode this whole layer exists to argue against. */
+      if(!c.length && manifest){
+        if(manifest.as_of) c.push(this.chip("manifest as_of", manifest.as_of));
+        if(manifest.data && manifest.data.files) c.push(this.chip("files", manifest.data.files.length));
+        if(manifest.site) c.push(this.chip("site", manifest.site));
+      }
+      if(!c.length) c.push(this.chip("file", url));
+      chips.innerHTML = c.join("");
+
+      let n = "";
+      if(d && d.note) n += '<div class="ud-note"><b>note:</b> '+this.esc(d.note)+'</div>';
+      if(!d && manifest){
+        n += '<div class="ud-note"><b>'+this.esc(url)+'</b> is prose and carries no <code>as_of</code> of its own. '+
+             'The dates above are the manifest’s, from <code>/data/index.json</code> — every file listed there '+
+             'carries its own <code>as_of</code>, and those are the ones to quote.</div>';
+      }
+      if(d && d.integrity && d.integrity.canonical_string_spec){
+        n += '<div class="ud-note"><b>canonical string:</b> '+this.esc(d.integrity.canonical_string_spec)+
+             (d.integrity.canonical_example_first_row
+               ? ' <br><b>first row:</b> <code>'+this.esc(d.integrity.canonical_example_first_row)+'</code>' : '')+
+             '</div>';
+      }
+      note.innerHTML = n;
+
+      const extra = this.also[this.stem()] || [];
+      also.innerHTML = extra.length
+        ? "also mirrored: " + extra.map(u=>'<a href="'+this.esc(u)+'" target="_blank" rel="noopener">'+this.esc(u)+'</a>').join("")
+        : "";
+
+      body.innerHTML = this.hilite(text, !!d);
+    },
+
+    async load(){
+      const url = this.url();
+      if(this.loaded === url) return;
+      const body = this.ov.querySelector("#udBody");
+      try{
+        const r = await fetch(url, {cache:"no-cache"});
+        if(!r.ok) throw new Error(r.status+" "+r.statusText);
+        const t = await r.text();
+        let man = null;
+        if(!/\.json$/.test(url) && !/^---/m.test(t.slice(0,400))){
+          /* no envelope in the file itself — go get the manifest so the view still
+             opens on a date. Failure here is not fatal: the body is the point. */
+          try{ man = await (await fetch("/data/index.json", {cache:"no-cache"})).json(); }catch(e){}
+        }
+        this.render(url, t, man);
+        this.loaded = url;
+      }catch(e){
+        /* llms.txt is the documented fallback; /data/index.json is the fallback's
+           fallback, because the manifest is the one file that is always worth having. */
+        if(url !== "/data/index.json"){
+          try{
+            const r2 = await fetch("/data/index.json", {cache:"no-cache"});
+            const t2 = await r2.text();
+            this.render("/data/index.json", t2);
+            this.loaded = "/data/index.json";
+            return;
+          }catch(e2){}
+        }
+        body.innerHTML = '<span class="ud-w">Could not fetch '+this.esc(url)+' — '+this.esc(e.message)+
+          '</span>\n\nThe file is still there: try it directly.';
+      }
+    },
+
+    /* Faint drift, for the Stranger Things read. Cheap by construction: ~40 motes,
+       stopped dead on close so nothing burns battery behind a closed overlay, and
+       skipped entirely under prefers-reduced-motion. First thing to cut if it ever
+       fights performance on the 2MB stats page. */
+    motes(){
+      const cv = this.cv, ctx = cv.getContext && cv.getContext("2d");
+      if(!ctx) return;
+      if(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      const dpr = Math.min(window.devicePixelRatio||1, 2);
+      const fit = ()=>{ cv.width = innerWidth*dpr; cv.height = innerHeight*dpr; };
+      fit();
+      const N = innerWidth < 700 ? 22 : 44;
+      const p = Array.from({length:N}, (_,i)=>({
+        x: (i*97 % 100)/100, y:(i*61 % 100)/100,
+        r: 0.6 + (i%5)*0.35, v: 0.06 + (i%7)*0.02, d:(i%2?1:-1)*0.03
+      }));
+      let t0 = 0;
+      const step = (ts)=>{
+        if(!this.ov.classList.contains("on")){ this.raf = 0; return; }
+        const dt = t0 ? Math.min((ts-t0)/1000, 0.05) : 0; t0 = ts;
+        ctx.clearRect(0,0,cv.width,cv.height);
+        for(const m of p){
+          m.y -= m.v*dt*0.12; m.x += m.d*dt*0.05;
+          if(m.y < -0.05){ m.y = 1.05; }
+          if(m.x < -0.05) m.x = 1.05; if(m.x > 1.05) m.x = -0.05;
+          ctx.beginPath();
+          ctx.fillStyle = "rgba(255,106,2,0.28)";
+          ctx.arc(m.x*cv.width, m.y*cv.height, m.r*dpr, 0, 6.284);
+          ctx.fill();
+        }
+        this.raf = requestAnimationFrame(step);
+      };
+      addEventListener("resize", fit);
+      this.raf = requestAnimationFrame(step);
+    },
+
+    open(){
+      this.build();
+      this.ov.classList.add("on");
+      this.prevY = window.scrollY;
+      document.documentElement.style.overflow = "hidden";
+      this.ov.scrollTop = 0;
+      this.load();
+      if(!this.raf) this.motes();
+      const x = this.ov.querySelector("#udX"); if(x) x.focus();
+    },
+    close(){
+      if(!this.ov) return;
+      this.ov.classList.remove("on");
+      document.documentElement.style.overflow = "";
+      if(this.raf){ cancelAnimationFrame(this.raf); this.raf = 0; }
+      const b = document.getElementById("udBtn"); if(b) b.focus();
+    },
+    toggle(){
+      this.build();
+      this.ov.classList.contains("on") ? this.close() : this.open();
+    }
+  };
+  window.DDUpsideDown = UD;
+
+  const udb = document.createElement("button");
+  udb.className = "udbtn"; udb.id = "udBtn"; udb.type = "button";
+  udb.textContent = "🙃";
+  udb.title = "The Upside Down — the machine-readable version of this page";
+  udb.setAttribute("aria-label","Open the Upside Down: the machine-readable version of this page");
+  udb.addEventListener("click", ()=>UD.toggle());
+  links.appendChild(udb);   // same flex run as the theme pill, so it wraps with it
+  document.addEventListener("keydown", e=>{
+    if(e.key === "Escape" && UD.ov && UD.ov.classList.contains("on")) UD.close();
+  });
+
   window.DDTheme.apply();
 
   // offline insurance: cache the draft pages so a dead venue wifi can't kill the room
@@ -1484,7 +1849,7 @@ STATE: everything saves in the browser on that device. A different device shows 
 </div>
 
   <footer>
-    Data Dawgs &middot; 2026 schedule and historical lines from <a href="https://github.com/nflverse/nfldata" target="_blank" rel="noopener">nflverse/nfldata</a> &middot; power ratings from <a href="nfelo.html">nfelo</a> (<a href="https://github.com/greerreNFL/nfelo" target="_blank" rel="noopener">greerreNFL/nfelo</a>, MIT) &middot; snapshot 2026-08-06 &middot; no receipts yet — this is a Labs build
+    Data Dawgs &middot; 2026 schedule and historical lines from <a href="https://github.com/nflverse/nfldata" target="_blank" rel="noopener">nflverse/nfldata</a> &middot; power ratings from <a href="nfelo.html">nfelo</a> (<a href="https://github.com/greerreNFL/nfelo" target="_blank" rel="noopener">greerreNFL/nfelo</a>, MIT) &middot; snapshot 2026-08-06 &middot; no receipts yet — this is a Labs build<br><a class="udmach" href="/data/survivor.json">🤖 For machines</a> · This site is mirrored for machines. 🙃 shows you the other side.
   </footer>
 </div>
 <script>window.SV={"meta": {"season": 2026, "captured": "2026-08-06", "elo_per_pt": 23.58, "hfa": 2.1, "sd": 13.18, "model_su": 0.6575, "blend_su": 0.6674, "market_su": 0.6677, "nfelo_sha": "0d3f8418", "sched_src": "nflverse/nfldata"}, "elo": {"SEA": 1628.5, "BUF": 1587.6, "LAR": 1580.3, "DEN": 1571.6, "DET": 1568.7, "NE": 1564.9, "MIN": 1564.3, "BAL": 1560.7, "JAX": 1552.9, "HOU": 1549.0, "PHI": 1548.5, "SF": 1548.4, "KC": 1542.3, "CHI": 1535.5, "PIT": 1510.8, "GB": 1507.3, "CIN": 1506.3, "DAL": 1501.4, "WAS": 1500.4, "IND": 1492.9, "TB": 1490.5, "ATL": 1488.6, "LAC": 1488.1, "NYG": 1474.6, "NO": 1464.3, "CAR": 1464.2, "CLE": 1457.0, "MIA": 1448.3, "LV": 1436.3, "ARI": 1435.9, "TEN": 1417.5, "NYJ": 1395.1}, "teams": {"ARI": {"n": "Cardinals", "loc": "Arizona", "full": "Arizona Cardinals"}, "ATL": {"n": "Falcons", "loc": "Atlanta", "full": "Atlanta Falcons"}, "BAL": {"n": "Ravens", "loc": "Baltimore", "full": "Baltimore Ravens"}, "BUF": {"n": "Bills", "loc": "Buffalo", "full": "Buffalo Bills"}, "CAR": {"n": "Panthers", "loc": "Carolina", "full": "Carolina Panthers"}, "CHI": {"n": "Bears", "loc": "Chicago", "full": "Chicago Bears"}, "CIN": {"n": "Bengals", "loc": "Cincinnati", "full": "Cincinnati Bengals"}, "CLE": {"n": "Browns", "loc": "Cleveland", "full": "Cleveland Browns"}, "DAL": {"n": "Cowboys", "loc": "Dallas", "full": "Dallas Cowboys"}, "DEN": {"n": "Broncos", "loc": "Denver", "full": "Denver Broncos"}, "DET": {"n": "Lions", "loc": "Detroit", "full": "Detroit Lions"}, "GB": {"n": "Packers", "loc": "Green Bay", "full": "Green Bay Packers"}, "HOU": {"n": "Texans", "loc": "Houston", "full": "Houston Texans"}, "IND": {"n": "Colts", "loc": "Indianapolis", "full": "Indianapolis Colts"}, "JAX": {"n": "Jaguars", "loc": "Jacksonville", "full": "Jacksonville Jaguars"}, "KC": {"n": "Chiefs", "loc": "Kansas City", "full": "Kansas City Chiefs"}, "LAC": {"n": "Chargers", "loc": "LA Chargers", "full": "Los Angeles Chargers"}, "LV": {"n": "Raiders", "loc": "Las Vegas", "full": "Las Vegas Raiders"}, "MIA": {"n": "Dolphins", "loc": "Miami", "full": "Miami Dolphins"}, "MIN": {"n": "Vikings", "loc": "Minnesota", "full": "Minnesota Vikings"}, "NE": {"n": "Patriots", "loc": "New England", "full": "New England Patriots"}, "NO": {"n": "Saints", "loc": "New Orleans", "full": "New Orleans Saints"}, "NYG": {"n": "Giants", "loc": "NY Giants", "full": "New York Giants"}, "NYJ": {"n": "Jets", "loc": "NY Jets", "full": "New York Jets"}, "PHI": {"n": "Eagles", "loc": "Philadelphia", "full": "Philadelphia Eagles"}, "PIT": {"n": "Steelers", "loc": "Pittsburgh", "full": "Pittsburgh Steelers"}, "SEA": {"n": "Seahawks", "loc": "Seattle", "full": "Seattle Seahawks"}, "SF": {"n": "49ers", "loc": "San Francisco", "full": "San Francisco 49ers"}, "TB": {"n": "Buccaneers", "loc": "Tampa Bay", "full": "Tampa Bay Buccaneers"}, "TEN": {"n": "Titans", "loc": "Tennessee", "full": "Tennessee Titans"}, "WAS": {"n": "Commanders", "loc": "Washington", "full": "Washington Commanders"}, "LAR": {"n": "LAR", "loc": "LAR", "full": "LAR"}}, "games": [{"id": "2026_01_NE_SEA", "wk": 1, "h": "SEA", "a": "NE", "d": "2026-09-09", "mm": 4.8, "mk": 0.6369, "p": 0.6382, "src": "market"}, {"id": "2026_01_SF_LA", "wk": 1, "h": "LAR", "a": "SF", "d": "2026-09-10", "mm": 3.454, "mk": 0.6164, "p": 0.6132, "src": "market"}, {"id": "2026_01_CHI_CAR", "wk": 1, "h": "CAR", "a": "CHI", "d": "2026-09-13", "mm": -0.923, "mk": 0.4279, "p": 0.4389, "src": "market"}, {"id": "2026_01_TB_CIN", "wk": 1, "h": "CIN", "a": "TB", "d": "2026-09-13", "mm": 2.774, "mk": 0.6309, "p": 0.6192, "src": "market"}, {"id": "2026_01_NO_DET", "wk": 1, "h": "DET", "a": "NO", "d": "2026-09-13", "mm": 6.529, "mk": 0.7258, "p": 0.717, "src": "market"}, {"id": "2026_01_BUF_HOU", "wk": 1, "h": "HOU", "a": "BUF", "d": "2026-09-13", "mm": 0.468, "mk": 0.4826, "p": 0.4905, "src": "market"}, {"id": "2026_01_BAL_IND", "wk": 1, "h": "IND", "a": "BAL", "d": "2026-09-13", "mm": -0.772, "mk": 0.3775, "p": 0.4018, "src": "market"}, {"id": "2026_01_CLE_JAX", "wk": 1, "h": "JAX", "a": "CLE", "d": "2026-09-13", "mm": 6.168, "mk": 0.76, "p": 0.7411, "src": "market"}, {"id": "2026_01_ATL_PIT", "wk": 1, "h": "PIT", "a": "ATL", "d": "2026-09-13", "mm": 3.044, "mk": 0.6092, "p": 0.6048, "src": "market"}, {"id": "2026_01_NYJ_TEN", "wk": 1, "h": "TEN", "a": "NYJ", "d": "2026-09-13", "mm": 3.05, "mk": 0.583, "p": 0.5851, "src": "market"}, {"id": "2026_01_ARI_LAC", "wk": 1, "h": "LAC", "a": "ARI", "d": "2026-09-13", "mm": 4.313, "mk": 0.8271, "p": 0.7849, "src": "market"}, {"id": "2026_01_MIA_LV", "wk": 1, "h": "LV", "a": "MIA", "d": "2026-09-13", "mm": 1.595, "mk": 0.6369, "p": 0.6152, "src": "market"}, {"id": "2026_01_GB_MIN", "wk": 1, "h": "MIN", "a": "GB", "d": "2026-09-13", "mm": 4.518, "mk": 0.4957, "p": 0.5309, "src": "market"}, {"id": "2026_01_WAS_PHI", "wk": 1, "h": "PHI", "a": "WAS", "d": "2026-09-13", "mm": 4.142, "mk": 0.6447, "p": 0.6394, "src": "market"}, {"id": "2026_01_DAL_NYG", "wk": 1, "h": "NYG", "a": "DAL", "d": "2026-09-13", "mm": 0.967, "mk": 0.4279, "p": 0.4531, "src": "market"}, {"id": "2026_01_DEN_KC", "wk": 1, "h": "KC", "a": "DEN", "d": "2026-09-14", "mm": 0.863, "mk": 0.5934, "p": 0.5767, "src": "market"}, {"id": "2026_02_DET_BUF", "wk": 2, "h": "BUF", "a": "DET", "d": "2026-09-17", "mm": 2.902, "mk": 0.583, "p": 0.584, "src": "market"}, {"id": "2026_02_CAR_ATL", "wk": 2, "h": "ATL", "a": "CAR", "d": "2026-09-20", "mm": 3.136, "mk": 0.5325, "p": 0.548, "src": "market"}, {"id": "2026_02_NO_BAL", "wk": 2, "h": "BAL", "a": "NO", "d": "2026-09-20", "mm": 6.189, "mk": 0.7409, "p": 0.7264, "src": "market"}, {"id": "2026_02_MIN_CHI", "wk": 2, "h": "CHI", "a": "MIN", "d": "2026-09-20", "mm": 0.882, "mk": 0.6225, "p": 0.599, "src": "market"}, {"id": "2026_02_CIN_HOU", "wk": 2, "h": "HOU", "a": "CIN", "d": "2026-09-20", "mm": 3.913, "mk": 0.5514, "p": 0.568, "src": "market"}, {"id": "2026_02_PIT_NE", "wk": 2, "h": "NE", "a": "PIT", "d": "2026-09-20", "mm": 4.397, "mk": 0.669, "p": 0.6596, "src": "market"}, {"id": "2026_02_GB_NYJ", "wk": 2, "h": "NYJ", "a": "GB", "d": "2026-09-20", "mm": -2.656, "mk": 0.3146, "p": 0.34, "src": "market"}, {"id": "2026_02_CLE_TB", "wk": 2, "h": "TB", "a": "CLE", "d": "2026-09-20", "mm": 3.52, "mk": 0.675, "p": 0.6581, "src": "market"}, {"id": "2026_02_PHI_TEN", "wk": 2, "h": "TEN", "a": "PHI", "d": "2026-09-20", "mm": -3.453, "mk": 0.3553, "p": 0.3655, "src": "market"}, {"id": "2026_02_JAX_DEN", "wk": 2, "h": "DEN", "a": "JAX", "d": "2026-09-20", "mm": 2.893, "mk": 0.5635, "p": 0.5694, "src": "market"}, {"id": "2026_02_LV_LAC", "wk": 2, "h": "LAC", "a": "LV", "d": "2026-09-20", "mm": 4.295, "mk": 0.7768, "p": 0.743, "src": "market"}, {"id": "2026_02_SEA_ARI", "wk": 2, "h": "ARI", "a": "SEA", "d": "2026-09-20", "mm": -6.066, "mk": 0.2, "p": 0.2278, "src": "market"}, {"id": "2026_02_WAS_DAL", "wk": 2, "h": "DAL", "a": "WAS", "d": "2026-09-20", "mm": 2.144, "mk": 0.6309, "p": 0.6146, "src": "market"}, {"id": "2026_02_MIA_SF", "wk": 2, "h": "SF", "a": "MIA", "d": "2026-09-20", "mm": 6.347, "mk": 0.8119, "p": 0.7835, "src": "market"}, {"id": "2026_02_IND_KC", "wk": 2, "h": "KC", "a": "IND", "d": "2026-09-20", "mm": 4.198, "mk": 0.705, "p": 0.6857, "src": "market"}, {"id": "2026_02_NYG_LA", "wk": 2, "h": "LAR", "a": "NYG", "d": "2026-09-21", "mm": 6.585, "mk": 0.76, "p": 0.7436, "src": "market"}, {"id": "2026_03_ATL_GB", "wk": 3, "h": "GB", "a": "ATL", "d": "2026-09-24", "mm": 2.898, "mk": 0.7508, "p": 0.7132, "src": "market"}, {"id": "2026_03_LAC_BUF", "wk": 3, "h": "BUF", "a": "LAC", "d": "2026-09-27", "mm": 6.322, "mk": 0.5996, "p": 0.6214, "src": "market"}, {"id": "2026_03_CAR_CLE", "wk": 3, "h": "CLE", "a": "CAR", "d": "2026-09-27", "mm": 1.799, "mk": 0.4675, "p": 0.4892, "src": "market"}, {"id": "2026_03_NYJ_DET", "wk": 3, "h": "DET", "a": "NYJ", "d": "2026-09-27", "mm": 9.464, "mk": 0.7819, "p": 0.7774, "src": "market"}, {"id": "2026_03_HOU_IND", "wk": 3, "h": "IND", "a": "HOU", "d": "2026-09-27", "mm": -0.277, "mk": 0.4675, "p": 0.4735, "src": "market"}, {"id": "2026_03_NE_JAX", "wk": 3, "h": "JAX", "a": "NE", "d": "2026-09-27", "mm": 1.593, "mk": 0.5174, "p": 0.5251, "src": "market"}, {"id": "2026_03_KC_MIA", "wk": 3, "h": "MIA", "a": "KC", "d": "2026-09-27", "mm": -1.886, "mk": 0.2522, "p": 0.2958, "src": "market"}, {"id": "2026_03_TEN_NYG", "wk": 3, "h": "NYG", "a": "TEN", "d": "2026-09-27", "mm": 4.524, "mk": 0.6038, "p": 0.6115, "src": "market"}, {"id": "2026_03_CIN_PIT", "wk": 3, "h": "PIT", "a": "CIN", "d": "2026-09-27", "mm": 2.291, "mk": 0.4675, "p": 0.493, "src": "market"}, {"id": "2026_03_SEA_WAS", "wk": 3, "h": "WAS", "a": "SEA", "d": "2026-09-27", "mm": -3.332, "mk": 0.3775, "p": 0.3832, "src": "market"}, {"id": "2026_03_ARI_SF", "wk": 3, "h": "SF", "a": "ARI", "d": "2026-09-27", "mm": 6.873, "mk": 0.8173, "p": 0.7908, "src": "market"}, {"id": "2026_03_MIN_TB", "wk": 3, "h": "TB", "a": "MIN", "d": "2026-09-27", "mm": -1.028, "mk": 0.5325, "p": 0.5166, "src": "market"}, {"id": "2026_03_BAL_DAL", "wk": 3, "h": "DAL", "a": "BAL", "d": "2026-09-27", "mm": -0.415, "mk": 0.4486, "p": 0.4583, "src": "market"}, {"id": "2026_03_LV_NO", "wk": 3, "h": "NO", "a": "LV", "d": "2026-09-27", "mm": 3.29, "mk": 0.6369, "p": 0.6274, "src": "market"}, {"id": "2026_03_LA_DEN", "wk": 3, "h": "DEN", "a": "LAR", "d": "2026-09-27", "mm": 1.732, "mk": 0.417, "p": 0.4505, "src": "market"}, {"id": "2026_03_PHI_CHI", "wk": 3, "h": "CHI", "a": "PHI", "d": "2026-09-28", "mm": 1.553, "mk": 0.5174, "p": 0.5248, "src": "market"}, {"id": "2026_04_PIT_CLE", "wk": 4, "h": "CLE", "a": "PIT", "d": "2026-10-01", "mm": -0.177, "mk": 0.4486, "p": 0.46, "src": "market"}, {"id": "2026_04_IND_WAS", "wk": 4, "h": "WAS", "a": "IND", "d": "2026-10-04", "mm": 2.418, "mk": 0.5174, "p": 0.5313, "src": "market"}, {"id": "2026_04_TEN_BAL", "wk": 4, "h": "BAL", "a": "TEN", "d": "2026-10-04", "mm": 8.176, "mk": null, "p": 0.7325, "src": "model"}, {"id": "2026_04_NE_BUF", "wk": 4, "h": "BUF", "a": "NE", "d": "2026-10-04", "mm": 3.063, "mk": null, "p": 0.5919, "src": "model"}, {"id": "2026_04_NYJ_CHI", "wk": 4, "h": "CHI", "a": "NYJ", "d": "2026-10-04", "mm": 8.056, "mk": 0.7715, "p": 0.7613, "src": "market"}, {"id": "2026_04_JAX_CIN", "wk": 4, "h": "CIN", "a": "JAX", "d": "2026-10-04", "mm": 0.127, "mk": null, "p": 0.5038, "src": "model"}, {"id": "2026_04_DAL_HOU", "wk": 4, "h": "HOU", "a": "DAL", "d": "2026-10-04", "mm": 4.124, "mk": null, "p": 0.6228, "src": "model"}, {"id": "2026_04_ARI_NYG", "wk": 4, "h": "NYG", "a": "ARI", "d": "2026-10-04", "mm": 3.742, "mk": null, "p": 0.6118, "src": "model"}, {"id": "2026_04_LA_PHI", "wk": 4, "h": "PHI", "a": "LAR", "d": "2026-10-04", "mm": 0.753, "mk": null, "p": 0.5228, "src": "model"}, {"id": "2026_04_GB_TB", "wk": 4, "h": "TB", "a": "GB", "d": "2026-10-04", "mm": 1.388, "mk": null, "p": 0.5419, "src": "model"}, {"id": "2026_04_MIA_MIN", "wk": 4, "h": "MIN", "a": "MIA", "d": "2026-10-04", "mm": 7.021, "mk": null, "p": 0.7029, "src": "model"}, {"id": "2026_04_KC_LV", "wk": 4, "h": "LV", "a": "KC", "d": "2026-10-04", "mm": -2.393, "mk": null, "p": 0.428, "src": "model"}, {"id": "2026_04_LAC_SEA", "wk": 4, "h": "SEA", "a": "LAC", "d": "2026-10-04", "mm": 8.059, "mk": null, "p": 0.7295, "src": "model"}, {"id": "2026_04_DEN_SF", "wk": 4, "h": "SF", "a": "DEN", "d": "2026-10-04", "mm": 1.12, "mk": null, "p": 0.5339, "src": "model"}, {"id": "2026_04_DET_CAR", "wk": 4, "h": "CAR", "a": "DET", "d": "2026-10-04", "mm": -2.331, "mk": null, "p": 0.4298, "src": "model"}, {"id": "2026_04_ATL_NO", "wk": 4, "h": "NO", "a": "ATL", "d": "2026-10-05", "mm": 1.074, "mk": null, "p": 0.5325, "src": "model"}, {"id": "2026_05_TB_DAL", "wk": 5, "h": "DAL", "a": "TB", "d": "2026-10-08", "mm": 2.564, "mk": null, "p": 0.5771, "src": "model"}, {"id": "2026_05_PHI_JAX", "wk": 5, "h": "JAX", "a": "PHI", "d": "2026-10-11", "mm": 2.29, "mk": null, "p": 0.569, "src": "model"}, {"id": "2026_05_CIN_MIA", "wk": 5, "h": "MIA", "a": "CIN", "d": "2026-10-11", "mm": -0.359, "mk": null, "p": 0.4891, "src": "model"}, {"id": "2026_05_LV_NE", "wk": 5, "h": "NE", "a": "LV", "d": "2026-10-11", "mm": 7.555, "mk": null, "p": 0.7167, "src": "model"}, {"id": "2026_05_MIN_NO", "wk": 5, "h": "NO", "a": "MIN", "d": "2026-10-11", "mm": -2.137, "mk": null, "p": 0.4356, "src": "model"}, {"id": "2026_05_CLE_NYJ", "wk": 5, "h": "NYJ", "a": "CLE", "d": "2026-10-11", "mm": -0.523, "mk": null, "p": 0.4842, "src": "model"}, {"id": "2026_05_IND_PIT", "wk": 5, "h": "PIT", "a": "IND", "d": "2026-10-11", "mm": 2.859, "mk": null, "p": 0.5859, "src": "model"}, {"id": "2026_05_HOU_TEN", "wk": 5, "h": "TEN", "a": "HOU", "d": "2026-10-11", "mm": -3.477, "mk": null, "p": 0.396, "src": "model"}, {"id": "2026_05_NYG_WAS", "wk": 5, "h": "WAS", "a": "NYG", "d": "2026-10-11", "mm": 3.195, "mk": null, "p": 0.5958, "src": "model"}, {"id": "2026_05_DEN_LAC", "wk": 5, "h": "LAC", "a": "DEN", "d": "2026-10-11", "mm": -1.439, "mk": null, "p": 0.4565, "src": "model"}, {"id": "2026_05_DET_ARI", "wk": 5, "h": "ARI", "a": "DET", "d": "2026-10-11", "mm": -3.529, "mk": null, "p": 0.3944, "src": "model"}, {"id": "2026_05_CHI_GB", "wk": 5, "h": "GB", "a": "CHI", "d": "2026-10-11", "mm": 0.907, "mk": null, "p": 0.5274, "src": "model"}, {"id": "2026_05_SF_SEA", "wk": 5, "h": "SEA", "a": "SF", "d": "2026-10-11", "mm": 5.5, "mk": null, "p": 0.6617, "src": "model"}, {"id": "2026_05_BAL_ATL", "wk": 5, "h": "ATL", "a": "BAL", "d": "2026-10-11", "mm": -0.957, "mk": null, "p": 0.4711, "src": "model"}, {"id": "2026_05_BUF_LA", "wk": 5, "h": "LAR", "a": "BUF", "d": "2026-10-12", "mm": 1.794, "mk": null, "p": 0.5541, "src": "model"}, {"id": "2026_06_SEA_DEN", "wk": 6, "h": "DEN", "a": "SEA", "d": "2026-10-15", "mm": -0.313, "mk": null, "p": 0.4905, "src": "model"}, {"id": "2026_06_HOU_JAX", "wk": 6, "h": "JAX", "a": "HOU", "d": "2026-10-18", "mm": 2.266, "mk": null, "p": 0.5683, "src": "model"}, {"id": "2026_06_CHI_ATL", "wk": 6, "h": "ATL", "a": "CHI", "d": "2026-10-18", "mm": 0.111, "mk": null, "p": 0.5034, "src": "model"}, {"id": "2026_06_BAL_CLE", "wk": 6, "h": "CLE", "a": "BAL", "d": "2026-10-18", "mm": -2.294, "mk": null, "p": 0.4309, "src": "model"}, {"id": "2026_06_TEN_IND", "wk": 6, "h": "IND", "a": "TEN", "d": "2026-10-18", "mm": 5.302, "mk": null, "p": 0.6562, "src": "model"}, {"id": "2026_06_NYJ_NE", "wk": 6, "h": "NE", "a": "NYJ", "d": "2026-10-18", "mm": 9.302, "mk": null, "p": 0.7598, "src": "model"}, {"id": "2026_06_NO_NYG", "wk": 6, "h": "NYG", "a": "NO", "d": "2026-10-18", "mm": 2.537, "mk": null, "p": 0.5763, "src": "model"}, {"id": "2026_06_CAR_PHI", "wk": 6, "h": "PHI", "a": "CAR", "d": "2026-10-18", "mm": 5.677, "mk": null, "p": 0.6666, "src": "model"}, {"id": "2026_06_PIT_TB", "wk": 6, "h": "TB", "a": "PIT", "d": "2026-10-18", "mm": 1.241, "mk": null, "p": 0.5375, "src": "model"}, {"id": "2026_06_ARI_LA", "wk": 6, "h": "LAR", "a": "ARI", "d": "2026-10-18", "mm": 8.225, "mk": null, "p": 0.7337, "src": "model"}, {"id": "2026_06_LAC_KC", "wk": 6, "h": "KC", "a": "LAC", "d": "2026-10-18", "mm": 4.404, "mk": null, "p": 0.6309, "src": "model"}, {"id": "2026_06_BUF_LV", "wk": 6, "h": "LV", "a": "BUF", "d": "2026-10-18", "mm": -4.311, "mk": null, "p": 0.3718, "src": "model"}, {"id": "2026_06_DAL_GB", "wk": 6, "h": "GB", "a": "DAL", "d": "2026-10-18", "mm": 2.355, "mk": null, "p": 0.5709, "src": "model"}, {"id": "2026_06_WAS_SF", "wk": 6, "h": "SF", "a": "WAS", "d": "2026-10-19", "mm": 4.139, "mk": null, "p": 0.6232, "src": "model"}, {"id": "2026_07_NE_CHI", "wk": 7, "h": "CHI", "a": "NE", "d": "2026-10-22", "mm": 0.856, "mk": null, "p": 0.5259, "src": "model"}, {"id": "2026_07_PIT_NO", "wk": 7, "h": "NO", "a": "PIT", "d": "2026-10-25", "mm": 0.132, "mk": null, "p": 0.504, "src": "model"}, {"id": "2026_07_SF_ATL", "wk": 7, "h": "ATL", "a": "SF", "d": "2026-10-25", "mm": -0.435, "mk": null, "p": 0.4868, "src": "model"}, {"id": "2026_07_CIN_BAL", "wk": 7, "h": "BAL", "a": "CIN", "d": "2026-10-25", "mm": 4.408, "mk": null, "p": 0.631, "src": "model"}, {"id": "2026_07_TB_CAR", "wk": 7, "h": "CAR", "a": "TB", "d": "2026-10-25", "mm": 0.987, "mk": null, "p": 0.5298, "src": "model"}, {"id": "2026_07_NYG_HOU", "wk": 7, "h": "HOU", "a": "NYG", "d": "2026-10-25", "mm": 5.259, "mk": null, "p": 0.655, "src": "model"}, {"id": "2026_07_IND_MIN", "wk": 7, "h": "MIN", "a": "IND", "d": "2026-10-25", "mm": 5.129, "mk": null, "p": 0.6514, "src": "model"}, {"id": "2026_07_MIA_NYJ", "wk": 7, "h": "NYJ", "a": "MIA", "d": "2026-10-25", "mm": -0.153, "mk": null, "p": 0.4954, "src": "model"}, {"id": "2026_07_CLE_TEN", "wk": 7, "h": "TEN", "a": "CLE", "d": "2026-10-25", "mm": 0.424, "mk": null, "p": 0.5128, "src": "model"}, {"id": "2026_07_DEN_ARI", "wk": 7, "h": "ARI", "a": "DEN", "d": "2026-10-25", "mm": -3.65, "mk": null, "p": 0.3909, "src": "model"}, {"id": "2026_07_GB_DET", "wk": 7, "h": "DET", "a": "GB", "d": "2026-10-25", "mm": 4.705, "mk": null, "p": 0.6394, "src": "model"}, {"id": "2026_07_LA_LV", "wk": 7, "h": "LV", "a": "LAR", "d": "2026-10-25", "mm": -4.003, "mk": null, "p": 0.3807, "src": "model"}, {"id": "2026_07_KC_SEA", "wk": 7, "h": "SEA", "a": "KC", "d": "2026-10-25", "mm": 5.757, "mk": null, "p": 0.6688, "src": "model"}, {"id": "2026_07_DAL_PHI", "wk": 7, "h": "PHI", "a": "DAL", "d": "2026-10-26", "mm": 4.1, "mk": null, "p": 0.6221, "src": "model"}, {"id": "2026_08_CAR_GB", "wk": 8, "h": "GB", "a": "CAR", "d": "2026-10-29", "mm": 3.932, "mk": null, "p": 0.6173, "src": "model"}, {"id": "2026_08_BAL_BUF", "wk": 8, "h": "BUF", "a": "BAL", "d": "2026-11-01", "mm": 3.241, "mk": null, "p": 0.5971, "src": "model"}, {"id": "2026_08_TEN_CIN", "wk": 8, "h": "CIN", "a": "TEN", "d": "2026-11-01", "mm": 5.87, "mk": null, "p": 0.672, "src": "model"}, {"id": "2026_08_ARI_DAL", "wk": 8, "h": "DAL", "a": "ARI", "d": "2026-11-01", "mm": 4.878, "mk": null, "p": 0.6443, "src": "model"}, {"id": "2026_08_MIN_DET", "wk": 8, "h": "DET", "a": "MIN", "d": "2026-11-01", "mm": 2.29, "mk": null, "p": 0.5689, "src": "model"}, {"id": "2026_08_IND_JAX", "wk": 8, "h": "JAX", "a": "IND", "d": "2026-11-01", "mm": 4.646, "mk": null, "p": 0.6377, "src": "model"}, {"id": "2026_08_LV_NYJ", "wk": 8, "h": "NYJ", "a": "LV", "d": "2026-11-01", "mm": 0.355, "mk": null, "p": 0.5107, "src": "model"}, {"id": "2026_08_CLE_PIT", "wk": 8, "h": "PIT", "a": "CLE", "d": "2026-11-01", "mm": 4.382, "mk": null, "p": 0.6302, "src": "model"}, {"id": "2026_08_ATL_TB", "wk": 8, "h": "TB", "a": "ATL", "d": "2026-11-01", "mm": 2.183, "mk": null, "p": 0.5658, "src": "model"}, {"id": "2026_08_LAC_LA", "wk": 8, "h": "LAR", "a": "LAC", "d": "2026-11-01", "mm": 6.014, "mk": null, "p": 0.6759, "src": "model"}, {"id": "2026_08_KC_DEN", "wk": 8, "h": "DEN", "a": "KC", "d": "2026-11-01", "mm": 3.341, "mk": null, "p": 0.6001, "src": "model"}, {"id": "2026_08_NE_MIA", "wk": 8, "h": "MIA", "a": "NE", "d": "2026-11-01", "mm": -2.843, "mk": null, "p": 0.4146, "src": "model"}, {"id": "2026_08_PHI_WAS", "wk": 8, "h": "WAS", "a": "PHI", "d": "2026-11-01", "mm": 0.062, "mk": null, "p": 0.5019, "src": "model"}, {"id": "2026_08_CHI_SEA", "wk": 8, "h": "SEA", "a": "CHI", "d": "2026-11-02", "mm": 6.046, "mk": null, "p": 0.6768, "src": "model"}, {"id": "2026_09_JAX_BAL", "wk": 9, "h": "BAL", "a": "JAX", "d": "2026-11-05", "mm": 2.433, "mk": null, "p": 0.5732, "src": "model"}, {"id": "2026_09_CIN_ATL", "wk": 9, "h": "ATL", "a": "CIN", "d": "2026-11-08", "mm": 1.349, "mk": null, "p": 0.5408, "src": "model"}, {"id": "2026_09_DEN_CAR", "wk": 9, "h": "CAR", "a": "DEN", "d": "2026-11-08", "mm": -2.452, "mk": null, "p": 0.4262, "src": "model"}, {"id": "2026_09_DAL_IND", "wk": 9, "h": "IND", "a": "DAL", "d": "2026-11-08", "mm": 1.745, "mk": null, "p": 0.5526, "src": "model"}, {"id": "2026_09_NYJ_KC", "wk": 9, "h": "KC", "a": "NYJ", "d": "2026-11-08", "mm": 8.345, "mk": null, "p": 0.7367, "src": "model"}, {"id": "2026_09_DET_MIA", "wk": 9, "h": "MIA", "a": "DET", "d": "2026-11-08", "mm": -3.004, "mk": null, "p": 0.4099, "src": "model"}, {"id": "2026_09_CLE_NO", "wk": 9, "h": "NO", "a": "CLE", "d": "2026-11-08", "mm": 2.412, "mk": null, "p": 0.5726, "src": "model"}, {"id": "2026_09_NYG_PHI", "wk": 9, "h": "PHI", "a": "NYG", "d": "2026-11-08", "mm": 5.235, "mk": null, "p": 0.6544, "src": "model"}, {"id": "2026_09_LA_WAS", "wk": 9, "h": "WAS", "a": "LAR", "d": "2026-11-08", "mm": -1.287, "mk": null, "p": 0.4611, "src": "model"}, {"id": "2026_09_HOU_LAC", "wk": 9, "h": "LAC", "a": "HOU", "d": "2026-11-08", "mm": -0.484, "mk": null, "p": 0.4854, "src": "model"}, {"id": "2026_09_LV_SF", "wk": 9, "h": "SF", "a": "LV", "d": "2026-11-08", "mm": 6.855, "mk": null, "p": 0.6985, "src": "model"}, {"id": "2026_09_GB_NE", "wk": 9, "h": "NE", "a": "GB", "d": "2026-11-08", "mm": 4.544, "mk": null, "p": 0.6348, "src": "model"}, {"id": "2026_09_ARI_SEA", "wk": 9, "h": "SEA", "a": "ARI", "d": "2026-11-08", "mm": 10.27, "mk": null, "p": 0.782, "src": "model"}, {"id": "2026_09_TB_CHI", "wk": 9, "h": "CHI", "a": "TB", "d": "2026-11-08", "mm": 4.012, "mk": null, "p": 0.6196, "src": "model"}, {"id": "2026_09_BUF_MIN", "wk": 9, "h": "MIN", "a": "BUF", "d": "2026-11-09", "mm": 1.115, "mk": null, "p": 0.5337, "src": "model"}, {"id": "2026_10_WAS_NYG", "wk": 10, "h": "NYG", "a": "WAS", "d": "2026-11-12", "mm": 1.009, "mk": null, "p": 0.5305, "src": "model"}, {"id": "2026_10_NE_DET", "wk": 10, "h": "DET", "a": "NE", "d": "2026-11-15", "mm": 2.264, "mk": null, "p": 0.5682, "src": "model"}, {"id": "2026_10_KC_ATL", "wk": 10, "h": "ATL", "a": "KC", "d": "2026-11-15", "mm": -0.178, "mk": null, "p": 0.4946, "src": "model"}, {"id": "2026_10_HOU_CLE", "wk": 10, "h": "CLE", "a": "HOU", "d": "2026-11-15", "mm": -1.799, "mk": null, "p": 0.4457, "src": "model"}, {"id": "2026_10_MIN_GB", "wk": 10, "h": "GB", "a": "MIN", "d": "2026-11-15", "mm": -0.314, "mk": null, "p": 0.4905, "src": "model"}, {"id": "2026_10_MIA_IND", "wk": 10, "h": "IND", "a": "MIA", "d": "2026-11-15", "mm": 3.995, "mk": null, "p": 0.6191, "src": "model"}, {"id": "2026_10_CAR_NO", "wk": 10, "h": "NO", "a": "CAR", "d": "2026-11-15", "mm": 2.109, "mk": null, "p": 0.5636, "src": "model"}, {"id": "2026_10_BUF_NYJ", "wk": 10, "h": "NYJ", "a": "BUF", "d": "2026-11-15", "mm": -6.059, "mk": null, "p": 0.3229, "src": "model"}, {"id": "2026_10_JAX_TEN", "wk": 10, "h": "TEN", "a": "JAX", "d": "2026-11-15", "mm": -3.641, "mk": null, "p": 0.3912, "src": "model"}, {"id": "2026_10_LA_ARI", "wk": 10, "h": "ARI", "a": "LAR", "d": "2026-11-15", "mm": -4.021, "mk": null, "p": 0.3802, "src": "model"}, {"id": "2026_10_SEA_LV", "wk": 10, "h": "LV", "a": "SEA", "d": "2026-11-15", "mm": -6.048, "mk": null, "p": 0.3232, "src": "model"}, {"id": "2026_10_SF_DAL", "wk": 10, "h": "DAL", "a": "SF", "d": "2026-11-15", "mm": 0.107, "mk": null, "p": 0.5032, "src": "model"}, {"id": "2026_10_PIT_CIN", "wk": 10, "h": "CIN", "a": "PIT", "d": "2026-11-15", "mm": 1.913, "mk": null, "p": 0.5577, "src": "model"}, {"id": "2026_10_LAC_BAL", "wk": 10, "h": "BAL", "a": "LAC", "d": "2026-11-16", "mm": 5.183, "mk": null, "p": 0.6529, "src": "model"}, {"id": "2026_11_IND_HOU", "wk": 11, "h": "HOU", "a": "IND", "d": "2026-11-19", "mm": 4.481, "mk": null, "p": 0.6331, "src": "model"}, {"id": "2026_11_MIA_BUF", "wk": 11, "h": "BUF", "a": "MIA", "d": "2026-11-22", "mm": 8.008, "mk": null, "p": 0.7283, "src": "model"}, {"id": "2026_11_BAL_CAR", "wk": 11, "h": "CAR", "a": "BAL", "d": "2026-11-22", "mm": -1.992, "mk": null, "p": 0.44, "src": "model"}, {"id": "2026_11_NO_CHI", "wk": 11, "h": "CHI", "a": "NO", "d": "2026-11-22", "mm": 5.121, "mk": null, "p": 0.6512, "src": "model"}, {"id": "2026_11_TEN_DAL", "wk": 11, "h": "DAL", "a": "TEN", "d": "2026-11-22", "mm": 5.66, "mk": null, "p": 0.6662, "src": "model"}, {"id": "2026_11_TB_DET", "wk": 11, "h": "DET", "a": "TB", "d": "2026-11-22", "mm": 5.42, "mk": null, "p": 0.6595, "src": "model"}, {"id": "2026_11_ARI_KC", "wk": 11, "h": "KC", "a": "ARI", "d": "2026-11-22", "mm": 6.615, "mk": null, "p": 0.6921, "src": "model"}, {"id": "2026_11_JAX_NYG", "wk": 11, "h": "NYG", "a": "JAX", "d": "2026-11-22", "mm": -1.219, "mk": null, "p": 0.4632, "src": "model"}, {"id": "2026_11_NYJ_LAC", "wk": 11, "h": "LAC", "a": "NYJ", "d": "2026-11-22", "mm": 6.043, "mk": null, "p": 0.6767, "src": "model"}, {"id": "2026_11_LV_DEN", "wk": 11, "h": "DEN", "a": "LV", "d": "2026-11-22", "mm": 7.837, "mk": null, "p": 0.7239, "src": "model"}, {"id": "2026_11_PIT_PHI", "wk": 11, "h": "PHI", "a": "PIT", "d": "2026-11-22", "mm": 3.7, "mk": null, "p": 0.6105, "src": "model"}, {"id": "2026_11_MIN_SF", "wk": 11, "h": "SF", "a": "MIN", "d": "2026-11-22", "mm": 1.428, "mk": null, "p": 0.5431, "src": "model"}, {"id": "2026_11_CIN_WAS", "wk": 11, "h": "WAS", "a": "CIN", "d": "2026-11-23", "mm": 1.85, "mk": null, "p": 0.5558, "src": "model"}, {"id": "2026_12_GB_LA", "wk": 12, "h": "LAR", "a": "GB", "d": "2026-11-25", "mm": 5.196, "mk": null, "p": 0.6533, "src": "model"}, {"id": "2026_12_CHI_DET", "wk": 12, "h": "DET", "a": "CHI", "d": "2026-11-26", "mm": 3.51, "mk": null, "p": 0.605, "src": "model"}, {"id": "2026_12_PHI_DAL", "wk": 12, "h": "DAL", "a": "PHI", "d": "2026-11-26", "mm": 0.104, "mk": null, "p": 0.5032, "src": "model"}, {"id": "2026_12_KC_BUF", "wk": 12, "h": "BUF", "a": "KC", "d": "2026-11-26", "mm": 4.02, "mk": null, "p": 0.6198, "src": "model"}, {"id": "2026_12_DEN_PIT", "wk": 12, "h": "PIT", "a": "DEN", "d": "2026-11-27", "mm": -0.475, "mk": null, "p": 0.4856, "src": "model"}, {"id": "2026_12_NO_CIN", "wk": 12, "h": "CIN", "a": "NO", "d": "2026-11-29", "mm": 3.883, "mk": null, "p": 0.6158, "src": "model"}, {"id": "2026_12_LV_CLE", "wk": 12, "h": "CLE", "a": "LV", "d": "2026-11-29", "mm": 2.98, "mk": null, "p": 0.5894, "src": "model"}, {"id": "2026_12_BAL_HOU", "wk": 12, "h": "HOU", "a": "BAL", "d": "2026-11-29", "mm": 1.607, "mk": null, "p": 0.5485, "src": "model"}, {"id": "2026_12_NYG_IND", "wk": 12, "h": "IND", "a": "NYG", "d": "2026-11-29", "mm": 2.88, "mk": null, "p": 0.5865, "src": "model"}, {"id": "2026_12_NYJ_MIA", "wk": 12, "h": "MIA", "a": "NYJ", "d": "2026-11-29", "mm": 4.357, "mk": null, "p": 0.6295, "src": "model"}, {"id": "2026_12_ATL_MIN", "wk": 12, "h": "MIN", "a": "ATL", "d": "2026-11-29", "mm": 5.314, "mk": null, "p": 0.6566, "src": "model"}, {"id": "2026_12_TEN_JAX", "wk": 12, "h": "JAX", "a": "TEN", "d": "2026-11-29", "mm": 7.845, "mk": null, "p": 0.7241, "src": "model"}, {"id": "2026_12_WAS_ARI", "wk": 12, "h": "ARI", "a": "WAS", "d": "2026-11-29", "mm": -0.631, "mk": null, "p": 0.4809, "src": "model"}, {"id": "2026_12_SEA_SF", "wk": 12, "h": "SF", "a": "SEA", "d": "2026-11-29", "mm": -1.295, "mk": null, "p": 0.4609, "src": "model"}, {"id": "2026_12_NE_LAC", "wk": 12, "h": "LAC", "a": "NE", "d": "2026-11-29", "mm": -1.157, "mk": null, "p": 0.465, "src": "model"}, {"id": "2026_12_CAR_TB", "wk": 12, "h": "TB", "a": "CAR", "d": "2026-11-30", "mm": 3.218, "mk": null, "p": 0.5964, "src": "model"}, {"id": "2026_13_KC_LA", "wk": 13, "h": "LAR", "a": "KC", "d": "2026-12-03", "mm": 3.712, "mk": null, "p": 0.6109, "src": "model"}, {"id": "2026_13_DET_ATL", "wk": 13, "h": "ATL", "a": "DET", "d": "2026-12-06", "mm": -1.297, "mk": null, "p": 0.4608, "src": "model"}, {"id": "2026_13_JAX_CHI", "wk": 13, "h": "CHI", "a": "JAX", "d": "2026-12-06", "mm": 1.365, "mk": null, "p": 0.5412, "src": "model"}, {"id": "2026_13_CIN_CLE", "wk": 13, "h": "CLE", "a": "CIN", "d": "2026-12-06", "mm": 0.012, "mk": null, "p": 0.5004, "src": "model"}, {"id": "2026_13_GB_NO", "wk": 13, "h": "NO", "a": "GB", "d": "2026-12-06", "mm": 0.279, "mk": null, "p": 0.5084, "src": "model"}, {"id": "2026_13_SF_NYG", "wk": 13, "h": "NYG", "a": "SF", "d": "2026-12-06", "mm": -1.028, "mk": null, "p": 0.4689, "src": "model"}, {"id": "2026_13_LAC_TB", "wk": 13, "h": "TB", "a": "LAC", "d": "2026-12-06", "mm": 2.205, "mk": null, "p": 0.5664, "src": "model"}, {"id": "2026_13_WAS_TEN", "wk": 13, "h": "TEN", "a": "WAS", "d": "2026-12-06", "mm": -1.413, "mk": null, "p": 0.4573, "src": "model"}, {"id": "2026_13_PHI_ARI", "wk": 13, "h": "ARI", "a": "PHI", "d": "2026-12-06", "mm": -2.671, "mk": null, "p": 0.4197, "src": "model"}, {"id": "2026_13_MIA_DEN", "wk": 13, "h": "DEN", "a": "MIA", "d": "2026-12-06", "mm": 7.33, "mk": null, "p": 0.7109, "src": "model"}, {"id": "2026_13_CAR_MIN", "wk": 13, "h": "MIN", "a": "CAR", "d": "2026-12-06", "mm": 6.348, "mk": null, "p": 0.6849, "src": "model"}, {"id": "2026_13_BUF_NE", "wk": 13, "h": "NE", "a": "BUF", "d": "2026-12-06", "mm": 1.141, "mk": null, "p": 0.5345, "src": "model"}, {"id": "2026_13_HOU_PIT", "wk": 13, "h": "PIT", "a": "HOU", "d": "2026-12-06", "mm": 0.48, "mk": null, "p": 0.5145, "src": "model"}, {"id": "2026_13_DAL_SEA", "wk": 13, "h": "SEA", "a": "DAL", "d": "2026-12-07", "mm": 7.495, "mk": null, "p": 0.7152, "src": "model"}, {"id": "2026_14_MIN_NE", "wk": 14, "h": "NE", "a": "MIN", "d": "2026-12-10", "mm": 2.128, "mk": null, "p": 0.5641, "src": "model"}, {"id": "2026_14_TB_BAL", "wk": 14, "h": "BAL", "a": "TB", "d": "2026-12-13", "mm": 5.08, "mk": null, "p": 0.65, "src": "model"}, {"id": "2026_14_NO_CAR", "wk": 14, "h": "CAR", "a": "NO", "d": "2026-12-13", "mm": 2.096, "mk": null, "p": 0.5632, "src": "model"}, {"id": "2026_14_ATL_CLE", "wk": 14, "h": "CLE", "a": "ATL", "d": "2026-12-13", "mm": 0.765, "mk": null, "p": 0.5231, "src": "model"}, {"id": "2026_14_TEN_DET", "wk": 14, "h": "DET", "a": "TEN", "d": "2026-12-13", "mm": 8.516, "mk": null, "p": 0.7409, "src": "model"}, {"id": "2026_14_CHI_MIA", "wk": 14, "h": "MIA", "a": "CHI", "d": "2026-12-13", "mm": -1.597, "mk": null, "p": 0.4518, "src": "model"}, {"id": "2026_14_DEN_NYJ", "wk": 14, "h": "NYJ", "a": "DEN", "d": "2026-12-13", "mm": -5.38, "mk": null, "p": 0.3416, "src": "model"}, {"id": "2026_14_IND_PHI", "wk": 14, "h": "PHI", "a": "IND", "d": "2026-12-13", "mm": 4.458, "mk": null, "p": 0.6324, "src": "model"}, {"id": "2026_14_HOU_WAS", "wk": 14, "h": "WAS", "a": "HOU", "d": "2026-12-13", "mm": 0.039, "mk": null, "p": 0.5012, "src": "model"}, {"id": "2026_14_LAC_LV", "wk": 14, "h": "LV", "a": "LAC", "d": "2026-12-13", "mm": -0.091, "mk": null, "p": 0.4972, "src": "model"}, {"id": "2026_14_KC_CIN", "wk": 14, "h": "CIN", "a": "KC", "d": "2026-12-13", "mm": 0.575, "mk": null, "p": 0.5174, "src": "model"}, {"id": "2026_14_NYG_SEA", "wk": 14, "h": "SEA", "a": "NYG", "d": "2026-12-13", "mm": 8.63, "mk": null, "p": 0.7437, "src": "model"}, {"id": "2026_14_LA_SF", "wk": 14, "h": "SF", "a": "LAR", "d": "2026-12-13", "mm": 0.75, "mk": null, "p": 0.5227, "src": "model"}, {"id": "2026_14_BUF_GB", "wk": 14, "h": "GB", "a": "BUF", "d": "2026-12-13", "mm": -1.3, "mk": null, "p": 0.4607, "src": "model"}, {"id": "2026_14_PIT_JAX", "wk": 14, "h": "JAX", "a": "PIT", "d": "2026-12-14", "mm": 3.888, "mk": null, "p": 0.616, "src": "model"}, {"id": "2026_15_SF_LAC", "wk": 15, "h": "LAC", "a": "SF", "d": "2026-12-17", "mm": -0.457, "mk": null, "p": 0.4862, "src": "model"}, {"id": "2026_15_SEA_PHI", "wk": 15, "h": "PHI", "a": "SEA", "d": "2026-12-19", "mm": -1.292, "mk": null, "p": 0.4609, "src": "model"}, {"id": "2026_15_CHI_BUF", "wk": 15, "h": "BUF", "a": "CHI", "d": "2026-12-19", "mm": 4.31, "mk": null, "p": 0.6281, "src": "model"}, {"id": "2026_15_CIN_CAR", "wk": 15, "h": "CAR", "a": "CIN", "d": "2026-12-20", "mm": 0.315, "mk": null, "p": 0.5095, "src": "model"}, {"id": "2026_15_MIA_GB", "wk": 15, "h": "GB", "a": "MIA", "d": "2026-12-20", "mm": 4.606, "mk": null, "p": 0.6366, "src": "model"}, {"id": "2026_15_JAX_HOU", "wk": 15, "h": "HOU", "a": "JAX", "d": "2026-12-20", "mm": 1.938, "mk": null, "p": 0.5584, "src": "model"}, {"id": "2026_15_CLE_NYG", "wk": 15, "h": "NYG", "a": "CLE", "d": "2026-12-20", "mm": 2.847, "mk": null, "p": 0.5855, "src": "model"}, {"id": "2026_15_BAL_PIT", "wk": 15, "h": "PIT", "a": "BAL", "d": "2026-12-20", "mm": -0.015, "mk": null, "p": 0.4995, "src": "model"}, {"id": "2026_15_NO_TB", "wk": 15, "h": "TB", "a": "NO", "d": "2026-12-20", "mm": 3.211, "mk": null, "p": 0.5962, "src": "model"}, {"id": "2026_15_IND_TEN", "wk": 15, "h": "TEN", "a": "IND", "d": "2026-12-20", "mm": -1.098, "mk": null, "p": 0.4668, "src": "model"}, {"id": "2026_15_ATL_WAS", "wk": 15, "h": "WAS", "a": "ATL", "d": "2026-12-20", "mm": 2.603, "mk": null, "p": 0.5783, "src": "model"}, {"id": "2026_15_NYJ_ARI", "wk": 15, "h": "ARI", "a": "NYJ", "d": "2026-12-20", "mm": 3.832, "mk": null, "p": 0.6144, "src": "model"}, {"id": "2026_15_DAL_LA", "wk": 15, "h": "LAR", "a": "DAL", "d": "2026-12-20", "mm": 5.449, "mk": null, "p": 0.6603, "src": "model"}, {"id": "2026_15_DEN_LV", "wk": 15, "h": "LV", "a": "DEN", "d": "2026-12-20", "mm": -3.633, "mk": null, "p": 0.3914, "src": "model"}, {"id": "2026_15_DET_MIN", "wk": 15, "h": "MIN", "a": "DET", "d": "2026-12-20", "mm": 1.915, "mk": null, "p": 0.5577, "src": "model"}, {"id": "2026_15_NE_KC", "wk": 15, "h": "KC", "a": "NE", "d": "2026-12-21", "mm": 1.145, "mk": null, "p": 0.5346, "src": "model"}, {"id": "2026_16_HOU_PHI", "wk": 16, "h": "PHI", "a": "HOU", "d": "2026-12-24", "mm": 2.079, "mk": null, "p": 0.5626, "src": "model"}, {"id": "2026_16_GB_CHI", "wk": 16, "h": "CHI", "a": "GB", "d": "2026-12-25", "mm": 3.297, "mk": null, "p": 0.5988, "src": "model"}, {"id": "2026_16_BUF_DEN", "wk": 16, "h": "DEN", "a": "BUF", "d": "2026-12-25", "mm": 1.423, "mk": null, "p": 0.543, "src": "model"}, {"id": "2026_16_LA_SEA", "wk": 16, "h": "SEA", "a": "LAR", "d": "2026-12-25", "mm": 4.147, "mk": null, "p": 0.6235, "src": "model"}, {"id": "2026_16_TB_ATL", "wk": 16, "h": "ATL", "a": "TB", "d": "2026-12-27", "mm": 2.021, "mk": null, "p": 0.5609, "src": "model"}, {"id": "2026_16_CLE_BAL", "wk": 16, "h": "BAL", "a": "CLE", "d": "2026-12-27", "mm": 6.499, "mk": null, "p": 0.689, "src": "model"}, {"id": "2026_16_CIN_IND", "wk": 16, "h": "IND", "a": "CIN", "d": "2026-12-27", "mm": 1.534, "mk": null, "p": 0.5463, "src": "model"}, {"id": "2026_16_LAC_MIA", "wk": 16, "h": "MIA", "a": "LAC", "d": "2026-12-27", "mm": 0.416, "mk": null, "p": 0.5126, "src": "model"}, {"id": "2026_16_WAS_MIN", "wk": 16, "h": "MIN", "a": "WAS", "d": "2026-12-27", "mm": 4.813, "mk": null, "p": 0.6425, "src": "model"}, {"id": "2026_16_ARI_NO", "wk": 16, "h": "NO", "a": "ARI", "d": "2026-12-27", "mm": 3.307, "mk": null, "p": 0.5991, "src": "model"}, {"id": "2026_16_NE_NYJ", "wk": 16, "h": "NYJ", "a": "NE", "d": "2026-12-27", "mm": -5.098, "mk": null, "p": 0.3495, "src": "model"}, {"id": "2026_16_CAR_PIT", "wk": 16, "h": "PIT", "a": "CAR", "d": "2026-12-27", "mm": 4.079, "mk": null, "p": 0.6215, "src": "model"}, {"id": "2026_16_TEN_LV", "wk": 16, "h": "LV", "a": "TEN", "d": "2026-12-27", "mm": 2.902, "mk": null, "p": 0.5871, "src": "model"}, {"id": "2026_16_SF_KC", "wk": 16, "h": "KC", "a": "SF", "d": "2026-12-27", "mm": 1.845, "mk": null, "p": 0.5557, "src": "model"}, {"id": "2026_16_JAX_DAL", "wk": 16, "h": "DAL", "a": "JAX", "d": "2026-12-27", "mm": -0.084, "mk": null, "p": 0.4975, "src": "model"}, {"id": "2026_16_NYG_DET", "wk": 16, "h": "DET", "a": "NYG", "d": "2026-12-28", "mm": 6.094, "mk": null, "p": 0.6781, "src": "model"}, {"id": "2026_17_BAL_CIN", "wk": 17, "h": "CIN", "a": "BAL", "d": "2026-12-31", "mm": -0.204, "mk": null, "p": 0.4938, "src": "model"}, {"id": "2026_17_NO_ATL", "wk": 17, "h": "ATL", "a": "NO", "d": "2027-01-03", "mm": 3.13, "mk": null, "p": 0.5938, "src": "model"}, {"id": "2026_17_SEA_CAR", "wk": 17, "h": "CAR", "a": "SEA", "d": "2027-01-03", "mm": -4.867, "mk": null, "p": 0.356, "src": "model"}, {"id": "2026_17_IND_CLE", "wk": 17, "h": "CLE", "a": "IND", "d": "2027-01-03", "mm": 0.58, "mk": null, "p": 0.5175, "src": "model"}, {"id": "2026_17_NYG_DAL", "wk": 17, "h": "DAL", "a": "NYG", "d": "2027-01-03", "mm": 3.237, "mk": null, "p": 0.597, "src": "model"}, {"id": "2026_17_WAS_JAX", "wk": 17, "h": "JAX", "a": "WAS", "d": "2027-01-03", "mm": 4.33, "mk": null, "p": 0.6287, "src": "model"}, {"id": "2026_17_KC_LAC", "wk": 17, "h": "LAC", "a": "KC", "d": "2027-01-03", "mm": -0.2, "mk": null, "p": 0.4939, "src": "model"}, {"id": "2026_17_BUF_MIA", "wk": 17, "h": "MIA", "a": "BUF", "d": "2027-01-03", "mm": -3.804, "mk": null, "p": 0.3865, "src": "model"}, {"id": "2026_17_DEN_NE", "wk": 17, "h": "NE", "a": "DEN", "d": "2027-01-03", "mm": 1.82, "mk": null, "p": 0.5549, "src": "model"}, {"id": "2026_17_MIN_NYJ", "wk": 17, "h": "NYJ", "a": "MIN", "d": "2027-01-03", "mm": -5.072, "mk": null, "p": 0.3502, "src": "model"}, {"id": "2026_17_LA_TB", "wk": 17, "h": "TB", "a": "LAR", "d": "2027-01-03", "mm": -1.707, "mk": null, "p": 0.4485, "src": "model"}, {"id": "2026_17_PIT_TEN", "wk": 17, "h": "TEN", "a": "PIT", "d": "2027-01-03", "mm": -1.855, "mk": null, "p": 0.444, "src": "model"}, {"id": "2026_17_LV_ARI", "wk": 17, "h": "ARI", "a": "LV", "d": "2027-01-03", "mm": 2.084, "mk": null, "p": 0.5628, "src": "model"}, {"id": "2026_17_DET_CHI", "wk": 17, "h": "CHI", "a": "DET", "d": "2027-01-03", "mm": 0.694, "mk": null, "p": 0.521, "src": "model"}, {"id": "2026_17_PHI_SF", "wk": 17, "h": "SF", "a": "PHI", "d": "2027-01-03", "mm": 2.099, "mk": null, "p": 0.5633, "src": "model"}, {"id": "2026_17_HOU_GB", "wk": 17, "h": "GB", "a": "HOU", "d": "2027-01-04", "mm": 0.334, "mk": null, "p": 0.5101, "src": "model"}, {"id": "2026_18_SF_ARI", "wk": 18, "h": "ARI", "a": "SF", "d": "2027-01-10", "mm": -2.668, "mk": null, "p": 0.4198, "src": "model"}, {"id": "2026_18_PIT_BAL", "wk": 18, "h": "BAL", "a": "PIT", "d": "2027-01-10", "mm": 4.219, "mk": null, "p": 0.6256, "src": "model"}, {"id": "2026_18_NYJ_BUF", "wk": 18, "h": "BUF", "a": "NYJ", "d": "2027-01-10", "mm": 10.263, "mk": null, "p": 0.7819, "src": "model"}, {"id": "2026_18_ATL_CAR", "wk": 18, "h": "CAR", "a": "ATL", "d": "2027-01-10", "mm": 1.068, "mk": null, "p": 0.5323, "src": "model"}, {"id": "2026_18_CLE_CIN", "wk": 18, "h": "CIN", "a": "CLE", "d": "2027-01-10", "mm": 4.192, "mk": null, "p": 0.6248, "src": "model"}, {"id": "2026_18_LAC_DEN", "wk": 18, "h": "DEN", "a": "LAC", "d": "2027-01-10", "mm": 5.644, "mk": null, "p": 0.6657, "src": "model"}, {"id": "2026_18_DET_GB", "wk": 18, "h": "GB", "a": "DET", "d": "2027-01-10", "mm": -0.501, "mk": null, "p": 0.4848, "src": "model"}, {"id": "2026_18_TEN_HOU", "wk": 18, "h": "HOU", "a": "TEN", "d": "2027-01-10", "mm": 7.681, "mk": null, "p": 0.72, "src": "model"}, {"id": "2026_18_JAX_IND", "wk": 18, "h": "IND", "a": "JAX", "d": "2027-01-10", "mm": -0.441, "mk": null, "p": 0.4866, "src": "model"}, {"id": "2026_18_LV_KC", "wk": 18, "h": "KC", "a": "LV", "d": "2027-01-10", "mm": 6.598, "mk": null, "p": 0.6916, "src": "model"}, {"id": "2026_18_SEA_LA", "wk": 18, "h": "LAR", "a": "SEA", "d": "2027-01-10", "mm": 0.057, "mk": null, "p": 0.5017, "src": "model"}, {"id": "2026_18_CHI_MIN", "wk": 18, "h": "MIN", "a": "CHI", "d": "2027-01-10", "mm": 3.323, "mk": null, "p": 0.5995, "src": "model"}, {"id": "2026_18_MIA_NE", "wk": 18, "h": "NE", "a": "MIA", "d": "2027-01-10", "mm": 7.047, "mk": null, "p": 0.7035, "src": "model"}, {"id": "2026_18_TB_NO", "wk": 18, "h": "NO", "a": "TB", "d": "2027-01-10", "mm": 0.993, "mk": null, "p": 0.53, "src": "model"}, {"id": "2026_18_PHI_NYG", "wk": 18, "h": "NYG", "a": "PHI", "d": "2027-01-10", "mm": -1.031, "mk": null, "p": 0.4688, "src": "model"}, {"id": "2026_18_DAL_WAS", "wk": 18, "h": "WAS", "a": "DAL", "d": "2027-01-10", "mm": 2.06, "mk": null, "p": 0.5621, "src": "model"}]};</script>

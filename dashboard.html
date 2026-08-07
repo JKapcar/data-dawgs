@@ -151,6 +151,77 @@ body{margin:0;background:var(--page);color:var(--ink-1);
 .grpmenu a.sep:hover{color:var(--accent)!important}
 .theme-btn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--ink-2);padding:4px 10px;cursor:pointer;font-size:12.5px}
 .sitenav .links .theme-btn{margin-left:10px}
+/* ---- 🙃 The Upside Down: the machine-readable mirror, made visible ----
+   Sits NEXT TO the theme pill but is deliberately not part of it: dashed border, no
+   word label. The everyday light/dark toggle stays binary — this is a third door, not
+   a third state. See the .livebtn note above for why every selector here is scoped
+   `.sitenav .links`: a bare `.udbtn` loses to `.sitenav .links a` on anything it
+   shares, and would silently flatten the day the button becomes an <a>. */
+.udbtn{background:none;border:1px dashed var(--border);border-radius:8px;color:var(--ink-2);
+  padding:4px 9px;cursor:pointer;font-size:13px;line-height:1.55;font-family:inherit;
+  display:block}
+.sitenav .links .udbtn{margin-left:8px;flex:0 0 auto}
+.udbtn:hover{border-color:var(--accent);color:var(--accent)}
+:root[data-theme="light"] .udbtn{border-color:rgba(236,223,201,0.40);color:var(--navink2)}
+:root[data-theme="light"] .udbtn:hover{border-color:#ff8a4d;color:#ff8a4d}
+
+/* ---- the overlay itself ----
+   ALWAYS dark, whatever the page is set to — the Upside Down is one fixed place, and
+   a light-mode version of it would be a fourth theme nobody asked for. Colours are
+   therefore hard-coded to the dark tokens, NOT var(--page)/var(--ink-*), which would
+   flip to cream under :root[data-theme="light"]. Do not "tidy" them into variables. */
+.ud-ov{position:fixed;inset:0;z-index:9000;display:none;background:#0a0806;color:#c8c1b4;
+  overflow:auto;overscroll-behavior:contain;
+  font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.ud-ov.on{display:block}
+.ud-cv{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;opacity:.55}
+.ud-in{position:relative;max-width:1040px;margin:0 auto;padding:18px 20px 70px}
+.ud-hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  border-bottom:1px solid #2b251d;padding-bottom:12px;margin-bottom:14px}
+.ud-ttl{font-size:15px;font-weight:800;color:#f5f1ea;letter-spacing:.02em;
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.ud-ttl b{color:#ff6a02}
+.ud-path{color:#8f897d;font-size:11.5px;word-break:break-all}
+.ud-path a{color:#ff6a02}
+.ud-x{margin-left:auto;background:none;border:1px solid rgba(255,255,255,.18);
+  border-radius:8px;color:#c8c1b4;padding:5px 11px;cursor:pointer;font:inherit;flex:0 0 auto}
+.ud-x:hover{border-color:#ff6a02;color:#ff6a02}
+.ud-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.ud-chip{border:1px solid #2b251d;background:#16120d;border-radius:999px;
+  padding:4px 12px;font-size:11.5px;color:#c8c1b4;max-width:100%;overflow-wrap:anywhere}
+.ud-chip b{color:#ff6a02;font-weight:800;text-transform:uppercase;letter-spacing:.07em;
+  font-size:9.5px;margin-right:7px}
+.ud-chip.dawg{border-color:#2fbf3f}
+.ud-chip.dawg b{color:#2fbf3f}
+.ud-note{background:#16120d;border:1px solid #2b251d;border-left:2px solid #ff6a02;
+  border-radius:0 8px 8px 0;padding:10px 13px;margin:0 0 12px;color:#c8c1b4;
+  font:13px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+.ud-note b{color:#f5f1ea}
+/* ⚠️ inline-block + anywhere, not a plain inline run with margin-right: at 360px the
+   third path ran straight off the right edge of the overlay. Caught by looking, not by
+   a bounds check — the overlay scrolls, so nothing reported an overflow. */
+.ud-also{margin:0 0 12px;color:#8f897d;font-size:11.5px;overflow-wrap:anywhere}
+.ud-also a{color:#ff6a02;display:inline-block;margin:0 12px 4px 0}
+.ud-body{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;
+  background:#16120d;border:1px solid #2b251d;border-radius:10px;padding:14px 16px;
+  color:#c8c1b4;font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.ud-k{color:#8f897d}
+.ud-s{color:#ffab6b}
+.ud-n{color:#2fbf3f}
+.ud-w{color:#ff6b6b}
+.ud-foot{margin:14px 0 0;color:#8f897d;font-size:11.5px;
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+@media(max-width:760px){
+  .ud-in{padding:14px 13px 60px}
+  .ud-body{font-size:11.5px;padding:11px 12px}
+}
+
+/* Copy A — index.html only. A footnote to the manifesto, not a line of it: the
+   manifesto still ends on the Cleveland kicker and this sits after that block closes. */
+.udnote{margin:22px 0 0;padding:12px 16px;border:1px dashed var(--border);border-radius:10px;
+  color:var(--ink-2);font-size:13.5px;line-height:1.55;
+  background:color-mix(in srgb, var(--accent) 5%, transparent)}
+.udmach{white-space:nowrap}
 .navbrk{display:none}
 /* A few nav items ship BOTH a full label and a phone label; exactly one is ever shown.
    Desktop gets the full one. The phone rule below flips them.
@@ -180,6 +251,10 @@ body{margin:0;background:var(--page);color:var(--ink-1);
   .sitenav .links .caret{display:none}
   .sitenav .links .theme-btn{margin-left:4px;padding:4px 6px;font-size:12px;flex:0 0 auto}
   .theme-btn .tword{display:none}
+  /* ⚠️ Measured at 360px the one-row nav had ~28px of slack (see the 419px note below).
+     🙃 spends most of it, so it runs tighter than the theme pill: icon only, no word,
+     minimum padding. If a nav item is ever added back, re-measure here first. */
+  .sitenav .links .udbtn{margin-left:3px;padding:3px 5px;font-size:12px}
   .nlg{display:none} .nsm{display:inline}
 }
 /* ⚠️ Second breakpoint, and it is not cosmetic. Measured at 360px: the brand (105px)
@@ -194,6 +269,15 @@ body{margin:0;background:var(--page);color:var(--ink-1);
    and comes back. */
 @media(max-width:419px){
   .sitenav .brand .logo{display:none}
+  /* ⚠️ 🙃 joins a row that was already at its limit. Measured at 320px BEFORE this
+     tightening: the links run needed 243.4px inside a 244.0px box — 0.6px of margin,
+     which is not margin. Two pixels off each link's horizontal padding buys 12px back.
+     At 360px (the width the one-row layout was designed against) there is 40px spare,
+     and the tightest point on the whole curve is 420px — the last width that still
+     shows the wordmark — where 11px separates the wordmark from the first nav item.
+     Re-measure all three if anything is ever added to this row again. */
+  .sitenav .links a,.sitenav .links .grpbtn{padding:4px 2px}
+  .sitenav .links .udbtn{margin-left:1px;padding:3px 4px;font-size:11.5px}
 
   /* ⚠️ The old two-row phone rules were DELETED here, not commented out. They sat AFTER
      these, at the same specificity, and quietly won the cascade — the one-row layout
@@ -794,6 +878,287 @@ select.dbpresent[hidden]{display:none}
   btn.setAttribute("data-ddtheme-btn","");
   btn.addEventListener("click", ()=>window.DDTheme.toggle());
   links.appendChild(btn);   // in .links, not nav: one flex run, so it wraps with the rest on mobile
+
+  /* ---------- 🙃 The Upside Down — this page's machine-readable mirror ----------
+     An OVERLAY, not a third theme. It writes NOTHING: dd-theme2-* is untouched, there
+     is no dd-upsidedown key, and it closes on a second tap or Esc. Nobody wants to
+     reload into JSON tomorrow morning, so it deliberately cannot persist.
+     Always dark regardless of the page's own theme — the Upside Down is one fixed
+     place. Exiting restores whatever the user actually had, because we never changed
+     documentElement.dataset.theme in the first place.
+     ⚠️ The content is FETCHED from the served file, never inlined. The joke only lands
+     because it is the genuine article; an inlined copy would drift the first time a
+     /data/ file was rebuilt and the mirror would quietly start lying. */
+  const UD = {
+    /* page → mirror. One object, so a new /data/ file is a one-line edit here and not
+       a sitewide pass. Keys are the page's filename stem (location.pathname), NOT the
+       nav `page` key — board.html sets DD_PAGE="live", which would miss.
+       Verified against /data/surfaces.json on 8/7/26: every url below is status:live.
+       Anything not listed falls through to llms.txt, which is the correct answer for
+       dfs and guillotine — surfaces.json records those as having no machine surface. */
+    map:{
+      "":"/llms.txt", "index":"/llms.txt",
+      "board":"/data/pool.json", "master":"/data/pool.json",
+      "bigboard":"/data/pool.json", "auction":"/data/pool.json",
+      "report":"/data/pool.json",
+      "dashboard":"/data/league.json",
+      "receipts":"/data/receipts.json",
+      "stats":"/data/epa-teams.json",
+      "nfelo":"/data/nfelo.json",
+      "survivor":"/data/survivor.json",
+      "bozo":"/data/bozo-rules.json",
+      "strategy":"/data/strategy.md"
+    },
+    /* secondary live mirrors — linked, not rendered, so the primary view stays one file */
+    also:{
+      "receipts":["/data/receipts-method.md","/data/tier-audit.json"],
+      "nfelo":["/data/models.json"],
+      "bozo":["/data/bozo-rules.md"],
+      "survivor":["/data/models.json"],
+      "index":["/data/index.json","/data/method.md","/data/surfaces.json"],
+      "":["/data/index.json","/data/method.md","/data/surfaces.json"]
+    },
+    stem(){
+      const f = (location.pathname.split("/").pop()||"").replace(/\.html?$/,"");
+      return f;
+    },
+    url(){ const s=this.stem(); return this.map[s] || "/llms.txt"; },
+    ov:null, cv:null, raf:0, loaded:"",
+
+    build(){
+      if(this.ov) return this.ov;
+      const ov = document.createElement("div");
+      ov.className = "ud-ov"; ov.id = "udOverlay";
+      ov.setAttribute("role","dialog");
+      ov.setAttribute("aria-label","The Upside Down — machine-readable mirror of this page");
+      const cv = document.createElement("canvas"); cv.className = "ud-cv"; cv.setAttribute("aria-hidden","true");
+      const inr = document.createElement("div"); inr.className = "ud-in";
+      inr.innerHTML =
+        '<div class="ud-hd">'+
+          '<span class="ud-ttl">🙃 THE <b>UPSIDE DOWN</b></span>'+
+          '<span class="ud-path" id="udPath"></span>'+
+          /* ⚠️ The close control carries 🙃 on purpose. The overlay is fixed inset:0,
+             so the nav button underneath it is unreachable while it is open — "tap 🙃
+             again" has to land on something that is actually on top. This is it, and
+             it sits in the same top-right corner the nav button does. */
+          '<button class="ud-x" id="udX" type="button">🙃 close · esc</button>'+
+        '</div>'+
+        '<div class="ud-chips" id="udChips"></div>'+
+        '<div id="udNote"></div>'+
+        '<div class="ud-also" id="udAlso"></div>'+
+        '<pre class="ud-body" id="udBody">loading the served file…</pre>'+
+        '<p class="ud-foot">This is the actual file your AI reads, fetched live from this site — '+
+        'not a copy pasted into the page. Same data, dated and sourced. '+
+        'Start at <a href="/data/index.json" style="color:#ff6a02">/data/index.json</a>.</p>';
+      ov.append(cv, inr);
+      document.body.appendChild(ov);
+      inr.querySelector("#udX").addEventListener("click", ()=>this.close());
+      this.ov = ov; this.cv = cv;
+      return ov;
+    },
+
+    esc(s){ return String(s).replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); },
+
+    /* ⚠️ ONE regex with alternation, not three chained replaces. Chaining them nests
+       spans — the number pass finds the digits inside a string span it just wrote
+       ("captured 2026-07-29") and repaints them green mid-sentence. One sweep, one
+       decision per token.
+       Only JSON gets coloured: llms.txt and strategy.md are prose, where quoted words
+       would light up at random. Capped at 300KB — pool.json (82KB) and epa-teams
+       (85KB) are fine; past that, plain text beats spending a phone's frame budget
+       building a hundred thousand spans. */
+    hilite(t, json){
+      const e = this.esc(t);
+      if(!json || t.length > 300000) return e;
+      return e.replace(
+        /("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false|null)\b|(-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?)/g,
+        (m, str, colon, lit, num)=>{
+          if(str) return colon
+            ? '<span class="ud-k">'+str+'</span>'+colon
+            : '<span class="ud-s">'+str+'</span>';
+          if(lit) return '<span class="ud-n">'+lit+'</span>';
+          return '<span class="ud-n">'+num+'</span>';
+        });
+    },
+
+    chip(label, value, cls){
+      return '<span class="ud-chip'+(cls?" "+cls:"")+'"><b>'+this.esc(label)+'</b>'+this.esc(value)+'</span>';
+    },
+
+    render(url, text, manifest){
+      const path = this.ov.querySelector("#udPath");
+      const chips = this.ov.querySelector("#udChips");
+      const note  = this.ov.querySelector("#udNote");
+      const also  = this.ov.querySelector("#udAlso");
+      const body  = this.ov.querySelector("#udBody");
+      path.innerHTML = '<a href="'+this.esc(url)+'" target="_blank" rel="noopener">'+this.esc(url)+'</a> · '+
+                       (text.length>1024 ? Math.round(text.length/1024)+" KB" : text.length+" B");
+
+      let d = null;
+      if(/\.json$/.test(url)){ try{ d = JSON.parse(text); }catch(e){ d = null; } }
+
+      const c = [];
+      if(d && typeof d === "object"){
+        if(d.as_of) c.push(this.chip("as_of", d.as_of));
+        if(d.tier)  c.push(this.chip("tier", d.tier==="dawg" ? "Working Dawg" : d.tier, d.tier==="dawg"?"dawg":""));
+        if(d.graded === false) c.push(this.chip("graded","not yet"));
+        if(d.built) c.push(this.chip("built", d.built));
+        if(d.count != null) c.push(this.chip("rows", d.count));
+        if(d.source) c.push(this.chip("source", d.source));
+        /* receipts is the one file whose whole point is that you can check it without
+           trusting us, so the hash and the canonical-string spec come to the top. */
+        if(d.integrity && d.integrity.sha256){
+          c.push(this.chip("sha256", d.integrity.sha256));
+        }
+      } else {
+        /* markdown mirrors carry the same envelope in YAML front matter */
+        const fm = text.match(/^(?:<!--[^]*?-->\s*)?---\r?\n([^]*?)\r?\n---/);
+        if(fm){
+          fm[1].split(/\r?\n/).forEach(line=>{
+            const m = line.match(/^(as_of|source|title|tier|staleness):\s*(.+)$/);
+            if(m) c.push(this.chip(m[1], m[2]));
+          });
+        }
+      }
+      /* llms.txt is prose — it is the one live surface with no envelope of its own, so
+         its dates come from the manifest and are LABELLED as the manifest's, not as
+         llms.txt's. Borrowing a date without saying where it came from is the exact
+         failure mode this whole layer exists to argue against. */
+      if(!c.length && manifest){
+        if(manifest.as_of) c.push(this.chip("manifest as_of", manifest.as_of));
+        if(manifest.data && manifest.data.files) c.push(this.chip("files", manifest.data.files.length));
+        if(manifest.site) c.push(this.chip("site", manifest.site));
+      }
+      if(!c.length) c.push(this.chip("file", url));
+      chips.innerHTML = c.join("");
+
+      let n = "";
+      if(d && d.note) n += '<div class="ud-note"><b>note:</b> '+this.esc(d.note)+'</div>';
+      if(!d && manifest){
+        n += '<div class="ud-note"><b>'+this.esc(url)+'</b> is prose and carries no <code>as_of</code> of its own. '+
+             'The dates above are the manifest’s, from <code>/data/index.json</code> — every file listed there '+
+             'carries its own <code>as_of</code>, and those are the ones to quote.</div>';
+      }
+      if(d && d.integrity && d.integrity.canonical_string_spec){
+        n += '<div class="ud-note"><b>canonical string:</b> '+this.esc(d.integrity.canonical_string_spec)+
+             (d.integrity.canonical_example_first_row
+               ? ' <br><b>first row:</b> <code>'+this.esc(d.integrity.canonical_example_first_row)+'</code>' : '')+
+             '</div>';
+      }
+      note.innerHTML = n;
+
+      const extra = this.also[this.stem()] || [];
+      also.innerHTML = extra.length
+        ? "also mirrored: " + extra.map(u=>'<a href="'+this.esc(u)+'" target="_blank" rel="noopener">'+this.esc(u)+'</a>').join("")
+        : "";
+
+      body.innerHTML = this.hilite(text, !!d);
+    },
+
+    async load(){
+      const url = this.url();
+      if(this.loaded === url) return;
+      const body = this.ov.querySelector("#udBody");
+      try{
+        const r = await fetch(url, {cache:"no-cache"});
+        if(!r.ok) throw new Error(r.status+" "+r.statusText);
+        const t = await r.text();
+        let man = null;
+        if(!/\.json$/.test(url) && !/^---/m.test(t.slice(0,400))){
+          /* no envelope in the file itself — go get the manifest so the view still
+             opens on a date. Failure here is not fatal: the body is the point. */
+          try{ man = await (await fetch("/data/index.json", {cache:"no-cache"})).json(); }catch(e){}
+        }
+        this.render(url, t, man);
+        this.loaded = url;
+      }catch(e){
+        /* llms.txt is the documented fallback; /data/index.json is the fallback's
+           fallback, because the manifest is the one file that is always worth having. */
+        if(url !== "/data/index.json"){
+          try{
+            const r2 = await fetch("/data/index.json", {cache:"no-cache"});
+            const t2 = await r2.text();
+            this.render("/data/index.json", t2);
+            this.loaded = "/data/index.json";
+            return;
+          }catch(e2){}
+        }
+        body.innerHTML = '<span class="ud-w">Could not fetch '+this.esc(url)+' — '+this.esc(e.message)+
+          '</span>\n\nThe file is still there: try it directly.';
+      }
+    },
+
+    /* Faint drift, for the Stranger Things read. Cheap by construction: ~40 motes,
+       stopped dead on close so nothing burns battery behind a closed overlay, and
+       skipped entirely under prefers-reduced-motion. First thing to cut if it ever
+       fights performance on the 2MB stats page. */
+    motes(){
+      const cv = this.cv, ctx = cv.getContext && cv.getContext("2d");
+      if(!ctx) return;
+      if(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      const dpr = Math.min(window.devicePixelRatio||1, 2);
+      const fit = ()=>{ cv.width = innerWidth*dpr; cv.height = innerHeight*dpr; };
+      fit();
+      const N = innerWidth < 700 ? 22 : 44;
+      const p = Array.from({length:N}, (_,i)=>({
+        x: (i*97 % 100)/100, y:(i*61 % 100)/100,
+        r: 0.6 + (i%5)*0.35, v: 0.06 + (i%7)*0.02, d:(i%2?1:-1)*0.03
+      }));
+      let t0 = 0;
+      const step = (ts)=>{
+        if(!this.ov.classList.contains("on")){ this.raf = 0; return; }
+        const dt = t0 ? Math.min((ts-t0)/1000, 0.05) : 0; t0 = ts;
+        ctx.clearRect(0,0,cv.width,cv.height);
+        for(const m of p){
+          m.y -= m.v*dt*0.12; m.x += m.d*dt*0.05;
+          if(m.y < -0.05){ m.y = 1.05; }
+          if(m.x < -0.05) m.x = 1.05; if(m.x > 1.05) m.x = -0.05;
+          ctx.beginPath();
+          ctx.fillStyle = "rgba(255,106,2,0.28)";
+          ctx.arc(m.x*cv.width, m.y*cv.height, m.r*dpr, 0, 6.284);
+          ctx.fill();
+        }
+        this.raf = requestAnimationFrame(step);
+      };
+      addEventListener("resize", fit);
+      this.raf = requestAnimationFrame(step);
+    },
+
+    open(){
+      this.build();
+      this.ov.classList.add("on");
+      this.prevY = window.scrollY;
+      document.documentElement.style.overflow = "hidden";
+      this.ov.scrollTop = 0;
+      this.load();
+      if(!this.raf) this.motes();
+      const x = this.ov.querySelector("#udX"); if(x) x.focus();
+    },
+    close(){
+      if(!this.ov) return;
+      this.ov.classList.remove("on");
+      document.documentElement.style.overflow = "";
+      if(this.raf){ cancelAnimationFrame(this.raf); this.raf = 0; }
+      const b = document.getElementById("udBtn"); if(b) b.focus();
+    },
+    toggle(){
+      this.build();
+      this.ov.classList.contains("on") ? this.close() : this.open();
+    }
+  };
+  window.DDUpsideDown = UD;
+
+  const udb = document.createElement("button");
+  udb.className = "udbtn"; udb.id = "udBtn"; udb.type = "button";
+  udb.textContent = "🙃";
+  udb.title = "The Upside Down — the machine-readable version of this page";
+  udb.setAttribute("aria-label","Open the Upside Down: the machine-readable version of this page");
+  udb.addEventListener("click", ()=>UD.toggle());
+  links.appendChild(udb);   // same flex run as the theme pill, so it wraps with it
+  document.addEventListener("keydown", e=>{
+    if(e.key === "Escape" && UD.ov && UD.ov.classList.contains("on")) UD.close();
+  });
+
   window.DDTheme.apply();
 
   // offline insurance: cache the draft pages so a dead venue wifi can't kill the room
