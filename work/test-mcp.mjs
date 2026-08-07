@@ -31,6 +31,20 @@ const poolJson = { as_of: "2026-07-29", source: "MV snapshot", note: "dated", ti
 ] };
 const dfsHtml = 'junk before\nconst CORR = {"meta":{"seasons":[2019,2025]},"roles":["QB"],"same":[[1.0]],"opp":[[0.19]],"cv":{"QB":[{"lo":10,"hi":14,"cv":0.62,"n":62}]}};\njunk after';
 const espnRaw = { events: [{ id: "401", shortName: "CLE @ PIT", date: "2026-09-13", status: { type: { state: "pre", completed: false } }, competitions: [{ competitors: [{ team: { abbreviation: "PIT" }, homeAway: "home", score: null }, { team: { abbreviation: "CLE" }, homeAway: "away", score: null }] }] }] };
+const survJson = { data: {
+  meta: { season: 2026, captured: "2026-08-06", elo_per_pt: 23.58, hfa: 2.1, sd: 13.18, nfelo_sha: "0d3f8418" },
+  elo: { SEA: 1620, ARI: 1420, PIT: 1520, CLE: 1500 },
+  teams: { SEA: { n: "Seahawks", loc: "Seattle", full: "Seattle Seahawks" },
+           ARI: { n: "Cardinals", loc: "Arizona", full: "Arizona Cardinals" },
+           PIT: { n: "Steelers", loc: "Pittsburgh", full: "Pittsburgh Steelers" },
+           CLE: { n: "Browns", loc: "Cleveland", full: "Cleveland Browns" } },
+  games: [
+    { id: "2026_01_ARI_SEA", wk: 1, h: "SEA", a: "ARI", d: "2026-09-13", p: 0.8, src: "market" },
+    { id: "2026_01_CLE_PIT", wk: 1, h: "PIT", a: "CLE", d: "2026-09-13", p: 0.55, src: "model" },
+    { id: "2026_02_PIT_SEA", wk: 2, h: "SEA", a: "PIT", d: "2026-09-20", p: 0.7, src: "model" },
+    { id: "2026_02_ARI_CLE", wk: 2, h: "CLE", a: "ARI", d: "2026-09-20", p: 0.6, src: "model" },
+  ],
+} };
 
 let netMode = "normal"; // normal | dbdown | emptyRoom | espnDown | simulatedRoom | simulatedSettings
 globalThis.fetch = async (input, init) => {
@@ -52,6 +66,7 @@ globalThis.fetch = async (input, init) => {
     return J(draftRec);
   }
   if (u.includes("datadawgs216.com/data/pool.json")) return J(poolJson);
+  if (u.includes("datadawgs216.com/data/survivor.json")) return J(survJson);
   if (u.includes("datadawgs216.com/dfs.html")) return new Response(dfsHtml, { status: 200 });
   if (u.includes("site.api.espn.com")) {
     if (netMode === "espnDown") return new Response("no", { status: 403 });
@@ -138,7 +153,7 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 {
   const j = await (await req(rpc("tools/list"))).json();
   const t = j.result.tools;
-  ok(t.length === 11, "eleven tools listed");
+  ok(t.length === 13, "thirteen tools listed");
   ok(t.every(x => x.name.startsWith("dd_")), "all tools dd_-prefixed");
   ok(t.every(x => x.inputSchema && x.inputSchema.type === "object"), "all tools carry an inputSchema");
 }
@@ -231,6 +246,88 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
   ok(j2.result.isError === true, "missing survivor week → isError");
   const j3 = await (await req(call("dd_survivor_week", { week: 99 }))).json();
   ok(j3.result.isError === true, "week 99 rejected");
+}
+// dd_survivor_ev: a PORT of survivor.html's leverage(), and the parity is enforced —
+// the reference below is transcribed from the page, not from the block. If the two
+// drift, the MCP answer and the board silently disagree, which is the actual failure.
+function refLeverage(week, pop, games, entries, used) {
+  const tab = {};
+  games.filter((g) => g.wk === week).forEach((g) => { tab[g.h] = { opp: g.a, p: g.p }; tab[g.a] = { opp: g.h, p: 1 - g.p }; });
+  const E = Math.max(1, entries - 1);
+  const seen = {}, gs = [];
+  for (const t in tab) {
+    if (seen[t]) continue;
+    const g = tab[t]; seen[t] = 1; seen[g.opp] = 1;
+    const ph = g.p, ah = pop[t] || 0, aa = pop[g.opp] || 0;
+    gs.push({ h: t, a: g.opp, mean: aa + (ah - aa) * ph, varc: (ah - aa) * (ah - aa) * ph * (1 - ph) });
+  }
+  return Object.keys(tab).filter((t) => !used.has(t)).map((t) => {
+    const own = pop[t] || 0; let mu = 0, v2 = 0;
+    for (const g of gs) { if (g.h === t || g.a === t) { mu += own; continue; } mu += g.mean; v2 += g.varc; }
+    const mean = E * mu, varS = E * E * v2, d = 1 + mean;
+    return { team: t, equity: tab[t].p * (1 / d + varS / (d * d * d)) };
+  });
+}
+{
+  // week 2 has no posted snapshot → ownership is MODELLED and must say so in words
+  const j = await (await req(call("dd_survivor_ev", { week: 2, entries: 200 }))).json();
+  const d = text(j);
+  ok(d.ownership === "modelled", "no snapshot → ownership modelled");
+  ok(typeof d.note === "string" && /MODELLED/.test(d.note), "…and the payload says so in WORDS, not a flag");
+  ok(typeof d.model === "string" && /independent/.test(d.model) && /Taylor/.test(d.model),
+     "the model names itself: independence assumption + Taylor correction (invariant 6)");
+  ok(d.rows.length === 4 && d.rows[0].evIndex === 1 && d.rows[0].rank === 1, "4 candidates, leader indexed 1.0");
+  ok(d.rows.every((r, i) => !i || d.rows[i - 1].equity >= r.equity), "sorted by equity, best first");
+  const CHALK = 2.4, tabP = { SEA: 0.7, PIT: 0.3, CLE: 0.6, ARI: 0.4 };
+  const pop = {}; let tot = 0;
+  for (const t in tabP) { pop[t] = Math.pow(Math.max(tabP[t], 0.01), CHALK); tot += pop[t]; }
+  for (const t in pop) pop[t] /= tot;
+  const ref = refLeverage(2, pop, survJson.data.games, 200, new Set());
+  ok(ref.every((r) => Math.abs((d.rows.find((x) => x.team === r.team) || {}).equity - r.equity) < 1e-5),
+     "equity matches survivor.html's leverage() transcribed independently — a port, not a cousin");
+}
+{
+  // week 1 HAS a posted snapshot ({CLE:40}) → renormalised over the teams playing
+  const j = await (await req(call("dd_survivor_ev", { week: 1 }))).json();
+  const d = text(j);
+  ok(d.ownership === "posted" && d.stale === false, "stored snapshot → posted, hour-old is not stale");
+  const cle = d.rows.find((r) => r.team === "CLE"), sea = d.rows.find((r) => r.team === "SEA");
+  ok(cle && cle.pop === 1, "posted picks renormalise over teams actually playing (CLE 40 → 100%)");
+  ok(sea.survivorsIfWin < cle.survivorsIfWin,
+     "joining the chalk keeps the whole field alive with you; fading it does not");
+}
+{
+  // every playing team spent → a tool error, case-insensitively
+  const j = await (await req(call("dd_survivor_ev", { week: 1, used: ["sea", "PIT", "CLE", "ari"] }))).json();
+  ok(j.result.isError === true && /used list/.test(j.result.content[0].text), "all teams used → tool error, used list is case-insensitive");
+  const j2 = await (await req(call("dd_survivor_ev", { week: 7 }))).json();
+  ok(j2.result.isError === true, "week with no games in the snapshot → tool error");
+}
+// dd_analyze_matchup: the formula is public in models.json — recompute it here with a
+// DIFFERENT Φ approximation (Press erfc, not the page's Abramowitz–Stegun) so agreement
+// means the maths is right, not that the same bug is pasted twice.
+function refNcdf(z) {
+  const x = z / Math.SQRT2, ax = Math.abs(x), t = 1 / (1 + 0.5 * ax);
+  const e = t * Math.exp(-ax * ax - 1.26551223 + t * (1.00002368 + t * (0.37409196 + t * (0.09678418 + t * (-0.18628806 + t * (0.27886807 + t * (-1.13520398 + t * (1.48851587 + t * (-0.82215223 + t * 0.17087277)))))))));
+  const erfc = x >= 0 ? e : 2 - e;
+  return 1 - erfc / 2;
+}
+{
+  const j = await (await req(call("dd_analyze_matchup", { home: "SEA", away: "cardinals" }))).json();
+  const d = text(j);
+  ok(d.home.team === "SEA" && d.away.team === "ARI", "abbreviation and nickname both resolve");
+  const margin = (1620 - 1420) / 23.58 + 2.1;
+  ok(Math.abs(d.expectedMarginAtHome - Math.round(margin * 100) / 100) < 1e-9, "margin follows the published formula");
+  ok(Math.abs(d.pHomeWin - refNcdf(margin / 13.18)) < 2e-4, "win prob is Φ(margin/SD), checked against an independent CDF");
+  ok(Array.isArray(d.scheduledMeetings2026) && d.scheduledMeetings2026[0].week === 1 && d.scheduledMeetings2026[0].pHomeWin === 0.8,
+     "the week-1 meeting is listed with the board's blended number");
+  ok(/Elo-only/.test(d.model) && /0d3f8418/.test(d.model), "model names itself AND its snapshot (invariant 6)");
+}
+{
+  const j = await (await req(call("dd_analyze_matchup", { home: "the 1972 dolphins", away: "SEA" }))).json();
+  ok(j.result.isError === true, "unknown team → tool error");
+  const j2 = await (await req(call("dd_analyze_matchup", { home: "browns", away: "Cleveland" }))).json();
+  ok(j2.result.isError === true, "same team by two names → tool error");
 }
 // dd_scores: reuses handleScores with sport+dates
 {
