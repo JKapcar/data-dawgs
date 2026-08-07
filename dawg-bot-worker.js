@@ -2020,6 +2020,29 @@ const SITE = "https://datadawgs216.com";
 // per request. An hour is generous; a Worker isolate rarely lives that long anyway.
 let mcpPoolCache = { at: 0, data: null };
 let mcpCorrCache = { at: 0, data: null };
+let mcpSurvCache = { at: 0, data: null };
+
+// Abramowitz–Stegun normal CDF — the SAME approximation survivor.html ships, so the
+// tool and the page cannot disagree about a probability by more than float dust.
+function mcpNcdf(z) {
+  const s = z < 0 ? -1 : 1; z = Math.abs(z) / Math.SQRT2;
+  const t = 1 / (1 + 0.3275911 * z);
+  const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-z * z);
+  return 0.5 * (1 + s * y);
+}
+
+// survivor.json carries the whole 2026 schedule with blended win probabilities,
+// the nfelo Elo table and the margin-model constants — one fetch feeds both the
+// survivor EV tool and the matchup tool. 15 min cache: it changes on data pushes,
+// not per request, but weekly ownership context makes an hour feel stale.
+async function mcpSurvivor() {
+  if (!mcpSurvCache.data || Date.now() - mcpSurvCache.at > 900e3) {
+    const r = await fetch(`${SITE}/data/survivor.json`, { cf: { cacheTtl: 900, cacheEverything: true } });
+    if (!r.ok) throw new Error("survivor.json unavailable: HTTP " + r.status);
+    mcpSurvCache = { at: Date.now(), data: (await r.json()).data };
+  }
+  return mcpSurvCache.data;
+}
 
 // Resolve the credential in the URL (or header) to a caller.
 //   { kind:"user", name }  — a per-user token, matched by HASH against /users
@@ -2359,6 +2382,160 @@ const MCP_TOOLS = [
       const ageH = (Date.now() - rec.stored) / 3.6e6;
       return toolText({ ...rec, ageHours: Math.round(ageH * 10) / 10, stale: ageH > 72,
         note: ageH > 72 ? "Snapshot is over 72h old — treat as directional-only." : undefined });
+    },
+  },
+  {
+    name: "dd_survivor_ev",
+    description: "Ranks every legal survivor pick for a week by closed-form expected value: win probability × expected share of the surviving field (one-week leverage). Ownership comes from the posted weekly snapshot when one exists, otherwise a chalk-softmax MODEL — and a modelled ranking is a structured guess, which the payload says in words.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        week: { type: "integer", minimum: 1, maximum: 18, description: "NFL week" },
+        entries: { type: "integer", minimum: 2, description: "Pool size (default 200). Drives how much fading the chalk is worth." },
+        used: { type: "array", items: { type: "string" }, description: "Teams you have already spent (abbreviations)" },
+      },
+      required: ["week"],
+      additionalProperties: false,
+    },
+    async run(args, env) {
+      const D = await mcpSurvivor();
+      const week = args.week;
+      if (!(week >= 1 && week <= 18)) return toolErr("week must be 1-18");
+      // Per-team table for the week, from the shipped blend (market 0.75 where a
+      // line existed at capture — the same numbers survivor.html renders by default).
+      const tab = {};
+      for (const g of D.games) {
+        if (g.wk !== week) continue;
+        tab[g.h] = { opp: g.a, home: true, p: g.p, src: g.src };
+        tab[g.a] = { opp: g.h, home: false, p: 1 - g.p, src: g.src };
+      }
+      if (!Object.keys(tab).length) return toolErr("No games found for week " + week + ".");
+
+      // Ownership: the posted snapshot when Kap has stored one, else chalk softmax.
+      // The field's distribution deliberately ignores YOUR used list — the field is not you.
+      let pop = null, ownership = "modelled", ageHours, stale;
+      const kv = env.DD_KV || env.RL;
+      if (kv) {
+        const hit = await kv.get(survivorKey(D.meta.season, week));
+        if (hit) {
+          const rec = JSON.parse(hit);
+          const w = {}; let tot = 0;
+          for (const t in (rec.picks || {})) { if (tab[t]) { w[t] = Math.max(0, rec.picks[t]); tot += w[t]; } }
+          if (tot > 0) {
+            for (const t in w) w[t] /= tot;
+            pop = w; ownership = "posted";
+            ageHours = Math.round((Date.now() - rec.stored) / 3.6e5) / 10;
+            stale = ageHours > 72;
+          }
+        }
+      }
+      if (!pop) {
+        const CHALK = 2.4;                      // survivor.html's default dial
+        pop = {}; let tot = 0;
+        for (const t in tab) { const v = Math.pow(Math.max(tab[t].p, 0.01), CHALK); pop[t] = v; tot += v; }
+        for (const t in pop) pop[t] /= tot;
+      }
+
+      const entries = Math.max(2, Number(args.entries) || 200);
+      const E = entries - 1;                    // the field is everyone but you
+      const used = new Set((args.used || []).map(t => String(t).toUpperCase()));
+
+      // Per-GAME surviving-mass contribution. Games are independent; within a game the
+      // two sides are perfectly anti-correlated, so a game contributes
+      // pop_a + (pop_h − pop_a)·W_h with W_h ~ Bernoulli(p_h): mean and variance closed-form.
+      // Ported from survivor.html leverage() — keep the two in lockstep or the MCP
+      // answer and the page will silently disagree.
+      const seen = {}, gs = [];
+      for (const t in tab) {
+        if (seen[t]) continue;
+        const g = tab[t]; seen[t] = 1; seen[g.opp] = 1;
+        const ah = pop[t] || 0, aa = pop[g.opp] || 0;
+        gs.push({ h: t, a: g.opp, mean: aa + (ah - aa) * g.p, varc: (ah - aa) * (ah - aa) * g.p * (1 - g.p) });
+      }
+      const rows = Object.keys(tab).filter(t => !used.has(t)).map(t => {
+        const own = pop[t] || 0;
+        let mu = 0, v2 = 0;
+        for (const g of gs) {
+          if (g.h === t || g.a === t) { mu += own; continue; }  // your game is settled: your side won
+          mu += g.mean; v2 += g.varc;
+        }
+        const mean = E * mu, varS = E * E * v2;
+        // E[1/(1+S)] is NOT 1/(1+E[S]) — 1/(1+x) is convex, the naive form is biased LOW.
+        // Second-order Taylor closes it: 1/(1+µ) + Var(S)/(1+µ)³. Same correction the page uses.
+        const d = 1 + mean;
+        const equity = tab[t].p * (1 / d + varS / (d * d * d));
+        return { team: t, opp: tab[t].opp, home: tab[t].home, p: tab[t].p, src: tab[t].src,
+                 pop: Math.round(own * 1e4) / 1e4,
+                 survivorsIfWin: Math.round(mean * 10) / 10,
+                 equity };
+      });
+      if (!rows.length) return toolErr("Every team playing week " + week + " is on the used list.");
+      rows.sort((a, b) => b.equity - a.equity || b.p - a.p);
+      const best = Math.max(rows[0].equity, 1e-12);
+      rows.forEach((r, i) => { r.rank = i + 1; r.evIndex = Math.round((r.equity / best) * 1e4) / 1e4; r.equity = Math.round(r.equity * 1e6) / 1e6; });
+
+      return toolText({
+        season: D.meta.season, week, entries, ownership, ageHours, stale,
+        asOf: D.meta.captured,
+        model: "One-week closed-form leverage: equity = P(win) × E[1/(1+survivors)], games independent, field mass survives by ownership share, E[1/(1+S)] by second-order Taylor. Win probabilities are the " + D.meta.captured + " snapshot blend (market 0.75 where a line existed). No future-value term: a team spent today is not priced against the weeks it could have covered — survivor.html's optimal-path view does that.",
+        note: ownership === "modelled"
+          ? "OWNERSHIP IS MODELLED (chalk softmax, exponent 2.4), not observed. A modelled ranking cannot see narrative picks and is wrong exactly where fading the field pays most. Post real pick data via /survivor-picks and this caveat disappears."
+          : (stale ? "Posted ownership is over 72h old — treat as directional-only." : undefined),
+        rows,
+      });
+    },
+  },
+  {
+    name: "dd_analyze_matchup",
+    description: "Elo-based read on any two NFL teams: rating gap, expected margin if hosted, win probability from the site's margin model, plus every 2026 scheduled meeting with the blended probability the survivor board uses. Ratings are a preseason snapshot and the payload names it.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        home: { type: "string", description: "Hosting team — abbreviation or name" },
+        away: { type: "string", description: "Visiting team — abbreviation or name" },
+      },
+      required: ["home", "away"],
+      additionalProperties: false,
+    },
+    async run(args) {
+      const D = await mcpSurvivor();
+      const find = (q) => {
+        const s = String(q || "").trim().toUpperCase();
+        if (D.elo[s] != null) return s;
+        const sl = s.toLowerCase();
+        // exact name first, substring second — "cleveland", "browns", "hawks" all land
+        for (const t in D.teams) {
+          const m = D.teams[t];
+          if ([m.n, m.loc, m.full].some(x => x && x.toLowerCase() === sl)) return t;
+        }
+        for (const t in D.teams) {
+          const m = D.teams[t];
+          if (sl.length >= 3 && [m.n, m.loc, m.full].some(x => x && x.toLowerCase().includes(sl))) return t;
+        }
+        return null;
+      };
+      const H = find(args.home), A = find(args.away);
+      if (!H) return toolErr("Unknown team: " + args.home);
+      if (!A) return toolErr("Unknown team: " + args.away);
+      if (H === A) return toolErr("That is the same team twice.");
+      const M = D.meta;
+      const margin = (D.elo[H] - D.elo[A]) / M.elo_per_pt + M.hfa;
+      const p = mcpNcdf(margin / M.sd);
+      const meetings = D.games
+        .filter(g => (g.h === H && g.a === A) || (g.h === A && g.a === H))
+        .map(g => ({ week: g.wk, date: g.d, home: g.h, away: g.a, pHomeWin: g.p, src: g.src }));
+      return toolText({
+        home: { team: H, name: (D.teams[H] || {}).full, elo: D.elo[H] },
+        away: { team: A, name: (D.teams[A] || {}).full, elo: D.elo[A] },
+        eloGap: Math.round((D.elo[H] - D.elo[A]) * 10) / 10,
+        expectedMarginAtHome: Math.round(margin * 100) / 100,
+        pHomeWin: Math.round(p * 1e4) / 1e4,
+        model: "expected_margin = (elo_home − elo_away) / " + M.elo_per_pt + " + " + M.hfa + " HFA; P(home) = Φ(margin / " + M.sd + "). Elo-only — no injuries, no rest, no weather. Ratings are the nfelo " + M.nfelo_sha + " snapshot captured " + M.captured + "; they do NOT update in-season here.",
+        scheduledMeetings2026: meetings.length ? meetings : "none",
+        note: meetings.length
+          ? "Per-meeting pHomeWin is the survivor board's blend (market 0.75 where a line existed at capture) and can differ from the Elo-only number above."
+          : undefined,
+      });
     },
   },
   {
