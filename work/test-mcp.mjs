@@ -1,7 +1,7 @@
 // Tests the ASSEMBLED Worker — its real timingSafeEqual, loadLeague, fbGet and
 // handleScores — with only the network faked. Run: node test-mcp.mjs
 import { readFileSync } from "fs";
-import worker from "./dawg-bot-worker.assembled.js";
+import worker from "../dawg-bot-worker.js";
 
 let pass = 0, fail = 0;
 const ok = (cond, name) => { if (cond) pass++; else { fail++; console.error("FAIL:", name); } };
@@ -131,7 +131,7 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 {
   const j = await (await req(rpc("tools/list"))).json();
   const t = j.result.tools;
-  ok(t.length === 9, "nine tools listed");
+  ok(t.length === 11, "eleven tools listed");
   ok(t.every(x => x.name.startsWith("dd_")), "all tools dd_-prefixed");
   ok(t.every(x => x.inputSchema && x.inputSchema.type === "object"), "all tools carry an inputSchema");
 }
@@ -233,7 +233,7 @@ const noComments = blockSrc.replace(/\/\/[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\/
 ok(!/fbPut|fbPatch|fbDelete/.test(noComments), "block calls NO Firebase write helper");
 ok(!/\.put\(|\.delete\(/.test(noComments), "block performs NO KV writes");
 ok(!/method:\s*["'](PUT|POST|PATCH|DELETE)/.test(noComments), "block issues NO writing HTTP methods");
-const assembled = readFileSync("dawg-bot-worker.assembled.js", "utf8");
+const assembled = readFileSync("../dawg-bot-worker.js", "utf8");
 const oldLines = readFileSync("../dawg-bot-worker.js", "utf8").split("\n").filter(l => l.trim());
 const newSet = new Set(assembled.split("\n"));
 ok(oldLines.every(l => newSet.has(l)), "purely additive: every non-blank old line survives");

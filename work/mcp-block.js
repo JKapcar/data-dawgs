@@ -4,11 +4,21 @@
 //
 //   https://toto.jkapcar4.workers.dev/mcp/<DAWG_PASS>
 //
-// ⚠️ The URL IS the credential. Claude's connector UI takes a URL and has no
-// field for a custom header, so the passphrase rides in the path. It leaks
-// through screenshots and history, and rotating DAWG_PASS re-onboards all 14
-// AND breaks the website's Toto/TTS auth (shared secret). Acceptable for a
-// fantasy league over read-only data — never to be described as security.
+// TWO WAYS IN, and they are not equivalent:
+//
+//   /mcp/u_<token>     PER-USER. Minted at /connect.html, stored HASHED, revocable
+//                      individually. The call knows WHO is asking, which is what makes
+//                      attribution — and eventually writes — possible.
+//   /mcp/<DAWG_PASS>   SHARED, legacy, read-only. Anonymous: the server cannot tell one
+//                      caller from another. Kept working so nobody is cut off mid-season;
+//                      retire it once all 14 hold personal URLs.
+//
+// ⚠️ The URL IS the credential either way. Claude's connector UI takes a URL and has no
+// field for a custom header, so the secret rides in the path. It leaks through
+// screenshots and history. Per-user makes a leak CONTAINABLE — rotate one row, nobody
+// else is disturbed — it does not make it secure, and it must never be described as
+// security. Rotating DAWG_PASS by contrast re-onboards all 14 AND breaks the website's
+// Toto/TTS auth, since that secret is shared.
 // Header X-Dawg-Pass and Authorization: Bearer are also accepted for clients
 // that can send them (Claude Code, Desktop config).
 //
@@ -41,6 +51,32 @@ const SITE = "https://datadawgs216.com";
 let mcpPoolCache = { at: 0, data: null };
 let mcpCorrCache = { at: 0, data: null };
 
+// Resolve the credential in the URL (or header) to a caller.
+//   { kind:"user", name }  — a per-user token, matched by HASH against /users
+//   { kind:"shared" }      — the legacy league passphrase; anonymous
+//   null                   — no match; the caller gets a 401
+// ⚠️ Matched by hash and compared timing-safely against EVERY row, so a wrong token
+// leaks no timing signal about which member it nearly matched — the same discipline
+// bozoClaim already applies to invite tokens.
+async function mcpAuth(request, url, env) {
+  const supplied = mcpPassOf(request, url);
+  if (!supplied) return null;
+
+  if (supplied.startsWith("u_")) {
+    if (!env.BOZO_PEPPER) return null;          // per-user tokens need the pepper to hash
+    let users;
+    try { users = await loadUsers(env); } catch { return null; }
+    const h = await mcpTokenHash(env, supplied);
+    let hit = null;
+    for (const [key, u] of Object.entries(users))
+      if (u && u.mcpToken && timingSafeEqual(h, u.mcpToken)) hit = playerName(key);
+    return hit ? { kind: "user", name: hit } : null;
+  }
+
+  if (env.DAWG_PASS && timingSafeEqual(supplied, env.DAWG_PASS)) return { kind: "shared" };
+  return null;
+}
+
 function mcpPassOf(request, url) {
   const seg = url.pathname.split("/").filter(Boolean);          // ["mcp", "<pass>"]
   if (seg.length >= 2) { try { return decodeURIComponent(seg.slice(1).join("/")); } catch { return seg.slice(1).join("/"); } }
@@ -64,11 +100,15 @@ async function handleMcp(request, url, env) {
     return mcpJson({ name: "data-dawgs", transport: "streamable-http", hint: "POST JSON-RPC 2.0 here." }, 405);
   if (request.method !== "POST") return mcpJson(rpcErr(null, -32600, "POST only"), 405);
 
-  if (!env.DAWG_PASS)
-    return mcpJson(rpcErr(null, -32000, "Worker misconfigured: DAWG_PASS secret not set."), 500);
-  const pass = mcpPassOf(request, url);
-  if (!pass || !timingSafeEqual(pass, env.DAWG_PASS))
-    return mcpJson(rpcErr(null, -32001, "unauthorised"), 401);
+  // ⚠️ Either mechanism is enough on its own: BOZO_PEPPER for per-user tokens, DAWG_PASS
+  // for the legacy shared one. Demanding both would have taken shared access down the
+  // moment per-user shipped, for no reason.
+  if (!env.BOZO_PEPPER && !env.DAWG_PASS)
+    return mcpJson(rpcErr(null, -32000, "Worker misconfigured: neither BOZO_PEPPER nor DAWG_PASS is set."), 500);
+  const caller = await mcpAuth(request, url, env);
+  if (!caller)
+    return new Response(JSON.stringify(rpcErr(null, -32001, "unauthorised — get your personal connector URL from " + SITE + "/connect.html")),
+      { status: 401, headers: { "Content-Type": "application/json", "WWW-Authenticate": 'Bearer realm="data-dawgs"', ...MCP_CORS } });
 
   let body;
   try { body = await request.json(); }
@@ -80,14 +120,14 @@ async function handleMcp(request, url, env) {
 
   const replies = [];
   for (const m of msgs) {
-    const r = await mcpDispatch(m, env);
+    const r = await mcpDispatch(m, env, caller);
     if (r !== undefined) replies.push(r);        // notifications contribute nothing
   }
   if (!replies.length) return new Response(null, { status: 202, headers: MCP_CORS });
   return mcpJson(batch ? replies : replies[0]);
 }
 
-async function mcpDispatch(m, env) {
+async function mcpDispatch(m, env, caller) {
   if (!m || typeof m !== "object" || m.jsonrpc !== "2.0" || typeof m.method !== "string")
     return rpcErr(m && m.id, -32600, "Invalid Request");
   const id = m.id;
@@ -101,7 +141,16 @@ async function mcpDispatch(m, env) {
       return rpcOk(id, {
         protocolVersion: proto,
         capabilities: { tools: {} },
-        serverInfo: { name: "data-dawgs", version: "1.0.0" },
+        serverInfo: { name: "data-dawgs", version: "1.1.0" },
+        instructions:
+          (caller && caller.kind === "user"
+            ? "You are connected as " + caller.name + ". When a tool marks a row `you: true`, that is them.\n"
+            : "⚠️ This is the SHARED league connector — you do NOT know which member you are talking to. " +
+              "Never assume whose team, leg or ledger is whose; ask. A personal URL from " + SITE + "/connect.html fixes this.\n") +
+          "Everything here is read-only and is either the league's own data or public play-by-play. " +
+          "There is no DFS projection or ownership data on this server. When quoting bozo odds, survivor odds " +
+          "or the correlation matrix, say it is model output or a measured historical average, never a forecast " +
+          "of a specific game. Team names, weeks and league ids come from dd_league_overview — do not guess them.",
       });
     }
     case "ping":
@@ -112,7 +161,7 @@ async function mcpDispatch(m, env) {
       const name = m.params && m.params.name;
       const tool = MCP_TOOLS.find(t => t.name === name);
       if (!tool) return rpcErr(id, -32602, "Unknown tool: " + name);
-      try { return rpcOk(id, await tool.run((m.params && m.params.arguments) || {}, env)); }
+      try { return rpcOk(id, await tool.run((m.params && m.params.arguments) || {}, env, caller)); }
       catch (e) { return rpcOk(id, toolErr(String((e && e.message) || e))); }
     }
     default:
@@ -127,6 +176,23 @@ async function mcpDispatch(m, env) {
 const MCP_NO_ARGS = { type: "object", properties: {}, additionalProperties: false };
 
 const MCP_TOOLS = [
+  {
+    name: "dd_whoami",
+    description: "Who this connection is authenticated as. Call it when a question says 'my' or 'I' — my leg, my budget, my ledger — so you resolve that to the right person instead of guessing. If it reports anonymous:true you do NOT know who you are talking to and must ask.",
+    inputSchema: MCP_NO_ARGS,
+    async run(args, env, caller) {
+      if (caller && caller.kind === "user")
+        return toolText({
+          player: caller.name, anonymous: false, access: "read-only",
+          note: "Rows belonging to this player are marked `you: true` by the other tools.",
+        });
+      return toolText({
+        player: null, anonymous: true, access: "read-only (shared league connector)",
+        note: "This connection uses the shared league passphrase, so the server cannot tell which member is asking. " +
+              "Do not assume whose team, leg or ledger is whose — ask the user. They can get a personal URL at " + SITE + "/connect.html.",
+      });
+    },
+  },
   {
     name: "dd_league_overview",
     description: "Who is in the Data Dawgs Bozo league, what season/week it is on, and whether the current board is open, placed or graded.",
@@ -148,7 +214,7 @@ const MCP_TOOLS = [
     name: "dd_bozo_week",
     description: "The current Bozo board: every leg IN SUBMISSION ORDER (whoever went last saw every other leg first — that is the social point), plus the drawn lever hierarchy once the ticket is placed. Read the caveats field before analysing.",
     inputSchema: { type: "object", properties: { league: { type: "string", description: "League id (default: main)" } }, additionalProperties: false },
-    async run(args, env) {
+    async run(args, env, caller) {
       const lid = validLeagueId(args.league || DEFAULT_LEAGUE) ? (args.league || DEFAULT_LEAGUE) : null;
       if (!lid) return toolErr("Bad league id.");
       const lg = await loadLeague(env, lid);
@@ -159,10 +225,12 @@ const MCP_TOOLS = [
         return toolText({ season: lg.season || SEASON, week: lg.week || 1, status: lg.status || "open", legs: [], note: "No legs are in yet this week." });
       // ⚠️ SUBMISSION ORDER, not object-key order.
       keys.sort((a, b) => (picks[a].ts || 0) - (picks[b].ts || 0));
+      const me = caller && caller.kind === "user" ? caller.name : null;
       const legs = keys.map((k, i) => {
         const x = picks[k];
         return {
           order: i + 1, player: playerName(k),
+          you: me ? playerName(k) === me : undefined,
           sport: x.sport, game: x.game, eventId: x.eventId,
           mkt: x.mkt, side: x.side, line: x.mkt === "ml" ? null : x.line,
           price: x.price, priceSource: x.priceSource || "self",
@@ -172,6 +240,9 @@ const MCP_TOOLS = [
       return toolText({
         season: lg.season || SEASON, week: lg.week || 1, status: lg.status || "open",
         band: bandOf(lg), legs,
+        you: me,
+        yourLegIn: me ? keys.some(k => playerName(k) === me) : null,
+        stillWaitingOn: Object.keys(lg.members || {}).filter(n => !keys.some(k => playerName(k) === n)),
         leverHierarchy: lg.order || null,
         results: lg.results || null, bozo: lg.bozo || null, bozoWhy: lg.bozoWhy || null,
         caveats: [
@@ -187,7 +258,7 @@ const MCP_TOOLS = [
     name: "dd_bozo_standings",
     description: "Season-to-date Bozo ledger summary per player: legs submitted, Last In count, Shortest Odds count, and any graded results present. Early season this will honestly say nothing has resolved.",
     inputSchema: { type: "object", properties: { league: { type: "string", description: "League id (default: main)" } }, additionalProperties: false },
-    async run(args, env) {
+    async run(args, env, caller) {
       const lid = validLeagueId(args.league || DEFAULT_LEAGUE) ? (args.league || DEFAULT_LEAGUE) : null;
       if (!lid) return toolErr("Bad league id.");
       let ledger;
@@ -210,9 +281,11 @@ const MCP_TOOLS = [
         const last = wk.reduce((a, b) => (b.rank > a.rank ? b : a));
         if (per[last.player]) per[last.player].lastIn++;
       }
+      const me = caller && caller.kind === "user" ? caller.name : null;
+      if (me && per[me]) per[me].you = true;
       return toolText({
         league: lid, weeksOnLedger: Object.keys(byWeek).length, gradedRows: graded,
-        players: per,
+        you: me, players: per,
         note: graded ? undefined : "No graded results yet — everything above is bookkeeping, not performance.",
       });
     },
@@ -351,6 +424,149 @@ const MCP_TOOLS = [
         mcpCorrCache = { at: Date.now(), data: corr };
       }
       return toolText(mcpCorrCache.data);
+    },
+  },
+  {
+    name: "dd_guillotine_odds",
+    description: "Survival odds for every team in a Sleeper guillotine league, plus the projected chop line — who is most likely to be eliminated this week. Built ONLY from that league's own completed weeks. ⚠️ Needs at least two completed weeks; with fewer it returns the roster and says so rather than inventing a probability.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        league_id: { type: "string", description: "Sleeper league id — the long number in the league URL." },
+        team: { type: "string", description: "Optional: a team or manager name to highlight." },
+        sims: { type: "integer", description: "Monte Carlo runs. Default 20000, max 50000." },
+      },
+      required: ["league_id"],
+      additionalProperties: false,
+    },
+    async run(args, env, caller) {
+      const id = String(args.league_id || "").replace(/[^0-9]/g, "");
+      if (!id) return toolErr("A Sleeper league id is required — it is the long number in the league URL.");
+      const SIMS = Math.min(Math.max(parseInt(args.sims, 10) || 20000, 1000), 50000);
+      const API = "https://api.sleeper.app/v1";
+
+      // ⚠️ /players/nfl is deliberately NOT fetched — ~5MB, and Sleeper's own docs say to
+      // pull it at most once a day. Names come from /users + /rosters, scores from
+      // /matchups. The page has always worked this way and so does this.
+      const get = async (path) => {
+        const r = await fetch(API + path, { cf: { cacheTtl: 300, cacheEverything: true } });
+        if (!r.ok) throw new Error("Sleeper " + path + " returned " + r.status);
+        return r.json();
+      };
+
+      let state, league, users, rosters;
+      try {
+        [state, league, users, rosters] = await Promise.all([
+          get("/state/nfl"), get("/league/" + id), get("/league/" + id + "/users"), get("/league/" + id + "/rosters"),
+        ]);
+      } catch (e) { return toolErr("Could not read that league from Sleeper: " + e.message); }
+      if (!league || !league.name) return toolErr("No Sleeper league with id " + id + ".");
+
+      const uname = {};
+      for (const u of users || []) uname[u.user_id] = (u.metadata && u.metadata.team_name) || u.display_name || "?";
+      const owner = {};
+      for (const u of users || []) owner[u.user_id] = u.display_name || "?";
+
+      // Sleeper's /state/nfl `week` is the week IN PROGRESS, so completed = week - 1.
+      const completed = Math.max(0, (parseInt(state && state.week, 10) || 0) - 1);
+
+      const scores = {};   // roster_id -> [week scores]
+      for (let w = 1; w <= completed; w++) {
+        let mm;
+        try { mm = await get("/league/" + id + "/matchups/" + w); } catch { continue; }
+        for (const m of mm || []) {
+          if (m && m.roster_id != null && typeof m.points === "number")
+            (scores[m.roster_id] = scores[m.roster_id] || []).push(m.points);
+        }
+      }
+
+      const teams = (rosters || []).map(r => {
+        const xs = scores[r.roster_id] || [];
+        const n = xs.length;
+        const mean = n ? xs.reduce((a, b) => a + b, 0) / n : 0;
+        // sample sd, n-1 — identical to the page's stats()
+        const sd = n > 1 ? Math.sqrt(xs.reduce((a, b) => a + (b - mean) * (b - mean), 0) / (n - 1)) : 0;
+        return {
+          rosterId: r.roster_id,
+          team: uname[r.owner_id] || ("Roster " + r.roster_id),
+          manager: owner[r.owner_id] || "?",
+          weeks: n, mean: +mean.toFixed(2), sd: +sd.toFixed(2),
+          last: n ? xs[n - 1] : null, low: n ? Math.min(...xs) : null,
+        };
+      });
+
+      const base = {
+        league: league.name, season: league.season, leagueId: id,
+        completedWeeks: completed, teamCount: teams.length, teams,
+      };
+
+      // ⚠️ Two completed weeks is the floor. One week gives a mean and no spread, and a
+      // survival probability without a spread is a coin flip wearing a lab coat. The page
+      // refuses here too — this must not quietly return 1/n.
+      const usable = teams.filter(t => t.weeks >= 2);
+      if (completed < 2 || usable.length < 2)
+        return toolText({
+          ...base, survivalAvailable: false,
+          why: "Survival needs at least two completed weeks — one week gives a mean with no spread, and a probability without a spread is not a probability. The league, its teams and its managers are above; the odds are not computed.",
+        });
+
+      // Monte Carlo, same estimator as guillotine.html: draw a week for every live team,
+      // find who is lowest, repeat. Survival = share of runs in which you are NOT lowest.
+      // The distribution of the weekly minimum IS the chop line.
+      let seed = 0x9e3779b9 ^ (completed * 2654435761) ^ (teams.length * 40503);
+      const rnd = () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+        let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+      let spare = null;
+      const gauss = () => {
+        if (spare !== null) { const v = spare; spare = null; return v; }
+        let u, v2, s2;
+        do { u = rnd() * 2 - 1; v2 = rnd() * 2 - 1; s2 = u * u + v2 * v2; } while (s2 >= 1 || s2 === 0);
+        const m = Math.sqrt(-2 * Math.log(s2) / s2); spare = v2 * m; return u * m;
+      };
+
+      const k = usable.length, lose = new Array(k).fill(0), mins = new Float64Array(SIMS);
+      for (let i = 0; i < SIMS; i++) {
+        let lo = Infinity, li = -1;
+        for (let j = 0; j < k; j++) {
+          const x = usable[j].mean + gauss() * usable[j].sd;
+          if (x < lo) { lo = x; li = j; }
+        }
+        lose[li]++; mins[i] = lo;
+      }
+      const sorted = Array.from(mins).sort((a, b) => a - b);
+      const chop = sorted[Math.floor(SIMS * 0.5)];
+
+      const ranked = usable.map((t, j) => ({
+        ...t,
+        survival: +(1 - lose[j] / SIMS).toFixed(4),
+        chopRisk: +(lose[j] / SIMS).toFixed(4),
+        marginOverChop: +(t.mean - chop).toFixed(1),
+      })).sort((a, b) => a.survival - b.survival);
+
+      const want = args.team ? String(args.team).toLowerCase() : null;
+      const highlighted = want
+        ? ranked.find(t => t.team.toLowerCase().includes(want) || t.manager.toLowerCase().includes(want)) || null
+        : null;
+
+      return toolText({
+        ...base, survivalAvailable: true, sims: SIMS,
+        projectedChopLine: +chop.toFixed(1),
+        mostAtRisk: ranked[0] ? { team: ranked[0].team, manager: ranked[0].manager, survival: ranked[0].survival } : null,
+        teams: ranked,
+        highlighted,
+        // ⚠️ Never default to a team the user did not name. Returning someone else's
+        // number as "yours" is the failure this page was explicitly fixed for.
+        note: want && !highlighted ? "No team or manager matched '" + args.team + "'." : undefined,
+        caveats: [
+          "Built from this league's own completed weekly scores and nothing else — no projections, no rankings, no ADP.",
+          "Scores are drawn NORMAL and INDEPENDENT across teams. Real weeks are neither.",
+          "It cannot see a bye week, an injury, a favourable matchup, or a roster change made after the last completed week.",
+          "Survival is the share of simulated weeks in which a team is NOT the lowest scorer; the chop line is the median simulated minimum.",
+          "With only " + completed + " completed week" + (completed === 1 ? "" : "s") + ", the standard deviations are estimated from a very small sample — early-season numbers move a lot.",
+        ],
+      });
     },
   },
   {
