@@ -537,18 +537,27 @@ write('tier-audit.json', {
  * "live" entry resolves to a file that actually exists, so this file cannot
  * claim coverage the site does not have.
  */
-// The nine deployed /mcp tools. ⚠️ Flip nothing here before the tool answers a
+// The deployed /mcp tools. ⚠️ Flip nothing here before the tool answers a
 // real call from a real client — this list IS counts.mcp_tools_live and the
 // validator asserts the endpoint exists whenever it is non-empty.
-const MCP_LIVE = ['dd_league_overview', 'dd_bozo_week', 'dd_bozo_standings',
+const MCP_LIVE = ['dd_whoami', 'dd_league_overview', 'dd_bozo_week', 'dd_bozo_standings',
   'dd_draft_board', 'dd_draft_pool', 'dd_survivor_week', 'dd_scores',
-  'dd_dfs_correlations', 'dd_site_map'];
+  'dd_dfs_correlations', 'dd_guillotine_odds', 'dd_site_map'];
 const MCP_ENDPOINT = {
-  path: '/mcp/<league passphrase>',
+  path: '/mcp/u_<personal token>   (legacy: /mcp/<league passphrase>)',
   transport: 'streamable-http',
   host: 'https://toto.jkapcar4.workers.dev',
-  auth: 'Shared league passphrase in the URL path. The URL is the credential — this is access control for a 14-friend league, never to be described as security.',
-  writes: 'None. Every tool is read-only, asserted by test.',
+  mint: 'https://datadawgs216.com/connect.html',
+  auth:
+    'PER-USER tokens, minted at /connect.html, stored hashed and revocable one at a time — ' +
+    'so the server knows who is asking and a leak costs one member, not fourteen. The older ' +
+    'shared league passphrase still works and is ANONYMOUS; it is kept only so nobody is cut ' +
+    'off mid-season. Either way the URL IS the credential: per-user makes a leak containable, ' +
+    'not secure, and it must never be described as security.',
+  identity:
+    'dd_whoami reports the caller. Rows belonging to them are marked `you: true`. An anonymous ' +
+    'connection is told so explicitly and instructed to ask rather than assume whose is whose.',
+  writes: 'None. Every tool is read-only, asserted by test against the source.',
 };
 
 const SURFACES = [
@@ -597,7 +606,8 @@ const SURFACES = [
     planned: ['mcp:solve_dfs_lineup'],
     gap: 'The solver is a pure function running in the browser. The correlation matrix it uses is served; the solve itself is not.' },
   { id: 'guillotine', name: 'Guillotine league tools', page: '/guillotine.html',
-    machine: [{ kind: 'none', status: 'none' }], planned: [] },
+    machine: [{ kind: 'mcp', tool: 'dd_guillotine_odds', status: 'live' }],
+    planned: ['json:/data/guillotine.json'] },
   { id: 'method', name: 'How this site reasons', page: '/index.html',
     machine: [{ kind: 'markdown', url: '/data/method.md', status: 'live' },
               { kind: 'markdown', url: '/data/toto-philosophy.md', status: 'live' }],
