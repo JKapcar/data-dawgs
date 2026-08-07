@@ -208,6 +208,17 @@ async function handleSurvivorPicks(request, url, env, cors) {
 }
 
 export default {
+  // Nightly RTDB snapshot to KV — see the "Nightly backup" section for why and where.
+  async scheduled(controller, env, ctx) {
+    try {
+      await runBackup(env, (controller && controller.scheduledTime) || Date.now());
+    } catch (e) {
+      const kv = backupKV(env);
+      if (kv) await kv.put("backup:lasterror",
+        JSON.stringify({ at: new Date().toISOString(), error: String((e && e.message) || e) }));
+      throw e;                            // surface the failure in the cron log
+    }
+  },
   async fetch(request, env) {
     const url = new URL(request.url);
     // DD-MCP-ROUTE — matched before ANY Origin-gated handler; see the block at the bottom.
@@ -644,6 +655,34 @@ async function readBody(request) {
   const raw = await request.text();
   if (raw.length > MAX_BODY) throw new Error("too large");
   return JSON.parse(raw);
+}
+
+/* =============================== Nightly backup =========================== */
+// The RTDB is the only copy of every Bozo pick, account and draft room. Code
+// can be rebuilt; a season of results cannot. So once a day the cron trigger
+// snapshots the ENTIRE database (auth=FB_SECRET reads "/", which includes the
+// Worker-only /users and /bozoauth) into KV beside the rate-limit counters,
+// prefixed so nothing can collide:
+//   backup:<YYYY-MM-DD>  — dated snapshot, expires after 180 days
+//   backup:latest        — same payload, never expires
+//   backup:lasterror     — written only when a run fails, for post-mortems
+// ⚠️ The snapshot contains password hashes and session material. NOTHING may
+// serve these keys: no route, no MCP tool, and never the public repo.
+// Retrieval is the Cloudflare dashboard or API, already behind Kap's account.
+// The backup READS Firebase and writes only to KV — it must stay that way.
+const backupKV = (env) => env.DD_KV || env.RL || null;
+
+async function runBackup(env, nowMs) {
+  const kv = backupKV(env);
+  if (!kv) throw new Error("no KV binding for backup");
+  // "/" not "": fbUrl appends ".json" directly, so "" glues ".json" onto the
+  // HOSTNAME and DNS-fails as a 530. Caught live 8/7 on the first cron fire.
+  const { data } = await fbGet(env, "/");                 // whole DB, one read
+  const taken = new Date(nowMs).toISOString();
+  const body = JSON.stringify({ taken, db: data });
+  await kv.put("backup:" + taken.slice(0, 10), body, { expirationTtl: 15552000 });
+  await kv.put("backup:latest", body);
+  return { day: taken.slice(0, 10), bytes: body.length };
 }
 
 /* ================================ Bozo auth =============================== */
