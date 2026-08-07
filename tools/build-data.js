@@ -445,6 +445,92 @@ write('bozo-rules.json', {
   },
 });
 
+/* ---------- tier-audit.json ----------
+ * The 2026-08-07 audit of every tool against the gate, machine-readable.
+ * `verdict` is one of: stands | promote | demote | outside.
+ * This is a judgment, not a measurement — `checked` and `not_checked` are the
+ * point of the file, not decoration.
+ */
+const AUDIT = [
+  { id: 'epa-stats', name: 'NFL EPA Stats', page: '/stats.html', lane: 'dawg', verdict: 'stands',
+    path: 'instrument',
+    checked: 'Aggregation independently re-implemented outside the page (tools/build-data.js) from the same encoded columns; outputs internally consistent and consistent with the seasons (SF 2023, BAL 2024, NE 2025 leading offensive EPA/play). Sources named, snapshot dated.',
+    not_checked: 'No external cross-check against a published nflfastR table. Re-implementing the page’s own algorithm proves the maths is reproducible, not that it is right.',
+    owed: 'One spot-check against a public source.' },
+  { id: 'nfelo', name: 'nfelo Power Ratings', page: '/nfelo.html', lane: 'dawg', verdict: 'stands',
+    path: 'instrument',
+    checked: 'Pinned to nfelo commit 0d3f8418, model v4.3.0. Source named, derivation reproducible, dated.',
+    caveat: 'The collar certifies the MIRROR, not the forecasts. Backtest on file: n=4,053, nfelo SU 0.6674 vs market 0.6677 — nfelo behind by 0.02pp against a 0.196pp standard error, i.e. indistinguishable, and in-sample-ish because it overlaps nfelo’s own optimisation window.',
+    owed: 'A one-line qualifier on the page itself, matching the homepage disclaimer.' },
+  { id: 'draft-rig', name: 'Fantasy Draft Dashboard (the draft rig)', page: '/dashboard.html', lane: 'dawg', verdict: 'stands',
+    path: 'operational',
+    checked: 'Ran a live 14-team draft end to end. For an operational tool that is the right evidence — "does it work" is answered by working under load.',
+    conditions: [
+      'The Dashboard is a frame shell over board.html, dataviz.html, report.html and auction.html. Those are live standalone URLs with NO tier chip — same code, different verdict depending on how you arrive.',
+      'The Grades view is a measurement dressed as a judgment: letter(0.5*z(surplus) + 0.5*z(starting-lineup value)). It measures buying value relative to the room, not whether the roster will win. Fix is labelling, not demotion.',
+      'The rig runs on a 2026-07-29 market snapshot from a source that publishes through August. The tool works; the input is decaying. Collar is conditional on a refresh before draft night.',
+    ] },
+  { id: 'receipts', name: 'Receipts', page: '/receipts.html', lane: 'labs', verdict: 'stands',
+    path: 'instrument',
+    checked: 'Sources named (nfelo 0d3f8418, nflverse/nfldata, ESPN). Canonical string published and recomputes the locked hash — 272 rows, 6,697 bytes. Dated. Failure threshold pre-registered before any 2026 game.',
+    blocker: 'The trust mechanism is SELF-ANCHORED. Data Dawgs hosts the ledger, the hash and the spec. Recomputation proves today’s file matches today’s hash; it cannot prove these were the predictions made before the games. A page whose purpose is verifiability cannot earn a collar on verification that is not independently checkable.',
+    promotion_path: 'Anchor the hash externally and timestamp it. Nothing else needs to change.' },
+  { id: 'master-data', name: 'Master Data', page: '/master.html', lane: 'labs', verdict: 'stands',
+    path: 'instrument',
+    blocker: 'Staleness, not method. Would clear on sources and reproducibility; the source updates daily and the file says 2026-07-29.',
+    promotion_path: 'A refresh cadence. Cheapest promotion available.' },
+  { id: 'survivor', name: 'Survivor', page: '/survivor.html', lane: 'labs', verdict: 'stands',
+    path: 'forecast',
+    blocker: 'No receipts. Two disclosed defects: double-pick weeks are recorded but not simulated, so survival numbers after such a week are optimistic in a known direction; ownership is modelled, not observed.' },
+  { id: 'bozo', name: 'Bozo', page: '/bozo.html', lane: 'labs', verdict: 'stands',
+    path: 'forecast',
+    blocker: 'Every price is self-reported and unverified. The simulation draws legs independently, knowably false for two legs on the same game. Worst CLV is unmeasured. The game is well designed; the numbers are not validated.' },
+  { id: 'dfs', name: 'DFS Solver & Contest Simulator', page: '/dfs.html', lane: 'labs', verdict: 'stands',
+    path: 'forecast',
+    blocker: 'Built 2026-08-06, zero graded slates. Determinism is a strength but is not validation — an optimiser is exactly as good as the projections it is fed, and those are untested.' },
+  { id: 'guillotine', name: 'Guillotine Companion', page: '/guillotine.html', lane: 'labs', verdict: 'stands',
+    path: 'forecast', blocker: 'Nothing graded, nothing claimed.' },
+  { id: 'strategy', name: 'Strategy', page: '/strategy.html', lane: 'labs', verdict: 'outside',
+    reason: 'A synthesis of one analyst’s opinions, not a tool. Tiering it implies a validation question that does not apply.' },
+  { id: 'dawgs-page', name: 'Dawgs', page: '/dawgs.html', lane: 'labs', verdict: 'outside',
+    reason: 'Photographs. Not a tool.' },
+];
+
+write('tier-audit.json', {
+  as_of: '2026-08-07',
+  source: 'Audit of every live tool against the gate on index.html#tiers, performed 2026-08-07.',
+  tier: TIERS.labs,
+  graded: false,
+  note:
+    'ONE REVIEWER, ONE DAY, reasoning from the code and the published data. This is a judgment, ' +
+    'not a measurement — which is the gate’s known weakness and the reason the audit is published ' +
+    'rather than held. Result: NO promotions, NO demotions. That is a suspiciously comfortable ' +
+    'outcome and is flagged as such; it survives only because every collar came back with a ' +
+    'condition attached. Treat these verdicts as falsifiable.',
+  headline_finding:
+    'The Pound is empty. After ~170 commits, zero recorded retirements. Either nothing has ever ' +
+    'failed, or failures are being abandoned rather than recorded — and the first is not plausible. ' +
+    'An empty Pound is survivorship bias appearing in the one structure built to prevent it.',
+  gate: 'Does it work, and can it be trusted? Forecasts need receipts against a benchmark chosen in advance; measurement tools need named sources and reproducible math. Nothing clears by feeling finished.',
+  what_would_change_our_mind: {
+    'epa-stats': 'An external cross-check that disagrees with the page.',
+    nfelo: 'Nothing this season — the market comparison is unresolvable in one year by the site’s own pre-registered arithmetic.',
+    'draft-rig': 'A draft night where the rig fails under load, or a refusal to refresh the market snapshot before it.',
+    receipts: 'An external, timestamped anchor would promote it. Nothing else would.',
+    'any-labs-tool': 'Receipts against a benchmark declared in advance.',
+  },
+  counts: {
+    audited: AUDIT.length,
+    dawgs: AUDIT.filter(a => a.lane === 'dawg').length,
+    labs: AUDIT.filter(a => a.lane === 'labs' && a.verdict !== 'outside').length,
+    pound: 0,
+    promotions_recommended: AUDIT.filter(a => a.verdict === 'promote').length,
+    demotions_recommended: AUDIT.filter(a => a.verdict === 'demote').length,
+    outside_the_tier_system: AUDIT.filter(a => a.verdict === 'outside').length,
+  },
+  data: AUDIT,
+});
+
 /* ---------- surfaces.json — the machine-access map ----------
  * Every human surface on the site, and what an agent can call instead.
  * `status` is honest: live | planned | none. The validator asserts that every
@@ -477,7 +563,9 @@ const SURFACES = [
     gap: 'Pool ownership is modelled, not observed, and double-pick weeks are recorded but not simulated.' },
   { id: 'receipts', name: 'Pre-registered forecasts', page: '/receipts.html',
     machine: [{ kind: 'json', url: '/data/receipts.json', status: 'live' },
-              { kind: 'markdown', url: '/data/receipts-method.md', status: 'live' }],
+              { kind: 'markdown', url: '/data/receipts-method.md', status: 'live' },
+              { kind: 'json', url: '/data/tier-audit.json', status: 'live', covers: 'the tier audit — our own tools graded against the gate' },
+              { kind: 'markdown', url: '/data/tier-audit.md', status: 'live' }],
     planned: ['mcp:get_receipts', 'mcp:verify_receipts'] },
   { id: 'bozo', name: 'Bozo — weekly group parlay', page: '/bozo.html',
     machine: [{ kind: 'json', url: '/data/bozo-rules.json', status: 'live', covers: 'ruleset only' },
@@ -543,6 +631,7 @@ const manifest = {
     // Add new ones here or validate-data.js will not know they exist.
     markdown: [
       'strategy.md', 'receipts-method.md', 'bozo-rules.md', 'method.md', 'toto-philosophy.md',
+      'tier-audit.md',
     ].map(name => {
       const p = path.join(OUT, name);
       const txt = fs.readFileSync(p, 'utf8');
