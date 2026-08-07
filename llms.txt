@@ -10,7 +10,24 @@
 draft values are a 2026-07-29 snapshot of a market that keeps moving. Quoting them without
 the date is the failure mode this site exists to argue against.
 
-Start at `/data/index.json` — it lists every file with its `as_of`, size and SHA-256.
+Start at `/data/index.json` — every file with its `as_of`, size and SHA-256.
+
+## Machine access is the design, not an afterthought
+
+Every part of this site that makes sense to expose to a machine gets a dated JSON or markdown
+surface, and — where a tool *computes* something rather than just reporting it — an MCP tool
+and a REST route. That is the standing design rule, applied as the site grows.
+
+**[`/data/surfaces.json`](https://datadawgs216.com/data/surfaces.json) is the map of how far
+that has actually got**: every human page, what an agent can call instead, and an honest
+`status` of `live`, `planned` or `none`. Gaps are listed on purpose. **`planned` means not
+built — don't tell a user you can call it.** Today: 9 of 11 surfaces have live machine access,
+**0 MCP tools are deployed**, and the DFS solver and live draft state are not callable at all.
+
+Every payload also carries `tier` — `labs` (useful, live, still being challenged) or `dawg`
+(earned its collar; evidence survived validation). The tier is read from the page's own chip
+at build time, so it can't drift from what the site shows a human. Don't present Labs output
+with Dawg confidence.
 
 ## Draft
 
