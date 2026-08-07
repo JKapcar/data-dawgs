@@ -71,11 +71,19 @@
     "note": "The board is fully open by design — every leg, price and timestamp is visible to everyone and to everyone's bots before they place. That was a decision, not an oversight."
    },
    {
+    "path": "/data/tier-audit.json",
+    "url": "https://datadawgs216.com/data/tier-audit.json",
+    "bytes": 7262,
+    "as_of": "2026-08-07",
+    "sha256": "be4fbb4921bc633caf88f060e10c67932ed0defcc497956cf389f36649dbef30",
+    "note": "ONE REVIEWER, ONE DAY, reasoning from the code and the published data. This is a judgment, not a measurement — which is the gate’s known weakness and the reason the audit is published rather than held. Result: NO promotions, NO demotions. That is a suspiciously comfortable outcome and is flagged as such; it survives only because every collar came back with a condition attached. Treat these verdicts as falsifiable."
+   },
+   {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 6024,
+    "bytes": 6287,
     "as_of": "2026-08-07",
-    "sha256": "cfe56a89b0ee94bf1c8e6f751f7dada1ed9727fa1d0960e83a4de9f46152e984",
+    "sha256": "bbeef2729b99c8595b5d85e2b815e58170cf33b9651197504e020c02f8b207ad",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    }
   ],
@@ -114,6 +122,13 @@
     "bytes": 2713,
     "sha256": "317bc66cf62df8de90b49176f80b63e20c45af42da309e080c3eff999c574ae3",
     "as_of": "2026-08-06"
+   },
+   {
+    "path": "/data/tier-audit.md",
+    "url": "https://datadawgs216.com/data/tier-audit.md",
+    "bytes": 9448,
+    "sha256": "7510c170ffd96f795e89096eb0e6735e15ef049fd548eee6ba269b9b47cdd6c4",
+    "as_of": "2026-08-07"
    }
   ]
  }
