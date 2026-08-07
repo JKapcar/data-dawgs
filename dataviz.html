@@ -2159,9 +2159,22 @@ function moneyPileChart(container, T, budget, spots, myIdx){
 function cliffChart(container, players, sold, infl){
   container.textContent="";
   const n=players.length;
-  const BW=14, GAP=3, step=BW+GAP;                       // fat, fixed-width bars; chart scrolls
-  const m={t:18,r:14,b:44,l:40}, H=330;
+  /* ⚠️ Two modes, and the phone one is not "the same chart, smaller".
+     On a wide screen the bars are a fixed 14px and the chart scrolls sideways — you read
+     it player by player, with a last name under each bar.
+     On a phone that produced a 2,706px chart in a 304px window: nine bars visible at a
+     time. Which defeats the chart. A cliff is a SHAPE — the whole argument is where the
+     drop is — and you cannot see a shape nine bars at a time. So below 620 the bars
+     shrink to fit the container and the per-bar names go, because a rotated last name at
+     1.7px of width is ink, not information. Tap-to-inspect still names every bar.
+     (The scroll container itself was never a bug; it is deliberate, and the page has
+     never overflowed. Only the phone reading was wrong.) */
   const cw=container.clientWidth||1100;
+  const m={t:18,r:14,b:44,l:40}, H=330;
+  const fit = cw < 620;
+  const GAP = fit ? 0 : 3;                               // no gutter: 155 gutters IS the chart
+  const BW  = fit ? Math.max(1, (cw - m.l - m.r) / n) : 14;
+  const step = BW + GAP;
   const W=Math.max(cw, m.l+m.r+n*step);
   const ih=H-m.t-m.b;
   const maxV=Math.max(1,...players.map(p=>val(p)));
@@ -2175,31 +2188,59 @@ function cliffChart(container, players, sold, infl){
     const t=svgEl("text",{x:m.l-6,y:Y(v)+4,"text-anchor":"end","font-size":10.5,fill:ink3});
     t.textContent="$"+v; svg.appendChild(t);
   });
+  const bars=[], tips=[];
   players.forEach((p,i)=>{
     const v=val(p), pk=sold[p.name];
     const color = pk ? css("--ink-3") : POS_COLOR[p.pos];
     const bar=svgEl("rect",{x:X(i), y:Y(v), width:BW, height:Math.max(2,m.t+ih-Y(v)),
-      fill:color, rx:2.5, opacity: pk?0.35:1});
+      fill:color, rx:BW<4?0:2.5, opacity: pk?0.35:1});   // a 2px radius on a 2px bar is a dot
     svg.appendChild(bar);
-    // last-name label under every bar, rotated
-    const nm=svgEl("text",{x:X(i)+BW/2, y:H-30, "font-size":9, fill:pk?ink3:ink2,
-      "text-anchor":"end", transform:`rotate(-42 ${X(i)+BW/2} ${H-30})`, opacity:pk?.55:1});
-    nm.textContent=p.name.includes(" DST")?p.name.replace(" DST"," D"):p.name.split(" ").slice(-1)[0];
-    svg.appendChild(nm);
-    const hit=svgEl("rect",{x:X(i)-GAP/2, y:m.t, width:step, height:H-m.t, fill:"transparent"});
+    bars.push(bar);
+    // last-name label under every bar, rotated — wide screens only
+    if(!fit){
+      const nm=svgEl("text",{x:X(i)+BW/2, y:H-30, "font-size":9, fill:pk?ink3:ink2,
+        "text-anchor":"end", transform:`rotate(-42 ${X(i)+BW/2} ${H-30})`, opacity:pk?.55:1});
+      nm.textContent=p.name.includes(" DST")?p.name.replace(" DST"," D"):p.name.split(" ").slice(-1)[0];
+      svg.appendChild(nm);
+    }
     const rows=[["Position",p.pos==="DST"?"D/ST":p.pos],["Market value",fmt$(v)],["Adj value",fmt$(Math.round(v*infl))]];
     if(pk){rows.push(["Sold for","$"+pk.price]); rows.push(["To", (S.settings.teams[pk.ti]||{}).name||"?"]);}
     else rows.push(["Status","AVAILABLE"]);
-    hit.addEventListener("pointerenter",()=>{ bar.setAttribute("stroke",css("--ink-1")); bar.setAttribute("stroke-width","1.5"); });
-    hit.addEventListener("pointermove",e=>showTT(e.clientX,e.clientY,p.name,rows));
-    // tap-to-inspect: on touch, pointerleave fires the instant the finger lifts, so the
-    // tooltip has to be opened on pointerdown and left standing.
-    hit.addEventListener("pointerdown",e=>{ bar.setAttribute("stroke",css("--ink-1"));
-      bar.setAttribute("stroke-width","1.5"); showTT(e.clientX,e.clientY,p.name,rows); });
-    hit.addEventListener("pointerleave",e=>{ bar.removeAttribute("stroke");
-      if(e.pointerType!=="touch") hideTT(); });
-    svg.appendChild(hit);
+    tips.push(rows);
+    /* ⚠️ Per-bar hit rects ONLY on wide screens. In fit mode a bar is ~1.6px, so a
+       per-bar target is either untappable at its true width or overlapping at a usable
+       one — and 155 overlapping rects means the last one drawn always wins, i.e. the
+       tooltip would name the wrong player. One overlay that computes the index from the
+       pointer x is both correct and 155 fewer nodes. */
+    if(!fit){
+      const hit=svgEl("rect",{x:X(i)-GAP/2, y:m.t, width:step, height:H-m.t, fill:"transparent"});
+      hit.addEventListener("pointerenter",()=>{ bar.setAttribute("stroke",css("--ink-1")); bar.setAttribute("stroke-width","1.5"); });
+      hit.addEventListener("pointermove",e=>showTT(e.clientX,e.clientY,p.name,rows));
+      // tap-to-inspect: on touch, pointerleave fires the instant the finger lifts, so the
+      // tooltip has to be opened on pointerdown and left standing.
+      hit.addEventListener("pointerdown",e=>{ bar.setAttribute("stroke",css("--ink-1"));
+        bar.setAttribute("stroke-width","1.5"); showTT(e.clientX,e.clientY,p.name,rows); });
+      hit.addEventListener("pointerleave",e=>{ bar.removeAttribute("stroke");
+        if(e.pointerType!=="touch") hideTT(); });
+      svg.appendChild(hit);
+    }
   });
+  if(fit){
+    const band=svgEl("rect",{x:m.l, y:m.t, width:Math.max(1,W-m.l-m.r), height:H-m.t, fill:"transparent"});
+    let last=-1;
+    const at=e=>{
+      const b=svg.getBoundingClientRect();
+      const i=Math.max(0, Math.min(n-1, Math.floor(((e.clientX-b.left)*(W/b.width) - m.l)/step)));
+      if(i!==last){ if(bars[last]) bars[last].removeAttribute("stroke"); last=i;
+        bars[i].setAttribute("stroke",css("--ink-1")); bars[i].setAttribute("stroke-width","1"); }
+      showTT(e.clientX,e.clientY,players[i].name,tips[i]);
+    };
+    band.addEventListener("pointerdown",at);
+    band.addEventListener("pointermove",e=>{ if(e.pointerType!=="touch"||e.buttons) at(e); });
+    band.addEventListener("pointerleave",e=>{ if(bars[last]) bars[last].removeAttribute("stroke");
+      last=-1; if(e.pointerType!=="touch") hideTT(); });
+    svg.appendChild(band);
+  }
   // direct-label the top 2 available with full name + price. Adjacent bars are 17px apart,
   // so the two labels always collide horizontally — force a vertical gap instead of letting
   // them print on top of each other.
@@ -2222,12 +2263,12 @@ function cliffChart(container, players, sold, infl){
   sc.style.cssText="overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px";
   sc.appendChild(svg);
   container.appendChild(sc);
-  if(W>cw){
-    const hint=document.createElement("div");
-    hint.className="note"; hint.style.marginTop="4px";
-    hint.textContent="Scroll right for the rest of the board →";
-    container.appendChild(hint);
-  }
+  const hint=document.createElement("div");
+  hint.className="note"; hint.style.marginTop="4px";
+  if(W>cw+1) hint.textContent="Scroll right for the rest of the board →";
+  // ⚠️ Say so when the labels are gone, or the phone chart reads as a rendering failure.
+  else if(fit) hint.textContent=`All ${n} players, most valuable first — tap any bar for the name and price.`;
+  if(hint.textContent) container.appendChild(hint);
 }
 
 // ---------- render ----------

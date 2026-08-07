@@ -473,6 +473,115 @@ tr.mine td:first-child{box-shadow:inset 3px 0 0 var(--good)}
 td .note{color:var(--ink-3);font-size:12px;white-space:normal;max-width:340px}
 th.sortable{cursor:pointer;user-select:none}
 th.sortable:hover{color:var(--ink-1)}
+/* ⚠️ Declared BEFORE the phone block, not after. It sat after and won on source order
+   at equal specificity, so the chevron was invisible on the one layout that needs it. */
+#board .rowexp{display:none}          /* desktop: every column is already on screen */
+/* ---------- the board on a phone: cards, not a table (8/7) ----------
+   ⚠️ This is a CSS reflow of the EXACT SAME DOM, not a second render path. The row is
+   still <tr><td>…, so sorting, filtering, hide-taken, the sold chip, Taken/Target and
+   the live-draft overlay all keep working with no JS branch to drift out of sync. Every
+   td carries data-c so the flex `order` can rearrange them; nothing is rebuilt.
+
+   What it replaces: eleven columns rendered 895px wide inside a 390px phone. There was
+   no mobile treatment at all, and because the dashboard embeds this page in an iframe
+   with scrolling="no", the other nine columns were not merely awkward — they were
+   unreachable. You saw Rk and Player, and rows 35px to 143px tall depending on how many
+   lines the Note column wrapped to in its 92px slot.
+
+   Layout is flex-wrap with an ::after that forces the line break, NOT grid-template-
+   areas: pos and team are two separate <td>s and would have had to share one grid area,
+   which stacks them on top of each other. */
+@media(max-width:620px){
+  /* ⚠️ Buy back the gutters before touching type size. Measured at 360px: the row had
+     278px of usable width out of 360 — 82px was page padding plus card padding, and
+     line two needed ~275px, so Taken/Target wrapped to a third line on the narrowest
+     common phone. Trimming the two paddings returns ~22px and the row fits with room
+     over. Shrinking the font instead would have made it fit and unreadable. */
+  .wrap{padding-left:13px;padding-right:13px}
+  #sheetCard{padding-left:10px;padding-right:10px}
+  /* the CSV column list is one unbroken token and ran off the right edge */
+  .bd-intro code{overflow-wrap:anywhere;word-break:break-word}
+  #board, #board tbody, #board tr, #board td{display:block}
+  #board thead{display:none}          /* sorting moves to the control row below */
+  #board tr{
+    display:flex;flex-wrap:wrap;align-items:baseline;gap:0 6px;
+    padding:9px 4px;border-bottom:1px solid var(--grid);white-space:nowrap}
+  #board td{border:0;padding:0;text-align:left;font-size:13px;white-space:nowrap}
+  #board tr::after{content:"";order:6;flex-basis:100%;height:0}   /* the line break */
+
+  /* ⚠️ Tags live on line ONE, between the name and POS·TEAM — not on line two with the
+     price, which is where they started. Line two is the crowded one (indent + price +
+     Silva + Taken + Target + chevron ≈ 300px of fixed width at 390), so the tag cell was
+     the only thing that could shrink and "buy" collapsed to a clipped "b". The tag is an
+     attribute of the player, like the position; it belongs next to it. The NAME shrinks
+     instead, with an ellipsis, and only for the longest names carrying two tags. */
+  #board td[data-c=rk]{order:1;width:27px;flex:0 0 27px;text-align:right;
+    color:var(--ink-3);font-size:12px}
+  #board td[data-c=name]{order:2;flex:1 1 60px;min-width:0;font-size:15px;font-weight:650;
+    overflow:hidden;text-overflow:ellipsis}
+  #board td[data-c=tags]{order:3;flex:0 0 auto}
+  #board td[data-c=pos]{order:4;flex:0 0 auto;font-size:11px;font-weight:700;
+    letter-spacing:.04em;color:var(--ink-2)}
+  #board td[data-c=team]{order:5;flex:0 0 auto;font-size:11px;color:var(--ink-3)}
+  #board td[data-c=pos]::after{content:"·";margin-left:6px;color:var(--ink-3);font-weight:400}
+
+  #board td[data-c=half]{order:7;margin-left:33px;font-weight:750;color:var(--accent);font-size:13.5px}
+  #board td[data-c=half]::after{content:" half";font-weight:500;font-size:11px;color:var(--ink-3)}
+  #board td[data-c=silva]{order:8;font-size:12px;color:var(--ink-3)}
+  #board td[data-c=silva]::before{content:"· Silva ";color:var(--ink-3)}
+  #board td[data-c=act]{order:9;flex:0 0 auto;margin-left:auto}
+
+  /* the third line, revealed by the chevron */
+  #board td[data-c=full],#board td[data-c=sf],#board td[data-c=note]{order:10;display:none}
+  #board tr.open td[data-c=full],#board tr.open td[data-c=sf]{display:block;
+    font-size:12px;color:var(--ink-3)}
+  #board tr.open td[data-c=full]{margin-left:33px}
+  #board tr.open td[data-c=note]{display:block;flex-basis:100%;margin:3px 0 0 33px}
+  #board td[data-c=full]::after{content:" full";color:var(--ink-3)}
+  #board td[data-c=sf]::after{content:" SF";color:var(--ink-3)}
+  #board td .note{white-space:normal;max-width:none;font-size:12px;line-height:1.45}
+
+  #board .pill{font-size:10.5px;padding:1px 6px}
+  #board .rowbtn{font-size:11px;padding:2px 7px;margin-left:3px}
+  #board .soldchip{font-size:10.5px}
+  /* ⚠️ 30px tall and 30px wide on purpose — it is the one control here that is a pure
+     affordance, and a 12px chevron is a miss-tap during a live auction. */
+  #board .rowexp{display:inline-block;width:30px;height:26px;margin-left:2px;border:0;
+    background:none;color:var(--ink-3);font-size:13px;cursor:pointer;vertical-align:middle}
+  #board tr.open .rowexp{color:var(--accent)}
+  /* struck-through names are the taken signal; the whole-row background is too heavy
+     when the row is a card */
+  #board tr.taken{opacity:.5}
+  #board tr.mine td:first-child{box-shadow:none}
+  #board tr.mine{box-shadow:inset 3px 0 0 var(--good)}
+}
+/* ⚠️ Below 380 the 33px indent on line two is the difference between two lines and
+   three. Found by measuring all 459 rows at 360px: exactly ONE wrapped — CeeDee Lamb,
+   whose Silva rank is "~11", two characters wider than the row above it. One ragged row
+   in 459 is precisely the kind of thing that never shows up in a screenshot, so the
+   indent goes rather than being trusted to keep fitting.
+   ⚠️ Do NOT try to solve this with flex-shrink on the Silva cell. With flex-wrap:wrap
+   the browser assigns items to lines using their flex BASE size and only shrinks within
+   a line afterwards — so the overflowing item wraps first and never gets shrunk. */
+@media(max-width:380px){
+  #board td[data-c=half]{margin-left:0}
+  #board tr.open td[data-c=full]{margin-left:0}
+  #board tr.open td[data-c=note]{margin-left:0}
+}
+/* 320px — an SE-class screen. The " half" suffix costs ~26px and is already stated in
+   the paragraph above the board; losing it buys back the last eight ragged rows. */
+@media(max-width:340px){
+  #board td[data-c=half]::after{content:""}
+}
+/* The phone sort control. Hidden on desktop, where the <th>s do this job. */
+.msort{display:none}
+@media(max-width:620px){
+  .msort{display:flex;align-items:center;gap:7px;margin:0 0 4px;font-size:12.5px;color:var(--ink-3)}
+  .msort select{font:inherit;font-size:12.5px;padding:4px 7px;border-radius:8px;
+    border:1px solid var(--border);background:var(--surface-1);color:var(--ink-1)}
+  .msort button{font:inherit;font-size:12.5px;padding:4px 9px;border-radius:8px;
+    border:1px solid var(--border);background:none;color:var(--ink-2);cursor:pointer}
+}
 .counts{font-size:12.5px;color:var(--ink-3);margin-left:auto}
 .val{font-weight:650}
 </style>
@@ -1751,6 +1860,22 @@ STATE: everything saves in the browser on that device. A different device shows 
   </div>
 
   <div class="card" style="padding:8px 16px" id="sheetCard">
+    <!-- ⚠️ Phone only. The <th>s are the sort control on desktop and they are hidden in
+         the card layout, so without this the board would be permanently stuck on rank. -->
+    <div class="msort">
+      <label for="msortKey">Sort</label>
+      <select id="msortKey">
+        <option value="rank">Rank</option>
+        <option value="half">$ Half</option>
+        <option value="full">$ Full</option>
+        <option value="sf">$ SF</option>
+        <option value="silva">Silva</option>
+        <option value="name">Name</option>
+        <option value="pos">Position</option>
+        <option value="team">Team</option>
+      </select>
+      <button id="msortDir" type="button" aria-label="Reverse sort order">▲</button>
+    </div>
     <div style="overflow-x:auto"><table id="board"></table></div>
   </div>
   <div class="card" id="liveCard" style="display:none">
@@ -2150,8 +2275,12 @@ function render(){
       ["$"+(+r.half||0),false,true],["$"+(+r.full||0),false,false],["$"+(+r.sf||0),false,false],
       [r.silva||"–",false,false],
     ];
+    // ⚠️ data-c is what the phone card layout reorders on. Keep it in step with COLS —
+    // a missing key means that cell silently falls to the end of the flex run.
+    const CKEY=["rk","name","pos","team","half","full","sf","silva"];
     cells.forEach(([v,tl,em],i)=>{
       const td=document.createElement("td"); if(tl) td.classList.add("tl");
+      td.dataset.c=CKEY[i];
       td.textContent=v;
       if(i===0) td.classList.add("rk");
       if(i===1){ td.style.fontWeight=600;
@@ -2162,7 +2291,7 @@ function render(){
       if(em) td.classList.add("val");
       tr.appendChild(td);
     });
-    const tdT=document.createElement("td");
+    const tdT=document.createElement("td"); tdT.dataset.c="tags";
     (r.tags||[]).forEach(t=>{
       const s=document.createElement("span");
       s.className="pill "+(t==="buy"?"buy":t==="fade"?"fade":t==="zrb"?"zrb":"pos");
@@ -2170,10 +2299,10 @@ function render(){
       tdT.appendChild(s);
     });
     tr.appendChild(tdT);
-    const tdN=document.createElement("td"); tdN.classList.add("tl");
+    const tdN=document.createElement("td"); tdN.classList.add("tl"); tdN.dataset.c="note";
     const nd=document.createElement("div"); nd.className="note"; nd.textContent=r.note||""; tdN.appendChild(nd);
     tr.appendChild(tdN);
-    const tdM=document.createElement("td");
+    const tdM=document.createElement("td"); tdM.dataset.c="act";
     if(pk){
       const s=document.createElement("span");
       s.className="ownchip"+(soldToMe?" me":"");
@@ -2187,16 +2316,46 @@ function render(){
       b2.addEventListener("click",()=>{ marks[r.name]=m==="mine"?undefined:"mine"; saveMarks(); render(); });
       tdM.appendChild(b1); tdM.appendChild(b2);
     }
+    /* The phone card's third line — full/SF prices and Silva's note. Rendered on every
+       row and CSS-hidden on desktop, where those columns are already on screen.
+       ⚠️ It toggles a class on the ROW and does not re-render. Calling render() here
+       would rebuild every node and lose the open state on the next tap, and during a
+       live draft it would also fight the sync repaint. */
+    const bx=document.createElement("button");
+    bx.className="rowexp"; bx.type="button";
+    bx.setAttribute("aria-label","More on "+r.name);
+    bx.textContent="▾";
+    bx.addEventListener("click",e=>{
+      e.stopPropagation();
+      const on=tr.classList.toggle("open");
+      bx.textContent = on ? "▴" : "▾";
+      bx.setAttribute("aria-expanded", on ? "true" : "false");
+    });
+    tdM.appendChild(bx);
     tr.appendChild(tdM);
     tb.appendChild(tr);
   });
   el.appendChild(tb);
+  if(!render.msortWired){
+    render.msortWired = true;
+    const k=document.getElementById("msortKey"), d=document.getElementById("msortDir");
+    if(k) k.addEventListener("change",()=>{
+      // money and Silva want biggest/best first; rank and names want A→Z, same
+      // defaults the column headers use so the two controls never disagree
+      state.sort={key:k.value, dir:(k.value==="half"||k.value==="full"||k.value==="sf")?-1:1};
+      render();
+    });
+    if(d) d.addEventListener("click",()=>{ state.sort.dir*=-1; render(); });
+  }
   const meTiC = (window.DDMe && window.DDMe.idx(A.teams));
   let soldN=0, mineN=0;
   board.forEach(r=>{
     const pk=A.sold[r.name.toLowerCase()];
     if(pk){ soldN++; if(meTiC!=null && pk.ti===meTiC) mineN++; }
   });
+  // keep the phone sort control showing the truth, whoever changed it
+  const mk=document.getElementById("msortKey"), md=document.getElementById("msortDir");
+  if(mk){ mk.value=state.sort.key; md.textContent = state.sort.dir<0 ? "▼" : "▲"; }
   const planned=Object.values(marks).filter(v=>v==="mine").length;
   document.getElementById("counts").textContent =
     `${rows.length} shown of ${board.length} · ${soldN} drafted · ${mineN} yours` +
