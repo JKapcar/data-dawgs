@@ -1,0 +1,188 @@
+
+  /* ---------- DDAuth — one sign-in for the whole site (8/7) ----------
+     Every page in the banner gets the same chip, backed by the same key, so signing
+     in on the guillotine page signs you in on Bozo. Before this, sign-in lived only
+     inside bozo.html and connect.html and nowhere else knew your name.
+
+     ⚠️ The session token is SELF-DESCRIBING: base64url(JSON) "." signature, where the
+     JSON carries {n:name, e:expiryMs}. So "who is signed in" is answerable from
+     localStorage alone — no request, no spinner, and no flash of the wrong state on
+     any page. The signature is verified by the WORKER and never here; this only
+     decides what to draw. Forging it locally buys you a nav chip and nothing else,
+     because every read that matters is public and every write is checked server-side.
+
+     ⚠️ The key is "dd-bozo-sess". bozo.html and connect.html read that exact string;
+     a near-miss like "dd-bozo-session" silently splits the site in two and looks fine
+     in a screenshot.
+
+     ⚠️ The header is X-Bozo-Session, NOT X-Dawg-Session. The Worker accepts both, but
+     only X-Bozo-Session is advertised in Access-Control-Allow-Headers on the currently
+     DEPLOYED worker, and a custom header the preflight does not advertise is dropped
+     by the browser. Using X-Bozo-Session means this works today, before the pending
+     worker paste. */
+  const AUTH_KEY = "dd-bozo-sess";
+  const AUTH_WORKER = "https://toto.jkapcar4.workers.dev";
+  window.DDAuth = {
+    token(){ try{ return localStorage.getItem(AUTH_KEY) || ""; }catch(e){ return ""; } },
+    me(){
+      const raw = this.token(); if(!raw) return null;
+      try{
+        const b = JSON.parse(atob(raw.split(".")[0].replace(/-/g,"+").replace(/_/g,"/")));
+        if(!b.n || !b.e || Date.now() > b.e){ this.wipe(); return null; }
+        return {name:b.n, session:raw, expires:b.e};
+      }catch(e){ this.wipe(); return null; }
+    },
+    wipe(){ try{ localStorage.removeItem(AUTH_KEY); }catch(e){} },
+    set(tok){ try{ localStorage.setItem(AUTH_KEY, tok); }catch(e){} this.render(); this.fire(); },
+    clear(){ this.wipe(); this.render(); this.fire(); },
+    /* Pages that already hold their own copy of the session (bozo.html, connect.html)
+       listen for this instead of reloading. A page that does not care ignores it. */
+    fire(){
+      const m = this.me();
+      try{ window.dispatchEvent(new CustomEvent("dd-auth", {detail:m})); }catch(e){}
+      if(typeof window.onDDAuth === "function"){ try{ window.onDDAuth(m); }catch(e){} }
+    },
+    headers(){ const t = this.token(); return t ? {"X-Bozo-Session":t} : {}; },
+    async post(path, body){
+      const r = await fetch(AUTH_WORKER + path, {method:"POST",
+        headers:Object.assign({"Content-Type":"application/json"}, this.headers()),
+        body:JSON.stringify(body||{})});
+      const j = await r.json().catch(()=>({error:"HTTP " + r.status}));
+      if(!r.ok) throw new Error(j.error || ("HTTP " + r.status));
+      return j;
+    },
+    render(){
+      const b = document.getElementById("ddAuthBtn"); if(!b) return;
+      const m = this.me();
+      b.replaceChildren();
+      if(m){
+        b.parentNode.classList.add("in");
+        const d = document.createElement("span"); d.className = "dot";
+        const w = document.createElement("span"); w.className = "who";
+        // first token only: the chip is 170px at most and "Signed in as" is the title
+        w.textContent = String(m.name).split(/\s+/)[0];
+        b.append(d, w);
+        b.title = "Signed in as " + m.name;
+        b.setAttribute("aria-label", "Account — signed in as " + m.name);
+      }else{
+        b.parentNode.classList.remove("in");
+        const w = document.createElement("span"); w.className = "who";
+        w.textContent = "Sign in";
+        b.append(w);
+        b.title = "Sign in";
+        b.setAttribute("aria-label", "Sign in");
+      }
+      // pages can hide their own duplicate sign-in affordance once the nav has one
+      document.querySelectorAll("[data-dd-signedin]").forEach(n=>{ n.hidden = !m; });
+      document.querySelectorAll("[data-dd-signedout]").forEach(n=>{ n.hidden = !!m; });
+    },
+    build(){
+      if(document.getElementById("ddAuthModal")) return;
+      const host = document.body || document.documentElement;
+      const ov = document.createElement("div");
+      ov.className = "authmodal"; ov.id = "ddAuthModal";
+      ov.innerHTML =
+        '<div class="box" role="dialog" aria-modal="true" aria-labelledby="ddAuthH">' +
+          '<button class="x" id="ddAuthX" aria-label="Close">×</button>' +
+          '<h3 id="ddAuthH">Sign in</h3>' +
+          '<div id="ddAuthOut">' +
+            '<p class="sub">One sign-in for the whole site — the Bozo board, the draft, and your AI connector.</p>' +
+            '<label for="ddAuthWho">Name or email</label>' +
+            '<input id="ddAuthWho" list="ddAuthRoster" autocomplete="username" autocapitalize="none" spellcheck="false">' +
+            '<datalist id="ddAuthRoster"></datalist>' +
+            '<label for="ddAuthPw">Password</label>' +
+            '<input id="ddAuthPw" type="password" autocomplete="current-password">' +
+            '<button class="go" id="ddAuthGo">Sign in</button>' +
+            '<p class="err" id="ddAuthErr"></p>' +
+            '<p class="note">No account yet? Use the join link Kap sent you — that is the only way in. ' +
+            'Nothing here is gated on signing in: the boards, the pool and the season tables are public either way.</p>' +
+          '</div>' +
+          '<div id="ddAuthIn" hidden>' +
+            '<p class="sub">Signed in as <b id="ddAuthName"></b>.</p>' +
+            '<a class="go" href="connect.html">Connect your AI</a>' +
+            '<a class="go alt" href="bozo.html">Bozo board</a>' +
+            /* ⚠️ Sign out is the GHOST button. It was the filled accent one for
+               about ten minutes; a destructive action should not be the loudest
+               thing in a panel you opened to check your own name. */
+            '<button class="go alt" id="ddAuthOutBtn">Sign out</button>' +
+            '<p class="note" id="ddAuthExp"></p>' +
+          '</div>' +
+        '</div>';
+      host.appendChild(ov);
+      ov.addEventListener("click", e=>{ if(e.target === ov) this.close(); });
+      document.getElementById("ddAuthX").onclick = ()=>this.close();
+      document.getElementById("ddAuthOutBtn").onclick = ()=>{ this.clear(); this.close(); };
+      const go = document.getElementById("ddAuthGo");
+      const err = document.getElementById("ddAuthErr");
+      const submit = async ()=>{
+        const who = document.getElementById("ddAuthWho").value.trim();
+        const pw  = document.getElementById("ddAuthPw").value;
+        err.className = "err"; err.textContent = "";
+        if(!who || !pw){ err.textContent = "Name and password, both."; return; }
+        go.disabled = true; go.textContent = "Signing in…";
+        try{
+          // `name` carries either a roster name or an email; the Worker resolves an
+          // email to a name before it does anything else. One field, two identifiers.
+          const r = await this.post("/auth/login", {name:who, password:pw});
+          if(!r.session) throw new Error("No session came back.");
+          document.getElementById("ddAuthPw").value = "";
+          this.set(r.session);
+          this.close();
+        }catch(e){ err.textContent = e.message || String(e); }
+        finally{ go.disabled = false; go.textContent = "Sign in"; }
+      };
+      go.onclick = submit;
+      ov.addEventListener("keydown", e=>{
+        if(e.key === "Enter" && !document.getElementById("ddAuthOut").hidden) submit();
+      });
+    },
+    async roster(){
+      const dl = document.getElementById("ddAuthRoster");
+      if(!dl || dl.dataset.loaded) return;
+      try{
+        const r = await fetch(AUTH_WORKER + "/auth/roster?cb=" + Date.now().toString(36));
+        const j = await r.json();
+        dl.replaceChildren();
+        (j.players || []).filter(p=>p.claimed).forEach(p=>{
+          const o = document.createElement("option"); o.value = p.name; dl.appendChild(o);
+        });
+        dl.dataset.loaded = "1";
+      }catch(e){ /* the field is free text; a missing roster costs autocomplete only */ }
+    },
+    open(){
+      this.build();
+      const m = this.me();
+      document.getElementById("ddAuthH").textContent = m ? "Your account" : "Sign in";
+      document.getElementById("ddAuthOut").hidden = !!m;
+      document.getElementById("ddAuthIn").hidden  = !m;
+      if(m){
+        document.getElementById("ddAuthName").textContent = m.name;
+        const days = Math.max(0, Math.round((m.expires - Date.now()) / 86400000));
+        document.getElementById("ddAuthExp").textContent =
+          "This sign-in lasts about " + days + " more day" + (days === 1 ? "" : "s") +
+          " on this device. It is stored in this browser only.";
+      }else{
+        this.roster();
+      }
+      document.getElementById("ddAuthModal").classList.add("open");
+      const f = document.getElementById(m ? "ddAuthOutBtn" : "ddAuthWho");
+      if(f) setTimeout(()=>f.focus(), 30);
+    },
+    close(){
+      const ov = document.getElementById("ddAuthModal");
+      if(ov) ov.classList.remove("open");
+      const e = document.getElementById("ddAuthErr");
+      if(e){ e.className = "err"; e.textContent = ""; }
+    }
+  };
+  const authSec = document.createElement("div");
+  authSec.className = "navauth";
+  const authBtn = document.createElement("button");
+  authBtn.className = "authbtn"; authBtn.id = "ddAuthBtn"; authBtn.type = "button";
+  authBtn.addEventListener("click", ()=>window.DDAuth.open());
+  authSec.appendChild(authBtn);
+  nav.appendChild(authSec);
+  window.DDAuth.render();
+  document.addEventListener("keydown", e=>{ if(e.key === "Escape") window.DDAuth.close(); });
+  // sign out in one tab, sign out in all of them
+  window.addEventListener("storage", e=>{ if(e.key === AUTH_KEY){ window.DDAuth.render(); window.DDAuth.fire(); } });

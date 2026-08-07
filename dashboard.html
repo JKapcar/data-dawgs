@@ -149,6 +149,56 @@ body{margin:0;background:var(--page);color:var(--ink-1);
 .grpmenu a.sep::after{content:"operator";margin-left:auto;font-size:9.5px;letter-spacing:.06em;
   text-transform:uppercase;opacity:.6}
 .grpmenu a.sep:hover{color:var(--accent)!important}
+/* ---------- navauth — sign-in as its own section of the banner (8/7) ----------
+   ⚠️ It is a direct child of .sitenav sitting BETWEEN .brand and .links, in the dead
+   space between the logo and the menu. It is deliberately NOT inside .links: that row
+   is flex-wrap:nowrap on phones and already runs five nav items plus two buttons in a
+   single line, so an eighth child there pushes the theme button off-screen. In the gap
+   it costs nothing, because the gap was already empty.
+   ⚠️ Light theme paints the bar seal-brown (--navbar), so the chip needs the same
+   cream-on-brown override .theme-btn already carries. Without it the border and text
+   inherit page colours and vanish into the bar. */
+.navauth{display:flex;align-items:center;flex:0 0 auto;min-width:0;margin-left:4px}
+.navauth .authbtn{display:inline-flex;align-items:center;gap:6px;background:none;
+  border:1px solid var(--border);border-radius:999px;color:var(--ink-2);
+  padding:4px 12px;cursor:pointer;font:inherit;font-size:12.5px;font-weight:600;
+  line-height:1.6;white-space:nowrap;max-width:170px}
+.navauth .authbtn:hover{border-color:var(--accent);color:var(--ink-1)}
+.navauth .authbtn .who{overflow:hidden;text-overflow:ellipsis}
+.navauth .authbtn .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex:0 0 auto}
+.navauth.in .authbtn{border-color:color-mix(in srgb, var(--accent) 55%, transparent);color:var(--ink-1)}
+:root[data-theme="light"] .navauth .authbtn{border-color:rgba(236,223,201,0.35);color:var(--navink)}
+:root[data-theme="light"] .navauth .authbtn:hover{border-color:var(--accent);color:#fff}
+:root[data-theme="light"] .navauth.in .authbtn{border-color:rgba(255,138,77,0.7);color:#ffd9c2}
+/* ---- the sign-in dialog: one per page, built lazily on first open ---- */
+.authmodal{position:fixed;inset:0;z-index:9500;display:none;align-items:center;
+  justify-content:center;background:rgba(0,0,0,0.62);padding:18px}
+.authmodal.open{display:flex}
+/* ⚠️ Enumerated, and !important. The `hidden` attribute loses to any `display` rule
+   that out-specifies it — that is exactly how the DFS custom-payout box shipped
+   visible. Do not delete this line thinking the attribute is enough. */
+.authmodal [hidden]{display:none !important}
+.authmodal .box{position:relative;background:var(--surface-1);border:1px solid var(--border);
+  border-radius:14px;width:min(380px,100%);max-height:88vh;overflow:auto;padding:22px;
+  box-shadow:0 20px 60px rgba(0,0,0,0.5);color:var(--ink-1)}
+.authmodal h3{margin:0 0 6px;font-size:18px;color:var(--ink-1)}
+.authmodal .sub{margin:0 0 4px;color:var(--ink-2);font-size:13px}
+.authmodal label{display:block;font-size:11px;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-3);margin:12px 0 4px}
+.authmodal input{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:9px;
+  background:var(--page);color:var(--ink-1);font:inherit;font-size:14px}
+.authmodal input:focus{outline:2px solid var(--accent);outline-offset:1px}
+.authmodal .go{display:block;width:100%;margin-top:12px;padding:10px 14px;border-radius:10px;
+  border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);
+  font:inherit;font-size:14px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none}
+.authmodal .go.alt{background:none;color:var(--ink-1);border-color:var(--border)}
+.authmodal .go.alt:hover{border-color:var(--accent)}
+.authmodal .err{margin:10px 0 0;color:var(--bad);font-size:13px;min-height:1.2em}
+.authmodal .err.ok{color:var(--good)}
+.authmodal .note{margin:14px 0 0;color:var(--ink-3);font-size:12px;line-height:1.5}
+.authmodal .x{position:absolute;top:8px;right:10px;background:none;border:0;color:var(--ink-3);
+  font-size:22px;line-height:1;cursor:pointer;padding:4px 8px}
+.authmodal .x:hover{color:var(--ink-1)}
 .theme-btn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--ink-2);padding:4px 10px;cursor:pointer;font-size:12.5px}
 .sitenav .links .theme-btn{margin-left:10px}
 /* ---- 🙃 The Upside Down: the machine-readable mirror, made visible ----
@@ -243,6 +293,9 @@ body{margin:0;background:var(--page);color:var(--ink-1);
   .sitenav .brand img{width:22px;height:27px}
   .sitenav .brand .logo{font-size:12px;letter-spacing:-.2px;white-space:nowrap}
   .sitenav .brand .tag{display:none}
+  .sitenav .navauth{margin-left:5px}
+  .sitenav .navauth .authbtn{padding:3px 8px;font-size:10.5px;max-width:104px;gap:4px;line-height:1.5}
+  .sitenav .navauth .authbtn .dot{width:6px;height:6px}
   .sitenav .links{width:auto;flex:1 1 auto;margin-left:auto;flex-wrap:nowrap;
     justify-content:flex-end;gap:0 1px;min-width:0}
   .sitenav .links .navbrk{display:none}
@@ -269,6 +322,8 @@ body{margin:0;background:var(--page);color:var(--ink-1);
    and comes back. */
 @media(max-width:419px){
   .sitenav .brand .logo{display:none}
+  .sitenav .navauth{margin-left:3px}
+  .sitenav .navauth .authbtn{padding:3px 7px;font-size:10px;max-width:84px}
   /* ⚠️ 🙃 joins a row that was already at its limit. Measured at 320px BEFORE this
      tightening: the links run needed 243.4px inside a 244.0px box — 0.6px of margin,
      which is not margin. Two pixels off each link's horizontal padding buys 12px back.
@@ -819,6 +874,194 @@ select.dbpresent[hidden]{display:none}
   brand.className = "brand"; brand.href = "index.html";
   brand.innerHTML = '<img src="data:image/png;base64,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" alt="Data Dawgs logo"><span class="logo">DATA <span>DAWGS</span></span><span class="tag">Data, Not Dogma</span>';
   nav.appendChild(brand);
+
+  /* ---------- DDAuth — one sign-in for the whole site (8/7) ----------
+     Every page in the banner gets the same chip, backed by the same key, so signing
+     in on the guillotine page signs you in on Bozo. Before this, sign-in lived only
+     inside bozo.html and connect.html and nowhere else knew your name.
+
+     ⚠️ The session token is SELF-DESCRIBING: base64url(JSON) "." signature, where the
+     JSON carries {n:name, e:expiryMs}. So "who is signed in" is answerable from
+     localStorage alone — no request, no spinner, and no flash of the wrong state on
+     any page. The signature is verified by the WORKER and never here; this only
+     decides what to draw. Forging it locally buys you a nav chip and nothing else,
+     because every read that matters is public and every write is checked server-side.
+
+     ⚠️ The key is "dd-bozo-sess". bozo.html and connect.html read that exact string;
+     a near-miss like "dd-bozo-session" silently splits the site in two and looks fine
+     in a screenshot.
+
+     ⚠️ The header is X-Bozo-Session, NOT X-Dawg-Session. The Worker accepts both, but
+     only X-Bozo-Session is advertised in Access-Control-Allow-Headers on the currently
+     DEPLOYED worker, and a custom header the preflight does not advertise is dropped
+     by the browser. Using X-Bozo-Session means this works today, before the pending
+     worker paste. */
+  const AUTH_KEY = "dd-bozo-sess";
+  const AUTH_WORKER = "https://toto.jkapcar4.workers.dev";
+  window.DDAuth = {
+    token(){ try{ return localStorage.getItem(AUTH_KEY) || ""; }catch(e){ return ""; } },
+    me(){
+      const raw = this.token(); if(!raw) return null;
+      try{
+        const b = JSON.parse(atob(raw.split(".")[0].replace(/-/g,"+").replace(/_/g,"/")));
+        if(!b.n || !b.e || Date.now() > b.e){ this.wipe(); return null; }
+        return {name:b.n, session:raw, expires:b.e};
+      }catch(e){ this.wipe(); return null; }
+    },
+    wipe(){ try{ localStorage.removeItem(AUTH_KEY); }catch(e){} },
+    set(tok){ try{ localStorage.setItem(AUTH_KEY, tok); }catch(e){} this.render(); this.fire(); },
+    clear(){ this.wipe(); this.render(); this.fire(); },
+    /* Pages that already hold their own copy of the session (bozo.html, connect.html)
+       listen for this instead of reloading. A page that does not care ignores it. */
+    fire(){
+      const m = this.me();
+      try{ window.dispatchEvent(new CustomEvent("dd-auth", {detail:m})); }catch(e){}
+      if(typeof window.onDDAuth === "function"){ try{ window.onDDAuth(m); }catch(e){} }
+    },
+    headers(){ const t = this.token(); return t ? {"X-Bozo-Session":t} : {}; },
+    async post(path, body){
+      const r = await fetch(AUTH_WORKER + path, {method:"POST",
+        headers:Object.assign({"Content-Type":"application/json"}, this.headers()),
+        body:JSON.stringify(body||{})});
+      const j = await r.json().catch(()=>({error:"HTTP " + r.status}));
+      if(!r.ok) throw new Error(j.error || ("HTTP " + r.status));
+      return j;
+    },
+    render(){
+      const b = document.getElementById("ddAuthBtn"); if(!b) return;
+      const m = this.me();
+      b.replaceChildren();
+      if(m){
+        b.parentNode.classList.add("in");
+        const d = document.createElement("span"); d.className = "dot";
+        const w = document.createElement("span"); w.className = "who";
+        // first token only: the chip is 170px at most and "Signed in as" is the title
+        w.textContent = String(m.name).split(/\s+/)[0];
+        b.append(d, w);
+        b.title = "Signed in as " + m.name;
+        b.setAttribute("aria-label", "Account — signed in as " + m.name);
+      }else{
+        b.parentNode.classList.remove("in");
+        const w = document.createElement("span"); w.className = "who";
+        w.textContent = "Sign in";
+        b.append(w);
+        b.title = "Sign in";
+        b.setAttribute("aria-label", "Sign in");
+      }
+      // pages can hide their own duplicate sign-in affordance once the nav has one
+      document.querySelectorAll("[data-dd-signedin]").forEach(n=>{ n.hidden = !m; });
+      document.querySelectorAll("[data-dd-signedout]").forEach(n=>{ n.hidden = !!m; });
+    },
+    build(){
+      if(document.getElementById("ddAuthModal")) return;
+      const host = document.body || document.documentElement;
+      const ov = document.createElement("div");
+      ov.className = "authmodal"; ov.id = "ddAuthModal";
+      ov.innerHTML =
+        '<div class="box" role="dialog" aria-modal="true" aria-labelledby="ddAuthH">' +
+          '<button class="x" id="ddAuthX" aria-label="Close">×</button>' +
+          '<h3 id="ddAuthH">Sign in</h3>' +
+          '<div id="ddAuthOut">' +
+            '<p class="sub">One sign-in for the whole site — the Bozo board, the draft, and your AI connector.</p>' +
+            '<label for="ddAuthWho">Name or email</label>' +
+            '<input id="ddAuthWho" list="ddAuthRoster" autocomplete="username" autocapitalize="none" spellcheck="false">' +
+            '<datalist id="ddAuthRoster"></datalist>' +
+            '<label for="ddAuthPw">Password</label>' +
+            '<input id="ddAuthPw" type="password" autocomplete="current-password">' +
+            '<button class="go" id="ddAuthGo">Sign in</button>' +
+            '<p class="err" id="ddAuthErr"></p>' +
+            '<p class="note">No account yet? Use the join link Kap sent you — that is the only way in. ' +
+            'Nothing here is gated on signing in: the boards, the pool and the season tables are public either way.</p>' +
+          '</div>' +
+          '<div id="ddAuthIn" hidden>' +
+            '<p class="sub">Signed in as <b id="ddAuthName"></b>.</p>' +
+            '<a class="go" href="connect.html">Connect your AI</a>' +
+            '<a class="go alt" href="bozo.html">Bozo board</a>' +
+            /* ⚠️ Sign out is the GHOST button. It was the filled accent one for
+               about ten minutes; a destructive action should not be the loudest
+               thing in a panel you opened to check your own name. */
+            '<button class="go alt" id="ddAuthOutBtn">Sign out</button>' +
+            '<p class="note" id="ddAuthExp"></p>' +
+          '</div>' +
+        '</div>';
+      host.appendChild(ov);
+      ov.addEventListener("click", e=>{ if(e.target === ov) this.close(); });
+      document.getElementById("ddAuthX").onclick = ()=>this.close();
+      document.getElementById("ddAuthOutBtn").onclick = ()=>{ this.clear(); this.close(); };
+      const go = document.getElementById("ddAuthGo");
+      const err = document.getElementById("ddAuthErr");
+      const submit = async ()=>{
+        const who = document.getElementById("ddAuthWho").value.trim();
+        const pw  = document.getElementById("ddAuthPw").value;
+        err.className = "err"; err.textContent = "";
+        if(!who || !pw){ err.textContent = "Name and password, both."; return; }
+        go.disabled = true; go.textContent = "Signing in…";
+        try{
+          // `name` carries either a roster name or an email; the Worker resolves an
+          // email to a name before it does anything else. One field, two identifiers.
+          const r = await this.post("/auth/login", {name:who, password:pw});
+          if(!r.session) throw new Error("No session came back.");
+          document.getElementById("ddAuthPw").value = "";
+          this.set(r.session);
+          this.close();
+        }catch(e){ err.textContent = e.message || String(e); }
+        finally{ go.disabled = false; go.textContent = "Sign in"; }
+      };
+      go.onclick = submit;
+      ov.addEventListener("keydown", e=>{
+        if(e.key === "Enter" && !document.getElementById("ddAuthOut").hidden) submit();
+      });
+    },
+    async roster(){
+      const dl = document.getElementById("ddAuthRoster");
+      if(!dl || dl.dataset.loaded) return;
+      try{
+        const r = await fetch(AUTH_WORKER + "/auth/roster?cb=" + Date.now().toString(36));
+        const j = await r.json();
+        dl.replaceChildren();
+        (j.players || []).filter(p=>p.claimed).forEach(p=>{
+          const o = document.createElement("option"); o.value = p.name; dl.appendChild(o);
+        });
+        dl.dataset.loaded = "1";
+      }catch(e){ /* the field is free text; a missing roster costs autocomplete only */ }
+    },
+    open(){
+      this.build();
+      const m = this.me();
+      document.getElementById("ddAuthH").textContent = m ? "Your account" : "Sign in";
+      document.getElementById("ddAuthOut").hidden = !!m;
+      document.getElementById("ddAuthIn").hidden  = !m;
+      if(m){
+        document.getElementById("ddAuthName").textContent = m.name;
+        const days = Math.max(0, Math.round((m.expires - Date.now()) / 86400000));
+        document.getElementById("ddAuthExp").textContent =
+          "This sign-in lasts about " + days + " more day" + (days === 1 ? "" : "s") +
+          " on this device. It is stored in this browser only.";
+      }else{
+        this.roster();
+      }
+      document.getElementById("ddAuthModal").classList.add("open");
+      const f = document.getElementById(m ? "ddAuthOutBtn" : "ddAuthWho");
+      if(f) setTimeout(()=>f.focus(), 30);
+    },
+    close(){
+      const ov = document.getElementById("ddAuthModal");
+      if(ov) ov.classList.remove("open");
+      const e = document.getElementById("ddAuthErr");
+      if(e){ e.className = "err"; e.textContent = ""; }
+    }
+  };
+  const authSec = document.createElement("div");
+  authSec.className = "navauth";
+  const authBtn = document.createElement("button");
+  authBtn.className = "authbtn"; authBtn.id = "ddAuthBtn"; authBtn.type = "button";
+  authBtn.addEventListener("click", ()=>window.DDAuth.open());
+  authSec.appendChild(authBtn);
+  nav.appendChild(authSec);
+  window.DDAuth.render();
+  document.addEventListener("keydown", e=>{ if(e.key === "Escape") window.DDAuth.close(); });
+  // sign out in one tab, sign out in all of them
+  window.addEventListener("storage", e=>{ if(e.key === AUTH_KEY){ window.DDAuth.render(); window.DDAuth.fire(); } });
   const links = document.createElement("div"); links.className = "links";
   NAV.forEach(entry=>{
     if(entry.href && !entry.items){          // a group may ALSO carry an href
