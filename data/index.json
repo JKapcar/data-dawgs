@@ -81,18 +81,18 @@
    {
     "path": "/data/model-contracts.json",
     "url": "https://datadawgs216.com/data/model-contracts.json",
-    "bytes": 4652,
+    "bytes": 4759,
     "as_of": "2026-08-07",
-    "sha256": "9ee860107d5babb415b011ae134de6d9ff4e0cd61c363cc12a59f96382a4f9d5",
+    "sha256": "bd7ff08dea0f61af9d36ad7202a5117b39553bbfbef9f15a473dd9894f8a681a",
     "note": "A contract is not a forecast. It prevents incompatible models and missing values from being silently normalized into false agreement."
    },
    {
     "path": "/data/pound-tools.json",
     "url": "https://datadawgs216.com/data/pound-tools.json",
-    "bytes": 22115,
+    "bytes": 21707,
     "as_of": "2026-08-07",
-    "sha256": "068f01d68d4cd5c21e65fe9423209d85d71500a1c21f423a11026a5aeaced659",
-    "note": "Complete means the requested delivery layers are live. Ready means the Worker source and tests exist but production activation is still pending. Frontend-only means the browser tool and public contract exist without an MCP endpoint. Blocked tools keep an exact minimum path instead of being omitted."
+    "sha256": "264d46c5c65541a3dc7711c29f61ca5f609815c714d32f4b8be9239327c1342d",
+    "note": "Complete means the requested delivery layers are live. Ready means the Worker source and tests exist but production activation is still pending. Frontend-only means the browser tool and public contract exist without an MCP endpoint for the full requested scope. Blocked tools keep an exact minimum path instead of being omitted."
    },
    {
     "path": "/data/tier-audit.json",
@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 11284,
+    "bytes": 11726,
     "as_of": "2026-08-07",
-    "sha256": "4032d4db69b22384f5ba598d2f1f6c2e7a4ee66cbbc058ed131ba59482e6b482",
+    "sha256": "62f78dcf93e10229e3067031ae2110f57409661280c595d558700e570c5a11cd",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    }
   ],

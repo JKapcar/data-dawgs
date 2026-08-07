@@ -515,7 +515,7 @@ const UPSTREAM_MODELS = [
 ];
 
 const MODEL_CONTRACTS = {
-  contract_version: '1.1.0',
+  contract_version: '1.2.0',
   canonical_game_id: 'season_week_away_home using canonical current team abbreviations, for example 2026_01_PIT_CLE',
   model_id_rule: 'lowercase stable slug; model version changes do not change model_id',
   forecast_status_values: ['backtest', 'prospective'],
@@ -539,9 +539,11 @@ const MODEL_CONTRACTS = {
     bet_ev: { inputs: ['win_probability', 'american_odds'], outputs: ['break_even_probability', 'expected_profit_per_unit', 'roi'], mcp_tool: 'dd_calculate_bet_ev' },
     hedge: { inputs: ['original_stake', 'original_american', 'hedge_american'], outputs: ['hedge_stake', 'locked_profit'], mcp_tool: 'dd_calculate_hedge' },
     passer_rating: { inputs: ['attempts', 'completions', 'yards', 'touchdowns', 'interceptions'], outputs: ['nfl_passer_rating'], mcp_tool: 'dd_nfl_passer_rating' },
-    elo_game: { inputs: ['home_elo', 'away_elo', 'home_field_elo'], outputs: ['home_win_probability', 'away_win_probability'] },
+    elo_game: { inputs: ['home_elo', 'away_elo', 'home_field_elo'],
+      outputs: ['home_win_probability', 'away_win_probability', 'adjusted_elo_difference'], mcp_tool: 'dd_elo_game' },
     normal_translation: { inputs: ['home_win_probability', 'residual_sd_points', 'optional_home_line_sportsbook_convention'],
       outputs: ['expected_margin_home', 'model_spread_home', 'home_cover_probability', 'push_probability'],
+      mcp_tool: 'dd_translate_probability',
       formula: 'expected_margin_home = 0.5 + residual_sd_points * inverse_standard_normal(home_win_probability)', modelled: true,
       assumptions: ['published 0.5-point win threshold', 'home favorite lines are negative', 'continuous cover approximation', 'zero push probability', 'no NFL key-number mass'] },
     forecast_grade: { inputs: ['forecast_probability', 'outcome_0_or_1'], outputs: ['brier', 'log_loss'], mcp_tool: 'dd_score_forecast' },
@@ -553,14 +555,14 @@ const MODEL_CONTRACTS = {
 
 const POUND_MINIMUM_PATHS = {
   'model-scoreboard': 'Normalize and publish at least one lawfully integrated independent model feed, then join it by canonical game_id.',
-  '538-classic': 'Build canonical historical/current inputs, reproduce official historical probabilities within tolerance, publish current forecasts, and lock prospective receipts.',
+  '538-classic': 'Deploy the staged Worker, verify dd_elo_game in production tools/list and a parity call, then mark only the one-game calculator scope live; current team states and receipts remain separate future work.',
   nfeloml: 'Run the MIT package in a scheduled precompute job with schema checks and publish static output, or build and validate a Worker-compatible inference port.',
   nfeloqb: 'Obtain a reusable license, permission, or lawful dated output; then build the starter mapping, adapter, and prospective validation.',
   wepa: 'Obtain a reusable methodology or licensed output, implement the weighting against canonical play data, and test it against ordinary EPA out of sample.',
   srs: 'Secure a lawful win-total feed and reusable methodology, then publish versioned preseason and weekly ratings from canonical schedules.',
   hfa: 'Build a canonical historical-game input, estimate HFA by declared period/context, and publish a dated series with uncertainty.',
   units: 'Obtain a reusable license, permission, or lawful output; normalize unit ratings to canonical teams and replicate performance claims independently.',
-  translation: 'Add a versioned discrete NFL margin distribution with key-number and push mass, then validate cover probabilities prospectively.',
+  translation: 'Deploy the staged Worker, verify dd_translate_probability in production tools/list and parity calls, then mark only the disclosed continuous-normal calculator scope live; a discrete key-number model remains separate future work.',
   receipts: 'Emit normalized forecasts from multiple models before kickoff, retain exact input snapshots, and store later results separately by forecast_id.',
   regimes: 'Accumulate adequate prospective samples, preregister slices and minimum counts, and mark post-hoc analysis exploratory.',
   ensembles: 'Accumulate prospective model errors, then benchmark mean, median and candidate weighting methods against the market and best individual model.',
@@ -570,6 +572,8 @@ const POUND_MINIMUM_PATHS = {
 const calculatorIds = new Set(['disagreement', '538-classic', 'hfa', 'translation', 'market', 'cover-ev', 'odds', 'parlay', 'hedge', 'passer', 'grader', 'ensembles']);
 const POUND_LIVE_MCP = {
   disagreement: 'dd_summarize_beliefs',
+  '538-classic': 'dd_elo_game',
+  translation: 'dd_translate_probability',
   market: 'dd_devig_market',
   'cover-ev': 'dd_calculate_bet_ev',
   odds: 'dd_convert_odds',
@@ -588,10 +592,10 @@ const POUND_TOOLS = [
     'Any list of probabilities, plus the current scoreboard.', 'Belief-summary lab and per-game descriptive statistics.',
     'Descriptive uncertainty only; never call disagreement a predictive edge.', 'dd_summarize_beliefs',
     '/data/model-contracts.json', null],
-  ['538-classic', '538 Classic Elo', 'Provide a permanent simple benchmark/control.', 'frontend-only',
+  ['538-classic', '538 Classic Elo', 'Provide a permanent simple benchmark/control.', 'complete',
     'User-supplied Elo ratings; MIT mathematics HFA=65.', 'One-game probability calculator.',
-    'Describe this as a calculator until canonical 2026 state and receipts ship.', 'No MCP tool.',
-    '/data/upstream-models.json', 'Historical reproduction and current team-state pipeline are not staged in this slice.'],
+    'Describe this as a calculator until canonical 2026 state and receipts ship.', 'dd_elo_game',
+    '/data/upstream-models.json + /data/model-contracts.json', null],
   ['nfelo', 'nfelo Power Ratings', 'Use a dated public model output with Data Dawgs validation.', 'complete',
     '2026-08-06 nfelo snapshot and existing historical backtest.', 'Existing nfelo page plus Pound scoreboard.',
     'State that the backtest overlaps optimization and has not established out-of-sample skill.', 'dd_analyze_matchup',
@@ -614,16 +618,16 @@ const POUND_TOOLS = [
     '/data/upstream-models.json', 'No verified reusable license or licensed market feed.'],
   ['hfa', 'Home-Field Adjustment Tracker', 'Inspect the effect of a transparent HFA assumption.', 'frontend-only',
     'User-supplied ratings and HFA; site defaults are dated.', 'Interactive Elo/margin calculator.',
-    'Labels inputs modelled and does not claim the default is current truth.', 'No MCP tool.',
+    'Labels inputs modelled and does not claim the default is current truth.', 'dd_elo_game covers the caller-supplied HFA calculator; it is not a historical tracker.',
     '/data/models.json', 'Historical HFA tracking feed is not built.'],
   ['units', 'Unit Ratings', 'Separate pass, rush and special-teams strengths.', 'data-blocked',
     'Lawful unit outputs and canonical play data.', 'Inventory card.',
     'Upstream performance numbers remain upstream claims.', 'No MCP tool.',
     '/data/upstream-models.json', 'Research/educational language is not a reusable software license.'],
-  ['translation', 'Probability / Spread Translation', 'Translate win probability into expected margin and cover estimates.', 'frontend-only',
+  ['translation', 'Probability / Spread Translation', 'Translate win probability into expected margin and cover estimates.', 'complete',
     'User probability and dated Data Dawgs normal residual SD.', 'Interactive calculator.',
-    'Calls the result MODELLED and names the normal, independent, no-key-number assumption.', 'No MCP tool.',
-    '/data/models.json + /data/model-contracts.json', 'Discrete key-number distribution and push model are not implemented.'],
+    'Calls the result MODELLED and names the normal, independent, no-key-number assumption.', 'dd_translate_probability',
+    '/data/models.json + /data/model-contracts.json', null],
   ['market', 'Market Normalizer', 'Normalize American odds, implied probability, hold and devig probabilities.', 'complete',
     'User-entered prices.', 'Odds and hold/vig calculators.',
     'No sportsbook feed, closing-line claim or vendor attribution.', 'dd_devig_market',
@@ -705,7 +709,7 @@ write('model-contracts.json', {
 write('pound-tools.json', {
   as_of: '2026-08-07', source: 'Reconciled against the Data Dawgs site, Worker source and inspected upstream projects on 2026-08-07.',
   tier: TIERS.pound, graded: false,
-  note: 'Complete means the requested delivery layers are live. Ready means the Worker source and tests exist but production activation is still pending. Frontend-only means the browser tool and public contract exist without an MCP endpoint. Blocked tools keep an exact minimum path instead of being omitted.',
+  note: 'Complete means the requested delivery layers are live. Ready means the Worker source and tests exist but production activation is still pending. Frontend-only means the browser tool and public contract exist without an MCP endpoint for the full requested scope. Blocked tools keep an exact minimum path instead of being omitted.',
   data: POUND_TOOLS,
 });
 
@@ -806,7 +810,8 @@ write('tier-audit.json', {
 // and deployed registrations have been verified.
 const MCP_POUND_LIVE = ['dd_convert_odds', 'dd_devig_market', 'dd_price_parlay',
   'dd_calculate_bet_ev', 'dd_calculate_hedge', 'dd_nfl_passer_rating',
-  'dd_score_forecast', 'dd_summarize_beliefs'];
+  'dd_score_forecast', 'dd_summarize_beliefs', 'dd_elo_game',
+  'dd_translate_probability'];
 const MCP_LIVE = ['dd_whoami', 'dd_league_overview', 'dd_bozo_week', 'dd_bozo_standings',
   'dd_draft_board', 'dd_draft_pool', 'dd_survivor_week', 'dd_scores',
   'dd_dfs_correlations', 'dd_guillotine_odds', 'dd_site_map',

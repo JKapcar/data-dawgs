@@ -2106,6 +2106,69 @@ function mcpCalcPasserRating(attempts, completions, yards, touchdowns, intercept
   ];
   return { rating: parts.reduce((s, v) => s + v, 0) / 6 * 100, components: parts };
 }
+function mcpCalcEloGame(homeElo, awayElo, homeFieldElo) {
+  const homeRating = mcpCalcFinite(homeElo, "home Elo");
+  const awayRating = mcpCalcFinite(awayElo, "away Elo");
+  const homeField = mcpCalcFinite(homeFieldElo, "home-field Elo");
+  const adjusted = homeRating + homeField - awayRating;
+  const home = 1 / (1 + Math.pow(10, -adjusted / 400));
+  return { home_win_probability: home, away_win_probability: 1 - home, adjusted_elo_difference: adjusted };
+}
+// Peter J. Acklam's inverse-normal rational approximation and the matching
+// browser CDF. Keeping these coefficients in parity with work/pound-core.js
+// prevents the MCP and human calculator from producing different answers.
+function mcpCalcNormalInv(v) {
+  const p = mcpCalcProbability(v);
+  if (p === 0) return -Infinity;
+  if (p === 1) return Infinity;
+  const a = [-39.69683028665376, 220.9460984245205, -275.9285104469687, 138.357751867269,
+    -30.66479806614716, 2.506628277459239];
+  const b = [-54.47609879822406, 161.5858368580409, -155.6989798598866,
+    66.80131188771972, -13.28068155288572];
+  const c = [-0.007784894002430293, -0.3223964580411365, -2.400758277161838,
+    -2.549732539343734, 4.374664141464968, 2.938163982698783];
+  const d = [0.007784695709041462, 0.3224671290700398, 2.445134137142996, 3.754408661907416];
+  const lo = 0.02425, hi = 1 - lo;
+  if (p < lo) {
+    const q = Math.sqrt(-2 * Math.log(p));
+    return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+      ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
+  }
+  if (p > hi) {
+    const q = Math.sqrt(-2 * Math.log(1 - p));
+    return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+      ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
+  }
+  const q = p - 0.5, r = q * q;
+  return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q /
+    (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
+}
+function mcpCalcNormalCdf(x) {
+  const z = mcpCalcFinite(x, "z");
+  const t = 1 / (1 + 0.2316419 * Math.abs(z));
+  const density = 0.3989422804014327 * Math.exp(-z * z / 2);
+  const poly = t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+  const cdf = 1 - density * poly;
+  return z >= 0 ? cdf : 1 - cdf;
+}
+function mcpCalcNormalTranslation(homeWinProbability, residualSdPoints, homeLine) {
+  const p = mcpCalcProbability(homeWinProbability, "home win probability");
+  if (p <= 0 || p >= 1) throw new Error("translation probability must be strictly between 0 and 1");
+  const sd = mcpCalcFinite(residualSdPoints, "residual SD");
+  if (sd <= 0) throw new Error("residual SD must be greater than zero");
+  const margin = 0.5 + sd * mcpCalcNormalInv(p);
+  if (!Number.isFinite(margin)) throw new Error("translated margin is outside the supported numeric range");
+  const out = { expected_margin_home: margin, model_spread_home: margin, residual_sd_points: sd };
+  if (homeLine !== undefined && homeLine !== null && homeLine !== "") {
+    const line = mcpCalcFinite(homeLine, "home line");
+    const threshold = -line;
+    out.home_line = line;
+    out.cover_threshold_home_margin = threshold;
+    out.home_cover_probability = 1 - mcpCalcNormalCdf((threshold - margin) / sd);
+    out.push_probability = 0;
+  }
+  return out;
+}
 function mcpCalcForecastGrade(forecastProbability, outcome) {
   const p = mcpCalcProbability(forecastProbability, "forecast probability");
   const y = mcpCalcFinite(outcome, "outcome");
@@ -2227,7 +2290,7 @@ async function mcpDispatch(m, env, caller) {
       return rpcOk(id, {
         protocolVersion: proto,
         capabilities: { tools: {} },
-        serverInfo: { name: "data-dawgs", version: "1.2.0" },
+        serverInfo: { name: "data-dawgs", version: "1.3.0" },
         instructions:
           (caller && caller.kind === "user"
             ? "You are connected as " + caller.name + ". When a tool marks a row `you: true`, that is them.\n"
@@ -2652,6 +2715,55 @@ const MCP_TOOLS = [
         implied_probability: 1 / decimal,
         read_only: true,
         note: "Deterministic price conversion only; the price is user-supplied and is not verified against a sportsbook.",
+      });
+    },
+  },
+  {
+    name: "dd_elo_game",
+    description: "Calculate one-game home and away win probabilities from caller-supplied Elo ratings and a caller-supplied home-field Elo adjustment. This is the transparent 538 Classic logistic equation, not a current team-state feed or forecast ledger.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        home_elo: { type: "number", description: "Caller-supplied home-team Elo rating." },
+        away_elo: { type: "number", description: "Caller-supplied away-team Elo rating." },
+        home_field_elo: { type: "number", description: "Caller-supplied home-field Elo adjustment; 65 reproduces the calculator's historical default." },
+      },
+      required: ["home_elo", "away_elo", "home_field_elo"],
+      additionalProperties: false,
+    },
+    async run(args) {
+      const out = mcpCalcEloGame(args.home_elo, args.away_elo, args.home_field_elo);
+      return toolText({
+        home_elo: args.home_elo,
+        away_elo: args.away_elo,
+        home_field_elo: args.home_field_elo,
+        ...out,
+        read_only: true,
+        note: "One-game calculator only. Data Dawgs does not supply current 2026 538 team states or a prospectively graded 538 forecast ledger.",
+      });
+    },
+  },
+  {
+    name: "dd_translate_probability",
+    description: "MODELLED translation from caller-supplied home win probability to expected home margin, with optional home cover probability at a caller-supplied sportsbook line. Uses the published 0.5-point win threshold and continuous normal approximation.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        home_win_probability: { type: "number", exclusiveMinimum: 0, exclusiveMaximum: 1, description: "Caller-supplied home win probability strictly between 0 and 1." },
+        residual_sd_points: { type: "number", exclusiveMinimum: 0, description: "Positive residual standard deviation in points; 13.18 is the dated Data Dawgs calculator default." },
+        home_line: { type: "number", description: "Optional sportsbook home spread; a home favorite is negative, for example -3." },
+      },
+      required: ["home_win_probability", "residual_sd_points"],
+      additionalProperties: false,
+    },
+    async run(args) {
+      const out = mcpCalcNormalTranslation(args.home_win_probability, args.residual_sd_points, args.home_line);
+      return toolText({
+        home_win_probability: args.home_win_probability,
+        ...out,
+        modelled: true,
+        read_only: true,
+        note: "MODELLED continuous normal approximation with a 0.5-point win threshold, independent residuals, no NFL key-number mass and zero push probability when a line is supplied. No injuries, weather, rest or market feed is included.",
       });
     },
   },

@@ -5,7 +5,7 @@
  "graded": false,
  "note": "A contract is not a forecast. It prevents incompatible models and missing values from being silently normalized into false agreement.",
  "data": {
-  "contract_version": "1.1.0",
+  "contract_version": "1.2.0",
   "canonical_game_id": "season_week_away_home using canonical current team abbreviations, for example 2026_01_PIT_CLE",
   "model_id_rule": "lowercase stable slug; model version changes do not change model_id",
   "forecast_status_values": [
@@ -124,8 +124,10 @@
     ],
     "outputs": [
      "home_win_probability",
-     "away_win_probability"
-    ]
+     "away_win_probability",
+     "adjusted_elo_difference"
+    ],
+    "mcp_tool": "dd_elo_game"
    },
    "normal_translation": {
     "inputs": [
@@ -139,6 +141,7 @@
      "home_cover_probability",
      "push_probability"
     ],
+    "mcp_tool": "dd_translate_probability",
     "formula": "expected_margin_home = 0.5 + residual_sd_points * inverse_standard_normal(home_win_probability)",
     "modelled": true,
     "assumptions": [

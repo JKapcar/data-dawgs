@@ -38,3 +38,19 @@ Started: 2026-08-07 ET
 - Strict deployment preserved compatibility date `2026-07-31`, the `RL` KV binding, the daily `0 9 * * *` backup cron, dashboard variables, encrypted secrets, disabled preview URLs, Workers Logs and the 1,000 ms CPU limit.
 - Production verification confirmed the active version and deployment message in Cloudflare, all eight tool registrations in the deployed bundle, the public streamable-HTTP MCP route, and the `401` authentication boundary for anonymous initialization.
 - No league credential was inspected or requested. Calculator behavior remains covered by the 122-assertion MCP suite and parity checks against `work/pound-core.js`; deployment verification does not turn deterministic arithmetic into a graded forecast or a live market feed.
+
+## Backend activation — Batch 2 staging
+
+- Synced to production commit `7cac6cd` before editing and preserved the unrelated untracked taxonomy patch and `tmp/` directory.
+- Added `dd_elo_game` and `dd_translate_probability` as deterministic, read-only Worker tools over caller-supplied inputs. Neither tool stores data or calls an external service.
+- Kept exact parity with the existing browser implementations: 538 Classic logistic Elo and the disclosed continuous normal-margin translation with a 0.5-point win threshold, zero push mass and no NFL key-number distribution.
+- Expanded the MCP suite to 131 passing assertions and re-ran the 19 Pound calculator, 13 contract, 62 identity, 14 backup and full data-envelope/manifest validations.
+- Public metadata reports 21 live tools and these 2 as staged/ready. Production deployment and a real conformance call are still required before either may be marked live or complete.
+- Scope remains explicit: `dd_elo_game` is not a current 2026 538 team-state feed, `dd_translate_probability` is not a discrete score model, and accepting an HFA input does not complete the historical HFA tracker.
+
+## Batch 2 production activation — 2026-08-07
+
+- Deployed the strict manifest to Cloudflare Worker `toto` as version `f6eca7d1-ff03-4a2a-b170-b434880b0a01` with message `Add Pound Elo and probability translation MCP tools (Batch 2)`.
+- Preserved compatibility date `2026-07-31`, the `RL` KV binding, the daily `0 9 * * *` backup cron, dashboard variables, eight encrypted secrets, disabled preview URLs, Workers Logs and the 1,000 ms CPU limit.
+- Production verification confirmed the active version, both Worker handlers, every binding by name and type, and the public MCP route's `401` authentication boundary.
+- No league credential was inspected or requested. Exact tool behavior remains covered by the 131-assertion MCP parity suite; activation does not add current 538 team states, a discrete margin distribution, a market feed or a graded track record.

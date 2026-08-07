@@ -43,7 +43,9 @@
    "dd_calculate_hedge",
    "dd_nfl_passer_rating",
    "dd_score_forecast",
-   "dd_summarize_beliefs"
+   "dd_summarize_beliefs",
+   "dd_elo_game",
+   "dd_translate_probability"
   ],
   "tools_staged": []
  },
@@ -51,7 +53,7 @@
   "surfaces": 12,
   "with_live_machine_access": 12,
   "with_no_machine_access": 0,
-  "mcp_tools_live": 21,
+  "mcp_tools_live": 23,
   "mcp_tools_staged": 0,
   "mcp_tools_planned": 7
  },
@@ -365,6 +367,18 @@
     {
      "kind": "mcp",
      "tool": "dd_summarize_beliefs",
+     "status": "live",
+     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_elo_game",
+     "status": "live",
+     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_translate_probability",
      "status": "live",
      "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
     }
