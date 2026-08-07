@@ -525,18 +525,36 @@ th.sortable:hover{color:var(--ink-1)}
   #board td[data-c=team]{order:5;flex:0 0 auto;font-size:11px;color:var(--ink-3)}
   #board td[data-c=pos]::after{content:"·";margin-left:6px;color:var(--ink-3);font-weight:400}
 
-  #board td[data-c=half]{order:7;margin-left:33px;font-weight:750;color:var(--accent);font-size:13.5px}
-  #board td[data-c=half]::after{content:" half";font-weight:500;font-size:11px;color:var(--ink-3)}
+  /* ⚠️ ALL THREE money cells are hidden by default and the one carrying .lgprice is
+     promoted onto line two. Which one that is comes from the auction settings, not from
+     this stylesheet — a superflex league should not be reading half-PPR dollars because
+     a CSS rule said `[data-c=half]`. The suffix is attr(data-lg), so the number on
+     screen always says which currency it is.
+     ⚠️ .lgprice must be declared AFTER the [data-c=…] rule: the two have identical
+     specificity (1,1,1) and source order is the only thing separating them. */
+  #board td[data-c=half],#board td[data-c=full],#board td[data-c=sf]{order:11;display:none}
+  #board td.lgprice{order:7;display:block;margin-left:33px;
+    font-weight:750;color:var(--accent);font-size:13.5px}
+  #board td.lgprice::after{font-weight:500;font-size:11px}
   #board td[data-c=silva]{order:8;font-size:12px;color:var(--ink-3)}
   #board td[data-c=silva]::before{content:"· Silva ";color:var(--ink-3)}
   #board td[data-c=act]{order:9;flex:0 0 auto;margin-left:auto}
 
-  /* the third line, revealed by the chevron */
-  #board td[data-c=full],#board td[data-c=sf],#board td[data-c=note]{order:10;display:none}
-  #board tr.open td[data-c=full],#board tr.open td[data-c=sf]{display:block;
-    font-size:12px;color:var(--ink-3)}
-  #board tr.open td[data-c=full]{margin-left:33px}
+  /* ⚠️ The label lives on the per-column ::after rules below and NOWHERE else. An
+     earlier pass also put `content:" " attr(data-lg)` on .lgprice; the two happened to
+     produce the same string, so the duplication was invisible and would have stayed
+     invisible right up until someone changed one of them. One source. */
+  /* the third line, revealed by the chevron: the other two prices, then the note */
+  #board td[data-c=note]{order:12;display:none}
+  #board tr.open td[data-c=half],#board tr.open td[data-c=full],#board tr.open td[data-c=sf]{
+    display:block;font-size:12px;font-weight:400;color:var(--ink-3)}
+  #board tr.open td.lgprice{font-size:13.5px;font-weight:750;color:var(--accent)}
+  /* Indent the first of the two extras. Exactly one cell carries .lgprice, so: indent
+     `half` unless half IS the league one, in which case indent `full` instead. */
+  #board tr.open td[data-c=half]:not(.lgprice){margin-left:33px}
+  #board tr.open td[data-c=half].lgprice ~ td[data-c=full]{margin-left:33px}
   #board tr.open td[data-c=note]{display:block;flex-basis:100%;margin:3px 0 0 33px}
+  #board td[data-c=half]::after{content:" half";color:var(--ink-3)}
   #board td[data-c=full]::after{content:" full";color:var(--ink-3)}
   #board td[data-c=sf]::after{content:" SF";color:var(--ink-3)}
   #board td .note{white-space:normal;max-width:none;font-size:12px;line-height:1.45}
@@ -564,14 +582,15 @@ th.sortable:hover{color:var(--ink-1)}
    the browser assigns items to lines using their flex BASE size and only shrinks within
    a line afterwards — so the overflowing item wraps first and never gets shrunk. */
 @media(max-width:380px){
-  #board td[data-c=half]{margin-left:0}
-  #board tr.open td[data-c=full]{margin-left:0}
+  #board td.lgprice{margin-left:0}
+  #board tr.open td[data-c=half]:not(.lgprice),
+  #board tr.open td[data-c=half].lgprice ~ td[data-c=full],
   #board tr.open td[data-c=note]{margin-left:0}
 }
 /* 320px — an SE-class screen. The " half" suffix costs ~26px and is already stated in
    the paragraph above the board; losing it buys back the last eight ragged rows. */
 @media(max-width:340px){
-  #board td[data-c=half]::after{content:""}
+  #board td.lgprice::after{content:"" !important}
 }
 /* The phone sort control. Hidden on desktop, where the <th>s do this job. */
 .msort{display:none}
@@ -1903,10 +1922,15 @@ const LS_BOARD="dd-board-v2", LS_MARKS="dd-marks-v1", LS_AUCTION="dd-auction-v1"
 const POS_COLOR={QB:"#e66767",RB:"#199e70",WR:"#3987e5",TE:"#c98500",DST:"#8a8378",D:"#8a8378",K:"#8a8378"};
 function auctionData(){
   let A=null; try{ A=JSON.parse(localStorage.getItem(LS_AUCTION)); }catch(e){}
-  if(!A || !A.settings || !Array.isArray(A.picks)) return {teams:[],picks:[],sold:{},budget:200,spots:15};
+  if(!A || !A.settings || !Array.isArray(A.picks))
+    return {teams:[],picks:[],sold:{},budget:200,spots:15,scoring:"half"};
   const sold={};
   A.picks.forEach(pk=>{ sold[pk.player.toLowerCase()]=pk; });
-  return {teams:A.settings.teams||[], picks:A.picks, sold, budget:A.settings.budget||200, spots:A.settings.spots||15};
+  // ⚠️ `scoring` was already read by the AI-context builder (st.scoring) but never made
+  // it out of auctionData, so the board itself had no idea what the league plays. The
+  // phone card shows ONE price and it has to be the right one.
+  return {teams:A.settings.teams||[], picks:A.picks, sold, budget:A.settings.budget||200,
+          spots:A.settings.spots||15, scoring:A.settings.scoring||"half"};
 }
 let board;
 try{ board = JSON.parse(localStorage.getItem(LS_BOARD)) || SEED; }catch(e){ board = SEED; }
@@ -2219,6 +2243,9 @@ function render(){
     document.getElementById("liveCard").style.display="none";
   }
   const el=document.getElementById("board");
+  // ⚠️ Whitelisted, not trusted. A settings blob carrying scoring:"ppr" would otherwise
+  // match no column and every row would show no price at all on a phone.
+  const SCORING = ["half","full","sf"].includes(A.scoring) ? A.scoring : "half";
   let rows=board.filter(r=>{
     if(state.pos!=="ALL" && r.pos!==state.pos) return false;
     if(state.q && !(r.name.toLowerCase().includes(state.q)||String(r.team).toLowerCase().includes(state.q))) return false;
@@ -2272,7 +2299,11 @@ function render(){
     const cells=[
       [String(r.rank),false,false],
       [r.name,true,false],[r.pos,false,false],[r.team,false,false],
-      ["$"+(+r.half||0),false,true],["$"+(+r.full||0),false,false],["$"+(+r.sf||0),false,false],
+      // the bolded money column follows the league too — desktop still shows all three,
+      // but the one that counts is the one that counts on both layouts
+      ["$"+(+r.half||0),false,SCORING==="half"],
+      ["$"+(+r.full||0),false,SCORING==="full"],
+      ["$"+(+r.sf||0),  false,SCORING==="sf"],
       [r.silva||"–",false,false],
     ];
     // ⚠️ data-c is what the phone card layout reorders on. Keep it in step with COLS —
@@ -2281,6 +2312,12 @@ function render(){
     cells.forEach(([v,tl,em],i)=>{
       const td=document.createElement("td"); if(tl) td.classList.add("tl");
       td.dataset.c=CKEY[i];
+      /* The phone card has room for exactly ONE price, and it is the league's — read
+         from the auction settings, not hardcoded. `.lgprice` is what the card layout
+         promotes onto line two; the other two stay hidden until the row is expanded.
+         The " half" / " full" / " SF" suffix comes from the per-column CSS, so the
+         number on screen always says which currency it is. */
+      if(CKEY[i]===SCORING) td.classList.add("lgprice");
       td.textContent=v;
       if(i===0) td.classList.add("rk");
       if(i===1){ td.style.fontWeight=600;

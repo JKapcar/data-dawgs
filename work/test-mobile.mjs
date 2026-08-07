@@ -148,6 +148,54 @@ for (const W of [390, 360]) {
   await ctx.close();
 }
 
+/* ---------------------------------------------- the price follows the league */
+console.log("\nthe phone price is the LEAGUE's price, not a hardcoded column");
+for (const [scoring, label, col] of [["half", "half", "half"], ["full", "full", "full"], ["sf", "SF", "sf"], ["ppr", "half", "half"]]) {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 900 }, isMobile: true, hasTouch: true });
+  const p = await ctx.newPage();
+  p.on("pageerror", e => errors.push("scoring " + scoring + ": " + e.message));
+  await p.goto(U + "board.html?embed=1", { waitUntil: "domcontentloaded" }).catch(() => {});
+  // seed an auction whose settings say what the league plays, then reload into it
+  await p.evaluate(sc => localStorage.setItem("dd-auction-v1", JSON.stringify({
+    settings: { teams: [{ name: "Data Dawgs" }], budget: 200, spots: 15, scoring: sc }, picks: []
+  })), scoring);
+  await p.reload({ waitUntil: "networkidle" }).catch(() => {});
+  await p.waitForTimeout(1200);
+  const r = await p.evaluate(() => {
+    const tr = document.querySelector("#board tbody tr");
+    const lg = tr.querySelector("td.lgprice");
+    const shown = [...tr.querySelectorAll("td[data-c=half],td[data-c=full],td[data-c=sf]")]
+      .filter(td => td.getBoundingClientRect().width > 0).map(td => td.dataset.c);
+    return {
+      lgCol: lg ? lg.dataset.c : null,
+      lgCount: tr.querySelectorAll("td.lgprice").length,
+      value: lg ? lg.textContent : "",
+      suffix: lg ? getComputedStyle(lg, "::after").content : "",
+      shown,
+      onLineTwo: lg && Math.abs(lg.getBoundingClientRect().top - tr.querySelector("td[data-c=silva]").getBoundingClientRect().top) < 12,
+    };
+  });
+  const note = scoring === "ppr" ? " (an unknown scoring value falls back to half)" : "";
+  ok(`scoring="${scoring}": the ${col} column is the one promoted${note}`, r.lgCol === col, String(r.lgCol));
+  ok(`scoring="${scoring}": exactly one cell is the league price`, r.lgCount === 1, String(r.lgCount));
+  ok(`scoring="${scoring}": it is the only price visible`, r.shown.length === 1 && r.shown[0] === col, r.shown.join(","));
+  ok(`scoring="${scoring}": it sits on line two next to Silva`, r.onLineTwo);
+  // ⚠️ the number must SAY which currency it is, or a superflex reader silently
+  // misreads half-PPR dollars as their own
+  ok(`scoring="${scoring}": the suffix reads "${label}"`, new RegExp(label).test(r.suffix), r.suffix);
+  // the other two are one tap away, not gone
+  await p.evaluate(() => document.querySelector("#board tbody tr .rowexp").click());
+  await p.waitForTimeout(150);
+  /* ⚠️ Scope to the ROW that was opened. Querying the document picks up every other
+     row's league price too, so the list came back with 459 entries and the assertion
+     failed against perfectly correct markup. */
+  const open = await p.evaluate(() => [...document.querySelector("#board tbody tr")
+    .querySelectorAll("td[data-c=half],td[data-c=full],td[data-c=sf]")]
+    .filter(td => td.getBoundingClientRect().width > 0).map(td => td.dataset.c));
+  ok(`scoring="${scoring}": expanding reveals the other two prices`, open.length === 3, open.join(","));
+  await ctx.close();
+}
+
 /* ---------------------------------------------- desktop must be untouched */
 console.log("\nthe desktop table is unchanged");
 {
