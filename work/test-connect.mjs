@@ -29,17 +29,25 @@ const errors = [];
 page.on("pageerror", e => errors.push(e.message));
 
 /* ---- stub the Worker ---- */
+/* ⚠️ A realistic session token, not a placeholder string. The nav's DDAuth decodes
+   the token to learn who is signed in and DISCARDS anything it cannot parse — so a
+   stub returning "SESS.TOKEN" would be thrown away the moment it was stored, and the
+   page would look broken for a reason that exists nowhere but this file. Shape is
+   base64url(JSON{n,e}) "." signature, exactly what the Worker mints. */
+const b64u = o => Buffer.from(JSON.stringify(o)).toString("base64")
+  .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const SESSTOK = b64u({ n: "Jeff", e: Date.now() + 30 * 86400000 }) + ".sigsigsig";
 let minted = null, revoked = false, savedEmail = null, sessionSeen = null;
 await page.route("**/toto.jkapcar4.workers.dev/**", async route => {
   const req = route.request();
   const url = new URL(req.url());
   const body = req.postDataJSON() || {};
-  sessionSeen = req.headers()["x-dawg-session"] || null;
+  sessionSeen = req.headers()["x-bozo-session"] || null;
   const send = (obj, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(obj) });
 
   if (url.pathname === "/auth/login") {
     if (body.password !== "hunter2") return send({ error: "Wrong password." }, 403);
-    return send({ ok: true, name: "Jeff", email: "jeff@example.com", session: "SESS.TOKEN" });
+    return send({ ok: true, name: "Jeff", email: "jeff@example.com", session: SESSTOK });
   }
   if (url.pathname === "/auth/mcp-token") {
     if (!sessionSeen) return send({ error: "Sign in first." }, 401);
@@ -83,14 +91,14 @@ ok("the email came back with the login and prefilled",
 ok("the password field is cleared after use", (await page.inputValue("#cPw")) === "");
 // ⚠️ the key must match bozo.html's exactly or the two pages cannot see each other
 ok("the session is stored under the SAME key bozo.html uses",
-   (await page.evaluate(() => localStorage.getItem("dd-bozo-sess"))) === "SESS.TOKEN");
+   (await page.evaluate(() => localStorage.getItem("dd-bozo-sess"))) === SESSTOK);
 ok("nothing was written to a near-miss key",
    (await page.evaluate(() => localStorage.getItem("dd-bozo-session"))) === null);
 
 console.log("\nminting");
 await page.click("#cMint");
 await page.waitForTimeout(300);
-ok("the mint call carried the session header", sessionSeen === "SESS.TOKEN");
+ok("the mint call carried the session header", sessionSeen === SESSTOK);
 ok("the URL box appears", await page.locator("#cUrlBox").isVisible());
 ok("the URL is the one the Worker minted",
    (await page.inputValue("#cUrl")) === "https://toto.jkapcar4.workers.dev/mcp/u_ABC123");
