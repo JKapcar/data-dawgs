@@ -612,6 +612,9 @@ select.dbpresent[hidden]{display:none}
   <p class="dbnote" id="dbNote"></p>
 </div>
 
+<script src="draft-league.js"></script>
+<script src="draft-providers.js"></script>
+<script src="draft-live-sync.js"></script>
 <script data-page="dashboard">
 // Shared nav + theme + live-sync client. Each page: <div id="nav"></div> then this script with data-page attr.
 
@@ -1177,7 +1180,7 @@ select.dbpresent[hidden]{display:none}
   const BOT_URL = "https://toto.jkapcar4.workers.dev/";              // Worker endpoint, baked at build time
   const LS_PASS = "dd-bot-pass";             // league passphrase, per browser
   const LS_AI   = "dd-ai-v1";                // optional personal-key override (operator)
-  const LS_STATE= "dd-auction-v1";
+  const LS_STATE=window.DDLeague ? DDLeague.storageKey("dd-auction-v1") : "dd-auction-v1";
 
   const cfgAI = () => { try{ return JSON.parse(localStorage.getItem(LS_AI)||"{}"); }catch(e){ return {}; } };
   const getPass = () => { try{ return localStorage.getItem(LS_PASS)||""; }catch(e){ return ""; } };
@@ -1211,7 +1214,7 @@ How-to questions about the site are also yours to answer, from the SITE MANUAL s
 - Same voice for how-to as for analysis: short, plain text, no markdown.`;
 
   // The auction surface — what SYS used to assert unconditionally.
-  const SYS_DRAFT = `RIGHT NOW you are the live auction assistant, advising whoever is asking, mid-draft, in a 14-team fantasy football auction.
+  const SYS_DRAFT = `RIGHT NOW you are the live draft assistant, advising whoever is asking, mid-draft, in a fantasy football draft.
 - MV is a dated market-consensus value snapshot, not a points projection. Surplus vs MV measures buying below consensus, not winning.
 - Reason from: dollars left, open starting slots, positional scarcity on the board, inflation, and each rival's max bid. $1-3 endgame fills are a real plan, not a failure.
 - When asked to decide, name the player(s) and the price you would pay.
@@ -1294,7 +1297,9 @@ STATE: everything saves in the browser on that device. A different device shows 
     const infl = remValue>0 ? remDollars/remValue : 1;
 
     const L=[];
-    L.push(`LEAGUE: 14-team offline auction, $${st.budget} budget, ${st.spots} roster spots each (QB, 2 RB, 2 WR, TE, 2 FLEX W/R/T, DEF, rest bench; no kicker). Scoring: ${{half:"Half PPR",full:"Full PPR",sf:"Superflex"}[scoring]||scoring}. $0 bids are legal, so a team's max bid = its dollars left.`);
+    const roster=(st.rosterSlots||[]).map(s=>`${s.count} ${s.slot}`).join(", ")||`${st.spots} roster spots`;
+    const draftType=st.draftType||"auction";
+    L.push(`LEAGUE: ${T.length}-team ${draftType} draft, ${roster}. Scoring: ${{half:"Half PPR",full:"Full PPR",sf:"Superflex"}[scoring]||scoring}.${draftType==="auction"?` $${st.budget} budget; $0 bids are legal, so a team's max bid = its dollars left.`:""}`);
     L.push(`MV = Market Value, a market-consensus auction-dollar snapshot dated 2026-07-29. It is not a points projection.`);
     L.push(`STATE: ${picks.length} sold. Inflation ${infl.toFixed(2)}x — $${remDollars} chasing $${Math.round(remValue)} of MV still on the board.`);
     L.push(`TEAMS (name | $ left = max bid | spots open | QB/RB/WR/TE/DST drafted):`);
@@ -1563,9 +1568,9 @@ STATE: everything saves in the browser on that device. A different device shows 
    needs its own answer to "which team am I", so identity lives in its own localStorage
    key that DDSync never touches. Resolve by NAME first — team order can change. */
 (function(){
-  const KEY="dd-me-v1", listeners=[];
+  const KEY=(window.DDLeague ? DDLeague.storageKey("dd-me-v1") : "dd-me-v1"), listeners=[];
   const raw=()=>{ try{ return JSON.parse(localStorage.getItem(KEY)||"null"); }catch(e){ return null; } };
-  const teams=()=>{ try{ const S=JSON.parse(localStorage.getItem("dd-auction-v1")||"null");
+  const teams=()=>{ try{ const S=JSON.parse(localStorage.getItem(window.DDLeague?DDLeague.storageKey("dd-auction-v1"):"dd-auction-v1")||"null");
       return (S&&S.settings&&S.settings.teams)||[]; }catch(e){ return []; } };
   const fire=()=>listeners.forEach(f=>{ try{ f(); }catch(e){} });
 
@@ -1684,7 +1689,8 @@ STATE: everything saves in the browser on that device. A different device shows 
        runs draft night on the operator machine, and it is the only thing that has. */
     auctioneer:{src:"auction.html?embed=1",        label:"Auctioneer Controls", op:true}
   };
-  const LS_STATE = "dd-auction-v1";
+  if(window.DDLeague && DDLeague.id) Object.values(VIEWS).forEach(v=>{ const u=new URL(v.src,location.href); u.searchParams.set("league",DDLeague.id); v.src=u.pathname.slice(1)+u.search; });
+  const LS_STATE = window.DDLeague ? DDLeague.storageKey("dd-auction-v1") : "dd-auction-v1";
   const view = document.getElementById("dbView");
   const tabs = document.getElementById("dbTabs");
   const strip = document.getElementById("dbStrip");
@@ -1737,6 +1743,15 @@ STATE: everything saves in the browser on that device. A different device shows 
       return;
     }
     const st = S.settings, picks = S.picks || [], teams = st.teams || [];
+    if(st.draftType==="snake"){
+      const last=picks.slice().sort((a,b)=>(a.pickNo||0)-(b.pickNo||0)).pop();
+      const round=last&&last.round||1;
+      strip.innerHTML='<div class="dbstat"><div class="k">Draft</div><div class="v">Snake</div><div class="s">Sleeper read-sync</div></div>'
+        +'<div class="dbstat"><div class="k">Picks</div><div class="v">'+picks.length+'</div><div class="s">round '+round+'</div></div>'
+        +'<div class="dbstat"><div class="k">Teams</div><div class="v">'+teams.length+'</div><div class="s">configured</div></div>';
+      note.textContent=last?`Latest: #${last.pickNo} ${last.player} to ${(teams[last.ti]||{}).name||"Unknown team"}.`:'Waiting for the first Sleeper pick.';
+      return;
+    }
     const scoring = st.scoring || "half";
     const POOL = window.DD_POOL || [];
     const val = p => +p[scoring] || 0;
@@ -2258,6 +2273,7 @@ STATE: everything saves in the browser on that device. A different device shows 
       renderStrip(); annCheck();
     });
   }
+  window.DDApplyExternalState=()=>{ renderStrip(); annCheck(); };
 
   addEventListener("storage", e=>{ if(e.key===LS_STATE){ renderStrip(); annCheck(); } });
   addEventListener("ddsync", ()=>{ renderStrip(); annCheck(); });
