@@ -28,4 +28,13 @@ const custom=core.stateFromLeague(core.normalizeLeague({
 assert.strictEqual(custom.settings.scoring,"half","auction math keeps the safe half-PPR fallback");
 assert.strictEqual(custom.settings.scoringConfig.mode,"custom","the UI must retain the honest custom-scoring signal");
 
+const firebaseEmpty=core.normalizeDraftState({
+  settings:{scoring:"half",scoringConfig:{mode:"custom"}},ts:1
+});
+assert.deepStrictEqual(firebaseEmpty.picks,[],"Firebase-omitted empty picks are restored during hydration");
+assert.strictEqual(firebaseEmpty.settings.scoringConfig.mode,"custom","normalization preserves scoring context");
+
+const drafted=core.normalizeDraftState({settings:{scoring:"full"},picks:[{id:"p1"}]});
+assert.deepStrictEqual(drafted.picks,[{id:"p1"}],"existing picks are preserved");
+
 console.log("draft league tests: ok");

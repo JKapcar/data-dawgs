@@ -13,6 +13,15 @@
   const now = ()=>Date.now();
   const clone = value=>value == null ? value : JSON.parse(JSON.stringify(value));
 
+  // Firebase Realtime Database omits empty arrays when it serializes an object.
+  // Restore the draft-state contract before page code or sync subscribers see it.
+  function normalizeDraftState(state){
+    if(!state || typeof state !== "object") return state;
+    const normalized = clone(state);
+    if(normalized.settings && !Array.isArray(normalized.picks)) normalized.picks = [];
+    return normalized;
+  }
+
   function getJSON(key, fallback){
     if(!storage) return fallback;
     try{
@@ -242,9 +251,10 @@
   function hydrateEnvelope(envelope){
     if(!envelope || typeof envelope !== "object") return null;
     let league = null;
+    const state = normalizeDraftState(envelope.state || null);
     if(envelope.league) league = saveLeague(envelope.league);
-    if(envelope.state && activeLeagueId()) setJSON(storageKey("dd-auction-v1"), envelope.state);
-    return {league,state:envelope.state || null,ts:envelope.ts || 0};
+    if(state && activeLeagueId()) setJSON(storageKey("dd-auction-v1"), state);
+    return {league,state,ts:envelope.ts || 0};
   }
 
   const DDLeague = {
@@ -252,7 +262,7 @@
     get id(){ return activeLeagueId(); },
     get current(){ const id=activeLeagueId(); return id ? loadLeague(id) : null; },
     get isInstance(){ return !!activeLeagueId(); },
-    activeLeagueId, generateId, normalize:normalizeLeague, stateFromLeague,
+    activeLeagueId, generateId, normalize:normalizeLeague, normalizeDraftState, stateFromLeague,
     storageKey, list, remember, save:saveLeague, load:loadLeague, removeLocal,
     createManual, saveState, leagueURL, remoteEndpoint, publishLeague, hydrateEnvelope, mountIndicator, decorateDraftLinks
   };
@@ -335,7 +345,7 @@
             const data=message && message.data;
             if(!data) return;
             if(data.league) saveLeague(data.league);
-            const payload=data.state || (data.ts ? null : data);
+            const payload=normalizeDraftState(data.state || (data.ts ? null : data));
             const ts=data.ts || now();
             if(!payload || ts<=lastTs) return;
             lastTs=ts;
@@ -382,6 +392,6 @@
   }
 
   if(typeof module !== "undefined" && module.exports){
-    module.exports={activeLeagueId,generateId,normalizeLeague,stateFromLeague,storageKey,LEAGUE_RE};
+    module.exports={activeLeagueId,generateId,normalizeLeague,normalizeDraftState,stateFromLeague,storageKey,LEAGUE_RE};
   }
 })(typeof window !== "undefined" ? window : globalThis);
