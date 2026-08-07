@@ -2031,6 +2031,99 @@ function mcpNcdf(z) {
   return 0.5 * (1 + s * y);
 }
 
+// Pure Pound calculator primitives. These intentionally mirror work/pound-core.js,
+// and test-mcp.mjs checks the MCP results against that source. MCP schemas describe
+// the inputs, but the server validates again because not every client enforces schemas.
+// No value is stored, no external service is called and no result is represented as a
+// forecast unless the caller supplied a probability explicitly.
+function mcpCalcFinite(v, name) {
+  if (typeof v !== "number" || !Number.isFinite(v))
+    throw new Error((name || "value") + " must be a finite number");
+  return v;
+}
+function mcpCalcProbability(v, name) {
+  const n = mcpCalcFinite(v, name || "probability");
+  if (n < 0 || n > 1) throw new Error((name || "probability") + " must be between 0 and 1");
+  return n;
+}
+function mcpCalcAmerican(v) {
+  const n = mcpCalcFinite(v, "American odds");
+  if (n === 0 || Math.abs(n) < 100) throw new Error("American odds must be <= -100 or >= +100");
+  return n;
+}
+const mcpCalcClamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+function mcpCalcAmericanToDecimal(v) {
+  const a = mcpCalcAmerican(v);
+  return a > 0 ? 1 + a / 100 : 1 + 100 / Math.abs(a);
+}
+function mcpCalcDecimalToAmerican(v) {
+  const d = mcpCalcFinite(v, "decimal odds");
+  if (d <= 1) throw new Error("decimal odds must be greater than 1");
+  return d >= 2 ? (d - 1) * 100 : -100 / (d - 1);
+}
+function mcpCalcImplied(v) { return 1 / mcpCalcAmericanToDecimal(v); }
+function mcpCalcParlay(values) {
+  if (!Array.isArray(values) || !values.length) throw new Error("enter at least one leg");
+  if (values.length > 20) throw new Error("a parlay is limited to 20 legs per call");
+  const legs = values.map(mcpCalcAmerican);
+  const decimal = legs.reduce((p, v) => p * mcpCalcAmericanToDecimal(v), 1);
+  if (!Number.isFinite(decimal)) throw new Error("combined parlay price is outside the supported numeric range");
+  return { legs, decimal, american: mcpCalcDecimalToAmerican(decimal), implied_probability: 1 / decimal };
+}
+function mcpCalcHoldVig(a, b) {
+  const raw = [mcpCalcImplied(a), mcpCalcImplied(b)];
+  const sum = raw[0] + raw[1];
+  return { raw_implied: raw, hold: sum - 1, devig_probability: raw.map(p => p / sum) };
+}
+function mcpCalcBetEv(winProbability, price) {
+  const p = mcpCalcProbability(winProbability, "win probability");
+  const decimal = mcpCalcAmericanToDecimal(price);
+  const breakEven = 1 / decimal;
+  const expected = p * (decimal - 1) - (1 - p);
+  return { break_even_probability: breakEven, expected_profit_per_unit: expected, roi: expected };
+}
+function mcpCalcHedge(originalStake, originalPrice, hedgePrice) {
+  const stake = mcpCalcFinite(originalStake, "original stake");
+  if (stake <= 0) throw new Error("original stake must be greater than zero");
+  const d1 = mcpCalcAmericanToDecimal(originalPrice), d2 = mcpCalcAmericanToDecimal(hedgePrice);
+  const hedgeStake = stake * d1 / d2;
+  const profit = stake * (d1 - 1) - hedgeStake;
+  return { hedge_stake: hedgeStake, locked_profit: profit, original_decimal: d1, hedge_decimal: d2 };
+}
+function mcpCalcPasserRating(attempts, completions, yards, touchdowns, interceptions) {
+  const att = mcpCalcFinite(attempts, "attempts"), cmp = mcpCalcFinite(completions, "completions");
+  const yds = mcpCalcFinite(yards, "yards"), td = mcpCalcFinite(touchdowns, "touchdowns");
+  const interceptionsN = mcpCalcFinite(interceptions, "interceptions");
+  if (att <= 0) throw new Error("attempts must be greater than zero");
+  if (![att, cmp, yds, td, interceptionsN].every(Number.isInteger)) throw new Error("passing statistics must be whole numbers");
+  if ([cmp, td, interceptionsN].some(v => v < 0) || cmp > att || td > att || interceptionsN > att)
+    throw new Error("enter a valid passing line");
+  const parts = [
+    mcpCalcClamp((cmp / att - 0.3) * 5, 0, 2.375),
+    mcpCalcClamp((yds / att - 3) * 0.25, 0, 2.375),
+    mcpCalcClamp((td / att) * 20, 0, 2.375),
+    mcpCalcClamp(2.375 - (interceptionsN / att) * 25, 0, 2.375),
+  ];
+  return { rating: parts.reduce((s, v) => s + v, 0) / 6 * 100, components: parts };
+}
+function mcpCalcForecastGrade(forecastProbability, outcome) {
+  const p = mcpCalcProbability(forecastProbability, "forecast probability");
+  const y = mcpCalcFinite(outcome, "outcome");
+  if (y !== 0 && y !== 1) throw new Error("outcome must be 0 or 1");
+  const safe = mcpCalcClamp(p, 1e-15, 1 - 1e-15);
+  return { brier: (p - y) ** 2, log_loss: -(y * Math.log(safe) + (1 - y) * Math.log(1 - safe)), sample_size: 1 };
+}
+function mcpCalcBeliefSummary(values) {
+  if (!Array.isArray(values) || !values.length) throw new Error("enter at least one probability");
+  if (values.length > 100) throw new Error("belief summary is limited to 100 probabilities per call");
+  const xs = values.map((v, i) => mcpCalcProbability(v, "probability " + (i + 1))).sort((a, b) => a - b);
+  const mean = xs.reduce((s, v) => s + v, 0) / xs.length;
+  const median = xs.length % 2 ? xs[(xs.length - 1) / 2] : (xs[xs.length / 2 - 1] + xs[xs.length / 2]) / 2;
+  const variance = xs.reduce((s, v) => s + (v - mean) ** 2, 0) / xs.length;
+  return { count: xs.length, mean, median, min: xs[0], max: xs[xs.length - 1], range: xs[xs.length - 1] - xs[0],
+    standard_deviation: Math.sqrt(variance), crosses_50: xs[0] < 0.5 && xs[xs.length - 1] > 0.5 };
+}
+
 // survivor.json carries the whole 2026 schedule with blended win probabilities,
 // the nfelo Elo table and the margin-model constants — one fetch feeds both the
 // survivor EV tool and the matchup tool. 15 min cache: it changes on data pushes,
@@ -2134,13 +2227,14 @@ async function mcpDispatch(m, env, caller) {
       return rpcOk(id, {
         protocolVersion: proto,
         capabilities: { tools: {} },
-        serverInfo: { name: "data-dawgs", version: "1.1.0" },
+        serverInfo: { name: "data-dawgs", version: "1.2.0" },
         instructions:
           (caller && caller.kind === "user"
             ? "You are connected as " + caller.name + ". When a tool marks a row `you: true`, that is them.\n"
             : "⚠️ This is the SHARED league connector — you do NOT know which member you are talking to. " +
               "Never assume whose team, leg or ledger is whose; ask. A personal URL from " + SITE + "/connect.html fixes this.\n") +
-          "Everything here is read-only and is either the league's own data or public play-by-play. " +
+          "Everything here is read-only and is either the league's own data, public play-by-play, " +
+          "or a deterministic calculation over caller-supplied inputs. Calculator inputs and results are not stored. " +
           "There is no DFS projection or ownership data on this server. When quoting bozo odds, survivor odds " +
           "or the correlation matrix, say it is model output or a measured historical average, never a forecast " +
           "of a specific game. Team names, weeks and league ids come from dd_league_overview — do not guess them.",
@@ -2163,8 +2257,8 @@ async function mcpDispatch(m, env, caller) {
 }
 
 /* ------------------------------- the tools ------------------------------- */
-// All read-only. Data comes from the same Firebase paths, KV keys and published
-// pages the site itself uses, so the tools cannot drift from what a human sees.
+// All read-only. Data tools use the same Firebase paths, KV keys and published pages
+// the site itself uses; calculator tools mirror work/pound-core.js and are parity-tested.
 
 const MCP_NO_ARGS = { type: "object", properties: {}, additionalProperties: false };
 
@@ -2539,6 +2633,194 @@ const MCP_TOOLS = [
     },
   },
   {
+    name: "dd_convert_odds",
+    description: "Convert user-supplied American odds to decimal odds and implied probability. Pure price arithmetic: no sportsbook feed, forecast, recommendation or stored input.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        american_odds: { type: "number", description: "American price, <= -100 or >= +100." },
+      },
+      required: ["american_odds"],
+      additionalProperties: false,
+    },
+    async run(args) {
+      const american = mcpCalcAmerican(args.american_odds);
+      const decimal = mcpCalcAmericanToDecimal(american);
+      return toolText({
+        american_odds: american,
+        decimal_odds: decimal,
+        implied_probability: 1 / decimal,
+        read_only: true,
+        note: "Deterministic price conversion only; the price is user-supplied and is not verified against a sportsbook.",
+      });
+    },
+  },
+  {
+    name: "dd_devig_market",
+    description: "Normalize a two-outcome market by proportional devig. Returns raw implied probabilities, hold and no-vig probabilities from user-supplied American prices; it does not fetch or validate a market.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        side_a_american: { type: "number", description: "Side A American price, <= -100 or >= +100." },
+        side_b_american: { type: "number", description: "Side B American price, <= -100 or >= +100." },
+      },
+      required: ["side_a_american", "side_b_american"],
+      additionalProperties: false,
+    },
+    async run(args) {
+      const out = mcpCalcHoldVig(args.side_a_american, args.side_b_american);
+      return toolText({
+        ...out,
+        devig_method: "proportional normalization",
+        read_only: true,
+        note: "User-entered two-outcome prices; no timestamped or licensed market feed is attached.",
+      });
+    },
+  },
+  {
+    name: "dd_price_parlay",
+    description: "Multiply user-supplied American leg prices into a combined parlay price and price-implied probability. This is price arithmetic, not a correlation-aware joint outcome model.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        american_odds: {
+          type: "array", minItems: 1, maxItems: 20,
+          items: { type: "number" },
+          description: "One to twenty American prices; every value must be <= -100 or >= +100.",
+        },
+      },
+      required: ["american_odds"],
+      additionalProperties: false,
+    },
+    async run(args) {
+      const out = mcpCalcParlay(args.american_odds);
+      return toolText({
+        leg_american_odds: out.legs,
+        decimal_odds: out.decimal,
+        american_odds: out.american,
+        implied_probability: out.implied_probability,
+        read_only: true,
+        note: "Multiplies listed prices only. It does not estimate leg correlation or a true joint win probability.",
+      });
+    },
+  },
+  {
+    name: "dd_calculate_bet_ev",
+    description: "Compute break-even probability, expected profit per unit and ROI from a caller-supplied win probability and American price. The probability is not generated or validated by Data Dawgs.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        win_probability: { type: "number", minimum: 0, maximum: 1, description: "Caller-supplied probability from 0 to 1." },
+        american_odds: { type: "number", description: "American price, <= -100 or >= +100." },
+      },
+      required: ["win_probability", "american_odds"],
+      additionalProperties: false,
+    },
+    async run(args) {
+      const out = mcpCalcBetEv(args.win_probability, args.american_odds);
+      return toolText({
+        ...out,
+        win_probability: args.win_probability,
+        american_odds: args.american_odds,
+        read_only: true,
+        note: "Arithmetic on a caller-supplied probability, not an independently graded edge or betting recommendation.",
+      });
+    },
+  },
+  {
+    name: "dd_calculate_hedge",
+    description: "Size the opposite side so the two net outcomes are equal, using a user-supplied original stake and two American prices. Ignores limits, taxes, execution risk and market movement.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        original_stake: { type: "number", exclusiveMinimum: 0, description: "Positive original stake." },
+        original_american: { type: "number", description: "Original American price, <= -100 or >= +100." },
+        hedge_american: { type: "number", description: "Opposite-side American price, <= -100 or >= +100." },
+      },
+      required: ["original_stake", "original_american", "hedge_american"],
+      additionalProperties: false,
+    },
+    async run(args) {
+      const out = mcpCalcHedge(args.original_stake, args.original_american, args.hedge_american);
+      return toolText({
+        ...out,
+        read_only: true,
+        note: "Equal-net-outcome arithmetic only; no bet is placed and no input is stored.",
+      });
+    },
+  },
+  {
+    name: "dd_nfl_passer_rating",
+    description: "Compute the official-style NFL passer rating from a complete passing line. Descriptive statistic only: not QBR, EPA or a forecast.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        attempts: { type: "integer", minimum: 1 },
+        completions: { type: "integer", minimum: 0 },
+        yards: { type: "integer", description: "Whole-number passing yards; legitimate negative totals are accepted." },
+        touchdowns: { type: "integer", minimum: 0 },
+        interceptions: { type: "integer", minimum: 0 },
+      },
+      required: ["attempts", "completions", "yards", "touchdowns", "interceptions"],
+      additionalProperties: false,
+    },
+    async run(args) {
+      const out = mcpCalcPasserRating(args.attempts, args.completions, args.yards, args.touchdowns, args.interceptions);
+      return toolText({
+        nfl_passer_rating: out.rating,
+        components: out.components,
+        read_only: true,
+        note: "NFL passer-rating formula only; this is not QBR, EPA or a performance forecast.",
+      });
+    },
+  },
+  {
+    name: "dd_score_forecast",
+    description: "Score one declared binary forecast with Brier score and log loss. One observation is not evidence of model skill; nothing is added to a receipt ledger or leaderboard.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        forecast_probability: { type: "number", minimum: 0, maximum: 1 },
+        outcome_0_or_1: { type: "integer", enum: [0, 1] },
+      },
+      required: ["forecast_probability", "outcome_0_or_1"],
+      additionalProperties: false,
+    },
+    async run(args) {
+      const out = mcpCalcForecastGrade(args.forecast_probability, args.outcome_0_or_1);
+      return toolText({
+        ...out,
+        read_only: true,
+        graded_track_record: false,
+        note: "One caller-supplied observation. It is not stored, immutable, prospective or comparable to a leaderboard sample.",
+      });
+    },
+  },
+  {
+    name: "dd_summarize_beliefs",
+    description: "Return equal-weight descriptive statistics for caller-supplied probabilities: mean, median, range, standard deviation and whether values cross 50%. Not a validated consensus blend.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        probabilities: {
+          type: "array", minItems: 1, maxItems: 100,
+          items: { type: "number", minimum: 0, maximum: 1 },
+          description: "One to one hundred probabilities from 0 to 1.",
+        },
+      },
+      required: ["probabilities"],
+      additionalProperties: false,
+    },
+    async run(args) {
+      const out = mcpCalcBeliefSummary(args.probabilities);
+      return toolText({
+        ...out,
+        read_only: true,
+        note: "Equal-weight descriptive summary only; this is not a validated consensus blend or confidence score.",
+      });
+    },
+  },
+  {
     name: "dd_scores",
     description: "ESPN scoreboard proxy (sport + optional YYYYMMDD dates). ⚠️ ESPN sometimes refuses Cloudflare egress; if this tool reports unavailable, the scoreboard is still readable in a browser at espn.com.",
     inputSchema: {
@@ -2737,7 +3019,7 @@ const MCP_TOOLS = [
         machine: {
           index: "/llms.txt",
           surfaces: "/data/surfaces.json — every human page, its machine equivalent, and an honest live|planned|none status. Check it before claiming a route exists.",
-          data: ["/data/pool.json", "/data/receipts.json", "/data/models.json", "/data/epa-teams.json", "/data/nfelo.json", "/data/league.json", "/data/bozo-rules.json", "/data/survivor.json", "/data/index.json"],
+          data: ["/data/pool.json", "/data/receipts.json", "/data/models.json", "/data/epa-teams.json", "/data/nfelo.json", "/data/league.json", "/data/bozo-rules.json", "/data/survivor.json", "/data/pound-tools.json", "/data/model-contracts.json", "/data/upstream-models.json", "/data/index.json"],
         },
         pages: {
           "index.html": "Home — what Data Dawgs is and the working-dawg taxonomy (Labs / Dawgs / The Pound).",
@@ -2751,6 +3033,7 @@ const MCP_TOOLS = [
           "survivor.html": "Survivor pool EV tools.",
           "receipts.html": "272 pre-registered 2026 forecasts, SHA-256 locked.",
           "dfs.html": "DFS lineup lab (runs entirely in the browser).",
+          "pound.html": "The Pound model workbench, deterministic calculators, contracts and honest tool-status inventory.",
         },
         notServedHere: {
           dfs_projections_and_ownership: "Never served, by design. The DFS slate lives only in each user's own browser localStorage; there is no server copy, and building an upload path is exactly the invariant the DFS roadmap forbids.",

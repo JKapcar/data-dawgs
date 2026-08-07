@@ -36,6 +36,16 @@
    "dd_site_map",
    "dd_survivor_ev",
    "dd_analyze_matchup"
+  ],
+  "tools_staged": [
+   "dd_convert_odds",
+   "dd_devig_market",
+   "dd_price_parlay",
+   "dd_calculate_bet_ev",
+   "dd_calculate_hedge",
+   "dd_nfl_passer_rating",
+   "dd_score_forecast",
+   "dd_summarize_beliefs"
   ]
  },
  "counts": {
@@ -43,7 +53,8 @@
   "with_live_machine_access": 12,
   "with_no_machine_access": 0,
   "mcp_tools_live": 13,
-  "mcp_tools_planned": 8
+  "mcp_tools_staged": 8,
+  "mcp_tools_planned": 15
  },
  "data": [
   {
@@ -313,9 +324,16 @@
    ],
    "planned": [
     "mcp:model_scoreboard",
-    "mcp:model_calculators"
+    "mcp:dd_convert_odds",
+    "mcp:dd_devig_market",
+    "mcp:dd_price_parlay",
+    "mcp:dd_calculate_bet_ev",
+    "mcp:dd_calculate_hedge",
+    "mcp:dd_nfl_passer_rating",
+    "mcp:dd_score_forecast",
+    "mcp:dd_summarize_beliefs"
    ],
-   "gap": "Browser calculators are deterministic and public, but no dedicated calculator MCP endpoint exists.",
+   "gap": "Eight deterministic calculator tools are staged and tested in the Worker source, but they are not live until a production Worker deployment and conformance call succeed.",
    "tier": "pound"
   },
   {

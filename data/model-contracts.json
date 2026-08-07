@@ -5,7 +5,7 @@
  "graded": false,
  "note": "A contract is not a forecast. It prevents incompatible models and missing values from being silently normalized into false agreement.",
  "data": {
-  "contract_version": "1.0.0-stage",
+  "contract_version": "1.1.0-stage",
   "canonical_game_id": "season_week_away_home using canonical current team abbreviations, for example 2026_01_PIT_CLE",
   "model_id_rule": "lowercase stable slug; model version changes do not change model_id",
   "forecast_status_values": [
@@ -53,7 +53,8 @@
     "outputs": [
      "decimal_odds",
      "implied_probability"
-    ]
+    ],
+    "staged_mcp_tool": "dd_convert_odds"
    },
    "parlay": {
     "inputs": [
@@ -63,7 +64,8 @@
      "decimal_odds",
      "american_odds",
      "implied_probability"
-    ]
+    ],
+    "staged_mcp_tool": "dd_price_parlay"
    },
    "hold_vig": {
     "inputs": [
@@ -74,7 +76,8 @@
      "raw_implied[]",
      "hold",
      "devig_probability[]"
-    ]
+    ],
+    "staged_mcp_tool": "dd_devig_market"
    },
    "bet_ev": {
     "inputs": [
@@ -85,7 +88,8 @@
      "break_even_probability",
      "expected_profit_per_unit",
      "roi"
-    ]
+    ],
+    "staged_mcp_tool": "dd_calculate_bet_ev"
    },
    "hedge": {
     "inputs": [
@@ -96,7 +100,8 @@
     "outputs": [
      "hedge_stake",
      "locked_profit"
-    ]
+    ],
+    "staged_mcp_tool": "dd_calculate_hedge"
    },
    "passer_rating": {
     "inputs": [
@@ -108,7 +113,8 @@
     ],
     "outputs": [
      "nfl_passer_rating"
-    ]
+    ],
+    "staged_mcp_tool": "dd_nfl_passer_rating"
    },
    "elo_game": {
     "inputs": [
@@ -151,7 +157,8 @@
     "outputs": [
      "brier",
      "log_loss"
-    ]
+    ],
+    "staged_mcp_tool": "dd_score_forecast"
    },
    "belief_summary": {
     "inputs": [
@@ -167,6 +174,7 @@
      "standard_deviation",
      "crosses_50"
     ],
+    "staged_mcp_tool": "dd_summarize_beliefs",
     "note": "Equal-weight descriptive statistics only; this is not a validated consensus blend."
    }
   }
