@@ -1811,6 +1811,10 @@ let sortKey="rank", sortDir=1;
 function render(){
   load();
   const app=document.getElementById("app");
+  if(S.settings.draftType==="snake"){
+    app.innerHTML='<div class="vcard"><div class="empty-state"><b>Snake draft report</b>Auction grades require prices and are intentionally unavailable for Sleeper snake drafts. The Live Board still shows the imported pick order.</div></div>';
+    return;
+  }
   const T=analyze();
   const drafted=T.filter(t=>t.n>0);
   if(!drafted.length){

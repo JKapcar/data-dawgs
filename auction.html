@@ -648,6 +648,8 @@ body.proj .blockbar .bb-v{font-size:26px}
 <div class="wrap">
   <div id="nav"></div>
   <script src="draft-league.js"></script>
+  <script src="draft-providers.js"></script>
+  <script src="draft-live-sync.js"></script>
   <script data-page="auction">
 // Shared nav + theme + live-sync client. Each page: <div id="nav"></div> then this script with data-page attr.
 
@@ -1772,11 +1774,13 @@ function save(){
   if(!IS_PROJ && window.DDSync && window.DDSync.on) window.DDSync.push(S);
 }
 load();
+window.DDApplyExternalState=next=>{ if(!next||!next.settings||!Array.isArray(next.picks)) return; S=next; renderOp(); };
 
 const byName={}; POOL.forEach(p=>byName[p.name]=p);
 const POSCOL={QB:"#e66767",RB:"#199e70",WR:"#3987e5",TE:"#c98500",DST:"#8a8378"};
 const val = p => p ? (+p[S.settings.scoring]||0) : 0;
 const fmt$ = n => "$"+n;
+const pickCost=pk=>pk&&pk.price!=null?`$${pk.price}`:`#${(pk&&pk.pickNo)||"–"}`;
 
 // ---------- derived ----------
 function derive(){
@@ -2145,7 +2149,7 @@ function renderProj(){
   const recent=S.picks.filter(p=>!p.keeper).slice(-5).reverse();
   if(recent.length){
     tkItems+=`<span class="tk-item"><span class="ts" style="color:var(--accent);font-weight:700">RECENT:</span></span>`;
-    tkItems+=recent.map(p=>`<span class="tk-item"><span class="tn" style="font-weight:600">${esc(shortName(p.player))}</span><span class="tm">${fmt$(p.price)}</span></span>`).join("");
+    tkItems+=recent.map(p=>`<span class="tk-item"><span class="tn" style="font-weight:600">${esc(shortName(p.player))}</span><span class="tm">${pickCost(p)}</span></span>`).join("");
   }
   const run=detectRun();
   if(run) tkItems+=`<span class="tk-item"><span class="tn" style="color:var(--bad)">🔥 RUN ON ${run}S — 4+ of last 6 sales</span></span>`;
@@ -2171,7 +2175,7 @@ function renderProj(){
       const topB = row.first ? `style="border-top:2px solid ${sc}55"` : "";
       if(pk){
         const pp=pk.pos==="D"?"DST":pk.pos;
-        mx+=`<div class="mx-c p${pp} ${row.g==="BN"?"bn":""} ${pk.keeper?"k":""}" ${topB}><span class="mp">${esc(shortName(pk.player))}</span><span class="mm">$${pk.price}</span></div>`;
+        mx+=`<div class="mx-c p${pp} ${row.g==="BN"?"bn":""} ${pk.keeper?"k":""}" ${topB}><span class="mp">${esc(shortName(pk.player))}</span><span class="mm">${pickCost(pk)}</span></div>`;
       } else {
         mx+=`<div class="mx-c" ${topB}></div>`;
       }
@@ -2199,7 +2203,7 @@ function renderProj(){
     content=`<div class="rgrid">`+d.T.map((t,ti)=>{
       const ps=S.picks.filter(p=>p.ti===ti);
       return `<div class="rcard"><h4>${esc(t.name)}<span class="rm">${fmt$(t.left)}</span></h4>
-        ${ps.map(p=>`<div class="rrow"><span class="rpos" style="background:color-mix(in srgb,${POS_COLOR2[p.pos]||"#8a8378"} 40%,var(--surface-1))">${p.pos==="DST"?"D":p.pos}</span><span class="rp">${esc(shortName(p.player))}${p.keeper?" ·K":""}</span><span class="rdol">$${p.price}</span></div>`).join("")||'<div class="rrow" style="color:var(--ink-3)">—</div>'}
+        ${ps.map(p=>`<div class="rrow"><span class="rpos" style="background:color-mix(in srgb,${POS_COLOR2[p.pos]||"#8a8378"} 40%,var(--surface-1))">${p.pos==="DST"?"D":p.pos}</span><span class="rp">${esc(shortName(p.player))}${p.keeper?" ·K":""}</span><span class="rdol">${pickCost(p)}</span></div>`).join("")||'<div class="rrow" style="color:var(--ink-3)">—</div>'}
       </div>`;
     }).join("")+`</div>`;
   } else if(view==="grades"){
@@ -2610,6 +2614,11 @@ function bindOp(d){
   priceIn.addEventListener("keydown",e=>{ if(e.key==="Enter") add(); });
 
   function add(){
+    if(window.DDLeague&&DDLeague.current&&DDLeague.current.provider.syncMode==="live-read"){
+      if(window.DDExternalSync) DDExternalSync.warnManual();
+      else alert("Sleeper is authoritative for this league. Take over manually before recording a Data Dawgs pick.");
+      return;
+    }
     const name=pin.value.trim();
     if(!name){ pin.focus(); return; }
     const p=chosen||byName[name];
@@ -2655,6 +2664,7 @@ function bindOp(d){
     document.getElementById("undoNo").addEventListener("click",disarm);
     document.getElementById("undoYes").addEventListener("click",()=>{
       clearTimeout(armTimer);
+      if(window.DDExternalSync&&DDExternalSync.isAuthoritative){DDExternalSync.warnManual();disarm();return;}
       const pk=S.picks.pop();
       if(!pk){ disarm(); return; }
       unmark(pk.player);

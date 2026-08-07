@@ -180,9 +180,21 @@
     return normalizeImport({ref,league,users,rosters,draft,picks},options||{});
   }
 
+  function fetchSleeperDraft(league,options){
+    const id=league&&league.provider&&league.provider.draftId;
+    if(!id) return Promise.reject(new Error("This Sleeper league has no active draft."));
+    return getJSON((options&&options.fetch)||root.fetch,`/draft/${encodeURIComponent(id)}`);
+  }
+
+  function fetchSleeperPicks(league,options){
+    const id=league&&league.provider&&league.provider.draftId;
+    if(!id) return Promise.reject(new Error("This Sleeper league has no active draft."));
+    return getJSON((options&&options.fetch)||root.fetch,`/draft/${encodeURIComponent(id)}/picks`);
+  }
+
   const providers={
     parse:parseProvider,
-    sleeper:{detect:input=>!!parseSleeper(input),parse:parseSleeper,importLeague:importSleeper,normalize:normalizeImport,mapPlayer,normalizePick,rosterSlots,scoringConfig},
+    sleeper:{detect:input=>!!parseSleeper(input),parse:parseSleeper,importLeague:importSleeper,fetchDraft:fetchSleeperDraft,fetchPicks:fetchSleeperPicks,normalize:normalizeImport,mapPlayer,normalizePick,rosterSlots,scoringConfig},
     yahoo:{detect:input=>!!parseYahoo(input),parse:parseYahoo},
     espn:{detect:input=>!!parseEspn(input),parse:parseEspn}
   };

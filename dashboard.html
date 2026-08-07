@@ -613,6 +613,8 @@ select.dbpresent[hidden]{display:none}
 </div>
 
 <script src="draft-league.js"></script>
+<script src="draft-providers.js"></script>
+<script src="draft-live-sync.js"></script>
 <script data-page="dashboard">
 // Shared nav + theme + live-sync client. Each page: <div id="nav"></div> then this script with data-page attr.
 
@@ -1741,6 +1743,15 @@ STATE: everything saves in the browser on that device. A different device shows 
       return;
     }
     const st = S.settings, picks = S.picks || [], teams = st.teams || [];
+    if(st.draftType==="snake"){
+      const last=picks.slice().sort((a,b)=>(a.pickNo||0)-(b.pickNo||0)).pop();
+      const round=last&&last.round||1;
+      strip.innerHTML='<div class="dbstat"><div class="k">Draft</div><div class="v">Snake</div><div class="s">Sleeper read-sync</div></div>'
+        +'<div class="dbstat"><div class="k">Picks</div><div class="v">'+picks.length+'</div><div class="s">round '+round+'</div></div>'
+        +'<div class="dbstat"><div class="k">Teams</div><div class="v">'+teams.length+'</div><div class="s">configured</div></div>';
+      note.textContent=last?`Latest: #${last.pickNo} ${last.player} to ${(teams[last.ti]||{}).name||"Unknown team"}.`:'Waiting for the first Sleeper pick.';
+      return;
+    }
     const scoring = st.scoring || "half";
     const POOL = window.DD_POOL || [];
     const val = p => +p[scoring] || 0;
@@ -2262,6 +2273,7 @@ STATE: everything saves in the browser on that device. A different device shows 
       renderStrip(); annCheck();
     });
   }
+  window.DDApplyExternalState=()=>{ renderStrip(); annCheck(); };
 
   addEventListener("storage", e=>{ if(e.key===LS_STATE){ renderStrip(); annCheck(); } });
   addEventListener("ddsync", ()=>{ renderStrip(); annCheck(); });

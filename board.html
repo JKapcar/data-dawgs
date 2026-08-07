@@ -1543,6 +1543,7 @@ function auctionData(){
   A.picks.forEach(pk=>{ sold[pk.player.toLowerCase()]=pk; });
   return {teams:A.settings.teams||[], picks:A.picks, sold, budget:A.settings.budget||200, spots:A.settings.spots||15};
 }
+const pickCost=pk=>pk&&pk.price!=null?`$${pk.price}`:`#${(pk&&pk.pickNo)||"–"}`;
 let board;
 try{ board = JSON.parse(localStorage.getItem(LS_BOARD)) || SEED; }catch(e){ board = SEED; }
 let marks;
@@ -1681,7 +1682,7 @@ function renderLive(A){
     const items=recent.map(pk=>{
       const tn=(A.teams[pk.ti]||{}).name||"?";
       const idx=A.picks.indexOf(pk)+1;
-      return `<span class="bt-i"><span class="t">#${idx}</span><span class="n">${escT(shortName(pk.player))}</span><span class="t">${escT(pk.pos==="DST"?"D":pk.pos)}</span><span class="d">$${pk.price}</span><span class="t">${escT(tn)}</span></span>`;
+      return `<span class="bt-i"><span class="t">#${idx}</span><span class="n">${escT(shortName(pk.player))}</span><span class="t">${escT(pk.pos==="DST"?"D":pk.pos)}</span><span class="d">${pickCost(pk)}</span><span class="t">${escT(tn)}</span></span>`;
     }).join("");
     const dur=Math.max(18, recent.length*3);
     tk.innerHTML=`<div class="btick"><div class="bt-track" style="--btdur:${dur}s">${items}${items}</div></div>`;
@@ -1737,7 +1738,7 @@ function renderLive(A){
         const pp=pk.pos==="D"?"DST":pk.pos;
         c.style.background=`color-mix(in srgb, ${POS_COLOR[pp]||POS_COLOR.DST} 30%, var(--page))`;
         if(row.g==="BN") c.style.opacity=".72";
-        c.innerHTML=`<span class="p">${escT(shortName(pk.player))}</span><span class="m">$${pk.price}</span>`;
+        c.innerHTML=`<span class="p">${escT(shortName(pk.player))}</span><span class="m">${pickCost(pk)}</span>`;
       }
       mx.appendChild(c);
     });
@@ -1777,7 +1778,7 @@ function celebrateBrowns(pk){
     +`<div class="flash"></div><canvas></canvas>
     <div class="cb-t">SUPER BOWL!</div>
     <div class="cb-t cb-t2">SUPER BROWNS!</div>
-    <div class="cb-p">${escT(pk.player)} · $${pk.price} · THE LAND HAS SPOKEN</div>`;
+    <div class="cb-p">${escT(pk.player)} · ${pickCost(pk)} · THE LAND HAS SPOKEN</div>`;
   document.body.appendChild(o);
   // rapid Cleveland cuts with camera flash
   const shots=[...o.querySelectorAll(".shot")], flash=o.querySelector(".flash");
@@ -1917,7 +1918,7 @@ function render(){
       if(i===1){ td.style.fontWeight=600;
         if(pk){ const sc=document.createElement("span"); sc.className="soldchip";
           const tn=(A.teams[pk.ti]||{}).name||"?";
-          sc.textContent=`$${pk.price} · ${tn}`; td.appendChild(sc); }
+          sc.textContent=`${pickCost(pk)} · ${tn}`; td.appendChild(sc); }
       }
       if(em) td.classList.add("val");
       tr.appendChild(td);

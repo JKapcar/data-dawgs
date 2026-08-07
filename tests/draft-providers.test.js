@@ -53,4 +53,11 @@ assert.strictEqual(imported.state.picks[0].playerId,"dd_player_1");
 assert.strictEqual(imported.state.picks[0].price,null);
 assert.strictEqual(imported.diagnostics.unresolvedMappings.length,1);
 
+const {reconcilePicks}=require("../draft-live-sync.js");
+const first=reconcilePicks([],imported.state.picks);
+const second=reconcilePicks(first,imported.state.picks.concat(imported.state.picks[0]));
+assert.strictEqual(first.length,2);
+assert.strictEqual(second.length,2,"repeated Sleeper responses must not duplicate picks");
+assert.strictEqual(new Set(second.map(p=>p.providerPickId)).size,2);
+
 console.log("draft provider tests: ok");

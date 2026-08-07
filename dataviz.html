@@ -2034,6 +2034,10 @@ function render(){
   if(rosterScope>=teams.length) rosterScope=0;
   const pos=cliffPos;
   const viz=document.getElementById("viz");
+  if(S.settings.draftType==="snake"){
+    viz.innerHTML='<section class="vcard"><h2>Snake draft analysis</h2><p class="note">Auction inflation and paid-vs-MV charts do not apply to this league, so they are intentionally not rendered. Use the Live Board for Sleeper pick order.</p></section>';
+    return;
+  }
 
   // ---- dashboard: one toggle for the whole tile strip ----
   const TL = tileScope>=0 ? d.T[tileScope] : null;
