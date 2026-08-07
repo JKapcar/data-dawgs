@@ -20,4 +20,12 @@ for(const teamCount of [10,12,14,16]){
   assert.strictEqual(state.settings.spots,8);
 }
 
+const custom=core.stateFromLeague(core.normalizeLeague({
+  id:"dd_"+"c".repeat(32),name:"Custom Scoring",season:2026,
+  config:{draftType:"auction",teamCount:10,budget:200,rosterSlots:[{slot:"QB",count:1}],
+    scoring:{mode:"custom",ppr:.75,raw:{bonus_rec_te:1}},teams:[]}
+}));
+assert.strictEqual(custom.settings.scoring,"half","auction math keeps the safe half-PPR fallback");
+assert.strictEqual(custom.settings.scoringConfig.mode,"custom","the UI must retain the honest custom-scoring signal");
+
 console.log("draft league tests: ok");
