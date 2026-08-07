@@ -1,0 +1,25 @@
+# The Pound staging checkpoint log
+
+Local branch: `codex/the-pound-staging`
+Production writes: forbidden for this session
+Started: 2026-08-07 ET
+
+## Checkpoints
+
+- Safe baseline: fetched `origin/main`, verified the deployed 13-tool surface, reset tracked files to `893519f`, and created the local branch. Preserved `Data-Dawgs-homepage-taxonomy.patch` and `tmp/` untouched.
+- Reconnaissance: confirmed the handoff's Worker/backup work had already landed; found generator drift (`tools/build-data.js` still described 11 tools while the shipped surface described 13).
+- Provenance/contracts: added generated upstream provenance, common model/calculator contracts, and a complete Pound tool inventory with exact statuses and blockers.
+- Calculator core: added pure deterministic implementations and Node assertions for odds, parlay, vig, EV, hedge, passer rating, 538-style one-game Elo, normal translation, forecast grading, and consensus statistics.
+- Human surface: staged the native Pound workbench, dated Week 1 two-input scoreboard, all ten calculator cards, 22-entry status inventory, 12-project provenance shelf, machine overlay, shared navigation, sitemap and `llms.txt` discovery.
+- Browser QA: exercised the odds calculator and status filter, confirmed all ten default calculator results, 16 scoreboard rows, 22 inventory entries, 12 provenance entries, labelled controls, valid defaults, responsive single-column cards and clean Pound console output. Opened all 19 changed HTML pages and verified their Pound navigation and duplicate-ID state.
+- Regression QA: data envelopes/manifest, Pound unit and contract suites, draft provider/league tests, Worker MCP (85), identity (62), backup (14), solver (38) and simulation (15) assertions all passed. Made the identity suite's temporary bundle path portable on Windows.
+- Offline integrity: added `/pound.html` to the service-worker core and set `VERSION` to the first ten hex characters of the staged sorted 21-page HTML MD5 (`1de0c64530`).
+- Owner review pass: corrected EV display precision, made cover inputs follow explicit sportsbook line convention, preserved the site’s published 0.5-point win threshold with a clearer disclosure, allowed legitimate negative passing-yard lines while rejecting fractional stats, renamed the unvalidated “consensus” display to an equal-weight belief summary, separated every blocker from its actionable minimum path, and changed not-installed MIT packages from `direct` to `pending` integration status.
+
+## Invariants carried forward
+
+- No secrets or private league data.
+- No server handling of paid DFS projections/ownership.
+- No code copied from an upstream repository without a verified reusable license.
+- Backtests, modelled output, simulation and ungraded state remain visibly labelled.
+- No push, PR, commit, deploy, Cloudflare/Firebase write, purchase or external message.
