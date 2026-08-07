@@ -65,6 +65,12 @@ self.addEventListener("fetch", e=>{
   if(/(^|\.)(youtube\.com|youtube-nocookie\.com|ytimg\.com|googlevideo\.com)$/.test(url.hostname)) return;
   // video is range-requested; a cached full-body response breaks seeking — let it through
   if(url.pathname.endsWith(".mp4") || url.pathname.endsWith(".webm")) return;
+  // ⚠️ /data/ is the machine-readable mirror and llms.txt is its index. The catch-all below
+  // is cache-first, which would pin a dated snapshot in the browser forever and serve a
+  // stale as_of long after the file was rebuilt. Freshness is the whole point of these
+  // files — let them go straight to the network. No VERSION bump needed: this path was
+  // never cached, so there is nothing stale to evict.
+  if(url.pathname.startsWith("/data/") || url.pathname === "/llms.txt") return;
 
   if(isHTML(req)){
     // network-first, 4s budget, fall back to whatever we cached

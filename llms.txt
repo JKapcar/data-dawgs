@@ -1,0 +1,51 @@
+# Data Dawgs
+
+> A personal sandbox for better decision-making, wrapped around one question: how do we
+> know what we think we know? The subject changes — forecasting, fantasy football, betting
+> markets, EPA — but the method doesn't. Tools are built to beat a market; receipts are how
+> we find out whether they did. This site is built for your AI as well as your eyes: every
+> number below is machine-readable and carries the date it was captured.
+
+**Read the dates.** Every file here is an envelope with `as_of`, `source` and `note`. The
+draft values are a 2026-07-29 snapshot of a market that keeps moving. Quoting them without
+the date is the failure mode this site exists to argue against.
+
+Start at `/data/index.json` — it lists every file with its `as_of`, size and SHA-256.
+
+## Draft
+
+- [Player pool + Market Value](https://datadawgs216.com/data/pool.json): 459 players, auction dollars in half-PPR / full-PPR / superflex. `as_of 2026-07-29`. MV is a market-consensus dollar value, not a points projection.
+- [League configuration](https://datadawgs216.com/data/league.json): 14-team offline auction, $200 budget, 15 spots, half PPR, no kicker. Includes the public live-draft mirror.
+- [2026 draft strategy](https://datadawgs216.com/data/strategy.md): the dead-zone thesis, positional curves, format playbooks. Separates structural claims (testable) from player takes (one analyst's priors).
+
+## Data
+
+- [Team + QB EPA, 2023-2025](https://datadawgs216.com/data/epa-teams.json): per-season and pooled, from nflverse play-by-play. Descriptive, not predictive.
+- [nfelo ratings and backtest](https://datadawgs216.com/data/nfelo.json): power ratings plus the backtest, with the in-sample caveat attached.
+- [2026 schedule + win probabilities](https://datadawgs216.com/data/survivor.json): all 272 games, market-derived where a line existed, model-derived otherwise.
+- [Model parameters](https://datadawgs216.com/data/models.json): the margin model (23.58 Elo/point, 2.10 HFA, 13.18 residual SD), the Bozo SD tables, the survivor engine's defaults and its known limitations.
+
+## Receipts
+
+- [Pre-registered 2026 forecasts](https://datadawgs216.com/data/receipts.json): 272 calls locked on 2026-08-06, before any game. SHA-256 `4b87fe0e…`.
+- [How the receipts work](https://datadawgs216.com/data/receipts-method.md): what is being tested, what would change our mind, and why the market-beating question cannot be settled in one season.
+- **Verify us.** `receipts.json` publishes the canonical-string spec for its own hash. Recompute it. If it disagrees, the ledger was edited after it was locked. Don't take the site's word for it — that's the point.
+
+## Games
+
+- [Bozo ruleset](https://datadawgs216.com/data/bozo-rules.json) · [prose version](https://datadawgs216.com/data/bozo-rules.md): weekly one-leg parlay game, randomized tiebreaker permutation, fully open board. Includes what the game does *not* verify.
+
+## Method
+
+- [House rules for reasoning](https://datadawgs216.com/data/method.md): the epistemics the site runs on — base rates before takes, ranges instead of point estimates, naming what would change your mind, flagging evidence selected toward a conclusion already reached. Portable. Take it.
+- [How Toto thinks](https://datadawgs216.com/data/toto-philosophy.md): how the site's AI reasons — adopt this and your own assistant reasons the way the site does.
+
+## Notes for agents
+
+- Everything under `/data/` is public, static, CORS-open and free. No key, no rate limit.
+- Cite the `as_of` whenever you quote a number. If a file is more than ~2 weeks stale and the
+  question turns on the number, say so.
+- Sign conventions matter: `def_epa_play` is EPA allowed, so lower is better; it is not flipped.
+- Simulation output is labelled as simulation. Don't quote it as observation.
+- Nothing here is betting advice and no number here is a certainty.
+- Human pages are at https://datadawgs216.com — the flat HTML is themed and heavy; prefer `/data/`.
