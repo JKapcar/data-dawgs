@@ -15,12 +15,15 @@
   }
  },
  "mcp": {
-  "path": "/mcp/<league passphrase>",
+  "path": "/mcp/u_<personal token>   (legacy: /mcp/<league passphrase>)",
   "transport": "streamable-http",
   "host": "https://toto.jkapcar4.workers.dev",
-  "auth": "Shared league passphrase in the URL path. The URL is the credential — this is access control for a 14-friend league, never to be described as security.",
-  "writes": "None. Every tool is read-only, asserted by test.",
+  "mint": "https://datadawgs216.com/connect.html",
+  "auth": "PER-USER tokens, minted at /connect.html, stored hashed and revocable one at a time — so the server knows who is asking and a leak costs one member, not fourteen. The older shared league passphrase still works and is ANONYMOUS; it is kept only so nobody is cut off mid-season. Either way the URL IS the credential: per-user makes a leak containable, not secure, and it must never be described as security.",
+  "identity": "dd_whoami reports the caller. Rows belonging to them are marked `you: true`. An anonymous connection is told so explicitly and instructed to ask rather than assume whose is whose.",
+  "writes": "None. Every tool is read-only, asserted by test against the source.",
   "tools_live": [
+   "dd_whoami",
    "dd_league_overview",
    "dd_bozo_week",
    "dd_bozo_standings",
@@ -29,14 +32,15 @@
    "dd_survivor_week",
    "dd_scores",
    "dd_dfs_correlations",
+   "dd_guillotine_odds",
    "dd_site_map"
   ]
  },
  "counts": {
   "surfaces": 11,
-  "with_live_machine_access": 10,
-  "with_no_machine_access": 1,
-  "mcp_tools_live": 9,
+  "with_live_machine_access": 11,
+  "with_no_machine_access": 0,
+  "mcp_tools_live": 11,
   "mcp_tools_planned": 8
  },
  "data": [
@@ -262,11 +266,14 @@
    "page": "/guillotine.html",
    "machine": [
     {
-     "kind": "none",
-     "status": "none"
+     "kind": "mcp",
+     "tool": "dd_guillotine_odds",
+     "status": "live"
     }
    ],
-   "planned": [],
+   "planned": [
+    "json:/data/guillotine.json"
+   ],
    "tier": "labs"
   },
   {
