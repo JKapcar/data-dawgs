@@ -1,12 +1,12 @@
 // Data Dawgs service worker — draft-night insurance.
 // HTML is network-first (so deploys land immediately) with a cache fallback,
 // so a dead venue wifi can't take the draft down mid-auction.
-const VERSION = "8e39077a3a";
+const VERSION = "2c89e2b0e2";
 const CACHE = "dd-" + VERSION;
 
 // the pages that must survive a network drop (stats.html is 2MB — cached on first visit instead)
 const CORE = [
-  "/", "/index.html", "/draft-leagues.html", "/draft-league.js", "/dashboard.html", "/board.html", "/auction.html",
+  "/", "/index.html", "/draft-leagues.html", "/draft-league.js", "/draft-providers.js", "/dashboard.html", "/board.html", "/auction.html",
   "/bigboard.html", "/dataviz.html", "/report.html", "/master.html", "/strategy.html",
   // Lab landing pages — small, static, and the nav now points at them
   "/dfs.html", "/connect.html", "/guillotine.html", "/receipts.html", "/nfelo.html", "/survivor.html", "/survivor-settings.html"
@@ -54,6 +54,9 @@ self.addEventListener("fetch", e=>{
 
   // never cache the live-sync stream or any firebase traffic
   if(/firebaseio\.com$/.test(url.hostname) || url.hostname.endsWith("firebasedatabase.app")) return;
+  // Sleeper is a live upstream source. Config and picks belong in DD's local/Firebase
+  // state after normalization, never in the service-worker response cache.
+  if(url.hostname === "api.sleeper.app") return;
   // ⚠️ Never touch the Worker. POSTs already bypass (the handler ignores non-GET), but
   // GET /tts/voices is an AUTHENTICATED request — the cache-first branch below would
   // store its response under a key with no notion of the passphrase, and keep serving

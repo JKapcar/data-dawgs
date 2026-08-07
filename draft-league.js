@@ -35,7 +35,7 @@
   }
 
   function generateId(cryptoImpl){
-    const source = cryptoImpl || (hasWindow && window.crypto);
+    const source = cryptoImpl || root.crypto;
     if(!source || typeof source.getRandomValues !== "function"){
       throw new Error("Secure browser randomness is required to create a league.");
     }
@@ -72,7 +72,8 @@
         syncMode: ["manual","config-only","live-read"].includes(provider.syncMode) ? provider.syncMode : "manual",
         status: provider.status || "ready",
         lastSyncedAt: provider.lastSyncedAt || null,
-        lastError: provider.lastError || null
+        lastError: provider.lastError || null,
+        diagnostics: provider.diagnostics && typeof provider.diagnostics==="object" ? clone(provider.diagnostics) : {unresolvedMappings:[],warnings:[]}
       },
       config: {
         draftType: config.draftType === "snake" ? "snake" : "auction",
@@ -188,9 +189,11 @@
       bar=document.createElement("aside"); bar.id="ddLeagueIndicator"; document.body.appendChild(bar);
     }
     const custom=league.config.scoring.mode==="custom" ? " · Custom scoring — verify settings" : "";
+    const unresolved=league.provider.diagnostics&&league.provider.diagnostics.unresolvedMappings||[];
+    const mapping=unresolved.length ? ` · ${unresolved.length} player${unresolved.length===1?"":"s"} could not be mapped` : "";
     bar.innerHTML=`<span class="ddli-name"></span><span class="ddli-meta"></span><a href="draft-leagues.html">Switch League</a>`;
     bar.querySelector(".ddli-name").textContent=league.name;
-    bar.querySelector(".ddli-meta").textContent=`${league.config.teamCount} teams · ${league.provider.name}${custom}`;
+    bar.querySelector(".ddli-meta").textContent=`${league.config.teamCount} teams · ${league.provider.name}${custom}${mapping}`;
   }
 
   function decorateDraftLinks(){
@@ -231,6 +234,11 @@
     return L;
   }
 
+  function saveState(id,state){
+    if(!LEAGUE_RE.test(id||"") || !state || typeof state!=="object") return false;
+    return setJSON(storageKey("dd-auction-v1",id),state);
+  }
+
   function hydrateEnvelope(envelope){
     if(!envelope || typeof envelope !== "object") return null;
     let league = null;
@@ -246,7 +254,7 @@
     get isInstance(){ return !!activeLeagueId(); },
     activeLeagueId, generateId, normalize:normalizeLeague, stateFromLeague,
     storageKey, list, remember, save:saveLeague, load:loadLeague, removeLocal,
-    createManual, leagueURL, remoteEndpoint, publishLeague, hydrateEnvelope, mountIndicator, decorateDraftLinks
+    createManual, saveState, leagueURL, remoteEndpoint, publishLeague, hydrateEnvelope, mountIndicator, decorateDraftLinks
   };
 
   root.DDLeague = DDLeague;

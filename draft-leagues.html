@@ -52,12 +52,13 @@
         <label for="providerUrl">Paste your fantasy league URL</label>
         <input id="providerUrl" inputmode="url" placeholder="Sleeper, Yahoo, or ESPN league URL">
         <p><button type="submit">Recognize League</button></p>
-        <div class="notice" id="connectMsg">Manual leagues are ready first. Sleeper import is the next staged commit; Yahoo and ESPN remain intentionally deferred.</div>
+        <div class="notice" id="connectMsg">Sleeper leagues import through its public read-only API. Yahoo and ESPN remain intentionally deferred.</div>
       </form>
     </section>
   </div>
 </main>
 <script src="draft-league.js"></script>
+<script src="draft-providers.js"></script>
 <script>
 (function(){
   const $=id=>document.getElementById(id);
@@ -111,13 +112,30 @@
     }
   });
 
-  $("connectForm").addEventListener("submit",event=>{
+  $("connectForm").addEventListener("submit",async event=>{
     event.preventDefault();
     const value=$("providerUrl").value.trim();
-    const host=(()=>{try{return new URL(value).hostname.toLowerCase()}catch(e){return ""}})();
-    const provider=host.includes("sleeper")?"Sleeper":host.includes("yahoo")?"Yahoo":host.includes("espn")?"ESPN":null;
-    $("connectMsg").className="notice "+(provider?"ok":"err");
-    $("connectMsg").textContent=provider?`${provider} URL recognized. Import is deliberately not enabled in the manual-foundation commit.`:"That does not look like a supported fantasy league URL.";
+    const ref=DDProviders.parse(value);
+    if(!ref){ $("connectMsg").className="notice err"; $("connectMsg").textContent="That does not look like a supported fantasy league URL."; return; }
+    if(ref.provider==="yahoo"){ $("connectMsg").className="notice"; $("connectMsg").textContent="Yahoo connection isn't configured on this deployment yet."; return; }
+    if(ref.provider==="espn"){ $("connectMsg").className="notice"; $("connectMsg").textContent="ESPN automatic import is unavailable for this league. Create this league manually for now."; return; }
+    const button=event.submitter; button.disabled=true;
+    $("connectMsg").className="notice"; $("connectMsg").textContent="Importing league, teams, scoring, roster settings, draft order, and picks from Sleeper…";
+    try{
+      const pool=await fetch("data/pool.json").then(r=>r.ok?r.json():null).then(x=>x&&Array.isArray(x.data)?x.data:[]).catch(()=>[]);
+      const result=await DDProviders.sleeper.importLeague(ref,{pool});
+      const league=DDLeague.save(result.league);
+      DDLeague.saveState(league.id,result.state);
+      DDLeague.publishLeague(league,result.state);
+      const unresolved=result.diagnostics.unresolvedMappings.length;
+      $("connectMsg").className="notice ok";
+      $("connectMsg").textContent=`Sleeper league imported${unresolved?`; ${unresolved} player mapping${unresolved===1?"":"s"} need review`:""}. Opening the draft rig…`;
+      location.href=DDLeague.leagueURL("dashboard.html",league.id);
+    }catch(error){
+      $("connectMsg").className="notice err";
+      $("connectMsg").textContent=error&&error.message?error.message:"Sleeper is unavailable right now. No local draft data was changed.";
+      button.disabled=false;
+    }
   });
 
   renderTeams(); renderList();
