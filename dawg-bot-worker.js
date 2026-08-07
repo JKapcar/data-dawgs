@@ -2223,7 +2223,7 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_draft_board",
-    description: "Live auction draft state from the league's Firebase mirror: budgets, open roster spots, each team's TRUE max bid (dollars left minus $1 reserved per unfilled slot — reporting raw remaining is the classic auction blunder), who is on the clock, what is on the block, and recent sales.",
+    description: "Live auction draft state from the league's Firebase mirror: budgets, open roster spots, each team's TRUE max bid (dollars left minus $1 reserved per unfilled slot — reporting raw remaining is the classic auction blunder), who is on the clock, what is on the block, and recent sales. The payload always carries a `simulated` flag: when it is true the rows are test picks entered to exercise the rig, not completed sales.",
     inputSchema: { type: "object", properties: { room: { type: "string", description: "Draft room (default: the league room)" } }, additionalProperties: false },
     async run(args, env) {
       const room = String(args.room || "pepperoninipples").replace(/[.#$\[\]\/]/g, "-");
@@ -2249,12 +2249,23 @@ const MCP_TOOLS = [
         player: pk.player, pos: pk.pos, price: pk.price,
         team: (teams[pk.ti] || {}).name || null, keeper: !!pk.keeper,
       }));
+      // C6 — this room is reused for testing between real drafts. A payload that cannot
+      // tell a test pick from a completed sale reads as a finished auction to any assistant
+      // that calls it ("Josh Allen $55 to Mark"). Read the flag from the top-level room node
+      // AND from settings: the draft app rewrites `state`, so a flag stored inside it can be
+      // clobbered mid-session. An absent flag means false — so it MUST be set on a test room
+      // before anyone is handed a connector URL.
+      const simulated = rec.simulated === true || set.simulated === true;
       return toolText({
         room, as_of: rec.ts || null, scoring: set.scoring || "half",
+        simulated,
         budget, rosterSpots: spots,
         onTheClock: (teams[st.nomIdx] || {}).name || null,
         onBlock: st.onBlock || null,
         teams, picksMade: picks.length, recentSales: recent,
+        note: simulated
+          ? "SIMULATED — these picks were entered to test the league rig. They are NOT completed sales: no money moved, no player is rostered, and nobody is really on the clock. Do not report any of it as a real draft result."
+          : undefined,
       });
     },
   },

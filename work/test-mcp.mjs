@@ -32,7 +32,7 @@ const poolJson = { as_of: "2026-07-29", source: "MV snapshot", note: "dated", ti
 const dfsHtml = 'junk before\nconst CORR = {"meta":{"seasons":[2019,2025]},"roles":["QB"],"same":[[1.0]],"opp":[[0.19]],"cv":{"QB":[{"lo":10,"hi":14,"cv":0.62,"n":62}]}};\njunk after';
 const espnRaw = { events: [{ id: "401", shortName: "CLE @ PIT", date: "2026-09-13", status: { type: { state: "pre", completed: false } }, competitions: [{ competitors: [{ team: { abbreviation: "PIT" }, homeAway: "home", score: null }, { team: { abbreviation: "CLE" }, homeAway: "away", score: null }] }] }] };
 
-let netMode = "normal"; // normal | dbdown | emptyRoom | espnDown
+let netMode = "normal"; // normal | dbdown | emptyRoom | espnDown | simulatedRoom | simulatedSettings
 globalThis.fetch = async (input, init) => {
   const u = String(input instanceof URL ? input.href : (input && input.url) || input);
   const method = (init && init.method) || (input && input.method) || "GET";
@@ -43,7 +43,14 @@ globalThis.fetch = async (input, init) => {
     return J({ main: leagueRec });
   }
   if (u.includes("/bozo/leagues/main/ledger")) return J(leagueRec.ledger || null);
-  if (u.startsWith(FB + "/drafts/")) return J(netMode === "emptyRoom" ? null : draftRec);
+  if (u.startsWith(FB + "/drafts/")) {
+    if (netMode === "emptyRoom") return J(null);
+    // C6 — the flag lives at the top level of the room node, out of the draft app's
+    // write path. `simulatedSettings` covers the other place it might be written.
+    if (netMode === "simulatedRoom") return J({ ...draftRec, simulated: true });
+    if (netMode === "simulatedSettings") return J({ ...draftRec, state: { ...draftRec.state, settings: { ...draftRec.state.settings, simulated: true } } });
+    return J(draftRec);
+  }
   if (u.includes("datadawgs216.com/data/pool.json")) return J(poolJson);
   if (u.includes("datadawgs216.com/dfs.html")) return new Response(dfsHtml, { status: 200 });
   if (u.includes("site.api.espn.com")) {
@@ -166,6 +173,30 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
   ok(a.maxBid === 127 - 13, "maxBid = left − (openSpots − 1) — $1 reserved per unfilled slot");
   ok(b.maxBid === 200 - 14, "untouched team maxBid = budget − (spots − 1)");
   ok(d.onTheClock === "Team B" && d.onBlock === "Bijan Robinson", "clock + block");
+}
+// dd_draft_board: C6 — a test pick must never read as a completed sale
+{
+  const j = await (await req(call("dd_draft_board"))).json();
+  const d = text(j);
+  ok(d.simulated === false, "unflagged room: simulated is present and false, never absent");
+  ok(d.note === undefined, "…and carries no warning it would have to walk back");
+}
+{
+  netMode = "simulatedRoom";
+  const j = await (await req(call("dd_draft_board"))).json();
+  const d = text(j);
+  ok(d.simulated === true, "top-level flag → simulated true");
+  ok(typeof d.note === "string" && /NOT completed sales/.test(d.note),
+     "…and the payload says so in WORDS — a bare boolean is ignorable, prose is not");
+  ok(d.recentSales.length === 1 && d.teams.length === 2,
+     "…while still returning the picks: the room stays usable for league testing (backlog C5)");
+  netMode = "normal";
+}
+{
+  netMode = "simulatedSettings";
+  const j = await (await req(call("dd_draft_board"))).json();
+  ok(text(j).simulated === true, "settings-level flag also counts (draft app may rewrite state)");
+  netMode = "normal";
 }
 // dd_draft_board: empty room is a tool error, not a protocol error
 {
