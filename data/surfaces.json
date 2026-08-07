@@ -33,15 +33,17 @@
    "dd_scores",
    "dd_dfs_correlations",
    "dd_guillotine_odds",
-   "dd_site_map"
+   "dd_site_map",
+   "dd_survivor_ev",
+   "dd_analyze_matchup"
   ]
  },
  "counts": {
   "surfaces": 11,
   "with_live_machine_access": 11,
   "with_no_machine_access": 0,
-  "mcp_tools_live": 11,
-  "mcp_tools_planned": 8
+  "mcp_tools_live": 13,
+  "mcp_tools_planned": 6
  },
  "data": [
   {
@@ -137,10 +139,15 @@
      "url": "/data/models.json",
      "status": "live",
      "covers": "the margin model parameters"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_analyze_matchup",
+     "status": "live",
+     "covers": "Elo margin + win probability for any two teams, plus scheduled meetings"
     }
    ],
    "planned": [
-    "mcp:analyze_matchup",
     "rest:/api/matchup"
    ],
    "tier": "dawg"
@@ -161,11 +168,15 @@
      "tool": "dd_survivor_week",
      "status": "live",
      "covers": "stored weekly ownership snapshots, staleness-flagged"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_survivor_ev",
+     "status": "live",
+     "covers": "closed-form one-week EV ranking; ownership posted or modelled, and it says which"
     }
    ],
-   "planned": [
-    "mcp:get_survivor_ev"
-   ],
+   "planned": [],
    "gap": "Pool ownership is modelled, not observed, and double-pick weeks are recorded but not simulated.",
    "tier": "labs"
   },
