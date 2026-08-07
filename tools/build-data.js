@@ -515,7 +515,7 @@ const UPSTREAM_MODELS = [
 ];
 
 const MODEL_CONTRACTS = {
-  contract_version: '1.0.0-stage',
+  contract_version: '1.1.0',
   canonical_game_id: 'season_week_away_home using canonical current team abbreviations, for example 2026_01_PIT_CLE',
   model_id_rule: 'lowercase stable slug; model version changes do not change model_id',
   forecast_status_values: ['backtest', 'prospective'],
@@ -533,26 +533,26 @@ const MODEL_CONTRACTS = {
   },
   comparable_sample_rule: 'Leaderboard comparisons disclose each sample and prefer identical game sets. No ranking across silently different samples.',
   calculator_contracts: {
-    odds_converter: { inputs: ['american_odds'], outputs: ['decimal_odds', 'implied_probability'] },
-    parlay: { inputs: ['american_odds[]'], outputs: ['decimal_odds', 'american_odds', 'implied_probability'] },
-    hold_vig: { inputs: ['side_a_american', 'side_b_american'], outputs: ['raw_implied[]', 'hold', 'devig_probability[]'] },
-    bet_ev: { inputs: ['win_probability', 'american_odds'], outputs: ['break_even_probability', 'expected_profit_per_unit', 'roi'] },
-    hedge: { inputs: ['original_stake', 'original_american', 'hedge_american'], outputs: ['hedge_stake', 'locked_profit'] },
-    passer_rating: { inputs: ['attempts', 'completions', 'yards', 'touchdowns', 'interceptions'], outputs: ['nfl_passer_rating'] },
+    odds_converter: { inputs: ['american_odds'], outputs: ['decimal_odds', 'implied_probability'], mcp_tool: 'dd_convert_odds' },
+    parlay: { inputs: ['american_odds[]'], outputs: ['decimal_odds', 'american_odds', 'implied_probability'], mcp_tool: 'dd_price_parlay' },
+    hold_vig: { inputs: ['side_a_american', 'side_b_american'], outputs: ['raw_implied[]', 'hold', 'devig_probability[]'], mcp_tool: 'dd_devig_market' },
+    bet_ev: { inputs: ['win_probability', 'american_odds'], outputs: ['break_even_probability', 'expected_profit_per_unit', 'roi'], mcp_tool: 'dd_calculate_bet_ev' },
+    hedge: { inputs: ['original_stake', 'original_american', 'hedge_american'], outputs: ['hedge_stake', 'locked_profit'], mcp_tool: 'dd_calculate_hedge' },
+    passer_rating: { inputs: ['attempts', 'completions', 'yards', 'touchdowns', 'interceptions'], outputs: ['nfl_passer_rating'], mcp_tool: 'dd_nfl_passer_rating' },
     elo_game: { inputs: ['home_elo', 'away_elo', 'home_field_elo'], outputs: ['home_win_probability', 'away_win_probability'] },
     normal_translation: { inputs: ['home_win_probability', 'residual_sd_points', 'optional_home_line_sportsbook_convention'],
       outputs: ['expected_margin_home', 'model_spread_home', 'home_cover_probability', 'push_probability'],
       formula: 'expected_margin_home = 0.5 + residual_sd_points * inverse_standard_normal(home_win_probability)', modelled: true,
       assumptions: ['published 0.5-point win threshold', 'home favorite lines are negative', 'continuous cover approximation', 'zero push probability', 'no NFL key-number mass'] },
-    forecast_grade: { inputs: ['forecast_probability', 'outcome_0_or_1'], outputs: ['brier', 'log_loss'] },
+    forecast_grade: { inputs: ['forecast_probability', 'outcome_0_or_1'], outputs: ['brier', 'log_loss'], mcp_tool: 'dd_score_forecast' },
     belief_summary: { inputs: ['probabilities[]'], outputs: ['count', 'mean', 'median', 'min', 'max', 'range', 'standard_deviation', 'crosses_50'],
+      mcp_tool: 'dd_summarize_beliefs',
       note: 'Equal-weight descriptive statistics only; this is not a validated consensus blend.' },
   },
 };
 
 const POUND_MINIMUM_PATHS = {
   'model-scoreboard': 'Normalize and publish at least one lawfully integrated independent model feed, then join it by canonical game_id.',
-  disagreement: 'Accumulate prospective receipts for at least two independent models and test a preregistered relationship between dispersion and forecast error.',
   '538-classic': 'Build canonical historical/current inputs, reproduce official historical probabilities within tolerance, publish current forecasts, and lock prospective receipts.',
   nfeloml: 'Run the MIT package in a scheduled precompute job with schema checks and publish static output, or build and validate a Worker-compatible inference port.',
   nfeloqb: 'Obtain a reusable license, permission, or lawful dated output; then build the starter mapping, adapter, and prospective validation.',
@@ -561,13 +561,6 @@ const POUND_MINIMUM_PATHS = {
   hfa: 'Build a canonical historical-game input, estimate HFA by declared period/context, and publish a dated series with uncertainty.',
   units: 'Obtain a reusable license, permission, or lawful output; normalize unit ratings to canonical teams and replicate performance claims independently.',
   translation: 'Add a versioned discrete NFL margin distribution with key-number and push mass, then validate cover probabilities prospectively.',
-  market: 'Secure a lawful market feed and retain source, observation time, price, close status, and declared devig method in canonical snapshots.',
-  'cover-ev': 'Pair a timestamped line feed with a prospectively graded margin distribution and publish cover calibration before making edge claims.',
-  odds: 'Expose the tested conversion through a read-only Worker tool using the published calculator contract.',
-  parlay: 'Keep price multiplication as the base mode; add joint-probability output only after a declared, tested correlation input or model exists.',
-  hedge: 'Expose the tested equal-net-outcome calculation through a read-only Worker tool using the published calculator contract.',
-  passer: 'Expose the tested passer-rating calculation through a read-only Worker tool using the published calculator contract.',
-  grader: 'Join immutable forecast receipts to separate outcomes, aggregate only comparable samples, and publish calibration and sample counts.',
   receipts: 'Emit normalized forecasts from multiple models before kickoff, retain exact input snapshots, and store later results separately by forecast_id.',
   regimes: 'Accumulate adequate prospective samples, preregister slices and minimum counts, and mark post-hoc analysis exploratory.',
   ensembles: 'Accumulate prospective model errors, then benchmark mean, median and candidate weighting methods against the market and best individual model.',
@@ -575,16 +568,26 @@ const POUND_MINIMUM_PATHS = {
 };
 
 const calculatorIds = new Set(['disagreement', '538-classic', 'hfa', 'translation', 'market', 'cover-ev', 'odds', 'parlay', 'hedge', 'passer', 'grader', 'ensembles']);
+const POUND_LIVE_MCP = {
+  disagreement: 'dd_summarize_beliefs',
+  market: 'dd_devig_market',
+  'cover-ev': 'dd_calculate_bet_ev',
+  odds: 'dd_convert_odds',
+  parlay: 'dd_price_parlay',
+  hedge: 'dd_calculate_hedge',
+  passer: 'dd_nfl_passer_rating',
+  grader: 'dd_score_forecast',
+};
 
 const POUND_TOOLS = [
   ['model-scoreboard', 'Model Scoreboard / Mean & Conflict', 'Compare dated model and market beliefs game by game.', 'frontend-only',
     'Uses the dated nfelo and market snapshots already published by Data Dawgs.', 'Interactive game table with metric/source states.',
     'Explain the equal-weight mean, range, dissent and missing models without claiming a validated consensus blend.', 'dd_analyze_matchup covers the current two-source matchup view.',
     '/data/nfelo.json + /data/survivor.json', 'More independently licensed model feeds are needed for a true multi-model board.'],
-  ['disagreement', 'Transparent Disagreement Engine', 'Show mean, median, range, standard deviation and decision-boundary splits.', 'frontend-only',
+  ['disagreement', 'Transparent Disagreement Engine', 'Show mean, median, range, standard deviation and decision-boundary splits.', 'complete',
     'Any list of probabilities, plus the current scoreboard.', 'Belief-summary lab and per-game descriptive statistics.',
-    'Descriptive uncertainty only; never call disagreement a predictive edge.', 'No dedicated endpoint.',
-    '/data/model-contracts.json', 'Validation against future forecast error needs prospective multi-model receipts.'],
+    'Descriptive uncertainty only; never call disagreement a predictive edge.', 'dd_summarize_beliefs',
+    '/data/model-contracts.json', null],
   ['538-classic', '538 Classic Elo', 'Provide a permanent simple benchmark/control.', 'frontend-only',
     'User-supplied Elo ratings; MIT mathematics HFA=65.', 'One-game probability calculator.',
     'Describe this as a calculator until canonical 2026 state and receipts ship.', 'No MCP tool.',
@@ -621,29 +624,29 @@ const POUND_TOOLS = [
     'User probability and dated Data Dawgs normal residual SD.', 'Interactive calculator.',
     'Calls the result MODELLED and names the normal, independent, no-key-number assumption.', 'No MCP tool.',
     '/data/models.json + /data/model-contracts.json', 'Discrete key-number distribution and push model are not implemented.'],
-  ['market', 'Market Normalizer', 'Normalize American odds, implied probability, hold and devig probabilities.', 'frontend-only',
+  ['market', 'Market Normalizer', 'Normalize American odds, implied probability, hold and devig probabilities.', 'complete',
     'User-entered prices.', 'Odds and hold/vig calculators.',
-    'No sportsbook feed, closing-line claim or vendor attribution.', 'No MCP tool.',
-    '/data/model-contracts.json', 'A timestamped licensed market feed is missing.'],
-  ['cover-ev', 'Cover Probability / EV', 'Turn a declared probability and price into break-even and expected value.', 'frontend-only',
+    'No sportsbook feed, closing-line claim or vendor attribution.', 'dd_devig_market',
+    '/data/model-contracts.json', null],
+  ['cover-ev', 'Cover Probability / EV', 'Turn a declared probability and price into break-even and expected value.', 'complete',
     'User probability and price, or the modelled normal translator.', 'Interactive calculator.',
-    'Distinguishes the user/model probability from the price-implied probability.', 'No MCP tool.',
-    '/data/model-contracts.json', 'No live line feed and no independently graded cover model.'],
-  ['odds', 'Odds Converter', 'Convert American odds to decimal odds and implied probability.', 'frontend-only',
-    'User-entered odds.', 'Interactive calculator.', 'Deterministic conversion; no predictive claim.', 'No MCP tool.',
-    '/data/model-contracts.json', 'No dedicated calculator MCP endpoint is deployed.'],
-  ['parlay', 'Parlay Calculator', 'Compound declared leg prices.', 'frontend-only',
-    'User-entered American odds.', 'Interactive calculator.', 'Assumes price multiplication; does not claim leg independence.', 'No MCP tool.',
-    '/data/model-contracts.json', 'No dedicated calculator MCP endpoint is deployed; correlation-aware joint probability remains undefined.'],
-  ['hedge', 'Hedge Calculator', 'Size the opposite side for equal net outcome.', 'frontend-only',
-    'Original stake/price and hedge price.', 'Interactive calculator.', 'Arithmetic, not advice; ignores limits, tax and execution risk.', 'No MCP tool.',
-    '/data/model-contracts.json', 'No dedicated calculator MCP endpoint is deployed.'],
-  ['passer', 'NFL Passer Rating', 'Reproduce the public deterministic NFL passer-rating formula.', 'frontend-only',
-    'Attempts, completions, yards, touchdowns and interceptions.', 'Interactive calculator.', 'Descriptive statistic, not a forecast or QBR substitute.', 'No MCP tool.',
-    '/data/model-contracts.json', 'No dedicated calculator MCP endpoint is deployed.'],
-  ['grader', 'Forecast Grader', 'Compute Brier score and log loss for one declared forecast.', 'frontend-only',
-    'Probability and binary outcome.', 'Interactive calculator.', 'One observation is not model validation; sample size stays visible.', 'No MCP tool.',
-    '/data/model-contracts.json', 'Leaderboard aggregation waits on immutable comparable receipts.'],
+    'Distinguishes the user/model probability from the price-implied probability.', 'dd_calculate_bet_ev',
+    '/data/model-contracts.json', null],
+  ['odds', 'Odds Converter', 'Convert American odds to decimal odds and implied probability.', 'complete',
+    'User-entered odds.', 'Interactive calculator.', 'Deterministic conversion; no predictive claim.', 'dd_convert_odds',
+    '/data/model-contracts.json', null],
+  ['parlay', 'Parlay Calculator', 'Compound declared leg prices.', 'complete',
+    'User-entered American odds.', 'Interactive calculator.', 'Multiplies declared prices; does not claim a correlation-aware joint probability.', 'dd_price_parlay',
+    '/data/model-contracts.json', null],
+  ['hedge', 'Hedge Calculator', 'Size the opposite side for equal net outcome.', 'complete',
+    'Original stake/price and hedge price.', 'Interactive calculator.', 'Arithmetic, not advice; ignores limits, tax and execution risk.', 'dd_calculate_hedge',
+    '/data/model-contracts.json', null],
+  ['passer', 'NFL Passer Rating', 'Reproduce the public deterministic NFL passer-rating formula.', 'complete',
+    'Attempts, completions, yards, touchdowns and interceptions.', 'Interactive calculator.', 'Descriptive statistic, not a forecast or QBR substitute.', 'dd_nfl_passer_rating',
+    '/data/model-contracts.json', null],
+  ['grader', 'Forecast Grader', 'Compute Brier score and log loss for one declared forecast.', 'complete',
+    'Probability and binary outcome.', 'Interactive calculator.', 'One observation is not model validation; sample size stays visible.', 'dd_score_forecast',
+    '/data/model-contracts.json', null],
   ['receipts', 'Immutable Multi-Model Receipts', 'Make prospective forecasts auditable after outcomes are known.', 'data-blocked',
     'Normalized forecasts, input snapshots and market state before kickoff.', 'Contract and link to the existing 2026 receipt ledger.',
     'Never mix backtests and prospective forecasts.', 'No dedicated MCP receipt tool.',
@@ -662,20 +665,22 @@ const POUND_TOOLS = [
     '/data/upstream-models.json', 'No scheduled canonical data job exists in this static repository.'],
 ].map(([id, name, intended_user_value, status, required_data, human_ui, ai_language, mcp_api, machine_readable, blocker]) => {
   const existingTool = (mcp_api.match(/^(dd_[a-z0-9_]+)/) || [])[1] || null;
+  const liveTool = POUND_LIVE_MCP[id] || existingTool;
   return {
     id, name, intended_user_value,
     existing_website_implementation: id === 'nfelo' ? '/nfelo.html + /pound.html#scoreboard'
       : id === 'model-scoreboard' ? '/pound.html#scoreboard'
       : calculatorIds.has(id) ? '/pound.html#calculators' : '/pound.html#inventory',
-    existing_worker_mcp_implementation: existingTool,
+    existing_worker_mcp_implementation: liveTool,
+    staged_worker_mcp_implementation: null,
     required_data, human_facing_ui_requirement: human_ui, ai_language_requirement: ai_language,
-    mcp_api_requirement: existingTool
-      ? `Keep ${existingTool} read-only and align its contract with the public JSON.`
+    mcp_api_requirement: liveTool
+      ? `Keep ${liveTool} read-only and align its contract with the public JSON.`
       : calculatorIds.has(id)
         ? 'Expose the staged deterministic browser function through a read-only Worker tool using the published calculator contract.'
         : 'Add a read-only Worker tool only after the required deterministic data or runtime is validated.',
     machine_readable_requirement: machine_readable, status, exact_blocker: blocker,
-    minimum_path_to_completion: blocker ? POUND_MINIMUM_PATHS[id] : 'No known blocker for the staged scope.'
+    minimum_path_to_completion: blocker ? POUND_MINIMUM_PATHS[id] : 'No known blocker for the deployed scope.'
   };
 });
 
@@ -691,7 +696,7 @@ write('upstream-models.json', {
 });
 
 write('model-contracts.json', {
-  as_of: '2026-08-07', source: 'Data Dawgs normalized forecasting and calculator contract, staged 2026-08-07.',
+  as_of: '2026-08-07', source: 'Data Dawgs normalized forecasting and calculator contract, deployed 2026-08-07.',
   tier: TIERS.pound, graded: false,
   note: 'A contract is not a forecast. It prevents incompatible models and missing values from being silently normalized into false agreement.',
   data: MODEL_CONTRACTS,
@@ -700,7 +705,7 @@ write('model-contracts.json', {
 write('pound-tools.json', {
   as_of: '2026-08-07', source: 'Reconciled against the Data Dawgs site, Worker source and inspected upstream projects on 2026-08-07.',
   tier: TIERS.pound, graded: false,
-  note: 'Complete means the requested delivery layers are live. Frontend-only means the browser tool and public contract exist but no MCP endpoint does. Blocked tools keep an exact minimum path instead of being omitted.',
+  note: 'Complete means the requested delivery layers are live. Ready means the Worker source and tests exist but production activation is still pending. Frontend-only means the browser tool and public contract exist without an MCP endpoint. Blocked tools keep an exact minimum path instead of being omitted.',
   data: POUND_TOOLS,
 });
 
@@ -796,13 +801,17 @@ write('tier-audit.json', {
  * "live" entry resolves to a file that actually exists, so this file cannot
  * claim coverage the site does not have.
  */
-// The deployed /mcp tools. ⚠️ Flip nothing here before the tool answers a
-// real call from a real client — this list IS counts.mcp_tools_live and the
-// validator asserts the endpoint exists whenever it is non-empty.
+// The deployed /mcp tools. This list IS counts.mcp_tools_live. Calculator
+// tools move here only after the production version, transport, auth boundary
+// and deployed registrations have been verified.
+const MCP_POUND_LIVE = ['dd_convert_odds', 'dd_devig_market', 'dd_price_parlay',
+  'dd_calculate_bet_ev', 'dd_calculate_hedge', 'dd_nfl_passer_rating',
+  'dd_score_forecast', 'dd_summarize_beliefs'];
 const MCP_LIVE = ['dd_whoami', 'dd_league_overview', 'dd_bozo_week', 'dd_bozo_standings',
   'dd_draft_board', 'dd_draft_pool', 'dd_survivor_week', 'dd_scores',
   'dd_dfs_correlations', 'dd_guillotine_odds', 'dd_site_map',
-  'dd_survivor_ev', 'dd_analyze_matchup'];
+  'dd_survivor_ev', 'dd_analyze_matchup', ...MCP_POUND_LIVE];
+const MCP_STAGED = [];
 const MCP_ENDPOINT = {
   path: '/mcp/u_<personal token>   (legacy: /mcp/<league passphrase>)',
   transport: 'streamable-http',
@@ -873,9 +882,10 @@ const SURFACES = [
   { id: 'pound', name: 'The Pound model and calculator workbench', page: '/pound.html',
     machine: [{ kind: 'json', url: '/data/pound-tools.json', status: 'live', covers: 'complete inventory, delivery status and exact blockers' },
               { kind: 'json', url: '/data/model-contracts.json', status: 'live', covers: 'forecast, receipt and calculator contracts' },
-              { kind: 'json', url: '/data/upstream-models.json', status: 'live', covers: 'source, commit and license provenance' }],
-    planned: ['mcp:model_scoreboard', 'mcp:model_calculators'],
-    gap: 'Browser calculators are deterministic and public, but no dedicated calculator MCP endpoint exists.' },
+              { kind: 'json', url: '/data/upstream-models.json', status: 'live', covers: 'source, commit and license provenance' },
+              ...MCP_POUND_LIVE.map(tool => ({ kind: 'mcp', tool, status: 'live', covers: 'deterministic calculation over caller-supplied inputs; inputs and results are not stored' }))],
+    planned: ['mcp:model_scoreboard'],
+    gap: 'The calculator tools have no sportsbook feed or independent forecast pipeline; they operate only on caller-supplied inputs.' },
   { id: 'method', name: 'How this site reasons', page: '/index.html',
     machine: [{ kind: 'markdown', url: '/data/method.md', status: 'live' },
               { kind: 'markdown', url: '/data/toto-philosophy.md', status: 'live' }],
@@ -899,12 +909,13 @@ write('surfaces.json', {
     dating: 'Every payload carries as_of and source. Quote the date with the number.',
     tiers: TIER_MEANING,
   },
-  mcp: { ...MCP_ENDPOINT, tools_live: MCP_LIVE },
+  mcp: { ...MCP_ENDPOINT, tools_live: MCP_LIVE, tools_staged: MCP_STAGED },
   counts: {
     surfaces: SURFACES.length,
     with_live_machine_access: SURFACES.filter(s => s.machine.some(m => m.status === 'live')).length,
     with_no_machine_access: SURFACES.filter(s => s.machine.every(m => m.status === 'none')).length,
     mcp_tools_live: MCP_LIVE.length,
+    mcp_tools_staged: MCP_STAGED.length,
     mcp_tools_planned: [...new Set(SURFACES.flatMap(s => s.planned).filter(p => p.startsWith('mcp:')))].length,
   },
   data: SURFACES.map(s => ({ ...s, tier: tierOf(s.page.replace(/^\//, '')) })),

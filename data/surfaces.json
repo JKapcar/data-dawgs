@@ -35,15 +35,25 @@
    "dd_guillotine_odds",
    "dd_site_map",
    "dd_survivor_ev",
-   "dd_analyze_matchup"
-  ]
+   "dd_analyze_matchup",
+   "dd_convert_odds",
+   "dd_devig_market",
+   "dd_price_parlay",
+   "dd_calculate_bet_ev",
+   "dd_calculate_hedge",
+   "dd_nfl_passer_rating",
+   "dd_score_forecast",
+   "dd_summarize_beliefs"
+  ],
+  "tools_staged": []
  },
  "counts": {
   "surfaces": 12,
   "with_live_machine_access": 12,
   "with_no_machine_access": 0,
-  "mcp_tools_live": 13,
-  "mcp_tools_planned": 8
+  "mcp_tools_live": 21,
+  "mcp_tools_staged": 0,
+  "mcp_tools_planned": 7
  },
  "data": [
   {
@@ -309,13 +319,60 @@
      "url": "/data/upstream-models.json",
      "status": "live",
      "covers": "source, commit and license provenance"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_convert_odds",
+     "status": "live",
+     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_devig_market",
+     "status": "live",
+     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_price_parlay",
+     "status": "live",
+     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_calculate_bet_ev",
+     "status": "live",
+     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_calculate_hedge",
+     "status": "live",
+     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_nfl_passer_rating",
+     "status": "live",
+     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_score_forecast",
+     "status": "live",
+     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_summarize_beliefs",
+     "status": "live",
+     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
     }
    ],
    "planned": [
-    "mcp:model_scoreboard",
-    "mcp:model_calculators"
+    "mcp:model_scoreboard"
    ],
-   "gap": "Browser calculators are deterministic and public, but no dedicated calculator MCP endpoint exists.",
+   "gap": "The calculator tools have no sportsbook feed or independent forecast pipeline; they operate only on caller-supplied inputs.",
    "tier": "pound"
   },
   {

@@ -23,3 +23,18 @@ Started: 2026-08-07 ET
 - No code copied from an upstream repository without a verified reusable license.
 - Backtests, modelled output, simulation and ungraded state remain visibly labelled.
 - No push, PR, commit, deploy, Cloudflare/Firebase write, purchase or external message.
+
+## Backend activation â€” Batch 1
+
+- Branch: `codex/pound-backend-batch-1`, based on verified production commit `17b4faa`.
+- Added eight deterministic, read-only MCP tools in the generated Worker block: odds conversion, proportional devig, parlay price multiplication, caller-supplied bet EV, equal-net hedge sizing, NFL passer rating, one-row forecast scoring and equal-weight belief summaries.
+- The tools accept only bounded, validated inputs; they call no network service, persist no input and perform no production write.
+- MCP parity coverage compares every calculation with `work/pound-core.js`; the expanded suite passes 122 assertions.
+- Public metadata uses `ready`, not `live`: Worker deployment and a real production MCP conformance call remain required before the eight tools move into `tools_live` or `complete`.
+
+## Production activation — 2026-08-07
+
+- Deployed commit `51c7f3d` to Cloudflare Worker `toto` as version `b7eb9dfd-450c-4a2b-bdab-723b2de706bf`.
+- Strict deployment preserved compatibility date `2026-07-31`, the `RL` KV binding, the daily `0 9 * * *` backup cron, dashboard variables, encrypted secrets, disabled preview URLs, Workers Logs and the 1,000 ms CPU limit.
+- Production verification confirmed the active version and deployment message in Cloudflare, all eight tool registrations in the deployed bundle, the public streamable-HTTP MCP route, and the `401` authentication boundary for anonymous initialization.
+- No league credential was inspected or requested. Calculator behavior remains covered by the 122-assertion MCP suite and parity checks against `work/pound-core.js`; deployment verification does not turn deterministic arithmetic into a graded forecast or a live market feed.

@@ -2,6 +2,7 @@
 // handleScores — with only the network faked. Run: node test-mcp.mjs
 import { readFileSync } from "fs";
 import worker from "../dawg-bot-worker.js";
+import P from "./pound-core.js";
 
 let pass = 0, fail = 0;
 const ok = (cond, name) => { if (cond) pass++; else { fail++; console.error("FAIL:", name); } };
@@ -97,6 +98,8 @@ for (const v of ["2025-03-26", "2025-06-18", "2026-07-28"]) {
 {
   const j = await (await req(rpc("initialize", { protocolVersion: "1999-01-01" }))).json();
   ok(j.result.protocolVersion === "2025-06-18", "initialize falls back on unknown version");
+  ok(/caller-supplied inputs/.test(j.result.instructions) && /not stored/.test(j.result.instructions),
+     "initialize explains deterministic calculator provenance and non-persistence");
 }
 // notification: 202, EMPTY body
 {
@@ -149,13 +152,16 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
   ok(r.status === 405, "GET → 405 with hint");
   ok((r.headers.get("Access-Control-Allow-Origin") || "") === "*", "/mcp carries its own permissive CORS");
 }
-// tools/list: nine tools, all dd_-prefixed, all with schemas
+// tools/list: every tool is named and schema-described
 {
   const j = await (await req(rpc("tools/list"))).json();
   const t = j.result.tools;
-  ok(t.length === 13, "thirteen tools listed");
+  ok(t.length === 21, "twenty-one tools listed");
   ok(t.every(x => x.name.startsWith("dd_")), "all tools dd_-prefixed");
   ok(t.every(x => x.inputSchema && x.inputSchema.type === "object"), "all tools carry an inputSchema");
+  for (const name of ["dd_convert_odds", "dd_devig_market", "dd_price_parlay", "dd_calculate_bet_ev",
+    "dd_calculate_hedge", "dd_nfl_passer_rating", "dd_score_forecast", "dd_summarize_beliefs"])
+    ok(t.some(x => x.name === name), name + " is listed");
 }
 // dd_league_overview
 {
@@ -329,6 +335,86 @@ function refNcdf(z) {
   const j2 = await (await req(call("dd_analyze_matchup", { home: "browns", away: "Cleveland" }))).json();
   ok(j2.result.isError === true, "same team by two names → tool error");
 }
+// Pound calculators: pure MCP results must stay in parity with work/pound-core.js.
+{
+  const j = await (await req(call("dd_convert_odds", { american_odds: -110 }))).json();
+  const d = text(j), ref = P.oddsConverter(-110);
+  ok(Math.abs(d.decimal_odds - ref.decimal) < 1e-12, "odds decimal matches Pound core");
+  ok(Math.abs(d.implied_probability - ref.implied_probability) < 1e-12, "odds implied probability matches Pound core");
+  ok(d.read_only === true && /user-supplied/i.test(d.note), "odds result labels provenance and read-only behavior");
+  const bad = await (await req(call("dd_convert_odds", { american_odds: -50 }))).json();
+  ok(bad.result.isError === true, "invalid American odds fail closed");
+  const wrongType = await (await req(call("dd_convert_odds", { american_odds: "-110" }))).json();
+  ok(wrongType.result.isError === true, "numeric strings are rejected against the MCP number schema");
+}
+{
+  const j = await (await req(call("dd_devig_market", { side_a_american: -110, side_b_american: -110 }))).json();
+  const d = text(j), ref = P.holdVig(-110, -110);
+  ok(Math.abs(d.hold - ref.hold) < 1e-12, "market hold matches Pound core");
+  ok(d.devig_probability.every((x, i) => Math.abs(x - ref.devig_probability[i]) < 1e-12), "proportional devig matches Pound core");
+  ok(d.devig_method === "proportional normalization", "devig method is explicit");
+}
+{
+  const prices = [-110, 150];
+  const j = await (await req(call("dd_price_parlay", { american_odds: prices }))).json();
+  const d = text(j), ref = P.parlay(prices);
+  ok(Math.abs(d.decimal_odds - ref.decimal) < 1e-12 && Math.abs(d.american_odds - ref.american) < 1e-12,
+     "parlay price matches Pound core");
+  ok(/correlation/.test(d.note), "parlay discloses that price multiplication is not a correlation model");
+  const empty = await (await req(call("dd_price_parlay", { american_odds: [] }))).json();
+  ok(empty.result.isError === true, "empty parlay fails closed");
+  const tooMany = await (await req(call("dd_price_parlay", { american_odds: new Array(21).fill(-110) }))).json();
+  ok(tooMany.result.isError === true, "parlay call is bounded at 20 legs");
+}
+{
+  const price = -110, p = P.impliedFromAmerican(price);
+  const j = await (await req(call("dd_calculate_bet_ev", { win_probability: p, american_odds: price }))).json();
+  const d = text(j), ref = P.betEV(p, price);
+  ok(Math.abs(d.roi - ref.roi) < 1e-12 && Math.abs(d.break_even_probability - ref.break_even_probability) < 1e-12,
+     "bet EV matches Pound core at break-even");
+  ok(/caller-supplied/.test(d.note) && /not an independently graded edge/i.test(d.note), "EV result refuses an edge claim");
+  const bad = await (await req(call("dd_calculate_bet_ev", { win_probability: 1.1, american_odds: -110 }))).json();
+  ok(bad.result.isError === true, "EV probability outside [0,1] fails closed");
+}
+{
+  const j = await (await req(call("dd_calculate_hedge", { original_stake: 100, original_american: 200, hedge_american: -150 }))).json();
+  const d = text(j), ref = P.hedge(100, 200, -150);
+  ok(Math.abs(d.hedge_stake - ref.hedge_stake) < 1e-12 && Math.abs(d.locked_profit - ref.locked_profit) < 1e-12,
+     "hedge sizing matches Pound core");
+  ok(/no bet is placed/.test(d.note), "hedge tool states that it takes no action");
+  const bad = await (await req(call("dd_calculate_hedge", { original_stake: 0, original_american: 200, hedge_american: -150 }))).json();
+  ok(bad.result.isError === true, "non-positive hedge stake fails closed");
+}
+{
+  const args = { attempts: 20, completions: 20, yards: 400, touchdowns: 4, interceptions: 0 };
+  const j = await (await req(call("dd_nfl_passer_rating", args))).json();
+  const d = text(j), ref = P.passerRating(20, 20, 400, 4, 0);
+  ok(Math.abs(d.nfl_passer_rating - ref.rating) < 1e-12 && Math.abs(d.nfl_passer_rating - 158.33333333333334) < 1e-12,
+     "perfect passer rating matches Pound core");
+  const neg = text(await (await req(call("dd_nfl_passer_rating", { attempts: 1, completions: 0, yards: -5, touchdowns: 0, interceptions: 0 }))).json());
+  ok(Math.abs(neg.nfl_passer_rating - P.passerRating(1, 0, -5, 0, 0).rating) < 1e-12, "legitimate negative passing yards remain valid");
+  const fractional = await (await req(call("dd_nfl_passer_rating", { attempts: 1.5, completions: 1, yards: 10, touchdowns: 0, interceptions: 0 }))).json();
+  ok(fractional.result.isError === true, "fractional passing statistics fail closed");
+}
+{
+  const j = await (await req(call("dd_score_forecast", { forecast_probability: 0.7, outcome_0_or_1: 1 }))).json();
+  const d = text(j), ref = P.forecastGrade(0.7, 1);
+  ok(Math.abs(d.brier - ref.brier) < 1e-12 && Math.abs(d.log_loss - ref.log_loss) < 1e-12,
+     "forecast grade matches Pound core");
+  ok(d.sample_size === 1 && d.graded_track_record === false, "single-row grade cannot masquerade as a track record");
+  const bad = await (await req(call("dd_score_forecast", { forecast_probability: 0.7, outcome_0_or_1: 2 }))).json();
+  ok(bad.result.isError === true, "non-binary outcome fails closed");
+}
+{
+  const xs = [0.4, 0.6, 0.7];
+  const j = await (await req(call("dd_summarize_beliefs", { probabilities: xs }))).json();
+  const d = text(j), ref = P.beliefSummary(xs);
+  ok(Math.abs(d.mean - ref.mean) < 1e-12 && Math.abs(d.standard_deviation - ref.standard_deviation) < 1e-12,
+     "belief summary matches Pound core");
+  ok(d.crosses_50 === true && /not a validated consensus blend/i.test(d.note), "belief summary carries the no-consensus claim");
+  const empty = await (await req(call("dd_summarize_beliefs", { probabilities: [] }))).json();
+  ok(empty.result.isError === true, "empty belief list fails closed");
+}
 // dd_scores: reuses handleScores with sport+dates
 {
   const j = await (await req(call("dd_scores", { sport: "nfl", dates: "20260913" }))).json();
@@ -353,6 +439,7 @@ function refNcdf(z) {
   const d = text(j);
   ok(d.notServedHere && /localStorage/.test(d.notServedHere.dfs_projections_and_ownership), "notServedHere explains the DFS invariant");
   ok(d.machine.surfaces.includes("surfaces.json"), "points agents at the surfaces map");
+  ok(d.machine.data.includes("/data/model-contracts.json") && d.pages["pound.html"], "site map includes the Pound contracts and workbench");
 }
 
 /* ----------------------- source-level safety asserts ----------------------- */

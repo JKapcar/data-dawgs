@@ -62,7 +62,7 @@ CSS = r'''
 .inventory{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .tool{border:1px solid var(--border);border-radius:11px;background:var(--surface-1);padding:14px}.tool h3{font-size:16px;margin:6px 0}.tool p{margin:5px 0;color:var(--ink-2);font-size:13px}.tool .block{color:var(--ink-3);border-top:1px solid var(--grid);margin-top:9px;padding-top:9px}.tool code{font-size:11px}
 .status{display:inline-flex;border-radius:999px;padding:3px 7px;font:800 10px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;border:1px solid var(--border)}
-.status-complete{color:var(--good);border-color:color-mix(in srgb,var(--good) 50%,var(--border))}.status-frontend-only{color:var(--warn)}.status-backend-blocked,.status-data-blocked{color:var(--bad)}
+.status-complete{color:var(--good);border-color:color-mix(in srgb,var(--good) 50%,var(--border))}.status-ready{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 50%,var(--border))}.status-frontend-only{color:var(--warn)}.status-backend-blocked,.status-data-blocked{color:var(--bad)}
 .provenance{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.prov{border:1px solid var(--border);border-radius:10px;padding:13px;background:var(--surface-1)}.prov h3{margin:0 0 6px;font-size:15px}.prov p{margin:4px 0;color:var(--ink-3);font-size:12px}.prov a{color:var(--accent)}
 .machine-box{border:1px solid var(--border);border-radius:12px;padding:16px;background:var(--surface-1)}.machine-box code{overflow-wrap:anywhere}.machine-box li{margin:6px 0;color:var(--ink-2)}
 @media(max-width:760px){.p-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.calc-grid,.inventory{grid-template-columns:1fr}.fields.five{grid-template-columns:repeat(2,minmax(0,1fr))}.provenance{grid-template-columns:1fr}.p-section>header{display:block}.p-meta{text-align:left;margin-top:7px}}
@@ -72,7 +72,7 @@ CSS = r'''
 CONTENT = r'''
 <main>
   <header class="p-hero">
-    <div class="p-kicker">The Pound · staged 2026-08-07</div>
+    <div class="p-kicker">The Pound · Worker tools live 2026-08-07</div>
     <h1>Tools that show their work. <a class="tierchip" href="index.html#tiers" title="Why this work is in The Pound">The Pound</a></h1>
     <p class="p-lead">A transparent model scoreboard and a set of deterministic football calculators. Useful now; still earning their collar. Missing data, licensing limits and ungraded claims stay visible.</p>
   </header>
@@ -105,7 +105,7 @@ CONTENT = r'''
   </section>
 
   <section class="p-section" id="inventory">
-    <header><div><h2>Every requested tool</h2><p class="dek">Nothing disappears because it is hard. Blocked work keeps its exact blocker and minimum path.</p></div><label class="p-meta" for="toolFilter">Filter status<br><select class="p-filter" id="toolFilter"><option value="all">All</option><option>complete</option><option>frontend-only</option><option>backend-blocked</option><option>data-blocked</option></select></label></header>
+    <header><div><h2>Every requested tool</h2><p class="dek">Nothing disappears because it is hard. Complete means the requested human, contract and MCP layers are live; blocked work keeps its exact blocker and minimum path.</p></div><label class="p-meta" for="toolFilter">Filter status<br><select class="p-filter" id="toolFilter"><option value="all">All</option><option>complete</option><option>ready</option><option>frontend-only</option><option>backend-blocked</option><option>data-blocked</option></select></label></header>
     <div class="inventory" id="toolInventory"><div class="p-loading">Loading the public inventory…</div></div>
   </section>
 
@@ -121,7 +121,8 @@ CONTENT = r'''
       <li><a href="/data/model-contracts.json"><code>/data/model-contracts.json</code></a> — normalized forecast, receipt and calculator contracts.</li>
       <li><a href="/data/upstream-models.json"><code>/data/upstream-models.json</code></a> — repository, commit, license status and integration mode.</li>
       <li><a href="/data/nfelo.json"><code>/data/nfelo.json</code></a> + <a href="/data/survivor.json"><code>/data/survivor.json</code></a> — the dated inputs behind the staged scoreboard.</li>
-      <li><code>dd_analyze_matchup</code> — live Worker tool for the current matchup view. There is no dedicated calculator MCP endpoint yet.</li>
+      <li><code>dd_analyze_matchup</code> — live Worker tool for the current matchup view.</li>
+      <li><code>dd_convert_odds</code>, <code>dd_devig_market</code>, <code>dd_price_parlay</code>, <code>dd_calculate_bet_ev</code>, <code>dd_calculate_hedge</code>, <code>dd_nfl_passer_rating</code>, <code>dd_score_forecast</code> and <code>dd_summarize_beliefs</code> — live, read-only Worker tools for deterministic calculations over caller-supplied inputs.</li>
     </ul><p class="assumption">The AI explains these outputs. It does not invent the underlying number, fill nulls or promote an ungraded tool.</p></div>
   </section>
 </main>
@@ -162,7 +163,7 @@ CONTROLLER = r'''
     }catch(err){$("scoreLoad").className="p-error";$("scoreLoad").textContent="Scoreboard unavailable: "+err.message}
   }
   let allTools=[];
-  function renderTools(status){const rows=status==="all"?allTools:allTools.filter(t=>t.status===status);$("toolInventory").innerHTML=rows.map(t=>`<article class="tool"><span class="status status-${esc(t.status)}">${esc(t.status)}</span><h3>${esc(t.name)}</h3><p>${esc(t.intended_user_value)}</p><p><b>Machine:</b> <code>${esc(t.machine_readable_requirement)}</code></p>${t.exact_blocker?`<p class="block"><b>Blocker:</b> ${esc(t.exact_blocker)}<br><b>Minimum path:</b> ${esc(t.minimum_path_to_completion)}</p>`:""}</article>`).join("")||'<div class="p-loading">No tools match.</div>'}
+  function renderTools(status){const rows=status==="all"?allTools:allTools.filter(t=>t.status===status);$("toolInventory").innerHTML=rows.map(t=>`<article class="tool"><span class="status status-${esc(t.status)}">${esc(t.status)}</span><h3>${esc(t.name)}</h3><p>${esc(t.intended_user_value)}</p><p><b>Machine:</b> <code>${esc(t.machine_readable_requirement)}</code>${t.existing_worker_mcp_implementation?`<br><b>Live MCP:</b> <code>${esc(t.existing_worker_mcp_implementation)}</code>`:""}${t.staged_worker_mcp_implementation?`<br><b>Staged MCP:</b> <code>${esc(t.staged_worker_mcp_implementation)}</code>`:""}</p>${t.exact_blocker?`<p class="block"><b>Blocker:</b> ${esc(t.exact_blocker)}<br><b>Minimum path:</b> ${esc(t.minimum_path_to_completion)}</p>`:""}</article>`).join("")||'<div class="p-loading">No tools match.</div>'}
   async function loadInventory(){try{const env=await json("/data/pound-tools.json");if(!Array.isArray(env.data))throw new Error("inventory payload is malformed");allTools=env.data;renderTools("all");$("toolFilter").addEventListener("change",e=>renderTools(e.target.value))}catch(err){$("toolInventory").innerHTML='<div class="p-error">Inventory unavailable: '+esc(err.message)+'</div>'}}
   async function loadProvenance(){try{const env=await json("/data/upstream-models.json");if(!Array.isArray(env.data))throw new Error("provenance payload is malformed");$("provGrid").innerHTML=env.data.map(x=>`<article class="prov"><h3>${esc(x.id)}</h3><p><a href="https://github.com/${esc(x.repository)}" target="_blank" rel="noopener">${esc(x.repository)}</a></p><p><b>License:</b> ${esc(x.license||"unverified")} · ${esc(x.license_status)}</p><p><b>Mode:</b> ${esc(x.integration_mode)}</p><p>${esc(x.notes)}</p></article>`).join("")}catch(err){$("provGrid").innerHTML='<div class="p-error">Provenance unavailable: '+esc(err.message)+'</div>'}}
   loadScoreboard();loadInventory();loadProvenance();
