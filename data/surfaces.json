@@ -39,11 +39,11 @@
   ]
  },
  "counts": {
-  "surfaces": 11,
-  "with_live_machine_access": 11,
+  "surfaces": 12,
+  "with_live_machine_access": 12,
   "with_no_machine_access": 0,
   "mcp_tools_live": 13,
-  "mcp_tools_planned": 6
+  "mcp_tools_planned": 8
  },
  "data": [
   {
@@ -144,7 +144,7 @@
      "kind": "mcp",
      "tool": "dd_analyze_matchup",
      "status": "live",
-     "covers": "Elo margin + win probability for any two teams, plus scheduled meetings"
+     "covers": "one current matchup with dated nfelo, market and model context"
     }
    ],
    "planned": [
@@ -173,7 +173,7 @@
      "kind": "mcp",
      "tool": "dd_survivor_ev",
      "status": "live",
-     "covers": "closed-form one-week EV ranking; ownership posted or modelled, and it says which"
+     "covers": "modelled pool survival EV with assumptions returned in the payload"
     }
    ],
    "planned": [],
@@ -286,6 +286,37 @@
     "json:/data/guillotine.json"
    ],
    "tier": "labs"
+  },
+  {
+   "id": "pound",
+   "name": "The Pound model and calculator workbench",
+   "page": "/pound.html",
+   "machine": [
+    {
+     "kind": "json",
+     "url": "/data/pound-tools.json",
+     "status": "live",
+     "covers": "complete inventory, delivery status and exact blockers"
+    },
+    {
+     "kind": "json",
+     "url": "/data/model-contracts.json",
+     "status": "live",
+     "covers": "forecast, receipt and calculator contracts"
+    },
+    {
+     "kind": "json",
+     "url": "/data/upstream-models.json",
+     "status": "live",
+     "covers": "source, commit and license provenance"
+    }
+   ],
+   "planned": [
+    "mcp:model_scoreboard",
+    "mcp:model_calculators"
+   ],
+   "gap": "Browser calculators are deterministic and public, but no dedicated calculator MCP endpoint exists.",
+   "tier": "pound"
   },
   {
    "id": "method",

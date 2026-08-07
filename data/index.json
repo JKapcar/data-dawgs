@@ -71,6 +71,30 @@
     "note": "The board is fully open by design — every leg, price and timestamp is visible to everyone and to everyone's bots before they place. That was a decision, not an oversight."
    },
    {
+    "path": "/data/upstream-models.json",
+    "url": "https://datadawgs216.com/data/upstream-models.json",
+    "bytes": 6804,
+    "as_of": "2026-08-07",
+    "sha256": "6c706540561b9baaabc1d8517988e8fb6e9681dcfd28f6dacb855d1d97969b23",
+    "note": "License status is an implementation gate, not legal advice. Public code without a verified reusable license is not copied or repackaged."
+   },
+   {
+    "path": "/data/model-contracts.json",
+    "url": "https://datadawgs216.com/data/model-contracts.json",
+    "bytes": 4357,
+    "as_of": "2026-08-07",
+    "sha256": "17f22b31107b9938677ffba1beaae46a1f8e1c33c42ea186c3ab25f9fbb3b7e8",
+    "note": "A contract is not a forecast. It prevents incompatible models and missing values from being silently normalized into false agreement."
+   },
+   {
+    "path": "/data/pound-tools.json",
+    "url": "https://datadawgs216.com/data/pound-tools.json",
+    "bytes": 22461,
+    "as_of": "2026-08-07",
+    "sha256": "4cc65e0dd53f635d41c703a14b0d2a996f5dcb252267c45499547c8a3afeb71f",
+    "note": "Complete means the requested delivery layers are live. Frontend-only means the browser tool and public contract exist but no MCP endpoint does. Blocked tools keep an exact minimum path instead of being omitted."
+   },
+   {
     "path": "/data/tier-audit.json",
     "url": "https://datadawgs216.com/data/tier-audit.json",
     "bytes": 7262,
@@ -81,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 8326,
+    "bytes": 9475,
     "as_of": "2026-08-07",
-    "sha256": "4fd6822462d9a4b7a44e071ed8da055a540fd36b7fef8c62ec721b0b66bc68ae",
+    "sha256": "9195d992a65902f78715f86c326f31de7c6eb46257265e8e8240101ecd200fef",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    }
   ],
@@ -91,43 +115,43 @@
    {
     "path": "/data/strategy.md",
     "url": "https://datadawgs216.com/data/strategy.md",
-    "bytes": 6864,
-    "sha256": "d712d36f62ce1abe00d92ce310f8390ac0fa1f572ed59a3d3d9c8f026b19465d",
+    "bytes": 6957,
+    "sha256": "beebdc10f47cbed6ef80baaa9dd33a3c3bf566d258d1c12dfca4fd5c02561b8f",
     "as_of": "2026-07-28"
    },
    {
     "path": "/data/receipts-method.md",
     "url": "https://datadawgs216.com/data/receipts-method.md",
-    "bytes": 4300,
-    "sha256": "8faad8c7d4f8a48e92d0319c1ff5239d413b26283c388c05f4df1db80a76f28c",
+    "bytes": 4398,
+    "sha256": "1e20d0d8c3f024bcdb20a2b5deb1d54c1e6f405e4e1bb247b3d3c8dafa4ad0ee",
     "as_of": "2026-08-06"
    },
    {
     "path": "/data/bozo-rules.md",
     "url": "https://datadawgs216.com/data/bozo-rules.md",
-    "bytes": 3456,
-    "sha256": "3c064194ca15776de071899f6de2c250b872ae6eff97885a77e97196544c011d",
+    "bytes": 3534,
+    "sha256": "32fe89973f946665b0cafa691e0c641654611069df7322d7eac799ad2345ecc4",
     "as_of": "2026-08-06"
    },
    {
     "path": "/data/method.md",
     "url": "https://datadawgs216.com/data/method.md",
-    "bytes": 3949,
-    "sha256": "fc24557ce934084d95d03a8f756b911eb6d3ee9063a62a3f5d0a81d46891b3fd",
+    "bytes": 4023,
+    "sha256": "2a0e4d3f460201d15c610ae072146f6c03771ed97f8b7205f848f7b67cfd1d9f",
     "as_of": "2026-08-06"
    },
    {
     "path": "/data/toto-philosophy.md",
     "url": "https://datadawgs216.com/data/toto-philosophy.md",
-    "bytes": 2713,
-    "sha256": "317bc66cf62df8de90b49176f80b63e20c45af42da309e080c3eff999c574ae3",
+    "bytes": 2768,
+    "sha256": "4cdc3619a20e0668b0979770acbe5926d4148671e30d501586860a8ebe7b9f98",
     "as_of": "2026-08-06"
    },
    {
     "path": "/data/tier-audit.md",
     "url": "https://datadawgs216.com/data/tier-audit.md",
-    "bytes": 9448,
-    "sha256": "7510c170ffd96f795e89096eb0e6735e15ef049fd548eee6ba269b9b47cdd6c4",
+    "bytes": 9624,
+    "sha256": "51ffe2619c67dffa9d8e832deea3cf636119b2c6a760d1158043e18e5a37d385",
     "as_of": "2026-08-07"
    }
   ]

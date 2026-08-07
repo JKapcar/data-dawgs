@@ -7,13 +7,16 @@
 */
 import fs from "fs";
 import { webcrypto } from "crypto";
+import { tmpdir } from "os";
+import { join } from "path";
+import { pathToFileURL } from "url";
 if (!globalThis.crypto) globalThis.crypto = webcrypto;
 
 let pass = 0, fail = 0;
 const ok = (n, c, x) => { c ? (pass++, console.log("  ok   " + n)) : (fail++, console.log("  FAIL " + n + (x ? "  — " + x : ""))); };
 
 const SRC = fs.readFileSync("../dawg-bot-worker.js", "utf8");
-const BUNDLE = "/tmp/worker-identity.mjs";
+const BUNDLE = join(tmpdir(), "worker-identity.mjs");
 fs.writeFileSync(BUNDLE, SRC + "\nexport { handleMcp, MCP_TOOLS, mcpAuth, mcpTokenHash, newMcpToken, emailToName };\n");
 
 const DB = "https://data-dawgs-draft-default-rtdb.firebaseio.com";
@@ -77,7 +80,7 @@ globalThis.fetch = async (u) => {
   return new Response("nope", { status: 404 });
 };
 
-const W = await import(BUNDLE);
+const W = await import(pathToFileURL(BUNDLE).href);
 
 /* ---- mint two tokens the way the Worker would ---- */
 const TOK_KAP = W.newMcpToken(), TOK_JEFF = W.newMcpToken(), TOK_STALE = W.newMcpToken();

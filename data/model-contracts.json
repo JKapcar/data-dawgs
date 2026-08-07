@@ -1,0 +1,177 @@
+{
+ "as_of": "2026-08-07",
+ "source": "Data Dawgs normalized forecasting and calculator contract, staged 2026-08-07.",
+ "tier": "pound",
+ "graded": false,
+ "note": "A contract is not a forecast. It prevents incompatible models and missing values from being silently normalized into false agreement.",
+ "data": {
+  "contract_version": "1.0.0-stage",
+  "canonical_game_id": "season_week_away_home using canonical current team abbreviations, for example 2026_01_PIT_CLE",
+  "model_id_rule": "lowercase stable slug; model version changes do not change model_id",
+  "forecast_status_values": [
+   "backtest",
+   "prospective"
+  ],
+  "forecast_required": [
+   "forecast_id",
+   "game_id",
+   "season",
+   "week",
+   "kickoff_at",
+   "captured_at",
+   "model_id",
+   "model_name",
+   "model_version",
+   "source_repo",
+   "source_commit",
+   "source_capture_at",
+   "home_team",
+   "away_team",
+   "home_win_probability",
+   "expected_margin_home",
+   "model_spread_home",
+   "home_cover_probability",
+   "push_probability",
+   "input_snapshot_id",
+   "forecast_status",
+   "methodology_url",
+   "license_status"
+  ],
+  "null_policy": "Unsupported values are null. A missing model output is never imputed merely to complete a row.",
+  "probability_rule": "Every non-null probability is a finite number in [0,1].",
+  "receipt_policy": {
+   "prospective": "Append-only after publication. Record the exact input snapshot and contemporaneous market state before kickoff.",
+   "results": "Store outcomes separately and join by forecast_id; never mutate the forecast receipt.",
+   "backtests": "Always labelled backtest and never mixed silently with prospective leaderboards."
+  },
+  "comparable_sample_rule": "Leaderboard comparisons disclose each sample and prefer identical game sets. No ranking across silently different samples.",
+  "calculator_contracts": {
+   "odds_converter": {
+    "inputs": [
+     "american_odds"
+    ],
+    "outputs": [
+     "decimal_odds",
+     "implied_probability"
+    ]
+   },
+   "parlay": {
+    "inputs": [
+     "american_odds[]"
+    ],
+    "outputs": [
+     "decimal_odds",
+     "american_odds",
+     "implied_probability"
+    ]
+   },
+   "hold_vig": {
+    "inputs": [
+     "side_a_american",
+     "side_b_american"
+    ],
+    "outputs": [
+     "raw_implied[]",
+     "hold",
+     "devig_probability[]"
+    ]
+   },
+   "bet_ev": {
+    "inputs": [
+     "win_probability",
+     "american_odds"
+    ],
+    "outputs": [
+     "break_even_probability",
+     "expected_profit_per_unit",
+     "roi"
+    ]
+   },
+   "hedge": {
+    "inputs": [
+     "original_stake",
+     "original_american",
+     "hedge_american"
+    ],
+    "outputs": [
+     "hedge_stake",
+     "locked_profit"
+    ]
+   },
+   "passer_rating": {
+    "inputs": [
+     "attempts",
+     "completions",
+     "yards",
+     "touchdowns",
+     "interceptions"
+    ],
+    "outputs": [
+     "nfl_passer_rating"
+    ]
+   },
+   "elo_game": {
+    "inputs": [
+     "home_elo",
+     "away_elo",
+     "home_field_elo"
+    ],
+    "outputs": [
+     "home_win_probability",
+     "away_win_probability"
+    ]
+   },
+   "normal_translation": {
+    "inputs": [
+     "home_win_probability",
+     "residual_sd_points",
+     "optional_home_line_sportsbook_convention"
+    ],
+    "outputs": [
+     "expected_margin_home",
+     "model_spread_home",
+     "home_cover_probability",
+     "push_probability"
+    ],
+    "formula": "expected_margin_home = 0.5 + residual_sd_points * inverse_standard_normal(home_win_probability)",
+    "modelled": true,
+    "assumptions": [
+     "published 0.5-point win threshold",
+     "home favorite lines are negative",
+     "continuous cover approximation",
+     "zero push probability",
+     "no NFL key-number mass"
+    ]
+   },
+   "forecast_grade": {
+    "inputs": [
+     "forecast_probability",
+     "outcome_0_or_1"
+    ],
+    "outputs": [
+     "brier",
+     "log_loss"
+    ]
+   },
+   "belief_summary": {
+    "inputs": [
+     "probabilities[]"
+    ],
+    "outputs": [
+     "count",
+     "mean",
+     "median",
+     "min",
+     "max",
+     "range",
+     "standard_deviation",
+     "crosses_50"
+    ],
+    "note": "Equal-weight descriptive statistics only; this is not a validated consensus blend."
+   }
+  }
+ },
+ "tier_meaning": "The Pound — shelved, with the reason attached.",
+ "built": "2026-08-07",
+ "canonical_url": "https://datadawgs216.com/data/model-contracts.json"
+}

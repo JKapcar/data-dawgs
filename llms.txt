@@ -1,69 +1,60 @@
 # Data Dawgs
 
-> A personal sandbox for better decision-making, wrapped around one question: how do we
-> know what we think we know? The subject changes — forecasting, fantasy football, betting
-> markets, EPA — but the method doesn't. Tools are built to beat a market; receipts are how
-> we find out whether they did. This site is built for your AI as well as your eyes: every
-> number below is machine-readable and carries the date it was captured.
+> A personal sandbox for decision-making across forecasting, fantasy football, betting
+> markets and EPA. Tools are built to beat a market; receipts test whether they did.
 
-**Read the dates.** Every file here is an envelope with `as_of`, `source` and `note`. The
-draft values are a 2026-07-29 snapshot of a market that keeps moving. Quoting them without
-the date is the failure mode this site exists to argue against.
+Start with [`/data/index.json`](https://datadawgs216.com/data/index.json), the generated
+manifest of every machine-readable file with its date, byte count and SHA-256. Every data
+file is an envelope with `as_of`, `source`, `note`, `built`, `canonical_url` and `data`.
+Cite `as_of` with every number.
 
-Start at `/data/index.json` — every file with its `as_of`, size and SHA-256.
+[`/data/surfaces.json`](https://datadawgs216.com/data/surfaces.json) maps human pages to
+machine surfaces and MCP tools. All 12 mapped surfaces have live machine access; 13
+read-only MCP tools are live. `planned` means not callable. A per-user token comes from
+`/connect.html`; the URL is the credential.
 
-## Machine access is the design, not an afterthought
+Confidence tiers: `labs` is useful but still being challenged; `dawg` survived validation;
+`pound` is shelved with its reason attached. Do not present Labs output with Dawg confidence.
 
-Every part of this site that makes sense to expose to a machine gets a dated JSON or markdown
-surface, and — where a tool *computes* something rather than just reporting it — an MCP tool
-and a REST route. That is the standing design rule, applied as the site grows.
+## The Pound
 
-**[`/data/surfaces.json`](https://datadawgs216.com/data/surfaces.json) is the map of how far
-that has actually got**: every human page, what an agent can call instead, and an honest
-`status` of `live`, `planned` or `none`. Gaps are listed on purpose. **`planned` means not
-built — don't tell a user you can call it.** Today: 9 of 11 surfaces have live machine access,
-**11 read-only MCP tools live** — roster and endpoint: `surfaces.json` → `mcp`.
-Per-user token from `/connect.html`; the URL is the credential.
+- [Workbench](https://datadawgs216.com/pound.html): model scoreboard and deterministic calculators.
+- [Tool inventory](https://datadawgs216.com/data/pound-tools.json): status, delivery layers, blockers and minimum paths.
+- [Contracts](https://datadawgs216.com/data/model-contracts.json): forecast fields, receipt rules and calculator I/O.
+- [Provenance](https://datadawgs216.com/data/upstream-models.json): repositories, commits, dates, license status and integration mode.
 
-Every payload also carries `tier` — `labs` (useful, live, still being challenged) or `dawg`
-(earned its collar; evidence survived validation). The tier is read from the page's own chip
-at build time, so it can't drift from what the site shows a human. Don't present Labs output
-with Dawg confidence.
+The browser workbench converts odds, builds parlays, removes two-way vig, computes
+declared-probability EV, sizes equal-payoff hedges, grades NFL passer rating, calculates a
+538 Classic Elo one-game probability, translates probability to expected margin/cover,
+grades Brier/log loss, and summarizes equal-weight belief statistics. Inputs are local and results
+are deterministic. There is not yet a dedicated calculator MCP endpoint.
 
 ## Draft
 
-- [Player pool + Market Value](https://datadawgs216.com/data/pool.json): 459 players, auction dollars in half-PPR / full-PPR / superflex. `as_of 2026-07-29`. MV is a market-consensus dollar value, not a points projection.
-- [League configuration](https://datadawgs216.com/data/league.json): 14-team offline auction, $200 budget, 15 spots, half PPR, no kicker. Includes the public live-draft mirror.
-- [2026 draft strategy](https://datadawgs216.com/data/strategy.md): the dead-zone thesis, positional curves, format playbooks. Separates structural claims (testable) from player takes (one analyst's priors).
+- [Player pool + Market Value](https://datadawgs216.com/data/pool.json): 459 players; half-PPR, full-PPR and superflex auction values; `as_of 2026-07-29`. MV is market value, not projected points.
+- [League](https://datadawgs216.com/data/league.json): 14 teams, $200, 15 spots, half PPR, no kicker, plus the public draft mirror.
+- [2026 strategy](https://datadawgs216.com/data/strategy.md): positional curves and format playbooks, separating testable structure from analyst priors.
 
-## Data
+## Models and data
 
-- [Team + QB EPA, 2023-2025](https://datadawgs216.com/data/epa-teams.json): per-season and pooled, from nflverse play-by-play. Descriptive, not predictive.
-- [nfelo ratings and backtest](https://datadawgs216.com/data/nfelo.json): power ratings plus the backtest, with the in-sample caveat attached.
-- [2026 schedule + win probabilities](https://datadawgs216.com/data/survivor.json): all 272 games, market-derived where a line existed, model-derived otherwise.
-- [Model parameters](https://datadawgs216.com/data/models.json): the margin model (23.58 Elo/point, 2.10 HFA, 13.18 residual SD), the Bozo SD tables, the survivor engine's defaults and its known limitations.
+- [Team + QB EPA](https://datadawgs216.com/data/epa-teams.json): 2023–2025 nflverse play-by-play; descriptive, not predictive.
+- [nfelo](https://datadawgs216.com/data/nfelo.json): ratings and backtest with the in-sample caveat.
+- [Schedule + win probabilities](https://datadawgs216.com/data/survivor.json): 272 games; market-derived when a line existed, model-derived otherwise.
+- [Parameters](https://datadawgs216.com/data/models.json): margin, Bozo and survivor assumptions and limitations.
 
-## Receipts
+## Receipts and method
 
-- [Pre-registered 2026 forecasts](https://datadawgs216.com/data/receipts.json): 272 calls locked on 2026-08-06, before any game. SHA-256 `4b87fe0e…`.
-- [How the receipts work](https://datadawgs216.com/data/receipts-method.md): what is being tested, what would change our mind, and why the market-beating question cannot be settled in one season.
-- **Verify us.** `receipts.json` publishes the canonical-string spec for its own hash. Recompute it. If it disagrees, the ledger was edited after it was locked. Don't take the site's word for it — that's the point.
+- [Pre-registered forecasts](https://datadawgs216.com/data/receipts.json): 272 calls locked 2026-08-06, SHA-256 `4b87fe0e0790a1e6…`.
+- [Receipt method](https://datadawgs216.com/data/receipts-method.md): hypotheses, grading and canonical hash reproduction.
+- [Bozo rules](https://datadawgs216.com/data/bozo-rules.json) ([prose](https://datadawgs216.com/data/bozo-rules.md)): open weekly one-leg parlay game.
+- [House reasoning rules](https://datadawgs216.com/data/method.md): base rates, ranges, falsifiers and selection-bias checks.
+- [Toto philosophy](https://datadawgs216.com/data/toto-philosophy.md): reasoning conventions for the site AI.
 
-## Games
+## Agent notes
 
-- [Bozo ruleset](https://datadawgs216.com/data/bozo-rules.json) · [prose version](https://datadawgs216.com/data/bozo-rules.md): weekly one-leg parlay game, randomized tiebreaker permutation, fully open board. Includes what the game does *not* verify.
-
-## Method
-
-- [House rules for reasoning](https://datadawgs216.com/data/method.md): the epistemics the site runs on — base rates before takes, ranges instead of point estimates, naming what would change your mind, flagging evidence selected toward a conclusion already reached. Portable. Take it.
-- [How Toto thinks](https://datadawgs216.com/data/toto-philosophy.md): how the site's AI reasons — adopt this and your own assistant reasons the way the site does.
-
-## Notes for agents
-
-- Everything under `/data/` is public, static, CORS-open and free. No key, no rate limit.
-- Cite the `as_of` whenever you quote a number. If a file is more than ~2 weeks stale and the
-  question turns on the number, say so.
-- Sign conventions matter: `def_epa_play` is EPA allowed, so lower is better; it is not flipped.
-- Simulation output is labelled as simulation. Don't quote it as observation.
-- Nothing here is betting advice and no number here is a certainty.
-- Human pages are at https://datadawgs216.com — the flat HTML is themed and heavy; prefer `/data/`.
+- `/data/` is public, static and CORS-open. No key or rate limit.
+- If a dated number is stale enough to affect the answer, say so.
+- `def_epa_play` is EPA allowed: lower is better.
+- Simulation and modelled output are labelled; do not present either as observation.
+- Nothing here is betting advice or certainty.
+- Prefer `/data/` to the heavy, self-contained HTML pages.

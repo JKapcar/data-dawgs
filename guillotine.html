@@ -686,15 +686,20 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
      `Draft` is gone as a group; Dashboard and Auctioneer Controls sit in Dawgs on
      Kap's call. Order runs worst-to-best left to right, which is deliberate: the shelf
      comes before the workbench; Dawgs have earned a job.
-     ⚠️ The Pound is a plain link, not a dropdown — it is empty, and an empty menu reads
-     as broken. Give it an `items` array the day something actually gets shelved. */
+     The Pound now has a shelf: scoreboard, deterministic calculators, inventory and
+     provenance. Keep this group identical on every page; the flattened HTML is the source. */
   const NAV = [
     {label:"Home", href:"index.html", key:"home"},
     /* `short` is the phone label. BOTH labels are rendered and CSS picks one, so
        there is no resize listener and nothing reflows on rotate. Only entries whose
        full label will not fit need one. `Pound` stays shortened on phones so the
        five-item nav keeps breathing room without shrinking the type. */
-    {label:"The Pound", short:"Pound", href:"index.html#tiers", key:"pound"},
+    {label:"The Pound", short:"Pound", href:"pound.html", key:"pound", items:[
+      ["pound.html","Tools & Scoreboard","pound","hot"],
+      ["pound.html#calculators","Calculators","pound-calculators"],
+      ["pound.html#inventory","Tool Inventory","pound-inventory"],
+      ["pound.html#provenance","Provenance","pound-provenance"],
+    ]},
     {label:"Labs", href:"index.html#tiers", items:[
       ["bozo.html","Bozo","bozo"],
       ["dfs.html","DFS Solver","dfs"],
