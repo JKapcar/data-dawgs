@@ -156,11 +156,12 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 {
   const j = await (await req(rpc("tools/list"))).json();
   const t = j.result.tools;
-  ok(t.length === 21, "twenty-one tools listed");
+  ok(t.length === 23, "twenty-three tools listed");
   ok(t.every(x => x.name.startsWith("dd_")), "all tools dd_-prefixed");
   ok(t.every(x => x.inputSchema && x.inputSchema.type === "object"), "all tools carry an inputSchema");
   for (const name of ["dd_convert_odds", "dd_devig_market", "dd_price_parlay", "dd_calculate_bet_ev",
-    "dd_calculate_hedge", "dd_nfl_passer_rating", "dd_score_forecast", "dd_summarize_beliefs"])
+    "dd_calculate_hedge", "dd_nfl_passer_rating", "dd_score_forecast", "dd_summarize_beliefs",
+    "dd_elo_game", "dd_translate_probability"])
     ok(t.some(x => x.name === name), name + " is listed");
 }
 // dd_league_overview
@@ -336,6 +337,38 @@ function refNcdf(z) {
   ok(j2.result.isError === true, "same team by two names → tool error");
 }
 // Pound calculators: pure MCP results must stay in parity with work/pound-core.js.
+{
+  const args = { home_elo: 1500, away_elo: 1500, home_field_elo: 65 };
+  const j = await (await req(call("dd_elo_game", args))).json();
+  const d = text(j), ref = P.eloGame(args.home_elo, args.away_elo, args.home_field_elo);
+  ok(Math.abs(d.home_win_probability - ref.home_win_probability) < 1e-12 &&
+     Math.abs(d.adjusted_elo_difference - ref.adjusted_elo_difference) < 1e-12,
+     "Elo game probability matches Pound core");
+  ok(d.read_only === true && /calculator only/i.test(d.note) && /does not supply current 2026/i.test(d.note),
+     "Elo result labels its calculator-only scope and missing current team states");
+  const wrongType = await (await req(call("dd_elo_game", { ...args, home_elo: "1500" }))).json();
+  ok(wrongType.result.isError === true, "Elo numeric strings fail closed");
+}
+{
+  const args = { home_win_probability: 0.6, residual_sd_points: 13.18, home_line: -3 };
+  const j = await (await req(call("dd_translate_probability", args))).json();
+  const d = text(j), ref = P.normalTranslation(args.home_win_probability, args.residual_sd_points, args.home_line);
+  ok(Math.abs(d.expected_margin_home - ref.expected_margin_home) < 1e-12 &&
+     Math.abs(d.home_cover_probability - ref.home_cover_probability) < 1e-12,
+     "probability translation matches Pound core");
+  ok(d.modelled === true && d.read_only === true && d.push_probability === 0 &&
+     /key-number mass/.test(d.note), "translation exposes modelled, continuous and zero-push assumptions");
+  const marginOnly = text(await (await req(call("dd_translate_probability",
+    { home_win_probability: 0.5, residual_sd_points: 13.18 }))).json());
+  ok(Math.abs(marginOnly.expected_margin_home - 0.5) < 1e-12 && marginOnly.home_cover_probability === undefined,
+     "translation supports margin-only calls without inventing a line");
+  const zero = await (await req(call("dd_translate_probability",
+    { home_win_probability: 0, residual_sd_points: 13.18 }))).json();
+  const badSd = await (await req(call("dd_translate_probability",
+    { home_win_probability: 0.6, residual_sd_points: 0 }))).json();
+  ok(zero.result.isError === true && badSd.result.isError === true,
+     "translation rejects boundary probabilities and non-positive residual SD");
+}
 {
   const j = await (await req(call("dd_convert_odds", { american_odds: -110 }))).json();
   const d = text(j), ref = P.oddsConverter(-110);
