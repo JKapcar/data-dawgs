@@ -14,12 +14,30 @@
    "pound": "The Pound — shelved, with the reason attached."
   }
  },
+ "mcp": {
+  "path": "/mcp/<league passphrase>",
+  "transport": "streamable-http",
+  "host": "https://toto.jkapcar4.workers.dev",
+  "auth": "Shared league passphrase in the URL path. The URL is the credential — this is access control for a 14-friend league, never to be described as security.",
+  "writes": "None. Every tool is read-only, asserted by test.",
+  "tools_live": [
+   "dd_league_overview",
+   "dd_bozo_week",
+   "dd_bozo_standings",
+   "dd_draft_board",
+   "dd_draft_pool",
+   "dd_survivor_week",
+   "dd_scores",
+   "dd_dfs_correlations",
+   "dd_site_map"
+  ]
+ },
  "counts": {
   "surfaces": 11,
-  "with_live_machine_access": 9,
-  "with_no_machine_access": 2,
-  "mcp_tools_live": 0,
-  "mcp_tools_planned": 11
+  "with_live_machine_access": 10,
+  "with_no_machine_access": 1,
+  "mcp_tools_live": 9,
+  "mcp_tools_planned": 8
  },
  "data": [
   {
@@ -31,10 +49,14 @@
      "kind": "json",
      "url": "/data/pool.json",
      "status": "live"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_draft_pool",
+     "status": "live"
     }
    ],
    "planned": [
-    "mcp:search_players",
     "rest:/api/pool"
    ],
    "tier": "labs"
@@ -63,13 +85,18 @@
      "url": "/data/league.json",
      "status": "live",
      "covers": "league configuration only"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_draft_board",
+     "status": "live",
+     "covers": "live budgets, open slots, true max bids, clock, block, recent sales"
     }
    ],
    "planned": [
-    "mcp:get_draft_state",
     "rest:/api/draft"
    ],
-   "gap": "Live picks, budgets and remaining players mirror to a public Firebase RTDB but have no dated JSON surface yet. This is the draft-night flagship and it is not built.",
+   "gap": "The Firebase mirror still has no dated JSON snapshot surface; dd_draft_board reads it live instead.",
    "tier": "dawg"
   },
   {
@@ -124,6 +151,12 @@
      "url": "/data/survivor.json",
      "status": "live",
      "covers": "schedule and win probabilities"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_survivor_week",
+     "status": "live",
+     "covers": "stored weekly ownership snapshots, staleness-flagged"
     }
    ],
    "planned": [
@@ -180,13 +213,29 @@
      "kind": "markdown",
      "url": "/data/bozo-rules.md",
      "status": "live"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_bozo_week",
+     "status": "live",
+     "covers": "the live board, legs in submission order"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_bozo_standings",
+     "status": "live",
+     "covers": "season ledger summary"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_league_overview",
+     "status": "live"
     }
    ],
    "planned": [
-    "mcp:get_bozo_state",
     "mcp:submit_bozo_leg"
    ],
-   "gap": "The live board is fully open by design but has no JSON surface yet. Write access waits on the trust layer.",
+   "gap": "Reads are live over MCP. Write access (submitting a leg) waits on the trust layer, deliberately.",
    "tier": "labs"
   },
   {
@@ -195,14 +244,16 @@
    "page": "/dfs.html",
    "machine": [
     {
-     "kind": "none",
-     "status": "none"
+     "kind": "mcp",
+     "tool": "dd_dfs_correlations",
+     "status": "live",
+     "covers": "the measured correlation structure only — never projections or ownership, which exist only in each user's browser"
     }
    ],
    "planned": [
     "mcp:solve_dfs_lineup"
    ],
-   "gap": "The solver is a pure function running in the browser. Exposing it means moving it server-side; nothing is callable today.",
+   "gap": "The solver is a pure function running in the browser. The correlation matrix it uses is served; the solve itself is not.",
    "tier": "labs"
   },
   {
