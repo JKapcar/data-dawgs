@@ -1,0 +1,60 @@
+{
+ "as_of": "2026-08-06",
+ "source": "bozo.html ruleset and the Worker-enforced write path, as deployed.",
+ "note": "The board is fully open by design — every leg, price and timestamp is visible to everyone and to everyone's bots before they place. That was a decision, not an oversight.",
+ "data": {
+  "game": "Each member submits ONE leg. Every leg goes on ONE real parlay, funded by last week's bozo. Whoever busts it worst wears it and funds the next ticket.",
+  "rules": [
+   "Favorites only, inside the league price band.",
+   "No exact duplicate legs.",
+   "The ticket locks the moment the last leg lands; that moment is the close.",
+   "Editing a leg resets both your timestamp AND your price.",
+   "Only legs that LOST are eligible to be the bozo. Nobody who cashed can wear it."
+  ],
+  "price_band": {
+   "ceiling": -100,
+   "floor": -500,
+   "unit": "American odds",
+   "enforced_by": "Worker, not the page"
+  },
+  "tiebreak": {
+   "mechanism": "Each week the tiebreaker hierarchy is a FRESH RANDOM PERMUTATION of the league's live levers, drawn on the server and written once. Walk the drawn order; the first lever that isolates one person names the bozo; ties fall to the next lever down.",
+   "design_rationale": "The randomisation is the design, not decoration: it keeps each lever legible while making the meta unsolvable. A weighted composite was considered and rejected — any blend is just a new deterministic objective someone will solve.",
+   "levers": [
+    {
+     "key": "odds",
+     "name": "Shortest Odds",
+     "desc": "biggest favorite in the pool"
+    },
+    {
+     "key": "beat",
+     "name": "Worst Beat",
+     "desc": "finished furthest under its number, in standard deviations"
+    },
+    {
+     "key": "last",
+     "name": "Last In",
+     "desc": "final leg submitted"
+    },
+    {
+     "key": "clv",
+     "name": "Worst CLV",
+     "desc": "price moved most against it"
+    }
+   ]
+  },
+  "trust_model": {
+   "writes": "Every write goes through the Worker, which stamps server time, maps token to player, and validates.",
+   "identity": "One-time join tokens. No accounts.",
+   "what_is_not_verified": "EVERY PRICE ON THIS BOARD IS SELF-REPORTED. Nothing checks it against a book. Report what was entered, flag what looks off market, never vouch for a number and never accuse anyone."
+  },
+  "known_soft_spots": [
+   "Bozo odds and leg-win numbers are SIMULATION output, not observation. Say so when quoting them.",
+   "The simulation draws every leg independently. Two legs on the same game are not independent.",
+   "Worst CLV is UNMEASURED — no closing prices are captured yet. Never state anyone's CLV.",
+   "A spread or total priced past about -145 is off market. A moneyline has no internal cross-check at all."
+  ]
+ },
+ "built": "2026-08-07",
+ "canonical_url": "https://datadawgs216.com/data/bozo-rules.json"
+}

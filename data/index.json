@@ -1,0 +1,112 @@
+{
+ "as_of": "2026-08-07",
+ "source": "Generated manifest of every machine-readable surface on datadawgs216.com.",
+ "note": "Start here. Each entry carries its own as_of — check it before quoting anything. The sha256 is of the file as served; recompute it if you care.",
+ "site": "https://datadawgs216.com",
+ "built": "2026-08-07",
+ "data": {
+  "files": [
+   {
+    "path": "/data/pool.json",
+    "url": "https://datadawgs216.com/data/pool.json",
+    "bytes": 81875,
+    "as_of": "2026-07-29",
+    "sha256": "ff839cc7722599d1d637bd3d222de40a57e3bc5f33f74c86592b21be84724cea",
+    "note": "MV is a market-consensus auction-dollar value, NOT a points projection. STALENESS WARNING: this snapshot is 9 days old as of the build date and the underlying market moves through August. Do not quote these dollars as current without saying the date out loud."
+   },
+   {
+    "path": "/data/receipts.json",
+    "url": "https://datadawgs216.com/data/receipts.json",
+    "bytes": 42720,
+    "as_of": "2026-08-06",
+    "sha256": "e2bf7bd3b46d425aaa67edb19cf48ea05510aee9717c3eaf14a737cd1ca95136",
+    "note": "These are PRE-REGISTERED calls: written down before the season and locked with a SHA-256 hash. n=272 games, 51 of them carrying a devigged closing-line benchmark. None are graded yet — the 2026 season has not started. Anything claiming a hit rate for these is wrong."
+   },
+   {
+    "path": "/data/nfelo.json",
+    "url": "https://datadawgs216.com/data/nfelo.json",
+    "bytes": 9716,
+    "as_of": "2026-08-06",
+    "sha256": "f78228f8d1bae83614d2c68b63ab21d2cd777bcaa2a0c5d0baf57f0c6540048f",
+    "note": "Backtest figures span 2009-2025 and OVERLAP the model's own optimisation window, so they are in-sample-ish and should not be read as out-of-sample skill. nfelo straight-up 0.6674 vs market 0.6677 over n=4053 is a difference well inside noise (SE 0.20 pp)."
+   },
+   {
+    "path": "/data/models.json",
+    "url": "https://datadawgs216.com/data/models.json",
+    "bytes": 2525,
+    "as_of": "2026-08-06",
+    "sha256": "2c8ff96fc84b82d0acc9e2cf7ea4ddde1e8cd0708cbc135688e3996aa822b5e7",
+    "note": "These are the exact parameters the site uses. Return them alongside any number you derive from them. The margin model is a linear Elo-to-points map with a normal residual — it is deliberately simple and its residual SD (13.18) is larger than most people intuit, which is the whole point."
+   },
+   {
+    "path": "/data/survivor.json",
+    "url": "https://datadawgs216.com/data/survivor.json",
+    "bytes": 52631,
+    "as_of": "2026-08-06",
+    "sha256": "d53475c0516e91accae73ddcb7a82bc20f962d8826930afb433c8ba552368b6f",
+    "note": "Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: \"market\" = derived from a real line, \"model\" = Elo-only. Ownership is modelled, not observed."
+   },
+   {
+    "path": "/data/epa-teams.json",
+    "url": "https://datadawgs216.com/data/epa-teams.json",
+    "bytes": 84945,
+    "as_of": "2026-07-29",
+    "sha256": "aec75513da24ed75a88b38f5ea0e2335efe4b1391a00f18f80ea433815e044bd",
+    "note": "Regular season only, plays with a down (excludes kickoffs/XPs/etc). Per-season tables use a 200-dropback minimum for QBs; the pooled table uses 500. These are descriptive aggregates, not projections — team EPA is famously unstable year to year, so do not read 2025 as 2026."
+   },
+   {
+    "path": "/data/league.json",
+    "url": "https://datadawgs216.com/data/league.json",
+    "bytes": 1712,
+    "as_of": "2026-08-06",
+    "sha256": "85d1bba3fdcbf93434849027fce132457349c6e6f1cf332871675d024685c575",
+    "note": "Public configuration only. No rosters, no tokens, nothing league-private lives in this repo."
+   },
+   {
+    "path": "/data/bozo-rules.json",
+    "url": "https://datadawgs216.com/data/bozo-rules.json",
+    "bytes": 2854,
+    "as_of": "2026-08-06",
+    "sha256": "7cf16b27e4a3e897282290a164c1075612bd51f328f708efdd408cb92676a76b",
+    "note": "The board is fully open by design — every leg, price and timestamp is visible to everyone and to everyone's bots before they place. That was a decision, not an oversight."
+   }
+  ],
+  "markdown": [
+   {
+    "path": "/data/strategy.md",
+    "url": "https://datadawgs216.com/data/strategy.md",
+    "bytes": 6864,
+    "sha256": "d712d36f62ce1abe00d92ce310f8390ac0fa1f572ed59a3d3d9c8f026b19465d",
+    "as_of": "2026-07-28"
+   },
+   {
+    "path": "/data/receipts-method.md",
+    "url": "https://datadawgs216.com/data/receipts-method.md",
+    "bytes": 4300,
+    "sha256": "8faad8c7d4f8a48e92d0319c1ff5239d413b26283c388c05f4df1db80a76f28c",
+    "as_of": "2026-08-06"
+   },
+   {
+    "path": "/data/bozo-rules.md",
+    "url": "https://datadawgs216.com/data/bozo-rules.md",
+    "bytes": 3456,
+    "sha256": "3c064194ca15776de071899f6de2c250b872ae6eff97885a77e97196544c011d",
+    "as_of": "2026-08-06"
+   },
+   {
+    "path": "/data/method.md",
+    "url": "https://datadawgs216.com/data/method.md",
+    "bytes": 3949,
+    "sha256": "fc24557ce934084d95d03a8f756b911eb6d3ee9063a62a3f5d0a81d46891b3fd",
+    "as_of": "2026-08-06"
+   },
+   {
+    "path": "/data/toto-philosophy.md",
+    "url": "https://datadawgs216.com/data/toto-philosophy.md",
+    "bytes": 2594,
+    "sha256": "bf45d488134d799b0c983b8871036dc817b32e4a20d4fd243ec5a9192ac46d9d",
+    "as_of": "2026-08-06"
+   }
+  ]
+ }
+}
