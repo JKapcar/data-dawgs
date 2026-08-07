@@ -43,6 +43,11 @@ for (const f of jsons) {
   }
   if (!o.source) fail(`${f}: missing source`);
   if (!('data' in o)) fail(`${f}: missing data`);
+  if (f !== 'index.json') {
+    if (!['labs', 'dawg', 'pound'].includes(o.tier)) fail(`${f}: tier is "${o.tier}" — must be labs|dawg|pound`);
+    if (typeof o.graded !== 'boolean') fail(`${f}: missing graded (boolean)`);
+    if (!o.tier_meaning) fail(`${f}: missing tier_meaning`);
+  }
   if (o.canonical_url && !o.canonical_url.startsWith('https://datadawgs216.com/data/'))
     fail(`${f}: canonical_url does not point at the live path`);
 
@@ -90,6 +95,38 @@ console.log('\nmarkdown mirrors');
       fail(`${rel}: index.json as_of (${m.as_of}) disagrees with the file's front matter (${found})`);
     else ok(`${rel} (as_of ${found}, matches manifest)`);
   }
+}
+
+console.log('\nsurfaces.json — a coverage claim must be true');
+{
+  const S = JSON.parse(fs.readFileSync(path.join(DATA, 'surfaces.json'), 'utf8'));
+  let liveClaims = 0;
+  for (const s of S.data) {
+    if (!fs.existsSync(path.join(ROOT, s.page.replace(/^\//, ''))))
+      fail(`surfaces.json: ${s.id} points at ${s.page}, which does not exist`);
+    for (const m of s.machine) {
+      if (m.status === 'live') {
+        liveClaims++;
+        if (!m.url) { fail(`surfaces.json: ${s.id} claims a live surface with no url`); continue; }
+        if (!fs.existsSync(path.join(ROOT, m.url.replace(/^\//, ''))))
+          fail(`surfaces.json: ${s.id} claims ${m.url} is live, but the file does not exist`);
+      } else if (m.status === 'none' && m.url) {
+        fail(`surfaces.json: ${s.id} has status "none" but names a url`);
+      } else if (!['live', 'planned', 'none'].includes(m.status)) {
+        fail(`surfaces.json: ${s.id} has status "${m.status}"`);
+      }
+    }
+    if (!['labs', 'dawg', 'pound'].includes(s.tier)) fail(`surfaces.json: ${s.id} tier "${s.tier}"`);
+  }
+  // The whole point of the file is that it cannot overstate coverage.
+  if (S.counts.mcp_tools_live !== 0)
+    fail(`surfaces.json: claims ${S.counts.mcp_tools_live} live MCP tools — none are deployed`);
+  const covered = new Set(S.data.flatMap(s => s.machine.filter(m => m.status === 'live').map(m => path.basename(m.url))));
+  for (const f of jsons) {
+    if (['index.json', 'surfaces.json'].includes(f)) continue;
+    if (!covered.has(f)) warn(`${f} is published but not referenced by any surface in surfaces.json`);
+  }
+  if (!fails.some(x => x.startsWith('surfaces.json'))) ok(`${S.data.length} surfaces, ${liveClaims} live machine surfaces, all resolve`);
 }
 
 console.log('\nreceipts integrity — the published spec must reproduce the locked hash');

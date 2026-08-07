@@ -148,10 +148,38 @@ const BUILT = process.env.DD_BUILD_DATE || new Date().toISOString().slice(0, 10)
 const CONFIG_AS_OF = '2026-08-06';
 const files = {};
 
+/* ---------------------------------------------------------------
+ * Tier, read from the pages themselves.
+ *
+ * A human sees a chip; an agent saw nothing, so a Labs experiment and a
+ * validated tool were indistinguishable to anything consuming /data/.
+ * Derived by scanning for the live chip rather than hardcoded, so the
+ * machine-readable tier CANNOT drift from what the site displays.
+ * ------------------------------------------------------------- */
+const TIERS = { labs: 'labs', dawg: 'dawg', pound: 'pound' };
+function tierOf(page) {
+  if (!page) return TIERS.labs;
+  let html;
+  try { html = read(page); } catch (e) { return TIERS.labs; }
+  const chip = html.match(/class="tierchip[^"]*"[^>]*>([^<]+)</);
+  if (!chip) return TIERS.labs;                       // no chip = implicitly Labs
+  const label = chip[1].trim().toLowerCase();
+  if (label.startsWith('dawg')) return TIERS.dawg;
+  if (label.includes('pound')) return TIERS.pound;
+  return TIERS.labs;
+}
+const TIER_MEANING = {
+  labs: 'Labs — useful and live, still being challenged. Open questions may remain about calibration, assumptions, data quality or edge. Use with your eyes open.',
+  dawg: 'Working Dawg — earned its collar. Evidence survived validation: receipts against a benchmark chosen in advance for forecasters, named sources and reproducible maths for measurement tools.',
+  pound: 'The Pound — shelved, with the reason attached.',
+};
+
 function write(name, env) {
   if (!env.as_of) throw new Error('missing as_of: ' + name);
   if (!env.source) throw new Error('missing source: ' + name);
-  const body = { ...env, built: BUILT, canonical_url: 'https://datadawgs216.com/data/' + name };
+  if (!env.tier) throw new Error('missing tier: ' + name);
+  if (typeof env.graded !== 'boolean') throw new Error('missing graded: ' + name);
+  const body = { ...env, tier_meaning: TIER_MEANING[env.tier], built: BUILT, canonical_url: 'https://datadawgs216.com/data/' + name };
   const txt = JSON.stringify(body, null, 1);
   fs.writeFileSync(path.join(OUT, name), txt);
   files[name] = {
@@ -165,6 +193,9 @@ function write(name, env) {
 /* ---------- pool.json ---------- */
 
 write('pool.json', {
+  source_page: '/master.html',
+  tier: tierOf('master.html'),
+  graded: false,
   as_of: '2026-07-29',
   source: 'Market Value (MV) auction-dollar snapshot, captured 2026-07-29 and republished unchanged since.',
   note:
@@ -191,6 +222,9 @@ write('pool.json', {
 /* ---------- receipts.json ---------- */
 
 write('receipts.json', {
+  source_page: '/receipts.html',
+  tier: tierOf('receipts.html'),
+  graded: false,
   as_of: RC.meta.locked,
   source:
     'Pre-registered 2026 forecasts derived from nfelo ' + RC.meta.model +
@@ -220,6 +254,9 @@ write('receipts.json', {
 /* ---------- nfelo.json ---------- */
 
 write('nfelo.json', {
+  source_page: '/nfelo.html',
+  tier: tierOf('nfelo.html'),
+  graded: false,
   as_of: NF.meta.captured,
   source: 'nfelo ' + NF.meta.model_version + ' (' + NF.meta.repo + ') at commit ' + NF.meta.sha + '.',
   note:
@@ -233,6 +270,9 @@ write('nfelo.json', {
 /* ---------- models.json ---------- */
 
 write('models.json', {
+  source_page: '/survivor.html',
+  tier: tierOf('survivor.html'),
+  graded: false,
   as_of: SV.meta.captured,
   source: 'Fitted on nfelo ratings + nflverse schedule; parameters as used live on survivor.html and receipts.html.',
   note:
@@ -286,6 +326,9 @@ write('models.json', {
 
 /* ---------- survivor.json ---------- */
 write('survivor.json', {
+  source_page: '/survivor.html',
+  tier: tierOf('survivor.html'),
+  graded: false,
   as_of: SV.meta.captured,
   source: 'nfelo ' + SV.meta.nfelo_sha + ' ratings + ' + SV.meta.sched_src + ' 2026 schedule.',
   note:
@@ -303,6 +346,9 @@ write('survivor.json', {
 /* ---------- epa-teams.json ---------- */
 
 write('epa-teams.json', {
+  source_page: '/stats.html',
+  tier: tierOf('stats.html'),
+  graded: false,
   as_of: '2026-07-29',
   source: 'nflverse play-by-play, 2023-2025. Captured 2026-07-29; covers through the completed 2025 season.',
   note:
@@ -320,6 +366,9 @@ write('epa-teams.json', {
 /* ---------- league.json ---------- */
 
 write('league.json', {
+  source_page: '/dashboard.html',
+  tier: tierOf('dashboard.html'),
+  graded: false,
   as_of: CONFIG_AS_OF,
   source: 'Live league configuration as it ships in auction.html.',
   note: 'Public configuration only. No rosters, no tokens, nothing league-private lives in this repo.',
@@ -344,6 +393,9 @@ write('league.json', {
 
 /* ---------- bozo-rules.json ---------- */
 write('bozo-rules.json', {
+  source_page: '/bozo.html',
+  tier: tierOf('bozo.html'),
+  graded: false,
   as_of: CONFIG_AS_OF,
   source: 'bozo.html ruleset and the Worker-enforced write path, as deployed.',
   note:
@@ -391,6 +443,84 @@ write('bozo-rules.json', {
       'A spread or total priced past about -145 is off market. A moneyline has no internal cross-check at all.',
     ],
   },
+});
+
+/* ---------- surfaces.json — the machine-access map ----------
+ * Every human surface on the site, and what an agent can call instead.
+ * `status` is honest: live | planned | none. The validator asserts that every
+ * "live" entry resolves to a file that actually exists, so this file cannot
+ * claim coverage the site does not have.
+ */
+const SURFACES = [
+  { id: 'draft-pool', name: 'Player pool + Market Value', page: '/master.html',
+    machine: [{ kind: 'json', url: '/data/pool.json', status: 'live' }],
+    planned: ['mcp:search_players', 'rest:/api/pool'] },
+  { id: 'draft-strategy', name: '2026 draft strategy', page: '/strategy.html',
+    machine: [{ kind: 'markdown', url: '/data/strategy.md', status: 'live' }],
+    planned: [] },
+  { id: 'live-draft', name: 'Live auction — board, auctioneer, big board, dashboard, report card',
+    page: '/dashboard.html',
+    machine: [{ kind: 'json', url: '/data/league.json', status: 'live', covers: 'league configuration only' }],
+    planned: ['mcp:get_draft_state', 'rest:/api/draft'],
+    gap: 'Live picks, budgets and remaining players mirror to a public Firebase RTDB but have no dated JSON surface yet. This is the draft-night flagship and it is not built.' },
+  { id: 'epa', name: 'NFL EPA explorer', page: '/stats.html',
+    machine: [{ kind: 'json', url: '/data/epa-teams.json', status: 'live', covers: 'team and QB aggregates' }],
+    planned: ['mcp:query_stats', 'rest:/api/epa'],
+    gap: 'Play-level data (109,933 plays) is not exposed; only aggregates.' },
+  { id: 'nfelo', name: 'nfelo power ratings', page: '/nfelo.html',
+    machine: [{ kind: 'json', url: '/data/nfelo.json', status: 'live' },
+              { kind: 'json', url: '/data/models.json', status: 'live', covers: 'the margin model parameters' }],
+    planned: ['mcp:analyze_matchup', 'rest:/api/matchup'] },
+  { id: 'survivor', name: 'Survivor pool EV', page: '/survivor.html',
+    machine: [{ kind: 'json', url: '/data/survivor.json', status: 'live', covers: 'schedule and win probabilities' }],
+    planned: ['mcp:get_survivor_ev'],
+    gap: 'Pool ownership is modelled, not observed, and double-pick weeks are recorded but not simulated.' },
+  { id: 'receipts', name: 'Pre-registered forecasts', page: '/receipts.html',
+    machine: [{ kind: 'json', url: '/data/receipts.json', status: 'live' },
+              { kind: 'markdown', url: '/data/receipts-method.md', status: 'live' }],
+    planned: ['mcp:get_receipts', 'mcp:verify_receipts'] },
+  { id: 'bozo', name: 'Bozo — weekly group parlay', page: '/bozo.html',
+    machine: [{ kind: 'json', url: '/data/bozo-rules.json', status: 'live', covers: 'ruleset only' },
+              { kind: 'markdown', url: '/data/bozo-rules.md', status: 'live' }],
+    planned: ['mcp:get_bozo_state', 'mcp:submit_bozo_leg'],
+    gap: 'The live board is fully open by design but has no JSON surface yet. Write access waits on the trust layer.' },
+  { id: 'dfs', name: 'DFS solver + contest simulator', page: '/dfs.html',
+    machine: [{ kind: 'none', status: 'none' }],
+    planned: ['mcp:solve_dfs_lineup'],
+    gap: 'The solver is a pure function running in the browser. Exposing it means moving it server-side; nothing is callable today.' },
+  { id: 'guillotine', name: 'Guillotine league tools', page: '/guillotine.html',
+    machine: [{ kind: 'none', status: 'none' }], planned: [] },
+  { id: 'method', name: 'How this site reasons', page: '/index.html',
+    machine: [{ kind: 'markdown', url: '/data/method.md', status: 'live' },
+              { kind: 'markdown', url: '/data/toto-philosophy.md', status: 'live' }],
+    planned: ['mcp:prompts'] },
+];
+
+write('surfaces.json', {
+  as_of: BUILT,
+  source: 'Generated from the site itself. Tier is read from each page\'s live chip.',
+  tier: TIERS.labs,
+  graded: false,
+  note:
+    'THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a ' +
+    'machine gets a dated JSON or markdown surface, and — where a tool computes something rather ' +
+    'than just reporting it — an MCP tool and a REST route. This file is the map of how far that ' +
+    'has actually got. `status` is honest. "planned" means NOT BUILT: do not tell a user you can ' +
+    'call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing.',
+  policy: {
+    reads: 'Public, free, CORS-open, no key, no rate limit.',
+    writes: 'Every write goes through a Worker that stamps server time and validates. None are live yet.',
+    dating: 'Every payload carries as_of and source. Quote the date with the number.',
+    tiers: TIER_MEANING,
+  },
+  counts: {
+    surfaces: SURFACES.length,
+    with_live_machine_access: SURFACES.filter(s => s.machine.some(m => m.status === 'live')).length,
+    with_no_machine_access: SURFACES.filter(s => s.machine.every(m => m.status === 'none')).length,
+    mcp_tools_live: 0,
+    mcp_tools_planned: [...new Set(SURFACES.flatMap(s => s.planned).filter(p => p.startsWith('mcp:')))].length,
+  },
+  data: SURFACES.map(s => ({ ...s, tier: tierOf(s.page.replace(/^\//, '')) })),
 });
 
 /* ---------- index.json (manifest) ---------- */
