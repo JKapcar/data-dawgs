@@ -6,11 +6,11 @@
  "note": "RETRODICTIVE AGGREGATE VALIDATION. Finding: held-out-incremental-signal. This is not a prospective grade, not market-adjusted, and does not call any team overrated, underrated or a fraud.",
  "provenance": {
   "generator": "scripts/cfb_record_divergence_validation.py",
-  "captured_at": "2026-08-08T09:03:46.623137Z",
+  "captured_at": "2026-08-08T14:18:43.293742Z",
   "private_rows_serialized": false
  },
  "integrity": {
-  "snapshot_id": "sha256:11fe8b205051bc2925b2a962b9176156b0c6523bfbbb89db60df36a8ad62d3c8",
+  "snapshot_id": "sha256:8881e24e964ed06cdcddd77798444bb3f21935ee06dc2dd3693087879bb2f5e0",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for the data object (sorted object keys, no insignificant whitespace).",
   "qualified_games": 582
  },
@@ -21,7 +21,7 @@
   "hypothesis": "Holding Elo fixed, the team whose observed record ranks further ahead of its scoring margin should underperform; the incremental log-odds coefficient should therefore be negative.",
   "inputs": {
    "team_game_snapshot_id": "sha256:49f2793ff21328b254a15d719b77ed781d481cbdf9b31c31f4d70206935c098f",
-   "elo_snapshot_id": "sha256:414e0f27fba170d172db03a1a07fcca1bf83af09848de356ae3bd6fa83894237",
+   "elo_snapshot_id": "sha256:00e2affd64f0853333db4a413dc5c99fbd123a1dc7e333d7476c16e4d666183d",
    "elo_season_source_snapshots": [
     {
      "season": "2018",

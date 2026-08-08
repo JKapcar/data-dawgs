@@ -414,11 +414,11 @@ const CFB_IDEAS = [
     lifecycle_history: [
       { status: 'idea', on: ROADMAP_AS_OF, note: 'Entered The Pound from the 2026-08-08 CFB roadmap.' },
       { status: 'building', on: ROADMAP_AS_OF, note: 'Implemented the deterministic Elo baseline and fixed-parameter backtest.' },
-      { status: 'live', on: ROADMAP_AS_OF, note: 'Published ratings, calibration bins, market comparison and generated model card.' },
+      { status: 'live', on: ROADMAP_AS_OF, note: 'Published ratings, calibration bins, market comparison, non-ranked retrodictive team diagnostics and generated model card.' },
     ],
     delivery_evidence: ['/data/cfb-elo.json', '/data/cfb-model-cards.json', '/scripts/cfb_elo.py', '/tests/test_cfb_elo.py',
       '/work/mcp-block.js', '/work/test-mcp.mjs'],
-    delivery_note: 'The baseline is live and reproducible with a staged generated model-card reader, but remains retrodictive and ungraded; no prospective 2026 claim is made.',
+    delivery_note: 'The baseline is live and reproducible with a staged generated model-card reader plus compact expected-versus-observed team diagnostics. Diagnostics are explicitly non-ranked, retrodictive and ungraded; no luck label or prospective 2026 claim is made.',
     category: 'model-validation', recommendation: 'build', roadmap_step: 2,
     source_headings: ['Continuous Elo / Glicko Rating'],
     rationale: 'An independently reproducible continuous rating updated after games — an interpretable challenger and baseline, not presumed to outperform other systems.',

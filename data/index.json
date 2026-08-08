@@ -89,9 +89,9 @@
    {
     "path": "/data/pound-tools.json",
     "url": "https://datadawgs216.com/data/pound-tools.json",
-    "bytes": 131528,
+    "bytes": 131666,
     "as_of": "2026-08-08",
-    "sha256": "b66e0c0ad4f07a77695035cef54afc8d9f7224b4d6c5bc866252935c34320dfb",
+    "sha256": "5e15318f5c366abebd1527e50cda10a0ff1be63f40d8e90b7aad2072dc5abff4",
     "note": "Two kinds of entry share this inventory. kind \"tool\" (NFL) carries delivery status. kind \"roadmap-idea\" (College Football) carries recommendation plus evidence-backed lifecycle and implementation state. A CFB artifact may be implemented without any MCP tool; candidate_mcp_tools are reservations and remain non-callable unless the independent Worker registry proves otherwise."
    },
    {
@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 17253,
+    "bytes": 17342,
     "as_of": "2026-08-08",
-    "sha256": "29ed4a70e9b5ad155358eb639a9ab9d4ef7530b137959ffc10536e93750c45b6",
+    "sha256": "b6645a2cfe8063326cba39315a6311539ef4c953ca060ca9dde769df3fb7c97e",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -177,9 +177,9 @@
    {
     "path": "/data/cfb-teams.json",
     "url": "https://datadawgs216.com/data/cfb-teams.json",
-    "bytes": 114887,
+    "bytes": 160451,
     "as_of": "2026-08-08",
-    "sha256": "2c1ff1f3a158b4463a628f2b58c8fc21ba4ca2a8409868af66e0db7cbd079949",
+    "sha256": "413c20473a4825631dfc36ca5d4199cc0cd367e5e9fd22f388b422c8dad3d51d",
     "note": "OBSERVED RESULTS plus one MODELLED, RETRODICTIVE, UNGRADED end-of-2025 Elo rating. The objects are separated deliberately. This is not a 2026 forecast, consensus, edge or recommendation."
    },
    {
@@ -187,7 +187,7 @@
     "url": "https://datadawgs216.com/data/cfb-record-divergence.json",
     "bytes": 95215,
     "as_of": "2026-08-08",
-    "sha256": "5dd52d24866ebb4575c329ba0bc10ce9a72ede588942ffac9149bd232a8b5e53",
+    "sha256": "a7b401fc63190705aa3e573935816dad392df88e24a566cf0547139950dfb71b",
     "note": "OBSERVED, DESCRIPTIVE BASELINE ONLY. This is not a Fraud Detector verdict and does not call any team overrated or underrated. No forward predictive value has been demonstrated."
    },
    {
@@ -201,17 +201,17 @@
    {
     "path": "/data/cfb-elo.json",
     "url": "https://datadawgs216.com/data/cfb-elo.json",
-    "bytes": 28437,
+    "bytes": 79310,
     "as_of": "2026-08-08",
-    "sha256": "b24ee248fdd27d7ab640d03dab738bed26f078f4f96ef7710693a405aa336f57",
+    "sha256": "e134c6e23357798d2d4485899118e3295a6edfbfbaade54e55fac6a8baf355c8",
     "note": "MODELLED OUTPUT, and a deliberately simple baseline at that. The backtest is retrodictive: 2025 outcomes were known before this file was built. It exists so future CFB models have an interpretable floor to beat (Baseline Requirement). No prospective CFB forecast receipts exist yet; nothing here is graded."
    },
    {
     "path": "/data/cfb-model-cards.json",
     "url": "https://datadawgs216.com/data/cfb-model-cards.json",
-    "bytes": 8808,
+    "bytes": 9621,
     "as_of": "2026-08-08",
-    "sha256": "874c7a07a36de096329b9ecec32437acc6b11af8bc1a41bdd363906a7de87710",
+    "sha256": "e569a64f75067481c3cfb9f639326f93e96c10575d8860d78043d266537cd0f6",
     "note": "Model cards for shipped CFB models, per the Model Cards governance principle in The Pound's CFB roadmap. A card documents what a model is for, what it cannot do and how it has actually scored. Nothing here is graded: no CFB forecast has been locked before kickoff yet."
    },
    {
@@ -225,9 +225,9 @@
    {
     "path": "/data/cfb-ratings.json",
     "url": "https://datadawgs216.com/data/cfb-ratings.json",
-    "bytes": 46122,
+    "bytes": 91686,
     "as_of": "2026-08-08",
-    "sha256": "33bb09e92b6e9963c1b3626b24ecd7c26ea5a10fa9fbbd73b6d83668e78f3989",
+    "sha256": "fe32fefafb6407c7c3b11521ab1ccb6cf30de65a606f65f67331bd2524995929",
     "note": "MODELLED, RETRODICTIVE, UNGRADED. This is a registry contract with one live baseline, not a consensus or evidence that several models agree. Unsupported outputs are null rather than inferred. Quote the rating period with every value."
    },
    {
@@ -243,7 +243,7 @@
     "url": "https://datadawgs216.com/data/cfb-record-divergence-validation.json",
     "bytes": 6340,
     "as_of": "2026-08-08",
-    "sha256": "a66f55112e08aa5d51399efa4cf53f312f8c4f4ccd466422a631b2568aea0aa3",
+    "sha256": "614b5e541c73e4161e63f26cebc8a416fa439a61d65f423ecca4baa55d0cdfdb",
     "note": "RETRODICTIVE AGGREGATE VALIDATION. Finding: held-out-incremental-signal. This is not a prospective grade, not market-adjusted, and does not call any team overrated, underrated or a fraud."
    }
   ],

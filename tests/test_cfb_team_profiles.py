@@ -38,6 +38,18 @@ class TeamProfileTests(unittest.TestCase):
         self.assertEqual(ohio["systems"][profiles.ratings_registry.SYSTEM_ID]["rank"], 2)
         self.assertEqual(ohio["systems"][profiles.ratings_registry.SYSTEM_ID]["win_probability"], None)
 
+    def test_retrodictive_diagnostic_flows_through_without_becoming_a_label(self):
+        ohio = next(row for row in self.envelope["data"]["teams"] if row["team_slug"] == "ohio-state")
+        diagnostic = ohio["systems"][profiles.ratings_registry.SYSTEM_ID]["retrodictive_team_diagnostic"]
+        self.assertGreater(diagnostic["games"], 0)
+        self.assertAlmostEqual(
+            diagnostic["actual_minus_expected_wins"],
+            diagnostic["observed_wins"] - diagnostic["expected_wins"],
+            places=4,
+        )
+        self.assertNotIn("rank", diagnostic)
+        self.assertNotIn("label", diagnostic)
+
     def test_descriptive_rates_reproduce_from_totals(self):
         for row in self.envelope["data"]["teams"]:
             observed = row["observed_results"]

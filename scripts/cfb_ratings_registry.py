@@ -29,6 +29,11 @@ ContractError = backbone.ContractError
 
 SYSTEM_ID = "dd-cfb-elo"
 NULLABLE_OUTPUTS = ("expected_margin", "win_probability", "predicted_total")
+DIAGNOSTIC_FIELDS = (
+    "games", "observed_wins", "observed_losses", "observed_win_percentage",
+    "expected_wins", "actual_minus_expected_wins", "mean_pregame_win_probability",
+    "brier_win_probability",
+)
 
 
 def build(elo_envelope: dict[str, Any]) -> dict[str, Any]:
@@ -40,10 +45,20 @@ def build(elo_envelope: dict[str, Any]) -> dict[str, Any]:
     source_rows = data.get(source_field)
     if not isinstance(source_rows, list) or not source_rows:
         raise ContractError(f"cfb-elo is missing {source_field}")
+    diagnostics = data.get("team_diagnostics", {})
+    diagnostic_rows = diagnostics.get("teams")
+    if not isinstance(diagnostic_rows, list):
+        raise ContractError("cfb-elo is missing team_diagnostics.teams")
+    diagnostics_by_slug = {row.get("team_slug"): row for row in diagnostic_rows}
+    if len(diagnostics_by_slug) != len(diagnostic_rows):
+        raise ContractError("cfb-elo team diagnostics contain duplicate identities")
     source_snapshot = elo_envelope["integrity"]["snapshot_id"]
 
     teams = []
     for rank, row in enumerate(source_rows, start=1):
+        diagnostic = diagnostics_by_slug.get(row["team_slug"])
+        if diagnostic is None:
+            raise ContractError(f"cfb-elo is missing team diagnostics for {row['team_slug']}")
         teams.append({
             "team_slug": row["team_slug"],
             "team": row["team"],
@@ -56,6 +71,9 @@ def build(elo_envelope: dict[str, Any]) -> dict[str, Any]:
                     "expected_margin": None,
                     "win_probability": None,
                     "predicted_total": None,
+                    "retrodictive_team_diagnostic": {
+                        field: diagnostic[field] for field in DIAGNOSTIC_FIELDS
+                    },
                 }
             },
         })
@@ -100,6 +118,17 @@ def build(elo_envelope: dict[str, Any]) -> dict[str, Any]:
                     "A win probability exists only after two team strengths and venue are supplied. "
                     "That does not make win_probability a populated team-level registry field."
                 ),
+            },
+            "team_diagnostics": {
+                "available": True,
+                "kind": diagnostics["kind"],
+                "source_field": "team_diagnostics.teams",
+                "evaluation_season": diagnostics["evaluation_season"],
+                "metrics": list(DIAGNOSTIC_FIELDS),
+                "prospective": False,
+                "graded": False,
+                "rankings_published": False,
+                "note": diagnostics["interpretation"],
             },
             "prospective_forecasts_exist": False,
             "graded": False,
@@ -183,6 +212,16 @@ def validate_envelope(envelope: dict[str, Any], elo_envelope: dict[str, Any] | N
         if projection.get("elo_scale") != 400.0 or projection.get("home_field_elo") != elo.PARAMS["home_field_elo"] or \
            projection.get("neutral_site_home_field_elo") != 0.0 or projection.get("rating_period_only") is not True:
             raise ContractError(f"{system.get('system_id')} matchup transform drifts from cfb_elo.py")
+        diagnostics = system.get("team_diagnostics")
+        if not isinstance(diagnostics, dict) or not isinstance(diagnostics.get("available"), bool):
+            raise ContractError(f"{system.get('system_id')} lacks a team-diagnostic availability contract")
+        if diagnostics["available"] and (
+            diagnostics.get("kind") != "retrodictive-team-aggregate" or
+            diagnostics.get("prospective") is not False or diagnostics.get("graded") is not False or
+            diagnostics.get("rankings_published") is not False or diagnostics.get("metrics") != list(DIAGNOSTIC_FIELDS)
+        ):
+            raise ContractError(f"{system.get('system_id')} overstates or drifts from team diagnostics")
+    systems_by_id = {system["system_id"]: system for system in systems}
 
     teams = data.get("teams")
     low, high = backbone.FBS_TEAM_RANGE
@@ -202,6 +241,23 @@ def validate_envelope(envelope: dict[str, Any], elo_envelope: dict[str, Any] | N
                 raise ContractError(f"{row.get('team_slug')} has invalid {system_id} team strength")
             if any(rating.get(field) is not None for field in NULLABLE_OUTPUTS):
                 raise ContractError(f"{row.get('team_slug')} invents unsupported {system_id} output")
+            diagnostic = rating.get("retrodictive_team_diagnostic")
+            diagnostics_available = systems_by_id[system_id]["team_diagnostics"]["available"]
+            if not diagnostics_available:
+                if diagnostic is not None:
+                    raise ContractError(f"{row.get('team_slug')} invents unavailable {system_id} team diagnostics")
+                continue
+            if not isinstance(diagnostic, dict) or set(diagnostic) != set(DIAGNOSTIC_FIELDS):
+                raise ContractError(f"{row.get('team_slug')} has an invalid {system_id} team diagnostic")
+            games = diagnostic.get("games")
+            wins = diagnostic.get("observed_wins")
+            losses = diagnostic.get("observed_losses")
+            if not isinstance(games, int) or games < 1 or not isinstance(wins, int) or \
+               not isinstance(losses, int) or wins + losses != games:
+                raise ContractError(f"{row.get('team_slug')} has an invalid diagnostic record")
+            for field in ("observed_win_percentage", "mean_pregame_win_probability", "brier_win_probability"):
+                if not isinstance(diagnostic.get(field), (int, float)) or not 0 <= diagnostic[field] <= 1:
+                    raise ContractError(f"{row.get('team_slug')} has an invalid diagnostic {field}")
 
     for system_id in system_ids:
         ranks = sorted(row["systems"][system_id]["rank"] for row in teams if system_id in row["systems"])
@@ -225,9 +281,15 @@ def validate_envelope(envelope: dict[str, Any], elo_envelope: dict[str, Any] | N
         source_rows = elo_envelope["data"].get(source_field)
         if not isinstance(source_rows, list):
             raise ContractError("registry rating_period does not name a current Elo field")
-        expected = [(r["team_slug"], r["rating"], r["games_rated"]) for r in source_rows]
+        source_diagnostics = {
+            row["team_slug"]: {field: row[field] for field in DIAGNOSTIC_FIELDS}
+            for row in elo_envelope["data"]["team_diagnostics"]["teams"]
+        }
+        expected = [(r["team_slug"], r["rating"], r["games_rated"], source_diagnostics[r["team_slug"]])
+                    for r in source_rows]
         actual = [(r["team_slug"], r["systems"][SYSTEM_ID]["team_strength"],
-                   r["systems"][SYSTEM_ID]["games_rated"]) for r in teams]
+                   r["systems"][SYSTEM_ID]["games_rated"],
+                   r["systems"][SYSTEM_ID]["retrodictive_team_diagnostic"]) for r in teams]
         if actual != expected:
             raise ContractError("registry rows drift from the published Elo source")
 

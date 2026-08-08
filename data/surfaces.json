@@ -434,13 +434,13 @@
      "kind": "json",
      "url": "/data/cfb-elo.json",
      "status": "live",
-     "covers": "deterministic continuous Elo baseline and retrodictive 2025 backtest; ungraded as a prospective model"
+     "covers": "deterministic continuous Elo baseline, retrodictive 2025 backtest and non-ranked expected-versus-observed team diagnostics; ungraded as a prospective model"
     },
     {
      "kind": "json",
      "url": "/data/cfb-ratings.json",
      "status": "live",
-     "covers": "canonical dated ratings registry with 136 teams and one retrodictive Elo system; unsupported outputs are null and consensus is explicitly not built"
+     "covers": "canonical dated ratings registry with 136 teams, one retrodictive Elo system and exact non-ranked team diagnostics; unsupported outputs are null and consensus is explicitly not built"
     },
     {
      "kind": "json",

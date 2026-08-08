@@ -1,17 +1,17 @@
 {
  "as_of": "2026-08-08",
- "source": "Normalized from /data/cfb-elo.json by scripts/cfb_ratings_registry.py; source snapshot sha256:414e0f27fba170d172db03a1a07fcca1bf83af09848de356ae3bd6fa83894237.",
+ "source": "Normalized from /data/cfb-elo.json by scripts/cfb_ratings_registry.py; source snapshot sha256:00e2affd64f0853333db4a413dc5c99fbd123a1dc7e333d7476c16e4d666183d.",
  "tier": "labs",
  "graded": false,
  "note": "MODELLED, RETRODICTIVE, UNGRADED. This is a registry contract with one live baseline, not a consensus or evidence that several models agree. Unsupported outputs are null rather than inferred. Quote the rating period with every value.",
  "provenance": {
   "generator": "scripts/cfb_ratings_registry.py",
-  "captured_at": "2026-08-08T06:31:51.828106Z",
+  "captured_at": "2026-08-08T14:18:05.541327Z",
   "input": "/data/cfb-elo.json",
-  "input_snapshot_id": "sha256:414e0f27fba170d172db03a1a07fcca1bf83af09848de356ae3bd6fa83894237"
+  "input_snapshot_id": "sha256:00e2affd64f0853333db4a413dc5c99fbd123a1dc7e333d7476c16e4d666183d"
  },
  "integrity": {
-  "snapshot_id": "sha256:49b2a286548274f881926530db66dea6c084f0a68ebdc350f55bbc7e47c545f0",
+  "snapshot_id": "sha256:6bff8d2a4d562cd55e723925039d0286bc5dc4de0a20725ac6888303d328ae46",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for the data object (sorted object keys, no insignificant whitespace).",
   "systems": 1,
   "teams": 136
@@ -31,7 +31,7 @@
     "provider": "Data Dawgs",
     "kind": "continuous-rating",
     "feature_family": "game results and margin only",
-    "source_snapshot_id": "sha256:414e0f27fba170d172db03a1a07fcca1bf83af09848de356ae3bd6fa83894237",
+    "source_snapshot_id": "sha256:00e2affd64f0853333db4a413dc5c99fbd123a1dc7e333d7476c16e4d666183d",
     "source_url": "/data/cfb-elo.json",
     "model_card_url": "/data/cfb-model-cards.json",
     "normalization": "Native Elo points are retained as team_strength. Game-context expected margin and win probability are not team-level source fields, so they remain null.",
@@ -64,6 +64,26 @@
      "not_a_team_level_output": true,
      "note": "A win probability exists only after two team strengths and venue are supplied. That does not make win_probability a populated team-level registry field."
     },
+    "team_diagnostics": {
+     "available": true,
+     "kind": "retrodictive-team-aggregate",
+     "source_field": "team_diagnostics.teams",
+     "evaluation_season": 2025,
+     "metrics": [
+      "games",
+      "observed_wins",
+      "observed_losses",
+      "observed_win_percentage",
+      "expected_wins",
+      "actual_minus_expected_wins",
+      "mean_pregame_win_probability",
+      "brier_win_probability"
+     ],
+     "prospective": false,
+     "graded": false,
+     "rankings_published": false,
+     "note": "Expected wins sum the fixed pregame Elo win probabilities from the 2025 walk-forward backtest. Actual-minus-expected is descriptive model residual, not luck, team quality, or a forecast."
+    },
     "prospective_forecasts_exist": false,
     "graded": false
    }
@@ -80,7 +100,17 @@
       "games_rated": 96,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 15,
+       "observed_wins": 15,
+       "observed_losses": 0,
+       "observed_win_percentage": 1.0,
+       "expected_wins": 10.5165,
+       "actual_minus_expected_wins": 4.4835,
+       "mean_pregame_win_probability": 0.7011,
+       "brier_win_probability": 0.1348
+      }
      }
     }
    },
@@ -95,7 +125,17 @@
       "games_rated": 99,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 13,
+       "observed_wins": 11,
+       "observed_losses": 2,
+       "observed_win_percentage": 0.8462,
+       "expected_wins": 10.7619,
+       "actual_minus_expected_wins": 0.2381,
+       "mean_pregame_win_probability": 0.8278,
+       "brier_win_probability": 0.0951
+      }
      }
     }
    },
@@ -110,7 +150,17 @@
       "games_rated": 99,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 14,
+       "observed_wins": 12,
+       "observed_losses": 2,
+       "observed_win_percentage": 0.8571,
+       "expected_wins": 10.0606,
+       "actual_minus_expected_wins": 1.9394,
+       "mean_pregame_win_probability": 0.7186,
+       "brier_win_probability": 0.1304
+      }
      }
     }
    },
@@ -125,7 +175,17 @@
       "games_rated": 100,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 10,
+       "observed_losses": 2,
+       "observed_win_percentage": 0.8333,
+       "expected_wins": 9.7452,
+       "actual_minus_expected_wins": 0.2548,
+       "mean_pregame_win_probability": 0.8121,
+       "brier_win_probability": 0.1137
+      }
      }
     }
    },
@@ -140,7 +200,17 @@
       "games_rated": 103,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 13,
+       "observed_wins": 11,
+       "observed_losses": 2,
+       "observed_win_percentage": 0.8462,
+       "expected_wins": 9.5113,
+       "actual_minus_expected_wins": 1.4887,
+       "mean_pregame_win_probability": 0.7316,
+       "brier_win_probability": 0.1437
+      }
      }
     }
    },
@@ -155,7 +225,17 @@
       "games_rated": 100,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 15,
+       "observed_wins": 12,
+       "observed_losses": 3,
+       "observed_win_percentage": 0.8,
+       "expected_wins": 9.1069,
+       "actual_minus_expected_wins": 2.8931,
+       "mean_pregame_win_probability": 0.6071,
+       "brier_win_probability": 0.1907
+      }
      }
     }
    },
@@ -170,7 +250,17 @@
       "games_rated": 98,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 14,
+       "observed_wins": 12,
+       "observed_losses": 2,
+       "observed_win_percentage": 0.8571,
+       "expected_wins": 10.0488,
+       "actual_minus_expected_wins": 1.9512,
+       "mean_pregame_win_probability": 0.7178,
+       "brier_win_probability": 0.1034
+      }
      }
     }
    },
@@ -185,7 +275,17 @@
       "games_rated": 98,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 13,
+       "observed_wins": 11,
+       "observed_losses": 2,
+       "observed_win_percentage": 0.8462,
+       "expected_wins": 8.6312,
+       "actual_minus_expected_wins": 2.3688,
+       "mean_pregame_win_probability": 0.6639,
+       "brier_win_probability": 0.15
+      }
      }
     }
    },
@@ -200,7 +300,17 @@
       "games_rated": 101,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 13,
+       "observed_wins": 10,
+       "observed_losses": 3,
+       "observed_win_percentage": 0.7692,
+       "expected_wins": 8.7949,
+       "actual_minus_expected_wins": 1.2051,
+       "mean_pregame_win_probability": 0.6765,
+       "brier_win_probability": 0.1175
+      }
      }
     }
    },
@@ -215,7 +325,17 @@
       "games_rated": 95,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 10,
+       "observed_losses": 2,
+       "observed_win_percentage": 0.8333,
+       "expected_wins": 7.3425,
+       "actual_minus_expected_wins": 2.6575,
+       "mean_pregame_win_probability": 0.6119,
+       "brier_win_probability": 0.1683
+      }
      }
     }
    },
@@ -230,7 +350,17 @@
       "games_rated": 51,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 13,
+       "observed_wins": 11,
+       "observed_losses": 2,
+       "observed_win_percentage": 0.8462,
+       "expected_wins": 9.0451,
+       "actual_minus_expected_wins": 1.9549,
+       "mean_pregame_win_probability": 0.6958,
+       "brier_win_probability": 0.0741
+      }
      }
     }
    },
@@ -245,7 +375,17 @@
       "games_rated": 103,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 14,
+       "observed_wins": 10,
+       "observed_losses": 4,
+       "observed_win_percentage": 0.7143,
+       "expected_wins": 8.4799,
+       "actual_minus_expected_wins": 1.5201,
+       "mean_pregame_win_probability": 0.6057,
+       "brier_win_probability": 0.2264
+      }
      }
     }
    },
@@ -260,7 +400,17 @@
       "games_rated": 99,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 8,
+       "observed_losses": 4,
+       "observed_win_percentage": 0.6667,
+       "expected_wins": 8.0238,
+       "actual_minus_expected_wins": -0.0238,
+       "mean_pregame_win_probability": 0.6687,
+       "brier_win_probability": 0.2585
+      }
      }
     }
    },
@@ -275,7 +425,17 @@
       "games_rated": 97,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 8,
+       "observed_losses": 4,
+       "observed_win_percentage": 0.6667,
+       "expected_wins": 6.8641,
+       "actual_minus_expected_wins": 1.1359,
+       "mean_pregame_win_probability": 0.572,
+       "brier_win_probability": 0.164
+      }
      }
     }
    },
@@ -290,7 +450,17 @@
       "games_rated": 98,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 13,
+       "observed_wins": 11,
+       "observed_losses": 2,
+       "observed_win_percentage": 0.8462,
+       "expected_wins": 8.9969,
+       "actual_minus_expected_wins": 2.0031,
+       "mean_pregame_win_probability": 0.6921,
+       "brier_win_probability": 0.1016
+      }
      }
     }
    },
@@ -305,7 +475,17 @@
       "games_rated": 96,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 10,
+       "observed_losses": 2,
+       "observed_win_percentage": 0.8333,
+       "expected_wins": 7.5291,
+       "actual_minus_expected_wins": 2.4709,
+       "mean_pregame_win_probability": 0.6274,
+       "brier_win_probability": 0.1839
+      }
      }
     }
    },
@@ -320,7 +500,17 @@
       "games_rated": 95,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 9,
+       "observed_losses": 3,
+       "observed_win_percentage": 0.75,
+       "expected_wins": 6.851,
+       "actual_minus_expected_wins": 2.149,
+       "mean_pregame_win_probability": 0.5709,
+       "brier_win_probability": 0.1996
+      }
      }
     }
    },
@@ -335,7 +525,17 @@
       "games_rated": 99,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 6,
+       "observed_losses": 6,
+       "observed_win_percentage": 0.5,
+       "expected_wins": 7.5154,
+       "actual_minus_expected_wins": -1.5154,
+       "mean_pregame_win_probability": 0.6263,
+       "brier_win_probability": 0.2023
+      }
      }
     }
    },
@@ -350,7 +550,17 @@
       "games_rated": 94,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 8,
+       "observed_losses": 4,
+       "observed_win_percentage": 0.6667,
+       "expected_wins": 7.2287,
+       "actual_minus_expected_wins": 0.7713,
+       "mean_pregame_win_probability": 0.6024,
+       "brier_win_probability": 0.1719
+      }
      }
     }
    },
@@ -365,7 +575,17 @@
       "games_rated": 99,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 9,
+       "observed_losses": 3,
+       "observed_win_percentage": 0.75,
+       "expected_wins": 6.4722,
+       "actual_minus_expected_wins": 2.5278,
+       "mean_pregame_win_probability": 0.5394,
+       "brier_win_probability": 0.2363
+      }
      }
     }
    },
@@ -380,7 +600,17 @@
       "games_rated": 94,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 13,
+       "observed_wins": 9,
+       "observed_losses": 4,
+       "observed_win_percentage": 0.6923,
+       "expected_wins": 8.2411,
+       "actual_minus_expected_wins": 0.7589,
+       "mean_pregame_win_probability": 0.6339,
+       "brier_win_probability": 0.1227
+      }
      }
     }
    },
@@ -395,7 +625,17 @@
       "games_rated": 97,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 10,
+       "observed_losses": 2,
+       "observed_win_percentage": 0.8333,
+       "expected_wins": 7.9846,
+       "actual_minus_expected_wins": 2.0154,
+       "mean_pregame_win_probability": 0.6654,
+       "brier_win_probability": 0.1056
+      }
      }
     }
    },
@@ -410,7 +650,17 @@
       "games_rated": 86,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 9,
+       "observed_losses": 3,
+       "observed_win_percentage": 0.75,
+       "expected_wins": 7.0062,
+       "actual_minus_expected_wins": 1.9938,
+       "mean_pregame_win_probability": 0.5839,
+       "brier_win_probability": 0.1217
+      }
      }
     }
    },
@@ -425,7 +675,17 @@
       "games_rated": 97,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 8,
+       "observed_losses": 4,
+       "observed_win_percentage": 0.6667,
+       "expected_wins": 7.1165,
+       "actual_minus_expected_wins": 0.8835,
+       "mean_pregame_win_probability": 0.593,
+       "brier_win_probability": 0.2038
+      }
      }
     }
    },
@@ -440,7 +700,17 @@
       "games_rated": 99,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 8,
+       "observed_losses": 4,
+       "observed_win_percentage": 0.6667,
+       "expected_wins": 8.2022,
+       "actual_minus_expected_wins": -0.2022,
+       "mean_pregame_win_probability": 0.6835,
+       "brier_win_probability": 0.2486
+      }
      }
     }
    },
@@ -455,7 +725,17 @@
       "games_rated": 91,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 8,
+       "observed_losses": 4,
+       "observed_win_percentage": 0.6667,
+       "expected_wins": 5.8028,
+       "actual_minus_expected_wins": 2.1972,
+       "mean_pregame_win_probability": 0.4836,
+       "brier_win_probability": 0.1924
+      }
      }
     }
    },
@@ -470,7 +750,17 @@
       "games_rated": 102,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 14,
+       "observed_wins": 11,
+       "observed_losses": 3,
+       "observed_win_percentage": 0.7857,
+       "expected_wins": 8.655,
+       "actual_minus_expected_wins": 2.345,
+       "mean_pregame_win_probability": 0.6182,
+       "brier_win_probability": 0.1525
+      }
      }
     }
    },
@@ -485,7 +775,17 @@
       "games_rated": 99,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 13,
+       "observed_wins": 8,
+       "observed_losses": 5,
+       "observed_win_percentage": 0.6154,
+       "expected_wins": 6.7136,
+       "actual_minus_expected_wins": 1.2864,
+       "mean_pregame_win_probability": 0.5164,
+       "brier_win_probability": 0.2704
+      }
      }
     }
    },
@@ -500,7 +800,17 @@
       "games_rated": 97,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 13,
+       "observed_wins": 9,
+       "observed_losses": 4,
+       "observed_win_percentage": 0.6923,
+       "expected_wins": 8.6541,
+       "actual_minus_expected_wins": 0.3459,
+       "mean_pregame_win_probability": 0.6657,
+       "brier_win_probability": 0.1091
+      }
      }
     }
    },
@@ -515,7 +825,17 @@
       "games_rated": 97,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 13,
+       "observed_wins": 11,
+       "observed_losses": 2,
+       "observed_win_percentage": 0.8462,
+       "expected_wins": 8.3588,
+       "actual_minus_expected_wins": 2.6412,
+       "mean_pregame_win_probability": 0.643,
+       "brier_win_probability": 0.1709
+      }
      }
     }
    },
@@ -530,7 +850,17 @@
       "games_rated": 92,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 8,
+       "observed_losses": 4,
+       "observed_win_percentage": 0.6667,
+       "expected_wins": 8.2695,
+       "actual_minus_expected_wins": -0.2695,
+       "mean_pregame_win_probability": 0.6891,
+       "brier_win_probability": 0.1875
+      }
      }
     }
    },
@@ -545,7 +875,17 @@
       "games_rated": 93,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 13,
+       "observed_wins": 9,
+       "observed_losses": 4,
+       "observed_win_percentage": 0.6923,
+       "expected_wins": 6.0285,
+       "actual_minus_expected_wins": 2.9715,
+       "mean_pregame_win_probability": 0.4637,
+       "brier_win_probability": 0.1959
+      }
      }
     }
    },
@@ -560,7 +900,17 @@
       "games_rated": 95,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 13,
+       "observed_wins": 10,
+       "observed_losses": 3,
+       "observed_win_percentage": 0.7692,
+       "expected_wins": 7.4569,
+       "actual_minus_expected_wins": 2.5431,
+       "mean_pregame_win_probability": 0.5736,
+       "brier_win_probability": 0.2503
+      }
      }
     }
    },
@@ -575,7 +925,17 @@
       "games_rated": 97,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 7,
+       "observed_losses": 5,
+       "observed_win_percentage": 0.5833,
+       "expected_wins": 7.8582,
+       "actual_minus_expected_wins": -0.8582,
+       "mean_pregame_win_probability": 0.6548,
+       "brier_win_probability": 0.1626
+      }
      }
     }
    },
@@ -590,7 +950,17 @@
       "games_rated": 102,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 6,
+       "observed_losses": 6,
+       "observed_win_percentage": 0.5,
+       "expected_wins": 6.7519,
+       "actual_minus_expected_wins": -0.7519,
+       "mean_pregame_win_probability": 0.5627,
+       "brier_win_probability": 0.2361
+      }
      }
     }
    },
@@ -605,7 +975,17 @@
       "games_rated": 94,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 8,
+       "observed_losses": 4,
+       "observed_win_percentage": 0.6667,
+       "expected_wins": 7.1346,
+       "actual_minus_expected_wins": 0.8654,
+       "mean_pregame_win_probability": 0.5945,
+       "brier_win_probability": 0.1769
+      }
      }
     }
    },
@@ -620,7 +1000,17 @@
       "games_rated": 95,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 8,
+       "observed_losses": 4,
+       "observed_win_percentage": 0.6667,
+       "expected_wins": 6.7381,
+       "actual_minus_expected_wins": 1.2619,
+       "mean_pregame_win_probability": 0.5615,
+       "brier_win_probability": 0.1796
+      }
      }
     }
    },
@@ -635,7 +1025,17 @@
       "games_rated": 98,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 7,
+       "observed_losses": 4,
+       "observed_win_percentage": 0.6364,
+       "expected_wins": 6.5925,
+       "actual_minus_expected_wins": 0.4075,
+       "mean_pregame_win_probability": 0.5993,
+       "brier_win_probability": 0.225
+      }
      }
     }
    },
@@ -650,7 +1050,17 @@
       "games_rated": 97,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 5,
+       "observed_losses": 6,
+       "observed_win_percentage": 0.4545,
+       "expected_wins": 5.9266,
+       "actual_minus_expected_wins": -0.9266,
+       "mean_pregame_win_probability": 0.5388,
+       "brier_win_probability": 0.207
+      }
      }
     }
    },
@@ -665,7 +1075,17 @@
       "games_rated": 98,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 7,
+       "observed_losses": 5,
+       "observed_win_percentage": 0.5833,
+       "expected_wins": 5.7256,
+       "actual_minus_expected_wins": 1.2744,
+       "mean_pregame_win_probability": 0.4771,
+       "brier_win_probability": 0.2092
+      }
      }
     }
    },
@@ -680,7 +1100,17 @@
       "games_rated": 97,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 7,
+       "observed_losses": 5,
+       "observed_win_percentage": 0.5833,
+       "expected_wins": 7.5977,
+       "actual_minus_expected_wins": -0.5977,
+       "mean_pregame_win_probability": 0.6331,
+       "brier_win_probability": 0.1421
+      }
      }
     }
    },
@@ -695,7 +1125,17 @@
       "games_rated": 99,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 7,
+       "observed_losses": 5,
+       "observed_win_percentage": 0.5833,
+       "expected_wins": 6.7095,
+       "actual_minus_expected_wins": 0.2905,
+       "mean_pregame_win_probability": 0.5591,
+       "brier_win_probability": 0.2631
+      }
      }
     }
    },
@@ -710,7 +1150,17 @@
       "games_rated": 96,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 8,
+       "observed_losses": 4,
+       "observed_win_percentage": 0.6667,
+       "expected_wins": 6.8465,
+       "actual_minus_expected_wins": 1.1535,
+       "mean_pregame_win_probability": 0.5705,
+       "brier_win_probability": 0.1953
+      }
      }
     }
    },
@@ -725,7 +1175,17 @@
       "games_rated": 94,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 7,
+       "observed_losses": 5,
+       "observed_win_percentage": 0.5833,
+       "expected_wins": 6.5941,
+       "actual_minus_expected_wins": 0.4059,
+       "mean_pregame_win_probability": 0.5495,
+       "brier_win_probability": 0.1442
+      }
      }
     }
    },
@@ -740,7 +1200,17 @@
       "games_rated": 93,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 9,
+       "observed_losses": 3,
+       "observed_win_percentage": 0.75,
+       "expected_wins": 6.4734,
+       "actual_minus_expected_wins": 2.5266,
+       "mean_pregame_win_probability": 0.5394,
+       "brier_win_probability": 0.2858
+      }
      }
     }
    },
@@ -755,7 +1225,17 @@
       "games_rated": 91,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 7,
+       "observed_losses": 5,
+       "observed_win_percentage": 0.5833,
+       "expected_wins": 7.3619,
+       "actual_minus_expected_wins": -0.3619,
+       "mean_pregame_win_probability": 0.6135,
+       "brier_win_probability": 0.2675
+      }
      }
     }
    },
@@ -770,7 +1250,17 @@
       "games_rated": 100,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 13,
+       "observed_wins": 8,
+       "observed_losses": 5,
+       "observed_win_percentage": 0.6154,
+       "expected_wins": 8.4367,
+       "actual_minus_expected_wins": -0.4367,
+       "mean_pregame_win_probability": 0.649,
+       "brier_win_probability": 0.2144
+      }
      }
     }
    },
@@ -785,7 +1275,17 @@
       "games_rated": 100,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 6,
+       "observed_losses": 6,
+       "observed_win_percentage": 0.5,
+       "expected_wins": 6.167,
+       "actual_minus_expected_wins": -0.167,
+       "mean_pregame_win_probability": 0.5139,
+       "brier_win_probability": 0.2373
+      }
      }
     }
    },
@@ -800,7 +1300,17 @@
       "games_rated": 96,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 13,
+       "observed_wins": 9,
+       "observed_losses": 4,
+       "observed_win_percentage": 0.6923,
+       "expected_wins": 9.3077,
+       "actual_minus_expected_wins": -0.3077,
+       "mean_pregame_win_probability": 0.716,
+       "brier_win_probability": 0.1469
+      }
      }
     }
    },
@@ -815,7 +1325,17 @@
       "games_rated": 99,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 6,
+       "observed_losses": 6,
+       "observed_win_percentage": 0.5,
+       "expected_wins": 6.6194,
+       "actual_minus_expected_wins": -0.6194,
+       "mean_pregame_win_probability": 0.5516,
+       "brier_win_probability": 0.1506
+      }
      }
     }
    },
@@ -830,7 +1350,17 @@
       "games_rated": 95,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 7,
+       "observed_losses": 5,
+       "observed_win_percentage": 0.5833,
+       "expected_wins": 7.0964,
+       "actual_minus_expected_wins": -0.0964,
+       "mean_pregame_win_probability": 0.5914,
+       "brier_win_probability": 0.2118
+      }
      }
     }
    },
@@ -845,7 +1375,17 @@
       "games_rated": 99,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 6,
+       "observed_losses": 6,
+       "observed_win_percentage": 0.5,
+       "expected_wins": 6.8357,
+       "actual_minus_expected_wins": -0.8357,
+       "mean_pregame_win_probability": 0.5696,
+       "brier_win_probability": 0.2003
+      }
      }
     }
    },
@@ -860,7 +1400,17 @@
       "games_rated": 99,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 7,
+       "observed_losses": 5,
+       "observed_win_percentage": 0.5833,
+       "expected_wins": 6.0762,
+       "actual_minus_expected_wins": 0.9238,
+       "mean_pregame_win_probability": 0.5063,
+       "brier_win_probability": 0.1899
+      }
      }
     }
    },
@@ -875,7 +1425,17 @@
       "games_rated": 92,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 8,
+       "observed_losses": 4,
+       "observed_win_percentage": 0.6667,
+       "expected_wins": 6.149,
+       "actual_minus_expected_wins": 1.851,
+       "mean_pregame_win_probability": 0.5124,
+       "brier_win_probability": 0.1835
+      }
      }
     }
    },
@@ -890,7 +1450,17 @@
       "games_rated": 97,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 8,
+       "observed_losses": 4,
+       "observed_win_percentage": 0.6667,
+       "expected_wins": 7.0929,
+       "actual_minus_expected_wins": 0.9071,
+       "mean_pregame_win_probability": 0.5911,
+       "brier_win_probability": 0.1905
+      }
      }
     }
    },
@@ -905,7 +1475,17 @@
       "games_rated": 90,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 6,
+       "observed_losses": 6,
+       "observed_win_percentage": 0.5,
+       "expected_wins": 5.9233,
+       "actual_minus_expected_wins": 0.0767,
+       "mean_pregame_win_probability": 0.4936,
+       "brier_win_probability": 0.1658
+      }
      }
     }
    },
@@ -920,7 +1500,17 @@
       "games_rated": 95,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 8,
+       "observed_losses": 4,
+       "observed_win_percentage": 0.6667,
+       "expected_wins": 6.8102,
+       "actual_minus_expected_wins": 1.1898,
+       "mean_pregame_win_probability": 0.5675,
+       "brier_win_probability": 0.2714
+      }
      }
     }
    },
@@ -935,7 +1525,17 @@
       "games_rated": 99,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 8,
+       "observed_losses": 4,
+       "observed_win_percentage": 0.6667,
+       "expected_wins": 6.3307,
+       "actual_minus_expected_wins": 1.6693,
+       "mean_pregame_win_probability": 0.5276,
+       "brier_win_probability": 0.2013
+      }
      }
     }
    },
@@ -950,7 +1550,17 @@
       "games_rated": 86,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 8,
+       "observed_losses": 4,
+       "observed_win_percentage": 0.6667,
+       "expected_wins": 7.8172,
+       "actual_minus_expected_wins": 0.1828,
+       "mean_pregame_win_probability": 0.6514,
+       "brier_win_probability": 0.1877
+      }
      }
     }
    },
@@ -965,7 +1575,17 @@
       "games_rated": 41,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 13,
+       "observed_wins": 8,
+       "observed_losses": 5,
+       "observed_win_percentage": 0.6154,
+       "expected_wins": 8.4854,
+       "actual_minus_expected_wins": -0.4854,
+       "mean_pregame_win_probability": 0.6527,
+       "brier_win_probability": 0.2496
+      }
      }
     }
    },
@@ -980,7 +1600,17 @@
       "games_rated": 94,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 8,
+       "observed_losses": 4,
+       "observed_win_percentage": 0.6667,
+       "expected_wins": 5.8384,
+       "actual_minus_expected_wins": 2.1616,
+       "mean_pregame_win_probability": 0.4865,
+       "brier_win_probability": 0.239
+      }
      }
     }
    },
@@ -995,7 +1625,17 @@
       "games_rated": 94,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 8,
+       "observed_losses": 4,
+       "observed_win_percentage": 0.6667,
+       "expected_wins": 6.2177,
+       "actual_minus_expected_wins": 1.7823,
+       "mean_pregame_win_probability": 0.5181,
+       "brier_win_probability": 0.2079
+      }
      }
     }
    },
@@ -1010,7 +1650,17 @@
       "games_rated": 95,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 6,
+       "observed_losses": 6,
+       "observed_win_percentage": 0.5,
+       "expected_wins": 4.7757,
+       "actual_minus_expected_wins": 1.2243,
+       "mean_pregame_win_probability": 0.398,
+       "brier_win_probability": 0.1676
+      }
      }
     }
    },
@@ -1025,7 +1675,17 @@
       "games_rated": 26,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 13,
+       "observed_wins": 9,
+       "observed_losses": 4,
+       "observed_win_percentage": 0.6923,
+       "expected_wins": 6.2211,
+       "actual_minus_expected_wins": 2.7789,
+       "mean_pregame_win_probability": 0.4785,
+       "brier_win_probability": 0.187
+      }
      }
     }
    },
@@ -1040,7 +1700,17 @@
       "games_rated": 101,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 8,
+       "observed_losses": 4,
+       "observed_win_percentage": 0.6667,
+       "expected_wins": 7.2512,
+       "actual_minus_expected_wins": 0.7488,
+       "mean_pregame_win_probability": 0.6043,
+       "brier_win_probability": 0.2103
+      }
      }
     }
    },
@@ -1055,7 +1725,17 @@
       "games_rated": 95,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 7,
+       "observed_losses": 5,
+       "observed_win_percentage": 0.5833,
+       "expected_wins": 6.2491,
+       "actual_minus_expected_wins": 0.7509,
+       "mean_pregame_win_probability": 0.5208,
+       "brier_win_probability": 0.1869
+      }
      }
     }
    },
@@ -1070,7 +1750,17 @@
       "games_rated": 99,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 7,
+       "observed_losses": 5,
+       "observed_win_percentage": 0.5833,
+       "expected_wins": 8.7398,
+       "actual_minus_expected_wins": -1.7398,
+       "mean_pregame_win_probability": 0.7283,
+       "brier_win_probability": 0.2186
+      }
      }
     }
    },
@@ -1085,7 +1775,17 @@
       "games_rated": 95,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 3,
+       "observed_losses": 8,
+       "observed_win_percentage": 0.2727,
+       "expected_wins": 4.7647,
+       "actual_minus_expected_wins": -1.7647,
+       "mean_pregame_win_probability": 0.4332,
+       "brier_win_probability": 0.1517
+      }
      }
     }
    },
@@ -1100,7 +1800,17 @@
       "games_rated": 96,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 3,
+       "observed_losses": 8,
+       "observed_win_percentage": 0.2727,
+       "expected_wins": 4.5093,
+       "actual_minus_expected_wins": -1.5093,
+       "mean_pregame_win_probability": 0.4099,
+       "brier_win_probability": 0.1834
+      }
      }
     }
    },
@@ -1115,7 +1825,17 @@
       "games_rated": 99,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 6,
+       "observed_losses": 6,
+       "observed_win_percentage": 0.5,
+       "expected_wins": 5.4404,
+       "actual_minus_expected_wins": 0.5596,
+       "mean_pregame_win_probability": 0.4534,
+       "brier_win_probability": 0.2643
+      }
      }
     }
    },
@@ -1130,7 +1850,17 @@
       "games_rated": 94,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 6,
+       "observed_losses": 6,
+       "observed_win_percentage": 0.5,
+       "expected_wins": 5.9482,
+       "actual_minus_expected_wins": 0.0518,
+       "mean_pregame_win_probability": 0.4957,
+       "brier_win_probability": 0.1491
+      }
      }
     }
    },
@@ -1145,7 +1875,17 @@
       "games_rated": 95,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 4,
+       "observed_losses": 7,
+       "observed_win_percentage": 0.3636,
+       "expected_wins": 4.6548,
+       "actual_minus_expected_wins": -0.6548,
+       "mean_pregame_win_probability": 0.4232,
+       "brier_win_probability": 0.1917
+      }
      }
     }
    },
@@ -1160,7 +1900,17 @@
       "games_rated": 95,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 4,
+       "observed_losses": 7,
+       "observed_win_percentage": 0.3636,
+       "expected_wins": 7.0296,
+       "actual_minus_expected_wins": -3.0296,
+       "mean_pregame_win_probability": 0.6391,
+       "brier_win_probability": 0.2645
+      }
      }
     }
    },
@@ -1175,7 +1925,17 @@
       "games_rated": 100,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 13,
+       "observed_wins": 7,
+       "observed_losses": 6,
+       "observed_win_percentage": 0.5385,
+       "expected_wins": 6.6557,
+       "actual_minus_expected_wins": 0.3443,
+       "mean_pregame_win_probability": 0.512,
+       "brier_win_probability": 0.1965
+      }
      }
     }
    },
@@ -1190,7 +1950,17 @@
       "games_rated": 95,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 4,
+       "observed_losses": 7,
+       "observed_win_percentage": 0.3636,
+       "expected_wins": 4.262,
+       "actual_minus_expected_wins": -0.262,
+       "mean_pregame_win_probability": 0.3875,
+       "brier_win_probability": 0.1456
+      }
      }
     }
    },
@@ -1205,7 +1975,17 @@
       "games_rated": 96,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 6,
+       "observed_losses": 6,
+       "observed_win_percentage": 0.5,
+       "expected_wins": 5.5801,
+       "actual_minus_expected_wins": 0.4199,
+       "mean_pregame_win_probability": 0.465,
+       "brier_win_probability": 0.1979
+      }
      }
     }
    },
@@ -1220,7 +2000,17 @@
       "games_rated": 95,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 4,
+       "observed_losses": 7,
+       "observed_win_percentage": 0.3636,
+       "expected_wins": 3.472,
+       "actual_minus_expected_wins": 0.528,
+       "mean_pregame_win_probability": 0.3156,
+       "brier_win_probability": 0.1422
+      }
      }
     }
    },
@@ -1235,7 +2025,17 @@
       "games_rated": 98,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 6,
+       "observed_losses": 6,
+       "observed_win_percentage": 0.5,
+       "expected_wins": 5.1069,
+       "actual_minus_expected_wins": 0.8931,
+       "mean_pregame_win_probability": 0.4256,
+       "brier_win_probability": 0.3162
+      }
      }
     }
    },
@@ -1250,7 +2050,17 @@
       "games_rated": 94,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 4,
+       "observed_losses": 7,
+       "observed_win_percentage": 0.3636,
+       "expected_wins": 5.6285,
+       "actual_minus_expected_wins": -1.6285,
+       "mean_pregame_win_probability": 0.5117,
+       "brier_win_probability": 0.16
+      }
      }
     }
    },
@@ -1265,7 +2075,17 @@
       "games_rated": 96,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 4,
+       "observed_losses": 7,
+       "observed_win_percentage": 0.3636,
+       "expected_wins": 5.1663,
+       "actual_minus_expected_wins": -1.1663,
+       "mean_pregame_win_probability": 0.4697,
+       "brier_win_probability": 0.2151
+      }
      }
     }
    },
@@ -1280,7 +2100,17 @@
       "games_rated": 94,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 13,
+       "observed_wins": 6,
+       "observed_losses": 7,
+       "observed_win_percentage": 0.4615,
+       "expected_wins": 7.6063,
+       "actual_minus_expected_wins": -1.6063,
+       "mean_pregame_win_probability": 0.5851,
+       "brier_win_probability": 0.1815
+      }
      }
     }
    },
@@ -1295,7 +2125,17 @@
       "games_rated": 92,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 4,
+       "observed_losses": 8,
+       "observed_win_percentage": 0.3333,
+       "expected_wins": 3.6029,
+       "actual_minus_expected_wins": 0.3971,
+       "mean_pregame_win_probability": 0.3002,
+       "brier_win_probability": 0.1852
+      }
      }
     }
    },
@@ -1310,7 +2150,17 @@
       "games_rated": 101,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 5,
+       "observed_losses": 7,
+       "observed_win_percentage": 0.4167,
+       "expected_wins": 6.0604,
+       "actual_minus_expected_wins": -1.0604,
+       "mean_pregame_win_probability": 0.505,
+       "brier_win_probability": 0.2789
+      }
      }
     }
    },
@@ -1325,7 +2175,17 @@
       "games_rated": 13,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 6,
+       "observed_losses": 6,
+       "observed_win_percentage": 0.5,
+       "expected_wins": 6.3413,
+       "actual_minus_expected_wins": -0.3413,
+       "mean_pregame_win_probability": 0.5284,
+       "brier_win_probability": 0.2222
+      }
      }
     }
    },
@@ -1340,7 +2200,17 @@
       "games_rated": 90,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 6,
+       "observed_losses": 6,
+       "observed_win_percentage": 0.5,
+       "expected_wins": 5.1362,
+       "actual_minus_expected_wins": 0.8638,
+       "mean_pregame_win_probability": 0.428,
+       "brier_win_probability": 0.215
+      }
      }
     }
    },
@@ -1355,7 +2225,17 @@
       "games_rated": 93,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 5,
+       "observed_losses": 7,
+       "observed_win_percentage": 0.4167,
+       "expected_wins": 5.0804,
+       "actual_minus_expected_wins": -0.0804,
+       "mean_pregame_win_probability": 0.4234,
+       "brier_win_probability": 0.1643
+      }
      }
     }
    },
@@ -1370,7 +2250,17 @@
       "games_rated": 91,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 6,
+       "observed_losses": 6,
+       "observed_win_percentage": 0.5,
+       "expected_wins": 5.646,
+       "actual_minus_expected_wins": 0.354,
+       "mean_pregame_win_probability": 0.4705,
+       "brier_win_probability": 0.344
+      }
      }
     }
    },
@@ -1385,7 +2275,17 @@
       "games_rated": 94,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 3,
+       "observed_losses": 8,
+       "observed_win_percentage": 0.2727,
+       "expected_wins": 3.4156,
+       "actual_minus_expected_wins": -0.4156,
+       "mean_pregame_win_probability": 0.3105,
+       "brier_win_probability": 0.1663
+      }
      }
     }
    },
@@ -1400,7 +2300,17 @@
       "games_rated": 95,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 4,
+       "observed_losses": 7,
+       "observed_win_percentage": 0.3636,
+       "expected_wins": 4.3895,
+       "actual_minus_expected_wins": -0.3895,
+       "mean_pregame_win_probability": 0.399,
+       "brier_win_probability": 0.1446
+      }
      }
     }
    },
@@ -1415,7 +2325,17 @@
       "games_rated": 95,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 4,
+       "observed_losses": 7,
+       "observed_win_percentage": 0.3636,
+       "expected_wins": 5.1148,
+       "actual_minus_expected_wins": -1.1148,
+       "mean_pregame_win_probability": 0.465,
+       "brier_win_probability": 0.2032
+      }
      }
     }
    },
@@ -1430,7 +2350,17 @@
       "games_rated": 91,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 3,
+       "observed_losses": 8,
+       "observed_win_percentage": 0.2727,
+       "expected_wins": 3.8142,
+       "actual_minus_expected_wins": -0.8142,
+       "mean_pregame_win_probability": 0.3467,
+       "brier_win_probability": 0.1784
+      }
      }
     }
    },
@@ -1445,7 +2375,17 @@
       "games_rated": 13,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 6,
+       "observed_losses": 6,
+       "observed_win_percentage": 0.5,
+       "expected_wins": 6.2369,
+       "actual_minus_expected_wins": -0.2369,
+       "mean_pregame_win_probability": 0.5197,
+       "brier_win_probability": 0.2291
+      }
      }
     }
    },
@@ -1460,7 +2400,17 @@
       "games_rated": 95,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 1,
+       "observed_losses": 10,
+       "observed_win_percentage": 0.0909,
+       "expected_wins": 3.7631,
+       "actual_minus_expected_wins": -2.7631,
+       "mean_pregame_win_probability": 0.3421,
+       "brier_win_probability": 0.13
+      }
      }
     }
    },
@@ -1475,7 +2425,17 @@
       "games_rated": 98,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 5,
+       "observed_losses": 7,
+       "observed_win_percentage": 0.4167,
+       "expected_wins": 5.1861,
+       "actual_minus_expected_wins": -0.1861,
+       "mean_pregame_win_probability": 0.4322,
+       "brier_win_probability": 0.2357
+      }
      }
     }
    },
@@ -1490,7 +2450,17 @@
       "games_rated": 95,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 4,
+       "observed_losses": 8,
+       "observed_win_percentage": 0.3333,
+       "expected_wins": 3.6507,
+       "actual_minus_expected_wins": 0.3493,
+       "mean_pregame_win_probability": 0.3042,
+       "brier_win_probability": 0.1536
+      }
      }
     }
    },
@@ -1505,7 +2475,17 @@
       "games_rated": 92,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 3,
+       "observed_losses": 9,
+       "observed_win_percentage": 0.25,
+       "expected_wins": 3.595,
+       "actual_minus_expected_wins": -0.595,
+       "mean_pregame_win_probability": 0.2996,
+       "brier_win_probability": 0.2166
+      }
      }
     }
    },
@@ -1520,7 +2500,17 @@
       "games_rated": 92,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 6,
+       "observed_losses": 6,
+       "observed_win_percentage": 0.5,
+       "expected_wins": 5.4857,
+       "actual_minus_expected_wins": 0.5143,
+       "mean_pregame_win_probability": 0.4571,
+       "brier_win_probability": 0.2165
+      }
      }
     }
    },
@@ -1535,7 +2525,17 @@
       "games_rated": 90,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 4,
+       "observed_losses": 8,
+       "observed_win_percentage": 0.3333,
+       "expected_wins": 3.2803,
+       "actual_minus_expected_wins": 0.7197,
+       "mean_pregame_win_probability": 0.2734,
+       "brier_win_probability": 0.1578
+      }
      }
     }
    },
@@ -1550,7 +2550,17 @@
       "games_rated": 97,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 3,
+       "observed_losses": 8,
+       "observed_win_percentage": 0.2727,
+       "expected_wins": 5.1816,
+       "actual_minus_expected_wins": -2.1816,
+       "mean_pregame_win_probability": 0.4711,
+       "brier_win_probability": 0.2317
+      }
      }
     }
    },
@@ -1565,7 +2575,17 @@
       "games_rated": 91,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 3,
+       "observed_losses": 8,
+       "observed_win_percentage": 0.2727,
+       "expected_wins": 3.3736,
+       "actual_minus_expected_wins": -0.3736,
+       "mean_pregame_win_probability": 0.3067,
+       "brier_win_probability": 0.1341
+      }
      }
     }
    },
@@ -1580,7 +2600,17 @@
       "games_rated": 96,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 3,
+       "observed_losses": 8,
+       "observed_win_percentage": 0.2727,
+       "expected_wins": 5.5239,
+       "actual_minus_expected_wins": -2.5239,
+       "mean_pregame_win_probability": 0.5022,
+       "brier_win_probability": 0.2041
+      }
      }
     }
    },
@@ -1595,7 +2625,17 @@
       "games_rated": 97,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 1,
+       "observed_losses": 10,
+       "observed_win_percentage": 0.0909,
+       "expected_wins": 3.352,
+       "actual_minus_expected_wins": -2.352,
+       "mean_pregame_win_probability": 0.3047,
+       "brier_win_probability": 0.1612
+      }
      }
     }
    },
@@ -1610,7 +2650,17 @@
       "games_rated": 97,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 3,
+       "observed_losses": 8,
+       "observed_win_percentage": 0.2727,
+       "expected_wins": 4.2498,
+       "actual_minus_expected_wins": -1.2498,
+       "mean_pregame_win_probability": 0.3863,
+       "brier_win_probability": 0.1613
+      }
      }
     }
    },
@@ -1625,7 +2675,17 @@
       "games_rated": 90,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 3,
+       "observed_losses": 9,
+       "observed_win_percentage": 0.25,
+       "expected_wins": 5.1566,
+       "actual_minus_expected_wins": -2.1566,
+       "mean_pregame_win_probability": 0.4297,
+       "brier_win_probability": 0.1855
+      }
      }
     }
    },
@@ -1640,7 +2700,17 @@
       "games_rated": 99,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 4,
+       "observed_losses": 8,
+       "observed_win_percentage": 0.3333,
+       "expected_wins": 5.9298,
+       "actual_minus_expected_wins": -1.9298,
+       "mean_pregame_win_probability": 0.4941,
+       "brier_win_probability": 0.2352
+      }
      }
     }
    },
@@ -1655,7 +2725,17 @@
       "games_rated": 92,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 4,
+       "observed_losses": 7,
+       "observed_win_percentage": 0.3636,
+       "expected_wins": 6.4963,
+       "actual_minus_expected_wins": -2.4963,
+       "mean_pregame_win_probability": 0.5906,
+       "brier_win_probability": 0.2223
+      }
      }
     }
    },
@@ -1670,7 +2750,17 @@
       "games_rated": 91,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 4,
+       "observed_losses": 7,
+       "observed_win_percentage": 0.3636,
+       "expected_wins": 3.8998,
+       "actual_minus_expected_wins": 0.1002,
+       "mean_pregame_win_probability": 0.3545,
+       "brier_win_probability": 0.1308
+      }
      }
     }
    },
@@ -1685,7 +2775,17 @@
       "games_rated": 94,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 6,
+       "observed_losses": 6,
+       "observed_win_percentage": 0.5,
+       "expected_wins": 5.0889,
+       "actual_minus_expected_wins": 0.9111,
+       "mean_pregame_win_probability": 0.4241,
+       "brier_win_probability": 0.3149
+      }
      }
     }
    },
@@ -1700,7 +2800,17 @@
       "games_rated": 90,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 3,
+       "observed_losses": 8,
+       "observed_win_percentage": 0.2727,
+       "expected_wins": 4.6169,
+       "actual_minus_expected_wins": -1.6169,
+       "mean_pregame_win_probability": 0.4197,
+       "brier_win_probability": 0.1911
+      }
      }
     }
    },
@@ -1715,7 +2825,17 @@
       "games_rated": 96,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 2,
+       "observed_losses": 9,
+       "observed_win_percentage": 0.1818,
+       "expected_wins": 3.6456,
+       "actual_minus_expected_wins": -1.6456,
+       "mean_pregame_win_probability": 0.3314,
+       "brier_win_probability": 0.2002
+      }
      }
     }
    },
@@ -1730,7 +2850,17 @@
       "games_rated": 91,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 4,
+       "observed_losses": 7,
+       "observed_win_percentage": 0.3636,
+       "expected_wins": 3.2917,
+       "actual_minus_expected_wins": 0.7083,
+       "mean_pregame_win_probability": 0.2992,
+       "brier_win_probability": 0.1665
+      }
      }
     }
    },
@@ -1745,7 +2875,17 @@
       "games_rated": 93,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 3,
+       "observed_losses": 8,
+       "observed_win_percentage": 0.2727,
+       "expected_wins": 3.3449,
+       "actual_minus_expected_wins": -0.3449,
+       "mean_pregame_win_probability": 0.3041,
+       "brier_win_probability": 0.1125
+      }
      }
     }
    },
@@ -1760,7 +2900,17 @@
       "games_rated": 93,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 2,
+       "observed_losses": 9,
+       "observed_win_percentage": 0.1818,
+       "expected_wins": 2.6654,
+       "actual_minus_expected_wins": -0.6654,
+       "mean_pregame_win_probability": 0.2423,
+       "brier_win_probability": 0.1558
+      }
      }
     }
    },
@@ -1775,7 +2925,17 @@
       "games_rated": 90,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 4,
+       "observed_losses": 7,
+       "observed_win_percentage": 0.3636,
+       "expected_wins": 4.5848,
+       "actual_minus_expected_wins": -0.5848,
+       "mean_pregame_win_probability": 0.4168,
+       "brier_win_probability": 0.2353
+      }
      }
     }
    },
@@ -1790,7 +2950,17 @@
       "games_rated": 91,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 3,
+       "observed_losses": 8,
+       "observed_win_percentage": 0.2727,
+       "expected_wins": 4.2421,
+       "actual_minus_expected_wins": -1.2421,
+       "mean_pregame_win_probability": 0.3856,
+       "brier_win_probability": 0.1815
+      }
      }
     }
    },
@@ -1805,7 +2975,17 @@
       "games_rated": 95,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 3,
+       "observed_losses": 8,
+       "observed_win_percentage": 0.2727,
+       "expected_wins": 3.2085,
+       "actual_minus_expected_wins": -0.2085,
+       "mean_pregame_win_probability": 0.2917,
+       "brier_win_probability": 0.1742
+      }
      }
     }
    },
@@ -1820,7 +3000,17 @@
       "games_rated": 92,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 4,
+       "observed_losses": 8,
+       "observed_win_percentage": 0.3333,
+       "expected_wins": 4.0401,
+       "actual_minus_expected_wins": -0.0401,
+       "mean_pregame_win_probability": 0.3367,
+       "brier_win_probability": 0.2209
+      }
      }
     }
    },
@@ -1835,7 +3025,17 @@
       "games_rated": 97,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 2,
+       "observed_losses": 9,
+       "observed_win_percentage": 0.1818,
+       "expected_wins": 4.8022,
+       "actual_minus_expected_wins": -2.8022,
+       "mean_pregame_win_probability": 0.4366,
+       "brier_win_probability": 0.2432
+      }
      }
     }
    },
@@ -1850,7 +3050,17 @@
       "games_rated": 91,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 1,
+       "observed_losses": 10,
+       "observed_win_percentage": 0.0909,
+       "expected_wins": 2.1454,
+       "actual_minus_expected_wins": -1.1454,
+       "mean_pregame_win_probability": 0.195,
+       "brier_win_probability": 0.0477
+      }
      }
     }
    },
@@ -1865,7 +3075,17 @@
       "games_rated": 89,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 4,
+       "observed_losses": 7,
+       "observed_win_percentage": 0.3636,
+       "expected_wins": 2.8283,
+       "actual_minus_expected_wins": 1.1717,
+       "mean_pregame_win_probability": 0.2571,
+       "brier_win_probability": 0.1726
+      }
      }
     }
    },
@@ -1880,7 +3100,17 @@
       "games_rated": 91,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 3,
+       "observed_losses": 8,
+       "observed_win_percentage": 0.2727,
+       "expected_wins": 5.6008,
+       "actual_minus_expected_wins": -2.6008,
+       "mean_pregame_win_probability": 0.5092,
+       "brier_win_probability": 0.2569
+      }
      }
     }
    },
@@ -1895,7 +3125,17 @@
       "games_rated": 94,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 2,
+       "observed_losses": 9,
+       "observed_win_percentage": 0.1818,
+       "expected_wins": 5.3613,
+       "actual_minus_expected_wins": -3.3613,
+       "mean_pregame_win_probability": 0.4874,
+       "brier_win_probability": 0.2107
+      }
      }
     }
    },
@@ -1910,7 +3150,17 @@
       "games_rated": 92,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 2,
+       "observed_losses": 9,
+       "observed_win_percentage": 0.1818,
+       "expected_wins": 5.1783,
+       "actual_minus_expected_wins": -3.1783,
+       "mean_pregame_win_probability": 0.4708,
+       "brier_win_probability": 0.2857
+      }
      }
     }
    },
@@ -1925,7 +3175,17 @@
       "games_rated": 87,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 3,
+       "observed_losses": 8,
+       "observed_win_percentage": 0.2727,
+       "expected_wins": 4.3828,
+       "actual_minus_expected_wins": -1.3828,
+       "mean_pregame_win_probability": 0.3984,
+       "brier_win_probability": 0.1737
+      }
      }
     }
    },
@@ -1940,7 +3200,17 @@
       "games_rated": 92,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 3,
+       "observed_losses": 8,
+       "observed_win_percentage": 0.2727,
+       "expected_wins": 2.9084,
+       "actual_minus_expected_wins": 0.0916,
+       "mean_pregame_win_probability": 0.2644,
+       "brier_win_probability": 0.2147
+      }
      }
     }
    },
@@ -1955,7 +3225,17 @@
       "games_rated": 94,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 3,
+       "observed_losses": 8,
+       "observed_win_percentage": 0.2727,
+       "expected_wins": 2.3995,
+       "actual_minus_expected_wins": 0.6005,
+       "mean_pregame_win_probability": 0.2181,
+       "brier_win_probability": 0.1651
+      }
      }
     }
    },
@@ -1970,7 +3250,17 @@
       "games_rated": 89,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 1,
+       "observed_losses": 10,
+       "observed_win_percentage": 0.0909,
+       "expected_wins": 3.8823,
+       "actual_minus_expected_wins": -2.8823,
+       "mean_pregame_win_probability": 0.3529,
+       "brier_win_probability": 0.1857
+      }
      }
     }
    },
@@ -1985,7 +3275,17 @@
       "games_rated": 91,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 3,
+       "observed_losses": 8,
+       "observed_win_percentage": 0.2727,
+       "expected_wins": 3.6855,
+       "actual_minus_expected_wins": -0.6855,
+       "mean_pregame_win_probability": 0.335,
+       "brier_win_probability": 0.1776
+      }
      }
     }
    },
@@ -2000,7 +3300,17 @@
       "games_rated": 92,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 1,
+       "observed_losses": 10,
+       "observed_win_percentage": 0.0909,
+       "expected_wins": 3.6573,
+       "actual_minus_expected_wins": -2.6573,
+       "mean_pregame_win_probability": 0.3325,
+       "brier_win_probability": 0.1836
+      }
      }
     }
    },
@@ -2015,7 +3325,17 @@
       "games_rated": 37,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 12,
+       "observed_wins": 2,
+       "observed_losses": 10,
+       "observed_win_percentage": 0.1667,
+       "expected_wins": 4.561,
+       "actual_minus_expected_wins": -2.561,
+       "mean_pregame_win_probability": 0.3801,
+       "brier_win_probability": 0.2445
+      }
      }
     }
    },
@@ -2030,7 +3350,17 @@
       "games_rated": 97,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 0,
+       "observed_losses": 11,
+       "observed_win_percentage": 0.0,
+       "expected_wins": 2.4509,
+       "actual_minus_expected_wins": -2.4509,
+       "mean_pregame_win_probability": 0.2228,
+       "brier_win_probability": 0.0854
+      }
      }
     }
    },
@@ -2045,7 +3375,17 @@
       "games_rated": 94,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 2,
+       "observed_losses": 9,
+       "observed_win_percentage": 0.1818,
+       "expected_wins": 3.5342,
+       "actual_minus_expected_wins": -1.5342,
+       "mean_pregame_win_probability": 0.3213,
+       "brier_win_probability": 0.1156
+      }
      }
     }
    },
@@ -2060,7 +3400,17 @@
       "games_rated": 92,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 1,
+       "observed_losses": 10,
+       "observed_win_percentage": 0.0909,
+       "expected_wins": 3.4419,
+       "actual_minus_expected_wins": -2.4419,
+       "mean_pregame_win_probability": 0.3129,
+       "brier_win_probability": 0.1402
+      }
      }
     }
    },
@@ -2075,7 +3425,17 @@
       "games_rated": 94,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 0,
+       "observed_losses": 11,
+       "observed_win_percentage": 0.0,
+       "expected_wins": 2.1125,
+       "actual_minus_expected_wins": -2.1125,
+       "mean_pregame_win_probability": 0.192,
+       "brier_win_probability": 0.051
+      }
      }
     }
    },
@@ -2090,7 +3450,17 @@
       "games_rated": 90,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 0,
+       "observed_losses": 11,
+       "observed_win_percentage": 0.0,
+       "expected_wins": 2.3888,
+       "actual_minus_expected_wins": -2.3888,
+       "mean_pregame_win_probability": 0.2172,
+       "brier_win_probability": 0.0743
+      }
      }
     }
    },
@@ -2105,7 +3475,17 @@
       "games_rated": 88,
       "expected_margin": null,
       "win_probability": null,
-      "predicted_total": null
+      "predicted_total": null,
+      "retrodictive_team_diagnostic": {
+       "games": 11,
+       "observed_wins": 0,
+       "observed_losses": 11,
+       "observed_win_percentage": 0.0,
+       "expected_wins": 2.3949,
+       "actual_minus_expected_wins": -2.3949,
+       "mean_pregame_win_probability": 0.2177,
+       "brier_win_probability": 0.071
+      }
      }
     }
    }

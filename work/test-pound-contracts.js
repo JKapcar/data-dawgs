@@ -217,6 +217,8 @@ test('CFB roadmap ideas carry evidence-backed lifecycle without inventing tools'
   assert.deepEqual(byId['cfb-ratings-registry'].candidate_mcp_tools, ['dd_get_cfb_rating_system', 'dd_rank_cfb_teams']);
   assert.equal(byId['cfb-elo'].lifecycle_status, 'live');
   assert.deepEqual(byId['cfb-elo'].candidate_mcp_tools, ['dd_get_cfb_model_card']);
+  assert.match(byId['cfb-elo'].delivery_note, /non-ranked/i);
+  assert.match(byId['cfb-elo'].delivery_note, /team diagnostics/i);
   assert.equal(byId['cfb-disagreement-lab'].lifecycle_status, 'evaluating');
   assert.ok(byId['cfb-disagreement-lab'].candidate_mcp_tools.includes('dd_get_cfb_model_disagreement'));
   assert.equal(byId['cfb-model-receipts'].lifecycle_status, 'building');
@@ -237,7 +239,9 @@ test('published CFB backbone artifacts are discoverable without overstating thei
   assert.match(machine['/data/cfb-market.json'].covers, /observation time is explicitly unknown/i);
   assert.match(machine['/data/cfb-market.json'].covers, /not closing lines/i);
   assert.match(machine['/data/cfb-elo.json'].covers, /ungraded as a prospective model/i);
+  assert.match(machine['/data/cfb-elo.json'].covers, /non-ranked expected-versus-observed team diagnostics/i);
   assert.match(machine['/data/cfb-ratings.json'].covers, /consensus is explicitly not built/i);
+  assert.match(machine['/data/cfb-ratings.json'].covers, /exact non-ranked team diagnostics/i);
   assert.match(machine['/data/cfb-model-receipts.json'].covers, /zero forecasts/i);
   assert.match(machine['/data/cfb-disagreement.json'].covers, /blocked/i);
   assert.match(machine['/data/cfb-games-latest.json'].covers, /one per FBS team/i);

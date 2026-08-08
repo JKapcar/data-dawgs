@@ -81,6 +81,7 @@ def elo_card(envelope: dict[str, Any], pound_tools: Path) -> dict[str, Any]:
     elo.validate_envelope(envelope)
     data = envelope["data"]
     backtest = data["backtest"]
+    team_diagnostics = data["team_diagnostics"]
     versus = backtest.get("versus_market")
     params = data["params"]
     return {
@@ -129,6 +130,16 @@ def elo_card(envelope: dict[str, Any], pound_tools: Path) -> dict[str, Any]:
         "performance": {
             "full_evaluation_set": backtest["elo_baseline"],
             "reference_points": backtest["reference_points"],
+            "team_diagnostics": {
+                "kind": team_diagnostics["kind"],
+                "evaluation_season": team_diagnostics["evaluation_season"],
+                "teams": len(team_diagnostics["teams"]),
+                "prospective": team_diagnostics["prospective"],
+                "graded": team_diagnostics["graded"],
+                "rankings_published": team_diagnostics["team_rankings_published"],
+                "interpretation": team_diagnostics["interpretation"],
+                "limitations": team_diagnostics["limitations"],
+            },
             "versus_market_same_games": None if versus is None else {
                 "n_games": versus["n_games"],
                 "market": versus["market_median_devig"],

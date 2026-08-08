@@ -30,6 +30,9 @@ class RatingsRegistryTests(unittest.TestCase):
         source_field = self.envelope["data"]["rating_period"]["source_field"]
         source = self.elo["data"][source_field]
         rows = self.envelope["data"]["teams"]
+        diagnostics = {
+            row["team_slug"]: row for row in self.elo["data"]["team_diagnostics"]["teams"]
+        }
         self.assertEqual(len(rows), len(source))
         for rank, (actual, expected) in enumerate(zip(rows, source), start=1):
             value = actual["systems"][registry.SYSTEM_ID]
@@ -37,6 +40,21 @@ class RatingsRegistryTests(unittest.TestCase):
             self.assertEqual(value["rank"], rank)
             self.assertEqual(value["team_strength"], expected["rating"])
             self.assertEqual(value["games_rated"], expected["games_rated"])
+            self.assertEqual(
+                value["retrodictive_team_diagnostic"],
+                {field: diagnostics[expected["team_slug"]][field] for field in registry.DIAGNOSTIC_FIELDS},
+            )
+
+    def test_team_diagnostics_are_available_but_not_ranked_or_graded(self):
+        contract = self.envelope["data"]["systems"][0]["team_diagnostics"]
+        self.assertTrue(contract["available"])
+        self.assertFalse(contract["prospective"])
+        self.assertFalse(contract["graded"])
+        self.assertFalse(contract["rankings_published"])
+        for row in self.envelope["data"]["teams"]:
+            diagnostic = row["systems"][registry.SYSTEM_ID]["retrodictive_team_diagnostic"]
+            self.assertNotIn("rank", diagnostic)
+            self.assertNotIn("label", diagnostic)
 
     def test_unsupported_outputs_are_null_not_invented(self):
         for row in self.envelope["data"]["teams"]:
@@ -74,6 +92,13 @@ class RatingsRegistryTests(unittest.TestCase):
     def test_rehashed_source_drift_is_still_rejected(self):
         broken = copy.deepcopy(self.envelope)
         broken["data"]["teams"][0]["systems"][registry.SYSTEM_ID]["team_strength"] += 1
+        broken["integrity"]["snapshot_id"] = registry.backbone.sha256_id(broken["data"])
+        with self.assertRaisesRegex(registry.ContractError, "drift"):
+            registry.validate_envelope(broken, self.elo)
+
+    def test_rehashed_diagnostic_drift_is_still_rejected(self):
+        broken = copy.deepcopy(self.envelope)
+        broken["data"]["teams"][0]["systems"][registry.SYSTEM_ID]["retrodictive_team_diagnostic"]["expected_wins"] += 1
         broken["integrity"]["snapshot_id"] = registry.backbone.sha256_id(broken["data"])
         with self.assertRaisesRegex(registry.ContractError, "drift"):
             registry.validate_envelope(broken, self.elo)

@@ -97,12 +97,19 @@ const cfbRatingsJson = {
         win_probability: { available: false, units: "probability" },
         predicted_total: { available: false, units: "points" },
       },
+      team_diagnostics: {
+        available: true, kind: "retrodictive-team-aggregate", source_field: "team_diagnostics.teams",
+        evaluation_season: 2025,
+        metrics: ["games", "observed_wins", "observed_losses", "observed_win_percentage", "expected_wins", "actual_minus_expected_wins", "mean_pregame_win_probability", "brier_win_probability"],
+        prospective: false, graded: false, rankings_published: false,
+        note: "Descriptive model residual, not luck, team quality, or a forecast.",
+      },
       prospective_forecasts_exist: false, graded: false,
     }],
     teams: [
-      { team_slug: "indiana", team: "Indiana", conference: "Big Ten", observed_results: { season: 2025, through_at: "2026-01-01T00:00:00Z", record: "16-0-0", games: 16, wins: 16, losses: 0, ties: 0, point_differential: 300 }, systems: { "dd-cfb-elo": { rank: 1, team_strength: 2054.8, games_rated: 96, expected_margin: null, win_probability: null, predicted_total: null } } },
-      { team_slug: "ohio-state", team: "Ohio State", conference: "Big Ten", observed_results: { season: 2025, through_at: "2026-01-01T00:30:00Z", record: "12-2-0", games: 14, wins: 12, losses: 2, ties: 0, point_differential: 338, win_percentage: 0.8571, point_differential_per_game: 24.143 }, systems: { "dd-cfb-elo": { rank: 2, team_strength: 1925.8, games_rated: 99, expected_margin: null, win_probability: null, predicted_total: null } } },
-      { team_slug: "akron", team: "Akron", conference: "Mid-American", observed_results: { season: 2025, through_at: "2025-11-29T00:00:00Z", record: "4-8-0", games: 12, wins: 4, losses: 8, ties: 0, point_differential: -100, win_percentage: 0.3333, point_differential_per_game: -8.333 }, systems: { "dd-cfb-elo": { rank: 133, team_strength: 1088.1, games_rated: 93, expected_margin: null, win_probability: null, predicted_total: null } } },
+      { team_slug: "indiana", team: "Indiana", conference: "Big Ten", observed_results: { season: 2025, through_at: "2026-01-01T00:00:00Z", record: "16-0-0", games: 16, wins: 16, losses: 0, ties: 0, point_differential: 300 }, systems: { "dd-cfb-elo": { rank: 1, team_strength: 2054.8, games_rated: 96, expected_margin: null, win_probability: null, predicted_total: null, retrodictive_team_diagnostic: { games: 15, observed_wins: 15, observed_losses: 0, observed_win_percentage: 1, expected_wins: 11.2, actual_minus_expected_wins: 3.8, mean_pregame_win_probability: 0.7467, brier_win_probability: 0.09 } } } },
+      { team_slug: "ohio-state", team: "Ohio State", conference: "Big Ten", observed_results: { season: 2025, through_at: "2026-01-01T00:30:00Z", record: "12-2-0", games: 14, wins: 12, losses: 2, ties: 0, point_differential: 338, win_percentage: 0.8571, point_differential_per_game: 24.143 }, systems: { "dd-cfb-elo": { rank: 2, team_strength: 1925.8, games_rated: 99, expected_margin: null, win_probability: null, predicted_total: null, retrodictive_team_diagnostic: { games: 13, observed_wins: 11, observed_losses: 2, observed_win_percentage: 0.8462, expected_wins: 10.1, actual_minus_expected_wins: 0.9, mean_pregame_win_probability: 0.7769, brier_win_probability: 0.12 } } } },
+      { team_slug: "akron", team: "Akron", conference: "Mid-American", observed_results: { season: 2025, through_at: "2025-11-29T00:00:00Z", record: "4-8-0", games: 12, wins: 4, losses: 8, ties: 0, point_differential: -100, win_percentage: 0.3333, point_differential_per_game: -8.333 }, systems: { "dd-cfb-elo": { rank: 133, team_strength: 1088.1, games_rated: 93, expected_margin: null, win_probability: null, predicted_total: null, retrodictive_team_diagnostic: { games: 11, observed_wins: 3, observed_losses: 8, observed_win_percentage: 0.2727, expected_wins: 2.5, actual_minus_expected_wins: 0.5, mean_pregame_win_probability: 0.2273, brier_win_probability: 0.19 } } } },
     ],
     consensus: { status: "not-built", system_count: 1, weights: null, reason: "One independent rating cannot form a consensus." },
   },
@@ -1041,13 +1048,20 @@ function refNcdf(z) {
      "CFB team profile returns the registered rating and preserves unsupported null outputs");
   ok(d.observed_results.record === "12-2-0" && d.observed_results.point_differential === 338,
      "CFB team profile keeps observed season results separate from the modelled rating");
-  ok(d.observed_results_are_facts === true && d.modelled_fields.length === 1 && d.modelled_fields[0] === "systems",
+  ok(d.observed_results_are_facts === true && d.modelled_fields.includes("systems") &&
+     d.modelled_fields.includes("systems[].rating.retrodictive_team_diagnostic"),
      "CFB team profile labels which object is observed and which is modelled");
+  ok(elo.team_diagnostics.rankings_published === false && elo.rating.retrodictive_team_diagnostic.games === 13 &&
+     elo.rating.retrodictive_team_diagnostic.actual_minus_expected_wins === 0.9 &&
+     !("rank" in elo.rating.retrodictive_team_diagnostic),
+     "CFB team profile carries the non-ranked retrodictive team diagnostic");
   ok(d.as_of === "2026-08-08" && d.integrity.snapshot_id === "sha256:test-cfb-ratings" && d.read_only && d.stored === false,
      "CFB team profile preserves registry provenance and non-persistence");
   ok(d.modelled && d.retrodictive && d.prospective === false && d.graded === false && d.consensus.status === "not-built" &&
      d.warnings.some(x => /one rating is not a consensus/i.test(x)) && d.warnings.some(x => /not represent a current-season forecast/i.test(x)),
      "CFB team profile states the retrodictive, ungraded and no-consensus limits");
+  ok(d.warnings.some(x => /not luck, team-quality labels, forecasts, grades or rankings/i.test(x)),
+     "CFB team profile refuses to turn the diagnostic into a luck or quality label");
 }
 {
   const slug = text(await (await req(call("dd_cfb_team_profile", { team: "ohio-state" }))).json());
@@ -1074,7 +1088,8 @@ function refNcdf(z) {
      d.teams.team_a.observed_results.record === "12-2-0" && d.teams.team_b.observed_results.record === "4-8-0",
      "CFB comparison keeps observed records separate from modelled system deltas");
   ok(d.read_only && d.stored === false && d.prospective === false && d.graded === false &&
-     d.warnings.some(x => /not a head-to-head game projection/i.test(x)) && d.warnings.some(x => /not opponent-adjusted/i.test(x)),
+     d.warnings.some(x => /not a head-to-head game projection/i.test(x)) && d.warnings.some(x => /not opponent-adjusted/i.test(x)) &&
+     d.warnings.some(x => /not luck, team-quality labels, forecasts, grades or rankings/i.test(x)),
      "CFB comparison refuses forecast, edge and schedule-adjustment claims");
 }
 {

@@ -7,10 +7,10 @@
  "provenance": {
   "generator": "scripts/cfb_model_cards.py",
   "governance_principle": "cfb-gov-model-cards",
-  "captured_at": "2026-08-08T08:13:32.689750Z"
+  "captured_at": "2026-08-08T14:18:41.972617Z"
  },
  "integrity": {
-  "snapshot_id": "sha256:2f1cea2210fdaee317b476a6930ade549343e08b598bf7bcf10b74fb9f45361a",
+  "snapshot_id": "sha256:390ef5ac8785ac205d9da859c31f0706064f04a98868be412f943f4eed31cf96",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for the data object (sorted object keys, no insignificant whitespace).",
   "cards": 1
  },
@@ -89,6 +89,20 @@
       "climatological_brier": 0.2409,
       "espn_pregame_elo_favorite_accuracy": 0.7054,
       "espn_note": "Favorite accuracy only, computed from the pregame Elo columns in the raw snapshot over the games where both are present and unequal (808 games). No probability comparison: converting someone else's Elo to a probability requires assumptions they did not publish."
+     },
+     "team_diagnostics": {
+      "kind": "retrodictive-team-aggregate",
+      "evaluation_season": 2025,
+      "teams": 136,
+      "prospective": false,
+      "graded": false,
+      "rankings_published": false,
+      "interpretation": "Expected wins sum the fixed pregame Elo win probabilities from the 2025 walk-forward backtest. Actual-minus-expected is descriptive model residual, not luck, team quality, or a forecast.",
+      "limitations": [
+       "The season was complete before this retrodictive backtest was run; no row is a prospective receipt.",
+       "Team samples are small and schedules differ, so team-level Brier values are diagnostics, not comparable grades or ranks.",
+       "Only FBS-vs-FBS finals are included; games against non-FBS opponents are excluded from evaluation."
+      ]
      },
      "versus_market_same_games": {
       "n_games": 783,
@@ -198,7 +212,7 @@
      "canonical_schedule": "/data/cfb-schedule.json",
      "market_reference": "/data/cfb-market.json",
      "model_output": "/data/cfb-elo.json",
-     "model_snapshot_id": "sha256:414e0f27fba170d172db03a1a07fcca1bf83af09848de356ae3bd6fa83894237",
+     "model_snapshot_id": "sha256:00e2affd64f0853333db4a413dc5c99fbd123a1dc7e333d7476c16e4d666183d",
      "market_snapshot_id": "sha256:64279de12a3349772c9983976bbb83536402790050fb96386857dfc92dfcb898"
     },
     "receipts": {

@@ -75,6 +75,17 @@ class ContractTests(unittest.TestCase):
         for card in self.envelope["data"]["cards"]:
             self.assertFalse(card["receipts"]["prospective_receipts_exist"])
 
+    def test_team_diagnostic_summary_is_generated_and_non_ranked(self):
+        elo_envelope = cards.backbone.read_json(ROOT / "data" / "cfb-elo.json")
+        card = self.envelope["data"]["cards"][0]
+        diagnostic = card["performance"]["team_diagnostics"]
+        source = elo_envelope["data"]["team_diagnostics"]
+        self.assertEqual(diagnostic["kind"], source["kind"])
+        self.assertEqual(diagnostic["teams"], len(source["teams"]))
+        self.assertFalse(diagnostic["prospective"])
+        self.assertFalse(diagnostic["graded"])
+        self.assertFalse(diagnostic["rankings_published"])
+
     def test_snapshot_tamper_is_detected(self):
         broken = copy.deepcopy(self.envelope)
         broken["data"]["cards"][0]["model_version"] = "9.9.9"

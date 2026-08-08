@@ -88,6 +88,25 @@ class EloMathTests(unittest.TestCase):
         self.assertIsNone(model.process_game(game))
         self.assertEqual(model.ratings, {})
 
+    def test_team_diagnostics_aggregate_two_perspectives_without_ranking(self):
+        model = elo.EloModel()
+        model.team_names = {"alpha": "Alpha", "beta": "Beta"}
+        model.team_conferences = {"alpha": "Test", "beta": "Test"}
+        rows = [
+            {"home_team_slug": "alpha", "away_team_slug": "beta", "p_home": 0.75, "home_won": 1},
+            {"home_team_slug": "beta", "away_team_slug": "alpha", "p_home": 0.40, "home_won": 0},
+        ]
+        diagnostics = elo.build_team_diagnostics(rows, model)
+        by_slug = {row["team_slug"]: row for row in diagnostics["teams"]}
+        self.assertEqual(by_slug["alpha"]["games"], 2)
+        self.assertEqual(by_slug["alpha"]["observed_wins"], 2)
+        self.assertEqual(by_slug["alpha"]["expected_wins"], 1.35)
+        self.assertEqual(by_slug["alpha"]["actual_minus_expected_wins"], 0.65)
+        self.assertFalse(diagnostics["prospective"])
+        self.assertFalse(diagnostics["graded"])
+        self.assertFalse(diagnostics["team_rankings_published"])
+        self.assertNotIn("rank", by_slug["alpha"])
+
 
 class PublishedFileTests(unittest.TestCase):
     def setUp(self):
@@ -133,6 +152,26 @@ class PublishedFileTests(unittest.TestCase):
         self.assertNotIn("_eval_rows", serialized)
         self.assertNotIn("home_team_slug", serialized)
         self.assertNotIn("away_team_slug", serialized)
+
+    def test_team_diagnostics_reconcile_without_publishing_labels(self):
+        diagnostics = self.envelope["data"]["team_diagnostics"]
+        rows = diagnostics["teams"]
+        backtest = self.envelope["data"]["backtest"]
+        ratings = self.envelope["data"]["ratings_as_of_end_of_2025"]
+        self.assertEqual(diagnostics["kind"], "retrodictive-team-aggregate")
+        self.assertFalse(diagnostics["prospective"])
+        self.assertFalse(diagnostics["graded"])
+        self.assertFalse(diagnostics["team_rankings_published"])
+        self.assertEqual({row["team_slug"] for row in rows}, {row["team_slug"] for row in ratings})
+        self.assertEqual(sum(row["games"] for row in rows), 2 * backtest["n_games"])
+        self.assertAlmostEqual(sum(row["expected_wins"] for row in rows), backtest["n_games"], delta=0.05)
+        weighted_brier = sum(row["games"] * row["brier_win_probability"] for row in rows) / sum(
+            row["games"] for row in rows
+        )
+        self.assertAlmostEqual(weighted_brier, backtest["elo_baseline"]["brier_home_win"], places=4)
+        serialized = json.dumps(diagnostics, sort_keys=True).lower()
+        for forbidden in ('"rank"', '"luck"', 'overrated', 'underrated'):
+            self.assertNotIn(forbidden, serialized)
 
 
 if __name__ == "__main__":

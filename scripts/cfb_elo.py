@@ -168,6 +168,62 @@ def calibration_bins(rows: list[dict[str, Any]], key: str) -> list[dict[str, Any
     return bins
 
 
+def build_team_diagnostics(eval_rows: list[dict[str, Any]], model: EloModel) -> dict[str, Any]:
+    """Aggregate private pregame evaluation rows without publishing game-level joins."""
+    aggregates: dict[str, dict[str, Any]] = {}
+    for row in eval_rows:
+        perspectives = (
+            (row["home_team_slug"], row["p_home"], 1 if row["home_won"] else 0),
+            (row["away_team_slug"], 1.0 - row["p_home"], 0 if row["home_won"] else 1),
+        )
+        for slug, probability, won in perspectives:
+            aggregate = aggregates.setdefault(slug, {
+                "games": 0, "wins": 0, "expected_wins": 0.0, "brier_sum": 0.0,
+            })
+            aggregate["games"] += 1
+            aggregate["wins"] += won
+            aggregate["expected_wins"] += probability
+            aggregate["brier_sum"] += (probability - won) ** 2
+
+    teams = []
+    for slug in sorted(aggregates):
+        aggregate = aggregates[slug]
+        games = aggregate["games"]
+        wins = aggregate["wins"]
+        expected_wins = aggregate["expected_wins"]
+        teams.append({
+            "team_slug": slug,
+            "team": model.team_names[slug],
+            "conference": model.team_conferences[slug],
+            "games": games,
+            "observed_wins": wins,
+            "observed_losses": games - wins,
+            "observed_win_percentage": round(wins / games, 4),
+            "expected_wins": round(expected_wins, 4),
+            "actual_minus_expected_wins": round(wins - expected_wins, 4),
+            "mean_pregame_win_probability": round(expected_wins / games, 4),
+            "brier_win_probability": round(aggregate["brier_sum"] / games, 4),
+        })
+    return {
+        "kind": "retrodictive-team-aggregate",
+        "evaluation_season": PARAMS["evaluation_season"],
+        "evaluation_set": "FBS-vs-FBS final games; two team perspectives per game",
+        "prospective": False,
+        "graded": False,
+        "team_rankings_published": False,
+        "interpretation": (
+            "Expected wins sum the fixed pregame Elo win probabilities from the 2025 walk-forward backtest. "
+            "Actual-minus-expected is descriptive model residual, not luck, team quality, or a forecast."
+        ),
+        "limitations": [
+            "The season was complete before this retrodictive backtest was run; no row is a prospective receipt.",
+            "Team samples are small and schedules differ, so team-level Brier values are diagnostics, not comparable grades or ranks.",
+            "Only FBS-vs-FBS finals are included; games against non-FBS opponents are excluded from evaluation.",
+        ],
+        "teams": teams,
+    }
+
+
 def run_backtest(market_path: Path | None = None) -> dict[str, Any]:
     model = EloModel()
     season_provenance: list[dict[str, str]] = []
@@ -255,6 +311,7 @@ def run_backtest(market_path: Path | None = None) -> dict[str, Any]:
     return {
         "_eval_rows": eval_rows,  # in-process only; never published
         "season_provenance": season_provenance,
+        "team_diagnostics": build_team_diagnostics(eval_rows, model),
         "ratings": sorted(
             (
                 {
@@ -306,6 +363,7 @@ def make_envelope(result: dict[str, Any], repo_head: str, captured_at: str) -> d
         "seasons_ingested": result["season_provenance"],
         "ratings_as_of_end_of_2025": result["ratings"],
         "backtest": result["backtest"],
+        "team_diagnostics": result["team_diagnostics"],
     }
     return {
         "as_of": captured_at[:10],
@@ -336,6 +394,7 @@ def make_envelope(result: dict[str, Any], repo_head: str, captured_at: str) -> d
                 "(sorted object keys, no insignificant whitespace)."
             ),
             "rated_teams": len(result["ratings"]),
+            "diagnostic_teams": len(result["team_diagnostics"]["teams"]),
         },
         "data": payload,
         "tier_meaning": backbone.TIER_MEANING,
@@ -371,6 +430,61 @@ def validate_envelope(envelope: dict[str, Any]) -> None:
         value = backtest.get("elo_baseline", {}).get(field)
         if not isinstance(value, (int, float)) or not 0 <= value <= 1:
             raise ContractError(f"backtest {field} out of range")
+    diagnostics = data.get("team_diagnostics")
+    diagnostic_rows = diagnostics.get("teams") if isinstance(diagnostics, dict) else None
+    if not isinstance(diagnostics, dict) or diagnostics.get("kind") != "retrodictive-team-aggregate" or \
+       diagnostics.get("prospective") is not False or diagnostics.get("graded") is not False or \
+       diagnostics.get("team_rankings_published") is not False or not isinstance(diagnostic_rows, list):
+        raise ContractError("team diagnostics must be a non-ranked retrodictive aggregate")
+    rating_by_slug = {row["team_slug"]: row for row in ratings}
+    rating_slugs = set(rating_by_slug)
+    diagnostic_slugs = {row.get("team_slug") for row in diagnostic_rows}
+    if diagnostic_slugs != rating_slugs or len(diagnostic_slugs) != len(diagnostic_rows):
+        raise ContractError("team diagnostic identities must exactly match the rated teams")
+    perspective_games = 0
+    expected_wins = 0.0
+    weighted_brier = 0.0
+    expected_fields = {
+        "team_slug", "team", "conference", "games", "observed_wins", "observed_losses",
+        "observed_win_percentage", "expected_wins", "actual_minus_expected_wins",
+        "mean_pregame_win_probability", "brier_win_probability",
+    }
+    for row in diagnostic_rows:
+        slug = row.get("team_slug")
+        if set(row) != expected_fields:
+            raise ContractError(f"team diagnostic fields drifted for {slug}")
+        source = rating_by_slug.get(slug, {})
+        if row.get("team") != source.get("team") or row.get("conference") != source.get("conference"):
+            raise ContractError(f"team diagnostic identity drifted for {slug}")
+        games = row.get("games")
+        wins = row.get("observed_wins")
+        losses = row.get("observed_losses")
+        if not isinstance(games, int) or games < 1 or not isinstance(wins, int) or not isinstance(losses, int) or \
+           wins + losses != games:
+            raise ContractError(f"invalid team diagnostic record for {row.get('team_slug')}")
+        for field in ("observed_win_percentage", "mean_pregame_win_probability", "brier_win_probability"):
+            value = row.get(field)
+            if not isinstance(value, (int, float)) or not 0 <= value <= 1:
+                raise ContractError(f"team diagnostic {field} out of range for {row.get('team_slug')}")
+        if not isinstance(row.get("expected_wins"), (int, float)) or not 0 <= row["expected_wins"] <= games:
+            raise ContractError(f"team diagnostic expected_wins out of range for {slug}")
+        if abs(row.get("actual_minus_expected_wins", math.inf) - (wins - row["expected_wins"])) > 0.0002:
+            raise ContractError(f"team diagnostic residual does not reconcile for {slug}")
+        if abs(row["observed_win_percentage"] - wins / games) > 0.0001:
+            raise ContractError(f"team diagnostic win percentage does not reconcile for {slug}")
+        if abs(row["mean_pregame_win_probability"] - row["expected_wins"] / games) > 0.0001:
+            raise ContractError(f"team diagnostic mean probability does not reconcile for {slug}")
+        perspective_games += games
+        expected_wins += row["expected_wins"]
+        weighted_brier += games * row["brier_win_probability"]
+    if perspective_games != 2 * backtest.get("n_games", -1):
+        raise ContractError("team diagnostic game perspectives do not reconcile with the backtest")
+    if abs(expected_wins - backtest.get("n_games", -1)) > 0.05:
+        raise ContractError("team diagnostic expected wins do not conserve one win per game")
+    if abs(weighted_brier / perspective_games - backtest["elo_baseline"]["brier_home_win"]) > 0.0001:
+        raise ContractError("team diagnostic Brier values do not reconcile with the backtest")
+    if envelope.get("integrity", {}).get("diagnostic_teams") != len(diagnostic_rows):
+        raise ContractError("team diagnostic integrity count disagrees")
     if data.get("params") != PARAMS:
         raise ContractError("published params differ from the pinned params in scripts/cfb_elo.py")
 

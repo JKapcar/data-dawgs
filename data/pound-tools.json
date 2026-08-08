@@ -1782,7 +1782,7 @@
     {
      "status": "live",
      "on": "2026-08-08",
-     "note": "Published ratings, calibration bins, market comparison and generated model card."
+     "note": "Published ratings, calibration bins, market comparison, non-ranked retrodictive team diagnostics and generated model card."
     }
    ],
    "implemented": true,
@@ -1794,7 +1794,7 @@
     "/work/mcp-block.js",
     "/work/test-mcp.mjs"
    ],
-   "delivery_note": "The baseline is live and reproducible with a staged generated model-card reader, but remains retrodictive and ungraded; no prospective 2026 claim is made.",
+   "delivery_note": "The baseline is live and reproducible with a staged generated model-card reader plus compact expected-versus-observed team diagnostics. Diagnostics are explicitly non-ranked, retrodictive and ungraded; no luck label or prospective 2026 claim is made.",
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 2,

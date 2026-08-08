@@ -258,6 +258,8 @@ console.log('\nCFB ratings registry — normalized evidence without invented con
   const inputSnapshot = elo.integrity && elo.integrity.snapshot_id;
   const systems = registry.data && registry.data.systems;
   const teams = registry.data && registry.data.teams;
+  const diagnostics = elo.data && elo.data.team_diagnostics;
+  const diagnosticRows = diagnostics && diagnostics.teams;
   if (!Array.isArray(systems) || systems.length !== 1 || systems[0].system_id !== 'dd-cfb-elo')
     fail('cfb-ratings.json: first registry version must contain exactly the shipped Elo system');
   else if (systems[0].source_snapshot_id !== inputSnapshot || registry.provenance.input_snapshot_id !== inputSnapshot)
@@ -267,16 +269,45 @@ console.log('\nCFB ratings registry — normalized evidence without invented con
            systems[0].matchup_probability.neutral_site_home_field_elo !== 0 ||
            systems[0].outputs.win_probability.available !== false)
     fail('cfb-ratings.json: matchup transform is absent, drifted or misrepresented as a team-level output');
+  else if (!systems[0].team_diagnostics || systems[0].team_diagnostics.available !== true ||
+           systems[0].team_diagnostics.kind !== 'retrodictive-team-aggregate' ||
+           systems[0].team_diagnostics.prospective !== false || systems[0].team_diagnostics.graded !== false ||
+           systems[0].team_diagnostics.rankings_published !== false)
+    fail('cfb-ratings.json: team diagnostics are absent, ranked, graded or prospective');
   else ok('registry locks the current Elo source snapshot');
   const sourceRows = elo.data && elo.data.ratings_as_of_end_of_2025;
+  if (!diagnostics || diagnostics.kind !== 'retrodictive-team-aggregate' ||
+      diagnostics.prospective !== false || diagnostics.graded !== false ||
+      diagnostics.team_rankings_published !== false || !Array.isArray(diagnosticRows) ||
+      !Array.isArray(sourceRows) || diagnosticRows.length !== sourceRows.length)
+    fail('cfb-elo.json: team diagnostics are missing, mislabelled or incomplete');
+  else {
+    const ratedSlugs = new Set(sourceRows.map(row => row.team_slug));
+    const diagnosticSlugs = new Set(diagnosticRows.map(row => row.team_slug));
+    const perspectives = diagnosticRows.reduce((sum, row) => sum + row.games, 0);
+    const expectedWins = diagnosticRows.reduce((sum, row) => sum + row.expected_wins, 0);
+    const forbidden = /"(?:rank|label|luck)"|overrated|underrated/i.test(JSON.stringify(diagnostics));
+    if (diagnosticSlugs.size !== diagnosticRows.length || diagnosticSlugs.size !== ratedSlugs.size ||
+        [...ratedSlugs].some(slug => !diagnosticSlugs.has(slug)) ||
+        perspectives !== 2 * elo.data.backtest.n_games ||
+        Math.abs(expectedWins - elo.data.backtest.n_games) > 0.05 || forbidden)
+      fail('cfb-elo.json: team diagnostics fail identity, conservation or no-label gates');
+    else ok(`${diagnosticRows.length} retrodictive team diagnostics reconcile without ranks or labels`);
+  }
+  const diagnosticsBySlug = new Map((diagnosticRows || []).map(row => [row.team_slug, row]));
   if (!Array.isArray(teams) || !Array.isArray(sourceRows) || teams.length !== sourceRows.length)
     fail('cfb-ratings.json: registry team count differs from Elo');
   else if (teams.some((row, i) => {
     const source = sourceRows[i];
+    const diagnostic = diagnosticsBySlug.get(row.team_slug);
     const value = row.systems && row.systems['dd-cfb-elo'];
     return !value || row.team_slug !== source.team_slug || value.rank !== i + 1 ||
       value.team_strength !== source.rating || value.games_rated !== source.games_rated ||
-      value.expected_margin !== null || value.win_probability !== null || value.predicted_total !== null;
+      value.expected_margin !== null || value.win_probability !== null || value.predicted_total !== null ||
+      !diagnostic || !value.retrodictive_team_diagnostic ||
+      ['games', 'observed_wins', 'observed_losses', 'observed_win_percentage', 'expected_wins',
+       'actual_minus_expected_wins', 'mean_pregame_win_probability', 'brier_win_probability']
+        .some(field => value.retrodictive_team_diagnostic[field] !== diagnostic[field]);
   })) fail('cfb-ratings.json: a normalized row drifts from Elo or invents an unavailable output');
   else ok(`all ${teams.length} registry rows reproduce Elo and leave unsupported outputs null`);
   const consensus = registry.data && registry.data.consensus;
@@ -458,10 +489,14 @@ console.log('\nCFB compact team profiles — facts and modelled rating stay sepa
   else if (new Set(teams.map(row => row.team_slug)).size !== teams.length || teams.some(row => {
     const observed = row.observed_results;
     const rating = row.systems && row.systems['dd-cfb-elo'];
+    const diagnostic = rating && rating.retrodictive_team_diagnostic;
     return row.division !== 'fbs' || !observed || !rating ||
       observed.games !== observed.wins + observed.losses + observed.ties ||
       observed.point_differential !== observed.points_for - observed.points_against ||
-      rating.win_probability !== null || rating.expected_margin !== null || rating.predicted_total !== null;
+      rating.win_probability !== null || rating.expected_margin !== null || rating.predicted_total !== null ||
+      !diagnostic || !Number.isInteger(diagnostic.games) || diagnostic.games < 1 ||
+      diagnostic.observed_wins + diagnostic.observed_losses !== diagnostic.games ||
+      Object.keys(diagnostic).some(key => /rank|label|luck/i.test(key));
   })) fail('cfb-teams.json: a profile merges, invents or misstates observed/modelled fields');
   // Python canonical JSON retains integral float spelling in the nested Elo rows;
   // JSON.parse does not. The Python contract reproduces the hash byte-for-byte.
