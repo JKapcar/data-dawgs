@@ -227,7 +227,7 @@ BODY = r"""  <div class="lab-hd"><span class="lab-chip">Labs</span></div>
     committee ranking, or a claim about who is better now. <b>Exp W</b> sums that team&rsquo;s pregame
     Elo win probabilities across the 2025 walk-forward backtest, so <b>Obs &minus; Exp</b> is model
     residual &mdash; not luck, not team quality, and not a forecast.</p>
-    <div class="cfbmore"><button class="btn ghost sm" id="cfbTblMore" type="button"></button></div>
+    <div class="cfbmore"><button class="btn ghost sm" id="cfbTblMore" type="button" hidden></button></div>
     <p class="cfbsrc" id="cfbTblSrc"></p>
   </div>
 
@@ -283,7 +283,7 @@ BODY = r"""  <div class="lab-hd"><span class="lab-chip">Labs</span></div>
         <tbody id="cfbDivBody"><tr><td colspan="8" style="color:var(--ink-3)">Loading&hellip;</td></tr></tbody>
       </table>
     </div>
-    <div class="cfbmore"><button class="btn ghost sm" id="cfbDivMore" type="button"></button></div>
+    <div class="cfbmore"><button class="btn ghost sm" id="cfbDivMore" type="button" hidden></button></div>
     <p class="cfbcap" id="cfbDivCap"></p>
     <p class="cfbsrc" id="cfbDivSrc"></p>
   </div>
@@ -730,12 +730,31 @@ PAGE_JS = r"""<script>
           + esc(e.message) + "</td></tr>";
       });
   }
+  /* ⚠️ IntersectionObserver DOES NOT DELIVER RECORDS WHILE THE DOCUMENT IS HIDDEN.
+     A background tab never runs the rendering steps the spec computes intersections
+     in, so a page opened in a background tab sat on "Loading…" forever. Found by
+     verifying the live page from an automation tab, which is always hidden — the
+     local suite never caught it because a Playwright page is visible.
+     So the observer is the FAST path, not the only path. A rect check on scroll,
+     resize and visibilitychange covers everything it misses, and loadLazy latches,
+     so nothing can double-fetch. */
+  function nearView(){
+    var el = $("baseline");
+    if(!el) return false;
+    var r = el.getBoundingClientRect(), vh = window.innerHeight || 800;
+    return r.top < vh + 400 && r.bottom > -400;
+  }
+  function maybeLazy(){ if(nearView()) loadLazy(); }
   if("IntersectionObserver" in window){
     var io = new IntersectionObserver(function(es){
       es.forEach(function(en){ if(en.isIntersecting){ loadLazy(); io.disconnect(); } });
     }, {rootMargin:"400px"});
     io.observe($("baseline"));
-  } else { loadLazy(); }
+  }
+  window.addEventListener("scroll", maybeLazy, {passive:true});
+  window.addEventListener("resize", maybeLazy, {passive:true});
+  document.addEventListener("visibilitychange", maybeLazy);
+  maybeLazy();
 
   function drawElo(env){
     var d = env.data || {}, bt = d.backtest || {}, base = bt.elo_baseline || {}, ref = bt.reference_points || {};

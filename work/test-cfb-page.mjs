@@ -238,6 +238,56 @@ for (const W of [320, 390]) {
   await ctx.close();
 }
 
+/* ------------------------------------------ lazy load without an observer ---- */
+{
+  /* ⚠️ THE BUG THIS DEFENDS. IntersectionObserver delivers nothing while the document
+     is hidden, because a background tab never runs the rendering steps intersections
+     are computed in. The first live cfb.html sat on "Loading…" forever in any tab that
+     was not in the foreground. A Playwright page is always visible, so the only way to
+     test the fallback here is to take the observer away entirely — which is also the
+     honest test, since the fallback is what has to work when the observer is silent. */
+  const ctx = await b.newContext({ viewport: { width: 1280, height: 900 } });
+  const p = await ctx.newPage();
+  p.on("pageerror", e => errs.push("nolazy: " + e.message));
+  await p.addInitScript(() => { delete window.IntersectionObserver; });
+  await p.goto("http://127.0.0.1:8919/cfb.html", { waitUntil: "load" });
+  await p.waitForFunction(() => document.querySelectorAll("#cfbTblBody tr").length > 10, null, { timeout: 15000 });
+  const before = await p.evaluate(() => ({
+    io: "IntersectionObserver" in window,
+    div: document.querySelectorAll("#cfbDivBody tr")[0].textContent
+  }));
+  ok("the observer really is gone for this run", before.io === false);
+  ok("…and nothing has lazily loaded yet", /Loading/.test(before.div), before.div);
+  await p.evaluate(() => document.getElementById("divergence").scrollIntoView());
+  // a timeout here IS the failure, so catch it and report it as one rather than crashing the run
+  await p.waitForFunction(() => document.querySelectorAll("#cfbDivBody tr").length > 10, null, { timeout: 8000 })
+    .catch(() => {});
+  const after = await p.evaluate(() => ({
+    div: document.querySelectorAll("#cfbDivBody tr").length,
+    kpis: document.querySelectorAll("#cfbEloKpis .cfbkpi").length
+  }));
+  ok("scrolling loads the divergence table with no observer", after.div > 10, String(after.div));
+  ok("…and the backtest strip too", after.kpis >= 3, String(after.kpis));
+  await ctx.close();
+}
+
+/* --------------------------------------- no empty controls before data lands ---- */
+{
+  const ctx = await b.newContext({ viewport: { width: 1280, height: 900 } });
+  const p = await ctx.newPage();
+  p.on("pageerror", e => errs.push("empty: " + e.message));
+  await p.route("**/data/cfb-teams.json", route => new Promise(() => {}));   // never resolves
+  await p.goto("http://127.0.0.1:8919/cfb.html", { waitUntil: "domcontentloaded" });
+  await p.waitForTimeout(1200);
+  const r = await p.evaluate(() => ["cfbTblMore", "cfbDivMore"].map(id => {
+    const e = document.getElementById(id);
+    return { hidden: e.hidden, text: e.textContent, w: e.getBoundingClientRect().width };
+  }));
+  ok("the expand buttons are hidden until they have something to say",
+    r.every(x => x.hidden === true && x.w === 0), JSON.stringify(r));
+  await ctx.close();
+}
+
 /* ------------------------------------------------------- fail closed ---- */
 {
   const ctx = await b.newContext({ viewport: { width: 1280, height: 900 } });
