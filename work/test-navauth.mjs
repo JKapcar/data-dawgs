@@ -85,48 +85,40 @@ ok("it sits between the logo and the menu, which is the gap Kap circled",
   }));
 ok("the chip says Sign in", (await page.locator("#ddAuthBtn").innerText()).trim() === "Sign in");
 ok("nothing was fetched to work that out", rosterHits === 0);
-ok("the modal is not built until it is needed", await page.locator("#ddAuthModal").count() === 0);
+ok("the dormant modal is never built", await page.locator("#ddAuthModal").count() === 0);
 
-console.log("\nthe dialog");
+console.log("\nthe chip ROUTES to the sign-on page (8/7: one page owns identity)");
+await page.click("#ddAuthBtn");
+await page.waitForURL("**/signon.html?next=index.html", { timeout: 4000 });
+ok("clicking navigates to signon.html carrying ?next=index.html", true);
+ok("no modal opened anywhere along the way", await page.locator("#ddAuthModal").count() === 0);
+ok("still no roster fetch from the chip itself — signon fetched it for ITS card, or not, but the chip cost nothing extra",
+  rosterHits <= 1, "hits " + rosterHits);
+await go("bozo.html");
+await page.click("#ddAuthBtn");
+await page.waitForURL("**/signon.html?next=bozo.html", { timeout: 4000 });
+ok("from bozo.html the chip routes with ?next=bozo.html", true);
+await go("connect.html");
+await page.click("#ddAuthBtn");
+await page.waitForURL("**/signon.html?next=connect.html", { timeout: 4000 });
+ok("from connect.html the chip routes with ?next=connect.html", true);
+/* on signon itself the chip must NOT navigate — the cards are already here */
 await page.click("#ddAuthBtn");
 await page.waitForTimeout(350);
-ok("clicking opens it", await page.locator("#ddAuthModal").isVisible());
-ok("the signed-in panel is genuinely hidden, not merely styled",
-  await page.evaluate(() => { const r = document.getElementById("ddAuthIn").getBoundingClientRect(); return r.width === 0 && r.height === 0; }));
-ok("the roster loads for autocomplete, once", rosterHits === 1);
-ok("only claimed players are offered",
-  await page.evaluate(() => [...document.querySelectorAll("#ddAuthRoster option")].map(o => o.value).join(",")) === "Kap,Jeff Carbaugh");
-await page.keyboard.press("Escape");
-await page.waitForTimeout(200);
-ok("Escape closes it", !(await page.locator("#ddAuthModal").isVisible()));
+ok("on signon.html the chip stays put (scrolls, no navigation)",
+  /signon\.html/.test(page.url()));
 
-console.log("\nsigning in");
-await page.click("#ddAuthBtn");
-await page.fill("#ddAuthWho", "jeff@example.com");
-await page.fill("#ddAuthPw", "wrong");
-await page.click("#ddAuthGo");
-await page.waitForTimeout(300);
-ok("a wrong password says so and the dialog stays open",
-  /Wrong password/.test(await page.locator("#ddAuthErr").innerText()) && await page.locator("#ddAuthModal").isVisible());
-ok("the chip has not changed", (await page.locator("#ddAuthBtn").innerText()).trim() === "Sign in");
-
-await page.fill("#ddAuthPw", "hunter2");
-await page.click("#ddAuthGo");
-await page.waitForTimeout(400);
-ok("an email goes in the SAME field the Worker resolves", loginSeen && loginSeen.name === "jeff@example.com");
-ok("the dialog closes on success", !(await page.locator("#ddAuthModal").isVisible()));
-ok("the chip now shows the first name from the token, not what was typed",
+console.log("\nsigned-in state comes from the token, no request");
+await page.evaluate(t => localStorage.setItem("dd-bozo-sess", t), GOOD);
+await go("index.html");
+ok("the chip shows the first name from the token",
   (await page.locator("#ddAuthBtn").innerText()).trim() === "Jeff");
 ok("the full name is in the title, so nothing is lost to truncation",
   /Jeff Carbaugh/.test(await page.locator("#ddAuthBtn").getAttribute("title")));
 ok("the section is marked signed-in for styling",
   await page.evaluate(() => document.querySelector(".navauth").classList.contains("in")));
-// ⚠️ the failure that would silently split the site in two
-ok("the session landed on the key bozo.html reads",
-  (await page.evaluate(() => localStorage.getItem("dd-bozo-sess"))) === GOOD);
 ok("nothing was written to a near-miss key",
   (await page.evaluate(() => localStorage.getItem("dd-bozo-session"))) === null);
-ok("the password field was cleared", (await page.inputValue("#ddAuthPw")) === "");
 
 console.log("\nit is universal — the point of the whole change");
 for (const p of ["guillotine.html", "dfs.html", "stats.html", "receipts.html", "survivor.html", "master.html"]) {
@@ -135,23 +127,18 @@ for (const p of ["guillotine.html", "dfs.html", "stats.html", "receipts.html", "
     (await page.locator("#ddAuthBtn").innerText()).trim() === "Jeff");
 }
 
-console.log("\nthe account panel");
+console.log("\nthe account panel lives on signon.html now");
 await go("index.html");
 await page.click("#ddAuthBtn");
+await page.waitForURL("**/signon.html?next=index.html", { timeout: 4000 });
 await page.waitForTimeout(300);
-ok("a signed-in click opens the account view, not the login form",
-  await page.locator("#ddAuthIn").isVisible() && !(await page.locator("#ddAuthOut").isVisible()));
-ok("the heading changes with it", (await page.locator("#ddAuthH").innerText()).trim() === "Your account");
-ok("it names you", (await page.locator("#ddAuthName").innerText()).trim() === "Jeff Carbaugh");
-ok("it says how long the sign-in lasts, from the token",
-  /about 30 more days/.test(await page.locator("#ddAuthExp").innerText()),
-  await page.locator("#ddAuthExp").innerText());
-ok("it links to the connector page", await page.locator('#ddAuthIn a[href="connect.html"]').count() === 1);
-await page.click("#ddAuthOutBtn");
-await page.waitForTimeout(300);
-ok("signing out clears the key", (await page.evaluate(() => localStorage.getItem("dd-bozo-sess"))) === null);
-ok("and the chip goes back", (await page.locator("#ddAuthBtn").innerText()).trim() === "Sign in");
-ok("and the dialog closes", !(await page.locator("#ddAuthModal").isVisible()));
+ok("a signed-in click routes to the same page — account controls are there", true);
+ok("no modal on arrival", await page.locator("#ddAuthModal").count() === 0);
+/* sign-out itself is signon.html's job — test-signin.mjs covers it. Here: the chip
+   must repaint when the key clears under it. */
+await page.evaluate(() => window.DDAuth.clear());
+await page.waitForTimeout(200);
+ok("clearing the session flips the chip back", (await page.locator("#ddAuthBtn").innerText()).trim() === "Sign in");
 
 console.log("\nexpiry — the nav must not show a dead session as live");
 await page.evaluate(t => localStorage.setItem("dd-bozo-sess", t), DEAD);
@@ -174,11 +161,10 @@ await page.click("#cMint");
 await page.waitForTimeout(300);
 ok("minting carries X-Bozo-Session, the header the deployed Worker advertises", sessionSeen === GOOD);
 ok("the URL appears", (await page.inputValue("#cUrl")).endsWith("/mcp/u_ABC"));
-await page.click("#ddAuthBtn");
-await page.waitForTimeout(250);
-await page.click("#ddAuthOutBtn");
+/* sign-out happens on signon.html; connect must repaint when the key clears */
+await page.evaluate(() => window.DDAuth.clear());
 await page.waitForTimeout(300);
-ok("signing out from the BANNER repaints connect.html without a reload",
+ok("a cleared session repaints connect.html without a reload",
   await page.locator("#cSignedOut").isVisible() && !(await page.locator("#cSignedIn").isVisible()));
 ok("and takes the minted URL off the screen", !(await page.locator("#cUrlBox").isVisible()));
 
@@ -217,9 +203,8 @@ await go("draft-leagues.html");
 ok("draft hub: exactly one auth chip lands in the compact header",
   await page.locator(".top #ddAuthBtn").count() === 1 && await page.locator("#ddAuthBtn").count() === 1);
 await page.click("#ddAuthBtn");
-ok("draft hub: the shared account dialog opens", await page.locator("#ddAuthModal").isVisible());
-await page.keyboard.press("Escape");
-ok("draft hub: Escape closes the shared dialog", !(await page.locator("#ddAuthModal").isVisible()));
+await page.waitForURL("**/signon.html?next=draft-leagues.html", { timeout: 4000 });
+ok("draft hub: the chip routes to signon with ?next=draft-leagues.html", true);
 for (const width of [390,360]){
   await page.evaluate(t=>localStorage.setItem("dd-bozo-sess",t),GOOD);
   await page.setViewportSize({width,height:844});
@@ -262,9 +247,6 @@ await page.screenshot({ path: path.join(SHOTS, "shot-navauth-light.png"), clip: 
 await page.setViewportSize({ width: 390, height: 844 });
 await go("index.html");
 await page.screenshot({ path: path.join(SHOTS, "shot-navauth-phone.png"), clip: { x: 0, y: 0, width: 390, height: 110 } });
-await page.click("#ddAuthBtn");
-await page.waitForTimeout(300);
-await page.screenshot({ path: path.join(SHOTS, "shot-navauth-modal.png") });
 
 ok("still no script errors after the whole run", errors.length === 0, errors.slice(0, 3).join(" | "));
 

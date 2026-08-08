@@ -17,7 +17,7 @@ const ok = (n, c, x) => { c ? (pass++, console.log("  ok   " + n)) : (fail++, co
 
 const SRC = fs.readFileSync("../dawg-bot-worker.js", "utf8");
 const BUNDLE = join(tmpdir(), "worker-identity.mjs");
-fs.writeFileSync(BUNDLE, SRC + "\nexport { handleMcp, MCP_TOOLS, mcpAuth, mcpTokenHash, newMcpToken, emailToName };\n");
+fs.writeFileSync(BUNDLE, SRC + "\nexport { handleMcp, MCP_TOOLS, mcpAuth, mcpTokenHash, newMcpToken, emailToName, bozoSignup, bozoLogin, readSession };\n");
 
 const DB = "https://data-dawgs-draft-default-rtdb.firebaseio.com";
 const PEPPER = "test-pepper-value";
@@ -265,6 +265,137 @@ console.log("\nthe read-only invariant still holds");
   ok("minting acts only on the caller's own record",
      /encodeURIComponent\(auth\.name\)/.test(SRC.slice(SRC.indexOf("async function authMcpToken"),
                                                        SRC.indexOf("async function authEmail"))));
+}
+
+/* ============================== open signup =============================== */
+/* /auth/signup is the only unauthenticated write on the Worker, so it gets the
+   same against-the-assembled-bundle treatment as the MCP layer: real handlers,
+   real KDF and session code, only the network faked. The wrapper below teaches
+   the fake network PUT/PATCH so signup's writes land somewhere login can read. */
+console.log("\nopen signup");
+
+const AUTHREC = {};                     // fake /bozoauth/<key> store
+const WRITES = [];                      // every write path, for the no-seat proof
+{
+  const origFetch = globalThis.fetch;
+  globalThis.fetch = async (u, opts = {}) => {
+    const url = String(u);
+    const method = (opts.method || "GET").toUpperCase();
+    if (method === "PUT" || method === "PATCH" || method === "DELETE")
+      WRITES.push(method + " " + url.replace(DB, "").split(".json")[0]);
+    let m = url.match(/\/users\/([^./]+)\.json/);
+    if (m && method === "PATCH") {
+      const key = m[1];
+      USERS[key] = { ...(USERS[key] || {}), ...JSON.parse(opts.body) };
+      return new Response("{}");
+    }
+    m = url.match(/\/bozoauth\/([^./]+)\.json/);
+    if (m) {
+      const key = m[1];
+      if (method === "PUT") { AUTHREC[key] = JSON.parse(opts.body); return new Response("{}"); }
+      if (method === "GET") return new Response(JSON.stringify(AUTHREC[key] ?? null));
+    }
+    return origFetch(u, opts);
+  };
+}
+
+const CORS = {};
+const signupReq = (body, ip) => new Request("https://w.example.com/auth/signup", {
+  method: "POST", headers: { "Content-Type": "application/json", "CF-Connecting-IP": ip || "1.2.3.4" },
+  body: JSON.stringify(body),
+});
+const postReq = (path, body) => new Request("https://w.example.com" + path, {
+  method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+});
+const jbody = async r => { try { return await r.json(); } catch { return null; } };
+
+{
+  const r = await W.bozoSignup(signupReq({ name: "Zed", email: "zed@example.com", password: "longenough1" }), ENV, CORS);
+  const j = await jbody(r);
+  ok("a stranger can create an account", r.status === 200 && j.ok === true, JSON.stringify(j));
+  ok("the response carries a working session", !!j.session && (await W.readSession(ENV, j.session))?.n === "Zed");
+  ok("the account is keyed by NAME, same data model as claim", !!USERS.Zed && USERS.Zed.src === "signup");
+  ok("the email landed on the user record", USERS.Zed.email === "zed@example.com");
+  ok("a real pbkdf2 record was written", AUTHREC.Zed && AUTHREC.Zed.v === 1 && !!AUTHREC.Zed.salt && AUTHREC.Zed.iters === 5000);
+  ok("the response says plainly the email is unverified", /nothing is ever sent/i.test(j.note || ""));
+  ok("signup wrote an account, NOT a league seat", !WRITES.some(w => w.includes("/bozo/leagues")), WRITES.join(" | "));
+}
+
+console.log("\nsignup rejects");
+{
+  const cases = [
+    ["a taken name",            { name: "Kap", email: "new@example.com", password: "longenough1" }, 409, /taken/i],
+    ["a taken email",           { name: "Newguy", email: "jeff@example.com", password: "longenough1" }, 409, /already uses/i],
+    ["a missing email",         { name: "Newguy", email: "", password: "longenough1" }, 400, /email/i],
+    ["a syntactically bad email", { name: "Newguy", email: "not-an-email", password: "longenough1" }, 400, /email/i],
+    ["a short password",        { name: "Newguy", email: "new@example.com", password: "short" }, 400, /8 characters/i],
+    ["an empty name",           { name: "  ", email: "new@example.com", password: "longenough1" }, 400, /name/i],
+    ["a name with Firebase-breaking chars", { name: "a.b#c", email: "new@example.com", password: "longenough1" }, 400, /can't contain/i],
+    ["a 41-character name",     { name: "x".repeat(41), email: "new@example.com", password: "longenough1" }, 400, /too long/i],
+  ];
+  for (const [label, body, status, re] of cases) {
+    const r = await W.bozoSignup(signupReq(body), ENV, CORS);
+    const j = await jbody(r);
+    ok(label + " is refused", r.status === status && re.test(j.error || ""), r.status + " " + JSON.stringify(j));
+  }
+  const g = await W.bozoSignup(new Request("https://w.example.com/auth/signup"), ENV, CORS);
+  ok("GET is refused", g.status === 405);
+  ok("email uniqueness is case-insensitive",
+     (await W.bozoSignup(signupReq({ name: "Newguy", email: "ZED@example.com", password: "longenough1" }), ENV, CORS)).status === 409);
+}
+
+console.log("\nsignup accounts can actually sign in");
+{
+  const byName = await W.bozoLogin(postReq("/auth/login", { name: "Zed", password: "longenough1" }), ENV, CORS);
+  const j1 = await jbody(byName);
+  ok("by name", byName.status === 200 && j1.ok === true && !!j1.session, JSON.stringify(j1));
+  const byEmail = await W.bozoLogin(postReq("/auth/login", { name: "zed@example.com", password: "longenough1" }), ENV, CORS);
+  const j2 = await jbody(byEmail);
+  ok("by email, resolving to the roster name", byEmail.status === 200 && j2.name === "Zed", JSON.stringify(j2));
+  const wrong = await W.bozoLogin(postReq("/auth/login", { name: "Zed", password: "wrongwrong" }), ENV, CORS);
+  ok("a wrong password still fails", wrong.status === 401);
+}
+
+console.log("\nsignup rate limit");
+{
+  const store = new Map();
+  const RL = { async get(k) { return store.get(k) ?? null; },
+               async put(k, v) { store.set(k, v); } };
+  const ENV_RL = { ...ENV, RL };
+  let last = null;
+  for (let i = 0; i < 6; i++) {
+    last = await W.bozoSignup(signupReq(
+      { name: "Flood" + i, email: "flood" + i + "@example.com", password: "longenough1" }, "9.9.9.9"), ENV_RL, CORS);
+  }
+  const j = await jbody(last);
+  ok("the 6th account from one IP in a day is refused", last.status === 429, last.status + " " + JSON.stringify(j));
+  ok("and told to come back tomorrow", /tomorrow/i.test(j.error || ""));
+  const other = await W.bozoSignup(signupReq(
+    { name: "Elsewhere", email: "elsewhere@example.com", password: "longenough1" }, "8.8.8.8"), ENV_RL, CORS);
+  ok("a different IP is not caught in it", other.status === 200);
+  ok("the counter keys by day and IP", [...store.keys()].some(k => /^signup:\d{4}-\d{2}-\d{2}:9\.9\.9\.9$/.test(k)));
+  // A typo must not burn one of the day's five — only requests that reach the
+  // database count. Five bad emails in a row would otherwise lock someone out.
+  const before = [...store.entries()].find(([k]) => k.endsWith("8.8.8.8"))?.[1];
+  await W.bozoSignup(signupReq({ name: "Typo", email: "not-an-email", password: "longenough1" }, "8.8.8.8"), ENV_RL, CORS);
+  const after = [...store.entries()].find(([k]) => k.endsWith("8.8.8.8"))?.[1];
+  ok("a syntactically invalid attempt does not count against the cap", before === after, before + " -> " + after);
+  ok("but a duplicate-name probe does (it reached the database)", await (async () => {
+    await W.bozoSignup(signupReq({ name: "Kap", email: "probe@example.com", password: "longenough1" }, "8.8.8.8"), ENV_RL, CORS);
+    const probed = [...store.entries()].find(([k]) => k.endsWith("8.8.8.8"))?.[1];
+    return Number(probed) === Number(after) + 1;
+  })());
+}
+
+console.log("\nsignup source invariants");
+{
+  ok("the route is wired on /auth/* and /bozo/* via the AUTH map", /"\/signup": bozoSignup/.test(SRC));
+  ok("signup lives OUTSIDE the read-only MCP block",
+     SRC.indexOf("async function bozoSignup") < SRC.indexOf("DD-MCP-BLOCK START"));
+  const fn = SRC.slice(SRC.indexOf("const SIGNUP_CAP"), SRC.indexOf("async function loadUsers"));
+  ok("the IP cap is checked before any database work", fn.indexOf("env.RL") < fn.indexOf("loadUsers"));
+  ok("signup never touches league membership", !/LG\(|\/members/.test(fn));
+  ok("no verification is claimed anywhere in the handler", !/verif/i.test(fn.replace(/UNVERIFIED|Unverified|unverified|verification is out/g, "")));
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);

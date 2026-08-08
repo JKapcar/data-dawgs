@@ -67,36 +67,28 @@ await page.waitForTimeout(500);
 
 console.log("\nsigned out");
 ok("the page loads with no script errors", errors.length === 0, errors.join(" | "));
-ok("the sign-in card is visible", await page.locator("#cSignedOut").isVisible());
+ok("the signed-out card is visible", await page.locator("#cSignedOut").isVisible());
+/* the sign-in FORM moved to signon.html (8/7 rule) — this page only points there */
+ok("it points at the sign-on page, carrying ?next= back here",
+   await page.locator('#cSignedOut a[href="signon.html?next=connect.html"]').count() === 1);
+ok("no password field remains anywhere on this page",
+   await page.locator('input[type="password"]').count() === 0);
 // ⚠️ the failure a screenshot would not show: hidden cards that still render
 ok("the signed-in card is genuinely hidden, not merely styled",
    await page.evaluate(() => { const r = document.getElementById("cSignedIn").getBoundingClientRect(); return r.width === 0 && r.height === 0; }));
 ok("the URL box is hidden before anything is minted",
    await page.evaluate(() => { const r = document.getElementById("cUrlBox").getBoundingClientRect(); return r.width === 0 && r.height === 0; }));
 
-console.log("\nsign in");
-await page.fill("#cWho", "jeff@example.com");
-await page.fill("#cPw", "wrong");
-await page.click("#cGo");
-await page.waitForTimeout(250);
-ok("a wrong password says so and stays signed out",
-   /Wrong password/.test(await page.locator("#cMsg").innerText()) && await page.locator("#cSignedOut").isVisible());
-
-await page.fill("#cPw", "hunter2");
-await page.click("#cGo");
-await page.waitForTimeout(300);
-ok("a good password reveals the connector card", await page.locator("#cSignedIn").isVisible());
-ok("the sign-in card is put away", !(await page.locator("#cSignedOut").isVisible()));
-ok("the page greets the player by the name the WORKER returned",
+console.log("\narriving with a session (signed in on signon.html, sent back here)");
+/* ⚠️ the key must match signon/bozo exactly or the pages cannot see each other */
+await page.evaluate(t => localStorage.setItem("dd-bozo-sess", t), SESSTOK);
+await page.reload({ waitUntil: "domcontentloaded" });
+await page.waitForTimeout(400);
+ok("a stored session reveals the connector card with no probe request",
+   await page.locator("#cSignedIn").isVisible());
+ok("the signed-out card is put away", !(await page.locator("#cSignedOut").isVisible()));
+ok("the page greets the name straight from the token",
    (await page.locator("#cWho2").innerText()).trim() === "Jeff");
-ok("the email came back with the login and prefilled",
-   (await page.inputValue("#cEmail")) === "jeff@example.com");
-ok("the password field is cleared after use", (await page.inputValue("#cPw")) === "");
-// ⚠️ the key must match bozo.html's exactly or the two pages cannot see each other
-ok("the session is stored under the SAME key bozo.html uses",
-   (await page.evaluate(() => localStorage.getItem("dd-bozo-sess"))) === SESSTOK);
-ok("nothing was written to a near-miss key",
-   (await page.evaluate(() => localStorage.getItem("dd-bozo-session"))) === null);
 
 console.log("\nminting");
 await page.click("#cMint");
@@ -118,13 +110,9 @@ await page.click("#cCopy");
 await page.waitForTimeout(200);
 ok("copy gives feedback", /Copied/.test(await page.locator("#cCopy").innerText()));
 
-console.log("\nemail");
-await page.fill("#cEmail", "new@example.com");
-await page.click("#cSaveEmail");
-await page.waitForTimeout(250);
-ok("the email reaches the Worker", savedEmail === "new@example.com");
-ok("and the page says it is not a channel",
-   /nothing is sent to it/i.test(await page.locator("#cEmailMsg").innerText()));
+console.log("\nemail card is gone — it lives on signon.html now");
+ok("no email input on this page", await page.locator("#cEmail").count() === 0);
+ok("no email-save call can originate here", savedEmail === null);
 
 console.log("\nrevoke");
 page.on("dialog", d => d.accept());
@@ -135,12 +123,15 @@ ok("the URL is removed from the screen", !(await page.locator("#cUrlBox").isVisi
 ok("the input is actually emptied, not just hidden", (await page.inputValue("#cUrl")) === "");
 ok("the button returns to offering creation", /Create my URL/.test(await page.locator("#cMint").innerText()));
 
-console.log("\nsign out");
-await page.click("#cOut");
+console.log("\nsign out lives on signon.html — this page just reacts");
+ok("no sign-out button here", await page.locator("#cOut").count() === 0);
+await page.evaluate(() => { window.DDAuth.clear(); });   // what signon (or the chip) does
 await page.waitForTimeout(200);
 ok("the session is cleared", (await page.evaluate(() => localStorage.getItem("dd-bozo-sess"))) === null);
-ok("the sign-in card returns", await page.locator("#cSignedOut").isVisible());
+ok("the pointer card returns without a reload", await page.locator("#cSignedOut").isVisible());
 ok("the connector card is hidden again", !(await page.locator("#cSignedIn").isVisible()));
+await page.evaluate(t => localStorage.setItem("dd-bozo-sess", t), SESSTOK);
+await page.waitForTimeout(150);
 
 console.log("\nhonesty copy is actually on the page");
 {
@@ -171,7 +162,6 @@ for (const [w, h, label] of [[1200, 950, "desktop"], [390, 844, "phone"]]) {
 }
 await page.setViewportSize({ width: 1200, height: 950 });
 await page.evaluate(() => document.documentElement.setAttribute("data-theme", "dark"));
-await page.click("#cWho");
 await page.screenshot({ path: path.join(SHOTS, "shot-connect.png") });
 
 ok("still no script errors after the whole run", errors.length === 0, errors.slice(0, 2).join(" | "));
