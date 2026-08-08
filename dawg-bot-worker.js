@@ -3676,7 +3676,7 @@ let mcpPoolCache = { at: 0, data: null };
 let mcpCorrCache = { at: 0, data: null };
 let mcpSurvCache = { at: 0, data: null };
 let mcpModelReceiptsCache = { at: 0, data: null };
-let mcpCfbRatingsCache = { at: 0, data: null };
+let mcpCfbProfilesCache = { at: 0, data: null };
 
 // Abramowitz–Stegun normal CDF — the SAME approximation survivor.html ships, so the
 // tool and the page cannot disagree about a probability by more than float dust.
@@ -4109,41 +4109,43 @@ async function mcpModelReceipts() {
 // The registry is a compact, public, dated normalization boundary rather than a
 // live upstream query. Retain its envelope so callers receive the exact source and
 // snapshot receipt that produced every rating. The tool below returns one team only.
-async function mcpCfbRatings() {
-  if (!mcpCfbRatingsCache.data || Date.now() - mcpCfbRatingsCache.at > 900e3) {
-    const r = await fetch(`${SITE}/data/cfb-ratings.json`, { cf: { cacheTtl: 900, cacheEverything: true } });
-    if (!r.ok) throw new Error("cfb-ratings.json unavailable: HTTP " + r.status);
+async function mcpCfbTeamProfiles() {
+  if (!mcpCfbProfilesCache.data || Date.now() - mcpCfbProfilesCache.at > 900e3) {
+    const r = await fetch(`${SITE}/data/cfb-teams.json`, { cf: { cacheTtl: 900, cacheEverything: true } });
+    if (!r.ok) throw new Error("cfb-teams.json unavailable: HTTP " + r.status);
     const envelope = await r.json();
     const data = envelope && envelope.data;
     if (!envelope || !envelope.as_of || !envelope.source || !data ||
         !Array.isArray(data.systems) || !Array.isArray(data.teams))
-      throw new Error("cfb-ratings.json has an invalid envelope");
+      throw new Error("cfb-teams.json has an invalid envelope");
     if (!data.systems.length || data.systems.length > 20)
-      throw new Error("cfb-ratings.json must contain 1-20 registered systems");
+      throw new Error("cfb-teams.json must contain 1-20 registered systems");
     if (!data.teams.length || data.teams.length > 200)
-      throw new Error("cfb-ratings.json must contain 1-200 teams");
-    if (!data.consensus || typeof data.consensus.status !== "string" || !data.rating_period)
-      throw new Error("cfb-ratings.json is missing rating-period or consensus metadata");
+      throw new Error("cfb-teams.json must contain 1-200 teams");
+    if (data.scope !== "observed-results-plus-retrodictive-rating" ||
+        !data.consensus || typeof data.consensus.status !== "string" || !data.rating_period)
+      throw new Error("cfb-teams.json is missing rating-period or consensus metadata");
     if (envelope.integrity && Number.isInteger(envelope.integrity.teams) && envelope.integrity.teams !== data.teams.length)
-      throw new Error("cfb-ratings.json team count does not match its integrity receipt");
+      throw new Error("cfb-teams.json team count does not match its integrity receipt");
     if (envelope.integrity && Number.isInteger(envelope.integrity.systems) && envelope.integrity.systems !== data.systems.length)
-      throw new Error("cfb-ratings.json system count does not match its integrity receipt");
+      throw new Error("cfb-teams.json system count does not match its integrity receipt");
     const systemIds = new Set();
     for (const system of data.systems) {
       if (!system || typeof system.system_id !== "string" || !system.system_id || systemIds.has(system.system_id))
-        throw new Error("cfb-ratings.json has an invalid or duplicate system_id");
+        throw new Error("cfb-teams.json has an invalid or duplicate system_id");
       systemIds.add(system.system_id);
     }
     for (const team of data.teams) {
       if (!team || typeof team.team_slug !== "string" || typeof team.team !== "string" ||
+          !team.observed_results || typeof team.observed_results !== "object" ||
           !team.systems || typeof team.systems !== "object" || Array.isArray(team.systems))
-        throw new Error("cfb-ratings.json has an invalid team row");
+        throw new Error("cfb-teams.json has an invalid team row");
       for (const systemId of Object.keys(team.systems))
-        if (!systemIds.has(systemId)) throw new Error("cfb-ratings.json team row names an unregistered system: " + systemId);
+        if (!systemIds.has(systemId)) throw new Error("cfb-teams.json team row names an unregistered system: " + systemId);
     }
-    mcpCfbRatingsCache = { at: Date.now(), data: envelope };
+    mcpCfbProfilesCache = { at: Date.now(), data: envelope };
   }
-  return mcpCfbRatingsCache.data;
+  return mcpCfbProfilesCache.data;
 }
 
 function mcpCfbTeamSlug(v) {
@@ -4167,7 +4169,7 @@ function mcpCfbTeamMatch(envelope, input) {
   const teams = envelope.data.teams;
   const exact = teams.filter(team => team.team_slug === input.slug || mcpCfbTeamSlug(team.team) === input.slug);
   if (exact.length === 1) return exact[0];
-  if (exact.length > 1) throw new Error("cfb-ratings.json has duplicate normalized team names for " + input.query);
+  if (exact.length > 1) throw new Error("cfb-teams.json has duplicate normalized team names for " + input.query);
   const partial = teams.filter(team => team.team_slug.includes(input.slug) || mcpCfbTeamSlug(team.team).includes(input.slug));
   if (partial.length) {
     const choices = partial.slice(0, 10).map(team => team.team + " (" + team.team_slug + ")").join(", ");
@@ -4387,7 +4389,7 @@ async function mcpDispatch(m, env, caller) {
           "Everything here is read-only and is either the league's own data, public play-by-play, " +
           "or a deterministic calculation over caller-supplied inputs. Calculator inputs and results are not stored. " +
           "The model scoreboard reads dated prospective receipts and returns descriptive disagreement only; it is ungraded and is not a validated consensus or ranking. " +
-          "The CFB team profile reads one end-of-2025 retrodictive Elo registry row; it is ungraded, is not a 2026 forecast and is not a consensus. " +
+          "The CFB team profile separates observed 2025 results from one end-of-2025 retrodictive Elo row; it is ungraded, is not a 2026 forecast and is not a consensus. " +
           "There is no built-in DFS projection or ownership feed: dd_solve_dfs_lineup requires the caller to supply every value per call, and stores none of them. dd_optimize_survivor_path is an ungraded ceiling over a dated snapshot and does not model double-pick weeks. When quoting bozo odds, survivor odds " +
           "or the correlation matrix, say it is model output or a measured historical average, never a forecast " +
           "of a specific game. Team names, weeks and league ids come from dd_league_overview — do not guess them.",
@@ -5119,7 +5121,7 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_cfb_team_profile",
-    description: "Read one exact team from the dated Data Dawgs CFB ratings registry. Returns the end-of-2025 retrodictive Elo value, rank, provenance and unsupported null outputs. This is ungraded, not a 2026 forecast, and not a consensus or betting recommendation.",
+    description: "Read one exact team from the compact dated CFB profile surface. Returns observed 2025 record/scoring facts separately from the end-of-2025 retrodictive Elo value, rank and provenance. This is ungraded, not a 2026 forecast, and not a consensus or betting recommendation.",
     inputSchema: {
       type: "object",
       properties: {
@@ -5130,7 +5132,7 @@ const MCP_TOOLS = [
     },
     async run(args) {
       const input = mcpCfbTeamArgs(args);
-      const envelope = await mcpCfbRatings();
+      const envelope = await mcpCfbTeamProfiles();
       const team = mcpCfbTeamMatch(envelope, input);
       const registeredSystems = envelope.data.systems.map(system => ({
         system_id: system.system_id,
@@ -5162,6 +5164,7 @@ const MCP_TOOLS = [
         query: input.query,
         match: { exact: true, team_slug: team.team_slug },
         team: { team_slug: team.team_slug, name: team.team, conference: team.conference || null },
+        observed_results: team.observed_results || null,
         rating_period: period,
         systems: registeredSystems,
         consensus,
@@ -5170,6 +5173,8 @@ const MCP_TOOLS = [
         built: envelope.built || null,
         integrity: envelope.integrity || null,
         modelled: true,
+        observed_results_are_facts: true,
+        modelled_fields: ["systems"],
         retrodictive: period && period.prospective !== true,
         prospective: period && period.prospective === true,
         graded: registeredSystems.length > 0 && registeredSystems.every(system => system.graded),
@@ -5479,7 +5484,7 @@ const MCP_TOOLS = [
         machine: {
           index: "/llms.txt",
           surfaces: "/data/surfaces.json — every human page, its machine equivalent, and an honest live|planned|none status. Check it before claiming a route exists.",
-          data: ["/data/pool.json", "/data/receipts.json", "/data/models.json", "/data/epa-teams.json", "/data/nfelo.json", "/data/league.json", "/data/bozo-rules.json", "/data/survivor.json", "/data/pound-tools.json", "/data/model-contracts.json", "/data/upstream-models.json", "/data/nfl-schedule.json", "/data/538-classic.json", "/data/model-receipts.json", "/data/cfb-schedule.json", "/data/cfb-team-game.json", "/data/cfb-team-week.json", "/data/cfb-market.json", "/data/cfb-elo.json", "/data/cfb-ratings.json", "/data/cfb-model-cards.json", "/data/cfb-model-receipts.json", "/data/cfb-disagreement.json", "/data/index.json"],
+          data: ["/data/pool.json", "/data/receipts.json", "/data/models.json", "/data/epa-teams.json", "/data/nfelo.json", "/data/league.json", "/data/bozo-rules.json", "/data/survivor.json", "/data/pound-tools.json", "/data/model-contracts.json", "/data/upstream-models.json", "/data/nfl-schedule.json", "/data/538-classic.json", "/data/model-receipts.json", "/data/cfb-schedule.json", "/data/cfb-team-game.json", "/data/cfb-team-week.json", "/data/cfb-teams.json", "/data/cfb-market.json", "/data/cfb-elo.json", "/data/cfb-ratings.json", "/data/cfb-model-cards.json", "/data/cfb-model-receipts.json", "/data/cfb-disagreement.json", "/data/index.json"],
         },
         pages: {
           "index.html": "Home — what Data Dawgs is and the working-dawg taxonomy (Labs / Dawgs / The Pound).",

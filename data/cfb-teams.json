@@ -1,0 +1,4717 @@
+{
+ "as_of": "2026-08-08",
+ "source": "Compact join of /data/cfb-team-week.json and /data/cfb-ratings.json by scripts/cfb_team_profiles.py; inputs sha256:2d843eb19ad19f4bb92f5ad3171d9c8635b433ae30b8aaf2a2c4a8e8ffb66fcf and sha256:13233f782f8cea384fde9077f8aac271458b2a7950b1a6a38b440f1c4bbbd786.",
+ "tier": "labs",
+ "graded": false,
+ "note": "OBSERVED RESULTS plus one MODELLED, RETRODICTIVE, UNGRADED end-of-2025 Elo rating. The objects are separated deliberately. This is not a 2026 forecast, consensus, edge or recommendation.",
+ "provenance": {
+  "generator": "scripts/cfb_team_profiles.py",
+  "inputs": [
+   {
+    "url": "/data/cfb-team-week.json",
+    "snapshot_id": "sha256:2d843eb19ad19f4bb92f5ad3171d9c8635b433ae30b8aaf2a2c4a8e8ffb66fcf"
+   },
+   {
+    "url": "/data/cfb-ratings.json",
+    "snapshot_id": "sha256:13233f782f8cea384fde9077f8aac271458b2a7950b1a6a38b440f1c4bbbd786"
+   }
+  ]
+ },
+ "integrity": {
+  "snapshot_id": "sha256:63c73f7ee7bd7c002a2cdf6c7932696abd508627789acc37b6093b2d9a7e2461",
+  "algorithm": "SHA-256 of canonical UTF-8 JSON for the data object (sorted object keys, no insignificant whitespace).",
+  "systems": 1,
+  "teams": 136
+ },
+ "data": {
+  "schema_version": 1,
+  "season": 2025,
+  "scope": "observed-results-plus-retrodictive-rating",
+  "inputs": {
+   "team_week_snapshot_id": "sha256:2d843eb19ad19f4bb92f5ad3171d9c8635b433ae30b8aaf2a2c4a8e8ffb66fcf",
+   "ratings_registry_snapshot_id": "sha256:13233f782f8cea384fde9077f8aac271458b2a7950b1a6a38b440f1c4bbbd786"
+  },
+  "rating_period": {
+   "season": 2025,
+   "label": "end-of-2025-season",
+   "source_field": "ratings_as_of_end_of_2025",
+   "prospective": false
+  },
+  "systems": [
+   {
+    "system_id": "dd-cfb-elo",
+    "name": "Data Dawgs CFB Elo baseline",
+    "provider": "Data Dawgs",
+    "kind": "continuous-rating",
+    "feature_family": "game results and margin only",
+    "source_snapshot_id": "sha256:414e0f27fba170d172db03a1a07fcca1bf83af09848de356ae3bd6fa83894237",
+    "source_url": "/data/cfb-elo.json",
+    "model_card_url": "/data/cfb-model-cards.json",
+    "normalization": "Native Elo points are retained as team_strength. Game-context expected margin and win probability are not team-level source fields, so they remain null.",
+    "outputs": {
+     "team_strength": {
+      "available": true,
+      "units": "elo-points"
+     },
+     "expected_margin": {
+      "available": false,
+      "units": "points"
+     },
+     "win_probability": {
+      "available": false,
+      "units": "probability"
+     },
+     "predicted_total": {
+      "available": false,
+      "units": "points"
+     }
+    },
+    "prospective_forecasts_exist": false,
+    "graded": false
+   }
+  ],
+  "teams": [
+   {
+    "team_slug": "indiana",
+    "team": "Indiana",
+    "espn_id": 84,
+    "division": "fbs",
+    "conference": "Big Ten",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2026-01-20T00:30:00Z",
+     "last_period": "postseason-01",
+     "games": 16,
+     "wins": 16,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 666,
+     "points_against": 187,
+     "point_differential": 479,
+     "record": "16-0-0",
+     "win_percentage": 1.0,
+     "points_for_per_game": 41.625,
+     "points_against_per_game": 11.688,
+     "point_differential_per_game": 29.938
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 1,
+      "team_strength": 2054.8,
+      "games_rated": 96,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "ohio-state",
+    "team": "Ohio State",
+    "espn_id": 194,
+    "division": "fbs",
+    "conference": "Big Ten",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2026-01-01T00:30:00Z",
+     "last_period": "postseason-01",
+     "games": 14,
+     "wins": 12,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 468,
+     "points_against": 130,
+     "point_differential": 338,
+     "record": "12-2-0",
+     "win_percentage": 0.8571,
+     "points_for_per_game": 33.429,
+     "points_against_per_game": 9.286,
+     "point_differential_per_game": 24.143
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 2,
+      "team_strength": 1925.8,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "oregon",
+    "team": "Oregon",
+    "espn_id": 2483,
+    "division": "fbs",
+    "conference": "Big Ten",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2026-01-10T00:30:00Z",
+     "last_period": "postseason-01",
+     "games": 15,
+     "wins": 13,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 554,
+     "points_against": 268,
+     "point_differential": 286,
+     "record": "13-2-0",
+     "win_percentage": 0.8667,
+     "points_for_per_game": 36.933,
+     "points_against_per_game": 17.867,
+     "point_differential_per_game": 19.067
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 3,
+      "team_strength": 1923.0,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "notre-dame",
+    "team": "Notre Dame",
+    "espn_id": 87,
+    "division": "fbs",
+    "conference": "FBS Independents",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-30T03:30:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 10,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 504,
+     "points_against": 211,
+     "point_differential": 293,
+     "record": "10-2-0",
+     "win_percentage": 0.8333,
+     "points_for_per_game": 42.0,
+     "points_against_per_game": 17.583,
+     "point_differential_per_game": 24.417
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 4,
+      "team_strength": 1922.2,
+      "games_rated": 100,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "georgia",
+    "team": "Georgia",
+    "espn_id": 61,
+    "division": "fbs",
+    "conference": "SEC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2026-01-02T01:00:00Z",
+     "last_period": "postseason-01",
+     "games": 14,
+     "wins": 12,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 449,
+     "points_against": 246,
+     "point_differential": 203,
+     "record": "12-2-0",
+     "win_percentage": 0.8571,
+     "points_for_per_game": 32.071,
+     "points_against_per_game": 17.571,
+     "point_differential_per_game": 14.5
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 5,
+      "team_strength": 1913.1,
+      "games_rated": 103,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "miami",
+    "team": "Miami",
+    "espn_id": 2390,
+    "division": "fbs",
+    "conference": "ACC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2026-01-20T00:30:00Z",
+     "last_period": "postseason-01",
+     "games": 16,
+     "wins": 13,
+     "losses": 3,
+     "ties": 0,
+     "points_for": 495,
+     "points_against": 237,
+     "point_differential": 258,
+     "record": "13-3-0",
+     "win_percentage": 0.8125,
+     "points_for_per_game": 30.938,
+     "points_against_per_game": 14.812,
+     "point_differential_per_game": 16.125
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 6,
+      "team_strength": 1907.9,
+      "games_rated": 100,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "ole-miss",
+    "team": "Ole Miss",
+    "espn_id": 145,
+    "division": "fbs",
+    "conference": "SEC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2026-01-09T00:30:00Z",
+     "last_period": "postseason-01",
+     "games": 15,
+     "wins": 13,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 554,
+     "points_against": 316,
+     "point_differential": 238,
+     "record": "13-2-0",
+     "win_percentage": 0.8667,
+     "points_for_per_game": 36.933,
+     "points_against_per_game": 21.067,
+     "point_differential_per_game": 15.867
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 7,
+      "team_strength": 1888.5,
+      "games_rated": 98,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "texas-tech",
+    "team": "Texas Tech",
+    "espn_id": 2641,
+    "division": "fbs",
+    "conference": "Big 12",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2026-01-01T17:00:00Z",
+     "last_period": "postseason-01",
+     "games": 14,
+     "wins": 12,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 552,
+     "points_against": 165,
+     "point_differential": 387,
+     "record": "12-2-0",
+     "win_percentage": 0.8571,
+     "points_for_per_game": 39.429,
+     "points_against_per_game": 11.786,
+     "point_differential_per_game": 27.643
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 8,
+      "team_strength": 1852.4,
+      "games_rated": 98,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "texas",
+    "team": "Texas",
+    "espn_id": 251,
+    "division": "fbs",
+    "conference": "SEC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-31T20:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 10,
+     "losses": 3,
+     "ties": 0,
+     "points_for": 396,
+     "points_against": 264,
+     "point_differential": 132,
+     "record": "10-3-0",
+     "win_percentage": 0.7692,
+     "points_for_per_game": 30.462,
+     "points_against_per_game": 20.308,
+     "point_differential_per_game": 10.154
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 9,
+      "team_strength": 1846.0,
+      "games_rated": 101,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "utah",
+    "team": "Utah",
+    "espn_id": 254,
+    "division": "fbs",
+    "conference": "Big 12",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-31T20:30:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 11,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 537,
+     "points_against": 246,
+     "point_differential": 291,
+     "record": "11-2-0",
+     "win_percentage": 0.8462,
+     "points_for_per_game": 41.308,
+     "points_against_per_game": 18.923,
+     "point_differential_per_game": 22.385
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 10,
+      "team_strength": 1825.7,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "james-madison",
+    "team": "James Madison",
+    "espn_id": 256,
+    "division": "fbs",
+    "conference": "Sun Belt",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-21T00:30:00Z",
+     "last_period": "postseason-01",
+     "games": 14,
+     "wins": 12,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 519,
+     "points_against": 257,
+     "point_differential": 262,
+     "record": "12-2-0",
+     "win_percentage": 0.8571,
+     "points_for_per_game": 37.071,
+     "points_against_per_game": 18.357,
+     "point_differential_per_game": 18.714
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 11,
+      "team_strength": 1791.7,
+      "games_rated": 51,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "alabama",
+    "team": "Alabama",
+    "espn_id": 333,
+    "division": "fbs",
+    "conference": "SEC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2026-01-01T21:00:00Z",
+     "last_period": "postseason-01",
+     "games": 15,
+     "wins": 11,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 443,
+     "points_against": 288,
+     "point_differential": 155,
+     "record": "11-4-0",
+     "win_percentage": 0.7333,
+     "points_for_per_game": 29.533,
+     "points_against_per_game": 19.2,
+     "point_differential_per_game": 10.333
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 12,
+      "team_strength": 1788.1,
+      "games_rated": 103,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "smu",
+    "team": "SMU",
+    "espn_id": 2567,
+    "division": "fbs",
+    "conference": "ACC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2026-01-03T01:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 9,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 419,
+     "points_against": 267,
+     "point_differential": 152,
+     "record": "9-4-0",
+     "win_percentage": 0.6923,
+     "points_for_per_game": 32.231,
+     "points_against_per_game": 20.538,
+     "point_differential_per_game": 11.692
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 13,
+      "team_strength": 1781.0,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "iowa",
+    "team": "Iowa",
+    "espn_id": 2294,
+    "division": "fbs",
+    "conference": "Big Ten",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-31T17:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 9,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 381,
+     "points_against": 209,
+     "point_differential": 172,
+     "record": "9-4-0",
+     "win_percentage": 0.6923,
+     "points_for_per_game": 29.308,
+     "points_against_per_game": 16.077,
+     "point_differential_per_game": 13.231
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 14,
+      "team_strength": 1780.8,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "byu",
+    "team": "BYU",
+    "espn_id": 252,
+    "division": "fbs",
+    "conference": "Big 12",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-27T20:30:00Z",
+     "last_period": "postseason-01",
+     "games": 14,
+     "wins": 12,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 440,
+     "points_against": 268,
+     "point_differential": 172,
+     "record": "12-2-0",
+     "win_percentage": 0.8571,
+     "points_for_per_game": 31.429,
+     "points_against_per_game": 19.143,
+     "point_differential_per_game": 12.286
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 15,
+      "team_strength": 1779.7,
+      "games_rated": 98,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "texas-a-m",
+    "team": "Texas A&M",
+    "espn_id": 245,
+    "division": "fbs",
+    "conference": "SEC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-20T17:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 11,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 439,
+     "points_against": 273,
+     "point_differential": 166,
+     "record": "11-2-0",
+     "win_percentage": 0.8462,
+     "points_for_per_game": 33.769,
+     "points_against_per_game": 21.0,
+     "point_differential_per_game": 12.769
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 16,
+      "team_strength": 1764.4,
+      "games_rated": 96,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "vanderbilt",
+    "team": "Vanderbilt",
+    "espn_id": 238,
+    "division": "fbs",
+    "conference": "SEC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-31T17:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 10,
+     "losses": 3,
+     "ties": 0,
+     "points_for": 500,
+     "points_against": 297,
+     "point_differential": 203,
+     "record": "10-3-0",
+     "win_percentage": 0.7692,
+     "points_for_per_game": 38.462,
+     "points_against_per_game": 22.846,
+     "point_differential_per_game": 15.615
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 17,
+      "team_strength": 1763.4,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "penn-state",
+    "team": "Penn State",
+    "espn_id": 213,
+    "division": "fbs",
+    "conference": "Big Ten",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-27T17:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 7,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 403,
+     "points_against": 267,
+     "point_differential": 136,
+     "record": "7-6-0",
+     "win_percentage": 0.5385,
+     "points_for_per_game": 31.0,
+     "points_against_per_game": 20.538,
+     "point_differential_per_game": 10.462
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 18,
+      "team_strength": 1753.9,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "washington",
+    "team": "Washington",
+    "espn_id": 264,
+    "division": "fbs",
+    "conference": "Big Ten",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-14T01:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 9,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 443,
+     "points_against": 243,
+     "point_differential": 200,
+     "record": "9-4-0",
+     "win_percentage": 0.6923,
+     "points_for_per_game": 34.077,
+     "points_against_per_game": 18.692,
+     "point_differential_per_game": 15.385
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 19,
+      "team_strength": 1731.1,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "oklahoma",
+    "team": "Oklahoma",
+    "espn_id": 201,
+    "division": "fbs",
+    "conference": "SEC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-20T01:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 10,
+     "losses": 3,
+     "ties": 0,
+     "points_for": 341,
+     "points_against": 201,
+     "point_differential": 140,
+     "record": "10-3-0",
+     "win_percentage": 0.7692,
+     "points_for_per_game": 26.231,
+     "points_against_per_game": 15.462,
+     "point_differential_per_game": 10.769
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 20,
+      "team_strength": 1724.7,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "usc",
+    "team": "USC",
+    "espn_id": 30,
+    "division": "fbs",
+    "conference": "Big Ten",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-31T02:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 9,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 465,
+     "points_against": 299,
+     "point_differential": 166,
+     "record": "9-4-0",
+     "win_percentage": 0.6923,
+     "points_for_per_game": 35.769,
+     "points_against_per_game": 23.0,
+     "point_differential_per_game": 12.769
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 21,
+      "team_strength": 1723.5,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "navy",
+    "team": "Navy",
+    "espn_id": 2426,
+    "division": "fbs",
+    "conference": "American Athletic",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2026-01-02T21:30:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 11,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 409,
+     "points_against": 325,
+     "point_differential": 84,
+     "record": "11-2-0",
+     "win_percentage": 0.8462,
+     "points_for_per_game": 31.462,
+     "points_against_per_game": 25.0,
+     "point_differential_per_game": 6.462
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 22,
+      "team_strength": 1719.5,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "old-dominion",
+    "team": "Old Dominion",
+    "espn_id": 295,
+    "division": "fbs",
+    "conference": "Sun Belt",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-17T22:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 10,
+     "losses": 3,
+     "ties": 0,
+     "points_for": 416,
+     "points_against": 241,
+     "point_differential": 175,
+     "record": "10-3-0",
+     "win_percentage": 0.7692,
+     "points_for_per_game": 32.0,
+     "points_against_per_game": 18.538,
+     "point_differential_per_game": 13.462
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 23,
+      "team_strength": 1709.9,
+      "games_rated": 86,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "tcu",
+    "team": "TCU",
+    "espn_id": 2628,
+    "division": "fbs",
+    "conference": "Big 12",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-31T02:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 9,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 399,
+     "points_against": 329,
+     "point_differential": 70,
+     "record": "9-4-0",
+     "win_percentage": 0.6923,
+     "points_for_per_game": 30.692,
+     "points_against_per_game": 25.308,
+     "point_differential_per_game": 5.385
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 24,
+      "team_strength": 1704.6,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "louisville",
+    "team": "Louisville",
+    "espn_id": 97,
+    "division": "fbs",
+    "conference": "ACC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-23T19:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 9,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 389,
+     "points_against": 275,
+     "point_differential": 114,
+     "record": "9-4-0",
+     "win_percentage": 0.6923,
+     "points_for_per_game": 29.923,
+     "points_against_per_game": 21.154,
+     "point_differential_per_game": 8.769
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 25,
+      "team_strength": 1704.2,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "arizona",
+    "team": "Arizona",
+    "espn_id": 12,
+    "division": "fbs",
+    "conference": "Big 12",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2026-01-03T01:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 9,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 410,
+     "points_against": 251,
+     "point_differential": 159,
+     "record": "9-4-0",
+     "win_percentage": 0.6923,
+     "points_for_per_game": 31.538,
+     "points_against_per_game": 19.308,
+     "point_differential_per_game": 12.231
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 26,
+      "team_strength": 1700.1,
+      "games_rated": 91,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "tulane",
+    "team": "Tulane",
+    "espn_id": 2655,
+    "division": "fbs",
+    "conference": "American Athletic",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-20T20:30:00Z",
+     "last_period": "postseason-01",
+     "games": 14,
+     "wins": 11,
+     "losses": 3,
+     "ties": 0,
+     "points_for": 388,
+     "points_against": 335,
+     "point_differential": 53,
+     "record": "11-3-0",
+     "win_percentage": 0.7857,
+     "points_for_per_game": 27.714,
+     "points_against_per_game": 23.929,
+     "point_differential_per_game": 3.786
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 27,
+      "team_strength": 1694.8,
+      "games_rated": 102,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "duke",
+    "team": "Duke",
+    "espn_id": 150,
+    "division": "fbs",
+    "conference": "ACC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-31T19:00:00Z",
+     "last_period": "postseason-01",
+     "games": 14,
+     "wins": 9,
+     "losses": 5,
+     "ties": 0,
+     "points_for": 484,
+     "points_against": 412,
+     "point_differential": 72,
+     "record": "9-5-0",
+     "win_percentage": 0.6429,
+     "points_for_per_game": 34.571,
+     "points_against_per_game": 29.429,
+     "point_differential_per_game": 5.143
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 28,
+      "team_strength": 1691.7,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "michigan",
+    "team": "Michigan",
+    "espn_id": 130,
+    "division": "fbs",
+    "conference": "Big Ten",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-31T20:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 9,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 358,
+     "points_against": 265,
+     "point_differential": 93,
+     "record": "9-4-0",
+     "win_percentage": 0.6923,
+     "points_for_per_game": 27.538,
+     "points_against_per_game": 20.385,
+     "point_differential_per_game": 7.154
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 29,
+      "team_strength": 1687.3,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "north-texas",
+    "team": "North Texas",
+    "espn_id": 249,
+    "division": "fbs",
+    "conference": "American Athletic",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-27T22:45:00Z",
+     "last_period": "postseason-01",
+     "games": 14,
+     "wins": 12,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 631,
+     "points_against": 371,
+     "point_differential": 260,
+     "record": "12-2-0",
+     "win_percentage": 0.8571,
+     "points_for_per_game": 45.071,
+     "points_against_per_game": 26.5,
+     "point_differential_per_game": 18.571
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 30,
+      "team_strength": 1674.0,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "ohio",
+    "team": "Ohio",
+    "espn_id": 195,
+    "division": "fbs",
+    "conference": "Mid-American",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-24T02:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 9,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 361,
+     "points_against": 285,
+     "point_differential": 76,
+     "record": "9-4-0",
+     "win_percentage": 0.6923,
+     "points_for_per_game": 27.769,
+     "points_against_per_game": 21.923,
+     "point_differential_per_game": 5.846
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 31,
+      "team_strength": 1668.5,
+      "games_rated": 92,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "western-michigan",
+    "team": "Western Michigan",
+    "espn_id": 2711,
+    "division": "fbs",
+    "conference": "Mid-American",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-19T16:00:00Z",
+     "last_period": "postseason-01",
+     "games": 14,
+     "wins": 10,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 348,
+     "points_against": 243,
+     "point_differential": 105,
+     "record": "10-4-0",
+     "win_percentage": 0.7143,
+     "points_for_per_game": 24.857,
+     "points_against_per_game": 17.357,
+     "point_differential_per_game": 7.5
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 32,
+      "team_strength": 1661.2,
+      "games_rated": 93,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "virginia",
+    "team": "Virginia",
+    "espn_id": 258,
+    "division": "fbs",
+    "conference": "ACC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-28T00:30:00Z",
+     "last_period": "postseason-01",
+     "games": 14,
+     "wins": 11,
+     "losses": 3,
+     "ties": 0,
+     "points_for": 431,
+     "points_against": 274,
+     "point_differential": 157,
+     "record": "11-3-0",
+     "win_percentage": 0.7857,
+     "points_for_per_game": 30.786,
+     "points_against_per_game": 19.571,
+     "point_differential_per_game": 11.214
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 33,
+      "team_strength": 1658.7,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "tennessee",
+    "team": "Tennessee",
+    "espn_id": 2633,
+    "division": "fbs",
+    "conference": "SEC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-30T22:30:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 8,
+     "losses": 5,
+     "ties": 0,
+     "points_for": 517,
+     "points_against": 375,
+     "point_differential": 142,
+     "record": "8-5-0",
+     "win_percentage": 0.6154,
+     "points_for_per_game": 39.769,
+     "points_against_per_game": 28.846,
+     "point_differential_per_game": 10.923
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 34,
+      "team_strength": 1639.9,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "clemson",
+    "team": "Clemson",
+    "espn_id": 228,
+    "division": "fbs",
+    "conference": "ACC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-27T17:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 7,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 354,
+     "points_against": 267,
+     "point_differential": 87,
+     "record": "7-6-0",
+     "win_percentage": 0.5385,
+     "points_for_per_game": 27.231,
+     "points_against_per_game": 20.538,
+     "point_differential_per_game": 6.692
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 35,
+      "team_strength": 1639.4,
+      "games_rated": 102,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "illinois",
+    "team": "Illinois",
+    "espn_id": 356,
+    "division": "fbs",
+    "conference": "Big Ten",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-30T22:30:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 9,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 382,
+     "points_against": 307,
+     "point_differential": 75,
+     "record": "9-4-0",
+     "win_percentage": 0.6923,
+     "points_for_per_game": 29.385,
+     "points_against_per_game": 23.615,
+     "point_differential_per_game": 5.769
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 36,
+      "team_strength": 1638.6,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "east-carolina",
+    "team": "East Carolina",
+    "espn_id": 151,
+    "division": "fbs",
+    "conference": "American Athletic",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-27T16:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 9,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 425,
+     "points_against": 261,
+     "point_differential": 164,
+     "record": "9-4-0",
+     "win_percentage": 0.6923,
+     "points_for_per_game": 32.692,
+     "points_against_per_game": 20.077,
+     "point_differential_per_game": 12.615
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 37,
+      "team_strength": 1637.1,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "iowa-state",
+    "team": "Iowa State",
+    "espn_id": 66,
+    "division": "fbs",
+    "conference": "Big 12",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T17:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 8,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 329,
+     "points_against": 242,
+     "point_differential": 87,
+     "record": "8-4-0",
+     "win_percentage": 0.6667,
+     "points_for_per_game": 27.417,
+     "points_against_per_game": 20.167,
+     "point_differential_per_game": 7.25
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 38,
+      "team_strength": 1635.2,
+      "games_rated": 98,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "kansas-state",
+    "team": "Kansas State",
+    "espn_id": 2306,
+    "division": "fbs",
+    "conference": "Big 12",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T17:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 6,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 353,
+     "points_against": 320,
+     "point_differential": 33,
+     "record": "6-6-0",
+     "win_percentage": 0.5,
+     "points_for_per_game": 29.417,
+     "points_against_per_game": 26.667,
+     "point_differential_per_game": 2.75
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 39,
+      "team_strength": 1632.0,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "nc-state",
+    "team": "NC State",
+    "espn_id": 152,
+    "division": "fbs",
+    "conference": "ACC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-19T19:30:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 8,
+     "losses": 5,
+     "ties": 0,
+     "points_for": 393,
+     "points_against": 353,
+     "point_differential": 40,
+     "record": "8-5-0",
+     "win_percentage": 0.6154,
+     "points_for_per_game": 30.231,
+     "points_against_per_game": 27.154,
+     "point_differential_per_game": 3.077
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 40,
+      "team_strength": 1631.6,
+      "games_rated": 98,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "missouri",
+    "team": "Missouri",
+    "espn_id": 142,
+    "division": "fbs",
+    "conference": "SEC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-28T00:30:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 8,
+     "losses": 5,
+     "ties": 0,
+     "points_for": 393,
+     "points_against": 246,
+     "point_differential": 147,
+     "record": "8-5-0",
+     "win_percentage": 0.6154,
+     "points_for_per_game": 30.231,
+     "points_against_per_game": 18.923,
+     "point_differential_per_game": 11.308
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 41,
+      "team_strength": 1631.3,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "army",
+    "team": "Army",
+    "espn_id": 349,
+    "division": "fbs",
+    "conference": "American Athletic",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-27T19:15:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 7,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 310,
+     "points_against": 281,
+     "point_differential": 29,
+     "record": "7-6-0",
+     "win_percentage": 0.5385,
+     "points_for_per_game": 23.846,
+     "points_against_per_game": 21.615,
+     "point_differential_per_game": 2.231
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 42,
+      "team_strength": 1628.2,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "south-florida",
+    "team": "South Florida",
+    "espn_id": 58,
+    "division": "fbs",
+    "conference": "American Athletic",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-17T22:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 9,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 526,
+     "points_against": 304,
+     "point_differential": 222,
+     "record": "9-4-0",
+     "win_percentage": 0.6923,
+     "points_for_per_game": 40.462,
+     "points_against_per_game": 23.385,
+     "point_differential_per_game": 17.077
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 43,
+      "team_strength": 1627.2,
+      "games_rated": 96,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "minnesota",
+    "team": "Minnesota",
+    "espn_id": 135,
+    "division": "fbs",
+    "conference": "Big Ten",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-26T21:30:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 8,
+     "losses": 5,
+     "ties": 0,
+     "points_for": 299,
+     "points_against": 298,
+     "point_differential": 1,
+     "record": "8-5-0",
+     "win_percentage": 0.6154,
+     "points_for_per_game": 23.0,
+     "points_against_per_game": 22.923,
+     "point_differential_per_game": 0.077
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 44,
+      "team_strength": 1620.2,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "houston",
+    "team": "Houston",
+    "espn_id": 248,
+    "division": "fbs",
+    "conference": "Big 12",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-28T02:15:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 10,
+     "losses": 3,
+     "ties": 0,
+     "points_for": 378,
+     "points_against": 297,
+     "point_differential": 81,
+     "record": "10-3-0",
+     "win_percentage": 0.7692,
+     "points_for_per_game": 29.077,
+     "points_against_per_game": 22.846,
+     "point_differential_per_game": 6.231
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 45,
+      "team_strength": 1611.8,
+      "games_rated": 93,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "arizona-state",
+    "team": "Arizona State",
+    "espn_id": 9,
+    "division": "fbs",
+    "conference": "Big 12",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-31T19:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 8,
+     "losses": 5,
+     "ties": 0,
+     "points_for": 335,
+     "points_against": 318,
+     "point_differential": 17,
+     "record": "8-5-0",
+     "win_percentage": 0.6154,
+     "points_for_per_game": 25.769,
+     "points_against_per_game": 24.462,
+     "point_differential_per_game": 1.308
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 46,
+      "team_strength": 1611.4,
+      "games_rated": 91,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "boise-state",
+    "team": "Boise State",
+    "espn_id": 68,
+    "division": "fbs",
+    "conference": "Mountain West",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-14T01:00:00Z",
+     "last_period": "postseason-01",
+     "games": 14,
+     "wins": 9,
+     "losses": 5,
+     "ties": 0,
+     "points_for": 418,
+     "points_against": 337,
+     "point_differential": 81,
+     "record": "9-5-0",
+     "win_percentage": 0.6429,
+     "points_for_per_game": 29.857,
+     "points_against_per_game": 24.071,
+     "point_differential_per_game": 5.786
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 47,
+      "team_strength": 1608.3,
+      "games_rated": 100,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "utsa",
+    "team": "UTSA",
+    "espn_id": 2636,
+    "division": "fbs",
+    "conference": "American Athletic",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-27T01:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 7,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 462,
+     "points_against": 375,
+     "point_differential": 87,
+     "record": "7-6-0",
+     "win_percentage": 0.5385,
+     "points_for_per_game": 35.538,
+     "points_against_per_game": 28.846,
+     "point_differential_per_game": 6.692
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 48,
+      "team_strength": 1608.3,
+      "games_rated": 100,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "unlv",
+    "team": "UNLV",
+    "espn_id": 2439,
+    "division": "fbs",
+    "conference": "Mountain West",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-24T02:00:00Z",
+     "last_period": "postseason-01",
+     "games": 14,
+     "wins": 10,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 477,
+     "points_against": 392,
+     "point_differential": 85,
+     "record": "10-4-0",
+     "win_percentage": 0.7143,
+     "points_for_per_game": 34.071,
+     "points_against_per_game": 28.0,
+     "point_differential_per_game": 6.071
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 49,
+      "team_strength": 1606.4,
+      "games_rated": 96,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "lsu",
+    "team": "LSU",
+    "espn_id": 99,
+    "division": "fbs",
+    "conference": "SEC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-28T02:15:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 7,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 297,
+     "points_against": 258,
+     "point_differential": 39,
+     "record": "7-6-0",
+     "win_percentage": 0.5385,
+     "points_for_per_game": 22.846,
+     "points_against_per_game": 19.846,
+     "point_differential_per_game": 3.0
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 50,
+      "team_strength": 1605.0,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "toledo",
+    "team": "Toledo",
+    "espn_id": 2649,
+    "division": "fbs",
+    "conference": "Mid-American",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-23T19:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 8,
+     "losses": 5,
+     "ties": 0,
+     "points_for": 401,
+     "points_against": 173,
+     "point_differential": 228,
+     "record": "8-5-0",
+     "win_percentage": 0.6154,
+     "points_for_per_game": 30.846,
+     "points_against_per_game": 13.308,
+     "point_differential_per_game": 17.538
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 51,
+      "team_strength": 1602.7,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "texas-state",
+    "team": "Texas State",
+    "espn_id": 326,
+    "division": "fbs",
+    "conference": "Sun Belt",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2026-01-02T18:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 7,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 474,
+     "points_against": 377,
+     "point_differential": 97,
+     "record": "7-6-0",
+     "win_percentage": 0.5385,
+     "points_for_per_game": 36.462,
+     "points_against_per_game": 29.0,
+     "point_differential_per_game": 7.462
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 52,
+      "team_strength": 1593.5,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "pittsburgh",
+    "team": "Pittsburgh",
+    "espn_id": 221,
+    "division": "fbs",
+    "conference": "ACC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-27T16:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 8,
+     "losses": 5,
+     "ties": 0,
+     "points_for": 438,
+     "points_against": 322,
+     "point_differential": 116,
+     "record": "8-5-0",
+     "win_percentage": 0.6154,
+     "points_for_per_game": 33.692,
+     "points_against_per_game": 24.769,
+     "point_differential_per_game": 8.923
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 53,
+      "team_strength": 1592.6,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "new-mexico",
+    "team": "New Mexico",
+    "espn_id": 167,
+    "division": "fbs",
+    "conference": "Mountain West",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-26T21:30:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 9,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 352,
+     "points_against": 290,
+     "point_differential": 62,
+     "record": "9-4-0",
+     "win_percentage": 0.6923,
+     "points_for_per_game": 27.077,
+     "points_against_per_game": 22.308,
+     "point_differential_per_game": 4.769
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 54,
+      "team_strength": 1590.5,
+      "games_rated": 92,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "georgia-tech",
+    "team": "Georgia Tech",
+    "espn_id": 59,
+    "division": "fbs",
+    "conference": "ACC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-27T20:30:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 9,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 418,
+     "points_against": 325,
+     "point_differential": 93,
+     "record": "9-4-0",
+     "win_percentage": 0.6923,
+     "points_for_per_game": 32.154,
+     "points_against_per_game": 25.0,
+     "point_differential_per_game": 7.154
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 55,
+      "team_strength": 1581.2,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "washington-state",
+    "team": "Washington State",
+    "espn_id": 265,
+    "division": "fbs",
+    "conference": "Pac-12",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-22T19:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 7,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 293,
+     "points_against": 263,
+     "point_differential": 30,
+     "record": "7-6-0",
+     "win_percentage": 0.5385,
+     "points_for_per_game": 22.538,
+     "points_against_per_game": 20.231,
+     "point_differential_per_game": 2.308
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 56,
+      "team_strength": 1578.5,
+      "games_rated": 90,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "fresno-state",
+    "team": "Fresno State",
+    "espn_id": 278,
+    "division": "fbs",
+    "conference": "Mountain West",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-27T21:30:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 9,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 335,
+     "points_against": 244,
+     "point_differential": 91,
+     "record": "9-4-0",
+     "win_percentage": 0.6923,
+     "points_for_per_game": 25.769,
+     "points_against_per_game": 18.769,
+     "point_differential_per_game": 7.0
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 57,
+      "team_strength": 1573.4,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "hawai-i",
+    "team": "Hawai'i",
+    "espn_id": 62,
+    "division": "fbs",
+    "conference": "Mountain West",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-25T01:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 9,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 377,
+     "points_against": 313,
+     "point_differential": 64,
+     "record": "9-4-0",
+     "win_percentage": 0.6923,
+     "points_for_per_game": 29.0,
+     "points_against_per_game": 24.077,
+     "point_differential_per_game": 4.923
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 58,
+      "team_strength": 1573.3,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "uconn",
+    "team": "UConn",
+    "espn_id": 41,
+    "division": "fbs",
+    "conference": "FBS Independents",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-27T19:15:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 9,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 459,
+     "points_against": 351,
+     "point_differential": 108,
+     "record": "9-4-0",
+     "win_percentage": 0.6923,
+     "points_for_per_game": 35.308,
+     "points_against_per_game": 27.0,
+     "point_differential_per_game": 8.308
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 59,
+      "team_strength": 1563.5,
+      "games_rated": 86,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "jacksonville-state",
+    "team": "Jacksonville State",
+    "espn_id": 55,
+    "division": "fbs",
+    "conference": "Conference USA",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-17T02:00:00Z",
+     "last_period": "postseason-01",
+     "games": 14,
+     "wins": 9,
+     "losses": 5,
+     "ties": 0,
+     "points_for": 394,
+     "points_against": 353,
+     "point_differential": 41,
+     "record": "9-5-0",
+     "win_percentage": 0.6429,
+     "points_for_per_game": 28.143,
+     "points_against_per_game": 25.214,
+     "point_differential_per_game": 2.929
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 60,
+      "team_strength": 1562.0,
+      "games_rated": 41,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "wake-forest",
+    "team": "Wake Forest",
+    "espn_id": 154,
+    "division": "fbs",
+    "conference": "ACC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2026-01-03T01:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 9,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 365,
+     "points_against": 287,
+     "point_differential": 78,
+     "record": "9-4-0",
+     "win_percentage": 0.6923,
+     "points_for_per_game": 28.077,
+     "points_against_per_game": 22.077,
+     "point_differential_per_game": 6.0
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 61,
+      "team_strength": 1561.6,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "san-diego-state",
+    "team": "San Diego State",
+    "espn_id": 21,
+    "division": "fbs",
+    "conference": "Mountain West",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-27T22:45:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 9,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 343,
+     "points_against": 200,
+     "point_differential": 143,
+     "record": "9-4-0",
+     "win_percentage": 0.6923,
+     "points_for_per_game": 26.385,
+     "points_against_per_game": 15.385,
+     "point_differential_per_game": 11.0
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 62,
+      "team_strength": 1558.1,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "northwestern",
+    "team": "Northwestern",
+    "espn_id": 77,
+    "division": "fbs",
+    "conference": "Big Ten",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-26T18:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 7,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 304,
+     "points_against": 258,
+     "point_differential": 46,
+     "record": "7-6-0",
+     "win_percentage": 0.5385,
+     "points_for_per_game": 23.385,
+     "points_against_per_game": 19.846,
+     "point_differential_per_game": 3.538
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 63,
+      "team_strength": 1550.2,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "kennesaw-state",
+    "team": "Kennesaw State",
+    "espn_id": 338,
+    "division": "fbs",
+    "conference": "Conference USA",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-19T16:00:00Z",
+     "last_period": "postseason-01",
+     "games": 14,
+     "wins": 10,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 374,
+     "points_against": 357,
+     "point_differential": 17,
+     "record": "10-4-0",
+     "win_percentage": 0.7143,
+     "points_for_per_game": 26.714,
+     "points_against_per_game": 25.5,
+     "point_differential_per_game": 1.214
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 64,
+      "team_strength": 1531.7,
+      "games_rated": 26,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "western-kentucky",
+    "team": "Western Kentucky",
+    "espn_id": 98,
+    "division": "fbs",
+    "conference": "Conference USA",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-23T22:30:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 9,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 384,
+     "points_against": 297,
+     "point_differential": 87,
+     "record": "9-4-0",
+     "win_percentage": 0.6923,
+     "points_for_per_game": 29.538,
+     "points_against_per_game": 22.846,
+     "point_differential_per_game": 6.692
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 65,
+      "team_strength": 1531.6,
+      "games_rated": 101,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "louisiana-tech",
+    "team": "Louisiana Tech",
+    "espn_id": 2348,
+    "division": "fbs",
+    "conference": "Conference USA",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-30T19:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 8,
+     "losses": 5,
+     "ties": 0,
+     "points_for": 355,
+     "points_against": 270,
+     "point_differential": 85,
+     "record": "8-5-0",
+     "win_percentage": 0.6154,
+     "points_for_per_game": 27.308,
+     "points_against_per_game": 20.769,
+     "point_differential_per_game": 6.538
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 66,
+      "team_strength": 1530.3,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "memphis",
+    "team": "Memphis",
+    "espn_id": 235,
+    "division": "fbs",
+    "conference": "American Athletic",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-19T19:30:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 8,
+     "losses": 5,
+     "ties": 0,
+     "points_for": 422,
+     "points_against": 301,
+     "point_differential": 121,
+     "record": "8-5-0",
+     "win_percentage": 0.6154,
+     "points_for_per_game": 32.462,
+     "points_against_per_game": 23.154,
+     "point_differential_per_game": 9.308
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 67,
+      "team_strength": 1530.1,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "south-carolina",
+    "team": "South Carolina",
+    "espn_id": 2579,
+    "division": "fbs",
+    "conference": "SEC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T17:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 4,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 272,
+     "points_against": 265,
+     "point_differential": 7,
+     "record": "4-8-0",
+     "win_percentage": 0.3333,
+     "points_for_per_game": 22.667,
+     "points_against_per_game": 22.083,
+     "point_differential_per_game": 0.583
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 68,
+      "team_strength": 1528.6,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "florida",
+    "team": "Florida",
+    "espn_id": 57,
+    "division": "fbs",
+    "conference": "SEC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T21:30:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 4,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 259,
+     "points_against": 288,
+     "point_differential": -29,
+     "record": "4-8-0",
+     "win_percentage": 0.3333,
+     "points_for_per_game": 21.583,
+     "points_against_per_game": 24.0,
+     "point_differential_per_game": -2.417
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 69,
+      "team_strength": 1521.8,
+      "games_rated": 96,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "georgia-southern",
+    "team": "Georgia Southern",
+    "espn_id": 290,
+    "division": "fbs",
+    "conference": "Sun Belt",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-29T19:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 7,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 363,
+     "points_against": 420,
+     "point_differential": -57,
+     "record": "7-6-0",
+     "win_percentage": 0.5385,
+     "points_for_per_game": 27.923,
+     "points_against_per_game": 32.308,
+     "point_differential_per_game": -4.385
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 70,
+      "team_strength": 1514.8,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "nebraska",
+    "team": "Nebraska",
+    "espn_id": 158,
+    "division": "fbs",
+    "conference": "Big Ten",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-31T20:30:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 7,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 373,
+     "points_against": 320,
+     "point_differential": 53,
+     "record": "7-6-0",
+     "win_percentage": 0.5385,
+     "points_for_per_game": 28.692,
+     "points_against_per_game": 24.615,
+     "point_differential_per_game": 4.077
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 71,
+      "team_strength": 1508.4,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "auburn",
+    "team": "Auburn",
+    "espn_id": 2,
+    "division": "fbs",
+    "conference": "SEC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-30T00:30:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 5,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 321,
+     "points_against": 248,
+     "point_differential": 73,
+     "record": "5-7-0",
+     "win_percentage": 0.4167,
+     "points_for_per_game": 26.75,
+     "points_against_per_game": 20.667,
+     "point_differential_per_game": 6.083
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 72,
+      "team_strength": 1502.1,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "marshall",
+    "team": "Marshall",
+    "espn_id": 276,
+    "division": "fbs",
+    "conference": "Sun Belt",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T18:30:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 5,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 369,
+     "points_against": 363,
+     "point_differential": 6,
+     "record": "5-7-0",
+     "win_percentage": 0.4167,
+     "points_for_per_game": 30.75,
+     "points_against_per_game": 30.25,
+     "point_differential_per_game": 0.5
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 73,
+      "team_strength": 1501.8,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "troy",
+    "team": "Troy",
+    "espn_id": 2653,
+    "division": "fbs",
+    "conference": "Sun Belt",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-17T02:00:00Z",
+     "last_period": "postseason-01",
+     "games": 14,
+     "wins": 8,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 329,
+     "points_against": 335,
+     "point_differential": -6,
+     "record": "8-6-0",
+     "win_percentage": 0.5714,
+     "points_for_per_game": 23.5,
+     "points_against_per_game": 23.929,
+     "point_differential_per_game": -0.429
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 74,
+      "team_strength": 1500.8,
+      "games_rated": 100,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "rutgers",
+    "team": "Rutgers",
+    "espn_id": 164,
+    "division": "fbs",
+    "conference": "Big Ten",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T20:30:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 5,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 344,
+     "points_against": 382,
+     "point_differential": -38,
+     "record": "5-7-0",
+     "win_percentage": 0.4167,
+     "points_for_per_game": 28.667,
+     "points_against_per_game": 31.833,
+     "point_differential_per_game": -3.167
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 75,
+      "team_strength": 1497.7,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "cincinnati",
+    "team": "Cincinnati",
+    "espn_id": 2132,
+    "division": "fbs",
+    "conference": "Big 12",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2026-01-02T21:30:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 7,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 394,
+     "points_against": 333,
+     "point_differential": 61,
+     "record": "7-6-0",
+     "win_percentage": 0.5385,
+     "points_for_per_game": 30.308,
+     "points_against_per_game": 25.615,
+     "point_differential_per_game": 4.692
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 76,
+      "team_strength": 1494.8,
+      "games_rated": 96,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "kentucky",
+    "team": "Kentucky",
+    "espn_id": 96,
+    "division": "fbs",
+    "conference": "SEC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T17:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 5,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 276,
+     "points_against": 317,
+     "point_differential": -41,
+     "record": "5-7-0",
+     "win_percentage": 0.4167,
+     "points_for_per_game": 23.0,
+     "points_against_per_game": 26.417,
+     "point_differential_per_game": -3.417
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 77,
+      "team_strength": 1491.2,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "arkansas-state",
+    "team": "Arkansas State",
+    "espn_id": 2032,
+    "division": "fbs",
+    "conference": "Sun Belt",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-19T02:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 7,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 327,
+     "points_against": 356,
+     "point_differential": -29,
+     "record": "7-6-0",
+     "win_percentage": 0.5385,
+     "points_for_per_game": 25.154,
+     "points_against_per_game": 27.385,
+     "point_differential_per_game": -2.231
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 78,
+      "team_strength": 1475.1,
+      "games_rated": 98,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "kansas",
+    "team": "Kansas",
+    "espn_id": 2305,
+    "division": "fbs",
+    "conference": "Big 12",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-28T17:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 5,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 337,
+     "points_against": 321,
+     "point_differential": 16,
+     "record": "5-7-0",
+     "win_percentage": 0.4167,
+     "points_for_per_game": 28.083,
+     "points_against_per_game": 26.75,
+     "point_differential_per_game": 1.333
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 79,
+      "team_strength": 1471.4,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "baylor",
+    "team": "Baylor",
+    "espn_id": 239,
+    "division": "fbs",
+    "conference": "Big 12",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T17:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 5,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 373,
+     "points_against": 391,
+     "point_differential": -18,
+     "record": "5-7-0",
+     "win_percentage": 0.4167,
+     "points_for_per_game": 31.083,
+     "points_against_per_game": 32.583,
+     "point_differential_per_game": -1.5
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 80,
+      "team_strength": 1471.1,
+      "games_rated": 96,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "miami-oh",
+    "team": "Miami (OH)",
+    "espn_id": 193,
+    "division": "fbs",
+    "conference": "Mid-American",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-27T21:30:00Z",
+     "last_period": "postseason-01",
+     "games": 14,
+     "wins": 7,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 329,
+     "points_against": 304,
+     "point_differential": 25,
+     "record": "7-7-0",
+     "win_percentage": 0.5,
+     "points_for_per_game": 23.5,
+     "points_against_per_game": 21.714,
+     "point_differential_per_game": 1.786
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 81,
+      "team_strength": 1470.6,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "wisconsin",
+    "team": "Wisconsin",
+    "espn_id": 275,
+    "division": "fbs",
+    "conference": "Big Ten",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T20:30:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 4,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 154,
+     "points_against": 259,
+     "point_differential": -105,
+     "record": "4-8-0",
+     "win_percentage": 0.3333,
+     "points_for_per_game": 12.833,
+     "points_against_per_game": 21.583,
+     "point_differential_per_game": -8.75
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 82,
+      "team_strength": 1467.4,
+      "games_rated": 92,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "louisiana",
+    "team": "Louisiana",
+    "espn_id": 309,
+    "division": "fbs",
+    "conference": "Sun Belt",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-18T01:30:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 6,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 338,
+     "points_against": 380,
+     "point_differential": -42,
+     "record": "6-7-0",
+     "win_percentage": 0.4615,
+     "points_for_per_game": 26.0,
+     "points_against_per_game": 29.231,
+     "point_differential_per_game": -3.231
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 83,
+      "team_strength": 1460.6,
+      "games_rated": 101,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "delaware",
+    "team": "Delaware",
+    "espn_id": 48,
+    "division": "fbs",
+    "conference": "Conference USA",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-18T01:30:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 7,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 377,
+     "points_against": 403,
+     "point_differential": -26,
+     "record": "7-6-0",
+     "win_percentage": 0.5385,
+     "points_for_per_game": 29.0,
+     "points_against_per_game": 31.0,
+     "point_differential_per_game": -2.0
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 84,
+      "team_strength": 1448.1,
+      "games_rated": 13,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "florida-international",
+    "team": "Florida International",
+    "espn_id": 2229,
+    "division": "fbs",
+    "conference": "Conference USA",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-27T01:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 7,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 371,
+     "points_against": 390,
+     "point_differential": -19,
+     "record": "7-6-0",
+     "win_percentage": 0.5385,
+     "points_for_per_game": 28.538,
+     "points_against_per_game": 30.0,
+     "point_differential_per_game": -1.462
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 85,
+      "team_strength": 1444.3,
+      "games_rated": 90,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "utah-state",
+    "team": "Utah State",
+    "espn_id": 328,
+    "division": "fbs",
+    "conference": "Mountain West",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-22T19:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 6,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 402,
+     "points_against": 373,
+     "point_differential": 29,
+     "record": "6-7-0",
+     "win_percentage": 0.4615,
+     "points_for_per_game": 30.923,
+     "points_against_per_game": 28.692,
+     "point_differential_per_game": 2.231
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 86,
+      "team_strength": 1443.4,
+      "games_rated": 93,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "california",
+    "team": "California",
+    "espn_id": 25,
+    "division": "fbs",
+    "conference": "ACC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-25T01:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 7,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 329,
+     "points_against": 353,
+     "point_differential": -24,
+     "record": "7-6-0",
+     "win_percentage": 0.5385,
+     "points_for_per_game": 25.308,
+     "points_against_per_game": 27.154,
+     "point_differential_per_game": -1.846
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 87,
+      "team_strength": 1441.8,
+      "games_rated": 91,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "west-virginia",
+    "team": "West Virginia",
+    "espn_id": 277,
+    "division": "fbs",
+    "conference": "Big 12",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T17:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 4,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 261,
+     "points_against": 370,
+     "point_differential": -109,
+     "record": "4-8-0",
+     "win_percentage": 0.3333,
+     "points_for_per_game": 21.75,
+     "points_against_per_game": 30.833,
+     "point_differential_per_game": -9.083
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 88,
+      "team_strength": 1439.0,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "ucf",
+    "team": "UCF",
+    "espn_id": 2116,
+    "division": "fbs",
+    "conference": "Big 12",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T18:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 5,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 292,
+     "points_against": 283,
+     "point_differential": 9,
+     "record": "5-7-0",
+     "win_percentage": 0.4167,
+     "points_for_per_game": 24.333,
+     "points_against_per_game": 23.583,
+     "point_differential_per_game": 0.75
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 89,
+      "team_strength": 1425.4,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "florida-state",
+    "team": "Florida State",
+    "espn_id": 52,
+    "division": "fbs",
+    "conference": "ACC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T21:30:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 5,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 396,
+     "points_against": 264,
+     "point_differential": 132,
+     "record": "5-7-0",
+     "win_percentage": 0.4167,
+     "points_for_per_game": 33.0,
+     "points_against_per_game": 22.0,
+     "point_differential_per_game": 11.0
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 90,
+      "team_strength": 1422.2,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "air-force",
+    "team": "Air Force",
+    "espn_id": 2005,
+    "division": "fbs",
+    "conference": "Mountain West",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-28T20:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 4,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 358,
+     "points_against": 364,
+     "point_differential": -6,
+     "record": "4-8-0",
+     "win_percentage": 0.3333,
+     "points_for_per_game": 29.833,
+     "points_against_per_game": 30.333,
+     "point_differential_per_game": -0.5
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 91,
+      "team_strength": 1416.9,
+      "games_rated": 91,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "missouri-state",
+    "team": "Missouri State",
+    "espn_id": 2623,
+    "division": "fbs",
+    "conference": "Conference USA",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-19T02:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 7,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 333,
+     "points_against": 374,
+     "point_differential": -41,
+     "record": "7-6-0",
+     "win_percentage": 0.5385,
+     "points_for_per_game": 25.615,
+     "points_against_per_game": 28.769,
+     "point_differential_per_game": -3.154
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 92,
+      "team_strength": 1412.3,
+      "games_rated": 13,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "arkansas",
+    "team": "Arkansas",
+    "espn_id": 8,
+    "division": "fbs",
+    "conference": "SEC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T20:30:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 2,
+     "losses": 10,
+     "ties": 0,
+     "points_for": 395,
+     "points_against": 406,
+     "point_differential": -11,
+     "record": "2-10-0",
+     "win_percentage": 0.1667,
+     "points_for_per_game": 32.917,
+     "points_against_per_game": 33.833,
+     "point_differential_per_game": -0.917
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 93,
+      "team_strength": 1410.6,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "coastal-carolina",
+    "team": "Coastal Carolina",
+    "espn_id": 324,
+    "division": "fbs",
+    "conference": "Sun Belt",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-30T19:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 6,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 288,
+     "points_against": 430,
+     "point_differential": -142,
+     "record": "6-7-0",
+     "win_percentage": 0.4615,
+     "points_for_per_game": 22.154,
+     "points_against_per_game": 33.077,
+     "point_differential_per_game": -10.923
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 94,
+      "team_strength": 1410.4,
+      "games_rated": 98,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "mississippi-state",
+    "team": "Mississippi State",
+    "espn_id": 344,
+    "division": "fbs",
+    "conference": "SEC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2026-01-03T01:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 5,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 395,
+     "points_against": 393,
+     "point_differential": 2,
+     "record": "5-8-0",
+     "win_percentage": 0.3846,
+     "points_for_per_game": 30.385,
+     "points_against_per_game": 30.231,
+     "point_differential_per_game": 0.154
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 95,
+      "team_strength": 1408.2,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "ucla",
+    "team": "UCLA",
+    "espn_id": 26,
+    "division": "fbs",
+    "conference": "Big Ten",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-30T00:30:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 3,
+     "losses": 9,
+     "ties": 0,
+     "points_for": 218,
+     "points_against": 401,
+     "point_differential": -183,
+     "record": "3-9-0",
+     "win_percentage": 0.25,
+     "points_for_per_game": 18.167,
+     "points_against_per_game": 33.417,
+     "point_differential_per_game": -15.25
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 96,
+      "team_strength": 1406.2,
+      "games_rated": 92,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "central-michigan",
+    "team": "Central Michigan",
+    "espn_id": 2117,
+    "division": "fbs",
+    "conference": "Mid-American",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-26T18:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 7,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 293,
+     "points_against": 306,
+     "point_differential": -13,
+     "record": "7-6-0",
+     "win_percentage": 0.5385,
+     "points_for_per_game": 22.538,
+     "points_against_per_game": 23.538,
+     "point_differential_per_game": -1.0
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 97,
+      "team_strength": 1405.1,
+      "games_rated": 92,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "stanford",
+    "team": "Stanford",
+    "espn_id": 24,
+    "division": "fbs",
+    "conference": "ACC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-30T03:30:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 4,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 226,
+     "points_against": 350,
+     "point_differential": -124,
+     "record": "4-8-0",
+     "win_percentage": 0.3333,
+     "points_for_per_game": 18.833,
+     "points_against_per_game": 29.167,
+     "point_differential_per_game": -10.333
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 98,
+      "team_strength": 1404.9,
+      "games_rated": 90,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "south-alabama",
+    "team": "South Alabama",
+    "espn_id": 6,
+    "division": "fbs",
+    "conference": "Sun Belt",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T20:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 4,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 318,
+     "points_against": 365,
+     "point_differential": -47,
+     "record": "4-8-0",
+     "win_percentage": 0.3333,
+     "points_for_per_game": 26.5,
+     "points_against_per_game": 30.417,
+     "point_differential_per_game": -3.917
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 99,
+      "team_strength": 1399.7,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "michigan-state",
+    "team": "Michigan State",
+    "espn_id": 127,
+    "division": "fbs",
+    "conference": "Big Ten",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-30T00:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 4,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 295,
+     "points_against": 359,
+     "point_differential": -64,
+     "record": "4-8-0",
+     "win_percentage": 0.3333,
+     "points_for_per_game": 24.583,
+     "points_against_per_game": 29.917,
+     "point_differential_per_game": -5.333
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 100,
+      "team_strength": 1384.9,
+      "games_rated": 91,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "liberty",
+    "team": "Liberty",
+    "espn_id": 2335,
+    "division": "fbs",
+    "conference": "Conference USA",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T20:30:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 4,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 307,
+     "points_against": 318,
+     "point_differential": -11,
+     "record": "4-8-0",
+     "win_percentage": 0.3333,
+     "points_for_per_game": 25.583,
+     "points_against_per_game": 26.5,
+     "point_differential_per_game": -0.917
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 101,
+      "team_strength": 1383.4,
+      "games_rated": 96,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "boston-college",
+    "team": "Boston College",
+    "espn_id": 103,
+    "division": "fbs",
+    "conference": "ACC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T20:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 2,
+     "losses": 10,
+     "ties": 0,
+     "points_for": 305,
+     "points_against": 393,
+     "point_differential": -88,
+     "record": "2-10-0",
+     "win_percentage": 0.1667,
+     "points_for_per_game": 25.417,
+     "points_against_per_game": 32.75,
+     "point_differential_per_game": -7.333
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 102,
+      "team_strength": 1379.7,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "north-carolina",
+    "team": "North Carolina",
+    "espn_id": 153,
+    "division": "fbs",
+    "conference": "ACC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-30T00:30:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 4,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 231,
+     "points_against": 294,
+     "point_differential": -63,
+     "record": "4-8-0",
+     "win_percentage": 0.3333,
+     "points_for_per_game": 19.25,
+     "points_against_per_game": 24.5,
+     "point_differential_per_game": -5.25
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 103,
+      "team_strength": 1376.8,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "colorado",
+    "team": "Colorado",
+    "espn_id": 38,
+    "division": "fbs",
+    "conference": "Big 12",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T17:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 3,
+     "losses": 9,
+     "ties": 0,
+     "points_for": 251,
+     "points_against": 366,
+     "point_differential": -115,
+     "record": "3-9-0",
+     "win_percentage": 0.25,
+     "points_for_per_game": 20.917,
+     "points_against_per_game": 30.5,
+     "point_differential_per_game": -9.583
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 104,
+      "team_strength": 1376.5,
+      "games_rated": 90,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "app-state",
+    "team": "App State",
+    "espn_id": 2026,
+    "division": "fbs",
+    "conference": "Sun Belt",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-29T19:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 5,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 314,
+     "points_against": 387,
+     "point_differential": -73,
+     "record": "5-8-0",
+     "win_percentage": 0.3846,
+     "points_for_per_game": 24.154,
+     "points_against_per_game": 29.769,
+     "point_differential_per_game": -5.615
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 105,
+      "team_strength": 1367.4,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "buffalo",
+    "team": "Buffalo",
+    "espn_id": 2084,
+    "division": "fbs",
+    "conference": "Mid-American",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-28T17:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 5,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 288,
+     "points_against": 282,
+     "point_differential": 6,
+     "record": "5-7-0",
+     "win_percentage": 0.4167,
+     "points_for_per_game": 24.0,
+     "points_against_per_game": 23.5,
+     "point_differential_per_game": 0.5
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 106,
+      "team_strength": 1366.9,
+      "games_rated": 92,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "temple",
+    "team": "Temple",
+    "espn_id": 218,
+    "division": "fbs",
+    "conference": "American Athletic",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-28T20:30:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 5,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 334,
+     "points_against": 356,
+     "point_differential": -22,
+     "record": "5-7-0",
+     "win_percentage": 0.4167,
+     "points_for_per_game": 27.833,
+     "points_against_per_game": 29.667,
+     "point_differential_per_game": -1.833
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 107,
+      "team_strength": 1362.7,
+      "games_rated": 91,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "southern-miss",
+    "team": "Southern Miss",
+    "espn_id": 2572,
+    "division": "fbs",
+    "conference": "Sun Belt",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-12-23T22:30:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 7,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 374,
+     "points_against": 356,
+     "point_differential": 18,
+     "record": "7-6-0",
+     "win_percentage": 0.5385,
+     "points_for_per_game": 28.769,
+     "points_against_per_game": 27.385,
+     "point_differential_per_game": 1.385
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 108,
+      "team_strength": 1360.1,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "maryland",
+    "team": "Maryland",
+    "espn_id": 120,
+    "division": "fbs",
+    "conference": "Big Ten",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-30T00:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 4,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 282,
+     "points_against": 318,
+     "point_differential": -36,
+     "record": "4-8-0",
+     "win_percentage": 0.3333,
+     "points_for_per_game": 23.5,
+     "points_against_per_game": 26.5,
+     "point_differential_per_game": -3.0
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 109,
+      "team_strength": 1354.8,
+      "games_rated": 90,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "virginia-tech",
+    "team": "Virginia Tech",
+    "espn_id": 259,
+    "division": "fbs",
+    "conference": "ACC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-30T00:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 3,
+     "losses": 9,
+     "ties": 0,
+     "points_for": 257,
+     "points_against": 362,
+     "point_differential": -105,
+     "record": "3-9-0",
+     "win_percentage": 0.25,
+     "points_for_per_game": 21.417,
+     "points_against_per_game": 30.167,
+     "point_differential_per_game": -8.75
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 110,
+      "team_strength": 1351.3,
+      "games_rated": 96,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "eastern-michigan",
+    "team": "Eastern Michigan",
+    "espn_id": 2199,
+    "division": "fbs",
+    "conference": "Mid-American",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-26T00:30:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 4,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 289,
+     "points_against": 357,
+     "point_differential": -68,
+     "record": "4-8-0",
+     "win_percentage": 0.3333,
+     "points_for_per_game": 24.083,
+     "points_against_per_game": 29.75,
+     "point_differential_per_game": -5.667
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 111,
+      "team_strength": 1346.2,
+      "games_rated": 91,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "florida-atlantic",
+    "team": "Florida Atlantic",
+    "espn_id": 2226,
+    "division": "fbs",
+    "conference": "American Athletic",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T17:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 4,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 354,
+     "points_against": 436,
+     "point_differential": -82,
+     "record": "4-8-0",
+     "win_percentage": 0.3333,
+     "points_for_per_game": 29.5,
+     "points_against_per_game": 36.333,
+     "point_differential_per_game": -6.833
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 112,
+      "team_strength": 1335.6,
+      "games_rated": 93,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "nevada",
+    "team": "Nevada",
+    "espn_id": 2440,
+    "division": "fbs",
+    "conference": "Mountain West",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-30T02:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 3,
+     "losses": 9,
+     "ties": 0,
+     "points_for": 211,
+     "points_against": 330,
+     "point_differential": -119,
+     "record": "3-9-0",
+     "win_percentage": 0.25,
+     "points_for_per_game": 17.583,
+     "points_against_per_game": 27.5,
+     "point_differential_per_game": -9.917
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 113,
+      "team_strength": 1327.6,
+      "games_rated": 93,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "akron",
+    "team": "Akron",
+    "espn_id": 2006,
+    "division": "fbs",
+    "conference": "Mid-American",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-19T00:00:00Z",
+     "last_period": "regular-13",
+     "games": 12,
+     "wins": 5,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 267,
+     "points_against": 329,
+     "point_differential": -62,
+     "record": "5-7-0",
+     "win_percentage": 0.4167,
+     "points_for_per_game": 22.25,
+     "points_against_per_game": 27.417,
+     "point_differential_per_game": -5.167
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 114,
+      "team_strength": 1326.0,
+      "games_rated": 90,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "wyoming",
+    "team": "Wyoming",
+    "espn_id": 2751,
+    "division": "fbs",
+    "conference": "Mountain West",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-30T04:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 4,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 192,
+     "points_against": 246,
+     "point_differential": -54,
+     "record": "4-8-0",
+     "win_percentage": 0.3333,
+     "points_for_per_game": 16.0,
+     "points_against_per_game": 20.5,
+     "point_differential_per_game": -4.5
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 115,
+      "team_strength": 1323.1,
+      "games_rated": 91,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "uab",
+    "team": "UAB",
+    "espn_id": 5,
+    "division": "fbs",
+    "conference": "American Athletic",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T20:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 4,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 317,
+     "points_against": 459,
+     "point_differential": -142,
+     "record": "4-8-0",
+     "win_percentage": 0.3333,
+     "points_for_per_game": 26.417,
+     "points_against_per_game": 38.25,
+     "point_differential_per_game": -11.833
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 116,
+      "team_strength": 1321.8,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "rice",
+    "team": "Rice",
+    "espn_id": 242,
+    "division": "fbs",
+    "conference": "American Athletic",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2026-01-02T18:00:00Z",
+     "last_period": "postseason-01",
+     "games": 13,
+     "wins": 5,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 248,
+     "points_against": 428,
+     "point_differential": -180,
+     "record": "5-8-0",
+     "win_percentage": 0.3846,
+     "points_for_per_game": 19.077,
+     "points_against_per_game": 32.923,
+     "point_differential_per_game": -13.846
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 117,
+      "team_strength": 1319.3,
+      "games_rated": 92,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "syracuse",
+    "team": "Syracuse",
+    "espn_id": 183,
+    "division": "fbs",
+    "conference": "ACC",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T20:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 3,
+     "losses": 9,
+     "ties": 0,
+     "points_for": 242,
+     "points_against": 419,
+     "point_differential": -177,
+     "record": "3-9-0",
+     "win_percentage": 0.25,
+     "points_for_per_game": 20.167,
+     "points_against_per_game": 34.917,
+     "point_differential_per_game": -14.75
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 118,
+      "team_strength": 1313.1,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "purdue",
+    "team": "Purdue",
+    "espn_id": 2509,
+    "division": "fbs",
+    "conference": "Big Ten",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T00:30:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 2,
+     "losses": 10,
+     "ties": 0,
+     "points_for": 225,
+     "points_against": 382,
+     "point_differential": -157,
+     "record": "2-10-0",
+     "win_percentage": 0.1667,
+     "points_for_per_game": 18.75,
+     "points_against_per_game": 31.833,
+     "point_differential_per_game": -13.083
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 119,
+      "team_strength": 1302.4,
+      "games_rated": 91,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "kent-state",
+    "team": "Kent State",
+    "espn_id": 2309,
+    "division": "fbs",
+    "conference": "Mid-American",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-28T17:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 5,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 255,
+     "points_against": 403,
+     "point_differential": -148,
+     "record": "5-7-0",
+     "win_percentage": 0.4167,
+     "points_for_per_game": 21.25,
+     "points_against_per_game": 33.583,
+     "point_differential_per_game": -12.333
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 120,
+      "team_strength": 1298.6,
+      "games_rated": 89,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "bowling-green",
+    "team": "Bowling Green",
+    "espn_id": 189,
+    "division": "fbs",
+    "conference": "Mid-American",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-25T21:30:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 4,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 246,
+     "points_against": 291,
+     "point_differential": -45,
+     "record": "4-8-0",
+     "win_percentage": 0.3333,
+     "points_for_per_game": 20.5,
+     "points_against_per_game": 24.25,
+     "point_differential_per_game": -3.75
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 121,
+      "team_strength": 1297.1,
+      "games_rated": 91,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "northern-illinois",
+    "team": "Northern Illinois",
+    "espn_id": 2459,
+    "division": "fbs",
+    "conference": "Mid-American",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-28T17:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 3,
+     "losses": 9,
+     "ties": 0,
+     "points_for": 205,
+     "points_against": 292,
+     "point_differential": -87,
+     "record": "3-9-0",
+     "win_percentage": 0.25,
+     "points_for_per_game": 17.083,
+     "points_against_per_game": 24.333,
+     "point_differential_per_game": -7.25
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 122,
+      "team_strength": 1287.2,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "san-jos-state",
+    "team": "San José State",
+    "espn_id": 23,
+    "division": "fbs",
+    "conference": "Mountain West",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-30T03:30:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 3,
+     "losses": 9,
+     "ties": 0,
+     "points_for": 257,
+     "points_against": 390,
+     "point_differential": -133,
+     "record": "3-9-0",
+     "win_percentage": 0.25,
+     "points_for_per_game": 21.417,
+     "points_against_per_game": 32.5,
+     "point_differential_per_game": -11.083
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 123,
+      "team_strength": 1269.2,
+      "games_rated": 92,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "new-mexico-state",
+    "team": "New Mexico State",
+    "espn_id": 166,
+    "division": "fbs",
+    "conference": "Conference USA",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T20:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 4,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 259,
+     "points_against": 331,
+     "point_differential": -72,
+     "record": "4-8-0",
+     "win_percentage": 0.3333,
+     "points_for_per_game": 21.583,
+     "points_against_per_game": 27.583,
+     "point_differential_per_game": -6.0
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 124,
+      "team_strength": 1265.8,
+      "games_rated": 87,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "tulsa",
+    "team": "Tulsa",
+    "espn_id": 202,
+    "division": "fbs",
+    "conference": "American Athletic",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T20:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 4,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 278,
+     "points_against": 347,
+     "point_differential": -69,
+     "record": "4-8-0",
+     "win_percentage": 0.3333,
+     "points_for_per_game": 23.167,
+     "points_against_per_game": 28.917,
+     "point_differential_per_game": -5.75
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 125,
+      "team_strength": 1258.5,
+      "games_rated": 92,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "middle-tennessee",
+    "team": "Middle Tennessee",
+    "espn_id": 2393,
+    "division": "fbs",
+    "conference": "Conference USA",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T20:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 3,
+     "losses": 9,
+     "ties": 0,
+     "points_for": 269,
+     "points_against": 371,
+     "point_differential": -102,
+     "record": "3-9-0",
+     "win_percentage": 0.25,
+     "points_for_per_game": 22.417,
+     "points_against_per_game": 30.917,
+     "point_differential_per_game": -8.5
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 126,
+      "team_strength": 1250.9,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "colorado-state",
+    "team": "Colorado State",
+    "espn_id": 36,
+    "division": "fbs",
+    "conference": "Mountain West",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-28T20:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 2,
+     "losses": 10,
+     "ties": 0,
+     "points_for": 222,
+     "points_against": 370,
+     "point_differential": -148,
+     "record": "2-10-0",
+     "win_percentage": 0.1667,
+     "points_for_per_game": 18.5,
+     "points_against_per_game": 30.833,
+     "point_differential_per_game": -12.333
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 127,
+      "team_strength": 1246.5,
+      "games_rated": 89,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "ball-state",
+    "team": "Ball State",
+    "espn_id": 2050,
+    "division": "fbs",
+    "conference": "Mid-American",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T17:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 4,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 190,
+     "points_against": 358,
+     "point_differential": -168,
+     "record": "4-8-0",
+     "win_percentage": 0.3333,
+     "points_for_per_game": 15.833,
+     "points_against_per_game": 29.833,
+     "point_differential_per_game": -14.0
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 128,
+      "team_strength": 1242.0,
+      "games_rated": 91,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "oregon-state",
+    "team": "Oregon State",
+    "espn_id": 204,
+    "division": "fbs",
+    "conference": "Pac-12",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T23:30:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 2,
+     "losses": 10,
+     "ties": 0,
+     "points_for": 218,
+     "points_against": 353,
+     "point_differential": -135,
+     "record": "2-10-0",
+     "win_percentage": 0.1667,
+     "points_for_per_game": 18.167,
+     "points_against_per_game": 29.417,
+     "point_differential_per_game": -11.25
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 129,
+      "team_strength": 1236.9,
+      "games_rated": 92,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "sam-houston",
+    "team": "Sam Houston",
+    "espn_id": 2534,
+    "division": "fbs",
+    "conference": "Conference USA",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T18:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 2,
+     "losses": 10,
+     "ties": 0,
+     "points_for": 213,
+     "points_against": 454,
+     "point_differential": -241,
+     "record": "2-10-0",
+     "win_percentage": 0.1667,
+     "points_for_per_game": 17.75,
+     "points_against_per_game": 37.833,
+     "point_differential_per_game": -20.083
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 130,
+      "team_strength": 1226.8,
+      "games_rated": 37,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "oklahoma-state",
+    "team": "Oklahoma State",
+    "espn_id": 197,
+    "division": "fbs",
+    "conference": "Big 12",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T17:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 1,
+     "losses": 11,
+     "ties": 0,
+     "points_for": 170,
+     "points_against": 400,
+     "point_differential": -230,
+     "record": "1-11-0",
+     "win_percentage": 0.0833,
+     "points_for_per_game": 14.167,
+     "points_against_per_game": 33.333,
+     "point_differential_per_game": -19.167
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 131,
+      "team_strength": 1217.3,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "ul-monroe",
+    "team": "UL Monroe",
+    "espn_id": 2433,
+    "division": "fbs",
+    "conference": "Sun Belt",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T20:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 3,
+     "losses": 9,
+     "ties": 0,
+     "points_for": 199,
+     "points_against": 383,
+     "point_differential": -184,
+     "record": "3-9-0",
+     "win_percentage": 0.25,
+     "points_for_per_game": 16.583,
+     "points_against_per_game": 31.917,
+     "point_differential_per_game": -15.333
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 132,
+      "team_strength": 1215.3,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "utep",
+    "team": "UTEP",
+    "espn_id": 2638,
+    "division": "fbs",
+    "conference": "Conference USA",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T18:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 2,
+     "losses": 10,
+     "ties": 0,
+     "points_for": 280,
+     "points_against": 365,
+     "point_differential": -85,
+     "record": "2-10-0",
+     "win_percentage": 0.1667,
+     "points_for_per_game": 23.333,
+     "points_against_per_game": 30.417,
+     "point_differential_per_game": -7.083
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 133,
+      "team_strength": 1212.8,
+      "games_rated": 92,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "georgia-state",
+    "team": "Georgia State",
+    "espn_id": 2247,
+    "division": "fbs",
+    "conference": "Sun Belt",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-29T19:00:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 1,
+     "losses": 11,
+     "ties": 0,
+     "points_for": 237,
+     "points_against": 454,
+     "point_differential": -217,
+     "record": "1-11-0",
+     "win_percentage": 0.0833,
+     "points_for_per_game": 19.75,
+     "points_against_per_game": 37.833,
+     "point_differential_per_game": -18.083
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 134,
+      "team_strength": 1200.5,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "charlotte",
+    "team": "Charlotte",
+    "espn_id": 2429,
+    "division": "fbs",
+    "conference": "American Athletic",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-30T00:30:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 1,
+     "losses": 11,
+     "ties": 0,
+     "points_for": 172,
+     "points_against": 436,
+     "point_differential": -264,
+     "record": "1-11-0",
+     "win_percentage": 0.0833,
+     "points_for_per_game": 14.333,
+     "points_against_per_game": 36.333,
+     "point_differential_per_game": -22.0
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 135,
+      "team_strength": 1169.7,
+      "games_rated": 90,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "massachusetts",
+    "team": "Massachusetts",
+    "espn_id": 113,
+    "division": "fbs",
+    "conference": "Mid-American",
+    "observed_results": {
+     "season": 2025,
+     "through_at": "2025-11-25T21:30:00Z",
+     "last_period": "regular-14",
+     "games": 12,
+     "wins": 0,
+     "losses": 12,
+     "ties": 0,
+     "points_for": 133,
+     "points_against": 463,
+     "point_differential": -330,
+     "record": "0-12-0",
+     "win_percentage": 0.0,
+     "points_for_per_game": 11.083,
+     "points_against_per_game": 38.583,
+     "point_differential_per_game": -27.5
+    },
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 136,
+      "team_strength": 1023.7,
+      "games_rated": 88,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   }
+  ],
+  "consensus": {
+   "status": "not-built",
+   "system_count": 1,
+   "weights": null,
+   "reason": "One independent rating cannot form a consensus. Do not create blend weights until multiple dated systems have prospective error histories."
+  },
+  "unsupported": [
+   "2026 forecast",
+   "current roster or availability",
+   "talent or portal inputs",
+   "play-by-play efficiency",
+   "opponent adjustment",
+   "timestamped market comparison"
+  ]
+ },
+ "tier_meaning": "Labs — useful and live, still being challenged. Open questions may remain about calibration, assumptions, data quality or edge. Use with your eyes open.",
+ "built": "2026-08-08",
+ "canonical_url": "https://datadawgs216.com/data/cfb-teams.json"
+}

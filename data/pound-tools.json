@@ -1373,17 +1373,26 @@
   {
    "kind": "roadmap-idea",
    "domain": "College Football",
-   "lifecycle_status": "idea",
+   "lifecycle_status": "building",
    "lifecycle_history": [
     {
      "status": "idea",
      "on": "2026-08-08",
      "note": "Entered The Pound from the 2026-08-08 CFB roadmap."
+    },
+    {
+     "status": "building",
+     "on": "2026-08-08",
+     "note": "Published the first compact output: 136 team profiles joining observed results to the dated retrodictive rating."
     }
    ],
-   "implemented": false,
-   "delivery_evidence": [],
-   "delivery_note": null,
+   "implemented": true,
+   "delivery_evidence": [
+    "/data/cfb-teams.json",
+    "/scripts/cfb_team_profiles.py",
+    "/tests/test_cfb_team_profiles.py"
+   ],
+   "delivery_note": "Partially implemented with a compact team profile surface. Latest games, richer team-week metrics and model grades remain future outputs.",
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 1,

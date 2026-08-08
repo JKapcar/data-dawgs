@@ -78,6 +78,7 @@ const cfbRatingsJson = {
   graded: false,
   integrity: { snapshot_id: "sha256:test-cfb-ratings", systems: 1, teams: 3 },
   data: {
+    scope: "observed-results-plus-retrodictive-rating",
     rating_period: { season: 2025, label: "end-of-2025-season", source_field: "ratings_as_of_end_of_2025", prospective: false },
     systems: [{
       system_id: "dd-cfb-elo", name: "Data Dawgs CFB Elo baseline", provider: "Data Dawgs",
@@ -93,9 +94,9 @@ const cfbRatingsJson = {
       prospective_forecasts_exist: false, graded: false,
     }],
     teams: [
-      { team_slug: "indiana", team: "Indiana", conference: "Big Ten", systems: { "dd-cfb-elo": { rank: 1, team_strength: 2054.8, games_rated: 96, expected_margin: null, win_probability: null, predicted_total: null } } },
-      { team_slug: "ohio-state", team: "Ohio State", conference: "Big Ten", systems: { "dd-cfb-elo": { rank: 2, team_strength: 1925.8, games_rated: 99, expected_margin: null, win_probability: null, predicted_total: null } } },
-      { team_slug: "akron", team: "Akron", conference: "Mid-American", systems: { "dd-cfb-elo": { rank: 133, team_strength: 1088.1, games_rated: 93, expected_margin: null, win_probability: null, predicted_total: null } } },
+      { team_slug: "indiana", team: "Indiana", conference: "Big Ten", observed_results: { season: 2025, through_at: "2026-01-01T00:00:00Z", record: "16-0-0", games: 16, wins: 16, losses: 0, ties: 0, point_differential: 300 }, systems: { "dd-cfb-elo": { rank: 1, team_strength: 2054.8, games_rated: 96, expected_margin: null, win_probability: null, predicted_total: null } } },
+      { team_slug: "ohio-state", team: "Ohio State", conference: "Big Ten", observed_results: { season: 2025, through_at: "2026-01-01T00:30:00Z", record: "12-2-0", games: 14, wins: 12, losses: 2, ties: 0, point_differential: 338 }, systems: { "dd-cfb-elo": { rank: 2, team_strength: 1925.8, games_rated: 99, expected_margin: null, win_probability: null, predicted_total: null } } },
+      { team_slug: "akron", team: "Akron", conference: "Mid-American", observed_results: { season: 2025, through_at: "2025-11-29T00:00:00Z", record: "4-8-0", games: 12, wins: 4, losses: 8, ties: 0, point_differential: -100 }, systems: { "dd-cfb-elo": { rank: 133, team_strength: 1088.1, games_rated: 93, expected_margin: null, win_probability: null, predicted_total: null } } },
     ],
     consensus: { status: "not-built", system_count: 1, weights: null, reason: "One independent rating cannot form a consensus." },
   },
@@ -123,7 +124,7 @@ globalThis.fetch = async (input, init) => {
   if (u.includes("datadawgs216.com/data/pool.json")) return J(poolJson);
   if (u.includes("datadawgs216.com/data/survivor.json")) return J(survJson);
   if (u.includes("datadawgs216.com/data/model-receipts.json")) return J(modelReceiptsJson);
-  if (u.includes("datadawgs216.com/data/cfb-ratings.json")) return J(cfbRatingsJson);
+  if (u.includes("datadawgs216.com/data/cfb-teams.json")) return J(cfbRatingsJson);
   if (u.includes("datadawgs216.com/dfs.html")) return new Response(dfsHtml, { status: 200 });
   if (u.includes("site.api.espn.com")) {
     if (netMode === "espnDown") return new Response("no", { status: 403 });
@@ -586,6 +587,10 @@ function refNcdf(z) {
      "CFB team profile resolves an exact case-insensitive team name");
   ok(elo.system_id === "dd-cfb-elo" && elo.rating.rank === 2 && elo.rating.team_strength === 1925.8 && elo.rating.win_probability === null,
      "CFB team profile returns the registered rating and preserves unsupported null outputs");
+  ok(d.observed_results.record === "12-2-0" && d.observed_results.point_differential === 338,
+     "CFB team profile keeps observed season results separate from the modelled rating");
+  ok(d.observed_results_are_facts === true && d.modelled_fields.length === 1 && d.modelled_fields[0] === "systems",
+     "CFB team profile labels which object is observed and which is modelled");
   ok(d.as_of === "2026-08-08" && d.integrity.snapshot_id === "sha256:test-cfb-ratings" && d.read_only && d.stored === false,
      "CFB team profile preserves registry provenance and non-persistence");
   ok(d.modelled && d.retrodictive && d.prospective === false && d.graded === false && d.consensus.status === "not-built" &&
@@ -720,7 +725,7 @@ function refNcdf(z) {
   ok(d.machine.surfaces.includes("surfaces.json"), "points agents at the surfaces map");
   ok(d.machine.data.includes("/data/model-contracts.json") && d.pages["pound.html"], "site map includes the Pound contracts and workbench");
   ok(d.machine.data.includes("/data/cfb-ratings.json") && d.machine.data.includes("/data/cfb-model-receipts.json") &&
-     d.machine.data.includes("/data/cfb-team-game.json") && d.machine.data.includes("/data/cfb-team-week.json"),
+     d.machine.data.includes("/data/cfb-team-game.json") && d.machine.data.includes("/data/cfb-team-week.json") && d.machine.data.includes("/data/cfb-teams.json"),
      "site map includes the canonical CFB registry, receipt ledger and results layers");
 }
 

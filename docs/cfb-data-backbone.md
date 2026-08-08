@@ -66,6 +66,13 @@ havoc, garbage-time, opponent-adjusted and market-performance families. Those fi
 are not filled with null-looking guesses. The roadmap entries remain `building` until
 canonical play-by-play and timestamped market inputs make the full contracts possible.
 
+`scripts/cfb_team_profiles.py refresh` adds `/data/cfb-teams.json`, a compact 136-team
+read surface. It joins each FBS team's observed season-to-date record and scoring facts
+to the separately nested end-of-2025 Elo registry row, locking both input snapshots.
+The observed and modelled objects are never blended. It remains retrodictive, ungraded,
+not a consensus and not a 2026 forecast; current roster, availability, talent, portal,
+play-efficiency, opponent-adjusted and timestamped-market inputs are explicitly absent.
+
 ## Model cards (governance principle cfb-gov-model-cards)
 
 `scripts/cfb_model_cards.py refresh` publishes `/data/cfb-model-cards.json`: the purpose, target, features, training window, validation design, limitations, calibration, performance, failure modes, version and retirement status the CFB governance section requires before a model is promoted past the lab. Every performance number is read from the model's own published output rather than typed into the card, and the calibration narrative is generated from the bins, so a card cannot drift away from the thing it describes.

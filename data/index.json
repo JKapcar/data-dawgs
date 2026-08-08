@@ -89,9 +89,9 @@
    {
     "path": "/data/pound-tools.json",
     "url": "https://datadawgs216.com/data/pound-tools.json",
-    "bytes": 125584,
+    "bytes": 126023,
     "as_of": "2026-08-08",
-    "sha256": "c2aeb6a84d4e6bae0e9b3bf3eaa6a99318ecb0fca35f11993d3a7567a50446aa",
+    "sha256": "f65b40c65a8277ec37b3d48a4c400707a8505dd489f5cd6fe0ef70aabc3dcd52",
     "note": "Two kinds of entry share this inventory. kind \"tool\" (NFL) carries delivery status. kind \"roadmap-idea\" (College Football) carries recommendation plus evidence-backed lifecycle and implementation state. A CFB artifact may be implemented without any MCP tool; candidate_mcp_tools are reservations and remain non-callable unless the independent Worker registry proves otherwise."
    },
    {
@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 15454,
+    "bytes": 15666,
     "as_of": "2026-08-08",
-    "sha256": "478ea513552b53b69bc1f29cfee0297c14dc77613ad371ba1e1f4930a69a58ad",
+    "sha256": "6eae0bbbcaa675287082c3a9087668c95414f2bfe88fa11a63931a43d06ebeff",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -157,6 +157,14 @@
     "as_of": "2026-08-08",
     "sha256": "71ff3e6f231148e69d5288e37fbbc4b0637549d26177d57baa6dd4574165074a",
     "note": "OBSERVED RESULTS ONLY. Scores, opponents, venue and record are deterministic schedule facts. No play-by-play, EPA, success, opponent adjustment, market performance or predictive claim is present."
+   },
+   {
+    "path": "/data/cfb-teams.json",
+    "url": "https://datadawgs216.com/data/cfb-teams.json",
+    "bytes": 114345,
+    "as_of": "2026-08-08",
+    "sha256": "6396b1486fe0a060d4e21bff4198045318bcee1fb04cab495606260374171314",
+    "note": "OBSERVED RESULTS plus one MODELLED, RETRODICTIVE, UNGRADED end-of-2025 Elo rating. The objects are separated deliberately. This is not a 2026 forecast, consensus, edge or recommendation."
    },
    {
     "path": "/data/cfb-market.json",

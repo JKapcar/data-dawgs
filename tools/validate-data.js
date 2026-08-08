@@ -362,6 +362,36 @@ console.log('\nCFB results layers — exact schedule-derived team facts');
   else ok(`${weekRows.length} results-only team-period rows reconcile arithmetically`);
 }
 
+console.log('\nCFB compact team profiles — facts and modelled rating stay separate');
+{
+  const week = JSON.parse(fs.readFileSync(path.join(DATA, 'cfb-team-week.json'), 'utf8'));
+  const ratings = JSON.parse(fs.readFileSync(path.join(DATA, 'cfb-ratings.json'), 'utf8'));
+  const profiles = JSON.parse(fs.readFileSync(path.join(DATA, 'cfb-teams.json'), 'utf8'));
+  const teams = profiles.data && profiles.data.teams;
+  if (!Array.isArray(teams) || teams.length !== ratings.data.teams.length)
+    fail('cfb-teams.json: compact profile count differs from the ratings registry');
+  else if (profiles.data.scope !== 'observed-results-plus-retrodictive-rating' || profiles.graded !== false)
+    fail('cfb-teams.json: evidence boundary is missing');
+  else if (profiles.data.inputs.team_week_snapshot_id !== week.integrity.snapshot_id ||
+           profiles.data.inputs.ratings_registry_snapshot_id !== ratings.integrity.snapshot_id)
+    fail('cfb-teams.json: input snapshot receipts drifted');
+  else if (profiles.data.consensus.status !== 'not-built' || profiles.data.consensus.weights !== null)
+    fail('cfb-teams.json: one system cannot become a consensus');
+  else if (new Set(teams.map(row => row.team_slug)).size !== teams.length || teams.some(row => {
+    const observed = row.observed_results;
+    const rating = row.systems && row.systems['dd-cfb-elo'];
+    return row.division !== 'fbs' || !observed || !rating ||
+      observed.games !== observed.wins + observed.losses + observed.ties ||
+      observed.point_differential !== observed.points_for - observed.points_against ||
+      rating.win_probability !== null || rating.expected_margin !== null || rating.predicted_total !== null;
+  })) fail('cfb-teams.json: a profile merges, invents or misstates observed/modelled fields');
+  // Python canonical JSON retains integral float spelling in the nested Elo rows;
+  // JSON.parse does not. The Python contract reproduces the hash byte-for-byte.
+  else if (!/^sha256:[0-9a-f]{64}$/.test(profiles.integrity.snapshot_id || ''))
+    fail('cfb-teams.json: canonical snapshot identifier is missing');
+  else ok(`${teams.length} compact profiles preserve separate observed and retrodictive objects`);
+}
+
 console.log('\nWorker deployment contract');
 {
   const configPath = path.join(ROOT, 'wrangler.jsonc');

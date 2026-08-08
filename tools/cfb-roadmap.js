@@ -293,6 +293,13 @@ const CFB_IDEAS = [
   /* ---------- Delivery / machine-readable infrastructure ---------- */
 
   idea({ id: 'cfb-public-outputs', name: 'Compact Public CFB Outputs',
+    lifecycle_status: 'building', implemented: true,
+    lifecycle_history: [
+      { status: 'idea', on: ROADMAP_AS_OF, note: 'Entered The Pound from the 2026-08-08 CFB roadmap.' },
+      { status: 'building', on: ROADMAP_AS_OF, note: 'Published the first compact output: 136 team profiles joining observed results to the dated retrodictive rating.' },
+    ],
+    delivery_evidence: ['/data/cfb-teams.json', '/scripts/cfb_team_profiles.py', '/tests/test_cfb_team_profiles.py'],
+    delivery_note: 'Partially implemented with a compact team profile surface. Latest games, richer team-week metrics and model grades remain future outputs.',
     category: 'delivery', recommendation: 'build', recommendation_modifiers: ['foundation'], roadmap_step: 1,
     source_headings: ['Compact public CFB outputs'],
     rationale: 'Publish compact derived outputs rather than dumping massive play-by-play datasets into the website repository — the same envelope-and-manifest discipline as the existing /data/ contract.',
