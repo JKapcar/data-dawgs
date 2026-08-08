@@ -1826,7 +1826,7 @@ STATE: everything saves in the browser on that device. A different device shows 
       <p style="margin:0 0 12px;font-size:13.5px;line-height:1.65;color:var(--ink-2)">
         Paste a Sleeper league ID. The API is read-only and needs no login, so there is nothing to
         authorize and nothing here can change your league. The ID is the long number in your league
-        URL &mdash; <code style="font-size:12px;color:var(--ink-1)">sleeper.com/leagues/<b>1234567890123456789</b>/team</code>.
+        URL &mdash; <code style="font-size:12px;color:var(--ink-1);overflow-wrap:anywhere">sleeper.com/leagues/<b>1234567890123456789</b>/team</code>.
       </p>
       <div class="controls" style="margin-bottom:6px">
         <input type="text" id="gxId" placeholder="League ID" style="width:260px" inputmode="numeric">
@@ -1875,7 +1875,7 @@ STATE: everything saves in the browser on that device. A different device shows 
     <div class="mod"><div class="n">03</div><h3>Survival odds <span class="mstat on">Live</span></h3><p>Monte Carlo over projected team scores and their variance &mdash; this week, and compounded across the rest of the season.</p></div>
     <div class="mod"><div class="n">04</div><h3>FAAB pacing <span class="mstat on">Live</span></h3><p>Dollars appreciate as the pool shrinks: ~$18,000 across 18 teams in week 1 is nearly worthless; ~$400 across five teams in December is not. Reads every team's remaining budget from your league.</p></div>
     <div class="mod"><div class="n">05</div><h3>Floor-first lineup <span class="mstat">Planned</span></h3><p>Maximizes P(score &gt; chop line) rather than expected points. Gated on a per-player weekly projection source with variance &mdash; a league's own history is too thin per player to fake one, so this waits rather than pretends.</p></div>
-    <div class="mod"><div class="n">06</div><h3>Waiver value <span class="mstat" id="gxM6">Planned</span></h3><p>Every elimination dumps a full roster into the pool. Who is unrostered in your league and what they actually scored in your scoring &mdash; observed points, not projections.</p></div>
+    <div class="mod"><div class="n">06</div><h3>Waiver value <span class="mstat on" id="gxM6">Live</span></h3><p>Every elimination dumps a full roster into the pool. Who is unrostered in your league and what they actually scored in your scoring &mdash; observed points, not projections.</p></div>
   </div>
 
   <div class="honesty">
@@ -2095,14 +2095,16 @@ STATE: everything saves in the browser on that device. A different device shows 
 
     if(!names){
       elWvTab.innerHTML="";
-      elWvState.textContent="Waiting on backend";
-      if(elM6) elM6.textContent="Awaiting deploy";
-      elWvNote.innerHTML = "⚠️ The maths ran — "+cand.length+" unrostered player"+(cand.length===1?" has":"s have")+" a scoring record here — but player NAMES need the site's backend piece, which is built and not yet deployed. The board lights up on its own once it ships. (Raw Sleeper IDs would be useless to you, so nothing is shown instead.)";
+      elWvState.textContent="Names unavailable";
+      if(elM6){ elM6.textContent="Degraded"; elM6.classList.remove("on"); }
+      elWvNote.innerHTML = "⚠️ The maths ran — "+cand.length+" unrostered player"+(cand.length===1?" has":"s have")+" a scoring record here — but the player-name lookup didn't answer just now. It is a cached copy of Sleeper's own player file and it refreshes daily, so this is almost always temporary: reload in a minute. (Raw Sleeper IDs would be useless to you, so nothing is shown instead.)";
       return;
     }
 
-    if(elM6) elM6.textContent="Live";
-    if(elM6) elM6.classList.add("on");
+    /* The card ships Live and only ever gets DOWNGRADED above, when the name backend is
+       unreachable. Restore it here in case a previous sync in this same page load hit
+       that path and the backend has since come back. */
+    if(elM6){ elM6.textContent="Live"; elM6.classList.add("on"); }
     elWvState.textContent="Live · your league";
     elWvTab.innerHTML = "<thead><tr><th>Player</th><th>Pos</th><th>Team</th><th>Avg</th><th>High</th><th>Last</th><th>Wks</th></tr></thead><tbody>"
       + cand.map(function(c){
