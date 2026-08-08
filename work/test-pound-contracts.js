@@ -118,7 +118,7 @@ test('new data surfaces are in the generated manifest', () => {
   const paths = new Set(index.data.files.map(x => x.path));
   for (const p of ['/data/pound-tools.json', '/data/model-contracts.json', '/data/upstream-models.json',
     '/data/nfl-schedule.json', '/data/model-receipts.json', '/data/538-classic.json',
-    '/data/cfb-schedule.json', '/data/cfb-team-game.json', '/data/cfb-team-week.json', '/data/cfb-teams.json', '/data/cfb-record-divergence.json', '/data/cfb-record-divergence-validation.json', '/data/cfb-market.json', '/data/cfb-elo.json',
+    '/data/cfb-schedule.json', '/data/cfb-team-game.json', '/data/cfb-team-week.json', '/data/cfb-team-week-latest.json', '/data/cfb-teams.json', '/data/cfb-record-divergence.json', '/data/cfb-record-divergence-validation.json', '/data/cfb-market.json', '/data/cfb-elo.json',
     '/data/cfb-ratings.json', '/data/cfb-model-cards.json', '/data/cfb-model-receipts.json',
     '/data/cfb-disagreement.json']) assert.ok(paths.has(p), p);
 });
@@ -232,7 +232,7 @@ test('published CFB backbone artifacts are discoverable without overstating thei
     '/data/cfb-market.json', '/data/cfb-model-cards.json', '/data/cfb-model-receipts.json',
     '/data/cfb-ratings.json', '/data/cfb-record-divergence-validation.json',
     '/data/cfb-record-divergence.json', '/data/cfb-schedule.json',
-    '/data/cfb-team-game.json', '/data/cfb-team-week.json', '/data/cfb-teams.json']);
+    '/data/cfb-team-game.json', '/data/cfb-team-week-latest.json', '/data/cfb-team-week.json', '/data/cfb-teams.json']);
   assert.match(machine['/data/cfb-market.json'].covers, /observation time is explicitly unknown/i);
   assert.match(machine['/data/cfb-market.json'].covers, /not closing lines/i);
   assert.match(machine['/data/cfb-elo.json'].covers, /ungraded as a prospective model/i);
@@ -241,6 +241,8 @@ test('published CFB backbone artifacts are discoverable without overstating thei
   assert.match(machine['/data/cfb-disagreement.json'].covers, /blocked/i);
   assert.match(machine['/data/cfb-team-game.json'].covers, /advanced play metrics are unavailable/i);
   assert.match(machine['/data/cfb-team-week.json'].covers, /results-only/i);
+  assert.match(machine['/data/cfb-team-week-latest.json'].covers, /230 compact latest team-period rows/i);
+  assert.match(machine['/data/cfb-team-week-latest.json'].covers, /no current-2026 or predictive claim/i);
   assert.match(machine['/data/cfb-teams.json'].covers, /separating observed 2025 results/i);
   assert.match(machine['/data/cfb-record-divergence.json'].covers, /no predictive or overrated\/underrated labels/i);
   assert.match(machine['/data/cfb-record-divergence-validation.json'].covers, /aggregate-only chronological holdout/i);

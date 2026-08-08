@@ -1443,7 +1443,8 @@ function refNcdf(z) {
   ok(d.machine.surfaces.includes("surfaces.json"), "points agents at the surfaces map");
   ok(d.machine.data.includes("/data/model-contracts.json") && d.pages["pound.html"], "site map includes the Pound contracts and workbench");
   ok(d.machine.data.includes("/data/cfb-ratings.json") && d.machine.data.includes("/data/cfb-model-receipts.json") &&
-     d.machine.data.includes("/data/cfb-team-game.json") && d.machine.data.includes("/data/cfb-team-week.json") && d.machine.data.includes("/data/cfb-teams.json"),
+     d.machine.data.includes("/data/cfb-team-game.json") && d.machine.data.includes("/data/cfb-team-week.json") &&
+     d.machine.data.includes("/data/cfb-team-week-latest.json") && d.machine.data.includes("/data/cfb-teams.json"),
      "site map includes the canonical CFB registry, receipt ledger and results layers");
   ok(d.machine.data.includes("/data/cfb-record-divergence.json"),
      "site map includes the descriptive CFB record-divergence baseline");

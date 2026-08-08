@@ -1331,17 +1331,18 @@
     {
      "status": "building",
      "on": "2026-08-08",
-     "note": "Published results-only team-period rows with opponent, venue, record and scoring facts. Advanced analytical metrics remain gated."
+     "note": "Published results-only team-period history and an exact compact latest row per team with opponent, venue, record and scoring facts. Advanced analytical metrics remain gated."
     }
    ],
    "implemented": true,
    "delivery_evidence": [
     "/data/cfb-team-week.json",
+    "/data/cfb-team-week-latest.json",
     "/scripts/cfb_team_results.py",
     "/tests/test_cfb_team_results.py",
     "/work/mcp-block.js"
    ],
-   "delivery_note": "Partially implemented. The live surface contains observed results and season-to-date scoring/record facts, with a bounded exact-team period-history reader staged locally; play, opponent-adjusted and market-performance metrics remain unavailable.",
+   "delivery_note": "Partially implemented. The live surfaces contain observed results, season-to-date scoring/record facts and a compact exact latest-period row per team, with a bounded exact-team period-history reader staged locally; play, opponent-adjusted and market-performance metrics remain unavailable.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 1,
@@ -1401,16 +1402,19 @@
     {
      "status": "building",
      "on": "2026-08-08",
-     "note": "Published the first compact output: 136 team profiles joining observed results to the dated retrodictive rating."
+     "note": "Published compact 136-team rating profiles plus 230 results-only latest-period team rows, each locked to its exact source snapshot."
     }
    ],
    "implemented": true,
    "delivery_evidence": [
     "/data/cfb-teams.json",
+    "/data/cfb-team-week-latest.json",
     "/scripts/cfb_team_profiles.py",
-    "/tests/test_cfb_team_profiles.py"
+    "/scripts/cfb_team_results.py",
+    "/tests/test_cfb_team_profiles.py",
+    "/tests/test_cfb_team_results.py"
    ],
-   "delivery_note": "Partially implemented with a compact team profile surface. Latest games, richer team-week metrics and model grades remain future outputs.",
+   "delivery_note": "Partially implemented with compact rating profiles and exact latest-period team rows. A latest-game feed, richer team-week metrics and model grades remain future outputs.",
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 1,

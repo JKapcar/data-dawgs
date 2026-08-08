@@ -315,6 +315,7 @@ console.log('\nCFB results layers — exact schedule-derived team facts');
   const schedule = JSON.parse(fs.readFileSync(path.join(DATA, 'cfb-schedule.json'), 'utf8'));
   const teamGame = JSON.parse(fs.readFileSync(path.join(DATA, 'cfb-team-game.json'), 'utf8'));
   const teamWeek = JSON.parse(fs.readFileSync(path.join(DATA, 'cfb-team-week.json'), 'utf8'));
+  const latest = JSON.parse(fs.readFileSync(path.join(DATA, 'cfb-team-week-latest.json'), 'utf8'));
   const games = schedule.data.games;
   const rows = teamGame.data && teamGame.data.rows;
   const unavailable = teamGame.data && teamGame.data.unavailable_metrics;
@@ -365,6 +366,38 @@ console.log('\nCFB results layers — exact schedule-derived team facts');
   else if (teamWeek.integrity.snapshot_id !== 'sha256:' + crypto.createHash('sha256').update(canonicalJson(teamWeek.data)).digest('hex'))
     fail('cfb-team-week.json: snapshot hash mismatch');
   else ok(`${weekRows.length} results-only team-period rows reconcile arithmetically`);
+
+  const latestRows = latest.data && latest.data.rows;
+  const teamFacts = teamWeek.data && teamWeek.data.teams;
+  const expectedLatest = new Map();
+  for (const row of weekRows || []) {
+    const prior = expectedLatest.get(row.team_slug);
+    if (!prior || row.through_at > prior.through_at ||
+        (row.through_at === prior.through_at && row.team_period_id > prior.team_period_id))
+      expectedLatest.set(row.team_slug, row);
+  }
+  if (!Array.isArray(latestRows) || !teamFacts || latestRows.length !== Object.keys(teamFacts).length)
+    fail('cfb-team-week-latest.json: expected exactly one row per team');
+  else if (latest.data.scope !== 'results-only' ||
+           latest.data.input_team_week_snapshot_id !== teamWeek.integrity.snapshot_id ||
+           latest.provenance.input_snapshot_id !== teamWeek.integrity.snapshot_id)
+    fail('cfb-team-week-latest.json: input snapshot or results-only boundary drifted');
+  else if (new Set(latestRows.map(row => row.team_slug)).size !== latestRows.length)
+    fail('cfb-team-week-latest.json: duplicate team row');
+  else if (latestRows.some(row => {
+    const source = expectedLatest.get(row.team_slug);
+    const facts = teamFacts[row.team_slug];
+    return !source || !facts || !row.latest_period || !row.season_to_date ||
+      row.team !== facts.team || row.division !== facts.division ||
+      row.conference !== facts.conference || row.through_at !== source.through_at ||
+      row.latest_period.team_period_id !== source.team_period_id ||
+      canonicalJson(row.season_to_date) !== canonicalJson(source.season_to_date) ||
+      canonicalJson(row.latest_period.observed_result) !== canonicalJson(source.period);
+  }))
+    fail('cfb-team-week-latest.json: a compact row drifted from its exact latest source period');
+  else if (latest.integrity.snapshot_id !== 'sha256:' + crypto.createHash('sha256').update(canonicalJson(latest.data)).digest('hex'))
+    fail('cfb-team-week-latest.json: snapshot hash mismatch');
+  else ok(`${latestRows.length} compact latest-team rows lock the exact team-week snapshot`);
 }
 
 console.log('\nCFB compact team profiles — facts and modelled rating stay separate');

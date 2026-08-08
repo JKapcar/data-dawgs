@@ -89,9 +89,9 @@
    {
     "path": "/data/pound-tools.json",
     "url": "https://datadawgs216.com/data/pound-tools.json",
-    "bytes": 130341,
+    "bytes": 130634,
     "as_of": "2026-08-08",
-    "sha256": "2cd269ceac64f61bb15bfe12b6ff6e2be4479d7fec5e0e27d8b782a79da30bd2",
+    "sha256": "27e6edb472c97522f142bd4998fd91cbda36d6773d5dd42c233f266865561a7d",
     "note": "Two kinds of entry share this inventory. kind \"tool\" (NFL) carries delivery status. kind \"roadmap-idea\" (College Football) carries recommendation plus evidence-backed lifecycle and implementation state. A CFB artifact may be implemented without any MCP tool; candidate_mcp_tools are reservations and remain non-callable unless the independent Worker registry proves otherwise."
    },
    {
@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 16581,
+    "bytes": 16833,
     "as_of": "2026-08-08",
-    "sha256": "ed04b21bacdae4a65adb4801e9e6cda48bbf4017e902c394be1ea8e16fefac6a",
+    "sha256": "48b777de03e1236e338f69447a633e3b041fbde3131576725803698cce0074b8",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -157,6 +157,14 @@
     "as_of": "2026-08-08",
     "sha256": "71ff3e6f231148e69d5288e37fbbc4b0637549d26177d57baa6dd4574165074a",
     "note": "OBSERVED RESULTS ONLY. Scores, opponents, venue and record are deterministic schedule facts. No play-by-play, EPA, success, opponent adjustment, market performance or predictive claim is present."
+   },
+   {
+    "path": "/data/cfb-team-week-latest.json",
+    "url": "https://datadawgs216.com/data/cfb-team-week-latest.json",
+    "bytes": 213186,
+    "as_of": "2026-08-08",
+    "sha256": "f058d967eaabcb50e3d3cc5023ea8708743bdd00e71f2f80525d648080627eef",
+    "note": "OBSERVED RESULTS ONLY. One latest schedule-derived period per team plus season-to-date record and scoring. No play-by-play, EPA, opponent adjustment, market performance or predictive claim is present."
    },
    {
     "path": "/data/cfb-teams.json",

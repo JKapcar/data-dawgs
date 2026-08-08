@@ -20,10 +20,14 @@ class TeamResultsTests(unittest.TestCase):
         cls.schedule = results.backbone.read_json(ROOT / "data" / "cfb-schedule.json")
         cls.team_game = results.backbone.read_json(ROOT / "data" / "cfb-team-game.json")
         cls.team_week = results.backbone.read_json(ROOT / "data" / "cfb-team-week.json")
+        cls.team_week_latest = results.backbone.read_json(ROOT / "data" / "cfb-team-week-latest.json")
 
     def test_published_surfaces_validate_against_the_current_schedule(self):
         results.validate_team_game(self.team_game, self.schedule)
         results.validate_team_week(self.team_week, self.team_game, self.schedule)
+        results.validate_team_week_latest(
+            self.team_week_latest, self.team_week, self.team_game, self.schedule
+        )
 
     def test_every_game_has_two_mirrored_rows(self):
         by_game = {}
@@ -89,11 +93,54 @@ class TeamResultsTests(unittest.TestCase):
         self.assertEqual(totals["wins"] + totals["losses"] + totals["ties"], totals["games"])
 
     def test_advanced_metrics_are_explicitly_unavailable(self):
-        for envelope in (self.team_game, self.team_week):
+        for envelope in (self.team_game, self.team_week, self.team_week_latest):
             self.assertEqual(envelope["data"]["scope"], "results-only")
             self.assertIn("epa_per_play", envelope["data"]["unavailable_metrics"])
             self.assertIn("opponent_adjusted_metrics", envelope["data"]["unavailable_metrics"])
             self.assertIn("OBSERVED RESULTS ONLY", envelope["note"])
+
+    def test_latest_surface_has_one_exact_latest_period_per_team(self):
+        rows = self.team_week_latest["data"]["rows"]
+        teams = self.team_week["data"]["teams"]
+        self.assertEqual(len(rows), len(teams))
+        self.assertEqual(len({row["team_slug"] for row in rows}), len(teams))
+        by_team = {}
+        for row in self.team_week["data"]["rows"]:
+            prior = by_team.get(row["team_slug"])
+            if prior is None or (row["through_at"], row["team_period_id"]) > (
+                prior["through_at"], prior["team_period_id"]
+            ):
+                by_team[row["team_slug"]] = row
+        for compact in rows:
+            source = by_team[compact["team_slug"]]
+            self.assertEqual(compact["through_at"], source["through_at"])
+            self.assertEqual(compact["latest_period"]["team_period_id"], source["team_period_id"])
+            self.assertEqual(compact["season_to_date"], source["season_to_date"])
+
+    def test_latest_surface_locks_the_exact_team_week_snapshot(self):
+        self.assertEqual(
+            self.team_week_latest["data"]["input_team_week_snapshot_id"],
+            self.team_week["integrity"]["snapshot_id"],
+        )
+
+    def test_latest_surface_declares_partial_fcs_coverage(self):
+        coverage = self.team_week_latest["data"]["coverage"]
+        self.assertIn("at least one FBS team", coverage["schedule_scope"])
+        self.assertIn("not complete FCS season records", coverage["fcs_team_records"])
+        self.assertTrue(any(row["division"] == "fcs" for row in self.team_week_latest["data"]["rows"]))
+        self.assertEqual(
+            self.team_week_latest["provenance"]["input_snapshot_id"],
+            self.team_week["integrity"]["snapshot_id"],
+        )
+
+    def test_latest_surface_rehashed_tamper_still_fails_source_reconciliation(self):
+        broken = copy.deepcopy(self.team_week_latest)
+        broken["data"]["rows"][0]["season_to_date"]["wins"] += 1
+        broken["integrity"]["snapshot_id"] = results.backbone.sha256_id(broken["data"])
+        with self.assertRaisesRegex(results.ContractError, "drift"):
+            results.validate_team_week_latest(
+                broken, self.team_week, self.team_game, self.schedule
+            )
 
     def test_rehashed_row_tamper_still_fails_source_reconciliation(self):
         broken = copy.deepcopy(self.team_game)
@@ -106,7 +153,15 @@ class TeamResultsTests(unittest.TestCase):
         first_game = results.build_team_game(self.schedule)
         second_game = results.build_team_game(self.schedule)
         self.assertEqual(first_game, second_game)
-        self.assertEqual(results.build_team_week(first_game), results.build_team_week(second_game))
+        first_week = results.build_team_week(first_game)
+        second_week = results.build_team_week(second_game)
+        self.assertEqual(first_week, second_week)
+        first_envelope = results.make_envelope(first_week, self.schedule, "team-week")
+        second_envelope = results.make_envelope(second_week, self.schedule, "team-week")
+        self.assertEqual(
+            results.build_team_week_latest(first_envelope),
+            results.build_team_week_latest(second_envelope),
+        )
 
 
 if __name__ == "__main__":

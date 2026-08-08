@@ -81,8 +81,9 @@ ranking claims, and it stores neither queries nor results.
 
 ## Results-only team layers (roadmap step 1)
 
-`scripts/cfb_team_results.py refresh` publishes `/data/cfb-team-game.json` and
-`/data/cfb-team-week.json` from the exact canonical schedule snapshot. Every game
+`scripts/cfb_team_results.py refresh` publishes `/data/cfb-team-game.json`,
+`/data/cfb-team-week.json` and `/data/cfb-team-week-latest.json` from the exact
+canonical schedule snapshot. Every game
 becomes two mirrored team rows. Team-period rows then aggregate observed opponents,
 venue, record, scoring and season-to-date totals while keeping regular-season week 1
 distinct from postseason week 1. The upstream week label can contain multiple games,
@@ -104,6 +105,12 @@ requires one exact team and can filter by regular/postseason week, with chronolo
 sorting and a hard result limit. It returns observed period and season-to-date record,
 scoring, opponent and venue facts, repeats the unavailable metric families, and stores
 nothing. A repeated week number never silently merges regular season with postseason.
+
+The compact latest surface selects the maximum `(through_at, team_period_id)` for each
+of the 230 canonical teams and copies that source period without recomputing it. It is
+about 0.2 MB rather than the 1.5 MB full history, locks the exact team-week snapshot it
+consumed, and still says results-only: an FCS team's latest FBS-involved game is not a
+claim about its complete season, and no row is current-2026 form or a forecast.
 
 `scripts/cfb_team_profiles.py refresh` adds `/data/cfb-teams.json`, a compact 136-team
 read surface. It joins each FBS team's observed season-to-date record and scoring facts

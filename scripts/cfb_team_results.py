@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build results-only CFB team-game and team-week public surfaces.
+"""Build results-only CFB team-game, team-week and compact latest public surfaces.
 
 These are deterministic views of the locked canonical schedule. They deliberately
 do not impersonate the full play-derived roadmap layers: EPA, success, explosiveness,
@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SCHEDULE = ROOT / "data" / "cfb-schedule.json"
 DEFAULT_TEAM_GAME = ROOT / "data" / "cfb-team-game.json"
 DEFAULT_TEAM_WEEK = ROOT / "data" / "cfb-team-week.json"
+DEFAULT_TEAM_WEEK_LATEST = ROOT / "data" / "cfb-team-week-latest.json"
 
 _SPEC = importlib.util.spec_from_file_location(
     "cfb_data_backbone", ROOT / "scripts" / "cfb_data_backbone.py"
@@ -176,6 +177,75 @@ def build_team_week(team_game: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def build_team_week_latest(team_week_envelope: dict[str, Any]) -> dict[str, Any]:
+    """Select one latest team-period row per canonical team without recomputing facts."""
+    data = team_week_envelope.get("data")
+    integrity = team_week_envelope.get("integrity")
+    if not isinstance(data, dict) or not isinstance(integrity, dict):
+        raise ContractError("team-week envelope must contain data and integrity")
+    rows = data.get("rows")
+    teams = data.get("teams")
+    snapshot_id = integrity.get("snapshot_id")
+    if not isinstance(rows, list) or not isinstance(teams, dict) or not isinstance(snapshot_id, str):
+        raise ContractError("team-week envelope lacks rows, teams or a snapshot id")
+
+    latest: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        slug = row.get("team_slug")
+        if slug not in teams:
+            raise ContractError(f"team-week row names an unknown team: {slug}")
+        prior = latest.get(slug)
+        if prior is None or (row["through_at"], row["team_period_id"]) > (
+            prior["through_at"], prior["team_period_id"]
+        ):
+            latest[slug] = row
+    if set(latest) != set(teams):
+        missing = sorted(set(teams) - set(latest))
+        raise ContractError(f"team-week latest selection lacks rows for: {', '.join(missing[:10])}")
+
+    output = []
+    for slug in sorted(latest):
+        row = latest[slug]
+        facts = teams[slug]
+        output.append({
+            "team_slug": slug,
+            "team": facts["team"],
+            "espn_id": facts["espn_id"],
+            "division": facts["division"],
+            "conference": facts["conference"],
+            "through_at": row["through_at"],
+            "latest_period": {
+                "team_period_id": row["team_period_id"],
+                "season_type": row["season_type"],
+                "week": row["week"],
+                "period_key": row["period_key"],
+                "scheduled_games": row["scheduled_games_this_period"],
+                "opponent_slugs": copy.deepcopy(row["opponent_slugs"]),
+                "home_games": row["home_games"],
+                "away_games": row["away_games"],
+                "neutral_games": row["neutral_games"],
+                "fbs_opponents": row["fbs_opponents"],
+                "observed_result": copy.deepcopy(row["period"]),
+            },
+            "season_to_date": copy.deepcopy(row["season_to_date"]),
+        })
+    return {
+        "schema_version": 1,
+        "season": data["season"],
+        "scope": "results-only",
+        "input_schedule_snapshot_id": data["input_schedule_snapshot_id"],
+        "input_team_week_snapshot_id": snapshot_id,
+        "selection": "Maximum (through_at, team_period_id) per team from /data/cfb-team-week.json.",
+        "coverage": {
+            "schedule_scope": "Canonical 2025 games involving at least one FBS team.",
+            "fbs_team_records": "Complete within the canonical FBS-involved schedule.",
+            "fcs_team_records": "Only games against FBS opponents; not complete FCS season records.",
+        },
+        "unavailable_metrics": copy.deepcopy(data["unavailable_metrics"]),
+        "rows": output,
+    }
+
+
 def make_envelope(payload: dict[str, Any], schedule: dict[str, Any], kind: str) -> dict[str, Any]:
     captured_at = schedule.get("provenance", {}).get("captured_at")
     if not isinstance(captured_at, str) or len(captured_at) < 10:
@@ -209,6 +279,47 @@ def make_envelope(payload: dict[str, Any], schedule: dict[str, Any], kind: str) 
         "tier_meaning": backbone.TIER_MEANING,
         "built": schedule["as_of"],
         "canonical_url": f"https://datadawgs216.com/data/cfb-{label}.json",
+    }
+
+
+def make_latest_envelope(
+    payload: dict[str, Any], schedule: dict[str, Any], team_week_envelope: dict[str, Any]
+) -> dict[str, Any]:
+    captured_at = schedule.get("provenance", {}).get("captured_at")
+    if not isinstance(captured_at, str) or len(captured_at) < 10:
+        raise ContractError("schedule provenance lacks captured_at")
+    team_week_snapshot = team_week_envelope.get("integrity", {}).get("snapshot_id")
+    if not isinstance(team_week_snapshot, str):
+        raise ContractError("team-week envelope lacks a snapshot id")
+    return {
+        "as_of": schedule["as_of"],
+        "source": (
+            "Compact latest-team selection from /data/cfb-team-week.json by "
+            f"scripts/cfb_team_results.py; source snapshot {team_week_snapshot}."
+        ),
+        "tier": "labs",
+        "graded": False,
+        "note": (
+            "OBSERVED RESULTS ONLY. One latest schedule-derived period per team plus season-to-date record and "
+            "scoring. No play-by-play, EPA, opponent adjustment, market performance or predictive claim is present."
+        ),
+        "provenance": {
+            "generator": "scripts/cfb_team_results.py",
+            "captured_at": captured_at,
+            "input": "/data/cfb-team-week.json",
+            "input_snapshot_id": team_week_snapshot,
+            "schedule_snapshot_id": schedule["integrity"]["snapshot_id"],
+        },
+        "integrity": {
+            "snapshot_id": backbone.sha256_id(payload),
+            "algorithm": "SHA-256 of canonical UTF-8 JSON for the data object (sorted object keys, no insignificant whitespace).",
+            "rows": len(payload["rows"]),
+            "teams": len(payload["rows"]),
+        },
+        "data": payload,
+        "tier_meaning": backbone.TIER_MEANING,
+        "built": schedule["as_of"],
+        "canonical_url": "https://datadawgs216.com/data/cfb-team-week-latest.json",
     }
 
 
@@ -248,6 +359,31 @@ def validate_team_week(envelope: dict[str, Any], team_game_envelope: dict[str, A
         raise ContractError("cfb-team-week integrity row count disagrees")
 
 
+def validate_team_week_latest(
+    envelope: dict[str, Any], team_week_envelope: dict[str, Any],
+    team_game_envelope: dict[str, Any], schedule: dict[str, Any]
+) -> None:
+    validate_team_week(team_week_envelope, team_game_envelope, schedule)
+    data = envelope.get("data")
+    if not isinstance(data, dict) or data.get("schema_version") != 1 or data.get("scope") != "results-only":
+        raise ContractError("cfb-team-week-latest must be a results-only schema_version 1 payload")
+    if envelope.get("graded") is not False or data.get("unavailable_metrics") != UNAVAILABLE_METRICS:
+        raise ContractError("cfb-team-week-latest overstates its evidence scope")
+    team_week_snapshot = team_week_envelope["integrity"]["snapshot_id"]
+    if envelope.get("provenance", {}).get("input_snapshot_id") != team_week_snapshot:
+        raise ContractError("cfb-team-week-latest provenance does not name the current team-week snapshot")
+    expected = build_team_week_latest(team_week_envelope)
+    if data != expected:
+        raise ContractError("cfb-team-week-latest rows drift from the team-week source")
+    if envelope.get("integrity", {}).get("snapshot_id") != backbone.sha256_id(data):
+        raise ContractError("cfb-team-week-latest snapshot hash mismatch")
+    row_count = len(data["rows"])
+    if envelope["integrity"].get("rows") != row_count or envelope["integrity"].get("teams") != row_count:
+        raise ContractError("cfb-team-week-latest integrity row or team count disagrees")
+    if row_count != len(team_week_envelope["data"]["teams"]):
+        raise ContractError("cfb-team-week-latest must contain exactly one row per team")
+
+
 def cmd_refresh(args: argparse.Namespace) -> int:
     schedule = backbone.read_json(Path(args.schedule))
     team_game_payload = build_team_game(schedule)
@@ -256,10 +392,15 @@ def cmd_refresh(args: argparse.Namespace) -> int:
     team_week_payload = build_team_week(team_game_payload)
     team_week_envelope = make_envelope(team_week_payload, schedule, "team-week")
     validate_team_week(team_week_envelope, team_game_envelope, schedule)
+    latest_payload = build_team_week_latest(team_week_envelope)
+    latest_envelope = make_latest_envelope(latest_payload, schedule, team_week_envelope)
+    validate_team_week_latest(latest_envelope, team_week_envelope, team_game_envelope, schedule)
     backbone.write_json(Path(args.team_game), team_game_envelope)
     backbone.write_json(Path(args.team_week), team_week_envelope)
+    backbone.write_json(Path(args.team_week_latest), latest_envelope)
     print(f"wrote {args.team_game}: {len(team_game_payload['rows'])} rows")
     print(f"wrote {args.team_week}: {len(team_week_payload['rows'])} rows")
+    print(f"wrote {args.team_week_latest}: {len(latest_payload['rows'])} rows")
     return 0
 
 
@@ -267,9 +408,11 @@ def cmd_validate(args: argparse.Namespace) -> int:
     schedule = backbone.read_json(Path(args.schedule))
     team_game = backbone.read_json(Path(args.team_game))
     team_week = backbone.read_json(Path(args.team_week))
+    latest = backbone.read_json(Path(args.team_week_latest))
     validate_team_game(team_game, schedule)
     validate_team_week(team_week, team_game, schedule)
-    print(f"{args.team_game} and {args.team_week} satisfy the results-only contracts")
+    validate_team_week_latest(latest, team_week, team_game, schedule)
+    print(f"{args.team_game}, {args.team_week} and {args.team_week_latest} satisfy the results-only contracts")
     return 0
 
 
@@ -277,13 +420,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
     for name, help_text, func in (
-        ("refresh", "rebuild both result surfaces from the canonical schedule", cmd_refresh),
-        ("validate", "validate both published result surfaces offline", cmd_validate),
+        ("refresh", "rebuild all result surfaces from the canonical schedule", cmd_refresh),
+        ("validate", "validate all published result surfaces offline", cmd_validate),
     ):
         command = sub.add_parser(name, help=help_text)
         command.add_argument("--schedule", default=str(DEFAULT_SCHEDULE))
         command.add_argument("--team-game", default=str(DEFAULT_TEAM_GAME))
         command.add_argument("--team-week", default=str(DEFAULT_TEAM_WEEK))
+        command.add_argument("--team-week-latest", default=str(DEFAULT_TEAM_WEEK_LATEST))
         command.set_defaults(func=func)
     args = parser.parse_args()
     try:
