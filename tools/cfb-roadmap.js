@@ -231,6 +231,14 @@ const CFB_IDEAS = [
     governance: ['cfb-gov-source-provenance'], tags: ['CFB', 'DATA-PIPE', 'FOUNDATION', 'MARKET'] }),
 
   idea({ id: 'cfb-ratings-registry', name: 'CFB Ratings Registry',
+    lifecycle_status: 'live', implemented: true,
+    lifecycle_history: [
+      { status: 'idea', on: ROADMAP_AS_OF, note: 'Entered The Pound from the 2026-08-08 CFB roadmap.' },
+      { status: 'building', on: ROADMAP_AS_OF, note: 'Defined a source-locked normalization contract over the shipped Elo baseline.' },
+      { status: 'live', on: ROADMAP_AS_OF, note: 'Published 136 teams in one dated registry; unsupported outputs remain null and consensus remains explicitly unbuilt.' },
+    ],
+    delivery_evidence: ['/data/cfb-ratings.json', '/scripts/cfb_ratings_registry.py', '/tests/test_cfb_ratings_registry.py'],
+    delivery_note: 'The registry contract is live with one independent, retrodictive Elo system. CFBD systems and market context remain future additions; one system is not a consensus.',
     category: 'foundation', recommendation: 'build', recommendation_modifiers: ['foundation', 'high-priority'],
     priority: 'high', roadmap_step: 2,
     source_headings: ['CFB Ratings Registry'],
@@ -240,7 +248,7 @@ const CFB_IDEAS = [
     deterministic_tool_potential: 'Yes — registry reads are deterministic lookups.',
     validation_requirement: 'Each system documents its normalization into comparable outputs; unconverted or unavailable fields stay null rather than being invented.',
     risks_limitations: 'Normalizing heterogeneous systems into comparable outputs is where silent errors live; the NFL model-contracts approach applies.',
-    dependencies: ['cfb-cfbd', 'cfb-games', 'cfb-market'], related_ideas: ['cfb-disagreement-lab', 'cfb-consensus-engine', 'cfb-elo'],
+    dependencies: ['cfb-games', 'cfb-elo'], related_ideas: ['cfb-cfbd', 'cfb-market', 'cfb-disagreement-lab', 'cfb-consensus-engine'],
     governance: ['cfb-gov-source-provenance'], tags: ['CFB', 'FOUNDATION', 'MODEL', 'HIGH-PRIORITY'] }),
 
   idea({ id: 'cfb-talent-dataset', name: 'CFB Talent Dataset',

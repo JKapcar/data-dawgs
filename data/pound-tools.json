@@ -1171,17 +1171,31 @@
   {
    "kind": "roadmap-idea",
    "domain": "College Football",
-   "lifecycle_status": "idea",
+   "lifecycle_status": "live",
    "lifecycle_history": [
     {
      "status": "idea",
      "on": "2026-08-08",
      "note": "Entered The Pound from the 2026-08-08 CFB roadmap."
+    },
+    {
+     "status": "building",
+     "on": "2026-08-08",
+     "note": "Defined a source-locked normalization contract over the shipped Elo baseline."
+    },
+    {
+     "status": "live",
+     "on": "2026-08-08",
+     "note": "Published 136 teams in one dated registry; unsupported outputs remain null and consensus remains explicitly unbuilt."
     }
    ],
-   "implemented": false,
-   "delivery_evidence": [],
-   "delivery_note": null,
+   "implemented": true,
+   "delivery_evidence": [
+    "/data/cfb-ratings.json",
+    "/scripts/cfb_ratings_registry.py",
+    "/tests/test_cfb_ratings_registry.py"
+   ],
+   "delivery_note": "The registry contract is live with one independent, retrodictive Elo system. CFBD systems and market context remain future additions; one system is not a consensus.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 2,
@@ -1190,16 +1204,16 @@
     "high-priority"
    ],
    "dependencies": [
-    "cfb-cfbd",
     "cfb-games",
-    "cfb-market"
+    "cfb-elo"
    ],
    "candidate_mcp_tools": [],
    "components": [],
    "related_ideas": [
+    "cfb-cfbd",
+    "cfb-market",
     "cfb-disagreement-lab",
-    "cfb-consensus-engine",
-    "cfb-elo"
+    "cfb-consensus-engine"
    ],
    "governance": [
     "cfb-gov-source-provenance"

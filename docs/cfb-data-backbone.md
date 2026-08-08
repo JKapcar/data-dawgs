@@ -45,11 +45,17 @@ Four Bovada moneyline quotes in 2025 are internally impossible (both sides price
 
 When the market file is present the backtest also scores the Elo against the market on the same games only, which is the comparison the Baseline Requirement actually asks for. On the 783 FBS-vs-FBS finals with a market probability, the market's median devigged price scored Brier 0.1814 and favorite accuracy 0.7241; the Elo scored 0.1917 and 0.6922 on those same games. The plain Elo losing to the market is the expected and correct result, and the timing caveat above means the comparison flatters the market. Both numbers are recorded so a future model can be judged against something real rather than against a straw baseline.
 
+## Ratings registry (roadmap step 2, idea cfb-ratings-registry)
+
+`scripts/cfb_ratings_registry.py refresh` publishes `/data/cfb-ratings.json`, the canonical normalization boundary for dated rating systems. Its first version contains the 136 end-of-2025 teams from the shipped Elo baseline and locks the exact `/data/cfb-elo.json` snapshot it consumed. Native Elo points become `team_strength`; expected margin, win probability and predicted total remain null because those are not team-level fields in the source output.
+
+The schema is ready to add independently dated systems, but the data is not padded to make the registry look fuller than it is. It currently contains one retrodictive, ungraded system. `data.consensus.status` is therefore `not-built`, with no weights. Multiple systems may be registered later; a blend still requires prospective error histories and correlation analysis.
+
 ## Model cards (governance principle cfb-gov-model-cards)
 
 `scripts/cfb_model_cards.py refresh` publishes `/data/cfb-model-cards.json`: the purpose, target, features, training window, validation design, limitations, calibration, performance, failure modes, version and retirement status the CFB governance section requires before a model is promoted past the lab. Every performance number is read from the model's own published output rather than typed into the card, and the calibration narrative is generated from the bins, so a card cannot drift away from the thing it describes.
 
-The card reports the roadmap's lifecycle value read from `/data/pound-tools.json` instead of asserting its own. The roadmap still says `idea` for `cfb-elo`, which is accurate in the sense that nobody has advanced it; the card says so plainly rather than letting two files disagree. Advancing those entries is a governance decision, not a cleanup task.
+The card reports the roadmap's lifecycle value read from `/data/pound-tools.json` instead of asserting its own. The Elo entry is now `live`, and refreshing the card carries that value through automatically rather than maintaining a second status by hand.
 
 ## Disagreement probe (roadmap step 3, idea cfb-disagreement-lab)
 
@@ -106,6 +112,7 @@ Focused verification:
 ```
 node work/test-cfb-market-capture.mjs
 node work/test-backup.mjs
+python3 scripts/cfb_ratings_registry.py validate
 wrangler deploy --dry-run --config wrangler.jsonc
 ```
 

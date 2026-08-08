@@ -1,0 +1,2112 @@
+{
+ "as_of": "2026-08-08",
+ "source": "Normalized from /data/cfb-elo.json by scripts/cfb_ratings_registry.py; source snapshot sha256:414e0f27fba170d172db03a1a07fcca1bf83af09848de356ae3bd6fa83894237.",
+ "tier": "labs",
+ "graded": false,
+ "note": "MODELLED, RETRODICTIVE, UNGRADED. This is a registry contract with one live baseline, not a consensus or evidence that several models agree. Unsupported outputs are null rather than inferred. Quote the rating period with every value.",
+ "provenance": {
+  "generator": "scripts/cfb_ratings_registry.py",
+  "captured_at": "2026-08-08T06:31:51.828106Z",
+  "input": "/data/cfb-elo.json",
+  "input_snapshot_id": "sha256:414e0f27fba170d172db03a1a07fcca1bf83af09848de356ae3bd6fa83894237"
+ },
+ "integrity": {
+  "snapshot_id": "sha256:13233f782f8cea384fde9077f8aac271458b2a7950b1a6a38b440f1c4bbbd786",
+  "algorithm": "SHA-256 of canonical UTF-8 JSON for the data object (sorted object keys, no insignificant whitespace).",
+  "systems": 1,
+  "teams": 136
+ },
+ "data": {
+  "schema_version": 1,
+  "rating_period": {
+   "season": 2025,
+   "label": "end-of-2025-season",
+   "source_field": "ratings_as_of_end_of_2025",
+   "prospective": false
+  },
+  "systems": [
+   {
+    "system_id": "dd-cfb-elo",
+    "name": "Data Dawgs CFB Elo baseline",
+    "provider": "Data Dawgs",
+    "kind": "continuous-rating",
+    "feature_family": "game results and margin only",
+    "source_snapshot_id": "sha256:414e0f27fba170d172db03a1a07fcca1bf83af09848de356ae3bd6fa83894237",
+    "source_url": "/data/cfb-elo.json",
+    "model_card_url": "/data/cfb-model-cards.json",
+    "normalization": "Native Elo points are retained as team_strength. Game-context expected margin and win probability are not team-level source fields, so they remain null.",
+    "outputs": {
+     "team_strength": {
+      "available": true,
+      "units": "elo-points"
+     },
+     "expected_margin": {
+      "available": false,
+      "units": "points"
+     },
+     "win_probability": {
+      "available": false,
+      "units": "probability"
+     },
+     "predicted_total": {
+      "available": false,
+      "units": "points"
+     }
+    },
+    "prospective_forecasts_exist": false,
+    "graded": false
+   }
+  ],
+  "teams": [
+   {
+    "team_slug": "indiana",
+    "team": "Indiana",
+    "conference": "Big Ten",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 1,
+      "team_strength": 2054.8,
+      "games_rated": 96,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "ohio-state",
+    "team": "Ohio State",
+    "conference": "Big Ten",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 2,
+      "team_strength": 1925.8,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "oregon",
+    "team": "Oregon",
+    "conference": "Big Ten",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 3,
+      "team_strength": 1923.0,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "notre-dame",
+    "team": "Notre Dame",
+    "conference": "FBS Independents",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 4,
+      "team_strength": 1922.2,
+      "games_rated": 100,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "georgia",
+    "team": "Georgia",
+    "conference": "SEC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 5,
+      "team_strength": 1913.1,
+      "games_rated": 103,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "miami",
+    "team": "Miami",
+    "conference": "ACC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 6,
+      "team_strength": 1907.9,
+      "games_rated": 100,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "ole-miss",
+    "team": "Ole Miss",
+    "conference": "SEC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 7,
+      "team_strength": 1888.5,
+      "games_rated": 98,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "texas-tech",
+    "team": "Texas Tech",
+    "conference": "Big 12",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 8,
+      "team_strength": 1852.4,
+      "games_rated": 98,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "texas",
+    "team": "Texas",
+    "conference": "SEC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 9,
+      "team_strength": 1846.0,
+      "games_rated": 101,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "utah",
+    "team": "Utah",
+    "conference": "Big 12",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 10,
+      "team_strength": 1825.7,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "james-madison",
+    "team": "James Madison",
+    "conference": "Sun Belt",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 11,
+      "team_strength": 1791.7,
+      "games_rated": 51,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "alabama",
+    "team": "Alabama",
+    "conference": "SEC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 12,
+      "team_strength": 1788.1,
+      "games_rated": 103,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "smu",
+    "team": "SMU",
+    "conference": "ACC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 13,
+      "team_strength": 1781.0,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "iowa",
+    "team": "Iowa",
+    "conference": "Big Ten",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 14,
+      "team_strength": 1780.8,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "byu",
+    "team": "BYU",
+    "conference": "Big 12",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 15,
+      "team_strength": 1779.7,
+      "games_rated": 98,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "texas-a-m",
+    "team": "Texas A&M",
+    "conference": "SEC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 16,
+      "team_strength": 1764.4,
+      "games_rated": 96,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "vanderbilt",
+    "team": "Vanderbilt",
+    "conference": "SEC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 17,
+      "team_strength": 1763.4,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "penn-state",
+    "team": "Penn State",
+    "conference": "Big Ten",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 18,
+      "team_strength": 1753.9,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "washington",
+    "team": "Washington",
+    "conference": "Big Ten",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 19,
+      "team_strength": 1731.1,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "oklahoma",
+    "team": "Oklahoma",
+    "conference": "SEC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 20,
+      "team_strength": 1724.7,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "usc",
+    "team": "USC",
+    "conference": "Big Ten",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 21,
+      "team_strength": 1723.5,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "navy",
+    "team": "Navy",
+    "conference": "American Athletic",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 22,
+      "team_strength": 1719.5,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "old-dominion",
+    "team": "Old Dominion",
+    "conference": "Sun Belt",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 23,
+      "team_strength": 1709.9,
+      "games_rated": 86,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "tcu",
+    "team": "TCU",
+    "conference": "Big 12",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 24,
+      "team_strength": 1704.6,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "louisville",
+    "team": "Louisville",
+    "conference": "ACC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 25,
+      "team_strength": 1704.2,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "arizona",
+    "team": "Arizona",
+    "conference": "Big 12",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 26,
+      "team_strength": 1700.1,
+      "games_rated": 91,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "tulane",
+    "team": "Tulane",
+    "conference": "American Athletic",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 27,
+      "team_strength": 1694.8,
+      "games_rated": 102,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "duke",
+    "team": "Duke",
+    "conference": "ACC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 28,
+      "team_strength": 1691.7,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "michigan",
+    "team": "Michigan",
+    "conference": "Big Ten",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 29,
+      "team_strength": 1687.3,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "north-texas",
+    "team": "North Texas",
+    "conference": "American Athletic",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 30,
+      "team_strength": 1674.0,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "ohio",
+    "team": "Ohio",
+    "conference": "Mid-American",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 31,
+      "team_strength": 1668.5,
+      "games_rated": 92,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "western-michigan",
+    "team": "Western Michigan",
+    "conference": "Mid-American",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 32,
+      "team_strength": 1661.2,
+      "games_rated": 93,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "virginia",
+    "team": "Virginia",
+    "conference": "ACC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 33,
+      "team_strength": 1658.7,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "tennessee",
+    "team": "Tennessee",
+    "conference": "SEC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 34,
+      "team_strength": 1639.9,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "clemson",
+    "team": "Clemson",
+    "conference": "ACC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 35,
+      "team_strength": 1639.4,
+      "games_rated": 102,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "illinois",
+    "team": "Illinois",
+    "conference": "Big Ten",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 36,
+      "team_strength": 1638.6,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "east-carolina",
+    "team": "East Carolina",
+    "conference": "American Athletic",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 37,
+      "team_strength": 1637.1,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "iowa-state",
+    "team": "Iowa State",
+    "conference": "Big 12",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 38,
+      "team_strength": 1635.2,
+      "games_rated": 98,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "kansas-state",
+    "team": "Kansas State",
+    "conference": "Big 12",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 39,
+      "team_strength": 1632.0,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "nc-state",
+    "team": "NC State",
+    "conference": "ACC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 40,
+      "team_strength": 1631.6,
+      "games_rated": 98,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "missouri",
+    "team": "Missouri",
+    "conference": "SEC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 41,
+      "team_strength": 1631.3,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "army",
+    "team": "Army",
+    "conference": "American Athletic",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 42,
+      "team_strength": 1628.2,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "south-florida",
+    "team": "South Florida",
+    "conference": "American Athletic",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 43,
+      "team_strength": 1627.2,
+      "games_rated": 96,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "minnesota",
+    "team": "Minnesota",
+    "conference": "Big Ten",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 44,
+      "team_strength": 1620.2,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "houston",
+    "team": "Houston",
+    "conference": "Big 12",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 45,
+      "team_strength": 1611.8,
+      "games_rated": 93,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "arizona-state",
+    "team": "Arizona State",
+    "conference": "Big 12",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 46,
+      "team_strength": 1611.4,
+      "games_rated": 91,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "boise-state",
+    "team": "Boise State",
+    "conference": "Mountain West",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 47,
+      "team_strength": 1608.3,
+      "games_rated": 100,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "utsa",
+    "team": "UTSA",
+    "conference": "American Athletic",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 48,
+      "team_strength": 1608.3,
+      "games_rated": 100,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "unlv",
+    "team": "UNLV",
+    "conference": "Mountain West",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 49,
+      "team_strength": 1606.4,
+      "games_rated": 96,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "lsu",
+    "team": "LSU",
+    "conference": "SEC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 50,
+      "team_strength": 1605.0,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "toledo",
+    "team": "Toledo",
+    "conference": "Mid-American",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 51,
+      "team_strength": 1602.7,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "texas-state",
+    "team": "Texas State",
+    "conference": "Sun Belt",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 52,
+      "team_strength": 1593.5,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "pittsburgh",
+    "team": "Pittsburgh",
+    "conference": "ACC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 53,
+      "team_strength": 1592.6,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "new-mexico",
+    "team": "New Mexico",
+    "conference": "Mountain West",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 54,
+      "team_strength": 1590.5,
+      "games_rated": 92,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "georgia-tech",
+    "team": "Georgia Tech",
+    "conference": "ACC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 55,
+      "team_strength": 1581.2,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "washington-state",
+    "team": "Washington State",
+    "conference": "Pac-12",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 56,
+      "team_strength": 1578.5,
+      "games_rated": 90,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "fresno-state",
+    "team": "Fresno State",
+    "conference": "Mountain West",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 57,
+      "team_strength": 1573.4,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "hawai-i",
+    "team": "Hawai'i",
+    "conference": "Mountain West",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 58,
+      "team_strength": 1573.3,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "uconn",
+    "team": "UConn",
+    "conference": "FBS Independents",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 59,
+      "team_strength": 1563.5,
+      "games_rated": 86,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "jacksonville-state",
+    "team": "Jacksonville State",
+    "conference": "Conference USA",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 60,
+      "team_strength": 1562.0,
+      "games_rated": 41,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "wake-forest",
+    "team": "Wake Forest",
+    "conference": "ACC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 61,
+      "team_strength": 1561.6,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "san-diego-state",
+    "team": "San Diego State",
+    "conference": "Mountain West",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 62,
+      "team_strength": 1558.1,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "northwestern",
+    "team": "Northwestern",
+    "conference": "Big Ten",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 63,
+      "team_strength": 1550.2,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "kennesaw-state",
+    "team": "Kennesaw State",
+    "conference": "Conference USA",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 64,
+      "team_strength": 1531.7,
+      "games_rated": 26,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "western-kentucky",
+    "team": "Western Kentucky",
+    "conference": "Conference USA",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 65,
+      "team_strength": 1531.6,
+      "games_rated": 101,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "louisiana-tech",
+    "team": "Louisiana Tech",
+    "conference": "Conference USA",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 66,
+      "team_strength": 1530.3,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "memphis",
+    "team": "Memphis",
+    "conference": "American Athletic",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 67,
+      "team_strength": 1530.1,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "south-carolina",
+    "team": "South Carolina",
+    "conference": "SEC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 68,
+      "team_strength": 1528.6,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "florida",
+    "team": "Florida",
+    "conference": "SEC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 69,
+      "team_strength": 1521.8,
+      "games_rated": 96,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "georgia-southern",
+    "team": "Georgia Southern",
+    "conference": "Sun Belt",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 70,
+      "team_strength": 1514.8,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "nebraska",
+    "team": "Nebraska",
+    "conference": "Big Ten",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 71,
+      "team_strength": 1508.4,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "auburn",
+    "team": "Auburn",
+    "conference": "SEC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 72,
+      "team_strength": 1502.1,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "marshall",
+    "team": "Marshall",
+    "conference": "Sun Belt",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 73,
+      "team_strength": 1501.8,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "troy",
+    "team": "Troy",
+    "conference": "Sun Belt",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 74,
+      "team_strength": 1500.8,
+      "games_rated": 100,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "rutgers",
+    "team": "Rutgers",
+    "conference": "Big Ten",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 75,
+      "team_strength": 1497.7,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "cincinnati",
+    "team": "Cincinnati",
+    "conference": "Big 12",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 76,
+      "team_strength": 1494.8,
+      "games_rated": 96,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "kentucky",
+    "team": "Kentucky",
+    "conference": "SEC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 77,
+      "team_strength": 1491.2,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "arkansas-state",
+    "team": "Arkansas State",
+    "conference": "Sun Belt",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 78,
+      "team_strength": 1475.1,
+      "games_rated": 98,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "kansas",
+    "team": "Kansas",
+    "conference": "Big 12",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 79,
+      "team_strength": 1471.4,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "baylor",
+    "team": "Baylor",
+    "conference": "Big 12",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 80,
+      "team_strength": 1471.1,
+      "games_rated": 96,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "miami-oh",
+    "team": "Miami (OH)",
+    "conference": "Mid-American",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 81,
+      "team_strength": 1470.6,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "wisconsin",
+    "team": "Wisconsin",
+    "conference": "Big Ten",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 82,
+      "team_strength": 1467.4,
+      "games_rated": 92,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "louisiana",
+    "team": "Louisiana",
+    "conference": "Sun Belt",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 83,
+      "team_strength": 1460.6,
+      "games_rated": 101,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "delaware",
+    "team": "Delaware",
+    "conference": "Conference USA",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 84,
+      "team_strength": 1448.1,
+      "games_rated": 13,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "florida-international",
+    "team": "Florida International",
+    "conference": "Conference USA",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 85,
+      "team_strength": 1444.3,
+      "games_rated": 90,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "utah-state",
+    "team": "Utah State",
+    "conference": "Mountain West",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 86,
+      "team_strength": 1443.4,
+      "games_rated": 93,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "california",
+    "team": "California",
+    "conference": "ACC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 87,
+      "team_strength": 1441.8,
+      "games_rated": 91,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "west-virginia",
+    "team": "West Virginia",
+    "conference": "Big 12",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 88,
+      "team_strength": 1439.0,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "ucf",
+    "team": "UCF",
+    "conference": "Big 12",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 89,
+      "team_strength": 1425.4,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "florida-state",
+    "team": "Florida State",
+    "conference": "ACC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 90,
+      "team_strength": 1422.2,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "air-force",
+    "team": "Air Force",
+    "conference": "Mountain West",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 91,
+      "team_strength": 1416.9,
+      "games_rated": 91,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "missouri-state",
+    "team": "Missouri State",
+    "conference": "Conference USA",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 92,
+      "team_strength": 1412.3,
+      "games_rated": 13,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "arkansas",
+    "team": "Arkansas",
+    "conference": "SEC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 93,
+      "team_strength": 1410.6,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "coastal-carolina",
+    "team": "Coastal Carolina",
+    "conference": "Sun Belt",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 94,
+      "team_strength": 1410.4,
+      "games_rated": 98,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "mississippi-state",
+    "team": "Mississippi State",
+    "conference": "SEC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 95,
+      "team_strength": 1408.2,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "ucla",
+    "team": "UCLA",
+    "conference": "Big Ten",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 96,
+      "team_strength": 1406.2,
+      "games_rated": 92,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "central-michigan",
+    "team": "Central Michigan",
+    "conference": "Mid-American",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 97,
+      "team_strength": 1405.1,
+      "games_rated": 92,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "stanford",
+    "team": "Stanford",
+    "conference": "ACC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 98,
+      "team_strength": 1404.9,
+      "games_rated": 90,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "south-alabama",
+    "team": "South Alabama",
+    "conference": "Sun Belt",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 99,
+      "team_strength": 1399.7,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "michigan-state",
+    "team": "Michigan State",
+    "conference": "Big Ten",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 100,
+      "team_strength": 1384.9,
+      "games_rated": 91,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "liberty",
+    "team": "Liberty",
+    "conference": "Conference USA",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 101,
+      "team_strength": 1383.4,
+      "games_rated": 96,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "boston-college",
+    "team": "Boston College",
+    "conference": "ACC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 102,
+      "team_strength": 1379.7,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "north-carolina",
+    "team": "North Carolina",
+    "conference": "ACC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 103,
+      "team_strength": 1376.8,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "colorado",
+    "team": "Colorado",
+    "conference": "Big 12",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 104,
+      "team_strength": 1376.5,
+      "games_rated": 90,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "app-state",
+    "team": "App State",
+    "conference": "Sun Belt",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 105,
+      "team_strength": 1367.4,
+      "games_rated": 99,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "buffalo",
+    "team": "Buffalo",
+    "conference": "Mid-American",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 106,
+      "team_strength": 1366.9,
+      "games_rated": 92,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "temple",
+    "team": "Temple",
+    "conference": "American Athletic",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 107,
+      "team_strength": 1362.7,
+      "games_rated": 91,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "southern-miss",
+    "team": "Southern Miss",
+    "conference": "Sun Belt",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 108,
+      "team_strength": 1360.1,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "maryland",
+    "team": "Maryland",
+    "conference": "Big Ten",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 109,
+      "team_strength": 1354.8,
+      "games_rated": 90,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "virginia-tech",
+    "team": "Virginia Tech",
+    "conference": "ACC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 110,
+      "team_strength": 1351.3,
+      "games_rated": 96,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "eastern-michigan",
+    "team": "Eastern Michigan",
+    "conference": "Mid-American",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 111,
+      "team_strength": 1346.2,
+      "games_rated": 91,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "florida-atlantic",
+    "team": "Florida Atlantic",
+    "conference": "American Athletic",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 112,
+      "team_strength": 1335.6,
+      "games_rated": 93,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "nevada",
+    "team": "Nevada",
+    "conference": "Mountain West",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 113,
+      "team_strength": 1327.6,
+      "games_rated": 93,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "akron",
+    "team": "Akron",
+    "conference": "Mid-American",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 114,
+      "team_strength": 1326.0,
+      "games_rated": 90,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "wyoming",
+    "team": "Wyoming",
+    "conference": "Mountain West",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 115,
+      "team_strength": 1323.1,
+      "games_rated": 91,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "uab",
+    "team": "UAB",
+    "conference": "American Athletic",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 116,
+      "team_strength": 1321.8,
+      "games_rated": 95,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "rice",
+    "team": "Rice",
+    "conference": "American Athletic",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 117,
+      "team_strength": 1319.3,
+      "games_rated": 92,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "syracuse",
+    "team": "Syracuse",
+    "conference": "ACC",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 118,
+      "team_strength": 1313.1,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "purdue",
+    "team": "Purdue",
+    "conference": "Big Ten",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 119,
+      "team_strength": 1302.4,
+      "games_rated": 91,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "kent-state",
+    "team": "Kent State",
+    "conference": "Mid-American",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 120,
+      "team_strength": 1298.6,
+      "games_rated": 89,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "bowling-green",
+    "team": "Bowling Green",
+    "conference": "Mid-American",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 121,
+      "team_strength": 1297.1,
+      "games_rated": 91,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "northern-illinois",
+    "team": "Northern Illinois",
+    "conference": "Mid-American",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 122,
+      "team_strength": 1287.2,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "san-jos-state",
+    "team": "San José State",
+    "conference": "Mountain West",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 123,
+      "team_strength": 1269.2,
+      "games_rated": 92,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "new-mexico-state",
+    "team": "New Mexico State",
+    "conference": "Conference USA",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 124,
+      "team_strength": 1265.8,
+      "games_rated": 87,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "tulsa",
+    "team": "Tulsa",
+    "conference": "American Athletic",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 125,
+      "team_strength": 1258.5,
+      "games_rated": 92,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "middle-tennessee",
+    "team": "Middle Tennessee",
+    "conference": "Conference USA",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 126,
+      "team_strength": 1250.9,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "colorado-state",
+    "team": "Colorado State",
+    "conference": "Mountain West",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 127,
+      "team_strength": 1246.5,
+      "games_rated": 89,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "ball-state",
+    "team": "Ball State",
+    "conference": "Mid-American",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 128,
+      "team_strength": 1242.0,
+      "games_rated": 91,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "oregon-state",
+    "team": "Oregon State",
+    "conference": "Pac-12",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 129,
+      "team_strength": 1236.9,
+      "games_rated": 92,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "sam-houston",
+    "team": "Sam Houston",
+    "conference": "Conference USA",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 130,
+      "team_strength": 1226.8,
+      "games_rated": 37,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "oklahoma-state",
+    "team": "Oklahoma State",
+    "conference": "Big 12",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 131,
+      "team_strength": 1217.3,
+      "games_rated": 97,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "ul-monroe",
+    "team": "UL Monroe",
+    "conference": "Sun Belt",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 132,
+      "team_strength": 1215.3,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "utep",
+    "team": "UTEP",
+    "conference": "Conference USA",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 133,
+      "team_strength": 1212.8,
+      "games_rated": 92,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "georgia-state",
+    "team": "Georgia State",
+    "conference": "Sun Belt",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 134,
+      "team_strength": 1200.5,
+      "games_rated": 94,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "charlotte",
+    "team": "Charlotte",
+    "conference": "American Athletic",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 135,
+      "team_strength": 1169.7,
+      "games_rated": 90,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   },
+   {
+    "team_slug": "massachusetts",
+    "team": "Massachusetts",
+    "conference": "Mid-American",
+    "systems": {
+     "dd-cfb-elo": {
+      "rank": 136,
+      "team_strength": 1023.7,
+      "games_rated": 88,
+      "expected_margin": null,
+      "win_probability": null,
+      "predicted_total": null
+     }
+    }
+   }
+  ],
+  "consensus": {
+   "status": "not-built",
+   "system_count": 1,
+   "weights": null,
+   "reason": "One independent rating cannot form a consensus. Do not create blend weights until multiple dated systems have prospective error histories."
+  }
+ },
+ "tier_meaning": "Labs — useful and live, still being challenged. Open questions may remain about calibration, assumptions, data quality or edge. Use with your eyes open.",
+ "built": "2026-08-08",
+ "canonical_url": "https://datadawgs216.com/data/cfb-ratings.json"
+}

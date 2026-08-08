@@ -961,6 +961,7 @@ const SURFACES = [
               { kind: 'json', url: '/data/cfb-schedule.json', status: 'live', covers: '934 canonical 2025 FBS-involved game facts with a pinned upstream commit and reproducible snapshot hash' },
               { kind: 'json', url: '/data/cfb-market.json', status: 'live', covers: 'book-identified historical spreads, totals and devigged moneylines; observation time is explicitly unknown, so these are not closing lines' },
               { kind: 'json', url: '/data/cfb-elo.json', status: 'live', covers: 'deterministic continuous Elo baseline and retrodictive 2025 backtest; ungraded as a prospective model' },
+              { kind: 'json', url: '/data/cfb-ratings.json', status: 'live', covers: 'canonical dated ratings registry with 136 teams and one retrodictive Elo system; unsupported outputs are null and consensus is explicitly not built' },
               { kind: 'json', url: '/data/cfb-model-cards.json', status: 'live', covers: 'generated CFB model governance cards tied to published model output and Pound lifecycle state' },
               { kind: 'json', url: '/data/cfb-disagreement.json', status: 'live', covers: 'published blocked model-versus-market probe naming the missing observation timestamp and exact unblock condition' },
               ...MCP_POUND_LIVE.map(tool => ({ kind: 'mcp', tool, status: 'live', covers: tool === 'dd_model_scoreboard'
@@ -1007,7 +1008,7 @@ write('surfaces.json', {
 // a page. Keep them in the same generated manifest without letting this build rewrite them.
 for (const name of ['nfl-schedule.json', 'model-receipts.json', '538-classic.json',
   'cfb-schedule.json', 'cfb-market.json', 'cfb-elo.json', 'cfb-model-cards.json',
-  'cfb-disagreement.json']) {
+  'cfb-disagreement.json', 'cfb-ratings.json']) {
   const p = path.join(OUT, name);
   const txt = fs.readFileSync(p, 'utf8');
   const payload = JSON.parse(txt);

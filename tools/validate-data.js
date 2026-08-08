@@ -16,6 +16,12 @@ const DATA = path.join(ROOT, 'data');
 // Markdown is committed and served with LF even when a Windows checkout exposes
 // CRLF in the working tree.
 const servedText = text => text.replace(/\r\n/g, '\n');
+const canonicalJson = value => {
+  if (Array.isArray(value)) return '[' + value.map(canonicalJson).join(',') + ']';
+  if (value && typeof value === 'object') return '{' + Object.keys(value).sort()
+    .map(key => JSON.stringify(key) + ':' + canonicalJson(value[key])).join(',') + '}';
+  return JSON.stringify(value);
+};
 const fails = [];
 const warns = [];
 const ok = m => console.log('  ok   ' + m);
@@ -163,12 +169,6 @@ console.log('\nreceipts integrity — the published spec must reproduce the lock
 
 console.log('\nNFL backbone — canonical schedule and append-only model receipts');
 {
-  const canonicalJson = value => {
-    if (Array.isArray(value)) return '[' + value.map(canonicalJson).join(',') + ']';
-    if (value && typeof value === 'object') return '{' + Object.keys(value).sort()
-      .map(key => JSON.stringify(key) + ':' + canonicalJson(value[key])).join(',') + '}';
-    return JSON.stringify(value);
-  };
   const schedule = JSON.parse(fs.readFileSync(path.join(DATA, 'nfl-schedule.json'), 'utf8'));
   const games = schedule.data && schedule.data.games;
   if (!Array.isArray(games)) fail('nfl-schedule.json: data.games is not an array');
@@ -242,6 +242,42 @@ console.log('\nNFL backbone — canonical schedule and append-only model receipt
       receipt.schedule_snapshot_id !== schedule.integrity.snapshot_id;
   })) fail('538-classic.json: a current forecast is absent from or disagrees with the receipt ledger');
   else ok('every current 538 Classic forecast has a matching immutable receipt');
+}
+
+console.log('\nCFB ratings registry — normalized evidence without invented consensus');
+{
+  const elo = JSON.parse(fs.readFileSync(path.join(DATA, 'cfb-elo.json'), 'utf8'));
+  const registry = JSON.parse(fs.readFileSync(path.join(DATA, 'cfb-ratings.json'), 'utf8'));
+  // Python's canonical JSON deliberately retains integral float spelling (1500.0),
+  // while JSON.parse in JavaScript erases that distinction (1500). The authoritative
+  // Python contract reproduces this hash byte-for-byte; here we validate its shape and
+  // then independently compare every normalized value with the locked Elo source.
+  if (!/^sha256:[0-9a-f]{64}$/.test(registry.integrity && registry.integrity.snapshot_id || ''))
+    fail('cfb-ratings.json: canonical snapshot identifier is missing');
+  else ok('registry declares a canonical SHA-256 snapshot');
+  const inputSnapshot = elo.integrity && elo.integrity.snapshot_id;
+  const systems = registry.data && registry.data.systems;
+  const teams = registry.data && registry.data.teams;
+  if (!Array.isArray(systems) || systems.length !== 1 || systems[0].system_id !== 'dd-cfb-elo')
+    fail('cfb-ratings.json: first registry version must contain exactly the shipped Elo system');
+  else if (systems[0].source_snapshot_id !== inputSnapshot || registry.provenance.input_snapshot_id !== inputSnapshot)
+    fail('cfb-ratings.json: registry does not lock the current Elo snapshot');
+  else ok('registry locks the current Elo source snapshot');
+  const sourceRows = elo.data && elo.data.ratings_as_of_end_of_2025;
+  if (!Array.isArray(teams) || !Array.isArray(sourceRows) || teams.length !== sourceRows.length)
+    fail('cfb-ratings.json: registry team count differs from Elo');
+  else if (teams.some((row, i) => {
+    const source = sourceRows[i];
+    const value = row.systems && row.systems['dd-cfb-elo'];
+    return !value || row.team_slug !== source.team_slug || value.rank !== i + 1 ||
+      value.team_strength !== source.rating || value.games_rated !== source.games_rated ||
+      value.expected_margin !== null || value.win_probability !== null || value.predicted_total !== null;
+  })) fail('cfb-ratings.json: a normalized row drifts from Elo or invents an unavailable output');
+  else ok(`all ${teams.length} registry rows reproduce Elo and leave unsupported outputs null`);
+  const consensus = registry.data && registry.data.consensus;
+  if (!consensus || consensus.status !== 'not-built' || consensus.weights !== null || consensus.system_count !== 1)
+    fail('cfb-ratings.json: one system cannot claim a consensus');
+  else ok('one-system registry explicitly refuses a consensus');
 }
 
 console.log('\nWorker deployment contract');

@@ -89,9 +89,9 @@
    {
     "path": "/data/pound-tools.json",
     "url": "https://datadawgs216.com/data/pound-tools.json",
-    "bytes": 123086,
+    "bytes": 123714,
     "as_of": "2026-08-08",
-    "sha256": "ba12decdbef9f91e3bf293b995c60fc96b5ce42b58efef48c30f513b56dec724",
+    "sha256": "12ccc6ac930b963845c74a4dcb80c393a834316dcea3f055caff8490f9de60a2",
     "note": "Two kinds of entry share this inventory. kind \"tool\" (NFL) carries delivery status. kind \"roadmap-idea\" (College Football) carries recommendation plus evidence-backed lifecycle and implementation state. A CFB artifact may be implemented without any MCP tool; candidate_mcp_tools are reservations and remain non-callable unless the independent Worker registry proves otherwise."
    },
    {
@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 14454,
+    "bytes": 14714,
     "as_of": "2026-08-08",
-    "sha256": "bef202aa8f1fd0dadb087d5d6049dcf6319a24317e381c102bb714eec9816e88",
+    "sha256": "5175c08268745c4624dc7bde807f7e2bd270d16543637977f11a8e83f11a5667",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -163,7 +163,7 @@
     "url": "https://datadawgs216.com/data/cfb-model-cards.json",
     "bytes": 8808,
     "as_of": "2026-08-08",
-    "sha256": "3a005e5c94ff127057717ed64c62be4d280ee79d451ed34b4c15cf2265921840",
+    "sha256": "874c7a07a36de096329b9ecec32437acc6b11af8bc1a41bdd363906a7de87710",
     "note": "Model cards for shipped CFB models, per the Model Cards governance principle in The Pound's CFB roadmap. A card documents what a model is for, what it cannot do and how it has actually scored. Nothing here is graded: no CFB forecast has been locked before kickoff yet."
    },
    {
@@ -173,6 +173,14 @@
     "as_of": "2026-08-08",
     "sha256": "6b4ec2c6f906018d86edb0c99ebf8447cda8c1e9dde092f524c4ea158027a761",
     "note": "A probe, not a result. The market prices behind it have no observation timestamp, which confounds the only question the probe was built to answer. The measurement is published so the reasoning is checkable; the conclusion is withheld on purpose."
+   },
+   {
+    "path": "/data/cfb-ratings.json",
+    "url": "https://datadawgs216.com/data/cfb-ratings.json",
+    "bytes": 45580,
+    "as_of": "2026-08-08",
+    "sha256": "b96f2931300d1220202d58ef87e5267ec452b5ebe626cb421b75f2c69bfbc5cb",
+    "note": "MODELLED, RETRODICTIVE, UNGRADED. This is a registry contract with one live baseline, not a consensus or evidence that several models agree. Unsupported outputs are null rather than inferred. Quote the rating period with every value."
    }
   ],
   "markdown": [
