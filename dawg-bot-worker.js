@@ -636,9 +636,16 @@ export default {
     // are permanent aliases because bozo.html in the wild (and any phone with a cached
     // page) still calls them. Never remove the aliases — a stale service-worker copy of
     // the page would lose the ability to sign in.
+    // ⚠️ "/reset" was already taken by the ADMIN-only clear-the-hash route (bozoReset)
+    // long before CEP-6 existed. The email flow is "/reset-password" — do not rename
+    // either one to tidy this up: bozo.html and signon.html in the wild still call
+    // /auth/reset expecting the admin behaviour, and a cached page would silently start
+    // hitting a route with completely different semantics.
     const AUTH = { "/roster": bozoRoster, "/claim": bozoClaim, "/login": bozoLogin,
                    "/passwd": bozoPasswd, "/reset": bozoReset, "/invite": authInvite,
-                   "/mcp-token": authMcpToken, "/email": authEmail, "/signup": bozoSignup };
+                   "/mcp-token": authMcpToken, "/email": authEmail, "/signup": bozoSignup,
+                   "/verify-request": authVerifyRequest, "/verify": authVerify,
+                   "/forgot": authForgot, "/reset-password": authReset };
     for (const [suffix, fn] of Object.entries(AUTH)) {
       if (url.pathname === "/auth" + suffix || url.pathname === "/bozo" + suffix)
         return suffix === "/roster" ? fn(env, cors) : fn(request, env, cors);
@@ -1702,6 +1709,277 @@ async function bozoReset(request, env, cors) {
     return json({ error: "Database write failed: " + e.message }, 502, cors);
   }
 }
+
+/* ===================== CEP-6 — email verification and reset =====================
+   ⚠️ INERT BY DEFAULT. mailReady() is false until BOTH the RESEND_KEY secret and the
+   MAIL_FROM plain-text var exist. Every route below checks it FIRST and returns 503
+   without minting a token, without touching the database and without calling out.
+
+   WHY A HARD GATE RATHER THAN A BEST EFFORT. The failure mode of "try to send, carry
+   on if it fails" is a reset token sitting in KV, valid for an hour, that the account
+   owner never receives. The only safe partial state is no state at all.
+
+   TOKENS. 32 random bytes, base64url. KV stores the SHA-256 of the token, never the
+   token, so read access to KV does not hand over an account — the same discipline as
+   the per-user MCP tokens. KV's own expirationTtl is the expiry; there is no sweeper
+   to forget to run.
+
+   ⚠️ A TOKEN IS DELETED BEFORE THE WORK IT AUTHORIZES, NOT AFTER. If the database
+   write then fails, the user has to ask for a new link. That is the correct direction
+   to fail: the alternative leaves a replayable password-reset token alive after an
+   error, and "the reset didn't take, try again" is a much smaller problem than that.
+
+   CAPS. Three, all checked before any work: per address per day, per IP per day, and
+   a cooldown per address. Mail is the one endpoint here that costs money and can be
+   pointed at a stranger's inbox, so it gets the tightest limits on the Worker.
+
+   ENUMERATION. /auth/forgot answers identically whether or not the address exists.
+   The single exception is "email is not configured on this site", which leaks nothing
+   about any address and is the honest answer to someone who would otherwise wait for
+   a message that is never coming. */
+const MAIL_TOKEN_TTL  = 3600;   // seconds; one hour is enough to walk to a laptop
+const MAIL_ADDR_CAP   = 3;      // links per address per day
+const MAIL_IP_CAP     = 10;     // links per connection per day
+const MAIL_COOLDOWN_S = 60;     // seconds between links to one address
+const MAIL_BASE       = "https://datadawgs216.com";
+
+function mailReady(env) { return !!(env && env.RESEND_KEY && env.MAIL_FROM); }
+const MAIL_OFF = "Email is not switched on for this site yet, so no link can be sent. " +
+                 "Ask Kap to reset you by hand in the meantime.";
+
+async function sha256hex(str) {
+  const buf = await crypto.subtle.digest("SHA-256", te.encode(String(str)));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+const normEmail = e => String(e || "").trim().toLowerCase();
+
+// Every account holding this address. /auth/email and /auth/signup both refuse
+// duplicates, so this should never return more than one — but reset has to resolve an
+// address to exactly one account, and guessing which one would be the wrong kind of
+// helpful. If the invariant has broken, say so and stop.
+async function emailOwners(env, email) {
+  const want = normEmail(email);
+  if (!want || want.indexOf("@") < 1) return [];
+  let users;
+  try { users = await loadUsers(env); } catch { return []; }
+  const out = [];
+  for (const [k, u] of Object.entries(users))
+    if (u && typeof u.email === "string" && normEmail(u.email) === want) out.push(playerName(k));
+  return out;
+}
+
+async function mailQuota(env, request, email) {
+  if (!env.RL) return { err: "Rate limiting is not configured, so no mail will be sent.", code: 503 };
+  const day = new Date().toISOString().slice(0, 10);
+  const ip = request.headers.get("CF-Connecting-IP") || "noip";
+  const eh = await sha256hex(normEmail(email));
+  const addrKey = "mailaddr:" + day + ":" + eh;
+  const ipKey = "mailip:" + day + ":" + ip;
+  const coolKey = "mailcool:" + eh;
+  if (await env.RL.get(coolKey))
+    return { err: "A link was just sent to that address. Give it a minute.", code: 429 };
+  const addrUsed = parseInt((await env.RL.get(addrKey)) || "0", 10);
+  if (addrUsed >= MAIL_ADDR_CAP)
+    return { err: "That address has had its links for today.", code: 429 };
+  const ipUsed = parseInt((await env.RL.get(ipKey)) || "0", 10);
+  if (ipUsed >= MAIL_IP_CAP)
+    return { err: "Too many emails from this connection today.", code: 429 };
+  // Counted only when the caller actually commits to sending, so a refusal further
+  // down (no such account, database down) does not burn somebody's daily allowance.
+  return { ok: true, bump: async () => {
+    await env.RL.put(addrKey, String(addrUsed + 1), { expirationTtl: 172800 });
+    await env.RL.put(ipKey, String(ipUsed + 1), { expirationTtl: 172800 });
+    await env.RL.put(coolKey, "1", { expirationTtl: MAIL_COOLDOWN_S });
+  } };
+}
+
+async function mintMailToken(env, kind, name, email) {
+  const raw = new Uint8Array(32);
+  crypto.getRandomValues(raw);
+  const tok = b64(raw).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  await env.RL.put("mailtok:" + (await sha256hex(tok)),
+                   JSON.stringify({ k: kind, n: name, e: normEmail(email), iat: Date.now() }),
+                   { expirationTtl: MAIL_TOKEN_TTL });
+  return tok;
+}
+
+async function consumeMailToken(env, kind, tok) {
+  if (!env.RL) return { err: "Token storage is not configured.", code: 503 };
+  if (typeof tok !== "string" || tok.length < 20 || tok.length > 200)
+    return { err: "That link is not valid.", code: 400 };
+  const key = "mailtok:" + (await sha256hex(tok));
+  const raw = await env.RL.get(key);
+  if (!raw) return { err: "That link has expired or has already been used.", code: 410 };
+  await env.RL.delete(key);                  // single use — see the note at the top
+  let o;
+  try { o = JSON.parse(raw); } catch { return { err: "That link is not valid.", code: 400 }; }
+  if (!o || o.k !== kind) return { err: "That link is not valid for this.", code: 400 };
+  return o;
+}
+
+// ⚠️ The key travels in a header and NEVER in a URL, a log line or a response. The
+// provider's error body is truncated and returned without it.
+async function sendMail(env, to, subject, text) {
+  const r = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: "Bearer " + env.RESEND_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ from: env.MAIL_FROM, to: [to], subject, text }),
+  });
+  if (!r.ok) {
+    let detail = "";
+    try { detail = (await r.text()).slice(0, 180); } catch { /* body is optional */ }
+    throw new Error("mail provider returned " + r.status + (detail ? ": " + detail : ""));
+  }
+  return true;
+}
+
+// POST /auth/verify-request — session required. Sends a verification link to the
+// address already on the caller's own account. It cannot be pointed anywhere else,
+// which is what keeps this from being an open relay.
+async function authVerifyRequest(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  if (!mailReady(env)) return json({ error: MAIL_OFF }, 503, cors);
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 401, cors);
+
+  let users;
+  try { users = await loadUsers(env); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+  const rec = users[auth.name] || users[encodeURIComponent(auth.name)] || null;
+  const email = rec && typeof rec.email === "string" ? rec.email.trim() : "";
+  if (!email) return json({ error: "There is no address on your account to verify." }, 409, cors);
+  if (rec.emailVerified === true)
+    return json({ ok: true, player: auth.name, email, alreadyVerified: true }, 200, cors);
+
+  const q = await mailQuota(env, request, email);
+  if (q.err) return json({ error: q.err }, q.code || 429, cors);
+
+  const tok = await mintMailToken(env, "verify", auth.name, email);
+  try {
+    await sendMail(env, email, "Confirm your Data Dawgs address",
+      "Someone asked to confirm this address for the Data Dawgs account \"" + auth.name + "\".\n\n" +
+      MAIL_BASE + "/signon.html?verify=" + tok + "\n\n" +
+      "The link works once and expires in an hour. If this wasn't you, ignore it — " +
+      "nothing changes and nobody can sign in as you from this message.\n");
+  } catch (e) {
+    return json({ error: "Could not send that email: " + e.message }, 502, cors);
+  }
+  await q.bump();
+  return json({ ok: true, player: auth.name, sent: true,
+                note: "Check that inbox. The link works once and expires in an hour." }, 200, cors);
+}
+
+// POST /auth/verify {token} — no session; the token IS the proof.
+async function authVerify(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  let body;
+  try { body = await readBody(request); } catch { return json({ error: "Bad JSON." }, 400, cors); }
+  const t = await consumeMailToken(env, "verify", body && body.token);
+  if (t.err) return json({ error: t.err }, t.code || 400, cors);
+
+  // The address may have been changed after the link was sent. Verifying the OLD
+  // address against the NEW one would mark an unverified address verified.
+  let users;
+  try { users = await loadUsers(env); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+  const rec = users[t.n] || users[encodeURIComponent(t.n)] || null;
+  if (!rec) return json({ error: "That account no longer exists." }, 410, cors);
+  if (normEmail(rec.email) !== t.e)
+    return json({ error: "That address has changed since the link was sent. Ask for a new one." }, 409, cors);
+
+  try { await fbPatch(env, "/users/" + encodeURIComponent(t.n),
+                      { emailVerified: true, emailVerifiedAt: Date.now() }); }
+  catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  return json({ ok: true, player: t.n, email: t.e, verified: true }, 200, cors);
+}
+
+// POST /auth/forgot {email} — NO session, by definition.
+// ⚠️ The success response is IDENTICAL whether or not the address exists, whether or
+// not it has one account, and whether or not the send worked. Any other shape turns
+// this into a "does this person play?" oracle for anyone with a list of addresses.
+const FORGOT_SAID = "If that address has an account, a reset link is on its way. " +
+                    "It works once and expires in an hour.";
+
+async function authForgot(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  // Not an enumeration leak: this says nothing about any address, and it is the honest
+  // answer to somebody who would otherwise wait forever for a message.
+  if (!mailReady(env)) return json({ error: MAIL_OFF }, 503, cors);
+
+  let body;
+  try { body = await readBody(request); } catch { return json({ error: "Bad JSON." }, 400, cors); }
+  const email = normEmail(body && body.email);
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))
+    return json({ error: "That does not look like an email address." }, 400, cors);
+
+  // The caps are the one thing allowed to answer differently, because a rate limit is
+  // about the CALLER, not about whether the address is real.
+  const q = await mailQuota(env, request, email);
+  if (q.err) return json({ error: q.err }, q.code || 429, cors);
+
+  const owners = await emailOwners(env, email);
+  if (owners.length === 1) {
+    try {
+      const tok = await mintMailToken(env, "reset", owners[0], email);
+      await sendMail(env, email, "Reset your Data Dawgs password",
+        "Someone asked to reset the password for the Data Dawgs account \"" + owners[0] + "\".\n\n" +
+        MAIL_BASE + "/signon.html?reset=" + tok + "\n\n" +
+        "The link works once and expires in an hour. If this wasn't you, ignore it — " +
+        "your password does not change until that link is used.\n");
+      await q.bump();
+    } catch (e) {
+      // Swallowed on purpose: a provider outage must not become a signal about the
+      // address. It is still visible in the Worker's own logs.
+      console.log("forgot: send failed:", e.message);
+    }
+  }
+  // owners.length > 1 means /auth/email's duplicate guard has been bypassed somehow.
+  // Resolving it by picking one would be a guess about whose account to reset.
+  return json({ ok: true, note: FORGOT_SAID }, 200, cors);
+}
+
+// POST /auth/reset {token, password} — the token is the proof; no session needed.
+async function authReset(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const cfg = bozoConfig(env);
+  if (cfg) return json({ error: cfg }, 500, cors);
+
+  let body;
+  try { body = await readBody(request); } catch { return json({ error: "Bad JSON." }, 400, cors); }
+  const pw = String((body && body.password) || "");
+  if (pw.length < MIN_PW) return json({ error: `Password must be at least ${MIN_PW} characters.` }, 400, cors);
+
+  const t = await consumeMailToken(env, "reset", body && body.token);
+  if (t.err) return json({ error: t.err }, t.code || 400, cors);
+
+  let users;
+  try { users = await loadUsers(env); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+  const rec = users[t.n] || users[encodeURIComponent(t.n)] || null;
+  if (!rec) return json({ error: "That account no longer exists." }, 410, cors);
+  // Same reason as verify: the address may have moved since the link was sent, and a
+  // link sent to an address that is no longer on the account must not still open it.
+  if (normEmail(rec.email) !== t.e)
+    return json({ error: "That address has changed since the link was sent. Ask for a new one." }, 409, cors);
+
+  try {
+    const saltBytes = new Uint8Array(16);
+    crypto.getRandomValues(saltBytes);
+    const salt = b64(saltBytes);
+    const hash = await pbkdf2(pw, env.BOZO_PEPPER, salt, PBKDF2_ITERS);
+    // ⚠️ A fresh setAt is what kills every session that existed before the reset — the
+    // session payload pins `p` to it. Without this, whoever prompted the reset keeps
+    // their stolen session and the reset accomplishes nothing.
+    const setAt = Date.now();
+    await fbPut(env, authPath(t.n), { v: 1, salt, hash, iters: PBKDF2_ITERS, setAt });
+    return json({ ok: true, player: t.n, session: await makeSession(env, t.n, setAt),
+                  note: "Password changed. Every other sign-in was ended." }, 200, cors);
+  } catch (e) {
+    return json({ error: "Database write failed: " + e.message }, 502, cors);
+  }
+}
+/* =================== end CEP-6 =================== */
 
 // POST /bozo/config — league-manager dials. v1: the price band. Lives at
 // /bozo/config (world-readable like the rest of /bozo — the page reads it straight
