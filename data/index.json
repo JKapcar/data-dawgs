@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 20900,
+    "bytes": 21335,
     "as_of": "2026-08-08",
-    "sha256": "be24a90c391f49adcfcf2c56995a843f838e3f114c7d0f8aee33119a6a881132",
+    "sha256": "478e1fd5b697441363a2ccf3df9b7c0e748139133d900a9cb82b50b2b0cb6e6b",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -245,6 +245,14 @@
     "as_of": "2026-08-08",
     "sha256": "614b5e541c73e4161e63f26cebc8a416fa439a61d65f423ecca4baa55d0cdfdb",
     "note": "RETRODICTIVE AGGREGATE VALIDATION. Finding: held-out-incremental-signal. This is not a prospective grade, not market-adjusted, and does not call any team overrated, underrated or a fraud."
+   },
+   {
+    "path": "/data/epa-players.json",
+    "url": "https://datadawgs216.com/data/epa-players.json",
+    "bytes": 151018,
+    "as_of": "2026-07-29",
+    "sha256": "36a67f192af0b98c20ccf8e7431fd4fce32be498e87b9849b7ec671aa0fc46eb",
+    "note": "Aggregated by the PRIMARY BALL HANDLER: the passer on a dropback, the ball carrier on a rush. There is no receiving EPA here and there cannot be — the play-by-play snapshot carries one name per play, so the whole value of a completed pass is credited to the quarterback and a receiver appears only for his own carries. Regular season only, plays with a down. Descriptive aggregates, not projections: do not read 2025 as 2026."
    }
   ],
   "markdown": [

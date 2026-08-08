@@ -146,13 +146,19 @@
      "url": "/data/epa-teams.json",
      "status": "live",
      "covers": "team and QB aggregates"
+    },
+    {
+     "kind": "json",
+     "url": "/data/epa-players.json",
+     "status": "live",
+     "covers": "per-player aggregates by primary ball handler — passer on a dropback, carrier on a rush; no receiving EPA, because no play names a receiver"
     }
    ],
    "planned": [
     "mcp:query_stats",
     "rest:/api/epa"
    ],
-   "gap": "Play-level data (109,933 plays) is not exposed; only aggregates.",
+   "gap": "Team and per-player aggregates are live as static JSON. Play-level data (109,933 plays) is still not exposed, and no play names a receiver, a blocker or a defender, so no tool built on this snapshot can produce receiving or defensive player EPA.",
    "tier": "dawg"
   },
   {

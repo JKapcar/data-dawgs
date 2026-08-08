@@ -7,6 +7,10 @@
  *
  *   node tools/build-data.js && node tools/validate-data.js
  *
+ * (build-data.js now regenerates index.json through tools/data-manifest.js, so files
+ * written by other pipelines survive the run. Before 2026-08-09 it did not, and this
+ * two-command sequence failed validation on a clean tree.)
+ *
  * No dependencies. Node 18+.
  */
 const fs = require('fs');
@@ -133,6 +137,82 @@ function aggregateEpa(seasonIdx, minDb) {
 const EPA_AGG = { by_season: {}, pooled: null };
 SEASONS.forEach((yr, i) => { EPA_AGG.by_season[yr] = aggregateEpa(new Set([i]), 200); });
 EPA_AGG.pooled = aggregateEpa(new Set(SEASONS.map((_, i) => i)), 500);
+
+/* ---------------------------------------------------------------
+ * Per-player EPA — the same play-by-play, aggregated by the PRIMARY BALL HANDLER.
+ *
+ * ⚠️ WHAT THE NAME COLUMN ACTUALLY IS, because everything honest about this file
+ * follows from it. stats.html carries ONE name per play: the passer on a dropback,
+ * the ball carrier on a rush. 109,921 of 109,933 plays have one. There is no
+ * receiver column, no blocker, nobody on defence.
+ *
+ * So this surface CANNOT answer "how good is this receiver" — a wideout appears here
+ * only for the handful of carries he takes, and the EPA of a 60-yard catch is credited
+ * entirely to the quarterback who threw it. Calling the file "players" without saying
+ * that would be the overstatement this whole /data/ layer exists to prevent, which is
+ * why `scope` and `unavailable` are part of the payload and not just prose.
+ *
+ * ⚠️ TWO THRESHOLDS, EITHER ONE QUALIFIES. A dropback-only minimum is what keeps the
+ * existing `qbs` table clean, and it also silently deletes every running back. A player
+ * is included if he clears the passing bar OR the rushing one, so the file covers both
+ * without letting a punter's one carry in.
+ * ------------------------------------------------------------- */
+const PLAYER_MIN = {
+  season: { dropbacks: 150, rushes: 75 },
+  pooled: { dropbacks: 400, rushes: 200 },
+};
+
+function aggregatePlayers(seasonIdx, min) {
+  const by = new Map();
+  for (let i = 0; i < N; i++) {
+    if (!seasonIdx.has(S[i])) continue;
+    if ((FL[i] >> 3) & 1) continue;            // REG only, same as the team tables
+    if (DOWN[i] === 0) continue;               // plays with a down, same as the page default
+    const ni = NAMEI[i];
+    if (ni <= 0) continue;
+    let p = by.get(ni);
+    if (!p) { p = { n: 0, epa: 0, succ: 0, db: 0, dbEpa: 0, dbSucc: 0, cp: 0, cpn: 0,
+                    ru: 0, ruEpa: 0, ruSucc: 0, tm: new Map() }; by.set(ni, p); }
+    const isPass = FL[i] & 1, succ = (FL[i] >> 1) & 1, epa = EPA[i] / 100;
+    p.n++; p.epa += epa; p.succ += succ;
+    if (isPass) {
+      p.db++; p.dbEpa += epa; p.dbSucc += succ;
+      if ((FL[i] >> 2) & 1) { p.cp += CPOE[i] / 10; p.cpn++; }
+    } else { p.ru++; p.ruEpa += epa; p.ruSucc += succ; }
+    p.tm.set(POS[i], (p.tm.get(POS[i]) || 0) + 1);
+  }
+  const r4 = v => (Number.isFinite(v) ? +v.toFixed(4) : null);
+  const rows = [];
+  for (const [ni, p] of by) {
+    if (p.db < min.dropbacks && p.ru < min.rushes) continue;
+    /* Every team he took a snap for, biggest first. A mid-season trade is a fact about
+       the row, and collapsing it to one abbreviation loses it silently. */
+    const teams = [...p.tm.entries()].sort((a, b) => b[1] - a[1])
+      .map(([t, c]) => ({ team: PBP_TEAMS[t], plays: c }));
+    rows.push({
+      player: NAMES[ni],
+      team: teams[0].team,
+      teams: teams.length > 1 ? teams : undefined,
+      plays: p.n,
+      dropbacks: p.db,
+      rushes: p.ru,
+      epa_per_play: r4(p.n ? p.epa / p.n : NaN),
+      success: r4(p.n ? p.succ / p.n : NaN),
+      epa_per_dropback: p.db ? r4(p.dbEpa / p.db) : null,
+      dropback_success: p.db ? r4(p.dbSucc / p.db) : null,
+      cpoe: p.cpn ? r4(p.cp / p.cpn) : null,
+      epa_per_rush: p.ru ? r4(p.ruEpa / p.ru) : null,
+      rush_success: p.ru ? r4(p.ruSucc / p.ru) : null,
+      total_epa: r4(p.epa),
+    });
+  }
+  rows.sort((a, b) => b.total_epa - a.total_epa);
+  return rows;
+}
+
+const EPA_PLAYERS = { by_season: {}, pooled: null };
+SEASONS.forEach((yr, i) => { EPA_PLAYERS.by_season[yr] = aggregatePlayers(new Set([i]), PLAYER_MIN.season); });
+EPA_PLAYERS.pooled = aggregatePlayers(new Set(SEASONS.map((_, i) => i)), PLAYER_MIN.pooled);
 
 /* ---------------------------------------------------------------
  * 3. Envelopes. as_of and source are mandatory — write() refuses without them.
@@ -362,6 +442,47 @@ write('epa-teams.json', {
     cpoe: 'completion percentage over expected, percentage points',
   },
   data: EPA_AGG,
+});
+
+/* ---------- epa-players.json ---------- */
+
+write('epa-players.json', {
+  source_page: '/stats.html',
+  tier: tierOf('stats.html'),
+  graded: false,
+  as_of: '2026-07-29',
+  source: 'nflverse play-by-play, 2023-2025, the same columnar snapshot stats.html serves. ' +
+    'Captured 2026-07-29; covers through the completed 2025 season.',
+  note:
+    'Aggregated by the PRIMARY BALL HANDLER: the passer on a dropback, the ball carrier on a rush. ' +
+    'There is no receiving EPA here and there cannot be — the play-by-play snapshot carries one name ' +
+    'per play, so the whole value of a completed pass is credited to the quarterback and a receiver ' +
+    'appears only for his own carries. Regular season only, plays with a down. Descriptive aggregates, ' +
+    'not projections: do not read 2025 as 2026.',
+  field_notes: {
+    epa_per_play: 'EPA per play over everything he handled the ball on',
+    epa_per_dropback: 'EPA per dropback as the passer; null if he never dropped back',
+    epa_per_rush: 'EPA per carry as the ball carrier; null if he never carried it',
+    cpoe: 'completion percentage over expected, percentage points; passers only',
+    teams: 'present only when he handled the ball for more than one team in the period',
+    total_epa: 'unrated sum, so it rewards volume — read it beside the per-play rates, not instead of them',
+  },
+  data: {
+    seasons: SEASONS,
+    scope: 'primary-ball-handler-per-play',
+    minimums: PLAYER_MIN,
+    minimum_rule: 'a player is included if he clears EITHER the dropback bar or the rush bar',
+    unavailable: [
+      'receiving EPA (no receiver is named on any play)',
+      'blocking, and every other lineman contribution',
+      'defensive players (only the defending TEAM is recorded)',
+      'special teams and plays with no down',
+      'postseason',
+      'opponent adjustment and game-state adjustment beyond what EPA already carries',
+    ],
+    by_season: EPA_PLAYERS.by_season,
+    pooled: EPA_PLAYERS.pooled,
+  },
 });
 
 /* ---------- league.json ---------- */
@@ -918,9 +1039,19 @@ const SURFACES = [
     planned: ['rest:/api/draft'],
     gap: 'The Firebase mirror still has no dated JSON snapshot surface; dd_draft_board reads it live instead.' },
   { id: 'epa', name: 'NFL EPA explorer', page: '/stats.html',
-    machine: [{ kind: 'json', url: '/data/epa-teams.json', status: 'live', covers: 'team and QB aggregates' }],
+    machine: [{ kind: 'json', url: '/data/epa-teams.json', status: 'live', covers: 'team and QB aggregates' },
+              { kind: 'json', url: '/data/epa-players.json', status: 'live',
+                covers: 'per-player aggregates by primary ball handler — passer on a dropback, ' +
+                        'carrier on a rush; no receiving EPA, because no play names a receiver' }],
     planned: ['mcp:query_stats', 'rest:/api/epa'],
-    gap: 'Play-level data (109,933 plays) is not exposed; only aggregates.' },
+    /* ⚠️ epa-players.json closes the AGGREGATE half of what query_stats was for, and
+       says so rather than letting the planned tool imply the aggregates are missing too.
+       What is still genuinely unexposed is the play level: 109,933 rows, and the receiver,
+       blocker and defensive-player identities that were never in the snapshot to begin
+       with. A tool cannot conjure a column the source does not have. */
+    gap: 'Team and per-player aggregates are live as static JSON. Play-level data (109,933 plays) ' +
+         'is still not exposed, and no play names a receiver, a blocker or a defender, so no tool ' +
+         'built on this snapshot can produce receiving or defensive player EPA.' },
   { id: 'nfelo', name: 'nfelo power ratings', page: '/nfelo.html',
     machine: [{ kind: 'json', url: '/data/nfelo.json', status: 'live' },
               { kind: 'json', url: '/data/models.json', status: 'live', covers: 'the margin model parameters' },
@@ -1036,8 +1167,24 @@ for (const name of ['nfl-schedule.json', 'model-receipts.json', '538-classic.jso
   };
 }
 
-/* ---------- index.json (manifest) ---------- */
-const manifest = {
+/* ---------- index.json (manifest) ----------
+   ⚠️ WRITTEN BY tools/data-manifest.js, WHICH SCANS THE DIRECTORY.
+   This script used to build the manifest from its OWN list of outputs, which meant any
+   /data/ file produced by another pipeline — the CFB Python scripts, for instance — was
+   silently dropped from index.json on every run, and validate-data.js then failed with
+   "present on disk but absent from index.json". Confirmed on 2026-08-09: a plain
+   `node tools/build-data.js` deleted cfb-record-divergence-validation.json from the
+   manifest and turned the build red.
+   The directory is the source of truth for what exists. Do not go back to a hand-kept
+   list here; add hand-authored Markdown mirrors in data-manifest.js instead. */
+const { writeDataManifest } = require('./data-manifest.js');
+const manifestResult = writeDataManifest({ built: BUILT });
+
+console.log('name'.padEnd(20), 'KB'.padStart(7), 'as_of');
+for (const [n, m] of Object.entries(files)) console.log(n.padEnd(20), (m.bytes / 1024).toFixed(1).padStart(7), m.as_of);
+console.log('index.json'.padEnd(20), (manifestResult.bytes / 1024).toFixed(1).padStart(7), BUILT);
+
+const UNUSED_MANIFEST = {
   as_of: BUILT,
   source: 'Generated manifest of every machine-readable surface on datadawgs216.com.',
   note:
@@ -1070,9 +1217,4 @@ const manifest = {
     }),
   },
 };
-const mtxt = JSON.stringify(manifest, null, 1);
-fs.writeFileSync(path.join(OUT, 'index.json'), mtxt);
-
-console.log('name'.padEnd(20), 'KB'.padStart(7), 'as_of');
-for (const [n, m] of Object.entries(files)) console.log(n.padEnd(20), (m.bytes / 1024).toFixed(1).padStart(7), m.as_of);
-console.log('index.json'.padEnd(20), (Buffer.byteLength(mtxt) / 1024).toFixed(1).padStart(7), BUILT);
+void UNUSED_MANIFEST;   // kept only so the markdown list above stays readable in one place
