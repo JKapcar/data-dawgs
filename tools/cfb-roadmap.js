@@ -176,6 +176,13 @@ const CFB_IDEAS = [
     governance: ['cfb-gov-source-provenance'], tags: ['CFB', 'DATA-PIPE', 'FOUNDATION'] }),
 
   idea({ id: 'cfb-team-game', name: 'Canonical CFB Team-Game Dataset',
+    lifecycle_status: 'building', implemented: true,
+    lifecycle_history: [
+      { status: 'idea', on: ROADMAP_AS_OF, note: 'Entered The Pound from the 2026-08-08 CFB roadmap.' },
+      { status: 'building', on: ROADMAP_AS_OF, note: 'Published the results-only foundation: two mirrored rows per canonical game. Play-derived aggregates remain unavailable.' },
+    ],
+    delivery_evidence: ['/data/cfb-team-game.json', '/scripts/cfb_team_results.py', '/tests/test_cfb_team_results.py'],
+    delivery_note: 'Partially implemented with observed schedule/result facts only. EPA, success, explosiveness, havoc and garbage-time fields still require canonical play-by-play.',
     category: 'foundation', recommendation: 'build', recommendation_modifiers: ['foundation'], roadmap_step: 1,
     source_headings: ['CFB Team-Game Dataset'],
     rationale: 'Canonical cfb_team_game: one row per team per game, aggregated once, consistently, instead of separately inside every tool.',
@@ -264,6 +271,13 @@ const CFB_IDEAS = [
     tags: ['CFB', 'DATA-PIPE', 'FOUNDATION', 'TALENT'] }),
 
   idea({ id: 'cfb-team-week', name: 'CFB Team-Week Analytical Layer',
+    lifecycle_status: 'building', implemented: true,
+    lifecycle_history: [
+      { status: 'idea', on: ROADMAP_AS_OF, note: 'Entered The Pound from the 2026-08-08 CFB roadmap.' },
+      { status: 'building', on: ROADMAP_AS_OF, note: 'Published results-only team-period rows with opponent, venue, record and scoring facts. Advanced analytical metrics remain gated.' },
+    ],
+    delivery_evidence: ['/data/cfb-team-week.json', '/scripts/cfb_team_results.py', '/tests/test_cfb_team_results.py'],
+    delivery_note: 'Partially implemented. The live surface contains observed results and season-to-date scoring/record facts; play, opponent-adjusted and market-performance metrics remain unavailable.',
     category: 'foundation', recommendation: 'build', recommendation_modifiers: ['foundation', 'high-priority'],
     priority: 'high', roadmap_step: 1,
     source_headings: ['CFB Team-Week Analytical Layer'],

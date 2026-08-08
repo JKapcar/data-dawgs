@@ -949,17 +949,26 @@
   {
    "kind": "roadmap-idea",
    "domain": "College Football",
-   "lifecycle_status": "idea",
+   "lifecycle_status": "building",
    "lifecycle_history": [
     {
      "status": "idea",
      "on": "2026-08-08",
      "note": "Entered The Pound from the 2026-08-08 CFB roadmap."
+    },
+    {
+     "status": "building",
+     "on": "2026-08-08",
+     "note": "Published the results-only foundation: two mirrored rows per canonical game. Play-derived aggregates remain unavailable."
     }
    ],
-   "implemented": false,
-   "delivery_evidence": [],
-   "delivery_note": null,
+   "implemented": true,
+   "delivery_evidence": [
+    "/data/cfb-team-game.json",
+    "/scripts/cfb_team_results.py",
+    "/tests/test_cfb_team_results.py"
+   ],
+   "delivery_note": "Partially implemented with observed schedule/result facts only. EPA, success, explosiveness, havoc and garbage-time fields still require canonical play-by-play.",
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 1,
@@ -1297,17 +1306,26 @@
   {
    "kind": "roadmap-idea",
    "domain": "College Football",
-   "lifecycle_status": "idea",
+   "lifecycle_status": "building",
    "lifecycle_history": [
     {
      "status": "idea",
      "on": "2026-08-08",
      "note": "Entered The Pound from the 2026-08-08 CFB roadmap."
+    },
+    {
+     "status": "building",
+     "on": "2026-08-08",
+     "note": "Published results-only team-period rows with opponent, venue, record and scoring facts. Advanced analytical metrics remain gated."
     }
    ],
-   "implemented": false,
-   "delivery_evidence": [],
-   "delivery_note": null,
+   "implemented": true,
+   "delivery_evidence": [
+    "/data/cfb-team-week.json",
+    "/scripts/cfb_team_results.py",
+    "/tests/test_cfb_team_results.py"
+   ],
+   "delivery_note": "Partially implemented. The live surface contains observed results and season-to-date scoring/record facts; play, opponent-adjusted and market-performance metrics remain unavailable.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 1,

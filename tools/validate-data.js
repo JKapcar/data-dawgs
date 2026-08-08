@@ -305,6 +305,63 @@ console.log('\nCFB model receipts — append-only prospective evidence');
   }
 }
 
+console.log('\nCFB results layers — exact schedule-derived team facts');
+{
+  const schedule = JSON.parse(fs.readFileSync(path.join(DATA, 'cfb-schedule.json'), 'utf8'));
+  const teamGame = JSON.parse(fs.readFileSync(path.join(DATA, 'cfb-team-game.json'), 'utf8'));
+  const teamWeek = JSON.parse(fs.readFileSync(path.join(DATA, 'cfb-team-week.json'), 'utf8'));
+  const games = schedule.data.games;
+  const rows = teamGame.data && teamGame.data.rows;
+  const unavailable = teamGame.data && teamGame.data.unavailable_metrics;
+  if (!Array.isArray(rows) || rows.length !== games.length * 2)
+    fail(`cfb-team-game.json: expected ${games.length * 2} rows`);
+  else if (teamGame.data.scope !== 'results-only' || !Array.isArray(unavailable) ||
+           !unavailable.includes('epa_per_play') || !unavailable.includes('opponent_adjusted_metrics'))
+    fail('cfb-team-game.json: results-only evidence boundary is missing');
+  else if (teamGame.provenance.input_snapshot_id !== schedule.integrity.snapshot_id ||
+           teamGame.data.input_schedule_snapshot_id !== schedule.integrity.snapshot_id)
+    fail('cfb-team-game.json: schedule snapshot provenance drifted');
+  else {
+    const byGame = new Map();
+    for (const row of rows) {
+      if (!byGame.has(row.game_id)) byGame.set(row.game_id, []);
+      byGame.get(row.game_id).push(row);
+    }
+    const badMirror = games.some(game => {
+      const pair = byGame.get(game.game_id) || [];
+      if (pair.length !== 2) return true;
+      const home = pair.find(row => row.team_slug === game.home_team_slug);
+      const away = pair.find(row => row.team_slug === game.away_team_slug);
+      return !home || !away || home.opponent_slug !== away.team_slug || away.opponent_slug !== home.team_slug ||
+        home.points_for !== game.home_points || home.points_against !== game.away_points ||
+        away.points_for !== game.away_points || away.points_against !== game.home_points ||
+        (home.point_differential === null ? away.point_differential !== null : home.point_differential !== -away.point_differential);
+    });
+    if (badMirror) fail('cfb-team-game.json: a game does not have two exact mirrored rows');
+    else if (teamGame.integrity.snapshot_id !== 'sha256:' + crypto.createHash('sha256').update(canonicalJson(teamGame.data)).digest('hex'))
+      fail('cfb-team-game.json: snapshot hash mismatch');
+    else ok(`all ${rows.length} team-game rows mirror ${games.length} canonical games`);
+  }
+
+  const weekRows = teamWeek.data && teamWeek.data.rows;
+  if (!Array.isArray(weekRows) || !weekRows.length)
+    fail('cfb-team-week.json: rows are missing');
+  else if (teamWeek.data.scope !== 'results-only' ||
+           teamWeek.data.input_team_game_snapshot_id !== teamGame.integrity.snapshot_id ||
+           teamWeek.provenance.input_snapshot_id !== schedule.integrity.snapshot_id)
+    fail('cfb-team-week.json: input snapshots or results-only boundary drifted');
+  else if (new Set(weekRows.map(row => row.team_period_id)).size !== weekRows.length)
+    fail('cfb-team-week.json: duplicate team_period_id');
+  else if (weekRows.some(row => row.period.games !== row.period.wins + row.period.losses + row.period.ties ||
+      row.season_to_date.games !== row.season_to_date.wins + row.season_to_date.losses + row.season_to_date.ties ||
+      row.period.point_differential !== row.period.points_for - row.period.points_against ||
+      row.season_to_date.point_differential !== row.season_to_date.points_for - row.season_to_date.points_against))
+    fail('cfb-team-week.json: record or point-differential arithmetic drifted');
+  else if (teamWeek.integrity.snapshot_id !== 'sha256:' + crypto.createHash('sha256').update(canonicalJson(teamWeek.data)).digest('hex'))
+    fail('cfb-team-week.json: snapshot hash mismatch');
+  else ok(`${weekRows.length} results-only team-period rows reconcile arithmetically`);
+}
+
 console.log('\nWorker deployment contract');
 {
   const configPath = path.join(ROOT, 'wrangler.jsonc');

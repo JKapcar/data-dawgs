@@ -17,11 +17,11 @@ Do not present Labs output with Dawg confidence.
 ## The Pound
 
 - [Workbench](https://datadawgs216.com/pound.html): model scoreboard and deterministic calculators.
-- [Inventory + CFB roadmap](https://datadawgs216.com/data/pound-tools.json): NFL status/blockers and 44 CFB ideas with evidence-backed lifecycle. No CFB MCP tool is callable.
+- [Inventory + CFB roadmap](https://datadawgs216.com/data/pound-tools.json): NFL status and 44 evidence-tracked CFB ideas. No CFB MCP tool is callable.
 - [Contracts](https://datadawgs216.com/data/model-contracts.json): forecast fields, receipt rules and calculator I/O.
 - [Provenance](https://datadawgs216.com/data/upstream-models.json): repositories, commits, dates, license status and integration mode.
-- [Canonical NFL schedule](https://datadawgs216.com/data/nfl-schedule.json): 272 validated 2026 games, exact upstream commit and snapshot hash.
-- [538 Classic Elo](https://datadawgs216.com/data/538-classic.json) ([method](https://datadawgs216.com/data/538-classic-methodology.md)): 32 dated ratings and 272 ungraded forecasts after reproducing 16,810 historical probabilities.
+- [Canonical NFL schedule](https://datadawgs216.com/data/nfl-schedule.json): 272 validated 2026 games and a locked snapshot.
+- [538 Classic Elo](https://datadawgs216.com/data/538-classic.json) ([method](https://datadawgs216.com/data/538-classic-methodology.md)): 32 ratings and 272 ungraded forecasts after historical reproduction.
 - [Normalized model receipts](https://datadawgs216.com/data/model-receipts.json): 544 append-only prospective forecasts across nfelo and 538 Classic.
 
 The 10 calculators cover odds, vig, EV, hedging, passer rating, Elo, margin translation
@@ -29,9 +29,9 @@ and forecast scoring. Inputs are not stored. The scoreboard is descriptive and u
 
 ## College football
 
-- [2025 schedule](https://datadawgs216.com/data/cfb-schedule.json): 934 FBS-involved game facts with pinned source bytes and snapshot hash.
+- [2025 results](https://datadawgs216.com/data/cfb-schedule.json): 934 games; [team-game](https://datadawgs216.com/data/cfb-team-game.json) and [team-week](https://datadawgs216.com/data/cfb-team-week.json) are observed results-only derivations, not EPA layers.
 - [Book market](https://datadawgs216.com/data/cfb-market.json): spreads, totals and devigged moneylines. Books are named but observation time is unknown; these are not closing lines and cannot establish CLV.
-- [Elo baseline](https://datadawgs216.com/data/cfb-elo.json), [ratings registry](https://datadawgs216.com/data/cfb-ratings.json) and [model card](https://datadawgs216.com/data/cfb-model-cards.json): one deterministic, retrodictive 2025 system; modelled, ungraded, not a consensus and not a 2026 forecast.
+- [CFB Elo](https://datadawgs216.com/data/cfb-elo.json), [registry](https://datadawgs216.com/data/cfb-ratings.json) and [card](https://datadawgs216.com/data/cfb-model-cards.json): end-2025; retrodictive, modelled, ungraded, not consensus or forecast.
 - [Disagreement probe](https://datadawgs216.com/data/cfb-disagreement.json): honestly `blocked` because untimestamped prices cannot separate model failure from later market information.
 - [Prospective receipts](https://datadawgs216.com/data/cfb-model-receipts.json): append-only contract, zero rows; no CFB forecast has been frozen before kickoff.
 - The 24-to-25-hour market collector is staged. Its endpoint is not live until Worker activation is verified.

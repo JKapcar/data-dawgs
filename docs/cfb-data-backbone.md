@@ -51,6 +51,21 @@ When the market file is present the backtest also scores the Elo against the mar
 
 The schema is ready to add independently dated systems, but the data is not padded to make the registry look fuller than it is. It currently contains one retrodictive, ungraded system. `data.consensus.status` is therefore `not-built`, with no weights. Multiple systems may be registered later; a blend still requires prospective error histories and correlation analysis.
 
+## Results-only team layers (roadmap step 1)
+
+`scripts/cfb_team_results.py refresh` publishes `/data/cfb-team-game.json` and
+`/data/cfb-team-week.json` from the exact canonical schedule snapshot. Every game
+becomes two mirrored team rows. Team-period rows then aggregate observed opponents,
+venue, record, scoring and season-to-date totals while keeping regular-season week 1
+distinct from postseason week 1. The upstream week label can contain multiple games,
+so `scheduled_games_this_period` is explicit rather than silently assuming one.
+
+These are useful partial foundations, not the completed analytical layers. Both files
+declare `scope: results-only` and enumerate the absent EPA, success, explosiveness,
+havoc, garbage-time, opponent-adjusted and market-performance families. Those fields
+are not filled with null-looking guesses. The roadmap entries remain `building` until
+canonical play-by-play and timestamped market inputs make the full contracts possible.
+
 ## Model cards (governance principle cfb-gov-model-cards)
 
 `scripts/cfb_model_cards.py refresh` publishes `/data/cfb-model-cards.json`: the purpose, target, features, training window, validation design, limitations, calibration, performance, failure modes, version and retirement status the CFB governance section requires before a model is promoted past the lab. Every performance number is read from the model's own published output rather than typed into the card, and the calibration narrative is generated from the bins, so a card cannot drift away from the thing it describes.
