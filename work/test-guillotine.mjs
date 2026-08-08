@@ -1,0 +1,204 @@
+/* Guillotine Companion — end-to-end logic test for the page's sync IIFE and Toto surface.
+   Extracts the live <script> blocks from ../guillotine.html and runs them against a
+   stubbed DOM, stubbed localStorage, and a faked Sleeper API + Worker players-slim
+   endpoint. No network, no browser.
+
+   Run:  cd work && node test-guillotine.mjs
+*/
+import { readFileSync } from "fs";
+
+let pass = 0, fail = 0;
+const ok = (name, cond, detail) => {
+  if (cond) { pass++; console.log("  ok   " + name); }
+  else { fail++; console.log("  FAIL " + name + (detail ? " — " + detail : "")); }
+};
+
+/* ------------------------------- DOM stubs ------------------------------- */
+const escapeHtml = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+function makeEl(id) {
+  return {
+    id, innerHTML: "", style: {}, value: "",
+    _text: "",
+    set textContent(v) { this._text = String(v); this.innerHTML = escapeHtml(v); },
+    get textContent() { return this._text; },
+    classList: { _s: new Set(), add(c) { this._s.add(c); }, remove(c) { this._s.delete(c); }, contains(c) { return this._s.has(c); } },
+    handlers: {},
+    addEventListener(ev, fn) { (this.handlers[ev] = this.handlers[ev] || []).push(fn); },
+    querySelectorAll() { return []; },
+    click() { (this.handlers.click || []).forEach(f => f({})); },
+  };
+}
+const els = new Map();
+const byId = (id) => { if (!els.has(id)) els.set(id, makeEl(id)); return els.get(id); };
+
+const store = new Map();
+globalThis.localStorage = {
+  getItem: (k) => (store.has(k) ? store.get(k) : null),
+  setItem: (k, v) => store.set(k, String(v)),
+  removeItem: (k) => store.delete(k),
+};
+globalThis.document = {
+  getElementById: byId,
+  createElement: () => makeEl(null),
+};
+globalThis.window = globalThis;
+globalThis.addEventListener = () => {};
+
+/* ----------------------------- Sleeper fixtures ---------------------------
+   Six-team league, $100 FAAB, 3 completed weeks. Roster 6 was chopped after
+   week 2: its roster is now empty and it scored 0 in week 3. Player p9 was
+   dropped (on nobody's roster) after scoring in weeks 1-3; p6x1/p6x2 belonged
+   to the chopped team. p1..p5 remain rostered. */
+const WEEKS_DONE = 3;
+const league = {
+  name: "Test Guillotine", season: "2026",
+  settings: { waiver_budget: 100 },
+};
+const users = [1, 2, 3, 4, 5, 6].map(i => ({
+  user_id: "u" + i, display_name: "Mgr" + i, metadata: { team_name: "Team " + i },
+}));
+const rosters = [
+  { roster_id: 1, owner_id: "u1", players: ["p1", "p2"], settings: { waiver_budget_used: 10 } },
+  { roster_id: 2, owner_id: "u2", players: ["p3"], settings: { waiver_budget_used: 40 } },
+  { roster_id: 3, owner_id: "u3", players: ["p4"], settings: { waiver_budget_used: 0 } },
+  { roster_id: 4, owner_id: "u4", players: ["p5"], settings: { waiver_budget_used: 100 } },
+  { roster_id: 5, owner_id: "u5", players: ["p6"], settings: { waiver_budget_used: 25 } },
+  { roster_id: 6, owner_id: "u6", players: [], settings: { waiver_budget_used: 60 } }, // chopped
+];
+const base = { 1: 120, 2: 110, 3: 100, 4: 95, 5: 90, 6: 85 };
+const jitter = { 1: [0, 6, -6], 2: [3, -3, 6], 3: [-4, 4, 8], 4: [5, -5, 2], 5: [-2, 2, -6], 6: [1, -1, 0] };
+const matchups = (w) => rosters.map(r => {
+  const dead = r.roster_id === 6 && w > 2;
+  const pts = dead ? 0 : base[r.roster_id] + jitter[r.roster_id][w - 1];
+  const pp = {};
+  if (!dead) {
+    // every live roster's players score; p9 scored on roster 3 in all completed weeks
+    (r.roster_id === 6 ? ["p6x1", "p6x2"] : rosters[r.roster_id - 1].players).forEach((p, i) => { pp[p] = 10 + i + w; });
+    if (r.roster_id === 3) pp["p9"] = 20 + w; // later dropped: on no current roster
+  }
+  return { roster_id: r.roster_id, points: pts, players_points: pp };
+});
+
+const PLAYERS_SLIM = {
+  as_of: "2026-08-08",
+  source: "Sleeper /players/nfl, slimmed by the Data Dawgs Worker",
+  data: { players: { p9: ["Waiver Wonder", "RB", "CLE"], p6x1: ["Chopped One", "WR", "PIT"], p6x2: ["Chopped Two", "TE", null] } },
+};
+
+let slimMode = "up"; // "up" | "down"
+globalThis.fetch = async (u) => {
+  const url = String(u);
+  const j = (o) => new Response(JSON.stringify(o), { status: 200, headers: { "Content-Type": "application/json" } });
+  if (url.includes("/sleeper/players-slim"))
+    return slimMode === "up" ? j(PLAYERS_SLIM) : new Response("nope", { status: 404 });
+  if (url.includes("/state/nfl")) return j({ week: WEEKS_DONE + 1, display_week: WEEKS_DONE + 1, season_type: "regular" });
+  if (url.endsWith("/league/12345")) return j(league);
+  if (url.includes("/users")) return j(users);
+  if (url.includes("/rosters")) return j(rosters);
+  const m = url.match(/\/matchups\/(\d+)$/);
+  if (m) return j(matchups(Number(m[1])));
+  throw new Error("unexpected fetch " + url);
+};
+
+/* ------------------------- load the page's scripts ------------------------ */
+const html = readFileSync("../guillotine.html", "utf8");
+const blocks = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1]);
+const syncBlock = blocks.find(b => b.includes('"dd-guillotine-v1"'));
+const botBlock = blocks.find(b => b.includes("GUILLOTINE LEAGUE"));
+ok("page has the sync and bot-context script blocks", !!syncBlock && !!botBlock);
+
+// Pre-seed a connected league with "me" = roster 2, so the IIFE auto-syncs on load.
+store.set("dd-guillotine-v1", JSON.stringify({ id: "12345", me: 2 }));
+
+const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+await new AsyncFunction(syncBlock)();
+await new Promise(r => setTimeout(r, 50)); // let sync() + renderWaiver settle
+new Function(botBlock)();
+
+/* --------------------------------- checks -------------------------------- */
+const G = globalThis.__GX;
+ok("__GX exists after sync", !!G);
+ok("chopped team detected via empty roster", G && G.chopped === 1, "chopped=" + (G && G.chopped));
+ok("simulation excludes the chopped team", G && G.teams.length === 5, "teams=" + (G && G.teams.length));
+ok("chop band ordered lo <= median <= hi", G && G.chopLo <= G.chop && G.chop <= G.chopHi,
+  G && [G.chopLo, G.chop, G.chopHi].join("/"));
+ok("band is a real spread, not a point", G && G.chopHi - G.chopLo > 1);
+
+const F = G && G.faab;
+ok("FAAB summary stashed", !!F);
+// alive teams: used 10,40,0,100,25 -> left 90,60,100,0,75 = 325 (chopped 40 excluded)
+ok("FAAB pool sums surviving teams only", F && F.pool === 325, "pool=" + (F && F.pool));
+ok("FAAB per-team average is pool/alive", F && F.perTeam === 65, "perTeam=" + (F && F.perTeam));
+ok("your dollars follow the saved team (roster 2: $60)", F && F.mine && F.mine.left === 60,
+  "mine=" + JSON.stringify(F && F.mine));
+ok("your share is dollars/pool", F && F.mine && Math.abs(F.mine.share - 18.5) < 0.11, "share=" + (F && F.mine && F.mine.share));
+
+const faabHtml = byId("gxFaabTab").innerHTML;
+ok("FAAB table renders every surviving team", faabHtml.split("<tr>").length - 1 >= 5);
+ok("FAAB table does not list the chopped team", !faabHtml.includes("Team 6"));
+ok("FAAB card is visible", byId("gxFaabCard").style.display === "");
+
+const W = G && G.waiver;
+ok("waiver board stashed on __GX", Array.isArray(W) && W.length > 0);
+ok("waiver board excludes rostered players", W && !W.some(w => w.name.startsWith("id p1")) &&
+  !JSON.stringify(W || []).includes('"p3"'));
+const wonder = W && W.find(w => w.name === "Waiver Wonder");
+ok("dropped player appears with observed avg (21,22,23 -> 22)", wonder && wonder.avg === 22,
+  "wonder=" + JSON.stringify(wonder));
+ok("chopped roster's players appear on the board", W && W.some(w => w.name === "Chopped One"));
+const wvHtml = byId("gxWvTab").innerHTML;
+ok("waiver table renders names, not raw ids", wvHtml.includes("Waiver Wonder") && !wvHtml.includes("id p9"));
+ok("module 06 card flips to Live when the backend answers", byId("gxM6").textContent === "Live");
+
+/* Toto context */
+const BC = globalThis.DD_BOTCTX;
+ok("DD_BOTCTX present", !!BC && typeof BC.ctx === "function");
+const ctx = BC.ctx();
+ok("ctx names the league", ctx.includes("Test Guillotine"));
+ok("ctx carries the 80% band", /80% band/.test(ctx));
+ok("ctx carries observed FAAB", ctx.includes("FAAB (all observed)") && ctx.includes("$325"));
+ok("ctx carries the waiver board with names", ctx.includes("WAIVER BOARD") && ctx.includes("Waiver Wonder"));
+ok("ctx flags the chopped team", ctx.includes("chopped"));
+ok("ctx flags thin history under 4 weeks", ctx.includes("ONLY 3 COMPLETED WEEK"));
+ok("sys prompt separates observed FAAB from framework", BC.sys.includes("OBSERVED league facts"));
+
+/* ------------------ degraded path: players-slim endpoint down ------------- */
+slimMode = "down";
+els.clear();
+globalThis.__GX = null;
+store.set("dd-guillotine-v1", JSON.stringify({ id: "12345", me: 2 }));
+await new AsyncFunction(syncBlock)();
+await new Promise(r => setTimeout(r, 50));
+const note2 = byId("gxWvNote").innerHTML;
+ok("waiver board degrades honestly when the backend is missing",
+  note2.includes("not yet deployed") || note2.includes("backend"), note2.slice(0, 120));
+ok("no raw ids leak into the degraded table", byId("gxWvTab").innerHTML === "");
+ok("module 06 card says awaiting deploy", byId("gxM6").textContent === "Awaiting deploy");
+ok("FAAB still renders without the backend", byId("gxFaabTab").innerHTML.includes("Team 1"));
+ok("__GX still stashed without the backend", !!globalThis.__GX && !!globalThis.__GX.faab);
+
+/* -------------------- pre-maths path: 0 completed weeks ------------------- */
+els.clear();
+globalThis.__GX = null;
+const realFetch = globalThis.fetch;
+globalThis.fetch = async (u) => {
+  const url = String(u);
+  if (url.includes("/state/nfl"))
+    return new Response(JSON.stringify({ week: 0, display_week: 0, season_type: "pre" }), { status: 200 });
+  return realFetch(u);
+};
+store.set("dd-guillotine-v1", JSON.stringify({ id: "12345", me: 2 }));
+await new AsyncFunction(syncBlock)();
+await new Promise(r => setTimeout(r, 50));
+const G0 = globalThis.__GX;
+ok("pre-season: __GX minimal stash exists", !!G0 && G0.teams.length === 0);
+ok("pre-season: FAAB still present for Toto", !!G0 && !!G0.faab && G0.faab.budget === 100);
+ok("pre-season: no team reads as chopped when nothing is scored", byId("gxFaabTab").innerHTML.includes("Team 6"));
+const ctx0 = globalThis.DD_BOTCTX.ctx();
+ok("pre-season ctx says the maths is off, with FAAB", ctx0.includes("not on yet") && ctx0.includes("FAAB"));
+globalThis.fetch = realFetch;
+
+console.log("\nguillotine: " + pass + " passed, " + fail + " failed");
+if (fail) process.exit(1);
