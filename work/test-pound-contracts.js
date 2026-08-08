@@ -59,13 +59,20 @@ test('surface generator reports the deployed Pound MCP tools as live', () => {
     'dd_calculate_bet_ev', 'dd_calculate_hedge', 'dd_nfl_passer_rating',
     'dd_score_forecast', 'dd_summarize_beliefs', 'dd_elo_game',
     'dd_translate_probability'];
-  assert.equal(surfaces.counts.mcp_tools_live, 25);
+  assert.equal(surfaces.counts.mcp_tools_live, 26);
   assert.equal(surfaces.counts.mcp_tools_staged, 0);
   assert.ok(surfaces.mcp.tools_live.includes('dd_survivor_ev'));
+  assert.ok(surfaces.mcp.tools_live.includes('dd_optimize_survivor_path'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_analyze_matchup'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_solve_dfs_lineup'));
   poundMcp.forEach(name => assert.ok(surfaces.mcp.tools_live.includes(name), name));
   assert.deepEqual(surfaces.mcp.tools_staged, []);
+});
+test('survivor surface exposes the exact path optimizer and names its remaining rule gap', () => {
+  const survivor = surfaces.data.find(s => s.id === 'survivor');
+  assert.ok(survivor.machine.some(x => x.kind === 'mcp' && x.tool === 'dd_optimize_survivor_path' && x.status === 'live'));
+  assert.match(survivor.gap, /one-pick-per-week path is live/i);
+  assert.match(survivor.gap, /double-pick weeks/i);
 });
 test('deployed Pound tools name live MCP implementations without staged claims', () => {
   const ids = new Set(['model-scoreboard', 'disagreement', '538-classic', 'translation', 'market', 'cover-ev', 'odds', 'parlay', 'hedge', 'passer', 'grader']);

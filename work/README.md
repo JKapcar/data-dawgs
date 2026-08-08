@@ -10,8 +10,9 @@ committed so it cannot die with a session — which has happened once already on
 
 `mcp-block.js` is the hand-edited MCP adapter. **Edit it there, never in the assembled
 Worker** — the block is regenerated on every build and edits to the output are lost.
-The build also injects `dfs-engine.js` into a private Worker root. That is how
-`dd_solve_dfs_lineup` and the browser run the same solver source instead of parallel ports.
+The build also injects `dfs-engine.js` and `survivor-path-engine.js` into private Worker
+roots. That is how `dd_solve_dfs_lineup`, `dd_optimize_survivor_path` and their browser
+views run the same solver sources instead of parallel ports.
 
 ⚠️ **The build is idempotent and must stay that way.** The committed Worker *is* the
 assembled output, so a build that naively appends produces a second copy of every
@@ -22,6 +23,14 @@ inside the block, and a second pass that would change nothing. It reverts the fi
 than leave a broken Worker on disk.
 
 Tests: `node test-mcp.mjs`.
+
+## The survivor path engine
+
+`survivor-path-engine.js` is the bounded exact maximum-product assignment used by both
+the survivor board and MCP. Run `node sync-survivor-path.mjs` after changing it; the
+generated block in `survivor.html` must never be edited by hand.
+
+    node test-survivor-path.js  # exact/brute-force math, reuse and browser-source parity
 
 ## The DFS engine
 

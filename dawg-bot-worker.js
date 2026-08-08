@@ -3091,6 +3091,142 @@ root.DDFS.payoutFn = payoutFn;
 
 })(mcpDdfsRoot);
 
+/* Shared survivor path engine — generated verbatim from work/survivor-path-engine.js except for its private root. */
+const mcpSurvivorPathRoot = {};
+/* ============================================================================
+   Survivor path engine — bounded exact assignment over weekly win probabilities.
+
+   Pure computation. No DOM, network, storage or randomness. Loaded three ways:
+     1. Node, for correctness and parity tests
+     2. inlined into survivor.html for the human path board
+     3. injected into the Cloudflare Worker under a private root for MCP
+
+   The ordinary survivor rule is one distinct team per week. That is a rectangular
+   maximum-product assignment, solved as minimum -log(probability) with Hungarian.
+   If a pool explicitly allows reuse, each week is independent and the exact solution
+   is simply that week's highest-probability team; the same team may appear repeatedly.
+   ========================================================================== */
+(function (root) {
+"use strict";
+
+const MAX_WEEKS = 18;
+const MAX_TEAMS = 64;
+const BIG = 25; // impossible cell; -log(1e-6) is only 13.82
+
+function finiteProbability(value, label) {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 1)
+    throw new Error((label || "probability") + " must be null or a finite number from 0 to 1");
+  return value;
+}
+
+function validateInput(input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("path input must be an object");
+  const weeks = input.weeks, teams = input.teams, probabilities = input.probabilities;
+  if (!Array.isArray(weeks) || !weeks.length || weeks.length > MAX_WEEKS)
+    throw new Error("weeks must contain 1-" + MAX_WEEKS + " entries");
+  if (!weeks.every(w => Number.isInteger(w) && w >= 1 && w <= 18) || new Set(weeks).size !== weeks.length)
+    throw new Error("weeks must be unique whole numbers from 1 to 18");
+  if (!Array.isArray(teams) || !teams.length || teams.length > MAX_TEAMS)
+    throw new Error("teams must contain 1-" + MAX_TEAMS + " entries");
+  if (!teams.every(t => typeof t === "string" && t.length > 0 && t.length <= 20) || new Set(teams).size !== teams.length)
+    throw new Error("teams must be unique non-empty strings of at most 20 characters");
+  if (!Array.isArray(probabilities) || probabilities.length !== teams.length)
+    throw new Error("probabilities must have one row per team");
+  const matrix = probabilities.map((row, i) => {
+    if (!Array.isArray(row) || row.length !== weeks.length)
+      throw new Error("probabilities row " + (i + 1) + " must have one cell per week");
+    return row.map((p, j) => finiteProbability(p, "probability for " + teams[i] + " week " + weeks[j]));
+  });
+  return { weeks: weeks.slice(), teams: teams.slice(), probabilities: matrix, reuse: input.reuse === true };
+}
+
+function hungarian(cost) { // square matrix, minimizes
+  if (!Array.isArray(cost)) throw new Error("cost must be a square matrix");
+  const n = cost.length, INF = 1e18;
+  if (!n) return new Int32Array(0);
+  if (!cost.every(row => row && row.length === n)) throw new Error("cost must be a square matrix");
+  const u = new Float64Array(n + 1), v = new Float64Array(n + 1);
+  const p = new Int32Array(n + 1), way = new Int32Array(n + 1);
+  for (let i = 1; i <= n; i++) {
+    p[0] = i; let j0 = 0;
+    const minv = new Float64Array(n + 1).fill(INF);
+    const used = new Uint8Array(n + 1);
+    do {
+      used[j0] = 1; const i0 = p[j0]; let delta = INF, j1 = 0;
+      for (let j = 1; j <= n; j++) if (!used[j]) {
+        const cell = cost[i0 - 1][j - 1];
+        if (typeof cell !== "number" || !Number.isFinite(cell)) throw new Error("cost cells must be finite numbers");
+        const cur = cell - u[i0] - v[j];
+        if (cur < minv[j]) { minv[j] = cur; way[j] = j0; }
+        if (minv[j] < delta) { delta = minv[j]; j1 = j; }
+      }
+      for (let j = 0; j <= n; j++) {
+        if (used[j]) { u[p[j]] += delta; v[j] -= delta; }
+        else minv[j] -= delta;
+      }
+      j0 = j1;
+    } while (p[j0] !== 0);
+    do { const j1 = way[j0]; p[j0] = p[j1]; j0 = j1; } while (j0);
+  }
+  const result = new Int32Array(n).fill(-1);
+  for (let j = 1; j <= n; j++) if (p[j] > 0) result[p[j] - 1] = j - 1;
+  return result; // result[row] = column
+}
+
+function finish(input, assignments) {
+  assignments.sort((a, b) => a.weekIndex - b.weekIndex || a.teamIndex - b.teamIndex);
+  let logSurvival = 0;
+  for (const pick of assignments) logSurvival += Math.log(pick.probability);
+  return {
+    weeks: input.weeks.slice(), assignments,
+    survival: assignments.length ? Math.exp(logSurvival) : 0,
+    covered: assignments.length,
+    complete: assignments.length === input.weeks.length,
+    reuse: input.reuse,
+  };
+}
+
+function solvePath(rawInput) {
+  const input = validateInput(rawInput);
+  const R = input.teams.length, C = input.weeks.length;
+  if (input.reuse) {
+    const assignments = [];
+    for (let j = 0; j < C; j++) {
+      let best = -1, bestP = -1;
+      for (let i = 0; i < R; i++) {
+        const p = input.probabilities[i][j];
+        if (p !== null && p > bestP) { best = i; bestP = p; }
+      }
+      if (best >= 0) assignments.push({
+        week: input.weeks[j], team: input.teams[best], probability: bestP,
+        teamIndex: best, weekIndex: j,
+      });
+    }
+    return finish(input, assignments);
+  }
+
+  const N = Math.max(R, C);
+  const cost = Array.from({ length: N }, () => new Float64Array(N).fill(BIG));
+  for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) {
+    const p = input.probabilities[i][j];
+    if (p !== null) cost[i][j] = -Math.log(Math.max(p, 1e-6));
+  }
+  const assignment = hungarian(cost), picks = [];
+  for (let i = 0; i < R; i++) {
+    const j = assignment[i];
+    if (j >= 0 && j < C && cost[i][j] < BIG) picks.push({
+      week: input.weeks[j], team: input.teams[i], probability: input.probabilities[i][j],
+      teamIndex: i, weekIndex: j,
+    });
+  }
+  return finish(input, picks);
+}
+
+root.DDSurvivorPath = { MAX_WEEKS, MAX_TEAMS, hungarian, solvePath };
+
+})(mcpSurvivorPathRoot);
+
 /* ================================== /mcp ================================== */
 // The league's remote MCP server. One URL, pasted once into Claude's custom-
 // connector box, gives any leaguemate's own Claude READ access to the league:
@@ -3527,6 +3663,36 @@ async function mcpSurvivor() {
   return mcpSurvCache.data;
 }
 
+// Exact survivor path adapter. The optimizer is injected from
+// work/survivor-path-engine.js, the same source inlined into survivor.html.
+function mcpSurvivorWeekTable(D, week) {
+  const table = {};
+  for (const g of D.games) {
+    if (g.wk !== week) continue;
+    table[g.h] = { opponent: g.a, home: true, probability: g.p, source: g.src, game_id: g.id, date: g.d };
+    table[g.a] = { opponent: g.h, home: false, probability: 1 - g.p, source: g.src, game_id: g.id, date: g.d };
+  }
+  return table;
+}
+
+function mcpSolveSurvivorPath(D, fromWeek, used, reuse) {
+  const weeks = [];
+  for (let week = fromWeek; week <= 18; week++) weeks.push(week);
+  if (!weeks.length) return { weeks, assignments: [], survival: 1, covered: 0, complete: true, reuse };
+  const tables = weeks.map(week => mcpSurvivorWeekTable(D, week));
+  const teams = Object.keys(D.elo).filter(team => reuse || !used.has(team));
+  if (!teams.length) return { weeks, assignments: [], survival: 0, covered: 0, complete: false, reuse };
+  const solved = mcpSurvivorPathRoot.DDSurvivorPath.solvePath({
+    weeks, teams, reuse,
+    probabilities: teams.map(team => tables.map(table => table[team] ? table[team].probability : null)),
+  });
+  solved.assignments = solved.assignments.map(pick => ({
+    week: pick.week, team: pick.team, probability: pick.probability,
+    ...tables[pick.weekIndex][pick.team],
+  }));
+  return solved;
+}
+
 // The public receipt ledger is append-only and changes only when a new dated model
 // snapshot is published. Keep the envelope (not just data) so every response can carry
 // its source date and integrity receipt. The returned rows are always bounded by the tool.
@@ -3746,7 +3912,7 @@ async function mcpDispatch(m, env, caller) {
       return rpcOk(id, {
         protocolVersion: proto,
         capabilities: { tools: {} },
-        serverInfo: { name: "data-dawgs", version: "1.5.0" },
+        serverInfo: { name: "data-dawgs", version: "1.6.0" },
         instructions:
           (caller && caller.kind === "user"
             ? "You are connected as " + caller.name + ". When a tool marks a row `you: true`, that is them.\n"
@@ -3755,7 +3921,7 @@ async function mcpDispatch(m, env, caller) {
           "Everything here is read-only and is either the league's own data, public play-by-play, " +
           "or a deterministic calculation over caller-supplied inputs. Calculator inputs and results are not stored. " +
           "The model scoreboard reads dated prospective receipts and returns descriptive disagreement only; it is ungraded and is not a validated consensus or ranking. " +
-          "There is no built-in DFS projection or ownership feed: dd_solve_dfs_lineup requires the caller to supply every value per call, and stores none of them. When quoting bozo odds, survivor odds " +
+          "There is no built-in DFS projection or ownership feed: dd_solve_dfs_lineup requires the caller to supply every value per call, and stores none of them. dd_optimize_survivor_path is an ungraded ceiling over a dated snapshot and does not model double-pick weeks. When quoting bozo odds, survivor odds " +
           "or the correlation matrix, say it is model output or a measured historical average, never a forecast " +
           "of a specific game. Team names, weeks and league ids come from dd_league_overview — do not guess them.",
       });
@@ -4096,6 +4262,101 @@ const MCP_TOOLS = [
           ? "OWNERSHIP IS MODELLED (chalk softmax, exponent 2.4), not observed. A modelled ranking cannot see narrative picks and is wrong exactly where fading the field pays most. Post real pick data via /survivor-picks and this caveat disappears."
           : (stale ? "Posted ownership is over 72h old — treat as directional-only." : undefined),
         rows,
+      });
+    },
+  },
+  {
+    name: "dd_optimize_survivor_path",
+    description: "Computes the exact maximum-product survivor path from a starting week through Week 18, subject to teams already used. Returns the path, run-the-table probability, each current-week option's future cost, and explicit rule/data caveats. This is a deterministic ceiling over a dated probability snapshot, not a recommendation or graded forecast.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        from_week: { type: "integer", minimum: 1, maximum: 18, description: "First week to optimize (default 1)" },
+        used_teams: { type: "array", maxItems: 32, items: { type: "string" }, description: "NFL team abbreviations already spent; case-insensitive" },
+        reuse_teams: { type: "boolean", description: "Allow the same team in multiple weeks (default false)" },
+        double_pick_from: { type: "integer", minimum: 0, maximum: 18, description: "Pool requires two picks beginning this week; 0 means never. Accepted so the result can warn that this rule is not yet modelled." },
+      },
+      additionalProperties: false,
+    },
+    async run(args) {
+      const allowed = ["from_week", "used_teams", "reuse_teams", "double_pick_from"];
+      if (!args || typeof args !== "object" || Array.isArray(args)) return toolErr("arguments must be an object");
+      const extra = Object.keys(args).filter(key => !allowed.includes(key));
+      if (extra.length) return toolErr("Unknown argument" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+      const fromWeek = args.from_week === undefined ? 1 : args.from_week;
+      if (!Number.isInteger(fromWeek) || fromWeek < 1 || fromWeek > 18) return toolErr("from_week must be a whole number from 1 to 18");
+      const reuse = args.reuse_teams === true;
+      if (args.reuse_teams !== undefined && typeof args.reuse_teams !== "boolean") return toolErr("reuse_teams must be true or false");
+      const doublePickFrom = args.double_pick_from === undefined ? 0 : args.double_pick_from;
+      if (!Number.isInteger(doublePickFrom) || doublePickFrom < 0 || doublePickFrom > 18)
+        return toolErr("double_pick_from must be 0 or a whole number from 1 to 18");
+      if (args.used_teams !== undefined && !Array.isArray(args.used_teams)) return toolErr("used_teams must be an array");
+      if ((args.used_teams || []).length > 32) return toolErr("used_teams is limited to 32 teams");
+
+      const D = await mcpSurvivor();
+      const usedList = (args.used_teams || []).map(team => String(team).trim().toUpperCase()).filter(Boolean);
+      if (new Set(usedList).size !== usedList.length) return toolErr("used_teams contains a duplicate");
+      const unknown = usedList.filter(team => !Object.prototype.hasOwnProperty.call(D.elo, team));
+      if (unknown.length) return toolErr("Unknown team abbreviation" + (unknown.length > 1 ? "s" : "") + ": " + unknown.join(", "));
+      const used = new Set(usedList);
+      const path = mcpSolveSurvivorPath(D, fromWeek, used, reuse);
+      const currentTable = mcpSurvivorWeekTable(D, fromWeek);
+      if (!Object.keys(currentTable).length) return toolErr("No games found for week " + fromWeek + ".");
+
+      const baselineFuture = fromWeek === 18 ? 1 : mcpSolveSurvivorPath(D, fromWeek + 1, used, reuse).survival;
+      const selected = path.assignments.find(pick => pick.week === fromWeek);
+      const currentOptions = Object.keys(currentTable)
+        .filter(team => reuse || !used.has(team))
+        .map(team => {
+          const nextUsed = new Set(used);
+          if (!reuse) nextUsed.add(team);
+          const future = fromWeek === 18 ? 1 : mcpSolveSurvivorPath(D, fromWeek + 1, nextUsed, reuse).survival;
+          const game = currentTable[team];
+          return {
+            team, opponent: game.opponent, home: game.home, probability: game.probability,
+            source: game.source, game_id: game.game_id, date: game.date,
+            future_path_probability: future,
+            future_cost: baselineFuture > 0 ? 1 - future / baselineFuture : 0,
+            combined_path_probability: game.probability * future,
+            selected: !!selected && selected.team === team,
+          };
+        })
+        .sort((a, b) => b.combined_path_probability - a.combined_path_probability || b.probability - a.probability || a.team.localeCompare(b.team));
+      if (!currentOptions.length) return toolErr("Every team playing week " + fromWeek + " is on the used list.");
+
+      const weakest = path.assignments.length
+        ? path.assignments.reduce((low, pick) => pick.probability < low.probability ? pick : low)
+        : null;
+      const modelGames = D.games.filter(game => game.src === "model").length;
+      const warnings = [
+        "CEILING, NOT A PLAN: the maximum-product path assumes the " + D.meta.captured + " probabilities stay fixed. Injuries, lines and ratings will move, so rerun it as inputs update.",
+        modelGames + " of " + D.games.length + " games have model-only probabilities; the rest use the published market/model blend where a captured line exists.",
+        "Run-the-table probability is modelled and ungraded. It is the product of the selected weekly probabilities, not evidence of a validated edge.",
+      ];
+      if (doublePickFrom > 0)
+        warnings.push("DOUBLE-PICK RULE NOT MODELLED: this solver still assigns exactly one team per week, including Week " + doublePickFrom + " onward. Do not use the path as a legal pool entry after that point.");
+      if (reuse) warnings.push("reuse_teams is on: used_teams is ignored and the same team may be selected in multiple weeks.");
+
+      return toolText({
+        season: D.meta.season,
+        as_of: D.meta.captured,
+        from_week: fromWeek,
+        through_week: 18,
+        access: "read-only",
+        stored: false,
+        modelled: true,
+        graded: false,
+        rules_fully_modelled: doublePickFrom === 0,
+        reuse_teams: reuse,
+        used_teams: usedList,
+        path: path.assignments,
+        covered_weeks: path.covered,
+        requested_weeks: path.weeks.length,
+        complete: path.complete,
+        run_the_table_probability: path.survival,
+        weakest_link: weakest,
+        current_week_options: currentOptions,
+        warnings,
       });
     },
   },

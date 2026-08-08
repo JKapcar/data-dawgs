@@ -832,7 +832,7 @@ const MCP_POUND_LIVE = ['dd_model_scoreboard', 'dd_convert_odds', 'dd_devig_mark
 const MCP_LIVE = ['dd_whoami', 'dd_league_overview', 'dd_bozo_week', 'dd_bozo_standings',
   'dd_draft_board', 'dd_draft_pool', 'dd_survivor_week', 'dd_scores',
   'dd_dfs_correlations', 'dd_solve_dfs_lineup', 'dd_guillotine_odds', 'dd_site_map',
-  'dd_survivor_ev', 'dd_analyze_matchup', ...MCP_POUND_LIVE];
+  'dd_survivor_ev', 'dd_optimize_survivor_path', 'dd_analyze_matchup', ...MCP_POUND_LIVE];
 const MCP_STAGED = [];
 const MCP_ENDPOINT = {
   path: '/mcp/u_<personal token>   (legacy: /mcp/<league passphrase>)',
@@ -877,9 +877,10 @@ const SURFACES = [
   { id: 'survivor', name: 'Survivor pool EV', page: '/survivor.html',
     machine: [{ kind: 'json', url: '/data/survivor.json', status: 'live', covers: 'schedule and win probabilities' },
               { kind: 'mcp', tool: 'dd_survivor_week', status: 'live', covers: 'stored weekly ownership snapshots, staleness-flagged' },
-              { kind: 'mcp', tool: 'dd_survivor_ev', status: 'live', covers: 'modelled pool survival EV with assumptions returned in the payload' }],
+              { kind: 'mcp', tool: 'dd_survivor_ev', status: 'live', covers: 'modelled pool survival EV with assumptions returned in the payload' },
+              { kind: 'mcp', tool: 'dd_optimize_survivor_path', status: 'live', covers: 'exact one-pick-per-week maximum-product path, dated probabilities and future-cost options' }],
     planned: [],
-    gap: 'Pool ownership is modelled, not observed, and double-pick weeks are recorded but not simulated.' },
+    gap: 'The exact one-pick-per-week path is live. Pool ownership is modelled, not observed, and double-pick weeks are recorded but not optimized.' },
   { id: 'receipts', name: 'Pre-registered forecasts', page: '/receipts.html',
     machine: [{ kind: 'json', url: '/data/receipts.json', status: 'live' },
               { kind: 'markdown', url: '/data/receipts-method.md', status: 'live' },
