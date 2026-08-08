@@ -75,13 +75,13 @@ test('surface generator reports the deployed Pound MCP tools as live', () => {
     'dd_score_forecast', 'dd_summarize_beliefs', 'dd_elo_game',
     'dd_translate_probability'];
   assert.equal(surfaces.counts.mcp_tools_live, 26);
-  assert.equal(surfaces.counts.mcp_tools_staged, 3);
+  assert.equal(surfaces.counts.mcp_tools_staged, 4);
   assert.ok(surfaces.mcp.tools_live.includes('dd_survivor_ev'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_optimize_survivor_path'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_analyze_matchup'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_solve_dfs_lineup'));
   poundMcp.forEach(name => assert.ok(surfaces.mcp.tools_live.includes(name), name));
-  assert.deepEqual(surfaces.mcp.tools_staged, ['dd_cfb_team_profile', 'dd_compare_cfb_teams', 'dd_project_cfb_matchup']);
+  assert.deepEqual(surfaces.mcp.tools_staged, ['dd_cfb_team_profile', 'dd_compare_cfb_teams', 'dd_project_cfb_matchup', 'dd_project_cfb_schedule_path']);
 });
 test('survivor surface exposes the exact path optimizer and names its remaining rule gap', () => {
   const survivor = surfaces.data.find(s => s.id === 'survivor');
@@ -118,7 +118,7 @@ test('new data surfaces are in the generated manifest', () => {
   const paths = new Set(index.data.files.map(x => x.path));
   for (const p of ['/data/pound-tools.json', '/data/model-contracts.json', '/data/upstream-models.json',
     '/data/nfl-schedule.json', '/data/model-receipts.json', '/data/538-classic.json',
-    '/data/cfb-schedule.json', '/data/cfb-team-game.json', '/data/cfb-team-week.json', '/data/cfb-teams.json', '/data/cfb-record-divergence.json', '/data/cfb-market.json', '/data/cfb-elo.json',
+    '/data/cfb-schedule.json', '/data/cfb-team-game.json', '/data/cfb-team-week.json', '/data/cfb-teams.json', '/data/cfb-record-divergence.json', '/data/cfb-record-divergence-validation.json', '/data/cfb-market.json', '/data/cfb-elo.json',
     '/data/cfb-ratings.json', '/data/cfb-model-cards.json', '/data/cfb-model-receipts.json',
     '/data/cfb-disagreement.json']) assert.ok(paths.has(p), p);
 });
@@ -212,6 +212,9 @@ test('CFB roadmap ideas carry evidence-backed lifecycle without inventing tools'
   assert.equal(byId['cfb-disagreement-lab'].lifecycle_status, 'evaluating');
   assert.equal(byId['cfb-model-receipts'].lifecycle_status, 'building');
   assert.equal(byId['cfb-model-receipts'].implemented, true);
+  assert.equal(byId['cfb-season-sim'].lifecycle_status, 'building');
+  assert.equal(byId['cfb-season-sim'].implemented, true);
+  assert.deepEqual(byId['cfb-season-sim'].candidate_mcp_tools, ['dd_project_cfb_schedule_path']);
 });
 test('published CFB backbone artifacts are discoverable without overstating their evidence', () => {
   const pound = surfaces.data.find(s => s.id === 'pound');
@@ -279,7 +282,7 @@ test('the 12-step roadmap ordering is stored explicitly and stays consistent', (
 });
 test('the implemented CFB MCP tools are staged locally but no candidate is claimed live', () => {
   const candidates = new Set(cfbIdeas.flatMap(i => i.candidate_mcp_tools || []));
-  const staged = new Set(['dd_cfb_team_profile', 'dd_compare_cfb_teams', 'dd_project_cfb_matchup']);
+  const staged = new Set(['dd_cfb_team_profile', 'dd_compare_cfb_teams', 'dd_project_cfb_matchup', 'dd_project_cfb_schedule_path']);
   assert.ok(candidates.size >= 12);
   for (const name of candidates) {
     assert.ok(!surfaces.mcp.tools_live.includes(name), `${name} falsely live`);

@@ -202,3 +202,17 @@ the Worker reads those dated parameters and calculates home/away win probabiliti
 two exact teams. Neutral site removes the +55 Elo adjustment. The result is a
 hypothetical end-of-2025 rating-period calculation, not a scheduled 2026 forecast, and
 expected margin, spread and total stay null rather than being reverse-engineered.
+
+`dd_project_cfb_schedule_path` extends that same published transform across one
+caller-supplied hypothetical path of up to 20 matchups. It calculates every game
+probability and the complete Poisson-binomial distribution for zero through all wins,
+including expected wins, variance, undefeated/winless probability and an optional
+minimum-wins threshold. The result is exact conditional on its inputs; it uses no Monte
+Carlo and stores nothing.
+
+This is only the first, bounded part of roadmap step 9. Ratings remain fixed at the
+end-of-2025 snapshot and games are treated as independent. The caller supplies every
+opponent and venue; the tool does not claim those rows are the 2026 schedule. Conference
+standings, tiebreakers, championship qualification, playoff selection, seeding and game
+leverage remain unbuilt. The tool is staged and non-callable in production until a
+separately approved Worker release.

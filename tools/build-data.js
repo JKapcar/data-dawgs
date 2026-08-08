@@ -880,7 +880,7 @@ const MCP_LIVE = ['dd_whoami', 'dd_league_overview', 'dd_bozo_week', 'dd_bozo_st
   'dd_draft_board', 'dd_draft_pool', 'dd_survivor_week', 'dd_scores',
   'dd_dfs_correlations', 'dd_solve_dfs_lineup', 'dd_guillotine_odds', 'dd_site_map',
   'dd_survivor_ev', 'dd_optimize_survivor_path', 'dd_analyze_matchup', ...MCP_POUND_LIVE];
-const MCP_STAGED = ['dd_cfb_team_profile', 'dd_compare_cfb_teams', 'dd_project_cfb_matchup'];
+const MCP_STAGED = ['dd_cfb_team_profile', 'dd_compare_cfb_teams', 'dd_project_cfb_matchup', 'dd_project_cfb_schedule_path'];
 const MCP_ENDPOINT = {
   path: '/mcp/u_<personal token>   (legacy: /mcp/<league passphrase>)',
   transport: 'streamable-http',
@@ -963,6 +963,7 @@ const SURFACES = [
               { kind: 'json', url: '/data/cfb-team-week.json', status: 'live', covers: 'results-only team-period records, scoring, venue and opponents; EPA, opponent adjustment and market performance are unavailable' },
               { kind: 'json', url: '/data/cfb-teams.json', status: 'live', covers: '136 compact team profiles separating observed 2025 results from one retrodictive, ungraded Elo rating' },
               { kind: 'json', url: '/data/cfb-record-divergence.json', status: 'live', covers: 'descriptive record-versus-scoring rank gaps and one-score records; no predictive or overrated/underrated labels' },
+              { kind: 'json', url: '/data/cfb-record-divergence-validation.json', status: 'live', covers: 'aggregate-only chronological holdout test of record-versus-scoring divergence beyond Elo; retrodictive, not market-adjusted and no team labels' },
               { kind: 'json', url: '/data/cfb-market.json', status: 'live', covers: 'book-identified historical spreads, totals and devigged moneylines; observation time is explicitly unknown, so these are not closing lines' },
               { kind: 'json', url: '/data/cfb-elo.json', status: 'live', covers: 'deterministic continuous Elo baseline and retrodictive 2025 backtest; ungraded as a prospective model' },
               { kind: 'json', url: '/data/cfb-ratings.json', status: 'live', covers: 'canonical dated ratings registry with 136 teams and one retrodictive Elo system; unsupported outputs are null and consensus is explicitly not built' },

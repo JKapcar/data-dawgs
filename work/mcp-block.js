@@ -576,6 +576,63 @@ function mcpCfbProjectionArgs(args) {
   return { homeTeam, awayTeam, neutralSite: args.neutral_site === true };
 }
 
+function mcpCfbScheduleArgs(args) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+  const extra = Object.keys(args).filter(k => !["team", "games", "minimum_wins"].includes(k));
+  if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+  const team = mcpCfbTeamArgs({ team: args.team });
+  if (!Array.isArray(args.games) || !args.games.length) throw new Error("games must contain at least one hypothetical matchup");
+  if (args.games.length > 20) throw new Error("games is limited to 20 hypothetical matchups");
+  const games = args.games.map((raw, i) => {
+    const label = "games[" + i + "]";
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error(label + " must be an object");
+    const gameExtra = Object.keys(raw).filter(k => !["opponent", "venue", "label"].includes(k));
+    if (gameExtra.length) throw new Error(label + " has unsupported field" + (gameExtra.length > 1 ? "s" : "") + ": " + gameExtra.join(", "));
+    const opponent = mcpCfbTeamArgs({ team: raw.opponent });
+    const venue = raw.venue === undefined ? "neutral" : raw.venue;
+    if (!["home", "away", "neutral"].includes(venue)) throw new Error(label + ".venue must be home, away or neutral");
+    if (raw.label !== undefined && (typeof raw.label !== "string" || !raw.label.trim() || raw.label.trim().length > 80))
+      throw new Error(label + ".label must be a non-empty string of at most 80 characters");
+    return { opponent, venue, label: raw.label === undefined ? null : raw.label.trim() };
+  });
+  const minimumWins = args.minimum_wins === undefined ? null : args.minimum_wins;
+  if (minimumWins !== null && (!Number.isInteger(minimumWins) || minimumWins < 0 || minimumWins > games.length))
+    throw new Error("minimum_wins must be a whole number from 0 through the number of games");
+  return { team, games, minimumWins };
+}
+
+function mcpCfbMatchupProbability(system, focalRating, opponentRating, venue) {
+  const transform = system.matchup_probability;
+  if (!transform || transform.available !== true) return null;
+  if (!focalRating || !opponentRating || !Number.isFinite(focalRating.team_strength) || !Number.isFinite(opponentRating.team_strength))
+    throw new Error("team strength is missing for registered system " + system.system_id);
+  if (!Number.isFinite(transform.elo_scale) || transform.elo_scale <= 0 ||
+      !Number.isFinite(transform.home_field_elo) || !Number.isFinite(transform.neutral_site_home_field_elo))
+    throw new Error("invalid matchup transform for registered system " + system.system_id);
+  const hfa = venue === "neutral" ? transform.neutral_site_home_field_elo : transform.home_field_elo;
+  const homeStrength = venue === "away" ? opponentRating.team_strength : focalRating.team_strength;
+  const awayStrength = venue === "away" ? focalRating.team_strength : opponentRating.team_strength;
+  const pHome = 1 / (1 + 10 ** (-(homeStrength - awayStrength + hfa) / transform.elo_scale));
+  return {
+    focal_win_probability: venue === "away" ? 1 - pHome : pHome,
+    venue_adjustment_elo: hfa,
+    focal_is_formula_home_team: venue !== "away",
+  };
+}
+
+function mcpCfbPoissonBinomial(probabilities) {
+  let distribution = [1];
+  for (const p of probabilities) {
+    const next = new Array(distribution.length + 1).fill(0);
+    for (let wins = 0; wins < distribution.length; wins++) {
+      next[wins] += distribution[wins] * (1 - p);
+      next[wins + 1] += distribution[wins] * p;
+    }
+    distribution = next;
+  }
+  return distribution;
+}
+
 function mcpCfbObservedView(team) {
   const observed = team.observed_results || {};
   return {
@@ -804,7 +861,7 @@ async function mcpDispatch(m, env, caller) {
           "Everything here is read-only and is either the league's own data, public play-by-play, " +
           "or a deterministic calculation over caller-supplied inputs. Calculator inputs and results are not stored. " +
           "The model scoreboard reads dated prospective receipts and returns descriptive disagreement only; it is ungraded and is not a validated consensus or ranking. " +
-          "The CFB reads separate observed 2025 results from one end-of-2025 retrodictive Elo row. dd_project_cfb_matchup is a hypothetical rating-period calculation, not a scheduled 2026 forecast; all CFB outputs are ungraded and are not a consensus. " +
+          "The CFB reads separate observed 2025 results from one end-of-2025 retrodictive Elo row. dd_project_cfb_matchup and dd_project_cfb_schedule_path are hypothetical rating-period calculations, not scheduled 2026 forecasts; all CFB outputs are ungraded and are not a consensus. " +
           "There is no built-in DFS projection or ownership feed: dd_solve_dfs_lineup requires the caller to supply every value per call, and stores none of them. dd_optimize_survivor_path is an ungraded ceiling over a dated snapshot and does not model double-pick weeks. When quoting bozo odds, survivor odds " +
           "or the correlation matrix, say it is model output or a measured historical average, never a forecast " +
           "of a specific game. Team names, weeks and league ids come from dd_league_overview — do not guess them.",
@@ -1752,6 +1809,129 @@ const MCP_TOOLS = [
     },
   },
   {
+    name: "dd_project_cfb_schedule_path",
+    description: "Calculate an exact win-count distribution for one team over a caller-supplied hypothetical schedule of up to 20 opponents. Uses the dated end-of-2025 CFB Elo transform with fixed ratings and independent games. It is not an actual 2026 schedule, playoff model, conference simulation, consensus, prospective forecast or recommendation.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        team: { type: "string", minLength: 1, maxLength: 80, description: "Exact focal-team registry name or slug." },
+        games: {
+          type: "array", minItems: 1, maxItems: 20,
+          description: "Caller-supplied hypothetical path. Repeated opponents are allowed for rematch scenarios.",
+          items: {
+            type: "object",
+            properties: {
+              opponent: { type: "string", minLength: 1, maxLength: 80, description: "Exact opponent registry name or slug." },
+              venue: { type: "string", enum: ["home", "away", "neutral"], default: "neutral" },
+              label: { type: "string", minLength: 1, maxLength: 80, description: "Optional caller label such as Week 1 or semifinal." },
+            },
+            required: ["opponent"],
+            additionalProperties: false,
+          },
+        },
+        minimum_wins: { type: "integer", minimum: 0, maximum: 20, description: "Optional threshold for P(wins >= threshold); cannot exceed games.length." },
+      },
+      required: ["team", "games"],
+      additionalProperties: false,
+    },
+    async run(args) {
+      const input = mcpCfbScheduleArgs(args);
+      const envelope = await mcpCfbTeamProfiles();
+      const focal = mcpCfbTeamMatch(envelope, input.team);
+      const games = input.games.map((game, index) => {
+        const opponent = mcpCfbTeamMatch(envelope, game.opponent);
+        if (opponent.team_slug === focal.team_slug)
+          throw new Error("games[" + index + "].opponent must be different from the focal team");
+        return { index: index + 1, label: game.label, venue: game.venue, opponent };
+      });
+      const systems = envelope.data.systems.map(system => {
+        const probabilities = [];
+        const projectedGames = games.map(game => {
+          const projection = mcpCfbMatchupProbability(
+            system,
+            focal.systems[system.system_id],
+            game.opponent.systems[system.system_id],
+            game.venue
+          );
+          if (!projection) return {
+            index: game.index, label: game.label, venue: game.venue,
+            opponent: { team_slug: game.opponent.team_slug, name: game.opponent.team },
+            available: false,
+          };
+          probabilities.push(projection.focal_win_probability);
+          return {
+            index: game.index, label: game.label, venue: game.venue,
+            opponent: { team_slug: game.opponent.team_slug, name: game.opponent.team, conference: game.opponent.conference || null },
+            available: true,
+            focal_win_probability: projection.focal_win_probability,
+            focal_loss_probability: 1 - projection.focal_win_probability,
+            venue_adjustment_elo: projection.venue_adjustment_elo,
+          };
+        });
+        if (probabilities.length !== games.length) return {
+          system_id: system.system_id, name: system.name, available: false,
+          reason: "This registered system has no declared matchup transform for every game.",
+        };
+        const exact = mcpCfbPoissonBinomial(probabilities);
+        const expectedWins = probabilities.reduce((sum, p) => sum + p, 0);
+        const variance = probabilities.reduce((sum, p) => sum + p * (1 - p), 0);
+        let mostLikelyWins = 0;
+        for (let wins = 1; wins < exact.length; wins++) if (exact[wins] > exact[mostLikelyWins]) mostLikelyWins = wins;
+        return {
+          system_id: system.system_id,
+          name: system.name,
+          available: true,
+          method: "Exact Poisson-binomial distribution over fixed independent game probabilities; no Monte Carlo.",
+          games: projectedGames,
+          expected_wins: expectedWins,
+          expected_losses: games.length - expectedWins,
+          win_count_standard_deviation: Math.sqrt(variance),
+          most_likely_wins: mostLikelyWins,
+          undefeated_probability: exact[games.length],
+          winless_probability: exact[0],
+          minimum_wins: input.minimumWins,
+          probability_at_least_minimum_wins: input.minimumWins === null
+            ? null : exact.slice(input.minimumWins).reduce((sum, p) => sum + p, 0),
+          exact_win_distribution: exact.map((probability, wins) => ({ wins, probability })),
+          graded: system.graded === true,
+          prospective_forecasts_exist: system.prospective_forecasts_exist === true,
+        };
+      });
+      if (!systems.some(system => system.available))
+        throw new Error("no registered CFB system can project every game in this schedule path");
+      return toolText({
+        projection_kind: "caller-supplied hypothetical schedule path at the published rating period",
+        team: { team_slug: focal.team_slug, name: focal.team, conference: focal.conference || null },
+        games_supplied: games.length,
+        rating_period: envelope.data.rating_period,
+        systems,
+        consensus: envelope.data.consensus,
+        as_of: envelope.as_of,
+        source: envelope.source,
+        integrity: envelope.integrity || null,
+        modelled: true,
+        retrodictive: true,
+        prospective: false,
+        actual_schedule: false,
+        playoff_or_conference_rules_modelled: false,
+        graded: false,
+        read_only: true,
+        stored: false,
+        assumptions: [
+          "Ratings are fixed at the published end-of-2025 values for every game; wins and losses do not update later matchup probabilities.",
+          "Game outcomes are independent conditional on the fixed probabilities.",
+          "The caller supplied every opponent and venue; Data Dawgs did not assert that this is a real schedule.",
+        ],
+        warnings: [
+          "This is an exact distribution over a hypothetical path, not a prospective 2026 season forecast or receipt.",
+          "Conference standings, tiebreakers, championship qualification, playoff selection and seed rules are not modelled.",
+          "The registry currently contains one retrodictive, ungraded Elo system; one system is not a consensus.",
+          "Current rosters, injuries, availability, talent, portal, market and matchup-style inputs are absent.",
+        ],
+      });
+    },
+  },
+  {
     name: "dd_model_scoreboard",
     description: "Query the dated prospective nfelo and 538 Classic receipt ledger by season, week, team, game or model. Returns receipt provenance plus descriptive mean/range/standard deviation; it is ungraded and is not a validated consensus, ensemble or leaderboard.",
     inputSchema: {
@@ -2051,7 +2231,7 @@ const MCP_TOOLS = [
         machine: {
           index: "/llms.txt",
           surfaces: "/data/surfaces.json — every human page, its machine equivalent, and an honest live|planned|none status. Check it before claiming a route exists.",
-          data: ["/data/pool.json", "/data/receipts.json", "/data/models.json", "/data/epa-teams.json", "/data/nfelo.json", "/data/league.json", "/data/bozo-rules.json", "/data/survivor.json", "/data/pound-tools.json", "/data/model-contracts.json", "/data/upstream-models.json", "/data/nfl-schedule.json", "/data/538-classic.json", "/data/model-receipts.json", "/data/cfb-schedule.json", "/data/cfb-team-game.json", "/data/cfb-team-week.json", "/data/cfb-teams.json", "/data/cfb-record-divergence.json", "/data/cfb-market.json", "/data/cfb-elo.json", "/data/cfb-ratings.json", "/data/cfb-model-cards.json", "/data/cfb-model-receipts.json", "/data/cfb-disagreement.json", "/data/index.json"],
+          data: ["/data/pool.json", "/data/receipts.json", "/data/models.json", "/data/epa-teams.json", "/data/nfelo.json", "/data/league.json", "/data/bozo-rules.json", "/data/survivor.json", "/data/pound-tools.json", "/data/model-contracts.json", "/data/upstream-models.json", "/data/nfl-schedule.json", "/data/538-classic.json", "/data/model-receipts.json", "/data/cfb-schedule.json", "/data/cfb-team-game.json", "/data/cfb-team-week.json", "/data/cfb-teams.json", "/data/cfb-record-divergence.json", "/data/cfb-record-divergence-validation.json", "/data/cfb-market.json", "/data/cfb-elo.json", "/data/cfb-ratings.json", "/data/cfb-model-cards.json", "/data/cfb-model-receipts.json", "/data/cfb-disagreement.json", "/data/index.json"],
         },
         pages: {
           "index.html": "Home — what Data Dawgs is and the working-dawg taxonomy (Labs / Dawgs / The Pound).",

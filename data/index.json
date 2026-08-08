@@ -89,9 +89,9 @@
    {
     "path": "/data/pound-tools.json",
     "url": "https://datadawgs216.com/data/pound-tools.json",
-    "bytes": 127159,
+    "bytes": 127877,
     "as_of": "2026-08-08",
-    "sha256": "afd6cede534a7aabd6dab73808e97ace4df18873a1f35d4a58f93d16c79f270c",
+    "sha256": "fbfe3fde01516120b5b2fbae0b5bec75fde33f1842b0b981a765a599182b376c",
     "note": "Two kinds of entry share this inventory. kind \"tool\" (NFL) carries delivery status. kind \"roadmap-idea\" (College Football) carries recommendation plus evidence-backed lifecycle and implementation state. A CFB artifact may be implemented without any MCP tool; candidate_mcp_tools are reservations and remain non-callable unless the independent Worker registry proves otherwise."
    },
    {
@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 16233,
+    "bytes": 16267,
     "as_of": "2026-08-08",
-    "sha256": "65105e6738d1e97d89450a14580a1844af81095b86ba68e5e42dd463fc20b88c",
+    "sha256": "70028f4ec760a766a5fbc91cad1d54febf657451b50cd93e73d100999ae05312",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {

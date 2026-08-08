@@ -219,12 +219,12 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 {
   const j = await (await req(rpc("tools/list"))).json();
   const t = j.result.tools;
-  ok(t.length === 29, "twenty-nine tools listed in the staged Worker source");
+  ok(t.length === 30, "thirty tools listed in the staged Worker source");
   ok(t.every(x => x.name.startsWith("dd_")), "all tools dd_-prefixed");
   ok(t.every(x => x.inputSchema && x.inputSchema.type === "object"), "all tools carry an inputSchema");
   for (const name of ["dd_convert_odds", "dd_devig_market", "dd_price_parlay", "dd_calculate_bet_ev",
     "dd_calculate_hedge", "dd_nfl_passer_rating", "dd_score_forecast", "dd_summarize_beliefs",
-    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_optimize_survivor_path"])
+    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_project_cfb_schedule_path", "dd_optimize_survivor_path"])
     ok(t.some(x => x.name === name), name + " is listed");
 }
 // dd_league_overview
@@ -668,6 +668,53 @@ function refNcdf(z) {
   ok(same.result.isError === true && partial.result.isError === true && badNeutral.result.isError === true && extra.result.isError === true,
      "CFB matchup projection fails closed on same-team, partial, mistyped and unsupported inputs");
 }
+// dd_project_cfb_schedule_path: exact Poisson-binomial path math over
+// caller-supplied opponents, never an invented schedule or playoff model.
+{
+  const args = {
+    team: "Ohio State",
+    games: [
+      { opponent: "Akron", venue: "home", label: "home test" },
+      { opponent: "Indiana", venue: "away", label: "road test" },
+      { opponent: "Akron", venue: "neutral", label: "rematch" },
+    ],
+    minimum_wins: 2,
+  };
+  const j = await (await req(call("dd_project_cfb_schedule_path", args))).json();
+  const d = text(j), system = d.systems[0];
+  const p1 = 1 / (1 + 10 ** (-((1925.8 - 1088.1 + 55) / 400)));
+  const indianaHome = 1 / (1 + 10 ** (-((2054.8 - 1925.8 + 55) / 400)));
+  const p2 = 1 - indianaHome;
+  const p3 = 1 / (1 + 10 ** (-((1925.8 - 1088.1) / 400)));
+  const expected = p1 + p2 + p3;
+  const distributionSum = system.exact_win_distribution.reduce((sum, row) => sum + row.probability, 0);
+  const atLeastTwo = system.exact_win_distribution.slice(2).reduce((sum, row) => sum + row.probability, 0);
+  ok(!j.result.isError && d.team.team_slug === "ohio-state" && d.games_supplied === 3 && system.games.length === 3,
+     "CFB schedule path resolves a focal team and every caller-supplied opponent");
+  ok(Math.abs(system.games[0].focal_win_probability - p1) < 1e-15 &&
+     Math.abs(system.games[1].focal_win_probability - p2) < 1e-15 &&
+     Math.abs(system.games[2].focal_win_probability - p3) < 1e-15,
+     "CFB schedule path applies home, away and neutral Elo venue transforms exactly");
+  ok(Math.abs(system.expected_wins - expected) < 1e-15 && Math.abs(distributionSum - 1) < 1e-12 &&
+     Math.abs(system.probability_at_least_minimum_wins - atLeastTwo) < 1e-15,
+     "CFB schedule path returns a normalized exact Poisson-binomial distribution and threshold probability");
+  ok(system.method.includes("no Monte Carlo") && d.actual_schedule === false &&
+     d.playoff_or_conference_rules_modelled === false && d.retrodictive && !d.prospective && !d.graded,
+     "CFB schedule path refuses actual-schedule, playoff, prospective and graded claims");
+  ok(d.read_only && d.stored === false && d.assumptions.some(x => /independent/.test(x)) &&
+     d.warnings.some(x => /not a prospective 2026 season forecast/i.test(x)),
+     "CFB schedule path publishes independence, non-persistence and forecast caveats");
+}
+{
+  const empty = await (await req(call("dd_project_cfb_schedule_path", { team: "Akron", games: [] }))).json();
+  const same = await (await req(call("dd_project_cfb_schedule_path", { team: "Akron", games: [{ opponent: "Akron" }] }))).json();
+  const partial = await (await req(call("dd_project_cfb_schedule_path", { team: "Akron", games: [{ opponent: "state" }] }))).json();
+  const badVenue = await (await req(call("dd_project_cfb_schedule_path", { team: "Akron", games: [{ opponent: "Indiana", venue: "Cleveland" }] }))).json();
+  const badMinimum = await (await req(call("dd_project_cfb_schedule_path", { team: "Akron", games: [{ opponent: "Indiana" }], minimum_wins: 2 }))).json();
+  const extra = await (await req(call("dd_project_cfb_schedule_path", { team: "Akron", games: [{ opponent: "Indiana", spread: -3 }] }))).json();
+  ok([empty, same, partial, badVenue, badMinimum, extra].every(result => result.result.isError === true),
+     "CFB schedule path fails closed on empty, same-team, partial, bad-venue, impossible-threshold and unsupported inputs");
+}
 // dd_scores: reuses handleScores with sport+dates
 {
   const j = await (await req(call("dd_scores", { sport: "nfl", dates: "20260913" }))).json();
@@ -788,6 +835,8 @@ function refNcdf(z) {
      "site map includes the canonical CFB registry, receipt ledger and results layers");
   ok(d.machine.data.includes("/data/cfb-record-divergence.json"),
      "site map includes the descriptive CFB record-divergence baseline");
+  ok(d.machine.data.includes("/data/cfb-record-divergence-validation.json"),
+     "site map includes the aggregate CFB divergence validation");
 }
 
 /* ----------------------- source-level safety asserts ----------------------- */
