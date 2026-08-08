@@ -107,6 +107,21 @@ class PublishedFileTests(unittest.TestCase):
         self.assertLess(bt["elo_baseline"]["brier_home_win"],
                         bt["reference_points"]["climatological_brier"])
 
+    def test_market_comparison_is_scored_on_the_same_games(self):
+        versus = self.envelope["data"]["backtest"].get("versus_market")
+        if versus is None:
+            self.skipTest("market file was absent when the Elo file was built")
+        self.assertIn("market_median_devig", versus)
+        self.assertIn("elo_baseline_same_games", versus)
+        self.assertGreater(versus["coverage_of_evaluation_set"], 0.5)
+        self.assertIn("timing", versus["timing_caveat"].lower())
+
+    def test_market_comparison_does_not_claim_closing_lines(self):
+        versus = self.envelope["data"]["backtest"].get("versus_market")
+        if versus is None:
+            self.skipTest("market file was absent when the Elo file was built")
+        self.assertIn("not closing lines", versus["timing_caveat"].lower())
+
     def test_output_declares_itself_modelled_and_ungraded(self):
         self.assertFalse(self.envelope["graded"])
         self.assertIn("MODELLED", self.envelope["note"])

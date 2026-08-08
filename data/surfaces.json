@@ -436,6 +436,12 @@
      "url": "/data/cfb-elo.json",
      "status": "live",
      "covers": "deterministic CFB Elo baseline, retrodictive 2025 backtest, ungraded (roadmap step 2)"
+    },
+    {
+     "kind": "json",
+     "url": "/data/cfb-market.json",
+     "status": "live",
+     "covers": "book-identified 2025 CFB spreads, totals and devigged moneylines; no observation timestamp, so not closing lines (roadmap step 1)"
     }
    ],
    "planned": [],

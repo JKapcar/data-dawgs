@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 13620,
+    "bytes": 13861,
     "as_of": "2026-08-08",
-    "sha256": "27044cc23b287e765740e74416b835e889bb1d938afcd4fade0529afc3eba4f5",
+    "sha256": "56e254f99cabeac4b7999710a5a46105a64dfa0f32543572455d844c34bf768c",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -145,10 +145,18 @@
    {
     "path": "/data/cfb-elo.json",
     "url": "https://datadawgs216.com/data/cfb-elo.json",
-    "bytes": 23185,
+    "bytes": 23866,
     "as_of": "2026-08-08",
-    "sha256": "d1c48aefcfeaec9b311cadbcbee10764c32ebb2f36f990dc2ac7ffe6d72e8d5e",
+    "sha256": "5d1400c1f2b1b8211bd8a0aba3ccbda6451f5edb188e4881b1b0b2908eb42ec4",
     "note": "MODELLED OUTPUT, and a deliberately simple baseline at that. The backtest is retrodictive: 2025 outcomes were known before this file was built. It exists so future CFB models have an interpretable floor to beat (Baseline Requirement). No prospective CFB forecast receipts exist yet; nothing here is graded."
+   },
+   {
+    "path": "/data/cfb-market.json",
+    "url": "https://datadawgs216.com/data/cfb-market.json",
+    "bytes": 1097979,
+    "as_of": "2026-08-08",
+    "sha256": "496b4726071152bb83248a8f8304cc53efe43138d3b53e3f8c61edd395b5645f",
+    "note": "Book-identified CFB prices joined to the canonical schedule. TIMING IS UNKNOWN: the upstream date_time column is the kickoff time, not an observation time, so there is no capture timestamp for any price. These are NOT closing lines, no CLV may be computed from them, and no forecast receipt may cite them as a prospective market input. A model-vs-market comparison drawn from this file is a reference point only, and one that flatters the market: if these prices are late, they carry information a pregame model did not have. Devig is proportional, matching work/pound-core.js."
    }
   ],
   "markdown": [

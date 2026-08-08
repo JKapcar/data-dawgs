@@ -10,10 +10,10 @@
   "source_repository": "sportsdataverse/cfbfastR-data",
   "source_repo_head_at_capture": "935eed66a08c95822992fd182495848ac4303f96",
   "parameters_fixed_before_evaluation": true,
-  "captured_at": "2026-08-08T06:02:30.278414Z"
+  "captured_at": "2026-08-08T06:28:54.194783Z"
  },
  "integrity": {
-  "snapshot_id": "sha256:f4d48298e4965ec49f62f498823d2964eddfd2c903c891c5a587c1e98e6ad28a",
+  "snapshot_id": "sha256:78c69fde2c4060eafeb6989a81e62718766893aed7fc346ef5a7ef70d834702b",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for the data object (sorted object keys, no insignificant whitespace).",
   "rated_teams": 136
  },
@@ -1047,6 +1047,20 @@
     "climatological_brier": 0.2409,
     "espn_pregame_elo_favorite_accuracy": 0.7054,
     "espn_note": "Favorite accuracy only, computed from the pregame Elo columns in the raw snapshot over the games where both are present and unequal (808 games). No probability comparison: converting someone else's Elo to a probability requires assumptions they did not publish."
+   },
+   "versus_market": {
+    "n_games": 783,
+    "coverage_of_evaluation_set": 0.9691,
+    "market_median_devig": {
+     "favorite_accuracy": 0.7241,
+     "brier_home_win": 0.1814
+    },
+    "elo_baseline_same_games": {
+     "favorite_accuracy": 0.6922,
+     "brier_home_win": 0.1917
+    },
+    "market_snapshot_id": "sha256:64279de12a3349772c9983976bbb83536402790050fb96386857dfc92dfcb898",
+    "timing_caveat": "Prices in data/cfb-market.json carry no observation timestamp. They are not closing lines and their timing is unknown. If they are late they contain information the Elo did not have, so this comparison flatters the market. It is a reference point, not a verdict."
    }
   }
  },

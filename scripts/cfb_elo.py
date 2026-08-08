@@ -123,11 +123,31 @@ def load_season(season: int) -> tuple[list[dict[str, Any]], dict[str, str], list
     return games, provenance, raw_rows
 
 
-def run_backtest() -> dict[str, Any]:
+def load_market_probabilities(path: Path) -> tuple[dict[str, float], str | None]:
+    """Median devigged home win probability per canonical game, if the file exists.
+
+    Timing is unknown for every price in that file (see scripts/cfb_market.py).
+    The caller must carry that caveat into anything it publishes.
+    """
+    if not path.exists():
+        return {}, None
+    envelope = backbone.read_json(path)
+    probabilities = {
+        game["game_id"]: game["median_devig_home_win_probability"]
+        for game in envelope["data"]["games"]
+        if game.get("median_devig_home_win_probability") is not None
+    }
+    return probabilities, envelope["integrity"]["snapshot_id"]
+
+
+def run_backtest(market_path: Path | None = None) -> dict[str, Any]:
     model = EloModel()
     season_provenance: list[dict[str, str]] = []
     eval_rows: list[dict[str, Any]] = []
     espn_upsets_checkable = espn_favorite_hits = 0
+    market_probabilities, market_snapshot = load_market_probabilities(
+        market_path or (ROOT / "data" / "cfb-market.json")
+    )
 
     seasons = PARAMS["burn_in_seasons"] + [PARAMS["evaluation_season"]]
     for season in seasons:
@@ -151,6 +171,7 @@ def run_backtest() -> dict[str, Any]:
                 "p_home": pregame["p_home_pregame"],
                 "home_won": home_won,
                 "favorite_hit": (pregame["p_home_pregame"] >= 0.5) == home_won,
+                "market_p_home": market_probabilities.get(game["game_id"]),
             })
             espn = espn_pregame.get(game["upstream_game_id"])
             if espn is not None and espn[0] != espn[1]:
@@ -165,6 +186,33 @@ def run_backtest() -> dict[str, Any]:
     brier = sum((r["p_home"] - (1.0 if r["home_won"] else 0.0)) ** 2 for r in eval_rows) / n
     home_rate = home_wins / n
     climatological_brier = home_rate * (1 - home_rate)  # constant-p forecast at the observed rate
+
+    # Head-to-head against the market, scored on the SAME games only. Anything else
+    # would compare two different question sets and call it a result.
+    paired = [r for r in eval_rows if r["market_p_home"] is not None]
+    market_block: dict[str, Any] | None = None
+    if paired:
+        m = len(paired)
+        def score(key: str) -> dict[str, float]:
+            return {
+                "favorite_accuracy": round(
+                    sum((r[key] >= 0.5) == r["home_won"] for r in paired) / m, 4),
+                "brier_home_win": round(
+                    sum((r[key] - (1.0 if r["home_won"] else 0.0)) ** 2 for r in paired) / m, 4),
+            }
+        market_block = {
+            "n_games": m,
+            "coverage_of_evaluation_set": round(m / n, 4),
+            "market_median_devig": score("market_p_home"),
+            "elo_baseline_same_games": score("p_home"),
+            "market_snapshot_id": market_snapshot,
+            "timing_caveat": (
+                "Prices in data/cfb-market.json carry no observation timestamp. They are not "
+                "closing lines and their timing is unknown. If they are late they contain "
+                "information the Elo did not have, so this comparison flatters the market. "
+                "It is a reference point, not a verdict."
+            ),
+        }
     return {
         "season_provenance": season_provenance,
         "ratings": sorted(
@@ -203,6 +251,7 @@ def run_backtest() -> dict[str, Any]:
                     "someone else's Elo to a probability requires assumptions they did not publish."
                 ),
             },
+            "versus_market": market_block,
         },
     }
 
