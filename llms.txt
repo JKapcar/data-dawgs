@@ -26,7 +26,7 @@ and forecast scoring. Inputs are not stored. The scoreboard is descriptive and u
 
 ## College football
 
-- [2025 results](https://datadawgs216.com/data/cfb-schedule.json): 934 games; [latest team periods](https://datadawgs216.com/data/cfb-team-week-latest.json): 230 snapshot-locked results-only rows; [rating profiles](https://datadawgs216.com/data/cfb-teams.json): observed records plus retrodictive Elo.
+- [2025 results](https://datadawgs216.com/data/cfb-schedule.json): 934 games; [latest games](https://datadawgs216.com/data/cfb-games-latest.json): one final per FBS team; [latest periods](https://datadawgs216.com/data/cfb-team-week-latest.json): one per team; [ratings](https://datadawgs216.com/data/cfb-teams.json): records + retrodictive Elo.
 - [Book market](https://datadawgs216.com/data/cfb-market.json): spreads, totals and devigged moneylines. Books are named but observation time is unknown; these are not closing lines and cannot establish CLV.
 - [CFB Elo](https://datadawgs216.com/data/cfb-elo.json), [registry](https://datadawgs216.com/data/cfb-ratings.json) and [card](https://datadawgs216.com/data/cfb-model-cards.json): end-2025; retrodictive, modelled, ungraded, not consensus or forecast.
 - [Fraud test](https://datadawgs216.com/data/cfb-record-divergence-validation.json): small held-out lift beyond Elo; retrodictive, no team labels. [Disagreement](https://datadawgs216.com/data/cfb-disagreement.json): blocked on timestamped prices.

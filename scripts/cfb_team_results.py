@@ -23,6 +23,7 @@ DEFAULT_SCHEDULE = ROOT / "data" / "cfb-schedule.json"
 DEFAULT_TEAM_GAME = ROOT / "data" / "cfb-team-game.json"
 DEFAULT_TEAM_WEEK = ROOT / "data" / "cfb-team-week.json"
 DEFAULT_TEAM_WEEK_LATEST = ROOT / "data" / "cfb-team-week-latest.json"
+DEFAULT_GAMES_LATEST = ROOT / "data" / "cfb-games-latest.json"
 
 _SPEC = importlib.util.spec_from_file_location(
     "cfb_data_backbone", ROOT / "scripts" / "cfb_data_backbone.py"
@@ -246,6 +247,84 @@ def build_team_week_latest(team_week_envelope: dict[str, Any]) -> dict[str, Any]
     }
 
 
+def build_games_latest(team_game_envelope: dict[str, Any]) -> dict[str, Any]:
+    """Select each FBS team's latest completed canonical game from its mirrored rows."""
+    data = team_game_envelope.get("data")
+    integrity = team_game_envelope.get("integrity")
+    if not isinstance(data, dict) or not isinstance(integrity, dict):
+        raise ContractError("team-game envelope must contain data and integrity")
+    rows = data.get("rows")
+    teams = data.get("teams")
+    snapshot_id = integrity.get("snapshot_id")
+    if not isinstance(rows, list) or not isinstance(teams, dict) or not isinstance(snapshot_id, str):
+        raise ContractError("team-game envelope lacks rows, teams or a snapshot id")
+
+    eligible = sorted(slug for slug, facts in teams.items() if facts.get("division") == "fbs")
+    eligible_set = set(eligible)
+    latest: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        if row.get("team_slug") not in eligible_set or row.get("status") != "final" or row.get("result") is None:
+            continue
+        slug = row["team_slug"]
+        prior = latest.get(slug)
+        if prior is None or (row["kickoff_at"], row["team_game_id"]) > (
+            prior["kickoff_at"], prior["team_game_id"]
+        ):
+            latest[slug] = row
+
+    output = []
+    for slug in sorted(latest):
+        row = latest[slug]
+        facts = teams[slug]
+        opponent = teams[row["opponent_slug"]]
+        output.append({
+            "team_slug": slug,
+            "team": facts["team"],
+            "espn_id": facts["espn_id"],
+            "conference": facts["conference"],
+            "latest_completed_game": {
+                "team_game_id": row["team_game_id"],
+                "game_id": row["game_id"],
+                "upstream_game_id": row["upstream_game_id"],
+                "season_type": row["season_type"],
+                "week": row["week"],
+                "kickoff_at": row["kickoff_at"],
+                "opponent_slug": row["opponent_slug"],
+                "opponent": opponent["team"],
+                "opponent_division": opponent["division"],
+                "opponent_conference": opponent["conference"],
+                "team_side": row["team_side"],
+                "site": row["site"],
+                "neutral_site": row["neutral_site"],
+                "conference_game": row["conference_game"],
+                "points_for": row["points_for"],
+                "points_against": row["points_against"],
+                "point_differential": row["point_differential"],
+                "result": row["result"],
+            },
+        })
+    missing = sorted(eligible_set - set(latest))
+    return {
+        "schema_version": 1,
+        "season": data["season"],
+        "scope": "observed-final-results-only",
+        "input_schedule_snapshot_id": data["input_schedule_snapshot_id"],
+        "input_team_game_snapshot_id": snapshot_id,
+        "selection": "Maximum (kickoff_at, team_game_id) completed row per FBS team from /data/cfb-team-game.json.",
+        "coverage": {
+            "team_scope": "FBS teams present in the canonical FBS-involved schedule.",
+            "final_games_only": True,
+            "one_row_per_represented_team": True,
+            "mirrored_game_can_appear_for_two_teams": True,
+            "eligible_fbs_teams": len(eligible),
+            "represented_teams": len(output),
+            "teams_without_a_completed_game": missing,
+        },
+        "unavailable_metrics": copy.deepcopy(data["unavailable_metrics"]),
+        "rows": output,
+    }
+
+
 def make_envelope(payload: dict[str, Any], schedule: dict[str, Any], kind: str) -> dict[str, Any]:
     captured_at = schedule.get("provenance", {}).get("captured_at")
     if not isinstance(captured_at, str) or len(captured_at) < 10:
@@ -323,6 +402,47 @@ def make_latest_envelope(
     }
 
 
+def make_games_latest_envelope(
+    payload: dict[str, Any], schedule: dict[str, Any], team_game_envelope: dict[str, Any]
+) -> dict[str, Any]:
+    captured_at = schedule.get("provenance", {}).get("captured_at")
+    if not isinstance(captured_at, str) or len(captured_at) < 10:
+        raise ContractError("schedule provenance lacks captured_at")
+    team_game_snapshot = team_game_envelope.get("integrity", {}).get("snapshot_id")
+    if not isinstance(team_game_snapshot, str):
+        raise ContractError("team-game envelope lacks a snapshot id")
+    return {
+        "as_of": schedule["as_of"],
+        "source": (
+            "Compact latest-completed-game-per-FBS-team selection from /data/cfb-team-game.json by "
+            f"scripts/cfb_team_results.py; source snapshot {team_game_snapshot}."
+        ),
+        "tier": "labs",
+        "graded": False,
+        "note": (
+            "OBSERVED RESULTS ONLY. Final games only; one latest completed canonical game per represented FBS team. "
+            "This is dated 2025 history, not current 2026 form, a forecast or a model grade."
+        ),
+        "provenance": {
+            "generator": "scripts/cfb_team_results.py",
+            "captured_at": captured_at,
+            "input": "/data/cfb-team-game.json",
+            "input_snapshot_id": team_game_snapshot,
+            "schedule_snapshot_id": schedule["integrity"]["snapshot_id"],
+        },
+        "integrity": {
+            "snapshot_id": backbone.sha256_id(payload),
+            "algorithm": "SHA-256 of canonical UTF-8 JSON for the data object (sorted object keys, no insignificant whitespace).",
+            "rows": len(payload["rows"]),
+            "teams": len(payload["rows"]),
+        },
+        "data": payload,
+        "tier_meaning": backbone.TIER_MEANING,
+        "built": schedule["as_of"],
+        "canonical_url": "https://datadawgs216.com/data/cfb-games-latest.json",
+    }
+
+
 def validate_team_game(envelope: dict[str, Any], schedule: dict[str, Any]) -> None:
     backbone.validate_schedule_envelope(schedule)
     data = envelope.get("data")
@@ -384,6 +504,32 @@ def validate_team_week_latest(
         raise ContractError("cfb-team-week-latest must contain exactly one row per team")
 
 
+def validate_games_latest(
+    envelope: dict[str, Any], team_game_envelope: dict[str, Any], schedule: dict[str, Any]
+) -> None:
+    validate_team_game(team_game_envelope, schedule)
+    data = envelope.get("data")
+    if not isinstance(data, dict) or data.get("schema_version") != 1 or data.get("scope") != "observed-final-results-only":
+        raise ContractError("cfb-games-latest must be an observed-final-results-only schema_version 1 payload")
+    if envelope.get("graded") is not False or data.get("unavailable_metrics") != UNAVAILABLE_METRICS:
+        raise ContractError("cfb-games-latest overstates its evidence scope")
+    team_game_snapshot = team_game_envelope["integrity"]["snapshot_id"]
+    if envelope.get("provenance", {}).get("input_snapshot_id") != team_game_snapshot:
+        raise ContractError("cfb-games-latest provenance does not name the current team-game snapshot")
+    expected = build_games_latest(team_game_envelope)
+    if data != expected:
+        raise ContractError("cfb-games-latest rows drift from the team-game source")
+    if envelope.get("integrity", {}).get("snapshot_id") != backbone.sha256_id(data):
+        raise ContractError("cfb-games-latest snapshot hash mismatch")
+    rows = data["rows"]
+    if envelope["integrity"].get("rows") != len(rows) or envelope["integrity"].get("teams") != len(rows):
+        raise ContractError("cfb-games-latest integrity row or team count disagrees")
+    if len({row["team_slug"] for row in rows}) != len(rows):
+        raise ContractError("cfb-games-latest contains duplicate team rows")
+    if data["coverage"].get("represented_teams") != len(rows):
+        raise ContractError("cfb-games-latest coverage count disagrees")
+
+
 def cmd_refresh(args: argparse.Namespace) -> int:
     schedule = backbone.read_json(Path(args.schedule))
     team_game_payload = build_team_game(schedule)
@@ -395,12 +541,17 @@ def cmd_refresh(args: argparse.Namespace) -> int:
     latest_payload = build_team_week_latest(team_week_envelope)
     latest_envelope = make_latest_envelope(latest_payload, schedule, team_week_envelope)
     validate_team_week_latest(latest_envelope, team_week_envelope, team_game_envelope, schedule)
+    games_latest_payload = build_games_latest(team_game_envelope)
+    games_latest_envelope = make_games_latest_envelope(games_latest_payload, schedule, team_game_envelope)
+    validate_games_latest(games_latest_envelope, team_game_envelope, schedule)
     backbone.write_json(Path(args.team_game), team_game_envelope)
     backbone.write_json(Path(args.team_week), team_week_envelope)
     backbone.write_json(Path(args.team_week_latest), latest_envelope)
+    backbone.write_json(Path(args.games_latest), games_latest_envelope)
     print(f"wrote {args.team_game}: {len(team_game_payload['rows'])} rows")
     print(f"wrote {args.team_week}: {len(team_week_payload['rows'])} rows")
     print(f"wrote {args.team_week_latest}: {len(latest_payload['rows'])} rows")
+    print(f"wrote {args.games_latest}: {len(games_latest_payload['rows'])} rows")
     return 0
 
 
@@ -409,10 +560,12 @@ def cmd_validate(args: argparse.Namespace) -> int:
     team_game = backbone.read_json(Path(args.team_game))
     team_week = backbone.read_json(Path(args.team_week))
     latest = backbone.read_json(Path(args.team_week_latest))
+    games_latest = backbone.read_json(Path(args.games_latest))
     validate_team_game(team_game, schedule)
     validate_team_week(team_week, team_game, schedule)
     validate_team_week_latest(latest, team_week, team_game, schedule)
-    print(f"{args.team_game}, {args.team_week} and {args.team_week_latest} satisfy the results-only contracts")
+    validate_games_latest(games_latest, team_game, schedule)
+    print(f"{args.team_game}, {args.team_week}, {args.team_week_latest} and {args.games_latest} satisfy the results-only contracts")
     return 0
 
 
@@ -428,6 +581,7 @@ def main() -> int:
         command.add_argument("--team-game", default=str(DEFAULT_TEAM_GAME))
         command.add_argument("--team-week", default=str(DEFAULT_TEAM_WEEK))
         command.add_argument("--team-week-latest", default=str(DEFAULT_TEAM_WEEK_LATEST))
+        command.add_argument("--games-latest", default=str(DEFAULT_GAMES_LATEST))
         command.set_defaults(func=func)
     args = parser.parse_args()
     try:

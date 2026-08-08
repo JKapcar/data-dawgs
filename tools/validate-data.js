@@ -316,6 +316,7 @@ console.log('\nCFB results layers — exact schedule-derived team facts');
   const teamGame = JSON.parse(fs.readFileSync(path.join(DATA, 'cfb-team-game.json'), 'utf8'));
   const teamWeek = JSON.parse(fs.readFileSync(path.join(DATA, 'cfb-team-week.json'), 'utf8'));
   const latest = JSON.parse(fs.readFileSync(path.join(DATA, 'cfb-team-week-latest.json'), 'utf8'));
+  const gamesLatest = JSON.parse(fs.readFileSync(path.join(DATA, 'cfb-games-latest.json'), 'utf8'));
   const games = schedule.data.games;
   const rows = teamGame.data && teamGame.data.rows;
   const unavailable = teamGame.data && teamGame.data.unavailable_metrics;
@@ -348,6 +349,37 @@ console.log('\nCFB results layers — exact schedule-derived team facts');
       fail('cfb-team-game.json: snapshot hash mismatch');
     else ok(`all ${rows.length} team-game rows mirror ${games.length} canonical games`);
   }
+
+  const latestGameRows = gamesLatest.data && gamesLatest.data.rows;
+  const fbsTeams = new Set(Object.entries(teamGame.data.teams)
+    .filter(([, facts]) => facts.division === 'fbs').map(([slug]) => slug));
+  const expectedLatestGames = new Map();
+  for (const row of rows || []) {
+    if (!fbsTeams.has(row.team_slug) || row.result === null) continue;
+    const prior = expectedLatestGames.get(row.team_slug);
+    if (!prior || row.kickoff_at > prior.kickoff_at ||
+        (row.kickoff_at === prior.kickoff_at && row.team_game_id > prior.team_game_id))
+      expectedLatestGames.set(row.team_slug, row);
+  }
+  if (!Array.isArray(latestGameRows) || latestGameRows.length !== expectedLatestGames.size)
+    fail('cfb-games-latest.json: expected one latest completed row per represented FBS team');
+  else if (gamesLatest.data.scope !== 'observed-final-results-only' ||
+           gamesLatest.data.input_team_game_snapshot_id !== teamGame.integrity.snapshot_id ||
+           gamesLatest.provenance.input_snapshot_id !== teamGame.integrity.snapshot_id)
+    fail('cfb-games-latest.json: input snapshot or observed-final boundary drifted');
+  else if (new Set(latestGameRows.map(row => row.team_slug)).size !== latestGameRows.length)
+    fail('cfb-games-latest.json: duplicate team row');
+  else if (latestGameRows.some(row => {
+    const source = expectedLatestGames.get(row.team_slug);
+    const game = row.latest_completed_game;
+    return !source || !game || game.team_game_id !== source.team_game_id ||
+      game.points_for !== source.points_for || game.points_against !== source.points_against ||
+      game.point_differential !== source.point_differential || game.result !== source.result;
+  }))
+    fail('cfb-games-latest.json: a compact row drifted from its exact team-game source');
+  else if (gamesLatest.integrity.snapshot_id !== 'sha256:' + crypto.createHash('sha256').update(canonicalJson(gamesLatest.data)).digest('hex'))
+    fail('cfb-games-latest.json: snapshot hash mismatch');
+  else ok(`${latestGameRows.length} latest completed FBS team games lock the exact team-game snapshot`);
 
   const weekRows = teamWeek.data && teamWeek.data.rows;
   if (!Array.isArray(weekRows) || !weekRows.length)

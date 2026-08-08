@@ -89,9 +89,9 @@
    {
     "path": "/data/pound-tools.json",
     "url": "https://datadawgs216.com/data/pound-tools.json",
-    "bytes": 130760,
+    "bytes": 130931,
     "as_of": "2026-08-08",
-    "sha256": "53a677cc332932e92815f84fce56676533480f071818fbab71262f13d8540e25",
+    "sha256": "de41fc611a42013a7738c0d6e530064ae42417f1df744614f4c54c948bfb0434",
     "note": "Two kinds of entry share this inventory. kind \"tool\" (NFL) carries delivery status. kind \"roadmap-idea\" (College Football) carries recommendation plus evidence-backed lifecycle and implementation state. A CFB artifact may be implemented without any MCP tool; candidate_mcp_tools are reservations and remain non-callable unless the independent Worker registry proves otherwise."
    },
    {
@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 16871,
+    "bytes": 17115,
     "as_of": "2026-08-08",
-    "sha256": "9598c628b6208bbd0626a02586805bee9dd4078bdab83a66d9042df90b10c625",
+    "sha256": "4e16434d433f4db291a83bb74630da6bc276d5e584ddcc60219b3afe28f8f2fc",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -141,6 +141,14 @@
     "as_of": "2026-08-08",
     "sha256": "e136e29e5e49f3369b0945972132edf798224b6d70de4d75400a0a62ec8ac568",
     "note": "Canonical CFB schedule and result facts for FBS-involved games only. Upstream modelled columns (win probabilities, ESPN Elo, excitement index) are deliberately excluded: they are model outputs, not facts, and carry no methodology metadata. Git history retains every changed snapshot; downstream work must record integrity.snapshot_id."
+   },
+   {
+    "path": "/data/cfb-games-latest.json",
+    "url": "https://datadawgs216.com/data/cfb-games-latest.json",
+    "bytes": 105366,
+    "as_of": "2026-08-08",
+    "sha256": "c379fb2c05b7be449f16e301cdd1b9a54876d89f299fd29c8cab4e410fb4c747",
+    "note": "OBSERVED RESULTS ONLY. Final games only; one latest completed canonical game per represented FBS team. This is dated 2025 history, not current 2026 form, a forecast or a model grade."
    },
    {
     "path": "/data/cfb-team-game.json",

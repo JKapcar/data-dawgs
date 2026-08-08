@@ -959,6 +959,7 @@ const SURFACES = [
               { kind: 'json', url: '/data/538-classic.json', status: 'live', covers: 'reproduced 538 Classic methodology, 32 target-season ratings and 272 prospective forecasts' },
               { kind: 'markdown', url: '/data/538-classic-methodology.md', status: 'live', covers: 'model mathematics, provenance, reproduction tolerance, receipts and limits' },
               { kind: 'json', url: '/data/cfb-schedule.json', status: 'live', covers: '934 canonical 2025 FBS-involved game facts with a pinned upstream commit and reproducible snapshot hash' },
+              { kind: 'json', url: '/data/cfb-games-latest.json', status: 'live', covers: '136 compact latest completed canonical game rows, one per FBS team; dated 2025 observed results, not current form or forecasts' },
               { kind: 'json', url: '/data/cfb-team-game.json', status: 'live', covers: '1,868 mirrored team-game result rows derived exactly from the canonical schedule; advanced play metrics are unavailable' },
               { kind: 'json', url: '/data/cfb-team-week.json', status: 'live', covers: 'results-only team-period records, scoring, venue and opponents; EPA, opponent adjustment and market performance are unavailable' },
               { kind: 'json', url: '/data/cfb-team-week-latest.json', status: 'live', covers: '230 compact latest team-period rows selected exactly from the results-only team-week snapshot; no current-2026 or predictive claim' },
@@ -1014,7 +1015,7 @@ write('surfaces.json', {
 // These are produced by the independent scheduled backbone rather than extracted from
 // a page. Keep them in the same generated manifest without letting this build rewrite them.
 for (const name of ['nfl-schedule.json', 'model-receipts.json', '538-classic.json',
-  'cfb-schedule.json', 'cfb-team-game.json', 'cfb-team-week.json', 'cfb-team-week-latest.json', 'cfb-teams.json', 'cfb-record-divergence.json', 'cfb-market.json', 'cfb-elo.json', 'cfb-model-cards.json',
+  'cfb-schedule.json', 'cfb-games-latest.json', 'cfb-team-game.json', 'cfb-team-week.json', 'cfb-team-week-latest.json', 'cfb-teams.json', 'cfb-record-divergence.json', 'cfb-market.json', 'cfb-elo.json', 'cfb-model-cards.json',
   'cfb-disagreement.json', 'cfb-ratings.json', 'cfb-model-receipts.json']) {
   const p = path.join(OUT, name);
   const txt = fs.readFileSync(p, 'utf8');

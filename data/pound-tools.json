@@ -969,11 +969,12 @@
    "implemented": true,
    "delivery_evidence": [
     "/data/cfb-team-game.json",
+    "/data/cfb-games-latest.json",
     "/scripts/cfb_team_results.py",
     "/tests/test_cfb_team_results.py",
     "/work/mcp-block.js"
    ],
-   "delivery_note": "Partially implemented with observed schedule/result facts only and a bounded exact-team game-history reader staged locally. EPA, success, explosiveness, havoc and garbage-time fields still require canonical play-by-play.",
+   "delivery_note": "Partially implemented with observed schedule/result facts, a compact latest-completed-game row per FBS team, and a bounded exact-team game-history reader staged locally. EPA, success, explosiveness, havoc and garbage-time fields still require canonical play-by-play.",
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 1,
@@ -1402,19 +1403,20 @@
     {
      "status": "building",
      "on": "2026-08-08",
-     "note": "Published compact 136-team rating profiles plus 230 results-only latest-period team rows, each locked to its exact source snapshot."
+     "note": "Published compact 136-team rating profiles, 136 latest completed FBS team games and 230 results-only latest-period team rows, each locked to its exact source snapshot."
     }
    ],
    "implemented": true,
    "delivery_evidence": [
     "/data/cfb-teams.json",
+    "/data/cfb-games-latest.json",
     "/data/cfb-team-week-latest.json",
     "/scripts/cfb_team_profiles.py",
     "/scripts/cfb_team_results.py",
     "/tests/test_cfb_team_profiles.py",
     "/tests/test_cfb_team_results.py"
    ],
-   "delivery_note": "Partially implemented with compact rating profiles and exact latest-period team rows. A latest-game feed, richer team-week metrics and model grades remain future outputs.",
+   "delivery_note": "Partially implemented with compact rating profiles, exact latest completed FBS team games and exact latest-period team rows. Richer team-week metrics and model grades remain future outputs.",
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 1,

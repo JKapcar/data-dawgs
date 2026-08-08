@@ -118,7 +118,7 @@ test('new data surfaces are in the generated manifest', () => {
   const paths = new Set(index.data.files.map(x => x.path));
   for (const p of ['/data/pound-tools.json', '/data/model-contracts.json', '/data/upstream-models.json',
     '/data/nfl-schedule.json', '/data/model-receipts.json', '/data/538-classic.json',
-    '/data/cfb-schedule.json', '/data/cfb-team-game.json', '/data/cfb-team-week.json', '/data/cfb-team-week-latest.json', '/data/cfb-teams.json', '/data/cfb-record-divergence.json', '/data/cfb-record-divergence-validation.json', '/data/cfb-market.json', '/data/cfb-elo.json',
+    '/data/cfb-schedule.json', '/data/cfb-games-latest.json', '/data/cfb-team-game.json', '/data/cfb-team-week.json', '/data/cfb-team-week-latest.json', '/data/cfb-teams.json', '/data/cfb-record-divergence.json', '/data/cfb-record-divergence-validation.json', '/data/cfb-market.json', '/data/cfb-elo.json',
     '/data/cfb-ratings.json', '/data/cfb-model-cards.json', '/data/cfb-model-receipts.json',
     '/data/cfb-disagreement.json']) assert.ok(paths.has(p), p);
 });
@@ -230,7 +230,7 @@ test('published CFB backbone artifacts are discoverable without overstating thei
   const pound = surfaces.data.find(s => s.id === 'pound');
   const machine = Object.fromEntries(pound.machine.filter(x => x.url && x.url.includes('/cfb-')).map(x => [x.url, x]));
   assert.deepEqual(Object.keys(machine).sort(), ['/data/cfb-disagreement.json', '/data/cfb-elo.json',
-    '/data/cfb-market.json', '/data/cfb-model-cards.json', '/data/cfb-model-receipts.json',
+    '/data/cfb-games-latest.json', '/data/cfb-market.json', '/data/cfb-model-cards.json', '/data/cfb-model-receipts.json',
     '/data/cfb-ratings.json', '/data/cfb-record-divergence-validation.json',
     '/data/cfb-record-divergence.json', '/data/cfb-schedule.json',
     '/data/cfb-team-game.json', '/data/cfb-team-week-latest.json', '/data/cfb-team-week.json', '/data/cfb-teams.json']);
@@ -240,6 +240,8 @@ test('published CFB backbone artifacts are discoverable without overstating thei
   assert.match(machine['/data/cfb-ratings.json'].covers, /consensus is explicitly not built/i);
   assert.match(machine['/data/cfb-model-receipts.json'].covers, /zero forecasts/i);
   assert.match(machine['/data/cfb-disagreement.json'].covers, /blocked/i);
+  assert.match(machine['/data/cfb-games-latest.json'].covers, /one per FBS team/i);
+  assert.match(machine['/data/cfb-games-latest.json'].covers, /not current form or forecasts/i);
   assert.match(machine['/data/cfb-team-game.json'].covers, /advanced play metrics are unavailable/i);
   assert.match(machine['/data/cfb-team-week.json'].covers, /results-only/i);
   assert.match(machine['/data/cfb-team-week-latest.json'].covers, /230 compact latest team-period rows/i);

@@ -21,6 +21,7 @@ class TeamResultsTests(unittest.TestCase):
         cls.team_game = results.backbone.read_json(ROOT / "data" / "cfb-team-game.json")
         cls.team_week = results.backbone.read_json(ROOT / "data" / "cfb-team-week.json")
         cls.team_week_latest = results.backbone.read_json(ROOT / "data" / "cfb-team-week-latest.json")
+        cls.games_latest = results.backbone.read_json(ROOT / "data" / "cfb-games-latest.json")
 
     def test_published_surfaces_validate_against_the_current_schedule(self):
         results.validate_team_game(self.team_game, self.schedule)
@@ -28,6 +29,7 @@ class TeamResultsTests(unittest.TestCase):
         results.validate_team_week_latest(
             self.team_week_latest, self.team_week, self.team_game, self.schedule
         )
+        results.validate_games_latest(self.games_latest, self.team_game, self.schedule)
 
     def test_every_game_has_two_mirrored_rows(self):
         by_game = {}
@@ -93,8 +95,8 @@ class TeamResultsTests(unittest.TestCase):
         self.assertEqual(totals["wins"] + totals["losses"] + totals["ties"], totals["games"])
 
     def test_advanced_metrics_are_explicitly_unavailable(self):
-        for envelope in (self.team_game, self.team_week, self.team_week_latest):
-            self.assertEqual(envelope["data"]["scope"], "results-only")
+        for envelope in (self.team_game, self.team_week, self.team_week_latest, self.games_latest):
+            self.assertIn("results-only", envelope["data"]["scope"])
             self.assertIn("epa_per_play", envelope["data"]["unavailable_metrics"])
             self.assertIn("opponent_adjusted_metrics", envelope["data"]["unavailable_metrics"])
             self.assertIn("OBSERVED RESULTS ONLY", envelope["note"])
@@ -141,6 +143,45 @@ class TeamResultsTests(unittest.TestCase):
             results.validate_team_week_latest(
                 broken, self.team_week, self.team_game, self.schedule
             )
+
+    def test_latest_games_select_exact_latest_completed_row_per_fbs_team(self):
+        rows = self.games_latest["data"]["rows"]
+        fbs = {slug for slug, facts in self.team_game["data"]["teams"].items()
+               if facts["division"] == "fbs"}
+        self.assertEqual({row["team_slug"] for row in rows}, fbs)
+        by_team = {}
+        for row in self.team_game["data"]["rows"]:
+            if row["team_slug"] not in fbs or row["result"] is None:
+                continue
+            prior = by_team.get(row["team_slug"])
+            if prior is None or (row["kickoff_at"], row["team_game_id"]) > (
+                prior["kickoff_at"], prior["team_game_id"]
+            ):
+                by_team[row["team_slug"]] = row
+        for compact in rows:
+            source = by_team[compact["team_slug"]]
+            game = compact["latest_completed_game"]
+            self.assertEqual(game["team_game_id"], source["team_game_id"])
+            self.assertEqual(game["points_for"], source["points_for"])
+            self.assertEqual(game["points_against"], source["points_against"])
+            self.assertEqual(game["result"], source["result"])
+
+    def test_latest_games_are_fbs_final_only_and_snapshot_locked(self):
+        data = self.games_latest["data"]
+        self.assertTrue(data["coverage"]["final_games_only"])
+        self.assertEqual(data["coverage"]["teams_without_a_completed_game"], [])
+        self.assertEqual(data["input_team_game_snapshot_id"], self.team_game["integrity"]["snapshot_id"])
+        self.assertEqual(
+            self.games_latest["provenance"]["input_snapshot_id"],
+            self.team_game["integrity"]["snapshot_id"],
+        )
+
+    def test_latest_games_rehashed_tamper_still_fails_source_reconciliation(self):
+        broken = copy.deepcopy(self.games_latest)
+        broken["data"]["rows"][0]["latest_completed_game"]["points_for"] += 1
+        broken["integrity"]["snapshot_id"] = results.backbone.sha256_id(broken["data"])
+        with self.assertRaisesRegex(results.ContractError, "drift"):
+            results.validate_games_latest(broken, self.team_game, self.schedule)
 
     def test_rehashed_row_tamper_still_fails_source_reconciliation(self):
         broken = copy.deepcopy(self.team_game)
