@@ -172,10 +172,14 @@ store.set("dd-guillotine-v1", JSON.stringify({ id: "12345", me: 2 }));
 await new AsyncFunction(syncBlock)();
 await new Promise(r => setTimeout(r, 50));
 const note2 = byId("gxWvNote").innerHTML;
-ok("waiver board degrades honestly when the backend is missing",
-  note2.includes("not yet deployed") || note2.includes("backend"), note2.slice(0, 120));
+// The route is deployed now, so a failure here is a transient outage, not a pending
+// ship — the copy says "reload in a minute" and must not promise a future deploy.
+ok("waiver board degrades honestly when the name lookup fails",
+  /didn't answer just now/.test(note2) && /temporary/.test(note2), note2.slice(0, 120));
+ok("degraded copy no longer promises an undeployed backend", !/not yet deployed/.test(note2));
 ok("no raw ids leak into the degraded table", byId("gxWvTab").innerHTML === "");
-ok("module 06 card says awaiting deploy", byId("gxM6").textContent === "Awaiting deploy");
+ok("module 06 card downgrades to Degraded", byId("gxM6").textContent === "Degraded");
+ok("module 06 loses its live styling when degraded", !byId("gxM6").classList.contains("on"));
 ok("FAAB still renders without the backend", byId("gxFaabTab").innerHTML.includes("Team 1"));
 ok("__GX still stashed without the backend", !!globalThis.__GX && !!globalThis.__GX.faab);
 

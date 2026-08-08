@@ -79,10 +79,13 @@ for(const W of [1280,390,320]){
   ok(tag+" page token is the new brown",r.pageTok==="#0b0802",r.pageTok);
   ok(tag+" boxes untouched",r.surfTok==="#16120d",r.surfTok);
   ok(tag+" body paints the brown",r.bodyBg==="rgb(11, 8, 2)",r.bodyBg);
-  /* Five combos overflow sideways on origin/main already — measured identical before and
-     after this change on 2026-08-08: bigboard 390 (+45) and 320 (+80), dataviz 320 (+21),
-     dfs 320 (+9), guillotine 320 (+47). They are real bugs, they are not this one. */
-  const KNOWN=new Set(["bigboard.html@390","bigboard.html@320","dataviz.html@320","dfs.html@320","guillotine.html@320"]);
+  /* Was five combos on 2026-08-08; three are now FIXED and are asserted like any other
+     page — do not put them back without a measurement.
+       bigboard 390 (+45) and 320 (+80): .pf-stat is white-space:nowrap, and stacking
+         .projfoot into a column made it a 480px shrink-to-fit item nothing clipped.
+       guillotine 320 (+47): the <code> sample league URL could not wrap.
+     Still open, both 320-only and neither diagnosed: dataviz (+21), dfs (+9). */
+  const KNOWN=new Set(["dataviz.html@320","dfs.html@320"]);
   if(!KNOWN.has(tag)) ok(tag+" no sideways scroll",r.hoverflow===false);
   await ctx.close();
  }
