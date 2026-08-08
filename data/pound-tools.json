@@ -3166,17 +3166,26 @@
   {
    "kind": "roadmap-idea",
    "domain": "College Football",
-   "lifecycle_status": "idea",
+   "lifecycle_status": "building",
    "lifecycle_history": [
     {
      "status": "idea",
      "on": "2026-08-08",
-     "note": "Entered The Pound from the 2026-08-08 CFB roadmap."
+     "note": "Captured as the read-only deterministic interface for validated CFB capabilities."
+    },
+    {
+     "status": "building",
+     "on": "2026-08-08",
+     "note": "Implemented and evaluated dd_cfb_team_profile locally over the dated ratings registry; it remains staged and non-callable in production."
     }
    ],
-   "implemented": false,
-   "delivery_evidence": [],
-   "delivery_note": null,
+   "implemented": true,
+   "delivery_evidence": [
+    "/work/mcp-block.js",
+    "/work/test-mcp.mjs",
+    "/data/cfb-ratings.json"
+   ],
+   "delivery_note": "The first source-backed CFB read tool is implemented locally and staged. Production still has 26 live tools; deployment requires a separate approved Worker release.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": null,
@@ -3196,7 +3205,7 @@
     "cfb-team-week"
    ],
    "candidate_mcp_tools": [
-    "get_cfb_team_profile",
+    "dd_cfb_team_profile",
     "compare_cfb_teams",
     "get_cfb_game_projection",
     "get_cfb_model_disagreement",

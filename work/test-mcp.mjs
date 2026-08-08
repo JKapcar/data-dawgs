@@ -71,6 +71,35 @@ const modelReceiptsJson = {
     { forecast_id: "classic-w2", game_id: "2026_02_PIT_SEA", season: 2026, week: 2, kickoff_at: "2026-09-20T17:00:00Z", captured_at: "2026-08-08T00:00:00Z", model_id: "538-classic", model_name: "538 Classic Elo", model_version: "classic-1.0.0", source_repo: "fivethirtyeight/nfl-elo-game", source_commit: "c3", source_capture_at: "2026-08-08T00:00:00Z", home_team: "SEA", away_team: "PIT", home_win_probability: 0.55, input_snapshot_id: "sha256:c3", schedule_snapshot_id: "sha256:schedule", forecast_status: "prospective", methodology_url: "https://example.test/classic", license_status: "MIT" },
   ],
 };
+const cfbRatingsJson = {
+  as_of: "2026-08-08",
+  source: "test normalized CFB ratings registry",
+  built: "2026-08-08",
+  graded: false,
+  integrity: { snapshot_id: "sha256:test-cfb-ratings", systems: 1, teams: 3 },
+  data: {
+    rating_period: { season: 2025, label: "end-of-2025-season", source_field: "ratings_as_of_end_of_2025", prospective: false },
+    systems: [{
+      system_id: "dd-cfb-elo", name: "Data Dawgs CFB Elo baseline", provider: "Data Dawgs",
+      kind: "continuous-rating", feature_family: "game results and margin only",
+      source_snapshot_id: "sha256:test-cfb-elo", source_url: "/data/cfb-elo.json",
+      model_card_url: "/data/cfb-model-cards.json",
+      outputs: {
+        team_strength: { available: true, units: "elo-points" },
+        expected_margin: { available: false, units: "points" },
+        win_probability: { available: false, units: "probability" },
+        predicted_total: { available: false, units: "points" },
+      },
+      prospective_forecasts_exist: false, graded: false,
+    }],
+    teams: [
+      { team_slug: "indiana", team: "Indiana", conference: "Big Ten", systems: { "dd-cfb-elo": { rank: 1, team_strength: 2054.8, games_rated: 96, expected_margin: null, win_probability: null, predicted_total: null } } },
+      { team_slug: "ohio-state", team: "Ohio State", conference: "Big Ten", systems: { "dd-cfb-elo": { rank: 2, team_strength: 1925.8, games_rated: 99, expected_margin: null, win_probability: null, predicted_total: null } } },
+      { team_slug: "akron", team: "Akron", conference: "Mid-American", systems: { "dd-cfb-elo": { rank: 133, team_strength: 1088.1, games_rated: 93, expected_margin: null, win_probability: null, predicted_total: null } } },
+    ],
+    consensus: { status: "not-built", system_count: 1, weights: null, reason: "One independent rating cannot form a consensus." },
+  },
+};
 
 let netMode = "normal"; // normal | dbdown | emptyRoom | espnDown | simulatedRoom | simulatedSettings
 globalThis.fetch = async (input, init) => {
@@ -94,6 +123,7 @@ globalThis.fetch = async (input, init) => {
   if (u.includes("datadawgs216.com/data/pool.json")) return J(poolJson);
   if (u.includes("datadawgs216.com/data/survivor.json")) return J(survJson);
   if (u.includes("datadawgs216.com/data/model-receipts.json")) return J(modelReceiptsJson);
+  if (u.includes("datadawgs216.com/data/cfb-ratings.json")) return J(cfbRatingsJson);
   if (u.includes("datadawgs216.com/dfs.html")) return new Response(dfsHtml, { status: 200 });
   if (u.includes("site.api.espn.com")) {
     if (netMode === "espnDown") return new Response("no", { status: 403 });
@@ -182,12 +212,12 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 {
   const j = await (await req(rpc("tools/list"))).json();
   const t = j.result.tools;
-  ok(t.length === 26, "twenty-six tools listed");
+  ok(t.length === 27, "twenty-seven tools listed in the staged Worker source");
   ok(t.every(x => x.name.startsWith("dd_")), "all tools dd_-prefixed");
   ok(t.every(x => x.inputSchema && x.inputSchema.type === "object"), "all tools carry an inputSchema");
   for (const name of ["dd_convert_odds", "dd_devig_market", "dd_price_parlay", "dd_calculate_bet_ev",
     "dd_calculate_hedge", "dd_nfl_passer_rating", "dd_score_forecast", "dd_summarize_beliefs",
-    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_optimize_survivor_path"])
+    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_cfb_team_profile", "dd_optimize_survivor_path"])
     ok(t.some(x => x.name === name), name + " is listed");
 }
 // dd_league_overview
@@ -547,6 +577,33 @@ function refNcdf(z) {
   ok(badWeek.result.isError === true && badExtra.result.isError === true && badTeam.result.isError === true,
      "model scoreboard rejects invalid and unsupported filters");
 }
+// dd_cfb_team_profile: exact bounded read over the dated registry, with every
+// retrodictive/no-consensus limit preserved in the response.
+{
+  const j = await (await req(call("dd_cfb_team_profile", { team: "OHIO STATE" }))).json();
+  const d = text(j), elo = d.systems[0];
+  ok(!j.result.isError && d.team.team_slug === "ohio-state" && d.team.conference === "Big Ten",
+     "CFB team profile resolves an exact case-insensitive team name");
+  ok(elo.system_id === "dd-cfb-elo" && elo.rating.rank === 2 && elo.rating.team_strength === 1925.8 && elo.rating.win_probability === null,
+     "CFB team profile returns the registered rating and preserves unsupported null outputs");
+  ok(d.as_of === "2026-08-08" && d.integrity.snapshot_id === "sha256:test-cfb-ratings" && d.read_only && d.stored === false,
+     "CFB team profile preserves registry provenance and non-persistence");
+  ok(d.modelled && d.retrodictive && d.prospective === false && d.graded === false && d.consensus.status === "not-built" &&
+     d.warnings.some(x => /one rating is not a consensus/i.test(x)) && d.warnings.some(x => /not represent a current-season forecast/i.test(x)),
+     "CFB team profile states the retrodictive, ungraded and no-consensus limits");
+}
+{
+  const slug = text(await (await req(call("dd_cfb_team_profile", { team: "ohio-state" }))).json());
+  ok(slug.team.name === "Ohio State" && slug.match.exact === true,
+     "CFB team profile accepts the canonical slug");
+  const partial = await (await req(call("dd_cfb_team_profile", { team: "state" }))).json();
+  const missing = await (await req(call("dd_cfb_team_profile", { team: "Cleveland Tech" }))).json();
+  const extra = await (await req(call("dd_cfb_team_profile", { team: "Akron", season: 2026 }))).json();
+  const empty = await (await req(call("dd_cfb_team_profile", { team: "" }))).json();
+  ok(partial.result.isError === true && /exact registry name or slug/.test(partial.result.content[0].text) &&
+     missing.result.isError === true && extra.result.isError === true && empty.result.isError === true,
+     "CFB team profile fails closed on partial, unknown, unsupported and empty inputs");
+}
 // dd_scores: reuses handleScores with sport+dates
 {
   const j = await (await req(call("dd_scores", { sport: "nfl", dates: "20260913" }))).json();
@@ -662,6 +719,8 @@ function refNcdf(z) {
      "notServedHere explains the DFS transient-compute invariant");
   ok(d.machine.surfaces.includes("surfaces.json"), "points agents at the surfaces map");
   ok(d.machine.data.includes("/data/model-contracts.json") && d.pages["pound.html"], "site map includes the Pound contracts and workbench");
+  ok(d.machine.data.includes("/data/cfb-ratings.json") && d.machine.data.includes("/data/cfb-model-receipts.json"),
+     "site map includes the canonical CFB registry and receipt ledger");
 }
 
 /* ----------------------- source-level safety asserts ----------------------- */

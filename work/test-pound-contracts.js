@@ -75,13 +75,13 @@ test('surface generator reports the deployed Pound MCP tools as live', () => {
     'dd_score_forecast', 'dd_summarize_beliefs', 'dd_elo_game',
     'dd_translate_probability'];
   assert.equal(surfaces.counts.mcp_tools_live, 26);
-  assert.equal(surfaces.counts.mcp_tools_staged, 0);
+  assert.equal(surfaces.counts.mcp_tools_staged, 1);
   assert.ok(surfaces.mcp.tools_live.includes('dd_survivor_ev'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_optimize_survivor_path'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_analyze_matchup'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_solve_dfs_lineup'));
   poundMcp.forEach(name => assert.ok(surfaces.mcp.tools_live.includes(name), name));
-  assert.deepEqual(surfaces.mcp.tools_staged, []);
+  assert.deepEqual(surfaces.mcp.tools_staged, ['dd_cfb_team_profile']);
 });
 test('survivor surface exposes the exact path optimizer and names its remaining rule gap', () => {
   const survivor = surfaces.data.find(s => s.id === 'survivor');
@@ -261,12 +261,13 @@ test('the 12-step roadmap ordering is stored explicitly and stays consistent', (
     else assert.ok(!inSteps.has(i.id), `${i.id} listed in a step but carries no roadmap_step`);
   }
 });
-test('no candidate CFB MCP tool is claimed live, staged or callable anywhere', () => {
+test('the first CFB MCP tool is staged locally but no candidate is claimed live', () => {
   const candidates = new Set(cfbIdeas.flatMap(i => i.candidate_mcp_tools || []));
   assert.ok(candidates.size >= 12);
   for (const name of candidates) {
     assert.ok(!surfaces.mcp.tools_live.includes(name), `${name} falsely live`);
-    assert.ok(!surfaces.mcp.tools_staged.includes(name), `${name} falsely staged`);
+    if (name === 'dd_cfb_team_profile') assert.ok(surfaces.mcp.tools_staged.includes(name), `${name} missing staged status`);
+    else assert.ok(!surfaces.mcp.tools_staged.includes(name), `${name} falsely staged`);
   }
   assert.equal(surfaces.counts.mcp_tools_live, 26); // unchanged by this task
   const pound = surfaces.data.find(s => s.id === 'pound');

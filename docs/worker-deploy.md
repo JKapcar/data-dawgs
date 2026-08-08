@@ -62,6 +62,9 @@ authorization.
 6. Verify the deployment, then make read-only production calls:
    `GET /mcp` should retain its transport boundary and
    `GET /cfb/market-snapshots?season=2026` should return a dated envelope.
+   After the CFB MCP release is approved, `tools/list` must contain
+   `dd_cfb_team_profile`, and an exact team call must preserve the registry's
+   `as_of`, source, integrity receipt and no-consensus warnings.
 7. Check the next expected cron execution in Workers Logs. A successful empty CFB
    window is normal; `cfb:market:24h:lasterror` is not.
 

@@ -3676,6 +3676,7 @@ let mcpPoolCache = { at: 0, data: null };
 let mcpCorrCache = { at: 0, data: null };
 let mcpSurvCache = { at: 0, data: null };
 let mcpModelReceiptsCache = { at: 0, data: null };
+let mcpCfbRatingsCache = { at: 0, data: null };
 
 // Abramowitz–Stegun normal CDF — the SAME approximation survivor.html ships, so the
 // tool and the page cannot disagree about a probability by more than float dust.
@@ -4105,6 +4106,76 @@ async function mcpModelReceipts() {
   return mcpModelReceiptsCache.data;
 }
 
+// The registry is a compact, public, dated normalization boundary rather than a
+// live upstream query. Retain its envelope so callers receive the exact source and
+// snapshot receipt that produced every rating. The tool below returns one team only.
+async function mcpCfbRatings() {
+  if (!mcpCfbRatingsCache.data || Date.now() - mcpCfbRatingsCache.at > 900e3) {
+    const r = await fetch(`${SITE}/data/cfb-ratings.json`, { cf: { cacheTtl: 900, cacheEverything: true } });
+    if (!r.ok) throw new Error("cfb-ratings.json unavailable: HTTP " + r.status);
+    const envelope = await r.json();
+    const data = envelope && envelope.data;
+    if (!envelope || !envelope.as_of || !envelope.source || !data ||
+        !Array.isArray(data.systems) || !Array.isArray(data.teams))
+      throw new Error("cfb-ratings.json has an invalid envelope");
+    if (!data.systems.length || data.systems.length > 20)
+      throw new Error("cfb-ratings.json must contain 1-20 registered systems");
+    if (!data.teams.length || data.teams.length > 200)
+      throw new Error("cfb-ratings.json must contain 1-200 teams");
+    if (!data.consensus || typeof data.consensus.status !== "string" || !data.rating_period)
+      throw new Error("cfb-ratings.json is missing rating-period or consensus metadata");
+    if (envelope.integrity && Number.isInteger(envelope.integrity.teams) && envelope.integrity.teams !== data.teams.length)
+      throw new Error("cfb-ratings.json team count does not match its integrity receipt");
+    if (envelope.integrity && Number.isInteger(envelope.integrity.systems) && envelope.integrity.systems !== data.systems.length)
+      throw new Error("cfb-ratings.json system count does not match its integrity receipt");
+    const systemIds = new Set();
+    for (const system of data.systems) {
+      if (!system || typeof system.system_id !== "string" || !system.system_id || systemIds.has(system.system_id))
+        throw new Error("cfb-ratings.json has an invalid or duplicate system_id");
+      systemIds.add(system.system_id);
+    }
+    for (const team of data.teams) {
+      if (!team || typeof team.team_slug !== "string" || typeof team.team !== "string" ||
+          !team.systems || typeof team.systems !== "object" || Array.isArray(team.systems))
+        throw new Error("cfb-ratings.json has an invalid team row");
+      for (const systemId of Object.keys(team.systems))
+        if (!systemIds.has(systemId)) throw new Error("cfb-ratings.json team row names an unregistered system: " + systemId);
+    }
+    mcpCfbRatingsCache = { at: Date.now(), data: envelope };
+  }
+  return mcpCfbRatingsCache.data;
+}
+
+function mcpCfbTeamSlug(v) {
+  return String(v || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/&/g, " and ").replace(/[\u2018\u2019']/g, "")
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+function mcpCfbTeamArgs(args) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+  const extra = Object.keys(args).filter(k => k !== "team");
+  if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+  if (typeof args.team !== "string" || !args.team.trim()) throw new Error("team must be a non-empty name or slug");
+  if (args.team.trim().length > 80) throw new Error("team is limited to 80 characters");
+  const slug = mcpCfbTeamSlug(args.team);
+  if (!slug) throw new Error("team must contain letters or numbers");
+  return { query: args.team.trim(), slug };
+}
+
+function mcpCfbTeamMatch(envelope, input) {
+  const teams = envelope.data.teams;
+  const exact = teams.filter(team => team.team_slug === input.slug || mcpCfbTeamSlug(team.team) === input.slug);
+  if (exact.length === 1) return exact[0];
+  if (exact.length > 1) throw new Error("cfb-ratings.json has duplicate normalized team names for " + input.query);
+  const partial = teams.filter(team => team.team_slug.includes(input.slug) || mcpCfbTeamSlug(team.team).includes(input.slug));
+  if (partial.length) {
+    const choices = partial.slice(0, 10).map(team => team.team + " (" + team.team_slug + ")").join(", ");
+    throw new Error("team is not an exact registry name or slug" + (partial.length > 1 ? " and is ambiguous" : "") + "; try: " + choices);
+  }
+  throw new Error("team is not present in the dated CFB ratings registry: " + input.query);
+}
+
 function mcpModelScoreboardString(v, label, max) {
   if (typeof v !== "string" || !v.trim()) throw new Error(label + " must be a non-empty string");
   const s = v.trim();
@@ -4307,7 +4378,7 @@ async function mcpDispatch(m, env, caller) {
       return rpcOk(id, {
         protocolVersion: proto,
         capabilities: { tools: {} },
-        serverInfo: { name: "data-dawgs", version: "1.6.0" },
+        serverInfo: { name: "data-dawgs", version: "1.7.0" },
         instructions:
           (caller && caller.kind === "user"
             ? "You are connected as " + caller.name + ". When a tool marks a row `you: true`, that is them.\n"
@@ -4316,6 +4387,7 @@ async function mcpDispatch(m, env, caller) {
           "Everything here is read-only and is either the league's own data, public play-by-play, " +
           "or a deterministic calculation over caller-supplied inputs. Calculator inputs and results are not stored. " +
           "The model scoreboard reads dated prospective receipts and returns descriptive disagreement only; it is ungraded and is not a validated consensus or ranking. " +
+          "The CFB team profile reads one end-of-2025 retrodictive Elo registry row; it is ungraded, is not a 2026 forecast and is not a consensus. " +
           "There is no built-in DFS projection or ownership feed: dd_solve_dfs_lineup requires the caller to supply every value per call, and stores none of them. dd_optimize_survivor_path is an ungraded ceiling over a dated snapshot and does not model double-pick weeks. When quoting bozo odds, survivor odds " +
           "or the correlation matrix, say it is model output or a measured historical average, never a forecast " +
           "of a specific game. Team names, weeks and league ids come from dd_league_overview — do not guess them.",
@@ -5046,6 +5118,68 @@ const MCP_TOOLS = [
     },
   },
   {
+    name: "dd_cfb_team_profile",
+    description: "Read one exact team from the dated Data Dawgs CFB ratings registry. Returns the end-of-2025 retrodictive Elo value, rank, provenance and unsupported null outputs. This is ungraded, not a 2026 forecast, and not a consensus or betting recommendation.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        team: { type: "string", minLength: 1, maxLength: 80, description: "Exact registry team name or slug, case-insensitive; for example Ohio State or ohio-state." },
+      },
+      required: ["team"],
+      additionalProperties: false,
+    },
+    async run(args) {
+      const input = mcpCfbTeamArgs(args);
+      const envelope = await mcpCfbRatings();
+      const team = mcpCfbTeamMatch(envelope, input);
+      const registeredSystems = envelope.data.systems.map(system => ({
+        system_id: system.system_id,
+        name: system.name,
+        provider: system.provider,
+        kind: system.kind,
+        feature_family: system.feature_family,
+        source_snapshot_id: system.source_snapshot_id,
+        source_url: system.source_url,
+        model_card_url: system.model_card_url,
+        outputs: system.outputs,
+        prospective_forecasts_exist: system.prospective_forecasts_exist === true,
+        graded: system.graded === true,
+        rating: Object.prototype.hasOwnProperty.call(team.systems, system.system_id) ? team.systems[system.system_id] : null,
+      }));
+      const period = envelope.data.rating_period;
+      const consensus = envelope.data.consensus;
+      const warnings = [];
+      if (period && period.prospective !== true)
+        warnings.push("This rating period is retrodictive and does not represent a current-season forecast.");
+      if (registeredSystems.length === 1)
+        warnings.push("The registry currently contains one system; one rating is not a consensus.");
+      if (!registeredSystems.some(system => system.prospective_forecasts_exist))
+        warnings.push("No registered system has a prospective CFB forecast in this snapshot.");
+      if (!registeredSystems.some(system => system.graded))
+        warnings.push("The registered ratings are ungraded prospectively.");
+      warnings.push("This profile does not include current market prices, talent, roster, injury, portal, matchup or availability inputs.");
+      return toolText({
+        query: input.query,
+        match: { exact: true, team_slug: team.team_slug },
+        team: { team_slug: team.team_slug, name: team.team, conference: team.conference || null },
+        rating_period: period,
+        systems: registeredSystems,
+        consensus,
+        as_of: envelope.as_of,
+        source: envelope.source,
+        built: envelope.built || null,
+        integrity: envelope.integrity || null,
+        modelled: true,
+        retrodictive: period && period.prospective !== true,
+        prospective: period && period.prospective === true,
+        graded: registeredSystems.length > 0 && registeredSystems.every(system => system.graded),
+        read_only: true,
+        stored: false,
+        warnings,
+      });
+    },
+  },
+  {
     name: "dd_model_scoreboard",
     description: "Query the dated prospective nfelo and 538 Classic receipt ledger by season, week, team, game or model. Returns receipt provenance plus descriptive mean/range/standard deviation; it is ungraded and is not a validated consensus, ensemble or leaderboard.",
     inputSchema: {
@@ -5345,7 +5479,7 @@ const MCP_TOOLS = [
         machine: {
           index: "/llms.txt",
           surfaces: "/data/surfaces.json — every human page, its machine equivalent, and an honest live|planned|none status. Check it before claiming a route exists.",
-          data: ["/data/pool.json", "/data/receipts.json", "/data/models.json", "/data/epa-teams.json", "/data/nfelo.json", "/data/league.json", "/data/bozo-rules.json", "/data/survivor.json", "/data/pound-tools.json", "/data/model-contracts.json", "/data/upstream-models.json", "/data/nfl-schedule.json", "/data/538-classic.json", "/data/model-receipts.json", "/data/index.json"],
+          data: ["/data/pool.json", "/data/receipts.json", "/data/models.json", "/data/epa-teams.json", "/data/nfelo.json", "/data/league.json", "/data/bozo-rules.json", "/data/survivor.json", "/data/pound-tools.json", "/data/model-contracts.json", "/data/upstream-models.json", "/data/nfl-schedule.json", "/data/538-classic.json", "/data/model-receipts.json", "/data/cfb-schedule.json", "/data/cfb-market.json", "/data/cfb-elo.json", "/data/cfb-ratings.json", "/data/cfb-model-cards.json", "/data/cfb-model-receipts.json", "/data/cfb-disagreement.json", "/data/index.json"],
         },
         pages: {
           "index.html": "Home — what Data Dawgs is and the working-dawg taxonomy (Labs / Dawgs / The Pound).",

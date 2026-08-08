@@ -789,6 +789,13 @@ const CFB_IDEAS = [
   /* ---------- Human / AI interface ---------- */
 
   idea({ id: 'cfb-mcp-layer', name: 'Deterministic CFB MCP/API Tool Layer',
+    lifecycle_status: 'building', implemented: true,
+    lifecycle_history: [
+      { status: 'idea', on: ROADMAP_AS_OF, note: 'Captured as the read-only deterministic interface for validated CFB capabilities.' },
+      { status: 'building', on: ROADMAP_AS_OF, note: 'Implemented and evaluated dd_cfb_team_profile locally over the dated ratings registry; it remains staged and non-callable in production.' },
+    ],
+    delivery_evidence: ['/work/mcp-block.js', '/work/test-mcp.mjs', '/data/cfb-ratings.json'],
+    delivery_note: 'The first source-backed CFB read tool is implemented locally and staged. Production still has 26 live tools; deployment requires a separate approved Worker release.',
     category: 'ai-interface', recommendation: 'build', recommendation_modifiers: ['foundation', 'high-priority'],
     priority: 'high',
     source_headings: ['Deterministic CFB MCP/API Tool Layer'],
@@ -796,7 +803,7 @@ const CFB_IDEAS = [
     expected_value: 'AI-callable CFB answers backed by receipts instead of vibes.',
     data_source_requirements: 'Each candidate tool depends on its underlying capability existing and being validated first.',
     deterministic_tool_potential: 'Yes — this entry is the tool layer itself.',
-    candidate_mcp_tools: ['get_cfb_team_profile', 'compare_cfb_teams', 'get_cfb_game_projection',
+    candidate_mcp_tools: ['dd_cfb_team_profile', 'compare_cfb_teams', 'get_cfb_game_projection',
       'get_cfb_model_disagreement', 'get_cfb_model_grades', 'find_cfb_disagreements', 'get_cfb_consensus',
       'get_fourth_down_decision', 'find_cfb_matchup_edges', 'simulate_cfb_season',
       'find_cfb_overrated_teams', 'find_cfb_underrated_teams'],

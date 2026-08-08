@@ -126,3 +126,16 @@ wrangler deploy --dry-run --config wrangler.jsonc
 
 Deployment and activation are separate actions. The source and trigger configuration
 can be reviewed and tested without uploading a Worker version or changing traffic.
+
+## Staged CFB MCP read tool
+
+`dd_cfb_team_profile` is the first implemented CFB-side MCP tool. It performs one
+bounded, cached read of `/data/cfb-ratings.json`, resolves an exact team name or slug,
+and returns that team's registered ratings with the envelope date, source and integrity
+receipt. It is read-only and stores neither the query nor the result.
+
+The response fails closed on malformed registry metadata and explicitly says what the
+current data cannot support: the sole Elo row is end-of-2025, retrodictive and ungraded;
+it is not a 2026 forecast, a consensus, or a betting recommendation. The tool is staged
+in source and `/data/surfaces.json`, but remains non-callable in production until a
+separately approved Worker version is uploaded, inspected and activated.
