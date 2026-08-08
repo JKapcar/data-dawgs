@@ -1095,7 +1095,12 @@ body.proj .blockbar .bb-v{font-size:26px}
   authSec.className = "navauth";
   const authBtn = document.createElement("button");
   authBtn.className = "authbtn"; authBtn.id = "ddAuthBtn"; authBtn.type = "button";
-  authBtn.addEventListener("click", ()=>window.DDAuth.open());
+  authBtn.addEventListener("click", ()=>{
+    /* one page owns every identity workflow (8/7) — the chip goes there, not to a modal */
+    const here = location.pathname.split("/").pop() || "index.html";
+    if (here === "signon.html") { window.scrollTo({top:0, behavior:"smooth"}); return; }
+    location.href = "signon.html?next=" + encodeURIComponent(here);
+  });
   authSec.appendChild(authBtn);
   nav.appendChild(authSec);
   window.DDAuth.render();

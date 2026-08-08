@@ -1074,7 +1074,12 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
   authSec.className = "navauth";
   const authBtn = document.createElement("button");
   authBtn.className = "authbtn"; authBtn.id = "ddAuthBtn"; authBtn.type = "button";
-  authBtn.addEventListener("click", ()=>window.DDAuth.open());
+  authBtn.addEventListener("click", ()=>{
+    /* one page owns every identity workflow (8/7) — the chip goes there, not to a modal */
+    const here = location.pathname.split("/").pop() || "index.html";
+    if (here === "signon.html") { window.scrollTo({top:0, behavior:"smooth"}); return; }
+    location.href = "signon.html?next=" + encodeURIComponent(here);
+  });
   authSec.appendChild(authBtn);
   nav.appendChild(authSec);
   window.DDAuth.render();
@@ -1979,19 +1984,7 @@ STATE: everything saves in the browser on that device. A different device shows 
     <span class="tm" id="adminBadge"></span>
     <span style="margin-left:auto"></span>
     <button class="btn ghost sm" id="mySheet">My sheet</button>
-    <button class="btn ghost sm" id="chgPw">Change password</button>
     <button class="btn ghost sm" id="signOut">Sign out</button>
-  </div>
-  <div id="pwBox" style="display:none;margin-top:12px">
-    <div class="frm">
-      <div class="f w2"><label>Current password</label><input id="pwOld" type="password" autocomplete="current-password"></div>
-      <div class="f w2"><label>New password</label><input id="pwNew" type="password" autocomplete="new-password"></div>
-      <div class="f w4"><div class="row" style="justify-content:flex-end">
-        <button class="btn ghost sm" id="pwCancel">Cancel</button>
-        <button class="btn sm" id="pwSave">Save</button>
-      </div></div>
-    </div>
-    <div class="err" id="pwErr"></div>
   </div>
 </div>
 
@@ -2161,6 +2154,13 @@ STATE: everything saves in the browser on that device. A different device shows 
 const WORKER = 'https://toto.jkapcar4.workers.dev';
 const DB     = 'https://data-dawgs-draft-default-rtdb.firebaseio.com';
 const SESS_K = 'dd-bozo-sess';
+/* Old texted links land here: bozo.html?join=<tok>. The claim card moved to
+   signon.html (one page owns every identity workflow, 8/7) — forward the token
+   whole; signon burns it out of its own URL the moment it loads. */
+(function(){
+  const tok = new URLSearchParams(location.search).get('join');
+  if (tok) location.replace('signon.html?join=' + encodeURIComponent(tok) + '&next=bozo.html');
+})();
 
 // The Worker is the authority on who may grade (BOZO_ADMIN). This constant only
 // decides whether to SHOW the admin controls — a wrong value here gets a 403,
@@ -3721,8 +3721,6 @@ function renderAuth(){
   const card=document.getElementById('authCard'), body=document.getElementById('authBody');
   const meCard=document.getElementById('meCard');
   const err=document.getElementById('authErr'); err.className='err'; err.textContent='';
-  const joinTok = new URLSearchParams(location.search).get('join');
-
   if(ME){
     card.style.display='none'; meCard.style.display='';
     document.getElementById('meName').textContent=ME.name;
@@ -3732,50 +3730,13 @@ function renderAuth(){
   }
   meCard.style.display='none'; card.style.display='';
 
-  if(joinTok){
-    document.getElementById('authH').textContent='Claim your slot';
-    body.innerHTML = `<div class="auth">
-      <p class="bz-sub" style="margin-top:0">This link works once. Set a password and it's yours — after that the link is dead, so forwarding it does nothing.</p>
-      <div class="f"><label>Password (8+ characters)</label><input id="cPw" type="password" autocomplete="new-password"></div>
-      <div class="f"><label>Confirm</label><input id="cPw2" type="password" autocomplete="new-password"></div>
-      <div class="row"><button class="btn" id="cGo">Claim it</button></div>
-    </div>`;
-    document.getElementById('cGo').onclick = async ()=>{
-      const a=document.getElementById('cPw').value, b=document.getElementById('cPw2').value;
-      if(a.length<8) { err.textContent='Password must be at least 8 characters.'; return; }
-      if(a!==b){ err.textContent="Those don't match."; return; }
-      try{
-        const r=await wPost('/auth/claim',{token:joinTok, password:a});
-        setSession(r.session);
-        history.replaceState(null,'',location.pathname);   // burn the token out of the URL
-        await loadRoster(); renderAuth();
-      }catch(e2){ err.textContent=e2.message; }
-    };
-    return;
-  }
-
   document.getElementById('authH').textContent='Sign in';
-  const claimed = ROSTER.filter(p=>p.claimed);
   body.innerHTML = `<div class="auth">
-    ${claimed.length ? `
-      <div class="f"><label>You are</label><select id="lName">${claimed.map(p=>`<option>${esc(p.name)}</option>`).join('')}</select></div>
-      <div class="f"><label>Password</label><input id="lPw" type="password" autocomplete="current-password"></div>
-      <div class="row"><button class="btn" id="lGo">Sign in</button></div>`
-    : `<p class="readonly">Nobody has set up an account yet. Use the join link Kap texted you.</p>`}
-    <p class="note">No account yet? Open the link Kap texted you — that's the only way in. Until then you can watch: the board, the ticket and the season table are all public.</p>
+    <p class="bz-sub" style="margin-top:0">Signing in has its own page now — one place for every
+    account chore: sign in, create an account, claim a texted invite, recover a password.</p>
+    <div class="row"><a class="btn" href="signon.html?next=bozo.html">Sign in / create account</a></div>
+    <p class="note">No account needed to watch: the board, the ticket and the season table are public.</p>
   </div>`;
-  const go=document.getElementById('lGo');
-  if(go){
-    const submit = async ()=>{
-      try{
-        const r=await wPost('/auth/login',{name:document.getElementById('lName').value,
-                                           password:document.getElementById('lPw').value});
-        setSession(r.session); await loadRoster(); renderAuth();
-      }catch(e2){ err.textContent=e2.message; }
-    };
-    go.onclick=submit;
-    document.getElementById('lPw').addEventListener('keydown',ev=>{ if(ev.key==='Enter') submit(); });
-  }
   render();
 }
 
@@ -3798,22 +3759,6 @@ document.getElementById('next').onclick = async ()=>{
 };
 document.getElementById('signOut').onclick = ()=>{ clearSession(); renderAuth(); };
 document.getElementById('mySheet').onclick = ()=>{ if(ME) goto(ME.name); };
-document.getElementById('chgPw').onclick = ()=>{
-  const b=document.getElementById('pwBox'); b.style.display = b.style.display==='none' ? '' : 'none';
-};
-document.getElementById('pwCancel').onclick = ()=>{ document.getElementById('pwBox').style.display='none'; };
-document.getElementById('pwSave').onclick = async ()=>{
-  const e=document.getElementById('pwErr'); e.className='err'; e.textContent='';
-  const oldPassword=document.getElementById('pwOld').value, newPassword=document.getElementById('pwNew').value;
-  if(newPassword.length<8){ e.textContent='New password must be at least 8 characters.'; return; }
-  try{
-    const r=await wPost('/auth/passwd',{oldPassword,newPassword});
-    setSession(r.session);                      // the old one is dead server-side
-    e.className='err ok'; e.textContent='Changed.';
-    document.getElementById('pwOld').value=''; document.getElementById('pwNew').value='';
-  }catch(err){ e.textContent=err.message; }
-};
-
 document.getElementById('fSport').innerHTML =
   Object.entries(SPORTS).map(([k,v])=>`<option value="${k}">${v.n}</option>`).join('');
 document.getElementById('fSport').onchange = ()=>loadGames(fSport.value);

@@ -36,9 +36,12 @@
  *   POST /league/team    — manager: {player, team} display name inside this league
  * ⚠️ The lock threshold is THAT LEAGUE'S member count, never the global roster.
  *
- * IDENTITY IS SITE-WIDE. The five auth routes answer on BOTH /auth/* and /bozo/*:
+ * IDENTITY IS SITE-WIDE. The auth routes answer on BOTH /auth/* and /bozo/*:
  *   GET  /auth/roster  POST /auth/claim  /auth/login  /auth/passwd  /auth/reset
  *   POST /auth/invite  — admin re-issues a join link (returns the raw token ONCE)
+ *   POST /auth/signup  — OPEN SIGNUP (8/7): {name, email, password} creates a
+ *     site-wide account, no invite. An account is NOT a league seat — membership
+ *     stays invite/manager-gated. The only unauthenticated write; IP-capped.
  * The roster lives at /users in RTDB — Worker-only (no rule, so RTDB default-denies
  * every browser; the Worker reads it with FB_SECRET). BOZO_TOKENS is now only a
  * BOOTSTRAP: /users is seeded from it on first read, and after that it is the truth.
@@ -237,7 +240,7 @@ export default {
     // the page would lose the ability to sign in.
     const AUTH = { "/roster": bozoRoster, "/claim": bozoClaim, "/login": bozoLogin,
                    "/passwd": bozoPasswd, "/reset": bozoReset, "/invite": authInvite,
-                   "/mcp-token": authMcpToken, "/email": authEmail };
+                   "/mcp-token": authMcpToken, "/email": authEmail, "/signup": bozoSignup };
     for (const [suffix, fn] of Object.entries(AUTH)) {
       if (url.pathname === "/auth" + suffix || url.pathname === "/bozo" + suffix)
         return suffix === "/roster" ? fn(env, cors) : fn(request, env, cors);
@@ -906,6 +909,93 @@ async function authEmail(request, env, cors) {
   catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
   return json({ ok: true, player: auth.name, email: email || null,
                 note: "Unverified — nothing is sent to this address. It only lets you sign in with it." }, 200, cors);
+}
+
+// POST /auth/signup {name, email, password} — TRUE OPEN SIGNUP (Kap's call, 8/7).
+// Anyone may create a site-wide account, like any normal website. What signup does
+// NOT grant is a league seat: membership stays invite/manager-gated, so an open door
+// on accounts costs the leagues nothing. The data model is unchanged — name stays the
+// roster key, exactly as claim/invite create it, so every existing surface that is
+// keyed by name keeps working without a migration.
+//
+// ⚠️ The email is an UNVERIFIED alternate sign-in identifier, same as /auth/email
+// (see emailToName for why verification is out: no mail infrastructure, and an open
+// mail endpoint is a spam relay). Required here — it is the recovery-adjacent
+// identifier a stranger signs in with — but nothing is ever sent to it. First come,
+// first served.
+//
+// ⚠️ This is the ONLY unauthenticated write on the Worker. Everything else behind a
+// write is session- or token-gated; this endpoint by design is not, so it gets the
+// hardest cap: SIGNUP_CAP fresh accounts per IP per day via the RL binding. The cap
+// is checked BEFORE any database work so a flood costs KV reads, not RTDB writes.
+const SIGNUP_CAP = 5;
+
+async function bozoSignup(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const cfg = bozoConfig(env);
+  if (cfg) return json({ error: cfg }, 500, cors);
+
+  let used = 0, rlKey = null;
+  if (env.RL) {
+    const ip = request.headers.get("CF-Connecting-IP") || "noip";
+    const day = new Date().toISOString().slice(0, 10);
+    rlKey = "signup:" + day + ":" + ip;
+    used = parseInt((await env.RL.get(rlKey)) || "0", 10);
+    if (used >= SIGNUP_CAP)
+      return json({ error: "Too many new accounts from this connection today. Try again tomorrow." }, 429, cors);
+  }
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  // Same name rules as /auth/invite — the name is a Firebase key and a roster label.
+  const name = String(body.name || "").trim();
+  if (!name) return json({ error: "Pick a name — it's what shows on rosters." }, 400, cors);
+  if (name.length > 40) return json({ error: "That name is too long." }, 400, cors);
+  if (/[.#$\[\]\/]/.test(name)) return json({ error: "Name can't contain . # $ [ ] or /" }, 400, cors);
+
+  const email = String(body.email || "").trim();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))
+    return json({ error: "That does not look like an email address." }, 400, cors);
+
+  const pw = String(body.password || "");
+  if (pw.length < MIN_PW) return json({ error: `Password must be at least ${MIN_PW} characters.` }, 400, cors);
+
+  // Count the attempt only NOW: a typo'd email must not burn one of the day's five,
+  // but anything that reaches the database — even a "name taken" probe — does.
+  if (rlKey) await env.RL.put(rlKey, String(used + 1), { expirationTtl: 172800 });
+
+  let users;
+  try { users = await loadUsers(env); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+  if (userNames(users).includes(name))
+    return json({ error: "That name is taken. If it's yours, sign in instead." }, 409, cors);
+  const emailOwner = await emailToName(env, email);
+  if (emailOwner)
+    return json({ error: "Another account already uses that address. Sign in with it instead." }, 409, cors);
+
+  try {
+    // Belt and braces: an auth record means the name is live even if /users
+    // momentarily disagrees (the same pair of nodes claim writes).
+    const existing = (await fbGet(env, authPath(name))).data;
+    if (existing) return json({ error: "That name is taken. If it's yours, sign in instead." }, 409, cors);
+
+    const saltBytes = new Uint8Array(16);
+    crypto.getRandomValues(saltBytes);
+    const salt = b64(saltBytes);
+    const hash = await pbkdf2(pw, env.BOZO_PEPPER, salt, PBKDF2_ITERS);
+    const setAt = Date.now();
+    // PATCH, not PUT: /users/<name> must not clobber anything if a concurrent
+    // invite landed first — though the name checks above make that a razor edge.
+    await fbPatch(env, "/users/" + encodeURIComponent(name),
+                  { email, src: "signup", signupTs: setAt, apps: {} });
+    await fbPut(env, authPath(name), { v: 1, salt, hash, iters: PBKDF2_ITERS, setAt });
+    return json({ ok: true, name, email, session: await makeSession(env, name, setAt),
+                  note: "Unverified email — nothing is ever sent to it. It only lets you sign in with it." }, 200, cors);
+  } catch (e) {
+    return json({ error: "Database write failed: " + e.message }, 502, cors);
+  }
 }
 
 // BOZO_TOKENS is the bootstrap, not the truth. First read seeds /users from it and

@@ -12,7 +12,8 @@ machine surfaces and MCP tools. All 12 mapped surfaces have live machine access;
 read-only MCP tools are live, including `dd_optimize_survivor_path`, `dd_model_scoreboard`
 and 10 Pound calculators.
 `planned` means not callable. A per-user token comes from
-`/connect.html`; the URL is the credential.
+`/connect.html`; the URL is the credential. Anyone can make an account at `/signon.html`;
+an account is not a league seat, and no mail is ever sent.
 
 Confidence tiers: `labs` is useful but still being challenged; `dawg` survived validation;
 `pound` is shelved with its reason attached. Do not present Labs output with Dawg confidence.

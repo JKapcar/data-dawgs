@@ -43,6 +43,7 @@ repo holds flattened, self-contained HTML — those files *are* the source. `sit
 | `stats.html` | EPA explorer, 2.1 MB, columnar base64 play-by-play. Never merge anything into it. |
 | `nfelo.html` `survivor.html` `receipts.html` `dfs.html` `guillotine.html` | the Lab |
 | `bozo.html` | the weekly betting game |
+| `signon.html` | THE identity page — sign in, open signup (`POST /auth/signup`), join-link claim, recovery, password/email change. Every other page's Sign-in chip routes here with `?next=`; old `bozo.html?join=` links forward here. Identity UX lives here and nowhere else (8/7 rule) |
 | `dawg-bot-worker.js` | source of the `toto` Cloudflare Worker (no secrets) |
 | `sw.js` | service worker, draft-night offline insurance |
 | `data/` | **machine-readable surfaces — see below** |

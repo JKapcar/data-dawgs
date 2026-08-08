@@ -848,7 +848,12 @@ button.btn.sm{font-size:12.5px;padding:7px 12px}
   authSec.className = "navauth";
   const authBtn = document.createElement("button");
   authBtn.className = "authbtn"; authBtn.id = "ddAuthBtn"; authBtn.type = "button";
-  authBtn.addEventListener("click", ()=>window.DDAuth.open());
+  authBtn.addEventListener("click", ()=>{
+    /* one page owns every identity workflow (8/7) — the chip goes there, not to a modal */
+    const here = location.pathname.split("/").pop() || "index.html";
+    if (here === "signon.html") { window.scrollTo({top:0, behavior:"smooth"}); return; }
+    location.href = "signon.html?next=" + encodeURIComponent(here);
+  });
   authSec.appendChild(authBtn);
   nav.appendChild(authSec);
   window.DDAuth.render();
@@ -1710,15 +1715,12 @@ STATE: everything saves in the browser on that device. A different device shows 
   odds, the player pool. One URL, pasted once. Nothing to install.</p>
 
   <div class="card" id="cSignedOut">
-    <h3>Sign in</h3>
-    <p class="sub">Same login as the Bozo board. Your name or your email, either works.</p>
-    <div class="grid2">
-      <label class="fld"><span>Name or email</span><input class="fi" id="cWho" autocomplete="username" placeholder="Jeff, or jeff@example.com"></label>
-      <label class="fld"><span>Password</span><input class="fi" id="cPw" type="password" autocomplete="current-password"></label>
-    </div>
-    <div class="btnrow"><button class="btn" id="cGo">Sign in</button></div>
+    <h3>Sign in first</h3>
+    <p class="sub">Your connector URL is personal, so this page needs to know who you are.
+    Signing in lives on its own page — one place for every account chore.</p>
+    <div class="btnrow"><a class="btn" href="signon.html?next=connect.html">Sign in / create account</a></div>
     <p class="note" id="cMsg"></p>
-    <p class="note">No password yet? Use the join link Kap sent you, then come back.</p>
+    <p class="note">No account? The join link Kap texted you works there too — or create one.</p>
   </div>
 
   <div class="card" id="cSignedIn" hidden>
@@ -1741,16 +1743,7 @@ STATE: everything saves in the browser on that device. A different device shows 
     </div>
     <p class="note" id="cMintMsg"></p>
 
-    <h3 style="margin-top:24px">Email</h3>
-    <p class="sub">Lets you sign in with your address instead of your name.
-    <b>Nothing is ever sent to it</b> and it is not verified — we do not run a mail server.</p>
-    <div class="grid2">
-      <label class="fld"><span>Email</span><input class="fi" id="cEmail" type="email" autocomplete="email" placeholder="you@example.com"></label>
-      <div style="display:flex;align-items:flex-end"><button class="btn sm" id="cSaveEmail" style="margin-bottom:11px">Save</button></div>
-    </div>
-    <p class="note" id="cEmailMsg"></p>
 
-    <div class="btnrow" style="margin-top:10px"><button class="btn ghost sm" id="cOut">Sign out</button></div>
   </div>
 
   <div class="card">
@@ -1820,25 +1813,7 @@ STATE: everything saves in the browser on that device. A different device shows 
     $("cSignedOut").hidden = true;
     $("cSignedIn").hidden = false;
     $("cWho2").textContent = name || "";
-    if (email) $("cEmail").value = email;
   }
-
-  $("cGo").addEventListener("click", function () {
-    var who = $("cWho").value.trim(), pw = $("cPw").value;
-    if (!who || !pw) { msg("cMsg", "Name (or email) and password, please.", "warn"); return; }
-    msg("cMsg", "Signing in…");
-    // The Worker resolves an email to a name itself, so send it in the same field.
-    post("/auth/login", { name: who, password: pw }).then(function (r) {
-      if (!r.ok || !r.j.session) { msg("cMsg", r.j.error || "That didn't work.", "bad"); return; }
-      // via DDAuth so the banner chip updates in the same tick
-      if (window.DDAuth) window.DDAuth.set(r.j.session);
-      else { try { localStorage.setItem(SESS, r.j.session); } catch (e) {} }
-      msg("cMsg", "");
-      $("cPw").value = "";
-      showSignedIn(r.j.name || who, r.j.email);   // the Worker returns `name`, not `player`
-    }).catch(function (e) { msg("cMsg", "Couldn't reach the server: " + e.message, "bad"); });
-  });
-  $("cPw").addEventListener("keydown", function (e) { if (e.key === "Enter") $("cGo").click(); });
 
   $("cMint").addEventListener("click", function () {
     msg("cMintMsg", "Creating…");
@@ -1868,28 +1843,11 @@ STATE: everything saves in the browser on that device. A different device shows 
     else { document.execCommand("copy"); done(); }
   });
 
-  $("cSaveEmail").addEventListener("click", function () {
-    msg("cEmailMsg", "Saving…");
-    post("/auth/email", { email: $("cEmail").value.trim() }, true).then(function (r) {
-      if (!r.ok) { msg("cEmailMsg", r.j.error || "Couldn't save it.", "bad"); return; }
-      msg("cEmailMsg", r.j.email ? "Saved. You can sign in with that address now — nothing is sent to it." : "Cleared.", "good");
-    });
-  });
-
   function showSignedOut() {
     $("cSignedIn").hidden = true; $("cSignedOut").hidden = false;
     $("cUrlBox").hidden = true; $("cUrl").value = "";
     $("cMint").textContent = "Create my URL";
   }
-
-  $("cOut").addEventListener("click", function () {
-    // Go through DDAuth so the banner chip flips too — clearing the key behind its
-    // back leaves the nav claiming you are still signed in until the next reload.
-    if (window.DDAuth) window.DDAuth.clear();
-    else { try { localStorage.removeItem(SESS); } catch (e) {} }
-    showSignedOut();
-    msg("cMsg", "Signed out.");
-  });
 
   /* Already signed in from another page? Don't make them do it twice.
      ⚠️ This used to fire a probe request at /auth/mcp-token and read the ERROR STRING
