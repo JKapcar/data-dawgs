@@ -970,9 +970,10 @@
    "delivery_evidence": [
     "/data/cfb-team-game.json",
     "/scripts/cfb_team_results.py",
-    "/tests/test_cfb_team_results.py"
+    "/tests/test_cfb_team_results.py",
+    "/work/mcp-block.js"
    ],
-   "delivery_note": "Partially implemented with observed schedule/result facts only. EPA, success, explosiveness, havoc and garbage-time fields still require canonical play-by-play.",
+   "delivery_note": "Partially implemented with observed schedule/result facts only and a bounded exact-team game-history reader staged locally. EPA, success, explosiveness, havoc and garbage-time fields still require canonical play-by-play.",
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 1,
@@ -983,7 +984,9 @@
     "cfb-plays",
     "cfb-games"
    ],
-   "candidate_mcp_tools": [],
+   "candidate_mcp_tools": [
+    "dd_find_cfb_team_games"
+   ],
    "components": [],
    "related_ideas": [
     "cfb-team-week",
@@ -1002,7 +1005,7 @@
    "rationale": "Canonical cfb_team_game: one row per team per game, aggregated once, consistently, instead of separately inside every tool.",
    "expected_value": "Shared team-game aggregates for ratings, the fraud detector and the team-week layer.",
    "data_source_requirements": "Derived from canonical plays and games.",
-   "deterministic_tool_potential": "Indirect — aggregate layer.",
+   "deterministic_tool_potential": "Yes — bounded team-perspective game history is a deterministic read over the aggregate layer.",
    "validation_requirement": "Aggregates reconcile with the play layer; derivations documented and reproducible.",
    "risks_limitations": "Aggregation choices (garbage time, overtime) must be declared, not implicit.",
    "tags": [
@@ -3255,7 +3258,7 @@
     {
      "status": "building",
      "on": "2026-08-08",
-     "note": "Implemented and evaluated canonical game, results-only team-period and historical market lookup, generated model-card governance, bounded single-system rankings, team profile, comparison, hypothetical Elo matchup, exact hypothetical schedule-path, descriptive record-divergence, blocked model-disagreement and prospective-receipt status tools locally; all remain staged and non-callable in production."
+     "note": "Implemented and evaluated canonical game, results-only team-game and team-period, and historical market lookup, generated model-card governance, bounded single-system rankings, team profile, comparison, hypothetical Elo matchup, exact hypothetical schedule-path, descriptive record-divergence, blocked model-disagreement and prospective-receipt status tools locally; all remain staged and non-callable in production."
     }
    ],
    "implemented": true,
@@ -3268,7 +3271,7 @@
     "/data/cfb-market.json",
     "/data/cfb-model-cards.json"
    ],
-   "delivery_note": "Twelve source-backed CFB tools are implemented locally and staged, including canonical game, results-only team-period and no-CLV historical market lookup, generated model-card governance, bounded single-system rankings, exact matchup and schedule-path calculations, plus no-label divergence, blocked-study and prospective-receipt status readers. Production still has 26 live tools; deployment requires a separate approved Worker release.",
+   "delivery_note": "Thirteen source-backed CFB tools are implemented locally and staged, including canonical game, results-only team-game and team-period, and no-CLV historical market lookup, generated model-card governance, bounded single-system rankings, exact matchup and schedule-path calculations, plus no-label divergence, blocked-study and prospective-receipt status readers. Production still has 26 live tools; deployment requires a separate approved Worker release.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": null,
@@ -3291,6 +3294,7 @@
    ],
    "candidate_mcp_tools": [
     "dd_find_cfb_games",
+    "dd_find_cfb_team_games",
     "dd_find_cfb_team_periods",
     "dd_find_cfb_historical_market",
     "dd_get_cfb_model_card",

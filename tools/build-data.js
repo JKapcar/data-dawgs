@@ -880,7 +880,7 @@ const MCP_LIVE = ['dd_whoami', 'dd_league_overview', 'dd_bozo_week', 'dd_bozo_st
   'dd_draft_board', 'dd_draft_pool', 'dd_survivor_week', 'dd_scores',
   'dd_dfs_correlations', 'dd_solve_dfs_lineup', 'dd_guillotine_odds', 'dd_site_map',
   'dd_survivor_ev', 'dd_optimize_survivor_path', 'dd_analyze_matchup', ...MCP_POUND_LIVE];
-const MCP_STAGED = ['dd_find_cfb_games', 'dd_find_cfb_team_periods', 'dd_find_cfb_historical_market', 'dd_get_cfb_model_card', 'dd_rank_cfb_teams', 'dd_cfb_team_profile', 'dd_compare_cfb_teams', 'dd_project_cfb_matchup', 'dd_project_cfb_schedule_path', 'dd_find_cfb_record_divergence', 'dd_get_cfb_model_disagreement', 'dd_get_cfb_model_receipt_status'];
+const MCP_STAGED = ['dd_find_cfb_games', 'dd_find_cfb_team_games', 'dd_find_cfb_team_periods', 'dd_find_cfb_historical_market', 'dd_get_cfb_model_card', 'dd_rank_cfb_teams', 'dd_cfb_team_profile', 'dd_compare_cfb_teams', 'dd_project_cfb_matchup', 'dd_project_cfb_schedule_path', 'dd_find_cfb_record_divergence', 'dd_get_cfb_model_disagreement', 'dd_get_cfb_model_receipt_status'];
 const MCP_ENDPOINT = {
   path: '/mcp/u_<personal token>   (legacy: /mcp/<league passphrase>)',
   transport: 'streamable-http',

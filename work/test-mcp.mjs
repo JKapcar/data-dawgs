@@ -290,6 +290,48 @@ const cfbTeamWeekJson = {
     ],
   },
 };
+const cfbTeamGameTeams = {};
+for (const game of cfbScheduleJson.data.games) {
+  cfbTeamGameTeams[game.home_team_slug] = { team: game.home_team, espn_id: null, division: game.home_division, conference: game.home_conference };
+  cfbTeamGameTeams[game.away_team_slug] = { team: game.away_team, espn_id: null, division: game.away_division, conference: game.away_conference };
+}
+const cfbTeamGameRows = cfbScheduleJson.data.games.flatMap(game => [
+  { side: "home", team_slug: game.home_team_slug, opponent_slug: game.away_team_slug, points_for: game.home_points, points_against: game.away_points },
+  { side: "away", team_slug: game.away_team_slug, opponent_slug: game.home_team_slug, points_for: game.away_points, points_against: game.home_points },
+].map(view => ({
+  team_game_id: game.game_id + "::" + view.team_slug,
+  game_id: game.game_id,
+  upstream_game_id: game.upstream_game_id,
+  season: game.season,
+  season_type: game.season_type,
+  week: game.week,
+  kickoff_at: game.kickoff_at,
+  status: game.status,
+  team_slug: view.team_slug,
+  opponent_slug: view.opponent_slug,
+  team_side: view.side,
+  site: game.neutral_site ? "neutral" : view.side,
+  neutral_site: game.neutral_site,
+  conference_game: game.conference_game,
+  points_for: view.points_for,
+  points_against: view.points_against,
+  point_differential: view.points_for - view.points_against,
+  result: view.points_for === view.points_against ? "tie" : view.points_for > view.points_against ? "win" : "loss",
+})));
+const cfbTeamGameJson = {
+  as_of: "2026-08-08",
+  source: "test schedule-derived CFB team games",
+  built: "2026-08-08",
+  integrity: { snapshot_id: "sha256:test-cfb-team-game", rows: cfbTeamGameRows.length },
+  data: {
+    schema_version: 1,
+    season: 2025,
+    scope: "results-only",
+    teams: cfbTeamGameTeams,
+    unavailable_metrics: ["epa_per_play", "success_rate", "explosiveness", "havoc", "garbage_time_filtered_metrics", "opponent_adjusted_metrics", "market_performance"],
+    rows: cfbTeamGameRows,
+  },
+};
 const cfbMarketJson = {
   as_of: "2026-08-08",
   source: "test historical CFB prices with unknown observation timing",
@@ -384,6 +426,7 @@ globalThis.fetch = async (input, init) => {
   if (u.includes("datadawgs216.com/data/cfb-record-divergence.json")) return J(cfbDivergenceJson);
   if (u.includes("datadawgs216.com/data/cfb-disagreement.json")) return J(cfbDisagreementJson);
   if (u.includes("datadawgs216.com/data/cfb-model-receipts.json")) return J(cfbModelReceiptsJson);
+  if (u.includes("datadawgs216.com/data/cfb-team-game.json")) return J(cfbTeamGameJson);
   if (u.includes("datadawgs216.com/data/cfb-team-week.json")) return J(cfbTeamWeekJson);
   if (u.includes("datadawgs216.com/data/cfb-schedule.json")) return J(cfbScheduleJson);
   if (u.includes("datadawgs216.com/data/cfb-market.json")) return J(cfbMarketJson);
@@ -476,12 +519,12 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 {
   const j = await (await req(rpc("tools/list"))).json();
   const t = j.result.tools;
-  ok(t.length === 38, "thirty-eight tools listed in the staged Worker source");
+  ok(t.length === 39, "thirty-nine tools listed in the staged Worker source");
   ok(t.every(x => x.name.startsWith("dd_")), "all tools dd_-prefixed");
   ok(t.every(x => x.inputSchema && x.inputSchema.type === "object"), "all tools carry an inputSchema");
   for (const name of ["dd_convert_odds", "dd_devig_market", "dd_price_parlay", "dd_calculate_bet_ev",
     "dd_calculate_hedge", "dd_nfl_passer_rating", "dd_score_forecast", "dd_summarize_beliefs",
-    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_rank_cfb_teams", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_project_cfb_schedule_path", "dd_find_cfb_record_divergence", "dd_get_cfb_model_disagreement", "dd_get_cfb_model_receipt_status", "dd_find_cfb_team_periods", "dd_find_cfb_games", "dd_find_cfb_historical_market", "dd_get_cfb_model_card", "dd_optimize_survivor_path"])
+    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_rank_cfb_teams", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_project_cfb_schedule_path", "dd_find_cfb_record_divergence", "dd_get_cfb_model_disagreement", "dd_get_cfb_model_receipt_status", "dd_find_cfb_team_games", "dd_find_cfb_team_periods", "dd_find_cfb_games", "dd_find_cfb_historical_market", "dd_get_cfb_model_card", "dd_optimize_survivor_path"])
     ok(t.some(x => x.name === name), name + " is listed");
 }
 // dd_league_overview
@@ -1080,6 +1123,44 @@ function refNcdf(z) {
   const extra = await (await req(call("dd_get_cfb_model_receipt_status", { include_backtests: true }))).json();
   ok(extra.result.isError === true,
      "CFB receipt status rejects backtest or other unsupported arguments");
+}
+// dd_find_cfb_team_games: bounded mirrored team-perspective results with exact
+// opponent, outcome and site filtering.
+{
+  const j = await (await req(call("dd_find_cfb_team_games", { team: "OHIO STATE" }))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.team.team_slug === "ohio-state" && d.returned === 2 &&
+     d.games[0].opponent.team === "Michigan" && d.games[1].opponent.team === "Georgia",
+     "CFB team-game reader resolves an exact team and returns chronological opponent history");
+  ok(d.games[0].result === "win" && d.games[0].point_differential === 3 &&
+     d.games[1].team_side === "away" && d.games[1].site === "neutral" && d.games[1].point_differential === 1,
+     "CFB team-game reader returns score and outcome from the selected team's perspective");
+  ok(d.scope === "results-only" && d.observed_results_only && !d.modelled && !d.opponent_adjusted &&
+     !d.market_adjusted && !d.forecast && !d.graded && d.read_only && d.stored === false &&
+     d.unavailable_metrics.includes("epa_per_play") && d.warnings.some(x => /mirrored row per team/i.test(x)),
+     "CFB team-game reader publishes its results-only mirrored-row boundary");
+}
+{
+  const filtered = text(await (await req(call("dd_find_cfb_team_games", {
+    team: "ohio-state", opponent: "Georgia", season_type: "postseason", result: "win", site: "neutral"
+  }))).json());
+  const latest = text(await (await req(call("dd_find_cfb_team_games", { team: "Ohio State", sort: "kickoff-desc", limit: 1 }))).json());
+  ok(filtered.returned === 1 && filtered.games[0].game_id === "2025_post_01_ohio-state_georgia" &&
+     filtered.query.opponent === "Georgia",
+     "CFB team-game reader combines exact opponent, postseason, result and site filters");
+  ok(latest.matched_before_limit === 2 && latest.returned === 1 && latest.games[0].opponent.team === "Georgia",
+     "CFB team-game reader applies reverse chronological sort and strict output bounds");
+}
+{
+  const partial = await (await req(call("dd_find_cfb_team_games", { team: "state" }))).json();
+  const missing = await (await req(call("dd_find_cfb_team_games", {}))).json();
+  const same = await (await req(call("dd_find_cfb_team_games", { team: "Ohio State", opponent: "ohio-state" }))).json();
+  const badResult = await (await req(call("dd_find_cfb_team_games", { team: "Akron", result: "cover" }))).json();
+  const badSite = await (await req(call("dd_find_cfb_team_games", { team: "Akron", site: "road" }))).json();
+  const badLimit = await (await req(call("dd_find_cfb_team_games", { team: "Akron", limit: 51 }))).json();
+  const extra = await (await req(call("dd_find_cfb_team_games", { team: "Akron", include_epa: true }))).json();
+  ok([partial, missing, same, badResult, badSite, badLimit, extra].every(result => result.result.isError === true),
+     "CFB team-game reader fails closed on partial, missing, same-team and unsupported inputs");
 }
 // dd_find_cfb_team_periods: bounded results-only team history with repeated
 // regular/postseason week labels kept distinct.
