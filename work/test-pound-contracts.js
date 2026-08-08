@@ -75,13 +75,13 @@ test('surface generator reports the deployed Pound MCP tools as live', () => {
     'dd_score_forecast', 'dd_summarize_beliefs', 'dd_elo_game',
     'dd_translate_probability'];
   assert.equal(surfaces.counts.mcp_tools_live, 26);
-  assert.equal(surfaces.counts.mcp_tools_staged, 6);
+  assert.equal(surfaces.counts.mcp_tools_staged, 7);
   assert.ok(surfaces.mcp.tools_live.includes('dd_survivor_ev'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_optimize_survivor_path'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_analyze_matchup'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_solve_dfs_lineup'));
   poundMcp.forEach(name => assert.ok(surfaces.mcp.tools_live.includes(name), name));
-  assert.deepEqual(surfaces.mcp.tools_staged, ['dd_cfb_team_profile', 'dd_compare_cfb_teams', 'dd_project_cfb_matchup', 'dd_project_cfb_schedule_path', 'dd_find_cfb_record_divergence', 'dd_get_cfb_model_disagreement']);
+  assert.deepEqual(surfaces.mcp.tools_staged, ['dd_cfb_team_profile', 'dd_compare_cfb_teams', 'dd_project_cfb_matchup', 'dd_project_cfb_schedule_path', 'dd_find_cfb_record_divergence', 'dd_get_cfb_model_disagreement', 'dd_get_cfb_model_receipt_status']);
 });
 test('survivor surface exposes the exact path optimizer and names its remaining rule gap', () => {
   const survivor = surfaces.data.find(s => s.id === 'survivor');
@@ -214,6 +214,7 @@ test('CFB roadmap ideas carry evidence-backed lifecycle without inventing tools'
   assert.ok(byId['cfb-disagreement-lab'].candidate_mcp_tools.includes('dd_get_cfb_model_disagreement'));
   assert.equal(byId['cfb-model-receipts'].lifecycle_status, 'building');
   assert.equal(byId['cfb-model-receipts'].implemented, true);
+  assert.ok(byId['cfb-model-receipts'].candidate_mcp_tools.includes('dd_get_cfb_model_receipt_status'));
   assert.equal(byId['cfb-season-sim'].lifecycle_status, 'building');
   assert.equal(byId['cfb-season-sim'].implemented, true);
   assert.deepEqual(byId['cfb-season-sim'].candidate_mcp_tools, ['dd_project_cfb_schedule_path']);
@@ -284,7 +285,7 @@ test('the 12-step roadmap ordering is stored explicitly and stays consistent', (
 });
 test('the implemented CFB MCP tools are staged locally but no candidate is claimed live', () => {
   const candidates = new Set(cfbIdeas.flatMap(i => i.candidate_mcp_tools || []));
-  const staged = new Set(['dd_cfb_team_profile', 'dd_compare_cfb_teams', 'dd_project_cfb_matchup', 'dd_project_cfb_schedule_path', 'dd_find_cfb_record_divergence', 'dd_get_cfb_model_disagreement']);
+  const staged = new Set(['dd_cfb_team_profile', 'dd_compare_cfb_teams', 'dd_project_cfb_matchup', 'dd_project_cfb_schedule_path', 'dd_find_cfb_record_divergence', 'dd_get_cfb_model_disagreement', 'dd_get_cfb_model_receipt_status']);
   assert.ok(candidates.size >= 12);
   for (const name of candidates) {
     assert.ok(!surfaces.mcp.tools_live.includes(name), `${name} falsely live`);

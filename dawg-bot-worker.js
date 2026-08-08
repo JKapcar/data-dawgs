@@ -3679,6 +3679,7 @@ let mcpModelReceiptsCache = { at: 0, data: null };
 let mcpCfbProfilesCache = { at: 0, data: null };
 let mcpCfbDivergenceCache = { at: 0, data: null };
 let mcpCfbDisagreementCache = { at: 0, data: null };
+let mcpCfbReceiptCache = { at: 0, data: null };
 
 // Abramowitz–Stegun normal CDF — the SAME approximation survivor.html ships, so the
 // tool and the page cannot disagree about a probability by more than float dust.
@@ -4224,6 +4225,36 @@ async function mcpCfbModelDisagreementEvidence() {
   return mcpCfbDisagreementCache.data;
 }
 
+async function mcpCfbModelReceipts() {
+  if (!mcpCfbReceiptCache.data || Date.now() - mcpCfbReceiptCache.at > 900e3) {
+    const response = await fetch(`${SITE}/data/cfb-model-receipts.json`, { cf: { cacheTtl: 900, cacheEverything: true } });
+    if (!response.ok) throw new Error("cfb-model-receipts.json unavailable: HTTP " + response.status);
+    const envelope = await response.json();
+    const rows = envelope && envelope.data;
+    if (!envelope || !envelope.as_of || !envelope.source || envelope.graded !== false ||
+        !Array.isArray(rows) || rows.length > 5000)
+      throw new Error("cfb-model-receipts.json has an invalid ungraded ledger envelope");
+    if (envelope.integrity && Number.isInteger(envelope.integrity.rows) && envelope.integrity.rows !== rows.length)
+      throw new Error("cfb-model-receipts.json row count does not match its integrity receipt");
+    const ids = new Set();
+    for (const row of rows) {
+      const issued = Date.parse(row && row.issued_at);
+      const kickoff = Date.parse(row && row.kickoff_at);
+      if (!row || typeof row.forecast_id !== "string" || !row.forecast_id || ids.has(row.forecast_id) ||
+          typeof row.model_id !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(row.model_id) ||
+          !Number.isInteger(row.season) || !Number.isInteger(row.week) ||
+          row.forecast_status !== "prospective" || row.grading_status !== "ungraded" ||
+          !Number.isFinite(issued) || !Number.isFinite(kickoff) || issued >= kickoff ||
+          typeof row.home_win_probability !== "number" || !Number.isFinite(row.home_win_probability) ||
+          row.home_win_probability < 0 || row.home_win_probability > 1)
+        throw new Error("cfb-model-receipts.json has an invalid, duplicate or non-prospective receipt");
+      ids.add(row.forecast_id);
+    }
+    mcpCfbReceiptCache = { at: Date.now(), data: envelope };
+  }
+  return mcpCfbReceiptCache.data;
+}
+
 function mcpCfbTeamSlug(v) {
   return String(v || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
     .toLowerCase().replace(/&/g, " and ").replace(/[\u2018\u2019']/g, "")
@@ -4599,7 +4630,7 @@ async function mcpDispatch(m, env, caller) {
           "Everything here is read-only and is either the league's own data, public play-by-play, " +
           "or a deterministic calculation over caller-supplied inputs. Calculator inputs and results are not stored. " +
           "The model scoreboard reads dated prospective receipts and returns descriptive disagreement only; it is ungraded and is not a validated consensus or ranking. " +
-          "The CFB reads separate observed 2025 results from one end-of-2025 retrodictive Elo row. dd_project_cfb_matchup and dd_project_cfb_schedule_path are hypothetical rating-period calculations, not scheduled 2026 forecasts. dd_find_cfb_record_divergence returns descriptive record-versus-scoring gaps whose small held-out lift does not authorize current-team labels. dd_get_cfb_model_disagreement returns a blocked study whose untimestamped market input prevents a winner or blend conclusion. All CFB outputs are ungraded, not market-adjusted and are not a consensus. " +
+          "The CFB reads separate observed 2025 results from one end-of-2025 retrodictive Elo row. dd_project_cfb_matchup and dd_project_cfb_schedule_path are hypothetical rating-period calculations, not scheduled 2026 forecasts. dd_find_cfb_record_divergence returns descriptive record-versus-scoring gaps whose small held-out lift does not authorize current-team labels. dd_get_cfb_model_disagreement returns a blocked study whose untimestamped market input prevents a winner or blend conclusion. dd_get_cfb_model_receipt_status reports the append-only prospective ledger honestly; receipt rows remain ungraded and outcomes belong in a separate surface. All CFB outputs are ungraded, not market-adjusted and are not a consensus. " +
           "There is no built-in DFS projection or ownership feed: dd_solve_dfs_lineup requires the caller to supply every value per call, and stores none of them. dd_optimize_survivor_path is an ungraded ceiling over a dated snapshot and does not model double-pick weeks. When quoting bozo odds, survivor odds " +
           "or the correlation matrix, say it is model output or a measured historical average, never a forecast " +
           "of a specific game. Team names, weeks and league ids come from dd_league_overview — do not guess them.",
@@ -5810,6 +5841,62 @@ const MCP_TOOLS = [
           "The bucket measurements are reproducible, but the headline comparison is confounded by unknown market observation timing.",
           "A larger market advantage in wider-gap buckets cannot distinguish a better method from a later information set.",
           "Do not infer a model winner, consensus weight, current-game edge or recommendation from this blocked study.",
+        ],
+      });
+    },
+  },
+  {
+    name: "dd_get_cfb_model_receipt_status",
+    description: "Report the dated append-only CFB prospective forecast receipt ledger status and bounded counts by model. The ledger is currently empty by design; immutable receipt rows remain ungraded and outcomes belong in a separate future grading surface. This tool does not return backtest results or invent a leaderboard.",
+    inputSchema: MCP_NO_ARGS,
+    async run(args) {
+      if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+      const extra = Object.keys(args);
+      if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+      const envelope = await mcpCfbModelReceipts();
+      const rows = envelope.data;
+      const byModel = new Map();
+      for (const row of rows) {
+        if (!byModel.has(row.model_id)) byModel.set(row.model_id, {
+          model_id: row.model_id, receipts: 0, seasons: new Set(), first_issued_at: null,
+          last_issued_at: null, with_timestamped_market_context: 0,
+        });
+        const summary = byModel.get(row.model_id);
+        summary.receipts++;
+        summary.seasons.add(row.season);
+        if (!summary.first_issued_at || row.issued_at < summary.first_issued_at) summary.first_issued_at = row.issued_at;
+        if (!summary.last_issued_at || row.issued_at > summary.last_issued_at) summary.last_issued_at = row.issued_at;
+        if (row.market_context && row.market_context.captured_at) summary.with_timestamped_market_context++;
+      }
+      const models = [...byModel.values()].map(summary => ({
+        ...summary,
+        seasons: [...summary.seasons].sort((a, b) => a - b),
+      })).sort((a, b) => a.model_id.localeCompare(b.model_id));
+      return toolText({
+        status: rows.length ? "prospective-receipts-exist-ungraded" : "empty-by-design",
+        prospective_receipts: rows.length,
+        model_count: models.length,
+        models,
+        first_actual_forecast_exists: rows.length > 0,
+        graded_forecasts: 0,
+        receipt_ledger_is_grading_surface: false,
+        grading_surface_available: false,
+        leaderboard_available: false,
+        as_of: envelope.as_of,
+        source: envelope.source,
+        built: envelope.built || null,
+        integrity: envelope.integrity || null,
+        prospective: rows.length > 0,
+        graded: false,
+        read_only: true,
+        stored: false,
+        next_unlock: rows.length
+          ? "Join immutable forecast receipts to completed canonical outcomes in a separate derived grading surface without mutating the receipt rows."
+          : "Publish a canonical scheduled 2026 game, then freeze a model forecast before kickoff against exact schedule, ratings-registry and model-card snapshots.",
+        warnings: [
+          "A zero-row ledger is evidence that no CFB forecast has yet been frozen prospectively, not evidence of model performance.",
+          "Retrodictive 2025 backtests are intentionally excluded from this prospective receipt ledger.",
+          "Do not report CFB model grades, calibration, a leaderboard or a track record until prospective receipts and a separate outcome-derived grading surface exist.",
         ],
       });
     },

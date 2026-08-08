@@ -1630,9 +1630,11 @@
    "delivery_evidence": [
     "/data/cfb-model-receipts.json",
     "/scripts/cfb_model_receipts.py",
-    "/tests/test_cfb_model_receipts.py"
+    "/tests/test_cfb_model_receipts.py",
+    "/work/mcp-block.js",
+    "/work/test-mcp.mjs"
    ],
-   "delivery_note": "Receipt infrastructure is implemented and the public ledger is honestly empty. The first actual row still waits on a 2026 scheduled game and a forecast frozen before kickoff.",
+   "delivery_note": "Receipt infrastructure is implemented, the public ledger is honestly empty, and a staged read-only status tool reports that state without manufacturing grades. The first actual row still waits on a 2026 scheduled game and a forecast frozen before kickoff.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 3,
@@ -1644,6 +1646,7 @@
     "cfb-market"
    ],
    "candidate_mcp_tools": [
+    "dd_get_cfb_model_receipt_status",
     "get_cfb_model_grades"
    ],
    "components": [],
@@ -3234,7 +3237,7 @@
     {
      "status": "building",
      "on": "2026-08-08",
-     "note": "Implemented and evaluated team profile, comparison, hypothetical Elo matchup, exact hypothetical schedule-path, descriptive record-divergence and blocked model-disagreement evidence tools locally; all remain staged and non-callable in production."
+     "note": "Implemented and evaluated team profile, comparison, hypothetical Elo matchup, exact hypothetical schedule-path, descriptive record-divergence, blocked model-disagreement and prospective-receipt status tools locally; all remain staged and non-callable in production."
     }
    ],
    "implemented": true,
@@ -3245,7 +3248,7 @@
     "/data/cfb-record-divergence.json",
     "/data/cfb-record-divergence-validation.json"
    ],
-   "delivery_note": "Six source-backed CFB tools are implemented locally and staged, including exact matchup and schedule-path calculations plus no-label divergence and blocked-study evidence readers. Production still has 26 live tools; deployment requires a separate approved Worker release.",
+   "delivery_note": "Seven source-backed CFB tools are implemented locally and staged, including exact matchup and schedule-path calculations plus no-label divergence, blocked-study and prospective-receipt status readers. Production still has 26 live tools; deployment requires a separate approved Worker release.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": null,
@@ -3271,6 +3274,7 @@
     "dd_project_cfb_schedule_path",
     "dd_find_cfb_record_divergence",
     "dd_get_cfb_model_disagreement",
+    "dd_get_cfb_model_receipt_status",
     "get_cfb_model_grades",
     "find_cfb_disagreements",
     "get_cfb_consensus",

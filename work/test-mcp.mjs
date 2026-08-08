@@ -195,6 +195,15 @@ const cfbDisagreementJson = {
     governance: ["cfb-gov-correlation", "cfb-gov-incremental", "cfb-gov-uncertainty"],
   },
 };
+const cfbModelReceiptsJson = {
+  as_of: "2026-08-08",
+  source: "test empty append-only prospective CFB forecast receipt ledger",
+  note: "EMPTY BY DESIGN. No CFB forecast has yet been frozen before kickoff.",
+  built: "2026-08-08",
+  graded: false,
+  integrity: { snapshot_id: "sha256:test-empty-cfb-receipts", rows: 0 },
+  data: [],
+};
 
 let netMode = "normal"; // normal | dbdown | emptyRoom | espnDown | simulatedRoom | simulatedSettings
 globalThis.fetch = async (input, init) => {
@@ -222,6 +231,7 @@ globalThis.fetch = async (input, init) => {
   if (u.includes("datadawgs216.com/data/cfb-record-divergence-validation.json")) return J(cfbDivergenceValidationJson);
   if (u.includes("datadawgs216.com/data/cfb-record-divergence.json")) return J(cfbDivergenceJson);
   if (u.includes("datadawgs216.com/data/cfb-disagreement.json")) return J(cfbDisagreementJson);
+  if (u.includes("datadawgs216.com/data/cfb-model-receipts.json")) return J(cfbModelReceiptsJson);
   if (u.includes("datadawgs216.com/dfs.html")) return new Response(dfsHtml, { status: 200 });
   if (u.includes("site.api.espn.com")) {
     if (netMode === "espnDown") return new Response("no", { status: 403 });
@@ -310,12 +320,12 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 {
   const j = await (await req(rpc("tools/list"))).json();
   const t = j.result.tools;
-  ok(t.length === 32, "thirty-two tools listed in the staged Worker source");
+  ok(t.length === 33, "thirty-three tools listed in the staged Worker source");
   ok(t.every(x => x.name.startsWith("dd_")), "all tools dd_-prefixed");
   ok(t.every(x => x.inputSchema && x.inputSchema.type === "object"), "all tools carry an inputSchema");
   for (const name of ["dd_convert_odds", "dd_devig_market", "dd_price_parlay", "dd_calculate_bet_ev",
     "dd_calculate_hedge", "dd_nfl_passer_rating", "dd_score_forecast", "dd_summarize_beliefs",
-    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_project_cfb_schedule_path", "dd_find_cfb_record_divergence", "dd_get_cfb_model_disagreement", "dd_optimize_survivor_path"])
+    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_project_cfb_schedule_path", "dd_find_cfb_record_divergence", "dd_get_cfb_model_disagreement", "dd_get_cfb_model_receipt_status", "dd_optimize_survivor_path"])
     ok(t.some(x => x.name === name), name + " is listed");
 }
 // dd_league_overview
@@ -862,6 +872,25 @@ function refNcdf(z) {
   const extra = await (await req(call("dd_get_cfb_model_disagreement", { game: "Ohio State" }))).json();
   ok(extra.result.isError === true,
      "CFB disagreement reader rejects game-level or other unsupported arguments");
+}
+// dd_get_cfb_model_receipt_status: zero rows is the honest prospective state,
+// and the immutable forecast ledger is never represented as its own grade table.
+{
+  const j = await (await req(call("dd_get_cfb_model_receipt_status", {}))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.status === "empty-by-design" && d.prospective_receipts === 0 &&
+     d.model_count === 0 && d.models.length === 0 && d.first_actual_forecast_exists === false,
+     "CFB receipt status reports the real zero-row prospective ledger");
+  ok(d.graded_forecasts === 0 && d.receipt_ledger_is_grading_surface === false &&
+     d.grading_surface_available === false && d.leaderboard_available === false && !d.prospective && !d.graded,
+     "CFB receipt status refuses grades, a leaderboard and prospective evidence that do not exist");
+  ok(d.read_only && d.stored === false && /scheduled 2026 game/i.test(d.next_unlock) &&
+     d.warnings.some(x => /zero-row ledger is evidence/i.test(x)) &&
+     d.warnings.some(x => /Retrodictive 2025 backtests are intentionally excluded/i.test(x)),
+     "CFB receipt status names the exact first-forecast unlock and ledger boundary");
+  const extra = await (await req(call("dd_get_cfb_model_receipt_status", { include_backtests: true }))).json();
+  ok(extra.result.isError === true,
+     "CFB receipt status rejects backtest or other unsupported arguments");
 }
 // dd_scores: reuses handleScores with sport+dates
 {

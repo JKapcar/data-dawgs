@@ -114,6 +114,13 @@ The card reports the roadmap's lifecycle value read from `/data/pound-tools.json
 
 Building the contract does not manufacture evidence. The current 2025 schedule contains only final games, so the append path refuses every one of them. The first real row requires a 2026 game whose canonical status is `scheduled`, an Elo forecast issued before kickoff, and exact schedule, ratings-registry and model-card snapshots. Until then the ledger's zero rows are the honest result.
 
+`dd_get_cfb_model_receipt_status` is the staged machine read of that honest state. It
+validates the public ledger as append-only prospective input, rejects duplicate,
+post-kickoff or non-prospective rows, and reports counts by model when rows eventually
+exist. Today it returns `empty-by-design`, zero models and zero receipts. It also keeps
+the architecture boundary explicit: immutable forecast receipts remain ungraded, and
+outcomes and scorecards belong in a separate derived grading surface.
+
 ## Disagreement probe (roadmap step 3, idea cfb-disagreement-lab)
 
 `scripts/cfb_disagreement.py refresh` publishes `/data/cfb-disagreement.json`, which asks step 3's question directly: when the Elo and the market disagree, does either side systematically win?
