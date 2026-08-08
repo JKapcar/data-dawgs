@@ -631,6 +631,15 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 .lifecycle-chip{display:inline-flex;border-radius:999px;padding:3px 7px;font:800 10px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;border:1px solid var(--border);color:var(--ink-3);margin-left:5px}
 .cfb-filters{display:flex;flex-wrap:wrap;gap:9px;margin:0 0 12px}.cfb-filters .field{min-width:150px;flex:1}
 .cfb-count{font-size:12px;color:var(--ink-3);margin:0 0 10px}
+.cfbt-box{border:1px solid var(--border);background:var(--surface-1);border-radius:12px;padding:16px 18px;margin:0 0 18px}
+.cfbt-box>h3{margin:0 0 6px;font:750 12px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.cfbt-box>p{margin:0 0 12px;color:var(--ink-2);font-size:13.5px;line-height:1.62;max-width:820px}
+.cfbt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:9px}
+.cfbt{border:1px solid var(--grid);border-radius:9px;padding:9px 11px;background:var(--page);min-width:0}
+.cfbt code{font-size:12px;color:var(--ink-1);font-weight:700;overflow-wrap:anywhere;display:block}
+.cfbt span{display:block;margin-top:4px;font-size:11.5px;line-height:1.5;color:var(--ink-3)}
+.cfbt-planned{margin:13px 0 0;font-size:12.5px;line-height:1.65;color:var(--ink-3);overflow-wrap:anywhere}
+.cfbt-planned code{font-size:11.5px}
 .tool .meta-line{font-size:11.5px;color:var(--ink-3)}
 .tool .components{border-top:1px solid var(--grid);margin-top:9px;padding-top:9px}.tool .components li{font-size:12px;color:var(--ink-3);margin:4px 0}
 .provenance{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.prov{border:1px solid var(--border);border-radius:10px;padding:13px;background:var(--surface-1)}.prov h3{margin:0 0 6px;font-size:15px}.prov p{margin:4px 0;color:var(--ink-3);font-size:12px}.prov a{color:var(--accent)}
@@ -1956,6 +1965,19 @@ STATE: everything saves in the browser on that device. A different device shows 
   <section class="p-section" id="cfb">
     <header><div><h2>College Football roadmap</h2><p class="dek">The complete identified CFB opportunity set — roadmap ideas, not automatically tools. Shipped data and model artifacts carry evidence-backed lifecycle state; every remaining card records what we could build, why, what it depends on, and how we would know whether it worked.</p></div><div class="p-meta">roadmap reconciled 2026-08-08<br>delivery tracked per card</div></header>
     <div class="p-disclosure"><b>Map, not territory.</b> Lifecycle and implementation state describe the artifact named by a card, not predictive proof. Candidate MCP tool names remain reservations and are not callable unless the separate Worker registry says they are live. Recommendations can change, and retired ideas move to a Graveyard with their history intact rather than being deleted.</div>
+    <div class="cfbt-box" id="cfbTools">
+      <h3>Production College Football MCP tools</h3>
+      <p>The roadmap cards below are <em>ideas</em>. These are the ones an assistant can
+      actually call today. The split is read at runtime by intersecting the live tool roster in
+      <a href="/data/surfaces.json"><code>/data/surfaces.json</code></a> with the candidate names
+      on the cards, so it cannot drift from the data the way a typed count can.
+      <b>&ldquo;Live&rdquo; here means the roster says so</b> &mdash;
+      <code>node tools/validate-data.js</code> checks that roster against every per-surface claim,
+      but this page does not call the Worker and does not independently confirm anything answered.</p>
+      <div class="p-summary" id="cfbToolStats"><div class="p-stat"><b>&mdash;</b><span>callable now</span></div><div class="p-stat"><b>&mdash;</b><span>named, not built</span></div><div class="p-stat"><b>&mdash;</b><span>ideas with a live tool</span></div><div class="p-stat"><b>0</b><span>that write anything</span></div></div>
+      <div class="cfbt-grid" id="cfbToolsLive"><div class="p-loading">Loading the live CFB tool roster&hellip;</div></div>
+      <p class="cfbt-planned" id="cfbToolsPlanned"></p>
+    </div>
     <div class="cfb-filters">
       <div class="field"><label for="cfbCat">Category</label><select class="p-filter" id="cfbCat"><option value="all">All</option></select></div>
       <div class="field"><label for="cfbRec">Recommendation</label><select class="p-filter" id="cfbRec"><option value="all">All</option><option value="build">BUILD</option><option value="lab">LAB</option><option value="defer">DEFER</option><option value="avoid-initially">AVOID INITIALLY</option><option value="not-needed">NOT NEEDED</option></select></div>
@@ -1975,7 +1997,8 @@ STATE: everything saves in the browser on that device. A different device shows 
   <section class="p-section" id="machines">
     <header><div><h2>The same evidence for machines</h2><p class="dek">Assistants should read deterministic state, not scrape the cards above.</p></div></header>
     <div class="machine-box"><ul>
-      <li><a href="/data/pound-tools.json"><code>/data/pound-tools.json</code></a> — full inventory: NFL tools (delivery status, blockers) plus evidence-backed College Football lifecycle under <code>cfb_roadmap</code> and <code>kind:"roadmap-idea"</code> entries. Candidate CFB MCP tool names are not callable.</li>
+      <li><a href="/data/pound-tools.json"><code>/data/pound-tools.json</code></a> — full inventory: NFL tools (delivery status, blockers) plus evidence-backed College Football lifecycle under <code>cfb_roadmap</code> and <code>kind:"roadmap-idea"</code> entries. A card's <code>candidate_mcp_tools</code> names are reservations; which of them are callable is settled by the live roster in <a href="/data/surfaces.json"><code>/data/surfaces.json</code></a>, not by the card.</li>
+      <li id="cfbMachineTools"><code>/data/surfaces.json</code> — the live Worker tool roster, including the College Football tools listed in the CFB section above.</li>
       <li><a href="/data/model-contracts.json"><code>/data/model-contracts.json</code></a> — normalized forecast, receipt and calculator contracts.</li>
       <li><a href="/data/upstream-models.json"><code>/data/upstream-models.json</code></a> — repository, commit, license status and integration mode.</li>
       <li><a href="/data/nfl-schedule.json"><code>/data/nfl-schedule.json</code></a> — validated canonical 2026 schedule, exact upstream commit and snapshot hash.</li>
@@ -2192,22 +2215,64 @@ STATE: everything saves in the browser on that device. A different device shows 
   }
   let allTools=[];
   function renderTools(status){const rows=status==="all"?allTools:allTools.filter(t=>t.status===status);$("toolInventory").innerHTML=rows.map(t=>`<article class="tool"><span class="status status-${esc(t.status)}">${esc(t.status)}</span><h3>${esc(t.name)}</h3><p>${esc(t.intended_user_value)}</p><p><b>Machine:</b> <code>${esc(t.machine_readable_requirement)}</code>${t.existing_worker_mcp_implementation?`<br><b>Live MCP:</b> <code>${esc(t.existing_worker_mcp_implementation)}</code>`:""}${t.staged_worker_mcp_implementation?`<br><b>Staged MCP:</b> <code>${esc(t.staged_worker_mcp_implementation)}</code>`:""}</p>${t.exact_blocker?`<p class="block"><b>Blocker:</b> ${esc(t.exact_blocker)}<br><b>Minimum path:</b> ${esc(t.minimum_path_to_completion)}</p>`:""}</article>`).join("")||'<div class="p-loading">No tools match.</div>'}
-  let cfbIdeas=[],cfbSteps=[];
+  let cfbIdeas=[],cfbSteps=[],liveMcp=new Set();
+  /* ⚠️ The live/not-live split is COMPUTED, never listed. A card names candidate tools;
+     /data/surfaces.json names what is actually on the Worker. The intersection is the
+     honest answer to "what can I call", and it self-corrects when either file moves.
+     Typing the number in here is exactly the bug this replaced. */
+  function cfbToolSplit(){
+    const named=new Set();
+    cfbIdeas.forEach(i=>(i.candidate_mcp_tools||[]).forEach(t=>named.add(t)));
+    const all=[...named].sort();
+    return {live:all.filter(t=>liveMcp.has(t)), planned:all.filter(t=>!liveMcp.has(t))};
+  }
+  function renderCfbTools(){
+    const {live,planned}=cfbToolSplit();
+    /* Attribute each tool to the roadmap idea that owns it. cfb-mcp-layer lists every
+       tool by design, so it is the fallback rather than the answer — otherwise every
+       tool would be credited to the umbrella card and the mapping would say nothing. */
+    const owner={};
+    cfbIdeas.forEach(i=>{ if(i.id==="cfb-mcp-layer") return;
+      (i.candidate_mcp_tools||[]).forEach(t=>{ if(!owner[t]) owner[t]=i; }); });
+    const umbrella=cfbIdeas.find(i=>i.id==="cfb-mcp-layer")||null;
+    const ideasWithLive=new Set(live.map(t=>(owner[t]||umbrella||{}).id).filter(Boolean)).size;
+    $("cfbToolStats").innerHTML=`<div class="p-stat"><b>${live.length}</b><span>callable now</span></div>`
+      +`<div class="p-stat"><b>${planned.length}</b><span>named, not built</span></div>`
+      +`<div class="p-stat"><b>${ideasWithLive}</b><span>ideas with a live tool</span></div>`
+      +`<div class="p-stat"><b>0</b><span>that write anything</span></div>`;
+    $("cfbToolsLive").innerHTML=live.map(t=>{
+      const o=owner[t]||umbrella;
+      /* ⚠️ The lifecycle chip belongs to the roadmap IDEA, not to the tool. Say which,
+         or a live tool under a still-building idea reads as a tool that is not ready. */
+      return `<div class="cfbt"><code>${esc(t)}</code><span>${o?`roadmap idea: ${esc(o.name)}${o.lifecycle_status?` (that idea is ${esc(o.lifecycle_status)})`:""}`:"roadmap owner not recorded"}</span></div>`;
+    }).join("")||'<div class="p-loading">The live roster names no College Football tools.</div>';
+    $("cfbToolsPlanned").innerHTML=planned.length
+      ? `<b>Named on a card but not callable:</b> <code>${planned.map(esc).join("</code>, <code>")}</code>. These are reservations. They are not on the Worker and asking for one gets nothing.`
+      : "Every tool named on a card is callable.";
+    const mb=$("cfbMachineTools");
+    if(mb) mb.innerHTML=`<a href="/data/surfaces.json"><code>/data/surfaces.json</code></a> — the live Worker tool roster. ${live.length} of its entries are College Football tools: <code>${live.map(esc).join("</code>, <code>")}</code>. All read-only.`;
+  }
   const recLabel={"build":"BUILD","lab":"LAB","defer":"DEFER","avoid-initially":"AVOID INITIALLY","not-needed":"NOT NEEDED"};
   const catLabel=c=>c.replace(/-/g," ").replace(/\b\w/g,x=>x.toUpperCase());
   function renderCfb(){
     const cat=$("cfbCat").value,rec=$("cfbRec").value,life=$("cfbLife").value,step=$("cfbStep").value;
     const rows=cfbIdeas.filter(i=>(cat==="all"||i.category===cat)&&(rec==="all"||i.recommendation===rec)&&(life==="all"||i.lifecycle_status===life)&&(step==="all"||String(i.roadmap_step)===step));
     const implemented=cfbIdeas.filter(i=>i.implemented).length;
-    $("cfbCount").textContent=`${rows.length} of ${cfbIdeas.length} ideas shown · ${implemented} implemented artifacts · 0 candidate CFB MCP tools callable.`;
+    const callable=cfbToolSplit().live.length;
+    $("cfbCount").textContent=`${rows.length} of ${cfbIdeas.length} ideas shown · ${implemented} implemented artifacts · ${callable} CFB MCP tool${callable===1?"":"s"} callable now.`;
     $("cfbGrid").innerHTML=rows.map(i=>{
       const stepInfo=i.roadmap_step?cfbSteps.find(s=>s.step===i.roadmap_step):null;
       const mods=(i.recommendation_modifiers||[]).map(m=>m.replace(/-/g," ")).join(" · ");
-      return `<article class="tool"><span class="status rec-${esc(i.recommendation)}">${esc(recLabel[i.recommendation]||i.recommendation)}</span><span class="lifecycle-chip">${esc(i.lifecycle_status)}</span>${i.implemented?`<span class="lifecycle-chip">implemented</span>`:""}${i.roadmap_step?`<span class="lifecycle-chip">step ${i.roadmap_step}</span>`:""}<h3>${esc(i.name)}</h3><p class="meta-line">${esc(catLabel(i.category))}${mods?" · "+esc(mods):""} · priority: ${esc(i.priority)}${stepInfo?` · roadmap: ${esc(stepInfo.title)}`:""}</p><p>${esc(i.rationale)}</p><p><b>Expected value:</b> ${esc(i.expected_value)}</p>${i.delivery_note?`<p class="meta-line"><b>Delivery state:</b> ${esc(i.delivery_note)}</p>`:""}${i.delivery_evidence&&i.delivery_evidence.length?`<p class="meta-line"><b>Shipped evidence:</b> <code>${i.delivery_evidence.map(esc).join("</code>, <code>")}</code></p>`:""}${i.dependencies&&i.dependencies.length?`<p class="meta-line"><b>Depends on:</b> ${i.dependencies.map(esc).join(", ")}</p>`:""}${i.candidate_mcp_tools&&i.candidate_mcp_tools.length?`<p class="meta-line"><b>Candidate MCP tools (not callable):</b> <code>${i.candidate_mcp_tools.map(esc).join("</code>, <code>")}</code></p>`:""}<p class="meta-line"><b>How we would know it worked:</b> ${esc(i.validation_requirement)}</p><p class="meta-line"><b>Risks / limits:</b> ${esc(i.risks_limitations)}</p>${i.components&&i.components.length?`<div class="components"><b>Consolidates:</b><ul>${i.components.map(c=>`<li><b>${esc(c.name)}</b>${c.recommendation?` (${esc(recLabel[c.recommendation]||c.recommendation)})`:""} — ${esc(c.summary)}</li>`).join("")}</ul></div>`:""}${i.revisit_conditions&&i.revisit_conditions.length?`<p class="block"><b>We would revisit if:</b> ${i.revisit_conditions.map(esc).join("; ")}.</p>`:""}${i.notes?`<p class="meta-line">${esc(i.notes)}</p>`:""}</article>`;
+      return `<article class="tool"><span class="status rec-${esc(i.recommendation)}">${esc(recLabel[i.recommendation]||i.recommendation)}</span><span class="lifecycle-chip">${esc(i.lifecycle_status)}</span>${i.implemented?`<span class="lifecycle-chip">implemented</span>`:""}${i.roadmap_step?`<span class="lifecycle-chip">step ${i.roadmap_step}</span>`:""}<h3>${esc(i.name)}</h3><p class="meta-line">${esc(catLabel(i.category))}${mods?" · "+esc(mods):""} · priority: ${esc(i.priority)}${stepInfo?` · roadmap: ${esc(stepInfo.title)}`:""}</p><p>${esc(i.rationale)}</p><p><b>Expected value:</b> ${esc(i.expected_value)}</p>${i.delivery_note?`<p class="meta-line"><b>Delivery state:</b> ${esc(i.delivery_note)}</p>`:""}${i.delivery_evidence&&i.delivery_evidence.length?`<p class="meta-line"><b>Shipped evidence:</b> <code>${i.delivery_evidence.map(esc).join("</code>, <code>")}</code></p>`:""}${i.dependencies&&i.dependencies.length?`<p class="meta-line"><b>Depends on:</b> ${i.dependencies.map(esc).join(", ")}</p>`:""}${(()=>{const t=i.candidate_mcp_tools||[],on=t.filter(x=>liveMcp.has(x)),off=t.filter(x=>!liveMcp.has(x));return (on.length?`<p class="meta-line"><b>Live over MCP:</b> <code>${on.map(esc).join("</code>, <code>")}</code></p>`:"")+(off.length?`<p class="meta-line"><b>Named, not callable:</b> <code>${off.map(esc).join("</code>, <code>")}</code></p>`:"")})()}<p class="meta-line"><b>How we would know it worked:</b> ${esc(i.validation_requirement)}</p><p class="meta-line"><b>Risks / limits:</b> ${esc(i.risks_limitations)}</p>${i.components&&i.components.length?`<div class="components"><b>Consolidates:</b><ul>${i.components.map(c=>`<li><b>${esc(c.name)}</b>${c.recommendation?` (${esc(recLabel[c.recommendation]||c.recommendation)})`:""} — ${esc(c.summary)}</li>`).join("")}</ul></div>`:""}${i.revisit_conditions&&i.revisit_conditions.length?`<p class="block"><b>We would revisit if:</b> ${i.revisit_conditions.map(esc).join("; ")}.</p>`:""}${i.notes?`<p class="meta-line">${esc(i.notes)}</p>`:""}</article>`;
     }).join("")||'<div class="p-loading">No ideas match these filters.</div>';
   }
   async function loadInventory(){try{
-    const env=await json("/data/pound-tools.json");if(!Array.isArray(env.data))throw new Error("inventory payload is malformed");
+    const [env,surfaces]=await Promise.all([json("/data/pound-tools.json"),json("/data/surfaces.json")]);
+    if(!Array.isArray(env.data))throw new Error("inventory payload is malformed");
+    /* Fail loud rather than silently reporting zero callable tools — a missing roster is
+       not evidence that nothing is live, and the old zero was exactly that mistake. */
+    if(!surfaces||!surfaces.mcp||!Array.isArray(surfaces.mcp.tools_live))throw new Error("surfaces.json is missing its live MCP roster");
+    liveMcp=new Set(surfaces.mcp.tools_live);
     allTools=env.data.filter(t=>(t.kind||"tool")==="tool");renderTools("all");$("toolFilter").addEventListener("change",e=>renderTools(e.target.value));
     cfbIdeas=env.data.filter(t=>t.kind==="roadmap-idea");cfbSteps=(env.cfb_roadmap&&env.cfb_roadmap.steps)||[];
     const addOpts=(id,vals,label)=>{const sel=$(id);vals.forEach(v=>{const o=document.createElement("option");o.value=String(v);o.textContent=label?label(v):String(v);sel.appendChild(o)});sel.addEventListener("change",renderCfb)};
@@ -2215,8 +2280,9 @@ STATE: everything saves in the browser on that device. A different device shows 
     addOpts("cfbLife",[...new Set(cfbIdeas.map(i=>i.lifecycle_status))]);
     addOpts("cfbStep",cfbSteps.map(s=>s.step),v=>{const s=cfbSteps.find(x=>x.step===v);return `${v} · ${s?s.title:""}`});
     $("cfbRec").addEventListener("change",renderCfb);
+    renderCfbTools();
     renderCfb();
-  }catch(err){$("toolInventory").innerHTML='<div class="p-error">Inventory unavailable: '+esc(err.message)+'</div>';$("cfbGrid").innerHTML='<div class="p-error">CFB roadmap unavailable: '+esc(err.message)+'</div>'}}
+  }catch(err){$("toolInventory").innerHTML='<div class="p-error">Inventory unavailable: '+esc(err.message)+'</div>';$("cfbGrid").innerHTML='<div class="p-error">CFB roadmap unavailable: '+esc(err.message)+'</div>';$("cfbToolsLive").innerHTML='<div class="p-error">Live CFB tool roster unavailable: '+esc(err.message)+' — this is not a claim that no tools are live.</div>'}}
   async function loadProvenance(){try{const env=await json("/data/upstream-models.json");if(!Array.isArray(env.data))throw new Error("provenance payload is malformed");$("provGrid").innerHTML=env.data.map(x=>`<article class="prov"><h3>${esc(x.id)}</h3><p><a href="https://github.com/${esc(x.repository)}" target="_blank" rel="noopener">${esc(x.repository)}</a></p><p><b>License:</b> ${esc(x.license||"unverified")} · ${esc(x.license_status)}</p><p><b>Mode:</b> ${esc(x.integration_mode)}</p><p>${esc(x.notes)}</p></article>`).join("")}catch(err){$("provGrid").innerHTML='<div class="p-error">Provenance unavailable: '+esc(err.message)+'</div>'}}
   loadScoreboard();loadInventory();loadProvenance();
 })();
