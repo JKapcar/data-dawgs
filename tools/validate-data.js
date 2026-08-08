@@ -12,6 +12,10 @@ const crypto = require('crypto');
 
 const ROOT = path.resolve(__dirname, '..');
 const DATA = path.join(ROOT, 'data');
+
+// Markdown is committed and served with LF even when a Windows checkout exposes
+// CRLF in the working tree.
+const servedText = text => text.replace(/\r\n/g, '\n');
 const fails = [];
 const warns = [];
 const ok = m => console.log('  ok   ' + m);
@@ -82,7 +86,7 @@ console.log('\nmarkdown mirrors');
     const rel = m.path.replace(/^\//, '');
     const p = path.join(ROOT, rel);
     if (!fs.existsSync(p)) { fail(`${rel}: listed in index.json but missing on disk`); continue; }
-    const txt = fs.readFileSync(p, 'utf8');
+    const txt = servedText(fs.readFileSync(p, 'utf8'));
     const head = txt.slice(0, 900);
     const found = (head.match(AS_OF_RE) || [])[1];
     if (!found) { fail(`${rel}: front matter missing a valid as_of`); continue; }

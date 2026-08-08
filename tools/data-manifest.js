@@ -11,6 +11,13 @@ function digest(text) {
   return crypto.createHash('sha256').update(text).digest('hex');
 }
 
+// Git stores the Markdown mirrors with LF and GitHub Pages serves those committed
+// bytes. A Windows checkout may expose CRLF locally, so canonicalize before
+// recording the served byte count and digest.
+function servedText(text) {
+  return text.replace(/\r\n/g, '\n');
+}
+
 function writeDataManifest({ built = new Date().toISOString().slice(0, 10) } = {}) {
   let previous = { data: { files: [], markdown: [] } };
   try { previous = JSON.parse(fs.readFileSync(path.join(DATA, 'index.json'), 'utf8')); } catch (_) {}
@@ -41,7 +48,7 @@ function writeDataManifest({ built = new Date().toISOString().slice(0, 10) } = {
     previous.data.markdown || []
   )
     .map(name => {
-      const text = fs.readFileSync(path.join(DATA, name), 'utf8');
+      const text = servedText(fs.readFileSync(path.join(DATA, name), 'utf8'));
       const head = text.slice(0, 900);
       const asOf = (head.match(/^as_of:\s*["']?(\d{4}-\d{2}-\d{2})["']?\s*$/m) || [])[1];
       if (!asOf || !/^source:\s*\S/m.test(head)) throw new Error(`${name}: missing as_of or source front matter`);
