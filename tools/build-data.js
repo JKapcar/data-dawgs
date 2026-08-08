@@ -1026,6 +1026,9 @@ const MCP_REGISTRY = (() => {
 // Staged = the tool is in work/mcp-block.js and the committed Worker source, but the
 // deployed Worker has not been updated yet. It is NOT callable. Keeping it out of
 // tools_live is the whole point: the map must not claim coverage the endpoint has.
+// ⚠️ EDITING THIS LIST IS STEP 3 OF A WORKER DEPLOY, NOT A STANDALONE CHANGE.
+// docs/mcp-catalogs.md has the full order; skipping the rest of it leaves this file
+// claiming a shape the endpoint does not have.
 const MCP_STAGED = ['dd_draft_bozo_leg'];
 const MCP_LIVE = MCP_REGISTRY.map(t => t.name).filter(n => !MCP_STAGED.includes(n));
 for (const n of MCP_STAGED)

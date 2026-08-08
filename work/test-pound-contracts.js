@@ -128,6 +128,24 @@ test('the surfaces map derives its MCP roster from the registry and labels the c
   assert.ok(Object.values(titles).every(t => typeof t === 'string' && t.length > 0));
   assert.equal(new Set(Object.values(titles)).size, declared.length, 'two tools sharing a title is a UI that lies');
 });
+/* ⚠️ THE DEPLOY CHECKLIST IS PART OF THE ARTIFACT, SO IT IS GRADED LIKE ONE.
+   docs/mcp-catalogs.md tells whoever runs the Worker deploy which files must change in the
+   same commit. A checklist that has drifted from the code is worse than none, because it
+   reads as verified. So the doc has to keep naming the real staged set, the real core set,
+   and its own not-deployed status. */
+test('docs/mcp-catalogs.md still matches the registry it documents', () => {
+  const doc = fs.readFileSync(path.join('docs', 'mcp-catalogs.md'), 'utf8');
+  assert.match(doc, /NOT deployed/, 'the doc must keep saying the catalogs are not live');
+  for (const name of surfaces.mcp.tools_staged)
+    assert.ok(doc.includes(name), `${name} is staged but docs/mcp-catalogs.md never mentions it`);
+  const cat = surfaces.mcp.catalogs_staged;
+  for (const name of cat.core)
+    assert.ok(doc.includes(name), `${name} is in the core catalog but is not listed in the doc`);
+  // the doc states the two counts in prose; keep them true
+  assert.ok(doc.includes(`| core | ${cat.core.length} |`) || new RegExp(`core\\b[^\\n]*\\b${cat.core.length}\\b`).test(doc),
+    'the doc must state the real core count');
+  assert.ok(new RegExp(`\\b${cat.full.length}\\b`).test(doc), 'the doc must state the real full count');
+});
 test('survivor surface exposes the exact path optimizer and names its remaining rule gap', () => {
   const survivor = surfaces.data.find(s => s.id === 'survivor');
   assert.ok(survivor.machine.some(x => x.kind === 'mcp' && x.tool === 'dd_optimize_survivor_path' && x.status === 'live'));
