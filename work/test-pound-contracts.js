@@ -41,6 +41,8 @@ test('not-installed upstream packages are not labelled direct integrations', () 
 test('forecast contract retains nullable unsupported fields', () => {
   assert.match(contracts.data.null_policy, /null/i);
   assert.ok(contracts.data.forecast_required.includes('forecast_status'));
+  assert.ok(contracts.data.forecast_required.includes('schedule_snapshot_id'));
+  assert.match(contracts.data.snapshot_policy, /not interchangeable/i);
   assert.deepEqual(contracts.data.forecast_status_values, ['backtest', 'prospective']);
   assert.match(contracts.data.calculator_contracts.normal_translation.formula, /inverse_standard_normal/);
   assert.match(contracts.data.calculator_contracts.normal_translation.formula, /0\.5/);
@@ -70,12 +72,12 @@ test('deployed Pound tools name live MCP implementations without staged claims',
     assert.equal(t.staged_worker_mcp_implementation, null);
     assert.equal(t.exact_blocker, null);
   });
-  assert.equal(contracts.data.contract_version, '1.3.0');
+  assert.equal(contracts.data.contract_version, '1.4.0');
   assert.equal(contracts.data.calculator_contracts.odds_converter.mcp_tool, 'dd_convert_odds');
 });
 test('new data surfaces are in the generated manifest', () => {
   const paths = new Set(index.data.files.map(x => x.path));
-  for (const p of ['/data/pound-tools.json', '/data/model-contracts.json', '/data/upstream-models.json', '/data/nfl-schedule.json', '/data/model-receipts.json']) assert.ok(paths.has(p), p);
+  for (const p of ['/data/pound-tools.json', '/data/model-contracts.json', '/data/upstream-models.json', '/data/nfl-schedule.json', '/data/model-receipts.json', '/data/538-classic.json']) assert.ok(paths.has(p), p);
 });
 test('NFL backbone is complete and exposes its canonical files', () => {
   const backbone = tools.data.find(t => t.id === 'nfl-data');
@@ -86,6 +88,19 @@ test('NFL backbone is complete and exposes its canonical files', () => {
   const urls = new Set(pound.machine.filter(x => x.status === 'live').map(x => x.url));
   assert.ok(urls.has('/data/nfl-schedule.json'));
   assert.ok(urls.has('/data/model-receipts.json'));
+  assert.ok(urls.has('/data/538-classic.json'));
+  assert.ok(urls.has('/data/538-classic-methodology.md'));
+});
+test('538 Classic and multi-model receipts are live but ungraded', () => {
+  const model = read('538-classic.json');
+  const receipts = read('model-receipts.json');
+  assert.equal(model.graded, false);
+  assert.equal(model.validation.official_probabilities_compared, 16810);
+  assert.ok(model.validation.max_absolute_probability_error < 0.000002);
+  assert.equal(model.data.forecasts.length, 272);
+  assert.equal(receipts.data.filter(x => x.model_id === 'nfelo').length, 272);
+  assert.equal(receipts.data.filter(x => x.model_id === '538-classic').length, 272);
+  assert.ok(receipts.data.every(x => x.forecast_status === 'prospective'));
 });
 test('all shared-nav pages point at pound.html exactly once', () => {
   const pages = fs.readdirSync('.').filter(x => x.endsWith('.html'));
@@ -107,6 +122,8 @@ test('Pound page declares its tier and accessible result regions', () => {
   assert.match(html, /<option>ready<\/option>/);
   assert.match(html, /live, read-only Worker tools/i);
   assert.match(html, /<b>Live MCP:<\/b>/);
+  assert.match(html, /Week 1 nfelo and 538 Classic belief scoreboard/);
+  assert.match(html, /\/data\/model-receipts\.json/);
 });
 
 console.log(`\n${pass} passed / 0 failed`);

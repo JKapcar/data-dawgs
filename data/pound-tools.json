@@ -1,6 +1,6 @@
 {
- "as_of": "2026-08-07",
- "source": "Reconciled against the Data Dawgs site, Worker source and inspected upstream projects on 2026-08-07.",
+ "as_of": "2026-08-08",
+ "source": "Reconciled against the Data Dawgs site, Worker source and inspected upstream projects on 2026-08-08.",
  "tier": "pound",
  "graded": false,
  "note": "Complete means the requested delivery layers are live. Ready means the Worker source and tests exist but production activation is still pending. Frontend-only means the browser tool and public contract exist without an MCP endpoint for the full requested scope. Blocked tools keep an exact minimum path instead of being omitted.",
@@ -8,24 +8,24 @@
   {
    "id": "model-scoreboard",
    "name": "Model Scoreboard / Mean & Conflict",
-   "intended_user_value": "Compare dated model and market beliefs game by game.",
+   "intended_user_value": "Compare dated nfelo and 538 Classic beliefs game by game.",
    "existing_website_implementation": "/pound.html#scoreboard",
    "existing_worker_mcp_implementation": "dd_analyze_matchup",
    "staged_worker_mcp_implementation": null,
-   "required_data": "Uses the dated nfelo and market snapshots already published by Data Dawgs.",
+   "required_data": "Uses the normalized prospective nfelo and 538 Classic receipts published by Data Dawgs.",
    "human_facing_ui_requirement": "Interactive game table with metric/source states.",
    "ai_language_requirement": "Explain the equal-weight mean, range, dissent and missing models without claiming a validated consensus blend.",
    "mcp_api_requirement": "Keep dd_analyze_matchup read-only and align its contract with the public JSON.",
-   "machine_readable_requirement": "/data/nfelo.json + /data/survivor.json",
+   "machine_readable_requirement": "/data/model-receipts.json + /data/538-classic.json",
    "status": "frontend-only",
-   "exact_blocker": "More independently licensed model feeds are needed for a true multi-model board.",
-   "minimum_path_to_completion": "Normalize and publish at least one lawfully integrated independent model feed, then join it by canonical game_id."
+   "exact_blocker": "The human two-model board is live, but dd_analyze_matchup does not yet expose the normalized multi-model ledger.",
+   "minimum_path_to_completion": "Add a read-only matchup query over model-receipts.json without storing caller activity or claiming a validated consensus blend."
   },
   {
    "id": "disagreement",
    "name": "Transparent Disagreement Engine",
    "intended_user_value": "Show mean, median, range, standard deviation and decision-boundary splits.",
-   "existing_website_implementation": "/pound.html#calculators",
+   "existing_website_implementation": "/pound.html#scoreboard + /pound.html#calculators",
    "existing_worker_mcp_implementation": "dd_summarize_beliefs",
    "staged_worker_mcp_implementation": null,
    "required_data": "Any list of probabilities, plus the current scoreboard.",
@@ -44,11 +44,11 @@
    "existing_website_implementation": "/pound.html#calculators",
    "existing_worker_mcp_implementation": "dd_elo_game",
    "staged_worker_mcp_implementation": null,
-   "required_data": "User-supplied Elo ratings; MIT mathematics HFA=65.",
-   "human_facing_ui_requirement": "One-game probability calculator.",
-   "ai_language_requirement": "Describe this as a calculator until canonical 2026 state and receipts ship.",
+   "required_data": "Pinned official reference, completed canonical game history and the 2026 schedule snapshot.",
+   "human_facing_ui_requirement": "Prospective scoreboard column plus one-game probability calculator.",
+   "ai_language_requirement": "Permanent simple benchmark; reproduced historically and still ungraded prospectively.",
    "mcp_api_requirement": "Keep dd_elo_game read-only and align its contract with the public JSON.",
-   "machine_readable_requirement": "/data/upstream-models.json + /data/model-contracts.json",
+   "machine_readable_requirement": "/data/538-classic.json + /data/model-receipts.json + /data/538-classic-methodology.md",
    "status": "complete",
    "exact_blocker": null,
    "minimum_path_to_completion": "No known blocker for the deployed scope."
@@ -304,10 +304,10 @@
    "human_facing_ui_requirement": "Contract and link to the existing 2026 receipt ledger.",
    "ai_language_requirement": "Never mix backtests and prospective forecasts.",
    "mcp_api_requirement": "Add a read-only Worker tool only after the required deterministic data or runtime is validated.",
-   "machine_readable_requirement": "/data/receipts.json + /data/model-contracts.json",
-   "status": "data-blocked",
-   "exact_blocker": "Only the current nfelo-derived ledger exists; multi-model append-only storage is not built.",
-   "minimum_path_to_completion": "Emit normalized forecasts from multiple models before kickoff, retain exact input snapshots, and store later results separately by forecast_id."
+   "machine_readable_requirement": "/data/model-receipts.json + /data/model-contracts.json",
+   "status": "complete",
+   "exact_blocker": null,
+   "minimum_path_to_completion": "No known blocker for the deployed scope; outcomes and grades remain separate future data."
   },
   {
    "id": "regimes",
@@ -322,7 +322,7 @@
    "mcp_api_requirement": "Add a read-only Worker tool only after the required deterministic data or runtime is validated.",
    "machine_readable_requirement": "/data/model-contracts.json",
    "status": "data-blocked",
-   "exact_blocker": "There are no multi-model prospective results yet.",
+   "exact_blocker": "Two-model prospective receipts exist, but no 2026 outcomes have occurred or been graded yet.",
    "minimum_path_to_completion": "Accumulate adequate prospective samples, preregister slices and minimum counts, and mark post-hoc analysis exploratory."
   },
   {
@@ -359,6 +359,6 @@
   }
  ],
  "tier_meaning": "The Pound — shelved, with the reason attached.",
- "built": "2026-08-07",
+ "built": "2026-08-08",
  "canonical_url": "https://datadawgs216.com/data/pound-tools.json"
 }

@@ -204,7 +204,44 @@ console.log('\nNFL backbone — canonical schedule and append-only model receipt
     if (hash !== ledger.integrity.sha256) fail('model-receipts.json: ledger hash mismatch');
     else if (ledger.integrity.rows !== rows.length) fail('model-receipts.json: integrity.rows mismatch');
     else ok('normalized receipt ledger hash and row count reproduce');
+    if (rows.some(row => !/^sha256:[0-9a-f]{64}$/.test(row.schedule_snapshot_id || '')))
+      fail('model-receipts.json: a receipt lacks a schedule snapshot identifier');
+    else ok('every normalized receipt names its canonical schedule snapshot');
+    if (rows.some(row => !/^[0-9a-f]{40,64}$/.test(row.source_commit || '')))
+      fail('model-receipts.json: a receipt lacks an exact source commit');
+    const counts = rows.reduce((out, row) => (out[row.model_id] = (out[row.model_id] || 0) + 1, out), {});
+    if (counts.nfelo !== 272 || (counts['538-classic'] || 0) < 272)
+      fail(`model-receipts.json: expected 272 nfelo and at least 272 538-classic rows; got ${JSON.stringify(counts)}`);
+    else ok('two complete prospective model sets are locked');
   }
+
+  const classic = JSON.parse(fs.readFileSync(path.join(DATA, '538-classic.json'), 'utf8'));
+  const classicDataHash = 'sha256:' + crypto.createHash('sha256').update(canonicalJson(classic.data)).digest('hex');
+  const classicInputHash = 'sha256:' + crypto.createHash('sha256')
+    .update(canonicalJson(classic.provenance.input_material)).digest('hex');
+  if (classic.integrity.snapshot_id !== classicDataHash) fail('538-classic.json: public snapshot hash mismatch');
+  else if (classic.integrity.input_snapshot_id !== classicInputHash) fail('538-classic.json: input snapshot hash mismatch');
+  else ok('538 Classic public and input snapshot hashes reproduce');
+  if (classic.graded !== false || classic.validation.status !== 'reproduced' ||
+      classic.validation.official_probabilities_compared !== 16810 ||
+      classic.validation.max_absolute_probability_error >= 0.000002)
+    fail('538-classic.json: historical reproduction evidence is missing or out of tolerance');
+  else ok('538 Classic reproduces 16,810 official probabilities within declared tolerance');
+  const expectedProspective = games.filter(game => game.status === 'scheduled' &&
+    Date.parse(game.kickoff_at) > Date.parse(classic.provenance.generated_at)).length;
+  if (!Array.isArray(classic.data.teams) || classic.data.teams.length !== 32 ||
+      !Array.isArray(classic.data.forecasts) || classic.data.forecasts.length !== expectedProspective)
+    fail(`538-classic.json: expected 32 teams and ${expectedProspective} still-prospective forecasts`);
+  else ok(`538 Classic covers 32 teams and ${expectedProspective} still-prospective games`);
+  const currentClassicReceipts = new Map(rows
+    .filter(row => row.model_id === '538-classic' && row.input_snapshot_id === classic.integrity.input_snapshot_id)
+    .map(row => [row.game_id, row]));
+  if (classic.data.forecasts.some(forecast => {
+    const receipt = currentClassicReceipts.get(forecast.game_id);
+    return !receipt || receipt.home_win_probability !== forecast.home_win_probability ||
+      receipt.schedule_snapshot_id !== schedule.integrity.snapshot_id;
+  })) fail('538-classic.json: a current forecast is absent from or disagrees with the receipt ledger');
+  else ok('every current 538 Classic forecast has a matching immutable receipt');
 }
 
 console.log('\nllms.txt');
