@@ -8,7 +8,7 @@
 <style>
 :root{
   color-scheme: dark;
-  --surface-1:#16120d; --page:#120e08;
+  --surface-1:#16120d; --page:#0b0802;
   --ink-1:#f5f1ea; --ink-2:#c8c1b4; --ink-3:#8f897d;
   --grid:#2b251d; --axis:#3b3428; --border:rgba(255,255,255,0.10);
   --accent:#ff6a02; --accent-ink:#140a02;
@@ -226,7 +226,7 @@ body{margin:0;background:var(--page);color:var(--ink-1);
    a light-mode version of it would be a fourth theme nobody asked for. Colours are
    therefore hard-coded to the dark tokens, NOT var(--page)/var(--ink-*), which would
    flip to cream under :root[data-theme="light"]. Do not "tidy" them into variables. */
-.ud-ov{position:fixed;inset:0;z-index:9000;display:none;background:#120e08;color:#c8c1b4;
+.ud-ov{position:fixed;inset:0;z-index:9000;display:none;background:#0b0802;color:#c8c1b4;
   overflow:auto;overscroll-behavior:contain;
   font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 .ud-ov.on{display:block}
@@ -345,6 +345,22 @@ body{margin:0;background:var(--page);color:var(--ink-1);
      back, revert the whole block; do not paste those rules below this one. */
   .sitenav .links a.livebtn{margin-left:0}
   :root[data-theme="light"] .sitenav .links > a.livebtn{margin-left:0}
+
+  /* ⚠️ 🙃 STOPS BEING CENTRED HERE, and that is a collision fix, not taste. Ask Toto's
+     launcher is fixed 20px off the bottom-right and is 145px wide, so at 320px its left
+     edge lands at x=163 — while a centred 38px 🙃 spans 143 to 177. A 14px overlap, on
+     18 of the 20 pages, measured 2026-08-08. It is 320px-only: at 390px the launcher's
+     left edge is 233 against a 🙃 ending at 212.
+     ⚠️ WHY IT SHIPPED IN 52af998 UNSEEN: the launcher is position:fixed, so at scroll 0
+     the two are nowhere near each other. The first test-udfoot.mjs measured at scroll 0,
+     passed 659/659, and proved nothing. The suite now scrolls to the document bottom
+     before it measures — it fails 18 times against 52af998. Do not "simplify" that
+     scroll out of the test.
+     Two independent guards, deliberately redundant: flex-start moves 🙃 out of the
+     launcher's column, and the bottom padding lifts it above the launcher's band even if
+     the launcher ever grows or moves. Pages WITH a footer are not safe by default — the
+     .wrap's 60px bottom padding left only ~2px of margin, which is not margin. */
+  .udfoot{justify-content:flex-start;padding-bottom:72px}
 }
 /* ---- cards & type ---- */
 .card{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:18px}
@@ -416,7 +432,7 @@ footer a{color:var(--accent)}
 <style>
 :root{
   color-scheme: dark;
-  --surface-1:#16120d; --page:#120e08;
+  --surface-1:#16120d; --page:#0b0802;
   --ink-1:#f5f1ea; --ink-2:#c8c1b4; --ink-3:#8f897d;
   --grid:#2b251d; --axis:#3b3428; --border:rgba(255,255,255,0.10);
   --accent:#ff6a02; --good:#2fbf3f; --bad:#ff6b6b;
