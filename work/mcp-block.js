@@ -58,6 +58,7 @@ let mcpCfbDisagreementCache = { at: 0, data: null };
 let mcpCfbReceiptCache = { at: 0, data: null };
 let mcpCfbScheduleCache = { at: 0, data: null };
 let mcpCfbMarketCache = { at: 0, data: null };
+let mcpCfbModelCardsCache = { at: 0, data: null };
 
 // Abramowitz–Stegun normal CDF — the SAME approximation survivor.html ships, so the
 // tool and the page cannot disagree about a probability by more than float dust.
@@ -701,6 +702,35 @@ async function mcpCfbHistoricalMarket() {
   return mcpCfbMarketCache.data;
 }
 
+async function mcpCfbModelCards() {
+  if (!mcpCfbModelCardsCache.data || Date.now() - mcpCfbModelCardsCache.at > 900e3) {
+    const response = await fetch(`${SITE}/data/cfb-model-cards.json`, { cf: { cacheTtl: 900, cacheEverything: true } });
+    if (!response.ok) throw new Error("cfb-model-cards.json unavailable: HTTP " + response.status);
+    const envelope = await response.json();
+    const cards = envelope && envelope.data && envelope.data.cards;
+    if (!envelope || !envelope.as_of || !envelope.source || envelope.graded !== false ||
+        !Array.isArray(cards) || !cards.length || cards.length > 50)
+      throw new Error("cfb-model-cards.json has an invalid governance envelope");
+    if (envelope.integrity && Number.isInteger(envelope.integrity.cards) && envelope.integrity.cards !== cards.length)
+      throw new Error("cfb-model-cards.json card count does not match its integrity receipt");
+    const ids = new Set();
+    for (const card of cards) {
+      if (!card || typeof card.model_id !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(card.model_id) ||
+          ids.has(card.model_id) || typeof card.model_name !== "string" || !card.model_name ||
+          typeof card.model_version !== "string" || !card.model_version || typeof card.purpose !== "string" ||
+          typeof card.target !== "string" || !Array.isArray(card.features) || !card.features.length ||
+          !card.validation_design || typeof card.validation_design.kind !== "string" ||
+          !card.performance || !Array.isArray(card.known_limitations) || !card.known_limitations.length ||
+          !Array.isArray(card.failure_modes) || !card.failure_modes.length || !card.receipts ||
+          typeof card.receipts.prospective_receipts_exist !== "boolean")
+        throw new Error("cfb-model-cards.json has an invalid or duplicate model card");
+      ids.add(card.model_id);
+    }
+    mcpCfbModelCardsCache = { at: Date.now(), data: envelope };
+  }
+  return mcpCfbModelCardsCache.data;
+}
+
 function mcpCfbTeamSlug(v) {
   return String(v || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
     .toLowerCase().replace(/&/g, " and ").replace(/[\u2018\u2019']/g, "")
@@ -874,6 +904,18 @@ function mcpCfbMarketTeam(games, input) {
     throw new Error("team is not an exact historical market name or slug" + (partial.length > 1 ? " and is ambiguous" : "") + "; try: " + choices);
   }
   throw new Error("team is not present in the dated historical CFB market surface: " + input.query);
+}
+
+function mcpCfbModelCardArgs(args) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+  const extra = Object.keys(args).filter(k => k !== "model_id");
+  if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+  if (args.model_id === undefined) return { modelId: null };
+  if (typeof args.model_id !== "string" || !args.model_id.trim() || args.model_id.trim().length > 80)
+    throw new Error("model_id must be a non-empty string of at most 80 characters");
+  const modelId = args.model_id.trim().toLowerCase();
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(modelId)) throw new Error("model_id must be a lowercase slug");
+  return { modelId };
 }
 
 function mcpCfbCompareArgs(args) {
@@ -1183,7 +1225,7 @@ async function mcpDispatch(m, env, caller) {
           "Everything here is read-only and is either the league's own data, public play-by-play, " +
           "or a deterministic calculation over caller-supplied inputs. Calculator inputs and results are not stored. " +
           "The model scoreboard reads dated prospective receipts and returns descriptive disagreement only; it is ungraded and is not a validated consensus or ranking. " +
-          "The CFB reads separate observed 2025 results from one end-of-2025 retrodictive Elo row. dd_find_cfb_games reads the actual canonical 2025 schedule/results surface; it is historical and not the unpublished 2026 schedule. dd_find_cfb_historical_market returns book-identified prices whose observation time is unknown: never call them closing lines, compute CLV or cite them as prospective inputs. dd_project_cfb_matchup and dd_project_cfb_schedule_path are hypothetical rating-period calculations, not scheduled 2026 forecasts. dd_find_cfb_record_divergence returns descriptive record-versus-scoring gaps whose small held-out lift does not authorize current-team labels. dd_get_cfb_model_disagreement returns a blocked study whose untimestamped market input prevents a winner or blend conclusion. dd_get_cfb_model_receipt_status reports the append-only prospective ledger honestly; receipt rows remain ungraded and outcomes belong in a separate surface. All CFB outputs are ungraded, not market-adjusted and are not a consensus. " +
+          "The CFB reads separate observed 2025 results from one end-of-2025 retrodictive Elo row. dd_find_cfb_games reads the actual canonical 2025 schedule/results surface; it is historical and not the unpublished 2026 schedule. dd_find_cfb_historical_market returns book-identified prices whose observation time is unknown: never call them closing lines, compute CLV or cite them as prospective inputs. dd_get_cfb_model_card returns generated governance and retrodictive evidence, not a current forecast or leaderboard. dd_project_cfb_matchup and dd_project_cfb_schedule_path are hypothetical rating-period calculations, not scheduled 2026 forecasts. dd_find_cfb_record_divergence returns descriptive record-versus-scoring gaps whose small held-out lift does not authorize current-team labels. dd_get_cfb_model_disagreement returns a blocked study whose untimestamped market input prevents a winner or blend conclusion. dd_get_cfb_model_receipt_status reports the append-only prospective ledger honestly; receipt rows remain ungraded and outcomes belong in a separate surface. All CFB outputs are ungraded, not market-adjusted and are not a consensus. " +
           "There is no built-in DFS projection or ownership feed: dd_solve_dfs_lineup requires the caller to supply every value per call, and stores none of them. dd_optimize_survivor_path is an ungraded ceiling over a dated snapshot and does not model double-pick weeks. When quoting bozo odds, survivor odds " +
           "or the correlation matrix, say it is model output or a measured historical average, never a forecast " +
           "of a specific game. Team names, weeks and league ids come from dd_league_overview — do not guess them.",
@@ -2652,6 +2694,68 @@ const MCP_TOOLS = [
           "The source-labelled open fields are retained as upstream labels, not as a verified line history or timing claim.",
           "Never call these closing lines, compute CLV from them, cite them in a prospective forecast receipt or treat them as a current betting market.",
           "Prices are historical reference observations only and do not establish an edge or recommendation.",
+        ],
+      });
+    },
+  },
+  {
+    name: "dd_get_cfb_model_card",
+    description: "List available generated CFB model cards or return one exact model card with purpose, target, features, parameters, validation, performance, calibration, limitations, failure modes, receipts and provenance. Model-card status is governance, not proof of a current forecast, prospective track record, consensus or recommendation.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        model_id: { type: "string", minLength: 1, maxLength: 80, description: "Optional exact model slug. Omit to list compact card summaries." },
+      },
+      additionalProperties: false,
+    },
+    async run(args) {
+      const input = mcpCfbModelCardArgs(args);
+      const envelope = await mcpCfbModelCards();
+      const cards = envelope.data.cards;
+      const summaries = cards.map(card => ({
+        model_id: card.model_id,
+        model_name: card.model_name,
+        model_version: card.model_version,
+        roadmap_idea: card.roadmap_idea || null,
+        roadmap_step: card.roadmap_step || null,
+        lifecycle_status: card.lifecycle_status || null,
+        retirement_status: card.retirement_status || null,
+        purpose: card.purpose,
+        target: card.target,
+        validation_kind: card.validation_design.kind,
+        prospective_receipts_exist: card.receipts.prospective_receipts_exist,
+        methodology_url: card.methodology_url || null,
+      })).sort((a, b) => a.model_id.localeCompare(b.model_id));
+      let card = null;
+      if (input.modelId) {
+        card = cards.find(row => row.model_id === input.modelId) || null;
+        if (!card) throw new Error("model_id is not present in the dated CFB model-card registry; available: " + summaries.map(row => row.model_id).join(", "));
+      }
+      const selected = card ? [card] : cards;
+      const anyProspective = selected.some(row => row.receipts.prospective_receipts_exist === true);
+      const allProspectiveValidation = selected.every(row => row.validation_design.kind === "prospective");
+      return toolText({
+        mode: card ? "model-card" : "model-card-index",
+        query: { model_id: input.modelId },
+        available_models: summaries,
+        card,
+        as_of: envelope.as_of,
+        source: envelope.source,
+        built: envelope.built || null,
+        integrity: envelope.integrity || null,
+        cards_are_generated_from_model_output: true,
+        prospective_receipts_exist: anyProspective,
+        prospective_validation: allProspectiveValidation,
+        graded: false,
+        consensus: false,
+        current_forecast: false,
+        read_only: true,
+        stored: false,
+        warnings: [
+          "A lifecycle value documents roadmap state; it does not prove forecast skill or a live prospective track record.",
+          "Retrodictive performance and calibration are evaluation evidence, not current-season forecasts or betting recommendations.",
+          "Read each card's known_limitations, failure_modes and receipts fields before interpreting its performance.",
+          "The current registry is not a consensus and no model card appears on a CFB leaderboard without prospective receipts and separate grading.",
         ],
       });
     },

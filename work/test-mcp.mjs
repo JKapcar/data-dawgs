@@ -275,6 +275,36 @@ const cfbMarketJson = {
     ],
   },
 };
+const cfbModelCardsJson = {
+  as_of: "2026-08-08",
+  source: "test generated CFB model cards",
+  built: "2026-08-08",
+  graded: false,
+  integrity: { snapshot_id: "sha256:test-cfb-model-cards", cards: 1 },
+  data: {
+    cards: [{
+      model_id: "cfb-elo", model_name: "Data Dawgs CFB Elo baseline", model_version: "1.0.0",
+      roadmap_idea: "cfb-elo", roadmap_step: 2,
+      lifecycle_status: { roadmap_lifecycle_status: "live", roadmap_implemented_flag: true },
+      retirement_status: "active",
+      purpose: "Be the interpretable floor every future CFB model must clear.",
+      target: "Probability that the home team wins a single FBS-vs-FBS game.",
+      features: ["Prior results, margin and site only."],
+      training_window: { burn_in_seasons: [2018, 2019, 2020, 2021, 2022, 2023, 2024], evaluation_season: 2025 },
+      parameters: { base_rating: 1500, k_factor: 35, home_field_elo: 55 },
+      parameters_fixed_before_evaluation: true,
+      validation_design: { kind: "retrodictive-backtest", n_games: 808 },
+      performance: { full_evaluation_set: { favorite_accuracy: 0.7017, brier_home_win: 0.1862 } },
+      calibration: { method: "fixed bins", bins: [] },
+      known_limitations: ["No preseason, roster, injury, market or play-level input."],
+      failure_modes: ["Early-season roster turnover is invisible."],
+      inputs: { model_output: "/data/cfb-elo.json" },
+      receipts: { prospective_receipts_exist: false, why: "No CFB forecast has been locked before kickoff yet." },
+      methodology_url: "https://datadawgs216.com/docs/cfb-data-backbone.md",
+      engine: "scripts/cfb_elo.py",
+    }],
+  },
+};
 
 let netMode = "normal"; // normal | dbdown | emptyRoom | espnDown | simulatedRoom | simulatedSettings
 globalThis.fetch = async (input, init) => {
@@ -305,6 +335,7 @@ globalThis.fetch = async (input, init) => {
   if (u.includes("datadawgs216.com/data/cfb-model-receipts.json")) return J(cfbModelReceiptsJson);
   if (u.includes("datadawgs216.com/data/cfb-schedule.json")) return J(cfbScheduleJson);
   if (u.includes("datadawgs216.com/data/cfb-market.json")) return J(cfbMarketJson);
+  if (u.includes("datadawgs216.com/data/cfb-model-cards.json")) return J(cfbModelCardsJson);
   if (u.includes("datadawgs216.com/dfs.html")) return new Response(dfsHtml, { status: 200 });
   if (u.includes("site.api.espn.com")) {
     if (netMode === "espnDown") return new Response("no", { status: 403 });
@@ -393,12 +424,12 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 {
   const j = await (await req(rpc("tools/list"))).json();
   const t = j.result.tools;
-  ok(t.length === 35, "thirty-five tools listed in the staged Worker source");
+  ok(t.length === 36, "thirty-six tools listed in the staged Worker source");
   ok(t.every(x => x.name.startsWith("dd_")), "all tools dd_-prefixed");
   ok(t.every(x => x.inputSchema && x.inputSchema.type === "object"), "all tools carry an inputSchema");
   for (const name of ["dd_convert_odds", "dd_devig_market", "dd_price_parlay", "dd_calculate_bet_ev",
     "dd_calculate_hedge", "dd_nfl_passer_rating", "dd_score_forecast", "dd_summarize_beliefs",
-    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_project_cfb_schedule_path", "dd_find_cfb_record_divergence", "dd_get_cfb_model_disagreement", "dd_get_cfb_model_receipt_status", "dd_find_cfb_games", "dd_find_cfb_historical_market", "dd_optimize_survivor_path"])
+    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_project_cfb_schedule_path", "dd_find_cfb_record_divergence", "dd_get_cfb_model_disagreement", "dd_get_cfb_model_receipt_status", "dd_find_cfb_games", "dd_find_cfb_historical_market", "dd_get_cfb_model_card", "dd_optimize_survivor_path"])
     ok(t.some(x => x.name === name), name + " is listed");
 }
 // dd_league_overview
@@ -1035,6 +1066,37 @@ function refNcdf(z) {
   const extra = await (await req(call("dd_find_cfb_historical_market", { closing_only: true }))).json();
   ok([partial, missingGame, badBook, badPriced, badLimit, extra].every(result => result.result.isError === true),
      "CFB historical market fails closed on partial, invented, mistyped and closing-line inputs");
+}
+// dd_get_cfb_model_card: generated governance and evaluation evidence, never a
+// shortcut from roadmap lifecycle to prospective skill.
+{
+  const j = await (await req(call("dd_get_cfb_model_card", {}))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.mode === "model-card-index" && d.card === null &&
+     d.available_models.length === 1 && d.available_models[0].model_id === "cfb-elo",
+     "CFB model-card reader lists compact generated card summaries");
+  ok(d.cards_are_generated_from_model_output && !d.prospective_receipts_exist && !d.prospective_validation &&
+     !d.graded && !d.consensus && !d.current_forecast && d.read_only && d.stored === false,
+     "CFB model-card index refuses prospective, graded, consensus and current-forecast claims");
+}
+{
+  const j = await (await req(call("dd_get_cfb_model_card", { model_id: "CFB-ELO" }))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.mode === "model-card" && d.card.model_id === "cfb-elo" &&
+     d.card.performance.full_evaluation_set.brier_home_win === 0.1862,
+     "CFB model-card reader returns one exact full card and its generated performance evidence");
+  ok(d.card.validation_design.kind === "retrodictive-backtest" &&
+     d.card.receipts.prospective_receipts_exist === false &&
+     d.warnings.some(x => /lifecycle value documents roadmap state/i.test(x)) &&
+     d.warnings.some(x => /known_limitations, failure_modes and receipts/i.test(x)),
+     "CFB model-card reader carries retrodictive, limitation and receipt boundaries");
+}
+{
+  const missing = await (await req(call("dd_get_cfb_model_card", { model_id: "mystery-model" }))).json();
+  const invalid = await (await req(call("dd_get_cfb_model_card", { model_id: "bad model" }))).json();
+  const extra = await (await req(call("dd_get_cfb_model_card", { include_recommendation: true }))).json();
+  ok([missing, invalid, extra].every(result => result.result.isError === true),
+     "CFB model-card reader fails closed on missing, invalid and unsupported inputs");
 }
 // dd_scores: reuses handleScores with sport+dates
 {

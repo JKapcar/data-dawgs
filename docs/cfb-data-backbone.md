@@ -125,6 +125,14 @@ prospective confirmation and comparison against timestamped pregame market obser
 
 The card reports the roadmap's lifecycle value read from `/data/pound-tools.json` instead of asserting its own. The Elo entry is now `live`, and refreshing the card carries that value through automatically rather than maintaining a second status by hand.
 
+`dd_get_cfb_model_card` is the staged bounded read of this governance surface. With no
+argument it lists compact summaries for every registered card; with an exact model slug
+it returns the complete generated purpose, target, features, parameters, validation,
+performance, calibration, limitations, failure modes and receipt state. The Worker
+validates required governance fields and unique model IDs before serving a card. Its
+response keeps lifecycle status separate from skill and explicitly refuses to turn a
+retrodictive card into a current forecast, consensus, leaderboard or recommendation.
+
 ## Prospective model receipts (roadmap step 3, idea cfb-model-receipts)
 
 `/data/cfb-model-receipts.json` is an append-only ledger and is currently empty by design. `scripts/cfb_model_receipts.py` rejects backtest rows, post-kickoff issue times, completed games, schedule or input-snapshot drift, late market observations, conflicting duplicate IDs, and any attempt to mutate or remove prior history. Optional market context must name its provider, capture time and immutable receipt hash. Outcomes never mutate a forecast row; grading belongs in a separate derived surface.

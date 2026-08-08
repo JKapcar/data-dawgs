@@ -1771,9 +1771,11 @@
     "/data/cfb-elo.json",
     "/data/cfb-model-cards.json",
     "/scripts/cfb_elo.py",
-    "/tests/test_cfb_elo.py"
+    "/tests/test_cfb_elo.py",
+    "/work/mcp-block.js",
+    "/work/test-mcp.mjs"
    ],
-   "delivery_note": "The baseline is live and reproducible, but retrodictive and ungraded; no prospective 2026 claim is made.",
+   "delivery_note": "The baseline is live and reproducible with a staged generated model-card reader, but remains retrodictive and ungraded; no prospective 2026 claim is made.",
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 2,
@@ -1781,7 +1783,9 @@
    "dependencies": [
     "cfb-games"
    ],
-   "candidate_mcp_tools": [],
+   "candidate_mcp_tools": [
+    "dd_get_cfb_model_card"
+   ],
    "components": [],
    "related_ideas": [
     "cfb-ratings-registry",
@@ -3245,7 +3249,7 @@
     {
      "status": "building",
      "on": "2026-08-08",
-     "note": "Implemented and evaluated canonical game and historical market lookup, team profile, comparison, hypothetical Elo matchup, exact hypothetical schedule-path, descriptive record-divergence, blocked model-disagreement and prospective-receipt status tools locally; all remain staged and non-callable in production."
+     "note": "Implemented and evaluated canonical game and historical market lookup, generated model-card governance, team profile, comparison, hypothetical Elo matchup, exact hypothetical schedule-path, descriptive record-divergence, blocked model-disagreement and prospective-receipt status tools locally; all remain staged and non-callable in production."
     }
    ],
    "implemented": true,
@@ -3255,9 +3259,10 @@
     "/data/cfb-ratings.json",
     "/data/cfb-record-divergence.json",
     "/data/cfb-record-divergence-validation.json",
-    "/data/cfb-market.json"
+    "/data/cfb-market.json",
+    "/data/cfb-model-cards.json"
    ],
-   "delivery_note": "Nine source-backed CFB tools are implemented locally and staged, including canonical game and no-CLV historical market lookup, exact matchup and schedule-path calculations, plus no-label divergence, blocked-study and prospective-receipt status readers. Production still has 26 live tools; deployment requires a separate approved Worker release.",
+   "delivery_note": "Ten source-backed CFB tools are implemented locally and staged, including canonical game and no-CLV historical market lookup, generated model-card governance, exact matchup and schedule-path calculations, plus no-label divergence, blocked-study and prospective-receipt status readers. Production still has 26 live tools; deployment requires a separate approved Worker release.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": null,
@@ -3281,6 +3286,7 @@
    "candidate_mcp_tools": [
     "dd_find_cfb_games",
     "dd_find_cfb_historical_market",
+    "dd_get_cfb_model_card",
     "dd_cfb_team_profile",
     "dd_compare_cfb_teams",
     "dd_project_cfb_matchup",
