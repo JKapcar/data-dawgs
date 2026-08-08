@@ -351,11 +351,11 @@
    "required_data": "nfelodcm, GitHub Actions, schema/freshness gates and snapshot retention.",
    "human_facing_ui_requirement": "Inventory and provenance contract.",
    "ai_language_requirement": "Fail closed on schema drift and suspicious row-count changes.",
-   "mcp_api_requirement": "Add a read-only Worker tool only after the required deterministic data or runtime is validated.",
-   "machine_readable_requirement": "/data/upstream-models.json",
-   "status": "backend-blocked",
-   "exact_blocker": "No scheduled canonical data job exists in this static repository.",
-   "minimum_path_to_completion": "Add a scheduled nfelodcm-backed job with schema, freshness and row-count gates plus retained canonical snapshots."
+   "mcp_api_requirement": "Static public schedule; no MCP calculation is required.",
+   "machine_readable_requirement": "/data/nfl-schedule.json + /data/model-receipts.json + /data/upstream-models.json",
+   "status": "complete",
+   "exact_blocker": null,
+   "minimum_path_to_completion": "No known blocker for the deployed scope."
   }
  ],
  "tier_meaning": "The Pound — shelved, with the reason attached.",

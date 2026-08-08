@@ -120,6 +120,8 @@ CONTENT = r'''
       <li><a href="/data/pound-tools.json"><code>/data/pound-tools.json</code></a> — full inventory, delivery status and blockers.</li>
       <li><a href="/data/model-contracts.json"><code>/data/model-contracts.json</code></a> — normalized forecast, receipt and calculator contracts.</li>
       <li><a href="/data/upstream-models.json"><code>/data/upstream-models.json</code></a> — repository, commit, license status and integration mode.</li>
+      <li><a href="/data/nfl-schedule.json"><code>/data/nfl-schedule.json</code></a> — validated canonical 2026 schedule, exact upstream commit and snapshot hash.</li>
+      <li><a href="/data/model-receipts.json"><code>/data/model-receipts.json</code></a> — append-only normalized forecast ledger; empty until the first model runner ships.</li>
       <li><a href="/data/nfelo.json"><code>/data/nfelo.json</code></a> + <a href="/data/survivor.json"><code>/data/survivor.json</code></a> — the dated inputs behind the staged scoreboard.</li>
       <li><code>dd_analyze_matchup</code> — live Worker tool for the current matchup view.</li>
       <li><code>dd_elo_game</code>, <code>dd_translate_probability</code>, <code>dd_convert_odds</code>, <code>dd_devig_market</code>, <code>dd_price_parlay</code>, <code>dd_calculate_bet_ev</code>, <code>dd_calculate_hedge</code>, <code>dd_nfl_passer_rating</code>, <code>dd_score_forecast</code> and <code>dd_summarize_beliefs</code> — live, read-only Worker tools for deterministic calculations over caller-supplied inputs.</li>

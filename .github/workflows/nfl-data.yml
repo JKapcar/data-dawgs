@@ -1,0 +1,109 @@
+name: NFL data backbone
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/nfl-data.yml"
+      - "data/nfl-schedule.json"
+      - "data/model-receipts.json"
+      - "requirements-data.txt"
+      - "scripts/nfl_data_backbone.py"
+      - "tests/test_nfl_data_backbone.py"
+      - "tools/data-manifest.js"
+      - "tools/validate-data.js"
+  schedule:
+    - cron: "17 10 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nfl-data-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'refresh' }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - name: Validate canonical data and tests
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+        run: |
+          python -m unittest tests.test_nfl_data_backbone
+          python scripts/nfl_data_backbone.py validate
+          python scripts/nfl_data_backbone.py verify-history --base-ref "$BASE_REF"
+          node tools/validate-data.js
+
+  refresh:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-data.txt
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - name: Install pinned loader
+        run: python -m pip install --requirement requirements-data.txt
+      - name: Refresh and validate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/nfl_data_backbone.py refresh --season 2026
+          if git diff --quiet -- data/nfl-schedule.json; then
+            echo "Canonical rows and source commit are unchanged."
+            python -m unittest tests.test_nfl_data_backbone
+            python scripts/nfl_data_backbone.py validate
+            node tools/validate-data.js
+            exit 0
+          fi
+          node tools/data-manifest.js
+          python -m unittest tests.test_nfl_data_backbone
+          python scripts/nfl_data_backbone.py validate
+          node tools/validate-data.js
+      - name: Open or update a review PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REFRESH_BRANCH: automation/nfl-data-refresh
+        run: |
+          if git diff --quiet -- data/nfl-schedule.json data/index.json; then
+            echo "Canonical snapshot is unchanged."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin "refs/heads/$REFRESH_BRANCH:refs/remotes/origin/$REFRESH_BRANCH" || true
+          git switch -C "$REFRESH_BRANCH"
+          git add data/nfl-schedule.json data/index.json
+          git commit -m "Refresh canonical NFL schedule"
+          git push --force-with-lease origin "HEAD:refs/heads/$REFRESH_BRANCH"
+          if [ "$(gh pr list --state open --head "$REFRESH_BRANCH" --json number --jq 'length')" = "0" ]; then
+            gh pr create \
+              --base main \
+              --head "$REFRESH_BRANCH" \
+              --title "Refresh canonical NFL schedule" \
+              --body "Automated nfelodcm refresh. This PR failed closed on schema, freshness, row-count, team, week, manifest and receipt-history validation before it was opened. Review and merge manually; this workflow never writes directly to production."
+          fi

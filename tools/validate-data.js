@@ -157,6 +157,52 @@ console.log('\nreceipts integrity — the published spec must reproduce the lock
   else ok(`row count matches meta.n (${R.meta.n})`);
 }
 
+console.log('\nNFL backbone — canonical schedule and append-only model receipts');
+{
+  const canonicalJson = value => {
+    if (Array.isArray(value)) return '[' + value.map(canonicalJson).join(',') + ']';
+    if (value && typeof value === 'object') return '{' + Object.keys(value).sort()
+      .map(key => JSON.stringify(key) + ':' + canonicalJson(value[key])).join(',') + '}';
+    return JSON.stringify(value);
+  };
+  const schedule = JSON.parse(fs.readFileSync(path.join(DATA, 'nfl-schedule.json'), 'utf8'));
+  const games = schedule.data && schedule.data.games;
+  if (!Array.isArray(games)) fail('nfl-schedule.json: data.games is not an array');
+  else {
+    const ids = new Set(games.map(game => game.game_id));
+    const regular = games.filter(game => game.season_type === 'REG');
+    const teams = new Set(regular.flatMap(game => [game.home_team, game.away_team]));
+    const weeks = new Set(regular.map(game => game.week));
+    if (games.length < 250 || games.length > 350) fail(`nfl-schedule.json: suspicious row count ${games.length}`);
+    else ok(`schedule row-count gate (${games.length})`);
+    if (ids.size !== games.length) fail('nfl-schedule.json: duplicate game_id');
+    else ok('canonical game IDs are unique');
+    if (regular.length !== 272 || weeks.size !== 18 || teams.size !== 32)
+      fail(`nfl-schedule.json: expected 272 regular games, 18 weeks and 32 teams; got ${regular.length}, ${weeks.size}, ${teams.size}`);
+    else ok('regular-season coverage is 272 games / 18 weeks / 32 teams');
+    const snapshot = 'sha256:' + crypto.createHash('sha256').update(canonicalJson(games)).digest('hex');
+    if (snapshot !== schedule.integrity.snapshot_id) fail('nfl-schedule.json: snapshot hash mismatch');
+    else ok('schedule snapshot hash reproduces ' + snapshot.slice(0, 23) + '…');
+    if (!/^[0-9a-f]{40,64}$/.test(schedule.provenance && schedule.provenance.source_commit || ''))
+      fail('nfl-schedule.json: missing exact upstream source commit');
+    else ok('exact upstream source commit recorded');
+  }
+
+  const ledger = JSON.parse(fs.readFileSync(path.join(DATA, 'model-receipts.json'), 'utf8'));
+  const rows = ledger.data;
+  if (!Array.isArray(rows)) fail('model-receipts.json: data is not an array');
+  else {
+    const ids = new Set(rows.map(row => row.forecast_id));
+    if (ids.size !== rows.length) fail('model-receipts.json: duplicate forecast_id');
+    else ok(`normalized receipt IDs are unique (${rows.length} rows)`);
+    const canonical = rows.map(canonicalJson).join('\n');
+    const hash = crypto.createHash('sha256').update(canonical).digest('hex');
+    if (hash !== ledger.integrity.sha256) fail('model-receipts.json: ledger hash mismatch');
+    else if (ledger.integrity.rows !== rows.length) fail('model-receipts.json: integrity.rows mismatch');
+    else ok('normalized receipt ledger hash and row count reproduce');
+  }
+}
+
 console.log('\nllms.txt');
 {
   const p = path.join(ROOT, 'llms.txt');

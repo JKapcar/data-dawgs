@@ -460,8 +460,8 @@ const UPSTREAM_MODELS = [
   { id: 'nfelodcm', creator: 'Robert Greer', repository: 'greerreNFL/nfelodcm',
     upstream_commit: 'aa6660855758e2e508c37fe38c9066f06c583ac9', version: '0.2.21',
     captured_at: '2026-08-07', license: 'MIT', license_status: 'verified-package-metadata',
-    integration_mode: 'pending', data_status: 'not installed in the static-site workflow',
-    notes: 'Lawful candidate for the shared NFL data loader. A scheduled build and snapshot retention policy are still required.' },
+    integration_mode: 'direct', data_status: 'pinned in the scheduled canonical schedule workflow',
+    notes: 'Typed loader for the shared NFL schedule backbone. The public output records the exact nflverse/nfldata source commit and omits market columns without book and observation-time provenance.' },
   { id: 'nfeloml', creator: 'Robert Greer', repository: 'greerreNFL/nfeloml',
     upstream_commit: 'b96bbc78abfbd4253230bb388c531728b042aa93', version: '0.1.11',
     captured_at: '2026-08-07', license: 'MIT', license_status: 'verified-package-metadata',
@@ -515,8 +515,10 @@ const UPSTREAM_MODELS = [
 ];
 
 const MODEL_CONTRACTS = {
-  contract_version: '1.2.0',
+  contract_version: '1.3.0',
   canonical_game_id: 'season_week_away_home using canonical current team abbreviations, for example 2026_01_PIT_CLE',
+  canonical_schedule: '/data/nfl-schedule.json; integrity.snapshot_id is SHA-256 over canonical ordered game rows',
+  normalized_receipt_ledger: '/data/model-receipts.json; existing rows are append-only and results remain separate',
   model_id_rule: 'lowercase stable slug; model version changes do not change model_id',
   forecast_status_values: ['backtest', 'prospective'],
   forecast_required: ['forecast_id', 'game_id', 'season', 'week', 'kickoff_at', 'captured_at',
@@ -663,10 +665,10 @@ const POUND_TOOLS = [
     'User-entered probabilities or future normalized forecasts.', 'Belief-summary calculator; equal-weight only.',
     'Complex methods wait until they beat equal weight on held-out data.', 'No MCP tool.',
     '/data/model-contracts.json', 'Weighted ensembles need prospective error history.'],
-  ['nfl-data', 'NFL Data Backbone', 'Create validated, reproducible canonical snapshots for every model.', 'backend-blocked',
+  ['nfl-data', 'NFL Data Backbone', 'Create validated, reproducible canonical snapshots for every model.', 'complete',
     'nfelodcm, GitHub Actions, schema/freshness gates and snapshot retention.', 'Inventory and provenance contract.',
-    'Fail closed on schema drift and suspicious row-count changes.', 'No MCP tool.',
-    '/data/upstream-models.json', 'No scheduled canonical data job exists in this static repository.'],
+    'Fail closed on schema drift and suspicious row-count changes.', 'Static public schedule; no MCP calculation is required.',
+    '/data/nfl-schedule.json + /data/model-receipts.json + /data/upstream-models.json', null],
 ].map(([id, name, intended_user_value, status, required_data, human_ui, ai_language, mcp_api, machine_readable, blocker]) => {
   const existingTool = (mcp_api.match(/^(dd_[a-z0-9_]+)/) || [])[1] || null;
   const liveTool = POUND_LIVE_MCP[id] || existingTool;
@@ -678,7 +680,9 @@ const POUND_TOOLS = [
     existing_worker_mcp_implementation: liveTool,
     staged_worker_mcp_implementation: null,
     required_data, human_facing_ui_requirement: human_ui, ai_language_requirement: ai_language,
-    mcp_api_requirement: liveTool
+    mcp_api_requirement: id === 'nfl-data'
+      ? mcp_api
+      : liveTool
       ? `Keep ${liveTool} read-only and align its contract with the public JSON.`
       : calculatorIds.has(id)
         ? 'Expose the staged deterministic browser function through a read-only Worker tool using the published calculator contract.'
@@ -888,6 +892,8 @@ const SURFACES = [
     machine: [{ kind: 'json', url: '/data/pound-tools.json', status: 'live', covers: 'complete inventory, delivery status and exact blockers' },
               { kind: 'json', url: '/data/model-contracts.json', status: 'live', covers: 'forecast, receipt and calculator contracts' },
               { kind: 'json', url: '/data/upstream-models.json', status: 'live', covers: 'source, commit and license provenance' },
+              { kind: 'json', url: '/data/nfl-schedule.json', status: 'live', covers: 'canonical schedule with exact upstream commit and snapshot hash' },
+              { kind: 'json', url: '/data/model-receipts.json', status: 'live', covers: 'append-only normalized multi-model receipt ledger; currently empty' },
               ...MCP_POUND_LIVE.map(tool => ({ kind: 'mcp', tool, status: 'live', covers: 'deterministic calculation over caller-supplied inputs; inputs and results are not stored' }))],
     planned: ['mcp:model_scoreboard'],
     gap: 'The calculator tools have no sportsbook feed or independent forecast pipeline; they operate only on caller-supplied inputs.' },
@@ -925,6 +931,21 @@ write('surfaces.json', {
   },
   data: SURFACES.map(s => ({ ...s, tier: tierOf(s.page.replace(/^\//, '')) })),
 });
+
+// These are produced by the independent scheduled backbone rather than extracted from
+// a page. Keep them in the same generated manifest without letting this build rewrite them.
+for (const name of ['nfl-schedule.json', 'model-receipts.json']) {
+  const p = path.join(OUT, name);
+  const txt = fs.readFileSync(p, 'utf8');
+  const payload = JSON.parse(txt);
+  if (!payload.as_of || !payload.source) throw new Error(`missing external surface envelope: ${name}`);
+  files[name] = {
+    bytes: Buffer.byteLength(txt),
+    as_of: payload.as_of,
+    sha256: crypto.createHash('sha256').update(txt).digest('hex'),
+    note: payload.note,
+  };
+}
 
 /* ---------- index.json (manifest) ---------- */
 const manifest = {
