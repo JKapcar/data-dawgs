@@ -89,6 +89,12 @@ havoc, garbage-time, opponent-adjusted and market-performance families. Those fi
 are not filled with null-looking guesses. The roadmap entries remain `building` until
 canonical play-by-play and timestamped market inputs make the full contracts possible.
 
+`dd_find_cfb_team_periods` is the staged bounded reader for this partial layer. It
+requires one exact team and can filter by regular/postseason week, with chronological
+sorting and a hard result limit. It returns observed period and season-to-date record,
+scoring, opponent and venue facts, repeats the unavailable metric families, and stores
+nothing. A repeated week number never silently merges regular season with postseason.
+
 `scripts/cfb_team_profiles.py refresh` adds `/data/cfb-teams.json`, a compact 136-team
 read surface. It joins each FBS team's observed season-to-date record and scoring facts
 to the separately nested end-of-2025 Elo registry row, locking both input snapshots.

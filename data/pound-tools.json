@@ -1334,9 +1334,10 @@
    "delivery_evidence": [
     "/data/cfb-team-week.json",
     "/scripts/cfb_team_results.py",
-    "/tests/test_cfb_team_results.py"
+    "/tests/test_cfb_team_results.py",
+    "/work/mcp-block.js"
    ],
-   "delivery_note": "Partially implemented. The live surface contains observed results and season-to-date scoring/record facts; play, opponent-adjusted and market-performance metrics remain unavailable.",
+   "delivery_note": "Partially implemented. The live surface contains observed results and season-to-date scoring/record facts, with a bounded exact-team period-history reader staged locally; play, opponent-adjusted and market-performance metrics remain unavailable.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 1,
@@ -1349,7 +1350,9 @@
     "cfb-team-game",
     "cfb-market"
    ],
-   "candidate_mcp_tools": [],
+   "candidate_mcp_tools": [
+    "dd_find_cfb_team_periods"
+   ],
    "components": [],
    "related_ideas": [
     "cfb-unit-ratings",
@@ -1371,7 +1374,7 @@
    "rationale": "The canonical cfb_team_week layer is the standardized analytical substrate for downstream CFB tools.",
    "expected_value": "One dated row per team per week carrying the candidate metric set: EPA/play, offensive/defensive EPA, dropback and rush EPA, success rate, explosive rate, havoc, early-down EPA, late-down success, garbage-time-filtered metrics, rolling 3- and 5-game metrics, home/away splits, opponent-adjusted versions, strength of schedule, market performance and closing-line error.",
    "data_source_requirements": "Canonical plays, team-game aggregates and the market dataset.",
-   "deterministic_tool_potential": "Yes — team profiles and comparisons become deterministic reads.",
+   "deterministic_tool_potential": "Yes — bounded exact-team period history is a deterministic read.",
    "validation_requirement": "Metric definitions documented once and spot-checked against published sources; opponent adjustment validated against known cases before anything downstream trusts it.",
    "risks_limitations": "Opponent adjustment and garbage-time filters are modelling choices, and must be labelled as such rather than presented as observation.",
    "tags": [
@@ -3252,7 +3255,7 @@
     {
      "status": "building",
      "on": "2026-08-08",
-     "note": "Implemented and evaluated canonical game and historical market lookup, generated model-card governance, bounded single-system rankings, team profile, comparison, hypothetical Elo matchup, exact hypothetical schedule-path, descriptive record-divergence, blocked model-disagreement and prospective-receipt status tools locally; all remain staged and non-callable in production."
+     "note": "Implemented and evaluated canonical game, results-only team-period and historical market lookup, generated model-card governance, bounded single-system rankings, team profile, comparison, hypothetical Elo matchup, exact hypothetical schedule-path, descriptive record-divergence, blocked model-disagreement and prospective-receipt status tools locally; all remain staged and non-callable in production."
     }
    ],
    "implemented": true,
@@ -3265,7 +3268,7 @@
     "/data/cfb-market.json",
     "/data/cfb-model-cards.json"
    ],
-   "delivery_note": "Eleven source-backed CFB tools are implemented locally and staged, including canonical game and no-CLV historical market lookup, generated model-card governance, bounded single-system rankings, exact matchup and schedule-path calculations, plus no-label divergence, blocked-study and prospective-receipt status readers. Production still has 26 live tools; deployment requires a separate approved Worker release.",
+   "delivery_note": "Twelve source-backed CFB tools are implemented locally and staged, including canonical game, results-only team-period and no-CLV historical market lookup, generated model-card governance, bounded single-system rankings, exact matchup and schedule-path calculations, plus no-label divergence, blocked-study and prospective-receipt status readers. Production still has 26 live tools; deployment requires a separate approved Worker release.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": null,
@@ -3288,6 +3291,7 @@
    ],
    "candidate_mcp_tools": [
     "dd_find_cfb_games",
+    "dd_find_cfb_team_periods",
     "dd_find_cfb_historical_market",
     "dd_get_cfb_model_card",
     "dd_rank_cfb_teams",

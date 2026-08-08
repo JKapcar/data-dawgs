@@ -57,6 +57,7 @@ let mcpCfbDivergenceCache = { at: 0, data: null };
 let mcpCfbDisagreementCache = { at: 0, data: null };
 let mcpCfbReceiptCache = { at: 0, data: null };
 let mcpCfbScheduleCache = { at: 0, data: null };
+let mcpCfbTeamPeriodsCache = { at: 0, data: null };
 let mcpCfbMarketCache = { at: 0, data: null };
 let mcpCfbModelCardsCache = { at: 0, data: null };
 
@@ -665,6 +666,53 @@ async function mcpCfbSchedule() {
   return mcpCfbScheduleCache.data;
 }
 
+async function mcpCfbTeamPeriods() {
+  if (!mcpCfbTeamPeriodsCache.data || Date.now() - mcpCfbTeamPeriodsCache.at > 900e3) {
+    const response = await fetch(`${SITE}/data/cfb-team-week.json`, { cf: { cacheTtl: 900, cacheEverything: true } });
+    if (!response.ok) throw new Error("cfb-team-week.json unavailable: HTTP " + response.status);
+    const envelope = await response.json();
+    const data = envelope && envelope.data;
+    const teams = data && data.teams;
+    const rows = data && data.rows;
+    if (!envelope || !envelope.as_of || !envelope.source || !data || !Number.isInteger(data.season) ||
+        data.scope !== "results-only" || !teams || typeof teams !== "object" || Array.isArray(teams) ||
+        !Array.isArray(rows) || !rows.length || rows.length > 4000 || !Array.isArray(data.unavailable_metrics))
+      throw new Error("cfb-team-week.json has an invalid results-only envelope");
+    if (envelope.integrity && Number.isInteger(envelope.integrity.rows) && envelope.integrity.rows !== rows.length)
+      throw new Error("cfb-team-week.json row count does not match its integrity receipt");
+    for (const [slug, team] of Object.entries(teams)) {
+      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || !team || typeof team.team !== "string" || !team.team ||
+          !["fbs", "fcs"].includes(team.division))
+        throw new Error("cfb-team-week.json has an invalid team registry");
+    }
+    const ids = new Set();
+    for (const row of rows) {
+      const period = row && row.period;
+      const seasonToDate = row && row.season_to_date;
+      if (!row || typeof row.team_period_id !== "string" || !row.team_period_id || ids.has(row.team_period_id) ||
+          row.season !== data.season || !["regular", "postseason"].includes(row.season_type) ||
+          !Number.isInteger(row.week) || row.week < 1 || row.week > 20 || typeof row.period_key !== "string" ||
+          !Number.isFinite(Date.parse(row.through_at)) || !teams[row.team_slug] ||
+          !Number.isInteger(row.scheduled_games_this_period) || row.scheduled_games_this_period < 1 ||
+          !Array.isArray(row.opponent_slugs) || !period || !seasonToDate)
+        throw new Error("cfb-team-week.json has an invalid or duplicate team-period row");
+      for (const summary of [period, seasonToDate]) {
+        if (![summary.games, summary.wins, summary.losses, summary.ties, summary.points_for,
+              summary.points_against, summary.point_differential].every(Number.isInteger) ||
+            summary.games !== summary.wins + summary.losses + summary.ties ||
+            summary.point_differential !== summary.points_for - summary.points_against)
+          throw new Error("cfb-team-week.json has an arithmetically invalid team-period summary");
+      }
+      if (period.games !== row.scheduled_games_this_period || seasonToDate.games < period.games ||
+          typeof seasonToDate.record !== "string" || !/^\d+-\d+-\d+$/.test(seasonToDate.record))
+        throw new Error("cfb-team-week.json has an inconsistent team-period summary");
+      ids.add(row.team_period_id);
+    }
+    mcpCfbTeamPeriodsCache = { at: Date.now(), data: envelope };
+  }
+  return mcpCfbTeamPeriodsCache.data;
+}
+
 async function mcpCfbHistoricalMarket() {
   if (!mcpCfbMarketCache.data || Date.now() - mcpCfbMarketCache.at > 900e3) {
     const response = await fetch(`${SITE}/data/cfb-market.json`, { cf: { cacheTtl: 900, cacheEverything: true } });
@@ -797,6 +845,42 @@ function mcpCfbDivergenceTeamMatch(rows, input) {
     throw new Error("team is not an exact record-divergence name or slug" + (partial.length > 1 ? " and is ambiguous" : "") + "; try: " + choices);
   }
   throw new Error("team is not present in the dated CFB record-divergence surface: " + input.query);
+}
+
+function mcpCfbTeamPeriodArgs(args) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+  const allowed = ["team", "week", "season_type", "sort", "limit"];
+  const extra = Object.keys(args).filter(k => !allowed.includes(k));
+  if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+  const out = {
+    team: mcpCfbTeamArgs({ team: args.team }),
+    week: args.week === undefined ? null : args.week,
+    seasonType: args.season_type === undefined ? "all" : args.season_type,
+    sort: args.sort === undefined ? "period-asc" : args.sort,
+    limit: args.limit === undefined ? 20 : args.limit,
+  };
+  if (out.week !== null && (!Number.isInteger(out.week) || out.week < 1 || out.week > 20))
+    throw new Error("week must be a whole number from 1 through 20");
+  if (!["all", "regular", "postseason"].includes(out.seasonType))
+    throw new Error("season_type must be all, regular or postseason");
+  if (!["period-asc", "period-desc"].includes(out.sort))
+    throw new Error("sort must be period-asc or period-desc");
+  if (!Number.isInteger(out.limit) || out.limit < 1 || out.limit > 25)
+    throw new Error("limit must be a whole number from 1 through 25");
+  return out;
+}
+
+function mcpCfbTeamPeriodMatch(teams, input) {
+  const entries = Object.entries(teams);
+  const exact = entries.filter(([slug, team]) => slug === input.slug || mcpCfbTeamSlug(team.team) === input.slug);
+  if (exact.length === 1) return { team_slug: exact[0][0], ...exact[0][1] };
+  if (exact.length > 1) throw new Error("cfb-team-week.json has duplicate normalized team names for " + input.query);
+  const partial = entries.filter(([slug, team]) => slug.includes(input.slug) || mcpCfbTeamSlug(team.team).includes(input.slug));
+  if (partial.length) {
+    const choices = partial.slice(0, 10).map(([slug, team]) => team.team + " (" + slug + ")").join(", ");
+    throw new Error("team is not an exact team-period name or slug" + (partial.length > 1 ? " and is ambiguous" : "") + "; try: " + choices);
+  }
+  throw new Error("team is not present in the dated CFB team-period surface: " + input.query);
 }
 
 function mcpCfbGameArgs(args) {
@@ -1254,7 +1338,7 @@ async function mcpDispatch(m, env, caller) {
           "Everything here is read-only and is either the league's own data, public play-by-play, " +
           "or a deterministic calculation over caller-supplied inputs. Calculator inputs and results are not stored. " +
           "The model scoreboard reads dated prospective receipts and returns descriptive disagreement only; it is ungraded and is not a validated consensus or ranking. " +
-          "The CFB reads separate observed 2025 results from one end-of-2025 retrodictive Elo row. dd_find_cfb_games reads the actual canonical 2025 schedule/results surface; it is historical and not the unpublished 2026 schedule. dd_find_cfb_historical_market returns book-identified prices whose observation time is unknown: never call them closing lines, compute CLV or cite them as prospective inputs. dd_get_cfb_model_card returns generated governance and retrodictive evidence, not a current forecast or leaderboard. dd_rank_cfb_teams returns one declared system's dated ranking, not a consensus or current power ranking. dd_project_cfb_matchup and dd_project_cfb_schedule_path are hypothetical rating-period calculations, not scheduled 2026 forecasts. dd_find_cfb_record_divergence returns descriptive record-versus-scoring gaps whose small held-out lift does not authorize current-team labels. dd_get_cfb_model_disagreement returns a blocked study whose untimestamped market input prevents a winner or blend conclusion. dd_get_cfb_model_receipt_status reports the append-only prospective ledger honestly; receipt rows remain ungraded and outcomes belong in a separate surface. All CFB outputs are ungraded, not market-adjusted and are not a consensus. " +
+          "The CFB reads separate observed 2025 results from one end-of-2025 retrodictive Elo row. dd_find_cfb_games reads the actual canonical 2025 schedule/results surface; it is historical and not the unpublished 2026 schedule. dd_find_cfb_team_periods returns schedule-derived results only; it has no EPA, opponent adjustment or market performance. dd_find_cfb_historical_market returns book-identified prices whose observation time is unknown: never call them closing lines, compute CLV or cite them as prospective inputs. dd_get_cfb_model_card returns generated governance and retrodictive evidence, not a current forecast or leaderboard. dd_rank_cfb_teams returns one declared system's dated ranking, not a consensus or current power ranking. dd_project_cfb_matchup and dd_project_cfb_schedule_path are hypothetical rating-period calculations, not scheduled 2026 forecasts. dd_find_cfb_record_divergence returns descriptive record-versus-scoring gaps whose small held-out lift does not authorize current-team labels. dd_get_cfb_model_disagreement returns a blocked study whose untimestamped market input prevents a winner or blend conclusion. dd_get_cfb_model_receipt_status reports the append-only prospective ledger honestly; receipt rows remain ungraded and outcomes belong in a separate surface. All CFB outputs are ungraded, not market-adjusted and are not a consensus. " +
           "There is no built-in DFS projection or ownership feed: dd_solve_dfs_lineup requires the caller to supply every value per call, and stores none of them. dd_optimize_survivor_path is an ungraded ceiling over a dated snapshot and does not model double-pick weeks. When quoting bozo odds, survivor odds " +
           "or the correlation matrix, say it is model output or a measured historical average, never a forecast " +
           "of a specific game. Team names, weeks and league ids come from dd_league_overview — do not guess them.",
@@ -2609,6 +2693,82 @@ const MCP_TOOLS = [
           "A zero-row ledger is evidence that no CFB forecast has yet been frozen prospectively, not evidence of model performance.",
           "Retrodictive 2025 backtests are intentionally excluded from this prospective receipt ledger.",
           "Do not report CFB model grades, calibration, a leaderboard or a track record until prospective receipts and a separate outcome-derived grading surface exist.",
+        ],
+      });
+    },
+  },
+  {
+    name: "dd_find_cfb_team_periods",
+    description: "Return bounded schedule-derived 2025 team-period results for one exact CFB team, with regular and postseason week labels kept distinct. Includes period and season-to-date record/scoring facts only. No EPA, success rate, explosiveness, havoc, garbage-time, opponent adjustment, market performance, model or recommendation is available.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        team: { type: "string", minLength: 1, maxLength: 80, description: "Required exact canonical team name or slug, case-insensitive." },
+        week: { type: "integer", minimum: 1, maximum: 20 },
+        season_type: { type: "string", enum: ["all", "regular", "postseason"], default: "all" },
+        sort: { type: "string", enum: ["period-asc", "period-desc"], default: "period-asc" },
+        limit: { type: "integer", minimum: 1, maximum: 25, default: 20 },
+      },
+      required: ["team"],
+      additionalProperties: false,
+    },
+    async run(args) {
+      const input = mcpCfbTeamPeriodArgs(args);
+      const envelope = await mcpCfbTeamPeriods();
+      const team = mcpCfbTeamPeriodMatch(envelope.data.teams, input.team);
+      const direction = input.sort === "period-asc" ? 1 : -1;
+      const matches = envelope.data.rows.filter(row =>
+        row.team_slug === team.team_slug &&
+        (input.week === null || row.week === input.week) &&
+        (input.seasonType === "all" || row.season_type === input.seasonType)
+      ).sort((a, b) => direction * (a.through_at.localeCompare(b.through_at) || a.team_period_id.localeCompare(b.team_period_id)));
+      const periods = matches.slice(0, input.limit).map(row => ({
+        team_period_id: row.team_period_id,
+        season: row.season,
+        season_type: row.season_type,
+        week: row.week,
+        period_key: row.period_key,
+        through_at: row.through_at,
+        scheduled_games_this_period: row.scheduled_games_this_period,
+        opponent_slugs: row.opponent_slugs,
+        venue_counts: { home: row.home_games, away: row.away_games, neutral: row.neutral_games },
+        fbs_opponents: row.fbs_opponents,
+        period: row.period,
+        season_to_date: row.season_to_date,
+      }));
+      return toolText({
+        query: {
+          team: team.team,
+          week: input.week,
+          season_type: input.seasonType,
+          sort: input.sort,
+          limit: input.limit,
+        },
+        team,
+        season: envelope.data.season,
+        scope: envelope.data.scope,
+        period_definition: envelope.data.period_definition,
+        matched_before_limit: matches.length,
+        returned: periods.length,
+        periods,
+        unavailable_metrics: envelope.data.unavailable_metrics,
+        as_of: envelope.as_of,
+        source: envelope.source,
+        built: envelope.built || null,
+        integrity: envelope.integrity || null,
+        observed_results_only: true,
+        modelled: false,
+        opponent_adjusted: false,
+        market_adjusted: false,
+        forecast: false,
+        graded: false,
+        read_only: true,
+        stored: false,
+        warnings: [
+          "These are observed schedule-derived 2025 results, not current 2026 form or a forecast.",
+          "Regular-season week 1 and postseason week 1 are distinct periods; use season_type when filtering a repeated week number.",
+          "EPA, success, explosiveness, havoc, garbage-time, opponent-adjusted and market-performance fields are unavailable in this results-only layer.",
+          "Period rows can contain more than one scheduled game; scheduled_games_this_period is explicit.",
         ],
       });
     },

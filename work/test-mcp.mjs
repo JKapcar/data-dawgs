@@ -239,6 +239,57 @@ const cfbScheduleJson = {
     ],
   },
 };
+const cfbTeamWeekJson = {
+  as_of: "2026-08-08",
+  source: "test schedule-derived CFB team periods",
+  built: "2026-08-08",
+  integrity: { snapshot_id: "sha256:test-cfb-team-week", rows: 4 },
+  data: {
+    schema_version: 1,
+    season: 2025,
+    scope: "results-only",
+    period_definition: "season_type plus upstream week; regular and postseason week numbers are distinct",
+    unavailable_metrics: ["epa", "success_rate", "explosiveness", "havoc", "garbage_time", "opponent_adjusted", "market_performance"],
+    teams: {
+      "ohio-state": { team: "Ohio State", espn_id: 194, division: "fbs", conference: "Big Ten" },
+      "akron": { team: "Akron", espn_id: 2006, division: "fbs", conference: "Mid-American" },
+    },
+    rows: [
+      {
+        team_period_id: "2025_regular_01::ohio-state", season: 2025, season_type: "regular", week: 1,
+        period_key: "regular-01", through_at: "2025-08-30T20:00:00Z", team_slug: "ohio-state",
+        division: "fbs", conference: "Big Ten", scheduled_games_this_period: 1, opponent_slugs: ["texas"],
+        home_games: 1, away_games: 0, neutral_games: 0, fbs_opponents: 1,
+        period: { games: 1, wins: 1, losses: 0, ties: 0, points_for: 14, points_against: 7, point_differential: 7 },
+        season_to_date: { games: 1, wins: 1, losses: 0, ties: 0, points_for: 14, points_against: 7, point_differential: 7, record: "1-0-0" },
+      },
+      {
+        team_period_id: "2025_regular_12::ohio-state", season: 2025, season_type: "regular", week: 12,
+        period_key: "regular-12", through_at: "2025-11-29T20:00:00Z", team_slug: "ohio-state",
+        division: "fbs", conference: "Big Ten", scheduled_games_this_period: 1, opponent_slugs: ["michigan"],
+        home_games: 1, away_games: 0, neutral_games: 0, fbs_opponents: 1,
+        period: { games: 1, wins: 1, losses: 0, ties: 0, points_for: 27, points_against: 24, point_differential: 3 },
+        season_to_date: { games: 12, wins: 11, losses: 1, ties: 0, points_for: 420, points_against: 120, point_differential: 300, record: "11-1-0" },
+      },
+      {
+        team_period_id: "2025_postseason_01::ohio-state", season: 2025, season_type: "postseason", week: 1,
+        period_key: "postseason-01", through_at: "2026-01-02T04:00:00Z", team_slug: "ohio-state",
+        division: "fbs", conference: "Big Ten", scheduled_games_this_period: 1, opponent_slugs: ["georgia"],
+        home_games: 0, away_games: 0, neutral_games: 1, fbs_opponents: 1,
+        period: { games: 1, wins: 1, losses: 0, ties: 0, points_for: 31, points_against: 30, point_differential: 1 },
+        season_to_date: { games: 13, wins: 12, losses: 1, ties: 0, points_for: 451, points_against: 150, point_differential: 301, record: "12-1-0" },
+      },
+      {
+        team_period_id: "2025_regular_01::akron", season: 2025, season_type: "regular", week: 1,
+        period_key: "regular-01", through_at: "2025-08-30T22:00:00Z", team_slug: "akron",
+        division: "fbs", conference: "Mid-American", scheduled_games_this_period: 1, opponent_slugs: ["wyoming"],
+        home_games: 0, away_games: 1, neutral_games: 0, fbs_opponents: 1,
+        period: { games: 1, wins: 0, losses: 1, ties: 0, points_for: 7, points_against: 24, point_differential: -17 },
+        season_to_date: { games: 1, wins: 0, losses: 1, ties: 0, points_for: 7, points_against: 24, point_differential: -17, record: "0-1-0" },
+      },
+    ],
+  },
+};
 const cfbMarketJson = {
   as_of: "2026-08-08",
   source: "test historical CFB prices with unknown observation timing",
@@ -333,6 +384,7 @@ globalThis.fetch = async (input, init) => {
   if (u.includes("datadawgs216.com/data/cfb-record-divergence.json")) return J(cfbDivergenceJson);
   if (u.includes("datadawgs216.com/data/cfb-disagreement.json")) return J(cfbDisagreementJson);
   if (u.includes("datadawgs216.com/data/cfb-model-receipts.json")) return J(cfbModelReceiptsJson);
+  if (u.includes("datadawgs216.com/data/cfb-team-week.json")) return J(cfbTeamWeekJson);
   if (u.includes("datadawgs216.com/data/cfb-schedule.json")) return J(cfbScheduleJson);
   if (u.includes("datadawgs216.com/data/cfb-market.json")) return J(cfbMarketJson);
   if (u.includes("datadawgs216.com/data/cfb-model-cards.json")) return J(cfbModelCardsJson);
@@ -424,12 +476,12 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 {
   const j = await (await req(rpc("tools/list"))).json();
   const t = j.result.tools;
-  ok(t.length === 37, "thirty-seven tools listed in the staged Worker source");
+  ok(t.length === 38, "thirty-eight tools listed in the staged Worker source");
   ok(t.every(x => x.name.startsWith("dd_")), "all tools dd_-prefixed");
   ok(t.every(x => x.inputSchema && x.inputSchema.type === "object"), "all tools carry an inputSchema");
   for (const name of ["dd_convert_odds", "dd_devig_market", "dd_price_parlay", "dd_calculate_bet_ev",
     "dd_calculate_hedge", "dd_nfl_passer_rating", "dd_score_forecast", "dd_summarize_beliefs",
-    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_rank_cfb_teams", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_project_cfb_schedule_path", "dd_find_cfb_record_divergence", "dd_get_cfb_model_disagreement", "dd_get_cfb_model_receipt_status", "dd_find_cfb_games", "dd_find_cfb_historical_market", "dd_get_cfb_model_card", "dd_optimize_survivor_path"])
+    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_rank_cfb_teams", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_project_cfb_schedule_path", "dd_find_cfb_record_divergence", "dd_get_cfb_model_disagreement", "dd_get_cfb_model_receipt_status", "dd_find_cfb_team_periods", "dd_find_cfb_games", "dd_find_cfb_historical_market", "dd_get_cfb_model_card", "dd_optimize_survivor_path"])
     ok(t.some(x => x.name === name), name + " is listed");
 }
 // dd_league_overview
@@ -1028,6 +1080,40 @@ function refNcdf(z) {
   const extra = await (await req(call("dd_get_cfb_model_receipt_status", { include_backtests: true }))).json();
   ok(extra.result.isError === true,
      "CFB receipt status rejects backtest or other unsupported arguments");
+}
+// dd_find_cfb_team_periods: bounded results-only team history with repeated
+// regular/postseason week labels kept distinct.
+{
+  const j = await (await req(call("dd_find_cfb_team_periods", { team: "OHIO STATE" }))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.team.team_slug === "ohio-state" && d.team.team === "Ohio State" &&
+     d.returned === 3 && d.periods.map(x => x.period_key).join(",") === "regular-01,regular-12,postseason-01",
+     "CFB team-period reader resolves an exact team and returns chronological regular/postseason history");
+  ok(d.periods[1].period.point_differential === 3 && d.periods[2].season_to_date.record === "12-1-0" &&
+     d.periods[2].venue_counts.neutral === 1,
+     "CFB team-period reader preserves period, season-to-date and venue facts");
+  ok(d.scope === "results-only" && d.observed_results_only && !d.modelled && !d.opponent_adjusted &&
+     !d.market_adjusted && !d.forecast && !d.graded && d.read_only && d.stored === false &&
+     d.unavailable_metrics.includes("epa") && d.warnings.some(x => /Regular-season week 1 and postseason week 1/i.test(x)),
+     "CFB team-period reader publishes the results-only and repeated-week boundaries");
+}
+{
+  const post = text(await (await req(call("dd_find_cfb_team_periods", { team: "ohio-state", week: 1, season_type: "postseason" }))).json());
+  const latest = text(await (await req(call("dd_find_cfb_team_periods", { team: "Ohio State", sort: "period-desc", limit: 1 }))).json());
+  ok(post.returned === 1 && post.periods[0].period_key === "postseason-01",
+     "CFB team-period reader disambiguates repeated week numbers with season_type");
+  ok(latest.matched_before_limit === 3 && latest.returned === 1 && latest.periods[0].period_key === "postseason-01",
+     "CFB team-period reader applies chronological sort and strict output bounds");
+}
+{
+  const partial = await (await req(call("dd_find_cfb_team_periods", { team: "state" }))).json();
+  const missing = await (await req(call("dd_find_cfb_team_periods", {}))).json();
+  const badWeek = await (await req(call("dd_find_cfb_team_periods", { team: "Akron", week: 0 }))).json();
+  const badSeason = await (await req(call("dd_find_cfb_team_periods", { team: "Akron", season_type: "bowl" }))).json();
+  const badLimit = await (await req(call("dd_find_cfb_team_periods", { team: "Akron", limit: 26 }))).json();
+  const extra = await (await req(call("dd_find_cfb_team_periods", { team: "Akron", include_epa: true }))).json();
+  ok([partial, missing, badWeek, badSeason, badLimit, extra].every(result => result.result.isError === true),
+     "CFB team-period reader fails closed on partial, missing, out-of-range and unsupported inputs");
 }
 // dd_find_cfb_games: bounded canonical schedule/result facts with season-type
 // disambiguation and no model or market claims.
