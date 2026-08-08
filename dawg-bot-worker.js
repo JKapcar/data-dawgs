@@ -498,6 +498,98 @@ async function handleCfbMarketSnapshots(request, url, env, cors) {
   });
 }
 
+/* ========================= Sleeper slim player index =========================
+   GET /sleeper/players-slim — a daily-cached, slimmed copy of Sleeper's
+   /players/nfl. The upstream file is ~5MB and Sleeper's docs say to pull it at
+   most once a day and cache it server-side — so the WORKER is the one place on
+   the site allowed to fetch it. guillotine.html's waiver board reads names from
+   here instead of hitting Sleeper per pageview.
+
+   Kept per player: [name, position, nfl team]. Active players at fantasy
+   positions only. This is identity data, nothing else — no stats, no
+   projections, and nothing caller-specific is stored.
+
+     sleeper:players:slim — one KV value, the full JSON envelope, rewritten
+                            at most once per SLEEPER_SLIM_TTL_MS.
+
+   Freshness: served from KV while `built` is under 24h old. When stale, one
+   request pays for the upstream refresh; if the refresh fails and a stale copy
+   exists, the stale copy is served and says so. No copy + failed refresh = 503,
+   never an invented payload. */
+const SLEEPER_PLAYERS_URL = "https://api.sleeper.app/v1/players/nfl";
+const SLEEPER_SLIM_KEY = "sleeper:players:slim";
+const SLEEPER_SLIM_TTL_MS = 24 * 60 * 60 * 1000;
+const SLEEPER_SLIM_POSITIONS = ["QB", "RB", "WR", "TE", "K", "DEF"];
+
+function sleeperSlimFromRaw(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("players payload is not an object");
+  const players = {};
+  let count = 0;
+  for (const id of Object.keys(raw)) {
+    const p = raw[id];
+    if (!p || typeof p !== "object") continue;
+    if (p.active !== true) continue;
+    const pos = String(p.position || "");
+    if (!SLEEPER_SLIM_POSITIONS.includes(pos)) continue;
+    const name = String(p.full_name || ((p.first_name || "") + " " + (p.last_name || "")).trim());
+    if (!name) continue;
+    players[id] = [name, pos, p.team ? String(p.team) : null];
+    count++;
+  }
+  // Fail closed on an implausibly small index rather than caching a broken upstream
+  // response for 24 hours. ~2,000+ actives is normal; 500 is already alarm territory.
+  if (count < 500) throw new Error("slim player index implausibly small: " + count);
+  return { players, count };
+}
+
+async function handleSleeperPlayersSlim(request, env, cors) {
+  if (request.method !== "GET") return json({ error: "GET only" }, 405, cors);
+  const kv = env.DD_KV || env.RL || null;
+  if (!kv) return json({ error: "player index storage is unavailable" }, 503, cors);
+
+  const serve = (body, extra) => new Response(body, {
+    headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "public, max-age=3600", ...(extra || {}) },
+  });
+
+  let cached = null;
+  try { cached = await kv.get(SLEEPER_SLIM_KEY); } catch { cached = null; }
+  if (cached) {
+    try {
+      const builtMs = Date.parse(JSON.parse(cached).built || "");
+      if (Number.isFinite(builtMs) && Date.now() - builtMs < SLEEPER_SLIM_TTL_MS) return serve(cached);
+    } catch { cached = null; } // unparseable cache is no cache
+  }
+
+  let slim;
+  try {
+    const r = await fetch(SLEEPER_PLAYERS_URL);
+    if (!r.ok) throw new Error("Sleeper /players/nfl returned " + r.status);
+    slim = sleeperSlimFromRaw(await r.json());
+  } catch (e) {
+    if (cached) {
+      // Serve the stale copy and say so, rather than failing a working page.
+      try {
+        const payload = JSON.parse(cached);
+        payload.note = String(payload.note || "") + " STALE: refresh failed (" + String((e && e.message) || e) + "); serving the previous day's index.";
+        return serve(JSON.stringify(payload), { "X-DD-Stale": "1" });
+      } catch { /* fall through */ }
+    }
+    return json({ error: "player index refresh failed: " + String((e && e.message) || e) }, 503, cors);
+  }
+
+  const now = new Date().toISOString();
+  const payload = JSON.stringify({
+    as_of: now.slice(0, 10),
+    source: "Sleeper /players/nfl, slimmed to active fantasy positions by the Data Dawgs Worker.",
+    note: "Identity only: player id -> [name, position, nfl team]. Refreshed at most once per day per Sleeper's own guidance. No stats, no projections.",
+    built: now,
+    canonical_url: "https://toto.jkapcar4.workers.dev/sleeper/players-slim",
+    data: { count: slim.count, players: slim.players },
+  });
+  try { await kv.put(SLEEPER_SLIM_KEY, payload); } catch { /* serving still works without the cache */ }
+  return serve(payload);
+}
+
 export default {
   // Two isolated jobs share this Worker: the nightly private RTDB backup and the
   // hourly public-data CFB receipt capture. Never run the backup hourly: it contains
@@ -538,6 +630,7 @@ export default {
     if (url.pathname === "/scores")       return handleScores(url, cors);
     if (url.pathname === "/survivor-picks") return handleSurvivorPicks(request, url, env, cors);
     if (url.pathname === "/cfb/market-snapshots") return handleCfbMarketSnapshots(request, url, env, cors);
+    if (url.pathname === "/sleeper/players-slim") return handleSleeperPlayersSlim(request, env, cors);
 
     // ⚠️ Identity is SITE-WIDE, not Bozo's. /auth/* is canonical; the /bozo/* spellings
     // are permanent aliases because bozo.html in the wild (and any phone with a cached
