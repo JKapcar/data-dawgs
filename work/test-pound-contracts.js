@@ -358,6 +358,55 @@ test('pound.html renders the CFB roadmap honestly', () => {
   assert.match(html, /kind==="roadmap-idea"/);
 });
 
+/* ⚠️ THE BUG THIS DEFENDS. pound.html carried a TYPED "0 candidate CFB MCP tools
+   callable" and labelled every card's tool names "not callable", months after sixteen of
+   them went live in /data/surfaces.json. The page and the machine surface disagreed and
+   only the machine surface was right. So: the page may not contain the answer, it must
+   compute it, and these assertions check the mechanism rather than the number. */
+test('pound.html computes the callable CFB tool count instead of stating one', () => {
+  const html = fs.readFileSync('pound.html', 'utf8');
+  assert.ok(!/\d+ candidate CFB MCP tools callable/.test(html),
+    'the callable count is typed into the page again');
+  assert.ok(!html.includes('Candidate MCP tools (not callable)'),
+    'cards label live tools as not callable again');
+  assert.ok(!html.includes('Candidate CFB MCP tool names are not callable'),
+    'the machine-readable bullet claims no CFB tool is callable again');
+  // the split must come from the live roster, intersected with the cards
+  assert.match(html, /liveMcp=new Set\(surfaces\.mcp\.tools_live\)/);
+  assert.match(html, /function cfbToolSplit\(\)/);
+  assert.match(html, /liveMcp\.has\(t\)/);
+  assert.match(html, /json\("\/data\/surfaces\.json"\)/);
+  for (const id of ['cfbTools', 'cfbToolStats', 'cfbToolsLive', 'cfbToolsPlanned', 'cfbMachineTools'])
+    assert.ok(html.includes(`id="${id}"`), id);
+  // a missing roster must fail loudly, not silently report zero
+  assert.match(html, /surfaces\.json is missing its live MCP roster/);
+  assert.match(html, /this is not a claim that no tools are live/);
+});
+test('the sixteen live CFB tools are exactly the cards-and-roster intersection', () => {
+  // the page computes this at runtime; the test computes it here from the same two files
+  const named = new Set();
+  cfbIdeas.forEach(i => (i.candidate_mcp_tools || []).forEach(t => named.add(t)));
+  const live = new Set(surfaces.mcp.tools_live);
+  const callable = [...named].filter(t => live.has(t)).sort();
+  const reserved = [...named].filter(t => !live.has(t)).sort();
+  assert.deepEqual(callable, [...CFB_MCP_LIVE].sort());
+  assert.equal(callable.length, 16);
+  assert.ok(reserved.length > 0, 'a page that shows no reservations would be hiding the roadmap');
+  // every callable tool must be attributable to a card that is not the umbrella
+  const umbrellaOnly = callable.filter(t => !cfbIdeas.some(
+    i => i.id !== 'cfb-mcp-layer' && (i.candidate_mcp_tools || []).includes(t)));
+  assert.ok(umbrellaOnly.length <= 3,
+    `too many tools attributable only to cfb-mcp-layer: ${umbrellaOnly.join(', ')}`);
+});
+test('build-pound.py cannot silently delete the CFB section', () => {
+  /* It regenerates pound.html from the 2026-08-07 nfelo.html template, which predates the
+     entire CFB section. Running it on 8/9 removed 6,697 characters and reported success. */
+  const bp = fs.readFileSync(path.join('work', 'build-pound.py'), 'utf8');
+  assert.match(bp, /HISTORICAL BOOTSTRAP/);
+  assert.match(bp, /raise SystemExit/);
+  assert.match(bp, /DD_REBUILD_POUND/);
+});
+
 test('all shared-nav pages point at pound.html exactly once', () => {
   const pages = fs.readdirSync('.').filter(x => x.endsWith('.html'));
   let covered = 0;

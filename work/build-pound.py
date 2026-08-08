@@ -1,8 +1,28 @@
-"""Build the flattened Pound page from the current site shell plus tested pure functions.
+"""⚠️ HISTORICAL BOOTSTRAP. DO NOT RUN. ⚠️
 
-The deployed artifact remains pound.html. This helper exists so the shared navigation/auth
-shell comes from an existing page and the calculator core stays independently testable.
+This script built the FIRST version of pound.html, on 2026-08-07, out of nfelo.html plus
+work/pound-core.js. pound.html has moved a long way since: the College Football roadmap
+section, the live CFB MCP tool roster, the sitewide nav sweeps, the sign-on chip and
+every later edit live in pound.html and NOWHERE ELSE. Per AGENTS.md, the flattened HTML
+IS the source.
+
+Running this file regenerates the page from the old template and DELETES all of that,
+silently, with a cheerful success message. Confirmed on 2026-08-09 by running it — the
+CFB section disappeared and the page shrank by 6,697 characters.
+
+It is kept because it records how the shell, the CSS and the calculator core were
+assembled, which is worth reading. It is not kept because it is runnable. Edit pound.html
+directly, or write a patch script beside this one (patch-pound-cfb-tools.py is one).
+
+To run it anyway, knowing it will overwrite the live page:
+    DD_REBUILD_POUND=i-know-this-deletes-the-cfb-section python3 work/build-pound.py
 """
+import os as _os
+if _os.environ.get("DD_REBUILD_POUND") != "i-know-this-deletes-the-cfb-section":
+    raise SystemExit(
+        "build-pound.py refuses to run: it would regenerate pound.html from the 2026-08-07\n"
+        "template and delete the CFB section and every later edit. Read the docstring.")
+
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
