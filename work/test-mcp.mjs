@@ -498,6 +498,7 @@ globalThis.fetch = async (input, init) => {
     if (netMode === "dbdown") throw new Error("connect refused");
     return J({ main: leagueRec });
   }
+  if (u.startsWith(FB + "/users.json")) return J(USERS);
   if (u.includes("/bozo/leagues/main/ledger")) return J(leagueRec.ledger || null);
   if (u.startsWith(FB + "/drafts/")) {
     if (netMode === "emptyRoom") return J(null);
@@ -532,7 +533,23 @@ globalThis.fetch = async (input, init) => {
 
 /* -------------------------------- helpers -------------------------------- */
 const PASS = "sekrit-league-pass";
-const env = { DAWG_PASS: PASS, RL: { async get(k) { return k === "survivor:2026:1" ? JSON.stringify({ season: 2026, week: 1, stored: NOW - 3600e3, picks: { CLE: 40 } }) : null; } } };
+/* ⚠️ A REAL PER-USER TOKEN. mcpAuth hashes the supplied token as hmac(BOZO_PEPPER,
+   "mcp|" + token) and compares it against every /users row, so the fixture has to carry
+   the genuine HMAC — faking the comparison would test nothing. */
+const PEPPER = "test-pepper";
+const USER_TOKEN = "u_thekid";
+const hmacB64u = async (secret, msg) => {
+  const te2 = new TextEncoder();
+  const key = await crypto.subtle.importKey("raw", te2.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", key, te2.encode(msg));
+  return Buffer.from(sig).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+};
+const USERS = {
+  "Kap": { mcpToken: await hmacB64u(PEPPER, "mcp|u_kap") },
+  "The%20Kid": { mcpToken: await hmacB64u(PEPPER, "mcp|" + USER_TOKEN) },
+  "Outsider": { mcpToken: await hmacB64u(PEPPER, "mcp|u_outsider") },
+};
+const env = { DAWG_PASS: PASS, BOZO_PEPPER: PEPPER, RL: { async get(k) { return k === "survivor:2026:1" ? JSON.stringify({ season: 2026, week: 1, stored: NOW - 3600e3, picks: { CLE: 40 } }) : null; } } };
 const req = (body, { path = "/mcp/" + PASS, headers = {}, method = "POST" } = {}) =>
   worker.fetch(new Request("https://toto.jkapcar4.workers.dev" + path, {
     method, headers: { "Content-Type": "application/json", ...headers },
@@ -610,7 +627,9 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 {
   const j = await (await req(rpc("tools/list"))).json();
   const t = j.result.tools;
-  ok(t.length === 42, "forty-two tools listed in the staged Worker source");
+  ok(t.length === 43, "forty-three tools listed in the staged Worker source");
+  ok(t.some(x => x.name === "dd_draft_bozo_leg" && /READ-ONLY/.test(x.description)),
+     "dd_draft_bozo_leg is listed and says in its own description that it writes nothing");
   ok(t.every(x => x.name.startsWith("dd_")), "all tools dd_-prefixed");
   ok(t.every(x => x.inputSchema && x.inputSchema.type === "object"), "all tools carry an inputSchema");
   for (const name of ["dd_convert_odds", "dd_devig_market", "dd_price_parlay", "dd_calculate_bet_ev",
@@ -1667,6 +1686,89 @@ function refNcdf(z) {
 /* ----------------------- source-level safety asserts ----------------------- */
 const blockSrc = readFileSync(resolve(WORK, "mcp-block.js"), "utf8");
 const noComments = blockSrc.replace(/\/\/[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
+/* ------------------------ dd_draft_bozo_leg ------------------------
+   ⚠️ It reads the board and runs the server's validator. It submits nothing. The tests
+   below go through the refusals in the order the tool checks them, then the happy path. */
+const asUser = (name, args, id = 1) =>
+  req(call("dd_draft_bozo_leg", args, id), { path: "/mcp/" + name });
+const LEG = { sport: "nfl", eventId: "403", game: "SF @ SEA", mkt: "spread", side: "SF", line: -6.5, price: -180, label: "SF -6.5" };
+
+{
+  // identity first: the shared connector cannot answer "are you in this league"
+  const j = await (await req(call("dd_draft_bozo_leg", LEG))).json();
+  ok(j.result.isError === true, "shared connector: dd_draft_bozo_leg refuses");
+  ok(/connect\.html/.test(j.result.content[0].text), "…and points at where to mint a personal URL");
+}
+{
+  const j = await (await asUser("u_outsider", LEG)).json();
+  ok(j.result.isError === true && /not in main/.test(j.result.content[0].text),
+     "a member of nothing is refused before any leg is inspected");
+}
+{
+  leagueRec.status = "placed";
+  const d = text(await (await asUser(USER_TOKEN, LEG)).json());
+  leagueRec.status = "open";
+  ok(d.accepted === false && d.reason === "board-closed", "board locked: refused, with the reason named");
+  ok(/lever hierarchy has already been drawn/.test(d.detail), "…and says the draw already happened");
+}
+{
+  leagueRec.allowEdit = false;
+  const d = text(await (await asUser("u_kap", LEG)).json());
+  leagueRec.allowEdit = undefined;
+  ok(d.accepted === false && d.reason === "edits-locked" && d.yourExistingLeg.label === "Over 47.5",
+     "a league that locks legs on arrival refuses an edit, and shows what is already in");
+}
+{
+  const d = text(await (await asUser(USER_TOKEN, { ...LEG, price: 150 })).json());
+  ok(d.accepted === false && /outside the/.test(d.detail),
+     "a price outside the band is refused in the server's own words");
+  ok(d.band && d.band.ceil !== undefined, "…and the band is returned so the caller can fix it");
+}
+{
+  // Jeff already has CLE -3.5 on the board and this league does not allow duplicates
+  const d = text(await (await asUser(USER_TOKEN, { ...LEG, label: "CLE -3.5" })).json());
+  ok(d.accepted === false && /Jeff already has that exact leg/.test(d.detail),
+     "a duplicate label is refused and names whose leg it clashes with");
+}
+{
+  const d = text(await (await asUser(USER_TOKEN, { ...LEG, mkt: "other", prop: "" })).json());
+  ok(d.accepted === false && /needs to say what it actually is/.test(d.detail),
+     "an \"other\" leg with no description is refused");
+}
+{
+  const d = text(await (await asUser(USER_TOKEN, LEG)).json());
+  ok(d.accepted === true, "a legal leg is accepted");
+  ok(d.you === "The Kid", "the caller is resolved from the per-user token, decoded");
+  ok(d.submit.body.league === "main" && d.submit.body.pick.label === "SF -6.5" &&
+     d.submit.body.pick.line === -6.5 && d.submit.body.pick.price === -180,
+     "the returned body is the exact shape /bozo/pick wants");
+  ok(d.willBeStoredAs.priceSource === "self" && /set by the server/.test(String(d.willBeStoredAs.ts)),
+     "what the server will store is shown, including that it stamps the time and the price is self-reported");
+  ok(d.editingAnExistingLeg === false, "The Kid has no leg in yet");
+  // ⚠️ three members, two legs in — The Kid's would be the last one
+  ok(d.wouldLockTheBoard === true && /LAST LEG/.test(d.warning) && /never redone/.test(d.warning),
+     "it says plainly when submitting would lock the board and draw the hierarchy for everyone");
+  ok(Array.isArray(d.stillWaitingOn) && d.stillWaitingOn.length === 1 && d.stillWaitingOn[0] === "The Kid",
+     "stillWaitingOn is who has no leg in");
+  ok(d.caveats.some(c => /Nothing was submitted/.test(c)), "the payload says nothing was submitted");
+  ok(d.caveats.some(c => /self-reported/.test(c)), "…and that the price is unchecked");
+}
+{
+  const d = text(await (await asUser("u_kap", { ...LEG, label: "SF -6.5 (edit)" })).json());
+  ok(d.accepted === true && d.editingAnExistingLeg === true && d.editResetsYourClock === true,
+     "an edit is allowed by default and says it resets the clock");
+  ok(d.wouldLockTheBoard === false,
+     "replacing a leg that is already counted does not become the locking leg");
+}
+{
+  // the tool must defer to the enforcer, not carry its own copy of the rules
+  const src = readFileSync(resolve(WORK, "mcp-block.js"), "utf8");
+  const tool = src.slice(src.indexOf('name: "dd_draft_bozo_leg"'), src.indexOf('name: "dd_draft_board"'));
+  ok(/validatePick\(/.test(tool), "dd_draft_bozo_leg calls the server's validatePick");
+  ok(!/outside the .* band/.test(tool) && !/Unknown market/.test(tool),
+     "…and does not carry its own copy of the rules to drift from");
+}
+
 ok(!/fbPut|fbPatch|fbDelete/.test(noComments), "block calls NO Firebase write helper");
 ok(!/\.put\(|\.delete\(/.test(noComments), "block performs NO KV writes");
 ok(!/method:\s*["'](PUT|POST|PATCH|DELETE)/.test(noComments), "block issues NO writing HTTP methods");

@@ -3504,6 +3504,179 @@ function bestShowdown(players, proj, pool, cfg, site, cap, floor,
 /* ------------------------------------------------------------------ export */
 
 root.DDFS = { SITES, POS, solveLineups, rng, gauss };
+/* ===== DD-FRONTIER START — generated from work/patch-dfs-frontier.py ===== */
+/* ============================================================================
+   PROJECTION vs RARITY — the exact convex frontier
+
+   The tournament question this answers: to make a lineup rarer, how much projection do
+   you have to give up? "Rarer" here is CUMULATIVE OWNERSHIP, the sum of the projected
+   ownership of the players in it — the number this page already reports per lineup, and
+   the one a field is measured in.
+
+   The method is a Lagrangian sweep. For a weight L, solve the ordinary exact problem on
+   proj[i] - L*own[i]. Whatever comes back is EXACTLY optimal for that weight, and it is
+   a vertex of the upper convex hull of the achievable (own, proj) set. Probing L at the
+   chord slope between two known vertices and recursing finds every vertex between them.
+
+   ⚠️ IT IS THE HULL, NOT THE FRONTIER. A lineup sitting in a dent — beaten by the
+   straight line between two hull vertices, but the best there is at its own ownership —
+   is optimal for no weight L at all and cannot be found this way. No sweep of this kind
+   can find one. `hull: true` rides on the result so the page has to say so.
+
+   ⚠️ ONLY PROVED POINTS ARE PLOTTED. A solve that hits its slice of the clock returns
+   the best lineup found so far, which is not the optimum and therefore not a vertex.
+   Those are DISCARDED and `capped` goes true, rather than drawing an unproved point on
+   a curve whose whole claim is exactness.
+
+   ⚠️ THE RARE END IS THE EXPENSIVE END, and that is structural. Low ownership correlates
+   with low salary, so "cheapest ownership while still spending the salary floor" sets
+   the objective against the constraint and the salary-knapsack bound goes slack. On a
+   full 13-game slate the max-projection solve is ~70ms and a large-L solve does not
+   finish in 15s. So the sweep walks L UP only while probes keep succeeding, and stops.
+   The curve then covers what was proved and says where it stopped.
+
+   ⚠️ THE SHIFT IS NOT A FUDGE, BUT IT IS NOT FREE. proj[i] - L*own[i] goes negative for
+   large L, and a non-positive projection means "no projection" everywhere else in this
+   engine, which would silently empty the pool. A constant added to every eligible
+   projection cannot change the winner, because every classic lineup holds exactly
+   site.size players. (That is also why showdown is refused rather than answered wrong:
+   the captain multiplier makes the constant non-uniform.) What the constant DOES cost is
+   pruning — it compresses the relative spread the bound works on — which is the other
+   half of why large L is slow.
+   ========================================================================== */
+
+var FRONTIER_MAX_SOLVES = 24;
+var FRONTIER_WALK = 6;      // probes spent finding the rare end before refinement starts
+
+/**
+ * players/cfg: exactly as solveLineups takes them, plus `own` (percent) per player.
+ * Returns { points, segments, solves, capped, hull, unavailable }.
+ *   points[]   {ids, proj, own, sal, lam}  hull vertices, ascending ownership
+ *   segments[] {from, to, rate}            rate = projection points per ownership point
+ *   capped     the search stopped on its budget or the clock, not on convergence
+ *   unavailable a reason string when no frontier can honestly be drawn at all
+ */
+function frontier(players, cfg, onProgress) {
+  cfg = cfg || {};
+  var site = SITES[cfg.site] || SITES.dk_classic;
+  var out = { points: [], segments: [], solves: 0, capped: false, hull: true, unavailable: null };
+  if (site.showdown) { out.unavailable = "showdown"; return out; }
+
+  var own = [], anyOwn = false, i;
+  for (i = 0; i < players.length; i++) {
+    var v = +players[i].own || 0;
+    own.push(v > 0 ? v : 0);
+    if (v > 0) anyOwn = true;
+  }
+  if (!anyOwn) { out.unavailable = "no-ownership"; return out; }
+
+  var budget = cfg.maxSolves > 0 ? Math.min(FRONTIER_MAX_SOLVES, cfg.maxSolves | 0) : FRONTIER_MAX_SOLVES;
+  var deadline = Date.now() + (cfg.timeLimitMs || 30000);
+  var seen = {}, points = [];
+
+  function at(lam) {
+    if (out.solves >= budget || Date.now() > deadline) { out.capped = true; return null; }
+    out.solves++;
+    if (onProgress) onProgress(out.solves, budget);
+
+    var lo = 0, j;
+    for (j = 0; j < players.length; j++) {
+      if (!(players[j].proj > 0) && !players[j].lock) continue;
+      var w = (players[j].proj || 0) - lam * own[j];
+      if (w < lo) lo = w;
+    }
+    var shift = -lo + 1e-6;
+
+    var shadow = [];
+    for (j = 0; j < players.length; j++) {
+      var p = players[j], q = {};
+      for (var k in p) q[k] = p[k];
+      // A player with no projection stays absent, exactly as everywhere else.
+      q.proj = (p.proj > 0 || p.lock) ? (p.proj || 0) - lam * own[j] + shift : 0;
+      shadow.push(q);
+    }
+
+    // A slice of what is left, not all of it: one hard weight must not starve the rest.
+    var c = {}; for (var kk in cfg) c[kk] = cfg[kk];
+    c.count = 1; c.randomness = 0; c.uniques = 0; c.seed = 1;
+    c.timeLimitMs = Math.max(600, Math.floor((deadline - Date.now()) / Math.max(1, budget - out.solves + 1)));
+
+    var res = solveLineups(shadow, c);
+    if (!res || res.timedOut || !res.lineups.length) { out.capped = true; return null; }
+
+    var ids = res.lineups[0].ids.slice();
+    var key = ids.slice().sort(function (a, b) { return a - b; }).join(",");
+    if (seen[key]) return seen[key];
+
+    var pr = 0, ow = 0;
+    for (j = 0; j < ids.length; j++) { pr += players[ids[j]].proj || 0; ow += own[ids[j]]; }
+    var pt = { ids: ids, proj: pr, own: ow, sal: res.lineups[0].sal, lam: lam };
+    seen[key] = pt; points.push(pt);
+    return pt;
+  }
+
+  var top = at(0);                       // the plain max-projection lineup
+  if (!top) { out.unavailable = "infeasible"; return out; }
+
+  // Walk the weight up while probes keep succeeding, keeping the rarest lineup seen.
+  // ⚠️ DO NOT stop because a probe returned the same lineup as the last one. Small
+  // weights often do — the max-projection lineup stays optimal until the weight is big
+  // enough to dislodge it — and an early stop there leaves the frontier a single point.
+  var lam = 0.05, bot = top, walk = 0;
+  while (walk++ < FRONTIER_WALK) {
+    var nxt = at(lam);
+    if (!nxt) break;                     // timed out, or the budget ran out
+    if (nxt.own < bot.own - 1e-9) bot = nxt;
+    lam *= 4;
+  }
+  // The rare end is "the rarest lineup this search reached", not provably the rarest
+  // lineup on the slate — see the note above about why large weights do not finish.
+
+  function refine(a, b, depth) {         // a = richer and more owned, b = leaner and rarer
+    if (depth > 12) return;
+    var dOwn = a.own - b.own;
+    if (dOwn <= 1e-9) return;
+    var slope = (a.proj - b.proj) / dOwn;
+    var p = at(slope);
+    if (!p) return;
+    if (p.proj <= b.proj + (p.own - b.own) * slope + 1e-7) return;   // sits on the chord
+    refine(a, p, depth + 1); refine(p, b, depth + 1);
+  }
+  refine(top, bot, 0);
+
+  points.sort(function (a, b) { return a.own - b.own || b.proj - a.proj; });
+
+  // Pareto filter first: a point beaten on BOTH axes by a rarer one is on no frontier,
+  // hull or otherwise. This can only bite when the search was cut off mid-recursion.
+  var pareto = [], bestProj = -Infinity;
+  for (i = 0; i < points.length; i++) {
+    if (points[i].proj > bestProj + 1e-9) { pareto.push(points[i]); bestProj = points[i].proj; }
+  }
+  // Then the upper hull: slopes must strictly decrease as ownership rises.
+  var hull = [];
+  for (i = 0; i < pareto.length; i++) {
+    var c2 = pareto[i];
+    while (hull.length >= 2) {
+      var x = hull[hull.length - 2], y = hull[hull.length - 1];
+      if ((y.proj - x.proj) * (c2.own - y.own) <= (c2.proj - y.proj) * (y.own - x.own) + 1e-9) hull.pop();
+      else break;
+    }
+    hull.push(c2);
+  }
+  out.points = hull;
+  for (i = 1; i < hull.length; i++) {
+    out.segments.push({
+      from: hull[i - 1], to: hull[i],
+      rate: (hull[i].proj - hull[i - 1].proj) / (hull[i].own - hull[i - 1].own)
+    });
+  }
+  return out;
+}
+
+root.DDFS.frontier = frontier;
+root.DDFS.FRONTIER_MAX_SOLVES = FRONTIER_MAX_SOLVES;
+root.DDFS.FRONTIER_WALK = FRONTIER_WALK;
+/* ===== DD-FRONTIER END ===== */
 
 /* ============================================================================
    CONTEST SIMULATOR
@@ -6018,6 +6191,140 @@ const MCP_TOOLS = [
         league: lid, weeksOnLedger: Object.keys(byWeek).length, gradedRows: graded,
         you: me, players: per,
         note: graded ? undefined : "No graded results yet — everything above is bookkeeping, not performance.",
+      });
+    },
+  },
+  {
+    name: "dd_draft_bozo_leg",
+    description:
+      "Check a proposed Bozo leg against the LIVE board and return the exact body /bozo/pick wants, " +
+      "or the reason it would be rejected. ⚠️ READ-ONLY: this submits nothing, writes nothing and " +
+      "changes nothing. The member still submits it themselves on bozo.html — that is deliberate, not a " +
+      "limitation to work around. Runs the server's own validator, so a pass here is a pass there.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        sport: { type: "string", description: "nfl | cfb | nba | cbb | mlb | nhl" },
+        eventId: { type: "string", description: "The game's id, from dd_scores" },
+        game: { type: "string", description: "Human-readable matchup, e.g. \"BUF @ MIA\"" },
+        mkt: { type: "string", description: "spread | ml | total | prop | other" },
+        side: { type: "string", description: "Team abbreviation, or over / under" },
+        line: { type: "number", description: "The number. Required for everything except ml." },
+        price: { type: "number", description: "American odds, e.g. -180. Favourites only; the band is league-set." },
+        label: { type: "string", description: "How the leg reads on the ticket, e.g. \"BUF -6.5\"" },
+        prop: { type: "string", description: "Required when mkt is \"other\": what the bet actually is" },
+        league: { type: "string", description: "League id (default: main)" },
+      },
+      required: ["sport", "eventId", "game", "mkt", "side", "price", "label"],
+      additionalProperties: false,
+    },
+    async run(args, env, caller) {
+      // ⚠️ REFUSALS FIRST, and identity before anything else. Membership, the duplicate
+      // rule and "have you already got a leg in" are all questions about who is asking.
+      if (!caller || caller.kind !== "user")
+        return toolErr(
+          "This one needs to know who you are, and the shared league connector cannot tell. " +
+          "Every check below — are you in this league, do you already have a leg in, has someone " +
+          "else taken this exact bet — depends on your name. Mint a personal URL at " +
+          SITE + "/connect.html and it works.");
+      const name = caller.name;
+
+      const lid = validLeagueId(args.league || DEFAULT_LEAGUE) ? (args.league || DEFAULT_LEAGUE) : null;
+      if (!lid) return toolErr("Bad league id.");
+      let lg;
+      try { lg = await loadLeague(env, lid); }
+      catch (e) { return toolErr("Database unreachable: " + e.message); }
+      if (!lg) return toolErr("No such league: " + lid);
+
+      if (!isMember(lg, name))
+        return toolErr("You are not in " + lid + ", so nothing can go on that board under your name.");
+
+      const status = lg.status || "open";
+      if (status !== "open")
+        return toolText({
+          accepted: false, reason: "board-closed",
+          detail: "The ticket is placed and the board is locked — nothing can be added or changed for week " +
+                  (lg.week || 1) + ". The lever hierarchy has already been drawn.",
+          week: lg.week || 1, status,
+        });
+
+      const set = settingsOf(lg);
+      const picks = lg.picks || {};
+      const mine = picks[encodeURIComponent(name)] || picks[name] || null;
+      if (mine && !set.allowEdit)
+        return toolText({
+          accepted: false, reason: "edits-locked",
+          detail: "This league locks your leg the moment it lands, and yours is already in. " +
+                  "No edit is possible, by league setting rather than by timing.",
+          yourExistingLeg: { label: mine.label, price: mine.price, ts: mine.ts || null },
+        });
+
+      // The proposal, shaped the way /bozo/pick reads it.
+      const p = {
+        sport: String(args.sport || "").toLowerCase(),
+        eventId: String(args.eventId || ""),
+        game: String(args.game || "").slice(0, 80),
+        mkt: String(args.mkt || "").toLowerCase(),
+        side: String(args.side || "").slice(0, 40),
+        line: args.mkt === "ml" ? 0 : Number(args.line),
+        price: Math.round(Number(args.price)),
+        label: String(args.label || "").slice(0, 90),
+        prop: args.prop ? String(args.prop).slice(0, 80) : null,
+      };
+
+      // ⚠️ THE SERVER'S OWN VALIDATOR, not a copy of its rules. A second copy would drift
+      // and start passing legs /bozo/pick rejects, which is worse than no check at all.
+      const band = bandOf(lg);
+      const err = validatePick(p, name, picks, band, set.allowDupes);
+      if (err)
+        return toolText({
+          accepted: false, reason: "rejected-by-the-same-validator-the-server-runs",
+          detail: err, band,
+          note: "That is the literal string POST /bozo/pick would return. Fix it and ask again.",
+        });
+
+      // ⚠️ Say when submitting would END THE WEEK for everyone. The last leg locks the
+      // board and draws the lever hierarchy, and there is no undo — the only route back to
+      // open advances the week and discards this one. Whoever is about to press the button
+      // should know that is what the button does this time.
+      const size = memberNames(lg).length;
+      const need = set.lockRule === "count" ? Math.min(set.lockCount || size, size || set.lockCount) : size;
+      const already = Object.keys(picks).length;
+      const wouldBeNth = mine ? already : already + 1;
+      const wouldLock = need > 0 && wouldBeNth >= need;
+
+      return toolText({
+        accepted: true,
+        league: lid, week: lg.week || 1, you: name,
+        editingAnExistingLeg: !!mine,
+        // ⚠️ Editing resets your clock. The server stamps a fresh ts, and ts is what
+        // decides Last In — so an edit is not free even when it is allowed.
+        editResetsYourClock: !!mine || undefined,
+        submit: {
+          how: "POST " + SITE.replace("https://datadawgs216.com", "https://toto.jkapcar4.workers.dev") +
+               "/bozo/pick — or just press submit on " + SITE + "/bozo.html, which is the intended path.",
+          body: { league: lid, pick: p },
+        },
+        willBeStoredAs: {
+          ...p,
+          dir: (p.side === "over" || p.side === "under") ? p.side : "over",
+          priceSource: "self",
+          ts: "set by the server when you actually submit, not now",
+        },
+        band,
+        legsIn: already, legsNeeded: need,
+        stillWaitingOn: memberNames(lg).filter(n => !Object.keys(picks).some(k => playerName(k) === n)),
+        wouldLockTheBoard: wouldLock,
+        warning: wouldLock
+          ? "⚠️ THIS WOULD BE THE LAST LEG. Submitting it places the ticket, locks the board for all " +
+            size + " and draws the lever hierarchy. That draw happens once and is never redone; there is " +
+            "no undo short of a manager advancing the week, which discards it for everyone."
+          : undefined,
+        caveats: [
+          "Nothing was submitted. This tool cannot submit — it reads the board and runs the validator.",
+          "The price is whatever you typed. Nothing here checks it against a book, and it is recorded as self-reported.",
+          "A pass here is a pass at this instant. Someone else can take your exact leg, or fill the board, before you press submit.",
+        ],
       });
     },
   },

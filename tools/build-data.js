@@ -1006,7 +1006,10 @@ const MCP_LIVE = ['dd_whoami', 'dd_league_overview', 'dd_bozo_week', 'dd_bozo_st
   'dd_draft_board', 'dd_draft_pool', 'dd_survivor_week', 'dd_scores',
   'dd_dfs_correlations', 'dd_solve_dfs_lineup', 'dd_guillotine_odds', 'dd_site_map',
   'dd_survivor_ev', 'dd_optimize_survivor_path', 'dd_analyze_matchup', ...MCP_POUND_LIVE, ...MCP_CFB_LIVE];
-const MCP_STAGED = [];
+// Staged = the tool is in work/mcp-block.js and the committed Worker source, but the
+// deployed Worker has not been updated yet. It is NOT callable. Keeping it out of
+// tools_live is the whole point: the map must not claim coverage the endpoint has.
+const MCP_STAGED = ['dd_draft_bozo_leg'];
 const MCP_ENDPOINT = {
   path: '/mcp/u_<personal token>   (legacy: /mcp/<league passphrase>)',
   transport: 'streamable-http',
