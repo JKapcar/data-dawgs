@@ -100,6 +100,34 @@ test('staged MCP tools are named, counted separately, and kept out of the live r
   for (const name of staged) assert.ok(!surfaces.mcp.tools_live.includes(name), `${name} is staged but claimed live`);
   assert.equal(surfaces.counts.mcp_tools_live, surfaces.mcp.tools_live.length);
 });
+/* ⚠️ THE ROSTER IS DERIVED FROM work/mcp-block.js, SO THE MAP CANNOT DRIFT FROM THE WORKER.
+   What is still a human decision — and must stay one — is deployment state: registered is
+   not deployed. These assertions hold the two apart and hold the catalog block to the same
+   honesty, since /mcp/core/<credential> does not answer on the live endpoint yet. */
+test('the surfaces map derives its MCP roster from the registry and labels the catalogs staged', () => {
+  const registry = fs.readFileSync(path.join('work', 'mcp-block.js'), 'utf8');
+  const reg = registry.slice(registry.indexOf('const MCP_TOOLS = ['));
+  const declared = (reg.match(/\n    name: "dd_\w+",\n/g) || []).map(s => s.match(/"(dd_\w+)"/)[1]);
+  assert.equal(declared.length, surfaces.counts.mcp_tools_registered);
+  assert.deepEqual([...surfaces.mcp.tools_live, ...surfaces.mcp.tools_staged].sort(), [...declared].sort());
+
+  const cat = surfaces.mcp.catalogs_staged;
+  assert.match(cat.status, /^STAGED/);
+  assert.match(cat.status, /NOT on the deployed endpoint/);
+  assert.deepEqual(cat.full, declared);
+  assert.equal(cat.core.length, surfaces.counts.mcp_tools_core_staged);
+  assert.ok(cat.core.length > 0 && cat.core.length < cat.full.length, 'core must be a proper subset, or it saves nothing');
+  for (const name of cat.core) assert.ok(cat.full.includes(name), `${name} is in core but not in full`);
+  assert.equal(cat.paths.core, '/mcp/core/<credential>');
+  // the live endpoint description must NOT advertise a catalog path that does not answer
+  assert.ok(!/\/mcp\/core\//.test(surfaces.mcp.path), 'the live path claims a catalog route that is not deployed');
+
+  const titles = surfaces.mcp.annotations_staged.titles;
+  assert.match(surfaces.mcp.annotations_staged.status, /^STAGED/);
+  assert.deepEqual(Object.keys(titles).sort(), [...declared].sort());
+  assert.ok(Object.values(titles).every(t => typeof t === 'string' && t.length > 0));
+  assert.equal(new Set(Object.values(titles)).size, declared.length, 'two tools sharing a title is a UI that lies');
+});
 test('survivor surface exposes the exact path optimizer and names its remaining rule gap', () => {
   const survivor = surfaces.data.find(s => s.id === 'survivor');
   assert.ok(survivor.machine.some(x => x.kind === 'mcp' && x.tool === 'dd_optimize_survivor_path' && x.status === 'live'));

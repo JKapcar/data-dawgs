@@ -1002,14 +1002,43 @@ const MCP_CFB_LIVE = ['dd_find_cfb_games', 'dd_find_cfb_team_games', 'dd_find_cf
   'dd_get_cfb_model_card', 'dd_get_cfb_rating_system', 'dd_rank_cfb_teams', 'dd_cfb_team_profile',
   'dd_compare_cfb_teams', 'dd_project_cfb_matchup', 'dd_project_cfb_schedule_path',
   'dd_find_cfb_record_divergence', 'dd_get_cfb_model_disagreement', 'dd_get_cfb_model_receipt_status'];
-const MCP_LIVE = ['dd_whoami', 'dd_league_overview', 'dd_bozo_week', 'dd_bozo_standings',
-  'dd_draft_board', 'dd_draft_pool', 'dd_survivor_week', 'dd_scores',
-  'dd_dfs_correlations', 'dd_solve_dfs_lineup', 'dd_guillotine_odds', 'dd_site_map',
-  'dd_survivor_ev', 'dd_optimize_survivor_path', 'dd_analyze_matchup', ...MCP_POUND_LIVE, ...MCP_CFB_LIVE];
+/* ⚠️ THE ROSTER IS READ FROM THE REGISTRY, NOT RETYPED HERE.
+ * MCP_LIVE used to be a hand-maintained list that had to be edited in step with
+ * work/mcp-block.js. Two lists cannot stay equal by intention — dd_draft_bozo_leg shipped
+ * into the registry on 2026-08-09 and this file had to be edited separately to notice.
+ * Now the registry is parsed, and the ONE remaining human decision is deployment state:
+ * every registered tool must be classified live or staged, or the build fails. Adding a
+ * tool to the Worker without saying whether it is deployed is a build error instead of a
+ * coverage map that quietly overstates.
+ */
+const MCP_REGISTRY = (() => {
+  const block = read('work/mcp-block.js');
+  const reg = block.slice(block.indexOf('const MCP_TOOLS = ['));
+  const rx = /\n    name: "(dd_\w+)",\n    title: "([^"]+)",\n    catalog: "(core|full)",\n    readOnlyHint: (true|false),\n/g;
+  const out = [];
+  for (let m; (m = rx.exec(reg)); ) out.push({ name: m[1], title: m[2], catalog: m[3], readOnly: m[4] === 'true' });
+  const declared = (reg.match(/\n    name: "dd_\w+",\n/g) || []).length;
+  if (!declared) throw new Error('work/mcp-block.js: no tools found — the registry regex has drifted');
+  if (out.length !== declared)
+    throw new Error(`work/mcp-block.js: ${declared} tools declared, ${out.length} fully annotated — run work/patch-mcp-annotations.py`);
+  return out;
+})();
 // Staged = the tool is in work/mcp-block.js and the committed Worker source, but the
 // deployed Worker has not been updated yet. It is NOT callable. Keeping it out of
 // tools_live is the whole point: the map must not claim coverage the endpoint has.
 const MCP_STAGED = ['dd_draft_bozo_leg'];
+const MCP_LIVE = MCP_REGISTRY.map(t => t.name).filter(n => !MCP_STAGED.includes(n));
+for (const n of MCP_STAGED)
+  if (!MCP_REGISTRY.some(t => t.name === n)) throw new Error(`${n} is listed as staged but is not in the registry`);
+for (const n of [...MCP_POUND_LIVE, ...MCP_CFB_LIVE])
+  if (!MCP_LIVE.includes(n)) throw new Error(`${n} is claimed live on the Pound surface but is not a live registry tool`);
+/* ⚠️ CATALOGS ARE STAGED, NOT LIVE. The core/full split is a Worker change that has not
+ * been deployed: /mcp/core/<credential> does not answer yet. It is reported under its own
+ * staged key so nothing reads it as an endpoint anyone can call today. */
+const MCP_CATALOGS = {
+  core: MCP_REGISTRY.filter(t => t.catalog === 'core').map(t => t.name),
+  full: MCP_REGISTRY.map(t => t.name),
+};
 const MCP_ENDPOINT = {
   path: '/mcp/u_<personal token>   (legacy: /mcp/<league passphrase>)',
   transport: 'streamable-http',
@@ -1141,13 +1170,35 @@ write('surfaces.json', {
     dating: 'Every payload carries as_of and source. Quote the date with the number.',
     tiers: TIER_MEANING,
   },
-  mcp: { ...MCP_ENDPOINT, tools_live: MCP_LIVE, tools_staged: MCP_STAGED },
+  mcp: {
+    ...MCP_ENDPOINT,
+    tools_live: MCP_LIVE,
+    tools_staged: MCP_STAGED,
+    catalogs_staged: {
+      status: 'STAGED — the core/full split is in work/mcp-block.js and the committed Worker source, ' +
+              'and is NOT on the deployed endpoint. /mcp/core/<credential> does not answer yet.',
+      why: 'Forty-three tool schemas cost 10-25k context tokens in every conversation that connects. ' +
+           'core is the everyday league surface; full is everything and stays the default, so the bare ' +
+           '/mcp/<credential> URL keeps serving every tool a live connector may already be calling.',
+      paths: { core: '/mcp/core/<credential>', full: '/mcp/full/<credential>' },
+      core: MCP_CATALOGS.core,
+      full: MCP_CATALOGS.full,
+    },
+    annotations_staged: {
+      status: 'STAGED with the catalogs. Every registered tool carries a display title and ' +
+              'readOnlyHint:true on tools/list. destructiveHint, idempotentHint and openWorldHint ' +
+              'are deliberately absent rather than guessed.',
+      titles: Object.fromEntries(MCP_REGISTRY.map(t => [t.name, t.title])),
+    },
+  },
   counts: {
     surfaces: SURFACES.length,
     with_live_machine_access: SURFACES.filter(s => s.machine.some(m => m.status === 'live')).length,
     with_no_machine_access: SURFACES.filter(s => s.machine.every(m => m.status === 'none')).length,
+    mcp_tools_registered: MCP_REGISTRY.length,
     mcp_tools_live: MCP_LIVE.length,
     mcp_tools_staged: MCP_STAGED.length,
+    mcp_tools_core_staged: MCP_CATALOGS.core.length,
     mcp_tools_planned: [...new Set(SURFACES.flatMap(s => s.planned).filter(p => p.startsWith('mcp:')))].length,
   },
   data: SURFACES.map(s => ({ ...s, tier: tierOf(s.page.replace(/^\//, '')) })),

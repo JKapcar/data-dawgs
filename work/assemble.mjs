@@ -99,6 +99,25 @@ for (const banned of ["fbPut(", "fbPatch(", "fbDelete("]) {
   if (blockOnly.includes(banned)) fail(`the MCP block calls ${banned} — read-only invariant broken`);
 }
 
+/* ---- 4b. every registered tool carries its full annotation set ----
+ * ⚠️ A tool added without a title, catalog and readOnlyHint would list with an undefined
+ * title, would fall out of BOTH catalogs (mcpCatalogTools filters core on t.catalog), and
+ * would make tools/list disagree with the coverage map that tools/build-data.js derives
+ * from this same file. Counting is enough to catch it and costs nothing.
+ */
+const count = re => (blockOnly.match(re) || []).length;
+const nTools = count(/\n    name: "dd_\w+",\n/g);
+for (const [what, n] of [["title", count(/\n    title: "[^"]+",\n/g)],
+                         ["catalog", count(/\n    catalog: "(?:core|full)",\n/g)],
+                         ["readOnlyHint", count(/\n    readOnlyHint: (?:true|false),\n/g)]]) {
+  if (n !== nTools) fail(`${nTools} tools declared but ${n} carry a ${what} — run work/patch-mcp-annotations.py`);
+}
+if (nTools === 0) fail("no tools found in the block — the registry regex has drifted");
+// The block still claims, in its own header and in every tool description, that nothing
+// writes. A `readOnlyHint: false` here would make that claim false on the wire.
+if (/readOnlyHint: false/.test(blockOnly))
+  fail("a tool declares readOnlyHint: false while the block is still asserted read-only");
+
 writeFileSync(TARGET, out);
 try {
   execFileSync(process.execPath, ["--check", TARGET], { stdio: "pipe" });

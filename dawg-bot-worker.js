@@ -5978,9 +5978,29 @@ async function mcpAuth(request, url, env) {
   return null;
 }
 
+// ⚠️ THE CATALOG IS A PATH SEGMENT, STRIPPED BEFORE THE CREDENTIAL IS READ.
+//   /mcp/<credential>        full — UNCHANGED, so no connector already in the wild loses a tool
+//   /mcp/full/<credential>   full, named explicitly
+//   /mcp/core/<credential>   core — the everyday league surface, for conversations that should
+//                            not spend 43 tool schemas of context on tools they never call
+// The default stayed `full` on purpose: switching it would silently remove tool names a live
+// connector may already be calling, which is the same breaking change as renaming one.
+// ⚠️ DAWG_PASS MUST NEVER BE LITERALLY "core" OR "full". A first segment matching a catalog
+// name is consumed as the catalog, so such a passphrase would be unreachable. Per-user tokens
+// start with u_ and cannot collide.
+const MCP_CATALOGS = ["core", "full"];
+const MCP_DEFAULT_CATALOG = "full";
+
+function mcpRoute(url) {
+  const seg = url.pathname.split("/").filter(Boolean);          // ["mcp", ("core"|"full")?, "<pass>"]
+  let rest = seg.slice(1), catalog = MCP_DEFAULT_CATALOG;
+  if (rest.length && MCP_CATALOGS.includes(rest[0])) { catalog = rest[0]; rest = rest.slice(1); }
+  return { catalog, rest };
+}
+
 function mcpPassOf(request, url) {
-  const seg = url.pathname.split("/").filter(Boolean);          // ["mcp", "<pass>"]
-  if (seg.length >= 2) { try { return decodeURIComponent(seg.slice(1).join("/")); } catch { return seg.slice(1).join("/"); } }
+  const { rest } = mcpRoute(url);
+  if (rest.length) { try { return decodeURIComponent(rest.join("/")); } catch { return rest.join("/"); } }
   const h = request.headers.get("X-Dawg-Pass");
   if (h) return h;
   const a = request.headers.get("Authorization") || "";
@@ -5998,7 +6018,14 @@ const toolErr  = msg => ({ content: [{ type: "text", text: msg }], isError: true
 async function handleMcp(request, url, env) {
   if (request.method === "OPTIONS") return new Response(null, { headers: MCP_CORS });
   if (request.method === "GET")
-    return mcpJson({ name: "data-dawgs", transport: "streamable-http", hint: "POST JSON-RPC 2.0 here." }, 405);
+    return mcpJson({
+      name: "data-dawgs", transport: "streamable-http",
+      catalogs: {
+        core: "/mcp/core/<credential> — the everyday league surface",
+        full: "/mcp/full/<credential> — every tool; the bare /mcp/<credential> is also full",
+      },
+      hint: "POST JSON-RPC 2.0 here.",
+    }, 405);
   if (request.method !== "POST") return mcpJson(rpcErr(null, -32600, "POST only"), 405);
 
   // ⚠️ Either mechanism is enough on its own: BOZO_PEPPER for per-user tokens, DAWG_PASS
@@ -6006,6 +6033,7 @@ async function handleMcp(request, url, env) {
   // moment per-user shipped, for no reason.
   if (!env.BOZO_PEPPER && !env.DAWG_PASS)
     return mcpJson(rpcErr(null, -32000, "Worker misconfigured: neither BOZO_PEPPER nor DAWG_PASS is set."), 500);
+  const { catalog } = mcpRoute(url);
   const caller = await mcpAuth(request, url, env);
   if (!caller)
     return new Response(JSON.stringify(rpcErr(null, -32001, "unauthorised — get your personal connector URL from " + SITE + "/connect.html")),
@@ -6021,14 +6049,19 @@ async function handleMcp(request, url, env) {
 
   const replies = [];
   for (const m of msgs) {
-    const r = await mcpDispatch(m, env, caller);
+    const r = await mcpDispatch(m, env, caller, catalog);
     if (r !== undefined) replies.push(r);        // notifications contribute nothing
   }
   if (!replies.length) return new Response(null, { status: 202, headers: MCP_CORS });
   return mcpJson(batch ? replies : replies[0]);
 }
 
-async function mcpDispatch(m, env, caller) {
+// ⚠️ THE CATALOG IS THE SURFACE, NOT A LISTING HINT. A tool outside the catalog is not
+// callable either. Filtering only tools/list would make `core` a suggestion a model can
+// step around by remembering a name it saw in another conversation.
+const mcpCatalogTools = catalog => catalog === "full" ? MCP_TOOLS : MCP_TOOLS.filter(t => t.catalog === catalog);
+
+async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG) {
   if (!m || typeof m !== "object" || m.jsonrpc !== "2.0" || typeof m.method !== "string")
     return rpcErr(m && m.id, -32600, "Invalid Request");
   const id = m.id;
@@ -6044,6 +6077,11 @@ async function mcpDispatch(m, env, caller) {
         capabilities: { tools: {} },
         serverInfo: { name: "data-dawgs", version: "1.7.0" },
         instructions:
+          "Catalog `" + catalog + "`: " + mcpCatalogTools(catalog).length + " of " + MCP_TOOLS.length + " tools are callable here. " +
+          (catalog === "core"
+            ? "The rest — college football evidence, the DFS and survivor solvers, the model scoreboard and the less common price math — " +
+              "are on the same URL with `full` in place of `core`. Calling one of them from here is an error, not a silent fallback.\n"
+            : "A smaller `core` catalog is served at the same URL with `core` before the credential; it costs less context.\n") +
           (caller && caller.kind === "user"
             ? "You are connected as " + caller.name + ". When a tool marks a row `you: true`, that is them.\n"
             : "⚠️ This is the SHARED league connector — you do NOT know which member you are talking to. " +
@@ -6060,11 +6098,21 @@ async function mcpDispatch(m, env, caller) {
     case "ping":
       return rpcOk(id, {});
     case "tools/list":
-      return rpcOk(id, { tools: MCP_TOOLS.map(t => ({ name: t.name, description: t.description, inputSchema: t.inputSchema })) });
+      // ⚠️ ONLY THE TWO HINTS WE CAN STAND BEHIND. destructiveHint is defined only when
+      // readOnlyHint is false, and idempotentHint/openWorldHint would be a guess per tool.
+      // A client trusts these; an annotation nobody checked is worse than no annotation.
+      // `catalog` is ours and stays server-side — it is not part of the Tool wire shape.
+      return rpcOk(id, { tools: mcpCatalogTools(catalog).map(t => ({
+        name: t.name, title: t.title, description: t.description, inputSchema: t.inputSchema,
+        annotations: { title: t.title, readOnlyHint: t.readOnlyHint === true },
+      })) });
     case "tools/call": {
       const name = m.params && m.params.name;
-      const tool = MCP_TOOLS.find(t => t.name === name);
-      if (!tool) return rpcErr(id, -32602, "Unknown tool: " + name);
+      const tool = mcpCatalogTools(catalog).find(t => t.name === name);
+      if (!tool)
+        return rpcErr(id, -32602, MCP_TOOLS.some(t => t.name === name)
+          ? name + " exists but is not in the `" + catalog + "` catalog. Reconnect with /mcp/full/<your token> to use it."
+          : "Unknown tool: " + name);
       try { return rpcOk(id, await tool.run((m.params && m.params.arguments) || {}, env, caller)); }
       catch (e) { return rpcOk(id, toolErr(String((e && e.message) || e))); }
     }
@@ -6082,6 +6130,9 @@ const MCP_NO_ARGS = { type: "object", properties: {}, additionalProperties: fals
 const MCP_TOOLS = [
   {
     name: "dd_whoami",
+    title: "Who am I",
+    catalog: "core",
+    readOnlyHint: true,
     description: "Who this connection is authenticated as. Call it when a question says 'my' or 'I' — my leg, my budget, my ledger — so you resolve that to the right person instead of guessing. If it reports anonymous:true you do NOT know who you are talking to and must ask.",
     inputSchema: MCP_NO_ARGS,
     async run(args, env, caller) {
@@ -6099,6 +6150,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_league_overview",
+    title: "League overview",
+    catalog: "core",
+    readOnlyHint: true,
     description: "Who is in the Data Dawgs Bozo league, what season/week it is on, and whether the current board is open, placed or graded.",
     inputSchema: { type: "object", properties: { league: { type: "string", description: "League id (default: main)" } }, additionalProperties: false },
     async run(args, env) {
@@ -6116,6 +6170,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_bozo_week",
+    title: "Bozo board this week",
+    catalog: "core",
+    readOnlyHint: true,
     description: "The current Bozo board: every leg IN SUBMISSION ORDER (whoever went last saw every other leg first — that is the social point), plus the drawn lever hierarchy once the ticket is placed. Read the caveats field before analysing.",
     inputSchema: { type: "object", properties: { league: { type: "string", description: "League id (default: main)" } }, additionalProperties: false },
     async run(args, env, caller) {
@@ -6160,6 +6217,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_bozo_standings",
+    title: "Bozo season ledger",
+    catalog: "core",
+    readOnlyHint: true,
     description: "Season-to-date Bozo ledger summary per player: legs submitted, Last In count, Shortest Odds count, and any graded results present. Early season this will honestly say nothing has resolved.",
     inputSchema: { type: "object", properties: { league: { type: "string", description: "League id (default: main)" } }, additionalProperties: false },
     async run(args, env, caller) {
@@ -6196,6 +6256,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_draft_bozo_leg",
+    title: "Draft a Bozo leg",
+    catalog: "core",
+    readOnlyHint: true,
     description:
       "Check a proposed Bozo leg against the LIVE board and return the exact body /bozo/pick wants, " +
       "or the reason it would be rejected. ⚠️ READ-ONLY: this submits nothing, writes nothing and " +
@@ -6330,6 +6393,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_draft_board",
+    title: "Live auction board",
+    catalog: "core",
+    readOnlyHint: true,
     description: "Live auction draft state from the league's Firebase mirror: budgets, open roster spots, each team's TRUE max bid (dollars left minus $1 reserved per unfilled slot — reporting raw remaining is the classic auction blunder), who is on the clock, what is on the block, and recent sales. The payload always carries a `simulated` flag: when it is true the rows are test picks entered to exercise the rig, not completed sales.",
     inputSchema: { type: "object", properties: { room: { type: "string", description: "Draft room (default: the league room)" } }, additionalProperties: false },
     async run(args, env) {
@@ -6378,6 +6444,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_draft_pool",
+    title: "Draft player pool",
+    catalog: "core",
+    readOnlyHint: true,
     description: "The published Market Value (MV) auction-dollar pool the site drafts from, filterable by position. MV is a dated snapshot, NOT a points projection — quote the as_of date out loud when quoting dollars.",
     inputSchema: {
       type: "object",
@@ -6406,6 +6475,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_survivor_week",
+    title: "Survivor ownership snapshot",
+    catalog: "core",
+    readOnlyHint: true,
     description: "Stored survivor pick-ownership snapshot for a week. Ownership moves all week: a snapshot over 72 hours old is flagged stale and is directional-only.",
     inputSchema: {
       type: "object",
@@ -6431,6 +6503,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_survivor_ev",
+    title: "Survivor pick EV",
+    catalog: "core",
+    readOnlyHint: true,
     description: "Ranks every legal survivor pick for a week by closed-form expected value: win probability × expected share of the surviving field (one-week leverage). Ownership comes from the posted weekly snapshot when one exists, otherwise a chalk-softmax MODEL — and a modelled ranking is a structured guess, which the payload says in words.",
     inputSchema: {
       type: "object",
@@ -6532,6 +6607,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_optimize_survivor_path",
+    title: "Survivor path optimizer",
+    catalog: "full",
+    readOnlyHint: true,
     description: "Computes the exact maximum-product survivor path from a starting week through Week 18, subject to teams already used. Returns the path, run-the-table probability, each current-week option's future cost, and explicit rule/data caveats. This is a deterministic ceiling over a dated probability snapshot, not a recommendation or graded forecast.",
     inputSchema: {
       type: "object",
@@ -6627,6 +6705,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_analyze_matchup",
+    title: "NFL matchup read",
+    catalog: "core",
+    readOnlyHint: true,
     description: "Elo-based read on any two NFL teams: rating gap, expected margin if hosted, win probability from the site's margin model, plus every 2026 scheduled meeting with the blended probability the survivor board uses. Ratings are a preseason snapshot and the payload names it.",
     inputSchema: {
       type: "object",
@@ -6680,6 +6761,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_convert_odds",
+    title: "Odds converter",
+    catalog: "core",
+    readOnlyHint: true,
     description: "Convert user-supplied American odds to decimal odds and implied probability. Pure price arithmetic: no sportsbook feed, forecast, recommendation or stored input.",
     inputSchema: {
       type: "object",
@@ -6703,6 +6787,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_elo_game",
+    title: "Elo game probability",
+    catalog: "full",
+    readOnlyHint: true,
     description: "Calculate one-game home and away win probabilities from caller-supplied Elo ratings and a caller-supplied home-field Elo adjustment. This is the transparent 538 Classic logistic equation, not a current team-state feed or forecast ledger.",
     inputSchema: {
       type: "object",
@@ -6728,6 +6815,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_translate_probability",
+    title: "Probability to margin",
+    catalog: "full",
+    readOnlyHint: true,
     description: "MODELLED translation from caller-supplied home win probability to expected home margin, with optional home cover probability at a caller-supplied sportsbook line. Uses the published 0.5-point win threshold and continuous normal approximation.",
     inputSchema: {
       type: "object",
@@ -6752,6 +6842,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_devig_market",
+    title: "Two-way devig",
+    catalog: "full",
+    readOnlyHint: true,
     description: "Normalize a two-outcome market by proportional devig. Returns raw implied probabilities, hold and no-vig probabilities from user-supplied American prices; it does not fetch or validate a market.",
     inputSchema: {
       type: "object",
@@ -6774,6 +6867,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_price_parlay",
+    title: "Parlay pricer",
+    catalog: "core",
+    readOnlyHint: true,
     description: "Multiply user-supplied American leg prices into a combined parlay price and price-implied probability. This is price arithmetic, not a correlation-aware joint outcome model.",
     inputSchema: {
       type: "object",
@@ -6801,6 +6897,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_calculate_bet_ev",
+    title: "Bet EV",
+    catalog: "core",
+    readOnlyHint: true,
     description: "Compute break-even probability, expected profit per unit and ROI from a caller-supplied win probability and American price. The probability is not generated or validated by Data Dawgs.",
     inputSchema: {
       type: "object",
@@ -6824,6 +6923,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_calculate_hedge",
+    title: "Hedge sizer",
+    catalog: "full",
+    readOnlyHint: true,
     description: "Size the opposite side so the two net outcomes are equal, using a user-supplied original stake and two American prices. Ignores limits, taxes, execution risk and market movement.",
     inputSchema: {
       type: "object",
@@ -6846,6 +6948,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_nfl_passer_rating",
+    title: "NFL passer rating",
+    catalog: "full",
+    readOnlyHint: true,
     description: "Compute the official-style NFL passer rating from a complete passing line. Descriptive statistic only: not QBR, EPA or a forecast.",
     inputSchema: {
       type: "object",
@@ -6871,6 +6976,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_score_forecast",
+    title: "Score one forecast",
+    catalog: "full",
+    readOnlyHint: true,
     description: "Score one declared binary forecast with Brier score and log loss. One observation is not evidence of model skill; nothing is added to a receipt ledger or leaderboard.",
     inputSchema: {
       type: "object",
@@ -6893,6 +7001,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_summarize_beliefs",
+    title: "Summarize probabilities",
+    catalog: "full",
+    readOnlyHint: true,
     description: "Return equal-weight descriptive statistics for caller-supplied probabilities: mean, median, range, standard deviation and whether values cross 50%. Not a validated consensus blend.",
     inputSchema: {
       type: "object",
@@ -6917,6 +7028,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_get_cfb_rating_system",
+    title: "CFB rating systems",
+    catalog: "full",
+    readOnlyHint: true,
     description: "List the dated CFB ratings registry or return one exact registered system with its source receipt, output availability and matchup transform. Registration documents a method; it does not imply prospective forecasts, grading, consensus status, current-2026 relevance or betting skill.",
     inputSchema: {
       type: "object",
@@ -6977,6 +7091,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_rank_cfb_teams",
+    title: "CFB team ranking",
+    catalog: "full",
+    readOnlyHint: true,
     description: "Return a bounded dated ranking from one exact registered CFB rating system, optionally filtered to an exact conference. Observed 2025 results remain separate from modelled team strength. The current registry contains one end-of-2025 retrodictive, ungraded Elo system; this is not a consensus, current 2026 power ranking or recommendation.",
     inputSchema: {
       type: "object",
@@ -7068,6 +7185,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_cfb_team_profile",
+    title: "CFB team profile",
+    catalog: "full",
+    readOnlyHint: true,
     description: "Read one exact team from the compact dated CFB profile surface. Returns observed 2025 record/scoring facts separately from the end-of-2025 retrodictive Elo value, rating rank, provenance and non-ranked expected-versus-observed diagnostic. The diagnostic is not luck or team quality. This is ungraded, not a 2026 forecast, and not a consensus or betting recommendation.",
     inputSchema: {
       type: "object",
@@ -7135,6 +7255,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_compare_cfb_teams",
+    title: "Compare CFB teams",
+    catalog: "full",
+    readOnlyHint: true,
     description: "Compare two exact teams on the same dated compact CFB snapshot. Returns observed 2025 records/scoring, non-ranked expected-versus-observed diagnostics and per-system retrodictive rating deltas. Diagnostics are not luck or team-quality labels. It does not produce a matchup win probability, spread, forecast, consensus, edge or recommendation.",
     inputSchema: {
       type: "object",
@@ -7207,6 +7330,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_project_cfb_matchup",
+    title: "CFB matchup projection",
+    catalog: "full",
+    readOnlyHint: true,
     description: "Calculate a hypothetical home/away win probability from two exact teams using the published Data Dawgs CFB Elo transform and its dated end-of-2025 ratings. This is retrodictive and ungraded: not a scheduled 2026 forecast, market edge, spread, total, consensus or recommendation.",
     inputSchema: {
       type: "object",
@@ -7288,6 +7414,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_project_cfb_schedule_path",
+    title: "CFB schedule path",
+    catalog: "full",
+    readOnlyHint: true,
     description: "Calculate an exact win-count distribution for one team over a caller-supplied hypothetical schedule of up to 20 opponents. An optional minimum-wins threshold also returns each supplied game's exact threshold leverage if its result were forced to a win versus loss. Uses dated end-of-2025 CFB Elo with fixed independent games; it is not an actual schedule, playoff model or forecast.",
     inputSchema: {
       type: "object",
@@ -7430,6 +7559,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_find_cfb_record_divergence",
+    title: "CFB record divergence",
+    catalog: "full",
+    readOnlyHint: true,
     description: "Explore dated 2025 differences between each team's observed record rank and scoring-margin rank, optionally by exact team, direction, conference or minimum absolute gap. Returns the aggregate held-out validation receipt too. Descriptive only: it does not label teams overrated/underrated, claim prospective value, use timestamped market prices or make a betting recommendation.",
     inputSchema: {
       type: "object",
@@ -7536,6 +7668,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_get_cfb_model_disagreement",
+    title: "CFB model disagreement",
+    catalog: "full",
+    readOnlyHint: true,
     description: "Read the dated aggregate 2025 CFB Elo-versus-market disagreement probe, including bucket measurements and the exact data blocker. The study is blocked because market observations have no capture timestamp; it does not identify a better model, authorize a blend or provide game-level edges.",
     inputSchema: MCP_NO_ARGS,
     async run(args) {
@@ -7575,6 +7710,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_get_cfb_model_receipt_status",
+    title: "CFB receipt ledger status",
+    catalog: "full",
+    readOnlyHint: true,
     description: "Report the dated append-only CFB prospective forecast receipt ledger status and bounded counts by model. The ledger is currently empty by design; immutable receipt rows remain ungraded and outcomes belong in a separate future grading surface. This tool does not return backtest results or invent a leaderboard.",
     inputSchema: MCP_NO_ARGS,
     async run(args) {
@@ -7631,6 +7769,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_find_cfb_team_games",
+    title: "CFB team games",
+    catalog: "full",
+    readOnlyHint: true,
     description: "Return bounded schedule-derived 2025 game results from one exact team's perspective, optionally filtered by exact opponent, week, regular/postseason, result or site. Includes observed score and outcome facts only. No EPA, opponent adjustment, market performance, model or recommendation is available.",
     inputSchema: {
       type: "object",
@@ -7720,6 +7861,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_find_cfb_latest_games",
+    title: "CFB latest games",
+    catalog: "full",
+    readOnlyHint: true,
     description: "Query one compact latest completed 2025 game per FBS team, optionally by exact team, exact conference, opponent division, regular/postseason, result or site. Supports bounded cross-team discovery. Latest is tied to the dated 2025 surface and is not current 2026 form, a forecast or a model grade.",
     inputSchema: {
       type: "object",
@@ -7790,6 +7934,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_find_cfb_latest_team_periods",
+    title: "CFB latest team periods",
+    catalog: "full",
+    readOnlyHint: true,
     description: "Query bounded compact latest-period rows from the dated 2025 FBS-involved schedule by exact team, division, exact conference, regular/postseason or period point-differential direction. Latest means the last covered 2025 period, not current 2026 form. FCS records include only games against FBS opponents.",
     inputSchema: {
       type: "object",
@@ -7874,6 +8021,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_find_cfb_team_periods",
+    title: "CFB team periods",
+    catalog: "full",
+    readOnlyHint: true,
     description: "Return bounded schedule-derived 2025 team-period results for one exact CFB team, with regular and postseason week labels kept distinct. Includes period and season-to-date record/scoring facts only. No EPA, success rate, explosiveness, havoc, garbage-time, opponent adjustment, market performance, model or recommendation is available.",
     inputSchema: {
       type: "object",
@@ -7953,6 +8103,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_find_cfb_games",
+    title: "CFB schedule search",
+    catalog: "full",
+    readOnlyHint: true,
     description: "Query the current dated canonical CFB schedule/results surface by exact game id, exact team, week, regular/postseason, status or conference. Returns bounded schedule and observed-result facts only, with the covered season declared. It includes no model, market, forecast or recommendation.",
     inputSchema: {
       type: "object",
@@ -8053,6 +8206,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_find_cfb_historical_market",
+    title: "CFB historical prices",
+    catalog: "full",
+    readOnlyHint: true,
     description: "Query bounded book-identified 2025 CFB prices by exact game id, exact team, week or book. Observation time is unknown: these are historical reference prices, not verified closing lines or prospective inputs, and the tool does not support CLV, an edge or a recommendation.",
     inputSchema: {
       type: "object",
@@ -8155,6 +8311,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_get_cfb_model_card",
+    title: "CFB model card",
+    catalog: "full",
+    readOnlyHint: true,
     description: "List available generated CFB model cards or return one exact model card with purpose, target, features, parameters, validation, performance, calibration, limitations, failure modes, receipts and provenance. Model-card status is governance, not proof of a current forecast, prospective track record, consensus or recommendation.",
     inputSchema: {
       type: "object",
@@ -8217,6 +8376,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_model_scoreboard",
+    title: "NFL model scoreboard",
+    catalog: "full",
+    readOnlyHint: true,
     description: "Query the dated prospective nfelo and 538 Classic receipt ledger by season, week, team, game or model. Returns receipt provenance plus descriptive mean/range/standard deviation; it is ungraded and is not a validated consensus, ensemble or leaderboard.",
     inputSchema: {
       type: "object",
@@ -8260,6 +8422,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_scores",
+    title: "Live scores",
+    catalog: "core",
+    readOnlyHint: true,
     description: "ESPN scoreboard proxy (sport + optional YYYYMMDD dates). ⚠️ ESPN sometimes refuses Cloudflare egress; if this tool reports unavailable, the scoreboard is still readable in a browser at espn.com.",
     inputSchema: {
       type: "object",
@@ -8284,6 +8449,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_dfs_correlations",
+    title: "DFS correlations",
+    catalog: "full",
+    readOnlyHint: true,
     description: "The site's within-game DFS correlation structure (same-team and opponent role×role matrices plus CV-by-projection tables), estimated from public nflverse data, 2019-2025 regular seasons. League-average structure — not this specific game.",
     inputSchema: MCP_NO_ARGS,
     async run() {
@@ -8306,6 +8474,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_solve_dfs_lineup",
+    title: "DFS lineup solver",
+    catalog: "full",
+    readOnlyHint: true,
     description: "Build one to twenty DraftKings Classic or Showdown lineups with the exact branch-and-bound solver used by dfs.html. Every salary, projection and ownership value must be supplied in this call; Data Dawgs has no projection feed, stores nothing, and returns the applied constraints plus explicit infeasibility or timeout state.",
     inputSchema: {
       type: "object",
@@ -8364,6 +8535,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_guillotine_odds",
+    title: "Guillotine survival odds",
+    catalog: "core",
+    readOnlyHint: true,
     description: "Survival odds for every team in a Sleeper guillotine league, plus the projected chop line — who is most likely to be eliminated this week. Built ONLY from that league's own completed weeks. ⚠️ Needs at least two completed weeks; with fewer it returns the roster and says so rather than inventing a probability.",
     inputSchema: {
       type: "object",
@@ -8507,6 +8681,9 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_site_map",
+    title: "Site map",
+    catalog: "core",
+    readOnlyHint: true,
     description: "What Data Dawgs publishes, where the machine-readable surfaces live, and — explicitly — what is NOT served here and why.",
     inputSchema: MCP_NO_ARGS,
     async run() {

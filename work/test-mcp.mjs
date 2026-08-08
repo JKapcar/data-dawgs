@@ -637,6 +637,91 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
     "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_get_cfb_rating_system", "dd_rank_cfb_teams", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_project_cfb_schedule_path", "dd_find_cfb_record_divergence", "dd_get_cfb_model_disagreement", "dd_get_cfb_model_receipt_status", "dd_find_cfb_team_games", "dd_find_cfb_latest_games", "dd_find_cfb_team_periods", "dd_find_cfb_latest_team_periods", "dd_find_cfb_games", "dd_find_cfb_historical_market", "dd_get_cfb_model_card", "dd_optimize_survivor_path"])
     ok(t.some(x => x.name === name), name + " is listed");
 }
+
+/* ---------------------- annotations and the two catalogs ----------------------
+ * ⚠️ THE POINT OF `core` IS CONTEXT, AND IT ONLY PAYS IF IT IS A REAL BOUNDARY.
+ * Forty-three schemas cost 10-25k tokens in every conversation that connects. If `core`
+ * only filtered tools/list, a model that had seen a full-catalog name elsewhere could
+ * still call it, so the small surface would be a suggestion rather than a surface. These
+ * assertions pin both halves: what is listed, and what is callable.
+ * ⚠️ The default path stays FULL. Changing it would silently remove tool names a live
+ * connector may already be calling — the same breaking change as renaming one. */
+{
+  const listOn = async path => (await (await req(rpc("tools/list"), { path })).json()).result.tools;
+  const full = await listOn("/mcp/" + PASS);
+  const fullNamed = await listOn("/mcp/full/" + PASS);
+  const core = await listOn("/mcp/core/" + PASS);
+
+  ok(full.every(x => typeof x.title === "string" && x.title.length > 0), "every tool carries a display title");
+  ok(full.every(x => x.annotations && x.annotations.title === x.title), "…mirrored into annotations.title, where MCP clients read it");
+  ok(full.every(x => x.annotations.readOnlyHint === true), "every tool declares readOnlyHint:true — the block writes nothing");
+  ok(full.every(x => !("destructiveHint" in x.annotations) && !("idempotentHint" in x.annotations) && !("openWorldHint" in x.annotations)),
+     "the hints nobody verified are ABSENT, not guessed");
+  ok(new Set(full.map(x => x.title)).size === full.length, "titles are unique — two tools with one title is a UI that lies");
+  ok(full.every(x => !("catalog" in x)), "`catalog` is server-side bookkeeping and never reaches the wire");
+
+  ok(fullNamed.length === full.length, "/mcp/full/<pass> lists the same set as the bare /mcp/<pass>");
+  ok(full.length === 43 && core.length === 16, "full lists 43, core lists 16");
+  const fullNames = new Set(full.map(x => x.name)), coreNames = new Set(core.map(x => x.name));
+  ok([...coreNames].every(n => fullNames.has(n)), "core is a strict subset of full");
+  ok(coreNames.has("dd_whoami") && coreNames.has("dd_bozo_week") && coreNames.has("dd_draft_board") && coreNames.has("dd_site_map"),
+     "core keeps the league's own state and the site map");
+  ok(!coreNames.has("dd_find_cfb_games") && !coreNames.has("dd_solve_dfs_lineup") && !coreNames.has("dd_model_scoreboard"),
+     "core drops the CFB evidence surfaces, the DFS solver and the model scoreboard");
+
+  // callable, not merely listed
+  const okCall = await (await req(call("dd_convert_odds", { american_odds: -110 }), { path: "/mcp/core/" + PASS })).json();
+  ok(okCall.result && !okCall.result.isError, "a core tool is callable on the core path");
+  const blocked = await (await req(call("dd_find_cfb_games", { limit: 1 }), { path: "/mcp/core/" + PASS })).json();
+  ok(blocked.error && blocked.error.code === -32602, "a full-only tool is NOT callable on core — it is an error, not a silent fallback");
+  // ⚠️ read the message defensively: if the catalog stops being enforced there IS no error
+  // object, and a crash here would hide which assertion actually broke.
+  const msgOf = j => (j.error && j.error.message) || "";
+  ok(/not in the `core` catalog/.test(msgOf(blocked)) && /\/mcp\/full\//.test(msgOf(blocked)),
+     "…and the error says which catalog and where to get the tool");
+  const missing = await (await req(call("dd_nonexistent"), { path: "/mcp/core/" + PASS })).json();
+  ok(/Unknown tool/.test(msgOf(missing)), "a name that exists nowhere still reads as unknown, not as a catalog problem");
+  const allowed = await (await req(call("dd_find_cfb_games", { limit: 1 }), { path: "/mcp/full/" + PASS })).json();
+  ok(allowed.result && !allowed.result.isError, "…and the same call succeeds on full");
+
+  // the catalog segment is stripped BEFORE the credential is read
+  ok((await req(rpc("ping"), { path: "/mcp/core/wrong-pass" })).status === 401, "catalog prefix does not bypass auth");
+  ok((await req(rpc("ping"), { path: "/mcp/core" })).status === 401, "catalog with no credential and no header → 401");
+  {
+    const r = await req(rpc("tools/list"), { path: "/mcp/core", headers: { "X-Dawg-Pass": PASS } });
+    ok(r.status === 200 && (await r.json()).result.tools.length === 16, "header auth can still pick a catalog");
+  }
+  // per-user tokens route the same way
+  {
+    const j = await (await req(rpc("tools/list"), { path: "/mcp/core/" + USER_TOKEN })).json();
+    ok(j.result.tools.length === 16, "a per-user token gets the same catalog treatment");
+  }
+  // initialize says which catalog you are on
+  for (const [path, needle] of [["/mcp/core/" + PASS, "Catalog `core`"], ["/mcp/" + PASS, "Catalog `full`"]]) {
+    const j = await (await req(rpc("initialize", { protocolVersion: "2025-06-18" }), { path })).json();
+    ok(j.result.instructions.startsWith(needle), "initialize opens by naming the catalog: " + needle);
+    ok(/16 of 43|43 of 43/.test(j.result.instructions), "…with the honest count for that path");
+  }
+  {
+    const r = await req(null, { path: "/mcp/" + PASS, method: "GET" });
+    const j = await r.json();
+    ok(j.catalogs && /\/mcp\/core\//.test(j.catalogs.core) && /\/mcp\/full\//.test(j.catalogs.full),
+       "the GET hint advertises both catalog paths");
+  }
+}
+// the registry itself: annotations are complete in the SOURCE, not just in one response
+{
+  const src = readFileSync(resolve(WORK, "mcp-block.js"), "utf8");
+  const reg = src.slice(src.indexOf("const MCP_TOOLS = ["));
+  const n = (re) => (reg.match(re) || []).length;
+  const tools = n(/\n    name: "dd_\w+",\n/g);
+  ok(tools === 43, "43 tools declared in work/mcp-block.js");
+  ok(n(/\n    title: "[^"]+",\n/g) === tools, "every declared tool carries a title");
+  ok(n(/\n    catalog: "(?:core|full)",\n/g) === tools, "every declared tool carries a core/full catalog tag");
+  ok(n(/\n    readOnlyHint: (?:true|false),\n/g) === tools, "every declared tool carries a readOnlyHint");
+  ok(!/readOnlyHint: false/.test(reg), "no tool claims readOnlyHint:false while the block is asserted read-only");
+  ok(n(/\n    catalog: "core",\n/g) === 16, "16 tools are tagged core in the source");
+}
 // dd_league_overview
 {
   const j = await (await req(call("dd_league_overview"))).json();
