@@ -1,0 +1,16 @@
+{
+ "as_of": "2026-08-07",
+ "source": "Data Dawgs normalized append-only multi-model receipt ledger, initialized 2026-08-07.",
+ "tier": "labs",
+ "graded": false,
+ "note": "No normalized multi-model receipts have been appended yet. The separately locked 272-row nfelo-derived ledger remains at /data/receipts.json. New prospective rows must be written before kickoff, reference an exact NFL input snapshot, and can never replace an existing forecast_id.",
+ "integrity": {
+  "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "algorithm": "SHA-256 of canonical receipt JSON rows joined by LF in append order.",
+  "rows": 0
+ },
+ "data": [],
+ "tier_meaning": "Labs — useful and live, still being challenged. Open questions may remain about calibration, assumptions, data quality or edge. Use with your eyes open.",
+ "built": "2026-08-07",
+ "canonical_url": "https://datadawgs216.com/data/model-receipts.json"
+}

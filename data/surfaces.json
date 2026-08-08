@@ -323,6 +323,18 @@
      "covers": "source, commit and license provenance"
     },
     {
+     "kind": "json",
+     "url": "/data/nfl-schedule.json",
+     "status": "live",
+     "covers": "canonical schedule with exact upstream commit and snapshot hash"
+    },
+    {
+     "kind": "json",
+     "url": "/data/model-receipts.json",
+     "status": "live",
+     "covers": "append-only normalized multi-model receipt ledger; currently empty"
+    },
+    {
      "kind": "mcp",
      "tool": "dd_convert_odds",
      "status": "live",

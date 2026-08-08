@@ -70,12 +70,22 @@ test('deployed Pound tools name live MCP implementations without staged claims',
     assert.equal(t.staged_worker_mcp_implementation, null);
     assert.equal(t.exact_blocker, null);
   });
-  assert.equal(contracts.data.contract_version, '1.2.0');
+  assert.equal(contracts.data.contract_version, '1.3.0');
   assert.equal(contracts.data.calculator_contracts.odds_converter.mcp_tool, 'dd_convert_odds');
 });
 test('new data surfaces are in the generated manifest', () => {
   const paths = new Set(index.data.files.map(x => x.path));
-  for (const p of ['/data/pound-tools.json', '/data/model-contracts.json', '/data/upstream-models.json']) assert.ok(paths.has(p), p);
+  for (const p of ['/data/pound-tools.json', '/data/model-contracts.json', '/data/upstream-models.json', '/data/nfl-schedule.json', '/data/model-receipts.json']) assert.ok(paths.has(p), p);
+});
+test('NFL backbone is complete and exposes its canonical files', () => {
+  const backbone = tools.data.find(t => t.id === 'nfl-data');
+  assert.equal(backbone.status, 'complete');
+  assert.equal(backbone.exact_blocker, null);
+  assert.match(backbone.machine_readable_requirement, /nfl-schedule\.json/);
+  const pound = surfaces.data.find(s => s.id === 'pound');
+  const urls = new Set(pound.machine.filter(x => x.status === 'live').map(x => x.url));
+  assert.ok(urls.has('/data/nfl-schedule.json'));
+  assert.ok(urls.has('/data/model-receipts.json'));
 });
 test('all shared-nav pages point at pound.html exactly once', () => {
   const pages = fs.readdirSync('.').filter(x => x.endsWith('.html'));

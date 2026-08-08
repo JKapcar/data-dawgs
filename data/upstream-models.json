@@ -27,9 +27,9 @@
    "captured_at": "2026-08-07",
    "license": "MIT",
    "license_status": "verified-package-metadata",
-   "integration_mode": "pending",
-   "data_status": "not installed in the static-site workflow",
-   "notes": "Lawful candidate for the shared NFL data loader. A scheduled build and snapshot retention policy are still required."
+   "integration_mode": "direct",
+   "data_status": "pinned in the scheduled canonical schedule workflow",
+   "notes": "Typed loader for the shared NFL schedule backbone. The public output records the exact nflverse/nfldata source commit and omits market columns without book and observation-time provenance."
   },
   {
    "id": "nfeloml",

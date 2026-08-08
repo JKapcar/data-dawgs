@@ -1,9 +1,9 @@
 {
- "as_of": "2026-08-07",
+ "as_of": "2026-08-08",
  "source": "Generated manifest of every machine-readable surface on datadawgs216.com.",
  "note": "Start here. Each entry carries its own as_of — check it before quoting anything. The sha256 is of the file as served; recompute it if you care.",
  "site": "https://datadawgs216.com",
- "built": "2026-08-07",
+ "built": "2026-08-08",
  "data": {
   "files": [
    {
@@ -73,25 +73,25 @@
    {
     "path": "/data/upstream-models.json",
     "url": "https://datadawgs216.com/data/upstream-models.json",
-    "bytes": 6804,
+    "bytes": 6885,
     "as_of": "2026-08-07",
-    "sha256": "6c706540561b9baaabc1d8517988e8fb6e9681dcfd28f6dacb855d1d97969b23",
+    "sha256": "955dd4fe6d61b83f221d200cc9db6bd8f677cd2474a0acd088e06f995c3a3738",
     "note": "License status is an implementation gate, not legal advice. Public code without a verified reusable license is not copied or repackaged."
    },
    {
     "path": "/data/model-contracts.json",
     "url": "https://datadawgs216.com/data/model-contracts.json",
-    "bytes": 4759,
+    "bytes": 4996,
     "as_of": "2026-08-07",
-    "sha256": "bd7ff08dea0f61af9d36ad7202a5117b39553bbfbef9f15a473dd9894f8a681a",
+    "sha256": "2cc88d40733b93b5f18d9711767f07370570d94e3387918e52c2db8860921ee2",
     "note": "A contract is not a forecast. It prevents incompatible models and missing values from being silently normalized into false agreement."
    },
    {
     "path": "/data/pound-tools.json",
     "url": "https://datadawgs216.com/data/pound-tools.json",
-    "bytes": 21707,
+    "bytes": 21578,
     "as_of": "2026-08-07",
-    "sha256": "264d46c5c65541a3dc7711c29f61ca5f609815c714d32f4b8be9239327c1342d",
+    "sha256": "e67e3221663ce6476d5135bbe4ae1be1442a83387984431c60a65f30adec2134",
     "note": "Complete means the requested delivery layers are live. Ready means the Worker source and tests exist but production activation is still pending. Frontend-only means the browser tool and public contract exist without an MCP endpoint for the full requested scope. Blocked tools keep an exact minimum path instead of being omitted."
    },
    {
@@ -105,53 +105,69 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 11726,
+    "bytes": 12085,
     "as_of": "2026-08-07",
-    "sha256": "62f78dcf93e10229e3067031ae2110f57409661280c595d558700e570c5a11cd",
+    "sha256": "cbc6088beafed9f62e79faa569eeabde9433af54a8fcfad545d4dd4d88e9f17d",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
+   },
+   {
+    "path": "/data/nfl-schedule.json",
+    "url": "https://datadawgs216.com/data/nfl-schedule.json",
+    "bytes": 114148,
+    "as_of": "2026-08-07",
+    "sha256": "5f2b7863a5730443d3c4135f2ceefe330fd776cabf9a16cff99bb1eee19be746",
+    "note": "Canonical schedule facts only. Market prices are deliberately excluded because the upstream table does not identify their book and observation timestamp. Git history retains every changed snapshot; models must record integrity.snapshot_id in receipts."
+   },
+   {
+    "path": "/data/model-receipts.json",
+    "url": "https://datadawgs216.com/data/model-receipts.json",
+    "bytes": 937,
+    "as_of": "2026-08-07",
+    "sha256": "4e79a8339d7d2f5462488ea5a62f80bf7855a96f0f38c3a3c5b92a9a6166ce49",
+    "note": "No normalized multi-model receipts have been appended yet. The separately locked 272-row nfelo-derived ledger remains at /data/receipts.json. New prospective rows must be written before kickoff, reference an exact NFL input snapshot, and can never replace an existing forecast_id."
    }
   ],
   "markdown": [
    {
     "path": "/data/strategy.md",
     "url": "https://datadawgs216.com/data/strategy.md",
-    "bytes": 6957,
-    "sha256": "beebdc10f47cbed6ef80baaa9dd33a3c3bf566d258d1c12dfca4fd5c02561b8f",
+    "bytes": 6864,
+    "sha256": "d712d36f62ce1abe00d92ce310f8390ac0fa1f572ed59a3d3d9c8f026b19465d",
     "as_of": "2026-07-28"
    },
    {
     "path": "/data/receipts-method.md",
     "url": "https://datadawgs216.com/data/receipts-method.md",
-    "bytes": 4398,
-    "sha256": "1e20d0d8c3f024bcdb20a2b5deb1d54c1e6f405e4e1bb247b3d3c8dafa4ad0ee",
+    "bytes": 4300,
+    "sha256": "8faad8c7d4f8a48e92d0319c1ff5239d413b26283c388c05f4df1db80a76f28c",
     "as_of": "2026-08-06"
    },
    {
     "path": "/data/bozo-rules.md",
     "url": "https://datadawgs216.com/data/bozo-rules.md",
-    "bytes": 3534,
-    "sha256": "32fe89973f946665b0cafa691e0c641654611069df7322d7eac799ad2345ecc4",
+    "bytes": 3456,
+    "sha256": "3c064194ca15776de071899f6de2c250b872ae6eff97885a77e97196544c011d",
     "as_of": "2026-08-06"
    },
    {
     "path": "/data/method.md",
     "url": "https://datadawgs216.com/data/method.md",
-    "bytes": 4023,
-    "sha256": "2a0e4d3f460201d15c610ae072146f6c03771ed97f8b7205f848f7b67cfd1d9f",
+    "bytes": 3949,
+    "sha256": "fc24557ce934084d95d03a8f756b911eb6d3ee9063a62a3f5d0a81d46891b3fd",
     "as_of": "2026-08-06"
    },
    {
     "path": "/data/toto-philosophy.md",
     "url": "https://datadawgs216.com/data/toto-philosophy.md",
-    "bytes": 2768,
-    "sha256": "4cdc3619a20e0668b0979770acbe5926d4148671e30d501586860a8ebe7b9f98",
+    "bytes": 2713,
+    "sha256": "317bc66cf62df8de90b49176f80b63e20c45af42da309e080c3eff999c574ae3",
     "as_of": "2026-08-06"
    },
    {
     "path": "/data/tier-audit.md",
     "url": "https://datadawgs216.com/data/tier-audit.md",
-    "bytes": 9624,
-    "sha256": "51ffe2619c67dffa9d8e832deea3cf636119b2c6a760d1158043e18e5a37d385",
+    "bytes": 9448,
+    "sha256": "7510c170ffd96f795e89096eb0e6735e15ef049fd548eee6ba269b9b47cdd6c4",
     "as_of": "2026-08-07"
    }
   ]
