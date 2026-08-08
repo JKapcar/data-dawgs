@@ -711,9 +711,10 @@ for (const tool of POUND_TOOLS) {
 }
 
 /* ---------- The Pound: College Football roadmap ----------
- * Roadmap IDEAS, not tools. Nothing here is implemented or callable; the
- * generator fails closed if an idea claims otherwise, points at an unknown
- * dependency, or drops one of the 61 source headings.
+ * Roadmap IDEAS, not automatically tools. Shipped data/model artifacts carry
+ * evidence-backed lifecycle state, while candidate MCP names remain non-callable.
+ * The generator fails closed on impossible lifecycle claims, missing delivery
+ * evidence, unknown dependencies, or a dropped source heading.
  */
 const { CFB_IDEAS, CFB_GOVERNANCE, CFB_ROADMAP_STEPS, CFB_LIFECYCLE,
   CFB_RECOMMENDATION_CLASSES, CFB_SOURCE_HEADINGS } = require('./cfb-roadmap.js');
@@ -729,9 +730,16 @@ const { CFB_IDEAS, CFB_GOVERNANCE, CFB_ROADMAP_STEPS, CFB_LIFECYCLE,
   for (const h of CFB_SOURCE_HEADINGS) if (!covered.has(h)) throw new Error(`CFB roadmap heading not represented: ${h}`);
   for (const h of covered) if (!CFB_SOURCE_HEADINGS.includes(h)) throw new Error(`unknown CFB heading claimed: ${h}`);
   for (const i of CFB_IDEAS) {
-    if (i.implemented !== false || i.kind !== 'roadmap-idea') throw new Error(`CFB idea must stay unimplemented: ${i.id}`);
+    if (i.kind !== 'roadmap-idea' || typeof i.implemented !== 'boolean') throw new Error(`bad CFB roadmap delivery shape: ${i.id}`);
     if (!(i.recommendation in CFB_RECOMMENDATION_CLASSES)) throw new Error(`unknown recommendation: ${i.id}`);
     if (!CFB_LIFECYCLE.statuses.includes(i.lifecycle_status)) throw new Error(`unknown lifecycle status: ${i.id}`);
+    if (i.lifecycle_status === 'live' && !i.implemented) throw new Error(`live CFB idea lacks implementation: ${i.id}`);
+    if (i.implemented && (!Array.isArray(i.delivery_evidence) || !i.delivery_evidence.length))
+      throw new Error(`implemented CFB idea lacks delivery evidence: ${i.id}`);
+    for (const evidence of i.delivery_evidence || []) {
+      const local = evidence.replace(/^\//, '');
+      if (!fs.existsSync(path.join(ROOT, local))) throw new Error(`${i.id}: delivery evidence does not exist: ${evidence}`);
+    }
     for (const d of [...i.dependencies, ...i.related_ideas]) if (!ideaIds.has(d)) throw new Error(`${i.id}: unresolved idea reference ${d}`);
     for (const g of i.governance) if (!govIds.has(g)) throw new Error(`${i.id}: unresolved governance reference ${g}`);
   }
@@ -755,7 +763,7 @@ write('model-contracts.json', {
 write('pound-tools.json', {
   as_of: '2026-08-08', source: 'Reconciled against the Data Dawgs site, Worker source and inspected upstream projects on 2026-08-08. College Football roadmap ideas added from the 2026-08-08 CFB roadmap.',
   tier: TIERS.pound, graded: false,
-  note: 'Two kinds of entry share this inventory. kind "tool" (NFL) carries a delivery status: complete means the requested delivery layers are live; ready means Worker source and tests exist but production activation is pending; frontend-only means the browser tool and public contract exist without an MCP endpoint for the full requested scope; blocked tools keep an exact minimum path instead of being omitted. kind "roadmap-idea" (College Football) is an IDEA: nothing about it is implemented, staged or callable, candidate_mcp_tools are names reserved for computation that does not exist yet, and recommendation/lifecycle_status describe intent, not delivery.',
+  note: 'Two kinds of entry share this inventory. kind "tool" (NFL) carries delivery status. kind "roadmap-idea" (College Football) carries recommendation plus evidence-backed lifecycle and implementation state. A CFB artifact may be implemented without any MCP tool; candidate_mcp_tools are reservations and remain non-callable unless the independent Worker registry proves otherwise.',
   cfb_roadmap: {
     as_of: '2026-08-08',
     domain: 'College Football',
@@ -943,18 +951,23 @@ const SURFACES = [
     machine: [{ kind: 'mcp', tool: 'dd_guillotine_odds', status: 'live' }],
     planned: ['json:/data/guillotine.json'] },
   { id: 'pound', name: 'The Pound model and calculator workbench', page: '/pound.html',
-    machine: [{ kind: 'json', url: '/data/pound-tools.json', status: 'live', covers: 'complete NFL tool inventory (delivery status, exact blockers) plus the College Football roadmap — ideas only, none implemented or callable' },
+    machine: [{ kind: 'json', url: '/data/pound-tools.json', status: 'live', covers: 'complete NFL tool inventory plus the College Football roadmap with evidence-backed lifecycle state; no candidate CFB MCP tool is callable' },
               { kind: 'json', url: '/data/model-contracts.json', status: 'live', covers: 'forecast, receipt and calculator contracts' },
               { kind: 'json', url: '/data/upstream-models.json', status: 'live', covers: 'source, commit and license provenance' },
               { kind: 'json', url: '/data/nfl-schedule.json', status: 'live', covers: 'canonical schedule with exact upstream commit and snapshot hash' },
               { kind: 'json', url: '/data/model-receipts.json', status: 'live', covers: '544 append-only normalized prospective receipts across nfelo and 538 Classic' },
               { kind: 'json', url: '/data/538-classic.json', status: 'live', covers: 'reproduced 538 Classic methodology, 32 target-season ratings and 272 prospective forecasts' },
               { kind: 'markdown', url: '/data/538-classic-methodology.md', status: 'live', covers: 'model mathematics, provenance, reproduction tolerance, receipts and limits' },
+              { kind: 'json', url: '/data/cfb-schedule.json', status: 'live', covers: '934 canonical 2025 FBS-involved game facts with a pinned upstream commit and reproducible snapshot hash' },
+              { kind: 'json', url: '/data/cfb-market.json', status: 'live', covers: 'book-identified historical spreads, totals and devigged moneylines; observation time is explicitly unknown, so these are not closing lines' },
+              { kind: 'json', url: '/data/cfb-elo.json', status: 'live', covers: 'deterministic continuous Elo baseline and retrodictive 2025 backtest; ungraded as a prospective model' },
+              { kind: 'json', url: '/data/cfb-model-cards.json', status: 'live', covers: 'generated CFB model governance cards tied to published model output and Pound lifecycle state' },
+              { kind: 'json', url: '/data/cfb-disagreement.json', status: 'live', covers: 'published blocked model-versus-market probe naming the missing observation timestamp and exact unblock condition' },
               ...MCP_POUND_LIVE.map(tool => ({ kind: 'mcp', tool, status: 'live', covers: tool === 'dd_model_scoreboard'
                 ? 'bounded read-only query over dated prospective receipts; filters and results are not stored'
                 : 'deterministic calculation over caller-supplied inputs; inputs and results are not stored' }))],
     planned: [],
-    gap: 'Two prospective model feeds are live and ungraded. There is still no book-and-timestamp-provenanced market feed or comparable-sample leaderboard.' },
+    gap: 'Two NFL prospective model feeds are live and ungraded. The CFB historical backbone and blocked disagreement finding are published, but its prospective timestamped market collector is staged rather than activated and no CFB forecast receipt has been frozen yet.' },
   { id: 'method', name: 'How this site reasons', page: '/index.html',
     machine: [{ kind: 'markdown', url: '/data/method.md', status: 'live' },
               { kind: 'markdown', url: '/data/toto-philosophy.md', status: 'live' }],
@@ -992,7 +1005,9 @@ write('surfaces.json', {
 
 // These are produced by the independent scheduled backbone rather than extracted from
 // a page. Keep them in the same generated manifest without letting this build rewrite them.
-for (const name of ['nfl-schedule.json', 'model-receipts.json', '538-classic.json']) {
+for (const name of ['nfl-schedule.json', 'model-receipts.json', '538-classic.json',
+  'cfb-schedule.json', 'cfb-market.json', 'cfb-elo.json', 'cfb-model-cards.json',
+  'cfb-disagreement.json']) {
   const p = path.join(OUT, name);
   const txt = fs.readFileSync(p, 'utf8');
   const payload = JSON.parse(txt);

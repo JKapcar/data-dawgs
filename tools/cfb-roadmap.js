@@ -1,12 +1,11 @@
 /*
  * tools/cfb-roadmap.js — the College Football opportunity set for The Pound.
  *
- * These are ROADMAP IDEAS, not tools. Nothing in this file is implemented,
- * staged, or callable. `recommendation` records how strongly Data Dawgs
- * currently wants to build a thing; `lifecycle_status` records where the idea
- * is in its life. Neither field is the delivery `status` used by the existing
- * NFL tool inventory — an idea has no delivery status because nothing has been
- * delivered.
+ * These are ROADMAP IDEAS, not automatically tools. `recommendation` records
+ * how strongly Data Dawgs wants to build a thing; `lifecycle_status` and
+ * `implemented` record what has actually happened. A shipped data/model artifact
+ * may be implemented without having any callable MCP tool. Candidate tool names
+ * remain reservations until the Worker registry independently proves them live.
  *
  * Source: the 2026-08-08 CFB roadmap (61 headings: 54 ideas + 7 governance
  * principles). Every heading is preserved verbatim in `source_headings`, either
@@ -91,6 +90,8 @@ const idea = o => Object.assign({
   lifecycle_status: 'idea',
   lifecycle_history: [{ status: 'idea', on: ROADMAP_AS_OF, note: 'Entered The Pound from the 2026-08-08 CFB roadmap.' }],
   implemented: false,
+  delivery_evidence: [],
+  delivery_note: null,
   graveyard_ready: true,
   priority: 'standard',
   roadmap_step: null,
@@ -109,6 +110,14 @@ const CFB_IDEAS = [
   /* ---------- Foundation / canonical CFB data (roadmap step 1) ---------- */
 
   idea({ id: 'cfb-sportsdataverse', name: 'SportsDataverse Bulk-Data Ingestion',
+    lifecycle_status: 'live', implemented: true,
+    lifecycle_history: [
+      { status: 'idea', on: ROADMAP_AS_OF, note: 'Entered The Pound from the 2026-08-08 CFB roadmap.' },
+      { status: 'building', on: ROADMAP_AS_OF, note: 'Built pinned, fail-closed schedule and market ingestion.' },
+      { status: 'live', on: ROADMAP_AS_OF, note: 'Canonical schedule and book-market snapshots published with source-byte hashes.' },
+    ],
+    delivery_evidence: ['/scripts/cfb_data_backbone.py', '/scripts/cfb_market.py', '/data/cfb-schedule.json', '/data/cfb-market.json'],
+    delivery_note: 'Live for the schedule and book-market source families. Play-by-play remains a separate cfb-plays dependency.',
     category: 'foundation', recommendation: 'build', recommendation_modifiers: ['foundation', 'high-priority'],
     priority: 'high', roadmap_step: 1,
     source_headings: ['SportsDataverse bulk-data ingestion'],
@@ -135,6 +144,14 @@ const CFB_IDEAS = [
     governance: ['cfb-gov-source-provenance'], tags: ['CFB', 'DATA-PIPE', 'FOUNDATION', 'HIGH-PRIORITY'] }),
 
   idea({ id: 'cfb-games', name: 'Canonical CFB Games',
+    lifecycle_status: 'live', implemented: true,
+    lifecycle_history: [
+      { status: 'idea', on: ROADMAP_AS_OF, note: 'Entered The Pound from the 2026-08-08 CFB roadmap.' },
+      { status: 'building', on: ROADMAP_AS_OF, note: 'Canonicalized 2025 FBS-involved schedule and result facts.' },
+      { status: 'live', on: ROADMAP_AS_OF, note: 'Published 934 validated games with unique IDs and a reproducible snapshot hash.' },
+    ],
+    delivery_evidence: ['/data/cfb-schedule.json', '/scripts/cfb_data_backbone.py', '/tests/test_cfb_data_backbone.py'],
+    delivery_note: 'Live for the completed 2025 season. The upstream 2026 schedule has not been published yet.',
     category: 'foundation', recommendation: 'build', recommendation_modifiers: ['foundation'], roadmap_step: 1,
     source_headings: ['Canonical CFB Games'],
     rationale: 'A canonical cfb_games dataset is the spine every schedule, rating, receipt and simulator joins against.',
@@ -195,6 +212,13 @@ const CFB_IDEAS = [
     tags: ['CFB', 'DATA-PIPE', 'FOUNDATION'] }),
 
   idea({ id: 'cfb-market', name: 'CFB Market Dataset',
+    lifecycle_status: 'building', implemented: true,
+    lifecycle_history: [
+      { status: 'idea', on: ROADMAP_AS_OF, note: 'Entered The Pound from the 2026-08-08 CFB roadmap.' },
+      { status: 'building', on: ROADMAP_AS_OF, note: 'Published book-identified historical prices; observation time remains unknown. Prospective 24-hour capture is staged, not activated.' },
+    ],
+    delivery_evidence: ['/data/cfb-market.json', '/scripts/cfb_market.py', '/tests/test_cfb_market.py'],
+    delivery_note: 'Partially implemented. Historical book prices are live with explicit unknown timing; the timestamped prospective Worker collector still needs activation.',
     category: 'foundation', recommendation: 'build', recommendation_modifiers: ['foundation'], roadmap_step: 1,
     source_headings: ['CFB Market Dataset'],
     rationale: 'Canonical spreads, totals and relevant market observations. The market is the permanent benchmark every model must beat.',
@@ -286,6 +310,13 @@ const CFB_IDEAS = [
   /* ---------- Model validation & forecasting ---------- */
 
   idea({ id: 'cfb-disagreement-lab', name: 'CFB Model Disagreement Lab',
+    lifecycle_status: 'evaluating', implemented: true,
+    lifecycle_history: [
+      { status: 'idea', on: ROADMAP_AS_OF, note: 'Entered The Pound from the 2026-08-08 CFB roadmap.' },
+      { status: 'evaluating', on: ROADMAP_AS_OF, note: 'Published the 2025 Elo-vs-market probe as blocked; timestamped prospective prices are the named unblocker.' },
+    ],
+    delivery_evidence: ['/data/cfb-disagreement.json', '/scripts/cfb_disagreement.py', '/tests/test_cfb_disagreement.py'],
+    delivery_note: 'The lab artifact is live, but its headline question remains blocked by historical prices without observation timestamps.',
     category: 'model-validation', recommendation: 'build', recommendation_modifiers: ['high-priority'],
     priority: 'high', roadmap_step: 3,
     source_headings: ['CFB Model Disagreement Lab'],
@@ -300,6 +331,12 @@ const CFB_IDEAS = [
     governance: ['cfb-gov-correlation'], tags: ['CFB', 'MODEL', 'MODEL-RISK', 'HIGH-PRIORITY'] }),
 
   idea({ id: 'cfb-model-receipts', name: 'CFB Model Receipts / Historical Grading',
+    lifecycle_status: 'planned', implemented: false,
+    lifecycle_history: [
+      { status: 'idea', on: ROADMAP_AS_OF, note: 'Entered The Pound from the 2026-08-08 CFB roadmap.' },
+      { status: 'planned', on: ROADMAP_AS_OF, note: 'Prospective 24-hour market observation contract is staged; first model receipts wait on a 2026 schedule and pre-kickoff forecasts.' },
+    ],
+    delivery_note: 'No CFB model forecast receipt exists yet. Planning is concrete, but implementation remains false.',
     category: 'model-validation', recommendation: 'build', recommendation_modifiers: ['high-priority'],
     priority: 'high', roadmap_step: 3,
     source_headings: ['Model Receipts / Historical Grading'],
@@ -332,6 +369,14 @@ const CFB_IDEAS = [
     tags: ['CFB', 'MODEL-RISK', 'DECISION-ENGINE', 'HIGH-PRIORITY'] }),
 
   idea({ id: 'cfb-elo', name: 'Continuous Elo / Glicko Rating',
+    lifecycle_status: 'live', implemented: true,
+    lifecycle_history: [
+      { status: 'idea', on: ROADMAP_AS_OF, note: 'Entered The Pound from the 2026-08-08 CFB roadmap.' },
+      { status: 'building', on: ROADMAP_AS_OF, note: 'Implemented the deterministic Elo baseline and fixed-parameter backtest.' },
+      { status: 'live', on: ROADMAP_AS_OF, note: 'Published ratings, calibration bins, market comparison and generated model card.' },
+    ],
+    delivery_evidence: ['/data/cfb-elo.json', '/data/cfb-model-cards.json', '/scripts/cfb_elo.py', '/tests/test_cfb_elo.py'],
+    delivery_note: 'The baseline is live and reproducible, but retrodictive and ungraded; no prospective 2026 claim is made.',
     category: 'model-validation', recommendation: 'build', roadmap_step: 2,
     source_headings: ['Continuous Elo / Glicko Rating'],
     rationale: 'An independently reproducible continuous rating updated after games — an interpretable challenger and baseline, not presumed to outperform other systems.',

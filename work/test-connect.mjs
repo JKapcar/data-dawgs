@@ -5,16 +5,19 @@
 
    Run:  cd work && node test-connect.mjs      (serves ../ on :8903)
 */
-import { chromium } from "playwright";
+import { chromiumExecutable, loadPlaywright } from "./playwright-loader.mjs";
 import http from "http";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
+
+const { chromium } = loadPlaywright();
 
 let pass = 0, fail = 0;
 const ok = (n, c, x) => { c ? (pass++, console.log("  ok   " + n)) : (fail++, console.log("  FAIL " + n + (x ? "  — " + x : ""))); };
 
-const ROOT = path.resolve("..");
-const EXECUTABLE = process.env.PLAYWRIGHT_CHROMIUM || "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const EXECUTABLE = chromiumExecutable(chromium);
 const SHOTS = process.env.DD_TEST_ARTIFACTS || path.join(ROOT, "work");
 fs.mkdirSync(SHOTS, {recursive:true});
 const server = http.createServer((req, res) => {

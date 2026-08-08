@@ -210,9 +210,313 @@ async function handleSurvivorPicks(request, url, env, cors) {
   return json({ ...rec, ageHours: Math.round(ageH * 10) / 10, stale: ageH > 72 }, 200, cors);
 }
 
+/* ======================= CFB 24-hour market receipts ===================== */
+// The historical CFB market file names books but has no observation timestamp,
+// which makes every model-vs-market comparison confounded. This collector fixes
+// that prospectively and narrowly: once an hour it asks SportsGameOdds for NCAAF
+// events kicking off in [24h, 25h), freezes the paired moneylines it sees, and
+// never overwrites them. One event object counts as one SGO quota object; the
+// narrow window keeps a full season viable on the 2,500-object free allowance.
+//
+// Storage is one immutable KV value per event AND scheduled kickoff. Including
+// kickoff is deliberate: if a game is rescheduled after its first receipt, the
+// new 24-hour window creates a second record instead of rewriting history.
+//
+//   cfb:market:24h:<season>:<kickoff-ms>:<event-id>  - immutable receipt
+//   cfb:market:24h:last-run                           - operational summary
+//   cfb:market:24h:lasterror                          - operational failure trail
+//
+// GET /cfb/market-snapshots?season=2026 publishes only the receipt prefix. It
+// can never enumerate backup, auth, rate-limit or other KV keys.
+const CFB_MARKET_CRON = "9 * * * *";
+const BACKUP_CRON = "0 9 * * *";
+const CFB_MARKET_API = "https://api.sportsgameodds.com/v2/events";
+const CFB_MARKET_PREFIX = "cfb:market:24h:";
+const CFB_MARKET_LEAD_MS = 24 * 60 * 60 * 1000;
+const CFB_MARKET_WINDOW_MS = 60 * 60 * 1000;
+const CFB_MARKET_PAGE_LIMIT = 100;
+const CFB_MARKET_MAX_PAGES = 4;
+const CFB_MARKET_ODDS = [
+  "points-home-game-ml-home",
+  "points-home-game-sp-home",
+  "points-all-game-ou-over",
+];
+
+const cfbMarketKV = (env) => env.DD_KV || env.RL || null;
+
+function cfbSeasonFromKickoff(ms) {
+  const d = new Date(ms);
+  const year = d.getUTCFullYear();
+  return d.getUTCMonth() < 2 ? year - 1 : year;
+}
+
+function cfbMarketWindow(nowMs) {
+  const start = nowMs + CFB_MARKET_LEAD_MS;
+  return { start, end: start + CFB_MARKET_WINDOW_MS };
+}
+
+function cfbAmerican(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || Math.abs(n) < 100 || n === 0) return null;
+  return Math.round(n);
+}
+
+function cfbImplied(american) {
+  return american < 0 ? -american / (-american + 100) : 100 / (american + 100);
+}
+
+function cfbTeam(team, side) {
+  const names = (team && team.names) || {};
+  return {
+    side,
+    id: String((team && team.teamID) || ""),
+    name: String(names.long || names.medium || names.short || ""),
+    abbreviation: String(names.short || ""),
+  };
+}
+
+function cfbCanonicalJson(value) {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return "[" + value.map(cfbCanonicalJson).join(",") + "]";
+  return "{" + Object.keys(value).sort().map(k => JSON.stringify(k) + ":" + cfbCanonicalJson(value[k])).join(",") + "}";
+}
+
+async function cfbSha256(value) {
+  const bytes = new TextEncoder().encode(cfbCanonicalJson(value));
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function cfbPairedMoneylines(event) {
+  const odds = (event && event.odds) || {};
+  const home = odds["points-home-game-ml-home"] || {};
+  const away = odds["points-away-game-ml-away"] || {};
+  const homeBooks = home.byBookmaker || {};
+  const awayBooks = away.byBookmaker || {};
+  const books = [...new Set([...Object.keys(homeBooks), ...Object.keys(awayBooks)])].sort();
+  const accepted = [], rejected = [];
+
+  for (const bookmaker of books) {
+    const h = homeBooks[bookmaker], a = awayBooks[bookmaker];
+    if (!h || !a) {
+      rejected.push({ bookmaker, market: "moneyline", reason: "missing-opposing-side" });
+      continue;
+    }
+    if (h.available === false || a.available === false) {
+      rejected.push({ bookmaker, market: "moneyline", reason: "quote-not-available" });
+      continue;
+    }
+    const homeAmerican = cfbAmerican(h.odds), awayAmerican = cfbAmerican(a.odds);
+    if (homeAmerican === null || awayAmerican === null) {
+      rejected.push({ bookmaker, market: "moneyline", reason: "invalid-american-price" });
+      continue;
+    }
+    const rawHome = cfbImplied(homeAmerican), rawAway = cfbImplied(awayAmerican);
+    const total = rawHome + rawAway;
+    const hold = total - 1;
+    // A slightly negative hold can occur when books move opposing sides at different
+    // moments. Large negative or >25% holds are not credible paired markets and stay
+    // visible as rejected input rather than disappearing.
+    if (hold < -0.05 || hold > 0.25) {
+      rejected.push({
+        bookmaker, market: "moneyline", reason: "implausible-hold",
+        home_american: homeAmerican, away_american: awayAmerican,
+        hold: Math.round(hold * 1e6) / 1e6,
+      });
+      continue;
+    }
+    accepted.push({
+      bookmaker,
+      home_american: homeAmerican,
+      away_american: awayAmerican,
+      hold: Math.round(hold * 1e6) / 1e6,
+      home_probability_no_vig: Math.round((rawHome / total) * 1e6) / 1e6,
+      away_probability_no_vig: Math.round((rawAway / total) * 1e6) / 1e6,
+      home_quote_updated_at: h.lastUpdatedAt || null,
+      away_quote_updated_at: a.lastUpdatedAt || null,
+    });
+  }
+  return { accepted, rejected };
+}
+
+async function cfbMarketRecord(event, capturedMs, sourceNotice) {
+  if (!event || event.leagueID !== "NCAAF") throw new Error("SGO returned a non-NCAAF event");
+  const eventId = String(event.eventID || "");
+  if (!eventId || eventId.length > 200) throw new Error("SGO event missing a valid eventID");
+  const kickoff = Date.parse(event.status && event.status.startsAt);
+  if (!Number.isFinite(kickoff)) throw new Error("SGO event missing a valid kickoff");
+  if (kickoff <= capturedMs) throw new Error("SGO returned an event that has already started");
+  const teams = event.teams || {};
+  const home = cfbTeam(teams.home, "home"), away = cfbTeam(teams.away, "away");
+  if (!home.id || !home.name || !away.id || !away.name) throw new Error("SGO event missing team identity");
+  const pairs = cfbPairedMoneylines(event);
+  const season = cfbSeasonFromKickoff(kickoff);
+  const capturedAt = new Date(capturedMs).toISOString();
+  const body = {
+    schema_version: 1,
+    event_id: eventId,
+    league: "NCAAF",
+    season,
+    kickoff: new Date(kickoff).toISOString(),
+    captured_at: capturedAt,
+    lead_seconds: Math.round((kickoff - capturedMs) / 1000),
+    price_timing: "prospective-24h-window",
+    teams: { home, away },
+    source: {
+      provider: "SportsGameOdds",
+      endpoint: CFB_MARKET_API,
+      observation_timestamp_available: true,
+      provider_notice: sourceNotice || null,
+    },
+    status: pairs.accepted.length ? "priced" : "unpriced",
+    moneylines: pairs.accepted,
+    rejected_quotes: pairs.rejected,
+    grading: { modelled: false, simulation: false, graded: false },
+  };
+  const snapshotId = await cfbSha256(body);
+  return {
+    ...body,
+    integrity: { algorithm: "sha256-canonical-json", snapshot_id: snapshotId },
+    storage_key: `${CFB_MARKET_PREFIX}${season}:${kickoff}:${encodeURIComponent(eventId)}`,
+  };
+}
+
+async function cfbFetchMarketEvents(env, window) {
+  if (!env.SGO_KEY) throw new Error("Worker misconfigured: SGO_KEY secret not set");
+  const events = [];
+  let cursor = null, notice = null;
+  for (let page = 0; page < CFB_MARKET_MAX_PAGES; page++) {
+    const url = new URL(CFB_MARKET_API);
+    url.searchParams.set("leagueID", "NCAAF");
+    url.searchParams.set("started", "false");
+    // One millisecond of API-side overlap prevents an exact-boundary game from
+    // falling between two exclusive filters. Local filtering below is canonical.
+    url.searchParams.set("startsAfter", new Date(window.start - 1).toISOString());
+    url.searchParams.set("startsBefore", new Date(window.end).toISOString());
+    url.searchParams.set("oddID", CFB_MARKET_ODDS.join(","));
+    url.searchParams.set("includeOpposingOdds", "true");
+    url.searchParams.set("includeAltLines", "false");
+    url.searchParams.set("limit", String(CFB_MARKET_PAGE_LIMIT));
+    if (cursor) url.searchParams.set("cursor", cursor);
+
+    let response;
+    try {
+      response = await fetch(url, { headers: { "x-api-key": env.SGO_KEY } });
+    } catch (e) {
+      throw new Error("SportsGameOdds network failure: " + e.message);
+    }
+    const text = await response.text();
+    let payload;
+    try { payload = JSON.parse(text); }
+    catch { throw new Error("SportsGameOdds returned non-JSON (HTTP " + response.status + ")"); }
+    if (!response.ok || !payload || payload.success !== true || !Array.isArray(payload.data)) {
+      const detail = String((payload && (payload.error || payload.message)) || "invalid response").slice(0, 240);
+      throw new Error("SportsGameOdds HTTP " + response.status + ": " + detail);
+    }
+    if (payload.notice) notice = String(payload.notice).slice(0, 500);
+    for (const event of payload.data) {
+      const kickoff = Date.parse(event && event.status && event.status.startsAt);
+      if (Number.isFinite(kickoff) && kickoff >= window.start && kickoff < window.end) events.push(event);
+    }
+    cursor = payload.nextCursor || null;
+    if (!cursor) return { events, notice, pages: page + 1 };
+  }
+  throw new Error(`SportsGameOdds pagination exceeded ${CFB_MARKET_MAX_PAGES} pages`);
+}
+
+async function runCfbMarketCapture(env, nowMs) {
+  const kv = cfbMarketKV(env);
+  if (!kv) throw new Error("no KV binding for CFB market receipts");
+  const window = cfbMarketWindow(nowMs);
+  const fetched = await cfbFetchMarketEvents(env, window);
+  let stored = 0, existing = 0, priced = 0, unpriced = 0;
+  for (const event of fetched.events) {
+    const record = await cfbMarketRecord(event, nowMs, fetched.notice);
+    const prior = await kv.get(record.storage_key);
+    if (prior !== null) { existing++; continue; }
+    await kv.put(record.storage_key, JSON.stringify(record));
+    stored++;
+    if (record.status === "priced") priced++; else unpriced++;
+  }
+  const summary = {
+    at: new Date(nowMs).toISOString(),
+    window_start: new Date(window.start).toISOString(),
+    window_end: new Date(window.end).toISOString(),
+    pages: fetched.pages,
+    events: fetched.events.length,
+    stored, existing, priced, unpriced,
+    provider_notice: fetched.notice,
+  };
+  await kv.put(CFB_MARKET_PREFIX + "last-run", JSON.stringify(summary));
+  return summary;
+}
+
+async function handleCfbMarketSnapshots(request, url, env, cors) {
+  if (request.method !== "GET") return json({ error: "GET only" }, 405, cors);
+  const kv = cfbMarketKV(env);
+  if (!kv) return json({ error: "CFB market receipt storage is unavailable" }, 503, cors);
+  const season = Number(url.searchParams.get("season") || cfbSeasonFromKickoff(Date.now()));
+  if (!Number.isInteger(season) || season < 2018 || season > 2100)
+    return json({ error: "season must be an integer from 2018 through 2100" }, 400, cors);
+  const limit = Math.min(200, Math.max(1, Number(url.searchParams.get("limit")) || 100));
+  const options = { prefix: `${CFB_MARKET_PREFIX}${season}:`, limit };
+  const cursor = url.searchParams.get("cursor");
+  if (cursor) options.cursor = cursor;
+
+  let listed;
+  try { listed = await kv.list(options); }
+  catch (e) { return json({ error: "CFB market receipt listing failed: " + e.message }, 502, cors); }
+  const records = [];
+  try {
+    for (const key of listed.keys || []) {
+      const value = await kv.get(key.name);
+      if (value === null) throw new Error("listed receipt disappeared");
+      records.push(JSON.parse(value));
+    }
+  } catch (e) {
+    return json({ error: "Stored CFB market receipt failed validation: " + e.message }, 500, cors);
+  }
+  records.sort((a, b) => String(a.kickoff).localeCompare(String(b.kickoff)) || String(a.event_id).localeCompare(String(b.event_id)));
+  const latest = records.reduce((m, r) => String(r.captured_at || "") > m ? String(r.captured_at) : m, "");
+  const payload = {
+    as_of: latest ? latest.slice(0, 10) : new Date().toISOString().slice(0, 10),
+    source: "SportsGameOdds NCAAF events captured prospectively by the Data Dawgs Cloudflare Worker.",
+    note: "Immutable market observations captured 24 to 25 hours before scheduled kickoff. Prices are model inputs, not forecasts or graded results. Rescheduled games may have multiple receipts.",
+    built: new Date().toISOString(),
+    canonical_url: `https://toto.jkapcar4.workers.dev/cfb/market-snapshots?season=${season}`,
+    data: {
+      season,
+      target_lead_hours: 24,
+      capture_window_hours: 1,
+      records,
+      complete: !!listed.list_complete,
+      next_cursor: listed.list_complete ? null : (listed.cursor || null),
+    },
+  };
+  return new Response(JSON.stringify(payload), {
+    headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "public, max-age=300" },
+  });
+}
+
 export default {
-  // Nightly RTDB snapshot to KV — see the "Nightly backup" section for why and where.
+  // Two isolated jobs share this Worker: the nightly private RTDB backup and the
+  // hourly public-data CFB receipt capture. Never run the backup hourly: it contains
+  // sensitive auth material and exists for disaster recovery, not polling.
   async scheduled(controller, env, ctx) {
+    const cron = (controller && controller.cron) || "";
+    if (cron === CFB_MARKET_CRON) {
+      try {
+        return await runCfbMarketCapture(env, (controller && controller.scheduledTime) || Date.now());
+      } catch (e) {
+        const kv = cfbMarketKV(env);
+        if (kv) await kv.put(CFB_MARKET_PREFIX + "lasterror",
+          JSON.stringify({ at: new Date().toISOString(), error: String((e && e.message) || e) }));
+        throw e;
+      }
+    }
+    // Missing cron preserves the local test/manual-call contract. Production names
+    // the daily trigger explicitly, and an unknown configured cron fails closed.
+    if (cron && cron !== BACKUP_CRON) throw new Error("unknown scheduled trigger: " + cron);
     try {
       await runBackup(env, (controller && controller.scheduledTime) || Date.now());
     } catch (e) {
@@ -233,6 +537,7 @@ export default {
 
     if (url.pathname === "/scores")       return handleScores(url, cors);
     if (url.pathname === "/survivor-picks") return handleSurvivorPicks(request, url, env, cors);
+    if (url.pathname === "/cfb/market-snapshots") return handleCfbMarketSnapshots(request, url, env, cors);
 
     // ⚠️ Identity is SITE-WIDE, not Bozo's. /auth/* is canonical; the /bozo/* spellings
     // are permanent aliases because bozo.html in the wild (and any phone with a cached

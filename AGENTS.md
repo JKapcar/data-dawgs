@@ -45,6 +45,7 @@ repo holds flattened, self-contained HTML — those files *are* the source. `sit
 | `bozo.html` | the weekly betting game |
 | `signon.html` | THE identity page — sign in, open signup (`POST /auth/signup`), join-link claim, recovery, password/email change. Every other page's Sign-in chip routes here with `?next=`; old `bozo.html?join=` links forward here. Identity UX lives here and nowhere else (8/7 rule) |
 | `dawg-bot-worker.js` | source of the `toto` Cloudflare Worker (no secrets) |
+| `wrangler.jsonc` | complete non-secret Worker config; do not deploy with a partial temporary manifest |
 | `sw.js` | service worker, draft-night offline insurance |
 | `data/` | **machine-readable surfaces — see below** |
 | `llms.txt` | curated index for LLM consumers |

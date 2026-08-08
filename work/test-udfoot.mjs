@@ -2,11 +2,13 @@
    Catches: a 🙃 still stuck in the nav, two of them, one that never renders because a
    page has no <footer>, one that lands under Ask Toto's fixed launcher, and a page whose
    background token did not get replaced. */
-import { chromium } from "playwright";
+import { chromiumExecutable, loadPlaywright } from "./playwright-loader.mjs";
 import http from "http"; import fs from "fs"; import path from "path";
+import { fileURLToPath } from "url";
+const { chromium } = loadPlaywright();
 let pass=0, fail=0;
 const ok=(n,c,x)=>{c?(pass++):(fail++,console.log("  FAIL "+n+(x?"  — "+x:"")));};
-const ROOT=path.resolve("..");
+const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"..");
 const server=http.createServer((req,res)=>{
   const f=path.join(ROOT,decodeURIComponent(req.url.split("?")[0]));
   if(!f.startsWith(ROOT)||!fs.existsSync(f)||fs.statSync(f).isDirectory()){res.writeHead(404);return res.end("no");}
@@ -14,7 +16,7 @@ const server=http.createServer((req,res)=>{
   res.end(fs.readFileSync(f));
 });
 await new Promise(r=>server.listen(8917,r));
-const b=await chromium.launch({executablePath:"/opt/pw-browsers/chromium-1194/chrome-linux/chrome",args:["--no-sandbox"]});
+const b=await chromium.launch({executablePath:chromiumExecutable(chromium),args:["--no-sandbox"]});
 const PAGES=["auction.html","bigboard.html","board.html","bozo.html","connect.html","dashboard.html",
  "dataviz.html","dawgs.html","dfs.html","guillotine.html","index.html","master.html","nfelo.html",
  "pound.html","receipts.html","report.html","signon.html","stats.html","strategy.html","survivor.html"];
@@ -25,7 +27,13 @@ for(const W of [1280,390,320]){
   const p=await ctx.newPage();
   p.on("pageerror",e=>errs.push(`${f}@${W}: ${e.message}`));
   await p.goto(`http://127.0.0.1:8917/${f}`,{waitUntil:"load"});
-  await p.evaluate(()=>document.documentElement.setAttribute("data-theme","dark"));
+  /* Exercise the same persistent controller as the real theme button. board.html and
+     bigboard.html intentionally re-render live draft state and re-apply the stored
+     preference, so mutating data-theme directly is not a stable/user-reachable state. */
+  await p.evaluate(()=>{
+    if(window.DDTheme && window.DDTheme.current() !== "dark") window.DDTheme.toggle();
+    else if(!window.DDTheme) document.documentElement.setAttribute("data-theme","dark");
+  });
   await p.waitForTimeout(250);
   const r=await p.evaluate(async()=>{
     /* ⚠️ SCROLL FIRST. Ask Toto's launcher is position:fixed, so at scroll 0 a bottom-of-

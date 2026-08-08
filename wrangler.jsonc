@@ -1,0 +1,46 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "toto",
+  "main": "dawg-bot-worker.js",
+  "compatibility_date": "2026-07-31",
+  "workers_dev": true,
+  "preview_urls": false,
+  "keep_vars": true,
+  "limits": {
+    "cpu_ms": 1000
+  },
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true
+    }
+  },
+  "vars": {
+    "BOZO_ADMIN": "Kap",
+    "ELEVEN_VOICE": "1bLhIC6iHGxxaQhUlUN7",
+    "MODEL": "grok-4.5"
+  },
+  "secrets": {
+    "required": [
+      "BOZO_PEPPER",
+      "BOZO_TOKENS",
+      "DAWG_PASS",
+      "ELEVEN_KEY",
+      "FB_SECRET",
+      "SGO_KEY",
+      "XAI_KEY"
+    ]
+  },
+  "kv_namespaces": [
+    {
+      "binding": "RL",
+      "id": "ffee9157b0a04cebb796acfa6046880a"
+    }
+  ],
+  "triggers": {
+    "crons": [
+      "0 9 * * *",
+      "9 * * * *"
+    ]
+  }
+}

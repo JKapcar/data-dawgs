@@ -5,16 +5,19 @@
 
    Run:  cd work && node test-signin.mjs      (serves ../ on :8905)
 */
-import { chromium } from "playwright";
+import { chromiumExecutable, loadPlaywright } from "./playwright-loader.mjs";
 import http from "http";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
+
+const { chromium } = loadPlaywright();
 
 let pass = 0, fail = 0;
 const ok = (n, c, x) => { c ? (pass++, console.log("  ok   " + n)) : (fail++, console.log("  FAIL " + n + (x ? "  — " + x : ""))); };
 
-const ROOT = path.resolve("..");
-const EXECUTABLE = process.env.PLAYWRIGHT_CHROMIUM || "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const EXECUTABLE = chromiumExecutable(chromium);
 const server = http.createServer((req, res) => {
   const f = path.join(ROOT, decodeURIComponent(req.url.split("?")[0]));
   if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end("no"); }

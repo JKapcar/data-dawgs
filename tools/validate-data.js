@@ -244,6 +244,38 @@ console.log('\nNFL backbone — canonical schedule and append-only model receipt
   else ok('every current 538 Classic forecast has a matching immutable receipt');
 }
 
+console.log('\nWorker deployment contract');
+{
+  const configPath = path.join(ROOT, 'wrangler.jsonc');
+  if (!fs.existsSync(configPath)) fail('wrangler.jsonc missing');
+  else {
+    let w;
+    try { w = JSON.parse(fs.readFileSync(configPath, 'utf8')); }
+    catch (e) { fail(`wrangler.jsonc: unparseable — ${e.message}`); }
+    if (w) {
+      const expectedSecrets = ['BOZO_PEPPER', 'BOZO_TOKENS', 'DAWG_PASS', 'ELEVEN_KEY', 'FB_SECRET', 'SGO_KEY', 'XAI_KEY'];
+      const required = [...((w.secrets && w.secrets.required) || [])].sort();
+      const crons = [...((w.triggers && w.triggers.crons) || [])].sort();
+      const rl = (w.kv_namespaces || []).find(x => x.binding === 'RL');
+      if (w.name !== 'toto' || w.main !== 'dawg-bot-worker.js') fail('wrangler.jsonc: wrong Worker name or entry point');
+      if (w.compatibility_date !== '2026-07-31') fail('wrangler.jsonc: compatibility date drifted from production');
+      if (!w.keep_vars || w.preview_urls !== false) fail('wrangler.jsonc: keep_vars/preview_urls safety settings missing');
+      if (!w.observability || w.observability.enabled !== true || !w.observability.logs || w.observability.logs.enabled !== true)
+        fail('wrangler.jsonc: Workers Logs must stay enabled');
+      if (!w.limits || w.limits.cpu_ms !== 1000) fail('wrangler.jsonc: production CPU ceiling must stay 1000 ms');
+      if (!rl || rl.id !== 'ffee9157b0a04cebb796acfa6046880a') fail('wrangler.jsonc: RL KV binding missing or changed');
+      if (JSON.stringify(required) !== JSON.stringify(expectedSecrets.sort())) fail('wrangler.jsonc: required secret-name set drifted');
+      if (JSON.stringify(crons) !== JSON.stringify(['0 9 * * *', '9 * * * *'].sort()))
+        fail('wrangler.jsonc: expected daily backup and hourly CFB triggers');
+      if (!w.vars || w.vars.BOZO_ADMIN !== 'Kap' || w.vars.MODEL !== 'grok-4.5' || !w.vars.ELEVEN_VOICE)
+        fail('wrangler.jsonc: production plain variables missing');
+      for (const secret of expectedSecrets) if (w.vars && Object.hasOwn(w.vars, secret))
+        fail(`wrangler.jsonc: ${secret} must be a secret name, never a plain variable`);
+      if (!fails.some(x => x.startsWith('wrangler.jsonc'))) ok('complete config preserves Worker, KV, secrets, crons, logs and limits');
+    }
+  }
+}
+
 console.log('\nllms.txt');
 {
   const p = path.join(ROOT, 'llms.txt');

@@ -89,10 +89,10 @@
    {
     "path": "/data/pound-tools.json",
     "url": "https://datadawgs216.com/data/pound-tools.json",
-    "bytes": 118242,
+    "bytes": 123086,
     "as_of": "2026-08-08",
-    "sha256": "cc71535437c5beb328e4051477e4fff07dd48b3e4a99cfe52cd2cab7803ac0b2",
-    "note": "Two kinds of entry share this inventory. kind \"tool\" (NFL) carries a delivery status: complete means the requested delivery layers are live; ready means Worker source and tests exist but production activation is pending; frontend-only means the browser tool and public contract exist without an MCP endpoint for the full requested scope; blocked tools keep an exact minimum path instead of being omitted. kind \"roadmap-idea\" (College Football) is an IDEA: nothing about it is implemented, staged or callable, candidate_mcp_tools are names reserved for computation that does not exist yet, and recommendation/lifecycle_status describe intent, not delivery."
+    "sha256": "ba12decdbef9f91e3bf293b995c60fc96b5ce42b58efef48c30f513b56dec724",
+    "note": "Two kinds of entry share this inventory. kind \"tool\" (NFL) carries delivery status. kind \"roadmap-idea\" (College Football) carries recommendation plus evidence-backed lifecycle and implementation state. A CFB artifact may be implemented without any MCP tool; candidate_mcp_tools are reservations and remain non-callable unless the independent Worker registry proves otherwise."
    },
    {
     "path": "/data/tier-audit.json",
@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 14293,
+    "bytes": 14454,
     "as_of": "2026-08-08",
-    "sha256": "b928d0de49bd34844bf824905ad2a3fb059f664376b3bd700bb50c1f1af22450",
+    "sha256": "bef202aa8f1fd0dadb087d5d6049dcf6319a24317e381c102bb714eec9816e88",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -143,14 +143,6 @@
     "note": "Canonical CFB schedule and result facts for FBS-involved games only. Upstream modelled columns (win probabilities, ESPN Elo, excitement index) are deliberately excluded: they are model outputs, not facts, and carry no methodology metadata. Git history retains every changed snapshot; downstream work must record integrity.snapshot_id."
    },
    {
-    "path": "/data/cfb-elo.json",
-    "url": "https://datadawgs216.com/data/cfb-elo.json",
-    "bytes": 28437,
-    "as_of": "2026-08-08",
-    "sha256": "b24ee248fdd27d7ab640d03dab738bed26f078f4f96ef7710693a405aa336f57",
-    "note": "MODELLED OUTPUT, and a deliberately simple baseline at that. The backtest is retrodictive: 2025 outcomes were known before this file was built. It exists so future CFB models have an interpretable floor to beat (Baseline Requirement). No prospective CFB forecast receipts exist yet; nothing here is graded."
-   },
-   {
     "path": "/data/cfb-market.json",
     "url": "https://datadawgs216.com/data/cfb-market.json",
     "bytes": 1097979,
@@ -159,11 +151,19 @@
     "note": "Book-identified CFB prices joined to the canonical schedule. TIMING IS UNKNOWN: the upstream date_time column is the kickoff time, not an observation time, so there is no capture timestamp for any price. These are NOT closing lines, no CLV may be computed from them, and no forecast receipt may cite them as a prospective market input. A model-vs-market comparison drawn from this file is a reference point only, and one that flatters the market: if these prices are late, they carry information a pregame model did not have. Devig is proportional, matching work/pound-core.js."
    },
    {
+    "path": "/data/cfb-elo.json",
+    "url": "https://datadawgs216.com/data/cfb-elo.json",
+    "bytes": 28437,
+    "as_of": "2026-08-08",
+    "sha256": "b24ee248fdd27d7ab640d03dab738bed26f078f4f96ef7710693a405aa336f57",
+    "note": "MODELLED OUTPUT, and a deliberately simple baseline at that. The backtest is retrodictive: 2025 outcomes were known before this file was built. It exists so future CFB models have an interpretable floor to beat (Baseline Requirement). No prospective CFB forecast receipts exist yet; nothing here is graded."
+   },
+   {
     "path": "/data/cfb-model-cards.json",
     "url": "https://datadawgs216.com/data/cfb-model-cards.json",
-    "bytes": 8937,
+    "bytes": 8808,
     "as_of": "2026-08-08",
-    "sha256": "5348f38356e937703f442b51e8ad24bb058098b277ce26351df2019359f9810c",
+    "sha256": "3a005e5c94ff127057717ed64c62be4d280ee79d451ed34b4c15cf2265921840",
     "note": "Model cards for shipped CFB models, per the Model Cards governance principle in The Pound's CFB roadmap. A card documents what a model is for, what it cannot do and how it has actually scored. Nothing here is graded: no CFB forecast has been locked before kickoff yet."
    },
    {

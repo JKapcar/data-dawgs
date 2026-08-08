@@ -2,10 +2,13 @@
 // handleScores — with only the network faked. Run: node test-mcp.mjs
 import { readFileSync } from "fs";
 import { createRequire } from "module";
+import { dirname, resolve } from "path";
+import { fileURLToPath } from "url";
 import worker from "../dawg-bot-worker.js";
 import P from "./pound-core.js";
 
 const require = createRequire(import.meta.url);
+const WORK = dirname(fileURLToPath(import.meta.url));
 const DDFS = require("./dfs-engine.js").DDFS;
 const DDSurvivorPath = require("./survivor-path-engine.js").DDSurvivorPath;
 const makeSlate = require("./mkslate.js");
@@ -662,13 +665,13 @@ function refNcdf(z) {
 }
 
 /* ----------------------- source-level safety asserts ----------------------- */
-const blockSrc = readFileSync("mcp-block.js", "utf8");
+const blockSrc = readFileSync(resolve(WORK, "mcp-block.js"), "utf8");
 const noComments = blockSrc.replace(/\/\/[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
 ok(!/fbPut|fbPatch|fbDelete/.test(noComments), "block calls NO Firebase write helper");
 ok(!/\.put\(|\.delete\(/.test(noComments), "block performs NO KV writes");
 ok(!/method:\s*["'](PUT|POST|PATCH|DELETE)/.test(noComments), "block issues NO writing HTTP methods");
-const assembled = readFileSync("../dawg-bot-worker.js", "utf8");
-const oldLines = readFileSync("../dawg-bot-worker.js", "utf8").split("\n").filter(l => l.trim());
+const assembled = readFileSync(resolve(WORK, "..", "dawg-bot-worker.js"), "utf8");
+const oldLines = readFileSync(resolve(WORK, "..", "dawg-bot-worker.js"), "utf8").split("\n").filter(l => l.trim());
 const newSet = new Set(assembled.split("\n"));
 ok(oldLines.every(l => newSet.has(l)), "purely additive: every non-blank old line survives");
 ok((assembled.match(/export default/g) || []).length === 1, "exactly one default export");

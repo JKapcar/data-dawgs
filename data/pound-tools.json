@@ -3,7 +3,7 @@
  "source": "Reconciled against the Data Dawgs site, Worker source and inspected upstream projects on 2026-08-08. College Football roadmap ideas added from the 2026-08-08 CFB roadmap.",
  "tier": "pound",
  "graded": false,
- "note": "Two kinds of entry share this inventory. kind \"tool\" (NFL) carries a delivery status: complete means the requested delivery layers are live; ready means Worker source and tests exist but production activation is pending; frontend-only means the browser tool and public contract exist without an MCP endpoint for the full requested scope; blocked tools keep an exact minimum path instead of being omitted. kind \"roadmap-idea\" (College Football) is an IDEA: nothing about it is implemented, staged or callable, candidate_mcp_tools are names reserved for computation that does not exist yet, and recommendation/lifecycle_status describe intent, not delivery.",
+ "note": "Two kinds of entry share this inventory. kind \"tool\" (NFL) carries delivery status. kind \"roadmap-idea\" (College Football) carries recommendation plus evidence-backed lifecycle and implementation state. A CFB artifact may be implemented without any MCP tool; candidate_mcp_tools are reservations and remain non-callable unless the independent Worker registry proves otherwise.",
  "cfb_roadmap": {
   "as_of": "2026-08-08",
   "domain": "College Football",
@@ -705,15 +705,32 @@
   {
    "kind": "roadmap-idea",
    "domain": "College Football",
-   "lifecycle_status": "idea",
+   "lifecycle_status": "live",
    "lifecycle_history": [
     {
      "status": "idea",
      "on": "2026-08-08",
      "note": "Entered The Pound from the 2026-08-08 CFB roadmap."
+    },
+    {
+     "status": "building",
+     "on": "2026-08-08",
+     "note": "Built pinned, fail-closed schedule and market ingestion."
+    },
+    {
+     "status": "live",
+     "on": "2026-08-08",
+     "note": "Canonical schedule and book-market snapshots published with source-byte hashes."
     }
    ],
-   "implemented": false,
+   "implemented": true,
+   "delivery_evidence": [
+    "/scripts/cfb_data_backbone.py",
+    "/scripts/cfb_market.py",
+    "/data/cfb-schedule.json",
+    "/data/cfb-market.json"
+   ],
+   "delivery_note": "Live for the schedule and book-market source families. Play-by-play remains a separate cfb-plays dependency.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 1,
@@ -766,6 +783,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 1,
@@ -809,15 +828,31 @@
   {
    "kind": "roadmap-idea",
    "domain": "College Football",
-   "lifecycle_status": "idea",
+   "lifecycle_status": "live",
    "lifecycle_history": [
     {
      "status": "idea",
      "on": "2026-08-08",
      "note": "Entered The Pound from the 2026-08-08 CFB roadmap."
+    },
+    {
+     "status": "building",
+     "on": "2026-08-08",
+     "note": "Canonicalized 2025 FBS-involved schedule and result facts."
+    },
+    {
+     "status": "live",
+     "on": "2026-08-08",
+     "note": "Published 934 validated games with unique IDs and a reproducible snapshot hash."
     }
    ],
-   "implemented": false,
+   "implemented": true,
+   "delivery_evidence": [
+    "/data/cfb-schedule.json",
+    "/scripts/cfb_data_backbone.py",
+    "/tests/test_cfb_data_backbone.py"
+   ],
+   "delivery_note": "Live for the completed 2025 season. The upstream 2026 schedule has not been published yet.",
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 1,
@@ -869,6 +904,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 1,
@@ -921,6 +958,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 1,
@@ -971,6 +1010,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 1,
@@ -1022,6 +1063,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 1,
@@ -1064,15 +1107,26 @@
   {
    "kind": "roadmap-idea",
    "domain": "College Football",
-   "lifecycle_status": "idea",
+   "lifecycle_status": "building",
    "lifecycle_history": [
     {
      "status": "idea",
      "on": "2026-08-08",
      "note": "Entered The Pound from the 2026-08-08 CFB roadmap."
+    },
+    {
+     "status": "building",
+     "on": "2026-08-08",
+     "note": "Published book-identified historical prices; observation time remains unknown. Prospective 24-hour capture is staged, not activated."
     }
    ],
-   "implemented": false,
+   "implemented": true,
+   "delivery_evidence": [
+    "/data/cfb-market.json",
+    "/scripts/cfb_market.py",
+    "/tests/test_cfb_market.py"
+   ],
+   "delivery_note": "Partially implemented. Historical book prices are live with explicit unknown timing; the timestamped prospective Worker collector still needs activation.",
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 1,
@@ -1126,6 +1180,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 2,
@@ -1182,6 +1238,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 1,
@@ -1234,6 +1292,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 1,
@@ -1290,6 +1350,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 1,
@@ -1344,6 +1406,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": null,
@@ -1396,6 +1460,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": null,
@@ -1433,15 +1499,26 @@
   {
    "kind": "roadmap-idea",
    "domain": "College Football",
-   "lifecycle_status": "idea",
+   "lifecycle_status": "evaluating",
    "lifecycle_history": [
     {
      "status": "idea",
      "on": "2026-08-08",
      "note": "Entered The Pound from the 2026-08-08 CFB roadmap."
+    },
+    {
+     "status": "evaluating",
+     "on": "2026-08-08",
+     "note": "Published the 2025 Elo-vs-market probe as blocked; timestamped prospective prices are the named unblocker."
     }
    ],
-   "implemented": false,
+   "implemented": true,
+   "delivery_evidence": [
+    "/data/cfb-disagreement.json",
+    "/scripts/cfb_disagreement.py",
+    "/tests/test_cfb_disagreement.py"
+   ],
+   "delivery_note": "The lab artifact is live, but its headline question remains blocked by historical prices without observation timestamps.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 3,
@@ -1488,15 +1565,22 @@
   {
    "kind": "roadmap-idea",
    "domain": "College Football",
-   "lifecycle_status": "idea",
+   "lifecycle_status": "planned",
    "lifecycle_history": [
     {
      "status": "idea",
      "on": "2026-08-08",
      "note": "Entered The Pound from the 2026-08-08 CFB roadmap."
+    },
+    {
+     "status": "planned",
+     "on": "2026-08-08",
+     "note": "Prospective 24-hour market observation contract is staged; first model receipts wait on a 2026 schedule and pre-kickoff forecasts."
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": "No CFB model forecast receipt exists yet. Planning is concrete, but implementation remains false.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 3,
@@ -1552,6 +1636,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 4,
@@ -1599,15 +1685,32 @@
   {
    "kind": "roadmap-idea",
    "domain": "College Football",
-   "lifecycle_status": "idea",
+   "lifecycle_status": "live",
    "lifecycle_history": [
     {
      "status": "idea",
      "on": "2026-08-08",
      "note": "Entered The Pound from the 2026-08-08 CFB roadmap."
+    },
+    {
+     "status": "building",
+     "on": "2026-08-08",
+     "note": "Implemented the deterministic Elo baseline and fixed-parameter backtest."
+    },
+    {
+     "status": "live",
+     "on": "2026-08-08",
+     "note": "Published ratings, calibration bins, market comparison and generated model card."
     }
    ],
-   "implemented": false,
+   "implemented": true,
+   "delivery_evidence": [
+    "/data/cfb-elo.json",
+    "/data/cfb-model-cards.json",
+    "/scripts/cfb_elo.py",
+    "/tests/test_cfb_elo.py"
+   ],
+   "delivery_note": "The baseline is live and reproducible, but retrodictive and ungraded; no prospective 2026 claim is made.",
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 2,
@@ -1657,6 +1760,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 8,
@@ -1709,6 +1814,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "eventual",
    "roadmap_step": 11,
@@ -1765,6 +1872,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 12,
@@ -1829,6 +1938,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": null,
@@ -1875,6 +1986,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 6,
@@ -1942,6 +2055,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 6,
@@ -2003,6 +2118,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 6,
@@ -2056,6 +2173,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 6,
@@ -2105,6 +2224,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": null,
@@ -2154,6 +2275,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": null,
@@ -2206,6 +2329,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 5,
@@ -2275,6 +2400,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": null,
@@ -2324,6 +2451,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": null,
@@ -2372,6 +2501,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 8,
@@ -2427,6 +2558,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": null,
@@ -2480,6 +2613,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 9,
@@ -2549,6 +2684,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": null,
@@ -2598,6 +2735,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 7,
@@ -2656,6 +2795,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": null,
@@ -2717,6 +2858,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 10,
@@ -2766,6 +2909,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": null,
@@ -2839,6 +2984,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": null,
@@ -2905,6 +3052,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": null,
@@ -2953,6 +3102,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": null,
@@ -3001,6 +3152,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": null,
@@ -3073,6 +3226,8 @@
     }
    ],
    "implemented": false,
+   "delivery_evidence": [],
+   "delivery_note": null,
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": null,

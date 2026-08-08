@@ -8,14 +8,15 @@
 import fs from "fs";
 import { webcrypto } from "crypto";
 import { tmpdir } from "os";
-import { join } from "path";
-import { pathToFileURL } from "url";
+import { dirname, join, resolve } from "path";
+import { fileURLToPath, pathToFileURL } from "url";
 if (!globalThis.crypto) globalThis.crypto = webcrypto;
 
 let pass = 0, fail = 0;
 const ok = (n, c, x) => { c ? (pass++, console.log("  ok   " + n)) : (fail++, console.log("  FAIL " + n + (x ? "  — " + x : ""))); };
 
-const SRC = fs.readFileSync("../dawg-bot-worker.js", "utf8");
+const WORK = dirname(fileURLToPath(import.meta.url));
+const SRC = fs.readFileSync(resolve(WORK, "..", "dawg-bot-worker.js"), "utf8");
 const BUNDLE = join(tmpdir(), "worker-identity.mjs");
 fs.writeFileSync(BUNDLE, SRC + "\nexport { handleMcp, MCP_TOOLS, mcpAuth, mcpTokenHash, newMcpToken, emailToName, bozoSignup, bozoLogin, readSession };\n");
 

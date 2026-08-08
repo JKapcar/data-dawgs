@@ -64,3 +64,50 @@ What unblocks it is small and specific: market prices with a capture timestamp e
 - The 2026 season file does not exist upstream yet (checked 2026-08-08). When cfbfastR-data publishes it, `refresh --season 2026` produces the prospective schedule; until then the canonical surface is the completed 2025 season.
 - CFBD API ingestion (`cfb-cfbd`) remains unstarted: it requires an API key, which belongs in the Cloudflare Worker, never in this public repo.
 - Play-by-play (`cfb-plays`) is deliberately not in this step; the schedule surface had to exist first.
+
+## Prospective 24-hour market receipts
+
+The Worker source now contains the missing prospective price-capture path. Its hourly
+`9 * * * *` trigger queries SportsGameOdds only for NCAAF games scheduled in the
+half-open window 24 to 25 hours ahead, then freezes every valid paired bookmaker
+moneyline in KV. The existing `SGO_KEY` remains an encrypted Worker secret. The
+credential is sent only in an HTTP header and never enters a URL, stored receipt,
+log message or public response.
+
+The timing contract is intentionally about **our observation**, not a provider's idea
+of a close. Each receipt carries `captured_at`, scheduled `kickoff`, `lead_seconds`,
+the provider's per-book quote-update timestamps when supplied, a canonical SHA-256
+snapshot ID and `observation_timestamp_available: true`. A game with no usable paired
+moneyline still produces an explicit `unpriced` receipt. Impossible holds, missing
+opposing sides and unavailable prices are retained under `rejected_quotes` with reasons.
+
+Receipts are immutable and keyed by season, scheduled kickoff and provider event ID.
+The kickoff component matters: a rescheduled game earns a new receipt rather than
+rewriting the old observation. The read-only export is paginated at:
+
+```
+GET https://toto.jkapcar4.workers.dev/cfb/market-snapshots?season=2026
+```
+
+This does **not** unblock the 2025 disagreement finding retroactively. It creates the
+prospective evidence needed to answer that question on 2026 games. It also does not
+authorize a consensus model: the receipts must first accumulate, join cleanly to the
+canonical schedule and be graded against outcomes.
+
+The quota math is predeclared. SportsGameOdds counts top-level events rather than
+markets or books; empty responses count as one object. Hourly narrow-window queries
+therefore cost about 720 empty-response objects per 30-day month plus roughly one object
+per scheduled game, before rare reschedules or pagination. That fits the current
+2,500-object Amateur allowance without turning a full line-history collector into an
+accidental requirement.
+
+Focused verification:
+
+```
+node work/test-cfb-market-capture.mjs
+node work/test-backup.mjs
+wrangler deploy --dry-run --config wrangler.jsonc
+```
+
+Deployment and activation are separate actions. The source and trigger configuration
+can be reviewed and tested without uploading a Worker version or changing traffic.

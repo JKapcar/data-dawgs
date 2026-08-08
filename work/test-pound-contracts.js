@@ -111,11 +111,15 @@ test('model scoreboard is live over the normalized ungraded receipt ledger', () 
   const pound = surfaces.data.find(s => s.id === 'pound');
   assert.ok(pound.machine.some(x => x.kind === 'mcp' && x.tool === 'dd_model_scoreboard' && x.status === 'live'));
   assert.ok(!pound.planned.includes('mcp:model_scoreboard'));
-  assert.match(pound.gap, /no book-and-timestamp-provenanced market feed/i);
+  assert.match(pound.gap, /prospective timestamped market collector is staged rather than activated/i);
+  assert.match(pound.gap, /no CFB forecast receipt has been frozen/i);
 });
 test('new data surfaces are in the generated manifest', () => {
   const paths = new Set(index.data.files.map(x => x.path));
-  for (const p of ['/data/pound-tools.json', '/data/model-contracts.json', '/data/upstream-models.json', '/data/nfl-schedule.json', '/data/model-receipts.json', '/data/538-classic.json']) assert.ok(paths.has(p), p);
+  for (const p of ['/data/pound-tools.json', '/data/model-contracts.json', '/data/upstream-models.json',
+    '/data/nfl-schedule.json', '/data/model-receipts.json', '/data/538-classic.json',
+    '/data/cfb-schedule.json', '/data/cfb-market.json', '/data/cfb-elo.json',
+    '/data/cfb-model-cards.json', '/data/cfb-disagreement.json']) assert.ok(paths.has(p), p);
 });
 test('NFL backbone is complete and exposes its canonical files', () => {
   const backbone = tools.data.find(t => t.id === 'nfl-data');
@@ -165,17 +169,23 @@ const CFB_HEADINGS = [
 const RECS = ['build', 'lab', 'defer', 'avoid-initially', 'not-needed'];
 const LIFECYCLE = ['idea', 'evaluating', 'planned', 'building', 'live', 'deferred', 'graveyard', 'revived'];
 
-test('CFB roadmap ideas carry the required metadata and honest non-delivery', () => {
+test('CFB roadmap ideas carry evidence-backed lifecycle without inventing tools', () => {
   assert.equal(cfbIdeas.length, 44);
   for (const i of cfbIdeas) {
     assert.match(i.id, /^cfb-/, i.id);
     assert.equal(i.domain, 'College Football', i.id);
-    assert.equal(i.implemented, false, i.id);
+    assert.equal(typeof i.implemented, 'boolean', i.id);
     assert.ok(!('status' in i), `${i.id}: a roadmap idea must not carry a delivery status`);
-    assert.ok(!i.existing_worker_mcp_implementation, `${i.id}: an idea cannot claim a live MCP tool`);
-    assert.ok(!i.staged_worker_mcp_implementation, `${i.id}: an idea cannot claim a staged MCP tool`);
+    assert.ok(!i.existing_worker_mcp_implementation, `${i.id}: a roadmap artifact cannot claim a live MCP tool`);
+    assert.ok(!i.staged_worker_mcp_implementation, `${i.id}: a roadmap artifact cannot claim a staged MCP tool`);
     assert.ok(RECS.includes(i.recommendation), `${i.id}: ${i.recommendation}`);
     assert.ok(LIFECYCLE.includes(i.lifecycle_status), `${i.id}: ${i.lifecycle_status}`);
+    if (i.lifecycle_status === 'live') assert.equal(i.implemented, true, `${i.id}: live requires implementation`);
+    if (i.implemented) {
+      assert.ok(Array.isArray(i.delivery_evidence) && i.delivery_evidence.length, `${i.id}: missing evidence`);
+      for (const evidence of i.delivery_evidence)
+        assert.ok(fs.existsSync(evidence.replace(/^\//, '')), `${i.id}: missing ${evidence}`);
+    }
     for (const field of ['category', 'rationale', 'expected_value', 'data_source_requirements',
       'validation_requirement', 'risks_limitations', 'priority']) assert.ok(i[field], `${i.id}: missing ${field}`);
     assert.ok(Array.isArray(i.source_headings) && i.source_headings.length, `${i.id}: missing source_headings`);
@@ -183,6 +193,23 @@ test('CFB roadmap ideas carry the required metadata and honest non-delivery', ()
     if (['defer', 'avoid-initially', 'not-needed'].includes(i.recommendation))
       assert.ok(Array.isArray(i.revisit_conditions) && i.revisit_conditions.length, `${i.id}: kept ideas need revisit conditions`);
   }
+  const byId = Object.fromEntries(cfbIdeas.map(i => [i.id, i]));
+  assert.equal(byId['cfb-sportsdataverse'].lifecycle_status, 'live');
+  assert.equal(byId['cfb-games'].lifecycle_status, 'live');
+  assert.equal(byId['cfb-market'].lifecycle_status, 'building');
+  assert.equal(byId['cfb-elo'].lifecycle_status, 'live');
+  assert.equal(byId['cfb-disagreement-lab'].lifecycle_status, 'evaluating');
+  assert.equal(byId['cfb-model-receipts'].lifecycle_status, 'planned');
+});
+test('published CFB backbone artifacts are discoverable without overstating their evidence', () => {
+  const pound = surfaces.data.find(s => s.id === 'pound');
+  const machine = Object.fromEntries(pound.machine.filter(x => x.url && x.url.includes('/cfb-')).map(x => [x.url, x]));
+  assert.deepEqual(Object.keys(machine).sort(), ['/data/cfb-disagreement.json', '/data/cfb-elo.json',
+    '/data/cfb-market.json', '/data/cfb-model-cards.json', '/data/cfb-schedule.json']);
+  assert.match(machine['/data/cfb-market.json'].covers, /observation time is explicitly unknown/i);
+  assert.match(machine['/data/cfb-market.json'].covers, /not closing lines/i);
+  assert.match(machine['/data/cfb-elo.json'].covers, /ungraded as a prospective model/i);
+  assert.match(machine['/data/cfb-disagreement.json'].covers, /blocked/i);
 });
 test('CFB dependency, related-idea and governance references resolve', () => {
   const ids = new Set(cfbIdeas.map(i => i.id));
@@ -237,7 +264,7 @@ test('no candidate CFB MCP tool is claimed live, staged or callable anywhere', (
   assert.equal(surfaces.counts.mcp_tools_live, 26); // unchanged by this task
   const pound = surfaces.data.find(s => s.id === 'pound');
   for (const m of pound.machine.filter(x => x.kind === 'mcp')) assert.ok(!candidates.has(m.tool), m.tool);
-  assert.match(pound.machine.find(m => m.url === '/data/pound-tools.json').covers, /ideas only, none implemented or callable/);
+  assert.match(pound.machine.find(m => m.url === '/data/pound-tools.json').covers, /evidence-backed lifecycle state; no candidate CFB MCP tool is callable/);
 });
 test('the roadmap is Graveyard-ready: lifecycle history, postmortem shape and revival path exist', () => {
   assert.deepEqual(roadmap.lifecycle.statuses, LIFECYCLE);
@@ -261,8 +288,10 @@ test('the seven governance principles are preserved as shared metadata', () => {
 test('pound.html renders the CFB roadmap honestly', () => {
   const html = fs.readFileSync('pound.html', 'utf8');
   assert.match(html, /<section class="p-section" id="cfb">/);
-  assert.match(html, /ideas, not tools/i);
-  assert.match(html, /Candidate MCP tool names are reservations/);
+  assert.match(html, /roadmap ideas, not automatically tools/i);
+  assert.match(html, /Candidate MCP tool names remain reservations/);
+  assert.match(html, /implemented artifacts/);
+  assert.match(html, /Shipped evidence/);
   for (const id of ['cfbCat', 'cfbRec', 'cfbLife', 'cfbStep']) assert.ok(html.includes(`id="${id}"`), id);
   assert.match(html, /AVOID INITIALLY/);
   assert.match(html, /NOT NEEDED/);

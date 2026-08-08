@@ -7,10 +7,10 @@
  "provenance": {
   "generator": "scripts/cfb_model_cards.py",
   "governance_principle": "cfb-gov-model-cards",
-  "captured_at": "2026-08-08T06:33:26.671966Z"
+  "captured_at": "2026-08-08T07:46:27.079375Z"
  },
  "integrity": {
-  "snapshot_id": "sha256:872fedabba5a6b0c4db2b8112ed686f05f7d14e8562bde108fdd2ce3cb22f1e9",
+  "snapshot_id": "sha256:2f1cea2210fdaee317b476a6930ade549343e08b598bf7bcf10b74fb9f45361a",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for the data object (sorted object keys, no insignificant whitespace).",
   "cards": 1
  },
@@ -23,9 +23,9 @@
     "roadmap_idea": "cfb-elo",
     "roadmap_step": 2,
     "lifecycle_status": {
-     "roadmap_lifecycle_status": "idea",
-     "roadmap_implemented_flag": false,
-     "note": "Read from /data/pound-tools.json, not asserted here. The roadmap entry has not been advanced since this model shipped; moving it is a pending governance decision, not an oversight."
+     "roadmap_lifecycle_status": "live",
+     "roadmap_implemented_flag": true,
+     "note": "Read from /data/pound-tools.json, not asserted here."
     },
     "retirement_status": "active",
     "purpose": "Be the interpretable floor every future CFB model must clear. It exists to make 'this model is good' a falsifiable claim, not to be the best available forecast.",
