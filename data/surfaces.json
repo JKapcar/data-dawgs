@@ -442,6 +442,12 @@
      "url": "/data/cfb-market.json",
      "status": "live",
      "covers": "book-identified 2025 CFB spreads, totals and devigged moneylines; no observation timestamp, so not closing lines (roadmap step 1)"
+    },
+    {
+     "kind": "json",
+     "url": "/data/cfb-model-cards.json",
+     "status": "live",
+     "covers": "governance model cards for shipped CFB models; numbers generated from each model's own output"
     }
    ],
    "planned": [],

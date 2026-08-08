@@ -140,6 +140,34 @@ def load_market_probabilities(path: Path) -> tuple[dict[str, float], str | None]
     return probabilities, envelope["integrity"]["snapshot_id"]
 
 
+CALIBRATION_EDGES = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+
+
+def calibration_bins(rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
+    """Predicted vs observed home win rate in fixed probability bins.
+
+    Fixed edges, not quantiles, so bins stay comparable across refreshes and
+    across models. Sparse bins are published with their count rather than
+    merged away; a bin of 12 games is not evidence and its n says so.
+    """
+    bins = []
+    for low, high in zip(CALIBRATION_EDGES, CALIBRATION_EDGES[1:]):
+        members = [r for r in rows
+                   if r[key] is not None and (low <= r[key] < high or (high == 1.0 and r[key] == 1.0))]
+        if not members:
+            bins.append({"bin_low": low, "bin_high": high, "n": 0,
+                         "mean_predicted": None, "observed_home_win_rate": None})
+            continue
+        bins.append({
+            "bin_low": low,
+            "bin_high": high,
+            "n": len(members),
+            "mean_predicted": round(sum(r[key] for r in members) / len(members), 4),
+            "observed_home_win_rate": round(sum(r["home_won"] for r in members) / len(members), 4),
+        })
+    return bins
+
+
 def run_backtest(market_path: Path | None = None) -> dict[str, Any]:
     model = EloModel()
     season_provenance: list[dict[str, str]] = []
@@ -187,6 +215,8 @@ def run_backtest(market_path: Path | None = None) -> dict[str, Any]:
     home_rate = home_wins / n
     climatological_brier = home_rate * (1 - home_rate)  # constant-p forecast at the observed rate
 
+    calibration = calibration_bins(eval_rows, "p_home")
+
     # Head-to-head against the market, scored on the SAME games only. Anything else
     # would compare two different question sets and call it a result.
     paired = [r for r in eval_rows if r["market_p_home"] is not None]
@@ -205,6 +235,8 @@ def run_backtest(market_path: Path | None = None) -> dict[str, Any]:
             "coverage_of_evaluation_set": round(m / n, 4),
             "market_median_devig": score("market_p_home"),
             "elo_baseline_same_games": score("p_home"),
+            "market_calibration_bins": calibration_bins(paired, "market_p_home"),
+            "elo_calibration_bins_same_games": calibration_bins(paired, "p_home"),
             "market_snapshot_id": market_snapshot,
             "timing_caveat": (
                 "Prices in data/cfb-market.json carry no observation timestamp. They are not "
@@ -236,6 +268,10 @@ def run_backtest(market_path: Path | None = None) -> dict[str, Any]:
             "elo_baseline": {
                 "favorite_accuracy": round(sum(r["favorite_hit"] for r in eval_rows) / n, 4),
                 "brier_home_win": round(brier, 4),
+            },
+            "calibration": {
+                "method": "fixed 0.1-wide probability bins over the home win probability",
+                "bins": calibration,
             },
             "reference_points": {
                 "always_pick_home_accuracy": round(max(home_rate, 1 - home_rate), 4),
