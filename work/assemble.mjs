@@ -58,7 +58,19 @@ if (!src.includes(ANCHOR)) fail("route anchor not found in " + TARGET);
 if (src.split(ANCHOR).length - 1 !== 1) fail("route anchor is ambiguous — appears more than once");
 src = src.replace(ANCHOR, ANCHOR + "\n" + ROUTE);
 
-const block = readFileSync("mcp-block.js", "utf8").replace(/\s+$/, "");
+// Inject the exact browser/Node DFS engine, but give its universal wrapper a private
+// root inside this module. The source remains work/dfs-engine.js; the Worker does not
+// carry a hand-maintained fork that can silently disagree with the human page.
+const engineSuffix =
+  '})(typeof module !== "undefined" && module.exports ? module.exports : (typeof self !== "undefined" ? self : this));';
+const engineSource = readFileSync("dfs-engine.js", "utf8").replace(/\s+$/, "");
+if (!engineSource.endsWith(engineSuffix)) fail("dfs-engine.js wrapper changed — update the explicit Worker-root transform");
+const engine = "const mcpDdfsRoot = {};\n" +
+  engineSource.slice(0, -engineSuffix.length) + "})(mcpDdfsRoot);";
+const mcp = readFileSync("mcp-block.js", "utf8").replace(/\s+$/, "");
+const block =
+  "/* Shared DFS engine — generated verbatim from work/dfs-engine.js except for its private root. */\n" +
+  engine + "\n\n" + mcp;
 const out = src.replace(/\s+$/, "") + "\n\n" + START + "\n" + block + "\n" + END + "\n";
 
 /* ---- 4. prove it before writing ---- */
@@ -68,6 +80,8 @@ const once = (needle, what) => {
 };
 once("const MCP_PROTOS", "MCP_PROTOS declaration");
 once("const MCP_TOOLS", "MCP_TOOLS declaration");
+once("const mcpDdfsRoot", "private DFS engine root");
+once("function solveLineups", "shared DFS solver");
 once("async function handleMcp", "handleMcp definition");
 once("async function mcpDispatch", "mcpDispatch definition");
 once("DD-MCP-ROUTE", "injected route");
@@ -99,6 +113,6 @@ const secondPass = (() => {
 if (secondPass !== out) fail("build is not idempotent — a second run would change the file");
 
 console.log(`assembled ${TARGET}: ${out.split("\n").length} lines, ${(out.length / 1024).toFixed(1)} KB`);
-console.log("  single-declaration checks passed · parses · idempotent · no write calls in the block");
+console.log("  shared DFS source · single declarations · parses · idempotent · no write calls in the block");
 
 function fail(msg) { console.error("BUILD FAILED: " + msg); process.exit(1); }

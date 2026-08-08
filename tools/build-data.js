@@ -818,7 +818,7 @@ const MCP_POUND_LIVE = ['dd_convert_odds', 'dd_devig_market', 'dd_price_parlay',
   'dd_translate_probability'];
 const MCP_LIVE = ['dd_whoami', 'dd_league_overview', 'dd_bozo_week', 'dd_bozo_standings',
   'dd_draft_board', 'dd_draft_pool', 'dd_survivor_week', 'dd_scores',
-  'dd_dfs_correlations', 'dd_guillotine_odds', 'dd_site_map',
+  'dd_dfs_correlations', 'dd_solve_dfs_lineup', 'dd_guillotine_odds', 'dd_site_map',
   'dd_survivor_ev', 'dd_analyze_matchup', ...MCP_POUND_LIVE];
 const MCP_STAGED = [];
 const MCP_ENDPOINT = {
@@ -882,9 +882,10 @@ const SURFACES = [
     planned: ['mcp:submit_bozo_leg'],
     gap: 'Reads are live over MCP. Write access (submitting a leg) waits on the trust layer, deliberately.' },
   { id: 'dfs', name: 'DFS solver + contest simulator', page: '/dfs.html',
-    machine: [{ kind: 'mcp', tool: 'dd_dfs_correlations', status: 'live', covers: 'the measured correlation structure only — never projections or ownership, which exist only in each user\'s browser' }],
-    planned: ['mcp:solve_dfs_lineup'],
-    gap: 'The solver is a pure function running in the browser. The correlation matrix it uses is served; the solve itself is not.' },
+    machine: [{ kind: 'mcp', tool: 'dd_dfs_correlations', status: 'live', covers: 'the measured correlation structure' },
+              { kind: 'mcp', tool: 'dd_solve_dfs_lineup', status: 'live', covers: 'bounded exact lineup optimization over caller-supplied slate data; inputs and results are not stored' }],
+    planned: [],
+    gap: 'The exact solver is live over MCP; contest simulation remains browser-only. Projections and ownership are caller-supplied and never hosted.' },
   { id: 'guillotine', name: 'Guillotine league tools', page: '/guillotine.html',
     machine: [{ kind: 'mcp', tool: 'dd_guillotine_odds', status: 'live' }],
     planned: ['json:/data/guillotine.json'] },
@@ -893,10 +894,12 @@ const SURFACES = [
               { kind: 'json', url: '/data/model-contracts.json', status: 'live', covers: 'forecast, receipt and calculator contracts' },
               { kind: 'json', url: '/data/upstream-models.json', status: 'live', covers: 'source, commit and license provenance' },
               { kind: 'json', url: '/data/nfl-schedule.json', status: 'live', covers: 'canonical schedule with exact upstream commit and snapshot hash' },
-              { kind: 'json', url: '/data/model-receipts.json', status: 'live', covers: 'append-only normalized multi-model receipt ledger; currently empty' },
+              { kind: 'json', url: '/data/model-receipts.json', status: 'live', covers: '544 append-only normalized prospective receipts across nfelo and 538 Classic' },
+              { kind: 'json', url: '/data/538-classic.json', status: 'live', covers: 'reproduced 538 Classic methodology, 32 target-season ratings and 272 prospective forecasts' },
+              { kind: 'markdown', url: '/data/538-classic-methodology.md', status: 'live', covers: 'model mathematics, provenance, reproduction tolerance, receipts and limits' },
               ...MCP_POUND_LIVE.map(tool => ({ kind: 'mcp', tool, status: 'live', covers: 'deterministic calculation over caller-supplied inputs; inputs and results are not stored' }))],
     planned: ['mcp:model_scoreboard'],
-    gap: 'The calculator tools have no sportsbook feed or independent forecast pipeline; they operate only on caller-supplied inputs.' },
+    gap: 'Two prospective model feeds are live and ungraded. There is still no book-and-timestamp-provenanced market feed or comparable-sample leaderboard.' },
   { id: 'method', name: 'How this site reasons', page: '/index.html',
     machine: [{ kind: 'markdown', url: '/data/method.md', status: 'live' },
               { kind: 'markdown', url: '/data/toto-philosophy.md', status: 'live' }],
@@ -934,7 +937,7 @@ write('surfaces.json', {
 
 // These are produced by the independent scheduled backbone rather than extracted from
 // a page. Keep them in the same generated manifest without letting this build rewrite them.
-for (const name of ['nfl-schedule.json', 'model-receipts.json']) {
+for (const name of ['nfl-schedule.json', 'model-receipts.json', '538-classic.json']) {
   const p = path.join(OUT, name);
   const txt = fs.readFileSync(p, 'utf8');
   const payload = JSON.parse(txt);
@@ -967,7 +970,7 @@ const manifest = {
     // Add new ones here or validate-data.js will not know they exist.
     markdown: [
       'strategy.md', 'receipts-method.md', 'bozo-rules.md', 'method.md', 'toto-philosophy.md',
-      'tier-audit.md',
+      'tier-audit.md', '538-classic-methodology.md',
     ].map(name => {
       const p = path.join(OUT, name);
       const txt = fs.readFileSync(p, 'utf8');

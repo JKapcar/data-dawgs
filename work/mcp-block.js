@@ -217,6 +217,209 @@ function mcpCalcBeliefSummary(values) {
     standard_deviation: Math.sqrt(variance), crosses_50: xs[0] < 0.5 && xs[xs.length - 1] > 0.5 };
 }
 
+// DFS solver adapter. The optimizer itself is injected from work/dfs-engine.js by
+// assemble.mjs, so the browser and MCP execute one source. This layer only validates a
+// bounded caller-supplied slate, maps public ids to engine indexes and makes every
+// constraint/result inspectable. Inputs and results are never stored.
+const MCP_DFS_MAX_PLAYERS = 220;
+const MCP_DFS_MAX_LINEUPS = 20;
+const MCP_DFS_MAX_TIME_MS = 3000;
+const MCP_DFS_POSITIONS = ["QB", "RB", "WR", "TE", "DST"];
+
+function mcpDfsHas(obj, key) { return Object.prototype.hasOwnProperty.call(obj, key); }
+function mcpDfsKnown(obj, allowed, label) {
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) throw new Error(label + " must be an object");
+  const extra = Object.keys(obj).filter(k => !allowed.includes(k));
+  if (extra.length) throw new Error(label + " has unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+}
+function mcpDfsString(v, label, max) {
+  if (typeof v !== "string" || !v.trim()) throw new Error(label + " must be a non-empty string");
+  const s = v.trim();
+  if (s.length > max) throw new Error(label + " is limited to " + max + " characters");
+  return s;
+}
+function mcpDfsNumber(v, label, lo, hi) {
+  if (typeof v !== "number" || !Number.isFinite(v)) throw new Error(label + " must be a finite number");
+  if (v < lo || v > hi) throw new Error(label + " must be between " + lo + " and " + hi);
+  return v;
+}
+function mcpDfsInteger(v, label, lo, hi) {
+  const n = mcpDfsNumber(v, label, lo, hi);
+  if (!Number.isInteger(n)) throw new Error(label + " must be a whole number");
+  return n;
+}
+function mcpDfsOptionalInteger(args, key, label, lo, hi, fallback) {
+  return mcpDfsHas(args, key) ? mcpDfsInteger(args[key], label, lo, hi) : fallback;
+}
+function mcpDfsOptionalNumber(args, key, label, lo, hi, fallback) {
+  return mcpDfsHas(args, key) ? mcpDfsNumber(args[key], label, lo, hi) : fallback;
+}
+function mcpDfsSlots(lineup, players, site) {
+  if (site === "dk_showdown") {
+    const rest = lineup.ids.filter(i => i !== lineup.cpt);
+    return [{ slot: "CPT", i: lineup.cpt }].concat(rest.map(i => ({ slot: "FLEX", i })));
+  }
+  const by = { QB: [], RB: [], WR: [], TE: [], DST: [] };
+  lineup.ids.forEach(i => by[players[i].pos].push(i));
+  for (const pos of MCP_DFS_POSITIONS)
+    by[pos].sort((a, b) => players[b].proj - players[a].proj || players[a].id.localeCompare(players[b].id));
+  const flex = by.RB[2] !== undefined ? by.RB[2] : by.WR[3] !== undefined ? by.WR[3] : by.TE[1];
+  return [
+    { slot: "QB", i: by.QB[0] },
+    { slot: "RB", i: by.RB[0] }, { slot: "RB", i: by.RB[1] },
+    { slot: "WR", i: by.WR[0] }, { slot: "WR", i: by.WR[1] }, { slot: "WR", i: by.WR[2] },
+    { slot: "TE", i: by.TE[0] }, { slot: "FLEX", i: flex }, { slot: "DST", i: by.DST[0] },
+  ];
+}
+function mcpDfsSolve(args) {
+  mcpDfsKnown(args, ["players", "site", "count", "min_salary", "max_salary", "unique_players",
+    "randomness", "seed", "max_per_team", "max_per_game", "time_limit_ms", "stack"], "arguments");
+  if (!Array.isArray(args.players) || !args.players.length)
+    throw new Error("players must be a non-empty array");
+  if (args.players.length > MCP_DFS_MAX_PLAYERS)
+    throw new Error("players is limited to " + MCP_DFS_MAX_PLAYERS + " rows per call");
+
+  const site = args.site === undefined ? "dk_classic" : args.site;
+  if (site !== "dk_classic" && site !== "dk_showdown")
+    throw new Error("site must be dk_classic or dk_showdown");
+  const siteSpec = mcpDdfsRoot.DDFS.SITES[site];
+  const count = mcpDfsOptionalInteger(args, "count", "count", 1, MCP_DFS_MAX_LINEUPS, 1);
+  const minSalary = mcpDfsOptionalInteger(args, "min_salary", "min_salary", 0, siteSpec.cap, 0);
+  const maxSalary = mcpDfsOptionalInteger(args, "max_salary", "max_salary", 100, siteSpec.cap, siteSpec.cap);
+  if (minSalary > maxSalary) throw new Error("min_salary cannot exceed max_salary");
+  if (minSalary % 100 || maxSalary % 100) throw new Error("salary limits must be multiples of 100");
+  const uniques = mcpDfsOptionalInteger(args, "unique_players", "unique_players", 0, siteSpec.size, count > 1 ? (siteSpec.showdown ? 1 : 2) : 0);
+  const randomness = mcpDfsOptionalNumber(args, "randomness", "randomness", 0, 0.6, 0);
+  const seed = mcpDfsOptionalInteger(args, "seed", "seed", 1, 2147483647, 1);
+  const maxPerTeam = mcpDfsHas(args, "max_per_team")
+    ? mcpDfsInteger(args.max_per_team, "max_per_team", 1, siteSpec.size) : undefined;
+  const maxPerGame = mcpDfsHas(args, "max_per_game")
+    ? mcpDfsInteger(args.max_per_game, "max_per_game", 1, siteSpec.size) : undefined;
+  const timeLimitMs = mcpDfsOptionalInteger(args, "time_limit_ms", "time_limit_ms", 100, MCP_DFS_MAX_TIME_MS, 2000);
+
+  const stackIn = args.stack === undefined ? {} : args.stack;
+  mcpDfsKnown(stackIn, ["qb_min", "qb_positions", "bring_back", "no_rb_vs_dst", "no_opp_dst"], "stack");
+  const qbMin = mcpDfsOptionalInteger(stackIn, "qb_min", "stack.qb_min", 0, 3, 0);
+  const bringBack = mcpDfsOptionalInteger(stackIn, "bring_back", "stack.bring_back", 0, 3, 0);
+  const qbPos = stackIn.qb_positions === undefined ? ["WR", "TE"] : stackIn.qb_positions;
+  if (!Array.isArray(qbPos) || !qbPos.length || qbPos.length > 3 ||
+      qbPos.some(p => !["RB", "WR", "TE"].includes(p)) || new Set(qbPos).size !== qbPos.length)
+    throw new Error("stack.qb_positions must contain one to three unique values from RB, WR, TE");
+  for (const key of ["no_rb_vs_dst", "no_opp_dst"])
+    if (mcpDfsHas(stackIn, key) && typeof stackIn[key] !== "boolean")
+      throw new Error("stack." + key + " must be true or false");
+  if (siteSpec.showdown && (qbMin || bringBack || stackIn.no_rb_vs_dst || stackIn.no_opp_dst))
+    throw new Error("QB-stack and DST-opponent constraints apply only to dk_classic");
+
+  const ids = new Set();
+  const players = args.players.map((raw, i) => {
+    const label = "players[" + i + "]";
+    mcpDfsKnown(raw, ["id", "name", "position", "team", "opponent", "game_id", "salary",
+      "projection", "ownership", "lock", "exclude", "max_exposure"], label);
+    const id = mcpDfsString(raw.id, label + ".id", 80);
+    if (ids.has(id)) throw new Error("player id appears more than once: " + id);
+    ids.add(id);
+    const pos = mcpDfsString(raw.position, label + ".position", 3).toUpperCase();
+    if (!MCP_DFS_POSITIONS.includes(pos)) throw new Error(label + ".position must be QB, RB, WR, TE or DST");
+    const sal = mcpDfsInteger(raw.salary, label + ".salary", 100, siteSpec.cap);
+    if (sal % 100) throw new Error(label + ".salary must be a multiple of 100");
+    const lock = raw.lock === undefined ? false : raw.lock;
+    const excl = raw.exclude === undefined ? false : raw.exclude;
+    if (typeof lock !== "boolean" || typeof excl !== "boolean") throw new Error(label + ".lock and .exclude must be true or false");
+    if (lock && excl) throw new Error(label + " cannot be both locked and excluded");
+    const maxExp = raw.max_exposure === undefined ? null
+      : mcpDfsNumber(raw.max_exposure, label + ".max_exposure", 0, 1);
+    if (lock && maxExp === 0) throw new Error(label + " cannot be locked with max_exposure 0");
+    return {
+      id,
+      name: mcpDfsString(raw.name, label + ".name", 100),
+      pos,
+      team: mcpDfsString(raw.team, label + ".team", 12).toUpperCase(),
+      opp: mcpDfsString(raw.opponent, label + ".opponent", 12).toUpperCase(),
+      gid: mcpDfsString(raw.game_id, label + ".game_id", 80),
+      sal,
+      proj: mcpDfsNumber(raw.projection, label + ".projection", 0, 100),
+      own: raw.ownership === undefined ? null : mcpDfsNumber(raw.ownership, label + ".ownership", 0, 100),
+      lock, excl: excl || maxExp === 0, maxExp,
+    };
+  });
+
+  const cfg = {
+    site, count, minSalary, maxSalary, uniques, randomness, seed,
+    maxPerTeam, maxPerGame, timeLimitMs,
+    stack: { qbMin, qbPos: qbPos.slice(), bringBack,
+      noRbVsDst: stackIn.no_rb_vs_dst === true, noOppDst: stackIn.no_opp_dst === true },
+  };
+  const started = Date.now();
+  const solved = mcpDdfsRoot.DDFS.solveLineups(players, cfg);
+  const elapsedMs = Date.now() - started;
+  const locked = players.filter(p => p.lock).map(p => p.id);
+  const excluded = new Set(players.filter(p => p.excl).map(p => p.id));
+  const output = solved.lineups.map((lineup, n) => {
+    const slots = mcpDfsSlots(lineup, players, site).map(({ slot, i }) => {
+      const p = players[i], captain = slot === "CPT";
+      return {
+        slot, id: p.id, name: p.name, position: p.pos, team: p.team,
+        opponent: p.opp, game_id: p.gid, salary: p.sal,
+        slot_salary: captain ? Math.round(p.sal * siteSpec.cptSalMult) : p.sal,
+        projection: p.proj,
+        slot_projection: captain ? p.proj * siteSpec.cptMult : p.proj,
+        ownership: p.own, locked: p.lock,
+      };
+    });
+    const lineupIds = new Set(slots.map(p => p.id));
+    const ownershipComplete = slots.every(p => p.ownership !== null);
+    const audit = {
+      roster_size: slots.length,
+      unique_players: lineupIds.size,
+      salary_within_range: lineup.sal >= minSalary && lineup.sal <= maxSalary,
+      all_locks_present: locked.every(id => lineupIds.has(id)),
+      no_excluded_players: ![...lineupIds].some(id => excluded.has(id)),
+    };
+    audit.satisfied = audit.roster_size === siteSpec.size && audit.unique_players === siteSpec.size &&
+      audit.salary_within_range && audit.all_locks_present && audit.no_excluded_players;
+    return {
+      rank: n + 1, salary: lineup.sal, projection: lineup.proj,
+      drawn_projection: randomness ? lineup.drawnProj : null,
+      ownership_sum: ownershipComplete ? slots.reduce((sum, p) => sum + p.ownership, 0) : null,
+      ownership_complete: ownershipComplete,
+      captain_id: lineup.cpt === undefined ? null : players[lineup.cpt].id,
+      players: slots, constraint_audit: audit,
+    };
+  });
+  const exposure = players.map((p, i) => ({
+    id: p.id, name: p.name,
+    lineups: Number(solved.exposure[i] || 0),
+    rate: output.length ? Number(solved.exposure[i] || 0) / output.length : 0,
+  })).filter(row => row.lineups > 0);
+  const status = output.length === count && !solved.timedOut && !solved.infeasible ? "complete"
+    : output.length ? "partial" : solved.timedOut ? "time_limit_no_lineup" : "infeasible";
+  const warnings = [
+    "Every projection, salary and ownership value came from this call. Data Dawgs did not supply or verify them.",
+    "The optimizer maximizes the supplied projection under the declared constraints; optimized does not mean likely or profitable.",
+  ];
+  if (randomness) warnings.push("Seeded randomness perturbed the optimization objective per lineup; projection reports the unperturbed caller-supplied total.");
+  if (solved.timedOut) warnings.push("The bounded Worker time limit was reached. Every returned lineup is valid, but the requested set did not finish.");
+  if (output.some(l => !l.ownership_complete)) warnings.push("Ownership was missing for at least one selected player, so ownership_sum is null for that lineup.");
+  return {
+    status, read_only: true, stored: false, site,
+    method: "Exact branch-and-bound per accepted lineup using the same source as dfs.html.",
+    methodology_url: SITE + "/dfs.html#method",
+    requested_lineups: count, returned_lineups: output.length,
+    elapsed_ms: elapsedMs, timed_out: !!solved.timedOut,
+    infeasible_reason: solved.infeasible || null,
+    constraints: {
+      min_salary: minSalary, max_salary: maxSalary, unique_players: uniques,
+      randomness, seed, max_per_team: maxPerTeam || null, max_per_game: maxPerGame || null,
+      time_limit_ms: timeLimitMs,
+      stack: { qb_min: qbMin, qb_positions: qbPos, bring_back: bringBack,
+        no_rb_vs_dst: stackIn.no_rb_vs_dst === true, no_opp_dst: stackIn.no_opp_dst === true },
+    },
+    input_summary: { players: players.length, locked: locked.length, excluded: excluded.size },
+    lineups: output, exposure, warnings,
+  };
+}
+
 // survivor.json carries the whole 2026 schedule with blended win probabilities,
 // the nfelo Elo table and the margin-model constants — one fetch feeds both the
 // survivor EV tool and the matchup tool. 15 min cache: it changes on data pushes,
@@ -320,7 +523,7 @@ async function mcpDispatch(m, env, caller) {
       return rpcOk(id, {
         protocolVersion: proto,
         capabilities: { tools: {} },
-        serverInfo: { name: "data-dawgs", version: "1.3.0" },
+        serverInfo: { name: "data-dawgs", version: "1.4.0" },
         instructions:
           (caller && caller.kind === "user"
             ? "You are connected as " + caller.name + ". When a tool marks a row `you: true`, that is them.\n"
@@ -328,7 +531,7 @@ async function mcpDispatch(m, env, caller) {
               "Never assume whose team, leg or ledger is whose; ask. A personal URL from " + SITE + "/connect.html fixes this.\n") +
           "Everything here is read-only and is either the league's own data, public play-by-play, " +
           "or a deterministic calculation over caller-supplied inputs. Calculator inputs and results are not stored. " +
-          "There is no DFS projection or ownership data on this server. When quoting bozo odds, survivor odds " +
+          "There is no built-in DFS projection or ownership feed: dd_solve_dfs_lineup requires the caller to supply every value per call, and stores none of them. When quoting bozo odds, survivor odds " +
           "or the correlation matrix, say it is model output or a measured historical average, never a forecast " +
           "of a specific game. Team names, weeks and league ids come from dd_league_overview — do not guess them.",
       });
@@ -769,7 +972,7 @@ const MCP_TOOLS = [
         home_field_elo: args.home_field_elo,
         ...out,
         read_only: true,
-        note: "One-game calculator only. Data Dawgs does not supply current 2026 538 team states or a prospectively graded 538 forecast ledger.",
+        note: "One-game calculator only. Published dated 2026 team states and ungraded prospective forecasts live separately at /data/538-classic.json; immutable normalized rows live at /data/model-receipts.json.",
       });
     },
   },
@@ -1009,6 +1212,64 @@ const MCP_TOOLS = [
     },
   },
   {
+    name: "dd_solve_dfs_lineup",
+    description: "Build one to twenty DraftKings Classic or Showdown lineups with the exact branch-and-bound solver used by dfs.html. Every salary, projection and ownership value must be supplied in this call; Data Dawgs has no projection feed, stores nothing, and returns the applied constraints plus explicit infeasibility or timeout state.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        players: {
+          type: "array", minItems: 1, maxItems: MCP_DFS_MAX_PLAYERS,
+          description: "Caller-supplied slate. Omit players with no usable projection or set exclude=true.",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "string", minLength: 1, maxLength: 80, description: "Unique stable player id for this call." },
+              name: { type: "string", minLength: 1, maxLength: 100 },
+              position: { type: "string", enum: ["QB", "RB", "WR", "TE", "DST"] },
+              team: { type: "string", minLength: 1, maxLength: 12 },
+              opponent: { type: "string", minLength: 1, maxLength: 12 },
+              game_id: { type: "string", minLength: 1, maxLength: 80, description: "Same value for every player in one game." },
+              salary: { type: "integer", minimum: 100, maximum: 50000, multipleOf: 100 },
+              projection: { type: "number", minimum: 0, maximum: 100, description: "Caller-supplied DraftKings points projection." },
+              ownership: { type: "number", minimum: 0, maximum: 100, description: "Optional caller-supplied projected ownership percentage." },
+              lock: { type: "boolean", description: "Force into every lineup." },
+              exclude: { type: "boolean", description: "Remove from the eligible pool." },
+              max_exposure: { type: "number", minimum: 0, maximum: 1, description: "Maximum lineup share from 0 to 1." },
+            },
+            required: ["id", "name", "position", "team", "opponent", "game_id", "salary", "projection"],
+            additionalProperties: false,
+          },
+        },
+        site: { type: "string", enum: ["dk_classic", "dk_showdown"], description: "Default dk_classic." },
+        count: { type: "integer", minimum: 1, maximum: MCP_DFS_MAX_LINEUPS, description: "Lineups requested; default 1." },
+        min_salary: { type: "integer", minimum: 0, maximum: 50000, multipleOf: 100, description: "Default 0." },
+        max_salary: { type: "integer", minimum: 100, maximum: 50000, multipleOf: 100, description: "Default 50000." },
+        unique_players: { type: "integer", minimum: 0, maximum: 9, description: "Minimum differing players between returned lineups; default 2 for multi-lineup Classic and 1 for Showdown." },
+        randomness: { type: "number", minimum: 0, maximum: 0.6, description: "Seeded projection jitter as a decimal. Default 0 for a deterministic optimum." },
+        seed: { type: "integer", minimum: 1, maximum: 2147483647, description: "Reproducible random seed; default 1." },
+        max_per_team: { type: "integer", minimum: 1, maximum: 9 },
+        max_per_game: { type: "integer", minimum: 1, maximum: 9 },
+        time_limit_ms: { type: "integer", minimum: 100, maximum: MCP_DFS_MAX_TIME_MS, description: "Bounded solve deadline; default 2000, maximum 3000." },
+        stack: {
+          type: "object",
+          properties: {
+            qb_min: { type: "integer", minimum: 0, maximum: 3, description: "Required QB teammates from qb_positions." },
+            qb_positions: { type: "array", minItems: 1, maxItems: 3, uniqueItems: true, items: { type: "string", enum: ["RB", "WR", "TE"] } },
+            bring_back: { type: "integer", minimum: 0, maximum: 3, description: "Required non-DST opponent players with the QB." },
+            no_rb_vs_dst: { type: "boolean" },
+            no_opp_dst: { type: "boolean" },
+          },
+          additionalProperties: false,
+        },
+      },
+      required: ["players"],
+      additionalProperties: false,
+    },
+    async run(args) {
+      return toolText(mcpDfsSolve(args));
+    },
+  },
+  {
     name: "dd_guillotine_odds",
     description: "Survival odds for every team in a Sleeper guillotine league, plus the projected chop line — who is most likely to be eliminated this week. Built ONLY from that league's own completed weeks. ⚠️ Needs at least two completed weeks; with fewer it returns the roster and says so rather than inventing a probability.",
     inputSchema: {
@@ -1161,7 +1422,7 @@ const MCP_TOOLS = [
         machine: {
           index: "/llms.txt",
           surfaces: "/data/surfaces.json — every human page, its machine equivalent, and an honest live|planned|none status. Check it before claiming a route exists.",
-          data: ["/data/pool.json", "/data/receipts.json", "/data/models.json", "/data/epa-teams.json", "/data/nfelo.json", "/data/league.json", "/data/bozo-rules.json", "/data/survivor.json", "/data/pound-tools.json", "/data/model-contracts.json", "/data/upstream-models.json", "/data/index.json"],
+          data: ["/data/pool.json", "/data/receipts.json", "/data/models.json", "/data/epa-teams.json", "/data/nfelo.json", "/data/league.json", "/data/bozo-rules.json", "/data/survivor.json", "/data/pound-tools.json", "/data/model-contracts.json", "/data/upstream-models.json", "/data/nfl-schedule.json", "/data/538-classic.json", "/data/model-receipts.json", "/data/index.json"],
         },
         pages: {
           "index.html": "Home — what Data Dawgs is and the working-dawg taxonomy (Labs / Dawgs / The Pound).",
@@ -1174,11 +1435,11 @@ const MCP_TOOLS = [
           "bozo.html": "The Bozo weekly parlay game.",
           "survivor.html": "Survivor pool EV tools.",
           "receipts.html": "272 pre-registered 2026 forecasts, SHA-256 locked.",
-          "dfs.html": "DFS lineup lab (runs entirely in the browser).",
+          "dfs.html": "DFS lineup lab; the exact lineup solver is also callable through dd_solve_dfs_lineup with a bounded caller-supplied slate.",
           "pound.html": "The Pound model workbench, deterministic calculators, contracts and honest tool-status inventory.",
         },
         notServedHere: {
-          dfs_projections_and_ownership: "Never served, by design. The DFS slate lives only in each user's own browser localStorage; there is no server copy, and building an upload path is exactly the invariant the DFS roadmap forbids.",
+          dfs_projections_and_ownership: "Never hosted or persisted, by design. The browser slate stays in that user's localStorage. dd_solve_dfs_lineup accepts a bounded slate transiently in one authenticated call, computes, returns, and stores neither inputs nor results.",
           epa_stats: "The 2.1MB dataset is embedded in stats.html; parsing it per call is a poor fit for a Worker. Browse the page directly.",
         },
       });

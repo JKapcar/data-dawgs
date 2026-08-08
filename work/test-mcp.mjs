@@ -1,8 +1,13 @@
 // Tests the ASSEMBLED Worker — its real timingSafeEqual, loadLeague, fbGet and
 // handleScores — with only the network faked. Run: node test-mcp.mjs
 import { readFileSync } from "fs";
+import { createRequire } from "module";
 import worker from "../dawg-bot-worker.js";
 import P from "./pound-core.js";
+
+const require = createRequire(import.meta.url);
+const DDFS = require("./dfs-engine.js").DDFS;
+const makeSlate = require("./mkslate.js");
 
 let pass = 0, fail = 0;
 const ok = (cond, name) => { if (cond) pass++; else { fail++; console.error("FAIL:", name); } };
@@ -156,12 +161,12 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 {
   const j = await (await req(rpc("tools/list"))).json();
   const t = j.result.tools;
-  ok(t.length === 23, "twenty-three tools listed");
+  ok(t.length === 24, "twenty-four tools listed");
   ok(t.every(x => x.name.startsWith("dd_")), "all tools dd_-prefixed");
   ok(t.every(x => x.inputSchema && x.inputSchema.type === "object"), "all tools carry an inputSchema");
   for (const name of ["dd_convert_odds", "dd_devig_market", "dd_price_parlay", "dd_calculate_bet_ev",
     "dd_calculate_hedge", "dd_nfl_passer_rating", "dd_score_forecast", "dd_summarize_beliefs",
-    "dd_elo_game", "dd_translate_probability"])
+    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup"])
     ok(t.some(x => x.name === name), name + " is listed");
 }
 // dd_league_overview
@@ -344,8 +349,8 @@ function refNcdf(z) {
   ok(Math.abs(d.home_win_probability - ref.home_win_probability) < 1e-12 &&
      Math.abs(d.adjusted_elo_difference - ref.adjusted_elo_difference) < 1e-12,
      "Elo game probability matches Pound core");
-  ok(d.read_only === true && /calculator only/i.test(d.note) && /does not supply current 2026/i.test(d.note),
-     "Elo result labels its calculator-only scope and missing current team states");
+  ok(d.read_only === true && /calculator only/i.test(d.note) && /538-classic\.json/.test(d.note) && /model-receipts\.json/.test(d.note),
+     "Elo result separates calculator output from published states and receipts");
   const wrongType = await (await req(call("dd_elo_game", { ...args, home_elo: "1500" }))).json();
   ok(wrongType.result.isError === true, "Elo numeric strings fail closed");
 }
@@ -466,11 +471,101 @@ function refNcdf(z) {
   const d = text(j);
   ok(d.roles && d.roles[0] === "QB" && d.same[0][0] === 1, "CORR extracted and parsed from dfs.html");
 }
+// dd_solve_dfs_lineup: exact parity with the browser's shared engine
+{
+  const raw = makeSlate(4, 23);
+  const players = raw.map((p, i) => ({
+    id: "classic-" + i, name: p.pos + " " + i, position: p.pos,
+    team: p.team, opponent: p.opp, game_id: String(p.gid), salary: p.sal,
+    projection: p.proj, ownership: (i % 37) + 1,
+  }));
+  const args = {
+    players, site: "dk_classic", count: 2, min_salary: 49000, max_salary: 50000,
+    unique_players: 2, randomness: 0, seed: 7, max_per_team: 4, time_limit_ms: 3000,
+    stack: { qb_min: 1, qb_positions: ["WR", "TE"], bring_back: 1, no_rb_vs_dst: true },
+  };
+  const cfg = {
+    site: "dk_classic", count: 2, minSalary: 49000, maxSalary: 50000,
+    uniques: 2, randomness: 0, seed: 7, maxPerTeam: 4, maxPerGame: undefined,
+    timeLimitMs: 3000,
+    stack: { qbMin: 1, qbPos: ["WR", "TE"], bringBack: 1, noRbVsDst: true, noOppDst: false },
+  };
+  const enginePlayers = players.map(p => ({
+    id: p.id, name: p.name, pos: p.position, team: p.team, opp: p.opponent,
+    gid: p.game_id, sal: p.salary, proj: p.projection, own: p.ownership,
+    lock: false, excl: false, maxExp: null,
+  }));
+  const ref = DDFS.solveLineups(enginePlayers, cfg);
+  const j = await (await req(call("dd_solve_dfs_lineup", args))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.status === "complete" && d.lineups.length === 2,
+     "DFS classic returns the requested exact lineup set");
+  ok(d.lineups.every(l => l.constraint_audit.satisfied && l.players.map(p => p.slot).join(",") === "QB,RB,RB,WR,WR,WR,TE,FLEX,DST"),
+     "DFS classic returns slot-aware lineups with a passing constraint audit");
+  ok(d.lineups.every((l, i) => l.salary === ref.lineups[i].sal &&
+       Math.abs(l.projection - ref.lineups[i].proj) < 1e-10 &&
+       l.players.map(p => p.id).sort().join(",") === ref.lineups[i].ids.map(x => players[x].id).sort().join(",")),
+     "DFS MCP classic selections exactly match direct browser-engine output");
+  ok(d.read_only === true && d.stored === false && /this call/.test(d.warnings[0]),
+     "DFS response makes transient read-only handling explicit");
+}
+// Showdown uses the same engine, including the captain multiplier.
+{
+  const raw = makeSlate(1, 29);
+  const players = raw.map((p, i) => ({
+    id: "showdown-" + i, name: p.pos + " " + i, position: p.pos,
+    team: p.team, opponent: p.opp, game_id: String(p.gid), salary: p.sal,
+    projection: p.proj,
+  }));
+  const enginePlayers = players.map(p => ({
+    id: p.id, name: p.name, pos: p.position, team: p.team, opp: p.opponent,
+    gid: p.game_id, sal: p.salary, proj: p.projection, own: null,
+    lock: false, excl: false, maxExp: null,
+  }));
+  const cfg = {
+    site: "dk_showdown", count: 1, minSalary: 0, maxSalary: 50000,
+    uniques: 0, randomness: 0, seed: 11, maxPerTeam: undefined, maxPerGame: undefined,
+    timeLimitMs: 3000, stack: { qbMin: 0, qbPos: ["WR", "TE"], bringBack: 0, noRbVsDst: false, noOppDst: false },
+  };
+  const ref = DDFS.solveLineups(enginePlayers, cfg);
+  const j = await (await req(call("dd_solve_dfs_lineup", {
+    players, site: "dk_showdown", count: 1, seed: 11, time_limit_ms: 3000,
+  }))).json();
+  const d = text(j);
+  ok(d.status === "complete" && d.lineups[0].captain_id === players[ref.lineups[0].cpt].id,
+     "DFS showdown captain matches direct browser-engine output");
+  ok(d.lineups[0].salary === ref.lineups[0].sal && d.lineups[0].players[0].slot === "CPT" &&
+       d.lineups[0].players[0].slot_salary === Math.round(d.lineups[0].players[0].salary * 1.5),
+     "DFS showdown reports the exact salary and captain multiplier");
+}
+// Malformed and infeasible slates fail honestly and stay bounded.
+{
+  const base = makeSlate(1, 31).slice(0, 9).map((p, i) => ({
+    id: "bad-" + i, name: p.pos + " " + i, position: p.pos,
+    team: p.team, opponent: p.opp, game_id: String(p.gid), salary: p.sal, projection: p.proj,
+  }));
+  const dup = base.map(p => ({ ...p })); dup[1].id = dup[0].id;
+  const bad = await (await req(call("dd_solve_dfs_lineup", { players: dup }))).json();
+  ok(bad.result.isError === true && /more than once/.test(bad.result.content[0].text),
+     "DFS rejects duplicate public player ids");
+  const tooMany = Array.from({ length: 221 }, (_, i) => ({ ...base[0], id: "too-many-" + i }));
+  const over = await (await req(call("dd_solve_dfs_lineup", { players: tooMany }))).json();
+  ok(over.result.isError === true && /limited to 220/.test(over.result.content[0].text),
+     "DFS enforces the per-call player bound");
+  const infeasible = await (await req(call("dd_solve_dfs_lineup", {
+    players: [base[0]], site: "dk_classic", time_limit_ms: 100,
+  }))).json();
+  const d = text(infeasible);
+  ok(!infeasible.result.isError && d.status === "infeasible" && d.returned_lineups === 0 && d.infeasible_reason,
+     "DFS reports a valid structured infeasibility result instead of crashing");
+}
 // dd_site_map: says what is NOT served
 {
   const j = await (await req(call("dd_site_map"))).json();
   const d = text(j);
-  ok(d.notServedHere && /localStorage/.test(d.notServedHere.dfs_projections_and_ownership), "notServedHere explains the DFS invariant");
+  ok(d.notServedHere && /Never hosted or persisted/.test(d.notServedHere.dfs_projections_and_ownership) &&
+     /bounded slate transiently/.test(d.notServedHere.dfs_projections_and_ownership),
+     "notServedHere explains the DFS transient-compute invariant");
   ok(d.machine.surfaces.includes("surfaces.json"), "points agents at the surfaces map");
   ok(d.machine.data.includes("/data/model-contracts.json") && d.pages["pound.html"], "site map includes the Pound contracts and workbench");
 }
@@ -486,6 +581,8 @@ const oldLines = readFileSync("../dawg-bot-worker.js", "utf8").split("\n").filte
 const newSet = new Set(assembled.split("\n"));
 ok(oldLines.every(l => newSet.has(l)), "purely additive: every non-blank old line survives");
 ok((assembled.match(/export default/g) || []).length === 1, "exactly one default export");
+ok((assembled.match(/function solveLineups/g) || []).length === 1 && assembled.includes("const mcpDdfsRoot = {}"),
+   "assembled Worker contains one private copy of the shared DFS engine");
 ok(!assembled.includes(PASS), "no hardcoded secrets in the source");
 
 console.log(`\n${pass} passed, ${fail} failed`);

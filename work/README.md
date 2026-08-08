@@ -8,16 +8,18 @@ committed so it cannot die with a session — which has happened once already on
 
     cd work && node assemble.mjs      # rewrites ../dawg-bot-worker.js IN PLACE
 
-`mcp-block.js` is the hand-edited half. **Edit it there, never in the assembled Worker** —
-the block is regenerated on every build and edits to the output are lost.
+`mcp-block.js` is the hand-edited MCP adapter. **Edit it there, never in the assembled
+Worker** — the block is regenerated on every build and edits to the output are lost.
+The build also injects `dfs-engine.js` into a private Worker root. That is how
+`dd_solve_dfs_lineup` and the browser run the same solver source instead of parallel ports.
 
 ⚠️ **The build is idempotent and must stay that way.** The committed Worker *is* the
 assembled output, so a build that naively appends produces a second copy of every
 declaration and `SyntaxError: Identifier 'MCP_PROTOS' has already been declared`. The
 build strips between content markers before injecting, then proves the result: one of
-each declaration, parses under `node --check`, no write calls inside the block, and a
-second pass that would change nothing. It reverts the file rather than leave a broken
-Worker on disk.
+each declaration, exactly one shared solver, parses under `node --check`, no write calls
+inside the block, and a second pass that would change nothing. It reverts the file rather
+than leave a broken Worker on disk.
 
 Tests: `node test-mcp.mjs`.
 
