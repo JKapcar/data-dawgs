@@ -850,9 +850,11 @@
    "delivery_evidence": [
     "/data/cfb-schedule.json",
     "/scripts/cfb_data_backbone.py",
-    "/tests/test_cfb_data_backbone.py"
+    "/tests/test_cfb_data_backbone.py",
+    "/work/mcp-block.js",
+    "/work/test-mcp.mjs"
    ],
-   "delivery_note": "Live for the completed 2025 season. The upstream 2026 schedule has not been published yet.",
+   "delivery_note": "Live for the completed 2025 season with a staged bounded MCP game finder. The upstream 2026 schedule has not been published yet.",
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 1,
@@ -862,7 +864,9 @@
    "dependencies": [
     "cfb-sportsdataverse"
    ],
-   "candidate_mcp_tools": [],
+   "candidate_mcp_tools": [
+    "dd_find_cfb_games"
+   ],
    "components": [],
    "related_ideas": [
     "cfb-plays",
@@ -883,7 +887,7 @@
    "rationale": "A canonical cfb_games dataset is the spine every schedule, rating, receipt and simulator joins against.",
    "expected_value": "Durable game IDs, results and kickoff context for all downstream CFB work.",
    "data_source_requirements": "SportsDataverse schedules/results reconciled with CFBD reference data.",
-   "deterministic_tool_potential": "Indirect — reference layer.",
+   "deterministic_tool_potential": "Yes — bounded canonical game reads and downstream reference joins.",
    "validation_requirement": "Unique game IDs, season/week coverage gates and snapshot hashes, like /data/nfl-schedule.json.",
    "risks_limitations": "FBS/FCS boundary cases, cancellations and rescheduling need explicit rules.",
    "tags": [
@@ -3237,7 +3241,7 @@
     {
      "status": "building",
      "on": "2026-08-08",
-     "note": "Implemented and evaluated team profile, comparison, hypothetical Elo matchup, exact hypothetical schedule-path, descriptive record-divergence, blocked model-disagreement and prospective-receipt status tools locally; all remain staged and non-callable in production."
+     "note": "Implemented and evaluated canonical game lookup, team profile, comparison, hypothetical Elo matchup, exact hypothetical schedule-path, descriptive record-divergence, blocked model-disagreement and prospective-receipt status tools locally; all remain staged and non-callable in production."
     }
    ],
    "implemented": true,
@@ -3248,7 +3252,7 @@
     "/data/cfb-record-divergence.json",
     "/data/cfb-record-divergence-validation.json"
    ],
-   "delivery_note": "Seven source-backed CFB tools are implemented locally and staged, including exact matchup and schedule-path calculations plus no-label divergence, blocked-study and prospective-receipt status readers. Production still has 26 live tools; deployment requires a separate approved Worker release.",
+   "delivery_note": "Eight source-backed CFB tools are implemented locally and staged, including canonical game lookup, exact matchup and schedule-path calculations, plus no-label divergence, blocked-study and prospective-receipt status readers. Production still has 26 live tools; deployment requires a separate approved Worker release.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": null,
@@ -3257,6 +3261,7 @@
     "high-priority"
    ],
    "dependencies": [
+    "cfb-games",
     "cfb-ratings-registry",
     "cfb-disagreement-lab",
     "cfb-consensus-engine",
@@ -3268,6 +3273,7 @@
     "cfb-team-week"
    ],
    "candidate_mcp_tools": [
+    "dd_find_cfb_games",
     "dd_cfb_team_profile",
     "dd_compare_cfb_teams",
     "dd_project_cfb_matchup",

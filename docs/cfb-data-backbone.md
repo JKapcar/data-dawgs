@@ -29,6 +29,14 @@ python3 scripts/cfb_data_backbone.py validate
 node tools/validate-data.js
 ```
 
+`dd_find_cfb_games` is the staged bounded read of that canonical surface. It resolves an
+exact game ID or team and can filter by week, regular/postseason, status or exact
+conference, returning at most 50 games with deterministic observed winners and home
+margins for finals. Week numbers repeat between regular season and postseason, so the
+tool preserves and exposes `season_type` rather than flattening them. It returns no
+rating, probability, market price or forecast, and declares the covered season and
+whether any scheduled rows exist.
+
 ## Market surface (roadmap step 1, idea cfb-market)
 
 `scripts/cfb_market.py refresh` joins SportsDataverse's `betting/csv/cfb_line_odds.csv.gz` to the canonical schedule and publishes `/data/cfb-market.json`: spreads, totals and moneylines from ESPN Bet, Bovada and DraftKings for all 934 games, with a devigged home win probability on 864 of them. Devig is proportional, matching `holdVig()` in `work/pound-core.js`.

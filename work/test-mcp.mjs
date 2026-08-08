@@ -204,6 +204,41 @@ const cfbModelReceiptsJson = {
   integrity: { snapshot_id: "sha256:test-empty-cfb-receipts", rows: 0 },
   data: [],
 };
+const cfbScheduleJson = {
+  as_of: "2026-08-08",
+  source: "test canonical 2025 CFB schedule/results",
+  built: "2026-08-08",
+  integrity: { snapshot_id: "sha256:test-cfb-schedule", rows: 3, final_rows: 3 },
+  data: {
+    season: 2025,
+    games: [
+      {
+        game_id: "2025_regu_01_iowa-state_kansas-state", upstream_game_id: "401",
+        season: 2025, week: 1, season_type: "regular", kickoff_at: "2025-08-23T16:00:00Z",
+        neutral_site: true, conference_game: true,
+        home_team: "Kansas State", home_team_slug: "kansas-state", home_division: "fbs", home_conference: "Big 12",
+        away_team: "Iowa State", away_team_slug: "iowa-state", away_division: "fbs", away_conference: "Big 12",
+        status: "final", home_points: 21, away_points: 24,
+      },
+      {
+        game_id: "2025_regu_12_michigan_ohio-state", upstream_game_id: "402",
+        season: 2025, week: 12, season_type: "regular", kickoff_at: "2025-11-29T17:00:00Z",
+        neutral_site: false, conference_game: true,
+        home_team: "Ohio State", home_team_slug: "ohio-state", home_division: "fbs", home_conference: "Big Ten",
+        away_team: "Michigan", away_team_slug: "michigan", away_division: "fbs", away_conference: "Big Ten",
+        status: "final", home_points: 27, away_points: 24,
+      },
+      {
+        game_id: "2025_post_01_ohio-state_georgia", upstream_game_id: "403",
+        season: 2025, week: 1, season_type: "postseason", kickoff_at: "2026-01-02T01:00:00Z",
+        neutral_site: true, conference_game: false,
+        home_team: "Georgia", home_team_slug: "georgia", home_division: "fbs", home_conference: "SEC",
+        away_team: "Ohio State", away_team_slug: "ohio-state", away_division: "fbs", away_conference: "Big Ten",
+        status: "final", home_points: 30, away_points: 31,
+      },
+    ],
+  },
+};
 
 let netMode = "normal"; // normal | dbdown | emptyRoom | espnDown | simulatedRoom | simulatedSettings
 globalThis.fetch = async (input, init) => {
@@ -232,6 +267,7 @@ globalThis.fetch = async (input, init) => {
   if (u.includes("datadawgs216.com/data/cfb-record-divergence.json")) return J(cfbDivergenceJson);
   if (u.includes("datadawgs216.com/data/cfb-disagreement.json")) return J(cfbDisagreementJson);
   if (u.includes("datadawgs216.com/data/cfb-model-receipts.json")) return J(cfbModelReceiptsJson);
+  if (u.includes("datadawgs216.com/data/cfb-schedule.json")) return J(cfbScheduleJson);
   if (u.includes("datadawgs216.com/dfs.html")) return new Response(dfsHtml, { status: 200 });
   if (u.includes("site.api.espn.com")) {
     if (netMode === "espnDown") return new Response("no", { status: 403 });
@@ -320,12 +356,12 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 {
   const j = await (await req(rpc("tools/list"))).json();
   const t = j.result.tools;
-  ok(t.length === 33, "thirty-three tools listed in the staged Worker source");
+  ok(t.length === 34, "thirty-four tools listed in the staged Worker source");
   ok(t.every(x => x.name.startsWith("dd_")), "all tools dd_-prefixed");
   ok(t.every(x => x.inputSchema && x.inputSchema.type === "object"), "all tools carry an inputSchema");
   for (const name of ["dd_convert_odds", "dd_devig_market", "dd_price_parlay", "dd_calculate_bet_ev",
     "dd_calculate_hedge", "dd_nfl_passer_rating", "dd_score_forecast", "dd_summarize_beliefs",
-    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_project_cfb_schedule_path", "dd_find_cfb_record_divergence", "dd_get_cfb_model_disagreement", "dd_get_cfb_model_receipt_status", "dd_optimize_survivor_path"])
+    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_project_cfb_schedule_path", "dd_find_cfb_record_divergence", "dd_get_cfb_model_disagreement", "dd_get_cfb_model_receipt_status", "dd_find_cfb_games", "dd_optimize_survivor_path"])
     ok(t.some(x => x.name === name), name + " is listed");
 }
 // dd_league_overview
@@ -891,6 +927,42 @@ function refNcdf(z) {
   const extra = await (await req(call("dd_get_cfb_model_receipt_status", { include_backtests: true }))).json();
   ok(extra.result.isError === true,
      "CFB receipt status rejects backtest or other unsupported arguments");
+}
+// dd_find_cfb_games: bounded canonical schedule/result facts with season-type
+// disambiguation and no model or market claims.
+{
+  const j = await (await req(call("dd_find_cfb_games", { team: "Ohio State", sort: "kickoff-asc" }))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.season === 2025 && d.returned === 2 && d.games[0].season_type === "regular" &&
+     d.games[1].season_type === "postseason",
+     "CFB game finder resolves one exact team across regular and postseason games");
+  ok(d.games[0].observed_result.home_margin === 3 && d.games[0].observed_result.winner_team_slug === "ohio-state" &&
+     d.games[1].observed_result.home_margin === -1 && d.games[1].observed_result.winner_team_slug === "ohio-state",
+     "CFB game finder derives winner and home margin only from observed final scores");
+  ok(d.actual_canonical_schedule && d.completed_schedule && d.scheduled_games_in_surface === 0 &&
+     d.prospective_model_output === false && d.forecast === false && !d.modelled && d.read_only && d.stored === false,
+     "CFB game finder labels canonical facts, completed coverage and non-forecast status");
+}
+{
+  const post = text(await (await req(call("dd_find_cfb_games", { week: 1, season_type: "postseason", conference: "big ten" }))).json());
+  const noneScheduled = text(await (await req(call("dd_find_cfb_games", { status: "scheduled" }))).json());
+  const exact = text(await (await req(call("dd_find_cfb_games", { game_id: "2025_regu_01_iowa-state_kansas-state" }))).json());
+  ok(post.returned === 1 && post.games[0].game_id === "2025_post_01_ohio-state_georgia" && post.query.conference === "Big Ten",
+     "CFB game finder combines week, season type and exact conference filters");
+  ok(noneScheduled.returned === 0 && noneScheduled.matched_before_limit === 0,
+     "CFB game finder reports that the completed surface has no scheduled games");
+  ok(exact.returned === 1 && exact.games[0].observed_result.winner_team_slug === "iowa-state",
+     "CFB game finder resolves an exact canonical game id");
+}
+{
+  const partial = await (await req(call("dd_find_cfb_games", { team: "state" }))).json();
+  const missingGame = await (await req(call("dd_find_cfb_games", { game_id: "2026_missing" }))).json();
+  const badWeek = await (await req(call("dd_find_cfb_games", { week: 0 }))).json();
+  const badConference = await (await req(call("dd_find_cfb_games", { conference: "NFL" }))).json();
+  const badSort = await (await req(call("dd_find_cfb_games", { sort: "score" }))).json();
+  const extra = await (await req(call("dd_find_cfb_games", { include_odds: true }))).json();
+  ok([partial, missingGame, badWeek, badConference, badSort, extra].every(result => result.result.isError === true),
+     "CFB game finder fails closed on partial, missing, out-of-range and unsupported inputs");
 }
 // dd_scores: reuses handleScores with sport+dates
 {

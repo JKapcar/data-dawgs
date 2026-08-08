@@ -56,6 +56,7 @@ let mcpCfbProfilesCache = { at: 0, data: null };
 let mcpCfbDivergenceCache = { at: 0, data: null };
 let mcpCfbDisagreementCache = { at: 0, data: null };
 let mcpCfbReceiptCache = { at: 0, data: null };
+let mcpCfbScheduleCache = { at: 0, data: null };
 
 // Abramowitz–Stegun normal CDF — the SAME approximation survivor.html ships, so the
 // tool and the page cannot disagree about a probability by more than float dust.
@@ -631,6 +632,37 @@ async function mcpCfbModelReceipts() {
   return mcpCfbReceiptCache.data;
 }
 
+async function mcpCfbSchedule() {
+  if (!mcpCfbScheduleCache.data || Date.now() - mcpCfbScheduleCache.at > 900e3) {
+    const response = await fetch(`${SITE}/data/cfb-schedule.json`, { cf: { cacheTtl: 900, cacheEverything: true } });
+    if (!response.ok) throw new Error("cfb-schedule.json unavailable: HTTP " + response.status);
+    const envelope = await response.json();
+    const data = envelope && envelope.data;
+    const games = data && data.games;
+    if (!envelope || !envelope.as_of || !envelope.source || !data || !Number.isInteger(data.season) ||
+        !Array.isArray(games) || !games.length || games.length > 2000)
+      throw new Error("cfb-schedule.json has an invalid envelope");
+    if (envelope.integrity && Number.isInteger(envelope.integrity.rows) && envelope.integrity.rows !== games.length)
+      throw new Error("cfb-schedule.json row count does not match its integrity receipt");
+    const ids = new Set();
+    for (const game of games) {
+      const final = game && game.status === "final";
+      if (!game || typeof game.game_id !== "string" || !game.game_id || ids.has(game.game_id) ||
+          game.season !== data.season || !Number.isInteger(game.week) || game.week < 1 || game.week > 20 ||
+          !["regular", "postseason"].includes(game.season_type) || !Number.isFinite(Date.parse(game.kickoff_at)) ||
+          typeof game.home_team !== "string" || typeof game.home_team_slug !== "string" ||
+          typeof game.away_team !== "string" || typeof game.away_team_slug !== "string" ||
+          !["scheduled", "final"].includes(game.status) ||
+          (final && (!Number.isInteger(game.home_points) || !Number.isInteger(game.away_points))) ||
+          (!final && !(game.home_points === null && game.away_points === null)))
+        throw new Error("cfb-schedule.json has an invalid or duplicate canonical game row");
+      ids.add(game.game_id);
+    }
+    mcpCfbScheduleCache = { at: Date.now(), data: envelope };
+  }
+  return mcpCfbScheduleCache.data;
+}
+
 function mcpCfbTeamSlug(v) {
   return String(v || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
     .toLowerCase().replace(/&/g, " and ").replace(/[\u2018\u2019']/g, "")
@@ -697,6 +729,61 @@ function mcpCfbDivergenceTeamMatch(rows, input) {
     throw new Error("team is not an exact record-divergence name or slug" + (partial.length > 1 ? " and is ambiguous" : "") + "; try: " + choices);
   }
   throw new Error("team is not present in the dated CFB record-divergence surface: " + input.query);
+}
+
+function mcpCfbGameArgs(args) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+  const allowed = ["game_id", "team", "week", "season_type", "status", "conference", "sort", "limit"];
+  const extra = Object.keys(args).filter(k => !allowed.includes(k));
+  if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+  const out = {
+    gameId: null,
+    team: args.team === undefined ? null : mcpCfbTeamArgs({ team: args.team }),
+    week: args.week === undefined ? null : args.week,
+    seasonType: args.season_type === undefined ? "all" : args.season_type,
+    status: args.status === undefined ? "all" : args.status,
+    conference: null,
+    sort: args.sort === undefined ? "kickoff-desc" : args.sort,
+    limit: args.limit === undefined ? 20 : args.limit,
+  };
+  if (args.game_id !== undefined) {
+    if (typeof args.game_id !== "string" || !args.game_id.trim() || args.game_id.trim().length > 150)
+      throw new Error("game_id must be a non-empty string of at most 150 characters");
+    out.gameId = args.game_id.trim();
+  }
+  if (out.week !== null && (!Number.isInteger(out.week) || out.week < 1 || out.week > 20))
+    throw new Error("week must be a whole number from 1 through 20");
+  if (!["all", "regular", "postseason"].includes(out.seasonType))
+    throw new Error("season_type must be all, regular or postseason");
+  if (!["all", "scheduled", "final"].includes(out.status))
+    throw new Error("status must be all, scheduled or final");
+  if (args.conference !== undefined) {
+    if (typeof args.conference !== "string" || !args.conference.trim() || args.conference.trim().length > 80)
+      throw new Error("conference must be a non-empty string of at most 80 characters");
+    out.conference = args.conference.trim();
+  }
+  if (!["kickoff-asc", "kickoff-desc"].includes(out.sort))
+    throw new Error("sort must be kickoff-asc or kickoff-desc");
+  if (!Number.isInteger(out.limit) || out.limit < 1 || out.limit > 50)
+    throw new Error("limit must be a whole number from 1 through 50");
+  return out;
+}
+
+function mcpCfbScheduleTeam(games, input) {
+  const teams = new Map();
+  for (const game of games) {
+    teams.set(game.home_team_slug, game.home_team);
+    teams.set(game.away_team_slug, game.away_team);
+  }
+  const exact = [...teams].filter(([slug, name]) => slug === input.slug || mcpCfbTeamSlug(name) === input.slug);
+  if (exact.length === 1) return { team_slug: exact[0][0], team: exact[0][1] };
+  if (exact.length > 1) throw new Error("cfb-schedule.json has duplicate normalized team names for " + input.query);
+  const partial = [...teams].filter(([slug, name]) => slug.includes(input.slug) || mcpCfbTeamSlug(name).includes(input.slug));
+  if (partial.length) {
+    const choices = partial.slice(0, 10).map(([slug, name]) => name + " (" + slug + ")").join(", ");
+    throw new Error("team is not an exact canonical schedule name or slug" + (partial.length > 1 ? " and is ambiguous" : "") + "; try: " + choices);
+  }
+  throw new Error("team is not present in the dated canonical CFB schedule: " + input.query);
 }
 
 function mcpCfbCompareArgs(args) {
@@ -1006,7 +1093,7 @@ async function mcpDispatch(m, env, caller) {
           "Everything here is read-only and is either the league's own data, public play-by-play, " +
           "or a deterministic calculation over caller-supplied inputs. Calculator inputs and results are not stored. " +
           "The model scoreboard reads dated prospective receipts and returns descriptive disagreement only; it is ungraded and is not a validated consensus or ranking. " +
-          "The CFB reads separate observed 2025 results from one end-of-2025 retrodictive Elo row. dd_project_cfb_matchup and dd_project_cfb_schedule_path are hypothetical rating-period calculations, not scheduled 2026 forecasts. dd_find_cfb_record_divergence returns descriptive record-versus-scoring gaps whose small held-out lift does not authorize current-team labels. dd_get_cfb_model_disagreement returns a blocked study whose untimestamped market input prevents a winner or blend conclusion. dd_get_cfb_model_receipt_status reports the append-only prospective ledger honestly; receipt rows remain ungraded and outcomes belong in a separate surface. All CFB outputs are ungraded, not market-adjusted and are not a consensus. " +
+          "The CFB reads separate observed 2025 results from one end-of-2025 retrodictive Elo row. dd_find_cfb_games reads the actual canonical 2025 schedule/results surface; it is historical and not the unpublished 2026 schedule. dd_project_cfb_matchup and dd_project_cfb_schedule_path are hypothetical rating-period calculations, not scheduled 2026 forecasts. dd_find_cfb_record_divergence returns descriptive record-versus-scoring gaps whose small held-out lift does not authorize current-team labels. dd_get_cfb_model_disagreement returns a blocked study whose untimestamped market input prevents a winner or blend conclusion. dd_get_cfb_model_receipt_status reports the append-only prospective ledger honestly; receipt rows remain ungraded and outcomes belong in a separate surface. All CFB outputs are ungraded, not market-adjusted and are not a consensus. " +
           "There is no built-in DFS projection or ownership feed: dd_solve_dfs_lineup requires the caller to supply every value per call, and stores none of them. dd_optimize_survivor_path is an ungraded ceiling over a dated snapshot and does not model double-pick weeks. When quoting bozo odds, survivor odds " +
           "or the correlation matrix, say it is model output or a measured historical average, never a forecast " +
           "of a specific game. Team names, weeks and league ids come from dd_league_overview — do not guess them.",
@@ -2273,6 +2360,106 @@ const MCP_TOOLS = [
           "A zero-row ledger is evidence that no CFB forecast has yet been frozen prospectively, not evidence of model performance.",
           "Retrodictive 2025 backtests are intentionally excluded from this prospective receipt ledger.",
           "Do not report CFB model grades, calibration, a leaderboard or a track record until prospective receipts and a separate outcome-derived grading surface exist.",
+        ],
+      });
+    },
+  },
+  {
+    name: "dd_find_cfb_games",
+    description: "Query the current dated canonical CFB schedule/results surface by exact game id, exact team, week, regular/postseason, status or conference. Returns bounded schedule and observed-result facts only, with the covered season declared. It includes no model, market, forecast or recommendation.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        game_id: { type: "string", minLength: 1, maxLength: 150, description: "Optional exact canonical game id." },
+        team: { type: "string", minLength: 1, maxLength: 80, description: "Optional exact canonical team name or slug, case-insensitive." },
+        week: { type: "integer", minimum: 1, maximum: 20 },
+        season_type: { type: "string", enum: ["all", "regular", "postseason"], default: "all" },
+        status: { type: "string", enum: ["all", "scheduled", "final"], default: "all" },
+        conference: { type: "string", minLength: 1, maxLength: 80, description: "Optional exact home-or-away conference name, case-insensitive." },
+        sort: { type: "string", enum: ["kickoff-asc", "kickoff-desc"], default: "kickoff-desc" },
+        limit: { type: "integer", minimum: 1, maximum: 50, default: 20 },
+      },
+      additionalProperties: false,
+    },
+    async run(args) {
+      const input = mcpCfbGameArgs(args);
+      const envelope = await mcpCfbSchedule();
+      const allGames = envelope.data.games;
+      const team = input.team ? mcpCfbScheduleTeam(allGames, input.team) : null;
+      let conference = null;
+      if (input.conference) {
+        const conferences = [...new Set(allGames.flatMap(game => [game.home_conference, game.away_conference]).filter(Boolean))]
+          .sort((a, b) => a.localeCompare(b));
+        conference = conferences.find(name => name.toLowerCase() === input.conference.toLowerCase()) || null;
+        if (!conference) throw new Error("conference is not present in the dated canonical CFB schedule; available: " + conferences.join(", "));
+      }
+      if (input.gameId && !allGames.some(game => game.game_id === input.gameId))
+        throw new Error("game_id is not present in the dated canonical CFB schedule: " + input.gameId);
+      const matches = allGames.filter(game =>
+        (!input.gameId || game.game_id === input.gameId) &&
+        (!team || game.home_team_slug === team.team_slug || game.away_team_slug === team.team_slug) &&
+        (input.week === null || game.week === input.week) &&
+        (input.seasonType === "all" || game.season_type === input.seasonType) &&
+        (input.status === "all" || game.status === input.status) &&
+        (!conference || game.home_conference === conference || game.away_conference === conference)
+      ).sort((a, b) => input.sort === "kickoff-asc"
+        ? a.kickoff_at.localeCompare(b.kickoff_at) || a.game_id.localeCompare(b.game_id)
+        : b.kickoff_at.localeCompare(a.kickoff_at) || a.game_id.localeCompare(b.game_id));
+      const games = matches.slice(0, input.limit).map(game => ({
+        game_id: game.game_id,
+        upstream_game_id: game.upstream_game_id,
+        season: game.season,
+        week: game.week,
+        season_type: game.season_type,
+        kickoff_at: game.kickoff_at,
+        status: game.status,
+        neutral_site: game.neutral_site,
+        conference_game: game.conference_game,
+        away_team: { name: game.away_team, team_slug: game.away_team_slug, division: game.away_division, conference: game.away_conference },
+        home_team: { name: game.home_team, team_slug: game.home_team_slug, division: game.home_division, conference: game.home_conference },
+        observed_result: game.status === "final" ? {
+          away_points: game.away_points,
+          home_points: game.home_points,
+          home_margin: game.home_points - game.away_points,
+          winner_team_slug: game.home_points === game.away_points ? null
+            : game.home_points > game.away_points ? game.home_team_slug : game.away_team_slug,
+          tie: game.home_points === game.away_points,
+        } : null,
+      }));
+      return toolText({
+        query: {
+          game_id: input.gameId,
+          team: team ? team.team : null,
+          week: input.week,
+          season_type: input.seasonType,
+          status: input.status,
+          conference,
+          sort: input.sort,
+          limit: input.limit,
+        },
+        season: envelope.data.season,
+        matched_before_limit: matches.length,
+        returned: games.length,
+        games,
+        as_of: envelope.as_of,
+        source: envelope.source,
+        built: envelope.built || null,
+        integrity: envelope.integrity || null,
+        actual_canonical_schedule: true,
+        completed_schedule: allGames.every(game => game.status === "final"),
+        scheduled_games_in_surface: allGames.filter(game => game.status === "scheduled").length,
+        prospective_model_output: false,
+        forecast: false,
+        modelled: false,
+        graded: false,
+        read_only: true,
+        stored: false,
+        warnings: [
+          allGames.every(game => game.status === "final")
+            ? "This surface covers a completed FBS-involved season; it contains no upcoming games."
+            : "Scheduled rows are schedule facts only and do not imply a forecast.",
+          "Scores and schedule fields are observed facts. No rating, probability, market price, roster context or forecast is included.",
+          "Week numbers repeat between regular season and postseason; use season_type when that distinction matters.",
         ],
       });
     },
