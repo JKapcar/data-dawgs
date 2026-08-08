@@ -1,16 +1,16 @@
 # Data Dawgs
 
-> A personal sandbox for decision-making across forecasting, fantasy football, betting
-> markets and EPA. Tools are built to beat a market; receipts test whether they did.
+> A sandbox for forecasting, fantasy football, betting markets and EPA.
+> Tools aim to beat a market; receipts test whether they did.
 
-Start with [`/data/index.json`](https://datadawgs216.com/data/index.json), the generated
-manifest of every machine-readable file with its date, byte count and SHA-256. Every data
-file is an envelope with `as_of`, `source`, `note`, `built`, `canonical_url` and `data`.
-Cite `as_of` with every number.
+Start with [`/data/index.json`](https://datadawgs216.com/data/index.json): every machine file,
+its date, bytes and SHA-256. Payloads carry `as_of`, `source`, `note`, `built`,
+`canonical_url` and `data`. Cite `as_of` with every number.
 
 [`/data/surfaces.json`](https://datadawgs216.com/data/surfaces.json) maps human pages to
-machine surfaces and MCP tools. All 12 mapped surfaces have live machine access; 25
-read-only MCP tools are live, including `dd_model_scoreboard` and 10 Pound calculators.
+machine surfaces and MCP tools. All 12 mapped surfaces have live machine access; 26
+read-only MCP tools are live, including `dd_optimize_survivor_path`, `dd_model_scoreboard`
+and 10 Pound calculators.
 `planned` means not callable. A per-user token comes from
 `/connect.html`; the URL is the credential.
 

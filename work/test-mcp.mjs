@@ -7,6 +7,7 @@ import P from "./pound-core.js";
 
 const require = createRequire(import.meta.url);
 const DDFS = require("./dfs-engine.js").DDFS;
+const DDSurvivorPath = require("./survivor-path-engine.js").DDSurvivorPath;
 const makeSlate = require("./mkslate.js");
 
 let pass = 0, fail = 0;
@@ -178,12 +179,12 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 {
   const j = await (await req(rpc("tools/list"))).json();
   const t = j.result.tools;
-  ok(t.length === 25, "twenty-five tools listed");
+  ok(t.length === 26, "twenty-six tools listed");
   ok(t.every(x => x.name.startsWith("dd_")), "all tools dd_-prefixed");
   ok(t.every(x => x.inputSchema && x.inputSchema.type === "object"), "all tools carry an inputSchema");
   for (const name of ["dd_convert_odds", "dd_devig_market", "dd_price_parlay", "dd_calculate_bet_ev",
     "dd_calculate_hedge", "dd_nfl_passer_rating", "dd_score_forecast", "dd_summarize_beliefs",
-    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard"])
+    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_optimize_survivor_path"])
     ok(t.some(x => x.name === name), name + " is listed");
 }
 // dd_league_overview
@@ -331,6 +332,48 @@ function refLeverage(week, pop, games, entries, used) {
   ok(j.result.isError === true && /used list/.test(j.result.content[0].text), "all teams used → tool error, used list is case-insensitive");
   const j2 = await (await req(call("dd_survivor_ev", { week: 7 }))).json();
   ok(j2.result.isError === true, "week with no games in the snapshot → tool error");
+}
+// dd_optimize_survivor_path: the Worker calls the exact shared browser engine.
+{
+  const j = await (await req(call("dd_optimize_survivor_path", { from_week: 1 }))).json();
+  const d = text(j);
+  const teams = Object.keys(survJson.data.elo);
+  const direct = DDSurvivorPath.solvePath({
+    weeks: Array.from({ length: 18 }, (_, i) => i + 1), teams,
+    probabilities: teams.map(team => Array.from({ length: 18 }, (_, i) => {
+      const week = i + 1, g = survJson.data.games.find(game => game.wk === week && (game.h === team || game.a === team));
+      return !g ? null : (g.h === team ? g.p : 1 - g.p);
+    })),
+  });
+  ok(!j.result.isError && d.covered_weeks === 2 && d.complete === false && Math.abs(d.run_the_table_probability - 0.48) < 1e-12,
+     "survivor path returns the exact 0.48 fixture ceiling and exposes missing weeks");
+  ok(d.path.map(x => x.week + ":" + x.team).join(",") === direct.assignments.map(x => x.week + ":" + x.team).join(","),
+     "survivor MCP selections exactly match direct browser-engine output");
+  const sea = d.current_week_options.find(x => x.team === "SEA");
+  ok(sea.selected && Math.abs(sea.future_path_probability - 0.6) < 1e-12 &&
+       Math.abs(sea.future_cost - (1 - 0.6 / 0.7)) < 1e-12 && Math.abs(sea.combined_path_probability - 0.48) < 1e-12,
+     "current-week option reports exact future cost and combined path probability");
+  ok(d.access === "read-only" && d.stored === false && d.modelled === true && d.graded === false &&
+       d.warnings.some(w => /CEILING, NOT A PLAN/.test(w)),
+     "survivor path makes read-only, ungraded and ceiling limits explicit");
+}
+{
+  const used = text(await (await req(call("dd_optimize_survivor_path", { from_week: 1, used_teams: ["sea"] }))).json());
+  ok(Math.abs(used.run_the_table_probability - 0.33) < 1e-12 && used.path.some(x => x.week === 1 && x.team === "PIT"),
+     "used team is case-insensitive and leaves the 0.33 PIT/CLE path");
+  const reused = text(await (await req(call("dd_optimize_survivor_path", { from_week: 1, reuse_teams: true }))).json());
+  ok(Math.abs(reused.run_the_table_probability - 0.56) < 1e-12 && reused.path.filter(x => x.team === "SEA").length === 2,
+     "reuse mode truly permits SEA in both fixture weeks");
+  const doubled = text(await (await req(call("dd_optimize_survivor_path", { double_pick_from: 10 }))).json());
+  ok(doubled.rules_fully_modelled === false && doubled.warnings.some(w => /DOUBLE-PICK RULE NOT MODELLED/.test(w)),
+     "double-pick rule fails visibly instead of pretending to be modelled");
+}
+{
+  const badTeam = await (await req(call("dd_optimize_survivor_path", { used_teams: ["XXX"] }))).json();
+  const badWeek = await (await req(call("dd_optimize_survivor_path", { from_week: 0 }))).json();
+  const badExtra = await (await req(call("dd_optimize_survivor_path", { confidence: true }))).json();
+  ok(badTeam.result.isError === true && badWeek.result.isError === true && badExtra.result.isError === true,
+     "survivor path rejects unknown teams, invalid weeks and unsupported inputs");
 }
 // dd_analyze_matchup: the formula is public in models.json — recompute it here with a
 // DIFFERENT Φ approximation (Press erfc, not the page's Abramowitz–Stegun) so agreement
@@ -631,6 +674,8 @@ ok(oldLines.every(l => newSet.has(l)), "purely additive: every non-blank old lin
 ok((assembled.match(/export default/g) || []).length === 1, "exactly one default export");
 ok((assembled.match(/function solveLineups/g) || []).length === 1 && assembled.includes("const mcpDdfsRoot = {}"),
    "assembled Worker contains one private copy of the shared DFS engine");
+ok((assembled.match(/function solvePath/g) || []).length === 1 && assembled.includes("const mcpSurvivorPathRoot = {}"),
+   "assembled Worker contains one private copy of the shared survivor path engine");
 ok(!assembled.includes(PASS), "no hardcoded secrets in the source");
 
 console.log(`\n${pass} passed, ${fail} failed`);

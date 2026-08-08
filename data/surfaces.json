@@ -36,6 +36,7 @@
    "dd_guillotine_odds",
    "dd_site_map",
    "dd_survivor_ev",
+   "dd_optimize_survivor_path",
    "dd_analyze_matchup",
    "dd_model_scoreboard",
    "dd_convert_odds",
@@ -55,7 +56,7 @@
   "surfaces": 12,
   "with_live_machine_access": 12,
   "with_no_machine_access": 0,
-  "mcp_tools_live": 25,
+  "mcp_tools_live": 26,
   "mcp_tools_staged": 0,
   "mcp_tools_planned": 5
  },
@@ -188,10 +189,16 @@
      "tool": "dd_survivor_ev",
      "status": "live",
      "covers": "modelled pool survival EV with assumptions returned in the payload"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_optimize_survivor_path",
+     "status": "live",
+     "covers": "exact one-pick-per-week maximum-product path, dated probabilities and future-cost options"
     }
    ],
    "planned": [],
-   "gap": "Pool ownership is modelled, not observed, and double-pick weeks are recorded but not simulated.",
+   "gap": "The exact one-pick-per-week path is live. Pool ownership is modelled, not observed, and double-pick weeks are recorded but not optimized.",
    "tier": "labs"
   },
   {
