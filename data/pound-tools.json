@@ -1216,7 +1216,7 @@
     "/tests/test_cfb_ratings_registry.py",
     "/work/mcp-block.js"
    ],
-   "delivery_note": "The registry contract is live with one independent, retrodictive Elo system, and a bounded ranking/conference reader is staged locally. CFBD systems and market context remain future additions; one system is not a consensus.",
+   "delivery_note": "The registry contract is live with one independent, retrodictive Elo system. Bounded registry metadata and ranking/conference readers are staged locally. CFBD systems and market context remain future additions; one system is not a consensus.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 2,
@@ -1229,6 +1229,7 @@
     "cfb-elo"
    ],
    "candidate_mcp_tools": [
+    "dd_get_cfb_rating_system",
     "dd_rank_cfb_teams"
    ],
    "components": [],
@@ -3258,7 +3259,7 @@
     {
      "status": "building",
      "on": "2026-08-08",
-     "note": "Implemented and evaluated canonical game, results-only team-game and team-period, and historical market lookup, generated model-card governance, bounded single-system rankings, team profile, comparison, hypothetical Elo matchup, exact hypothetical schedule-path, descriptive record-divergence, blocked model-disagreement and prospective-receipt status tools locally; all remain staged and non-callable in production."
+     "note": "Implemented and evaluated canonical game, results-only team-game and team-period, and historical market lookup, generated model-card governance, rating-system discovery, bounded single-system rankings, team profile, comparison, hypothetical Elo matchup, exact hypothetical schedule-path, descriptive record-divergence, blocked model-disagreement and prospective-receipt status tools locally; all remain staged and non-callable in production."
     }
    ],
    "implemented": true,
@@ -3271,7 +3272,7 @@
     "/data/cfb-market.json",
     "/data/cfb-model-cards.json"
    ],
-   "delivery_note": "Thirteen source-backed CFB tools are implemented locally and staged, including canonical game, results-only team-game and team-period, and no-CLV historical market lookup, generated model-card governance, bounded single-system rankings, exact matchup and schedule-path calculations, plus no-label divergence, blocked-study and prospective-receipt status readers. Production still has 26 live tools; deployment requires a separate approved Worker release.",
+   "delivery_note": "Fourteen source-backed CFB tools are implemented locally and staged, including canonical game, results-only team-game and team-period, and no-CLV historical market lookup, generated model-card governance, rating-system discovery, bounded single-system rankings, exact matchup and schedule-path calculations, plus no-label divergence, blocked-study and prospective-receipt status readers. Production still has 26 live tools; deployment requires a separate approved Worker release.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": null,
@@ -3298,6 +3299,7 @@
     "dd_find_cfb_team_periods",
     "dd_find_cfb_historical_market",
     "dd_get_cfb_model_card",
+    "dd_get_cfb_rating_system",
     "dd_rank_cfb_teams",
     "dd_cfb_team_profile",
     "dd_compare_cfb_teams",

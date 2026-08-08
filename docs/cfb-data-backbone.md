@@ -68,7 +68,12 @@ When the market file is present the backtest also scores the Elo against the mar
 
 The schema is ready to add independently dated systems, but the data is not padded to make the registry look fuller than it is. It currently contains one retrodictive, ungraded system. `data.consensus.status` is therefore `not-built`, with no weights. Multiple systems may be registered later; a blend still requires prospective error histories and correlation analysis.
 
-`dd_rank_cfb_teams` is the staged bounded discovery read over that registry. It selects
+`dd_get_cfb_rating_system` is the staged method-discovery read. With no ID it returns
+compact registered-system and available-output summaries; with an exact ID it returns
+the full source receipt, output contract and published matchup transform. Registry
+membership is explicitly not evidence of prospective skill.
+
+`dd_rank_cfb_teams` is the staged bounded ranking read over that registry. It selects
 one exact registered system, sorts by its published rank, and optionally returns one
 exact conference slice with offset/limit pagination. Observed records remain separate
 from the modelled rating. The response explicitly refuses consensus and current-2026

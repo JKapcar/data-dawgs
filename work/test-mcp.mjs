@@ -519,12 +519,12 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 {
   const j = await (await req(rpc("tools/list"))).json();
   const t = j.result.tools;
-  ok(t.length === 39, "thirty-nine tools listed in the staged Worker source");
+  ok(t.length === 40, "forty tools listed in the staged Worker source");
   ok(t.every(x => x.name.startsWith("dd_")), "all tools dd_-prefixed");
   ok(t.every(x => x.inputSchema && x.inputSchema.type === "object"), "all tools carry an inputSchema");
   for (const name of ["dd_convert_odds", "dd_devig_market", "dd_price_parlay", "dd_calculate_bet_ev",
     "dd_calculate_hedge", "dd_nfl_passer_rating", "dd_score_forecast", "dd_summarize_beliefs",
-    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_rank_cfb_teams", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_project_cfb_schedule_path", "dd_find_cfb_record_divergence", "dd_get_cfb_model_disagreement", "dd_get_cfb_model_receipt_status", "dd_find_cfb_team_games", "dd_find_cfb_team_periods", "dd_find_cfb_games", "dd_find_cfb_historical_market", "dd_get_cfb_model_card", "dd_optimize_survivor_path"])
+    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_get_cfb_rating_system", "dd_rank_cfb_teams", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_project_cfb_schedule_path", "dd_find_cfb_record_divergence", "dd_get_cfb_model_disagreement", "dd_get_cfb_model_receipt_status", "dd_find_cfb_team_games", "dd_find_cfb_team_periods", "dd_find_cfb_games", "dd_find_cfb_historical_market", "dd_get_cfb_model_card", "dd_optimize_survivor_path"])
     ok(t.some(x => x.name === name), name + " is listed");
 }
 // dd_league_overview
@@ -883,6 +883,35 @@ function refNcdf(z) {
   const badTeam = await (await req(call("dd_model_scoreboard", { team: "C!" }))).json();
   ok(badWeek.result.isError === true && badExtra.result.isError === true && badTeam.result.isError === true,
      "model scoreboard rejects invalid and unsupported filters");
+}
+// dd_get_cfb_rating_system: compact method discovery or one exact full system
+// contract, without treating registry membership as evidence of skill.
+{
+  const j = await (await req(call("dd_get_cfb_rating_system"))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.mode === "rating-system-index" && d.system === null &&
+     d.registered_system_count === 1 && d.available_systems[0].system_id === "dd-cfb-elo" &&
+     d.available_systems[0].available_outputs.join(",") === "team_strength",
+     "CFB rating-system reader lists compact registered method and output summaries");
+  ok(d.one_system_is_consensus === false && d.prospective_forecasts_exist === false && d.graded === false &&
+     d.current_2026_method === false && d.read_only && d.stored === false &&
+     d.warnings.some(x => /Registry membership documents source/i.test(x)),
+     "CFB rating-system index refuses consensus, prospective, graded and current-method claims");
+}
+{
+  const j = await (await req(call("dd_get_cfb_rating_system", { system_id: "DD-CFB-ELO" }))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.mode === "rating-system" && d.system.system_id === "dd-cfb-elo" &&
+     d.system.source_snapshot_id === "sha256:test-cfb-elo" && d.system.outputs.expected_margin.available === false,
+     "CFB rating-system reader returns one exact full source and output contract");
+  ok(d.system.matchup_probability.elo_scale === 400 && d.system.matchup_probability.home_field_elo === 55 &&
+     d.rating_period.prospective === false && d.consensus.status === "not-built",
+     "CFB rating-system reader preserves the published matchup transform and registry boundaries");
+  const missing = await (await req(call("dd_get_cfb_rating_system", { system_id: "mystery" }))).json();
+  const invalid = await (await req(call("dd_get_cfb_rating_system", { system_id: "bad system" }))).json();
+  const extra = await (await req(call("dd_get_cfb_rating_system", { include_rankings: true }))).json();
+  ok([missing, invalid, extra].every(result => result.result.isError === true),
+     "CFB rating-system reader fails closed on unknown, invalid and unsupported inputs");
 }
 // dd_rank_cfb_teams: bounded ranking and conference slices over one declared
 // rating system, without presenting the result as consensus or current-season.

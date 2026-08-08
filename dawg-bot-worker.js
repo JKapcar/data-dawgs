@@ -4139,7 +4139,15 @@ async function mcpCfbTeamProfiles() {
       throw new Error("cfb-teams.json system count does not match its integrity receipt");
     const systemIds = new Set();
     for (const system of data.systems) {
-      if (!system || typeof system.system_id !== "string" || !system.system_id || systemIds.has(system.system_id))
+      if (!system || typeof system.system_id !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(system.system_id) ||
+          systemIds.has(system.system_id) || typeof system.name !== "string" || !system.name ||
+          typeof system.provider !== "string" || !system.provider || typeof system.kind !== "string" || !system.kind ||
+          typeof system.feature_family !== "string" || !system.feature_family ||
+          typeof system.source_snapshot_id !== "string" || !system.source_snapshot_id ||
+          typeof system.source_url !== "string" || !system.source_url ||
+          typeof system.model_card_url !== "string" || !system.model_card_url ||
+          !system.outputs || typeof system.outputs !== "object" || Array.isArray(system.outputs) ||
+          typeof system.prospective_forecasts_exist !== "boolean" || typeof system.graded !== "boolean")
         throw new Error("cfb-teams.json has an invalid or duplicate system_id");
       systemIds.add(system.system_id);
     }
@@ -4718,6 +4726,18 @@ function mcpCfbModelCardArgs(args) {
   return { modelId };
 }
 
+function mcpCfbRatingSystemArgs(args) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+  const extra = Object.keys(args).filter(k => k !== "system_id");
+  if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+  if (args.system_id === undefined) return { systemId: null };
+  if (typeof args.system_id !== "string" || !args.system_id.trim() || args.system_id.trim().length > 80)
+    throw new Error("system_id must be a non-empty string of at most 80 characters");
+  const systemId = args.system_id.trim().toLowerCase();
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(systemId)) throw new Error("system_id must be a lowercase slug");
+  return { systemId };
+}
+
 function mcpCfbRankingArgs(args) {
   if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
   const allowed = ["system_id", "conference", "offset", "limit"];
@@ -5054,7 +5074,7 @@ async function mcpDispatch(m, env, caller) {
           "Everything here is read-only and is either the league's own data, public play-by-play, " +
           "or a deterministic calculation over caller-supplied inputs. Calculator inputs and results are not stored. " +
           "The model scoreboard reads dated prospective receipts and returns descriptive disagreement only; it is ungraded and is not a validated consensus or ranking. " +
-          "The CFB reads separate observed 2025 results from one end-of-2025 retrodictive Elo row. dd_find_cfb_games reads the actual canonical 2025 schedule/results surface; it is historical and not the unpublished 2026 schedule. dd_find_cfb_team_games and dd_find_cfb_team_periods return schedule-derived results only; they have no EPA, opponent adjustment or market performance. dd_find_cfb_historical_market returns book-identified prices whose observation time is unknown: never call them closing lines, compute CLV or cite them as prospective inputs. dd_get_cfb_model_card returns generated governance and retrodictive evidence, not a current forecast or leaderboard. dd_rank_cfb_teams returns one declared system's dated ranking, not a consensus or current power ranking. dd_project_cfb_matchup and dd_project_cfb_schedule_path are hypothetical rating-period calculations, not scheduled 2026 forecasts. dd_find_cfb_record_divergence returns descriptive record-versus-scoring gaps whose small held-out lift does not authorize current-team labels. dd_get_cfb_model_disagreement returns a blocked study whose untimestamped market input prevents a winner or blend conclusion. dd_get_cfb_model_receipt_status reports the append-only prospective ledger honestly; receipt rows remain ungraded and outcomes belong in a separate surface. All CFB outputs are ungraded, not market-adjusted and are not a consensus. " +
+          "The CFB reads separate observed 2025 results from one end-of-2025 retrodictive Elo row. dd_find_cfb_games reads the actual canonical 2025 schedule/results surface; it is historical and not the unpublished 2026 schedule. dd_find_cfb_team_games and dd_find_cfb_team_periods return schedule-derived results only; they have no EPA, opponent adjustment or market performance. dd_find_cfb_historical_market returns book-identified prices whose observation time is unknown: never call them closing lines, compute CLV or cite them as prospective inputs. dd_get_cfb_model_card returns generated governance and retrodictive evidence, not a current forecast or leaderboard. dd_get_cfb_rating_system describes registered methods and output availability; registration is not evidence of prospective skill. dd_rank_cfb_teams returns one declared system's dated ranking, not a consensus or current power ranking. dd_project_cfb_matchup and dd_project_cfb_schedule_path are hypothetical rating-period calculations, not scheduled 2026 forecasts. dd_find_cfb_record_divergence returns descriptive record-versus-scoring gaps whose small held-out lift does not authorize current-team labels. dd_get_cfb_model_disagreement returns a blocked study whose untimestamped market input prevents a winner or blend conclusion. dd_get_cfb_model_receipt_status reports the append-only prospective ledger honestly; receipt rows remain ungraded and outcomes belong in a separate surface. All CFB outputs are ungraded, not market-adjusted and are not a consensus. " +
           "There is no built-in DFS projection or ownership feed: dd_solve_dfs_lineup requires the caller to supply every value per call, and stores none of them. dd_optimize_survivor_path is an ungraded ceiling over a dated snapshot and does not model double-pick weeks. When quoting bozo odds, survivor odds " +
           "or the correlation matrix, say it is model output or a measured historical average, never a forecast " +
           "of a specific game. Team names, weeks and league ids come from dd_league_overview — do not guess them.",
@@ -5781,6 +5801,60 @@ const MCP_TOOLS = [
         ...out,
         read_only: true,
         note: "Equal-weight descriptive summary only; this is not a validated consensus blend or confidence score.",
+      });
+    },
+  },
+  {
+    name: "dd_get_cfb_rating_system",
+    description: "List the dated CFB ratings registry or return one exact registered system with its source receipt, output availability and matchup transform. Registration documents a method; it does not imply prospective forecasts, grading, consensus status, current-2026 relevance or betting skill.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        system_id: { type: "string", minLength: 1, maxLength: 80, description: "Optional exact registered system slug. Omit for the compact registry index." },
+      },
+      additionalProperties: false,
+    },
+    async run(args) {
+      const input = mcpCfbRatingSystemArgs(args);
+      const envelope = await mcpCfbTeamProfiles();
+      const systems = envelope.data.systems;
+      const system = input.systemId ? systems.find(row => row.system_id === input.systemId) || null : null;
+      if (input.systemId && !system)
+        throw new Error("system_id is not present in the dated CFB ratings registry; available: " + systems.map(row => row.system_id).join(", "));
+      const availableSystems = systems.map(row => ({
+        system_id: row.system_id,
+        name: row.name,
+        provider: row.provider,
+        kind: row.kind,
+        feature_family: row.feature_family,
+        available_outputs: Object.entries(row.outputs).filter(([, value]) => value && value.available === true).map(([key]) => key),
+        prospective_forecasts_exist: row.prospective_forecasts_exist === true,
+        graded: row.graded === true,
+      }));
+      return toolText({
+        mode: system ? "rating-system" : "rating-system-index",
+        query: { system_id: input.systemId },
+        available_systems: availableSystems,
+        system,
+        rating_period: envelope.data.rating_period,
+        consensus: envelope.data.consensus,
+        as_of: envelope.as_of,
+        source: envelope.source,
+        built: envelope.built || null,
+        integrity: envelope.integrity || null,
+        registered_system_count: systems.length,
+        one_system_is_consensus: false,
+        prospective_forecasts_exist: systems.some(row => row.prospective_forecasts_exist === true),
+        graded: systems.length > 0 && systems.every(row => row.graded === true),
+        current_2026_method: envelope.data.rating_period && envelope.data.rating_period.prospective === true,
+        read_only: true,
+        stored: false,
+        warnings: [
+          "Registry membership documents source and output contracts; it is not evidence of forecast skill.",
+          "The current registry contains one end-of-2025 retrodictive Elo system, so no consensus exists.",
+          "No prospective CFB forecast receipts or graded track record exist for the registered system in this snapshot.",
+          "Unsupported outputs remain explicitly unavailable rather than being inferred from team strength.",
+        ],
       });
     },
   },
