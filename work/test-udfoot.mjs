@@ -87,8 +87,9 @@ for(const W of [1280,390,320]){
      Still open, both 320-only and neither diagnosed: dataviz (+21), dfs (+9).
      cfb.html joined this list on 8/8 with NO exemption — its tables scroll inside
      .cfbwrap so the document never grows. */
-  const KNOWN=new Set(["dataviz.html@320","dfs.html@320"]);
-  if(!KNOWN.has(tag)) ok(tag+" no sideways scroll",r.hoverflow===false);
+  /* ⚠️ NO EXEMPTIONS LEFT. dataviz@320 and dfs@320 were the last two and are fixed; the
+     KNOWN set is gone rather than emptied, so re-adding one is a visible decision. */
+  ok(tag+" no sideways scroll",r.hoverflow===false);
   await ctx.close();
  }
 }

@@ -27,11 +27,19 @@ cannot be made unique inside the growth limit falls back to shipping the whole f
 replaced by `\x00<path>\x1f<offset>\x1f<length>\x00`, pointing at the identical range of an
 already-rebuilt PATCHED file. Resolve them after every patched file is built:
 
+    const CP = {};                       // code points, NOT UTF-16 units — see below
+    for (const f of Object.keys(P.patches)) CP[f] = Array.from(OUT[f]);
     const unref = s => s.split("\x00").map((part, i) => {
       if (i % 2 === 0) return part;
       const [f, b, n] = part.split("\x1f");
-      return OUT[f].substr(+b, +n);
+      return CP[f].slice(+b, +b + +n).join("");
     }).join("");
+
+⚠️ THE OFFSETS ARE PYTHON CODE POINTS. JavaScript strings index UTF-16 units, and
+dfs.html contains 🙃, so substr() lands one unit short for every ref past it. The first
+version of this docstring said substr() and the SHA check caught it mid-deploy on
+2026-08-09 — which is the entire argument for hashing every file before uploading it
+rather than trusting that the reconstruction worked.
 
 Refs never point at another whole file, so one pass in any order is enough.
 
