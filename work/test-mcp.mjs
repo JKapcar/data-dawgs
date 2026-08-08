@@ -893,7 +893,7 @@ function refNcdf(z) {
      d.registered_system_count === 1 && d.available_systems[0].system_id === "dd-cfb-elo" &&
      d.available_systems[0].available_outputs.join(",") === "team_strength",
      "CFB rating-system reader lists compact registered method and output summaries");
-  ok(d.one_system_is_consensus === false && d.prospective_forecasts_exist === false && d.graded === false &&
+  ok(d.consensus_built === false && d.prospective_forecasts_exist === false && d.graded === false &&
      d.current_2026_method === false && d.read_only && d.stored === false &&
      d.warnings.some(x => /Registry membership documents source/i.test(x)),
      "CFB rating-system index refuses consensus, prospective, graded and current-method claims");

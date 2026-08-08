@@ -2207,6 +2207,16 @@ const MCP_TOOLS = [
         prospective_forecasts_exist: row.prospective_forecasts_exist === true,
         graded: row.graded === true,
       }));
+      const scopedSystems = system ? [system] : systems;
+      const consensusBuilt = envelope.data.consensus.status === "built";
+      const prospective = scopedSystems.some(row => row.prospective_forecasts_exist === true);
+      const graded = scopedSystems.length > 0 && scopedSystems.every(row => row.graded === true);
+      const warnings = ["Registry membership documents source and output contracts; it is not evidence of forecast skill."];
+      if (systems.length === 1) warnings.push("The current registry contains one system; one rating cannot form a consensus.");
+      if (!consensusBuilt) warnings.push("The registry's published consensus status is not built.");
+      if (!prospective) warnings.push("No prospective CFB forecast receipts exist for the returned system scope.");
+      if (!graded) warnings.push("No prospective graded track record exists for the returned system scope.");
+      warnings.push("Unsupported outputs remain explicitly unavailable rather than being inferred from team strength.");
       return toolText({
         mode: system ? "rating-system" : "rating-system-index",
         query: { system_id: input.systemId },
@@ -2219,18 +2229,14 @@ const MCP_TOOLS = [
         built: envelope.built || null,
         integrity: envelope.integrity || null,
         registered_system_count: systems.length,
-        one_system_is_consensus: false,
-        prospective_forecasts_exist: systems.some(row => row.prospective_forecasts_exist === true),
-        graded: systems.length > 0 && systems.every(row => row.graded === true),
-        current_2026_method: envelope.data.rating_period && envelope.data.rating_period.prospective === true,
+        consensus_built: consensusBuilt,
+        prospective_forecasts_exist: prospective,
+        graded,
+        current_2026_method: envelope.data.rating_period && envelope.data.rating_period.season === 2026 &&
+          envelope.data.rating_period.prospective === true,
         read_only: true,
         stored: false,
-        warnings: [
-          "Registry membership documents source and output contracts; it is not evidence of forecast skill.",
-          "The current registry contains one end-of-2025 retrodictive Elo system, so no consensus exists.",
-          "No prospective CFB forecast receipts or graded track record exist for the registered system in this snapshot.",
-          "Unsupported outputs remain explicitly unavailable rather than being inferred from team strength.",
-        ],
+        warnings,
       });
     },
   },
@@ -2281,6 +2287,14 @@ const MCP_TOOLS = [
         rating: team.systems[system.system_id],
         observed_results: mcpCfbObservedView(team),
       }));
+      const prospective = envelope.data.rating_period && envelope.data.rating_period.prospective === true &&
+        system.prospective_forecasts_exist === true;
+      const graded = system.graded === true;
+      const warnings = ["This ranks one declared system at its published rating period; it is not a consensus ranking."];
+      if (!prospective) warnings.push("The selected system has no prospective CFB forecast receipt in this snapshot.");
+      if (!graded) warnings.push("The selected system has no prospective graded track record in this snapshot.");
+      warnings.push("Observed records and scoring are shown separately and do not alter the modelled rank returned here.");
+      warnings.push("Current rosters, injuries, availability, talent, portal, market and play-efficiency inputs are absent.");
       return toolText({
         query: { system_id: system.system_id, conference, offset: input.offset, limit: input.limit },
         system: {
@@ -2307,18 +2321,13 @@ const MCP_TOOLS = [
         observed_results_are_facts: true,
         modelled_fields: ["teams[].rating"],
         retrodictive: envelope.data.rating_period && envelope.data.rating_period.prospective !== true,
-        prospective: false,
-        graded: false,
+        prospective,
+        graded,
         consensus_ranking: false,
-        current_2026_ranking: false,
+        current_2026_ranking: envelope.data.rating_period && envelope.data.rating_period.season === 2026 && prospective,
         read_only: true,
         stored: false,
-        warnings: [
-          "This ranks one declared system at its published end-of-2025 rating period; it is not a consensus ranking.",
-          "The registered system has no prospective CFB forecast receipts or graded track record in this snapshot.",
-          "Observed records and scoring are shown separately and do not alter the modelled rank returned here.",
-          "Current rosters, injuries, availability, talent, portal, market and play-efficiency inputs are absent.",
-        ],
+        warnings,
       });
     },
   },
