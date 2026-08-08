@@ -80,14 +80,25 @@ test('surface generator reports the deployed Pound MCP tools as live', () => {
     'dd_score_forecast', 'dd_summarize_beliefs', 'dd_elo_game',
     'dd_translate_probability'];
   assert.equal(surfaces.counts.mcp_tools_live, 42);
-  assert.equal(surfaces.counts.mcp_tools_staged, 0);
   assert.ok(surfaces.mcp.tools_live.includes('dd_survivor_ev'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_optimize_survivor_path'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_analyze_matchup'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_solve_dfs_lineup'));
   poundMcp.forEach(name => assert.ok(surfaces.mcp.tools_live.includes(name), name));
   CFB_MCP_LIVE.forEach(name => assert.ok(surfaces.mcp.tools_live.includes(name), name));
-  assert.deepEqual(surfaces.mcp.tools_staged, []);
+});
+/* ⚠️ STAGED IS NOT LIVE, AND THE TEST HAS TO SAY WHICH.
+   This assertion used to read `tools_staged === []`, which passed only while nothing was
+   ever staged — so the first genuinely staged tool turned the suite red instead of being
+   checked. What actually matters is the boundary: a staged name is in the registry and in
+   the committed Worker source, and is NOT callable on the deployed endpoint, so it must
+   never appear in tools_live and must never be counted there. */
+test('staged MCP tools are named, counted separately, and kept out of the live roster', () => {
+  const staged = surfaces.mcp.tools_staged;
+  assert.deepEqual(staged, ['dd_draft_bozo_leg']);
+  assert.equal(surfaces.counts.mcp_tools_staged, staged.length);
+  for (const name of staged) assert.ok(!surfaces.mcp.tools_live.includes(name), `${name} is staged but claimed live`);
+  assert.equal(surfaces.counts.mcp_tools_live, surfaces.mcp.tools_live.length);
 });
 test('survivor surface exposes the exact path optimizer and names its remaining rule gap', () => {
   const survivor = surfaces.data.find(s => s.id === 'survivor');
