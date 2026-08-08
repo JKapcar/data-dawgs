@@ -646,6 +646,9 @@ export default {
     if (url.pathname === "/league/list")   return leagueList(env, cors);
     if (url.pathname === "/league/create") return leagueCreate(request, env, cors);
     if (url.pathname === "/league/member") return leagueMember(request, env, cors);
+    if (url.pathname === "/league/join")
+      return request.method === "GET" ? leagueJoinPreview(request, url, env, cors) : leagueJoin(request, env, cors);
+    if (url.pathname === "/league/join-code") return leagueJoinCode(request, env, cors);
     if (url.pathname === "/league/lock")   return leagueLock(request, env, cors);
     if (url.pathname === "/league/config") return bozoConfigSet(request, env, cors);
     if (url.pathname === "/league/settings") return leagueSettings(request, env, cors);
@@ -2024,7 +2027,7 @@ async function leagueMember(request, env, cors) {
   const remove = body.action === "remove";
   const users = await loadUsers(env);
   if (!remove && !userNames(users).includes(player))
-    return json({ error: player + " doesn't have an account yet — send them a join link instead." }, 400, cors);
+    return json({ error: player + " doesn't have an account yet — have them sign up first, or send them your league's join link." }, 400, cors);
 
   // ⚠️ Changing the roster mid-week moves the lock threshold under a live board.
   // Removing the last person you were waiting on would otherwise silently place the
@@ -2074,6 +2077,219 @@ async function leagueLock(request, env, cors) {
 
   const placed = await placeAndDraw(env, lid, picks, lg);
   return json({ ok: true, placed, legs: n, waitingOn: memberNames(lg).filter(p => !picks[encodeURIComponent(p)]) }, 200, cors);
+}
+
+/* ============================== league join links ==========================
+   A reusable per-league join code, handed out as a link:
+   https://datadawgs216.com/signon.html?league=<code>
+
+   ⚠️ THE CODE LIVES IN KV, NEVER IN FIREBASE. /bozo is world-readable — anything
+   under /bozo/leagues/<id> can be read by anyone with the database URL, so a code
+   stored there would be a public invitation to every league at once. KV is only
+   reachable from inside this Worker, which is the whole security model here.
+
+   Two keys per league, both KV:
+     joinlink:lg:<lid>     {code, cap, createdTs, createdBy}   — manager's view
+     joinlink:code:<code>  "<lid>"                             — redemption lookup
+
+   Rotation deletes the old code key, so a leaked link dies the moment the manager
+   presses rotate. That is a property a signed token cannot have without a
+   revocation list, which is why this is a stored random secret and not an HMAC:
+   there is no key material in the link, and revocation is a single delete.
+
+   The cap is the blast radius. A leaked link cannot grow a league past it, and it
+   is the manager's number, not a global one.
+
+   ⚠️ This is NOT how the draft rig works and must never become that. AGENTS.md
+   rule 6: the draft board is public on purpose. This gates league MEMBERSHIP for
+   the Bozo game only. */
+
+const JOIN_KV = (env) => env.DD_KV || env.RL || null;
+const JOIN_LG = (lid) => "joinlink:lg:" + lid;
+const JOIN_CODE = (code) => "joinlink:code:" + code;
+const JOIN_CAP_DEFAULT = 20;
+const JOIN_CAP_MIN = 2;
+const JOIN_CAP_MAX = 64;
+const JOIN_REDEEM_PER_DAY = 20;
+// base64url of 16 random bytes: 22 chars, ~128 bits. Not guessable, and short
+// enough to survive a text message without wrapping.
+const validJoinCode = (c) => typeof c === "string" && /^[A-Za-z0-9_-]{22}$/.test(c);
+
+function newJoinCode() {
+  const raw = crypto.getRandomValues(new Uint8Array(16));
+  return btoa(String.fromCharCode(...raw)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+const joinCapOf = (rec) =>
+  Number.isFinite(rec && rec.cap) ? Math.min(JOIN_CAP_MAX, Math.max(JOIN_CAP_MIN, rec.cap)) : JOIN_CAP_DEFAULT;
+
+// GET /league/join?code=... — deliberately PUBLIC and deliberately thin.
+// Whoever holds the code was given it; showing them which league they are about to
+// join is the difference between a confident click and a suspicious one. It returns
+// no member names, no picks and no ledger — /league/list already publishes the rest.
+async function leagueJoinPreview(request, url, env, cors) {
+  const kv = JOIN_KV(env);
+  if (!kv) return json({ error: "Join links are unavailable right now." }, 503, cors);
+  const code = String(url.searchParams.get("code") || "");
+  if (!validJoinCode(code)) return json({ error: "That is not a join link." }, 400, cors);
+
+  let lid = null;
+  try { lid = await kv.get(JOIN_CODE(code)); }
+  catch { return json({ error: "Join lookup failed." }, 502, cors); }
+  // ⚠️ Same answer for "never existed" and "rotated away". Distinguishing them tells
+  // a stranger which codes were once real.
+  if (!lid) return json({ error: "That join link is no longer good — ask the manager for a new one." }, 404, cors);
+
+  let lg, rec = null;
+  try {
+    lg = await loadLeague(env, lid);
+    rec = JSON.parse((await kv.get(JOIN_LG(lid))) || "null");
+  } catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+  if (!lg) return json({ error: "That league is gone." }, 404, cors);
+
+  const size = memberNames(lg).length, cap = joinCapOf(rec);
+  return json({
+    league: lid, name: lg.name || lid, manager: lg.manager || null,
+    size, cap, full: size >= cap, open: (lg.status || "open") === "open",
+  }, 200, cors);
+}
+
+// POST /league/join {code} — redeem. A SESSION IS REQUIRED: the code says which
+// league, the session says who. There is no path here that creates an account, so a
+// leaked link cannot be used by anyone who has not already signed up under a name.
+async function leagueJoin(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const kv = JOIN_KV(env);
+  if (!kv) return json({ error: "Join links are unavailable right now." }, 503, cors);
+
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err, needSignIn: true }, auth.code || 401, cors);
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+  const code = String(body.code || "");
+  if (!validJoinCode(code)) return json({ error: "That is not a join link." }, 400, cors);
+
+  // Per-IP daily cap on redemption attempts. A valid code is not brute-forceable at
+  // 128 bits; this is here so a script cannot use the endpoint as a league prober.
+  let rlKey = null, used = 0;
+  if (env.RL) {
+    const day = new Date().toISOString().slice(0, 10);
+    rlKey = "joinrl:" + day + ":" + (request.headers.get("CF-Connecting-IP") || "noip");
+    used = parseInt((await env.RL.get(rlKey)) || "0", 10);
+    if (used >= JOIN_REDEEM_PER_DAY)
+      return json({ error: "Too many join attempts from here today. Try tomorrow." }, 429, cors);
+    await env.RL.put(rlKey, String(used + 1), { expirationTtl: 172800 });
+  }
+
+  let lid = null;
+  try { lid = await kv.get(JOIN_CODE(code)); }
+  catch { return json({ error: "Join lookup failed." }, 502, cors); }
+  if (!lid) return json({ error: "That join link is no longer good — ask the manager for a new one." }, 404, cors);
+
+  let lg, rec = null;
+  try {
+    lg = await loadLeague(env, lid);
+    rec = JSON.parse((await kv.get(JOIN_LG(lid))) || "null");
+  } catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+  if (!lg) return json({ error: "That league is gone." }, 404, cors);
+
+  // Already in: say so plainly and succeed. Clicking your own link twice is not an error.
+  if (isMember(lg, auth.name))
+    return json({ ok: true, already: true, league: lid, name: lg.name || lid, size: memberNames(lg).length }, 200, cors);
+
+  // ⚠️ Same rule leagueMember enforces, for the same reason: joining mid-week moves
+  // the lock threshold under a live board and could place the ticket early.
+  if ((lg.status || "open") !== "open")
+    return json({ error: "This week's ticket is already placed — you can join once next week opens." }, 409, cors);
+
+  const cap = joinCapOf(rec);
+  if (memberNames(lg).length >= cap)
+    return json({ error: "That league is full (" + cap + " members)." }, 409, cors);
+
+  try {
+    await fbPatch(env, LG(lid) + "/members", { [encodeURIComponent(auth.name)]: true });
+  } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+
+  const after = await loadLeague(env, lid);
+  return json({ ok: true, league: lid, name: after.name || lid, size: memberNames(after).length, cap }, 200, cors);
+}
+
+// POST /league/join-code {league, action} — manager only.
+//   action "get"    (default) mint on first use, otherwise return the current code
+//   action "rotate"           new code, old one dead immediately
+//   action "cap"    {cap}     change the member cap
+//   action "off"              delete the link entirely; no code works until re-minted
+async function leagueJoinCode(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const kv = JOIN_KV(env);
+  if (!kv) return json({ error: "Join links are unavailable right now." }, 503, cors);
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const lid = leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+  const auth = await requireManager(request, env, lid);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  const action = String(body.action || "get");
+  if (!["get", "rotate", "cap", "off"].includes(action))
+    return json({ error: "Unknown action." }, 400, cors);
+
+  let rec = null;
+  try { rec = JSON.parse((await kv.get(JOIN_LG(lid))) || "null"); }
+  catch { rec = null; }
+
+  const size = memberNames(auth.league).length;
+  const reply = (r) => json({
+    ok: true, league: lid, name: auth.league.name || lid,
+    code: r ? r.code : null,
+    link: r ? "https://datadawgs216.com/signon.html?league=" + r.code : null,
+    cap: joinCapOf(r), size, full: r ? size >= joinCapOf(r) : false,
+    createdTs: r ? r.createdTs : null, createdBy: r ? r.createdBy : null,
+  }, 200, cors);
+
+  if (action === "off") {
+    try {
+      if (rec && rec.code) await kv.delete(JOIN_CODE(rec.code));
+      await kv.delete(JOIN_LG(lid));
+    } catch (e) { return json({ error: "Join link write failed: " + e.message }, 502, cors); }
+    return reply(null);
+  }
+
+  if (action === "cap") {
+    const cap = parseInt(body.cap, 10);
+    if (!Number.isFinite(cap) || cap < JOIN_CAP_MIN || cap > JOIN_CAP_MAX)
+      return json({ error: "Cap must be a whole number from " + JOIN_CAP_MIN + " to " + JOIN_CAP_MAX + "." }, 400, cors);
+    // ⚠️ A cap below the current roster is allowed and does NOT evict anyone. It just
+    // closes the door: existing members stay, nobody new gets in until it is raised.
+    const next = { ...(rec || { code: newJoinCode(), createdTs: Date.now(), createdBy: auth.name }), cap };
+    try {
+      await kv.put(JOIN_CODE(next.code), lid);
+      await kv.put(JOIN_LG(lid), JSON.stringify(next));
+    } catch (e) { return json({ error: "Join link write failed: " + e.message }, 502, cors); }
+    return reply(next);
+  }
+
+  if (action === "get" && rec && rec.code) return reply(rec);
+
+  const next = {
+    code: newJoinCode(),
+    cap: joinCapOf(rec),
+    createdTs: Date.now(),
+    createdBy: auth.name,
+  };
+  try {
+    // Kill the old lookup FIRST. If the second write fails the league is left with no
+    // working link, which is the safe direction to fail — a live orphaned code is not.
+    if (rec && rec.code) await kv.delete(JOIN_CODE(rec.code));
+    await kv.put(JOIN_CODE(next.code), lid);
+    await kv.put(JOIN_LG(lid), JSON.stringify(next));
+  } catch (e) { return json({ error: "Join link write failed: " + e.message }, 502, cors); }
+  return reply(next);
 }
 
 /* =============================== /bozo/pick =============================== */

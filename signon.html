@@ -1746,6 +1746,15 @@ STATE: everything saves in the browser on that device. A different device shows 
   claim a texted invite, fix a forgotten password. The boards, the pool and the season tables
   stay public either way; an account is for playing.</p>
 
+  <!-- CEP-7: a league join link (?league=<code>). Reusable, carries no password, and
+       creates no account on its own — it only says WHICH league, once you are signed in. -->
+  <div class="card" id="sLeague" hidden>
+    <h3>Join <span class="rt" id="lgName"></span></h3>
+    <p class="sub" id="lgSub"></p>
+    <div class="btnrow"><button class="btn" id="lgGo" hidden>Join this league</button></div>
+    <p class="note" id="lgMsg"></p>
+  </div>
+
   <!-- claim a texted join link (?join=<token>) -->
   <div class="card" id="sJoin" hidden>
     <h3>Claim your slot <span class="rt" id="jWho"></span></h3>
@@ -1786,8 +1795,8 @@ STATE: everything saves in the browser on that device. A different device shows 
     <h3>Create an account</h3>
     <p class="sub">Open to anyone. Your <b>name</b> is what shows on rosters. Your <b>email</b>
     is just a second way to sign in — <b>nothing is ever sent to it</b> and it is not verified,
-    because this site does not send mail, period. An account does not put you in a league:
-    seats are invite-only, from the league manager.</p>
+    because this site does not send mail, period. An account on its own does not put you in
+    a league &mdash; you get in by opening a manager's join link, or by them adding you.</p>
     <div class="grid2">
       <label class="fld"><span>Name <span class="hint">— shows on rosters</span></span>
         <input class="fi" id="nName" autocomplete="off" maxlength="40"></label>
@@ -1874,6 +1883,12 @@ STATE: everything saves in the browser on that device. A different device shows 
      signon itself) is dropped — this must never become an open redirect. */
   var next = qs.get("next") || "";
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]*\.html$/.test(next) || next === "signon.html") next = "";
+  /* ⚠️ A LEAGUE CODE IS NOT AN INVITE TOKEN. ?join= is one-time and carries account
+     creation, so it is burned out of the URL below. ?league= is reusable, grants no
+     account and no password, and is meant to be shared — so it stays in the address
+     bar until it is successfully redeemed. Do not "tidy" these into one path. */
+  var leagueCode = qs.get("league") || "";
+  if (!/^[A-Za-z0-9_-]{22}$/.test(leagueCode)) leagueCode = "";
   var joinTok = qs.get("join") || "";
   if (joinTok) {
     /* Burn the token out of the URL bar and history NOW, exactly as bozo.html did —
@@ -1882,10 +1897,87 @@ STATE: everything saves in the browser on that device. A different device shows 
     history.replaceState(null, "", clean);
   }
 
+  /* ⚠️ leave() must not fire while a league code is still pending — a signed-in user
+     who arrived with ?next= would be bounced away before the join ever ran, and the
+     link would look broken while being perfectly good. redeemLeague() calls leave()
+     itself once the join settles. */
   var leave = function () {
+    if (leaguePending) return true;
     if (next) { location.replace(next); return true; }
     return false;
   };
+  var leaguePending = !!leagueCode;
+
+  /* ---- ?league=: preview, then redeem once there is a session ---- */
+  var LG_WORKER = "https://toto.jkapcar4.workers.dev";   // DDAuth's copy is IIFE-scoped
+  var lgInfo = null;
+  function lgShow(text, kind) { msg("lgMsg", text, kind); }
+
+  function paintLeague() {
+    if (!leagueCode) { $("sLeague").hidden = true; return; }
+    $("sLeague").hidden = false;
+    var m = window.DDAuth ? window.DDAuth.me() : null;
+    $("lgName").textContent = lgInfo ? (lgInfo.name || lgInfo.league) : "";
+    $("lgGo").hidden = !m || !lgInfo;
+    if (!lgInfo) { $("lgSub").textContent = "Checking that link…"; return; }
+    if (lgInfo.full && !m) {
+      $("lgSub").textContent = "This league is full (" + lgInfo.cap + " members). Ask "
+        + (lgInfo.manager || "the manager") + " to raise the cap before you sign up for it.";
+      return;
+    }
+    $("lgSub").textContent = m
+      ? "You're signed in as " + m.name + ". One click and you're on the roster — "
+        + lgInfo.size + " of " + lgInfo.cap + " seats used."
+      : "Sign in below, or create an account, and you'll join automatically. "
+        + lgInfo.size + " of " + lgInfo.cap + " seats used"
+        + (lgInfo.manager ? ", run by " + lgInfo.manager : "") + ".";
+  }
+
+  if (leagueCode) {
+    fetch(LG_WORKER + "/league/join?code=" + encodeURIComponent(leagueCode))
+      .then(function (r) { return r.json().then(function (j) { return {ok: r.ok, j: j}; }); })
+      .then(function (res) {
+        if (!res.ok) throw new Error(res.j.error || "That link didn't work.");
+        lgInfo = res.j;
+        paintLeague();
+        /* Already signed in when the page opened? Redeem straight away — the click
+           would be pure ceremony. */
+        if (window.DDAuth && window.DDAuth.me()) redeemLeague();
+      })
+      .catch(function (e) {
+        leagueCode = ""; leaguePending = false;
+        $("sLeague").hidden = false;
+        $("lgName").textContent = "";
+        $("lgSub").textContent = e.message || String(e);
+        $("lgGo").hidden = true;
+        render();
+      });
+  }
+
+  function redeemLeague() {
+    if (!leagueCode) return;
+    lgShow("Joining…");
+    window.DDAuth.post("/league/join", { code: leagueCode }).then(function (j) {
+      var name = j.name || "the league";
+      leagueCode = ""; leaguePending = false;
+      /* Strip the code now that it is spent for this person — a refresh should not
+         re-run a join that already happened. */
+      history.replaceState(null, "", location.pathname + (next ? "?next=" + encodeURIComponent(next) : ""));
+      $("lgGo").hidden = true;
+      $("lgSub").textContent = j.already
+        ? "You were already in " + name + "."
+        : "You're in " + name + " — " + j.size + " member" + (j.size === 1 ? "" : "s") + " now.";
+      lgShow(j.already ? "" : "Joined.", "good");
+      if (!leave()) render();
+    }).catch(function (e) {
+      /* ⚠️ A failed join must NOT strip the code. The league being full or the week
+         being placed are both temporary — the same link works later. */
+      leaguePending = false;
+      lgShow(e.message || String(e), "bad");
+      if (next) $("meBack").hidden = false;
+    });
+  }
+  $("lgGo").addEventListener("click", redeemLeague);
 
   /* ---- render: exactly one of signed-out / signed-in ---- */
   function render() {
@@ -1894,6 +1986,7 @@ STATE: everything saves in the browser on that device. A different device shows 
     $("sIn").hidden = !!m;
     $("sNew").hidden = !!m || !!joinTok;   // invited people claim; they don't need signup
     $("sHelp").hidden = !!m;
+    paintLeague();
     $("sJoin").hidden = !!m || !joinTok;
     $("meJoinWarn").hidden = !(m && joinTok);
     if (m) {
@@ -1930,6 +2023,7 @@ STATE: everything saves in the browser on that device. A different device shows 
       $("sPw").value = "";
       window.DDAuth.set(j.session);
       if (j.email) $("eEmail").value = j.email;
+      if (leagueCode) { msg("sMsg", ""); render(); redeemLeague(); return; }
       if (!leave()) { msg("sMsg", ""); render(); }
     }).catch(function (e) { msg("sMsg", e.message || String(e), "bad"); });
   }
@@ -1950,6 +2044,7 @@ STATE: everything saves in the browser on that device. A different device shows 
       $("nPw").value = ""; $("nPw2").value = "";
       window.DDAuth.set(j.session);
       $("eEmail").value = j.email || email;
+      if (leagueCode) { msg("nMsg", ""); render(); redeemLeague(); return; }
       if (!leave()) { msg("nMsg", ""); render(); }
     }).catch(function (e) { msg("nMsg", e.message || String(e), "bad"); });
   });

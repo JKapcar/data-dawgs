@@ -2109,6 +2109,22 @@ STATE: everything saves in the browser on that device. A different device shows 
     <div id="rosOut"></div>
     <div class="err" id="rosErr"></div>
 
+    <!-- CEP-7: one reusable link per league. Unlike the per-person invite above, this
+         one does NOT create accounts — people sign up themselves and the link only
+         adds them here. That is why it is safe to post in a group chat. -->
+    <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:22px 0 4px">Join link</h3>
+    <p class="tm" style="margin:0 0 8px">One link, reusable, safe to drop in the group chat. It does not create accounts and it does not carry a password &mdash; people sign up under their own name and the link puts them in this league. Rotate it and the old one dies instantly. The cap is your ceiling: a leaked link can never grow the league past it.</p>
+    <div class="row" style="align-items:flex-end;gap:10px">
+      <button class="btn ghost sm" id="jlGet">Show join link</button>
+      <button class="btn ghost sm" id="jlRot">Rotate</button>
+      <div class="f" style="width:120px"><label>Member cap</label>
+        <input id="jlCap" type="number" min="2" max="64" step="1"></div>
+      <button class="btn ghost sm" id="jlCapGo">Set cap</button>
+      <button class="btn ghost sm" id="jlOff">Turn off</button>
+    </div>
+    <div id="jlOut"></div>
+    <div class="err" id="jlErr"></div>
+
     <div id="lockRow" style="display:none;margin-top:18px;border-top:1px solid var(--grid);padding-top:14px">
       <div class="row" style="align-items:center;gap:10px">
         <button class="btn ghost sm" id="forceLock">Place the ticket now</button>
@@ -3067,6 +3083,57 @@ document.getElementById('addGo').onclick = async ()=>{
     const e3=rosErr(`${who} added — ${r.size} player${r.size===1?'':'s'} now.`); e3.className='err ok';
     await reloadLeagues();
   }catch(e2){ rosErr(e2.message); }
+};
+
+/* ---------------- CEP-7 join link (manager controls) ----------------
+   ⚠️ Nothing here is a secret the PAGE keeps. The code comes back from the Worker on
+   demand and is never cached in localStorage — a shared laptop must not leak another
+   league's link, and "Show" is one request away anyway. */
+const jlErr = m => { const e=document.getElementById('jlErr'); e.textContent=m||''; e.className='err'; return e; };
+function jlPaint(r){
+  const out = document.getElementById('jlOut');
+  if(!r || !r.code){
+    out.innerHTML = `<div class="linkout"><b>No join link.</b>
+      <span class="tm">Nobody can join by link until you make one. The per-person invites above still work.</span></div>`;
+    return;
+  }
+  out.innerHTML =
+    `<div class="linkout"><b>${esc(r.name||r.league)}</b> — reusable, share freely.
+      <code>${esc(r.link)}</code>
+      <span class="tm">${r.size} of ${r.cap} seats used${r.full?' — <b>full</b>, raise the cap to let anyone else in':''}.</span>
+      <div class="row" style="margin-top:8px"><button class="btn sm" id="jlCopy">Copy</button></div></div>`;
+  document.getElementById('jlCopy').onclick=()=>{
+    navigator.clipboard?.writeText(r.link).then(
+      ()=>{ document.getElementById('jlCopy').textContent='Copied'; },
+      ()=>{ jlErr('Clipboard blocked — select the link above and copy it.'); });
+  };
+  const cap=document.getElementById('jlCap');
+  if(document.activeElement!==cap) cap.value = r.cap;
+}
+async function jlDo(action, extra){
+  jlErr('');
+  try{
+    const r = await wPost('/league/join-code', Object.assign({action}, extra||{}));
+    jlPaint(r);
+    if(action==='rotate'){ const e=jlErr('Rotated — the previous link is dead as of now.'); e.className='err ok'; }
+    if(action==='off'){ const e=jlErr('Join link off. Existing members are unaffected.'); e.className='err ok'; }
+    await reloadLeagues();
+  }catch(e){ jlErr(e.message); }
+}
+document.getElementById('jlGet').onclick = ()=>jlDo('get');
+document.getElementById('jlOff').onclick = ()=>jlDo('off');
+document.getElementById('jlCapGo').onclick = ()=>{
+  const cap = parseInt(document.getElementById('jlCap').value, 10);
+  if(!Number.isFinite(cap)) return jlErr('Give the cap a number between 2 and 64.');
+  jlDo('cap', {cap});
+};
+/* Two-step, same as Remove: rotating locks out anyone still holding the old link. */
+document.getElementById('jlRot').onclick = (e)=>{
+  const b=e.target;
+  if(b.dataset.armed!=='1'){ b.dataset.armed='1'; b.textContent='Confirm rotate';
+    setTimeout(()=>{ b.dataset.armed='0'; b.textContent='Rotate'; }, 4000); return; }
+  b.dataset.armed='0'; b.textContent='Rotate';
+  jlDo('rotate');
 };
 
 document.getElementById('invGo').onclick = async ()=>{
