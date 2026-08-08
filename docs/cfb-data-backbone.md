@@ -73,6 +73,20 @@ The observed and modelled objects are never blended. It remains retrodictive, un
 not a consensus and not a 2026 forecast; current roster, availability, talent, portal,
 play-efficiency, opponent-adjusted and timestamped-market inputs are explicitly absent.
 
+## Record-divergence baseline (roadmap step 7)
+
+`scripts/cfb_record_divergence.py refresh` publishes
+`/data/cfb-record-divergence.json`, the first evaluable substrate for the Fraud
+Detector. It compares observed win-percentage rank with observed point-differential-
+per-game rank and reports each team's one-score record. Competition ranks keep ties on
+the same 136-team scale; the raw signed gap is published instead of a thresholded label.
+
+This is intentionally a descriptive baseline. Every `predictive_label` is null,
+`forward_value_claimed` is false, and the file names the missing opponent adjustment,
+play efficiency, turnover/decision variance and timestamped market context. The next
+gate is prospective: freeze the metric by week and test whether it predicts later games
+beyond Elo and the market before calling any team overrated, underrated or a fraud.
+
 ## Model cards (governance principle cfb-gov-model-cards)
 
 `scripts/cfb_model_cards.py refresh` publishes `/data/cfb-model-cards.json`: the purpose, target, features, training window, validation design, limitations, calibration, performance, failure modes, version and retirement status the CFB governance section requires before a model is promoted past the lab. Every performance number is read from the model's own published output rather than typed into the card, and the calibration narrative is generated from the bins, so a card cannot drift away from the thing it describes.

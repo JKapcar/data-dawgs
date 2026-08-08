@@ -2776,17 +2776,26 @@
   {
    "kind": "roadmap-idea",
    "domain": "College Football",
-   "lifecycle_status": "idea",
+   "lifecycle_status": "evaluating",
    "lifecycle_history": [
     {
      "status": "idea",
      "on": "2026-08-08",
      "note": "Entered The Pound from the 2026-08-08 CFB roadmap."
+    },
+    {
+     "status": "evaluating",
+     "on": "2026-08-08",
+     "note": "Published a results-only record-versus-scoring divergence baseline with one-score records; no predictive labels are permitted yet."
     }
    ],
-   "implemented": false,
-   "delivery_evidence": [],
-   "delivery_note": null,
+   "implemented": true,
+   "delivery_evidence": [
+    "/data/cfb-record-divergence.json",
+    "/scripts/cfb_record_divergence.py",
+    "/tests/test_cfb_record_divergence.py"
+   ],
+   "delivery_note": "Partially implemented as a descriptive baseline. It does not call teams overrated or underrated; forward value beyond Elo and a timestamped market remains untested.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 7,

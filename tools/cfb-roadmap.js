@@ -686,6 +686,13 @@ const CFB_IDEAS = [
   /* ---------- Fraud detector ---------- */
 
   idea({ id: 'cfb-fraud-detector', name: 'Overrated / Underrated Team Detector',
+    lifecycle_status: 'evaluating', implemented: true,
+    lifecycle_history: [
+      { status: 'idea', on: ROADMAP_AS_OF, note: 'Entered The Pound from the 2026-08-08 CFB roadmap.' },
+      { status: 'evaluating', on: ROADMAP_AS_OF, note: 'Published a results-only record-versus-scoring divergence baseline with one-score records; no predictive labels are permitted yet.' },
+    ],
+    delivery_evidence: ['/data/cfb-record-divergence.json', '/scripts/cfb_record_divergence.py', '/tests/test_cfb_record_divergence.py'],
+    delivery_note: 'Partially implemented as a descriptive baseline. It does not call teams overrated or underrated; forward value beyond Elo and a timestamped market remains untested.',
     category: 'fraud-detector', recommendation: 'build', recommendation_modifiers: ['high-priority'],
     priority: 'high', roadmap_step: 7,
     source_headings: ['Overrated / Underrated Team Detector'],

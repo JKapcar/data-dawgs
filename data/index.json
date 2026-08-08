@@ -89,9 +89,9 @@
    {
     "path": "/data/pound-tools.json",
     "url": "https://datadawgs216.com/data/pound-tools.json",
-    "bytes": 126073,
+    "bytes": 126581,
     "as_of": "2026-08-08",
-    "sha256": "e0ff50de93142dc5536d0b308f5a27cc10f3bf177e00fc551861555f04aeb75c",
+    "sha256": "ada1744738c7610bb0ad691edad8695db3056b4ab14d774c68029a25b142d981",
     "note": "Two kinds of entry share this inventory. kind \"tool\" (NFL) carries delivery status. kind \"roadmap-idea\" (College Football) carries recommendation plus evidence-backed lifecycle and implementation state. A CFB artifact may be implemented without any MCP tool; candidate_mcp_tools are reservations and remain non-callable unless the independent Worker registry proves otherwise."
    },
    {
@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 15722,
+    "bytes": 15956,
     "as_of": "2026-08-08",
-    "sha256": "76bdf5580a4390fbc1f104aced7068f8e8a940033cde693e53098897ee0a7058",
+    "sha256": "c9c93730507e415c6c84b5bfe063a4f7f352021c326fafb34bf6f6bbd1daf384",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -165,6 +165,14 @@
     "as_of": "2026-08-08",
     "sha256": "cd21ad102ee356c18f35f03756c7c21eda719e214c7a5fbc80f12f1410e82578",
     "note": "OBSERVED RESULTS plus one MODELLED, RETRODICTIVE, UNGRADED end-of-2025 Elo rating. The objects are separated deliberately. This is not a 2026 forecast, consensus, edge or recommendation."
+   },
+   {
+    "path": "/data/cfb-record-divergence.json",
+    "url": "https://datadawgs216.com/data/cfb-record-divergence.json",
+    "bytes": 95079,
+    "as_of": "2026-08-08",
+    "sha256": "7c1646fcb32c9bcea0df593a3d94e8c18dfe6a7db4f8f478dd950dafebba1298",
+    "note": "OBSERVED, DESCRIPTIVE BASELINE ONLY. This is not a Fraud Detector verdict and does not call any team overrated or underrated. No forward predictive value has been demonstrated."
    },
    {
     "path": "/data/cfb-market.json",

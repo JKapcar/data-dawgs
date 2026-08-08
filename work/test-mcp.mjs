@@ -786,6 +786,8 @@ function refNcdf(z) {
   ok(d.machine.data.includes("/data/cfb-ratings.json") && d.machine.data.includes("/data/cfb-model-receipts.json") &&
      d.machine.data.includes("/data/cfb-team-game.json") && d.machine.data.includes("/data/cfb-team-week.json") && d.machine.data.includes("/data/cfb-teams.json"),
      "site map includes the canonical CFB registry, receipt ledger and results layers");
+  ok(d.machine.data.includes("/data/cfb-record-divergence.json"),
+     "site map includes the descriptive CFB record-divergence baseline");
 }
 
 /* ----------------------- source-level safety asserts ----------------------- */

@@ -397,6 +397,29 @@ console.log('\nCFB compact team profiles — facts and modelled rating stay sepa
   else ok(`${teams.length} compact profiles preserve separate observed and retrodictive objects`);
 }
 
+console.log('\nCFB record divergence — descriptive baseline, not a verdict');
+{
+  const teamGame = JSON.parse(fs.readFileSync(path.join(DATA, 'cfb-team-game.json'), 'utf8'));
+  const profiles = JSON.parse(fs.readFileSync(path.join(DATA, 'cfb-teams.json'), 'utf8'));
+  const divergence = JSON.parse(fs.readFileSync(path.join(DATA, 'cfb-record-divergence.json'), 'utf8'));
+  const rows = divergence.data && divergence.data.rows;
+  if (!Array.isArray(rows) || rows.length !== profiles.data.teams.length)
+    fail('cfb-record-divergence.json: row count differs from compact profiles');
+  else if (divergence.data.status !== 'descriptive-baseline' || divergence.graded !== false ||
+           divergence.data.predictive_validation.forward_value_claimed !== false)
+    fail('cfb-record-divergence.json: descriptive evidence boundary is missing');
+  else if (divergence.data.inputs.team_game_snapshot_id !== teamGame.integrity.snapshot_id ||
+           divergence.data.inputs.team_profiles_snapshot_id !== profiles.integrity.snapshot_id)
+    fail('cfb-record-divergence.json: input snapshot receipts drifted');
+  else if (rows.some(row => row.predictive_label !== null ||
+      row.record_scoring_rank_gap !== row.scoring_rank - row.record_rank ||
+      row.one_score_games.games !== row.one_score_games.wins + row.one_score_games.losses + row.one_score_games.ties))
+    fail('cfb-record-divergence.json: a row invents a label or fails arithmetic reconciliation');
+  else if (!/^sha256:[0-9a-f]{64}$/.test(divergence.integrity.snapshot_id || ''))
+    fail('cfb-record-divergence.json: canonical snapshot identifier is missing');
+  else ok(`${rows.length} descriptive divergence rows publish no predictive labels`);
+}
+
 console.log('\nWorker deployment contract');
 {
   const configPath = path.join(ROOT, 'wrangler.jsonc');
