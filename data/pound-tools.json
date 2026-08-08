@@ -1137,9 +1137,11 @@
    "delivery_evidence": [
     "/data/cfb-market.json",
     "/scripts/cfb_market.py",
-    "/tests/test_cfb_market.py"
+    "/tests/test_cfb_market.py",
+    "/work/mcp-block.js",
+    "/work/test-mcp.mjs"
    ],
-   "delivery_note": "Partially implemented. Historical book prices are live with explicit unknown timing; the timestamped prospective Worker collector still needs activation.",
+   "delivery_note": "Partially implemented. Historical book prices are live with explicit unknown timing and have a staged no-CLV MCP reader; the timestamped prospective Worker collector still needs activation.",
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 1,
@@ -1149,7 +1151,9 @@
    "dependencies": [
     "cfb-games"
    ],
-   "candidate_mcp_tools": [],
+   "candidate_mcp_tools": [
+    "dd_find_cfb_historical_market"
+   ],
    "components": [],
    "related_ideas": [
     "cfb-ratings-registry",
@@ -1171,7 +1175,7 @@
    "rationale": "Canonical spreads, totals and relevant market observations. The market is the permanent benchmark every model must beat.",
    "expected_value": "Market baselines for grading; closing lines retained wherever possible for model evaluation.",
    "data_source_requirements": "A lawful, dated market feed with book and timestamp provenance — the same gate the NFL side already enforces.",
-   "deterministic_tool_potential": "Indirect — benchmark layer.",
+   "deterministic_tool_potential": "Yes — bounded historical market reads, with timing limitations enforced in the response.",
    "validation_requirement": "Every observation carries book, timestamp and line; closing-line retention is checked, not assumed.",
    "risks_limitations": "Historical closing lines with provenance are the hardest part; unprovenanced market numbers stay out, as on the NFL side.",
    "tags": [
@@ -3241,7 +3245,7 @@
     {
      "status": "building",
      "on": "2026-08-08",
-     "note": "Implemented and evaluated canonical game lookup, team profile, comparison, hypothetical Elo matchup, exact hypothetical schedule-path, descriptive record-divergence, blocked model-disagreement and prospective-receipt status tools locally; all remain staged and non-callable in production."
+     "note": "Implemented and evaluated canonical game and historical market lookup, team profile, comparison, hypothetical Elo matchup, exact hypothetical schedule-path, descriptive record-divergence, blocked model-disagreement and prospective-receipt status tools locally; all remain staged and non-callable in production."
     }
    ],
    "implemented": true,
@@ -3250,9 +3254,10 @@
     "/work/test-mcp.mjs",
     "/data/cfb-ratings.json",
     "/data/cfb-record-divergence.json",
-    "/data/cfb-record-divergence-validation.json"
+    "/data/cfb-record-divergence-validation.json",
+    "/data/cfb-market.json"
    ],
-   "delivery_note": "Eight source-backed CFB tools are implemented locally and staged, including canonical game lookup, exact matchup and schedule-path calculations, plus no-label divergence, blocked-study and prospective-receipt status readers. Production still has 26 live tools; deployment requires a separate approved Worker release.",
+   "delivery_note": "Nine source-backed CFB tools are implemented locally and staged, including canonical game and no-CLV historical market lookup, exact matchup and schedule-path calculations, plus no-label divergence, blocked-study and prospective-receipt status readers. Production still has 26 live tools; deployment requires a separate approved Worker release.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": null,
@@ -3262,6 +3267,7 @@
    ],
    "dependencies": [
     "cfb-games",
+    "cfb-market",
     "cfb-ratings-registry",
     "cfb-disagreement-lab",
     "cfb-consensus-engine",
@@ -3274,6 +3280,7 @@
    ],
    "candidate_mcp_tools": [
     "dd_find_cfb_games",
+    "dd_find_cfb_historical_market",
     "dd_cfb_team_profile",
     "dd_compare_cfb_teams",
     "dd_project_cfb_matchup",

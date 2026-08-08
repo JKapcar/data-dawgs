@@ -239,6 +239,42 @@ const cfbScheduleJson = {
     ],
   },
 };
+const cfbMarketJson = {
+  as_of: "2026-08-08",
+  source: "test historical CFB prices with unknown observation timing",
+  built: "2026-08-08",
+  integrity: { snapshot_id: "sha256:test-cfb-market", games: 3, games_with_devig_probability: 2, rejected_quotes: 1 },
+  provenance: {
+    observation_timestamp_available: false,
+    price_timing: "unknown",
+    devig_method: "proportional normalization of two-way raw implied probabilities",
+  },
+  data: {
+    season: 2025,
+    rejected_quotes: [{ game_id: "2025_post_01_ohio-state_georgia", book: "Test Book", reason: "impossible hold" }],
+    games: [
+      {
+        game_id: "2025_regu_01_iowa-state_kansas-state", upstream_game_id: "401", season: 2025, week: 1,
+        kickoff_at: "2025-08-23T16:00:00Z", home_team: "Kansas State", away_team: "Iowa State",
+        books: [{ book: "DraftKings", spread_home: -3.5, spread_open_home: -3.5, total: 49.5, total_open: 49.5,
+          moneyline_home: -162, moneyline_away: 136, devig_home_win_probability: 0.59337, hold: 0.042049 }],
+        median_spread_home: -3.5, median_total: 49.5, median_devig_home_win_probability: 0.59337, books_quoting: 1,
+      },
+      {
+        game_id: "2025_regu_12_michigan_ohio-state", upstream_game_id: "402", season: 2025, week: 12,
+        kickoff_at: "2025-11-29T17:00:00Z", home_team: "Ohio State", away_team: "Michigan",
+        books: [{ book: "DraftKings", spread_home: -7.5, spread_open_home: -6.5, total: 45.5, total_open: 46.5,
+          moneyline_home: -300, moneyline_away: 240, devig_home_win_probability: 0.730435, hold: 0.036765 }],
+        median_spread_home: -7.5, median_total: 45.5, median_devig_home_win_probability: 0.730435, books_quoting: 1,
+      },
+      {
+        game_id: "2025_post_01_ohio-state_georgia", upstream_game_id: "403", season: 2025, week: 1,
+        kickoff_at: "2026-01-02T01:00:00Z", home_team: "Georgia", away_team: "Ohio State",
+        books: [], median_spread_home: null, median_total: null, median_devig_home_win_probability: null, books_quoting: 0,
+      },
+    ],
+  },
+};
 
 let netMode = "normal"; // normal | dbdown | emptyRoom | espnDown | simulatedRoom | simulatedSettings
 globalThis.fetch = async (input, init) => {
@@ -268,6 +304,7 @@ globalThis.fetch = async (input, init) => {
   if (u.includes("datadawgs216.com/data/cfb-disagreement.json")) return J(cfbDisagreementJson);
   if (u.includes("datadawgs216.com/data/cfb-model-receipts.json")) return J(cfbModelReceiptsJson);
   if (u.includes("datadawgs216.com/data/cfb-schedule.json")) return J(cfbScheduleJson);
+  if (u.includes("datadawgs216.com/data/cfb-market.json")) return J(cfbMarketJson);
   if (u.includes("datadawgs216.com/dfs.html")) return new Response(dfsHtml, { status: 200 });
   if (u.includes("site.api.espn.com")) {
     if (netMode === "espnDown") return new Response("no", { status: 403 });
@@ -356,12 +393,12 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 {
   const j = await (await req(rpc("tools/list"))).json();
   const t = j.result.tools;
-  ok(t.length === 34, "thirty-four tools listed in the staged Worker source");
+  ok(t.length === 35, "thirty-five tools listed in the staged Worker source");
   ok(t.every(x => x.name.startsWith("dd_")), "all tools dd_-prefixed");
   ok(t.every(x => x.inputSchema && x.inputSchema.type === "object"), "all tools carry an inputSchema");
   for (const name of ["dd_convert_odds", "dd_devig_market", "dd_price_parlay", "dd_calculate_bet_ev",
     "dd_calculate_hedge", "dd_nfl_passer_rating", "dd_score_forecast", "dd_summarize_beliefs",
-    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_project_cfb_schedule_path", "dd_find_cfb_record_divergence", "dd_get_cfb_model_disagreement", "dd_get_cfb_model_receipt_status", "dd_find_cfb_games", "dd_optimize_survivor_path"])
+    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_project_cfb_schedule_path", "dd_find_cfb_record_divergence", "dd_get_cfb_model_disagreement", "dd_get_cfb_model_receipt_status", "dd_find_cfb_games", "dd_find_cfb_historical_market", "dd_optimize_survivor_path"])
     ok(t.some(x => x.name === name), name + " is listed");
 }
 // dd_league_overview
@@ -963,6 +1000,41 @@ function refNcdf(z) {
   const extra = await (await req(call("dd_find_cfb_games", { include_odds: true }))).json();
   ok([partial, missingGame, badWeek, badConference, badSort, extra].every(result => result.result.isError === true),
      "CFB game finder fails closed on partial, missing, out-of-range and unsupported inputs");
+}
+// dd_find_cfb_historical_market: queryable book prices whose unknown timing is
+// enforced in both source validation and every response boundary.
+{
+  const j = await (await req(call("dd_find_cfb_historical_market", { team: "Ohio State", sort: "kickoff-asc" }))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.season === 2025 && d.returned === 2 && d.games[0].game_id === "2025_regu_12_michigan_ohio-state" &&
+     d.games[1].books.length === 0,
+     "CFB historical market resolves one exact team and retains explicitly unpriced games");
+  ok(d.observation_timestamp_available === false && d.price_timing === "unknown" &&
+     d.verified_closing_lines === false && d.clv_supported === false &&
+     d.prospective_input_eligible === false && d.current_market === false,
+     "CFB historical market mechanically refuses closing-line, CLV, prospective and current-market claims");
+  ok(d.games[0].books[0].source_labelled_open_spread_home === -6.5 &&
+     !("spread_open_home" in d.games[0].books[0]) && d.rejected_quote_count === 1 &&
+     d.warnings.some(x => /Never call these closing lines/i.test(x)),
+     "CFB historical market relabels source-open fields and publishes rejection/caveat context");
+}
+{
+  const book = text(await (await req(call("dd_find_cfb_historical_market", { book: "draftkings", priced_only: true, limit: 1 }))).json());
+  const exact = text(await (await req(call("dd_find_cfb_historical_market", { game_id: "2025_regu_01_iowa-state_kansas-state" }))).json());
+  ok(book.query.book === "DraftKings" && book.matched_before_limit === 2 && book.returned === 1 && book.games[0].books.length === 1,
+     "CFB historical market applies exact book, priced-only and limit filters");
+  ok(exact.returned === 1 && exact.games[0].median_devig_home_win_probability === 0.59337,
+     "CFB historical market resolves an exact canonical game id");
+}
+{
+  const partial = await (await req(call("dd_find_cfb_historical_market", { team: "state" }))).json();
+  const missingGame = await (await req(call("dd_find_cfb_historical_market", { game_id: "2026_missing" }))).json();
+  const badBook = await (await req(call("dd_find_cfb_historical_market", { book: "Mystery Book" }))).json();
+  const badPriced = await (await req(call("dd_find_cfb_historical_market", { priced_only: "yes" }))).json();
+  const badLimit = await (await req(call("dd_find_cfb_historical_market", { limit: 26 }))).json();
+  const extra = await (await req(call("dd_find_cfb_historical_market", { closing_only: true }))).json();
+  ok([partial, missingGame, badBook, badPriced, badLimit, extra].every(result => result.result.isError === true),
+     "CFB historical market fails closed on partial, invented, mistyped and closing-line inputs");
 }
 // dd_scores: reuses handleScores with sport+dates
 {

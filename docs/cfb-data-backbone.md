@@ -47,6 +47,15 @@ The NFL backbone drops its upstream market columns entirely because they identif
 
 Four Bovada moneyline quotes in 2025 are internally impossible (both sides priced the same way, implying a 34 to 60 percent hold). They are dropped from the priced rows and published in `data.rejected_quotes` with the reason, rather than silently discarded. If rejections ever exceed one percent of quotes the refresh fails instead of publishing a degraded feed.
 
+`dd_find_cfb_historical_market` is the staged bounded read of this explicitly limited
+surface. It can resolve an exact game or team and filter by week, exact book or the
+presence of a devigged probability. Every response repeats
+`observation_timestamp_available: false`, `price_timing: unknown`,
+`verified_closing_lines: false` and `clv_supported: false`. Upstream fields labelled
+"open" are renamed `source_labelled_open_*`; that preserves the source observation
+without upgrading its unknown timing into a verified line history. The tool is for
+historical reference only and cannot supply a prospective receipt or current edge.
+
 ## Elo baseline (roadmap step 2, idea cfb-elo)
 
 `scripts/cfb_elo.py refresh` ingests seasons 2018-2025 through the same canonicalization and gates, runs a deliberately simple deterministic Elo (parameters fixed in the script before evaluation), and publishes `/data/cfb-elo.json`: end-of-2025 ratings plus a retrodictive 2025 backtest against reference points (always-pick-home, climatological Brier, ESPN pregame-Elo favorite accuracy from the raw snapshot). It is the interpretable floor future CFB models must beat, per the Baseline Requirement. It is modelled output, ungraded, and says nothing about 2026 until prospective receipts exist.
