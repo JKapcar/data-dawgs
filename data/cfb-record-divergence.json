@@ -18,7 +18,7 @@
   ]
  },
  "integrity": {
-  "snapshot_id": "sha256:77bab3ba61ccd68ef9e6a2ea627de3881f8454d1d3237cfaabd0c89c894db0d4",
+  "snapshot_id": "sha256:da8258679118937db92037f88229ddb79a053f08fa22185574b01569185ee46c",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for the data object (sorted object keys, no insignificant whitespace).",
   "rows": 136
  },
@@ -36,9 +36,11 @@
    "record_scoring_rank_gap": "scoring_rank - record_rank; positive means the observed record ranks better than scoring margin."
   },
   "predictive_validation": {
-   "status": "not-run",
+   "status": "evaluated-separately",
+   "evidence_url": "/data/cfb-record-divergence-validation.json",
    "forward_value_claimed": false,
-   "required_next_test": "Freeze the metric prospectively by week and test whether the gap predicts future results beyond Elo and the timestamped market on held-out games."
+   "team_labels_permitted": false,
+   "remaining_gate": "Freeze the metric in prospective receipts and test whether the gap adds value beyond Elo and timestamped pregame market observations before permitting current-team labels."
   },
   "unavailable": [
    "opponent adjustment",

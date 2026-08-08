@@ -406,7 +406,10 @@ console.log('\nCFB record divergence — descriptive baseline, not a verdict');
   if (!Array.isArray(rows) || rows.length !== profiles.data.teams.length)
     fail('cfb-record-divergence.json: row count differs from compact profiles');
   else if (divergence.data.status !== 'descriptive-baseline' || divergence.graded !== false ||
-           divergence.data.predictive_validation.forward_value_claimed !== false)
+           divergence.data.predictive_validation.status !== 'evaluated-separately' ||
+           divergence.data.predictive_validation.evidence_url !== '/data/cfb-record-divergence-validation.json' ||
+           divergence.data.predictive_validation.forward_value_claimed !== false ||
+           divergence.data.predictive_validation.team_labels_permitted !== false)
     fail('cfb-record-divergence.json: descriptive evidence boundary is missing');
   else if (divergence.data.inputs.team_game_snapshot_id !== teamGame.integrity.snapshot_id ||
            divergence.data.inputs.team_profiles_snapshot_id !== profiles.integrity.snapshot_id)

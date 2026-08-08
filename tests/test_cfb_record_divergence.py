@@ -53,8 +53,12 @@ class RecordDivergenceTests(unittest.TestCase):
             self.assertEqual(summary["wins"] + summary["losses"] + summary["ties"], len(close))
 
     def test_no_predictive_or_fraud_labels_are_published(self):
-        self.assertEqual(self.envelope["data"]["predictive_validation"]["status"], "not-run")
-        self.assertFalse(self.envelope["data"]["predictive_validation"]["forward_value_claimed"])
+        validation = self.envelope["data"]["predictive_validation"]
+        self.assertEqual(validation["status"], "evaluated-separately")
+        self.assertEqual(validation["evidence_url"], "/data/cfb-record-divergence-validation.json")
+        self.assertFalse(validation["forward_value_claimed"])
+        self.assertFalse(validation["team_labels_permitted"])
+        self.assertIn("prospective receipts", validation["remaining_gate"])
         self.assertTrue(all(row["predictive_label"] is None for row in self.envelope["data"]["rows"]))
         self.assertIn("not a Fraud Detector verdict", self.envelope["note"])
 

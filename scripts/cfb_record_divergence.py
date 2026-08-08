@@ -114,11 +114,13 @@ def build(team_game_envelope: dict[str, Any], profiles_envelope: dict[str, Any])
             "record_scoring_rank_gap": "scoring_rank - record_rank; positive means the observed record ranks better than scoring margin.",
         },
         "predictive_validation": {
-            "status": "not-run",
+            "status": "evaluated-separately",
+            "evidence_url": "/data/cfb-record-divergence-validation.json",
             "forward_value_claimed": False,
-            "required_next_test": (
-                "Freeze the metric prospectively by week and test whether the gap predicts future results "
-                "beyond Elo and the timestamped market on held-out games."
+            "team_labels_permitted": False,
+            "remaining_gate": (
+                "Freeze the metric in prospective receipts and test whether the gap adds value beyond Elo "
+                "and timestamped pregame market observations before permitting current-team labels."
             ),
         },
         "unavailable": [
@@ -167,7 +169,12 @@ def validate_envelope(envelope: dict[str, Any], team_game: dict[str, Any], profi
     data = envelope.get("data")
     if not isinstance(data, dict) or data.get("schema_version") != 1 or data.get("status") != "descriptive-baseline":
         raise ContractError("cfb-record-divergence must be a descriptive schema_version 1 baseline")
-    if envelope.get("graded") is not False or data.get("predictive_validation", {}).get("forward_value_claimed") is not False:
+    predictive = data.get("predictive_validation", {})
+    if (envelope.get("graded") is not False or
+            predictive.get("status") != "evaluated-separately" or
+            predictive.get("evidence_url") != "/data/cfb-record-divergence-validation.json" or
+            predictive.get("forward_value_claimed") is not False or
+            predictive.get("team_labels_permitted") is not False):
         raise ContractError("cfb-record-divergence overstates predictive evidence")
     if any(row.get("predictive_label") is not None for row in data.get("rows", [])):
         raise ContractError("cfb-record-divergence cannot publish predictive labels")
