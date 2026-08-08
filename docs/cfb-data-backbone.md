@@ -118,6 +118,11 @@ facts and lock the team-game and schedule snapshots; the same canonical game can
 once for each FBS participant. At about 0.1 MB, it is a small observed-results lookup,
 not current-2026 form, a forecast or a model grade.
 
+`dd_find_cfb_latest_games` is the staged bounded multi-team read over that compact
+surface. It can resolve one exact team or filter across exact conference, opponent
+division, season type, result and site with hard pagination. Every response preserves
+the dated-2025 and observed-results-only boundary.
+
 `dd_find_cfb_latest_team_periods` is the staged bounded read over that compact file. It
 can resolve an exact team or filter by division, exact conference, season type and the
 sign of the latest period's aggregate observed point differential, with hard pagination.
