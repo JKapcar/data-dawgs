@@ -17,7 +17,7 @@ const server=http.createServer((req,res)=>{
 });
 await new Promise(r=>server.listen(8917,r));
 const b=await chromium.launch({executablePath:chromiumExecutable(chromium),args:["--no-sandbox"]});
-const PAGES=["auction.html","bigboard.html","board.html","bozo.html","connect.html","dashboard.html",
+const PAGES=["auction.html","bigboard.html","board.html","bozo.html","cfb.html","connect.html","dashboard.html",
  "dataviz.html","dawgs.html","dfs.html","guillotine.html","index.html","master.html","nfelo.html",
  "pound.html","receipts.html","report.html","signon.html","stats.html","strategy.html","survivor.html"];
 const errs=[];
@@ -84,7 +84,9 @@ for(const W of [1280,390,320]){
        bigboard 390 (+45) and 320 (+80): .pf-stat is white-space:nowrap, and stacking
          .projfoot into a column made it a 480px shrink-to-fit item nothing clipped.
        guillotine 320 (+47): the <code> sample league URL could not wrap.
-     Still open, both 320-only and neither diagnosed: dataviz (+21), dfs (+9). */
+     Still open, both 320-only and neither diagnosed: dataviz (+21), dfs (+9).
+     cfb.html joined this list on 8/8 with NO exemption — its tables scroll inside
+     .cfbwrap so the document never grows. */
   const KNOWN=new Set(["dataviz.html@320","dfs.html@320"]);
   if(!KNOWN.has(tag)) ok(tag+" no sideways scroll",r.hoverflow===false);
   await ctx.close();
