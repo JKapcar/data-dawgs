@@ -283,7 +283,7 @@ const CFB_IDEAS = [
       { status: 'building', on: ROADMAP_AS_OF, note: 'Published results-only team-period history and an exact compact latest row per team with opponent, venue, overall record, non-authoritative regular-season conference record and scoring facts. Advanced analytical metrics remain gated.' },
     ],
     delivery_evidence: ['/data/cfb-team-week.json', '/data/cfb-team-week-latest.json', '/scripts/cfb_team_results.py', '/tests/test_cfb_team_results.py', '/work/mcp-block.js'],
-    delivery_note: 'Partially implemented. The live surfaces contain observed results, season-to-date scoring/record facts, an explicitly non-authoritative regular-season conference record and a compact exact latest-period row per team, with bounded history and latest readers staged locally; play, opponent-adjusted and market-performance metrics remain unavailable.',
+    delivery_note: 'Partially implemented. The live surfaces contain observed results, season-to-date scoring/record facts, an explicitly non-authoritative regular-season conference record and a compact exact latest-period row per team, with bounded history and latest readers staged locally. The latest reader can compare conference records arithmetically but publishes no official rank or tiebreaker result; play, opponent-adjusted and market-performance metrics remain unavailable.',
     category: 'foundation', recommendation: 'build', recommendation_modifiers: ['foundation', 'high-priority'],
     priority: 'high', roadmap_step: 1,
     source_headings: ['CFB Team-Week Analytical Layer'],

@@ -130,7 +130,9 @@ the dated-2025 and observed-results-only boundary.
 `dd_find_cfb_latest_team_periods` is the staged bounded read over that compact file. It
 can resolve an exact team or filter by division, exact conference, season type and the
 sign of the latest period's aggregate observed point differential, with hard pagination.
-Every response repeats that latest is dated 2025 coverage and that FCS records are partial.
+It can order rows by conference win percentage, wins and point differential, but publishes
+no conference rank and does not apply conference-specific tiebreakers. Every response
+repeats that latest is dated 2025 coverage and that FCS records are partial.
 
 `scripts/cfb_team_profiles.py refresh` adds `/data/cfb-teams.json`, a compact 136-team
 read surface. It joins each FBS team's observed season-to-date record and scoring facts

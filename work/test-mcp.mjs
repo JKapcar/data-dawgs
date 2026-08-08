@@ -1364,6 +1364,13 @@ function refNcdf(z) {
   const negative = text(await (await req(call("dd_find_cfb_latest_team_periods", { period_outcome: "negative" }))).json());
   ok(negative.returned === 1 && negative.rows[0].team === "Akron",
      "CFB latest-period outcome filter uses aggregate observed point-differential direction");
+  const conferenceOrder = text(await (await req(call("dd_find_cfb_latest_team_periods", {
+    sort: "conference-record-desc"
+  }))).json());
+  ok(conferenceOrder.rows.map(row => row.team).join(",") === "Ohio State,Akron" &&
+     conferenceOrder.rows.every(row => !("conference_rank" in row)) &&
+     conferenceOrder.warnings.some(value => /descriptive arithmetic order/i.test(value)),
+     "CFB latest-period reader compares conference records without inventing official ranks");
 }
 {
   const partial = await (await req(call("dd_find_cfb_latest_team_periods", { team: "state" }))).json();
@@ -1371,8 +1378,9 @@ function refNcdf(z) {
   const outcome = await (await req(call("dd_find_cfb_latest_team_periods", { period_outcome: "win" }))).json();
   const offset = await (await req(call("dd_find_cfb_latest_team_periods", { offset: 400 }))).json();
   const limit = await (await req(call("dd_find_cfb_latest_team_periods", { limit: 51 }))).json();
+  const sort = await (await req(call("dd_find_cfb_latest_team_periods", { sort: "official-standing" }))).json();
   const extra = await (await req(call("dd_find_cfb_latest_team_periods", { current: true }))).json();
-  ok([partial, conference, outcome, offset, limit, extra].every(result => result.result.isError === true),
+  ok([partial, conference, outcome, offset, limit, sort, extra].every(result => result.result.isError === true),
      "CFB latest-period reader fails closed on partial, invented, out-of-range and unsupported inputs");
 }
 // dd_find_cfb_team_periods: bounded results-only team history with repeated

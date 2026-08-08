@@ -1343,7 +1343,7 @@
     "/tests/test_cfb_team_results.py",
     "/work/mcp-block.js"
    ],
-   "delivery_note": "Partially implemented. The live surfaces contain observed results, season-to-date scoring/record facts, an explicitly non-authoritative regular-season conference record and a compact exact latest-period row per team, with bounded history and latest readers staged locally; play, opponent-adjusted and market-performance metrics remain unavailable.",
+   "delivery_note": "Partially implemented. The live surfaces contain observed results, season-to-date scoring/record facts, an explicitly non-authoritative regular-season conference record and a compact exact latest-period row per team, with bounded history and latest readers staged locally. The latest reader can compare conference records arithmetically but publishes no official rank or tiebreaker result; play, opponent-adjusted and market-performance metrics remain unavailable.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 1,

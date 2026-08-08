@@ -1056,7 +1056,8 @@ function mcpCfbLatestPeriodArgs(args) {
     throw new Error("season_type must be all, regular or postseason");
   if (!["all", "positive", "negative", "even"].includes(out.periodOutcome))
     throw new Error("period_outcome must be all, positive, negative or even");
-  if (!["team-asc", "through-desc"].includes(out.sort)) throw new Error("sort must be team-asc or through-desc");
+  if (!["team-asc", "through-desc", "conference-record-desc"].includes(out.sort))
+    throw new Error("sort must be team-asc, through-desc or conference-record-desc");
   if (!Number.isInteger(out.offset) || out.offset < 0 || out.offset > 399)
     throw new Error("offset must be a whole number from 0 through 399");
   if (!Number.isInteger(out.limit) || out.limit < 1 || out.limit > 50)
@@ -3254,7 +3255,7 @@ const MCP_TOOLS = [
         conference: { type: "string", minLength: 1, maxLength: 80, description: "Optional exact conference name, case-insensitive." },
         season_type: { type: "string", enum: ["all", "regular", "postseason"], default: "all" },
         period_outcome: { type: "string", enum: ["all", "positive", "negative", "even"], default: "all", description: "Filter the latest period by the sign of its observed point differential; a period can contain multiple games." },
-        sort: { type: "string", enum: ["team-asc", "through-desc"], default: "team-asc" },
+        sort: { type: "string", enum: ["team-asc", "through-desc", "conference-record-desc"], default: "team-asc", description: "conference-record-desc orders by observed regular-season conference win percentage, then wins and point differential; it is not an official standing." },
         offset: { type: "integer", minimum: 0, maximum: 399, default: 0 },
         limit: { type: "integer", minimum: 1, maximum: 50, default: 25 },
       },
@@ -3276,14 +3277,23 @@ const MCP_TOOLS = [
         return input.periodOutcome === "all" || (input.periodOutcome === "positive" && differential > 0) ||
           (input.periodOutcome === "negative" && differential < 0) || (input.periodOutcome === "even" && differential === 0);
       };
+      const conferenceWinPercentage = row => {
+        const record = row.conference_regular_season_to_date;
+        return record.games ? (record.wins + 0.5 * record.ties) / record.games : -1;
+      };
       const matches = allRows.filter(row =>
         (!team || row.team_slug === team.team_slug) &&
         (input.division === "all" || row.division === input.division) &&
         (!conference || row.conference === conference) &&
         (input.seasonType === "all" || row.latest_period.season_type === input.seasonType) && outcomeMatches(row)
-      ).sort((a, b) => input.sort === "team-asc"
-        ? a.team.localeCompare(b.team) || a.team_slug.localeCompare(b.team_slug)
-        : b.through_at.localeCompare(a.through_at) || a.team.localeCompare(b.team));
+      ).sort((a, b) => {
+        if (input.sort === "team-asc") return a.team.localeCompare(b.team) || a.team_slug.localeCompare(b.team_slug);
+        if (input.sort === "through-desc") return b.through_at.localeCompare(a.through_at) || a.team.localeCompare(b.team);
+        const aRecord = a.conference_regular_season_to_date;
+        const bRecord = b.conference_regular_season_to_date;
+        return conferenceWinPercentage(b) - conferenceWinPercentage(a) || bRecord.wins - aRecord.wins ||
+          bRecord.point_differential - aRecord.point_differential || a.team.localeCompare(b.team);
+      });
       const rows = matches.slice(input.offset, input.offset + input.limit);
       return toolText({
         query: { team: team ? team.team : null, division: input.division, conference, season_type: input.seasonType,
@@ -3311,6 +3321,7 @@ const MCP_TOOLS = [
           "Latest means the last covered period in the dated 2025 FBS-involved schedule, not current 2026 form.",
           "FCS season-to-date records include only games against FBS opponents and are not complete FCS season records.",
           "Conference records include only final regular-season rows marked conference_game and are not official standings, ranks or tiebreakers.",
+          "conference-record-desc is a descriptive arithmetic order only; it does not apply conference-specific standings rules.",
           "period_outcome is the sign of the aggregate observed point differential; one period can contain multiple games.",
           "EPA, opponent-adjusted and market-performance metrics are unavailable in this results-only surface.",
         ],
