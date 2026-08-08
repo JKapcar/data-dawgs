@@ -29,6 +29,10 @@ python3 scripts/cfb_data_backbone.py validate
 node tools/validate-data.js
 ```
 
+## Elo baseline (roadmap step 2, idea cfb-elo)
+
+`scripts/cfb_elo.py refresh` ingests seasons 2018-2025 through the same canonicalization and gates, runs a deliberately simple deterministic Elo (parameters fixed in the script before evaluation), and publishes `/data/cfb-elo.json`: end-of-2025 ratings plus a retrodictive 2025 backtest against reference points (always-pick-home, climatological Brier, ESPN pregame-Elo favorite accuracy from the raw snapshot). It is the interpretable floor future CFB models must beat, per the Baseline Requirement. It is modelled output, ungraded, and says nothing about 2026 until prospective receipts exist.
+
 ## Known limits and next steps
 
 - The 2026 season file does not exist upstream yet (checked 2026-08-08). When cfbfastR-data publishes it, `refresh --season 2026` produces the prospective schedule; until then the canonical surface is the completed 2025 season.

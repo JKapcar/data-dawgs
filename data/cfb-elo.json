@@ -1,0 +1,1056 @@
+{
+ "as_of": "2026-08-08",
+ "source": "Deterministic Elo over canonical cfbfastR-data schedule facts, seasons 2018-2025 (source repository HEAD 935eed66a08c95822992fd182495848ac4303f96 at capture; per-season raw hashes inside).",
+ "tier": "labs",
+ "graded": false,
+ "note": "MODELLED OUTPUT, and a deliberately simple baseline at that. The backtest is retrodictive: 2025 outcomes were known before this file was built. It exists so future CFB models have an interpretable floor to beat (Baseline Requirement). No prospective CFB forecast receipts exist yet; nothing here is graded.",
+ "provenance": {
+  "engine": "scripts/cfb_elo.py",
+  "inputs": "data/cfb-schedule.json contract via scripts/cfb_data_backbone.py canonicalization",
+  "source_repository": "sportsdataverse/cfbfastR-data",
+  "source_repo_head_at_capture": "935eed66a08c95822992fd182495848ac4303f96",
+  "parameters_fixed_before_evaluation": true,
+  "captured_at": "2026-08-08T06:02:30.278414Z"
+ },
+ "integrity": {
+  "snapshot_id": "sha256:f4d48298e4965ec49f62f498823d2964eddfd2c903c891c5a587c1e98e6ad28a",
+  "algorithm": "SHA-256 of canonical UTF-8 JSON for the data object (sorted object keys, no insignificant whitespace).",
+  "rated_teams": 136
+ },
+ "data": {
+  "params": {
+   "base_rating": 1500.0,
+   "non_fbs_pool_rating": 1200.0,
+   "k_factor": 35.0,
+   "home_field_elo": 55.0,
+   "season_reversion_to_mean": 0.3333333333333333,
+   "mov_formula": "ln(|margin|+1) * 2.2 / (0.001*|winner_elo_diff| + 2.2)",
+   "burn_in_seasons": [
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024
+   ],
+   "evaluation_season": 2025
+  },
+  "seasons_ingested": [
+   {
+    "season": "2018",
+    "source_raw_sha256": "a4d4c2ccd06f933c1b6848b3ef4fddbc56695f6b066c9376b1249bfb9d29c00f",
+    "rows_canonical": "845"
+   },
+   {
+    "season": "2019",
+    "source_raw_sha256": "d8665fa0aced3d02d59405c8b9ff157ba00ef128a90c1c5eab31d268d917abac",
+    "rows_canonical": "848"
+   },
+   {
+    "season": "2020",
+    "source_raw_sha256": "f902a845a7e79199ab15dff7c3ed91ee7ef1cb54d32ef80fed5aad5c0ac6c316",
+    "rows_canonical": "542"
+   },
+   {
+    "season": "2021",
+    "source_raw_sha256": "91616be40e7f4d611a6e714ee7284cdd7372249888287b05b790019e9397d5fd",
+    "rows_canonical": "849"
+   },
+   {
+    "season": "2022",
+    "source_raw_sha256": "bfee92544d7269f764dcb5726ce5c037837cb100a8c6326e0e4c7103a2e6656d",
+    "rows_canonical": "854"
+   },
+   {
+    "season": "2023",
+    "source_raw_sha256": "7ffc245da1242fc44c021dae724029074aece78544ba498937cc7703417f0dff",
+    "rows_canonical": "910"
+   },
+   {
+    "season": "2024",
+    "source_raw_sha256": "3e4f3cab542657015ff73d1b527c41df58e6a17acf5fbe7d6fb518a1aabcac61",
+    "rows_canonical": "920"
+   },
+   {
+    "season": "2025",
+    "source_raw_sha256": "bfecf10bc5a8ffd2e3b6a76b5f0b03b406e17c1a0e03b2000bdf7e2263712db4",
+    "rows_canonical": "934"
+   }
+  ],
+  "ratings_as_of_end_of_2025": [
+   {
+    "team_slug": "indiana",
+    "team": "Indiana",
+    "conference": "Big Ten",
+    "rating": 2054.8,
+    "games_rated": 96
+   },
+   {
+    "team_slug": "ohio-state",
+    "team": "Ohio State",
+    "conference": "Big Ten",
+    "rating": 1925.8,
+    "games_rated": 99
+   },
+   {
+    "team_slug": "oregon",
+    "team": "Oregon",
+    "conference": "Big Ten",
+    "rating": 1923.0,
+    "games_rated": 99
+   },
+   {
+    "team_slug": "notre-dame",
+    "team": "Notre Dame",
+    "conference": "FBS Independents",
+    "rating": 1922.2,
+    "games_rated": 100
+   },
+   {
+    "team_slug": "georgia",
+    "team": "Georgia",
+    "conference": "SEC",
+    "rating": 1913.1,
+    "games_rated": 103
+   },
+   {
+    "team_slug": "miami",
+    "team": "Miami",
+    "conference": "ACC",
+    "rating": 1907.9,
+    "games_rated": 100
+   },
+   {
+    "team_slug": "ole-miss",
+    "team": "Ole Miss",
+    "conference": "SEC",
+    "rating": 1888.5,
+    "games_rated": 98
+   },
+   {
+    "team_slug": "texas-tech",
+    "team": "Texas Tech",
+    "conference": "Big 12",
+    "rating": 1852.4,
+    "games_rated": 98
+   },
+   {
+    "team_slug": "texas",
+    "team": "Texas",
+    "conference": "SEC",
+    "rating": 1846.0,
+    "games_rated": 101
+   },
+   {
+    "team_slug": "utah",
+    "team": "Utah",
+    "conference": "Big 12",
+    "rating": 1825.7,
+    "games_rated": 95
+   },
+   {
+    "team_slug": "james-madison",
+    "team": "James Madison",
+    "conference": "Sun Belt",
+    "rating": 1791.7,
+    "games_rated": 51
+   },
+   {
+    "team_slug": "alabama",
+    "team": "Alabama",
+    "conference": "SEC",
+    "rating": 1788.1,
+    "games_rated": 103
+   },
+   {
+    "team_slug": "smu",
+    "team": "SMU",
+    "conference": "ACC",
+    "rating": 1781.0,
+    "games_rated": 99
+   },
+   {
+    "team_slug": "iowa",
+    "team": "Iowa",
+    "conference": "Big Ten",
+    "rating": 1780.8,
+    "games_rated": 97
+   },
+   {
+    "team_slug": "byu",
+    "team": "BYU",
+    "conference": "Big 12",
+    "rating": 1779.7,
+    "games_rated": 98
+   },
+   {
+    "team_slug": "texas-a-m",
+    "team": "Texas A&M",
+    "conference": "SEC",
+    "rating": 1764.4,
+    "games_rated": 96
+   },
+   {
+    "team_slug": "vanderbilt",
+    "team": "Vanderbilt",
+    "conference": "SEC",
+    "rating": 1763.4,
+    "games_rated": 95
+   },
+   {
+    "team_slug": "penn-state",
+    "team": "Penn State",
+    "conference": "Big Ten",
+    "rating": 1753.9,
+    "games_rated": 99
+   },
+   {
+    "team_slug": "washington",
+    "team": "Washington",
+    "conference": "Big Ten",
+    "rating": 1731.1,
+    "games_rated": 94
+   },
+   {
+    "team_slug": "oklahoma",
+    "team": "Oklahoma",
+    "conference": "SEC",
+    "rating": 1724.7,
+    "games_rated": 99
+   },
+   {
+    "team_slug": "usc",
+    "team": "USC",
+    "conference": "Big Ten",
+    "rating": 1723.5,
+    "games_rated": 94
+   },
+   {
+    "team_slug": "navy",
+    "team": "Navy",
+    "conference": "American Athletic",
+    "rating": 1719.5,
+    "games_rated": 97
+   },
+   {
+    "team_slug": "old-dominion",
+    "team": "Old Dominion",
+    "conference": "Sun Belt",
+    "rating": 1709.9,
+    "games_rated": 86
+   },
+   {
+    "team_slug": "tcu",
+    "team": "TCU",
+    "conference": "Big 12",
+    "rating": 1704.6,
+    "games_rated": 97
+   },
+   {
+    "team_slug": "louisville",
+    "team": "Louisville",
+    "conference": "ACC",
+    "rating": 1704.2,
+    "games_rated": 99
+   },
+   {
+    "team_slug": "arizona",
+    "team": "Arizona",
+    "conference": "Big 12",
+    "rating": 1700.1,
+    "games_rated": 91
+   },
+   {
+    "team_slug": "tulane",
+    "team": "Tulane",
+    "conference": "American Athletic",
+    "rating": 1694.8,
+    "games_rated": 102
+   },
+   {
+    "team_slug": "duke",
+    "team": "Duke",
+    "conference": "ACC",
+    "rating": 1691.7,
+    "games_rated": 99
+   },
+   {
+    "team_slug": "michigan",
+    "team": "Michigan",
+    "conference": "Big Ten",
+    "rating": 1687.3,
+    "games_rated": 97
+   },
+   {
+    "team_slug": "north-texas",
+    "team": "North Texas",
+    "conference": "American Athletic",
+    "rating": 1674.0,
+    "games_rated": 97
+   },
+   {
+    "team_slug": "ohio",
+    "team": "Ohio",
+    "conference": "Mid-American",
+    "rating": 1668.5,
+    "games_rated": 92
+   },
+   {
+    "team_slug": "western-michigan",
+    "team": "Western Michigan",
+    "conference": "Mid-American",
+    "rating": 1661.2,
+    "games_rated": 93
+   },
+   {
+    "team_slug": "virginia",
+    "team": "Virginia",
+    "conference": "ACC",
+    "rating": 1658.7,
+    "games_rated": 95
+   },
+   {
+    "team_slug": "tennessee",
+    "team": "Tennessee",
+    "conference": "SEC",
+    "rating": 1639.9,
+    "games_rated": 97
+   },
+   {
+    "team_slug": "clemson",
+    "team": "Clemson",
+    "conference": "ACC",
+    "rating": 1639.4,
+    "games_rated": 102
+   },
+   {
+    "team_slug": "illinois",
+    "team": "Illinois",
+    "conference": "Big Ten",
+    "rating": 1638.6,
+    "games_rated": 94
+   },
+   {
+    "team_slug": "east-carolina",
+    "team": "East Carolina",
+    "conference": "American Athletic",
+    "rating": 1637.1,
+    "games_rated": 95
+   },
+   {
+    "team_slug": "iowa-state",
+    "team": "Iowa State",
+    "conference": "Big 12",
+    "rating": 1635.2,
+    "games_rated": 98
+   },
+   {
+    "team_slug": "kansas-state",
+    "team": "Kansas State",
+    "conference": "Big 12",
+    "rating": 1632.0,
+    "games_rated": 97
+   },
+   {
+    "team_slug": "nc-state",
+    "team": "NC State",
+    "conference": "ACC",
+    "rating": 1631.6,
+    "games_rated": 98
+   },
+   {
+    "team_slug": "missouri",
+    "team": "Missouri",
+    "conference": "SEC",
+    "rating": 1631.3,
+    "games_rated": 97
+   },
+   {
+    "team_slug": "army",
+    "team": "Army",
+    "conference": "American Athletic",
+    "rating": 1628.2,
+    "games_rated": 99
+   },
+   {
+    "team_slug": "south-florida",
+    "team": "South Florida",
+    "conference": "American Athletic",
+    "rating": 1627.2,
+    "games_rated": 96
+   },
+   {
+    "team_slug": "minnesota",
+    "team": "Minnesota",
+    "conference": "Big Ten",
+    "rating": 1620.2,
+    "games_rated": 94
+   },
+   {
+    "team_slug": "houston",
+    "team": "Houston",
+    "conference": "Big 12",
+    "rating": 1611.8,
+    "games_rated": 93
+   },
+   {
+    "team_slug": "arizona-state",
+    "team": "Arizona State",
+    "conference": "Big 12",
+    "rating": 1611.4,
+    "games_rated": 91
+   },
+   {
+    "team_slug": "boise-state",
+    "team": "Boise State",
+    "conference": "Mountain West",
+    "rating": 1608.3,
+    "games_rated": 100
+   },
+   {
+    "team_slug": "utsa",
+    "team": "UTSA",
+    "conference": "American Athletic",
+    "rating": 1608.3,
+    "games_rated": 100
+   },
+   {
+    "team_slug": "unlv",
+    "team": "UNLV",
+    "conference": "Mountain West",
+    "rating": 1606.4,
+    "games_rated": 96
+   },
+   {
+    "team_slug": "lsu",
+    "team": "LSU",
+    "conference": "SEC",
+    "rating": 1605.0,
+    "games_rated": 99
+   },
+   {
+    "team_slug": "toledo",
+    "team": "Toledo",
+    "conference": "Mid-American",
+    "rating": 1602.7,
+    "games_rated": 95
+   },
+   {
+    "team_slug": "texas-state",
+    "team": "Texas State",
+    "conference": "Sun Belt",
+    "rating": 1593.5,
+    "games_rated": 99
+   },
+   {
+    "team_slug": "pittsburgh",
+    "team": "Pittsburgh",
+    "conference": "ACC",
+    "rating": 1592.6,
+    "games_rated": 99
+   },
+   {
+    "team_slug": "new-mexico",
+    "team": "New Mexico",
+    "conference": "Mountain West",
+    "rating": 1590.5,
+    "games_rated": 92
+   },
+   {
+    "team_slug": "georgia-tech",
+    "team": "Georgia Tech",
+    "conference": "ACC",
+    "rating": 1581.2,
+    "games_rated": 97
+   },
+   {
+    "team_slug": "washington-state",
+    "team": "Washington State",
+    "conference": "Pac-12",
+    "rating": 1578.5,
+    "games_rated": 90
+   },
+   {
+    "team_slug": "fresno-state",
+    "team": "Fresno State",
+    "conference": "Mountain West",
+    "rating": 1573.4,
+    "games_rated": 95
+   },
+   {
+    "team_slug": "hawai-i",
+    "team": "Hawai'i",
+    "conference": "Mountain West",
+    "rating": 1573.3,
+    "games_rated": 99
+   },
+   {
+    "team_slug": "uconn",
+    "team": "UConn",
+    "conference": "FBS Independents",
+    "rating": 1563.5,
+    "games_rated": 86
+   },
+   {
+    "team_slug": "jacksonville-state",
+    "team": "Jacksonville State",
+    "conference": "Conference USA",
+    "rating": 1562.0,
+    "games_rated": 41
+   },
+   {
+    "team_slug": "wake-forest",
+    "team": "Wake Forest",
+    "conference": "ACC",
+    "rating": 1561.6,
+    "games_rated": 94
+   },
+   {
+    "team_slug": "san-diego-state",
+    "team": "San Diego State",
+    "conference": "Mountain West",
+    "rating": 1558.1,
+    "games_rated": 94
+   },
+   {
+    "team_slug": "northwestern",
+    "team": "Northwestern",
+    "conference": "Big Ten",
+    "rating": 1550.2,
+    "games_rated": 95
+   },
+   {
+    "team_slug": "kennesaw-state",
+    "team": "Kennesaw State",
+    "conference": "Conference USA",
+    "rating": 1531.7,
+    "games_rated": 26
+   },
+   {
+    "team_slug": "western-kentucky",
+    "team": "Western Kentucky",
+    "conference": "Conference USA",
+    "rating": 1531.6,
+    "games_rated": 101
+   },
+   {
+    "team_slug": "louisiana-tech",
+    "team": "Louisiana Tech",
+    "conference": "Conference USA",
+    "rating": 1530.3,
+    "games_rated": 95
+   },
+   {
+    "team_slug": "memphis",
+    "team": "Memphis",
+    "conference": "American Athletic",
+    "rating": 1530.1,
+    "games_rated": 99
+   },
+   {
+    "team_slug": "south-carolina",
+    "team": "South Carolina",
+    "conference": "SEC",
+    "rating": 1528.6,
+    "games_rated": 95
+   },
+   {
+    "team_slug": "florida",
+    "team": "Florida",
+    "conference": "SEC",
+    "rating": 1521.8,
+    "games_rated": 96
+   },
+   {
+    "team_slug": "georgia-southern",
+    "team": "Georgia Southern",
+    "conference": "Sun Belt",
+    "rating": 1514.8,
+    "games_rated": 99
+   },
+   {
+    "team_slug": "nebraska",
+    "team": "Nebraska",
+    "conference": "Big Ten",
+    "rating": 1508.4,
+    "games_rated": 94
+   },
+   {
+    "team_slug": "auburn",
+    "team": "Auburn",
+    "conference": "SEC",
+    "rating": 1502.1,
+    "games_rated": 95
+   },
+   {
+    "team_slug": "marshall",
+    "team": "Marshall",
+    "conference": "Sun Belt",
+    "rating": 1501.8,
+    "games_rated": 95
+   },
+   {
+    "team_slug": "troy",
+    "team": "Troy",
+    "conference": "Sun Belt",
+    "rating": 1500.8,
+    "games_rated": 100
+   },
+   {
+    "team_slug": "rutgers",
+    "team": "Rutgers",
+    "conference": "Big Ten",
+    "rating": 1497.7,
+    "games_rated": 95
+   },
+   {
+    "team_slug": "cincinnati",
+    "team": "Cincinnati",
+    "conference": "Big 12",
+    "rating": 1494.8,
+    "games_rated": 96
+   },
+   {
+    "team_slug": "kentucky",
+    "team": "Kentucky",
+    "conference": "SEC",
+    "rating": 1491.2,
+    "games_rated": 95
+   },
+   {
+    "team_slug": "arkansas-state",
+    "team": "Arkansas State",
+    "conference": "Sun Belt",
+    "rating": 1475.1,
+    "games_rated": 98
+   },
+   {
+    "team_slug": "kansas",
+    "team": "Kansas",
+    "conference": "Big 12",
+    "rating": 1471.4,
+    "games_rated": 94
+   },
+   {
+    "team_slug": "baylor",
+    "team": "Baylor",
+    "conference": "Big 12",
+    "rating": 1471.1,
+    "games_rated": 96
+   },
+   {
+    "team_slug": "miami-oh",
+    "team": "Miami (OH)",
+    "conference": "Mid-American",
+    "rating": 1470.6,
+    "games_rated": 94
+   },
+   {
+    "team_slug": "wisconsin",
+    "team": "Wisconsin",
+    "conference": "Big Ten",
+    "rating": 1467.4,
+    "games_rated": 92
+   },
+   {
+    "team_slug": "louisiana",
+    "team": "Louisiana",
+    "conference": "Sun Belt",
+    "rating": 1460.6,
+    "games_rated": 101
+   },
+   {
+    "team_slug": "delaware",
+    "team": "Delaware",
+    "conference": "Conference USA",
+    "rating": 1448.1,
+    "games_rated": 13
+   },
+   {
+    "team_slug": "florida-international",
+    "team": "Florida International",
+    "conference": "Conference USA",
+    "rating": 1444.3,
+    "games_rated": 90
+   },
+   {
+    "team_slug": "utah-state",
+    "team": "Utah State",
+    "conference": "Mountain West",
+    "rating": 1443.4,
+    "games_rated": 93
+   },
+   {
+    "team_slug": "california",
+    "team": "California",
+    "conference": "ACC",
+    "rating": 1441.8,
+    "games_rated": 91
+   },
+   {
+    "team_slug": "west-virginia",
+    "team": "West Virginia",
+    "conference": "Big 12",
+    "rating": 1439.0,
+    "games_rated": 94
+   },
+   {
+    "team_slug": "ucf",
+    "team": "UCF",
+    "conference": "Big 12",
+    "rating": 1425.4,
+    "games_rated": 95
+   },
+   {
+    "team_slug": "florida-state",
+    "team": "Florida State",
+    "conference": "ACC",
+    "rating": 1422.2,
+    "games_rated": 95
+   },
+   {
+    "team_slug": "air-force",
+    "team": "Air Force",
+    "conference": "Mountain West",
+    "rating": 1416.9,
+    "games_rated": 91
+   },
+   {
+    "team_slug": "missouri-state",
+    "team": "Missouri State",
+    "conference": "Conference USA",
+    "rating": 1412.3,
+    "games_rated": 13
+   },
+   {
+    "team_slug": "arkansas",
+    "team": "Arkansas",
+    "conference": "SEC",
+    "rating": 1410.6,
+    "games_rated": 95
+   },
+   {
+    "team_slug": "coastal-carolina",
+    "team": "Coastal Carolina",
+    "conference": "Sun Belt",
+    "rating": 1410.4,
+    "games_rated": 98
+   },
+   {
+    "team_slug": "mississippi-state",
+    "team": "Mississippi State",
+    "conference": "SEC",
+    "rating": 1408.2,
+    "games_rated": 95
+   },
+   {
+    "team_slug": "ucla",
+    "team": "UCLA",
+    "conference": "Big Ten",
+    "rating": 1406.2,
+    "games_rated": 92
+   },
+   {
+    "team_slug": "central-michigan",
+    "team": "Central Michigan",
+    "conference": "Mid-American",
+    "rating": 1405.1,
+    "games_rated": 92
+   },
+   {
+    "team_slug": "stanford",
+    "team": "Stanford",
+    "conference": "ACC",
+    "rating": 1404.9,
+    "games_rated": 90
+   },
+   {
+    "team_slug": "south-alabama",
+    "team": "South Alabama",
+    "conference": "Sun Belt",
+    "rating": 1399.7,
+    "games_rated": 97
+   },
+   {
+    "team_slug": "michigan-state",
+    "team": "Michigan State",
+    "conference": "Big Ten",
+    "rating": 1384.9,
+    "games_rated": 91
+   },
+   {
+    "team_slug": "liberty",
+    "team": "Liberty",
+    "conference": "Conference USA",
+    "rating": 1383.4,
+    "games_rated": 96
+   },
+   {
+    "team_slug": "boston-college",
+    "team": "Boston College",
+    "conference": "ACC",
+    "rating": 1379.7,
+    "games_rated": 97
+   },
+   {
+    "team_slug": "north-carolina",
+    "team": "North Carolina",
+    "conference": "ACC",
+    "rating": 1376.8,
+    "games_rated": 97
+   },
+   {
+    "team_slug": "colorado",
+    "team": "Colorado",
+    "conference": "Big 12",
+    "rating": 1376.5,
+    "games_rated": 90
+   },
+   {
+    "team_slug": "app-state",
+    "team": "App State",
+    "conference": "Sun Belt",
+    "rating": 1367.4,
+    "games_rated": 99
+   },
+   {
+    "team_slug": "buffalo",
+    "team": "Buffalo",
+    "conference": "Mid-American",
+    "rating": 1366.9,
+    "games_rated": 92
+   },
+   {
+    "team_slug": "temple",
+    "team": "Temple",
+    "conference": "American Athletic",
+    "rating": 1362.7,
+    "games_rated": 91
+   },
+   {
+    "team_slug": "southern-miss",
+    "team": "Southern Miss",
+    "conference": "Sun Belt",
+    "rating": 1360.1,
+    "games_rated": 94
+   },
+   {
+    "team_slug": "maryland",
+    "team": "Maryland",
+    "conference": "Big Ten",
+    "rating": 1354.8,
+    "games_rated": 90
+   },
+   {
+    "team_slug": "virginia-tech",
+    "team": "Virginia Tech",
+    "conference": "ACC",
+    "rating": 1351.3,
+    "games_rated": 96
+   },
+   {
+    "team_slug": "eastern-michigan",
+    "team": "Eastern Michigan",
+    "conference": "Mid-American",
+    "rating": 1346.2,
+    "games_rated": 91
+   },
+   {
+    "team_slug": "florida-atlantic",
+    "team": "Florida Atlantic",
+    "conference": "American Athletic",
+    "rating": 1335.6,
+    "games_rated": 93
+   },
+   {
+    "team_slug": "nevada",
+    "team": "Nevada",
+    "conference": "Mountain West",
+    "rating": 1327.6,
+    "games_rated": 93
+   },
+   {
+    "team_slug": "akron",
+    "team": "Akron",
+    "conference": "Mid-American",
+    "rating": 1326.0,
+    "games_rated": 90
+   },
+   {
+    "team_slug": "wyoming",
+    "team": "Wyoming",
+    "conference": "Mountain West",
+    "rating": 1323.1,
+    "games_rated": 91
+   },
+   {
+    "team_slug": "uab",
+    "team": "UAB",
+    "conference": "American Athletic",
+    "rating": 1321.8,
+    "games_rated": 95
+   },
+   {
+    "team_slug": "rice",
+    "team": "Rice",
+    "conference": "American Athletic",
+    "rating": 1319.3,
+    "games_rated": 92
+   },
+   {
+    "team_slug": "syracuse",
+    "team": "Syracuse",
+    "conference": "ACC",
+    "rating": 1313.1,
+    "games_rated": 97
+   },
+   {
+    "team_slug": "purdue",
+    "team": "Purdue",
+    "conference": "Big Ten",
+    "rating": 1302.4,
+    "games_rated": 91
+   },
+   {
+    "team_slug": "kent-state",
+    "team": "Kent State",
+    "conference": "Mid-American",
+    "rating": 1298.6,
+    "games_rated": 89
+   },
+   {
+    "team_slug": "bowling-green",
+    "team": "Bowling Green",
+    "conference": "Mid-American",
+    "rating": 1297.1,
+    "games_rated": 91
+   },
+   {
+    "team_slug": "northern-illinois",
+    "team": "Northern Illinois",
+    "conference": "Mid-American",
+    "rating": 1287.2,
+    "games_rated": 94
+   },
+   {
+    "team_slug": "san-jos-state",
+    "team": "San José State",
+    "conference": "Mountain West",
+    "rating": 1269.2,
+    "games_rated": 92
+   },
+   {
+    "team_slug": "new-mexico-state",
+    "team": "New Mexico State",
+    "conference": "Conference USA",
+    "rating": 1265.8,
+    "games_rated": 87
+   },
+   {
+    "team_slug": "tulsa",
+    "team": "Tulsa",
+    "conference": "American Athletic",
+    "rating": 1258.5,
+    "games_rated": 92
+   },
+   {
+    "team_slug": "middle-tennessee",
+    "team": "Middle Tennessee",
+    "conference": "Conference USA",
+    "rating": 1250.9,
+    "games_rated": 94
+   },
+   {
+    "team_slug": "colorado-state",
+    "team": "Colorado State",
+    "conference": "Mountain West",
+    "rating": 1246.5,
+    "games_rated": 89
+   },
+   {
+    "team_slug": "ball-state",
+    "team": "Ball State",
+    "conference": "Mid-American",
+    "rating": 1242.0,
+    "games_rated": 91
+   },
+   {
+    "team_slug": "oregon-state",
+    "team": "Oregon State",
+    "conference": "Pac-12",
+    "rating": 1236.9,
+    "games_rated": 92
+   },
+   {
+    "team_slug": "sam-houston",
+    "team": "Sam Houston",
+    "conference": "Conference USA",
+    "rating": 1226.8,
+    "games_rated": 37
+   },
+   {
+    "team_slug": "oklahoma-state",
+    "team": "Oklahoma State",
+    "conference": "Big 12",
+    "rating": 1217.3,
+    "games_rated": 97
+   },
+   {
+    "team_slug": "ul-monroe",
+    "team": "UL Monroe",
+    "conference": "Sun Belt",
+    "rating": 1215.3,
+    "games_rated": 94
+   },
+   {
+    "team_slug": "utep",
+    "team": "UTEP",
+    "conference": "Conference USA",
+    "rating": 1212.8,
+    "games_rated": 92
+   },
+   {
+    "team_slug": "georgia-state",
+    "team": "Georgia State",
+    "conference": "Sun Belt",
+    "rating": 1200.5,
+    "games_rated": 94
+   },
+   {
+    "team_slug": "charlotte",
+    "team": "Charlotte",
+    "conference": "American Athletic",
+    "rating": 1169.7,
+    "games_rated": 90
+   },
+   {
+    "team_slug": "massachusetts",
+    "team": "Massachusetts",
+    "conference": "Mid-American",
+    "rating": 1023.7,
+    "games_rated": 88
+   }
+  ],
+  "backtest": {
+   "kind": "retrodictive-backtest",
+   "evaluation_season": 2025,
+   "evaluation_set": "FBS-vs-FBS final games",
+   "n_games": 808,
+   "elo_baseline": {
+    "favorite_accuracy": 0.7017,
+    "brier_home_win": 0.1862
+   },
+   "reference_points": {
+    "always_pick_home_accuracy": 0.5953,
+    "observed_home_win_rate": 0.5953,
+    "climatological_brier": 0.2409,
+    "espn_pregame_elo_favorite_accuracy": 0.7054,
+    "espn_note": "Favorite accuracy only, computed from the pregame Elo columns in the raw snapshot over the games where both are present and unequal (808 games). No probability comparison: converting someone else's Elo to a probability requires assumptions they did not publish."
+   }
+  }
+ },
+ "tier_meaning": "Labs — useful and live, still being challenged. Open questions may remain about calibration, assumptions, data quality or edge. Use with your eyes open.",
+ "built": "2026-08-08",
+ "canonical_url": "https://datadawgs216.com/data/cfb-elo.json"
+}

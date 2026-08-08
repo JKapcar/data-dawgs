@@ -430,6 +430,12 @@
      "url": "/data/cfb-schedule.json",
      "status": "live",
      "covers": "canonical 2025 CFB schedule and result facts, FBS-involved games only (roadmap step 1)"
+    },
+    {
+     "kind": "json",
+     "url": "/data/cfb-elo.json",
+     "status": "live",
+     "covers": "deterministic CFB Elo baseline, retrodictive 2025 backtest, ungraded (roadmap step 2)"
     }
    ],
    "planned": [],
