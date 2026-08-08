@@ -19,13 +19,28 @@ for (const [name, env] of Object.entries({ tools, contracts, upstream })) {
     assert.equal(env.graded, false);
   });
 }
+const nflTools = tools.data.filter(t => (t.kind || 'tool') === 'tool');
+const cfbIdeas = tools.data.filter(t => t.kind === 'roadmap-idea');
+const roadmap = tools.cfb_roadmap;
 test('inventory uses only declared statuses', () => {
   const allowed = new Set(['ready', 'frontend-only', 'backend-blocked', 'data-blocked', 'complete']);
-  assert.ok(tools.data.length >= 20);
-  tools.data.forEach(t => assert.ok(allowed.has(t.status), `${t.id}: ${t.status}`));
+  assert.ok(nflTools.length >= 20);
+  nflTools.forEach(t => assert.ok(allowed.has(t.status), `${t.id}: ${t.status}`));
+});
+test('existing NFL delivery statuses are unchanged by the CFB roadmap', () => {
+  const expected = {
+    'model-scoreboard': 'complete', disagreement: 'complete', '538-classic': 'complete', nfelo: 'complete',
+    nfeloml: 'backend-blocked', nfeloqb: 'data-blocked', wepa: 'data-blocked', srs: 'data-blocked',
+    hfa: 'frontend-only', units: 'data-blocked', translation: 'complete', market: 'complete',
+    'cover-ev': 'complete', odds: 'complete', parlay: 'complete', hedge: 'complete', passer: 'complete',
+    grader: 'complete', receipts: 'complete', regimes: 'data-blocked', ensembles: 'frontend-only',
+    'nfl-data': 'complete',
+  };
+  assert.equal(nflTools.length, 22);
+  for (const t of nflTools) assert.equal(t.status, expected[t.id], t.id);
 });
 test('every incomplete tool names a distinct blocker and minimum path', () => {
-  tools.data.filter(t => t.status !== 'complete').forEach(t => {
+  nflTools.filter(t => t.status !== 'complete').forEach(t => {
     assert.ok(t.exact_blocker, t.id);
     assert.ok(t.minimum_path_to_completion, t.id);
     assert.notEqual(t.minimum_path_to_completion, t.exact_blocker, t.id);
@@ -125,6 +140,135 @@ test('538 Classic and multi-model receipts are live but ungraded', () => {
   assert.equal(receipts.data.filter(x => x.model_id === '538-classic').length, 272);
   assert.ok(receipts.data.every(x => x.forecast_status === 'prospective'));
 });
+/* ---------- College Football roadmap ---------- */
+const CFB_HEADINGS = [
+  'SportsDataverse bulk-data ingestion', 'CFBD enrichment/model ingestion', 'Canonical CFB Games',
+  'Canonical CFB Play-by-Play', 'CFB Team-Game Dataset', 'CFB Player-Game Dataset',
+  'CFB Rosters / Identity Resolution', 'CFB Market Dataset', 'CFB Ratings Registry', 'CFB Talent Dataset',
+  'CFB Team-Week Analytical Layer', 'Compact public CFB outputs', 'Full offline-reprocessable upstream/raw pipeline',
+  'Static SQLite / browser-queryable exploratory database', 'CFB Model Disagreement Lab',
+  'Model Receipts / Historical Grading', 'Model Diversity / Consensus Engine', 'Continuous Elo / Glicko Rating',
+  'Opponent-Adjusted Unit Ratings', 'Data Dawgs Predictive Power Rating', 'Deep/Trajectory Model',
+  'XGBoost / Other ML Challenger Models', 'CFBD Model Training Pack / educational modeling resources',
+  'Transfer Portal Flow Network', 'Recruiting Acquisition Network', 'Player Acquisition Graph',
+  'Returning Production', 'Portal Net Flow', 'Recruiting Composite / Talent Composite',
+  'Raw 247 / On3 / Rivals Scraping', 'NIL Deal Tracking / NIL Valuation', 'Fourth-Down Decision Engine',
+  'Fourth-Down Yards-Gained Distribution Model', 'CPOE', 'xREPA', 'Matchup Fingerprints',
+  'Counterfactual Simulator', 'Schedule Path Simulator', 'Game Leverage Index', 'Prediction-Market Integration',
+  'Overrated / Underrated Team Detector', 'Coaching Trees', 'Coaching Movement / Performance Delta',
+  'Coaching Decision Scorecards', 'Weather Effects', 'Altitude', 'Travel Distance / Time Zones',
+  'Indoor / Outdoor Effects', 'Injury / Availability Data', 'Practice Participation / Beat-Writer Proxies',
+  'Media / Reddit / Social Sentiment', 'ESPN Total QBR Historical Layer', 'Deterministic CFB MCP/API Tool Layer',
+  'Local LLM Generated Reports', 'Source Provenance', 'Snapshotting / Receipts', 'Model Cards',
+  'Baseline Requirement', 'Incremental Information Test', 'Correlation Awareness', 'Uncertainty',
+];
+const RECS = ['build', 'lab', 'defer', 'avoid-initially', 'not-needed'];
+const LIFECYCLE = ['idea', 'evaluating', 'planned', 'building', 'live', 'deferred', 'graveyard', 'revived'];
+
+test('CFB roadmap ideas carry the required metadata and honest non-delivery', () => {
+  assert.equal(cfbIdeas.length, 44);
+  for (const i of cfbIdeas) {
+    assert.match(i.id, /^cfb-/, i.id);
+    assert.equal(i.domain, 'College Football', i.id);
+    assert.equal(i.implemented, false, i.id);
+    assert.ok(!('status' in i), `${i.id}: a roadmap idea must not carry a delivery status`);
+    assert.ok(!i.existing_worker_mcp_implementation, `${i.id}: an idea cannot claim a live MCP tool`);
+    assert.ok(!i.staged_worker_mcp_implementation, `${i.id}: an idea cannot claim a staged MCP tool`);
+    assert.ok(RECS.includes(i.recommendation), `${i.id}: ${i.recommendation}`);
+    assert.ok(LIFECYCLE.includes(i.lifecycle_status), `${i.id}: ${i.lifecycle_status}`);
+    for (const field of ['category', 'rationale', 'expected_value', 'data_source_requirements',
+      'validation_requirement', 'risks_limitations', 'priority']) assert.ok(i[field], `${i.id}: missing ${field}`);
+    assert.ok(Array.isArray(i.source_headings) && i.source_headings.length, `${i.id}: missing source_headings`);
+    assert.ok(Array.isArray(i.tags) && i.tags.includes('CFB'), `${i.id}: tags`);
+    if (['defer', 'avoid-initially', 'not-needed'].includes(i.recommendation))
+      assert.ok(Array.isArray(i.revisit_conditions) && i.revisit_conditions.length, `${i.id}: kept ideas need revisit conditions`);
+  }
+});
+test('CFB dependency, related-idea and governance references resolve', () => {
+  const ids = new Set(cfbIdeas.map(i => i.id));
+  const gov = new Set(roadmap.governance.map(g => g.id));
+  for (const i of cfbIdeas) {
+    for (const d of i.dependencies || []) assert.ok(ids.has(d), `${i.id} → ${d}`);
+    for (const d of i.related_ideas || []) assert.ok(ids.has(d), `${i.id} ~ ${d}`);
+    for (const g of i.governance || []) assert.ok(gov.has(g), `${i.id} gov ${g}`);
+  }
+  for (const g of roadmap.governance) for (const d of g.related_ideas || []) assert.ok(ids.has(d), `${g.id} → ${d}`);
+});
+test('every one of the 61 source headings is represented directly or via a documented consolidation', () => {
+  const covered = new Set([
+    ...cfbIdeas.flatMap(i => i.source_headings),
+    ...cfbIdeas.flatMap(i => (i.components || []).map(c => c.source_heading)),
+    ...roadmap.governance.map(g => g.source_heading),
+  ]);
+  assert.equal(roadmap.source_headings.length, 61);
+  assert.deepEqual([...roadmap.source_headings].sort(), [...CFB_HEADINGS].sort());
+  for (const h of CFB_HEADINGS) assert.ok(covered.has(h), `heading dropped: ${h}`);
+  for (const h of covered) assert.ok(CFB_HEADINGS.includes(h), `unknown heading claimed: ${h}`);
+  // a consolidated card (an idea covering more than one heading) must document it
+  for (const i of cfbIdeas) {
+    const headings = new Set([...i.source_headings, ...(i.components || []).map(c => c.source_heading)]);
+    if (headings.size > 1) {
+      assert.ok((i.components || []).length >= 1 || /consolidat/i.test(i.notes || ''), `${i.id}: undocumented consolidation`);
+    }
+  }
+});
+test('the 12-step roadmap ordering is stored explicitly and stays consistent', () => {
+  const titles = ['Foundation / canonical CFB data', 'Ratings registry', 'Model disagreement + receipts',
+    'Model diversity / consensus', 'Fourth-down engine', 'Talent / recruiting / portal', 'Fraud Detector',
+    'Opponent-adjusted unit ratings + matchup engine', 'Season / playoff path simulator',
+    'Coaching decision scorecards', 'Data Dawgs predictive model', 'Experimental challenger models'];
+  assert.deepEqual(roadmap.steps.map(s => s.step), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+  assert.deepEqual(roadmap.steps.map(s => s.title), titles);
+  const ids = new Set(cfbIdeas.map(i => i.id));
+  const inSteps = new Map();
+  for (const s of roadmap.steps) for (const id of s.idea_ids) { assert.ok(ids.has(id), id); inSteps.set(id, s.step); }
+  for (const i of cfbIdeas) {
+    if (i.roadmap_step != null) assert.equal(inSteps.get(i.id), i.roadmap_step, i.id);
+    else assert.ok(!inSteps.has(i.id), `${i.id} listed in a step but carries no roadmap_step`);
+  }
+});
+test('no candidate CFB MCP tool is claimed live, staged or callable anywhere', () => {
+  const candidates = new Set(cfbIdeas.flatMap(i => i.candidate_mcp_tools || []));
+  assert.ok(candidates.size >= 12);
+  for (const name of candidates) {
+    assert.ok(!surfaces.mcp.tools_live.includes(name), `${name} falsely live`);
+    assert.ok(!surfaces.mcp.tools_staged.includes(name), `${name} falsely staged`);
+  }
+  assert.equal(surfaces.counts.mcp_tools_live, 26); // unchanged by this task
+  const pound = surfaces.data.find(s => s.id === 'pound');
+  for (const m of pound.machine.filter(x => x.kind === 'mcp')) assert.ok(!candidates.has(m.tool), m.tool);
+  assert.match(pound.machine.find(m => m.url === '/data/pound-tools.json').covers, /ideas only, none implemented or callable/);
+});
+test('the roadmap is Graveyard-ready: lifecycle history, postmortem shape and revival path exist', () => {
+  assert.deepEqual(roadmap.lifecycle.statuses, LIFECYCLE);
+  assert.ok(roadmap.lifecycle.alternate_exits.some(x => /graveyard → revived/i.test(x)));
+  for (const f of ['original_hypothesis', 'validation_design', 'performance_vs_baseline',
+    'cost_complexity_maintenance', 'reason_retired', 'receipts', 'lessons_learned',
+    'revival_conditions', 'lifecycle_history']) assert.ok(roadmap.lifecycle.graveyard_postmortem_fields.includes(f), f);
+  for (const i of cfbIdeas) {
+    assert.equal(i.graveyard_ready, true, i.id);
+    assert.ok(Array.isArray(i.lifecycle_history) && i.lifecycle_history.length >= 1, i.id);
+    assert.equal(i.lifecycle_history[0].status, 'idea', i.id);
+    assert.match(i.lifecycle_history[0].on, /^\d{4}-\d{2}-\d{2}$/, i.id);
+  }
+});
+test('the seven governance principles are preserved as shared metadata', () => {
+  const names = roadmap.governance.map(g => g.source_heading).sort();
+  assert.deepEqual(names, ['Baseline Requirement', 'Correlation Awareness', 'Incremental Information Test',
+    'Model Cards', 'Snapshotting / Receipts', 'Source Provenance', 'Uncertainty']);
+  for (const g of roadmap.governance) assert.ok(g.principle && g.applies_to, g.id);
+});
+test('pound.html renders the CFB roadmap honestly', () => {
+  const html = fs.readFileSync('pound.html', 'utf8');
+  assert.match(html, /<section class="p-section" id="cfb">/);
+  assert.match(html, /ideas, not tools/i);
+  assert.match(html, /Candidate MCP tool names are reservations/);
+  for (const id of ['cfbCat', 'cfbRec', 'cfbLife', 'cfbStep']) assert.ok(html.includes(`id="${id}"`), id);
+  assert.match(html, /AVOID INITIALLY/);
+  assert.match(html, /NOT NEEDED/);
+  assert.match(html, /kind==="roadmap-idea"/);
+});
+
 test('all shared-nav pages point at pound.html exactly once', () => {
   const pages = fs.readdirSync('.').filter(x => x.endsWith('.html'));
   let covered = 0;

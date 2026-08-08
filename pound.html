@@ -627,6 +627,12 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 .tool{border:1px solid var(--border);border-radius:11px;background:var(--surface-1);padding:14px}.tool h3{font-size:16px;margin:6px 0}.tool p{margin:5px 0;color:var(--ink-2);font-size:13px}.tool .block{color:var(--ink-3);border-top:1px solid var(--grid);margin-top:9px;padding-top:9px}.tool code{font-size:11px}
 .status{display:inline-flex;border-radius:999px;padding:3px 7px;font:800 10px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;border:1px solid var(--border)}
 .status-complete{color:var(--good);border-color:color-mix(in srgb,var(--good) 50%,var(--border))}.status-ready{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 50%,var(--border))}.status-frontend-only{color:var(--warn)}.status-backend-blocked,.status-data-blocked{color:var(--bad)}
+.rec-build{color:var(--good);border-color:color-mix(in srgb,var(--good) 50%,var(--border))}.rec-lab{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 50%,var(--border))}.rec-defer,.rec-avoid-initially,.rec-not-needed{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,var(--border))}
+.lifecycle-chip{display:inline-flex;border-radius:999px;padding:3px 7px;font:800 10px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;border:1px solid var(--border);color:var(--ink-3);margin-left:5px}
+.cfb-filters{display:flex;flex-wrap:wrap;gap:9px;margin:0 0 12px}.cfb-filters .field{min-width:150px;flex:1}
+.cfb-count{font-size:12px;color:var(--ink-3);margin:0 0 10px}
+.tool .meta-line{font-size:11.5px;color:var(--ink-3)}
+.tool .components{border-top:1px solid var(--grid);margin-top:9px;padding-top:9px}.tool .components li{font-size:12px;color:var(--ink-3);margin:4px 0}
 .provenance{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.prov{border:1px solid var(--border);border-radius:10px;padding:13px;background:var(--surface-1)}.prov h3{margin:0 0 6px;font-size:15px}.prov p{margin:4px 0;color:var(--ink-3);font-size:12px}.prov a{color:var(--accent)}
 .machine-box{border:1px solid var(--border);border-radius:12px;padding:16px;background:var(--surface-1)}.machine-box code{overflow-wrap:anywhere}.machine-box li{margin:6px 0;color:var(--ink-2)}
 @media(max-width:760px){.p-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.calc-grid,.inventory{grid-template-columns:1fr}.fields.five{grid-template-columns:repeat(2,minmax(0,1fr))}.provenance{grid-template-columns:1fr}.p-section>header{display:block}.p-meta{text-align:left;margin-top:7px}}
@@ -1908,7 +1914,7 @@ STATE: everything saves in the browser on that device. A different device shows 
   </header>
   <div class="p-disclosure"><b>No oracle lives here.</b> Current game numbers are dated 2026 inputs. Calculator output is arithmetic or explicitly <b>MODELLED</b>. Nothing on this page has established betting profitability, and the multi-model system has not yet been graded prospectively.</div>
   <nav class="p-jump" aria-label="The Pound sections">
-    <a href="#scoreboard">Scoreboard</a><a href="#calculators">Calculators</a><a href="#inventory">Tool inventory</a><a href="#provenance">Provenance</a><a href="#machines">For machines</a>
+    <a href="#scoreboard">Scoreboard</a><a href="#calculators">Calculators</a><a href="#inventory">Tool inventory</a><a href="#cfb">CFB roadmap</a><a href="#provenance">Provenance</a><a href="#machines">For machines</a>
   </nav>
 
   <section class="p-section" id="scoreboard">
@@ -1939,6 +1945,20 @@ STATE: everything saves in the browser on that device. A different device shows 
     <div class="inventory" id="toolInventory"><div class="p-loading">Loading the public inventory…</div></div>
   </section>
 
+  <section class="p-section" id="cfb">
+    <header><div><h2>College Football roadmap</h2><p class="dek">The complete identified CFB opportunity set — ideas, not tools. Nothing in this section is built, staged or callable; each card records what we could build, why, what it depends on, how strongly we currently recommend it, and how we would know whether it worked.</p></div><div class="p-meta">roadmap locked 2026-08-08<br>0 of these exist</div></header>
+    <div class="p-disclosure"><b>Map, not territory.</b> Every card below is a roadmap idea with lifecycle status <b>idea</b>. Candidate MCP tool names are reservations for computation that does not exist yet — do not call them. Recommendations are recommendations, not permanent truths, and retired ideas will move to a Graveyard with their history intact rather than being deleted.</div>
+    <div class="cfb-filters">
+      <div class="field"><label for="cfbCat">Category</label><select class="p-filter" id="cfbCat"><option value="all">All</option></select></div>
+      <div class="field"><label for="cfbRec">Recommendation</label><select class="p-filter" id="cfbRec"><option value="all">All</option><option value="build">BUILD</option><option value="lab">LAB</option><option value="defer">DEFER</option><option value="avoid-initially">AVOID INITIALLY</option><option value="not-needed">NOT NEEDED</option></select></div>
+      <div class="field"><label for="cfbLife">Lifecycle</label><select class="p-filter" id="cfbLife"><option value="all">All</option></select></div>
+      <div class="field"><label for="cfbStep">Roadmap step</label><select class="p-filter" id="cfbStep"><option value="all">All</option></select></div>
+    </div>
+    <p class="cfb-count" id="cfbCount" aria-live="polite"></p>
+    <div class="inventory" id="cfbGrid"><div class="p-loading">Loading the College Football roadmap…</div></div>
+    <p class="assumption"><b>Ordering:</b> the 12-step sequence stored with this data is directional, not an irreversible commitment — dependencies ultimately determine the actual build order. Shared governance (source provenance, snapshotting/receipts, model cards, baseline requirement, incremental-information testing, correlation awareness, uncertainty) applies across every idea and is published in the same file.</p>
+  </section>
+
   <section class="p-section" id="provenance">
     <header><div><h2>Provenance before claims</h2><p class="dek">A public repository is not automatically reusable software. Integration mode follows the verified license.</p></div><div class="p-meta">captured 2026-08-07<br>primary repositories inspected</div></header>
     <div class="provenance" id="provGrid"><div class="p-loading">Loading upstream provenance…</div></div>
@@ -1947,7 +1967,7 @@ STATE: everything saves in the browser on that device. A different device shows 
   <section class="p-section" id="machines">
     <header><div><h2>The same evidence for machines</h2><p class="dek">Assistants should read deterministic state, not scrape the cards above.</p></div></header>
     <div class="machine-box"><ul>
-      <li><a href="/data/pound-tools.json"><code>/data/pound-tools.json</code></a> — full inventory, delivery status and blockers.</li>
+      <li><a href="/data/pound-tools.json"><code>/data/pound-tools.json</code></a> — full inventory: NFL tools (delivery status, blockers) plus the College Football roadmap under <code>cfb_roadmap</code> and <code>kind:"roadmap-idea"</code> entries. Roadmap ideas are not implemented and their candidate MCP tool names are not callable.</li>
       <li><a href="/data/model-contracts.json"><code>/data/model-contracts.json</code></a> — normalized forecast, receipt and calculator contracts.</li>
       <li><a href="/data/upstream-models.json"><code>/data/upstream-models.json</code></a> — repository, commit, license status and integration mode.</li>
       <li><a href="/data/nfl-schedule.json"><code>/data/nfl-schedule.json</code></a> — validated canonical 2026 schedule, exact upstream commit and snapshot hash.</li>
@@ -2164,7 +2184,30 @@ STATE: everything saves in the browser on that device. A different device shows 
   }
   let allTools=[];
   function renderTools(status){const rows=status==="all"?allTools:allTools.filter(t=>t.status===status);$("toolInventory").innerHTML=rows.map(t=>`<article class="tool"><span class="status status-${esc(t.status)}">${esc(t.status)}</span><h3>${esc(t.name)}</h3><p>${esc(t.intended_user_value)}</p><p><b>Machine:</b> <code>${esc(t.machine_readable_requirement)}</code>${t.existing_worker_mcp_implementation?`<br><b>Live MCP:</b> <code>${esc(t.existing_worker_mcp_implementation)}</code>`:""}${t.staged_worker_mcp_implementation?`<br><b>Staged MCP:</b> <code>${esc(t.staged_worker_mcp_implementation)}</code>`:""}</p>${t.exact_blocker?`<p class="block"><b>Blocker:</b> ${esc(t.exact_blocker)}<br><b>Minimum path:</b> ${esc(t.minimum_path_to_completion)}</p>`:""}</article>`).join("")||'<div class="p-loading">No tools match.</div>'}
-  async function loadInventory(){try{const env=await json("/data/pound-tools.json");if(!Array.isArray(env.data))throw new Error("inventory payload is malformed");allTools=env.data;renderTools("all");$("toolFilter").addEventListener("change",e=>renderTools(e.target.value))}catch(err){$("toolInventory").innerHTML='<div class="p-error">Inventory unavailable: '+esc(err.message)+'</div>'}}
+  let cfbIdeas=[],cfbSteps=[];
+  const recLabel={"build":"BUILD","lab":"LAB","defer":"DEFER","avoid-initially":"AVOID INITIALLY","not-needed":"NOT NEEDED"};
+  const catLabel=c=>c.replace(/-/g," ").replace(/\b\w/g,x=>x.toUpperCase());
+  function renderCfb(){
+    const cat=$("cfbCat").value,rec=$("cfbRec").value,life=$("cfbLife").value,step=$("cfbStep").value;
+    const rows=cfbIdeas.filter(i=>(cat==="all"||i.category===cat)&&(rec==="all"||i.recommendation===rec)&&(life==="all"||i.lifecycle_status===life)&&(step==="all"||String(i.roadmap_step)===step));
+    $("cfbCount").textContent=`${rows.length} of ${cfbIdeas.length} ideas shown · 0 implemented — every entry is an idea, not a shipped tool.`;
+    $("cfbGrid").innerHTML=rows.map(i=>{
+      const stepInfo=i.roadmap_step?cfbSteps.find(s=>s.step===i.roadmap_step):null;
+      const mods=(i.recommendation_modifiers||[]).map(m=>m.replace(/-/g," ")).join(" · ");
+      return `<article class="tool"><span class="status rec-${esc(i.recommendation)}">${esc(recLabel[i.recommendation]||i.recommendation)}</span><span class="lifecycle-chip">${esc(i.lifecycle_status)}</span>${i.roadmap_step?`<span class="lifecycle-chip">step ${i.roadmap_step}</span>`:""}<h3>${esc(i.name)}</h3><p class="meta-line">${esc(catLabel(i.category))}${mods?" · "+esc(mods):""} · priority: ${esc(i.priority)}${stepInfo?` · roadmap: ${esc(stepInfo.title)}`:""}</p><p>${esc(i.rationale)}</p><p><b>Expected value:</b> ${esc(i.expected_value)}</p>${i.dependencies&&i.dependencies.length?`<p class="meta-line"><b>Depends on:</b> ${i.dependencies.map(esc).join(", ")}</p>`:""}${i.candidate_mcp_tools&&i.candidate_mcp_tools.length?`<p class="meta-line"><b>Candidate MCP tools (not callable):</b> <code>${i.candidate_mcp_tools.map(esc).join("</code>, <code>")}</code></p>`:""}<p class="meta-line"><b>How we would know it worked:</b> ${esc(i.validation_requirement)}</p><p class="meta-line"><b>Risks / limits:</b> ${esc(i.risks_limitations)}</p>${i.components&&i.components.length?`<div class="components"><b>Consolidates:</b><ul>${i.components.map(c=>`<li><b>${esc(c.name)}</b>${c.recommendation?` (${esc(recLabel[c.recommendation]||c.recommendation)})`:""} — ${esc(c.summary)}</li>`).join("")}</ul></div>`:""}${i.revisit_conditions&&i.revisit_conditions.length?`<p class="block"><b>We would revisit if:</b> ${i.revisit_conditions.map(esc).join("; ")}.</p>`:""}${i.notes?`<p class="meta-line">${esc(i.notes)}</p>`:""}</article>`;
+    }).join("")||'<div class="p-loading">No ideas match these filters.</div>';
+  }
+  async function loadInventory(){try{
+    const env=await json("/data/pound-tools.json");if(!Array.isArray(env.data))throw new Error("inventory payload is malformed");
+    allTools=env.data.filter(t=>(t.kind||"tool")==="tool");renderTools("all");$("toolFilter").addEventListener("change",e=>renderTools(e.target.value));
+    cfbIdeas=env.data.filter(t=>t.kind==="roadmap-idea");cfbSteps=(env.cfb_roadmap&&env.cfb_roadmap.steps)||[];
+    const addOpts=(id,vals,label)=>{const sel=$(id);vals.forEach(v=>{const o=document.createElement("option");o.value=String(v);o.textContent=label?label(v):String(v);sel.appendChild(o)});sel.addEventListener("change",renderCfb)};
+    addOpts("cfbCat",[...new Set(cfbIdeas.map(i=>i.category))],catLabel);
+    addOpts("cfbLife",[...new Set(cfbIdeas.map(i=>i.lifecycle_status))]);
+    addOpts("cfbStep",cfbSteps.map(s=>s.step),v=>{const s=cfbSteps.find(x=>x.step===v);return `${v} · ${s?s.title:""}`});
+    $("cfbRec").addEventListener("change",renderCfb);
+    renderCfb();
+  }catch(err){$("toolInventory").innerHTML='<div class="p-error">Inventory unavailable: '+esc(err.message)+'</div>';$("cfbGrid").innerHTML='<div class="p-error">CFB roadmap unavailable: '+esc(err.message)+'</div>'}}
   async function loadProvenance(){try{const env=await json("/data/upstream-models.json");if(!Array.isArray(env.data))throw new Error("provenance payload is malformed");$("provGrid").innerHTML=env.data.map(x=>`<article class="prov"><h3>${esc(x.id)}</h3><p><a href="https://github.com/${esc(x.repository)}" target="_blank" rel="noopener">${esc(x.repository)}</a></p><p><b>License:</b> ${esc(x.license||"unverified")} · ${esc(x.license_status)}</p><p><b>Mode:</b> ${esc(x.integration_mode)}</p><p>${esc(x.notes)}</p></article>`).join("")}catch(err){$("provGrid").innerHTML='<div class="p-error">Provenance unavailable: '+esc(err.message)+'</div>'}}
   loadScoreboard();loadInventory();loadProvenance();
 })();

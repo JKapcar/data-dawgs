@@ -701,12 +701,41 @@ const POUND_TOOLS = [
         ? 'Expose the staged deterministic browser function through a read-only Worker tool using the published calculator contract.'
         : 'Add a read-only Worker tool only after the required deterministic data or runtime is validated.',
     machine_readable_requirement: machine_readable, status, exact_blocker: blocker,
-    minimum_path_to_completion: blocker ? POUND_MINIMUM_PATHS[id] : 'No known blocker for the deployed scope.'
+    minimum_path_to_completion: blocker ? POUND_MINIMUM_PATHS[id] : 'No known blocker for the deployed scope.',
+    kind: 'tool', domain: 'NFL',
   };
 });
 
 for (const tool of POUND_TOOLS) {
   if (tool.exact_blocker && !tool.minimum_path_to_completion) throw new Error(`missing Pound minimum path: ${tool.id}`);
+}
+
+/* ---------- The Pound: College Football roadmap ----------
+ * Roadmap IDEAS, not tools. Nothing here is implemented or callable; the
+ * generator fails closed if an idea claims otherwise, points at an unknown
+ * dependency, or drops one of the 61 source headings.
+ */
+const { CFB_IDEAS, CFB_GOVERNANCE, CFB_ROADMAP_STEPS, CFB_LIFECYCLE,
+  CFB_RECOMMENDATION_CLASSES, CFB_SOURCE_HEADINGS } = require('./cfb-roadmap.js');
+
+{
+  const ideaIds = new Set(CFB_IDEAS.map(i => i.id));
+  const govIds = new Set(CFB_GOVERNANCE.map(g => g.id));
+  const covered = new Set([
+    ...CFB_IDEAS.flatMap(i => i.source_headings),
+    ...CFB_IDEAS.flatMap(i => i.components.map(c => c.source_heading)),
+    ...CFB_GOVERNANCE.map(g => g.source_heading),
+  ]);
+  for (const h of CFB_SOURCE_HEADINGS) if (!covered.has(h)) throw new Error(`CFB roadmap heading not represented: ${h}`);
+  for (const h of covered) if (!CFB_SOURCE_HEADINGS.includes(h)) throw new Error(`unknown CFB heading claimed: ${h}`);
+  for (const i of CFB_IDEAS) {
+    if (i.implemented !== false || i.kind !== 'roadmap-idea') throw new Error(`CFB idea must stay unimplemented: ${i.id}`);
+    if (!(i.recommendation in CFB_RECOMMENDATION_CLASSES)) throw new Error(`unknown recommendation: ${i.id}`);
+    if (!CFB_LIFECYCLE.statuses.includes(i.lifecycle_status)) throw new Error(`unknown lifecycle status: ${i.id}`);
+    for (const d of [...i.dependencies, ...i.related_ideas]) if (!ideaIds.has(d)) throw new Error(`${i.id}: unresolved idea reference ${d}`);
+    for (const g of i.governance) if (!govIds.has(g)) throw new Error(`${i.id}: unresolved governance reference ${g}`);
+  }
+  for (const s of CFB_ROADMAP_STEPS) for (const d of s.idea_ids) if (!ideaIds.has(d)) throw new Error(`roadmap step ${s.step}: unknown idea ${d}`);
 }
 
 write('upstream-models.json', {
@@ -724,10 +753,20 @@ write('model-contracts.json', {
 });
 
 write('pound-tools.json', {
-  as_of: '2026-08-08', source: 'Reconciled against the Data Dawgs site, Worker source and inspected upstream projects on 2026-08-08.',
+  as_of: '2026-08-08', source: 'Reconciled against the Data Dawgs site, Worker source and inspected upstream projects on 2026-08-08. College Football roadmap ideas added from the 2026-08-08 CFB roadmap.',
   tier: TIERS.pound, graded: false,
-  note: 'Complete means the requested delivery layers are live. Ready means the Worker source and tests exist but production activation is still pending. Frontend-only means the browser tool and public contract exist without an MCP endpoint for the full requested scope. Blocked tools keep an exact minimum path instead of being omitted.',
-  data: POUND_TOOLS,
+  note: 'Two kinds of entry share this inventory. kind "tool" (NFL) carries a delivery status: complete means the requested delivery layers are live; ready means Worker source and tests exist but production activation is pending; frontend-only means the browser tool and public contract exist without an MCP endpoint for the full requested scope; blocked tools keep an exact minimum path instead of being omitted. kind "roadmap-idea" (College Football) is an IDEA: nothing about it is implemented, staged or callable, candidate_mcp_tools are names reserved for computation that does not exist yet, and recommendation/lifecycle_status describe intent, not delivery.',
+  cfb_roadmap: {
+    as_of: '2026-08-08',
+    domain: 'College Football',
+    note: 'The 12-step ordering is directional, not an irreversible commitment; dependencies ultimately determine the actual build sequence. Recommendations are recommendations, not permanent truths.',
+    steps: CFB_ROADMAP_STEPS,
+    recommendation_classes: CFB_RECOMMENDATION_CLASSES,
+    lifecycle: CFB_LIFECYCLE,
+    governance: CFB_GOVERNANCE,
+    source_headings: CFB_SOURCE_HEADINGS,
+  },
+  data: [...POUND_TOOLS, ...CFB_IDEAS],
 });
 
 /* ---------- tier-audit.json ----------
@@ -904,7 +943,7 @@ const SURFACES = [
     machine: [{ kind: 'mcp', tool: 'dd_guillotine_odds', status: 'live' }],
     planned: ['json:/data/guillotine.json'] },
   { id: 'pound', name: 'The Pound model and calculator workbench', page: '/pound.html',
-    machine: [{ kind: 'json', url: '/data/pound-tools.json', status: 'live', covers: 'complete inventory, delivery status and exact blockers' },
+    machine: [{ kind: 'json', url: '/data/pound-tools.json', status: 'live', covers: 'complete NFL tool inventory (delivery status, exact blockers) plus the College Football roadmap — ideas only, none implemented or callable' },
               { kind: 'json', url: '/data/model-contracts.json', status: 'live', covers: 'forecast, receipt and calculator contracts' },
               { kind: 'json', url: '/data/upstream-models.json', status: 'live', covers: 'source, commit and license provenance' },
               { kind: 'json', url: '/data/nfl-schedule.json', status: 'live', covers: 'canonical schedule with exact upstream commit and snapshot hash' },
