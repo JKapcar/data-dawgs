@@ -1,7 +1,7 @@
 // Data Dawgs service worker — draft-night insurance.
 // HTML is network-first (so deploys land immediately) with a cache fallback,
 // so a dead venue wifi can't take the draft down mid-auction.
-const VERSION = "4a1ef1c600";
+const VERSION = "8d2309d5ed";
 const CACHE = "dd-" + VERSION;
 
 // the pages that must survive a network drop (stats.html is 2MB — cached on first visit instead)
@@ -9,7 +9,8 @@ const CORE = [
   "/", "/index.html", "/draft-leagues.html", "/draft-league.js", "/draft-providers.js", "/draft-live-sync.js", "/dashboard.html", "/board.html", "/auction.html",
   "/bigboard.html", "/dataviz.html", "/report.html", "/master.html", "/strategy.html",
   // Lab landing pages — small, static, and the nav now points at them
-  "/dfs.html", "/connect.html", "/guillotine.html", "/receipts.html", "/nfelo.html", "/survivor.html", "/survivor-settings.html", "/pound.html"
+  "/dfs.html", "/connect.html", "/guillotine.html", "/receipts.html", "/nfelo.html", "/survivor.html", "/survivor-settings.html", "/pound.html",
+  "/cfb.html"
 ];
 // the horn is precached, not left to cache-first on first play: draft night is the
 // first time it ever fires, and a venue wifi hiccup at that exact moment would eat it

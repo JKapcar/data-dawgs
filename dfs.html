@@ -1123,12 +1123,12 @@ label.fld[hidden], .statrow[hidden], .card[hidden], .sheet[hidden], .banner[hidd
        five-item nav keeps breathing room without shrinking the type. */
     {label:"The Pound", short:"Pound", href:"pound.html", key:"pound", items:[
       ["pound.html","Tools & Scoreboard","pound","hot"],
-      ["pound.html#calculators","Calculators","pound-calculators"],
       ["pound.html#inventory","Tool Inventory","pound-inventory"],
       ["pound.html#provenance","Provenance","pound-provenance"],
     ]},
     {label:"Labs", href:"index.html#tiers", items:[
       ["bozo.html","Bozo","bozo"],
+      ["cfb.html","College Football","cfb"],
       ["dfs.html","DFS Solver","dfs"],
       ["guillotine.html","Guillotine Companion","guillotine"],
       ["receipts.html","Receipts","receipts"],
@@ -1148,6 +1148,12 @@ label.fld[hidden], .statrow[hidden], .card[hidden], .sheet[hidden], .banner[hidd
       ["nfelo.html","nfelo Power Ratings","nfelo"],
       ["dashboard.html","Fantasy Draft Dashboard","dashboard","hot"],
       ["dawgs.html","Rollo · OG Data Dawg","dawgs"],
+      /* ⚠️ The calculators live HERE, not in The Pound (Kap, 8/8): "calculators
+         belong in the dawgs section grouped all as calculators." They are grouped
+         by their labels rather than by a `sep` rule — `sep` renders an "operator"
+         badge, which is auctioneer territory and would be wrong on these. */
+      ["pound.html#calculators","Calculators · NFL","pound-calculators"],
+      ["cfb.html#matchup","Calculators · CFB matchup","cfb-matchup"],
     ]},
   ];
   const nav = document.getElementById("nav");
@@ -1452,11 +1458,13 @@ label.fld[hidden], .statrow[hidden], .card[hidden], .sheet[hidden], .banner[hidd
       "nfelo":"/data/nfelo.json",
       "survivor":"/data/survivor.json",
       "bozo":"/data/bozo-rules.json",
+      "cfb":"/data/cfb-teams.json",
       "strategy":"/data/strategy.md"
     },
     /* secondary live mirrors — linked, not rendered, so the primary view stays one file */
     also:{
       "receipts":["/data/receipts-method.md","/data/tier-audit.json"],
+      "cfb":["/data/cfb-elo.json","/data/cfb-record-divergence.json","/data/cfb-model-cards.json"],
       "nfelo":["/data/models.json"],
       "bozo":["/data/bozo-rules.md"],
       "survivor":["/data/models.json"],
