@@ -262,6 +262,11 @@ console.log('\nCFB ratings registry — normalized evidence without invented con
     fail('cfb-ratings.json: first registry version must contain exactly the shipped Elo system');
   else if (systems[0].source_snapshot_id !== inputSnapshot || registry.provenance.input_snapshot_id !== inputSnapshot)
     fail('cfb-ratings.json: registry does not lock the current Elo snapshot');
+  else if (!systems[0].matchup_probability || systems[0].matchup_probability.available !== true ||
+           systems[0].matchup_probability.elo_scale !== 400 || systems[0].matchup_probability.home_field_elo !== 55 ||
+           systems[0].matchup_probability.neutral_site_home_field_elo !== 0 ||
+           systems[0].outputs.win_probability.available !== false)
+    fail('cfb-ratings.json: matchup transform is absent, drifted or misrepresented as a team-level output');
   else ok('registry locks the current Elo source snapshot');
   const sourceRows = elo.data && elo.data.ratings_as_of_end_of_2025;
   if (!Array.isArray(teams) || !Array.isArray(sourceRows) || teams.length !== sourceRows.length)

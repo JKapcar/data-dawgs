@@ -1,6 +1,6 @@
 {
  "as_of": "2026-08-08",
- "source": "Compact join of /data/cfb-team-week.json and /data/cfb-ratings.json by scripts/cfb_team_profiles.py; inputs sha256:2d843eb19ad19f4bb92f5ad3171d9c8635b433ae30b8aaf2a2c4a8e8ffb66fcf and sha256:13233f782f8cea384fde9077f8aac271458b2a7950b1a6a38b440f1c4bbbd786.",
+ "source": "Compact join of /data/cfb-team-week.json and /data/cfb-ratings.json by scripts/cfb_team_profiles.py; inputs sha256:2d843eb19ad19f4bb92f5ad3171d9c8635b433ae30b8aaf2a2c4a8e8ffb66fcf and sha256:49b2a286548274f881926530db66dea6c084f0a68ebdc350f55bbc7e47c545f0.",
  "tier": "labs",
  "graded": false,
  "note": "OBSERVED RESULTS plus one MODELLED, RETRODICTIVE, UNGRADED end-of-2025 Elo rating. The objects are separated deliberately. This is not a 2026 forecast, consensus, edge or recommendation.",
@@ -13,12 +13,12 @@
    },
    {
     "url": "/data/cfb-ratings.json",
-    "snapshot_id": "sha256:13233f782f8cea384fde9077f8aac271458b2a7950b1a6a38b440f1c4bbbd786"
+    "snapshot_id": "sha256:49b2a286548274f881926530db66dea6c084f0a68ebdc350f55bbc7e47c545f0"
    }
   ]
  },
  "integrity": {
-  "snapshot_id": "sha256:63c73f7ee7bd7c002a2cdf6c7932696abd508627789acc37b6093b2d9a7e2461",
+  "snapshot_id": "sha256:7faca01dd0602ed82c18306696bb26d59866969ce64bfd7f3027b438efa6db22",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for the data object (sorted object keys, no insignificant whitespace).",
   "systems": 1,
   "teams": 136
@@ -29,7 +29,7 @@
   "scope": "observed-results-plus-retrodictive-rating",
   "inputs": {
    "team_week_snapshot_id": "sha256:2d843eb19ad19f4bb92f5ad3171d9c8635b433ae30b8aaf2a2c4a8e8ffb66fcf",
-   "ratings_registry_snapshot_id": "sha256:13233f782f8cea384fde9077f8aac271458b2a7950b1a6a38b440f1c4bbbd786"
+   "ratings_registry_snapshot_id": "sha256:49b2a286548274f881926530db66dea6c084f0a68ebdc350f55bbc7e47c545f0"
   },
   "rating_period": {
    "season": 2025,
@@ -65,6 +65,17 @@
       "available": false,
       "units": "points"
      }
+    },
+    "matchup_probability": {
+     "available": true,
+     "output": "home_win_probability",
+     "formula": "1 / (1 + 10 ** (-(home_team_strength - away_team_strength + home_field_elo) / elo_scale))",
+     "elo_scale": 400.0,
+     "home_field_elo": 55.0,
+     "neutral_site_home_field_elo": 0.0,
+     "rating_period_only": true,
+     "not_a_team_level_output": true,
+     "note": "A win probability exists only after two team strengths and venue are supplied. That does not make win_probability a populated team-level registry field."
     },
     "prospective_forecasts_exist": false,
     "graded": false

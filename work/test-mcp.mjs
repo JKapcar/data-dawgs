@@ -85,6 +85,12 @@ const cfbRatingsJson = {
       kind: "continuous-rating", feature_family: "game results and margin only",
       source_snapshot_id: "sha256:test-cfb-elo", source_url: "/data/cfb-elo.json",
       model_card_url: "/data/cfb-model-cards.json",
+      matchup_probability: {
+        available: true, output: "home_win_probability",
+        formula: "1 / (1 + 10 ** (-(home_team_strength - away_team_strength + home_field_elo) / elo_scale))",
+        elo_scale: 400, home_field_elo: 55, neutral_site_home_field_elo: 0,
+        rating_period_only: true, not_a_team_level_output: true,
+      },
       outputs: {
         team_strength: { available: true, units: "elo-points" },
         expected_margin: { available: false, units: "points" },
@@ -213,12 +219,12 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 {
   const j = await (await req(rpc("tools/list"))).json();
   const t = j.result.tools;
-  ok(t.length === 28, "twenty-eight tools listed in the staged Worker source");
+  ok(t.length === 29, "twenty-nine tools listed in the staged Worker source");
   ok(t.every(x => x.name.startsWith("dd_")), "all tools dd_-prefixed");
   ok(t.every(x => x.inputSchema && x.inputSchema.type === "object"), "all tools carry an inputSchema");
   for (const name of ["dd_convert_odds", "dd_devig_market", "dd_price_parlay", "dd_calculate_bet_ev",
     "dd_calculate_hedge", "dd_nfl_passer_rating", "dd_score_forecast", "dd_summarize_beliefs",
-    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_optimize_survivor_path"])
+    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_optimize_survivor_path"])
     ok(t.some(x => x.name === name), name + " is listed");
 }
 // dd_league_overview
@@ -632,6 +638,35 @@ function refNcdf(z) {
   const extra = await (await req(call("dd_compare_cfb_teams", { team_a: "Akron", team_b: "Indiana", neutral: true }))).json();
   ok(same.result.isError === true && partial.result.isError === true && missing.result.isError === true && extra.result.isError === true,
      "CFB comparison fails closed on same-team, partial, missing and unsupported inputs");
+}
+// dd_project_cfb_matchup: exact parity with the published Elo transform, with
+// venue handling and a hard boundary against calling it a scheduled forecast.
+{
+  const j = await (await req(call("dd_project_cfb_matchup", { home_team: "Ohio State", away_team: "Akron" }))).json();
+  const d = text(j), projection = d.projections[0];
+  const expected = 1 / (1 + 10 ** (-((1925.8 - 1088.1 + 55) / 400)));
+  ok(!j.result.isError && d.matchup.home_team.team_slug === "ohio-state" && d.matchup.away_team.team_slug === "akron",
+     "CFB matchup projection resolves an exact home and away team");
+  ok(Math.abs(projection.home_win_probability - expected) < 1e-15 &&
+     Math.abs(projection.away_win_probability - (1 - expected)) < 1e-15 && projection.venue_adjustment_elo === 55,
+     "CFB matchup projection reproduces the published Elo probability transform exactly");
+  ok(d.retrodictive === true && d.prospective === false && d.scheduled_game === false && d.graded === false &&
+     d.unsupported_outputs.expected_margin === null && d.unsupported_outputs.predicted_total === null,
+     "CFB matchup projection labels retrodictive status and refuses unsupported outputs");
+  ok(d.warnings.some(x => /not a frozen 2026 forecast receipt/i.test(x)) && d.warnings.some(x => /not a consensus/i.test(x)),
+     "CFB matchup projection carries forecast and consensus caveats");
+}
+{
+  const home = text(await (await req(call("dd_project_cfb_matchup", { home_team: "Ohio State", away_team: "Akron" }))).json()).projections[0];
+  const neutral = text(await (await req(call("dd_project_cfb_matchup", { home_team: "Ohio State", away_team: "Akron", neutral_site: true }))).json()).projections[0];
+  ok(neutral.venue_adjustment_elo === 0 && neutral.home_win_probability < home.home_win_probability,
+     "neutral-site CFB projection removes the published home-field adjustment");
+  const same = await (await req(call("dd_project_cfb_matchup", { home_team: "Akron", away_team: "akron" }))).json();
+  const partial = await (await req(call("dd_project_cfb_matchup", { home_team: "state", away_team: "Akron" }))).json();
+  const badNeutral = await (await req(call("dd_project_cfb_matchup", { home_team: "Ohio State", away_team: "Akron", neutral_site: "yes" }))).json();
+  const extra = await (await req(call("dd_project_cfb_matchup", { home_team: "Ohio State", away_team: "Akron", week: 1 }))).json();
+  ok(same.result.isError === true && partial.result.isError === true && badNeutral.result.isError === true && extra.result.isError === true,
+     "CFB matchup projection fails closed on same-team, partial, mistyped and unsupported inputs");
 }
 // dd_scores: reuses handleScores with sport+dates
 {

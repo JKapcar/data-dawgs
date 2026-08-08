@@ -166,3 +166,10 @@ separately approved Worker version is uploaded, inspected and activated.
 same compact snapshot and reports observed record/scoring differences plus per-system
 rating and rank deltas. It deliberately returns no matchup probability, spread or edge:
 the results are not opponent-adjusted, and one retrodictive rating is not a consensus.
+
+`dd_project_cfb_matchup` is the first staged CFB computation rather than a lookup. The
+ratings registry publishes the Elo scale, venue adjustment and exact logistic formula;
+the Worker reads those dated parameters and calculates home/away win probabilities for
+two exact teams. Neutral site removes the +55 Elo adjustment. The result is a
+hypothetical end-of-2025 rating-period calculation, not a scheduled 2026 forecast, and
+expected margin, spread and total stay null rather than being reverse-engineered.

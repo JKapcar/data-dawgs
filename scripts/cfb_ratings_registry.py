@@ -87,6 +87,20 @@ def build(elo_envelope: dict[str, Any]) -> dict[str, Any]:
                 "win_probability": {"available": False, "units": "probability"},
                 "predicted_total": {"available": False, "units": "points"},
             },
+            "matchup_probability": {
+                "available": True,
+                "output": "home_win_probability",
+                "formula": "1 / (1 + 10 ** (-(home_team_strength - away_team_strength + home_field_elo) / elo_scale))",
+                "elo_scale": 400.0,
+                "home_field_elo": data["params"]["home_field_elo"],
+                "neutral_site_home_field_elo": 0.0,
+                "rating_period_only": True,
+                "not_a_team_level_output": True,
+                "note": (
+                    "A win probability exists only after two team strengths and venue are supplied. "
+                    "That does not make win_probability a populated team-level registry field."
+                ),
+            },
             "prospective_forecasts_exist": False,
             "graded": False,
         }],
@@ -163,6 +177,12 @@ def validate_envelope(envelope: dict[str, Any], elo_envelope: dict[str, Any] | N
             raise ContractError(f"{system.get('system_id')} has an invalid output contract")
         if system.get("graded") is not False or system.get("prospective_forecasts_exist") is not False:
             raise ContractError(f"{system.get('system_id')} overstates prospective evidence")
+        projection = system.get("matchup_probability")
+        if not isinstance(projection, dict) or projection.get("available") is not True:
+            raise ContractError(f"{system.get('system_id')} lacks the declared matchup transform")
+        if projection.get("elo_scale") != 400.0 or projection.get("home_field_elo") != elo.PARAMS["home_field_elo"] or \
+           projection.get("neutral_site_home_field_elo") != 0.0 or projection.get("rating_period_only") is not True:
+            raise ContractError(f"{system.get('system_id')} matchup transform drifts from cfb_elo.py")
 
     teams = data.get("teams")
     low, high = backbone.FBS_TEAM_RANGE

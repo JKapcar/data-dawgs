@@ -11,7 +11,7 @@
   "input_snapshot_id": "sha256:414e0f27fba170d172db03a1a07fcca1bf83af09848de356ae3bd6fa83894237"
  },
  "integrity": {
-  "snapshot_id": "sha256:13233f782f8cea384fde9077f8aac271458b2a7950b1a6a38b440f1c4bbbd786",
+  "snapshot_id": "sha256:49b2a286548274f881926530db66dea6c084f0a68ebdc350f55bbc7e47c545f0",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for the data object (sorted object keys, no insignificant whitespace).",
   "systems": 1,
   "teams": 136
@@ -52,6 +52,17 @@
       "available": false,
       "units": "points"
      }
+    },
+    "matchup_probability": {
+     "available": true,
+     "output": "home_win_probability",
+     "formula": "1 / (1 + 10 ** (-(home_team_strength - away_team_strength + home_field_elo) / elo_scale))",
+     "elo_scale": 400.0,
+     "home_field_elo": 55.0,
+     "neutral_site_home_field_elo": 0.0,
+     "rating_period_only": true,
+     "not_a_team_level_output": true,
+     "note": "A win probability exists only after two team strengths and venue are supplied. That does not make win_probability a populated team-level registry field."
     },
     "prospective_forecasts_exist": false,
     "graded": false

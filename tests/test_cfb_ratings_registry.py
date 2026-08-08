@@ -50,6 +50,21 @@ class RatingsRegistryTests(unittest.TestCase):
         self.assertIsNone(consensus["weights"])
         self.assertIn("One independent rating", consensus["reason"])
 
+    def test_matchup_transform_is_published_from_the_elo_parameters(self):
+        system = self.envelope["data"]["systems"][0]
+        projection = system["matchup_probability"]
+        self.assertTrue(projection["available"])
+        self.assertEqual(projection["elo_scale"], 400.0)
+        self.assertEqual(projection["home_field_elo"], registry.elo.PARAMS["home_field_elo"])
+        self.assertTrue(projection["not_a_team_level_output"])
+        self.assertFalse(system["outputs"]["win_probability"]["available"])
+
+    def test_published_transform_reproduces_the_elo_probability_function(self):
+        projection = self.envelope["data"]["systems"][0]["matchup_probability"]
+        home, away = 1925.8, 1700.0
+        actual = 1 / (1 + 10 ** (-(home - away + projection["home_field_elo"]) / projection["elo_scale"]))
+        self.assertAlmostEqual(actual, registry.elo.expected_home_prob(home, away, neutral=False))
+
     def test_snapshot_tamper_is_rejected(self):
         broken = copy.deepcopy(self.envelope)
         broken["data"]["teams"][0]["systems"][registry.SYSTEM_ID]["team_strength"] += 1

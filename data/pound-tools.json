@@ -3203,7 +3203,7 @@
     {
      "status": "building",
      "on": "2026-08-08",
-     "note": "Implemented and evaluated dd_cfb_team_profile plus dd_compare_cfb_teams locally over compact dated profiles; both remain staged and non-callable in production."
+     "note": "Implemented and evaluated team profile, comparison and hypothetical Elo matchup tools locally; all remain staged and non-callable in production."
     }
    ],
    "implemented": true,
@@ -3212,7 +3212,7 @@
     "/work/test-mcp.mjs",
     "/data/cfb-ratings.json"
    ],
-   "delivery_note": "Two source-backed CFB read tools are implemented locally and staged. Production still has 26 live tools; deployment requires a separate approved Worker release.",
+   "delivery_note": "Three source-backed CFB tools are implemented locally and staged, including the published Elo matchup transform. Production still has 26 live tools; deployment requires a separate approved Worker release.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": null,
@@ -3234,7 +3234,7 @@
    "candidate_mcp_tools": [
     "dd_cfb_team_profile",
     "dd_compare_cfb_teams",
-    "get_cfb_game_projection",
+    "dd_project_cfb_matchup",
     "get_cfb_model_disagreement",
     "get_cfb_model_grades",
     "find_cfb_disagreements",

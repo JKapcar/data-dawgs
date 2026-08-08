@@ -89,9 +89,9 @@
    {
     "path": "/data/pound-tools.json",
     "url": "https://datadawgs216.com/data/pound-tools.json",
-    "bytes": 126045,
+    "bytes": 126073,
     "as_of": "2026-08-08",
-    "sha256": "652574750ab7a0e7958a8f25972315d4c0564a94992c361231a8bd1b79299919",
+    "sha256": "e0ff50de93142dc5536d0b308f5a27cc10f3bf177e00fc551861555f04aeb75c",
     "note": "Two kinds of entry share this inventory. kind \"tool\" (NFL) carries delivery status. kind \"roadmap-idea\" (College Football) carries recommendation plus evidence-backed lifecycle and implementation state. A CFB artifact may be implemented without any MCP tool; candidate_mcp_tools are reservations and remain non-callable unless the independent Worker registry proves otherwise."
    },
    {
@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 15693,
+    "bytes": 15722,
     "as_of": "2026-08-08",
-    "sha256": "53aa54f81c52c6def1c5c24a111aaae44c883969b7300eeaaaa1239548a166b6",
+    "sha256": "76bdf5580a4390fbc1f104aced7068f8e8a940033cde693e53098897ee0a7058",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -161,9 +161,9 @@
    {
     "path": "/data/cfb-teams.json",
     "url": "https://datadawgs216.com/data/cfb-teams.json",
-    "bytes": 114345,
+    "bytes": 114887,
     "as_of": "2026-08-08",
-    "sha256": "6396b1486fe0a060d4e21bff4198045318bcee1fb04cab495606260374171314",
+    "sha256": "cd21ad102ee356c18f35f03756c7c21eda719e214c7a5fbc80f12f1410e82578",
     "note": "OBSERVED RESULTS plus one MODELLED, RETRODICTIVE, UNGRADED end-of-2025 Elo rating. The objects are separated deliberately. This is not a 2026 forecast, consensus, edge or recommendation."
    },
    {
@@ -201,9 +201,9 @@
    {
     "path": "/data/cfb-ratings.json",
     "url": "https://datadawgs216.com/data/cfb-ratings.json",
-    "bytes": 45580,
+    "bytes": 46122,
     "as_of": "2026-08-08",
-    "sha256": "b96f2931300d1220202d58ef87e5267ec452b5ebe626cb421b75f2c69bfbc5cb",
+    "sha256": "33bb09e92b6e9963c1b3626b24ecd7c26ea5a10fa9fbbd73b6d83668e78f3989",
     "note": "MODELLED, RETRODICTIVE, UNGRADED. This is a registry contract with one live baseline, not a consensus or evidence that several models agree. Unsupported outputs are null rather than inferred. Quote the rating period with every value."
    },
    {

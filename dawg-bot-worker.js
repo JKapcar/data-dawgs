@@ -4188,6 +4188,18 @@ function mcpCfbCompareArgs(args) {
   return { teamA, teamB };
 }
 
+function mcpCfbProjectionArgs(args) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+  const extra = Object.keys(args).filter(k => !["home_team", "away_team", "neutral_site"].includes(k));
+  if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+  const homeTeam = mcpCfbTeamArgs({ team: args.home_team });
+  const awayTeam = mcpCfbTeamArgs({ team: args.away_team });
+  if (homeTeam.slug === awayTeam.slug) throw new Error("home_team and away_team must name different teams");
+  if (args.neutral_site !== undefined && typeof args.neutral_site !== "boolean")
+    throw new Error("neutral_site must be true or false");
+  return { homeTeam, awayTeam, neutralSite: args.neutral_site === true };
+}
+
 function mcpCfbObservedView(team) {
   const observed = team.observed_results || {};
   return {
@@ -4416,7 +4428,7 @@ async function mcpDispatch(m, env, caller) {
           "Everything here is read-only and is either the league's own data, public play-by-play, " +
           "or a deterministic calculation over caller-supplied inputs. Calculator inputs and results are not stored. " +
           "The model scoreboard reads dated prospective receipts and returns descriptive disagreement only; it is ungraded and is not a validated consensus or ranking. " +
-          "The CFB team profile separates observed 2025 results from one end-of-2025 retrodictive Elo row; it is ungraded, is not a 2026 forecast and is not a consensus. " +
+          "The CFB reads separate observed 2025 results from one end-of-2025 retrodictive Elo row. dd_project_cfb_matchup is a hypothetical rating-period calculation, not a scheduled 2026 forecast; all CFB outputs are ungraded and are not a consensus. " +
           "There is no built-in DFS projection or ownership feed: dd_solve_dfs_lineup requires the caller to supply every value per call, and stores none of them. dd_optimize_survivor_path is an ungraded ceiling over a dated snapshot and does not model double-pick weeks. When quoting bozo odds, survivor odds " +
           "or the correlation matrix, say it is model output or a measured historical average, never a forecast " +
           "of a specific game. Team names, weeks and league ids come from dd_league_overview — do not guess them.",
@@ -5278,6 +5290,87 @@ const MCP_TOOLS = [
           "Observed records and scoring are not opponent-adjusted; differences in schedule strength are not modelled.",
           "The registry currently contains one retrodictive, ungraded rating system; one system is not a consensus.",
           "Current market prices, rosters, injuries, availability, talent, portal and matchup inputs are absent.",
+        ],
+      });
+    },
+  },
+  {
+    name: "dd_project_cfb_matchup",
+    description: "Calculate a hypothetical home/away win probability from two exact teams using the published Data Dawgs CFB Elo transform and its dated end-of-2025 ratings. This is retrodictive and ungraded: not a scheduled 2026 forecast, market edge, spread, total, consensus or recommendation.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        home_team: { type: "string", minLength: 1, maxLength: 80, description: "Exact home-team registry name or slug." },
+        away_team: { type: "string", minLength: 1, maxLength: 80, description: "Exact away-team registry name or slug." },
+        neutral_site: { type: "boolean", default: false, description: "True removes the published home-field Elo adjustment." },
+      },
+      required: ["home_team", "away_team"],
+      additionalProperties: false,
+    },
+    async run(args) {
+      const input = mcpCfbProjectionArgs(args);
+      const envelope = await mcpCfbTeamProfiles();
+      const home = mcpCfbTeamMatch(envelope, input.homeTeam);
+      const away = mcpCfbTeamMatch(envelope, input.awayTeam);
+      const projections = envelope.data.systems.map(system => {
+        const transform = system.matchup_probability;
+        const homeRating = home.systems[system.system_id];
+        const awayRating = away.systems[system.system_id];
+        if (!transform || transform.available !== true) return {
+          system_id: system.system_id, available: false, reason: "This registered system has no declared matchup transform.",
+        };
+        if (!homeRating || !awayRating || !Number.isFinite(homeRating.team_strength) || !Number.isFinite(awayRating.team_strength))
+          throw new Error("team strength is missing for registered system " + system.system_id);
+        if (!Number.isFinite(transform.elo_scale) || transform.elo_scale <= 0 ||
+            !Number.isFinite(transform.home_field_elo) || !Number.isFinite(transform.neutral_site_home_field_elo))
+          throw new Error("invalid matchup transform for registered system " + system.system_id);
+        const venueAdjustment = input.neutralSite ? transform.neutral_site_home_field_elo : transform.home_field_elo;
+        const adjustedDifference = homeRating.team_strength - awayRating.team_strength + venueAdjustment;
+        const pHome = 1 / (1 + 10 ** (-adjustedDifference / transform.elo_scale));
+        return {
+          system_id: system.system_id,
+          name: system.name,
+          available: true,
+          home_team_strength: homeRating.team_strength,
+          away_team_strength: awayRating.team_strength,
+          raw_team_strength_difference_home_minus_away: homeRating.team_strength - awayRating.team_strength,
+          venue_adjustment_elo: venueAdjustment,
+          adjusted_elo_difference: adjustedDifference,
+          home_win_probability: pHome,
+          away_win_probability: 1 - pHome,
+          formula: transform.formula,
+          elo_scale: transform.elo_scale,
+          graded: system.graded === true,
+          prospective_forecasts_exist: system.prospective_forecasts_exist === true,
+        };
+      });
+      if (!projections.some(row => row.available)) throw new Error("no registered CFB system has a callable matchup transform");
+      return toolText({
+        projection_kind: "hypothetical matchup at the published rating period",
+        matchup: {
+          away_team: { team_slug: away.team_slug, name: away.team, conference: away.conference || null },
+          home_team: { team_slug: home.team_slug, name: home.team, conference: home.conference || null },
+          neutral_site: input.neutralSite,
+        },
+        rating_period: envelope.data.rating_period,
+        projections,
+        consensus: envelope.data.consensus,
+        as_of: envelope.as_of,
+        source: envelope.source,
+        integrity: envelope.integrity || null,
+        modelled: true,
+        retrodictive: true,
+        prospective: false,
+        scheduled_game: false,
+        graded: false,
+        read_only: true,
+        stored: false,
+        unsupported_outputs: { expected_margin: null, spread: null, predicted_total: null },
+        warnings: [
+          "This uses end-of-2025 ratings for a hypothetical matchup; it is not a frozen 2026 forecast receipt.",
+          "Only the published Elo transform is available. One retrodictive system is not a consensus.",
+          "The calculation does not include a current roster, injuries, availability, talent, portal, matchup, market or schedule context.",
+          "No expected margin, spread or total is inferred from win probability.",
         ],
       });
     },
