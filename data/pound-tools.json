@@ -10,16 +10,16 @@
    "name": "Model Scoreboard / Mean & Conflict",
    "intended_user_value": "Compare dated nfelo and 538 Classic beliefs game by game.",
    "existing_website_implementation": "/pound.html#scoreboard",
-   "existing_worker_mcp_implementation": "dd_analyze_matchup",
+   "existing_worker_mcp_implementation": "dd_model_scoreboard",
    "staged_worker_mcp_implementation": null,
    "required_data": "Uses the normalized prospective nfelo and 538 Classic receipts published by Data Dawgs.",
    "human_facing_ui_requirement": "Interactive game table with metric/source states.",
    "ai_language_requirement": "Explain the equal-weight mean, range, dissent and missing models without claiming a validated consensus blend.",
-   "mcp_api_requirement": "Keep dd_analyze_matchup read-only and align its contract with the public JSON.",
+   "mcp_api_requirement": "Keep dd_model_scoreboard read-only and align its contract with the public JSON.",
    "machine_readable_requirement": "/data/model-receipts.json + /data/538-classic.json",
-   "status": "frontend-only",
-   "exact_blocker": "The human two-model board is live, but dd_analyze_matchup does not yet expose the normalized multi-model ledger.",
-   "minimum_path_to_completion": "Add a read-only matchup query over model-receipts.json without storing caller activity or claiming a validated consensus blend."
+   "status": "complete",
+   "exact_blocker": null,
+   "minimum_path_to_completion": "No known blocker for the deployed scope."
   },
   {
    "id": "disagreement",
@@ -307,7 +307,7 @@
    "machine_readable_requirement": "/data/model-receipts.json + /data/model-contracts.json",
    "status": "complete",
    "exact_blocker": null,
-   "minimum_path_to_completion": "No known blocker for the deployed scope; outcomes and grades remain separate future data."
+   "minimum_path_to_completion": "No known blocker for the deployed scope."
   },
   {
    "id": "regimes",

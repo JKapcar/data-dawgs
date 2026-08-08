@@ -9,8 +9,8 @@ file is an envelope with `as_of`, `source`, `note`, `built`, `canonical_url` and
 Cite `as_of` with every number.
 
 [`/data/surfaces.json`](https://datadawgs216.com/data/surfaces.json) maps human pages to
-machine surfaces and MCP tools. All 12 mapped surfaces have live machine access; 24
-read-only MCP tools are live, including 10 deterministic Pound calculator tools.
+machine surfaces and MCP tools. All 12 mapped surfaces have live machine access; 25
+read-only MCP tools are live, including `dd_model_scoreboard` and 10 Pound calculators.
 `planned` means not callable. A per-user token comes from
 `/connect.html`; the URL is the credential.
 
@@ -31,8 +31,8 @@ The browser workbench converts odds, builds parlays, removes two-way vig, comput
 declared-probability EV, sizes equal-payoff hedges, grades NFL passer rating, calculates a
 538 Classic Elo one-game probability, translates probability to expected margin/cover,
 grades Brier/log loss, and summarizes equal-weight belief statistics. Browser inputs stay local and
-results are deterministic. Ten matching read-only MCP tools are live; caller-supplied calculator
-inputs and results are not stored.
+results are deterministic. The scoreboard and 10 calculators are live over read-only MCP;
+inputs and results are not stored. The scoreboard is descriptive and ungraded, not consensus or a ranking.
 
 ## Draft
 

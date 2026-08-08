@@ -5,7 +5,7 @@
  "graded": false,
  "note": "A contract is not a forecast. It prevents incompatible models and missing values from being silently normalized into false agreement.",
  "data": {
-  "contract_version": "1.4.0",
+  "contract_version": "1.5.0",
   "canonical_game_id": "season_week_away_home using canonical current team abbreviations, for example 2026_01_PIT_CLE",
   "canonical_schedule": "/data/nfl-schedule.json; integrity.snapshot_id is SHA-256 over canonical ordered game rows",
   "normalized_receipt_ledger": "/data/model-receipts.json; existing rows are append-only and results remain separate",
@@ -184,6 +184,24 @@
     "mcp_tool": "dd_summarize_beliefs",
     "note": "Equal-weight descriptive statistics only; this is not a validated consensus blend."
    }
+  },
+  "model_scoreboard_contract": {
+   "mcp_tool": "dd_model_scoreboard",
+   "source": "/data/model-receipts.json",
+   "selection": "Prospective receipts only; latest captured_at per game_id and model_id after bounded filters.",
+   "outputs": [
+    "dated receipt provenance",
+    "home win probabilities",
+    "equal-weight descriptive summary",
+    "comparable-set completeness"
+   ],
+   "bounds": {
+    "maximum_games_returned": 50,
+    "maximum_model_ids": 10
+   },
+   "grading": "No outcomes are joined. The tool is ungraded and does not rank models.",
+   "consensus": "Mean, range and standard deviation are descriptive only; no validated consensus, ensemble, confidence score or predictive edge is claimed.",
+   "persistence": "Read-only. Caller filters and results are not stored."
   }
  },
  "tier_meaning": "The Pound — shelved, with the reason attached.",

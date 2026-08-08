@@ -16,6 +16,7 @@ const crypto = require('crypto');
 const ROOT = path.resolve(__dirname, '..');
 const OUT = path.join(ROOT, 'data');
 const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
+const servedText = text => text.replace(/\r\n/g, '\n');
 
 /* ---------------------------------------------------------------
  * 1. Pull the JS literals out of the flat HTML.
@@ -454,9 +455,9 @@ write('bozo-rules.json', {
 const UPSTREAM_MODELS = [
   { id: '538-classic', creator: 'FiveThirtyEight', repository: 'fivethirtyeight/nfl-elo-game',
     upstream_commit: 'fbec1afa38ece5befe24fb21be8ddba8eb160fe6', version: null,
-    captured_at: '2026-08-07', license: 'MIT', license_status: 'verified-license-file',
-    integration_mode: 'reimplementation', data_status: 'historical reference available',
-    notes: 'Permanent simple benchmark. Data Dawgs may preserve the published mathematics with attribution; current 2026 team-state production is not built yet.' },
+    captured_at: '2026-08-08', license: 'MIT', license_status: 'verified-license-file',
+    integration_mode: 'reimplementation', data_status: 'historical reproduction and prospective 2026 forecasts published',
+    notes: 'Permanent simple benchmark. All 16,810 official probabilities reproduce within 0.0002 percentage point; that is a mathematics check, not evidence of current predictive skill.' },
   { id: 'nfelodcm', creator: 'Robert Greer', repository: 'greerreNFL/nfelodcm',
     upstream_commit: 'aa6660855758e2e508c37fe38c9066f06c583ac9', version: '0.2.21',
     captured_at: '2026-08-07', license: 'MIT', license_status: 'verified-package-metadata',
@@ -515,7 +516,7 @@ const UPSTREAM_MODELS = [
 ];
 
 const MODEL_CONTRACTS = {
-  contract_version: '1.3.0',
+  contract_version: '1.5.0',
   canonical_game_id: 'season_week_away_home using canonical current team abbreviations, for example 2026_01_PIT_CLE',
   canonical_schedule: '/data/nfl-schedule.json; integrity.snapshot_id is SHA-256 over canonical ordered game rows',
   normalized_receipt_ledger: '/data/model-receipts.json; existing rows are append-only and results remain separate',
@@ -524,9 +525,10 @@ const MODEL_CONTRACTS = {
   forecast_required: ['forecast_id', 'game_id', 'season', 'week', 'kickoff_at', 'captured_at',
     'model_id', 'model_name', 'model_version', 'source_repo', 'source_commit', 'source_capture_at',
     'home_team', 'away_team', 'home_win_probability', 'expected_margin_home', 'model_spread_home',
-    'home_cover_probability', 'push_probability', 'input_snapshot_id', 'forecast_status',
+    'home_cover_probability', 'push_probability', 'input_snapshot_id', 'schedule_snapshot_id', 'forecast_status',
     'methodology_url', 'license_status'],
-  null_policy: 'Unsupported values are null. A missing model output is never imputed merely to complete a row.',
+  snapshot_policy: 'schedule_snapshot_id identifies the canonical game facts; input_snapshot_id separately identifies the model-specific state, methodology and source snapshots. They are not interchangeable.',
+  null_policy: 'Unsupported values are null. A missing model output is never imputed merely to complete a row. Legacy market values without a named book and observation timestamp are not normalized.',
   probability_rule: 'Every non-null probability is a finite number in [0,1].',
   receipt_policy: {
     prospective: 'Append-only after publication. Record the exact input snapshot and contemporaneous market state before kickoff.',
@@ -553,10 +555,19 @@ const MODEL_CONTRACTS = {
       mcp_tool: 'dd_summarize_beliefs',
       note: 'Equal-weight descriptive statistics only; this is not a validated consensus blend.' },
   },
+  model_scoreboard_contract: {
+    mcp_tool: 'dd_model_scoreboard',
+    source: '/data/model-receipts.json',
+    selection: 'Prospective receipts only; latest captured_at per game_id and model_id after bounded filters.',
+    outputs: ['dated receipt provenance', 'home win probabilities', 'equal-weight descriptive summary', 'comparable-set completeness'],
+    bounds: { maximum_games_returned: 50, maximum_model_ids: 10 },
+    grading: 'No outcomes are joined. The tool is ungraded and does not rank models.',
+    consensus: 'Mean, range and standard deviation are descriptive only; no validated consensus, ensemble, confidence score or predictive edge is claimed.',
+    persistence: 'Read-only. Caller filters and results are not stored.',
+  },
 };
 
 const POUND_MINIMUM_PATHS = {
-  'model-scoreboard': 'Normalize and publish at least one lawfully integrated independent model feed, then join it by canonical game_id.',
   '538-classic': 'Deploy the staged Worker, verify dd_elo_game in production tools/list and a parity call, then mark only the one-game calculator scope live; current team states and receipts remain separate future work.',
   nfeloml: 'Run the MIT package in a scheduled precompute job with schema checks and publish static output, or build and validate a Worker-compatible inference port.',
   nfeloqb: 'Obtain a reusable license, permission, or lawful dated output; then build the starter mapping, adapter, and prospective validation.',
@@ -573,6 +584,7 @@ const POUND_MINIMUM_PATHS = {
 
 const calculatorIds = new Set(['disagreement', '538-classic', 'hfa', 'translation', 'market', 'cover-ev', 'odds', 'parlay', 'hedge', 'passer', 'grader', 'ensembles']);
 const POUND_LIVE_MCP = {
+  'model-scoreboard': 'dd_model_scoreboard',
   disagreement: 'dd_summarize_beliefs',
   '538-classic': 'dd_elo_game',
   translation: 'dd_translate_probability',
@@ -586,18 +598,18 @@ const POUND_LIVE_MCP = {
 };
 
 const POUND_TOOLS = [
-  ['model-scoreboard', 'Model Scoreboard / Mean & Conflict', 'Compare dated model and market beliefs game by game.', 'frontend-only',
-    'Uses the dated nfelo and market snapshots already published by Data Dawgs.', 'Interactive game table with metric/source states.',
-    'Explain the equal-weight mean, range, dissent and missing models without claiming a validated consensus blend.', 'dd_analyze_matchup covers the current two-source matchup view.',
-    '/data/nfelo.json + /data/survivor.json', 'More independently licensed model feeds are needed for a true multi-model board.'],
+  ['model-scoreboard', 'Model Scoreboard / Mean & Conflict', 'Compare dated nfelo and 538 Classic beliefs game by game.', 'complete',
+    'Uses the normalized prospective nfelo and 538 Classic receipts published by Data Dawgs.', 'Interactive game table with metric/source states.',
+    'Explain the equal-weight mean, range, dissent and missing models without claiming a validated consensus blend.', 'dd_model_scoreboard',
+    '/data/model-receipts.json + /data/538-classic.json', null],
   ['disagreement', 'Transparent Disagreement Engine', 'Show mean, median, range, standard deviation and decision-boundary splits.', 'complete',
     'Any list of probabilities, plus the current scoreboard.', 'Belief-summary lab and per-game descriptive statistics.',
     'Descriptive uncertainty only; never call disagreement a predictive edge.', 'dd_summarize_beliefs',
     '/data/model-contracts.json', null],
   ['538-classic', '538 Classic Elo', 'Provide a permanent simple benchmark/control.', 'complete',
-    'User-supplied Elo ratings; MIT mathematics HFA=65.', 'One-game probability calculator.',
-    'Describe this as a calculator until canonical 2026 state and receipts ship.', 'dd_elo_game',
-    '/data/upstream-models.json + /data/model-contracts.json', null],
+    'Pinned official reference, completed canonical game history and the 2026 schedule snapshot.', 'Prospective scoreboard column plus one-game probability calculator.',
+    'Permanent simple benchmark; reproduced historically and still ungraded prospectively.', 'dd_elo_game',
+    '/data/538-classic.json + /data/model-receipts.json + /data/538-classic-methodology.md', null],
   ['nfelo', 'nfelo Power Ratings', 'Use a dated public model output with Data Dawgs validation.', 'complete',
     '2026-08-06 nfelo snapshot and existing historical backtest.', 'Existing nfelo page plus Pound scoreboard.',
     'State that the backtest overlaps optimization and has not established out-of-sample skill.', 'dd_analyze_matchup',
@@ -653,14 +665,14 @@ const POUND_TOOLS = [
   ['grader', 'Forecast Grader', 'Compute Brier score and log loss for one declared forecast.', 'complete',
     'Probability and binary outcome.', 'Interactive calculator.', 'One observation is not model validation; sample size stays visible.', 'dd_score_forecast',
     '/data/model-contracts.json', null],
-  ['receipts', 'Immutable Multi-Model Receipts', 'Make prospective forecasts auditable after outcomes are known.', 'data-blocked',
+  ['receipts', 'Immutable Multi-Model Receipts', 'Make prospective forecasts auditable after outcomes are known.', 'complete',
     'Normalized forecasts, input snapshots and market state before kickoff.', 'Contract and link to the existing 2026 receipt ledger.',
     'Never mix backtests and prospective forecasts.', 'No dedicated MCP receipt tool.',
-    '/data/receipts.json + /data/model-contracts.json', 'Only the current nfelo-derived ledger exists; multi-model append-only storage is not built.'],
+    '/data/model-receipts.json + /data/model-contracts.json', null],
   ['regimes', 'Regime Analysis', 'Evaluate performance by declared football conditions.', 'data-blocked',
     'Adequate prospective comparable samples and predeclared slices.', 'Inventory card only.',
     'Post-hoc slices are exploratory; sample sizes and multiple-comparison risk must be shown.', 'No MCP tool.',
-    '/data/model-contracts.json', 'There are no multi-model prospective results yet.'],
+    '/data/model-contracts.json', 'Two-model prospective receipts exist, but no 2026 outcomes have occurred or been graded yet.'],
   ['ensembles', 'Ensemble Lab', 'Compare mean, median and later weighted blends.', 'frontend-only',
     'User-entered probabilities or future normalized forecasts.', 'Belief-summary calculator; equal-weight only.',
     'Complex methods wait until they beat equal weight on held-out data.', 'No MCP tool.',
@@ -676,6 +688,7 @@ const POUND_TOOLS = [
     id, name, intended_user_value,
     existing_website_implementation: id === 'nfelo' ? '/nfelo.html + /pound.html#scoreboard'
       : id === 'model-scoreboard' ? '/pound.html#scoreboard'
+      : id === 'disagreement' ? '/pound.html#scoreboard + /pound.html#calculators'
       : calculatorIds.has(id) ? '/pound.html#calculators' : '/pound.html#inventory',
     existing_worker_mcp_implementation: liveTool,
     staged_worker_mcp_implementation: null,
@@ -697,21 +710,21 @@ for (const tool of POUND_TOOLS) {
 }
 
 write('upstream-models.json', {
-  as_of: '2026-08-07', source: 'Primary upstream GitHub repositories and package metadata inspected 2026-08-07.',
+  as_of: '2026-08-08', source: 'Primary upstream GitHub repositories and package metadata inspected 2026-08-08.',
   tier: TIERS.pound, graded: false,
   note: 'License status is an implementation gate, not legal advice. Public code without a verified reusable license is not copied or repackaged.',
   data: UPSTREAM_MODELS,
 });
 
 write('model-contracts.json', {
-  as_of: '2026-08-07', source: 'Data Dawgs normalized forecasting and calculator contract, deployed 2026-08-07.',
+  as_of: '2026-08-08', source: 'Data Dawgs normalized forecasting and calculator contract, revised 2026-08-08.',
   tier: TIERS.pound, graded: false,
   note: 'A contract is not a forecast. It prevents incompatible models and missing values from being silently normalized into false agreement.',
   data: MODEL_CONTRACTS,
 });
 
 write('pound-tools.json', {
-  as_of: '2026-08-07', source: 'Reconciled against the Data Dawgs site, Worker source and inspected upstream projects on 2026-08-07.',
+  as_of: '2026-08-08', source: 'Reconciled against the Data Dawgs site, Worker source and inspected upstream projects on 2026-08-08.',
   tier: TIERS.pound, graded: false,
   note: 'Complete means the requested delivery layers are live. Ready means the Worker source and tests exist but production activation is still pending. Frontend-only means the browser tool and public contract exist without an MCP endpoint for the full requested scope. Blocked tools keep an exact minimum path instead of being omitted.',
   data: POUND_TOOLS,
@@ -812,7 +825,7 @@ write('tier-audit.json', {
 // The deployed /mcp tools. This list IS counts.mcp_tools_live. Calculator
 // tools move here only after the production version, transport, auth boundary
 // and deployed registrations have been verified.
-const MCP_POUND_LIVE = ['dd_convert_odds', 'dd_devig_market', 'dd_price_parlay',
+const MCP_POUND_LIVE = ['dd_model_scoreboard', 'dd_convert_odds', 'dd_devig_market', 'dd_price_parlay',
   'dd_calculate_bet_ev', 'dd_calculate_hedge', 'dd_nfl_passer_rating',
   'dd_score_forecast', 'dd_summarize_beliefs', 'dd_elo_game',
   'dd_translate_probability'];
@@ -897,8 +910,10 @@ const SURFACES = [
               { kind: 'json', url: '/data/model-receipts.json', status: 'live', covers: '544 append-only normalized prospective receipts across nfelo and 538 Classic' },
               { kind: 'json', url: '/data/538-classic.json', status: 'live', covers: 'reproduced 538 Classic methodology, 32 target-season ratings and 272 prospective forecasts' },
               { kind: 'markdown', url: '/data/538-classic-methodology.md', status: 'live', covers: 'model mathematics, provenance, reproduction tolerance, receipts and limits' },
-              ...MCP_POUND_LIVE.map(tool => ({ kind: 'mcp', tool, status: 'live', covers: 'deterministic calculation over caller-supplied inputs; inputs and results are not stored' }))],
-    planned: ['mcp:model_scoreboard'],
+              ...MCP_POUND_LIVE.map(tool => ({ kind: 'mcp', tool, status: 'live', covers: tool === 'dd_model_scoreboard'
+                ? 'bounded read-only query over dated prospective receipts; filters and results are not stored'
+                : 'deterministic calculation over caller-supplied inputs; inputs and results are not stored' }))],
+    planned: [],
     gap: 'Two prospective model feeds are live and ungraded. There is still no book-and-timestamp-provenanced market feed or comparable-sample leaderboard.' },
   { id: 'method', name: 'How this site reasons', page: '/index.html',
     machine: [{ kind: 'markdown', url: '/data/method.md', status: 'live' },
@@ -973,7 +988,7 @@ const manifest = {
       'tier-audit.md', '538-classic-methodology.md',
     ].map(name => {
       const p = path.join(OUT, name);
-      const txt = fs.readFileSync(p, 'utf8');
+      const txt = servedText(fs.readFileSync(p, 'utf8'));
       return {
         path: '/data/' + name,
         url: 'https://datadawgs216.com/data/' + name,
