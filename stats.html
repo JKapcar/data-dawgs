@@ -8,7 +8,7 @@
 <style>
 :root{
   color-scheme: dark;
-  --surface-1:#16120d; --page:#0a0806;
+  --surface-1:#16120d; --page:#120e08;
   --ink-1:#f5f1ea; --ink-2:#c8c1b4; --ink-3:#8f897d;
   --grid:#2b251d; --axis:#3b3428; --border:rgba(255,255,255,0.10);
   --accent:#ff6a02; --accent-ink:#140a02;
@@ -210,7 +210,13 @@ body{margin:0;background:var(--page);color:var(--ink-1);
 .udbtn{background:none;border:1px dashed var(--border);border-radius:8px;color:var(--ink-2);
   padding:4px 9px;cursor:pointer;font-size:13px;line-height:1.55;font-family:inherit;
   display:block}
-.sitenav .links .udbtn{margin-left:8px;flex:0 0 auto}
+/* ⚠️ 🙃 IS NOT A NAV ITEM. Moved 2026-08-08 out of the nav's flex run and down to
+   its own centred row at the foot of every page — see the .udfoot injection in the nav
+   script. Bottom-CENTRE, not bottom-right: Ask Toto owns the right corner as a fixed
+   button and would sit on top of it. The two phone rules that used to squeeze 🙃 into
+   the one-row nav were deleted with this move, which hands ~24px of slack back to the
+   360px layout. If 🙃 ever returns to the nav, restore all three together. */
+.udfoot{display:flex;justify-content:center;padding:20px 0 4px}
 .udbtn:hover{border-color:var(--accent);color:var(--accent)}
 :root[data-theme="light"] .udbtn{border-color:rgba(236,223,201,0.40);color:var(--navink2)}
 :root[data-theme="light"] .udbtn:hover{border-color:#ff8a4d;color:#ff8a4d}
@@ -220,7 +226,7 @@ body{margin:0;background:var(--page);color:var(--ink-1);
    a light-mode version of it would be a fourth theme nobody asked for. Colours are
    therefore hard-coded to the dark tokens, NOT var(--page)/var(--ink-*), which would
    flip to cream under :root[data-theme="light"]. Do not "tidy" them into variables. */
-.ud-ov{position:fixed;inset:0;z-index:9000;display:none;background:#0a0806;color:#c8c1b4;
+.ud-ov{position:fixed;inset:0;z-index:9000;display:none;background:#120e08;color:#c8c1b4;
   overflow:auto;overscroll-behavior:contain;
   font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 .ud-ov.on{display:block}
@@ -305,9 +311,8 @@ body{margin:0;background:var(--page);color:var(--ink-1);
   .sitenav .links .theme-btn{margin-left:4px;padding:4px 6px;font-size:12px;flex:0 0 auto}
   .theme-btn .tword{display:none}
   /* ⚠️ Measured at 360px the one-row nav had ~28px of slack (see the 419px note below).
-     🙃 spends most of it, so it runs tighter than the theme pill: icon only, no word,
-     minimum padding. If a nav item is ever added back, re-measure here first. */
-  .sitenav .links .udbtn{margin-left:3px;padding:3px 5px;font-size:12px}
+     🙃 used to spend most of it. It moved to the footer row on 2026-08-08, so that slack
+     is unspent again — the first nav item added back gets it. Re-measure here first. */
   .nlg{display:none} .nsm{display:inline}
 }
 /* ⚠️ Second breakpoint, and it is not cosmetic. Measured at 360px: the brand (105px)
@@ -324,15 +329,15 @@ body{margin:0;background:var(--page);color:var(--ink-1);
   .sitenav .brand .logo{display:none}
   .sitenav .navauth{margin-left:3px}
   .sitenav .navauth .authbtn{padding:3px 7px;font-size:10px;max-width:84px}
-  /* ⚠️ 🙃 joins a row that was already at its limit. Measured at 320px BEFORE this
-     tightening: the links run needed 243.4px inside a 244.0px box — 0.6px of margin,
-     which is not margin. Two pixels off each link's horizontal padding buys 12px back.
-     At 360px (the width the one-row layout was designed against) there is 40px spare,
-     and the tightest point on the whole curve is 420px — the last width that still
-     shows the wordmark — where 11px separates the wordmark from the first nav item.
+  /* ⚠️ Measured at 320px BEFORE this tightening: the links run needed 243.4px inside a
+     244.0px box — 0.6px of margin, which is not margin. Two pixels off each link's
+     horizontal padding buys 12px back. At 360px (the width the one-row layout was
+     designed against) there is 40px spare, and the tightest point on the whole curve is
+     420px — the last width that still shows the wordmark — where 11px separates the
+     wordmark from the first nav item. Every figure here was measured while 🙃 still sat
+     in this row; since 2026-08-08 it does not, so they are floors, not ceilings.
      Re-measure all three if anything is ever added to this row again. */
   .sitenav .links a,.sitenav .links .grpbtn{padding:4px 2px}
-  .sitenav .links .udbtn{margin-left:1px;padding:3px 4px;font-size:11.5px}
 
   /* ⚠️ The old two-row phone rules were DELETED here, not commented out. They sat AFTER
      these, at the same specificity, and quietly won the cascade — the one-row layout
@@ -411,7 +416,7 @@ footer a{color:var(--accent)}
 <style>
 :root{
   color-scheme: dark;
-  --surface-1:#16120d; --page:#0a0806;
+  --surface-1:#16120d; --page:#120e08;
   --ink-1:#f5f1ea; --ink-2:#c8c1b4; --ink-3:#8f897d;
   --grid:#2b251d; --axis:#3b3428; --border:rgba(255,255,255,0.10);
   --accent:#ff6a02; --good:#2fbf3f; --bad:#ff6b6b;
@@ -1216,7 +1221,17 @@ footer a{color:var(--accent)}
   udb.title = "The Upside Down — the machine-readable version of this page";
   udb.setAttribute("aria-label","Open the Upside Down: the machine-readable version of this page");
   udb.addEventListener("click", ()=>UD.toggle());
-  links.appendChild(udb);   // same flex run as the theme pill, so it wraps with it
+  /* ⚠️ 🙃 goes at the FOOT of the page, not in the nav (moved 2026-08-08). It is placed
+     immediately AFTER <footer> where one exists, so it inherits the page column, and at
+     the end of <body> on the six pages that ship no footer (auction, bigboard, bozo,
+     dashboard, dataviz, dawgs). Do not switch this to position:fixed bottom-right —
+     Ask Toto's launcher already owns that corner and 🙃 would land underneath it. */
+  const udrow = document.createElement("div");
+  udrow.className = "udfoot";
+  udrow.appendChild(udb);
+  const udft = document.querySelector("footer");
+  if(udft && udft.parentNode) udft.parentNode.insertBefore(udrow, udft.nextSibling);
+  else document.body.appendChild(udrow);
   document.addEventListener("keydown", e=>{
     if(e.key === "Escape" && UD.ov && UD.ov.classList.contains("on")) UD.close();
   });
