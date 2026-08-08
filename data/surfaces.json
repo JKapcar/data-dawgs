@@ -32,6 +32,7 @@
    "dd_survivor_week",
    "dd_scores",
    "dd_dfs_correlations",
+   "dd_solve_dfs_lineup",
    "dd_guillotine_odds",
    "dd_site_map",
    "dd_survivor_ev",
@@ -53,9 +54,9 @@
   "surfaces": 12,
   "with_live_machine_access": 12,
   "with_no_machine_access": 0,
-  "mcp_tools_live": 23,
+  "mcp_tools_live": 24,
   "mcp_tools_staged": 0,
-  "mcp_tools_planned": 7
+  "mcp_tools_planned": 6
  },
  "data": [
   {
@@ -274,13 +275,17 @@
      "kind": "mcp",
      "tool": "dd_dfs_correlations",
      "status": "live",
-     "covers": "the measured correlation structure only — never projections or ownership, which exist only in each user's browser"
+     "covers": "the measured correlation structure"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_solve_dfs_lineup",
+     "status": "live",
+     "covers": "bounded exact lineup optimization over caller-supplied slate data; inputs and results are not stored"
     }
    ],
-   "planned": [
-    "mcp:solve_dfs_lineup"
-   ],
-   "gap": "The solver is a pure function running in the browser. The correlation matrix it uses is served; the solve itself is not.",
+   "planned": [],
+   "gap": "The exact solver is live over MCP; contest simulation remains browser-only. Projections and ownership are caller-supplied and never hosted.",
    "tier": "labs"
   },
   {
