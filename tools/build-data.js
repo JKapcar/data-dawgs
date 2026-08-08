@@ -876,11 +876,16 @@ const MCP_POUND_LIVE = ['dd_model_scoreboard', 'dd_convert_odds', 'dd_devig_mark
   'dd_calculate_bet_ev', 'dd_calculate_hedge', 'dd_nfl_passer_rating',
   'dd_score_forecast', 'dd_summarize_beliefs', 'dd_elo_game',
   'dd_translate_probability'];
+const MCP_CFB_LIVE = ['dd_find_cfb_games', 'dd_find_cfb_team_games', 'dd_find_cfb_latest_games',
+  'dd_find_cfb_team_periods', 'dd_find_cfb_latest_team_periods', 'dd_find_cfb_historical_market',
+  'dd_get_cfb_model_card', 'dd_get_cfb_rating_system', 'dd_rank_cfb_teams', 'dd_cfb_team_profile',
+  'dd_compare_cfb_teams', 'dd_project_cfb_matchup', 'dd_project_cfb_schedule_path',
+  'dd_find_cfb_record_divergence', 'dd_get_cfb_model_disagreement', 'dd_get_cfb_model_receipt_status'];
 const MCP_LIVE = ['dd_whoami', 'dd_league_overview', 'dd_bozo_week', 'dd_bozo_standings',
   'dd_draft_board', 'dd_draft_pool', 'dd_survivor_week', 'dd_scores',
   'dd_dfs_correlations', 'dd_solve_dfs_lineup', 'dd_guillotine_odds', 'dd_site_map',
-  'dd_survivor_ev', 'dd_optimize_survivor_path', 'dd_analyze_matchup', ...MCP_POUND_LIVE];
-const MCP_STAGED = ['dd_find_cfb_games', 'dd_find_cfb_team_games', 'dd_find_cfb_latest_games', 'dd_find_cfb_team_periods', 'dd_find_cfb_latest_team_periods', 'dd_find_cfb_historical_market', 'dd_get_cfb_model_card', 'dd_get_cfb_rating_system', 'dd_rank_cfb_teams', 'dd_cfb_team_profile', 'dd_compare_cfb_teams', 'dd_project_cfb_matchup', 'dd_project_cfb_schedule_path', 'dd_find_cfb_record_divergence', 'dd_get_cfb_model_disagreement', 'dd_get_cfb_model_receipt_status'];
+  'dd_survivor_ev', 'dd_optimize_survivor_path', 'dd_analyze_matchup', ...MCP_POUND_LIVE, ...MCP_CFB_LIVE];
+const MCP_STAGED = [];
 const MCP_ENDPOINT = {
   path: '/mcp/u_<personal token>   (legacy: /mcp/<league passphrase>)',
   transport: 'streamable-http',
@@ -951,7 +956,7 @@ const SURFACES = [
     machine: [{ kind: 'mcp', tool: 'dd_guillotine_odds', status: 'live' }],
     planned: ['json:/data/guillotine.json'] },
   { id: 'pound', name: 'The Pound model and calculator workbench', page: '/pound.html',
-    machine: [{ kind: 'json', url: '/data/pound-tools.json', status: 'live', covers: 'complete NFL tool inventory plus the College Football roadmap with evidence-backed lifecycle state; no candidate CFB MCP tool is callable' },
+    machine: [{ kind: 'json', url: '/data/pound-tools.json', status: 'live', covers: 'complete NFL tool inventory plus the College Football roadmap with evidence-backed lifecycle state and sixteen production CFB MCP tools' },
               { kind: 'json', url: '/data/model-contracts.json', status: 'live', covers: 'forecast, receipt and calculator contracts' },
               { kind: 'json', url: '/data/upstream-models.json', status: 'live', covers: 'source, commit and license provenance' },
               { kind: 'json', url: '/data/nfl-schedule.json', status: 'live', covers: 'canonical schedule with exact upstream commit and snapshot hash' },
@@ -974,9 +979,11 @@ const SURFACES = [
               { kind: 'json', url: '/data/cfb-disagreement.json', status: 'live', covers: 'published blocked model-versus-market probe naming the missing observation timestamp and exact unblock condition' },
               ...MCP_POUND_LIVE.map(tool => ({ kind: 'mcp', tool, status: 'live', covers: tool === 'dd_model_scoreboard'
                 ? 'bounded read-only query over dated prospective receipts; filters and results are not stored'
-                : 'deterministic calculation over caller-supplied inputs; inputs and results are not stored' }))],
+                : 'deterministic calculation over caller-supplied inputs; inputs and results are not stored' })),
+              ...MCP_CFB_LIVE.map(tool => ({ kind: 'mcp', tool, status: 'live',
+                covers: 'bounded read-only CFB evidence or deterministic rating-period calculation; inputs and results are not stored' }))],
     planned: [],
-    gap: 'Two NFL prospective model feeds are live and ungraded. The CFB historical backbone and blocked disagreement finding are published, but its prospective timestamped market collector is staged rather than activated and no CFB forecast receipt has been frozen yet.' },
+    gap: 'Two NFL prospective model feeds are live and ungraded. Sixteen bounded CFB tools and the timestamped 24-hour market collector are live; the first market observation waits on an eligible 2026 event, and no CFB model forecast receipt has been frozen yet.' },
   { id: 'method', name: 'How this site reasons', page: '/index.html',
     machine: [{ kind: 'markdown', url: '/data/method.md', status: 'live' },
               { kind: 'markdown', url: '/data/toto-philosophy.md', status: 'live' }],

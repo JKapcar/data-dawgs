@@ -48,9 +48,7 @@
    "dd_score_forecast",
    "dd_summarize_beliefs",
    "dd_elo_game",
-   "dd_translate_probability"
-  ],
-  "tools_staged": [
+   "dd_translate_probability",
    "dd_find_cfb_games",
    "dd_find_cfb_team_games",
    "dd_find_cfb_latest_games",
@@ -67,14 +65,15 @@
    "dd_find_cfb_record_divergence",
    "dd_get_cfb_model_disagreement",
    "dd_get_cfb_model_receipt_status"
-  ]
+  ],
+  "tools_staged": []
  },
  "counts": {
   "surfaces": 12,
   "with_live_machine_access": 12,
   "with_no_machine_access": 0,
-  "mcp_tools_live": 26,
-  "mcp_tools_staged": 16,
+  "mcp_tools_live": 42,
+  "mcp_tools_staged": 0,
   "mcp_tools_planned": 5
  },
  "data": [
@@ -338,7 +337,7 @@
      "kind": "json",
      "url": "/data/pound-tools.json",
      "status": "live",
-     "covers": "complete NFL tool inventory plus the College Football roadmap with evidence-backed lifecycle state; no candidate CFB MCP tool is callable"
+     "covers": "complete NFL tool inventory plus the College Football roadmap with evidence-backed lifecycle state and sixteen production CFB MCP tools"
     },
     {
      "kind": "json",
@@ -525,10 +524,106 @@
      "tool": "dd_translate_probability",
      "status": "live",
      "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_find_cfb_games",
+     "status": "live",
+     "covers": "bounded read-only CFB evidence or deterministic rating-period calculation; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_find_cfb_team_games",
+     "status": "live",
+     "covers": "bounded read-only CFB evidence or deterministic rating-period calculation; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_find_cfb_latest_games",
+     "status": "live",
+     "covers": "bounded read-only CFB evidence or deterministic rating-period calculation; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_find_cfb_team_periods",
+     "status": "live",
+     "covers": "bounded read-only CFB evidence or deterministic rating-period calculation; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_find_cfb_latest_team_periods",
+     "status": "live",
+     "covers": "bounded read-only CFB evidence or deterministic rating-period calculation; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_find_cfb_historical_market",
+     "status": "live",
+     "covers": "bounded read-only CFB evidence or deterministic rating-period calculation; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_get_cfb_model_card",
+     "status": "live",
+     "covers": "bounded read-only CFB evidence or deterministic rating-period calculation; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_get_cfb_rating_system",
+     "status": "live",
+     "covers": "bounded read-only CFB evidence or deterministic rating-period calculation; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_rank_cfb_teams",
+     "status": "live",
+     "covers": "bounded read-only CFB evidence or deterministic rating-period calculation; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_cfb_team_profile",
+     "status": "live",
+     "covers": "bounded read-only CFB evidence or deterministic rating-period calculation; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_compare_cfb_teams",
+     "status": "live",
+     "covers": "bounded read-only CFB evidence or deterministic rating-period calculation; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_project_cfb_matchup",
+     "status": "live",
+     "covers": "bounded read-only CFB evidence or deterministic rating-period calculation; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_project_cfb_schedule_path",
+     "status": "live",
+     "covers": "bounded read-only CFB evidence or deterministic rating-period calculation; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_find_cfb_record_divergence",
+     "status": "live",
+     "covers": "bounded read-only CFB evidence or deterministic rating-period calculation; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_get_cfb_model_disagreement",
+     "status": "live",
+     "covers": "bounded read-only CFB evidence or deterministic rating-period calculation; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_get_cfb_model_receipt_status",
+     "status": "live",
+     "covers": "bounded read-only CFB evidence or deterministic rating-period calculation; inputs and results are not stored"
     }
    ],
    "planned": [],
-   "gap": "Two NFL prospective model feeds are live and ungraded. The CFB historical backbone and blocked disagreement finding are published, but its prospective timestamped market collector is staged rather than activated and no CFB forecast receipt has been frozen yet.",
+   "gap": "Two NFL prospective model feeds are live and ungraded. Sixteen bounded CFB tools and the timestamped 24-hour market collector are live; the first market observation waits on an eligible 2026 event, and no CFB model forecast receipt has been frozen yet.",
    "tier": "pound"
   },
   {

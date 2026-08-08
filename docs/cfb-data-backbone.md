@@ -29,7 +29,7 @@ python3 scripts/cfb_data_backbone.py validate
 node tools/validate-data.js
 ```
 
-`dd_find_cfb_games` is the staged bounded read of that canonical surface. It resolves an
+`dd_find_cfb_games` is the production bounded read of that canonical surface. It resolves an
 exact game ID or team and can filter by week, regular/postseason, status or exact
 conference, returning at most 50 games with deterministic observed winners and home
 margins for finals. Week numbers repeat between regular season and postseason, so the
@@ -47,7 +47,7 @@ The NFL backbone drops its upstream market columns entirely because they identif
 
 Four Bovada moneyline quotes in 2025 are internally impossible (both sides priced the same way, implying a 34 to 60 percent hold). They are dropped from the priced rows and published in `data.rejected_quotes` with the reason, rather than silently discarded. If rejections ever exceed one percent of quotes the refresh fails instead of publishing a degraded feed.
 
-`dd_find_cfb_historical_market` is the staged bounded read of this explicitly limited
+`dd_find_cfb_historical_market` is the production bounded read of this explicitly limited
 surface. It can resolve an exact game or team and filter by week, exact book or the
 presence of a devigged probability. Every response repeats
 `observation_timestamp_available: false`, `price_timing: unknown`,
@@ -70,12 +70,12 @@ When the market file is present the backtest also scores the Elo against the mar
 
 The schema is ready to add independently dated systems, but the data is not padded to make the registry look fuller than it is. It currently contains one retrodictive, ungraded system. Its exact team diagnostics flow through the registry and compact profiles under `retrodictive_team_diagnostic`, separately from the rating rank and observed result record. `data.consensus.status` is therefore `not-built`, with no weights. Multiple systems may be registered later; a blend still requires prospective error histories and correlation analysis.
 
-`dd_get_cfb_rating_system` is the staged method-discovery read. With no ID it returns
+`dd_get_cfb_rating_system` is the production method-discovery read. With no ID it returns
 compact registered-system and available-output summaries; with an exact ID it returns
 the full source receipt, output contract and published matchup transform. Registry
 membership is explicitly not evidence of prospective skill.
 
-`dd_rank_cfb_teams` is the staged bounded ranking read over that registry. It selects
+`dd_rank_cfb_teams` is the production bounded ranking read over that registry. It selects
 one exact registered system, sorts by its published rank, and optionally returns one
 exact conference slice with offset/limit pagination. Observed records remain separate
 from the modelled rating. The response explicitly refuses consensus and current-2026
@@ -100,12 +100,12 @@ havoc, garbage-time, opponent-adjusted and market-performance families. Those fi
 are not filled with null-looking guesses. The roadmap entries remain `building` until
 canonical play-by-play and timestamped market inputs make the full contracts possible.
 
-`dd_find_cfb_team_games` is the staged team-perspective read over the mirrored game
+`dd_find_cfb_team_games` is the production team-perspective read over the mirrored game
 rows. It requires one exact team and can filter by exact opponent, result, site, week
 and season type. Scores and outcomes are returned from the selected team's perspective,
 with the results-only and unavailable-metric boundaries repeated in every response.
 
-`dd_find_cfb_team_periods` is the staged bounded reader for the period layer. It
+`dd_find_cfb_team_periods` is the production bounded reader for the period layer. It
 requires one exact team and can filter by regular/postseason week, with chronological
 sorting and a hard result limit. It returns observed period and season-to-date record,
 scoring, opponent and venue facts, repeats the unavailable metric families, and stores
@@ -124,12 +124,12 @@ facts and lock the team-game and schedule snapshots; the same canonical game can
 once for each FBS participant. At about 0.1 MB, it is a small observed-results lookup,
 not current-2026 form, a forecast or a model grade.
 
-`dd_find_cfb_latest_games` is the staged bounded multi-team read over that compact
+`dd_find_cfb_latest_games` is the production bounded multi-team read over that compact
 surface. It can resolve one exact team or filter across exact conference, opponent
 division, season type, result and site with hard pagination. Every response preserves
 the dated-2025 and observed-results-only boundary.
 
-`dd_find_cfb_latest_team_periods` is the staged bounded read over that compact file. It
+`dd_find_cfb_latest_team_periods` is the production bounded read over that compact file. It
 can resolve an exact team or filter by division, exact conference, season type and the
 sign of the latest period's aggregate observed point differential, with hard pagination.
 It can order rows by conference win percentage, wins and point differential, but publishes
@@ -178,7 +178,7 @@ prospective confirmation and comparison against timestamped pregame market obser
 
 The card reports the roadmap's lifecycle value read from `/data/pound-tools.json` instead of asserting its own. The Elo entry is now `live`, and refreshing the card carries that value through automatically rather than maintaining a second status by hand.
 
-`dd_get_cfb_model_card` is the staged bounded read of this governance surface. With no
+`dd_get_cfb_model_card` is the production bounded read of this governance surface. With no
 argument it lists compact summaries for every registered card; with an exact model slug
 it returns the complete generated purpose, target, features, parameters, validation,
 performance, calibration, limitations, failure modes and receipt state. The Worker
@@ -192,7 +192,7 @@ retrodictive card into a current forecast, consensus, leaderboard or recommendat
 
 Building the contract does not manufacture evidence. The current 2025 schedule contains only final games, so the append path refuses every one of them. The first real row requires a 2026 game whose canonical status is `scheduled`, an Elo forecast issued before kickoff, and exact schedule, ratings-registry and model-card snapshots. Until then the ledger's zero rows are the honest result.
 
-`dd_get_cfb_model_receipt_status` is the staged machine read of that honest state. It
+`dd_get_cfb_model_receipt_status` is the production machine read of that honest state. It
 validates the public ledger as append-only prospective input, rejects duplicate,
 post-kickoff or non-prospective rows, and reports counts by model when rows eventually
 exist. Today it returns `empty-by-design`, zero models and zero receipts. It also keeps
@@ -207,7 +207,7 @@ The measured pattern is clean. Bucketing the 783 paired games by the size of the
 
 What unblocks it is small and specific: market prices with a capture timestamp established before kickoff, from any book. One timestamped snapshot per game at a fixed pregame hour is enough, and a full line history is not required. Until that exists, step 3's headline question and the step 4 consensus engine that depends on it are gated on data rather than on modelling. That is a real finding about the roadmap order, and it is worth more than a confounded verdict would have been.
 
-`dd_get_cfb_model_disagreement` is the staged MCP read of that artifact. It accepts no
+`dd_get_cfb_model_disagreement` is the production MCP read of that artifact. It accepts no
 filters because the published study is aggregate-only: the complete four-bucket
 measurement is small and there are no game-level edges to query. Before returning it,
 the Worker verifies that the finding is still `blocked`, every bucket reconciles to the
@@ -268,10 +268,13 @@ python3 scripts/cfb_model_receipts.py verify-history --base-ref origin/main
 wrangler deploy --dry-run --config wrangler.jsonc
 ```
 
-Deployment and activation are separate actions. The source and trigger configuration
-can be reviewed and tested without uploading a Worker version or changing traffic.
+The collector and public export are active in production on Worker version
+`4de01c9d-cff6-4234-9be1-3b93df6f49e7`. The hourly `9 * * * *` trigger is installed,
+and the public endpoint above is live. The receipt ledger will remain empty until an
+eligible 2026 event enters the 24-to-25-hour capture window; an empty ledger before then
+is expected rather than a failed deployment.
 
-## Staged CFB MCP read tool
+## Production CFB MCP tool layer
 
 `dd_cfb_team_profile` is the first exact-team CFB-side MCP read. It performs one
 bounded, cached read of `/data/cfb-ratings.json`, resolves an exact team name or slug,
@@ -280,16 +283,16 @@ receipt. It is read-only and stores neither the query nor the result.
 
 The response fails closed on malformed registry metadata and explicitly says what the
 current data cannot support: the sole Elo row is end-of-2025, retrodictive and ungraded;
-it is not a 2026 forecast, a consensus, or a betting recommendation. The tool is staged
-in source and `/data/surfaces.json`, but remains non-callable in production until a
-separately approved Worker version is uploaded, inspected and activated.
+it is not a 2026 forecast, a consensus, or a betting recommendation. The tool is live,
+read-only and callable in production on Worker version
+`4de01c9d-cff6-4234-9be1-3b93df6f49e7`.
 
-`dd_compare_cfb_teams` is staged beside it. It resolves two exact names or slugs on the
+`dd_compare_cfb_teams` is live beside it. It resolves two exact names or slugs on the
 same compact snapshot and reports observed record/scoring differences plus per-system
 rating and rank deltas. It deliberately returns no matchup probability, spread or edge:
 the results are not opponent-adjusted, and one retrodictive rating is not a consensus.
 
-`dd_project_cfb_matchup` is the first staged CFB computation rather than a lookup. The
+`dd_project_cfb_matchup` is the first production CFB computation rather than a lookup. The
 ratings registry publishes the Elo scale, venue adjustment and exact logistic formula;
 the Worker reads those dated parameters and calculates home/away win probabilities for
 two exact teams. Neutral site removes the +55 Elo adjustment. The result is a
@@ -310,8 +313,8 @@ end-of-2025 snapshot and games are treated as independent. Threshold leverage is
 win-count leverage, not conference or playoff leverage. The caller supplies every
 opponent and venue; the tool does not claim those rows are the 2026 schedule. Conference
 standings, tiebreakers, championship qualification, playoff selection, seeding and game
-leverage remain unbuilt. The tool is staged and non-callable in production until a
-separately approved Worker release.
+leverage remain unbuilt. The bounded, read-only computation is live in production;
+those limitations remain part of every response.
 
 `dd_find_cfb_record_divergence` makes the evaluated step-7 substrate queryable without
 promoting its brand into a verdict. It can resolve one exact team or filter the 136 dated
@@ -324,4 +327,4 @@ beyond Elo, while also returning `current_team_labels_permitted: false`,
 `prospective: false` and `market_adjusted: false`. The Worker validates that the source
 artifact still contains null labels and that the validation artifact still declares
 aggregate-only publication before serving a row. It is read-only, cached, bounded to 25
-rows and staged rather than callable in production.
+rows and callable in production.

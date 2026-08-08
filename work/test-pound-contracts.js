@@ -22,6 +22,11 @@ for (const [name, env] of Object.entries({ tools, contracts, upstream })) {
 const nflTools = tools.data.filter(t => (t.kind || 'tool') === 'tool');
 const cfbIdeas = tools.data.filter(t => t.kind === 'roadmap-idea');
 const roadmap = tools.cfb_roadmap;
+const CFB_MCP_LIVE = ['dd_find_cfb_games', 'dd_find_cfb_team_games', 'dd_find_cfb_latest_games',
+  'dd_find_cfb_team_periods', 'dd_find_cfb_latest_team_periods', 'dd_find_cfb_historical_market',
+  'dd_get_cfb_model_card', 'dd_get_cfb_rating_system', 'dd_rank_cfb_teams', 'dd_cfb_team_profile',
+  'dd_compare_cfb_teams', 'dd_project_cfb_matchup', 'dd_project_cfb_schedule_path',
+  'dd_find_cfb_record_divergence', 'dd_get_cfb_model_disagreement', 'dd_get_cfb_model_receipt_status'];
 test('inventory uses only declared statuses', () => {
   const allowed = new Set(['ready', 'frontend-only', 'backend-blocked', 'data-blocked', 'complete']);
   assert.ok(nflTools.length >= 20);
@@ -74,14 +79,15 @@ test('surface generator reports the deployed Pound MCP tools as live', () => {
     'dd_calculate_bet_ev', 'dd_calculate_hedge', 'dd_nfl_passer_rating',
     'dd_score_forecast', 'dd_summarize_beliefs', 'dd_elo_game',
     'dd_translate_probability'];
-  assert.equal(surfaces.counts.mcp_tools_live, 26);
-  assert.equal(surfaces.counts.mcp_tools_staged, 16);
+  assert.equal(surfaces.counts.mcp_tools_live, 42);
+  assert.equal(surfaces.counts.mcp_tools_staged, 0);
   assert.ok(surfaces.mcp.tools_live.includes('dd_survivor_ev'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_optimize_survivor_path'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_analyze_matchup'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_solve_dfs_lineup'));
   poundMcp.forEach(name => assert.ok(surfaces.mcp.tools_live.includes(name), name));
-  assert.deepEqual(surfaces.mcp.tools_staged, ['dd_find_cfb_games', 'dd_find_cfb_team_games', 'dd_find_cfb_latest_games', 'dd_find_cfb_team_periods', 'dd_find_cfb_latest_team_periods', 'dd_find_cfb_historical_market', 'dd_get_cfb_model_card', 'dd_get_cfb_rating_system', 'dd_rank_cfb_teams', 'dd_cfb_team_profile', 'dd_compare_cfb_teams', 'dd_project_cfb_matchup', 'dd_project_cfb_schedule_path', 'dd_find_cfb_record_divergence', 'dd_get_cfb_model_disagreement', 'dd_get_cfb_model_receipt_status']);
+  CFB_MCP_LIVE.forEach(name => assert.ok(surfaces.mcp.tools_live.includes(name), name));
+  assert.deepEqual(surfaces.mcp.tools_staged, []);
 });
 test('survivor surface exposes the exact path optimizer and names its remaining rule gap', () => {
   const survivor = surfaces.data.find(s => s.id === 'survivor');
@@ -111,8 +117,9 @@ test('model scoreboard is live over the normalized ungraded receipt ledger', () 
   const pound = surfaces.data.find(s => s.id === 'pound');
   assert.ok(pound.machine.some(x => x.kind === 'mcp' && x.tool === 'dd_model_scoreboard' && x.status === 'live'));
   assert.ok(!pound.planned.includes('mcp:model_scoreboard'));
-  assert.match(pound.gap, /prospective timestamped market collector is staged rather than activated/i);
-  assert.match(pound.gap, /no CFB forecast receipt has been frozen/i);
+  assert.match(pound.gap, /timestamped 24-hour market collector are live/i);
+  assert.match(pound.gap, /first market observation waits on an eligible 2026 event/i);
+  assert.match(pound.gap, /no CFB (?:model )?forecast receipt has been frozen/i);
 });
 test('new data surfaces are in the generated manifest', () => {
   const paths = new Set(index.data.files.map(x => x.path));
@@ -227,6 +234,10 @@ test('CFB roadmap ideas carry evidence-backed lifecycle without inventing tools'
   assert.equal(byId['cfb-season-sim'].lifecycle_status, 'building');
   assert.equal(byId['cfb-season-sim'].implemented, true);
   assert.deepEqual(byId['cfb-season-sim'].candidate_mcp_tools, ['dd_project_cfb_schedule_path']);
+  assert.equal(byId['cfb-mcp-layer'].lifecycle_status, 'live');
+  assert.equal(byId['cfb-mcp-layer'].implemented, true);
+  assert.match(byId['cfb-mcp-layer'].delivery_note, /sixteen source-backed CFB tools are live in production/i);
+  assert.match(byId['cfb-mcp-layer'].delivery_note, /42 live tools total/i);
 });
 test('published CFB backbone artifacts are discoverable without overstating their evidence', () => {
   const pound = surfaces.data.find(s => s.id === 'pound');
@@ -300,19 +311,20 @@ test('the 12-step roadmap ordering is stored explicitly and stays consistent', (
     else assert.ok(!inSteps.has(i.id), `${i.id} listed in a step but carries no roadmap_step`);
   }
 });
-test('the implemented CFB MCP tools are staged locally but no candidate is claimed live', () => {
+test('the deployed CFB MCP tools are live while unimplemented candidate names remain reserved', () => {
   const candidates = new Set(cfbIdeas.flatMap(i => i.candidate_mcp_tools || []));
-  const staged = new Set(['dd_find_cfb_games', 'dd_find_cfb_team_games', 'dd_find_cfb_latest_games', 'dd_find_cfb_team_periods', 'dd_find_cfb_latest_team_periods', 'dd_find_cfb_historical_market', 'dd_get_cfb_model_card', 'dd_get_cfb_rating_system', 'dd_rank_cfb_teams', 'dd_cfb_team_profile', 'dd_compare_cfb_teams', 'dd_project_cfb_matchup', 'dd_project_cfb_schedule_path', 'dd_find_cfb_record_divergence', 'dd_get_cfb_model_disagreement', 'dd_get_cfb_model_receipt_status']);
+  const live = new Set(CFB_MCP_LIVE);
   assert.ok(candidates.size >= 12);
   for (const name of candidates) {
-    assert.ok(!surfaces.mcp.tools_live.includes(name), `${name} falsely live`);
-    if (staged.has(name)) assert.ok(surfaces.mcp.tools_staged.includes(name), `${name} missing staged status`);
-    else assert.ok(!surfaces.mcp.tools_staged.includes(name), `${name} falsely staged`);
+    if (live.has(name)) assert.ok(surfaces.mcp.tools_live.includes(name), `${name} missing live status`);
+    else assert.ok(!surfaces.mcp.tools_live.includes(name), `${name} falsely live`);
+    assert.ok(!surfaces.mcp.tools_staged.includes(name), `${name} falsely staged`);
   }
-  assert.equal(surfaces.counts.mcp_tools_live, 26); // unchanged by this task
+  assert.equal(surfaces.counts.mcp_tools_live, 42);
   const pound = surfaces.data.find(s => s.id === 'pound');
-  for (const m of pound.machine.filter(x => x.kind === 'mcp')) assert.ok(!candidates.has(m.tool), m.tool);
-  assert.match(pound.machine.find(m => m.url === '/data/pound-tools.json').covers, /evidence-backed lifecycle state; no candidate CFB MCP tool is callable/);
+  const exposed = new Set(pound.machine.filter(x => x.kind === 'mcp').map(x => x.tool));
+  for (const name of CFB_MCP_LIVE) assert.ok(exposed.has(name), `${name} missing from Pound machine surfaces`);
+  assert.match(pound.machine.find(m => m.url === '/data/pound-tools.json').covers, /sixteen production CFB MCP tools/i);
 });
 test('the roadmap is Graveyard-ready: lifecycle history, postmortem shape and revival path exist', () => {
   assert.deepEqual(roadmap.lifecycle.statuses, LIFECYCLE);

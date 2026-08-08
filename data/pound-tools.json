@@ -854,7 +854,7 @@
     "/work/mcp-block.js",
     "/work/test-mcp.mjs"
    ],
-   "delivery_note": "Live for the completed 2025 season with a staged bounded MCP game finder. The upstream 2026 schedule has not been published yet.",
+   "delivery_note": "Live for the completed 2025 season with a bounded production MCP game finder. The upstream 2026 schedule has not been published yet.",
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 1,
@@ -974,7 +974,7 @@
     "/tests/test_cfb_team_results.py",
     "/work/mcp-block.js"
    ],
-   "delivery_note": "Partially implemented with observed schedule/result facts, a compact latest-completed-game row per FBS team, and a bounded exact-team game-history reader staged locally. EPA, success, explosiveness, havoc and garbage-time fields still require canonical play-by-play.",
+   "delivery_note": "Partially implemented with observed schedule/result facts, a compact latest-completed-game row per FBS team, and a bounded exact-team game-history reader live over MCP. EPA, success, explosiveness, havoc and garbage-time fields still require canonical play-by-play.",
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 1,
@@ -1134,7 +1134,12 @@
     {
      "status": "building",
      "on": "2026-08-08",
-     "note": "Published book-identified historical prices; observation time remains unknown. Prospective 24-hour capture is staged, not activated."
+     "note": "Published book-identified historical prices; observation time remains unknown."
+    },
+    {
+     "status": "building",
+     "on": "2026-08-08",
+     "note": "Activated the immutable 24-hour pregame capture cron and public receipt export; first observations depend on eligible 2026 events entering the window."
     }
    ],
    "implemented": true,
@@ -1145,7 +1150,7 @@
     "/work/mcp-block.js",
     "/work/test-mcp.mjs"
    ],
-   "delivery_note": "Partially implemented. Historical book prices are live with explicit unknown timing and have a staged no-CLV MCP reader; the timestamped prospective Worker collector still needs activation.",
+   "delivery_note": "Partially implemented. Historical book prices are live with explicit unknown timing and a no-CLV MCP reader. The timestamped 24-hour prospective collector and public export are active on the production Worker; first observations depend on eligible 2026 events entering the capture window.",
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 1,
@@ -1217,7 +1222,7 @@
     "/tests/test_cfb_ratings_registry.py",
     "/work/mcp-block.js"
    ],
-   "delivery_note": "The registry contract is live with one independent, retrodictive Elo system. Bounded registry metadata and ranking/conference readers are staged locally. CFBD systems and market context remain future additions; one system is not a consensus.",
+   "delivery_note": "The registry contract is live with one independent, retrodictive Elo system. Bounded registry metadata and ranking/conference readers are live over MCP. CFBD systems and market context remain future additions; one system is not a consensus.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 2,
@@ -1343,7 +1348,7 @@
     "/tests/test_cfb_team_results.py",
     "/work/mcp-block.js"
    ],
-   "delivery_note": "Partially implemented. The live surfaces contain observed results, season-to-date scoring/record facts, an explicitly non-authoritative regular-season conference record and a compact exact latest-period row per team, with bounded history and latest readers staged locally. The latest reader can compare conference records arithmetically but publishes no official rank or tiebreaker result; play, opponent-adjusted and market-performance metrics remain unavailable.",
+   "delivery_note": "Partially implemented. The live surfaces contain observed results, season-to-date scoring/record facts, an explicitly non-authoritative regular-season conference record and a compact exact latest-period row per team, with bounded history and latest readers live over MCP. The latest reader can compare conference records arithmetically but publishes no official rank or tiebreaker result; play, opponent-adjusted and market-performance metrics remain unavailable.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 1,
@@ -1416,7 +1421,7 @@
     "/tests/test_cfb_team_profiles.py",
     "/tests/test_cfb_team_results.py"
    ],
-   "delivery_note": "Partially implemented with compact rating profiles, exact latest completed FBS team games and exact latest-period team rows carrying overall and non-authoritative conference records; both latest surfaces have bounded staged readers. Richer team-week metrics and model grades remain future outputs.",
+   "delivery_note": "Partially implemented with compact rating profiles, exact latest completed FBS team games and exact latest-period team rows carrying overall and non-authoritative conference records; both latest surfaces have bounded production MCP readers. Richer team-week metrics and model grades remain future outputs.",
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 1,
@@ -1588,7 +1593,7 @@
     "/work/mcp-block.js",
     "/work/test-mcp.mjs"
    ],
-   "delivery_note": "The lab artifact is live and its aggregate evidence has a staged read-only MCP reader, but the headline question remains blocked by historical prices without observation timestamps. The tool returns the blocker rather than a winner or blend.",
+   "delivery_note": "The lab artifact and its aggregate read-only MCP reader are live, but the headline question remains blocked by historical prices without observation timestamps. The tool returns the blocker rather than a winner or blend.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 3,
@@ -1661,7 +1666,7 @@
     "/work/mcp-block.js",
     "/work/test-mcp.mjs"
    ],
-   "delivery_note": "Receipt infrastructure is implemented, the public ledger is honestly empty, and a staged read-only status tool reports that state without manufacturing grades. The first actual row still waits on a 2026 scheduled game and a forecast frozen before kickoff.",
+   "delivery_note": "Receipt infrastructure is implemented, the public ledger is honestly empty, and a production read-only status tool reports that state without manufacturing grades. The timestamped market collector is active; the first model receipt still waits on a 2026 scheduled game and a forecast frozen before kickoff.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 3,
@@ -1794,7 +1799,7 @@
     "/work/mcp-block.js",
     "/work/test-mcp.mjs"
    ],
-   "delivery_note": "The baseline is live and reproducible with a staged generated model-card reader plus compact expected-versus-observed team diagnostics. Diagnostics are explicitly non-ranked, retrodictive and ungraded; no luck label or prospective 2026 claim is made.",
+   "delivery_note": "The baseline is live and reproducible with a production generated model-card reader plus compact expected-versus-observed team diagnostics. Diagnostics are explicitly non-ranked, retrodictive and ungraded; no luck label or prospective 2026 claim is made.",
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 2,
@@ -2709,7 +2714,7 @@
     "/work/test-mcp.mjs",
     "/data/cfb-ratings.json"
    ],
-   "delivery_note": "Partially implemented as staged dd_project_cfb_schedule_path: exact Poisson-binomial win-count distributions and optional per-game win-threshold leverage for up to 20 caller-supplied matchups using fixed end-of-2025 Elo. Threshold leverage is not conference/playoff leverage; this is not an actual 2026 schedule, conference simulation or playoff model and remains non-callable in production.",
+   "delivery_note": "Partially implemented through live dd_project_cfb_schedule_path: exact Poisson-binomial win-count distributions and optional per-game win-threshold leverage for up to 20 caller-supplied matchups using fixed end-of-2025 Elo. Threshold leverage is not conference/playoff leverage; this is not an actual 2026 schedule, conference simulation or playoff model.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 9,
@@ -2850,7 +2855,7 @@
     "/work/mcp-block.js",
     "/work/test-mcp.mjs"
    ],
-   "delivery_note": "The descriptive baseline now has a one-season, pregame-only chronological holdout: one Elo-offset coefficient improved Brier by 0.001123 and log loss by 0.002277 over 233 untouched games. A staged read-only MCP explorer exposes the dated gaps and aggregate receipt without labels. This remains retrodictive, not market-adjusted or prospective, and does not authorize overrated/underrated team labels.",
+   "delivery_note": "The descriptive baseline now has a one-season, pregame-only chronological holdout: one Elo-offset coefficient improved Brier by 0.001123 and log loss by 0.002277 over 233 untouched games. A production read-only MCP explorer exposes the dated gaps and aggregate receipt without labels. This remains retrodictive, not market-adjusted or prospective, and does not authorize overrated/underrated team labels.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 7,
@@ -3258,7 +3263,7 @@
   {
    "kind": "roadmap-idea",
    "domain": "College Football",
-   "lifecycle_status": "building",
+   "lifecycle_status": "live",
    "lifecycle_history": [
     {
      "status": "idea",
@@ -3269,6 +3274,11 @@
      "status": "building",
      "on": "2026-08-08",
      "note": "Implemented and evaluated canonical game, results-only team-game, compact latest-game, team-period and compact latest-period, and historical market lookup, generated model-card governance, rating-system discovery, bounded single-system rankings, team profile, comparison, hypothetical Elo matchup, exact hypothetical schedule-path, descriptive record-divergence, blocked model-disagreement and prospective-receipt status tools locally; all remain staged and non-callable in production."
+    },
+    {
+     "status": "live",
+     "on": "2026-08-08",
+     "note": "Deployed sixteen validated, bounded, read-only CFB tools to the production toto Worker as version 4de01c9d-cff6-4234-9be1-3b93df6f49e7."
     }
    ],
    "implemented": true,
@@ -3281,7 +3291,7 @@
     "/data/cfb-market.json",
     "/data/cfb-model-cards.json"
    ],
-   "delivery_note": "Sixteen source-backed CFB tools are implemented locally and staged, including canonical game, results-only team-game, compact latest-game, team-period and compact latest-period, and no-CLV historical market lookup, generated model-card governance, rating-system discovery, bounded single-system rankings, exact matchup and schedule-path calculations, plus no-label divergence, blocked-study and prospective-receipt status readers. Production still has 26 live tools; deployment requires a separate approved Worker release.",
+   "delivery_note": "Sixteen source-backed CFB tools are live in production, including canonical game, results-only team-game, compact latest-game, team-period and compact latest-period, no-CLV historical market lookup, generated model-card governance, rating-system discovery, bounded single-system rankings, exact matchup and schedule-path calculations, plus no-label divergence, blocked-study and prospective-receipt status readers. The production registry now contains 42 live tools total.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": null,
@@ -3341,11 +3351,11 @@
    "source_headings": [
     "Deterministic CFB MCP/API Tool Layer"
    ],
-   "rationale": "The eventual product layer: read-only tools that call deterministic Data Dawgs computation, with the AI doing orchestration and explanation — the same architecture as the 26 live NFL-side tools, extended to CFB only as each underlying capability ships.",
+   "rationale": "The production product layer: read-only tools that call deterministic Data Dawgs computation, with the AI doing orchestration and explanation — sixteen CFB tools now run alongside the existing 26-tool registry, and future names remain gated on their underlying capability.",
    "expected_value": "AI-callable CFB answers backed by receipts instead of vibes.",
    "data_source_requirements": "Each candidate tool depends on its underlying capability existing and being validated first.",
    "deterministic_tool_potential": "Yes — this entry is the tool layer itself.",
-   "validation_requirement": "A candidate tool goes live only after its underlying computation is built, tested and deployed — the same gate the NFL calculators passed. None of these names is callable today.",
+   "validation_requirement": "A candidate tool goes live only after its underlying computation is built, tested and deployed — the first sixteen passed that gate; remaining reserved names stay non-callable.",
    "risks_limitations": "The temptation is registering tool names before the computation earns them; the Pound exists to prevent exactly that.",
    "tags": [
     "CFB",
