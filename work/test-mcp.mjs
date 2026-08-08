@@ -290,6 +290,38 @@ const cfbTeamWeekJson = {
     ],
   },
 };
+const cfbTeamWeekLatestRows = Object.keys(cfbTeamWeekJson.data.teams).sort().map(teamSlug => {
+  const source = cfbTeamWeekJson.data.rows.filter(row => row.team_slug === teamSlug)
+    .sort((a, b) => b.through_at.localeCompare(a.through_at) || b.team_period_id.localeCompare(a.team_period_id))[0];
+  const team = cfbTeamWeekJson.data.teams[teamSlug];
+  return {
+    team_slug: teamSlug, team: team.team, espn_id: team.espn_id, division: team.division, conference: team.conference,
+    through_at: source.through_at,
+    latest_period: {
+      team_period_id: source.team_period_id, season_type: source.season_type, week: source.week, period_key: source.period_key,
+      scheduled_games: source.scheduled_games_this_period, opponent_slugs: source.opponent_slugs,
+      home_games: source.home_games, away_games: source.away_games, neutral_games: source.neutral_games,
+      fbs_opponents: source.fbs_opponents, observed_result: source.period,
+    },
+    season_to_date: source.season_to_date,
+  };
+});
+const cfbTeamWeekLatestJson = {
+  as_of: "2026-08-08", source: "test compact latest CFB team periods", built: "2026-08-08", graded: false,
+  integrity: { snapshot_id: "sha256:test-cfb-team-week-latest", rows: cfbTeamWeekLatestRows.length, teams: cfbTeamWeekLatestRows.length },
+  data: {
+    schema_version: 1, season: 2025, scope: "results-only",
+    input_schedule_snapshot_id: "sha256:test-cfb-schedule", input_team_week_snapshot_id: "sha256:test-cfb-team-week",
+    selection: "Maximum (through_at, team_period_id) per team from /data/cfb-team-week.json.",
+    coverage: {
+      schedule_scope: "Canonical 2025 games involving at least one FBS team.",
+      fbs_team_records: "Complete within the canonical FBS-involved schedule.",
+      fcs_team_records: "Only games against FBS opponents; not complete FCS season records.",
+    },
+    unavailable_metrics: cfbTeamWeekJson.data.unavailable_metrics,
+    rows: cfbTeamWeekLatestRows,
+  },
+};
 const cfbTeamGameTeams = {};
 for (const game of cfbScheduleJson.data.games) {
   cfbTeamGameTeams[game.home_team_slug] = { team: game.home_team, espn_id: null, division: game.home_division, conference: game.home_conference };
@@ -427,6 +459,7 @@ globalThis.fetch = async (input, init) => {
   if (u.includes("datadawgs216.com/data/cfb-disagreement.json")) return J(cfbDisagreementJson);
   if (u.includes("datadawgs216.com/data/cfb-model-receipts.json")) return J(cfbModelReceiptsJson);
   if (u.includes("datadawgs216.com/data/cfb-team-game.json")) return J(cfbTeamGameJson);
+  if (u.includes("datadawgs216.com/data/cfb-team-week-latest.json")) return J(cfbTeamWeekLatestJson);
   if (u.includes("datadawgs216.com/data/cfb-team-week.json")) return J(cfbTeamWeekJson);
   if (u.includes("datadawgs216.com/data/cfb-schedule.json")) return J(cfbScheduleJson);
   if (u.includes("datadawgs216.com/data/cfb-market.json")) return J(cfbMarketJson);
@@ -519,12 +552,12 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 {
   const j = await (await req(rpc("tools/list"))).json();
   const t = j.result.tools;
-  ok(t.length === 40, "forty tools listed in the staged Worker source");
+  ok(t.length === 41, "forty-one tools listed in the staged Worker source");
   ok(t.every(x => x.name.startsWith("dd_")), "all tools dd_-prefixed");
   ok(t.every(x => x.inputSchema && x.inputSchema.type === "object"), "all tools carry an inputSchema");
   for (const name of ["dd_convert_odds", "dd_devig_market", "dd_price_parlay", "dd_calculate_bet_ev",
     "dd_calculate_hedge", "dd_nfl_passer_rating", "dd_score_forecast", "dd_summarize_beliefs",
-    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_get_cfb_rating_system", "dd_rank_cfb_teams", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_project_cfb_schedule_path", "dd_find_cfb_record_divergence", "dd_get_cfb_model_disagreement", "dd_get_cfb_model_receipt_status", "dd_find_cfb_team_games", "dd_find_cfb_team_periods", "dd_find_cfb_games", "dd_find_cfb_historical_market", "dd_get_cfb_model_card", "dd_optimize_survivor_path"])
+    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_get_cfb_rating_system", "dd_rank_cfb_teams", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_project_cfb_schedule_path", "dd_find_cfb_record_divergence", "dd_get_cfb_model_disagreement", "dd_get_cfb_model_receipt_status", "dd_find_cfb_team_games", "dd_find_cfb_team_periods", "dd_find_cfb_latest_team_periods", "dd_find_cfb_games", "dd_find_cfb_historical_market", "dd_get_cfb_model_card", "dd_optimize_survivor_path"])
     ok(t.some(x => x.name === name), name + " is listed");
 }
 // dd_league_overview
@@ -1190,6 +1223,44 @@ function refNcdf(z) {
   const extra = await (await req(call("dd_find_cfb_team_games", { team: "Akron", include_epa: true }))).json();
   ok([partial, missing, same, badResult, badSite, badLimit, extra].every(result => result.result.isError === true),
      "CFB team-game reader fails closed on partial, missing, same-team and unsupported inputs");
+}
+// dd_find_cfb_latest_team_periods: compact bounded cross-team discovery whose
+// "latest" label stays tied to the dated 2025 FBS-involved surface.
+{
+  const j = await (await req(call("dd_find_cfb_latest_team_periods"))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.season === 2025 && d.returned === 2 &&
+     d.rows.map(row => row.team).join(",") === "Akron,Ohio State",
+     "CFB latest-period reader defaults to a bounded alphabetical compact index");
+  ok(d.scope === "results-only" && d.observed_results_only && !d.current_2026_form && !d.forecast &&
+     !d.modelled && !d.graded && d.read_only && d.stored === false,
+     "CFB latest-period reader refuses current-form, model and forecast claims");
+  ok(/not complete FCS season records/i.test(d.coverage.fcs_team_records) &&
+     d.warnings.some(x => /last covered period in the dated 2025/i.test(x)),
+     "CFB latest-period reader preserves the partial-FCS and dated-latest boundaries");
+}
+{
+  const filtered = text(await (await req(call("dd_find_cfb_latest_team_periods", {
+    team: "OHIO STATE", division: "fbs", conference: "big ten", season_type: "postseason",
+    period_outcome: "positive", sort: "through-desc", offset: 0, limit: 1
+  }))).json());
+  ok(filtered.matched_before_pagination === 1 && filtered.returned === 1 &&
+     filtered.rows[0].team_slug === "ohio-state" && filtered.rows[0].latest_period.period_key === "postseason-01" &&
+     filtered.query.conference === "Big Ten",
+     "CFB latest-period reader combines exact team, conference, division, period and outcome filters");
+  const negative = text(await (await req(call("dd_find_cfb_latest_team_periods", { period_outcome: "negative" }))).json());
+  ok(negative.returned === 1 && negative.rows[0].team === "Akron",
+     "CFB latest-period outcome filter uses aggregate observed point-differential direction");
+}
+{
+  const partial = await (await req(call("dd_find_cfb_latest_team_periods", { team: "state" }))).json();
+  const conference = await (await req(call("dd_find_cfb_latest_team_periods", { conference: "NFL" }))).json();
+  const outcome = await (await req(call("dd_find_cfb_latest_team_periods", { period_outcome: "win" }))).json();
+  const offset = await (await req(call("dd_find_cfb_latest_team_periods", { offset: 400 }))).json();
+  const limit = await (await req(call("dd_find_cfb_latest_team_periods", { limit: 51 }))).json();
+  const extra = await (await req(call("dd_find_cfb_latest_team_periods", { current: true }))).json();
+  ok([partial, conference, outcome, offset, limit, extra].every(result => result.result.isError === true),
+     "CFB latest-period reader fails closed on partial, invented, out-of-range and unsupported inputs");
 }
 // dd_find_cfb_team_periods: bounded results-only team history with repeated
 // regular/postseason week labels kept distinct.

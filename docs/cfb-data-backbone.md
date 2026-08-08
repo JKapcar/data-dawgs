@@ -112,6 +112,11 @@ about 0.2 MB rather than the 1.5 MB full history, locks the exact team-week snap
 consumed, and still says results-only: an FCS team's latest FBS-involved game is not a
 claim about its complete season, and no row is current-2026 form or a forecast.
 
+`dd_find_cfb_latest_team_periods` is the staged bounded read over that compact file. It
+can resolve an exact team or filter by division, exact conference, season type and the
+sign of the latest period's aggregate observed point differential, with hard pagination.
+Every response repeats that latest is dated 2025 coverage and that FCS records are partial.
+
 `scripts/cfb_team_profiles.py refresh` adds `/data/cfb-teams.json`, a compact 136-team
 read surface. It joins each FBS team's observed season-to-date record and scoring facts
 to the separately nested end-of-2025 Elo registry row, locking both input snapshots.

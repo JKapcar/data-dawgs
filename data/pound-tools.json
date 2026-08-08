@@ -1426,7 +1426,9 @@
     "cfb-team-week",
     "cfb-ratings-registry"
    ],
-   "candidate_mcp_tools": [],
+   "candidate_mcp_tools": [
+    "dd_find_cfb_latest_team_periods"
+   ],
    "components": [],
    "related_ideas": [
     "cfb-sqlite-explorer",
@@ -3263,7 +3265,7 @@
     {
      "status": "building",
      "on": "2026-08-08",
-     "note": "Implemented and evaluated canonical game, results-only team-game and team-period, and historical market lookup, generated model-card governance, rating-system discovery, bounded single-system rankings, team profile, comparison, hypothetical Elo matchup, exact hypothetical schedule-path, descriptive record-divergence, blocked model-disagreement and prospective-receipt status tools locally; all remain staged and non-callable in production."
+     "note": "Implemented and evaluated canonical game, results-only team-game, team-period and compact latest-period, and historical market lookup, generated model-card governance, rating-system discovery, bounded single-system rankings, team profile, comparison, hypothetical Elo matchup, exact hypothetical schedule-path, descriptive record-divergence, blocked model-disagreement and prospective-receipt status tools locally; all remain staged and non-callable in production."
     }
    ],
    "implemented": true,
@@ -3276,7 +3278,7 @@
     "/data/cfb-market.json",
     "/data/cfb-model-cards.json"
    ],
-   "delivery_note": "Fourteen source-backed CFB tools are implemented locally and staged, including canonical game, results-only team-game and team-period, and no-CLV historical market lookup, generated model-card governance, rating-system discovery, bounded single-system rankings, exact matchup and schedule-path calculations, plus no-label divergence, blocked-study and prospective-receipt status readers. Production still has 26 live tools; deployment requires a separate approved Worker release.",
+   "delivery_note": "Fifteen source-backed CFB tools are implemented locally and staged, including canonical game, results-only team-game, team-period and compact latest-period, and no-CLV historical market lookup, generated model-card governance, rating-system discovery, bounded single-system rankings, exact matchup and schedule-path calculations, plus no-label divergence, blocked-study and prospective-receipt status readers. Production still has 26 live tools; deployment requires a separate approved Worker release.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": null,
@@ -3301,6 +3303,7 @@
     "dd_find_cfb_games",
     "dd_find_cfb_team_games",
     "dd_find_cfb_team_periods",
+    "dd_find_cfb_latest_team_periods",
     "dd_find_cfb_historical_market",
     "dd_get_cfb_model_card",
     "dd_get_cfb_rating_system",
