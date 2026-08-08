@@ -1557,9 +1557,11 @@
    "delivery_evidence": [
     "/data/cfb-disagreement.json",
     "/scripts/cfb_disagreement.py",
-    "/tests/test_cfb_disagreement.py"
+    "/tests/test_cfb_disagreement.py",
+    "/work/mcp-block.js",
+    "/work/test-mcp.mjs"
    ],
-   "delivery_note": "The lab artifact is live, but its headline question remains blocked by historical prices without observation timestamps.",
+   "delivery_note": "The lab artifact is live and its aggregate evidence has a staged read-only MCP reader, but the headline question remains blocked by historical prices without observation timestamps. The tool returns the blocker rather than a winner or blend.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 3,
@@ -1570,7 +1572,7 @@
     "cfb-ratings-registry"
    ],
    "candidate_mcp_tools": [
-    "get_cfb_model_disagreement",
+    "dd_get_cfb_model_disagreement",
     "find_cfb_disagreements"
    ],
    "components": [],
@@ -3232,7 +3234,7 @@
     {
      "status": "building",
      "on": "2026-08-08",
-     "note": "Implemented and evaluated team profile, comparison, hypothetical Elo matchup, exact hypothetical schedule-path and descriptive record-divergence tools locally; all remain staged and non-callable in production."
+     "note": "Implemented and evaluated team profile, comparison, hypothetical Elo matchup, exact hypothetical schedule-path, descriptive record-divergence and blocked model-disagreement evidence tools locally; all remain staged and non-callable in production."
     }
    ],
    "implemented": true,
@@ -3243,7 +3245,7 @@
     "/data/cfb-record-divergence.json",
     "/data/cfb-record-divergence-validation.json"
    ],
-   "delivery_note": "Five source-backed CFB tools are implemented locally and staged, including exact matchup and schedule-path calculations plus a no-label record-divergence explorer. Production still has 26 live tools; deployment requires a separate approved Worker release.",
+   "delivery_note": "Six source-backed CFB tools are implemented locally and staged, including exact matchup and schedule-path calculations plus no-label divergence and blocked-study evidence readers. Production still has 26 live tools; deployment requires a separate approved Worker release.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": null,
@@ -3268,7 +3270,7 @@
     "dd_project_cfb_matchup",
     "dd_project_cfb_schedule_path",
     "dd_find_cfb_record_divergence",
-    "get_cfb_model_disagreement",
+    "dd_get_cfb_model_disagreement",
     "get_cfb_model_grades",
     "find_cfb_disagreements",
     "get_cfb_consensus",

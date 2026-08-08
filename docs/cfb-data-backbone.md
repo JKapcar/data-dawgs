@@ -122,6 +122,14 @@ The measured pattern is clean. Bucketing the 783 paired games by the size of the
 
 What unblocks it is small and specific: market prices with a capture timestamp established before kickoff, from any book. One timestamped snapshot per game at a fixed pregame hour is enough, and a full line history is not required. Until that exists, step 3's headline question and the step 4 consensus engine that depends on it are gated on data rather than on modelling. That is a real finding about the roadmap order, and it is worth more than a confounded verdict would have been.
 
+`dd_get_cfb_model_disagreement` is the staged MCP read of that artifact. It accepts no
+filters because the published study is aggregate-only: the complete four-bucket
+measurement is small and there are no game-level edges to query. Before returning it,
+the Worker verifies that the finding is still `blocked`, every bucket reconciles to the
+declared paired-game count, and the exact unblock condition is present. The response
+sets `conclusion_withheld`, reports market timing as unknown and explicitly refuses a
+model winner, blend weight or current-game recommendation.
+
 ## Known limits and next steps
 
 - The 2026 season file does not exist upstream yet (checked 2026-08-08). When cfbfastR-data publishes it, `refresh --season 2026` produces the prospective schedule; until then the canonical surface is the completed 2025 season.

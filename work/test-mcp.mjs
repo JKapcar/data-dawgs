@@ -172,6 +172,29 @@ const cfbDivergenceValidationJson = {
     published_granularity: "aggregate-only; no game IDs, team identities or per-game predictions are serialized",
   },
 };
+const cfbDisagreementJson = {
+  as_of: "2026-08-08",
+  source: "test CFB Elo against untimestamped market prices",
+  built: "2026-08-08",
+  integrity: { snapshot_id: "sha256:test-cfb-disagreement" },
+  data: {
+    question: "When the Data Dawgs CFB Elo and the market disagree, does either side systematically win?",
+    finding: "blocked",
+    why_blocked: "The available market prices carry no observation timestamp, so this design cannot separate a better method from a later information set.",
+    what_would_unblock_it: "One timestamped pregame market snapshot per game at a fixed hour before kickoff.",
+    measured_anyway: {
+      n_paired_games: 5,
+      buckets: [
+        { gap_low: 0, gap_high: 0.1, n: 2, underpowered: true, mean_gap: 0.05, elo_brier: 0.2, market_brier: 0.19, market_brier_advantage: 0.01 },
+        { gap_low: 0.1, gap_high: null, n: 3, underpowered: true, mean_gap: 0.2, elo_brier: 0.24, market_brier: 0.18, market_brier_advantage: 0.06 },
+      ],
+      widest_bucket: { gap_low: 0.1, n: 3, market_brier_advantage: 0.06 },
+      observed_pattern: "Market Brier advantage rises with the disagreement gap.",
+      reading_if_prices_were_timestamped_and_pregame: "Only timestamped pregame prices could make the comparison interpretable.",
+    },
+    governance: ["cfb-gov-correlation", "cfb-gov-incremental", "cfb-gov-uncertainty"],
+  },
+};
 
 let netMode = "normal"; // normal | dbdown | emptyRoom | espnDown | simulatedRoom | simulatedSettings
 globalThis.fetch = async (input, init) => {
@@ -198,6 +221,7 @@ globalThis.fetch = async (input, init) => {
   if (u.includes("datadawgs216.com/data/cfb-teams.json")) return J(cfbRatingsJson);
   if (u.includes("datadawgs216.com/data/cfb-record-divergence-validation.json")) return J(cfbDivergenceValidationJson);
   if (u.includes("datadawgs216.com/data/cfb-record-divergence.json")) return J(cfbDivergenceJson);
+  if (u.includes("datadawgs216.com/data/cfb-disagreement.json")) return J(cfbDisagreementJson);
   if (u.includes("datadawgs216.com/dfs.html")) return new Response(dfsHtml, { status: 200 });
   if (u.includes("site.api.espn.com")) {
     if (netMode === "espnDown") return new Response("no", { status: 403 });
@@ -286,12 +310,12 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 {
   const j = await (await req(rpc("tools/list"))).json();
   const t = j.result.tools;
-  ok(t.length === 31, "thirty-one tools listed in the staged Worker source");
+  ok(t.length === 32, "thirty-two tools listed in the staged Worker source");
   ok(t.every(x => x.name.startsWith("dd_")), "all tools dd_-prefixed");
   ok(t.every(x => x.inputSchema && x.inputSchema.type === "object"), "all tools carry an inputSchema");
   for (const name of ["dd_convert_odds", "dd_devig_market", "dd_price_parlay", "dd_calculate_bet_ev",
     "dd_calculate_hedge", "dd_nfl_passer_rating", "dd_score_forecast", "dd_summarize_beliefs",
-    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_project_cfb_schedule_path", "dd_find_cfb_record_divergence", "dd_optimize_survivor_path"])
+    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_project_cfb_schedule_path", "dd_find_cfb_record_divergence", "dd_get_cfb_model_disagreement", "dd_optimize_survivor_path"])
     ok(t.some(x => x.name === name), name + " is listed");
 }
 // dd_league_overview
@@ -818,6 +842,26 @@ function refNcdf(z) {
   const extra = await (await req(call("dd_find_cfb_record_divergence", { verdict: "overrated" }))).json();
   ok([partial, badDirection, badConference, badGap, badLimit, extra].every(result => result.result.isError === true),
      "CFB divergence explorer fails closed on partial, invented, out-of-range and unsupported inputs");
+}
+// dd_get_cfb_model_disagreement: the blocked aggregate measurement is useful
+// evidence, but unknown price timing forbids a winner, blend or game-level edge.
+{
+  const j = await (await req(call("dd_get_cfb_model_disagreement", {}))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.finding === "blocked" && d.conclusion_withheld === true &&
+     d.measured_anyway.n_paired_games === 5 && d.measured_anyway.buckets.length === 2,
+     "CFB disagreement reader returns the dated blocked aggregate measurement");
+  ok(d.market_observation_timestamp_available === false && d.market_price_timing === "unknown" &&
+     d.better_model_identified === false && d.consensus_or_blend_authorized === false &&
+     d.game_level_edges_available === false,
+     "CFB disagreement reader preserves the no-winner, no-blend and no-edge boundary");
+  ok(!d.prospective && !d.graded && d.read_only && d.stored === false &&
+     /timestamped pregame market snapshot/i.test(d.what_would_unblock_it) &&
+     d.warnings.some(x => /Do not infer a model winner/i.test(x)),
+     "CFB disagreement reader returns the exact unblock condition and non-persistence caveats");
+  const extra = await (await req(call("dd_get_cfb_model_disagreement", { game: "Ohio State" }))).json();
+  ok(extra.result.isError === true,
+     "CFB disagreement reader rejects game-level or other unsupported arguments");
 }
 // dd_scores: reuses handleScores with sport+dates
 {

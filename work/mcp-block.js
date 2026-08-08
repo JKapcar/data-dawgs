@@ -54,6 +54,7 @@ let mcpSurvCache = { at: 0, data: null };
 let mcpModelReceiptsCache = { at: 0, data: null };
 let mcpCfbProfilesCache = { at: 0, data: null };
 let mcpCfbDivergenceCache = { at: 0, data: null };
+let mcpCfbDisagreementCache = { at: 0, data: null };
 
 // Abramowitz–Stegun normal CDF — the SAME approximation survivor.html ships, so the
 // tool and the page cannot disagree about a probability by more than float dust.
@@ -568,6 +569,37 @@ async function mcpCfbRecordDivergenceEvidence() {
   return mcpCfbDivergenceCache.data;
 }
 
+async function mcpCfbModelDisagreementEvidence() {
+  if (!mcpCfbDisagreementCache.data || Date.now() - mcpCfbDisagreementCache.at > 900e3) {
+    const response = await fetch(`${SITE}/data/cfb-disagreement.json`, { cf: { cacheTtl: 900, cacheEverything: true } });
+    if (!response.ok) throw new Error("cfb-disagreement.json unavailable: HTTP " + response.status);
+    const envelope = await response.json();
+    const data = envelope && envelope.data;
+    const measured = data && data.measured_anyway;
+    if (!envelope || !envelope.as_of || !envelope.source || !data || data.finding !== "blocked" ||
+        typeof data.question !== "string" || !data.question || typeof data.why_blocked !== "string" ||
+        !data.why_blocked || typeof data.what_would_unblock_it !== "string" || !data.what_would_unblock_it ||
+        !measured || !Number.isInteger(measured.n_paired_games) || measured.n_paired_games < 1 ||
+        measured.n_paired_games > 2000 || !Array.isArray(measured.buckets) || !measured.buckets.length ||
+        measured.buckets.length > 20)
+      throw new Error("cfb-disagreement.json has an invalid blocked-evidence envelope");
+    let bucketGames = 0;
+    for (const bucket of measured.buckets) {
+      if (!bucket || !Number.isFinite(bucket.gap_low) ||
+          !(bucket.gap_high === null || Number.isFinite(bucket.gap_high)) ||
+          !Number.isInteger(bucket.n) || bucket.n < 1 || typeof bucket.underpowered !== "boolean" ||
+          !Number.isFinite(bucket.mean_gap) || !Number.isFinite(bucket.elo_brier) ||
+          !Number.isFinite(bucket.market_brier) || !Number.isFinite(bucket.market_brier_advantage))
+        throw new Error("cfb-disagreement.json has an invalid measured bucket");
+      bucketGames += bucket.n;
+    }
+    if (bucketGames !== measured.n_paired_games)
+      throw new Error("cfb-disagreement.json bucket counts do not reconcile to paired games");
+    mcpCfbDisagreementCache = { at: Date.now(), data: envelope };
+  }
+  return mcpCfbDisagreementCache.data;
+}
+
 function mcpCfbTeamSlug(v) {
   return String(v || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
     .toLowerCase().replace(/&/g, " and ").replace(/[\u2018\u2019']/g, "")
@@ -943,7 +975,7 @@ async function mcpDispatch(m, env, caller) {
           "Everything here is read-only and is either the league's own data, public play-by-play, " +
           "or a deterministic calculation over caller-supplied inputs. Calculator inputs and results are not stored. " +
           "The model scoreboard reads dated prospective receipts and returns descriptive disagreement only; it is ungraded and is not a validated consensus or ranking. " +
-          "The CFB reads separate observed 2025 results from one end-of-2025 retrodictive Elo row. dd_project_cfb_matchup and dd_project_cfb_schedule_path are hypothetical rating-period calculations, not scheduled 2026 forecasts. dd_find_cfb_record_divergence returns descriptive record-versus-scoring gaps whose small held-out lift does not authorize current-team labels. All CFB outputs are ungraded, not market-adjusted and are not a consensus. " +
+          "The CFB reads separate observed 2025 results from one end-of-2025 retrodictive Elo row. dd_project_cfb_matchup and dd_project_cfb_schedule_path are hypothetical rating-period calculations, not scheduled 2026 forecasts. dd_find_cfb_record_divergence returns descriptive record-versus-scoring gaps whose small held-out lift does not authorize current-team labels. dd_get_cfb_model_disagreement returns a blocked study whose untimestamped market input prevents a winner or blend conclusion. All CFB outputs are ungraded, not market-adjusted and are not a consensus. " +
           "There is no built-in DFS projection or ownership feed: dd_solve_dfs_lineup requires the caller to supply every value per call, and stores none of them. dd_optimize_survivor_path is an ungraded ceiling over a dated snapshot and does not model double-pick weeks. When quoting bozo odds, survivor odds " +
           "or the correlation matrix, say it is model output or a measured historical average, never a forecast " +
           "of a specific game. Team names, weeks and league ids come from dd_league_overview — do not guess them.",
@@ -2115,6 +2147,45 @@ const MCP_TOOLS = [
           "A single-season chronological holdout showed a small incremental signal beyond Elo, but this has not been validated prospectively or against timestamped market prices.",
           "The validation receipt is aggregate-only and explicitly prohibits current-team predictive labels.",
           "Do not convert these rows into overrated, underrated, fraud, betting-edge or recommendation claims.",
+        ],
+      });
+    },
+  },
+  {
+    name: "dd_get_cfb_model_disagreement",
+    description: "Read the dated aggregate 2025 CFB Elo-versus-market disagreement probe, including bucket measurements and the exact data blocker. The study is blocked because market observations have no capture timestamp; it does not identify a better model, authorize a blend or provide game-level edges.",
+    inputSchema: MCP_NO_ARGS,
+    async run(args) {
+      if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+      const extra = Object.keys(args);
+      if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+      const envelope = await mcpCfbModelDisagreementEvidence();
+      const data = envelope.data;
+      return toolText({
+        question: data.question,
+        finding: data.finding,
+        conclusion_withheld: true,
+        why_blocked: data.why_blocked,
+        what_would_unblock_it: data.what_would_unblock_it,
+        measured_anyway: data.measured_anyway,
+        governance: data.governance || [],
+        as_of: envelope.as_of,
+        source: envelope.source,
+        built: envelope.built || null,
+        integrity: envelope.integrity || null,
+        market_observation_timestamp_available: false,
+        market_price_timing: "unknown",
+        better_model_identified: false,
+        consensus_or_blend_authorized: false,
+        game_level_edges_available: false,
+        prospective: false,
+        graded: false,
+        read_only: true,
+        stored: false,
+        warnings: [
+          "The bucket measurements are reproducible, but the headline comparison is confounded by unknown market observation timing.",
+          "A larger market advantage in wider-gap buckets cannot distinguish a better method from a later information set.",
+          "Do not infer a model winner, consensus weight, current-game edge or recommendation from this blocked study.",
         ],
       });
     },
