@@ -95,8 +95,8 @@ const cfbRatingsJson = {
     }],
     teams: [
       { team_slug: "indiana", team: "Indiana", conference: "Big Ten", observed_results: { season: 2025, through_at: "2026-01-01T00:00:00Z", record: "16-0-0", games: 16, wins: 16, losses: 0, ties: 0, point_differential: 300 }, systems: { "dd-cfb-elo": { rank: 1, team_strength: 2054.8, games_rated: 96, expected_margin: null, win_probability: null, predicted_total: null } } },
-      { team_slug: "ohio-state", team: "Ohio State", conference: "Big Ten", observed_results: { season: 2025, through_at: "2026-01-01T00:30:00Z", record: "12-2-0", games: 14, wins: 12, losses: 2, ties: 0, point_differential: 338 }, systems: { "dd-cfb-elo": { rank: 2, team_strength: 1925.8, games_rated: 99, expected_margin: null, win_probability: null, predicted_total: null } } },
-      { team_slug: "akron", team: "Akron", conference: "Mid-American", observed_results: { season: 2025, through_at: "2025-11-29T00:00:00Z", record: "4-8-0", games: 12, wins: 4, losses: 8, ties: 0, point_differential: -100 }, systems: { "dd-cfb-elo": { rank: 133, team_strength: 1088.1, games_rated: 93, expected_margin: null, win_probability: null, predicted_total: null } } },
+      { team_slug: "ohio-state", team: "Ohio State", conference: "Big Ten", observed_results: { season: 2025, through_at: "2026-01-01T00:30:00Z", record: "12-2-0", games: 14, wins: 12, losses: 2, ties: 0, point_differential: 338, win_percentage: 0.8571, point_differential_per_game: 24.143 }, systems: { "dd-cfb-elo": { rank: 2, team_strength: 1925.8, games_rated: 99, expected_margin: null, win_probability: null, predicted_total: null } } },
+      { team_slug: "akron", team: "Akron", conference: "Mid-American", observed_results: { season: 2025, through_at: "2025-11-29T00:00:00Z", record: "4-8-0", games: 12, wins: 4, losses: 8, ties: 0, point_differential: -100, win_percentage: 0.3333, point_differential_per_game: -8.333 }, systems: { "dd-cfb-elo": { rank: 133, team_strength: 1088.1, games_rated: 93, expected_margin: null, win_probability: null, predicted_total: null } } },
     ],
     consensus: { status: "not-built", system_count: 1, weights: null, reason: "One independent rating cannot form a consensus." },
   },
@@ -213,12 +213,12 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 {
   const j = await (await req(rpc("tools/list"))).json();
   const t = j.result.tools;
-  ok(t.length === 27, "twenty-seven tools listed in the staged Worker source");
+  ok(t.length === 28, "twenty-eight tools listed in the staged Worker source");
   ok(t.every(x => x.name.startsWith("dd_")), "all tools dd_-prefixed");
   ok(t.every(x => x.inputSchema && x.inputSchema.type === "object"), "all tools carry an inputSchema");
   for (const name of ["dd_convert_odds", "dd_devig_market", "dd_price_parlay", "dd_calculate_bet_ev",
     "dd_calculate_hedge", "dd_nfl_passer_rating", "dd_score_forecast", "dd_summarize_beliefs",
-    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_cfb_team_profile", "dd_optimize_survivor_path"])
+    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_optimize_survivor_path"])
     ok(t.some(x => x.name === name), name + " is listed");
 }
 // dd_league_overview
@@ -608,6 +608,30 @@ function refNcdf(z) {
   ok(partial.result.isError === true && /exact registry name or slug/.test(partial.result.content[0].text) &&
      missing.result.isError === true && extra.result.isError === true && empty.result.isError === true,
      "CFB team profile fails closed on partial, unknown, unsupported and empty inputs");
+}
+// dd_compare_cfb_teams: exact same-snapshot comparison without laundering the
+// observed/rating deltas into a matchup forecast.
+{
+  const j = await (await req(call("dd_compare_cfb_teams", { team_a: "Ohio State", team_b: "akron" }))).json();
+  const d = text(j), system = d.comparison.systems[0];
+  ok(!j.result.isError && d.teams.team_a.team_slug === "ohio-state" && d.teams.team_b.team_slug === "akron",
+     "CFB comparison resolves two exact names or slugs on one snapshot");
+  ok(system.team_strength_delta_a_minus_b === 837.7 && system.rank_delta_a_minus_b === -131,
+     "CFB comparison returns exact rating and rank deltas");
+  ok(d.comparison.observed_2025.win_percentage_delta_a_minus_b > 0 &&
+     d.teams.team_a.observed_results.record === "12-2-0" && d.teams.team_b.observed_results.record === "4-8-0",
+     "CFB comparison keeps observed records separate from modelled system deltas");
+  ok(d.read_only && d.stored === false && d.prospective === false && d.graded === false &&
+     d.warnings.some(x => /not a head-to-head game projection/i.test(x)) && d.warnings.some(x => /not opponent-adjusted/i.test(x)),
+     "CFB comparison refuses forecast, edge and schedule-adjustment claims");
+}
+{
+  const same = await (await req(call("dd_compare_cfb_teams", { team_a: "Akron", team_b: "akron" }))).json();
+  const partial = await (await req(call("dd_compare_cfb_teams", { team_a: "state", team_b: "Akron" }))).json();
+  const missing = await (await req(call("dd_compare_cfb_teams", { team_a: "Akron" }))).json();
+  const extra = await (await req(call("dd_compare_cfb_teams", { team_a: "Akron", team_b: "Indiana", neutral: true }))).json();
+  ok(same.result.isError === true && partial.result.isError === true && missing.result.isError === true && extra.result.isError === true,
+     "CFB comparison fails closed on same-team, partial, missing and unsupported inputs");
 }
 // dd_scores: reuses handleScores with sport+dates
 {

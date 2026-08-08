@@ -161,3 +161,8 @@ current data cannot support: the sole Elo row is end-of-2025, retrodictive and u
 it is not a 2026 forecast, a consensus, or a betting recommendation. The tool is staged
 in source and `/data/surfaces.json`, but remains non-callable in production until a
 separately approved Worker version is uploaded, inspected and activated.
+
+`dd_compare_cfb_teams` is staged beside it. It resolves two exact names or slugs on the
+same compact snapshot and reports observed record/scoring differences plus per-system
+rating and rank deltas. It deliberately returns no matchup probability, spread or edge:
+the results are not opponent-adjusted, and one retrodictive rating is not a consensus.

@@ -4178,6 +4178,33 @@ function mcpCfbTeamMatch(envelope, input) {
   throw new Error("team is not present in the dated CFB ratings registry: " + input.query);
 }
 
+function mcpCfbCompareArgs(args) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+  const extra = Object.keys(args).filter(k => !["team_a", "team_b"].includes(k));
+  if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+  const teamA = mcpCfbTeamArgs({ team: args.team_a });
+  const teamB = mcpCfbTeamArgs({ team: args.team_b });
+  if (teamA.slug === teamB.slug) throw new Error("team_a and team_b must name different teams");
+  return { teamA, teamB };
+}
+
+function mcpCfbObservedView(team) {
+  const observed = team.observed_results || {};
+  return {
+    season: observed.season,
+    through_at: observed.through_at,
+    record: observed.record,
+    games: observed.games,
+    wins: observed.wins,
+    losses: observed.losses,
+    ties: observed.ties,
+    win_percentage: observed.win_percentage,
+    points_for_per_game: observed.points_for_per_game,
+    points_against_per_game: observed.points_against_per_game,
+    point_differential_per_game: observed.point_differential_per_game,
+  };
+}
+
 function mcpModelScoreboardString(v, label, max) {
   if (typeof v !== "string" || !v.trim()) throw new Error(label + " must be a non-empty string");
   const s = v.trim();
@@ -5181,6 +5208,77 @@ const MCP_TOOLS = [
         read_only: true,
         stored: false,
         warnings,
+      });
+    },
+  },
+  {
+    name: "dd_compare_cfb_teams",
+    description: "Compare two exact teams on the same dated compact CFB snapshot. Returns observed 2025 records/scoring and per-system retrodictive rating deltas. It does not produce a matchup win probability, spread, forecast, consensus, edge or recommendation.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        team_a: { type: "string", minLength: 1, maxLength: 80, description: "First exact registry team name or slug." },
+        team_b: { type: "string", minLength: 1, maxLength: 80, description: "Second exact registry team name or slug." },
+      },
+      required: ["team_a", "team_b"],
+      additionalProperties: false,
+    },
+    async run(args) {
+      const input = mcpCfbCompareArgs(args);
+      const envelope = await mcpCfbTeamProfiles();
+      const teamA = mcpCfbTeamMatch(envelope, input.teamA);
+      const teamB = mcpCfbTeamMatch(envelope, input.teamB);
+      const observedA = mcpCfbObservedView(teamA);
+      const observedB = mcpCfbObservedView(teamB);
+      const systems = envelope.data.systems.map(system => {
+        const a = teamA.systems[system.system_id] || null;
+        const b = teamB.systems[system.system_id] || null;
+        return {
+          system_id: system.system_id,
+          name: system.name,
+          team_a: a,
+          team_b: b,
+          team_strength_delta_a_minus_b: a && b && Number.isFinite(a.team_strength) && Number.isFinite(b.team_strength)
+            ? a.team_strength - b.team_strength : null,
+          rank_delta_a_minus_b: a && b && Number.isInteger(a.rank) && Number.isInteger(b.rank) ? a.rank - b.rank : null,
+          prospective_forecasts_exist: system.prospective_forecasts_exist === true,
+          graded: system.graded === true,
+        };
+      });
+      const finiteDelta = (a, b) => Number.isFinite(a) && Number.isFinite(b) ? a - b : null;
+      return toolText({
+        query: { team_a: input.teamA.query, team_b: input.teamB.query },
+        teams: {
+          team_a: { team_slug: teamA.team_slug, name: teamA.team, conference: teamA.conference || null, observed_results: observedA },
+          team_b: { team_slug: teamB.team_slug, name: teamB.team, conference: teamB.conference || null, observed_results: observedB },
+        },
+        comparison: {
+          observed_2025: {
+            win_percentage_delta_a_minus_b: finiteDelta(observedA.win_percentage, observedB.win_percentage),
+            point_differential_per_game_delta_a_minus_b: finiteDelta(observedA.point_differential_per_game, observedB.point_differential_per_game),
+            note: "Descriptive season-result differences only; schedule strength is not adjusted here.",
+          },
+          systems,
+          rank_delta_note: "Negative rank_delta_a_minus_b means team_a has the better (lower-numbered) rank.",
+        },
+        rating_period: envelope.data.rating_period,
+        consensus: envelope.data.consensus,
+        as_of: envelope.as_of,
+        source: envelope.source,
+        integrity: envelope.integrity || null,
+        observed_results_are_facts: true,
+        modelled_fields: ["comparison.systems"],
+        retrodictive: envelope.data.rating_period && envelope.data.rating_period.prospective !== true,
+        prospective: false,
+        graded: false,
+        read_only: true,
+        stored: false,
+        warnings: [
+          "The comparison is not a head-to-head game projection and supplies no win probability or spread.",
+          "Observed records and scoring are not opponent-adjusted; differences in schedule strength are not modelled.",
+          "The registry currently contains one retrodictive, ungraded rating system; one system is not a consensus.",
+          "Current market prices, rosters, injuries, availability, talent, portal and matchup inputs are absent.",
+        ],
       });
     },
   },
