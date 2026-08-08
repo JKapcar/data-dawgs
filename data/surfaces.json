@@ -37,6 +37,7 @@
    "dd_site_map",
    "dd_survivor_ev",
    "dd_analyze_matchup",
+   "dd_model_scoreboard",
    "dd_convert_odds",
    "dd_devig_market",
    "dd_price_parlay",
@@ -54,9 +55,9 @@
   "surfaces": 12,
   "with_live_machine_access": 12,
   "with_no_machine_access": 0,
-  "mcp_tools_live": 24,
+  "mcp_tools_live": 25,
   "mcp_tools_staged": 0,
-  "mcp_tools_planned": 6
+  "mcp_tools_planned": 5
  },
  "data": [
   {
@@ -334,22 +335,28 @@
      "covers": "canonical schedule with exact upstream commit and snapshot hash"
     },
     {
-      "kind": "json",
-      "url": "/data/model-receipts.json",
-      "status": "live",
-      "covers": "544 append-only normalized prospective receipts across nfelo and 538 Classic"
-     },
-     {
-      "kind": "json",
-      "url": "/data/538-classic.json",
-      "status": "live",
-      "covers": "reproduced 538 Classic methodology, 32 target-season ratings and 272 prospective forecasts"
-     },
-     {
-      "kind": "markdown",
-      "url": "/data/538-classic-methodology.md",
-      "status": "live",
-      "covers": "model mathematics, provenance, reproduction tolerance, receipts and limits"
+     "kind": "json",
+     "url": "/data/model-receipts.json",
+     "status": "live",
+     "covers": "544 append-only normalized prospective receipts across nfelo and 538 Classic"
+    },
+    {
+     "kind": "json",
+     "url": "/data/538-classic.json",
+     "status": "live",
+     "covers": "reproduced 538 Classic methodology, 32 target-season ratings and 272 prospective forecasts"
+    },
+    {
+     "kind": "markdown",
+     "url": "/data/538-classic-methodology.md",
+     "status": "live",
+     "covers": "model mathematics, provenance, reproduction tolerance, receipts and limits"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_model_scoreboard",
+     "status": "live",
+     "covers": "bounded read-only query over dated prospective receipts; filters and results are not stored"
     },
     {
      "kind": "mcp",
@@ -412,10 +419,8 @@
      "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
     }
    ],
-   "planned": [
-    "mcp:model_scoreboard"
-   ],
-    "gap": "Two prospective model feeds are live and ungraded. There is still no book-and-timestamp-provenanced market feed or comparable-sample leaderboard.",
+   "planned": [],
+   "gap": "Two prospective model feeds are live and ungraded. There is still no book-and-timestamp-provenanced market feed or comparable-sample leaderboard.",
    "tier": "pound"
   },
   {

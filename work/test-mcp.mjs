@@ -51,6 +51,22 @@ const survJson = { data: {
     { id: "2026_02_ARI_CLE", wk: 2, h: "CLE", a: "ARI", d: "2026-09-20", p: 0.6, src: "model" },
   ],
 } };
+const modelReceiptsJson = {
+  as_of: "2026-08-08",
+  source: "test normalized prospective receipt ledger",
+  built: "2026-08-08",
+  graded: false,
+  integrity: { algorithm: "test", sha256: "abc123", rows: 7 },
+  data: [
+    { forecast_id: "nfelo-cle-old", game_id: "2026_01_CLE_PIT", season: 2026, week: 1, kickoff_at: "2026-09-13T17:00:00Z", captured_at: "2026-08-06T00:00:00Z", model_id: "nfelo", model_name: "nfelo", model_version: "4.3.0", source_repo: "greerreNFL/nfelo", source_commit: "n-old", source_capture_at: "2026-08-06T00:00:00Z", home_team: "PIT", away_team: "CLE", home_win_probability: 0.40, input_snapshot_id: "sha256:n-old", schedule_snapshot_id: "sha256:schedule", forecast_status: "prospective", methodology_url: "https://example.test/nfelo", license_status: "output-only" },
+    { forecast_id: "nfelo-cle-new", game_id: "2026_01_CLE_PIT", season: 2026, week: 1, kickoff_at: "2026-09-13T17:00:00Z", captured_at: "2026-08-07T00:00:00Z", model_id: "nfelo", model_name: "nfelo", model_version: "4.3.0", source_repo: "greerreNFL/nfelo", source_commit: "n-new", source_capture_at: "2026-08-07T00:00:00Z", home_team: "PIT", away_team: "CLE", home_win_probability: 0.45, input_snapshot_id: "sha256:n-new", schedule_snapshot_id: "sha256:schedule", forecast_status: "prospective", methodology_url: "https://example.test/nfelo", license_status: "output-only" },
+    { forecast_id: "classic-cle", game_id: "2026_01_CLE_PIT", season: 2026, week: 1, kickoff_at: "2026-09-13T17:00:00Z", captured_at: "2026-08-08T00:00:00Z", model_id: "538-classic", model_name: "538 Classic Elo", model_version: "classic-1.0.0", source_repo: "fivethirtyeight/nfl-elo-game", source_commit: "c1", source_capture_at: "2026-08-08T00:00:00Z", home_team: "PIT", away_team: "CLE", home_win_probability: 0.65, input_snapshot_id: "sha256:c1", schedule_snapshot_id: "sha256:schedule", forecast_status: "prospective", methodology_url: "https://example.test/classic", license_status: "MIT" },
+    { forecast_id: "nfelo-ari", game_id: "2026_01_ARI_SEA", season: 2026, week: 1, kickoff_at: "2026-09-13T20:00:00Z", captured_at: "2026-08-07T00:00:00Z", model_id: "nfelo", model_name: "nfelo", model_version: "4.3.0", source_repo: "greerreNFL/nfelo", source_commit: "n2", source_capture_at: "2026-08-07T00:00:00Z", home_team: "SEA", away_team: "ARI", home_win_probability: 0.80, input_snapshot_id: "sha256:n2", schedule_snapshot_id: "sha256:schedule", forecast_status: "prospective", methodology_url: "https://example.test/nfelo", license_status: "output-only" },
+    { forecast_id: "classic-ari", game_id: "2026_01_ARI_SEA", season: 2026, week: 1, kickoff_at: "2026-09-13T20:00:00Z", captured_at: "2026-08-08T00:00:00Z", model_id: "538-classic", model_name: "538 Classic Elo", model_version: "classic-1.0.0", source_repo: "fivethirtyeight/nfl-elo-game", source_commit: "c2", source_capture_at: "2026-08-08T00:00:00Z", home_team: "SEA", away_team: "ARI", home_win_probability: 0.75, input_snapshot_id: "sha256:c2", schedule_snapshot_id: "sha256:schedule", forecast_status: "prospective", methodology_url: "https://example.test/classic", license_status: "MIT" },
+    { forecast_id: "nfelo-w2", game_id: "2026_02_PIT_SEA", season: 2026, week: 2, kickoff_at: "2026-09-20T17:00:00Z", captured_at: "2026-08-07T00:00:00Z", model_id: "nfelo", model_name: "nfelo", model_version: "4.3.0", source_repo: "greerreNFL/nfelo", source_commit: "n3", source_capture_at: "2026-08-07T00:00:00Z", home_team: "SEA", away_team: "PIT", home_win_probability: 0.60, input_snapshot_id: "sha256:n3", schedule_snapshot_id: "sha256:schedule", forecast_status: "prospective", methodology_url: "https://example.test/nfelo", license_status: "output-only" },
+    { forecast_id: "classic-w2", game_id: "2026_02_PIT_SEA", season: 2026, week: 2, kickoff_at: "2026-09-20T17:00:00Z", captured_at: "2026-08-08T00:00:00Z", model_id: "538-classic", model_name: "538 Classic Elo", model_version: "classic-1.0.0", source_repo: "fivethirtyeight/nfl-elo-game", source_commit: "c3", source_capture_at: "2026-08-08T00:00:00Z", home_team: "SEA", away_team: "PIT", home_win_probability: 0.55, input_snapshot_id: "sha256:c3", schedule_snapshot_id: "sha256:schedule", forecast_status: "prospective", methodology_url: "https://example.test/classic", license_status: "MIT" },
+  ],
+};
 
 let netMode = "normal"; // normal | dbdown | emptyRoom | espnDown | simulatedRoom | simulatedSettings
 globalThis.fetch = async (input, init) => {
@@ -73,6 +89,7 @@ globalThis.fetch = async (input, init) => {
   }
   if (u.includes("datadawgs216.com/data/pool.json")) return J(poolJson);
   if (u.includes("datadawgs216.com/data/survivor.json")) return J(survJson);
+  if (u.includes("datadawgs216.com/data/model-receipts.json")) return J(modelReceiptsJson);
   if (u.includes("datadawgs216.com/dfs.html")) return new Response(dfsHtml, { status: 200 });
   if (u.includes("site.api.espn.com")) {
     if (netMode === "espnDown") return new Response("no", { status: 403 });
@@ -161,12 +178,12 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 {
   const j = await (await req(rpc("tools/list"))).json();
   const t = j.result.tools;
-  ok(t.length === 24, "twenty-four tools listed");
+  ok(t.length === 25, "twenty-five tools listed");
   ok(t.every(x => x.name.startsWith("dd_")), "all tools dd_-prefixed");
   ok(t.every(x => x.inputSchema && x.inputSchema.type === "object"), "all tools carry an inputSchema");
   for (const name of ["dd_convert_odds", "dd_devig_market", "dd_price_parlay", "dd_calculate_bet_ev",
     "dd_calculate_hedge", "dd_nfl_passer_rating", "dd_score_forecast", "dd_summarize_beliefs",
-    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup"])
+    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard"])
     ok(t.some(x => x.name === name), name + " is listed");
 }
 // dd_league_overview
@@ -452,6 +469,37 @@ function refNcdf(z) {
   ok(d.crosses_50 === true && /not a validated consensus blend/i.test(d.note), "belief summary carries the no-consensus claim");
   const empty = await (await req(call("dd_summarize_beliefs", { probabilities: [] }))).json();
   ok(empty.result.isError === true, "empty belief list fails closed");
+}
+// dd_model_scoreboard: bounded receipt query, latest-per-model selection and exact
+// parity with the human board's descriptive statistics.
+{
+  const j = await (await req(call("dd_model_scoreboard"))).json();
+  const d = text(j), cle = d.games[0], ref = P.beliefSummary([0.45, 0.65]);
+  ok(!j.result.isError && d.games.length === 2 && d.filters.season === 2026 && d.filters.week === 1,
+     "model scoreboard defaults to the latest season's Week 1 board");
+  ok(cle.game_id === "2026_01_CLE_PIT" && cle.models.some(m => m.forecast_id === "nfelo-cle-new") && !cle.models.some(m => m.forecast_id === "nfelo-cle-old"),
+     "model scoreboard sorts by disagreement and selects the latest receipt per game/model");
+  ok(Math.abs(cle.descriptive_summary.mean - ref.mean) < 1e-12 && Math.abs(cle.descriptive_summary.standard_deviation - ref.standard_deviation) < 1e-12 && cle.descriptive_summary.crosses_50,
+     "model scoreboard descriptive summary matches Pound core exactly");
+  ok(d.read_only === true && d.stored === false && d.graded === false && d.comparison_type.includes("descriptive") && d.warnings.some(x => /not a validated consensus/i.test(x)),
+     "model scoreboard makes read-only, ungraded and no-consensus limits explicit");
+  ok(d.ledger_integrity.rows === 7 && cle.models.every(m => m.source_commit && m.input_snapshot_id && m.schedule_snapshot_id),
+     "model scoreboard preserves ledger integrity and per-model provenance");
+}
+{
+  const team = text(await (await req(call("dd_model_scoreboard", { team: "pit", sort: "kickoff", limit: 1 }))).json());
+  ok(team.matched_games === 2 && team.returned_games === 1 && team.games[0].game_id === "2026_01_CLE_PIT",
+     "model scoreboard team filter is case-insensitive and limit bounds output");
+  const game = text(await (await req(call("dd_model_scoreboard", { game_id: "2026_02_PIT_SEA", model_ids: ["nfelo"] }))).json());
+  ok(game.games.length === 1 && game.games[0].models.length === 1 && game.games[0].complete_comparable_set === true,
+     "model scoreboard supports exact game and requested-model filters");
+  const none = text(await (await req(call("dd_model_scoreboard", { season: 2099 }))).json());
+  ok(none.games.length === 0 && none.note.includes("No prospective"), "model scoreboard returns a structured empty result");
+  const badWeek = await (await req(call("dd_model_scoreboard", { week: 0 }))).json();
+  const badExtra = await (await req(call("dd_model_scoreboard", { confidence: true }))).json();
+  const badTeam = await (await req(call("dd_model_scoreboard", { team: "C!" }))).json();
+  ok(badWeek.result.isError === true && badExtra.result.isError === true && badTeam.result.isError === true,
+     "model scoreboard rejects invalid and unsupported filters");
 }
 // dd_scores: reuses handleScores with sport+dates
 {

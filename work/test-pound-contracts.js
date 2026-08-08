@@ -49,13 +49,17 @@ test('forecast contract retains nullable unsupported fields', () => {
   assert.equal(contracts.data.calculator_contracts.elo_game.mcp_tool, 'dd_elo_game');
   assert.equal(contracts.data.calculator_contracts.normal_translation.mcp_tool, 'dd_translate_probability');
   assert.match(contracts.data.calculator_contracts.belief_summary.note, /not a validated consensus blend/i);
+  assert.equal(contracts.data.model_scoreboard_contract.mcp_tool, 'dd_model_scoreboard');
+  assert.match(contracts.data.model_scoreboard_contract.grading, /ungraded/i);
+  assert.match(contracts.data.model_scoreboard_contract.consensus, /no validated consensus/i);
+  assert.equal(contracts.data.model_scoreboard_contract.bounds.maximum_games_returned, 50);
 });
 test('surface generator reports the deployed Pound MCP tools as live', () => {
-  const poundMcp = ['dd_convert_odds', 'dd_devig_market', 'dd_price_parlay',
+  const poundMcp = ['dd_model_scoreboard', 'dd_convert_odds', 'dd_devig_market', 'dd_price_parlay',
     'dd_calculate_bet_ev', 'dd_calculate_hedge', 'dd_nfl_passer_rating',
     'dd_score_forecast', 'dd_summarize_beliefs', 'dd_elo_game',
     'dd_translate_probability'];
-  assert.equal(surfaces.counts.mcp_tools_live, 24);
+  assert.equal(surfaces.counts.mcp_tools_live, 25);
   assert.equal(surfaces.counts.mcp_tools_staged, 0);
   assert.ok(surfaces.mcp.tools_live.includes('dd_survivor_ev'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_analyze_matchup'));
@@ -64,17 +68,28 @@ test('surface generator reports the deployed Pound MCP tools as live', () => {
   assert.deepEqual(surfaces.mcp.tools_staged, []);
 });
 test('deployed Pound tools name live MCP implementations without staged claims', () => {
-  const ids = new Set(['disagreement', '538-classic', 'translation', 'market', 'cover-ev', 'odds', 'parlay', 'hedge', 'passer', 'grader']);
+  const ids = new Set(['model-scoreboard', 'disagreement', '538-classic', 'translation', 'market', 'cover-ev', 'odds', 'parlay', 'hedge', 'passer', 'grader']);
   const deployed = tools.data.filter(t => ids.has(t.id));
-  assert.equal(deployed.length, 10);
+  assert.equal(deployed.length, 11);
   deployed.forEach(t => {
     assert.equal(t.status, 'complete');
     assert.match(t.existing_worker_mcp_implementation, /^dd_/);
     assert.equal(t.staged_worker_mcp_implementation, null);
     assert.equal(t.exact_blocker, null);
   });
-  assert.equal(contracts.data.contract_version, '1.4.0');
+  assert.equal(contracts.data.contract_version, '1.5.0');
   assert.equal(contracts.data.calculator_contracts.odds_converter.mcp_tool, 'dd_convert_odds');
+});
+test('model scoreboard is live over the normalized ungraded receipt ledger', () => {
+  const scoreboard = tools.data.find(t => t.id === 'model-scoreboard');
+  assert.equal(scoreboard.status, 'complete');
+  assert.equal(scoreboard.existing_worker_mcp_implementation, 'dd_model_scoreboard');
+  assert.equal(scoreboard.exact_blocker, null);
+  assert.match(scoreboard.machine_readable_requirement, /model-receipts\.json/);
+  const pound = surfaces.data.find(s => s.id === 'pound');
+  assert.ok(pound.machine.some(x => x.kind === 'mcp' && x.tool === 'dd_model_scoreboard' && x.status === 'live'));
+  assert.ok(!pound.planned.includes('mcp:model_scoreboard'));
+  assert.match(pound.gap, /no book-and-timestamp-provenanced market feed/i);
 });
 test('new data surfaces are in the generated manifest', () => {
   const paths = new Set(index.data.files.map(x => x.path));

@@ -3144,6 +3144,7 @@ const SITE = "https://datadawgs216.com";
 let mcpPoolCache = { at: 0, data: null };
 let mcpCorrCache = { at: 0, data: null };
 let mcpSurvCache = { at: 0, data: null };
+let mcpModelReceiptsCache = { at: 0, data: null };
 
 // Abramowitz–Stegun normal CDF — the SAME approximation survivor.html ships, so the
 // tool and the page cannot disagree about a probability by more than float dust.
@@ -3526,6 +3527,135 @@ async function mcpSurvivor() {
   return mcpSurvCache.data;
 }
 
+// The public receipt ledger is append-only and changes only when a new dated model
+// snapshot is published. Keep the envelope (not just data) so every response can carry
+// its source date and integrity receipt. The returned rows are always bounded by the tool.
+async function mcpModelReceipts() {
+  if (!mcpModelReceiptsCache.data || Date.now() - mcpModelReceiptsCache.at > 900e3) {
+    const r = await fetch(`${SITE}/data/model-receipts.json`, { cf: { cacheTtl: 900, cacheEverything: true } });
+    if (!r.ok) throw new Error("model-receipts.json unavailable: HTTP " + r.status);
+    const envelope = await r.json();
+    if (!envelope || !Array.isArray(envelope.data)) throw new Error("model-receipts.json has an invalid envelope");
+    if (!envelope.as_of || !envelope.source) throw new Error("model-receipts.json is missing required provenance");
+    if (envelope.integrity && Number.isInteger(envelope.integrity.rows) && envelope.integrity.rows !== envelope.data.length)
+      throw new Error("model-receipts.json row count does not match its integrity receipt");
+    mcpModelReceiptsCache = { at: Date.now(), data: envelope };
+  }
+  return mcpModelReceiptsCache.data;
+}
+
+function mcpModelScoreboardString(v, label, max) {
+  if (typeof v !== "string" || !v.trim()) throw new Error(label + " must be a non-empty string");
+  const s = v.trim();
+  if (s.length > max) throw new Error(label + " is limited to " + max + " characters");
+  return s;
+}
+
+function mcpModelScoreboardInt(v, label, lo, hi) {
+  if (!Number.isInteger(v) || v < lo || v > hi) throw new Error(label + " must be a whole number from " + lo + " to " + hi);
+  return v;
+}
+
+function mcpModelScoreboardArgs(args) {
+  const allowed = ["season", "week", "team", "game_id", "model_ids", "limit", "sort"];
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+  const extra = Object.keys(args).filter(k => !allowed.includes(k));
+  if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+  const out = {};
+  if (args.season !== undefined) out.season = mcpModelScoreboardInt(args.season, "season", 2000, 2100);
+  if (args.week !== undefined) out.week = mcpModelScoreboardInt(args.week, "week", 1, 22);
+  if (args.team !== undefined) {
+    out.team = mcpModelScoreboardString(args.team, "team", 5).toUpperCase();
+    if (!/^[A-Z]{2,5}$/.test(out.team)) throw new Error("team must be a 2-5 letter abbreviation");
+  }
+  if (args.game_id !== undefined) {
+    out.game_id = mcpModelScoreboardString(args.game_id, "game_id", 80).toUpperCase();
+    if (!/^\d{4}_\d{2}_[A-Z]{2,5}_[A-Z]{2,5}$/.test(out.game_id))
+      throw new Error("game_id must use season_week_away_home, for example 2026_01_CLE_PIT");
+  }
+  if (args.model_ids !== undefined) {
+    if (!Array.isArray(args.model_ids) || !args.model_ids.length || args.model_ids.length > 10)
+      throw new Error("model_ids must contain 1-10 model ids");
+    out.model_ids = args.model_ids.map((v, i) => {
+      const s = mcpModelScoreboardString(v, "model_ids[" + i + "]", 40).toLowerCase();
+      if (!/^[a-z0-9][a-z0-9-]*$/.test(s)) throw new Error("model_ids must be lowercase slugs");
+      return s;
+    });
+    if (new Set(out.model_ids).size !== out.model_ids.length) throw new Error("model_ids must not contain duplicates");
+  }
+  out.limit = args.limit === undefined ? 25 : mcpModelScoreboardInt(args.limit, "limit", 1, 50);
+  out.sort = args.sort === undefined ? "disagreement" : args.sort;
+  if (!['disagreement', 'kickoff'].includes(out.sort)) throw new Error("sort must be disagreement or kickoff");
+  return out;
+}
+
+function mcpModelScoreboardRows(envelope, input) {
+  const prospective = envelope.data.filter(r => r && r.forecast_status === "prospective");
+  if (!prospective.length) throw new Error("model-receipts.json has no prospective receipts");
+  const latestSeason = prospective.reduce((n, r) => Math.max(n, Number(r.season) || 0), 0);
+  const season = input.season === undefined ? latestSeason : input.season;
+  // No-argument calls intentionally match the human Week 1 board. A caller who
+  // supplies any locator can omit week to search the full selected season.
+  const defaultWeek = input.season === undefined && input.week === undefined && !input.team && !input.game_id && !input.model_ids;
+  const week = defaultWeek ? 1 : input.week;
+  const preferredModelOrder = new Map([["nfelo", 0], ["538-classic", 1]]);
+  const allModelIds = Array.from(new Set(prospective.filter(r => r.season === season).map(r => r.model_id)))
+    .sort((a, b) => (preferredModelOrder.get(a) ?? 999) - (preferredModelOrder.get(b) ?? 999) || a.localeCompare(b));
+  const requestedModels = input.model_ids || allModelIds;
+  const requestedSet = new Set(requestedModels);
+  const latest = new Map();
+  for (const r of prospective) {
+    if (r.season !== season || (week !== undefined && r.week !== week)) continue;
+    if (input.team && r.home_team !== input.team && r.away_team !== input.team) continue;
+    if (input.game_id && r.game_id !== input.game_id) continue;
+    if (!requestedSet.has(r.model_id)) continue;
+    if (typeof r.home_win_probability !== "number" || !Number.isFinite(r.home_win_probability) || r.home_win_probability < 0 || r.home_win_probability > 1)
+      throw new Error("receipt " + (r.forecast_id || "unknown") + " has an invalid home_win_probability");
+    const capturedMs = Date.parse(r.captured_at);
+    if (!Number.isFinite(capturedMs)) throw new Error("receipt " + (r.forecast_id || "unknown") + " has an invalid captured_at");
+    const key = r.game_id + "|" + r.model_id;
+    const prior = latest.get(key);
+    if (!prior || capturedMs > Date.parse(prior.captured_at)) latest.set(key, r);
+  }
+  const grouped = new Map();
+  for (const r of latest.values()) {
+    if (!grouped.has(r.game_id)) grouped.set(r.game_id, []);
+    grouped.get(r.game_id).push(r);
+  }
+  const modelOrder = new Map(requestedModels.map((id, i) => [id, i]));
+  const games = Array.from(grouped.values()).map(receipts => {
+    receipts.sort((a, b) => (modelOrder.get(a.model_id) ?? 999) - (modelOrder.get(b.model_id) ?? 999) || a.model_id.localeCompare(b.model_id));
+    const first = receipts[0];
+    for (const r of receipts) {
+      if (r.season !== first.season || r.week !== first.week || r.kickoff_at !== first.kickoff_at ||
+          r.home_team !== first.home_team || r.away_team !== first.away_team || r.schedule_snapshot_id !== first.schedule_snapshot_id)
+        throw new Error("receipt game facts disagree for " + first.game_id);
+    }
+    const summary = mcpCalcBeliefSummary(receipts.map(r => r.home_win_probability));
+    return {
+      game_id: first.game_id, season: first.season, week: first.week, kickoff_at: first.kickoff_at,
+      away_team: first.away_team, home_team: first.home_team,
+      models: receipts.map(r => ({
+        model_id: r.model_id, model_name: r.model_name, model_version: r.model_version,
+        home_win_probability: r.home_win_probability, forecast_id: r.forecast_id,
+        captured_at: r.captured_at, source_repo: r.source_repo, source_commit: r.source_commit,
+        source_capture_at: r.source_capture_at, input_snapshot_id: r.input_snapshot_id,
+        schedule_snapshot_id: r.schedule_snapshot_id, methodology_url: r.methodology_url,
+        license_status: r.license_status,
+      })),
+      descriptive_summary: summary,
+      requested_models: requestedModels.length,
+      models_present: receipts.length,
+      complete_comparable_set: requestedModels.every(id => receipts.some(r => r.model_id === id)),
+      graded: false, outcome: null,
+    };
+  });
+  games.sort(input.sort === "kickoff"
+    ? (a, b) => String(a.kickoff_at).localeCompare(String(b.kickoff_at)) || a.game_id.localeCompare(b.game_id)
+    : (a, b) => b.descriptive_summary.range - a.descriptive_summary.range || String(a.kickoff_at).localeCompare(String(b.kickoff_at)) || a.game_id.localeCompare(b.game_id));
+  return { season, week: week === undefined ? null : week, availableModelIds: allModelIds, requestedModels, matched: games.length, games: games.slice(0, input.limit) };
+}
+
 // Resolve the credential in the URL (or header) to a caller.
 //   { kind:"user", name }  — a per-user token, matched by HASH against /users
 //   { kind:"shared" }      — the legacy league passphrase; anonymous
@@ -3616,7 +3746,7 @@ async function mcpDispatch(m, env, caller) {
       return rpcOk(id, {
         protocolVersion: proto,
         capabilities: { tools: {} },
-        serverInfo: { name: "data-dawgs", version: "1.4.0" },
+        serverInfo: { name: "data-dawgs", version: "1.5.0" },
         instructions:
           (caller && caller.kind === "user"
             ? "You are connected as " + caller.name + ". When a tool marks a row `you: true`, that is them.\n"
@@ -3624,6 +3754,7 @@ async function mcpDispatch(m, env, caller) {
               "Never assume whose team, leg or ledger is whose; ask. A personal URL from " + SITE + "/connect.html fixes this.\n") +
           "Everything here is read-only and is either the league's own data, public play-by-play, " +
           "or a deterministic calculation over caller-supplied inputs. Calculator inputs and results are not stored. " +
+          "The model scoreboard reads dated prospective receipts and returns descriptive disagreement only; it is ungraded and is not a validated consensus or ranking. " +
           "There is no built-in DFS projection or ownership feed: dd_solve_dfs_lineup requires the caller to supply every value per call, and stores none of them. When quoting bozo odds, survivor odds " +
           "or the correlation matrix, say it is model output or a measured historical average, never a forecast " +
           "of a specific game. Team names, weeks and league ids come from dd_league_overview — do not guess them.",
@@ -4255,6 +4386,49 @@ const MCP_TOOLS = [
         ...out,
         read_only: true,
         note: "Equal-weight descriptive summary only; this is not a validated consensus blend or confidence score.",
+      });
+    },
+  },
+  {
+    name: "dd_model_scoreboard",
+    description: "Query the dated prospective nfelo and 538 Classic receipt ledger by season, week, team, game or model. Returns receipt provenance plus descriptive mean/range/standard deviation; it is ungraded and is not a validated consensus, ensemble or leaderboard.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        season: { type: "integer", minimum: 2000, maximum: 2100, description: "Season. Defaults to the latest season in the ledger." },
+        week: { type: "integer", minimum: 1, maximum: 22, description: "NFL week. With no filters at all, the tool defaults to Week 1; otherwise omission searches the selected season." },
+        team: { type: "string", minLength: 2, maxLength: 5, description: "Exact home or away team abbreviation, case-insensitive." },
+        game_id: { type: "string", maxLength: 80, description: "Exact canonical season_week_away_home id, for example 2026_01_CLE_PIT." },
+        model_ids: { type: "array", minItems: 1, maxItems: 10, uniqueItems: true, items: { type: "string", minLength: 1, maxLength: 40 }, description: "Optional stable model slugs, currently nfelo and 538-classic." },
+        limit: { type: "integer", minimum: 1, maximum: 50, default: 25 },
+        sort: { type: "string", enum: ["disagreement", "kickoff"], default: "disagreement" },
+      },
+      additionalProperties: false,
+    },
+    async run(args) {
+      const input = mcpModelScoreboardArgs(args);
+      const envelope = await mcpModelReceipts();
+      const out = mcpModelScoreboardRows(envelope, input);
+      return toolText({
+        as_of: envelope.as_of, source: envelope.source, built: envelope.built || null,
+        ledger_integrity: envelope.integrity || null,
+        filters: {
+          season: out.season, week: out.week, team: input.team || null,
+          game_id: input.game_id || null, model_ids: out.requestedModels,
+          sort: input.sort, limit: input.limit,
+        },
+        matched_games: out.matched, returned_games: out.games.length,
+        available_model_ids: out.availableModelIds,
+        games: out.games,
+        read_only: true, stored: false, graded: false,
+        comparison_type: "equal-weight descriptive statistics only",
+        note: out.matched ? undefined : "No prospective receipt games matched these filters.",
+        warnings: [
+          "No outcomes are joined to this ledger, so nothing in this response is graded and no model is ranked.",
+          "The equal-weight mean and disagreement statistics are descriptive only, not a validated consensus, ensemble, confidence score or predictive edge.",
+          "Two model columns are not independent confirmation of one another.",
+          "No market probability is included: legacy values without a named book and observation timestamp are deliberately not normalized.",
+        ],
       });
     },
   },
