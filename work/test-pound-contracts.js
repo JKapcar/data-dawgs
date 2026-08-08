@@ -244,8 +244,10 @@ test('published CFB backbone artifacts are discoverable without overstating thei
   assert.match(machine['/data/cfb-games-latest.json'].covers, /not current form or forecasts/i);
   assert.match(machine['/data/cfb-team-game.json'].covers, /advanced play metrics are unavailable/i);
   assert.match(machine['/data/cfb-team-week.json'].covers, /results-only/i);
+  assert.match(machine['/data/cfb-team-week.json'].covers, /non-authoritative regular-season conference records/i);
   assert.match(machine['/data/cfb-team-week-latest.json'].covers, /230 compact latest team-period rows/i);
   assert.match(machine['/data/cfb-team-week-latest.json'].covers, /no current-2026 or predictive claim/i);
+  assert.match(machine['/data/cfb-team-week-latest.json'].covers, /non-authoritative conference records/i);
   assert.match(machine['/data/cfb-teams.json'].covers, /separating observed 2025 results/i);
   assert.match(machine['/data/cfb-record-divergence.json'].covers, /no predictive or overrated\/underrated labels/i);
   assert.match(machine['/data/cfb-record-divergence-validation.json'].covers, /aggregate-only chronological holdout/i);

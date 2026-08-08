@@ -290,6 +290,17 @@ const cfbTeamWeekJson = {
     ],
   },
 };
+cfbTeamWeekJson.data.conference_record_definition =
+  "Observed final regular-season rows marked conference_game; not an official standing, rank or tiebreaker result.";
+for (const row of cfbTeamWeekJson.data.rows) {
+  const ohioConferenceWin = row.team_slug === "ohio-state" &&
+    (row.period_key === "regular-12" || row.period_key === "postseason-01");
+  row.conference_regular_season_to_date = ohioConferenceWin
+    ? { games: 1, wins: 1, losses: 0, ties: 0, points_for: 27, points_against: 24,
+        point_differential: 3, record: "1-0-0" }
+    : { games: 0, wins: 0, losses: 0, ties: 0, points_for: 0, points_against: 0,
+        point_differential: 0, record: "0-0-0" };
+}
 const cfbTeamWeekLatestRows = Object.keys(cfbTeamWeekJson.data.teams).sort().map(teamSlug => {
   const source = cfbTeamWeekJson.data.rows.filter(row => row.team_slug === teamSlug)
     .sort((a, b) => b.through_at.localeCompare(a.through_at) || b.team_period_id.localeCompare(a.team_period_id))[0];
@@ -304,6 +315,7 @@ const cfbTeamWeekLatestRows = Object.keys(cfbTeamWeekJson.data.teams).sort().map
       fbs_opponents: source.fbs_opponents, observed_result: source.period,
     },
     season_to_date: source.season_to_date,
+    conference_regular_season_to_date: source.conference_regular_season_to_date,
   };
 });
 const cfbTeamWeekLatestJson = {
@@ -313,6 +325,7 @@ const cfbTeamWeekLatestJson = {
     schema_version: 1, season: 2025, scope: "results-only",
     input_schedule_snapshot_id: "sha256:test-cfb-schedule", input_team_week_snapshot_id: "sha256:test-cfb-team-week",
     selection: "Maximum (through_at, team_period_id) per team from /data/cfb-team-week.json.",
+    conference_record_definition: cfbTeamWeekJson.data.conference_record_definition,
     coverage: {
       schedule_scope: "Canonical 2025 games involving at least one FBS team.",
       fbs_team_records: "Complete within the canonical FBS-involved schedule.",
@@ -1315,6 +1328,9 @@ function refNcdf(z) {
   ok(/not complete FCS season records/i.test(d.coverage.fcs_team_records) &&
      d.warnings.some(x => /last covered period in the dated 2025/i.test(x)),
      "CFB latest-period reader preserves the partial-FCS and dated-latest boundaries");
+  ok(d.rows.find(row => row.team_slug === "ohio-state").conference_regular_season_to_date.record === "1-0-0" &&
+     /not an official standing/i.test(d.conference_record_definition),
+     "CFB latest-period reader exposes the explicitly non-authoritative conference record");
 }
 {
   const filtered = text(await (await req(call("dd_find_cfb_latest_team_periods", {
@@ -1350,6 +1366,10 @@ function refNcdf(z) {
   ok(d.periods[1].period.point_differential === 3 && d.periods[2].season_to_date.record === "12-1-0" &&
      d.periods[2].venue_counts.neutral === 1,
      "CFB team-period reader preserves period, season-to-date and venue facts");
+  ok(d.periods[1].conference_regular_season_to_date.record === "1-0-0" &&
+     d.periods[2].conference_regular_season_to_date.record === "1-0-0" &&
+     /excludes postseason|not an official standing/i.test(d.conference_record_definition),
+     "CFB team-period reader carries conference record through postseason without counting it");
   ok(d.scope === "results-only" && d.observed_results_only && !d.modelled && !d.opponent_adjusted &&
      !d.market_adjusted && !d.forecast && !d.graded && d.read_only && d.stored === false &&
      d.unavailable_metrics.includes("epa") && d.warnings.some(x => /Regular-season week 1 and postseason week 1/i.test(x)),

@@ -1,18 +1,18 @@
 {
  "as_of": "2026-08-08",
- "source": "Compact latest-team selection from /data/cfb-team-week.json by scripts/cfb_team_results.py; source snapshot sha256:2d843eb19ad19f4bb92f5ad3171d9c8635b433ae30b8aaf2a2c4a8e8ffb66fcf.",
+ "source": "Compact latest-team selection from /data/cfb-team-week.json by scripts/cfb_team_results.py; source snapshot sha256:a8bbaa0d8b83a63ed7f396fc7a897c789620c6178b3b8d26c2f24d9ddbcaa036.",
  "tier": "labs",
  "graded": false,
- "note": "OBSERVED RESULTS ONLY. One latest schedule-derived period per team plus season-to-date record and scoring. No play-by-play, EPA, opponent adjustment, market performance or predictive claim is present.",
+ "note": "OBSERVED RESULTS ONLY. One latest schedule-derived period per team plus season-to-date overall and non-authoritative regular-season conference records and scoring. No play-by-play, EPA, opponent adjustment, market performance or predictive claim is present.",
  "provenance": {
   "generator": "scripts/cfb_team_results.py",
   "captured_at": "2026-08-08T05:59:34.245786Z",
   "input": "/data/cfb-team-week.json",
-  "input_snapshot_id": "sha256:2d843eb19ad19f4bb92f5ad3171d9c8635b433ae30b8aaf2a2c4a8e8ffb66fcf",
+  "input_snapshot_id": "sha256:a8bbaa0d8b83a63ed7f396fc7a897c789620c6178b3b8d26c2f24d9ddbcaa036",
   "schedule_snapshot_id": "sha256:45eed4c8934bebe45a75ee4d15f1c01038f5ebe09eb3aa05f5c3396d76dfbb71"
  },
  "integrity": {
-  "snapshot_id": "sha256:179d12514cf0983a9fff8e5839341a38dc1be92a69b752f09add0bace3f75482",
+  "snapshot_id": "sha256:e7d65e99270bf90d74fd3710e4cd41c5465dd8a0c97adb6eb9d4267c43cbb178",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for the data object (sorted object keys, no insignificant whitespace).",
   "rows": 230,
   "teams": 230
@@ -22,8 +22,9 @@
   "season": 2025,
   "scope": "results-only",
   "input_schedule_snapshot_id": "sha256:45eed4c8934bebe45a75ee4d15f1c01038f5ebe09eb3aa05f5c3396d76dfbb71",
-  "input_team_week_snapshot_id": "sha256:2d843eb19ad19f4bb92f5ad3171d9c8635b433ae30b8aaf2a2c4a8e8ffb66fcf",
+  "input_team_week_snapshot_id": "sha256:a8bbaa0d8b83a63ed7f396fc7a897c789620c6178b3b8d26c2f24d9ddbcaa036",
   "selection": "Maximum (through_at, team_period_id) per team from /data/cfb-team-week.json.",
+  "conference_record_definition": "Observed final regular-season rows marked conference_game by the canonical schedule, accumulated through the period. This is not an official standing, rank or tiebreaker result and excludes postseason games.",
   "coverage": {
    "schedule_scope": "Canonical 2025 games involving at least one FBS team.",
    "fbs_team_records": "Complete within the canonical FBS-involved schedule.",
@@ -86,6 +87,16 @@
      "points_against": 77,
      "point_differential": -49,
      "record": "0-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -127,6 +138,16 @@
      "points_against": 364,
      "point_differential": -6,
      "record": "4-8-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 3,
+     "losses": 5,
+     "ties": 0,
+     "points_for": 245,
+     "points_against": 271,
+     "point_differential": -26,
+     "record": "3-5-0"
     }
    },
    {
@@ -168,6 +189,16 @@
      "points_against": 329,
      "point_differential": -62,
      "record": "5-7-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 4,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 188,
+     "points_against": 213,
+     "point_differential": -25,
+     "record": "4-4-0"
     }
    },
    {
@@ -210,6 +241,16 @@
      "points_against": 288,
      "point_differential": 155,
      "record": "11-4-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 7,
+     "losses": 1,
+     "ties": 0,
+     "points_for": 215,
+     "points_against": 153,
+     "point_differential": 62,
+     "record": "7-1-0"
     }
    },
    {
@@ -251,6 +292,16 @@
      "points_against": 52,
      "point_differential": -45,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -292,6 +343,16 @@
      "points_against": 52,
      "point_differential": -10,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -333,6 +394,16 @@
      "points_against": 63,
      "point_differential": -63,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -374,6 +445,16 @@
      "points_against": 387,
      "point_differential": -73,
      "record": "5-8-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 2,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 209,
+     "points_against": 264,
+     "point_differential": -55,
+     "record": "2-6-0"
     }
    },
    {
@@ -415,6 +496,16 @@
      "points_against": 251,
      "point_differential": 159,
      "record": "9-4-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 6,
+     "losses": 3,
+     "ties": 0,
+     "points_for": 280,
+     "points_against": 201,
+     "point_differential": 79,
+     "record": "6-3-0"
     }
    },
    {
@@ -456,6 +547,16 @@
      "points_against": 318,
      "point_differential": 17,
      "record": "8-5-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 6,
+     "losses": 3,
+     "ties": 0,
+     "points_for": 204,
+     "points_against": 218,
+     "point_differential": -14,
+     "record": "6-3-0"
     }
    },
    {
@@ -497,6 +598,16 @@
      "points_against": 406,
      "point_differential": -11,
      "record": "2-10-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 0,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 243,
+     "points_against": 297,
+     "point_differential": -54,
+     "record": "0-8-0"
     }
    },
    {
@@ -538,6 +649,16 @@
      "points_against": 67,
      "point_differential": -60,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -579,6 +700,16 @@
      "points_against": 356,
      "point_differential": -29,
      "record": "7-6-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 5,
+     "losses": 3,
+     "ties": 0,
+     "points_for": 200,
+     "points_against": 196,
+     "point_differential": 4,
+     "record": "5-3-0"
     }
    },
    {
@@ -620,6 +751,16 @@
      "points_against": 281,
      "point_differential": 29,
      "record": "7-6-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 4,
+     "losses": 5,
+     "ties": 0,
+     "points_for": 198,
+     "points_against": 197,
+     "point_differential": 1,
+     "record": "4-5-0"
     }
    },
    {
@@ -661,6 +802,16 @@
      "points_against": 248,
      "point_differential": 73,
      "record": "5-7-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 1,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 148,
+     "points_against": 189,
+     "point_differential": -41,
+     "record": "1-7-0"
     }
    },
    {
@@ -702,6 +853,16 @@
      "points_against": 42,
      "point_differential": -2,
      "record": "1-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -743,6 +904,16 @@
      "points_against": 358,
      "point_differential": -168,
      "record": "4-8-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 3,
+     "losses": 5,
+     "ties": 0,
+     "points_for": 128,
+     "points_against": 225,
+     "point_differential": -97,
+     "record": "3-5-0"
     }
    },
    {
@@ -784,6 +955,16 @@
      "points_against": 391,
      "point_differential": -18,
      "record": "5-7-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 3,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 259,
+     "points_against": 301,
+     "point_differential": -42,
+     "record": "3-6-0"
     }
    },
    {
@@ -825,6 +1006,16 @@
      "points_against": 87,
      "point_differential": -75,
      "record": "0-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -866,6 +1057,16 @@
      "points_against": 337,
      "point_differential": 81,
      "record": "9-5-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 6,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 258,
+     "points_against": 188,
+     "point_differential": 70,
+     "record": "6-2-0"
     }
    },
    {
@@ -907,6 +1108,16 @@
      "points_against": 393,
      "point_differential": -88,
      "record": "2-10-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 1,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 166,
+     "points_against": 278,
+     "point_differential": -112,
+     "record": "1-7-0"
     }
    },
    {
@@ -948,6 +1159,16 @@
      "points_against": 291,
      "point_differential": -45,
      "record": "4-8-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 2,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 160,
+     "points_against": 197,
+     "point_differential": -37,
+     "record": "2-6-0"
     }
    },
    {
@@ -989,6 +1210,16 @@
      "points_against": 45,
      "point_differential": -15,
      "record": "1-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -1030,6 +1261,16 @@
      "points_against": 49,
      "point_differential": -36,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -1071,6 +1312,16 @@
      "points_against": 282,
      "point_differential": 6,
      "record": "5-7-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 4,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 199,
+     "points_against": 212,
+     "point_differential": -13,
+     "record": "4-4-0"
     }
    },
    {
@@ -1112,6 +1363,16 @@
      "points_against": 268,
      "point_differential": 172,
      "record": "12-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 8,
+     "losses": 1,
+     "ties": 0,
+     "points_for": 278,
+     "points_against": 197,
+     "point_differential": 81,
+     "record": "8-1-0"
     }
    },
    {
@@ -1153,6 +1414,16 @@
      "points_against": 63,
      "point_differential": -54,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -1194,6 +1465,16 @@
      "points_against": 353,
      "point_differential": -24,
      "record": "7-6-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 4,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 202,
+     "points_against": 252,
+     "point_differential": -50,
+     "record": "4-4-0"
     }
    },
    {
@@ -1235,6 +1516,16 @@
      "points_against": 112,
      "point_differential": -99,
      "record": "0-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -1276,6 +1567,16 @@
      "points_against": 61,
      "point_differential": -55,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -1317,6 +1618,16 @@
      "points_against": 59,
      "point_differential": -46,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -1358,6 +1669,16 @@
      "points_against": 306,
      "point_differential": -13,
      "record": "7-6-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 5,
+     "losses": 3,
+     "ties": 0,
+     "points_for": 201,
+     "points_against": 140,
+     "point_differential": 61,
+     "record": "5-3-0"
     }
    },
    {
@@ -1399,6 +1720,16 @@
      "points_against": 58,
      "point_differential": -55,
      "record": "0-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -1440,6 +1771,16 @@
      "points_against": 436,
      "point_differential": -264,
      "record": "1-11-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 0,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 113,
+     "points_against": 312,
+     "point_differential": -199,
+     "record": "0-8-0"
     }
    },
    {
@@ -1481,6 +1822,16 @@
      "points_against": 45,
      "point_differential": -35,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -1522,6 +1873,16 @@
      "points_against": 333,
      "point_differential": 61,
      "record": "7-6-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 5,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 260,
+     "points_against": 258,
+     "point_differential": 2,
+     "record": "5-4-0"
     }
    },
    {
@@ -1563,6 +1924,16 @@
      "points_against": 267,
      "point_differential": 87,
      "record": "7-6-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 4,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 234,
+     "points_against": 188,
+     "point_differential": 46,
+     "record": "4-4-0"
     }
    },
    {
@@ -1604,6 +1975,16 @@
      "points_against": 430,
      "point_differential": -142,
      "record": "6-7-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 5,
+     "losses": 3,
+     "ties": 0,
+     "points_for": 247,
+     "points_against": 270,
+     "point_differential": -23,
+     "record": "5-3-0"
     }
    },
    {
@@ -1645,6 +2026,16 @@
      "points_against": 66,
      "point_differential": -42,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -1686,6 +2077,16 @@
      "points_against": 366,
      "point_differential": -115,
      "record": "3-9-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 1,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 163,
+     "points_against": 312,
+     "point_differential": -149,
+     "record": "1-8-0"
     }
    },
    {
@@ -1727,6 +2128,16 @@
      "points_against": 370,
      "point_differential": -148,
      "record": "2-10-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 1,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 161,
+     "points_against": 278,
+     "point_differential": -117,
+     "record": "1-7-0"
     }
    },
    {
@@ -1768,6 +2179,16 @@
      "points_against": 403,
      "point_differential": -26,
      "record": "7-6-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 4,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 257,
+     "points_against": 249,
+     "point_differential": 8,
+     "record": "4-4-0"
     }
    },
    {
@@ -1809,6 +2230,16 @@
      "points_against": 35,
      "point_differential": -18,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -1850,6 +2281,16 @@
      "points_against": 412,
      "point_differential": 72,
      "record": "9-5-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 6,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 290,
+     "points_against": 220,
+     "point_differential": 70,
+     "record": "6-2-0"
     }
    },
    {
@@ -1891,6 +2332,16 @@
      "points_against": 112,
      "point_differential": -96,
      "record": "0-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -1932,6 +2383,16 @@
      "points_against": 261,
      "point_differential": 164,
      "record": "9-4-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 6,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 278,
+     "points_against": 183,
+     "point_differential": 95,
+     "record": "6-2-0"
     }
    },
    {
@@ -1973,6 +2434,16 @@
      "points_against": 72,
      "point_differential": -55,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -2014,6 +2485,16 @@
      "points_against": 119,
      "point_differential": -103,
      "record": "0-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -2055,6 +2536,16 @@
      "points_against": 56,
      "point_differential": -56,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -2096,6 +2587,16 @@
      "points_against": 89,
      "point_differential": -65,
      "record": "0-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -2137,6 +2638,16 @@
      "points_against": 357,
      "point_differential": -68,
      "record": "4-8-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 3,
+     "losses": 5,
+     "ties": 0,
+     "points_for": 182,
+     "points_against": 198,
+     "point_differential": -16,
+     "record": "3-5-0"
     }
    },
    {
@@ -2178,6 +2689,16 @@
      "points_against": 51,
      "point_differential": -37,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -2219,6 +2740,16 @@
      "points_against": 45,
      "point_differential": -28,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -2260,6 +2791,16 @@
      "points_against": 288,
      "point_differential": -29,
      "record": "4-8-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 2,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 141,
+     "points_against": 223,
+     "point_differential": -82,
+     "record": "2-6-0"
     }
    },
    {
@@ -2301,6 +2842,16 @@
      "points_against": 56,
      "point_differential": -42,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -2342,6 +2893,16 @@
      "points_against": 436,
      "point_differential": -82,
      "record": "4-8-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 3,
+     "losses": 5,
+     "ties": 0,
+     "points_for": 218,
+     "points_against": 297,
+     "point_differential": -79,
+     "record": "3-5-0"
     }
    },
    {
@@ -2383,6 +2944,16 @@
      "points_against": 390,
      "point_differential": -19,
      "record": "7-6-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 5,
+     "losses": 3,
+     "ties": 0,
+     "points_for": 261,
+     "points_against": 211,
+     "point_differential": 50,
+     "record": "5-3-0"
     }
    },
    {
@@ -2424,6 +2995,16 @@
      "points_against": 264,
      "point_differential": 132,
      "record": "5-7-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 2,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 201,
+     "points_against": 194,
+     "point_differential": 7,
+     "record": "2-6-0"
     }
    },
    {
@@ -2465,6 +3046,16 @@
      "points_against": 66,
      "point_differential": -56,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -2506,6 +3097,16 @@
      "points_against": 244,
      "point_differential": 91,
      "record": "9-4-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 5,
+     "losses": 3,
+     "ties": 0,
+     "points_for": 176,
+     "points_against": 162,
+     "point_differential": 14,
+     "record": "5-3-0"
     }
    },
    {
@@ -2547,6 +3148,16 @@
      "points_against": 45,
      "point_differential": -35,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -2588,6 +3199,16 @@
      "points_against": 111,
      "point_differential": -64,
      "record": "0-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -2629,6 +3250,16 @@
      "points_against": 246,
      "point_differential": 203,
      "record": "12-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 7,
+     "losses": 1,
+     "ties": 0,
+     "points_for": 263,
+     "points_against": 175,
+     "point_differential": 88,
+     "record": "7-1-0"
     }
    },
    {
@@ -2670,6 +3301,16 @@
      "points_against": 420,
      "point_differential": -57,
      "record": "7-6-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 4,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 214,
+     "points_against": 258,
+     "point_differential": -44,
+     "record": "4-4-0"
     }
    },
    {
@@ -2711,6 +3352,16 @@
      "points_against": 454,
      "point_differential": -217,
      "record": "1-11-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 0,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 156,
+     "points_against": 262,
+     "point_differential": -106,
+     "record": "0-8-0"
     }
    },
    {
@@ -2752,6 +3403,16 @@
      "points_against": 325,
      "point_differential": 93,
      "record": "9-4-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 6,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 257,
+     "points_against": 228,
+     "point_differential": 29,
+     "record": "6-2-0"
     }
    },
    {
@@ -2793,6 +3454,16 @@
      "points_against": 70,
      "point_differential": -70,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -2834,6 +3505,16 @@
      "points_against": 313,
      "point_differential": 64,
      "record": "9-4-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 5,
+     "losses": 3,
+     "ties": 0,
+     "points_for": 253,
+     "points_against": 199,
+     "point_differential": 54,
+     "record": "5-3-0"
     }
    },
    {
@@ -2875,6 +3556,16 @@
      "points_against": 19,
      "point_differential": -2,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -2916,6 +3607,16 @@
      "points_against": 297,
      "point_differential": 81,
      "record": "10-3-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 6,
+     "losses": 3,
+     "ties": 0,
+     "points_for": 251,
+     "points_against": 229,
+     "point_differential": 22,
+     "record": "6-3-0"
     }
    },
    {
@@ -2957,6 +3658,16 @@
      "points_against": 59,
      "point_differential": -52,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -2998,6 +3709,16 @@
      "points_against": 55,
      "point_differential": -48,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -3039,6 +3760,16 @@
      "points_against": 44,
      "point_differential": -6,
      "record": "0-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -3080,6 +3811,16 @@
      "points_against": 70,
      "point_differential": -17,
      "record": "0-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -3121,6 +3862,16 @@
      "points_against": 307,
      "point_differential": 75,
      "record": "9-4-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 5,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 217,
+     "points_against": 257,
+     "point_differential": -40,
+     "record": "5-4-0"
     }
    },
    {
@@ -3162,6 +3913,16 @@
      "points_against": 35,
      "point_differential": -32,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -3203,6 +3964,16 @@
      "points_against": 48,
      "point_differential": -28,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -3246,6 +4017,16 @@
      "points_against": 187,
      "point_differential": 479,
      "record": "16-0-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 9,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 376,
+     "points_against": 108,
+     "point_differential": 268,
+     "record": "9-0-0"
     }
    },
    {
@@ -3287,6 +4068,16 @@
      "points_against": 73,
      "point_differential": -73,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -3328,6 +4119,16 @@
      "points_against": 209,
      "point_differential": 172,
      "record": "9-4-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 6,
+     "losses": 3,
+     "ties": 0,
+     "points_for": 253,
+     "points_against": 152,
+     "point_differential": 101,
+     "record": "6-3-0"
     }
    },
    {
@@ -3369,6 +4170,16 @@
      "points_against": 242,
      "point_differential": 87,
      "record": "8-4-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 5,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 234,
+     "points_against": 206,
+     "point_differential": 28,
+     "record": "5-4-0"
     }
    },
    {
@@ -3410,6 +4221,16 @@
      "points_against": 38,
      "point_differential": -18,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -3451,6 +4272,16 @@
      "points_against": 353,
      "point_differential": 41,
      "record": "9-5-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 7,
+     "losses": 1,
+     "ties": 0,
+     "points_for": 248,
+     "points_against": 211,
+     "point_differential": 37,
+     "record": "7-1-0"
     }
    },
    {
@@ -3492,6 +4323,16 @@
      "points_against": 257,
      "point_differential": 262,
      "record": "12-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 8,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 340,
+     "points_against": 121,
+     "point_differential": 219,
+     "record": "8-0-0"
     }
    },
    {
@@ -3533,6 +4374,16 @@
      "points_against": 321,
      "point_differential": 16,
      "record": "5-7-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 3,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 229,
+     "points_against": 265,
+     "point_differential": -36,
+     "record": "3-6-0"
     }
    },
    {
@@ -3574,6 +4425,16 @@
      "points_against": 320,
      "point_differential": 33,
      "record": "6-6-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 5,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 277,
+     "points_against": 238,
+     "point_differential": 39,
+     "record": "5-4-0"
     }
    },
    {
@@ -3615,6 +4476,16 @@
      "points_against": 357,
      "point_differential": 17,
      "record": "10-4-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 7,
+     "losses": 1,
+     "ties": 0,
+     "points_for": 276,
+     "points_against": 201,
+     "point_differential": 75,
+     "record": "7-1-0"
     }
    },
    {
@@ -3656,6 +4527,16 @@
      "points_against": 403,
      "point_differential": -148,
      "record": "5-7-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 4,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 210,
+     "points_against": 214,
+     "point_differential": -4,
+     "record": "4-4-0"
     }
    },
    {
@@ -3697,6 +4578,16 @@
      "points_against": 317,
      "point_differential": -41,
      "record": "5-7-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 2,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 162,
+     "points_against": 227,
+     "point_differential": -65,
+     "record": "2-6-0"
     }
    },
    {
@@ -3738,6 +4629,16 @@
      "points_against": 71,
      "point_differential": -51,
      "record": "0-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -3779,6 +4680,16 @@
      "points_against": 51,
      "point_differential": -51,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -3820,6 +4731,16 @@
      "points_against": 318,
      "point_differential": -11,
      "record": "4-8-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 3,
+     "losses": 5,
+     "ties": 0,
+     "points_for": 246,
+     "points_against": 236,
+     "point_differential": 10,
+     "record": "3-5-0"
     }
    },
    {
@@ -3861,6 +4782,16 @@
      "points_against": 58,
      "point_differential": -45,
      "record": "0-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -3902,6 +4833,16 @@
      "points_against": 78,
      "point_differential": -50,
      "record": "1-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -3943,6 +4884,16 @@
      "points_against": 380,
      "point_differential": -42,
      "record": "6-7-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 5,
+     "losses": 3,
+     "ties": 0,
+     "points_for": 238,
+     "points_against": 250,
+     "point_differential": -12,
+     "record": "5-3-0"
     }
    },
    {
@@ -3984,6 +4935,16 @@
      "points_against": 270,
      "point_differential": 85,
      "record": "8-5-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 5,
+     "losses": 3,
+     "ties": 0,
+     "points_for": 268,
+     "points_against": 185,
+     "point_differential": 83,
+     "record": "5-3-0"
     }
    },
    {
@@ -4025,6 +4986,16 @@
      "points_against": 275,
      "point_differential": 114,
      "record": "9-4-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 4,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 202,
+     "points_against": 205,
+     "point_differential": -3,
+     "record": "4-4-0"
     }
    },
    {
@@ -4066,6 +5037,16 @@
      "points_against": 258,
      "point_differential": 39,
      "record": "7-6-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 3,
+     "losses": 5,
+     "ties": 0,
+     "points_for": 153,
+     "points_against": 183,
+     "point_differential": -30,
+     "record": "3-5-0"
     }
    },
    {
@@ -4107,6 +5088,16 @@
      "points_against": 73,
      "point_differential": -49,
      "record": "0-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -4148,6 +5139,16 @@
      "points_against": 363,
      "point_differential": 6,
      "record": "5-7-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 3,
+     "losses": 5,
+     "ties": 0,
+     "points_for": 262,
+     "points_against": 262,
+     "point_differential": 0,
+     "record": "3-5-0"
     }
    },
    {
@@ -4189,6 +5190,16 @@
      "points_against": 318,
      "point_differential": -36,
      "record": "4-8-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 1,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 179,
+     "points_against": 285,
+     "point_differential": -106,
+     "record": "1-8-0"
     }
    },
    {
@@ -4230,6 +5241,16 @@
      "points_against": 463,
      "point_differential": -330,
      "record": "0-12-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 0,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 84,
+     "points_against": 305,
+     "point_differential": -221,
+     "record": "0-8-0"
     }
    },
    {
@@ -4271,6 +5292,16 @@
      "points_against": 82,
      "point_differential": -65,
      "record": "0-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -4312,6 +5343,16 @@
      "points_against": 301,
      "point_differential": 121,
      "record": "8-5-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 4,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 272,
+     "points_against": 206,
+     "point_differential": 66,
+     "record": "4-4-0"
     }
    },
    {
@@ -4353,6 +5394,16 @@
      "points_against": 62,
      "point_differential": -45,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -4394,6 +5445,16 @@
      "points_against": 48,
      "point_differential": -18,
      "record": "0-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -4438,6 +5499,16 @@
      "points_against": 237,
      "point_differential": 258,
      "record": "13-3-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 6,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 262,
+     "points_against": 120,
+     "point_differential": 142,
+     "record": "6-2-0"
     }
    },
    {
@@ -4479,6 +5550,16 @@
      "points_against": 304,
      "point_differential": 25,
      "record": "7-7-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 6,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 220,
+     "points_against": 160,
+     "point_differential": 60,
+     "record": "6-2-0"
     }
    },
    {
@@ -4520,6 +5601,16 @@
      "points_against": 265,
      "point_differential": 93,
      "record": "9-4-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 7,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 221,
+     "points_against": 180,
+     "point_differential": 41,
+     "record": "7-2-0"
     }
    },
    {
@@ -4561,6 +5652,16 @@
      "points_against": 359,
      "point_differential": -64,
      "record": "4-8-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 1,
+     "losses": 8,
+     "ties": 0,
+     "points_for": 189,
+     "points_against": 289,
+     "point_differential": -100,
+     "record": "1-8-0"
     }
    },
    {
@@ -4602,6 +5703,16 @@
      "points_against": 371,
      "point_differential": -102,
      "record": "3-9-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 2,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 203,
+     "points_against": 240,
+     "point_differential": -37,
+     "record": "2-6-0"
     }
    },
    {
@@ -4643,6 +5754,16 @@
      "points_against": 298,
      "point_differential": 1,
      "record": "8-5-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 5,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 176,
+     "points_against": 244,
+     "point_differential": -68,
+     "record": "5-4-0"
     }
    },
    {
@@ -4684,6 +5805,16 @@
      "points_against": 393,
      "point_differential": 2,
      "record": "5-8-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 1,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 207,
+     "points_against": 303,
+     "point_differential": -96,
+     "record": "1-7-0"
     }
    },
    {
@@ -4725,6 +5856,16 @@
      "points_against": 246,
      "point_differential": 147,
      "record": "8-5-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 4,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 189,
+     "points_against": 180,
+     "point_differential": 9,
+     "record": "4-4-0"
     }
    },
    {
@@ -4766,6 +5907,16 @@
      "points_against": 374,
      "point_differential": -41,
      "record": "7-6-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 5,
+     "losses": 3,
+     "ties": 0,
+     "points_for": 219,
+     "points_against": 209,
+     "point_differential": 10,
+     "record": "5-3-0"
     }
    },
    {
@@ -4807,6 +5958,16 @@
      "points_against": 42,
      "point_differential": -7,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -4848,6 +6009,16 @@
      "points_against": 59,
      "point_differential": -46,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -4889,6 +6060,16 @@
      "points_against": 98,
      "point_differential": -77,
      "record": "0-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -4930,6 +6111,16 @@
      "points_against": 82,
      "point_differential": -51,
      "record": "0-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -4971,6 +6162,16 @@
      "points_against": 325,
      "point_differential": 84,
      "record": "11-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 8,
+     "losses": 1,
+     "ties": 0,
+     "points_for": 278,
+     "points_against": 225,
+     "point_differential": 53,
+     "record": "8-1-0"
     }
    },
    {
@@ -5012,6 +6213,16 @@
      "points_against": 353,
      "point_differential": 40,
      "record": "8-5-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 4,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 240,
+     "points_against": 252,
+     "point_differential": -12,
+     "record": "4-4-0"
     }
    },
    {
@@ -5053,6 +6264,16 @@
      "points_against": 320,
      "point_differential": 53,
      "record": "7-6-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 4,
+     "losses": 5,
+     "ties": 0,
+     "points_for": 204,
+     "points_against": 252,
+     "point_differential": -48,
+     "record": "4-5-0"
     }
    },
    {
@@ -5094,6 +6315,16 @@
      "points_against": 330,
      "point_differential": -119,
      "record": "3-9-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 2,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 151,
+     "points_against": 222,
+     "point_differential": -71,
+     "record": "2-6-0"
     }
    },
    {
@@ -5135,6 +6366,16 @@
      "points_against": 34,
      "point_differential": -5,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -5176,6 +6417,16 @@
      "points_against": 290,
      "point_differential": 62,
      "record": "9-4-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 6,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 213,
+     "points_against": 184,
+     "point_differential": 29,
+     "record": "6-2-0"
     }
    },
    {
@@ -5217,6 +6468,16 @@
      "points_against": 331,
      "point_differential": -72,
      "record": "4-8-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 2,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 190,
+     "points_against": 234,
+     "point_differential": -44,
+     "record": "2-6-0"
     }
    },
    {
@@ -5258,6 +6519,16 @@
      "points_against": 73,
      "point_differential": -50,
      "record": "0-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -5299,6 +6570,16 @@
      "points_against": 60,
      "point_differential": -50,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -5340,6 +6621,16 @@
      "points_against": 55,
      "point_differential": -49,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -5381,6 +6672,16 @@
      "points_against": 294,
      "point_differential": -63,
      "record": "4-8-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 2,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 147,
+     "points_against": 203,
+     "point_differential": -56,
+     "record": "2-6-0"
     }
    },
    {
@@ -5422,6 +6723,16 @@
      "points_against": 68,
      "point_differential": -61,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -5463,6 +6774,16 @@
      "points_against": 54,
      "point_differential": -48,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -5504,6 +6825,16 @@
      "points_against": 38,
      "point_differential": -3,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -5545,6 +6876,16 @@
      "points_against": 371,
      "point_differential": 260,
      "record": "12-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 7,
+     "losses": 1,
+     "ties": 0,
+     "points_for": 382,
+     "points_against": 228,
+     "point_differential": 154,
+     "record": "7-1-0"
     }
    },
    {
@@ -5586,6 +6927,16 @@
      "points_against": 38,
      "point_differential": -19,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -5627,6 +6978,16 @@
      "points_against": 21,
      "point_differential": -4,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -5668,6 +7029,16 @@
      "points_against": 292,
      "point_differential": -87,
      "record": "3-9-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 2,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 164,
+     "points_against": 211,
+     "point_differential": -47,
+     "record": "2-6-0"
     }
    },
    {
@@ -5709,6 +7080,16 @@
      "points_against": 31,
      "point_differential": -24,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -5750,6 +7131,16 @@
      "points_against": 258,
      "point_differential": 46,
      "record": "7-6-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 4,
+     "losses": 5,
+     "ties": 0,
+     "points_for": 183,
+     "points_against": 214,
+     "point_differential": -31,
+     "record": "4-5-0"
     }
    },
    {
@@ -5791,6 +7182,16 @@
      "points_against": 136,
      "point_differential": -136,
      "record": "0-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -5832,6 +7233,16 @@
      "points_against": 211,
      "point_differential": 293,
      "record": "10-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -5873,6 +7284,16 @@
      "points_against": 285,
      "point_differential": 76,
      "record": "9-4-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 6,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 235,
+     "points_against": 159,
+     "point_differential": 76,
+     "record": "6-2-0"
     }
    },
    {
@@ -5914,6 +7335,16 @@
      "points_against": 130,
      "point_differential": 338,
      "record": "12-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 9,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 323,
+     "points_against": 77,
+     "point_differential": 246,
+     "record": "9-0-0"
     }
    },
    {
@@ -5955,6 +7386,16 @@
      "points_against": 201,
      "point_differential": 140,
      "record": "10-3-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 6,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 172,
+     "points_against": 148,
+     "point_differential": 24,
+     "record": "6-2-0"
     }
    },
    {
@@ -5996,6 +7437,16 @@
      "points_against": 400,
      "point_differential": -230,
      "record": "1-11-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 0,
+     "losses": 9,
+     "ties": 0,
+     "points_for": 128,
+     "points_against": 305,
+     "point_differential": -177,
+     "record": "0-9-0"
     }
    },
    {
@@ -6037,6 +7488,16 @@
      "points_against": 241,
      "point_differential": 175,
      "record": "10-3-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 6,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 258,
+     "points_against": 165,
+     "point_differential": 93,
+     "record": "6-2-0"
     }
    },
    {
@@ -6080,6 +7541,16 @@
      "points_against": 316,
      "point_differential": 238,
      "record": "13-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 7,
+     "losses": 1,
+     "ties": 0,
+     "points_for": 266,
+     "points_against": 203,
+     "point_differential": 63,
+     "record": "7-1-0"
     }
    },
    {
@@ -6123,6 +7594,16 @@
      "points_against": 268,
      "point_differential": 286,
      "record": "13-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 8,
+     "losses": 1,
+     "ties": 0,
+     "points_for": 289,
+     "points_against": 155,
+     "point_differential": 134,
+     "record": "8-1-0"
     }
    },
    {
@@ -6164,6 +7645,16 @@
      "points_against": 353,
      "point_differential": -135,
      "record": "2-10-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 2,
+     "wins": 1,
+     "losses": 1,
+     "ties": 0,
+     "points_for": 18,
+     "points_against": 39,
+     "point_differential": -21,
+     "record": "1-1-0"
     }
    },
    {
@@ -6205,6 +7696,16 @@
      "points_against": 267,
      "point_differential": 136,
      "record": "7-6-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 3,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 249,
+     "points_against": 240,
+     "point_differential": 9,
+     "record": "3-6-0"
     }
    },
    {
@@ -6246,6 +7747,16 @@
      "points_against": 322,
      "point_differential": 116,
      "record": "8-5-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 6,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 276,
+     "points_against": 205,
+     "point_differential": 71,
+     "record": "6-2-0"
     }
    },
    {
@@ -6287,6 +7798,16 @@
      "points_against": 92,
      "point_differential": -89,
      "record": "0-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -6328,6 +7849,16 @@
      "points_against": 38,
      "point_differential": -21,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -6369,6 +7900,16 @@
      "points_against": 382,
      "point_differential": -157,
      "record": "2-10-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 0,
+     "losses": 9,
+     "ties": 0,
+     "points_for": 130,
+     "points_against": 309,
+     "point_differential": -179,
+     "record": "0-9-0"
     }
    },
    {
@@ -6410,6 +7951,16 @@
      "points_against": 47,
      "point_differential": -33,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -6451,6 +8002,16 @@
      "points_against": 428,
      "point_differential": -180,
      "record": "5-8-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 2,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 140,
+     "points_against": 289,
+     "point_differential": -149,
+     "record": "2-6-0"
     }
    },
    {
@@ -6492,6 +8053,16 @@
      "points_against": 41,
      "point_differential": -35,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -6533,6 +8104,16 @@
      "points_against": 45,
      "point_differential": -42,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -6574,6 +8155,16 @@
      "points_against": 382,
      "point_differential": -38,
      "record": "5-7-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 2,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 205,
+     "points_against": 324,
+     "point_differential": -119,
+     "record": "2-7-0"
     }
    },
    {
@@ -6615,6 +8206,16 @@
      "points_against": 20,
      "point_differential": -3,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -6656,6 +8257,16 @@
      "points_against": 454,
      "point_differential": -241,
      "record": "2-10-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 1,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 151,
+     "points_against": 307,
+     "point_differential": -156,
+     "record": "1-7-0"
     }
    },
    {
@@ -6697,6 +8308,16 @@
      "points_against": 90,
      "point_differential": -83,
      "record": "0-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -6738,6 +8359,16 @@
      "points_against": 200,
      "point_differential": 143,
      "record": "9-4-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 6,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 201,
+     "points_against": 112,
+     "point_differential": 89,
+     "record": "6-2-0"
     }
    },
    {
@@ -6779,6 +8410,16 @@
      "points_against": 390,
      "point_differential": -133,
      "record": "3-9-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 2,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 176,
+     "points_against": 278,
+     "point_differential": -102,
+     "record": "2-6-0"
     }
    },
    {
@@ -6820,6 +8461,16 @@
      "points_against": 80,
      "point_differential": -70,
      "record": "0-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -6861,6 +8512,16 @@
      "points_against": 267,
      "point_differential": 152,
      "record": "9-4-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 6,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 256,
+     "points_against": 142,
+     "point_differential": 114,
+     "record": "6-2-0"
     }
    },
    {
@@ -6902,6 +8563,16 @@
      "points_against": 365,
      "point_differential": -47,
      "record": "4-8-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 3,
+     "losses": 5,
+     "ties": 0,
+     "points_for": 212,
+     "points_against": 244,
+     "point_differential": -32,
+     "record": "3-5-0"
     }
    },
    {
@@ -6943,6 +8614,16 @@
      "points_against": 265,
      "point_differential": 7,
      "record": "4-8-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 1,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 145,
+     "points_against": 209,
+     "point_differential": -64,
+     "record": "1-7-0"
     }
    },
    {
@@ -6984,6 +8665,16 @@
      "points_against": 101,
      "point_differential": -77,
      "record": "0-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -7025,6 +8716,16 @@
      "points_against": 55,
      "point_differential": -48,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -7066,6 +8767,16 @@
      "points_against": 304,
      "point_differential": 222,
      "record": "9-4-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 6,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 389,
+     "points_against": 194,
+     "point_differential": 195,
+     "record": "6-2-0"
     }
    },
    {
@@ -7107,6 +8818,16 @@
      "points_against": 42,
      "point_differential": -18,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -7148,6 +8869,16 @@
      "points_against": 56,
      "point_differential": -49,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -7189,6 +8920,16 @@
      "points_against": 34,
      "point_differential": -17,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -7230,6 +8971,16 @@
      "points_against": 356,
      "point_differential": 18,
      "record": "7-6-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 5,
+     "losses": 3,
+     "ties": 0,
+     "points_for": 241,
+     "points_against": 220,
+     "point_differential": 21,
+     "record": "5-3-0"
     }
    },
    {
@@ -7271,6 +9022,16 @@
      "points_against": 74,
      "point_differential": -68,
      "record": "0-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -7312,6 +9073,16 @@
      "points_against": 350,
      "point_differential": -124,
      "record": "4-8-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 3,
+     "losses": 5,
+     "ties": 0,
+     "points_for": 153,
+     "points_against": 222,
+     "point_differential": -69,
+     "record": "3-5-0"
     }
    },
    {
@@ -7353,6 +9124,16 @@
      "points_against": 27,
      "point_differential": -27,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -7394,6 +9175,16 @@
      "points_against": 42,
      "point_differential": -42,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -7435,6 +9226,16 @@
      "points_against": 419,
      "point_differential": -177,
      "record": "3-9-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 1,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 116,
+     "points_against": 260,
+     "point_differential": -144,
+     "record": "1-7-0"
     }
    },
    {
@@ -7476,6 +9277,16 @@
      "points_against": 27,
      "point_differential": 3,
      "record": "1-0-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -7517,6 +9328,16 @@
      "points_against": 329,
      "point_differential": 70,
      "record": "9-4-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 5,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 244,
+     "points_against": 243,
+     "point_differential": 1,
+     "record": "5-4-0"
     }
    },
    {
@@ -7558,6 +9379,16 @@
      "points_against": 356,
      "point_differential": -22,
      "record": "5-7-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 3,
+     "losses": 5,
+     "ties": 0,
+     "points_for": 210,
+     "points_against": 252,
+     "point_differential": -42,
+     "record": "3-5-0"
     }
    },
    {
@@ -7599,6 +9430,16 @@
      "points_against": 375,
      "point_differential": 142,
      "record": "8-5-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 4,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 274,
+     "points_against": 269,
+     "point_differential": 5,
+     "record": "4-4-0"
     }
    },
    {
@@ -7640,6 +9481,16 @@
      "points_against": 42,
      "point_differential": -32,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -7681,6 +9532,16 @@
      "points_against": 264,
      "point_differential": 132,
      "record": "10-3-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 6,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 228,
+     "points_against": 206,
+     "point_differential": 22,
+     "record": "6-2-0"
     }
    },
    {
@@ -7722,6 +9583,16 @@
      "points_against": 273,
      "point_differential": 166,
      "record": "11-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 7,
+     "losses": 1,
+     "ties": 0,
+     "points_for": 261,
+     "points_against": 177,
+     "point_differential": 84,
+     "record": "7-1-0"
     }
    },
    {
@@ -7763,6 +9634,16 @@
      "points_against": 35,
      "point_differential": -32,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -7804,6 +9685,16 @@
      "points_against": 377,
      "point_differential": 97,
      "record": "7-6-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 3,
+     "losses": 5,
+     "ties": 0,
+     "points_for": 288,
+     "points_against": 267,
+     "point_differential": 21,
+     "record": "3-5-0"
     }
    },
    {
@@ -7845,6 +9736,16 @@
      "points_against": 165,
      "point_differential": 387,
      "record": "12-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 8,
+     "losses": 1,
+     "ties": 0,
+     "points_for": 344,
+     "points_against": 100,
+     "point_differential": 244,
+     "record": "8-1-0"
     }
    },
    {
@@ -7886,6 +9787,16 @@
      "points_against": 49,
      "point_differential": -49,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -7927,6 +9838,16 @@
      "points_against": 173,
      "point_differential": 228,
      "record": "8-5-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 6,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 251,
+     "points_against": 73,
+     "point_differential": 178,
+     "record": "6-2-0"
     }
    },
    {
@@ -7968,6 +9889,16 @@
      "points_against": 44,
      "point_differential": -27,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -8009,6 +9940,16 @@
      "points_against": 335,
      "point_differential": -6,
      "record": "8-6-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 6,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 220,
+     "points_against": 195,
+     "point_differential": 25,
+     "record": "6-2-0"
     }
    },
    {
@@ -8050,6 +9991,16 @@
      "points_against": 335,
      "point_differential": 53,
      "record": "11-3-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 7,
+     "losses": 1,
+     "ties": 0,
+     "points_for": 244,
+     "points_against": 167,
+     "point_differential": 77,
+     "record": "7-1-0"
     }
    },
    {
@@ -8091,6 +10042,16 @@
      "points_against": 347,
      "point_differential": -69,
      "record": "4-8-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 1,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 179,
+     "points_against": 293,
+     "point_differential": -114,
+     "record": "1-7-0"
     }
    },
    {
@@ -8132,6 +10093,16 @@
      "points_against": 459,
      "point_differential": -142,
      "record": "4-8-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 2,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 191,
+     "points_against": 295,
+     "point_differential": -104,
+     "record": "2-6-0"
     }
    },
    {
@@ -8173,6 +10144,16 @@
      "points_against": 34,
      "point_differential": -27,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -8214,6 +10195,16 @@
      "points_against": 70,
      "point_differential": -60,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -8255,6 +10246,16 @@
      "points_against": 283,
      "point_differential": 9,
      "record": "5-7-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 2,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 173,
+     "points_against": 257,
+     "point_differential": -84,
+     "record": "2-7-0"
     }
    },
    {
@@ -8296,6 +10297,16 @@
      "points_against": 401,
      "point_differential": -183,
      "record": "3-9-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 3,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 175,
+     "points_against": 293,
+     "point_differential": -118,
+     "record": "3-6-0"
     }
    },
    {
@@ -8337,6 +10348,16 @@
      "points_against": 351,
      "point_differential": 108,
      "record": "9-4-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -8378,6 +10399,16 @@
      "points_against": 383,
      "point_differential": -184,
      "record": "3-9-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 1,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 132,
+     "points_against": 243,
+     "point_differential": -111,
+     "record": "1-7-0"
     }
    },
    {
@@ -8419,6 +10450,16 @@
      "points_against": 392,
      "point_differential": 85,
      "record": "10-4-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 6,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 299,
+     "points_against": 224,
+     "point_differential": 75,
+     "record": "6-2-0"
     }
    },
    {
@@ -8460,6 +10501,16 @@
      "points_against": 299,
      "point_differential": 166,
      "record": "9-4-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 7,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 282,
+     "points_against": 202,
+     "point_differential": 80,
+     "record": "7-2-0"
     }
    },
    {
@@ -8501,6 +10552,16 @@
      "points_against": 111,
      "point_differential": -77,
      "record": "0-3-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -8542,6 +10603,16 @@
      "points_against": 246,
      "point_differential": 291,
      "record": "11-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 7,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 356,
+     "points_against": 199,
+     "point_differential": 157,
+     "record": "7-2-0"
     }
    },
    {
@@ -8583,6 +10654,16 @@
      "points_against": 373,
      "point_differential": 29,
      "record": "6-7-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 4,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 248,
+     "points_against": 217,
+     "point_differential": 31,
+     "record": "4-4-0"
     }
    },
    {
@@ -8624,6 +10705,16 @@
      "points_against": 365,
      "point_differential": -85,
      "record": "2-10-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 1,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 187,
+     "points_against": 262,
+     "point_differential": -75,
+     "record": "1-7-0"
     }
    },
    {
@@ -8665,6 +10756,16 @@
      "points_against": 375,
      "point_differential": 87,
      "record": "7-6-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 4,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 280,
+     "points_against": 234,
+     "point_differential": 46,
+     "record": "4-4-0"
     }
    },
    {
@@ -8706,6 +10807,16 @@
      "points_against": 297,
      "point_differential": 203,
      "record": "10-3-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 6,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 259,
+     "points_against": 184,
+     "point_differential": 75,
+     "record": "6-2-0"
     }
    },
    {
@@ -8747,6 +10858,16 @@
      "points_against": 52,
      "point_differential": -46,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -8788,6 +10909,16 @@
      "points_against": 274,
      "point_differential": 157,
      "record": "11-3-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 7,
+     "losses": 1,
+     "ties": 0,
+     "points_for": 242,
+     "points_against": 162,
+     "point_differential": 80,
+     "record": "7-1-0"
     }
    },
    {
@@ -8829,6 +10960,16 @@
      "points_against": 362,
      "point_differential": -105,
      "record": "3-9-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 2,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 162,
+     "points_against": 243,
+     "point_differential": -81,
+     "record": "2-6-0"
     }
    },
    {
@@ -8870,6 +11011,16 @@
      "points_against": 52,
      "point_differential": -45,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -8911,6 +11062,16 @@
      "points_against": 95,
      "point_differential": -78,
      "record": "0-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -8952,6 +11113,16 @@
      "points_against": 287,
      "point_differential": 78,
      "record": "9-4-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 4,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 179,
+     "points_against": 211,
+     "point_differential": -32,
+     "record": "4-4-0"
     }
    },
    {
@@ -8993,6 +11164,16 @@
      "points_against": 243,
      "point_differential": 200,
      "record": "9-4-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 5,
+     "losses": 4,
+     "ties": 0,
+     "points_for": 238,
+     "points_against": 178,
+     "point_differential": 60,
+     "record": "5-4-0"
     }
    },
    {
@@ -9034,6 +11215,16 @@
      "points_against": 263,
      "point_differential": 30,
      "record": "7-6-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 2,
+     "wins": 1,
+     "losses": 1,
+     "ties": 0,
+     "points_for": 39,
+     "points_against": 18,
+     "point_differential": 21,
+     "record": "1-1-0"
     }
    },
    {
@@ -9075,6 +11266,16 @@
      "points_against": 93,
      "point_differential": -80,
      "record": "0-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -9116,6 +11317,16 @@
      "points_against": 370,
      "point_differential": -109,
      "record": "4-8-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 2,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 175,
+     "points_against": 326,
+     "point_differential": -151,
+     "record": "2-7-0"
     }
    },
    {
@@ -9157,6 +11368,16 @@
      "points_against": 42,
      "point_differential": -32,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -9198,6 +11419,16 @@
      "points_against": 94,
      "point_differential": -84,
      "record": "0-2-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -9239,6 +11470,16 @@
      "points_against": 297,
      "point_differential": 87,
      "record": "9-4-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 6,
+     "losses": 2,
+     "ties": 0,
+     "points_for": 240,
+     "points_against": 201,
+     "point_differential": 39,
+     "record": "6-2-0"
     }
    },
    {
@@ -9280,6 +11521,16 @@
      "points_against": 243,
      "point_differential": 105,
      "record": "10-4-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 7,
+     "losses": 1,
+     "ties": 0,
+     "points_for": 201,
+     "points_against": 116,
+     "point_differential": 85,
+     "record": "7-1-0"
     }
    },
    {
@@ -9321,6 +11572,16 @@
      "points_against": 55,
      "point_differential": -39,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -9362,6 +11623,16 @@
      "points_against": 259,
      "point_differential": -105,
      "record": "4-8-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 9,
+     "wins": 2,
+     "losses": 7,
+     "ties": 0,
+     "points_for": 81,
+     "points_against": 211,
+     "point_differential": -130,
+     "record": "2-7-0"
     }
    },
    {
@@ -9403,6 +11674,16 @@
      "points_against": 38,
      "point_differential": -32,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    },
    {
@@ -9444,6 +11725,16 @@
      "points_against": 246,
      "point_differential": -54,
      "record": "4-8-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 8,
+     "wins": 2,
+     "losses": 6,
+     "ties": 0,
+     "points_for": 125,
+     "points_against": 171,
+     "point_differential": -46,
+     "record": "2-6-0"
     }
    },
    {
@@ -9485,6 +11776,16 @@
      "points_against": 41,
      "point_differential": -17,
      "record": "0-1-0"
+    },
+    "conference_regular_season_to_date": {
+     "games": 0,
+     "wins": 0,
+     "losses": 0,
+     "ties": 0,
+     "points_for": 0,
+     "points_against": 0,
+     "point_differential": 0,
+     "record": "0-0-0"
     }
    }
   ]

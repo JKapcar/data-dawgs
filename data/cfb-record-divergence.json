@@ -1,6 +1,6 @@
 {
  "as_of": "2026-08-08",
- "source": "Descriptive join of /data/cfb-team-game.json and /data/cfb-teams.json by scripts/cfb_record_divergence.py; inputs sha256:49f2793ff21328b254a15d719b77ed781d481cbdf9b31c31f4d70206935c098f and sha256:7faca01dd0602ed82c18306696bb26d59866969ce64bfd7f3027b438efa6db22.",
+ "source": "Descriptive join of /data/cfb-team-game.json and /data/cfb-teams.json by scripts/cfb_record_divergence.py; inputs sha256:49f2793ff21328b254a15d719b77ed781d481cbdf9b31c31f4d70206935c098f and sha256:51a8c81eed8d8987b0b8b34c107914dda57309fe186fe37728a6ad1af04db62d.",
  "tier": "labs",
  "graded": false,
  "note": "OBSERVED, DESCRIPTIVE BASELINE ONLY. This is not a Fraud Detector verdict and does not call any team overrated or underrated. No forward predictive value has been demonstrated.",
@@ -13,12 +13,12 @@
    },
    {
     "url": "/data/cfb-teams.json",
-    "snapshot_id": "sha256:7faca01dd0602ed82c18306696bb26d59866969ce64bfd7f3027b438efa6db22"
+    "snapshot_id": "sha256:51a8c81eed8d8987b0b8b34c107914dda57309fe186fe37728a6ad1af04db62d"
    }
   ]
  },
  "integrity": {
-  "snapshot_id": "sha256:da8258679118937db92037f88229ddb79a053f08fa22185574b01569185ee46c",
+  "snapshot_id": "sha256:274fd9c03f437dbc934481e6d62afff273b1cb387464783c519536da630b8ce2",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for the data object (sorted object keys, no insignificant whitespace).",
   "rows": 136
  },
@@ -28,7 +28,7 @@
   "status": "descriptive-baseline",
   "inputs": {
    "team_game_snapshot_id": "sha256:49f2793ff21328b254a15d719b77ed781d481cbdf9b31c31f4d70206935c098f",
-   "team_profiles_snapshot_id": "sha256:7faca01dd0602ed82c18306696bb26d59866969ce64bfd7f3027b438efa6db22"
+   "team_profiles_snapshot_id": "sha256:51a8c81eed8d8987b0b8b34c107914dda57309fe186fe37728a6ad1af04db62d"
   },
   "definitions": {
    "record_rank": "Competition rank of observed win percentage, descending; ties share a rank and subsequent positions are skipped.",

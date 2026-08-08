@@ -122,6 +122,7 @@ def build_team_week(team_game: dict[str, Any]) -> dict[str, Any]:
     for team_slug, periods in by_team.items():
         periods.sort(key=lambda item: (item[1][-1]["kickoff_at"], item[0][1], item[0][2]))
         totals = {"games": 0, "wins": 0, "losses": 0, "ties": 0, "points_for": 0, "points_against": 0}
+        conference_totals = {"games": 0, "wins": 0, "losses": 0, "ties": 0, "points_for": 0, "points_against": 0}
         for (season, season_type, week, _), period_rows in periods:
             final = [row for row in period_rows if row["result"] is not None]
             period = {
@@ -134,6 +135,17 @@ def build_team_week(team_game: dict[str, Any]) -> dict[str, Any]:
             }
             for field in totals:
                 totals[field] += period[field]
+            conference_final = [row for row in final if row["season_type"] == "regular" and row["conference_game"]]
+            conference_period = {
+                "games": len(conference_final),
+                "wins": sum(row["result"] == "win" for row in conference_final),
+                "losses": sum(row["result"] == "loss" for row in conference_final),
+                "ties": sum(row["result"] == "tie" for row in conference_final),
+                "points_for": sum(row["points_for"] for row in conference_final),
+                "points_against": sum(row["points_against"] for row in conference_final),
+            }
+            for field in conference_totals:
+                conference_totals[field] += conference_period[field]
             opponent_slugs = [row["opponent_slug"] for row in period_rows]
             output.append({
                 "team_period_id": f"{season}_{season_type}_{week:02d}::{team_slug}",
@@ -160,6 +172,11 @@ def build_team_week(team_game: dict[str, Any]) -> dict[str, Any]:
                     "point_differential": totals["points_for"] - totals["points_against"],
                     "record": f"{totals['wins']}-{totals['losses']}-{totals['ties']}",
                 },
+                "conference_regular_season_to_date": {
+                    **conference_totals,
+                    "point_differential": conference_totals["points_for"] - conference_totals["points_against"],
+                    "record": f"{conference_totals['wins']}-{conference_totals['losses']}-{conference_totals['ties']}",
+                },
             })
     output.sort(key=lambda row: (row["through_at"], row["team_slug"], row["period_key"]))
     return {
@@ -172,6 +189,10 @@ def build_team_week(team_game: dict[str, Any]) -> dict[str, Any]:
         "period_definition": (
             "One row per team, season_type and upstream week label when at least one game is scheduled. "
             "Postseason week 1 is distinct from regular-season week 1. A period may contain multiple games."
+        ),
+        "conference_record_definition": (
+            "Observed final regular-season rows marked conference_game by the canonical schedule, accumulated through the period. "
+            "This is not an official standing, rank or tiebreaker result and excludes postseason games."
         ),
         "unavailable_metrics": UNAVAILABLE_METRICS,
         "rows": output,
@@ -229,6 +250,7 @@ def build_team_week_latest(team_week_envelope: dict[str, Any]) -> dict[str, Any]
                 "observed_result": copy.deepcopy(row["period"]),
             },
             "season_to_date": copy.deepcopy(row["season_to_date"]),
+            "conference_regular_season_to_date": copy.deepcopy(row["conference_regular_season_to_date"]),
         })
     return {
         "schema_version": 1,
@@ -237,6 +259,7 @@ def build_team_week_latest(team_week_envelope: dict[str, Any]) -> dict[str, Any]
         "input_schedule_snapshot_id": data["input_schedule_snapshot_id"],
         "input_team_week_snapshot_id": snapshot_id,
         "selection": "Maximum (through_at, team_period_id) per team from /data/cfb-team-week.json.",
+        "conference_record_definition": data["conference_record_definition"],
         "coverage": {
             "schedule_scope": "Canonical 2025 games involving at least one FBS team.",
             "fbs_team_records": "Complete within the canonical FBS-involved schedule.",
@@ -340,7 +363,9 @@ def make_envelope(payload: dict[str, Any], schedule: dict[str, Any], kind: str) 
         "graded": False,
         "note": (
             "OBSERVED RESULTS ONLY. Scores, opponents, venue and record are deterministic schedule facts. "
-            "No play-by-play, EPA, success, opponent adjustment, market performance or predictive claim is present."
+            + ("" if kind == "team-game" else
+               "Conference records use final regular-season rows marked conference_game and are not official standings. ")
+            + "No play-by-play, EPA, success, opponent adjustment, market performance or predictive claim is present."
         ),
         "provenance": {
             "generator": "scripts/cfb_team_results.py",
@@ -379,8 +404,9 @@ def make_latest_envelope(
         "tier": "labs",
         "graded": False,
         "note": (
-            "OBSERVED RESULTS ONLY. One latest schedule-derived period per team plus season-to-date record and "
-            "scoring. No play-by-play, EPA, opponent adjustment, market performance or predictive claim is present."
+            "OBSERVED RESULTS ONLY. One latest schedule-derived period per team plus season-to-date overall and "
+            "non-authoritative regular-season conference records and scoring. No play-by-play, EPA, opponent adjustment, "
+            "market performance or predictive claim is present."
         ),
         "provenance": {
             "generator": "scripts/cfb_team_results.py",

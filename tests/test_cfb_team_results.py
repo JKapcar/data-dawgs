@@ -94,6 +94,20 @@ class TeamResultsTests(unittest.TestCase):
         self.assertEqual(totals["points_against"], sum(row["points_against"] for row in team_rows))
         self.assertEqual(totals["wins"] + totals["losses"] + totals["ties"], totals["games"])
 
+    def test_conference_record_is_regular_season_only_and_reconciles(self):
+        team = "ohio-state"
+        source = [row for row in self.team_game["data"]["rows"]
+                  if row["team_slug"] == team and row["result"] is not None and
+                  row["season_type"] == "regular" and row["conference_game"]]
+        final_period = [row for row in self.team_week["data"]["rows"] if row["team_slug"] == team][-1]
+        totals = final_period["conference_regular_season_to_date"]
+        self.assertEqual(totals["games"], len(source))
+        self.assertEqual(totals["wins"], sum(row["result"] == "win" for row in source))
+        self.assertEqual(totals["losses"], sum(row["result"] == "loss" for row in source))
+        self.assertEqual(totals["points_for"], sum(row["points_for"] for row in source))
+        self.assertEqual(totals["points_against"], sum(row["points_against"] for row in source))
+        self.assertIn("not an official standing", self.team_week["data"]["conference_record_definition"])
+
     def test_advanced_metrics_are_explicitly_unavailable(self):
         for envelope in (self.team_game, self.team_week, self.team_week_latest, self.games_latest):
             self.assertIn("results-only", envelope["data"]["scope"])
@@ -118,6 +132,10 @@ class TeamResultsTests(unittest.TestCase):
             self.assertEqual(compact["through_at"], source["through_at"])
             self.assertEqual(compact["latest_period"]["team_period_id"], source["team_period_id"])
             self.assertEqual(compact["season_to_date"], source["season_to_date"])
+            self.assertEqual(
+                compact["conference_regular_season_to_date"],
+                source["conference_regular_season_to_date"],
+            )
 
     def test_latest_surface_locks_the_exact_team_week_snapshot(self):
         self.assertEqual(

@@ -686,7 +686,9 @@ async function mcpCfbTeamPeriods() {
     const teams = data && data.teams;
     const rows = data && data.rows;
     if (!envelope || !envelope.as_of || !envelope.source || !data || !Number.isInteger(data.season) ||
-        data.scope !== "results-only" || !teams || typeof teams !== "object" || Array.isArray(teams) ||
+        data.scope !== "results-only" || typeof data.conference_record_definition !== "string" ||
+        !/not an official standing/i.test(data.conference_record_definition) ||
+        !teams || typeof teams !== "object" || Array.isArray(teams) ||
         !Array.isArray(rows) || !rows.length || rows.length > 4000 || !Array.isArray(data.unavailable_metrics))
       throw new Error("cfb-team-week.json has an invalid results-only envelope");
     if (envelope.integrity && Number.isInteger(envelope.integrity.rows) && envelope.integrity.rows !== rows.length)
@@ -700,14 +702,15 @@ async function mcpCfbTeamPeriods() {
     for (const row of rows) {
       const period = row && row.period;
       const seasonToDate = row && row.season_to_date;
+      const conferenceToDate = row && row.conference_regular_season_to_date;
       if (!row || typeof row.team_period_id !== "string" || !row.team_period_id || ids.has(row.team_period_id) ||
           row.season !== data.season || !["regular", "postseason"].includes(row.season_type) ||
           !Number.isInteger(row.week) || row.week < 1 || row.week > 20 || typeof row.period_key !== "string" ||
           !Number.isFinite(Date.parse(row.through_at)) || !teams[row.team_slug] ||
           !Number.isInteger(row.scheduled_games_this_period) || row.scheduled_games_this_period < 1 ||
-          !Array.isArray(row.opponent_slugs) || !period || !seasonToDate)
+          !Array.isArray(row.opponent_slugs) || !period || !seasonToDate || !conferenceToDate)
         throw new Error("cfb-team-week.json has an invalid or duplicate team-period row");
-      for (const summary of [period, seasonToDate]) {
+      for (const summary of [period, seasonToDate, conferenceToDate]) {
         if (![summary.games, summary.wins, summary.losses, summary.ties, summary.points_for,
               summary.points_against, summary.point_differential].every(Number.isInteger) ||
             summary.games !== summary.wins + summary.losses + summary.ties ||
@@ -734,6 +737,7 @@ async function mcpCfbLatestPeriods() {
     if (!envelope || !envelope.as_of || !envelope.source || envelope.graded !== false || !data ||
         data.scope !== "results-only" || !Number.isInteger(data.season) || !data.coverage ||
         typeof data.coverage.fcs_team_records !== "string" || !/not complete FCS/i.test(data.coverage.fcs_team_records) ||
+        typeof data.conference_record_definition !== "string" || !/not an official standing/i.test(data.conference_record_definition) ||
         typeof data.input_team_week_snapshot_id !== "string" || !Array.isArray(data.unavailable_metrics) ||
         !Array.isArray(rows) || !rows.length || rows.length > 400)
       throw new Error("cfb-team-week-latest.json has an invalid results-only envelope");
@@ -744,12 +748,13 @@ async function mcpCfbLatestPeriods() {
       const latest = row && row.latest_period;
       const period = latest && latest.observed_result;
       const season = row && row.season_to_date;
+      const conference = row && row.conference_regular_season_to_date;
       if (!row || typeof row.team_slug !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(row.team_slug) ||
           slugs.has(row.team_slug) || typeof row.team !== "string" || !row.team || !["fbs", "fcs"].includes(row.division) ||
           !Number.isFinite(Date.parse(row.through_at)) || !latest || !["regular", "postseason"].includes(latest.season_type) ||
-          !Number.isInteger(latest.week) || latest.week < 1 || latest.week > 20 || !period || !season)
+          !Number.isInteger(latest.week) || latest.week < 1 || latest.week > 20 || !period || !season || !conference)
         throw new Error("cfb-team-week-latest.json has an invalid or duplicate team row");
-      for (const summary of [period, season]) {
+      for (const summary of [period, season, conference]) {
         if (![summary.games, summary.wins, summary.losses, summary.ties, summary.points_for,
               summary.points_against, summary.point_differential].every(Number.isInteger) ||
             summary.games !== summary.wins + summary.losses + summary.ties ||
@@ -3262,6 +3267,7 @@ const MCP_TOOLS = [
         scope: envelope.data.scope,
         coverage: envelope.data.coverage,
         selection: envelope.data.selection,
+        conference_record_definition: envelope.data.conference_record_definition,
         matched_before_pagination: matches.length,
         returned: rows.length,
         rows,
@@ -3279,6 +3285,7 @@ const MCP_TOOLS = [
         warnings: [
           "Latest means the last covered period in the dated 2025 FBS-involved schedule, not current 2026 form.",
           "FCS season-to-date records include only games against FBS opponents and are not complete FCS season records.",
+          "Conference records include only final regular-season rows marked conference_game and are not official standings, ranks or tiebreakers.",
           "period_outcome is the sign of the aggregate observed point differential; one period can contain multiple games.",
           "EPA, opponent-adjusted and market-performance metrics are unavailable in this results-only surface.",
         ],
@@ -3323,6 +3330,7 @@ const MCP_TOOLS = [
         fbs_opponents: row.fbs_opponents,
         period: row.period,
         season_to_date: row.season_to_date,
+        conference_regular_season_to_date: row.conference_regular_season_to_date,
       }));
       return toolText({
         query: {
@@ -3336,6 +3344,7 @@ const MCP_TOOLS = [
         season: envelope.data.season,
         scope: envelope.data.scope,
         period_definition: envelope.data.period_definition,
+        conference_record_definition: envelope.data.conference_record_definition,
         matched_before_limit: matches.length,
         returned: periods.length,
         periods,
@@ -3355,6 +3364,7 @@ const MCP_TOOLS = [
         warnings: [
           "These are observed schedule-derived 2025 results, not current 2026 form or a forecast.",
           "Regular-season week 1 and postseason week 1 are distinct periods; use season_type when filtering a repeated week number.",
+          "Conference records include only final regular-season rows marked conference_game and are not official standings, ranks or tiebreakers.",
           "EPA, success, explosiveness, havoc, garbage-time, opponent-adjusted and market-performance fields are unavailable in this results-only layer.",
           "Period rows can contain more than one scheduled game; scheduled_games_this_period is explicit.",
         ],

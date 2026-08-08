@@ -1,6 +1,6 @@
 {
  "as_of": "2026-08-08",
- "source": "Compact join of /data/cfb-team-week.json and /data/cfb-ratings.json by scripts/cfb_team_profiles.py; inputs sha256:2d843eb19ad19f4bb92f5ad3171d9c8635b433ae30b8aaf2a2c4a8e8ffb66fcf and sha256:49b2a286548274f881926530db66dea6c084f0a68ebdc350f55bbc7e47c545f0.",
+ "source": "Compact join of /data/cfb-team-week.json and /data/cfb-ratings.json by scripts/cfb_team_profiles.py; inputs sha256:a8bbaa0d8b83a63ed7f396fc7a897c789620c6178b3b8d26c2f24d9ddbcaa036 and sha256:49b2a286548274f881926530db66dea6c084f0a68ebdc350f55bbc7e47c545f0.",
  "tier": "labs",
  "graded": false,
  "note": "OBSERVED RESULTS plus one MODELLED, RETRODICTIVE, UNGRADED end-of-2025 Elo rating. The objects are separated deliberately. This is not a 2026 forecast, consensus, edge or recommendation.",
@@ -9,7 +9,7 @@
   "inputs": [
    {
     "url": "/data/cfb-team-week.json",
-    "snapshot_id": "sha256:2d843eb19ad19f4bb92f5ad3171d9c8635b433ae30b8aaf2a2c4a8e8ffb66fcf"
+    "snapshot_id": "sha256:a8bbaa0d8b83a63ed7f396fc7a897c789620c6178b3b8d26c2f24d9ddbcaa036"
    },
    {
     "url": "/data/cfb-ratings.json",
@@ -18,7 +18,7 @@
   ]
  },
  "integrity": {
-  "snapshot_id": "sha256:7faca01dd0602ed82c18306696bb26d59866969ce64bfd7f3027b438efa6db22",
+  "snapshot_id": "sha256:51a8c81eed8d8987b0b8b34c107914dda57309fe186fe37728a6ad1af04db62d",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for the data object (sorted object keys, no insignificant whitespace).",
   "systems": 1,
   "teams": 136
@@ -28,7 +28,7 @@
   "season": 2025,
   "scope": "observed-results-plus-retrodictive-rating",
   "inputs": {
-   "team_week_snapshot_id": "sha256:2d843eb19ad19f4bb92f5ad3171d9c8635b433ae30b8aaf2a2c4a8e8ffb66fcf",
+   "team_week_snapshot_id": "sha256:a8bbaa0d8b83a63ed7f396fc7a897c789620c6178b3b8d26c2f24d9ddbcaa036",
    "ratings_registry_snapshot_id": "sha256:49b2a286548274f881926530db66dea6c084f0a68ebdc350f55bbc7e47c545f0"
   },
   "rating_period": {

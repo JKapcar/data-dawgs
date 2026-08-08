@@ -385,15 +385,21 @@ console.log('\nCFB results layers — exact schedule-derived team facts');
   if (!Array.isArray(weekRows) || !weekRows.length)
     fail('cfb-team-week.json: rows are missing');
   else if (teamWeek.data.scope !== 'results-only' ||
+           !/not an official standing/i.test(teamWeek.data.conference_record_definition || '') ||
            teamWeek.data.input_team_game_snapshot_id !== teamGame.integrity.snapshot_id ||
            teamWeek.provenance.input_snapshot_id !== schedule.integrity.snapshot_id)
     fail('cfb-team-week.json: input snapshots or results-only boundary drifted');
   else if (new Set(weekRows.map(row => row.team_period_id)).size !== weekRows.length)
     fail('cfb-team-week.json: duplicate team_period_id');
-  else if (weekRows.some(row => row.period.games !== row.period.wins + row.period.losses + row.period.ties ||
+  else if (weekRows.some(row => !row.conference_regular_season_to_date ||
+      row.period.games !== row.period.wins + row.period.losses + row.period.ties ||
       row.season_to_date.games !== row.season_to_date.wins + row.season_to_date.losses + row.season_to_date.ties ||
+      row.conference_regular_season_to_date.games !== row.conference_regular_season_to_date.wins +
+        row.conference_regular_season_to_date.losses + row.conference_regular_season_to_date.ties ||
       row.period.point_differential !== row.period.points_for - row.period.points_against ||
-      row.season_to_date.point_differential !== row.season_to_date.points_for - row.season_to_date.points_against))
+      row.season_to_date.point_differential !== row.season_to_date.points_for - row.season_to_date.points_against ||
+      row.conference_regular_season_to_date.point_differential !==
+        row.conference_regular_season_to_date.points_for - row.conference_regular_season_to_date.points_against))
     fail('cfb-team-week.json: record or point-differential arithmetic drifted');
   else if (teamWeek.integrity.snapshot_id !== 'sha256:' + crypto.createHash('sha256').update(canonicalJson(teamWeek.data)).digest('hex'))
     fail('cfb-team-week.json: snapshot hash mismatch');
@@ -411,6 +417,7 @@ console.log('\nCFB results layers — exact schedule-derived team facts');
   if (!Array.isArray(latestRows) || !teamFacts || latestRows.length !== Object.keys(teamFacts).length)
     fail('cfb-team-week-latest.json: expected exactly one row per team');
   else if (latest.data.scope !== 'results-only' ||
+           latest.data.conference_record_definition !== teamWeek.data.conference_record_definition ||
            latest.data.input_team_week_snapshot_id !== teamWeek.integrity.snapshot_id ||
            latest.provenance.input_snapshot_id !== teamWeek.integrity.snapshot_id)
     fail('cfb-team-week-latest.json: input snapshot or results-only boundary drifted');
@@ -419,11 +426,12 @@ console.log('\nCFB results layers — exact schedule-derived team facts');
   else if (latestRows.some(row => {
     const source = expectedLatest.get(row.team_slug);
     const facts = teamFacts[row.team_slug];
-    return !source || !facts || !row.latest_period || !row.season_to_date ||
+    return !source || !facts || !row.latest_period || !row.season_to_date || !row.conference_regular_season_to_date ||
       row.team !== facts.team || row.division !== facts.division ||
       row.conference !== facts.conference || row.through_at !== source.through_at ||
       row.latest_period.team_period_id !== source.team_period_id ||
       canonicalJson(row.season_to_date) !== canonicalJson(source.season_to_date) ||
+      canonicalJson(row.conference_regular_season_to_date) !== canonicalJson(source.conference_regular_season_to_date) ||
       canonicalJson(row.latest_period.observed_result) !== canonicalJson(source.period);
   }))
     fail('cfb-team-week-latest.json: a compact row drifted from its exact latest source period');

@@ -85,9 +85,12 @@ ranking claims, and it stores neither queries nor results.
 `/data/cfb-team-week.json`, `/data/cfb-team-week-latest.json` and
 `/data/cfb-games-latest.json` from the exact canonical schedule snapshot. Every game
 becomes two mirrored team rows. Team-period rows then aggregate observed opponents,
-venue, record, scoring and season-to-date totals while keeping regular-season week 1
+venue, record, scoring, season-to-date totals and regular-season conference records
+while keeping regular-season week 1
 distinct from postseason week 1. The upstream week label can contain multiple games,
 so `scheduled_games_this_period` is explicit rather than silently assuming one.
+The conference record counts only final regular-season rows marked `conference_game`;
+it excludes postseason and is explicitly not an official standing, rank or tiebreaker.
 
 These are useful partial foundations, not the completed analytical layers. Both files
 declare `scope: results-only` and enumerate the absent EPA, success, explosiveness,
@@ -104,11 +107,12 @@ with the results-only and unavailable-metric boundaries repeated in every respon
 requires one exact team and can filter by regular/postseason week, with chronological
 sorting and a hard result limit. It returns observed period and season-to-date record,
 scoring, opponent and venue facts, repeats the unavailable metric families, and stores
-nothing. A repeated week number never silently merges regular season with postseason.
+nothing. It also returns that non-authoritative conference record. A repeated week
+number never silently merges regular season with postseason.
 
 The compact latest surface selects the maximum `(through_at, team_period_id)` for each
 of the 230 canonical teams and copies that source period without recomputing it. It is
-about 0.2 MB rather than the 1.5 MB full history, locks the exact team-week snapshot it
+about 0.25 MB rather than the 1.9 MB full history, locks the exact team-week snapshot it
 consumed, and still says results-only: an FCS team's latest FBS-involved game is not a
 claim about its complete season, and no row is current-2026 form or a forecast.
 

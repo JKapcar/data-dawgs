@@ -89,9 +89,9 @@
    {
     "path": "/data/pound-tools.json",
     "url": "https://datadawgs216.com/data/pound-tools.json",
-    "bytes": 131087,
+    "bytes": 131263,
     "as_of": "2026-08-08",
-    "sha256": "463d291d7c6cff681d353ecdbba155b6483ab9385e387eade74323d6a468318a",
+    "sha256": "ab01f6cc5d11676da317933614717912e7bccd5fd7d0aa7aef69a3b6a872a9db",
     "note": "Two kinds of entry share this inventory. kind \"tool\" (NFL) carries delivery status. kind \"roadmap-idea\" (College Football) carries recommendation plus evidence-backed lifecycle and implementation state. A CFB artifact may be implemented without any MCP tool; candidate_mcp_tools are reservations and remain non-callable unless the independent Worker registry proves otherwise."
    },
    {
@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 17146,
+    "bytes": 17253,
     "as_of": "2026-08-08",
-    "sha256": "91acd6ce4a3e373f9c692db0cd5f611aa0c29ee3f47ec78e49b7f96b7f8c7e77",
+    "sha256": "29ed4a70e9b5ad155358eb639a9ab9d4ef7530b137959ffc10536e93750c45b6",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -161,25 +161,25 @@
    {
     "path": "/data/cfb-team-week.json",
     "url": "https://datadawgs216.com/data/cfb-team-week.json",
-    "bytes": 1580155,
+    "bytes": 1989730,
     "as_of": "2026-08-08",
-    "sha256": "71ff3e6f231148e69d5288e37fbbc4b0637549d26177d57baa6dd4574165074a",
-    "note": "OBSERVED RESULTS ONLY. Scores, opponents, venue and record are deterministic schedule facts. No play-by-play, EPA, success, opponent adjustment, market performance or predictive claim is present."
+    "sha256": "4e58fb4b20e4131cd108bd460caf3bf9d12f16de4c687d6895dfbeb5d028555d",
+    "note": "OBSERVED RESULTS ONLY. Scores, opponents, venue and record are deterministic schedule facts. Conference records use final regular-season rows marked conference_game and are not official standings. No play-by-play, EPA, success, opponent adjustment, market performance or predictive claim is present."
    },
    {
     "path": "/data/cfb-team-week-latest.json",
     "url": "https://datadawgs216.com/data/cfb-team-week-latest.json",
-    "bytes": 213186,
+    "bytes": 264375,
     "as_of": "2026-08-08",
-    "sha256": "f058d967eaabcb50e3d3cc5023ea8708743bdd00e71f2f80525d648080627eef",
-    "note": "OBSERVED RESULTS ONLY. One latest schedule-derived period per team plus season-to-date record and scoring. No play-by-play, EPA, opponent adjustment, market performance or predictive claim is present."
+    "sha256": "1bb51ac8c53ec9036ae682a022f95364e07d52c1af861f840fa57835539d4ad0",
+    "note": "OBSERVED RESULTS ONLY. One latest schedule-derived period per team plus season-to-date overall and non-authoritative regular-season conference records and scoring. No play-by-play, EPA, opponent adjustment, market performance or predictive claim is present."
    },
    {
     "path": "/data/cfb-teams.json",
     "url": "https://datadawgs216.com/data/cfb-teams.json",
     "bytes": 114887,
     "as_of": "2026-08-08",
-    "sha256": "cd21ad102ee356c18f35f03756c7c21eda719e214c7a5fbc80f12f1410e82578",
+    "sha256": "2c1ff1f3a158b4463a628f2b58c8fc21ba4ca2a8409868af66e0db7cbd079949",
     "note": "OBSERVED RESULTS plus one MODELLED, RETRODICTIVE, UNGRADED end-of-2025 Elo rating. The objects are separated deliberately. This is not a 2026 forecast, consensus, edge or recommendation."
    },
    {
@@ -187,7 +187,7 @@
     "url": "https://datadawgs216.com/data/cfb-record-divergence.json",
     "bytes": 95215,
     "as_of": "2026-08-08",
-    "sha256": "37fc7b163c120135d0cca98460c1b7e8c0c7fc1f2c0db21dd3b5b4011830a259",
+    "sha256": "5dd52d24866ebb4575c329ba0bc10ce9a72ede588942ffac9149bd232a8b5e53",
     "note": "OBSERVED, DESCRIPTIVE BASELINE ONLY. This is not a Fraud Detector verdict and does not call any team overrated or underrated. No forward predictive value has been demonstrated."
    },
    {

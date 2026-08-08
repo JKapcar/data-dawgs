@@ -398,13 +398,13 @@
      "kind": "json",
      "url": "/data/cfb-team-week.json",
      "status": "live",
-     "covers": "results-only team-period records, scoring, venue and opponents; EPA, opponent adjustment and market performance are unavailable"
+     "covers": "results-only team-period records, scoring, venue, opponents and non-authoritative regular-season conference records; EPA, opponent adjustment and market performance are unavailable"
     },
     {
      "kind": "json",
      "url": "/data/cfb-team-week-latest.json",
      "status": "live",
-     "covers": "230 compact latest team-period rows selected exactly from the results-only team-week snapshot; no current-2026 or predictive claim"
+     "covers": "230 compact latest team-period rows with overall and non-authoritative conference records selected exactly from the results-only team-week snapshot; no current-2026 or predictive claim"
     },
     {
      "kind": "json",
