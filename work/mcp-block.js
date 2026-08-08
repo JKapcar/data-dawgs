@@ -918,6 +918,35 @@ function mcpCfbModelCardArgs(args) {
   return { modelId };
 }
 
+function mcpCfbRankingArgs(args) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+  const allowed = ["system_id", "conference", "offset", "limit"];
+  const extra = Object.keys(args).filter(k => !allowed.includes(k));
+  if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+  const out = {
+    systemId: null,
+    conference: null,
+    offset: args.offset === undefined ? 0 : args.offset,
+    limit: args.limit === undefined ? 25 : args.limit,
+  };
+  if (args.system_id !== undefined) {
+    if (typeof args.system_id !== "string" || !args.system_id.trim() || args.system_id.trim().length > 80)
+      throw new Error("system_id must be a non-empty string of at most 80 characters");
+    out.systemId = args.system_id.trim().toLowerCase();
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(out.systemId)) throw new Error("system_id must be a lowercase slug");
+  }
+  if (args.conference !== undefined) {
+    if (typeof args.conference !== "string" || !args.conference.trim() || args.conference.trim().length > 80)
+      throw new Error("conference must be a non-empty string of at most 80 characters");
+    out.conference = args.conference.trim();
+  }
+  if (!Number.isInteger(out.offset) || out.offset < 0 || out.offset > 199)
+    throw new Error("offset must be a whole number from 0 through 199");
+  if (!Number.isInteger(out.limit) || out.limit < 1 || out.limit > 50)
+    throw new Error("limit must be a whole number from 1 through 50");
+  return out;
+}
+
 function mcpCfbCompareArgs(args) {
   if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
   const extra = Object.keys(args).filter(k => !["team_a", "team_b"].includes(k));
@@ -1225,7 +1254,7 @@ async function mcpDispatch(m, env, caller) {
           "Everything here is read-only and is either the league's own data, public play-by-play, " +
           "or a deterministic calculation over caller-supplied inputs. Calculator inputs and results are not stored. " +
           "The model scoreboard reads dated prospective receipts and returns descriptive disagreement only; it is ungraded and is not a validated consensus or ranking. " +
-          "The CFB reads separate observed 2025 results from one end-of-2025 retrodictive Elo row. dd_find_cfb_games reads the actual canonical 2025 schedule/results surface; it is historical and not the unpublished 2026 schedule. dd_find_cfb_historical_market returns book-identified prices whose observation time is unknown: never call them closing lines, compute CLV or cite them as prospective inputs. dd_get_cfb_model_card returns generated governance and retrodictive evidence, not a current forecast or leaderboard. dd_project_cfb_matchup and dd_project_cfb_schedule_path are hypothetical rating-period calculations, not scheduled 2026 forecasts. dd_find_cfb_record_divergence returns descriptive record-versus-scoring gaps whose small held-out lift does not authorize current-team labels. dd_get_cfb_model_disagreement returns a blocked study whose untimestamped market input prevents a winner or blend conclusion. dd_get_cfb_model_receipt_status reports the append-only prospective ledger honestly; receipt rows remain ungraded and outcomes belong in a separate surface. All CFB outputs are ungraded, not market-adjusted and are not a consensus. " +
+          "The CFB reads separate observed 2025 results from one end-of-2025 retrodictive Elo row. dd_find_cfb_games reads the actual canonical 2025 schedule/results surface; it is historical and not the unpublished 2026 schedule. dd_find_cfb_historical_market returns book-identified prices whose observation time is unknown: never call them closing lines, compute CLV or cite them as prospective inputs. dd_get_cfb_model_card returns generated governance and retrodictive evidence, not a current forecast or leaderboard. dd_rank_cfb_teams returns one declared system's dated ranking, not a consensus or current power ranking. dd_project_cfb_matchup and dd_project_cfb_schedule_path are hypothetical rating-period calculations, not scheduled 2026 forecasts. dd_find_cfb_record_divergence returns descriptive record-versus-scoring gaps whose small held-out lift does not authorize current-team labels. dd_get_cfb_model_disagreement returns a blocked study whose untimestamped market input prevents a winner or blend conclusion. dd_get_cfb_model_receipt_status reports the append-only prospective ledger honestly; receipt rows remain ungraded and outcomes belong in a separate surface. All CFB outputs are ungraded, not market-adjusted and are not a consensus. " +
           "There is no built-in DFS projection or ownership feed: dd_solve_dfs_lineup requires the caller to supply every value per call, and stores none of them. dd_optimize_survivor_path is an ungraded ceiling over a dated snapshot and does not model double-pick weeks. When quoting bozo odds, survivor odds " +
           "or the correlation matrix, say it is model output or a measured historical average, never a forecast " +
           "of a specific game. Team names, weeks and league ids come from dd_league_overview — do not guess them.",
@@ -1952,6 +1981,94 @@ const MCP_TOOLS = [
         ...out,
         read_only: true,
         note: "Equal-weight descriptive summary only; this is not a validated consensus blend or confidence score.",
+      });
+    },
+  },
+  {
+    name: "dd_rank_cfb_teams",
+    description: "Return a bounded dated ranking from one exact registered CFB rating system, optionally filtered to an exact conference. Observed 2025 results remain separate from modelled team strength. The current registry contains one end-of-2025 retrodictive, ungraded Elo system; this is not a consensus, current 2026 power ranking or recommendation.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        system_id: { type: "string", minLength: 1, maxLength: 80, description: "Exact registered system slug. Optional only while the registry has one system." },
+        conference: { type: "string", minLength: 1, maxLength: 80, description: "Optional exact conference name, case-insensitive." },
+        offset: { type: "integer", minimum: 0, maximum: 199, default: 0 },
+        limit: { type: "integer", minimum: 1, maximum: 50, default: 25 },
+      },
+      additionalProperties: false,
+    },
+    async run(args) {
+      const input = mcpCfbRankingArgs(args);
+      const envelope = await mcpCfbTeamProfiles();
+      const systems = envelope.data.systems;
+      let system = null;
+      if (input.systemId) {
+        system = systems.find(row => row.system_id === input.systemId) || null;
+        if (!system) throw new Error("system_id is not present in the dated CFB ratings registry; available: " + systems.map(row => row.system_id).join(", "));
+      } else if (systems.length === 1) {
+        system = systems[0];
+      } else {
+        throw new Error("system_id is required when the CFB ratings registry contains more than one system; available: " + systems.map(row => row.system_id).join(", "));
+      }
+      let conference = null;
+      if (input.conference) {
+        const conferences = [...new Set(envelope.data.teams.map(team => team.conference).filter(Boolean))]
+          .sort((a, b) => a.localeCompare(b));
+        conference = conferences.find(name => name.toLowerCase() === input.conference.toLowerCase()) || null;
+        if (!conference) throw new Error("conference is not present in the dated CFB ratings registry; available: " + conferences.join(", "));
+      }
+      const ranked = envelope.data.teams.filter(team =>
+        (!conference || team.conference === conference) && team.systems[system.system_id] &&
+        Number.isInteger(team.systems[system.system_id].rank) &&
+        Number.isFinite(team.systems[system.system_id].team_strength)
+      ).sort((a, b) =>
+        a.systems[system.system_id].rank - b.systems[system.system_id].rank || a.team.localeCompare(b.team)
+      );
+      const teams = ranked.slice(input.offset, input.offset + input.limit).map(team => ({
+        team_slug: team.team_slug,
+        team: team.team,
+        conference: team.conference || null,
+        rating: team.systems[system.system_id],
+        observed_results: mcpCfbObservedView(team),
+      }));
+      return toolText({
+        query: { system_id: system.system_id, conference, offset: input.offset, limit: input.limit },
+        system: {
+          system_id: system.system_id,
+          name: system.name,
+          provider: system.provider,
+          kind: system.kind,
+          feature_family: system.feature_family,
+          source_snapshot_id: system.source_snapshot_id,
+          source_url: system.source_url,
+          model_card_url: system.model_card_url,
+          prospective_forecasts_exist: system.prospective_forecasts_exist === true,
+          graded: system.graded === true,
+        },
+        registered_systems: systems.map(row => ({ system_id: row.system_id, name: row.name })),
+        rating_period: envelope.data.rating_period,
+        consensus: envelope.data.consensus,
+        matched_before_pagination: ranked.length,
+        returned: teams.length,
+        teams,
+        as_of: envelope.as_of,
+        source: envelope.source,
+        integrity: envelope.integrity || null,
+        observed_results_are_facts: true,
+        modelled_fields: ["teams[].rating"],
+        retrodictive: envelope.data.rating_period && envelope.data.rating_period.prospective !== true,
+        prospective: false,
+        graded: false,
+        consensus_ranking: false,
+        current_2026_ranking: false,
+        read_only: true,
+        stored: false,
+        warnings: [
+          "This ranks one declared system at its published end-of-2025 rating period; it is not a consensus ranking.",
+          "The registered system has no prospective CFB forecast receipts or graded track record in this snapshot.",
+          "Observed records and scoring are shown separately and do not alter the modelled rank returned here.",
+          "Current rosters, injuries, availability, talent, portal, market and play-efficiency inputs are absent.",
+        ],
       });
     },
   },

@@ -68,6 +68,12 @@ When the market file is present the backtest also scores the Elo against the mar
 
 The schema is ready to add independently dated systems, but the data is not padded to make the registry look fuller than it is. It currently contains one retrodictive, ungraded system. `data.consensus.status` is therefore `not-built`, with no weights. Multiple systems may be registered later; a blend still requires prospective error histories and correlation analysis.
 
+`dd_rank_cfb_teams` is the staged bounded discovery read over that registry. It selects
+one exact registered system, sorts by its published rank, and optionally returns one
+exact conference slice with offset/limit pagination. Observed records remain separate
+from the modelled rating. The response explicitly refuses consensus and current-2026
+ranking claims, and it stores neither queries nor results.
+
 ## Results-only team layers (roadmap step 1)
 
 `scripts/cfb_team_results.py refresh` publishes `/data/cfb-team-game.json` and
@@ -220,7 +226,7 @@ can be reviewed and tested without uploading a Worker version or changing traffi
 
 ## Staged CFB MCP read tool
 
-`dd_cfb_team_profile` is the first implemented CFB-side MCP tool. It performs one
+`dd_cfb_team_profile` is the first exact-team CFB-side MCP read. It performs one
 bounded, cached read of `/data/cfb-ratings.json`, resolves an exact team name or slug,
 and returns that team's registered ratings with the envelope date, source and integrity
 receipt. It is read-only and stores neither the query nor the result.

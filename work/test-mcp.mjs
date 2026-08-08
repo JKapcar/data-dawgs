@@ -424,12 +424,12 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 {
   const j = await (await req(rpc("tools/list"))).json();
   const t = j.result.tools;
-  ok(t.length === 36, "thirty-six tools listed in the staged Worker source");
+  ok(t.length === 37, "thirty-seven tools listed in the staged Worker source");
   ok(t.every(x => x.name.startsWith("dd_")), "all tools dd_-prefixed");
   ok(t.every(x => x.inputSchema && x.inputSchema.type === "object"), "all tools carry an inputSchema");
   for (const name of ["dd_convert_odds", "dd_devig_market", "dd_price_parlay", "dd_calculate_bet_ev",
     "dd_calculate_hedge", "dd_nfl_passer_rating", "dd_score_forecast", "dd_summarize_beliefs",
-    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_project_cfb_schedule_path", "dd_find_cfb_record_divergence", "dd_get_cfb_model_disagreement", "dd_get_cfb_model_receipt_status", "dd_find_cfb_games", "dd_find_cfb_historical_market", "dd_get_cfb_model_card", "dd_optimize_survivor_path"])
+    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_rank_cfb_teams", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_project_cfb_schedule_path", "dd_find_cfb_record_divergence", "dd_get_cfb_model_disagreement", "dd_get_cfb_model_receipt_status", "dd_find_cfb_games", "dd_find_cfb_historical_market", "dd_get_cfb_model_card", "dd_optimize_survivor_path"])
     ok(t.some(x => x.name === name), name + " is listed");
 }
 // dd_league_overview
@@ -788,6 +788,39 @@ function refNcdf(z) {
   const badTeam = await (await req(call("dd_model_scoreboard", { team: "C!" }))).json();
   ok(badWeek.result.isError === true && badExtra.result.isError === true && badTeam.result.isError === true,
      "model scoreboard rejects invalid and unsupported filters");
+}
+// dd_rank_cfb_teams: bounded ranking and conference slices over one declared
+// rating system, without presenting the result as consensus or current-season.
+{
+  const j = await (await req(call("dd_rank_cfb_teams"))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.system.system_id === "dd-cfb-elo" && d.teams.length === 3 &&
+     d.teams.map(x => x.rating.rank).join(",") === "1,2,133",
+     "CFB ranking defaults safely when the registry has exactly one system and sorts by rank");
+  ok(d.teams[0].team === "Indiana" && d.teams[0].observed_results.record === "16-0-0" &&
+     d.observed_results_are_facts === true && d.modelled_fields.includes("teams[].rating"),
+     "CFB ranking keeps observed results separate from the modelled rating");
+  ok(d.retrodictive === true && d.prospective === false && d.graded === false &&
+     d.consensus_ranking === false && d.current_2026_ranking === false && d.read_only === true && d.stored === false,
+     "CFB ranking states its historical, ungraded, non-consensus and non-persistence limits");
+}
+{
+  const j = await (await req(call("dd_rank_cfb_teams", { conference: "big ten", offset: 1, limit: 1 }))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.query.conference === "Big Ten" && d.matched_before_pagination === 2 &&
+     d.returned === 1 && d.teams[0].team === "Ohio State",
+     "CFB ranking supports exact case-insensitive conference slices and bounded pagination");
+  const explicit = text(await (await req(call("dd_rank_cfb_teams", { system_id: "DD-CFB-ELO" }))).json());
+  ok(explicit.system.system_id === "dd-cfb-elo",
+     "CFB ranking accepts an explicit case-insensitive registered system id");
+  const unknown = await (await req(call("dd_rank_cfb_teams", { system_id: "mystery" }))).json();
+  const conference = await (await req(call("dd_rank_cfb_teams", { conference: "NFL" }))).json();
+  const offset = await (await req(call("dd_rank_cfb_teams", { offset: 200 }))).json();
+  const limit = await (await req(call("dd_rank_cfb_teams", { limit: 51 }))).json();
+  const extra = await (await req(call("dd_rank_cfb_teams", { consensus: true }))).json();
+  ok(unknown.result.isError === true && conference.result.isError === true && offset.result.isError === true &&
+     limit.result.isError === true && extra.result.isError === true,
+     "CFB ranking fails closed on unknown systems, conferences and unsupported bounds or claims");
 }
 // dd_cfb_team_profile: exact bounded read over the dated registry, with every
 // retrodictive/no-consensus limit preserved in the response.
