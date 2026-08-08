@@ -1,5 +1,5 @@
 {
- "as_of": "2026-08-07",
+ "as_of": "2026-08-08",
  "source": "Generated from the site itself. Tier is read from each page's live chip.",
  "tier": "labs",
  "graded": false,
@@ -329,10 +329,22 @@
      "covers": "canonical schedule with exact upstream commit and snapshot hash"
     },
     {
-     "kind": "json",
-     "url": "/data/model-receipts.json",
-     "status": "live",
-     "covers": "append-only normalized multi-model receipt ledger; currently empty"
+      "kind": "json",
+      "url": "/data/model-receipts.json",
+      "status": "live",
+      "covers": "544 append-only normalized prospective receipts across nfelo and 538 Classic"
+     },
+     {
+      "kind": "json",
+      "url": "/data/538-classic.json",
+      "status": "live",
+      "covers": "reproduced 538 Classic methodology, 32 target-season ratings and 272 prospective forecasts"
+     },
+     {
+      "kind": "markdown",
+      "url": "/data/538-classic-methodology.md",
+      "status": "live",
+      "covers": "model mathematics, provenance, reproduction tolerance, receipts and limits"
     },
     {
      "kind": "mcp",
@@ -398,7 +410,7 @@
    "planned": [
     "mcp:model_scoreboard"
    ],
-   "gap": "The calculator tools have no sportsbook feed or independent forecast pipeline; they operate only on caller-supplied inputs.",
+    "gap": "Two prospective model feeds are live and ungraded. There is still no book-and-timestamp-provenanced market feed or comparable-sample leaderboard.",
    "tier": "pound"
   },
   {
@@ -424,6 +436,6 @@
   }
  ],
  "tier_meaning": "Labs — useful and live, still being challenged. Open questions may remain about calibration, assumptions, data quality or edge. Use with your eyes open.",
- "built": "2026-08-07",
+ "built": "2026-08-08",
  "canonical_url": "https://datadawgs216.com/data/surfaces.json"
 }

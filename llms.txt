@@ -24,7 +24,8 @@ Confidence tiers: `labs` is useful but still being challenged; `dawg` survived v
 - [Contracts](https://datadawgs216.com/data/model-contracts.json): forecast fields, receipt rules and calculator I/O.
 - [Provenance](https://datadawgs216.com/data/upstream-models.json): repositories, commits, dates, license status and integration mode.
 - [Canonical NFL schedule](https://datadawgs216.com/data/nfl-schedule.json): 272 validated 2026 games loaded through pinned nfelodcm with the exact nflverse source commit and a reproducible snapshot hash.
-- [Normalized model receipts](https://datadawgs216.com/data/model-receipts.json): append-only forecast ledger; empty until the first canonical model runner ships.
+- [538 Classic Elo](https://datadawgs216.com/data/538-classic.json) ([method](https://datadawgs216.com/data/538-classic-methodology.md)): 32 dated 2026 ratings and 272 ungraded prospective forecasts after reproducing 16,810 official historical probabilities.
+- [Normalized model receipts](https://datadawgs216.com/data/model-receipts.json): 544 append-only prospective forecasts across nfelo and 538 Classic; inputs and canonical schedule snapshots are identified separately.
 
 The browser workbench converts odds, builds parlays, removes two-way vig, computes
 declared-probability EV, sizes equal-payoff hedges, grades NFL passer rating, calculates a
@@ -49,6 +50,7 @@ inputs and results are not stored.
 ## Receipts and method
 
 - [Pre-registered forecasts](https://datadawgs216.com/data/receipts.json): 272 calls locked 2026-08-06, SHA-256 `4b87fe0e0790a1e6…`.
+- [Normalized multi-model ledger](https://datadawgs216.com/data/model-receipts.json): the locked nfelo probabilities adapted without unprovenanced market values, plus prospective 538 Classic forecasts. None are graded yet.
 - [Receipt method](https://datadawgs216.com/data/receipts-method.md): hypotheses, grading and canonical hash reproduction.
 - [Bozo rules](https://datadawgs216.com/data/bozo-rules.json) ([prose](https://datadawgs216.com/data/bozo-rules.md)): open weekly one-leg parlay game.
 - [House reasoning rules](https://datadawgs216.com/data/method.md): base rates, ranges, falsifiers and selection-bias checks.

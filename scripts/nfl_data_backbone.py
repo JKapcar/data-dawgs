@@ -49,6 +49,7 @@ TEAM_ALIASES = {
     "SD": "LAC",
     "SL": "STL",
     "STL": "LAR",
+    "WSH": "WAS",
 }
 CURRENT_TEAMS = {
     "ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE", "DAL", "DEN",
@@ -66,8 +67,8 @@ REQUIRED_FORECAST_FIELDS = {
     "model_id", "model_name", "model_version", "source_repo", "source_commit",
     "source_capture_at", "home_team", "away_team", "home_win_probability",
     "expected_margin_home", "model_spread_home", "home_cover_probability",
-    "push_probability", "input_snapshot_id", "forecast_status", "methodology_url",
-    "license_status",
+    "push_probability", "input_snapshot_id", "schedule_snapshot_id", "forecast_status",
+    "methodology_url", "license_status",
 }
 SHA_RE = re.compile(r"^[0-9a-f]{40,64}$")
 SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
@@ -349,6 +350,12 @@ def validate_receipt(receipt: dict[str, Any]) -> None:
             raise ContractError(f"{field} must be finite or null")
     if not re.fullmatch(r"sha256:[0-9a-f]{64}", str(receipt["input_snapshot_id"])):
         raise ContractError("input_snapshot_id must be a sha256 identifier")
+    if not re.fullmatch(r"sha256:[0-9a-f]{64}", str(receipt["schedule_snapshot_id"])):
+        raise ContractError("schedule_snapshot_id must be a sha256 identifier")
+    if not SHA_RE.fullmatch(str(receipt["source_commit"])):
+        raise ContractError("source_commit must be an exact commit SHA")
+    if not isinstance(receipt["source_repo"], str) or "/" not in receipt["source_repo"]:
+        raise ContractError("source_repo must be an owner/repository name")
 
 
 def receipt_ledger_hash(receipts: list[dict[str, Any]]) -> str:
@@ -396,8 +403,8 @@ def append_receipts(
     appended = list(ledger["data"])
     for receipt in additions:
         validate_receipt(receipt)
-        if receipt["input_snapshot_id"] != snapshot_id:
-            raise ContractError("receipt input_snapshot_id does not match the supplied schedule")
+        if receipt["schedule_snapshot_id"] != snapshot_id:
+            raise ContractError("receipt schedule_snapshot_id does not match the supplied schedule")
         game = schedule_games.get(receipt["game_id"])
         if not game or game["kickoff_at"] != receipt["kickoff_at"]:
             raise ContractError(f"receipt game is absent from or disagrees with schedule: {receipt['game_id']}")

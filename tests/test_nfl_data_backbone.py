@@ -47,7 +47,7 @@ def valid_receipt(snapshot_id, game):
         "model_name": "nfelo",
         "model_version": "4.3.0",
         "source_repo": "greerreNFL/nfelo",
-        "source_commit": None,
+        "source_commit": "0d3f8418f1f9fc4755ff42acb2d5f56c27c137ca",
         "source_capture_at": "2026-08-07T12:00:00Z",
         "home_team": game["home_team"],
         "away_team": game["away_team"],
@@ -57,6 +57,7 @@ def valid_receipt(snapshot_id, game):
         "home_cover_probability": None,
         "push_probability": None,
         "input_snapshot_id": snapshot_id,
+        "schedule_snapshot_id": snapshot_id,
         "forecast_status": "prospective",
         "methodology_url": "https://datadawgs216.com/nfelo.html",
         "license_status": "output-only",
@@ -97,9 +98,13 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(len(self.schedule["data"]["games"]), 272)
         self.assertEqual(self.schedule["integrity"]["regular_season_rows"], 272)
 
-    def test_committed_empty_ledger_contract(self):
+    def test_committed_multi_model_ledger_contract(self):
         backbone.validate_receipt_ledger(self.ledger)
-        self.assertEqual(self.ledger["integrity"]["sha256"], backbone.receipt_ledger_hash([]))
+        self.assertEqual(len(self.ledger["data"]), 544)
+        self.assertEqual(
+            self.ledger["integrity"]["sha256"],
+            backbone.receipt_ledger_hash(self.ledger["data"]),
+        )
 
     def test_snapshot_hash_detects_mutation(self):
         changed = copy.deepcopy(self.schedule)
@@ -130,7 +135,7 @@ class ContractTests(unittest.TestCase):
         receipt = valid_receipt(self.schedule["integrity"]["snapshot_id"], game)
         once = backbone.append_receipts(self.ledger, [receipt], self.schedule)
         twice = backbone.append_receipts(once, [receipt], self.schedule)
-        self.assertEqual(len(twice["data"]), 1)
+        self.assertEqual(len(twice["data"]), len(self.ledger["data"]) + 1)
         changed = copy.deepcopy(receipt)
         changed["home_win_probability"] = 0.62
         with self.assertRaisesRegex(backbone.ContractError, "conflicting duplicate"):

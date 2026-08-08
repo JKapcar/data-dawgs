@@ -1,11 +1,11 @@
 {
- "as_of": "2026-08-07",
- "source": "Data Dawgs normalized forecasting and calculator contract, deployed 2026-08-07.",
+ "as_of": "2026-08-08",
+ "source": "Data Dawgs normalized forecasting and calculator contract, revised 2026-08-08.",
  "tier": "pound",
  "graded": false,
  "note": "A contract is not a forecast. It prevents incompatible models and missing values from being silently normalized into false agreement.",
  "data": {
-  "contract_version": "1.3.0",
+  "contract_version": "1.4.0",
   "canonical_game_id": "season_week_away_home using canonical current team abbreviations, for example 2026_01_PIT_CLE",
   "canonical_schedule": "/data/nfl-schedule.json; integrity.snapshot_id is SHA-256 over canonical ordered game rows",
   "normalized_receipt_ledger": "/data/model-receipts.json; existing rows are append-only and results remain separate",
@@ -35,11 +35,13 @@
    "home_cover_probability",
    "push_probability",
    "input_snapshot_id",
+   "schedule_snapshot_id",
    "forecast_status",
    "methodology_url",
    "license_status"
   ],
-  "null_policy": "Unsupported values are null. A missing model output is never imputed merely to complete a row.",
+  "snapshot_policy": "schedule_snapshot_id identifies the canonical game facts; input_snapshot_id separately identifies the model-specific state, methodology and source snapshots. They are not interchangeable.",
+  "null_policy": "Unsupported values are null. A missing model output is never imputed merely to complete a row. Legacy market values without a named book and observation timestamp are not normalized.",
   "probability_rule": "Every non-null probability is a finite number in [0,1].",
   "receipt_policy": {
    "prospective": "Append-only after publication. Record the exact input snapshot and contemporaneous market state before kickoff.",
@@ -185,6 +187,6 @@
   }
  },
  "tier_meaning": "The Pound — shelved, with the reason attached.",
- "built": "2026-08-07",
+ "built": "2026-08-08",
  "canonical_url": "https://datadawgs216.com/data/model-contracts.json"
 }
