@@ -642,6 +642,14 @@ button.btn.sm{font-size:12.5px;padding:7px 12px}
 :root[data-theme="light"] .toggle.on{color:#fff}
 
 .prog{height:6px;background:var(--grid);border-radius:4px;overflow:hidden;margin:12px 0 0}
+.rlegend{display:flex;flex-wrap:wrap;gap:6px 18px;margin:14px 0 2px;font-size:12px;color:var(--ink-2)}
+.rlegend span{display:inline-flex;align-items:center;gap:7px}
+.rlegend i{width:14px;height:0;border-top:2px solid var(--ink-2);flex:none}
+.rlegend i.k-port{width:9px;height:9px;border:0;border-radius:50%;background:var(--accent)}
+.rtip{position:absolute;z-index:40;pointer-events:none;background:var(--surface-1);
+  border:1px solid var(--border);border-radius:8px;padding:7px 9px;font-size:12px;
+  color:var(--ink-1);box-shadow:0 4px 14px rgba(0,0,0,.35);white-space:nowrap}
+.rtip b{color:var(--ink-1)} .rtip span{color:var(--ink-3)}
 .prog i{display:block;height:100%;background:var(--accent);width:0;transition:width .18s}
 .prog[hidden]{display:none}
 
@@ -2437,6 +2445,28 @@ STATE: everything saves in the browser on that device. A different device shows 
       <h3 style="margin-top:18px">Game exposure</h3><div class="bars" id="expGames"></div></div>
   </div>
   <div class="card"><h3>Salary used</h3><div id="expSal"></div></div>
+  <div class="card" id="rarityCard">
+    <h3>Projection vs rarity <span class="rt" id="rarityState"></span></h3>
+    <p class="sub">Every projected point you add to a lineup costs you ownership, and in a
+      tournament ownership is what you are trying not to have. This traces the exact trade:
+      for each level of cumulative ownership, the most projection any legal lineup can
+      reach — and where your own lineups sit against it.</p>
+    <div class="btnrow">
+      <button class="btn sm" id="rarityGo">Trace the frontier</button>
+      <button class="btn ghost sm" id="rarityTabGo" aria-expanded="false" aria-controls="rarityTab">Show the numbers</button>
+    </div>
+    <div class="prog" id="rarityProg" hidden><i></i></div>
+    <div class="banner" id="rarityWarn" hidden></div>
+    <div class="statrow" id="rarityStats" hidden></div>
+    <div id="rarityLegend" class="rlegend" hidden>
+      <span><i class="k-front"></i>Frontier — the best projection available at that ownership</span>
+      <span><i class="k-port"></i>Your lineups</span>
+    </div>
+    <div id="rarityChart"></div>
+    <div id="rarityCost"></div>
+    <p class="note" id="rarityNote"></p>
+    <div class="tscroll" id="rarityTab" hidden><table class="dtab" id="rarityTabT"></table></div>
+  </div>
   <div class="emptystate" id="expEmpty"><div class="big">No lineups yet</div><p>Build a pool on the Solver sheet and this fills in.</p></div>
 </section>
 
@@ -3076,6 +3106,179 @@ function bestShowdown(players, proj, pool, cfg, site, cap, floor,
 /* ------------------------------------------------------------------ export */
 
 root.DDFS = { SITES, POS, solveLineups, rng, gauss };
+/* ===== DD-FRONTIER START — generated from work/patch-dfs-frontier.py ===== */
+/* ============================================================================
+   PROJECTION vs RARITY — the exact convex frontier
+
+   The tournament question this answers: to make a lineup rarer, how much projection do
+   you have to give up? "Rarer" here is CUMULATIVE OWNERSHIP, the sum of the projected
+   ownership of the players in it — the number this page already reports per lineup, and
+   the one a field is measured in.
+
+   The method is a Lagrangian sweep. For a weight L, solve the ordinary exact problem on
+   proj[i] - L*own[i]. Whatever comes back is EXACTLY optimal for that weight, and it is
+   a vertex of the upper convex hull of the achievable (own, proj) set. Probing L at the
+   chord slope between two known vertices and recursing finds every vertex between them.
+
+   ⚠️ IT IS THE HULL, NOT THE FRONTIER. A lineup sitting in a dent — beaten by the
+   straight line between two hull vertices, but the best there is at its own ownership —
+   is optimal for no weight L at all and cannot be found this way. No sweep of this kind
+   can find one. `hull: true` rides on the result so the page has to say so.
+
+   ⚠️ ONLY PROVED POINTS ARE PLOTTED. A solve that hits its slice of the clock returns
+   the best lineup found so far, which is not the optimum and therefore not a vertex.
+   Those are DISCARDED and `capped` goes true, rather than drawing an unproved point on
+   a curve whose whole claim is exactness.
+
+   ⚠️ THE RARE END IS THE EXPENSIVE END, and that is structural. Low ownership correlates
+   with low salary, so "cheapest ownership while still spending the salary floor" sets
+   the objective against the constraint and the salary-knapsack bound goes slack. On a
+   full 13-game slate the max-projection solve is ~70ms and a large-L solve does not
+   finish in 15s. So the sweep walks L UP only while probes keep succeeding, and stops.
+   The curve then covers what was proved and says where it stopped.
+
+   ⚠️ THE SHIFT IS NOT A FUDGE, BUT IT IS NOT FREE. proj[i] - L*own[i] goes negative for
+   large L, and a non-positive projection means "no projection" everywhere else in this
+   engine, which would silently empty the pool. A constant added to every eligible
+   projection cannot change the winner, because every classic lineup holds exactly
+   site.size players. (That is also why showdown is refused rather than answered wrong:
+   the captain multiplier makes the constant non-uniform.) What the constant DOES cost is
+   pruning — it compresses the relative spread the bound works on — which is the other
+   half of why large L is slow.
+   ========================================================================== */
+
+var FRONTIER_MAX_SOLVES = 24;
+var FRONTIER_WALK = 6;      // probes spent finding the rare end before refinement starts
+
+/**
+ * players/cfg: exactly as solveLineups takes them, plus `own` (percent) per player.
+ * Returns { points, segments, solves, capped, hull, unavailable }.
+ *   points[]   {ids, proj, own, sal, lam}  hull vertices, ascending ownership
+ *   segments[] {from, to, rate}            rate = projection points per ownership point
+ *   capped     the search stopped on its budget or the clock, not on convergence
+ *   unavailable a reason string when no frontier can honestly be drawn at all
+ */
+function frontier(players, cfg, onProgress) {
+  cfg = cfg || {};
+  var site = SITES[cfg.site] || SITES.dk_classic;
+  var out = { points: [], segments: [], solves: 0, capped: false, hull: true, unavailable: null };
+  if (site.showdown) { out.unavailable = "showdown"; return out; }
+
+  var own = [], anyOwn = false, i;
+  for (i = 0; i < players.length; i++) {
+    var v = +players[i].own || 0;
+    own.push(v > 0 ? v : 0);
+    if (v > 0) anyOwn = true;
+  }
+  if (!anyOwn) { out.unavailable = "no-ownership"; return out; }
+
+  var budget = cfg.maxSolves > 0 ? Math.min(FRONTIER_MAX_SOLVES, cfg.maxSolves | 0) : FRONTIER_MAX_SOLVES;
+  var deadline = Date.now() + (cfg.timeLimitMs || 30000);
+  var seen = {}, points = [];
+
+  function at(lam) {
+    if (out.solves >= budget || Date.now() > deadline) { out.capped = true; return null; }
+    out.solves++;
+    if (onProgress) onProgress(out.solves, budget);
+
+    var lo = 0, j;
+    for (j = 0; j < players.length; j++) {
+      if (!(players[j].proj > 0) && !players[j].lock) continue;
+      var w = (players[j].proj || 0) - lam * own[j];
+      if (w < lo) lo = w;
+    }
+    var shift = -lo + 1e-6;
+
+    var shadow = [];
+    for (j = 0; j < players.length; j++) {
+      var p = players[j], q = {};
+      for (var k in p) q[k] = p[k];
+      // A player with no projection stays absent, exactly as everywhere else.
+      q.proj = (p.proj > 0 || p.lock) ? (p.proj || 0) - lam * own[j] + shift : 0;
+      shadow.push(q);
+    }
+
+    // A slice of what is left, not all of it: one hard weight must not starve the rest.
+    var c = {}; for (var kk in cfg) c[kk] = cfg[kk];
+    c.count = 1; c.randomness = 0; c.uniques = 0; c.seed = 1;
+    c.timeLimitMs = Math.max(600, Math.floor((deadline - Date.now()) / Math.max(1, budget - out.solves + 1)));
+
+    var res = solveLineups(shadow, c);
+    if (!res || res.timedOut || !res.lineups.length) { out.capped = true; return null; }
+
+    var ids = res.lineups[0].ids.slice();
+    var key = ids.slice().sort(function (a, b) { return a - b; }).join(",");
+    if (seen[key]) return seen[key];
+
+    var pr = 0, ow = 0;
+    for (j = 0; j < ids.length; j++) { pr += players[ids[j]].proj || 0; ow += own[ids[j]]; }
+    var pt = { ids: ids, proj: pr, own: ow, sal: res.lineups[0].sal, lam: lam };
+    seen[key] = pt; points.push(pt);
+    return pt;
+  }
+
+  var top = at(0);                       // the plain max-projection lineup
+  if (!top) { out.unavailable = "infeasible"; return out; }
+
+  // Walk the weight up while probes keep succeeding, keeping the rarest lineup seen.
+  // ⚠️ DO NOT stop because a probe returned the same lineup as the last one. Small
+  // weights often do — the max-projection lineup stays optimal until the weight is big
+  // enough to dislodge it — and an early stop there leaves the frontier a single point.
+  var lam = 0.05, bot = top, walk = 0;
+  while (walk++ < FRONTIER_WALK) {
+    var nxt = at(lam);
+    if (!nxt) break;                     // timed out, or the budget ran out
+    if (nxt.own < bot.own - 1e-9) bot = nxt;
+    lam *= 4;
+  }
+  // The rare end is "the rarest lineup this search reached", not provably the rarest
+  // lineup on the slate — see the note above about why large weights do not finish.
+
+  function refine(a, b, depth) {         // a = richer and more owned, b = leaner and rarer
+    if (depth > 12) return;
+    var dOwn = a.own - b.own;
+    if (dOwn <= 1e-9) return;
+    var slope = (a.proj - b.proj) / dOwn;
+    var p = at(slope);
+    if (!p) return;
+    if (p.proj <= b.proj + (p.own - b.own) * slope + 1e-7) return;   // sits on the chord
+    refine(a, p, depth + 1); refine(p, b, depth + 1);
+  }
+  refine(top, bot, 0);
+
+  points.sort(function (a, b) { return a.own - b.own || b.proj - a.proj; });
+
+  // Pareto filter first: a point beaten on BOTH axes by a rarer one is on no frontier,
+  // hull or otherwise. This can only bite when the search was cut off mid-recursion.
+  var pareto = [], bestProj = -Infinity;
+  for (i = 0; i < points.length; i++) {
+    if (points[i].proj > bestProj + 1e-9) { pareto.push(points[i]); bestProj = points[i].proj; }
+  }
+  // Then the upper hull: slopes must strictly decrease as ownership rises.
+  var hull = [];
+  for (i = 0; i < pareto.length; i++) {
+    var c2 = pareto[i];
+    while (hull.length >= 2) {
+      var x = hull[hull.length - 2], y = hull[hull.length - 1];
+      if ((y.proj - x.proj) * (c2.own - y.own) <= (c2.proj - y.proj) * (y.own - x.own) + 1e-9) hull.pop();
+      else break;
+    }
+    hull.push(c2);
+  }
+  out.points = hull;
+  for (i = 1; i < hull.length; i++) {
+    out.segments.push({
+      from: hull[i - 1], to: hull[i],
+      rate: (hull[i].proj - hull[i - 1].proj) / (hull[i].own - hull[i - 1].own)
+    });
+  }
+  return out;
+}
+
+root.DDFS.frontier = frontier;
+root.DDFS.FRONTIER_MAX_SOLVES = FRONTIER_MAX_SOLVES;
+root.DDFS.FRONTIER_WALK = FRONTIER_WALK;
+/* ===== DD-FRONTIER END ===== */
 
 /* ============================================================================
    CONTEST SIMULATOR
@@ -3677,6 +3880,9 @@ self.onmessage = function (e) {
     if (d.op === "solve") {
       var r = R.solveLineups(d.players, d.cfg, function (n, t) { self.postMessage({ type: "progress", n: n, t: t }); });
       self.postMessage({ type: "done", result: r });
+    } else if (d.op === "frontier") {
+      var f = R.frontier(d.players, d.cfg, function (n, t) { self.postMessage({ type: "progress", n: n, t: t }); });
+      self.postMessage({ type: "done", result: f });
     } else if (d.op === "sim") {
       var s = R.simulate(d.players, d.lineups, d.cfg, function (phase, n, t) { self.postMessage({ type: "progress", phase: phase, n: n, t: t }); });
       self.postMessage({ type: "done", result: s });
@@ -4015,7 +4221,7 @@ function runSolve() {
     const ms = Date.now() - t0;
     S.lineups = r.lineups.map(l => ({ ids: l.ids, cpt: l.cpt, proj: l.proj, sal: l.sal }));
     S.lineupsMeta = { ms, asked: cfg.count, site: S.site, stamp: Date.now() };
-    SIM = null;
+    SIM = null; FRONT = null;
     save();
     $("solveState").textContent = `${r.lineups.length} in ${(ms / 1000).toFixed(1)}s`;
     const msgs = [];
@@ -4289,6 +4495,260 @@ function renderLev() {
 
 /* ---------------------------------------------------------------- exposure */
 
+/* ============================================================================
+   PROJECTION vs RARITY
+
+   ⚠️ WHAT THE CURVE IS. Each point is a lineup that is EXACTLY optimal for one weighting
+   of projection against ownership — proved, not approximated. The line between two points
+   is a chord of the convex hull, so it is a floor: the real frontier is at or above it,
+   never below. A lineup in a dent between two vertices is optimal for no weighting at all
+   and cannot be found by this method. The note under the chart says so; do not delete it.
+
+   ⚠️ OWNERSHIP IS AN IMPORT, NOT AN OBSERVATION. Everything here is measured in the
+   ownership numbers the user pasted in. They are somebody's projection of the field.
+   ========================================================================== */
+
+let FRONT = null, frontWorker = null;
+
+function runFrontier() {
+  const st = poolStats();
+  if (!st.priced) { banner("rarityWarn", "err", "<b>No projections.</b> There is nothing to trade off yet."); return; }
+  if (!st.own) {
+    banner("rarityWarn", "err", "<b>No ownership.</b> This chart is entirely about ownership, so it cannot be drawn without it. Re-import your projections with the ownership column mapped.");
+    return;
+  }
+  readCfg();
+  const players = enginePlayers();
+  const cfg = {
+    site: S.site, minSalary: S.cfg.minSal, maxSalary: S.cfg.maxSal,
+    maxPerTeam: S.cfg.team, maxPerGame: S.cfg.game,
+    stack: { qbMin: S.cfg.qbMin, qbPos: S.cfg.qbPos.split(","), bringBack: S.cfg.bring,
+             noRbVsDst: S.cfg.noRbDst, noOppDst: S.cfg.noOppDst },
+    timeLimitMs: 30000
+  };
+  banner("rarityWarn", null, null);
+  $("rarityProg").hidden = false; $("rarityProg").firstElementChild.style.width = "5%";
+  $("rarityGo").disabled = true;
+  $("rarityState").textContent = "tracing…";
+  const t0 = Date.now();
+
+  const finish = (r) => {
+    $("rarityProg").hidden = true; $("rarityGo").disabled = false;
+    FRONT = r; FRONT.ms = Date.now() - t0; FRONT.cfg = cfg;
+    $("rarityState").textContent = r.points.length
+      ? `${r.points.length} point${r.points.length === 1 ? "" : "s"} in ${(FRONT.ms / 1000).toFixed(1)}s` : "";
+    drawRarity();
+  };
+
+  if (WORKER_URL) {
+    try {
+      if (frontWorker) frontWorker.terminate();
+      frontWorker = new Worker(WORKER_URL);
+      frontWorker.onmessage = (e) => {
+        const d = e.data;
+        if (d.type === "progress") $("rarityProg").firstElementChild.style.width = Math.max(5, (d.n / d.t) * 100) + "%";
+        else if (d.type === "done") { finish(d.result); frontWorker.terminate(); frontWorker = null; }
+        else if (d.type === "error") {
+          $("rarityProg").hidden = true; $("rarityGo").disabled = false; $("rarityState").textContent = "";
+          banner("rarityWarn", "err", "<b>The sweep failed.</b> " + esc(d.message));
+        }
+      };
+      frontWorker.onerror = () => { frontWorker = null; setTimeout(() => finish(E.frontier(players, cfg)), 20); };
+      frontWorker.postMessage({ op: "frontier", players, cfg });
+      return;
+    } catch (e) { frontWorker = null; }
+  }
+  banner("rarityWarn", "warn", "<b>Running on the main thread.</b> This browser blocked the background worker, so the page will be unresponsive until the sweep finishes.");
+  setTimeout(() => finish(E.frontier(players, cfg)), 30);
+}
+
+/* the hull, read as a function of ownership — used for the gap each lineup gives up */
+function hullAt(pts, own) {
+  if (pts.length < 2 || own < pts[0].own || own > pts[pts.length - 1].own) return null;
+  for (let i = 1; i < pts.length; i++) {
+    if (own <= pts[i].own + 1e-9) {
+      const a = pts[i - 1], b = pts[i];
+      return a.proj + (own - a.own) * (b.proj - a.proj) / (b.own - a.own);
+    }
+  }
+  return null;
+}
+
+function portfolioPoints() {
+  const P = S.players;
+  return S.lineups.map((l, i) => ({
+    i, proj: l.proj, sal: l.sal,
+    own: l.ids.reduce((t, id) => t + (P[id].own || 0), 0)
+  }));
+}
+
+function drawRarity() {
+  const chart = $("rarityChart"), cost = $("rarityCost"), note = $("rarityNote");
+  const stats = $("rarityStats"), legend = $("rarityLegend");
+  /* ⚠️ The card mirrors its own state onto data- attributes, the same way the Upside Down
+     mirrors the page: what is on screen should be readable by something that is not a
+     pair of eyes. It is also what the browser test asserts against. */
+  const card = $("rarityCard");
+  const stamp = o => { for (const k of ["points", "solves", "capped", "lineups", "unavailable"]) delete card.dataset[k];
+                       for (const k in o) if (o[k] != null) card.dataset[k] = String(o[k]); };
+
+  if (!FRONT) { chart.innerHTML = cost.innerHTML = ""; note.textContent = ""; stats.hidden = legend.hidden = true; $("rarityTab").hidden = true; stamp({}); return; }
+
+  if (FRONT.unavailable || FRONT.points.length < 2) {
+    chart.innerHTML = cost.innerHTML = ""; stats.hidden = legend.hidden = true; $("rarityTab").hidden = true;
+    const why = FRONT.unavailable === "showdown"
+      ? "<b>Not available on a showdown slate.</b> Cumulative ownership is not the right rarity measure when one player is a captain at 1.5&times; — the sweep would be optimising something other than what the chart claims to show, so it refuses rather than drawing it."
+      : FRONT.unavailable === "no-ownership"
+        ? "<b>No ownership in the pool.</b> Re-import your projections with the ownership column mapped."
+        : FRONT.unavailable === "infeasible"
+          ? "<b>No lineup satisfies these constraints.</b> The frontier is empty because the pool is."
+          : `<b>Only ${FRONT.points.length} point${FRONT.points.length === 1 ? "" : "s"} could be proved</b> inside the ${(FRONT.ms / 1000).toFixed(0)}s budget. A curve needs at least two. Widening the salary window is usually what unsticks it.`;
+    banner("rarityWarn", "warn", why);
+    note.textContent = "";
+    stamp({ points: FRONT.points.length, solves: FRONT.solves, unavailable: FRONT.unavailable || "too-few-points" });
+    return;
+  }
+
+  const pts = FRONT.points, segs = FRONT.segments, port = portfolioPoints();
+  const owns = pts.map(p => p.own).concat(port.map(p => p.own));
+  const projs = pts.map(p => p.proj).concat(port.map(p => p.proj));
+  const x0 = Math.min(...owns), x1 = Math.max(...owns);
+  const y0 = Math.min(...projs), y1 = Math.max(...projs);
+  const xs = (x1 - x0) || 1, ys = (y1 - y0) || 1;
+  const W = Math.max(280, chart.clientWidth || 640);
+  const H = 260, PADL = 46, PADR = 16, PADT = 14, PADB = 34;
+  const X = v => PADL + ((v - x0 + xs * 0.04) / (xs * 1.08)) * (W - PADL - PADR);
+  const Y = v => PADT + (1 - (v - y0 + ys * 0.06) / (ys * 1.12)) * (H - PADT - PADB);
+
+  const ticksY = [y0, y0 + (y1 - y0) / 2, y1];
+  const ticksX = [x0, x0 + (x1 - x0) / 2, x1];
+  const grid = ticksY.map(v => `<line x1="${PADL}" y1="${Y(v).toFixed(1)}" x2="${W - PADR}" y2="${Y(v).toFixed(1)}" stroke="var(--grid)" stroke-width="1"/>
+      <text x="${PADL - 8}" y="${(Y(v) + 4).toFixed(1)}" text-anchor="end" font-size="10" fill="var(--ink-3)" style="font-variant-numeric:tabular-nums">${fmt(v, 0)}</text>`).join("")
+    + ticksX.map((v, i) => `<text x="${X(v).toFixed(1)}" y="${H - 12}" text-anchor="${i === 0 ? "start" : i === 2 ? "end" : "middle"}" font-size="10" fill="var(--ink-3)" style="font-variant-numeric:tabular-nums">${fmt(v, 0)}%</text>`).join("");
+
+  const line = pts.map((p, i) => (i ? "L" : "M") + X(p.own).toFixed(1) + " " + Y(p.proj).toFixed(1)).join(" ");
+  const marks = pts.map(p => `<rect x="${(X(p.own) - 3.5).toFixed(1)}" y="${(Y(p.proj) - 3.5).toFixed(1)}" width="7" height="7"
+      fill="var(--surface-1)" stroke="var(--ink-2)" stroke-width="2"/>`).join("");
+  const dots = port.map(p => `<circle cx="${X(p.own).toFixed(1)}" cy="${Y(p.proj).toFixed(1)}" r="4"
+      fill="var(--accent)" stroke="var(--surface-1)" stroke-width="2"/>`).join("");
+  // ⚠️ Two labels, not one per point. The axis and the tooltip carry the rest.
+  const rich = pts[pts.length - 1], lean = pts[0];
+  // ⚠️ ABOVE the rare-end point, not below it. Below puts this text straight through the
+  // x-axis tick for the same value, and the two render as one unreadable smear.
+  const labels =
+    `<text x="${(X(rich.own) - 8).toFixed(1)}" y="${(Y(rich.proj) - 9).toFixed(1)}" text-anchor="end" font-size="10" fill="var(--ink-2)">best projection ${fmt(rich.proj)}</text>` +
+    `<text x="${(X(lean.own) + 9).toFixed(1)}" y="${(Y(lean.proj) - 7).toFixed(1)}" font-size="10" fill="var(--ink-2)">rarest reached ${fmt(lean.own, 0)}%</text>`;
+
+  chart.innerHTML = `<div style="position:relative">
+    <svg id="raritySvg" viewBox="0 0 ${W} ${H}" width="100%" style="height:auto;display:block;touch-action:pan-y" role="img"
+      aria-label="Projected points against cumulative ownership. The frontier runs from ${fmt(lean.own, 0)}% ownership at ${fmt(lean.proj)} projected points up to ${fmt(rich.own, 0)}% at ${fmt(rich.proj)}. ${port.length} of your lineups are plotted against it. Exact figures are in the table below.">
+      ${grid}
+      <path d="${line}" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linejoin="round"/>
+      ${dots}${marks}${labels}
+      <text x="${PADL}" y="${PADT - 2}" font-size="10" fill="var(--ink-3)">projected points</text>
+      <text x="${W - PADR}" y="${H - 24}" text-anchor="end" font-size="10" fill="var(--ink-3)">cumulative ownership</text>
+    </svg></div>`;
+
+  /* ---- the cost curve: a second plot, its own y-axis, the same x range ----
+     ⚠️ LOG SCALE, AND IT SAYS SO. The exchange rate on a real slate spans three orders of
+     magnitude — the first step off the rarest lineup can buy 5 points per ownership point
+     and the last buys 0.01. On a linear axis every step but the first is a flat line on
+     the floor, which is a chart that shows nothing. The caption sits ABOVE the plot, not
+     under it: the Ask Toto launcher is fixed to the bottom-right of every page and eats
+     anything parked down there. */
+  const CH = 132, rates = segs.map(s => s.rate);
+  const rHi = Math.max(...rates), rLoRaw = Math.min(...rates);
+  const rLo = Math.max(rLoRaw, rHi / 1000);        // three decades is as far as the eye goes
+  const lg = v => Math.log10(Math.max(v, rLo));
+  const span = Math.max(lg(rHi) - lg(rLo), 0.3);
+  const rY = v => 16 + (1 - (lg(v) - lg(rLo)) / span) * (CH - 16 - 30);
+  const decades = [];
+  for (let e = Math.ceil(Math.log10(rLo)); e <= Math.floor(Math.log10(rHi)); e++) decades.push(Math.pow(10, e));
+  // ⚠️ Name the bottom of the axis. Without it the last step floats under the lowest
+  // decade line with nothing to read it against, and looks like it means zero.
+  if (!decades.length || decades[0] > rLo * 1.6) decades.unshift(rLo);
+  const dLines = decades.map(v => `<line x1="${PADL}" y1="${rY(v).toFixed(1)}" x2="${W - PADR}" y2="${rY(v).toFixed(1)}" stroke="var(--grid)" stroke-width="1"/>
+      <text x="${PADL - 8}" y="${(rY(v) + 4).toFixed(1)}" text-anchor="end" font-size="10" fill="var(--ink-3)" style="font-variant-numeric:tabular-nums">${v >= 1 ? v : fmt(v, v < 0.1 ? 3 : 2)}</text>`).join("");
+  const steps = segs.map(s => {
+    const xa = X(s.from.own).toFixed(1), xb = X(s.to.own).toFixed(1), yy = rY(s.rate).toFixed(1);
+    return `<line class="cstep" x1="${xa}" y1="${yy}" x2="${xb}" y2="${yy}" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round"/>`;
+  }).join("");
+  const clipped = rates.filter(r => r < rHi / 1000).length;
+  cost.innerHTML =
+    `<p class="note" style="margin:14px 0 0">What each step of ownership buys, along the frontier —
+      projected points per point of cumulative ownership, on a <b>log scale</b> (it spans
+      ${fmt(rHi, 2)} down to ${fmt(rLoRaw, rLoRaw < 0.1 ? 3 : 2)}).${clipped ? ` ${clipped} step${clipped === 1 ? " is" : "s are"} below the bottom of the axis and sit${clipped === 1 ? "s" : ""} on it.` : ""}</p>
+    <svg viewBox="0 0 ${W} ${CH}" width="100%" style="height:auto;display:block;margin-top:4px" role="img"
+      aria-label="The exchange rate along the frontier on a log scale: projected points gained per point of cumulative ownership added. It falls from ${fmt(rHi, 2)} at the rare end to ${fmt(rLoRaw, 3)} at the chalky end. The same figures are in the table below.">
+    ${dLines}${steps}
+    <text x="${PADL}" y="${CH - 8}" font-size="10" fill="var(--ink-3)">rarer ←</text>
+    <text x="${W - PADR}" y="${CH - 8}" text-anchor="end" font-size="10" fill="var(--ink-3)">→ chalkier</text>
+  </svg>`;
+
+  /* ---- the headline numbers ---- */
+  const gaps = port.map(p => { const h = hullAt(pts, p.own); return h == null ? null : h - p.proj; }).filter(v => v != null);
+  gaps.sort((a, b) => a - b);
+  const med = gaps.length ? gaps[gaps.length >> 1] : null;
+  stats.hidden = false; legend.hidden = false;
+  stats.innerHTML = [
+    ["Frontier points", pts.length],
+    ["Exact solves", FRONT.solves],
+    ["Best projection", fmt(rich.proj)],
+    ["Rarest reached", fmt(lean.own, 0) + "%"],
+    ["Median lineup gives up", med == null ? "—" : fmt(med) + " pts"]
+  ].map(([l, v]) => `<div class="s"><div class="sv">${v}</div><div class="sl">${l}</div></div>`).join("");
+
+  /* ---- the table view: every plotted number, readable without a pointer ---- */
+  let t = `<thead><tr><th>Cumulative own</th><th>Projection</th><th>Salary</th><th>Next point costs</th></tr></thead><tbody>`;
+  pts.forEach((p, i) => {
+    const s = segs[i];
+    t += `<tr><td>${fmt(p.own)}%</td><td>${fmt(p.proj)}</td><td>$${p.sal.toLocaleString()}</td>
+      <td>${s ? fmt(s.rate, 3) + " pts per own%" : "—"}</td></tr>`;
+  });
+  $("rarityTabT").innerHTML = t + "</tbody>";
+
+  /* ---- and what none of it proves ---- */
+  const outside = port.length - gaps.length;
+  note.innerHTML =
+    `Traced with <b>${FRONT.solves}</b> exact solves in ${(FRONT.ms / 1000).toFixed(1)}s under the salary window and stack rules currently set on the Solver sheet. ` +
+    `Every square is a lineup proved optimal for one weighting of projection against ownership. ` +
+    `<b>The line joining them is the convex hull, not the frontier</b> — it is a floor, so the true best-at-that-ownership is at or above it, and a lineup that beats the straight line at some ownership in between is optimal for no weighting at all and cannot be found this way. ` +
+    (FRONT.capped ? `The sweep stopped on its ${E.FRONTIER_MAX_SOLVES}-solve budget rather than on convergence, so there are hull vertices it did not reach — the rare end especially, where the search is hardest. ` : "") +
+    (outside > 0 ? `${outside} of your ${port.length} lineups sit outside the ownership range that was traced, so no gap is computed for them. ` : "") +
+    `Ownership is whatever you imported: somebody's projection of the field, not an observation of it. Change it and this whole picture moves.`;
+
+  stamp({ points: pts.length, solves: FRONT.solves, capped: FRONT.capped, lineups: port.length });
+  attachRarityTip(pts, port, X, Y, W, H);
+}
+
+/* Nearest-point hover. ⚠️ The tooltip enhances; it never gates. Every number in it is
+   also in the table view above, which is why that toggle exists. */
+function attachRarityTip(pts, port, X, Y, W, H) {
+  const svg = $("raritySvg"); if (!svg) return;
+  const wrap = svg.parentNode;
+  const all = pts.map(p => ({ x: X(p.own), y: Y(p.proj), kind: "frontier", own: p.own, proj: p.proj, sal: p.sal }))
+    .concat(port.map(p => ({ x: X(p.own), y: Y(p.proj), kind: "lineup", own: p.own, proj: p.proj, sal: p.sal, i: p.i })));
+  let tip = null;
+  const hide = () => { if (tip) { tip.remove(); tip = null; } };
+  const move = ev => {
+    const r = svg.getBoundingClientRect();
+    const sx = (ev.clientX - r.left) * (W / r.width), sy = (ev.clientY - r.top) * (H / r.height);
+    let best = null, bd = Infinity;
+    for (const p of all) { const d = (p.x - sx) ** 2 + (p.y - sy) ** 2; if (d < bd) { bd = d; best = p; } }
+    // a generous hit area — a 4px dot you must land on dead-centre is not a hit target
+    if (!best || bd > 26 * 26) { hide(); return; }
+    if (!tip) { tip = document.createElement("div"); tip.className = "rtip"; wrap.appendChild(tip); }
+    tip.innerHTML = `<b>${best.kind === "frontier" ? "Frontier" : "Lineup #" + (best.i + 1)}</b><br>` +
+      `<span>own</span> ${fmt(best.own)}% &nbsp; <span>proj</span> ${fmt(best.proj)}<br>` +
+      `<span>salary</span> $${best.sal.toLocaleString()}`;
+    const px = (best.x / W) * r.width, py = (best.y / H) * r.height;
+    tip.style.left = Math.min(r.width - 150, Math.max(0, px + 12)) + "px";
+    tip.style.top = Math.max(0, py - 52) + "px";
+  };
+  svg.addEventListener("mousemove", move);
+  svg.addEventListener("mouseleave", hide);
+}
+
 function renderExposure() {
   const has = S.lineups.length > 0;
   $("expEmpty").hidden = has;
@@ -4338,6 +4798,8 @@ function renderExposure() {
     + tk.map(t => bar(t, tct[t] / N, (tct[t] / N * 100).toFixed(0) + "%")).join("");
   const gk = Object.keys(gct).sort((a, b) => gct[b] - gct[a]);
   $("expGames").innerHTML = gk.map(g => bar(g, gct[g] / N, (gct[g] / N * 100).toFixed(0) + "%")).join("");
+
+  drawRarity();
 
   const sals = S.lineups.map(l => l.sal).sort((a, b) => a - b);
   const bins = {}; sals.forEach(s => { const b = Math.floor(s / 250) * 250; bins[b] = (bins[b] || 0) + 1; });
@@ -4708,6 +5170,14 @@ function boot() {
   });
   ["levPos", "levSort"].forEach(id => $(id).addEventListener("change", renderLev));
   $("expPos").addEventListener("change", renderExposure);
+$("rarityGo").addEventListener("click", runFrontier);
+$("rarityTabGo").addEventListener("click", () => {
+  const t = $("rarityTab"), b = $("rarityTabGo");
+  const open = t.hidden;
+  t.hidden = !open;
+  b.setAttribute("aria-expanded", String(open));
+  b.textContent = open ? "Hide the numbers" : "Show the numbers";
+});
 
   // ---- bankroll ----
   $("brDate").value = new Date().toISOString().slice(0, 10);
@@ -4858,7 +5328,12 @@ ${S.demo ? "- ⚠️ THE LOADED SLATE IS THE DEMO SLATE. Every player name, sala
         L.push(bs ? `⚠️ Bootstrapped 95% band on that ROI: ${(bs.lo * 100).toFixed(0)}% to ${(bs.hi * 100).toFixed(0)}%, resampling contests not entries. LEAD WITH THIS BAND, never with the point estimate.`
                   : `⚠️ Fewer than five contests logged — there is no confidence band and you must not imply the ROI figure means anything.`);
       } else L.push("Nothing is logged in the bankroll tracker.");
-      L.push(`VOCABULARY: Proj = sum of the user's projections. Mean = average simulated score. Own% = projected ownership. Win-lineup% = how often a player is in the best lineup on the slate across simulations. Leverage = win-lineup% minus ownership. Dupes = expected number of other entries holding the identical lineup. Cash% = share of simulations finishing in the money.`);
+      if (FRONT && FRONT.points.length > 1) {
+        const a = FRONT.points[0], z = FRONT.points[FRONT.points.length - 1];
+        L.push(`PROJECTION-VS-RARITY: traced with ${FRONT.solves} exact solves. ${FRONT.points.length} vertices, from ${a.own.toFixed(1)}% cumulative ownership at ${a.proj.toFixed(1)} projected points to ${z.own.toFixed(1)}% at ${z.proj.toFixed(1)}. Steepest exchange rate ${FRONT.segments[0].rate.toFixed(3)} points per ownership point, shallowest ${FRONT.segments[FRONT.segments.length - 1].rate.toFixed(3)}.`);
+        L.push(`⚠️ THAT IS THE CONVEX HULL OF THE FRONTIER, NOT THE FRONTIER. Each vertex is exactly optimal for ONE weighting of projection against ownership; a lineup that beats the straight line between two vertices is optimal for no weighting at all and this method cannot find it. Say "hull" or "at least this good", never "the best lineup at that ownership".${FRONT.capped ? " The sweep also stopped on its solve budget rather than on convergence, so vertices are missing — the rare end especially." : ""}`);
+      } else L.push("No projection-vs-rarity frontier has been traced in this session.");
+      L.push(`VOCABULARY: Proj = sum of the user's projections. Mean = average simulated score. Own% = projected ownership. Win-lineup% = how often a player is in the best lineup on the slate across simulations. Leverage = win-lineup% minus ownership. Dupes = expected number of other entries holding the identical lineup. Cash% = share of simulations finishing in the money. Cumulative own = the sum of the projected ownership of the nine players in a lineup, which is what "rarity" means on this page. Exchange rate = projected points gained per point of cumulative ownership added, along the frontier.`);
       return L.join("\n");
     }
   };
