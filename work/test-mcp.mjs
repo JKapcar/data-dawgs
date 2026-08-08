@@ -1144,6 +1144,21 @@ function refNcdf(z) {
   ok(Math.abs(system.expected_wins - expected) < 1e-15 && Math.abs(distributionSum - 1) < 1e-12 &&
      Math.abs(system.probability_at_least_minimum_wins - atLeastTwo) < 1e-15,
      "CFB schedule path returns a normalized exact Poisson-binomial distribution and threshold probability");
+  const leverageByIndex = Object.fromEntries(system.threshold_game_leverage.map(row => [row.index, row]));
+  const exactOneWin = (a, b) => a * (1 - b) + (1 - a) * b;
+  ok(system.threshold_game_leverage.length === 3 &&
+     Math.abs(leverageByIndex[1].threshold_probability_swing - exactOneWin(p2, p3)) < 1e-15 &&
+     Math.abs(leverageByIndex[2].threshold_probability_swing - exactOneWin(p1, p3)) < 1e-15 &&
+     Math.abs(leverageByIndex[3].threshold_probability_swing - exactOneWin(p1, p2)) < 1e-15 &&
+     system.threshold_game_leverage.every(row =>
+       Math.abs(row.threshold_probability_swing -
+         (row.probability_at_least_minimum_wins_if_forced_win -
+          row.probability_at_least_minimum_wins_if_forced_loss)) < 1e-15),
+     "CFB schedule path computes each supplied game's exact forced-win versus forced-loss threshold leverage");
+  ok(system.threshold_game_leverage.every((row, i, rows) => i === 0 ||
+     rows[i - 1].threshold_probability_swing >= row.threshold_probability_swing) &&
+     /not conference or playoff leverage/i.test(d.warnings.join(" ")),
+     "CFB schedule path ranks threshold leverage without laundering it into playoff leverage");
   ok(system.method.includes("no Monte Carlo") && d.actual_schedule === false &&
      d.playoff_or_conference_rules_modelled === false && d.retrodictive && !d.prospective && !d.graded,
      "CFB schedule path refuses actual-schedule, playoff, prospective and graded claims");
@@ -1160,6 +1175,11 @@ function refNcdf(z) {
   const extra = await (await req(call("dd_project_cfb_schedule_path", { team: "Akron", games: [{ opponent: "Indiana", spread: -3 }] }))).json();
   ok([empty, same, partial, badVenue, badMinimum, extra].every(result => result.result.isError === true),
      "CFB schedule path fails closed on empty, same-team, partial, bad-venue, impossible-threshold and unsupported inputs");
+  const noThreshold = text(await (await req(call("dd_project_cfb_schedule_path", {
+    team: "Akron", games: [{ opponent: "Indiana" }]
+  }))).json()).systems[0];
+  ok(noThreshold.threshold_game_leverage === null && noThreshold.threshold_leverage_definition === null,
+     "CFB schedule path omits leverage when the caller supplies no win threshold");
 }
 // dd_find_cfb_record_divergence: descriptive team rows plus the aggregate-only
 // chronological validation receipt, never current-team fraud labels.

@@ -5033,6 +5033,12 @@ function mcpCfbPoissonBinomial(probabilities) {
   return distribution;
 }
 
+function mcpCfbProbabilityAtLeast(distribution, wins) {
+  if (wins <= 0) return 1;
+  if (wins >= distribution.length) return 0;
+  return distribution.slice(wins).reduce((sum, probability) => sum + probability, 0);
+}
+
 function mcpCfbObservedView(team) {
   const observed = team.observed_results || {};
   return {
@@ -6361,7 +6367,7 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_project_cfb_schedule_path",
-    description: "Calculate an exact win-count distribution for one team over a caller-supplied hypothetical schedule of up to 20 opponents. Uses the dated end-of-2025 CFB Elo transform with fixed ratings and independent games. It is not an actual 2026 schedule, playoff model, conference simulation, consensus, prospective forecast or recommendation.",
+    description: "Calculate an exact win-count distribution for one team over a caller-supplied hypothetical schedule of up to 20 opponents. An optional minimum-wins threshold also returns each supplied game's exact threshold leverage if its result were forced to a win versus loss. Uses dated end-of-2025 CFB Elo with fixed independent games; it is not an actual schedule, playoff model or forecast.",
     inputSchema: {
       type: "object",
       properties: {
@@ -6428,6 +6434,20 @@ const MCP_TOOLS = [
         const variance = probabilities.reduce((sum, p) => sum + p * (1 - p), 0);
         let mostLikelyWins = 0;
         for (let wins = 1; wins < exact.length; wins++) if (exact[wins] > exact[mostLikelyWins]) mostLikelyWins = wins;
+        const thresholdGameLeverage = input.minimumWins === null ? null : projectedGames.map((game, index) => {
+          const withoutGame = mcpCfbPoissonBinomial(probabilities.filter((_, j) => j !== index));
+          const ifWin = mcpCfbProbabilityAtLeast(withoutGame, input.minimumWins - 1);
+          const ifLoss = mcpCfbProbabilityAtLeast(withoutGame, input.minimumWins);
+          return {
+            index: game.index,
+            label: game.label,
+            opponent: game.opponent,
+            venue: game.venue,
+            probability_at_least_minimum_wins_if_forced_win: ifWin,
+            probability_at_least_minimum_wins_if_forced_loss: ifLoss,
+            threshold_probability_swing: ifWin - ifLoss,
+          };
+        }).sort((a, b) => b.threshold_probability_swing - a.threshold_probability_swing || a.index - b.index);
         return {
           system_id: system.system_id,
           name: system.name,
@@ -6442,7 +6462,10 @@ const MCP_TOOLS = [
           winless_probability: exact[0],
           minimum_wins: input.minimumWins,
           probability_at_least_minimum_wins: input.minimumWins === null
-            ? null : exact.slice(input.minimumWins).reduce((sum, p) => sum + p, 0),
+            ? null : mcpCfbProbabilityAtLeast(exact, input.minimumWins),
+          threshold_game_leverage: thresholdGameLeverage,
+          threshold_leverage_definition: input.minimumWins === null ? null :
+            "Exact change in P(wins >= minimum_wins) when one supplied game's result is forced from loss to win, with all other independent fixed-rating probabilities unchanged.",
           exact_win_distribution: exact.map((probability, wins) => ({ wins, probability })),
           graded: system.graded === true,
           prospective_forecasts_exist: system.prospective_forecasts_exist === true,
@@ -6472,10 +6495,12 @@ const MCP_TOOLS = [
           "Ratings are fixed at the published end-of-2025 values for every game; wins and losses do not update later matchup probabilities.",
           "Game outcomes are independent conditional on the fixed probabilities.",
           "The caller supplied every opponent and venue; Data Dawgs did not assert that this is a real schedule.",
+          "Threshold leverage, when requested, changes only one supplied game's forced result and leaves every other fixed probability unchanged.",
         ],
         warnings: [
           "This is an exact distribution over a hypothetical path, not a prospective 2026 season forecast or receipt.",
           "Conference standings, tiebreakers, championship qualification, playoff selection and seed rules are not modelled.",
+          "Win-threshold leverage is not conference or playoff leverage unless the caller's threshold independently represents that event, which this tool does not establish.",
           "The registry currently contains one retrodictive, ungraded Elo system; one system is not a consensus.",
           "Current rosters, injuries, availability, talent, portal, market and matchup-style inputs are absent.",
         ],

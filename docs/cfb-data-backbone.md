@@ -296,11 +296,14 @@ expected margin, spread and total stay null rather than being reverse-engineered
 caller-supplied hypothetical path of up to 20 matchups. It calculates every game
 probability and the complete Poisson-binomial distribution for zero through all wins,
 including expected wins, variance, undefeated/winless probability and an optional
-minimum-wins threshold. The result is exact conditional on its inputs; it uses no Monte
-Carlo and stores nothing.
+minimum-wins threshold. When that threshold is supplied, the tool also computes each
+game's exact threshold leverage: the change in threshold probability if that one result
+is forced from a loss to a win while every other fixed probability stays unchanged. The
+result is exact conditional on its inputs; it uses no Monte Carlo and stores nothing.
 
 This is only the first, bounded part of roadmap step 9. Ratings remain fixed at the
-end-of-2025 snapshot and games are treated as independent. The caller supplies every
+end-of-2025 snapshot and games are treated as independent. Threshold leverage is only
+win-count leverage, not conference or playoff leverage. The caller supplies every
 opponent and venue; the tool does not claim those rows are the 2026 schedule. Conference
 standings, tiebreakers, championship qualification, playoff selection, seeding and game
 leverage remain unbuilt. The tool is staged and non-callable in production until a

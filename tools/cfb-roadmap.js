@@ -665,10 +665,10 @@ const CFB_IDEAS = [
     lifecycle_status: 'building', implemented: true,
     lifecycle_history: [
       { status: 'idea', on: ROADMAP_AS_OF, note: 'Entered The Pound from the 2026-08-08 CFB roadmap.' },
-      { status: 'building', on: ROADMAP_AS_OF, note: 'Implemented an exact caller-supplied hypothetical schedule-path distribution over the dated Elo registry; actual schedules, standings, tiebreakers and playoff selection remain unbuilt.' },
+      { status: 'building', on: ROADMAP_AS_OF, note: 'Implemented an exact caller-supplied hypothetical schedule-path distribution plus per-game win-threshold leverage over the dated Elo registry; actual schedules, official standings, tiebreakers and playoff selection remain unbuilt.' },
     ],
     delivery_evidence: ['/work/mcp-block.js', '/work/test-mcp.mjs', '/data/cfb-ratings.json'],
-    delivery_note: 'Partially implemented as staged dd_project_cfb_schedule_path: exact Poisson-binomial win-count distributions for up to 20 caller-supplied matchups using fixed end-of-2025 Elo. It is not an actual 2026 schedule, conference simulation or playoff model and remains non-callable in production.',
+    delivery_note: 'Partially implemented as staged dd_project_cfb_schedule_path: exact Poisson-binomial win-count distributions and optional per-game win-threshold leverage for up to 20 caller-supplied matchups using fixed end-of-2025 Elo. Threshold leverage is not conference/playoff leverage; this is not an actual 2026 schedule, conference simulation or playoff model and remains non-callable in production.',
     category: 'season-simulation', recommendation: 'build', recommendation_modifiers: ['high-priority', 'decision-engine'],
     priority: 'high', roadmap_step: 9,
     source_headings: ['Schedule Path Simulator', 'Game Leverage Index'],
