@@ -119,7 +119,8 @@ test('new data surfaces are in the generated manifest', () => {
   for (const p of ['/data/pound-tools.json', '/data/model-contracts.json', '/data/upstream-models.json',
     '/data/nfl-schedule.json', '/data/model-receipts.json', '/data/538-classic.json',
     '/data/cfb-schedule.json', '/data/cfb-market.json', '/data/cfb-elo.json',
-    '/data/cfb-ratings.json', '/data/cfb-model-cards.json', '/data/cfb-disagreement.json']) assert.ok(paths.has(p), p);
+    '/data/cfb-ratings.json', '/data/cfb-model-cards.json', '/data/cfb-model-receipts.json',
+    '/data/cfb-disagreement.json']) assert.ok(paths.has(p), p);
 });
 test('NFL backbone is complete and exposes its canonical files', () => {
   const backbone = tools.data.find(t => t.id === 'nfl-data');
@@ -201,17 +202,20 @@ test('CFB roadmap ideas carry evidence-backed lifecycle without inventing tools'
   assert.equal(byId['cfb-ratings-registry'].implemented, true);
   assert.equal(byId['cfb-elo'].lifecycle_status, 'live');
   assert.equal(byId['cfb-disagreement-lab'].lifecycle_status, 'evaluating');
-  assert.equal(byId['cfb-model-receipts'].lifecycle_status, 'planned');
+  assert.equal(byId['cfb-model-receipts'].lifecycle_status, 'building');
+  assert.equal(byId['cfb-model-receipts'].implemented, true);
 });
 test('published CFB backbone artifacts are discoverable without overstating their evidence', () => {
   const pound = surfaces.data.find(s => s.id === 'pound');
   const machine = Object.fromEntries(pound.machine.filter(x => x.url && x.url.includes('/cfb-')).map(x => [x.url, x]));
   assert.deepEqual(Object.keys(machine).sort(), ['/data/cfb-disagreement.json', '/data/cfb-elo.json',
-    '/data/cfb-market.json', '/data/cfb-model-cards.json', '/data/cfb-ratings.json', '/data/cfb-schedule.json']);
+    '/data/cfb-market.json', '/data/cfb-model-cards.json', '/data/cfb-model-receipts.json',
+    '/data/cfb-ratings.json', '/data/cfb-schedule.json']);
   assert.match(machine['/data/cfb-market.json'].covers, /observation time is explicitly unknown/i);
   assert.match(machine['/data/cfb-market.json'].covers, /not closing lines/i);
   assert.match(machine['/data/cfb-elo.json'].covers, /ungraded as a prospective model/i);
   assert.match(machine['/data/cfb-ratings.json'].covers, /consensus is explicitly not built/i);
+  assert.match(machine['/data/cfb-model-receipts.json'].covers, /zero forecasts/i);
   assert.match(machine['/data/cfb-disagreement.json'].covers, /blocked/i);
 });
 test('CFB dependency, related-idea and governance references resolve', () => {

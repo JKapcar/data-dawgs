@@ -89,9 +89,9 @@
    {
     "path": "/data/pound-tools.json",
     "url": "https://datadawgs216.com/data/pound-tools.json",
-    "bytes": 123714,
+    "bytes": 124113,
     "as_of": "2026-08-08",
-    "sha256": "12ccc6ac930b963845c74a4dcb80c393a834316dcea3f055caff8490f9de60a2",
+    "sha256": "57587932253c9c12d443f8e3d0e1c35a6c3ca6a4046efdaccad85e75a39051cb",
     "note": "Two kinds of entry share this inventory. kind \"tool\" (NFL) carries delivery status. kind \"roadmap-idea\" (College Football) carries recommendation plus evidence-backed lifecycle and implementation state. A CFB artifact may be implemented without any MCP tool; candidate_mcp_tools are reservations and remain non-callable unless the independent Worker registry proves otherwise."
    },
    {
@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 14714,
+    "bytes": 14950,
     "as_of": "2026-08-08",
-    "sha256": "5175c08268745c4624dc7bde807f7e2bd270d16543637977f11a8e83f11a5667",
+    "sha256": "4f4335f0f8c8e6ca9b45c3be83bd7a46ee65791f3e36f11309905b4bc53f3174",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -181,6 +181,14 @@
     "as_of": "2026-08-08",
     "sha256": "b96f2931300d1220202d58ef87e5267ec452b5ebe626cb421b75f2c69bfbc5cb",
     "note": "MODELLED, RETRODICTIVE, UNGRADED. This is a registry contract with one live baseline, not a consensus or evidence that several models agree. Unsupported outputs are null rather than inferred. Quote the rating period with every value."
+   },
+   {
+    "path": "/data/cfb-model-receipts.json",
+    "url": "https://datadawgs216.com/data/cfb-model-receipts.json",
+    "bytes": 1440,
+    "as_of": "2026-08-08",
+    "sha256": "490021d44f95f79ad0c354543d8279a934af09034dc3093d3162a70ed764955b",
+    "note": "EMPTY BY DESIGN. No CFB forecast has yet been frozen before kickoff. This file publishes the append-only prospective receipt contract without manufacturing a backtest row or implying that the 2025 completed season was forecast live."
    }
   ],
   "markdown": [

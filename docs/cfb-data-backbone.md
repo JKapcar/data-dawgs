@@ -57,6 +57,12 @@ The schema is ready to add independently dated systems, but the data is not padd
 
 The card reports the roadmap's lifecycle value read from `/data/pound-tools.json` instead of asserting its own. The Elo entry is now `live`, and refreshing the card carries that value through automatically rather than maintaining a second status by hand.
 
+## Prospective model receipts (roadmap step 3, idea cfb-model-receipts)
+
+`/data/cfb-model-receipts.json` is an append-only ledger and is currently empty by design. `scripts/cfb_model_receipts.py` rejects backtest rows, post-kickoff issue times, completed games, schedule or input-snapshot drift, late market observations, conflicting duplicate IDs, and any attempt to mutate or remove prior history. Optional market context must name its provider, capture time and immutable receipt hash. Outcomes never mutate a forecast row; grading belongs in a separate derived surface.
+
+Building the contract does not manufacture evidence. The current 2025 schedule contains only final games, so the append path refuses every one of them. The first real row requires a 2026 game whose canonical status is `scheduled`, an Elo forecast issued before kickoff, and exact schedule, ratings-registry and model-card snapshots. Until then the ledger's zero rows are the honest result.
+
 ## Disagreement probe (roadmap step 3, idea cfb-disagreement-lab)
 
 `scripts/cfb_disagreement.py refresh` publishes `/data/cfb-disagreement.json`, which asks step 3's question directly: when the Elo and the market disagree, does either side systematically win?
@@ -113,6 +119,8 @@ Focused verification:
 node work/test-cfb-market-capture.mjs
 node work/test-backup.mjs
 python3 scripts/cfb_ratings_registry.py validate
+python3 scripts/cfb_model_receipts.py validate
+python3 scripts/cfb_model_receipts.py verify-history --base-ref origin/main
 wrangler deploy --dry-run --config wrangler.jsonc
 ```
 

@@ -1579,7 +1579,7 @@
   {
    "kind": "roadmap-idea",
    "domain": "College Football",
-   "lifecycle_status": "planned",
+   "lifecycle_status": "building",
    "lifecycle_history": [
     {
      "status": "idea",
@@ -1590,11 +1590,20 @@
      "status": "planned",
      "on": "2026-08-08",
      "note": "Prospective 24-hour market observation contract is staged; first model receipts wait on a 2026 schedule and pre-kickoff forecasts."
+    },
+    {
+     "status": "building",
+     "on": "2026-08-08",
+     "note": "Published an empty append-only ledger and fail-closed append contract. No receipt is fabricated from completed 2025 games."
     }
    ],
-   "implemented": false,
-   "delivery_evidence": [],
-   "delivery_note": "No CFB model forecast receipt exists yet. Planning is concrete, but implementation remains false.",
+   "implemented": true,
+   "delivery_evidence": [
+    "/data/cfb-model-receipts.json",
+    "/scripts/cfb_model_receipts.py",
+    "/tests/test_cfb_model_receipts.py"
+   ],
+   "delivery_note": "Receipt infrastructure is implemented and the public ledger is honestly empty. The first actual row still waits on a 2026 scheduled game and a forecast frozen before kickoff.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 3,

@@ -339,12 +339,14 @@ const CFB_IDEAS = [
     governance: ['cfb-gov-correlation'], tags: ['CFB', 'MODEL', 'MODEL-RISK', 'HIGH-PRIORITY'] }),
 
   idea({ id: 'cfb-model-receipts', name: 'CFB Model Receipts / Historical Grading',
-    lifecycle_status: 'planned', implemented: false,
+    lifecycle_status: 'building', implemented: true,
     lifecycle_history: [
       { status: 'idea', on: ROADMAP_AS_OF, note: 'Entered The Pound from the 2026-08-08 CFB roadmap.' },
       { status: 'planned', on: ROADMAP_AS_OF, note: 'Prospective 24-hour market observation contract is staged; first model receipts wait on a 2026 schedule and pre-kickoff forecasts.' },
+      { status: 'building', on: ROADMAP_AS_OF, note: 'Published an empty append-only ledger and fail-closed append contract. No receipt is fabricated from completed 2025 games.' },
     ],
-    delivery_note: 'No CFB model forecast receipt exists yet. Planning is concrete, but implementation remains false.',
+    delivery_evidence: ['/data/cfb-model-receipts.json', '/scripts/cfb_model_receipts.py', '/tests/test_cfb_model_receipts.py'],
+    delivery_note: 'Receipt infrastructure is implemented and the public ledger is honestly empty. The first actual row still waits on a 2026 scheduled game and a forecast frozen before kickoff.',
     category: 'model-validation', recommendation: 'build', recommendation_modifiers: ['high-priority'],
     priority: 'high', roadmap_step: 3,
     source_headings: ['Model Receipts / Historical Grading'],

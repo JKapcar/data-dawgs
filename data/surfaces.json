@@ -391,6 +391,12 @@
     },
     {
      "kind": "json",
+     "url": "/data/cfb-model-receipts.json",
+     "status": "live",
+     "covers": "empty append-only prospective receipt ledger and validation contract; zero forecasts have been frozen before kickoff"
+    },
+    {
+     "kind": "json",
      "url": "/data/cfb-disagreement.json",
      "status": "live",
      "covers": "published blocked model-versus-market probe naming the missing observation timestamp and exact unblock condition"

@@ -1,0 +1,32 @@
+{
+ "as_of": "2026-08-08",
+ "source": "Initialized by scripts/cfb_model_receipts.py; no forecast rows existed at initialization.",
+ "tier": "labs",
+ "graded": false,
+ "note": "EMPTY BY DESIGN. No CFB forecast has yet been frozen before kickoff. This file publishes the append-only prospective receipt contract without manufacturing a backtest row or implying that the 2025 completed season was forecast live.",
+ "provenance": {
+  "generator": "scripts/cfb_model_receipts.py",
+  "captured_at": "2026-08-08T08:18:10.324965Z"
+ },
+ "integrity": {
+  "snapshot_id": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "algorithm": "SHA-256 of canonical receipt JSON rows joined by LF in append order.",
+  "rows": 0
+ },
+ "contract": {
+  "schema_version": 1,
+  "forecast_status": "prospective-only",
+  "immutability": "Existing rows may never be removed, reordered or changed.",
+  "grading": "Outcomes and scores belong in a separate derived grading surface.",
+  "required_input_snapshots": [
+   "schedule",
+   "ratings_registry",
+   "model_cards"
+  ]
+ },
+ "data": [],
+ "tier_meaning": "Labs — useful and live, still being challenged. Open questions may remain about calibration, assumptions, data quality or edge. Use with your eyes open.",
+ "built": "2026-08-08",
+ "canonical_url": "https://datadawgs216.com/data/cfb-model-receipts.json"
+}

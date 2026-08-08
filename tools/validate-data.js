@@ -280,6 +280,31 @@ console.log('\nCFB ratings registry — normalized evidence without invented con
   else ok('one-system registry explicitly refuses a consensus');
 }
 
+console.log('\nCFB model receipts — append-only prospective evidence');
+{
+  const ledger = JSON.parse(fs.readFileSync(path.join(DATA, 'cfb-model-receipts.json'), 'utf8'));
+  const rows = ledger.data;
+  if (!Array.isArray(rows)) fail('cfb-model-receipts.json: data must be an array');
+  else {
+    const ids = new Set(rows.map(row => row.forecast_id));
+    if (ids.size !== rows.length) fail('cfb-model-receipts.json: duplicate forecast_id');
+    else if (ledger.integrity.rows !== rows.length) fail('cfb-model-receipts.json: integrity.rows disagrees');
+    else if (rows.some(row => row.forecast_status !== 'prospective' || row.grading_status !== 'ungraded'))
+      fail('cfb-model-receipts.json: ledger contains a non-prospective or mutated grading row');
+    else ok(`receipt ledger contains ${rows.length} prospective, immutable forecast rows`);
+    if (rows.length === 0) {
+      const emptyHash = crypto.createHash('sha256').update('').digest('hex');
+      if (ledger.integrity.sha256 !== emptyHash || ledger.integrity.snapshot_id !== 'sha256:' + emptyHash)
+        fail('cfb-model-receipts.json: empty-ledger hash is wrong');
+      else if (!/EMPTY BY DESIGN/i.test(ledger.note || ''))
+        fail('cfb-model-receipts.json: empty ledger does not explain why it is empty');
+      else ok('empty ledger is hash-locked and explicitly disclaims any frozen forecast');
+    } else if (!/^sha256:[0-9a-f]{64}$/.test(ledger.integrity.snapshot_id || '')) {
+      fail('cfb-model-receipts.json: canonical snapshot identifier is missing');
+    }
+  }
+}
+
 console.log('\nWorker deployment contract');
 {
   const configPath = path.join(ROOT, 'wrangler.jsonc');

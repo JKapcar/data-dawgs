@@ -29,11 +29,12 @@ and forecast scoring. Inputs are not stored. The scoreboard is descriptive and u
 
 ## College football
 
-- [Canonical 2025 schedule](https://datadawgs216.com/data/cfb-schedule.json): 934 FBS-involved games, facts only, pinned source bytes and snapshot hash.
+- [2025 schedule](https://datadawgs216.com/data/cfb-schedule.json): 934 FBS-involved game facts with pinned source bytes and snapshot hash.
 - [Book market](https://datadawgs216.com/data/cfb-market.json): spreads, totals and devigged moneylines. Books are named but observation time is unknown; these are not closing lines and cannot establish CLV.
 - [Elo baseline](https://datadawgs216.com/data/cfb-elo.json), [ratings registry](https://datadawgs216.com/data/cfb-ratings.json) and [model card](https://datadawgs216.com/data/cfb-model-cards.json): one deterministic, retrodictive 2025 system; modelled, ungraded, not a consensus and not a 2026 forecast.
 - [Disagreement probe](https://datadawgs216.com/data/cfb-disagreement.json): honestly `blocked` because untimestamped prices cannot separate model failure from later market information.
-- A prospective 24-to-25-hour market receipt collector is staged in the Worker source. Do not claim its endpoint is live until Worker activation is verified.
+- [Prospective receipts](https://datadawgs216.com/data/cfb-model-receipts.json): append-only contract, zero rows; no CFB forecast has been frozen before kickoff.
+- The 24-to-25-hour market collector is staged. Its endpoint is not live until Worker activation is verified.
 
 ## Draft
 
@@ -62,5 +63,5 @@ and forecast scoring. Inputs are not stored. The scoreboard is descriptive and u
 - If a dated number is stale enough to affect the answer, say so.
 - `def_epa_play` is EPA allowed: lower is better.
 - Simulation and modelled output are labelled; do not present either as observation.
-- Nothing here is betting advice or certainty.
+- Nothing here is betting advice.
 - Prefer `/data/` to the heavy, self-contained HTML pages.
