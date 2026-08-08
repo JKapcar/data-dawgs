@@ -216,3 +216,16 @@ opponent and venue; the tool does not claim those rows are the 2026 schedule. Co
 standings, tiebreakers, championship qualification, playoff selection, seeding and game
 leverage remain unbuilt. The tool is staged and non-callable in production until a
 separately approved Worker release.
+
+`dd_find_cfb_record_divergence` makes the evaluated step-7 substrate queryable without
+promoting its brand into a verdict. It can resolve one exact team or filter the 136 dated
+rows by descriptive direction, conference and minimum absolute record-versus-scoring
+rank gap. Results stay sorted by absolute gap and carry their one-score records, the
+baseline snapshot receipt and the aggregate chronological validation receipt.
+
+The response deliberately omits `predictive_label`. It reports the small held-out lift
+beyond Elo, while also returning `current_team_labels_permitted: false`,
+`prospective: false` and `market_adjusted: false`. The Worker validates that the source
+artifact still contains null labels and that the validation artifact still declares
+aggregate-only publication before serving a row. It is read-only, cached, bounded to 25
+rows and staged rather than callable in production.

@@ -2810,9 +2810,11 @@
     "/scripts/cfb_record_divergence.py",
     "/scripts/cfb_record_divergence_validation.py",
     "/tests/test_cfb_record_divergence.py",
-    "/tests/test_cfb_record_divergence_validation.py"
+    "/tests/test_cfb_record_divergence_validation.py",
+    "/work/mcp-block.js",
+    "/work/test-mcp.mjs"
    ],
-   "delivery_note": "The descriptive baseline now has a one-season, pregame-only chronological holdout: one Elo-offset coefficient improved Brier by 0.001123 and log loss by 0.002277 over 233 untouched games. This is retrodictive, not market-adjusted or prospective, and does not authorize overrated/underrated team labels.",
+   "delivery_note": "The descriptive baseline now has a one-season, pregame-only chronological holdout: one Elo-offset coefficient improved Brier by 0.001123 and log loss by 0.002277 over 233 untouched games. A staged read-only MCP explorer exposes the dated gaps and aggregate receipt without labels. This remains retrodictive, not market-adjusted or prospective, and does not authorize overrated/underrated team labels.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": 7,
@@ -2825,6 +2827,7 @@
     "cfb-market"
    ],
    "candidate_mcp_tools": [
+    "dd_find_cfb_record_divergence",
     "find_cfb_overrated_teams",
     "find_cfb_underrated_teams"
    ],
@@ -3229,16 +3232,18 @@
     {
      "status": "building",
      "on": "2026-08-08",
-     "note": "Implemented and evaluated team profile, comparison, hypothetical Elo matchup and exact hypothetical schedule-path tools locally; all remain staged and non-callable in production."
+     "note": "Implemented and evaluated team profile, comparison, hypothetical Elo matchup, exact hypothetical schedule-path and descriptive record-divergence tools locally; all remain staged and non-callable in production."
     }
    ],
    "implemented": true,
    "delivery_evidence": [
     "/work/mcp-block.js",
     "/work/test-mcp.mjs",
-    "/data/cfb-ratings.json"
+    "/data/cfb-ratings.json",
+    "/data/cfb-record-divergence.json",
+    "/data/cfb-record-divergence-validation.json"
    ],
-   "delivery_note": "Four source-backed CFB tools are implemented locally and staged, including exact matchup and schedule-path calculations over the published Elo transform. Production still has 26 live tools; deployment requires a separate approved Worker release.",
+   "delivery_note": "Five source-backed CFB tools are implemented locally and staged, including exact matchup and schedule-path calculations plus a no-label record-divergence explorer. Production still has 26 live tools; deployment requires a separate approved Worker release.",
    "graveyard_ready": true,
    "priority": "high",
    "roadmap_step": null,
@@ -3262,6 +3267,7 @@
     "dd_compare_cfb_teams",
     "dd_project_cfb_matchup",
     "dd_project_cfb_schedule_path",
+    "dd_find_cfb_record_divergence",
     "get_cfb_model_disagreement",
     "get_cfb_model_grades",
     "find_cfb_disagreements",

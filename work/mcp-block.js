@@ -53,6 +53,7 @@ let mcpCorrCache = { at: 0, data: null };
 let mcpSurvCache = { at: 0, data: null };
 let mcpModelReceiptsCache = { at: 0, data: null };
 let mcpCfbProfilesCache = { at: 0, data: null };
+let mcpCfbDivergenceCache = { at: 0, data: null };
 
 // Abramowitz–Stegun normal CDF — the SAME approximation survivor.html ships, so the
 // tool and the page cannot disagree about a probability by more than float dust.
@@ -524,6 +525,49 @@ async function mcpCfbTeamProfiles() {
   return mcpCfbProfilesCache.data;
 }
 
+// Keep the descriptive team rows and their aggregate-only validation receipt
+// together. The explorer below must never return a team label that the validation
+// artifact explicitly refuses to authorize.
+async function mcpCfbRecordDivergenceEvidence() {
+  if (!mcpCfbDivergenceCache.data || Date.now() - mcpCfbDivergenceCache.at > 900e3) {
+    const [baselineResponse, validationResponse] = await Promise.all([
+      fetch(`${SITE}/data/cfb-record-divergence.json`, { cf: { cacheTtl: 900, cacheEverything: true } }),
+      fetch(`${SITE}/data/cfb-record-divergence-validation.json`, { cf: { cacheTtl: 900, cacheEverything: true } }),
+    ]);
+    if (!baselineResponse.ok) throw new Error("cfb-record-divergence.json unavailable: HTTP " + baselineResponse.status);
+    if (!validationResponse.ok) throw new Error("cfb-record-divergence-validation.json unavailable: HTTP " + validationResponse.status);
+    const [baseline, validation] = await Promise.all([baselineResponse.json(), validationResponse.json()]);
+    const rows = baseline && baseline.data && baseline.data.rows;
+    if (!baseline || !baseline.as_of || !baseline.source || !baseline.data ||
+        baseline.data.status !== "descriptive-baseline" || !Array.isArray(rows) || !rows.length || rows.length > 200)
+      throw new Error("cfb-record-divergence.json has an invalid envelope");
+    if (baseline.integrity && Number.isInteger(baseline.integrity.rows) && baseline.integrity.rows !== rows.length)
+      throw new Error("cfb-record-divergence.json row count does not match its integrity receipt");
+    const slugs = new Set();
+    const directions = new Set(["record-ahead-of-scoring", "scoring-ahead-of-record", "aligned"]);
+    for (const row of rows) {
+      if (!row || typeof row.team_slug !== "string" || !row.team_slug || slugs.has(row.team_slug) ||
+          typeof row.team !== "string" || !row.team || typeof row.conference !== "string" ||
+          !Number.isInteger(row.record_rank) || !Number.isInteger(row.scoring_rank) ||
+          !Number.isInteger(row.record_scoring_rank_gap) || !directions.has(row.descriptive_direction) ||
+          row.predictive_label !== null)
+        throw new Error("cfb-record-divergence.json has an invalid or labelled team row");
+      slugs.add(row.team_slug);
+    }
+    const evidence = validation && validation.data;
+    if (!validation || !validation.as_of || !validation.source || !evidence ||
+        evidence.status !== "retrodictive-chronological-validation" ||
+        !evidence.result || typeof evidence.result.finding !== "string" ||
+        !evidence.result.holdout || !evidence.roadmap_decision ||
+        evidence.roadmap_decision.team_labels_permitted !== false ||
+        evidence.roadmap_decision.prospective_value_claimed !== false ||
+        !String(evidence.published_granularity || "").includes("aggregate-only"))
+      throw new Error("cfb-record-divergence-validation.json does not preserve the aggregate-only no-label contract");
+    mcpCfbDivergenceCache = { at: Date.now(), data: { baseline, validation } };
+  }
+  return mcpCfbDivergenceCache.data;
+}
+
 function mcpCfbTeamSlug(v) {
   return String(v || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
     .toLowerCase().replace(/&/g, " and ").replace(/[\u2018\u2019']/g, "")
@@ -552,6 +596,44 @@ function mcpCfbTeamMatch(envelope, input) {
     throw new Error("team is not an exact registry name or slug" + (partial.length > 1 ? " and is ambiguous" : "") + "; try: " + choices);
   }
   throw new Error("team is not present in the dated CFB ratings registry: " + input.query);
+}
+
+function mcpCfbDivergenceArgs(args) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+  const allowed = ["team", "direction", "conference", "minimum_absolute_rank_gap", "limit"];
+  const extra = Object.keys(args).filter(k => !allowed.includes(k));
+  if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+  const out = {
+    team: args.team === undefined ? null : mcpCfbTeamArgs({ team: args.team }),
+    direction: args.direction === undefined ? "all" : args.direction,
+    conference: null,
+    minimumAbsoluteRankGap: args.minimum_absolute_rank_gap === undefined ? 0 : args.minimum_absolute_rank_gap,
+    limit: args.limit === undefined ? 10 : args.limit,
+  };
+  if (!["all", "record-ahead-of-scoring", "scoring-ahead-of-record", "aligned"].includes(out.direction))
+    throw new Error("direction must be all, record-ahead-of-scoring, scoring-ahead-of-record or aligned");
+  if (args.conference !== undefined) {
+    if (typeof args.conference !== "string" || !args.conference.trim() || args.conference.trim().length > 80)
+      throw new Error("conference must be a non-empty string of at most 80 characters");
+    out.conference = args.conference.trim();
+  }
+  if (!Number.isInteger(out.minimumAbsoluteRankGap) || out.minimumAbsoluteRankGap < 0 || out.minimumAbsoluteRankGap > 135)
+    throw new Error("minimum_absolute_rank_gap must be a whole number from 0 through 135");
+  if (!Number.isInteger(out.limit) || out.limit < 1 || out.limit > 25)
+    throw new Error("limit must be a whole number from 1 through 25");
+  return out;
+}
+
+function mcpCfbDivergenceTeamMatch(rows, input) {
+  const exact = rows.filter(row => row.team_slug === input.slug || mcpCfbTeamSlug(row.team) === input.slug);
+  if (exact.length === 1) return exact[0];
+  if (exact.length > 1) throw new Error("cfb-record-divergence.json has duplicate normalized team names for " + input.query);
+  const partial = rows.filter(row => row.team_slug.includes(input.slug) || mcpCfbTeamSlug(row.team).includes(input.slug));
+  if (partial.length) {
+    const choices = partial.slice(0, 10).map(row => row.team + " (" + row.team_slug + ")").join(", ");
+    throw new Error("team is not an exact record-divergence name or slug" + (partial.length > 1 ? " and is ambiguous" : "") + "; try: " + choices);
+  }
+  throw new Error("team is not present in the dated CFB record-divergence surface: " + input.query);
 }
 
 function mcpCfbCompareArgs(args) {
@@ -861,7 +943,7 @@ async function mcpDispatch(m, env, caller) {
           "Everything here is read-only and is either the league's own data, public play-by-play, " +
           "or a deterministic calculation over caller-supplied inputs. Calculator inputs and results are not stored. " +
           "The model scoreboard reads dated prospective receipts and returns descriptive disagreement only; it is ungraded and is not a validated consensus or ranking. " +
-          "The CFB reads separate observed 2025 results from one end-of-2025 retrodictive Elo row. dd_project_cfb_matchup and dd_project_cfb_schedule_path are hypothetical rating-period calculations, not scheduled 2026 forecasts; all CFB outputs are ungraded and are not a consensus. " +
+          "The CFB reads separate observed 2025 results from one end-of-2025 retrodictive Elo row. dd_project_cfb_matchup and dd_project_cfb_schedule_path are hypothetical rating-period calculations, not scheduled 2026 forecasts. dd_find_cfb_record_divergence returns descriptive record-versus-scoring gaps whose small held-out lift does not authorize current-team labels. All CFB outputs are ungraded, not market-adjusted and are not a consensus. " +
           "There is no built-in DFS projection or ownership feed: dd_solve_dfs_lineup requires the caller to supply every value per call, and stores none of them. dd_optimize_survivor_path is an ungraded ceiling over a dated snapshot and does not model double-pick weeks. When quoting bozo odds, survivor odds " +
           "or the correlation matrix, say it is model output or a measured historical average, never a forecast " +
           "of a specific game. Team names, weeks and league ids come from dd_league_overview — do not guess them.",
@@ -1927,6 +2009,112 @@ const MCP_TOOLS = [
           "Conference standings, tiebreakers, championship qualification, playoff selection and seed rules are not modelled.",
           "The registry currently contains one retrodictive, ungraded Elo system; one system is not a consensus.",
           "Current rosters, injuries, availability, talent, portal, market and matchup-style inputs are absent.",
+        ],
+      });
+    },
+  },
+  {
+    name: "dd_find_cfb_record_divergence",
+    description: "Explore dated 2025 differences between each team's observed record rank and scoring-margin rank, optionally by exact team, direction, conference or minimum absolute gap. Returns the aggregate held-out validation receipt too. Descriptive only: it does not label teams overrated/underrated, claim prospective value, use timestamped market prices or make a betting recommendation.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        team: { type: "string", minLength: 1, maxLength: 80, description: "Optional exact team name or slug, case-insensitive." },
+        direction: {
+          type: "string",
+          enum: ["all", "record-ahead-of-scoring", "scoring-ahead-of-record", "aligned"],
+          default: "all",
+          description: "Descriptive direction of the record rank relative to scoring-margin rank.",
+        },
+        conference: { type: "string", minLength: 1, maxLength: 80, description: "Optional exact conference name, case-insensitive." },
+        minimum_absolute_rank_gap: { type: "integer", minimum: 0, maximum: 135, default: 0 },
+        limit: { type: "integer", minimum: 1, maximum: 25, default: 10 },
+      },
+      additionalProperties: false,
+    },
+    async run(args) {
+      const input = mcpCfbDivergenceArgs(args);
+      const evidence = await mcpCfbRecordDivergenceEvidence();
+      const baseline = evidence.baseline;
+      const validation = evidence.validation;
+      const sourceRows = input.team
+        ? [mcpCfbDivergenceTeamMatch(baseline.data.rows, input.team)]
+        : baseline.data.rows.slice();
+      let conference = null;
+      if (input.conference) {
+        const conferences = [...new Set(baseline.data.rows.map(row => row.conference))].sort((a, b) => a.localeCompare(b));
+        conference = conferences.find(name => name.toLowerCase() === input.conference.toLowerCase()) || null;
+        if (!conference) throw new Error("conference is not present in the dated record-divergence surface; available: " + conferences.join(", "));
+      }
+      const matches = sourceRows.filter(row =>
+        (input.direction === "all" || row.descriptive_direction === input.direction) &&
+        (!conference || row.conference === conference) &&
+        Math.abs(row.record_scoring_rank_gap) >= input.minimumAbsoluteRankGap
+      ).sort((a, b) =>
+        Math.abs(b.record_scoring_rank_gap) - Math.abs(a.record_scoring_rank_gap) ||
+        a.team.localeCompare(b.team)
+      );
+      const rows = matches.slice(0, input.limit).map(row => ({
+        team_slug: row.team_slug,
+        team: row.team,
+        conference: row.conference,
+        through_at: row.through_at,
+        games: row.games,
+        record: row.record,
+        win_percentage: row.win_percentage,
+        record_rank: row.record_rank,
+        point_differential_per_game: row.point_differential_per_game,
+        scoring_rank: row.scoring_rank,
+        record_scoring_rank_gap: row.record_scoring_rank_gap,
+        absolute_rank_gap: Math.abs(row.record_scoring_rank_gap),
+        descriptive_direction: row.descriptive_direction,
+        one_score_games: row.one_score_games,
+      }));
+      const result = validation.data.result;
+      return toolText({
+        query: {
+          team: input.team ? input.team.query : null,
+          direction: input.direction,
+          conference,
+          minimum_absolute_rank_gap: input.minimumAbsoluteRankGap,
+          limit: input.limit,
+        },
+        season: baseline.data.season,
+        ranking_basis: baseline.data.definitions,
+        matched_before_limit: matches.length,
+        returned: rows.length,
+        rows,
+        validation: {
+          status: validation.data.status,
+          finding: result.finding,
+          qualified_games: result.qualified_games,
+          holdout_games: result.holdout.n_games,
+          holdout_brier_improvement_over_elo: result.holdout.brier_improvement_over_elo,
+          holdout_log_loss_improvement_over_elo: result.holdout.log_loss_improvement_over_elo,
+          promotion_gate_passed: result.promotion_gate && result.promotion_gate.passed === true,
+          design: validation.data.design,
+          roadmap_decision: validation.data.roadmap_decision,
+          published_granularity: validation.data.published_granularity,
+          as_of: validation.as_of,
+          source: validation.source,
+          integrity: validation.integrity || null,
+        },
+        as_of: baseline.as_of,
+        source: baseline.source,
+        integrity: baseline.integrity || null,
+        observed_descriptive_rows: true,
+        modelled_fields: ["validation"],
+        current_team_labels_permitted: false,
+        prospective: false,
+        market_adjusted: false,
+        graded: false,
+        read_only: true,
+        stored: false,
+        warnings: [
+          "Rank gaps describe completed 2025 results; schedule strength is not adjusted in the team rows.",
+          "A single-season chronological holdout showed a small incremental signal beyond Elo, but this has not been validated prospectively or against timestamped market prices.",
+          "The validation receipt is aggregate-only and explicitly prohibits current-team predictive labels.",
+          "Do not convert these rows into overrated, underrated, fraud, betting-edge or recommendation claims.",
         ],
       });
     },

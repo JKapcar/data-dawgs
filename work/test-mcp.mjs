@@ -107,6 +107,71 @@ const cfbRatingsJson = {
     consensus: { status: "not-built", system_count: 1, weights: null, reason: "One independent rating cannot form a consensus." },
   },
 };
+const cfbDivergenceJson = {
+  as_of: "2026-08-08",
+  source: "test descriptive CFB record divergence",
+  built: "2026-08-08",
+  integrity: { snapshot_id: "sha256:test-cfb-divergence", rows: 3 },
+  data: {
+    schema_version: 1,
+    season: 2025,
+    status: "descriptive-baseline",
+    definitions: {
+      record_rank: "Observed win-percentage competition rank, descending.",
+      scoring_rank: "Observed point-differential-per-game competition rank, descending.",
+      record_scoring_rank_gap: "scoring_rank - record_rank; positive means record ranks better than scoring margin.",
+    },
+    rows: [
+      {
+        team_slug: "florida-state", team: "Florida State", conference: "ACC", through_at: "2025-11-29T21:30:00Z",
+        games: 12, record: "5-7-0", win_percentage: 0.4167, record_rank: 83,
+        point_differential_per_game: 11, scoring_rank: 26, record_scoring_rank_gap: -57,
+        descriptive_direction: "scoring-ahead-of-record",
+        one_score_games: { definition: "absolute final point differential <= 8", games: 4, wins: 0, losses: 4, ties: 0, win_percentage: 0 },
+        predictive_label: null,
+      },
+      {
+        team_slug: "kennesaw-state", team: "Kennesaw State", conference: "Conference USA", through_at: "2025-12-19T16:00:00Z",
+        games: 14, record: "10-4-0", win_percentage: 0.7143, record_rank: 23,
+        point_differential_per_game: 1.214, scoring_rank: 74, record_scoring_rank_gap: 51,
+        descriptive_direction: "record-ahead-of-scoring",
+        one_score_games: { definition: "absolute final point differential <= 8", games: 7, wins: 6, losses: 1, ties: 0, win_percentage: 0.8571 },
+        predictive_label: null,
+      },
+      {
+        team_slug: "ohio-state", team: "Ohio State", conference: "Big Ten", through_at: "2026-01-01T00:30:00Z",
+        games: 14, record: "12-2-0", win_percentage: 0.8571, record_rank: 4,
+        point_differential_per_game: 24.143, scoring_rank: 4, record_scoring_rank_gap: 0,
+        descriptive_direction: "aligned",
+        one_score_games: { definition: "absolute final point differential <= 8", games: 2, wins: 1, losses: 1, ties: 0, win_percentage: 0.5 },
+        predictive_label: null,
+      },
+    ],
+  },
+};
+const cfbDivergenceValidationJson = {
+  as_of: "2026-08-08",
+  source: "test aggregate chronological CFB divergence validation",
+  built: "2026-08-08",
+  integrity: { snapshot_id: "sha256:test-cfb-divergence-validation", qualified_games: 582 },
+  data: {
+    schema_version: 1,
+    season: 2025,
+    status: "retrodictive-chronological-validation",
+    design: { pregame_only: true, split: "first 60% training / final 40% holdout", market_adjusted: false },
+    result: {
+      qualified_games: 582,
+      holdout: { n_games: 233, brier_improvement_over_elo: 0.001123, log_loss_improvement_over_elo: 0.002277 },
+      promotion_gate: { passed: true },
+      finding: "held-out-incremental-signal",
+    },
+    roadmap_decision: {
+      lifecycle_status: "evaluating", team_labels_permitted: false, prospective_value_claimed: false,
+      reason: "Prospective receipts and timestamped market adjustment remain required.",
+    },
+    published_granularity: "aggregate-only; no game IDs, team identities or per-game predictions are serialized",
+  },
+};
 
 let netMode = "normal"; // normal | dbdown | emptyRoom | espnDown | simulatedRoom | simulatedSettings
 globalThis.fetch = async (input, init) => {
@@ -131,6 +196,8 @@ globalThis.fetch = async (input, init) => {
   if (u.includes("datadawgs216.com/data/survivor.json")) return J(survJson);
   if (u.includes("datadawgs216.com/data/model-receipts.json")) return J(modelReceiptsJson);
   if (u.includes("datadawgs216.com/data/cfb-teams.json")) return J(cfbRatingsJson);
+  if (u.includes("datadawgs216.com/data/cfb-record-divergence-validation.json")) return J(cfbDivergenceValidationJson);
+  if (u.includes("datadawgs216.com/data/cfb-record-divergence.json")) return J(cfbDivergenceJson);
   if (u.includes("datadawgs216.com/dfs.html")) return new Response(dfsHtml, { status: 200 });
   if (u.includes("site.api.espn.com")) {
     if (netMode === "espnDown") return new Response("no", { status: 403 });
@@ -219,12 +286,12 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 {
   const j = await (await req(rpc("tools/list"))).json();
   const t = j.result.tools;
-  ok(t.length === 30, "thirty tools listed in the staged Worker source");
+  ok(t.length === 31, "thirty-one tools listed in the staged Worker source");
   ok(t.every(x => x.name.startsWith("dd_")), "all tools dd_-prefixed");
   ok(t.every(x => x.inputSchema && x.inputSchema.type === "object"), "all tools carry an inputSchema");
   for (const name of ["dd_convert_odds", "dd_devig_market", "dd_price_parlay", "dd_calculate_bet_ev",
     "dd_calculate_hedge", "dd_nfl_passer_rating", "dd_score_forecast", "dd_summarize_beliefs",
-    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_project_cfb_schedule_path", "dd_optimize_survivor_path"])
+    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_project_cfb_schedule_path", "dd_find_cfb_record_divergence", "dd_optimize_survivor_path"])
     ok(t.some(x => x.name === name), name + " is listed");
 }
 // dd_league_overview
@@ -714,6 +781,43 @@ function refNcdf(z) {
   const extra = await (await req(call("dd_project_cfb_schedule_path", { team: "Akron", games: [{ opponent: "Indiana", spread: -3 }] }))).json();
   ok([empty, same, partial, badVenue, badMinimum, extra].every(result => result.result.isError === true),
      "CFB schedule path fails closed on empty, same-team, partial, bad-venue, impossible-threshold and unsupported inputs");
+}
+// dd_find_cfb_record_divergence: descriptive team rows plus the aggregate-only
+// chronological validation receipt, never current-team fraud labels.
+{
+  const j = await (await req(call("dd_find_cfb_record_divergence", {}))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.returned === 3 && d.rows[0].team_slug === "florida-state" && d.rows[0].absolute_rank_gap === 57,
+     "CFB divergence explorer defaults to largest absolute descriptive rank gaps");
+  ok(d.validation.finding === "held-out-incremental-signal" && d.validation.holdout_games === 233 &&
+     d.validation.holdout_brier_improvement_over_elo === 0.001123 && d.validation.promotion_gate_passed === true,
+     "CFB divergence explorer returns the aggregate chronological validation receipt");
+  ok(d.current_team_labels_permitted === false && !d.prospective && !d.market_adjusted && !d.graded &&
+     d.read_only && d.stored === false && d.rows.every(row => !("predictive_label" in row)),
+     "CFB divergence explorer refuses labels, prospective, market-adjusted and graded claims");
+  ok(d.warnings.some(x => /small incremental signal beyond Elo/i.test(x)) &&
+     d.warnings.some(x => /Do not convert/.test(x)),
+     "CFB divergence explorer carries validation-scale and no-verdict caveats");
+}
+{
+  const team = text(await (await req(call("dd_find_cfb_record_divergence", { team: "Kennesaw State" }))).json());
+  const filtered = text(await (await req(call("dd_find_cfb_record_divergence", {
+    direction: "scoring-ahead-of-record", conference: "acc", minimum_absolute_rank_gap: 40, limit: 1,
+  }))).json());
+  ok(team.returned === 1 && team.rows[0].team_slug === "kennesaw-state" && team.rows[0].record_scoring_rank_gap === 51,
+     "CFB divergence explorer resolves an exact team without assigning a predictive label");
+  ok(filtered.query.conference === "ACC" && filtered.returned === 1 && filtered.rows[0].team_slug === "florida-state",
+     "CFB divergence explorer applies exact conference, direction, gap and limit filters");
+}
+{
+  const partial = await (await req(call("dd_find_cfb_record_divergence", { team: "state" }))).json();
+  const badDirection = await (await req(call("dd_find_cfb_record_divergence", { direction: "fraud" }))).json();
+  const badConference = await (await req(call("dd_find_cfb_record_divergence", { conference: "NFL" }))).json();
+  const badGap = await (await req(call("dd_find_cfb_record_divergence", { minimum_absolute_rank_gap: 136 }))).json();
+  const badLimit = await (await req(call("dd_find_cfb_record_divergence", { limit: 26 }))).json();
+  const extra = await (await req(call("dd_find_cfb_record_divergence", { verdict: "overrated" }))).json();
+  ok([partial, badDirection, badConference, badGap, badLimit, extra].every(result => result.result.isError === true),
+     "CFB divergence explorer fails closed on partial, invented, out-of-range and unsupported inputs");
 }
 // dd_scores: reuses handleScores with sport+dates
 {

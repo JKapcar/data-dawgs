@@ -75,13 +75,13 @@ test('surface generator reports the deployed Pound MCP tools as live', () => {
     'dd_score_forecast', 'dd_summarize_beliefs', 'dd_elo_game',
     'dd_translate_probability'];
   assert.equal(surfaces.counts.mcp_tools_live, 26);
-  assert.equal(surfaces.counts.mcp_tools_staged, 4);
+  assert.equal(surfaces.counts.mcp_tools_staged, 5);
   assert.ok(surfaces.mcp.tools_live.includes('dd_survivor_ev'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_optimize_survivor_path'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_analyze_matchup'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_solve_dfs_lineup'));
   poundMcp.forEach(name => assert.ok(surfaces.mcp.tools_live.includes(name), name));
-  assert.deepEqual(surfaces.mcp.tools_staged, ['dd_cfb_team_profile', 'dd_compare_cfb_teams', 'dd_project_cfb_matchup', 'dd_project_cfb_schedule_path']);
+  assert.deepEqual(surfaces.mcp.tools_staged, ['dd_cfb_team_profile', 'dd_compare_cfb_teams', 'dd_project_cfb_matchup', 'dd_project_cfb_schedule_path', 'dd_find_cfb_record_divergence']);
 });
 test('survivor surface exposes the exact path optimizer and names its remaining rule gap', () => {
   const survivor = surfaces.data.find(s => s.id === 'survivor');
@@ -206,6 +206,7 @@ test('CFB roadmap ideas carry evidence-backed lifecycle without inventing tools'
   assert.equal(byId['cfb-public-outputs'].implemented, true);
   assert.equal(byId['cfb-fraud-detector'].lifecycle_status, 'evaluating');
   assert.equal(byId['cfb-fraud-detector'].implemented, true);
+  assert.ok(byId['cfb-fraud-detector'].candidate_mcp_tools.includes('dd_find_cfb_record_divergence'));
   assert.equal(byId['cfb-ratings-registry'].lifecycle_status, 'live');
   assert.equal(byId['cfb-ratings-registry'].implemented, true);
   assert.equal(byId['cfb-elo'].lifecycle_status, 'live');
@@ -282,7 +283,7 @@ test('the 12-step roadmap ordering is stored explicitly and stays consistent', (
 });
 test('the implemented CFB MCP tools are staged locally but no candidate is claimed live', () => {
   const candidates = new Set(cfbIdeas.flatMap(i => i.candidate_mcp_tools || []));
-  const staged = new Set(['dd_cfb_team_profile', 'dd_compare_cfb_teams', 'dd_project_cfb_matchup', 'dd_project_cfb_schedule_path']);
+  const staged = new Set(['dd_cfb_team_profile', 'dd_compare_cfb_teams', 'dd_project_cfb_matchup', 'dd_project_cfb_schedule_path', 'dd_find_cfb_record_divergence']);
   assert.ok(candidates.size >= 12);
   for (const name of candidates) {
     assert.ok(!surfaces.mcp.tools_live.includes(name), `${name} falsely live`);
