@@ -424,6 +424,12 @@
      "tool": "dd_translate_probability",
      "status": "live",
      "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
+    },
+    {
+     "kind": "json",
+     "url": "/data/cfb-schedule.json",
+     "status": "live",
+     "covers": "canonical 2025 CFB schedule and result facts, FBS-involved games only (roadmap step 1)"
     }
    ],
    "planned": [],

@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 13225,
+    "bytes": 13426,
     "as_of": "2026-08-08",
-    "sha256": "9805491ca72f06ad829fceaa343712e1aecf13c9f34a14a4e883fc8c118d5e80",
+    "sha256": "106fb9d35362dfc2946ceace09c64a911830b6816387539ce00aea4919790ae5",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -133,6 +133,14 @@
     "as_of": "2026-08-08",
     "sha256": "932ef46f769511764c81220b06a2ec4f4a1310691204ea93db8139c0fd689dba",
     "note": "Prospective 2026 probabilities from the original 538 Classic Elo mathematics. They are ungraded, contain no QB, injury, weather or market adjustment, and are a permanent simple benchmark rather than a claim of current superiority."
+   },
+   {
+    "path": "/data/cfb-schedule.json",
+    "url": "https://datadawgs216.com/data/cfb-schedule.json",
+    "bytes": 601213,
+    "as_of": "2026-08-08",
+    "sha256": "e136e29e5e49f3369b0945972132edf798224b6d70de4d75400a0a62ec8ac568",
+    "note": "Canonical CFB schedule and result facts for FBS-involved games only. Upstream modelled columns (win probabilities, ESPN Elo, excitement index) are deliberately excluded: they are model outputs, not facts, and carry no methodology metadata. Git history retains every changed snapshot; downstream work must record integrity.snapshot_id."
    }
   ],
   "markdown": [
