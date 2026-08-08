@@ -218,7 +218,8 @@ test('published CFB backbone artifacts are discoverable without overstating thei
   const machine = Object.fromEntries(pound.machine.filter(x => x.url && x.url.includes('/cfb-')).map(x => [x.url, x]));
   assert.deepEqual(Object.keys(machine).sort(), ['/data/cfb-disagreement.json', '/data/cfb-elo.json',
     '/data/cfb-market.json', '/data/cfb-model-cards.json', '/data/cfb-model-receipts.json',
-    '/data/cfb-ratings.json', '/data/cfb-record-divergence.json', '/data/cfb-schedule.json',
+    '/data/cfb-ratings.json', '/data/cfb-record-divergence-validation.json',
+    '/data/cfb-record-divergence.json', '/data/cfb-schedule.json',
     '/data/cfb-team-game.json', '/data/cfb-team-week.json', '/data/cfb-teams.json']);
   assert.match(machine['/data/cfb-market.json'].covers, /observation time is explicitly unknown/i);
   assert.match(machine['/data/cfb-market.json'].covers, /not closing lines/i);
@@ -230,6 +231,8 @@ test('published CFB backbone artifacts are discoverable without overstating thei
   assert.match(machine['/data/cfb-team-week.json'].covers, /results-only/i);
   assert.match(machine['/data/cfb-teams.json'].covers, /separating observed 2025 results/i);
   assert.match(machine['/data/cfb-record-divergence.json'].covers, /no predictive or overrated\/underrated labels/i);
+  assert.match(machine['/data/cfb-record-divergence-validation.json'].covers, /aggregate-only chronological holdout/i);
+  assert.match(machine['/data/cfb-record-divergence-validation.json'].covers, /no team labels/i);
 });
 test('CFB dependency, related-idea and governance references resolve', () => {
   const ids = new Set(cfbIdeas.map(i => i.id));

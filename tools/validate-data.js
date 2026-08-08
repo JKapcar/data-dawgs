@@ -420,6 +420,43 @@ console.log('\nCFB record divergence — descriptive baseline, not a verdict');
   else ok(`${rows.length} descriptive divergence rows publish no predictive labels`);
 }
 
+console.log('\nCFB record divergence - chronological aggregate validation');
+{
+  const teamGame = JSON.parse(fs.readFileSync(path.join(DATA, 'cfb-team-game.json'), 'utf8'));
+  const elo = JSON.parse(fs.readFileSync(path.join(DATA, 'cfb-elo.json'), 'utf8'));
+  const validation = JSON.parse(fs.readFileSync(path.join(DATA, 'cfb-record-divergence-validation.json'), 'utf8'));
+  const data = validation.data || {};
+  const result = data.result || {};
+  const holdout = result.holdout || {};
+  const decision = data.roadmap_decision || {};
+  const checks = (result.promotion_gate && result.promotion_gate.checks) || {};
+  const passed = Object.keys(checks).length > 0 && Object.values(checks).every(Boolean);
+  const serialized = JSON.stringify(data);
+  if (data.status !== 'retrodictive-chronological-validation' || validation.graded !== false)
+    fail('cfb-record-divergence-validation.json: retrodictive evidence boundary is missing');
+  else if (data.inputs.team_game_snapshot_id !== teamGame.integrity.snapshot_id ||
+           data.inputs.elo_snapshot_id !== elo.integrity.snapshot_id ||
+           JSON.stringify(data.inputs.elo_season_source_snapshots) !== JSON.stringify(elo.data.seasons_ingested))
+    fail('cfb-record-divergence-validation.json: input snapshot receipts drifted');
+  else if (!data.design.pregame_only || !data.design.simultaneous_kickoffs_batched_before_state_update ||
+           data.design.market_adjusted !== false)
+    fail('cfb-record-divergence-validation.json: leakage or evidence controls are missing');
+  else if (decision.team_labels_permitted !== false || decision.prospective_value_claimed !== false)
+    fail('cfb-record-divergence-validation.json: result overstates evidence');
+  else if (result.promotion_gate.passed !== passed ||
+           result.finding !== (passed ? 'held-out-incremental-signal' :
+             (checks.minimum_holdout_games === false ? 'underpowered' : 'no-held-out-improvement')))
+    fail('cfb-record-divergence-validation.json: promotion gate does not reconcile');
+  else if (Math.round((holdout.elo_baseline.brier_home_win - holdout.elo_plus_divergence.brier_home_win) * 1e6) / 1e6 !== holdout.brier_improvement_over_elo ||
+           Math.round((holdout.elo_baseline.log_loss_home_win - holdout.elo_plus_divergence.log_loss_home_win) * 1e6) / 1e6 !== holdout.log_loss_improvement_over_elo)
+    fail('cfb-record-divergence-validation.json: held-out score deltas do not reconcile');
+  else if (['"game_id"', '"home_team_slug"', '"away_team_slug"', '"predictive_label"'].some(field => serialized.includes(field)))
+    fail('cfb-record-divergence-validation.json: private row fields were published');
+  else if (!/^sha256:[0-9a-f]{64}$/.test(validation.integrity.snapshot_id || ''))
+    fail('cfb-record-divergence-validation.json: canonical snapshot identifier is missing');
+  else ok(`${result.qualified_games} pregame-only features; ${holdout.n_games} held-out games; ${result.finding}`);
+}
+
 console.log('\nWorker deployment contract');
 {
   const configPath = path.join(ROOT, 'wrangler.jsonc');

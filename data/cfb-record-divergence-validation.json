@@ -1,0 +1,172 @@
+{
+ "as_of": "2026-08-08",
+ "source": "Leakage-resistant chronological evaluation of /data/cfb-team-game.json record-versus-scoring divergence against the exact /data/cfb-elo.json baseline snapshots.",
+ "tier": "labs",
+ "graded": false,
+ "note": "RETRODICTIVE AGGREGATE VALIDATION. Finding: held-out-incremental-signal. This is not a prospective grade, not market-adjusted, and does not call any team overrated, underrated or a fraud.",
+ "provenance": {
+  "generator": "scripts/cfb_record_divergence_validation.py",
+  "captured_at": "2026-08-08T09:03:46.623137Z",
+  "private_rows_serialized": false
+ },
+ "integrity": {
+  "snapshot_id": "sha256:11fe8b205051bc2925b2a962b9176156b0c6523bfbbb89db60df36a8ad62d3c8",
+  "algorithm": "SHA-256 of canonical UTF-8 JSON for the data object (sorted object keys, no insignificant whitespace).",
+  "qualified_games": 582
+ },
+ "data": {
+  "schema_version": 1,
+  "season": 2025,
+  "status": "retrodictive-chronological-validation",
+  "hypothesis": "Holding Elo fixed, the team whose observed record ranks further ahead of its scoring margin should underperform; the incremental log-odds coefficient should therefore be negative.",
+  "inputs": {
+   "team_game_snapshot_id": "sha256:49f2793ff21328b254a15d719b77ed781d481cbdf9b31c31f4d70206935c098f",
+   "elo_snapshot_id": "sha256:414e0f27fba170d172db03a1a07fcca1bf83af09848de356ae3bd6fa83894237",
+   "elo_season_source_snapshots": [
+    {
+     "season": "2018",
+     "source_raw_sha256": "a4d4c2ccd06f933c1b6848b3ef4fddbc56695f6b066c9376b1249bfb9d29c00f",
+     "rows_canonical": "845"
+    },
+    {
+     "season": "2019",
+     "source_raw_sha256": "d8665fa0aced3d02d59405c8b9ff157ba00ef128a90c1c5eab31d268d917abac",
+     "rows_canonical": "848"
+    },
+    {
+     "season": "2020",
+     "source_raw_sha256": "f902a845a7e79199ab15dff7c3ed91ee7ef1cb54d32ef80fed5aad5c0ac6c316",
+     "rows_canonical": "542"
+    },
+    {
+     "season": "2021",
+     "source_raw_sha256": "91616be40e7f4d611a6e714ee7284cdd7372249888287b05b790019e9397d5fd",
+     "rows_canonical": "849"
+    },
+    {
+     "season": "2022",
+     "source_raw_sha256": "bfee92544d7269f764dcb5726ce5c037837cb100a8c6326e0e4c7103a2e6656d",
+     "rows_canonical": "854"
+    },
+    {
+     "season": "2023",
+     "source_raw_sha256": "7ffc245da1242fc44c021dae724029074aece78544ba498937cc7703417f0dff",
+     "rows_canonical": "910"
+    },
+    {
+     "season": "2024",
+     "source_raw_sha256": "3e4f3cab542657015ff73d1b527c41df58e6a17acf5fbe7d6fb518a1aabcac61",
+     "rows_canonical": "920"
+    },
+    {
+     "season": "2025",
+     "source_raw_sha256": "bfecf10bc5a8ffd2e3b6a76b5f0b03b406e17c1a0e03b2000bdf7e2263712db4",
+     "rows_canonical": "934"
+    }
+   ]
+  },
+  "design": {
+   "feature": "home record_scoring_rank_gap minus away record_scoring_rank_gap",
+   "minimum_prior_completed_games_per_team": 4,
+   "pregame_only": true,
+   "simultaneous_kickoffs_batched_before_state_update": true,
+   "split": "first 60% training / final 40% holdout at nearest whole-kickoff boundary",
+   "model": "logit(p_home) = logit(p_elo_home) + beta * standardized_relative_gap",
+   "fitted_parameters": [
+    "beta"
+   ],
+   "intercept_fitted": false,
+   "market_adjusted": false
+  },
+  "result": {
+   "qualified_games": 582,
+   "training": {
+    "n_games": 349,
+    "first_kickoff_at": "2025-09-21T03:59:00Z",
+    "last_kickoff_at": "2025-11-15T02:00:00Z",
+    "elo_baseline": {
+     "n_games": 349,
+     "brier_home_win": 0.194579,
+     "log_loss_home_win": 0.570843,
+     "favorite_accuracy": 0.702,
+     "mean_predicted_home_win": 0.5638,
+     "observed_home_win_rate": 0.5788
+    },
+    "elo_plus_divergence": {
+     "n_games": 349,
+     "brier_home_win": 0.193805,
+     "log_loss_home_win": 0.569459,
+     "favorite_accuracy": 0.7077,
+     "mean_predicted_home_win": 0.5637,
+     "observed_home_win_rate": 0.5788
+    }
+   },
+   "holdout": {
+    "n_games": 233,
+    "first_kickoff_at": "2025-11-15T17:00:00Z",
+    "last_kickoff_at": "2026-01-20T00:30:00Z",
+    "elo_baseline": {
+     "n_games": 233,
+     "brier_home_win": 0.171281,
+     "log_loss_home_win": 0.510326,
+     "favorite_accuracy": 0.7082,
+     "mean_predicted_home_win": 0.5602,
+     "observed_home_win_rate": 0.5751
+    },
+    "elo_plus_divergence": {
+     "n_games": 233,
+     "brier_home_win": 0.170158,
+     "log_loss_home_win": 0.508049,
+     "favorite_accuracy": 0.7253,
+     "mean_predicted_home_win": 0.5582,
+     "observed_home_win_rate": 0.5751
+    },
+    "brier_improvement_over_elo": 0.001123,
+    "log_loss_improvement_over_elo": 0.002277,
+    "directional_summary": {
+     "lowest_relative_gap_quartile": {
+      "n_games": 58,
+      "mean_relative_gap": -31.7241,
+      "mean_elo_residual": 0.061163
+     },
+     "highest_relative_gap_quartile": {
+      "n_games": 58,
+      "mean_relative_gap": 33.9483,
+      "mean_elo_residual": 0.017621
+     },
+     "high_minus_low_elo_residual": -0.043542,
+     "expected_sign": "negative"
+    }
+   },
+   "fit": {
+    "feature_standardization_mean_training_only": -1.518625,
+    "feature_standardization_scale_training_only": 28.537068,
+    "log_odds_coefficient": -0.11733051,
+    "iterations": 4,
+    "expected_coefficient_sign": "negative",
+    "intercept_fitted": false
+   },
+   "promotion_gate": {
+    "passed": true,
+    "checks": {
+     "minimum_holdout_games": true,
+     "coefficient_has_expected_negative_sign": true,
+     "holdout_brier_improves": true,
+     "holdout_log_loss_improves": true,
+     "extreme_quartile_residual_contrast_has_expected_negative_sign": true
+    }
+   },
+   "finding": "held-out-incremental-signal"
+  },
+  "roadmap_decision": {
+   "lifecycle_status": "evaluating",
+   "team_labels_permitted": false,
+   "prospective_value_claimed": false,
+   "reason": "A single-season retrodictive chronological holdout can challenge the feature but cannot authorize current-team fraud labels. Prospective receipts and timestamped market adjustment remain required."
+  },
+  "published_granularity": "aggregate-only; no game IDs, team identities or per-game predictions are serialized"
+ },
+ "tier_meaning": "Labs — useful and live, still being challenged. Open questions may remain about calibration, assumptions, data quality or edge. Use with your eyes open.",
+ "built": "2026-08-08",
+ "canonical_url": "https://datadawgs216.com/data/cfb-record-divergence-validation.json"
+}

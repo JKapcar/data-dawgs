@@ -89,9 +89,9 @@
    {
     "path": "/data/pound-tools.json",
     "url": "https://datadawgs216.com/data/pound-tools.json",
-    "bytes": 126581,
+    "bytes": 127159,
     "as_of": "2026-08-08",
-    "sha256": "ada1744738c7610bb0ad691edad8695db3056b4ab14d774c68029a25b142d981",
+    "sha256": "afd6cede534a7aabd6dab73808e97ace4df18873a1f35d4a58f93d16c79f270c",
     "note": "Two kinds of entry share this inventory. kind \"tool\" (NFL) carries delivery status. kind \"roadmap-idea\" (College Football) carries recommendation plus evidence-backed lifecycle and implementation state. A CFB artifact may be implemented without any MCP tool; candidate_mcp_tools are reservations and remain non-callable unless the independent Worker registry proves otherwise."
    },
    {
@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 15956,
+    "bytes": 16233,
     "as_of": "2026-08-08",
-    "sha256": "c9c93730507e415c6c84b5bfe063a4f7f352021c326fafb34bf6f6bbd1daf384",
+    "sha256": "65105e6738d1e97d89450a14580a1844af81095b86ba68e5e42dd463fc20b88c",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -221,6 +221,14 @@
     "as_of": "2026-08-08",
     "sha256": "490021d44f95f79ad0c354543d8279a934af09034dc3093d3162a70ed764955b",
     "note": "EMPTY BY DESIGN. No CFB forecast has yet been frozen before kickoff. This file publishes the append-only prospective receipt contract without manufacturing a backtest row or implying that the 2025 completed season was forecast live."
+   },
+   {
+    "path": "/data/cfb-record-divergence-validation.json",
+    "url": "https://datadawgs216.com/data/cfb-record-divergence-validation.json",
+    "bytes": 6340,
+    "as_of": "2026-08-08",
+    "sha256": "a66f55112e08aa5d51399efa4cf53f312f8c4f4ccd466422a631b2568aea0aa3",
+    "note": "RETRODICTIVE AGGREGATE VALIDATION. Finding: held-out-incremental-signal. This is not a prospective grade, not market-adjusted, and does not call any team overrated, underrated or a fraud."
    }
   ],
   "markdown": [

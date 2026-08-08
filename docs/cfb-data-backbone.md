@@ -87,6 +87,21 @@ play efficiency, turnover/decision variance and timestamped market context. The 
 gate is prospective: freeze the metric by week and test whether it predicts later games
 beyond Elo and the market before calling any team overrated, underrated or a fraud.
 
+`scripts/cfb_record_divergence_validation.py` performs the first challenge of that
+hypothesis and publishes aggregate-only evidence at
+`/data/cfb-record-divergence-validation.json`. Every feature is reconstructed from
+results completed before kickoff; games sharing a kickoff are evaluated as one batch
+before any of their outcomes update state. The first 60 percent of 582 qualified games
+fit one coefficient on top of Elo's fixed log-odds, and the final 233 games are held out
+at a whole-kickoff boundary. The coefficient had the expected negative sign. On holdout,
+the adjusted model improved Brier by 0.001123 and log loss by 0.002277, with favorite
+accuracy moving from 0.7082 to 0.7253.
+
+That is a small retrodictive held-out signal, not a current-team verdict. No game rows,
+team identities or predictions are published in the validation artifact; no prospective
+value is claimed, and the Fraud Detector remains `evaluating`. Team labels still require
+prospective confirmation and comparison against timestamped pregame market observations.
+
 ## Model cards (governance principle cfb-gov-model-cards)
 
 `scripts/cfb_model_cards.py refresh` publishes `/data/cfb-model-cards.json`: the purpose, target, features, training window, validation design, limitations, calibration, performance, failure modes, version and retirement status the CFB governance section requires before a model is promoted past the lab. Every performance number is read from the model's own published output rather than typed into the card, and the calibration narrative is generated from the bins, so a card cannot drift away from the thing it describes.

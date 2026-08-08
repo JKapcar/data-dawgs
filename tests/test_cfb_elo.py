@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import math
 import sys
 import unittest
@@ -126,6 +127,12 @@ class PublishedFileTests(unittest.TestCase):
         self.assertFalse(self.envelope["graded"])
         self.assertIn("MODELLED", self.envelope["note"])
         self.assertIn("retrodictive", self.envelope["note"].lower() + self.envelope["data"]["backtest"]["kind"])
+
+    def test_private_evaluation_rows_are_never_published(self):
+        serialized = json.dumps(self.envelope, sort_keys=True)
+        self.assertNotIn("_eval_rows", serialized)
+        self.assertNotIn("home_team_slug", serialized)
+        self.assertNotIn("away_team_slug", serialized)
 
 
 if __name__ == "__main__":

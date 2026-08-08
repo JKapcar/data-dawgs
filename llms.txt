@@ -29,10 +29,10 @@ and forecast scoring. Inputs are not stored. The scoreboard is descriptive and u
 
 ## College football
 
-- [2025 results](https://datadawgs216.com/data/cfb-schedule.json): 934 games; [compact profiles](https://datadawgs216.com/data/cfb-teams.json) separate observed records from retrodictive Elo.
+- [2025 results](https://datadawgs216.com/data/cfb-schedule.json): 934 games; [team profiles](https://datadawgs216.com/data/cfb-teams.json): observed records plus retrodictive Elo.
 - [Book market](https://datadawgs216.com/data/cfb-market.json): spreads, totals and devigged moneylines. Books are named but observation time is unknown; these are not closing lines and cannot establish CLV.
 - [CFB Elo](https://datadawgs216.com/data/cfb-elo.json), [registry](https://datadawgs216.com/data/cfb-ratings.json) and [card](https://datadawgs216.com/data/cfb-model-cards.json): end-2025; retrodictive, modelled, ungraded, not consensus or forecast.
-- [Disagreement probe](https://datadawgs216.com/data/cfb-disagreement.json): honestly `blocked` because untimestamped prices cannot separate model failure from later market information.
+- [Fraud test](https://datadawgs216.com/data/cfb-record-divergence-validation.json): small held-out lift beyond Elo; retrodictive, no team labels. [Disagreement](https://datadawgs216.com/data/cfb-disagreement.json): blocked on timestamped prices.
 - [Prospective receipts](https://datadawgs216.com/data/cfb-model-receipts.json): append-only contract, zero rows; no CFB forecast has been frozen before kickoff.
 - The 24-to-25-hour market collector is staged. Its endpoint is not live until Worker activation is verified.
 

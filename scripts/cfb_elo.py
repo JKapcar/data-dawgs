@@ -196,6 +196,13 @@ def run_backtest(market_path: Path | None = None) -> dict[str, Any]:
                 continue
             home_won = game["home_points"] > game["away_points"]
             eval_rows.append({
+                # Private join keys for in-process downstream evaluation only.  make_envelope()
+                # deliberately selects the public fields and never serializes _eval_rows.
+                "game_id": game["game_id"],
+                "kickoff_at": game["kickoff_at"],
+                "home_team_slug": game["home_team_slug"],
+                "away_team_slug": game["away_team_slug"],
+                "neutral_site": game["neutral_site"],
                 "p_home": pregame["p_home_pregame"],
                 "home_won": home_won,
                 "favorite_hit": (pregame["p_home_pregame"] >= 0.5) == home_won,

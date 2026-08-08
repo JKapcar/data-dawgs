@@ -395,6 +395,12 @@
     },
     {
      "kind": "json",
+     "url": "/data/cfb-record-divergence-validation.json",
+     "status": "live",
+     "covers": "aggregate-only chronological holdout test of record-versus-scoring divergence beyond Elo; retrodictive, not market-adjusted and no team labels"
+    },
+    {
+     "kind": "json",
      "url": "/data/cfb-market.json",
      "status": "live",
      "covers": "book-identified historical spreads, totals and devigged moneylines; observation time is explicitly unknown, so these are not closing lines"
