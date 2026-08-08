@@ -51,6 +51,14 @@ When the market file is present the backtest also scores the Elo against the mar
 
 The card reports the roadmap's lifecycle value read from `/data/pound-tools.json` instead of asserting its own. The roadmap still says `idea` for `cfb-elo`, which is accurate in the sense that nobody has advanced it; the card says so plainly rather than letting two files disagree. Advancing those entries is a governance decision, not a cleanup task.
 
+## Disagreement probe (roadmap step 3, idea cfb-disagreement-lab)
+
+`scripts/cfb_disagreement.py refresh` publishes `/data/cfb-disagreement.json`, which asks step 3's question directly: when the Elo and the market disagree, does either side systematically win?
+
+The measured pattern is clean. Bucketing the 783 paired games by the size of the disagreement, the market's Brier advantage over the Elo runs 0.0000, then 0.0011, then 0.0075, then 0.0565 as the gap widens. The finding is nonetheless published as **blocked**, because two explanations fit that shape equally well and this data cannot separate them: either the Elo is worst exactly where it is most confidently wrong, or the market simply had a later look at the same world. Untimestamped prices make the second explanation unfalsifiable here.
+
+What unblocks it is small and specific: market prices with a capture timestamp established before kickoff, from any book. One timestamped snapshot per game at a fixed pregame hour is enough, and a full line history is not required. Until that exists, step 3's headline question and the step 4 consensus engine that depends on it are gated on data rather than on modelling. That is a real finding about the roadmap order, and it is worth more than a confounded verdict would have been.
+
 ## Known limits and next steps
 
 - The 2026 season file does not exist upstream yet (checked 2026-08-08). When cfbfastR-data publishes it, `refresh --season 2026` produces the prospective schedule; until then the canonical surface is the completed 2025 season.

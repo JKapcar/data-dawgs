@@ -246,6 +246,7 @@ def run_backtest(market_path: Path | None = None) -> dict[str, Any]:
             ),
         }
     return {
+        "_eval_rows": eval_rows,  # in-process only; never published
         "season_provenance": season_provenance,
         "ratings": sorted(
             (

@@ -448,6 +448,12 @@
      "url": "/data/cfb-model-cards.json",
      "status": "live",
      "covers": "governance model cards for shipped CFB models; numbers generated from each model's own output"
+    },
+    {
+     "kind": "json",
+     "url": "/data/cfb-disagreement.json",
+     "status": "live",
+     "covers": "model-vs-market disagreement probe; finding withheld as blocked on untimestamped prices (roadmap step 3)"
     }
    ],
    "planned": [],

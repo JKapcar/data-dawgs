@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 14071,
+    "bytes": 14293,
     "as_of": "2026-08-08",
-    "sha256": "d3e3bdd8f34ff30b2a47c4e2d2ae90bf047e0ce81bcf7830b12884e4ba0604bf",
+    "sha256": "b928d0de49bd34844bf824905ad2a3fb059f664376b3bd700bb50c1f1af22450",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -165,6 +165,14 @@
     "as_of": "2026-08-08",
     "sha256": "5348f38356e937703f442b51e8ad24bb058098b277ce26351df2019359f9810c",
     "note": "Model cards for shipped CFB models, per the Model Cards governance principle in The Pound's CFB roadmap. A card documents what a model is for, what it cannot do and how it has actually scored. Nothing here is graded: no CFB forecast has been locked before kickoff yet."
+   },
+   {
+    "path": "/data/cfb-disagreement.json",
+    "url": "https://datadawgs216.com/data/cfb-disagreement.json",
+    "bytes": 4278,
+    "as_of": "2026-08-08",
+    "sha256": "6b4ec2c6f906018d86edb0c99ebf8447cda8c1e9dde092f524c4ea158027a761",
+    "note": "A probe, not a result. The market prices behind it have no observation timestamp, which confounds the only question the probe was built to answer. The measurement is published so the reasoning is checkable; the conclusion is withheld on purpose."
    }
   ],
   "markdown": [

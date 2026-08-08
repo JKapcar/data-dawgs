@@ -1,0 +1,96 @@
+{
+ "as_of": "2026-08-08",
+ "source": "Data Dawgs CFB Elo (/data/cfb-elo.json) against median devigged market prices (/data/cfb-market.json), 2025 FBS-vs-FBS finals.",
+ "tier": "labs",
+ "graded": false,
+ "note": "A probe, not a result. The market prices behind it have no observation timestamp, which confounds the only question the probe was built to answer. The measurement is published so the reasoning is checkable; the conclusion is withheld on purpose.",
+ "provenance": {
+  "engine": "scripts/cfb_disagreement.py",
+  "roadmap_idea": "cfb-disagreement-lab",
+  "roadmap_step": 3,
+  "market_timing": "unknown",
+  "captured_at": "2026-08-08T06:36:15.901850Z"
+ },
+ "integrity": {
+  "snapshot_id": "sha256:80a8cdc36c664f7eed13966abf1cfc6a207af663dc1148dfc96b1e9587478c8a",
+  "algorithm": "SHA-256 of canonical UTF-8 JSON for the data object (sorted object keys, no insignificant whitespace)."
+ },
+ "data": {
+  "question": "When the Data Dawgs CFB Elo and the market disagree, does either side systematically win?",
+  "finding": "blocked",
+  "why_blocked": "The available market prices carry no observation timestamp. If they are late, the widest-disagreement games are precisely the games where the market held news the model could not have held, so the market wins that bucket by construction. This design cannot separate a better method from a later look at the same world.",
+  "what_would_unblock_it": "Market prices with a capture timestamp established before kickoff, from any book. One timestamped snapshot per game at a fixed pregame hour is enough; a full line history is not required. Until then, step 3's headline question and the step 4 consensus engine that depends on it are both gated on data, not on modelling.",
+  "measured_anyway": {
+   "n_paired_games": 783,
+   "buckets": [
+    {
+     "gap_low": 0.0,
+     "gap_high": 0.05,
+     "n": 245,
+     "underpowered": false,
+     "mean_gap": 0.0243,
+     "elo_brier": 0.1753,
+     "market_brier": 0.1753,
+     "elo_accuracy": 0.7102,
+     "market_accuracy": 0.7224,
+     "observed_home_win_rate": 0.5796,
+     "market_brier_advantage": 0.0
+    },
+    {
+     "gap_low": 0.05,
+     "gap_high": 0.1,
+     "n": 204,
+     "underpowered": false,
+     "mean_gap": 0.0734,
+     "elo_brier": 0.1828,
+     "market_brier": 0.1817,
+     "elo_accuracy": 0.7353,
+     "market_accuracy": 0.7353,
+     "observed_home_win_rate": 0.5686,
+     "market_brier_advantage": 0.0011
+    },
+    {
+     "gap_low": 0.1,
+     "gap_high": 0.2,
+     "n": 225,
+     "underpowered": false,
+     "mean_gap": 0.1409,
+     "elo_brier": 0.1947,
+     "market_brier": 0.1872,
+     "elo_accuracy": 0.6889,
+     "market_accuracy": 0.7156,
+     "observed_home_win_rate": 0.5733,
+     "market_brier_advantage": 0.0075
+    },
+    {
+     "gap_low": 0.2,
+     "gap_high": null,
+     "n": 109,
+     "underpowered": false,
+     "mean_gap": 0.273,
+     "elo_brier": 0.2386,
+     "market_brier": 0.1821,
+     "elo_accuracy": 0.578,
+     "market_accuracy": 0.7248,
+     "observed_home_win_rate": 0.633,
+     "market_brier_advantage": 0.0565
+    }
+   ],
+   "widest_bucket": {
+    "gap_low": 0.2,
+    "n": 109,
+    "market_brier_advantage": 0.0565
+   },
+   "observed_pattern": "The market's Brier advantage rises with the disagreement gap, +0.0000 then +0.0011 then +0.0075 then +0.0565. Two explanations fit this equally well and the data cannot separate them: the Elo is worst exactly where it is most confidently wrong, or the market simply knew something later. Both predict this shape.",
+   "reading_if_prices_were_timestamped_and_pregame": "A market Brier advantage that grows with the disagreement gap would say the Elo's confident disagreements are where it is most wrong, and that blending toward the market is the correct move. A flat or shrinking advantage would say the Elo carries something the market does not, which is the only case where a consensus engine earns its keep."
+  },
+  "governance": [
+   "cfb-gov-correlation",
+   "cfb-gov-incremental",
+   "cfb-gov-uncertainty"
+  ]
+ },
+ "tier_meaning": "Labs — useful and live, still being challenged. Open questions may remain about calibration, assumptions, data quality or edge. Use with your eyes open.",
+ "built": "2026-08-08",
+ "canonical_url": "https://datadawgs216.com/data/cfb-disagreement.json"
+}
