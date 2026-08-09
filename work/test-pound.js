@@ -55,8 +55,8 @@ test('belief summary statistics', () => {
 });
 test('bad odds fail closed', () => assert.throws(() => P.americanToDecimal(-50)));
 test('bad probability fails closed', () => assert.throws(() => P.beliefSummary([1.2])));
-test('every Pound inline script parses', () => {
-  const html = fs.readFileSync('pound.html', 'utf8');
+test('every DawgHouse inline script parses', () => {
+  const html = fs.readFileSync('dawghouse.html', 'utf8');
   const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map(m => m[1]);
   assert.ok(scripts.length >= 3);
   scripts.forEach((source, i) => assert.doesNotThrow(() => new vm.Script(source, { filename: `pound-inline-${i}.js` })));

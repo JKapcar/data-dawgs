@@ -409,8 +409,8 @@ test('the seven governance principles are preserved as shared metadata', () => {
     'Model Cards', 'Snapshotting / Receipts', 'Source Provenance', 'Uncertainty']);
   for (const g of roadmap.governance) assert.ok(g.principle && g.applies_to, g.id);
 });
-test('pound.html renders the CFB roadmap honestly', () => {
-  const html = fs.readFileSync('pound.html', 'utf8');
+test('dawghouse.html renders the CFB roadmap honestly', () => {
+  const html = fs.readFileSync('dawghouse.html', 'utf8');
   assert.match(html, /<section class="p-section" id="cfb">/);
   assert.match(html, /roadmap ideas, not automatically tools/i);
   assert.match(html, /Candidate MCP tool names remain reservations/);
@@ -427,8 +427,8 @@ test('pound.html renders the CFB roadmap honestly', () => {
    them went live in /data/surfaces.json. The page and the machine surface disagreed and
    only the machine surface was right. So: the page may not contain the answer, it must
    compute it, and these assertions check the mechanism rather than the number. */
-test('pound.html computes the callable CFB tool count instead of stating one', () => {
-  const html = fs.readFileSync('pound.html', 'utf8');
+test('dawghouse.html computes the callable CFB tool count instead of stating one', () => {
+  const html = fs.readFileSync('dawghouse.html', 'utf8');
   assert.ok(!/\d+ candidate CFB MCP tools callable/.test(html),
     'the callable count is typed into the page again');
   assert.ok(!html.includes('Candidate MCP tools (not callable)'),
@@ -471,28 +471,88 @@ test('build-pound.py cannot silently delete the CFB section', () => {
   assert.match(bp, /DD_REBUILD_POUND/);
 });
 
-test('all shared-nav pages point at pound.html exactly once', () => {
+test('all shared-nav pages point at dawghouse.html exactly once, and never at the old name', () => {
   const pages = fs.readdirSync('.').filter(x => x.endsWith('.html'));
   let covered = 0;
   for (const page of pages) {
     const html = fs.readFileSync(page, 'utf8');
     if (!html.includes('const NAV = [')) continue;
     covered++;
-    assert.equal((html.match(/label:"The Pound"/g) || []).length, 1, page);
-    assert.equal((html.match(/href:"pound\.html"/g) || []).length, 1, page);
+    assert.equal((html.match(/label:"The DawgHouse"/g) || []).length, 1, page);
+    assert.equal((html.match(/href:"dawghouse\.html"/g) || []).length, 1, page);
+    assert.equal((html.match(/label:"The Pound"/g) || []).length, 0, page);
+    // no link may point at the stub (prose/comments may still name the old file)
+    assert.equal((html.match(/(?:href="|href:"|\[")pound\.html/g) || []).length, 0,
+      `${page} still links pound.html — the stub is not a destination`);
   }
   assert.ok(covered >= 19);
 });
-test('Pound page declares its tier and accessible result regions', () => {
-  const html = fs.readFileSync('pound.html', 'utf8');
-  assert.match(html, /class="tierchip"[^>]*>The Pound<\/a>/);
+test('DawgHouse page declares its tier and accessible result regions', () => {
+  const html = fs.readFileSync('dawghouse.html', 'utf8');
+  assert.match(html, /class="tierchip"[^>]*>The DawgHouse<\/a>/);
   assert.ok((html.match(/aria-live="polite"/g) || []).length >= 10);
   assert.match(html, /MODELLED:/);
-  assert.match(html, /<option>ready<\/option>/);
   assert.match(html, /live, read-only Worker tools/i);
   assert.match(html, /<b>Live MCP:<\/b>/);
   assert.match(html, /Week 1 nfelo and 538 Classic belief scoreboard/);
   assert.match(html, /\/data\/model-receipts\.json/);
+});
+
+/* ---- CEP-5A Stage 1a: the rename, graded ---------------------------------------- */
+
+test('the rename did not touch stored machine values', () => {
+  // Invariant 13. The human label moved; the machine key must not.
+  const row = surfaces.data.find(s => s.id === 'pound');
+  assert.ok(row, 'surfaces.json lost its pound row');
+  assert.equal(row.tier, 'pound',
+    'tier flipped — tierOf() matched "dawg" before "dawghouse" and promoted the shelf to a collar');
+  assert.equal(row.page, '/dawghouse.html');
+  assert.match(row.name, /DawgHouse/);
+  assert.equal(surfaces.policy.tiers.pound.includes('DawgHouse'), true);
+  for (const env of [tools, contracts, upstream]) assert.equal(env.tier, 'pound');
+});
+test('pound.html is a redirect stub, not a second copy of the page', () => {
+  const html = fs.readFileSync('pound.html', 'utf8');
+  assert.ok(html.length < 4000, `stub is ${html.length} B — a stub, not a page`);
+  assert.match(html, /http-equiv=["']refresh["']/i);
+  assert.match(html, /name="robots" content="noindex"/);
+  assert.match(html, /rel="canonical" href="https:\/\/datadawgs216\.com\/dawghouse\.html"/);
+  // replace() so the stub leaves no history trap, and the hash survives the hop
+  assert.match(html, /location\.replace\("dawghouse\.html"\+location\.search\+location\.hash\)/);
+  assert.ok(!html.includes('const NAV = ['), 'the stub must not carry the nav');
+});
+test('the shelf holds only blocked work; complete tools left it', () => {
+  const html = fs.readFileSync('dawghouse.html', 'utf8');
+  assert.match(html, /t\.status!=="complete"/,
+    'the shelf filter is gone — complete tools are back on the shelf');
+  assert.ok(!html.includes('<option>complete</option>'), 'the status filter still offers complete');
+  assert.ok(!html.includes('<option>ready</option>'), 'the status filter still offers ready');
+  assert.match(html, /The complete NFL tools left the shelf on 2026-08-09/);
+  // the machine inventory keeps every row — reduction is presentation, not deletion
+  assert.equal(nflTools.filter(t => t.status === 'complete').length, 14);
+  assert.equal(nflTools.filter(t => t.status !== 'complete').length, 8);
+});
+test('the homepage lifecycle card tells the current truth', () => {
+  const html = fs.readFileSync('index.html', 'utf8');
+  assert.match(html, /it goes to The DawgHouse with the reason attached/);
+  assert.match(html, /The DawgHouse<\/a> is no longer empty; every tenant keeps its reason and its way back/);
+  assert.ok(!html.includes('The Pound is empty today'), 'the sentence the update note falsified is back');
+  assert.ok(!html.includes('Update · 2026-08-07'), 'the superseded update note survived');
+});
+test('the rename is recorded in Receipts as a material change', () => {
+  const html = fs.readFileSync('receipts.html', 'utf8');
+  assert.match(html, /<h2>Material changes<\/h2>/);
+  assert.match(html, /2026-08-09 &mdash; The Pound is renamed The DawgHouse/);
+  const md = fs.readFileSync(path.join('data', 'receipts-method.md'), 'utf8');
+  assert.match(md, /## Material changes/);
+  assert.match(md, /The Pound is renamed The DawgHouse/);
+});
+test('the dated 2026-08-07 tier audit keeps its original wording', () => {
+  // A dated record is history, not a label. The rename must not edit it.
+  const html = fs.readFileSync('receipts.html', 'utf8');
+  assert.match(html, /The empty Pound is the biggest finding/);
+  const audit = read('tier-audit.json');
+  assert.match(audit.headline_finding, /The Pound is empty/);
 });
 
 console.log(`\n${pass} passed / 0 failed`);

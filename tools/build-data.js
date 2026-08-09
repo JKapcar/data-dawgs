@@ -245,14 +245,19 @@ function tierOf(page) {
   const chip = html.match(/class="tierchip[^"]*"[^>]*>([^<]+)</);
   if (!chip) return TIERS.labs;                       // no chip = implicitly Labs
   const label = chip[1].trim().toLowerCase();
+  /* ⚠️ ORDER AND PREFIX BOTH MATTER HERE. The chip reads "The DawgHouse": it does not
+     start with "dawg" (the article) and no longer contains "pound", so the pre-rename
+     logic silently demoted the shelf to labs — proven red in test-pound-contracts.js.
+     Match the shelf name explicitly, and before any dawg check, so a future chip
+     without the article ("DawgHouse") cannot be promoted to a collar either. */
+  if (label.includes('dawghouse') || label.includes('pound')) return TIERS.pound;
   if (label.startsWith('dawg')) return TIERS.dawg;
-  if (label.includes('pound')) return TIERS.pound;
   return TIERS.labs;
 }
 const TIER_MEANING = {
   labs: 'Labs — useful and live, still being challenged. Open questions may remain about calibration, assumptions, data quality or edge. Use with your eyes open.',
   dawg: 'Working Dawg — earned its collar. Evidence survived validation: receipts against a benchmark chosen in advance for forecasters, named sources and reproducible maths for measurement tools.',
-  pound: 'The Pound — shelved, with the reason attached.',
+  pound: 'The DawgHouse (formerly The Pound) — shelved, with the reason attached.',
 };
 
 function write(name, env) {
@@ -608,7 +613,7 @@ const UPSTREAM_MODELS = [
     upstream_commit: 'fe4e41899b94e465d583e4c919ff39840dc64aa6', version: null,
     captured_at: '2026-08-07', license: null, license_status: 'unverified-no-license-file',
     integration_mode: 'pending', data_status: 'no canonical Data Dawgs output',
-    notes: 'The Pound includes an independent transparent HFA calculator, not copied upstream code.' },
+    notes: 'The DawgHouse includes an independent transparent HFA calculator, not copied upstream code.' },
   { id: 'nfelounits', creator: 'Robert Greer', repository: 'greerreNFL/nfelounits',
     upstream_commit: '626415483728ec3ee3c9d8af21a373ed9a498d8b', version: null,
     captured_at: '2026-08-07', license: null, license_status: 'research-and-educational-language-only',
@@ -623,7 +628,7 @@ const UPSTREAM_MODELS = [
     upstream_commit: '5cf05b54063e10085146e358e91b90193f1ef8c5', version: '0.2.2',
     captured_at: '2026-08-07', license: null, license_status: 'unverified-no-license-declaration',
     integration_mode: 'reimplementation', data_status: 'independent normal-model approximation available',
-    notes: 'The Pound implementation uses Data Dawgs published normal-margin parameters and does not copy upstream package code or fitted key-number distributions.' },
+    notes: 'The DawgHouse implementation uses Data Dawgs published normal-margin parameters and does not copy upstream package code or fitted key-number distributions.' },
   { id: 'wepa', creator: 'Robert Greer', repository: 'greerreNFL/wepa',
     upstream_commit: 'e11013e5ae8e7c94117006a8b7ef501dd51c299a', version: 'v3',
     captured_at: '2026-08-07', license: null, license_status: 'unverified-no-license-file',
@@ -633,7 +638,7 @@ const UPSTREAM_MODELS = [
     upstream_commit: '97c8542480a96666109c422682c72e3b7dd6ca4d', version: null,
     captured_at: '2026-08-07', license: null, license_status: 'unverified-no-license-file',
     integration_mode: 'reimplementation', data_status: 'independent pregame normal-model calculator available',
-    notes: 'The upstream repository describes a live-game ML model. The Pound does not copy it and clearly labels its simpler pregame approximation.' },
+    notes: 'The upstream repository describes a live-game ML model. The DawgHouse does not copy it and clearly labels its simpler pregame approximation.' },
 ];
 
 const MODEL_CONTRACTS = {
@@ -807,10 +812,10 @@ const POUND_TOOLS = [
   const liveTool = POUND_LIVE_MCP[id] || existingTool;
   return {
     id, name, intended_user_value,
-    existing_website_implementation: id === 'nfelo' ? '/nfelo.html + /pound.html#scoreboard'
-      : id === 'model-scoreboard' ? '/pound.html#scoreboard'
-      : id === 'disagreement' ? '/pound.html#scoreboard + /pound.html#calculators'
-      : calculatorIds.has(id) ? '/pound.html#calculators' : '/pound.html#inventory',
+    existing_website_implementation: id === 'nfelo' ? '/nfelo.html + /dawghouse.html#scoreboard'
+      : id === 'model-scoreboard' ? '/dawghouse.html#scoreboard'
+      : id === 'disagreement' ? '/dawghouse.html#scoreboard + /dawghouse.html#calculators'
+      : calculatorIds.has(id) ? '/dawghouse.html#calculators' : '/dawghouse.html#inventory',
     existing_worker_mcp_implementation: liveTool,
     staged_worker_mcp_implementation: null,
     required_data, human_facing_ui_requirement: human_ui, ai_language_requirement: ai_language,
@@ -1126,7 +1131,7 @@ const SURFACES = [
   { id: 'guillotine', name: 'Guillotine league tools', page: '/guillotine.html',
     machine: [{ kind: 'mcp', tool: 'dd_guillotine_odds', status: 'live' }],
     planned: ['json:/data/guillotine.json'] },
-  { id: 'pound', name: 'The Pound model and calculator workbench', page: '/pound.html',
+  { id: 'pound', name: 'The DawgHouse model and calculator workbench (formerly The Pound)', page: '/dawghouse.html',
     machine: [{ kind: 'json', url: '/data/pound-tools.json', status: 'live', covers: 'complete NFL tool inventory plus the College Football roadmap with evidence-backed lifecycle state and sixteen production CFB MCP tools' },
               { kind: 'json', url: '/data/model-contracts.json', status: 'live', covers: 'forecast, receipt and calculator contracts' },
               { kind: 'json', url: '/data/upstream-models.json', status: 'live', covers: 'source, commit and license provenance' },

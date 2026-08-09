@@ -73,25 +73,25 @@
    {
     "path": "/data/upstream-models.json",
     "url": "https://datadawgs216.com/data/upstream-models.json",
-    "bytes": 6945,
+    "bytes": 6982,
     "as_of": "2026-08-08",
-    "sha256": "b5cfa38a4f0fc8f238542ece490c6862920989ea38bba07b2ad81dd1b98d9e47",
+    "sha256": "3d2114093c8279a8f5cf1f413d89abf6fcd8ce776021b55ec1343fbb24cbf255",
     "note": "License status is an implementation gate, not legal advice. Public code without a verified reusable license is not copied or repackaged."
    },
    {
     "path": "/data/model-contracts.json",
     "url": "https://datadawgs216.com/data/model-contracts.json",
-    "bytes": 6114,
+    "bytes": 6139,
     "as_of": "2026-08-08",
-    "sha256": "456fa173096db5b3609f29171035ff90e52cf445457048b49afe8ba2a9efe25d",
+    "sha256": "094403373e0f89af4be63295ee02635c7723618e9343df37bb26ef6caf6ad958",
     "note": "A contract is not a forecast. It prevents incompatible models and missing values from being silently normalized into false agreement."
    },
    {
     "path": "/data/pound-tools.json",
     "url": "https://datadawgs216.com/data/pound-tools.json",
-    "bytes": 132130,
+    "bytes": 132247,
     "as_of": "2026-08-08",
-    "sha256": "d1e1d38f02da8112a03565184cdddc6a6afc70bb3897a2a806586af38d85ec4d",
+    "sha256": "61189d33890ded6d4bf75b77aad322661b5d2578676b9881823f75c8f9a05f25",
     "note": "Two kinds of entry share this inventory. kind \"tool\" (NFL) carries delivery status. kind \"roadmap-idea\" (College Football) carries recommendation plus evidence-backed lifecycle and implementation state. A CFB artifact may be implemented without any MCP tool; candidate_mcp_tools are reservations and remain non-callable unless the independent Worker registry proves otherwise."
    },
    {
@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 26376,
+    "bytes": 26430,
     "as_of": "2026-08-09",
-    "sha256": "e4e6e6385c78af04056fa9db804a3f87b3a93c8dc57f4a6ea6333d6ff34f2831",
+    "sha256": "c8e713e7a5dff272577c950d8f0c73bf95bffb4bcec48810c9ec5f28f3a7f079",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -266,8 +266,8 @@
    {
     "path": "/data/receipts-method.md",
     "url": "https://datadawgs216.com/data/receipts-method.md",
-    "bytes": 4300,
-    "sha256": "8faad8c7d4f8a48e92d0319c1ff5239d413b26283c388c05f4df1db80a76f28c",
+    "bytes": 4923,
+    "sha256": "b5c6405d7d73211b593d101e64901031f4e19682c810c8fb08f0dc4fb7da3de4",
     "as_of": "2026-08-06"
    },
    {

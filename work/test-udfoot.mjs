@@ -23,7 +23,7 @@ await new Promise(r=>server.listen(8917,r));
 const b=await chromium.launch({executablePath:chromiumExecutable(chromium),args:["--no-sandbox"]});
 const PAGES=["auction.html","bigboard.html","board.html","bozo.html","cfb.html","connect.html","dashboard.html",
  "dataviz.html","dawgs.html","dfs.html","guillotine.html","index.html","master.html","nfelo.html",
- "pound.html","receipts.html","report.html","signon.html","stats.html","strategy.html","survivor.html"];
+ "dawghouse.html","receipts.html","report.html","signon.html","stats.html","strategy.html","survivor.html"];
 const errs=[];
 for(const W of [1280,390,320]){
  for(const f of PAGES){
@@ -105,7 +105,7 @@ for(const W of [1280,390,320]){
 {
  const ctx=await b.newContext({viewport:{width:1280,height:900}});
  const p=await ctx.newPage(); p.on("pageerror",e=>errs.push("toggle: "+e.message));
- await p.goto("http://127.0.0.1:8917/pound.html",{waitUntil:"load"});
+ await p.goto("http://127.0.0.1:8917/dawghouse.html",{waitUntil:"load"});
  await p.waitForTimeout(300);
  await p.locator("#udBtn").scrollIntoViewIfNeeded();
  await p.locator("#udBtn").click();

@@ -96,3 +96,15 @@ The reason the spec is published is so you don't have to trust this site. Recomp
 Forecasts from [nfelo](https://github.com/greerreNFL/nfelo) (MIT), snapshot `0d3f8418`.
 Schedule and closing lines from [nflverse/nfldata](https://github.com/nflverse/nfldata).
 Finals from ESPN. Call sheet locked 2026-08-06.
+
+## Material changes
+
+Changes to how this site names or frames its claims, recorded rather than applied
+silently. The forecast rows are covered by the hash above; this list covers what the
+hash cannot see.
+
+- **2026-08-09 — The Pound is renamed The DawgHouse.** Human-facing labels only:
+  /pound.html forwards to /dawghouse.html. Stored machine values did not move — `tier`
+  stays `pound` and /data/pound-tools.json keeps its name. No forecast, probability or
+  benchmark changed. The same day the shelf was reduced to genuinely blocked work; the
+  complete NFL tools left it. Full inventory: /data/pound-tools.json.

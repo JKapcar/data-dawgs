@@ -72,17 +72,20 @@ changed = git("diff", "--name-only", BASE, HEAD).decode().strip().splitlines()
 changed = [f for f in changed if f]
 assert changed, "nothing changed between those commits"
 
-patches, whole, sizes = {}, {}, {}
-for f in changed:
-    try:
-        old_text = at(BASE, f)
-    except subprocess.CalledProcessError:
-        whole[f] = at(HEAD, f)          # new file: nothing to anchor against
-        continue
-    new_text = at(HEAD, f)
+# ⚠️ A NEW FILE CAN BE DERIVED FROM A SIBLING'S BASE BLOB instead of crossing whole.
+# dawghouse.html is 184 KB "new", but it is pound.html at BASE plus a rename sweep —
+# exactly the signon.html-from-connect.html move, formalized. DD_DERIVE names the
+# sibling ("new.html=old.html,..."); the page fetches the SIBLING at the pinned base
+# commit, applies anchored pairs, and the SHA check judges the result like any patch.
+DERIVE_MAP = dict(kv.split("=") for kv in
+                  filter(None, __import__("os").environ.get("DD_DERIVE", "").split(",")))
+
+
+def anchored_pairs(old_text, new_text):
+    """Anchored (old, new) pairs unique in old_text, or None if one cannot be grown."""
     a, b = old_text.splitlines(keepends=True), new_text.splitlines(keepends=True)
     sm = difflib.SequenceMatcher(None, a, b, autojunk=False)
-    pairs, failed = [], False
+    pairs = []
     for tag, i1, i2, j1, j2 in sm.get_opcodes():
         if tag == "equal":
             continue
@@ -98,17 +101,38 @@ for f in changed:
                 break
             ctx += 1
             if ctx > MAX_CONTEXT:
-                failed = True
-                break
-        if failed:
-            break
-    if failed:
-        assert len(new_text) < WHOLE_FILE_LIMIT, \
-            f"{f}: no unique anchor and too large ({len(new_text)} B) to send whole"
-        whole[f] = new_text
-    else:
+                return None
+    return pairs
+
+
+patches, whole, derived, sizes = {}, {}, {}, {}
+for f in changed:
+    new_text = at(HEAD, f)
+    try:
+        old_text = at(BASE, f)
+    except subprocess.CalledProcessError:
+        sib = DERIVE_MAP.get(f)
+        if sib:
+            pairs = anchored_pairs(at(BASE, sib), new_text)
+            assert pairs is not None, f"{f}: cannot be derived from {sib} with unique anchors"
+            derived[f] = {"from": sib, "pairs": pairs}
+            sizes[f] = sum(len(o) + len(n) for o, n in pairs)
+            continue
+        whole[f] = new_text             # new file: nothing to anchor against
+        sizes[f] = len(new_text)
+        continue
+    pairs = anchored_pairs(old_text, new_text)
+    # ⚠️ A REWRITE IS NOT A PATCH. When a file's new content shares almost nothing with
+    # its base (pound.html becoming a 1.5 KB stub), the "patch" would carry the entire
+    # old file as its anchor. Ship the smaller representation.
+    if pairs is not None and sum(len(o) + len(n) for o, n in pairs) <= len(new_text):
         patches[f] = pairs
-    sizes[f] = sum(len(o) + len(n) for o, n in pairs) if not failed else len(new_text)
+        sizes[f] = sum(len(o) + len(n) for o, n in pairs)
+    else:
+        assert len(new_text) < WHOLE_FILE_LIMIT, \
+            f"{f}: no affordable anchor and too large ({len(new_text)} B) to send whole"
+        whole[f] = new_text
+        sizes[f] = len(new_text)
 
 # ---- prove it, against the real base blobs ----
 expected, produced = {}, {}
@@ -116,8 +140,10 @@ for f in changed:
     if f in whole:
         produced[f] = whole[f]
     else:
-        s = at(BASE, f)
-        for o, n in patches[f]:
+        src = derived[f]["from"] if f in derived else f
+        prs = derived[f]["pairs"] if f in derived else patches[f]
+        s = at(BASE, src)
+        for o, n in prs:
             assert s.count(o) == 1, f"{f}: anchor is not unique at apply time"
             s = s.replace(o, n, 1)
         produced[f] = s
@@ -179,7 +205,8 @@ def refify(text, targets, index):
     return "".join(out)
 
 
-targets = {f: produced[f] for f in patches}
+# derived files are rebuilt before whole files resolve refs, so they are targets too
+targets = {f: produced[f] for f in list(patches) + list(derived)}
 INDEX = {f: _index(t, MIN_REF) for f, t in targets.items()}
 squeezed, saved = {}, 0
 for f in sorted(whole):
@@ -207,7 +234,7 @@ for f in squeezed:
     assert unref(squeezed[f]) == whole[f], f"{f}: ref encoding does not round-trip"
 
 payload = {"base": git("rev-parse", BASE).decode().strip(),
-           "patches": patches, "whole": squeezed, "sha": expected}
+           "patches": patches, "derived": derived, "whole": squeezed, "sha": expected}
 raw = json.dumps(payload)
 b64 = base64.b64encode(gzip.compress(raw.encode("utf-8"), 9)).decode()
 # ⚠️ 2000, not 7000. The payload crosses into the page as text an assistant retypes,
@@ -227,10 +254,10 @@ for i, c in enumerate(chunks):
     "chunkLen": [len(c) for c in chunks],
     "chunkSha": [hashlib.sha256(c.encode()).hexdigest()[:8] for c in chunks],
     "jsonSha": sha(raw)[:16],
-    "patched": sorted(patches), "whole": sorted(whole),
+    "patched": sorted(patches), "derived": sorted(derived), "whole": sorted(whole),
 }, indent=1))
 if saved:
     print(f"cross-file refs saved {saved} raw B")
 print(f"{len(changed)} files reproduce {HEAD} exactly "
-      f"({len(patches)} patched, {len(whole)} whole)")
+      f"({len(patches)} patched, {len(derived)} derived, {len(whole)} whole)")
 print(f"raw {len(raw)} B -> gz+b64 {len(b64)} B in {len(chunks)} chunk(s) -> {out}/")
