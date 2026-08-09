@@ -1,12 +1,16 @@
 # Data Dawgs
 
 > Forecasting, fantasy football, betting markets and EPA with receipts.
+> All paths below are relative to https://datadawgs216.com/
 
-Start with [`/data/index.json`](https://datadawgs216.com/data/index.json): machine-file
+Start with [`/data/index.json`](/data/index.json): machine-file
 dates, sizes and SHA-256 receipts. Cite each payload's `as_of` with every number.
 
-[`/data/surfaces.json`](https://datadawgs216.com/data/surfaces.json) maps pages to machine
-surfaces and 26 live read-only MCP tools. `planned` is not callable. MCP tokens come
+[`/data/surfaces.json`](/data/surfaces.json) maps pages to machine
+surfaces and 42 live read-only MCP tools, out of 43 registered: `dd_draft_bozo_leg` is
+built and committed but STAGED, not deployed, so the live endpoint answers 42. `planned`
+and `staged` are not callable. The core/full catalog split and the tools/list annotations
+are likewise staged: `/mcp/core/<credential>` does not answer yet. MCP tokens come
 from `/connect.html`; `/signon.html` signup creates an account, not a league seat.
 
 Tiers: `labs` is challenged; `dawg` validated; `pound` shelved. Do not overstate Labs.
@@ -14,45 +18,45 @@ Tiers: `labs` is challenged; `dawg` validated; `pound` shelved. Do not overstate
 ## The Pound
 
 - [Workbench](https://datadawgs216.com/pound.html): model scoreboard and deterministic calculators.
-- [Inventory + CFB roadmap](https://datadawgs216.com/data/pound-tools.json): NFL status and 44 evidence-tracked CFB ideas. No CFB MCP tool is callable.
-- [Contracts](https://datadawgs216.com/data/model-contracts.json): forecast fields, receipt rules and calculator I/O.
-- [Provenance](https://datadawgs216.com/data/upstream-models.json): repositories, commits, dates, license status and integration mode.
-- [Canonical NFL schedule](https://datadawgs216.com/data/nfl-schedule.json): 272 validated 2026 games and a locked snapshot.
-- [538 Classic Elo](https://datadawgs216.com/data/538-classic.json) ([method](https://datadawgs216.com/data/538-classic-methodology.md)): 32 ratings and 272 ungraded forecasts after historical reproduction.
-- [Normalized model receipts](https://datadawgs216.com/data/model-receipts.json): 544 append-only prospective forecasts across nfelo and 538 Classic.
+- [Inventory + CFB roadmap](/data/pound-tools.json): NFL status and 44 evidence-tracked CFB ideas. Sixteen production CFB tools ARE callable over MCP; the 44 roadmap ideas are not, and an idea's lifecycle state is not a capability claim.
+- [Contracts](/data/model-contracts.json): forecast fields, receipt rules and calculator I/O.
+- [Provenance](/data/upstream-models.json): repositories, commits, dates, license status and integration mode.
+- [Canonical NFL schedule](/data/nfl-schedule.json): 272 validated 2026 games and a locked snapshot.
+- [538 Classic Elo](/data/538-classic.json) ([method](/data/538-classic-methodology.md)): 32 ratings and 272 ungraded forecasts after historical reproduction.
+- [Normalized model receipts](/data/model-receipts.json): 544 append-only prospective forecasts across nfelo and 538 Classic.
 
 The 10 calculators cover odds, vig, EV, hedging, passer rating, Elo, margin translation
 and forecast scoring. Inputs are not stored. The scoreboard is descriptive and ungraded.
 
 ## College football
 
-- [2025 results](https://datadawgs216.com/data/cfb-schedule.json): 934 games; [latest games](https://datadawgs216.com/data/cfb-games-latest.json): one final per FBS team; [latest periods](https://datadawgs216.com/data/cfb-team-week-latest.json): one per team; [ratings](https://datadawgs216.com/data/cfb-teams.json): records + retrodictive Elo.
-- [Book market](https://datadawgs216.com/data/cfb-market.json): spreads, totals and devigged moneylines. Books are named but observation time is unknown; these are not closing lines and cannot establish CLV.
-- [CFB Elo](https://datadawgs216.com/data/cfb-elo.json), [registry](https://datadawgs216.com/data/cfb-ratings.json) and [card](https://datadawgs216.com/data/cfb-model-cards.json): end-2025; retrodictive, modelled, ungraded, not consensus or forecast.
-- [Fraud test](https://datadawgs216.com/data/cfb-record-divergence-validation.json): small held-out lift beyond Elo; retrodictive, no team labels. [Disagreement](https://datadawgs216.com/data/cfb-disagreement.json): blocked on timestamped prices.
-- [Prospective receipts](https://datadawgs216.com/data/cfb-model-receipts.json): append-only contract, zero rows; no CFB forecast has been frozen before kickoff.
+- [2025 results](/data/cfb-schedule.json): 934 games; [latest games](/data/cfb-games-latest.json): one final per FBS team; [latest periods](/data/cfb-team-week-latest.json): one per team; [ratings](/data/cfb-teams.json): records + retrodictive Elo.
+- [Book market](/data/cfb-market.json): spreads, totals and devigged moneylines. Books are named but observation time is unknown; these are not closing lines and cannot establish CLV.
+- [CFB Elo](/data/cfb-elo.json), [registry](/data/cfb-ratings.json) and [card](/data/cfb-model-cards.json): end-2025; retrodictive, modelled, ungraded, not consensus or forecast.
+- [Fraud test](/data/cfb-record-divergence-validation.json): small held-out lift beyond Elo; retrodictive, no team labels. [Disagreement](/data/cfb-disagreement.json): blocked on timestamped prices.
+- [Prospective receipts](/data/cfb-model-receipts.json): append-only contract, zero rows; no CFB forecast has been frozen before kickoff.
 - The 24-to-25-hour market collector is staged. Its endpoint is not live until Worker activation is verified.
 
 ## Draft
 
-- [Player pool + Market Value](https://datadawgs216.com/data/pool.json): 459 players; three auction formats; `as_of 2026-07-29`. MV is not projected points.
-- [League](https://datadawgs216.com/data/league.json): 14 teams, $200, 15 spots, half PPR, no kicker, plus the public draft mirror.
-- [2026 strategy](https://datadawgs216.com/data/strategy.md): positional curves and format playbooks, separating testable structure from analyst priors.
+- [Player pool + Market Value](/data/pool.json): 459 players; three auction formats; `as_of 2026-07-29`. MV is not projected points.
+- [League](/data/league.json): 14 teams, $200, 15 spots, half PPR, no kicker, plus the public draft mirror.
+- [2026 strategy](/data/strategy.md): positional curves and format playbooks, separating testable structure from analyst priors.
 
 ## Models and data
 
-- [Team + QB EPA](https://datadawgs216.com/data/epa-teams.json): 2023-2025 nflverse play-by-play; descriptive, not predictive.
-- [nfelo](https://datadawgs216.com/data/nfelo.json): ratings and backtest with the in-sample caveat.
-- [Schedule + win probabilities](https://datadawgs216.com/data/survivor.json): 272 games; market-derived where available, model-derived otherwise.
-- [Parameters](https://datadawgs216.com/data/models.json): margin, Bozo and survivor assumptions and limitations.
+- [Team + QB EPA](/data/epa-teams.json): 2023-2025 nflverse play-by-play; descriptive, not predictive.
+- [nfelo](/data/nfelo.json): ratings and backtest with the in-sample caveat.
+- [Schedule + win probabilities](/data/survivor.json): 272 games; market-derived where available, model-derived otherwise.
+- [Parameters](/data/models.json): margin, Bozo and survivor assumptions and limitations.
 
 ## Receipts and method
 
-- [Pre-registered forecasts](https://datadawgs216.com/data/receipts.json): 272 calls locked 2026-08-06, SHA-256 `4b87fe0e0790a1e6…`.
-- [Receipt method](https://datadawgs216.com/data/receipts-method.md): hypotheses, grading and canonical hash reproduction.
-- [Bozo rules](https://datadawgs216.com/data/bozo-rules.json) ([prose](https://datadawgs216.com/data/bozo-rules.md)): open weekly one-leg parlay game.
-- [House reasoning rules](https://datadawgs216.com/data/method.md): base rates, ranges, falsifiers and selection-bias checks.
-- [Toto philosophy](https://datadawgs216.com/data/toto-philosophy.md): reasoning conventions for the site AI.
+- [Pre-registered forecasts](/data/receipts.json): 272 calls locked 2026-08-06, SHA-256 `4b87fe0e0790a1e6…`.
+- [Receipt method](/data/receipts-method.md): hypotheses, grading and canonical hash reproduction.
+- [Bozo rules](/data/bozo-rules.json) ([prose](/data/bozo-rules.md)): open weekly one-leg parlay game.
+- [House reasoning rules](/data/method.md): base rates, ranges, falsifiers and selection-bias checks.
+- [Toto philosophy](/data/toto-philosophy.md): reasoning conventions for the site AI.
 
 ## Agent notes
 
