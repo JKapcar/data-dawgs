@@ -189,8 +189,8 @@
   }
  },
  "counts": {
-  "surfaces": 12,
-  "with_live_machine_access": 12,
+  "surfaces": 13,
+  "with_live_machine_access": 13,
   "with_no_machine_access": 0,
   "mcp_tools_registered": 43,
   "mcp_tools_live": 43,
@@ -494,7 +494,7 @@
   },
   {
    "id": "pound",
-   "name": "The DawgHouse calculator workbench and shelf (formerly The Pound)",
+   "name": "The DawgHouse shelf and College Football roadmap (formerly The Pound)",
    "page": "/dawghouse.html",
    "machine": [
     {
@@ -502,12 +502,6 @@
      "url": "/data/pound-tools.json",
      "status": "live",
      "covers": "complete NFL tool inventory plus the College Football roadmap with evidence-backed lifecycle state and sixteen production CFB MCP tools"
-    },
-    {
-     "kind": "json",
-     "url": "/data/model-contracts.json",
-     "status": "live",
-     "covers": "forecast, receipt and calculator contracts"
     },
     {
      "kind": "json",
@@ -592,66 +586,6 @@
      "url": "/data/cfb-disagreement.json",
      "status": "live",
      "covers": "published blocked model-versus-market probe naming the missing observation timestamp and exact unblock condition"
-    },
-    {
-     "kind": "mcp",
-     "tool": "dd_convert_odds",
-     "status": "live",
-     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
-    },
-    {
-     "kind": "mcp",
-     "tool": "dd_devig_market",
-     "status": "live",
-     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
-    },
-    {
-     "kind": "mcp",
-     "tool": "dd_price_parlay",
-     "status": "live",
-     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
-    },
-    {
-     "kind": "mcp",
-     "tool": "dd_calculate_bet_ev",
-     "status": "live",
-     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
-    },
-    {
-     "kind": "mcp",
-     "tool": "dd_calculate_hedge",
-     "status": "live",
-     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
-    },
-    {
-     "kind": "mcp",
-     "tool": "dd_nfl_passer_rating",
-     "status": "live",
-     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
-    },
-    {
-     "kind": "mcp",
-     "tool": "dd_score_forecast",
-     "status": "live",
-     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
-    },
-    {
-     "kind": "mcp",
-     "tool": "dd_summarize_beliefs",
-     "status": "live",
-     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
-    },
-    {
-     "kind": "mcp",
-     "tool": "dd_elo_game",
-     "status": "live",
-     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
-    },
-    {
-     "kind": "mcp",
-     "tool": "dd_translate_probability",
-     "status": "live",
-     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
     },
     {
      "kind": "mcp",
@@ -751,8 +685,83 @@
     }
    ],
    "planned": [],
-   "gap": "The model scoreboard and provenance render on /receipts.html since 2026-08-09; their data files are unchanged. Sixteen bounded CFB tools and the timestamped 24-hour market collector are live; the first market observation waits on an eligible 2026 event, and no CFB model forecast receipt has been frozen yet.",
+   "gap": "The model scoreboard and provenance render on /receipts.html and the deterministic calculators on /calculators.html since 2026-08-09; the calculator contracts and Worker tools are listed on the calculators surface. Sixteen bounded CFB tools and the timestamped 24-hour market collector are live; the first market observation waits on an eligible 2026 event, and no CFB model forecast receipt has been frozen yet.",
    "tier": "pound"
+  },
+  {
+   "id": "calculators",
+   "name": "NFL calculators",
+   "page": "/calculators.html",
+   "machine": [
+    {
+     "kind": "json",
+     "url": "/data/model-contracts.json",
+     "status": "live",
+     "covers": "forecast, receipt and calculator contracts — the calculator I/O contracts are the ones the page implements"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_convert_odds",
+     "status": "live",
+     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_devig_market",
+     "status": "live",
+     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_price_parlay",
+     "status": "live",
+     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_calculate_bet_ev",
+     "status": "live",
+     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_calculate_hedge",
+     "status": "live",
+     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_nfl_passer_rating",
+     "status": "live",
+     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_score_forecast",
+     "status": "live",
+     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_summarize_beliefs",
+     "status": "live",
+     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_elo_game",
+     "status": "live",
+     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_translate_probability",
+     "status": "live",
+     "covers": "deterministic calculation over caller-supplied inputs; inputs and results are not stored"
+    }
+   ],
+   "planned": [],
+   "tier": "labs"
   },
   {
    "id": "method",

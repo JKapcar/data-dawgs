@@ -75,8 +75,14 @@ ok("dawghouse.html forwards its old deep links",
   ok("surfaces: dd_model_scoreboard rides with the models sheet",
     receipts.machine.some(m => m.tool === "dd_model_scoreboard")
     && !pound.machine.some(m => m.tool === "dd_model_scoreboard"));
-  ok("surfaces: the pound row keeps its tier and the calculators",
-    pound.tier === "pound" && pound.machine.some(m => m.tool === "dd_convert_odds"));
+  /* CEP-5A Stage 2: the calculators moved from the pound surface to their own
+     /calculators.html surface. The invariant that matters here is unchanged — the
+     machine tier value stays "pound" — and the tools must live somewhere, exactly once. */
+  const calcs = surfaces.data.find(s => s.id === "calculators");
+  ok("surfaces: the pound row keeps its tier; the calculators moved to their own surface",
+    pound.tier === "pound" && !!calcs
+    && calcs.machine.some(m => m.tool === "dd_convert_odds")
+    && !pound.machine.some(m => m.tool === "dd_convert_odds"));
 }
 
 /* ---------- live: the sheets actually work, in both themes ---------- */

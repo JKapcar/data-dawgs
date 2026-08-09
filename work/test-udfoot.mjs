@@ -21,7 +21,7 @@ const server=http.createServer((req,res)=>{
 });
 await new Promise(r=>server.listen(8917,r));
 const b=await chromium.launch({executablePath:chromiumExecutable(chromium),args:["--no-sandbox"]});
-const PAGES=["auction.html","bigboard.html","board.html","bozo.html","cfb.html","connect.html","dashboard.html",
+const PAGES=["auction.html","bigboard.html","board.html","bozo.html","calculators.html","cfb.html","connect.html","dashboard.html",
  "dataviz.html","dawgs.html","dfs.html","guillotine.html","index.html","master.html","nfelo.html",
  "dawghouse.html","receipts.html","report.html","signon.html","stats.html","strategy.html","survivor.html"];
 const errs=[];

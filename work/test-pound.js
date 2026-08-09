@@ -61,5 +61,23 @@ test('every DawgHouse inline script parses', () => {
   assert.ok(scripts.length >= 3);
   scripts.forEach((source, i) => assert.doesNotThrow(() => new vm.Script(source, { filename: `pound-inline-${i}.js` })));
 });
+test('every calculators.html inline script parses', () => {
+  const html = fs.readFileSync('calculators.html', 'utf8');
+  const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map(m => m[1]);
+  assert.ok(scripts.length >= 3);
+  scripts.forEach((source, i) => assert.doesNotThrow(() => new vm.Script(source, { filename: `calculators-inline-${i}.js` })));
+});
+test('calculators.html carries the DDPound core verbatim, dawghouse.html no longer does', () => {
+  /* CEP-5A Stage 2. The inlined copy must BE work/pound-core.js (the testable source
+     this whole file grades), not a paraphrase of it — byte drift between the two is
+     exactly how a page starts disagreeing with its own contracts. fs paths are
+     cwd-relative and this suite runs from the REPO ROOT (require() above is
+     file-relative, which is why './pound-core.js' works there and not here). */
+  const core = fs.readFileSync('work/pound-core.js', 'utf8').trim();
+  const calc = fs.readFileSync('calculators.html', 'utf8');
+  assert.ok(calc.includes(core), 'calculators.html inline DDPound differs from work/pound-core.js');
+  const dawg = fs.readFileSync('dawghouse.html', 'utf8');
+  assert.ok(!dawg.includes('DDPound'), 'dawghouse.html still carries DDPound');
+});
 
 console.log(`\n${pass} passed / 0 failed`);

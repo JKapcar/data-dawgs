@@ -500,9 +500,9 @@ test('all shared-nav pages point at dawghouse.html exactly once, and never at th
 test('DawgHouse page declares its tier and accessible result regions', () => {
   const html = fs.readFileSync('dawghouse.html', 'utf8');
   assert.match(html, /class="tierchip"[^>]*>The DawgHouse<\/a>/);
-  assert.ok((html.match(/aria-live="polite"/g) || []).length >= 10);
-  assert.match(html, /MODELLED:/);
-  assert.match(html, /live, read-only Worker tools/i);
+  /* CEP-5A Stage 2: the ten aria-live calculator answers moved to calculators.html;
+     the CFB count line is what remains live-announced here */
+  assert.ok((html.match(/aria-live="polite"/g) || []).length >= 1);
   assert.match(html, /<b>Live MCP:<\/b>/);
   /* CEP-5A 1b: the belief scoreboard renders on receipts.html now */
   const receiptsHtml = fs.readFileSync('receipts.html', 'utf8');
@@ -560,6 +560,77 @@ test('the rename is recorded in Receipts as a material change', () => {
   assert.match(md, /## Material changes/);
   assert.match(md, /The Pound is renamed The DawgHouse/);
 });
+/* ---- CEP-5A Stage 2: the calculators leave for their own page ------------------- */
+
+test('calculators.html holds the ten forms and claims Labs, not a collar', () => {
+  const html = fs.readFileSync('calculators.html', 'utf8');
+  assert.equal((html.match(/class="calc"/g) || []).length, 10);
+  /* the chip is a maturity claim: complete + contract-tested is still ungraded work,
+     so the page must not promote itself to a collar or keep the DawgHouse label */
+  assert.match(html, /class="tierchip"[^>]*>Labs<\/a>/);
+  assert.doesNotMatch(html, /class="tierchip"[^>]*>The DawgHouse<\/a>/);
+  assert.ok((html.match(/aria-live="polite"/g) || []).length >= 10);
+  assert.match(html, /MODELLED:/);
+  assert.match(html, /live, read-only Worker tools/i);
+  assert.match(html, /\/data\/model-contracts\.json/);
+  assert.match(html, /<script data-page="calculators">/);
+  // no shelf, no roadmap: those stayed home
+  assert.ok(!html.includes('id="toolInventory"'));
+  assert.ok(!html.includes('id="cfbGrid"'));
+});
+test('dawghouse.html no longer carries the calculator forms and forwards the deep link', () => {
+  const html = fs.readFileSync('dawghouse.html', 'utf8');
+  assert.equal((html.match(/class="calc"/g) || []).length, 0);
+  assert.ok(!html.includes('id="oddsForm"'));
+  assert.match(html, /else if\(h==="#calculators"\)location\.replace\("calculators\.html"\)/);
+  // the machine box no longer lists what the page no longer holds
+  assert.ok(!html.includes('<code>dd_convert_odds</code>'));
+  assert.ok(!html.includes('/data/model-contracts.json'));
+});
+test('every shared-nav page points the Calculators item at the canonical page', () => {
+  const pages = fs.readdirSync('.').filter(x => x.endsWith('.html'));
+  let covered = 0;
+  for (const page of pages) {
+    const html = fs.readFileSync(page, 'utf8');
+    if (!html.includes('const NAV = [')) continue;
+    covered++;
+    assert.equal((html.match(/\["calculators\.html","Calculators · NFL","calculators"\],/g) || []).length, 1, page);
+    assert.equal((html.match(/dawghouse\.html#calculators/g) || []).length, 0, page);
+  }
+  assert.ok(covered >= 20);
+});
+test('the calculators surface says what the pound surface stopped claiming', () => {
+  const row = surfaces.data.find(s => s.id === 'calculators');
+  assert.ok(row, 'surfaces.json has no calculators row');
+  assert.equal(row.page, '/calculators.html');
+  assert.equal(row.tier, 'labs', 'tierOf read the wrong chip from calculators.html');
+  const mcp = row.machine.filter(m => m.kind === 'mcp').map(m => m.tool).sort();
+  assert.deepEqual(mcp, ['dd_calculate_bet_ev', 'dd_calculate_hedge', 'dd_convert_odds',
+    'dd_devig_market', 'dd_elo_game', 'dd_nfl_passer_rating', 'dd_price_parlay',
+    'dd_score_forecast', 'dd_summarize_beliefs', 'dd_translate_probability']);
+  assert.ok(row.machine.some(m => m.url === '/data/model-contracts.json'));
+  const pound = surfaces.data.find(s => s.id === 'pound');
+  assert.ok(!pound.machine.some(m => m.kind === 'mcp' && mcp.includes(m.tool)),
+    'the pound surface still claims the calculator tools');
+  assert.ok(!pound.machine.some(m => m.url === '/data/model-contracts.json'),
+    'the pound surface still claims the contracts file');
+});
+test('the inventory claims follow the forms to the new page', () => {
+  for (const t of nflTools) {
+    if (t.existing_website_implementation.includes('#calculators'))
+      assert.fail(`${t.id} still claims a #calculators section that no longer exists`);
+  }
+  assert.equal(nflTools.find(t => t.id === 'odds').existing_website_implementation, '/calculators.html');
+  assert.equal(nflTools.find(t => t.id === 'disagreement').existing_website_implementation,
+    '/receipts.html#models + /calculators.html');
+});
+test('calculators.html is cached for draft night and findable by crawlers', () => {
+  const sw = fs.readFileSync('sw.js', 'utf8');
+  assert.match(sw, /"\/calculators\.html"/);
+  const sitemap = fs.readFileSync('sitemap.xml', 'utf8');
+  assert.match(sitemap, /datadawgs216\.com\/calculators\.html/);
+});
+
 test('the dated 2026-08-07 tier audit keeps its original wording', () => {
   // A dated record is history, not a label. The rename must not edit it.
   const html = fs.readFileSync('receipts.html', 'utf8');

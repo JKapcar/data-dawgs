@@ -814,8 +814,8 @@ const POUND_TOOLS = [
     id, name, intended_user_value,
     existing_website_implementation: id === 'nfelo' ? '/nfelo.html + /dawghouse.html#scoreboard'
       : id === 'model-scoreboard' ? '/dawghouse.html#scoreboard'
-      : id === 'disagreement' ? '/dawghouse.html#scoreboard + /dawghouse.html#calculators'
-      : calculatorIds.has(id) ? '/dawghouse.html#calculators' : '/dawghouse.html#inventory',
+      : id === 'disagreement' ? '/receipts.html#models + /calculators.html'
+      : calculatorIds.has(id) ? '/calculators.html' : '/dawghouse.html#inventory',
     existing_worker_mcp_implementation: liveTool,
     staged_worker_mcp_implementation: null,
     required_data, human_facing_ui_requirement: human_ui, ai_language_requirement: ai_language,
@@ -1139,9 +1139,8 @@ const SURFACES = [
   { id: 'guillotine', name: 'Guillotine league tools', page: '/guillotine.html',
     machine: [{ kind: 'mcp', tool: 'dd_guillotine_odds', status: 'live' }],
     planned: ['json:/data/guillotine.json'] },
-  { id: 'pound', name: 'The DawgHouse calculator workbench and shelf (formerly The Pound)', page: '/dawghouse.html',
+  { id: 'pound', name: 'The DawgHouse shelf and College Football roadmap (formerly The Pound)', page: '/dawghouse.html',
     machine: [{ kind: 'json', url: '/data/pound-tools.json', status: 'live', covers: 'complete NFL tool inventory plus the College Football roadmap with evidence-backed lifecycle state and sixteen production CFB MCP tools' },
-              { kind: 'json', url: '/data/model-contracts.json', status: 'live', covers: 'forecast, receipt and calculator contracts' },
               { kind: 'json', url: '/data/cfb-schedule.json', status: 'live', covers: '934 canonical 2025 FBS-involved game facts with a pinned upstream commit and reproducible snapshot hash' },
               { kind: 'json', url: '/data/cfb-games-latest.json', status: 'live', covers: '136 compact latest completed canonical game rows, one per FBS team; dated 2025 observed results, not current form or forecasts' },
               { kind: 'json', url: '/data/cfb-team-game.json', status: 'live', covers: '1,868 mirrored team-game result rows derived exactly from the canonical schedule; advanced play metrics are unavailable' },
@@ -1156,12 +1155,18 @@ const SURFACES = [
               { kind: 'json', url: '/data/cfb-model-cards.json', status: 'live', covers: 'generated CFB model governance cards tied to published model output and Pound lifecycle state' },
               { kind: 'json', url: '/data/cfb-model-receipts.json', status: 'live', covers: 'empty append-only prospective receipt ledger and validation contract; zero forecasts have been frozen before kickoff' },
               { kind: 'json', url: '/data/cfb-disagreement.json', status: 'live', covers: 'published blocked model-versus-market probe naming the missing observation timestamp and exact unblock condition' },
-              ...MCP_POUND_LIVE.map(tool => ({ kind: 'mcp', tool, status: 'live',
-                covers: 'deterministic calculation over caller-supplied inputs; inputs and results are not stored' })),
               ...MCP_CFB_LIVE.map(tool => ({ kind: 'mcp', tool, status: 'live',
                 covers: 'bounded read-only CFB evidence or deterministic rating-period calculation; inputs and results are not stored' }))],
     planned: [],
-    gap: 'The model scoreboard and provenance render on /receipts.html since 2026-08-09; their data files are unchanged. Sixteen bounded CFB tools and the timestamped 24-hour market collector are live; the first market observation waits on an eligible 2026 event, and no CFB model forecast receipt has been frozen yet.' },
+    gap: 'The model scoreboard and provenance render on /receipts.html and the deterministic calculators on /calculators.html since 2026-08-09; the calculator contracts and Worker tools are listed on the calculators surface. Sixteen bounded CFB tools and the timestamped 24-hour market collector are live; the first market observation waits on an eligible 2026 event, and no CFB model forecast receipt has been frozen yet.' },
+  { id: 'calculators', name: 'NFL calculators', page: '/calculators.html',
+    /* CEP-5A Stage 2: the ten deterministic calculators moved off the DawgHouse page.
+       Their contracts file and Worker tools moved with them — a surface lists what its
+       page actually holds, and /dawghouse.html no longer holds the forms. */
+    machine: [{ kind: 'json', url: '/data/model-contracts.json', status: 'live', covers: 'forecast, receipt and calculator contracts — the calculator I/O contracts are the ones the page implements' },
+              ...MCP_POUND_LIVE.map(tool => ({ kind: 'mcp', tool, status: 'live',
+                covers: 'deterministic calculation over caller-supplied inputs; inputs and results are not stored' }))],
+    planned: [] },
   { id: 'method', name: 'How this site reasons', page: '/index.html',
     machine: [{ kind: 'markdown', url: '/data/method.md', status: 'live' },
               { kind: 'markdown', url: '/data/toto-philosophy.md', status: 'live' }],
