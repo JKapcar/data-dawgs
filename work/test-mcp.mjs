@@ -686,10 +686,35 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 
   // the catalog segment is stripped BEFORE the credential is read
   ok((await req(rpc("ping"), { path: "/mcp/core/wrong-pass" })).status === 401, "catalog prefix does not bypass auth");
-  ok((await req(rpc("ping"), { path: "/mcp/core" })).status === 401, "catalog with no credential and no header → 401");
+  ok((await req(rpc("ping"), { path: "/mcp/core" })).status === 401, "a bare catalog word is a credential, and a wrong one → 401");
   {
     const r = await req(rpc("tools/list"), { path: "/mcp/core", headers: { "X-Dawg-Pass": PASS } });
     ok(r.status === 200 && (await r.json()).result.tools.length === 16, "header auth can still pick a catalog");
+  }
+
+  /* ⚠️ THE RESERVED-WORD PASSPHRASE. A DAWG_PASS that IS "core" or "full" used to be
+     unreachable: /mcp/core parsed as "catalog core, no credential", and no URL was left that
+     could carry it. It was defended with a comment telling a human not to do it — which fails
+     silently, at deploy time, and locks out the whole league rather than one member. The route
+     now only treats a leading catalog word as a catalog when something follows it (or when the
+     credential came in a header), so no passphrase can be stranded whatever it happens to be.
+     These run against their OWN env, because the collision only exists when the secret equals
+     the reserved word. */
+  for (const word of ["core", "full"]) {
+    const envWord = { ...env, DAWG_PASS: word };
+    const reqWord = (body, path) => worker.fetch(
+      new Request("https://toto.jkapcar4.workers.dev" + path, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      }), envWord);
+    const r = await reqWord(rpc("tools/list"), "/mcp/" + word);
+    ok(r.status === 200, `a passphrase of "${word}" still authenticates at /mcp/${word}`, "status " + r.status);
+    if (r.status === 200) {
+      const n = (await r.json()).result.tools.length;
+      ok(n === 43, `…and gets the default full catalog, not an empty or partial one`, "tools=" + n);
+    }
+    // it must still be a real credential check, not a hole that lets the word through
+    const bad = await reqWord(rpc("ping"), "/mcp/" + (word === "core" ? "full" : "core"));
+    ok(bad.status === 401, `…while the OTHER reserved word is still rejected as a wrong credential`);
   }
   // per-user tokens route the same way
   {

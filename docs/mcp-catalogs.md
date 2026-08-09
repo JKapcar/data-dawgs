@@ -47,11 +47,34 @@ when `readOnlyHint` is false. `idempotentHint` and `openWorldHint` would have be
 guess repeated 43 times. An annotation a client trusts and nobody checked is worse than
 no annotation.
 
-## ⚠️ DAWG_PASS must never be literally `core` or `full`
+## A reserved-word `DAWG_PASS` is no longer a hazard — it is handled in code
 
-A first path segment matching a catalog name is consumed as the catalog, so a passphrase
-of `core` or `full` would be unreachable. Per-user tokens start with `u_` and cannot
-collide. The same warning is in the header of `work/mcp-block.js`.
+This section used to warn that `DAWG_PASS` must never be literally `core` or `full`,
+because a first path segment matching a catalog name was consumed as the catalog and such
+a passphrase became unreachable. **That warning has been replaced by a fix**, because a
+comment telling a human to check a secret is not a defence: it fails silently, at deploy
+time, and locks out the whole league rather than one member.
+
+`mcpRoute` now treats a leading `core`/`full` as a catalog only when **something follows
+it**, or when the credential arrived in a header (`X-Dawg-Pass` or `Bearer`), in which case
+the URL does not need to carry one and a lone catalog segment is unambiguous.
+
+    /mcp/<credential>          full — unchanged
+    /mcp/full/<credential>     full, named
+    /mcp/core/<credential>     core
+    /mcp/core                  credential "core"  (no header)
+    /mcp/core + auth header     catalog core       (header carries the credential)
+
+The only residue is harmless: a URL credential that literally is `core` or `full` still
+authenticates, it just always gets the default catalog, because its own name occupies the
+slot a catalog would use. Nobody is locked out, whatever the secret is, and no one has to
+audit it before a deploy. Per-user tokens start with `u_` and could never collide anyway.
+
+`work/test-mcp.mjs` proves it against a purpose-built env whose `DAWG_PASS` IS the reserved
+word. Both halves of the condition are load-bearing and were mutation-tested: dropping the
+`rest.length > 1` clause fails the two reserved-word cases; dropping the header clause fails
+`header auth can still pick a catalog`, which is a regression the first draft of this fix
+actually contained and the existing suite caught.
 
 ## Deploy checklist
 

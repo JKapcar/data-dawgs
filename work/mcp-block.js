@@ -1601,21 +1601,50 @@ async function mcpAuth(request, url, env) {
 //                            not spend 43 tool schemas of context on tools they never call
 // The default stayed `full` on purpose: switching it would silently remove tool names a live
 // connector may already be calling, which is the same breaking change as renaming one.
-// ⚠️ DAWG_PASS MUST NEVER BE LITERALLY "core" OR "full". A first segment matching a catalog
-// name is consumed as the catalog, so such a passphrase would be unreachable. Per-user tokens
-// start with u_ and cannot collide.
+// ⚠️ A CATALOG NAME IS ONLY A CATALOG IF SOMETHING FOLLOWS IT. This one condition is what
+// makes the split safe to deploy without anyone auditing the secret first. The earlier
+// version consumed a leading "core"/"full" unconditionally, which meant a DAWG_PASS that
+// happened to BE one of those words became unreachable: /mcp/core parsed as "catalog core,
+// no credential" and there was no URL left that could carry it. That was defended with a
+// comment telling a human not to let it happen, which is not a defence — it fails silently,
+// at deploy time, and locks out the whole league rather than one member.
+// Requiring a following segment closes it by construction:
+//   /mcp/<credential>            full — UNCHANGED, so no connector in the wild loses a tool
+//   /mcp/full/<credential>       full, named explicitly
+//   /mcp/core/<credential>       core — the everyday league surface, for conversations that
+//                                should not spend 43 tool schemas of context on tools they
+//                                never call
+//   /mcp/core     (nothing after) credential "core" — NOT a catalog selection
+// ⚠️ UNLESS THE CREDENTIAL ARRIVED IN A HEADER. A header-authenticated caller does not need
+// the URL to carry a credential, so for them a lone /mcp/core IS a catalog selection and
+// nothing is ambiguous. Leaving that out silently broke header auth + catalog in the first
+// draft of this guard: /mcp/core consumed "core" as the credential, never read the header,
+// and returned 401 to a caller who had authenticated correctly. The existing suite caught it.
+// The only residue is harmless and worth stating: a URL credential that literally is "core"
+// or "full" still authenticates, it just always gets the default catalog, because its own
+// name occupies the slot a catalog would use. Nobody is ever locked out. Per-user tokens
+// start with u_ and could never collide in the first place.
+// The default stayed `full` on purpose: switching it would silently remove tool names a live
+// connector may already be calling, which is the same breaking change as renaming one.
 const MCP_CATALOGS = ["core", "full"];
 const MCP_DEFAULT_CATALOG = "full";
 
-function mcpRoute(url) {
+function mcpHasHeaderPass(request) {
+  if (!request) return false;
+  if (request.headers.get("X-Dawg-Pass")) return true;
+  return (request.headers.get("Authorization") || "").startsWith("Bearer ");
+}
+
+function mcpRoute(url, request) {
   const seg = url.pathname.split("/").filter(Boolean);          // ["mcp", ("core"|"full")?, "<pass>"]
   let rest = seg.slice(1), catalog = MCP_DEFAULT_CATALOG;
-  if (rest.length && MCP_CATALOGS.includes(rest[0])) { catalog = rest[0]; rest = rest.slice(1); }
+  const named = rest.length && MCP_CATALOGS.includes(rest[0]);
+  if (named && (rest.length > 1 || mcpHasHeaderPass(request))) { catalog = rest[0]; rest = rest.slice(1); }
   return { catalog, rest };
 }
 
 function mcpPassOf(request, url) {
-  const { rest } = mcpRoute(url);
+  const { rest } = mcpRoute(url, request);
   if (rest.length) { try { return decodeURIComponent(rest.join("/")); } catch { return rest.join("/"); } }
   const h = request.headers.get("X-Dawg-Pass");
   if (h) return h;
@@ -1649,7 +1678,7 @@ async function handleMcp(request, url, env) {
   // moment per-user shipped, for no reason.
   if (!env.BOZO_PEPPER && !env.DAWG_PASS)
     return mcpJson(rpcErr(null, -32000, "Worker misconfigured: neither BOZO_PEPPER nor DAWG_PASS is set."), 500);
-  const { catalog } = mcpRoute(url);
+  const { catalog } = mcpRoute(url, request);
   const caller = await mcpAuth(request, url, env);
   if (!caller)
     return new Response(JSON.stringify(rpcErr(null, -32001, "unauthorised — get your personal connector URL from " + SITE + "/connect.html")),
