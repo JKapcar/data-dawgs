@@ -29,6 +29,16 @@ await new Promise(r => server.listen(8919, r));
 const b = await chromium.launch({ executablePath: chromiumExecutable(chromium), args: ["--no-sandbox"] });
 const errs = [];
 
+/* CEP-5A Stage 3: the page is a DDSheets family (Matchup / Teams / Elo / Divergence /
+   Roadmap). Sections that used to be scrolled to now live behind a tab, and opening the
+   tab is the visibility event that triggers the lazy Elo and divergence fetches. Clicking
+   the real tab is the honest replacement for scrollIntoView — it is what a person does. */
+const openSheet = (p, id) => p.evaluate(sheet => {
+  const tab = document.querySelector(`.sheet-tab[data-id="${sheet}"]`);
+  if (!tab) throw new Error("no sheet tab: " + sheet);
+  tab.click();
+}, id);
+
 // the truth the page must agree with, read from the file rather than from the page
 const teamsEnv = JSON.parse(fs.readFileSync(path.join(ROOT, "data/cfb-teams.json"), "utf8"));
 const sysDef = teamsEnv.data.systems.find(s => s.system_id === "dd-cfb-elo");
@@ -165,7 +175,7 @@ const TEAMS = teamsEnv.data.teams;
   ok("the sorted column reports aria-sort", sorted.aria === "ascending" || sorted.aria === "descending", String(sorted.aria));
 
   /* -------- the lazy sections actually arrive -------- */
-  await p.evaluate(() => document.getElementById("divergence").scrollIntoView());
+  await openSheet(p, "divergence");
   await p.waitForFunction(() => document.querySelectorAll("#cfbDivBody tr").length > 10, null, { timeout: 15000 });
   await p.evaluate(() => document.getElementById("cfbDivMore").click());
   await p.waitForFunction(() => document.querySelectorAll("#cfbDivBody tr").length > 100, null, { timeout: 5000 });
@@ -223,17 +233,29 @@ for (const W of [320, 390]) {
   p.on("pageerror", e => errs.push(`${W}: ${e.message}`));
   await p.goto("http://127.0.0.1:8919/cfb.html", { waitUntil: "load" });
   await p.waitForFunction(() => document.querySelectorAll("#cfbTblBody tr").length > 10, null, { timeout: 15000 });
+  await openSheet(p, "teams");
   await p.evaluate(() => document.getElementById("cfbTblMore").click());
-  await p.evaluate(() => document.getElementById("divergence").scrollIntoView());
+  await openSheet(p, "divergence");
   await p.waitForFunction(() => document.querySelectorAll("#cfbDivBody tr").length > 10, null, { timeout: 15000 });
   await p.evaluate(() => document.getElementById("cfbDivMore").click());
-  const r = await p.evaluate(() => ({
-    over: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  /* Stage 3: every sheet is its own layout, so overflow is checked on each one. A
+     sheet that is closed cannot overflow the document, so measuring only the first
+     would pass vacuously for the other four. */
+  for (const sheet of ["matchup", "teams", "elo", "divergence", "roadmap"]) {
+    await openSheet(p, sheet);
+    await p.waitForTimeout(120);
+    const over = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    ok(`no document overflow at ${W} on the ${sheet} sheet`, over <= 1, `+${over}px`);
+  }
+  await openSheet(p, "teams");
+  await p.waitForTimeout(120);
+  const r = await p.evaluate(() => {
     // the tables are allowed to scroll sideways INSIDE their wrapper; that is the fix,
     // not the bug, so prove the wrapper is the thing that scrolls
-    wrapScrolls: document.querySelector(".cfbwrap").scrollWidth > document.querySelector(".cfbwrap").clientWidth
-  }));
-  ok(`no document overflow at ${W}`, r.over <= 1, `+${r.over}px`);
+    const w = document.querySelector("#sheetTeams .cfbwrap");
+    return { wrapScrolls: w.scrollWidth > w.clientWidth, wrapWidth: w.clientWidth };
+  });
+  ok(`the teams sheet's scroller has a real width at ${W}`, r.wrapWidth > 0, String(r.wrapWidth));
   if (W === 320) ok("the table scroller is what absorbs it", r.wrapScrolls === true);
   await ctx.close();
 }
@@ -258,7 +280,7 @@ for (const W of [320, 390]) {
   }));
   ok("the observer really is gone for this run", before.io === false);
   ok("…and nothing has lazily loaded yet", /Loading/.test(before.div), before.div);
-  await p.evaluate(() => document.getElementById("divergence").scrollIntoView());
+  await openSheet(p, "divergence");
   // a timeout here IS the failure, so catch it and report it as one rather than crashing the run
   await p.waitForFunction(() => document.querySelectorAll("#cfbDivBody tr").length > 10, null, { timeout: 8000 })
     .catch(() => {});
@@ -311,6 +333,98 @@ for (const W of [320, 390]) {
   }));
   ok("no published transform ⇒ the calculator refuses", r.hidden === true && /will not guess/i.test(r.msg), r.msg);
   ok("…and the rest of the page still works", r.rows === 30, String(r.rows));
+  await ctx.close();
+}
+
+/* ------------------------------ CEP-5A Stage 3: the five sheets ------------ */
+{
+  const ctx = await b.newContext({ viewport: { width: 1280, height: 900 } });
+  const p = await ctx.newPage();
+  p.on("pageerror", e => errs.push("sheets: " + e.message));
+  await p.goto("http://127.0.0.1:8919/cfb.html", { waitUntil: "load" });
+  await p.waitForFunction(() => document.querySelectorAll(".sheet-tab").length > 0, null, { timeout: 10000 });
+  const bar = await p.evaluate(() => ({
+    ids: Array.from(document.querySelectorAll(".sheet-tab")).map(t => t.dataset.id),
+    open: document.querySelector(".sheet-tab.on")?.dataset.id,
+    visible: Array.from(document.querySelectorAll("#sheetMatchup,#sheetTeams,#sheetElo,#sheetDiv,#sheetRoadmap"))
+      .filter(el => !el.hidden).length
+  }));
+  ok("the five sheets are in the locked order",
+    JSON.stringify(bar.ids) === JSON.stringify(["matchup", "teams", "elo", "divergence", "roadmap"]), bar.ids.join(","));
+  ok("the matchup sheet opens first", bar.open === "matchup", String(bar.open));
+  ok("exactly one panel is visible at a time", bar.visible === 1, String(bar.visible));
+
+  /* The roadmap must COMPUTE the live/not-live split here exactly as it did on the
+     DawgHouse — the whole point of the move is that nothing about the mechanism
+     changed. A typed count would be the bug this defends against, relocated. */
+  await openSheet(p, "roadmap");
+  await p.waitForFunction(() => document.querySelectorAll("#cfbGrid article").length > 10, null, { timeout: 15000 });
+  const surfaces = JSON.parse(fs.readFileSync(path.join(ROOT, "data/surfaces.json"), "utf8"));
+  const toolsEnv = JSON.parse(fs.readFileSync(path.join(ROOT, "data/pound-tools.json"), "utf8"));
+  const ideas = toolsEnv.data.filter(t => t.kind === "roadmap-idea");
+  const named = new Set(ideas.flatMap(i => i.candidate_mcp_tools || []));
+  const live = new Set(surfaces.mcp.tools_live);
+  const callable = [...named].filter(t => live.has(t)).length;
+  const rm = await p.evaluate(() => ({
+    cards: document.querySelectorAll("#cfbGrid article").length,
+    stats: Array.from(document.querySelectorAll("#cfbToolStats .p-stat b")).map(b => b.textContent),
+    liveTools: document.querySelectorAll("#cfbToolsLive .cfbt").length,
+    count: document.getElementById("cfbRmCount").textContent,
+    planned: document.getElementById("cfbToolsPlanned").textContent
+  }));
+  ok("every roadmap idea renders on the sheet", rm.cards === ideas.length, `${rm.cards} vs ${ideas.length}`);
+  ok("the callable count is computed from the live roster",
+    Number(rm.stats[0]) === callable, `${rm.stats[0]} vs ${callable}`);
+  ok("every callable tool gets a card", rm.liveTools === callable, String(rm.liveTools));
+  ok("the roadmap count line reports the real total",
+    rm.count.indexOf(String(ideas.length)) >= 0, rm.count);
+  ok("reservations are still named as reservations", /not callable|reservations/i.test(rm.planned), rm.planned.slice(0, 90));
+  ok("nothing that writes is claimed", rm.stats[3] === "0", String(rm.stats[3]));
+
+  /* Deep links: the old dawghouse anchors and the page's own old section ids must
+     land on the sheet that now holds the content. A moved section with a dead link
+     is the failure mode this whole reorg exists to avoid. */
+  for (const [from, want] of [["#roadmap", "roadmap"], ["#explorer", "teams"],
+    ["#expected", "elo"], ["#baseline", "elo"], ["#matchup", "matchup"], ["#divergence", "divergence"]]) {
+    await p.goto("http://127.0.0.1:8919/cfb.html" + from, { waitUntil: "load" });
+    await p.waitForTimeout(250);
+    const got = await p.evaluate(() => document.querySelector(".sheet-tab.on")?.dataset.id);
+    ok(`cfb.html${from} opens the ${want} sheet`, got === want, String(got));
+  }
+  await ctx.close();
+}
+{
+  /* dawghouse.html let go: no roadmap markup, no roadmap loader, and the old anchor
+     forwards rather than landing on a section that is not there. */
+  const html = fs.readFileSync(path.join(ROOT, "dawghouse.html"), "utf8");
+  ok("dawghouse.html no longer holds the roadmap grid", !html.includes('id="cfbGrid"'));
+  ok("dawghouse.html no longer holds the roadmap loader", !html.includes("cfbToolSplit"));
+  ok("dawghouse.html forwards #cfb to the sheet",
+    html.includes('else if(h==="#cfb")location.replace("cfb.html#roadmap")'));
+  ok("the shelf still renders and still filters to blocked work",
+    html.includes('id="toolInventory"') && html.includes('t.status!=="complete"'));
+  ok("the shelf announces its filtered results", html.includes('id="toolInventory" aria-live="polite"'));
+}
+{
+  /* ⚠️ THE BUG THIS DEFENDS. A hash-only navigation does not reload the document, so a
+     forward that runs once at load never fires — the reader stays on a page whose
+     section left. Both ends of the chain are checked from an ALREADY-LOADED page, which
+     is the case that was broken. */
+  const ctx = await b.newContext({ viewport: { width: 1280, height: 900 } });
+  const p = await ctx.newPage();
+  p.on("pageerror", e => errs.push("samedoc: " + e.message));
+  await p.goto("http://127.0.0.1:8919/dawghouse.html", { waitUntil: "load" });
+  await p.waitForTimeout(300);
+  await p.evaluate(() => { location.hash = "#cfb"; });
+  await p.waitForTimeout(600);
+  ok("dawghouse.html forwards #cfb on a same-document hash change",
+    p.url().endsWith("/cfb.html#roadmap"), p.url());
+  await p.goto("http://127.0.0.1:8919/cfb.html", { waitUntil: "load" });
+  await p.waitForTimeout(300);
+  await p.evaluate(() => { location.hash = "#explorer"; });
+  await p.waitForTimeout(400);
+  const on = await p.evaluate(() => document.querySelector(".sheet-tab.on")?.dataset.id);
+  ok("cfb.html forwards a legacy anchor on a same-document hash change", on === "teams", String(on));
   await ctx.close();
 }
 

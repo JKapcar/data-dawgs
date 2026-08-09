@@ -548,6 +548,62 @@ table.cfbt td.cf{color:var(--ink-3)}
   .cfbkpi .v{font-size:20px}
   .cfbmeter{height:22px}
 }
+/* ---- page-family sheets -------------------------------------------------- */
+.sheetbar{display:flex;gap:4px;flex-wrap:wrap;margin:0 0 18px;
+  border-bottom:1px solid var(--grid);padding-bottom:0}
+.sheet-tab{appearance:none;background:transparent;border:0;border-bottom:2px solid transparent;
+  color:var(--ink-3);font:inherit;font-size:14px;font-weight:700;letter-spacing:.005em;
+  padding:9px 15px 8px;cursor:pointer;border-radius:7px 7px 0 0;display:inline-flex;
+  align-items:center;gap:7px;margin-bottom:-1px}
+.sheet-tab:hover{color:var(--ink-1);background:color-mix(in srgb,var(--ink-3) 9%,transparent)}
+.sheet-tab.on{color:var(--accent);border-bottom-color:var(--accent);background:transparent}
+.sheet-tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sheet-hint{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-3);background:color-mix(in srgb,var(--ink-3) 16%,transparent);
+  border-radius:5px;padding:2px 6px}
+.sheet-tab.on .sheet-hint{color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent)}
+[role=tabpanel][hidden]{display:none}
+.sheet-frame{position:relative;min-height:340px}
+.sheet-frame iframe{display:block;width:100%;min-height:70vh;border:0;background:transparent}
+@media (max-width:560px){
+  .sheetbar{gap:2px}
+  .sheet-tab{font-size:13px;padding:8px 11px 7px}
+  .sheet-hint{display:none}
+}
+
+/* ---- Stage 3: the roadmap sheet, moved from The DawgHouse 2026-08-09.
+   Rules travel verbatim but scoped under #roadmap: cfb.html already owns .cfbt
+   (its tables), and an unscoped copy would restyle them. ---- */
+#roadmap .p-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:18px 0}
+#roadmap .p-stat{border:1px solid var(--border);background:var(--surface-1);border-radius:10px;padding:13px}
+#roadmap .p-stat b{display:block;font-size:25px;line-height:1;color:var(--ink-1)}
+#roadmap .p-stat span{display:block;color:var(--ink-3);font:650 11px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;margin-top:6px;text-transform:uppercase}
+#roadmap .p-loading,#roadmap .p-error{padding:20px;color:var(--ink-3)}#roadmap .p-error{color:var(--bad)}
+#roadmap .field{display:flex;flex-direction:column;gap:4px}#roadmap .field.full{grid-column:1/-1}#roadmap .field label{font:700 10.5px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--ink-3);text-transform:uppercase}
+#roadmap .field input,#roadmap .field select{width:100%;border:1px solid var(--border);background:var(--page);color:var(--ink-1);border-radius:8px;padding:9px 10px;font:inherit;font-variant-numeric:tabular-nums}
+#roadmap .assumption{font-size:11.5px;color:var(--ink-3);margin:10px 0 0}#roadmap .assumption b{color:var(--warn)}
+#roadmap .p-filter{border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--ink-1);padding:8px 10px}
+#roadmap .inventory{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#roadmap .tool{min-width:0;border:1px solid var(--border);border-radius:11px;background:var(--surface-1);padding:14px}#roadmap .tool h3{font-size:16px;margin:6px 0}#roadmap .tool p{margin:5px 0;color:var(--ink-2);font-size:13px}#roadmap .tool .block{color:var(--ink-3);border-top:1px solid var(--grid);margin-top:9px;padding-top:9px}#roadmap .tool code{font-size:11px;overflow-wrap:anywhere}
+#roadmap .status{display:inline-flex;border-radius:999px;padding:3px 7px;font:800 10px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;border:1px solid var(--border)}
+#roadmap .rec-build{color:var(--good);border-color:color-mix(in srgb,var(--good) 50%,var(--border))}#roadmap .rec-lab{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 50%,var(--border))}#roadmap .rec-defer,#roadmap .rec-avoid-initially,#roadmap .rec-not-needed{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,var(--border))}
+#roadmap .lifecycle-chip{display:inline-flex;border-radius:999px;padding:3px 7px;font:800 10px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;border:1px solid var(--border);color:var(--ink-3);margin-left:5px}
+#roadmap .cfb-filters{display:flex;flex-wrap:wrap;gap:9px;margin:0 0 12px}#roadmap .cfb-filters .field{min-width:150px;flex:1}
+#roadmap .cfb-count{font-size:12px;color:var(--ink-3);margin:0 0 10px}
+#roadmap .cfbt-box{border:1px solid var(--border);background:var(--surface-1);border-radius:12px;padding:16px 18px;margin:0 0 18px}
+#roadmap .cfbt-box>h3{margin:0 0 6px;font:750 12px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+#roadmap .cfbt-box>p{margin:0 0 12px;color:var(--ink-2);font-size:13.5px;line-height:1.62;max-width:820px}
+#roadmap .cfbt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:9px}
+#roadmap .cfbt{border:1px solid var(--grid);border-radius:9px;padding:9px 11px;background:var(--page);min-width:0}
+#roadmap .cfbt code{font-size:12px;color:var(--ink-1);font-weight:700;overflow-wrap:anywhere;display:block}
+#roadmap .cfbt span{display:block;margin-top:4px;font-size:11.5px;line-height:1.5;color:var(--ink-3)}
+#roadmap .cfbt-planned{margin:13px 0 0;font-size:12.5px;line-height:1.65;color:var(--ink-3);overflow-wrap:anywhere}
+#roadmap .cfbt-planned code{font-size:11.5px}
+#roadmap .tool .meta-line{font-size:11.5px;color:var(--ink-3)}
+#roadmap .tool .components{border-top:1px solid var(--grid);margin-top:9px;padding-top:9px}#roadmap .tool .components li{font-size:12px;color:var(--ink-3);margin:4px 0}
+#roadmap .cfbt-grid{grid-template-columns:repeat(auto-fill,minmax(min(268px,100%),1fr))}
+@media(max-width:760px){#roadmap .p-summary{grid-template-columns:repeat(2,minmax(0,1fr))}#roadmap .inventory{grid-template-columns:1fr}}
+@media(max-width:430px){#roadmap .p-summary{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -1828,13 +1884,17 @@ STATE: everything saves in the browser on that device. A different device shows 
   <p class="lab-sub">One hundred and thirty-six FBS teams, their 2025 results, and one deliberately
   simple Elo rating built from game results and margin alone. The rating is retrodictive and
   ungraded &mdash; it has never forecast a game before kickoff. Everything on this page is the
-  same data the CFB tools serve to machines, drawn for people.</p>
+  same data the CFB tools serve to machines, drawn for people. The build roadmap moved here
+  from <a href="dawghouse.html">The DawgHouse</a> on 2026-08-09.</p>
 
   <div class="banner" style="margin-top:14px"><b>2025 only.</b> There is no 2026 schedule in this
   data, so nothing here is a projection of a coming season, a ranking, or a bet. The one thing you
   can compute is a hypothetical: what this rating would have said about two teams meeting during
   the 2025 rating period.</div>
 
+  <div id="sheets"></div>
+
+  <div id="sheetMatchup">
   <!-- ================= matchup calculator ================= -->
   <div class="card" id="matchup">
     <h3>Matchup calculator <span class="rt" id="cfbMxAsOf"></span></h3>
@@ -1878,11 +1938,14 @@ STATE: everything saves in the browser on that device. A different device shows 
     <p class="note" id="cfbMxErr" hidden></p>
   </div>
 
+  </div>
+
+  <div id="sheetTeams">
   <!-- ================= one filter row, scoping everything below ================= -->
   <div class="card">
     <h3>Filter</h3>
-    <p class="sub">One filter for the whole page below: the team table, the expected-versus-observed
-    chart and the divergence table all redraw against the same slice.</p>
+    <p class="sub">One filter across the data sheets: the team table here, the expected-versus-observed
+    chart on the Elo sheet and the divergence table on its sheet all redraw against the same slice.</p>
     <div class="cfbfilt">
       <label class="fld"><span>Conference</span>
         <select class="fi" id="cfbConf"><option value="">All conferences</option></select></label>
@@ -1931,6 +1994,9 @@ STATE: everything saves in the browser on that device. A different device shows 
     <p class="cfbsrc" id="cfbTblSrc"></p>
   </div>
 
+  </div>
+
+  <div id="sheetElo">
   <!-- ================= expected vs observed ================= -->
   <div class="card" id="expected">
     <h3>Expected versus observed wins</h3>
@@ -1958,6 +2024,9 @@ STATE: everything saves in the browser on that device. A different device shows 
     <p class="cfbsrc" id="cfbEloSrc"></p>
   </div>
 
+  </div>
+
+  <div id="sheetDiv">
   <!-- ================= divergence ================= -->
   <div class="card" id="divergence">
     <h3>Record versus scoring margin <span class="rt" id="cfbDivAsOf"></span></h3>
@@ -1986,6 +2055,45 @@ STATE: everything saves in the browser on that device. A different device shows 
     <div class="cfbmore"><button class="btn ghost sm" id="cfbDivMore" type="button" hidden></button></div>
     <p class="cfbcap" id="cfbDivCap"></p>
     <p class="cfbsrc" id="cfbDivSrc"></p>
+  </div>
+
+  </div>
+
+  <div id="sheetRoadmap">
+  <!-- ================= roadmap (moved from The DawgHouse 2026-08-09) ================= -->
+  <div class="card" id="roadmap">
+    <h3>College Football roadmap <span class="rt">roadmap reconciled 2026-08-08 &middot; moved from The DawgHouse 2026-08-09</span></h3>
+    <p class="sub">The complete identified CFB opportunity set &mdash; roadmap ideas, not automatically tools.
+    Shipped data and model artifacts carry evidence-backed lifecycle state; every remaining card
+    records what we could build, why, what it depends on, and how we would know whether it worked.</p>
+    <div class="banner"><b>Map, not territory.</b> Lifecycle and implementation state describe the
+    artifact named by a card, not predictive proof. Candidate MCP tool names remain reservations and are
+    not callable unless the separate Worker registry says they are live. Recommendations can change, and
+    retired ideas move to a Graveyard with their history intact rather than being deleted.</div>
+    <div class="cfbt-box" id="cfbTools">
+      <h3>Production College Football MCP tools</h3>
+      <p>The roadmap cards below are <em>ideas</em>. These are the ones an assistant can
+      actually call today. The split is read at runtime by intersecting the live tool roster in
+      <a href="/data/surfaces.json"><code>/data/surfaces.json</code></a> with the candidate names
+      on the cards, so it cannot drift from the data the way a typed count can.
+      <b>&ldquo;Live&rdquo; here means the roster says so</b> &mdash;
+      <code>node tools/validate-data.js</code> checks that roster against every per-surface claim,
+      but this page does not call the Worker and does not independently confirm anything answered.</p>
+      <div class="p-summary" id="cfbToolStats"><div class="p-stat"><b>&mdash;</b><span>callable now</span></div><div class="p-stat"><b>&mdash;</b><span>named, not built</span></div><div class="p-stat"><b>&mdash;</b><span>ideas with a live tool</span></div><div class="p-stat"><b>0</b><span>that write anything</span></div></div>
+      <div class="cfbt-grid" id="cfbToolsLive"><div class="p-loading">Loading the live CFB tool roster&hellip;</div></div>
+      <p class="cfbt-planned" id="cfbToolsPlanned"></p>
+      <p class="cfbt-planned" id="cfbMachineTools"><a href="/data/surfaces.json"><code>/data/surfaces.json</code></a> &mdash; the live Worker tool roster, including the College Football tools above.</p>
+    </div>
+    <div class="cfb-filters">
+      <div class="field"><label for="cfbCat">Category</label><select class="p-filter" id="cfbCat"><option value="all">All</option></select></div>
+      <div class="field"><label for="cfbRec">Recommendation</label><select class="p-filter" id="cfbRec"><option value="all">All</option><option value="build">BUILD</option><option value="lab">LAB</option><option value="defer">DEFER</option><option value="avoid-initially">AVOID INITIALLY</option><option value="not-needed">NOT NEEDED</option></select></div>
+      <div class="field"><label for="cfbLife">Lifecycle</label><select class="p-filter" id="cfbLife"><option value="all">All</option></select></div>
+      <div class="field"><label for="cfbStep">Roadmap step</label><select class="p-filter" id="cfbStep"><option value="all">All</option></select></div>
+    </div>
+    <p class="cfb-count" id="cfbRmCount" aria-live="polite"></p>
+    <div class="inventory" id="cfbGrid"><div class="p-loading">Loading the College Football roadmap…</div></div>
+        <p class="assumption"><b>Ordering:</b> the 12-step sequence stored with this data is directional, not an irreversible commitment — dependencies ultimately determine the actual build order. Shared governance (source provenance, snapshotting/receipts, model cards, baseline requirement, incremental-information testing, correlation awareness, uncertainty) applies across every idea and is published in the same file.</p>
+  </div>
   </div>
 
   <!-- ================= honesty ================= -->
@@ -2444,10 +2552,14 @@ STATE: everything saves in the browser on that device. A different device shows 
   function nearView(){
     var el = $("baseline");
     if(!el) return false;
+    /* Stage 3: a hidden sheet panel has no layout box, so its rect is 0x0 at the
+       origin and would read as "near the viewport" forever. */
+    if(!el.offsetParent && getComputedStyle(el).position !== "fixed") return false;
     var r = el.getBoundingClientRect(), vh = window.innerHeight || 800;
     return r.top < vh + 400 && r.bottom > -400;
   }
   function maybeLazy(){ if(nearView()) loadLazy(); }
+  window.ddCfbLoadLazy = loadLazy;   /* Stage 3: opening the Elo/Divergence sheet is a visibility event too */
   if("IntersectionObserver" in window){
     var io = new IntersectionObserver(function(es){
       es.forEach(function(en){ if(en.isIntersecting){ loadLazy(); io.disconnect(); } });
@@ -2568,6 +2680,256 @@ STATE: everything saves in the browser on that device. A different device shows 
 })();
 </script>
 <script>
+/* ============================================================================
+   DDSheets — the page-family component.
+
+   A "family" is a set of surfaces that belong to one tool. Instead of shipping
+   them as sibling pages that each re-inline 100KB of shared shell, a family is
+   ONE page with a sheet bar across the top.
+
+   Two modes, and the choice is not cosmetic:
+
+     inline — panels already in the DOM. Use when the sheets share live state
+              (a settings sheet that the board must react to) and the family is
+              small. Merging DEDUPES the shell, so it usually shrinks the site.
+
+     frame  — sheets are separate pages loaded lazily into an iframe with
+              ?embed=1. Use when a member is heavy, or is independently used in
+              a different context. dashboard.html already does this for
+              auction.html, which runs draft night on the operator machine and
+              must stay standalone. Do not merge that one inline.
+
+   ⚠️ Do NOT inline-merge a family whose combined weight is large. The draft rig
+   is ~1.25MB across six pages and stats.html is 2.1MB on its own; one document
+   holding those would be worse than the problem it solves. Byte math before
+   conversion, every time.
+
+   Usage:
+     DDSheets({
+       key: "survivor",
+       mount: "#sheets",
+       sheets: [
+         { id:"board",    label:"Board",    panel:"#sheetBoard" },
+         { id:"settings", label:"Settings", panel:"#sheetSettings" }
+       ],
+       onShow(id, prev) { ... }
+     });
+   ============================================================================ */
+window.DDSheets = function(cfg){
+  const LS = "dd-sheet-" + cfg.key;
+  const mount = document.querySelector(cfg.mount);
+  if(!mount) return null;
+  const sheets = cfg.sheets.filter(s=>document.querySelector(s.panel) || s.src);
+  if(!sheets.length) return null;
+  const ids = sheets.map(s=>s.id);
+  let cur = null, navigating = false;
+
+  /* ---- which sheet do we open on? -------------------------------------
+     Hash beats memory beats first. A deep link someone was sent must win over
+     whatever this browser happened to look at last, or shared links silently
+     land on the wrong sheet. */
+  function initial(){
+    const h = (location.hash||"").replace(/^#/,"");
+    if(ids.includes(h)) return h;
+    try{ const r = localStorage.getItem(LS); if(ids.includes(r)) return r; }catch(e){}
+    return ids[0];
+  }
+
+  /* ---- chrome ---------------------------------------------------------- */
+  mount.className = "sheetbar";
+  mount.setAttribute("role","tablist");
+  /* ⚠️ NEVER overwrite a panel's existing id. The first version assigned
+     el.id = "panel-"+id, which silently renamed #sheetBoard to #panel-board and
+     broke every other querySelector on the page that referenced it. Adopt the id
+     that is already there; only mint one if the element has none. */
+  sheets.forEach(s=>{
+    const el = document.querySelector(s.panel);
+    if(!el) return;
+    if(!el.id) el.id = "panel-" + s.id;
+    s._pid = el.id;
+    el.setAttribute("role","tabpanel");
+    el.setAttribute("aria-labelledby","tab-"+s.id);
+    el.hidden = true;
+  });
+  mount.innerHTML = sheets.map(s=>
+    `<button type="button" role="tab" class="sheet-tab" id="tab-${s.id}"
+       data-id="${s.id}"${s._pid?` aria-controls="${s._pid}"`:""} aria-selected="false" tabindex="-1">
+       ${s.label}${s.hint?`<span class="sheet-hint">${s.hint}</span>`:""}</button>`).join("");
+
+  function frameFor(s){
+    let el = document.querySelector(s.panel);
+    if(el.dataset.loaded) return;
+    /* lazy: an iframe sheet costs nothing until it is first opened */
+    const f = document.createElement("iframe");
+    f.src = s.src + (s.src.includes("?")?"&":"?") + "embed=1";
+    f.title = s.label; f.loading = "lazy";
+    el.appendChild(f); el.dataset.loaded = "1";
+  }
+
+  function show(id, opts){
+    opts = opts || {};
+    if(!ids.includes(id)) id = ids[0];
+    const prev = cur;
+    if(id === prev && !opts.force) return;
+    cur = id;
+    sheets.forEach(s=>{
+      const tab = mount.querySelector(`[data-id="${s.id}"]`);
+      const on = s.id === id;
+      tab.classList.toggle("on", on);
+      tab.setAttribute("aria-selected", on ? "true" : "false");
+      tab.tabIndex = on ? 0 : -1;
+      const el = document.querySelector(s.panel);
+      if(el) el.hidden = !on;
+      if(on && s.src) frameFor(s);
+    });
+    try{ localStorage.setItem(LS, id); }catch(e){}
+    if(!opts.silent){
+      /* ⚠️ pushState, not location.hash — assigning to hash also SCROLLS to the
+         element with that id, which yanks the page down past the sheet bar on
+         every switch. And replaceState on the first paint so the initial sheet
+         does not add a bogus history entry the back button has to eat. */
+      navigating = true;
+      try{ history[opts.replace?"replaceState":"pushState"](null,"","#"+id); }catch(e){}
+      navigating = false;
+    }
+    if(typeof cfg.onShow === "function") cfg.onShow(id, prev);
+  }
+
+  mount.addEventListener("click", e=>{
+    const b = e.target.closest(".sheet-tab"); if(b) show(b.dataset.id);
+  });
+  /* roving tabindex + arrow keys, per the tablist pattern */
+  mount.addEventListener("keydown", e=>{
+    const i = ids.indexOf(cur); let n = null;
+    if(e.key==="ArrowRight") n = ids[(i+1)%ids.length];
+    else if(e.key==="ArrowLeft") n = ids[(i-1+ids.length)%ids.length];
+    else if(e.key==="Home") n = ids[0];
+    else if(e.key==="End") n = ids[ids.length-1];
+    if(n){ e.preventDefault(); show(n); mount.querySelector(`[data-id="${n}"]`).focus(); }
+  });
+  addEventListener("hashchange", ()=>{
+    if(navigating) return;
+    const h = (location.hash||"").replace(/^#/,"");
+    if(ids.includes(h)) show(h,{silent:true});
+  });
+  addEventListener("popstate", ()=>{
+    const h = (location.hash||"").replace(/^#/,"");
+    show(ids.includes(h)?h:ids[0], {silent:true});
+  });
+
+  show(initial(), {replace:true, force:true});
+  return { show, get current(){ return cur; }, ids };
+};
+
+</script>
+<script>
+/* ---------------- Stage 3: the roadmap sheet's loader ----------------
+   Moved from dawghouse.html on 2026-08-09 with the split-computation intact:
+   the live/not-live tool split is COMPUTED from /data/surfaces.json against the
+   cards, never typed in. Fail-loud rules unchanged: a missing roster is not
+   evidence that nothing is live. */
+(function(){
+  const $=id=>document.getElementById(id);
+  const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  async function json(url){const r=await fetch(url);if(!r.ok)throw new Error(`${url} returned ${r.status}`);return r.json()}
+  let cfbIdeas=[],cfbSteps=[],liveMcp=new Set();
+  /* ⚠️ The live/not-live split is COMPUTED, never listed. A card names candidate tools;
+     /data/surfaces.json names what is actually on the Worker. The intersection is the
+     honest answer to "what can I call", and it self-corrects when either file moves.
+     Typing the number in here is exactly the bug this replaced. */
+  function cfbToolSplit(){
+    const named=new Set();
+    cfbIdeas.forEach(i=>(i.candidate_mcp_tools||[]).forEach(t=>named.add(t)));
+    const all=[...named].sort();
+    return {live:all.filter(t=>liveMcp.has(t)), planned:all.filter(t=>!liveMcp.has(t))};
+  }
+  function renderCfbTools(){
+    const {live,planned}=cfbToolSplit();
+    /* Attribute each tool to the roadmap idea that owns it. cfb-mcp-layer lists every
+       tool by design, so it is the fallback rather than the answer — otherwise every
+       tool would be credited to the umbrella card and the mapping would say nothing. */
+    const owner={};
+    cfbIdeas.forEach(i=>{ if(i.id==="cfb-mcp-layer") return;
+      (i.candidate_mcp_tools||[]).forEach(t=>{ if(!owner[t]) owner[t]=i; }); });
+    const umbrella=cfbIdeas.find(i=>i.id==="cfb-mcp-layer")||null;
+    const ideasWithLive=new Set(live.map(t=>(owner[t]||umbrella||{}).id).filter(Boolean)).size;
+    $("cfbToolStats").innerHTML=`<div class="p-stat"><b>${live.length}</b><span>callable now</span></div>`
+      +`<div class="p-stat"><b>${planned.length}</b><span>named, not built</span></div>`
+      +`<div class="p-stat"><b>${ideasWithLive}</b><span>ideas with a live tool</span></div>`
+      +`<div class="p-stat"><b>0</b><span>that write anything</span></div>`;
+    $("cfbToolsLive").innerHTML=live.map(t=>{
+      const o=owner[t]||umbrella;
+      /* ⚠️ The lifecycle chip belongs to the roadmap IDEA, not to the tool. Say which,
+         or a live tool under a still-building idea reads as a tool that is not ready. */
+      return `<div class="cfbt"><code>${esc(t)}</code><span>${o?`roadmap idea: ${esc(o.name)}${o.lifecycle_status?` (that idea is ${esc(o.lifecycle_status)})`:""}`:"roadmap owner not recorded"}</span></div>`;
+    }).join("")||'<div class="p-loading">The live roster names no College Football tools.</div>';
+    $("cfbToolsPlanned").innerHTML=planned.length
+      ? `<b>Named on a card but not callable:</b> <code>${planned.map(esc).join("</code>, <code>")}</code>. These are reservations. They are not on the Worker and asking for one gets nothing.`
+      : "Every tool named on a card is callable.";
+    const mb=$("cfbMachineTools");
+    if(mb) mb.innerHTML=`<a href="/data/surfaces.json"><code>/data/surfaces.json</code></a> — the live Worker tool roster. ${live.length} of its entries are College Football tools: <code>${live.map(esc).join("</code>, <code>")}</code>. All read-only.`;
+  }
+  const recLabel={"build":"BUILD","lab":"LAB","defer":"DEFER","avoid-initially":"AVOID INITIALLY","not-needed":"NOT NEEDED"};
+  const catLabel=c=>c.replace(/-/g," ").replace(/\b\w/g,x=>x.toUpperCase());
+  function renderCfb(){
+    const cat=$("cfbCat").value,rec=$("cfbRec").value,life=$("cfbLife").value,step=$("cfbStep").value;
+    const rows=cfbIdeas.filter(i=>(cat==="all"||i.category===cat)&&(rec==="all"||i.recommendation===rec)&&(life==="all"||i.lifecycle_status===life)&&(step==="all"||String(i.roadmap_step)===step));
+    const implemented=cfbIdeas.filter(i=>i.implemented).length;
+    const callable=cfbToolSplit().live.length;
+    $("cfbRmCount").textContent=`${rows.length} of ${cfbIdeas.length} ideas shown · ${implemented} implemented artifacts · ${callable} CFB MCP tool${callable===1?"":"s"} callable now.`;
+    $("cfbGrid").innerHTML=rows.map(i=>{
+      const stepInfo=i.roadmap_step?cfbSteps.find(s=>s.step===i.roadmap_step):null;
+      const mods=(i.recommendation_modifiers||[]).map(m=>m.replace(/-/g," ")).join(" · ");
+      return `<article class="tool"><span class="status rec-${esc(i.recommendation)}">${esc(recLabel[i.recommendation]||i.recommendation)}</span><span class="lifecycle-chip">${esc(i.lifecycle_status)}</span>${i.implemented?`<span class="lifecycle-chip">implemented</span>`:""}${i.roadmap_step?`<span class="lifecycle-chip">step ${i.roadmap_step}</span>`:""}<h3>${esc(i.name)}</h3><p class="meta-line">${esc(catLabel(i.category))}${mods?" · "+esc(mods):""} · priority: ${esc(i.priority)}${stepInfo?` · roadmap: ${esc(stepInfo.title)}`:""}</p><p>${esc(i.rationale)}</p><p><b>Expected value:</b> ${esc(i.expected_value)}</p>${i.delivery_note?`<p class="meta-line"><b>Delivery state:</b> ${esc(i.delivery_note)}</p>`:""}${i.delivery_evidence&&i.delivery_evidence.length?`<p class="meta-line"><b>Shipped evidence:</b> <code>${i.delivery_evidence.map(esc).join("</code>, <code>")}</code></p>`:""}${i.dependencies&&i.dependencies.length?`<p class="meta-line"><b>Depends on:</b> ${i.dependencies.map(esc).join(", ")}</p>`:""}${(()=>{const t=i.candidate_mcp_tools||[],on=t.filter(x=>liveMcp.has(x)),off=t.filter(x=>!liveMcp.has(x));return (on.length?`<p class="meta-line"><b>Live over MCP:</b> <code>${on.map(esc).join("</code>, <code>")}</code></p>`:"")+(off.length?`<p class="meta-line"><b>Named, not callable:</b> <code>${off.map(esc).join("</code>, <code>")}</code></p>`:"")})()}<p class="meta-line"><b>How we would know it worked:</b> ${esc(i.validation_requirement)}</p><p class="meta-line"><b>Risks / limits:</b> ${esc(i.risks_limitations)}</p>${i.components&&i.components.length?`<div class="components"><b>Consolidates:</b><ul>${i.components.map(c=>`<li><b>${esc(c.name)}</b>${c.recommendation?` (${esc(recLabel[c.recommendation]||c.recommendation)})`:""} — ${esc(c.summary)}</li>`).join("")}</ul></div>`:""}${i.revisit_conditions&&i.revisit_conditions.length?`<p class="block"><b>We would revisit if:</b> ${i.revisit_conditions.map(esc).join("; ")}.</p>`:""}${i.notes?`<p class="meta-line">${esc(i.notes)}</p>`:""}</article>`;
+    }).join("")||'<div class="p-loading">No ideas match these filters.</div>';
+  }
+  async function loadRoadmap(){try{
+    const [env,surfaces]=await Promise.all([json("/data/pound-tools.json"),json("/data/surfaces.json")]);
+    if(!Array.isArray(env.data))throw new Error("roadmap payload is malformed");
+    /* Fail loud rather than silently reporting zero callable tools — a missing roster is
+       not evidence that nothing is live, and the old zero was exactly that mistake. */
+    if(!surfaces||!surfaces.mcp||!Array.isArray(surfaces.mcp.tools_live))throw new Error("surfaces.json is missing its live MCP roster");
+    liveMcp=new Set(surfaces.mcp.tools_live);
+    cfbIdeas=env.data.filter(t=>t.kind==="roadmap-idea");cfbSteps=(env.cfb_roadmap&&env.cfb_roadmap.steps)||[];
+    const addOpts=(id,vals,label)=>{const sel=$(id);vals.forEach(v=>{const o=document.createElement("option");o.value=String(v);o.textContent=label?label(v):String(v);sel.appendChild(o)});sel.addEventListener("change",renderCfb)};
+    addOpts("cfbCat",[...new Set(cfbIdeas.map(i=>i.category))],catLabel);
+    addOpts("cfbLife",[...new Set(cfbIdeas.map(i=>i.lifecycle_status))]);
+    addOpts("cfbStep",cfbSteps.map(s=>s.step),v=>{const s=cfbSteps.find(x=>x.step===v);return `${v} · ${s?s.title:""}`});
+    $("cfbRec").addEventListener("change",renderCfb);
+    renderCfbTools();
+    renderCfb();
+    window.__CFBRM={ideas:cfbIdeas.length,live:cfbToolSplit().live.length};
+  }catch(err){$("cfbGrid").innerHTML='<div class="p-error">CFB roadmap unavailable: '+esc(err.message)+'</div>';$("cfbToolsLive").innerHTML='<div class="p-error">Live CFB tool roster unavailable: '+esc(err.message)+' — this is not a claim that no tools are live.</div>'}}
+  loadRoadmap();
+
+  /* Old anchors follow the content into sheets; the sheet ids "matchup" and
+     "divergence" ARE the old anchors, so only these three need a forward.
+     ⚠️ ON hashchange TOO, not just at load. A link from one part of the page to
+     cfb.html#explorer is a SAME-DOCUMENT navigation: nothing reloads, this script
+     never re-runs, and DDSheets sees an id it does not know and stays put. This
+     listener is registered BEFORE DDSheets', so it rewrites the hash first and
+     DDSheets reads the corrected one. */
+  var fwd={explorer:"teams",expected:"elo",baseline:"elo"};
+  function fwdHash(){
+    var h=(location.hash||"").replace(/^#/,"");
+    if(!fwd[h]) return;
+    try{history.replaceState(null,"","#"+fwd[h]);}catch(e){}
+  }
+  fwdHash();
+  addEventListener("hashchange", fwdHash);
+  DDSheets({key:"cfb",mount:"#sheets",sheets:[
+    {id:"matchup",label:"Matchup",panel:"#sheetMatchup"},
+    {id:"teams",label:"Teams",panel:"#sheetTeams"},
+    {id:"elo",label:"Elo",panel:"#sheetElo"},
+    {id:"divergence",label:"Divergence",panel:"#sheetDiv"},
+    {id:"roadmap",label:"Roadmap",panel:"#sheetRoadmap"}],
+    /* the lazy Elo/divergence fetches were scroll-triggered; a sheet opening is the
+       new visibility event, so it triggers the same latched loader directly */
+    onShow:function(id){if((id==="elo"||id==="divergence")&&window.ddCfbLoadLazy)window.ddCfbLoadLazy();}
+  });
+})();
+</script>
+<script>
 /* ---------------- Toto's surface: the College Football lab ----------------
    ⚠️ The system block is where the honesty constraints have to be repeated, because
    Toto answers from it and not from the page copy. Every limit stated on the page is
@@ -2588,7 +2950,8 @@ window.DD_BOTCTX = {
 - ⚠️ NO MARKET PRICES ARE ON THIS PAGE. The historical CFB market file has NO observation timestamp, so those are not closing lines and no closing-line value can be computed. The one market number quoted here is an aggregate Brier score on the same games, and even that flatters the market for the same reason.
 - ⚠️ THE MATCHUP CALCULATOR IS A HYPOTHETICAL. It applies the published end-of-2025 transform to two frozen ratings. It is not a scheduled-game forecast and it produces no spread or total.
 - ⚠️ THE DIVERGENCE TABLE IS DESCRIPTIVE. Every predictive label in the source file is null. Never call a team overrated, underrated, or a fraud.
-- The rating sees game results, margin and site. It does NOT see recruiting, the portal, rosters, injuries, weather, travel, play-by-play efficiency or opponent strength adjustment.`,
+- The rating sees game results, margin and site. It does NOT see recruiting, the portal, rosters, injuries, weather, travel, play-by-play efficiency or opponent strength adjustment.
+- ⚠️ THE ROADMAP SHEET IS A PLAN, NOT A CAPABILITY LIST. Its cards are ideas; a candidate tool name is a reservation unless the live roster in /data/surfaces.json says it is callable. Never promise a roadmap feature exists.`,
   ctx(){
     var L = [];
     var w = window.__CFB || null;
@@ -2608,6 +2971,7 @@ window.DD_BOTCTX = {
     L.push('THE FIVE IT OVER-EXPECTED MOST:');
     byd.slice(-5).reverse().forEach(function(t){ L.push(t.team + ' | ' + t.record + ' | expected ' + t.exp.toFixed(2) + ' | observed ' + t.obs + ' | ' + t.dw.toFixed(2)); });
     if(w.backtest) L.push('PUBLISHED 2025 BACKTEST (retrodictive): ' + w.backtest);
+    if(window.__CFBRM) L.push('ROADMAP SHEET: ' + window.__CFBRM.ideas + ' build ideas; ' + window.__CFBRM.live + ' candidate tools callable now per the live roster. Ideas are plans, not capabilities.');
     L.push('⚠️ Nothing above is a 2026 claim. No forecast in this data was issued before a kickoff.');
     return L.join('\n');
   }

@@ -18,7 +18,7 @@ Tiers: `labs` is challenged; `dawg` validated; `pound` shelved — The DawgHouse
 
 ## The DawgHouse
 
-- [Workbench](/dawghouse.html): the shelf of blocked work and the CFB roadmap.
+- [Workbench](/dawghouse.html): the shelf of blocked work.
 - [Inventory + CFB roadmap](/data/pound-tools.json): NFL status and 44 evidence-tracked CFB ideas. Sixteen production CFB tools ARE callable over MCP; the 44 roadmap ideas are not, and an idea's lifecycle state is not a capability claim.
 - [Contracts](/data/model-contracts.json): forecast fields, receipt rules and calculator I/O.
 - [Provenance](/data/upstream-models.json): repositories, commits, dates, license status and integration mode.
@@ -33,6 +33,7 @@ provenance render on /receipts.html since 2026-08-09.
 
 ## College football
 
+- [CFB Lab](/cfb.html): explorer, matchup calculator, Elo backtest, divergence, and the 44-idea build roadmap (moved from the workbench 2026-08-09).
 - [2025 results](/data/cfb-schedule.json): 934 games; [latest games](/data/cfb-games-latest.json): one final per FBS team; [latest periods](/data/cfb-team-week-latest.json): one per team; [ratings](/data/cfb-teams.json): records + retrodictive Elo.
 - [Book market](/data/cfb-market.json): spreads, totals and devigged moneylines. Books are named but observation time is unknown; these are not closing lines and cannot establish CLV.
 - [CFB Elo](/data/cfb-elo.json), [registry](/data/cfb-ratings.json) and [card](/data/cfb-model-cards.json): end-2025; retrodictive, modelled, ungraded, not consensus or forecast.

@@ -185,9 +185,14 @@ test('model scoreboard is live over the normalized ungraded receipt ledger', () 
   assert.ok(receiptsSurface.machine.some(x => x.kind === 'mcp' && x.tool === 'dd_model_scoreboard' && x.status === 'live'));
   assert.ok(!pound.machine.some(x => x.tool === 'dd_model_scoreboard'));
   assert.ok(!pound.planned.includes('mcp:model_scoreboard'));
-  assert.match(pound.gap, /timestamped 24-hour market collector are live/i);
-  assert.match(pound.gap, /first market observation waits on an eligible 2026 event/i);
-  assert.match(pound.gap, /no CFB (?:model )?forecast receipt has been frozen/i);
+  /* CEP-5A Stage 3: the CFB claims moved with the roadmap to the cfb surface. The
+     collector/receipt honesty statements must survive the move, on the row that now
+     owns them — this is the same check, at its new address. */
+  const cfbSurface = surfaces.data.find(s => s.id === 'cfb');
+  assert.ok(cfbSurface, 'surfaces.json has no cfb row');
+  assert.match(cfbSurface.gap, /timestamped 24-hour market collector are live/i);
+  assert.match(cfbSurface.gap, /first market observation waits on an eligible 2026 event/i);
+  assert.match(cfbSurface.gap, /no CFB (?:model )?forecast receipt has been frozen/i);
 });
 test('new data surfaces are in the generated manifest', () => {
   const paths = new Set(index.data.files.map(x => x.path));
@@ -314,8 +319,13 @@ test('CFB roadmap ideas carry evidence-backed lifecycle without inventing tools'
   assert.match(byId['cfb-mcp-layer'].delivery_note, /42 live tools total/i);
 });
 test('published CFB backbone artifacts are discoverable without overstating their evidence', () => {
+  /* CEP-5A Stage 3: the files ride on the cfb surface now — same honesty checks, at
+     the row that owns them. The pound row must have let them go. */
+  const cfbSurface = surfaces.data.find(s => s.id === 'cfb');
+  const machine = Object.fromEntries(cfbSurface.machine.filter(x => x.url && x.url.includes('/cfb-')).map(x => [x.url, x]));
   const pound = surfaces.data.find(s => s.id === 'pound');
-  const machine = Object.fromEntries(pound.machine.filter(x => x.url && x.url.includes('/cfb-')).map(x => [x.url, x]));
+  assert.ok(!pound.machine.some(x => x.url && x.url.includes('/cfb-')),
+    'the pound surface still claims CFB data files');
   assert.deepEqual(Object.keys(machine).sort(), ['/data/cfb-disagreement.json', '/data/cfb-elo.json',
     '/data/cfb-games-latest.json', '/data/cfb-market.json', '/data/cfb-model-cards.json', '/data/cfb-model-receipts.json',
     '/data/cfb-ratings.json', '/data/cfb-record-divergence-validation.json',
@@ -395,10 +405,17 @@ test('the deployed CFB MCP tools are live while unimplemented candidate names re
     assert.ok(!surfaces.mcp.tools_staged.includes(name), `${name} falsely staged`);
   }
   assert.equal(surfaces.counts.mcp_tools_live, 43);   // 43 live since the 2026-08-09 deploy
+  /* CEP-5A Stage 3: the sixteen CFB tools ride on the cfb surface, whose page renders
+     the roadmap that names them. The DawgHouse surface must no longer claim them, and
+     its pound-tools.json entry must stop advertising a roadmap it does not render. */
+  const cfbSurface = surfaces.data.find(s => s.id === 'cfb');
+  const exposed = new Set(cfbSurface.machine.filter(x => x.kind === 'mcp').map(x => x.tool));
+  for (const name of CFB_MCP_LIVE) assert.ok(exposed.has(name), `${name} missing from the cfb machine surfaces`);
   const pound = surfaces.data.find(s => s.id === 'pound');
-  const exposed = new Set(pound.machine.filter(x => x.kind === 'mcp').map(x => x.tool));
-  for (const name of CFB_MCP_LIVE) assert.ok(exposed.has(name), `${name} missing from Pound machine surfaces`);
-  assert.match(pound.machine.find(m => m.url === '/data/pound-tools.json').covers, /sixteen production CFB MCP tools/i);
+  assert.ok(!pound.machine.some(x => x.kind === 'mcp' && CFB_MCP_LIVE.includes(x.tool)),
+    'the pound surface still claims the CFB tools');
+  assert.match(cfbSurface.machine.find(m => m.url === '/data/pound-tools.json').covers, /roadmap/i);
+  assert.match(pound.machine.find(m => m.url === '/data/pound-tools.json').covers, /listed on the cfb surface/i);
 });
 test('the roadmap is Graveyard-ready: lifecycle history, postmortem shape and revival path exist', () => {
   assert.deepEqual(roadmap.lifecycle.statuses, LIFECYCLE);
@@ -419,9 +436,12 @@ test('the seven governance principles are preserved as shared metadata', () => {
     'Model Cards', 'Snapshotting / Receipts', 'Source Provenance', 'Uncertainty']);
   for (const g of roadmap.governance) assert.ok(g.principle && g.applies_to, g.id);
 });
-test('dawghouse.html renders the CFB roadmap honestly', () => {
-  const html = fs.readFileSync('dawghouse.html', 'utf8');
-  assert.match(html, /<section class="p-section" id="cfb">/);
+/* CEP-5A Stage 3: the roadmap renders on cfb.html's Roadmap sheet now. These two
+   tests grade the CONTENT and the MECHANISM, which travelled unchanged — they follow
+   it rather than being deleted, and dawghouse.html is checked for having let go. */
+test('cfb.html renders the CFB roadmap honestly', () => {
+  const html = fs.readFileSync('cfb.html', 'utf8');
+  assert.match(html, /<div class="card" id="roadmap">/);
   assert.match(html, /roadmap ideas, not automatically tools/i);
   assert.match(html, /Candidate MCP tool names remain reservations/);
   assert.match(html, /implemented artifacts/);
@@ -437,8 +457,8 @@ test('dawghouse.html renders the CFB roadmap honestly', () => {
    them went live in /data/surfaces.json. The page and the machine surface disagreed and
    only the machine surface was right. So: the page may not contain the answer, it must
    compute it, and these assertions check the mechanism rather than the number. */
-test('dawghouse.html computes the callable CFB tool count instead of stating one', () => {
-  const html = fs.readFileSync('dawghouse.html', 'utf8');
+test('cfb.html computes the callable CFB tool count instead of stating one', () => {
+  const html = fs.readFileSync('cfb.html', 'utf8');
   assert.ok(!/\d+ candidate CFB MCP tools callable/.test(html),
     'the callable count is typed into the page again');
   assert.ok(!html.includes('Candidate MCP tools (not callable)'),

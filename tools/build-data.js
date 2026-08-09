@@ -1139,8 +1139,14 @@ const SURFACES = [
   { id: 'guillotine', name: 'Guillotine league tools', page: '/guillotine.html',
     machine: [{ kind: 'mcp', tool: 'dd_guillotine_odds', status: 'live' }],
     planned: ['json:/data/guillotine.json'] },
-  { id: 'pound', name: 'The DawgHouse shelf and College Football roadmap (formerly The Pound)', page: '/dawghouse.html',
-    machine: [{ kind: 'json', url: '/data/pound-tools.json', status: 'live', covers: 'complete NFL tool inventory plus the College Football roadmap with evidence-backed lifecycle state and sixteen production CFB MCP tools' },
+  { id: 'pound', name: 'The DawgHouse shelf (formerly The Pound)', page: '/dawghouse.html',
+    machine: [{ kind: 'json', url: '/data/pound-tools.json', status: 'live', covers: 'complete NFL tool inventory (delivery status, blockers) — the College Football roadmap in the same file is listed on the cfb surface, where it renders' }],
+    planned: [],
+    gap: 'The model scoreboard and provenance render on /receipts.html, the deterministic calculators on /calculators.html, and the College Football roadmap on /cfb.html since 2026-08-09; each surface lists its own files and Worker tools.' },
+  { id: 'cfb', name: 'College Football Lab — 2025 results, retrodictive Elo and the build roadmap', page: '/cfb.html',
+    /* CEP-5A Stage 3: the roadmap renders on /cfb.html now, so the CFB files and the
+       sixteen CFB Worker tools are this surface's claims, not the DawgHouse's. */
+    machine: [{ kind: 'json', url: '/data/pound-tools.json', status: 'live', covers: 'the 44-idea College Football roadmap under cfb_roadmap and kind:"roadmap-idea" entries — the same file also carries the NFL inventory listed on the DawgHouse surface' },
               { kind: 'json', url: '/data/cfb-schedule.json', status: 'live', covers: '934 canonical 2025 FBS-involved game facts with a pinned upstream commit and reproducible snapshot hash' },
               { kind: 'json', url: '/data/cfb-games-latest.json', status: 'live', covers: '136 compact latest completed canonical game rows, one per FBS team; dated 2025 observed results, not current form or forecasts' },
               { kind: 'json', url: '/data/cfb-team-game.json', status: 'live', covers: '1,868 mirrored team-game result rows derived exactly from the canonical schedule; advanced play metrics are unavailable' },
@@ -1158,7 +1164,7 @@ const SURFACES = [
               ...MCP_CFB_LIVE.map(tool => ({ kind: 'mcp', tool, status: 'live',
                 covers: 'bounded read-only CFB evidence or deterministic rating-period calculation; inputs and results are not stored' }))],
     planned: [],
-    gap: 'The model scoreboard and provenance render on /receipts.html and the deterministic calculators on /calculators.html since 2026-08-09; the calculator contracts and Worker tools are listed on the calculators surface. Sixteen bounded CFB tools and the timestamped 24-hour market collector are live; the first market observation waits on an eligible 2026 event, and no CFB model forecast receipt has been frozen yet.' },
+    gap: 'Sixteen bounded CFB tools and the timestamped 24-hour market collector are live; the first market observation waits on an eligible 2026 event, and no CFB model forecast receipt has been frozen yet.' },
   { id: 'calculators', name: 'NFL calculators', page: '/calculators.html',
     /* CEP-5A Stage 2: the ten deterministic calculators moved off the DawgHouse page.
        Their contracts file and Worker tools moved with them — a surface lists what its
