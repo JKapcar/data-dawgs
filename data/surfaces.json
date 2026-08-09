@@ -1,5 +1,5 @@
 {
- "as_of": "2026-08-08",
+ "as_of": "2026-08-09",
  "source": "Generated from the site itself. Tier is read from each page's live chip.",
  "tier": "labs",
  "graded": false,
@@ -15,7 +15,7 @@
   }
  },
  "mcp": {
-  "path": "/mcp/u_<personal token>   (legacy: /mcp/<league passphrase>)",
+  "path": "/mcp/u_<personal token>   ·   catalogs: /mcp/core/<credential> and /mcp/full/<credential>   (legacy: /mcp/<league passphrase>, still full)",
   "transport": "streamable-http",
   "host": "https://toto.jkapcar4.workers.dev",
   "mint": "https://datadawgs216.com/connect.html",
@@ -27,6 +27,7 @@
    "dd_league_overview",
    "dd_bozo_week",
    "dd_bozo_standings",
+   "dd_draft_bozo_leg",
    "dd_draft_board",
    "dd_draft_pool",
    "dd_survivor_week",
@@ -66,11 +67,9 @@
    "dd_guillotine_odds",
    "dd_site_map"
   ],
-  "tools_staged": [
-   "dd_draft_bozo_leg"
-  ],
-  "catalogs_staged": {
-   "status": "STAGED — the core/full split is in work/mcp-block.js and the committed Worker source, and is NOT on the deployed endpoint. /mcp/core/<credential> does not answer yet.",
+  "tools_staged": [],
+  "catalogs": {
+   "status": "LIVE since 2026-08-09. Both /mcp/core/<credential> and /mcp/full/<credential> answer, and GET /mcp/ advertises them. The bare /mcp/<credential> is unchanged and still full. A leading `core`/`full` is only read as a catalog when a credential follows it, or when the credential arrived in a header — so no passphrase can be stranded by its own name. NOT VERIFIED IN PRODUCTION: the per-catalog tools/list counts, which need a credential.",
    "why": "Forty-three tool schemas cost 10-25k context tokens in every conversation that connects. core is the everyday league surface; full is everything and stays the default, so the bare /mcp/<credential> URL keeps serving every tool a live connector may already be calling.",
    "paths": {
     "core": "/mcp/core/<credential>",
@@ -140,8 +139,8 @@
     "dd_site_map"
    ]
   },
-  "annotations_staged": {
-   "status": "STAGED with the catalogs. Every registered tool carries a display title and readOnlyHint:true on tools/list. destructiveHint, idempotentHint and openWorldHint are deliberately absent rather than guessed.",
+  "annotations": {
+   "status": "LIVE with the catalogs since 2026-08-09, present in the deployed source. Every registered tool carries a display title and readOnlyHint:true on tools/list. destructiveHint, idempotentHint and openWorldHint are deliberately absent rather than guessed. NOT VERIFIED ON THE WIRE: reading them back needs a credential.",
    "titles": {
     "dd_whoami": "Who am I",
     "dd_league_overview": "League overview",
@@ -194,9 +193,9 @@
   "with_live_machine_access": 12,
   "with_no_machine_access": 0,
   "mcp_tools_registered": 43,
-  "mcp_tools_live": 42,
-  "mcp_tools_staged": 1,
-  "mcp_tools_core_staged": 16,
+  "mcp_tools_live": 43,
+  "mcp_tools_staged": 0,
+  "mcp_tools_core": 16,
   "mcp_tools_planned": 5
  },
  "data": [
@@ -778,6 +777,6 @@
   }
  ],
  "tier_meaning": "Labs — useful and live, still being challenged. Open questions may remain about calibration, assumptions, data quality or edge. Use with your eyes open.",
- "built": "2026-08-08",
+ "built": "2026-08-09",
  "canonical_url": "https://datadawgs216.com/data/surfaces.json"
 }

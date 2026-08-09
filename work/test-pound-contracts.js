@@ -79,7 +79,7 @@ test('surface generator reports the deployed Pound MCP tools as live', () => {
     'dd_calculate_bet_ev', 'dd_calculate_hedge', 'dd_nfl_passer_rating',
     'dd_score_forecast', 'dd_summarize_beliefs', 'dd_elo_game',
     'dd_translate_probability'];
-  assert.equal(surfaces.counts.mcp_tools_live, 42);
+  assert.equal(surfaces.counts.mcp_tools_live, 43);   // 43 live since the 2026-08-09 deploy
   assert.ok(surfaces.mcp.tools_live.includes('dd_survivor_ev'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_optimize_survivor_path'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_analyze_matchup'));
@@ -95,7 +95,10 @@ test('surface generator reports the deployed Pound MCP tools as live', () => {
    never appear in tools_live and must never be counted there. */
 test('staged MCP tools are named, counted separately, and kept out of the live roster', () => {
   const staged = surfaces.mcp.tools_staged;
-  assert.deepEqual(staged, ['dd_draft_bozo_leg']);
+  /* Empty since the 2026-08-09 deploy. ⚠️ This is deliberately NOT written as
+     `deepEqual(staged, [])` — that is the exact bug the comment above describes, a check
+     that passes only while nothing is staged and turns red the moment something is. The
+     assertions below are about the BOUNDARY and hold whether the list is empty or not. */
   assert.equal(surfaces.counts.mcp_tools_staged, staged.length);
   for (const name of staged) assert.ok(!surfaces.mcp.tools_live.includes(name), `${name} is staged but claimed live`);
   assert.equal(surfaces.counts.mcp_tools_live, surfaces.mcp.tools_live.length);
@@ -104,26 +107,29 @@ test('staged MCP tools are named, counted separately, and kept out of the live r
    What is still a human decision — and must stay one — is deployment state: registered is
    not deployed. These assertions hold the two apart and hold the catalog block to the same
    honesty, since /mcp/core/<credential> does not answer on the live endpoint yet. */
-test('the surfaces map derives its MCP roster from the registry and labels the catalogs staged', () => {
+test('the surfaces map derives its MCP roster from the registry and labels the catalogs honestly', () => {
   const registry = fs.readFileSync(path.join('work', 'mcp-block.js'), 'utf8');
   const reg = registry.slice(registry.indexOf('const MCP_TOOLS = ['));
   const declared = (reg.match(/\n    name: "dd_\w+",\n/g) || []).map(s => s.match(/"(dd_\w+)"/)[1]);
   assert.equal(declared.length, surfaces.counts.mcp_tools_registered);
   assert.deepEqual([...surfaces.mcp.tools_live, ...surfaces.mcp.tools_staged].sort(), [...declared].sort());
 
-  const cat = surfaces.mcp.catalogs_staged;
-  assert.match(cat.status, /^STAGED/);
-  assert.match(cat.status, /NOT on the deployed endpoint/);
+  const cat = surfaces.mcp.catalogs;
+  assert.match(cat.status, /^LIVE/);
+  /* ⚠️ A LIVE claim must still say what was NOT verified. The per-catalog tools/list counts
+     need a credential and none was minted, so the map has to keep admitting that. */
+  assert.match(cat.status, /NOT VERIFIED IN PRODUCTION/);
   assert.deepEqual(cat.full, declared);
-  assert.equal(cat.core.length, surfaces.counts.mcp_tools_core_staged);
+  assert.equal(cat.core.length, surfaces.counts.mcp_tools_core);
   assert.ok(cat.core.length > 0 && cat.core.length < cat.full.length, 'core must be a proper subset, or it saves nothing');
   for (const name of cat.core) assert.ok(cat.full.includes(name), `${name} is in core but not in full`);
   assert.equal(cat.paths.core, '/mcp/core/<credential>');
-  // the live endpoint description must NOT advertise a catalog path that does not answer
-  assert.ok(!/\/mcp\/core\//.test(surfaces.mcp.path), 'the live path claims a catalog route that is not deployed');
+  // the endpoint description must now ADVERTISE the catalog routes, because they answer
+  assert.ok(/\/mcp\/core\//.test(surfaces.mcp.path), 'the catalogs are live but the path does not name them');
 
-  const titles = surfaces.mcp.annotations_staged.titles;
-  assert.match(surfaces.mcp.annotations_staged.status, /^STAGED/);
+  const titles = surfaces.mcp.annotations.titles;
+  assert.match(surfaces.mcp.annotations.status, /^LIVE/);
+  assert.match(surfaces.mcp.annotations.status, /NOT VERIFIED ON THE WIRE/);
   assert.deepEqual(Object.keys(titles).sort(), [...declared].sort());
   assert.ok(Object.values(titles).every(t => typeof t === 'string' && t.length > 0));
   assert.equal(new Set(Object.values(titles)).size, declared.length, 'two tools sharing a title is a UI that lies');
@@ -131,14 +137,15 @@ test('the surfaces map derives its MCP roster from the registry and labels the c
 /* ⚠️ THE DEPLOY CHECKLIST IS PART OF THE ARTIFACT, SO IT IS GRADED LIKE ONE.
    docs/mcp-catalogs.md tells whoever runs the Worker deploy which files must change in the
    same commit. A checklist that has drifted from the code is worse than none, because it
-   reads as verified. So the doc has to keep naming the real staged set, the real core set,
-   and its own not-deployed status. */
+   reads as verified. So the doc has to keep naming the real staged set and the real core
+   set — and, now that the deploy has happened, must NOT still claim the catalogs are
+   undeployed. The assertion inverted on 2026-08-09 rather than being deleted. */
 test('docs/mcp-catalogs.md still matches the registry it documents', () => {
   const doc = fs.readFileSync(path.join('docs', 'mcp-catalogs.md'), 'utf8');
-  assert.match(doc, /NOT deployed/, 'the doc must keep saying the catalogs are not live');
+  assert.ok(!/NOT deployed/.test(doc), 'the catalogs are deployed; the doc must not still say otherwise');
   for (const name of surfaces.mcp.tools_staged)
     assert.ok(doc.includes(name), `${name} is staged but docs/mcp-catalogs.md never mentions it`);
-  const cat = surfaces.mcp.catalogs_staged;
+  const cat = surfaces.mcp.catalogs;
   for (const name of cat.core)
     assert.ok(doc.includes(name), `${name} is in the core catalog but is not listed in the doc`);
   // the doc states the two counts in prose; keep them true
@@ -377,7 +384,7 @@ test('the deployed CFB MCP tools are live while unimplemented candidate names re
     else assert.ok(!surfaces.mcp.tools_live.includes(name), `${name} falsely live`);
     assert.ok(!surfaces.mcp.tools_staged.includes(name), `${name} falsely staged`);
   }
-  assert.equal(surfaces.counts.mcp_tools_live, 42);
+  assert.equal(surfaces.counts.mcp_tools_live, 43);   // 43 live since the 2026-08-09 deploy
   const pound = surfaces.data.find(s => s.id === 'pound');
   const exposed = new Set(pound.machine.filter(x => x.kind === 'mcp').map(x => x.tool));
   for (const name of CFB_MCP_LIVE) assert.ok(exposed.has(name), `${name} missing from Pound machine surfaces`);

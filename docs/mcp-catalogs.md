@@ -1,12 +1,21 @@
 # MCP tool annotations and the core/full catalogs
 
-**Status: in the repo and in the committed Worker source. NOT deployed.** The live
-endpoint still serves 42 tools on one path with no annotations. `/mcp/core/<credential>`
-does not answer. `data/surfaces.json` reports the catalogs under `mcp.catalogs_staged`
-for exactly that reason.
+**Status: DEPLOYED 2026-08-09.** The live endpoint serves all 43 tools, carries the
+annotations, and answers on both `/mcp/core/<credential>` and `/mcp/full/<credential>`;
+`GET /mcp/` advertises both. The bare `/mcp/<credential>` is unchanged and still full, so
+no connector already in the wild lost a tool. `data/surfaces.json` reports them under
+`mcp.catalogs` and `mcp.annotations` — no longer under a staged key.
 
-Shipped in `e99ddf1`. Base `c3f7250`. Worker `toto` unchanged at
-`5445f0d9-793c-4ee7-9805-ff0db7f64cbc`.
+⚠️ **What is still not verified in production:** the tools/list SHAPE on each path (16 on
+core, 43 on full) and the annotations on the wire. Reading those back needs a credential
+and none was minted. What WAS verified against the deployed endpoint: the catalog routes
+answer, a wrong credential on a catalog path returns 401 rather than 404, and the deployed
+source was read back from `/content/v2` and structurally diffed against the repo — 43 tool
+names, none removed, no route removed, all 11 bindings intact. Step 4 below is the part
+still owed.
+
+Built in `e99ddf1`, base `c3f7250`. Deployed from `74ea314`; Worker etag
+`e24980f19710ce87`, replacing `5445f0d9-793c-4ee7-9805-ff0db7f64cbc`.
 
 ## What it does
 
@@ -79,12 +88,15 @@ actually contained and the existing suite caught.
 ## Deploy checklist
 
 ⚠️ **A Worker deploy needs Kap's fresh explicit approval every time.** Nothing below is
-authorised in advance.
+authorised in advance. He granted it explicitly for the 2026-08-09 deploy; that grant does
+not carry forward to the next one.
 
 The order matters. Deploying without step 3 leaves `data/surfaces.json` claiming 42 live
 tools and a staged catalog block, while the endpoint serves 43 and answers on
 `/mcp/core/`. That is the coverage map lying, which is the one thing that file exists to
-prevent.
+prevent. On 2026-08-09 the flip was done in the same commit as the deploy, and
+`work/test-machine-surfaces.mjs` caught llms.txt still saying 42 within seconds of the
+rebuild — which is what that suite is for.
 
 1. Reconcile `origin/main`. Kap runs manual Codex on this repo and it deploys the Worker.
 2. Deploy `dawg-bot-worker.js` (see `docs/worker-deploy.md`). Do NOT hand-edit the

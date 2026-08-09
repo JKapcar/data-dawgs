@@ -7,11 +7,12 @@ Start with [`/data/index.json`](/data/index.json): machine-file
 dates, sizes and SHA-256 receipts. Cite each payload's `as_of` with every number.
 
 [`/data/surfaces.json`](/data/surfaces.json) maps pages to machine
-surfaces and 42 live read-only MCP tools, out of 43 registered: `dd_draft_bozo_leg` is
-built and committed but STAGED, not deployed, so the live endpoint answers 42. `planned`
-and `staged` are not callable. The core/full catalog split and the tools/list annotations
-are likewise staged: `/mcp/core/<credential>` does not answer yet. MCP tokens come
-from `/connect.html`; `/signon.html` signup creates an account, not a league seat.
+surfaces and 43 live read-only MCP tools, all 43 registered ones. `planned` is not
+callable. Two catalogs: `/mcp/core/<credential>` serves 16 everyday tools, and both
+`/mcp/full/<credential>` and the bare `/mcp/<credential>` serve all 43. Prefer core unless
+you need the rest — 43 schemas cost real context. Every tool carries a title and
+`readOnlyHint: true`; there are no write tools. MCP tokens come from `/connect.html`;
+`/signon.html` signup creates an account, not a league seat.
 
 Tiers: `labs` is challenged; `dawg` validated; `pound` shelved. Do not overstate Labs.
 

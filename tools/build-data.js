@@ -1029,21 +1029,26 @@ const MCP_REGISTRY = (() => {
 // ⚠️ EDITING THIS LIST IS STEP 3 OF A WORKER DEPLOY, NOT A STANDALONE CHANGE.
 // docs/mcp-catalogs.md has the full order; skipping the rest of it leaves this file
 // claiming a shape the endpoint does not have.
-const MCP_STAGED = ['dd_draft_bozo_leg'];
+// Empty since the 2026-08-09 deploy (Worker etag e24980f19710ce87): the endpoint carries
+// all 43. Read back from /content/v2 after deploying, not assumed from the PUT's 200.
+const MCP_STAGED = [];
 const MCP_LIVE = MCP_REGISTRY.map(t => t.name).filter(n => !MCP_STAGED.includes(n));
 for (const n of MCP_STAGED)
   if (!MCP_REGISTRY.some(t => t.name === n)) throw new Error(`${n} is listed as staged but is not in the registry`);
 for (const n of [...MCP_POUND_LIVE, ...MCP_CFB_LIVE])
   if (!MCP_LIVE.includes(n)) throw new Error(`${n} is claimed live on the Pound surface but is not a live registry tool`);
-/* ⚠️ CATALOGS ARE STAGED, NOT LIVE. The core/full split is a Worker change that has not
- * been deployed: /mcp/core/<credential> does not answer yet. It is reported under its own
- * staged key so nothing reads it as an endpoint anyone can call today. */
+/* CATALOGS ARE LIVE as of the 2026-08-09 deploy. GET /mcp/ advertises both paths and both
+ * answer; verified against the deployed endpoint, not this repo. ⚠️ What is NOT verified in
+ * production is the tools/list SHAPE on each path (16 on core, 43 on full) and the
+ * annotations on the wire, because that needs a credential and none was minted. The claims
+ * below are therefore about the DEPLOYED SOURCE, which was read back and structurally
+ * diffed after the PUT. If you get a credential, run docs/mcp-catalogs.md step 4. */
 const MCP_CATALOGS = {
   core: MCP_REGISTRY.filter(t => t.catalog === 'core').map(t => t.name),
   full: MCP_REGISTRY.map(t => t.name),
 };
 const MCP_ENDPOINT = {
-  path: '/mcp/u_<personal token>   (legacy: /mcp/<league passphrase>)',
+  path: '/mcp/u_<personal token>   ·   catalogs: /mcp/core/<credential> and /mcp/full/<credential>   (legacy: /mcp/<league passphrase>, still full)',
   transport: 'streamable-http',
   host: 'https://toto.jkapcar4.workers.dev',
   mint: 'https://datadawgs216.com/connect.html',
@@ -1177,9 +1182,12 @@ write('surfaces.json', {
     ...MCP_ENDPOINT,
     tools_live: MCP_LIVE,
     tools_staged: MCP_STAGED,
-    catalogs_staged: {
-      status: 'STAGED — the core/full split is in work/mcp-block.js and the committed Worker source, ' +
-              'and is NOT on the deployed endpoint. /mcp/core/<credential> does not answer yet.',
+    catalogs: {
+      status: 'LIVE since 2026-08-09. Both /mcp/core/<credential> and /mcp/full/<credential> answer, ' +
+              'and GET /mcp/ advertises them. The bare /mcp/<credential> is unchanged and still full. ' +
+              'A leading `core`/`full` is only read as a catalog when a credential follows it, or when ' +
+              'the credential arrived in a header — so no passphrase can be stranded by its own name. ' +
+              'NOT VERIFIED IN PRODUCTION: the per-catalog tools/list counts, which need a credential.',
       why: 'Forty-three tool schemas cost 10-25k context tokens in every conversation that connects. ' +
            'core is the everyday league surface; full is everything and stays the default, so the bare ' +
            '/mcp/<credential> URL keeps serving every tool a live connector may already be calling.',
@@ -1187,10 +1195,11 @@ write('surfaces.json', {
       core: MCP_CATALOGS.core,
       full: MCP_CATALOGS.full,
     },
-    annotations_staged: {
-      status: 'STAGED with the catalogs. Every registered tool carries a display title and ' +
-              'readOnlyHint:true on tools/list. destructiveHint, idempotentHint and openWorldHint ' +
-              'are deliberately absent rather than guessed.',
+    annotations: {
+      status: 'LIVE with the catalogs since 2026-08-09, present in the deployed source. Every ' +
+              'registered tool carries a display title and readOnlyHint:true on tools/list. ' +
+              'destructiveHint, idempotentHint and openWorldHint are deliberately absent rather ' +
+              'than guessed. NOT VERIFIED ON THE WIRE: reading them back needs a credential.',
       titles: Object.fromEntries(MCP_REGISTRY.map(t => [t.name, t.title])),
     },
   },
@@ -1201,7 +1210,7 @@ write('surfaces.json', {
     mcp_tools_registered: MCP_REGISTRY.length,
     mcp_tools_live: MCP_LIVE.length,
     mcp_tools_staged: MCP_STAGED.length,
-    mcp_tools_core_staged: MCP_CATALOGS.core.length,
+    mcp_tools_core: MCP_CATALOGS.core.length,
     mcp_tools_planned: [...new Set(SURFACES.flatMap(s => s.planned).filter(p => p.startsWith('mcp:')))].length,
   },
   data: SURFACES.map(s => ({ ...s, tier: tierOf(s.page.replace(/^\//, '')) })),
