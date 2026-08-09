@@ -1,7 +1,11 @@
-/* The 🙃-to-the-footer move plus the new brown page field.
+/* The 🙃-to-the-footer move plus the brown page field.
    Catches: a 🙃 still stuck in the nav, two of them, one that never renders because a
    page has no <footer>, one that lands under Ask Toto's fixed launcher, and a page whose
-   background token did not get replaced. */
+   background token did not get replaced.
+   ⚠️ The field is ramp B as of 8/9 (#161009 page / #241c12 cards). The old #0b0802 was
+   1.05 against pure black, which is below what an eye can use — it read as black on a
+   real desktop in daylight. Both tokens are asserted because the fix was moving them
+   TOGETHER; see work/sweep-theme-ramp-b.py for the measurements. */
 import { chromiumExecutable, loadPlaywright } from "./playwright-loader.mjs";
 import http from "http"; import fs from "fs"; import path from "path";
 import { fileURLToPath } from "url";
@@ -76,9 +80,13 @@ for(const W of [1280,390,320]){
   ok(tag+" 🙃 has a box",r.w>10&&r.h>10,`${r.w}x${r.h}`);
   ok(tag+" 🙃 is in the bottom fifth of the page",r.docTop > r.bodyH*0.8,`${Math.round(r.docTop)} of ${r.bodyH}`);
   ok(tag+" 🙃 clear of Ask Toto",r.overlapToto===false);
-  ok(tag+" page token is the new brown",r.pageTok==="#0b0802",r.pageTok);
-  ok(tag+" boxes untouched",r.surfTok==="#16120d",r.surfTok);
-  ok(tag+" body paints the brown",r.bodyBg==="rgb(11, 8, 2)",r.bodyBg);
+  /* ⚠️ Ramp B (8/9). These three moved together ON PURPOSE and must keep moving
+     together: the field alone cannot be lightened without collapsing the step against
+     the cards, so page AND surface are asserted as a pair. Anyone changing one of
+     these constants without the other has broken the thing the swatch exercise fixed. */
+  ok(tag+" page token is the new brown",r.pageTok==="#161009",r.pageTok);
+  ok(tag+" cards moved up with it",r.surfTok==="#241c12",r.surfTok);
+  ok(tag+" body paints the brown",r.bodyBg==="rgb(22, 16, 9)",r.bodyBg);
   /* Was five combos on 2026-08-08; three are now FIXED and are asserted like any other
      page — do not put them back without a measurement.
        bigboard 390 (+45) and 320 (+80): .pf-stat is white-space:nowrap, and stacking
@@ -103,7 +111,7 @@ for(const W of [1280,390,320]){
  await p.locator("#udBtn").click();
  await p.waitForTimeout(400);
  ok("overlay opens from the footer button", await p.evaluate(()=>!!document.querySelector(".ud-ov.on")));
- ok("overlay field matches the new brown", (await p.evaluate(()=>getComputedStyle(document.querySelector(".ud-ov")).backgroundColor))==="rgb(11, 8, 2)");
+ ok("overlay field matches the new brown", (await p.evaluate(()=>getComputedStyle(document.querySelector(".ud-ov")).backgroundColor))==="rgb(22, 16, 9)");
  await p.keyboard.press("Escape"); await p.waitForTimeout(300);
  ok("Escape still closes it", await p.evaluate(()=>!document.querySelector(".ud-ov.on")));
  await ctx.close();
