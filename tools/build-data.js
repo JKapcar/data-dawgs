@@ -998,7 +998,8 @@ write('tier-audit.json', {
 // The deployed /mcp tools. This list IS counts.mcp_tools_live. Calculator
 // tools move here only after the production version, transport, auth boundary
 // and deployed registrations have been verified.
-const MCP_POUND_LIVE = ['dd_model_scoreboard', 'dd_convert_odds', 'dd_devig_market', 'dd_price_parlay',
+/* dd_model_scoreboard moved to the receipts surface with the models sheet (CEP-5A 1b). */
+const MCP_POUND_LIVE = ['dd_convert_odds', 'dd_devig_market', 'dd_price_parlay',
   'dd_calculate_bet_ev', 'dd_calculate_hedge', 'dd_nfl_passer_rating',
   'dd_score_forecast', 'dd_summarize_beliefs', 'dd_elo_game',
   'dd_translate_probability'];
@@ -1040,7 +1041,7 @@ const MCP_STAGED = [];
 const MCP_LIVE = MCP_REGISTRY.map(t => t.name).filter(n => !MCP_STAGED.includes(n));
 for (const n of MCP_STAGED)
   if (!MCP_REGISTRY.some(t => t.name === n)) throw new Error(`${n} is listed as staged but is not in the registry`);
-for (const n of [...MCP_POUND_LIVE, ...MCP_CFB_LIVE])
+for (const n of [...MCP_POUND_LIVE, ...MCP_CFB_LIVE, 'dd_model_scoreboard'])
   if (!MCP_LIVE.includes(n)) throw new Error(`${n} is claimed live on the Pound surface but is not a live registry tool`);
 /* CATALOGS ARE LIVE as of the 2026-08-09 deploy. GET /mcp/ advertises both paths and both
  * answer; verified against the deployed endpoint, not this repo. ⚠️ What is NOT verified in
@@ -1109,8 +1110,15 @@ const SURFACES = [
               { kind: 'mcp', tool: 'dd_optimize_survivor_path', status: 'live', covers: 'exact one-pick-per-week maximum-product path, dated probabilities and future-cost options' }],
     planned: [],
     gap: 'The exact one-pick-per-week path is live. Pool ownership is modelled, not observed, and double-pick weeks are recorded but not optimized.' },
-  { id: 'receipts', name: 'Pre-registered forecasts', page: '/receipts.html',
+  { id: 'receipts', name: 'Pre-registered forecasts, the model scoreboard and provenance', page: '/receipts.html',
     machine: [{ kind: 'json', url: '/data/receipts.json', status: 'live' },
+              // CEP-5A 1b: the models sheet and provenance sheet render these here now
+              { kind: 'json', url: '/data/model-receipts.json', status: 'live', covers: '544 append-only normalized prospective receipts across nfelo and 538 Classic — the models sheet' },
+              { kind: 'json', url: '/data/nfl-schedule.json', status: 'live', covers: 'canonical schedule with exact upstream commit and snapshot hash' },
+              { kind: 'json', url: '/data/538-classic.json', status: 'live', covers: 'reproduced 538 Classic methodology, 32 target-season ratings and 272 prospective forecasts' },
+              { kind: 'markdown', url: '/data/538-classic-methodology.md', status: 'live', covers: 'model mathematics, provenance, reproduction tolerance, receipts and limits' },
+              { kind: 'json', url: '/data/upstream-models.json', status: 'live', covers: 'source, commit and license provenance — the provenance sheet' },
+              { kind: 'mcp', tool: 'dd_model_scoreboard', status: 'live', covers: 'bounded read-only query over dated prospective receipts; filters and results are not stored' },
               { kind: 'markdown', url: '/data/receipts-method.md', status: 'live' },
               { kind: 'json', url: '/data/tier-audit.json', status: 'live', covers: 'the tier audit — our own tools graded against the gate' },
               { kind: 'markdown', url: '/data/tier-audit.md', status: 'live' }],
@@ -1131,14 +1139,9 @@ const SURFACES = [
   { id: 'guillotine', name: 'Guillotine league tools', page: '/guillotine.html',
     machine: [{ kind: 'mcp', tool: 'dd_guillotine_odds', status: 'live' }],
     planned: ['json:/data/guillotine.json'] },
-  { id: 'pound', name: 'The DawgHouse model and calculator workbench (formerly The Pound)', page: '/dawghouse.html',
+  { id: 'pound', name: 'The DawgHouse calculator workbench and shelf (formerly The Pound)', page: '/dawghouse.html',
     machine: [{ kind: 'json', url: '/data/pound-tools.json', status: 'live', covers: 'complete NFL tool inventory plus the College Football roadmap with evidence-backed lifecycle state and sixteen production CFB MCP tools' },
               { kind: 'json', url: '/data/model-contracts.json', status: 'live', covers: 'forecast, receipt and calculator contracts' },
-              { kind: 'json', url: '/data/upstream-models.json', status: 'live', covers: 'source, commit and license provenance' },
-              { kind: 'json', url: '/data/nfl-schedule.json', status: 'live', covers: 'canonical schedule with exact upstream commit and snapshot hash' },
-              { kind: 'json', url: '/data/model-receipts.json', status: 'live', covers: '544 append-only normalized prospective receipts across nfelo and 538 Classic' },
-              { kind: 'json', url: '/data/538-classic.json', status: 'live', covers: 'reproduced 538 Classic methodology, 32 target-season ratings and 272 prospective forecasts' },
-              { kind: 'markdown', url: '/data/538-classic-methodology.md', status: 'live', covers: 'model mathematics, provenance, reproduction tolerance, receipts and limits' },
               { kind: 'json', url: '/data/cfb-schedule.json', status: 'live', covers: '934 canonical 2025 FBS-involved game facts with a pinned upstream commit and reproducible snapshot hash' },
               { kind: 'json', url: '/data/cfb-games-latest.json', status: 'live', covers: '136 compact latest completed canonical game rows, one per FBS team; dated 2025 observed results, not current form or forecasts' },
               { kind: 'json', url: '/data/cfb-team-game.json', status: 'live', covers: '1,868 mirrored team-game result rows derived exactly from the canonical schedule; advanced play metrics are unavailable' },
@@ -1153,13 +1156,12 @@ const SURFACES = [
               { kind: 'json', url: '/data/cfb-model-cards.json', status: 'live', covers: 'generated CFB model governance cards tied to published model output and Pound lifecycle state' },
               { kind: 'json', url: '/data/cfb-model-receipts.json', status: 'live', covers: 'empty append-only prospective receipt ledger and validation contract; zero forecasts have been frozen before kickoff' },
               { kind: 'json', url: '/data/cfb-disagreement.json', status: 'live', covers: 'published blocked model-versus-market probe naming the missing observation timestamp and exact unblock condition' },
-              ...MCP_POUND_LIVE.map(tool => ({ kind: 'mcp', tool, status: 'live', covers: tool === 'dd_model_scoreboard'
-                ? 'bounded read-only query over dated prospective receipts; filters and results are not stored'
-                : 'deterministic calculation over caller-supplied inputs; inputs and results are not stored' })),
+              ...MCP_POUND_LIVE.map(tool => ({ kind: 'mcp', tool, status: 'live',
+                covers: 'deterministic calculation over caller-supplied inputs; inputs and results are not stored' })),
               ...MCP_CFB_LIVE.map(tool => ({ kind: 'mcp', tool, status: 'live',
                 covers: 'bounded read-only CFB evidence or deterministic rating-period calculation; inputs and results are not stored' }))],
     planned: [],
-    gap: 'Two NFL prospective model feeds are live and ungraded. Sixteen bounded CFB tools and the timestamped 24-hour market collector are live; the first market observation waits on an eligible 2026 event, and no CFB model forecast receipt has been frozen yet.' },
+    gap: 'The model scoreboard and provenance render on /receipts.html since 2026-08-09; their data files are unchanged. Sixteen bounded CFB tools and the timestamped 24-hour market collector are live; the first market observation waits on an eligible 2026 event, and no CFB model forecast receipt has been frozen yet.' },
   { id: 'method', name: 'How this site reasons', page: '/index.html',
     machine: [{ kind: 'markdown', url: '/data/method.md', status: 'live' },
               { kind: 'markdown', url: '/data/toto-philosophy.md', status: 'live' }],

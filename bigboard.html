@@ -854,8 +854,9 @@ body.proj .blockbar .bb-v{font-size:26px}
      `Draft` is gone as a group; Dashboard and Auctioneer Controls sit in Dawgs on
      Kap's call. Order runs worst-to-best left to right, which is deliberate: the shelf
      comes before the workbench; Dawgs have earned a job.
-     The DawgHouse now has a shelf: scoreboard, deterministic calculators, inventory and
-     provenance. Keep this group identical on every page; the flattened HTML is the source. */
+     The DawgHouse holds the calculators, the shelf and the CFB roadmap; the model
+     scoreboard and provenance moved to Receipts (CEP-5A 1b, 2026-08-09). Keep this
+     group identical on every page; the flattened HTML is the source. */
   const NAV = [
     {label:"Home", href:"index.html", key:"home"},
     /* `short` is the phone label. BOTH labels are rendered and CSS picks one, so
@@ -863,9 +864,9 @@ body.proj .blockbar .bb-v{font-size:26px}
        full label will not fit need one. `DawgHouse` stays shortened on phones so the
        five-item nav keeps breathing room without shrinking the type. */
     {label:"The DawgHouse", short:"DawgHouse", href:"dawghouse.html", key:"pound", items:[
-      ["dawghouse.html","Tools & Scoreboard","pound","hot"],
+      ["dawghouse.html","Workbench","pound","hot"],
       ["dawghouse.html#inventory","The Shelf","pound-inventory"],
-      ["dawghouse.html#provenance","Provenance","pound-provenance"],
+      ["receipts.html#provenance","Provenance","pound-provenance"],
     ]},
     {label:"Labs", href:"index.html#tiers", items:[
       ["bozo.html","Bozo","bozo"],

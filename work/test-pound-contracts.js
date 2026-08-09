@@ -178,8 +178,12 @@ test('model scoreboard is live over the normalized ungraded receipt ledger', () 
   assert.equal(scoreboard.existing_worker_mcp_implementation, 'dd_model_scoreboard');
   assert.equal(scoreboard.exact_blocker, null);
   assert.match(scoreboard.machine_readable_requirement, /model-receipts\.json/);
+  /* CEP-5A 1b: the models sheet renders on receipts.html, so the tool and its data
+     ride on the receipts surface now. The pound surface must NOT still claim them. */
   const pound = surfaces.data.find(s => s.id === 'pound');
-  assert.ok(pound.machine.some(x => x.kind === 'mcp' && x.tool === 'dd_model_scoreboard' && x.status === 'live'));
+  const receiptsSurface = surfaces.data.find(s => s.id === 'receipts');
+  assert.ok(receiptsSurface.machine.some(x => x.kind === 'mcp' && x.tool === 'dd_model_scoreboard' && x.status === 'live'));
+  assert.ok(!pound.machine.some(x => x.tool === 'dd_model_scoreboard'));
   assert.ok(!pound.planned.includes('mcp:model_scoreboard'));
   assert.match(pound.gap, /timestamped 24-hour market collector are live/i);
   assert.match(pound.gap, /first market observation waits on an eligible 2026 event/i);
@@ -198,12 +202,18 @@ test('NFL backbone is complete and exposes its canonical files', () => {
   assert.equal(backbone.status, 'complete');
   assert.equal(backbone.exact_blocker, null);
   assert.match(backbone.machine_readable_requirement, /nfl-schedule\.json/);
-  const pound = surfaces.data.find(s => s.id === 'pound');
-  const urls = new Set(pound.machine.filter(x => x.status === 'live').map(x => x.url));
+  /* CEP-5A 1b: these render on receipts.html now, so the receipts surface owns them. */
+  const receiptsSurface = surfaces.data.find(s => s.id === 'receipts');
+  const urls = new Set(receiptsSurface.machine.filter(x => x.status === 'live').map(x => x.url));
   assert.ok(urls.has('/data/nfl-schedule.json'));
   assert.ok(urls.has('/data/model-receipts.json'));
   assert.ok(urls.has('/data/538-classic.json'));
   assert.ok(urls.has('/data/538-classic-methodology.md'));
+  assert.ok(urls.has('/data/upstream-models.json'));
+  const poundUrls = new Set(surfaces.data.find(s => s.id === 'pound').machine.map(x => x.url));
+  for (const moved of ['/data/nfl-schedule.json', '/data/model-receipts.json', '/data/538-classic.json',
+    '/data/538-classic-methodology.md', '/data/upstream-models.json'])
+    assert.ok(!poundUrls.has(moved), moved + ' still claimed by the pound surface');
 });
 test('538 Classic and multi-model receipts are live but ungraded', () => {
   const model = read('538-classic.json');
@@ -494,7 +504,10 @@ test('DawgHouse page declares its tier and accessible result regions', () => {
   assert.match(html, /MODELLED:/);
   assert.match(html, /live, read-only Worker tools/i);
   assert.match(html, /<b>Live MCP:<\/b>/);
-  assert.match(html, /Week 1 nfelo and 538 Classic belief scoreboard/);
+  /* CEP-5A 1b: the belief scoreboard renders on receipts.html now */
+  const receiptsHtml = fs.readFileSync('receipts.html', 'utf8');
+  assert.match(receiptsHtml, /Week 1 nfelo and 538 Classic belief scoreboard/);
+  assert.doesNotMatch(html, /Week 1 nfelo and 538 Classic belief scoreboard/);
   assert.match(html, /\/data\/model-receipts\.json/);
 });
 

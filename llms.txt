@@ -18,7 +18,7 @@ Tiers: `labs` is challenged; `dawg` validated; `pound` shelved — The DawgHouse
 
 ## The DawgHouse
 
-- [Workbench](/dawghouse.html): model scoreboard and deterministic calculators.
+- [Workbench](/dawghouse.html): deterministic calculators, the shelf of blocked work, CFB roadmap.
 - [Inventory + CFB roadmap](/data/pound-tools.json): NFL status and 44 evidence-tracked CFB ideas. Sixteen production CFB tools ARE callable over MCP; the 44 roadmap ideas are not, and an idea's lifecycle state is not a capability claim.
 - [Contracts](/data/model-contracts.json): forecast fields, receipt rules and calculator I/O.
 - [Provenance](/data/upstream-models.json): repositories, commits, dates, license status and integration mode.
@@ -27,7 +27,8 @@ Tiers: `labs` is challenged; `dawg` validated; `pound` shelved — The DawgHouse
 - [Normalized model receipts](/data/model-receipts.json): 544 append-only prospective forecasts across nfelo and 538 Classic.
 
 The 10 calculators cover odds, vig, EV, hedging, passer rating, Elo, margin translation
-and forecast scoring. Inputs are not stored. The scoreboard is descriptive and ungraded.
+and forecast scoring. Inputs are not stored. The model scoreboard (descriptive, ungraded)
+and upstream provenance render on /receipts.html since 2026-08-09.
 
 ## College football
 
