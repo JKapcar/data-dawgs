@@ -630,6 +630,94 @@ console.log('\nllms.txt');
 // them. Changing build-data.js alone therefore published two different definitions of
 // the same tier with every gate green. The map is parsed out of build-data.js rather
 // than imported so that drift is caught in either direction without running the builder.
+// -------------------------------------------------- the inventory is not stale
+// Stage RI, 2026-08-10. receipts-inventory.json is DERIVED from the receipt ledgers, but
+// the ledgers it reads are written by scripts/*_backbone.py and scripts/elo_538_classic.py,
+// NOT by tools/build-data.js. Nothing in the build enforces that build-data runs last, so
+// a backbone run after it silently publishes stale counts. Recompute every number here.
+// Same failure shape as tier_meaning's five sources: a derived value with no equality check
+// is two definitions waiting to diverge.
+console.log('\nreceipts-inventory.json agrees with the ledgers it counts');
+{
+  const invPath = path.join(DATA, 'receipts-inventory.json');
+  if (!fs.existsSync(invPath)) {
+    fail('receipts-inventory.json is missing — receipts.html#inventory renders nothing');
+  } else {
+    const inv = JSON.parse(fs.readFileSync(invPath, 'utf8')).data || {};
+    const KEYS = ['resolved_at', 'graded_at', 'outcome', 'result', 'actual', 'final'];
+    const settledOf = rows => rows.filter(r => r && typeof r === 'object' &&
+      KEYS.some(k => r[k] !== undefined && r[k] !== null && r[k] !== '')).length;
+    const rowsOf = (file, d) => file === '538-classic.json' ? (d.forecasts || []) : d;
+    let bad = 0;
+    const ledgers = inv.ledgers || [];
+    if (!ledgers.length) { fail('receipts-inventory.json publishes no ledgers'); bad++; }
+    for (const l of ledgers) {
+      const file = String(l.machine || '').replace('/data/', '');
+      const p = path.join(DATA, file);
+      if (!fs.existsSync(p)) { fail(`receipts-inventory.json counts ${file}, which does not exist`); bad++; continue; }
+      const env = JSON.parse(fs.readFileSync(p, 'utf8'));
+      const rows = rowsOf(file, env.data);
+      if (!Array.isArray(rows)) { fail(`receipts-inventory.json: ${file} did not yield an array`); bad++; continue; }
+      const settled = settledOf(rows);
+      if (l.registered !== rows.length) {
+        fail(`receipts-inventory.json: ${file} registered=${l.registered} but the file holds ${rows.length}`); bad++;
+      }
+      if (l.settled !== settled) {
+        fail(`receipts-inventory.json: ${file} settled=${l.settled} but the file shows ${settled}`); bad++;
+      }
+      if (l.pending !== rows.length - settled) {
+        fail(`receipts-inventory.json: ${file} pending=${l.pending} does not equal registered minus settled`); bad++;
+      }
+      if (l.as_of !== env.as_of) {
+        fail(`receipts-inventory.json: ${file} as_of=${l.as_of} but the file says ${env.as_of}`); bad++;
+      }
+    }
+    // The aggregate must come from ONE superset ledger, never from summing the column.
+    const ag = inv.aggregate || {};
+    const supFile = String(ag.counted_from || '').replace('/data/', '');
+    const supPath = path.join(DATA, supFile);
+    if (!supFile || !fs.existsSync(supPath)) {
+      fail(`receipts-inventory.json: aggregate.counted_from "${ag.counted_from}" does not exist`); bad++;
+    } else {
+      const sup = JSON.parse(fs.readFileSync(supPath, 'utf8')).data;
+      const games = new Set(sup.map(r => r.game_id).filter(Boolean)).size;
+      if (ag.forecasts !== sup.length) {
+        fail(`receipts-inventory.json: aggregate.forecasts=${ag.forecasts} but ${supFile} holds ${sup.length}`); bad++;
+      }
+      if (ag.games !== games) {
+        fail(`receipts-inventory.json: aggregate.games=${ag.games} but ${supFile} covers ${games}`); bad++;
+      }
+      const naive = ledgers.reduce((a, l) => a + l.registered, 0);
+      if (ag.naive_sum !== naive) {
+        fail(`receipts-inventory.json: aggregate.naive_sum=${ag.naive_sum} but the column sums to ${naive}`); bad++;
+      }
+      // The whole point of the file: the aggregate must NOT be the column sum.
+      if (ledgers.length > 1 && ag.forecasts === naive) {
+        fail('receipts-inventory.json: aggregate.forecasts equals the column sum — the overlap was double-counted'); bad++;
+      }
+    }
+    // An inventory that scores is the cross-domain blend the page argues against.
+    // ⚠️ Scoped to the COUNTED data, not the whole file: the envelope note has to be free
+    // to say "there is no honest Brier across domains", which is the reason this file
+    // exists. A first cut checked the raw text and failed on its own explanation.
+    const counted = JSON.stringify({ ledgers: inv.ledgers, aggregate: inv.aggregate }).toLowerCase();
+    for (const w of ['brier', 'accuracy', 'score', 'correct', 'win_rate']) {
+      if (counted.includes(w)) {
+        fail(`receipts-inventory.json's counted data mentions "${w}" — this file counts, it does not grade`); bad++;
+      }
+    }
+    const au = inv.audit || {};
+    const ta = JSON.parse(fs.readFileSync(path.join(DATA, 'tier-audit.json'), 'utf8'));
+    if (au.tools !== (ta.data || []).length) {
+      fail(`receipts-inventory.json: audit.tools=${au.tools} but tier-audit.json holds ${(ta.data || []).length}`); bad++;
+    }
+    if (ledgers.some(l => /audit/i.test(l.id || ''))) {
+      fail('receipts-inventory.json puts the tier audit in the forecast ledgers — a judgment is not a forecast'); bad++;
+    }
+    if (!bad) ok(`${ledgers.length} ledgers, the aggregate and the audit all match the files they count`);
+  }
+}
+
 console.log('\ntier_meaning matches its source of truth');
 {
   const src = fs.readFileSync(path.join(ROOT, 'tools/build-data.js'), 'utf8');

@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 27739,
+    "bytes": 27994,
     "as_of": "2026-08-10",
-    "sha256": "5b1d00031f97aab41ba6024c768ebca49fe1a1d3665fd9101be6fe332147f432",
+    "sha256": "d81a1a16d9f1b7b56c210f3c798bf3b7de9ac8a4701e0045de26bba3e0d6965b",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -253,6 +253,14 @@
     "as_of": "2026-07-29",
     "sha256": "ff8019abc2b90545a72c0cea5186c0be652c8a297ad0f3d647fff1c2aaa0226d",
     "note": "Aggregated by the PRIMARY BALL HANDLER: the passer on a dropback, the ball carrier on a rush. There is no receiving EPA here and there cannot be — the play-by-play snapshot carries one name per play, so the whole value of a completed pass is credited to the quarterback and a receiver appears only for his own carries. Regular season only, plays with a down. Descriptive aggregates, not projections: do not read 2025 as 2026."
+   },
+   {
+    "path": "/data/receipts-inventory.json",
+    "url": "https://datadawgs216.com/data/receipts-inventory.json",
+    "bytes": 2886,
+    "as_of": "2026-08-10",
+    "sha256": "a8128112289ddc473ef59f51d28e499c898e64bc5d8043d02c03a76216375f4b",
+    "note": "An INVENTORY, not a scoreboard. There is no honest Brier across domains, so this file counts what has been registered and settled and never scores it. The ledgers OVERLAP: receipts.json and the nfelo half of model-receipts.json are the same forecasts, as are 538-classic.json and its half. aggregate is therefore computed from aggregate.counted_from alone; aggregate.naive_sum is what summing the registered column would wrongly give, published so it can be named and corrected rather than quietly reproduced."
    }
   ],
   "markdown": [

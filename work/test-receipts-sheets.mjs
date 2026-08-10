@@ -121,10 +121,116 @@ for (const theme of ["dark", "light"]) {
     tableVisible: !document.getElementById("scoreTable").hidden,
     gradingHidden: document.getElementById("sheetScore").hidden,
   }));
-  ok(`[${theme}] eight sheets in order, receipts last`,
-    JSON.stringify(models.tabs) === JSON.stringify(["scoreboard", "models", "classic", "cfbrec", "calls", "provenance", "audit", "receipts"]),
+  ok(`[${theme}] nine sheets in order, inventory first and receipts last`,
+    JSON.stringify(models.tabs) === JSON.stringify(["inventory", "scoreboard", "models", "classic", "cfbrec", "calls", "provenance", "audit", "receipts"]),
     JSON.stringify(models.tabs));
   ok(`[${theme}] #models opens the models sheet, not grading`, models.selected === "models" && models.gradingHidden);
+
+  /* ---- Stage RI, 2026-08-10: the inventory sheet ------------------------------
+     Two things must hold, and neither is about layout.
+     1. NO COUNT IS TYPED. Every number arrives from a fetch, so the page cannot
+        drift from the payloads. A hardcoded 272 would be right today and a lie the
+        first time a forecast is added -- which is the exact failure this page
+        exists to argue against.
+     2. THE PANEL CARRIES NO SCORE. The whole ruling is that there is no honest
+        Brier across domains, so a score column here would contradict the sheet's
+        own opening paragraph. */
+  await p.goto("http://127.0.0.1:8921/receipts.html#inventory", { waitUntil: "networkidle" });
+  await p.waitForTimeout(900);
+  const inv = await p.evaluate(() => {
+    const panel = document.getElementById("sheetInv");
+    const cell = (r, i) => r.children[i]?.textContent.trim();
+    return {
+      selected: document.querySelector('.sheet-tab[aria-selected="true"]')?.dataset.id,
+      open: !panel.hidden,
+      loadHidden: document.getElementById("invLoad").hidden,
+      tableVisible: !document.getElementById("invTable").hidden,
+      rows: [...document.querySelectorAll("#invTable tbody tr.inv-main")].map(r => ({
+        name: cell(r, 0), reg: cell(r, 1), settled: cell(r, 2), pending: cell(r, 3) })),
+      /* ⚠️ The bug this catches was found in a PNG, not by a bounds check. Under
+         table-layout:auto the Ledger cell's description sentence took all the width and
+         pushed Settled / Pending / Machine read outside .inv-wrap -- three of five columns
+         invisible at 1280, while document scrollWidth stayed 0 because the wrap scrolls
+         internally. Measure the header cells against the WRAP's client box, not the page. */
+      clipped: (() => {
+        const wrap = document.querySelector("#sheetInv .inv-wrap");
+        const wb = wrap.getBoundingClientRect();
+        return [...document.querySelectorAll("#invTable thead th")]
+          .filter(th => th.getBoundingClientRect().right > wb.right + 1)
+          .map(th => th.textContent.trim());
+      })(),
+      /* ⚠️ Measure the SCROLL BOX, not the cells. Two earlier cuts were vacuous: cell
+         bounding boxes under table-layout:fixed sit on the column boundaries and never
+         overlap however the text behaves, and a cell's own scrollWidth stays clean when
+         the TABLE grows to fit it and .inv-wrap absorbs the difference. The property that
+         actually matters, and the only one a mutation can break, is that at 1280 this
+         table needs no horizontal scrolling at all. (At 420 it legitimately does, which is
+         why this is asserted only at the wide viewport.) */
+      wrapOverflow: (() => {
+        const w = document.querySelector("#sheetInv .inv-wrap");
+        return w.scrollWidth - w.clientWidth;
+      })(),
+      heads: [...document.querySelectorAll("#invTable thead th")].map(t => t.textContent.trim()),
+      forecasts: document.getElementById("invForecasts").textContent.trim(),
+      games: document.getElementById("invGames").textContent.trim(),
+      settled: document.getElementById("invResolved").textContent.trim(),
+      overlap: document.getElementById("invOverlap").textContent.trim(),
+      audit: document.getElementById("invAudit").textContent.trim(),
+      text: panel.innerText,
+    };
+  });
+  ok(`[${theme}] #inventory opens the inventory sheet`, inv.selected === "inventory" && inv.open);
+  ok(`[${theme}] the inventory table renders every ledger`,
+    inv.tableVisible && inv.loadHidden && inv.rows.length === 4, JSON.stringify(inv.rows.map(r => r.name)));
+  ok(`[${theme}] every inventory column fits inside the scroll box at 1280`,
+    inv.clipped.length === 0, `clipped: ${inv.clipped.join(", ")}`);
+  ok(`[${theme}] the inventory table needs no sideways scrolling at 1280`,
+    inv.wrapOverflow <= 1, `+${inv.wrapOverflow}px inside .inv-wrap`);
+
+  // the counts must equal the files, because they were read from the files
+  const mr = JSON.parse(fs.readFileSync(path.join(ROOT, "data/model-receipts.json"), "utf8"));
+  const rc = JSON.parse(fs.readFileSync(path.join(ROOT, "data/receipts.json"), "utf8"));
+  const cl = JSON.parse(fs.readFileSync(path.join(ROOT, "data/538-classic.json"), "utf8"));
+  const cf = JSON.parse(fs.readFileSync(path.join(ROOT, "data/cfb-model-receipts.json"), "utf8"));
+  const fileCounts = [mr.data.length, rc.data.length, cl.data.forecasts.length, cf.data.length];
+  ok(`[${theme}] every Registered count comes from its file`,
+    JSON.stringify(inv.rows.map(r => Number(r.reg.replace(/,/g, "")))) === JSON.stringify(fileCounts),
+    `page ${JSON.stringify(inv.rows.map(r => r.reg))} vs files ${JSON.stringify(fileCounts)}`);
+  ok(`[${theme}] the aggregate counts distinct forecasts, never the column sum`,
+    Number(inv.forecasts.replace(/,/g, "")) === mr.data.length &&
+    Number(inv.games.replace(/,/g, "")) === new Set(mr.data.map(r => r.game_id)).size,
+    `${inv.forecasts} forecasts / ${inv.games} games`);
+
+  /* ⚠️ NO COUNT IS TYPED. Scoped to the panel's SOURCE markup, not its rendered
+     text -- the rendered text is full of numbers precisely because the fetch put
+     them there. If a real count appears in the markup, it was hardcoded. */
+  const invSrc = fs.readFileSync(path.join(ROOT, "receipts.html"), "utf8")
+    .split('<div id="sheetInv">')[1].split('<div id="sheetScore">')[0];
+  const typed = [...new Set(fileCounts.concat([new Set(mr.data.map(r => r.game_id)).size]))]
+    .filter(n => n > 1).filter(n => new RegExp(`\\b${n}\\b`).test(invSrc));
+  ok(`[${theme}] no count is typed into the inventory markup`, typed.length === 0,
+    `hardcoded: ${typed.join(",")}`);
+
+  // THE PANEL CARRIES NO SCORE
+  const banned = ["brier", "accuracy", "correct", "% right", "win rate"];
+  const found = banned.filter(w => inv.heads.join(" ").toLowerCase().includes(w));
+  ok(`[${theme}] the inventory table has no score column`, found.length === 0, found.join(","));
+  ok(`[${theme}] the inventory says out loud why there is no single score`,
+    /no single score/i.test(inv.text) && /blended/i.test(inv.text));
+  ok(`[${theme}] the inventory warns against summing the Registered column`,
+    /do not add the registered column up/i.test(inv.overlap) &&
+    inv.overlap.includes(fileCounts.reduce((a, n) => a + n, 0).toLocaleString("en-US")),
+    inv.overlap.slice(0, 90));
+
+  /* The audit is a judgment and must be counted OUTSIDE the forecast table, or this
+     sheet becomes the cross-domain blend the ruling forbids. */
+  const ta = JSON.parse(fs.readFileSync(path.join(ROOT, "data/tier-audit.json"), "utf8"));
+  ok(`[${theme}] the tier audit is counted outside the forecast table`,
+    inv.audit.includes(String(ta.data.length)) &&
+    !inv.rows.some(r => /audit/i.test(r.name)) &&
+    /judgment, not a measurement/i.test(inv.audit), inv.audit.slice(0, 80));
+  ok(`[${theme}] nothing is settled yet, and every ledger says so`,
+    inv.rows.every(r => r.settled === "0") && inv.settled === "0");
   ok(`[${theme}] the model scoreboard renders 16 games`, models.rows === 16 && models.tableVisible, String(models.rows));
 
   // #provenance renders the grid

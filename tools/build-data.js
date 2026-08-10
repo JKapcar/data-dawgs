@@ -1139,7 +1139,11 @@ const SURFACES = [
     planned: [],
     gap: 'The exact one-pick-per-week path is live. Pool ownership is modelled, not observed, and double-pick weeks are recorded but not optimized.' },
   { id: 'receipts', domain: 'receipts', name: 'Pre-registered forecasts, the model scoreboard and provenance', page: '/receipts.html',
-    machine: [{ kind: 'json', url: '/data/receipts.json', status: 'live' },
+    machine: [// Stage RI: the inventory sheet is the page's front door, so its payload leads.
+              // It is a COUNT, never a grade — see the file's own note for why there is no
+              // blended Brier across these ledgers.
+              { kind: 'json', url: '/data/receipts-inventory.json', status: 'live', covers: 'registered / settled / pending per receipt ledger, plus the two aggregates that do not double-count the overlap — the inventory sheet' },
+              { kind: 'json', url: '/data/receipts.json', status: 'live' },
               // CEP-5A 1b: the models sheet and provenance sheet render these here now
               { kind: 'json', url: '/data/model-receipts.json', status: 'live', covers: '544 append-only normalized prospective receipts across nfelo and 538 Classic — the models sheet' },
               { kind: 'json', url: '/data/nfl-schedule.json', status: 'live', covers: 'canonical schedule with exact upstream commit and snapshot hash' },
@@ -1278,6 +1282,99 @@ for (const name of ['nfl-schedule.json', 'model-receipts.json', '538-classic.jso
     note: payload.note,
   };
 }
+
+/* ---------- receipts-inventory.json ----------
+   Stage RI. The aggregate inventory behind receipts.html#inventory: how much has been
+   registered, how much is settled, per ledger. NO SCORE, by design -- there is no honest
+   Brier across domains, so this file counts and never grades.
+
+   ⚠️ The ledgers OVERLAP. receipts.json's rows and the nfelo half of model-receipts.json
+   are the SAME forecasts; 538-classic.json and the 538-classic half are likewise the same.
+   So `aggregate` is computed from the SUPERSET ledger alone and never by summing across
+   ledgers. `naive_sum` is published deliberately, as the number a reader would get by
+   adding the column up, so the page can name it and correct it rather than hoping nobody
+   tries.
+
+   ⚠️ These files are written by the PYTHON BACKBONES, not by this script, so this block
+   reads them off disk. If a backbone runs after this script the counts go stale --
+   tools/validate-data.js recomputes all of them and fails on drift. Do not remove that
+   check and leave this file unguarded. */
+const INV_LEDGERS = [
+  { file: 'model-receipts.json', id: 'model-receipts', name: 'NFL model receipts', sheet: 'models',
+    superset: true, rows: d => d,
+    what: 'Append-only prospective forecasts, one row per model per game. This is the superset the others are views of.' },
+  { file: 'receipts.json', id: 'receipts', name: 'NFL pre-registered calls', sheet: 'receipts',
+    rows: d => d,
+    what: 'The locked, SHA-256 hashed nfelo set. The same forecasts as the nfelo half of the ledger above, fixed in place so they cannot be edited after a result.' },
+  { file: '538-classic.json', id: '538-classic', name: '538 Classic beliefs', sheet: 'classic',
+    rows: d => d.forecasts || [],
+    what: 'A deliberately simple Elo benchmark with no QB, injury, weather or market adjustment.' },
+  { file: 'cfb-model-receipts.json', id: 'cfb-model-receipts', name: 'CFB model receipts', sheet: 'cfbrec',
+    rows: d => d,
+    what: 'The college-football contract. Empty by design: no CFB forecast has been frozen before a kickoff yet.' },
+];
+/* A row is SETTLED when it carries a result. No payload carries one today, so every count
+   below is 0 -- but this probes for the field instead of hardcoding a zero, so grading
+   starts being counted the day it lands, with no edit here. */
+const INV_SETTLED_KEYS = ['resolved_at', 'graded_at', 'outcome', 'result', 'actual', 'final'];
+function invSettled(rows) {
+  return rows.filter(r => r && typeof r === 'object' &&
+    INV_SETTLED_KEYS.some(k => r[k] !== undefined && r[k] !== null && r[k] !== '')).length;
+}
+function buildInventory() {
+  const ledgers = INV_LEDGERS.map(l => {
+    const env = JSON.parse(fs.readFileSync(path.join(OUT, l.file), 'utf8'));
+    const rows = l.rows(env.data);
+    if (!Array.isArray(rows)) throw new Error('inventory: ' + l.file + ' did not yield an array');
+    const settled = invSettled(rows);
+    return {
+      id: l.id, name: l.name, what: l.what, sheet: l.sheet,
+      machine: '/data/' + l.file, as_of: env.as_of,
+      registered: rows.length, settled, pending: rows.length - settled,
+      superset: !!l.superset,
+      _rows: rows,
+    };
+  });
+  const sup = ledgers.find(l => l.superset);
+  if (!sup) throw new Error('inventory: no ledger is marked the superset');
+  const games = new Set(sup._rows.map(r => r.game_id).filter(Boolean)).size;
+  const settled = ledgers.reduce((a, l) => a + l.settled, 0);
+  const audit = JSON.parse(fs.readFileSync(path.join(OUT, 'tier-audit.json'), 'utf8'));
+  return {
+    ledgers: ledgers.map(({ _rows, ...l }) => l),
+    aggregate: {
+      forecasts: sup.registered,
+      games,
+      settled,
+      pending: sup.registered - settled,
+      counted_from: sup.machine,
+      naive_sum: ledgers.reduce((a, l) => a + l.registered, 0),
+    },
+    /* Counted apart from every forecast column on purpose: a verdict about our own tools
+       is a judgment by one reviewer on one day, has no kickoff, and can never be settled. */
+    audit: {
+      tools: (audit.data || []).length,
+      dawgs: (audit.counts || {}).dawgs || 0,
+      outside_the_tier_system: (audit.counts || {}).outside_the_tier_system || 0,
+      audited_on: audit.as_of,
+      sheet: 'audit',
+      machine: '/data/tier-audit.json',
+    },
+  };
+}
+write('receipts-inventory.json', {
+  as_of: BUILT,
+  source: 'Derived at build time by tools/build-data.js from the published receipt ledgers in /data/. Counts only; no grading.',
+  tier: 'labs',
+  graded: false,
+  note: 'An INVENTORY, not a scoreboard. There is no honest Brier across domains, so this file '
+      + 'counts what has been registered and settled and never scores it. The ledgers OVERLAP: '
+      + 'receipts.json and the nfelo half of model-receipts.json are the same forecasts, as are '
+      + '538-classic.json and its half. aggregate is therefore computed from aggregate.counted_from '
+      + 'alone; aggregate.naive_sum is what summing the registered column would wrongly give, '
+      + 'published so it can be named and corrected rather than quietly reproduced.',
+  data: buildInventory(),
+});
 
 /* ---------- index.json (manifest) ----------
    ⚠️ WRITTEN BY tools/data-manifest.js, WHICH SCANS THE DIRECTORY.

@@ -1,0 +1,78 @@
+{
+ "as_of": "2026-08-10",
+ "source": "Derived at build time by tools/build-data.js from the published receipt ledgers in /data/. Counts only; no grading.",
+ "tier": "labs",
+ "graded": false,
+ "note": "An INVENTORY, not a scoreboard. There is no honest Brier across domains, so this file counts what has been registered and settled and never scores it. The ledgers OVERLAP: receipts.json and the nfelo half of model-receipts.json are the same forecasts, as are 538-classic.json and its half. aggregate is therefore computed from aggregate.counted_from alone; aggregate.naive_sum is what summing the registered column would wrongly give, published so it can be named and corrected rather than quietly reproduced.",
+ "data": {
+  "ledgers": [
+   {
+    "id": "model-receipts",
+    "name": "NFL model receipts",
+    "what": "Append-only prospective forecasts, one row per model per game. This is the superset the others are views of.",
+    "sheet": "models",
+    "machine": "/data/model-receipts.json",
+    "as_of": "2026-08-08",
+    "registered": 544,
+    "settled": 0,
+    "pending": 544,
+    "superset": true
+   },
+   {
+    "id": "receipts",
+    "name": "NFL pre-registered calls",
+    "what": "The locked, SHA-256 hashed nfelo set. The same forecasts as the nfelo half of the ledger above, fixed in place so they cannot be edited after a result.",
+    "sheet": "receipts",
+    "machine": "/data/receipts.json",
+    "as_of": "2026-08-06",
+    "registered": 272,
+    "settled": 0,
+    "pending": 272,
+    "superset": false
+   },
+   {
+    "id": "538-classic",
+    "name": "538 Classic beliefs",
+    "what": "A deliberately simple Elo benchmark with no QB, injury, weather or market adjustment.",
+    "sheet": "classic",
+    "machine": "/data/538-classic.json",
+    "as_of": "2026-08-08",
+    "registered": 272,
+    "settled": 0,
+    "pending": 272,
+    "superset": false
+   },
+   {
+    "id": "cfb-model-receipts",
+    "name": "CFB model receipts",
+    "what": "The college-football contract. Empty by design: no CFB forecast has been frozen before a kickoff yet.",
+    "sheet": "cfbrec",
+    "machine": "/data/cfb-model-receipts.json",
+    "as_of": "2026-08-08",
+    "registered": 0,
+    "settled": 0,
+    "pending": 0,
+    "superset": false
+   }
+  ],
+  "aggregate": {
+   "forecasts": 544,
+   "games": 272,
+   "settled": 0,
+   "pending": 544,
+   "counted_from": "/data/model-receipts.json",
+   "naive_sum": 1088
+  },
+  "audit": {
+   "tools": 11,
+   "dawgs": 3,
+   "outside_the_tier_system": 2,
+   "audited_on": "2026-08-07",
+   "sheet": "audit",
+   "machine": "/data/tier-audit.json"
+  }
+ },
+ "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
+ "built": "2026-08-10",
+ "canonical_url": "https://datadawgs216.com/data/receipts-inventory.json"
+}

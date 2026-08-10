@@ -359,6 +359,12 @@
    "machine": [
     {
      "kind": "json",
+     "url": "/data/receipts-inventory.json",
+     "status": "live",
+     "covers": "registered / settled / pending per receipt ledger, plus the two aggregates that do not double-count the overlap — the inventory sheet"
+    },
+    {
+     "kind": "json",
      "url": "/data/receipts.json",
      "status": "live"
     },

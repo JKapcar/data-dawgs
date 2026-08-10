@@ -697,6 +697,52 @@ tr.sv-used td{opacity:.42}
    wide at 360px. break-all is correct here — a hash has no word boundaries to respect. */
 #rcHash2{display:inline-block;max-width:100%;word-break:break-all;line-height:1.7}
 .rc-state,.card p{overflow-wrap:anywhere}
+/* ---- Stage RI: the inventory sheet ---------------------------------------
+   Scoped under #sheetInv so nothing leaks into the cards, same discipline as
+   #sheetModels below. The aggregate row deliberately reuses the .p-stat look so
+   an inventory number is visually the same KIND of thing as a grading number --
+   it just never carries a score. */
+#sheetInv .inv-agg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:18px 0}
+#sheetInv .inv-stat{border:1px solid var(--border);background:var(--surface-1);border-radius:10px;padding:13px}
+#sheetInv .inv-stat b{display:block;font-size:25px;line-height:1;color:var(--ink-1)}
+#sheetInv .inv-stat span{display:block;color:var(--ink-3);font:650 11px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;margin-top:6px;text-transform:uppercase}
+#sheetInv .inv-wrap{overflow:auto;border:1px solid var(--border);border-radius:11px;background:var(--surface-1)}
+/* ⚠️ table-layout:fixed is load-bearing. Without it the browser sizes columns to
+   content, the Ledger cell's description sentence wins all the width, and Settled /
+   Pending / Machine read get pushed outside the scroll box -- three of five columns
+   invisible at 1280 unless you think to scroll a table that looks complete. Found in a
+   screenshot; no assertion on document overflow can see it, because .inv-wrap scrolls
+   internally and scrollWidth on the document stays clean. */
+#sheetInv table.inv-tbl{width:100%;border-collapse:collapse;font-size:13.5px;table-layout:fixed;min-width:640px}
+#sheetInv .inv-tbl col.c-led{width:30%}
+#sheetInv .inv-tbl col.c-n{width:12%}
+#sheetInv .inv-tbl col.c-mac{width:26%}
+#sheetInv .inv-tbl td:first-child{overflow-wrap:anywhere}
+#sheetInv .inv-tbl td.inv-mac{overflow-wrap:anywhere;font-size:12.5px}
+#sheetInv .inv-tbl th,#sheetInv .inv-tbl td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}
+#sheetInv .inv-tbl th{font:800 10.5px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;
+  letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
+#sheetInv .inv-tbl tbody tr:last-child td{border-bottom:0}
+#sheetInv .inv-tbl td.inv-n{font:700 14px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;
+  text-align:right;white-space:nowrap}
+/* ⚠️ The description gets its OWN full-width row, not a block inside the first cell.
+   Under table-layout:fixed a long sentence in a 42%-wide cell does not stay inside it --
+   it painted straight across the Settled, Pending and Machine read columns and collided
+   with their text. A colspan row wraps naturally and cannot overlap anything. Both the
+   overflow and the collision were found by looking at the PNG; document scrollWidth was
+   0 the whole time. */
+#sheetInv .inv-tbl tr.inv-main>td{border-bottom:0;padding-bottom:2px}
+#sheetInv .inv-tbl tr.inv-desc>td{padding-top:0;color:var(--ink-3);font-size:12.5px;
+  line-height:1.45;overflow-wrap:anywhere}
+#sheetInv .inv-tbl tbody tr.inv-desc:last-child>td{border-bottom:0}
+#sheetInv .inv-load{padding:16px;color:var(--ink-3);font-size:13px}
+#sheetInv .inv-err{color:#d13a00;font-weight:700}
+#sheetInv .inv-warn{border-left:3px solid var(--accent);padding:11px 0 11px 13px;margin:16px 0 0}
+#sheetInv .inv-aside{border:1px dashed var(--border);border-radius:11px;padding:13px 15px;margin:18px 0 0}
+#sheetInv .inv-aside h3{margin:0 0 6px;font-size:14.5px}
+@media(max-width:760px){#sheetInv .inv-agg{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:430px){#sheetInv .inv-agg{grid-template-columns:1fr 1fr}}
+
 /* ---- CEP-5A 1b: the DawgHouse evidence (models sheet + provenance sheet) ----
    Brought with the content from dawghouse.html. The p- prefix does not collide here;
    rules are scoped under the two sheet panels so they cannot leak into the cards. */
@@ -2054,6 +2100,48 @@ Locked <b>2026-08-06</b> &middot; <b id="rcN">&mdash;</b> calls &middot;
 
 <div id="sheets"></div>
 
+<div id="sheetInv">
+  <div class="card">
+    <h2>Every receipt this site has registered</h2>
+    <p class="muted" style="margin-top:0">This is a count, not a grade. It says what has been
+    written down and locked, how much of it has been settled, and where each ledger lives so
+    you can read it yourself.</p>
+    <p class="muted"><b>There is deliberately no single score here.</b> An NFL win
+    probability, a college-football forecast and a verdict about whether one of our own tools
+    deserves a collar are different kinds of claim with different base rates. A Brier score
+    blended across them would look like a grade and mean nothing, so grading stays inside the
+    per-domain sheets, next to the assumptions it depends on.</p>
+
+    <div class="inv-agg" id="invAgg">
+      <div class="inv-stat"><b id="invForecasts">&mdash;</b><span>forecasts registered</span></div>
+      <div class="inv-stat"><b id="invGames">&mdash;</b><span>games covered</span></div>
+      <div class="inv-stat"><b id="invResolved">&mdash;</b><span>settled</span></div>
+      <div class="inv-stat"><b id="invPending">&mdash;</b><span>awaiting a result</span></div>
+    </div>
+
+    <div class="inv-wrap">
+      <div class="inv-load" id="invLoad" role="status">Reading the ledgers&hellip;</div>
+      <table class="inv-tbl" id="invTable" aria-label="Registered receipts by ledger" hidden>
+        <colgroup><col class="c-led"><col class="c-n"><col class="c-n"><col class="c-n"><col class="c-mac"></colgroup>
+        <thead><tr><th>Ledger</th><th>Registered</th><th>Settled</th><th>Pending</th><th>Machine read</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <p class="muted inv-warn" id="invOverlap"></p>
+
+    <div class="inv-aside">
+      <h3>The tier audit is counted separately, on purpose</h3>
+      <p class="muted" style="margin:0" id="invAudit">Loading the audit&hellip;</p>
+    </div>
+
+    <p class="muted">Nothing above is graded yet, and that is the correct state: the season
+    has not started. A receipt written now is worth something precisely because it cannot be
+    edited later. Every number on this sheet is read from the published payloads at page
+    load, so none of it can drift from the files.</p>
+  </div>
+</div>
+
 <div id="sheetScore">
   <div class="rc-state" id="rcState"></div>
   <div class="nf-tiles" id="rcTiles"></div>
@@ -2835,6 +2923,61 @@ async function loadCfbReceipts(){
       .map(([k,val])=>`<li><b>${mdlEsc(k)}:</b> ${mdlEsc(val)}</li>`).join("");
   }catch(err){cfrLoaded=false;mdlEl("cfrNote").className="s8-err";mdlEl("cfrNote").textContent="CFB receipt contract unavailable: "+err.message}
 }
+let invLoaded=false;
+/* Stage RI. ONE fetch of ~1 KB. The counts are derived at BUILD time by
+   tools/build-data.js and gated by tools/validate-data.js against the source payloads --
+   see that file for why a runtime fetch of the ledgers was the wrong answer here
+   (model-receipts.json alone is 688 KB, and this is the DEFAULT sheet). */
+const invNum=n=>Number(n).toLocaleString("en-US");
+async function loadInventory(){
+  if(invLoaded)return;invLoaded=true;
+  try{
+    const env=await mdlJson("/data/receipts-inventory.json");
+    const d=env.data||{},led=d.ledgers||[],ag=d.aggregate||{},au=d.audit||{};
+    if(!led.length)throw new Error("the inventory published no ledgers");
+
+    mdlEl("invTable").querySelector("tbody").innerHTML=led.map(l=>
+      `<tr class="inv-main"><td><b>${mdlEsc(l.name)}</b></td>`+
+      `<td class="inv-n">${invNum(l.registered)}</td><td class="inv-n">${invNum(l.settled)}</td>`+
+      `<td class="inv-n">${invNum(l.pending)}</td>`+
+      `<td class="inv-mac"><a href="#${mdlEsc(l.sheet)}">sheet</a> &middot; `+
+      `<a href="${mdlEsc(l.machine)}"><code>${mdlEsc(String(l.machine).replace("/data/",""))}</code></a></td></tr>`+
+      `<tr class="inv-desc"><td colspan="5">${mdlEsc(l.what)} `+
+      `<em>As of ${mdlEsc(l.as_of||"an undated build")}.</em></td></tr>`).join("");
+    mdlEl("invLoad").hidden=true;
+    mdlEl("invTable").hidden=false;
+
+    mdlEl("invForecasts").textContent=invNum(ag.forecasts);
+    mdlEl("invGames").textContent=invNum(ag.games);
+    mdlEl("invResolved").textContent=invNum(ag.settled);
+    mdlEl("invPending").textContent=invNum(ag.pending);
+
+    /* ⚠️ The correction that makes the table honest. The builder publishes the wrong
+       number on purpose so the page can name it. */
+    mdlEl("invOverlap").innerHTML=
+      `<b>Do not add the Registered column up.</b> It comes to ${invNum(ag.naive_sum)}, which `+
+      `counts the same NFL forecast more than once: the pre-registered calls and the 538 `+
+      `Classic beliefs are both views of rows already inside the append-only ledger, not `+
+      `extra forecasts alongside it. The honest aggregates are the two on the left &mdash; `+
+      `${invNum(ag.forecasts)} distinct forecasts across ${invNum(ag.games)} games &mdash; `+
+      `counted from <a href="${mdlEsc(ag.counted_from||"")}"><code>`+
+      `${mdlEsc(String(ag.counted_from||"").replace("/data/",""))}</code></a> alone, never `+
+      `summed across ledgers.`;
+
+    mdlEl("invAudit").innerHTML=
+      `<b>${invNum(au.tools)} tools audited</b> on ${mdlEsc(au.audited_on||"an undated day")}, `+
+      `by one reviewer in one day &mdash; a judgment, not a measurement. `+
+      `${invNum(au.dawgs)} hold a collar; ${invNum(au.outside_the_tier_system)} sit outside the `+
+      `tier system entirely. It is counted here and nowhere else on this sheet, because a `+
+      `verdict about our own tools is not a forecast and must never share a column with one. `+
+      `<a href="#audit">Read the audit</a>.`;
+  }catch(err){
+    invLoaded=false;
+    mdlEl("invLoad").className="inv-err";
+    mdlEl("invLoad").textContent="Inventory unavailable: "+err.message;
+    mdlEl("invAudit").textContent="Inventory unavailable: "+err.message;
+  }
+}
 let auLoaded=false;
 async function loadAudit(){
   if(auLoaded)return;auLoaded=true;
@@ -2867,7 +3010,8 @@ async function loadAudit(){
 DDSheets({key:"receipts",mount:"#sheets",
   /* `receipts` (the method sheet) stays LAST by design; `models` sits beside the
      grading scoreboard precisely so nobody mistakes one for the other. */
-  sheets:[{id:"scoreboard",label:"Grading",panel:"#sheetScore"},
+  sheets:[{id:"inventory",label:"Inventory",panel:"#sheetInv"},
+          {id:"scoreboard",label:"Grading",panel:"#sheetScore"},
           {id:"models",label:"Model scoreboard",panel:"#sheetModels"},
           {id:"classic",label:"538 Classic",panel:"#sheetClassic"},
           {id:"cfbrec",label:"CFB Receipts",panel:"#sheetCfbRec"},
@@ -2875,7 +3019,8 @@ DDSheets({key:"receipts",mount:"#sheets",
           {id:"provenance",label:"Provenance",panel:"#sheetProv"},
           {id:"audit",label:"Tier Audit",panel:"#sheetAudit"},
           {id:"receipts",label:"Receipts & Method",panel:"#sheetMethod",hint:"pre-registered"}],
-  onShow(id){ if(id==="scoreboard") drawCal(resolved()); if(id==="models") loadModels(); if(id==="provenance") loadProvenance();
+  onShow(id){ if(id==="inventory") loadInventory();
+    if(id==="scoreboard") drawCal(resolved()); if(id==="models") loadModels(); if(id==="provenance") loadProvenance();
     if(id==="classic") loadClassic(); if(id==="cfbrec") loadCfbReceipts(); if(id==="audit") loadAudit(); }});
 const prev=window.onThemeChange;
 window.onThemeChange=function(){ if(typeof prev==="function") prev(); drawCal(resolved()); };
