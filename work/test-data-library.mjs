@@ -103,13 +103,29 @@ const bookId = p => p.replace(/^\/data\//, "").replace(/\./g, "-");
   const reqs = [];
   p.on("request", r => reqs.push(r.url()));
   await p.goto("http://127.0.0.1:8923/data.html", { waitUntil: "load" });
-  await p.waitForFunction(() => document.querySelectorAll("#libShelves .spine").length > 0, null, { timeout: 15000 });
+  await p.waitForFunction(() => document.querySelectorAll("#libShelves .book[data-book]").length > 0, null, { timeout: 15000 });
   await p.waitForTimeout(400);
 
   const got = await p.evaluate(() => ({
-    spines: [...document.querySelectorAll("#libShelves .spine")].map(s => ({
+    /* Stage LS: every book renders OPEN as a two-page spread, so there is no spine to
+       click and no single shared open container. What used to be asserted about the spine
+       is now asserted about the book itself. */
+    books: [...document.querySelectorAll("#libShelves .book[data-book]")].map(s => ({
       id: s.dataset.book, shelf: s.closest(".lib-shelf").dataset.shelf,
-      text: s.textContent, tag: s.tagName, expanded: s.getAttribute("aria-expanded"),
+      text: s.textContent, pages: s.children.length,
+      /* two pages must be SIDE BY SIDE above the collapse width. Count distinct rounded
+         tops, never getClientRects().length — a Range yields one rect per text run and that
+         mistake stayed green under mutation once already (see stage-ms-spec). */
+      pageTops: [...new Set([...s.children].map(c => Math.round(c.getBoundingClientRect().top)))].length,
+      readBtn: !!s.querySelector(".lib-read"),
+      readTag: (s.querySelector(".lib-read")||{}).tagName,
+      readExpanded: (s.querySelector(".lib-read")||{}).getAttribute
+        ? s.querySelector(".lib-read").getAttribute("aria-expanded") : null,
+      contentsEmpty: (s.querySelector(".lib-contents")||{}).innerHTML === "",
+    })),
+    volumes: [...document.querySelectorAll("#libShelves .book[data-reading]")].map(s => ({
+      id: s.dataset.reading, text: s.textContent,
+      hasReadBtn: !!s.querySelector(".lib-read"),
     })),
     shelves: [...document.querySelectorAll(".lib-shelf")].map(s => s.dataset.shelf),
     count: document.getElementById("libCount").textContent,
@@ -124,16 +140,21 @@ const bookId = p => p.replace(/^\/data\//, "").replace(/\./g, "-");
       chip: !!a.querySelector(".uc-chip"), art: !!a.querySelector(".uc-art"),
       heading: a.querySelector("h3").textContent.trim(),
     })),
-    spreadEmpty: document.getElementById("libSpread").innerHTML.trim() === "",
+    noSpines: document.querySelectorAll(".spine").length,
     liveRegions: document.querySelectorAll("[aria-live]").length,
   }));
 
-  ok("one spine per manifest entry", got.spines.length === MANIFEST.length,
-    `page ${got.spines.length} vs manifest ${MANIFEST.length}`);
-  ok("spines are real buttons, so they tab and take Enter for free",
-    got.spines.every(s => s.tag === "BUTTON"));
-  ok("every spine carries real text, not a painted label",
-    got.spines.every(s => s.text.trim().length > 4));
+  ok("one open book per manifest entry", got.books.length === MANIFEST.length,
+    `page ${got.books.length} vs manifest ${MANIFEST.length}`);
+  ok("the spines are gone — every book renders open", got.noSpines === 0, String(got.noSpines));
+  ok("every book is a two-page spread", got.books.every(s => s.pages === 2));
+  ok("the two pages sit side by side above the collapse width",
+    got.books.every(s => s.pageTops === 1),
+    String(got.books.filter(s => s.pageTops !== 1).length) + " books stacked at 1280");
+  ok("every book carries real text, not a painted label",
+    got.books.every(s => s.text.trim().length > 4));
+  ok("every book offers a real button to read the file itself",
+    got.books.every(s => s.readBtn && s.readTag === "BUTTON" && s.readExpanded === "false"));
   ok("the printed count is the manifest's, not a typed number",
     got.count.includes(String(MANIFEST.length)) && got.count.includes("index.json"), got.count);
 
@@ -141,30 +162,60 @@ const bookId = p => p.replace(/^\/data\//, "").replace(/\./g, "-");
      id gave them the same one, which is a duplicate DOM id and a deep link that opens
      whichever the browser found first. Found by looking at the rendered page, not by a
      test — so here is the test. */
-  const ids = got.spines.map(s => s.id);
+  const ids = got.books.map(s => s.id);
   ok("every book id is unique", new Set(ids).size === ids.length,
     ids.filter((x, i) => ids.indexOf(x) !== i).join(","));
 
   for (const f of MANIFEST) {
     const id = bookId(f.path);
-    const s = got.spines.find(x => x.id === id);
-    ok(`${id}: has a spine`, !!s);
+    const s = got.books.find(x => x.id === id);
+    ok(`${id}: has an open book`, !!s);
     ok(`${id}: the file it names exists`, fs.existsSync(path.join(ROOT, f.path.replace(/^\//, ""))));
     const want = OWNER[f.path] ? OWNER[f.path][0].domain : "__unclaimed";
     ok(`${id}: shelved under the surface that owns it`, !!s && s.shelf === want, s && s.shelf);
-    ok(`${id}: the spine names the file, extension and all`, !!s && s.text.includes(f.path.replace("/data/", "")));
+    ok(`${id}: the book names the file, extension and all`, !!s && s.text.includes(f.path.replace("/data/", "")));
   }
   /* the map cannot contain itself; anything ELSE unclaimed is a real gap */
-  const unclaimed = got.spines.filter(s => s.shelf === "__unclaimed").map(s => s.id);
+  const unclaimed = got.books.filter(s => s.shelf === "__unclaimed").map(s => s.id);
   ok("only the map itself is unclaimed", unclaimed.join(",") === "surfaces-json", unclaimed.join(","));
 
-  /* ⚠️ nothing is fetched until a book is opened */
+  /* ⚠️ NOTHING IS FETCHED UNTIL "READ THE FILE" IS PRESSED. This is the assertion that
+     makes 42 simultaneously-open books affordable: the right-hand page is built from the
+     manifest the page already holds, and no payload is requested at load. The property is
+     unchanged from the spine era; only its trigger moved. */
   const dataReqs = reqs.filter(u => /\/data\//.test(u));
   const bootOnly = ["/data/index.json", "/data/surfaces.json", "/data/upstream-models.json"];
   ok("only the three catalogue files are read at load",
     dataReqs.every(u => bootOnly.some(x => u.endsWith(x))),
     dataReqs.filter(u => !bootOnly.some(x => u.endsWith(x))).join(" "));
-  ok("no book is open before one is clicked", got.spreadEmpty);
+  ok("no book has read its file before the button is pressed",
+    got.books.every(s => s.contentsEmpty), 
+    String(got.books.filter(s => !s.contentsEmpty).length) + " books pre-read");
+
+  /* ---- Stage LS: the volumes shelf, derived from surfaces.json's `reading` key ----
+     ⚠️ Asserted against the REGISTRY, never against a name. If a surface gains a `reading`
+     entry the page must grow a volume with no edit here, which is the whole reason the key
+     exists rather than a typed list of two pages. */
+  const READING = sur.flatMap(s => (s.reading || []).map(r => ({ ...r, sid: s.id })));
+  ok("one volume per `reading` entry in the registry", got.volumes.length === READING.length,
+    `page ${got.volumes.length} vs registry ${READING.length}`);
+  ok("the registry actually carries reading entries (guards the assertion above)",
+    READING.length > 0, String(READING.length));
+  for (const r of READING) {
+    const v = got.volumes.find(x => x.id.startsWith(r.sid));
+    ok(`volume ${r.sid}: is on the shelf`, !!v);
+    ok(`volume ${r.sid}: names the page it points at`, !!v && v.text.includes(r.url));
+    /* A page has no envelope to read, so offering "Read the file" would be a lie. */
+    ok(`volume ${r.sid}: offers no file to read, because it is not a file`, !!v && !v.hasReadBtn);
+  }
+  ok("a `reading` url is a page, never a /data/ payload",
+    READING.every(r => !r.url.startsWith("/data/")), READING.map(r => r.url).join(" "));
+  /* ⚠️ THE REGISTRY BOUNDARY. `reading` was added as a THIRD key precisely so an HTML page
+     would never land in a `machine` array, which llms.txt and test-machine-surfaces grade as
+     machine-readable. If that ever leaks, this fails. */
+  ok("no html page leaked into a `machine` array",
+    sur.every(s => (s.machine || []).every(m => !/\.html(\?|#|$)/.test(m.url || ""))),
+    sur.flatMap(s => (s.machine || []).filter(m => /\.html/.test(m.url || "")).map(m => m.url)).join(" "));
 
   /* reference books */
   ok("one reference book per unintegrated source", got.ref.length === REF.length,
@@ -187,25 +238,33 @@ const bookId = p => p.replace(/^\/data\//, "").replace(/\./g, "-");
     got.plan.filter(x => x.controls).map(x => x.planned).join(" "));
   ok("a planned card is headed by the surface that does not exist",
     got.plan.every(x => x.heading === x.planned), got.plan.map(x => x.heading).join(" | "));
-  ok("the page keeps live regions for the counts", got.liveRegions >= 4, String(got.liveRegions));
+  /* ⚠️ Stage LS dropped this from 4 to 3, and that is a REAL reduction, not a relaxation
+     to make a suite pass. The fourth region was #libSpread, the single shared container the
+     one-open-book model announced into. Books render open now, so there is nothing to
+     announce and no container to announce it from. The three that remain are the three
+     counts, and they are still the point: a count that changes silently is the failure this
+     assertion exists to catch. Mutation-proved (M6/M7 in work/ls_mutations.py). */
+  ok("the page keeps a live region for every count it prints", got.liveRegions === 3, String(got.liveRegions));
 
-  /* ---- open a book: the right-hand page must be the real file ---- */
+  /* ---- read a book: the contents must come from the real file ---- */
   const target = "nfelo-json";
   const before = reqs.length;
-  await p.click(`#sp-${target}`);
-  await p.waitForFunction(() => document.querySelector("#libSpread pre"), null, { timeout: 10000 });
-  const opened = await p.evaluate(() => ({
-    heading: document.querySelector("#libSpread h3").textContent.trim(),
-    left: document.querySelector("#libSpread .lib-page").textContent,
-    right: document.querySelectorAll("#libSpread .lib-page")[1].textContent,
-    pre: document.querySelector("#libSpread pre").textContent,
-    expanded: document.querySelector(`#sp-nfelo-json`).getAttribute("aria-expanded"),
-    hash: location.hash,
-    canvases: document.querySelectorAll("canvas").length,
-  }));
+  await p.click(`[data-read="${target}"]`);
+  await p.waitForFunction(() => document.querySelector("#rd-nfelo-json pre"), null, { timeout: 10000 });
+  const opened = await p.evaluate(() => {
+    const bk = document.getElementById("book-nfelo-json");
+    return {
+      left: bk.children[0].textContent,
+      right: bk.children[1].textContent,
+      pre: bk.querySelector("#rd-nfelo-json pre").textContent,
+      expanded: bk.querySelector(".lib-read").getAttribute("aria-expanded"),
+      btnLabel: bk.querySelector(".lib-read").textContent.trim(),
+      canvases: document.querySelectorAll("canvas").length,
+    };
+  });
   const nfeloEnv = JSON.parse(fs.readFileSync(path.join(ROOT, "data/nfelo.json"), "utf8"));
   const nfeloEntry = idx.files.find(f => f.path === "/data/nfelo.json");
-  ok("opening a book fetches that exact file",
+  ok("reading a book fetches that exact file",
     reqs.slice(before).some(u => u.endsWith("/data/nfelo.json")),
     reqs.slice(before).join(" "));
   ok("the right page reports the file's real as_of", opened.right.includes(nfeloEnv.as_of));
@@ -213,12 +272,12 @@ const bookId = p => p.replace(/^\/data\//, "").replace(/\./g, "-");
   ok("the shape comes from the file, naming its real top-level keys",
     Object.keys(nfeloEnv.data).slice(0, 3).every(k => opened.pre.includes(k)),
     opened.pre.slice(0, 120));
-  ok("the left page reports the manifest's real sha256",
-    opened.left.includes(nfeloEntry.sha256.slice(0, 32)));
-  ok("the left page links the surface that owns the file",
-    opened.left.includes(OWNER["/data/nfelo.json"][0].name));
-  ok("the open spine is marked expanded for assistive tech", opened.expanded === "true");
-  ok("opening a book deep-links it", opened.hash === "#book-nfelo-json", opened.hash);
+  ok("the record page reports the manifest's real sha256",
+    opened.right.includes(nfeloEntry.sha256.slice(0, 16)));
+  ok("the record page links the surface that owns the file",
+    opened.right.includes(OWNER["/data/nfelo.json"][0].name));
+  ok("the read control is marked expanded for assistive tech", opened.expanded === "true");
+  ok("and it offers the way back", /collapse/i.test(opened.btnLabel), opened.btnLabel);
   ok("nothing was painted", opened.canvases === 0);
 
   /* ⚠️ A FILE CAN BE CLAIMED BY MORE THAN ONE SURFACE. /data/pound-tools.json is claimed by
@@ -229,12 +288,13 @@ const bookId = p => p.replace(/^\/data\//, "").replace(/\./g, "-");
     const multi = Object.entries(OWNER).filter(([, v]) => v.length > 1);
     ok("the map really does double-claim at least one file", multi.length > 0);
     for (const [url, rows] of multi) {
-      await p.click(`#sp-${bookId(url)}`);
-      await p.waitForFunction(() => document.querySelector("#libSpread .lib-page"), null, { timeout: 8000 });
-      const left = await p.evaluate(() => document.querySelector("#libSpread .lib-page").textContent);
+      const rec = await p.evaluate(id => {
+        const bk = document.getElementById("book-" + id);
+        return bk ? bk.children[1].textContent : null;
+      }, bookId(url));
       ok(`${bookId(url)}: the book names every surface that claims it`,
-        rows.every(r => left.includes(r.name)), rows.map(r => r.name).join(" / "));
-      ok(`${bookId(url)}: and says "surfaces", plural`, /SURFACES/i.test(left));
+        !!rec && rows.every(r => rec.includes(r.name)), rows.map(r => r.name).join(" / "));
+      ok(`${bookId(url)}: and says "surfaces", plural`, !!rec && /SURFACES/i.test(rec));
     }
   }
 
@@ -242,35 +302,57 @@ const bookId = p => p.replace(/^\/data\//, "").replace(/\./g, "-");
   const bigEntry = idx.files.find(f => f.bytes > 250000);
   const bigId = bookId(bigEntry.path);
   const beforeBig = reqs.length;
-  await p.click(`#sp-${bigId}`);
-  await p.waitForFunction(id => /Not opened here/.test(document.getElementById("libSpread").textContent), null, { timeout: 8000 }).catch(() => { });
-  const bigOpen = await p.evaluate(() => document.getElementById("libSpread").textContent);
+  await p.click(`[data-read="${bigId}"]`);
+  await p.waitForFunction(id => /Not opened here/.test(document.getElementById("rd-" + id).textContent), bigId, { timeout: 8000 }).catch(() => { });
+  const bigOpen = await p.evaluate(id => document.getElementById("rd-" + id).textContent, bigId);
   ok("a file too large to open refuses out loud", /Not opened here/.test(bigOpen));
   ok("and is not fetched anyway", !reqs.slice(beforeBig).some(u => u.endsWith(bigEntry.path)),
     bigEntry.path);
 
-  /* closing */
-  await p.click("#libClose");
+  /* collapsing. ⚠️ Stage LS: there is no "close the book" any more, because the book never
+     shut. What collapses is the fetched contents, and focus must come back to the control
+     that was pressed — the same accessibility property the old close button carried. */
+  /* ⚠️ VACUITY. Clicking a button focuses it, so asserting "focus returned to the button"
+     after a CLICK passes whether or not the page manages focus at all — removing the
+     focus() call left this green. Move focus away first and trigger the collapse
+     programmatically, which is also the real path for an assistive-tech or scripted
+     activation. Now the assertion can fail, and the mutation proves it does. */
+  await p.evaluate(id => {
+    document.getElementById("libCount").setAttribute("tabindex", "-1");
+    document.getElementById("libCount").focus();
+    document.querySelector(`[data-read="${id}"]`).click();
+  }, bigId);
   await p.waitForTimeout(200);
-  const closed = await p.evaluate(() => ({
-    empty: document.getElementById("libSpread").innerHTML.trim() === "",
-    anyExpanded: document.querySelectorAll('.spine[aria-expanded="true"]').length,
-    focused: document.activeElement.dataset ? document.activeElement.dataset.book : null,
-  }));
-  ok("closing a book empties the spread", closed.empty);
-  ok("closing a book un-expands every spine", closed.anyExpanded === 0);
-  ok("closing a book returns focus to its spine", closed.focused === bigId, closed.focused);
+  const closed = await p.evaluate(id => ({
+    empty: document.getElementById("rd-" + id).innerHTML.trim() === "",
+    anyExpanded: document.querySelectorAll('.lib-read[aria-expanded="true"]').length,
+    focused: document.activeElement.dataset ? document.activeElement.dataset.read : null,
+    stillOpen: !!document.getElementById("book-" + id),
+    label: document.querySelector(`[data-read="${id}"]`).textContent.trim(),
+  }), bigId);
+  ok("collapsing empties the contents", closed.empty);
+  ok("the BOOK stays open when its contents collapse", closed.stillOpen);
+  ok("collapsing returns focus to the control that was pressed", closed.focused === bigId, String(closed.focused));
+  ok("and the control offers to read it again", /read the file/i.test(closed.label), closed.label);
+  ok("only the books actually read are marked expanded",
+    closed.anyExpanded === 1, String(closed.anyExpanded));
 
   /* ⚠️ a hash-only navigation does NOT reload the document. This is the same-document
      case that broke every 1b forward; goto with a new hash on a loaded page is exactly it. */
   await p.goto("http://127.0.0.1:8923/data.html#book-receipts-json", { waitUntil: "commit" });
   await p.waitForFunction(() => document.querySelector("#libSpread h3"), null, { timeout: 8000 }).catch(() => { });
   const viaHash = await p.evaluate(() => ({
-    heading: document.querySelector("#libSpread h3") ? document.querySelector("#libSpread h3").textContent.trim() : null,
-    expanded: document.querySelector("#sp-receipts-json") ? document.querySelector("#sp-receipts-json").getAttribute("aria-expanded") : null,
+    /* ⚠️ Stage LS: #book-<id> no longer OPENS anything, because every book is already open.
+       An old deep link must still land the reader on the right book, so it now scrolls to it
+       and marks it. A link that silently does nothing is worse than one that 404s. */
+    heading: document.querySelector("#book-receipts-json h4")
+      ? document.querySelector("#book-receipts-json h4").textContent.trim() : null,
+    marked: !!document.querySelector("#book-receipts-json.lib-hit"),
+    onlyOne: document.querySelectorAll(".book.lib-hit").length,
   }));
-  ok("a hash-only navigation opens the book it names", viaHash.heading === "receipts.json", viaHash.heading);
-  ok("and marks that spine expanded", viaHash.expanded === "true");
+  ok("a hash-only navigation still finds the book it names", viaHash.heading === "receipts.json", viaHash.heading);
+  ok("and marks it so the reader can see where they landed", viaHash.marked);
+  ok("and marks exactly one", viaHash.onlyOne === 1, String(viaHash.onlyOne));
 
   await ctx.close();
 }
@@ -285,11 +367,11 @@ const bookId = p => p.replace(/^\/data\//, "").replace(/\./g, "-");
   await p.waitForFunction(() => !document.querySelector("#libShelves .p-loading"), null, { timeout: 8000 }).catch(() => { });
   const d = await p.evaluate(() => ({
     err: !!document.querySelector("#libShelves .p-error"),
-    spines: document.querySelectorAll(".spine").length,
+    books: document.querySelectorAll(".book").length,
     count: document.getElementById("libCount").textContent,
     refErr: !!document.querySelector("#refBooks .p-error"),
   }));
-  ok("an unreadable manifest produces a stated failure", d.err && d.spines === 0);
+  ok("an unreadable manifest produces a stated failure", d.err && d.books === 0);
   ok("the count says unavailable rather than zero", /unavailable/i.test(d.count), d.count);
   ok("the reference shelf fails with it rather than looking complete", d.refErr);
   await ctx.close();
@@ -303,7 +385,7 @@ for (const W of [1280, 390, 320]) {
     p.on("pageerror", e => errs.push(`${theme}@${W}: ${e.message}`));
     await p.addInitScript(t => { try { localStorage.setItem("dd-theme2", t); localStorage.setItem("dd-theme", t); } catch (e) { } }, theme);
     await p.goto("http://127.0.0.1:8923/data.html", { waitUntil: "load" });
-    await p.waitForFunction(() => document.querySelectorAll("#libShelves .spine").length > 0, null, { timeout: 15000 });
+    await p.waitForFunction(() => document.querySelectorAll("#libShelves .book[data-book]").length > 0, null, { timeout: 15000 });
     await p.waitForTimeout(150);
     const tag = `library@${W} ${theme}`;
     const shut = await p.evaluate(() => ({
@@ -321,14 +403,21 @@ for (const W of [1280, 390, 320]) {
     /* ⚠️ A CLOSED panel cannot overflow the document, so measuring only the closed state
        passes vacuously. Open the widest book — the one with the longest note — and measure
        again. That is what caught .cfbt-grid on Stage 3. */
-    await p.click("#sp-pool-json");
-    await p.waitForFunction(() => document.querySelector("#libSpread pre"), null, { timeout: 10000 }).catch(() => { });
+    await p.click('[data-read="pool-json"]');
+    await p.waitForFunction(() => document.querySelector("#rd-pool-json pre"), null, { timeout: 10000 }).catch(() => { });
     const open = await p.evaluate(() => ({
       hoverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
-      spreadWide: (() => { const s = document.querySelector(".spread"); return s ? s.getBoundingClientRect().width > document.documentElement.clientWidth + 1 : false; })(),
+      wide: (() => { const s = document.querySelector(".book"); return s ? s.getBoundingClientRect().width > document.documentElement.clientWidth + 1 : false; })(),
+      /* ⚠️ Kap asked for one page below ~480px. Count DISTINCT ROUNDED TOPS of the two
+         pages, never getClientRects().length — that mistake stayed green under mutation on
+         Stage MS-A. Two tops means stacked; one means side by side. */
+      pageTops: (() => { const s = document.querySelector(".book"); return s
+        ? [...new Set([...s.children].map(c => Math.round(c.getBoundingClientRect().top)))].length : 0; })(),
     }));
-    ok(tag + " no sideways scroll with a book OPEN", open.hoverflow === false);
-    ok(tag + " the open spread fits the column", open.spreadWide === false);
+    ok(tag + " no sideways scroll with a book READ", open.hoverflow === false);
+    ok(tag + " the book fits the column", open.wide === false);
+    ok(tag + (W <= 480 ? " the spread collapses to one page" : " the spread keeps two pages side by side"),
+      W <= 480 ? open.pageTops === 2 : open.pageTops === 1, `${open.pageTops} row(s) at ${W}`);
     await ctx.close();
   }
 }

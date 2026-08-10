@@ -648,23 +648,15 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
    request, no canvas, nothing to animate. */
 .uc{border-color:color-mix(in srgb,var(--warn) 38%,var(--border))}
 .uc-art{display:block;height:9px;margin:-14px -14px 11px;border-radius:10px 10px 0 0;background:repeating-linear-gradient(135deg,var(--warn) 0 8px,transparent 8px 16px);opacity:.5}
-.uc-chip{display:inline-flex;border-radius:999px;padding:3px 7px;font:800 10px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;border:1px solid color-mix(in srgb,var(--warn) 50%,var(--border));color:var(--warn)}/* CEP-5A Stage 5 — THE LIBRARY. Spines are styled HTML and real <button> elements:
-   they carry real text for a screen reader, they tab and they take Enter and Space for
-   free. ⚠️ NO CANVAS anywhere on this page — a painted spine is unreadable to assistive
-   technology and unselectable to everyone, and a painted "chart" on the right-hand page
-   would be a picture of numbers nobody can check. */
+.uc-chip{display:inline-flex;border-radius:999px;padding:3px 7px;font:800 10px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;border:1px solid color-mix(in srgb,var(--warn) 50%,var(--border));color:var(--warn)}/* CEP-5A Stage 5 — THE LIBRARY. ⚠️ NO CANVAS anywhere on this page: a painted label is
+   unreadable to assistive technology and unselectable to everyone, and a painted "chart" on
+   a right-hand page would be a picture of numbers nobody can check. Stage LS removed the
+   spine buttons — books render open now — but the rule about canvas stands. */
 .lib-shelf{border:1px solid var(--border);border-radius:12px;background:var(--surface-1);padding:13px 14px;margin:0 0 14px}
 .lib-shelf>h3{margin:0 0 3px;font:750 12px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
 .lib-shelf>p{margin:0 0 11px;color:var(--ink-3);font-size:12.5px;line-height:1.6;max-width:820px}
-.spines{display:flex;flex-wrap:wrap;gap:7px;align-items:stretch}
-.spine{display:flex;flex-direction:column;justify-content:space-between;gap:6px;min-width:0;max-width:100%;text-align:left;cursor:pointer;
   border:1px solid var(--grid);border-left:4px solid var(--accent);border-radius:4px;background:var(--page);color:var(--ink-1);
   padding:9px 10px;font:inherit}
-.spine:hover{border-color:var(--accent)}
-.spine:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.spine[aria-expanded="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--page))}
-.spine b{font:700 12.5px/1.35 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}
-.spine span{font:650 10.5px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--ink-3);text-transform:uppercase}
 .spread{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0;border:1px solid var(--border);border-radius:12px;background:var(--surface-1);overflow:hidden;margin:0 0 18px}
 .lib-page{padding:16px 18px;min-width:0}
 .lib-page+.lib-page{border-left:1px solid var(--grid)}
@@ -677,7 +669,37 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 .lib-side{font:650 10.5px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--ink-3);text-transform:uppercase;margin:0 0 8px}
 .lib-close{border:1px solid var(--border);border-radius:8px;background:var(--page);color:var(--ink-2);padding:6px 10px;font:700 11px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;cursor:pointer;margin-top:12px}
 .lib-close:hover{border-color:var(--accent);color:var(--accent)}
-@media(max-width:760px){.spread{grid-template-columns:1fr}.lib-page+.lib-page{border-left:0;border-top:1px solid var(--grid)}.spine{width:100%}}
+@media(max-width:760px){.spread{grid-template-columns:1fr}.lib-page+.lib-page{border-left:0;border-top:1px solid var(--grid)}}
+/* ---- Stage LS, 2026-08-10: the books are OPEN ----------------------------------------
+   Spines were rejected as pretty and unscannable. Every book now renders open, in place,
+   as a two-page spread: left page says what it is, right page carries the metadata.
+
+   ⚠️ THE RIGHT PAGE IS BUILT FROM THE MANIFEST AND FETCHES NOTHING. 42 books open by
+   default would otherwise be 42 requests, two of them over 1 MB. Reading the actual file
+   stays behind the "Read the file" button, which is also what keeps the big-file refusal
+   and the request-counting assertions meaningful.
+   ⚠️ DO NOT "improve" this with an intersection observer. A hidden element's rect is 0x0 at
+   the document origin, so every near-viewport helper reads true and fires on load. That is
+   how cfb.html's lazy loader silently stopped being lazy. */
+.books{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:12px}
+.book{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);border:1px solid var(--grid);
+  border-radius:10px;background:var(--page);overflow:hidden;scroll-margin-top:80px}
+.book>.lib-page{padding:13px 15px}
+.book>.lib-page+.lib-page{border-left:1px solid var(--grid)}
+.book h4{margin:0 0 6px;font:700 13px/1.35 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}
+.book p{margin:5px 0;color:var(--ink-2);font-size:12.5px;line-height:1.55}
+.book:target,.book.lib-hit{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 28%,transparent)}
+.book .lib-read{border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--ink-2);
+  padding:5px 9px;font:700 10.5px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;cursor:pointer;margin-top:10px}
+.book .lib-read:hover{border-color:var(--accent);color:var(--accent)}
+.book .lib-read:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.book.reading{border-left:4px solid var(--accent)}
+/* One page below 480px, per the ask. The two pages must stack, not squeeze. */
+@media(max-width:480px){
+  .books{grid-template-columns:1fr}
+  .book{grid-template-columns:1fr}
+  .book>.lib-page+.lib-page{border-left:0;border-top:1px solid var(--grid)}
+}
 .tool{min-width:0;border:1px solid var(--border);border-radius:11px;background:var(--surface-1);padding:14px}.tool h3{font-size:16px;margin:6px 0}.tool p{margin:5px 0;color:var(--ink-2);font-size:13px}.tool .block{color:var(--ink-3);border-top:1px solid var(--grid);margin-top:9px;padding-top:9px}.tool code{font-size:11px;overflow-wrap:anywhere}
 .status{display:inline-flex;border-radius:999px;padding:3px 7px;font:800 10px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;border:1px solid var(--border)}
 .status-complete{color:var(--good);border-color:color-mix(in srgb,var(--good) 50%,var(--border))}.status-ready{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 50%,var(--border))}.status-frontend-only{color:var(--warn)}.status-backend-blocked,.status-data-blocked{color:var(--bad)}
@@ -1996,14 +2018,19 @@ STATE: everything saves in the browser on that device. A different device shows 
 
 <main>
   <header class="p-hero">
-    <div class="p-kicker">The Library · every machine-readable file this site publishes, and the ones it does not</div>
+    <!-- ⚠️ Stage LS reworded this. It said "every machine-readable file this site publishes",
+         which stopped being true the moment pages were shelved beside the files. The
+         distinction is now stated rather than quietly dropped, and llms.txt is untouched —
+         it has nineteen bytes of headroom and does not describe this page's scope. -->
+    <div class="p-kicker">The Library · every machine-readable file this site publishes, the pages worth reading whole, and the ones we do not republish</div>
     <h1>The Library. <a class="tierchip" data-tier="labs" href="index.html#tiers" title="Why this page is a Pup">Pup</a></h1>
     <p class="p-lead">Every file on the shelves below is listed by
     <a href="/data/index.json"><code>/data/index.json</code></a>, the generated manifest, and
     shelved by the surface that owns it in <a href="/data/surfaces.json"><code>/data/surfaces.json</code></a>.
-    Nothing here is typed into this page: if a file is not in the manifest it has no spine, and if
-    the manifest gains one it appears without anyone editing this page. Open a book and the right-hand
-    page shows what is actually in the file — its envelope and its shape, read from the file itself.</p>
+    Nothing here is typed into this page: if a file is not in the manifest it has no book, and if
+    the manifest gains one it appears without anyone editing this page. Every book lies open —
+    the left page says what it is, the right page carries its record. Press <b>Read the file</b>
+    and the right page also shows what is actually inside it, read from the file itself.</p>
   </header>
   <div class="p-disclosure"><b>A catalogue is not a warranty.</b> Every payload carries its own
   <code>as_of</code>; some are weeks old and say so. A file being listed here means it exists and is
@@ -2013,12 +2040,13 @@ STATE: everything saves in the browser on that device. A different device shows 
   </nav>
 
   <section class="p-section" id="shelves">
-    <header><div><h2>The shelves</h2><p class="dek">One spine per file in the manifest, grouped by the
-      <code>domain</code> of the surface that publishes it. Click a spine to open the book: the left
-      page describes it, the right page shows the real envelope and shape. Nothing is drawn — a
-      picture of numbers is not something you can check.</p></div>
+    <header><div><h2>The shelves</h2><p class="dek">One open book per file in the manifest, grouped by
+      the <code>domain</code> of the surface that publishes it. The left page says what it is; the
+      right page carries its record — date, size, hash and owning surface — and none of that costs a
+      request, because it all comes from the manifest. <b>Read the file</b> fetches the payload itself
+      and prints its envelope and shape. Nothing is drawn: a picture of numbers is not something you
+      can check.</p></div>
       <div class="p-meta" id="libCount" aria-live="polite">reading the manifest&hellip;</div></header>
-    <div id="libSpread" aria-live="polite"></div>
     <div id="libShelves"><div class="p-loading">Loading the manifest&hellip;</div></div>
   </section>
 
@@ -2101,7 +2129,10 @@ STATE: everything saves in the browser on that device. A different device shows 
   };
   const UNCLAIMED = "__unclaimed";
 
-  let BOOKS=[], OWNER={}, openId=null;
+  let BOOKS=[], OWNER={};
+  /* Which books have had their actual contents fetched. Replaces the single `openId`:
+     every book is open, so what varies is whether it has been READ. */
+  const READ = new Set();
   /* ⚠️ THE ID CARRIES THE EXTENSION. /data/bozo-rules.json and /data/bozo-rules.md are two
      different books and a stem-only id gives them the same one — duplicate DOM ids, and a
      deep link that opens whichever the browser found first. Same for tier-audit. Always
@@ -2111,10 +2142,61 @@ STATE: everything saves in the browser on that device. A different device shows 
   const label = p => p.replace(/^\/data\//,"");
   const kb = b => b >= 1048576 ? (b/1048576).toFixed(1)+" MB" : Math.round(b/1024)+" KB";
 
-  function spine(b){
-    return `<button type="button" class="spine" id="sp-${esc(b.id)}" data-book="${esc(b.id)}"
-      aria-expanded="false" aria-controls="libSpread">
-      <b>${esc(label(b.path))}</b><span>${esc(b.as_of||"undated")} · ${esc(kb(b.bytes))}</span></button>`;
+  /* ⚠️ Stage LS: an OPEN book. Left page says what it is, right page carries the metadata,
+     and BOTH come from the manifest the page has already loaded. Nothing here fetches.
+     The "Read the file" button is the only thing that ever requests a payload, which is what
+     lets 42 books render at once without 42 requests. */
+  function bookCard(b){
+    const own = OWNER[b.path]||[];
+    return `<article class="book" id="book-${esc(b.id)}" data-book="${esc(b.id)}">
+      <div class="lib-page">
+        <p class="lib-side">The book</p>
+        <h4>${esc(label(b.path))}</h4>
+        <p>${b.note?esc(b.note):"The manifest records no note for this file."}</p>
+        <p><a href="${esc(b.path)}"><code>${esc(b.path)}</code></a></p>
+      </div>
+      <div class="lib-page">
+        <p class="lib-side">The record</p>
+        <dl>
+          <dt>as_of</dt><dd>${esc(b.as_of||"undated")}</dd>
+          <dt>size</dt><dd>${esc(kb(b.bytes))}</dd>
+          <dt>sha256</dt><dd><code>${esc((b.sha256||"").slice(0,16))}&hellip;</code></dd>
+          <dt>${own.length>1?"surfaces":"surface"}</dt><dd>${own.length
+            ? own.map(o=>`<a href="${esc(o.page)}">${esc(o.name)}</a>`).join("<br>")
+            : "none — see the unclaimed shelf"}</dd>
+        </dl>
+        <div class="lib-contents" id="rd-${esc(b.id)}"></div>
+        <button type="button" class="lib-read" data-read="${esc(b.id)}"
+          aria-expanded="false" aria-controls="rd-${esc(b.id)}">Read the file</button>
+      </div>
+    </article>`;
+  }
+
+  /* ⚠️ A page is NOT a file, and this shelf says so in its own words. `reading` is a third
+     key on the surface row beside `machine` and `planned` (see tools/build-data.js), added
+     so master.html and strategy.html could be shelved without an HTML page ending up in a
+     `machine` array that llms.txt grades as machine-readable. No typed list: add a `reading`
+     entry to a surface and its page appears here. */
+  function readingCard(r){
+    return `<article class="book reading" id="read-${esc(r.id)}" data-reading="${esc(r.id)}">
+      <div class="lib-page">
+        <p class="lib-side">A volume, not a file</p>
+        <h4>${esc(r.title)}</h4>
+        <p>${esc(r.covers)}</p>
+        <p><a href="${esc(r.url)}">${esc(r.url)}</a></p>
+      </div>
+      <div class="lib-page">
+        <p class="lib-side">The record</p>
+        <dl>
+          <dt>kind</dt><dd>page, read in a browser</dd>
+          <dt>surface</dt><dd><a href="${esc(r.page)}">${esc(r.name)}</a></dd>
+          <dt>as_of</dt><dd>the page states its own</dd>
+        </dl>
+        <p class="assumption">This is a page, so it carries no envelope, no byte count and no
+        hash in the manifest. It is shelved because it is worth reading, not because it is
+        machine-readable — and saying which is which is the point of the shelf.</p>
+      </div>
+    </article>`;
   }
 
   function shelfBlock(key, books){
@@ -2123,7 +2205,7 @@ STATE: everything saves in the browser on that device. A different device shows 
       <h3>${esc(claimed ? (SHELF_LABEL[key]||key) : "Not claimed by any surface")}</h3>
       <p>${claimed ? esc(SHELF_NOTE[key]||"") :
         "The map cannot contain itself: <code>/data/surfaces.json</code> is the map, so no row in it owns it. Anything <em>else</em> that appears on this shelf is a real gap — a published file no surface admits to, which is how a dataset goes stale unnoticed."}</p>
-      <div class="spines">${books.map(spine).join("")}</div></div>`;
+      <div class="books">${books.map(bookCard).join("")}</div></div>`;
   }
 
   /* the right-hand page: real envelope + real shape, or a stated refusal. Never a chart. */
@@ -2169,52 +2251,50 @@ STATE: everything saves in the browser on that device. A different device shows 
       + `<pre>${esc(shapeOf(body,0))}</pre>`;
   }
 
-  function closeBook(focusBack){
-    openId=null;
-    $("libSpread").innerHTML="";
-    document.querySelectorAll('.spine[aria-expanded="true"]').forEach(s=>s.setAttribute("aria-expanded","false"));
-    if(history.replaceState) history.replaceState(null,"",location.pathname+location.search+"#shelves");
-    if(focusBack){const el=document.getElementById("sp-"+focusBack); if(el) el.focus();}
+  /* ⚠️ Stage LS replaced open/close with read/collapse. The BOOK is always open; what
+     toggles is whether its actual contents have been fetched. `openId` is gone: there is no
+     single open book any more, so several files can be read at once and each keeps its own
+     state. The request-counting assertions still mean something because this function is
+     still the only thing on the page that fetches a payload. */
+  function collapseRead(id){
+    const box = $("rd-"+id), btn = document.querySelector(`[data-read="${CSS.escape(id)}"]`);
+    if(!box || !btn) return;
+    box.innerHTML = "";
+    READ.delete(id);
+    btn.setAttribute("aria-expanded","false");
+    btn.textContent = "Read the file";
+    btn.focus();
   }
 
-  async function openBook(id, viaHash){
+  async function readBook(id){
     const b = BOOKS.find(x=>x.id===id);
-    if(!b) return;
-    openId=id;
-    document.querySelectorAll(".spine").forEach(s=>s.setAttribute("aria-expanded", s.dataset.book===id?"true":"false"));
-    const own = OWNER[b.path]||[];
-    const left = `<div class="lib-page">
-        <p class="lib-side">The book</p>
-        <h3>${esc(label(b.path))}</h3>
-        <p>${b.note?esc(b.note):"The manifest records no note for this file."}</p>
-        <dl>
-          <dt>path</dt><dd><a href="${esc(b.path)}"><code>${esc(b.path)}</code></a></dd>
-          <dt>as_of</dt><dd>${esc(b.as_of||"undated")}</dd>
-          <dt>size</dt><dd>${esc(kb(b.bytes))}</dd>
-          <dt>sha256</dt><dd><code>${esc((b.sha256||"").slice(0,32))}…</code></dd>
-          <dt>${own.length>1?"surfaces":"surface"}</dt><dd>${own.length
-            ? own.map(o=>`<a href="${esc(o.page)}">${esc(o.name)}</a>`).join("<br>")
-            : "none — see the unclaimed shelf"}</dd>
-        </dl>
-        <button type="button" class="lib-close" id="libClose">Close the book</button>
-      </div>`;
-    $("libSpread").innerHTML = `<div class="spread">${left}<div class="lib-page"><p class="p-loading">Reading the file&hellip;</p></div></div>`;
-    $("libClose").addEventListener("click",()=>closeBook(id));
-    if(history.replaceState) history.replaceState(null,"",location.pathname+location.search+"#book-"+id);
+    const box = $("rd-"+id), btn = document.querySelector(`[data-read="${CSS.escape(id)}"]`);
+    if(!b || !box || !btn) return;
+    if(READ.has(id)) return collapseRead(id);
+    READ.add(id);
+    btn.setAttribute("aria-expanded","true");
+    btn.textContent = "Collapse";
+    box.innerHTML = `<p class="p-loading">Reading the file&hellip;</p>`;
     let right;
     try{ right = await rightPage(b); }
-    catch(err){ right = `<p class="lib-side">Contents</p><p class="p-error">This file could not be read: ${esc(err.message)}. The facts on the left come from the manifest and still stand.</p>`; }
-    if(openId!==id) return;                       // another book was opened while this loaded
-    $("libSpread").querySelector(".lib-page + .lib-page").innerHTML = right;
-    if(!viaHash) $("libSpread").querySelector("h3").scrollIntoView({block:"nearest"});
+    catch(err){ right = `<p class="lib-side">Contents</p><p class="p-error">This file could not be read: ${esc(err.message)}. The facts beside it come from the manifest and still stand.</p>`; }
+    if(!READ.has(id)) return;                     // collapsed while it loaded
+    box.innerHTML = right;
   }
 
   /* ⚠️ A hash-only navigation does NOT reload the document, so a forward that runs once at
-     load never fires again. Listen for hashchange too. */
+     load never fires again. Listen for hashchange too.
+     Stage LS: #book-<id> no longer OPENS anything, because everything is already open. It
+     scrolls the book into view and marks it, so an old deep link still lands on the right
+     book instead of silently doing nothing. */
   function fromHash(){
     const m = /^#book-(.+)$/.exec(location.hash||"");
-    if(m) openBook(decodeURIComponent(m[1]), true);
-    else if(openId) closeBook(null);
+    document.querySelectorAll(".book.lib-hit").forEach(el=>el.classList.remove("lib-hit"));
+    if(!m) return;
+    const el = document.getElementById("book-"+decodeURIComponent(m[1]));
+    if(!el) return;
+    el.classList.add("lib-hit");
+    el.scrollIntoView({block:"nearest"});
   }
 
   async function load(){
@@ -2250,11 +2330,25 @@ STATE: everything saves in the browser on that device. A different device shows 
     }
     const order = Object.keys(SHELF_LABEL).filter(k=>groups[k]).concat(groups[UNCLAIMED]?[UNCLAIMED]:[])
       .concat(Object.keys(groups).filter(k=>!SHELF_LABEL[k]&&k!==UNCLAIMED));
-    $("libShelves").innerHTML = order.map(k=>shelfBlock(k,groups[k])).join("");
-    $("libCount").textContent = `${BOOKS.length} books on ${order.length} shelves · from /data/index.json`;
+    /* ⚠️ The volumes shelf is DERIVED from the `reading` key on the surface rows. No typed
+       list: adding `reading` to a surface in tools/build-data.js puts its page here. */
+    const VOLUMES = (sur.data||[]).flatMap(s => (s.reading||[])
+      .map((r,i) => ({ ...r, id: s.id + (i?"-"+i:""), page: s.page, name: s.name, domain: s.domain })));
+
+    $("libShelves").innerHTML = order.map(k=>shelfBlock(k,groups[k])).join("")
+      + (VOLUMES.length ? `<div class="lib-shelf" data-shelf="__reading">
+          <h3>Volumes — pages, not files</h3>
+          <p>Long-form pages worth reading whole, listed from the <code>reading</code> key on
+          the surface that owns each one. They carry no envelope, byte count or hash, because
+          they are not machine-readable payloads — and a shelf that blurred the two would be
+          exactly the kind of claim this page exists to refuse.</p>
+          <div class="books">${VOLUMES.map(readingCard).join("")}</div></div>` : "");
+    $("libCount").textContent = `${BOOKS.length} books on ${order.length} shelves`
+      + (VOLUMES.length ? ` · ${VOLUMES.length} volumes` : "")
+      + ` · from /data/index.json`;
     $("libShelves").addEventListener("click", e=>{
-      const s = e.target.closest(".spine"); if(!s) return;
-      s.dataset.book===openId ? closeBook(s.dataset.book) : openBook(s.dataset.book);
+      const btn = e.target.closest(".lib-read"); if(!btn) return;
+      readBook(btn.dataset.read);
     });
 
     /* reference books: whatever the provenance file says we do not integrate */
@@ -2288,7 +2382,7 @@ STATE: everything saves in the browser on that device. A different device shows 
         <h3><code>${esc(p)}</code></h3>
         <p class="meta-line">A planned surface for ${esc(r.name)}.</p>
         <p>Named <code>planned</code> in the map and <b>not published</b>. It has no entry in the
-        manifest, so it has no spine on any shelf — which is the point: the shelves show what exists.</p>
+        manifest, so it has no book on any shelf — which is the point: the shelves show what exists.</p>
         ${r.gap?`<p class="block"><b>Why it is not live:</b> ${esc(r.gap)}</p>`:""}
       </article>`).join("") : '<div class="p-loading">Nothing is marked planned as a data surface right now.</div>';
     $("planCount").textContent = plan.length ? `${plan.length} planned data ${plan.length===1?"surface":"surfaces"} · not published` : "none planned";

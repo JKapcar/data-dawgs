@@ -216,6 +216,13 @@
      "status": "live"
     }
    ],
+   "reading": [
+    {
+     "url": "/master.html",
+     "title": "Player pool + Market Value",
+     "covers": "The full player pool as a page: every Market Value in auction dollars, sortable and filterable, with the staleness of the snapshot stated on the page rather than in a footnote."
+    }
+   ],
    "planned": [
     "rest:/api/pool"
    ],
@@ -231,6 +238,13 @@
      "kind": "markdown",
      "url": "/data/strategy.md",
      "status": "live"
+    }
+   ],
+   "reading": [
+    {
+     "url": "/strategy.html",
+     "title": "2026 draft strategy",
+     "covers": "The strategy synthesis in prose, written to be read start to finish rather than queried. The markdown beside it on this shelf is the same argument as a file."
     }
    ],
    "planned": [],

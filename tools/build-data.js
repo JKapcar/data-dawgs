@@ -1108,13 +1108,31 @@ const LEDGER = JSON.parse(fs.readFileSync(path.join(OUT, 'model-receipts.json'),
 const LEDGER_ROWS = LEDGER.data.length;
 const LEDGER_MODELS = [...new Set(LEDGER.data.map(r => r.model_id))];
 
+/* ⚠️ Stage LS, 2026-08-10: `reading` is a THIRD key beside `machine` and `planned`, and it
+   is deliberately not either of them.
+
+   The Library shelves what the manifest lists, which is machine-readable payloads only.
+   Kap wanted master.html and strategy.html on the shelf too, and there were three ways to
+   do it. Putting an HTML page in a `machine` array would have worked with no new key, but
+   `machine` is what llms.txt and work/test-machine-surfaces.mjs grade as MACHINE-READABLE,
+   so that corrupts the registry to fix a layout problem. Deriving from the existing `page`
+   field needs no registry change at all, but EVERY surface has a `page`, so selecting two of
+   them means a typed list — the exact thing data.html exists to refuse.
+
+   A new key derives with no typed list and changes the meaning of nothing that already
+   grades `machine`. Add a `reading` entry to any surface whose page is worth reading in
+   full, and it shelves itself. Kap ruled on this in chat 5. */
 const SURFACES = [
   { id: 'draft-pool', domain: 'data', name: 'Player pool + Market Value', page: '/master.html',
     machine: [{ kind: 'json', url: '/data/pool.json', status: 'live' },
               { kind: 'mcp', tool: 'dd_draft_pool', status: 'live' }],
+    reading: [{ url: '/master.html', title: 'Player pool + Market Value',
+                covers: 'The full player pool as a page: every Market Value in auction dollars, sortable and filterable, with the staleness of the snapshot stated on the page rather than in a footnote.' }],
     planned: ['rest:/api/pool'] },
   { id: 'draft-strategy', domain: 'data', name: '2026 draft strategy', page: '/strategy.html',
     machine: [{ kind: 'markdown', url: '/data/strategy.md', status: 'live' }],
+    reading: [{ url: '/strategy.html', title: '2026 draft strategy',
+                covers: 'The strategy synthesis in prose, written to be read start to finish rather than queried. The markdown beside it on this shelf is the same argument as a file.' }],
     planned: [] },
   { id: 'live-draft', domain: 'arena', name: 'Live auction — board, auctioneer, big board, dashboard, report card',
     page: '/dashboard.html',
