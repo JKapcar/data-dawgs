@@ -723,6 +723,129 @@ console.log('\nreceipts-inventory.json agrees with the ledgers it counts');
   }
 }
 
+// -------------------------------------------------- the model board is not stale
+// Stage MS-B, 2026-08-10. model-board.json is derived from model-receipts.json at build
+// time and is what receipts.html#models actually draws. Same hazard as the inventory
+// above: the ledger is written by scripts/*.py, so a backbone run after build-data.js
+// publishes a board that disagrees with the ledger it claims to summarise. Everything here
+// is RECOMPUTED from the ledger rather than checked for self-consistency -- a derived file
+// that only agrees with itself is exactly the failure this suite exists to catch.
+console.log('\nmodel-board.json agrees with the ledger it summarises');
+{
+  const bPath = path.join(DATA, 'model-board.json');
+  const lPath = path.join(DATA, 'model-receipts.json');
+  if (!fs.existsSync(bPath)) {
+    fail('model-board.json is missing — receipts.html#models renders nothing');
+  } else {
+    const board = JSON.parse(fs.readFileSync(bPath, 'utf8')).data || {};
+    const rows = (JSON.parse(fs.readFileSync(lPath, 'utf8')).data || [])
+      .filter(r => r && r.forecast_status === 'prospective');
+    const latest = new Map();
+    for (const r of rows) {
+      const k = r.game_id + '|' + r.model_id, prior = latest.get(k);
+      if (!prior || r.captured_at > prior.captured_at) latest.set(k, r);
+    }
+    const current = [...latest.values()];
+    const ids = [...new Set(current.map(r => r.model_id))];
+    const models = board.models || [];
+    let bad = 0;
+
+    // 1. Every model_id in the ledger has a board row, and the board invents none.
+    const boardIds = models.map(m => m.model_id);
+    for (const id of ids) if (!boardIds.includes(id)) {
+      fail(`model-board.json omits model_id "${id}", which the ledger registers`); bad++;
+    }
+    for (const id of boardIds) if (!ids.includes(id)) {
+      fail(`model-board.json publishes model_id "${id}", which the ledger does not register`); bad++;
+    }
+
+    // 2. Per-model coverage and central tendency, recomputed.
+    const r6 = v => Number(v.toFixed(6));
+    for (const m of models) {
+      const rs = current.filter(r => r.model_id === m.model_id);
+      if (!rs.length) continue;
+      const games = new Set(rs.map(r => r.game_id)).size;
+      if (m.games !== games) { fail(`model-board.json: ${m.model_id} games=${m.games} but the ledger covers ${games}`); bad++; }
+      if (m.receipts !== rs.length) { fail(`model-board.json: ${m.model_id} receipts=${m.receipts} but the ledger holds ${rs.length}`); bad++; }
+      const ps = rs.map(r => r.home_win_probability).filter(Number.isFinite);
+      const mean = r6(ps.reduce((s, v) => s + v, 0) / ps.length);
+      if (m.mean_home_win_probability !== mean) {
+        fail(`model-board.json: ${m.model_id} mean=${m.mean_home_win_probability} but the ledger means ${mean}`); bad++;
+      }
+      // kind is what every honesty claim on the board hangs off, so derive it too.
+      const head = rs[0];
+      const kind = (Array.isArray(head.ensemble_of) && head.ensemble_of.length) ? 'ensemble' : 'primitive';
+      if (m.kind !== kind) { fail(`model-board.json: ${m.model_id} kind="${m.kind}" but the ledger says ${kind}`); bad++; }
+      if (m.displayed !== (head.displayed !== false)) {
+        fail(`model-board.json: ${m.model_id} displayed=${m.displayed} disagrees with the ledger`); bad++;
+      }
+      // Nothing is graded until kickoff. A number here is a claim nobody can back yet.
+      if (m.brier !== null || m.points !== null || m.settled !== 0) {
+        fail(`model-board.json: ${m.model_id} carries a score before any game has kicked off`); bad++;
+      }
+    }
+
+    // 3. ⚠️ THE UNDISPLAYED LINE MUST STAY UNDISPLAYED, asserted as a negative.
+    //    ddpr-nfl-linear exists so the season-end comparison is not model-shopping. The
+    //    moment it renders, the site is publishing two aggregations and can pick afterwards.
+    const linear = models.find(m => m.model_id === 'ddpr-nfl-linear');
+    if (linear && linear.displayed !== false) {
+      fail('model-board.json marks ddpr-nfl-linear displayed — it is registered for comparison and must never render'); bad++;
+    }
+    const wk = board.week || {};
+    for (const g of (wk.games || [])) {
+      for (const id of Object.keys(g.beliefs || {})) {
+        const m = models.find(x => x.model_id === id);
+        if (m && m.displayed === false) {
+          fail(`model-board.json: week beliefs carry "${id}", which is registered undisplayed`); bad++;
+        }
+      }
+    }
+
+    // 4. The panel arithmetic, and the pre-registration cross-check.
+    const panel = board.panel || {};
+    const prims = models.filter(m => m.kind === 'primitive').map(m => m.model_id);
+    if (panel.registered_lines !== models.length) { fail(`model-board.json: panel.registered_lines=${panel.registered_lines} but the board holds ${models.length}`); bad++; }
+    if (panel.independent_lines !== prims.length) { fail(`model-board.json: panel.independent_lines=${panel.independent_lines} but ${prims.length} lines are primitive`); bad++; }
+    if (panel.displayed_lines !== models.filter(m => m.displayed).length) { fail('model-board.json: panel.displayed_lines disagrees with the rows'); bad++; }
+    if (panel.independent_lines >= panel.registered_lines && panel.registered_lines > 1) {
+      fail('model-board.json calls every registered line independent — an ensemble of two lines is not a third source'); bad++;
+    }
+    const chk = panel.pre_registration_check;
+    if (!chk) { fail('model-board.json publishes no pre-registration cross-check against ddpr-nfl.json'); bad++; }
+    else if (chk.agrees !== true
+             || chk.derived_logit_correlation !== chk.pre_registered_logit_correlation
+             || chk.derived_mean_absolute_probability_gap !== chk.pre_registered_mean_absolute_probability_gap) {
+      fail(`model-board.json: the correlation derived from the ledger (${chk.derived_logit_correlation}) does not match the value pre-registered in ddpr-nfl.json (${chk.pre_registered_logit_correlation}) — the ledger moved after registration`); bad++;
+    }
+
+    // 5. The per-game spread must average the INDEPENDENT lines only. Averaging an
+    //    ensemble back in with its own inputs counts the same beliefs twice and narrows
+    //    the range for free, which would make the board look more agreed than it is.
+    for (const g of (wk.games || [])) {
+      const over = (g.spread || {}).over || [];
+      if (over.slice().sort().join('|') !== prims.slice().sort().join('|')) {
+        fail(`model-board.json: ${g.game_id} spread.over=[${over}] but the independent lines are [${prims}]`); bad++;
+        break;
+      }
+      const ps = over.map(id => (g.beliefs || {})[id]).filter(Number.isFinite).sort((a, b) => a - b);
+      if (ps.length && g.spread.mean !== r6(ps.reduce((s, v) => s + v, 0) / ps.length)) {
+        fail(`model-board.json: ${g.game_id} spread.mean does not equal the mean of its own panel`); bad++;
+        break;
+      }
+    }
+
+    // 6. The board is a summary of a lazy fetch, so it has to stay small enough to be worth
+    //    having. If it ever approaches the superset it is replacing, it has stopped being a
+    //    derived view and this check says so before a user pays for it.
+    const bKb = fs.statSync(bPath).size / 1024, lKb = fs.statSync(lPath).size / 1024;
+    if (bKb > lKb / 4) {
+      fail(`model-board.json is ${bKb.toFixed(0)} KB against a ${lKb.toFixed(0)} KB ledger — it is no longer a small derived view`); bad++;
+    }
+    if (!bad) ok(`${models.length} model lines, ${prims.length} independent, ${(wk.games || []).length} week-${wk.week} games, all recomputed from the ledger`);
+  }
+}
+
 console.log('\ntier_meaning matches its source of truth');
 {
   const src = fs.readFileSync(path.join(ROOT, 'tools/build-data.js'), 'utf8');

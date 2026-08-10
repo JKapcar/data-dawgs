@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 28539,
+    "bytes": 28832,
     "as_of": "2026-08-10",
-    "sha256": "f1d5ed9c7022d81cce7caf1b92f5d618f769f420d9aaf3672adec3d294e2be8d",
+    "sha256": "f1722496193ec4c5edfee2f6f7da3c48cb2c7198b396faca44a1ec0970e77dfb",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -269,6 +269,14 @@
     "as_of": "2026-08-08",
     "sha256": "d448eb4a31cd077b8d54ec6c8a3f20e9ab97e8fd8c49fbb72d2d04f9223b38ef",
     "note": "DDPR is a FUNCTION of its inputs, so it is not independent evidence — a board showing nfelo, 538 Classic and DDPR shows two sources, not three. Two aggregations are pre-registered before any game is played: the log-odds average is displayed and the linear average is carried ungraded so the season-end comparison is not model-shopping. No extremizing. Nothing is graded: the 2026 season starts 2026-09-10."
+   },
+   {
+    "path": "/data/model-board.json",
+    "url": "https://datadawgs216.com/data/model-board.json",
+    "bytes": 14489,
+    "as_of": "2026-08-10",
+    "sha256": "fca55e32bda28c7ea1ccb5a7402116558f97fb4582d25ca48c7aee32e10691da",
+    "note": "The per-model board behind receipts.html#models. Rows and columns are DERIVED from the ledger's distinct model_id values, so registering a new model puts it on the board with no page edit. Per-game spread statistics are computed over the independent lines only -- an ensemble of two models averaged back in with them counts the same two beliefs twice. ddpr-nfl-linear is registered and carries displayed:false; it is published here for completeness and must not be rendered."
    }
   ],
   "markdown": [

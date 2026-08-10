@@ -1,0 +1,589 @@
+{
+ "as_of": "2026-08-10",
+ "source": "Derived at build time by tools/build-data.js from /data/model-receipts.json, with the pre-registered independence figures cross-checked against /data/ddpr-nfl.json.",
+ "tier": "labs",
+ "graded": false,
+ "note": "The per-model board behind receipts.html#models. Rows and columns are DERIVED from the ledger's distinct model_id values, so registering a new model puts it on the board with no page edit. Per-game spread statistics are computed over the independent lines only -- an ensemble of two models averaged back in with them counts the same two beliefs twice. ddpr-nfl-linear is registered and carries displayed:false; it is published here for completeness and must not be rendered.",
+ "data": {
+  "models": [
+   {
+    "model_id": "538-classic",
+    "model_name": "538 Classic Elo",
+    "model_version": "classic-1.0.0",
+    "source_repo": "fivethirtyeight/nfl-elo-game",
+    "methodology_url": "https://datadawgs216.com/data/538-classic-methodology.md",
+    "displayed": true,
+    "kind": "primitive",
+    "ensemble_of": null,
+    "aggregation": null,
+    "extremized": false,
+    "evidence": "An independent line: its forecasts are not a function of any other model on this board.",
+    "games": 272,
+    "weeks": 18,
+    "receipts": 272,
+    "mean_home_win_probability": 0.582931,
+    "min_home_win_probability": 0.182773,
+    "max_home_win_probability": 0.879901,
+    "decisiveness": 0.281198,
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "brier": null,
+    "points": null,
+    "settled": 0
+   },
+   {
+    "model_id": "nfelo",
+    "model_name": "nfelo",
+    "model_version": "4.3.0",
+    "source_repo": "greerreNFL/nfelo",
+    "methodology_url": "https://datadawgs216.com/data/nfelo.json",
+    "displayed": true,
+    "kind": "primitive",
+    "ensemble_of": null,
+    "aggregation": null,
+    "extremized": false,
+    "evidence": "An independent line: its forecasts are not a function of any other model on this board.",
+    "games": 272,
+    "weeks": 18,
+    "receipts": 272,
+    "mean_home_win_probability": 0.562806,
+    "min_home_win_probability": 0.3227,
+    "max_home_win_probability": 0.806,
+    "decisiveness": 0.190111,
+    "captured_at": "2026-08-07T00:39:11Z",
+    "brier": null,
+    "points": null,
+    "settled": 0
+   },
+   {
+    "model_id": "ddpr-nfl",
+    "model_name": "DDPR NFL (logit mean)",
+    "model_version": "logit-1.0.0",
+    "source_repo": "JKapcar/data-dawgs",
+    "methodology_url": "https://datadawgs216.com/data/ddpr-methodology.md",
+    "displayed": true,
+    "kind": "ensemble",
+    "ensemble_of": [
+     "nfelo",
+     "538-classic"
+    ],
+    "aggregation": "logit_mean",
+    "extremized": false,
+    "evidence": "Derived from nfelo + 538-classic. Carries no evidence those lines do not already carry.",
+    "games": 272,
+    "weeks": 18,
+    "receipts": 272,
+    "mean_home_win_probability": 0.573463,
+    "min_home_win_probability": 0.24631,
+    "max_home_win_probability": 0.836775,
+    "decisiveness": 0.233467,
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "brier": null,
+    "points": null,
+    "settled": 0
+   },
+   {
+    "model_id": "ddpr-nfl-linear",
+    "model_name": "DDPR NFL (linear mean)",
+    "model_version": "linear-1.0.0",
+    "source_repo": "JKapcar/data-dawgs",
+    "methodology_url": "https://datadawgs216.com/data/ddpr-methodology.md",
+    "displayed": false,
+    "kind": "ensemble",
+    "ensemble_of": [
+     "nfelo",
+     "538-classic"
+    ],
+    "aggregation": "linear_mean",
+    "extremized": false,
+    "evidence": "Derived from nfelo + 538-classic. Carries no evidence those lines do not already carry.",
+    "games": 272,
+    "weeks": 18,
+    "receipts": 272,
+    "mean_home_win_probability": 0.572869,
+    "min_home_win_probability": 0.252987,
+    "max_home_win_probability": 0.830951,
+    "decisiveness": 0.231541,
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "brier": null,
+    "points": null,
+    "settled": 0
+   }
+  ],
+  "panel": {
+   "registered_lines": 4,
+   "displayed_lines": 3,
+   "independent_lines": 2,
+   "independent_model_ids": [
+    "538-classic",
+    "nfelo"
+   ],
+   "note": "Registered lines are not independent evidence. 2 of 4 lines on this board are independent; the rest are functions of those. Correlations are over LOGITS on prospectively published forecasts and need no resolved games.",
+   "pairs": [
+    {
+     "models": [
+      "nfelo",
+      "538-classic"
+     ],
+     "games": 272,
+     "logit_correlation": 0.928307,
+     "mean_absolute_probability_gap": 0.057425
+    },
+    {
+     "models": [
+      "nfelo",
+      "ddpr-nfl"
+     ],
+     "games": 272,
+     "logit_correlation": 0.972588,
+     "mean_absolute_probability_gap": 0.029648
+    },
+    {
+     "models": [
+      "nfelo",
+      "ddpr-nfl-linear"
+     ],
+     "games": 272,
+     "logit_correlation": 0.974067,
+     "mean_absolute_probability_gap": 0.028713
+    },
+    {
+     "models": [
+      "538-classic",
+      "ddpr-nfl"
+     ],
+     "games": 272,
+     "logit_correlation": 0.98932,
+     "mean_absolute_probability_gap": 0.027777
+    },
+    {
+     "models": [
+      "538-classic",
+      "ddpr-nfl-linear"
+     ],
+     "games": 272,
+     "logit_correlation": 0.98824,
+     "mean_absolute_probability_gap": 0.028713
+    },
+    {
+     "models": [
+      "ddpr-nfl",
+      "ddpr-nfl-linear"
+     ],
+     "games": 272,
+     "logit_correlation": 0.999904,
+     "mean_absolute_probability_gap": 0.000963
+    }
+   ],
+   "pre_registration_check": {
+    "models": [
+     "nfelo",
+     "538-classic"
+    ],
+    "pre_registered_in": "/data/ddpr-nfl.json",
+    "pre_registered_logit_correlation": 0.928307,
+    "derived_logit_correlation": 0.928307,
+    "pre_registered_mean_absolute_probability_gap": 0.057425,
+    "derived_mean_absolute_probability_gap": 0.057425,
+    "agrees": true
+   }
+  },
+  "grading": {
+   "graded": false,
+   "settled": 0,
+   "starts": "2026-09-10",
+   "note": "No game has kicked off. Brier and points stay null until 2026-09-10. There is no cross-domain blended score here, for the same reason the inventory refuses one."
+  },
+  "week": {
+   "week": 1,
+   "games": [
+    {
+     "game_id": "2026_01_MIA_LV",
+     "home_team": "LV",
+     "away_team": "MIA",
+     "kickoff_at": "2026-09-13T20:25:00Z",
+     "beliefs": {
+      "nfelo": 0.597,
+      "538-classic": 0.435019,
+      "ddpr-nfl": 0.516441
+     },
+     "spread": {
+      "over": [
+       "538-classic",
+       "nfelo"
+      ],
+      "count": 2,
+      "mean": 0.51601,
+      "min": 0.435019,
+      "max": 0.597,
+      "range": 0.161981,
+      "standard_deviation": 0.08099,
+      "crosses_50": true
+     }
+    },
+    {
+     "game_id": "2026_01_BUF_HOU",
+     "home_team": "HOU",
+     "away_team": "BUF",
+     "kickoff_at": "2026-09-13T17:00:00Z",
+     "beliefs": {
+      "nfelo": 0.444,
+      "538-classic": 0.593752,
+      "ddpr-nfl": 0.51931
+     },
+     "spread": {
+      "over": [
+       "538-classic",
+       "nfelo"
+      ],
+      "count": 2,
+      "mean": 0.518876,
+      "min": 0.444,
+      "max": 0.593752,
+      "range": 0.149752,
+      "standard_deviation": 0.074876,
+      "crosses_50": true
+     }
+    },
+    {
+     "game_id": "2026_01_DEN_KC",
+     "home_team": "KC",
+     "away_team": "DEN",
+     "kickoff_at": "2026-09-15T00:15:00Z",
+     "beliefs": {
+      "nfelo": 0.539,
+      "538-classic": 0.426854,
+      "ddpr-nfl": 0.482709
+     },
+     "spread": {
+      "over": [
+       "538-classic",
+       "nfelo"
+      ],
+      "count": 2,
+      "mean": 0.482927,
+      "min": 0.426854,
+      "max": 0.539,
+      "range": 0.112146,
+      "standard_deviation": 0.056073,
+      "crosses_50": true
+     }
+    },
+    {
+     "game_id": "2026_01_GB_MIN",
+     "home_team": "MIN",
+     "away_team": "GB",
+     "kickoff_at": "2026-09-13T20:25:00Z",
+     "beliefs": {
+      "nfelo": 0.527,
+      "538-classic": 0.623835,
+      "ddpr-nfl": 0.576148
+     },
+     "spread": {
+      "over": [
+       "538-classic",
+       "nfelo"
+      ],
+      "count": 2,
+      "mean": 0.575418,
+      "min": 0.527,
+      "max": 0.623835,
+      "range": 0.096835,
+      "standard_deviation": 0.048418,
+      "crosses_50": false
+     }
+    },
+    {
+     "game_id": "2026_01_DAL_NYG",
+     "home_team": "NYG",
+     "away_team": "DAL",
+     "kickoff_at": "2026-09-14T00:20:00Z",
+     "beliefs": {
+      "nfelo": 0.45,
+      "538-classic": 0.543708,
+      "ddpr-nfl": 0.496826
+     },
+     "spread": {
+      "over": [
+       "538-classic",
+       "nfelo"
+      ],
+      "count": 2,
+      "mean": 0.496854,
+      "min": 0.45,
+      "max": 0.543708,
+      "range": 0.093708,
+      "standard_deviation": 0.046854,
+      "crosses_50": true
+     }
+    },
+    {
+     "game_id": "2026_01_WAS_PHI",
+     "home_team": "PHI",
+     "away_team": "WAS",
+     "kickoff_at": "2026-09-13T20:25:00Z",
+     "beliefs": {
+      "nfelo": 0.631,
+      "538-classic": 0.71495,
+      "ddpr-nfl": 0.674373
+     },
+     "spread": {
+      "over": [
+       "538-classic",
+       "nfelo"
+      ],
+      "count": 2,
+      "mean": 0.672975,
+      "min": 0.631,
+      "max": 0.71495,
+      "range": 0.08395,
+      "standard_deviation": 0.041975,
+      "crosses_50": false
+     }
+    },
+    {
+     "game_id": "2026_01_NE_SEA",
+     "home_team": "SEA",
+     "away_team": "NE",
+     "kickoff_at": "2026-09-10T00:20:00Z",
+     "beliefs": {
+      "nfelo": 0.633,
+      "538-classic": 0.694318,
+      "ddpr-nfl": 0.664351
+     },
+     "spread": {
+      "over": [
+       "538-classic",
+       "nfelo"
+      ],
+      "count": 2,
+      "mean": 0.663659,
+      "min": 0.633,
+      "max": 0.694318,
+      "range": 0.061318,
+      "standard_deviation": 0.030659,
+      "crosses_50": false
+     }
+    },
+    {
+     "game_id": "2026_01_BAL_IND",
+     "home_team": "IND",
+     "away_team": "BAL",
+     "kickoff_at": "2026-09-13T17:00:00Z",
+     "beliefs": {
+      "nfelo": 0.436,
+      "538-classic": 0.484375,
+      "ddpr-nfl": 0.460094
+     },
+     "spread": {
+      "over": [
+       "538-classic",
+       "nfelo"
+      ],
+      "count": 2,
+      "mean": 0.460187,
+      "min": 0.436,
+      "max": 0.484375,
+      "range": 0.048375,
+      "standard_deviation": 0.024187,
+      "crosses_50": false
+     }
+    },
+    {
+     "game_id": "2026_01_CLE_JAX",
+     "home_team": "JAX",
+     "away_team": "CLE",
+     "kickoff_at": "2026-09-13T17:00:00Z",
+     "beliefs": {
+      "nfelo": 0.722,
+      "538-classic": 0.769761,
+      "ddpr-nfl": 0.746623
+     },
+     "spread": {
+      "over": [
+       "538-classic",
+       "nfelo"
+      ],
+      "count": 2,
+      "mean": 0.74588,
+      "min": 0.722,
+      "max": 0.769761,
+      "range": 0.047761,
+      "standard_deviation": 0.023881,
+      "crosses_50": false
+     }
+    },
+    {
+     "game_id": "2026_01_ARI_LAC",
+     "home_team": "LAC",
+     "away_team": "ARI",
+     "kickoff_at": "2026-09-13T20:25:00Z",
+     "beliefs": {
+      "nfelo": 0.806,
+      "538-classic": 0.759907,
+      "ddpr-nfl": 0.783842
+     },
+     "spread": {
+      "over": [
+       "538-classic",
+       "nfelo"
+      ],
+      "count": 2,
+      "mean": 0.782954,
+      "min": 0.759907,
+      "max": 0.806,
+      "range": 0.046093,
+      "standard_deviation": 0.023047,
+      "crosses_50": false
+     }
+    },
+    {
+     "game_id": "2026_01_TB_CIN",
+     "home_team": "CIN",
+     "away_team": "TB",
+     "kickoff_at": "2026-09-13T17:00:00Z",
+     "beliefs": {
+      "nfelo": 0.631,
+      "538-classic": 0.592752,
+      "ddpr-nfl": 0.612049
+     },
+     "spread": {
+      "over": [
+       "538-classic",
+       "nfelo"
+      ],
+      "count": 2,
+      "mean": 0.611876,
+      "min": 0.592752,
+      "max": 0.631,
+      "range": 0.038248,
+      "standard_deviation": 0.019124,
+      "crosses_50": false
+     }
+    },
+    {
+     "game_id": "2026_01_ATL_PIT",
+     "home_team": "PIT",
+     "away_team": "ATL",
+     "kickoff_at": "2026-09-13T17:00:00Z",
+     "beliefs": {
+      "nfelo": 0.613,
+      "538-classic": 0.642434,
+      "ddpr-nfl": 0.627835
+     },
+     "spread": {
+      "over": [
+       "538-classic",
+       "nfelo"
+      ],
+      "count": 2,
+      "mean": 0.627717,
+      "min": 0.613,
+      "max": 0.642434,
+      "range": 0.029434,
+      "standard_deviation": 0.014717,
+      "crosses_50": false
+     }
+    },
+    {
+     "game_id": "2026_01_NYJ_TEN",
+     "home_team": "TEN",
+     "away_team": "NYJ",
+     "kickoff_at": "2026-09-13T17:00:00Z",
+     "beliefs": {
+      "nfelo": 0.613,
+      "538-classic": 0.58586,
+      "ddpr-nfl": 0.599506
+     },
+     "spread": {
+      "over": [
+       "538-classic",
+       "nfelo"
+      ],
+      "count": 2,
+      "mean": 0.59943,
+      "min": 0.58586,
+      "max": 0.613,
+      "range": 0.02714,
+      "standard_deviation": 0.01357,
+      "crosses_50": false
+     }
+    },
+    {
+     "game_id": "2026_01_CHI_CAR",
+     "home_team": "CAR",
+     "away_team": "CHI",
+     "kickoff_at": "2026-09-13T17:00:00Z",
+     "beliefs": {
+      "nfelo": 0.443,
+      "538-classic": 0.452296,
+      "ddpr-nfl": 0.447643
+     },
+     "spread": {
+      "over": [
+       "538-classic",
+       "nfelo"
+      ],
+      "count": 2,
+      "mean": 0.447648,
+      "min": 0.443,
+      "max": 0.452296,
+      "range": 0.009296,
+      "standard_deviation": 0.004648,
+      "crosses_50": false
+     }
+    },
+    {
+     "game_id": "2026_01_SF_LAR",
+     "home_team": "LAR",
+     "away_team": "SF",
+     "kickoff_at": "2026-09-11T00:35:00Z",
+     "beliefs": {
+      "nfelo": 0.579,
+      "538-classic": 0.570698,
+      "ddpr-nfl": 0.574854
+     },
+     "spread": {
+      "over": [
+       "538-classic",
+       "nfelo"
+      ],
+      "count": 2,
+      "mean": 0.574849,
+      "min": 0.570698,
+      "max": 0.579,
+      "range": 0.008302,
+      "standard_deviation": 0.004151,
+      "crosses_50": false
+     }
+    },
+    {
+     "game_id": "2026_01_NO_DET",
+     "home_team": "DET",
+     "away_team": "NO",
+     "kickoff_at": "2026-09-13T17:00:00Z",
+     "beliefs": {
+      "nfelo": 0.745,
+      "538-classic": 0.741372,
+      "ddpr-nfl": 0.74319
+     },
+     "spread": {
+      "over": [
+       "538-classic",
+       "nfelo"
+      ],
+      "count": 2,
+      "mean": 0.743186,
+      "min": 0.741372,
+      "max": 0.745,
+      "range": 0.003628,
+      "standard_deviation": 0.001814,
+      "crosses_50": false
+     }
+    }
+   ]
+  }
+ },
+ "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
+ "built": "2026-08-10",
+ "canonical_url": "https://datadawgs216.com/data/model-board.json"
+}

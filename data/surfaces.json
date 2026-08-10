@@ -370,9 +370,15 @@
     },
     {
      "kind": "json",
+     "url": "/data/model-board.json",
+     "status": "live",
+     "covers": "the per-model board: 4 registered lines, the pairwise logit correlations that say how much independent evidence they carry, and the week-1 beliefs — the models sheet"
+    },
+    {
+     "kind": "json",
      "url": "/data/model-receipts.json",
      "status": "live",
-     "covers": "1088 append-only normalized prospective receipts across 4 model lines (nfelo, 538-classic, ddpr-nfl, ddpr-nfl-linear) — the models sheet"
+     "covers": "1088 append-only normalized prospective receipts across 4 model lines (nfelo, 538-classic, ddpr-nfl, ddpr-nfl-linear) — the superset behind the board"
     },
     {
      "kind": "json",

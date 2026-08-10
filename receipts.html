@@ -769,6 +769,19 @@ tr.sv-used td{opacity:.42}
 #sheetModels .p-table .date{display:block;color:var(--ink-3);font:11px ui-monospace,SFMono-Regular,Consolas,monospace;margin-top:2px}
 #sheetModels .p-table .hot{color:var(--warn);font-weight:800}
 #sheetModels .p-table .cross{color:var(--bad);font-weight:800}
+/* Stage MS-B. The board and the correlation matrix reuse .p-table; only what is new to
+   them lives here. ⚠️ The global td{white-space:nowrap} at the top of this file applies
+   to these cells too — see Stage RI's description row, which never wrapped because of it.
+   Anything below meant to wrap says so explicitly. */
+#sheetModels h3{margin:26px 0 8px;font-size:15px;letter-spacing:.01em}
+#sheetModels .mb-kind{display:inline-block;border:1px solid var(--border);border-radius:999px;
+  padding:1px 8px;font:750 10px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;
+  text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3)}
+/* An empty score column must read as "not yet", never as a value. The dash is muted and
+   the reason is stated once in the caption, not typed into every cell. */
+#sheetModels .mb-null{color:var(--ink-3)}
+#sheetModels .mb-why{display:block;color:var(--ink-3);font:11px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace;margin-top:4px;max-width:54ch;white-space:normal}
+#sheetModels #corrTable td:first-child{white-space:normal}
 #sheetModels .p-loading,#sheetProv .p-loading{padding:20px;color:var(--ink-3)}
 #sheetModels .p-error,#sheetProv .p-error{padding:20px;color:var(--bad)}
 #sheetProv .provenance{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
@@ -2202,20 +2215,43 @@ Locked <b>2026-08-06</b> &middot; <b id="rcN">&mdash;</b> calls &middot;
 <div id="sheetModels">
   <div class="card">
     <h2>Model scoreboard &mdash; what the models believe</h2>
-    <p class="muted" style="margin-top:0">Current Week 1 beliefs, normalized to home win
-    probability. The equal-weight mean, range and standard deviation are descriptive &mdash;
-    not a validated consensus blend or confidence score. This sheet is what the models
+    <p class="muted" style="margin-top:0">One row per registered model line, then the same
+    beliefs game by game, normalized to home win probability. This sheet is what the models
     <em>believe</em>; the Scoreboard sheet is how our pre-registered calls <em>grade</em>.
     Keeping those apart is the point of this page. nfelo locked 2026-08-06 &middot;
-    538 Classic locked 2026-08-08 &middot; moved here from The DawgHouse 2026-08-09.</p>
-    <div class="p-summary" id="scoreSummary"><div class="p-stat"><b>&mdash;</b><span>games</span></div><div class="p-stat"><b>2</b><span>available beliefs</span></div><div class="p-stat"><b>0</b><span>prospectively graded models</span></div><div class="p-stat"><b>&mdash;</b><span>largest range</span></div></div>
-    <div class="p-table-wrap"><div class="p-loading" id="scoreLoad" role="status">Loading the public dated receipts&hellip;</div><table class="p-table" id="scoreTable" aria-label="Week 1 nfelo and 538 Classic belief scoreboard" hidden><thead><tr><th>Game</th><th>nfelo</th><th>538 Classic</th><th>Mean</th><th>Range</th><th>Std dev</th><th>50% split?</th></tr></thead><tbody></tbody></table></div>
-    <p class="muted"><b>Important:</b> two models are not independent confirmation and their
-    equal-weight mean is not a validated ensemble. nfelo uses market-informed machinery;
-    538 Classic deliberately omits QB, injury, weather and market adjustments. SRS, Units,
-    WEPA and QB-adjusted columns remain absent until lawful normalized forecasts exist.
-    Machine reads: <a href="/data/model-receipts.json"><code>/data/model-receipts.json</code></a>
-    &middot; <a href="/data/nfl-schedule.json"><code>/data/nfl-schedule.json</code></a>
+    538 Classic locked 2026-08-08 &middot; DDPR pre-registered 2026-08-10.</p>
+    <!-- ⚠️ Stage MS-B: every number in this block is written by loadModels() from
+         /data/model-board.json. The static markup carries em-dashes and NO counts. It used
+         to type "2 available beliefs", which was invisible while the fetch worked and wrong
+         the moment a third line was registered. A count that only shows on failure is still
+         a count, and it goes stale like any other. -->
+    <div class="p-summary" id="scoreSummary"><div class="p-stat"><b>&mdash;</b><span>games</span></div><div class="p-stat"><b>&mdash;</b><span>registered lines</span></div><div class="p-stat"><b>&mdash;</b><span>independent lines</span></div><div class="p-stat"><b>&mdash;</b><span>largest range</span></div></div>
+
+    <h3>The board</h3>
+    <div class="p-table-wrap"><div class="p-loading" id="boardLoad" role="status">Loading the registered model lines&hellip;</div><table class="p-table" id="boardTable" aria-label="Registered model lines and their pre-grading summary" hidden><thead></thead><tbody></tbody></table></div>
+    <p class="muted" id="boardNote"></p>
+
+    <h3>How much of this is independent evidence?</h3>
+    <p class="muted" style="margin-top:0">Correlation of <em>log-odds</em> between every pair
+    of registered lines, measured on the published prospective forecasts. It needs no resolved
+    games, which is why it is the one honest comparison available before kickoff. A line
+    derived from two others cannot disagree with them by much, and this table is where that
+    shows up rather than being asserted in prose.</p>
+    <div class="p-table-wrap"><table class="p-table" id="corrTable" aria-label="Pairwise logit correlation between registered model lines" hidden><thead><tr><th>Pair</th><th>Games</th><th>Logit correlation</th><th>Mean absolute gap</th></tr></thead><tbody></tbody></table></div>
+    <p class="muted" id="corrNote"></p>
+
+    <h3>Week 1, game by game</h3>
+    <div class="p-table-wrap"><div class="p-loading" id="scoreLoad" role="status">Loading the public dated receipts&hellip;</div><table class="p-table" id="scoreTable" aria-label="Week 1 model beliefs by game" hidden><thead></thead><tbody></tbody></table></div>
+    <p class="muted" id="scoreNote"></p>
+    <p class="muted"><b>Important:</b> registered lines are not independent confirmation.
+    nfelo uses market-informed machinery; 538 Classic deliberately omits QB, injury, weather
+    and market adjustments; DDPR is a pre-registered average of those two and carries no
+    evidence they do not already carry, which is why the mean, range and standard deviation
+    above are computed over the independent lines alone. SRS, Units, WEPA and QB-adjusted
+    columns remain absent until lawful normalized forecasts exist.
+    Machine reads: <a href="/data/model-board.json"><code>/data/model-board.json</code></a>
+    &middot; <a href="/data/model-receipts.json"><code>/data/model-receipts.json</code></a>
+    &middot; <a href="/data/ddpr-nfl.json"><code>/data/ddpr-nfl.json</code></a>
     &middot; <code>dd_model_scoreboard</code> over MCP.</p>
   </div>
 </div>
@@ -2847,22 +2883,134 @@ function mdlBeliefs(values){
   return {count:xs.length,mean,median,min:xs[0],max:xs[xs.length-1],range:xs[xs.length-1]-xs[0],
     standard_deviation:Math.sqrt(variance),crosses_50:xs[0]<0.5&&xs[xs.length-1]>0.5};
 }
+/* ---------- Stage MS-B, the per-model board ----------
+   ⚠️ ONE fetch of ~14 KB. This used to pull /data/model-receipts.json whole -- 688 KB, then
+   1,354 KB once DDPR was appended -- plus the schedule, to draw sixteen rows. The board is
+   derived at build time by tools/build-data.js and recomputed by tools/validate-data.js
+   against the ledger, which is the Stage RI inventory pattern.
+
+   ⚠️ NOTHING HERE NAMES A MODEL. Rows, table headers and the per-game columns are all built
+   from the board's own model list, so registering a fifth line is a data change and this
+   function does not move. The previous version filtered `model_id==="nfelo"||"538-classic"`
+   and named both in a static <thead>, which is why DDPR was in the ledger for a whole stage
+   without appearing on any sheet.
+
+   ⚠️ UNDISPLAYED LINES ARE FILTERED HERE AND GATED IN validate-data.js. ddpr-nfl-linear is
+   registered so the season-end comparison cannot be model-shopped after the fact; rendering
+   it would defeat the reason it exists. */
 let mdlLoaded=false;
+const mbPct=v=>Number.isFinite(v)?pct(v):'<span class="mb-null">&mdash;</span>';
+const mbPp=v=>Number.isFinite(v)?(v*100).toFixed(1)+" pp":'<span class="mb-null">&mdash;</span>';
 async function loadModels(){
   if(mdlLoaded)return;mdlLoaded=true;
   try{
-    const [receiptEnv,scheduleEnv]=await Promise.all([mdlJson("/data/model-receipts.json"),mdlJson("/data/nfl-schedule.json")]);
-    const receipts=(receiptEnv.data||[]).filter(r=>r.forecast_status==="prospective"&&r.week===1&&(r.model_id==="nfelo"||r.model_id==="538-classic"));
-    const games=(scheduleEnv.data?.games||[]).filter(g=>g.week===1);
-    if(!Array.isArray(receipts)||!Array.isArray(games)||!games.length)throw new Error("normalized Week 1 receipts are missing")
-    const latest=new Map();
-    for(const r of receipts){const key=r.game_id+"|"+r.model_id,prior=latest.get(key);if(!prior||r.captured_at>prior.captured_at)latest.set(key,r)}
-    const rows=games.map(g=>{const nf=latest.get(g.game_id+"|nfelo"),classic=latest.get(g.game_id+"|538-classic"),beliefs=[nf?.home_win_probability,classic?.home_win_probability].filter(v=>Number.isFinite(v));const summary=beliefs.length?mdlBeliefs(beliefs):null;return {g,nf,classic,summary};}).sort((x,y)=>(y.summary?.range??-1)-(x.summary?.range??-1));
-    const max=rows.reduce((a,r)=>Math.max(a,r.summary?.range||0),0), splits=rows.filter(r=>r.summary?.crosses_50).length, maxBeliefs=rows.reduce((a,r)=>Math.max(a,r.summary?.count||0),0);
-    mdlEl("scoreSummary").innerHTML=`<div class="p-stat"><b>${rows.length}</b><span>games</span></div><div class="p-stat"><b>${maxBeliefs}</b><span>max beliefs / game</span></div><div class="p-stat"><b>0</b><span>prospectively graded models</span></div><div class="p-stat"><b>${(max*100).toFixed(1)} pp</b><span>largest range &middot; ${splits} 50% splits</span></div>`;
-    mdlEl("scoreTable").querySelector("tbody").innerHTML=rows.map(({g,nf,classic,summary:s})=>`<tr><td><span class="game">${mdlEsc(g.away_team)} @ ${mdlEsc(g.home_team)}</span><span class="date">${mdlEsc(g.kickoff_at.slice(0,10))} &middot; ${mdlEsc(g.game_id)}</span></td><td>${Number.isFinite(nf?.home_win_probability)?pct(nf.home_win_probability):"&mdash;"}</td><td>${Number.isFinite(classic?.home_win_probability)?pct(classic.home_win_probability):"&mdash;"}</td><td><b>${s?pct(s.mean):"&mdash;"}</b></td><td class="${s&&s.range>=.05?"hot":""}">${s?(s.range*100).toFixed(1)+" pp":"&mdash;"}</td><td>${s?(s.standard_deviation*100).toFixed(1)+" pp":"&mdash;"}</td><td class="${s&&s.crosses_50?"cross":""}">${s?(s.crosses_50?"YES":"no"):"&mdash;"}</td></tr>`).join("");
+    const env=await mdlJson("/data/model-board.json");
+    const d=env.data||{},all=d.models||[],panel=d.panel||{},grading=d.grading||{},wk=d.week||{};
+    if(!all.length)throw new Error("the model board publishes no model lines");
+    const shown=all.filter(m=>m.displayed!==false);
+    if(!shown.length)throw new Error("every registered model line is marked undisplayed");
+    const prims=(panel.independent_model_ids||[]).filter(id=>shown.some(m=>m.model_id===id));
+    const games=(wk.games||[]);
+
+    /* The per-game panel is recomputed in the page with mdlBeliefs -- the function
+       work/pound-core.js mirrors and work/test-receipts-sheets.mjs holds to its source --
+       rather than read out of the file, so the sheet does not simply restate a derived
+       field it cannot check. The suite asserts the two agree. */
+    const rows=games.map(g=>{
+      const beliefs=g.beliefs||{};
+      const vals=prims.map(id=>beliefs[id]).filter(v=>Number.isFinite(v));
+      return {g,beliefs,summary:vals.length?mdlBeliefs(vals):null};
+    }).sort((x,y)=>(y.summary?.range??-1)-(x.summary?.range??-1));
+
+    const maxRange=rows.reduce((a,r)=>Math.max(a,r.summary?.range||0),0);
+    const splits=rows.filter(r=>r.summary?.crosses_50).length;
+    mdlEl("scoreSummary").innerHTML=
+      `<div class="p-stat"><b>${rows.length}</b><span>week ${mdlEsc(wk.week)} games</span></div>`+
+      `<div class="p-stat"><b>${all.length}</b><span>registered lines</span></div>`+
+      `<div class="p-stat"><b>${panel.independent_lines}</b><span>independent lines</span></div>`+
+      `<div class="p-stat"><b>${(maxRange*100).toFixed(1)} pp</b><span>largest range &middot; ${splits} 50% splits</span></div>`;
+
+    /* ---- the board ---- */
+    mdlEl("boardTable").querySelector("thead").innerHTML=
+      "<tr><th>Model line</th><th>Games</th><th>Mean home win</th><th>Range</th>"+
+      "<th>Decisiveness</th><th>Brier</th><th>Points</th></tr>";
+    mdlEl("boardTable").querySelector("tbody").innerHTML=shown.map(m=>
+      `<tr><td><span class="game">${mdlEsc(m.model_name)}</span>`+
+      `<span class="date">${mdlEsc(m.model_id)} &middot; ${mdlEsc(m.model_version)} &middot; `+
+      `<span class="mb-kind" data-kind="${mdlEsc(m.kind)}">${mdlEsc(m.kind)}</span></span>`+
+      `<span class="mb-why">${mdlEsc(m.evidence)}</span></td>`+
+      `<td>${m.games}</td><td><b>${mbPct(m.mean_home_win_probability)}</b></td>`+
+      `<td>${mbPct(m.min_home_win_probability)} &ndash; ${mbPct(m.max_home_win_probability)}</td>`+
+      `<td>${mbPct(m.decisiveness)}</td>`+
+      /* Null, not zero. A zero Brier is a claim; this is the absence of one. */
+      `<td>${m.brier===null?'<span class="mb-null">&mdash;</span>':mdlEsc(m.brier)}</td>`+
+      `<td>${m.points===null?'<span class="mb-null">&mdash;</span>':mdlEsc(m.points)}</td></tr>`).join("");
+    /* ⚠️ THE ORDER HERE IS DELIBERATE, and it works around a known open defect. The floating
+       "Ask Toto" chip overlaps the bottom-right of this card, so whatever ENDS this paragraph
+       is partly covered at 1280. The withheld-line disclosure is the sentence a reader most
+       needs, so it goes FIRST and the decisiveness gloss -- pleasant, not load-bearing --
+       takes the covered tail. The real fix is sitewide, touches every table on every page and
+       needs its own commit and mutation proof. Until then, do not reorder this back. */
+    const withheld=all.filter(m=>m.displayed===false).map(m=>m.model_id);
+    mdlEl("boardNote").innerHTML=
+      (withheld.length
+        ? `<b>${withheld.length} registered line${withheld.length===1?" is":"s are"} deliberately `+
+          `not shown here:</b> ${withheld.map(x=>mdlEsc(x)).join(", ")} &mdash; registered before `+
+          `kickoff so the season-end comparison cannot be chosen once the results are in. `
+        : "")+
+      `<b>Brier and points are empty because nothing has been graded.</b> `+
+      `${mdlEsc(grading.note||"Grading has not started.")} `+
+      `Decisiveness is the average distance from a coin flip, doubled to read 0&ndash;100%: a `+
+      `model that says 50% about everything scores 0.`;
+
+    /* ---- independence ----
+       ⚠️ Pairs are filtered to lines that are actually shown. The board file computes the
+       full matrix because a machine reader is entitled to it, but publishing
+       corr(ddpr-nfl, ddpr-nfl-linear) on the page would put a statistic ABOUT the withheld
+       aggregation in front of a reader, which is the thing withholding it is for. The
+       sentence under the board still names it as withheld -- that is disclosure, not
+       display, and the two are not the same. */
+    const pairs=(panel.pairs||[])
+      .filter(p=>(p.models||[]).every(id=>shown.some(m=>m.model_id===id)))
+      .sort((a,b)=>(b.logit_correlation??-1)-(a.logit_correlation??-1));
+    mdlEl("corrTable").querySelector("tbody").innerHTML=pairs.map(p=>
+      `<tr><td>${p.models.map(x=>mdlEsc(x)).join(" &times; ")}</td><td>${p.games}</td>`+
+      `<td class="${p.logit_correlation>=0.95?"hot":""}">${Number(p.logit_correlation).toFixed(6)}</td>`+
+      `<td>${mbPp(p.mean_absolute_probability_gap)}</td></tr>`).join("");
+    mdlEl("corrTable").hidden=false;
+    const chk=panel.pre_registration_check;
+    mdlEl("corrNote").innerHTML=mdlEsc(panel.note||"")+
+      /* ⚠️ Escape the ids, THEN join with the entity. Escaping the joined string turns the
+         separator into a literal "&times;" on the page -- caught in a screenshot, not by any
+         assertion, because a wrong separator is still a well-formed string. */
+      (chk?` The ${chk.models.map(x=>mdlEsc(x)).join(" &times; ")} figure was `+
+        `<b>pre-registered</b> in <a href="${mdlEsc(chk.pre_registered_in)}"><code>${mdlEsc(chk.pre_registered_in)}</code></a> `+
+        `at ${mdlEsc(chk.pre_registered_logit_correlation)} before any game was played, and re-deriving it `+
+        `from the ledger today gives ${mdlEsc(chk.derived_logit_correlation)}.`:"");
+
+    /* ---- week 1, columns derived from the displayed lines ---- */
+    mdlEl("scoreTable").querySelector("thead").innerHTML=
+      "<tr><th>Game</th>"+shown.map(m=>`<th>${mdlEsc(m.model_name)}</th>`).join("")+
+      "<th>Mean</th><th>Range</th><th>Std dev</th><th>50% split?</th></tr>";
+    mdlEl("scoreTable").querySelector("tbody").innerHTML=rows.map(({g,beliefs,summary:s})=>
+      `<tr><td><span class="game">${mdlEsc(g.away_team)} @ ${mdlEsc(g.home_team)}</span>`+
+      `<span class="date">${mdlEsc(String(g.kickoff_at).slice(0,10))} &middot; ${mdlEsc(g.game_id)}</span></td>`+
+      shown.map(m=>`<td>${mbPct(beliefs[m.model_id])}</td>`).join("")+
+      `<td><b>${s?pct(s.mean):'<span class="mb-null">&mdash;</span>'}</b></td>`+
+      `<td class="${s&&s.range>=.05?"hot":""}">${s?mbPp(s.range):'<span class="mb-null">&mdash;</span>'}</td>`+
+      `<td>${s?mbPp(s.standard_deviation):'<span class="mb-null">&mdash;</span>'}</td>`+
+      `<td class="${s&&s.crosses_50?"cross":""}">${s?(s.crosses_50?"YES":"no"):'<span class="mb-null">&mdash;</span>'}</td></tr>`).join("");
+    mdlEl("scoreNote").innerHTML=
+      `Mean, range and standard deviation are over the ${prims.length} independent line`+
+      `${prims.length===1?"":"s"} only (${prims.map(x=>mdlEsc(x)).join(", ")}). `+
+      `An ensemble of those lines averaged back in with them would count the same beliefs twice `+
+      `and narrow the range for free, so the derived columns stay out of the panel even though `+
+      `they are shown beside it.`;
+    mdlEl("boardLoad").hidden=true;mdlEl("boardTable").hidden=false;
     mdlEl("scoreLoad").hidden=true;mdlEl("scoreTable").hidden=false;
-  }catch(err){mdlLoaded=false;mdlEl("scoreLoad").className="p-error";mdlEl("scoreLoad").textContent="Scoreboard unavailable: "+err.message}
+  }catch(err){mdlLoaded=false;
+    mdlEl("boardLoad").className="p-error";mdlEl("boardLoad").textContent="Model board unavailable: "+err.message;
+    mdlEl("scoreLoad").className="p-error";mdlEl("scoreLoad").textContent="Scoreboard unavailable: "+err.message}
 }
 let provLoaded=false;
 async function loadProvenance(){

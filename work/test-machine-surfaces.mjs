@@ -103,6 +103,42 @@ ok("the ledger carries strictly more model lines than independent sources, so th
    ledgerModels.length > independentSources,
    `${ledgerModels.length} lines vs ${independentSources} sources`);
 
+/* ---------- Stage MS-B: the registry must carry the board, and the board must be a VIEW ----
+   ⚠️ WHY. surfaces.json is what tells a machine reader which payload backs which sheet. The
+   models sheet now reads /data/model-board.json and no longer fetches the 1,354 KB superset,
+   so a registry pointing only at model-receipts.json sends every crawler to a file the page
+   has stopped using. Graded against the board and the ledger, never against prose. */
+const BOARD = JSON.parse(read("data/model-board.json"));
+const boardModels = BOARD.data.models.map(m => m.model_id);
+const receiptsSurface = (surfaces.data || []).find(s => s.id === "receipts");
+ok("surfaces.json still registers the receipts surface (guards the next assertions)",
+   !!receiptsSurface);
+const surfaceUrls = ((receiptsSurface || {}).machine || []).map(m => m.url).filter(Boolean);
+ok("the registry lists the derived model board the sheet actually fetches",
+   surfaceUrls.includes("/data/model-board.json"), JSON.stringify(surfaceUrls));
+ok("the registry still lists the superset the board is a view of",
+   surfaceUrls.includes("/data/model-receipts.json"));
+
+/* The board is derived from the ledger, so its model list IS the ledger's. If a backbone
+   appends a fifth line and build-data.js is not re-run these stop agreeing -- the same
+   staleness hazard the inventory has, now on the file backing the default model sheet. */
+ok("the board registers exactly the model lines the ledger carries",
+   JSON.stringify([...boardModels].sort()) === JSON.stringify([...ledgerModels].sort()),
+   `board ${boardModels} vs ledger ${ledgerModels}`);
+ok("the board's independent-line count equals llms.txt's independence claim",
+   BOARD.data.panel.independent_lines === independentSources,
+   `board ${BOARD.data.panel.independent_lines} vs ${independentSources}`);
+
+/* ⚠️ The point of the derived file is that it is SMALL. If it stops being small it has
+   stopped being a view, and the models sheet is paying for the superset again under another
+   name -- precisely the regression Stage MS-A left open. */
+{
+  const kb = f => fs.statSync(path.join(ROOT, f)).size / 1024;
+  const b = kb("data/model-board.json"), l = kb("data/model-receipts.json");
+  ok("the model board is a small derived view, not a second copy of the ledger", b < l / 4,
+     `${b.toFixed(0)} KB board vs ${l.toFixed(0)} KB ledger`);
+}
+
 /* Staged is not live. If anything is staged, llms.txt has to say so by name, or a reader is
    told 43 tools exist and left to discover that one of them does not answer. */
 if (staged.length) {

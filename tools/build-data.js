@@ -1154,8 +1154,13 @@ const SURFACES = [
               // blended Brier across these ledgers.
               { kind: 'json', url: '/data/receipts-inventory.json', status: 'live', covers: 'registered / settled / pending per receipt ledger, plus the two aggregates that do not double-count the overlap — the inventory sheet' },
               { kind: 'json', url: '/data/receipts.json', status: 'live' },
-              // CEP-5A 1b: the models sheet and provenance sheet render these here now
-              { kind: 'json', url: '/data/model-receipts.json', status: 'live', covers: `${LEDGER_ROWS} append-only normalized prospective receipts across ${LEDGER_MODELS.length} model lines (${LEDGER_MODELS.join(', ')}) — the models sheet` },
+              // Stage MS-B: the models sheet reads THIS, not the 1,354 KB superset below it.
+              // Rows, columns and the independence figures are all derived from the ledger,
+              // so a new model appears on the board without a page edit.
+              { kind: 'json', url: '/data/model-board.json', status: 'live', covers: `the per-model board: ${LEDGER_MODELS.length} registered lines, the pairwise logit correlations that say how much independent evidence they carry, and the week-1 beliefs — the models sheet` },
+              // CEP-5A 1b: the provenance sheet renders these here now. This stays the
+              // canonical superset every derived view above is a view OF.
+              { kind: 'json', url: '/data/model-receipts.json', status: 'live', covers: `${LEDGER_ROWS} append-only normalized prospective receipts across ${LEDGER_MODELS.length} model lines (${LEDGER_MODELS.join(', ')}) — the superset behind the board` },
               { kind: 'json', url: '/data/nfl-schedule.json', status: 'live', covers: 'canonical schedule with exact upstream commit and snapshot hash' },
               { kind: 'json', url: '/data/538-classic.json', status: 'live', covers: 'reproduced 538 Classic methodology, 32 target-season ratings and 272 prospective forecasts' },
               { kind: 'markdown', url: '/data/538-classic-methodology.md', status: 'live', covers: 'model mathematics, provenance, reproduction tolerance, receipts and limits' },
@@ -1397,6 +1402,197 @@ write('receipts-inventory.json', {
       + 'alone; aggregate.naive_sum is what summing the registered column would wrongly give, '
       + 'published so it can be named and corrected rather than quietly reproduced.',
   data: buildInventory(),
+});
+
+/* ---------- model-board.json ----------
+   Stage MS-B. The per-model board behind receipts.html#models, derived at build time from
+   the receipt ledger so that adding a model is a DATA change and not a page edit.
+
+   ⚠️ WHY THIS FILE EXISTS AT ALL. loadModels() used to fetch model-receipts.json whole --
+   688 KB before Stage MS-A appended DDPR, 1,354 KB after. The models sheet is lazy so no
+   assertion went red, but doubling a lazy fetch to render sixteen rows is a regression the
+   Stage RI inventory pattern already solved once. This file is ~40 KB and carries exactly
+   what the sheet draws. model-receipts.json stays the canonical superset and stays linked.
+
+   ⚠️ THE MEAN IS OVER THE PRIMITIVES ONLY, AND THAT IS THE WHOLE POINT. DDPR is a
+   deterministic function of nfelo and 538 Classic, so averaging it back in with them
+   counts the same two beliefs twice and shrinks the range for free. The per-game spread is
+   therefore computed over kind:"primitive" rows alone, and the payload NAMES the models it
+   averaged in `spread.over` so the page cannot quietly widen it later. DDPR renders as its
+   own column beside the panel, never inside it. */
+const MB_GRADING_STARTS = '2026-09-10';
+const mbLogit = p => Math.log(p / (1 - p));
+const mbRound = (v, dp = 6) => Number.isFinite(v) ? Number(v.toFixed(dp)) : null;
+function mbPearson(xs, ys) {
+  const n = xs.length;
+  if (n < 2) return null;
+  const mx = xs.reduce((s, v) => s + v, 0) / n, my = ys.reduce((s, v) => s + v, 0) / n;
+  let sxy = 0, sxx = 0, syy = 0;
+  for (let i = 0; i < n; i++) { const dx = xs[i] - mx, dy = ys[i] - my; sxy += dx * dy; sxx += dx * dx; syy += dy * dy; }
+  return (sxx && syy) ? sxy / Math.sqrt(sxx * syy) : null;
+}
+function buildModelBoard() {
+  const rows = LEDGER.data.filter(r => r && r.forecast_status === 'prospective');
+  if (!rows.length) throw new Error('model-board: the ledger carries no prospective rows');
+
+  /* Latest capture wins, exactly as loadModels() did, so the board and the ledger cannot
+     disagree about which row is current. */
+  const latest = new Map();
+  for (const r of rows) {
+    const key = r.game_id + '|' + r.model_id, prior = latest.get(key);
+    if (!prior || r.captured_at > prior.captured_at) latest.set(key, r);
+  }
+  const current = [...latest.values()];
+
+  const ids = [...new Set(current.map(r => r.model_id))];
+  const byModel = new Map(ids.map(id => [id, current.filter(r => r.model_id === id)]));
+  const probOf = id => new Map(byModel.get(id).map(r => [r.game_id, r.home_win_probability]));
+  const probs = new Map(ids.map(id => [id, probOf(id)]));
+
+  const models = ids.map(id => {
+    const rs = byModel.get(id), head = rs[0];
+    const ps = rs.map(r => r.home_win_probability).filter(Number.isFinite).sort((a, b) => a - b);
+    const mean = ps.reduce((s, v) => s + v, 0) / ps.length;
+    /* Distance from a coin flip, doubled so it reads 0..1. A model that says 50% about
+       everything is maximally hedged and this is the column that shows it -- before a
+       single game is played, which is the only kind of column this board can honestly
+       carry today. */
+    const decisiveness = ps.reduce((s, v) => s + Math.abs(v - 0.5), 0) / ps.length * 2;
+    const ensembleOf = Array.isArray(head.ensemble_of) && head.ensemble_of.length ? head.ensemble_of : null;
+    return {
+      model_id: id,
+      model_name: head.model_name,
+      model_version: head.model_version,
+      source_repo: head.source_repo,
+      methodology_url: head.methodology_url || null,
+      /* `displayed` is only stamped on the rows that needed to say no. Absent means yes. */
+      displayed: head.displayed !== false,
+      kind: ensembleOf ? 'ensemble' : 'primitive',
+      ensemble_of: ensembleOf,
+      aggregation: head.aggregation || null,
+      extremized: head.extremized === true,
+      evidence: ensembleOf
+        ? 'Derived from ' + ensembleOf.join(' + ') + '. Carries no evidence those lines do not already carry.'
+        : 'An independent line: its forecasts are not a function of any other model on this board.',
+      games: new Set(rs.map(r => r.game_id)).size,
+      weeks: new Set(rs.map(r => r.week)).size,
+      receipts: rs.length,
+      mean_home_win_probability: mbRound(mean),
+      min_home_win_probability: mbRound(ps[0]),
+      max_home_win_probability: mbRound(ps[ps.length - 1]),
+      decisiveness: mbRound(decisiveness),
+      captured_at: rs.reduce((a, r) => (r.captured_at > a ? r.captured_at : a), rs[0].captured_at),
+      /* Nulls, not zeros. A zero Brier is a claim; a null is the absence of one. */
+      brier: null, points: null, settled: 0,
+    };
+  }).sort((a, b) => (a.kind === b.kind ? a.model_id.localeCompare(b.model_id) : a.kind === 'primitive' ? -1 : 1));
+
+  const pairs = [];
+  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+    const a = probs.get(ids[i]), b = probs.get(ids[j]);
+    const common = [...a.keys()].filter(k => b.has(k)).sort();
+    if (common.length < 2) continue;
+    const r = mbPearson(common.map(k => mbLogit(a.get(k))), common.map(k => mbLogit(b.get(k))));
+    pairs.push({
+      models: [ids[i], ids[j]],
+      games: common.length,
+      logit_correlation: mbRound(r),
+      mean_absolute_probability_gap: mbRound(common.reduce((s, k) => s + Math.abs(a.get(k) - b.get(k)), 0) / common.length),
+    });
+  }
+
+  /* ⚠️ THE CROSS-CHECK THAT MAKES THIS FILE TRUSTWORTHY. ddpr-nfl.json pre-registered
+     corr(logit nfelo, logit 538) BEFORE any game was played. This block recomputes it from
+     the ledger and publishes both numbers side by side. If the ledger is ever edited after
+     the fact the two stop agreeing, and tools/validate-data.js fails. A published
+     correlation nobody re-derives is just another typed number. */
+  const ddpr = JSON.parse(fs.readFileSync(path.join(OUT, 'ddpr-nfl.json'), 'utf8'));
+  const preReg = ((ddpr.independence || {}).pairs || [])[0] || null;
+  const check = preReg ? (() => {
+    const want = [...preReg.models].sort().join('|');
+    const got = pairs.find(p => [...p.models].sort().join('|') === want) || null;
+    return {
+      models: preReg.models,
+      pre_registered_in: '/data/ddpr-nfl.json',
+      pre_registered_logit_correlation: preReg.logit_correlation,
+      derived_logit_correlation: got ? got.logit_correlation : null,
+      pre_registered_mean_absolute_probability_gap: preReg.mean_absolute_probability_gap,
+      derived_mean_absolute_probability_gap: got ? got.mean_absolute_probability_gap : null,
+      agrees: !!got && got.logit_correlation === preReg.logit_correlation
+              && got.mean_absolute_probability_gap === preReg.mean_absolute_probability_gap,
+    };
+  })() : null;
+
+  const displayed = models.filter(m => m.displayed);
+  const primitives = models.filter(m => m.kind === 'primitive');
+  const primitiveIds = primitives.map(m => m.model_id);
+
+  /* Week 1 is what the sheet draws. Everything it needs comes from the ledger rows
+     themselves -- game_id, teams, kickoff -- so the sheet no longer fetches the schedule
+     either. */
+  const week = Math.min(...current.map(r => r.week).filter(Number.isFinite));
+  const wkRows = current.filter(r => r.week === week);
+  const gameIds = [...new Set(wkRows.map(r => r.game_id))];
+  const games = gameIds.map(gid => {
+    const rs = wkRows.filter(r => r.game_id === gid), head = rs[0];
+    const beliefs = {};
+    for (const r of rs) if (displayed.some(m => m.model_id === r.model_id)) beliefs[r.model_id] = r.home_win_probability;
+    const panel = primitiveIds.map(id => beliefs[id]).filter(Number.isFinite).sort((a, b) => a - b);
+    const mean = panel.length ? panel.reduce((s, v) => s + v, 0) / panel.length : null;
+    const sd = panel.length > 1
+      ? Math.sqrt(panel.reduce((s, v) => s + (v - mean) ** 2, 0) / panel.length) : null;
+    return {
+      game_id: gid, home_team: head.home_team, away_team: head.away_team, kickoff_at: head.kickoff_at,
+      beliefs,
+      spread: {
+        over: primitiveIds,
+        count: panel.length,
+        mean: mbRound(mean),
+        min: panel.length ? mbRound(panel[0]) : null,
+        max: panel.length ? mbRound(panel[panel.length - 1]) : null,
+        range: panel.length ? mbRound(panel[panel.length - 1] - panel[0]) : null,
+        standard_deviation: mbRound(sd),
+        crosses_50: panel.length > 1 && panel[0] < 0.5 && panel[panel.length - 1] > 0.5,
+      },
+    };
+  }).sort((a, b) => (b.spread.range ?? -1) - (a.spread.range ?? -1));
+
+  return {
+    models,
+    panel: {
+      registered_lines: models.length,
+      displayed_lines: displayed.length,
+      independent_lines: primitives.length,
+      independent_model_ids: primitiveIds,
+      note: 'Registered lines are not independent evidence. ' + primitives.length + ' of '
+          + models.length + ' lines on this board are independent; the rest are functions of '
+          + 'those. Correlations are over LOGITS on prospectively published forecasts and need '
+          + 'no resolved games.',
+      pairs,
+      pre_registration_check: check,
+    },
+    /* Named so the page can state WHY every score column is empty instead of rendering a
+       dash a reader has to interpret. */
+    grading: {
+      graded: false, settled: 0, starts: MB_GRADING_STARTS,
+      note: 'No game has kicked off. Brier and points stay null until ' + MB_GRADING_STARTS
+          + '. There is no cross-domain blended score here, for the same reason the inventory refuses one.',
+    },
+    week: { week, games },
+  };
+}
+write('model-board.json', {
+  as_of: BUILT,
+  source: 'Derived at build time by tools/build-data.js from /data/model-receipts.json, with the pre-registered independence figures cross-checked against /data/ddpr-nfl.json.',
+  tier: 'labs',
+  graded: false,
+  note: 'The per-model board behind receipts.html#models. Rows and columns are DERIVED from the '
+      + "ledger's distinct model_id values, so registering a new model puts it on the board with "
+      + 'no page edit. Per-game spread statistics are computed over the independent lines only -- '
+      + 'an ensemble of two models averaged back in with them counts the same two beliefs twice. '
+      + 'ddpr-nfl-linear is registered and carries displayed:false; it is published here for '
+      + 'completeness and must not be rendered.',
+  data: buildModelBoard(),
 });
 
 /* ---------- index.json (manifest) ----------

@@ -126,6 +126,111 @@ for (const theme of ["dark", "light"]) {
     JSON.stringify(models.tabs));
   ok(`[${theme}] #models opens the models sheet, not grading`, models.selected === "models" && models.gradingHidden);
 
+  /* ---- Stage MS-B, 2026-08-10: the per-model board --------------------------------
+     The sheet used to filter `model_id==="nfelo"||"538-classic"` and name both in a
+     static <thead>. DDPR sat in the ledger for an entire stage without appearing on any
+     sheet and nothing went red, because every assertion here was about the two models
+     that were hardcoded. So these are written against the PAYLOAD's model list rather
+     than against names: register a fifth line, and if the page does not grow a column
+     this suite fails.
+
+     ⚠️ The one thing that must NOT be derived-and-shown is ddpr-nfl-linear. It is
+     registered so the season-end comparison cannot be model-shopped afterwards, which
+     only works if no reader sees it presented as a forecast. Asserted below as a
+     negative in three places, plus a POSITIVE that the page discloses the withholding --
+     silently omitting it would be its own kind of dishonesty. */
+  const board = JSON.parse(read("data/model-board.json")).data;
+  const shownIds = board.models.filter(m => m.displayed !== false).map(m => m.model_id);
+  const hiddenIds = board.models.filter(m => m.displayed === false).map(m => m.model_id);
+  const mb = await p.evaluate(() => {
+    const txt = el => (el ? el.textContent.replace(/\s+/g, " ").trim() : "");
+    return {
+      rowIds: [...document.querySelectorAll("#boardTable tbody tr")]
+        .map(tr => txt(tr.querySelector(".date")).split(" · ")[0]),
+      boardVisible: !document.getElementById("boardTable").hidden,
+      scoreHeads: [...document.querySelectorAll("#scoreTable thead th")].map(t => txt(t)),
+      corrPairs: [...document.querySelectorAll("#corrTable tbody tr")].map(tr => txt(tr.querySelector("td"))),
+      corrVisible: !document.getElementById("corrTable").hidden,
+      boardNote: txt(document.getElementById("boardNote")),
+      scoreNote: txt(document.getElementById("scoreNote")),
+      /* The last two cells of every board row are Brier and points. Read what was RENDERED,
+         not what the payload holds: a page that prints 0 for an ungraded model is making a
+         claim the file never made, and a data-level check cannot see it. */
+      scoreCells: [...document.querySelectorAll("#boardTable tbody tr")]
+        .map(tr => [...tr.querySelectorAll("td")].slice(-2).map(td => txt(td))),
+      sheetText: document.getElementById("sheetModels").innerText,
+      firstGameCells: [...document.querySelectorAll("#scoreTable tbody tr")].slice(0, 1)
+        .map(tr => [...tr.querySelectorAll("td")].map(td => txt(td))),
+    };
+  });
+  ok(`[${theme}] the board renders one row per DISPLAYED model line`,
+    JSON.stringify(mb.rowIds) === JSON.stringify(shownIds) && mb.boardVisible,
+    `${JSON.stringify(mb.rowIds)} vs ${JSON.stringify(shownIds)}`);
+  ok(`[${theme}] the week table grows one column per displayed line, derived not named`,
+    shownIds.every(id => mb.scoreHeads.includes(board.models.find(x => x.model_id === id).model_name))
+      && mb.scoreHeads.length === shownIds.length + 5,
+    JSON.stringify(mb.scoreHeads));
+  ok(`[${theme}] the correlation matrix renders every all-displayed pair`,
+    mb.corrVisible && mb.corrPairs.length === (shownIds.length * (shownIds.length - 1)) / 2,
+    `${mb.corrPairs.length} rows for ${shownIds.length} shown lines`);
+
+  // -- the negative. Three surfaces, because any one of them passing is not the claim.
+  for (const id of hiddenIds) {
+    const name = (board.models.find(m => m.model_id === id) || {}).model_name;
+    ok(`[${theme}] "${id}" gets no board row`, !mb.rowIds.includes(id), JSON.stringify(mb.rowIds));
+    ok(`[${theme}] "${id}" gets no week-table column`,
+      !mb.scoreHeads.some(h => h.includes(id) || h === name), JSON.stringify(mb.scoreHeads));
+    ok(`[${theme}] "${id}" appears in no correlation row`,
+      !mb.corrPairs.some(t => t.includes(id)), JSON.stringify(mb.corrPairs));
+    ok(`[${theme}] the page discloses that "${id}" is withheld rather than dropping it silently`,
+      mb.boardNote.includes(id), mb.boardNote.slice(0, 160));
+  }
+  ok(`[${theme}] fewer lines are shown than are registered`,
+    hiddenIds.length > 0 && mb.rowIds.length < board.models.length);
+
+  /* Every score column is empty AND the sheet states the date, rather than leaving a dash
+     for the reader to interpret. A zero would be a claim about a model nobody has graded. */
+  ok(`[${theme}] no Brier or points value is rendered before grading starts`,
+    board.models.every(m => m.brier === null && m.points === null)
+      && mb.boardNote.includes(board.grading.starts), mb.boardNote.slice(0, 160));
+  ok(`[${theme}] every rendered Brier and points cell is an em dash, not a zero`,
+    mb.scoreCells.length === shownIds.length
+      && mb.scoreCells.flat().every(c => c === "—"),
+    JSON.stringify(mb.scoreCells));
+
+  /* The panel excludes the ensemble. If DDPR is ever averaged back in with its own inputs
+     the mean tightens and the range shrinks for free, and the page looks more agreed than
+     the evidence is. */
+  ok(`[${theme}] the per-game panel names the independent lines only`,
+    board.panel.independent_model_ids.every(id => mb.scoreNote.includes(id))
+      && !board.models.filter(m => m.kind === "ensemble").some(m => mb.scoreNote.includes(m.model_id)),
+    mb.scoreNote.slice(0, 160));
+
+  /* ⚠️ VACUITY GUARD. Everything above would also pass on a page that rendered nothing,
+     if the payload were empty. Prove real numbers reached real cells. */
+  ok(`[${theme}] the board actually drew numbers`,
+    mb.firstGameCells.length === 1 && mb.firstGameCells[0].filter(c => /%|pp/.test(c)).length >= 4,
+    JSON.stringify(mb.firstGameCells));
+
+  /* The page recomputes the panel with mdlBeliefs instead of reading spread.mean, so this
+     compares two independent computations rather than restating one. */
+  ok(`[${theme}] the rendered panel mean equals the published spread.mean`,
+    (mb.firstGameCells[0] || []).includes((board.week.games[0].spread.mean * 100).toFixed(1) + "%"),
+    `${JSON.stringify(mb.firstGameCells[0])} vs ${board.week.games[0].spread.mean}`);
+
+  /* No count typed into the static markup. The old placeholder said "2 available beliefs":
+     invisible while the fetch worked, wrong the moment a third line was registered. */
+  ok(`[${theme}] the models sheet types no model count into its static markup`,
+    !/<b>\s*\d+\s*<\/b>\s*<span>\s*(registered|independent|available)/i.test(rc),
+    "a literal count is back in the #scoreSummary placeholder");
+
+  /* An entity used as a separator must reach the page AS the separator. The first cut
+     escaped the joined string and printed a literal "&times;". No numeric assertion could
+     see it; a screenshot did. */
+  ok(`[${theme}] no raw HTML entity leaks into the rendered prose`,
+    !/&(times|amp|mdash|middot|ndash|hellip);/.test(mb.sheetText),
+    (mb.sheetText.match(/&\w+;/g) || []).slice(0, 4).join(" "));
+
   /* ---- Stage RI, 2026-08-10: the inventory sheet ------------------------------
      Two things must hold, and neither is about layout.
      1. NO COUNT IS TYPED. Every number arrives from a fetch, so the page cannot

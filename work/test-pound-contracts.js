@@ -615,10 +615,21 @@ test('DawgHouse page declares its tier and accessible result regions', () => {
      the CFB count line is what remains live-announced here */
   assert.ok((html.match(/aria-live="polite"/g) || []).length >= 1);
   assert.match(html, /<b>Live MCP:<\/b>/);
-  /* CEP-5A 1b: the belief scoreboard renders on receipts.html now */
+  /* CEP-5A 1b: the belief scoreboard renders on receipts.html now.
+     ⚠️ Stage MS-B, 2026-08-10. This used to assert the literal aria-label
+     "Week 1 nfelo and 538 Classic belief scoreboard", which NAMED THE TWO MODELS -- so the
+     assertion was a hidden third copy of the hardcoded model list this stage exists to
+     delete, and it went red the moment the sheet started deriving its own columns. It is
+     also the reason this suite is on the GATE list and in no test loop: it caught a real
+     break that every browser suite passed over.
+     The boundary this test actually cares about is WHICH PAGE the sheet lives on. Assert
+     that, and let the label describe whatever the board currently shows. */
   const receiptsHtml = fs.readFileSync('receipts.html', 'utf8');
-  assert.match(receiptsHtml, /Week 1 nfelo and 538 Classic belief scoreboard/);
-  assert.doesNotMatch(html, /Week 1 nfelo and 538 Classic belief scoreboard/);
+  const boardTable = /<table[^>]*id="scoreTable"[^>]*aria-label="([^"]+)"/;
+  assert.match(receiptsHtml, boardTable);
+  assert.doesNotMatch(html, boardTable);
+  // ...and it must not have quietly become an unlabelled table on the way past.
+  assert.ok((receiptsHtml.match(boardTable)[1] || '').trim().length > 10);
   assert.match(html, /\/data\/model-receipts\.json/);
 });
 
