@@ -372,7 +372,7 @@
      "kind": "json",
      "url": "/data/model-receipts.json",
      "status": "live",
-     "covers": "544 append-only normalized prospective receipts across nfelo and 538 Classic — the models sheet"
+     "covers": "1088 append-only normalized prospective receipts across 4 model lines (nfelo, 538-classic, ddpr-nfl, ddpr-nfl-linear) — the models sheet"
     },
     {
      "kind": "json",
@@ -391,6 +391,18 @@
      "url": "/data/538-classic-methodology.md",
      "status": "live",
      "covers": "model mathematics, provenance, reproduction tolerance, receipts and limits"
+    },
+    {
+     "kind": "json",
+     "url": "/data/ddpr-nfl.json",
+     "status": "live",
+     "covers": "both pre-registered DDPR aggregations over 272 games, the inputs that produced each one, and the measured pairwise logit correlation of the panel"
+    },
+    {
+     "kind": "markdown",
+     "url": "/data/ddpr-methodology.md",
+     "status": "live",
+     "covers": "the aggregation rule, why the log-odds average is displayed, why there is no extremizing, and the size of the effect being tested"
     },
     {
      "kind": "json",

@@ -1,0 +1,4136 @@
+{
+ "source_page": "/receipts.html",
+ "tier": "labs",
+ "graded": false,
+ "as_of": "2026-08-08",
+ "source": "Data Dawgs Power Rank: an explicit ensemble of the prospective model lines in /data/model-receipts.json. Not a novel model.",
+ "note": "DDPR is a FUNCTION of its inputs, so it is not independent evidence — a board showing nfelo, 538 Classic and DDPR shows two sources, not three. Two aggregations are pre-registered before any game is played: the log-odds average is displayed and the linear average is carried ungraded so the season-end comparison is not model-shopping. No extremizing. Nothing is graded: the 2026 season starts 2026-09-10.",
+ "methodology": {
+  "displayed": "inverse_logit(mean(logit(p_i)))",
+  "also_registered": "mean(p_i)",
+  "rounding": "6 decimal places, ROUND_HALF_UP",
+  "extremizing": "none, by decision — the inputs are not independent enough",
+  "url": "https://datadawgs216.com/data/ddpr-methodology.md"
+ },
+ "independence": {
+  "games": 272,
+  "note": "Correlation of LOGITS between input models, computed on prospective forecasts alone. High correlation means the ensemble carries less independent evidence than its member count suggests.",
+  "pairs": [
+   {
+    "models": [
+     "nfelo",
+     "538-classic"
+    ],
+    "logit_correlation": 0.928307,
+    "mean_absolute_probability_gap": 0.057425
+   }
+  ]
+ },
+ "integrity": {
+  "input_snapshot_id": "sha256:afc11fc93089cb6709464209a6fbc868bb95f6478365c1264f46f99ce1afa633",
+  "snapshot_id": "sha256:49ed874e5f4c9e7fd5732fa1c5a5e5400d816ad5abe6272b3211049dd29b19a6",
+  "forecast_rows": 272,
+  "input_model_count": 2
+ },
+ "provenance": {
+  "source_repo": "JKapcar/data-dawgs",
+  "source_commit": "706177db2bbdbf4b3e0bc62966a1f65e7d77fc34",
+  "schedule_snapshot_id": "sha256:d8b1f35cea30ff0a26278b04232f536e8d733a6e06b61c8bf56e409a28b8a80f",
+  "inputs_from": "/data/model-receipts.json"
+ },
+ "data": {
+  "model_id": "ddpr-nfl",
+  "model_name": "DDPR NFL",
+  "model_version": "1.0.0",
+  "displayed_aggregation": "logit_mean",
+  "input_model_ids": [
+   "nfelo",
+   "538-classic"
+  ],
+  "extremized": false,
+  "forecasts": [
+   {
+    "game_id": "2026_01_ARI_LAC",
+    "season": 2026,
+    "week": 1,
+    "kickoff_at": "2026-09-13T20:25:00Z",
+    "home_team": "LAC",
+    "away_team": "ARI",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.806,
+     "538-classic": 0.759907
+    },
+    "home_win_probability_logit_mean": 0.783842,
+    "home_win_probability_linear_mean": 0.782954
+   },
+   {
+    "game_id": "2026_01_ATL_PIT",
+    "season": 2026,
+    "week": 1,
+    "kickoff_at": "2026-09-13T17:00:00Z",
+    "home_team": "PIT",
+    "away_team": "ATL",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.613,
+     "538-classic": 0.642434
+    },
+    "home_win_probability_logit_mean": 0.627835,
+    "home_win_probability_linear_mean": 0.627717
+   },
+   {
+    "game_id": "2026_01_BAL_IND",
+    "season": 2026,
+    "week": 1,
+    "kickoff_at": "2026-09-13T17:00:00Z",
+    "home_team": "IND",
+    "away_team": "BAL",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.436,
+     "538-classic": 0.484375
+    },
+    "home_win_probability_logit_mean": 0.460094,
+    "home_win_probability_linear_mean": 0.460187
+   },
+   {
+    "game_id": "2026_01_BUF_HOU",
+    "season": 2026,
+    "week": 1,
+    "kickoff_at": "2026-09-13T17:00:00Z",
+    "home_team": "HOU",
+    "away_team": "BUF",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.444,
+     "538-classic": 0.593752
+    },
+    "home_win_probability_logit_mean": 0.51931,
+    "home_win_probability_linear_mean": 0.518876
+   },
+   {
+    "game_id": "2026_01_CHI_CAR",
+    "season": 2026,
+    "week": 1,
+    "kickoff_at": "2026-09-13T17:00:00Z",
+    "home_team": "CAR",
+    "away_team": "CHI",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.443,
+     "538-classic": 0.452296
+    },
+    "home_win_probability_logit_mean": 0.447643,
+    "home_win_probability_linear_mean": 0.447648
+   },
+   {
+    "game_id": "2026_01_CLE_JAX",
+    "season": 2026,
+    "week": 1,
+    "kickoff_at": "2026-09-13T17:00:00Z",
+    "home_team": "JAX",
+    "away_team": "CLE",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.722,
+     "538-classic": 0.769761
+    },
+    "home_win_probability_logit_mean": 0.746623,
+    "home_win_probability_linear_mean": 0.745881
+   },
+   {
+    "game_id": "2026_01_DAL_NYG",
+    "season": 2026,
+    "week": 1,
+    "kickoff_at": "2026-09-14T00:20:00Z",
+    "home_team": "NYG",
+    "away_team": "DAL",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.45,
+     "538-classic": 0.543708
+    },
+    "home_win_probability_logit_mean": 0.496826,
+    "home_win_probability_linear_mean": 0.496854
+   },
+   {
+    "game_id": "2026_01_DEN_KC",
+    "season": 2026,
+    "week": 1,
+    "kickoff_at": "2026-09-15T00:15:00Z",
+    "home_team": "KC",
+    "away_team": "DEN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.539,
+     "538-classic": 0.426854
+    },
+    "home_win_probability_logit_mean": 0.482709,
+    "home_win_probability_linear_mean": 0.482927
+   },
+   {
+    "game_id": "2026_01_GB_MIN",
+    "season": 2026,
+    "week": 1,
+    "kickoff_at": "2026-09-13T20:25:00Z",
+    "home_team": "MIN",
+    "away_team": "GB",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.527,
+     "538-classic": 0.623835
+    },
+    "home_win_probability_logit_mean": 0.576148,
+    "home_win_probability_linear_mean": 0.575418
+   },
+   {
+    "game_id": "2026_01_MIA_LV",
+    "season": 2026,
+    "week": 1,
+    "kickoff_at": "2026-09-13T20:25:00Z",
+    "home_team": "LV",
+    "away_team": "MIA",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.597,
+     "538-classic": 0.435019
+    },
+    "home_win_probability_logit_mean": 0.516441,
+    "home_win_probability_linear_mean": 0.51601
+   },
+   {
+    "game_id": "2026_01_NE_SEA",
+    "season": 2026,
+    "week": 1,
+    "kickoff_at": "2026-09-10T00:20:00Z",
+    "home_team": "SEA",
+    "away_team": "NE",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.633,
+     "538-classic": 0.694318
+    },
+    "home_win_probability_logit_mean": 0.664351,
+    "home_win_probability_linear_mean": 0.663659
+   },
+   {
+    "game_id": "2026_01_NO_DET",
+    "season": 2026,
+    "week": 1,
+    "kickoff_at": "2026-09-13T17:00:00Z",
+    "home_team": "DET",
+    "away_team": "NO",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.745,
+     "538-classic": 0.741372
+    },
+    "home_win_probability_logit_mean": 0.74319,
+    "home_win_probability_linear_mean": 0.743186
+   },
+   {
+    "game_id": "2026_01_NYJ_TEN",
+    "season": 2026,
+    "week": 1,
+    "kickoff_at": "2026-09-13T17:00:00Z",
+    "home_team": "TEN",
+    "away_team": "NYJ",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.613,
+     "538-classic": 0.58586
+    },
+    "home_win_probability_logit_mean": 0.599506,
+    "home_win_probability_linear_mean": 0.59943
+   },
+   {
+    "game_id": "2026_01_SF_LAR",
+    "season": 2026,
+    "week": 1,
+    "kickoff_at": "2026-09-11T00:35:00Z",
+    "home_team": "LAR",
+    "away_team": "SF",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.579,
+     "538-classic": 0.570698
+    },
+    "home_win_probability_logit_mean": 0.574854,
+    "home_win_probability_linear_mean": 0.574849
+   },
+   {
+    "game_id": "2026_01_TB_CIN",
+    "season": 2026,
+    "week": 1,
+    "kickoff_at": "2026-09-13T17:00:00Z",
+    "home_team": "CIN",
+    "away_team": "TB",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.631,
+     "538-classic": 0.592752
+    },
+    "home_win_probability_logit_mean": 0.612049,
+    "home_win_probability_linear_mean": 0.611876
+   },
+   {
+    "game_id": "2026_01_WAS_PHI",
+    "season": 2026,
+    "week": 1,
+    "kickoff_at": "2026-09-13T20:25:00Z",
+    "home_team": "PHI",
+    "away_team": "WAS",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.631,
+     "538-classic": 0.71495
+    },
+    "home_win_probability_logit_mean": 0.674373,
+    "home_win_probability_linear_mean": 0.672975
+   },
+   {
+    "game_id": "2026_02_CAR_ATL",
+    "season": 2026,
+    "week": 2,
+    "kickoff_at": "2026-09-20T17:00:00Z",
+    "home_team": "ATL",
+    "away_team": "CAR",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.594,
+     "538-classic": 0.649312
+    },
+    "home_win_probability_logit_mean": 0.622053,
+    "home_win_probability_linear_mean": 0.621656
+   },
+   {
+    "game_id": "2026_02_CIN_HOU",
+    "season": 2026,
+    "week": 2,
+    "kickoff_at": "2026-09-20T17:00:00Z",
+    "home_team": "HOU",
+    "away_team": "CIN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6167,
+     "538-classic": 0.751558
+    },
+    "home_win_probability_logit_mean": 0.6881,
+    "home_win_probability_linear_mean": 0.684129
+   },
+   {
+    "game_id": "2026_02_CLE_TB",
+    "season": 2026,
+    "week": 2,
+    "kickoff_at": "2026-09-20T17:00:00Z",
+    "home_team": "TB",
+    "away_team": "CLE",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6053,
+     "538-classic": 0.667542
+    },
+    "home_win_probability_logit_mean": 0.636995,
+    "home_win_probability_linear_mean": 0.636421
+   },
+   {
+    "game_id": "2026_02_DET_BUF",
+    "season": 2026,
+    "week": 2,
+    "kickoff_at": "2026-09-18T00:15:00Z",
+    "home_team": "BUF",
+    "away_team": "DET",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5871,
+     "538-classic": 0.660532
+    },
+    "home_win_probability_logit_mean": 0.624532,
+    "home_win_probability_linear_mean": 0.623816
+   },
+   {
+    "game_id": "2026_02_GB_NYJ",
+    "season": 2026,
+    "week": 2,
+    "kickoff_at": "2026-09-20T17:00:00Z",
+    "home_team": "NYJ",
+    "away_team": "GB",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4202,
+     "538-classic": 0.359924
+    },
+    "home_win_probability_logit_mean": 0.389641,
+    "home_win_probability_linear_mean": 0.390062
+   },
+   {
+    "game_id": "2026_02_IND_KC",
+    "season": 2026,
+    "week": 2,
+    "kickoff_at": "2026-09-21T00:20:00Z",
+    "home_team": "KC",
+    "away_team": "IND",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6249,
+     "538-classic": 0.621275
+    },
+    "home_win_probability_logit_mean": 0.623089,
+    "home_win_probability_linear_mean": 0.623088
+   },
+   {
+    "game_id": "2026_02_JAX_DEN",
+    "season": 2026,
+    "week": 2,
+    "kickoff_at": "2026-09-20T20:05:00Z",
+    "home_team": "DEN",
+    "away_team": "JAX",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5869,
+     "538-classic": 0.642088
+    },
+    "home_win_probability_logit_mean": 0.614863,
+    "home_win_probability_linear_mean": 0.614494
+   },
+   {
+    "game_id": "2026_02_LV_LAC",
+    "season": 2026,
+    "week": 2,
+    "kickoff_at": "2026-09-20T20:05:00Z",
+    "home_team": "LAC",
+    "away_team": "LV",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6277,
+     "538-classic": 0.803243
+    },
+    "home_win_probability_logit_mean": 0.724027,
+    "home_win_probability_linear_mean": 0.715472
+   },
+   {
+    "game_id": "2026_02_MIA_SF",
+    "season": 2026,
+    "week": 2,
+    "kickoff_at": "2026-09-20T20:25:00Z",
+    "home_team": "SF",
+    "away_team": "MIA",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6849,
+     "538-classic": 0.722871
+    },
+    "home_win_probability_logit_mean": 0.704239,
+    "home_win_probability_linear_mean": 0.703885
+   },
+   {
+    "game_id": "2026_02_MIN_CHI",
+    "season": 2026,
+    "week": 2,
+    "kickoff_at": "2026-09-20T17:00:00Z",
+    "home_team": "CHI",
+    "away_team": "MIN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5267,
+     "538-classic": 0.563468
+    },
+    "home_win_probability_logit_mean": 0.545146,
+    "home_win_probability_linear_mean": 0.545084
+   },
+   {
+    "game_id": "2026_02_NO_BAL",
+    "season": 2026,
+    "week": 2,
+    "kickoff_at": "2026-09-20T17:00:00Z",
+    "home_team": "BAL",
+    "away_team": "NO",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6806,
+     "538-classic": 0.727733
+    },
+    "home_win_probability_logit_mean": 0.704713,
+    "home_win_probability_linear_mean": 0.704166
+   },
+   {
+    "game_id": "2026_02_NYG_LAR",
+    "season": 2026,
+    "week": 2,
+    "kickoff_at": "2026-09-22T00:15:00Z",
+    "home_team": "LAR",
+    "away_team": "NYG",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6913,
+     "538-classic": 0.808893
+    },
+    "home_win_probability_logit_mean": 0.754826,
+    "home_win_probability_linear_mean": 0.750096
+   },
+   {
+    "game_id": "2026_02_PHI_TEN",
+    "season": 2026,
+    "week": 2,
+    "kickoff_at": "2026-09-20T17:00:00Z",
+    "home_team": "TEN",
+    "away_team": "PHI",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.3967,
+     "538-classic": 0.314928
+    },
+    "home_win_probability_logit_mean": 0.354754,
+    "home_win_probability_linear_mean": 0.355814
+   },
+   {
+    "game_id": "2026_02_PIT_NE",
+    "season": 2026,
+    "week": 2,
+    "kickoff_at": "2026-09-20T17:00:00Z",
+    "home_team": "NE",
+    "away_team": "PIT",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6306,
+     "538-classic": 0.705398
+    },
+    "home_win_probability_logit_mean": 0.669066,
+    "home_win_probability_linear_mean": 0.667999
+   },
+   {
+    "game_id": "2026_02_SEA_ARI",
+    "season": 2026,
+    "week": 2,
+    "kickoff_at": "2026-09-20T20:25:00Z",
+    "home_team": "ARI",
+    "away_team": "SEA",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.3227,
+     "538-classic": 0.223887
+    },
+    "home_win_probability_logit_mean": 0.270463,
+    "home_win_probability_linear_mean": 0.273293
+   },
+   {
+    "game_id": "2026_02_WAS_DAL",
+    "season": 2026,
+    "week": 2,
+    "kickoff_at": "2026-09-20T20:25:00Z",
+    "home_team": "DAL",
+    "away_team": "WAS",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5646,
+     "538-classic": 0.58773
+    },
+    "home_win_probability_logit_mean": 0.576207,
+    "home_win_probability_linear_mean": 0.576165
+   },
+   {
+    "game_id": "2026_03_ARI_SF",
+    "season": 2026,
+    "week": 3,
+    "kickoff_at": "2026-09-27T20:05:00Z",
+    "home_team": "SF",
+    "away_team": "ARI",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.699,
+     "538-classic": 0.792457
+    },
+    "home_win_probability_logit_mean": 0.748602,
+    "home_win_probability_linear_mean": 0.745729
+   },
+   {
+    "game_id": "2026_03_ATL_GB",
+    "season": 2026,
+    "week": 3,
+    "kickoff_at": "2026-09-25T00:15:00Z",
+    "home_team": "GB",
+    "away_team": "ATL",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.587,
+     "538-classic": 0.664882
+    },
+    "home_win_probability_logit_mean": 0.626762,
+    "home_win_probability_linear_mean": 0.625941
+   },
+   {
+    "game_id": "2026_03_BAL_DAL",
+    "season": 2026,
+    "week": 3,
+    "kickoff_at": "2026-09-27T20:25:00Z",
+    "home_team": "DAL",
+    "away_team": "BAL",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4874,
+     "538-classic": 0.379879
+    },
+    "home_win_probability_logit_mean": 0.432849,
+    "home_win_probability_linear_mean": 0.43364
+   },
+   {
+    "game_id": "2026_03_CAR_CLE",
+    "season": 2026,
+    "week": 3,
+    "kickoff_at": "2026-09-27T17:00:00Z",
+    "home_team": "CLE",
+    "away_team": "CAR",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5543,
+     "538-classic": 0.583262
+    },
+    "home_win_probability_logit_mean": 0.56884,
+    "home_win_probability_linear_mean": 0.568781
+   },
+   {
+    "game_id": "2026_03_CIN_PIT",
+    "season": 2026,
+    "week": 3,
+    "kickoff_at": "2026-09-27T17:00:00Z",
+    "home_team": "PIT",
+    "away_team": "CIN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.569,
+     "538-classic": 0.632203
+    },
+    "home_win_probability_logit_mean": 0.601022,
+    "home_win_probability_linear_mean": 0.600602
+   },
+   {
+    "game_id": "2026_03_HOU_IND",
+    "season": 2026,
+    "week": 3,
+    "kickoff_at": "2026-09-27T17:00:00Z",
+    "home_team": "IND",
+    "away_team": "HOU",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4916,
+     "538-classic": 0.394292
+    },
+    "home_win_probability_logit_mean": 0.442393,
+    "home_win_probability_linear_mean": 0.442946
+   },
+   {
+    "game_id": "2026_03_KC_MIA",
+    "season": 2026,
+    "week": 3,
+    "kickoff_at": "2026-09-27T17:00:00Z",
+    "home_team": "MIA",
+    "away_team": "KC",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4431,
+     "538-classic": 0.549958
+    },
+    "home_win_probability_logit_mean": 0.496489,
+    "home_win_probability_linear_mean": 0.496529
+   },
+   {
+    "game_id": "2026_03_LAC_BUF",
+    "season": 2026,
+    "week": 3,
+    "kickoff_at": "2026-09-27T17:00:00Z",
+    "home_team": "BUF",
+    "away_team": "LAC",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6842,
+     "538-classic": 0.695984
+    },
+    "home_win_probability_logit_mean": 0.690123,
+    "home_win_probability_linear_mean": 0.690092
+   },
+   {
+    "game_id": "2026_03_LAR_DEN",
+    "season": 2026,
+    "week": 3,
+    "kickoff_at": "2026-09-28T00:20:00Z",
+    "home_team": "DEN",
+    "away_team": "LAR",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5523,
+     "538-classic": 0.585994
+    },
+    "home_win_probability_logit_mean": 0.569227,
+    "home_win_probability_linear_mean": 0.569147
+   },
+   {
+    "game_id": "2026_03_LV_NO",
+    "season": 2026,
+    "week": 3,
+    "kickoff_at": "2026-09-27T20:25:00Z",
+    "home_team": "NO",
+    "away_team": "LV",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5985,
+     "538-classic": 0.708957
+    },
+    "home_win_probability_logit_mean": 0.655831,
+    "home_win_probability_linear_mean": 0.653728
+   },
+   {
+    "game_id": "2026_03_MIN_TB",
+    "season": 2026,
+    "week": 3,
+    "kickoff_at": "2026-09-27T20:05:00Z",
+    "home_team": "TB",
+    "away_team": "MIN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4689,
+     "538-classic": 0.493652
+    },
+    "home_win_probability_logit_mean": 0.481265,
+    "home_win_probability_linear_mean": 0.481276
+   },
+   {
+    "game_id": "2026_03_NE_JAX",
+    "season": 2026,
+    "week": 3,
+    "kickoff_at": "2026-09-27T17:00:00Z",
+    "home_team": "JAX",
+    "away_team": "NE",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5481,
+     "538-classic": 0.553886
+    },
+    "home_win_probability_logit_mean": 0.550995,
+    "home_win_probability_linear_mean": 0.550993
+   },
+   {
+    "game_id": "2026_03_NYJ_DET",
+    "season": 2026,
+    "week": 3,
+    "kickoff_at": "2026-09-27T17:00:00Z",
+    "home_team": "DET",
+    "away_team": "NYJ",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.7636,
+     "538-classic": 0.816571
+    },
+    "home_win_probability_logit_mean": 0.79132,
+    "home_win_probability_linear_mean": 0.790086
+   },
+   {
+    "game_id": "2026_03_PHI_CHI",
+    "season": 2026,
+    "week": 3,
+    "kickoff_at": "2026-09-29T00:15:00Z",
+    "home_team": "CHI",
+    "away_team": "PHI",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5469,
+     "538-classic": 0.552985
+    },
+    "home_win_probability_logit_mean": 0.549944,
+    "home_win_probability_linear_mean": 0.549943
+   },
+   {
+    "game_id": "2026_03_SEA_WAS",
+    "season": 2026,
+    "week": 3,
+    "kickoff_at": "2026-09-27T17:00:00Z",
+    "home_team": "WAS",
+    "away_team": "SEA",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4002,
+     "538-classic": 0.3009
+    },
+    "home_win_probability_logit_mean": 0.348912,
+    "home_win_probability_linear_mean": 0.35055
+   },
+   {
+    "game_id": "2026_03_TEN_NYG",
+    "season": 2026,
+    "week": 3,
+    "kickoff_at": "2026-09-27T17:00:00Z",
+    "home_team": "NYG",
+    "away_team": "TEN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6343,
+     "538-classic": 0.681716
+    },
+    "home_win_probability_logit_mean": 0.658404,
+    "home_win_probability_linear_mean": 0.658008
+   },
+   {
+    "game_id": "2026_04_ARI_NYG",
+    "season": 2026,
+    "week": 4,
+    "kickoff_at": "2026-10-04T17:00:00Z",
+    "home_team": "NYG",
+    "away_team": "ARI",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6117,
+     "538-classic": 0.635489
+    },
+    "home_win_probability_logit_mean": 0.623669,
+    "home_win_probability_linear_mean": 0.623595
+   },
+   {
+    "game_id": "2026_04_ATL_NO",
+    "season": 2026,
+    "week": 4,
+    "kickoff_at": "2026-10-06T00:15:00Z",
+    "home_team": "NO",
+    "away_team": "ATL",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5325,
+     "538-classic": 0.543749
+    },
+    "home_win_probability_logit_mean": 0.538129,
+    "home_win_probability_linear_mean": 0.538125
+   },
+   {
+    "game_id": "2026_04_DAL_HOU",
+    "season": 2026,
+    "week": 4,
+    "kickoff_at": "2026-10-04T17:00:00Z",
+    "home_team": "HOU",
+    "away_team": "DAL",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6228,
+     "538-classic": 0.773996
+    },
+    "home_win_probability_logit_mean": 0.703961,
+    "home_win_probability_linear_mean": 0.698398
+   },
+   {
+    "game_id": "2026_04_DEN_SF",
+    "season": 2026,
+    "week": 4,
+    "kickoff_at": "2026-10-04T20:25:00Z",
+    "home_team": "SF",
+    "away_team": "DEN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5339,
+     "538-classic": 0.52902
+    },
+    "home_win_probability_logit_mean": 0.531461,
+    "home_win_probability_linear_mean": 0.53146
+   },
+   {
+    "game_id": "2026_04_DET_CAR",
+    "season": 2026,
+    "week": 4,
+    "kickoff_at": "2026-10-05T00:20:00Z",
+    "home_team": "CAR",
+    "away_team": "DET",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4298,
+     "538-classic": 0.413895
+    },
+    "home_win_probability_logit_mean": 0.421827,
+    "home_win_probability_linear_mean": 0.421848
+   },
+   {
+    "game_id": "2026_04_GB_TB",
+    "season": 2026,
+    "week": 4,
+    "kickoff_at": "2026-10-04T17:00:00Z",
+    "home_team": "TB",
+    "away_team": "GB",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5419,
+     "538-classic": 0.526548
+    },
+    "home_win_probability_logit_mean": 0.534232,
+    "home_win_probability_linear_mean": 0.534224
+   },
+   {
+    "game_id": "2026_04_IND_WAS",
+    "season": 2026,
+    "week": 4,
+    "kickoff_at": "2026-10-04T13:30:00Z",
+    "home_team": "WAS",
+    "away_team": "IND",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5728,
+     "538-classic": 0.491554
+    },
+    "home_win_probability_logit_mean": 0.532392,
+    "home_win_probability_linear_mean": 0.532177
+   },
+   {
+    "game_id": "2026_04_JAX_CIN",
+    "season": 2026,
+    "week": 4,
+    "kickoff_at": "2026-10-04T17:00:00Z",
+    "home_team": "CIN",
+    "away_team": "JAX",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5038,
+     "538-classic": 0.46642
+    },
+    "home_win_probability_logit_mean": 0.485089,
+    "home_win_probability_linear_mean": 0.48511
+   },
+   {
+    "game_id": "2026_04_KC_LV",
+    "season": 2026,
+    "week": 4,
+    "kickoff_at": "2026-10-04T20:25:00Z",
+    "home_team": "LV",
+    "away_team": "KC",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.428,
+     "538-classic": 0.392917
+    },
+    "home_win_probability_logit_mean": 0.410344,
+    "home_win_probability_linear_mean": 0.410459
+   },
+   {
+    "game_id": "2026_04_LAC_SEA",
+    "season": 2026,
+    "week": 4,
+    "kickoff_at": "2026-10-04T20:25:00Z",
+    "home_team": "SEA",
+    "away_team": "LAC",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.7295,
+     "538-classic": 0.770917
+    },
+    "home_win_probability_logit_mean": 0.750783,
+    "home_win_probability_linear_mean": 0.750209
+   },
+   {
+    "game_id": "2026_04_LAR_PHI",
+    "season": 2026,
+    "week": 4,
+    "kickoff_at": "2026-10-04T17:00:00Z",
+    "home_team": "PHI",
+    "away_team": "LAR",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5228,
+     "538-classic": 0.517333
+    },
+    "home_win_probability_logit_mean": 0.520067,
+    "home_win_probability_linear_mean": 0.520067
+   },
+   {
+    "game_id": "2026_04_MIA_MIN",
+    "season": 2026,
+    "week": 4,
+    "kickoff_at": "2026-10-04T20:05:00Z",
+    "home_team": "MIN",
+    "away_team": "MIA",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.7029,
+     "538-classic": 0.710153
+    },
+    "home_win_probability_logit_mean": 0.70654,
+    "home_win_probability_linear_mean": 0.706527
+   },
+   {
+    "game_id": "2026_04_NE_BUF",
+    "season": 2026,
+    "week": 4,
+    "kickoff_at": "2026-10-04T17:00:00Z",
+    "home_team": "BUF",
+    "away_team": "NE",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5919,
+     "538-classic": 0.6071
+    },
+    "home_win_probability_logit_mean": 0.599524,
+    "home_win_probability_linear_mean": 0.5995
+   },
+   {
+    "game_id": "2026_04_NYJ_CHI",
+    "season": 2026,
+    "week": 4,
+    "kickoff_at": "2026-10-04T17:00:00Z",
+    "home_team": "CHI",
+    "away_team": "NYJ",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.7295,
+     "538-classic": 0.791963
+    },
+    "home_win_probability_logit_mean": 0.762139,
+    "home_win_probability_linear_mean": 0.760732
+   },
+   {
+    "game_id": "2026_04_PIT_CLE",
+    "season": 2026,
+    "week": 4,
+    "kickoff_at": "2026-10-02T00:15:00Z",
+    "home_team": "CLE",
+    "away_team": "PIT",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4946,
+     "538-classic": 0.470673
+    },
+    "home_win_probability_logit_mean": 0.482627,
+    "home_win_probability_linear_mean": 0.482637
+   },
+   {
+    "game_id": "2026_04_TEN_BAL",
+    "season": 2026,
+    "week": 4,
+    "kickoff_at": "2026-10-04T17:00:00Z",
+    "home_team": "BAL",
+    "away_team": "TEN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.7325,
+     "538-classic": 0.810094
+    },
+    "home_win_probability_logit_mean": 0.77364,
+    "home_win_probability_linear_mean": 0.771297
+   },
+   {
+    "game_id": "2026_05_BAL_ATL",
+    "season": 2026,
+    "week": 5,
+    "kickoff_at": "2026-10-12T00:20:00Z",
+    "home_team": "ATL",
+    "away_team": "BAL",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4711,
+     "538-classic": 0.49098
+    },
+    "home_win_probability_logit_mean": 0.481032,
+    "home_win_probability_linear_mean": 0.48104
+   },
+   {
+    "game_id": "2026_05_BUF_LAR",
+    "season": 2026,
+    "week": 5,
+    "kickoff_at": "2026-10-13T00:15:00Z",
+    "home_team": "LAR",
+    "away_team": "BUF",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5541,
+     "538-classic": 0.596867
+    },
+    "home_win_probability_logit_mean": 0.575625,
+    "home_win_probability_linear_mean": 0.575484
+   },
+   {
+    "game_id": "2026_05_CHI_GB",
+    "season": 2026,
+    "week": 5,
+    "kickoff_at": "2026-10-11T20:25:00Z",
+    "home_team": "GB",
+    "away_team": "CHI",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5274,
+     "538-classic": 0.589381
+    },
+    "home_win_probability_logit_mean": 0.558619,
+    "home_win_probability_linear_mean": 0.558391
+   },
+   {
+    "game_id": "2026_05_CIN_MIA",
+    "season": 2026,
+    "week": 5,
+    "kickoff_at": "2026-10-11T17:00:00Z",
+    "home_team": "MIA",
+    "away_team": "CIN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4891,
+     "538-classic": 0.562322
+    },
+    "home_win_probability_logit_mean": 0.52585,
+    "home_win_probability_linear_mean": 0.525711
+   },
+   {
+    "game_id": "2026_05_CLE_NYJ",
+    "season": 2026,
+    "week": 5,
+    "kickoff_at": "2026-10-11T17:00:00Z",
+    "home_team": "NYJ",
+    "away_team": "CLE",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4842,
+     "538-classic": 0.503775
+    },
+    "home_win_probability_logit_mean": 0.493985,
+    "home_win_probability_linear_mean": 0.493988
+   },
+   {
+    "game_id": "2026_05_DEN_LAC",
+    "season": 2026,
+    "week": 5,
+    "kickoff_at": "2026-10-11T20:05:00Z",
+    "home_team": "LAC",
+    "away_team": "DEN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4565,
+     "538-classic": 0.482152
+    },
+    "home_win_probability_logit_mean": 0.469306,
+    "home_win_probability_linear_mean": 0.469326
+   },
+   {
+    "game_id": "2026_05_DET_ARI",
+    "season": 2026,
+    "week": 5,
+    "kickoff_at": "2026-10-11T20:25:00Z",
+    "home_team": "ARI",
+    "away_team": "DET",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.3945,
+     "538-classic": 0.362065
+    },
+    "home_win_probability_logit_mean": 0.378146,
+    "home_win_probability_linear_mean": 0.378283
+   },
+   {
+    "game_id": "2026_05_HOU_TEN",
+    "season": 2026,
+    "week": 5,
+    "kickoff_at": "2026-10-11T17:00:00Z",
+    "home_team": "TEN",
+    "away_team": "HOU",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.396,
+     "538-classic": 0.255581
+    },
+    "home_win_probability_logit_mean": 0.321778,
+    "home_win_probability_linear_mean": 0.325791
+   },
+   {
+    "game_id": "2026_05_IND_PIT",
+    "season": 2026,
+    "week": 5,
+    "kickoff_at": "2026-10-11T17:00:00Z",
+    "home_team": "PIT",
+    "away_team": "IND",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5859,
+     "538-classic": 0.648485
+    },
+    "home_win_probability_logit_mean": 0.61768,
+    "home_win_probability_linear_mean": 0.617193
+   },
+   {
+    "game_id": "2026_05_LV_NE",
+    "season": 2026,
+    "week": 5,
+    "kickoff_at": "2026-10-11T17:00:00Z",
+    "home_team": "NE",
+    "away_team": "LV",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.7167,
+     "538-classic": 0.858124
+    },
+    "home_win_probability_logit_mean": 0.796405,
+    "home_win_probability_linear_mean": 0.787412
+   },
+   {
+    "game_id": "2026_05_MIN_NO",
+    "season": 2026,
+    "week": 5,
+    "kickoff_at": "2026-10-11T17:00:00Z",
+    "home_team": "NO",
+    "away_team": "MIN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4356,
+     "538-classic": 0.433594
+    },
+    "home_win_probability_logit_mean": 0.434597,
+    "home_win_probability_linear_mean": 0.434597
+   },
+   {
+    "game_id": "2026_05_NYG_WAS",
+    "season": 2026,
+    "week": 5,
+    "kickoff_at": "2026-10-11T17:00:00Z",
+    "home_team": "WAS",
+    "away_team": "NYG",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5958,
+     "538-classic": 0.643971
+    },
+    "home_win_probability_logit_mean": 0.620181,
+    "home_win_probability_linear_mean": 0.619886
+   },
+   {
+    "game_id": "2026_05_PHI_JAX",
+    "season": 2026,
+    "week": 5,
+    "kickoff_at": "2026-10-11T13:30:00Z",
+    "home_team": "JAX",
+    "away_team": "PHI",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.569,
+     "538-classic": 0.608729
+    },
+    "home_win_probability_logit_mean": 0.58901,
+    "home_win_probability_linear_mean": 0.588864
+   },
+   {
+    "game_id": "2026_05_SF_SEA",
+    "season": 2026,
+    "week": 5,
+    "kickoff_at": "2026-10-11T20:25:00Z",
+    "home_team": "SEA",
+    "away_team": "SF",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6618,
+     "538-classic": 0.736113
+    },
+    "home_win_probability_logit_mean": 0.700272,
+    "home_win_probability_linear_mean": 0.698957
+   },
+   {
+    "game_id": "2026_05_TB_DAL",
+    "season": 2026,
+    "week": 5,
+    "kickoff_at": "2026-10-09T00:15:00Z",
+    "home_team": "DAL",
+    "away_team": "TB",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5771,
+     "538-classic": 0.562492
+    },
+    "home_win_probability_logit_mean": 0.569811,
+    "home_win_probability_linear_mean": 0.569796
+   },
+   {
+    "game_id": "2026_06_ARI_LAR",
+    "season": 2026,
+    "week": 6,
+    "kickoff_at": "2026-10-18T20:05:00Z",
+    "home_team": "LAR",
+    "away_team": "ARI",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.7337,
+     "538-classic": 0.835415
+    },
+    "home_win_probability_logit_mean": 0.789013,
+    "home_win_probability_linear_mean": 0.784558
+   },
+   {
+    "game_id": "2026_06_BAL_CLE",
+    "season": 2026,
+    "week": 6,
+    "kickoff_at": "2026-10-18T17:00:00Z",
+    "home_team": "CLE",
+    "away_team": "BAL",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4309,
+     "538-classic": 0.421671
+    },
+    "home_win_probability_logit_mean": 0.426279,
+    "home_win_probability_linear_mean": 0.426286
+   },
+   {
+    "game_id": "2026_06_BUF_LV",
+    "season": 2026,
+    "week": 6,
+    "kickoff_at": "2026-10-18T20:25:00Z",
+    "home_team": "LV",
+    "away_team": "BUF",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.3718,
+     "538-classic": 0.24742
+    },
+    "home_win_probability_logit_mean": 0.30609,
+    "home_win_probability_linear_mean": 0.30961
+   },
+   {
+    "game_id": "2026_06_CAR_PHI",
+    "season": 2026,
+    "week": 6,
+    "kickoff_at": "2026-10-18T17:00:00Z",
+    "home_team": "PHI",
+    "away_team": "CAR",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6666,
+     "538-classic": 0.750479
+    },
+    "home_win_probability_logit_mean": 0.710334,
+    "home_win_probability_linear_mean": 0.70854
+   },
+   {
+    "game_id": "2026_06_CHI_ATL",
+    "season": 2026,
+    "week": 6,
+    "kickoff_at": "2026-10-18T17:00:00Z",
+    "home_team": "ATL",
+    "away_team": "CHI",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5034,
+     "538-classic": 0.512609
+    },
+    "home_win_probability_logit_mean": 0.508005,
+    "home_win_probability_linear_mean": 0.508005
+   },
+   {
+    "game_id": "2026_06_DAL_GB",
+    "season": 2026,
+    "week": 6,
+    "kickoff_at": "2026-10-19T00:20:00Z",
+    "home_team": "GB",
+    "away_team": "DAL",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5709,
+     "538-classic": 0.682425
+    },
+    "home_win_probability_logit_mean": 0.62837,
+    "home_win_probability_linear_mean": 0.626662
+   },
+   {
+    "game_id": "2026_06_HOU_JAX",
+    "season": 2026,
+    "week": 6,
+    "kickoff_at": "2026-10-18T13:30:00Z",
+    "home_team": "JAX",
+    "away_team": "HOU",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5682,
+     "538-classic": 0.444213
+    },
+    "home_win_probability_logit_mean": 0.506303,
+    "home_win_probability_linear_mean": 0.506207
+   },
+   {
+    "game_id": "2026_06_LAC_KC",
+    "season": 2026,
+    "week": 6,
+    "kickoff_at": "2026-10-18T20:25:00Z",
+    "home_team": "KC",
+    "away_team": "LAC",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6308,
+     "538-classic": 0.537652
+    },
+    "home_win_probability_logit_mean": 0.584985,
+    "home_win_probability_linear_mean": 0.584226
+   },
+   {
+    "game_id": "2026_06_NO_NYG",
+    "season": 2026,
+    "week": 6,
+    "kickoff_at": "2026-10-18T17:00:00Z",
+    "home_team": "NYG",
+    "away_team": "NO",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5763,
+     "538-classic": 0.573024
+    },
+    "home_win_probability_logit_mean": 0.574663,
+    "home_win_probability_linear_mean": 0.574662
+   },
+   {
+    "game_id": "2026_06_NYJ_NE",
+    "season": 2026,
+    "week": 6,
+    "kickoff_at": "2026-10-18T17:00:00Z",
+    "home_team": "NE",
+    "away_team": "NYJ",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.7598,
+     "538-classic": 0.84862
+    },
+    "home_win_probability_logit_mean": 0.808098,
+    "home_win_probability_linear_mean": 0.80421
+   },
+   {
+    "game_id": "2026_06_PIT_TB",
+    "season": 2026,
+    "week": 6,
+    "kickoff_at": "2026-10-18T17:00:00Z",
+    "home_team": "TB",
+    "away_team": "PIT",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5375,
+     "538-classic": 0.551189
+    },
+    "home_win_probability_logit_mean": 0.544353,
+    "home_win_probability_linear_mean": 0.544345
+   },
+   {
+    "game_id": "2026_06_SEA_DEN",
+    "season": 2026,
+    "week": 6,
+    "kickoff_at": "2026-10-16T00:15:00Z",
+    "home_team": "DEN",
+    "away_team": "SEA",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4905,
+     "538-classic": 0.495109
+    },
+    "home_win_probability_logit_mean": 0.492804,
+    "home_win_probability_linear_mean": 0.492805
+   },
+   {
+    "game_id": "2026_06_TEN_IND",
+    "season": 2026,
+    "week": 6,
+    "kickoff_at": "2026-10-18T17:00:00Z",
+    "home_team": "IND",
+    "away_team": "TEN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6562,
+     "538-classic": 0.733788
+    },
+    "home_win_probability_logit_mean": 0.69639,
+    "home_win_probability_linear_mean": 0.694994
+   },
+   {
+    "game_id": "2026_06_WAS_SF",
+    "season": 2026,
+    "week": 6,
+    "kickoff_at": "2026-10-20T00:15:00Z",
+    "home_team": "SF",
+    "away_team": "WAS",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6232,
+     "538-classic": 0.719031
+    },
+    "home_win_probability_logit_mean": 0.672917,
+    "home_win_probability_linear_mean": 0.671116
+   },
+   {
+    "game_id": "2026_07_CIN_BAL",
+    "season": 2026,
+    "week": 7,
+    "kickoff_at": "2026-10-25T17:00:00Z",
+    "home_team": "BAL",
+    "away_team": "CIN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.631,
+     "538-classic": 0.67703
+    },
+    "home_win_probability_logit_mean": 0.654376,
+    "home_win_probability_linear_mean": 0.654015
+   },
+   {
+    "game_id": "2026_07_CLE_TEN",
+    "season": 2026,
+    "week": 7,
+    "kickoff_at": "2026-10-25T17:00:00Z",
+    "home_team": "TEN",
+    "away_team": "CLE",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5128,
+     "538-classic": 0.496952
+    },
+    "home_win_probability_logit_mean": 0.504877,
+    "home_win_probability_linear_mean": 0.504876
+   },
+   {
+    "game_id": "2026_07_DAL_PHI",
+    "season": 2026,
+    "week": 7,
+    "kickoff_at": "2026-10-27T00:15:00Z",
+    "home_team": "PHI",
+    "away_team": "DAL",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6221,
+     "538-classic": 0.718924
+    },
+    "home_win_probability_logit_mean": 0.672343,
+    "home_win_probability_linear_mean": 0.670512
+   },
+   {
+    "game_id": "2026_07_DEN_ARI",
+    "season": 2026,
+    "week": 7,
+    "kickoff_at": "2026-10-25T20:05:00Z",
+    "home_team": "ARI",
+    "away_team": "DEN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.3909,
+     "538-classic": 0.299554
+    },
+    "home_win_probability_logit_mean": 0.343784,
+    "home_win_probability_linear_mean": 0.345227
+   },
+   {
+    "game_id": "2026_07_GB_DET",
+    "season": 2026,
+    "week": 7,
+    "kickoff_at": "2026-10-25T20:25:00Z",
+    "home_team": "DET",
+    "away_team": "GB",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6394,
+     "538-classic": 0.632609
+    },
+    "home_win_probability_logit_mean": 0.636011,
+    "home_win_probability_linear_mean": 0.636005
+   },
+   {
+    "game_id": "2026_07_IND_MIN",
+    "season": 2026,
+    "week": 7,
+    "kickoff_at": "2026-10-25T17:00:00Z",
+    "home_team": "MIN",
+    "away_team": "IND",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6514,
+     "538-classic": 0.69915
+    },
+    "home_win_probability_logit_mean": 0.675732,
+    "home_win_probability_linear_mean": 0.675275
+   },
+   {
+    "game_id": "2026_07_KC_SEA",
+    "season": 2026,
+    "week": 7,
+    "kickoff_at": "2026-10-26T00:20:00Z",
+    "home_team": "SEA",
+    "away_team": "KC",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6689,
+     "538-classic": 0.807954
+    },
+    "home_win_probability_logit_mean": 0.744595,
+    "home_win_probability_linear_mean": 0.738427
+   },
+   {
+    "game_id": "2026_07_LAR_LV",
+    "season": 2026,
+    "week": 7,
+    "kickoff_at": "2026-10-25T20:25:00Z",
+    "home_team": "LV",
+    "away_team": "LAR",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.3807,
+     "538-classic": 0.244036
+    },
+    "home_win_probability_logit_mean": 0.308183,
+    "home_win_probability_linear_mean": 0.312368
+   },
+   {
+    "game_id": "2026_07_MIA_NYJ",
+    "season": 2026,
+    "week": 7,
+    "kickoff_at": "2026-10-25T17:00:00Z",
+    "home_team": "NYJ",
+    "away_team": "MIA",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4954,
+     "538-classic": 0.453776
+    },
+    "home_win_probability_logit_mean": 0.474544,
+    "home_win_probability_linear_mean": 0.474588
+   },
+   {
+    "game_id": "2026_07_NE_CHI",
+    "season": 2026,
+    "week": 7,
+    "kickoff_at": "2026-10-23T00:15:00Z",
+    "home_team": "CHI",
+    "away_team": "NE",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5259,
+     "538-classic": 0.496788
+    },
+    "home_win_probability_logit_mean": 0.511354,
+    "home_win_probability_linear_mean": 0.511344
+   },
+   {
+    "game_id": "2026_07_NYG_HOU",
+    "season": 2026,
+    "week": 7,
+    "kickoff_at": "2026-10-25T17:00:00Z",
+    "home_team": "HOU",
+    "away_team": "NYG",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.655,
+     "538-classic": 0.806886
+    },
+    "home_win_probability_logit_mean": 0.73798,
+    "home_win_probability_linear_mean": 0.730943
+   },
+   {
+    "game_id": "2026_07_PIT_NO",
+    "season": 2026,
+    "week": 7,
+    "kickoff_at": "2026-10-25T13:30:00Z",
+    "home_team": "NO",
+    "away_team": "PIT",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.504,
+     "538-classic": 0.398792
+    },
+    "home_win_probability_logit_mean": 0.450847,
+    "home_win_probability_linear_mean": 0.451396
+   },
+   {
+    "game_id": "2026_07_SF_ATL",
+    "season": 2026,
+    "week": 7,
+    "kickoff_at": "2026-10-25T17:00:00Z",
+    "home_team": "ATL",
+    "away_team": "SF",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4868,
+     "538-classic": 0.467273
+    },
+    "home_win_probability_logit_mean": 0.477028,
+    "home_win_probability_linear_mean": 0.477037
+   },
+   {
+    "game_id": "2026_07_TB_CAR",
+    "season": 2026,
+    "week": 7,
+    "kickoff_at": "2026-10-25T17:00:00Z",
+    "home_team": "CAR",
+    "away_team": "TB",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5298,
+     "538-classic": 0.522296
+    },
+    "home_win_probability_logit_mean": 0.526049,
+    "home_win_probability_linear_mean": 0.526048
+   },
+   {
+    "game_id": "2026_08_ARI_DAL",
+    "season": 2026,
+    "week": 8,
+    "kickoff_at": "2026-11-01T18:00:00Z",
+    "home_team": "DAL",
+    "away_team": "ARI",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6443,
+     "538-classic": 0.680209
+    },
+    "home_win_probability_logit_mean": 0.662489,
+    "home_win_probability_linear_mean": 0.662255
+   },
+   {
+    "game_id": "2026_08_ATL_TB",
+    "season": 2026,
+    "week": 8,
+    "kickoff_at": "2026-11-01T18:00:00Z",
+    "home_team": "TB",
+    "away_team": "ATL",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5658,
+     "538-classic": 0.602825
+    },
+    "home_win_probability_logit_mean": 0.584432,
+    "home_win_probability_linear_mean": 0.584313
+   },
+   {
+    "game_id": "2026_08_BAL_BUF",
+    "season": 2026,
+    "week": 8,
+    "kickoff_at": "2026-11-01T18:00:00Z",
+    "home_team": "BUF",
+    "away_team": "BAL",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5971,
+     "538-classic": 0.676038
+    },
+    "home_win_probability_logit_mean": 0.637495,
+    "home_win_probability_linear_mean": 0.636569
+   },
+   {
+    "game_id": "2026_08_CAR_GB",
+    "season": 2026,
+    "week": 8,
+    "kickoff_at": "2026-10-30T00:15:00Z",
+    "home_team": "GB",
+    "away_team": "CAR",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6173,
+     "538-classic": 0.716461
+    },
+    "home_win_probability_logit_mean": 0.66875,
+    "home_win_probability_linear_mean": 0.666881
+   },
+   {
+    "game_id": "2026_08_CHI_SEA",
+    "season": 2026,
+    "week": 8,
+    "kickoff_at": "2026-11-03T01:15:00Z",
+    "home_team": "SEA",
+    "away_team": "CHI",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6768,
+     "538-classic": 0.76984
+    },
+    "home_win_probability_logit_mean": 0.725768,
+    "home_win_probability_linear_mean": 0.72332
+   },
+   {
+    "game_id": "2026_08_CLE_PIT",
+    "season": 2026,
+    "week": 8,
+    "kickoff_at": "2026-11-01T18:00:00Z",
+    "home_team": "PIT",
+    "away_team": "CLE",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6302,
+     "538-classic": 0.703867
+    },
+    "home_win_probability_logit_mean": 0.668061,
+    "home_win_probability_linear_mean": 0.667034
+   },
+   {
+    "game_id": "2026_08_IND_JAX",
+    "season": 2026,
+    "week": 8,
+    "kickoff_at": "2026-11-01T18:00:00Z",
+    "home_team": "JAX",
+    "away_team": "IND",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6378,
+     "538-classic": 0.721832
+    },
+    "home_win_probability_logit_mean": 0.681288,
+    "home_win_probability_linear_mean": 0.679816
+   },
+   {
+    "game_id": "2026_08_KC_DEN",
+    "season": 2026,
+    "week": 8,
+    "kickoff_at": "2026-11-01T21:25:00Z",
+    "home_team": "DEN",
+    "away_team": "KC",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6,
+     "538-classic": 0.739436
+    },
+    "home_win_probability_logit_mean": 0.673543,
+    "home_win_probability_linear_mean": 0.669718
+   },
+   {
+    "game_id": "2026_08_LAC_LAR",
+    "season": 2026,
+    "week": 8,
+    "kickoff_at": "2026-11-01T21:05:00Z",
+    "home_team": "LAR",
+    "away_team": "LAC",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6759,
+     "538-classic": 0.699833
+    },
+    "home_win_probability_logit_mean": 0.687992,
+    "home_win_probability_linear_mean": 0.687866
+   },
+   {
+    "game_id": "2026_08_LV_NYJ",
+    "season": 2026,
+    "week": 8,
+    "kickoff_at": "2026-11-01T18:00:00Z",
+    "home_team": "NYJ",
+    "away_team": "LV",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5107,
+     "538-classic": 0.610674
+    },
+    "home_win_probability_logit_mean": 0.561309,
+    "home_win_probability_linear_mean": 0.560687
+   },
+   {
+    "game_id": "2026_08_MIN_DET",
+    "season": 2026,
+    "week": 8,
+    "kickoff_at": "2026-11-01T18:00:00Z",
+    "home_team": "DET",
+    "away_team": "MIN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.569,
+     "538-classic": 0.601505
+    },
+    "home_win_probability_logit_mean": 0.585345,
+    "home_win_probability_linear_mean": 0.585253
+   },
+   {
+    "game_id": "2026_08_NE_MIA",
+    "season": 2026,
+    "week": 8,
+    "kickoff_at": "2026-11-01T21:25:00Z",
+    "home_team": "MIA",
+    "away_team": "NE",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4146,
+     "538-classic": 0.397502
+    },
+    "home_win_probability_logit_mean": 0.406023,
+    "home_win_probability_linear_mean": 0.406051
+   },
+   {
+    "game_id": "2026_08_PHI_WAS",
+    "season": 2026,
+    "week": 8,
+    "kickoff_at": "2026-11-02T01:20:00Z",
+    "home_team": "WAS",
+    "away_team": "PHI",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5019,
+     "538-classic": 0.457302
+    },
+    "home_win_probability_logit_mean": 0.47956,
+    "home_win_probability_linear_mean": 0.479601
+   },
+   {
+    "game_id": "2026_08_TEN_CIN",
+    "season": 2026,
+    "week": 8,
+    "kickoff_at": "2026-11-01T18:00:00Z",
+    "home_team": "CIN",
+    "away_team": "TEN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.672,
+     "538-classic": 0.74737
+    },
+    "home_win_probability_logit_mean": 0.711143,
+    "home_win_probability_linear_mean": 0.709685
+   },
+   {
+    "game_id": "2026_09_ARI_SEA",
+    "season": 2026,
+    "week": 9,
+    "kickoff_at": "2026-11-08T21:25:00Z",
+    "home_team": "SEA",
+    "away_team": "ARI",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.782,
+     "538-classic": 0.879901
+    },
+    "home_win_probability_logit_mean": 0.836775,
+    "home_win_probability_linear_mean": 0.830951
+   },
+   {
+    "game_id": "2026_09_BUF_MIN",
+    "season": 2026,
+    "week": 9,
+    "kickoff_at": "2026-11-10T01:15:00Z",
+    "home_team": "MIN",
+    "away_team": "BUF",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5337,
+     "538-classic": 0.511275
+    },
+    "home_win_probability_logit_mean": 0.522499,
+    "home_win_probability_linear_mean": 0.522488
+   },
+   {
+    "game_id": "2026_09_CIN_ATL",
+    "season": 2026,
+    "week": 9,
+    "kickoff_at": "2026-11-08T14:30:00Z",
+    "home_team": "ATL",
+    "away_team": "CIN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5408,
+     "538-classic": 0.488935
+    },
+    "home_win_probability_logit_mean": 0.514908,
+    "home_win_probability_linear_mean": 0.514868
+   },
+   {
+    "game_id": "2026_09_CLE_NO",
+    "season": 2026,
+    "week": 9,
+    "kickoff_at": "2026-11-08T18:00:00Z",
+    "home_team": "NO",
+    "away_team": "CLE",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5726,
+     "538-classic": 0.611894
+    },
+    "home_win_probability_logit_mean": 0.592395,
+    "home_win_probability_linear_mean": 0.592247
+   },
+   {
+    "game_id": "2026_09_DAL_IND",
+    "season": 2026,
+    "week": 9,
+    "kickoff_at": "2026-11-08T18:00:00Z",
+    "home_team": "IND",
+    "away_team": "DAL",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5527,
+     "538-classic": 0.605286
+    },
+    "home_win_probability_logit_mean": 0.579218,
+    "home_win_probability_linear_mean": 0.578993
+   },
+   {
+    "game_id": "2026_09_DEN_CAR",
+    "season": 2026,
+    "week": 9,
+    "kickoff_at": "2026-11-08T18:00:00Z",
+    "home_team": "CAR",
+    "away_team": "DEN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4262,
+     "538-classic": 0.347307
+    },
+    "home_win_probability_logit_mean": 0.386005,
+    "home_win_probability_linear_mean": 0.386754
+   },
+   {
+    "game_id": "2026_09_DET_MIA",
+    "season": 2026,
+    "week": 9,
+    "kickoff_at": "2026-11-08T18:00:00Z",
+    "home_team": "MIA",
+    "away_team": "DET",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4099,
+     "538-classic": 0.453793
+    },
+    "home_win_probability_logit_mean": 0.431712,
+    "home_win_probability_linear_mean": 0.431847
+   },
+   {
+    "game_id": "2026_09_GB_NE",
+    "season": 2026,
+    "week": 9,
+    "kickoff_at": "2026-11-08T21:25:00Z",
+    "home_team": "NE",
+    "away_team": "GB",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6348,
+     "538-classic": 0.684376
+    },
+    "home_win_probability_logit_mean": 0.660026,
+    "home_win_probability_linear_mean": 0.659588
+   },
+   {
+    "game_id": "2026_09_HOU_LAC",
+    "season": 2026,
+    "week": 9,
+    "kickoff_at": "2026-11-08T21:05:00Z",
+    "home_team": "LAC",
+    "away_team": "HOU",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4854,
+     "538-classic": 0.478704
+    },
+    "home_win_probability_logit_mean": 0.482051,
+    "home_win_probability_linear_mean": 0.482052
+   },
+   {
+    "game_id": "2026_09_JAX_BAL",
+    "season": 2026,
+    "week": 9,
+    "kickoff_at": "2026-11-06T01:15:00Z",
+    "home_team": "BAL",
+    "away_team": "JAX",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5732,
+     "538-classic": 0.55761
+    },
+    "home_win_probability_logit_mean": 0.565421,
+    "home_win_probability_linear_mean": 0.565405
+   },
+   {
+    "game_id": "2026_09_LAR_WAS",
+    "season": 2026,
+    "week": 9,
+    "kickoff_at": "2026-11-08T18:00:00Z",
+    "home_team": "WAS",
+    "away_team": "LAR",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4611,
+     "538-classic": 0.383192
+    },
+    "home_win_probability_logit_mean": 0.421659,
+    "home_win_probability_linear_mean": 0.422146
+   },
+   {
+    "game_id": "2026_09_LV_SF",
+    "season": 2026,
+    "week": 9,
+    "kickoff_at": "2026-11-08T21:05:00Z",
+    "home_team": "SF",
+    "away_team": "LV",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6985,
+     "538-classic": 0.831223
+    },
+    "home_win_probability_logit_mean": 0.771578,
+    "home_win_probability_linear_mean": 0.764862
+   },
+   {
+    "game_id": "2026_09_NYG_PHI",
+    "season": 2026,
+    "week": 9,
+    "kickoff_at": "2026-11-08T18:00:00Z",
+    "home_team": "PHI",
+    "away_team": "NYG",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6544,
+     "538-classic": 0.757316
+    },
+    "home_win_probability_logit_mean": 0.708524,
+    "home_win_probability_linear_mean": 0.705858
+   },
+   {
+    "game_id": "2026_09_NYJ_KC",
+    "season": 2026,
+    "week": 9,
+    "kickoff_at": "2026-11-08T18:00:00Z",
+    "home_team": "KC",
+    "away_team": "NYJ",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.7367,
+     "538-classic": 0.75165
+    },
+    "home_win_probability_logit_mean": 0.744247,
+    "home_win_probability_linear_mean": 0.744175
+   },
+   {
+    "game_id": "2026_09_TB_CHI",
+    "season": 2026,
+    "week": 9,
+    "kickoff_at": "2026-11-09T01:20:00Z",
+    "home_team": "CHI",
+    "away_team": "TB",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6196,
+     "538-classic": 0.658094
+    },
+    "home_win_probability_logit_mean": 0.63907,
+    "home_win_probability_linear_mean": 0.638847
+   },
+   {
+    "game_id": "2026_10_BUF_NYJ",
+    "season": 2026,
+    "week": 10,
+    "kickoff_at": "2026-11-15T18:00:00Z",
+    "home_team": "NYJ",
+    "away_team": "BUF",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.3229,
+     "538-classic": 0.261837
+    },
+    "home_win_probability_logit_mean": 0.291428,
+    "home_win_probability_linear_mean": 0.292369
+   },
+   {
+    "game_id": "2026_10_CAR_NO",
+    "season": 2026,
+    "week": 10,
+    "kickoff_at": "2026-11-15T18:00:00Z",
+    "home_team": "NO",
+    "away_team": "CAR",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5636,
+     "538-classic": 0.602834
+    },
+    "home_win_probability_logit_mean": 0.583349,
+    "home_win_probability_linear_mean": 0.583217
+   },
+   {
+    "game_id": "2026_10_HOU_CLE",
+    "season": 2026,
+    "week": 10,
+    "kickoff_at": "2026-11-15T18:00:00Z",
+    "home_team": "CLE",
+    "away_team": "HOU",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4457,
+     "538-classic": 0.335659
+    },
+    "home_win_probability_logit_mean": 0.38927,
+    "home_win_probability_linear_mean": 0.390679
+   },
+   {
+    "game_id": "2026_10_JAX_TEN",
+    "season": 2026,
+    "week": 10,
+    "kickoff_at": "2026-11-15T18:00:00Z",
+    "home_team": "TEN",
+    "away_team": "JAX",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.3912,
+     "538-classic": 0.300486
+    },
+    "home_win_probability_logit_mean": 0.344427,
+    "home_win_probability_linear_mean": 0.345843
+   },
+   {
+    "game_id": "2026_10_KC_ATL",
+    "season": 2026,
+    "week": 10,
+    "kickoff_at": "2026-11-15T18:00:00Z",
+    "home_team": "ATL",
+    "away_team": "KC",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4946,
+     "538-classic": 0.569501
+    },
+    "home_win_probability_logit_mean": 0.532232,
+    "home_win_probability_linear_mean": 0.532051
+   },
+   {
+    "game_id": "2026_10_LAC_BAL",
+    "season": 2026,
+    "week": 10,
+    "kickoff_at": "2026-11-17T01:15:00Z",
+    "home_team": "BAL",
+    "away_team": "LAC",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6529,
+     "538-classic": 0.614624
+    },
+    "home_win_probability_logit_mean": 0.633973,
+    "home_win_probability_linear_mean": 0.633762
+   },
+   {
+    "game_id": "2026_10_LAR_ARI",
+    "season": 2026,
+    "week": 10,
+    "kickoff_at": "2026-11-15T21:05:00Z",
+    "home_team": "ARI",
+    "away_team": "LAR",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.3802,
+     "538-classic": 0.293974
+    },
+    "home_win_probability_logit_mean": 0.335719,
+    "home_win_probability_linear_mean": 0.337087
+   },
+   {
+    "game_id": "2026_10_MIA_IND",
+    "season": 2026,
+    "week": 10,
+    "kickoff_at": "2026-11-15T18:00:00Z",
+    "home_team": "IND",
+    "away_team": "MIA",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6191,
+     "538-classic": 0.605167
+    },
+    "home_win_probability_logit_mean": 0.612156,
+    "home_win_probability_linear_mean": 0.612134
+   },
+   {
+    "game_id": "2026_10_MIN_GB",
+    "season": 2026,
+    "week": 10,
+    "kickoff_at": "2026-11-15T18:00:00Z",
+    "home_team": "GB",
+    "away_team": "MIN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4905,
+     "538-classic": 0.560326
+    },
+    "home_win_probability_logit_mean": 0.525538,
+    "home_win_probability_linear_mean": 0.525413
+   },
+   {
+    "game_id": "2026_10_NE_DET",
+    "season": 2026,
+    "week": 10,
+    "kickoff_at": "2026-11-15T14:30:00Z",
+    "home_team": "DET",
+    "away_team": "NE",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5682,
+     "538-classic": 0.442622
+    },
+    "home_win_probability_logit_mean": 0.505498,
+    "home_win_probability_linear_mean": 0.505411
+   },
+   {
+    "game_id": "2026_10_PIT_CIN",
+    "season": 2026,
+    "week": 10,
+    "kickoff_at": "2026-11-16T01:20:00Z",
+    "home_team": "CIN",
+    "away_team": "PIT",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5577,
+     "538-classic": 0.551482
+    },
+    "home_win_probability_logit_mean": 0.554593,
+    "home_win_probability_linear_mean": 0.554591
+   },
+   {
+    "game_id": "2026_10_SEA_LV",
+    "season": 2026,
+    "week": 10,
+    "kickoff_at": "2026-11-15T21:05:00Z",
+    "home_team": "LV",
+    "away_team": "SEA",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.3232,
+     "538-classic": 0.182773
+    },
+    "home_win_probability_logit_mean": 0.24631,
+    "home_win_probability_linear_mean": 0.252987
+   },
+   {
+    "game_id": "2026_10_SF_DAL",
+    "season": 2026,
+    "week": 10,
+    "kickoff_at": "2026-11-15T21:25:00Z",
+    "home_team": "DAL",
+    "away_team": "SF",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5032,
+     "538-classic": 0.447469
+    },
+    "home_win_probability_logit_mean": 0.475257,
+    "home_win_probability_linear_mean": 0.475335
+   },
+   {
+    "game_id": "2026_10_WAS_NYG",
+    "season": 2026,
+    "week": 10,
+    "kickoff_at": "2026-11-13T01:15:00Z",
+    "home_team": "NYG",
+    "away_team": "WAS",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5305,
+     "538-classic": 0.538846
+    },
+    "home_win_probability_logit_mean": 0.534675,
+    "home_win_probability_linear_mean": 0.534673
+   },
+   {
+    "game_id": "2026_11_ARI_KC",
+    "season": 2026,
+    "week": 11,
+    "kickoff_at": "2026-11-22T18:00:00Z",
+    "home_team": "KC",
+    "away_team": "ARI",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6921,
+     "538-classic": 0.716851
+    },
+    "home_win_probability_logit_mean": 0.704626,
+    "home_win_probability_linear_mean": 0.704476
+   },
+   {
+    "game_id": "2026_11_BAL_CAR",
+    "season": 2026,
+    "week": 11,
+    "kickoff_at": "2026-11-22T18:00:00Z",
+    "home_team": "CAR",
+    "away_team": "BAL",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4399,
+     "538-classic": 0.430962
+    },
+    "home_win_probability_logit_mean": 0.435426,
+    "home_win_probability_linear_mean": 0.435431
+   },
+   {
+    "game_id": "2026_11_CIN_WAS",
+    "season": 2026,
+    "week": 11,
+    "kickoff_at": "2026-11-24T01:15:00Z",
+    "home_team": "WAS",
+    "away_team": "CIN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5558,
+     "538-classic": 0.567014
+    },
+    "home_win_probability_logit_mean": 0.561415,
+    "home_win_probability_linear_mean": 0.561407
+   },
+   {
+    "game_id": "2026_11_IND_HOU",
+    "season": 2026,
+    "week": 11,
+    "kickoff_at": "2026-11-20T01:15:00Z",
+    "home_team": "HOU",
+    "away_team": "IND",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.633,
+     "538-classic": 0.764524
+    },
+    "home_win_probability_logit_mean": 0.702948,
+    "home_win_probability_linear_mean": 0.698762
+   },
+   {
+    "game_id": "2026_11_JAX_NYG",
+    "season": 2026,
+    "week": 11,
+    "kickoff_at": "2026-11-22T18:00:00Z",
+    "home_team": "NYG",
+    "away_team": "JAX",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4632,
+     "538-classic": 0.387583
+    },
+    "home_win_probability_logit_mean": 0.424953,
+    "home_win_probability_linear_mean": 0.425392
+   },
+   {
+    "game_id": "2026_11_LV_DEN",
+    "season": 2026,
+    "week": 11,
+    "kickoff_at": "2026-11-22T21:25:00Z",
+    "home_team": "DEN",
+    "away_team": "LV",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.7239,
+     "538-classic": 0.864394
+    },
+    "home_win_probability_logit_mean": 0.803463,
+    "home_win_probability_linear_mean": 0.794147
+   },
+   {
+    "game_id": "2026_11_MIA_BUF",
+    "season": 2026,
+    "week": 11,
+    "kickoff_at": "2026-11-22T18:00:00Z",
+    "home_team": "BUF",
+    "away_team": "MIA",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.7282,
+     "538-classic": 0.772976
+    },
+    "home_win_probability_logit_mean": 0.751261,
+    "home_win_probability_linear_mean": 0.750588
+   },
+   {
+    "game_id": "2026_11_MIN_SF",
+    "season": 2026,
+    "week": 11,
+    "kickoff_at": "2026-11-23T01:20:00Z",
+    "home_team": "SF",
+    "away_team": "MIN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5431,
+     "538-classic": 0.51565
+    },
+    "home_win_probability_logit_mean": 0.529397,
+    "home_win_probability_linear_mean": 0.529375
+   },
+   {
+    "game_id": "2026_11_NO_CHI",
+    "season": 2026,
+    "week": 11,
+    "kickoff_at": "2026-11-22T18:00:00Z",
+    "home_team": "CHI",
+    "away_team": "NO",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6512,
+     "538-classic": 0.710254
+    },
+    "home_win_probability_logit_mean": 0.681455,
+    "home_win_probability_linear_mean": 0.680727
+   },
+   {
+    "game_id": "2026_11_NYJ_LAC",
+    "season": 2026,
+    "week": 11,
+    "kickoff_at": "2026-11-22T21:05:00Z",
+    "home_team": "LAC",
+    "away_team": "NYJ",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6767,
+     "538-classic": 0.790958
+    },
+    "home_win_probability_logit_mean": 0.737822,
+    "home_win_probability_linear_mean": 0.733829
+   },
+   {
+    "game_id": "2026_11_PIT_PHI",
+    "season": 2026,
+    "week": 11,
+    "kickoff_at": "2026-11-22T21:25:00Z",
+    "home_team": "PHI",
+    "away_team": "PIT",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6105,
+     "538-classic": 0.656458
+    },
+    "home_win_probability_logit_mean": 0.633783,
+    "home_win_probability_linear_mean": 0.633479
+   },
+   {
+    "game_id": "2026_11_TB_DET",
+    "season": 2026,
+    "week": 11,
+    "kickoff_at": "2026-11-22T18:00:00Z",
+    "home_team": "DET",
+    "away_team": "TB",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6595,
+     "538-classic": 0.692387
+    },
+    "home_win_probability_logit_mean": 0.676161,
+    "home_win_probability_linear_mean": 0.675944
+   },
+   {
+    "game_id": "2026_11_TEN_DAL",
+    "season": 2026,
+    "week": 11,
+    "kickoff_at": "2026-11-22T18:00:00Z",
+    "home_team": "DAL",
+    "away_team": "TEN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6662,
+     "538-classic": 0.723234
+    },
+    "home_win_probability_logit_mean": 0.695467,
+    "home_win_probability_linear_mean": 0.694717
+   },
+   {
+    "game_id": "2026_12_ATL_MIN",
+    "season": 2026,
+    "week": 12,
+    "kickoff_at": "2026-11-29T18:00:00Z",
+    "home_team": "MIN",
+    "away_team": "ATL",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6566,
+     "538-classic": 0.69356
+    },
+    "home_win_probability_logit_mean": 0.675353,
+    "home_win_probability_linear_mean": 0.67508
+   },
+   {
+    "game_id": "2026_12_BAL_HOU",
+    "season": 2026,
+    "week": 12,
+    "kickoff_at": "2026-11-29T18:00:00Z",
+    "home_team": "HOU",
+    "away_team": "BAL",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5485,
+     "538-classic": 0.677204
+    },
+    "home_win_probability_logit_mean": 0.614859,
+    "home_win_probability_linear_mean": 0.612852
+   },
+   {
+    "game_id": "2026_12_CAR_TB",
+    "season": 2026,
+    "week": 12,
+    "kickoff_at": "2026-12-01T01:15:00Z",
+    "home_team": "TB",
+    "away_team": "CAR",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5964,
+     "538-classic": 0.659057
+    },
+    "home_win_probability_logit_mean": 0.628267,
+    "home_win_probability_linear_mean": 0.627729
+   },
+   {
+    "game_id": "2026_12_CHI_DET",
+    "season": 2026,
+    "week": 12,
+    "kickoff_at": "2026-11-26T18:00:00Z",
+    "home_team": "DET",
+    "away_team": "CHI",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.605,
+     "538-classic": 0.629637
+    },
+    "home_win_probability_logit_mean": 0.617394,
+    "home_win_probability_linear_mean": 0.617319
+   },
+   {
+    "game_id": "2026_12_DEN_PIT",
+    "season": 2026,
+    "week": 12,
+    "kickoff_at": "2026-11-27T20:00:00Z",
+    "home_team": "PIT",
+    "away_team": "DEN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4856,
+     "538-classic": 0.455796
+    },
+    "home_win_probability_logit_mean": 0.470672,
+    "home_win_probability_linear_mean": 0.470698
+   },
+   {
+    "game_id": "2026_12_GB_LAR",
+    "season": 2026,
+    "week": 12,
+    "kickoff_at": "2026-11-26T01:00:00Z",
+    "home_team": "LAR",
+    "away_team": "GB",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6533,
+     "538-classic": 0.701233
+    },
+    "home_win_probability_logit_mean": 0.677734,
+    "home_win_probability_linear_mean": 0.677267
+   },
+   {
+    "game_id": "2026_12_KC_BUF",
+    "season": 2026,
+    "week": 12,
+    "kickoff_at": "2026-11-27T01:20:00Z",
+    "home_team": "BUF",
+    "away_team": "KC",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6198,
+     "538-classic": 0.741067
+    },
+    "home_win_probability_logit_mean": 0.683545,
+    "home_win_probability_linear_mean": 0.680434
+   },
+   {
+    "game_id": "2026_12_LV_CLE",
+    "season": 2026,
+    "week": 12,
+    "kickoff_at": "2026-11-29T18:00:00Z",
+    "home_team": "CLE",
+    "away_team": "LV",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5894,
+     "538-classic": 0.691943
+    },
+    "home_win_probability_logit_mean": 0.642298,
+    "home_win_probability_linear_mean": 0.640672
+   },
+   {
+    "game_id": "2026_12_NE_LAC",
+    "season": 2026,
+    "week": 12,
+    "kickoff_at": "2026-11-30T01:20:00Z",
+    "home_team": "LAC",
+    "away_team": "NE",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.465,
+     "538-classic": 0.495265
+    },
+    "home_win_probability_logit_mean": 0.480114,
+    "home_win_probability_linear_mean": 0.480133
+   },
+   {
+    "game_id": "2026_12_NO_CIN",
+    "season": 2026,
+    "week": 12,
+    "kickoff_at": "2026-11-29T18:00:00Z",
+    "home_team": "CIN",
+    "away_team": "NO",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6158,
+     "538-classic": 0.649573
+    },
+    "home_win_probability_logit_mean": 0.63285,
+    "home_win_probability_linear_mean": 0.632686
+   },
+   {
+    "game_id": "2026_12_NYG_IND",
+    "season": 2026,
+    "week": 12,
+    "kickoff_at": "2026-11-29T18:00:00Z",
+    "home_team": "IND",
+    "away_team": "NYG",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5865,
+     "538-classic": 0.651679
+    },
+    "home_win_probability_logit_mean": 0.619628,
+    "home_win_probability_linear_mean": 0.61909
+   },
+   {
+    "game_id": "2026_12_NYJ_MIA",
+    "season": 2026,
+    "week": 12,
+    "kickoff_at": "2026-11-29T18:00:00Z",
+    "home_team": "MIA",
+    "away_team": "NYJ",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6295,
+     "538-classic": 0.717838
+    },
+    "home_win_probability_logit_mean": 0.675226,
+    "home_win_probability_linear_mean": 0.673669
+   },
+   {
+    "game_id": "2026_12_PHI_DAL",
+    "season": 2026,
+    "week": 12,
+    "kickoff_at": "2026-11-26T21:30:00Z",
+    "home_team": "DAL",
+    "away_team": "PHI",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5031,
+     "538-classic": 0.452446
+    },
+    "home_win_probability_logit_mean": 0.477716,
+    "home_win_probability_linear_mean": 0.477773
+   },
+   {
+    "game_id": "2026_12_SEA_SF",
+    "season": 2026,
+    "week": 12,
+    "kickoff_at": "2026-11-29T21:25:00Z",
+    "home_team": "SF",
+    "away_team": "SEA",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4609,
+     "538-classic": 0.431061
+    },
+    "home_win_probability_logit_mean": 0.445932,
+    "home_win_probability_linear_mean": 0.445981
+   },
+   {
+    "game_id": "2026_12_TEN_JAX",
+    "season": 2026,
+    "week": 12,
+    "kickoff_at": "2026-11-29T21:05:00Z",
+    "home_team": "JAX",
+    "away_team": "TEN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.7241,
+     "538-classic": 0.831083
+    },
+    "home_win_probability_logit_mean": 0.782298,
+    "home_win_probability_linear_mean": 0.777592
+   },
+   {
+    "game_id": "2026_12_WAS_ARI",
+    "season": 2026,
+    "week": 12,
+    "kickoff_at": "2026-11-29T21:25:00Z",
+    "home_team": "ARI",
+    "away_team": "WAS",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4809,
+     "538-classic": 0.493507
+    },
+    "home_win_probability_logit_mean": 0.487201,
+    "home_win_probability_linear_mean": 0.487204
+   },
+   {
+    "game_id": "2026_13_BUF_NE",
+    "season": 2026,
+    "week": 13,
+    "kickoff_at": "2026-12-06T21:25:00Z",
+    "home_team": "NE",
+    "away_team": "BUF",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5345,
+     "538-classic": 0.577667
+    },
+    "home_win_probability_logit_mean": 0.55619,
+    "home_win_probability_linear_mean": 0.556084
+   },
+   {
+    "game_id": "2026_13_CAR_MIN",
+    "season": 2026,
+    "week": 13,
+    "kickoff_at": "2026-12-06T21:25:00Z",
+    "home_team": "MIN",
+    "away_team": "CAR",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6849,
+     "538-classic": 0.742434
+    },
+    "home_win_probability_logit_mean": 0.714537,
+    "home_win_probability_linear_mean": 0.713667
+   },
+   {
+    "game_id": "2026_13_CIN_CLE",
+    "season": 2026,
+    "week": 13,
+    "kickoff_at": "2026-12-06T18:00:00Z",
+    "home_team": "CLE",
+    "away_team": "CIN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5004,
+     "538-classic": 0.512514
+    },
+    "home_win_probability_logit_mean": 0.506458,
+    "home_win_probability_linear_mean": 0.506457
+   },
+   {
+    "game_id": "2026_13_DAL_SEA",
+    "season": 2026,
+    "week": 13,
+    "kickoff_at": "2026-12-08T01:15:00Z",
+    "home_team": "SEA",
+    "away_team": "DAL",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.7152,
+     "538-classic": 0.833541
+    },
+    "home_win_probability_logit_mean": 0.780032,
+    "home_win_probability_linear_mean": 0.774371
+   },
+   {
+    "game_id": "2026_13_DET_ATL",
+    "season": 2026,
+    "week": 13,
+    "kickoff_at": "2026-12-06T18:00:00Z",
+    "home_team": "ATL",
+    "away_team": "DET",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4608,
+     "538-classic": 0.473514
+    },
+    "home_win_probability_logit_mean": 0.467152,
+    "home_win_probability_linear_mean": 0.467157
+   },
+   {
+    "game_id": "2026_13_GB_NO",
+    "season": 2026,
+    "week": 13,
+    "kickoff_at": "2026-12-06T18:00:00Z",
+    "home_team": "NO",
+    "away_team": "GB",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5084,
+     "538-classic": 0.466173
+    },
+    "home_win_probability_logit_mean": 0.487264,
+    "home_win_probability_linear_mean": 0.487286
+   },
+   {
+    "game_id": "2026_13_HOU_PIT",
+    "season": 2026,
+    "week": 13,
+    "kickoff_at": "2026-12-07T01:20:00Z",
+    "home_team": "PIT",
+    "away_team": "HOU",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5145,
+     "538-classic": 0.452372
+    },
+    "home_win_probability_logit_mean": 0.483372,
+    "home_win_probability_linear_mean": 0.483436
+   },
+   {
+    "game_id": "2026_13_JAX_CHI",
+    "season": 2026,
+    "week": 13,
+    "kickoff_at": "2026-12-06T18:00:00Z",
+    "home_team": "CHI",
+    "away_team": "JAX",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5412,
+     "538-classic": 0.536171
+    },
+    "home_win_probability_logit_mean": 0.538686,
+    "home_win_probability_linear_mean": 0.538685
+   },
+   {
+    "game_id": "2026_13_KC_LAR",
+    "season": 2026,
+    "week": 13,
+    "kickoff_at": "2026-12-04T01:15:00Z",
+    "home_team": "LAR",
+    "away_team": "KC",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6109,
+     "538-classic": 0.744555
+    },
+    "home_win_probability_logit_mean": 0.681449,
+    "home_win_probability_linear_mean": 0.677728
+   },
+   {
+    "game_id": "2026_13_LAC_TB",
+    "season": 2026,
+    "week": 13,
+    "kickoff_at": "2026-12-06T18:00:00Z",
+    "home_team": "TB",
+    "away_team": "LAC",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5664,
+     "538-classic": 0.524884
+    },
+    "home_win_probability_logit_mean": 0.545721,
+    "home_win_probability_linear_mean": 0.545642
+   },
+   {
+    "game_id": "2026_13_MIA_DEN",
+    "season": 2026,
+    "week": 13,
+    "kickoff_at": "2026-12-06T21:05:00Z",
+    "home_team": "DEN",
+    "away_team": "MIA",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.7109,
+     "538-classic": 0.771483
+    },
+    "home_win_probability_logit_mean": 0.742352,
+    "home_win_probability_linear_mean": 0.741192
+   },
+   {
+    "game_id": "2026_13_PHI_ARI",
+    "season": 2026,
+    "week": 13,
+    "kickoff_at": "2026-12-06T21:05:00Z",
+    "home_team": "ARI",
+    "away_team": "PHI",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4197,
+     "538-classic": 0.360925
+    },
+    "home_win_probability_logit_mean": 0.389913,
+    "home_win_probability_linear_mean": 0.390313
+   },
+   {
+    "game_id": "2026_13_SF_NYG",
+    "season": 2026,
+    "week": 13,
+    "kickoff_at": "2026-12-06T18:00:00Z",
+    "home_team": "NYG",
+    "away_team": "SF",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4689,
+     "538-classic": 0.398962
+    },
+    "home_win_probability_logit_mean": 0.4336,
+    "home_win_probability_linear_mean": 0.433931
+   },
+   {
+    "game_id": "2026_13_WAS_TEN",
+    "season": 2026,
+    "week": 13,
+    "kickoff_at": "2026-12-06T18:00:00Z",
+    "home_team": "TEN",
+    "away_team": "WAS",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4573,
+     "538-classic": 0.442308
+    },
+    "home_win_probability_logit_mean": 0.449793,
+    "home_win_probability_linear_mean": 0.449804
+   },
+   {
+    "game_id": "2026_14_ATL_CLE",
+    "season": 2026,
+    "week": 14,
+    "kickoff_at": "2026-12-13T18:00:00Z",
+    "home_team": "CLE",
+    "away_team": "ATL",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5231,
+     "538-classic": 0.523566
+    },
+    "home_win_probability_logit_mean": 0.523333,
+    "home_win_probability_linear_mean": 0.523333
+   },
+   {
+    "game_id": "2026_14_BUF_GB",
+    "season": 2026,
+    "week": 14,
+    "kickoff_at": "2026-12-14T01:20:00Z",
+    "home_team": "GB",
+    "away_team": "BUF",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4607,
+     "538-classic": 0.478368
+    },
+    "home_win_probability_logit_mean": 0.469524,
+    "home_win_probability_linear_mean": 0.469534
+   },
+   {
+    "game_id": "2026_14_CHI_MIA",
+    "season": 2026,
+    "week": 14,
+    "kickoff_at": "2026-12-13T18:00:00Z",
+    "home_team": "MIA",
+    "away_team": "CHI",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4518,
+     "538-classic": 0.492784
+    },
+    "home_win_probability_logit_mean": 0.472245,
+    "home_win_probability_linear_mean": 0.472292
+   },
+   {
+    "game_id": "2026_14_DEN_NYJ",
+    "season": 2026,
+    "week": 14,
+    "kickoff_at": "2026-12-13T18:00:00Z",
+    "home_team": "NYJ",
+    "away_team": "DEN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.3416,
+     "538-classic": 0.26348
+    },
+    "home_win_probability_logit_mean": 0.3011,
+    "home_win_probability_linear_mean": 0.30254
+   },
+   {
+    "game_id": "2026_14_HOU_WAS",
+    "season": 2026,
+    "week": 14,
+    "kickoff_at": "2026-12-13T18:00:00Z",
+    "home_team": "WAS",
+    "away_team": "HOU",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5012,
+     "538-classic": 0.386253
+    },
+    "home_win_probability_logit_mean": 0.442963,
+    "home_win_probability_linear_mean": 0.443727
+   },
+   {
+    "game_id": "2026_14_IND_PHI",
+    "season": 2026,
+    "week": 14,
+    "kickoff_at": "2026-12-13T18:00:00Z",
+    "home_team": "PHI",
+    "away_team": "IND",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6324,
+     "538-classic": 0.708015
+    },
+    "home_win_probability_logit_mean": 0.671316,
+    "home_win_probability_linear_mean": 0.670208
+   },
+   {
+    "game_id": "2026_14_KC_CIN",
+    "season": 2026,
+    "week": 14,
+    "kickoff_at": "2026-12-13T21:25:00Z",
+    "home_team": "CIN",
+    "away_team": "KC",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5174,
+     "538-classic": 0.580318
+    },
+    "home_win_probability_logit_mean": 0.549055,
+    "home_win_probability_linear_mean": 0.548859
+   },
+   {
+    "game_id": "2026_14_LAC_LV",
+    "season": 2026,
+    "week": 14,
+    "kickoff_at": "2026-12-13T21:05:00Z",
+    "home_team": "LV",
+    "away_team": "LAC",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4972,
+     "538-classic": 0.341112
+    },
+    "home_win_probability_logit_mean": 0.41708,
+    "home_win_probability_linear_mean": 0.419156
+   },
+   {
+    "game_id": "2026_14_LAR_SF",
+    "season": 2026,
+    "week": 14,
+    "kickoff_at": "2026-12-13T21:25:00Z",
+    "home_team": "SF",
+    "away_team": "LAR",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5227,
+     "538-classic": 0.522352
+    },
+    "home_win_probability_logit_mean": 0.522526,
+    "home_win_probability_linear_mean": 0.522526
+   },
+   {
+    "game_id": "2026_14_MIN_NE",
+    "season": 2026,
+    "week": 14,
+    "kickoff_at": "2026-12-11T01:15:00Z",
+    "home_team": "NE",
+    "away_team": "MIN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5641,
+     "538-classic": 0.655266
+    },
+    "home_win_probability_logit_mean": 0.61065,
+    "home_win_probability_linear_mean": 0.609683
+   },
+   {
+    "game_id": "2026_14_NO_CAR",
+    "season": 2026,
+    "week": 14,
+    "kickoff_at": "2026-12-13T18:00:00Z",
+    "home_team": "CAR",
+    "away_team": "NO",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5632,
+     "538-classic": 0.582015
+    },
+    "home_win_probability_logit_mean": 0.572634,
+    "home_win_probability_linear_mean": 0.572607
+   },
+   {
+    "game_id": "2026_14_NYG_SEA",
+    "season": 2026,
+    "week": 14,
+    "kickoff_at": "2026-12-13T21:25:00Z",
+    "home_team": "SEA",
+    "away_team": "NYG",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.7437,
+     "538-classic": 0.859341
+    },
+    "home_win_probability_logit_mean": 0.808076,
+    "home_win_probability_linear_mean": 0.801521
+   },
+   {
+    "game_id": "2026_14_PIT_JAX",
+    "season": 2026,
+    "week": 14,
+    "kickoff_at": "2026-12-15T01:15:00Z",
+    "home_team": "JAX",
+    "away_team": "PIT",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.616,
+     "538-classic": 0.671582
+    },
+    "home_win_probability_logit_mean": 0.644277,
+    "home_win_probability_linear_mean": 0.643791
+   },
+   {
+    "game_id": "2026_14_TB_BAL",
+    "season": 2026,
+    "week": 14,
+    "kickoff_at": "2026-12-13T18:00:00Z",
+    "home_team": "BAL",
+    "away_team": "TB",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.65,
+     "538-classic": 0.677289
+    },
+    "home_win_probability_logit_mean": 0.663781,
+    "home_win_probability_linear_mean": 0.663645
+   },
+   {
+    "game_id": "2026_14_TEN_DET",
+    "season": 2026,
+    "week": 14,
+    "kickoff_at": "2026-12-13T18:00:00Z",
+    "home_team": "DET",
+    "away_team": "TEN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.7409,
+     "538-classic": 0.820624
+    },
+    "home_win_probability_logit_mean": 0.783404,
+    "home_win_probability_linear_mean": 0.780762
+   },
+   {
+    "game_id": "2026_15_ATL_WAS",
+    "season": 2026,
+    "week": 15,
+    "kickoff_at": "2026-12-20T18:00:00Z",
+    "home_team": "WAS",
+    "away_team": "ATL",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5783,
+     "538-classic": 0.577848
+    },
+    "home_win_probability_logit_mean": 0.578074,
+    "home_win_probability_linear_mean": 0.578074
+   },
+   {
+    "game_id": "2026_15_BAL_PIT",
+    "season": 2026,
+    "week": 15,
+    "kickoff_at": "2026-12-20T18:00:00Z",
+    "home_team": "PIT",
+    "away_team": "BAL",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4995,
+     "538-classic": 0.54381
+    },
+    "home_win_probability_logit_mean": 0.521698,
+    "home_win_probability_linear_mean": 0.521655
+   },
+   {
+    "game_id": "2026_15_CHI_BUF",
+    "season": 2026,
+    "week": 15,
+    "kickoff_at": "2026-12-20T01:20:00Z",
+    "home_team": "BUF",
+    "away_team": "CHI",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6282,
+     "538-classic": 0.694694
+    },
+    "home_win_probability_logit_mean": 0.662248,
+    "home_win_probability_linear_mean": 0.661447
+   },
+   {
+    "game_id": "2026_15_CIN_CAR",
+    "season": 2026,
+    "week": 15,
+    "kickoff_at": "2026-12-20T18:00:00Z",
+    "home_team": "CAR",
+    "away_team": "CIN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5095,
+     "538-classic": 0.522001
+    },
+    "home_win_probability_logit_mean": 0.515753,
+    "home_win_probability_linear_mean": 0.515751
+   },
+   {
+    "game_id": "2026_15_CLE_NYG",
+    "season": 2026,
+    "week": 15,
+    "kickoff_at": "2026-12-20T18:00:00Z",
+    "home_team": "NYG",
+    "away_team": "CLE",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5855,
+     "538-classic": 0.592741
+    },
+    "home_win_probability_logit_mean": 0.589125,
+    "home_win_probability_linear_mean": 0.58912
+   },
+   {
+    "game_id": "2026_15_DAL_LAR",
+    "season": 2026,
+    "week": 15,
+    "kickoff_at": "2026-12-20T21:25:00Z",
+    "home_team": "LAR",
+    "away_team": "DAL",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6603,
+     "538-classic": 0.77625
+    },
+    "home_win_probability_logit_mean": 0.721977,
+    "home_win_probability_linear_mean": 0.718275
+   },
+   {
+    "game_id": "2026_15_DEN_LV",
+    "season": 2026,
+    "week": 15,
+    "kickoff_at": "2026-12-20T21:25:00Z",
+    "home_team": "LV",
+    "away_team": "DEN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.3914,
+     "538-classic": 0.249003
+    },
+    "home_win_probability_logit_mean": 0.315899,
+    "home_win_probability_linear_mean": 0.320202
+   },
+   {
+    "game_id": "2026_15_DET_MIN",
+    "season": 2026,
+    "week": 15,
+    "kickoff_at": "2026-12-21T01:20:00Z",
+    "home_team": "MIN",
+    "away_team": "DET",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5578,
+     "538-classic": 0.583365
+    },
+    "home_win_probability_logit_mean": 0.57063,
+    "home_win_probability_linear_mean": 0.570583
+   },
+   {
+    "game_id": "2026_15_IND_TEN",
+    "season": 2026,
+    "week": 15,
+    "kickoff_at": "2026-12-20T18:00:00Z",
+    "home_team": "TEN",
+    "away_team": "IND",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4668,
+     "538-classic": 0.43399
+    },
+    "home_win_probability_logit_mean": 0.450341,
+    "home_win_probability_linear_mean": 0.450395
+   },
+   {
+    "game_id": "2026_15_JAX_HOU",
+    "season": 2026,
+    "week": 15,
+    "kickoff_at": "2026-12-20T18:00:00Z",
+    "home_team": "HOU",
+    "away_team": "JAX",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5584,
+     "538-classic": 0.645256
+    },
+    "home_win_probability_logit_mean": 0.602636,
+    "home_win_probability_linear_mean": 0.601828
+   },
+   {
+    "game_id": "2026_15_MIA_GB",
+    "season": 2026,
+    "week": 15,
+    "kickoff_at": "2026-12-20T18:00:00Z",
+    "home_team": "GB",
+    "away_team": "MIA",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6366,
+     "538-classic": 0.682317
+    },
+    "home_win_probability_logit_mean": 0.65983,
+    "home_win_probability_linear_mean": 0.659459
+   },
+   {
+    "game_id": "2026_15_NE_KC",
+    "season": 2026,
+    "week": 15,
+    "kickoff_at": "2026-12-22T01:15:00Z",
+    "home_team": "KC",
+    "away_team": "NE",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5346,
+     "538-classic": 0.43974
+    },
+    "home_win_probability_logit_mean": 0.487053,
+    "home_win_probability_linear_mean": 0.48717
+   },
+   {
+    "game_id": "2026_15_NO_TB",
+    "season": 2026,
+    "week": 15,
+    "kickoff_at": "2026-12-20T18:00:00Z",
+    "home_team": "TB",
+    "away_team": "NO",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5962,
+     "538-classic": 0.649303
+    },
+    "home_win_probability_logit_mean": 0.623121,
+    "home_win_probability_linear_mean": 0.622751
+   },
+   {
+    "game_id": "2026_15_NYJ_ARI",
+    "season": 2026,
+    "week": 15,
+    "kickoff_at": "2026-12-20T21:05:00Z",
+    "home_team": "ARI",
+    "away_team": "NYJ",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6144,
+     "538-classic": 0.634763
+    },
+    "home_win_probability_logit_mean": 0.624637,
+    "home_win_probability_linear_mean": 0.624581
+   },
+   {
+    "game_id": "2026_15_SEA_PHI",
+    "season": 2026,
+    "week": 15,
+    "kickoff_at": "2026-12-19T22:00:00Z",
+    "home_team": "PHI",
+    "away_team": "SEA",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.461,
+     "538-classic": 0.426136
+    },
+    "home_win_probability_logit_mean": 0.443498,
+    "home_win_probability_linear_mean": 0.443568
+   },
+   {
+    "game_id": "2026_15_SF_LAC",
+    "season": 2026,
+    "week": 15,
+    "kickoff_at": "2026-12-18T01:15:00Z",
+    "home_team": "LAC",
+    "away_team": "SF",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4862,
+     "538-classic": 0.5465
+    },
+    "home_win_probability_logit_mean": 0.51641,
+    "home_win_probability_linear_mean": 0.51635
+   },
+   {
+    "game_id": "2026_16_ARI_NO",
+    "season": 2026,
+    "week": 16,
+    "kickoff_at": "2026-12-27T18:00:00Z",
+    "home_team": "NO",
+    "away_team": "ARI",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.599,
+     "538-classic": 0.653806
+    },
+    "home_win_probability_logit_mean": 0.62681,
+    "home_win_probability_linear_mean": 0.626403
+   },
+   {
+    "game_id": "2026_16_BUF_DEN",
+    "season": 2026,
+    "week": 16,
+    "kickoff_at": "2026-12-25T21:30:00Z",
+    "home_team": "DEN",
+    "away_team": "BUF",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.543,
+     "538-classic": 0.590416
+    },
+    "home_win_probability_logit_mean": 0.566861,
+    "home_win_probability_linear_mean": 0.566708
+   },
+   {
+    "game_id": "2026_16_CAR_PIT",
+    "season": 2026,
+    "week": 16,
+    "kickoff_at": "2026-12-27T18:00:00Z",
+    "home_team": "PIT",
+    "away_team": "CAR",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6215,
+     "538-classic": 0.695888
+    },
+    "home_win_probability_logit_mean": 0.659677,
+    "home_win_probability_linear_mean": 0.658694
+   },
+   {
+    "game_id": "2026_16_CIN_IND",
+    "season": 2026,
+    "week": 16,
+    "kickoff_at": "2026-12-27T18:00:00Z",
+    "home_team": "IND",
+    "away_team": "CIN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5463,
+     "538-classic": 0.575289
+    },
+    "home_win_probability_logit_mean": 0.560846,
+    "home_win_probability_linear_mean": 0.560795
+   },
+   {
+    "game_id": "2026_16_CLE_BAL",
+    "season": 2026,
+    "week": 16,
+    "kickoff_at": "2026-12-27T18:00:00Z",
+    "home_team": "BAL",
+    "away_team": "CLE",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.689,
+     "538-classic": 0.743504
+    },
+    "home_win_probability_logit_mean": 0.717046,
+    "home_win_probability_linear_mean": 0.716252
+   },
+   {
+    "game_id": "2026_16_GB_CHI",
+    "season": 2026,
+    "week": 16,
+    "kickoff_at": "2026-12-25T18:00:00Z",
+    "home_team": "CHI",
+    "away_team": "GB",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5988,
+     "538-classic": 0.595544
+    },
+    "home_win_probability_logit_mean": 0.597173,
+    "home_win_probability_linear_mean": 0.597172
+   },
+   {
+    "game_id": "2026_16_HOU_PHI",
+    "season": 2026,
+    "week": 16,
+    "kickoff_at": "2026-12-25T01:15:00Z",
+    "home_team": "PHI",
+    "away_team": "HOU",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5627,
+     "538-classic": 0.52056
+    },
+    "home_win_probability_logit_mean": 0.541705,
+    "home_win_probability_linear_mean": 0.54163
+   },
+   {
+    "game_id": "2026_16_JAX_DAL",
+    "season": 2026,
+    "week": 16,
+    "kickoff_at": "2026-12-28T01:20:00Z",
+    "home_team": "DAL",
+    "away_team": "JAX",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4975,
+     "538-classic": 0.435709
+    },
+    "home_win_probability_logit_mean": 0.466476,
+    "home_win_probability_linear_mean": 0.466605
+   },
+   {
+    "game_id": "2026_16_LAC_MIA",
+    "season": 2026,
+    "week": 16,
+    "kickoff_at": "2026-12-27T18:00:00Z",
+    "home_team": "MIA",
+    "away_team": "LAC",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5126,
+     "538-classic": 0.494307
+    },
+    "home_win_probability_logit_mean": 0.503455,
+    "home_win_probability_linear_mean": 0.503454
+   },
+   {
+    "game_id": "2026_16_LAR_SEA",
+    "season": 2026,
+    "week": 16,
+    "kickoff_at": "2026-12-26T01:15:00Z",
+    "home_team": "SEA",
+    "away_team": "LAR",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6235,
+     "538-classic": 0.67725
+    },
+    "home_win_probability_logit_mean": 0.650854,
+    "home_win_probability_linear_mean": 0.650375
+   },
+   {
+    "game_id": "2026_16_NE_NYJ",
+    "season": 2026,
+    "week": 16,
+    "kickoff_at": "2026-12-27T18:00:00Z",
+    "home_team": "NYJ",
+    "away_team": "NE",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.3495,
+     "538-classic": 0.27379
+    },
+    "home_win_probability_logit_mean": 0.310377,
+    "home_win_probability_linear_mean": 0.311645
+   },
+   {
+    "game_id": "2026_16_NYG_DET",
+    "season": 2026,
+    "week": 16,
+    "kickoff_at": "2026-12-29T01:15:00Z",
+    "home_team": "DET",
+    "away_team": "NYG",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6781,
+     "538-classic": 0.756407
+    },
+    "home_win_probability_logit_mean": 0.718911,
+    "home_win_probability_linear_mean": 0.717254
+   },
+   {
+    "game_id": "2026_16_SF_KC",
+    "season": 2026,
+    "week": 16,
+    "kickoff_at": "2026-12-27T21:25:00Z",
+    "home_team": "KC",
+    "away_team": "SF",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5557,
+     "538-classic": 0.490817
+    },
+    "home_win_probability_logit_mean": 0.523357,
+    "home_win_probability_linear_mean": 0.523259
+   },
+   {
+    "game_id": "2026_16_TB_ATL",
+    "season": 2026,
+    "week": 16,
+    "kickoff_at": "2026-12-27T18:00:00Z",
+    "home_team": "ATL",
+    "away_team": "TB",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5609,
+     "538-classic": 0.582024
+    },
+    "home_win_probability_logit_mean": 0.571495,
+    "home_win_probability_linear_mean": 0.571462
+   },
+   {
+    "game_id": "2026_16_TEN_LV",
+    "season": 2026,
+    "week": 16,
+    "kickoff_at": "2026-12-27T21:05:00Z",
+    "home_team": "LV",
+    "away_team": "TEN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5871,
+     "538-classic": 0.58066
+    },
+    "home_win_probability_logit_mean": 0.583884,
+    "home_win_probability_linear_mean": 0.58388
+   },
+   {
+    "game_id": "2026_16_WAS_MIN",
+    "season": 2026,
+    "week": 16,
+    "kickoff_at": "2026-12-27T18:00:00Z",
+    "home_team": "MIN",
+    "away_team": "WAS",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6425,
+     "538-classic": 0.706209
+    },
+    "home_win_probability_logit_mean": 0.675164,
+    "home_win_probability_linear_mean": 0.674355
+   },
+   {
+    "game_id": "2026_17_BAL_CIN",
+    "season": 2026,
+    "week": 17,
+    "kickoff_at": "2027-01-01T01:15:00Z",
+    "home_team": "CIN",
+    "away_team": "BAL",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4938,
+     "538-classic": 0.502046
+    },
+    "home_win_probability_logit_mean": 0.497923,
+    "home_win_probability_linear_mean": 0.497923
+   },
+   {
+    "game_id": "2026_17_BUF_MIA",
+    "season": 2026,
+    "week": 17,
+    "kickoff_at": "2027-01-03T18:00:00Z",
+    "home_team": "MIA",
+    "away_team": "BUF",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.3865,
+     "538-classic": 0.382996
+    },
+    "home_win_probability_logit_mean": 0.384747,
+    "home_win_probability_linear_mean": 0.384748
+   },
+   {
+    "game_id": "2026_17_DEN_NE",
+    "season": 2026,
+    "week": 17,
+    "kickoff_at": "2027-01-03T18:00:00Z",
+    "home_team": "NE",
+    "away_team": "DEN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5549,
+     "538-classic": 0.579736
+    },
+    "home_win_probability_logit_mean": 0.56736,
+    "home_win_probability_linear_mean": 0.567318
+   },
+   {
+    "game_id": "2026_17_DET_CHI",
+    "season": 2026,
+    "week": 17,
+    "kickoff_at": "2027-01-03T21:25:00Z",
+    "home_team": "CHI",
+    "away_team": "DET",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.521,
+     "538-classic": 0.554206
+    },
+    "home_win_probability_logit_mean": 0.537645,
+    "home_win_probability_linear_mean": 0.537603
+   },
+   {
+    "game_id": "2026_17_HOU_GB",
+    "season": 2026,
+    "week": 17,
+    "kickoff_at": "2027-01-05T01:15:00Z",
+    "home_team": "GB",
+    "away_team": "HOU",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5101,
+     "538-classic": 0.477039
+    },
+    "home_win_probability_logit_mean": 0.493562,
+    "home_win_probability_linear_mean": 0.49357
+   },
+   {
+    "game_id": "2026_17_IND_CLE",
+    "season": 2026,
+    "week": 17,
+    "kickoff_at": "2027-01-03T18:00:00Z",
+    "home_team": "CLE",
+    "away_team": "IND",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5175,
+     "538-classic": 0.530157
+    },
+    "home_win_probability_logit_mean": 0.523832,
+    "home_win_probability_linear_mean": 0.523829
+   },
+   {
+    "game_id": "2026_17_KC_LAC",
+    "season": 2026,
+    "week": 17,
+    "kickoff_at": "2027-01-03T18:00:00Z",
+    "home_team": "LAC",
+    "away_team": "KC",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4939,
+     "538-classic": 0.645072
+    },
+    "home_win_probability_logit_mean": 0.571145,
+    "home_win_probability_linear_mean": 0.569486
+   },
+   {
+    "game_id": "2026_17_LAR_TB",
+    "season": 2026,
+    "week": 17,
+    "kickoff_at": "2027-01-03T18:00:00Z",
+    "home_team": "TB",
+    "away_team": "LAR",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4485,
+     "538-classic": 0.407885
+    },
+    "home_win_probability_logit_mean": 0.428071,
+    "home_win_probability_linear_mean": 0.428193
+   },
+   {
+    "game_id": "2026_17_LV_ARI",
+    "season": 2026,
+    "week": 17,
+    "kickoff_at": "2027-01-03T21:05:00Z",
+    "home_team": "ARI",
+    "away_team": "LV",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5628,
+     "538-classic": 0.652191
+    },
+    "home_win_probability_logit_mean": 0.608404,
+    "home_win_probability_linear_mean": 0.607496
+   },
+   {
+    "game_id": "2026_17_MIN_NYJ",
+    "season": 2026,
+    "week": 17,
+    "kickoff_at": "2027-01-03T18:00:00Z",
+    "home_team": "NYJ",
+    "away_team": "MIN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.3502,
+     "538-classic": 0.330178
+    },
+    "home_win_probability_logit_mean": 0.340118,
+    "home_win_probability_linear_mean": 0.340189
+   },
+   {
+    "game_id": "2026_17_NO_ATL",
+    "season": 2026,
+    "week": 17,
+    "kickoff_at": "2027-01-03T18:00:00Z",
+    "home_team": "ATL",
+    "away_team": "NO",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5938,
+     "538-classic": 0.639431
+    },
+    "home_win_probability_logit_mean": 0.616873,
+    "home_win_probability_linear_mean": 0.616616
+   },
+   {
+    "game_id": "2026_17_NYG_DAL",
+    "season": 2026,
+    "week": 17,
+    "kickoff_at": "2027-01-03T18:00:00Z",
+    "home_team": "DAL",
+    "away_team": "NYG",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.597,
+     "538-classic": 0.639469
+    },
+    "home_win_probability_logit_mean": 0.618461,
+    "home_win_probability_linear_mean": 0.618235
+   },
+   {
+    "game_id": "2026_17_PHI_SF",
+    "season": 2026,
+    "week": 17,
+    "kickoff_at": "2027-01-04T01:20:00Z",
+    "home_team": "SF",
+    "away_team": "PHI",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5633,
+     "538-classic": 0.597313
+    },
+    "home_win_probability_logit_mean": 0.580402,
+    "home_win_probability_linear_mean": 0.580307
+   },
+   {
+    "game_id": "2026_17_PIT_TEN",
+    "season": 2026,
+    "week": 17,
+    "kickoff_at": "2027-01-03T18:00:00Z",
+    "home_team": "TEN",
+    "away_team": "PIT",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.444,
+     "538-classic": 0.376647
+    },
+    "home_win_probability_logit_mean": 0.409901,
+    "home_win_probability_linear_mean": 0.410324
+   },
+   {
+    "game_id": "2026_17_SEA_CAR",
+    "season": 2026,
+    "week": 17,
+    "kickoff_at": "2027-01-03T18:00:00Z",
+    "home_team": "CAR",
+    "away_team": "SEA",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.356,
+     "538-classic": 0.264126
+    },
+    "home_win_probability_logit_mean": 0.308168,
+    "home_win_probability_linear_mean": 0.310063
+   },
+   {
+    "game_id": "2026_17_WAS_JAX",
+    "season": 2026,
+    "week": 17,
+    "kickoff_at": "2027-01-03T18:00:00Z",
+    "home_team": "JAX",
+    "away_team": "WAS",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6287,
+     "538-classic": 0.728565
+    },
+    "home_win_probability_logit_mean": 0.680702,
+    "home_win_probability_linear_mean": 0.678633
+   },
+   {
+    "game_id": "2026_18_ATL_CAR",
+    "season": 2026,
+    "week": 18,
+    "kickoff_at": "2027-01-10T18:00:00Z",
+    "home_team": "CAR",
+    "away_team": "ATL",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5323,
+     "538-classic": 0.533033
+    },
+    "home_win_probability_logit_mean": 0.532667,
+    "home_win_probability_linear_mean": 0.532666
+   },
+   {
+    "game_id": "2026_18_CHI_MIN",
+    "season": 2026,
+    "week": 18,
+    "kickoff_at": "2027-01-10T18:00:00Z",
+    "home_team": "MIN",
+    "away_team": "CHI",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5995,
+     "538-classic": 0.620835
+    },
+    "home_win_probability_logit_mean": 0.61022,
+    "home_win_probability_linear_mean": 0.610168
+   },
+   {
+    "game_id": "2026_18_CLE_CIN",
+    "season": 2026,
+    "week": 18,
+    "kickoff_at": "2027-01-10T18:00:00Z",
+    "home_team": "CIN",
+    "away_team": "CLE",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6248,
+     "538-classic": 0.667804
+    },
+    "home_win_probability_logit_mean": 0.646599,
+    "home_win_probability_linear_mean": 0.646302
+   },
+   {
+    "game_id": "2026_18_DAL_WAS",
+    "season": 2026,
+    "week": 18,
+    "kickoff_at": "2027-01-10T18:00:00Z",
+    "home_team": "WAS",
+    "away_team": "DAL",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5621,
+     "538-classic": 0.597186
+    },
+    "home_win_probability_logit_mean": 0.579744,
+    "home_win_probability_linear_mean": 0.579643
+   },
+   {
+    "game_id": "2026_18_DET_GB",
+    "season": 2026,
+    "week": 18,
+    "kickoff_at": "2027-01-10T18:00:00Z",
+    "home_team": "GB",
+    "away_team": "DET",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4848,
+     "538-classic": 0.55105
+    },
+    "home_win_probability_logit_mean": 0.518004,
+    "home_win_probability_linear_mean": 0.517925
+   },
+   {
+    "game_id": "2026_18_JAX_IND",
+    "season": 2026,
+    "week": 18,
+    "kickoff_at": "2027-01-10T18:00:00Z",
+    "home_team": "IND",
+    "away_team": "JAX",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4867,
+     "538-classic": 0.448873
+    },
+    "home_win_probability_logit_mean": 0.46774,
+    "home_win_probability_linear_mean": 0.467787
+   },
+   {
+    "game_id": "2026_18_LAC_DEN",
+    "season": 2026,
+    "week": 18,
+    "kickoff_at": "2027-01-10T18:00:00Z",
+    "home_team": "DEN",
+    "away_team": "LAC",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6657,
+     "538-classic": 0.694186
+    },
+    "home_win_probability_logit_mean": 0.680111,
+    "home_win_probability_linear_mean": 0.679943
+   },
+   {
+    "game_id": "2026_18_LV_KC",
+    "season": 2026,
+    "week": 18,
+    "kickoff_at": "2027-01-10T18:00:00Z",
+    "home_team": "KC",
+    "away_team": "LV",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6917,
+     "538-classic": 0.76556
+    },
+    "home_win_probability_logit_mean": 0.730221,
+    "home_win_probability_linear_mean": 0.72863
+   },
+   {
+    "game_id": "2026_18_MIA_NE",
+    "season": 2026,
+    "week": 18,
+    "kickoff_at": "2027-01-10T18:00:00Z",
+    "home_team": "NE",
+    "away_team": "MIA",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.7035,
+     "538-classic": 0.762099
+    },
+    "home_win_probability_logit_mean": 0.733826,
+    "home_win_probability_linear_mean": 0.7328
+   },
+   {
+    "game_id": "2026_18_NYJ_BUF",
+    "season": 2026,
+    "week": 18,
+    "kickoff_at": "2027-01-10T18:00:00Z",
+    "home_team": "BUF",
+    "away_team": "NYJ",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.7819,
+     "538-classic": 0.856287
+    },
+    "home_win_probability_logit_mean": 0.82212,
+    "home_win_probability_linear_mean": 0.819094
+   },
+   {
+    "game_id": "2026_18_PHI_NYG",
+    "season": 2026,
+    "week": 18,
+    "kickoff_at": "2027-01-10T18:00:00Z",
+    "home_team": "NYG",
+    "away_team": "PHI",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4688,
+     "538-classic": 0.403794
+    },
+    "home_win_probability_logit_mean": 0.436022,
+    "home_win_probability_linear_mean": 0.436297
+   },
+   {
+    "game_id": "2026_18_PIT_BAL",
+    "season": 2026,
+    "week": 18,
+    "kickoff_at": "2027-01-10T18:00:00Z",
+    "home_team": "BAL",
+    "away_team": "PIT",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.6255,
+     "538-classic": 0.639374
+    },
+    "home_win_probability_logit_mean": 0.632464,
+    "home_win_probability_linear_mean": 0.632437
+   },
+   {
+    "game_id": "2026_18_SEA_LAR",
+    "season": 2026,
+    "week": 18,
+    "kickoff_at": "2027-01-10T18:00:00Z",
+    "home_team": "LAR",
+    "away_team": "SEA",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.5017,
+     "538-classic": 0.501794
+    },
+    "home_win_probability_logit_mean": 0.501747,
+    "home_win_probability_linear_mean": 0.501747
+   },
+   {
+    "game_id": "2026_18_SF_ARI",
+    "season": 2026,
+    "week": 18,
+    "kickoff_at": "2027-01-10T18:00:00Z",
+    "home_team": "ARI",
+    "away_team": "SF",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.4198,
+     "538-classic": 0.356299
+    },
+    "home_win_probability_logit_mean": 0.387572,
+    "home_win_probability_linear_mean": 0.38805
+   },
+   {
+    "game_id": "2026_18_TB_NO",
+    "season": 2026,
+    "week": 18,
+    "kickoff_at": "2027-01-10T18:00:00Z",
+    "home_team": "NO",
+    "away_team": "TB",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.53,
+     "538-classic": 0.533042
+    },
+    "home_win_probability_logit_mean": 0.531521,
+    "home_win_probability_linear_mean": 0.531521
+   },
+   {
+    "game_id": "2026_18_TEN_HOU",
+    "season": 2026,
+    "week": 18,
+    "kickoff_at": "2027-01-10T18:00:00Z",
+    "home_team": "HOU",
+    "away_team": "TEN",
+    "captured_at": "2026-08-08T00:42:55.946323Z",
+    "inputs": {
+     "nfelo": 0.72,
+     "538-classic": 0.860254
+    },
+    "home_win_probability_logit_mean": 0.799141,
+    "home_win_probability_linear_mean": 0.790127
+   }
+  ]
+ },
+ "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
+ "canonical_url": "https://datadawgs216.com/data/ddpr-nfl.json"
+}

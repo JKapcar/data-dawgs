@@ -728,12 +728,21 @@ tr.sv-used td{opacity:.42}
 /* ⚠️ The description gets its OWN full-width row, not a block inside the first cell.
    Under table-layout:fixed a long sentence in a 42%-wide cell does not stay inside it --
    it painted straight across the Settled, Pending and Machine read columns and collided
-   with their text. A colspan row wraps naturally and cannot overlap anything. Both the
-   overflow and the collision were found by looking at the PNG; document scrollWidth was
-   0 the whole time. */
+   with their text. Both the overflow and the collision were found by looking at the PNG;
+   document scrollWidth was 0 the whole time.
+
+   ⚠️⚠️ `white-space:normal` IS THE LOAD-BEARING DECLARATION, and Stage RI shipped without
+   it. That stage's comment here claimed "a colspan row wraps naturally" -- it does not.
+   The GLOBAL `td{...white-space:nowrap}` at the top of this file applies to every cell on
+   the page, so this row never wrapped at all; all four original sentences (103-169 chars)
+   simply fit on one 1080px line, and the scroll-box assertion passed because nothing had
+   yet been long enough to fail it. Stage MS added a 290-char description and .inv-wrap
+   scrolled +791px on the first run. `overflow-wrap:anywhere` alone does NOT rescue this:
+   it breaks inside a word only once wrapping is permitted, and nowrap forbids wrapping.
+   Do not remove `white-space:normal` on the theory that the colspan handles it. */
 #sheetInv .inv-tbl tr.inv-main>td{border-bottom:0;padding-bottom:2px}
 #sheetInv .inv-tbl tr.inv-desc>td{padding-top:0;color:var(--ink-3);font-size:12.5px;
-  line-height:1.45;overflow-wrap:anywhere}
+  line-height:1.45;overflow-wrap:anywhere;white-space:normal}
 #sheetInv .inv-tbl tbody tr.inv-desc:last-child>td{border-bottom:0}
 #sheetInv .inv-load{padding:16px;color:var(--ink-3);font-size:13px}
 #sheetInv .inv-err{color:#d13a00;font-weight:700}
@@ -2953,12 +2962,21 @@ async function loadInventory(){
     mdlEl("invPending").textContent=invNum(ag.pending);
 
     /* ⚠️ The correction that makes the table honest. The builder publishes the wrong
-       number on purpose so the page can name it. */
+       number on purpose so the page can name it.
+       ⚠️⚠️ THE LIST OF VIEWS IS DERIVED, NOT WRITTEN OUT. This sentence used to read "the
+       pre-registered calls and the 538 Classic beliefs are both views of..." — true when
+       there were two, and quietly incomplete the moment Stage MS added the DDPR ensemble as
+       a third. A correction that itself goes stale is worse than no correction, because a
+       reader who has just been told to distrust the column sum has no reason to distrust
+       this. Name them from the payload, and let the superset flag decide which they are. */
+    const views=led.filter(l=>!l.superset&&l.registered>0);
     mdlEl("invOverlap").innerHTML=
       `<b>Do not add the Registered column up.</b> It comes to ${invNum(ag.naive_sum)}, which `+
-      `counts the same NFL forecast more than once: the pre-registered calls and the 538 `+
-      `Classic beliefs are both views of rows already inside the append-only ledger, not `+
-      `extra forecasts alongside it. The honest aggregates are the two on the left &mdash; `+
+      `counts the same NFL forecast more than once: `+
+      `${views.map(l=>mdlEsc(l.name)).join(", ")} `+
+      `${views.length===1?"is a view":"are all views"} of rows already inside the `+
+      `append-only ledger, not extra forecasts alongside it. The honest aggregates are the `+
+      `two on the left &mdash; `+
       `${invNum(ag.forecasts)} distinct forecasts across ${invNum(ag.games)} games &mdash; `+
       `counted from <a href="${mdlEsc(ag.counted_from||"")}"><code>`+
       `${mdlEsc(String(ag.counted_from||"").replace("/data/",""))}</code></a> alone, never `+

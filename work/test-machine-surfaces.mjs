@@ -57,6 +57,52 @@ ok("every registered count in llms.txt equals the registry",
    registeredClaims.every(n => n === counts.mcp_tools_registered),
    `claims ${JSON.stringify(registeredClaims)} vs registry ${counts.mcp_tools_registered}`);
 
+/* ---------- llms.txt agrees with the receipt LEDGER, not just the tool registry ----------
+   ⚠️ WHY THIS BLOCK EXISTS. The three checks above guard MCP tool counts and nothing else.
+   On 2026-08-10 Stage MS appended two DDPR lines to data/model-receipts.json, taking it from
+   544 rows to 1,088, and llms.txt went on telling every crawler "544 append-only prospective
+   forecasts across nfelo and 538 Classic" — a false count AND a false model list. All 19
+   assertions in this suite stayed green. That is the exact failure this file was written to
+   make impossible, one payload over from where it was first caught.
+   Read the ledger itself rather than surfaces.json: the number is only in surfaces.json as
+   prose inside a `covers` string, and grading prose against prose proves nothing. */
+const LEDGER = JSON.parse(read("data/model-receipts.json"));
+const ledgerRows = LEDGER.data.length;
+const ledgerModels = [...new Set(LEDGER.data.map(r => r.model_id))];
+
+/* Match the number with or without thousands separators, so reformatting 1088 as 1,088
+   cannot make the claim invisible to this check. */
+const rowClaims = [...llms.matchAll(/([\d,]+)\s+append-only prospective forecasts/gi)]
+  .map(m => +m[1].replace(/,/g, ""));
+ok("llms.txt states a receipt-ledger row count at all", rowClaims.length > 0,
+   "no 'N append-only prospective forecasts' claim found");
+ok("every receipt-ledger row count in llms.txt equals the ledger",
+   rowClaims.every(n => n === ledgerRows),
+   `claims ${JSON.stringify(rowClaims)} vs ledger ${ledgerRows}`);
+
+const modelLineClaims = [...llms.matchAll(/([\d,]+)\s+model lines/gi)]
+  .map(m => +m[1].replace(/,/g, ""));
+ok("llms.txt states how many model lines the ledger carries", modelLineClaims.length > 0,
+   "no 'N model lines' claim found");
+ok("every model-line count in llms.txt equals the ledger",
+   modelLineClaims.every(n => n === ledgerModels.length),
+   `claims ${JSON.stringify(modelLineClaims)} vs ledger ${ledgerModels.length} (${ledgerModels})`);
+
+/* ⚠️ NOT a count check. Three of the four lines are functions of nfelo, so a reader told
+   "4 model lines" and nothing else is told there is more independent evidence here than
+   there is. The independence figure is measured in data/ddpr-nfl.json from prospective
+   forecasts alone, and llms.txt has to carry it. */
+const DDPR = JSON.parse(read("data/ddpr-nfl.json"));
+const independentSources = DDPR.data.input_model_ids.length;
+const independentClaims = [...llms.matchAll(/([\d,]+)\s+independent/gi)]
+  .map(m => +m[1].replace(/,/g, ""));
+ok("llms.txt does not let the model-line count imply independent evidence",
+   independentClaims.length > 0 && independentClaims.every(n => n === independentSources),
+   `claims ${JSON.stringify(independentClaims)} vs ${independentSources} independent inputs`);
+ok("the ledger carries strictly more model lines than independent sources, so the claim matters",
+   ledgerModels.length > independentSources,
+   `${ledgerModels.length} lines vs ${independentSources} sources`);
+
 /* Staged is not live. If anything is staged, llms.txt has to say so by name, or a reader is
    told 43 tools exist and left to discover that one of them does not answer. */
 if (staged.length) {

@@ -170,6 +170,18 @@ for (const theme of ["dark", "light"]) {
         const w = document.querySelector("#sheetInv .inv-wrap");
         return w.scrollWidth - w.clientWidth;
       })(),
+      /* ⚠️ PROVES THE WRAP HAPPENS, which the scroll-box check above cannot: a row that
+         never wraps only overflows once some sentence is long enough, and before Stage MS
+         none were.
+         ⚠️⚠️ COUNT DISTINCT `top` VALUES, NOT `getClientRects().length`. The first cut of
+         this assertion counted rects and was VACUOUS — a Range over the cell yields one
+         rect per text run, and this cell holds a text node plus an <em>, so it returned 2
+         under nowrap and the assertion passed while the row sat on a single line. The
+         nowrap mutation is what exposed it. A rect per line is only true when the content
+         is one text run; a rect per distinct top is true always. */
+      descLines: Math.max(...[...document.querySelectorAll("#invTable tr.inv-desc td")]
+        .map(td => { const r = document.createRange(); r.selectNodeContents(td);
+                     return new Set([...r.getClientRects()].map(b => Math.round(b.top))).size; })),
       heads: [...document.querySelectorAll("#invTable thead th")].map(t => t.textContent.trim()),
       forecasts: document.getElementById("invForecasts").textContent.trim(),
       games: document.getElementById("invGames").textContent.trim(),
@@ -180,19 +192,44 @@ for (const theme of ["dark", "light"]) {
     };
   });
   ok(`[${theme}] #inventory opens the inventory sheet`, inv.selected === "inventory" && inv.open);
+  /* ⚠️ DERIVED FROM THE PAYLOAD, NOT A TYPED 4, and not a hand-listed set of files.
+     This assertion and the two Registered checks below carried a hardcoded four-file list.
+     Stage MS appended a fifth ledger (the DDPR ensemble) and three assertions went red while
+     describing the stage perfectly correctly. The properties actually worth grading are
+     "the page drops no ledger the payload publishes" and "each Registered count equals the
+     row count of THAT ledger's own file" — neither needs to know how many ledgers exist.
+     Not circular: the loop below ties every count to a real file on disk, and
+     tools/validate-data.js separately grades the payload against those same files. */
+  const invLedgers = JSON.parse(
+    fs.readFileSync(path.join(ROOT, "data/receipts-inventory.json"), "utf8")).data.ledgers;
+  const mr = JSON.parse(fs.readFileSync(path.join(ROOT, "data/model-receipts.json"), "utf8"));
+  /* Same structural rule as tools/validate-data.js: ask the payload its shape rather than
+     naming files. An envelope that is neither an array nor {forecasts:[]} yields undefined
+     and fails the length comparison loudly. */
+  const fileCounts = invLedgers.map(l => {
+    const env = JSON.parse(fs.readFileSync(
+      path.join(ROOT, "data", String(l.machine).replace("/data/", "")), "utf8"));
+    const rows = Array.isArray(env.data) ? env.data : (env.data && env.data.forecasts);
+    return Array.isArray(rows) ? rows.length : NaN;
+  });
+
+  ok(`[${theme}] the inventory publishes more than one ledger (guards the next assertion)`,
+    invLedgers.length > 1, String(invLedgers.length));
   ok(`[${theme}] the inventory table renders every ledger`,
-    inv.tableVisible && inv.loadHidden && inv.rows.length === 4, JSON.stringify(inv.rows.map(r => r.name)));
+    inv.tableVisible && inv.loadHidden && inv.rows.length === invLedgers.length,
+    JSON.stringify(inv.rows.map(r => r.name)));
   ok(`[${theme}] every inventory column fits inside the scroll box at 1280`,
     inv.clipped.length === 0, `clipped: ${inv.clipped.join(", ")}`);
+  /* ⚠️ THIS ONE FOUND A REAL BUG THE MOMENT IT COULD. Stage RI's description row never
+     wrapped — the global `td{white-space:nowrap}` applies to it — and all four original
+     sentences happened to fit on one line, so this assertion had never had the chance to
+     fail. Stage MS's 290-char DDPR description scrolled .inv-wrap +791px on the first run.
+     Keep the description sentences long enough that this stays a live check. */
   ok(`[${theme}] the inventory table needs no sideways scrolling at 1280`,
     inv.wrapOverflow <= 1, `+${inv.wrapOverflow}px inside .inv-wrap`);
+  ok(`[${theme}] the longest ledger description actually wraps`,
+    inv.descLines >= 2, `tallest description row is ${inv.descLines} line(s)`);
 
-  // the counts must equal the files, because they were read from the files
-  const mr = JSON.parse(fs.readFileSync(path.join(ROOT, "data/model-receipts.json"), "utf8"));
-  const rc = JSON.parse(fs.readFileSync(path.join(ROOT, "data/receipts.json"), "utf8"));
-  const cl = JSON.parse(fs.readFileSync(path.join(ROOT, "data/538-classic.json"), "utf8"));
-  const cf = JSON.parse(fs.readFileSync(path.join(ROOT, "data/cfb-model-receipts.json"), "utf8"));
-  const fileCounts = [mr.data.length, rc.data.length, cl.data.forecasts.length, cf.data.length];
   ok(`[${theme}] every Registered count comes from its file`,
     JSON.stringify(inv.rows.map(r => Number(r.reg.replace(/,/g, "")))) === JSON.stringify(fileCounts),
     `page ${JSON.stringify(inv.rows.map(r => r.reg))} vs files ${JSON.stringify(fileCounts)}`);
@@ -221,6 +258,17 @@ for (const theme of ["dark", "light"]) {
     /do not add the registered column up/i.test(inv.overlap) &&
     inv.overlap.includes(fileCounts.reduce((a, n) => a + n, 0).toLocaleString("en-US")),
     inv.overlap.slice(0, 90));
+  /* ⚠️ THE CORRECTION MUST NAME EVERY VIEW, not the two that existed when it was written.
+     The original sentence enumerated "the pre-registered calls and the 538 Classic beliefs"
+     and silently stopped being complete when a third view was appended. A stale correction
+     is the worst kind of stale prose on this page: the reader has just been told the column
+     sum lies, so they have no reason to doubt the explanation of why. */
+  const nonSuperset = invLedgers.filter(l => !l.superset && l.registered > 0);
+  ok(`[${theme}] more than one ledger is a view (guards the next assertion)`,
+    nonSuperset.length > 1, String(nonSuperset.length));
+  ok(`[${theme}] the overlap correction names every view of the superset`,
+    nonSuperset.every(l => inv.overlap.includes(l.name)),
+    `missing ${nonSuperset.filter(l => !inv.overlap.includes(l.name)).map(l => l.name)}`);
 
   /* The audit is a judgment and must be counted OUTSIDE the forecast table, or this
      sheet becomes the cross-domain blend the ruling forbids. */

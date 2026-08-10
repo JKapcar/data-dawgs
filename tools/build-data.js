@@ -1098,6 +1098,16 @@ const MCP_ENDPOINT = {
    field. It is an editorial grouping, not a capability claim — nothing about a row's
    tier, machine surfaces or grading depends on it. pound-tools.json already carried a
    `domain`; this is the same idea on the surfaces map. */
+
+/* ⚠️ DERIVED, NOT TYPED. The receipts row's `covers` used to read "544 append-only
+   normalized prospective receipts across nfelo and 538 Classic". That sentence was correct
+   the day it was written and became a lie the moment a third model line was appended --
+   and work/test-machine-surfaces.mjs grades llms.txt against THIS registry, so a typed
+   count here quietly propagates. Read the numbers off the ledger instead. */
+const LEDGER = JSON.parse(fs.readFileSync(path.join(OUT, 'model-receipts.json'), 'utf8'));
+const LEDGER_ROWS = LEDGER.data.length;
+const LEDGER_MODELS = [...new Set(LEDGER.data.map(r => r.model_id))];
+
 const SURFACES = [
   { id: 'draft-pool', domain: 'data', name: 'Player pool + Market Value', page: '/master.html',
     machine: [{ kind: 'json', url: '/data/pool.json', status: 'live' },
@@ -1145,10 +1155,15 @@ const SURFACES = [
               { kind: 'json', url: '/data/receipts-inventory.json', status: 'live', covers: 'registered / settled / pending per receipt ledger, plus the two aggregates that do not double-count the overlap — the inventory sheet' },
               { kind: 'json', url: '/data/receipts.json', status: 'live' },
               // CEP-5A 1b: the models sheet and provenance sheet render these here now
-              { kind: 'json', url: '/data/model-receipts.json', status: 'live', covers: '544 append-only normalized prospective receipts across nfelo and 538 Classic — the models sheet' },
+              { kind: 'json', url: '/data/model-receipts.json', status: 'live', covers: `${LEDGER_ROWS} append-only normalized prospective receipts across ${LEDGER_MODELS.length} model lines (${LEDGER_MODELS.join(', ')}) — the models sheet` },
               { kind: 'json', url: '/data/nfl-schedule.json', status: 'live', covers: 'canonical schedule with exact upstream commit and snapshot hash' },
               { kind: 'json', url: '/data/538-classic.json', status: 'live', covers: 'reproduced 538 Classic methodology, 32 target-season ratings and 272 prospective forecasts' },
               { kind: 'markdown', url: '/data/538-classic-methodology.md', status: 'live', covers: 'model mathematics, provenance, reproduction tolerance, receipts and limits' },
+              // DDPR: an ensemble of the two rows above it, so it carries NO new evidence.
+              // Its `independence` block is the measured proof of that, and it needs zero
+              // resolved games — which is why it can be published while grading is empty.
+              { kind: 'json', url: '/data/ddpr-nfl.json', status: 'live', covers: 'both pre-registered DDPR aggregations over 272 games, the inputs that produced each one, and the measured pairwise logit correlation of the panel' },
+              { kind: 'markdown', url: '/data/ddpr-methodology.md', status: 'live', covers: 'the aggregation rule, why the log-odds average is displayed, why there is no extremizing, and the size of the effect being tested' },
               { kind: 'json', url: '/data/upstream-models.json', status: 'live', covers: 'source, commit and license provenance — the provenance sheet' },
               { kind: 'mcp', tool: 'dd_model_scoreboard', status: 'live', covers: 'bounded read-only query over dated prospective receipts; filters and results are not stored' },
               { kind: 'markdown', url: '/data/receipts-method.md', status: 'live' },
@@ -1309,6 +1324,14 @@ const INV_LEDGERS = [
   { file: '538-classic.json', id: '538-classic', name: '538 Classic beliefs', sheet: 'classic',
     rows: d => d.forecasts || [],
     what: 'A deliberately simple Elo benchmark with no QB, injury, weather or market adjustment.' },
+  /* ⚠️ A THIRD KIND OF OVERLAP, which is why this row spells its arithmetic out. The other
+     views hold one row per forecast. This one holds one row per GAME carrying TWO
+     probabilities, so its 272 rows are 544 receipts in the superset above -- and both of
+     those are functions of the nfelo and 538 Classic halves. A registered ledger that adds
+     zero independent evidence is exactly the thing an inventory has to be able to say. */
+  { file: 'ddpr-nfl.json', id: 'ddpr-nfl', name: 'DDPR NFL ensemble', sheet: 'models',
+    rows: d => d.forecasts || [],
+    what: 'Both pre-registered ensemble aggregations, one row per game carrying two probabilities: 272 games, 544 receipts in the superset. A FUNCTION of the nfelo and 538 Classic rows, not independent evidence. The linear average is registered for comparison and is never displayed.' },
   { file: 'cfb-model-receipts.json', id: 'cfb-model-receipts', name: 'CFB model receipts', sheet: 'cfbrec',
     rows: d => d,
     what: 'The college-football contract. Empty by design: no CFB forecast has been frozen before a kickoff yet.' },
@@ -1412,7 +1435,7 @@ const UNUSED_MANIFEST = {
     // Add new ones here or validate-data.js will not know they exist.
     markdown: [
       'strategy.md', 'receipts-method.md', 'bozo-rules.md', 'method.md', 'toto-philosophy.md',
-      'tier-audit.md', '538-classic-methodology.md',
+      'tier-audit.md', '538-classic-methodology.md', 'ddpr-methodology.md',
     ].map(name => {
       const p = path.join(OUT, name);
       const txt = servedText(fs.readFileSync(p, 'utf8'));

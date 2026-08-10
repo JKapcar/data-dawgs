@@ -647,7 +647,12 @@ console.log('\nreceipts-inventory.json agrees with the ledgers it counts');
     const KEYS = ['resolved_at', 'graded_at', 'outcome', 'result', 'actual', 'final'];
     const settledOf = rows => rows.filter(r => r && typeof r === 'object' &&
       KEYS.some(k => r[k] !== undefined && r[k] !== null && r[k] !== '')).length;
-    const rowsOf = (file, d) => file === '538-classic.json' ? (d.forecasts || []) : d;
+    /* ⚠️ STRUCTURAL, not a filename list. This used to name 538-classic.json explicitly,
+       which meant the second envelope shaped that way (ddpr-nfl.json) failed here as "did
+       not yield an array" — a message that reads like a corrupt file rather than a check
+       that had not been told about a new one. Ask the payload what shape it is. Anything
+       that is neither an array nor a {forecasts:[]} still fails loud below. */
+    const rowsOf = (file, d) => Array.isArray(d) ? d : (d && d.forecasts);
     let bad = 0;
     const ledgers = inv.ledgers || [];
     if (!ledgers.length) { fail('receipts-inventory.json publishes no ledgers'); bad++; }

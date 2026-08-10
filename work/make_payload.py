@@ -3,7 +3,7 @@
 
     git add -A && python3 work/make_payload.py <base-sha> [outdir]
 
-Writes <outdir>/payload.b64.NN (~7,000-char chunks) and <outdir>/manifest.json.
+Writes <outdir>/payload.b64.NN (2,000-char chunks -- see CHUNK below) and <outdir>/manifest.json.
 Default outdir is work/.payload.
 
 The repo cannot be pushed from a Cowork session, so a commit is assembled in page JS on the

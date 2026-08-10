@@ -12,10 +12,10 @@
     "what": "Append-only prospective forecasts, one row per model per game. This is the superset the others are views of.",
     "sheet": "models",
     "machine": "/data/model-receipts.json",
-    "as_of": "2026-08-08",
-    "registered": 544,
+    "as_of": "2026-08-10",
+    "registered": 1088,
     "settled": 0,
-    "pending": 544,
+    "pending": 1088,
     "superset": true
    },
    {
@@ -43,6 +43,18 @@
     "superset": false
    },
    {
+    "id": "ddpr-nfl",
+    "name": "DDPR NFL ensemble",
+    "what": "Both pre-registered ensemble aggregations, one row per game carrying two probabilities: 272 games, 544 receipts in the superset. A FUNCTION of the nfelo and 538 Classic rows, not independent evidence. The linear average is registered for comparison and is never displayed.",
+    "sheet": "models",
+    "machine": "/data/ddpr-nfl.json",
+    "as_of": "2026-08-08",
+    "registered": 272,
+    "settled": 0,
+    "pending": 272,
+    "superset": false
+   },
+   {
     "id": "cfb-model-receipts",
     "name": "CFB model receipts",
     "what": "The college-football contract. Empty by design: no CFB forecast has been frozen before a kickoff yet.",
@@ -56,12 +68,12 @@
    }
   ],
   "aggregate": {
-   "forecasts": 544,
+   "forecasts": 1088,
    "games": 272,
    "settled": 0,
-   "pending": 544,
+   "pending": 1088,
    "counted_from": "/data/model-receipts.json",
-   "naive_sum": 1088
+   "naive_sum": 1904
   },
   "audit": {
    "tools": 11,
