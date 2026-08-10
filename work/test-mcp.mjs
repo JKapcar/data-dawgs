@@ -627,20 +627,20 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 {
   const j = await (await req(rpc("tools/list"))).json();
   const t = j.result.tools;
-  ok(t.length === 43, "forty-three tools listed in the staged Worker source");
+  ok(t.length === 41, "forty-one tools listed in the staged Worker source");
   ok(t.some(x => x.name === "dd_draft_bozo_leg" && /READ-ONLY/.test(x.description)),
      "dd_draft_bozo_leg is listed and says in its own description that it writes nothing");
   ok(t.every(x => x.name.startsWith("dd_")), "all tools dd_-prefixed");
   ok(t.every(x => x.inputSchema && x.inputSchema.type === "object"), "all tools carry an inputSchema");
   for (const name of ["dd_convert_odds", "dd_devig_market", "dd_price_parlay", "dd_calculate_bet_ev",
     "dd_calculate_hedge", "dd_nfl_passer_rating", "dd_score_forecast", "dd_summarize_beliefs",
-    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_get_cfb_rating_system", "dd_rank_cfb_teams", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_project_cfb_schedule_path", "dd_find_cfb_record_divergence", "dd_get_cfb_model_disagreement", "dd_get_cfb_model_receipt_status", "dd_find_cfb_team_games", "dd_find_cfb_latest_games", "dd_find_cfb_team_periods", "dd_find_cfb_latest_team_periods", "dd_find_cfb_games", "dd_find_cfb_historical_market", "dd_get_cfb_model_card", "dd_optimize_survivor_path"])
+    "dd_elo_game", "dd_translate_probability", "dd_solve_dfs_lineup", "dd_model_scoreboard", "dd_get_cfb_rating_system", "dd_rank_cfb_teams", "dd_cfb_team_profile", "dd_compare_cfb_teams", "dd_project_cfb_matchup", "dd_project_cfb_schedule_path", "dd_find_cfb_record_divergence", "dd_get_cfb_model_disagreement", "dd_get_cfb_model_receipt_status", "dd_find_cfb_team_games", "dd_find_cfb_team_periods", "dd_find_cfb_games", "dd_find_cfb_historical_market", "dd_get_cfb_model_card", "dd_optimize_survivor_path"])
     ok(t.some(x => x.name === name), name + " is listed");
 }
 
 /* ---------------------- annotations and the two catalogs ----------------------
  * ⚠️ THE POINT OF `core` IS CONTEXT, AND IT ONLY PAYS IF IT IS A REAL BOUNDARY.
- * Forty-three schemas cost 10-25k tokens in every conversation that connects. If `core`
+ * Forty-one schemas cost 10-25k tokens in every conversation that connects. If `core`
  * only filtered tools/list, a model that had seen a full-catalog name elsewhere could
  * still call it, so the small surface would be a suggestion rather than a surface. These
  * assertions pin both halves: what is listed, and what is callable.
@@ -661,7 +661,7 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
   ok(full.every(x => !("catalog" in x)), "`catalog` is server-side bookkeeping and never reaches the wire");
 
   ok(fullNamed.length === full.length, "/mcp/full/<pass> lists the same set as the bare /mcp/<pass>");
-  ok(full.length === 43 && core.length === 16, "full lists 43, core lists 16");
+  ok(full.length === 41 && core.length === 16, "full lists 41, core lists 16");
   const fullNames = new Set(full.map(x => x.name)), coreNames = new Set(core.map(x => x.name));
   ok([...coreNames].every(n => fullNames.has(n)), "core is a strict subset of full");
   ok(coreNames.has("dd_whoami") && coreNames.has("dd_bozo_week") && coreNames.has("dd_draft_board") && coreNames.has("dd_site_map"),
@@ -710,7 +710,7 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
     ok(r.status === 200, `a passphrase of "${word}" still authenticates at /mcp/${word}`, "status " + r.status);
     if (r.status === 200) {
       const n = (await r.json()).result.tools.length;
-      ok(n === 43, `…and gets the default full catalog, not an empty or partial one`, "tools=" + n);
+      ok(n === 41, `…and gets the default full catalog, not an empty or partial one`, "tools=" + n);
     }
     // it must still be a real credential check, not a hole that lets the word through
     const bad = await reqWord(rpc("ping"), "/mcp/" + (word === "core" ? "full" : "core"));
@@ -725,7 +725,7 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
   for (const [path, needle] of [["/mcp/core/" + PASS, "Catalog `core`"], ["/mcp/" + PASS, "Catalog `full`"]]) {
     const j = await (await req(rpc("initialize", { protocolVersion: "2025-06-18" }), { path })).json();
     ok(j.result.instructions.startsWith(needle), "initialize opens by naming the catalog: " + needle);
-    ok(/16 of 43|43 of 43/.test(j.result.instructions), "…with the honest count for that path");
+    ok(/16 of 41|41 of 41/.test(j.result.instructions), "…with the honest count for that path");
   }
   {
     const r = await req(null, { path: "/mcp/" + PASS, method: "GET" });
@@ -740,7 +740,7 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
   const reg = src.slice(src.indexOf("const MCP_TOOLS = ["));
   const n = (re) => (reg.match(re) || []).length;
   const tools = n(/\n    name: "dd_\w+",\n/g);
-  ok(tools === 43, "43 tools declared in work/mcp-block.js");
+  ok(tools === 41, "41 tools declared in work/mcp-block.js");
   ok(n(/\n    title: "[^"]+",\n/g) === tools, "every declared tool carries a title");
   ok(n(/\n    catalog: "(?:core|full)",\n/g) === tools, "every declared tool carries a core/full catalog tag");
   ok(n(/\n    readOnlyHint: (?:true|false),\n/g) === tools, "every declared tool carries a readOnlyHint");
@@ -1439,9 +1439,10 @@ function refNcdf(z) {
   ok([partial, missing, same, badResult, badSite, badLimit, extra].every(result => result.result.isError === true),
      "CFB team-game reader fails closed on partial, missing, same-team and unsupported inputs");
 }
-// dd_find_cfb_latest_games: compact bounded cross-team final-game discovery.
+// dd_find_cfb_team_games at scope=latest-per-team: compact bounded cross-team
+// final-game discovery, formerly dd_find_cfb_latest_games.
 {
-  const j = await (await req(call("dd_find_cfb_latest_games"))).json();
+  const j = await (await req(call("dd_find_cfb_team_games", { scope: "latest-per-team" }))).json();
   const d = text(j);
   ok(!j.result.isError && d.season === 2025 && d.returned === 5 &&
      d.rows.map(row => row.team).join(",") === "Georgia,Iowa State,Kansas State,Michigan,Ohio State",
@@ -1454,8 +1455,8 @@ function refNcdf(z) {
      "CFB latest-game reader preserves the final-only dated-latest boundary");
 }
 {
-  const filtered = text(await (await req(call("dd_find_cfb_latest_games", {
-    team: "OHIO STATE", conference: "big ten", opponent_division: "fbs",
+  const filtered = text(await (await req(call("dd_find_cfb_team_games", {
+    scope: "latest-per-team", team: "OHIO STATE", conference: "big ten", opponent_division: "fbs",
     season_type: "postseason", result: "win", site: "neutral",
     sort: "kickoff-desc", offset: 0, limit: 1
   }))).json());
@@ -1463,25 +1464,26 @@ function refNcdf(z) {
      filtered.rows[0].team_slug === "ohio-state" &&
      filtered.rows[0].latest_completed_game.opponent === "Georgia" && filtered.query.conference === "Big Ten",
      "CFB latest-game reader combines exact team, conference, opponent, period, result and site filters");
-  const losses = text(await (await req(call("dd_find_cfb_latest_games", { result: "loss" }))).json());
+  const losses = text(await (await req(call("dd_find_cfb_team_games", { scope: "latest-per-team", result: "loss" }))).json());
   ok(losses.returned === 3 && losses.rows.map(row => row.team).join(",") === "Georgia,Kansas State,Michigan",
      "CFB latest-game reader filters team-perspective observed outcomes");
 }
 {
-  const partial = await (await req(call("dd_find_cfb_latest_games", { team: "state" }))).json();
-  const conference = await (await req(call("dd_find_cfb_latest_games", { conference: "NFL" }))).json();
-  const opponent = await (await req(call("dd_find_cfb_latest_games", { opponent_division: "d2" }))).json();
-  const result = await (await req(call("dd_find_cfb_latest_games", { result: "cover" }))).json();
-  const offset = await (await req(call("dd_find_cfb_latest_games", { offset: 200 }))).json();
-  const limit = await (await req(call("dd_find_cfb_latest_games", { limit: 51 }))).json();
-  const extra = await (await req(call("dd_find_cfb_latest_games", { current: true }))).json();
+  const partial = await (await req(call("dd_find_cfb_team_games", { scope: "latest-per-team", team: "state" }))).json();
+  const conference = await (await req(call("dd_find_cfb_team_games", { scope: "latest-per-team", conference: "NFL" }))).json();
+  const opponent = await (await req(call("dd_find_cfb_team_games", { scope: "latest-per-team", opponent_division: "d2" }))).json();
+  const result = await (await req(call("dd_find_cfb_team_games", { scope: "latest-per-team", result: "cover" }))).json();
+  const offset = await (await req(call("dd_find_cfb_team_games", { scope: "latest-per-team", offset: 200 }))).json();
+  const limit = await (await req(call("dd_find_cfb_team_games", { scope: "latest-per-team", limit: 51 }))).json();
+  const extra = await (await req(call("dd_find_cfb_team_games", { scope: "latest-per-team", current: true }))).json();
   ok([partial, conference, opponent, result, offset, limit, extra].every(value => value.result.isError === true),
      "CFB latest-game reader fails closed on partial, invented, out-of-range and unsupported inputs");
 }
-// dd_find_cfb_latest_team_periods: compact bounded cross-team discovery whose
-// "latest" label stays tied to the dated 2025 FBS-involved surface.
+// dd_find_cfb_team_periods at scope=latest-per-team: compact bounded cross-team
+// discovery whose "latest" label stays tied to the dated 2025 FBS-involved surface.
+// Formerly dd_find_cfb_latest_team_periods.
 {
-  const j = await (await req(call("dd_find_cfb_latest_team_periods"))).json();
+  const j = await (await req(call("dd_find_cfb_team_periods", { scope: "latest-per-team" }))).json();
   const d = text(j);
   ok(!j.result.isError && d.season === 2025 && d.returned === 2 &&
      d.rows.map(row => row.team).join(",") === "Akron,Ohio State",
@@ -1497,19 +1499,19 @@ function refNcdf(z) {
      "CFB latest-period reader exposes the explicitly non-authoritative conference record");
 }
 {
-  const filtered = text(await (await req(call("dd_find_cfb_latest_team_periods", {
-    team: "OHIO STATE", division: "fbs", conference: "big ten", season_type: "postseason",
+  const filtered = text(await (await req(call("dd_find_cfb_team_periods", {
+    scope: "latest-per-team", team: "OHIO STATE", division: "fbs", conference: "big ten", season_type: "postseason",
     period_outcome: "positive", sort: "through-desc", offset: 0, limit: 1
   }))).json());
   ok(filtered.matched_before_pagination === 1 && filtered.returned === 1 &&
      filtered.rows[0].team_slug === "ohio-state" && filtered.rows[0].latest_period.period_key === "postseason-01" &&
      filtered.query.conference === "Big Ten",
      "CFB latest-period reader combines exact team, conference, division, period and outcome filters");
-  const negative = text(await (await req(call("dd_find_cfb_latest_team_periods", { period_outcome: "negative" }))).json());
+  const negative = text(await (await req(call("dd_find_cfb_team_periods", { scope: "latest-per-team", period_outcome: "negative" }))).json());
   ok(negative.returned === 1 && negative.rows[0].team === "Akron",
      "CFB latest-period outcome filter uses aggregate observed point-differential direction");
-  const conferenceOrder = text(await (await req(call("dd_find_cfb_latest_team_periods", {
-    sort: "conference-record-desc"
+  const conferenceOrder = text(await (await req(call("dd_find_cfb_team_periods", {
+    scope: "latest-per-team", sort: "conference-record-desc"
   }))).json());
   ok(conferenceOrder.rows.map(row => row.team).join(",") === "Ohio State,Akron" &&
      conferenceOrder.rows.every(row => !("conference_rank" in row)) &&
@@ -1517,13 +1519,13 @@ function refNcdf(z) {
      "CFB latest-period reader compares conference records without inventing official ranks");
 }
 {
-  const partial = await (await req(call("dd_find_cfb_latest_team_periods", { team: "state" }))).json();
-  const conference = await (await req(call("dd_find_cfb_latest_team_periods", { conference: "NFL" }))).json();
-  const outcome = await (await req(call("dd_find_cfb_latest_team_periods", { period_outcome: "win" }))).json();
-  const offset = await (await req(call("dd_find_cfb_latest_team_periods", { offset: 400 }))).json();
-  const limit = await (await req(call("dd_find_cfb_latest_team_periods", { limit: 51 }))).json();
-  const sort = await (await req(call("dd_find_cfb_latest_team_periods", { sort: "official-standing" }))).json();
-  const extra = await (await req(call("dd_find_cfb_latest_team_periods", { current: true }))).json();
+  const partial = await (await req(call("dd_find_cfb_team_periods", { scope: "latest-per-team", team: "state" }))).json();
+  const conference = await (await req(call("dd_find_cfb_team_periods", { scope: "latest-per-team", conference: "NFL" }))).json();
+  const outcome = await (await req(call("dd_find_cfb_team_periods", { scope: "latest-per-team", period_outcome: "win" }))).json();
+  const offset = await (await req(call("dd_find_cfb_team_periods", { scope: "latest-per-team", offset: 400 }))).json();
+  const limit = await (await req(call("dd_find_cfb_team_periods", { scope: "latest-per-team", limit: 51 }))).json();
+  const sort = await (await req(call("dd_find_cfb_team_periods", { scope: "latest-per-team", sort: "official-standing" }))).json();
+  const extra = await (await req(call("dd_find_cfb_team_periods", { scope: "latest-per-team", current: true }))).json();
   ok([partial, conference, outcome, offset, limit, sort, extra].every(result => result.result.isError === true),
      "CFB latest-period reader fails closed on partial, invented, out-of-range and unsupported inputs");
 }
@@ -1793,6 +1795,126 @@ function refNcdf(z) {
      "site map includes the aggregate CFB divergence validation");
 }
 
+/* ------------- the merged CFB find surfaces: scope is a real boundary -------------
+ * ⚠️ WHY THESE EXIST. `dd_find_cfb_team_games` and `dd_find_cfb_team_periods` each cover
+ * a parent surface and its derived cross-sectional view behind one flat schema, which
+ * means a caller can pass a parameter the chosen scope does not support. IGNORING IT
+ * WOULD BE THE DISHONEST FAILURE: the caller gets a plausible answer to a question it did
+ * not ask, and nothing in the response says so. Every assertion below reads the error
+ * MESSAGE, because an error thrown for some other reason would satisfy isError just as
+ * well and prove nothing.
+ */
+{
+  const msg = async (tool, args) => {
+    const j = await (await req(call(tool, args))).json();
+    if (!j.result || j.result.isError !== true) return "(no error)";
+    return j.result.content[0].text;
+  };
+
+  // the retired names are gone from the wire, not merely undocumented
+  for (const gone of ["dd_find_cfb_latest_games", "dd_find_cfb_latest_team_periods"]) {
+    const j = await (await req(call(gone))).json();
+    ok(/Unknown tool/.test((j.error && j.error.message) || (j.result && j.result.content[0].text) || ""),
+       gone + " is not callable — the consolidation removed the name, it did not alias it");
+  }
+
+  // team is required for the default scope and optional for the derived one, and the
+  // error says which is which rather than "team must be a non-empty name or slug"
+  const noTeam = await msg("dd_find_cfb_team_games", {});
+  ok(/team is required when scope is team-games/.test(noTeam) && /latest-per-team/.test(noTeam),
+     "the conditional team requirement is enforced with an error that names both scopes", noTeam);
+  const noTeamPeriods = await msg("dd_find_cfb_team_periods", {});
+  ok(/team is required when scope is team-periods/.test(noTeamPeriods),
+     "…and the same holds for the period surface", noTeamPeriods);
+
+  // a parameter belonging to the other scope is refused BY NAME, naming the scope
+  const wrongWay = await msg("dd_find_cfb_team_games", { scope: "latest-per-team", opponent: "Georgia" });
+  ok(/unsupported field for scope latest-per-team: opponent/.test(wrongWay),
+     "a parent-scope parameter is refused by name under the derived scope", wrongWay);
+  const otherWay = await msg("dd_find_cfb_team_games", { team: "Ohio State", conference: "Big Ten" });
+  ok(/unsupported field for scope team-games: conference/.test(otherWay),
+     "…and a derived-scope parameter is refused by name under the parent scope", otherWay);
+  const periodWrongWay = await msg("dd_find_cfb_team_periods", { team: "Ohio State", period_outcome: "positive" });
+  ok(/unsupported field for scope team-periods: period_outcome/.test(periodWrongWay),
+     "the period surface refuses period_outcome outside latest-per-team", periodWrongWay);
+  const plural = await msg("dd_find_cfb_team_games", { team: "Ohio State", conference: "Big Ten", offset: 1 });
+  ok(/unsupported fields for scope team-games: conference, offset/.test(plural),
+     "…and two of them are refused together, both named", plural);
+
+  // the sort enum is the union of both scopes, so a value must be checked against the
+  // scope and not merely against the enum
+  const crossSort = await msg("dd_find_cfb_team_games", { team: "Ohio State", sort: "team-asc" });
+  ok(/sort must be kickoff-asc or kickoff-desc/.test(crossSort),
+     "a sort value from the other scope is refused even though the schema enum allows it", crossSort);
+  const crossSortBack = await msg("dd_find_cfb_team_games", { scope: "latest-per-team", sort: "kickoff-asc" });
+  ok(/sort must be team-asc or kickoff-desc/.test(crossSortBack),
+     "…in both directions", crossSortBack);
+  const crossPeriodSort = await msg("dd_find_cfb_team_periods", { team: "Ohio State", sort: "conference-record-desc" });
+  ok(/sort must be period-asc or period-desc/.test(crossPeriodSort),
+     "…and on the period surface too", crossPeriodSort);
+
+  // ⚠️ THE PER-SCOPE LIMIT CEILING SURVIVED THE MERGE. The schema advertises the union
+  // maximum of 50; team-periods still refuses 26, because that bound is a payload bound
+  // and raising it silently would be a behaviour change disguised as a refactor.
+  const tightLimit = await msg("dd_find_cfb_team_periods", { team: "Ohio State", limit: 26 });
+  ok(/limit must be a whole number from 1 through 25/.test(tightLimit),
+     "team-periods keeps its 25 ceiling under the union schema maximum of 50", tightLimit);
+  {
+    const j = await (await req(call("dd_find_cfb_team_periods", { scope: "latest-per-team", limit: 26 }))).json();
+    ok(!j.result.isError, "…while latest-per-team accepts 26, so the ceiling is per-scope and not global");
+  }
+
+  // an invented scope is refused, and names what is available
+  const badScope = await msg("dd_find_cfb_team_games", { scope: "everything" });
+  ok(/scope must be team-games or latest-per-team/.test(badScope), "an invented scope is refused", badScope);
+
+  // both scopes declare which shape came back, so a consumer branches on a stated field
+  // instead of probing for a key
+  {
+    const parent = text(await (await req(call("dd_find_cfb_team_games", { team: "Ohio State" }))).json());
+    ok(parent.query.scope === "team-games" && parent.response_shape === "team-game-rows" &&
+       Array.isArray(parent.games) && !("rows" in parent),
+       "the parent scope echoes its scope and declares the team-game shape");
+    const derived = text(await (await req(call("dd_find_cfb_team_games", { scope: "latest-per-team" }))).json());
+    ok(derived.query.scope === "latest-per-team" && derived.response_shape === "latest-per-team-rows" &&
+       Array.isArray(derived.rows) && !("games" in derived),
+       "the derived scope echoes its scope and declares the latest-per-team shape");
+    // ⚠️ the top-level `scope` field is the DATA SURFACE's coverage string and predates
+    // the parameter. If the parameter had been echoed there it would have overwritten a
+    // published honesty claim, so the two must not be the same field.
+    ok(parent.scope !== parent.query.scope && typeof parent.scope === "string",
+       "the top-level scope still carries the data surface's coverage string, not the argument");
+    const derivedPeriods = text(await (await req(call("dd_find_cfb_team_periods", { scope: "latest-per-team" }))).json());
+    ok(derivedPeriods.response_shape === "latest-per-team-rows" && derivedPeriods.query.scope === "latest-per-team",
+       "the period surface declares its shape the same way");
+  }
+
+  // the per-scope DEFAULTS differ, and the default must follow the scope
+  {
+    const parent = text(await (await req(call("dd_find_cfb_team_games", { team: "Ohio State" }))).json());
+    ok(parent.query.sort === "kickoff-asc" && parent.query.limit === 25,
+       "the parent scope keeps its own sort and limit defaults");
+    const derived = text(await (await req(call("dd_find_cfb_team_games", { scope: "latest-per-team" }))).json());
+    ok(derived.query.sort === "team-asc" && derived.query.offset === 0,
+       "the derived scope keeps its own sort default and its pagination");
+    const parentPeriods = text(await (await req(call("dd_find_cfb_team_periods", { team: "Ohio State" }))).json());
+    ok(parentPeriods.query.sort === "period-asc" && parentPeriods.query.limit === 20,
+       "the period parent scope defaults to period-asc and a limit of 20, not the union's 25");
+  }
+
+  // the merged descriptions have to name the scopes, or a model cannot discover them
+  {
+    const listed = (await (await req(rpc("tools/list"))).json()).result.tools;
+    for (const name of ["dd_find_cfb_team_games", "dd_find_cfb_team_periods"]) {
+      const tool = listed.find(x => x.name === name);
+      ok(/scope=latest-per-team/.test(tool.description) && /refused by name rather than ignored/.test(tool.description),
+         name + " tells a caller the derived scope exists and that a wrong parameter is refused");
+      ok(tool.inputSchema.properties.scope && !("required" in tool.inputSchema),
+         name + " advertises scope and no longer claims an unconditional required field");
+    }
+  }
+}
+
 /* ----------------------- source-level safety asserts ----------------------- */
 const blockSrc = readFileSync(resolve(WORK, "mcp-block.js"), "utf8");
 const noComments = blockSrc.replace(/\/\/[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
@@ -1883,9 +2005,37 @@ ok(!/fbPut|fbPatch|fbDelete/.test(noComments), "block calls NO Firebase write he
 ok(!/\.put\(|\.delete\(/.test(noComments), "block performs NO KV writes");
 ok(!/method:\s*["'](PUT|POST|PATCH|DELETE)/.test(noComments), "block issues NO writing HTTP methods");
 const assembled = readFileSync(resolve(WORK, "..", "dawg-bot-worker.js"), "utf8");
-const oldLines = readFileSync(resolve(WORK, "..", "dawg-bot-worker.js"), "utf8").split("\n").filter(l => l.trim());
-const newSet = new Set(assembled.split("\n"));
-ok(oldLines.every(l => newSet.has(l)), "purely additive: every non-blank old line survives");
+/* ⚠️ THIS USED TO BE AN ASSERTION THAT COULD NOT FAIL. It read dawg-bot-worker.js into
+   `assembled` and then read THE SAME FILE into `oldLines`, so "purely additive: every
+   non-blank old line survives" compared a file with itself and was true for any input.
+   There is no reference-free way to make that sentence mean anything, so it is replaced
+   by the invariant that was actually worth having and that nothing else covered: THE
+   ASSEMBLED WORKER'S TOOL ROSTER IS EXACTLY THE REGISTRY'S, and the generated block is
+   bounded by its markers so nothing leaked outside them.
+
+   This is not hypothetical. work/mcp-block.js had said "(Pup / Dawgs / The DawgHouse)"
+   since Stage TR while the committed Worker still said "(Labs / Dawgs / The Pound)",
+   because the Worker had not been reassembled. 343 assertions were green throughout. */
+const MCP_START = "/* ===== DD-MCP-BLOCK START — generated from work/mcp-block.js; edit THERE ===== */";
+const MCP_END = "/* ===== DD-MCP-BLOCK END ===== */";
+ok(assembled.split(MCP_START).length === 2 && assembled.split(MCP_END).length === 2,
+   "the generated block appears exactly once, bounded by its markers");
+{
+  const inBlock = assembled.slice(assembled.indexOf(MCP_START), assembled.indexOf(MCP_END));
+  const outOfBlock = assembled.slice(0, assembled.indexOf(MCP_START)) + assembled.slice(assembled.indexOf(MCP_END));
+  const names = s => (s.match(/\n    name: "dd_\w+",\n/g) || []).map(m => m.trim());
+  const registry = names(blockSrc);
+  ok(registry.length === 41 && names(inBlock).join("|") === registry.join("|"),
+     "the assembled block declares the registry's 41 tools, in the registry's order",
+     `${names(inBlock).length} assembled vs ${registry.length} declared`);
+  ok(names(outOfBlock).length === 0,
+     "no tool is declared outside the markers, where assemble.mjs would never regenerate it");
+  // and the block is genuinely a COPY of the source, not a drifted sibling: the source's
+  // own text has to be present verbatim, which is what caught nothing for two stages.
+  const registrySource = blockSrc.slice(blockSrc.indexOf("const MCP_TOOLS = ["));
+  ok(inBlock.includes(registrySource.trimEnd()),
+     "the assembled block contains work/mcp-block.js verbatim — a stale Worker fails here");
+}
 ok((assembled.match(/export default/g) || []).length === 1, "exactly one default export");
 ok((assembled.match(/function solveLineups/g) || []).length === 1 && assembled.includes("const mcpDdfsRoot = {}"),
    "assembled Worker contains one private copy of the shared DFS engine");

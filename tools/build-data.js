@@ -1082,8 +1082,13 @@ const MCP_POUND_LIVE = ['dd_convert_odds', 'dd_devig_market', 'dd_price_parlay',
   'dd_calculate_bet_ev', 'dd_calculate_hedge', 'dd_nfl_passer_rating',
   'dd_score_forecast', 'dd_summarize_beliefs', 'dd_elo_game',
   'dd_translate_probability'];
-const MCP_CFB_LIVE = ['dd_find_cfb_games', 'dd_find_cfb_team_games', 'dd_find_cfb_latest_games',
-  'dd_find_cfb_team_periods', 'dd_find_cfb_latest_team_periods', 'dd_find_cfb_historical_market',
+/* 2026-08-10 (Stage WC-A): sixteen became fourteen. dd_find_cfb_latest_games and
+ * dd_find_cfb_latest_team_periods were REMOVED, not renamed — their surfaces are now the
+ * `latest-per-team` scope of dd_find_cfb_team_games and dd_find_cfb_team_periods. No data
+ * file was retired: both derived files are still built, still in the manifest and still on
+ * the Library shelf. This changed the tool surface, not the data surface. */
+const MCP_CFB_LIVE = ['dd_find_cfb_games', 'dd_find_cfb_team_games',
+  'dd_find_cfb_team_periods', 'dd_find_cfb_historical_market',
   'dd_get_cfb_model_card', 'dd_get_cfb_rating_system', 'dd_rank_cfb_teams', 'dd_cfb_team_profile',
   'dd_compare_cfb_teams', 'dd_project_cfb_matchup', 'dd_project_cfb_schedule_path',
   'dd_find_cfb_record_divergence', 'dd_get_cfb_model_disagreement', 'dd_get_cfb_model_receipt_status'];
@@ -1114,8 +1119,16 @@ const MCP_REGISTRY = (() => {
 // ⚠️ EDITING THIS LIST IS STEP 3 OF A WORKER DEPLOY, NOT A STANDALONE CHANGE.
 // docs/mcp-catalogs.md has the full order; skipping the rest of it leaves this file
 // claiming a shape the endpoint does not have.
-// Empty since the 2026-08-09 deploy (Worker etag e24980f19710ce87): the endpoint carries
-// all 43. Read back from /content/v2 after deploying, not assumed from the PUT's 200.
+// Empty: the endpoint carries every registered tool. Read it back from /content/v2 after
+// deploying, never assumed from the PUT's 200.
+// ⚠️ MCP_STAGED CANNOT EXPRESS A REMOVAL, and Stage WC-A on 2026-08-10 was one. `staged`
+// means "in the repo, not yet on the endpoint", which is the conservative direction for an
+// ADDITION: the map under-claims until the deploy catches up. For a REMOVAL that direction
+// flips and there is no key for it, so the deploy order was reversed instead — commit
+// first, deploy minutes later. Had that deploy failed, this file would list 41 while the
+// endpoint served 43: the map under-claims and every caller of a retired name keeps
+// working. Deploying first and failing to commit would leave this file claiming two tools
+// are live that answer -32602, which is the one thing it exists to prevent.
 const MCP_STAGED = [];
 const MCP_LIVE = MCP_REGISTRY.map(t => t.name).filter(n => !MCP_STAGED.includes(n));
 for (const n of MCP_STAGED)

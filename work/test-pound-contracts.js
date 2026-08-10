@@ -22,8 +22,12 @@ for (const [name, env] of Object.entries({ tools, contracts, upstream })) {
 const nflTools = tools.data.filter(t => (t.kind || 'tool') === 'tool');
 const cfbIdeas = tools.data.filter(t => t.kind === 'roadmap-idea');
 const roadmap = tools.cfb_roadmap;
-const CFB_MCP_LIVE = ['dd_find_cfb_games', 'dd_find_cfb_team_games', 'dd_find_cfb_latest_games',
-  'dd_find_cfb_team_periods', 'dd_find_cfb_latest_team_periods', 'dd_find_cfb_historical_market',
+/* ⚠️ FOURTEEN, NOT SIXTEEN, SINCE 2026-08-10. dd_find_cfb_latest_games and
+   dd_find_cfb_latest_team_periods were REMOVED by Stage WC-A, not renamed: their surfaces
+   are the `latest-per-team` scope of the two readers immediately above. Neither data file
+   was retired. */
+const CFB_MCP_LIVE = ['dd_find_cfb_games', 'dd_find_cfb_team_games',
+  'dd_find_cfb_team_periods', 'dd_find_cfb_historical_market',
   'dd_get_cfb_model_card', 'dd_get_cfb_rating_system', 'dd_rank_cfb_teams', 'dd_cfb_team_profile',
   'dd_compare_cfb_teams', 'dd_project_cfb_matchup', 'dd_project_cfb_schedule_path',
   'dd_find_cfb_record_divergence', 'dd_get_cfb_model_disagreement', 'dd_get_cfb_model_receipt_status'];
@@ -79,7 +83,7 @@ test('surface generator reports the deployed Pound MCP tools as live', () => {
     'dd_calculate_bet_ev', 'dd_calculate_hedge', 'dd_nfl_passer_rating',
     'dd_score_forecast', 'dd_summarize_beliefs', 'dd_elo_game',
     'dd_translate_probability'];
-  assert.equal(surfaces.counts.mcp_tools_live, 43);   // 43 live since the 2026-08-09 deploy
+  assert.equal(surfaces.counts.mcp_tools_live, 41);   // 43 after the 2026-08-09 deploy, 41 after Stage WC-A merged two CFB readers away
   assert.ok(surfaces.mcp.tools_live.includes('dd_survivor_ev'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_optimize_survivor_path'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_analyze_matchup'));
@@ -334,7 +338,9 @@ test('CFB roadmap ideas carry evidence-backed lifecycle without inventing tools'
   assert.deepEqual(byId['cfb-team-week'].candidate_mcp_tools, ['dd_find_cfb_team_periods']);
   assert.equal(byId['cfb-public-outputs'].lifecycle_status, 'building');
   assert.equal(byId['cfb-public-outputs'].implemented, true);
-  assert.deepEqual(byId['cfb-public-outputs'].candidate_mcp_tools, ['dd_find_cfb_latest_games', 'dd_find_cfb_latest_team_periods']);
+  /* the idea's candidates followed the consolidation: the two derived surfaces it names
+     are now reachable as the latest-per-team scope of these two readers. */
+  assert.deepEqual(byId['cfb-public-outputs'].candidate_mcp_tools, ['dd_find_cfb_team_games', 'dd_find_cfb_team_periods']);
   assert.equal(byId['cfb-fraud-detector'].lifecycle_status, 'evaluating');
   assert.equal(byId['cfb-fraud-detector'].implemented, true);
   assert.ok(byId['cfb-fraud-detector'].candidate_mcp_tools.includes('dd_find_cfb_record_divergence'));
@@ -444,7 +450,7 @@ test('the deployed CFB MCP tools are live while unimplemented candidate names re
     else assert.ok(!surfaces.mcp.tools_live.includes(name), `${name} falsely live`);
     assert.ok(!surfaces.mcp.tools_staged.includes(name), `${name} falsely staged`);
   }
-  assert.equal(surfaces.counts.mcp_tools_live, 43);   // 43 live since the 2026-08-09 deploy
+  assert.equal(surfaces.counts.mcp_tools_live, 41);   // 43 after the 2026-08-09 deploy, 41 after Stage WC-A merged two CFB readers away
   /* CEP-5A Stage 3: the sixteen CFB tools ride on the cfb surface, whose page renders
      the roadmap that names them. The DawgHouse surface must no longer claim them, and
      its pound-tools.json entry must stop advertising a roadmap it does not render. */
@@ -516,7 +522,7 @@ test('cfb.html computes the callable CFB tool count instead of stating one', () 
   assert.match(html, /surfaces\.json is missing its live MCP roster/);
   assert.match(html, /this is not a claim that no tools are live/);
 });
-test('the sixteen live CFB tools are exactly the cards-and-roster intersection', () => {
+test('the fourteen live CFB tools are exactly the cards-and-roster intersection', () => {
   // the page computes this at runtime; the test computes it here from the same two files
   const named = new Set();
   cfbIdeas.forEach(i => (i.candidate_mcp_tools || []).forEach(t => named.add(t)));
@@ -524,7 +530,7 @@ test('the sixteen live CFB tools are exactly the cards-and-roster intersection',
   const callable = [...named].filter(t => live.has(t)).sort();
   const reserved = [...named].filter(t => !live.has(t)).sort();
   assert.deepEqual(callable, [...CFB_MCP_LIVE].sort());
-  assert.equal(callable.length, 16);
+  assert.equal(callable.length, 14);   // 16 until Stage WC-A merged the two latest-* readers away
   assert.ok(reserved.length > 0, 'a page that shows no reservations would be hiding the roadmap');
   // every callable tool must be attributable to a card that is not the umbrella
   const umbrellaOnly = callable.filter(t => !cfbIdeas.some(

@@ -54,8 +54,6 @@
    "dd_get_cfb_model_disagreement",
    "dd_get_cfb_model_receipt_status",
    "dd_find_cfb_team_games",
-   "dd_find_cfb_latest_games",
-   "dd_find_cfb_latest_team_periods",
    "dd_find_cfb_team_periods",
    "dd_find_cfb_games",
    "dd_find_cfb_historical_market",
@@ -125,8 +123,6 @@
     "dd_get_cfb_model_disagreement",
     "dd_get_cfb_model_receipt_status",
     "dd_find_cfb_team_games",
-    "dd_find_cfb_latest_games",
-    "dd_find_cfb_latest_team_periods",
     "dd_find_cfb_team_periods",
     "dd_find_cfb_games",
     "dd_find_cfb_historical_market",
@@ -173,8 +169,6 @@
     "dd_get_cfb_model_disagreement": "CFB model disagreement",
     "dd_get_cfb_model_receipt_status": "CFB receipt ledger status",
     "dd_find_cfb_team_games": "CFB team games",
-    "dd_find_cfb_latest_games": "CFB latest games",
-    "dd_find_cfb_latest_team_periods": "CFB latest team periods",
     "dd_find_cfb_team_periods": "CFB team periods",
     "dd_find_cfb_games": "CFB schedule search",
     "dd_find_cfb_historical_market": "CFB historical prices",
@@ -192,8 +186,8 @@
   "surfaces": 14,
   "with_live_machine_access": 14,
   "with_no_machine_access": 0,
-  "mcp_tools_registered": 43,
-  "mcp_tools_live": 43,
+  "mcp_tools_registered": 41,
+  "mcp_tools_live": 41,
   "mcp_tools_staged": 0,
   "mcp_tools_core": 16,
   "mcp_tools_planned": 5
@@ -667,19 +661,7 @@
     },
     {
      "kind": "mcp",
-     "tool": "dd_find_cfb_latest_games",
-     "status": "live",
-     "covers": "bounded read-only CFB evidence or deterministic rating-period calculation; inputs and results are not stored"
-    },
-    {
-     "kind": "mcp",
      "tool": "dd_find_cfb_team_periods",
-     "status": "live",
-     "covers": "bounded read-only CFB evidence or deterministic rating-period calculation; inputs and results are not stored"
-    },
-    {
-     "kind": "mcp",
-     "tool": "dd_find_cfb_latest_team_periods",
      "status": "live",
      "covers": "bounded read-only CFB evidence or deterministic rating-period calculation; inputs and results are not stored"
     },

@@ -1,10 +1,17 @@
 # MCP tool annotations and the core/full catalogs
 
-**Status: DEPLOYED 2026-08-09.** The live endpoint serves all 43 tools, carries the
-annotations, and answers on both `/mcp/core/<credential>` and `/mcp/full/<credential>`;
-`GET /mcp/` advertises both. The bare `/mcp/<credential>` is unchanged and still full, so
-no connector already in the wild lost a tool. `data/surfaces.json` reports them under
-`mcp.catalogs` and `mcp.annotations` — no longer under a staged key.
+**Status: DEPLOYED 2026-08-09. AMENDED 2026-08-10 — the registry is 41 tools, not 43.**
+The live endpoint carries the annotations and answers on both `/mcp/core/<credential>` and
+`/mcp/full/<credential>`; `GET /mcp/` advertises both. The bare `/mcp/<credential>` is
+unchanged and still full. `data/surfaces.json` reports them under `mcp.catalogs` and
+`mcp.annotations` — no longer under a staged key.
+
+⚠️ **Stage WC-A consolidated the `dd_find_cfb_*` family on 2026-08-10.**
+`dd_find_cfb_latest_games` and `dd_find_cfb_latest_team_periods` were **removed**, and
+their surfaces are now the `latest-per-team` scope of `dd_find_cfb_team_games` and
+`dd_find_cfb_team_periods`. Full went 43 → 41. **Core is unchanged at 16** — neither
+retired tool was ever in it, so no core connector is affected. Numbers below that describe
+the 2026-08-09 deploy are left at 43 on purpose; they are history, not the current shape.
 
 ⚠️ **What is still not verified in production:** the tools/list SHAPE on each path (16 on
 core, 43 on full) and the annotations on the wire. Reading those back needs a credential
@@ -20,7 +27,7 @@ Built in `e99ddf1`, base `c3f7250`. Deployed from `74ea314`; Worker etag
 ## What it does
 
 Every tool in `work/mcp-block.js` carries three new fields: `title` (a short display
-name), `readOnlyHint` (`true` for all 43 today) and `catalog` (`core` or `full`).
+name), `readOnlyHint` (`true` for every tool today) and `catalog` (`core` or `full`).
 `tools/list` projects the first two into the MCP annotation shape — top-level `title`
 plus `annotations: { title, readOnlyHint }`. `catalog` is ours and never crosses the wire.
 
@@ -28,23 +35,33 @@ Three paths, and the catalog segment is stripped before the credential is read:
 
 | Path | Catalog | Tools |
 |---|---|---|
-| `/mcp/<credential>` | full | 43 — unchanged from today |
-| `/mcp/full/<credential>` | full | 43 |
+| `/mcp/<credential>` | full | 41 — still the default path |
+| `/mcp/full/<credential>` | full | 41 |
 | `/mcp/core/<credential>` | core | 16 |
 
 Core is the everyday league surface: `dd_whoami`, `dd_league_overview`, `dd_bozo_week`,
 `dd_bozo_standings`, `dd_draft_bozo_leg`, `dd_draft_board`, `dd_draft_pool`,
 `dd_survivor_week`, `dd_survivor_ev`, `dd_analyze_matchup`, `dd_convert_odds`,
 `dd_price_parlay`, `dd_calculate_bet_ev`, `dd_scores`, `dd_guillotine_odds`,
-`dd_site_map`. Everything else — the sixteen college-football evidence tools, the DFS and
+`dd_site_map`. Everything else — the fourteen college-football evidence tools, the DFS and
 survivor solvers, the model scoreboard, the less common price math — is full only.
 
 ## Three decisions worth knowing
 
-**The default stayed `full`.** `/mcp/<credential>` serves all 43 exactly as before.
-Making core the default would silently remove tool names a live connector may already be
-calling. That is the same breaking change as renaming a tool, which is also why the
-`dd_find_cfb_*` family has not been consolidated.
+**The default stayed `full`.** `/mcp/<credential>` serves every registered tool, exactly as
+before. Making core the default would silently remove tool names a live connector may
+already be calling.
+
+**⚠️ AMENDED 2026-08-10: the `dd_find_cfb_*` family HAS now been consolidated.** This
+section used to cite that family as an example of a breaking change not worth making. Kap
+reversed that on 2026-08-10, with the breakage stated: `dd_find_cfb_latest_games` and
+`dd_find_cfb_latest_team_periods` were removed rather than aliased, so anything calling
+either name by hand now gets `Unknown tool`. What bought it: the two names differed from
+their parents by one word, and a model choosing between them picked `latest_games` for
+questions that wanted `team_games`. The parent tools' `scope` parameter makes the choice
+explicit instead of guessable, and a parameter belonging to the other scope is refused by
+name rather than ignored. **The reasoning about the default path is unchanged** — flipping
+core to default would remove 25 names at once, silently, which is not the same trade.
 
 **The catalog is the surface, not a listing hint.** A full-only tool called on
 `/mcp/core` returns `-32602` naming the catalog and the full URL. If only `tools/list`
@@ -53,8 +70,8 @@ saw in another conversation, and the context saving would be fictional.
 
 **Only two annotations.** `title` and `readOnlyHint`. `destructiveHint` is defined only
 when `readOnlyHint` is false. `idempotentHint` and `openWorldHint` would have been a
-guess repeated 43 times. An annotation a client trusts and nobody checked is worse than
-no annotation.
+guess repeated once per tool. An annotation a client trusts and nobody checked is worse
+than no annotation.
 
 ## A reserved-word `DAWG_PASS` is no longer a hazard — it is handled in code
 
@@ -97,6 +114,16 @@ tools and a staged catalog block, while the endpoint serves 43 and answers on
 prevent. On 2026-08-09 the flip was done in the same commit as the deploy, and
 `work/test-machine-surfaces.mjs` caught llms.txt still saying 42 within seconds of the
 rebuild — which is what that suite is for.
+
+⚠️ **THAT ORDER IS FOR AN ADDITION. REVERSE IT FOR A REMOVAL.** The checklist below deploys
+first and flips the coverage map second, because `MCP_STAGED` exists to make the repo
+under-claim until the endpoint catches up. `MCP_STAGED` has no equivalent for a removal, so
+for one the conservative direction flips: **commit first, deploy minutes later.** If the
+deploy then fails, the repo lists fewer tools than the endpoint serves and every caller of a
+retired name keeps working — the map under-claims, which is survivable. Deploying first and
+failing to commit leaves `data/surfaces.json` claiming tools that answer `-32602`, which is
+exactly the lie it exists to prevent. Stage WC-A on 2026-08-10 took the reversed order for
+that reason.
 
 1. Reconcile `origin/main`. Kap runs manual Codex on this repo and it deploys the Worker.
 2. Deploy `dawg-bot-worker.js` (see `docs/worker-deploy.md`). Do NOT hand-edit the

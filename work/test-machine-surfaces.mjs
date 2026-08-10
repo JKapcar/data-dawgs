@@ -147,17 +147,36 @@ if (staged.length) {
   ok("llms.txt uses the word staged", /\bSTAGED\b|\bstaged\b/.test(llms));
 }
 
-/* The CFB claim. Sixteen dd_*cfb* tools are in tools_live, so llms.txt must not deny them. */
+/* The CFB claim. dd_*cfb* tools are in tools_live, so llms.txt must not deny them. */
 const cfbLive = live.filter(t => /cfb/i.test(t));
 ok("registry actually carries CFB tools (guards the next assertion)", cfbLive.length > 0,
    `${cfbLive.length}`);
 ok("llms.txt does not claim CFB tools are uncallable while they are live",
    !/no cfb mcp tool is callable/i.test(llms));
-const cfbNumWords = { 16: /sixteen|\b16\b/i };
-if (cfbNumWords[cfbLive.length]) {
-  ok("llms.txt states the CFB tool count correctly",
-     cfbNumWords[cfbLive.length].test(llms), `expected ${cfbLive.length}`);
-}
+
+/* ⚠️ THIS ASSERTION USED TO SKIP ITSELF, AND DID. It was a one-entry lookup —
+   `const cfbNumWords = { 16: /sixteen|\b16\b/i }` — guarded by
+   `if (cfbNumWords[cfbLive.length])`. So it checked llms.txt's CFB count only while that
+   count was exactly sixteen, which is to say only while the answer was already known.
+   Stage WC-A took CFB from sixteen tools to fourteen on 2026-08-10 and the check silently
+   evaporated: this suite went from 31 passed to 30 passed with ZERO failures, while
+   llms.txt still read "Sixteen production CFB tools ARE callable" with fourteen live. A
+   test keyed on the value it is asserting cannot fail at the one moment it exists for. It
+   now always runs, an unmapped count fails loudly instead of skipping, and a stale
+   spelled-out count is caught on its own line. */
+const NUM_WORDS = { 10: "ten", 11: "eleven", 12: "twelve", 13: "thirteen", 14: "fourteen",
+                    15: "fifteen", 16: "sixteen", 17: "seventeen", 18: "eighteen",
+                    19: "nineteen", 20: "twenty" };
+const cfbWord = NUM_WORDS[cfbLive.length];
+ok("this suite knows how to spell the current CFB tool count (extend NUM_WORDS if not)",
+   !!cfbWord, `no spelled-out form for ${cfbLive.length}`);
+ok("llms.txt states the CFB tool count correctly",
+   !!cfbWord && new RegExp(`\\b${cfbWord}\\b`, "i").test(llms),
+   `expected ${cfbLive.length} (${cfbWord}) somewhere in llms.txt`);
+const staleWords = Object.entries(NUM_WORDS).filter(([n, word]) =>
+  Number(n) !== cfbLive.length && new RegExp(`\\b${word} production CFB tools\\b`, "i").test(llms));
+ok("…and carries no stale spelled-out CFB count alongside it",
+   staleWords.length === 0, staleWords.map(([, w]) => w).join(", "));
 
 /* ---------- sitemap.xml covers the pages that actually exist ---------- */
 

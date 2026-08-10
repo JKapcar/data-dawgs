@@ -1421,7 +1421,7 @@
     "/tests/test_cfb_team_profiles.py",
     "/tests/test_cfb_team_results.py"
    ],
-   "delivery_note": "Partially implemented with compact rating profiles, exact latest completed FBS team games and exact latest-period team rows carrying overall and non-authoritative conference records; both latest surfaces have bounded production MCP readers. Richer team-week metrics and model grades remain future outputs.",
+   "delivery_note": "Partially implemented with compact rating profiles, exact latest completed FBS team games and exact latest-period team rows carrying overall and non-authoritative conference records; both latest surfaces are readable over MCP as the latest-per-team scope of the team-game and team-period readers. Richer team-week metrics and model grades remain future outputs.",
    "graveyard_ready": true,
    "priority": "standard",
    "roadmap_step": 1,
@@ -1434,8 +1434,8 @@
     "cfb-ratings-registry"
    ],
    "candidate_mcp_tools": [
-    "dd_find_cfb_latest_games",
-    "dd_find_cfb_latest_team_periods"
+    "dd_find_cfb_team_games",
+    "dd_find_cfb_team_periods"
    ],
    "components": [],
    "related_ideas": [
@@ -3315,9 +3315,7 @@
    "candidate_mcp_tools": [
     "dd_find_cfb_games",
     "dd_find_cfb_team_games",
-    "dd_find_cfb_latest_games",
     "dd_find_cfb_team_periods",
-    "dd_find_cfb_latest_team_periods",
     "dd_find_cfb_historical_market",
     "dd_get_cfb_model_card",
     "dd_get_cfb_rating_system",
@@ -3351,11 +3349,11 @@
    "source_headings": [
     "Deterministic CFB MCP/API Tool Layer"
    ],
-   "rationale": "The production product layer: read-only tools that call deterministic Data Dawgs computation, with the AI doing orchestration and explanation — sixteen CFB tools now run alongside the existing 26-tool registry, and future names remain gated on their underlying capability.",
+   "rationale": "The production product layer: read-only tools that call deterministic Data Dawgs computation, with the AI doing orchestration and explanation — fourteen CFB tools now run alongside the rest of the registry, and future names remain gated on their underlying capability.",
    "expected_value": "AI-callable CFB answers backed by receipts instead of vibes.",
    "data_source_requirements": "Each candidate tool depends on its underlying capability existing and being validated first.",
    "deterministic_tool_potential": "Yes — this entry is the tool layer itself.",
-   "validation_requirement": "A candidate tool goes live only after its underlying computation is built, tested and deployed — the first sixteen passed that gate; remaining reserved names stay non-callable.",
+   "validation_requirement": "A candidate tool goes live only after its underlying computation is built, tested and deployed — the fourteen live readers passed that gate; remaining reserved names stay non-callable.",
    "risks_limitations": "The temptation is registering tool names before the computation earns them; the Pound exists to prevent exactly that.",
    "tags": [
     "CFB",

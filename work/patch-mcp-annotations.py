@@ -57,9 +57,11 @@ TOOLS = [
     ("dd_find_cfb_record_divergence",    "CFB record divergence",        "full"),
     ("dd_get_cfb_model_disagreement",    "CFB model disagreement",       "full"),
     ("dd_get_cfb_model_receipt_status",  "CFB receipt ledger status",    "full"),
+    # ⚠️ dd_find_cfb_latest_games and dd_find_cfb_latest_team_periods were REMOVED by
+    # work/patch-cfb-tool-merge.py on 2026-08-10. Their rows are gone from this table so
+    # re-running this one-shot annotator can never reintroduce two tools the registry no
+    # longer declares.
     ("dd_find_cfb_team_games",           "CFB team games",               "full"),
-    ("dd_find_cfb_latest_games",         "CFB latest games",             "full"),
-    ("dd_find_cfb_latest_team_periods",  "CFB latest team periods",      "full"),
     ("dd_find_cfb_team_periods",         "CFB team periods",             "full"),
     ("dd_find_cfb_games",                "CFB schedule search",          "full"),
     ("dd_find_cfb_historical_market",    "CFB historical prices",        "full"),
