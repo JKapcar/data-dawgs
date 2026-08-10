@@ -664,7 +664,7 @@ const UPSTREAM_MODELS = [
 ];
 
 const MODEL_CONTRACTS = {
-  contract_version: '1.5.0',
+  contract_version: '1.6.0',
   canonical_game_id: 'season_week_away_home using canonical current team abbreviations, for example 2026_01_PIT_CLE',
   canonical_schedule: '/data/nfl-schedule.json; integrity.snapshot_id is SHA-256 over canonical ordered game rows',
   normalized_receipt_ledger: '/data/model-receipts.json; existing rows are append-only and results remain separate',
@@ -712,6 +712,63 @@ const MODEL_CONTRACTS = {
     grading: 'No outcomes are joined. The tool is ungraded and does not rank models.',
     consensus: 'Mean, range and standard deviation are descriptive only; no validated consensus, ensemble, confidence score or predictive edge is claimed.',
     persistence: 'Read-only. Caller filters and results are not stored.',
+  },
+  /* The forecasting challenge storage contract. Published here, and not as its own
+   * surface, because this file already exists to stop incompatible models and missing
+   * values being normalized into false agreement — which is precisely what an entry
+   * contract does. No page reads any of this yet: the schema is settled first because
+   * a season of entries stored in the wrong shape cannot be re-collected. */
+  forecast_challenge_contract: {
+    status: 'storage only; no page, no grading and no leaderboard is built',
+    scoring: {
+      formula: 'points = 25 - 100 * (p - r)^2, p = probability on the team picked, r = 1 win / 0 loss',
+      ceiling: 25,
+      floor: -75,
+      neutral: 'A slider left at 50 scores exactly 0 either way.',
+      equivalence: 'A linear transform of the Brier score, so one number ranks humans and models both ways.',
+      side_invariance: 'The formula is symmetric under p -> 1-p, r -> 1-r, so the canonical home-probability form scores identically to the picked-side form.',
+      replicates: 'FiveThirtyEight NFL Forecasting Game.',
+      deviations_from_538: [
+        'No playoff multiplier. 538 doubled playoff games; doubling amplifies noise rather than skill.',
+        'Ties VOID for everyone including models. Scoring a tie at r=0.5 would hand an untouched 50 slider a free +25.',
+        'Lock is PER GAME at kickoff, not per week, because Thursday and Monday games bracket the Sunday block.',
+      ],
+      provenance_caveat: 'The 538 rules page and leaderboard now redirect to abcnews.com. The formula was recovered from the nflgamedata.com game, which states it replicates the 538 one.',
+    },
+    entry_required: ['v', 'sport', 'season', 'week', 'game_id', 'user', 'home_team', 'away_team',
+      'kickoff_at', 'home_win_probability', 'slider_value', 'slider_side', 'touched',
+      'submitted_at', 'revision', 'source'],
+    entry_rules: {
+      granularity: 'One entry per user per game. No running total is stored anywhere. Points, Brier, ranks, coverage and every slice are queries over the entry table, because a total is a view and a stored view is the copy that goes stale.',
+      touched_is_separate: 'touched is its own field and is NEVER derived from the value. An untouched slider and a deliberate 50 are identical in value and opposite in meaning; both score zero, but the first is an absence. Untouched entries are excluded from the human consensus, or every lurker drags the crowd to 50 and the independence the human line exists to supply is gone.',
+      touched_is_client_asserted: 'The server cannot observe a drag, so touched is reported by the client and labelled as such — the same honesty rule as priceSource "self" on a Bozo leg.',
+      canonical_probability: 'home_win_probability is always P(home) and is DERIVED server-side from slider_value and slider_side. A client may not submit it, so the raw input and the scored number cannot disagree.',
+      server_time: 'submitted_at is the server clock. A client-supplied timestamp is ignored.',
+      lock: 'A write at or after kickoff_at is refused. kickoff_at comes from the canonical schedule surface, never from the request.',
+      privacy: 'An entry is readable only by its owner until that game kicks off. After kickoff every entry for the game is readable, which is what makes the consensus auditable.',
+      sport_scoping: 'sport is both a stored field and a storage path segment, so no node has children spanning both sports. CFB scores inflate against NFL because most games are lopsided, so the two leaderboards can never be summed.',
+    },
+    crowd_consensus: {
+      model_id_pattern: 'dd-crowd-<sport>',
+      aggregation: 'trimmed-mean-logit',
+      formula: 'Mean of logits over touched entries, back-transformed. n>=5 drops ceil(0.1n) from each end by logit; 3<=n<5 uses the median.',
+      clamp: [0.01, 0.99],
+      clamp_reason: 'Sliders reach 0 and 100 — the -75 floor is exactly p=0 on a winner — so an unclamped logit is infinite and one certain entry would swallow the mean.',
+      minimum_touched: 3,
+      minimum_reason: 'Below three touched entries no row is written at all. An empty node is honest where a row built on one person is not.',
+      log_odds_reason: 'Probability averaging is systematically underconfident and costs most where forecasters agree, which is where points are earned.',
+      extremized: false,
+      extremize_reason: 'The case for extremizing assumes partially independent forecasters. Model numbers are visible on the site before picking, so copying is expected and is handled by measuring each correlation against each model rather than by hiding numbers.',
+      captured_at: 'The latest submitted_at among contributing entries — the instant the forecast became fully determined. Strictly before kickoff_at, because every later write is refused.',
+      sealed_at: 'When the row was written, which is at or after kickoff. Published beside captured_at because captured_at alone is true but invites the false reading that the arithmetic was done before kickoff.',
+      immutability: 'A sealed row is never overwritten, not even a wrong one. A ledger that can be corrected in place is not a ledger.',
+      recomputable: 'contributors_sha256 is SHA-256 over the canonical contributing rows in append order, so anyone can recompute the consensus once entries become readable at lock.',
+    },
+    not_built_yet: [
+      'Grading. No outcome is joined, no score is stored and no leaderboard exists.',
+      'Registration of dd-crowd-* as a line in /data/model-receipts.json. Sealed rows must exist first.',
+      'Any page. No slider UI and no challenge entry in the navigation.',
+    ],
   },
 };
 
@@ -902,7 +959,7 @@ write('upstream-models.json', {
 });
 
 write('model-contracts.json', {
-  as_of: '2026-08-08', source: 'Data Dawgs normalized forecasting and calculator contract, revised 2026-08-08.',
+  as_of: '2026-08-10', source: 'Data Dawgs normalized forecasting and calculator contract, revised 2026-08-10 to add the forecasting challenge storage contract.',
   tier: TIERS.pound, graded: false,
   note: 'A contract is not a forecast. It prevents incompatible models and missing values from being silently normalized into false agreement.',
   data: MODEL_CONTRACTS,

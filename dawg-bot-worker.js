@@ -662,6 +662,11 @@ export default {
     if (url.pathname === "/league/team")   return leagueTeam(request, env, cors);
     if (url.pathname === "/league/invite") return authInvite(request, env, cors);
 
+    // The forecasting challenge. Storage only for now — no page calls these yet.
+    if (url.pathname === "/forecast/entry")   return forecastEntry(request, env, cors);
+    if (url.pathname === "/forecast/entries") return forecastMine(request, url, env, cors);
+    if (url.pathname === "/forecast/game")    return forecastGame(request, url, env, cors);
+    if (url.pathname === "/forecast/seal")    return forecastSeal(request, env, cors);
     if (url.pathname === "/bozo/pick")    return bozoPick(request, env, cors);
     if (url.pathname === "/bozo/grade")   return bozoGrade(request, env, cors);
     if (url.pathname === "/bozo/next")    return bozoNext(request, env, cors);
@@ -2568,6 +2573,386 @@ async function leagueJoinCode(request, env, cors) {
     await kv.put(JOIN_LG(lid), JSON.stringify(next));
   } catch (e) { return json({ error: "Join link write failed: " + e.message }, 502, cors); }
   return reply(next);
+}
+
+/* ========================== the forecasting challenge ======================= */
+/* Storage for the 538-style challenge. Entries only — no scores, no standings, no
+ * running totals of any kind. Points, Brier, ranks and slices are all queries over
+ * the entry table, and a stored total would be the one copy that could go stale.
+ *
+ *   /forecast/entries/<sport>/<season>/<week>/<user>/<game_id>   one entry
+ *   /forecast/sealed/<sport>/<season>/<week>/<game_id>           one crowd consensus
+ *
+ * ⚠️ WHY /forecast AND NOT /users, WHICH IS WHERE THIS WAS FIRST AIMED.
+ * loadUsers() reads the ENTIRE /users node in one fbGet, and sessionAuth() calls it on
+ * every authenticated request. A season of entries nested under /users/<name>/ would put
+ * every user's whole history on the wire for every signed-in click, against a hard 10 ms
+ * CPU ceiling on the free plan. /forecast is a sibling root with identical protection.
+ *
+ * ⚠️ THE PROTECTION IS THE RTDB RULES, AND IT WAS MEASURED, NOT ASSUMED. On 2026-08-10 an
+ * unauthenticated browser GET returned 200 for /bozo (world-readable, by design) and 401
+ * Permission denied for /users, /bozoauth, / and /forecast. No rules change is needed here
+ * and none should be made. Re-run that probe before deploying: if someone widens the rules,
+ * these routes become the leak.
+ *
+ * This is the same reasoning CEP-7 used to put join codes in KV rather than under /bozo.
+ * The conclusion differs only because /forecast, unlike /bozo/leagues/<id>, is closed.
+ */
+
+const FC_ROOT = "/forecast";
+const FC_SPORTS = { nfl: "/data/nfl-schedule.json", cfb: "/data/cfb-schedule.json" };
+const FC_MIN_TOUCH = 3;       // fewer than three touched entries is not a crowd
+const FC_TRIM = 0.1;          // dropped from EACH end, by logit, once n >= 5
+const FC_CLAMP_LO = 0.01;     // sliders reach 0 and 100; an unclamped logit is infinite
+const FC_CLAMP_HI = 0.99;
+const FC_WRITE_CAP = 2000;    // entry writes per user per day
+const FC_CROWD_VERSION = "crowd-1.0.0";
+
+const fcEntryPath = (sport, season, week, user, gameId) =>
+  `${FC_ROOT}/entries/${sport}/${season}/${week}/${encodeURIComponent(user)}` +
+  (gameId ? "/" + encodeURIComponent(gameId) : "");
+const fcSealPath = (sport, season, week, gameId) =>
+  `${FC_ROOT}/sealed/${sport}/${season}/${week}` + (gameId ? "/" + encodeURIComponent(gameId) : "");
+
+/* ---------------------------- the schedule ------------------------------- */
+/* kickoff_at comes from the canonical schedule surface and NEVER from the request.
+ * A client that could name its own kickoff could name one in the future and write a
+ * "prospective" forecast after the game had started. */
+const fcScheduleCache = {};
+
+async function fcSchedule(sport) {
+  const url = FC_SPORTS[sport];
+  if (!url) throw new Error("Unknown sport.");
+  const hit = fcScheduleCache[sport];
+  if (hit && Date.now() - hit.at < 900e3) return hit.games;
+
+  const r = await fetch(SITE + url, { cf: { cacheTtl: 900, cacheEverything: true } });
+  if (!r.ok) throw new Error(url + " unavailable: HTTP " + r.status);
+  const envelope = await r.json();
+  const data = envelope && envelope.data;
+  const rows = data && data.games;
+  if (!envelope || !envelope.as_of || !envelope.source || !Array.isArray(rows) || !rows.length)
+    throw new Error(url + " has an invalid envelope");
+
+  const games = new Map();
+  for (const g of rows) {
+    const kickoff = Date.parse(g && g.kickoff_at);
+    if (!g || typeof g.game_id !== "string" || !g.game_id || !Number.isFinite(kickoff) ||
+        typeof g.home_team !== "string" || typeof g.away_team !== "string" ||
+        !Number.isInteger(g.season) || !Number.isInteger(g.week)) continue;
+    games.set(g.game_id, {
+      game_id: g.game_id, season: g.season, week: g.week, kickoff_ms: kickoff,
+      kickoff_at: new Date(kickoff).toISOString(),
+      home_team: g.home_team, away_team: g.away_team,
+    });
+  }
+  if (!games.size) throw new Error(url + " produced no usable games");
+  fcScheduleCache[sport] = { at: Date.now(), games };
+  return games;
+}
+
+/* ----------------------------- aggregation ------------------------------- */
+/* Average in LOG-ODDS, never in probabilities. Probability averaging is systematically
+ * underconfident and costs most where forecasters agree — which is exactly where points
+ * are earned. Do NOT extremize: the literature's case for it assumes partially
+ * independent forecasters, and ours are not. Model numbers are on the site before you
+ * pick, so copying is expected and is handled by MEASURING correlation against each
+ * model rather than by hiding numbers. */
+const fcLogit = p => {
+  const q = Math.min(FC_CLAMP_HI, Math.max(FC_CLAMP_LO, Number(p)));
+  return Math.log(q / (1 - q));
+};
+const fcSigmoid = z => 1 / (1 + Math.exp(-z));
+
+/* ⚠️ `touched === true` is an EXPLICIT filter and must never become
+ * `slider_value !== 50`. An untouched slider and a deliberate 50 have the same value and
+ * opposite meanings — both score zero, but the first is an ABSENCE. Let untouched games
+ * into the consensus at 50% and every lurker drags the crowd to the middle, which
+ * destroys the only thing the human line is for: independence from the models. */
+function fcAggregate(rows) {
+  const contributors = rows
+    .filter(r => r && r.touched === true && Number.isFinite(Number(r.home_win_probability)))
+    .sort((a, b) => String(a.user).localeCompare(String(b.user)));
+  const n = contributors.length;
+  if (n < FC_MIN_TOUCH) return null;
+
+  const zs = contributors.map(r => fcLogit(r.home_win_probability)).sort((a, b) => a - b);
+  let keep;
+  if (n >= 5) {
+    const k = Math.ceil(FC_TRIM * n);
+    keep = zs.slice(k, n - k);
+  } else {
+    // Too few to trim meaningfully; the median is the robust statistic that remains.
+    keep = n % 2 ? [zs[(n - 1) / 2]] : [zs[n / 2 - 1], zs[n / 2]];
+  }
+  const mean = keep.reduce((a, b) => a + b, 0) / keep.length;
+  return {
+    home_win_probability: Math.round(fcSigmoid(mean) * 1e6) / 1e6,
+    n_touched: n,
+    n_used: keep.length,
+    n_trimmed: n - keep.length,
+    contributors,
+  };
+}
+
+/* The canonical row form the contributors hash is taken over — same device the receipt
+ * ledger uses, so the consensus is recomputable by anyone once entries become readable. */
+const fcCanonicalRow = r => JSON.stringify({
+  game_id: r.game_id, home_win_probability: r.home_win_probability,
+  submitted_at: r.submitted_at, touched: r.touched, user: r.user,
+});
+
+/* ------------------------- POST /forecast/entry -------------------------- */
+async function forecastEntry(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code, cors);
+  const { name } = auth;
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const sport = String(body.sport || "");
+  if (!FC_SPORTS[sport]) return json({ error: "Unknown sport." }, 400, cors);
+  const gameId = String(body.game_id || "");
+  if (!gameId) return json({ error: "Which game?" }, 400, cors);
+
+  let games;
+  try { games = await fcSchedule(sport); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+  const game = games.get(gameId);
+  if (!game) return json({ error: "No such game in the canonical schedule." }, 404, cors);
+
+  // ⚠️ SERVER TIME, ALWAYS. This refusal is what makes forecast_status "prospective"
+  // (captured_at < kickoff_at) true by construction instead of true by audit.
+  const now = Date.now();
+  if (now >= game.kickoff_ms)
+    return json({ error: "That game has kicked off. Forecasts are locked." }, 409, cors);
+
+  const slider = Number(body.slider_value);
+  if (!Number.isInteger(slider) || slider < 0 || slider > 100)
+    return json({ error: "slider_value must be a whole number from 0 to 100." }, 400, cors);
+  const side = String(body.slider_side || "");
+  if (side !== "home" && side !== "away")
+    return json({ error: "slider_side must be home or away." }, 400, cors);
+  if (typeof body.touched !== "boolean")
+    return json({ error: "touched must be true or false." }, 400, cors);
+  // ⚠️ The client may not assert the canonical probability. Deriving it here is what makes
+  // it impossible for the raw slider and the number everything scores to disagree.
+  if ("home_win_probability" in body)
+    return json({ error: "home_win_probability is derived, not submitted." }, 400, cors);
+
+  if (env.RL) {
+    const key = `fc:w:${new Date().toISOString().slice(0, 10)}:${encodeURIComponent(name)}`;
+    const used = parseInt((await env.RL.get(key)) || "0", 10);
+    if (used >= FC_WRITE_CAP)
+      return json({ error: `You have hit the daily forecast write cap (${FC_WRITE_CAP}).` }, 429, cors);
+    await env.RL.put(key, String(used + 1), { expirationTtl: 172800 });
+  }
+
+  const path = fcEntryPath(sport, game.season, game.week, name, gameId);
+  let prior = null;
+  try { prior = (await fbGet(env, path)).data; }
+  catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+
+  const entry = {
+    v: 1,
+    sport, season: game.season, week: game.week, game_id: gameId, user: name,
+    home_team: game.home_team, away_team: game.away_team, kickoff_at: game.kickoff_at,
+    // The canonical number is ALWAYS P(home). Scoring is symmetric under
+    // p -> 1-p, r -> 1-r, so the side the user expressed it on cannot change a score.
+    home_win_probability: (side === "home" ? slider : 100 - slider) / 100,
+    slider_value: slider,
+    slider_side: side,
+    // ⚠️ CLIENT-ASSERTED, like priceSource "self" on a Bozo leg — the Worker cannot observe
+    // a drag. Stored anyway, and stored SEPARATELY from the value: "was here and left this
+    // one alone" is real coverage information, and discarding it would make an absent
+    // record ambiguous between two states that mean opposite things.
+    touched: body.touched,
+    submitted_at: now,
+    revision: (prior && Number.isInteger(prior.revision) ? prior.revision : 0) + 1,
+    source: "web",
+  };
+
+  try { await fbPut(env, path, entry); }
+  catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  return json({ ok: true, entry }, 200, cors);
+}
+
+/* ------------------------ GET /forecast/entries -------------------------- */
+/* Your own week, and nothing else. This route reads exactly one node containing exactly
+ * your own data, so the request that runs most often never holds another person's
+ * pre-lock forecast in memory at all. */
+async function forecastMine(request, url, env, cors) {
+  if (request.method !== "GET") return json({ error: "GET only" }, 405, cors);
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code, cors);
+
+  const sport = String(url.searchParams.get("sport") || "");
+  if (!FC_SPORTS[sport]) return json({ error: "Unknown sport." }, 400, cors);
+  const season = parseInt(url.searchParams.get("season") || "", 10);
+  const week = parseInt(url.searchParams.get("week") || "", 10);
+  if (!Number.isInteger(season) || !Number.isInteger(week))
+    return json({ error: "season and week are required." }, 400, cors);
+
+  let mine, sealed;
+  try {
+    mine = (await fbGet(env, fcEntryPath(sport, season, week, auth.name, null))).data || {};
+    sealed = (await fbGet(env, fcSealPath(sport, season, week, null))).data || {};
+  } catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+
+  return json({
+    ok: true, sport, season, week,
+    entries: Object.values(mine),
+    // The sealed rows are for games that have already locked, so publishing them here
+    // discloses nothing that was private a moment ago.
+    sealed: Object.values(sealed),
+  }, 200, cors);
+}
+
+/* -------------------------- GET /forecast/game --------------------------- */
+/* Every entry for one game — AFTER kickoff and never before. This is the route the
+ * privacy assertion attacks. */
+async function forecastGame(request, url, env, cors) {
+  if (request.method !== "GET") return json({ error: "GET only" }, 405, cors);
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code, cors);
+
+  const sport = String(url.searchParams.get("sport") || "");
+  if (!FC_SPORTS[sport]) return json({ error: "Unknown sport." }, 400, cors);
+  const gameId = String(url.searchParams.get("game_id") || "");
+  if (!gameId) return json({ error: "Which game?" }, 400, cors);
+
+  let games;
+  try { games = await fcSchedule(sport); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+  const game = games.get(gameId);
+  if (!game) return json({ error: "No such game in the canonical schedule." }, 404, cors);
+
+  // ⚠️ THE ONE THAT MATTERS. Nobody but the owner reads an entry until the game locks.
+  // Refuse BEFORE any read, so a bug in the shaping code below cannot leak anything.
+  if (Date.now() < game.kickoff_ms)
+    return json({ error: "Forecasts stay private until kickoff." }, 409, cors);
+
+  let byUser;
+  try { byUser = (await fbGet(env, `${FC_ROOT}/entries/${sport}/${game.season}/${game.week}`)).data || {}; }
+  catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+
+  const key = encodeURIComponent(gameId);
+  const entries = [];
+  for (const perUser of Object.values(byUser)) {
+    const row = perUser && perUser[key];
+    if (row) entries.push(row);
+  }
+  entries.sort((a, b) => String(a.user).localeCompare(String(b.user)));
+
+  let sealed = null;
+  try { sealed = (await fbGet(env, fcSealPath(sport, game.season, game.week, gameId))).data || null; }
+  catch { /* the entries are the answer; a missing seal is not an error */ }
+
+  return json({ ok: true, sport, game_id: gameId, kickoff_at: game.kickoff_at, entries, sealed }, 200, cors);
+}
+
+/* ------------------------- POST /forecast/seal --------------------------- */
+/* Freeze the crowd consensus for every game in a week that has kicked off and has no
+ * sealed row yet. Idempotent: an existing row is NEVER overwritten, not even a wrong one.
+ * A ledger that can be corrected in place is not a ledger.
+ *
+ * ⚠️ captured_at AND sealed_at ARE TWO DIFFERENT FACTS AND BOTH ARE PUBLISHED.
+ * A consensus can only be computed once its inputs stop changing, which is kickoff — so
+ * captured_at = now would be at or after kickoff and the row could never be prospective.
+ *   captured_at = the latest submitted_at among contributors. The instant the forecast
+ *                 became fully determined. < kickoff_at by construction, because
+ *                 /forecast/entry refuses every later write.
+ *   sealed_at   = when this row was written. >= kickoff_at, always.
+ * captured_at alone is true but invites "we computed this before kickoff", which is false.
+ * Publishing both makes the claim exact: every input predates kickoff, the arithmetic
+ * does not. */
+async function forecastSeal(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const auth = await requireAdmin(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const sport = String(body.sport || "");
+  if (!FC_SPORTS[sport]) return json({ error: "Unknown sport." }, 400, cors);
+  const season = parseInt(body.season, 10);
+  const week = parseInt(body.week, 10);
+  if (!Number.isInteger(season) || !Number.isInteger(week))
+    return json({ error: "season and week are required." }, 400, cors);
+
+  let games;
+  try { games = await fcSchedule(sport); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+
+  let byUser, already;
+  try {
+    byUser = (await fbGet(env, `${FC_ROOT}/entries/${sport}/${season}/${week}`)).data || {};
+    already = (await fbGet(env, fcSealPath(sport, season, week, null))).data || {};
+  } catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+
+  const perGame = new Map();
+  for (const entries of Object.values(byUser)) {
+    for (const row of Object.values(entries || {})) {
+      if (!row || typeof row.game_id !== "string") continue;
+      if (!perGame.has(row.game_id)) perGame.set(row.game_id, []);
+      perGame.get(row.game_id).push(row);
+    }
+  }
+
+  const now = Date.now();
+  const sealed = [], skipped = [];
+  for (const [gameId, rows] of perGame) {
+    const game = games.get(gameId);
+    if (!game) { skipped.push({ game_id: gameId, why: "not in the canonical schedule" }); continue; }
+    if (now < game.kickoff_ms) { skipped.push({ game_id: gameId, why: "not kicked off" }); continue; }
+    if (already[encodeURIComponent(gameId)]) {
+      skipped.push({ game_id: gameId, why: "already sealed" }); continue;
+    }
+    const agg = fcAggregate(rows);
+    if (!agg) { skipped.push({ game_id: gameId, why: `fewer than ${FC_MIN_TOUCH} touched entries` }); continue; }
+
+    const capturedMs = Math.max(...agg.contributors.map(r => Number(r.submitted_at) || 0));
+    // Belt and braces: an entry that somehow predates nothing, or postdates kickoff, must
+    // never be laundered into a prospective row by the aggregator.
+    if (!(capturedMs > 0 && capturedMs < game.kickoff_ms)) {
+      skipped.push({ game_id: gameId, why: "a contributing entry is not prospective" });
+      continue;
+    }
+
+    const row = {
+      v: 1,
+      model_id: "dd-crowd-" + sport,
+      model_name: "Data Dawgs Crowd",
+      model_version: FC_CROWD_VERSION,
+      sport, season, week, game_id: gameId,
+      home_team: game.home_team, away_team: game.away_team,
+      kickoff_at: game.kickoff_at,
+      home_win_probability: agg.home_win_probability,
+      aggregation: "trimmed-mean-logit",
+      trim_fraction: FC_TRIM,
+      clamp: [FC_CLAMP_LO, FC_CLAMP_HI],
+      extremized: false,
+      min_touch: FC_MIN_TOUCH,
+      n_touched: agg.n_touched,
+      n_used: agg.n_used,
+      n_trimmed: agg.n_trimmed,
+      captured_at: new Date(capturedMs).toISOString(),
+      sealed_at: new Date(now).toISOString(),
+      forecast_status: "prospective",
+      contributors: agg.contributors.map(r => r.user),
+      contributors_sha256: await sha256hex(agg.contributors.map(fcCanonicalRow).join("\n")),
+    };
+    try { await fbPut(env, fcSealPath(sport, season, week, gameId), row); }
+    catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+    sealed.push(row);
+  }
+
+  return json({ ok: true, sport, season, week, sealed, skipped }, 200, cors);
 }
 
 /* =============================== /bozo/pick =============================== */
@@ -8724,7 +9109,7 @@ const MCP_TOOLS = [
           data: ["/data/pool.json", "/data/receipts.json", "/data/models.json", "/data/epa-teams.json", "/data/nfelo.json", "/data/league.json", "/data/bozo-rules.json", "/data/survivor.json", "/data/pound-tools.json", "/data/model-contracts.json", "/data/upstream-models.json", "/data/nfl-schedule.json", "/data/538-classic.json", "/data/model-receipts.json", "/data/cfb-schedule.json", "/data/cfb-games-latest.json", "/data/cfb-team-game.json", "/data/cfb-team-week.json", "/data/cfb-team-week-latest.json", "/data/cfb-teams.json", "/data/cfb-record-divergence.json", "/data/cfb-record-divergence-validation.json", "/data/cfb-market.json", "/data/cfb-elo.json", "/data/cfb-ratings.json", "/data/cfb-model-cards.json", "/data/cfb-model-receipts.json", "/data/cfb-disagreement.json", "/data/index.json"],
         },
         pages: {
-          "index.html": "Home — what Data Dawgs is and the working-dawg taxonomy (Labs / Dawgs / The Pound).",
+          "index.html": "Home — what Data Dawgs is and the working-dawg taxonomy (Pup / Dawgs / The DawgHouse).",
           "bigboard.html": "Draft big board over the MV pool.",
           "auction.html": "Auction draft operator (league passphrase gate).",
           "board.html": "Live draft board — mirrors the auction via Firebase.",

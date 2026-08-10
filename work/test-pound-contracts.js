@@ -169,8 +169,48 @@ test('deployed Pound tools name live MCP implementations without staged claims',
     assert.equal(t.staged_worker_mcp_implementation, null);
     assert.equal(t.exact_blocker, null);
   });
-  assert.equal(contracts.data.contract_version, '1.5.0');
+  assert.equal(contracts.data.contract_version, '1.6.0');
   assert.equal(contracts.data.calculator_contracts.odds_converter.mcp_tool, 'dd_convert_odds');
+});
+/* Stage FC-A. The forecasting challenge stores entries before any page reads them, so
+   this file is where the storage rules are pinned. A contract nobody asserts is prose. */
+test('the forecasting challenge contract states the rules the storage layer enforces', () => {
+  const fc = contracts.data.forecast_challenge_contract;
+  assert.ok(fc, 'model-contracts.json carries no forecast_challenge_contract');
+  assert.match(fc.status, /storage only/i);
+
+  /* Scoring replicates 538 exactly, and every deviation is written down rather than
+     left silent. Three of them, and the reason travels with each. */
+  assert.match(fc.scoring.formula, /25 - 100 \* \(p - r\)\^2/);
+  assert.equal(fc.scoring.ceiling, 25);
+  assert.equal(fc.scoring.floor, -75);
+  assert.equal(fc.scoring.deviations_from_538.length, 3);
+  assert.ok(fc.scoring.deviations_from_538.some(d => /no playoff multiplier/i.test(d)));
+  assert.ok(fc.scoring.deviations_from_538.some(d => /ties void/i.test(d)));
+  assert.ok(fc.scoring.deviations_from_538.some(d => /per game at kickoff/i.test(d)));
+
+  /* The three rules that are unrecoverable if they ship wrong. */
+  assert.match(fc.entry_rules.granularity, /no running total is stored/i);
+  assert.match(fc.entry_rules.touched_is_separate, /never derived/i);
+  assert.match(fc.entry_rules.privacy, /only by its owner until that game kicks off/i);
+  assert.ok(fc.entry_required.includes('touched'));
+  assert.ok(fc.entry_required.includes('slider_value'));
+  assert.ok(fc.entry_required.includes('home_win_probability'));
+
+  /* The aggregation is pre-registered, so it cannot be chosen after the season. */
+  assert.equal(fc.crowd_consensus.aggregation, 'trimmed-mean-logit');
+  assert.equal(fc.crowd_consensus.extremized, false);
+  assert.equal(fc.crowd_consensus.minimum_touched, 3);
+  assert.deepEqual(fc.crowd_consensus.clamp, [0.01, 0.99]);
+  assert.match(fc.crowd_consensus.immutability, /never overwritten/i);
+
+  /* captured_at and sealed_at are two different facts and both must stay published. */
+  assert.match(fc.crowd_consensus.captured_at, /before kickoff_at/i);
+  assert.match(fc.crowd_consensus.sealed_at, /at or after kickoff/i);
+
+  /* Nothing here may claim grading or a leaderboard exists. */
+  assert.ok(fc.not_built_yet.some(x => /grading/i.test(x)));
+  assert.ok(fc.not_built_yet.some(x => /model-receipts\.json/.test(x)));
 });
 test('model scoreboard is live over the normalized ungraded receipt ledger', () => {
   const scoreboard = tools.data.find(t => t.id === 'model-scoreboard');
