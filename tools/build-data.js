@@ -639,6 +639,17 @@ const UPSTREAM_MODELS = [
     captured_at: '2026-08-07', license: null, license_status: 'unverified-no-license-file',
     integration_mode: 'reimplementation', data_status: 'independent pregame normal-model calculator available',
     notes: 'The upstream repository describes a live-game ML model. The DawgHouse does not copy it and clearly labels its simpler pregame approximation.' },
+  /* ⚠️ NOT A REPOSITORY. Added 2026-08-09 for the Data library (CEP-5A Stage 5). This file
+     was the only place recording what we consume and under what terms, and it was missing
+     the one source we consume the MOST carefully: a paid subscription product synthesized
+     into /data/strategy.md. Leaving it out made the provenance file look complete when it
+     was not. `reference-only` means we publish NOTHING of theirs — no mirror, no proxy,
+     no cache, no fetch from any Data Dawgs page. The library links out and stops there. */
+  { id: 'etr', creator: 'Establish The Run', repository: null,
+    homepage: 'https://establishtherun.com', upstream_commit: null, version: '2026 Draft Kit Pro',
+    captured_at: '2026-07-28', license: null, license_status: 'proprietary-subscription-content',
+    integration_mode: 'reference-only', data_status: 'not republished; /data/strategy.md is a dated synthesis, not their content',
+    notes: 'A subscription product. Their rankings, projections and articles are not mirrored, proxied or cached here, and no Data Dawgs page requests anything from their servers. The captured date is when the synthesis was written; they update daily, so treat player-level calls as stale and the structural arguments as ageing better.' },
 ];
 
 const MODEL_CONTRACTS = {
@@ -873,9 +884,9 @@ const { CFB_IDEAS, CFB_GOVERNANCE, CFB_ROADMAP_STEPS, CFB_LIFECYCLE,
 }
 
 write('upstream-models.json', {
-  as_of: '2026-08-08', source: 'Primary upstream GitHub repositories and package metadata inspected 2026-08-08.',
+  as_of: '2026-08-08', source: 'Upstream sources we consume — GitHub repositories and package metadata inspected 2026-08-08, plus named third-party content sources.',
   tier: TIERS.pound, graded: false,
-  note: 'License status is an implementation gate, not legal advice. Public code without a verified reusable license is not copied or repackaged.',
+  note: 'License status is an implementation gate, not legal advice. Public code without a verified reusable license is not copied or repackaged, and a reference-only source is not republished in any form.',
   data: UPSTREAM_MODELS,
 });
 

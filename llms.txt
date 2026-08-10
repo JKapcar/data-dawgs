@@ -3,8 +3,8 @@
 > Forecasting, fantasy football, betting markets and EPA with receipts.
 > All paths below are relative to https://datadawgs216.com/
 
-Start with [`/data/index.json`](/data/index.json): machine-file
-dates, sizes and SHA-256 receipts. Cite each payload's `as_of` with every number.
+Start with [`/data/index.json`](/data/index.json): dates, sizes and SHA-256 for every
+machine file. Cite each payload's `as_of` with every number.
 
 [`/data/surfaces.json`](/data/surfaces.json) maps pages to machine
 surfaces and 43 live read-only MCP tools — every registered one. `planned` is not
@@ -17,27 +17,28 @@ Tiers: `labs` is challenged; `dawg` validated; `pound` shelved — The DawgHouse
 
 ## The DawgHouse
 
-- [The shelf](/dawghouse.html) and its [inventory](/data/pound-tools.json): blocked NFL work with exact blockers, and 44 evidence-tracked CFB ideas. Sixteen production CFB tools ARE callable over MCP; the roadmap ideas are not, and a lifecycle state is not a capability claim.
+- [The shelf](/dawghouse.html) and its [inventory](/data/pound-tools.json): blocked NFL work with exact blockers, and 44 evidence-tracked CFB ideas. Sixteen production CFB tools ARE callable over MCP; the roadmap ideas are not.
 - [Contracts](/data/model-contracts.json): forecast fields, receipt rules and calculator I/O.
 - [Provenance](/data/upstream-models.json): repos, commits, dates, licenses, integration mode.
 - [NFL schedule](/data/nfl-schedule.json): 272 validated 2026 games, locked snapshot.
-- [538 Classic Elo](/data/538-classic.json) ([method](/data/538-classic-methodology.md)): 32 ratings, 272 ungraded forecasts, reproduced historically.
+- [538 Classic Elo](/data/538-classic.json) ([method](/data/538-classic-methodology.md)): 32 ratings, 272 ungraded forecasts.
 - [Normalized model receipts](/data/model-receipts.json): 544 append-only prospective forecasts across nfelo and 538 Classic.
 
 - [Calculators](/calculators.html): 10 deterministic calculators — odds, vig, EV, hedging,
-passer rating, Elo, margin translation, forecast scoring, belief summary. Inputs are not
-stored. The model scoreboard and upstream provenance render on /receipts.html.
+passer rating, Elo, margin translation, forecast scoring, belief summary. Inputs are not stored.
 
-## Arena
+## Hubs
 
 - [Arena](/arena.html): the games played against other people — Bozo, Guillotine, Survivor, DFS,
 the live draft rig. Rendered from the `domain: "arena"` rows of surfaces.json; owns no data file.
+- [Library](/data.html): every file in index.json, shelved by the surface that owns it, plus
+the sources we read and do not republish. Owns no data file either.
 
 ## College football
 
 - [CFB Lab](/cfb.html): explorer, matchup calculator, Elo backtest, divergence, and the 44-idea build roadmap (moved from the workbench 2026-08-09).
 - [2025 results](/data/cfb-schedule.json): 934 games; [latest games](/data/cfb-games-latest.json): one final per FBS team; [latest periods](/data/cfb-team-week-latest.json): one per team; [ratings](/data/cfb-teams.json): records + retrodictive Elo.
-- [Book market](/data/cfb-market.json): spreads, totals and devigged moneylines. Books are named but observation time is unknown; these are not closing lines and cannot establish CLV.
+- [Book market](/data/cfb-market.json): spreads, totals, devigged moneylines. Books are named but observation time is unknown; not closing lines, so no CLV.
 - [CFB Elo](/data/cfb-elo.json), [registry](/data/cfb-ratings.json) and [card](/data/cfb-model-cards.json): end-2025; retrodictive, modelled, ungraded, not consensus or forecast.
 - [Fraud test](/data/cfb-record-divergence-validation.json): small held-out lift beyond Elo; retrodictive, no team labels. [Disagreement](/data/cfb-disagreement.json): blocked on timestamped prices.
 - [Prospective receipts](/data/cfb-model-receipts.json): append-only contract, zero rows; no CFB forecast has been frozen before kickoff.

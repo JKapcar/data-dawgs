@@ -695,6 +695,47 @@ test('the collar has published criteria', () => {
   assert.match(method, /2026-08-09 — the collar becomes a symbol/);
 });
 
+test('a reference-only source is recorded and never integrated', () => {
+  // CEP-5A Stage 5. upstream-models.json was the only record of what we consume and under
+  // what terms, and it was missing the source we consume most carefully: a paid
+  // subscription synthesized into /data/strategy.md. Its absence made the file look
+  // complete when it was not.
+  const etr = upstream.data.find(x => x.id === 'etr');
+  assert.ok(etr, 'the provenance file does not record ETR');
+  assert.equal(etr.integration_mode, 'reference-only');
+  assert.equal(etr.repository, null, 'reference-only sources are not repositories');
+  assert.ok(etr.homepage && /^https:\/\//.test(etr.homepage));
+  assert.match(etr.data_status, /not republished/);
+  assert.equal(etr.license, null);
+  // and nothing on the site may fetch it
+  for (const f of ['data.html', 'strategy.html', 'index.html'])
+    assert.ok(!/fetch\([^)]*establishtherun/.test(fs.readFileSync(f, 'utf8')), f);
+});
+
+test('proprietary and unverified sources are never direct integrations', () => {
+  upstream.data
+    .filter(x => x.license_status.startsWith('unverified') || x.license_status.includes('educational')
+      || x.license_status.includes('proprietary'))
+    .forEach(x => assert.notEqual(x.integration_mode, 'direct', x.id));
+});
+
+test('data.html is a directory and claims no surface of its own', () => {
+  assert.ok(!surfaces.data.some(s => s.page === '/data.html'), 'a surfaces row points at the hub');
+  const html = fs.readFileSync('data.html', 'utf8');
+  const chip = html.match(/class="tierchip[^"]*"[^>]*>([^<]+)</);
+  assert.equal(chip && chip[1].trim(), 'Labs', 'a hub is a directory, not a graded tool');
+  // the shelf is rendered from the manifest, never typed
+  assert.match(html, /idx\.data\.files\.map/);
+  assert.ok(!/data-book="pool/.test(html), 'a book id is typed into the page');
+  // and it paints nothing
+  assert.ok(!/<canvas/i.test(html.slice(html.indexOf('<main>'))), 'the library paints something');
+});
+
+test('data.html is cached for draft night and findable by crawlers', () => {
+  assert.match(fs.readFileSync('sw.js', 'utf8'), /"\/data\.html"/);
+  assert.match(fs.readFileSync('sitemap.xml', 'utf8'), /datadawgs216\.com\/data\.html/);
+});
+
 test('the dated 2026-08-07 tier audit keeps its original wording', () => {
   // A dated record is history, not a label. The rename must not edit it.
   const html = fs.readFileSync('receipts.html', 'utf8');

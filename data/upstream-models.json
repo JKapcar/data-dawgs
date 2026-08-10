@@ -1,9 +1,9 @@
 {
  "as_of": "2026-08-08",
- "source": "Primary upstream GitHub repositories and package metadata inspected 2026-08-08.",
+ "source": "Upstream sources we consume — GitHub repositories and package metadata inspected 2026-08-08, plus named third-party content sources.",
  "tier": "pound",
  "graded": false,
- "note": "License status is an implementation gate, not legal advice. Public code without a verified reusable license is not copied or repackaged.",
+ "note": "License status is an implementation gate, not legal advice. Public code without a verified reusable license is not copied or repackaged, and a reference-only source is not republished in any form.",
  "data": [
   {
    "id": "538-classic",
@@ -160,6 +160,20 @@
    "integration_mode": "reimplementation",
    "data_status": "independent pregame normal-model calculator available",
    "notes": "The upstream repository describes a live-game ML model. The DawgHouse does not copy it and clearly labels its simpler pregame approximation."
+  },
+  {
+   "id": "etr",
+   "creator": "Establish The Run",
+   "repository": null,
+   "homepage": "https://establishtherun.com",
+   "upstream_commit": null,
+   "version": "2026 Draft Kit Pro",
+   "captured_at": "2026-07-28",
+   "license": null,
+   "license_status": "proprietary-subscription-content",
+   "integration_mode": "reference-only",
+   "data_status": "not republished; /data/strategy.md is a dated synthesis, not their content",
+   "notes": "A subscription product. Their rankings, projections and articles are not mirrored, proxied or cached here, and no Data Dawgs page requests anything from their servers. The captured date is when the synthesis was written; they update daily, so treat player-level calls as stale and the structural arguments as ageing better."
   }
  ],
  "tier_meaning": "The DawgHouse (formerly The Pound) — shelved, with the reason attached.",
