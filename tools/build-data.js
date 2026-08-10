@@ -1070,21 +1070,27 @@ const MCP_ENDPOINT = {
   writes: 'None. Every tool is read-only, asserted by test against the source.',
 };
 
+/* `domain` names the hub a surface belongs to, so a hub page can COMPUTE its own card
+   set instead of carrying a typed list that drifts the first time a row moves. Added
+   2026-08-09 for CEP-5A Stage 4 (arena.html); nfl.html and data.html read the same
+   field. It is an editorial grouping, not a capability claim — nothing about a row's
+   tier, machine surfaces or grading depends on it. pound-tools.json already carried a
+   `domain`; this is the same idea on the surfaces map. */
 const SURFACES = [
-  { id: 'draft-pool', name: 'Player pool + Market Value', page: '/master.html',
+  { id: 'draft-pool', domain: 'data', name: 'Player pool + Market Value', page: '/master.html',
     machine: [{ kind: 'json', url: '/data/pool.json', status: 'live' },
               { kind: 'mcp', tool: 'dd_draft_pool', status: 'live' }],
     planned: ['rest:/api/pool'] },
-  { id: 'draft-strategy', name: '2026 draft strategy', page: '/strategy.html',
+  { id: 'draft-strategy', domain: 'data', name: '2026 draft strategy', page: '/strategy.html',
     machine: [{ kind: 'markdown', url: '/data/strategy.md', status: 'live' }],
     planned: [] },
-  { id: 'live-draft', name: 'Live auction — board, auctioneer, big board, dashboard, report card',
+  { id: 'live-draft', domain: 'arena', name: 'Live auction — board, auctioneer, big board, dashboard, report card',
     page: '/dashboard.html',
     machine: [{ kind: 'json', url: '/data/league.json', status: 'live', covers: 'league configuration only' },
               { kind: 'mcp', tool: 'dd_draft_board', status: 'live', covers: 'live budgets, open slots, true max bids, clock, block, recent sales' }],
     planned: ['rest:/api/draft'],
     gap: 'The Firebase mirror still has no dated JSON snapshot surface; dd_draft_board reads it live instead.' },
-  { id: 'epa', name: 'NFL EPA explorer', page: '/stats.html',
+  { id: 'epa', domain: 'nfl', name: 'NFL EPA explorer', page: '/stats.html',
     machine: [{ kind: 'json', url: '/data/epa-teams.json', status: 'live', covers: 'team and QB aggregates' },
               { kind: 'json', url: '/data/epa-players.json', status: 'live',
                 covers: 'per-player aggregates by primary ball handler — passer on a dropback, ' +
@@ -1098,19 +1104,19 @@ const SURFACES = [
     gap: 'Team and per-player aggregates are live as static JSON. Play-level data (109,933 plays) ' +
          'is still not exposed, and no play names a receiver, a blocker or a defender, so no tool ' +
          'built on this snapshot can produce receiving or defensive player EPA.' },
-  { id: 'nfelo', name: 'nfelo power ratings', page: '/nfelo.html',
+  { id: 'nfelo', domain: 'nfl', name: 'nfelo power ratings', page: '/nfelo.html',
     machine: [{ kind: 'json', url: '/data/nfelo.json', status: 'live' },
               { kind: 'json', url: '/data/models.json', status: 'live', covers: 'the margin model parameters' },
               { kind: 'mcp', tool: 'dd_analyze_matchup', status: 'live', covers: 'one current matchup with dated nfelo, market and model context' }],
     planned: ['rest:/api/matchup'] },
-  { id: 'survivor', name: 'Survivor pool EV', page: '/survivor.html',
+  { id: 'survivor', domain: 'arena', name: 'Survivor pool EV', page: '/survivor.html',
     machine: [{ kind: 'json', url: '/data/survivor.json', status: 'live', covers: 'schedule and win probabilities' },
               { kind: 'mcp', tool: 'dd_survivor_week', status: 'live', covers: 'stored weekly ownership snapshots, staleness-flagged' },
               { kind: 'mcp', tool: 'dd_survivor_ev', status: 'live', covers: 'modelled pool survival EV with assumptions returned in the payload' },
               { kind: 'mcp', tool: 'dd_optimize_survivor_path', status: 'live', covers: 'exact one-pick-per-week maximum-product path, dated probabilities and future-cost options' }],
     planned: [],
     gap: 'The exact one-pick-per-week path is live. Pool ownership is modelled, not observed, and double-pick weeks are recorded but not optimized.' },
-  { id: 'receipts', name: 'Pre-registered forecasts, the model scoreboard and provenance', page: '/receipts.html',
+  { id: 'receipts', domain: 'receipts', name: 'Pre-registered forecasts, the model scoreboard and provenance', page: '/receipts.html',
     machine: [{ kind: 'json', url: '/data/receipts.json', status: 'live' },
               // CEP-5A 1b: the models sheet and provenance sheet render these here now
               { kind: 'json', url: '/data/model-receipts.json', status: 'live', covers: '544 append-only normalized prospective receipts across nfelo and 538 Classic — the models sheet' },
@@ -1123,7 +1129,7 @@ const SURFACES = [
               { kind: 'json', url: '/data/tier-audit.json', status: 'live', covers: 'the tier audit — our own tools graded against the gate' },
               { kind: 'markdown', url: '/data/tier-audit.md', status: 'live' }],
     planned: ['mcp:get_receipts', 'mcp:verify_receipts'] },
-  { id: 'bozo', name: 'Bozo — weekly group parlay', page: '/bozo.html',
+  { id: 'bozo', domain: 'arena', name: 'Bozo — weekly group parlay', page: '/bozo.html',
     machine: [{ kind: 'json', url: '/data/bozo-rules.json', status: 'live', covers: 'ruleset only' },
               { kind: 'markdown', url: '/data/bozo-rules.md', status: 'live' },
               { kind: 'mcp', tool: 'dd_bozo_week', status: 'live', covers: 'the live board, legs in submission order' },
@@ -1131,19 +1137,19 @@ const SURFACES = [
               { kind: 'mcp', tool: 'dd_league_overview', status: 'live' }],
     planned: ['mcp:submit_bozo_leg'],
     gap: 'Reads are live over MCP. Write access (submitting a leg) waits on the trust layer, deliberately.' },
-  { id: 'dfs', name: 'DFS solver + contest simulator', page: '/dfs.html',
+  { id: 'dfs', domain: 'arena', name: 'DFS solver + contest simulator', page: '/dfs.html',
     machine: [{ kind: 'mcp', tool: 'dd_dfs_correlations', status: 'live', covers: 'the measured correlation structure' },
               { kind: 'mcp', tool: 'dd_solve_dfs_lineup', status: 'live', covers: 'bounded exact lineup optimization over caller-supplied slate data; inputs and results are not stored' }],
     planned: [],
     gap: 'The exact solver is live over MCP; contest simulation remains browser-only. Projections and ownership are caller-supplied and never hosted.' },
-  { id: 'guillotine', name: 'Guillotine league tools', page: '/guillotine.html',
+  { id: 'guillotine', domain: 'arena', name: 'Guillotine league tools', page: '/guillotine.html',
     machine: [{ kind: 'mcp', tool: 'dd_guillotine_odds', status: 'live' }],
     planned: ['json:/data/guillotine.json'] },
-  { id: 'pound', name: 'The DawgHouse shelf (formerly The Pound)', page: '/dawghouse.html',
+  { id: 'pound', domain: 'site', name: 'The DawgHouse shelf (formerly The Pound)', page: '/dawghouse.html',
     machine: [{ kind: 'json', url: '/data/pound-tools.json', status: 'live', covers: 'complete NFL tool inventory (delivery status, blockers) — the College Football roadmap in the same file is listed on the cfb surface, where it renders' }],
     planned: [],
     gap: 'The model scoreboard and provenance render on /receipts.html, the deterministic calculators on /calculators.html, and the College Football roadmap on /cfb.html since 2026-08-09; each surface lists its own files and Worker tools.' },
-  { id: 'cfb', name: 'College Football Lab — 2025 results, retrodictive Elo and the build roadmap', page: '/cfb.html',
+  { id: 'cfb', domain: 'cfb', name: 'College Football Lab — 2025 results, retrodictive Elo and the build roadmap', page: '/cfb.html',
     /* CEP-5A Stage 3: the roadmap renders on /cfb.html now, so the CFB files and the
        sixteen CFB Worker tools are this surface's claims, not the DawgHouse's. */
     machine: [{ kind: 'json', url: '/data/pound-tools.json', status: 'live', covers: 'the 44-idea College Football roadmap under cfb_roadmap and kind:"roadmap-idea" entries — the same file also carries the NFL inventory listed on the DawgHouse surface' },
@@ -1165,7 +1171,7 @@ const SURFACES = [
                 covers: 'bounded read-only CFB evidence or deterministic rating-period calculation; inputs and results are not stored' }))],
     planned: [],
     gap: 'Sixteen bounded CFB tools and the timestamped 24-hour market collector are live; the first market observation waits on an eligible 2026 event, and no CFB model forecast receipt has been frozen yet.' },
-  { id: 'calculators', name: 'NFL calculators', page: '/calculators.html',
+  { id: 'calculators', domain: 'nfl', name: 'NFL calculators', page: '/calculators.html',
     /* CEP-5A Stage 2: the ten deterministic calculators moved off the DawgHouse page.
        Their contracts file and Worker tools moved with them — a surface lists what its
        page actually holds, and /dawghouse.html no longer holds the forms. */
@@ -1173,7 +1179,7 @@ const SURFACES = [
               ...MCP_POUND_LIVE.map(tool => ({ kind: 'mcp', tool, status: 'live',
                 covers: 'deterministic calculation over caller-supplied inputs; inputs and results are not stored' }))],
     planned: [] },
-  { id: 'method', name: 'How this site reasons', page: '/index.html',
+  { id: 'method', domain: 'site', name: 'How this site reasons', page: '/index.html',
     machine: [{ kind: 'markdown', url: '/data/method.md', status: 'live' },
               { kind: 'markdown', url: '/data/toto-philosophy.md', status: 'live' }],
     planned: ['mcp:prompts'] },

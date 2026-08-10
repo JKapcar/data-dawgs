@@ -651,6 +651,50 @@ test('calculators.html is cached for draft night and findable by crawlers', () =
   assert.match(sitemap, /datadawgs216\.com\/calculators\.html/);
 });
 
+test('the domain field partitions the surfaces map without changing any claim', () => {
+  // CEP-5A Stage 4. `domain` is an editorial grouping so a hub can COMPUTE its cards.
+  // It must not become a back door for a capability claim, so: every row has one, the
+  // values are a closed set, and no row's tier, machine list or planned list depends on it.
+  const allowed = new Set(['arena', 'nfl', 'cfb', 'data', 'receipts', 'site']);
+  surfaces.data.forEach(r => assert.ok(allowed.has(r.domain), `${r.id}: domain ${r.domain}`));
+  const arena = surfaces.data.filter(r => r.domain === 'arena').map(r => r.id).sort();
+  assert.deepEqual(arena, ['bozo', 'dfs', 'guillotine', 'live-draft', 'survivor']);
+  // every arena row still points at a page that exists
+  arena.forEach(id => {
+    const row = surfaces.data.find(r => r.id === id);
+    assert.ok(fs.existsSync(row.page.replace(/^\//, '')), `${id}: ${row.page} is missing`);
+  });
+});
+
+test('arena.html is a directory and claims no surface of its own', () => {
+  // ⚠️ The opposite of what the pattern suggests: a hub gets NO surfaces row. A row would
+  // claim a machine surface that does not exist, which is the exact overclaim CEP-5A is
+  // meant to remove. It also must not pick up a collar — tierOf() reads the hero chip.
+  assert.ok(!surfaces.data.some(s => s.id === 'arena'), 'arena claimed a surfaces row');
+  assert.ok(!surfaces.data.some(s => s.page === '/arena.html'), 'a surfaces row points at the hub');
+  const html = fs.readFileSync('arena.html', 'utf8');
+  const chip = html.match(/class="tierchip[^"]*"[^>]*>([^<]+)</);
+  assert.ok(chip, 'arena.html has no tier chip');
+  assert.equal(chip[1].trim(), 'Labs', 'a hub is a directory, not a graded tool');
+  // the card set is read from the map, never typed
+  assert.match(html, /r\.domain===DOMAIN/);
+  assert.ok(!/data-surface="bozo"/.test(html), 'a card id is typed into the page');
+});
+
+test('arena.html is cached for draft night and findable by crawlers', () => {
+  assert.match(fs.readFileSync('sw.js', 'utf8'), /"\/arena\.html"/);
+  assert.match(fs.readFileSync('sitemap.xml', 'utf8'), /datadawgs216\.com\/arena\.html/);
+});
+
+test('the collar has published criteria', () => {
+  // A symbol with no criteria is an unbacked claim (CEP-5A ruling, 2026-08-09).
+  const method = fs.readFileSync('data/receipts-method.md', 'utf8');
+  assert.match(method, /## Tiers and the collar/);
+  assert.match(method, /Working Dawg/);
+  assert.match(method, /Material changes/);
+  assert.match(method, /2026-08-09 — the collar becomes a symbol/);
+});
+
 test('the dated 2026-08-07 tier audit keeps its original wording', () => {
   // A dated record is history, not a label. The rename must not edit it.
   const html = fs.readFileSync('receipts.html', 'utf8');

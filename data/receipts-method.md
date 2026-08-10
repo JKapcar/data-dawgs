@@ -91,6 +91,35 @@ That must equal `4b87fe0e0790a1e6196fbbcad9b444e00735d5c7035ad1c7f9b476a55fc2716
 
 The reason the spec is published is so you don't have to trust this site. Recompute it.
 
+## Tiers and the collar
+
+Three tiers, one gate: **does it work, and can it be trusted?**
+
+- **Labs** — useful and live, still being challenged. It may compute real answers and still
+  have open questions about calibration, assumptions, data quality or edge. Everything starts
+  here. Labs means use it with your eyes open.
+- **Working Dawg** — earned its collar. A tool becomes a Dawg only after its evidence survives
+  validation: forecasts need receipts against a benchmark chosen in advance, measurement tools
+  need named sources and reproducible maths. Looking finished is not evidence.
+- **The DawgHouse** (formerly The Pound) — shelved, with the reason attached. Nothing is here
+  because it is hard; each entry keeps its exact blocker and its minimum path back.
+
+The collar is a mark, not decoration, so what it stands for is written here rather than left
+to the picture. Where a tier is rendered **from `/data/surfaces.json`** instead of typed into a
+page, `tier: "dawg"` draws a collar glyph carrying the accessible name *Working Dawg — earned
+its collar*; `labs` and `pound` stay text chips, because only the earned tier gets a mark. The
+criteria for drawing one are the three paragraphs above and nothing else. Which tools currently
+hold a collar, what was checked and what was explicitly **not** checked, is the tier audit:
+[/data/tier-audit.md](/data/tier-audit.md), dated 2026-08-07.
+
+A collar certifies what its audit entry says it certifies and no more. nfelo Power Ratings is
+the standing example: its collar is for faithfully mirroring a named upstream model, not for
+that model forecasting well, and the evidence on file says it does not beat the market.
+
+⚠️ A page's own tier is still read from its hero chip **text** by `tierOf()` in
+`tools/build-data.js`. Hero chips therefore stay words until that function changes in the same
+commit. As of 2026-08-09 the collar is card-level only, where the tier comes from the map.
+
 ## Provenance
 
 Forecasts from [nfelo](https://github.com/greerreNFL/nfelo) (MIT), snapshot `0d3f8418`.
@@ -103,6 +132,12 @@ Changes to how this site names or frames its claims, recorded rather than applie
 silently. The forecast rows are covered by the hash above; this list covers what the
 hash cannot see.
 
+- **2026-08-09 — the collar becomes a symbol, and its criteria are published.** `tier: "dawg"`
+  now renders as a collar glyph with an accessible name wherever a tier is read from
+  /data/surfaces.json, starting with the cards on /arena.html. The criteria are written into
+  this file above rather than implied by the picture; without them the mark would be a claim
+  with nothing behind it. No tool's tier changed, no forecast, probability or benchmark moved,
+  and stored machine values are untouched — `tier` is still the string `dawg`.
 - **2026-08-09 — The Pound is renamed The DawgHouse.** Human-facing labels only:
   /pound.html forwards to /dawghouse.html. Stored machine values did not move — `tier`
   stays `pound` and /data/pound-tools.json keeps its name. No forecast, probability or
