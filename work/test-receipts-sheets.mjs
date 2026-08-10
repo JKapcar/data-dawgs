@@ -111,8 +111,8 @@ for (const theme of ["dark", "light"]) {
     tableVisible: !document.getElementById("scoreTable").hidden,
     gradingHidden: document.getElementById("sheetScore").hidden,
   }));
-  ok(`[${theme}] five sheets in order, receipts last`,
-    JSON.stringify(models.tabs) === JSON.stringify(["scoreboard", "models", "calls", "provenance", "receipts"]),
+  ok(`[${theme}] eight sheets in order, receipts last`,
+    JSON.stringify(models.tabs) === JSON.stringify(["scoreboard", "models", "classic", "cfbrec", "calls", "provenance", "audit", "receipts"]),
     JSON.stringify(models.tabs));
   ok(`[${theme}] #models opens the models sheet, not grading`, models.selected === "models" && models.gradingHidden);
   ok(`[${theme}] the model scoreboard renders 16 games`, models.rows === 16 && models.tableVisible, String(models.rows));
@@ -150,9 +150,185 @@ for (const theme of ["dark", "light"]) {
   ok(`[${theme}] dawghouse.html#scoreboard lands on receipts.html#models`,
     await p.evaluate(() => location.pathname.endsWith("/receipts.html") && location.hash === "#models"));
 
+  /* ================= CEP-5A Stage 8 — the per-tool sheets =================
+     THE LINE: `models` is what models BELIEVE, `scoreboard` is how our pre-registered
+     calls GRADE. `classic`/`cfbrec` are beliefs; `audit` is neither and says so. */
+
+  const openSheet = async (page, id) => {
+    await page.click(`.sheet-tab[data-id="${id}"]`);
+    await page.waitForFunction(
+      i => document.querySelector(`.sheet-tab[data-id="${i}"]`)?.getAttribute("aria-selected") === "true",
+      id, { timeout: 4000 }).catch(() => {});
+    await page.waitForTimeout(450);
+  };
+  const statMap = (page, sel) => page.evaluate(q => Object.fromEntries(
+    [...document.querySelectorAll(`${q} .s8-stat`)].map(d =>
+      [d.querySelector("span").textContent.trim().toLowerCase(), d.querySelector("b").textContent.trim()])), sel);
+
+  // --- A. every new sheet's numbers come from ITS OWN FILE (compared to the file) ---
+  const CLASSIC = JSON.parse(read("data/538-classic.json"));
+  const CFBREC  = JSON.parse(read("data/cfb-model-receipts.json"));
+  const AUDIT   = JSON.parse(read("data/tier-audit.json"));
+
+  await p.goto("http://127.0.0.1:8921/receipts.html", { waitUntil: "networkidle" });
+  await openSheet(p, "classic");
+  {
+    const st = await statMap(p, "#sheetClassic");
+    const fc = CLASSIC.data.forecasts, weeks = new Set(fc.map(f => f.week)).size;
+    ok(`[${theme}] classic: forecast count comes from the file`, st["forecasts"] === String(fc.length),
+      `page ${st["forecasts"]} vs file ${fc.length}`);
+    ok(`[${theme}] classic: team count comes from the file`, st["teams rated"] === String(CLASSIC.data.teams.length),
+      `page ${st["teams rated"]} vs file ${CLASSIC.data.teams.length}`);
+    ok(`[${theme}] classic: week count comes from the file`, st["weeks covered"] === String(weeks),
+      `page ${st["weeks covered"]} vs file ${weeks}`);
+    const wk1 = fc.filter(f => f.week === 1);
+    const shown = await p.evaluate(() => [...document.querySelectorAll("#clTable tbody tr")].map(
+      tr => tr.lastElementChild.textContent.trim()));
+    ok(`[${theme}] classic: renders every Week 1 row`, shown.length === wk1.length, `${shown.length} vs ${wk1.length}`);
+    const want = wk1.slice().sort((a, b) => a.game_id < b.game_id ? -1 : 1)
+      .map(f => (f.home_win_probability * 100).toFixed(1) + "%");
+    ok(`[${theme}] classic: every probability equals the file's, to the digit`,
+      JSON.stringify(shown) === JSON.stringify(want),
+      shown.find((v, i) => v !== want[i]) ? `first drift ${shown.find((v, i) => v !== want[i])}` : "");
+  }
+
+  await openSheet(p, "audit");
+  {
+    const st = await statMap(p, "#sheetAudit");
+    const c = AUDIT.counts;
+    ok(`[${theme}] audit: audited count comes from the file`, st["audited"] === String(c.audited));
+    ok(`[${theme}] audit: promotions count comes from the file`, st["promotions"] === String(c.promotions_recommended));
+    ok(`[${theme}] audit: demotions count comes from the file`, st["demotions"] === String(c.demotions_recommended));
+    ok(`[${theme}] audit: pound count comes from the file`, st["in the pound"] === String(c.pound));
+    const verdicts = await p.evaluate(() => [...document.querySelectorAll("#auTable tbody tr")].map(
+      tr => tr.lastElementChild.textContent.trim()));
+    ok(`[${theme}] audit: one row per audited tool, verdicts from the file`,
+      JSON.stringify(verdicts) === JSON.stringify(AUDIT.data.map(r => r.verdict)), verdicts.join(","));
+  }
+
+  // --- B. a ZERO-ROW file renders a STATED zero, not an empty table ---
+  await openSheet(p, "cfbrec");
+  {
+    const z = await p.evaluate(() => ({
+      count: document.getElementById("cfrCount").textContent.trim(),
+      note: document.getElementById("cfrNote").textContent.trim(),
+      tables: document.querySelectorAll("#sheetCfbRec table").length,
+      rows: document.querySelectorAll("#sheetCfbRec tbody tr").length,
+      terms: document.querySelectorAll("#cfrTerms li").length,
+    }));
+    ok(`[${theme}] cfbrec: the row count is stated and equals the file`, z.count === String(CFBREC.data.length) && z.count === "0",
+      z.count);
+    ok(`[${theme}] cfbrec: a zero-row file renders NO table at all`, z.tables === 0 && z.rows === 0,
+      `${z.tables} tables / ${z.rows} rows`);
+    ok(`[${theme}] cfbrec: the file's own "empty by design" note is on the page`,
+      z.note === CFBREC.note.trim() && /empty by design/i.test(z.note));
+    ok(`[${theme}] cfbrec: the append-only contract terms render`, z.terms >= 4, String(z.terms));
+  }
+
+  // --- C. the models/scoreboard line still holds ---
+  {
+    /* ⚠️ #scoreTable lives in #sheetModels and holds BELIEFS — an earlier version of this
+       check counted its rows and "failed" on a page that was behaving correctly. The
+       grading sheet is #sheetScore. The invariant that matters: opening a belief sheet
+       must leave the GRADING panel byte-identical, i.e. no new loader writes into it. */
+    /* ⚠️ ON A FRESH PAGE. The first version snapshotted #sheetScore on THIS page, where
+       the audit sheet had already been opened further up the loop — so its loader had
+       already run and any bleed was baked into the "before" value. The assertion could
+       not fail. Proven by mutation M5. */
+    const p3 = await ctx.newPage();
+    p3.on("pageerror", e => errs.push(e.message));
+    await p3.goto("http://127.0.0.1:8921/receipts.html", { waitUntil: "networkidle" });
+    const gradeBefore = await p3.evaluate(() => document.getElementById("sheetScore").innerHTML.length);
+    for (const id of ["classic", "cfbrec", "audit"]) await openSheet(p3, id);
+    const bleed = await p3.evaluate(() => ({
+      scoreHidden: document.getElementById("sheetScore").hidden,
+      modelsHidden: document.getElementById("sheetModels").hidden,
+      gradeLen: document.getElementById("sheetScore").innerHTML.length,
+    }));
+    await p3.close();
+    ok(`[${theme}] opening all three belief sheets leaves the GRADING panel untouched`,
+      bleed.scoreHidden && bleed.modelsHidden && bleed.gradeLen === gradeBefore,
+      JSON.stringify({ ...bleed, gradeBefore }));
+    await openSheet(p, "classic"); await openSheet(p, "cfbrec"); await openSheet(p, "audit");
+    const said = await p.evaluate(() => ({
+      classic: document.getElementById("sheetClassic").textContent,
+      cfbrec: document.getElementById("sheetCfbRec").textContent,
+      audit: document.getElementById("sheetAudit").textContent,
+    }));
+    ok(`[${theme}] classic declares itself a belief and states it is not graded`,
+      /belief/i.test(said.classic) && /not a grade/i.test(said.classic) && CLASSIC.graded === false);
+    ok(`[${theme}] cfbrec declares itself a belief ledger`,
+      /belief/i.test(said.cfbrec) && CFBREC.graded === false);
+    ok(`[${theme}] audit says out loud that it is on NEITHER side`,
+      /neither side of the line/i.test(said.audit) && /one reviewer/i.test(said.audit));
+    ok(`[${theme}] no belief sheet claims a result`,
+      !/(hit rate|win rate|accuracy so far|record so far|went \d+-\d+|beat the market|profit)/i
+        .test(said.classic + said.cfbrec));
+  }
+
   ok(`[${theme}] no script errors`, errs.length === 0, errs.slice(0, 3).join(" | "));
   await ctx.close();
 }
+/* --- D. LAZY: nothing loads until its sheet is opened -----------------------
+   ⚠️ The reason this is checked at the NETWORK and not by a viewport helper: a hidden
+   panel's rect is 0x0 at the document origin, so "is it near the viewport" reads TRUE
+   for every closed sheet and fires on load. cfb.html shipped exactly that bug. */
+{
+  const S8 = { classic: "/data/538-classic.json", cfbrec: "/data/cfb-model-receipts.json", audit: "/data/tier-audit.json" };
+  const ctx = await b.newContext({ viewport: { width: 1280, height: 950 } });
+  await ctx.addInitScript(() => { localStorage.setItem("dd-theme2", "dark"); });
+  const p = await ctx.newPage();
+  const hits = [];
+  p.on("request", r => { const u = new URL(r.url()).pathname; if (Object.values(S8).includes(u)) hits.push(u); });
+
+  await p.goto("http://127.0.0.1:8921/receipts.html", { waitUntil: "networkidle" });
+  await p.waitForTimeout(900);
+  ok("at page load NONE of the three files is fetched", hits.length === 0, hits.join(","));
+
+  for (const [id, url] of Object.entries(S8)) {
+    const before = hits.length;
+    await p.click(`.sheet-tab[data-id="${id}"]`);
+    await p.waitForResponse(r => new URL(r.url()).pathname === url, { timeout: 5000 }).catch(() => {});
+    await p.waitForTimeout(350);
+    ok(`opening #${id} fetches ${url} and nothing else`,
+      hits.length === before + 1 && hits[hits.length - 1] === url, hits.slice(before).join(","));
+  }
+  // re-opening must not re-fetch: the loaders latch
+  const settled = hits.length;
+  for (const id of Object.keys(S8)) { await p.click(`.sheet-tab[data-id="${id}"]`); await p.waitForTimeout(250); }
+  ok("re-opening a sheet does not re-fetch its file", hits.length === settled, `${hits.length} vs ${settled}`);
+  await ctx.close();
+}
+
+/* --- E. overflow measured ON EACH SHEET, both themes ------------------------
+   A CLOSED sheet cannot overflow the document, so a single check passes vacuously
+   for seven of the eight panels. Loop them. */
+{
+  const SHEETS = ["scoreboard", "models", "classic", "cfbrec", "calls", "provenance", "audit", "receipts"];
+  for (const theme of ["dark", "light"]) {
+    for (const W of [320, 390, 1280]) {
+      const ctx = await b.newContext({ viewport: { width: W, height: 900 } });
+      await ctx.addInitScript(t => { localStorage.setItem("dd-theme2", t); localStorage.setItem("dd-theme", t); }, theme);
+      const p = await ctx.newPage();
+      await p.goto("http://127.0.0.1:8921/receipts.html", { waitUntil: "networkidle" });
+      for (const sheet of SHEETS) {
+        await p.click(`.sheet-tab[data-id="${sheet}"]`);
+        await p.waitForTimeout(sheet === "classic" || sheet === "audit" || sheet === "cfbrec" ? 700 : 220);
+        const m = await p.evaluate(s => {
+          const de = document.documentElement;
+          const panel = document.querySelector(`.sheet-tab[data-id="${s}"]`)?.getAttribute("aria-controls");
+          const el = panel && document.getElementById(panel);
+          return { over: de.scrollWidth - de.clientWidth, open: !!el && !el.hidden };
+        }, sheet);
+        ok(`[${theme}] no document overflow at ${W} on the ${sheet} sheet`, m.over <= 1, `+${m.over}px`);
+        // the vacuity guard: prove the sheet was actually OPEN when we measured it
+        ok(`[${theme}] the ${sheet} sheet was open when measured at ${W}`, m.open);
+      }
+      await ctx.close();
+    }
+  }
+}
+
 await b.close(); server.close();
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
