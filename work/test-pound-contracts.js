@@ -501,21 +501,67 @@ test('build-pound.py cannot silently delete the CFB section', () => {
   assert.match(bp, /DD_REBUILD_POUND/);
 });
 
-test('all shared-nav pages point at dawghouse.html exactly once, and never at the old name', () => {
+test('every shared-nav page reaches the shelf exactly once, and never by the old name', () => {
+  /* CEP-5A Stage 7. The DawgHouse LEFT the menu: a shelf of blocked work is not somewhere
+     to route people. It did not leave the site — every page still links it exactly once,
+     from the .udfoot row the shared nav script injects sitewide. The assertion MOVED with
+     the link rather than being deleted, which is the point: "reachable exactly once" is
+     the invariant, and the menu was only ever one way to satisfy it. */
   const pages = fs.readdirSync('.').filter(x => x.endsWith('.html'));
   let covered = 0;
   for (const page of pages) {
     const html = fs.readFileSync(page, 'utf8');
     if (!html.includes('const NAV = [')) continue;
     covered++;
-    assert.equal((html.match(/label:"The DawgHouse"/g) || []).length, 1, page);
-    assert.equal((html.match(/href:"dawghouse\.html"/g) || []).length, 1, page);
+    assert.equal((html.match(/udh\.href = "dawghouse\.html";/g) || []).length, 1,
+      `${page}: the shelf link is not in the footer row exactly once`);
+    assert.equal((html.match(/label:"The DawgHouse"/g) || []).length, 0,
+      `${page}: the DawgHouse is back in the menu`);
     assert.equal((html.match(/label:"The Pound"/g) || []).length, 0, page);
     // no link may point at the stub (prose/comments may still name the old file)
     assert.equal((html.match(/(?:href="|href:"|\[")pound\.html/g) || []).length, 0,
       `${page} still links pound.html — the stub is not a destination`);
   }
-  assert.ok(covered >= 19);
+  assert.equal(covered, 25, 'the nav page set changed');
+});
+
+test('the flipped nav is identical on every page and carries the locked order', () => {
+  // ⚠️ THE FLATTENED HTML IS THE SOURCE. If two pages disagree about the menu, the site
+  // disagrees with itself and nothing catches it at runtime.
+  const pages = fs.readdirSync('.').filter(x => x.endsWith('.html'));
+  const blocks = new Set();
+  const ORDER = ['Receipts', 'Arena', 'NFL', 'CFB', 'Data', 'Dawgs'];
+  let covered = 0;
+  for (const page of pages) {
+    const html = fs.readFileSync(page, 'utf8');
+    const i = html.indexOf('  const NAV = [\n');
+    if (i < 0) continue;
+    covered++;
+    const block = html.slice(i, html.indexOf('\n  ];', i));
+    blocks.add(block);
+    const labels = [...block.matchAll(/\{label:"([^"]+)"/g)].map(m => m[1]);
+    assert.deepEqual(labels, ORDER, `${page}: top-level order drifted`);
+    // ⚠️ operator pages stay unlinked; they run draft night from the operator machine
+    assert.ok(!block.includes('"auction.html"'), `${page}: auction.html was restored to the nav`);
+    assert.ok(!block.includes('"bigboard.html"'), `${page}: bigboard.html was restored to the nav`);
+    assert.ok(!/\{label:"Home"/.test(block), page);   // the wordmark is already the link home
+  }
+  assert.equal(covered, 25);
+  assert.equal(blocks.size, 1, 'the NAV array is not identical across pages');
+});
+
+test('the hubs the reorg built are in the menu, and machine values did not move', () => {
+  const html = fs.readFileSync('index.html', 'utf8');
+  for (const [href, label] of [['arena.html', 'All the games'], ['nfl.html', 'The NFL work'],
+                               ['data.html', 'The Library']])
+    assert.ok(html.includes(`["${href}","${label}"`), `${href} is not in the menu`);
+  // ⚠️ a tier is a maturity claim, not an address. The menu changed; the stored values did not.
+  assert.equal(surfaces.data.find(s => s.id === 'pound').tier, 'pound');
+  assert.equal(surfaces.data.find(s => s.id === 'pound').page, '/dawghouse.html');
+  assert.ok(fs.existsSync('data/pound-tools.json'));
+  assert.match(html, /"pound-provenance"/, 'a historical nav key was renamed to match the menu');
+  // the lifecycle section is the other half of "off-nav, not unreachable"
+  assert.match(html, /<h3><a href="dawghouse\.html">The DawgHouse<\/a><\/h3>/);
 });
 test('DawgHouse page declares its tier and accessible result regions', () => {
   const html = fs.readFileSync('dawghouse.html', 'utf8');

@@ -216,7 +216,14 @@ body{margin:0;background:var(--page);color:var(--ink-1);
    button and would sit on top of it. The two phone rules that used to squeeze 🙃 into
    the one-row nav were deleted with this move, which hands ~24px of slack back to the
    360px layout. If 🙃 ever returns to the nav, restore all three together. */
-.udfoot{display:flex;justify-content:center;padding:20px 0 4px}
+.udfoot{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;padding:20px 0 4px}
+/* ⚠️ CEP-5A Stage 7: the DawgHouse link lives in this row because the row is the only
+   footer markup identical on all 28 pages — the <footer> elements themselves are not.
+   The shelf is off-nav on purpose; this is how it stays reachable. */
+.udhouse{border:1px dashed var(--border);border-radius:8px;color:var(--ink-3);text-decoration:none;padding:5px 10px;font:700 11px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace}
+.udhouse:hover{border-color:var(--accent);color:var(--accent)}
+:root[data-theme="light"] .udhouse{border-color:rgba(236,223,201,0.40);color:var(--navink2)}
+:root[data-theme="light"] .udhouse:hover{border-color:#ff8a4d;color:#ff8a4d}
 .udbtn:hover{border-color:var(--accent);color:var(--accent)}
 :root[data-theme="light"] .udbtn{border-color:rgba(236,223,201,0.40);color:var(--navink2)}
 :root[data-theme="light"] .udbtn:hover{border-color:#ff8a4d;color:#ff8a4d}
@@ -325,8 +332,17 @@ body{margin:0;background:var(--page);color:var(--ink-1);
    Dropping the wordmark buys back ~78px, which is the whole deficit. The logo mark
    stays, and the whole brand is still the link home. Above 420px the wordmark fits
    and comes back. */
-@media(max-width:419px){
+@media(max-width:519px){
   .sitenav .brand .logo{display:none}
+}
+@media(max-width:419px){
+  /* ⚠️ CEP-5A Stage 7: the links get their own row here. See the note above. */
+  .sitenav{flex-wrap:wrap}
+  .sitenav .links{flex:1 1 100%;margin-left:0;justify-content:flex-start;flex-wrap:wrap;gap:2px 5px;padding-top:3px}
+  /* ⚠️ NO margin-left:auto on the theme button here. In a WRAPPING flex row an
+     auto margin eats every pixel of free space, which forced a third line at 320px
+     with 16px to spare. Let it sit inline with the links. */
+  .sitenav .links .theme-btn{margin-left:2px}
   .sitenav .navauth{margin-left:3px}
   .sitenav .navauth .authbtn{padding:3px 7px;font-size:10px;max-width:84px}
   /* ⚠️ Measured at 320px BEFORE this tightening: the links run needed 243.4px inside a
@@ -337,7 +353,7 @@ body{margin:0;background:var(--page);color:var(--ink-1);
      wordmark from the first nav item. Every figure here was measured while 🙃 still sat
      in this row; since 2026-08-08 it does not, so they are floors, not ceilings.
      Re-measure all three if anything is ever added to this row again. */
-  .sitenav .links a,.sitenav .links .grpbtn{padding:4px 2px}
+  .sitenav .links a,.sitenav .links .grpbtn{padding:4px 4px;font-size:11px}
 
   /* ⚠️ The old two-row phone rules were DELETED here, not commented out. They sat AFTER
      these, at the same specificity, and quietly won the cascade — the one-row layout
@@ -816,55 +832,61 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
     }
   };
   window.DDTheme.apply();
-  /* ⚠️ 8/5, second nav change today: the menu IS the tier ladder now. Kap set the order
-     — Home · The DawgHouse · Labs · Data · Dawgs. This SUPERSEDES the note that
-     sat here this morning claiming the nav ("what kind of thing is this") and the tier
-     ("how far along is it") were orthogonal on purpose. They are now the same axis.
-     `Draft` is gone as a group; Dashboard and Auctioneer Controls sit in Dawgs on
-     Kap's call. Order runs worst-to-best left to right, which is deliberate: the shelf
-     comes before the workbench; Dawgs have earned a job.
-     The DawgHouse holds the calculators, the shelf and the CFB roadmap; the model
-     scoreboard and provenance moved to Receipts (CEP-5A 1b, 2026-08-09). Keep this
-     group identical on every page; the flattened HTML is the source. */
+  /* ⚠️ CEP-5A Stage 7, 2026-08-09. THE NAV IS NO LONGER THE TIER LADDER. It supersedes
+     the 8/5 note that said it was. Kap's locked order:
+         Sign in · Receipts · Arena · NFL · CFB · Data · Dawgs
+     The menu now answers "what kind of thing is this", and the CHIP on each page answers
+     "how far along is it". Those had been collapsed onto one axis since 8/5, which is how
+     a shelf of blocked work ended up being a top-level destination.
+
+     ⚠️ NO "Home" ITEM — the wordmark is already an <a> to index.html.
+     ⚠️ NO "Sign in" ITEM — sign-in is its own banner section (.navauth, 8/7), appended
+        before these links, routing to signon.html?next= and showing who you are once you
+        are in. A menu item with the same label would be a second identical control.
+     ⚠️ NO LIVE DRAFT top-level item — the pill was retired 8/1; Live is a Dashboard tab.
+     ⚠️ THE DAWGHOUSE AND LABS ARE OFF-NAV. The shelf is linked from the .udfoot row at
+        the foot of every page and from the lifecycle section on index.html#tiers.
+     ⚠️ auction.html and bigboard.html stay deliberately unlinked. They run draft night
+        from the operator machine. Do not "restore" them here.
+     ⚠️ Machine values did not move: tier is still "pound" and the keys below keep their
+        historical spellings.
+     Keep this array identical on every page; the flattened HTML is the source. */
   const NAV = [
-    {label:"Home", href:"index.html", key:"home"},
-    /* `short` is the phone label. BOTH labels are rendered and CSS picks one, so
-       there is no resize listener and nothing reflows on rotate. Only entries whose
-       full label will not fit need one. `DawgHouse` stays shortened on phones so the
-       five-item nav keeps breathing room without shrinking the type. */
-    {label:"The DawgHouse", short:"DawgHouse", href:"dawghouse.html", key:"pound", items:[
-      ["dawghouse.html","Workbench","pound","hot"],
-      ["dawghouse.html#inventory","The Shelf","pound-inventory"],
+    {label:"Receipts", href:"receipts.html", key:"receipts", items:[
+      ["receipts.html","Pre-registered calls","receipts"],
+      ["receipts.html#scoreboard","Scoreboard","receipts-scoreboard"],
+      ["receipts.html#models","What models believe","receipts-models"],
       ["receipts.html#provenance","Provenance","pound-provenance"],
     ]},
-    {label:"Labs", href:"index.html#tiers", items:[
+    /* Arena = the surfaces where a person competes against other people. */
+    {label:"Arena", href:"arena.html", key:"arena", items:[
+      ["arena.html","All the games","arena"],
       ["bozo.html","Bozo","bozo"],
-      ["cfb.html","College Football","cfb"],
+      ["dashboard.html","Fantasy Draft Dashboard","dashboard","hot"],
       ["dfs.html","DFS Solver","dfs"],
+      ["draft-leagues.html","League setup","draft-leagues"],
       ["guillotine.html","Guillotine Companion","guillotine"],
-      ["receipts.html","Receipts","receipts"],
       ["survivor.html","Survivor","survivor"],
     ]},
-    /* ⚠️ Auctioneer Controls left this menu on 8/5 — it is now a tab inside the
-       Dashboard (auction.html?embed=1), behind an acknowledgement gate. The standalone
-       page is STILL LIVE at /auction.html and is still what runs draft night on the
-       operator machine; it is simply unlinked, same treatment as bigboard.html. Do not
-       "restore" it here without checking whether the Dashboard tab was removed too. */
-    {label:"Data", items:[
+    {label:"NFL", href:"nfl.html", key:"nfl", items:[
+      ["nfl.html","The NFL work","nfl"],
+      ["stats.html","NFL EPA Stats","stats"],
+      ["nfelo.html","nfelo Power Ratings","nfelo"],
+      ["calculators.html","Calculators · NFL","calculators"],
+    ]},
+    {label:"CFB", href:"cfb.html", key:"cfb", items:[
+      ["cfb.html","College Football Lab","cfb"],
+      ["cfb.html#matchup","Calculators · CFB matchup","cfb-matchup"],
+      ["cfb.html#roadmap","Build roadmap","cfb-roadmap"],
+    ]},
+    {label:"Data", href:"data.html", key:"data", items:[
+      ["data.html","The Library","data"],
       ["master.html","Master Data","master"],
       ["strategy.html","2026 Strategy","strategy"],
     ]},
     {label:"Dawgs", href:"index.html#tiers", items:[
-      ["stats.html","NFL EPA Stats","stats"],
-      ["nfelo.html","nfelo Power Ratings","nfelo"],
-      ["dashboard.html","Fantasy Draft Dashboard","dashboard","hot"],
+      ["index.html#tiers","How the tiers work","tiers"],
       ["dawgs.html","Rollo · OG Data Dawg","dawgs"],
-      /* ⚠️ The calculators live HERE, not in The DawgHouse (Kap, 8/8): "calculators
-         belong in the dawgs section grouped all as calculators." They are grouped
-         by their labels rather than by a `sep` rule — `sep` renders an "operator"
-         badge, which is auctioneer territory and would be wrong on these. */
-      ["calculators.html","Calculators · NFL","calculators"],
-      ["cfb.html#matchup","Calculators · CFB matchup","cfb-matchup"],
     ]},
   ];
   const nav = document.getElementById("nav");
@@ -1428,6 +1450,15 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
      Ask Toto's launcher already owns that corner and 🙃 would land underneath it. */
   const udrow = document.createElement("div");
   udrow.className = "udfoot";
+  /* ⚠️ CEP-5A Stage 7: THE DAWGHOUSE LIVES HERE NOW, not in the menu. A shelf of blocked
+     work is not somewhere to route people; it is somewhere to be able to look. This row is
+     injected on every page, so one edit here reaches all 28 — the <footer> elements are not
+     identical and could not carry it. */
+  const udh = document.createElement("a");
+  udh.className = "udhouse"; udh.href = "dawghouse.html";
+  udh.textContent = "The DawgHouse";
+  udh.title = "The shelf: work that is blocked, with the reason and the way back attached";
+  udrow.appendChild(udh);
   udrow.appendChild(udb);
   const udft = document.querySelector("footer");
   if(udft && udft.parentNode) udft.parentNode.insertBefore(udrow, udft.nextSibling);
