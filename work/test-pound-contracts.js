@@ -501,12 +501,14 @@ test('build-pound.py cannot silently delete the CFB section', () => {
   assert.match(bp, /DD_REBUILD_POUND/);
 });
 
-test('every shared-nav page reaches the shelf exactly once, and never by the old name', () => {
-  /* CEP-5A Stage 7. The DawgHouse LEFT the menu: a shelf of blocked work is not somewhere
-     to route people. It did not leave the site — every page still links it exactly once,
-     from the .udfoot row the shared nav script injects sitewide. The assertion MOVED with
-     the link rather than being deleted, which is the point: "reachable exactly once" is
-     the invariant, and the menu was only ever one way to satisfy it. */
+test('every shared-nav page reaches the shelf, and never by the old name', () => {
+  /* CEP-5A Stage 7 took The DawgHouse OUT of the menu, reasoning that a shelf of blocked
+     work is not somewhere to route people. Kap reversed that on 2026-08-10: the shelf is
+     EVIDENCE, so it belongs with the evidence, and it is now an item inside the Receipts
+     group. What did NOT change is that it stays its own PAGE — its content is prose per
+     tenant, not a graded table, so it is not a sheet inside receipts.html.
+     ⚠️ It is still not a TOP-LEVEL chip, which is what `label:"The DawgHouse"` would mean.
+     The footer row link stays as well: exactly one, injected sitewide by the nav script. */
   const pages = fs.readdirSync('.').filter(x => x.endsWith('.html'));
   let covered = 0;
   for (const page of pages) {
@@ -516,7 +518,7 @@ test('every shared-nav page reaches the shelf exactly once, and never by the old
     assert.equal((html.match(/udh\.href = "dawghouse\.html";/g) || []).length, 1,
       `${page}: the shelf link is not in the footer row exactly once`);
     assert.equal((html.match(/label:"The DawgHouse"/g) || []).length, 0,
-      `${page}: the DawgHouse is back in the menu`);
+      `${page}: the DawgHouse became a top-level chip — it is an item under Receipts`);
     assert.equal((html.match(/label:"The Pound"/g) || []).length, 0, page);
     // no link may point at the stub (prose/comments may still name the old file)
     assert.equal((html.match(/(?:href="|href:"|\[")pound\.html/g) || []).length, 0,
@@ -545,9 +547,52 @@ test('the flipped nav is identical on every page and carries the locked order', 
     assert.ok(!block.includes('"auction.html"'), `${page}: auction.html was restored to the nav`);
     assert.ok(!block.includes('"bigboard.html"'), `${page}: bigboard.html was restored to the nav`);
     assert.ok(!/\{label:"Home"/.test(block), page);   // the wordmark is already the link home
+
+    /* Stage NB, 2026-08-10. Three rulings, asserted on the array rather than on the
+       rendered bar, because the array is what 25 files have to agree about. */
+
+    // 1. THE MODEL SCOREBOARD IS FRONT AND CENTRE. Not "somewhere in the Receipts group":
+    //    first item, named for what it is. A reorder has to turn this red.
+    assert.ok(block.includes('key:"receipts", items:[\n      ["receipts.html#models","Model scoreboard","receipts-models"],'),
+      `${page}: the model scoreboard is not the first item in the Receipts group`);
+
+    // 2. THE SHELF IS AN ITEM UNDER RECEIPTS, exactly once.
+    //    ⚠️ The key is "pound", not "dawghouse". dawghouse.html declares data-page="pound"
+    //    and the nav lights an item by `it[2] === page`, so "dawghouse" would render a
+    //    dead item that never highlights and a Receipts group that never reads as active
+    //    on the shelf page. Same reasoning that kept the "pound-provenance" key.
+    assert.equal((block.match(/\["dawghouse\.html","The DawgHouse","pound"\],/g) || []).length, 1,
+      `${page}: the shelf is not an item in the nav exactly once, keyed "pound"`);
+
+    // 3. LEAGUE SETUP LEFT THE ARENA GROUP. It lives in the hub whose rooms it creates.
+    assert.ok(!block.includes('"draft-leagues.html"'),
+      `${page}: draft-leagues.html is back in the nav — it belongs to the draft hub now`);
   }
   assert.equal(covered, 25);
   assert.equal(blocks.size, 1, 'the NAV array is not identical across pages');
+});
+
+test('the draft hub owns league setup now that the menu does not', () => {
+  /* ⚠️ Removing a nav item can orphan a page, and nothing at runtime notices: the file
+     still exists, still renders, and is simply unreachable. draft-leagues.html carries no
+     nav of its own, so it cannot even offer a way back. This asserts the two doors that
+     replaced the menu entry, by BODY link and not by mention: the draft hub, and the
+     Arena directory that lists what Arena contains. */
+  const body = (f) => {
+    const h = fs.readFileSync(f, 'utf8');
+    const i = h.indexOf('<div class="dbwrap">');
+    return i < 0 ? h.slice(h.indexOf('</head>')) : h.slice(i);
+  };
+  assert.equal((body('dashboard.html').match(/href="draft-leagues\.html"/g) || []).length, 1,
+    'the draft hub does not link league setup exactly once');
+  assert.match(body('dashboard.html'), /class="dbsetup" href="draft-leagues\.html">League setup/,
+    'the draft hub link is not the styled header action');
+  assert.ok((body('arena.html').match(/href="draft-leagues\.html"/g) || []).length >= 1,
+    'arena.html stopped linking league setup');
+  // and the page it points at is really there
+  assert.ok(fs.existsSync('draft-leagues.html'));
+  assert.ok(!fs.readFileSync('draft-leagues.html', 'utf8').includes('const NAV = ['),
+    'draft-leagues.html grew a nav — the reachability argument above changes if it does');
 });
 
 test('the hubs the reorg built are in the menu, and machine values did not move', () => {

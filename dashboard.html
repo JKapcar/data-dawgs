@@ -563,6 +563,11 @@ svg text{font-family:inherit}
 :root.db-live .dbhead{max-width:1132px;margin-left:auto;margin-right:auto;width:100%}
 .dbhead h1{font-size:23px;font-weight:800;margin:0;letter-spacing:-.01em}
 .dbhead .who{margin-left:auto;font-size:12.5px;color:var(--ink-3)}
+/* ⚠️ Sits BEFORE .who in the DOM, so .who keeps the margin-left:auto that pushes the
+   identity to the far right. Putting the link after .who would move the auto gap and
+   the two would swap sides. */
+.dbhead .dbsetup{font-size:12.5px;font-weight:700;color:var(--accent);text-decoration:none;white-space:nowrap}
+.dbhead .dbsetup:hover{text-decoration:underline}
 
 /* persistent summary strip — never hidden behind a tab */
 .dbstrip{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:0 0 14px}
@@ -689,6 +694,7 @@ select.dbpresent[hidden]{display:none}
 <div class="dbwrap">
   <div class="dbhead">
     <h1>Fantasy Draft Dashboard <a class="tierchip tierchip-collar" data-tier="dawg" href="index.html#tiers" title="Working Dawg — earned its collar. Criteria: /data/receipts-method.md"><span class="collar" role="img" aria-label="Working Dawg — earned its collar"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false"><ellipse cx="12" cy="9.5" rx="7.4" ry="5.4" fill="none" stroke="currentColor" stroke-width="2.4"></ellipse><circle cx="12" cy="17.6" r="3.1" fill="currentColor"></circle></svg></span></a></h1>
+    <a class="dbsetup" href="draft-leagues.html">League setup &rarr;</a>
     <span class="who" id="dbWho"></span>
   </div>
 
@@ -881,10 +887,11 @@ select.dbpresent[hidden]{display:none}
      Keep this array identical on every page; the flattened HTML is the source. */
   const NAV = [
     {label:"Receipts", href:"receipts.html", key:"receipts", items:[
+      ["receipts.html#models","Model scoreboard","receipts-models"],
       ["receipts.html","Pre-registered calls","receipts"],
-      ["receipts.html#scoreboard","Scoreboard","receipts-scoreboard"],
-      ["receipts.html#models","What models believe","receipts-models"],
+      ["receipts.html#scoreboard","Grading","receipts-scoreboard"],
       ["receipts.html#provenance","Provenance","pound-provenance"],
+      ["dawghouse.html","The DawgHouse","pound"],
     ]},
     /* Arena = the surfaces where a person competes against other people. */
     {label:"Arena", href:"arena.html", key:"arena", items:[
@@ -892,7 +899,6 @@ select.dbpresent[hidden]{display:none}
       ["bozo.html","Bozo","bozo"],
       ["dashboard.html","Fantasy Draft Dashboard","dashboard","hot"],
       ["dfs.html","DFS Solver","dfs"],
-      ["draft-leagues.html","League setup","draft-leagues"],
       ["guillotine.html","Guillotine Companion","guillotine"],
       ["survivor.html","Survivor","survivor"],
     ]},

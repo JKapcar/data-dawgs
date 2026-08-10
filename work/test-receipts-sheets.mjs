@@ -40,8 +40,18 @@ const dh = read("dawghouse.html");
     ok("mdlBeliefs fails closed like the source", throws === 3, String(throws));
   }
 }
-ok("the models sheet is not the grading sheet", rc.includes('{id:"models",label:"Models",panel:"#sheetModels"}')
-  && rc.includes('{id:"scoreboard",label:"Scoreboard",panel:"#sheetScore"}'));
+/* Stage NB, 2026-08-10. The two tabs used to be called "Scoreboard" and "Models", and the
+   nav called the same two things "Scoreboard" and "What models believe". Four names for two
+   sheets, and the word "scoreboard" pointed at the GRADING sheet while the model scoreboard
+   was the other one. The labels now say which is which; the IDS did not move, so every
+   `receipts.html#models` and `receipts.html#scoreboard` deep link on the site still lands
+   where it did. ⚠️ If a future edit renames the ids to match the labels, ~20 cross-page
+   links break silently — they are anchors, so nothing 404s and nothing fails. */
+ok("the models sheet is not the grading sheet", rc.includes('{id:"models",label:"Model scoreboard",panel:"#sheetModels"}')
+  && rc.includes('{id:"scoreboard",label:"Grading",panel:"#sheetScore"}'));
+ok("the sheet IDS did not move with the labels",
+  rc.includes('{id:"scoreboard",') && rc.includes('{id:"models",')
+  && !rc.includes('{id:"grading",') && !rc.includes('{id:"model-scoreboard",'));
 ok("the method sheet is renamed receipts, hint kept, and stays LAST",
   /\{id:"receipts",label:"Receipts & Method",panel:"#sheetMethod",hint:"pre-registered"\}\]/.test(rc));
 ok("#method deep links forward", rc.includes('if(location.hash==="#method")history.replaceState(null,"","#receipts")'));
