@@ -444,6 +444,12 @@ footer a{color:var(--accent)}
   text-decoration:none;background:var(--surface-1);color:var(--good);
   border:1px solid color-mix(in srgb,var(--good) 55%,transparent)}
 .tierchip:hover{border-color:var(--good)}
+/* CEP-5A — the collar on a HERO chip. The glyph carries the tier visually;
+   data-tier on the tag carries it to tools/build-data.js. Do not put the word
+   back: the accessible name comes from the span's aria-label. */
+.collar{display:inline-flex;align-items:center;color:var(--good);vertical-align:middle}
+.collar svg{display:block}
+.tierchip-collar{padding:3px 7px;line-height:0}
 
 </style>
 <style>
@@ -682,7 +688,7 @@ select.dbpresent[hidden]{display:none}
 
 <div class="dbwrap">
   <div class="dbhead">
-    <h1>Fantasy Draft Dashboard <a class="tierchip" href="index.html#tiers" title="What the tiers mean">Dawg</a></h1>
+    <h1>Fantasy Draft Dashboard <a class="tierchip tierchip-collar" data-tier="dawg" href="index.html#tiers" title="Working Dawg — earned its collar. Criteria: /data/receipts-method.md"><span class="collar" role="img" aria-label="Working Dawg — earned its collar"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false"><ellipse cx="12" cy="9.5" rx="7.4" ry="5.4" fill="none" stroke="currentColor" stroke-width="2.4"></ellipse><circle cx="12" cy="17.6" r="3.1" fill="currentColor"></circle></svg></span></a></h1>
     <span class="who" id="dbWho"></span>
   </div>
 

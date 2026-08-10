@@ -827,6 +827,73 @@ test('the under-construction component has one source, not three copies', () => 
     assert.ok(fs.readFileSync(f, 'utf8').includes(block), `${f} has forked the component`);
 });
 
+test('tier is DATA, not chip text — a collar cannot demote a Working Dawg', () => {
+  /* ⚠️ THE BUG THIS GUARDS. tools/build-data.js tierOf() used to read a page's tier from
+     its hero chip's TEXT. On 2026-08-10 the three Working Dawg chips became a COLLAR
+     GLYPH with no word in it, which under the old logic reported "labs" and would have
+     silently demoted dashboard, nfelo and stats in every /data/ envelope. data-tier on
+     the chip TAG is now authoritative. This test re-derives the tier the same way the
+     builder does and compares it against the COMMITTED data, so drift in either
+     direction is red. */
+  const TIERS = { labs: 'labs', dawg: 'dawg', pound: 'pound' };
+  const derive = (page) => {
+    let html;
+    try { html = fs.readFileSync(page, 'utf8'); } catch (e) { return 'labs'; }
+    const tag = html.match(/<[a-z]+[^>]*class="tierchip[^"]*"[^>]*>/);
+    if (tag) {
+      const a = tag[0].match(/data-tier="([a-z]+)"/);
+      if (a && TIERS[a[1]]) return TIERS[a[1]];
+    }
+    const chip = html.match(/class="tierchip[^"]*"[^>]*>([^<]+)</);
+    if (!chip) return 'labs';
+    const l = chip[1].trim().toLowerCase();
+    if (l.includes('dawghouse') || l.includes('pound')) return 'pound';
+    if (l.startsWith('dawg')) return 'dawg';
+    return 'labs';
+  };
+
+  // 1. every page carrying a chip declares its tier as an ATTRIBUTE
+  const withChip = fs.readdirSync('.').filter(f => f.endsWith('.html'))
+    .filter(f => /<[a-z]+[^>]*class="tierchip/.test(fs.readFileSync(f, 'utf8')));
+  assert.equal(withChip.length, 10, 'the set of pages carrying a tier chip moved: ' + withChip.join(','));
+  for (const f of withChip) {
+    const tag = fs.readFileSync(f, 'utf8').match(/<[a-z]+[^>]*class="tierchip[^"]*"[^>]*>/);
+    assert.match(tag[0], /data-tier="(labs|dawg|pound)"/, f + ' has a tier chip with no data-tier');
+  }
+
+  // 2. the three collared pages carry NO word in the chip, and still derive as dawg
+  for (const f of ['dashboard.html', 'nfelo.html', 'stats.html']) {
+    const html = fs.readFileSync(f, 'utf8');
+    assert.doesNotMatch(html, /class="tierchip[^"]*"[^>]*>Dawg</,
+      f + ' put the word back — the glyph is the collar');
+    assert.match(html, /class="collar" role="img" aria-label="Working Dawg/,
+      f + ' has no accessible name on its collar glyph');
+    assert.equal(derive(f), 'dawg', f + ' DEMOTED — data-tier is missing or wrong');
+  }
+
+  // 3. the re-derived tier agrees with what is COMMITTED in surfaces.json.
+  //    This is the assertion that turns red if data-tier is stripped from a page.
+  for (const row of surfaces.data) {
+    const page = row.page.replace(/^\//, '');
+    if (!page || !fs.existsSync(page)) continue;
+    assert.equal(row.tier, derive(page),
+      'surfaces.json says ' + row.id + ' is ' + row.tier + ' but ' + page + ' now derives ' + derive(page));
+  }
+
+  /* 4. ⚠️ derive() above is a RE-IMPLEMENTATION. Without this check, reverting the real
+     tierOf() in tools/build-data.js to text-only would leave this test green while every
+     /data/ envelope silently demoted. Assert the builder reads the attribute, and reads
+     it BEFORE the text fallback. */
+  const bd = fs.readFileSync('tools/build-data.js', 'utf8');
+  const fn = bd.match(/function tierOf\(page\)[\s\S]*?\n\}/);
+  assert.ok(fn, 'tierOf() is gone from tools/build-data.js');
+  const iAttr = fn[0].indexOf('data-tier=');
+  const iText = fn[0].indexOf('>([^<]+)<');
+  assert.ok(iAttr !== -1, 'tierOf() no longer reads data-tier — a collar will demote to labs');
+  assert.ok(iText === -1 || iAttr < iText,
+    'tierOf() reads the chip TEXT before data-tier — the collared pages will demote');
+});
+
 test('the dated 2026-08-07 tier audit keeps its original wording', () => {
   // A dated record is history, not a label. The rename must not edit it.
   const html = fs.readFileSync('receipts.html', 'utf8');

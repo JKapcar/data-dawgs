@@ -242,8 +242,19 @@ function tierOf(page) {
   if (!page) return TIERS.labs;
   let html;
   try { html = read(page); } catch (e) { return TIERS.labs; }
+  /* ⚠️ data-tier ON THE CHIP TAG IS AUTHORITATIVE, and the reason is load-bearing.
+     This used to read the chip's TEXT. A Working Dawg's chip is now a COLLAR GLYPH with
+     no word in it, so text-parsing would report labs for dashboard, nfelo and stats and
+     silently demote three validated surfaces in every /data/ envelope. Tier is data; the
+     chip is presentation; they stopped being the same string on 2026-08-10. */
+  const tag = html.match(/<[a-z]+[^>]*class="tierchip[^"]*"[^>]*>/);
+  if (tag) {
+    const a = tag[0].match(/data-tier="([a-z]+)"/);
+    if (a && TIERS[a[1]]) return TIERS[a[1]];
+  }
   const chip = html.match(/class="tierchip[^"]*"[^>]*>([^<]+)</);
   if (!chip) return TIERS.labs;                       // no chip = implicitly Labs
+  /* Fallback only, for a chip that has not been migrated to data-tier. */
   const label = chip[1].trim().toLowerCase();
   /* ⚠️ ORDER AND PREFIX BOTH MATTER HERE. The chip reads "The DawgHouse": it does not
      start with "dawg" (the article) and no longer contains "pound", so the pre-rename
