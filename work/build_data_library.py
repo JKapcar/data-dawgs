@@ -127,7 +127,7 @@ MAIN = """
 <main>
   <header class="p-hero">
     <div class="p-kicker">The Library · every machine-readable file this site publishes, and the ones it does not</div>
-    <h1>The Library. <a class="tierchip" href="index.html#tiers" title="Why this page is in Labs">Labs</a></h1>
+    <h1>The Library. <a class="tierchip" href="index.html#tiers" title="Why this page is a Pup">Pup</a></h1>
     <p class="p-lead">Every file on the shelves below is listed by
     <a href="/data/index.json"><code>/data/index.json</code></a>, the generated manifest, and
     shelved by the surface that owns it in <a href="/data/surfaces.json"><code>/data/surfaces.json</code></a>.

@@ -9,7 +9,7 @@
       defends against on the CFB cards.
    2. THE HUB CLAIMS NOTHING OF ITS OWN. arena.html is a directory over surfaces that
       already exist, so surfaces.json must have NO arena row, and the page's own chip is
-      Labs — a hub is not a graded tool and must never pick up a collar.
+      Pup — a hub is not a graded tool and must never pick up a collar.
    3. UNDER-CONSTRUCTION CARDS HAVE NO WORKING-LOOKING CONTROL. Kap's line, 2026-08-09:
       a card that SAYS it is not built is honest; a live-looking control that silently
       fails is not. Zero interactive elements inside a .uc card, enforced by query.
@@ -55,7 +55,7 @@ const html = fs.readFileSync(path.join(ROOT, "arena.html"), "utf8");
   /* A hub is a directory, not a graded tool. tierOf() reads this chip, so a stray
      "Dawg" here would promote a page that has never been graded. */
   const chip = html.match(/class="tierchip[^"]*"[^>]*>([^<]+)</);
-  ok("the page's own tier chip is Labs", !!chip && chip[1].trim() === "Labs", chip && chip[1]);
+  ok("the page's own tier chip is Pup", !!chip && chip[1].trim() === "Pup", chip && chip[1]);
   ok("no card list is typed into the page",
     !/data-surface="(bozo|dfs|guillotine|survivor|live-draft)"/.test(html.replace(/\/\*[\s\S]*?\*\//g, "")));
   ok("the under-construction component is defined once and only here",

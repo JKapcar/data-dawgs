@@ -673,12 +673,12 @@ test('the rename is recorded in Receipts as a material change', () => {
 });
 /* ---- CEP-5A Stage 2: the calculators leave for their own page ------------------- */
 
-test('calculators.html holds the ten forms and claims Labs, not a collar', () => {
+test('calculators.html holds the ten forms and claims Pup, not a collar', () => {
   const html = fs.readFileSync('calculators.html', 'utf8');
   assert.equal((html.match(/class="calc"/g) || []).length, 10);
   /* the chip is a maturity claim: complete + contract-tested is still ungraded work,
      so the page must not promote itself to a collar or keep the DawgHouse label */
-  assert.match(html, /class="tierchip"[^>]*>Labs<\/a>/);
+  assert.match(html, /class="tierchip"[^>]*>Pup<\/a>/);
   assert.doesNotMatch(html, /class="tierchip"[^>]*>The DawgHouse<\/a>/);
   assert.ok((html.match(/aria-live="polite"/g) || []).length >= 10);
   assert.match(html, /MODELLED:/);
@@ -766,7 +766,7 @@ test('arena.html is a directory and claims no surface of its own', () => {
   const html = fs.readFileSync('arena.html', 'utf8');
   const chip = html.match(/class="tierchip[^"]*"[^>]*>([^<]+)</);
   assert.ok(chip, 'arena.html has no tier chip');
-  assert.equal(chip[1].trim(), 'Labs', 'a hub is a directory, not a graded tool');
+  assert.equal(chip[1].trim(), 'Pup', 'a hub is a directory, not a graded tool');
   // the card set is read from the map, never typed
   assert.match(html, /r\.domain===DOMAIN/);
   assert.ok(!/data-surface="bozo"/.test(html), 'a card id is typed into the page');
@@ -814,7 +814,7 @@ test('data.html is a directory and claims no surface of its own', () => {
   assert.ok(!surfaces.data.some(s => s.page === '/data.html'), 'a surfaces row points at the hub');
   const html = fs.readFileSync('data.html', 'utf8');
   const chip = html.match(/class="tierchip[^"]*"[^>]*>([^<]+)</);
-  assert.equal(chip && chip[1].trim(), 'Labs', 'a hub is a directory, not a graded tool');
+  assert.equal(chip && chip[1].trim(), 'Pup', 'a hub is a directory, not a graded tool');
   // the shelf is rendered from the manifest, never typed
   assert.match(html, /idx\.data\.files\.map/);
   assert.ok(!/data-book="pool/.test(html), 'a book id is typed into the page');
@@ -831,7 +831,7 @@ test('nfl.html is a directory and claims no surface of its own', () => {
   assert.ok(!surfaces.data.some(s => s.page === '/nfl.html'), 'a surfaces row points at the hub');
   const html = fs.readFileSync('nfl.html', 'utf8');
   const chip = html.match(/class="tierchip[^"]*"[^>]*>([^<]+)</);
-  assert.equal(chip && chip[1].trim(), 'Labs', 'a hub is a directory, not a graded tool');
+  assert.equal(chip && chip[1].trim(), 'Pup', 'a hub is a directory, not a graded tool');
   // both card sets are computed, neither typed
   assert.match(html, /r\.domain===DOMAIN/);
   assert.match(html, /t\.domain===SHELF_DOMAIN/);
@@ -945,6 +945,50 @@ test('the dated 2026-08-07 tier audit keeps its original wording', () => {
   assert.match(html, /The empty Pound is the biggest finding/);
   const audit = read('tier-audit.json');
   assert.match(audit.headline_finding, /The Pound is empty/);
+});
+
+test('the tier LABEL map is one vocabulary, not four copies drifting', () => {
+  /* Stage TR, 2026-08-10. TIER_LABEL is duplicated in FOUR places: the two hub pages and
+     the two Python builders that GENERATE those pages. Nothing guarded them, so patching
+     arena.html without work/build_arena.py left a page that silently reverts on the next
+     rebuild — the same failure mode as tier_meaning's five sources, one layer up. The
+     assertion is equality across all four, not a hardcoded string, so a future relabel
+     stays a one-line change and still cannot drift. */
+  const SITES = ['arena.html', 'nfl.html', 'work/build_arena.py', 'work/build_nfl_hub.py'];
+  const maps = SITES.map(f => {
+    const m = fs.readFileSync(f, 'utf8').match(/const TIER_LABEL=\{[^}]*\};/);
+    assert.ok(m, `${f} no longer declares TIER_LABEL`);
+    return m[0];
+  });
+  for (let i = 1; i < maps.length; i++)
+    assert.equal(maps[i], maps[0], `${SITES[i]} disagrees with ${SITES[0]} about the tier labels`);
+  // ids are load-bearing and must survive any relabel; only the display strings may move
+  for (const id of ['labs', 'dawg', 'pound'])
+    assert.match(maps[0], new RegExp(`\\b${id}:"`), `TIER_LABEL lost the ${id} id`);
+});
+
+test('every worded tier chip uses a label from that map', () => {
+  /* Six pages carry a worded hero chip. tierOf() reads data-tier from the TAG (05bce3b),
+     so the text carries no machine meaning — which is exactly why it can rot unnoticed.
+     This pins the words to the map instead of to a literal, and it is what would have
+     caught a half-finished relabel. */
+  const labels = [...fs.readFileSync('arena.html', 'utf8')
+    .match(/const TIER_LABEL=\{([^}]*)\};/)[1]
+    .matchAll(/\w+:"([^"]+)"/g)].map(m => m[1]);
+  const PAGES = ['arena.html', 'data.html', 'nfl.html', 'calculators.html',
+    'receipts.html', 'survivor.html', 'dawghouse.html'];
+  for (const f of PAGES) {
+    const chip = fs.readFileSync(f, 'utf8').match(/class="tierchip[^"]*"[^>]*>([^<]+)<\/a>/);
+    assert.ok(chip, `${f} lost its hero tier chip`);
+    assert.ok(labels.includes(chip[1].trim()),
+      `${f} chip reads "${chip[1].trim()}", which is not in TIER_LABEL`);
+  }
+  // and the lifecycle section on the homepage teaches the same three words
+  const home = fs.readFileSync('index.html', 'utf8');
+  const lc = [...home.matchAll(/class="lc-chip[^"]*">([^<]+)</g)].map(m => m[1].trim());
+  assert.equal(lc.length, 3, 'index.html#tiers no longer shows exactly three lifecycle chips');
+  for (const word of lc)
+    assert.ok(labels.includes(word), `index.html#tiers teaches "${word}", which is not in TIER_LABEL`);
 });
 
 console.log(`\n${pass} passed / 0 failed`);

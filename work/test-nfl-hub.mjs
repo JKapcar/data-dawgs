@@ -9,7 +9,7 @@
       and minimum_path_to_completion verbatim. "Coming soon" is not information; a named
       blocker with a way out is, and it is the reason the DawgHouse shelf exists at all.
       Both pages render the same rows from the same file, so they cannot disagree.
-   3. THE HUB CLAIMS NOTHING. No surfaces row, chip is Labs, no collar of its own.
+   3. THE HUB CLAIMS NOTHING. No surfaces row, chip is Pup, no collar of its own.
    4. NO WORKING-LOOKING CONTROL on a card that is not built.
    5. THE COMPONENT IS ARENA'S, BYTE FOR BYTE — three copies now, one source.
    6. THE BELIEF SCOREBOARD IS NOT HERE. What models believe and how pre-registered calls
@@ -53,7 +53,7 @@ const BLOCKED = tools.filter(t => (t.kind || "tool") === "tool" && t.domain === 
   ok("the hub claims no surface of its own",
     !sur.some(r => r.id === "nfl-hub" || r.page === "/nfl.html"));
   const chip = html.match(/class="tierchip[^"]*"[^>]*>([^<]+)</);
-  ok("the page's own tier chip is Labs", !!chip && chip[1].trim() === "Labs", chip && chip[1]);
+  ok("the page's own tier chip is Pup", !!chip && chip[1].trim() === "Pup", chip && chip[1]);
   ok("no card list is typed into the page",
     !/data-surface="(epa|nfelo|calculators)"/.test(html) && !/data-tool="(nfeloml|wepa)"/.test(html)
     && /r\.domain===DOMAIN/.test(html) && /t\.domain===SHELF_DOMAIN/.test(html));

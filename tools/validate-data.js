@@ -621,6 +621,46 @@ console.log('\nllms.txt');
   }
 }
 
+// ---------------------------------------------------------------- tier_meaning drift
+// Added 2026-08-10 with the Labs→Pup relabel. Until this check existed, the rule above
+// only asserted that tier_meaning EXISTS. That is not enough: the sentence is written
+// from FIVE independent sources — tools/build-data.js holds the real map, and
+// scripts/cfb_data_backbone.py, scripts/nfl_data_backbone.py and scripts/elo_538_classic.py
+// each carry their own hardcoded copy, writing 17 of the 24 affected payloads between
+// them. Changing build-data.js alone therefore published two different definitions of
+// the same tier with every gate green. The map is parsed out of build-data.js rather
+// than imported so that drift is caught in either direction without running the builder.
+console.log('\ntier_meaning matches its source of truth');
+{
+  const src = fs.readFileSync(path.join(ROOT, 'tools/build-data.js'), 'utf8');
+  const block = src.match(/const TIER_MEANING = \{([\s\S]*?)\n\};/);
+  if (!block) {
+    fail('build-data.js: could not parse the TIER_MEANING map — this check is now blind');
+  } else {
+    const MEAN = {};
+    for (const m of block[1].matchAll(/^\s*(labs|dawg|pound):\s*'((?:[^'\\]|\\.)*)',?\s*$/gm))
+      MEAN[m[1]] = m[2].replace(/\\'/g, "'").replace(/\\\\/g, '\\');
+    for (const t of ['labs', 'dawg', 'pound'])
+      if (!MEAN[t]) fail(`build-data.js: TIER_MEANING is missing ${t}`);
+    let checked = 0;
+    let drift = 0;
+    for (const f of fs.readdirSync(DATA).filter(n => n.endsWith('.json'))) {
+      let o;
+      try { o = JSON.parse(fs.readFileSync(path.join(DATA, f), 'utf8')); } catch { continue; }
+      if (!o || typeof o !== 'object' || !o.tier || !o.tier_meaning) continue;
+      const want = MEAN[o.tier];
+      if (!want) continue;
+      checked++;
+      if (o.tier_meaning !== want) {
+        drift++;
+        fail(`${f}: tier_meaning does not match TIER_MEANING.${o.tier} in tools/build-data.js`);
+      }
+    }
+    if (!checked) fail('no data/*.json carried a tier_meaning — the check ran on nothing');
+    else if (!drift) ok(`${checked} payloads carry the byte-identical sentence for their tier`);
+  }
+}
+
 console.log('\nGitHub Pages serving');
 if (!fs.existsSync(path.join(ROOT, '.nojekyll')))
   fail('.nojekyll missing — Jekyll will drop dot-directories such as /.well-known/');

@@ -94,7 +94,7 @@ MAIN = """
 <main>
   <header class="p-hero">
     <div class="p-kicker">NFL · what we know about the league, and what we do not</div>
-    <h1>The NFL work. <a class="tierchip" href="index.html#tiers" title="Why this page is in Labs">Labs</a></h1>
+    <h1>The NFL work. <a class="tierchip" href="index.html#tiers" title="Why this page is a Pup">Pup</a></h1>
     <p class="p-lead">Play-level aggregates, power ratings and the deterministic calculators — the
     analysis side of the site, as opposed to the games you play against other people. Every card
     below is an NFL surface in <a href="/data/surfaces.json"><code>/data/surfaces.json</code></a>,
@@ -174,7 +174,7 @@ SCRIPT = r"""
   async function json(url){const r=await fetch(url);if(!r.ok)throw new Error(`${url} returned ${r.status}`);return r.json()}
 
   const DOMAIN="nfl", SHELF_DOMAIN="NFL";
-  const TIER_LABEL={labs:"Labs",dawg:"Working Dawg",pound:"The DawgHouse"};
+  const TIER_LABEL={labs:"Pup",dawg:"Working Dawg",pound:"The DawgHouse"};
   const KIND={json:"JSON",markdown:"Markdown",mcp:"MCP",rest:"REST"};
   /* The collar, identical to arena.html: tier "dawg" is a glyph with an accessible name.
      Criteria in /data/receipts-method.md; without them the mark would be unbacked. */

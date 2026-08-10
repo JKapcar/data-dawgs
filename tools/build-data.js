@@ -266,7 +266,7 @@ function tierOf(page) {
   return TIERS.labs;
 }
 const TIER_MEANING = {
-  labs: 'Labs — useful and live, still being challenged. Open questions may remain about calibration, assumptions, data quality or edge. Use with your eyes open.',
+  labs: 'Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.',
   dawg: 'Working Dawg — earned its collar. Evidence survived validation: receipts against a benchmark chosen in advance for forecasters, named sources and reproducible maths for measurement tools.',
   pound: 'The DawgHouse (formerly The Pound) — shelved, with the reason attached.',
 };

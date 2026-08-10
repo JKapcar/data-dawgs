@@ -60,7 +60,7 @@ const bookId = p => p.replace(/^\/data\//, "").replace(/\./g, "-");
   ok("the hub claims no surface of its own",
     !sur.some(r => r.id === "data-hub" || r.page === "/data.html"));
   const chip = html.match(/class="tierchip[^"]*"[^>]*>([^<]+)</);
-  ok("the page's own tier chip is Labs", !!chip && chip[1].trim() === "Labs", chip && chip[1]);
+  ok("the page's own tier chip is Pup", !!chip && chip[1].trim() === "Pup", chip && chip[1]);
   ok("no book list is typed into the page",
     !/data-book="(pool|receipts|nfelo|cfb-teams)"/.test(html) && /idx\.data\.files\.map/.test(html));
 

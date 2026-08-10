@@ -18,6 +18,10 @@ judgment, not a measurement** — which is the gate's known weakness, and the re
 document exists in the open rather than in someone's head. What was checked is stated. What
 was not checked is stated too. Argue with it.
 
+> **Label note, 2026-08-10.** This audit was written when the first tier was called
+> *Labs*; the headings below now read *Pup*, which is the same tier under its current
+> name. The tier id `labs` never moved. No row was re-graded — that is its own commit.
+
 **Result: no promotions, no demotions.** That is a suspiciously comfortable outcome and worth
 naming as such. It survives scrutiny only because every collar came back with a condition
 attached, and because the one tool closest to promotion is blocked for a specific, stated
@@ -87,9 +91,9 @@ Dawg. The collar is conditional on a refresh before draft night.
 
 ---
 
-## Labs — the ones near the line
+## Pup — the ones near the line
 
-### Receipts — correctly in Labs, for exactly one reason
+### Receipts — correctly a Pup, for exactly one reason
 
 This is the closest thing to a Dawg outside the collar. Sources named (nfelo `0d3f8418`,
 nflverse/nfldata, ESPN finals). Math reproducible — the canonical string is published and
@@ -116,7 +120,7 @@ refresh cadence, not a redesign. Worth noting because it is the cheapest promoti
 
 ---
 
-## Labs — correctly placed, not close
+## Pup — correctly placed, not close
 
 - **Survivor.** Forecast path, no receipts, and two disclosed defects: double-pick weeks are
   recorded but not simulated, so every survival number after such a week is optimistic in a

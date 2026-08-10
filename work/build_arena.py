@@ -118,7 +118,7 @@ MAIN = """
 <main>
   <header class="p-hero">
     <div class="p-kicker">Arena · the games played against other people · a directory, not a grade</div>
-    <h1>Where you play against other people. <a class="tierchip" href="index.html#tiers" title="Why this page is in Labs">Labs</a></h1>
+    <h1>Where you play against other people. <a class="tierchip" href="index.html#tiers" title="Why this page is a Pup">Pup</a></h1>
     <p class="p-lead">Bozo, the Guillotine companion, Survivor, the DFS solver and the live draft rig
     all put you across from a person rather than across from a number. This page is the directory to
     them and nothing more: it lists them, links them, and shows each one's own tier and machine
@@ -197,7 +197,7 @@ SCRIPT = r"""
   async function json(url){const r=await fetch(url);if(!r.ok)throw new Error(`${url} returned ${r.status}`);return r.json()}
 
   const DOMAIN="arena";
-  const TIER_LABEL={labs:"Labs",dawg:"Working Dawg",pound:"The DawgHouse"};
+  const TIER_LABEL={labs:"Pup",dawg:"Working Dawg",pound:"The DawgHouse"};
   const KIND={json:"JSON",markdown:"Markdown",mcp:"MCP",rest:"REST"};
   /* The collar: tier "dawg" is a glyph with an accessible name, not a word. The criteria
      it stands for are in /data/receipts-method.md — without them the symbol would be an

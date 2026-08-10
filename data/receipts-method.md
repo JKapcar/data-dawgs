@@ -95,9 +95,9 @@ The reason the spec is published is so you don't have to trust this site. Recomp
 
 Three tiers, one gate: **does it work, and can it be trusted?**
 
-- **Labs** — useful and live, still being challenged. It may compute real answers and still
+- **Pup** — live and useful, not yet validated. It may compute real answers and still
   have open questions about calibration, assumptions, data quality or edge. Everything starts
-  here. Labs means use it with your eyes open.
+  here. A Pup means use it with your eyes open.
 - **Working Dawg** — earned its collar. A tool becomes a Dawg only after its evidence survives
   validation: forecasts need receipts against a benchmark chosen in advance, measurement tools
   need named sources and reproducible maths. Looking finished is not evidence.
@@ -116,10 +116,6 @@ A collar certifies what its audit entry says it certifies and no more. nfelo Pow
 the standing example: its collar is for faithfully mirroring a named upstream model, not for
 that model forecasting well, and the evidence on file says it does not beat the market.
 
-⚠️ A page's own tier is still read from its hero chip **text** by `tierOf()` in
-`tools/build-data.js`. Hero chips therefore stay words until that function changes in the same
-commit. As of 2026-08-09 the collar is card-level only, where the tier comes from the map.
-
 ## Provenance
 
 Forecasts from [nfelo](https://github.com/greerreNFL/nfelo) (MIT), snapshot `0d3f8418`.
@@ -132,6 +128,15 @@ Changes to how this site names or frames its claims, recorded rather than applie
 silently. The forecast rows are covered by the hash above; this list covers what the
 hash cannot see.
 
+- **2026-08-10 — Labs is renamed Pup, and stops being a tier name.** Human-facing labels
+  only. Stored machine values did not move: `tier` is still the string `labs`, and
+  /data/surfaces.json still keys the policy on it. The ladder now reads Pup (unvalidated) →
+  Working Dawg (validated) → The DawgHouse (the evidence said stop), which names what is
+  known about a tool rather than where it lives. *Data Dawgs Labs* survives as the name of a
+  PLACE — the lab pages — not a grade. No tool's tier changed, and no forecast, probability
+  or benchmark moved. `tier_meaning` is now asserted byte-identical across all 24 published
+  payloads and the five sources that write them; before this commit only its existence was
+  checked, so two definitions could ship at once.
 - **2026-08-09 — the collar becomes a symbol, and its criteria are published.** `tier: "dawg"`
   now renders as a collar glyph with an accessible name wherever a tier is read from
   /data/surfaces.json, starting with the cards on /arena.html. The criteria are written into

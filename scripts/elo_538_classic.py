@@ -81,8 +81,9 @@ REVERSIONS = {
 }
 POSTSEASON_TYPES = {"REG", "WC", "DIV", "CON", "SB"}
 TIER_MEANING = (
-    "Labs — useful and live, still being challenged. Open questions may remain about "
-    "calibration, assumptions, data quality or edge. Use with your eyes open."
+    "Pup — live and useful, not yet validated. It may compute real answers and still "
+    "have open questions about calibration, assumptions, data quality or edge. "
+    "Everything starts here."
 )
 
 
