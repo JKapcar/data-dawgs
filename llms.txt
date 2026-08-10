@@ -17,7 +17,7 @@ Tiers: `labs` is challenged; `dawg` validated; `pound` shelved — The DawgHouse
 
 ## The DawgHouse
 
-- [The shelf](/dawghouse.html) and its [inventory](/data/pound-tools.json): blocked NFL work with exact blockers, and 44 evidence-tracked CFB ideas. Sixteen production CFB tools ARE callable over MCP; the roadmap ideas are not.
+- [The shelf](/dawghouse.html) and its [inventory](/data/pound-tools.json): blocked NFL work with exact blockers, and 44 CFB ideas. Sixteen production CFB tools ARE callable over MCP; the roadmap ideas are not.
 - [Contracts](/data/model-contracts.json): forecast fields, receipt rules and calculator I/O.
 - [Provenance](/data/upstream-models.json): repos, commits, dates, licenses, integration mode.
 - [NFL schedule](/data/nfl-schedule.json): 272 validated 2026 games, locked snapshot.
@@ -33,11 +33,12 @@ passer rating, Elo, margin translation, forecast scoring, belief summary. Inputs
 the live draft rig. Rendered from the `domain: "arena"` rows of surfaces.json; owns no data file.
 - [Library](/data.html): every file in index.json, shelved by the surface that owns it, plus
 the sources we read and do not republish. Owns no data file either.
+- [NFL](/nfl.html): EPA, nfelo, calculators, and the blocked NFL work with its exact blockers.
 
 ## College football
 
 - [CFB Lab](/cfb.html): explorer, matchup calculator, Elo backtest, divergence, and the 44-idea build roadmap (moved from the workbench 2026-08-09).
-- [2025 results](/data/cfb-schedule.json): 934 games; [latest games](/data/cfb-games-latest.json): one final per FBS team; [latest periods](/data/cfb-team-week-latest.json): one per team; [ratings](/data/cfb-teams.json): records + retrodictive Elo.
+- [2025 results](/data/cfb-schedule.json): 934 games; [latest games](/data/cfb-games-latest.json): one final per FBS team; [latest periods](/data/cfb-team-week-latest.json); [ratings](/data/cfb-teams.json): records + retrodictive Elo.
 - [Book market](/data/cfb-market.json): spreads, totals, devigged moneylines. Books are named but observation time is unknown; not closing lines, so no CLV.
 - [CFB Elo](/data/cfb-elo.json), [registry](/data/cfb-ratings.json) and [card](/data/cfb-model-cards.json): end-2025; retrodictive, modelled, ungraded, not consensus or forecast.
 - [Fraud test](/data/cfb-record-divergence-validation.json): small held-out lift beyond Elo; retrodictive, no team labels. [Disagreement](/data/cfb-disagreement.json): blocked on timestamped prices.
@@ -47,7 +48,7 @@ the sources we read and do not republish. Owns no data file either.
 ## Draft
 
 - [Player pool + Market Value](/data/pool.json): 459 players; three auction formats; `as_of 2026-07-29`. MV is not projected points.
-- [League](/data/league.json): 14 teams, $200, 15 spots, half PPR, no kicker, plus the public draft mirror.
+- [League](/data/league.json): 14 teams, $200, 15 spots, half PPR, no kicker.
 - [2026 strategy](/data/strategy.md): positional curves and format playbooks; testable structure kept apart from analyst priors.
 
 ## Models and data
@@ -59,7 +60,7 @@ the sources we read and do not republish. Owns no data file either.
 
 ## Receipts and method
 
-- [Pre-registered forecasts](/data/receipts.json): 272 calls locked 2026-08-06, SHA-256 `4b87fe0e0790a1e6…`.
+- [Pre-registered forecasts](/data/receipts.json): 272 calls locked 2026-08-06; the hash is in index.json.
 - [Receipt method](/data/receipts-method.md): hypotheses, grading, hash reproduction, and what the tier collar means.
 - [Bozo rules](/data/bozo-rules.json) ([prose](/data/bozo-rules.md)): open weekly one-leg parlay game.
 - [House reasoning rules](/data/method.md): base rates, ranges, falsifiers and selection-bias checks.

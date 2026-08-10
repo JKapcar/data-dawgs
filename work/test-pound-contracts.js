@@ -736,6 +736,51 @@ test('data.html is cached for draft night and findable by crawlers', () => {
   assert.match(fs.readFileSync('sitemap.xml', 'utf8'), /datadawgs216\.com\/data\.html/);
 });
 
+test('nfl.html is a directory and claims no surface of its own', () => {
+  assert.ok(!surfaces.data.some(s => s.page === '/nfl.html'), 'a surfaces row points at the hub');
+  const html = fs.readFileSync('nfl.html', 'utf8');
+  const chip = html.match(/class="tierchip[^"]*"[^>]*>([^<]+)</);
+  assert.equal(chip && chip[1].trim(), 'Labs', 'a hub is a directory, not a graded tool');
+  // both card sets are computed, neither typed
+  assert.match(html, /r\.domain===DOMAIN/);
+  assert.match(html, /t\.domain===SHELF_DOMAIN/);
+  assert.ok(!/data-tool="nfeloml"/.test(html), 'a blocked tool id is typed into the page');
+  // ⚠️ models (belief) and scoreboard (grading) stay apart — the point of Receipts
+  const body = html.slice(html.indexOf('<main>'));
+  assert.ok(!/receipts\.json/.test(body) && !/model-receipts\.json/.test(body),
+    'nfl.html re-hosts a receipt file');
+  assert.match(body, /receipts\.html#models/);
+});
+
+test('the NFL hub and the DawgHouse shelf render the same blocked rows', () => {
+  // Neither page is a copy: both read /data/pound-tools.json, so they cannot disagree.
+  const blocked = nflTools.filter(t => t.domain === 'NFL' && t.status !== 'complete');
+  assert.equal(blocked.length, 8, 'the blocked NFL set moved');
+  blocked.forEach(t => {
+    assert.ok(t.exact_blocker, `${t.id} has no exact blocker`);
+    assert.ok(t.minimum_path_to_completion, `${t.id} has no minimum path`);
+  });
+  for (const f of ['nfl.html', 'dawghouse.html'])
+    assert.match(fs.readFileSync(f, 'utf8'), /pound-tools\.json/, f);
+});
+
+test('nfl.html is cached for draft night and findable by crawlers', () => {
+  assert.match(fs.readFileSync('sw.js', 'utf8'), /"\/nfl\.html"/);
+  assert.match(fs.readFileSync('sitemap.xml', 'utf8'), /datadawgs216\.com\/nfl\.html/);
+});
+
+test('the under-construction component has one source, not three copies', () => {
+  // Stage 4 built it once; build_data_library.py and build_nfl_hub.py SLICE it out of
+  // arena.html rather than retyping it. A retyped copy is a fork waiting to happen.
+  const arena = fs.readFileSync('arena.html', 'utf8');
+  const i = arena.indexOf('/* CEP-5A Stage 4 — THE REUSABLE UNDER-CONSTRUCTION TREATMENT.');
+  const j = arena.indexOf('\n/* Tier chips rendered FROM surfaces.json', i);
+  assert.ok(i >= 0 && j > i, 'arena.html lost the component');
+  const block = arena.slice(i, j);
+  for (const f of ['data.html', 'nfl.html'])
+    assert.ok(fs.readFileSync(f, 'utf8').includes(block), `${f} has forked the component`);
+});
+
 test('the dated 2026-08-07 tier audit keeps its original wording', () => {
   // A dated record is history, not a label. The rename must not edit it.
   const html = fs.readFileSync('receipts.html', 'utf8');
