@@ -677,6 +677,138 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
 .rule-row .rl{font-weight:750}
 .rule-row .rd{color:var(--ink-3);font-size:12.5px;display:block;margin-top:2px}
 .rule-row .rv{font:700 14px ui-monospace,monospace;white-space:nowrap;color:var(--ink-1)}
+/* A rule that is not a manager's to change. Styled as a statement, not a disabled
+   control — a greyed-out dropdown reads as "broken", which is a different claim. */
+.rule-row .fixedrule{font:700 11px/1 ui-monospace,monospace;letter-spacing:1px;text-transform:uppercase;
+  white-space:nowrap;color:var(--ink-3);border:1px dashed var(--grid);border-radius:5px;padding:6px 9px}
+
+/* ================= CLV vs. result =================
+   ⚠️ SERIES PALETTE AND THEMING — read before "fixing" this.
+
+   The prototype shipped a `@media (prefers-color-scheme: dark)` block alongside a
+   `[data-theme="dark"]` scope, and the handoff asked for both to be kept. This site does
+   not work that way and adding them would BREAK the thing that instruction was protecting.
+   Here `:root` IS dark — dark is the default, and light is the override at
+   `:root[data-theme="light"]`. There is no OS-preference block anywhere on the site,
+   because the theme toggle is the only input. Wire prefers-color-scheme in and a reader
+   on a light-OS machine who has chosen Dark gets light series colours on a dark card.
+   So the OS setting is ignored here exactly as it is everywhere else on the site, which
+   is what "the site's Dark toggle must win over the OS setting either way" actually asks
+   for on this codebase.
+
+   The eight series colours are the prototype's, unchanged and validated with the dataviz
+   skill's palette checker. Nothing below this block references a raw hex.
+
+   ⚠️ Eight series cannot clear an all-pairs contrast gate — a scatter puts ANY two
+   series next to each other, not just adjacent legend slots. The documented mitigations
+   are load-bearing and must not be removed: shape is a real channel (eight glyphs,
+   assigned so the weakest colour pairs get the most different shapes), selecting a
+   player drops the rest to 16%, direct labels in season mode, and the table twin carries
+   every value. */
+:root{
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+  --s5:#d55181; --s6:#2fbf3f; --s7:#9085e9; --s8:#e66767;
+  --clv-quad:rgba(255,255,255,0.025);
+  --clv-band-1:rgba(255,255,255,0.075); --clv-band-2:rgba(255,255,255,0.038);
+}
+:root[data-theme="light"]{
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
+  --s5:#e87ba4; --s6:#008300; --s7:#4a3aa7; --s8:#e34948;
+  --clv-quad:rgba(43,28,14,0.022);
+  --clv-band-1:rgba(43,28,14,0.055); --clv-band-2:rgba(43,28,14,0.028);
+}
+.clv-controls{display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+  padding-bottom:16px;margin-bottom:4px;border-bottom:1px solid var(--grid)}
+.clv-controls .seg{display:inline-flex;background:var(--grid);border-radius:999px;padding:3px;gap:2px}
+.clv-controls .seg button{font:600 12px/1 system-ui;letter-spacing:.04em;padding:6px 13px;border:0;
+  border-radius:999px;cursor:pointer;background:transparent;color:var(--ink-2)}
+.clv-controls .seg button[aria-pressed="true"]{background:var(--surface-1);color:var(--ink-1);
+  box-shadow:0 1px 2px rgba(0,0,0,.18)}
+.clv-controls .weekbox{display:flex;align-items:center;gap:10px}
+.clv-controls .weekbox label{font:11px ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+#clvWeek{width:190px;accent-color:var(--accent)}
+.clv-controls .weeknum{font-variant-numeric:tabular-nums;font-weight:700;font-size:13px;min-width:6.6em}
+.clv-controls .playbtn{width:30px;height:30px;border-radius:50%;cursor:pointer;border:1px solid var(--axis);
+  background:transparent;color:var(--ink-1);font-size:12px;line-height:1;display:grid;place-items:center}
+.clv-controls .playbtn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.clv-check{display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-size:12px;font-weight:600;color:var(--ink-2)}
+.clv-check input{accent-color:var(--accent);width:14px;height:14px;cursor:pointer}
+.clv-check .clv-lab{color:var(--ink-3);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+.clv-check select{font:600 12px system-ui;color:var(--ink-1);background:var(--grid);border:1px solid var(--border);
+  border-radius:999px;padding:5px 10px;cursor:pointer;text-transform:uppercase;letter-spacing:.04em}
+.clv-legend{display:flex;flex-wrap:wrap;gap:6px;padding:14px 0 6px}
+.clv-legend .pchip{display:inline-flex;align-items:center;gap:7px;cursor:pointer;font:600 12.5px system-ui;
+  padding:4px 11px 4px 8px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--ink-2)}
+.clv-legend .pchip[data-on="false"]{opacity:.38}
+.clv-legend .pchip[data-sel="true"]{border-color:var(--ink-1);color:var(--ink-1);background:var(--grid)}
+.clv-legend .pchip svg{display:block}
+.clv-legend .me{font:600 9.5px/1 ui-monospace,monospace;letter-spacing:.08em;color:var(--ink-3)}
+.clv-legend .dead{font:600 9.5px/1 ui-monospace,monospace;letter-spacing:.08em;color:var(--bad)}
+.clv-legnote{font-size:11.5px;color:var(--ink-3);padding:2px 0 0;line-height:1.6}
+.clv-plot{position:relative;margin-top:6px}
+svg.clv-svg{display:block;width:100%;height:auto;overflow:visible}
+.clv-svg .tick{font-size:11px;fill:var(--ink-3);font-variant-numeric:tabular-nums}
+.clv-svg .axtitle{font-size:11px;fill:var(--ink-2);letter-spacing:.09em;text-transform:uppercase;font-weight:650}
+.clv-svg .quadlab{font-size:10px;fill:var(--ink-3);letter-spacing:.1em;text-transform:uppercase}
+.clv-svg .dotlabel{font-size:11.5px;font-weight:700;fill:var(--ink-1);paint-order:stroke;
+  stroke:var(--surface-1);stroke-width:3px}
+.clv-svg .bandlab{font-size:10px;fill:var(--ink-3);letter-spacing:.08em;text-transform:uppercase;
+  paint-order:stroke;stroke:var(--surface-1);stroke-width:3px}
+.clv-tip{position:absolute;pointer-events:none;opacity:0;transition:opacity .09s;background:var(--surface-1);
+  border:1px solid var(--axis);border-radius:9px;padding:9px 11px;font-size:12.5px;min-width:172px;
+  box-shadow:0 6px 20px rgba(0,0,0,.28);z-index:5}
+.clv-tip .t-name{font-weight:750;margin-bottom:5px;display:flex;align-items:center;gap:7px}
+.clv-tip .t-row{display:flex;justify-content:space-between;gap:16px;color:var(--ink-2)}
+.clv-tip .t-row b{color:var(--ink-1);font-variant-numeric:tabular-nums;font-weight:650}
+.clv-tip .t-sep{height:1px;background:var(--grid);margin:6px 0}
+.clv-tablewrap{max-height:520px;overflow:auto;margin-top:14px}
+table.clv-tbl{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+table.clv-tbl th,table.clv-tbl td{padding:7px 10px;text-align:right;border-bottom:1px solid var(--grid)}
+table.clv-tbl th{font:650 10.5px/1 ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink-3);white-space:nowrap}
+table.clv-tbl th:first-child,table.clv-tbl td:first-child{text-align:left}
+table.clv-tbl tbody tr:hover{background:var(--grid)}
+table.clv-tbl .pos{color:var(--good)} table.clv-tbl .neg{color:var(--bad)}
+.clv-foot{margin-top:16px;padding-top:14px;border-top:1px solid var(--grid);font-size:11.5px;
+  color:var(--ink-3);line-height:1.65}
+.clv-foot b{color:var(--ink-2)}
+.clv-foot code{font-size:11px;background:var(--grid);padding:1px 5px;border-radius:4px}
+.clv-empty{padding:50px 20px;text-align:center;color:var(--ink-3);font-size:13.5px}
+
+/* ---- correlated-ticket honesty + Bozo Royale ---- */
+.slip-ft .ind{font:700 8.5px/1 ui-monospace,monospace;letter-spacing:.9px;text-transform:uppercase;
+  color:var(--warn);vertical-align:top}
+.sgpwarn{margin-top:12px;padding:10px 12px;border:1px solid var(--warn);border-radius:8px;
+  background:color-mix(in srgb, var(--warn) 10%, transparent);font-size:12px;line-height:1.6;color:var(--ink-2)}
+.sgpwarn b{color:var(--ink-1)}
+.legs .leg.dead{opacity:.55}
+.legs .leg.dead .mk{color:var(--bad)}
+.legs .pxv.dead{font:700 11px/1 ui-monospace,monospace;letter-spacing:1px;color:var(--bad)}
+/* The buy-back is a TIMED prompt, not a menu item — it appears at the chop and expires
+   at the next lock. It is styled to look like a decision, because that is what it is. */
+.buyback{border:2px solid var(--accent);border-radius:10px;padding:14px 16px;margin-bottom:18px;
+  background:color-mix(in srgb, var(--accent) 8%, transparent)}
+.buyback h3{margin:0 0 6px;font-size:15px;font-weight:750;color:var(--ink-1)}
+.buyback p{margin:0 0 10px;font-size:13px;color:var(--ink-2);line-height:1.6}
+.buyback .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.chops{margin-top:16px;border-top:1px solid var(--grid);padding-top:12px}
+.chops h3{font:700 11px/1 ui-monospace,monospace;letter-spacing:1.1px;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 8px}
+.chops ol{margin:0;padding-left:20px;font-size:12.5px;color:var(--ink-2);line-height:1.85}
+.chops .who{font-weight:750;color:var(--ink-1)}
+.chops .by{color:var(--ink-3)}
+/* ⚠️ A tie and an unmeasurable lever are DIFFERENT failures and are coloured
+   differently on purpose. A tie is bad luck; an unmeasurable lever is a hole in the
+   data, and collapsing the two hides the second behind the first. */
+.chops .passed{font:600 10.5px/1 ui-monospace,monospace;color:var(--ink-3)}
+.chops .passed .unmeas{color:var(--warn)}
+.chops .passed .tie{color:var(--ink-3)}
+.rosterline{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 2px}
+.rosterline .rr{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:650;
+  color:var(--ink-1);border:1px solid var(--border);border-radius:999px;padding:4px 11px}
+.rosterline .rr.dead{opacity:.55;border-style:dashed}
+.rosterline .dead{font:700 9px/1 ui-monospace,monospace;letter-spacing:.8px;color:var(--bad)}
+.rosterline .bb{font:700 9px/1 ui-monospace,monospace;letter-spacing:.8px;color:var(--accent)}
 /* ---- league switcher ---- */
 .lgbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
 .lgbar select{background:var(--surface-1);border:1px solid var(--grid);color:var(--ink-1);
@@ -699,6 +831,18 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
 .hcard .iconbtn{background:none;border:1px solid var(--grid);border-radius:6px;color:var(--ink-3);
   cursor:pointer;font:600 10.5px/1 ui-monospace,monospace;letter-spacing:.6px;text-transform:uppercase;padding:4px 7px}
 .hcard .iconbtn:hover{border-color:var(--accent);color:var(--accent)}
+/* Delete is the only destructive control on this card, so it is the only one that
+   looks it. It stays quiet until hovered — a red button you brush past on the way to
+   Rename is worse design than a grey one that turns red when you mean it. */
+.hcard .iconbtn.danger:hover{border-color:var(--bad);color:var(--bad)}
+.hcard .chip.fmt{background:color-mix(in srgb, var(--accent) 18%, transparent);color:var(--accent)}
+/* ⚠️ The DEMO badge is load-bearing, not decoration. These leagues use the real eight
+   names on purpose — that is what makes the demo land — which is exactly why every
+   surface they appear on has to say the numbers are invented. */
+.hcard .chip.demo,.chip.demo{background:var(--warn);color:#1a1206}
+.hcard.demo{border-style:dashed}
+.f .opt{font:600 9.5px/1 ui-monospace,monospace;letter-spacing:.7px;text-transform:uppercase;
+  color:var(--ink-3);margin-left:5px}
 .hcard input.rn{font:750 16px system-ui;padding:4px 8px;border:1px solid var(--accent);border-radius:7px;
   background:var(--surface-1);color:var(--ink-1);width:100%;max-width:230px}
 .hcard .go{display:block;margin-top:10px;color:var(--accent);font-size:12.5px;font-weight:650}
@@ -2069,6 +2213,16 @@ STATE: everything saves in the browser on that device. A different device shows 
       <div class="f w2"><label>Name</label><input id="nlName" placeholder="Sunday Crew"></div>
       <div class="f"><label>Id (for the link)</label><input id="nlId" placeholder="sunday"></div>
       <div class="f"><label>Manager</label><select id="nlMgr"></select></div>
+      <!-- ⚠️ Format is chosen once and frozen at the first lock. Changing a ruleset
+           mid-season retroactively changes who should have been eliminated, which is the
+           same class of error as editing a published forecast. -->
+      <div class="f w2"><label>Format</label>
+        <select id="nlFormat">
+          <option value="standard">Standard — everyone plays every week, worst busts and wears it</option>
+          <option value="royale">Bozo Royale — one player chopped a week, last one standing takes the pot</option>
+        </select></div>
+      <div class="f" id="nlBuybackWrap" style="display:none"><label>Buy-back price ($)</label>
+        <input id="nlBuyback" type="number" min="0" step="5" value="25" placeholder="0 disables"></div>
       <div class="f w4"><div class="row" style="justify-content:flex-end">
         <button class="btn sm" id="nlGo">Create league</button></div></div>
     </div>
@@ -2119,6 +2273,13 @@ STATE: everything saves in the browser on that device. A different device shows 
     <div class="f w2"><label>Side</label><select id="fSide"></select></div>
     <div class="f" id="lineWrap"><label id="lineLbl">Number</label><input id="fLine" type="number" step="0.5" placeholder="6.5"></div>
     <div class="f"><label>Price</label><input id="fPrice" type="number" step="5" placeholder="-175"></div>
+    <!-- ⚠️ Not decoration, and not optional if you ever want your CLV to mean anything.
+         The other side is what makes the de-vig possible; without it the price can only
+         be read raw, which overstates every favourite by roughly the whole hold. A leg
+         submitted without it is charted as "no de-vig" rather than silently averaged in
+         beside legs that have one. -->
+    <div class="f"><label>Other side <span class="opt">for CLV</span></label>
+      <input id="fPriceOpp" type="number" step="5" placeholder="+145"></div>
     <div class="f w2" id="propWrap" style="display:none"><label>Player &amp; stat</label><input id="fProp" placeholder="Kelce receiving yards"></div>
     <div class="f w4"><div class="row" style="justify-content:flex-end">
       <button class="btn ghost sm" id="clearMine" style="display:none">Remove my leg</button>
@@ -2158,8 +2319,19 @@ STATE: everything saves in the browser on that device. A different device shows 
     <div class="rule-row"><span><span class="rl">Band floor</span><span class="rd">deepest favorite allowed — deeper floor = ticket cashes more often, for less</span></span>
       <span class="dial"><button data-dial="floor" data-d="-25">−</button><input id="dFloor" type="number" step="5"><button data-dial="floor" data-d="25">+</button></span></div>
 
-    <div class="rule-row"><span><span class="rl">Duplicate legs</span><span class="rd">can two people take the exact same bet</span></span>
-      <span><select id="sDupes"><option value="no">Not allowed</option><option value="yes">Allowed</option></select></span></div>
+    <!-- ⚠️ This was a dropdown. It is now a statement, because it stopped being a
+         choice: every leg has to be a real DraftKings selection that is legal in an SGP,
+         and DK will not put the same selection on one parlay twice. A league that
+         allowed duplicates could not build its own ticket. -->
+    <!-- ⚠️ Editable only until the first ticket locks. After that, changing the ruleset
+         would retroactively change who should have been eliminated. -->
+    <div class="rule-row" id="fmtRow"><span><span class="rl">Format</span><span class="rd" id="fmtDesc"></span></span>
+      <span id="fmtCtl"></span></div>
+    <div class="rule-row" id="bbRow" style="display:none"><span><span class="rl">Buy-back price</span><span class="rd">what it costs a chopped player to come straight back. 0 turns buy-backs off entirely.</span></span>
+      <span><input id="sBuyback" type="number" min="0" step="5" style="width:88px"></span></div>
+
+    <div class="rule-row"><span><span class="rl">Duplicate legs</span><span class="rd">not a setting any more — the ticket is one real DraftKings parlay, and DK rejects the same selection twice. Opposite sides of one market are refused too: both can’t cash, so the ticket could never win.</span></span>
+      <span class="fixedrule">Always refused</span></div>
     <div class="rule-row"><span><span class="rl">Editing after you submit</span><span class="rd">open editing resets your timestamp and your price, which is what makes Last In and CLV bite</span></span>
       <span><select id="sEdit"><option value="yes">Open until the ticket is placed</option><option value="no">Locked once your leg is in</option></select></span></div>
     <div class="rule-row"><span><span class="rl">When the ticket locks</span><span class="rd">everyone-in keeps the close honest; a fixed count turns Last In into a race someone can miss</span></span>
@@ -2225,12 +2397,71 @@ STATE: everything saves in the browser on that device. A different device shows 
 <!-- ---------- hierarchy: the machine sits ABOVE the ticket now, because it is
      the frame you read the ticket through. It is visible on an OPEN board in an
      armed/idle state — the reels only STOP when the server has actually drawn. -->
+<!-- ---------- Bozo Royale: the buy-back window and the chop log ----------
+     The prompt is timed. It appears the moment you are chopped and dies at the next
+     lock — there is no menu item for it and no way to take it later. Without that
+     window a chopped player could lurk, watch the field thin, and re-enter at the final
+     two, which is strictly better than playing every week. -->
+<div class="card" id="royaleCard" style="display:none">
+  <div class="bz-hdr"><h2 class="bz" style="margin:0">Bozo Royale</h2><span class="tm" id="royaleState"></span></div>
+  <div id="royaleBody"></div>
+</div>
+
 <div class="card" id="drawCard">
   <div class="bz-hdr"><h2 class="bz" style="margin:0">This week's hierarchy</h2><span class="tm" id="drawState"></span></div>
   <div class="machine" id="machine"><div class="reels" id="reels"></div>
     <div class="lever" id="lever"><div class="rod"></div><div class="knob"></div></div></div>
   <ol class="ord" id="ord"></ol>
   <p class="note" id="drawNote"></p>
+</div>
+
+<!-- ---------- CLV vs. result ----------
+     Two questions the league has always run together, pulled apart onto two axes:
+     "did you get a good price" (x, mostly under your control, stabilises fast) and
+     "did you win more than the price implied" (y, mostly luck at this sample size).
+     Same unit on both, so the quadrants compare. -->
+<div class="card" id="clvCard" style="display:none">
+  <div class="bz-hdr"><h2 class="bz" style="margin:0">Beating the number vs. beating the close</h2>
+    <span class="tm" id="clvHead"></span></div>
+  <p class="note" id="clvSub" style="margin:0 0 14px">Each dot is one player through one week. Horizontal is the price
+    they got against the closing line; vertical is how often they actually won versus how often the closing line said
+    they should. Hover or pick a name to trace a season.</p>
+
+  <div class="clv-controls">
+    <div class="seg" role="group" aria-label="View">
+      <button id="clv-week" aria-pressed="true">By week</button>
+      <button id="clv-season" aria-pressed="false">Season average</button>
+    </div>
+    <div class="weekbox">
+      <label for="clvWeek">Through</label>
+      <input type="range" id="clvWeek" min="1" max="18" value="18" step="1">
+      <span class="weeknum" id="clvWeekNum">Week 18</span>
+      <button class="playbtn" id="clvPlay" aria-pressed="false" aria-label="Play season">&#9654;</button>
+    </div>
+    <label class="clv-check"><input type="checkbox" id="clvBand" checked><span>Luck band</span></label>
+    <label class="clv-check" style="gap:8px"><span class="clv-lab">Sport</span>
+      <select id="clvSport"><option value="all">All sports</option></select></label>
+    <div class="seg" role="group" aria-label="Display" style="margin-left:auto">
+      <button id="clv-chart" aria-pressed="true">Chart</button>
+      <button id="clv-table" aria-pressed="false">Table</button>
+    </div>
+  </div>
+
+  <div class="clv-legend" id="clvLegend"></div>
+  <div class="clv-legnote">Click a name to trace it &middot; shift-click to hide &middot; shape and colour both carry
+    identity, because eight series is past the point where colour alone is reliable &middot; dot size is sample size,
+    so a week-1 dot is one coin flip and a Super Bowl dot is twenty-two.</div>
+
+  <div id="clvChartView">
+    <div class="clv-plot">
+      <svg class="clv-svg" id="clvSvg" viewBox="0 0 960 520" role="img"
+           aria-label="Scatter plot of cumulative closing line value against cumulative win rate versus expected"></svg>
+      <div class="clv-tip" id="clvTip"></div>
+    </div>
+  </div>
+  <div id="clvTableView" hidden><div class="clv-tablewrap"><table class="clv-tbl" id="clvTbl"></table></div></div>
+
+  <div class="clv-foot" id="clvFoot"></div>
 </div>
 
 <!-- ---------- the ticket, as a parlay slip ---------- -->
@@ -2389,6 +2620,11 @@ async function wPost(path, body){
 const dirOf = x => ((x && (x.dir || x.side)) === 'under') ? 'under' : 'over';
 const dec  = a => a<0 ? 1+100/Math.abs(a) : 1+a/100;
 const imp  = a => a<0 ? Math.abs(a)/(Math.abs(a)+100) : 100/(a+100);
+/* Proportional de-vig against the opposite side of the same two-way market.
+   ⚠️ Null when either side is missing, deliberately. Raw implied and de-vigged differ by
+   roughly the whole hold, so a function that "falls back" to raw would let two different
+   quantities be compared as if they were one. Callers must handle the null. */
+const devigP = (a,b) => (a==null||b==null) ? null : (imp(a)/(imp(a)+imp(b)));
 const amer = d => d>=2 ? '+'+Math.round((d-1)*100) : '-'+Math.round(100/(d-1));
 // Acklam's inverse normal — turns a price into an expected margin.
 function invNorm(p){
@@ -2674,13 +2910,18 @@ function paintHub(){
   document.getElementById('hubList').innerHTML = LEAGUES.map(l=>{
     const mine = ME && (l.members||[]).includes(ME.name);
     const chip = l.status==='open' ? 'open' : l.status;
-    return `<div class="hcard" data-open="${esc(l.id)}">
+    const st = l.settings || {};
+    const royale = st.format === 'royale';
+    return `<div class="hcard${st.synthetic?' demo':''}" data-open="${esc(l.id)}">
       <div class="hhead">
         <h3 data-title="${esc(l.id)}">${esc(l.name)}</h3>
         ${canManage(l)?`<button class="iconbtn" data-rename="${esc(l.id)}" title="Rename this league">Rename</button>`:''}
+        ${canManage(l) && l.id!=='main'?`<button class="iconbtn danger" data-del="${esc(l.id)}" title="Delete this league and every row in it">Delete</button>`:''}
       </div>
       <div class="meta">${l.size} player${l.size===1?'':'s'} · week ${l.week} · run by ${esc(l.manager||'—')}</div>
       <div class="bar"><span class="chip ${esc(chip)}">${esc(chip)}</span>
+        ${royale?'<span class="chip fmt">Bozo Royale</span>':''}
+        ${st.synthetic?'<span class="chip demo" title="Simulated season. Every leg, price, close and result in this league is fabricated, and it counts toward nothing.">DEMO \u00b7 SIMULATED</span>':''}
         ${mine?'<span class="yours">you\u2019re in</span>':''}</div>
       <span class="go">${canManage(l)?'Open to manage roster &amp; rules →':'Open the board →'}</span>
       <div class="rnerr" data-rnerr="${esc(l.id)}"></div>
@@ -2735,7 +2976,29 @@ function startRename(lid){
   inp.addEventListener('click', ev=>ev.stopPropagation());
 }
 
+/* Delete a league, for real. Typing the name is the confirmation — a modal alone is a
+   reflex, and this takes the league's legs, closes, grades and ledger rows with it.
+   ⚠️ Hard, not hidden. A soft-deleted demo league is a synthetic-data leak waiting for
+   the next query someone writes; a deleted one cannot be counted by anything. */
+async function startDelete(lid){
+  const lg = LEAGUES.find(x=>x.id===lid); if(!lg) return;
+  const err = document.querySelector(`[data-rnerr="${CSS.escape(lid)}"]`);
+  const typed = prompt(
+    `Delete "${lg.name}" permanently?\n\n`
+    + `This removes the league and every row in it — picks, closes, grades, the ledger and the join link. `
+    + `It cannot be undone and nothing is kept hidden.\n\n`
+    + `Type the league name exactly to confirm:`);
+  if(typed === null) return;                       // cancelled, say nothing
+  if(err) err.textContent = '';
+  try{
+    await wPost('/league/delete', { league: lid, confirm: typed.trim() });
+    await reloadLeagues();
+  }catch(e){ if(err) err.textContent = e.message; }
+}
+
 document.getElementById('hubList').addEventListener('click', e=>{
+  const del = e.target.closest('[data-del]');
+  if(del){ e.stopPropagation(); startDelete(del.dataset.del); return; }
   const rn = e.target.closest('[data-rename]');
   if(rn){ e.stopPropagation(); startRename(rn.dataset.rename); return; }
   if(e.target.closest('input')) return;      // don't navigate while editing the name
@@ -2819,7 +3082,7 @@ function render(){
   document.getElementById('statusChip').style.display = hub ? 'none' : '';
   document.getElementById('backHub').style.display = (hub || LEAGUES.length<2) ? 'none' : '';
   // On the hub every league-scoped card is hidden; the directory is the whole page.
-  for(const id of ['snav','lgbar','submitCard','ticketCard','seasonCard','sheetCard','leagueCard','drawCard','diagCard','gradeCard','verdict'])
+  for(const id of ['snav','lgbar','submitCard','ticketCard','seasonCard','sheetCard','leagueCard','drawCard','royaleCard','clvCard','diagCard','gradeCard','verdict'])
     { const el=document.getElementById(id); if(el && hub) el.style.display='none'; }
   if(hub) return;
 
@@ -2831,17 +3094,33 @@ function render(){
   const c=document.getElementById('statusChip');
   c.className='chip '+status;
   c.textContent='Week '+(S.week||1)+' · '+status;
-  document.getElementById('fill').textContent = live.length+' of '+players.length+' in';
+  /* ⚠️ In Bozo Royale the denominator is who is still ALIVE, not who is in the league.
+     "3 of 8 in" when five have been chopped reads as a board still waiting on five
+     people who are never coming.
+
+     ⚠️ And it is floored at the number of legs actually on the board. The chop resolves
+     when the week is GRADED, so between that moment and the next week opening, the
+     roster has already shrunk while the graded week's legs are all still displayed —
+     which without this read "2 of 1 in". */
+  const expected = isRoyale() ? Math.max(live.length, royaleAliveNames().length) : players.length;
+  document.getElementById('fill').textContent = live.length+' of '+expected+' in';
 
   const open = status==='open';
   const mine = ME ? picks[kEnc(ME.name)] : null;
   const bd = band();
   // The bet form lives on YOUR sheet — that's the "place their bet" surface.
-  document.getElementById('submitCard').style.display = (ME && open && v===ME.name) ? '' : 'none';
+  // A chopped Royale player doesn't get one: they fund the ticket, they don't bet on it.
+  const meAlive = !ME || !isRoyale() || (royaleOf(ME.name)?.alive !== false);
+  document.getElementById('submitCard').style.display = (ME && open && v===ME.name && meAlive) ? '' : 'none';
   document.getElementById('submitH').textContent = mine ? 'Your leg — editing resets your clock and price' : 'Your leg';
   document.getElementById('bandNote').textContent =
     `Favorites only, ${bd.ceil} to ${bd.floor}. No exact duplicates. Editing resets your clock and your price. The ticket locks the moment the last leg lands.`;
   const cm=document.getElementById('clearMine'); if(cm) cm.style.display = mine ? '' : 'none';
+
+  paintRoyale();
+  // The chart sits under the hierarchy on the board view only — it is a season-long
+  // read, and it has no meaning on one player's sheet.
+  if(onBoard) clvLoad(); else document.getElementById('clvCard').style.display='none';
 
   // the sheets themselves
   document.getElementById('ticketCard').style.display = onBoard ? '' : 'none';
@@ -2854,13 +3133,16 @@ function render(){
   paintSlip(players, picks, status, live);
 
   document.getElementById('placeNote').textContent = open
-    ? `Locks when every leg is in — ${players.length-live.length} to go. That moment is the close, and the server draws the hierarchy on the spot.`
-    : 'Placed. Prices frozen; CLV is graded against the last leg in.';
-  // Standing disclosure, not a per-leg badge: right now EVERY price here is
-  // self-reported, so badging each one would be noise. When a market source is
-  // wired in and picks carry a priceSource, this becomes a per-leg mark instead.
+    ? `Locks when every leg is in — ${Math.max(0, expected-live.length)} to go. That moment is the close for the ticket, and the server draws the hierarchy on the spot.`
+    : 'Placed. Entry prices frozen.';
+  /* ⚠️ THIS SENTENCE CHANGED WHEN THE CAPTURE SHIPPED, and only half of it changed.
+     Closing prices are now snapped at kickoff from DraftKings via a licensed
+     aggregator — those ARE checked. The ENTRY price is still a number a human typed and
+     nothing verifies it, so a player who mis-enters a better price than they got shows
+     inflated CLV. Saying "prices are checked now" would be the easy lie. */
   document.getElementById('placeNote').textContent +=
-    ' Prices are entered by each player and are not checked against the book.';
+    ' Closing prices are captured at kickoff from DraftKings; entry prices are still typed in by each player and'
+    + ' are not checked against the book, so any CLV here mixes one verified number with one unverified one.';
 
   // hierarchy — the machine is on the board at ALL times now. Before the draw it
   // idles (armed); the reels STOP only when the server has actually drawn, so a
@@ -2920,9 +3202,15 @@ function paintSheet(player){
   const avgPx = priced.length ? Math.round(priced.reduce((a,r)=>a+r.price,0)/priced.length) : null;
   const chalk = rows.filter(r=>r.shortestOdds).length;
   const lastIn = names().length ? rows.filter(r=>r.rank===names().length).length : 0;
-  const withClose = rows.filter(r=>Number.isFinite(r.close));
+  /* ⚠️ De-vigged, matching the CLV chart. This used to be raw implied on both ends,
+     which gave a second, different CLV number for the same player on the same page.
+     Raw-minus-raw partly cancels the hold, but only when both sides carry the same one —
+     they don't, and the residual is the same order of magnitude as the whole spread of
+     CLV across the league. A leg missing either side of either price is excluded rather
+     than de-vigged against nothing, so this counts only what the chart counts. */
+  const withClose = rows.filter(r=>devigP(r.close, r.closeOpp)!=null && devigP(r.price, r.priceOpp)!=null);
   const clv = withClose.length
-    ? withClose.reduce((a,r)=>a+(imp(r.close)-imp(r.price)),0)/withClose.length : null;
+    ? withClose.reduce((a,r)=>a+(devigP(r.close,r.closeOpp)-devigP(r.price,r.priceOpp)),0)/withClose.length : null;
 
   const tile=(lil,big)=>`<div><div class="lil">${lil}</div><div class="big">${big}</div></div>`;
   document.getElementById('shStats').innerHTML =
@@ -2991,7 +3279,15 @@ function paintLeague(){
   paintRoster();
 }
 
-function settings(){ return league()?.settings || {stake:50,allowDupes:false,allowEdit:true,lockRule:'all',lockCount:0,levers:[0,1,2,3]}; }
+function settings(){ return league()?.settings || {stake:50,allowEdit:true,lockRule:'all',lockCount:0,levers:[0,1,2,3],format:'standard',buyback:0,formatLocked:false,synthetic:false}; }
+// Which ruleset this league runs. Standard names a bozo who plays again next week;
+// Bozo Royale eliminates them. Everything else about a leg is identical.
+const isRoyale = () => settings().format === 'royale';
+const isDemo   = () => settings().synthetic === true;
+/* Live Royale state for one player, straight off the league node. Null in Standard,
+   where nobody is ever out. */
+const royaleOf = p => isRoyale() ? (((S.royale||{}).status||{})[kEnc(p)] || null) : null;
+const royaleAliveNames = () => names().filter(p=>{ const r=royaleOf(p); return !r || r.alive !== false; });
 
 function fillSettings(){
   const bd = band(), st = settings(), lg = league();
@@ -3001,12 +3297,33 @@ function fillSettings(){
   document.getElementById('sStake').value = st.stake;
   document.getElementById('dCeil').value = bd.ceil;
   document.getElementById('dFloor').value = bd.floor;
-  document.getElementById('sDupes').value = st.allowDupes ? 'yes' : 'no';
   document.getElementById('sEdit').value  = st.allowEdit ? 'yes' : 'no';
   document.getElementById('sLockRule').value = st.lockRule;
   const lc = document.getElementById('sLockCount');
   lc.style.display = st.lockRule==='count' ? '' : 'none';
   lc.value = st.lockCount || Math.max(2, names().length);
+
+  /* ⚠️ Format is a dropdown ONLY until the first ticket locks. After that it is a
+     statement of what this season has been played under. A locked format shown as a
+     disabled <select> would read as "broken"; it isn't broken, it is decided. */
+  const locked = st.formatLocked;
+  document.getElementById('fmtCtl').innerHTML = locked
+    ? `<span class="fixedrule">${st.format==='royale'?'Bozo Royale':'Standard'} · locked</span>`
+    : `<select id="sFormat">
+         <option value="standard"${st.format!=='royale'?' selected':''}>Standard</option>
+         <option value="royale"${st.format==='royale'?' selected':''}>Bozo Royale</option>
+       </select>`;
+  document.getElementById('fmtDesc').textContent = locked
+    ? 'Fixed for the season — this league has already locked a ticket, and changing the ruleset now would retroactively change who should have been eliminated.'
+    : 'Standard: everyone plays every week and the worst loser funds the next ticket. Bozo Royale: one player is chopped a week and the last one standing takes the pot. Locks permanently when this league places its first ticket.';
+  document.getElementById('bbRow').style.display = st.format==='royale' ? '' : 'none';
+  document.getElementById('sBuyback').value = st.buyback ?? 0;
+  const fs = document.getElementById('sFormat');
+  if(fs) fs.onchange = e => {
+    document.getElementById('bbRow').style.display = e.target.value==='royale' ? '' : 'none';
+    lgDirty = true;
+  };
+
   paintLevers(st.levers);
 }
 function paintLevers(active){
@@ -3034,7 +3351,7 @@ document.getElementById('sLockRule').addEventListener('change', e=>{
   lgDirty=true;
   document.getElementById('sLockCount').style.display = e.target.value==='count' ? '' : 'none';
 });
-['sName','sMgr','sStake','sDupes','sEdit','sLockCount'].forEach(id=>
+['sName','sMgr','sStake','sEdit','sLockCount'].forEach(id=>
   document.getElementById(id).addEventListener('input', ()=>{ lgDirty=true; }));
 
 document.getElementById('lgAdmin').addEventListener('click', e=>{
@@ -3247,15 +3564,22 @@ document.getElementById('forceLock').onclick = async (ev)=>{
   }catch(e2){ rosErr(e2.message); }
 };
 
+// The buy-back price only exists in Bozo Royale, so the field only exists there too.
+document.getElementById('nlFormat').onchange = e => {
+  document.getElementById('nlBuybackWrap').style.display =
+    e.target.value === 'royale' ? '' : 'none';
+};
 document.getElementById('nlGo').onclick = async ()=>{
   const e=document.getElementById('nlErr'); e.className='err'; e.textContent='';
   const id=document.getElementById('nlId').value.trim().toLowerCase();
   const nm=document.getElementById('nlName').value.trim();
   const mgr=document.getElementById('nlMgr').value;
+  const format=document.getElementById('nlFormat').value==='royale'?'royale':'standard';
+  const buyback=format==='royale' ? Math.max(0, Math.round(+document.getElementById('nlBuyback').value||0)) : 0;
   if(!id||!nm) { e.textContent='Name and id are both required.'; return; }
   try{
     // ⚠️ league:id, not the currently-viewed league — this call creates rather than edits.
-    await wPost('/league/create',{league:LID, id, name:nm, manager:mgr});
+    await wPost('/league/create',{league:LID, id, name:nm, manager:mgr, format, buyback});
     e.className='err ok'; e.textContent=`Created — switching to ${nm}.`;
     const u=new URL(location.href); u.searchParams.set('l', id); u.hash='league';
     setTimeout(()=>{ location.href=u.toString(); }, 600);
@@ -3272,12 +3596,18 @@ document.getElementById('dSave').onclick = async ()=>{
     stake: +document.getElementById('sStake').value,
     bandCeil: +document.getElementById('dCeil').value,
     bandFloor: +document.getElementById('dFloor').value,
-    allowDupes: document.getElementById('sDupes').value==='yes',
     allowEdit: document.getElementById('sEdit').value==='yes',
     lockRule: document.getElementById('sLockRule').value,
     levers,
   };
   if(body.lockRule==='count') body.lockCount = +document.getElementById('sLockCount').value;
+  // Only sent while the format is still editable — after the first lock the control is
+  // a statement rather than a <select>, and there is nothing to send.
+  const fs = document.getElementById('sFormat');
+  if(fs){
+    body.format = fs.value === 'royale' ? 'royale' : 'standard';
+    if(body.format === 'royale') body.buyback = Math.max(0, Math.round(+document.getElementById('sBuyback').value || 0));
+  }
   try{
     await wPost('/league/settings', body);
     lgDirty=false; e.className='err ok'; e.textContent='Saved — live for everyone in this league.';
@@ -3303,8 +3633,17 @@ async function submitLeg(){
     : mk==='spread' ? `${side} ${line>0?'-':''}${Math.abs(line)}`
     : mk==='total' ? `${g.short} ${side==='over'?'o':'u'}${line}`
     : `${fProp.value} ${side==='over'?'o':'u'}${line}`;
+  const oppRaw = document.getElementById('fPriceOpp').value;
+  const priceOpp = oppRaw === '' ? null : Math.round(Number(oppRaw));
+  if(priceOpp !== null && (!Number.isFinite(priceOpp) || Math.abs(priceOpp) < 100))
+    return e.textContent='The other side has to be a real American price (±100 or wider), or leave it blank.';
   const pick = {sport:sp, eventId:id, game:g.short, mkt:mk, side, line: mk==='ml'?0:line,
-    price, label, prop: fProp.value||null};
+    price, priceOpp, label, prop: fProp.value||null,
+    // ⚠️ Kickoff, straight off the ESPN game you picked. This is what schedules the
+    // closing-price capture — event ids don't line up between ESPN and the odds source,
+    // so this timestamp is the only thing that tells the cron WHEN to snap. A leg
+    // without it never gets a close.
+    startsAt: g.start || null};
   const btn=document.getElementById('save'); btn.disabled=true;
   try{
     const res = await wPost('/bozo/pick', {pick});
@@ -3341,11 +3680,22 @@ function paintSlip(players, picks, status, live){
       (ME && p===ME.name) ? 'mine' : '',
       (S.bozo && playerName(S.bozo)===p) ? 'bz' : '' ].filter(Boolean).join(' ');
     const mark = state==='won' ? '✓' : state==='lost' ? '✕' : state==='void' ? '—' : (i+1);
-    if(!inPool)
+    if(!inPool){
+      // ⚠️ Bozo Royale: a chopped player is not "waiting to submit", they are OUT — and
+      // they stay visible rather than vanishing, because the ledger, the chart and the
+      // pot all still involve them. The ticket itself shrinks as the roster does; it
+      // never assumed eight rows and must not start now.
+      const rs = royaleOf(p);
+      if(rs && rs.alive === false)
+        return `<li class="leg dead"><span class="mk">✝</span>
+          <span><span class="who2">${esc(teamOf(p))}</span>
+          <span class="sel">chopped in week ${rs.eliminatedWeek ?? '?'} · funds the ticket, doesn't bet on it</span></span>
+          <span class="rt"><span class="pxv dead">DEAD</span></span></li>`;
       return `<li class="${cls}"><span class="mk">${mark}</span>
         <span><span class="who2">${esc(teamOf(p))}</span>
         <span class="sel">no leg yet</span></span>
         <span class="rt"><span class="pxv">—</span></span></li>`;
+    }
     const sub = `${SPORTS[x.sport]?SPORTS[x.sport].n:esc(x.sport)} · ${esc(x.game)}`
       + (x.mkt==='prop' ? ' · prop' : x.mkt==='other' ? ' · other' : '')
       + (r.actual!=null ? ` · finished ${r.actual}` : '');
@@ -3362,17 +3712,43 @@ function paintSlip(players, picks, status, live){
     const d = live.reduce((a,x)=>a*dec(x.price),1);
     odds = amer(d); pay = '$'+Math.round(d*stake).toLocaleString();
   }
+
+  /* ⚠️ THE DISPLAYED PRICE IS WRONG WHENEVER TWO LEGS SHARE A GAME, and it used to say
+     so nowhere. Multiplying the leg prices is price arithmetic, not a correlation-aware
+     joint outcome model — fine for eight independent games, false the moment two legs
+     are on one event, because DraftKings reprices correlated SGP legs. The product is an
+     UPPER BOUND on the payout, often badly.
+
+     ⚠️ The better fix is to show DK's actual SGP price for the constructed ticket. That
+     is not available to us: it needs DK's bet-slip pricing endpoint and DK has no public
+     API, and no aggregator reprices an arbitrary same-game combination either. So the
+     honest option is the only available one — label it, and say why. */
+  const byEvent = {};
+  for(const x of live) (byEvent[x.eventId] = byEvent[x.eventId] || []).push(x);
+  const sgp = Object.entries(byEvent).filter(([,g])=>g.length>1)
+    .map(([,g])=>({ game:g[0].game, legs:g.length, who:g.map(y=>teamOf(y.p)) }));
+  const indicative = sgp.length > 0;
+  const sgpNote = indicative
+    ? `<div class="sgpwarn"><b>Indicative price only.</b> `
+      + sgp.map(s=>`${s.legs} legs on ${esc(s.game)} (${s.who.map(esc).join(', ')})`).join('; ')
+      + ` — that makes this a same-game parlay, and DraftKings reprices correlated legs. `
+      + `The number above is the product of the individual prices, which is an upper bound, not the payout.</div>`
+    : '';
+
   const stamp = status==='open'?'open':status==='placed'?'placed':'graded';
   document.getElementById('board').innerHTML =
     `<div class="stamp ${stamp}">${stamp}</div>
      <div class="slip-hd"><span class="t">Parlay · ${nIn} leg${nIn===1?'':'s'}</span>
-       <span class="s">Week ${S.week||1} · ${esc(league()?.name || 'Data Dawgs')}</span></div>
+       <span class="s">Week ${S.week||1} · ${esc(league()?.name || 'Data Dawgs')}`
+       + (isDemo()?' · <span class="chip demo">DEMO · SIMULATED</span>':'') + `</span></div>
      <ul class="legs">${html}</ul>
      <div class="slip-ft">
        <div><div class="lil">Legs</div><div class="big" id="tLegs">${nIn}</div></div>
-       <div><div class="lil">Parlay price</div><div class="big" id="tOdds">${odds}</div></div>
-       <div><div class="lil">$${stake} returns</div><div class="big" id="tPay">${pay}</div></div>
-     </div>`;
+       <div><div class="lil">Parlay price${indicative?' <span class="ind">indicative</span>':''}</div>
+         <div class="big" id="tOdds">${odds}</div></div>
+       <div><div class="lil">$${stake} returns${indicative?' <span class="ind">at most</span>':''}</div>
+         <div class="big" id="tPay">${pay}</div></div>
+     </div>${sgpNote}`;
 }
 
 /* ---------------- diagnostics ----------------
@@ -3630,7 +4006,7 @@ function bozoCtx(){
 
   L.push(`LEAGUE: ${lg?lg.name:LID} — ${players.length} members, season ${S.season||2026}, week ${S.week||1}, status ${status}.`);
   L.push(`WHO IS ASKING: ${ME ? teamOf(ME.name)+(isManager()?' (league manager)':'') : 'not signed in — they can read the board but cannot submit'}.`);
-  L.push(`RULES IN FORCE: price band ${bd.ceil} to ${bd.floor}; stake $${st.stake??50} on the ticket; duplicates ${st.allowDupes?'allowed':'not allowed'}; editing a leg ${st.allowEdit?'stays open until the ticket is placed (and resets your timestamp AND your price)':'is locked once your leg is in'}; the ticket places ${st.lockRule==='count'?`at ${st.lockCount} legs`:'when every member is in'}.`);
+  L.push(`RULES IN FORCE: price band ${bd.ceil} to ${bd.floor}; stake $${st.stake??50} on the ticket; duplicate selections and contradicting sides are ALWAYS refused (the ticket is one real DraftKings parlay); editing a leg ${st.allowEdit?'stays open until the ticket is placed (and resets your timestamp AND your price)':'is locked once your leg is in'}; the ticket places ${st.lockRule==='count'?`at ${st.lockCount} legs`:'when every member is in'}.`);
   L.push(`LEVERS IN THE DRAW (${levers.length} of 4): ${levers.map(i=>LEVERS[i].name).join(', ')}.`);
 
   L.push(`THE TICKET (${live.length} of ${players.length} in, listed in submission order — the LAST one is currently exposed to Last In):`);
@@ -3883,14 +4259,30 @@ async function decide(){
       if(r.actual===0 && (x.mkt==='prop'||x.mkt==='total'||x.mkt==='other') && dirOf(x)==='over') beat=999;
       else { const exp=expected(x); beat = (dirOf(x)==='under' ? (r.actual-exp) : (exp-r.actual))/sd; }
     }
-    const close = r.close!=null ? r.close : x.price;
-    M[p]={odds:imp(x.price), beat, last:x.ts, clv:imp(close)-imp(x.price)};
+    /* ⚠️ CLV IS NULL WHEN THERE IS NO CLOSE, AND NULL MEANS UNMEASURABLE.
+       This used to read `r.close != null ? r.close : x.price`, which quietly scored every
+       leg with no captured close as EXACTLY ZERO movement — a fabricated reading, not a
+       missing one, and one that beat every genuinely-negative CLV in the pool. The leg
+       is dropped from this lever instead, and if no leg in the pool can be scored the
+       lever passes to the next one. Both sides are required at both ends: without the
+       opposite price there is no de-vig, and ranking a de-vigged number against a raw
+       implied one is wrong by roughly the whole hold. */
+    const pC = devigP(r.close, r.closeOpp), pE = devigP(x.price, x.entryPriceOpp);
+    const clv = (pC==null || pE==null) ? null : (pC - pE);
+    M[p]={odds:imp(x.price), beat, last:x.ts, clv};
   });
-  const R={odds:p=>M[p].odds, beat:p=>M[p].beat, last:p=>M[p].last, clv:p=>-M[p].clv};
+  const R={odds:p=>M[p].odds, beat:p=>M[p].beat, last:p=>M[p].last,
+           clv:p=>M[p].clv==null ? null : -M[p].clv};
   let why='';
   for(const li of (S.order||[0,1,2,3])){
-    const k=LEVERS[li].k, mx=Math.max(...pool.map(R[k]));
-    const surv=pool.filter(p=>R[k](p)===mx);
+    const k=LEVERS[li].k;
+    // Drop what this lever cannot score, then rank what is left. An empty set means the
+    // lever is unmeasurable for this pool and the hierarchy moves on — which is a
+    // different failure from a tie, and the verdict says which.
+    const scored = pool.filter(p=>R[k](p)!=null);
+    if(!scored.length) continue;
+    const mx=Math.max(...scored.map(R[k]));
+    const surv=scored.filter(p=>R[k](p)===mx);
     if(surv.length<pool.length || surv.length===1){ pool=surv; why=LEVERS[li].name; }
     if(pool.length===1) break;
   }
@@ -3957,6 +4349,579 @@ window.onDDAuth = function(){
   ME = loadSession();
   renderAuth();
 };
+
+/* ==================== Bozo Royale ====================
+   A second ruleset over the same legs, prices, closes and chart. What changes is the
+   consequence: Standard names a bozo who funds the next ticket and plays again, Royale
+   ELIMINATES them. The chop itself is decided on the server — see the Worker — because
+   it gates who may write a leg for the rest of the season. This is the display. */
+function paintRoyale(){
+  const card = document.getElementById('royaleCard');
+  if(!isRoyale() || onHub() || view()!=='board'){ card.style.display='none'; return; }
+  card.style.display='';
+
+  const R = S.royale || {};
+  const alive = royaleAliveNames();
+  const price = settings().buyback;
+  document.getElementById('royaleState').textContent = R.survivor
+    ? `${teamOf(R.survivor)} took it — league over`
+    : `${alive.length} still alive · one chop a week`;
+
+  let h = '';
+
+  /* ---- the buy-back prompt, if one is on the table for the signed-in player ---- */
+  const myKey = ME ? kEnc(ME.name) : null;
+  const offer = myKey ? (R.offers||{})[myKey] : null;
+  const expired = offer && (S.week||1) > offer.expiresWeek;
+  if(offer && !offer.resolved && !expired){
+    h += `<div class="buyback">
+      <h3>You were chopped. One buy-back, and it's now or never.</h3>
+      <p>Buying back costs <b>$${offer.price}</b> and puts you straight back on the ticket. Decline, or let this
+      expire when the next ticket locks, and you're out for good — a buy-back you can take later would just be
+      a free option to sit out the risky weeks and rejoin at the final two.</p>
+      <div class="row">
+        <button class="btn" id="bbTake">Buy back — $${offer.price}</button>
+        <button class="btn ghost sm" id="bbPass">Stay out</button>
+        <span class="tm">Expires when week ${offer.expiresWeek + 1} locks.</span>
+      </div>
+      <div class="err" id="bbErr"></div></div>`;
+  } else if(offer && (offer.resolved || expired) && offer.took === false){
+    h += `<p class="note">Your buy-back ${offer.forfeited || expired ? 'expired unused' : 'was declined'} — that was the only one.</p>`;
+  }
+
+  /* ---- who is left, and who isn't ---- */
+  h += `<div class="rosterline">` + names().map(p=>{
+    const r = royaleOf(p);
+    const dead = r && r.alive === false;
+    return `<span class="rr${dead?' dead':''}">${esc(teamOf(p))}`
+      + (dead?`<span class="dead">DEAD · WK ${r.eliminatedWeek??'?'}</span>`:'')
+      + (r && r.buybacksLeft>0 && !dead?'<span class="bb">buy-back available</span>':'')
+      + `</span>`;
+  }).join('') + `</div>`;
+
+  /* ---- the chop log. This is a receipt for an elimination, so it records not just who
+       went but which lever decided it and which levers passed on the way — and whether
+       each one passed because of a TIE or because it could not be measured at all.
+       Those are different failures: a tie is bad luck, an unmeasurable lever is a hole
+       in the data, and reporting them as one thing hides the second behind the first. */
+  const chops = Object.values(R.chops || {}).sort((a,b)=>a.week-b.week);
+  if(chops.length){
+    h += `<div class="chops"><h3>Chop log</h3><ol>` + chops.map(c=>{
+      if(c.ticketCashed || !c.chopped)
+        return `<li>Week ${c.week} — <span class="who">ticket cashed</span>. Nobody chopped; the pot carries.</li>`;
+      const passed = (c.leversPassed||[]).length
+        ? ` <span class="passed">passed: ` + c.leversPassed.map(x=>
+            `${esc(x.lever)} <span class="${x.why==='unmeasurable'?'unmeas':'tie'}">(${esc(x.why)})</span>`).join(', ')
+          + `</span>` : '';
+      return `<li>Week ${c.week} — <span class="who">${esc(teamOf(c.chopped))}</span>`
+        + ` <span class="by">by ${esc(c.decidedBy||'—')}</span>${passed}`
+        + (c.buybackOffered ? ' · was offered a buy-back' : '')
+        + (c.survivor ? ` · <b>${esc(teamOf(c.survivor))} takes the pot</b>` : '')
+        + `</li>`;
+    }).join('') + `</ol></div>`;
+  }
+
+  h += `<p class="note">One chop a week, ranked by that week's drawn lever hierarchy — the first lever that
+    produces a unique worst decides it. If the ticket cashes, nobody goes and the pot carries. The chopped
+    player funds the next ticket, then spectates. Last one standing takes the pot.
+    ${price>0?`Buy-back is $${price}, one each, taken at the chop or forfeited.`:'Buy-backs are disabled in this league.'}</p>`;
+
+  document.getElementById('royaleBody').innerHTML = h;
+
+  const take = document.getElementById('bbTake'), pass = document.getElementById('bbPass');
+  const bbGo = async action => {
+    const e = document.getElementById('bbErr');
+    if(e){ e.className='err'; e.textContent=''; }
+    if(take) take.disabled = true; if(pass) pass.disabled = true;
+    try{ await wPost('/bozo/buyback', { action }); await refresh(); }
+    catch(err){ if(e) e.textContent = err.message;
+      if(take) take.disabled=false; if(pass) pass.disabled=false; }
+  };
+  if(take) take.onclick = ()=>bbGo('take');
+  if(pass) pass.onclick = ()=>{
+    if(confirm('Stay out for good? Your buy-back is spent either way — it cannot be saved for a later week.'))
+      bbGo('decline');
+  };
+}
+
+/* ==================== CLV vs. result ====================
+   Ported from the standalone prototype. The maths below is deliberately unchanged and
+   every piece of it is load-bearing — see the footnote the card renders.
+
+   ⚠️ De-vig, not raw implied. −200 raw is 66.7%; de-vigged against the +180 the other
+   side was actually quoted at, it is 65.1%. Using raw implied would overstate every
+   favourite by roughly the hold and push the whole league's y-axis down by ~2 points.
+
+   ⚠️ Pushes are dropped from both axes AND from n. A push says nothing about the number.
+
+   ⚠️ A leg with no capturable close is dropped from both axes and from n as well, and
+   is NEVER back-filled from the entry price. Substituting the entry would record a
+   fabricated CLV of exactly zero and drag every average toward it. The header counts
+   them instead, so the gap is visible rather than silently absorbed.
+
+   ⚠️ Dot radius encodes n. A week-1 dot is one coin flip and must not look like a
+   week-18 dot. This is the honesty valve on the y-axis and is not decoration. */
+const CLV = {
+  data: null, lid: null, loading: false,
+  series: {}, dom: {}, players: [], me: null, maxWeek: 1, sports: [],
+  state: { mode:'week', display:'chart', week:1, on:new Set(), sel:null, hover:null,
+           band:true, sport:'all', playing:false },
+  timer: null,
+};
+
+const clvImp = o => o < 0 ? (-o)/((-o)+100) : 100/(o+100);
+/** proportional de-vig against the opposite side of the same two-way market */
+function clvDevig(price, opp){
+  if(price == null) return null;
+  const a = clvImp(price);
+  // ⚠️ No opposite side means no de-vig is possible. Returning raw implied here would
+  // silently mix two different quantities in one average; the leg is excluded instead
+  // and counted in the header.
+  if(opp == null) return null;
+  const b = clvImp(opp);
+  return a/(a+b);
+}
+const clvGraded = l => (l.result==='win' || l.result==='loss')
+  && l.closePrice != null && l.entryPrice != null
+  && clvDevig(l.closePrice, l.closePriceOpp) != null
+  && clvDevig(l.entryPrice, l.entryPriceOpp) != null;
+
+const CLV_SHAPES = ['circle','square','triUp','triDown','diamond','plus','ex','hex'];
+const clvIdent = {};
+function clvBuildIdent(){
+  clvIdent.map = {};
+  CLV.players.forEach((p,i)=>{ clvIdent.map[p] = { cssVar:`--s${(i%8)+1}`, shape:CLV_SHAPES[i%8] }; });
+}
+const clvId = p => clvIdent.map[p] || { cssVar:'--s1', shape:'circle' };
+
+/** cumulative series per player: one point per week with >=1 chartable leg */
+function clvBuildSeries(sport){
+  const out = {};
+  for(const p of CLV.players){
+    const legs = CLV.data.legs
+      .filter(l => l.player===p && clvGraded(l) && (sport==='all' || l.sport===sport))
+      .sort((a,b)=>a.week-b.week);
+    let n=0, wins=0, sumExp=0, sumClv=0;
+    const pts=[];
+    for(const l of legs){
+      const pC = clvDevig(l.closePrice, l.closePriceOpp);
+      const pE = clvDevig(l.entryPrice, l.entryPriceOpp);
+      n++; wins += l.result==='win'?1:0; sumExp += pC; sumClv += (pC-pE);
+      pts.push({ player:p, week:l.week, n, wins,
+        x:(sumClv/n)*100, y:((wins/n)-(sumExp/n))*100,
+        expected:(sumExp/n)*100, winPct:(wins/n)*100,
+        legClv:(pC-pE)*100, leg:l });
+    }
+    out[p]=pts;
+  }
+  return out;
+}
+const clvSeriesFor = s => CLV.series[s] || (CLV.series[s] = clvBuildSeries(s));
+const clvSER = () => clvSeriesFor(CLV.state.sport);
+
+const CLV_W=960, CLV_H=520, CLV_M={t:26,r:30,b:58,l:74};
+const CLV_PW = CLV_W-CLV_M.l-CLV_M.r, CLV_PH = CLV_H-CLV_M.t-CLV_M.b;
+let CLV_D = null;
+const csx = v => CLV_M.l + (v-CLV_D.x0)/(CLV_D.x1-CLV_D.x0)*CLV_PW;
+const csy = v => CLV_M.t + CLV_PH - (v-CLV_D.y0)/(CLV_D.y1-CLV_D.y0)*CLV_PH;
+const clvRadius = n => 2.9 + 4.1*Math.sqrt(Math.min(n, CLV.maxWeek)/CLV.maxWeek);
+
+function clvVisiblePoints(){
+  const rows=[];
+  for(const p of CLV.players){
+    if(!CLV.state.on.has(p)) continue;
+    const pts = clvSER()[p].filter(d=>d.week<=CLV.state.week);
+    if(!pts.length) continue;
+    if(CLV.state.mode==='season') rows.push(pts[pts.length-1]); else rows.push(...pts);
+  }
+  return rows;
+}
+/* Domain is fixed per mode over the WHOLE season, so scrubbing and playback never
+   rescale the plot under the reader. Season mode gets its own tighter frame. */
+function clvDomain(mode, sport){
+  const S2 = clvSeriesFor(sport), all=[];
+  for(const p of CLV.players){
+    const pts=S2[p]; if(!pts.length) continue;
+    if(mode==='season') all.push(pts[pts.length-1]); else all.push(...pts);
+  }
+  if(!all.length) return {x0:-1,x1:1,y0:-1,y1:1};
+  const xs=all.map(d=>d.x), ys=all.map(d=>d.y);
+  const pad=(lo,hi,f)=>{ const s=(hi-lo)*f||1; return [lo-s,hi+s]; };
+  const f = mode==='season' ? 0.22 : 0.08;
+  const [x0,x1]=pad(Math.min(0,...xs), Math.max(0,...xs), f);
+  const [y0,y1]=pad(Math.min(0,...ys), Math.max(0,...ys), f);
+  return {x0,x1,y0,y1};
+}
+const clvDom = (m,s) => CLV.dom[m+s] || (CLV.dom[m+s] = clvDomain(m,s));
+
+/* ---------------- the luck band ----------------
+   How far from zero a perfectly-calibrated bettor lands by chance alone. Binomial
+   standard error on the delta, sqrt(p̄(1−p̄)/n), in probability points. n is the MEDIAN
+   legs per visible player, not the mean, because pushes and missing closes leave
+   players at different counts. It shrinks as the season runs — that is the point, and
+   it is what stops "I'm +17 over expected" from being read as a claim. */
+function clvLuckBand(pts){
+  if(!pts.length) return null;
+  const byPlayer=new Map();
+  for(const d of pts){ const cur=byPlayer.get(d.player); if(!cur||d.week>cur.week) byPlayer.set(d.player,d); }
+  const lasts=[...byPlayer.values()];
+  const ns=lasts.map(d=>d.n).sort((a,b)=>a-b);
+  const n=ns[Math.floor(ns.length/2)];
+  const pbar=lasts.reduce((s,d)=>s+d.expected/100,0)/lasts.length;
+  if(!n||!isFinite(pbar)) return null;
+  return { se: Math.sqrt(pbar*(1-pbar)/n)*100, n, pbar, lo: ns[0], hi: ns[ns.length-1] };
+}
+
+function clvShapePath(kind,r){
+  const P=pts=>'M'+pts.map(p=>p.join(' ')).join('L')+'Z';
+  const k=r*1.05;
+  switch(kind){
+    case 'square':  return P([[-k,-k],[k,-k],[k,k],[-k,k]]);
+    case 'triUp':   return P([[0,-r*1.28],[r*1.18,r*0.78],[-r*1.18,r*0.78]]);
+    case 'triDown': return P([[0,r*1.28],[r*1.18,-r*0.78],[-r*1.18,-r*0.78]]);
+    case 'diamond': return P([[0,-r*1.36],[r*1.24,0],[0,r*1.36],[-r*1.24,0]]);
+    case 'plus':{ const a=r*0.44,b=r*1.30; return P([[-a,-b],[a,-b],[a,-a],[b,-a],[b,a],[a,a],[a,b],[-a,b],[-a,a],[-b,a],[-b,-a],[-a,-a]]); }
+    case 'ex':{ const a=r*0.42,b=r*1.22,m=(x,y)=>[(x-y)*0.7071,(x+y)*0.7071];
+      return P([[-a,-b],[a,-b],[a,-a],[b,-a],[b,a],[a,a],[a,b],[-a,b],[-a,a],[-b,a],[-b,-a],[-a,-a]].map(([x,y])=>m(x,y))); }
+    case 'hex':{ const pts=[]; for(let i=0;i<6;i++){ const t=Math.PI/6+i*Math.PI/3; pts.push([Math.cos(t)*r*1.22,Math.sin(t)*r*1.22]); } return P(pts); }
+    default: return `M${-r*1.1} 0a${r*1.1} ${r*1.1} 0 1 0 ${r*2.2} 0a${r*1.1} ${r*1.1} 0 1 0 ${-r*2.2} 0Z`;
+  }
+}
+const clvGlyph = (p,r,extra='') =>
+  `<path d="${clvShapePath(clvId(p).shape,r)}" fill="var(${clvId(p).cssVar})" ${extra}/>`;
+
+function clvTicks(lo,hi,count){
+  const raw=(hi-lo)/count, mag=Math.pow(10,Math.floor(Math.log10(raw)));
+  const step=[1,2,2.5,5,10].map(m=>m*mag).find(s=>s>=raw)||10*mag;
+  const out=[]; for(let v=Math.ceil(lo/step)*step; v<=hi+1e-9; v+=step) out.push(+v.toFixed(6));
+  return out;
+}
+const clvWeekLabel = w => (CLV.data.weeks.find(x=>x.week===w)||{}).label || ('Week '+w);
+const clvShort = w => { const x=CLV.data.weeks.find(y=>y.week===w);
+  return x ? (x.phase==='regular' ? 'Wk '+w : x.label) : 'Wk '+w; };
+const csgn = (v,dp=1) => (v>0?'+':'')+v.toFixed(dp);
+
+function clvRender(){
+  if(!CLV.data) return;
+  const st = CLV.state;
+  document.getElementById('clvWeekNum').textContent = clvWeekLabel(st.week);
+  const pts = clvVisiblePoints();
+  const scope = CLV.data.legs.filter(l => l.week<=st.week && (st.sport==='all'||l.sport===st.sport));
+  const charted = scope.filter(clvGraded).length;
+  const noClose = scope.filter(l=>l.closePrice==null).length;
+  const noOpp   = scope.filter(l=>l.closePrice!=null && (l.closePriceOpp==null||l.entryPriceOpp==null)).length;
+  const pushes  = scope.filter(l=>l.result==='push').length;
+  document.getElementById('clvHead').textContent = scope.length
+    ? `${charted} of ${scope.length} legs charted · ${pushes} push${pushes===1?'':'es'} · ${noClose} with no capturable close`
+      + (noOpp ? ` · ${noOpp} missing the other side` : '')
+    : '';
+
+  CLV_D = clvDom(st.mode, st.sport);
+  clvRenderLegend();
+  if(st.display==='table') return clvRenderTable();
+
+  const svg = document.getElementById('clvSvg');
+  if(!pts.length){
+    svg.innerHTML = `<text x="${CLV_W/2}" y="${CLV_H/2}" text-anchor="middle" class="tick">`
+      + `No graded legs yet — the chart fills in as weeks resolve.</text>`;
+    return;
+  }
+
+  const xt=clvTicks(CLV_D.x0,CLV_D.x1,7), yt=clvTicks(CLV_D.y0,CLV_D.y1,6);
+  let s='';
+  /* quadrant wash: the two "market agreed with you" quadrants */
+  s += `<rect x="${csx(0)}" y="${CLV_M.t}" width="${CLV_M.l+CLV_PW-csx(0)}" height="${csy(0)-CLV_M.t}" fill="var(--clv-quad)"/>`;
+  s += `<rect x="${CLV_M.l}" y="${csy(0)}" width="${csx(0)-CLV_M.l}" height="${CLV_M.t+CLV_PH-csy(0)}" fill="var(--clv-quad)"/>`;
+
+  const LB = st.band ? clvLuckBand(pts) : null;
+  if(LB){
+    const y2hi=Math.max(CLV_M.t,csy(2*LB.se)), y2lo=Math.min(CLV_M.t+CLV_PH,csy(-2*LB.se));
+    const y1hi=Math.max(CLV_M.t,csy(LB.se)),   y1lo=Math.min(CLV_M.t+CLV_PH,csy(-LB.se));
+    s += `<rect x="${CLV_M.l}" y="${y2hi}" width="${CLV_PW}" height="${Math.max(0,y2lo-y2hi)}" fill="var(--clv-band-2)"/>`;
+    s += `<rect x="${CLV_M.l}" y="${y1hi}" width="${CLV_PW}" height="${Math.max(0,y1lo-y1hi)}" fill="var(--clv-band-1)"/>`;
+    // Label an edge only when it is genuinely on screen — early in a season ±2 SE is off
+    // the top, and pinning the label to the plot edge collides with the quadrant labels.
+    if(y2hi > CLV_M.t+14)
+      s += `<text class="bandlab" x="${CLV_M.l+CLV_PW-9}" y="${y2hi+14}" text-anchor="end">±2 SE · 95% of pure luck lands inside</text>`;
+    if(y1lo < CLV_M.t+CLV_PH-8)
+      s += `<text class="bandlab" x="${CLV_M.l+9}" y="${y1lo-7}">±1 SE · median ${LB.n} legs${LB.lo!==LB.hi?` (n = ${LB.lo}–${LB.hi})`:''}</text>`;
+  }
+
+  for(const t of yt) s += `<line x1="${CLV_M.l}" x2="${CLV_M.l+CLV_PW}" y1="${csy(t)}" y2="${csy(t)}" stroke="var(--grid)" stroke-width="1"/>`;
+  for(const t of xt) s += `<line y1="${CLV_M.t}" y2="${CLV_M.t+CLV_PH}" x1="${csx(t)}" x2="${csx(t)}" stroke="var(--grid)" stroke-width="1"/>`;
+  s += `<line x1="${CLV_M.l}" x2="${CLV_M.l+CLV_PW}" y1="${csy(0)}" y2="${csy(0)}" stroke="var(--axis)" stroke-width="1.5"/>`;
+  s += `<line y1="${CLV_M.t}" y2="${CLV_M.t+CLV_PH}" x1="${csx(0)}" x2="${csx(0)}" stroke="var(--axis)" stroke-width="1.5"/>`;
+  for(const t of yt) s += `<text class="tick" x="${CLV_M.l-12}" y="${csy(t)+4}" text-anchor="end">${t>0?'+':''}${t}</text>`;
+  for(const t of xt) s += `<text class="tick" x="${csx(t)}" y="${CLV_M.t+CLV_PH+20}" text-anchor="middle">${t>0?'+':''}${t}</text>`;
+  s += `<text class="axtitle" x="${CLV_M.l+CLV_PW/2}" y="${CLV_H-14}" text-anchor="middle">Closing line value · probability points →</text>`;
+  s += `<text class="axtitle" transform="translate(19,${CLV_M.t+CLV_PH/2}) rotate(-90)" text-anchor="middle">Win rate over expected · points →</text>`;
+  s += `<text class="quadlab" x="${CLV_M.l+CLV_PW-9}" y="${CLV_M.t+16}" text-anchor="end">good prices · winning more</text>`;
+  s += `<text class="quadlab" x="${CLV_M.l+9}" y="${CLV_M.t+CLV_PH-9}">bad prices · losing more</text>`;
+
+  const emph = st.sel || st.hover;
+  if(emph && st.mode==='week' && st.on.has(emph)){
+    const tp = clvSER()[emph].filter(d=>d.week<=st.week);
+    if(tp.length>1)
+      s += `<polyline points="${tp.map(d=>`${csx(d.x)},${csy(d.y)}`).join(' ')}" fill="none"`
+         + ` stroke="var(${clvId(emph).cssVar})" stroke-width="2" stroke-linejoin="round"`
+         + ` stroke-linecap="round" opacity="0.62"/>`;
+  }
+
+  const order = pts.slice().sort((a,b)=>(a.player===emph?1:0)-(b.player===emph?1:0));
+  const seasonMode = st.mode==='season';
+  for(const d of order){
+    const isEmph = d.player===emph, dim = emph && !isEmph;
+    const own = clvSER()[d.player].filter(q=>q.week<=st.week);
+    const last = own.length && d.week===own[own.length-1].week;
+    const r = seasonMode ? 9 : clvRadius(d.n);
+    const op = dim ? 0.16 : (seasonMode||isEmph ? 1 : (last ? 0.95 : 0.62));
+    s += `<g transform="translate(${csx(d.x)},${csy(d.y)})" opacity="${op}">`
+       + clvGlyph(d.player, r, `stroke="var(--surface-1)" stroke-width="2"`) + `</g>`;
+  }
+
+  if(seasonMode){
+    for(const L of clvPlaceLabels(pts.map(d=>({text:d.player, x:csx(d.x), y:csy(d.y), player:d.player})))){
+      const dim = emph && L.player!==emph;
+      s += `<text class="dotlabel" x="${L.lx}" y="${L.ly}" text-anchor="${L.anchor}" opacity="${dim?0.25:1}">${esc(L.text)}</text>`;
+    }
+  } else if(emph && st.on.has(emph)){
+    const tp = clvSER()[emph].filter(d=>d.week<=st.week);
+    if(tp.length){ const d=tp[tp.length-1];
+      s += `<text class="dotlabel" x="${csx(d.x)+15}" y="${csy(d.y)+4}">${esc(emph)} · ${esc(clvShort(d.week))}</text>`; }
+  }
+  svg.innerHTML = s;
+  svg.__pts = pts;
+}
+
+/* greedy label placement so season-mode names don't overlap */
+function clvPlaceLabels(items){
+  const placed=[], out=[];
+  const cand=(x,y,w)=>[
+    {lx:x+13,ly:y+4,anchor:'start',box:[x+13,y-6,x+13+w,y+8]},
+    {lx:x-13,ly:y+4,anchor:'end',box:[x-13-w,y-6,x-13,y+8]},
+    {lx:x,ly:y-15,anchor:'middle',box:[x-w/2,y-25,x+w/2,y-11]},
+    {lx:x,ly:y+24,anchor:'middle',box:[x-w/2,y+14,x+w/2,y+28]}];
+  const hits=b=>placed.some(p=>!(b[2]<p[0]||b[0]>p[2]||b[3]<p[1]||b[1]>p[3]));
+  for(const it of items){
+    const w=it.text.length*7.2;
+    const pick=cand(it.x,it.y,w).find(c=>!hits(c.box))||cand(it.x,it.y,w)[0];
+    placed.push(pick.box); out.push({...it,...pick});
+  }
+  return out;
+}
+
+function clvRenderLegend(){
+  const el=document.getElementById('clvLegend');
+  const R = CLV.data.royale;
+  el.innerHTML = CLV.players.map(p=>{
+    const on=CLV.state.on.has(p);
+    // Chopped players stay on the chart with a DEAD badge — their line simply stops.
+    const rs = R && R.status ? R.status[encodeURIComponent(p)] : null;
+    const dead = rs && rs.alive === false;
+    return `<button class="pchip" data-p="${esc(p)}" data-on="${on}" data-sel="${CLV.state.sel===p}"`
+      + ` aria-pressed="${on}" title="Click to focus · shift-click to hide">`
+      + `<svg width="15" height="15" viewBox="-8 -8 16 16">${clvGlyph(p,5.4)}</svg>`
+      + `<span>${esc(teamOf(p))}</span>`
+      + (CLV.me===p?'<span class="me">YOU</span>':'')
+      + (dead?`<span class="dead">DEAD · WK ${rs.eliminatedWeek??'?'}</span>`:'')
+      + `</button>`;
+  }).join('') + `<button class="pchip" data-p="__all" data-on="true" data-sel="false" title="Show everyone">All</button>`;
+
+  el.querySelectorAll('.pchip').forEach(c=>{
+    c.onclick = e => {
+      const p=c.dataset.p;
+      if(p==='__all'){ CLV.state.on=new Set(CLV.players); CLV.state.sel=null; return clvRender(); }
+      if(e.shiftKey){ CLV.state.on.has(p)?CLV.state.on.delete(p):CLV.state.on.add(p); if(CLV.state.sel===p) CLV.state.sel=null; }
+      else { CLV.state.sel = CLV.state.sel===p ? null : p; CLV.state.on.add(p); }
+      clvRender();
+    };
+    c.onmouseenter = ()=>{ if(c.dataset.p!=='__all' && !CLV.state.sel){ CLV.state.hover=c.dataset.p; clvRender(); } };
+    c.onmouseleave = ()=>{ if(CLV.state.hover){ CLV.state.hover=null; clvRender(); } };
+  });
+}
+
+/* The table twin is the WCAG counterpart AND the relief for the light-mode contrast
+   warning the palette check raised. Every value in the chart is reachable here.
+   ⚠️ Do not delete it to save space. */
+function clvRenderTable(){
+  const rows = clvVisiblePoints().sort((a,b)=>a.player.localeCompare(b.player)||a.week-b.week);
+  const head = `<thead><tr><th>Player</th><th>Wk</th><th>Charted</th><th>W–L</th>`
+    + `<th>Win %</th><th>Expected %</th><th>Delta (pts)</th><th>CLV (pts)</th></tr></thead>`;
+  const body = rows.map(d=>`<tr>`
+    + `<td>${esc(teamOf(d.player))}${d.player===CLV.me?' <span class="me">· you</span>':''}</td>`
+    + `<td>${esc(clvShort(d.week))}</td><td>${d.n}</td><td>${d.wins}–${d.n-d.wins}</td>`
+    + `<td>${d.winPct.toFixed(1)}</td><td>${d.expected.toFixed(1)}</td>`
+    + `<td class="${d.y>=0?'pos':'neg'}">${csgn(d.y,1)}</td>`
+    + `<td class="${d.x>=0?'pos':'neg'}">${csgn(d.x,2)}</td></tr>`).join('');
+  document.getElementById('clvTbl').innerHTML = head + `<tbody>${body}</tbody>`;
+}
+
+/* nearest-point hover with a generous hit radius — pinpoint hit-testing on 8px dots is
+   unusable on a trackpad and worse on touch */
+(function clvWireHover(){
+  const svg=document.getElementById('clvSvg'), tip=document.getElementById('clvTip');
+  if(!svg) return;
+  svg.addEventListener('mousemove', e=>{
+    const pts=svg.__pts||[]; if(!CLV.data) return;
+    const r=svg.getBoundingClientRect();
+    const mx=(e.clientX-r.left)/r.width*CLV_W, my=(e.clientY-r.top)/r.height*CLV_H;
+    let best=null, bd=34*34;
+    for(const d of pts){ const dx=csx(d.x)-mx, dy=csy(d.y)-my, dd=dx*dx+dy*dy; if(dd<bd){ bd=dd; best=d; } }
+    if(!best){ tip.style.opacity=0; if(CLV.state.hover&&!CLV.state.sel){ CLV.state.hover=null; clvRender(); } return; }
+    if(!CLV.state.sel && CLV.state.hover!==best.player){ CLV.state.hover=best.player; clvRender(); }
+    clvShowTip(best, e.clientX-r.left, e.clientY-r.top);
+  });
+  svg.addEventListener('mouseleave', ()=>{
+    tip.style.opacity=0;
+    if(CLV.state.hover&&!CLV.state.sel){ CLV.state.hover=null; clvRender(); }
+  });
+  svg.addEventListener('click', ()=>{
+    if(CLV.state.hover){ CLV.state.sel = CLV.state.sel===CLV.state.hover ? null : CLV.state.hover; clvRender(); }
+  });
+})();
+
+function clvShowTip(d,px,py){
+  const tip=document.getElementById('clvTip'), l=d.leg;
+  const seen = CLV.data.legs.filter(x=>x.player===d.player && x.week<=d.week
+    && (CLV.state.sport==='all'||x.sport===CLV.state.sport)).length;
+  tip.innerHTML =
+    `<div class="t-name"><svg width="13" height="13" viewBox="-8 -8 16 16">${clvGlyph(d.player,5.4)}</svg>`
+    + `${esc(teamOf(d.player))} · ${esc(clvShort(d.week))}</div>`
+    + `<div class="t-row"><span>Cumulative CLV</span><b>${csgn(d.x,2)} pts</b></div>`
+    + `<div class="t-row"><span>Win rate</span><b>${d.winPct.toFixed(1)}%</b></div>`
+    + `<div class="t-row"><span>Expected</span><b>${d.expected.toFixed(1)}%</b></div>`
+    + `<div class="t-row"><span>Delta</span><b>${csgn(d.y,1)} pts</b></div>`
+    + `<div class="t-row"><span>Sample</span><b>${d.wins}–${d.n-d.wins}</b></div>`
+    + `<div class="t-row"><span>Charted</span><b>${d.n} of ${seen}</b></div>`
+    + `<div class="t-sep"></div>`
+    + `<div class="t-row"><span>${esc(clvShort(d.week))} · ${esc(String(l.sport).toUpperCase())}</span><b>${esc(l.label)}</b></div>`
+    + `<div class="t-row"><span>Got / closed</span><b>${l.entryPrice} → ${l.closePrice}</b></div>`
+    + `<div class="t-row"><span>Leg CLV</span><b>${csgn(d.legClv,2)} pts</b></div>`;
+  const w=200, off=16;
+  const bw=document.getElementById('clvSvg').getBoundingClientRect().width;
+  tip.style.left = (px+off+w>bw ? px-w-off : px+off)+'px';
+  tip.style.top = Math.max(0,py-30)+'px';
+  tip.style.opacity = 1;
+}
+
+function clvFootnote(){
+  const c = CLV.data.coverage, syn = CLV.data.synthetic;
+  return (syn ? `<b>Simulated league.</b> Every price, close and result below is fabricated by the seeding `
+      + `script. It is here to show what a populated board looks like, counts toward nothing, and can be `
+      + `deleted from the leagues card.<br><br>` : '')
+    + `<b>How the axes are built.</b> Both prices are de-vigged proportionally against the opposite side, so a `
+    + `<code>-200</code> favourite quoted with the usual hold is treated as roughly 65%, not 66.7%. `
+    + `<b>x</b> = mean of <code>p_close − p_entry</code> across a player's graded legs to date, in probability `
+    + `points; positive means the market moved toward their side after they bet. `
+    + `<b>y</b> = <code>(wins ÷ n) − mean(p_close)</code>, also in points; the closing line sets the bar. `
+    + `Pushes and voids are dropped from both. Same unit on both axes, so the quadrants are comparable.<br><br>`
+    + `<b>One book, both ends.</b> Every Bozo leg has to be a real DraftKings selection that is legal in an SGP, `
+    + `so DK is the book at entry <i>and</i> at close — the price you got and the price it closed at are `
+    + `like-for-like rather than a cross-book artifact. The close reaches us through a licensed aggregator, `
+    + `because DraftKings has no public odds API; the entry price is still typed in by the player and checked `
+    + `against nothing. <b>A CLV figure here mixes one checked number with one unchecked one.</b><br><br>`
+    + `<b>What is not on the chart.</b> ${c.noClose} of ${c.legs} legs have no capturable close and are excluded `
+    + `from both axes and from <code>n</code> — never back-filled from the entry price, and still counted in the `
+    + `ledger. Every leg goes on a real bet slip, so the market always existed and always closed; a gap here means `
+    + `the capture could not resolve what was typed onto the right market, and each one carries the reason it `
+    + `missed. “Other” legs are the exception — free text describing an arbitrary market, with nothing to match `
+    + `on. ${c.pushes} push${c.pushes===1?'':'es'} are dropped too.<br><br>`
+    + `<b>The luck band.</b> The shaded strip is how far from zero a perfectly-calibrated bettor drifts by chance `
+    + `alone — binomial standard error <code>√(p̄(1−p̄) ÷ n)</code> on the delta, where n is the median legs per `
+    + `player so far. It starts enormous and shrinks as the season runs. <b>A dot inside ±2 SE has not `
+    + `demonstrated anything</b>: after a full season plus playoffs the band is still roughly ±10 points, wider `
+    + `than most of the spread on this chart. The x-axis needs far less sample to mean something than the y-axis `
+    + `does, which is the honest finding here and not a flaw in the picture.<br><br>`
+    + `<b>Two caveats on the band itself.</b> It assumes legs are independent, and in Bozo they are not — several `
+    + `players land on the same game most weeks. Positive correlation means the league-wide delta swings further `
+    + `than a pooled binomial band implies, so the band is a <i>floor</i> on the noise, not a ceiling. And p̄ `
+    + `varies per player: someone who always takes −400 favourites has a different standard error from someone `
+    + `at −110. A pooled band is an approximation, and the right one at eight players.`
+    + (CLV.data.format === 'royale'
+      ? `<br><br><b>Bozo Royale changes what n means.</b> A player chopped in week 1 has one charted leg and a `
+        + `delta that says nothing about them; the survivor has fourteen. Dot size already encodes that — the `
+        + `band's <code>n</code> range is printed on its label for the same reason, because a median no longer `
+        + `describes most of the roster.` : '');
+}
+
+async function clvLoad(force){
+  const card = document.getElementById('clvCard');
+  if(onHub()){ card.style.display='none'; return; }
+  if(CLV.loading) return;
+  if(CLV.lid===LID && CLV.data && !force){ card.style.display=''; return; }
+  CLV.loading = true;
+  try{
+    const j = await wGet('/bozo/clv?league='+encodeURIComponent(LID));
+    CLV.data = j; CLV.lid = LID;
+    CLV.series = {}; CLV.dom = {};
+    CLV.players = (j.players||[]).slice().sort();
+    CLV.me = ME ? ME.name : null;
+    CLV.maxWeek = Math.max(1, ...j.legs.map(l=>l.week));
+    CLV.sports = [...new Set(j.legs.map(l=>l.sport))].sort();
+    clvBuildIdent();
+    CLV.state.on = new Set(CLV.players);
+    CLV.state.sel = null; CLV.state.hover = null;
+    CLV.state.week = CLV.maxWeek; CLV.state.sport = 'all';
+
+    // Nothing graded yet is a real state, not an error. Say so instead of drawing an
+    // empty axis frame, which reads as "broken".
+    if(!j.legs.length){ card.style.display='none'; return; }
+    card.style.display='';
+
+    const wk=document.getElementById('clvWeek');
+    wk.max = CLV.maxWeek; wk.value = CLV.maxWeek;
+    document.getElementById('clvSport').innerHTML = '<option value="all">All sports</option>'
+      + CLV.sports.map(s=>`<option value="${esc(s)}">${esc(s.toUpperCase())}</option>`).join('');
+    document.getElementById('clvFoot').innerHTML = clvFootnote();
+    clvRender();
+  }catch(e){
+    card.style.display='none';
+  }finally{ CLV.loading=false; }
+}
+
+(function clvWireControls(){
+  const seg=(a,b,onA,onB)=>{
+    const A=document.getElementById(a), B=document.getElementById(b);
+    if(!A||!B) return;
+    A.onclick=()=>{ A.setAttribute('aria-pressed','true'); B.setAttribute('aria-pressed','false'); onA(); };
+    B.onclick=()=>{ B.setAttribute('aria-pressed','true'); A.setAttribute('aria-pressed','false'); onB(); };
+  };
+  seg('clv-week','clv-season', ()=>{ CLV.state.mode='week'; clvRender(); },
+                               ()=>{ CLV.state.mode='season'; clvRender(); });
+  seg('clv-chart','clv-table',
+    ()=>{ CLV.state.display='chart';
+          document.getElementById('clvChartView').hidden=false;
+          document.getElementById('clvTableView').hidden=true; clvRender(); },
+    ()=>{ CLV.state.display='table';
+          document.getElementById('clvChartView').hidden=true;
+          document.getElementById('clvTableView').hidden=false; clvRender(); });
+  const wk=document.getElementById('clvWeek');
+  if(wk) wk.oninput = e=>{ CLV.state.week=+e.target.value; clvRender(); };
+  const bd=document.getElementById('clvBand');
+  if(bd) bd.onchange = e=>{ CLV.state.band=e.target.checked; clvRender(); };
+  const sp=document.getElementById('clvSport');
+  // ⚠️ A sport filter rebuilds the series AND the domain for that slice. "My CLV on NBA
+  // vs NFL" is a real question and the answer must not be plotted on the all-sports frame.
+  if(sp) sp.onchange = e=>{ CLV.state.sport=e.target.value; CLV.state.sel=null; clvRender(); };
+  const pb=document.getElementById('clvPlay');
+  if(pb) pb.onclick = ()=>{
+    CLV.state.playing = !CLV.state.playing;
+    pb.setAttribute('aria-pressed', String(CLV.state.playing));
+    pb.textContent = CLV.state.playing ? '❚❚' : '▶';
+    clearInterval(CLV.timer);
+    if(!CLV.state.playing) return;
+    if(CLV.state.week >= CLV.maxWeek) CLV.state.week = 1;
+    CLV.timer = setInterval(()=>{
+      CLV.state.week++;
+      document.getElementById('clvWeek').value = CLV.state.week;
+      clvRender();
+      if(CLV.state.week >= CLV.maxWeek){
+        clearInterval(CLV.timer); CLV.state.playing=false;
+        pb.setAttribute('aria-pressed','false'); pb.textContent='▶';
+      }
+    }, 620);
+  };
+})();
 
 (async function init(){
   ME = loadSession();

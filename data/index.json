@@ -65,9 +65,9 @@
    {
     "path": "/data/bozo-rules.json",
     "url": "https://datadawgs216.com/data/bozo-rules.json",
-    "bytes": 3119,
+    "bytes": 7378,
     "as_of": "2026-08-06",
-    "sha256": "157f08687b4f542007aed0aebbbb7d1dd0913df46c5c04220bfce10a4d02e502",
+    "sha256": "d3645a537ad2612a177c24fa9c8a9f1804eca22fbeff39a7550e05c5205c9ae7",
     "note": "The board is fully open by design — every leg, price and timestamp is visible to everyone and to everyone's bots before they place. That was a decision, not an oversight."
    },
    {
@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 31382,
+    "bytes": 31465,
     "as_of": "2026-08-11",
-    "sha256": "2e4691e35fc379c12bc42c13c62dc5e322fa71d110572d70ebcbb61697202a38",
+    "sha256": "c363384ad98e98064ba6cd4a37536b34674003e1b6650bbce500c86f81161e03",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {

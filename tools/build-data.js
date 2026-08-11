@@ -545,11 +545,35 @@ write('bozo-rules.json', {
       'Whoever busts it worst wears it and funds the next ticket.',
     rules: [
       'Favorites only, inside the league price band.',
-      'No exact duplicate legs.',
-      'The ticket locks the moment the last leg lands; that moment is the close.',
+      'Every leg must be a real DraftKings selection that is legal in a same-game parlay. ' +
+        'Futures are not legal legs — DraftKings will not parlay one with game markets.',
+      'No duplicate selections: DraftKings rejects the same selection twice on one parlay, so two ' +
+        'players cannot hold it. This is a constraint on the bet, not a league preference, and it ' +
+        'is enforced on every league.',
+      'No contradicting selections either: two different sides of one market instance can never both ' +
+        'cash. Uniqueness does not catch this, because over 45.5 and under 45.5 are distinct selections.',
+      'The ticket locks the moment the last leg lands; that moment is the close for the ticket.',
       'Editing a leg resets both your timestamp AND your price.',
       'Only legs that LOST are eligible to be the bozo. Nobody who cashed can wear it.',
     ],
+    formats: {
+      standard: 'Everyone plays every week. Whoever busts it worst wears it, funds the next ticket, and plays again.',
+      royale:
+        'Bozo Royale — the guillotine. One player is chopped each week, ranked by that week\'s drawn lever ' +
+        'hierarchy. If the ticket cashes nobody goes and the pot carries. One buy-back per player, taken at ' +
+        'the chop or forfeited — it expires at the next lock, because a buy-back you could take later is ' +
+        'just a free option to sit out the risky weeks and rejoin at the final two. The chopped player funds ' +
+        'the next ticket, then spectates. Last one standing takes the pot.',
+      immutable:
+        'Format is chosen at league creation and frozen when the league locks its first ticket. Changing a ' +
+        'ruleset mid-season retroactively changes who should have been eliminated.',
+    },
+    parlay_price:
+      'The displayed parlay price is the product of the leg prices. That is price arithmetic, not a ' +
+      'correlation-aware joint outcome model — so whenever two legs share an event the ticket is a same-game ' +
+      'parlay, DraftKings reprices correlated legs, and the number shown is an UPPER BOUND rather than the ' +
+      'payout. It is labelled indicative in that case. DraftKings\' real SGP price is not obtainable: it needs ' +
+      'their bet-slip pricing endpoint, and DraftKings has no public API.',
     price_band: { ceiling: -100, floor: -500, unit: 'American odds', enforced_by: 'Worker, not the page' },
     tiebreak: {
       mechanism:
@@ -571,14 +595,42 @@ write('bozo-rules.json', {
       writes: 'Every write goes through the Worker, which stamps server time, maps token to player, and validates.',
       identity: 'One-time join tokens. No accounts.',
       what_is_not_verified:
-        'EVERY PRICE ON THIS BOARD IS SELF-REPORTED. Nothing checks it against a book. Report what was entered, ' +
-        'flag what looks off market, never vouch for a number and never accuse anyone.',
+        'ENTRY PRICES ARE SELF-REPORTED. Nothing checks what a player typed against a book. Report what was ' +
+        'entered, flag what looks off market, never vouch for a number and never accuse anyone. CLOSING prices ' +
+        'are different: they are captured at kickoff from DraftKings through a licensed aggregator and stamped ' +
+        'with a server clock. So any CLV figure combines one verified number with one unverified one.',
+    },
+    closing_prices: {
+      captured: true,
+      book: 'draftkings',
+      via: 'SportsGameOdds (licensed aggregator). DraftKings has no public odds API — no developer portal and ' +
+        'no key programme — so a DraftKings price can only be obtained through a reseller. The book that set ' +
+        'the price and the route it travelled are recorded in separate fields.',
+      when: 'A cron fires in the minutes before kickoff, per event, and writes closeObservedAt from the server clock.',
+      both_sides: 'Both sides of the market are captured, because without the opposite side there is no de-vig ' +
+        'and an expected-win baseline is wrong by the whole hold — roughly two probability points.',
+      immutable: 'A close is written once and never revised. Grading a week later cannot rewrite its prices.',
+      nulls: 'No capture means closePrice stays null with a closeUnavailableReason attached. It is never ' +
+        'back-filled from the entry price: that would record a fabricated zero movement rather than a missing ' +
+        'reading, and drag every average toward it.',
+      coverage_gap: 'Every leg goes on a real DraftKings bet slip, so every market exists and every market ' +
+        'closes — including player props. What can fail is resolving the free text a player typed onto the odds ' +
+        'source\'s market identifier, which needs the stat, the player and the number all to line up. When one ' +
+        'of them does not, the row records which. "Other" legs are the genuine exception: they describe an ' +
+        'arbitrary game market with no stat, player or number to match on, and stay uncaptured. A missing close ' +
+        'is a matching failure or an "other" leg — never evidence about a player.',
     },
     known_soft_spots: [
       'Bozo odds and leg-win numbers are SIMULATION output, not observation. Say so when quoting them.',
       'The simulation draws every leg independently. Two legs on the same game are not independent.',
-      'Worst CLV is UNMEASURED — no closing prices are captured yet. Never state anyone\'s CLV.',
+      'CLV is computable only for a leg that has a captured close AND both sides of both prices. Say it is ' +
+        'unmeasured for any leg that does not, and never average the two together.',
+      'The Worst Beat lever has no margin to work with on a prop or an "other" leg — they are binary. Under ' +
+        'Bozo Royale that would be elimination-dodging, so a binary leg is given a margin from its own ' +
+        'de-vigged closing probability. Under Standard the lever simply passes.',
       'A spread or total priced past about -145 is off market. A moneyline has no internal cross-check at all.',
+      'Demo leagues (demo-2026, demo-royale) are SIMULATED. Every leg, price, close and result in them is ' +
+        'fabricated, they use the real player names on purpose, and they count toward nothing.',
     ],
   },
 });

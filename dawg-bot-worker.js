@@ -610,6 +610,18 @@ export default {
   // sensitive auth material and exists for disaster recovery, not polling.
   async scheduled(controller, env, ctx) {
     const cron = (controller && controller.cron) || "";
+    // Bozo closes: fires every five minutes and does nothing on a tick with no game
+    // about to start, which is the overwhelming majority of them. One RTDB read.
+    if (cron === BOZO_CLOSE_CRON) {
+      try {
+        return await runBozoCloseCapture(env, (controller && controller.scheduledTime) || Date.now());
+      } catch (e) {
+        const kv = cfbMarketKV(env);
+        if (kv) await kv.put("bozo:close:lasterror",
+          JSON.stringify({ at: new Date().toISOString(), error: String((e && e.message) || e) }));
+        throw e;
+      }
+    }
     if (cron === CFB_MARKET_CRON) {
       try {
         return await runCfbMarketCapture(env, (controller && controller.scheduledTime) || Date.now());
@@ -666,6 +678,8 @@ export default {
     }
     if (url.pathname === "/league/list")   return leagueList(env, cors);
     if (url.pathname === "/league/create") return leagueCreate(request, env, cors);
+    if (url.pathname === "/league/delete") return leagueDelete(request, env, cors);
+    if (url.pathname === "/league/import") return leagueImport(request, env, cors);
     if (url.pathname === "/league/member") return leagueMember(request, env, cors);
     if (url.pathname === "/league/join")
       return request.method === "GET" ? leagueJoinPreview(request, url, env, cors) : leagueJoin(request, env, cors);
@@ -692,6 +706,8 @@ export default {
     if (url.pathname === "/bozo/pick")    return bozoPick(request, env, cors);
     if (url.pathname === "/bozo/grade")   return bozoGrade(request, env, cors);
     if (url.pathname === "/bozo/next")    return bozoNext(request, env, cors);
+    if (url.pathname === "/bozo/buyback") return bozoBuyback(request, env, cors);
+    if (url.pathname === "/bozo/clv")     return bozoClv(request, url, env, cors);
     if (url.pathname === "/bozo/config")  return bozoConfigSet(request, env, cors);
     if (url.pathname === "/tts")          return handleTts(request, env, cors);
     if (url.pathname === "/tts/models")   return ttsModels(request, env, cors);
@@ -2240,6 +2256,15 @@ async function leagueCreate(request, env, cors) {
   if (!userNames(users).includes(manager))
     return json({ error: manager + " doesn't have an account yet — invite them first." }, 400, cors);
 
+  // ⚠️ FORMAT IS CHOSEN HERE AND NOWHERE ELSE. Standard is the original game; Bozo
+  // Royale is the guillotine. It is immutable after the first lock — see leagueSettings —
+  // because changing the ruleset mid-season retroactively changes who should have been
+  // eliminated, which is the same class of error as mutating a published forecast.
+  const format = body.format === "royale" ? "royale" : "standard";
+  const buyback = format === "royale" ? Math.max(0, Math.round(Number(body.buyback) || 0)) : 0;
+  if (!Number.isFinite(buyback) || buyback > 100000)
+    return json({ error: "Buy-back price must be between 0 and 100000." }, 400, cors);
+
   const lg = {
     name: String(body.name || id).slice(0, 60),
     manager,
@@ -2247,11 +2272,180 @@ async function leagueCreate(request, env, cors) {
     // just a league whose manager stopped adding people at 4.
     members: { [encodeURIComponent(manager)]: true },
     season: SEASON, week: 1, status: "open",
+    format, buyback,
+    formatLocked: false,
     createdTs: Date.now(), createdBy: auth.name,
   };
   try { await fbPatch(env, LG(id), lg); }
   catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
   return json({ ok: true, id, league: lg }, 200, cors);
+}
+
+/* POST /league/import — SITE ADMIN only. Loads a simulated season from the seeding
+   script into a brand-new league, so the group can see what a populated Bozo looks like
+   before a single real leg is graded.
+
+   ⚠️ `synthetic: true` IS FORCED ON HERE AND CANNOT BE TURNED OFF BY THE CALLER. It is
+   the only thing standing between a fabricated close and the evidence layer. Every
+   surface that aggregates — receipts, the model scoreboard, any cross-league total —
+   filters on it, and the close-capture cron skips these leagues outright so an invented
+   price is never confused with an observed one.
+
+   ⚠️ Import is create-only. It refuses an existing id rather than merging, because a
+   half-simulated real league is not a state anyone could reason about afterwards.
+
+   ⚠️ The simulator that produces this payload is NOT wired into any production path. It
+   is run by hand and its output posted here once. */
+async function leagueImport(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const auth = await requireAdmin(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const id = String(body.id || body.league || "").toLowerCase().trim();
+  if (!validLeagueId(id)) return json({ error: "League id must be 2–24 chars: lowercase letters, numbers and dashes." }, 400, cors);
+
+  let leagues;
+  try { leagues = await loadLeagues(env); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+  if (leagues[id]) return json({ error: "A league with that id already exists. Delete it first — import never merges." }, 409, cors);
+
+  const legs = Array.isArray(body.legs) ? body.legs : [];
+  if (!legs.length) return json({ error: "Nothing to import — no legs in the payload." }, 400, cors);
+  if (legs.length > 4000) return json({ error: "That payload is too large for one import." }, 413, cors);
+
+  const season = Number(body.season) || SEASON;
+  const format = body.format === "royale" ? "royale" : "standard";
+  const players = [...new Set(legs.map(l => String(l.player || "")).filter(Boolean))].sort();
+  const members = {};
+  for (const p of players) members[encodeURIComponent(p)] = true;
+
+  const RESULT = { win: "won", loss: "lost", push: "push" };
+  const ledger = {};
+  for (const l of legs) {
+    const key = encodeURIComponent(String(l.player));
+    const week = Number(l.week) || 1;
+    const ts = Date.parse(l.entrySubmittedAt || "") || null;
+    ledger[ledgerKey(season, week, key)] = {
+      league: id, season, week, player: String(l.player),
+      sport: l.sport, eventId: String(l.eventId || ""), game: l.game || "",
+      mkt: l.mkt, side: String(l.side ?? ""), dir: (l.side === "over" || l.side === "under") ? l.side : "over",
+      priceSource: "simulated",                 // never "self" — nobody typed this
+      line: l.line ?? null, label: l.label || "", prop: l.prop || null,
+      price: l.entryPrice ?? null, priceOpp: l.entryPriceOpp ?? null,
+      entryBook: l.entryBook || "draftkings",
+      selectionKey: l.selectionKey || null,
+      startsAt: null,                           // no capture will ever run on these
+      dkSgpEligible: l.dkSgpEligible === true ? "asserted" : (l.dkSgpEligible || null),
+      mainLine: null, ts,
+      close: l.closePrice ?? null, closeOpp: l.closePriceOpp ?? null,
+      closeBook: l.closeBook || null,
+      closeObservedAt: l.closeObservedAt || null,
+      // ⚠️ Not "sgo" and not "manual". A fabricated close must be distinguishable from
+      // an observed one in the column that records where closes come from, forever.
+      closeSource: l.closePrice == null ? null : "simulated",
+      closeUnavailableReason: l.closeUnavailableReason || null,
+      result: RESULT[l.result] || null,
+      won: l.result === "win" ? true : l.result === "loss" ? false : null,
+      gradedAt: l.gradedAt || null,
+      synthetic: true,
+    };
+  }
+
+  const weekLabels = {}, weekPhases = {};
+  for (const w of (Array.isArray(body.weeks) ? body.weeks : [])) {
+    if (w && w.week) { weekLabels[w.week] = w.label || ("Week " + w.week); weekPhases[w.week] = w.phase || "regular"; }
+  }
+
+  const lg = {
+    name: String(body.name || id).slice(0, 60),
+    manager: auth.name,
+    members, season,
+    week: Number(body.weeksPlayed) || Math.max(...legs.map(l => Number(l.week) || 1)),
+    status: "graded",
+    format, buyback: format === "royale" ? (Number(body.buyback) || 25) : 0,
+    formatLocked: true,
+    synthetic: true,
+    demoNote: String(body.note || "SIMULATED SEASON — every leg, price, close and result is fabricated."),
+    weekLabels, weekPhases,
+    ledger,
+    createdTs: Date.now(), createdBy: auth.name, importedTs: Date.now(),
+  };
+
+  // Royale state travels with the season so the DEAD badges and the chop log are right
+  // the moment the league opens.
+  if (format === "royale") {
+    const status = {};
+    for (const [name, s] of Object.entries(body.playersStatus || {})) {
+      status[encodeURIComponent(name)] = {
+        alive: s.alive === true,
+        buybacksLeft: Number(s.buybacksLeft) || 0,
+        chopped: Array.isArray(s.chopped) ? s.chopped : [],
+        boughtBack: Array.isArray(s.boughtBack) ? s.boughtBack : [],
+        eliminatedWeek: s.alive === true ? null : (Array.isArray(s.chopped) ? s.chopped[s.chopped.length - 1] ?? null : null),
+      };
+    }
+    const chops = {};
+    for (const c of (Array.isArray(body.chops) ? body.chops : [])) {
+      if (c && c.week) chops[c.week] = { ...c, season, resolvedTs: null, simulated: true };
+    }
+    lg.royale = { status, chops, offers: {}, survivor: body.survivor || null };
+  }
+
+  try { await fbPatch(env, LG(id), lg); }
+  catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  return json({ ok: true, id, legs: legs.length, players: players.length, format, synthetic: true }, 200, cors);
+}
+
+// POST /league/delete {league, confirm} — MANAGER or site admin. A HARD delete: the
+// whole league node goes, which takes its picks, ledger, closes, grades, order,
+// results, history, config, members and teams with it.
+//
+// ⚠️ Hard, not soft, and that is the point. A soft-hidden league is a synthetic-data
+// leak waiting to happen — the demo seasons in here are fabricated closes and
+// fabricated results, and a hidden-but-present demo row is exactly the thing that
+// eventually gets counted by a query someone writes next month. If it is deleted it
+// cannot be counted.
+//
+// ⚠️ The default league cannot be deleted. loadLeagues() re-seeds it from /users on the
+// next read, so "deleting" it would silently resurrect an empty shell — worse than
+// refusing, because it looks like it worked.
+async function leagueDelete(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const lid = leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+  if (lid === DEFAULT_LEAGUE)
+    return json({ error: "The default league can't be deleted — it is recreated on the next read." }, 400, cors);
+
+  const auth = await requireManager(request, env, lid);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  // Typing the name is the confirmation. A modal alone is a reflex; this is not.
+  const want = String(auth.league.name || lid);
+  if (String(body.confirm || "").trim() !== want)
+    return json({ error: 'Type the league name exactly — "' + want + '" — to confirm.' }, 400, cors);
+
+  // The join code lives in KV, not in the league node, so it has to be reaped
+  // separately or a live link keeps pointing at a league that no longer exists.
+  const kv = JOIN_KV(env);
+  if (kv) {
+    try {
+      const rec = JSON.parse((await kv.get(JOIN_LG(lid))) || "null");
+      if (rec && rec.code) await kv.delete(JOIN_CODE(rec.code));
+      await kv.delete(JOIN_LG(lid));
+    } catch (e) { /* a stale code resolves to "no such league" below; not worth failing on */ }
+  }
+
+  try { await fbDelete(env, LG(lid)); }
+  catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  return json({ ok: true, deleted: lid, name: want }, 200, cors);
 }
 
 
@@ -2265,17 +2459,31 @@ async function leagueCreate(request, env, cors) {
 // you have rebuilt exactly that — under pure shortest-odds-loses, undercutting to the
 // floor is strictly dominant and the whole league converges there. It is allowed, it is
 // warned about in the UI, and it is the only setting here with a game-theory cost.
+//
+// ⚠️ `allowDupes` IS RETIRED AND IS NO LONGER READ. It used to let a manager permit two
+// players on the identical selection. The league rule now says every leg must be a real
+// DraftKings selection that is legal in an SGP, and DK will not accept the same
+// selection twice in one parlay — so a league with dupes on could not build its own
+// ticket. That is a physical constraint on the bet, not a house preference, and a
+// setting that cannot be honoured is worse than no setting. The stored field is left
+// alone rather than migrated: it is inert, and rewriting history to hide that a league
+// once ran differently is not this codebase's habit. settingsOf reports it as
+// `dupesRetired` so the panel can say why the control vanished.
 const LEVER_COUNT = 4;
 const SETTING_DEFAULTS = {
-  stake: 50, allowDupes: false, allowEdit: true, lockRule: "all", lockCount: 0,
+  stake: 50, allowEdit: true, lockRule: "all", lockCount: 0,
 };
 const settingsOf = lg => ({
   stake: Number.isFinite(lg?.stake) ? lg.stake : SETTING_DEFAULTS.stake,
-  allowDupes: lg?.allowDupes === true,
   allowEdit: lg?.allowEdit !== false,
   lockRule: lg?.lockRule === "count" ? "count" : "all",
   lockCount: Number.isFinite(lg?.lockCount) ? lg.lockCount : 0,
   levers: Array.isArray(lg?.levers) && lg.levers.length ? lg.levers : [0, 1, 2, 3],
+  format: lg?.format === "royale" ? "royale" : "standard",
+  buyback: Number.isFinite(lg?.buyback) ? lg.buyback : 0,
+  formatLocked: lg?.formatLocked === true,
+  synthetic: lg?.synthetic === true,
+  dupesRetired: lg?.allowDupes === true,
 });
 
 async function leagueSettings(request, env, cors) {
@@ -2319,8 +2527,36 @@ async function leagueSettings(request, env, cors) {
     patch.stake = v;
   }
 
-  if (has("allowDupes")) patch.allowDupes = body.allowDupes === true;
+  /* allowDupes is retired — see the note above settingsOf. It is DROPPED rather than
+     rejected, and `dupesRetired` in the response says so.
+
+     ⚠️ Rejecting the whole save would have been the more talkative choice and the wrong
+     one. bozo.html is served network-first with a cache fallback, so a phone that has not
+     revalidated is still posting the old settings body — and failing its Save because it
+     mentioned a setting we retired punishes a manager for our schema change, on the one
+     panel where the error would look like their edit was invalid. The field is inert
+     either way; the ticket is one real DraftKings parlay and DK will not take the same
+     selection twice, whatever any league once preferred. */
+  const dupesRetired = has("allowDupes");
   if (has("allowEdit"))  patch.allowEdit  = body.allowEdit !== false;
+
+  // ⚠️ Format is immutable once the league has locked a ticket. Before that it is just a
+  // choice on a league nobody has played yet, so let a manager fix a mis-click.
+  if (has("format")) {
+    const f = body.format === "royale" ? "royale" : "standard";
+    if (settingsOf(lg).formatLocked && f !== settingsOf(lg).format)
+      return json({ error: "This league has already locked a ticket — the format is fixed for the season. Changing it now would retroactively change who should have been eliminated." }, 409, cors);
+    patch.format = f;
+    if (f === "standard") patch.buyback = 0;
+  }
+  if (has("buyback")) {
+    const b = Math.round(Number(body.buyback));
+    if (!Number.isFinite(b) || b < 0 || b > 100000)
+      return json({ error: "Buy-back price must be between 0 and 100000." }, 400, cors);
+    const f = patch.format || settingsOf(lg).format;
+    if (f !== "royale") return json({ error: "Buy-backs only exist in Bozo Royale." }, 400, cors);
+    patch.buyback = b;
+  }
 
   if (has("lockRule")) {
     const r = body.lockRule === "count" ? "count" : "all";
@@ -2365,7 +2601,13 @@ async function leagueSettings(request, env, cors) {
   try { await fbPatch(env, LG(lid), patch); }
   catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
   const after = await loadLeague(env, lid);
-  return json({ ok: true, league: lid, settings: settingsOf(after), name: after.name, manager: after.manager }, 200, cors);
+  return json({
+    ok: true, league: lid, settings: settingsOf(after), name: after.name, manager: after.manager,
+    dupesRetired: dupesRetired || undefined,
+    note: dupesRetired
+      ? "Duplicate legs aren't a setting any more and that part of your save was ignored. Every leg has to be a real DraftKings selection that's legal in an SGP, and DK rejects the same selection twice on one parlay — so duplicates and contradicting sides are refused on every league now. Reload the page to see the current panel."
+      : undefined,
+  }, 200, cors);
 }
 
 // POST /league/team {league, player, team} — the display name inside THIS league.
@@ -3441,9 +3683,22 @@ async function bozoPick(request, env, cors) {
     if (!set.allowEdit && (state.picks || {})[encodeURIComponent(name)])
       return json({ error: "This league locks your leg once it's in — no edits." }, 409, cors);
 
+    // Bozo Royale: a chopped player funds the ticket, they do not bet on it. Their
+    // buy-back window is the one way back in, and it closes at the next lock.
+    if (set.format === "royale" && !royaleAlive(state, name))
+      return json({ error: "You're out — chopped in week " + (royaleStatus(state)[encodeURIComponent(name)]?.chopped?.slice(-1)[0] ?? "?") + ". You fund this ticket; you don't have a leg on it." }, 409, cors);
+
     const p = body.pick || {};
-    const err = validatePick(p, name, state.picks || {}, bandOf(state), set.allowDupes);
+    const err = validatePick(p, name, state.picks || {}, bandOf(state), set.format);
     if (err) return json({ error: err }, 400, cors);
+
+    // ⚠️ The opposite side is NOT optional. Without it there is no de-vig, and the
+    // chart's y-axis baseline is wrong by the whole hold — about two probability
+    // points, which is comparable to the entire spread of CLV across the league. A leg
+    // that arrives without it is stored with null and flagged, never quietly de-vigged
+    // against nothing. See handoff §4 rule 6.
+    const oppRaw = Number(p.priceOpp);
+    const entryPriceOpp = Number.isFinite(oppRaw) && Math.abs(oppRaw) >= 100 ? Math.round(oppRaw) : null;
 
     const pick = {
       sport: p.sport, eventId: String(p.eventId), game: String(p.game).slice(0, 80),
@@ -3463,6 +3718,22 @@ async function bozoPick(request, env, cors) {
       // labelled forever instead of becoming indistinguishable from verified ones.
       // The client cannot assert "market" — only this file may ever set that.
       priceSource: "self",
+      // ⚠️ Stored so the uniqueness and contradiction checks never have to re-derive a
+      // key from a row written under an older version of the rules. A key that drifts
+      // between write time and read time silently stops catching collisions.
+      selectionKey: selectionKeyOf(p),
+      marketKey: marketKeyOf(p),
+      // ⚠️ Kickoff, carried from the ESPN game the player picked. The close capture has
+      // no other way to know WHEN to snap: event ids don't line up between ESPN and the
+      // odds source, so this timestamp is what schedules the whole thing. A leg without
+      // it is never captured — see bozoCloseTargets.
+      startsAt: typeof p.startsAt === "string" && !isNaN(Date.parse(p.startsAt)) ? p.startsAt : null,
+      entryPriceOpp,
+      entryBook: "draftkings",        // league rule: there is no other book at either end
+      // ⚠️ "asserted", not "verified". DK has no public API, so this records that the
+      // player is claiming an SGP-legal selection and that it passed the structural
+      // checks — nothing has asked DraftKings.
+      dkSgpEligible: "asserted",
       ts: Date.now(),                 // SERVER time — the reason this route exists
     };
     await fbPut(env, LG(lid) + "/picks/" + encodeURIComponent(name), pick);
@@ -3472,7 +3743,11 @@ async function bozoPick(request, env, cors) {
     // where the size IS the member count — an 8-person league locks on the 8th leg and
     // a 4-person league on the 4th. A league can instead lock at a fixed count, which
     // turns Last In into a race with a real risk of not making the ticket at all.
-    const size = memberNames(state).length;
+    // ⚠️ In Bozo Royale the threshold is the ALIVE roster, not the member count. A
+    // chopped player never submits again, so waiting for "everyone in" would mean the
+    // ticket could never lock once the first elimination landed — the board would just
+    // sit open forever with the league unable to play.
+    const size = set.format === "royale" ? royaleRoster(state).length : memberNames(state).length;
     const need = set.lockRule === "count" ? Math.min(set.lockCount || size, size || set.lockCount) : size;
     let placed = false;
     if (need > 0 && Object.keys(picks).length >= need) {
@@ -3484,7 +3759,52 @@ async function bozoPick(request, env, cors) {
   }
 }
 
-function validatePick(p, name, existing, band, allowDupes) {
+/* ---------- the DraftKings SGP rule, enforced at submission ----------
+   Every leg must be a real DraftKings selection that is legal in a same-game parlay.
+   If it can't go on the ticket, it isn't a Bozo leg. Three checks follow from that, and
+   they run on EVERY league — none of them is a manager preference, because none of them
+   is about what the league wants. They are about what the bet physically is.
+
+   ⚠️ NONE OF THIS IS VERIFICATION AGAINST DRAFTKINGS. DK has no public odds API — no
+   developer portal, no key programme — so nothing here has asked DK whether the
+   selection exists. What these checks catch is a ticket that could not be built even if
+   every leg were real: the same selection twice, or two selections that cannot both win.
+   Never present this as "checked against the book". */
+
+// The selection: what you'd tap on the DK bet slip. Two players cannot both have it,
+// because DK will not put the same selection on one parlay twice.
+const selectionKeyOf = p => [
+  String(p.eventId), p.mkt, String(p.side),
+  p.mkt === "ml" ? "" : String(p.line ?? ""),
+  String(p.prop || ""),
+].join("|");
+
+// The MARKET INSTANCE: the question, without the answer. Two different sides of one
+// market instance can never both cash, so DK blocks the pair and so do we.
+//
+// ⚠️ Uniqueness does NOT catch this. "over 45.5" and "under 45.5" are distinct
+// selections — different sides — so they pass the duplicate check and still make a
+// ticket that cannot win.
+//
+// ⚠️ Spread keys on the ABSOLUTE line, so DET −8.5 and DEN +8.5 collide (they are the
+// two sides of one instance) while DET −8.5 and DEN +10.5 do not (both can cash if DET
+// wins by nine). Props key on text AND number, because "over 199.5 yards" and "over
+// 249.5 yards" are two different markets that happen to share a name.
+const marketKeyOf = p => [
+  String(p.eventId), p.mkt,
+  p.mkt === "total"  ? String(p.line ?? "")
+  : p.mkt === "spread" ? String(Math.abs(Number(p.line) || 0))
+  : p.mkt === "prop" ? String(p.prop || "") + "|" + String(p.line ?? "")
+  : p.mkt === "other" ? String(p.prop || "")
+  : "",
+].join("|");
+
+// A future is not an SGP-legal leg — DK will not parlay "to win the division" with game
+// markets. This is a WORD MATCH, not a market lookup, and it is deliberately narrow:
+// it catches the obvious ones and says so. `other` must be a game market.
+const FUTURES_WORDS = /\b(to win (the )?(division|conference|championship|title|super ?bowl|pennant|cup|east|west|north|south)|mvp|award|make (the )?playoffs?|season win|regular[- ]season wins|to be drafted|coach of the year|rookie of the year)\b/i;
+
+function validatePick(p, name, existing, band, format) {
   if (!LEAGUE[p.sport]) return "Unknown sport.";
   if (!MARKETS.includes(p.mkt)) return "Unknown market.";
   if (!p.eventId || !p.game) return "Pick a game.";
@@ -3495,13 +3815,28 @@ function validatePick(p, name, existing, band, allowDupes) {
   if (!isFinite(price) || price > band.ceil || price < band.floor)
     return `${p.price} is outside the ${band.ceil} to ${band.floor} band.`;
   if (p.mkt !== "ml" && !isFinite(Number(p.line))) return "Number is required for that market.";
-  if (!allowDupes) {
-    const label = String(p.label).toLowerCase();
-    for (const [who, x] of Object.entries(existing)) {
-      if (who !== playerName(name) && who !== encodeURIComponent(name) && x &&
-          String(x.label).toLowerCase() === label)
-        return `${playerName(who)} already has that exact leg.`;
-    }
+
+  if ((p.mkt === "other" || p.mkt === "prop") && FUTURES_WORDS.test(String(p.prop || "")))
+    return "That reads like a future, and DraftKings won't parlay a future with game legs. Bozo takes SGP-legal game markets only.";
+
+  // ⚠️ Bozo Royale only: a prop or `other` leg is binary and Worst Beat needs a margin.
+  // Kap's call was to give binary legs a margin from the de-vigged close rather than
+  // restrict the markets, so this is NOT a rejection — the note is here so the next
+  // person to read this file doesn't re-derive the exploit and "fix" it by banning them.
+  // See royaleBeatDeficit().
+
+  const meKey = encodeURIComponent(name), meName = playerName(name);
+  const mySel = selectionKeyOf(p), myMkt = marketKeyOf(p);
+
+  for (const [who, x] of Object.entries(existing)) {
+    if (!x) continue;
+    if (who === meKey || who === meName || playerName(who) === meName) continue;  // my own leg, being edited
+    const theirSel = x.selectionKey || selectionKeyOf(x);
+    if (theirSel === mySel)
+      return `${playerName(who)} already has that exact selection — DraftKings won't take it twice on one parlay. Pick a different side, number or game.`;
+    const theirMkt = x.marketKey || marketKeyOf(x);
+    if (theirMkt === myMkt && String(x.side) !== String(p.side))
+      return `${playerName(who)} has the other side of that same market (${x.label}). Both can't cash, so the ticket could never win — DraftKings blocks the pair.`;
   }
   return null;
 }
@@ -3528,6 +3863,27 @@ async function placeAndDraw(env, lid, picks, state) {
   const closeTs = Math.max(...Object.values(picks).map(x => x.ts || 0));
   await fbPut(env, LG(lid) + "/status", "placed");
   await fbPut(env, LG(lid) + "/closeTs", closeTs);
+
+  // ⚠️ THE FIRST LOCK FREEZES THE FORMAT. Up to here the ruleset is a choice on a league
+  // nobody has played; from here it is the thing everyone's week was played under.
+  // Switching it now would retroactively change who should have been eliminated — the
+  // same class of error as mutating a published forecast.
+  const lockPatch = { formatLocked: true };
+
+  // ⚠️ AND IT KILLS ANY UNTAKEN BUY-BACK. That is the whole design of the window: the
+  // decision is made at the chop or it is not made at all. A pending offer surviving one
+  // more lock is exactly the lurk-and-re-enter-at-the-final-two hole it exists to close.
+  const offers = ((state && state.royale) || {}).offers || {};
+  for (const [k, o] of Object.entries(offers)) {
+    if (o && !o.resolved) {
+      lockPatch[`royale/offers/${k}/resolved`] = true;
+      lockPatch[`royale/offers/${k}/took`] = false;
+      lockPatch[`royale/offers/${k}/forfeited`] = true;
+      lockPatch[`royale/status/${k}/buybacksLeft`] = 0;
+    }
+  }
+  try { await fbPatch(env, LG(lid), lockPatch); }
+  catch (e) { console.log("royale: lock patch failed — " + e.message); }
 
   // ⚠️ The ledger is written HERE, at lock — not at grade, and not in bozoNext. A week
   // that locks but never gets graded must still leave a complete record of the entry.
@@ -3598,6 +3954,14 @@ function ledgerEntries(lid, season, week, picks, order) {
       label: x.label,                           // or the Bozo Index can't be computed
       prop: x.prop || null,
       price: x.price,
+      // ⚠️ The opposite side of the entry, and the book both ends came from. Without
+      // priceOpp there is no de-vig, so the CLV chart's y-axis baseline is wrong by the
+      // hold. A null here is a flagged gap, never a silent raw-implied substitution.
+      priceOpp: x.entryPriceOpp ?? null,
+      entryBook: x.entryBook || null,
+      selectionKey: x.selectionKey || null,
+      startsAt: x.startsAt || null,             // what schedules the close capture
+      dkSgpEligible: x.dkSgpEligible || null,   // "asserted" — see bozoPick
       mainLine: null,                           // reserved — see the note above
       ts: x.ts || null,                         // server time, the reason /bozo/pick exists
       rank: byTs.indexOf(n) + 1,                // 1 = first in, N = Last In
@@ -3643,7 +4007,7 @@ async function ledgerBackfill(env, lid, state) {
 
 // Grade-stage deep-path update. Keys carry slashes, so each field is written on its own
 // and nothing written at lock is touched.
-function ledgerGradeUpdate(season, week, results, bozo, picks) {
+function ledgerGradeUpdate(season, week, results, bozo, picks, have) {
   // ⚠️ Results arrive keyed however the page keyed them, and the page keys off
   // Object.keys(picks) — which is URL-encoded. Map any decoded name back onto the
   // stored key, or the day someone fixes the "The%20Kid" display bug the grade stage
@@ -3668,15 +4032,884 @@ function ledgerGradeUpdate(season, week, results, bozo, picks) {
       upd[`${k}/won`] = result === "won" ? true : result === "lost" ? false : null;
     }
     if (r.actual !== undefined) upd[`${k}/actual`] = r.actual ?? null;
-    if (r.close !== undefined) {
-      upd[`${k}/close`] = r.close ?? null;
-      // ⚠️ Record WHERE a close came from. Hand-entered and cron-captured closes must
-      // never end up silently mixed in the same column.
-      upd[`${k}/closeSource`] = r.close == null ? null : "manual";
+
+    // ⚠️ A CAPTURED CLOSE IS IMMUTABLE AND OUTRANKS ANYTHING TYPED IN LATER. The cron
+    // snapped it at kickoff off a licensed feed and stamped a server clock; a manager
+    // grading on Monday is recalling a number, at best. Once closeObservedAt exists on
+    // the row, the grade stage does not touch the close columns at all — which also
+    // means re-grading a week to fix a result can never silently rewrite its prices.
+    const row = (have || {})[k] || {};
+    const capturedAlready = row.closeObservedAt != null || row.closeUnavailableReason != null;
+
+    if (!capturedAlready) {
+      if (r.close !== undefined) {
+        upd[`${k}/close`] = r.close ?? null;
+        // ⚠️ Record WHERE a close came from. Hand-entered and cron-captured closes must
+        // never end up silently mixed in the same column.
+        upd[`${k}/closeSource`] = r.close == null ? null : (r.closeSource || "manual");
+      }
+      // The opposite side and the book travel with the close or not at all — a close
+      // with no opposite side cannot be de-vigged, and the chart has to know that.
+      if (r.closeOpp !== undefined) upd[`${k}/closeOpp`] = r.closeOpp ?? null;
+      if (r.closeBook !== undefined) upd[`${k}/closeBook`] = r.closeBook ?? null;
+      if (r.closeObservedAt !== undefined) upd[`${k}/closeObservedAt`] = r.closeObservedAt ?? null;
+      if (r.closeUnavailableReason !== undefined)
+        upd[`${k}/closeUnavailableReason`] = r.closeUnavailableReason ?? null;
     }
     if (bozoKey !== undefined) upd[`${k}/bozo`] = p === bozoKey;
   }
   return upd;
+}
+
+/* ========================= Bozo closing-price capture ======================
+   The x-axis of the CLV chart. Without this there is nothing to compare an entry price
+   to, and `dd_bozo_week` is right to say the site cannot compute anyone's CLV.
+
+   ⚠️ WHERE THE PRICE ACTUALLY COMES FROM, said plainly. The league rule is that every
+   leg is a real DraftKings selection, and the handoff says to capture from DraftKings at
+   both ends. DRAFTKINGS HAS NO PUBLIC ODDS API — no developer portal, no key programme —
+   which bozo.html has said in a comment for months. The only compliant route to a DK
+   number is a licensed aggregator, and this Worker already has one wired up with a key:
+   SportsGameOdds, whose payloads carry `byBookmaker.draftkings`.
+
+   So: the price IS DraftKings' price, and `closeBook` is honestly "draftkings". But it
+   reached us through a reseller, and that is recorded separately in `closeSource:
+   "sgo"`. Those are two different facts and they get two different fields. Anything
+   that quotes a close should be able to say which book set it AND how we came to have
+   it, without having to guess.
+
+   ⚠️ WHAT THIS CANNOT DO, so nobody discovers it as a surprise:
+     · Nothing here joins on an id, because there is no shared id to join on. Picks carry
+       ESPN event ids (the page reads ESPN's scoreboard) and the aggregator has its own,
+       so events are matched on sport + kickoff + team name, and props on stat + player +
+       number parsed out of the free text a player typed. Every one of those joins can
+       miss. A miss writes a null WITH THE REASON IT MISSED — never a guess, and never
+       the entry price.
+     · A prop IS always priced: every Bozo leg goes on a real DraftKings bet slip, so the
+       market exists and closes. What can fail is the text-to-market resolution, and
+       bozoDkPropQuote reports which of stat / player / number it could not line up so
+       the fix is obvious rather than a shrug.
+     · `other` legs are the real hole. They describe an arbitrary game market in free
+       text with no player, no stat and no number to join on, so they stay null.
+     · DK's real SGP price for a correlated ticket is not obtainable at all. See
+       ticketPricing() — the displayed parlay price is labelled indicative instead.
+
+   Rows are immutable: a close is written once, and every write below is guarded on the
+   field being absent. Nulls stay null and are NEVER back-filled from the entry price —
+   an entry price copied into the close column is a fabricated zero-movement reading,
+   which is worse than a visible gap because it silently drags every average toward zero.
+   ========================================================================== */
+
+const BOZO_CLOSE_CRON = "*/5 * * * *";
+const BOZO_CLOSE_API = "https://api.sportsgameodds.com/v2/events";
+// Fire when kickoff is inside this window ahead of now. One cron tick wide, plus slack,
+// so a game cannot slip between two runs.
+const BOZO_CLOSE_LEAD_MS = 7 * 60 * 1000;
+// How far back we will still accept a capture. Past this the number is not a close any
+// more, it is an in-play price, and writing it into the close column would be a lie.
+const BOZO_CLOSE_STALE_MS = 20 * 60 * 1000;
+const BOZO_SGO_LEAGUE = { nfl: "NFL", cfb: "NCAAF", nba: "NBA", cbb: "NCAAB", mlb: "MLB", nhl: "NHL" };
+const BOZO_CLOSE_BOOK = "draftkings";
+
+// Team names arrive spelled differently at each end. Strip everything that is not a
+// letter or digit and compare on that — "St. Louis" / "St Louis" / "ST-LOUIS" collapse.
+const bzNorm = s => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+// The two sides of each game-level market.
+const BOZO_ODD_IDS = {
+  ml:     ["points-home-game-ml-home", "points-away-game-ml-away"],
+  spread: ["points-home-game-sp-home", "points-away-game-sp-away"],
+  total:  ["points-all-game-ou-over",  "points-all-game-ou-under"],
+};
+
+/* ---------------- player props ----------------
+   ⚠️ A PROP IS ALWAYS PRICED. Every Bozo leg goes on a real DraftKings bet slip, so by
+   construction DraftKings has a market for it and quotes both sides at kickoff. The
+   difficulty was never whether the price exists — it was resolving the free text a
+   player typed ("Kelce receiving yards") onto the odds source's market identifier.
+   That is a MATCHING problem, and it gets a real attempt rather than an assumed null.
+
+   The aggregator keys props as {statID}-{playerEntityID}-{period}-{betType}-{side}, so a
+   match needs three things to line up: the stat, the player, and the number. All three
+   come out of what is already on the leg — the prop text carries the first two and
+   `line` is the third.
+
+   ⚠️ When it still fails, the reason says WHICH of the three failed. "Couldn't resolve
+   the stat" and "DraftKings pulled the market" are different problems with different
+   fixes, and a blanket "no close" hides both. */
+const BOZO_STAT_WORDS = [
+  // NFL / CFB
+  [/pass(ing)?\s*(yds|yards)/i,            ["passing_yards"]],
+  [/pass(ing)?\s*(td|touchdown)/i,         ["passing_touchdowns"]],
+  [/completion/i,                          ["passing_completions"]],
+  [/interception|\bint\b/i,                ["passing_interceptions"]],
+  [/rush(ing)?\s*(yds|yards)/i,            ["rushing_yards"]],
+  [/rush(ing)?\s*(td|touchdown)/i,         ["rushing_touchdowns"]],
+  [/receiv(ing)?\s*(yds|yards)/i,          ["receiving_yards"]],
+  [/reception|\brec\b(?!eiving)/i,         ["receptions"]],
+  [/receiv(ing)?\s*(td|touchdown)/i,       ["receiving_touchdowns"]],
+  [/anytime\s*(td|touchdown)|scores?\s*a\s*(td|touchdown)/i, ["touchdowns"]],
+  // NBA / CBB
+  [/\bpoints?\b|\bpts\b/i,                 ["points"]],
+  [/rebound|\breb\b/i,                     ["rebounds"]],
+  [/assist|\bast\b/i,                      ["assists"]],
+  [/three|\b3pt|3-point/i,                 ["threePointersMade"]],
+  [/\bsteal/i,                             ["steals"]],
+  [/\bblock/i,                             ["blocks"]],
+  // MLB
+  [/strikeout|\bks?\b|punchout/i,          ["strikeouts"]],
+  [/\bhits?\b/i,                           ["hits"]],
+  [/total\s*bases/i,                       ["totalBases"]],
+  [/home\s*run|\bhr\b/i,                   ["homeRuns"]],
+  [/\brbi/i,                               ["RBIs"]],
+  // NHL
+  [/shots?\s*on\s*goal|\bsog\b/i,          ["shotsOnGoal"]],
+  [/\bgoals?\b/i,                          ["goals"]],
+  [/\bsaves?\b/i,                          ["saves"]],
+  [/\bassists?\b/i,                        ["assists"]],
+  [/\bpoints?\b/i,                         ["points"]],
+];
+
+// Words that are never part of a player's name, so they can be stripped before what is
+// left is treated as one.
+const BOZO_PROP_NOISE = /\b(over|under|o|u|the|a|an|to|record|total|\d+\+?|yards?|yds|pts|points?|rebounds?|reb|assists?|ast|receptions?|rec|receiving|rushing|passing|touchdowns?|tds?|strikeouts?|hits?|bases|home|runs?|rbi|shots?|on|goal|sog|goals?|saves?|steals?|blocks?|three|3pt|pointers?|made|anytime|scores?|completions?|interceptions?|ints?|first|longest|alt)\b/gi;
+
+function bozoPropStats(text) {
+  const out = [];
+  for (const [re, ids] of BOZO_STAT_WORDS) if (re.test(text)) out.push(...ids);
+  return [...new Set(out)];
+}
+// Whatever is left once the stat vocabulary is removed is the player's name.
+function bozoPropNameTokens(text) {
+  return String(text || "").replace(BOZO_PROP_NOISE, " ")
+    .split(/[^A-Za-z'.-]+/).map(bzNorm).filter(t => t.length >= 3);
+}
+
+const bzAmerican = v => {
+  const n = Number(v);
+  return Number.isFinite(n) && Math.abs(n) >= 100 ? Math.round(n) : null;
+};
+
+// Pull DraftKings' two sides for one market off an aggregator event.
+// Returns { price, opp } in the orientation of the leg, or a reason it could not.
+function bozoDkQuote(event, pick) {
+  if (pick.mkt === "prop") return bozoDkPropQuote(event, pick);
+  const ids = BOZO_ODD_IDS[pick.mkt];
+  if (!ids) return { reason: "market-not-matchable" };
+  const odds = (event && event.odds) || {};
+  const a = odds[ids[0]], b = odds[ids[1]];
+  if (!a || !b) return { reason: "market-absent-at-source" };
+  const ba = (a.byBookmaker || {})[BOZO_CLOSE_BOOK], bb = (b.byBookmaker || {})[BOZO_CLOSE_BOOK];
+  if (!ba || !bb) return { reason: "DraftKings had no standing market at kickoff" };
+  if (ba.available === false || bb.available === false)
+    return { reason: "DraftKings suspended the market before kickoff" };
+  const pa = bzAmerican(ba.odds), pb = bzAmerican(bb.odds);
+  if (pa === null || pb === null) return { reason: "no usable price at source" };
+
+  // Orient to the side the player actually took. For a total that is over/under; for a
+  // moneyline or spread it is home/away, and the pick stores a team abbreviation.
+  let mine, theirs;
+  if (pick.mkt === "total") {
+    const over = (pick.dir || pick.side) !== "under";
+    mine = over ? pa : pb; theirs = over ? pb : pa;
+  } else {
+    const home = bzNorm(((event.teams || {}).home || {}).names?.short || ((event.teams || {}).home || {}).names?.medium);
+    const away = bzNorm(((event.teams || {}).away || {}).names?.short || ((event.teams || {}).away || {}).names?.medium);
+    const side = bzNorm(pick.side);
+    if (side && side === home)      { mine = pa; theirs = pb; }
+    else if (side && side === away) { mine = pb; theirs = pa; }
+    else return { reason: "could not tell which side of the market the leg was on" };
+  }
+
+  // ⚠️ Both sides or nothing. Without the opposite side there is no de-vig, and the
+  // chart's expected-win baseline is off by the entire hold.
+  if (mine === null || theirs === null) return { reason: "only one side of the market was priced" };
+  return { price: mine, opp: theirs };
+}
+
+/* Resolve one free-text prop against every market the aggregator has on that event.
+   Returns the DraftKings price for the side the player took, plus the other side.
+
+   ⚠️ The number is part of the identity, not a detail. "Kelce over 62.5" and "Kelce over
+   74.5" are two different DraftKings markets that close at different prices, so a match
+   that ignores the line would be confidently wrong rather than absent. Alt lines are
+   requested for exactly this reason: Bozo's favourites-only band pushes players onto
+   bought-down numbers constantly, and the main line is often not the one they took. */
+function bozoDkPropQuote(event, pick) {
+  const odds = (event && event.odds) || {};
+  const wantStats = bozoPropStats(pick.prop || "");
+  const wantName = bozoPropNameTokens(pick.prop || "");
+  const wantLine = Number(pick.line);
+  const over = (pick.dir || pick.side) !== "under";
+
+  if (!wantStats.length)
+    return { reason: 'couldn\'t work out which stat "' + String(pick.prop || "").slice(0, 40) + '" refers to' };
+  if (!wantName.length)
+    return { reason: 'couldn\'t work out which player "' + String(pick.prop || "").slice(0, 40) + '" refers to' };
+  if (!Number.isFinite(wantLine)) return { reason: "the leg has no number to match a prop market on" };
+
+  let sawStat = false, sawPlayer = false, sawLine = false, best = null;
+  for (const [oddID, o] of Object.entries(odds)) {
+    // {statID}-{playerEntityID}-{period}-{betType}-{side}
+    const parts = String(oddID).split("-");
+    if (parts.length < 5) continue;
+    const side = parts[parts.length - 1];
+    const betType = parts[parts.length - 2];
+    if (betType !== "ou") continue;                       // props are over/under markets
+    const statID = parts[0], entity = parts.slice(1, parts.length - 3).join("-");
+    if (!wantStats.includes(statID)) continue;
+    sawStat = true;
+
+    const ent = bzNorm(entity);
+    if (!wantName.some(t => ent.includes(t))) continue;
+    sawPlayer = true;
+
+    // The line the book is offering on this particular market instance.
+    const ln = Number(o.bookOverUnder ?? o.overUnder ?? o.fairOverUnder);
+    if (!Number.isFinite(ln) || Math.abs(ln - wantLine) > 0.001) continue;
+    sawLine = true;
+
+    if (side !== (over ? "over" : "under")) continue;
+    const opp = odds[parts.slice(0, -1).join("-") + "-" + (over ? "under" : "over")];
+    if (!opp) continue;
+    const mine = (o.byBookmaker || {})[BOZO_CLOSE_BOOK];
+    const theirs = (opp.byBookmaker || {})[BOZO_CLOSE_BOOK];
+    if (!mine || !theirs) continue;
+    if (mine.available === false || theirs.available === false) continue;
+    const a = bzAmerican(mine.odds), b = bzAmerican(theirs.odds);
+    if (a === null || b === null) continue;
+    best = { price: a, opp: b };
+    break;
+  }
+  if (best) return best;
+
+  // ⚠️ Say which of the three joins failed. "The stat resolved but the player didn't"
+  // and "DraftKings pulled the market" need different fixes, and one shared message
+  // would hide both behind whichever someone guessed at first.
+  if (!sawStat)   return { reason: "the odds source had no " + wantStats[0].replace(/_/g, " ") + " market on this game" };
+  if (!sawPlayer) return { reason: 'no market for "' + wantName.join(" ") + '" on this game — check the spelling against the bet slip' };
+  if (!sawLine)   return { reason: "DraftKings had that player and stat but not the number " + wantLine + " at kickoff" };
+  return { reason: "DraftKings wasn't pricing that selection at kickoff" };
+}
+
+// Every leg across every league that is still waiting on a close and whose game is
+// about to start. One RTDB read; on a quiet tick this returns nothing and we stop.
+async function bozoCloseTargets(env, nowMs) {
+  let leagues;
+  try { leagues = await loadLeagues(env); } catch { return []; }
+  const out = [];
+  for (const [lid, lg] of Object.entries(leagues || {})) {
+    // ⚠️ Synthetic leagues are skipped outright. Their closes are fabricated by design
+    // and must never be overwritten with, or mistaken for, an observed market price.
+    if (lg && lg.synthetic === true) continue;
+    const picks = (lg && lg.picks) || {};
+    const results = (lg && lg.results) || {};
+    for (const [key, p] of Object.entries(picks)) {
+      if (!p || !p.eventId) continue;
+      const r = results[key] || {};
+      if (r.close != null || r.closeUnavailableReason) continue;   // immutable once written
+      const start = Date.parse(p.startsAt || "");
+      if (!Number.isFinite(start)) continue;                       // no kickoff, no window
+      if (start > nowMs + BOZO_CLOSE_LEAD_MS) continue;            // too early
+      if (start < nowMs - BOZO_CLOSE_STALE_MS) continue;           // too late to be a close
+      out.push({ lid, key, pick: p, startMs: start,
+                 season: lg.season || SEASON, week: lg.week || 1 });
+    }
+  }
+  return out;
+}
+
+async function bozoFetchEvents(env, sport, startMs, needProps) {
+  if (!env.SGO_KEY) throw new Error("Worker misconfigured: SGO_KEY secret not set");
+  const leagueID = BOZO_SGO_LEAGUE[sport];
+  if (!leagueID) return [];
+  const url = new URL(BOZO_CLOSE_API);
+  url.searchParams.set("leagueID", leagueID);
+  // A generous window around the kickoff — the join is on teams, not on this.
+  url.searchParams.set("startsAfter", new Date(startMs - 6 * 3600 * 1000).toISOString());
+  url.searchParams.set("startsBefore", new Date(startMs + 6 * 3600 * 1000).toISOString());
+  // ⚠️ The oddID filter is dropped when any leg in this bucket is a prop. A prop's market
+  // id contains the player's entity id, which we don't know until we've seen the event's
+  // markets — so filtering by id first would rule out the very rows we need to search.
+  // Game-only buckets keep the narrow filter, because most ticks are game-only and
+  // pulling every prop on a full NFL Sunday for no reason is wasteful.
+  if (!needProps) url.searchParams.set("oddID", [...new Set(Object.values(BOZO_ODD_IDS).flat())].join(","));
+  url.searchParams.set("includeOpposingOdds", "true");
+  // ⚠️ Alt lines are NOT optional here. Bozo's favourites-only band pushes players onto
+  // bought-down numbers constantly, so the number they took is frequently not the main
+  // line — and a close snapped off the main line would be a different market's price.
+  url.searchParams.set("includeAltLines", "true");
+  url.searchParams.set("limit", needProps ? "25" : "100");
+  const res = await fetch(url, { headers: { "x-api-key": env.SGO_KEY } });
+  if (!res.ok) throw new Error("SGO " + res.status);
+  const body = await res.json();
+  return (body && body.data) || [];
+}
+
+// Join an ESPN-sourced pick to an aggregator event. The pick's `game` is "AWAY VS HOME"
+// as the page rendered it, so both abbreviations are available even though the ids are not.
+function bozoMatchEvent(events, pick) {
+  const parts = String(pick.game || "").split(/\s+vs\.?\s+/i);
+  const want = parts.map(bzNorm).filter(Boolean);
+  if (want.length < 2) return null;
+  for (const ev of events) {
+    const t = ev.teams || {};
+    const names = [t.home, t.away].map(x => {
+      const n = (x && x.names) || {};
+      return [n.short, n.medium, n.long].map(bzNorm).filter(Boolean);
+    });
+    const hit = want.every(w => names.some(list => list.some(n => n === w || n.endsWith(w) || w.endsWith(n))));
+    if (hit) return ev;
+  }
+  return null;
+}
+
+/* The cron body. Writes at most one close per leg, ever. */
+async function runBozoCloseCapture(env, nowMs) {
+  const targets = await bozoCloseTargets(env, nowMs);
+  if (!targets.length) return { captured: 0, skipped: 0, checked: 0 };
+
+  // One fetch per (sport, hour-bucket) rather than one per leg.
+  const byBucket = new Map();
+  for (const t of targets) {
+    const k = t.pick.sport + "|" + Math.floor(t.startMs / (3600 * 1000));
+    if (!byBucket.has(k)) byBucket.set(k, { sport: t.pick.sport, startMs: t.startMs, legs: [] });
+    byBucket.get(k).legs.push(t);
+  }
+
+  const observedAt = new Date(nowMs).toISOString();
+  let captured = 0, skipped = 0;
+  const patches = new Map();                                  // lid -> deep-path patch
+  const add = (lid, path, val) => {
+    if (!patches.has(lid)) patches.set(lid, {});
+    patches.get(lid)[path] = val;
+  };
+
+  for (const bucket of byBucket.values()) {
+    let events = [];
+    let fetchErr = null;
+    const needProps = bucket.legs.some(t => t.pick.mkt === "prop");
+    try { events = await bozoFetchEvents(env, bucket.sport, bucket.startMs, needProps); }
+    catch (e) { fetchErr = String((e && e.message) || e); }
+
+    for (const t of bucket.legs) {
+      const base = `results/${t.key}`;
+      if (fetchErr) { skipped++; continue; }                  // no reason written — retry next tick
+
+      let reason = null, quote = null;
+      // ⚠️ `other` is the one market type with no principled way in. It is free text
+      // describing an arbitrary game market ("favourite to lead at halftime", "no
+      // overtime"), with no player, no stat and no number to join on — unlike a prop,
+      // which has all three. It stays a null with a reason.
+      if (t.pick.mkt === "other") {
+        reason = "No closing price captured: an “other” leg describes an arbitrary game market in free text, "
+               + "with no stat, player or number to match on at the odds source.";
+      } else {
+        const ev = bozoMatchEvent(events, t.pick);
+        if (!ev) reason = "No closing price captured: this game couldn't be matched at the odds source.";
+        else {
+          const q = bozoDkQuote(ev, t.pick);
+          if (q.reason) reason = "No closing price captured: " + q.reason + ".";
+          else quote = q;
+        }
+      }
+
+      // ⚠️ Written in TWO places, on purpose. `results/<key>` is this week's live board
+      // and gets cleared by bozoNext; the ledger row is the permanent receipt. The
+      // ledger's four-stage comment has reserved KICKOFF for exactly this since it was
+      // written. A week that locks and never gets graded still ends up with its close.
+      const lrow = `ledger/${ledgerKey(t.season, t.week, t.key)}`;
+      const both = (field, val) => { add(t.lid, `${base}/${field}`, val); add(t.lid, `${lrow}/${field}`, val); };
+
+      if (quote) {
+        both("close", quote.price);
+        both("closeOpp", quote.opp);
+        both("closeBook", BOZO_CLOSE_BOOK);
+        both("closeSource", "sgo");            // the reseller, not the book
+        both("closeObservedAt", observedAt);   // SERVER clock, never backfilled
+        both("closeUnavailableReason", null);
+        captured++;
+      } else {
+        // ⚠️ The reason is the record. A null with no explanation is indistinguishable
+        // from a capture that never ran, and the chart has to be able to say which.
+        both("close", null);
+        both("closeOpp", null);
+        both("closeBook", null);
+        both("closeObservedAt", null);
+        both("closeUnavailableReason", reason);
+        both("closeSource", "sgo");
+        skipped++;
+      }
+    }
+  }
+
+  for (const [lid, patch] of patches.entries()) {
+    if (!Object.keys(patch).length) continue;
+    try { await fbPatch(env, LG(lid), patch); }
+    catch (e) { console.log("bozo close: write failed for " + lid + " — " + e.message); }
+  }
+
+  const kv = cfbMarketKV(env);
+  if (kv) {
+    try {
+      await kv.put("bozo:close:last-run", JSON.stringify({
+        at: observedAt, checked: targets.length, captured, skipped,
+        book: BOZO_CLOSE_BOOK, via: "sportsgameodds",
+      }));
+    } catch { /* the capture already landed; the summary is a convenience */ }
+  }
+  return { captured, skipped, checked: targets.length };
+}
+
+/* GET /bozo/clv?league=<id> — the read model behind the CLV chart. Public, because the
+   board is public and this is the same rows in a different shape.
+
+   ⚠️ RAW INPUTS ONLY, in the ledger's own tradition. No CLV is computed here, no
+   de-vigged probability, no delta, no luck band. Those are pure functions of price,
+   opposite price, close and result, and the de-vig METHOD is declared in the payload
+   (`devig: "proportional"`) so the page can reproduce them and an old payload stays
+   reproducible if the method ever changes. Persisting a derived CLV would freeze
+   today's formula into last year's rows — the exact mistake the ledger comment warns
+   about for imp/clv/beat. */
+async function bozoClv(request, url, env, cors) {
+  const lid = validLeagueId(url.searchParams.get("league") || "") ? url.searchParams.get("league") : DEFAULT_LEAGUE;
+  let lg;
+  try { lg = await loadLeague(env, lid); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+  if (!lg) return json({ error: "No such league." }, 404, cors);
+
+  let ledger = {};
+  try { ledger = (await fbGet(env, LG(lid) + "/ledger")).data || {}; }
+  catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+
+  const set = settingsOf(lg);
+  // The ledger says "won"/"lost"; the chart contract says "win"/"loss". Translate once,
+  // here, rather than teaching the page two vocabularies for one fact.
+  const RESULT = { won: "win", lost: "loss", push: "push", void: "push" };
+  const labels = lg.weekLabels || {};
+
+  const legs = Object.values(ledger)
+    .filter(r => r && r.player)
+    .sort((a, b) => (a.week - b.week) || String(a.player).localeCompare(String(b.player)))
+    .map(r => ({
+      synthetic: lg.synthetic === true,
+      league: lid, season: r.season ?? (lg.season || SEASON),
+      week: r.week, weekLabel: labels[r.week] || ("Week " + r.week),
+      player: r.player, sport: r.sport,
+      eventId: r.eventId, game: r.game,
+      mkt: r.mkt, side: r.side, line: r.line ?? null, prop: r.prop || null,
+      label: r.label, selectionKey: r.selectionKey || null,
+      dkSgpEligible: r.dkSgpEligible || null,
+
+      entryPrice: r.price ?? null,
+      entryPriceOpp: r.priceOpp ?? null,
+      entryBook: r.entryBook || null,
+      entrySubmittedAt: r.ts ? new Date(r.ts).toISOString() : null,
+
+      closePrice: r.close ?? null,
+      closePriceOpp: r.closeOpp ?? null,
+      closeBook: r.closeBook || null,
+      closeObservedAt: r.closeObservedAt || null,
+      closeSource: r.closeSource || null,
+      closeUnavailableReason: r.closeUnavailableReason || null,
+
+      result: RESULT[r.result] || null,
+      gradedAt: r.gradedAt || null,
+    }));
+
+  const weeks = [...new Set(legs.map(l => l.week))].sort((a, b) => a - b)
+    .map(w => ({ week: w, label: labels[w] || ("Week " + w), phase: (lg.weekPhases || {})[w] || "regular" }));
+
+  // Header counts, so the page never has to guess what it is NOT showing.
+  const graded = legs.filter(l => l.result === "win" || l.result === "loss");
+  const coverage = {
+    legs: legs.length,
+    charted: graded.filter(l => l.closePrice != null && l.entryPrice != null).length,
+    pushes: legs.filter(l => l.result === "push").length,
+    ungraded: legs.filter(l => l.result == null).length,
+    noClose: legs.filter(l => l.closePrice == null).length,
+    noEntryOpp: legs.filter(l => l.entryPriceOpp == null).length,
+  };
+
+  return json({
+    league: lid, leagueName: lg.name || lid, season: lg.season || SEASON,
+    format: set.format, synthetic: lg.synthetic === true,
+    devig: "proportional",
+    book: BOZO_CLOSE_BOOK,
+    closeVia: "sportsgameodds",
+    players: memberNames(lg), teams: lg.teams || null,
+    week: lg.week || 1,
+    weeks, coverage, legs,
+    royale: set.format === "royale" ? {
+      status: royaleStatus(lg),
+      chops: (lg.royale || {}).chops || {},
+      offers: (lg.royale || {}).offers || {},
+      survivor: (lg.royale || {}).survivor || null,
+      buyback: set.buyback,
+    } : null,
+    tickets: ticketPricing(lg, ledger),
+    note: lg.synthetic === true
+      ? "SIMULATED SEASON — every leg, price, close and result in this league is fabricated. It is excluded from receipts, the model scoreboard and every cross-league aggregate."
+      : null,
+  }, 200, cors);
+}
+
+/* ---------------- the parlay price, and why it is labelled ----------------
+   dd_price_parlay describes itself as "price arithmetic, not a correlation-aware joint
+   outcome model". That is exactly right for eight independent games and WRONG the moment
+   two legs share an event: DraftKings reprices correlated SGP legs, and the product of
+   the individual prices OVERSTATES the payout, sometimes badly.
+
+   ⚠️ The better fix — pulling DK's real SGP price for the constructed ticket — is not
+   available to us. It needs DK's bet-slip pricing endpoint, and DK has no public API.
+   Nothing an aggregator sells reprices an arbitrary same-game combination either. So the
+   honest option is the only available one: say the number is indicative, and say why. */
+function ticketPricing(lg, ledger) {
+  const byWeek = new Map();
+  for (const r of Object.values(ledger || {})) {
+    if (!r || !r.week) continue;
+    if (!byWeek.has(r.week)) byWeek.set(r.week, []);
+    byWeek.get(r.week).push(r);
+  }
+  const dec = o => o < 0 ? 1 + 100 / Math.abs(o) : 1 + o / 100;
+  const out = [];
+  for (const [week, rows] of [...byWeek.entries()].sort((a, b) => a[0] - b[0])) {
+    const groups = {};
+    for (const r of rows) (groups[r.eventId] = groups[r.eventId] || []).push(r);
+    const sameGame = Object.entries(groups).filter(([, g]) => g.length > 1)
+      .map(([eventId, g]) => ({ eventId, game: g[0].game, sport: g[0].sport,
+                                legs: g.length, players: g.map(x => x.player) }));
+    const naive = rows.reduce((a, r) => a * dec(r.price), 1);
+    const correlated = sameGame.length > 0;
+    out.push({
+      week, legs: rows.length,
+      naiveDecimal: +naive.toFixed(2),
+      naiveAmerican: naive >= 2 ? Math.round((naive - 1) * 100) : -Math.round(100 / (naive - 1)),
+      priceIsIndicative: correlated,
+      priceCaveat: correlated
+        ? "Indicative only — legs share a game, so this is a same-game parlay. DraftKings reprices correlated legs, and the product of the individual prices is an upper bound, not the payout."
+        : "All legs from distinct games. Product pricing is a fair approximation.",
+      sameGameGroups: sameGame,
+    });
+  }
+  return out;
+}
+
+/* ================================ Bozo Royale ==============================
+   The guillotine ruleset. One chop a week; last one standing takes the pot.
+
+   Everything about a leg is identical to Standard — same submission, same band, same
+   prices, same closes, same chart. Royale is a second ruleset laid over the same rows.
+   What differs is the consequence: in Standard the worst loser wears the shame and
+   funds next week, and plays again. Here they are OUT.
+
+   ⚠️ THAT IS WHY THE CHOP IS COMPUTED HERE AND NOT IN THE PAGE. The standard verdict is
+   client-computed and admin-signed on purpose — anyone can recompute it from the public
+   order and results and call BS, and being named bozo costs you nothing you can't argue
+   about next week. Elimination is not that. It gates who may write a leg for the rest of
+   the season, so the thing that decides it lives on the server beside the permutation.
+   A manager can still fabricate the RESULTS — they always could — but they cannot
+   fabricate who those results eliminate.
+
+   Lever indices are the page's LEVERS array and must stay aligned with it:
+     0 Shortest Odds   1 Worst Beat   2 Last In   3 Worst CLV
+   ========================================================================== */
+
+const ROYALE_LEVER_NAMES = ["Shortest Odds", "Worst Beat", "Last In", "Worst CLV"];
+
+// Margin-of-victory / total spreads per sport, mirroring the page's SPORTS table. Both
+// copies are flagged as needing calibration; they are a shared guess, not a measurement.
+const ROYALE_SD = {
+  nfl: { sd: 13.5, tot: 10.5 }, cfb: { sd: 16.5, tot: 13.0 },
+  nba: { sd: 11.5, tot: 17.0 }, cbb: { sd: 10.5, tot: 13.0 },
+  mlb: { sd: 4.4,  tot: 4.2  }, nhl: { sd: 2.3,  tot: 2.1  },
+};
+
+const rImp = a => a < 0 ? Math.abs(a) / (Math.abs(a) + 100) : 100 / (a + 100);
+
+// Proportional de-vig against the opposite side of the same two-way market.
+// ⚠️ Returns null when the opposite side is missing. It does NOT quietly fall back to
+// raw implied: raw implied and de-vigged are different quantities by about the whole
+// hold, and ranking one player's de-vigged number against another's raw one is a
+// silently wrong comparison. A visible gap beats an invisible error.
+function rDevig(price, opp) {
+  if (price == null || opp == null) return null;
+  const a = rImp(price), b = rImp(opp);
+  const t = a + b;
+  return t > 0 ? a / t : null;
+}
+
+// Acklam's inverse normal — the page's copy, verbatim.
+function rInvNorm(p) {
+  if (p <= 0) return -6; if (p >= 1) return 6;
+  const a = [-39.696830286653757, 220.94609842452050, -275.92851044696869, 138.35775186726900, -30.664798066147160, 2.5066282774592392],
+        b = [-54.476098798224058, 161.58583685804089, -155.69897985988661, 66.801311887719720, -13.280681552885721],
+        c = [-0.0077848940024302926, -0.32239645804113648, -2.4007582771618381, -2.5497325393437338, 4.3746641414649678, 2.9381639826987831],
+        d = [0.0077846957090414622, 0.32246712907003983, 2.4451340770184519, 3.7544086619074162];
+  const pl = 0.02425; let q, r;
+  if (p < pl) { q = Math.sqrt(-2 * Math.log(p));
+    return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+  if (p > 1 - pl) { q = Math.sqrt(-2 * Math.log(1 - p));
+    return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+  q = p - .5; r = q * q;
+  return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5]) * q / (((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
+}
+
+const rDir = x => ((x && (x.dir || x.side)) === "under") ? "under" : "over";
+function rSd(x) {
+  const s = ROYALE_SD[x.sport] || ROYALE_SD.nfl;
+  return x.mkt === "total" ? s.tot
+       : (x.mkt === "prop" || x.mkt === "other") ? Math.max(Math.abs(Number(x.line) || 0) * .55, 1)
+       : s.sd;
+}
+function rExpected(x) {
+  const sd = rSd(x), p = Math.min(.98, Math.max(.02, rImp(x.price) - .022));
+  const shift = sd * rInvNorm(p), base = x.mkt === "ml" ? 0 : (Number(x.line) || 0);
+  return rDir(x) === "under" ? base - shift : base + shift;
+}
+
+/* ---------------- Worst Beat, including for legs that have no margin ----------------
+   ⚠️ THIS IS THE FIX FOR THE EXPLOIT ROYALE CREATES, and it is a rules decision, not a
+   detail. A prop or an `other` leg is BINARY: it hit or it didn't, and there is no
+   margin to be "furthest under" by. In Standard that costs nothing — Worst Beat is a
+   shame mechanic and an unmeasurable lever just falls through. In Royale it is
+   elimination-dodging: a player who only ever bets props is immune to a quarter of the
+   chop machinery by construction, forever, at no cost.
+
+   Kap's call (handoff §8.3, option 1): give a binary leg a margin from its own price.
+   A leg that lost at a de-vigged 82% was a far worse beat than one that lost at 55%, so
+   convert that probability to the equivalent normal deviate and rank it on the SAME
+   z-scale the margin legs already use. −450 loses to −120, as intended, and every leg
+   in the league stays rankable on every lever.
+
+   Preference order for the probability: the de-vigged CLOSE, because the close is the
+   bar this whole system argues from. Falling back to the entry price when no close was
+   captured is deliberate and is recorded in `beatBasis` — Worst Beat asks "how
+   surprising was this loss", and the price you took is a legitimate answer to that.
+   Worst CLV does NOT get the same fallback, because Worst CLV is *about* the close;
+   substituting the entry price there would make every uncapturable leg score exactly
+   zero movement, which is a fabricated number, not a missing one. */
+function royaleBeatDeficit(x, r) {
+  if (x.mkt === "prop" || x.mkt === "other") {
+    const pClose = rDevig(r && r.close, r && r.closeOpp);
+    const pEntry = rDevig(x.price, x.entryPriceOpp);
+    const p = pClose != null ? pClose : (pEntry != null ? pEntry : rImp(x.price));
+    const basis = pClose != null ? "close" : (pEntry != null ? "entry" : "entry-raw");
+    if (!(p > 0 && p < 1)) return { v: null, basis: "unpriced" };
+    return { v: rInvNorm(p), basis };
+  }
+  // Margin markets: how far under its own number the leg finished, in SDs.
+  if (r == null || r.actual == null) return { v: null, basis: "no-result" };
+  const sd = rSd(x);
+  if (!(sd > 0)) return { v: null, basis: "no-sd" };
+  const exp = rExpected(x);
+  const v = (rDir(x) === "under" ? (Number(r.actual) - exp) : (exp - Number(r.actual))) / sd;
+  return { v, basis: "margin" };
+}
+
+/* Score every losing leg on one lever.
+     { key }                  a unique worst — this lever decides
+     { pass: "tie" }          measurable, two or more tied on the worst value
+     { pass: "unmeasurable" } no losing leg could be scored at all
+   ⚠️ A tie and an unmeasurable lever are DIFFERENT FAILURES and are recorded as such.
+   A tie is bad luck. An unmeasurable lever is a hole in the data, and the whole reason
+   §8.3 exists. Reporting them as one thing hides the second behind the first. */
+function royaleApplyLever(leverIdx, losers, picks, results) {
+  const scored = [];
+  for (const key of losers) {
+    const x = picks[key], r = (results || {})[key] || {};
+    let v = null;
+    switch (leverIdx) {
+      case 0: v = rImp(x.price); break;                            // biggest favourite = worst
+      case 1: v = royaleBeatDeficit(x, r).v; break;                // furthest under = worst
+      case 2: v = x.ts || null; break;                             // latest in = worst
+      case 3: {                                                    // price moved most against = worst
+        // ⚠️ Needs BOTH sides at BOTH ends. Kap's call: a leg with no capturable close
+        // is unmeasurable and falls through to the next lever. It is neither ranked
+        // worst (DraftKings pulling a market is not the player's doing) nor ranked best
+        // (that would make an uncapturable market the optimal thing to bet).
+        const pC = rDevig(r.close, r.closeOpp), pE = rDevig(x.price, x.entryPriceOpp);
+        v = (pC == null || pE == null) ? null : -(pC - pE);
+        break;
+      }
+    }
+    if (v != null && Number.isFinite(v)) scored.push({ key, v });
+  }
+  if (!scored.length) return { pass: "unmeasurable" };
+  const max = Math.max(...scored.map(s => s.v));
+  const top = scored.filter(s => s.v === max);
+  return top.length === 1 ? { key: top[0].key } : { pass: "tie" };
+}
+
+/* The chop, exactly as handoff §8.2 specifies it. */
+function royaleDecideChop(state, order) {
+  const picks = state.picks || {}, results = state.results || {};
+  const keys = Object.keys(picks);
+  const losers = keys.filter(k => {
+    const r = results[k] || {};
+    return r.result === "lost" || (r.result == null && r.won === false);
+  });
+
+  const out = { ticketCashed: losers.length === 0, losers: losers.map(playerName),
+                chopped: null, decidedBy: null, leversPassed: [] };
+  if (!losers.length) return out;                                   // clean week, pot carries
+  if (losers.length === 1) {
+    out.chopped = playerName(losers[0]); out.choppedKey = losers[0];
+    out.decidedBy = "only loser";
+    return out;
+  }
+  for (const li of (Array.isArray(order) && order.length ? order : [0, 1, 2, 3])) {
+    const r = royaleApplyLever(li, losers, picks, results);
+    if (r.key) { out.chopped = playerName(r.key); out.choppedKey = r.key; out.decidedBy = ROYALE_LEVER_NAMES[li]; return out; }
+    out.leversPassed.push({ lever: ROYALE_LEVER_NAMES[li], why: r.pass });
+  }
+  // Every lever tied or was unmeasurable. The week still has to resolve, so the
+  // longest-standing submission wears it — and the fallback is NAMED in the record
+  // rather than dressed up as a lever decision.
+  const first = losers.slice().sort((a, b) => (picks[a].ts || 0) - (picks[b].ts || 0))[0];
+  out.chopped = playerName(first); out.choppedKey = first;
+  out.decidedBy = "fallback: first submitted";
+  return out;
+}
+
+/* ---------------- roster state ----------------
+   Defaults are computed, never written at league creation, so a league that switches
+   format before its first lock doesn't carry a stale roster snapshot. */
+function royaleStatus(state) {
+  const stored = (state && state.royale && state.royale.status) || {};
+  const out = {};
+  const buybacks = settingsOf(state).buyback > 0 ? 1 : 0;
+  for (const k of Object.keys((state && state.members) || {})) {
+    const s = stored[k] || {};
+    out[k] = {
+      alive: s.alive !== false,
+      buybacksLeft: Number.isFinite(s.buybacksLeft) ? s.buybacksLeft : buybacks,
+      chopped: Array.isArray(s.chopped) ? s.chopped : [],
+      boughtBack: Array.isArray(s.boughtBack) ? s.boughtBack : [],
+      eliminatedWeek: s.eliminatedWeek ?? null,
+    };
+  }
+  return out;
+}
+const royaleAlive = (state, name) => {
+  const st = royaleStatus(state)[encodeURIComponent(name)];
+  return !st || st.alive !== false;
+};
+const royaleRoster = state => Object.entries(royaleStatus(state))
+  .filter(([, s]) => s.alive).map(([k]) => k);
+
+/* Resolve one Royale week: decide the chop, mutate the roster, open the buy-back window,
+   and write an immutable record of how it was decided.
+
+   ⚠️ The chop record is written ONCE and never revised. It is the receipt for an
+   elimination, and the reason `leversPassed` carries the tie-vs-unmeasurable distinction
+   is so that a season later you can tell a coin-flip from a data hole. */
+async function royaleResolveWeek(env, lid, state) {
+  const week = state.week || 1;
+  if (((state.royale || {}).chops || {})[week]) return null;      // already resolved
+
+  const status = royaleStatus(state);
+  const before = royaleRoster(state);
+  const decided = royaleDecideChop(state, state.order);
+
+  const rec = {
+    week, season: state.season || SEASON,
+    rosterBefore: before.map(playerName),
+    leverOrder: (Array.isArray(state.order) ? state.order : [0, 1, 2, 3]).map(i => ROYALE_LEVER_NAMES[i]),
+    ticketCashed: decided.ticketCashed,
+    chopped: decided.chopped, decidedBy: decided.decidedBy,
+    leversPassed: decided.leversPassed,
+    losers: decided.losers,
+    resolvedTs: Date.now(),
+  };
+
+  const patch = {};
+  const key = decided.choppedKey;
+  if (key) {
+    const st = status[key] || { buybacksLeft: 0, chopped: [], boughtBack: [] };
+    patch[`royale/status/${key}/alive`] = false;
+    patch[`royale/status/${key}/eliminatedWeek`] = week;
+    patch[`royale/status/${key}/chopped`] = [...(st.chopped || []), week];
+    rec.fundsNextTicket = decided.chopped;              // the standard-Bozo mechanic, kept
+
+    // The buy-back is offered only while there is still a league to come back to. At the
+    // final two a buy-back would mean nobody can ever be eliminated.
+    const stillAlive = before.filter(k => k !== key).length;
+    const price = settingsOf(state).buyback;
+    if (price > 0 && (st.buybacksLeft || 0) > 0 && stillAlive > 1) {
+      patch[`royale/offers/${key}`] = {
+        week, price, expiresWeek: week + 1, resolved: false, offeredTs: Date.now(),
+      };
+      rec.buybackOffered = true;
+    } else {
+      rec.buybackOffered = false;
+      if ((st.buybacksLeft || 0) > 0) patch[`royale/status/${key}/buybacksLeft`] = 0;
+    }
+    const survivors = before.filter(k => k !== key);
+    if (survivors.length === 1 && !rec.buybackOffered) {
+      patch["royale/survivor"] = playerName(survivors[0]);
+      patch["royale/endedWeek"] = week;
+      rec.survivor = playerName(survivors[0]);
+    }
+  }
+  patch[`royale/chops/${week}`] = rec;
+  try { await fbPatch(env, LG(lid), patch); }
+  catch (e) { console.log("royale: chop write failed — " + e.message); return null; }
+  return rec;
+}
+
+/* POST /bozo/buyback {league, action:"take"|"decline"} — the player's own call.
+   ⚠️ THE WINDOW IS THE LOAD-BEARING PART. Without "immediately or forfeited" a chopped
+   player could lurk, watch the field thin out, and re-enter at the final two — which is
+   strictly better than playing every week. The offer is written at the chop and dies at
+   the next lock; there is no menu item for it and no way to take it later. */
+async function bozoBuyback(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code, cors);
+  const { name } = auth;
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const lid = leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+
+  let state;
+  try { state = await loadLeague(env, lid); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+  if (!state) return json({ error: "No such league." }, 404, cors);
+  if (settingsOf(state).format !== "royale")
+    return json({ error: "Buy-backs only exist in Bozo Royale." }, 400, cors);
+
+  const key = encodeURIComponent(name);
+  const offer = ((state.royale || {}).offers || {})[key];
+  if (!offer || offer.resolved) return json({ error: "You don't have a buy-back on the table." }, 409, cors);
+  if ((state.week || 1) > offer.expiresWeek)
+    return json({ error: "That buy-back expired when the next ticket locked. It was a one-time call at the chop." }, 409, cors);
+
+  const take = body.action === "take";
+  const st = royaleStatus(state)[key] || { buybacksLeft: 0 };
+  if (take && st.buybacksLeft <= 0)
+    return json({ error: "You've already used your buy-back. One each, and that was it." }, 409, cors);
+
+  const patch = {
+    [`royale/offers/${key}/resolved`]: true,
+    [`royale/offers/${key}/took`]: take,
+    [`royale/offers/${key}/resolvedTs`]: Date.now(),
+  };
+  if (take) {
+    patch[`royale/status/${key}/alive`] = true;
+    patch[`royale/status/${key}/buybacksLeft`] = st.buybacksLeft - 1;
+    patch[`royale/status/${key}/eliminatedWeek`] = null;
+    patch[`royale/status/${key}/boughtBack`] = [...(st.boughtBack || []), state.week || 1];
+  } else {
+    patch[`royale/status/${key}/buybacksLeft`] = 0;   // declined is forfeited, not banked
+  }
+  try { await fbPatch(env, LG(lid), patch); }
+  catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  return json({ ok: true, took: take, price: settingsOf(state).buyback }, 200, cors);
 }
 
 /* ========================== /bozo/grade, /bozo/next ======================= */
@@ -3718,11 +4951,38 @@ async function bozoGrade(request, env, cors) {
     // Ledger last, before the status flip: if it fails the manager gets a 502, status is
     // still "placed", and hitting Decide again replays the whole thing idempotently.
     const backfilled = await ledgerBackfill(env, lid, state);
-    const upd = ledgerGradeUpdate(state.season || SEASON, state.week || 1, body.results, body.bozo, state.picks);
-    if (Object.keys(upd).length) await fbPatch(env, LG(lid) + "/ledger", upd);
+    // Read the ledger once so the grade stage can see which rows already carry a close
+    // the cron captured at kickoff, and leave those alone.
+    let have = {};
+    try { have = (await fbGet(env, LG(lid) + "/ledger")).data || {}; }
+    catch (e) { console.log("ledger: grade-stage read failed — " + e.message); }
+    const upd = ledgerGradeUpdate(state.season || SEASON, state.week || 1, body.results, body.bozo, state.picks, have);
+    if (Object.keys(upd).length) {
+      // gradedAt is per row, not per league — a re-grade that only fixes one player's
+      // result should not restamp everyone else's.
+      const pickKeys = Object.keys(state.picks || {});
+      const gradedAt = new Date().toISOString();
+      for (const k of Object.keys(body.results || {})) {
+        const rowKey = pickKeys.includes(k) ? k
+          : pickKeys.includes(encodeURIComponent(k)) ? encodeURIComponent(k)
+          : (pickKeys.find(x => playerName(x) === k) || k);
+        upd[`${ledgerKey(state.season || SEASON, state.week || 1, rowKey)}/gradedAt`] = gradedAt;
+      }
+      await fbPatch(env, LG(lid) + "/ledger", upd);
+    }
+
+    // ⚠️ Bozo Royale resolves the chop HERE, on the server, from the results just
+    // written — not from anything the client sent. See the note above royaleDecideChop.
+    // It runs only on the transition into "graded", so re-grading a week to correct a
+    // typo cannot chop a second person or double-spend a buy-back.
+    let chop = null;
+    if (body.graded && settingsOf(state).format === "royale" && status !== "graded") {
+      const fresh = await loadLeague(env, lid);          // read back the results we just wrote
+      chop = await royaleResolveWeek(env, lid, fresh || state);
+    }
 
     if (body.graded) await fbPut(env, LG(lid) + "/status", "graded");
-    return json({ ok: true, backfilled }, 200, cors);
+    return json({ ok: true, backfilled, chop }, 200, cors);
   } catch (e) {
     return json({ error: "Database write failed: " + e.message }, 502, cors);
   }
@@ -7346,11 +8606,90 @@ const MCP_TOOLS = [
       if (!lid) return toolErr("Bad league id.");
       const lg = await loadLeague(env, lid);
       if (!lg) return toolErr("No such league: " + lid);
+      const set = settingsOf(lg);
       return toolText({
         id: lid, name: lg.name || lid, manager: lg.manager || null,
         season: lg.season || SEASON, week: lg.week || 1, status: lg.status || "open",
         members: memberNames(lg),
         legsIn: Object.keys(lg.picks || {}).length,
+        // ⚠️ Two rulesets now run on the same rows. Standard names a bozo who plays
+        // again; Bozo Royale ELIMINATES them. Never describe a Royale league's weekly
+        // loser as "wearing it" — they are out, and who is still alive is the state
+        // that matters.
+        format: set.format,
+        royale: set.format === "royale" ? {
+          alive: royaleRoster(lg).map(playerName),
+          eliminated: Object.entries(royaleStatus(lg)).filter(([, s]) => !s.alive)
+            .map(([k, s]) => ({ player: playerName(k), eliminatedWeek: s.eliminatedWeek })),
+          survivor: (lg.royale || {}).survivor || null,
+          buybackPrice: set.buyback,
+        } : null,
+        // ⚠️ SAY SO IN EVERY ANSWER ABOUT THIS LEAGUE. A simulated season uses the real
+        // eight names on purpose, which is exactly why it must never be quoted as a
+        // result. Nothing here counts toward receipts, standings or any aggregate.
+        synthetic: lg.synthetic === true,
+        syntheticNote: lg.synthetic === true
+          ? "SIMULATED LEAGUE. Every leg, price, close and result is fabricated. Label it as simulated in any answer that quotes it, and never let it into a total."
+          : undefined,
+      });
+    },
+  },
+  {
+    name: "dd_bozo_clv",
+    title: "Bozo closing line value",
+    catalog: "full",
+    readOnlyHint: true,
+    description: "Per-leg entry and closing prices for a Bozo league, with both sides of each market so the caller can de-vig. Returns RAW PRICES ONLY — it does not compute CLV, a delta or a ranking. Legs with no capturable close are returned with the reason and must be excluded from any average, never back-filled from the entry price.",
+    inputSchema: { type: "object", properties: {
+      league: { type: "string", description: "League id (default: main)" },
+      player: { type: "string", description: "Restrict to one player (optional)" },
+      week: { type: "number", description: "Restrict to one week (optional)" },
+    }, additionalProperties: false },
+    async run(args, env) {
+      const lid = validLeagueId(args.league || DEFAULT_LEAGUE) ? (args.league || DEFAULT_LEAGUE) : null;
+      if (!lid) return toolErr("Bad league id.");
+      const lg = await loadLeague(env, lid);
+      if (!lg) return toolErr("No such league: " + lid);
+      let ledger = {};
+      try { ledger = (await fbGet(env, LG(lid) + "/ledger")).data || {}; }
+      catch (e) { return toolErr("Database unreachable: " + e.message); }
+
+      const want = args.player ? String(args.player) : null;
+      const wk = Number.isFinite(Number(args.week)) ? Number(args.week) : null;
+      const rows = Object.values(ledger)
+        .filter(r => r && r.player && (!want || r.player === want) && (wk == null || r.week === wk))
+        .sort((a, b) => (a.week - b.week) || String(a.player).localeCompare(String(b.player)))
+        .map(r => ({
+          week: r.week, player: r.player, sport: r.sport, eventId: r.eventId,
+          mkt: r.mkt, label: r.label, result: r.result || null,
+          entryPrice: r.price ?? null, entryPriceOpp: r.priceOpp ?? null,
+          entryBook: r.entryBook || null, entrySubmittedAt: r.ts ? new Date(r.ts).toISOString() : null,
+          closePrice: r.close ?? null, closePriceOpp: r.closeOpp ?? null,
+          closeBook: r.closeBook || null, closeObservedAt: r.closeObservedAt || null,
+          closeSource: r.closeSource || null,
+          closeUnavailableReason: r.closeUnavailableReason || null,
+          // The one derived field, and it is a boolean rather than a number: whether
+          // this leg is eligible to be in a CLV calculation at all.
+          clvMeasurable: r.close != null && r.closeOpp != null && r.price != null && r.priceOpp != null
+            && (r.result === "won" || r.result === "lost"),
+        }));
+
+      const measurable = rows.filter(r => r.clvMeasurable).length;
+      return toolText({
+        league: lid, name: lg.name || lid, season: lg.season || SEASON,
+        synthetic: lg.synthetic === true,
+        devig: "proportional",
+        formula: "imp(o) = o<0 ? -o/(-o+100) : 100/(o+100); p = imp(price)/(imp(price)+imp(oppPrice)); clv = p_close - p_entry, in probability points.",
+        counts: { legs: rows.length, clvMeasurable: measurable, notMeasurable: rows.length - measurable },
+        legs: rows,
+        caveats: [
+          "This tool returns prices. It deliberately does not return a CLV number, a per-player average or a ranking — the de-vig method is declared so the caller derives those and stays reproducible if the method ever changes.",
+          "Use ONLY legs where clvMeasurable is true. A leg missing either side of either price cannot be de-vigged, and mixing a de-vigged number with a raw implied one is wrong by roughly the whole hold.",
+          "Never substitute the entry price for a missing close.",
+          "Pushes and voids carry no information about the number and belong in neither the average nor the count.",
+          "The close is DraftKings' price obtained through a licensed aggregator; the entry is self-reported by the player. Any CLV figure mixes a checked number with an unchecked one.",
+          lg.synthetic === true ? "SIMULATED LEAGUE — every price here is fabricated. Never quote it as evidence of anyone's skill." : null,
+        ].filter(Boolean),
       });
     },
   },
@@ -7381,7 +8720,16 @@ const MCP_TOOLS = [
           sport: x.sport, game: x.game, eventId: x.eventId,
           mkt: x.mkt, side: x.side, line: x.mkt === "ml" ? null : x.line,
           price: x.price, priceSource: x.priceSource || "self",
+          priceOpp: x.entryPriceOpp ?? null, entryBook: x.entryBook || null,
           label: x.label, prop: x.prop || null, ts: x.ts || null,
+          // The close, once the kickoff cron has snapped it. Null until then, and null
+          // FOREVER for legs it could not match — with the reason attached, so a missing
+          // close is never mistaken for a leg that did not move.
+          close: (lg.results || {})[k]?.close ?? null,
+          closeOpp: (lg.results || {})[k]?.closeOpp ?? null,
+          closeBook: (lg.results || {})[k]?.closeBook ?? null,
+          closeObservedAt: (lg.results || {})[k]?.closeObservedAt ?? null,
+          closeUnavailableReason: (lg.results || {})[k]?.closeUnavailableReason ?? null,
         };
       });
       return toolText({
@@ -7396,7 +8744,16 @@ const MCP_TOOLS = [
           "Bozo odds anywhere on the site are simulation output, not market prices.",
           "The simulator draws legs independently; correlated legs (same game, same side of a number) must be flagged by the reader.",
           "The lever hierarchy is a server-side random permutation drawn at lock — it is not chosen by anyone.",
-          "Never state anyone's CLV. The site does not compute it and prices are self-reported (priceSource: self).",
+          // ⚠️ This caveat changed the day the capture shipped, and the change is narrow
+          // on purpose. CLV is now computable — but only for a leg that has BOTH a
+          // captured close and both sides of both prices, and the entry is still a
+          // number a human typed. State CLV for a leg that has one; say it is
+          // unmeasured for a leg that does not; never average across the two.
+          "CLV is computable only where closeObservedAt is set AND both priceOpp and closeOpp are present — de-vig proportionally, and report probability points, not cents.",
+          "A leg with closeUnavailableReason has NO CLV. Do not substitute the entry price for a missing close: that fabricates a zero and drags any average toward it.",
+          "Entry prices are still self-reported (priceSource: self). The close is DraftKings' price via a licensed aggregator (closeBook: draftkings, closeSource: sgo) — so a CLV figure mixes a checked number with an unchecked one, and should be quoted that way.",
+          "Every leg goes on a real DraftKings bet slip, so every market — props included — exists and closes. A missing close means the capture could not resolve the typed description onto the right market, and closeUnavailableReason says which of stat, player or number failed. \"Other\" legs are the exception: free text for an arbitrary market, with nothing to match on. Either way it is a matching gap, never evidence about a player.",
+          "If two legs share an eventId the ticket is a same-game parlay and the displayed parlay price is INDICATIVE — DraftKings reprices correlated legs, so the product of the leg prices is an upper bound, not the payout.",
         ],
       });
     },
@@ -7411,6 +8768,11 @@ const MCP_TOOLS = [
     async run(args, env, caller) {
       const lid = validLeagueId(args.league || DEFAULT_LEAGUE) ? (args.league || DEFAULT_LEAGUE) : null;
       if (!lid) return toolErr("Bad league id.");
+      // ⚠️ Whether this league's rows are real has to be known BEFORE any of them are
+      // summarised. A demo league uses the real player names on purpose, so a standings
+      // table off one is indistinguishable from a real one unless it says so itself.
+      const lgRec = await loadLeague(env, lid);
+      const synthetic = !!(lgRec && lgRec.synthetic === true);
       let ledger;
       try { ledger = (await fbGet(env, LG(lid) + "/ledger")).data || {}; }
       catch (e) { return toolErr("Database unreachable: " + e.message); }
@@ -7436,6 +8798,12 @@ const MCP_TOOLS = [
       return toolText({
         league: lid, weeksOnLedger: Object.keys(byWeek).length, gradedRows: graded,
         you: me, players: per,
+        synthetic,
+        syntheticNote: synthetic
+          ? "SIMULATED LEAGUE. Every leg, price, close and result behind this table is fabricated by a seeding "
+            + "script — it exists to show what a populated board looks like. It counts toward no standing, no "
+            + "receipt and no aggregate. Say so in any answer that quotes it, and never combine it with a real league."
+          : undefined,
         note: graded ? undefined : "No graded results yet — everything above is bookkeeping, not performance.",
       });
     },
@@ -7524,7 +8892,7 @@ const MCP_TOOLS = [
       // ⚠️ THE SERVER'S OWN VALIDATOR, not a copy of its rules. A second copy would drift
       // and start passing legs /bozo/pick rejects, which is worse than no check at all.
       const band = bandOf(lg);
-      const err = validatePick(p, name, picks, band, set.allowDupes);
+      const err = validatePick(p, name, picks, band, set.format);
       if (err)
         return toolText({
           accepted: false, reason: "rejected-by-the-same-validator-the-server-runs",

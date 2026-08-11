@@ -627,7 +627,7 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 {
   const j = await (await req(rpc("tools/list"))).json();
   const t = j.result.tools;
-  ok(t.length === 41, "forty-one tools listed in the staged Worker source");
+  ok(t.length === 42, "forty-two tools listed in the staged Worker source");
   ok(t.some(x => x.name === "dd_draft_bozo_leg" && /READ-ONLY/.test(x.description)),
      "dd_draft_bozo_leg is listed and says in its own description that it writes nothing");
   ok(t.every(x => x.name.startsWith("dd_")), "all tools dd_-prefixed");
@@ -661,7 +661,7 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
   ok(full.every(x => !("catalog" in x)), "`catalog` is server-side bookkeeping and never reaches the wire");
 
   ok(fullNamed.length === full.length, "/mcp/full/<pass> lists the same set as the bare /mcp/<pass>");
-  ok(full.length === 41 && core.length === 16, "full lists 41, core lists 16");
+  ok(full.length === 42 && core.length === 16, "full lists 42, core lists 16");
   const fullNames = new Set(full.map(x => x.name)), coreNames = new Set(core.map(x => x.name));
   ok([...coreNames].every(n => fullNames.has(n)), "core is a strict subset of full");
   ok(coreNames.has("dd_whoami") && coreNames.has("dd_bozo_week") && coreNames.has("dd_draft_board") && coreNames.has("dd_site_map"),
@@ -710,7 +710,7 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
     ok(r.status === 200, `a passphrase of "${word}" still authenticates at /mcp/${word}`, "status " + r.status);
     if (r.status === 200) {
       const n = (await r.json()).result.tools.length;
-      ok(n === 41, `…and gets the default full catalog, not an empty or partial one`, "tools=" + n);
+      ok(n === 42, `…and gets the default full catalog, not an empty or partial one`, "tools=" + n);
     }
     // it must still be a real credential check, not a hole that lets the word through
     const bad = await reqWord(rpc("ping"), "/mcp/" + (word === "core" ? "full" : "core"));
@@ -725,7 +725,7 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
   for (const [path, needle] of [["/mcp/core/" + PASS, "Catalog `core`"], ["/mcp/" + PASS, "Catalog `full`"]]) {
     const j = await (await req(rpc("initialize", { protocolVersion: "2025-06-18" }), { path })).json();
     ok(j.result.instructions.startsWith(needle), "initialize opens by naming the catalog: " + needle);
-    ok(/16 of 41|41 of 41/.test(j.result.instructions), "…with the honest count for that path");
+    ok(/16 of 42|42 of 42/.test(j.result.instructions), "…with the honest count for that path");
   }
   {
     const r = await req(null, { path: "/mcp/" + PASS, method: "GET" });
@@ -740,7 +740,7 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
   const reg = src.slice(src.indexOf("const MCP_TOOLS = ["));
   const n = (re) => (reg.match(re) || []).length;
   const tools = n(/\n    name: "dd_\w+",\n/g);
-  ok(tools === 41, "41 tools declared in work/mcp-block.js");
+  ok(tools === 42, "42 tools declared in work/mcp-block.js");
   ok(n(/\n    title: "[^"]+",\n/g) === tools, "every declared tool carries a title");
   ok(n(/\n    catalog: "(?:core|full)",\n/g) === tools, "every declared tool carries a core/full catalog tag");
   ok(n(/\n    readOnlyHint: (?:true|false),\n/g) === tools, "every declared tool carries a readOnlyHint");
@@ -1957,10 +1957,54 @@ const LEG = { sport: "nfl", eventId: "403", game: "SF @ SEA", mkt: "spread", sid
   ok(d.band && d.band.ceil !== undefined, "…and the band is returned so the caller can fix it");
 }
 {
-  // Jeff already has CLE -3.5 on the board and this league does not allow duplicates
-  const d = text(await (await asUser(USER_TOKEN, { ...LEG, label: "CLE -3.5" })).json());
-  ok(d.accepted === false && /Jeff already has that exact leg/.test(d.detail),
-     "a duplicate label is refused and names whose leg it clashes with");
+  // ⚠️ Uniqueness is keyed on the SELECTION, not on the label. Two people can spell the
+  // same bet differently and DraftKings still rejects the second one — the ticket is one
+  // parlay and the same selection cannot go on it twice. So the check has to look at
+  // event, market, side and number, and a label that merely LOOKS the same must not
+  // trigger it.
+  const dupe = text(await (await asUser(USER_TOKEN,
+    { ...LEG, eventId: "401", game: "CLE @ PIT", mkt: "spread", side: "CLE", line: 3.5, label: "Browns -3.5" })).json());
+  ok(dupe.accepted === false && /Jeff already has that exact selection/.test(dupe.detail),
+     "a duplicate SELECTION is refused even when spelled differently, and names whose leg it clashes with");
+  ok(/DraftKings won't take it twice/.test(dupe.detail),
+     "…and says it is DraftKings' constraint, not a house preference");
+
+  // A label that collides while the selection does not is fine — the old check got this
+  // exactly backwards and would have blocked a legal leg.
+  const lookalike = text(await (await asUser(USER_TOKEN,
+    { ...LEG, eventId: "409", game: "CLE @ BAL", mkt: "spread", side: "CLE", line: 3.5, label: "CLE -3.5" })).json());
+  ok(lookalike.accepted === true,
+     "the same label on a DIFFERENT game is accepted — the label was never the thing DK rejects");
+}
+{
+  // ⚠️ THE CHECK UNIQUENESS DOES NOT MAKE. Jeff has CLE -3.5; PIT +3.5 is a DIFFERENT
+  // selection, so the duplicate test passes it — and the resulting ticket could never
+  // cash, because both legs cannot win. DK blocks the pair, and so must we.
+  const contra = text(await (await asUser(USER_TOKEN,
+    { ...LEG, eventId: "401", game: "CLE @ PIT", mkt: "spread", side: "PIT", line: -3.5, label: "PIT +3.5" })).json());
+  ok(contra.accepted === false && /other side of that same market/.test(contra.detail),
+     "the opposite side of a market already on the ticket is refused");
+  ok(/could never win/.test(contra.detail), "…and says why: the ticket could never cash");
+
+  // Same, on a total, where the two sides are over/under rather than two teams.
+  const ou = text(await (await asUser(USER_TOKEN,
+    { ...LEG, eventId: "402", game: "DET @ GB", mkt: "total", side: "under", line: 47.5, label: "Under 47.5" })).json());
+  ok(ou.accepted === false && /other side of that same market/.test(ou.detail),
+     "under 47.5 is refused when over 47.5 is already on the ticket");
+
+  // A different NUMBER on the same game is a different market instance and stays legal.
+  const otherNumber = text(await (await asUser(USER_TOKEN,
+    { ...LEG, eventId: "402", game: "DET @ GB", mkt: "total", side: "under", line: 51.5, label: "Under 51.5" })).json());
+  ok(otherNumber.accepted === true,
+     "under 51.5 alongside over 47.5 is accepted — different numbers are different markets, and both can cash");
+}
+{
+  // Futures are not SGP-legal, so they are not Bozo legs. This is a word match and is
+  // deliberately narrow; it is not a market lookup and must never be described as one.
+  const fut = text(await (await asUser(USER_TOKEN,
+    { ...LEG, mkt: "other", prop: "Lions to win the division", label: "DET division" })).json());
+  ok(fut.accepted === false && /future/.test(fut.detail),
+     "a future dressed up as an \"other\" leg is refused");
 }
 {
   const d = text(await (await asUser(USER_TOKEN, { ...LEG, mkt: "other", prop: "" })).json());
@@ -2025,8 +2069,8 @@ ok(assembled.split(MCP_START).length === 2 && assembled.split(MCP_END).length ==
   const outOfBlock = assembled.slice(0, assembled.indexOf(MCP_START)) + assembled.slice(assembled.indexOf(MCP_END));
   const names = s => (s.match(/\n    name: "dd_\w+",\n/g) || []).map(m => m.trim());
   const registry = names(blockSrc);
-  ok(registry.length === 41 && names(inBlock).join("|") === registry.join("|"),
-     "the assembled block declares the registry's 41 tools, in the registry's order",
+  ok(registry.length === 42 && names(inBlock).join("|") === registry.join("|"),
+     "the assembled block declares the registry's 42 tools, in the registry's order",
      `${names(inBlock).length} assembled vs ${registry.length} declared`);
   ok(names(outOfBlock).length === 0,
      "no tool is declared outside the markers, where assemble.mjs would never regenerate it");

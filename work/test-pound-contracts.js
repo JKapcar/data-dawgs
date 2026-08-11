@@ -83,7 +83,7 @@ test('surface generator reports the deployed Pound MCP tools as live', () => {
     'dd_calculate_bet_ev', 'dd_calculate_hedge', 'dd_nfl_passer_rating',
     'dd_score_forecast', 'dd_summarize_beliefs', 'dd_elo_game',
     'dd_translate_probability'];
-  assert.equal(surfaces.counts.mcp_tools_live, 41);   // 43 after the 2026-08-09 deploy, 41 after Stage WC-A merged two CFB readers away
+  assert.equal(surfaces.counts.mcp_tools_live, 42);   // 43 after the 2026-08-09 deploy, 41 after Stage WC-A merged two CFB readers away, 42 with dd_bozo_clv
   assert.ok(surfaces.mcp.tools_live.includes('dd_survivor_ev'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_optimize_survivor_path'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_analyze_matchup'));
@@ -474,7 +474,7 @@ test('the deployed CFB MCP tools are live while unimplemented candidate names re
     else assert.ok(!surfaces.mcp.tools_live.includes(name), `${name} falsely live`);
     assert.ok(!surfaces.mcp.tools_staged.includes(name), `${name} falsely staged`);
   }
-  assert.equal(surfaces.counts.mcp_tools_live, 41);   // 43 after the 2026-08-09 deploy, 41 after Stage WC-A merged two CFB readers away
+  assert.equal(surfaces.counts.mcp_tools_live, 42);   // 43 after the 2026-08-09 deploy, 41 after Stage WC-A merged two CFB readers away, 42 with dd_bozo_clv
   /* CEP-5A Stage 3: the sixteen CFB tools ride on the cfb surface, whose page renders
      the roadmap that names them. The DawgHouse surface must no longer claim them, and
      its pound-tools.json entry must stop advertising a roadmap it does not render. */

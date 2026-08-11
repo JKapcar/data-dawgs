@@ -589,8 +589,16 @@ console.log('\nWorker deployment contract');
       if (!w.limits || w.limits.cpu_ms !== 1000) fail('wrangler.jsonc: production CPU ceiling must stay 1000 ms');
       if (!rl || rl.id !== 'ffee9157b0a04cebb796acfa6046880a') fail('wrangler.jsonc: RL KV binding missing or changed');
       if (JSON.stringify(required) !== JSON.stringify(expectedSecrets.sort())) fail('wrangler.jsonc: required secret-name set drifted');
-      if (JSON.stringify(crons) !== JSON.stringify(['0 9 * * *', '9 * * * *'].sort()))
-        fail('wrangler.jsonc: expected daily backup and hourly CFB triggers');
+      // ⚠️ Three jobs share this Worker and the dispatcher in scheduled() fails closed on
+      // an unknown cron, so this list and that switch have to move together:
+      //   0 9 * * *   nightly private RTDB backup — NEVER run this hourly, it contains
+      //               auth material and exists for disaster recovery, not polling
+      //   9 * * * *   hourly public CFB market receipt capture
+      //   */5 * * * * Bozo closing prices. Fires often because a close has to be snapped
+      //               near kickoff to be a close at all, and does nothing on a tick with
+      //               no game about to start — one RTDB read and out.
+      if (JSON.stringify(crons) !== JSON.stringify(['0 9 * * *', '9 * * * *', '*/5 * * * *'].sort()))
+        fail('wrangler.jsonc: expected daily backup, hourly CFB and 5-minute Bozo-close triggers');
       if (!w.vars || w.vars.BOZO_ADMIN !== 'Kap' || w.vars.MODEL !== 'grok-4.5' || !w.vars.ELEVEN_VOICE)
         fail('wrangler.jsonc: production plain variables missing');
       // MAIL_FROM is pinned, not merely present. mailReady() is true only when both it and

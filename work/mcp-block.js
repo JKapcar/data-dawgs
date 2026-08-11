@@ -2137,11 +2137,90 @@ const MCP_TOOLS = [
       if (!lid) return toolErr("Bad league id.");
       const lg = await loadLeague(env, lid);
       if (!lg) return toolErr("No such league: " + lid);
+      const set = settingsOf(lg);
       return toolText({
         id: lid, name: lg.name || lid, manager: lg.manager || null,
         season: lg.season || SEASON, week: lg.week || 1, status: lg.status || "open",
         members: memberNames(lg),
         legsIn: Object.keys(lg.picks || {}).length,
+        // ⚠️ Two rulesets now run on the same rows. Standard names a bozo who plays
+        // again; Bozo Royale ELIMINATES them. Never describe a Royale league's weekly
+        // loser as "wearing it" — they are out, and who is still alive is the state
+        // that matters.
+        format: set.format,
+        royale: set.format === "royale" ? {
+          alive: royaleRoster(lg).map(playerName),
+          eliminated: Object.entries(royaleStatus(lg)).filter(([, s]) => !s.alive)
+            .map(([k, s]) => ({ player: playerName(k), eliminatedWeek: s.eliminatedWeek })),
+          survivor: (lg.royale || {}).survivor || null,
+          buybackPrice: set.buyback,
+        } : null,
+        // ⚠️ SAY SO IN EVERY ANSWER ABOUT THIS LEAGUE. A simulated season uses the real
+        // eight names on purpose, which is exactly why it must never be quoted as a
+        // result. Nothing here counts toward receipts, standings or any aggregate.
+        synthetic: lg.synthetic === true,
+        syntheticNote: lg.synthetic === true
+          ? "SIMULATED LEAGUE. Every leg, price, close and result is fabricated. Label it as simulated in any answer that quotes it, and never let it into a total."
+          : undefined,
+      });
+    },
+  },
+  {
+    name: "dd_bozo_clv",
+    title: "Bozo closing line value",
+    catalog: "full",
+    readOnlyHint: true,
+    description: "Per-leg entry and closing prices for a Bozo league, with both sides of each market so the caller can de-vig. Returns RAW PRICES ONLY — it does not compute CLV, a delta or a ranking. Legs with no capturable close are returned with the reason and must be excluded from any average, never back-filled from the entry price.",
+    inputSchema: { type: "object", properties: {
+      league: { type: "string", description: "League id (default: main)" },
+      player: { type: "string", description: "Restrict to one player (optional)" },
+      week: { type: "number", description: "Restrict to one week (optional)" },
+    }, additionalProperties: false },
+    async run(args, env) {
+      const lid = validLeagueId(args.league || DEFAULT_LEAGUE) ? (args.league || DEFAULT_LEAGUE) : null;
+      if (!lid) return toolErr("Bad league id.");
+      const lg = await loadLeague(env, lid);
+      if (!lg) return toolErr("No such league: " + lid);
+      let ledger = {};
+      try { ledger = (await fbGet(env, LG(lid) + "/ledger")).data || {}; }
+      catch (e) { return toolErr("Database unreachable: " + e.message); }
+
+      const want = args.player ? String(args.player) : null;
+      const wk = Number.isFinite(Number(args.week)) ? Number(args.week) : null;
+      const rows = Object.values(ledger)
+        .filter(r => r && r.player && (!want || r.player === want) && (wk == null || r.week === wk))
+        .sort((a, b) => (a.week - b.week) || String(a.player).localeCompare(String(b.player)))
+        .map(r => ({
+          week: r.week, player: r.player, sport: r.sport, eventId: r.eventId,
+          mkt: r.mkt, label: r.label, result: r.result || null,
+          entryPrice: r.price ?? null, entryPriceOpp: r.priceOpp ?? null,
+          entryBook: r.entryBook || null, entrySubmittedAt: r.ts ? new Date(r.ts).toISOString() : null,
+          closePrice: r.close ?? null, closePriceOpp: r.closeOpp ?? null,
+          closeBook: r.closeBook || null, closeObservedAt: r.closeObservedAt || null,
+          closeSource: r.closeSource || null,
+          closeUnavailableReason: r.closeUnavailableReason || null,
+          // The one derived field, and it is a boolean rather than a number: whether
+          // this leg is eligible to be in a CLV calculation at all.
+          clvMeasurable: r.close != null && r.closeOpp != null && r.price != null && r.priceOpp != null
+            && (r.result === "won" || r.result === "lost"),
+        }));
+
+      const measurable = rows.filter(r => r.clvMeasurable).length;
+      return toolText({
+        league: lid, name: lg.name || lid, season: lg.season || SEASON,
+        synthetic: lg.synthetic === true,
+        devig: "proportional",
+        formula: "imp(o) = o<0 ? -o/(-o+100) : 100/(o+100); p = imp(price)/(imp(price)+imp(oppPrice)); clv = p_close - p_entry, in probability points.",
+        counts: { legs: rows.length, clvMeasurable: measurable, notMeasurable: rows.length - measurable },
+        legs: rows,
+        caveats: [
+          "This tool returns prices. It deliberately does not return a CLV number, a per-player average or a ranking — the de-vig method is declared so the caller derives those and stays reproducible if the method ever changes.",
+          "Use ONLY legs where clvMeasurable is true. A leg missing either side of either price cannot be de-vigged, and mixing a de-vigged number with a raw implied one is wrong by roughly the whole hold.",
+          "Never substitute the entry price for a missing close.",
+          "Pushes and voids carry no information about the number and belong in neither the average nor the count.",
+          "The close is DraftKings' price obtained through a licensed aggregator; the entry is self-reported by the player. Any CLV figure mixes a checked number with an unchecked one.",
+          lg.synthetic === true ? "SIMULATED LEAGUE — every price here is fabricated. Never quote it as evidence of anyone's skill." : null,
+        ].filter(Boolean),
       });
     },
   },
@@ -2172,7 +2251,16 @@ const MCP_TOOLS = [
           sport: x.sport, game: x.game, eventId: x.eventId,
           mkt: x.mkt, side: x.side, line: x.mkt === "ml" ? null : x.line,
           price: x.price, priceSource: x.priceSource || "self",
+          priceOpp: x.entryPriceOpp ?? null, entryBook: x.entryBook || null,
           label: x.label, prop: x.prop || null, ts: x.ts || null,
+          // The close, once the kickoff cron has snapped it. Null until then, and null
+          // FOREVER for legs it could not match — with the reason attached, so a missing
+          // close is never mistaken for a leg that did not move.
+          close: (lg.results || {})[k]?.close ?? null,
+          closeOpp: (lg.results || {})[k]?.closeOpp ?? null,
+          closeBook: (lg.results || {})[k]?.closeBook ?? null,
+          closeObservedAt: (lg.results || {})[k]?.closeObservedAt ?? null,
+          closeUnavailableReason: (lg.results || {})[k]?.closeUnavailableReason ?? null,
         };
       });
       return toolText({
@@ -2187,7 +2275,16 @@ const MCP_TOOLS = [
           "Bozo odds anywhere on the site are simulation output, not market prices.",
           "The simulator draws legs independently; correlated legs (same game, same side of a number) must be flagged by the reader.",
           "The lever hierarchy is a server-side random permutation drawn at lock — it is not chosen by anyone.",
-          "Never state anyone's CLV. The site does not compute it and prices are self-reported (priceSource: self).",
+          // ⚠️ This caveat changed the day the capture shipped, and the change is narrow
+          // on purpose. CLV is now computable — but only for a leg that has BOTH a
+          // captured close and both sides of both prices, and the entry is still a
+          // number a human typed. State CLV for a leg that has one; say it is
+          // unmeasured for a leg that does not; never average across the two.
+          "CLV is computable only where closeObservedAt is set AND both priceOpp and closeOpp are present — de-vig proportionally, and report probability points, not cents.",
+          "A leg with closeUnavailableReason has NO CLV. Do not substitute the entry price for a missing close: that fabricates a zero and drags any average toward it.",
+          "Entry prices are still self-reported (priceSource: self). The close is DraftKings' price via a licensed aggregator (closeBook: draftkings, closeSource: sgo) — so a CLV figure mixes a checked number with an unchecked one, and should be quoted that way.",
+          "Every leg goes on a real DraftKings bet slip, so every market — props included — exists and closes. A missing close means the capture could not resolve the typed description onto the right market, and closeUnavailableReason says which of stat, player or number failed. \"Other\" legs are the exception: free text for an arbitrary market, with nothing to match on. Either way it is a matching gap, never evidence about a player.",
+          "If two legs share an eventId the ticket is a same-game parlay and the displayed parlay price is INDICATIVE — DraftKings reprices correlated legs, so the product of the leg prices is an upper bound, not the payout.",
         ],
       });
     },
@@ -2202,6 +2299,11 @@ const MCP_TOOLS = [
     async run(args, env, caller) {
       const lid = validLeagueId(args.league || DEFAULT_LEAGUE) ? (args.league || DEFAULT_LEAGUE) : null;
       if (!lid) return toolErr("Bad league id.");
+      // ⚠️ Whether this league's rows are real has to be known BEFORE any of them are
+      // summarised. A demo league uses the real player names on purpose, so a standings
+      // table off one is indistinguishable from a real one unless it says so itself.
+      const lgRec = await loadLeague(env, lid);
+      const synthetic = !!(lgRec && lgRec.synthetic === true);
       let ledger;
       try { ledger = (await fbGet(env, LG(lid) + "/ledger")).data || {}; }
       catch (e) { return toolErr("Database unreachable: " + e.message); }
@@ -2227,6 +2329,12 @@ const MCP_TOOLS = [
       return toolText({
         league: lid, weeksOnLedger: Object.keys(byWeek).length, gradedRows: graded,
         you: me, players: per,
+        synthetic,
+        syntheticNote: synthetic
+          ? "SIMULATED LEAGUE. Every leg, price, close and result behind this table is fabricated by a seeding "
+            + "script — it exists to show what a populated board looks like. It counts toward no standing, no "
+            + "receipt and no aggregate. Say so in any answer that quotes it, and never combine it with a real league."
+          : undefined,
         note: graded ? undefined : "No graded results yet — everything above is bookkeeping, not performance.",
       });
     },
@@ -2315,7 +2423,7 @@ const MCP_TOOLS = [
       // ⚠️ THE SERVER'S OWN VALIDATOR, not a copy of its rules. A second copy would drift
       // and start passing legs /bozo/pick rejects, which is worse than no check at all.
       const band = bandOf(lg);
-      const err = validatePick(p, name, picks, band, set.allowDupes);
+      const err = validatePick(p, name, picks, band, set.format);
       if (err)
         return toolText({
           accepted: false, reason: "rejected-by-the-same-validator-the-server-runs",
