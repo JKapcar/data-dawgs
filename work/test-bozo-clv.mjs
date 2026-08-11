@@ -371,7 +371,16 @@ ok(/clv-tablewrap/.test(page), "the table twin ships — it is the WCAG counterp
   ok(/Simulation, not a forecast/.test(code), "the footnote says it is simulation");
   ok(/drawn independently/.test(code) && /same game/.test(code),
      "…and names the correlation it does not model");
-  ok(/always taken/.test(code), "…and states the buy-back assumption rather than burying it");
+  // ⚠️ The re-deploy stopped being an assumption when it stopped being a choice.
+  ok(/need no assumption/.test(code),
+     "…and says re-deploys need no assumption, because they are automatic");
+  // ⚠️ Strip HTML comments too, not just JS ones. The page keeps a note explaining what
+  // the buy-back was and why the timed window existed — that history is worth keeping,
+  // and a test that cannot tell a comment from live code would force it to be deleted.
+  const live = code.replace(/<!--[\s\S]*?-->/g, "");
+  ok(!/buy-back/i.test(live), "…and no live code or copy still offers a buy-back");
+  ok(!/bbTake|bbPass|bozo\/buyback/.test(live),
+     "…and the Take/Decline handlers are gone, not just their markup");
   ok(/legs resampled/.test(code) && /decoration/.test(code),
      "…and says when a player's history is too thin to mean anything");
   ok(/no captured close/.test(code),

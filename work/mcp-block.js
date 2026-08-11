@@ -2152,8 +2152,16 @@ const MCP_TOOLS = [
           alive: royaleRoster(lg).map(playerName),
           eliminated: Object.entries(royaleStatus(lg)).filter(([, s]) => !s.alive)
             .map(([k, s]) => ({ player: playerName(k), eliminatedWeek: s.eliminatedWeek })),
+          // ⚠️ A parachute means that player has already used their one way back, so the
+          // next chop ends them. It is the single most decision-relevant fact about a
+          // live Bozo Royale board.
+          parachutes: Object.entries(royaleStatus(lg)).filter(([, s]) => s.hasParachute)
+            .map(([k]) => playerName(k)),
           survivor: (lg.royale || {}).survivor || null,
-          buybackPrice: set.buyback,
+          redeployCost: set.buyback,
+          // ⚠️ Automatic, not a choice. Never describe a chopped Royale player as
+          // "deciding whether to buy back" — there is no decision to make.
+          redeployRule: "A chopped player with a re-deploy left comes straight back on the next ticket, automatically. One each. After that the parachute stays next to their name and the next chop is final.",
         } : null,
         // ⚠️ SAY SO IN EVERY ANSWER ABOUT THIS LEAGUE. A simulated season uses the real
         // eight names on purpose, which is exactly why it must never be quoted as a

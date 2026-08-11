@@ -2265,7 +2265,7 @@ async function leagueCreate(request, env, cors) {
   const format = body.format === "royale" ? "royale" : "standard";
   const buyback = format === "royale" ? Math.max(0, Math.round(Number(body.buyback) || 0)) : 0;
   if (!Number.isFinite(buyback) || buyback > 100000)
-    return json({ error: "Buy-back price must be between 0 and 100000." }, 400, cors);
+    return json({ error: "Re-deploy cost must be between 0 and 100000." }, 400, cors);
 
   const lg = {
     name: String(body.name || id).slice(0, 60),
@@ -2614,9 +2614,9 @@ async function leagueSettings(request, env, cors) {
   if (has("buyback")) {
     const b = Math.round(Number(body.buyback));
     if (!Number.isFinite(b) || b < 0 || b > 100000)
-      return json({ error: "Buy-back price must be between 0 and 100000." }, 400, cors);
+      return json({ error: "Re-deploy cost must be between 0 and 100000." }, 400, cors);
     const f = patch.format || settingsOf(lg).format;
-    if (f !== "royale") return json({ error: "Buy-backs only exist in Bozo Royale." }, 400, cors);
+    if (f !== "royale") return json({ error: "Re-deploys only exist in Bozo Royale." }, 400, cors);
     patch.buyback = b;
   }
 
@@ -3746,7 +3746,7 @@ async function bozoPick(request, env, cors) {
       return json({ error: "This league locks your leg once it's in — no edits." }, 409, cors);
 
     // Bozo Royale: a chopped player funds the ticket, they do not bet on it. Their
-    // buy-back window is the one way back in, and it closes at the next lock.
+    // re-deploy puts you straight back the first time; after that this is the end of it.
     if (set.format === "royale" && !royaleAlive(state, name))
       return json({ error: "You're out — chopped in week " + (royaleStatus(state)[encodeURIComponent(name)]?.chopped?.slice(-1)[0] ?? "?") + ". You fund this ticket; you don't have a leg on it." }, 409, cors);
 
@@ -3932,18 +3932,12 @@ async function placeAndDraw(env, lid, picks, state) {
   // same class of error as mutating a published forecast.
   const lockPatch = { formatLocked: true };
 
-  // ⚠️ AND IT KILLS ANY UNTAKEN BUY-BACK. That is the whole design of the window: the
-  // decision is made at the chop or it is not made at all. A pending offer surviving one
-  // more lock is exactly the lurk-and-re-enter-at-the-final-two hole it exists to close.
+  // ⚠️ There used to be buy-back offers to expire here. There aren't any: the re-deploy
+  // is automatic and resolves at the chop, so nothing is ever left pending at a lock. Any
+  // offers still stored are from before that change and are cleared once, so a league
+  // mid-season doesn't carry a prompt nothing will ever answer.
   const offers = ((state && state.royale) || {}).offers || {};
-  for (const [k, o] of Object.entries(offers)) {
-    if (o && !o.resolved) {
-      lockPatch[`royale/offers/${k}/resolved`] = true;
-      lockPatch[`royale/offers/${k}/took`] = false;
-      lockPatch[`royale/offers/${k}/forfeited`] = true;
-      lockPatch[`royale/status/${k}/buybacksLeft`] = 0;
-    }
-  }
+  if (Object.keys(offers).length) lockPatch["royale/offers"] = null;
   try { await fbPatch(env, LG(lid), lockPatch); }
   catch (e) { console.log("royale: lock patch failed — " + e.message); }
 
@@ -4633,9 +4627,9 @@ async function bozoClv(request, url, env, cors) {
       // array-with-holes, the page receives one shape and never has to know.
       chops: Object.fromEntries(Object.entries((lg.royale || {}).chops || {})
         .filter(([, c]) => c && c.week).map(([, c]) => [`w${c.week}`, c])),
-      offers: (lg.royale || {}).offers || {},
       survivor: (lg.royale || {}).survivor || null,
-      buyback: set.buyback,
+      // The cost of coming back. It is charged, not offered — see royaleStatus.
+      redeployCost: set.buyback,
     } : null,
     tickets: ticketPricing(lg, ledger),
     note: lg.synthetic === true
@@ -4865,17 +4859,41 @@ function royaleDecideChop(state, order) {
 /* ---------------- roster state ----------------
    Defaults are computed, never written at league creation, so a league that switches
    format before its first lock doesn't carry a stale roster snapshot. */
+/* ⚠️ THE RE-DEPLOY IS AUTOMATIC. It was a "buy-back" with a timed window: you were
+   chopped, offered a way back, and had until the next lock to take it or forfeit. That
+   window existed to stop a chopped player lurking and re-entering at the final two, which
+   would be strictly better than playing every week.
+
+   Kap replaced it with the Warzone gulag: you don't choose, you just come back — once.
+   The exploit it was built to close cannot exist, because there is no decision to defer.
+   A whole class of state goes with it: no offers, no expiry, no forfeiting at lock, no
+   prompt that has to be noticed. What is left is a parachute next to your name, which
+   says the next chop is the one that ends you.
+
+   ⚠️ Storage keys stay `buybacksLeft` and `boughtBack`. Renaming them would orphan the
+   seeded demo leagues and every league already mid-season for the sake of vocabulary the
+   database never shows anyone. The rename happens at this boundary: everything above
+   reads `redeploysLeft` and `redeployed`, and both spellings are accepted on the way in
+   so a league written under either one loads. */
 function royaleStatus(state) {
   const stored = (state && state.royale && state.royale.status) || {};
   const out = {};
-  const buybacks = settingsOf(state).buyback > 0 ? 1 : 0;
+  const allowance = settingsOf(state).buyback > 0 ? 1 : 0;
   for (const k of Object.keys((state && state.members) || {})) {
     const s = stored[k] || {};
+    const left = Number.isFinite(s.redeploysLeft) ? s.redeploysLeft
+               : Number.isFinite(s.buybacksLeft) ? s.buybacksLeft : allowance;
+    const back = Array.isArray(s.redeployed) ? s.redeployed
+               : Array.isArray(s.boughtBack) ? s.boughtBack : [];
     out[k] = {
       alive: s.alive !== false,
-      buybacksLeft: Number.isFinite(s.buybacksLeft) ? s.buybacksLeft : buybacks,
+      redeploysLeft: left,
+      redeployed: back,
+      // ⚠️ THE PARACHUTE. True once you have used your one way back, and it stays true
+      // for the rest of the season — it is not a status that clears. It marks you as the
+      // player for whom the next chop is final.
+      hasParachute: back.length > 0,
       chopped: Array.isArray(s.chopped) ? s.chopped : [],
-      boughtBack: Array.isArray(s.boughtBack) ? s.boughtBack : [],
       eliminatedWeek: s.eliminatedWeek ?? null,
     };
   }
@@ -4888,8 +4906,8 @@ const royaleAlive = (state, name) => {
 const royaleRoster = state => Object.entries(royaleStatus(state))
   .filter(([, s]) => s.alive).map(([k]) => k);
 
-/* Resolve one Royale week: decide the chop, mutate the roster, open the buy-back window,
-   and write an immutable record of how it was decided.
+/* Resolve one Royale week: decide the chop, re-deploy them if they still have one, and
+   write an immutable record of how it was decided.
 
    ⚠️ The chop record is written ONCE and never revised. It is the receipt for an
    elimination, and the reason `leversPassed` carries the tie-vs-unmeasurable distinction
@@ -4916,30 +4934,43 @@ async function royaleResolveWeek(env, lid, state) {
   const patch = {};
   const key = decided.choppedKey;
   if (key) {
-    const st = status[key] || { buybacksLeft: 0, chopped: [], boughtBack: [] };
-    patch[`royale/status/${key}/alive`] = false;
-    patch[`royale/status/${key}/eliminatedWeek`] = week;
+    const st = status[key] || { redeploysLeft: 0, chopped: [], redeployed: [] };
     patch[`royale/status/${key}/chopped`] = [...(st.chopped || []), week];
     rec.fundsNextTicket = decided.chopped;              // the standard-Bozo mechanic, kept
 
-    // The buy-back is offered only while there is still a league to come back to. At the
-    // final two a buy-back would mean nobody can ever be eliminated.
+    /* ⚠️ RE-DEPLOYED, NOT OFFERED. You do not get asked and you cannot decline — being
+       chopped with a re-deploy left puts you straight back on the next ticket. That is
+       the whole reason the timed window is gone: there is no decision left to defer to a
+       more convenient week.
+
+       ⚠️ NOT at the final two. A re-deploy there would mean the chop cannot resolve the
+       league, and the season would never end. Your last life is spent by being the last
+       one chopped, which is the correct place for it to run out. */
     const stillAlive = before.filter(k => k !== key).length;
-    const price = settingsOf(state).buyback;
-    if (price > 0 && (st.buybacksLeft || 0) > 0 && stillAlive > 1) {
-      patch[`royale/offers/${key}`] = {
-        week, price, expiresWeek: week + 1, resolved: false, offeredTs: Date.now(),
-      };
-      rec.buybackOffered = true;
+    const canRedeploy = (st.redeploysLeft || 0) > 0 && stillAlive > 1;
+
+    if (canRedeploy) {
+      patch[`royale/status/${key}/alive`] = true;
+      patch[`royale/status/${key}/redeploysLeft`] = (st.redeploysLeft || 0) - 1;
+      patch[`royale/status/${key}/buybacksLeft`] = (st.redeploysLeft || 0) - 1;  // legacy mirror
+      patch[`royale/status/${key}/redeployed`] = [...(st.redeployed || []), week];
+      patch[`royale/status/${key}/boughtBack`] = [...(st.redeployed || []), week]; // legacy mirror
+      patch[`royale/status/${key}/eliminatedWeek`] = null;
+      rec.redeployed = true;
+      rec.cost = settingsOf(state).buyback;
     } else {
-      rec.buybackOffered = false;
-      if ((st.buybacksLeft || 0) > 0) patch[`royale/status/${key}/buybacksLeft`] = 0;
-    }
-    const survivors = before.filter(k => k !== key);
-    if (survivors.length === 1 && !rec.buybackOffered) {
-      patch["royale/survivor"] = playerName(survivors[0]);
-      patch["royale/endedWeek"] = week;
-      rec.survivor = playerName(survivors[0]);
+      patch[`royale/status/${key}/alive`] = false;
+      patch[`royale/status/${key}/eliminatedWeek`] = week;
+      rec.redeployed = false;
+      // Out for good. The parachute they already used is what made this chop final.
+      rec.hadParachute = (st.redeployed || []).length > 0;
+
+      const survivors = before.filter(k => k !== key);
+      if (survivors.length === 1) {
+        patch["royale/survivor"] = playerName(survivors[0]);
+        patch["royale/endedWeek"] = week;
+        rec.survivor = playerName(survivors[0]);
+      }
     }
   }
   // ⚠️ "w" PREFIX, AND IT IS LOAD-BEARING. Firebase silently converts an object whose
@@ -4953,58 +4984,19 @@ async function royaleResolveWeek(env, lid, state) {
   return rec;
 }
 
-/* POST /bozo/buyback {league, action:"take"|"decline"} — the player's own call.
-   ⚠️ THE WINDOW IS THE LOAD-BEARING PART. Without "immediately or forfeited" a chopped
-   player could lurk, watch the field thin out, and re-enter at the final two — which is
-   strictly better than playing every week. The offer is written at the chop and dies at
-   the next lock; there is no menu item for it and no way to take it later. */
+/* POST /bozo/buyback — RETIRED.
+   The re-deploy is automatic now: being chopped with one left puts you straight back on
+   the next ticket, so there is nothing to accept or decline and no window to miss.
+
+   ⚠️ The route stays and answers honestly rather than being deleted. bozo.html is
+   served network-first with a cache fallback, so a phone that has not revalidated still
+   has the old prompt on it — and a button that falls through to the generic chat handler
+   tells the player nothing about why it stopped working. This does. */
 async function bozoBuyback(request, env, cors) {
-  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
-  const auth = await sessionAuth(request, env);
-  if (auth.err) return json({ error: auth.err }, auth.code, cors);
-  const { name } = auth;
-
-  let body;
-  try { body = await readBody(request); }
-  catch { return json({ error: "Bad JSON." }, 400, cors); }
-
-  const lid = leagueOf(body);
-  if (!lid) return json({ error: "Bad league id." }, 400, cors);
-
-  let state;
-  try { state = await loadLeague(env, lid); }
-  catch (e) { return json({ error: e.message }, 502, cors); }
-  if (!state) return json({ error: "No such league." }, 404, cors);
-  if (settingsOf(state).format !== "royale")
-    return json({ error: "Buy-backs only exist in Bozo Royale." }, 400, cors);
-
-  const key = encodeURIComponent(name);
-  const offer = ((state.royale || {}).offers || {})[key];
-  if (!offer || offer.resolved) return json({ error: "You don't have a buy-back on the table." }, 409, cors);
-  if ((state.week || 1) > offer.expiresWeek)
-    return json({ error: "That buy-back expired when the next ticket locked. It was a one-time call at the chop." }, 409, cors);
-
-  const take = body.action === "take";
-  const st = royaleStatus(state)[key] || { buybacksLeft: 0 };
-  if (take && st.buybacksLeft <= 0)
-    return json({ error: "You've already used your buy-back. One each, and that was it." }, 409, cors);
-
-  const patch = {
-    [`royale/offers/${key}/resolved`]: true,
-    [`royale/offers/${key}/took`]: take,
-    [`royale/offers/${key}/resolvedTs`]: Date.now(),
-  };
-  if (take) {
-    patch[`royale/status/${key}/alive`] = true;
-    patch[`royale/status/${key}/buybacksLeft`] = st.buybacksLeft - 1;
-    patch[`royale/status/${key}/eliminatedWeek`] = null;
-    patch[`royale/status/${key}/boughtBack`] = [...(st.boughtBack || []), state.week || 1];
-  } else {
-    patch[`royale/status/${key}/buybacksLeft`] = 0;   // declined is forfeited, not banked
-  }
-  try { await fbPatch(env, LG(lid), patch); }
-  catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
-  return json({ ok: true, took: take, price: settingsOf(state).buyback }, 200, cors);
+  return json({
+    error: "Buy-backs are gone. Get chopped with a re-deploy left and you come straight back, automatically — there is nothing to decide. Reload the page.",
+    retired: true, replacedBy: "automatic re-deploy",
+  }, 410, cors);
 }
 
 /* POST /bozo/close {league, row, close, closeOpp} — fill in a closing price by hand, on
@@ -8858,8 +8850,16 @@ const MCP_TOOLS = [
           alive: royaleRoster(lg).map(playerName),
           eliminated: Object.entries(royaleStatus(lg)).filter(([, s]) => !s.alive)
             .map(([k, s]) => ({ player: playerName(k), eliminatedWeek: s.eliminatedWeek })),
+          // ⚠️ A parachute means that player has already used their one way back, so the
+          // next chop ends them. It is the single most decision-relevant fact about a
+          // live Bozo Royale board.
+          parachutes: Object.entries(royaleStatus(lg)).filter(([, s]) => s.hasParachute)
+            .map(([k]) => playerName(k)),
           survivor: (lg.royale || {}).survivor || null,
-          buybackPrice: set.buyback,
+          redeployCost: set.buyback,
+          // ⚠️ Automatic, not a choice. Never describe a chopped Royale player as
+          // "deciding whether to buy back" — there is no decision to make.
+          redeployRule: "A chopped player with a re-deploy left comes straight back on the next ticket, automatically. One each. After that the parachute stays next to their name and the next chop is final.",
         } : null,
         // ⚠️ SAY SO IN EVERY ANSWER ABOUT THIS LEAGUE. A simulated season uses the real
         // eight names on purpose, which is exactly why it must never be quoted as a

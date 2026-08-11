@@ -784,8 +784,9 @@ table.clv-tbl .pos{color:var(--good)} table.clv-tbl .neg{color:var(--bad)}
 .legs .leg.dead{opacity:.55}
 .legs .leg.dead .mk{color:var(--bad)}
 .legs .pxv.dead{font:700 11px/1 ui-monospace,monospace;letter-spacing:1px;color:var(--bad)}
-/* The buy-back is a TIMED prompt, not a menu item — it appears at the chop and expires
-   at the next lock. It is styled to look like a decision, because that is what it is. */
+/* ⚠️ Retired styling kept only until every cached page has revalidated: the buy-back
+   prompt it dressed no longer exists. The re-deploy is automatic, so .redeploy below
+   is a statement of what happened to you, not a decision to make. */
 .buyback{border:2px solid var(--accent);border-radius:10px;padding:14px 16px;margin-bottom:18px;
   background:color-mix(in srgb, var(--accent) 8%, transparent)}
 .buyback h3{margin:0 0 6px;font-size:15px;font-weight:750;color:var(--ink-1)}
@@ -809,6 +810,14 @@ table.clv-tbl .pos{color:var(--good)} table.clv-tbl .neg{color:var(--bad)}
 .rosterline .rr.dead{opacity:.55;border-style:dashed}
 .rosterline .dead{font:700 9px/1 ui-monospace,monospace;letter-spacing:.8px;color:var(--bad)}
 .rosterline .bb{font:700 9px/1 ui-monospace,monospace;letter-spacing:.8px;color:var(--accent)}
+.rosterline .bb.last{color:var(--warn)}
+/* ⚠️ The parachute is a status, not decoration: it says the next chop ends that
+   player. Sized to the text it follows so it reads as part of the name. */
+.chute{font-size:12px;line-height:1;margin-left:3px;cursor:help}
+.redeploy{border:2px solid var(--accent);border-radius:10px;padding:14px 16px;margin-bottom:18px;
+  background:color-mix(in srgb, var(--accent) 8%, transparent)}
+.redeploy h3{margin:0 0 6px;font-size:15px;font-weight:750;color:var(--ink-1)}
+.redeploy p{margin:0;font-size:13px;color:var(--ink-2);line-height:1.6}
 /* ---- closing-price entry: the state of every leg, said out loud ---- */
 .gr.close{align-items:start}
 .gr.close input{width:96px}
@@ -2252,10 +2261,10 @@ STATE: everything saves in the browser on that device. A different device shows 
       <div class="f w2"><label>Format</label>
         <select id="nlFormat">
           <option value="standard">Standard — everyone plays every week, worst busts and wears it</option>
-          <option value="royale">Bozo Royale — one player chopped a week, last one standing takes the pot</option>
+          <option value="royale">Bozo Royale — one chopped a week, one re-deploy each, last one standing takes the pot</option>
         </select></div>
-      <div class="f" id="nlBuybackWrap" style="display:none"><label>Buy-back price ($)</label>
-        <input id="nlBuyback" type="number" min="0" step="5" value="25" placeholder="0 disables"></div>
+      <div class="f" id="nlBuybackWrap" style="display:none"><label>Re-deploy cost ($)</label>
+        <input id="nlBuyback" type="number" min="0" step="5" value="25" placeholder="0 = no re-deploys"></div>
       <div class="f w4"><div class="row" style="justify-content:flex-end">
         <button class="btn sm" id="nlGo">Create league</button></div></div>
     </div>
@@ -2361,7 +2370,7 @@ STATE: everything saves in the browser on that device. A different device shows 
          would retroactively change who should have been eliminated. -->
     <div class="rule-row" id="fmtRow"><span><span class="rl">Format</span><span class="rd" id="fmtDesc"></span></span>
       <span id="fmtCtl"></span></div>
-    <div class="rule-row" id="bbRow" style="display:none"><span><span class="rl">Buy-back price</span><span class="rd">what it costs a chopped player to come straight back. 0 turns buy-backs off entirely.</span></span>
+    <div class="rule-row" id="bbRow" style="display:none"><span><span class="rl">Re-deploy cost</span><span class="rd">get chopped with a re-deploy left and you are back on the next ticket automatically — nothing to accept, no window to miss. One each; after that the 🪂 stays beside your name and the next chop is final. 0 turns re-deploys off entirely.</span></span>
       <span><input id="sBuyback" type="number" min="0" step="5" style="width:88px"></span></div>
 
     <div class="rule-row"><span><span class="rl">Duplicate legs</span><span class="rd">not a setting any more — the ticket is one real DraftKings parlay, and DK rejects the same selection twice. Opposite sides of one market are refused too: both can’t cash, so the ticket could never win.</span></span>
@@ -2439,11 +2448,12 @@ STATE: everything saves in the browser on that device. A different device shows 
 <!-- ---------- hierarchy: the machine sits ABOVE the ticket now, because it is
      the frame you read the ticket through. It is visible on an OPEN board in an
      armed/idle state — the reels only STOP when the server has actually drawn. -->
-<!-- ---------- Bozo Royale: the buy-back window and the chop log ----------
-     The prompt is timed. It appears the moment you are chopped and dies at the next
-     lock — there is no menu item for it and no way to take it later. Without that
-     window a chopped player could lurk, watch the field thin, and re-enter at the final
-     two, which is strictly better than playing every week. -->
+<!-- ---------- Bozo Royale: re-deploys and the chop log ----------
+     ⚠️ Nothing here is a prompt. Get chopped with a re-deploy left and you are put back
+     on the next ticket automatically — the Warzone gulag, not a menu. This card reports
+     what already happened to you. The old buy-back needed a timed window to stop a
+     chopped player lurking and re-entering at the final two; taking the decision away
+     closes that by construction, because there is nothing left to defer. -->
 <div class="card" id="royaleCard" style="display:none">
   <div class="bz-hdr"><h2 class="bz" style="margin:0">Bozo Royale</h2><span class="tm" id="royaleState"></span></div>
   <div id="royaleBody"></div>
@@ -3185,7 +3195,7 @@ function paintSnav(v){
   const btn = (id,label,extra) =>
     `<button data-v="${esc(id)}"${v===id?' class="on"':''}>${esc(label)}${extra||''}</button>`;
   el.innerHTML = btn('board','The Board')
-    + names().map(p=>btn(p, teamOf(p), (ME&&p===ME.name)?'<span class="yu">— you</span>':'')).join('')
+    + names().map(p=>btn(p, teamOf(p), chute(p) + ((ME&&p===ME.name)?'<span class="yu">— you</span>':''))).join('')
     + btn('league','League');
 }
 document.getElementById('snav').addEventListener('click', e=>{
@@ -3423,6 +3433,19 @@ const isDemo   = () => settings().synthetic === true;
    where nobody is ever out. */
 const royaleOf = p => isRoyale() ? (((S.royale||{}).status||{})[kEnc(p)] || null) : null;
 const royaleAliveNames = () => names().filter(p=>{ const r=royaleOf(p); return !r || r.alive !== false; });
+/* ⚠️ THE PARACHUTE. Warzone rules: get chopped once and you are re-deployed straight back
+   onto the next ticket — automatically, no prompt, nothing to accept. What you carry
+   afterwards is this, and it means the next chop is the one that ends you.
+
+   Read from `redeployed` with a fallback to the old `boughtBack`, because leagues written
+   before the rename are still mid-season and their history is the same history. */
+const hasChute = p => {
+  const r = royaleOf(p); if(!r) return false;
+  const back = r.redeployed || r.boughtBack || [];
+  return back.length > 0;
+};
+// Suffix, not a replacement for the name — it has to compose with team names and YOU tags.
+const chute = p => hasChute(p) ? ' <span class="chute" title="Re-deployed. One chop from out.">🪂</span>' : '';
 
 function fillSettings(){
   const bd = band(), st = settings(), lg = league();
@@ -3699,7 +3722,7 @@ document.getElementById('forceLock').onclick = async (ev)=>{
   }catch(e2){ rosErr(e2.message); }
 };
 
-// The buy-back price only exists in Bozo Royale, so the field only exists there too.
+// The re-deploy cost only exists in Bozo Royale, so the field only exists there too.
 document.getElementById('nlFormat').onchange = e => {
   document.getElementById('nlBuybackWrap').style.display =
     e.target.value === 'royale' ? '' : 'none';
@@ -3820,9 +3843,9 @@ function paintSlip(players, picks, status, live){
       const rs = royaleOf(p);
       if(rs && rs.alive === false)
         return `<li class="leg dead"><span class="mk">✝</span>
-          <span><span class="who2">${esc(teamOf(p))}</span>
+          <span><span class="who2">${esc(teamOf(p))}${chute(p)}</span>
           <span class="sel">chopped in week ${rs.eliminatedWeek ?? '?'} · funds the ticket, doesn't bet on it</span></span>
-          <span class="rt"><span class="pxv dead">DEAD</span></span></li>`;
+          <span class="rt"><span class="pxv dead">OUT</span></span></li>`;
       return `<li class="${cls}"><span class="mk">${mark}</span>
         <span><span class="who2">${esc(teamOf(p))}</span>
         <span class="sel">no leg yet</span></span>
@@ -3832,7 +3855,7 @@ function paintSlip(players, picks, status, live){
       + (x.mkt==='prop' ? ' · prop' : x.mkt==='other' ? ' · other' : '')
       + (r.actual!=null ? ` · finished ${r.actual}` : '');
     return `<li class="${cls}"><span class="mk">${mark}</span>
-      <span><span class="who2">${esc(teamOf(p))}</span>
+      <span><span class="who2">${esc(teamOf(p))}${chute(p)}</span>
       <span class="sel">${esc(x.label)}</span>
       <span class="mkt">${sub}</span></span>
       <span class="rt"><span class="pxv">${x.price>0?'+':''}${x.price}</span>
@@ -4673,10 +4696,10 @@ async function paintGaps(){
    weeks both more common than this shows. The prop SD is the weakest number in the
    build. Say so whenever these numbers are quoted.
 
-   ⚠️ IT ASSUMES BUY-BACKS ARE ALWAYS TAKEN while one is available and the league is
-   still bigger than two. That is a behavioural assumption and it is stated in the
-   footnote rather than buried — a player who would decline is worse off in this model
-   than in reality, and the honest thing is to name the assumption rather than tune it. */
+   ⚠️ RE-DEPLOYS NEED NO ASSUMPTION. They used to: a buy-back was a choice, so the model
+   had to guess how often it was taken. It is automatic now, so the simulation does
+   exactly what the league does — one each, spent on the chop, never at the final two.
+   One fewer invented number. */
 const ROY_SIMS = 4000;
 
 /* One player's history, as a pool to resample from. */
@@ -4728,7 +4751,7 @@ function simulateRoyale(){
   if(players.length < 2) return { tooEarly: true, need: 'two players with graded legs' };
 
   const levers = (settings().levers || [0,1,2,3]).slice();
-  const buyback = settings().buyback > 0;
+  const redeploys = settings().buyback > 0;
   const status = royaleStatus_page();
 
   const wins = {}, nextChop = {}, aliveAt = {};
@@ -4737,7 +4760,8 @@ function simulateRoyale(){
 
   for(let s=0; s<ROY_SIMS; s++){
     let roster = players.slice();
-    const bb = {}; for(const p of players) bb[p] = buyback && (status[p]?.buybacksLeft ?? 0) > 0;
+    const bb = {}; for(const p of players)
+      bb[p] = redeploys && ((status[p]?.redeploysLeft ?? status[p]?.buybacksLeft ?? 0) > 0);
     for(let w=0; w<HORIZON && roster.length>1; w++){
       for(const p of roster) aliveAt[p][w]++;
       // draw one real past leg for each survivor, and redraw only its outcome
@@ -4768,7 +4792,8 @@ function simulateRoyale(){
         victim = pool[(Math.random()*pool.length)|0];    // every lever tied: coin flip
       }
       if(w===0) nextChop[victim]++;
-      if(bb[victim] && roster.length > 2){ bb[victim] = false; continue; }  // buys back
+      // ⚠️ Automatic and unconditional, matching the real rule — no probability here.
+      if(bb[victim] && roster.length > 2){ bb[victim] = false; continue; }  // re-deployed
       roster = roster.filter(p=>p!==victim);
     }
     if(roster.length===1) wins[roster[0]]++;
@@ -4783,7 +4808,7 @@ function simulateRoyale(){
     softLegs: players.reduce((a,p)=>a + pools[p].filter(l=>l.soft).length, 0),
     totalLegs: players.reduce((a,p)=>a + pools[p].length, 0),
     thin: thin,
-    buyback,
+    buyback: redeploys,
   };
 }
 // The page's own view of Royale status, keyed by display name rather than URL-encoded.
@@ -4812,33 +4837,36 @@ function paintRoyale(){
 
   let h = '';
 
-  /* ---- the buy-back prompt, if one is on the table for the signed-in player ---- */
-  const myKey = ME ? kEnc(ME.name) : null;
-  const offer = myKey ? (R.offers||{})[myKey] : null;
-  const expired = offer && (S.week||1) > offer.expiresWeek;
-  if(offer && !offer.resolved && !expired){
-    h += `<div class="buyback">
-      <h3>You were chopped. One buy-back, and it's now or never.</h3>
-      <p>Buying back costs <b>$${offer.price}</b> and puts you straight back on the ticket. Decline, or let this
-      expire when the next ticket locks, and you're out for good — a buy-back you can take later would just be
-      a free option to sit out the risky weeks and rejoin at the final two.</p>
-      <div class="row">
-        <button class="btn" id="bbTake">Buy back — $${offer.price}</button>
-        <button class="btn ghost sm" id="bbPass">Stay out</button>
-        <span class="tm">Expires when week ${offer.expiresWeek + 1} locks.</span>
-      </div>
-      <div class="err" id="bbErr"></div></div>`;
-  } else if(offer && (offer.resolved || expired) && offer.took === false){
-    h += `<p class="note">Your buy-back ${offer.forfeited || expired ? 'expired unused' : 'was declined'} — that was the only one.</p>`;
+  /* ---- were you re-deployed? ----
+     ⚠️ NOT A PROMPT. There used to be a timed buy-back offer here with Take and Decline
+     buttons and an expiry. The re-deploy is automatic, so there is nothing to press —
+     this just tells you what already happened to you and what it costs you next time. */
+  const chopsList = Object.values(R.chops||{}).filter(c=>c&&c.week).sort((a,b)=>b.week-a.week);
+  const mine = ME ? chopsList.find(c=>c.chopped===ME.name) : null;
+  // ⚠️ Both spellings again — a chop written before the rename says `boughtBack`.
+  if(mine && (mine.redeployed ?? mine.boughtBack) && ME && hasChute(ME.name)){
+    h += `<div class="redeploy">
+      <h3>🪂 You were chopped in week ${mine.week} — and re-deployed.</h3>
+      <p>You're back on the next ticket automatically${mine.cost?` for <b>$${mine.cost}</b>`:''}, and you funded
+      that ticket on the way through. There was nothing to accept: waiting is the one thing a way back can't
+      allow, or you'd sit out the ugly weeks and drop in at the final two.
+      <b>That was your one.</b> The parachute stays next to your name now, and the next chop is the end of it.</p>
+    </div>`;
+  } else if(ME && royaleOf(ME.name)?.alive === false){
+    const out = chopsList.find(c=>c.chopped===ME.name);
+    h += `<p class="note">You were chopped in week ${out?out.week:'?'} and you'd already used your re-deploy —
+      that's the season. You still show on the board, the ledger and the chart; your line just stops.</p>`;
   }
 
   /* ---- who is left, and who isn't ---- */
   h += `<div class="rosterline">` + names().map(p=>{
     const r = royaleOf(p);
     const dead = r && r.alive === false;
-    return `<span class="rr${dead?' dead':''}">${esc(teamOf(p))}`
-      + (dead?`<span class="dead">DEAD · WK ${r.eliminatedWeek??'?'}</span>`:'')
-      + (r && r.buybacksLeft>0 && !dead?'<span class="bb">buy-back available</span>':'')
+    return `<span class="rr${dead?' dead':''}">${esc(teamOf(p))}${chute(p)}`
+      + (dead?`<span class="dead">OUT · WK ${r.eliminatedWeek??'?'}</span>`:'')
+      // ⚠️ "one left" is a fact, not an offer. There is no button.
+      + (!dead && !hasChute(p) ? '<span class="bb">re-deploy in hand</span>' : '')
+      + (!dead && hasChute(p) ? '<span class="bb last">last life</span>' : '')
       + `</span>`;
   }).join('') + `</div>`;
 
@@ -4861,7 +4889,14 @@ function paintRoyale(){
           + `</span>` : '';
       return `<li>Week ${c.week} — <span class="who">${esc(teamOf(c.chopped))}</span>`
         + ` <span class="by">by ${esc(c.decidedBy||'—')}</span>${passed}`
-        + (c.buybackOffered ? ' · was offered a buy-back' : '')
+        // ⚠️ Read both spellings. Chop records written before the rename say `boughtBack`,
+        // and they are the same event — a player who came back. Reading only the new name
+        // silently relabels every historical re-deploy as "out for good", which is a
+        // false statement about a season that actually happened.
+        + ((c.redeployed ?? c.boughtBack)
+            ? ' · 🪂 re-deployed'
+            : ((c.hadParachute || (c.buybackForfeited === undefined && c.chopped && royaleOf(c.chopped) && hasChute(c.chopped)))
+                ? ' · out for good, chute already spent' : ' · out for good'))
         + (c.survivor ? ` · <b>${esc(teamOf(c.survivor))} takes the pot</b>` : '')
         + `</li>`;
     }).join('') + `</ol></div>`;
@@ -4870,24 +4905,16 @@ function paintRoyale(){
   h += `<p class="note">One chop a week, ranked by that week's drawn lever hierarchy — the first lever that
     produces a unique worst decides it. If the ticket cashes, nobody goes and the pot carries. The chopped
     player funds the next ticket, then spectates. Last one standing takes the pot.
-    ${price>0?`Buy-back is $${price}, one each, taken at the chop or forfeited.`:'Buy-backs are disabled in this league.'}</p>`;
+    ${price>0?`Get chopped with a re-deploy left and you're back on the next ticket automatically — one each,
+    $${price}, no decision to make. After that the 🪂 stays next to your name and the next chop is final.`
+    :'No re-deploys in this league: one chop and you are out.'}</p>`;
 
   document.getElementById('royaleBody').innerHTML = h;
-
-  const take = document.getElementById('bbTake'), pass = document.getElementById('bbPass');
-  const bbGo = async action => {
-    const e = document.getElementById('bbErr');
-    if(e){ e.className='err'; e.textContent=''; }
-    if(take) take.disabled = true; if(pass) pass.disabled = true;
-    try{ await wPost('/bozo/buyback', { action }); await refresh(); }
-    catch(err){ if(e) e.textContent = err.message;
-      if(take) take.disabled=false; if(pass) pass.disabled=false; }
-  };
-  if(take) take.onclick = ()=>bbGo('take');
-  if(pass) pass.onclick = ()=>{
-    if(confirm('Stay out for good? Your buy-back is spent either way — it cannot be saved for a later week.'))
-      bbGo('decline');
-  };
+  /* ⚠️ There are no handlers here on purpose. This card used to wire up Take and Decline
+     buttons against /bozo/buyback; the re-deploy is automatic, so there is nothing to
+     click and that route is retired. If you find yourself adding a button back, the
+     question to answer first is what a player would be deciding — because the moment
+     there is a decision, the lurk-and-re-enter-at-the-final-two hole reopens. */
 }
 
 /* ==================== CLV vs. result ====================
@@ -5168,8 +5195,9 @@ function clvRenderLegend(){
       + ` aria-pressed="${on}" title="Click to focus · shift-click to hide">`
       + `<svg width="15" height="15" viewBox="-8 -8 16 16">${clvGlyph(p,5.4)}</svg>`
       + `<span>${esc(teamOf(p))}</span>`
+      + (hasChute(p)?'<span class="chute" title="Re-deployed. One chop from out.">🪂</span>':'')
       + (CLV.me===p?'<span class="me">YOU</span>':'')
-      + (dead?`<span class="dead">DEAD · WK ${rs.eliminatedWeek??'?'}</span>`:'')
+      + (dead?`<span class="dead">OUT · WK ${rs.eliminatedWeek??'?'}</span>`:'')
       + `</button>`;
   }).join('') + `<button class="pchip" data-p="__all" data-on="true" data-sel="false" title="Show everyone">All</button>`;
 
@@ -5350,7 +5378,7 @@ function paintSurvival(){
     `<tbody><tr><th>Who</th><th>Chopped next week</th><th>Takes the pot</th><th>Legs resampled</th></tr>`
     + ordered.map(p=>{
         const pool = royalePool(p);
-        return `<tr><td>${esc(teamOf(p))}${p===(ME&&ME.name)?' <span class="me">· you</span>':''}</td>
+        return `<tr><td>${esc(teamOf(p))}${chute(p)}${p===(ME&&ME.name)?' <span class="me">· you</span>':''}</td>
           <td>${pct(R.nextChop[p])}</td><td>${pct(R.win[p])}</td>
           <td class="tm">${pool.length}${pool.length<3?' — thin':''}</td></tr>`;
       }).join('') + `</tbody>`;
@@ -5365,8 +5393,9 @@ function paintSurvival(){
     + `land on the same game most weeks. That correlation makes both clean weeks and bloodbaths more common than `
     + `this shows, so the middle of this chart is too smooth. Prop and “other” legs take their Worst Beat margin `
     + `from their own price, since a binary leg has none of its own.`
-    + (R.buyback ? ` Buy-backs are assumed <b>always taken</b> while one is available and more than two players `
-      + `remain; someone who would decline is worse off in reality than here.` : ` Buy-backs are off in this league.`)
+    + (R.buyback ? ` Re-deploys need no assumption any more: they are automatic, so the simulation does exactly `
+      + `what the league does — one each, spent on the chop, never at the final two.`
+      : ` No re-deploys in this league: one chop and you are out.`)
     + (R.softLegs ? `<br><br><b>${R.softLegs} of ${R.totalLegs} resampled legs have no captured close</b>, so their `
       + `win probability comes from the entry price instead — a self-reported number. Those legs flatter whoever `
       + `entered them optimistically.` : '');
