@@ -809,6 +809,23 @@ table.clv-tbl .pos{color:var(--good)} table.clv-tbl .neg{color:var(--bad)}
 .rosterline .rr.dead{opacity:.55;border-style:dashed}
 .rosterline .dead{font:700 9px/1 ui-monospace,monospace;letter-spacing:.8px;color:var(--bad)}
 .rosterline .bb{font:700 9px/1 ui-monospace,monospace;letter-spacing:.8px;color:var(--accent)}
+/* ---- closing-price entry: the state of every leg, said out loud ---- */
+.gr.close{align-items:start}
+.gr.close input{width:96px}
+.cst{display:inline-block;margin-left:8px;font:700 9px/1 ui-monospace,monospace;letter-spacing:.7px;
+  text-transform:uppercase;padding:3px 6px;border-radius:4px;background:var(--grid);color:var(--ink-3)}
+.cst.ok{color:var(--good)}
+/* ⚠️ Amber, not green: one side of a market is NOT a usable close. It cannot be
+   de-vigged, so the chart discards it exactly as if the box were empty — and a green
+   chip there would tell the manager the job was done when it wasn't. */
+.cst.warn{background:color-mix(in srgb, var(--warn) 22%, transparent);color:var(--warn)}
+.cst.bad{background:color-mix(in srgb, var(--bad) 18%, transparent);color:var(--bad)}
+.gr.close .why{display:block;margin-top:3px;font-size:11px;color:var(--ink-3);line-height:1.5;max-width:52ch}
+table.gaptbl th{font:650 10px/1 ui-monospace,monospace;letter-spacing:.7px;text-transform:uppercase;
+  color:var(--ink-3);text-align:left;padding:6px 8px;white-space:nowrap}
+table.gaptbl td{padding:6px 8px;border-top:1px solid var(--grid);vertical-align:top;font-size:12.5px}
+table.gaptbl input{width:82px}
+table.gaptbl .gwhy{font-size:11px;color:var(--ink-3);margin-top:2px;max-width:46ch;line-height:1.45}
 /* ---- league switcher ---- */
 .lgbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
 .lgbar select{background:var(--surface-1);border:1px solid var(--grid);color:var(--ink-1);
@@ -2384,6 +2401,14 @@ STATE: everything saves in the browser on that device. A different device shows 
     <div id="jlOut"></div>
     <div class="err" id="jlErr"></div>
 
+    <!-- ⚠️ Reaches the LEDGER, not this week's board. The grade card only ever shows the
+         current week, so without this a close the capture missed in week 3 becomes
+         unfillable the moment week 4 opens. -->
+    <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:22px 0 4px">Missing closing prices</h3>
+    <p class="note" id="gapNote" style="margin:0 0 8px"></p>
+    <div id="gapBody"></div>
+    <div class="err" id="gapErr"></div>
+
     <div id="lockRow" style="display:none;margin-top:18px;border-top:1px solid var(--grid);padding-top:14px">
       <div class="row" style="align-items:center;gap:10px">
         <button class="btn ghost sm" id="forceLock">Place the ticket now</button>
@@ -3128,7 +3153,11 @@ function render(){
   document.getElementById('sheetCard').style.display = players.includes(v) ? '' : 'none';
   if(players.includes(v)) paintSheet(v);
   document.getElementById('leagueCard').style.display = v==='league' ? '' : 'none';
-  if(v==='league') paintLeague();
+  if(v==='league'){ paintLeague();
+    // Manager-only, and it reaches every week rather than just this one.
+    if(canManage(league()||{})) paintGaps();
+    else { const b=document.getElementById('gapBody'); if(b) b.innerHTML=''; }
+  }
 
   paintSlip(players, picks, status, live);
 
@@ -4225,12 +4254,49 @@ function paintManual(live){
       need.map(x=>`<div class="gr"><span><b>${esc(x.p)}</b> <span class="pk">${esc(x.label)}</span></span>
         <select data-w="${esc(x.p)}"><option value="">—</option><option value="1">Won</option><option value="0">Lost</option></select>
         <input type="number" step="0.5" data-a="${esc(x.p)}" placeholder="actual"></div>`).join('') : '')
-    + `<div class="lil" style="margin:14px 0 6px">Closing prices — from the placed-ticket screenshot (optional)</div>`
-    + live.map(x=>`<div class="gr"><span><b>${esc(x.p)}</b> <span class="pk">${esc(x.label)}</span></span>
-        <span class="tm">took ${x.price}</span>
-        <input type="number" step="5" data-c="${esc(x.p)}" placeholder="close" value="${((S.results||{})[x.p]||{}).close ?? ''}"></div>`).join('')
+    + paintCloses(live)
     + `<div class="row" style="margin-top:14px"><button class="btn" id="finish">Name the bozo</button></div>`;
   document.getElementById('finish').onclick = decide;
+}
+
+/* Closing prices, with the capture's own status shown per leg.
+   ⚠️ BOTH SIDES OR NEITHER. A close on its own cannot be de-vigged, and the chart drops
+   an un-de-viggable leg exactly as if nothing had been entered — so a manager who filled
+   in one box would see no change and reasonably conclude the feature was broken. The
+   second box is not optional detail; it is what makes the first box count. */
+function paintCloses(live){
+  const res = S.results || {};
+  const rows = live.map(x=>{
+    const r = res[x.p] || {};
+    const has = r.close != null;
+    const missing = has && r.closeOpp == null;
+    const state = has
+      ? (missing
+          ? `<span class="cst warn">needs the other side</span>`
+          : `<span class="cst ok">${r.closeSource==='sgo'?'captured at kickoff':'entered by hand'}</span>`)
+      : (r.closeUnavailableReason
+          ? `<span class="cst bad" title="${esc(r.closeUnavailableReason)}">not captured — fill it in</span>`
+          : `<span class="cst">waiting on kickoff</span>`);
+    // ⚠️ A captured close is immutable and the Worker will ignore an edit to it. Say so
+    // by disabling the box rather than accepting a change that silently does nothing.
+    const locked = r.closeObservedAt != null;
+    return `<div class="gr close"><span><b>${esc(x.p)}</b> <span class="pk">${esc(x.label)}</span>${state}
+        ${r.closeUnavailableReason?`<span class="why">${esc(r.closeUnavailableReason)}</span>`:''}</span>
+      <span class="tm">took ${x.price} / ${x.entryPriceOpp ?? '—'}</span>
+      <input type="number" step="5" data-c="${esc(x.p)}" placeholder="close" ${locked?'disabled':''}
+        value="${r.close ?? ''}">
+      <input type="number" step="5" data-co="${esc(x.p)}" placeholder="other side" ${locked?'disabled':''}
+        value="${r.closeOpp ?? ''}"></div>`;
+  }).join('');
+
+  const gaps = live.filter(x=>{ const r=res[x.p]||{}; return r.close==null || r.closeOpp==null; }).length;
+  const banner = gaps
+    ? `<div class="warnbox" style="display:block;margin-bottom:10px"><b>${gaps} leg${gaps===1?'':'s'} ${gaps===1?'has':'have'} no usable closing price.</b>
+        A leg needs BOTH sides to be de-vigged — with one side only it is dropped from the CLV chart and from
+        <i>n</i>, exactly as if it had none. Read them off the placed ticket and fill both boxes.</div>`
+    : `<div class="lil" style="margin:14px 0 6px">Closing prices — all present</div>`;
+
+  return `<div class="lil" style="margin:16px 0 6px">Closing prices</div>` + banner + rows;
 }
 async function decide(){
   const e=document.getElementById('gerr'); e.className='err'; e.textContent='';
@@ -4239,8 +4305,13 @@ async function decide(){
     results[s.dataset.w]=results[s.dataset.w]||{}; results[s.dataset.w].won = s.value==='1'; });
   document.querySelectorAll('[data-a]').forEach(i=>{ if(i.value===''){return;}
     results[i.dataset.a]=results[i.dataset.a]||{}; results[i.dataset.a].actual=+i.value; });
-  document.querySelectorAll('[data-c]').forEach(i=>{ const p=i.dataset.c;
+  // ⚠️ A disabled box is a close the cron already captured. Skip it rather than sending
+  // its value back — the Worker ignores edits to a captured close anyway, and reading a
+  // disabled field just to have it rejected invites someone to "fix" the wrong end later.
+  document.querySelectorAll('[data-c]').forEach(i=>{ if(i.disabled) return; const p=i.dataset.c;
     results[p]=results[p]||{}; results[p].close = i.value===''?null:+i.value; });
+  document.querySelectorAll('[data-co]').forEach(i=>{ if(i.disabled) return; const p=i.dataset.co;
+    results[p]=results[p]||{}; results[p].closeOpp = i.value===''?null:+i.value; });
 
   const picks=S.picks||{};
   let pool = Object.keys(picks).filter(p => (results[p]||{}).won === false);
@@ -4349,6 +4420,58 @@ window.onDDAuth = function(){
   ME = loadSession();
   renderAuth();
 };
+
+/* ---------------- missing closing prices, across the whole season ----------------
+   The grade card can only see the current week — bozoNext clears /results when the week
+   advances. This reads the LEDGER, which keeps every row forever, so a gap from any week
+   is still fillable months later. */
+async function paintGaps(){
+  const body = document.getElementById('gapBody'), note = document.getElementById('gapNote');
+  if(!body) return;
+  let j;
+  try{ j = await wGet('/bozo/close-gaps?league='+encodeURIComponent(LID)); }
+  catch(e){ note.textContent = 'Could not load: '+e.message; body.innerHTML=''; return; }
+
+  const fillable = j.rows.filter(r=>!r.locked);
+  note.innerHTML = j.gaps === 0
+    ? `Every graded leg has both sides of its close. Nothing to fill in.`
+    : `<b>${j.gaps} of ${j.total} legs</b> have no usable closing price. A leg needs <b>both sides</b> to be
+       de-vigged — with one side only it is dropped from the CLV chart and from <i>n</i>, exactly as if it had
+       none. Read them off the placed ticket. Captured closes are locked and can't be edited.`;
+  if(!fillable.length){ body.innerHTML=''; return; }
+
+  body.innerHTML = `<div class="tscroll"><table class="bz gaptbl"><tbody>
+    <tr><th>Wk</th><th>Who</th><th>Leg</th><th>Took</th><th>Close</th><th>Other side</th><th></th></tr>`
+    + fillable.map(r=>`<tr data-row="${esc(r.row)}">
+        <td>${r.week}</td><td>${esc(teamOf(r.player))}</td>
+        <td>${esc(r.label)}<div class="gwhy">${esc(r.reason||'no close captured yet')}</div></td>
+        <td class="px">${r.price ?? '—'} / ${r.priceOpp ?? '—'}</td>
+        <td><input type="number" step="5" class="gc" placeholder="close" value="${r.close ?? ''}"></td>
+        <td><input type="number" step="5" class="go" placeholder="other" value="${r.closeOpp ?? ''}"></td>
+        <td><button class="btn ghost sm gsave">Save</button></td></tr>`).join('')
+    + `</tbody></table></div>`;
+
+  body.querySelectorAll('.gsave').forEach(btn=>{
+    btn.onclick = async ()=>{
+      const tr = btn.closest('tr'), e = document.getElementById('gapErr');
+      e.className='err'; e.textContent='';
+      const close = tr.querySelector('.gc').value, opp = tr.querySelector('.go').value;
+      // ⚠️ Checked here as well as on the server, because the failure is invisible
+      // otherwise: a one-sided close saves fine and then never appears on the chart.
+      if((close==='') !== (opp==='')){
+        e.textContent = 'Both sides, or neither. One side alone can’t be de-vigged, so the leg stays off the chart.';
+        return;
+      }
+      btn.disabled = true;
+      try{
+        await wPost('/bozo/close', { league: LID, row: tr.dataset.row,
+          close: close===''?null:+close, closeOpp: opp===''?null:+opp });
+        await paintGaps();
+        await refresh();
+      }catch(err){ e.textContent = err.message; btn.disabled = false; }
+    };
+  });
+}
 
 /* ==================== Bozo Royale ====================
    A second ruleset over the same legs, prices, closes and chart. What changes is the

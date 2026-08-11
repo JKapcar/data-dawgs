@@ -708,6 +708,8 @@ export default {
     if (url.pathname === "/bozo/next")    return bozoNext(request, env, cors);
     if (url.pathname === "/bozo/buyback") return bozoBuyback(request, env, cors);
     if (url.pathname === "/bozo/clv")     return bozoClv(request, url, env, cors);
+    if (url.pathname === "/bozo/close")   return bozoCloseFill(request, env, cors);
+    if (url.pathname === "/bozo/close-gaps") return bozoCloseGaps(request, url, env, cors);
     if (url.pathname === "/bozo/config")  return bozoConfigSet(request, env, cors);
     if (url.pathname === "/tts")          return handleTts(request, env, cors);
     if (url.pathname === "/tts/models")   return ttsModels(request, env, cors);
@@ -4093,13 +4095,20 @@ function ledgerGradeUpdate(season, week, results, bozo, picks, have) {
     }
     if (r.actual !== undefined) upd[`${k}/actual`] = r.actual ?? null;
 
-    // ⚠️ A CAPTURED CLOSE IS IMMUTABLE AND OUTRANKS ANYTHING TYPED IN LATER. The cron
-    // snapped it at kickoff off a licensed feed and stamped a server clock; a manager
-    // grading on Monday is recalling a number, at best. Once closeObservedAt exists on
-    // the row, the grade stage does not touch the close columns at all — which also
-    // means re-grading a week to fix a result can never silently rewrite its prices.
+    /* ⚠️ A CAPTURED CLOSE IS IMMUTABLE AND OUTRANKS ANYTHING TYPED IN LATER. The cron
+       snapped it at kickoff off a licensed feed and stamped a server clock; a manager
+       grading on Monday is recalling a number, at best. Once closeObservedAt exists the
+       grade stage does not touch the close columns — so re-grading a week to fix a
+       result can never silently rewrite its prices.
+
+       ⚠️ BUT "UNAVAILABLE" IS NOT "CAPTURED", and conflating the two locked out the one
+       case that most needs a human: the cron couldn't match the market, so the leg has a
+       reason and no price, and a manager reading it off the placed ticket is the ONLY
+       way it will ever have one. A row with a reason and no observation is fillable.
+       Filling it clears the reason, because the reason described a gap that no longer
+       exists — and closeSource keeps the two provenances apart forever. */
     const row = (have || {})[k] || {};
-    const capturedAlready = row.closeObservedAt != null || row.closeUnavailableReason != null;
+    const capturedAlready = row.closeObservedAt != null;
 
     if (!capturedAlready) {
       if (r.close !== undefined) {
@@ -4107,9 +4116,18 @@ function ledgerGradeUpdate(season, week, results, bozo, picks, have) {
         // ⚠️ Record WHERE a close came from. Hand-entered and cron-captured closes must
         // never end up silently mixed in the same column.
         upd[`${k}/closeSource`] = r.close == null ? null : (r.closeSource || "manual");
+        // A hand-entered close is still DraftKings' number — it is read off the placed
+        // ticket — so the book is the same. What differs is who observed it, and that is
+        // what closeSource carries.
+        if (r.close != null) {
+          upd[`${k}/closeBook`] = r.closeBook || "draftkings";
+          // The gap is filled, so the note describing the gap goes.
+          upd[`${k}/closeUnavailableReason`] = null;
+        }
       }
-      // The opposite side and the book travel with the close or not at all — a close
-      // with no opposite side cannot be de-vigged, and the chart has to know that.
+      // ⚠️ The opposite side travels with the close or the close is useless. Without it
+      // there is no de-vig, and the chart drops the leg exactly as if nothing had been
+      // entered — which looks like the manual fill silently failed.
       if (r.closeOpp !== undefined) upd[`${k}/closeOpp`] = r.closeOpp ?? null;
       if (r.closeBook !== undefined) upd[`${k}/closeBook`] = r.closeBook ?? null;
       if (r.closeObservedAt !== undefined) upd[`${k}/closeObservedAt`] = r.closeObservedAt ?? null;
@@ -4978,6 +4996,115 @@ async function bozoBuyback(request, env, cors) {
   try { await fbPatch(env, LG(lid), patch); }
   catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
   return json({ ok: true, took: take, price: settingsOf(state).buyback }, 200, cors);
+}
+
+/* POST /bozo/close {league, row, close, closeOpp} — fill in a closing price by hand, on
+   any week, long after that week has rolled over.
+
+   ⚠️ THIS EXISTS BECAUSE THE GRADE CARD CANNOT REACH BACKWARDS. bozoNext clears
+   /results when the week advances, so the grading UI only ever shows the current week —
+   and a leg the capture missed in week 3 would be permanently unfillable by the time
+   anyone noticed. The ledger keeps the row forever; this is the door to it.
+
+   ⚠️ A CAPTURED CLOSE IS STILL IMMUTABLE. If closeObservedAt is set, the cron observed
+   that price at kickoff off a licensed feed and stamped a server clock. Nothing typed in
+   afterwards outranks that, and this route refuses rather than quietly declining.
+
+   ⚠️ Both sides or nothing. A close with no opposite side cannot be de-vigged, so it is
+   not a usable close — accepting one alone would write a row that looks filled and is
+   still invisible to the chart.
+
+   ⚠️ closeSource stays "manual" forever. A number read off a bet slip and a number
+   snapped from the feed are different kinds of evidence and must never become
+   indistinguishable in the column that records where closes come from. */
+async function bozoCloseFill(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const lid = leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+  const auth = await requireManager(request, env, lid);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  const rowKey = String(body.row || "");
+  if (!/^[\w%.-]+$/.test(rowKey)) return json({ error: "Bad ledger row key." }, 400, cors);
+
+  let row;
+  try { row = (await fbGet(env, LG(lid) + "/ledger/" + rowKey)).data; }
+  catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+  if (!row) return json({ error: "No such ledger row." }, 404, cors);
+
+  if (row.closeObservedAt != null)
+    return json({ error: "That close was captured at kickoff from the book and can't be overwritten." }, 409, cors);
+
+  // Clearing is allowed — sending both as null undoes a mistyped entry.
+  const clear = body.close == null && body.closeOpp == null;
+  const close = Math.round(Number(body.close)), closeOpp = Math.round(Number(body.closeOpp));
+  if (!clear) {
+    if (!Number.isFinite(close) || Math.abs(close) < 100)
+      return json({ error: "The closing price has to be a real American price (±100 or wider)." }, 400, cors);
+    if (!Number.isFinite(closeOpp) || Math.abs(closeOpp) < 100)
+      return json({ error: "The other side is required — without it the price can't be de-vigged, and the leg stays off the chart either way." }, 400, cors);
+  }
+
+  const patch = clear
+    ? { close: null, closeOpp: null, closeBook: null, closeSource: null,
+        closeEnteredBy: null, closeEnteredTs: null }
+    : { close, closeOpp, closeBook: "draftkings", closeSource: "manual",
+        closeUnavailableReason: null,
+        closeEnteredBy: auth.name, closeEnteredTs: Date.now() };
+
+  try { await fbPatch(env, LG(lid) + "/ledger/" + rowKey, patch); }
+  catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+
+  // Mirror onto the live week if this row is the current one, so the board agrees.
+  const state = auth.league;
+  const parts = rowKey.split("-w");
+  if (parts.length === 2) {
+    const [wk, pKey] = parts[1].split("-");
+    if (Number(wk) === (state.week || 1) && (state.picks || {})[pKey]) {
+      try { await fbPatch(env, LG(lid) + "/results/" + pKey, clear
+        ? { close: null, closeOpp: null, closeBook: null, closeSource: null }
+        : { close, closeOpp, closeBook: "draftkings", closeSource: "manual", closeUnavailableReason: null }); }
+      catch (e) { /* the ledger is the receipt; the live mirror is a convenience */ }
+    }
+  }
+  return json({ ok: true, row: rowKey, close: clear ? null : close, closeOpp: clear ? null : closeOpp }, 200, cors);
+}
+
+/* GET /bozo/close-gaps?league=<id> — every ledger row still missing a usable close.
+   Public, like the rest of the board. "Usable" means BOTH sides present: one side alone
+   cannot be de-vigged and is dropped by the chart, so it belongs on this list. */
+async function bozoCloseGaps(request, url, env, cors) {
+  const lid = validLeagueId(url.searchParams.get("league") || "") ? url.searchParams.get("league") : DEFAULT_LEAGUE;
+  let lg, ledger = {};
+  try {
+    lg = await loadLeague(env, lid);
+    if (!lg) return json({ error: "No such league." }, 404, cors);
+    ledger = (await fbGet(env, LG(lid) + "/ledger")).data || {};
+  } catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+
+  const gaps = Object.entries(ledger)
+    .filter(([, r]) => r && (r.close == null || r.closeOpp == null))
+    .map(([row, r]) => ({
+      row, week: r.week, player: r.player, label: r.label, sport: r.sport,
+      game: r.game, price: r.price, priceOpp: r.priceOpp ?? null,
+      close: r.close ?? null, closeOpp: r.closeOpp ?? null,
+      reason: r.closeUnavailableReason || null,
+      // A row the cron observed is not fillable, and the UI needs to know before it
+      // offers a box that would be refused.
+      locked: r.closeObservedAt != null,
+      result: r.result || null,
+    }))
+    .sort((a, b) => (a.week - b.week) || String(a.player).localeCompare(String(b.player)));
+
+  return json({
+    league: lid, synthetic: lg.synthetic === true,
+    total: Object.keys(ledger).length, gaps: gaps.length, rows: gaps,
+    note: "A leg needs BOTH sides of the closing market to be de-vigged. One side alone is dropped from the CLV chart and from n, exactly as if there were no close at all.",
+  }, 200, cors);
 }
 
 /* ========================== /bozo/grade, /bozo/next ======================= */
