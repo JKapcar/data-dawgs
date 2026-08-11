@@ -2294,42 +2294,28 @@ async function leagueCreate(request, env, cors) {
    ⚠️ Import is create-only. It refuses an existing id rather than merging, because a
    half-simulated real league is not a state anyone could reason about afterwards.
 
+   ⚠️ IT ARRIVES IN BATCHES, because a season does not fit in one request. MAX_BODY is
+   24 KB and the standard demo season is 112 KB of JSON. That limit is a shared defence
+   on every route in this Worker, so it is NOT raised for one admin convenience — the
+   caller sends the metadata plus a first slice, then appends the rest.
+
+   The first call creates the league with `importing: true`. Appends are only accepted
+   onto a league that is BOTH synthetic and still importing, which is what stops this
+   route from being a way to inject fabricated rows into a real league's ledger. The
+   final call clears the flag.
+
    ⚠️ The simulator that produces this payload is NOT wired into any production path. It
    is run by hand and its output posted here once. */
-async function leagueImport(request, env, cors) {
-  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
-  const auth = await requireAdmin(request, env);
-  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
-
-  let body;
-  try { body = await readBody(request); }
-  catch { return json({ error: "Bad JSON." }, 400, cors); }
-
-  const id = String(body.id || body.league || "").toLowerCase().trim();
-  if (!validLeagueId(id)) return json({ error: "League id must be 2–24 chars: lowercase letters, numbers and dashes." }, 400, cors);
-
-  let leagues;
-  try { leagues = await loadLeagues(env); }
-  catch (e) { return json({ error: e.message }, 502, cors); }
-  if (leagues[id]) return json({ error: "A league with that id already exists. Delete it first — import never merges." }, 409, cors);
-
-  const legs = Array.isArray(body.legs) ? body.legs : [];
-  if (!legs.length) return json({ error: "Nothing to import — no legs in the payload." }, 400, cors);
-  if (legs.length > 4000) return json({ error: "That payload is too large for one import." }, 413, cors);
-
-  const season = Number(body.season) || SEASON;
-  const format = body.format === "royale" ? "royale" : "standard";
-  const players = [...new Set(legs.map(l => String(l.player || "")).filter(Boolean))].sort();
-  const members = {};
-  for (const p of players) members[encodeURIComponent(p)] = true;
-
+/* Turn simulator legs into ledger rows. Shared by the create call and every append, so
+   a row written in batch 1 and a row written in batch 7 are built by the same code. */
+function leagueImportRows(id, season, legs) {
   const RESULT = { win: "won", loss: "lost", push: "push" };
-  const ledger = {};
-  for (const l of legs) {
+  const rows = {};
+  for (const l of (legs || [])) {
+    if (!l || !l.player) continue;
     const key = encodeURIComponent(String(l.player));
     const week = Number(l.week) || 1;
-    const ts = Date.parse(l.entrySubmittedAt || "") || null;
-    ledger[ledgerKey(season, week, key)] = {
+    rows[ledgerKey(season, week, key)] = {
       league: id, season, week, player: String(l.player),
       sport: l.sport, eventId: String(l.eventId || ""), game: l.game || "",
       mkt: l.mkt, side: String(l.side ?? ""), dir: (l.side === "over" || l.side === "under") ? l.side : "over",
@@ -2340,7 +2326,8 @@ async function leagueImport(request, env, cors) {
       selectionKey: l.selectionKey || null,
       startsAt: null,                           // no capture will ever run on these
       dkSgpEligible: l.dkSgpEligible === true ? "asserted" : (l.dkSgpEligible || null),
-      mainLine: null, ts,
+      mainLine: null,
+      ts: Date.parse(l.entrySubmittedAt || "") || null,
       close: l.closePrice ?? null, closeOpp: l.closePriceOpp ?? null,
       closeBook: l.closeBook || null,
       closeObservedAt: l.closeObservedAt || null,
@@ -2354,6 +2341,76 @@ async function leagueImport(request, env, cors) {
       synthetic: true,
     };
   }
+  return rows;
+}
+
+async function leagueImport(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const auth = await requireAdmin(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  let body;
+  try { body = await readBody(request); }
+  catch (e) {
+    // ⚠️ Say WHICH failure it was. These were one message until an import hit the size
+    // ceiling and reported "Bad JSON", which is a completely different problem and sent
+    // the reader looking at their payload's syntax instead of its length.
+    return /too large/.test(String(e && e.message))
+      ? json({ error: `That request body is over the ${MAX_BODY / 1000} KB limit. Send the legs in batches — see /league/import.` }, 413, cors)
+      : json({ error: "Bad JSON." }, 400, cors);
+  }
+
+  const id = String(body.id || body.league || "").toLowerCase().trim();
+  if (!validLeagueId(id)) return json({ error: "League id must be 2–24 chars: lowercase letters, numbers and dashes." }, 400, cors);
+
+  const legs = Array.isArray(body.legs) ? body.legs : [];
+  const append = body.append === true;
+
+  let leagues;
+  try { leagues = await loadLeagues(env); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+
+  /* ---------- appending to an import already in progress ---------- */
+  if (append) {
+    const lg = leagues[id];
+    if (!lg) return json({ error: "No such league — send the first batch without append." }, 404, cors);
+    // ⚠️ Both conditions, every time. Synthetic alone would let a finished demo be
+    // topped up months later; importing alone would be a way into a real league.
+    if (lg.synthetic !== true || lg.importing !== true)
+      return json({ error: "That league isn't mid-import. Import never merges into an existing league." }, 409, cors);
+
+    const rows = leagueImportRows(id, Number(lg.season) || SEASON, legs);
+    if (Object.keys(rows).length) {
+      try { await fbPatch(env, LG(id) + "/ledger", rows); }
+      catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+    }
+    if (body.done === true) {
+      // ⚠️ The flag clears LAST, after every row has landed. An import interrupted
+      // halfway leaves `importing: true` — visibly unfinished, and still appendable —
+      // rather than a league that looks complete and silently isn't.
+      try { await fbPatch(env, LG(id), { importing: null }); }
+      catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+    }
+    return json({ ok: true, id, appended: legs.length, done: body.done === true }, 200, cors);
+  }
+
+  /* ---------- the first batch, which creates the league ---------- */
+  if (leagues[id]) return json({ error: "A league with that id already exists. Delete it first — import never merges." }, 409, cors);
+  if (!legs.length) return json({ error: "Nothing to import — no legs in the payload." }, 400, cors);
+
+  const season = Number(body.season) || SEASON;
+  const format = body.format === "royale" ? "royale" : "standard";
+  // ⚠️ The roster comes from body.players, NOT from this batch's legs. Under batching the
+  // first slice is a few weeks of one league and would name only whoever happened to bet
+  // in them — and in Bozo Royale, where the roster shrinks, the last slice names almost
+  // nobody. Falling back to the legs is only for a single-shot import.
+  const players = Array.isArray(body.players) && body.players.length
+    ? [...new Set(body.players.map(String))].sort()
+    : [...new Set(legs.map(l => String(l.player || "")).filter(Boolean))].sort();
+  const members = {};
+  for (const p of players) members[encodeURIComponent(p)] = true;
+
+  const ledger = leagueImportRows(id, season, legs);
 
   const weekLabels = {}, weekPhases = {};
   for (const w of (Array.isArray(body.weeks) ? body.weeks : [])) {
@@ -2369,6 +2426,9 @@ async function leagueImport(request, env, cors) {
     format, buyback: format === "royale" ? (Number(body.buyback) || 25) : 0,
     formatLocked: true,
     synthetic: true,
+    // Cleared by the final batch. Until then the league is visibly mid-import rather
+    // than looking complete while missing most of its season.
+    importing: body.done === true ? null : true,
     demoNote: String(body.note || "SIMULATED SEASON — every leg, price, close and result is fabricated."),
     weekLabels, weekPhases,
     ledger,

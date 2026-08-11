@@ -143,21 +143,51 @@ for (const job of JOBS) {
   if (payload.format !== job.format)
     die(`${job.file} says format "${payload.format}" but this job expects "${job.format}"`);
 
-  const body = {
+  /* ⚠️ A SEASON DOES NOT FIT IN ONE REQUEST. The Worker caps request bodies at 24 KB —
+     a shared defence on every route, not something to raise for one admin convenience —
+     and the standard demo season is 112 KB of JSON. So the metadata goes with a first
+     slice and the rest is appended.
+
+     Batches are sized by measuring the serialised body rather than by counting legs,
+     because the first one also carries the week table, the chop log and the roster. A
+     fixed leg count would be either wasteful or, on the first batch, over the line. */
+  const post = async (body) => {
+    const res = await fetch(BASE + "/league/import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Dawg-Session": SESSION },
+      body: JSON.stringify(body),
+    });
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok) die(`${job.id}: ${res.status} ${out.error || "import failed"}`);
+    return out;
+  };
+
+  const LIMIT = 20000;                          // 24 KB ceiling, with room for headers
+  const meta = {
     id: job.id, name: job.name, format: job.format, buyback: job.buyback || 0,
     season: payload.season, weeks: payload.weeks, weeksPlayed: payload.weeksPlayed,
-    legs: payload.legs, note: payload.note,
+    note: payload.note, players: payload.players,
     playersStatus: payload.playersStatus, chops: payload.chops, survivor: payload.survivor,
   };
 
-  const res = await fetch(BASE + "/league/import", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Dawg-Session": SESSION },
-    body: JSON.stringify(body),
-  });
-  const out = await res.json().catch(() => ({}));
-  if (!res.ok) die(`${job.id}: ${res.status} ${out.error || "import failed"}`);
-  console.log(`${job.id}: ${out.legs} legs, ${out.players} players, format ${out.format}, synthetic ${out.synthetic}`);
+  const remaining = payload.legs.slice();
+  let sent = 0, batches = 0, first = true;
+  while (remaining.length) {
+    const base = first ? { ...meta, legs: [] } : { id: job.id, append: true, legs: [] };
+    const slice = [];
+    while (remaining.length) {
+      slice.push(remaining[0]);
+      if (JSON.stringify({ ...base, legs: slice }).length > LIMIT) { slice.pop(); break; }
+      remaining.shift();
+    }
+    if (!slice.length) die(`${job.id}: a single leg is bigger than the ${LIMIT} byte batch limit — something is wrong with the payload`);
+    // `done` on the last batch clears the importing flag, and only then.
+    await post({ ...base, legs: slice, done: remaining.length === 0 });
+    sent += slice.length; batches++; first = false;
+    process.stdout.write(`\r  ${job.id}: ${sent}/${payload.legs.length} legs …`);
+  }
+  process.stdout.write(`\r  ${job.id}: ${sent} legs in ${batches} batches, `
+    + `${(payload.players || []).length} players, format ${job.format}, synthetic true\n`);
 }
 
 console.log("\nBoth demos seeded. They carry a DEMO · SIMULATED badge everywhere they appear,");
