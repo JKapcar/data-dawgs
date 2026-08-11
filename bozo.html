@@ -1780,9 +1780,20 @@ STATE: everything saves in the browser on that device. A different device shows 
   display:flex;align-items:center;gap:11px;padding:8px 22px 8px 8px;
   background:var(--accent);color:var(--accent-ink,#fff);border-radius:999px;
   font-size:16px;font-weight:750;letter-spacing:.01em;cursor:pointer;font-family:inherit;
-  box-shadow:0 8px 26px rgba(0,0,0,.30);transition:transform .13s ease, box-shadow .13s ease}
+  box-shadow:0 8px 26px rgba(0,0,0,.30);
+  transition:transform .13s ease, box-shadow .13s ease, opacity .16s ease}
 #ddbLaunch:hover{transform:translateY(-2px);box-shadow:0 13px 32px rgba(0,0,0,.36)}
 #ddbLaunch:active{transform:translateY(0)}
+/* ⚠️ GUARD B (2026-08-10). The launcher is fixed, so it owns the bottom-right ~74px band at
+   EVERY scroll position and at rest it sits on top of whatever is there: measured 4,303 px2
+   over two cells on receipts.html#models and 3,947 px2 over a heading on nfl.html. It steps
+   aside while the page is moving and returns when it stops, which is when reading happens.
+   The transform is decoration. opacity and pointer-events are what actually clear the
+   text, which is why reduced motion still HIDES it instead of keeping it over the words —
+   honouring the preference means dropping the movement, not dropping the fix.
+   Gate: work/test-launcher-overlap.mjs. */
+#ddbLaunch.ddb-away{opacity:0;pointer-events:none;transform:translateY(12px) scale(.97)}
+@media (prefers-reduced-motion:reduce){#ddbLaunch.ddb-away{transform:none;transition:none}}
 /* seal-brown badge + orange dawg = the same pairing as the site banner. On white the
    thin binary artwork washed out; on brown it reads at 40px. */
 #ddbLaunch .dg{width:40px;height:40px;border-radius:50%;background:#2a1a06;flex:none;
@@ -1895,6 +1906,20 @@ STATE: everything saves in the browser on that device. A different device shows 
         window.DDBot.toggle();
       });
       document.body.appendChild(b);
+      /* ⚠️ GUARD B. 140ms of quiet before it comes back: long enough that momentum scrolling
+         does not flicker it, short enough that it is already there when a reader reaches for
+         it. passive so this can never delay a scroll.
+         ⚠️ capture:true IS LOAD-BEARING. Scroll events do not bubble, and the tables on
+         cfb.html and the receipts sheets scroll INSIDE their own container while the document
+         never grows — a window-only listener sees nothing on exactly the surfaces the
+         complaint named. Capture reaches them because the capture path runs even for
+         non-bubbling events. */
+      let ddbIdle = 0;
+      addEventListener("scroll", () => {
+        b.classList.add("ddb-away");
+        clearTimeout(ddbIdle);
+        ddbIdle = setTimeout(() => b.classList.remove("ddb-away"), 140);
+      }, { passive: true, capture: true });
     }, 300);
   });
 })();
