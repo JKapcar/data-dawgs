@@ -350,5 +350,37 @@ ok(page.indexOf('id="drawCard"') < page.indexOf('id="clvCard"')
    "the chart sits between the hierarchy slot machine and the ticket, as specified");
 ok(/clv-tablewrap/.test(page), "the table twin ships — it is the WCAG counterpart and the contrast relief, not optional");
 
+/* ============ 7. Bozo Royale survival odds ==============================
+   ⚠️ These guard the HONESTY RAILS, not the arithmetic. The arithmetic was checked
+   against the seeded season in a browser: curves monotone, survival starting at 1.0,
+   win probabilities summing to exactly 1, and the clean-week share landing on 0.58^5.
+   What a static test can protect is the set of caveats, because those are what gets
+   deleted when someone decides the chart looks cluttered. */
+{
+  const code = page.replace(/\/\*[\s\S]*?\*\//g, "");
+  ok(/function simulateRoyale/.test(code), "the survival simulation exists");
+  ok(/id="survCard"/.test(page), "the survival card exists");
+
+  // It must resample REAL legs. A fitted distribution would drop the correlation between
+  // the price a player takes and how badly they miss, which flatters whoever bets chalk.
+  ok(/pool\[\(Math\.random\(\)\*pool\.length\)\|0\]/.test(code),
+     "each simulated week deals a player one of their OWN past legs");
+  ok(/Math\.random\(\) >= leg\.p/.test(code),
+     "…and re-rolls only the outcome, from that leg's own de-vigged closing price");
+
+  ok(/Simulation, not a forecast/.test(code), "the footnote says it is simulation");
+  ok(/drawn independently/.test(code) && /same game/.test(code),
+     "…and names the correlation it does not model");
+  ok(/always taken/.test(code), "…and states the buy-back assumption rather than burying it");
+  ok(/legs resampled/.test(code) && /decoration/.test(code),
+     "…and says when a player's history is too thin to mean anything");
+  ok(/no captured close/.test(code),
+     "…and flags resampled legs whose probability came from a self-reported entry price");
+
+  // Royale only, and only while there is something left to simulate.
+  ok(/CLV\.data\.format !== 'royale'/.test(code), "it does not run on a Standard league");
+  ok(/alive\.length < 2/.test(code), "…nor on a finished one");
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

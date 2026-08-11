@@ -864,6 +864,18 @@ table.gaptbl .gwhy{font-size:11px;color:var(--ink-3);margin-top:2px;max-width:46
   font-size:13px;color:var(--ink-1);line-height:1.5}
 .legprev .pl{color:var(--ink-3);font-size:11.5px}
 .twinnote{font:600 11px/1.5 system-ui;color:var(--warn);margin:8px 0 2px}
+.surv-wrap{position:relative;margin:4px 0 10px}
+svg.surv-svg{display:block;width:100%;height:auto;overflow:visible}
+.surv-svg .tick{font-size:11px;fill:var(--ink-3);font-variant-numeric:tabular-nums}
+.surv-svg .axtitle{font-size:11px;fill:var(--ink-2);letter-spacing:.09em;text-transform:uppercase;font-weight:650}
+.surv-svg .dotlabel{font-size:11.5px;font-weight:700;fill:var(--ink-1);paint-order:stroke;
+  stroke:var(--surface-1);stroke-width:3px}
+table.survtbl th{font:650 10.5px/1 ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink-3);text-align:right;padding:7px 10px;white-space:nowrap}
+table.survtbl th:first-child{text-align:left}
+table.survtbl td{padding:7px 10px;border-top:1px solid var(--grid);text-align:right;
+  font-variant-numeric:tabular-nums;font-size:13px}
+table.survtbl td:first-child{text-align:left;font-weight:650}
 .hcard input.rn{font:750 16px system-ui;padding:4px 8px;border:1px solid var(--accent);border-radius:7px;
   background:var(--surface-1);color:var(--ink-1);width:100%;max-width:230px}
 .hcard .go{display:block;margin-top:10px;color:var(--accent);font-size:12.5px;font-weight:650}
@@ -2494,6 +2506,24 @@ STATE: everything saves in the browser on that device. A different device shows 
   <div class="clv-foot" id="clvFoot"></div>
 </div>
 
+<!-- ---------- Bozo Royale: survival odds ----------
+     A second chart over the same legs. Where the CLV chart asks whether you have been
+     getting a good price, this asks how the season ends if everyone keeps betting the
+     way they have been. Simulation, and labelled as such everywhere it appears. -->
+<div class="card" id="survCard" style="display:none">
+  <div class="bz-hdr"><h2 class="bz" style="margin:0">Survival odds</h2>
+    <span class="tm" id="survMeta"></span></div>
+  <p class="note" id="survSub" style="margin:0 0 14px">How the season ends if everyone keeps betting the way
+    they have been. Each simulated week deals every survivor one of their own past legs and re-rolls only the
+    result, so nobody's future betting is invented — it is their own history, replayed.</p>
+  <div class="surv-wrap">
+    <svg class="surv-svg" id="survSvg" viewBox="0 0 960 380" role="img"
+         aria-label="Probability each player is still alive, by week"></svg>
+  </div>
+  <div class="tscroll"><table class="bz survtbl" id="survTbl"></table></div>
+  <div class="clv-foot" id="survFoot"></div>
+</div>
+
 <!-- ---------- the ticket, as a parlay slip ---------- -->
 <div class="card" id="ticketCard">
   <div class="bz-hdr"><h2 class="bz" style="margin:0">The ticket</h2><span class="tm" id="fill"></span></div>
@@ -3181,7 +3211,7 @@ function render(){
   document.getElementById('statusChip').style.display = hub ? 'none' : '';
   document.getElementById('backHub').style.display = (hub || LEAGUES.length<2) ? 'none' : '';
   // On the hub every league-scoped card is hidden; the directory is the whole page.
-  for(const id of ['snav','lgbar','submitCard','ticketCard','seasonCard','sheetCard','leagueCard','drawCard','royaleCard','clvCard','diagCard','gradeCard','verdict'])
+  for(const id of ['snav','lgbar','submitCard','ticketCard','seasonCard','sheetCard','leagueCard','drawCard','royaleCard','clvCard','survCard','diagCard','gradeCard','verdict'])
     { const el=document.getElementById(id); if(el && hub) el.style.display='none'; }
   if(hub) return;
 
@@ -3219,7 +3249,9 @@ function render(){
   paintRoyale();
   // The chart sits under the hierarchy on the board view only — it is a season-long
   // read, and it has no meaning on one player's sheet.
-  if(onBoard) clvLoad(); else document.getElementById('clvCard').style.display='none';
+  if(onBoard){ clvLoad(); paintSurvival(); }
+  else { document.getElementById('clvCard').style.display='none';
+         document.getElementById('survCard').style.display='none'; }
 
   // the sheets themselves
   document.getElementById('ticketCard').style.display = onBoard ? '' : 'none';
@@ -3881,10 +3913,18 @@ const devig = px => Math.min(.98, Math.max(.02, imp(px)-.022));
 
 function simulate(live, levers){
   const n = live.length;
-  const L = live.map(x=>({
-    sd: sdOf(x), base: x.mkt==='ml' ? 0 : x.line, exp: expected(x),
-    under: dirOf(x)==='under', odds: imp(x.price), last: x.ts||0
-  }));
+  const res = S.results || {};
+  const L = live.map(x=>{
+    const r = res[kEnc(x.p)] || {};
+    // Real CLV where the close has been captured, null where it hasn't. See the lever
+    // branch below for why the difference matters.
+    const pC = devigP(r.close, r.closeOpp), pE = devigP(x.price, x.entryPriceOpp);
+    return {
+      sd: sdOf(x), base: x.mkt==='ml' ? 0 : x.line, exp: expected(x),
+      under: dirOf(x)==='under', odds: imp(x.price), last: x.ts||0,
+      clv: (pC==null||pE==null) ? null : (pC-pE)
+    };
+  });
   const win=new Array(n).fill(0), bz=new Array(n).fill(0), solo=new Array(n).fill(0);
   const named=live.map(()=>({}));
   const idx=new Array(n), lost=[];
@@ -3904,10 +3944,20 @@ function simulate(live, levers){
       const k=LEVERS[li].k;
       let surv;
       if(k==='clv'){
-        // No closing prices are captured yet, so CLV carries no information.
-        // Uniform over the survivors is what "no information" actually means —
-        // treating it as a constant would silently delete a live lever from the draw.
-        surv=[pool[(Math.random()*pool.length)|0]];
+        /* ⚠️ THIS COMMENT USED TO SAY "no closing prices are captured yet". They are now,
+           so CLV carries real information for any leg whose close has been snapped — and
+           randomising it would delete that. But a close only exists once the market has
+           closed, and this sim also runs on an OPEN board where the games have not
+           started. So: rank on real CLV where it is known, and fall back to uniform over
+           whoever is left when it genuinely isn't. Uniform is what "no information"
+           actually means; a constant would silently drop a live lever from the draw. */
+        const known = pool.filter(i=>L[i].clv!=null);
+        if(known.length){
+          let mx=-Infinity; for(const i of known){ const v=-L[i].clv; if(v>mx) mx=v; }
+          surv=known.filter(i=>-L[i].clv===mx);
+        }else{
+          surv=[pool[(Math.random()*pool.length)|0]];
+        }
       }else{
         const f = k==='odds' ? (i=>L[i].odds) : k==='beat' ? (i=>idx[i]) : (i=>L[i].last);
         let mx=-Infinity; for(const i of pool){ const v=f(i); if(v>mx) mx=v; }
@@ -3930,8 +3980,12 @@ function simulate(live, levers){
 
 // One definition of "is the cached sim still the right sim". Used by paintDiag to
 // decide whether to re-run, and by Toto's context to decide whether it may quote it.
+// ⚠️ The close is part of the key now that CLV feeds the sim. Without it, a close landing
+// at kickoff would leave a cached run that had ranked Worst CLV at random still on screen,
+// looking freshly computed.
 const simKeyFor = (live, levers, status) =>
-  live.map(x=>`${x.p}:${x.price}:${x.ts}:${x.line}:${x.mkt}:${x.side}`).join('|')
+  live.map(x=>{ const r=(S.results||{})[kEnc(x.p)]||{};
+    return `${x.p}:${x.price}:${x.ts}:${x.line}:${x.mkt}:${x.side}:${r.close??''}:${r.closeOpp??''}`; }).join('|')
   + '#' + levers.join(',') + '#' + status;
 
 const pct = v => (v*100).toFixed(v>=.1?0:1)+'%';
@@ -4602,6 +4656,143 @@ async function paintGaps(){
   });
 }
 
+/* ==================== Bozo Royale — survival odds ====================
+   How the season is likely to end, given how each player has actually been betting.
+
+   ⚠️ IT BOOTSTRAPS FROM REAL LEGS. Every simulated week hands each surviving player one
+   of THEIR OWN past legs, drawn at random, and redraws only the win/loss from that leg's
+   own de-vigged closing probability. Nothing about a player's future betting is invented.
+   That matters more than it sounds: resampling a whole real leg keeps the correlation
+   between the price someone takes and how badly they tend to miss, which a fitted
+   distribution would throw away — and throwing it away would systematically flatter
+   whoever bets the most chalk, since chalk both wins more AND loses by less.
+
+   ⚠️ IT IS SIMULATION, NOT A FORECAST, and it inherits every soft spot the weekly sim
+   has. Legs are drawn independently; in Bozo they are not, because several players land
+   on the same game most weeks. Positive correlation makes clean weeks and bloodbath
+   weeks both more common than this shows. The prop SD is the weakest number in the
+   build. Say so whenever these numbers are quoted.
+
+   ⚠️ IT ASSUMES BUY-BACKS ARE ALWAYS TAKEN while one is available and the league is
+   still bigger than two. That is a behavioural assumption and it is stated in the
+   footnote rather than buried — a player who would decline is worse off in this model
+   than in reality, and the honest thing is to name the assumption rather than tune it. */
+const ROY_SIMS = 4000;
+
+/* One player's history, as a pool to resample from. */
+function royalePool(player){
+  const legs = (CLV.data ? CLV.data.legs : []).filter(l =>
+    l.player === player && (l.result === 'win' || l.result === 'loss'));
+  const out = [];
+  for(const l of legs){
+    const pC = clvDevig(l.closePrice, l.closePriceOpp);
+    const pE = clvDevig(l.entryPrice, l.entryPriceOpp);
+    // The closing price is the bar, so it is the win probability. Where no close was
+    // captured the entry stands in, flagged by `soft` so the footnote can count them.
+    const p = pC != null ? pC : (pE != null ? pE : imp(l.entryPrice));
+    if(!(p > 0.02 && p < 0.98)) continue;
+    /* Worst Beat wants how far under its number the leg finished, in SDs. A binary leg
+       has no margin at all, so it takes one from its own de-vigged price — Kap's §8.3
+       call, and the same rule the server applies when it decides a real chop, so the
+       simulation and the live chop agree about what "worst" means. */
+    const shape = { mkt: l.mkt, line: l.line ?? 0, price: l.entryPrice, sport: l.sport, side: l.side };
+    const binary = l.mkt === 'prop' || l.mkt === 'other' || l.actual == null;
+    let beat;
+    if(binary) beat = invNorm(p);
+    else {
+      const sd = sdOf(shape), exp = expected(shape);
+      beat = sd > 0 ? (dirOf(shape)==='under' ? (l.actual - exp) : (exp - l.actual)) / sd : 0;
+    }
+    out.push({
+      p, price: l.entryPrice,
+      clv: (pC != null && pE != null) ? (pC - pE) : null,
+      beat,
+      rank: l.rank || null,
+      soft: pC == null,
+      raw: l,
+    });
+  }
+  return out;
+}
+
+function simulateRoyale(){
+  if(!CLV.data || CLV.data.format !== 'royale') return null;
+  const alive = royaleAliveNames();
+  if(alive.length < 2) return null;
+  const pools = {};
+  for(const p of alive){ const q = royalePool(p); if(q.length) pools[p] = q; }
+  const players = alive.filter(p => pools[p]);
+  // ⚠️ Two completed weeks is the floor the handoff sets, and it is generous. With one
+  // leg each the resample has nothing to resample.
+  const thin = players.filter(p => pools[p].length < 2);
+  if(players.length < 2) return { tooEarly: true, need: 'two players with graded legs' };
+
+  const levers = (settings().levers || [0,1,2,3]).slice();
+  const buyback = settings().buyback > 0;
+  const status = royaleStatus_page();
+
+  const wins = {}, nextChop = {}, aliveAt = {};
+  const HORIZON = 26;
+  for(const p of players){ wins[p]=0; nextChop[p]=0; aliveAt[p]=new Array(HORIZON).fill(0); }
+
+  for(let s=0; s<ROY_SIMS; s++){
+    let roster = players.slice();
+    const bb = {}; for(const p of players) bb[p] = buyback && (status[p]?.buybacksLeft ?? 0) > 0;
+    for(let w=0; w<HORIZON && roster.length>1; w++){
+      for(const p of roster) aliveAt[p][w]++;
+      // draw one real past leg for each survivor, and redraw only its outcome
+      const drawn = {}, losers = [];
+      for(const p of roster){
+        const pool = pools[p], leg = pool[(Math.random()*pool.length)|0];
+        drawn[p] = leg;
+        if(Math.random() >= leg.p) losers.push(p);
+      }
+      if(!losers.length) continue;                       // ticket cashed, pot carries
+      let victim;
+      if(losers.length === 1) victim = losers[0];
+      else {
+        let pool = losers.slice();
+        for(const li of shuffled(levers)){
+          const k = LEVERS[li].k;
+          const f = k==='odds' ? (p=>imp(drawn[p].price))
+                  : k==='beat' ? (p=>drawn[p].beat)
+                  : k==='clv'  ? (p=>drawn[p].clv==null?null:-drawn[p].clv)
+                  : (p=>drawn[p].rank==null?null:drawn[p].rank);
+          const scored = pool.filter(p=>f(p)!=null);
+          if(!scored.length) continue;                   // unmeasurable — next lever
+          let mx=-Infinity; for(const p of scored){ const v=f(p); if(v>mx) mx=v; }
+          const surv = scored.filter(p=>f(p)===mx);
+          if(surv.length < pool.length || surv.length===1) pool = surv;
+          if(pool.length===1) break;
+        }
+        victim = pool[(Math.random()*pool.length)|0];    // every lever tied: coin flip
+      }
+      if(w===0) nextChop[victim]++;
+      if(bb[victim] && roster.length > 2){ bb[victim] = false; continue; }  // buys back
+      roster = roster.filter(p=>p!==victim);
+    }
+    if(roster.length===1) wins[roster[0]]++;
+  }
+
+  return {
+    sims: ROY_SIMS, players,
+    win: Object.fromEntries(players.map(p=>[p, wins[p]/ROY_SIMS])),
+    nextChop: Object.fromEntries(players.map(p=>[p, nextChop[p]/ROY_SIMS])),
+    curve: Object.fromEntries(players.map(p=>[p, aliveAt[p].map(c=>c/ROY_SIMS)])),
+    horizon: HORIZON,
+    softLegs: players.reduce((a,p)=>a + pools[p].filter(l=>l.soft).length, 0),
+    totalLegs: players.reduce((a,p)=>a + pools[p].length, 0),
+    thin: thin,
+    buyback,
+  };
+}
+// The page's own view of Royale status, keyed by display name rather than URL-encoded.
+function royaleStatus_page(){
+  const out = {};
+  for(const p of names()) out[p] = royaleOf(p) || { buybacksLeft: 0, alive: true };
+  return out;
+}
+
 /* ==================== Bozo Royale ====================
    A second ruleset over the same legs, prices, closes and chart. What changes is the
    consequence: Standard names a bozo who funds the next ticket and plays again, Royale
@@ -5099,6 +5290,88 @@ function clvFootnote(){
         + `describes most of the roster.` : '');
 }
 
+/* Draw the survival curves. Same colour + shape identity as the CLV chart above — a
+   player is one thing on this page, not two. */
+let SURV = null, survKey = '';
+function paintSurvival(){
+  const card = document.getElementById('survCard');
+  if(!card) return;
+  if(!CLV.data || CLV.data.format !== 'royale' || onHub() || view()!=='board'){
+    card.style.display='none'; return;
+  }
+  // ⚠️ Re-run only when the inputs actually change. This is 4,000 seasons of resampling;
+  // doing it on every render would make the board crawl for no new information.
+  const key = royaleAliveNames().join(',') + '#' + (CLV.data.legs||[]).length + '#' + (S.week||1);
+  if(key !== survKey){ SURV = simulateRoyale(); survKey = key; }
+  const R = SURV;
+  if(!R || R.tooEarly){ card.style.display='none'; return; }
+  card.style.display='';
+
+  const meta = document.getElementById('survMeta');
+  meta.textContent = `${R.sims.toLocaleString()} simulated seasons · ${R.players.length} alive`
+    + (isDemo() ? ' · DEMO' : '');
+
+  /* ---- the curves ---- */
+  const W=960, H=380, M={t:20,r:120,b:44,l:52};
+  const PW=W-M.l-M.r, PH=H-M.t-M.b;
+  // Trim the horizon to where the outcome is effectively settled — 26 weeks of flat line
+  // is not information, it is just a wide chart.
+  let last = 1;
+  for(let w=0; w<R.horizon; w++)
+    if(R.players.some(p=>R.curve[p][w] > 0.005)) last = w;
+  const wk0 = S.week || 1;
+  const sx = w => M.l + (last ? w/last : 0) * PW;
+  const sy = v => M.t + PH - v * PH;
+
+  let s = '';
+  for(const t of [0,0.25,0.5,0.75,1]){
+    s += `<line x1="${M.l}" x2="${M.l+PW}" y1="${sy(t)}" y2="${sy(t)}" stroke="var(--grid)" stroke-width="1"/>`
+      + `<text class="tick" x="${M.l-10}" y="${sy(t)+4}" text-anchor="end">${Math.round(t*100)}%</text>`;
+  }
+  const step = last > 12 ? 4 : last > 6 ? 2 : 1;
+  for(let w=0; w<=last; w+=step)
+    s += `<text class="tick" x="${sx(w)}" y="${M.t+PH+20}" text-anchor="middle">wk ${wk0+w}</text>`;
+  s += `<text class="axtitle" x="${M.l+PW/2}" y="${H-8}" text-anchor="middle">week</text>`;
+  s += `<text class="axtitle" transform="translate(15,${M.t+PH/2}) rotate(-90)" text-anchor="middle">still alive</text>`;
+
+  const ordered = R.players.slice().sort((a,b)=>R.win[b]-R.win[a]);
+  for(const p of ordered){
+    const pts = R.curve[p].slice(0,last+1).map((v,w)=>`${sx(w)},${sy(v)}`).join(' ');
+    s += `<polyline points="${pts}" fill="none" stroke="var(${clvId(p).cssVar})" stroke-width="2.4"
+            stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>`;
+    const endV = R.curve[p][last];
+    s += `<g transform="translate(${sx(last)},${sy(endV)})">${clvGlyph(p, 4.6, 'stroke="var(--surface-1)" stroke-width="1.6"')}</g>`;
+    s += `<text class="dotlabel" x="${sx(last)+11}" y="${sy(endV)+4}">${esc(teamOf(p))} ${(R.win[p]*100).toFixed(0)}%</text>`;
+  }
+  document.getElementById('survSvg').innerHTML = s;
+
+  /* ---- the table: the two numbers people will actually argue about ---- */
+  document.getElementById('survTbl').innerHTML =
+    `<tbody><tr><th>Who</th><th>Chopped next week</th><th>Takes the pot</th><th>Legs resampled</th></tr>`
+    + ordered.map(p=>{
+        const pool = royalePool(p);
+        return `<tr><td>${esc(teamOf(p))}${p===(ME&&ME.name)?' <span class="me">· you</span>':''}</td>
+          <td>${pct(R.nextChop[p])}</td><td>${pct(R.win[p])}</td>
+          <td class="tm">${pool.length}${pool.length<3?' — thin':''}</td></tr>`;
+      }).join('') + `</tbody>`;
+
+  document.getElementById('survFoot').innerHTML =
+      `<b>Simulation, not a forecast.</b> ${R.sims.toLocaleString()} seasons, each week dealing every survivor `
+    + `one of their own graded legs at random and re-rolling only the outcome from that leg's de-vigged closing `
+    + `price. Nobody's future betting is invented — but a player is only as predictable as their history is long, `
+    + `and the <i>legs resampled</i> column is how much history there is. Under three, treat their number as `
+    + `decoration.<br><br>`
+    + `<b>What it does not model.</b> Legs are drawn independently, and in Bozo they are not — several players `
+    + `land on the same game most weeks. That correlation makes both clean weeks and bloodbaths more common than `
+    + `this shows, so the middle of this chart is too smooth. Prop and “other” legs take their Worst Beat margin `
+    + `from their own price, since a binary leg has none of its own.`
+    + (R.buyback ? ` Buy-backs are assumed <b>always taken</b> while one is available and more than two players `
+      + `remain; someone who would decline is worse off in reality than here.` : ` Buy-backs are off in this league.`)
+    + (R.softLegs ? `<br><br><b>${R.softLegs} of ${R.totalLegs} resampled legs have no captured close</b>, so their `
+      + `win probability comes from the entry price instead — a self-reported number. Those legs flatter whoever `
+      + `entered them optimistically.` : '');
+}
+
 async function clvLoad(force){
   const card = document.getElementById('clvCard');
   if(onHub()){ card.style.display='none'; return; }
@@ -5129,6 +5402,7 @@ async function clvLoad(force){
       + CLV.sports.map(s=>`<option value="${esc(s)}">${esc(s.toUpperCase())}</option>`).join('');
     document.getElementById('clvFoot').innerHTML = clvFootnote();
     clvRender();
+    paintSurvival();
   }catch(e){
     card.style.display='none';
   }finally{ CLV.loading=false; }

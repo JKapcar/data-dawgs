@@ -4593,6 +4593,15 @@ async function bozoClv(request, url, env, cors) {
 
       result: RESULT[r.result] || null,
       gradedAt: r.gradedAt || null,
+
+      // ⚠️ Needed by the Royale survival simulation, which BOOTSTRAPS from a player's own
+      // past legs rather than inventing a distribution for them. Resampling a whole real
+      // leg keeps the correlation between the price someone takes and how badly they
+      // tend to miss — a made-up distribution would throw that away and quietly flatter
+      // whoever bets the most chalk.
+      actual: r.actual ?? null,
+      rank: r.rank ?? null,            // 1 = first leg in that week, N = Last In
+      shortestOdds: r.shortestOdds === true,
     }));
 
   const weeks = [...new Set(legs.map(l => l.week))].sort((a, b) => a - b)
