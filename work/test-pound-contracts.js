@@ -181,7 +181,11 @@ test('deployed Pound tools name live MCP implementations without staged claims',
 test('the forecasting challenge contract states the rules the storage layer enforces', () => {
   const fc = contracts.data.forecast_challenge_contract;
   assert.ok(fc, 'model-contracts.json carries no forecast_challenge_contract');
-  assert.match(fc.status, /storage only/i);
+  /* ⚠️ Was /storage only/. FC-C added the entrant model, so the honest status moved —
+     but the half that matters has NOT: still no page, no grading, no leaderboard. Pinning
+     that clause rather than the whole sentence keeps the check meaningful as the stage
+     advances, instead of turning into a string nobody may edit. */
+  assert.match(fc.status, /no page, no grading and no leaderboard/i);
 
   /* Scoring replicates 538 exactly, and every deviation is written down rather than
      left silent. Three of them, and the reason travels with each. */
@@ -200,6 +204,26 @@ test('the forecasting challenge contract states the rules the storage layer enfo
   assert.ok(fc.entry_required.includes('touched'));
   assert.ok(fc.entry_required.includes('slider_value'));
   assert.ok(fc.entry_required.includes('home_win_probability'));
+
+  /* FC-C: entrants. The leaderboard key is `entrant`, which may be a person or a bot, and
+     `owner` is the human answerable for it. `user` is gone — a clean break, because nothing
+     had ever read it. */
+  assert.equal(fc.entry_version, 2);
+  assert.ok(fc.entry_required.includes('entrant'));
+  assert.ok(fc.entry_required.includes('entrant_kind'));
+  assert.ok(fc.entry_required.includes('owner'));
+  assert.ok(fc.entry_required.includes('idempotency_key'));
+  assert.ok(!fc.entry_required.includes('user'), 'v2 renamed user to entrant; both must not be listed');
+  assert.deepEqual(fc.entrants.kinds, ['human', 'agent']);
+  assert.match(fc.entrants.one_namespace, /case-insensitiv/i);
+  assert.match(fc.entrants.no_separator, /never a suffix/i);
+  assert.match(fc.entrants.bot_credential, /X-DD-Bot/);
+  assert.match(fc.entrants.revocation, /name stays reserved/i);
+  assert.match(fc.entry_rules.idempotency, /not a revision/i);
+
+  /* ⚠️ The crowd line is HUMANS ONLY. Bots are model-driven, so admitting them would make
+     the one independent signal an average of the models it exists to check. */
+  assert.match(fc.crowd_consensus.humans_only, /excluded/i);
 
   /* The aggregation is pre-registered, so it cannot be chosen after the season. */
   assert.equal(fc.crowd_consensus.aggregation, 'trimmed-mean-logit');

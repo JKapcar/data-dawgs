@@ -204,7 +204,7 @@
    "persistence": "Read-only. Caller filters and results are not stored."
   },
   "forecast_challenge_contract": {
-   "status": "storage only; no page, no grading and no leaderboard is built",
+   "status": "storage and entrants; no page, no grading and no leaderboard is built",
    "scoring": {
     "formula": "points = 25 - 100 * (p - r)^2, p = probability on the team picked, r = 1 win / 0 loss",
     "ceiling": 25,
@@ -220,13 +220,16 @@
     ],
     "provenance_caveat": "The 538 rules page and leaderboard now redirect to abcnews.com. The formula was recovered from the nflgamedata.com game, which states it replicates the 538 one."
    },
+   "entry_version": 2,
    "entry_required": [
     "v",
     "sport",
     "season",
     "week",
     "game_id",
-    "user",
+    "entrant",
+    "entrant_kind",
+    "owner",
     "home_team",
     "away_team",
     "kickoff_at",
@@ -236,10 +239,25 @@
     "touched",
     "submitted_at",
     "revision",
-    "source"
+    "source",
+    "idempotency_key"
    ],
+   "entrants": {
+    "kinds": [
+     "human",
+     "agent"
+    ],
+    "entrant_is_the_key": "entrant is the leaderboard key and may be a person or a registered bot. owner is the human answerable for it, and equals entrant for humans. v2 renamed v1 user to entrant as a clean break; nothing had ever read user, because no page called these routes.",
+    "one_namespace": "Bots and people share ONE name namespace. Registration refuses a bot_name that already exists in /users or /forecast/bots, case-insensitively, so a leaderboard name identifies exactly one entrant.",
+    "no_separator": "A bot is a reserved name, never a suffix on its owner (owner~slug). Account names have no enforced charset at signup, so any separator that can be chosen can also occur inside a real name, and the parse becomes ambiguous exactly once, silently, on somebody's receipt.",
+    "why_not_the_owners_account": "One entry per entrant per game means a bot writing as its owner would overwrite the owner's own slider, last write wins, and would make the most interesting comparison in the project — a person against their own bot — impossible to express.",
+    "bot_credential": "A bot token is sent as X-DD-Bot, is stored only as hmac(BOZO_PEPPER, \"fcbot|\" + token), is shown once, and is honoured on POST /forecast/entry and no other route. Registration additionally requires a confirmed email; forecast entry deliberately does not.",
+    "revocation": "Revoking a bot keeps its record so the name stays reserved. Freeing the name would let someone else register it and inherit a leaderboard row full of another person's forecasts."
+   },
    "entry_rules": {
-    "granularity": "One entry per user per game. No running total is stored anywhere. Points, Brier, ranks, coverage and every slice are queries over the entry table, because a total is a view and a stored view is the copy that goes stale.",
+    "granularity": "One entry per entrant per game. No running total is stored anywhere. Points, Brier, ranks, coverage and every slice are queries over the entry table, because a total is a view and a stored view is the copy that goes stale.",
+    "idempotency": "A repeat submission carrying an idempotency_key already stored on that entry is a no-op, not a revision: revision does not move, submitted_at does not move, and it costs nothing against the write cap. An agent retrying after a timeout it never saw the answer to must not be recorded as having changed its mind.",
+    "write_caps": "Humans and agents have separate daily counters and separate ceilings, because a cap sized for a person dragging sliders would let one busy bot lock its owner out of the website.",
     "touched_is_separate": "touched is its own field and is NEVER derived from the value. An untouched slider and a deliberate 50 are identical in value and opposite in meaning; both score zero, but the first is an absence. Untouched entries are excluded from the human consensus, or every lurker drags the crowd to 50 and the independence the human line exists to supply is gone.",
     "touched_is_client_asserted": "The server cannot observe a drag, so touched is reported by the client and labelled as such — the same honesty rule as priceSource \"self\" on a Bozo leg.",
     "canonical_probability": "home_win_probability is always P(home) and is DERIVED server-side from slider_value and slider_side. A client may not submit it, so the raw input and the scored number cannot disagree.",
@@ -257,6 +275,7 @@
      0.99
     ],
     "clamp_reason": "Sliders reach 0 and 100 — the -75 floor is exactly p=0 on a winner — so an unclamped logit is infinite and one certain entry would swallow the mean.",
+    "humans_only": "Agent entries are EXCLUDED from the crowd line. Its whole reason to exist is being an independent signal to grade the models against, and bots are model-driven by construction, so admitting them would turn the crowd into a weighted average of the same models it is supposed to be independent of. Agents still compete and still score; they are simply not the crowd. This is the touched rule one level up: untouched sliders drag the crowd toward 50, model-following bots drag it toward the models, and both destroy the only property the human line supplies.",
     "minimum_touched": 3,
     "minimum_reason": "Below three touched entries no row is written at all. An empty node is honest where a row built on one person is not.",
     "log_odds_reason": "Probability averaging is systematically underconfident and costs most where forecasters agree, which is where points are earned.",

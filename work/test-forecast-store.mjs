@@ -146,9 +146,10 @@ async function sessionFor(name) {
 }
 
 const ORIGIN = "https://toto.jkapcar4.workers.dev";
-const call = async (path, { method = "POST", body, session } = {}) => {
+const call = async (path, { method = "POST", body, session, bot } = {}) => {
   const headers = { "Content-Type": "application/json" };
   if (session) headers["X-Dawg-Session"] = session;
+  if (bot) headers["X-DD-Bot"] = bot;
   const r = await worker.fetch(new Request(ORIGIN + path, {
     method, headers, body: body === undefined ? undefined : JSON.stringify(body),
   }), ENV);
@@ -225,14 +226,19 @@ console.log("\nthe entry write path");
   await call("/forecast/entry", {
     session: SAM,
     body: { sport: "nfl", game_id: G_OPEN, slider_value: 55, slider_side: "home", touched: true,
-            submitted_at: forged, ts: forged, revision: 99, user: "Kap", source: "forged" },
+            submitted_at: forged, ts: forged, revision: 99, entrant: "Kap", user: "Kap",
+            entrant_kind: "agent", owner: "Kap", source: "forged" },
   });
   const stored = entryOf("nfl", 2026, 1, "Sam", G_OPEN);
   ok("a client-supplied submitted_at is ignored", stored && stored.submitted_at !== forged);
   ok("a client-supplied revision is ignored", stored && stored.revision === 1);
-  ok("a client cannot write the entry under another user's name",
-    stored && stored.user === "Sam" && !entryOf("nfl", 2026, 1, "Kap", G_OPEN));
+  ok("a client cannot write the entry under another entrant's name",
+    stored && stored.entrant === "Sam" && !entryOf("nfl", 2026, 1, "Kap", G_OPEN));
   ok("a client-supplied source is ignored", stored && stored.source === "web");
+  // ⚠️ entrant_kind decides whether a row is in the crowd line. A body that could set it
+  // would let anyone remove themselves from the consensus, or add their bot to it.
+  ok("a client-supplied entrant_kind is ignored", stored && stored.entrant_kind === "human");
+  ok("owner is the authenticated human, not the body", stored && stored.owner === "Sam");
 }
 {
   const bad = [
@@ -267,8 +273,8 @@ console.log("\nprivacy — nobody but the owner reads an entry before kickoff");
 {
   const mine = await call("/forecast/entries?sport=nfl&season=2026&week=1", { method: "GET", session: JEFF });
   ok("my own week reads back", mine.status === 200 && Array.isArray(mine.j.entries), mine.text);
-  ok("it returns only my entries", mine.j.entries.every(e => e.user === "Jeff"),
-    JSON.stringify(mine.j.entries.map(e => e.user)));
+  ok("it returns only my entries", mine.j.entries.every(e => e.entrant === "Jeff"),
+    JSON.stringify(mine.j.entries.map(e => e.entrant)));
   /* Assert on the BODY, not the count. Sam has a live entry on this same game in this
      same week, so a route that returned the whole week node would pass a length check
      against a single-user fixture and fail this one. */
@@ -351,12 +357,14 @@ console.log("\nthe sealed crowd consensus");
 /* Entries on a game that has already kicked off cannot be written through the route —
    that is the point of the lock — so they are seeded directly, which is also how the
    exact probabilities below get chosen. */
-const seed = (user, gameId, p, touched, submittedAt) => dbSet(
-  `/forecast/entries/nfl/2026/1/${encodeURIComponent(user)}/${encodeURIComponent(gameId)}`,
-  { v: 1, sport: "nfl", season: 2026, week: 1, game_id: gameId, user,
+const seed = (entrant, gameId, p, touched, submittedAt, kind = "human") => dbSet(
+  `/forecast/entries/nfl/2026/1/${encodeURIComponent(entrant)}/${encodeURIComponent(gameId)}`,
+  { v: 2, sport: "nfl", season: 2026, week: 1, game_id: gameId,
+    entrant, entrant_kind: kind, owner: kind === "agent" ? "Kap" : entrant,
     home_team: "LAR", away_team: "SF", kickoff_at: new Date(LOCK_KICK).toISOString(),
     home_win_probability: p, slider_value: Math.round(p * 100), slider_side: "home",
-    touched, submitted_at: submittedAt, revision: 1, source: "web" });
+    touched, submitted_at: submittedAt, revision: 1, source: kind === "agent" ? "api" : "web",
+    idempotency_key: null });
 
 const LATEST = LOCK_KICK - 60e3;
 {
@@ -420,7 +428,7 @@ const LATEST = LOCK_KICK - 60e3;
   const canonical = ["Bea", "Dana", "Jeff", "Kap", "Nia", "Sam"].map(u => {
     const e = entryOf("nfl", 2026, 1, u, G_LOCK);
     return JSON.stringify({ game_id: e.game_id, home_win_probability: e.home_win_probability,
-      submitted_at: e.submitted_at, touched: e.touched, user: e.user });
+      submitted_at: e.submitted_at, touched: e.touched, entrant: e.entrant });
   }).join("\n");
   const want = [...new Uint8Array(await crypto.subtle.digest("SHA-256", te.encode(canonical)))]
     .map(b => b.toString(16).padStart(2, "0")).join("");
@@ -490,7 +498,7 @@ console.log("\nafter the lock, the game becomes auditable");
   ok("the per-game route opens once the game has kicked off", r.status === 200, r.text);
   ok("it returns every entry for that game", r.j && r.j.entries.length === 3, r.j && r.j.entries.length);
   ok("including other people's, which is what makes the consensus checkable",
-    r.j && r.j.entries.some(e => e.user === "Kap") && r.j.entries.some(e => e.user === "Sam"));
+    r.j && r.j.entries.some(e => e.entrant === "Kap") && r.j.entries.some(e => e.entrant === "Sam"));
   ok("and it carries the sealed row beside them", r.j && !!r.j.sealed);
 }
 {
@@ -507,6 +515,218 @@ console.log("\nthe schedule is the source of kickoff, and it is cached");
   });
   ok("a repeat write does not refetch the schedule every time", scheduleHits === before,
     `${before} -> ${scheduleHits}`);
+}
+
+/* ================= 10. FC-C — the entrant model =========================== */
+console.log("\nbot entrants: registration");
+/* Kap confirms an address; Jeff deliberately does not. Bot registration is the one thing
+   gated on a confirmed email, and the suite has to hold both sides of that. */
+dbSet("/users/Kap/emailVerified", true);
+let BOT_TOKEN = null;
+{
+  const noEmail = await call("/forecast/bot", {
+    session: JEFF, body: { action: "register", bot_name: "JeffBot" },
+  });
+  ok("registering without a confirmed email is refused", noEmail.status === 403, noEmail.text);
+  ok("…and no bot record is written", !dbGet("/forecast/bots/JeffBot"));
+
+  const r = await call("/forecast/bot", {
+    session: KAP, body: { action: "register", bot_name: "EloDawg", agent_note: "538-classic port" },
+  });
+  ok("a confirmed owner may register a bot", r.status === 200, r.text);
+  BOT_TOKEN = r.j && r.j.token;
+  ok("the token is returned exactly once, in the mint response", typeof BOT_TOKEN === "string" && BOT_TOKEN.startsWith("b_"));
+  const rec = dbGet("/forecast/bots/EloDawg");
+  ok("the record lands at /forecast/bots/<botname>", !!rec);
+  ok("it stores the owner", rec && rec.owner === "Kap");
+  /* ⚠️ Only the hash is stored — the same discipline invite and MCP tokens already get. */
+  ok("the raw token is NOT stored anywhere", JSON.stringify(db).indexOf(BOT_TOKEN) === -1);
+  ok("a hash is stored instead", rec && typeof rec.token_hash === "string" && rec.token_hash !== BOT_TOKEN);
+  ok("it starts unrevoked", rec && rec.revoked === false);
+}
+{
+  /* ⚠️ ONE NAMESPACE. A bot may not take a name a person already has, or the leaderboard
+     has two rows that render identically and a receipt cannot say whose it is. */
+  /* ⚠️ These assert on WHY the registration was refused, not merely that it was. Both the
+     namespace check and the per-owner cap answer 409, so a status-only assertion passes
+     when the namespace check is deleted and the cap happens to reject the same call — which
+     is exactly what the mutation harness caught it doing. */
+  const isClash = r => r.status === 409 && /one namespace/.test((r.j && r.j.error) || "");
+  const clash = await call("/forecast/bot", {
+    session: KAP, body: { action: "register", bot_name: "Jeff" },
+  });
+  ok("a bot may not take an existing account name", isClash(clash), clash.text);
+  const caseClash = await call("/forecast/bot", {
+    session: KAP, body: { action: "register", bot_name: "jeff" },
+  });
+  ok("…case-insensitively", isClash(caseClash), caseClash.text);
+  const dup = await call("/forecast/bot", {
+    session: KAP, body: { action: "register", bot_name: "EloDawg" },
+  });
+  ok("a bot may not take another bot's name", isClash(dup), dup.text);
+  const junk = await call("/forecast/bot", {
+    session: KAP, body: { action: "register", bot_name: "a" },
+  });
+  ok("a too-short bot name is refused", junk.status === 400, junk.text);
+}
+{
+  const list = await call("/forecast/bots", { method: "GET", session: KAP });
+  ok("an owner can list their bots", list.status === 200 && list.j.bots.length === 1, list.text);
+  ok("the listing never carries the token or its hash",
+    !/token_hash/.test(list.text) && (!BOT_TOKEN || list.text.indexOf(BOT_TOKEN) === -1), list.text);
+  const other = await call("/forecast/bots", { method: "GET", session: JEFF });
+  ok("and it shows nobody else's", other.status === 200 && other.j.bots.length === 0, other.text);
+}
+
+console.log("\nbot entrants: writing a forecast");
+{
+  /* ⚠️ THE WHOLE POINT OF FC-C, set up explicitly rather than assumed: the OWNER puts a
+     real forecast on the very same game FIRST, so the bot's write below has something it
+     could plausibly clobber. Under the v1 shape it would have — same account name, same
+     path, last write wins, and the human's slider silently gone. */
+  const own = await call("/forecast/entry", {
+    session: KAP,
+    body: { sport: "nfl", game_id: G_OPEN, slider_value: 33, slider_side: "home", touched: true },
+  });
+  ok("the owner puts their own forecast on the same game", own.status === 200, own.text);
+  const before = JSON.stringify(entryOf("nfl", 2026, 1, "Kap", G_OPEN));
+
+  const r = await call("/forecast/entry", {
+    bot: BOT_TOKEN,
+    body: { sport: "nfl", game_id: G_OPEN, slider_value: 71, slider_side: "home", touched: true },
+  });
+  ok("a bot token writes an entry", r.status === 200, r.text);
+  const stored = entryOf("nfl", 2026, 1, "EloDawg", G_OPEN);
+  ok("it lands under the BOT's name, not its owner's", !!stored);
+  ok("entrant_kind is agent", stored && stored.entrant_kind === "agent");
+  ok("owner records the human answerable for it", stored && stored.owner === "Kap");
+  ok("source is api, decided by the credential and not the body", stored && stored.source === "api");
+
+  const after = JSON.stringify(entryOf("nfl", 2026, 1, "Kap", G_OPEN));
+  ok("the owner's own entry on the same game is byte-for-byte untouched", before === after,
+    `${before}\n  vs\n  ${after}`);
+  ok("…and still holds the human's number, not the bot's",
+    entryOf("nfl", 2026, 1, "Kap", G_OPEN).slider_value === 33);
+  ok("so a human and their bot hold two distinct entries for one game",
+    stored.entrant === "EloDawg" && stored.owner === "Kap" && stored.entrant !== stored.owner);
+  ok("the record is v2", stored && stored.v === 2, stored && stored.v);
+}
+{
+  const anon = await call("/forecast/entry", {
+    body: { sport: "nfl", game_id: G_OPEN, slider_value: 50, slider_side: "home", touched: false },
+  });
+  ok("no credential at all is still 401", anon.status === 401, anon.text);
+  const bogus = await call("/forecast/entry", {
+    bot: "b_not_a_real_token",
+    body: { sport: "nfl", game_id: G_OPEN, slider_value: 50, slider_side: "home", touched: false },
+  });
+  ok("an unknown bot token is 401", bogus.status === 401, bogus.text);
+}
+{
+  /* ⚠️ A BOT TOKEN IS SCOPED TO ONE ROUTE. These must not authenticate anything. */
+  const mine = await call("/forecast/entries?sport=nfl&season=2026&week=1", { method: "GET", bot: BOT_TOKEN });
+  ok("a bot token is refused on /forecast/entries", mine.status === 401, mine.text);
+  const game = await call(`/forecast/game?sport=nfl&game_id=${G_LOCK}`, { method: "GET", bot: BOT_TOKEN });
+  ok("a bot token is refused on /forecast/game", game.status === 401, game.text);
+  const bots = await call("/forecast/bots", { method: "GET", bot: BOT_TOKEN });
+  ok("a bot token is refused on /forecast/bots", bots.status === 401, bots.text);
+  const reg = await call("/forecast/bot", { bot: BOT_TOKEN, body: { action: "register", bot_name: "Sneaky" } });
+  ok("a bot token cannot register another bot", reg.status === 401, reg.text);
+  ok("…and no such bot exists", !dbGet("/forecast/bots/Sneaky"));
+}
+
+console.log("\nidempotency");
+{
+  const body = { sport: "nfl", game_id: G_OPEN, slider_value: 44, slider_side: "home",
+                 touched: true, idempotency_key: "run-2026-08-11T15:00" };
+  const first = await call("/forecast/entry", { bot: BOT_TOKEN, body });
+  const revAfterFirst = entryOf("nfl", 2026, 1, "EloDawg", G_OPEN).revision;
+  const tsAfterFirst = entryOf("nfl", 2026, 1, "EloDawg", G_OPEN).submitted_at;
+  ok("a keyed submission is accepted", first.status === 200, first.text);
+  /* ⚠️ Real elapsed time before the repeat, deliberately. Both calls otherwise land in the
+     same millisecond, so submitted_at would be identical even if the idempotency
+     short-circuit were deleted — the assertion below would pass for a reason that has
+     nothing to do with the behaviour it names. The mutation harness caught this. */
+  await new Promise(r => setTimeout(r, 5));
+  const again = await call("/forecast/entry", { bot: BOT_TOKEN, body });
+  const after = entryOf("nfl", 2026, 1, "EloDawg", G_OPEN);
+  ok("a repeat with the SAME key is accepted", again.status === 200, again.text);
+  ok("…and is reported as idempotent", again.j && again.j.idempotent === true, again.text);
+  /* ⚠️ A retry after a timeout the agent never saw the answer to must not be recorded as
+     a change of mind. Revision is the audit trail; moving it would be a lie. */
+  ok("…and does NOT bump the revision", after.revision === revAfterFirst, `${revAfterFirst} -> ${after.revision}`);
+  ok("…and does NOT move submitted_at", after.submitted_at === tsAfterFirst);
+  const changed = await call("/forecast/entry", {
+    bot: BOT_TOKEN, body: { ...body, slider_value: 45, idempotency_key: "run-2026-08-11T16:00" },
+  });
+  const afterNew = entryOf("nfl", 2026, 1, "EloDawg", G_OPEN);
+  ok("a DIFFERENT key is a real revision", changed.status === 200 && afterNew.revision === revAfterFirst + 1,
+    `${revAfterFirst} -> ${afterNew.revision}`);
+  ok("…and the value actually changed", afterNew.slider_value === 45);
+}
+
+console.log("\nrotate and revoke");
+{
+  const rot = await call("/forecast/bot", { session: KAP, body: { action: "rotate", bot_name: "EloDawg" } });
+  ok("an owner can rotate a bot token", rot.status === 200 && typeof rot.j.token === "string", rot.text);
+  const NEW = rot.j.token;
+  ok("the rotated token differs from the original", NEW !== BOT_TOKEN);
+  const oldTok = await call("/forecast/entry", {
+    bot: BOT_TOKEN, body: { sport: "nfl", game_id: G_OPEN, slider_value: 60, slider_side: "home", touched: true },
+  });
+  ok("the OLD token stops working immediately", oldTok.status === 401, oldTok.text);
+  const newTok = await call("/forecast/entry", {
+    bot: NEW, body: { sport: "nfl", game_id: G_OPEN, slider_value: 60, slider_side: "home", touched: true },
+  });
+  ok("the new token works", newTok.status === 200, newTok.text);
+
+  const notMine = await call("/forecast/bot", { session: JEFF, body: { action: "revoke", bot_name: "EloDawg" } });
+  ok("somebody else cannot revoke your bot", notMine.status === 404, notMine.text);
+  ok("…and the same answer is given for a bot that does not exist, so the route is not a probe",
+    (await call("/forecast/bot", { session: JEFF, body: { action: "revoke", bot_name: "NoSuchBot" } })).status === 404);
+
+  const rev = await call("/forecast/bot", { session: KAP, body: { action: "revoke", bot_name: "EloDawg" } });
+  ok("an owner can revoke their bot", rev.status === 200, rev.text);
+  const dead = await call("/forecast/entry", {
+    bot: NEW, body: { sport: "nfl", game_id: G_OPEN, slider_value: 60, slider_side: "home", touched: true },
+  });
+  ok("a revoked token is refused 403", dead.status === 403, dead.text);
+  /* ⚠️ The record survives revocation so the NAME stays reserved. Freeing it would let
+     someone else register it and inherit a leaderboard row of another person's forecasts. */
+  ok("the bot record is NOT deleted by revoking", !!dbGet("/forecast/bots/EloDawg"));
+  const retake = await call("/forecast/bot", { session: JEFF, body: { action: "register", bot_name: "EloDawg" } });
+  ok("and the revoked name cannot be re-registered by anyone else", retake.status !== 200, retake.text);
+}
+
+console.log("\nagents are excluded from the crowd line");
+{
+  /* ⚠️ The crowd line exists to be an INDEPENDENT signal to grade the models against.
+     Bots are model-driven, so admitting them would make it an average of the very models
+     it is meant to check. This is the touched rule one level up. */
+  resetDb();
+  dbSet("/forecast/entries/nfl/2026/1", null);
+  seed("Kap", G_LOCK, 0.10, true, LOCK_KICK - 9e5);
+  seed("Jeff", G_LOCK, 0.20, true, LOCK_KICK - 8e5);
+  seed("Sam", G_LOCK, 0.30, true, LOCK_KICK - 7e5);
+  /* ⚠️ THREE agents, not one, and all at the ceiling. With three humans the aggregator
+     takes the median of 3; admitting agents makes it 6 and trims one from each end, and
+     the number moves a long way. One agent would only have turned a 3-median into a
+     4-median — still landing between the same two human values — so the assertion below
+     would have passed even with the exclusion removed. A test that cannot fail is not a
+     test, and the mutation harness is what caught that. */
+  seed("EloBot", G_LOCK, 0.99, true, LOCK_KICK - 6e5, "agent");
+  seed("MarketBot", G_LOCK, 0.98, true, LOCK_KICK - 55e4, "agent");
+  seed("NfeloBot", G_LOCK, 0.97, true, LOCK_KICK - 5e5, "agent");
+  const r = await call("/forecast/seal", { session: KAP, body: { sport: "nfl", season: 2026, week: 1 } });
+  const row = dbGet(`/forecast/sealed/nfl/2026/1/${encodeURIComponent(G_LOCK)}`);
+  ok("the week seals", r.status === 200, r.text);
+  ok("only the three humans are counted", row && row.n_touched === 3, row && row.n_touched);
+  ok("no agent is in the contributor list",
+    row && !row.contributors.some(c => /Bot$/.test(c)), row && JSON.stringify(row.contributors));
+  /* The humans alone median to 0.20. Admitting the three agents would trim to the middle
+     four of [.10 .20 .30 .97 .98 .99] and land far above 0.5. */
+  ok("and the agents' numbers did not move the consensus",
+    row && close(row.home_win_probability, 0.2), row && row.home_win_probability);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

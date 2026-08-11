@@ -57,7 +57,7 @@ await ctx.route("**/toto.jkapcar4.workers.dev/**", async route => {
     if (body.name === "Kap") return send({ error: "That name is taken. If it's yours, sign in instead." }, 409);
     if (body.email === "taken@example.com") return send({ error: "Another account already uses that address. Sign in with it instead." }, 409);
     return send({ ok: true, name: body.name, email: body.email, session: tokenFor(body.name),
-                  note: "Unverified email — nothing is ever sent to it." });
+                  note: "Email saved but unconfirmed. It lets you sign in, and a reset link goes here." });
   }
   if (p === "/auth/claim") {
     if (body.token !== "TOKTOK") return send({ error: "That claim link isn't valid." }, 403);
@@ -96,10 +96,43 @@ ok("only claimed players are offered for autocomplete",
   await page.evaluate(() => [...document.querySelectorAll("#sRoster option")].map(o => o.value).join(",")) === "Kap,Jeff Carbaugh");
 {
   const t = await page.locator("body").innerText();
-  ok("the page says plainly nothing is ever sent to the email", /nothing is ever sent/i.test(t));
+  /* ⚠️ INVERTED FROM "the page says plainly nothing is ever sent to the email". CEP-6
+     shipped, so that sentence became false and was removed sitewide. The page must now
+     do the opposite — advertise the recovery it can actually perform. */
+  ok("the page no longer claims nothing is ever sent", !/nothing is ever sent/i.test(t));
+  ok("it offers to send a reset link", /reset link/i.test(t));
   ok("and that an account is not a league seat", /does not put you in a league/i.test(t));
+  /* Still true, and deliberately kept: an account with NO email cannot self-recover, and
+     the honest fallback for those people is still Kap. */
   ok("recovery says to text Kap", /Text Kap/.test(t));
 }
+
+/* ------------------------------------------- the CEP-6 recovery affordances */
+console.log("\nforgot-password and the one-time link cards");
+ok("a forgot-password form is on the resting page", await vis("fEmail") && await vis("fGo"));
+ok("the reset card is hidden without ?reset=", !(await vis("sReset")));
+ok("the verify banner is hidden without ?verify=", !(await vis("sVerify")));
+{
+  /* ⚠️ A live reset token is EXCLUSIVE — it hides every other card. Someone who followed a
+     reset link has one job, and leaving the sign-in form up invites them to retry the
+     password they have already forgotten. */
+  await go("signon.html?reset=faketoken123");
+  ok("?reset= shows the set-password card", await vis("sReset"));
+  ok("…and hides sign-in", !(await vis("sIn")));
+  ok("…and hides create-account", !(await vis("sNew")));
+  ok("…and hides recovery", !(await vis("sHelp")));
+  /* One-time credentials must not survive in the URL bar, history or a screenshot. */
+  ok("…and burns the token out of the URL", await page.evaluate(() => location.search) === "");
+  await page.fill("#rPw", "short"); await page.fill("#rPw2", "short");
+  await page.click("#rGo");
+  ok("a short password is refused client-side",
+    /at least 8/i.test(await page.locator("#rMsg").innerText()));
+  await page.fill("#rPw", "longenough1"); await page.fill("#rPw2", "different1");
+  await page.click("#rGo");
+  ok("a mismatch is refused client-side",
+    /don't match/i.test(await page.locator("#rMsg").innerText()));
+}
+await go("signon.html");
 
 /* ------------------------------------------------- open signup */
 console.log("\ncreate an account");
@@ -200,7 +233,9 @@ await page.fill("#eEmail", "jc@example.com");
 await page.click("#eGo");
 await page.waitForTimeout(300);
 ok("saving carries the session header", !!headers["/auth/email"]);
-ok("and confirms without pretending mail exists", /nothing is sent to it/i.test(await page.locator("#eMsg").innerText()));
+/* ⚠️ INVERTED. Was "confirms without pretending mail exists" — mail now exists, so the
+   honest confirmation is that the address is what a reset link would reach. */
+ok("and confirms what the address is actually for", /reset a forgotten password/i.test(await page.locator("#eMsg").innerText()));
 await page.fill("#eEmail", "");
 await page.click("#eGo");
 await page.waitForTimeout(300);

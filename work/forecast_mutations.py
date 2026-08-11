@@ -25,8 +25,14 @@ SUITE = "test-forecast-store.mjs"
 
 def run_suite():
     """Return (ok, set_of_failed_assertion_names)."""
+    # ⚠️ encoding="utf-8" is load-bearing, not tidiness. text=True alone decodes with the
+    # locale default, which on Windows is cp1252: every "—" and "…" in an assertion name
+    # comes back mojibake. That breaks the detail-stripping regex below AND every substring
+    # match against `expect`, so a mutation that really did go red gets graded "red on the
+    # wrong assertions" — and, worse, an expectation naming a non-ASCII assertion can never
+    # be satisfied. The suite's test names use both characters liberally.
     proc = subprocess.run([shutil.which("node") or "node", SUITE],
-                          capture_output=True, text=True, timeout=300)
+                          capture_output=True, text=True, encoding="utf-8", timeout=300)
     failed = set(re.findall(r"^\s*FAIL\s+(.*?)(?:\s+—.*)?$", proc.stdout, re.M))
     return proc.returncode == 0, failed, proc.stdout
 
@@ -50,9 +56,10 @@ MUTATIONS = [
          "it returns only my entries"]),
 
     ("M3", "touched is DERIVED from the value instead of stored separately", [(
-        '    .filter(r => r && r.touched === true && Number.isFinite(Number(r.home_win_probability)))',
-        '    .filter(r => r && Number(r.home_win_probability) !== 0.5 '
-        '&& Number.isFinite(Number(r.home_win_probability)))',
+        '    .filter(r => r && r.touched === true && r.entrant_kind !== "agent" &&\n'
+        '                 Number.isFinite(Number(r.home_win_probability)))',
+        '    .filter(r => r && Number(r.home_win_probability) !== 0.5 && r.entrant_kind !== "agent" &&\n'
+        '                 Number.isFinite(Number(r.home_win_probability)))',
     )], ["the consensus is the trimmed mean of LOG-ODDS, not of probabilities",
          "it trims one from each end once n >= 5",
          "the untouched entry is excluded from the crowd",
@@ -117,8 +124,12 @@ MUTATIONS = [
         '  return json({ ok: true, entry }, 200, cors);',
         '  try { await fbPut(env, path, entry); }\n'
         '  catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }\n'
+        # ⚠️ `entrant`, not `name` — FC-C renamed the binding. Referencing the old name here
+        # threw a ReferenceError INSIDE this mutation's own `catch {}`, so the standings node
+        # was never written and M11 silently stopped testing anything while still reading as
+        # a valid mutation. A mutation that cannot fail is worse than no mutation.
         '  try { await fbPut(env, `${FC_ROOT}/standings/${sport}/${game.season}/'
-        '${encodeURIComponent(name)}`, { points: 0 }); } catch {}\n'
+        '${encodeURIComponent(entrant)}`, { points: 0 }); } catch {}\n'
         '  return json({ ok: true, entry }, 200, cors);',
     )], ["the forecast tree contains no total, standing, score or rank node"]),
 
@@ -149,6 +160,54 @@ MUTATIONS = [
         '  if (!FC_SPORTS[sport]) return json({ error: "Unknown sport." }, 400, cors);\n'
         '  const season = parseInt(body.season, 10);',
     )], ["sealing is admin only"]),
+
+    # ---- FC-C, the entrant model -------------------------------------------
+    # Each of these is a plausible-looking simplification of the entrant work, and each
+    # destroys something the stage exists to guarantee.
+
+    ("M14", "a bot writes under its OWNER's name instead of its own", [(
+        '    return { entrant: bot.entrant, kind: "agent", owner: bot.owner, source: "api" };',
+        '    return { entrant: bot.owner, kind: "agent", owner: bot.owner, source: "api" };',
+    )], ["the owner's own entry on the same game is byte-for-byte untouched",
+         "and still holds the human's number, not the bot's",
+         "it lands under the BOT's name, not its owner's"]),
+
+    ("M15", "an idempotent repeat is treated as a fresh revision", [(
+        '  if (idemKey !== null && prior && prior.idempotency_key === idemKey)\n'
+        '    return json({ ok: true, entry: prior, idempotent: true }, 200, cors);',
+        '  if (false)\n'
+        '    return json({ ok: true, entry: prior, idempotent: true }, 200, cors);',
+    )], ["and is reported as idempotent",
+         "and does NOT bump the revision",
+         "and does NOT move submitted_at"]),
+
+    ("M16", "agents are admitted to the crowd consensus", [(
+        '    .filter(r => r && r.touched === true && r.entrant_kind !== "agent" &&',
+        '    .filter(r => r && r.touched === true &&',
+    )], ["only the three humans are counted",
+         "no agent is in the contributor list",
+         "and the agents' numbers did not move the consensus"]),
+
+    ("M17", "a bot token is accepted wherever a session is", [(
+        'async function forecastMine(request, url, env, cors) {\n'
+        '  if (request.method !== "GET") return json({ error: "GET only" }, 405, cors);\n'
+        '  const auth = await sessionAuth(request, env);',
+        'async function forecastMine(request, url, env, cors) {\n'
+        '  if (request.method !== "GET") return json({ error: "GET only" }, 405, cors);\n'
+        '  const auth = await fcEntrantAuth(request, env);',
+    )], ["a bot token is refused on /forecast/entries"]),
+
+    ("M18", "a revoked bot token keeps working", [(
+        '    if (b.revoked === true) return { err: "That bot token was revoked.", code: 403 };',
+        '    if (false) return { err: "That bot token was revoked.", code: 403 };',
+    )], ["a revoked token is refused 403"]),
+
+    ("M19", "bot registration stops checking the account namespace", [(
+        '    if (taken) return json({ error: `That name is already ${taken}. Bots and people share one namespace.` }, 409, cors);',
+        '    if (false) return json({ error: `That name is already ${taken}. Bots and people share one namespace.` }, 409, cors);',
+    )], ["a bot may not take an existing account name",
+         "case-insensitively",
+         "a bot may not take another bot's name"]),
 ]
 
 

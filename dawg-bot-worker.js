@@ -124,7 +124,10 @@ function corsFor(origin) {
     // Must list EVERY custom header any page sends. A header that is accepted by
     // the handler but missing here is still killed by the browser at preflight,
     // and the page only sees "Failed to fetch" with no status and no console body.
-    "Access-Control-Allow-Headers": "Content-Type, X-Dawg-Pass, X-Bozo-Session, X-Dawg-Session",
+    // X-DD-Bot is a forecast-challenge bot credential (FC-C). It is listed here so a
+    // browser-side bot test preflights, and it is accepted on POST /forecast/entry and
+    // NOWHERE else — that scoping lives in the route table, not in a handler branch.
+    "Access-Control-Allow-Headers": "Content-Type, X-Dawg-Pass, X-Bozo-Session, X-Dawg-Session, X-DD-Bot",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
@@ -673,11 +676,18 @@ export default {
     if (url.pathname === "/league/team")   return leagueTeam(request, env, cors);
     if (url.pathname === "/league/invite") return authInvite(request, env, cors);
 
-    // The forecasting challenge. Storage only for now — no page calls these yet.
+    // The forecasting challenge. Storage and entrants — no page calls these yet.
+    // ⚠️ A BOT TOKEN IS HONOURED ON /forecast/entry AND NOWHERE ELSE, and that scoping
+    // lives HERE rather than inside the handlers. Only forecastEntry calls fcEntrantAuth;
+    // every other route below still calls sessionAuth, so an X-DD-Bot header sent at them
+    // is not "rejected" so much as never consulted. Put the check in a handler instead and
+    // the next route someone adds inherits whichever auth they happen to copy.
     if (url.pathname === "/forecast/entry")   return forecastEntry(request, env, cors);
     if (url.pathname === "/forecast/entries") return forecastMine(request, url, env, cors);
     if (url.pathname === "/forecast/game")    return forecastGame(request, url, env, cors);
     if (url.pathname === "/forecast/seal")    return forecastSeal(request, env, cors);
+    if (url.pathname === "/forecast/bot")     return forecastBot(request, env, cors);
+    if (url.pathname === "/forecast/bots")    return forecastBots(request, env, cors);
     if (url.pathname === "/bozo/pick")    return bozoPick(request, env, cors);
     if (url.pathname === "/bozo/grade")   return bozoGrade(request, env, cors);
     if (url.pathname === "/bozo/next")    return bozoNext(request, env, cors);
@@ -1316,10 +1326,14 @@ function newMcpToken() {
   return "u_" + btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-// Resolve an email to a player name. Email is an ALTERNATE IDENTIFIER ONLY — nothing is
-// ever sent to it and nothing is verified, because verifying would need a mail sender
-// (Resend + DKIM/SPF at Porkbun), and a public repo with an open mail endpoint is a spam
-// relay that gets the domain blacklisted. Saying "verified" without that work is a lie.
+// Resolve an email to a player name. Email is an ALTERNATE SIGN-IN IDENTIFIER, and since
+// CEP-6 it is also the address a reset link goes to.
+//
+// ⚠️ THIS LOOKUP IS DELIBERATELY INDIFFERENT TO emailVerified. Every account predates the
+// mail sender, so gating sign-in on confirmation would lock existing players out of their
+// own names for a property none of them could have had. Verification is additive and
+// opt-in (POST /auth/verify-request); it proves an address is reachable, and it is never
+// a precondition for signing in with it.
 async function emailToName(env, email) {
   const want = String(email || "").trim().toLowerCase();
   if (!want || want.indexOf("@") < 1) return null;
@@ -2695,14 +2709,119 @@ const FC_MIN_TOUCH = 3;       // fewer than three touched entries is not a crowd
 const FC_TRIM = 0.1;          // dropped from EACH end, by logit, once n >= 5
 const FC_CLAMP_LO = 0.01;     // sliders reach 0 and 100; an unclamped logit is infinite
 const FC_CLAMP_HI = 0.99;
-const FC_WRITE_CAP = 2000;    // entry writes per user per day
+const FC_WRITE_CAP = 2000;    // entry writes per HUMAN per day
+// ⚠️ Agents get their own cap and their own key. FC_WRITE_CAP was sized for a person
+// dragging sliders; a bot resubmitting on every model refresh burns that in an afternoon
+// through no fault of its own. Sharing one counter would let a busy bot lock its owner
+// out of the website, which is the wrong failure. Repeat submissions carrying the same
+// idempotency_key cost nothing against either counter — see forecastEntry.
+const FC_AGENT_WRITE_CAP = 5000;
+const FC_BOTS_PER_OWNER = 3;
+const FC_BOT_REG_CAP = 10;    // registrations per IP per day
 const FC_CROWD_VERSION = "crowd-1.0.0";
 
-const fcEntryPath = (sport, season, week, user, gameId) =>
-  `${FC_ROOT}/entries/${sport}/${season}/${week}/${encodeURIComponent(user)}` +
+const fcEntryPath = (sport, season, week, entrant, gameId) =>
+  `${FC_ROOT}/entries/${sport}/${season}/${week}/${encodeURIComponent(entrant)}` +
   (gameId ? "/" + encodeURIComponent(gameId) : "");
+const fcBotPath = (botName) =>
+  `${FC_ROOT}/bots` + (botName ? "/" + encodeURIComponent(botName) : "");
 const fcSealPath = (sport, season, week, gameId) =>
   `${FC_ROOT}/sealed/${sport}/${season}/${week}` + (gameId ? "/" + encodeURIComponent(gameId) : "");
+
+/* ------------------------------ bot entrants ----------------------------- */
+/* ⚠️ A BOT IS A RESERVED NAME IN THE ACCOUNT NAMESPACE, NOT A SUFFIX ON ITS OWNER'S.
+ * The tempting shape is `owner~slug`, and it is wrong: account names have no enforced
+ * charset at signup, so any separator that can be chosen can also appear inside a real
+ * name, and the parse becomes ambiguous exactly once — silently, on somebody's receipt.
+ * Registration instead refuses a name that already exists in /users OR in /forecast/bots,
+ * so humans and bots share ONE namespace. That is correct on its own terms — leaderboard
+ * names have to be unique anyway — and it means the entry path shape does not change:
+ * .../<entrant>/<game_id> works whoever the entrant is.
+ *
+ * ⚠️ WHY BOTS DO NOT WRITE UNDER THEIR OWNER'S ACCOUNT. One entry per entrant per game
+ * means an agent writing as its owner would overwrite the owner's own slider, last write
+ * wins, with no way to tell afterwards which was which. It would also make the single
+ * most interesting comparison in the whole project — you against your own bot —
+ * impossible to express. */
+
+// Domain-separated from MCP tokens and invite hashes: same pepper, different prefix, so a
+// stolen credential of one kind can never be replayed as another.
+const fcBotTokenHash = (env, token) => hmac(env.BOZO_PEPPER, "fcbot|" + token);
+
+function newFcBotToken() {
+  const raw = crypto.getRandomValues(new Uint8Array(24));
+  let s = ""; for (const b of raw) s += String.fromCharCode(b);
+  return "b_" + btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+// Bot names are charset-controlled even though account names are not. We own this
+// namespace's creation path, so there is no reason to inherit the looseness that forced
+// the no-separator decision above.
+const FC_BOT_NAME_RE = /^[A-Za-z0-9][A-Za-z0-9 ._-]{1,39}$/;
+const fcNameKey = (s) => String(s || "").trim().toLowerCase();
+
+/* Case-insensitive collision check across BOTH namespaces. "Kap" and "kap" as two
+ * separate leaderboard rows would be a support problem and an impersonation vector. */
+async function fcNameTaken(env, wanted) {
+  const want = fcNameKey(wanted);
+  let users = {};
+  try { users = await loadUsers(env); } catch (e) { throw new Error("roster unreadable: " + e.message); }
+  for (const k of Object.keys(users)) if (fcNameKey(playerName(k)) === want) return "an account";
+  let bots = {};
+  try { bots = (await fbGet(env, fcBotPath(null))).data || {}; }
+  catch (e) { throw new Error("bot registry unreadable: " + e.message); }
+  for (const [k, b] of Object.entries(bots))
+    if (fcNameKey((b && b.bot_name) || decodeURIComponent(k)) === want) return "a bot";
+  return null;
+}
+
+/* ⚠️ Resolves a bot credential to an entrant. This is sessionAuth's SIBLING, not a branch
+ * inside it: the two credential kinds authorise different things, and folding them into
+ * one function is how a bot token eventually gets accepted somewhere nobody intended.
+ * A bot token is honoured on POST /forecast/entry and nowhere else. */
+async function fcBotAuth(env, token) {
+  const cfg = bozoConfig(env);
+  if (cfg) return { err: cfg, code: 500 };
+  if (!token) return { err: "Missing bot token.", code: 401 };
+  const hash = await fcBotTokenHash(env, token);
+
+  let bots;
+  try { bots = (await fbGet(env, fcBotPath(null))).data || {}; }
+  catch (e) { return { err: "Database unreachable: " + e.message, code: 502 }; }
+
+  for (const [k, b] of Object.entries(bots)) {
+    if (!b || b.token_hash !== hash) continue;
+    if (b.revoked === true) return { err: "That bot token was revoked.", code: 403 };
+    const botName = b.bot_name || decodeURIComponent(k);
+    // Mirrors sessionAuth's roster check: if the owner is removed from /users, their
+    // bots stop writing on the next request rather than outliving the human indefinitely.
+    let players;
+    try { players = userNames(await loadUsers(env)); }
+    catch (e) { return { err: e.message, code: 502 }; }
+    if (!players.includes(b.owner)) return { err: "That bot's owner is no longer a player.", code: 403 };
+    return { entrant: botName, kind: "agent", owner: b.owner };
+  }
+  return { err: "Unknown bot token.", code: 401 };
+}
+
+/* The one place the two credential kinds meet. Header presence picks the path; a request
+ * carrying both is treated as the human, because a session is the stronger claim and
+ * silently preferring the bot would let a stolen token ride a real browser session. */
+async function fcEntrantAuth(request, env) {
+  const sessTok = request.headers.get("X-Dawg-Session") || request.headers.get("X-Bozo-Session") || "";
+  if (sessTok) {
+    const auth = await sessionAuth(request, env);
+    if (auth.err) return auth;
+    return { entrant: auth.name, kind: "human", owner: auth.name, source: "web" };
+  }
+  const botTok = request.headers.get("X-DD-Bot") || "";
+  if (botTok) {
+    const bot = await fcBotAuth(env, botTok);
+    if (bot.err) return bot;
+    return { entrant: bot.entrant, kind: "agent", owner: bot.owner, source: "api" };
+  }
+  return { err: "Sign in first, or send a bot token.", code: 401 };
+}
 
 /* ---------------------------- the schedule ------------------------------- */
 /* kickoff_at comes from the canonical schedule surface and NEVER from the request.
@@ -2759,10 +2878,26 @@ const fcSigmoid = z => 1 / (1 + Math.exp(-z));
  * opposite meanings — both score zero, but the first is an ABSENCE. Let untouched games
  * into the consensus at 50% and every lurker drags the crowd to the middle, which
  * destroys the only thing the human line is for: independence from the models. */
+/* ⚠️ AGENTS ARE EXCLUDED FROM THE CROWD LINE. FC-C introduced bot entrants, which forces
+ * a question stage FC-A did not have to answer: does dd-crowd-<sport> average humans, or
+ * everyone? It has to be humans. The crowd line's entire reason to exist is being an
+ * INDEPENDENT signal to grade the models against — and bots are model-driven by
+ * construction, so admitting them turns "Data Dawgs Crowd" into a weighted average of the
+ * same models it is supposed to be independent of. It would still be a legitimate line;
+ * it would just no longer be the line the contract pre-registered.
+ *
+ * This is the same argument the `touched` filter already makes, one level up: untouched
+ * sliders drag the crowd toward 50, and model-following bots drag it toward the models.
+ * Both destroy independence, which is the only thing the human line is for.
+ *
+ * Agents still compete, still score, still get a leaderboard row. They just are not the
+ * crowd. A v1 row has no entrant_kind, so `!== "agent"` treats it as human — which is
+ * exactly right, because v1 predates bots existing at all. */
 function fcAggregate(rows) {
   const contributors = rows
-    .filter(r => r && r.touched === true && Number.isFinite(Number(r.home_win_probability)))
-    .sort((a, b) => String(a.user).localeCompare(String(b.user)));
+    .filter(r => r && r.touched === true && r.entrant_kind !== "agent" &&
+                 Number.isFinite(Number(r.home_win_probability)))
+    .sort((a, b) => String(a.entrant).localeCompare(String(b.entrant)));
   const n = contributors.length;
   if (n < FC_MIN_TOUCH) return null;
 
@@ -2789,15 +2924,16 @@ function fcAggregate(rows) {
  * ledger uses, so the consensus is recomputable by anyone once entries become readable. */
 const fcCanonicalRow = r => JSON.stringify({
   game_id: r.game_id, home_win_probability: r.home_win_probability,
-  submitted_at: r.submitted_at, touched: r.touched, user: r.user,
+  submitted_at: r.submitted_at, touched: r.touched, entrant: r.entrant,
 });
 
 /* ------------------------- POST /forecast/entry -------------------------- */
 async function forecastEntry(request, env, cors) {
   if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
-  const auth = await sessionAuth(request, env);
+  // The ONE route that accepts a bot credential. Everywhere else still calls sessionAuth.
+  const auth = await fcEntrantAuth(request, env);
   if (auth.err) return json({ error: auth.err }, auth.code, cors);
-  const { name } = auth;
+  const { entrant, kind, owner, source } = auth;
 
   let body;
   try { body = await readBody(request); }
@@ -2833,22 +2969,47 @@ async function forecastEntry(request, env, cors) {
   if ("home_win_probability" in body)
     return json({ error: "home_win_probability is derived, not submitted." }, 400, cors);
 
-  if (env.RL) {
-    const key = `fc:w:${new Date().toISOString().slice(0, 10)}:${encodeURIComponent(name)}`;
-    const used = parseInt((await env.RL.get(key)) || "0", 10);
-    if (used >= FC_WRITE_CAP)
-      return json({ error: `You have hit the daily forecast write cap (${FC_WRITE_CAP}).` }, 429, cors);
-    await env.RL.put(key, String(used + 1), { expirationTtl: 172800 });
-  }
+  const idemKey = body.idempotency_key == null ? null : String(body.idempotency_key);
+  if (idemKey !== null && (!idemKey || idemKey.length > 128))
+    return json({ error: "idempotency_key must be a string of 1 to 128 characters." }, 400, cors);
 
-  const path = fcEntryPath(sport, game.season, game.week, name, gameId);
+  const path = fcEntryPath(sport, game.season, game.week, entrant, gameId);
   let prior = null;
   try { prior = (await fbGet(env, path)).data; }
   catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
 
+  // ⚠️ IDEMPOTENCY IS CHECKED BEFORE THE CAP, AND THAT ORDER IS THE WHOLE POINT. A repeat
+  // carrying a key we have already stored is a no-op, not a revision: it must not bump
+  // `revision`, must not move `submitted_at`, and must not cost a write against the cap.
+  // An agent that retries after a timeout it never saw the response to would otherwise be
+  // punished for the network's failure, and its revision history would record edits that
+  // never happened. Reading `prior` first is what makes this possible, which is why the
+  // cap moved below the read.
+  if (idemKey !== null && prior && prior.idempotency_key === idemKey)
+    return json({ ok: true, entry: prior, idempotent: true }, 200, cors);
+
+  if (env.RL) {
+    const day = new Date().toISOString().slice(0, 10);
+    const agent = kind === "agent";
+    const key = agent ? `fc:b:${day}:${encodeURIComponent(entrant)}`
+                      : `fc:w:${day}:${encodeURIComponent(entrant)}`;
+    const cap = agent ? FC_AGENT_WRITE_CAP : FC_WRITE_CAP;
+    const used = parseInt((await env.RL.get(key)) || "0", 10);
+    if (used >= cap)
+      return json({ error: `Daily forecast write cap reached (${cap}).` }, 429, cors);
+    await env.RL.put(key, String(used + 1), { expirationTtl: 172800 });
+  }
+
   const entry = {
-    v: 1,
-    sport, season: game.season, week: game.week, game_id: gameId, user: name,
+    // ⚠️ v2 RENAMES `user` TO `entrant`, AND IT IS A CLEAN BREAK, NOT A DUPLICATE FIELD.
+    // Nothing had ever read `user` — no page called these routes — so carrying both would
+    // have bought compatibility with no reader, at the price of two names for one thing
+    // and a permanent question about which is authoritative. `entrant` is the leaderboard
+    // key and may be a person or a bot; `owner` is the human answerable for it, and equals
+    // `entrant` for humans.
+    v: 2,
+    sport, season: game.season, week: game.week, game_id: gameId,
+    entrant, entrant_kind: kind, owner,
     home_team: game.home_team, away_team: game.away_team, kickoff_at: game.kickoff_at,
     // The canonical number is ALWAYS P(home). Scoring is symmetric under
     // p -> 1-p, r -> 1-r, so the side the user expressed it on cannot change a score.
@@ -2862,7 +3023,10 @@ async function forecastEntry(request, env, cors) {
     touched: body.touched,
     submitted_at: now,
     revision: (prior && Number.isInteger(prior.revision) ? prior.revision : 0) + 1,
-    source: "web",
+    // Where the write came from, decided by which credential authenticated it — never
+    // read from the body, so a caller cannot dress an API write up as a human one.
+    source,
+    idempotency_key: idemKey,
   };
 
   try { await fbPut(env, path, entry); }
@@ -2925,17 +3089,17 @@ async function forecastGame(request, url, env, cors) {
   if (Date.now() < game.kickoff_ms)
     return json({ error: "Forecasts stay private until kickoff." }, 409, cors);
 
-  let byUser;
-  try { byUser = (await fbGet(env, `${FC_ROOT}/entries/${sport}/${game.season}/${game.week}`)).data || {}; }
+  let byEntrant;
+  try { byEntrant = (await fbGet(env, `${FC_ROOT}/entries/${sport}/${game.season}/${game.week}`)).data || {}; }
   catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
 
   const key = encodeURIComponent(gameId);
   const entries = [];
-  for (const perUser of Object.values(byUser)) {
-    const row = perUser && perUser[key];
+  for (const perEntrant of Object.values(byEntrant)) {
+    const row = perEntrant && perEntrant[key];
     if (row) entries.push(row);
   }
-  entries.sort((a, b) => String(a.user).localeCompare(String(b.user)));
+  entries.sort((a, b) => String(a.entrant).localeCompare(String(b.entrant)));
 
   let sealed = null;
   try { sealed = (await fbGet(env, fcSealPath(sport, game.season, game.week, gameId))).data || null; }
@@ -2979,14 +3143,14 @@ async function forecastSeal(request, env, cors) {
   try { games = await fcSchedule(sport); }
   catch (e) { return json({ error: e.message }, 502, cors); }
 
-  let byUser, already;
+  let byEntrant, already;
   try {
-    byUser = (await fbGet(env, `${FC_ROOT}/entries/${sport}/${season}/${week}`)).data || {};
+    byEntrant = (await fbGet(env, `${FC_ROOT}/entries/${sport}/${season}/${week}`)).data || {};
     already = (await fbGet(env, fcSealPath(sport, season, week, null))).data || {};
   } catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
 
   const perGame = new Map();
-  for (const entries of Object.values(byUser)) {
+  for (const entries of Object.values(byEntrant)) {
     for (const row of Object.values(entries || {})) {
       if (!row || typeof row.game_id !== "string") continue;
       if (!perGame.has(row.game_id)) perGame.set(row.game_id, []);
@@ -3034,7 +3198,7 @@ async function forecastSeal(request, env, cors) {
       captured_at: new Date(capturedMs).toISOString(),
       sealed_at: new Date(now).toISOString(),
       forecast_status: "prospective",
-      contributors: agg.contributors.map(r => r.user),
+      contributors: agg.contributors.map(r => r.entrant),
       contributors_sha256: await sha256hex(agg.contributors.map(fcCanonicalRow).join("\n")),
     };
     try { await fbPut(env, fcSealPath(sport, season, week, gameId), row); }
@@ -3043,6 +3207,137 @@ async function forecastSeal(request, env, cors) {
   }
 
   return json({ ok: true, sport, season, week, sealed, skipped }, 200, cors);
+}
+
+/* -------------------------- POST /forecast/bot --------------------------- */
+/* Register, rotate or revoke a bot entrant. Session required, and it acts ONLY on bots
+ * the caller owns — the same "acts only on SELF" discipline /auth/mcp-token has.
+ *
+ * ⚠️ REGISTRATION REQUIRES A CONFIRMED EMAIL, AND FORECAST ENTRY DOES NOT. That asymmetry
+ * is deliberate. A slider is a person playing a game; a verification wall in front of it
+ * would cost conversion and protect nothing. A bot token is a different object: it writes
+ * attributable prospective receipts, unattended, at volume, and it is the thing that would
+ * be abused first. Requiring a reachable human behind it is proportionate to what it can
+ * do — and unlike a slider, nobody is standing there waiting on it. */
+async function forecastBot(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 401, cors);
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const action = String((body && body.action) || "");
+  if (!["register", "rotate", "revoke"].includes(action))
+    return json({ error: "action must be register, rotate or revoke." }, 400, cors);
+  const botName = String((body && body.bot_name) || "").trim();
+  if (!botName) return json({ error: "bot_name is required." }, 400, cors);
+
+  let users;
+  try { users = await loadUsers(env); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+  const me = users[auth.name] || users[encodeURIComponent(auth.name)] || null;
+
+  /* ---------------------------- register ---------------------------- */
+  if (action === "register") {
+    if (!me || me.emailVerified !== true)
+      return json({ error: "Confirm your email address before registering a bot." }, 403, cors);
+    if (!FC_BOT_NAME_RE.test(botName))
+      return json({ error: "bot_name must be 2 to 40 characters: letters, digits, spaces, dot, underscore or hyphen, starting with a letter or digit." }, 400, cors);
+
+    if (env.RL) {
+      const ip = request.headers.get("CF-Connecting-IP") || "0.0.0.0";
+      const key = `fcbotreg:${new Date().toISOString().slice(0, 10)}:${ip}`;
+      const used = parseInt((await env.RL.get(key)) || "0", 10);
+      if (used >= FC_BOT_REG_CAP)
+        return json({ error: "Too many bot registrations from this address today." }, 429, cors);
+      await env.RL.put(key, String(used + 1), { expirationTtl: 172800 });
+    }
+
+    let bots;
+    try { bots = (await fbGet(env, fcBotPath(null))).data || {}; }
+    catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+    const mine = Object.values(bots).filter(b => b && b.owner === auth.name && b.revoked !== true);
+    if (mine.length >= FC_BOTS_PER_OWNER)
+      return json({ error: `You already have ${FC_BOTS_PER_OWNER} active bots.` }, 409, cors);
+
+    let taken;
+    try { taken = await fcNameTaken(env, botName); }
+    catch (e) { return json({ error: e.message }, 502, cors); }
+    if (taken) return json({ error: `That name is already ${taken}. Bots and people share one namespace.` }, 409, cors);
+
+    const token = newFcBotToken();
+    const rec = {
+      v: 1,
+      owner: auth.name,
+      bot_name: botName,
+      created_at: Date.now(),
+      token_hash: await fcBotTokenHash(env, token),
+      token_set_at: Date.now(),
+      revoked: false,
+      agent_note: String((body && body.agent_note) || "").slice(0, 280),
+    };
+    try { await fbPut(env, fcBotPath(botName), rec); }
+    catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+    // ⚠️ Shown ONCE. Only the hash is stored, so it cannot be redisplayed — same discipline
+    // as invite tokens and MCP tokens. Losing it means rotating.
+    return json({ ok: true, bot: fcPublicBot(botName, rec), token,
+                  note: "Copy this token now. It is shown once and only its hash is stored. Send it as the X-DD-Bot header on POST /forecast/entry." }, 200, cors);
+  }
+
+  /* ------------------------ rotate / revoke ------------------------- */
+  let rec;
+  try { rec = (await fbGet(env, fcBotPath(botName))).data; }
+  catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+  // Same answer for "does not exist" and "is not yours", so this cannot be used to probe
+  // which bot names other people have registered.
+  if (!rec || rec.owner !== auth.name) return json({ error: "No such bot of yours." }, 404, cors);
+
+  if (action === "revoke") {
+    // ⚠️ REVOKE DOES NOT DELETE THE RECORD. The name must stay reserved: its entries are
+    // already attributed to it, and freeing the name would let someone else register it
+    // and inherit a leaderboard row full of somebody else's forecasts.
+    try { await fbPatch(env, fcBotPath(botName), { revoked: true, revoked_at: Date.now() }); }
+    catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+    return json({ ok: true, bot: fcPublicBot(botName, { ...rec, revoked: true }), revoked: true }, 200, cors);
+  }
+
+  const token = newFcBotToken();
+  try {
+    await fbPatch(env, fcBotPath(botName),
+      { token_hash: await fcBotTokenHash(env, token), token_set_at: Date.now(), revoked: false });
+  } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  return json({ ok: true, bot: fcPublicBot(botName, rec), token,
+                note: "Rotated. The previous token stopped working immediately." }, 200, cors);
+}
+
+// The public shape of a bot. ⚠️ token_hash is never in it — not because the hash is
+// usable, but because publishing it invites someone to try.
+const fcPublicBot = (name, b) => ({
+  bot_name: b.bot_name || name,
+  owner: b.owner,
+  created_at: b.created_at || null,
+  token_set_at: b.token_set_at || null,
+  revoked: b.revoked === true,
+  agent_note: b.agent_note || "",
+});
+
+/* -------------------------- GET /forecast/bots --------------------------- */
+async function forecastBots(request, env, cors) {
+  if (request.method !== "GET") return json({ error: "GET only" }, 405, cors);
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 401, cors);
+
+  let bots;
+  try { bots = (await fbGet(env, fcBotPath(null))).data || {}; }
+  catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+
+  const mine = Object.entries(bots)
+    .filter(([, b]) => b && b.owner === auth.name)
+    .map(([k, b]) => fcPublicBot(decodeURIComponent(k), b))
+    .sort((a, b) => a.bot_name.localeCompare(b.bot_name));
+  return json({ ok: true, owner: auth.name, bots: mine, cap: FC_BOTS_PER_OWNER }, 200, cors);
 }
 
 /* =============================== /bozo/pick =============================== */
