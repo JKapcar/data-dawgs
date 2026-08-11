@@ -159,6 +159,30 @@ ok(sub.marketKeyOf({ eventId: "9", mkt: "prop", prop: "QB yards", line: 199.5 })
 ok(sub.marketKeyOf({ eventId: "9", mkt: "ml", side: "CLE" }) === sub.marketKeyOf({ eventId: "9", mkt: "ml", side: "PIT" }),
    "both moneylines on one game are one market instance");
 
+/* ⚠️ THE PAGE KEEPS A MIRROR OF BOTH KEYS so it can warn you your leg is gone BEFORE you
+   press submit. The server stays authoritative — drift produces a wrong warning, never a
+   leg that gets through — but a wrong warning is still a lie told confidently, and these
+   two implementations sit in different files with nothing but this test between them. */
+{
+  const pg = build(page, ["pageSelectionKey", "pageMarketKey"]);
+  const cases = [
+    { eventId: "401", mkt: "spread", side: "CLE",   line: 3.5,   prop: null },
+    { eventId: "401", mkt: "spread", side: "PIT",   line: -3.5,  prop: null },
+    { eventId: "402", mkt: "total",  side: "over",  line: 47.5,  prop: null },
+    { eventId: "402", mkt: "total",  side: "under", line: 47.5,  prop: null },
+    { eventId: "9",   mkt: "ml",     side: "CLE",   line: 0,     prop: null },
+    { eventId: "9",   mkt: "prop",   side: "over",  line: 199.5, prop: "QB yards" },
+    { eventId: "9",   mkt: "other",  side: "DET",   line: 0.5,   prop: "No overtime" },
+  ];
+  let selOk = 0, mktOk = 0;
+  for (const c of cases) {
+    if (pg.pageSelectionKey(c.eventId, c.mkt, c.side, c.line, c.prop) === sub.selectionKeyOf(c)) selOk++;
+    if (pg.pageMarketKey(c.eventId, c.mkt, c.line, c.prop) === sub.marketKeyOf(c)) mktOk++;
+  }
+  ok(selOk === cases.length, "the page's selection key matches the Worker's on every market shape", `${selOk}/${cases.length}`);
+  ok(mktOk === cases.length, "…and so does its market key", `${mktOk}/${cases.length}`);
+}
+
 /* ========================== 3. Bozo Royale levers ========================= */
 const roy = build(worker, ["rImp", "rDevig", "rInvNorm", "rDir", "rSd", "rExpected",
                            "royaleBeatDeficit", "royaleApplyLever"],

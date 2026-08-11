@@ -562,7 +562,9 @@ write('bozo-rules.json', {
         'Bozo Royale — the guillotine. One player is chopped each week, ranked by that week\'s drawn lever ' +
         'hierarchy. If the ticket cashes nobody goes and the pot carries. RE-DEPLOY: get chopped with one ' +
         'left and you are back on the next ticket automatically — there is no decision to make and no window ' +
-        'to miss, which is exactly why it cannot be saved for a convenient week. One each. After that a ' +
+        'to miss, which is exactly why it cannot be saved for a convenient week. EVERY player gets exactly ' +
+        'one and it always fires: being able to sit out and dodge bozos would be unfair to everyone still ' +
+        'playing, so the cost is a price and never an off switch. After that a ' +
         'parachute stays beside your name and the next chop ends your season. Never granted at the final ' +
         'two, or the league could not resolve. The chopped player funds the next ticket either way. Last ' +
         'one standing takes the pot.',

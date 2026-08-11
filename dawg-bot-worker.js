@@ -4878,7 +4878,15 @@ function royaleDecideChop(state, order) {
 function royaleStatus(state) {
   const stored = (state && state.royale && state.royale.status) || {};
   const out = {};
-  const allowance = settingsOf(state).buyback > 0 ? 1 : 0;
+  /* ⚠️ EVERY PLAYER GETS EXACTLY ONE, ALWAYS. The cost used to double as an on/off
+     switch — 0 meant no re-deploys at all — which made a free re-deploy impossible to
+     express and, worse, made "no way back" a league someone could configure.
+
+     Kap's call: in Bozo Royale you auto-redeploy, full stop. Being able to sit out and
+     dodge bozos is unfair to the group, and a league where the first chop is final turns
+     week 1 into the whole season for whoever loses it. The cost is now only a price, and
+     0 simply means free. */
+  const allowance = 1;
   for (const k of Object.keys((state && state.members) || {})) {
     const s = stored[k] || {};
     const left = Number.isFinite(s.redeploysLeft) ? s.redeploysLeft

@@ -872,6 +872,18 @@ table.gaptbl .gwhy{font-size:11px;color:var(--ink-3);margin-top:2px;max-width:46
 .legprev{margin:10px 0 0;padding:9px 12px;border:1px dashed var(--grid);border-radius:8px;
   font-size:13px;color:var(--ink-1);line-height:1.5}
 .legprev .pl{color:var(--ink-3);font-size:11.5px}
+/* ⚠️ Red, because the leg is not available — this is a refusal you are about to get,
+   shown early. It is not advice. */
+.legprev .legwarn{margin-top:8px;padding:8px 10px;border-radius:6px;font-size:12px;line-height:1.55;
+  background:color-mix(in srgb, var(--bad) 14%, transparent);color:var(--ink-1)}
+/* The race. Amber only when submitting now would actually make you Last In — an
+   always-on warning is wallpaper. */
+.legprev .legrace{margin-top:8px;font-size:12px;line-height:1.55;color:var(--ink-3)}
+.legprev .legrace b{color:var(--ink-2)}
+.legprev .legrace.hot{color:var(--warn)}
+.legprev .legrace.hot b{color:var(--warn)}
+.legs .leg .lastin{font:700 8.5px/1 ui-monospace,monospace;letter-spacing:.9px;text-transform:uppercase;
+  color:var(--warn);margin-left:6px;white-space:nowrap}
 .twinnote{font:600 11px/1.5 system-ui;color:var(--warn);margin:8px 0 2px}
 .surv-wrap{position:relative;margin:4px 0 10px}
 svg.surv-svg{display:block;width:100%;height:auto;overflow:visible}
@@ -2264,7 +2276,7 @@ STATE: everything saves in the browser on that device. A different device shows 
           <option value="royale">Bozo Royale — one chopped a week, one re-deploy each, last one standing takes the pot</option>
         </select></div>
       <div class="f" id="nlBuybackWrap" style="display:none"><label>Re-deploy cost ($)</label>
-        <input id="nlBuyback" type="number" min="0" step="5" value="25" placeholder="0 = no re-deploys"></div>
+        <input id="nlBuyback" type="number" min="0" step="5" value="25" placeholder="0 = free"></div>
       <div class="f w4"><div class="row" style="justify-content:flex-end">
         <button class="btn sm" id="nlGo">Create league</button></div></div>
     </div>
@@ -2370,7 +2382,7 @@ STATE: everything saves in the browser on that device. A different device shows 
          would retroactively change who should have been eliminated. -->
     <div class="rule-row" id="fmtRow"><span><span class="rl">Format</span><span class="rd" id="fmtDesc"></span></span>
       <span id="fmtCtl"></span></div>
-    <div class="rule-row" id="bbRow" style="display:none"><span><span class="rl">Re-deploy cost</span><span class="rd">get chopped with a re-deploy left and you are back on the next ticket automatically — nothing to accept, no window to miss. One each; after that the 🪂 stays beside your name and the next chop is final. 0 turns re-deploys off entirely.</span></span>
+    <div class="rule-row" id="bbRow" style="display:none"><span><span class="rl">Re-deploy cost</span><span class="rd">what it costs to come back. Every player gets exactly one re-deploy and it fires automatically — nothing to accept, no window to miss, and no way to sit out and dodge bozos. After that the 🪂 stays beside your name and the next chop is final. 0 means the re-deploy is free.</span></span>
       <span><input id="sBuyback" type="number" min="0" step="5" style="width:88px"></span></div>
 
     <div class="rule-row"><span><span class="rl">Duplicate legs</span><span class="rd">not a setting any more — the ticket is one real DraftKings parlay, and DK rejects the same selection twice. Opposite sides of one market are refused too: both can’t cash, so the ticket could never win.</span></span>
@@ -2900,21 +2912,88 @@ function legLabel(mk, side, line, prop, gameShort){
   return `${prop||''} ${side==='over'?'o':'u'}${line}`;
 }
 
-/* ⚠️ The preview is the actual fix for the spread-sign trap. A hint tells you a rule;
-   this shows you the consequence of what you just typed, before it is on the ticket. */
+/* The two keys the Worker checks a submission against.
+   ⚠️ THE SERVER IS AUTHORITATIVE. These are a mirror, and they exist only so you learn
+   your leg is gone BEFORE you press the button rather than from a rejection afterwards.
+   If they ever drift from the Worker's versions the failure is a warning that is wrong,
+   never a leg that gets through — /bozo/pick re-derives both and refuses on its own. */
+const pageSelectionKey = (eventId, mk, side, line, prop) =>
+  [String(eventId), mk, String(side), mk==='ml' ? '' : String(line ?? ''), String(prop||'')].join('|');
+const pageMarketKey = (eventId, mk, line, prop) =>
+  [String(eventId), mk,
+   mk==='total'  ? String(line ?? '')
+   : mk==='spread' ? String(Math.abs(Number(line)||0))
+   : mk==='prop' ? String(prop||'')+'|'+String(line ?? '')
+   : mk==='other' ? String(prop||'') : ''].join('|');
+
+/* ⚠️ The preview is the actual fix for the spread-sign trap, AND the place the race is
+   made visible. Uniqueness means the first player to claim a selection owns it, and Last
+   In means the newest leg wears it — both of which reward submitting early. Neither is
+   felt by anyone reading a rules page. Showing you that your leg is already gone, and
+   where you would land in the order, is what makes waiting cost something you can see. */
 function paintLegPreview(){
   const el = document.getElementById('legPrev'); if(!el) return;
   const mk = fMkt.value, side = fSide.value, raw = fLine.value;
   const g = (GAMES[fSport.value]||[]).find(x=>x.id===fGame.value);
   if(!side || (mk!=='ml' && raw==='')){ el.style.display='none'; return; }
-  const line = +raw;
+  const line = +raw, prop = fProp.value, eventId = fGame.value;
   el.style.display='';
   const takes = mk==='spread' && line < 0;
-  el.innerHTML = `<span class="pl">You are submitting</span> <b>${esc(legLabel(mk, side, line, fProp.value, g?g.short:''))}</b>`
+
+  let h = `<span class="pl">You are submitting</span> <b>${esc(legLabel(mk, side, line, prop, g?g.short:''))}</b>`
     + (mk==='spread'
         ? ` <span class="pl">— ${takes ? `${esc(side)} TAKES ${Math.abs(line)} points`
                                        : `${esc(side)} LAYS ${Math.abs(line)} points`}</span>`
         : '');
+
+  /* ---- is it still available? ---- */
+  const mineKey = ME ? kEnc(ME.name) : null;
+  const mySel = pageSelectionKey(eventId, mk, side, line, prop);
+  const myMkt = pageMarketKey(eventId, mk, line, prop);
+  let clash = null;
+  for(const [who, x] of Object.entries(S.picks||{})){
+    if(who === mineKey || !x) continue;
+    const theirSel = x.selectionKey || pageSelectionKey(x.eventId, x.mkt, x.side, x.line, x.prop);
+    if(theirSel === mySel){ clash = { who, kind:'taken', label:x.label }; break; }
+    const theirMkt = x.marketKey || pageMarketKey(x.eventId, x.mkt, x.line, x.prop);
+    if(theirMkt === myMkt && String(x.side) !== String(side)){
+      clash = { who, kind:'clash', label:x.label }; break;
+    }
+  }
+  if(clash){
+    h += clash.kind==='taken'
+      ? `<div class="legwarn"><b>Gone.</b> ${esc(teamOf(playerName(clash.who)))} already has this exact selection,
+         and DraftKings won't take it twice on one parlay. Pick a different side, number or game.</div>`
+      : `<div class="legwarn"><b>Can't sit with ${esc(teamOf(playerName(clash.who)))}'s leg.</b>
+         They have ${esc(clash.label)} — the other side of this same market. Both can't cash, so the ticket
+         could never win.</div>`;
+  }
+
+  /* ---- where you would land in the order ---- */
+  const inNow = Object.keys(S.picks||{}).length;
+  const editing = !!(mineKey && (S.picks||{})[mineKey]);
+  const size = isRoyale() ? royaleAliveNames().length : names().length;
+  const wouldBe = editing ? inNow : inNow + 1;
+  const lastIn = wouldBe >= size;
+  h += `<div class="legrace ${lastIn?'hot':''}">`
+    + (editing
+        ? `⚠️ You already have a leg in. Editing <b>resets your clock and your price</b> — you'd drop from
+           ${ordinal(rankOfMine())} to <b>last</b>, which is what Last In looks at.`
+        : `You'd be <b>${ordinal(wouldBe)}</b> of ${size} in.`)
+    + (lastIn
+        ? ` <b>That's Last In</b> — if the ticket busts and Last In is drawn first, it's you.`
+        : ` The last leg to land wears Last In, so the longer you wait the more exposed you are — and the
+           selection you want can be taken by then.`)
+    + `</div>`;
+
+  el.innerHTML = h;
+}
+const ordinal = n => n + (['th','st','nd','rd'][(n%100-n%10!=10)*(n%10<4)*(n%10)] || 'th');
+// Where my current leg sits in submission order, 1-based.
+function rankOfMine(){
+  if(!ME) return 0;
+  const ks = Object.keys(S.picks||{}).sort((a,b)=>((S.picks[a].ts||0)-(S.picks[b].ts||0)));
+  return ks.indexOf(kEnc(ME.name)) + 1;
 }
 
 function paintSides(){
@@ -3257,6 +3336,11 @@ function render(){
   const cm=document.getElementById('clearMine'); if(cm) cm.style.display = mine ? '' : 'none';
 
   paintRoyale();
+  // ⚠️ Repaint the preview on every board change, not just on your own typing. Someone
+  // else claiming the selection you are looking at is exactly the moment you need to
+  // know, and a preview that only updates when YOU touch something would still be
+  // telling you it is available.
+  if(document.getElementById('submitCard').style.display !== 'none') paintLegPreview();
   // The chart sits under the hierarchy on the board view only — it is a season-long
   // read, and it has no meaning on one player's sheet.
   if(onBoard){ clvLoad(); paintSurvival(); }
@@ -3824,6 +3908,10 @@ function paintSlip(players, picks, status, live){
       return a.p.localeCompare(b.p);
     });
   const graded = status==='graded';
+  const open = status==='open';
+  // Index of the newest leg in the sorted list — the one Last In is looking at right now.
+  const withLegs = rows.filter(r=>r.x.price!=null);
+  const lastInIdx = withLegs.length ? withLegs.length - 1 : -1;
   const nIn = live.length;
   const html = rows.map((row,i)=>{
     const {p,x,r} = row;
@@ -3854,9 +3942,15 @@ function paintSlip(players, picks, status, live){
     const sub = `${SPORTS[x.sport]?SPORTS[x.sport].n:esc(x.sport)} · ${esc(x.game)}`
       + (x.mkt==='prop' ? ' · prop' : x.mkt==='other' ? ' · other' : '')
       + (r.actual!=null ? ` · finished ${r.actual}` : '');
+    /* ⚠️ NAME THE EXPOSURE, don't imply it. The legs are listed in submission order and a
+       comment in this file has always said the bottom one is the one Last In would pick —
+       but nothing on screen said so, which left the single most actionable fact on an
+       open board as something you had to already know. While the board is open the newest
+       leg wears it, and whoever it is should be able to see that without counting rows. */
+    const isLastIn = open && inPool && i === lastInIdx;
     return `<li class="${cls}"><span class="mk">${mark}</span>
       <span><span class="who2">${esc(teamOf(p))}${chute(p)}</span>
-      <span class="sel">${esc(x.label)}</span>
+      <span class="sel">${esc(x.label)}${isLastIn?'<span class="lastin">last in</span>':''}</span>
       <span class="mkt">${sub}</span></span>
       <span class="rt"><span class="pxv">${x.price>0?'+':''}${x.price}</span>
       <span class="tin">${when(x.ts)}</span></span></li>`;
@@ -4751,7 +4845,8 @@ function simulateRoyale(){
   if(players.length < 2) return { tooEarly: true, need: 'two players with graded legs' };
 
   const levers = (settings().levers || [0,1,2,3]).slice();
-  const redeploys = settings().buyback > 0;
+  // ⚠️ Always, in Royale. The cost is a price, not a switch — see royaleStatus.
+  const redeploys = true;
   const status = royaleStatus_page();
 
   const wins = {}, nextChop = {}, aliveAt = {};
@@ -4905,9 +5000,9 @@ function paintRoyale(){
   h += `<p class="note">One chop a week, ranked by that week's drawn lever hierarchy — the first lever that
     produces a unique worst decides it. If the ticket cashes, nobody goes and the pot carries. The chopped
     player funds the next ticket, then spectates. Last one standing takes the pot.
-    ${price>0?`Get chopped with a re-deploy left and you're back on the next ticket automatically — one each,
-    $${price}, no decision to make. After that the 🪂 stays next to your name and the next chop is final.`
-    :'No re-deploys in this league: one chop and you are out.'}</p>`;
+    Get chopped with your re-deploy still in hand and you are back on the next ticket automatically${price>0?` for $${price}`:', free'} —
+    one each, no decision to make, because being able to sit out and dodge bozos would be unfair to everyone still
+    playing. After that the 🪂 stays next to your name and the next chop is final.</p>`;
 
   document.getElementById('royaleBody').innerHTML = h;
   /* ⚠️ There are no handlers here on purpose. This card used to wire up Take and Decline
@@ -5395,7 +5490,7 @@ function paintSurvival(){
     + `from their own price, since a binary leg has none of its own.`
     + (R.buyback ? ` Re-deploys need no assumption any more: they are automatic, so the simulation does exactly `
       + `what the league does — one each, spent on the chop, never at the final two.`
-      : ` No re-deploys in this league: one chop and you are out.`)
+      : ``)
     + (R.softLegs ? `<br><br><b>${R.softLegs} of ${R.totalLegs} resampled legs have no captured close</b>, so their `
       + `win probability comes from the entry price instead — a self-reported number. Those legs flatter whoever `
       + `entered them optimistically.` : '');
