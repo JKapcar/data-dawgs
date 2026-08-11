@@ -807,7 +807,10 @@ test('the domain field partitions the surfaces map without changing any claim', 
   // CEP-5A Stage 4. `domain` is an editorial grouping so a hub can COMPUTE its cards.
   // It must not become a back door for a capability claim, so: every row has one, the
   // values are a closed set, and no row's tier, machine list or planned list depends on it.
-  const allowed = new Set(['arena', 'nfl', 'cfb', 'data', 'receipts', 'site']);
+  // Stage 2, 2026-08-11: the two section hubs earned their tools, so `markets` and `ai` join
+  // the closed set. The set stays closed — these are the only new domains — and no row's tier,
+  // machine list or planned list depends on the value.
+  const allowed = new Set(['arena', 'nfl', 'cfb', 'data', 'receipts', 'site', 'markets', 'ai']);
   surfaces.data.forEach(r => assert.ok(allowed.has(r.domain), `${r.id}: domain ${r.domain}`));
   const arena = surfaces.data.filter(r => r.domain === 'arena').map(r => r.id).sort();
   assert.deepEqual(arena, ['bozo', 'dfs', 'guillotine', 'live-draft', 'survivor']);

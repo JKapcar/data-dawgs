@@ -1,0 +1,184 @@
+  <h1>AI <span class="tierchip">Pup</span></h1>
+  <p class="lead">This page measures models. <b>It does not rank which one is best</b> &mdash; where
+  the leaders are inside each other&rsquo;s error bars, the honest answer is &ldquo;tied,&rdquo; and
+  that is what we will say.</p>
+  <p class="sub">Everything on the first two panels is read live from OpenRouter&rsquo;s public model
+  catalogue in your browser. Nothing is transcribed. The third panel is a study that has not
+  produced a single data point yet, published in advance so that it cannot be quietly edited after
+  the fact.</p>
+
+  <div id="sheets"></div>
+
+  <!-- ===================== MODEL BOARD ===================== -->
+  <div id="sheetModels">
+  <div class="card">
+    <h3>What the models cost, right now <span class="rt" id="aiAsOf"></span></h3>
+    <p class="sub">Every model OpenRouter currently serves, with its published price, context
+    window and &mdash; where the vendor supplies one &mdash; Artificial Analysis&rsquo; composite
+    intelligence index. Prices are dollars per <b>million</b> tokens.</p>
+
+    <div class="ddstat" id="aiTiles"></div>
+    <div class="ddctl">
+      <input class="fi" id="aiQ" type="search" placeholder="Filter models…" aria-label="Filter models">
+      <select class="fi" id="aiScope" aria-label="Which models">
+        <option value="scored" selected>Scored models only</option>
+        <option value="text">All text models</option>
+        <option value="all">Everything</option>
+      </select>
+      <button class="btn ghost" id="aiReload" type="button">Reload</button>
+    </div>
+    <div id="aiMsg" class="ddmsg">Loading the model catalogue…</div>
+    <div class="ddtw" id="aiTw" hidden>
+      <table>
+        <thead><tr>
+          <th class="tl so" data-k="name">Model</th>
+          <th class="so" data-k="ctx">Context</th>
+          <th class="so" data-k="pin">$/M in</th>
+          <th class="so" data-k="pout">$/M out</th>
+          <th class="so" data-k="iq">Intelligence</th>
+          <th class="tl so" data-k="reas">Reasoning</th>
+        </tr></thead>
+        <tbody id="aiBody"></tbody>
+      </table>
+    </div>
+    <p class="sub" style="margin-top:10px">Source: <a href="https://openrouter.ai/api/v1/models" target="_blank" rel="noopener">openrouter.ai/api/v1/models</a>,
+    fetched client-side. The intelligence index is <b>Artificial Analysis&rsquo; composite, not
+    ours</b> &mdash; one vendor&rsquo;s weighting of one set of benchmarks, carried through
+    OpenRouter&rsquo;s payload. It ships with no error bar, which is precisely why the tie-aware
+    leaderboard is not built yet. <a class="udmach" href="https://openrouter.ai/api/v1/models">🤖 For machines</a></p>
+  </div>
+  </div>
+
+  <!-- ===================== FRONTIER ===================== -->
+  <div id="sheetFrontier">
+  <div class="card" id="frontier">
+    <h3>Price against intelligence <span class="rt" id="frAsOf"></span></h3>
+    <p class="sub">Each dot is a model: what it costs per million output tokens, against its
+    composite score. The models on the <b>frontier</b> are the ones nothing else beats on both at
+    once &mdash; everything above and to the left of a frontier point is strictly a worse deal.</p>
+
+    <p class="ddhead" id="frHead"></p>
+    <div id="frMsg" class="ddmsg">Waiting for the model catalogue…</div>
+    <div class="ddfig" id="frFig"></div>
+    <div class="ddlgd" id="frLgd" hidden>
+      <span class="l1"><i></i>On the frontier — labelled</span>
+      <span style="color:var(--ink-3)">◦ &nbsp;Dominated by at least one cheaper, stronger model</span>
+    </div>
+
+    <div class="ddwarn" style="border-color:var(--ink-3);margin-top:16px">
+      <b>What this chart is not.</b> It is a snapshot of <em>list prices</em>, not of value.
+      It cannot see throughput, latency, rate limits, context-window quality, or whether a model
+      burns four times the tokens to reach the same answer &mdash; which is the single biggest
+      reason a cheap model can cost more in practice. The x-axis is output price alone; models that
+      charge asymmetrically for input will sit in the wrong place for your workload. And the y-axis
+      is one vendor&rsquo;s composite with no published interval, so small vertical gaps between
+      models mean nothing at all.
+    </div>
+    <p class="sub"><b>Coming next:</b> the same axes against Epoch AI&rsquo;s benchmark data, fitted
+    over time, so the rate of decline can be read off rather than asserted. Published estimates of
+    that rate currently disagree by two orders of magnitude, and the disagreement is entirely about
+    method &mdash; which benchmark you hold fixed, whether you price the cheapest model clearing a
+    bar or the frontier one, and whether you count reasoning tokens.</p>
+  </div>
+  </div>
+
+  <!-- ===================== FORECAST STUDY ===================== -->
+  <div id="sheetForecasts">
+  <div class="card" id="forecasts">
+    <h3>Does a better prompt make a better forecaster?</h3>
+    <p class="lead" style="font-size:16px">We are about to find out, and we are telling you how
+    before we start.</p>
+
+    <div style="text-align:center;margin:22px 0 8px">
+      <div class="ddcount" id="fcCount">0 / 150</div>
+      <div class="sub" style="margin-top:2px">resolved questions &mdash; the pre-registered analysis
+      does not run until the counter fills</div>
+    </div>
+
+    <p>Frontier models get the same set of live prediction-market questions, twice. Once
+    <b>cold</b>, with no system prompt at all. Once with a fixed <b>standard reasoning prompt</b>
+    &mdash; base rates, explicit priors, a stated posterior, an outside-view check. Same questions,
+    same timestamp, same temperature, same output format. The system prompt is the only thing that
+    differs.</p>
+
+    <p>Then every forecast gets scored three ways: against what actually happened, against the
+    market price at the moment the model saw the question, and against that price
+    <em>recalibrated</em> using the curve on our own
+    <a href="markets.html#calibration">Markets page</a>. That third one is the interesting test. If a
+    model only beats the market by the amount the market&rsquo;s known miscalibration already
+    explains, it did not find anything &mdash; it rediscovered a bias we had already published.</p>
+
+    <div class="ddprereg">
+      <h4>The three rules that keep it honest</h4>
+      <p style="margin:6px 0"><b>1. No tools, no search, either arm.</b> A model with web access
+      reads the market price instead of forecasting, and a prompt that <em>tells</em> a model to go
+      look things up would make the two arms differ in information rather than in reasoning. Turning
+      tools off is what keeps this a test of the prompt.</p>
+      <p style="margin:6px 0"><b>2. The same forced output line in both arms.</b> A reasoning prompt
+      asks for ranges and posteriors; scoring needs one number. Without an identical output
+      contract, the disciplined arm gets punished for following its own instructions and we would be
+      measuring our parser.</p>
+      <p style="margin:6px 0"><b>3. Forward-looking questions only.</b> Every question resolves after
+      the forecast date and after the model&rsquo;s training cutoff. A model recalling an outcome is
+      not forecasting it.</p>
+    </div>
+
+    <div class="ddprereg">
+      <h4>Written down before any model was run</h4>
+      <p style="margin:6px 0">Probability the disciplined prompt wins at all: <b>55–70%</b>.
+      That it wins by more than 0.02 Brier: <b>20–35%</b>. That it is actively
+      <em>worse</em>: <b>20–30%</b> &mdash; long reasoning chains can talk a model out of a
+      well-anchored prior. That any model beats the recalibrated market: <b>under 20%</b>, and we
+      would treat such a result as a bug until a second cohort reproduced it.</p>
+      <p style="margin:6px 0"><b>What would change our minds about the whole design:</b> if the cold
+      arm already produces long, structured, base-rate-citing reasoning without being asked, then
+      the two arms are nearly the same thing and a null result means &ldquo;the prompt was
+      redundant,&rdquo; not &ldquo;prompting does not work.&rdquo; That gets checked on the first ten
+      questions, before scaling.</p>
+    </div>
+
+    <div class="ddwarn"><b>The limitation we cannot design away yet.</b> This compares one prompt
+    against <em>no</em> prompt. It cannot separate &ldquo;this specific reasoning framework&rdquo;
+    from &ldquo;having any long system prompt at all&rdquo; &mdash; that needs a third,
+    placebo arm of similar length, and it is not running. Until it does, no claim on this page
+    should be read as one prompt beating another.</p></div>
+
+    <p class="sub"><b>Status: pre-registration, not results.</b> Nothing has been run. When the first
+    cohort is collected the raw model outputs get published alongside the scores &mdash; the
+    reasoning bodies, verbatim, including whatever they hallucinate.</p>
+  </div>
+  </div>
+
+  <!-- ===================== METHOD ===================== -->
+  <div id="sheetAiMethod">
+  <div class="card">
+    <h3>Method, and what is missing</h3>
+
+    <p><b>What is live.</b> The model board and the frontier chart, both computed in your browser
+    from one OpenRouter request at page load. No cached mirror exists under <code>/data/</code> for
+    this page yet, which cuts both ways honestly: the numbers cannot go stale, and they are not
+    reproducible &mdash; you and I will see slightly different figures depending on when we looked.</p>
+
+    <p><b>What is deliberately not here.</b></p>
+    <ul>
+      <li><b>A tie-aware leaderboard.</b> This was specced and then cut, because the intelligence
+      index in OpenRouter&rsquo;s payload arrives with no confidence interval. Collapsing
+      statistically indistinguishable models into one block is the whole point of the tool, and
+      inventing an interval to do it would be worse than not shipping it. It needs LMArena&rsquo;s
+      published Bradley-Terry bounds, which are a separate fetch.</li>
+      <li><b>Epoch AI benchmark data.</b> Their CSVs are CC-BY and current, but the domain sends no
+      CORS header, so a browser cannot read them directly. Needs a Worker proxy.</li>
+      <li><b>METR&rsquo;s time-horizon revision audit.</b> The most interesting chart we have
+      specced &mdash; how much of the apparent acceleration is models improving versus the measuring
+      instrument being changed underneath them. It is gated: it does not ship until the logistic
+      fits are recomputed from METR&rsquo;s public repository rather than read off their blog post.
+      Publishing an accusation of a measurement artifact on the strength of secondary numbers would
+      be the exact failure this site exists to avoid.</li>
+    </ul>
+
+    <p class="sub"><b>Tier: Pup.</b> Live and useful, not validated. The board is a faithful
+    rendering of somebody else&rsquo;s catalogue &mdash; if OpenRouter&rsquo;s prices are wrong,
+    ours are wrong in exactly the same way, and we have not independently checked a single one
+    against a provider&rsquo;s own pricing page.</p>
+  </div>
+  </div>

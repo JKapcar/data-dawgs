@@ -692,6 +692,90 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 @media(max-width:760px){.p-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.calc-grid,.inventory{grid-template-columns:1fr}.fields.five{grid-template-columns:repeat(2,minmax(0,1fr))}.provenance{grid-template-columns:1fr}.p-section>header{display:block}.p-meta{text-align:left;margin-top:7px}}
 @media(max-width:430px){.fields{grid-template-columns:1fr}.fields.five{grid-template-columns:1fr}.p-summary{grid-template-columns:1fr 1fr}.calc{padding:13px}}
 
+
+/* ---- page-family sheets -------------------------------------------------- */
+.sheetbar{display:flex;gap:4px;flex-wrap:wrap;margin:0 0 18px;
+  border-bottom:1px solid var(--grid);padding-bottom:0}
+.sheet-tab{appearance:none;background:transparent;border:0;border-bottom:2px solid transparent;
+  color:var(--ink-3);font:inherit;font-size:14px;font-weight:700;letter-spacing:.005em;
+  padding:9px 15px 8px;cursor:pointer;border-radius:7px 7px 0 0;display:inline-flex;
+  align-items:center;gap:7px;margin-bottom:-1px}
+.sheet-tab:hover{color:var(--ink-1);background:color-mix(in srgb,var(--ink-3) 9%,transparent)}
+.sheet-tab.on{color:var(--accent);border-bottom-color:var(--accent);background:transparent}
+.sheet-tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sheet-hint{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-3);background:color-mix(in srgb,var(--ink-3) 16%,transparent);
+  border-radius:5px;padding:2px 6px}
+.sheet-tab.on .sheet-hint{color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent)}
+[role=tabpanel][hidden]{display:none}
+.sheet-frame{position:relative;min-height:340px}
+.sheet-frame iframe{display:block;width:100%;min-height:70vh;border:0;background:transparent}
+@media (max-width:560px){
+  .sheetbar{gap:2px}
+  .sheet-tab{font-size:13px;padding:8px 11px 7px}
+  .sheet-hint{display:none}
+}
+/* ---- Stage 2: utilities the section tools reference, verbatim from cfb.html ---- */
+.rt{float:right;text-transform:none;letter-spacing:0;font-weight:650;color:var(--ink-1)}
+.fi{width:100%;box-sizing:border-box;background:var(--page);border:1px solid var(--grid);border-radius:9px;
+  color:var(--ink-1);font:inherit;font-size:14px;padding:9px 11px}
+.fi:focus{outline:2px solid color-mix(in srgb,var(--accent) 55%,transparent);outline-offset:1px}
+.btn.ghost{background:none;color:var(--ink-2);border:1px solid var(--border);font-weight:700;font-size:13px;padding:9px 14px}
+.good{color:var(--good)}
+.bad{color:var(--bad)}
+/* ---- Markets + AI domains: shared page CSS (appended after site.css) ---- */
+.ddstat{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr));gap:10px;margin:14px 0}
+.ddstat .s{background:color-mix(in srgb,var(--ink-3) 8%,transparent);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+.ddstat .s .k{font-size:10.5px;letter-spacing:.10em;text-transform:uppercase;color:var(--ink-3)}
+.ddstat .s .v{font-size:21px;font-weight:700;color:var(--ink-1);font-variant-numeric:tabular-nums;margin-top:3px;line-height:1.15}
+.ddstat .s .n{font-size:11.5px;color:var(--ink-3);margin-top:2px}
+.ddhead{font-size:16px;line-height:1.5;color:var(--ink-1);font-weight:650;margin:2px 0 10px}
+.ddhead b{color:var(--accent)}
+.ddctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 12px}
+.ddctl .fi{max-width:230px}
+.ddtw{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--grid);border-radius:10px}
+.ddtw table{font-size:12.5px}
+.ddtw th{position:sticky;top:0;background:var(--surface-1);z-index:1;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);padding:8px;border-bottom:1px solid var(--axis);text-align:right;white-space:nowrap}
+.ddtw th.tl,.ddtw td.tl{text-align:left}
+.ddtw th.so{cursor:pointer;user-select:none}
+.ddtw th.so:hover{color:var(--accent)}
+.ddtw tbody tr:hover td{background:color-mix(in srgb,var(--accent) 7%,transparent)}
+.ddtw td{white-space:nowrap;padding:6px 8px}
+.ddtw td.tl{white-space:normal;overflow-wrap:anywhere;max-width:340px}
+.ddmsg{padding:14px;border:1px dashed var(--axis);border-radius:10px;color:var(--ink-3);font-size:13px;text-align:center}
+.ddmsg.err{border-color:var(--bad);color:var(--bad)}
+.ddfig{margin:6px 0 2px}
+.ddfig svg{width:100%;height:auto;display:block;overflow:visible}
+.ddfig .ax,.ddfacet .ax{stroke:var(--axis);stroke-width:1}
+.ddfig .gr,.ddfacet .gr{stroke:var(--grid);stroke-width:1}
+.ddfig .lb,.ddfacet .lb{fill:var(--ink-3);font-size:10.5px}
+.ddfig .lb2,.ddfacet .lb2{fill:var(--ink-2);font-size:11.5px;font-weight:650}
+.ddfig .ref,.ddfacet .ref{stroke:var(--ink-3);stroke-width:2;stroke-dasharray:5 4;fill:none}
+.ddfig .ser,.ddfacet .ser{stroke:var(--accent);stroke-width:2;fill:none}
+.ddfig .dot,.ddfacet .dot{fill:var(--accent);stroke:var(--surface-1);stroke-width:2}
+.ddfig .dim,.ddfacet .dim{fill:var(--ink-3);opacity:.42}
+.ddfig .wis,.ddfacet .wis{stroke:var(--accent);stroke-width:2;opacity:.45}
+.ddlgd{display:flex;flex-wrap:wrap;gap:14px;font-size:11.5px;color:var(--ink-2);margin:8px 0 0}
+.ddlgd i{display:inline-block;width:20px;height:0;border-top-width:2px;vertical-align:middle;margin-right:6px}
+.ddlgd .l1 i{border-top:2px solid var(--accent)}
+.ddlgd .l2 i{border-top:2px dashed var(--ink-3)}
+.ddtip{position:fixed;pointer-events:none;z-index:8000;background:var(--surface-1);border:1px solid var(--axis);border-radius:8px;padding:7px 9px;font-size:12px;color:var(--ink-1);box-shadow:0 6px 20px rgba(0,0,0,.28);max-width:260px;display:none}
+.ddtip b{color:var(--accent)}
+.ddbar{height:6px;border-radius:4px;background:color-mix(in srgb,var(--ink-3) 22%,transparent);overflow:hidden;margin:10px 0}
+.ddbar i{display:block;height:100%;background:var(--accent);width:0;transition:width .18s linear}
+.ddwarn{border-left:3px solid var(--warn);padding:8px 0 8px 11px;margin:12px 0;font-size:12.5px;color:var(--ink-2)}
+.ddprereg{border:1px dashed var(--axis);border-radius:10px;padding:14px 16px;margin:12px 0}
+.ddprereg h4{margin:0 0 6px;font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3)}
+.ddprereg pre{white-space:pre-wrap;font-size:11.5px;color:var(--ink-2);background:color-mix(in srgb,var(--ink-3) 8%,transparent);padding:10px;border-radius:8px;overflow-x:auto;margin:6px 0 0}
+.ddcount{font-size:30px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
+@media(max-width:620px){.ddtw td.tl{max-width:190px}.ddstat{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* ---- domain split: small multiples ---- */
+#domFacets{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(268px,100%),1fr));gap:14px}
+.ddfacet{border:1px solid var(--grid);border-radius:10px;padding:10px 10px 4px}
+.ddfacet .ft{font-size:11.5px;font-weight:700;color:var(--ink-2);letter-spacing:.04em;text-transform:uppercase;margin-bottom:2px}
+.ddfacet .ft span{font-weight:500;color:var(--ink-3);text-transform:none;letter-spacing:0}
+.ddfacet svg{width:100%;height:auto;display:block;overflow:visible}
 </style>
 </head>
 <body>
@@ -2023,11 +2107,6 @@ STATE: everything saves in the browser on that device. A different device shows 
   <header class="p-hero">
     <div class="p-kicker">A.I. · bring your own dawg, and then grade it</div>
     <h1>The A.I. work. <a class="tierchip" data-tier="labs" href="index.html#tiers" title="Why this page is a Pup">Pup</a></h1>
-    <div class="notbuilt"><b>Nothing here is built yet.</b> This section was created on
-    <b>2026-08-11</b> to hold work that has not started. It publishes no data file, computes
-    nothing, exposes no MCP tool, and has no row in the surfaces map. Everything under
-    &ldquo;What this section is for&rdquo; below is <b>stated intent, not shipped work</b> &mdash; read it
-    as a plan someone can hold us to, not as a description of the site.</div>
     <p class="p-lead">Every leaguemate now turns up with an assistant. This site is built so those
     assistants can read it &mdash; dated payloads, stated sources, read-only tools &mdash; and that
     half is real and already running. The half that is <em>not</em> built is the interesting one: a
@@ -2039,73 +2118,614 @@ STATE: everything saves in the browser on that device. A different device shows 
   scoreboard has resolved a single question, and a language model producing a confident number is not
   evidence that the number is any good &mdash; which is the entire reason to make it write the number
   down first.</div>
-  <nav class="p-jump" aria-label="A.I. sections">
-    <a href="#live">What is live</a><a href="#plan">What this section is for</a><a href="#machines">For machines</a><a href="receipts.html#models">Belief scoreboard &rarr;</a>
-  </nav>
 
-  <section class="p-section" id="live">
-    <header><div><h2>What is live</h2><p class="dek">One card per surface in
+<div id="sheets"></div>
+
+  <!-- ===================== MODEL BOARD ===================== -->
+  <div id="sheetModels">
+  <div class="card">
+    <h3>What the models cost, right now <span class="rt" id="aiAsOf"></span></h3>
+    <p class="sub">Every model OpenRouter currently serves, with its published price, context
+    window and &mdash; where the vendor supplies one &mdash; Artificial Analysis&rsquo; composite
+    intelligence index. Prices are dollars per <b>million</b> tokens.</p>
+
+    <div class="ddstat" id="aiTiles"></div>
+    <div class="ddctl">
+      <input class="fi" id="aiQ" type="search" placeholder="Filter models…" aria-label="Filter models">
+      <select class="fi" id="aiScope" aria-label="Which models">
+        <option value="scored" selected>Scored models only</option>
+        <option value="text">All text models</option>
+        <option value="all">Everything</option>
+      </select>
+      <button class="btn ghost" id="aiReload" type="button">Reload</button>
+    </div>
+    <div id="aiMsg" class="ddmsg">Loading the model catalogue…</div>
+    <div class="ddtw" id="aiTw" hidden>
+      <table>
+        <thead><tr>
+          <th class="tl so" data-k="name">Model</th>
+          <th class="so" data-k="ctx">Context</th>
+          <th class="so" data-k="pin">$/M in</th>
+          <th class="so" data-k="pout">$/M out</th>
+          <th class="so" data-k="iq">Intelligence</th>
+          <th class="tl so" data-k="reas">Reasoning</th>
+        </tr></thead>
+        <tbody id="aiBody"></tbody>
+      </table>
+    </div>
+    <p class="sub" style="margin-top:10px">Source: <a href="https://openrouter.ai/api/v1/models" target="_blank" rel="noopener">openrouter.ai/api/v1/models</a>,
+    fetched client-side. The intelligence index is <b>Artificial Analysis&rsquo; composite, not
+    ours</b> &mdash; one vendor&rsquo;s weighting of one set of benchmarks, carried through
+    OpenRouter&rsquo;s payload. It ships with no error bar, which is precisely why the tie-aware
+    leaderboard is not built yet. <a class="udmach" href="https://openrouter.ai/api/v1/models">🤖 For machines</a></p>
+  </div>
+  </div>
+
+  <!-- ===================== FRONTIER ===================== -->
+  <div id="sheetFrontier">
+  <div class="card" id="frontier">
+    <h3>Price against intelligence <span class="rt" id="frAsOf"></span></h3>
+    <p class="sub">Each dot is a model: what it costs per million output tokens, against its
+    composite score. The models on the <b>frontier</b> are the ones nothing else beats on both at
+    once &mdash; everything above and to the left of a frontier point is strictly a worse deal.</p>
+
+    <p class="ddhead" id="frHead"></p>
+    <div id="frMsg" class="ddmsg">Waiting for the model catalogue…</div>
+    <div class="ddfig" id="frFig"></div>
+    <div class="ddlgd" id="frLgd" hidden>
+      <span class="l1"><i></i>On the frontier — labelled</span>
+      <span style="color:var(--ink-3)">◦ &nbsp;Dominated by at least one cheaper, stronger model</span>
+    </div>
+
+    <div class="ddwarn" style="border-color:var(--ink-3);margin-top:16px">
+      <b>What this chart is not.</b> It is a snapshot of <em>list prices</em>, not of value.
+      It cannot see throughput, latency, rate limits, context-window quality, or whether a model
+      burns four times the tokens to reach the same answer &mdash; which is the single biggest
+      reason a cheap model can cost more in practice. The x-axis is output price alone; models that
+      charge asymmetrically for input will sit in the wrong place for your workload. And the y-axis
+      is one vendor&rsquo;s composite with no published interval, so small vertical gaps between
+      models mean nothing at all.
+    </div>
+    <p class="sub"><b>Coming next:</b> the same axes against Epoch AI&rsquo;s benchmark data, fitted
+    over time, so the rate of decline can be read off rather than asserted. Published estimates of
+    that rate currently disagree by two orders of magnitude, and the disagreement is entirely about
+    method &mdash; which benchmark you hold fixed, whether you price the cheapest model clearing a
+    bar or the frontier one, and whether you count reasoning tokens.</p>
+  </div>
+  </div>
+
+  <!-- ===================== FORECAST STUDY ===================== -->
+  <div id="sheetForecasts">
+  <div class="card" id="forecasts">
+    <h3>Does a better prompt make a better forecaster?</h3>
+    <p class="lead" style="font-size:16px">We are about to find out, and we are telling you how
+    before we start.</p>
+
+    <div style="text-align:center;margin:22px 0 8px">
+      <div class="ddcount" id="fcCount">0 / 150</div>
+      <div class="sub" style="margin-top:2px">resolved questions &mdash; the pre-registered analysis
+      does not run until the counter fills</div>
+    </div>
+
+    <p>Frontier models get the same set of live prediction-market questions, twice. Once
+    <b>cold</b>, with no system prompt at all. Once with a fixed <b>standard reasoning prompt</b>
+    &mdash; base rates, explicit priors, a stated posterior, an outside-view check. Same questions,
+    same timestamp, same temperature, same output format. The system prompt is the only thing that
+    differs.</p>
+
+    <p>Then every forecast gets scored three ways: against what actually happened, against the
+    market price at the moment the model saw the question, and against that price
+    <em>recalibrated</em> using the curve on our own
+    <a href="markets.html#calibration">Markets page</a>. That third one is the interesting test. If a
+    model only beats the market by the amount the market&rsquo;s known miscalibration already
+    explains, it did not find anything &mdash; it rediscovered a bias we had already published.</p>
+
+    <div class="ddprereg">
+      <h4>The three rules that keep it honest</h4>
+      <p style="margin:6px 0"><b>1. No tools, no search, either arm.</b> A model with web access
+      reads the market price instead of forecasting, and a prompt that <em>tells</em> a model to go
+      look things up would make the two arms differ in information rather than in reasoning. Turning
+      tools off is what keeps this a test of the prompt.</p>
+      <p style="margin:6px 0"><b>2. The same forced output line in both arms.</b> A reasoning prompt
+      asks for ranges and posteriors; scoring needs one number. Without an identical output
+      contract, the disciplined arm gets punished for following its own instructions and we would be
+      measuring our parser.</p>
+      <p style="margin:6px 0"><b>3. Forward-looking questions only.</b> Every question resolves after
+      the forecast date and after the model&rsquo;s training cutoff. A model recalling an outcome is
+      not forecasting it.</p>
+    </div>
+
+    <div class="ddprereg">
+      <h4>Written down before any model was run</h4>
+      <p style="margin:6px 0">Probability the disciplined prompt wins at all: <b>55–70%</b>.
+      That it wins by more than 0.02 Brier: <b>20–35%</b>. That it is actively
+      <em>worse</em>: <b>20–30%</b> &mdash; long reasoning chains can talk a model out of a
+      well-anchored prior. That any model beats the recalibrated market: <b>under 20%</b>, and we
+      would treat such a result as a bug until a second cohort reproduced it.</p>
+      <p style="margin:6px 0"><b>What would change our minds about the whole design:</b> if the cold
+      arm already produces long, structured, base-rate-citing reasoning without being asked, then
+      the two arms are nearly the same thing and a null result means &ldquo;the prompt was
+      redundant,&rdquo; not &ldquo;prompting does not work.&rdquo; That gets checked on the first ten
+      questions, before scaling.</p>
+    </div>
+
+    <div class="ddwarn"><b>The limitation we cannot design away yet.</b> This compares one prompt
+    against <em>no</em> prompt. It cannot separate &ldquo;this specific reasoning framework&rdquo;
+    from &ldquo;having any long system prompt at all&rdquo; &mdash; that needs a third,
+    placebo arm of similar length, and it is not running. Until it does, no claim on this page
+    should be read as one prompt beating another.</p></div>
+
+    <p class="sub"><b>Status: pre-registration, not results.</b> Nothing has been run. When the first
+    cohort is collected the raw model outputs get published alongside the scores &mdash; the
+    reasoning bodies, verbatim, including whatever they hallucinate.</p>
+  </div>
+  </div>
+
+  <!-- ===================== METHOD ===================== -->
+  <div id="sheetAiMethod">
+  <div class="card">
+    <h3>Method, and what is missing</h3>
+
+    <p><b>What is live.</b> The model board and the frontier chart, both computed in your browser
+    from one OpenRouter request at page load. No cached mirror exists under <code>/data/</code> for
+    this page yet, which cuts both ways honestly: the numbers cannot go stale, and they are not
+    reproducible &mdash; you and I will see slightly different figures depending on when we looked.</p>
+
+    <p><b>What is deliberately not here.</b></p>
+    <ul>
+      <li><b>A tie-aware leaderboard.</b> This was specced and then cut, because the intelligence
+      index in OpenRouter&rsquo;s payload arrives with no confidence interval. Collapsing
+      statistically indistinguishable models into one block is the whole point of the tool, and
+      inventing an interval to do it would be worse than not shipping it. It needs LMArena&rsquo;s
+      published Bradley-Terry bounds, which are a separate fetch.</li>
+      <li><b>Epoch AI benchmark data.</b> Their CSVs are CC-BY and current, but the domain sends no
+      CORS header, so a browser cannot read them directly. Needs a Worker proxy.</li>
+      <li><b>METR&rsquo;s time-horizon revision audit.</b> The most interesting chart we have
+      specced &mdash; how much of the apparent acceleration is models improving versus the measuring
+      instrument being changed underneath them. It is gated: it does not ship until the logistic
+      fits are recomputed from METR&rsquo;s public repository rather than read off their blog post.
+      Publishing an accusation of a measurement artifact on the strength of secondary numbers would
+      be the exact failure this site exists to avoid.</li>
+    </ul>
+
+    <p class="sub"><b>Tier: Pup.</b> Live and useful, not validated. The board is a faithful
+    rendering of somebody else&rsquo;s catalogue &mdash; if OpenRouter&rsquo;s prices are wrong,
+    ours are wrong in exactly the same way, and we have not independently checked a single one
+    against a provider&rsquo;s own pricing page.</p>
+  </div>
+  </div>
+
+  <section class="p-section" id="surfaces">
+    <header><div><h2>This section, for machines</h2><p class="dek">One card per row in
       <a href="/data/surfaces.json"><code>/data/surfaces.json</code></a> carrying
       <code>domain: &quot;ai&quot;</code>. The count is the file&rsquo;s count, not a number typed
-      into this page, so the day the first surface ships it appears here and nobody has to
-      remember to add it. Today the file has none, and the grid says so in those words rather
-      than sitting empty.</p></div>
+      into this page. Every tool here computes in <em>your</em> browser from a third party&rsquo;s
+      public API, so none publishes a machine surface of its own &mdash; each card says exactly that,
+      and the panels above name the upstream every number comes from.</p></div>
       <div class="p-meta" id="secCount" aria-live="polite">reading /data/surfaces.json&hellip;</div></header>
     <div class="inventory" id="secCards"><div class="p-loading">Reading the surfaces map&hellip;</div></div>
-  </section>
-
-  <section class="p-section" id="plan">
-    <header><div><h2>What this section is for</h2><p class="dek">Written down before any of it
-      exists, so the first thing that ships can be checked against what was promised. None of
-      this is built. None of it is callable. Nothing below is a claim about the world.</p></div></header>
-    <div class="machine-box"><p>Four things, and they are deliberately separate because they are different kinds of
-      claim:</p>
-      <ol>
-        <li><b>Bring Your Own Dawg.</b> The machine-facing front door: what an assistant can read, what
-        it can call, and how to connect one. This is the only item here whose underlying plumbing
-        already exists &mdash; <a href="/llms.txt"><code>/llms.txt</code></a>, the surfaces map and the
-        read-only tool catalogue are live today. What is missing is the page that explains them in one
-        place.</li>
-        <li><b>A model scoreboard.</b> Several models answer the same forecast questions before the
-        event, their answers are stored as append-only receipts, and they are scored after resolution.
-        The same treatment the site&rsquo;s own models get, with no special pleading for being new.</li>
-        <li><b>Head to head.</b> Models run the site&rsquo;s actual tasks &mdash; a draft pick, a
-        survivor path, a weekly leg &mdash; against each other, where a wrong answer is visible rather
-        than merely low-scoring.</li>
-        <li><b>Field notes.</b> Public benchmark, price and context-window figures, mirrored with their
-        capture date. <b>These are other people&rsquo;s numbers</b> and will be labelled as such
-        everywhere they appear. Mirroring a benchmark is not running one, and this section will never
-        present a mirrored figure as something we measured.</li>
-      </ol>
-      <p class="assumption">The scoreboard is worth exactly as much as its question set. A set chosen
-      after seeing the answers is worthless, so the questions get frozen and published before the
-      models are asked &mdash; the same pre-registration rule the NFL receipts already follow.</p></div>
-  </section>
-
-  <section class="p-section" id="machines">
-    <header><div><h2>The A.I. work for machines</h2><p class="dek">Read the files, not the cards.</p></div></header>
-    <div class="machine-box"><ul>
-      <li><a href="/llms.txt"><code>/llms.txt</code></a> &mdash; the curated index for assistants.
-        Live, and the right starting point today.</li>
-      <li><a href="/data/index.json"><code>/data/index.json</code></a> &mdash; every machine file with
-        its date, size and SHA-256. Cite the <code>as_of</code> with the number.</li>
-      <li><a href="/data/surfaces.json"><code>/data/surfaces.json</code></a> &mdash; the map, including
-        the read-only tool catalogue. A.I. rows will carry <code>domain: "ai"</code>; there are
-        none.</li>
-      <li><a href="/data/model-contracts.json"><code>/data/model-contracts.json</code></a> &mdash; the
-        receipt shape a model scoreboard would have to satisfy. Written; unused by any model line on
-        this page, because there are none.</li>
-      <li><a href="connect.html">connect.html</a> &mdash; how an assistant gets a connector URL. This
-        part works now.</li></ul>
-    <p class="assumption">This hub is a directory over surfaces that do not exist yet. It publishes
-    no data of its own, so it has <b>no row</b> in the map &mdash; the same rule the Arena, Library and
-    NFL hubs follow. Its machine mirror falls through to <a href="/llms.txt"><code>/llms.txt</code></a>,
-    which is the correct answer for a page with no surface of its own.</p></div>
   </section>
 </main>
 
 <footer class="foot">Data Dawgs · Data, Not Dogma · <a href="/llms.txt">For machines</a> · All model and market numbers carry their date.</footer>
 
+<script>
+/* DDSheets — the page-family component, lifted verbatim from cfb.html by
+   work/build_section_tools.py. See cfb.html for the design notes. */
+window.DDSheets = function(cfg){
+  const LS = "dd-sheet-" + cfg.key;
+  const mount = document.querySelector(cfg.mount);
+  if(!mount) return null;
+  const sheets = cfg.sheets.filter(s=>document.querySelector(s.panel) || s.src);
+  if(!sheets.length) return null;
+  const ids = sheets.map(s=>s.id);
+  let cur = null, navigating = false;
+
+  /* ---- which sheet do we open on? -------------------------------------
+     Hash beats memory beats first. A deep link someone was sent must win over
+     whatever this browser happened to look at last, or shared links silently
+     land on the wrong sheet. */
+  function initial(){
+    const h = (location.hash||"").replace(/^#/,"");
+    if(ids.includes(h)) return h;
+    try{ const r = localStorage.getItem(LS); if(ids.includes(r)) return r; }catch(e){}
+    return ids[0];
+  }
+
+  /* ---- chrome ---------------------------------------------------------- */
+  mount.className = "sheetbar";
+  mount.setAttribute("role","tablist");
+  /* ⚠️ NEVER overwrite a panel's existing id. The first version assigned
+     el.id = "panel-"+id, which silently renamed #sheetBoard to #panel-board and
+     broke every other querySelector on the page that referenced it. Adopt the id
+     that is already there; only mint one if the element has none. */
+  sheets.forEach(s=>{
+    const el = document.querySelector(s.panel);
+    if(!el) return;
+    if(!el.id) el.id = "panel-" + s.id;
+    s._pid = el.id;
+    el.setAttribute("role","tabpanel");
+    el.setAttribute("aria-labelledby","tab-"+s.id);
+    el.hidden = true;
+  });
+  mount.innerHTML = sheets.map(s=>
+    `<button type="button" role="tab" class="sheet-tab" id="tab-${s.id}"
+       data-id="${s.id}"${s._pid?` aria-controls="${s._pid}"`:""} aria-selected="false" tabindex="-1">
+       ${s.label}${s.hint?`<span class="sheet-hint">${s.hint}</span>`:""}</button>`).join("");
+
+  function frameFor(s){
+    let el = document.querySelector(s.panel);
+    if(el.dataset.loaded) return;
+    /* lazy: an iframe sheet costs nothing until it is first opened */
+    const f = document.createElement("iframe");
+    f.src = s.src + (s.src.includes("?")?"&":"?") + "embed=1";
+    f.title = s.label; f.loading = "lazy";
+    el.appendChild(f); el.dataset.loaded = "1";
+  }
+
+  function show(id, opts){
+    opts = opts || {};
+    if(!ids.includes(id)) id = ids[0];
+    const prev = cur;
+    if(id === prev && !opts.force) return;
+    cur = id;
+    sheets.forEach(s=>{
+      const tab = mount.querySelector(`[data-id="${s.id}"]`);
+      const on = s.id === id;
+      tab.classList.toggle("on", on);
+      tab.setAttribute("aria-selected", on ? "true" : "false");
+      tab.tabIndex = on ? 0 : -1;
+      const el = document.querySelector(s.panel);
+      if(el) el.hidden = !on;
+      if(on && s.src) frameFor(s);
+    });
+    try{ localStorage.setItem(LS, id); }catch(e){}
+    if(!opts.silent){
+      /* ⚠️ pushState, not location.hash — assigning to hash also SCROLLS to the
+         element with that id, which yanks the page down past the sheet bar on
+         every switch. And replaceState on the first paint so the initial sheet
+         does not add a bogus history entry the back button has to eat. */
+      navigating = true;
+      try{ history[opts.replace?"replaceState":"pushState"](null,"","#"+id); }catch(e){}
+      navigating = false;
+    }
+    if(typeof cfg.onShow === "function") cfg.onShow(id, prev);
+  }
+
+  mount.addEventListener("click", e=>{
+    const b = e.target.closest(".sheet-tab"); if(b) show(b.dataset.id);
+  });
+  /* roving tabindex + arrow keys, per the tablist pattern */
+  mount.addEventListener("keydown", e=>{
+    const i = ids.indexOf(cur); let n = null;
+    if(e.key==="ArrowRight") n = ids[(i+1)%ids.length];
+    else if(e.key==="ArrowLeft") n = ids[(i-1+ids.length)%ids.length];
+    else if(e.key==="Home") n = ids[0];
+    else if(e.key==="End") n = ids[ids.length-1];
+    if(n){ e.preventDefault(); show(n); mount.querySelector(`[data-id="${n}"]`).focus(); }
+  });
+  addEventListener("hashchange", ()=>{
+    if(navigating) return;
+    const h = (location.hash||"").replace(/^#/,"");
+    if(ids.includes(h)) show(h,{silent:true});
+  });
+  addEventListener("popstate", ()=>{
+    const h = (location.hash||"").replace(/^#/,"");
+    show(ids.includes(h)?h:ids[0], {silent:true});
+  });
+
+  show(initial(), {replace:true, force:true});
+  return { show, get current(){ return cur; }, ids };
+};
+</script>
+<script>
+/* ============================================================================
+   ai.html — models, measured
+
+   ⚠️ NOTHING ON THIS PAGE IS TYPED IN. One request to OpenRouter's public model
+   catalogue at load time feeds both the board and the frontier chart. There is no
+   /data/ mirror yet, so the page cannot go stale and cannot be reproduced — both are
+   stated on the page rather than hidden.
+
+   ⚠️ THE INTELLIGENCE INDEX IS NOT OURS. It is Artificial Analysis' composite, carried
+   through OpenRouter's payload, and it arrives with NO confidence interval. That single
+   missing field is why the tie-aware leaderboard was cut rather than shipped: the tool's
+   entire purpose is collapsing statistically indistinguishable models, and there is
+   nothing here to decide indistinguishability with. Do not add one by eye.
+   ============================================================================ */
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+  var esc = function(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){
+    return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]; }); };
+
+  var SRC = "https://openrouter.ai/api/v1/models";
+  var models = [], sortKey = "iq", sortDir = -1;
+
+  function stamp(d){
+    try{ return d.toISOString().replace("T"," ").slice(0,16) + " UTC"; }
+    catch(e){ return "unknown"; }
+  }
+  function money(v){
+    if(v == null || !isFinite(v)) return "—";
+    if(v === 0) return "free";
+    if(v < 0.01) return "$" + v.toFixed(4);
+    if(v < 1) return "$" + v.toFixed(3);
+    return "$" + v.toFixed(2);
+  }
+  function ctxs(n){
+    if(!n) return "—";
+    if(n >= 1e6) return (n/1e6).toFixed(n % 1e6 ? 1 : 0) + "M";
+    if(n >= 1000) return Math.round(n/1000) + "k";
+    return String(n);
+  }
+  function tile(k,v,n){
+    return '<div class="s"><div class="k">' + esc(k) + '</div><div class="v">' + esc(String(v)) +
+           '</div><div class="n">' + esc(n||"") + '</div></div>';
+  }
+
+  var tip = document.createElement("div");
+  tip.className = "ddtip";
+  document.body.appendChild(tip);
+  function showTip(html, ev){
+    tip.innerHTML = html; tip.style.display = "block";
+    var pad = 14, w = tip.offsetWidth, h = tip.offsetHeight;
+    var x = ev.clientX + pad, y = ev.clientY + pad;
+    if(x + w > innerWidth - 8) x = ev.clientX - w - pad;
+    if(y + h > innerHeight - 8) y = ev.clientY - h - pad;
+    tip.style.left = x + "px"; tip.style.top = y + "px";
+  }
+  function hideTip(){ tip.style.display = "none"; }
+
+  /* ---------------- load ---------------- */
+  function load(){
+    $("aiMsg").hidden = false; $("aiMsg").className = "ddmsg";
+    $("aiMsg").textContent = "Loading the model catalogue…";
+    $("aiTw").hidden = true;
+
+    fetch(SRC, {headers:{"Accept":"application/json"}}).then(function(r){
+      if(!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(raw){
+      var arr = (raw && raw.data) || [];
+      models = arr.map(function(m){
+        var pr = m.pricing || {};
+        /* OpenRouter quotes price PER TOKEN as a string. Everything a human reads is
+           per million, so convert once here and never again downstream. */
+        var pin  = parseFloat(pr.prompt);
+        var pout = parseFloat(pr.completion);
+        var bm = (m.benchmarks || {}).artificial_analysis || {};
+        var arch = m.architecture || {};
+        var mods = arch.input_modalities || [];
+        var reas = m.reasoning || null;
+        return {
+          id: m.id || "",
+          name: m.name || m.id || "(unnamed)",
+          vendor: (m.id || "").split("/")[0] || "",
+          ctx: m.context_length || (m.top_provider && m.top_provider.context_length) || null,
+          pin:  isFinite(pin)  ? pin  * 1e6 : null,
+          pout: isFinite(pout) ? pout * 1e6 : null,
+          iq: typeof bm.intelligence_index === "number" ? bm.intelligence_index : null,
+          text: (arch.modality || "").indexOf("text") === 0,
+          multi: mods.length > 1,
+          reas: reas ? (reas.mandatory ? "always" : (reas.default_enabled ? "default on" : "optional")) : "—",
+          created: m.created || 0
+        };
+      });
+      $("aiAsOf").textContent = "fetched " + stamp(new Date());
+      $("frAsOf").textContent = "fetched " + stamp(new Date());
+      tiles();
+      draw();
+      frontier();
+    }).catch(function(e){
+      $("aiTw").hidden = true;
+      $("aiMsg").className = "ddmsg err";
+      $("aiMsg").innerHTML = "Could not reach OpenRouter from your browser (" + esc(e.message) +
+        "). This panel reads their API directly, so an ad-blocker, a corporate network or an " +
+        "outage all look identical from here. Nothing is cached on our side to fall back to.";
+      $("frMsg").className = "ddmsg err";
+      $("frMsg").textContent = "No catalogue, no chart.";
+    });
+  }
+
+  function scoped(){
+    var s = $("aiScope").value;
+    return models.filter(function(m){
+      if(s === "scored") return m.iq != null;
+      if(s === "text") return m.text;
+      return true;
+    });
+  }
+
+  function tiles(){
+    var withIq = models.filter(function(m){ return m.iq != null; });
+    var priced = models.filter(function(m){ return m.pout != null && m.pout > 0; });
+    priced.sort(function(a,b){ return a.pout - b.pout; });
+    var med = priced.length ? priced[Math.floor(priced.length/2)].pout : null;
+    var vendors = {};
+    models.forEach(function(m){ if(m.vendor) vendors[m.vendor] = 1; });
+    var free = models.filter(function(m){ return m.pout === 0; }).length;
+    $("aiTiles").innerHTML =
+      tile("Models listed", models.length, Object.keys(vendors).length + " vendors") +
+      tile("Median output price", money(med) + "/M", "of " + priced.length + " paid models") +
+      tile("With a score", withIq.length, "carry an intelligence index") +
+      tile("Free endpoints", free, "$0 output price");
+  }
+
+  function draw(){
+    var q = ($("aiQ").value || "").toLowerCase().trim();
+    var rows = scoped().filter(function(m){
+      return !q || m.name.toLowerCase().indexOf(q) >= 0 || m.id.toLowerCase().indexOf(q) >= 0;
+    });
+    rows.sort(function(a,b){
+      var x = a[sortKey], y = b[sortKey];
+      if(typeof x === "string") return sortDir * String(x).localeCompare(String(y));
+      /* Nulls sink to the bottom in BOTH directions — a missing price is not a cheap
+         price, and letting it sort as zero would put unpriced models on the frontier. */
+      if(x == null && y == null) return 0;
+      if(x == null) return 1;
+      if(y == null) return -1;
+      return sortDir * (x - y);
+    });
+    $("aiBody").innerHTML = rows.map(function(m){
+      return '<tr><td class="tl"><a href="https://openrouter.ai/' + esc(m.id) +
+        '" target="_blank" rel="noopener">' + esc(m.name) + '</a>' +
+        (m.multi ? ' <span class="chip">multimodal</span>' : '') + '</td>' +
+        '<td>' + ctxs(m.ctx) + '</td>' +
+        '<td>' + money(m.pin) + '</td>' +
+        '<td>' + money(m.pout) + '</td>' +
+        '<td>' + (m.iq == null ? "—" : m.iq.toFixed(1)) + '</td>' +
+        '<td class="tl">' + esc(m.reas) + '</td></tr>';
+    }).join("");
+    $("aiTw").hidden = false;
+    $("aiMsg").hidden = rows.length > 0;
+    if(!rows.length){ $("aiMsg").hidden = false; $("aiMsg").className = "ddmsg";
+      $("aiMsg").textContent = "No models match that filter."; }
+  }
+
+  /* ---------------- frontier ---------------- */
+  function frontier(){
+    var pts = models.filter(function(m){
+      return m.iq != null && m.pout != null && m.pout > 0;
+    });
+    if(pts.length < 4){
+      $("frMsg").hidden = false;
+      $("frMsg").textContent = "Too few models carry both a price and a score to draw a frontier.";
+      return;
+    }
+    $("frMsg").hidden = true;
+    $("frLgd").hidden = false;
+
+    /* A model is on the frontier if nothing else is BOTH cheaper AND at least as smart. */
+    pts.forEach(function(m){
+      m.front = !pts.some(function(o){
+        return o !== m && o.pout <= m.pout && o.iq >= m.iq && (o.pout < m.pout || o.iq > m.iq);
+      });
+    });
+    var front = pts.filter(function(m){ return m.front; })
+                   .sort(function(a,b){ return a.pout - b.pout; });
+
+    var best = front[front.length-1];
+    var cheap = front[0];
+    $("frHead").innerHTML = "The cheapest model on the frontier scores <b>" + cheap.iq.toFixed(1) +
+      "</b> at <b>" + money(cheap.pout) + "</b> per million output tokens. The strongest scores <b>" +
+      best.iq.toFixed(1) + "</b> and costs <b>" + money(best.pout) + "</b> — " +
+      (cheap.pout > 0 ? Math.round(best.pout/cheap.pout) : "—") + "× more for " +
+      (best.iq - cheap.iq).toFixed(1) + " more points of somebody else&rsquo;s composite.";
+
+    var W = 680, H = 430, m = {t:18, r:22, b:46, l:70};
+    var pw = W - m.l - m.r, ph = H - m.t - m.b;
+    var lo = Math.log10(Math.min.apply(null, pts.map(function(p){ return p.pout; })));
+    var hi = Math.log10(Math.max.apply(null, pts.map(function(p){ return p.pout; })));
+    lo = Math.floor(lo); hi = Math.ceil(hi);
+    var iqhi = Math.max.apply(null, pts.map(function(p){ return p.iq; }));
+    var iqlo = Math.min.apply(null, pts.map(function(p){ return p.iq; }));
+    var pad = (iqhi - iqlo) * 0.08 || 1;
+    iqhi += pad; iqlo -= pad;
+
+    var X = function(v){ return m.l + (Math.log10(v) - lo)/(hi - lo) * pw; };
+    var Y = function(v){ return m.t + (1 - (v - iqlo)/(iqhi - iqlo)) * ph; };
+
+    var s = ['<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Output price against composite intelligence score, log price axis">'];
+    for(var e = lo; e <= hi; e++){
+      s.push('<line class="gr" x1="' + X(Math.pow(10,e)) + '" y1="' + m.t + '" x2="' + X(Math.pow(10,e)) + '" y2="' + (m.t+ph) + '"/>');
+      var lab = Math.pow(10,e);
+      s.push('<text class="lb" x="' + X(lab) + '" y="' + (m.t+ph+18) + '" text-anchor="middle">$' +
+        (lab < 1 ? lab.toFixed(lab < 0.1 ? 2 : 1) : lab) + '</text>');
+    }
+    for(var g = 0; g <= 4; g++){
+      var yv = iqlo + (iqhi - iqlo) * g/4;
+      s.push('<line class="gr" x1="' + m.l + '" y1="' + Y(yv) + '" x2="' + (m.l+pw) + '" y2="' + Y(yv) + '"/>');
+      s.push('<text class="lb" x="' + (m.l-10) + '" y="' + (Y(yv)+4) + '" text-anchor="end">' + yv.toFixed(0) + '</text>');
+    }
+    s.push('<line class="ax" x1="' + m.l + '" y1="' + (m.t+ph) + '" x2="' + (m.l+pw) + '" y2="' + (m.t+ph) + '"/>');
+    s.push('<line class="ax" x1="' + m.l + '" y1="' + m.t + '" x2="' + m.l + '" y2="' + (m.t+ph) + '"/>');
+
+    /* Frontier drawn as a staircase, because it IS a step function: between two
+       frontier models nothing exists, and a straight interpolation would draw models
+       that do not exist. */
+    var step = [];
+    front.forEach(function(p,i){
+      if(i === 0) step.push("M" + X(p.pout) + " " + Y(p.iq));
+      else { step.push("L" + X(p.pout) + " " + Y(front[i-1].iq)); step.push("L" + X(p.pout) + " " + Y(p.iq)); }
+    });
+    if(step.length) s.push('<path class="ser" d="' + step.join(" ") + '"/>');
+
+    pts.filter(function(p){ return !p.front; }).forEach(function(p){
+      s.push('<circle class="dim" cx="' + X(p.pout) + '" cy="' + Y(p.iq) + '" r="4" ' +
+        'data-t="' + esc(p.name + "|" + money(p.pout) + " per M out|score " + p.iq.toFixed(1)) + '"/>');
+    });
+    front.forEach(function(p){
+      s.push('<circle class="dot" cx="' + X(p.pout) + '" cy="' + Y(p.iq) + '" r="6" ' +
+        'data-t="' + esc(p.name + "|ON THE FRONTIER|" + money(p.pout) + " per M out|score " + p.iq.toFixed(1)) + '"/>');
+    });
+    /* Direct labels on the frontier only — a number on every point is unreadable, and
+       identity must not rest on colour alone.
+       ⚠️ COLLISION AVOIDANCE IS NOT OPTIONAL HERE. Frontier points cluster: two models a
+       few cents apart put their labels on top of each other and both become unreadable.
+       The first render did exactly that. Greedy placement — keep a label only if its box
+       clears every box already placed, try above then below, otherwise drop it. A dropped
+       label is fine; the point is still on the chart and still has its tooltip. */
+    var placed = [];
+    function fits(x1,y1,x2,y2){
+      for(var i=0;i<placed.length;i++){
+        var b = placed[i];
+        if(x1 < b[2] && x2 > b[0] && y1 < b[3] && y2 > b[1]) return false;
+      }
+      return true;
+    }
+    front.slice().reverse().forEach(function(p){
+      var txt = p.name.length > 24 ? p.name.slice(0,23) + "…" : p.name;
+      var w = txt.length * 5.6, h = 13;
+      var cands = [[X(p.pout)+9, Y(p.iq)-8], [X(p.pout)+9, Y(p.iq)+16],
+                   [X(p.pout)-9-w, Y(p.iq)-8], [X(p.pout)-9-w, Y(p.iq)+16]];
+      for(var c=0;c<cands.length;c++){
+        var x = cands[c][0], y = cands[c][1];
+        if(x < 2 || x + w > W - 2) continue;
+        if(y - h < 2 || y > H - 2) continue;
+        if(!fits(x, y-h, x+w, y)) continue;
+        placed.push([x, y-h, x+w, y]);
+        s.push('<text class="lb" x="' + x + '" y="' + y + '">' + esc(txt) + '</text>');
+        return;
+      }
+    });
+
+    s.push('<text class="lb2" x="' + (m.l+pw/2) + '" y="' + (H-6) + '" text-anchor="middle">Dollars per million output tokens (log scale)</text>');
+    s.push('<text class="lb2" transform="rotate(-90 20 ' + (m.t+ph/2) + ')" x="20" y="' + (m.t+ph/2) + '" text-anchor="middle">Composite intelligence index</text>');
+    s.push('</svg>');
+    $("frFig").innerHTML = s.join("");
+
+    Array.prototype.forEach.call($("frFig").querySelectorAll("circle"), function(c){
+      c.addEventListener("mousemove", function(ev){
+        var p = c.getAttribute("data-t").split("|");
+        showTip("<b>" + esc(p[0]) + "</b><br>" + p.slice(1).map(esc).join("<br>"), ev);
+      });
+      c.addEventListener("mouseleave", hideTip);
+    });
+  }
+
+  /* ---------------- wiring ---------------- */
+  $("aiReload").addEventListener("click", load);
+  $("aiQ").addEventListener("input", draw);
+  $("aiScope").addEventListener("change", function(){ draw(); });
+  Array.prototype.forEach.call(document.querySelectorAll("#aiTw th.so"), function(th){
+    th.addEventListener("click", function(){
+      var k = th.getAttribute("data-k");
+      if(sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = (k === "name" ? 1 : -1); }
+      draw();
+    });
+  });
+
+  DDSheets({key:"ai", mount:"#sheets", sheets:[
+    {id:"models",    label:"Model board", panel:"#sheetModels"},
+    {id:"frontier",  label:"Frontier",    panel:"#sheetFrontier"},
+    {id:"forecasts", label:"Forecast study", panel:"#sheetForecasts"},
+    {id:"method",    label:"Method",      panel:"#sheetAiMethod"}
+  ]});
+
+  load();
+})();
+</script>
 <script>
 /* ai.html — a section hub with nothing in it yet.
  *

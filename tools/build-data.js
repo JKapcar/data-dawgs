@@ -1317,6 +1317,26 @@ const SURFACES = [
     machine: [{ kind: 'markdown', url: '/data/method.md', status: 'live' },
               { kind: 'markdown', url: '/data/toto-philosophy.md', status: 'live' }],
     planned: ['mcp:prompts'] },
+
+  /* ⚠️ THE FOUR SECTION TOOLS HAVE NO MACHINE SURFACE, ON PURPOSE. They compute in the
+     visitor's browser from a third party's public API (Polymarket, OpenRouter); there is no
+     /data/ mirror behind them, so `machine: []`. Empty `machine` reads as "with_no_machine_access"
+     in the counts below — [].every(...) is vacuously true — which moves that count 0 -> 4. That
+     is the honest reading and it is what the field is for: the upstream API is Polymarket's and
+     OpenRouter's surface, not ours, and inventing a /data/ file to keep the count clean would be
+     a coverage claim we cannot back. The `gap` on each row names the upstream instead. */
+  { id: 'markets-board', domain: 'markets', name: 'Open prediction-market board', page: '/markets.html',
+    tier: 'labs', machine: [], planned: [],
+    gap: 'Live in the visitor\'s browser from Polymarket\'s public API (gamma-api.polymarket.com). Nothing is cached under /data/, so there is no dated machine mirror to read — only the upstream API this page names and links.' },
+  { id: 'markets-calibration', domain: 'markets', name: 'Market calibration and the subject split', page: '/markets.html',
+    tier: 'labs', machine: [], planned: [],
+    gap: 'The reliability curve and the politics-versus-everything split are computed client-side over Polymarket\'s resolved markets and their CLOB price history. No resolved-market snapshot is hosted here, so there is no machine surface behind them yet.' },
+  { id: 'ai-board', domain: 'ai', name: 'Model board and the price / intelligence frontier', page: '/ai.html',
+    tier: 'labs', machine: [], planned: [],
+    gap: 'Read live from OpenRouter\'s public model catalogue (openrouter.ai/api/v1/models). Prices and the composite intelligence index are third parties\' numbers, mirrored with no /data/ copy, so this page exposes no machine surface of its own.' },
+  { id: 'ai-forecasts', domain: 'ai', name: 'Model forecast study, pre-registered', page: '/ai.html',
+    tier: 'labs', machine: [], planned: [],
+    gap: 'Pre-registration only: the question set, the two arms and the scoring rules are published before any model is run. No forecast has been collected, so there is nothing to serve a machine yet.' },
 ];
 
 write('surfaces.json', {

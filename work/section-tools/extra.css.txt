@@ -1,0 +1,53 @@
+/* ---- Markets + AI domains: shared page CSS (appended after site.css) ---- */
+.ddstat{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr));gap:10px;margin:14px 0}
+.ddstat .s{background:color-mix(in srgb,var(--ink-3) 8%,transparent);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+.ddstat .s .k{font-size:10.5px;letter-spacing:.10em;text-transform:uppercase;color:var(--ink-3)}
+.ddstat .s .v{font-size:21px;font-weight:700;color:var(--ink-1);font-variant-numeric:tabular-nums;margin-top:3px;line-height:1.15}
+.ddstat .s .n{font-size:11.5px;color:var(--ink-3);margin-top:2px}
+.ddhead{font-size:16px;line-height:1.5;color:var(--ink-1);font-weight:650;margin:2px 0 10px}
+.ddhead b{color:var(--accent)}
+.ddctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 12px}
+.ddctl .fi{max-width:230px}
+.ddtw{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--grid);border-radius:10px}
+.ddtw table{font-size:12.5px}
+.ddtw th{position:sticky;top:0;background:var(--surface-1);z-index:1;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);padding:8px;border-bottom:1px solid var(--axis);text-align:right;white-space:nowrap}
+.ddtw th.tl,.ddtw td.tl{text-align:left}
+.ddtw th.so{cursor:pointer;user-select:none}
+.ddtw th.so:hover{color:var(--accent)}
+.ddtw tbody tr:hover td{background:color-mix(in srgb,var(--accent) 7%,transparent)}
+.ddtw td{white-space:nowrap;padding:6px 8px}
+.ddtw td.tl{white-space:normal;overflow-wrap:anywhere;max-width:340px}
+.ddmsg{padding:14px;border:1px dashed var(--axis);border-radius:10px;color:var(--ink-3);font-size:13px;text-align:center}
+.ddmsg.err{border-color:var(--bad);color:var(--bad)}
+.ddfig{margin:6px 0 2px}
+.ddfig svg{width:100%;height:auto;display:block;overflow:visible}
+.ddfig .ax,.ddfacet .ax{stroke:var(--axis);stroke-width:1}
+.ddfig .gr,.ddfacet .gr{stroke:var(--grid);stroke-width:1}
+.ddfig .lb,.ddfacet .lb{fill:var(--ink-3);font-size:10.5px}
+.ddfig .lb2,.ddfacet .lb2{fill:var(--ink-2);font-size:11.5px;font-weight:650}
+.ddfig .ref,.ddfacet .ref{stroke:var(--ink-3);stroke-width:2;stroke-dasharray:5 4;fill:none}
+.ddfig .ser,.ddfacet .ser{stroke:var(--accent);stroke-width:2;fill:none}
+.ddfig .dot,.ddfacet .dot{fill:var(--accent);stroke:var(--surface-1);stroke-width:2}
+.ddfig .dim,.ddfacet .dim{fill:var(--ink-3);opacity:.42}
+.ddfig .wis,.ddfacet .wis{stroke:var(--accent);stroke-width:2;opacity:.45}
+.ddlgd{display:flex;flex-wrap:wrap;gap:14px;font-size:11.5px;color:var(--ink-2);margin:8px 0 0}
+.ddlgd i{display:inline-block;width:20px;height:0;border-top-width:2px;vertical-align:middle;margin-right:6px}
+.ddlgd .l1 i{border-top:2px solid var(--accent)}
+.ddlgd .l2 i{border-top:2px dashed var(--ink-3)}
+.ddtip{position:fixed;pointer-events:none;z-index:8000;background:var(--surface-1);border:1px solid var(--axis);border-radius:8px;padding:7px 9px;font-size:12px;color:var(--ink-1);box-shadow:0 6px 20px rgba(0,0,0,.28);max-width:260px;display:none}
+.ddtip b{color:var(--accent)}
+.ddbar{height:6px;border-radius:4px;background:color-mix(in srgb,var(--ink-3) 22%,transparent);overflow:hidden;margin:10px 0}
+.ddbar i{display:block;height:100%;background:var(--accent);width:0;transition:width .18s linear}
+.ddwarn{border-left:3px solid var(--warn);padding:8px 0 8px 11px;margin:12px 0;font-size:12.5px;color:var(--ink-2)}
+.ddprereg{border:1px dashed var(--axis);border-radius:10px;padding:14px 16px;margin:12px 0}
+.ddprereg h4{margin:0 0 6px;font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3)}
+.ddprereg pre{white-space:pre-wrap;font-size:11.5px;color:var(--ink-2);background:color-mix(in srgb,var(--ink-3) 8%,transparent);padding:10px;border-radius:8px;overflow-x:auto;margin:6px 0 0}
+.ddcount{font-size:30px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
+@media(max-width:620px){.ddtw td.tl{max-width:190px}.ddstat{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* ---- domain split: small multiples ---- */
+#domFacets{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(268px,100%),1fr));gap:14px}
+.ddfacet{border:1px solid var(--grid);border-radius:10px;padding:10px 10px 4px}
+.ddfacet .ft{font-size:11.5px;font-weight:700;color:var(--ink-2);letter-spacing:.04em;text-transform:uppercase;margin-bottom:2px}
+.ddfacet .ft span{font-weight:500;color:var(--ink-3);text-transform:none;letter-spacing:0}
+.ddfacet svg{width:100%;height:auto;display:block;overflow:visible}

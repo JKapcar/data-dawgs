@@ -692,6 +692,90 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 @media(max-width:760px){.p-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.calc-grid,.inventory{grid-template-columns:1fr}.fields.five{grid-template-columns:repeat(2,minmax(0,1fr))}.provenance{grid-template-columns:1fr}.p-section>header{display:block}.p-meta{text-align:left;margin-top:7px}}
 @media(max-width:430px){.fields{grid-template-columns:1fr}.fields.five{grid-template-columns:1fr}.p-summary{grid-template-columns:1fr 1fr}.calc{padding:13px}}
 
+
+/* ---- page-family sheets -------------------------------------------------- */
+.sheetbar{display:flex;gap:4px;flex-wrap:wrap;margin:0 0 18px;
+  border-bottom:1px solid var(--grid);padding-bottom:0}
+.sheet-tab{appearance:none;background:transparent;border:0;border-bottom:2px solid transparent;
+  color:var(--ink-3);font:inherit;font-size:14px;font-weight:700;letter-spacing:.005em;
+  padding:9px 15px 8px;cursor:pointer;border-radius:7px 7px 0 0;display:inline-flex;
+  align-items:center;gap:7px;margin-bottom:-1px}
+.sheet-tab:hover{color:var(--ink-1);background:color-mix(in srgb,var(--ink-3) 9%,transparent)}
+.sheet-tab.on{color:var(--accent);border-bottom-color:var(--accent);background:transparent}
+.sheet-tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sheet-hint{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-3);background:color-mix(in srgb,var(--ink-3) 16%,transparent);
+  border-radius:5px;padding:2px 6px}
+.sheet-tab.on .sheet-hint{color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent)}
+[role=tabpanel][hidden]{display:none}
+.sheet-frame{position:relative;min-height:340px}
+.sheet-frame iframe{display:block;width:100%;min-height:70vh;border:0;background:transparent}
+@media (max-width:560px){
+  .sheetbar{gap:2px}
+  .sheet-tab{font-size:13px;padding:8px 11px 7px}
+  .sheet-hint{display:none}
+}
+/* ---- Stage 2: utilities the section tools reference, verbatim from cfb.html ---- */
+.rt{float:right;text-transform:none;letter-spacing:0;font-weight:650;color:var(--ink-1)}
+.fi{width:100%;box-sizing:border-box;background:var(--page);border:1px solid var(--grid);border-radius:9px;
+  color:var(--ink-1);font:inherit;font-size:14px;padding:9px 11px}
+.fi:focus{outline:2px solid color-mix(in srgb,var(--accent) 55%,transparent);outline-offset:1px}
+.btn.ghost{background:none;color:var(--ink-2);border:1px solid var(--border);font-weight:700;font-size:13px;padding:9px 14px}
+.good{color:var(--good)}
+.bad{color:var(--bad)}
+/* ---- Markets + AI domains: shared page CSS (appended after site.css) ---- */
+.ddstat{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr));gap:10px;margin:14px 0}
+.ddstat .s{background:color-mix(in srgb,var(--ink-3) 8%,transparent);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+.ddstat .s .k{font-size:10.5px;letter-spacing:.10em;text-transform:uppercase;color:var(--ink-3)}
+.ddstat .s .v{font-size:21px;font-weight:700;color:var(--ink-1);font-variant-numeric:tabular-nums;margin-top:3px;line-height:1.15}
+.ddstat .s .n{font-size:11.5px;color:var(--ink-3);margin-top:2px}
+.ddhead{font-size:16px;line-height:1.5;color:var(--ink-1);font-weight:650;margin:2px 0 10px}
+.ddhead b{color:var(--accent)}
+.ddctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 12px}
+.ddctl .fi{max-width:230px}
+.ddtw{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--grid);border-radius:10px}
+.ddtw table{font-size:12.5px}
+.ddtw th{position:sticky;top:0;background:var(--surface-1);z-index:1;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);padding:8px;border-bottom:1px solid var(--axis);text-align:right;white-space:nowrap}
+.ddtw th.tl,.ddtw td.tl{text-align:left}
+.ddtw th.so{cursor:pointer;user-select:none}
+.ddtw th.so:hover{color:var(--accent)}
+.ddtw tbody tr:hover td{background:color-mix(in srgb,var(--accent) 7%,transparent)}
+.ddtw td{white-space:nowrap;padding:6px 8px}
+.ddtw td.tl{white-space:normal;overflow-wrap:anywhere;max-width:340px}
+.ddmsg{padding:14px;border:1px dashed var(--axis);border-radius:10px;color:var(--ink-3);font-size:13px;text-align:center}
+.ddmsg.err{border-color:var(--bad);color:var(--bad)}
+.ddfig{margin:6px 0 2px}
+.ddfig svg{width:100%;height:auto;display:block;overflow:visible}
+.ddfig .ax,.ddfacet .ax{stroke:var(--axis);stroke-width:1}
+.ddfig .gr,.ddfacet .gr{stroke:var(--grid);stroke-width:1}
+.ddfig .lb,.ddfacet .lb{fill:var(--ink-3);font-size:10.5px}
+.ddfig .lb2,.ddfacet .lb2{fill:var(--ink-2);font-size:11.5px;font-weight:650}
+.ddfig .ref,.ddfacet .ref{stroke:var(--ink-3);stroke-width:2;stroke-dasharray:5 4;fill:none}
+.ddfig .ser,.ddfacet .ser{stroke:var(--accent);stroke-width:2;fill:none}
+.ddfig .dot,.ddfacet .dot{fill:var(--accent);stroke:var(--surface-1);stroke-width:2}
+.ddfig .dim,.ddfacet .dim{fill:var(--ink-3);opacity:.42}
+.ddfig .wis,.ddfacet .wis{stroke:var(--accent);stroke-width:2;opacity:.45}
+.ddlgd{display:flex;flex-wrap:wrap;gap:14px;font-size:11.5px;color:var(--ink-2);margin:8px 0 0}
+.ddlgd i{display:inline-block;width:20px;height:0;border-top-width:2px;vertical-align:middle;margin-right:6px}
+.ddlgd .l1 i{border-top:2px solid var(--accent)}
+.ddlgd .l2 i{border-top:2px dashed var(--ink-3)}
+.ddtip{position:fixed;pointer-events:none;z-index:8000;background:var(--surface-1);border:1px solid var(--axis);border-radius:8px;padding:7px 9px;font-size:12px;color:var(--ink-1);box-shadow:0 6px 20px rgba(0,0,0,.28);max-width:260px;display:none}
+.ddtip b{color:var(--accent)}
+.ddbar{height:6px;border-radius:4px;background:color-mix(in srgb,var(--ink-3) 22%,transparent);overflow:hidden;margin:10px 0}
+.ddbar i{display:block;height:100%;background:var(--accent);width:0;transition:width .18s linear}
+.ddwarn{border-left:3px solid var(--warn);padding:8px 0 8px 11px;margin:12px 0;font-size:12.5px;color:var(--ink-2)}
+.ddprereg{border:1px dashed var(--axis);border-radius:10px;padding:14px 16px;margin:12px 0}
+.ddprereg h4{margin:0 0 6px;font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3)}
+.ddprereg pre{white-space:pre-wrap;font-size:11.5px;color:var(--ink-2);background:color-mix(in srgb,var(--ink-3) 8%,transparent);padding:10px;border-radius:8px;overflow-x:auto;margin:6px 0 0}
+.ddcount{font-size:30px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
+@media(max-width:620px){.ddtw td.tl{max-width:190px}.ddstat{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* ---- domain split: small multiples ---- */
+#domFacets{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(268px,100%),1fr));gap:14px}
+.ddfacet{border:1px solid var(--grid);border-radius:10px;padding:10px 10px 4px}
+.ddfacet .ft{font-size:11.5px;font-weight:700;color:var(--ink-2);letter-spacing:.04em;text-transform:uppercase;margin-bottom:2px}
+.ddfacet .ft span{font-weight:500;color:var(--ink-3);text-transform:none;letter-spacing:0}
+.ddfacet svg{width:100%;height:auto;display:block;overflow:visible}
 </style>
 </head>
 <body>
@@ -2023,11 +2107,6 @@ STATE: everything saves in the browser on that device. A different device shows 
   <header class="p-hero">
     <div class="p-kicker">Prediction markets · what a price claims, and whether it was right</div>
     <h1>The prediction-markets work. <a class="tierchip" data-tier="labs" href="index.html#tiers" title="Why this page is a Pup">Pup</a></h1>
-    <div class="notbuilt"><b>Nothing here is built yet.</b> This section was created on
-    <b>2026-08-11</b> to hold work that has not started. It publishes no data file, computes
-    nothing, exposes no MCP tool, and has no row in the surfaces map. Everything under
-    &ldquo;What this section is for&rdquo; below is <b>stated intent, not shipped work</b> &mdash; read it
-    as a plan someone can hold us to, not as a description of the site.</div>
     <p class="p-lead">A price is a forecast wearing a dollar sign. A market that says 62&cent; is making
     exactly the kind of dated, checkable claim this site already grades models on &mdash; so the
     plan is to treat venues as forecasters, log what they said before the event, and score them
@@ -2039,69 +2118,888 @@ STATE: everything saves in the browser on that device. A different device shows 
   capture time</b> &mdash; not closing lines. The site&rsquo;s existing book-price surface already
   carries that limit and refuses to compute CLV from it; the same rule applies to anything added
   here.</div>
-  <nav class="p-jump" aria-label="Prediction markets sections">
-    <a href="#live">What is live</a><a href="#plan">What this section is for</a><a href="#machines">For machines</a><a href="receipts.html#models">Belief scoreboard &rarr;</a>
-  </nav>
 
-  <section class="p-section" id="live">
-    <header><div><h2>What is live</h2><p class="dek">One card per surface in
+<div id="sheets"></div>
+
+  <!-- ===================== LIVE BOARD ===================== -->
+  <div id="sheetLive">
+  <div class="card">
+    <h3>Open markets, by money <span class="rt" id="mkAsOf"></span></h3>
+    <p class="sub">The largest open binary markets on Polymarket right now. Price is the <b>Yes</b>
+    side, read as a probability. Volume is lifetime, in dollars. Sort any column.</p>
+
+    <div class="ddstat" id="mkTiles"></div>
+    <div class="ddctl">
+      <input class="fi" id="mkQ" type="search" placeholder="Filter questions…" aria-label="Filter questions">
+      <select class="fi" id="mkN" aria-label="How many markets">
+        <option value="50">Top 50</option>
+        <option value="100" selected>Top 100</option>
+        <option value="200">Top 200</option>
+      </select>
+      <button class="btn ghost" id="mkReload" type="button">Reload</button>
+    </div>
+    <div id="mkMsg" class="ddmsg">Loading live markets…</div>
+    <div class="ddtw" id="mkTw" hidden>
+      <table>
+        <thead><tr>
+          <th class="tl so" data-k="q">Market</th>
+          <th class="so" data-k="p">Yes price</th>
+          <th class="so" data-k="v">Volume</th>
+          <th class="so" data-k="d">Resolves</th>
+        </tr></thead>
+        <tbody id="mkBody"></tbody>
+      </table>
+    </div>
+    <p class="sub" style="margin-top:10px">Source: <a href="https://gamma-api.polymarket.com/markets" target="_blank" rel="noopener">gamma-api.polymarket.com</a>,
+    fetched client-side. <a class="udmach" href="https://gamma-api.polymarket.com/markets?closed=false&amp;limit=100&amp;order=volumeNum&amp;ascending=false">🤖 For machines</a></p>
+  </div>
+  </div>
+
+  <!-- ===================== CALIBRATION ===================== -->
+  <div id="sheetCal">
+  <div class="card" id="calibration">
+    <h3>Did the price mean anything? <span class="rt" id="calAsOf"></span></h3>
+    <p class="sub">Take resolved markets. Look at what the price said some days <em>before</em> it
+    resolved. Group those prices into buckets, and check how often the thing actually happened.
+    A market that is telling the truth lands on the diagonal.</p>
+
+    <div class="ddwarn"><b>This runs in your browser and it is not instant.</b> Each market needs a
+    second request for its price history, so a pass fetches a few hundred URLs. Start small. Nothing
+    is stored; refreshing re-runs it.</div>
+
+    <div class="ddctl">
+      <select class="fi" id="calN" aria-label="Sample size">
+        <option value="60" selected>60 markets</option>
+        <option value="120">120 markets</option>
+        <option value="240">240 markets</option>
+      </select>
+      <select class="fi" id="calBack" aria-label="Lookback">
+        <option value="1">Price 1 day before close</option>
+        <option value="7" selected>Price 7 days before close</option>
+        <option value="30">Price 30 days before close</option>
+      </select>
+      <button class="btn" id="calRun" type="button">Run the pass</button>
+    </div>
+
+    <div class="ddbar" id="calBarW" hidden><i id="calBar"></i></div>
+    <div id="calMsg" class="ddmsg">Nothing has been computed yet. Press <b>Run the pass</b>.</div>
+
+    <div id="calOut" hidden>
+      <p class="ddhead" id="calHead"></p>
+      <div class="ddstat" id="calTiles"></div>
+      <div class="ddfig" id="calFig"></div>
+      <div class="ddlgd">
+        <span class="l1"><i></i>Observed rate (with 95% Wilson interval)</span>
+        <span class="l2"><i></i>Perfect calibration</span>
+      </div>
+      <div class="ddtw" style="margin-top:14px">
+        <table>
+          <thead><tr>
+            <th class="tl">Price bucket</th><th>Markets</th><th>Mean price</th>
+            <th>Actually happened</th><th>Gap</th>
+          </tr></thead>
+          <tbody id="calBody"></tbody>
+        </table>
+      </div>
+      <p class="sub" style="margin-top:10px" id="calNote"></p>
+    </div>
+
+    <div class="ddwarn" style="border-color:var(--ink-3);margin-top:16px">
+      <b>What this cannot tell you.</b> The sample is the highest-volume resolved markets, which is
+      not a random sample of anything &mdash; it skews politics and crypto. A market that resolved
+      early, voided, or never traded near the lookback date is dropped, and dropped markets are
+      counted and reported rather than hidden. One pass is a snapshot, not a study: the numbers will
+      move between runs, and that movement is the honest measure of how little 60 markets tells you.
+    </div>
+  </div>
+  </div>
+
+  <!-- ===================== DOMAIN SPLIT ===================== -->
+  <div id="sheetDomains">
+  <div class="card" id="domains">
+    <h3>Is it politics, or is it everything? <span class="rt" id="domAsOf"></span></h3>
+    <p class="sub">The same markets as the calibration pass, split by what they are <em>about</em>.
+    There is a live disagreement in the literature about which way prediction-market bias runs, and
+    it may be that both sides are right about different subjects.</p>
+
+    <div class="ddprereg">
+      <h4>The claim being checked</h4>
+      <p style="margin:6px 0"><b>One camp</b> (Le, arXiv:2602.19520, Aug 2026 — 64.7M Kalshi trades,
+      cross-checked on 288.7M Polymarket trades) finds politics badly miscalibrated and everything
+      else nearly clean, with prices <em>compressed toward 50%</em> — meaning long shots are
+      <b>under</b>priced.</p>
+      <p style="margin:6px 0"><b>The other camp</b> is the older, larger literature — and
+      ElectionBettingOdds&rsquo; own 807-prediction record, where the 0&ndash;20% bucket predicted
+      5.4% and delivered 1.7%. That is the textbook favourite&ndash;longshot bias, and it points
+      the <em>opposite</em> way: long shots <b>over</b>priced.</p>
+      <p style="margin:6px 0">Both cannot be right about the same markets. Different venues, eras
+      and subjects are the obvious suspects. This panel is the cheapest honest test we can run.</p>
+    </div>
+
+    <p class="ddhead" id="domHead"></p>
+    <div id="domMsg" class="ddmsg">Run the pass on the <b>Calibration</b> sheet first &mdash; this
+    panel reuses those markets rather than fetching them again.</div>
+
+    <div id="domOut" hidden>
+      <div class="ddtw" style="margin-bottom:16px">
+        <table>
+          <thead><tr>
+            <th class="tl">Subject</th><th>Markets</th><th>Calibration error</th>
+            <th>Slope</th><th class="tl">What the slope says</th>
+          </tr></thead>
+          <tbody id="domBody"></tbody>
+        </table>
+      </div>
+      <div id="domFacets"></div>
+      <div class="ddlgd">
+        <span class="l1"><i></i>Observed rate</span>
+        <span class="l2"><i></i>Perfect calibration</span>
+      </div>
+      <p class="sub" style="margin-top:12px" id="domNote"></p>
+    </div>
+
+    <div class="ddwarn"><b>Expect this panel to say &ldquo;does not separate them&rdquo; for a
+    long time &mdash; and that is the correct answer, not a broken tool.</b> We tested the slope
+    estimator against synthetic data with a known answer: it recovers the true slope to within
+    ±0.05 at 4,000 markets, but at 150 markets the 95% interval is already ±0.29, and at 25 it is
+    ±0.67. Telling a politics slope of 1.4 apart from a rest-of-market 1.0 needs intervals under
+    about ±0.2 each &mdash; roughly 300 markets <em>per subject</em>. A single 60-market pass
+    cannot get there. Run 240 and read the intervals, not the point estimates.</div>
+
+    <div class="ddwarn" style="border-color:var(--ink-3);margin-top:16px">
+      <b>Read the sample size before the slope.</b> Splitting a few hundred markets four ways leaves
+      some buckets with a couple of dozen, and a slope fitted on 25 markets is nearly meaningless.
+      Any bucket under 25 gets no slope at all rather than a decorative one. Subjects come from
+      Polymarket&rsquo;s own tags, matched to buckets by a fixed keyword list &mdash; a market
+      tagged both &ldquo;Politics&rdquo; and &ldquo;Crypto&rdquo; lands in whichever comes first in
+      that list, and markets matching nothing land in <em>Other / untagged</em>, which is therefore a
+      grab bag and not a clean category. Note that the headline compares politics against
+      <em>all</em> non-political markets &mdash; a larger set than the Other / untagged row.
+    </div>
+  </div>
+  </div>
+
+  <!-- ===================== METHOD ===================== -->
+  <div id="sheetMkMethod">
+  <div class="card">
+    <h3>Method, and what is missing</h3>
+    <p class="sub">Written before the tools were interesting enough to be worth defending.</p>
+
+    <p><b>What is live.</b> Two things, both computed in your browser from Polymarket&rsquo;s public
+    API at the moment you load the page: the open-market board, and the calibration pass. Neither
+    has a cached copy on this site, so neither can go stale &mdash; but neither is reproducible
+    either, because you and I will get slightly different numbers. That is the trade we made to ship
+    something true on day one instead of something frozen.</p>
+
+    <p><b>What is not here yet, and why.</b></p>
+    <ul>
+      <li><b>Kalshi.</b> Their API sends no CORS header, so a browser cannot read it directly. It
+      needs a proxy through our Worker. Until that exists, every number on this page is Polymarket
+      only, and this page should not be read as a statement about prediction markets in general.</li>
+      <li><b>The domain split</b> &mdash; politics vs. sports vs. crypto vs. weather. This is the
+      interesting version of the calibration chart and it is the next thing built. There is a live
+      disagreement in the literature about which direction the bias runs, and it looks resolvable
+      with exactly the data this page already fetches.</li>
+      <li><b>Cross-venue basis, parlay markup, volume-vs-accuracy.</b> Specced, not built.</li>
+    </ul>
+
+    <p><b>The calculators already on this site</b> &mdash; devig, expected value, hedging, odds
+    conversion &mdash; are prediction-market tools that never had a live feed behind them.
+    <a href="calculators.html">They are here.</a> Connecting them to this page is a
+    build, not a research question.</p>
+
+    <p class="sub"><b>Tier: Pup.</b> Live and useful, not yet validated. Nothing on this page has
+    been checked against an independent implementation, and the calibration pass in particular has
+    never been run against a known-answer test set. Treat every number as a first draft.</p>
+  </div>
+  </div>
+
+  <section class="p-section" id="surfaces">
+    <header><div><h2>This section, for machines</h2><p class="dek">One card per row in
       <a href="/data/surfaces.json"><code>/data/surfaces.json</code></a> carrying
       <code>domain: &quot;markets&quot;</code>. The count is the file&rsquo;s count, not a number typed
-      into this page, so the day the first surface ships it appears here and nobody has to
-      remember to add it. Today the file has none, and the grid says so in those words rather
-      than sitting empty.</p></div>
+      into this page. Every tool here computes in <em>your</em> browser from a third party&rsquo;s
+      public API, so none publishes a machine surface of its own &mdash; each card says exactly that,
+      and the panels above name the upstream every number comes from.</p></div>
       <div class="p-meta" id="secCount" aria-live="polite">reading /data/surfaces.json&hellip;</div></header>
     <div class="inventory" id="secCards"><div class="p-loading">Reading the surfaces map&hellip;</div></div>
-  </section>
-
-  <section class="p-section" id="plan">
-    <header><div><h2>What this section is for</h2><p class="dek">Written down before any of it
-      exists, so the first thing that ships can be checked against what was promised. None of
-      this is built. None of it is callable. Nothing below is a claim about the world.</p></div></header>
-    <div class="machine-box"><p>In the order it is meant to ship, and each one is a claim we can be held to:</p>
-      <ol>
-        <li><b>Market-versus-model receipts.</b> Capture venue prices before an event, store them as
-        prospective forecasts under the existing
-        <a href="/data/model-contracts.json"><code>model-contracts.json</code></a> shape, and grade
-        them alongside nfelo, 538 Classic and DDPR once results land. This is a generalisation of the
-        hourly college-football market capture the site already runs, not a new machine.</li>
-        <li><b>Cross-venue divergence.</b> The same event priced in more than one place, and the gap
-        over time. Descriptive; it is not an arbitrage tool and will not be described as one.</li>
-        <li><b>Calibration.</b> A reliability curve for market prices, which stays empty until enough
-        events have resolved. Empty is the correct state for a calibration chart with no resolutions,
-        and it will say so rather than drawing a flattering line through nothing.</li>
-        <li><b>The market calculators.</b> Devig, fair price, expected value, hedging, parlay pricing
-        &mdash; arithmetic over numbers you supply. These already exist as read-only tools; this is a
-        surface over them, not new maths.</li>
-      </ol>
-      <p class="assumption">Two things are unresolved and will be answered in public before anything
-      is built on them: whether either venue&rsquo;s public read API is reachable from a browser on
-      this origin, and what the capture cadence should be. Until a capture exists there is no
-      receipt, and until there is a receipt there is no claim.</p></div>
-  </section>
-
-  <section class="p-section" id="machines">
-    <header><div><h2>The prediction-markets work for machines</h2><p class="dek">Read the files, not the cards.</p></div></header>
-    <div class="machine-box"><ul>
-      <li><a href="/data/surfaces.json"><code>/data/surfaces.json</code></a> &mdash; the map. Market
-        rows will carry <code>domain: "markets"</code>; this page renders exactly those, and there
-        are none.</li>
-      <li><a href="/data/model-contracts.json"><code>/data/model-contracts.json</code></a> &mdash; the
-        forecast and receipt contract any market capture has to satisfy. It exists; nothing market-side
-        implements it yet.</li>
-      <li><a href="/data/cfb-market.json"><code>/data/cfb-market.json</code></a> &mdash; the one market
-        surface on the site today. It is college football, its books are named, and its observation
-        time is unknown, which is why it is not treated as a closing line. It is listed here as the
-        precedent this section generalises, not as its content.</li></ul>
-    <p class="assumption">This hub is a directory over surfaces that do not exist yet. It publishes
-    no data of its own, so it has <b>no row</b> in the map &mdash; the same rule the Arena, Library and
-    NFL hubs follow. Its machine mirror falls through to <a href="/llms.txt"><code>/llms.txt</code></a>,
-    which is the correct answer for a page with no surface of its own.</p></div>
   </section>
 </main>
 
 <footer class="foot">Data Dawgs · Data, Not Dogma · <a href="/llms.txt">For machines</a> · All model and market numbers carry their date.</footer>
 
+<script>
+/* DDSheets — the page-family component, lifted verbatim from cfb.html by
+   work/build_section_tools.py. See cfb.html for the design notes. */
+window.DDSheets = function(cfg){
+  const LS = "dd-sheet-" + cfg.key;
+  const mount = document.querySelector(cfg.mount);
+  if(!mount) return null;
+  const sheets = cfg.sheets.filter(s=>document.querySelector(s.panel) || s.src);
+  if(!sheets.length) return null;
+  const ids = sheets.map(s=>s.id);
+  let cur = null, navigating = false;
+
+  /* ---- which sheet do we open on? -------------------------------------
+     Hash beats memory beats first. A deep link someone was sent must win over
+     whatever this browser happened to look at last, or shared links silently
+     land on the wrong sheet. */
+  function initial(){
+    const h = (location.hash||"").replace(/^#/,"");
+    if(ids.includes(h)) return h;
+    try{ const r = localStorage.getItem(LS); if(ids.includes(r)) return r; }catch(e){}
+    return ids[0];
+  }
+
+  /* ---- chrome ---------------------------------------------------------- */
+  mount.className = "sheetbar";
+  mount.setAttribute("role","tablist");
+  /* ⚠️ NEVER overwrite a panel's existing id. The first version assigned
+     el.id = "panel-"+id, which silently renamed #sheetBoard to #panel-board and
+     broke every other querySelector on the page that referenced it. Adopt the id
+     that is already there; only mint one if the element has none. */
+  sheets.forEach(s=>{
+    const el = document.querySelector(s.panel);
+    if(!el) return;
+    if(!el.id) el.id = "panel-" + s.id;
+    s._pid = el.id;
+    el.setAttribute("role","tabpanel");
+    el.setAttribute("aria-labelledby","tab-"+s.id);
+    el.hidden = true;
+  });
+  mount.innerHTML = sheets.map(s=>
+    `<button type="button" role="tab" class="sheet-tab" id="tab-${s.id}"
+       data-id="${s.id}"${s._pid?` aria-controls="${s._pid}"`:""} aria-selected="false" tabindex="-1">
+       ${s.label}${s.hint?`<span class="sheet-hint">${s.hint}</span>`:""}</button>`).join("");
+
+  function frameFor(s){
+    let el = document.querySelector(s.panel);
+    if(el.dataset.loaded) return;
+    /* lazy: an iframe sheet costs nothing until it is first opened */
+    const f = document.createElement("iframe");
+    f.src = s.src + (s.src.includes("?")?"&":"?") + "embed=1";
+    f.title = s.label; f.loading = "lazy";
+    el.appendChild(f); el.dataset.loaded = "1";
+  }
+
+  function show(id, opts){
+    opts = opts || {};
+    if(!ids.includes(id)) id = ids[0];
+    const prev = cur;
+    if(id === prev && !opts.force) return;
+    cur = id;
+    sheets.forEach(s=>{
+      const tab = mount.querySelector(`[data-id="${s.id}"]`);
+      const on = s.id === id;
+      tab.classList.toggle("on", on);
+      tab.setAttribute("aria-selected", on ? "true" : "false");
+      tab.tabIndex = on ? 0 : -1;
+      const el = document.querySelector(s.panel);
+      if(el) el.hidden = !on;
+      if(on && s.src) frameFor(s);
+    });
+    try{ localStorage.setItem(LS, id); }catch(e){}
+    if(!opts.silent){
+      /* ⚠️ pushState, not location.hash — assigning to hash also SCROLLS to the
+         element with that id, which yanks the page down past the sheet bar on
+         every switch. And replaceState on the first paint so the initial sheet
+         does not add a bogus history entry the back button has to eat. */
+      navigating = true;
+      try{ history[opts.replace?"replaceState":"pushState"](null,"","#"+id); }catch(e){}
+      navigating = false;
+    }
+    if(typeof cfg.onShow === "function") cfg.onShow(id, prev);
+  }
+
+  mount.addEventListener("click", e=>{
+    const b = e.target.closest(".sheet-tab"); if(b) show(b.dataset.id);
+  });
+  /* roving tabindex + arrow keys, per the tablist pattern */
+  mount.addEventListener("keydown", e=>{
+    const i = ids.indexOf(cur); let n = null;
+    if(e.key==="ArrowRight") n = ids[(i+1)%ids.length];
+    else if(e.key==="ArrowLeft") n = ids[(i-1+ids.length)%ids.length];
+    else if(e.key==="Home") n = ids[0];
+    else if(e.key==="End") n = ids[ids.length-1];
+    if(n){ e.preventDefault(); show(n); mount.querySelector(`[data-id="${n}"]`).focus(); }
+  });
+  addEventListener("hashchange", ()=>{
+    if(navigating) return;
+    const h = (location.hash||"").replace(/^#/,"");
+    if(ids.includes(h)) show(h,{silent:true});
+  });
+  addEventListener("popstate", ()=>{
+    const h = (location.hash||"").replace(/^#/,"");
+    show(ids.includes(h)?h:ids[0], {silent:true});
+  });
+
+  show(initial(), {replace:true, force:true});
+  return { show, get current(){ return cur; }, ids };
+};
+</script>
+<script>
+/* ============================================================================
+   markets.html — prediction markets, measured
+
+   ⚠️ NOTHING ON THIS PAGE IS TYPED IN. Every price, count and date is fetched from
+   Polymarket's public API in the visitor's browser at load time. There is no cached
+   mirror under /data/ for this page yet, which means two honest consequences that are
+   stated on the page rather than hidden: the numbers cannot go stale, and they are not
+   reproducible between two visitors. When the /data/ mirror lands, this flips.
+
+   ⚠️ THE CALIBRATION PASS IS OPT-IN ON PURPOSE. It costs one extra request per market
+   (the CLOB price history), so an automatic run would fire hundreds of requests at page
+   load for a visitor who came to read the board. It is a button.
+   ============================================================================ */
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+  var esc = function(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){
+    return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]; }); };
+
+  var GAMMA = "https://gamma-api.polymarket.com/markets";
+  var CLOB  = "https://clob.polymarket.com/prices-history";
+
+  function stamp(d){
+    try{ return d.toISOString().replace("T"," ").slice(0,16) + " UTC"; }
+    catch(e){ return "unknown"; }
+  }
+  function usd(n){
+    if(n==null || !isFinite(n)) return "—";
+    if(n>=1e9) return "$" + (n/1e9).toFixed(2) + "B";
+    if(n>=1e6) return "$" + (n/1e6).toFixed(1) + "M";
+    if(n>=1e3) return "$" + Math.round(n/1e3) + "k";
+    return "$" + Math.round(n);
+  }
+  /* Gamma returns JSON-encoded STRINGS for outcomes/outcomePrices/clobTokenIds, not
+     arrays. Parsing them defensively is not paranoia — a bare JSON.parse on a null
+     field takes the whole page down. */
+  function pjson(v){
+    if(v==null) return null;
+    if(Array.isArray(v)) return v;
+    try{ var r = JSON.parse(v); return Array.isArray(r) ? r : null; }catch(e){ return null; }
+  }
+  function fetchJSON(url){
+    return fetch(url, {headers:{"Accept":"application/json"}}).then(function(r){
+      if(!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    });
+  }
+
+  /* ---------------- shared tooltip ---------------- */
+  var tip = document.createElement("div");
+  tip.className = "ddtip";
+  document.body.appendChild(tip);
+  function showTip(html, ev){
+    tip.innerHTML = html; tip.style.display = "block";
+    var pad = 14, w = tip.offsetWidth, h = tip.offsetHeight;
+    var x = ev.clientX + pad, y = ev.clientY + pad;
+    if(x + w > innerWidth - 8) x = ev.clientX - w - pad;
+    if(y + h > innerHeight - 8) y = ev.clientY - h - pad;
+    tip.style.left = x + "px"; tip.style.top = y + "px";
+  }
+  function hideTip(){ tip.style.display = "none"; }
+
+  /* ================= SHEET 1 — the open board ================= */
+  var board = [], sortKey = "v", sortDir = -1;
+
+  function drawBoard(){
+    var q = ($("mkQ").value || "").toLowerCase().trim();
+    var rows = board.filter(function(m){ return !q || m.q.toLowerCase().indexOf(q) >= 0; });
+    rows.sort(function(a,b){
+      var x = a[sortKey], y = b[sortKey];
+      if(typeof x === "string") return sortDir * x.localeCompare(y);
+      return sortDir * ((x==null?-Infinity:x) - (y==null?-Infinity:y));
+    });
+    $("mkBody").innerHTML = rows.map(function(m){
+      return '<tr><td class="tl"><a href="https://polymarket.com/event/' + esc(m.slug) +
+        '" target="_blank" rel="noopener">' + esc(m.q) + '</a></td>' +
+        '<td>' + (m.p==null ? "—" : (m.p*100).toFixed(1) + "%") + '</td>' +
+        '<td>' + usd(m.v) + '</td>' +
+        '<td>' + esc(m.dtxt) + '</td></tr>';
+    }).join("");
+    $("mkTw").hidden = false;
+    $("mkMsg").hidden = rows.length > 0;
+    if(!rows.length){ $("mkMsg").hidden = false; $("mkMsg").textContent = "No markets match that filter."; }
+  }
+
+  function loadBoard(){
+    var n = $("mkN").value;
+    $("mkMsg").hidden = false; $("mkMsg").className = "ddmsg";
+    $("mkMsg").textContent = "Loading live markets…";
+    $("mkTw").hidden = true;
+    var url = GAMMA + "?closed=false&active=true&limit=" + encodeURIComponent(n) +
+              "&order=volumeNum&ascending=false";
+    fetchJSON(url).then(function(raw){
+      var arr = Array.isArray(raw) ? raw : (raw && raw.data) || [];
+      board = arr.map(function(m){
+        var pr = pjson(m.outcomePrices), oc = pjson(m.outcomes);
+        /* Only binary Yes/No markets. A multi-outcome market has no single "the price",
+           and quietly showing its first leg as if it were one would be a lie. */
+        if(!pr || pr.length !== 2 || !oc || oc.length !== 2) return null;
+        var p = parseFloat(pr[0]);
+        var end = m.endDate ? new Date(m.endDate) : null;
+        return {
+          q: m.question || m.slug || "(untitled)",
+          slug: m.slug || "",
+          p: isFinite(p) ? p : null,
+          v: typeof m.volumeNum === "number" ? m.volumeNum : parseFloat(m.volume || "0"),
+          d: end ? end.getTime() : null,
+          dtxt: end ? end.toISOString().slice(0,10) : "—"
+        };
+      }).filter(Boolean);
+      $("mkAsOf").textContent = "fetched " + stamp(new Date());
+      var tot = board.reduce(function(s,m){ return s + (m.v||0); }, 0);
+      var near = board.filter(function(m){ return m.p!=null && m.p>0.45 && m.p<0.55; }).length;
+      $("mkTiles").innerHTML =
+        tile("Binary markets", board.length, "of the top " + n + " by volume") +
+        tile("Total volume", usd(tot), "lifetime, all shown") +
+        tile("Coin flips", near, "priced 45–55%");
+      drawBoard();
+    }).catch(function(e){
+      $("mkTw").hidden = true;
+      $("mkMsg").className = "ddmsg err";
+      $("mkMsg").innerHTML = "Could not reach Polymarket from your browser (" + esc(e.message) +
+        "). This panel reads the API directly, so an ad-blocker, a corporate network or an API " +
+        "outage will all look like this. Nothing is cached on our side to fall back to.";
+    });
+  }
+
+  function tile(k,v,n){
+    return '<div class="s"><div class="k">' + esc(k) + '</div><div class="v">' + esc(String(v)) +
+           '</div><div class="n">' + esc(n||"") + '</div></div>';
+  }
+
+  /* ================= SHEET 2 — the calibration pass ================= */
+  /* The domain split reuses THIS run rather than fetching again — one pass, two panels. */
+  var lastRun = null;
+
+  /* Wilson score interval. Normal-approximation intervals go outside [0,1] and are
+     badly wrong in exactly the buckets we care about most — the 0–10% and 90–100%
+     ends, where p is near a boundary and n is small. */
+  function wilson(k, n){
+    if(!n) return [0,1];
+    var z = 1.959964, p = k/n, d = 1 + z*z/n;
+    var c = (p + z*z/(2*n)) / d;
+    var h = (z * Math.sqrt(p*(1-p)/n + z*z/(4*n*n))) / d;
+    return [Math.max(0, c-h), Math.min(1, c+h)];
+  }
+
+  /* Small concurrency pool. Polymarket documents 1,000 req/10s on prices-history, so
+     8 in flight is nowhere near the limit — the cap is here to be a good citizen and
+     to keep a phone from opening 240 sockets at once. */
+  function pool(items, size, worker, onTick){
+    var i = 0, done = 0, out = new Array(items.length);
+    return new Promise(function(resolve){
+      function next(){
+        if(i >= items.length){ if(done >= items.length) resolve(out); return; }
+        var idx = i++;
+        worker(items[idx], idx).then(function(r){ out[idx] = r; })
+          .catch(function(){ out[idx] = null; })
+          .then(function(){ done++; if(onTick) onTick(done, items.length);
+            if(done >= items.length) resolve(out); else next(); });
+      }
+      for(var k = 0; k < Math.min(size, items.length); k++) next();
+    });
+  }
+
+  /* ================= domain classification =================
+     ⚠️ FIXED PRIORITY ORDER, FIRST MATCH WINS, AND IT IS PUBLISHED ON THE PAGE. A market
+     tagged both "Politics" and "Crypto" has to land somewhere; picking silently would make
+     the politics bucket unfalsifiable. Anything matching nothing lands in "Everything
+     else", which is a grab bag and is labelled as one — never a clean category. */
+  var DOMAINS = [
+    {key:"politics", label:"Politics", pat:/politic|election|trump|biden|congress|senate|president|geopolit|governor|parliament|supreme court/},
+    {key:"sports",   label:"Sports",   pat:/sport|nfl|nba|mlb|nhl|soccer|football|basketball|baseball|hockey|tennis|golf|ufc|boxing|olympic|premier league|formula/},
+    {key:"crypto",   label:"Crypto",   pat:/crypto|bitcoin|btc|ethereum|solana|dogecoin|stablecoin|defi|altcoin/},
+    {key:"other",    label:"Other / untagged", pat:null}
+  ];
+  function classify(m){
+    var tags = Array.isArray(m.tags) ? m.tags : [];
+    var hay = tags.map(function(t){
+      return String((t && (t.label || t.slug)) || t || "");
+    }).join(" ").toLowerCase();
+    /* Question text is a FALLBACK ONLY, for markets carrying no tags at all. Letting it
+       override a real tag would quietly reclassify markets by their wording. */
+    if(!hay) hay = String(m.question || "").toLowerCase();
+    for(var i = 0; i < DOMAINS.length; i++){
+      if(DOMAINS[i].pat && DOMAINS[i].pat.test(hay)) return DOMAINS[i].key;
+    }
+    return "other";
+  }
+
+  /* ================= logistic recalibration fit =================
+     Regress outcome on logit(price). The slope is the whole point:
+       slope > 1  prices COMPRESSED toward 50% — long shots UNDERpriced
+       slope < 1  prices too EXTREME           — long shots OVERpriced
+       slope ~ 1  consistent with honest pricing
+     Newton-Raphson on two parameters; the standard error falls out of the inverse
+     Hessian, which is the only reason a slope is quotable at these sample sizes. */
+  function logitFit(pts){
+    var n = pts.length;
+    if(n < 25) return null;
+    var x = [], y = [];
+    for(var i = 0; i < n; i++){
+      /* Clip before the logit, or a market quoted at 0.000 sends the design matrix to
+         infinity and takes the fit with it. */
+      var p = Math.min(0.99, Math.max(0.01, pts[i].p));
+      x.push(Math.log(p/(1-p)));
+      y.push(pts[i].o);
+    }
+    var b0 = 0, b1 = 1;
+    for(var it = 0; it < 40; it++){
+      var g0 = 0, g1 = 0, h00 = 0, h01 = 0, h11 = 0;
+      for(var j = 0; j < n; j++){
+        var eta = b0 + b1*x[j];
+        var mu = 1/(1 + Math.exp(-eta));
+        var w = Math.max(1e-9, mu*(1-mu));
+        var r = y[j] - mu;
+        g0 += r; g1 += r*x[j];
+        h00 += w; h01 += w*x[j]; h11 += w*x[j]*x[j];
+      }
+      var det = h00*h11 - h01*h01;
+      if(!isFinite(det) || Math.abs(det) < 1e-12) return null;
+      var d0 = ( h11*g0 - h01*g1)/det;
+      var d1 = (-h01*g0 + h00*g1)/det;
+      b0 += d0; b1 += d1;
+      if(!isFinite(b0) || !isFinite(b1) || Math.abs(b1) > 25) return null;
+      if(Math.abs(d0) < 1e-9 && Math.abs(d1) < 1e-9) break;
+    }
+    var H00 = 0, H01 = 0, H11 = 0;
+    for(var k = 0; k < n; k++){
+      var e2 = b0 + b1*x[k];
+      var m2 = 1/(1 + Math.exp(-e2));
+      var w2 = Math.max(1e-9, m2*(1-m2));
+      H00 += w2; H01 += w2*x[k]; H11 += w2*x[k]*x[k];
+    }
+    var D = H00*H11 - H01*H01;
+    if(!isFinite(D) || D <= 0) return null;
+    var se = Math.sqrt(H00/D);
+    if(!isFinite(se)) return null;
+    return {slope:b1, se:se, lo:b1 - 1.96*se, hi:b1 + 1.96*se, n:n};
+  }
+
+  function slopeWords(f){
+    if(!f) return "too few markets to fit";
+    if(f.lo <= 1 && f.hi >= 1) return "consistent with honest pricing";
+    if(f.lo > 1) return "compressed toward 50% — long shots underpriced";
+    return "too extreme — long shots overpriced";
+  }
+
+  function runCal(){
+    var want = parseInt($("calN").value, 10);
+    var back = parseInt($("calBack").value, 10);
+    var btn = $("calRun");
+    btn.disabled = true; btn.textContent = "Running…";
+    $("calOut").hidden = true;
+    $("calBarW").hidden = false; $("calBar").style.width = "0%";
+    $("calMsg").hidden = false; $("calMsg").className = "ddmsg";
+    $("calMsg").textContent = "Fetching resolved markets…";
+
+    /* Over-fetch: a good fraction of closed markets are multi-outcome, voided, or have
+       no usable history at the lookback, and those are dropped downstream. */
+    /* include_tag=true carries Polymarket's own tag objects on each market, so the
+       domain split costs ZERO extra requests — it rides this same response. */
+    var url = GAMMA + "?closed=true&include_tag=true&limit=" + Math.min(500, want*3) +
+              "&order=volumeNum&ascending=false";
+
+    fetchJSON(url).then(function(raw){
+      var arr = Array.isArray(raw) ? raw : (raw && raw.data) || [];
+      var cands = arr.map(function(m){
+        var pr = pjson(m.outcomePrices), oc = pjson(m.outcomes), tk = pjson(m.clobTokenIds);
+        if(!pr || pr.length !== 2 || !oc || oc.length !== 2 || !tk || !tk.length) return null;
+        /* A cleanly resolved binary market settles at exactly 1/0. Anything else is a
+           void, a partial, or still settling — dropped, and counted as dropped. */
+        var a = parseFloat(pr[0]), b = parseFloat(pr[1]);
+        var outcome = (a === 1 && b === 0) ? 1 : ((a === 0 && b === 1) ? 0 : null);
+        if(outcome === null) return null;
+        if(!m.endDate) return null;
+        return { q: m.question || m.slug, token: tk[0], outcome: outcome,
+                 dom: classify(m),
+                 end: Math.floor(new Date(m.endDate).getTime()/1000) };
+      }).filter(Boolean).slice(0, want);
+
+      if(!cands.length) throw new Error("no cleanly resolved binary markets returned");
+
+      $("calMsg").textContent = "Reading price history for " + cands.length + " markets…";
+
+      return pool(cands, 8, function(c){
+        return fetchJSON(CLOB + "?market=" + encodeURIComponent(c.token) +
+                         "&interval=max&fidelity=1440").then(function(h){
+          var hist = (h && h.history) || [];
+          if(!hist.length) return null;
+          var target = c.end - back*86400;
+          /* Last observation at or before the lookback instant. Using the nearest point
+             in either direction would let a post-lookback price leak in, which on a
+             market resolving in days is close to leaking the answer. */
+          var pick = null;
+          for(var i = 0; i < hist.length; i++){
+            if(hist[i].t <= target) pick = hist[i]; else break;
+          }
+          if(!pick) return null;
+          var p = parseFloat(pick.p);
+          if(!isFinite(p) || p < 0 || p > 1) return null;
+          return { p: p, o: c.outcome, q: c.q, dom: c.dom };
+        });
+      }, function(done, total){
+        $("calBar").style.width = Math.round(done/total*100) + "%";
+      }).then(function(res){
+        var pts = res.filter(Boolean);
+        var dropped = cands.length - pts.length;
+        if(pts.length < 10) throw new Error("only " + pts.length + " markets survived the filters — too few to bin");
+        render(pts, dropped, cands.length, back);
+      });
+    }).catch(function(e){
+      $("calBarW").hidden = true;
+      $("calMsg").className = "ddmsg err";
+      $("calMsg").innerHTML = "The pass did not finish: " + esc(e.message) + ".";
+    }).then(function(){
+      btn.disabled = false; btn.textContent = "Run the pass";
+    });
+  }
+
+  function render(pts, dropped, attempted, back){
+    $("calBarW").hidden = true;
+    $("calMsg").hidden = true;
+    $("calOut").hidden = false;
+    $("calAsOf").textContent = "computed " + stamp(new Date());
+
+    var NB = 10, bins = [];
+    for(var i = 0; i < NB; i++) bins.push({lo:i/NB, hi:(i+1)/NB, n:0, k:0, sp:0});
+    pts.forEach(function(d){
+      var idx = Math.min(NB-1, Math.floor(d.p*NB));
+      var b = bins[idx]; b.n++; b.k += d.o; b.sp += d.p;
+    });
+    var live = bins.filter(function(b){ return b.n > 0; });
+    live.forEach(function(b){
+      b.mean = b.sp/b.n; b.rate = b.k/b.n; b.ci = wilson(b.k, b.n);
+    });
+
+    var N = pts.length;
+    var ece = live.reduce(function(s,b){ return s + (b.n/N)*Math.abs(b.mean - b.rate); }, 0);
+    var brier = pts.reduce(function(s,d){ return s + (d.p-d.o)*(d.p-d.o); }, 0) / N;
+    var base = pts.reduce(function(s,d){ return s + d.o; }, 0) / N;
+
+    /* The headline is a sentence, not a metric. ECE is a number for us; "when it said
+       70% it happened 68% of the time" is the number for a reader. Pick the populated
+       bucket closest to 70% so the sentence is about a real bucket, never a made-up one. */
+    var hb = live.slice().sort(function(a,b){
+      return Math.abs(a.mean-0.7) - Math.abs(b.mean-0.7); })[0];
+    $("calHead").innerHTML = "When these markets said <b>" + Math.round(hb.mean*100) +
+      "%</b>, it happened <b>" + Math.round(hb.rate*100) + "%</b> of the time — across " +
+      hb.n + " market" + (hb.n===1?"":"s") + " in that bucket, " + N + " overall, priced " +
+      back + " day" + (back===1?"":"s") + " before they closed.";
+
+    $("calTiles").innerHTML =
+      tile("Markets scored", N, dropped + " dropped of " + attempted) +
+      tile("Calibration error", (ece*100).toFixed(1) + " pts", "mean gap, volume-weighted") +
+      tile("Brier score", brier.toFixed(3), "lower is better") +
+      tile("Base rate", Math.round(base*100) + "%", "share resolving Yes");
+
+    $("calBody").innerHTML = live.map(function(b){
+      var gap = b.rate - b.mean;
+      var cls = Math.abs(gap) < 0.05 ? "" : (gap > 0 ? "good" : "bad");
+      return "<tr><td class=\"tl\">" + Math.round(b.lo*100) + "–" + Math.round(b.hi*100) + "%</td>" +
+        "<td>" + b.n + "</td><td>" + (b.mean*100).toFixed(1) + "%</td>" +
+        "<td>" + (b.rate*100).toFixed(1) + "%</td>" +
+        "<td class=\"" + cls + "\">" + (gap>0?"+":"") + (gap*100).toFixed(1) + "</td></tr>";
+    }).join("");
+
+    $("calNote").innerHTML = "Buckets are deciles of the price " + back + " day" +
+      (back===1?"":"s") + " before close. Intervals are 95% Wilson. <b>" + dropped +
+      "</b> of " + attempted + " markets were dropped — multi-outcome, voided, or no trade " +
+      "at the lookback — and a bucket holding a handful of markets is noise wearing a data point.";
+
+    drawFig(live);
+    lastRun = {pts: pts, back: back, at: stamp(new Date())};
+    renderDomains();
+  }
+
+  /* ================= SHEET 4 — the domain split =================
+     Same markets, cut by subject. This is the panel that can actually adjudicate the
+     compression-vs-longshot disagreement, and it costs one extra query parameter. */
+  function binOf(pts, nb){
+    var bins = [];
+    for(var i = 0; i < nb; i++) bins.push({lo:i/nb, hi:(i+1)/nb, n:0, k:0, sp:0});
+    pts.forEach(function(d){
+      var b = bins[Math.min(nb-1, Math.floor(d.p*nb))];
+      b.n++; b.k += d.o; b.sp += d.p;
+    });
+    return bins.filter(function(b){ return b.n > 0; }).map(function(b){
+      b.mean = b.sp/b.n; b.rate = b.k/b.n; b.ci = wilson(b.k, b.n); return b;
+    });
+  }
+  function eceOf(pts, bins){
+    var N = pts.length;
+    return bins.reduce(function(s,b){ return s + (b.n/N)*Math.abs(b.mean - b.rate); }, 0);
+  }
+
+  function renderDomains(){
+    if(!lastRun) return;
+    var pts = lastRun.pts;
+    $("domMsg").hidden = true;
+    $("domOut").hidden = false;
+    $("domAsOf").textContent = "computed " + lastRun.at;
+
+    var groups = DOMAINS.map(function(d){
+      var sub = pts.filter(function(p){ return p.dom === d.key; });
+      return {d: d, pts: sub, fit: logitFit(sub), bins: sub.length ? binOf(sub, 5) : []};
+    });
+
+    /* The headline is the politics-vs-everything-else comparison, because that is the
+       specific claim in dispute — not a generic "here are four numbers". */
+    var pol = groups[0];
+    var rest = pts.filter(function(p){ return p.dom !== "politics"; });
+    var restFit = logitFit(rest);
+    var polE = pol.pts.length ? eceOf(pol.pts, pol.bins) : null;
+    var restE = rest.length ? eceOf(rest, binOf(rest, 5)) : null;
+
+    if(pol.pts.length < 25 || rest.length < 25){
+      $("domHead").innerHTML = "Not enough markets in this pass to compare politics against the " +
+        "rest — <b>" + pol.pts.length + "</b> political and <b>" + rest.length + "</b> non-political. " +
+        "Re-run the calibration pass with a larger sample.";
+    } else {
+      $("domHead").innerHTML = "Politics missed by <b>" + (polE*100).toFixed(1) +
+        " points</b> across " + pol.pts.length + " markets; all non-political markets missed by <b>" +
+        (restE*100).toFixed(1) + " points</b> across " + rest.length + ". " +
+        (pol.fit && restFit
+          ? "Slopes " + pol.fit.slope.toFixed(2) + " and " + restFit.slope.toFixed(2) + " — " +
+            (pol.fit.lo > restFit.hi || restFit.lo > pol.fit.hi
+              ? "their intervals do not overlap, so this pass does separate them."
+              : "their intervals overlap, so this pass does <b>not</b> separate them.")
+          : "");
+    }
+
+    $("domBody").innerHTML = groups.map(function(g){
+      var e = g.pts.length ? eceOf(g.pts, g.bins) : null;
+      return "<tr><td class=\"tl\">" + esc(g.d.label) + "</td>" +
+        "<td>" + g.pts.length + "</td>" +
+        "<td>" + (e == null ? "—" : (e*100).toFixed(1) + " pts") + "</td>" +
+        "<td>" + (g.fit ? g.fit.slope.toFixed(2) + " ± " + (1.96*g.fit.se).toFixed(2) : "—") + "</td>" +
+        "<td class=\"tl\">" + esc(slopeWords(g.fit)) + "</td></tr>";
+    }).join("");
+
+    $("domFacets").innerHTML = groups.map(function(g){
+      return '<div class="ddfacet"><div class="ft">' + esc(g.d.label) +
+        ' <span>' + g.pts.length + ' markets</span></div>' +
+        (g.pts.length < 8
+          ? '<div class="ddmsg" style="padding:26px 8px">too few to plot</div>'
+          : miniFig(g.bins)) + '</div>';
+    }).join("");
+
+    Array.prototype.forEach.call($("domFacets").querySelectorAll("circle.dot"), function(c){
+      c.addEventListener("mousemove", function(ev){
+        var q = c.getAttribute("data-t").split("|");
+        showTip("<b>" + esc(q[0]) + "</b><br>" + q.slice(1).map(esc).join("<br>"), ev);
+      });
+      c.addEventListener("mouseleave", hideTip);
+    });
+
+    $("domNote").innerHTML = "Buckets are quintiles here, not deciles — a decile of a subject " +
+      "with 40 markets holds four. A slope is fitted only where a subject has at least 25 " +
+      "markets. Subjects come from Polymarket&rsquo;s own tags; the keyword list and its priority " +
+      "order are in the page source and in <code>llms.txt</code>.";
+  }
+
+  /* Small multiples rather than four coloured series on one axis: each facet is a single
+     series, so nothing depends on telling four hues apart. */
+  function miniFig(bins){
+    var W = 300, H = 210, m = {t:10, r:12, b:26, l:34};
+    var pw = W-m.l-m.r, ph = H-m.t-m.b;
+    var X = function(v){ return m.l + v*pw; }, Y = function(v){ return m.t + (1-v)*ph; };
+    var s = ['<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Calibration for this subject">'];
+    [0,0.5,1].forEach(function(g){
+      s.push('<line class="gr" x1="'+X(g)+'" y1="'+Y(0)+'" x2="'+X(g)+'" y2="'+Y(1)+'"/>');
+      s.push('<line class="gr" x1="'+X(0)+'" y1="'+Y(g)+'" x2="'+X(1)+'" y2="'+Y(g)+'"/>');
+      s.push('<text class="lb" x="'+X(g)+'" y="'+(Y(0)+15)+'" text-anchor="middle">'+(g*100)+'</text>');
+      s.push('<text class="lb" x="'+(X(0)-7)+'" y="'+(Y(g)+4)+'" text-anchor="end">'+(g*100)+'</text>');
+    });
+    s.push('<line class="ax" x1="'+X(0)+'" y1="'+Y(0)+'" x2="'+X(1)+'" y2="'+Y(0)+'"/>');
+    s.push('<line class="ax" x1="'+X(0)+'" y1="'+Y(0)+'" x2="'+X(0)+'" y2="'+Y(1)+'"/>');
+    s.push('<line class="ref" x1="'+X(0)+'" y1="'+Y(0)+'" x2="'+X(1)+'" y2="'+Y(1)+'"/>');
+    s.push('<path class="ser" d="'+bins.map(function(b,i){
+      return (i?"L":"M")+X(b.mean)+" "+Y(b.rate); }).join(" ")+'"/>');
+    bins.forEach(function(b){
+      s.push('<line class="wis" x1="'+X(b.mean)+'" y1="'+Y(b.ci[0])+'" x2="'+X(b.mean)+'" y2="'+Y(b.ci[1])+'"/>');
+      s.push('<circle class="dot" cx="'+X(b.mean)+'" cy="'+Y(b.rate)+'" r="4.5" data-t="'+
+        esc(Math.round(b.lo*100)+"–"+Math.round(b.hi*100)+"% bucket|"+b.n+" markets|said "+
+        (b.mean*100).toFixed(1)+"%|happened "+(b.rate*100).toFixed(1)+"%")+'"/>');
+    });
+    s.push('</svg>');
+    return s.join("");
+  }
+
+  function drawFig(bins){
+    var W = 680, H = 420, m = {t:16, r:18, b:44, l:70};
+    var pw = W - m.l - m.r, ph = H - m.t - m.b;
+    var X = function(v){ return m.l + v*pw; };
+    var Y = function(v){ return m.t + (1-v)*ph; };
+    var s = ['<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Calibration: predicted probability against observed frequency">'];
+
+    for(var g = 0; g <= 10; g += 2){
+      s.push('<line class="gr" x1="' + X(g/10) + '" y1="' + Y(0) + '" x2="' + X(g/10) + '" y2="' + Y(1) + '"/>');
+      s.push('<line class="gr" x1="' + X(0) + '" y1="' + Y(g/10) + '" x2="' + X(1) + '" y2="' + Y(g/10) + '"/>');
+      s.push('<text class="lb" x="' + X(g/10) + '" y="' + (Y(0)+18) + '" text-anchor="middle">' + (g*10) + '%</text>');
+      s.push('<text class="lb" x="' + (X(0)-10) + '" y="' + (Y(g/10)+4) + '" text-anchor="end">' + (g*10) + '%</text>');
+    }
+    s.push('<line class="ax" x1="' + X(0) + '" y1="' + Y(0) + '" x2="' + X(1) + '" y2="' + Y(0) + '"/>');
+    s.push('<line class="ax" x1="' + X(0) + '" y1="' + Y(0) + '" x2="' + X(0) + '" y2="' + Y(1) + '"/>');
+
+    /* Reference line is DASHED, and the legend under the chart repeats that dash next to
+       its name — so the two marks are told apart by pattern, not by colour alone.
+       ⚠️ The in-chart rotated "perfect calibration" caption was removed after the first
+       render: a calibrated market hugs the diagonal, so a label ON the diagonal lands on
+       top of the data every time. The legend does the same job and cannot collide. */
+    s.push('<line class="ref" x1="' + X(0) + '" y1="' + Y(0) + '" x2="' + X(1) + '" y2="' + Y(1) + '"/>');
+
+    var path = bins.map(function(b,i){ return (i?"L":"M") + X(b.mean) + " " + Y(b.rate); }).join(" ");
+    s.push('<path class="ser" d="' + path + '"/>');
+
+    bins.forEach(function(b){
+      s.push('<line class="wis" x1="' + X(b.mean) + '" y1="' + Y(b.ci[0]) + '" x2="' + X(b.mean) + '" y2="' + Y(b.ci[1]) + '"/>');
+      s.push('<circle class="dot" cx="' + X(b.mean) + '" cy="' + Y(b.rate) + '" r="6" ' +
+        'data-t="' + esc(Math.round(b.lo*100) + "–" + Math.round(b.hi*100) + "% bucket|" + b.n +
+        " markets|said " + (b.mean*100).toFixed(1) + "%|happened " + (b.rate*100).toFixed(1) +
+        "%|95% CI " + (b.ci[0]*100).toFixed(0) + "–" + (b.ci[1]*100).toFixed(0) + "%") + '"/>');
+    });
+
+    s.push('<text class="lb2" x="' + (m.l + pw/2) + '" y="' + (H-6) + '" text-anchor="middle">What the market said</text>');
+    s.push('<text class="lb2" transform="rotate(-90 20 ' + (m.t + ph/2) + ')" x="20" y="' + (m.t + ph/2) + '" text-anchor="middle">What actually happened</text>');
+    s.push('</svg>');
+    $("calFig").innerHTML = s.join("");
+
+    Array.prototype.forEach.call($("calFig").querySelectorAll("circle.dot"), function(c){
+      c.addEventListener("mousemove", function(ev){
+        var p = c.getAttribute("data-t").split("|");
+        showTip("<b>" + esc(p[0]) + "</b><br>" + p.slice(1).map(esc).join("<br>"), ev);
+      });
+      c.addEventListener("mouseleave", hideTip);
+    });
+  }
+
+  /* ---------------- wiring ---------------- */
+  $("mkReload").addEventListener("click", loadBoard);
+  $("mkN").addEventListener("change", loadBoard);
+  $("mkQ").addEventListener("input", drawBoard);
+  Array.prototype.forEach.call(document.querySelectorAll("#mkTw th.so"), function(th){
+    th.addEventListener("click", function(){
+      var k = th.getAttribute("data-k");
+      if(sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = (k === "q" ? 1 : -1); }
+      drawBoard();
+    });
+  });
+  $("calRun").addEventListener("click", runCal);
+
+  DDSheets({key:"markets", mount:"#sheets", sheets:[
+    {id:"live",        label:"Open board",  panel:"#sheetLive"},
+    {id:"calibration", label:"Calibration", panel:"#sheetCal"},
+    {id:"domains",     label:"By subject",  panel:"#sheetDomains"},
+    {id:"method",      label:"Method",      panel:"#sheetMkMethod"}
+  ]});
+
+  loadBoard();
+})();
+</script>
 <script>
 /* markets.html — a section hub with nothing in it yet.
  *

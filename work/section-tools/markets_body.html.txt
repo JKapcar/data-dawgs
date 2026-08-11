@@ -1,0 +1,201 @@
+  <h1>Markets <span class="tierchip">Pup</span></h1>
+  <p class="lead">This page measures prediction markets. <b>It does not sell picks.</b> Every price
+  here is somebody else&rsquo;s forecast, and the only question we ask is whether it was any good.</p>
+  <p class="sub">Prices come straight from Polymarket&rsquo;s public API in your browser &mdash; nothing is
+  cached, transcribed or hand-typed on this page. The timestamp on each panel is the moment
+  <em>your</em> browser fetched it, not the moment we built the page.</p>
+
+  <div id="sheets"></div>
+
+  <!-- ===================== LIVE BOARD ===================== -->
+  <div id="sheetLive">
+  <div class="card">
+    <h3>Open markets, by money <span class="rt" id="mkAsOf"></span></h3>
+    <p class="sub">The largest open binary markets on Polymarket right now. Price is the <b>Yes</b>
+    side, read as a probability. Volume is lifetime, in dollars. Sort any column.</p>
+
+    <div class="ddstat" id="mkTiles"></div>
+    <div class="ddctl">
+      <input class="fi" id="mkQ" type="search" placeholder="Filter questions…" aria-label="Filter questions">
+      <select class="fi" id="mkN" aria-label="How many markets">
+        <option value="50">Top 50</option>
+        <option value="100" selected>Top 100</option>
+        <option value="200">Top 200</option>
+      </select>
+      <button class="btn ghost" id="mkReload" type="button">Reload</button>
+    </div>
+    <div id="mkMsg" class="ddmsg">Loading live markets…</div>
+    <div class="ddtw" id="mkTw" hidden>
+      <table>
+        <thead><tr>
+          <th class="tl so" data-k="q">Market</th>
+          <th class="so" data-k="p">Yes price</th>
+          <th class="so" data-k="v">Volume</th>
+          <th class="so" data-k="d">Resolves</th>
+        </tr></thead>
+        <tbody id="mkBody"></tbody>
+      </table>
+    </div>
+    <p class="sub" style="margin-top:10px">Source: <a href="https://gamma-api.polymarket.com/markets" target="_blank" rel="noopener">gamma-api.polymarket.com</a>,
+    fetched client-side. <a class="udmach" href="https://gamma-api.polymarket.com/markets?closed=false&amp;limit=100&amp;order=volumeNum&amp;ascending=false">🤖 For machines</a></p>
+  </div>
+  </div>
+
+  <!-- ===================== CALIBRATION ===================== -->
+  <div id="sheetCal">
+  <div class="card" id="calibration">
+    <h3>Did the price mean anything? <span class="rt" id="calAsOf"></span></h3>
+    <p class="sub">Take resolved markets. Look at what the price said some days <em>before</em> it
+    resolved. Group those prices into buckets, and check how often the thing actually happened.
+    A market that is telling the truth lands on the diagonal.</p>
+
+    <div class="ddwarn"><b>This runs in your browser and it is not instant.</b> Each market needs a
+    second request for its price history, so a pass fetches a few hundred URLs. Start small. Nothing
+    is stored; refreshing re-runs it.</div>
+
+    <div class="ddctl">
+      <select class="fi" id="calN" aria-label="Sample size">
+        <option value="60" selected>60 markets</option>
+        <option value="120">120 markets</option>
+        <option value="240">240 markets</option>
+      </select>
+      <select class="fi" id="calBack" aria-label="Lookback">
+        <option value="1">Price 1 day before close</option>
+        <option value="7" selected>Price 7 days before close</option>
+        <option value="30">Price 30 days before close</option>
+      </select>
+      <button class="btn" id="calRun" type="button">Run the pass</button>
+    </div>
+
+    <div class="ddbar" id="calBarW" hidden><i id="calBar"></i></div>
+    <div id="calMsg" class="ddmsg">Nothing has been computed yet. Press <b>Run the pass</b>.</div>
+
+    <div id="calOut" hidden>
+      <p class="ddhead" id="calHead"></p>
+      <div class="ddstat" id="calTiles"></div>
+      <div class="ddfig" id="calFig"></div>
+      <div class="ddlgd">
+        <span class="l1"><i></i>Observed rate (with 95% Wilson interval)</span>
+        <span class="l2"><i></i>Perfect calibration</span>
+      </div>
+      <div class="ddtw" style="margin-top:14px">
+        <table>
+          <thead><tr>
+            <th class="tl">Price bucket</th><th>Markets</th><th>Mean price</th>
+            <th>Actually happened</th><th>Gap</th>
+          </tr></thead>
+          <tbody id="calBody"></tbody>
+        </table>
+      </div>
+      <p class="sub" style="margin-top:10px" id="calNote"></p>
+    </div>
+
+    <div class="ddwarn" style="border-color:var(--ink-3);margin-top:16px">
+      <b>What this cannot tell you.</b> The sample is the highest-volume resolved markets, which is
+      not a random sample of anything &mdash; it skews politics and crypto. A market that resolved
+      early, voided, or never traded near the lookback date is dropped, and dropped markets are
+      counted and reported rather than hidden. One pass is a snapshot, not a study: the numbers will
+      move between runs, and that movement is the honest measure of how little 60 markets tells you.
+    </div>
+  </div>
+  </div>
+
+  <!-- ===================== DOMAIN SPLIT ===================== -->
+  <div id="sheetDomains">
+  <div class="card" id="domains">
+    <h3>Is it politics, or is it everything? <span class="rt" id="domAsOf"></span></h3>
+    <p class="sub">The same markets as the calibration pass, split by what they are <em>about</em>.
+    There is a live disagreement in the literature about which way prediction-market bias runs, and
+    it may be that both sides are right about different subjects.</p>
+
+    <div class="ddprereg">
+      <h4>The claim being checked</h4>
+      <p style="margin:6px 0"><b>One camp</b> (Le, arXiv:2602.19520, Aug 2026 — 64.7M Kalshi trades,
+      cross-checked on 288.7M Polymarket trades) finds politics badly miscalibrated and everything
+      else nearly clean, with prices <em>compressed toward 50%</em> — meaning long shots are
+      <b>under</b>priced.</p>
+      <p style="margin:6px 0"><b>The other camp</b> is the older, larger literature — and
+      ElectionBettingOdds&rsquo; own 807-prediction record, where the 0&ndash;20% bucket predicted
+      5.4% and delivered 1.7%. That is the textbook favourite&ndash;longshot bias, and it points
+      the <em>opposite</em> way: long shots <b>over</b>priced.</p>
+      <p style="margin:6px 0">Both cannot be right about the same markets. Different venues, eras
+      and subjects are the obvious suspects. This panel is the cheapest honest test we can run.</p>
+    </div>
+
+    <p class="ddhead" id="domHead"></p>
+    <div id="domMsg" class="ddmsg">Run the pass on the <b>Calibration</b> sheet first &mdash; this
+    panel reuses those markets rather than fetching them again.</div>
+
+    <div id="domOut" hidden>
+      <div class="ddtw" style="margin-bottom:16px">
+        <table>
+          <thead><tr>
+            <th class="tl">Subject</th><th>Markets</th><th>Calibration error</th>
+            <th>Slope</th><th class="tl">What the slope says</th>
+          </tr></thead>
+          <tbody id="domBody"></tbody>
+        </table>
+      </div>
+      <div id="domFacets"></div>
+      <div class="ddlgd">
+        <span class="l1"><i></i>Observed rate</span>
+        <span class="l2"><i></i>Perfect calibration</span>
+      </div>
+      <p class="sub" style="margin-top:12px" id="domNote"></p>
+    </div>
+
+    <div class="ddwarn"><b>Expect this panel to say &ldquo;does not separate them&rdquo; for a
+    long time &mdash; and that is the correct answer, not a broken tool.</b> We tested the slope
+    estimator against synthetic data with a known answer: it recovers the true slope to within
+    ±0.05 at 4,000 markets, but at 150 markets the 95% interval is already ±0.29, and at 25 it is
+    ±0.67. Telling a politics slope of 1.4 apart from a rest-of-market 1.0 needs intervals under
+    about ±0.2 each &mdash; roughly 300 markets <em>per subject</em>. A single 60-market pass
+    cannot get there. Run 240 and read the intervals, not the point estimates.</div>
+
+    <div class="ddwarn" style="border-color:var(--ink-3);margin-top:16px">
+      <b>Read the sample size before the slope.</b> Splitting a few hundred markets four ways leaves
+      some buckets with a couple of dozen, and a slope fitted on 25 markets is nearly meaningless.
+      Any bucket under 25 gets no slope at all rather than a decorative one. Subjects come from
+      Polymarket&rsquo;s own tags, matched to buckets by a fixed keyword list &mdash; a market
+      tagged both &ldquo;Politics&rdquo; and &ldquo;Crypto&rdquo; lands in whichever comes first in
+      that list, and markets matching nothing land in <em>Other / untagged</em>, which is therefore a
+      grab bag and not a clean category. Note that the headline compares politics against
+      <em>all</em> non-political markets &mdash; a larger set than the Other / untagged row.
+    </div>
+  </div>
+  </div>
+
+  <!-- ===================== METHOD ===================== -->
+  <div id="sheetMkMethod">
+  <div class="card">
+    <h3>Method, and what is missing</h3>
+    <p class="sub">Written before the tools were interesting enough to be worth defending.</p>
+
+    <p><b>What is live.</b> Two things, both computed in your browser from Polymarket&rsquo;s public
+    API at the moment you load the page: the open-market board, and the calibration pass. Neither
+    has a cached copy on this site, so neither can go stale &mdash; but neither is reproducible
+    either, because you and I will get slightly different numbers. That is the trade we made to ship
+    something true on day one instead of something frozen.</p>
+
+    <p><b>What is not here yet, and why.</b></p>
+    <ul>
+      <li><b>Kalshi.</b> Their API sends no CORS header, so a browser cannot read it directly. It
+      needs a proxy through our Worker. Until that exists, every number on this page is Polymarket
+      only, and this page should not be read as a statement about prediction markets in general.</li>
+      <li><b>The domain split</b> &mdash; politics vs. sports vs. crypto vs. weather. This is the
+      interesting version of the calibration chart and it is the next thing built. There is a live
+      disagreement in the literature about which direction the bias runs, and it looks resolvable
+      with exactly the data this page already fetches.</li>
+      <li><b>Cross-venue basis, parlay markup, volume-vs-accuracy.</b> Specced, not built.</li>
+    </ul>
+
+    <p><b>The calculators already on this site</b> &mdash; devig, expected value, hedging, odds
+    conversion &mdash; are prediction-market tools that never had a live feed behind them.
+    <a href="calculators.html">They are here.</a> Connecting them to this page is a
+    build, not a research question.</p>
+
+    <p class="sub"><b>Tier: Pup.</b> Live and useful, not yet validated. Nothing on this page has
+    been checked against an independent implementation, and the calibration pass in particular has
+    never been run against a known-answer test set. Treat every number as a first draft.</p>
+  </div>
+  </div>

@@ -1,0 +1,306 @@
+/* ============================================================================
+   ai.html — models, measured
+
+   ⚠️ NOTHING ON THIS PAGE IS TYPED IN. One request to OpenRouter's public model
+   catalogue at load time feeds both the board and the frontier chart. There is no
+   /data/ mirror yet, so the page cannot go stale and cannot be reproduced — both are
+   stated on the page rather than hidden.
+
+   ⚠️ THE INTELLIGENCE INDEX IS NOT OURS. It is Artificial Analysis' composite, carried
+   through OpenRouter's payload, and it arrives with NO confidence interval. That single
+   missing field is why the tie-aware leaderboard was cut rather than shipped: the tool's
+   entire purpose is collapsing statistically indistinguishable models, and there is
+   nothing here to decide indistinguishability with. Do not add one by eye.
+   ============================================================================ */
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+  var esc = function(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){
+    return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]; }); };
+
+  var SRC = "https://openrouter.ai/api/v1/models";
+  var models = [], sortKey = "iq", sortDir = -1;
+
+  function stamp(d){
+    try{ return d.toISOString().replace("T"," ").slice(0,16) + " UTC"; }
+    catch(e){ return "unknown"; }
+  }
+  function money(v){
+    if(v == null || !isFinite(v)) return "—";
+    if(v === 0) return "free";
+    if(v < 0.01) return "$" + v.toFixed(4);
+    if(v < 1) return "$" + v.toFixed(3);
+    return "$" + v.toFixed(2);
+  }
+  function ctxs(n){
+    if(!n) return "—";
+    if(n >= 1e6) return (n/1e6).toFixed(n % 1e6 ? 1 : 0) + "M";
+    if(n >= 1000) return Math.round(n/1000) + "k";
+    return String(n);
+  }
+  function tile(k,v,n){
+    return '<div class="s"><div class="k">' + esc(k) + '</div><div class="v">' + esc(String(v)) +
+           '</div><div class="n">' + esc(n||"") + '</div></div>';
+  }
+
+  var tip = document.createElement("div");
+  tip.className = "ddtip";
+  document.body.appendChild(tip);
+  function showTip(html, ev){
+    tip.innerHTML = html; tip.style.display = "block";
+    var pad = 14, w = tip.offsetWidth, h = tip.offsetHeight;
+    var x = ev.clientX + pad, y = ev.clientY + pad;
+    if(x + w > innerWidth - 8) x = ev.clientX - w - pad;
+    if(y + h > innerHeight - 8) y = ev.clientY - h - pad;
+    tip.style.left = x + "px"; tip.style.top = y + "px";
+  }
+  function hideTip(){ tip.style.display = "none"; }
+
+  /* ---------------- load ---------------- */
+  function load(){
+    $("aiMsg").hidden = false; $("aiMsg").className = "ddmsg";
+    $("aiMsg").textContent = "Loading the model catalogue…";
+    $("aiTw").hidden = true;
+
+    fetch(SRC, {headers:{"Accept":"application/json"}}).then(function(r){
+      if(!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(raw){
+      var arr = (raw && raw.data) || [];
+      models = arr.map(function(m){
+        var pr = m.pricing || {};
+        /* OpenRouter quotes price PER TOKEN as a string. Everything a human reads is
+           per million, so convert once here and never again downstream. */
+        var pin  = parseFloat(pr.prompt);
+        var pout = parseFloat(pr.completion);
+        var bm = (m.benchmarks || {}).artificial_analysis || {};
+        var arch = m.architecture || {};
+        var mods = arch.input_modalities || [];
+        var reas = m.reasoning || null;
+        return {
+          id: m.id || "",
+          name: m.name || m.id || "(unnamed)",
+          vendor: (m.id || "").split("/")[0] || "",
+          ctx: m.context_length || (m.top_provider && m.top_provider.context_length) || null,
+          pin:  isFinite(pin)  ? pin  * 1e6 : null,
+          pout: isFinite(pout) ? pout * 1e6 : null,
+          iq: typeof bm.intelligence_index === "number" ? bm.intelligence_index : null,
+          text: (arch.modality || "").indexOf("text") === 0,
+          multi: mods.length > 1,
+          reas: reas ? (reas.mandatory ? "always" : (reas.default_enabled ? "default on" : "optional")) : "—",
+          created: m.created || 0
+        };
+      });
+      $("aiAsOf").textContent = "fetched " + stamp(new Date());
+      $("frAsOf").textContent = "fetched " + stamp(new Date());
+      tiles();
+      draw();
+      frontier();
+    }).catch(function(e){
+      $("aiTw").hidden = true;
+      $("aiMsg").className = "ddmsg err";
+      $("aiMsg").innerHTML = "Could not reach OpenRouter from your browser (" + esc(e.message) +
+        "). This panel reads their API directly, so an ad-blocker, a corporate network or an " +
+        "outage all look identical from here. Nothing is cached on our side to fall back to.";
+      $("frMsg").className = "ddmsg err";
+      $("frMsg").textContent = "No catalogue, no chart.";
+    });
+  }
+
+  function scoped(){
+    var s = $("aiScope").value;
+    return models.filter(function(m){
+      if(s === "scored") return m.iq != null;
+      if(s === "text") return m.text;
+      return true;
+    });
+  }
+
+  function tiles(){
+    var withIq = models.filter(function(m){ return m.iq != null; });
+    var priced = models.filter(function(m){ return m.pout != null && m.pout > 0; });
+    priced.sort(function(a,b){ return a.pout - b.pout; });
+    var med = priced.length ? priced[Math.floor(priced.length/2)].pout : null;
+    var vendors = {};
+    models.forEach(function(m){ if(m.vendor) vendors[m.vendor] = 1; });
+    var free = models.filter(function(m){ return m.pout === 0; }).length;
+    $("aiTiles").innerHTML =
+      tile("Models listed", models.length, Object.keys(vendors).length + " vendors") +
+      tile("Median output price", money(med) + "/M", "of " + priced.length + " paid models") +
+      tile("With a score", withIq.length, "carry an intelligence index") +
+      tile("Free endpoints", free, "$0 output price");
+  }
+
+  function draw(){
+    var q = ($("aiQ").value || "").toLowerCase().trim();
+    var rows = scoped().filter(function(m){
+      return !q || m.name.toLowerCase().indexOf(q) >= 0 || m.id.toLowerCase().indexOf(q) >= 0;
+    });
+    rows.sort(function(a,b){
+      var x = a[sortKey], y = b[sortKey];
+      if(typeof x === "string") return sortDir * String(x).localeCompare(String(y));
+      /* Nulls sink to the bottom in BOTH directions — a missing price is not a cheap
+         price, and letting it sort as zero would put unpriced models on the frontier. */
+      if(x == null && y == null) return 0;
+      if(x == null) return 1;
+      if(y == null) return -1;
+      return sortDir * (x - y);
+    });
+    $("aiBody").innerHTML = rows.map(function(m){
+      return '<tr><td class="tl"><a href="https://openrouter.ai/' + esc(m.id) +
+        '" target="_blank" rel="noopener">' + esc(m.name) + '</a>' +
+        (m.multi ? ' <span class="chip">multimodal</span>' : '') + '</td>' +
+        '<td>' + ctxs(m.ctx) + '</td>' +
+        '<td>' + money(m.pin) + '</td>' +
+        '<td>' + money(m.pout) + '</td>' +
+        '<td>' + (m.iq == null ? "—" : m.iq.toFixed(1)) + '</td>' +
+        '<td class="tl">' + esc(m.reas) + '</td></tr>';
+    }).join("");
+    $("aiTw").hidden = false;
+    $("aiMsg").hidden = rows.length > 0;
+    if(!rows.length){ $("aiMsg").hidden = false; $("aiMsg").className = "ddmsg";
+      $("aiMsg").textContent = "No models match that filter."; }
+  }
+
+  /* ---------------- frontier ---------------- */
+  function frontier(){
+    var pts = models.filter(function(m){
+      return m.iq != null && m.pout != null && m.pout > 0;
+    });
+    if(pts.length < 4){
+      $("frMsg").hidden = false;
+      $("frMsg").textContent = "Too few models carry both a price and a score to draw a frontier.";
+      return;
+    }
+    $("frMsg").hidden = true;
+    $("frLgd").hidden = false;
+
+    /* A model is on the frontier if nothing else is BOTH cheaper AND at least as smart. */
+    pts.forEach(function(m){
+      m.front = !pts.some(function(o){
+        return o !== m && o.pout <= m.pout && o.iq >= m.iq && (o.pout < m.pout || o.iq > m.iq);
+      });
+    });
+    var front = pts.filter(function(m){ return m.front; })
+                   .sort(function(a,b){ return a.pout - b.pout; });
+
+    var best = front[front.length-1];
+    var cheap = front[0];
+    $("frHead").innerHTML = "The cheapest model on the frontier scores <b>" + cheap.iq.toFixed(1) +
+      "</b> at <b>" + money(cheap.pout) + "</b> per million output tokens. The strongest scores <b>" +
+      best.iq.toFixed(1) + "</b> and costs <b>" + money(best.pout) + "</b> — " +
+      (cheap.pout > 0 ? Math.round(best.pout/cheap.pout) : "—") + "× more for " +
+      (best.iq - cheap.iq).toFixed(1) + " more points of somebody else&rsquo;s composite.";
+
+    var W = 680, H = 430, m = {t:18, r:22, b:46, l:70};
+    var pw = W - m.l - m.r, ph = H - m.t - m.b;
+    var lo = Math.log10(Math.min.apply(null, pts.map(function(p){ return p.pout; })));
+    var hi = Math.log10(Math.max.apply(null, pts.map(function(p){ return p.pout; })));
+    lo = Math.floor(lo); hi = Math.ceil(hi);
+    var iqhi = Math.max.apply(null, pts.map(function(p){ return p.iq; }));
+    var iqlo = Math.min.apply(null, pts.map(function(p){ return p.iq; }));
+    var pad = (iqhi - iqlo) * 0.08 || 1;
+    iqhi += pad; iqlo -= pad;
+
+    var X = function(v){ return m.l + (Math.log10(v) - lo)/(hi - lo) * pw; };
+    var Y = function(v){ return m.t + (1 - (v - iqlo)/(iqhi - iqlo)) * ph; };
+
+    var s = ['<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Output price against composite intelligence score, log price axis">'];
+    for(var e = lo; e <= hi; e++){
+      s.push('<line class="gr" x1="' + X(Math.pow(10,e)) + '" y1="' + m.t + '" x2="' + X(Math.pow(10,e)) + '" y2="' + (m.t+ph) + '"/>');
+      var lab = Math.pow(10,e);
+      s.push('<text class="lb" x="' + X(lab) + '" y="' + (m.t+ph+18) + '" text-anchor="middle">$' +
+        (lab < 1 ? lab.toFixed(lab < 0.1 ? 2 : 1) : lab) + '</text>');
+    }
+    for(var g = 0; g <= 4; g++){
+      var yv = iqlo + (iqhi - iqlo) * g/4;
+      s.push('<line class="gr" x1="' + m.l + '" y1="' + Y(yv) + '" x2="' + (m.l+pw) + '" y2="' + Y(yv) + '"/>');
+      s.push('<text class="lb" x="' + (m.l-10) + '" y="' + (Y(yv)+4) + '" text-anchor="end">' + yv.toFixed(0) + '</text>');
+    }
+    s.push('<line class="ax" x1="' + m.l + '" y1="' + (m.t+ph) + '" x2="' + (m.l+pw) + '" y2="' + (m.t+ph) + '"/>');
+    s.push('<line class="ax" x1="' + m.l + '" y1="' + m.t + '" x2="' + m.l + '" y2="' + (m.t+ph) + '"/>');
+
+    /* Frontier drawn as a staircase, because it IS a step function: between two
+       frontier models nothing exists, and a straight interpolation would draw models
+       that do not exist. */
+    var step = [];
+    front.forEach(function(p,i){
+      if(i === 0) step.push("M" + X(p.pout) + " " + Y(p.iq));
+      else { step.push("L" + X(p.pout) + " " + Y(front[i-1].iq)); step.push("L" + X(p.pout) + " " + Y(p.iq)); }
+    });
+    if(step.length) s.push('<path class="ser" d="' + step.join(" ") + '"/>');
+
+    pts.filter(function(p){ return !p.front; }).forEach(function(p){
+      s.push('<circle class="dim" cx="' + X(p.pout) + '" cy="' + Y(p.iq) + '" r="4" ' +
+        'data-t="' + esc(p.name + "|" + money(p.pout) + " per M out|score " + p.iq.toFixed(1)) + '"/>');
+    });
+    front.forEach(function(p){
+      s.push('<circle class="dot" cx="' + X(p.pout) + '" cy="' + Y(p.iq) + '" r="6" ' +
+        'data-t="' + esc(p.name + "|ON THE FRONTIER|" + money(p.pout) + " per M out|score " + p.iq.toFixed(1)) + '"/>');
+    });
+    /* Direct labels on the frontier only — a number on every point is unreadable, and
+       identity must not rest on colour alone.
+       ⚠️ COLLISION AVOIDANCE IS NOT OPTIONAL HERE. Frontier points cluster: two models a
+       few cents apart put their labels on top of each other and both become unreadable.
+       The first render did exactly that. Greedy placement — keep a label only if its box
+       clears every box already placed, try above then below, otherwise drop it. A dropped
+       label is fine; the point is still on the chart and still has its tooltip. */
+    var placed = [];
+    function fits(x1,y1,x2,y2){
+      for(var i=0;i<placed.length;i++){
+        var b = placed[i];
+        if(x1 < b[2] && x2 > b[0] && y1 < b[3] && y2 > b[1]) return false;
+      }
+      return true;
+    }
+    front.slice().reverse().forEach(function(p){
+      var txt = p.name.length > 24 ? p.name.slice(0,23) + "…" : p.name;
+      var w = txt.length * 5.6, h = 13;
+      var cands = [[X(p.pout)+9, Y(p.iq)-8], [X(p.pout)+9, Y(p.iq)+16],
+                   [X(p.pout)-9-w, Y(p.iq)-8], [X(p.pout)-9-w, Y(p.iq)+16]];
+      for(var c=0;c<cands.length;c++){
+        var x = cands[c][0], y = cands[c][1];
+        if(x < 2 || x + w > W - 2) continue;
+        if(y - h < 2 || y > H - 2) continue;
+        if(!fits(x, y-h, x+w, y)) continue;
+        placed.push([x, y-h, x+w, y]);
+        s.push('<text class="lb" x="' + x + '" y="' + y + '">' + esc(txt) + '</text>');
+        return;
+      }
+    });
+
+    s.push('<text class="lb2" x="' + (m.l+pw/2) + '" y="' + (H-6) + '" text-anchor="middle">Dollars per million output tokens (log scale)</text>');
+    s.push('<text class="lb2" transform="rotate(-90 20 ' + (m.t+ph/2) + ')" x="20" y="' + (m.t+ph/2) + '" text-anchor="middle">Composite intelligence index</text>');
+    s.push('</svg>');
+    $("frFig").innerHTML = s.join("");
+
+    Array.prototype.forEach.call($("frFig").querySelectorAll("circle"), function(c){
+      c.addEventListener("mousemove", function(ev){
+        var p = c.getAttribute("data-t").split("|");
+        showTip("<b>" + esc(p[0]) + "</b><br>" + p.slice(1).map(esc).join("<br>"), ev);
+      });
+      c.addEventListener("mouseleave", hideTip);
+    });
+  }
+
+  /* ---------------- wiring ---------------- */
+  $("aiReload").addEventListener("click", load);
+  $("aiQ").addEventListener("input", draw);
+  $("aiScope").addEventListener("change", function(){ draw(); });
+  Array.prototype.forEach.call(document.querySelectorAll("#aiTw th.so"), function(th){
+    th.addEventListener("click", function(){
+      var k = th.getAttribute("data-k");
+      if(sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = (k === "name" ? 1 : -1); }
+      draw();
+    });
+  });
+
+  DDSheets({key:"ai", mount:"#sheets", sheets:[
+    {id:"models",    label:"Model board", panel:"#sheetModels"},
+    {id:"frontier",  label:"Frontier",    panel:"#sheetFrontier"},
+    {id:"forecasts", label:"Forecast study", panel:"#sheetForecasts"},
+    {id:"method",    label:"Method",      panel:"#sheetAiMethod"}
+  ]});
+
+  load();
+})();
