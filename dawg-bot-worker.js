@@ -5138,8 +5138,41 @@ async function bozoGrade(request, env, cors) {
     if (status !== "placed" && status !== "graded")
       return json({ error: "Nothing to grade — ticket isn't placed." }, 409, cors);
 
-    if (body.results && typeof body.results === "object")
+    /* ⚠️ ONE EVENT, ONE OUTCOME. A game's margin and total are read once per eventId, so
+       moneylines, spreads and totals cannot disagree with themselves. Props and `other`
+       are hand-graded per player, and nothing stopped two people on the SAME selection
+       from being marked differently — one wins, one loses, off a single real-world fact.
+       That is not a display glitch: it decides who wears it, and in Bozo Royale who is
+       eliminated. The simulator caught this by grading legs independently and getting
+       eight answers for one Super Bowl.
+
+       Keyed on (eventId, prop) rather than on the leg, exactly as the handoff specifies.
+       Refused rather than auto-reconciled — picking a winner between two hand-entered
+       answers would be inventing the result, and the manager knows which is right. */
+    if (body.results && typeof body.results === "object") {
+      const picks = state.picks || {};
+      const byMarket = new Map();
+      for (const [key, p] of Object.entries(picks)) {
+        if (!p || (p.mkt !== "prop" && p.mkt !== "other")) continue;
+        const r = body.results[key] || body.results[playerName(key)];
+        if (!r) continue;
+        const outcome = r.result || (r.won === true ? "won" : r.won === false ? "lost" : null);
+        if (outcome == null) continue;
+        const mk = [p.eventId, p.mkt, p.prop || "", p.line ?? "", p.side ?? ""].join("|");
+        if (!byMarket.has(mk)) byMarket.set(mk, []);
+        byMarket.get(mk).push({ who: playerName(key), outcome, label: p.label });
+      }
+      for (const [, group] of byMarket) {
+        if (group.length < 2) continue;
+        const distinct = [...new Set(group.map(g => g.outcome))];
+        if (distinct.length > 1)
+          return json({ error:
+            `${group.map(g => g.who + " = " + g.outcome).join(", ")} — but that's the same selection `
+            + `(${group[0].label}) on the same game, so it can only have one outcome. Fix the odd one out and grade again.`
+          }, 409, cors);
+      }
       await fbPut(env, LG(lid) + "/results", body.results);
+    }
     if (body.bozo !== undefined) await fbPut(env, LG(lid) + "/bozo", body.bozo);
     if (body.bozoWhy !== undefined) await fbPut(env, LG(lid) + "/bozoWhy", String(body.bozoWhy).slice(0, 200));
 

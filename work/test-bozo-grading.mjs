@@ -1,0 +1,108 @@
+/* Grading — the three bugs the simulator warned about, pinned so they cannot come back.
+ *
+ * Run: node test-bozo-grading.mjs
+ *
+ * ⚠️ ALL THREE ARE SILENT. None throws, none logs, none renders wrong. They produce a
+ * confident, plausible, incorrect answer about who lost — which in Standard names the
+ * wrong bozo and in Bozo Royale eliminates the wrong person. Tests are the only place
+ * they are visible.
+ */
+import { readFileSync } from "fs";
+import { dirname, resolve } from "path";
+import { fileURLToPath } from "url";
+
+const WORK = dirname(fileURLToPath(import.meta.url));
+const page = readFileSync(resolve(WORK, "..", "bozo.html"), "utf8");
+const worker = readFileSync(resolve(WORK, "..", "dawg-bot-worker.js"), "utf8");
+
+let pass = 0, fail = 0;
+const ok = (c, n, x) => { if (c) pass++; else { fail++; console.error("FAIL:", n, x === undefined ? "" : "→ " + x); } };
+
+/* ---- lift a top-level function out of the page and run it FOR REAL ----
+   ⚠️ Lifted, never re-implemented. A second copy of this arithmetic written here would be
+   exactly as wrong as the original and would agree with it perfectly — which is the one
+   thing a test must never do. Plain string search rather than a regex: the bodies contain
+   braces, slashes and template literals, and escaping all of those correctly is its own
+   source of bugs. */
+function lift(name) {
+  const at = page.indexOf("function " + name + "(");
+  if (at < 0) throw new Error("could not find " + name + " in bozo.html — renamed?");
+  const end = page.indexOf("\n}", at);
+  if (end < 0) throw new Error("could not find the end of " + name);
+  const body = page.slice(at, end + 2);
+  return new Function(body + "\nreturn " + name + ";")();
+}
+
+const legLabel = lift("legLabel");
+ok(typeof legLabel === "function", "legLabel is liftable from the page");
+
+/* =================== 1. the spread sign =====================================
+   `line` is what THIS SIDE GIVES UP: positive lays, negative takes. The label has to
+   invert it, because the number is a handicap and the label is what you'd read on a
+   bet slip. Getting this backwards is how an MLB/NHL dog at +1.5 becomes a lay. */
+ok(legLabel("spread", "DET", 8.5) === "DET -8.5", "laying 8.5 prints as -8.5", legLabel("spread", "DET", 8.5));
+ok(legLabel("spread", "PIT", -1.5) === "PIT +1.5", "taking 1.5 prints as +1.5, not a bare 1.5",
+   legLabel("spread", "PIT", -1.5));
+ok(legLabel("ml", "CLE") === "CLE ML", "a moneyline has no number");
+ok(legLabel("total", "over", 47.5, null, "DET@GB") === "DET@GB o47.5", "a total names the game");
+
+/* =================== 2. push handling =======================================
+   The grader used `m > x.line`, which has no third state. Landing exactly on the number
+   is a PUSH: the stake comes back, the leg voids on the ticket, and it says nothing
+   about whether you beat the number. Scored as a loss it makes you eligible to wear it. */
+const grade = lift("gradeLeg");
+ok(typeof grade === "function", "gradeLeg is liftable from the page");
+
+ok(/results\[p\]\.result = outcome;/.test(page), "autoGrade stores the three-state result");
+ok(/results\[p\]\.won\s+= outcome==='won' \? true : outcome==='lost' \? false : null;/.test(page),
+   "…and `won` is NULL on a push, so nothing downstream reads it as a loss");
+ok(/outcome = gradeLeg\(/.test(page), "autoGrade calls the same function this test does");
+
+ok(grade("spread", "over", 8.5, 9) === "won",  "DET -8.5 winning by 9 covers");
+ok(grade("spread", "over", 8.5, 8) === "lost", "…by 8 does not");
+ok(grade("spread", "over", 8.5, 8.5) === "push", "…by exactly 8.5 is a push, not a loss");
+ok(grade("spread", "over", 7, 7) === "push", "a whole-number spread landed on exactly is a push");
+ok(grade("total", "over", 47.5, null, 48) === "won", "over 47.5 with 48 wins");
+ok(grade("total", "under", 47, null, 47) === "push", "under 47 with exactly 47 is a push");
+ok(grade("ml", "over", 0, 0) === "push", "a drawn game is a push on the moneyline, not a loss");
+ok(grade("ml", "over", 0, -3) === "lost", "losing by 3 loses the moneyline");
+
+/* The MLB/NHL case the handoff called out by name: the band-legal bet is the DOG at
+   +1.5 priced short, stored as -1.5 because it TAKES a run. */
+ok(grade("spread", "over", -1.5, -1) === "won",
+   "a puckline dog at +1.5 losing by 1 still covers");
+ok(grade("spread", "over", -1.5, -2) === "lost",
+   "…losing by 2 does not");
+ok(grade("spread", "over", -1.5, 3) === "won",
+   "…and winning outright obviously covers");
+
+/* ⚠️ The regression itself: under the old comparison every push above scored as a loss. */
+for (const [mkt, dir, line, m, tot] of [["spread","over",8.5,8.5,null],["total","under",47,null,47],["ml","over",0,0,null]]) {
+  const old = mkt === "total" ? (dir === "over" ? tot > line : tot < line) : (mkt === "ml" ? m > 0 : m > line);
+  ok(old === false && grade(mkt, dir, line, m, tot) === "push",
+     `the old grader called this ${mkt} push a loss; the new one does not`);
+}
+
+/* =================== 3. one event, one outcome ==============================
+   Props are hand-graded per player. Two people on the same selection share one
+   real-world fact, so they cannot be graded apart. */
+ok(/same selection/.test(worker) && /only have one outcome/.test(worker),
+   "the Worker refuses a divergent grade on one selection");
+ok(/p\.mkt !== "prop" && p\.mkt !== "other"/.test(worker),
+   "…scoped to the hand-graded markets, since game markets read one outcome per event anyway");
+ok(/\[p\.eventId, p\.mkt, p\.prop \|\| "", p\.line \?\? "", p\.side \?\? ""\]/.test(worker),
+   "…keyed on the selection, not on the leg");
+ok(/return json\(\{ error:[\s\S]{0,400}Fix the odd one out/.test(worker),
+   "…and refuses rather than picking a winner, which would be inventing the result");
+const code = page.replace(/\/\*[\s\S]*?\*\//g, "");
+ok(/twinnote/.test(code) && /graded together/.test(code),
+   "the page mirrors the answer across the group and says why the boxes move together");
+
+/* Push must be expressible by hand too — a scratched prop is void, not lost. */
+ok(/<option value="p">Push \/ void<\/option>/.test(page),
+   "manual grading offers Push / void");
+ok(/r\.result = s\.value==='1' \? 'won' : s\.value==='0' \? 'lost' : 'push';/.test(code),
+   "…and carries it through as the three-state result");
+
+console.log(`\n${pass} passed, ${fail} failed`);
+process.exit(fail ? 1 : 0);

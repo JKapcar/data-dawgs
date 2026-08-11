@@ -860,6 +860,10 @@ table.gaptbl .gwhy{font-size:11px;color:var(--ink-3);margin-top:2px;max-width:46
 .hcard.demo{border-style:dashed}
 .f .opt{font:600 9.5px/1 ui-monospace,monospace;letter-spacing:.7px;text-transform:uppercase;
   color:var(--ink-3);margin-left:5px}
+.legprev{margin:10px 0 0;padding:9px 12px;border:1px dashed var(--grid);border-radius:8px;
+  font-size:13px;color:var(--ink-1);line-height:1.5}
+.legprev .pl{color:var(--ink-3);font-size:11.5px}
+.twinnote{font:600 11px/1.5 system-ui;color:var(--warn);margin:8px 0 2px}
 .hcard input.rn{font:750 16px system-ui;padding:4px 8px;border:1px solid var(--accent);border-radius:7px;
   background:var(--surface-1);color:var(--ink-1);width:100%;max-width:230px}
 .hcard .go{display:block;margin-top:10px;color:var(--accent);font-size:12.5px;font-weight:650}
@@ -2303,6 +2307,7 @@ STATE: everything saves in the browser on that device. A different device shows 
       <button class="btn" id="save">Submit leg</button>
     </div></div>
   </div>
+  <div class="legprev" id="legPrev" style="display:none"></div>
   <div class="warnbox" id="priceWarn" style="display:none"></div>
   <div class="err" id="err"></div>
   <p class="note" id="bandNote">Favorites only. No exact duplicates. Editing resets your clock <em>and</em> your price. The ticket locks the moment the last leg lands.</p>
@@ -2818,6 +2823,60 @@ function paintGames(){
     : '<option value="">no games in window</option>';
   paintSides();
 }
+/* Grade one leg against its game's realised numbers. PURE, and separate from autoGrade
+   so it can be tested for real rather than re-implemented in a test — a second copy of
+   this arithmetic would be exactly as wrong as the first and agree with it perfectly.
+
+   ⚠️ THREE OUTCOMES. `edge` is signed distance past the number, so exactly 0 is a PUSH.
+   The old code compared with `>` and had no third state, which scored every leg landing
+   on its number as a loss — and a loss makes you eligible to wear it, or in Bozo Royale
+   to be eliminated.
+
+   ⚠️ `line` is what THIS SIDE GIVES UP: positive lays points, negative takes them. So
+   m − line is correct in both directions, including the MLB/NHL runline dog at +1.5
+   stored as −1.5. Bozo is favourites-only, which makes that dog the band-legal baseball
+   and hockey spread — it is the common case there, not an exotic one.
+
+   ⚠️ A moneyline has no number, so the margin itself is the edge, and a drawn game is a
+   push rather than a loss. */
+function gradeLeg(mkt, dir, line, margin, total){
+  const edge = mkt === 'total' ? (dir === 'over' ? (total - line) : (line - total))
+             : mkt === 'ml'    ? margin
+             :                   (margin - line);
+  return edge > 0 ? 'won' : edge < 0 ? 'lost' : 'push';
+}
+
+/* The leg exactly as the board will print it. ONE definition, used by the live preview
+   and by the submit — if these were two copies, the preview would eventually reassure
+   someone about a leg the board then displays differently.
+
+   ⚠️ `line` is what this side GIVES UP: positive lays points, negative takes them. So a
+   stored 8.5 prints "-8.5" and a stored -1.5 prints "+1.5". That inversion looks odd
+   until you remember the number is the handicap, not the display. */
+function legLabel(mk, side, line, prop, gameShort){
+  if(mk==='ml') return side+' ML';
+  if(mk==='spread') return `${side} ${line>0?'-':'+'}${Math.abs(line)}`;
+  if(mk==='total') return `${gameShort||''} ${side==='over'?'o':'u'}${line}`;
+  return `${prop||''} ${side==='over'?'o':'u'}${line}`;
+}
+
+/* ⚠️ The preview is the actual fix for the spread-sign trap. A hint tells you a rule;
+   this shows you the consequence of what you just typed, before it is on the ticket. */
+function paintLegPreview(){
+  const el = document.getElementById('legPrev'); if(!el) return;
+  const mk = fMkt.value, side = fSide.value, raw = fLine.value;
+  const g = (GAMES[fSport.value]||[]).find(x=>x.id===fGame.value);
+  if(!side || (mk!=='ml' && raw==='')){ el.style.display='none'; return; }
+  const line = +raw;
+  el.style.display='';
+  const takes = mk==='spread' && line < 0;
+  el.innerHTML = `<span class="pl">You are submitting</span> <b>${esc(legLabel(mk, side, line, fProp.value, g?g.short:''))}</b>`
+    + (mk==='spread'
+        ? ` <span class="pl">— ${takes ? `${esc(side)} TAKES ${Math.abs(line)} points`
+                                       : `${esc(side)} LAYS ${Math.abs(line)} points`}</span>`
+        : '');
+}
+
 function paintSides(){
   const sp=document.getElementById('fSport').value, id=document.getElementById('fGame').value;
   const g=(GAMES[sp]||[]).find(x=>x.id===id), mk=document.getElementById('fMkt').value;
@@ -2830,8 +2889,23 @@ function paintSides(){
   if(OU) sel.innerHTML='<option value="over">Over</option><option value="under">Under</option>';
   else sel.innerHTML=(g?g.teams:[]).map(t=>`<option value="${esc(t.abbr)}">${esc(t.name)}</option>`).join('');
   document.getElementById('lineWrap').style.display = mk==='ml' ? 'none' : '';
-  document.getElementById('lineLbl').textContent =
-    mk==='spread'?'Spread':mk==='total'?'Total':'Number';
+  /* ⚠️ THE SIGN IS THE WHOLE MEANING ON A SPREAD, and the form used to hide it. The
+     stored convention is "points THIS SIDE GIVES UP": positive lays, negative takes.
+     Both the grader (m − line) and expected() depend on that, and there are live legs
+     stored under it, so the convention stays. What changes is that the form stops being
+     silent about it.
+
+     This matters because of one specific leg. Bozo takes favourites only, so the legal
+     baseball and hockey spread is the DOG at +1.5 priced short — a TAKING bet, which has
+     to be typed −1.5. Typed as 1.5 it means laying 1.5 and resolves backwards, and
+     nothing in the old form would have told you. The preview under the box is the real
+     fix: it shows the leg exactly as the board will, before you submit it. */
+  const fl = document.getElementById('fLine');
+  document.getElementById('lineLbl').innerHTML =
+    mk==='spread' ? 'Spread <span class="opt">+ lays &middot; &minus; takes</span>'
+    : mk==='total' ? 'Total' : 'Number';
+  fl.placeholder = mk==='spread' ? '6.5 to lay  ·  -1.5 to take' : '6.5';
+  paintLegPreview();
   const pw=document.getElementById('propWrap');
   pw.style.display = (mk==='prop'||mk==='other') ? '' : 'none';
   const pl=document.getElementById('fProp');
@@ -3658,10 +3732,7 @@ async function submitLeg(){
   // mirrors the Worker: an "other" leg that doesn't say what it is cannot be graded
   if(mk==='other' && !fProp.value.trim())
     return e.textContent='Describe the bet — an "other" leg needs to say what it actually is.';
-  const label = mk==='ml' ? side+' ML'
-    : mk==='spread' ? `${side} ${line>0?'-':''}${Math.abs(line)}`
-    : mk==='total' ? `${g.short} ${side==='over'?'o':'u'}${line}`
-    : `${fProp.value} ${side==='over'?'o':'u'}${line}`;
+  const label = legLabel(mk, side, line, fProp.value, g.short);
   const oppRaw = document.getElementById('fPriceOpp').value;
   const priceOpp = oppRaw === '' ? null : Math.round(Number(oppRaw));
   if(priceOpp !== null && (!Number.isFinite(priceOpp) || Math.abs(priceOpp) < 100))
@@ -4228,15 +4299,31 @@ async function autoGrade(){
       const g=games.find(y=>y.id===x.eventId);
       if(!g||!g.final){ missed.push(p); continue; }
       results[p]=results[p]||{};
+      /* ⚠️ THREE OUTCOMES, NOT TWO. This used to be `m > x.line`, which scores a leg that
+         lands EXACTLY on its number as a loss — and a loss makes you eligible to wear it.
+         Under Bozo Royale it eliminates you. A push is not a loss: the book returns the
+         stake, the leg is void on the ticket, and it says nothing about whether you beat
+         the number. The seeded season has 4 pushes in 176 legs, so this is roughly one
+         leg every three weeks, silently naming the wrong bozo.
+
+         `edge` is signed distance past the number, so > 0 wins, < 0 loses, and exactly 0
+         is the push the old comparison swallowed. result is the four-state truth; won is
+         the boolean derived from it and is NULL on a push, so nothing downstream can
+         quietly read a push as false. */
+      let outcome;
       if(x.mkt==='total'){
         const tot=g.teams.reduce((a,t)=>a+(t.score||0),0);
-        results[p].actual=tot; results[p].won = dirOf(x)==='over' ? tot>x.line : tot<x.line;
+        results[p].actual=tot;
+        outcome = gradeLeg(x.mkt, dirOf(x), x.line, null, tot);
       }else{
         const mineT=g.teams.find(t=>t.abbr===x.side), opp=g.teams.find(t=>t.abbr!==x.side);
         if(!mineT||!opp){ missed.push(p); continue; }
         const m=mineT.score-opp.score;
-        results[p].actual=m; results[p].won = x.mkt==='ml' ? m>0 : m>x.line;
+        results[p].actual=m;
+        outcome = gradeLeg(x.mkt, dirOf(x), x.line, m, null);
       }
+      results[p].result = outcome;
+      results[p].won    = outcome==='won' ? true : outcome==='lost' ? false : null;
       got++;
     }
   }
@@ -4252,11 +4339,40 @@ function paintManual(live){
   document.getElementById('manual').innerHTML =
     (need.length ? `<div class="lil" style="margin-bottom:6px">Manual — props and anything ESPN didn't cover</div>` +
       need.map(x=>`<div class="gr"><span><b>${esc(x.p)}</b> <span class="pk">${esc(x.label)}</span></span>
-        <select data-w="${esc(x.p)}"><option value="">—</option><option value="1">Won</option><option value="0">Lost</option></select>
+        <select data-w="${esc(x.p)}"><option value="">—</option><option value="1">Won</option><option value="0">Lost</option><option value="p">Push / void</option></select>
         <input type="number" step="0.5" data-a="${esc(x.p)}" placeholder="actual"></div>`).join('') : '')
     + paintCloses(live)
     + `<div class="row" style="margin-top:14px"><button class="btn" id="finish">Name the bozo</button></div>`;
   document.getElementById('finish').onclick = decide;
+
+  /* ⚠️ Two players on the SAME selection share one real-world outcome, so grading them
+     apart is not a preference — it is a contradiction. The Worker refuses it outright;
+     this mirrors the answer across the group so the contradiction is never typed in the
+     first place. Belt and braces on purpose: the server guard is the one that counts,
+     but being told "no" after filling in eight dropdowns is a worse day than never
+     being able to disagree with yourself. */
+  const sameMarket = {};
+  for(const x of live){
+    if(x.mkt!=='prop' && x.mkt!=='other') continue;
+    const k = [x.eventId, x.mkt, x.prop||'', x.line??'', x.side??''].join('|');
+    (sameMarket[k] = sameMarket[k] || []).push(x.p);
+  }
+  const twins = Object.values(sameMarket).filter(g=>g.length>1);
+  for(const group of twins){
+    for(const who of group){
+      const sel = document.querySelector(`[data-w="${CSS.escape(who)}"]`);
+      const act = document.querySelector(`[data-a="${CSS.escape(who)}"]`);
+      if(sel) sel.onchange = ()=>group.forEach(o=>{
+        const s2=document.querySelector(`[data-w="${CSS.escape(o)}"]`); if(s2) s2.value=sel.value; });
+      if(act) act.oninput = ()=>group.forEach(o=>{
+        const a2=document.querySelector(`[data-a="${CSS.escape(o)}"]`); if(a2) a2.value=act.value; });
+    }
+    // Say why the boxes are moving together, or it reads as a bug.
+    const first = document.querySelector(`[data-w="${CSS.escape(group[0])}"]`);
+    if(first && first.closest('.gr'))
+      first.closest('.gr').insertAdjacentHTML('beforebegin',
+        `<div class="twinnote">${group.map(esc).join(' and ')} are on the same selection — one outcome, graded together.</div>`);
+  }
 }
 
 /* Closing prices, with the capture's own status shown per leg.
@@ -4301,8 +4417,13 @@ function paintCloses(live){
 async function decide(){
   const e=document.getElementById('gerr'); e.className='err'; e.textContent='';
   const results = JSON.parse(JSON.stringify(S.results||{}));
+  // ⚠️ Three states. `won` alone cannot express a push, and a push coerced to false
+  // is a loss — which under Bozo Royale eliminates someone. result is the truth here;
+  // won is derived from it and stays null on a push.
   document.querySelectorAll('[data-w]').forEach(s=>{ if(s.value===''){return;}
-    results[s.dataset.w]=results[s.dataset.w]||{}; results[s.dataset.w].won = s.value==='1'; });
+    const r = results[s.dataset.w] = results[s.dataset.w]||{};
+    r.result = s.value==='1' ? 'won' : s.value==='0' ? 'lost' : 'push';
+    r.won    = s.value==='1' ? true  : s.value==='0' ? false  : null; });
   document.querySelectorAll('[data-a]').forEach(i=>{ if(i.value===''){return;}
     results[i.dataset.a]=results[i.dataset.a]||{}; results[i.dataset.a].actual=+i.value; });
   // ⚠️ A disabled box is a close the cron already captured. Skip it rather than sending
@@ -4413,6 +4534,14 @@ document.getElementById('fSport').onchange = ()=>loadGames(fSport.value);
 document.getElementById('fGame').onchange = paintSides;
 document.getElementById('fMkt').onchange = ()=>{ paintSides(); paintPriceWarn(); };
 document.getElementById('fPrice').addEventListener('input', paintPriceWarn);
+// ⚠️ Every control that can change the printed leg repaints the preview. Miss one
+// and the preview goes stale, which is worse than not having it — it would be
+// confidently showing a leg you are no longer submitting.
+['fLine','fSide','fProp','fGame','fMkt','fSport'].forEach(id=>{
+  const el=document.getElementById(id); if(!el) return;
+  el.addEventListener('input', paintLegPreview);
+  el.addEventListener('change', paintLegPreview);
+});
 
 /* Signing in from the banner (or in another tab) repaints this page's auth panel.
    ⚠️ Do NOT call setSession/clearSession from in here — those are what fire this. */
