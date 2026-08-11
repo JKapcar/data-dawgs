@@ -19,31 +19,21 @@
  * merging — delete it from the leagues card first. Half-simulated is not a state anyone
  * could reason about later.
  *
- * The session must belong to the SITE ADMIN and is read from the DD_SESSION environment
- * variable. In the browser console on datadawgs216.com:
+ * The session must belong to the SITE ADMIN. Just run it — it ASKS:
  *
- *     copy(localStorage.getItem('dd-bozo-sess'))
- *
- * then in PowerShell:
  *     node seed-demo-leagues.mjs
  *
- * ⚠️ THE HAND-OFF GOES THROUGH A FILE, NOT THE CLIPBOARD, and that is not fussiness.
- * The clipboard version had an ordering trap with no way out: to run the command you had
- * to copy the command, which overwrote the session you had just copied. Anyone following
- * the instructions in order got a shell command posted to the server as their credential.
- * A file has no such ordering — the browser writes it, the script reads it whenever.
+ * and waits at a `session>` prompt while you fetch the token. See askSession() for why
+ * that ordering is the whole point, and for the three hand-offs that failed before it.
  *
- * ⚠️ And it is SHREDDED the moment it is read, before a single request goes out, because
- * a live session token sitting in Downloads is the one thing worse than one in shell
- * history: nobody ever looks there again.
- *
- * DD_SESSION and --session still work for automation. --session lands in shell history,
- * so prefer the other two.
+ * DD_SESSION, --session and a --session-file all still work for automation. --session
+ * lands in shell history; prefer the others.
  */
 import { readFileSync, existsSync, writeFileSync, unlinkSync } from "fs";
 import { homedir } from "os";
 import { dirname, resolve, join } from "path";
 import { fileURLToPath } from "url";
+import { createInterface } from "readline";
 
 // ⚠️ Resolved against THIS FILE, not the shell's working directory. The default paths
 // used to be "../tmp/..." relative to cwd, which silently meant a different place
@@ -70,13 +60,42 @@ const BASE = String(args.base || "https://toto.jkapcar4.workers.dev");
 const DROP = args["session-file"] ? String(args["session-file"])
                                   : join(homedir(), "Downloads", "dd-session.txt");
 
-const HOWTO =
-  "  1. On datadawgs216.com, open the DevTools console (F12) and paste this ONE LINE:\n\n"
-+ "     (()=>{const s=localStorage.getItem('dd-bozo-sess');if(!s)return'NOT SIGNED IN';"
-+ "const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([s]));"
-+ "a.download='dd-session.txt';a.click();return'saved — now run the seed script'})()\n\n"
-+ "  2. Back here:  node seed-demo-leagues.mjs\n\n"
-+ "     (the file is deleted the moment it is read)";
+const GET_IT =
+  "In Chrome on datadawgs216.com, open DevTools (F12) → Console, and run:\n\n"
++ "    copy(localStorage.getItem('dd-bozo-sess'))\n\n"
++ "  Then come back to this window and right-click to paste.";
+
+/* ⚠️ ASKING ON STDIN IS THE POINT, and it took three failed attempts to get here.
+   Every other hand-off has an ordering trap or a silent failure:
+
+     · as a command argument — you have to copy MY command to run it, which overwrites
+       the token you just copied. There is no order in which both steps succeed.
+     · via a downloaded file — Chrome drops a programmatic blob download with no error,
+       and the console still reports success, so it looks like it worked and didn't.
+     · via an env var set from the clipboard — same overwrite problem as the argument.
+
+   Prompting inverts it. The command is already running and waiting BEFORE the token goes
+   on the clipboard, so nothing can clobber it in between. It also keeps the token out of
+   PowerShell history, because stdin to a running process is not a shell command. */
+async function askSession() {
+  if (process.stdin.isTTY) {
+    console.log("\nPaste your Data Dawgs session, then press Enter.");
+    console.log("(nothing else needs doing first — this window is now waiting for it)\n");
+    console.log("  " + GET_IT.replace(/\n/g, "\n  ") + "\n");
+  }
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  // ⚠️ Resolve on close as well as on an answer. Piped input works (one line, then EOF)
+  // and a closed stdin returns empty instead of hanging forever, which is what a cron or
+  // a CI runner would otherwise do — silently, until something timed it out.
+  const answer = await new Promise(res => {
+    let done = false;
+    const finish = v => { if (!done) { done = true; res(v); } };
+    rl.on("close", () => finish(""));
+    rl.question(process.stdin.isTTY ? "session> " : "", finish);
+  });
+  rl.close();
+  return String(answer || "").trim();
+}
 
 let SESSION = String(process.env.DD_SESSION || args.session || "").trim();
 let fromFile = false;
@@ -84,18 +103,19 @@ if (!SESSION && existsSync(DROP)) {
   SESSION = readFileSync(DROP, "utf8").trim();
   fromFile = true;
 }
+if (!SESSION) SESSION = await askSession();
 
 // ⚠️ Catch the placeholder explicitly. It has been pasted literally once already, and the
 // failure it produces — a 401 from the Worker — looks like an expired login rather than an
 // unsubstituted argument, which sends you debugging the wrong thing.
 if (/^PASTE|^<|^your[-_ ]?session/i.test(SESSION))
-  die("that's a placeholder, not a session.\n\n" + HOWTO);
+  die("that's a placeholder, not a session.\n\n" + "  " + GET_IT);
 // ⚠️ Same class of mistake, one step later: the clipboard flow this replaced could hand
 // the script a shell command instead of a token. Name it rather than posting it.
 if (/^(cd |node |\$env:|PS )/i.test(SESSION))
-  die("that's a shell command, not a session — the clipboard had the wrong thing in it.\n\n" + HOWTO);
+  die("that's a shell command, not a session — the clipboard had the wrong thing in it.\n\n" + "  " + GET_IT);
 if (!SESSION)
-  die("no session found.\n\n" + HOWTO);
+  die("no session given.\n\n" + "  " + GET_IT);
 
 // A session is <base64url payload>.<hmac>. Decode the payload locally — not to trust it,
 // only to fail fast and legibly on an expired or malformed one instead of on a 401.
@@ -106,7 +126,7 @@ try {
   console.log(`seeding as ${body.n} → ${BASE}`);
 } catch (e) {
   if (e && e.__seedFail) throw e;
-  die("couldn't read that session token — the file didn't contain a whole one.\n\n" + HOWTO);
+  die("couldn't read that session token — it looks truncated.\n\n" + "  " + GET_IT);
 }
 
 /* ⚠️ Shred it here — BEFORE the first request, not after the last one. A run that fails
