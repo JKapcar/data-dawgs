@@ -25,16 +25,24 @@
  *     copy(localStorage.getItem('dd-bozo-sess'))
  *
  * then in PowerShell:
+ *     node seed-demo-leagues.mjs
  *
- *     $env:DD_SESSION = Get-Clipboard; node seed-demo-leagues.mjs
+ * ⚠️ THE HAND-OFF GOES THROUGH A FILE, NOT THE CLIPBOARD, and that is not fussiness.
+ * The clipboard version had an ordering trap with no way out: to run the command you had
+ * to copy the command, which overwrote the session you had just copied. Anyone following
+ * the instructions in order got a shell command posted to the server as their credential.
+ * A file has no such ordering — the browser writes it, the script reads it whenever.
  *
- * ⚠️ THE ENV VAR IS THE POINT, not a convenience. A session token pasted as a command
- * argument lands in PowerShell history and in the scrollback of whatever window it was
- * typed into, where it stays valid until it expires. --session still works for a
- * throwaway, but the env var is the way to do this.
+ * ⚠️ And it is SHREDDED the moment it is read, before a single request goes out, because
+ * a live session token sitting in Downloads is the one thing worse than one in shell
+ * history: nobody ever looks there again.
+ *
+ * DD_SESSION and --session still work for automation. --session lands in shell history,
+ * so prefer the other two.
  */
-import { readFileSync } from "fs";
-import { dirname, resolve } from "path";
+import { readFileSync, existsSync, writeFileSync, unlinkSync } from "fs";
+import { homedir } from "os";
+import { dirname, resolve, join } from "path";
 import { fileURLToPath } from "url";
 
 // ⚠️ Resolved against THIS FILE, not the shell's working directory. The default paths
@@ -56,29 +64,64 @@ const args = Object.fromEntries(
     .map(s => s.trim().split(/\s+/)).map(([k, ...v]) => [k, v.join(" ") || true]));
 
 const BASE = String(args.base || "https://toto.jkapcar4.workers.dev");
-const SESSION = String(process.env.DD_SESSION || args.session || "").trim();
-// ⚠️ Catch the placeholder explicitly. It has been pasted literally at least once, and
-// the failure it produces — a 401 from the Worker — looks like an expired login rather
-// than an unsubstituted argument, which sends you debugging the wrong thing.
+
+// The browser drops the token here. Downloads is the only directory a page can reliably
+// write to without the user choosing a location.
+const DROP = args["session-file"] ? String(args["session-file"])
+                                  : join(homedir(), "Downloads", "dd-session.txt");
+
+const HOWTO =
+  "  1. On datadawgs216.com, open the DevTools console (F12) and paste this ONE LINE:\n\n"
++ "     (()=>{const s=localStorage.getItem('dd-bozo-sess');if(!s)return'NOT SIGNED IN';"
++ "const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([s]));"
++ "a.download='dd-session.txt';a.click();return'saved — now run the seed script'})()\n\n"
++ "  2. Back here:  node seed-demo-leagues.mjs\n\n"
++ "     (the file is deleted the moment it is read)";
+
+let SESSION = String(process.env.DD_SESSION || args.session || "").trim();
+let fromFile = false;
+if (!SESSION && existsSync(DROP)) {
+  SESSION = readFileSync(DROP, "utf8").trim();
+  fromFile = true;
+}
+
+// ⚠️ Catch the placeholder explicitly. It has been pasted literally once already, and the
+// failure it produces — a 401 from the Worker — looks like an expired login rather than an
+// unsubstituted argument, which sends you debugging the wrong thing.
 if (/^PASTE|^<|^your[-_ ]?session/i.test(SESSION))
-  die("that's the placeholder, not a session. Run:  copy(localStorage.getItem('dd-bozo-sess'))  in the\n"
-    + "           browser console on datadawgs216.com, then:  $env:DD_SESSION = Get-Clipboard");
+  die("that's a placeholder, not a session.\n\n" + HOWTO);
+// ⚠️ Same class of mistake, one step later: the clipboard flow this replaced could hand
+// the script a shell command instead of a token. Name it rather than posting it.
+if (/^(cd |node |\$env:|PS )/i.test(SESSION))
+  die("that's a shell command, not a session — the clipboard had the wrong thing in it.\n\n" + HOWTO);
 if (!SESSION)
-  die("no session. In the browser console on datadawgs216.com run:\n"
-    + "             copy(localStorage.getItem('dd-bozo-sess'))\n"
-    + "           then in this window:\n"
-    + "             $env:DD_SESSION = Get-Clipboard; node seed-demo-leagues.mjs");
+  die("no session found.\n\n" + HOWTO);
 
 // A session is <base64url payload>.<hmac>. Decode the payload locally — not to trust it,
 // only to fail fast and legibly on an expired or malformed one instead of on a 401.
 try {
   const body = JSON.parse(Buffer.from(SESSION.split(".")[0].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString());
   if (!body.n || !body.e) die("that doesn't look like a Data Dawgs session token.");
-  if (Date.now() > body.e) die(`that session expired ${new Date(body.e).toISOString()}. Sign in again and re-copy it.`);
-  console.log(`seeding as ${body.n} → ${BASE}\n`);
+  if (Date.now() > body.e) die(`that session expired ${new Date(body.e).toLocaleString()}. Sign in again and redo step 1.`);
+  console.log(`seeding as ${body.n} → ${BASE}`);
 } catch (e) {
   if (e && e.__seedFail) throw e;
-  die("couldn't read that session token — check the whole value was copied.");
+  die("couldn't read that session token — the file didn't contain a whole one.\n\n" + HOWTO);
+}
+
+/* ⚠️ Shred it here — BEFORE the first request, not after the last one. A run that fails
+   halfway must not leave a live credential sitting in Downloads, and that is exactly the
+   run where someone walks away from the keyboard. Overwrite before unlinking so the bytes
+   don't survive in a recoverable slack block. */
+if (fromFile) {
+  try {
+    writeFileSync(DROP, "x".repeat(Math.max(64, SESSION.length)));
+    unlinkSync(DROP);
+    console.log(`read and deleted ${DROP}\n`);
+  } catch (e) {
+    console.error(`\n⚠️  COULD NOT DELETE ${DROP} — ${e.message}`);
+    console.error(`   Delete it yourself: that file is a live login until ${new Date(JSON.parse(Buffer.from(SESSION.split(".")[0].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString()).e).toLocaleString()}\n`);
+  }
 }
 
 const JOBS = [
