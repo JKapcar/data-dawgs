@@ -12,10 +12,31 @@
    Stage 7 took the bar from five groups to six, which is exactly the change the old 419px
    comment warned to re-measure after. It collided at 320, 340, 360, 420 and 460.
 
+   2026-08-11 took it from six to EIGHT — Prediction Markets and A.I. Eight groups at the
+   shipped padding collide at 420 (33.3px), 440 (13.3px) and 520 (25.8px). What pays for
+   them: `short:` labels on the two longest entries (Receipts -> Rcpt, Prediction Markets
+   -> Mkts) plus 1px per side off the link padding in the max-width:760px block. Labels
+   alone still miss by 11.1px at 420 and 3.6px at 520, so both halves are load-bearing.
+
+   ⚠️ EIGHT IS THE CEILING. A ninth group was measured with every tightening applied at
+   once — 9.5px font, zero gap, smaller theme button and sign-in chip — and still collides
+   at 420 (12.5px) and 520 (5px). A ninth section needs an overflow menu, not another
+   array entry, and this suite is where that gets caught.
+
+   ⚠️ THIS SUITE ONLY SEES OVERLAP, AND OVERLAP IS ONLY HOW THE 420-760 BAND FAILS.
+   Outside it the bar WRAPS instead, so the failure is an extra ROW and every assertion
+   here stays green through it. Eight groups added a row at 360/375/390/393 and another at
+   761/820, and this file reported 205 passed while both were live. Both were caught by
+   looking at a screenshot. The height table is in work/patch-nav-sections.py; if you
+   change this bar, measure height below 420 and above 761 as well as overlap here.
+
    ⚠️ THE WIDTH LIST IS THE POINT. Breakpoints are where this breaks, so the list walks
    both sides of every one: 419/420 (the wordmark), 519/520 (its new ceiling), 760/761
    (the one-row phone layout). Testing 320/390/1280 alone would have missed the 420-519
    band entirely, which is where the worst collision was.
+   440 and 560 were added on 2026-08-11 and are not padding: at eight groups the run
+   collided at 440 while 419, 460 and 500 were all clean, so a list that stepped over it
+   would have shipped a collision on a width nobody was watching.
 
    Three pages rather than 25 because test-pound-contracts.js already asserts the NAV array
    is byte-identical across all of them, and the nav CSS travels with it. These three differ
@@ -43,7 +64,23 @@ const b = await chromium.launch({ executablePath: chromiumExecutable(chromium), 
 const errs = [];
 
 const PAGES = ["index.html", "stats.html", "dashboard.html"];
-const WIDTHS = [320, 340, 360, 390, 419, 420, 460, 500, 519, 520, 600, 760, 761, 900, 1280];
+const WIDTHS = [320, 340, 360, 390, 419, 420, 440, 460, 500, 519, 520, 560, 600, 760, 761, 900, 1024, 1100, 1280];
+
+/* ⚠️ HEIGHT, NOT OVERLAP — the second failure mode, added 2026-08-11.
+   Outside 420-760 this bar does not collide, it WRAPS, so growing it costs a ROW and
+   every overlap assertion above stays green. That happened twice in one change and both
+   times it was caught by looking at a screenshot rather than by this file. These are the
+   six-group heights measured on index.html at b2b7003; the bar may never exceed them.
+   Cap, not equality: shorter is always fine, and this patch is 2px shorter above 761.
+   ⚠️ 1100 IS THE ONE DELIBERATE EXCEPTION AND IT IS 54px. Six groups fitted one row at
+   1100; eight do not, and no combination of padding, gap and type size recovers it while
+   the nav label reads "Prediction Markets" — shortening that label to "Markets" is the
+   only thing that does. It is allowed here explicitly rather than by loosening the whole
+   table, so that if 1100 ever returns to one row this assertion says so. */
+const MAX_H = {320:109, 340:108, 360:82, 390:82, 419:82, 420:54, 440:54, 460:54, 500:54,
+               519:54, 520:54, 560:54, 600:54, 760:54, 761:125, 900:125, 1024:125,
+               1100:123,   /* was 69 with six groups — see above */
+               1280:69};
 
 /* every visible box in the bar, pairwise. A 0.5px tolerance keeps sub-pixel rounding out. */
 const MEASURE = () => {
@@ -63,9 +100,10 @@ const MEASURE = () => {
     if (ox > 0.5 && oy > 0.5) hits.push(`${boxes[i][0]}/${boxes[j][0]} ${ox.toFixed(1)}x${oy.toFixed(1)}`);
   }
   const navR = nav.getBoundingClientRect();
+  const navH = Math.round(navR.height);
   const outside = boxes.filter(([, r]) => r.left < navR.left - 0.5 || r.right > navR.right + 0.5).map(([n]) => n);
   return {
-    hits, outside, boxes: boxes.length,
+    hits, outside, boxes: boxes.length, navH,
     groups: links ? [...links.querySelectorAll(".navgrp")].length : 0,
     docOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
   };
@@ -83,9 +121,11 @@ for (const page of PAGES) {
     const tag = `${page}@${W}`;
     ok(tag + " nothing in the bar overlaps anything else", !m.err && m.hits.length === 0, (m.hits || []).join(" | "));
     ok(tag + " nothing is painted outside the bar", !m.err && m.outside.length === 0, (m.outside || []).join(","));
-    ok(tag + " all six groups are present", m.groups === 6, String(m.groups));
+    ok(tag + " all eight groups are present", m.groups === 8, String(m.groups));
     /* the belt to the braces: this is what USED to pass while the bar was unreadable */
     ok(tag + " and the document still does not scroll sideways", m.docOverflow === false);
+    ok(tag + " the bar is no taller than its six-group baseline", m.navH <= MAX_H[W] + 0.5,
+       `${m.navH} > ${MAX_H[W]}`);
     await ctx.close();
   }
 }

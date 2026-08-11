@@ -90,17 +90,18 @@ body{margin:0;background:var(--page);color:var(--ink-1);
    overflows its line box upward. Centering makes every item size to its own content and
    share one axis; the .navgrp and .grpbtn rules below finish the job by giving the two
    header variants the same block box and line-height as a plain link. */
-.sitenav .links{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap;align-items:center}
-.sitenav .links a{color:var(--ink-2);text-decoration:none;padding:6px 12px;border-radius:8px;font-size:14px;font-weight:550}
+.sitenav .links{display:flex;gap:2px;margin-left:auto;flex-wrap:wrap;align-items:center}
+.sitenav .links a{color:var(--ink-2);text-decoration:none;padding:6px 6px;border-radius:8px;font-size:13px;font-weight:550}
 .sitenav .links a:hover{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--ink-1)}
 .sitenav .links a.on{color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent);border-radius:8px 8px 0 0}
 /* nav dropdown groups */
 .navgrp{position:relative;display:flex;align-items:center}
-.grpbtn{background:none;border:none;color:var(--ink-2);padding:6px 12px;border-radius:8px;font-size:14px;font-weight:550;cursor:pointer;font-family:inherit;
+.grpbtn{background:none;border:none;color:var(--ink-2);padding:6px 6px;border-radius:8px;font-size:13px;font-weight:550;cursor:pointer;font-family:inherit;
   /* ⚠️ display:block and an explicit line-height are what put a group header on the
      same baseline as a plain link. <a> defaults to inline (wrong height, overflows
-     upward) and <button> to inline-block with line-height:normal (~16px vs the 21.7px
-     a 14px/1.55 link gets). Both drifted. Do not drop either declaration. */
+     upward) and <button> to inline-block with line-height:normal (~16px vs the 20.2px
+     a 13px/1.55 link gets — 14px until 2026-08-11, when an eight-group bar took the type
+     down a point). Both drifted. Do not drop either declaration. */
   display:block;line-height:1.55}
 .grpbtn:hover{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--ink-1)}
 .grpbtn.on{color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent);border-radius:8px 8px 0 0}
@@ -312,14 +313,19 @@ body{margin:0;background:var(--page);color:var(--ink-1);
   .sitenav .links{width:auto;flex:1 1 auto;margin-left:auto;flex-wrap:nowrap;
     justify-content:flex-end;gap:0 1px;min-width:0}
   .sitenav .links .navbrk{display:none}
-  .sitenav .links a,.sitenav .links .grpbtn{padding:4px 3px;font-size:10px;
+  .sitenav .links a,.sitenav .links .grpbtn{padding:4px 2px;font-size:10px;
     white-space:nowrap;letter-spacing:-.2px}
   .sitenav .links .caret{display:none}
   .sitenav .links .theme-btn{margin-left:4px;padding:4px 6px;font-size:12px;flex:0 0 auto}
   .theme-btn .tword{display:none}
-  /* ⚠️ Measured at 360px the one-row nav had ~28px of slack (see the 419px note below).
-     🙃 used to spend most of it. It moved to the footer row on 2026-08-08, so that slack
-     is unspent again — the first nav item added back gets it. Re-measure here first. */
+  /* ⚠️ THE SLACK IS SPENT. The ~28px that 🙃 freed when it moved to the footer row on
+     2026-08-08 was taken on 2026-08-11 by the Prediction Markets and A.I. groups, along
+     with 1px per side off the padding below and two `short:` labels (Rcpt, Mkts). Eight
+     groups now fit with nothing left over: a ninth collides at 420 and 520 even with the
+     font at 9.5px, the gap at zero and the theme button and sign-in chip tightened. The
+     next section is an overflow menu, not another entry.
+     ⚠️ Re-measure with an element-vs-element overlap check, never a bounds check —
+     work/test-nav-fit.mjs explains why a bounds check cannot see this failure. */
   .nlg{display:none} .nsm{display:inline}
 }
 /* ⚠️ Second breakpoint, and it is not cosmetic. Measured at 360px: the brand (105px)
@@ -338,7 +344,7 @@ body{margin:0;background:var(--page);color:var(--ink-1);
 @media(max-width:419px){
   /* ⚠️ CEP-5A Stage 7: the links get their own row here. See the note above. */
   .sitenav{flex-wrap:wrap}
-  .sitenav .links{flex:1 1 100%;margin-left:0;justify-content:flex-start;flex-wrap:wrap;gap:2px 5px;padding-top:3px}
+  .sitenav .links{flex:1 1 100%;margin-left:0;justify-content:flex-start;flex-wrap:wrap;gap:2px 3px;padding-top:3px}
   /* ⚠️ NO margin-left:auto on the theme button here. In a WRAPPING flex row an
      auto margin eats every pixel of free space, which forced a third line at 320px
      with 16px to spare. Let it sit inline with the links. */
@@ -347,13 +353,19 @@ body{margin:0;background:var(--page);color:var(--ink-1);
   .sitenav .navauth .authbtn{padding:3px 7px;font-size:10px;max-width:84px}
   /* ⚠️ Measured at 320px BEFORE this tightening: the links run needed 243.4px inside a
      244.0px box — 0.6px of margin, which is not margin. Two pixels off each link's
-     horizontal padding buys 12px back. At 360px (the width the one-row layout was
-     designed against) there is 40px spare, and the tightest point on the whole curve is
-     420px — the last width that still shows the wordmark — where 11px separates the
-     wordmark from the first nav item. Every figure here was measured while 🙃 still sat
-     in this row; since 2026-08-08 it does not, so they are floors, not ceilings.
-     Re-measure all three if anything is ever added to this row again. */
-  .sitenav .links a,.sitenav .links .grpbtn{padding:4px 4px;font-size:11px}
+     horizontal padding buys 12px back. Every figure in this note was taken with six
+     groups and while 🙃 still sat in this row; both changed, so read them as history.
+     ⚠️ RE-MEASURED 2026-08-11 WITH EIGHT GROUPS, AND THIS BLOCK FAILS DIFFERENTLY FROM
+     THE ONE ABOVE. Here the links WRAP rather than collide, so the failure is not overlap
+     — it is an extra ROW. Two more groups took the bar from 82px to 108px at 360, 375,
+     390 and 393 with every overlap assertion still green, because the theme button simply
+     moved to a third line. It was caught by looking at a screenshot. The 2px padding and
+     3px gap are why, and together they put every width from 340 up back to its six-group
+     height; 320px is 109px, which is what it was before as well.
+     ⚠️ Add anything here again and measure the bar's HEIGHT below 420 and above 761, and
+     its OVERLAP between 420 and 760. They are different failures and no one check sees
+     more than one of them. */
+  .sitenav .links a,.sitenav .links .grpbtn{padding:4px 2px;font-size:11px}
 
   /* ⚠️ The old two-row phone rules were DELETED here, not commented out. They sat AFTER
      these, at the same specificity, and quietly won the cascade — the one-row layout
@@ -909,7 +921,7 @@ body.proj .blockbar .bb-v{font-size:26px}
         historical spellings.
      Keep this array identical on every page; the flattened HTML is the source. */
   const NAV = [
-    {label:"Receipts", href:"receipts.html", key:"receipts", items:[
+    {label:"Receipts", short:"Rcpt", href:"receipts.html", key:"receipts", items:[
       ["receipts.html#models","Model scoreboard","receipts-models"],
       ["receipts.html","Pre-registered calls","receipts"],
       ["receipts.html#scoreboard","Grading","receipts-scoreboard"],
@@ -924,6 +936,16 @@ body.proj .blockbar .bb-v{font-size:26px}
       ["dfs.html","DFS Solver","dfs"],
       ["guillotine.html","Guillotine Companion","guillotine"],
       ["survivor.html","Survivor","survivor"],
+    ]},
+    /* Two sections that are not football, placed where they were asked for: after the
+       games people play against each other, before the sport pages. Both are EMPTY today
+       and their pages say so above the fold — a nav entry pointing at a page with nothing
+       on it is only honest while the page admits it. See work/build_section_hub.py. */
+    {label:"Prediction Markets", short:"Mkts", href:"markets.html", key:"markets", items:[
+      ["markets.html","The markets work","markets"],
+    ]},
+    {label:"A.I.", href:"ai.html", key:"ai", items:[
+      ["ai.html","The AI work","ai"],
     ]},
     {label:"NFL", href:"nfl.html", key:"nfl", items:[
       ["nfl.html","The NFL work","nfl"],

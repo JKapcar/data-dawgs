@@ -570,7 +570,7 @@ test('every shared-nav page reaches the shelf, and never by the old name', () =>
     assert.equal((html.match(/(?:href="|href:"|\[")pound\.html/g) || []).length, 0,
       `${page} still links pound.html — the stub is not a destination`);
   }
-  assert.equal(covered, 25, 'the nav page set changed');
+  assert.equal(covered, 27, 'the nav page set changed');   // +markets.html +ai.html, 2026-08-11
 });
 
 test('the flipped nav is identical on every page and carries the locked order', () => {
@@ -578,7 +578,11 @@ test('the flipped nav is identical on every page and carries the locked order', 
   // disagrees with itself and nothing catches it at runtime.
   const pages = fs.readdirSync('.').filter(x => x.endsWith('.html'));
   const blocks = new Set();
-  const ORDER = ['Receipts', 'Arena', 'NFL', 'CFB', 'Data', 'Dawgs'];
+  /* ⚠️ Two sections were inserted between Arena and NFL on 2026-08-11, which is where
+     Kap asked for them. The ORDER is asserted, not just the membership: the bar is a claim
+     about what this site is about, and "not football" sitting ahead of the football groups
+     is part of that claim. Both pages are empty and say so above the fold. */
+  const ORDER = ['Receipts', 'Arena', 'Prediction Markets', 'A.I.', 'NFL', 'CFB', 'Data', 'Dawgs'];
   let covered = 0;
   for (const page of pages) {
     const html = fs.readFileSync(page, 'utf8');
@@ -614,7 +618,7 @@ test('the flipped nav is identical on every page and carries the locked order', 
     assert.ok(!block.includes('"draft-leagues.html"'),
       `${page}: draft-leagues.html is back in the nav — it belongs to the draft hub now`);
   }
-  assert.equal(covered, 25);
+  assert.equal(covered, 27);
   assert.equal(blocks.size, 1, 'the NAV array is not identical across pages');
 });
 
@@ -957,7 +961,11 @@ test('tier is DATA, not chip text — a collar cannot demote a Working Dawg', ()
   // 1. every page carrying a chip declares its tier as an ATTRIBUTE
   const withChip = fs.readdirSync('.').filter(f => f.endsWith('.html'))
     .filter(f => /<[a-z]+[^>]*class="tierchip/.test(fs.readFileSync(f, 'utf8')));
-  assert.equal(withChip.length, 10, 'the set of pages carrying a tier chip moved: ' + withChip.join(','));
+  /* 12 since 2026-08-11: markets.html and ai.html joined as Pups. Both are empty section
+     hubs, and a Pup chip on an empty page is only honest because the page also carries a
+     "Nothing here is built yet" banner above the fold — the chip says unvalidated, the
+     banner says unbuilt, and those are different claims. */
+  assert.equal(withChip.length, 12, 'the set of pages carrying a tier chip moved: ' + withChip.join(','));
   for (const f of withChip) {
     const tag = fs.readFileSync(f, 'utf8').match(/<[a-z]+[^>]*class="tierchip[^"]*"[^>]*>/);
     assert.match(tag[0], /data-tier="(labs|dawg|pound)"/, f + ' has a tier chip with no data-tier');
