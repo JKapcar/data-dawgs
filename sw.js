@@ -1,7 +1,7 @@
 // Data Dawgs service worker — draft-night insurance.
 // HTML is network-first (so deploys land immediately) with a cache fallback,
 // so a dead venue wifi can't take the draft down mid-auction.
-const VERSION = "d1fc3a83ce";
+const VERSION = "c0d9f76131";
 const CACHE = "dd-" + VERSION;
 
 // the pages that must survive a network drop (stats.html is 2MB — cached on first visit instead)
@@ -10,7 +10,11 @@ const CORE = [
   "/bigboard.html", "/dataviz.html", "/report.html", "/master.html", "/strategy.html",
   // Lab landing pages — small, static, and the nav now points at them
   "/dfs.html", "/connect.html", "/guillotine.html", "/receipts.html", "/nfelo.html", "/survivor.html", "/survivor-settings.html", "/pound.html", "/dawghouse.html",
-  "/cfb.html", "/calculators.html", "/arena.html", "/data.html", "/nfl.html"
+  "/cfb.html", "/calculators.html", "/arena.html", "/data.html", "/nfl.html",
+  // The challenge board is worth having offline: the schedule and the model lines still
+  // render from cache, and a save that cannot reach the Worker fails visibly rather than
+  // looking like it worked.
+  "/challenge.html"
 ];
 // the horn is precached, not left to cache-first on first play: draft night is the
 // first time it ever fires, and a venue wifi hiccup at that exact moment would eat it

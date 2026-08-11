@@ -183,8 +183,8 @@
   }
  },
  "counts": {
-  "surfaces": 18,
-  "with_live_machine_access": 14,
+  "surfaces": 19,
+  "with_live_machine_access": 15,
   "with_no_machine_access": 4,
   "mcp_tools_registered": 41,
   "mcp_tools_live": 41,
@@ -357,6 +357,31 @@
    ],
    "planned": [],
    "gap": "The exact one-pick-per-week path is live. Pool ownership is modelled, not observed, and double-pick weeks are recorded but not optimized.",
+   "tier": "labs"
+  },
+  {
+   "id": "forecast-challenge",
+   "domain": "arena",
+   "name": "The Forecast Challenge",
+   "page": "/challenge.html",
+   "machine": [
+    {
+     "kind": "json",
+     "url": "/data/model-receipts.json",
+     "status": "live",
+     "covers": "the dated model lines the challenge is played against — the same prospective receipts the scoreboard grades"
+    },
+    {
+     "kind": "json",
+     "url": "/data/model-contracts.json",
+     "status": "live",
+     "covers": "the scoring formula, the entry schema, the entrant model and the crowd-consensus rules, which the Method sheet renders rather than restates"
+    }
+   ],
+   "planned": [
+    "json:/data/forecast-grades.json"
+   ],
+   "gap": "The entry side is live: you forecast, the models are already on the record, and the crowd line seals at kickoff. Nothing is graded — no game has been played — so there is no leaderboard, and the page says so rather than showing an empty table that looks broken.",
    "tier": "labs"
   },
   {

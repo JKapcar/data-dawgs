@@ -594,7 +594,7 @@ test('every shared-nav page reaches the shelf, and never by the old name', () =>
     assert.equal((html.match(/(?:href="|href:"|\[")pound\.html/g) || []).length, 0,
       `${page} still links pound.html — the stub is not a destination`);
   }
-  assert.equal(covered, 27, 'the nav page set changed');   // +markets.html +ai.html, 2026-08-11
+  assert.equal(covered, 28, 'the nav page set changed');   // +markets.html +ai.html, 2026-08-11; +challenge.html (FC-E), 2026-08-11
 });
 
 test('the flipped nav is identical on every page and carries the locked order', () => {
@@ -642,7 +642,7 @@ test('the flipped nav is identical on every page and carries the locked order', 
     assert.ok(!block.includes('"draft-leagues.html"'),
       `${page}: draft-leagues.html is back in the nav — it belongs to the draft hub now`);
   }
-  assert.equal(covered, 27);
+  assert.equal(covered, 28);   // +challenge.html (FC-E), 2026-08-11
   assert.equal(blocks.size, 1, 'the NAV array is not identical across pages');
 });
 
@@ -837,7 +837,9 @@ test('the domain field partitions the surfaces map without changing any claim', 
   const allowed = new Set(['arena', 'nfl', 'cfb', 'data', 'receipts', 'site', 'markets', 'ai']);
   surfaces.data.forEach(r => assert.ok(allowed.has(r.domain), `${r.id}: domain ${r.domain}`));
   const arena = surfaces.data.filter(r => r.domain === 'arena').map(r => r.id).sort();
-  assert.deepEqual(arena, ['bozo', 'dfs', 'guillotine', 'live-draft', 'survivor']);
+  // FC-E, 2026-08-11: the forecasting challenge is an arena surface — it is the one place a
+  // person competes against the models rather than reading them.
+  assert.deepEqual(arena, ['bozo', 'dfs', 'forecast-challenge', 'guillotine', 'live-draft', 'survivor']);
   // every arena row still points at a page that exists
   arena.forEach(id => {
     const row = surfaces.data.find(r => r.id === id);
@@ -991,8 +993,11 @@ test('tier is DATA, not chip text — a collar cannot demote a Working Dawg', ()
   /* 12 since 2026-08-11: markets.html and ai.html joined as Pups. Both are empty section
      hubs, and a Pup chip on an empty page is only honest because the page also carries a
      "Nothing here is built yet" banner above the fold — the chip says unvalidated, the
-     banner says unbuilt, and those are different claims. */
-  assert.equal(withChip.length, 12, 'the set of pages carrying a tier chip moved: ' + withChip.join(','));
+     banner says unbuilt, and those are different claims.
+     13 since 2026-08-11 (FC-E): challenge.html joins as a Pup. Same discipline — the chip
+     says nothing here has been validated, and the page's own disclosure says nothing has
+     been graded, because no game has been played. */
+  assert.equal(withChip.length, 13, 'the set of pages carrying a tier chip moved: ' + withChip.join(','));
   for (const f of withChip) {
     const tag = fs.readFileSync(f, 'utf8').match(/<[a-z]+[^>]*class="tierchip[^"]*"[^>]*>/);
     assert.match(tag[0], /data-tier="(labs|dawg|pound)"/, f + ' has a tier chip with no data-tier');

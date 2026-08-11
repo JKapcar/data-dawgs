@@ -1249,6 +1249,22 @@ const SURFACES = [
               { kind: 'mcp', tool: 'dd_optimize_survivor_path', status: 'live', covers: 'exact one-pick-per-week maximum-product path, dated probabilities and future-cost options' }],
     planned: [],
     gap: 'The exact one-pick-per-week path is live. Pool ownership is modelled, not observed, and double-pick weeks are recorded but not optimized.' },
+  // The forecasting challenge. Arena, because it is the one surface where a person
+  // competes against the models rather than reading them.
+  //
+  // ⚠️ NO MACHINE SURFACE IS CLAIMED HERE, DELIBERATELY. Entries are private until their
+  // game kicks off — that is the feature's central promise — so there is no /data/ mirror
+  // and no read tool to point at. The Worker routes are session- or bot-token-gated and
+  // are not a public surface. The crowd line becomes publishable only once sealed rows
+  // exist, and the grades only once games have been played; both are listed as planned
+  // rather than described as though they were nearly here.
+  { id: 'forecast-challenge', domain: 'arena', name: 'The Forecast Challenge', page: '/challenge.html',
+    machine: [{ kind: 'json', url: '/data/model-receipts.json', status: 'live',
+                covers: 'the dated model lines the challenge is played against — the same prospective receipts the scoreboard grades' },
+              { kind: 'json', url: '/data/model-contracts.json', status: 'live',
+                covers: 'the scoring formula, the entry schema, the entrant model and the crowd-consensus rules, which the Method sheet renders rather than restates' }],
+    planned: ['json:/data/forecast-grades.json'],
+    gap: 'The entry side is live: you forecast, the models are already on the record, and the crowd line seals at kickoff. Nothing is graded — no game has been played — so there is no leaderboard, and the page says so rather than showing an empty table that looks broken.' },
   { id: 'receipts', domain: 'receipts', name: 'Pre-registered forecasts, the model scoreboard and provenance', page: '/receipts.html',
     machine: [// Stage RI: the inventory sheet is the page's front door, so its payload leads.
               // It is a COUNT, never a grade — see the file's own note for why there is no
