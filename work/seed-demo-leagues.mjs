@@ -78,20 +78,24 @@ const GET_IT =
    on the clipboard, so nothing can clobber it in between. It also keeps the token out of
    PowerShell history, because stdin to a running process is not a shell command. */
 async function askSession() {
-  if (process.stdin.isTTY) {
-    console.log("\nPaste your Data Dawgs session, then press Enter.");
-    console.log("(nothing else needs doing first — this window is now waiting for it)\n");
-    console.log("  " + GET_IT.replace(/\n/g, "\n  ") + "\n");
+  // ⚠️ Piped input is read RAW, not through readline. readline hands back a line only
+  // when it sees a newline, so `printf '%s' "$TOKEN" | node ...` — no trailing newline —
+  // hits EOF with the token still in the buffer and the question callback never fires.
+  // It looks exactly like "no session given", which is a lie about what happened.
+  if (!process.stdin.isTTY) {
+    let buf = "";
+    for await (const chunk of process.stdin) buf += chunk;
+    return buf.trim();
   }
+  console.log("\nPaste your Data Dawgs session, then press Enter.");
+  console.log("(nothing else needs doing first — this window is now waiting for it)\n");
+  console.log("  " + GET_IT.replace(/\n/g, "\n  ") + "\n");
   const rl = createInterface({ input: process.stdin, output: process.stdout });
-  // ⚠️ Resolve on close as well as on an answer. Piped input works (one line, then EOF)
-  // and a closed stdin returns empty instead of hanging forever, which is what a cron or
-  // a CI runner would otherwise do — silently, until something timed it out.
   const answer = await new Promise(res => {
     let done = false;
     const finish = v => { if (!done) { done = true; res(v); } };
-    rl.on("close", () => finish(""));
-    rl.question(process.stdin.isTTY ? "session> " : "", finish);
+    rl.on("close", () => finish(""));          // Ctrl-C / closed pipe returns empty, never hangs
+    rl.question("session> ", finish);
   });
   rl.close();
   return String(answer || "").trim();
@@ -178,6 +182,10 @@ for (const job of JOBS) {
       body: JSON.stringify(body),
     });
     const out = await res.json().catch(() => ({}));
+    // 409 means the league is already there, and import is create-only by design.
+    // That is a reason to leave it alone and go on to the next job, not to abort the
+    // whole run: re-seeding one demo should not be blocked by the other existing.
+    if (res.status === 409) return { exists: true };
     if (!res.ok) die(`${job.id}: ${res.status} ${out.error || "import failed"}`);
     return out;
   };
@@ -202,11 +210,12 @@ for (const job of JOBS) {
     }
     if (!slice.length) die(`${job.id}: a single leg is bigger than the ${LIMIT} byte batch limit — something is wrong with the payload`);
     // `done` on the last batch clears the importing flag, and only then.
-    await post({ ...base, legs: slice, done: remaining.length === 0 });
+    const r = await post({ ...base, legs: slice, done: remaining.length === 0 });
+    if (r.exists) { console.log(`  ${job.id}: already exists, left untouched (delete it from the leagues card to re-import)`); break; }
     sent += slice.length; batches++; first = false;
     process.stdout.write(`\r  ${job.id}: ${sent}/${payload.legs.length} legs …`);
   }
-  process.stdout.write(`\r  ${job.id}: ${sent} legs in ${batches} batches, `
+  if (sent) process.stdout.write(`\r  ${job.id}: ${sent} legs in ${batches} batches, `
     + `${(payload.players || []).length} players, format ${job.format}, synthetic true\n`);
 }
 

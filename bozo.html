@@ -4404,7 +4404,10 @@ function paintRoyale(){
        each one passed because of a TIE or because it could not be measured at all.
        Those are different failures: a tie is bad luck, an unmeasurable lever is a hole
        in the data, and reporting them as one thing hides the second behind the first. */
-  const chops = Object.values(R.chops || {}).sort((a,b)=>a.week-b.week);
+  // ⚠️ filter(Boolean) is not defensive padding. Firebase turns an object keyed by
+  // sequential week numbers into an array with a null at index 0, so an unfiltered
+  // sort here throws on null.week and takes the whole render down with it.
+  const chops = Object.values(R.chops || {}).filter(c=>c && c.week).sort((a,b)=>a.week-b.week);
   if(chops.length){
     h += `<div class="chops"><h3>Chop log</h3><ol>` + chops.map(c=>{
       if(c.ticketCashed || !c.chopped)

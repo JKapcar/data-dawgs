@@ -2450,7 +2450,7 @@ async function leagueImport(request, env, cors) {
     }
     const chops = {};
     for (const c of (Array.isArray(body.chops) ? body.chops : [])) {
-      if (c && c.week) chops[c.week] = { ...c, season, resolvedTs: null, simulated: true };
+      if (c && c.week) chops[`w${c.week}`] = { ...c, season, resolvedTs: null, simulated: true };
     }
     lg.royale = { status, chops, offers: {}, survivor: body.survivor || null };
   }
@@ -4602,7 +4602,10 @@ async function bozoClv(request, url, env, cors) {
     weeks, coverage, legs,
     royale: set.format === "royale" ? {
       status: royaleStatus(lg),
-      chops: (lg.royale || {}).chops || {},
+      // Normalised on the way out: whether the database hands back an object or an
+      // array-with-holes, the page receives one shape and never has to know.
+      chops: Object.fromEntries(Object.entries((lg.royale || {}).chops || {})
+        .filter(([, c]) => c && c.week).map(([, c]) => [`w${c.week}`, c])),
       offers: (lg.royale || {}).offers || {},
       survivor: (lg.royale || {}).survivor || null,
       buyback: set.buyback,
@@ -4912,7 +4915,12 @@ async function royaleResolveWeek(env, lid, state) {
       rec.survivor = playerName(survivors[0]);
     }
   }
-  patch[`royale/chops/${week}`] = rec;
+  // ⚠️ "w" PREFIX, AND IT IS LOAD-BEARING. Firebase silently converts an object whose
+  // keys are sequential integers into an ARRAY — so chops keyed 1..14 come back as a
+  // 15-element array with null at index 0, and any reader doing Object.values().sort()
+  // dies on null.week. Measured on the seeded demo, not theorised. A non-numeric key
+  // cannot be coerced.
+  patch[`royale/chops/w${week}`] = rec;
   try { await fbPatch(env, LG(lid), patch); }
   catch (e) { console.log("royale: chop write failed — " + e.message); return null; }
   return rec;
