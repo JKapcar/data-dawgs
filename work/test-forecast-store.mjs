@@ -81,6 +81,10 @@ const LOCK_KICK = NOW - 3 * 3600e3;      // kicked off three hours ago
 const G_OPEN = "2026_01_NE_SEA";
 const G_LOCK = "2026_01_SF_LAR";
 const G_CFB = "2026_01_ALA_UGA";
+/* A week whose games have ALL kicked off. Week 1 deliberately mixes an open game with a
+   locked one — that mixture is what the grader's read must refuse — so proving the
+   readable case needs a week with nothing still pending in it. */
+const G_DONE = "2026_03_DEN_KC";
 
 const scheduleEnvelope = (season, games) => ({
   as_of: "2026-08-10", source: "faked for test-forecast-store.mjs",
@@ -91,6 +95,8 @@ const NFL_SCHEDULE = scheduleEnvelope(2026, [
     home_team: "SEA", away_team: "NE" },
   { game_id: G_LOCK, season: 2026, week: 1, kickoff_at: new Date(LOCK_KICK).toISOString(),
     home_team: "LAR", away_team: "SF" },
+  { game_id: G_DONE, season: 2026, week: 3, kickoff_at: new Date(LOCK_KICK).toISOString(),
+    home_team: "KC", away_team: "DEN" },
 ]);
 const CFB_SCHEDULE = scheduleEnvelope(2026, [
   { game_id: G_CFB, season: 2026, week: 1, kickoff_at: new Date(OPEN_KICK).toISOString(),
@@ -727,6 +733,53 @@ console.log("\nagents are excluded from the crowd line");
      four of [.10 .20 .30 .97 .98 .99] and land far above 0.5. */
   ok("and the agents' numbers did not move the consensus",
     row && close(row.home_win_probability, 0.2), row && row.home_win_probability);
+}
+
+/* ============ 11. FC-F — the grader's read of a finished week ============= */
+console.log("\nthe admin week read, for grading");
+{
+  /* The fixture week holds G_LOCK (kicked off) and G_OPEN (still open), so the week as a
+     whole is NOT finished — which is exactly the state the route must refuse. */
+  const early = await call(`/forecast/week?sport=nfl&season=2026&week=1`, { method: "GET", session: KAP });
+  ok("a week with an unkicked game is refused 409", early.status === 409, early.text);
+  /* ⚠️ ASSERT ON THE BODY, NOT THE STATUS. The whole point of the refusal is that no
+     entry crosses the wire; a route that returned 409 with the week attached would pass
+     a status check and still have leaked every pre-lock forecast in it. */
+  ok("…and no entry is in the refusal body", !/home_win_probability/.test(early.text), early.text.slice(0, 200));
+  ok("…and it names which games it is waiting on",
+    early.j && Array.isArray(early.j.pending) && early.j.pending.includes(G_OPEN), early.text);
+
+  const anon = await call(`/forecast/week?sport=nfl&season=2026&week=1`, { method: "GET" });
+  ok("it is refused without a session at all", anon.status === 401 || anon.status === 403, String(anon.status));
+  const notAdmin = await call(`/forecast/week?sport=nfl&season=2026&week=1`, { method: "GET", session: JEFF });
+  ok("…and to a signed-in non-admin", notAdmin.status === 403, notAdmin.text);
+  const bot = await call(`/forecast/week?sport=nfl&season=2026&week=1`, { method: "GET", bot: BOT_TOKEN });
+  ok("…and a bot token buys nothing here either", bot.status === 401 || bot.status === 403, String(bot.status));
+}
+{
+  /* A week whose games have ALL kicked off is readable, which is what makes grading
+     possible without ever touching a live forecast. Seeded directly, because the route
+     that writes entries refuses a game that has already started — which is the point. */
+  const seedDone = (entrant, p) => dbSet(
+    `/forecast/entries/nfl/2026/3/${encodeURIComponent(entrant)}/${encodeURIComponent(G_DONE)}`,
+    { v: 2, sport: "nfl", season: 2026, week: 3, game_id: G_DONE,
+      entrant, entrant_kind: "human", owner: entrant,
+      home_team: "KC", away_team: "DEN", kickoff_at: new Date(LOCK_KICK).toISOString(),
+      home_win_probability: p, slider_value: Math.round(p * 100), slider_side: "home",
+      touched: true, submitted_at: LOCK_KICK - 6e5, revision: 1, source: "web",
+      idempotency_key: null });
+  seedDone("Kap", 0.71);
+  seedDone("Jeff", 0.44);
+
+  const r = await call(`/forecast/week?sport=nfl&season=2026&week=3`, { method: "GET", session: KAP });
+  ok("a fully kicked-off week reads back for the grader", r.status === 200, r.text);
+  ok("…and carries entries from every entrant, not just the caller",
+    r.j && r.j.entries.length >= 2 &&
+    new Set(r.j.entries.map(e => e.entrant)).size >= 2,
+    r.j && JSON.stringify(r.j.entries.map(e => e.entrant)));
+  ok("…each carrying the number the grader scores",
+    r.j && r.j.entries.every(e => typeof e.home_win_probability === "number"));
+  ok("…and the sealed crowd row beside them", r.j && Array.isArray(r.j.sealed));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

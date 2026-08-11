@@ -686,6 +686,7 @@ export default {
     if (url.pathname === "/forecast/entries") return forecastMine(request, url, env, cors);
     if (url.pathname === "/forecast/game")    return forecastGame(request, url, env, cors);
     if (url.pathname === "/forecast/seal")    return forecastSeal(request, env, cors);
+    if (url.pathname === "/forecast/week")    return forecastWeek(request, url, env, cors);
     if (url.pathname === "/forecast/bot")     return forecastBot(request, env, cors);
     if (url.pathname === "/forecast/bots")    return forecastBots(request, env, cors);
     if (url.pathname === "/bozo/pick")    return bozoPick(request, env, cors);
@@ -3207,6 +3208,60 @@ async function forecastSeal(request, env, cors) {
   }
 
   return json({ ok: true, sport, season, week, sealed, skipped }, 200, cors);
+}
+
+/* -------------------------- GET /forecast/week --------------------------- */
+/* Every entry for one week, admin only. This is the grader's read: scripts/forecast_grade.py
+ * joins these against the canonical schedule's finals, out here rather than in the Worker,
+ * because outcomes and grades are evidence ABOUT forecasts and must be produced by a
+ * different process from a different source. Keeping them together would let a bug in
+ * scoring rewrite a forecast, which is the one thing the storage layer exists to prevent.
+ *
+ * ⚠️ IT REFUSES A WEEK THAT IS NOT FULLY KICKED OFF, AND THAT IS NOT A CONVENIENCE CHECK.
+ * The whole privacy guarantee is that nobody but the owner reads an entry before that
+ * game locks. An admin route returning a week with one unkicked game in it would be a
+ * hole straight through that promise — and the person holding the admin credential is
+ * also an entrant. The refusal is checked BEFORE any read, so a bug in the shaping code
+ * below cannot leak what the guard would have refused. */
+async function forecastWeek(request, url, env, cors) {
+  if (request.method !== "GET") return json({ error: "GET only" }, 405, cors);
+  const auth = await requireAdmin(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  const sport = String(url.searchParams.get("sport") || "");
+  if (!FC_SPORTS[sport]) return json({ error: "Unknown sport." }, 400, cors);
+  const season = parseInt(url.searchParams.get("season") || "", 10);
+  const week = parseInt(url.searchParams.get("week") || "", 10);
+  if (!Number.isInteger(season) || !Number.isInteger(week))
+    return json({ error: "season and week are required." }, 400, cors);
+
+  let games;
+  try { games = await fcSchedule(sport); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+
+  const now = Date.now();
+  const pending = [];
+  for (const g of games.values()) {
+    if (g.season !== season || g.week !== week) continue;
+    if (now < g.kickoff_ms) pending.push(g.game_id);
+  }
+  if (!games.size) return json({ error: "The schedule produced no games." }, 502, cors);
+  if (pending.length)
+    return json({ error: "That week still has games that have not kicked off.", pending }, 409, cors);
+
+  let byEntrant, sealed;
+  try {
+    byEntrant = (await fbGet(env, `${FC_ROOT}/entries/${sport}/${season}/${week}`)).data || {};
+    sealed = (await fbGet(env, fcSealPath(sport, season, week, null))).data || {};
+  } catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+
+  const entries = [];
+  for (const perEntrant of Object.values(byEntrant))
+    for (const row of Object.values(perEntrant || {})) if (row) entries.push(row);
+  entries.sort((a, b) => String(a.game_id).localeCompare(String(b.game_id)) ||
+                         String(a.entrant).localeCompare(String(b.entrant)));
+
+  return json({ ok: true, sport, season, week, entries, sealed: Object.values(sealed) }, 200, cors);
 }
 
 /* -------------------------- POST /forecast/bot --------------------------- */

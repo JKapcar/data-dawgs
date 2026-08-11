@@ -202,6 +202,25 @@ MUTATIONS = [
         '    if (false) return { err: "That bot token was revoked.", code: 403 };',
     )], ["a revoked token is refused 403"]),
 
+    # ---- FC-F, the grader's read ------------------------------------------
+    ("M20", "the grader's week read stops refusing an unfinished week", [(
+        '  if (pending.length)\n'
+        '    return json({ error: "That week still has games that have not kicked off.", pending }, 409, cors);',
+        '  if (false)\n'
+        '    return json({ error: "That week still has games that have not kicked off.", pending }, 409, cors);',
+    )], ["a week with an unkicked game is refused 409",
+         "and no entry is in the refusal body",
+         "and it names which games it is waiting on"]),
+
+    ("M21", "the grader's week read drops the admin requirement", [(
+        'async function forecastWeek(request, url, env, cors) {\n'
+        '  if (request.method !== "GET") return json({ error: "GET only" }, 405, cors);\n'
+        '  const auth = await requireAdmin(request, env);',
+        'async function forecastWeek(request, url, env, cors) {\n'
+        '  if (request.method !== "GET") return json({ error: "GET only" }, 405, cors);\n'
+        '  const auth = await sessionAuth(request, env);',
+    )], ["and to a signed-in non-admin"]),
+
     ("M19", "bot registration stops checking the account namespace", [(
         '    if (taken) return json({ error: `That name is already ${taken}. Bots and people share one namespace.` }, 409, cors);',
         '    if (false) return json({ error: `That name is already ${taken}. Bots and people share one namespace.` }, 409, cors);',
