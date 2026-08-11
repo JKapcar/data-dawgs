@@ -1853,7 +1853,7 @@ STATE: everything saves in the browser on that device. A different device shows 
       <label class="fld"><span>Confirm</span>
         <input class="fi" id="jPw2" type="password" autocomplete="new-password"></label>
     </div>
-    <label class="fld"><span>Email <span class="hint">— optional. Lets you sign in with it later; nothing is ever sent to it.</span></span>
+    <label class="fld"><span>Email <span class="hint">— optional, but it is the only way to reset a forgotten password.</span></span>
       <input class="fi" id="jEmail" type="email" autocomplete="email" placeholder="you@example.com"></label>
     <div class="btnrow"><button class="btn" id="jGo">Claim it</button></div>
     <p class="note" id="jMsg"></p>
@@ -1881,8 +1881,9 @@ STATE: everything saves in the browser on that device. A different device shows 
   <div class="card" id="sNew">
     <h3>Create an account</h3>
     <p class="sub">Open to anyone. Your <b>name</b> is what shows on rosters. Your <b>email</b>
-    is just a second way to sign in — <b>nothing is ever sent to it</b> and it is not verified,
-    because this site does not send mail, period. An account on its own does not put you in
+    is a second way to sign in, and the address a password-reset link goes to — so put in one
+    you can actually open. The only mail this site sends is the one you ask it for: a reset
+    link, or a confirmation link. An account on its own does not put you in
     a league &mdash; you get in by opening a manager's join link, or by them adding you.</p>
     <div class="grid2">
       <label class="fld"><span>Name <span class="hint">— shows on rosters</span></span>
@@ -1901,12 +1902,41 @@ STATE: everything saves in the browser on that device. A different device shows 
   <!-- recovery, in plain words -->
   <div class="card" id="sHelp">
     <h3>Locked out?</h3>
+    <p class="sub"><b>Forgot your password?</b> Put in the email address on your account and
+    we'll send a reset link. It works once and expires in an hour.</p>
+    <div class="grid2">
+      <label class="fld"><span>Email</span>
+        <input class="fi" id="fEmail" type="email" autocomplete="email" placeholder="you@example.com"></label>
+      <div style="display:flex;align-items:flex-end"><button class="btn sm" id="fGo" style="margin-bottom:11px">Send the link</button></div>
+    </div>
+    <p class="note" id="fMsg"></p>
     <p class="sub" style="margin-bottom:0">
-    <b>Forgot your password?</b> Text Kap. He resets your account, and your original join link
-    works again — open it and set a new one. There is no reset email, because nothing is ever
-    emailed.<br><br>
+    <b>No email on your account?</b> Older accounts never saved one, and a reset link has
+    nowhere to go without it. Text Kap — he resets you by hand, and your original join link
+    works again.<br><br>
     <b>Lost the join link too?</b> Also Kap. He mints a fresh one and the old one stops working.<br><br>
     <b>Change your password or email?</b> Sign in above — those controls appear right here.</p>
+  </div>
+
+  <!-- ?reset=<token> — the link from a reset email lands here -->
+  <div class="card" id="sReset" hidden>
+    <h3>Set a new password</h3>
+    <p class="sub">This link works once and expires an hour after it was sent. Setting a new
+    password ends every other sign-in, on every device.</p>
+    <div class="grid2">
+      <label class="fld"><span>New password <span class="hint">— 8+ characters</span></span>
+        <input class="fi" id="rPw" type="password" autocomplete="new-password"></label>
+      <label class="fld"><span>Confirm</span>
+        <input class="fi" id="rPw2" type="password" autocomplete="new-password"></label>
+    </div>
+    <div class="btnrow"><button class="btn" id="rGo">Set it</button></div>
+    <p class="note" id="rMsg"></p>
+  </div>
+
+  <!-- ?verify=<token> — the link from a confirmation email lands here -->
+  <div class="card" id="sVerify" hidden>
+    <h3>Confirming your address</h3>
+    <p class="note" id="vMsg">Checking that link&hellip;</p>
   </div>
 
   <!-- signed in -->
@@ -1933,14 +1963,19 @@ STATE: everything saves in the browser on that device. A different device shows 
     <p class="note" id="pMsg"></p>
 
     <h3 style="margin-top:26px">Email</h3>
-    <p class="sub">A second way to sign in, nothing more. <b>Nothing is ever sent to it</b> and
-    it is not verified. Clear it and you are back to signing in by name.</p>
+    <p class="sub">A second way to sign in, and where a password-reset link would go. Clear it
+    and you are back to signing in by name &mdash; and back to texting Kap if you ever forget
+    your password.</p>
     <div class="grid2">
       <label class="fld"><span>Email</span>
         <input class="fi" id="eEmail" type="email" autocomplete="email" placeholder="you@example.com"></label>
       <div style="display:flex;align-items:flex-end"><button class="btn sm" id="eGo" style="margin-bottom:11px">Save</button></div>
     </div>
     <p class="note" id="eMsg"></p>
+    <p class="sub">Confirming the address proves you can open it. Reset still works without
+    this &mdash; it is only proof, not a gate.</p>
+    <div class="btnrow"><button class="btn ghost sm" id="vGo">Send me a confirmation link</button></div>
+    <p class="note" id="vrMsg"></p>
   </div>
 
   <footer>
@@ -1977,7 +2012,16 @@ STATE: everything saves in the browser on that device. A different device shows 
   var leagueCode = qs.get("league") || "";
   if (!/^[A-Za-z0-9_-]{22}$/.test(leagueCode)) leagueCode = "";
   var joinTok = qs.get("join") || "";
-  if (joinTok) {
+  /* ⚠️ ?reset= and ?verify= are one-time mail tokens and are burned for exactly the same
+     reason ?join= is: a screenshot, a shared address or a browser-history sync must not
+     carry a live credential. Read into variables first — the flows below use them from
+     memory, never from the URL. */
+  var resetTok = qs.get("reset") || "";
+  var verifyTok = qs.get("verify") || "";
+  /* A verify link resolves the moment the page opens, so the token is gone by the time
+     anything renders. This flag remembers that the banner should still be on screen. */
+  var sawVerify = !!verifyTok;
+  if (joinTok || resetTok || verifyTok) {
     /* Burn the token out of the URL bar and history NOW, exactly as bozo.html did —
        a screenshot or a shared address must not carry a live invite. */
     var clean = location.pathname + (next ? "?next=" + encodeURIComponent(next) : "");
@@ -2069,12 +2113,21 @@ STATE: everything saves in the browser on that device. A different device shows 
   /* ---- render: exactly one of signed-out / signed-in ---- */
   function render() {
     var m = window.DDAuth ? window.DDAuth.me() : null;
-    $("sMe").hidden = !m;
-    $("sIn").hidden = !!m;
-    $("sNew").hidden = !!m || !!joinTok;   // invited people claim; they don't need signup
-    $("sHelp").hidden = !!m;
+    /* ⚠️ A live reset token is EXCLUSIVE: it hides every other card, signed in or out.
+       Someone who followed a reset link has exactly one job, and leaving the sign-in form
+       on screen invites them to try the password they have already forgotten. The verify
+       banner is the opposite — it only reports, so it sits above the normal page. */
+    var resetting = !!resetTok;
+    $("sReset").hidden = !resetting;
+    $("sVerify").hidden = !sawVerify;
+    $("sMe").hidden = !m || resetting;
+    $("sIn").hidden = !!m || resetting;
+    $("sNew").hidden = !!m || !!joinTok || resetting;   // invited people claim; they don't need signup
+    $("sHelp").hidden = !!m || resetting;
     paintLeague();
-    $("sJoin").hidden = !!m || !joinTok;
+    // paintLeague() un-hides the league card on its own; "exclusive" has to mean exclusive.
+    if (resetting) $("sLeague").hidden = true;
+    $("sJoin").hidden = !!m || !joinTok || resetting;
     $("meJoinWarn").hidden = !(m && joinTok);
     if (m) {
       $("meName").textContent = m.name;
@@ -2174,9 +2227,90 @@ STATE: everything saves in the browser on that device. A different device shows 
     var email = $("eEmail").value.trim();
     msg("eMsg", "Saving…");
     window.DDAuth.post("/auth/email", { email: email }).then(function (j) {
-      msg("eMsg", j.email ? "Saved. You can sign in with that address now — nothing is sent to it."
-                          : "Cleared. You sign in by name now.", "good");
+      msg("eMsg", j.email ? "Saved. You can sign in with that address now, and reset a forgotten password through it."
+                          : "Cleared. You sign in by name now — and a reset link has nowhere to go.", "good");
     }).catch(function (e) { msg("eMsg", e.message || String(e), "bad"); });
+  });
+
+  /* ---- the four mail flows (CEP-6) ----
+     ⚠️ These use their own fetch instead of DDAuth.post because DDAuth.post throws away
+     the status code, and 503 is the one answer here that is NOT a failure: it is what
+     every mail route returns while RESEND_KEY or MAIL_FROM is unset. That is guidance
+     ("ask Kap"), not something the visitor did wrong, so it is styled as a warning. The
+     routes stay inert in that state — no token is minted and nothing is written. */
+  var MAIL_WORKER = "https://toto.jkapcar4.workers.dev";   // DDAuth's copy is IIFE-scoped
+  function mailPost(path, body) {
+    return fetch(MAIL_WORKER + path, {
+      method: "POST",
+      headers: Object.assign({ "Content-Type": "application/json" },
+                             window.DDAuth ? window.DDAuth.headers() : {}),
+      body: JSON.stringify(body || {})
+    }).then(function (r) {
+      return r.json().catch(function () { return { error: "HTTP " + r.status }; })
+        .then(function (j) { return { ok: r.ok, status: r.status, j: j }; });
+    });
+  }
+  function mailFail(el, res) {
+    msg(el, res.j.error || ("HTTP " + res.status), res.status === 503 ? "warn" : "bad");
+  }
+
+  /* ---- forgot password ---- */
+  /* ⚠️ /auth/forgot answers IDENTICALLY whether or not that address has an account. That
+     is deliberate: any other shape turns this box into a "does this person play?" oracle
+     for anyone holding a list of addresses. Render the Worker's own note and NEVER add a
+     "no account found" branch here — doing so would rebuild, in the page, exactly the
+     oracle the Worker refuses to be. */
+  function doForgot() {
+    var email = $("fEmail").value.trim();
+    if (!email) { msg("fMsg", "Put in the address on your account.", "warn"); return; }
+    msg("fMsg", "Sending…");
+    mailPost("/auth/forgot", { email: email }).then(function (res) {
+      if (!res.ok) return mailFail("fMsg", res);
+      msg("fMsg", res.j.note || "If that address has an account, a reset link is on its way.", "good");
+    }).catch(function (e) { msg("fMsg", e.message || String(e), "bad"); });
+  }
+  $("fGo").addEventListener("click", doForgot);
+  $("fEmail").addEventListener("keydown", function (e) { if (e.key === "Enter") doForgot(); });
+
+  /* ---- set a new password from a ?reset= link ---- */
+  function doReset() {
+    var pw = $("rPw").value, pw2 = $("rPw2").value;
+    if (pw.length < 8) { msg("rMsg", "Password must be at least 8 characters.", "warn"); return; }
+    if (pw !== pw2) { msg("rMsg", "Those passwords don't match.", "warn"); return; }
+    msg("rMsg", "Setting…");
+    mailPost("/auth/reset-password", { token: resetTok, password: pw }).then(function (res) {
+      if (!res.ok) return mailFail("rMsg", res);
+      $("rPw").value = ""; $("rPw2").value = "";
+      /* The Worker hands back a fresh session, so the reset signs you in right here. Every
+         older session died server-side the moment the password's setAt moved. */
+      if (res.j.session && window.DDAuth) window.DDAuth.set(res.j.session);
+      resetTok = "";                       // the card is exclusive; let the page come back
+      msg("rMsg", "");
+      if (!leave()) { render(); msg("pMsg", res.j.note || "Password changed. Every other sign-in was ended.", "good"); }
+    }).catch(function (e) { msg("rMsg", e.message || String(e), "bad"); });
+  }
+  $("rGo").addEventListener("click", doReset);
+  $("rPw2").addEventListener("keydown", function (e) { if (e.key === "Enter") doReset(); });
+
+  /* ---- confirm an address from a ?verify= link: no click, the token is the proof ---- */
+  if (verifyTok) {
+    mailPost("/auth/verify", { token: verifyTok }).then(function (res) {
+      verifyTok = "";
+      if (!res.ok) return mailFail("vMsg", res);
+      msg("vMsg", "Confirmed" + (res.j.email ? " — " + res.j.email : "") +
+                  ". Nothing else to do.", "good");
+    }).catch(function (e) { msg("vMsg", e.message || String(e), "bad"); });
+  }
+
+  /* ---- ask for a confirmation link (signed in; goes only to your own address) ---- */
+  $("vGo").addEventListener("click", function () {
+    msg("vrMsg", "Sending…");
+    mailPost("/auth/verify-request", {}).then(function (res) {
+      if (!res.ok) return mailFail("vrMsg", res);
+      msg("vrMsg", res.j.alreadyVerified
+            ? "That address is already confirmed."
+            : (res.j.note || "Check that inbox. The link works once and expires in an hour."), "good");
+    }).catch(function (e) { msg("vrMsg", e.message || String(e), "bad"); });
   });
 
   /* ---- sign out ---- */

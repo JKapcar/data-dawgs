@@ -577,7 +577,7 @@ console.log('\nWorker deployment contract');
     try { w = JSON.parse(fs.readFileSync(configPath, 'utf8')); }
     catch (e) { fail(`wrangler.jsonc: unparseable — ${e.message}`); }
     if (w) {
-      const expectedSecrets = ['BOZO_PEPPER', 'BOZO_TOKENS', 'DAWG_PASS', 'ELEVEN_KEY', 'FB_SECRET', 'SGO_KEY', 'XAI_KEY'];
+      const expectedSecrets = ['BOZO_PEPPER', 'BOZO_TOKENS', 'DAWG_PASS', 'ELEVEN_KEY', 'FB_SECRET', 'RESEND_KEY', 'SGO_KEY', 'XAI_KEY'];
       const required = [...((w.secrets && w.secrets.required) || [])].sort();
       const crons = [...((w.triggers && w.triggers.crons) || [])].sort();
       const rl = (w.kv_namespaces || []).find(x => x.binding === 'RL');
@@ -593,6 +593,12 @@ console.log('\nWorker deployment contract');
         fail('wrangler.jsonc: expected daily backup and hourly CFB triggers');
       if (!w.vars || w.vars.BOZO_ADMIN !== 'Kap' || w.vars.MODEL !== 'grok-4.5' || !w.vars.ELEVEN_VOICE)
         fail('wrangler.jsonc: production plain variables missing');
+      // MAIL_FROM is pinned, not merely present. mailReady() is true only when both it and
+      // RESEND_KEY exist, so a silent drift here switches every /auth/* mail route back to
+      // 503 with nothing in the config to explain it. Sending is from the mail. subdomain
+      // deliberately: a transactional deliverability problem must never reach the apex.
+      if (!w.vars || w.vars.MAIL_FROM !== 'no-reply@mail.datadawgs216.com')
+        fail('wrangler.jsonc: MAIL_FROM must be the verified no-reply@mail.datadawgs216.com sender');
       for (const secret of expectedSecrets) if (w.vars && Object.hasOwn(w.vars, secret))
         fail(`wrangler.jsonc: ${secret} must be a secret name, never a plain variable`);
       if (!fails.some(x => x.startsWith('wrangler.jsonc'))) ok('complete config preserves Worker, KV, secrets, crons, logs and limits');

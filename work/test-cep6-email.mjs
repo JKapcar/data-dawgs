@@ -290,14 +290,42 @@ const ON = () => makeEnv({ RESEND_KEY: "re_test", MAIL_FROM: "Data Dawgs <no-rep
   ok("⚠️ a reset token cannot be used to verify an address", true);   // covered by the kind check above
 }
 
-/* =================== 9. THE SITE STILL CLAIMS NOTHING =================== */
+/* ============ 9. THE SITE ADVERTISES EXACTLY WHAT IT CAN DO ============
+ * This block used to assert the OPPOSITE — that no page wired any /auth mail route —
+ * as a "still inert" precondition while the Worker shipped dark. Shipping the UI
+ * falsified it by design, so it is INVERTED rather than deleted: the same three pages
+ * are still named, and the same routes are still the subject. What changed is which
+ * answer is correct, and that is exactly the fact worth holding onto.
+ *
+ * ⚠️ signon.html must wire all four; bozo.html and connect.html must wire none. Identity
+ * UX lives on ONE page (the 8/7 rule) and a reset form that drifts onto a second page is
+ * a second place to keep the enumeration-safe copy honest. */
 {
   const fs = await import("fs");
-  for (const page of ["signon.html", "bozo.html", "connect.html"]) {
+  const signon = fs.readFileSync("signon.html", "utf8");
+  for (const route of ["/auth/forgot", "/auth/reset-password", "/auth/verify-request", "/auth/verify"])
+    ok(`signon.html wires ${route}`, signon.includes(`"${route}"`));
+  ok("signon.html reads the ?reset= link", /qs\.get\("reset"\)/.test(signon));
+  ok("signon.html reads the ?verify= link", /qs\.get\("verify"\)/.test(signon));
+  // Both are one-time credentials and must not survive in the URL bar or history.
+  ok("…and burns both out of the URL", /joinTok \|\| resetTok \|\| verifyTok/.test(signon));
+  // The Worker answers /auth/forgot identically for a real and an unknown address. The page
+  // keeps that property by echoing the Worker's OWN note on success instead of composing a
+  // message of its own — there is no client-side state that could branch on existence.
+  ok("signon.html echoes the Worker's enumeration-safe note for forgot",
+    /mailPost\("\/auth\/forgot"[\s\S]{0,400}res\.j\.note/.test(signon));
+  for (const page of ["bozo.html", "connect.html"]) {
     const html = fs.readFileSync(page, "utf8");
-    ok(`${page} advertises no reset-by-email`, !/\/auth\/forgot|\/auth\/reset-password|\/auth\/verify/.test(html));
+    ok(`${page} still keeps identity UX on signon.html`,
+      !/\/auth\/forgot|\/auth\/reset-password|\/auth\/verify/.test(html));
   }
+  // The claims the pages make about mail must not outlive the inert era.
+  for (const page of ["signon.html", "bozo.html", "connect.html"])
+    ok(`${page} no longer claims nothing is ever sent`,
+      !/nothing is ever sent|nothing is sent to it|does not send mail/i.test(fs.readFileSync(page, "utf8")));
   const w = fs.readFileSync("dawg-bot-worker.js", "utf8");
+  ok("the Worker no longer claims nothing is ever sent either",
+    !/nothing is ever sent|nothing is sent to this address/i.test(w));
   ok("the Worker source contains no key material", !/re_[A-Za-z0-9]{12,}/.test(w));
   ok("the admin /auth/reset route is untouched by the email flow",
     w.includes('"/reset": bozoReset') && w.includes('"/reset-password": authReset'));

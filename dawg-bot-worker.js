@@ -156,10 +156,18 @@ const json = (obj, status, cors) =>
 //
 //  ⚠️ Storage reuses the EXISTING `RL` namespace rather than a new binding.
 //  Keys are prefixed `survivor:` so they cannot collide with the rate-limit
-//  counters, and it means this route needs no dashboard change to work. If a
-//  dedicated DD_KV is ever bound it is preferred automatically.
+//  counters, and it means this route needs no dashboard change to work.
+//
+//  ⚠️ THIS NAMES `RL` EXPLICITLY, AND MUST KEEP DOING SO. It used to read
+//  `env.DD_KV || env.RL`, which sounds harmless — "prefer a dedicated namespace if
+//  one is ever bound" — and is not. The live data is in RL. Binding an empty DD_KV
+//  would have silently repointed this and five other concerns at it: no exception,
+//  no 500, just survivor boards, CFB market receipts, the player index, nightly
+//  backups and EVERY LEAGUE JOIN LINK reading blank. A binding is a dashboard
+//  action taken by someone who is not reading this file. Do not reintroduce the
+//  fallback; give genuinely new concerns their own binding by name.
 // ============================================================
-const survivorKV = (env) => env.DD_KV || env.RL || null;
+const survivorKV = (env) => env.RL || null;
 const survivorKey = (season, week) => `survivor:${season}:${week}`;
 
 // Normalise to { TEAM: share } summing to 1. Rejects a row rather than guessing.
@@ -242,7 +250,9 @@ const CFB_MARKET_ODDS = [
   "points-all-game-ou-over",
 ];
 
-const cfbMarketKV = (env) => env.DD_KV || env.RL || null;
+// Names RL explicitly — see the survivorKV note. A DD_KV fallback here would point the
+// market receipts at an empty namespace the moment that binding appeared.
+const cfbMarketKV = (env) => env.RL || null;
 
 function cfbSeasonFromKickoff(ms) {
   const d = new Date(ms);
@@ -544,7 +554,8 @@ function sleeperSlimFromRaw(raw) {
 
 async function handleSleeperPlayersSlim(request, env, cors) {
   if (request.method !== "GET") return json({ error: "GET only" }, 405, cors);
-  const kv = env.DD_KV || env.RL || null;
+  // Names RL explicitly — see the survivorKV note.
+  const kv = env.RL || null;
   if (!kv) return json({ error: "player index storage is unavailable" }, 503, cors);
 
   const serve = (body, extra) => new Response(body, {
@@ -1086,7 +1097,10 @@ async function readBody(request) {
 // serve these keys: no route, no MCP tool, and never the public repo.
 // Retrieval is the Cloudflare dashboard or API, already behind Kap's account.
 // The backup READS Firebase and writes only to KV — it must stay that way.
-const backupKV = (env) => env.DD_KV || env.RL || null;
+// Names RL explicitly — see the survivorKV note. This one is the disaster-recovery copy;
+// a fallback that silently pointed it at an empty namespace would look identical to a
+// working backup right up until the day it was needed.
+const backupKV = (env) => env.RL || null;
 
 async function runBackup(env, nowMs) {
   const kv = backupKV(env);
@@ -1364,7 +1378,7 @@ async function authEmail(request, env, cors) {
   try { await fbPatch(env, "/users/" + encodeURIComponent(auth.name), { email: email || null }); }
   catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
   return json({ ok: true, player: auth.name, email: email || null,
-                note: "Unverified — nothing is sent to this address. It only lets you sign in with it." }, 200, cors);
+                note: "Saved but unconfirmed. It lets you sign in, and a reset link goes here." }, 200, cors);
 }
 
 // POST /auth/signup {name, email, password} — TRUE OPEN SIGNUP (Kap's call, 8/7).
@@ -1374,11 +1388,12 @@ async function authEmail(request, env, cors) {
 // roster key, exactly as claim/invite create it, so every existing surface that is
 // keyed by name keeps working without a migration.
 //
-// ⚠️ The email is an UNVERIFIED alternate sign-in identifier, same as /auth/email
-// (see emailToName for why verification is out: no mail infrastructure, and an open
-// mail endpoint is a spam relay). Required here — it is the recovery-adjacent
-// identifier a stranger signs in with — but nothing is ever sent to it. First come,
-// first served.
+// ⚠️ The email is an UNCONFIRMED alternate sign-in identifier, same as /auth/email.
+// Signup neither verifies it nor sends anything: CEP-6 made verification additive and
+// opt-in (POST /auth/verify-request), because every existing account predates mail and
+// gating sign-in on confirmation would lock those people out of their own names.
+// Required here — it is the identifier a stranger signs in with, and the only address a
+// reset link could ever reach. First come, first served.
 //
 // ⚠️ This is the ONLY unauthenticated write on the Worker. Everything else behind a
 // write is session- or token-gated; this endpoint by design is not, so it gets the
@@ -1451,7 +1466,7 @@ async function bozoSignup(request, env, cors) {
                   { email, src: "signup", signupTs: setAt, apps: {}, entitlement: freeEntitlement() });
     await fbPut(env, authPath(name), { v: 1, salt, hash, iters: PBKDF2_ITERS, setAt });
     return json({ ok: true, name, email, session: await makeSession(env, name, setAt),
-                  note: "Unverified email — nothing is ever sent to it. It only lets you sign in with it." }, 200, cors);
+                  note: "Email saved but unconfirmed. It lets you sign in, and a reset link goes here." }, 200, cors);
   } catch (e) {
     return json({ error: "Database write failed: " + e.message }, 502, cors);
   }
@@ -2458,7 +2473,11 @@ async function leagueLock(request, env, cors) {
    rule 6: the draft board is public on purpose. This gates league MEMBERSHIP for
    the Bozo game only. */
 
-const JOIN_KV = (env) => env.DD_KV || env.RL || null;
+// ⚠️ Names RL explicitly — see the survivorKV note. This is the one that bites hardest:
+// these keys ARE the live join links. CEP-7 put them in KV precisely so they would not
+// sit in world-readable /bozo, which means there is no second copy anywhere. Pointing
+// this at an empty namespace invalidates every outstanding invite at once, silently.
+const JOIN_KV = (env) => env.RL || null;
 const JOIN_LG = (lid) => "joinlink:lg:" + lid;
 const JOIN_CODE = (code) => "joinlink:code:" + code;
 const JOIN_CAP_DEFAULT = 20;
@@ -7306,7 +7325,8 @@ const MCP_TOOLS = [
       additionalProperties: false,
     },
     async run(args, env) {
-      const kv = env.DD_KV || env.RL;
+      // Names RL explicitly, matching survivorKV — see its note in the Worker.
+      const kv = env.RL;
       if (!kv) return toolErr("No KV namespace bound — survivor data unavailable.");
       const season = args.season || SEASON, week = args.week;
       if (!(week >= 1 && week <= 18)) return toolErr("week must be 1-18");
@@ -7351,7 +7371,7 @@ const MCP_TOOLS = [
       // Ownership: the posted snapshot when Kap has stored one, else chalk softmax.
       // The field's distribution deliberately ignores YOUR used list — the field is not you.
       let pop = null, ownership = "modelled", ageHours, stale;
-      const kv = env.DD_KV || env.RL;
+      const kv = env.RL;   // names RL explicitly, matching survivorKV
       if (kv) {
         const hit = await kv.get(survivorKey(D.meta.season, week));
         if (hit) {

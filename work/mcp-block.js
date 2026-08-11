@@ -2466,7 +2466,8 @@ const MCP_TOOLS = [
       additionalProperties: false,
     },
     async run(args, env) {
-      const kv = env.DD_KV || env.RL;
+      // Names RL explicitly, matching survivorKV — see its note in the Worker.
+      const kv = env.RL;
       if (!kv) return toolErr("No KV namespace bound — survivor data unavailable.");
       const season = args.season || SEASON, week = args.week;
       if (!(week >= 1 && week <= 18)) return toolErr("week must be 1-18");
@@ -2511,7 +2512,7 @@ const MCP_TOOLS = [
       // Ownership: the posted snapshot when Kap has stored one, else chalk softmax.
       // The field's distribution deliberately ignores YOUR used list — the field is not you.
       let pop = null, ownership = "modelled", ageHours, stale;
-      const kv = env.DD_KV || env.RL;
+      const kv = env.RL;   // names RL explicitly, matching survivorKV
       if (kv) {
         const hit = await kv.get(survivorKey(D.meta.season, week));
         if (hit) {

@@ -201,7 +201,13 @@ console.log("\nemail as an identifier");
   ok("a non-address is refused", (await W.emailToName(ENV, "Jeff")) === null);
   ok("login accepts an email where a name goes",
      /name = String\(body\.name \|\| body\.email/.test(SRC) && /emailToName\(env, name\)/.test(SRC));
-  ok("email is documented as unverified", /Unverified — nothing is sent/.test(SRC));
+  /* Was: /Unverified — nothing is sent/. CEP-6 shipped, so "nothing is sent" became false
+     and the note now names the reset path. The property under test is unchanged — saving an
+     address must say out loud that it is NOT confirmed — only the true wording moved. */
+  ok("email is documented as unconfirmed, and as where a reset goes",
+     /Saved but unconfirmed/.test(SRC) && /reset link goes here/.test(SRC));
+  ok("…and no longer claims nothing is sent to it",
+     !/nothing is (ever )?sent/i.test(SRC));
 }
 
 console.log("\nguillotine odds");
@@ -334,7 +340,7 @@ const jbody = async r => { try { return await r.json(); } catch { return null; }
   ok("the account is keyed by NAME, same data model as claim", !!USERS.Zed && USERS.Zed.src === "signup");
   ok("the email landed on the user record", USERS.Zed.email === "zed@example.com");
   ok("a real pbkdf2 record was written", AUTHREC.Zed && AUTHREC.Zed.v === 1 && !!AUTHREC.Zed.salt && AUTHREC.Zed.iters === 5000);
-  ok("the response says plainly the email is unverified", /nothing is ever sent/i.test(j.note || ""));
+  ok("the response says plainly the email is unconfirmed", /unconfirmed/i.test(j.note || ""));
   ok("signup wrote an account, NOT a league seat", !WRITES.some(w => w.includes("/bozo/leagues")), WRITES.join(" | "));
 }
 

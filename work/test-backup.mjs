@@ -78,11 +78,20 @@ const T0 = Date.parse("2026-09-15T09:00:00Z");
   ok("next day gets its own key", kv.store.has("backup:2026-09-15") && kv.store.has("backup:2026-09-16"));
 }
 
-// -- DD_KV preferred over RL when both exist (same rule as survivor) ---------
+// -- a bound DD_KV is IGNORED; RL is named explicitly (same rule as survivor) -
+/* ⚠️ THIS ASSERTION IS THE INVERSE OF WHAT IT USED TO BE, DELIBERATELY.
+ * It once asserted DD_KV was PREFERRED over RL — the `env.DD_KV || env.RL` shape, whose
+ * stated intent was "prefer a dedicated namespace if one is ever bound". That is a trap:
+ * the live data is in RL, so binding a fresh empty DD_KV in the dashboard would have
+ * silently repointed the backups — and survivor, the CFB market receipts, the player
+ * index and every league join link — at an empty store. No exception, no 500, just blank
+ * reads, discovered on the day the backup was needed. Binding is a dashboard action taken
+ * by someone who is not reading this file, so the code must not be steerable from there.
+ * The test now proves the opposite property: DD_KV can be bound and is ignored. */
 {
   const dd = makeKV(), rl = makeKV();
   await worker.scheduled({ scheduledTime: T0 }, { FB_SECRET: "s", DD_KV: dd, RL: rl }, {});
-  ok("DD_KV preferred over RL, matching survivorKV", dd.puts.length > 0 && rl.puts.length === 0);
+  ok("a bound DD_KV is ignored — RL is named explicitly", rl.puts.length > 0 && dd.puts.length === 0);
 }
 
 // -- a failed run must scream, not shrug -------------------------------------
