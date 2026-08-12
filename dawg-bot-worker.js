@@ -848,6 +848,7 @@ export default {
                    "/passwd": bozoPasswd, "/reset": bozoReset, "/invite": authInvite,
                    "/mcp-token": authMcpToken, "/email": authEmail,
                    "/email-confirm": authEmailConfirm, "/signup": bozoSignup,
+                   "/beta-reset": authBetaReset,
                    "/lookup": authLookup,
                    "/verify-request": authVerifyRequest, "/verify": authVerify,
                    "/forgot": authForgot, "/reset-password": authReset };
@@ -2149,6 +2150,33 @@ async function authEmailConfirm(request, env, cors) {
   }
 }
 
+// One-deploy beta cleanup. Removed immediately after the two empty Kap records are gone.
+async function authBetaReset(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const auth = await sessionAuth(request, env);
+  if (!auth || auth.error) return json({ error: "Sign in first." }, 401, cors);
+  const body = await readBody(request);
+  if (body.confirm !== "DELETE EMPTY BETA ACCOUNTS" || !Array.isArray(body.emails) || body.emails.length !== 2)
+    return json({ error: "Exact confirmation required." }, 400, cors);
+  const wanted = [...new Set(body.emails.map(normEmail))];
+  if (wanted.length !== 2 || !wanted.includes(normEmail(auth.user.email)))
+    return json({ error: "The signed-in account must be one of the targets." }, 403, cors);
+  const targets = [];
+  for (const email of wanted) {
+    const owners = await accountsForEmail(env, email);
+    if (owners.length !== 1 || owners[0].name !== auth.name)
+      return json({ error: "Targets must be two single-owner records with the signed-in display name." }, 409, cors);
+    targets.push(owners[0]);
+  }
+  for (const target of targets) {
+    await fbDelete(env, await emailIndexPath(target.user.email));
+    await fbDelete(env, "/users/" + encodeURIComponent(target.key));
+    await fbDelete(env, "/bozoauth/" + encodeURIComponent(target.key));
+    await fbDelete(env, "/ddcc/users/" + encodeURIComponent(target.key));
+  }
+  return json({ ok: true, deleted: targets.length }, 200, cors);
+}
+
 // POST /auth/signup {name, email, password} — TRUE OPEN SIGNUP (Kap's call, 8/7).
 // Anyone may create a site-wide account, like any normal website. What signup does
 // NOT grant is a league seat: membership stays invite/manager-gated, so an open door
@@ -2204,7 +2232,6 @@ async function bozoSignup(request, env, cors) {
   catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
   if (owners.length)
     return json({ error: "An account already uses that address. Sign in with it instead." }, 409, cors);
-
   const uid = newUid();
   if (!UID_RE.test(uid)) return json({ error: "Account ID generation failed." }, 500, cors);
   let reservation;
@@ -2797,6 +2824,7 @@ async function reserveEmail(env, email, uid) {
   return { ok: false, conflict: true };
 }
 
+
 async function releaseEmailReservation(env, reservation, uid) {
   if (!reservation || !reservation.path) return;
   try {
@@ -2808,6 +2836,7 @@ async function releaseEmailReservation(env, reservation, uid) {
     if (got.data && got.data.uid === uid && got.etag) await fbDelete(env, reservation.path, got.etag);
   } catch { /* a cleanup failure leaves a safe conflict, never a duplicate account */ }
 }
+
 
 // Every account holding this address. /auth/email and /auth/signup both refuse
 // duplicates, so this should never return more than one — but reset has to resolve an

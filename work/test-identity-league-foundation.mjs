@@ -136,6 +136,26 @@ equal(second.response.status, 201, "duplicate display name allowed");
 check(second.json.uid !== first.json.uid, "duplicate names retain distinct UIDs");
 equal((await call("/auth/lookup", { body: { email: "KAP@example.com" } })).json.known, true, "known lookup");
 
+const raced = await Promise.all([
+  call("/auth/signup", { body: { name: "Race One", email: "  RACE@Example.com ", password: "race password one" }, ip: "203.0.113.21" }),
+  call("/auth/signup", { body: { name: "Race Two", email: "race@example.com", password: "race password two" }, ip: "203.0.113.22" }),
+]);
+equal(raced.filter(x => x.response.status === 201).length, 1, "atomic email reservation admits one concurrent signup");
+equal(raced.filter(x => x.response.status === 409).length, 1, "atomic email reservation rejects the concurrent loser");
+equal(Object.values(db.users).filter(u => u.email === "race@example.com").length, 1, "normalized raced email has one account write");
+equal(Object.values(db.emailIndex).filter(v => v.email === "race@example.com").length, 1, "normalized raced email has one index owner");
+
+const unconfirmedChange = await call("/auth/email", { body: { email: "  OTHER.NEW@Example.com " }, session: second.json.session, ip: "203.0.113.23" });
+equal(unconfirmedChange.response.status, 202, "unconfirmed account may request a corrected address");
+equal(db.users[second.json.uid].email, "other@example.com", "wrong address remains only until corrected address is proven");
+equal(mail.at(-1).to.length, 1, "correction mail has exactly one recipient");
+equal(mail.at(-1).to[0], "other.new@example.com", "correction mail goes only to the new normalized address");
+const unconfirmedEmailToken = tokenFromLastMail("email-change");
+equal((await call("/auth/email-confirm", { body: { token: unconfirmedEmailToken }, ip: "203.0.113.23" })).response.status,
+  200, "unconfirmed account can prove and adopt the corrected address");
+equal(db.users[second.json.uid].email, "other.new@example.com", "corrected address becomes the account login");
+equal(db.users[second.json.uid].emailVerified, true, "corrected address is verified by its own link");
+
 equal((await call("/auth/login", { body: { email: "kap@example.com", password: "wrong password" } })).response.status, 401, "wrong login");
 check([...kvStore.keys()].some(k => k.startsWith("loginid:")), "email failure bucket written");
 check([...kvStore.keys()].some(k => k.startsWith("loginip:")), "IP failure bucket written");
@@ -169,7 +189,7 @@ equal(created.json.league.gate, undefined, "gate secret omitted from response");
 equal(Object.values(db.leagues[leagueId].events)[0].type, "league_created", "creation is event-backed");
 equal((await call("/league/mine", { method: "GET", session: login.json.session })).json.leagues.length, 1, "mine lists membership");
 
-const secondLogin = await call("/auth/login", { body: { email: "other@example.com", password: "another valid password" }, ip: "203.0.113.11" });
+const secondLogin = await call("/auth/login", { body: { email: "other.new@example.com", password: "another valid password" }, ip: "203.0.113.11" });
 equal((await call("/league/join", { body: { leagueId, gateCode: "wrong-code" }, session: secondLogin.json.session })).response.status,
   403, "wrong league gate rejected");
 const joined = await call("/league/join", { body: { leagueId, gateCode: "lake-erie-216" }, session: secondLogin.json.session });
