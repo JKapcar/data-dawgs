@@ -38,14 +38,14 @@ function makeEnv(over = {}) {
   }, over);
 }
 
-let USERS, AUTHREC, mailSends, fbWrites, allowMail;
+let USERS, AUTHREC, mailSends, fbWrites, allowMail, mailResponse;
 function installFetch() {
   globalThis.fetch = async (input, init = {}) => {
     const url = typeof input === "string" ? input : input.url;
     if (url.startsWith("https://api.resend.com")) {
       if (!allowMail) { fail++; console.log("  FAIL a message was sent while mail was supposed to be OFF"); }
       mailSends.push({ url, headers: init.headers || {}, body: JSON.parse(init.body || "{}") });
-      return new Response(JSON.stringify({ id: "msg_1" }), { status: 200 });
+      return new Response(JSON.stringify(mailResponse.body), { status: mailResponse.status });
     }
     if (url.startsWith(FB)) {
       const path = url.slice(FB.length).split("?")[0].replace(/\.json$/, "");
@@ -81,7 +81,7 @@ function reset() {
   AUTHREC = { Kap: { v: 1, salt: "AAAA", hash: "x", iters: 5000, setAt: 0 },
               Stranger: { v: 1, salt: "AAAA", hash: "x", iters: 5000, setAt: 0 },
               NoMail: { v: 1, salt: "AAAA", hash: "x", iters: 5000, setAt: 0 } };
-  mailSends = []; fbWrites = []; allowMail = false;
+  mailSends = []; fbWrites = []; allowMail = false; mailResponse = { status: 200, body: { id: "msg_1" } };
 }
 
 const req = (path, body, headers = {}) => new Request("https://toto.jkapcar4.workers.dev" + path, {
@@ -276,6 +276,9 @@ const ON = () => makeEnv({ RESEND_KEY: "re_test", MAIL_FROM: "Data Dawgs <no-rep
   const sess = await sessionFor(env, "Kap");
   const asked = await call(env, "/auth/verify-request", {}, { "X-Bozo-Session": sess });
   ok("verify-request accepts a signed-in caller", asked.status === 200, JSON.stringify(asked.j));
+  ok("verify-request makes exactly one provider call", mailSends.length === 1, String(mailSends.length));
+  ok("verify-request reports provider acceptance", asked.j.sent === true && asked.j.providerAccepted === true,
+    JSON.stringify(asked.j));
   ok("…and the response never contains the token", !JSON.stringify(asked.j).includes("verify="));
   const link = mailLink("verify");
   ok("⚠️ a domain-separated verify token cannot be found in the reset namespace",
@@ -288,6 +291,19 @@ const ON = () => makeEnv({ RESEND_KEY: "re_test", MAIL_FROM: "Data Dawgs <no-rep
   ok("verify marks the address verified", done.status === 200 && done.j.verified === true, JSON.stringify(done.j));
   ok("…in the database", fbWrites.some(w => w.path === "/users/Kap" && w.body.emailVerified === true));
   ok("⚠️ a reset token cannot be used to verify an address", true);   // covered by the kind check above
+}
+
+/* =================== 8B. PROVIDER REJECTION IS VISIBLE AND CLEAN =============== */
+{
+  reset(); allowMail = true; mailResponse = { status: 422, body: { message: "sender rejected" } };
+  const env = ON();
+  const rejected = await call(env, "/auth/verify-request", {},
+    { "X-Bozo-Session": await sessionFor(env, "Kap") });
+  ok("provider rejection reaches the caller", rejected.status === 502 && /Could not send/.test(rejected.j.error),
+    JSON.stringify(rejected.j));
+  ok("provider rejection still made exactly one send attempt", mailSends.length === 1, String(mailSends.length));
+  ok("provider rejection deletes the unusable verification token",
+    ![...env.RL._map.keys()].some(k => k.startsWith("mailtok:")), [...env.RL._map.keys()].join(","));
 }
 
 /* ============ 9. THE SITE ADVERTISES EXACTLY WHAT IT CAN DO ============

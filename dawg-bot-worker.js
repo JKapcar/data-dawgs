@@ -2893,7 +2893,11 @@ async function sendMail(env, to, subject, text) {
     try { detail = (await r.text()).slice(0, 180); } catch { /* body is optional */ }
     throw new Error("mail provider returned " + r.status + (detail ? ": " + detail : ""));
   }
-  return true;
+  let accepted = null;
+  try { accepted = await r.json(); } catch { /* a successful provider response should still carry an id */ }
+  if (!accepted || typeof accepted.id !== "string" || !accepted.id)
+    throw new Error("mail provider accepted the request without a delivery id");
+  return { id: accepted.id };
 }
 
 // POST /auth/verify-request — session required. Sends a verification link to the
@@ -2921,18 +2925,25 @@ async function authVerifyRequest(request, env, cors) {
   if (q.err) return json({ error: q.err }, q.code || 429, cors);
 
   const tok = await mintMailToken(env, "verify", auth.name, email, auth.uid);
+  let delivery;
   try {
-    await sendMail(env, email, "Confirm your Data Dawgs address",
+    delivery = await sendMail(env, email, "Confirm your Data Dawgs address",
       "Someone asked to confirm this address for the Data Dawgs account \"" + auth.name + "\".\n\n" +
       MAIL_BASE + "/signon.html?verify=" + tok + "\n\n" +
       "The link works once and expires in an hour. If this wasn't you, ignore it — " +
       "nothing changes and nobody can sign in as you from this message.\n");
   } catch (e) {
+    try { await env.RL.delete("mailtok:" + (await hmac(env.BOZO_PEPPER, "mail|verify|" + tok))); }
+    catch { /* expiry remains the safe fallback if cleanup itself fails */ }
+    console.error(JSON.stringify({ event: "mail.verify.rejected", account: auth.uid || auth.name,
+                                   reason: String(e && e.message || e).slice(0, 220) }));
     return json({ error: "Could not send that email: " + e.message }, 502, cors);
   }
+  console.log(JSON.stringify({ event: "mail.verify.accepted", account: auth.uid || auth.name,
+                               deliveryId: delivery.id }));
   await q.bump();
-  return json({ ok: true, player: auth.name, sent: true,
-                note: "Check that inbox. The link works once and expires in an hour." }, 200, cors);
+  return json({ ok: true, player: auth.name, sent: true, providerAccepted: true,
+                note: "Email provider accepted the confirmation. Check that inbox and spam; the link works once and expires in an hour." }, 200, cors);
 }
 
 // POST /auth/verify {token} — no session; the token IS the proof.
