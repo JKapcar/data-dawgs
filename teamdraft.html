@@ -731,11 +731,14 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
   border-radius:5px;padding:2px 6px}
 .sheet-tab.on .sheet-hint{color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent)}
 [role=tabpanel][hidden]{display:none}
-#tab-rules{border:1px solid color-mix(in srgb,var(--accent) 42%,transparent);
-  border-bottom-width:2px;border-radius:8px 8px 0 0;
-  background:color-mix(in srgb,var(--accent) 9%,transparent);color:var(--ink-1)}
-#tab-rules:hover{background:color-mix(in srgb,var(--accent) 16%,transparent)}
-#tab-rules.on{background:color-mix(in srgb,var(--accent) 14%,transparent)}
+/* ⚠️ SHADING MEANS SELECTED. The first pass gave Rules a permanent tinted box to
+   make it noticeable, which made it look like the open tab no matter which sheet you
+   were on — two things competing to say "you are here". The wash now belongs to
+   .on and nothing else; Rules is marked by its accent-coloured hint chip and text,
+   which reads as emphasis rather than as state. */
+.sheet-tab.on{background:color-mix(in srgb,var(--accent) 12%,transparent);
+  border-radius:8px 8px 0 0}
+#tab-rules{color:var(--ink-1)}
 #tab-rules .sheet-hint{color:var(--accent);
   background:color-mix(in srgb,var(--accent) 18%,transparent)}
 @media (max-width:560px){
@@ -2699,8 +2702,8 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <a href="/data/draft-2026.json"><code>/data/draft-2026.json</code></a>.</p>
   </header>
   <div class="p-disclosure"><b>No game has been played.</b> Expected wins are devigged from four books
-  and normalized to 272 — a market snapshot, not a forecast this site has graded. The tracker reads
-  zero because zero is the true number, and nothing here says who is winning.</div>
+  and normalized to 272 — a market snapshot, not a forecast this site has graded. Nothing here says
+  who is winning.</div>
 
   <div class="td-sticky">
     <div id="sheets"></div>
@@ -3143,7 +3146,11 @@ window.DDSheets = function(cfg){
   function select(kind, id, opts){
     if(kind === "league"){ sel.d.clear(); sel.t.clear(); autoPick = null; }
     else {
-      if(autoPick && autoPick !== id){ sel.d.delete(autoPick); sel.t.delete(autoPick); }
+      /* ⚠️ TAPPING A SECOND NAME ADDS IT. An earlier pass had the sheet's opening
+         pick silently replaced by your first tap, which made sense while the
+         placeholder was an NFL team nobody chose. Now that it is a drafter and its
+         chip is visibly pressed, replacing it reads as the page deselecting somebody
+         behind your back. Chips toggle, always, with no special case. */
       autoPick = null;
       const bag = kind === "drafter" ? sel.d : sel.t;
       if(bag.has(id)) bag.delete(id); else bag.add(id);
@@ -3960,7 +3967,6 @@ window.DDSheets = function(cfg){
     $("tdTeamPick").addEventListener("change", e=>{
       const v = e.target.value;
       if(v){
-        if(autoPick && autoPick !== v){ sel.d.delete(autoPick); sel.t.delete(autoPick); }
         autoPick = null;
         sel.t.add(v);
       }
@@ -4026,6 +4032,13 @@ window.DDSheets = function(cfg){
     document.querySelectorAll("[data-mc]").forEach(btn=>
       btn.addEventListener("click", ()=> runMC(Number(btn.dataset.mc))));
 
+    /* ⚠️ ALWAYS OPENS ON POOL. DDSheets remembers the last sheet per browser, which
+       is right for a tool somebody lives in and wrong for a page eight people open
+       once a week: you land on Diagnostics because of something you did on Tuesday.
+       Clearing the key before init leaves hash > first, so a deep link like #rules
+       still wins and the default is the pool. The component is NOT forked — this is
+       one line of state, cleared from the caller. */
+    try{ localStorage.removeItem("dd-sheet-teamdraft"); }catch(e){}
     sheets = DDSheets({key:"teamdraft", mount:"#sheets",
       sheets:[{id:"pool",  label:"Pool",        panel:"#sheetPool"},
               {id:"team",  label:"Roster",      panel:"#sheetTeam"},
@@ -4034,6 +4047,16 @@ window.DDSheets = function(cfg){
       onShow(id){
         const rail = document.querySelector(".td-rail");
         if(rail) rail.hidden = (id === "diag" || id === "rules");
+        /* ⚠️ The Roster placeholder is DROPPED ON THE WAY OUT if it was never
+           touched. It exists so that sheet is not a blank page; carrying it back to
+           the Pool sheet would leave one drafter highlighted everywhere because of a
+           tab visit — the same "something selected itself" confusion as replacing it,
+           just pointing the other way. Only cleared while it is still the entire
+           selection: the moment the reader adds to it, it is theirs. */
+        if(id !== "team" && autoPick && sel.t.size === 0
+           && sel.d.size === 1 && sel.d.has(autoPick)){
+          sel.d.delete(autoPick); autoPick = null;
+        }
         /* Opening the Team sheet with nothing chosen would show an empty page, so it
            lands on the top of the ladder rather than on a prompt. */
         if(id === "team" && selEmpty()){

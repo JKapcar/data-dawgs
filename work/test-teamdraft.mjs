@@ -163,6 +163,13 @@ const ready = p => p.waitForFunction(
      site's cream at 1.56:1 and must never come back. */
   ok("the mockup's unvalidated palette did not ship", !/#5FE3C0|#B4A5F5|#A8821A/i.test(html));
   ok("the Rules tab is styled to be noticed", /#tab-rules\{/.test(html));
+  /* ⚠️ Shading means SELECTED. A permanent wash on Rules made it look like the open
+     tab from every other sheet — two things competing to say "you are here". */
+  ok("the tab wash belongs to the selected tab, not to Rules",
+    /\.sheet-tab\.on\{background:color-mix/.test(html)
+    && !/#tab-rules\{[^}]*background:color-mix/.test(html));
+  ok("the page clears the remembered sheet so it always opens on Pool",
+    /removeItem\("dd-sheet-teamdraft"\)/.test(html));
   ok("the sheet labels are short enough not to wrap",
     /label:"Pool"/.test(html) && /label:"Roster"/.test(html) && /label:"Rules"/.test(html));
   ok("both themes define all eight drafter slots",
@@ -393,6 +400,38 @@ const ready = p => p.waitForFunction(
   ok("the strip drops to the remaining roster",
     one.strips === D.drafters[dB].roster.length, String(one.strips));
 
+  /* ⚠️ Tapping a second name ADDS. Silently dropping the first read as the page
+     deselecting somebody behind your back. */
+  ok("tapping a second name keeps the first", await (async () => {
+    await p.click('.sheet-tab[data-id="pool"]');
+    await p.waitForTimeout(120);
+    await p.click('[data-sel="league:"]');
+    await p.click('.sheet-tab[data-id="team"]');
+    await p.waitForTimeout(220);
+    const before = await p.evaluate(() =>
+      document.querySelector("#tdHero h2")?.textContent.trim());
+    const other = D.draft_order.find(n => n !== before);
+    await p.click(`[data-sel="drafter:${other}"]`);
+    await p.waitForTimeout(220);
+    const after = await p.evaluate(() =>
+      document.querySelector("#tdHero h2")?.textContent.trim());
+    return after.includes(before) && after.includes(other);
+  })());
+
+  /* ...but an UNTOUCHED placeholder must not follow you to the Pool sheet either. */
+  ok("an untouched placeholder is dropped when you leave the Roster sheet",
+    await (async () => {
+      await p.click('.sheet-tab[data-id="pool"]');
+      await p.waitForTimeout(120);
+      await p.click('[data-sel="league:"]');
+      await p.click('.sheet-tab[data-id="team"]');
+      await p.waitForTimeout(200);
+      await p.click('.sheet-tab[data-id="pool"]');
+      await p.waitForTimeout(200);
+      return await p.evaluate(() =>
+        document.querySelectorAll("#tdLadder .td-row.on").length) === 0;
+    })());
+
   /* the Team sheet's placeholder must not survive as a selection nobody made */
   await p.click('[data-sel="league:"]');
   await p.waitForTimeout(120);
@@ -404,6 +443,8 @@ const ready = p => p.waitForFunction(
     clean === D.drafters[dA].roster.length, `${clean} vs ${D.drafters[dA].roster.length}`);
 
   /* "All 32" is a Pool control; on the Team sheet it reads Clear */
+  await p.click('.sheet-tab[data-id="team"]');
+  await p.waitForTimeout(180);
   ok("the Team sheet offers Clear, not the All 32 lever", await p.evaluate(() =>
     document.querySelector('[data-sel="league:"]')?.textContent.trim()) === "Clear");
   await p.click('.sheet-tab[data-id="pool"]');
@@ -411,6 +452,29 @@ const ready = p => p.waitForFunction(
   ok("the Pool sheet keeps All 32", await p.evaluate(() =>
     document.querySelector('[data-sel="league:"]')?.textContent.trim()) === "All 32");
 
+  await ctx.close();
+}
+
+/* ------------------------------------------- always opens on the pool ------- */
+/* ⚠️ ITS OWN CONTEXT. DDSheets pushes the current sheet into location.hash, so a
+   reload inside the main block carries a deep link — which correctly beats the
+   default and would make this look broken. Fresh context, bare URL. */
+{
+  const ctx = await b.newContext({ viewport: { width: 1280, height: 900 } });
+  const p = await ctx.newPage();
+  await p.goto("http://127.0.0.1:8927/teamdraft.html", { waitUntil: "load" });
+  await p.evaluate(() => localStorage.setItem("dd-sheet-teamdraft", "diag"));
+  await p.goto("http://127.0.0.1:8927/teamdraft.html", { waitUntil: "load" });
+  await ready(p);
+  await p.waitForTimeout(200);
+  ok("a remembered sheet does not override the Pool default",
+    await p.evaluate(() => document.querySelector(".sheet-tab.on").dataset.id) === "pool");
+  /* ...but a deep link still wins, which is why the hash is checked first. */
+  await p.goto("http://127.0.0.1:8927/teamdraft.html#rules", { waitUntil: "load" });
+  await ready(p);
+  await p.waitForTimeout(200);
+  ok("a #rules deep link still opens the Rules sheet",
+    await p.evaluate(() => document.querySelector(".sheet-tab.on").dataset.id) === "rules");
   await ctx.close();
 }
 
