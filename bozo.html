@@ -462,6 +462,92 @@ footer a{color:var(--accent)}
 .bz-hdr{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px}
 .bz-hdr h1{font-size:28px;margin:0;letter-spacing:-.4px;font-weight:800}
 .bz-sub{color:var(--ink-2);margin:6px 0 22px;max-width:62ch}
+
+/* ================= the playbill header =================
+   One block now does what six stacked ones used to: title, dek, the week/status band,
+   which league you are in, and the cast strip. It is the SAME component on the board and
+   on a player's sheet — only the active cell and the sheet bar change.
+
+   ⚠️ --bz-display is a variable so a display face can be dropped in as a one-line change
+   later. It is not one today on purpose: there are zero webfonts on any page of this
+   site, and the service worker exists as draft-night offline insurance — a face pulled
+   from a third-party CDN is a network dependency the offline path cannot keep. If the
+   face is ever wanted, the shape is a self-hosted subset woff2 in assets/ covering only
+   the wordmark, with font-display:swap and the stack below as fallback. The playbill
+   reads as a playbill because of the STRUCTURE — star eyebrow, centred dek, double rule,
+   mono band, cast strip — not because of the face. */
+.playbill{--bz-display:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;margin:0 0 20px}
+.playbill .eyebrow{font:700 10.5px/1 ui-monospace,Menlo,monospace;letter-spacing:3.4px;
+  text-transform:uppercase;color:var(--accent);text-align:center;margin:0 0 9px}
+.playbill h1{font-family:var(--bz-display);font-weight:900;font-size:clamp(38px,11vw,54px);
+  letter-spacing:-.5px;line-height:.95;text-transform:uppercase;text-align:center;margin:0}
+/* Kap's line, unchanged and not truncated on mobile — the second clause is the joke. */
+.playbill .dek{color:var(--ink-2);text-align:center;max-width:31ch;margin:11px auto 15px;
+  font-size:14.5px;line-height:1.45}
+.playbill .band{border-top:2px solid var(--ink-1);border-bottom:2px solid var(--ink-1);
+  padding:9px 4px;display:flex;justify-content:center;align-items:center;flex-wrap:wrap}
+.playbill .band > *{font:700 11px/1.5 ui-monospace,Menlo,monospace;letter-spacing:1.7px;
+  text-transform:uppercase;color:var(--ink-2)}
+.playbill .band > * + *::before{content:"·";margin:0 11px;color:var(--ink-3)}
+/* ⚠️ #statusChip still gets `className = 'chip ' + status` and "Week N · status" written
+   to it by render(). It is RESTYLED here rather than rewired: a filled pill would read
+   as a control sitting inside a typographic band, so the status carries in the ink
+   instead. This is also the only place on the page the week number is printed. */
+.playbill .band .chip{background:none;padding:0;border-radius:0;letter-spacing:1.7px}
+.playbill .band .chip.open{color:var(--accent)}
+.playbill .band .chip.placed{color:var(--warn)}
+.playbill .band .chip.graded{color:var(--good)}
+/* ---- the league line: the name IS the switcher ---- */
+.playbill .league{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:10px 2px 0}
+.playbill .league select{background:none;border:0;border-radius:0;color:var(--ink-1);
+  font:750 14.5px system-ui;padding:0;width:auto;min-width:0;cursor:pointer;
+  -webkit-appearance:none;appearance:none}
+.playbill .league select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.playbill .league .lgname{font:750 14.5px system-ui;color:var(--ink-1)}
+.playbill .league .lil{font:700 9.5px/1 ui-monospace,monospace;letter-spacing:1.3px;
+  text-transform:uppercase;color:var(--ink-3)}
+.playbill .league .demo{font:700 9.5px/1 ui-monospace,monospace;letter-spacing:1.3px;
+  text-transform:uppercase;background:var(--warn);color:#1a1206;padding:4px 6px;border-radius:4px}
+.playbill .league .adm{font:700 9.5px/1 ui-monospace,monospace;letter-spacing:1.3px;
+  text-transform:uppercase;color:var(--accent)}
+.playbill .league .backlink{margin:0 0 0 auto;font-size:12.5px}
+/* ---- the cast strip: board / one cell per player / league ----
+   ⚠️ ONE row that scrolls, not a wrapping cloud of pills. Ten pills wrapped to three
+   rows at 390px and pushed the board under the fold, which is the whole reason this
+   header was rebuilt. Flush cells divided by hairlines read as a playbill's cast list;
+   pills read as filters, which is a different claim about what these are. */
+.playbill .snav{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:0;margin:12px 0 0;
+  border-top:1px solid var(--grid);scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.playbill .snav::-webkit-scrollbar{display:none}
+.playbill .snav button{flex:0 0 auto;background:none;border:0;border-right:1px solid var(--grid);
+  border-radius:0;color:var(--ink-2);padding:10px 13px;cursor:pointer;white-space:nowrap;
+  font:700 11.5px/1 ui-monospace,monospace;letter-spacing:.9px;text-transform:uppercase}
+.playbill .snav button:last-child{border-right:0}
+.playbill .snav button:hover{color:var(--ink-1)}
+.playbill .snav button.on{background:var(--accent);color:var(--accent-ink)}
+/* The pill's border used to carry focus. Flush cells have none, so put a ring back —
+   these are still the page's primary navigation and they are still <button>s. */
+.playbill .snav button:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
+.playbill .snav .yu{font-size:9px;opacity:.8;margin-left:5px}
+/* ⚠️ Royale dead state lives HERE and nowhere else. There used to be a second roster
+   line inside the Royale card saying the same thing; two renderings of one fact can
+   disagree, and the strip already IS the roster. */
+.playbill .snav button.dead{opacity:.62}
+.playbill .snav button.dead .who{text-decoration:line-through}
+.playbill .snav button .out{font-size:9px;letter-spacing:.8px;margin-left:5px;color:var(--bad)}
+.playbill .snav button.on .out{color:var(--accent-ink);opacity:.85}
+/* ---- the sheet bar: only on a player's sheet ---- */
+.playbill .sheetbar{display:flex;align-items:center;gap:11px;flex-wrap:wrap;
+  border-top:1px solid var(--grid);padding:9px 2px 0;
+  font:700 10.5px/1.6 ui-monospace,monospace;letter-spacing:1.3px;text-transform:uppercase;
+  color:var(--ink-3)}
+.playbill .sheetbar b{color:var(--ink-1)}
+.playbill .sheetbar a{margin-left:auto;color:var(--accent);text-decoration:none}
+@media(max-width:560px){
+  .playbill .dek{font-size:13.5px;margin-bottom:13px}
+  .playbill .band > *{letter-spacing:1.2px}
+  .playbill .band > * + *::before{margin:0 7px}
+}
 .card{background:var(--surface-1);border:1px solid var(--grid);border-radius:12px;padding:18px;margin-bottom:16px}
 h2.bz{font-size:13px;letter-spacing:1.3px;text-transform:uppercase;color:var(--ink-3);margin:0 0 12px;font-weight:700}
 .chip{font:700 11px/1 ui-monospace,Menlo,monospace;letter-spacing:1.2px;text-transform:uppercase;padding:5px 9px;border-radius:5px;background:var(--grid);color:var(--ink-2);white-space:nowrap}
@@ -858,9 +944,8 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
 .gr{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:8px 0;
   border-bottom:1px solid var(--grid);font-size:13.5px}
 .gr input{width:96px}
-/* auth */
-.who-strip{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13.5px}
-.who-strip .nm{font-weight:750}
+/* auth — the signed-OUT form only. There is no signed-in strip any more: sign out is in
+   the nav account modal and "my sheet" is your cell in the cast strip. */
 .auth{max-width:420px}
 .auth .f{margin-bottom:10px}
 .readonly{border-left:3px solid var(--warn);padding-left:12px;color:var(--ink-2);font-size:13.5px}
@@ -913,13 +998,7 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
      names which levers are in the draw. */
   .bz-carnival .machine.armed .strip{animation:none!important;visibility:hidden}
   .bz-carnival .machine.armed .win{background:repeating-linear-gradient(45deg,#e7dcc6 0 7px,#f7f1e6 7px 14px)}}
-/* ---- sheets nav: board / one chip per player / league ---- */
-.snav{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 16px}
-.snav button{background:none;border:1px solid var(--grid);color:var(--ink-2);border-radius:999px;
-  padding:6px 13px;cursor:pointer;font:700 12px/1 ui-monospace,monospace;letter-spacing:.6px;text-transform:uppercase}
-.snav button:hover{border-color:var(--accent);color:var(--ink-1)}
-.snav button.on{background:var(--accent);color:var(--accent-ink);border-color:transparent}
-.snav button .yu{font-size:9px;opacity:.8;margin-left:5px}
+/* ---- sheets nav: the cast strip, styled with the playbill it lives in ---- */
 /* ---- sheet stat tiles ---- */
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:14px 22px;margin:4px 0 2px}
 .stat-grid .big{font-size:24px}
@@ -1031,6 +1110,27 @@ table.clv-tbl .pos{color:var(--good)} table.clv-tbl .neg{color:var(--bad)}
   color:var(--ink-3);line-height:1.65}
 .clv-foot b{color:var(--ink-2)}
 .clv-foot code{font-size:11px;background:var(--grid);padding:1px 5px;border-radius:4px}
+/* ---- one live line, the method in a drawer ----
+   The prose under these charts was five paragraphs with four live numbers buried in it,
+   which is a methodology page wearing a caption's clothes. The numbers that CHANGE are
+   the ones a reader needs without clicking; the method does not change between loads.
+
+   ⚠️ The drawer is closed by default and its state is NOT persisted. A localStorage
+   open-state key is worth nothing here and is one more thing that can be wrong.
+
+   ⚠️ The drawer sits AFTER the plot, never above it. clvShowTip measures
+   #clvSvg.getBoundingClientRect().width to decide which side of the cursor the tooltip
+   goes on; anything that reflows the plot when it opens moves the tooltip with it. */
+.clv-foot .live{margin:0}
+.clv-foot .method{margin:9px 0 0}
+.clv-foot .method > summary{cursor:pointer;list-style:none;padding:5px 0;
+  font:700 10.5px/1 ui-monospace,monospace;letter-spacing:1.3px;text-transform:uppercase;
+  color:var(--accent)}
+.clv-foot .method > summary::-webkit-details-marker{display:none}
+.clv-foot .method > summary::after{content:" ↓"}
+.clv-foot .method[open] > summary::after{content:" ↑"}
+.clv-foot .method > summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.clv-foot .method-body{padding:4px 0 2px;line-height:1.7}
 .clv-empty{padding:50px 20px;text-align:center;color:var(--ink-3);font-size:13.5px}
 
 /* ---- correlated-ticket honesty + Bozo Royale ---- */
@@ -1062,13 +1162,9 @@ table.clv-tbl .pos{color:var(--good)} table.clv-tbl .neg{color:var(--bad)}
 .chops .passed{font:600 10.5px/1 ui-monospace,monospace;color:var(--ink-3)}
 .chops .passed .unmeas{color:var(--warn)}
 .chops .passed .tie{color:var(--ink-3)}
-.rosterline{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 2px}
-.rosterline .rr{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:650;
-  color:var(--ink-1);border:1px solid var(--border);border-radius:999px;padding:4px 11px}
-.rosterline .rr.dead{opacity:.55;border-style:dashed}
-.rosterline .dead{font:700 9px/1 ui-monospace,monospace;letter-spacing:.8px;color:var(--bad)}
-.rosterline .bb{font:700 9px/1 ui-monospace,monospace;letter-spacing:.8px;color:var(--accent)}
-.rosterline .bb.last{color:var(--warn)}
+/* ⚠️ .rosterline is GONE. Who is alive and who is out is rendered exactly once, on the
+   cast strip in the playbill header, because two renderings of one fact can disagree
+   and the strip is already the roster. See `.playbill .snav button.dead`. */
 /* ⚠️ The parachute is a status, not decoration: it says the next chop ends that
    player. Sized to the text it follows so it reads as part of the name. */
 .chute{font-size:12px;line-height:1;margin-left:3px;cursor:help}
@@ -1098,11 +1194,7 @@ table.gaptbl .gwhy{font-size:11px;color:var(--ink-3);margin-top:2px;max-width:46
 #dgTable td.clvdn{color:var(--bad);font-weight:700}
 #diagCard.bz-carnival #dgTable td.clvup{color:#7ef0a8}
 #diagCard.bz-carnival #dgTable td.clvdn{color:#ff8f7a}
-/* ---- league switcher ---- */
-.lgbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
-.lgbar select{background:var(--surface-1);border:1px solid var(--grid);color:var(--ink-1);
-  border-radius:8px;padding:7px 10px;font:700 13px system-ui;max-width:min(320px,70vw)}
-.lgbar .sz{font:700 10.5px/1 ui-monospace,monospace;letter-spacing:1px;text-transform:uppercase;color:var(--ink-3)}
+/* ---- league switcher: styled with the playbill it now lives in ---- */
 /* ---- league hub ---- */
 .hub{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:4px}
 .hcard{display:block;text-decoration:none;color:var(--ink-1);background:var(--page);
@@ -2743,8 +2835,41 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
 <div class="bz">
 
-<div class="bz-hdr"><h1>Bozo</h1><span class="chip" id="statusChip">—</span></div>
-<p class="bz-sub">One favorite each, one big parlay. Whoever busts it worst wears it — and funds next week's ticket.</p>
+<!-- ---------- the playbill ----------
+     One header instead of six stacked blocks. It replaced a generic title + chip + sub,
+     a boxed league bar, a bare back-link, a wrapping pill nav and a "signed in as" card
+     — ~340px of chrome before any content, on a page that turns carnival 800px down.
+
+     What lives where, and why it is not duplicated anywhere else:
+       · the BAND is the only place the week, the status and the roster count appear
+       · the CAST STRIP is the only place the roster appears, alive or chopped
+       · the LEAGUE LINE is the switcher; the league name IS the affordance
+     Every id in here kept its old job — #statusChip, #lgPick, #lgSize, #backHub and
+     #snav are all still written by the same functions. Only the containers changed. -->
+<header class="playbill" id="bzHead">
+  <div class="eyebrow">★ This week only ★</div>
+  <h1>Bozo</h1>
+  <p class="dek">One favorite each, one big parlay. Whoever busts it worst wears it — and funds next week's ticket.</p>
+  <div class="band" id="bzBand">
+    <!-- ⚠️ #statusChip's contract is unchanged: render() writes 'chip '+status to its
+         className and "Week N · status" to its text. It is restyled, not rewired. -->
+    <span class="chip" id="statusChip">—</span>
+    <!-- and #lgSize prints the COUNT only now — the week used to be printed twice. -->
+    <span class="sz" id="lgSize"></span>
+  </div>
+  <div class="league" id="lgbar" style="display:none">
+    <label class="lil" for="lgPick">League</label>
+    <select id="lgPick"></select>
+    <span class="lgname" id="lgName"></span>
+    <span class="lil" id="lgChange" style="display:none">change ↓</span>
+    <span class="demo" id="lgDemo" style="display:none">Demo</span>
+    <span class="adm" id="adminBadge"></span>
+    <a class="backlink" id="backHub" href="bozo.html" style="display:none">← All leagues</a>
+  </div>
+  <!-- ---------- cast strip: the board, one cell per player, the league ---------- -->
+  <div class="snav" id="snav"></div>
+  <div class="sheetbar" id="sheetBar" style="display:none"></div>
+</header>
 
 <!-- ---------- the hub: every league, plus admin ---------- -->
 <div class="card" id="hubCard" style="display:none">
@@ -2775,33 +2900,26 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <p class="note" id="hubNote"></p>
 </div>
 
-<!-- ---------- which league ---------- -->
-<div class="lgbar" id="lgbar" style="display:none">
-  <label class="lil" for="lgPick" style="margin:0">League</label>
-  <select id="lgPick"></select>
-  <span class="sz" id="lgSize"></span>
-</div>
+<!-- ---------- Royale: the one piece of Royale state that is NEWS ----------
+     The 🪂 re-deploy banner, and only while the chop it reports is from the most recent
+     graded week. Everything else about the season — the epitaph, the chop log, the rules
+     — is a receipt, and receipts anchor at the bottom of the board (#royaleCard). No
+     card chrome and no default content: an empty div collapses. -->
+<div id="royaleAlert"></div>
 
-<a class="backlink" id="backHub" href="bozo.html" style="display:none">← All leagues</a>
+<!-- ---------- identity ----------
+     ⚠️ #authCard is the SIGNED-OUT form and it stays. It is the only in-page path for
+     someone who lands on a shared board link, and the nav pill is a 170px chip.
 
-<!-- ---------- sheet nav: the board, one sheet per player, the league ---------- -->
-<div class="snav" id="snav"></div>
-
-<!-- ---------- identity ---------- -->
+     ⚠️ There is no signed-IN card any more. Sign out lives in the DDAuth account modal
+     off the nav pill (#ddAuthOutBtn) — identity UX lives in one place (the 8/7 rule) —
+     and "my sheet" is your own cell in the cast strip, pinned second. Two controls for
+     one navigation is one too many. Its handlers were deleted with it: a click handler
+     bound to a missing node throws on load and takes the whole render down. -->
 <div class="card" id="authCard">
   <h2 class="bz" id="authH">Sign in</h2>
   <div id="authBody"></div>
   <div class="err" id="authErr"></div>
-</div>
-
-<div class="card" id="meCard" style="display:none;padding:12px 16px">
-  <div class="who-strip">
-    <span>Signed in as <span class="nm" id="meName">—</span></span>
-    <span class="tm" id="adminBadge"></span>
-    <span style="margin-left:auto"></span>
-    <button class="btn ghost sm" id="mySheet">My sheet</button>
-    <button class="btn ghost sm" id="signOut">Sign out</button>
-  </div>
 </div>
 
 <!-- ---------- submit ---------- -->
@@ -2950,17 +3068,6 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 <!-- ---------- hierarchy: the machine sits ABOVE the ticket now, because it is
      the frame you read the ticket through. It is visible on an OPEN board in an
      armed/idle state — the reels only STOP when the server has actually drawn. -->
-<!-- ---------- Bozo Royale: re-deploys and the chop log ----------
-     ⚠️ Nothing here is a prompt. Get chopped with a re-deploy left and you are put back
-     on the next ticket automatically — the Warzone gulag, not a menu. This card reports
-     what already happened to you. The old buy-back needed a timed window to stop a
-     chopped player lurking and re-entering at the final two; taking the decision away
-     closes that by construction, because there is nothing left to defer. -->
-<div class="card" id="royaleCard" style="display:none">
-  <div class="bz-hdr"><h2 class="bz" style="margin:0">Bozo Royale</h2><span class="tm" id="royaleState"></span></div>
-  <div id="royaleBody"></div>
-</div>
-
 <div class="card bz-carnival" id="drawCard">
   <div class="bz-hdr"><h2 class="bz" style="margin:0">This week's hierarchy</h2><span class="tm" id="drawState"></span></div>
   <div class="machine" id="machine"><div class="reels" id="reels"></div>
@@ -2985,6 +3092,14 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <p class="note" id="clvSub" style="margin:0 0 14px">Each dot is one player through one week. Horizontal is the price
     they got against the closing line; vertical is how often they actually won versus how often the closing line said
     they should. Hover or pick a name to trace a season.</p>
+
+  <!-- ⚠️ This does NOT go in the methodology drawer, and it is not a paragraph of the
+       footnote. It is a truth claim about the numbers on screen, the demo-badge
+       requirement is explicit and site-wide, and a warning a reader has to click to
+       find is a warning most readers never see. Above the plot, always visible. -->
+  <div class="flag" id="clvSim" style="display:none"><span>⚠️</span><span><b>Simulated league.</b>
+    Every price, close and result on this chart is fabricated by the seeding script. It is here to show what a
+    populated board looks like, it counts toward nothing, and it can be deleted from the leagues card.</span></div>
 
   <div class="clv-controls">
     <div class="seg" role="group" aria-label="View">
@@ -3082,6 +3197,24 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <button class="btn ghost sm" id="next">Start next week</button>
   </div>
   <p class="note" id="srcNote"></p>
+</div>
+
+<!-- ---------- Bozo Royale: the chop log ----------
+     ⚠️ This card is LAST on the board on purpose, below the season table. A chop log is
+     a receipt, and receipts go at the end. It used to sit above the hierarchy machine,
+     where four stacked blocks of prose were the first thing anyone read on a Royale
+     board — before the ticket, before the draw, before the standings. Who is alive is
+     now on the cast strip in the header, and the one piece of NEWS in here (a re-deploy
+     from the most recent graded week) is hoisted to #royaleAlert under the header.
+
+     ⚠️ Nothing here is a prompt. Get chopped with a re-deploy left and you are put back
+     on the next ticket automatically — the Warzone gulag, not a menu. This card reports
+     what already happened to you. The old buy-back needed a timed window to stop a
+     chopped player lurking and re-entering at the final two; taking the decision away
+     closes that by construction, because there is nothing left to defer. -->
+<div class="card" id="royaleCard" style="display:none">
+  <div class="bz-hdr"><h2 class="bz" style="margin:0">Bozo Royale</h2><span class="tm" id="royaleState"></span></div>
+  <div id="royaleBody"></div>
 </div>
 
 </div>
@@ -3745,15 +3878,37 @@ document.getElementById('hubList').addEventListener('click', e=>{
 /* ---------------- the league switcher ---------------- */
 // League in the QUERY string, view in the hash: bozo.html?l=smallball#s=Tony. They are
 // orthogonal — the same sheet exists in every league — so they get separate slots.
+/* The league line and the band's roster count.
+   ⚠️ #lgSize now lives in the BAND, not in this line, so it has to be written even when
+   there is only one league and the switcher itself is hidden. It also prints the count
+   ONLY: the week is #statusChip's, and it used to be printed in both places.
+   ⚠️ In Royale the count is who is still ALIVE. "8 dawgs" on a board where five have
+   been chopped names five people who are never coming back. */
 function paintLeagueBar(){
-  const bar = document.getElementById('lgbar');
-  const sel = document.getElementById('lgPick');
-  if(LEAGUES.length <= 1){ bar.style.display = 'none'; return; }
-  bar.style.display = '';
-  sel.innerHTML = LEAGUES.map(l=>`<option value="${esc(l.id)}"${l.id===LID?' selected':''}>${esc(l.name)}</option>`).join('');
-  const lg = league();
+  const bar  = document.getElementById('lgbar');
+  const sel  = document.getElementById('lgPick');
+  const one  = LEAGUES.length <= 1;
+  const lg   = league();
+
+  const alive = isRoyale() ? royaleAliveNames().length : null;
   document.getElementById('lgSize').textContent =
-    lg ? `${lg.size} player${lg.size===1?'':'s'} · week ${lg.week}` : '';
+    alive != null ? `${alive} alive`
+    : lg ? `${lg.size} dawg${lg.size===1?'':'s'}` : '';
+
+  bar.style.display = onHub() ? 'none' : '';
+  // One league is no switcher — the name is a statement, not a control. More than one
+  // and the name IS the affordance: a <select> styled as text with a change cue.
+  sel.style.display = one ? 'none' : '';
+  document.getElementById('lgChange').style.display = one ? 'none' : '';
+  const nm = document.getElementById('lgName');
+  nm.style.display = one ? '' : 'none';
+  nm.textContent = one ? (lg ? lg.name : '') : '';
+  bar.querySelector('label[for="lgPick"]').style.display = one ? 'none' : '';
+  if(!one)
+    sel.innerHTML = LEAGUES.map(l=>`<option value="${esc(l.id)}"${l.id===LID?' selected':''}>${esc(l.name)}</option>`).join('');
+  document.getElementById('lgDemo').style.display = isDemo() ? '' : 'none';
+  // The admin marker moved here off the deleted "signed in as" card. Same isAdmin() test.
+  document.getElementById('adminBadge').textContent = isAdmin() ? 'admin' : '';
 }
 document.getElementById('lgPick').onchange = e => {
   // Full reload: the EventSource, the state and every sheet are league-scoped, and a
@@ -3787,16 +3942,50 @@ function view(){
 function goto(v){
   location.hash = v==='board' ? '' : v==='league' ? 'league' : 's='+encodeURIComponent(v);
 }
+/* The cast strip. One scrolling row, and the only rendering of who is in this league —
+   including, in Royale, who is out and in which week. */
+let snavActive = null;
 function paintSnav(v){
   const el = document.getElementById('snav');
-  const btn = (id,label,extra) =>
-    `<button data-v="${esc(id)}"${v===id?' class="on"':''}>${esc(label)}${extra||''}</button>`;
+  const btn = (id,label,extra,cls) =>
+    `<button data-v="${esc(id)}" class="${cls||''}${v===id?' on':''}"><span class="who">${esc(label)}</span>${extra||''}</button>`;
+  // Board pins first and your own sheet pins second. Everyone else keeps roster order —
+  // the strip scrolls, and the two cells a reader wants most must not be off-screen.
+  const roster = names();
+  const ordered = (ME && roster.includes(ME.name))
+    ? [ME.name, ...roster.filter(p => p !== ME.name)] : roster;
   el.innerHTML = btn('board','The Board')
-    + names().map(p=>btn(p, teamOf(p), chute(p) + ((ME&&p===ME.name)?'<span class="yu">— you</span>':''))).join('')
+    + ordered.map(p=>{
+        const r = royaleOf(p);
+        const dead = !!(r && r.alive === false);
+        return btn(p, teamOf(p),
+          chute(p)
+          + (dead ? `<span class="out">out · wk ${esc(String(r.eliminatedWeek ?? '?'))}</span>` : '')
+          + ((ME && p===ME.name) ? '<span class="yu">— you</span>' : ''),
+          dead ? 'dead ' : '');
+      }).join('')
     + btn('league','League');
+
+  /* ⚠️ Scroll the active cell into view ONLY when the active view actually changed.
+     paintSnav runs on every 15s poll and on every hashchange, and an unconditional
+     scroll yanks the strip out from under a reader who is mid-drag. Landing on
+     #s=Tucholski still has to show you your own cell, or the strip looks like it does
+     not contain you.
+     ⚠️ Setting scrollLeft on the strip itself, not scrollIntoView: scrollIntoView walks
+     every scrollable ancestor including the document, so an off-screen cell would also
+     jump the whole page. Only the strip's own scroll should move. */
+  if(v !== snavActive){
+    snavActive = v;
+    const on = el.querySelector('button.on');
+    if(on) el.scrollLeft = Math.max(0, on.offsetLeft - (el.clientWidth - on.offsetWidth)/2);
+  }
 }
 document.getElementById('snav').addEventListener('click', e=>{
   const b = e.target.closest('button[data-v]'); if(b) goto(b.dataset.v);
+});
+document.getElementById('sheetBar').addEventListener('click', e=>{
+  const a = e.target.closest('a[data-v]'); if(!a) return;
+  e.preventDefault(); goto(a.dataset.v);
 });
 window.addEventListener('hashchange', ()=>render());
 
@@ -3814,13 +4003,17 @@ function render(){
   const live = players.map(p=>({p, ...(picks[kEnc(p)]||{})})).filter(x=>x.price!=null);
   const hub = onHub();
   paintHub();
-  // The chip reports one league's week and status — nonsense on a directory of several.
+  // The band reports one league's week, status and roster — nonsense on a directory of
+  // several. The title, eyebrow and dek are the site's, not a league's, and stay.
+  document.getElementById('bzBand').style.display = hub ? 'none' : '';
   document.getElementById('statusChip').style.display = hub ? 'none' : '';
   document.getElementById('backHub').style.display = (hub || LEAGUES.length<2) ? 'none' : '';
   // On the hub every league-scoped card is hidden; the directory is the whole page.
-  for(const id of ['snav','lgbar','submitCard','ticketCard','seasonCard','sheetCard','leagueCard','drawCard','royaleCard','clvCard','survCard','diagCard','gradeCard','verdict'])
+  for(const id of ['snav','lgbar','sheetBar','royaleAlert','submitCard','ticketCard','seasonCard','sheetCard','leagueCard','drawCard','royaleCard','clvCard','survCard','diagCard','gradeCard','verdict'])
     { const el=document.getElementById(id); if(el && hub) el.style.display='none'; }
   if(hub) return;
+  document.getElementById('snav').style.display = '';
+  document.getElementById('royaleAlert').style.display = '';
 
   const v = view();
   const onBoard = v==='board';
@@ -3853,7 +4046,10 @@ function render(){
     `Favorites only, ${bd.ceil} to ${bd.floor}. No exact duplicates. Editing resets your clock and your price. The ticket locks the moment the last leg lands.`;
   const cm=document.getElementById('clearMine'); if(cm) cm.style.display = mine ? '' : 'none';
 
-  paintRoyale();
+  // Two destinations, one source. The banner is news and sits under the header; the log
+  // is a receipt and sits at the bottom of the board.
+  paintRoyaleAlert();
+  paintRoyaleLog();
   // ⚠️ Repaint the preview on every board change, not just on your own typing. Someone
   // else claiming the selection you are looking at is exactly the moment you need to
   // know, and a preview that only updates when YOU touch something would still be
@@ -3869,6 +4065,10 @@ function render(){
   document.getElementById('ticketCard').style.display = onBoard ? '' : 'none';
   document.getElementById('seasonCard').style.display = onBoard ? '' : 'none';
   document.getElementById('sheetCard').style.display = players.includes(v) ? '' : 'none';
+  // The sheet bar is part of the header, so it is cleared here rather than left stale
+  // on the way back to the board. paintSheet fills it — it reads what #sheetCard already
+  // computes, so there is no second source for these numbers.
+  document.getElementById('sheetBar').style.display = players.includes(v) ? '' : 'none';
   if(players.includes(v)) paintSheet(v);
   document.getElementById('leagueCard').style.display = v==='league' ? '' : 'none';
   if(v==='league'){ paintLeague();
@@ -3964,6 +4164,16 @@ function paintSheet(player){
   const withClose = rows.filter(r=>devigP(r.close, r.closeOpp)!=null && devigP(r.price, r.priceOpp)!=null);
   const clv = withClose.length
     ? withClose.reduce((a,r)=>a+(devigP(r.close,r.closeOpp)-devigP(r.price,r.priceOpp)),0)/withClose.length : null;
+
+  /* The header's sheet bar. Same numbers as the tiles below, computed once, right here —
+     it is a locator ("you are on Kap's sheet"), not a second scoreboard, so it gets the
+     name, the legs and the CLV and nothing else. Nothing here is invented: a player with
+     no capturable closes shows an em dash, the same as the tile. */
+  document.getElementById('sheetBar').innerHTML =
+    `<b>${esc(teamOf(player))}${isMe?"'s sheet — yours":"'s sheet"}</b>`
+    + `<span>${rows.length} leg${rows.length===1?'':'s'}</span>`
+    + `<span>${clv==null?'— CLV':((clv>0?'+':'')+(clv*100).toFixed(1)+'pp CLV')}</span>`
+    + `<a href="#" data-v="board">← Board</a>`;
 
   const tile=(lil,big)=>`<div><div class="lil">${lil}</div><div class="big">${big}</div></div>`;
   document.getElementById('shStats').innerHTML =
@@ -5334,18 +5544,15 @@ async function decide(){
 }
 
 /* ---------------- auth UI ---------------- */
+/* Signed in, there is nothing to show here: sign out lives in the nav's account modal
+   (#ddAuthOutBtn) and your own sheet is your cell in the cast strip. The admin marker
+   moved to the league line and is written by paintLeagueBar. So this hides the form and
+   gets out of the way — one branch instead of a card toggled against a card. */
 function renderAuth(){
   const card=document.getElementById('authCard'), body=document.getElementById('authBody');
-  const meCard=document.getElementById('meCard');
   const err=document.getElementById('authErr'); err.className='err'; err.textContent='';
-  if(ME){
-    card.style.display='none'; meCard.style.display='';
-    document.getElementById('meName').textContent=ME.name;
-    document.getElementById('adminBadge').textContent = isAdmin() ? '· admin' : '';
-    render();
-    return;
-  }
-  meCard.style.display='none'; card.style.display='';
+  if(ME){ card.style.display='none'; render(); return; }
+  card.style.display='';
 
   document.getElementById('authH').textContent='Sign in';
   body.innerHTML = `<div class="auth">
@@ -5374,8 +5581,10 @@ document.getElementById('next').onclick = async ()=>{
   try{ await wPost('/bozo/next',{}); drawnOrder=null; await refresh(); }
   catch(err){ document.getElementById('srcNote').textContent=err.message; }
 };
-document.getElementById('signOut').onclick = ()=>{ clearSession(); renderAuth(); };
-document.getElementById('mySheet').onclick = ()=>{ if(ME) goto(ME.name); };
+/* ⚠️ #signOut and #mySheet were deleted along with #meCard, and their handlers went with
+   them. A getElementById(...).onclick against a node that no longer exists throws at
+   parse time and takes every wiring line below it down with it. Sign out is
+   #ddAuthOutBtn in the nav account modal; "my sheet" is your cell in the cast strip. */
 document.getElementById('fSport').innerHTML =
   Object.entries(SPORTS).map(([k,v])=>`<option value="${k}">${v.n}</option>`).join('');
 document.getElementById('fSport').onchange = ()=>loadGames(fSport.value);
@@ -5595,7 +5804,47 @@ function royaleStatus_page(){
    consequence: Standard names a bozo who funds the next ticket and plays again, Royale
    ELIMINATES them. The chop itself is decided on the server — see the Worker — because
    it gates who may write a leg for the rest of the season. This is the display. */
-function paintRoyale(){
+/* ---- the one Royale fact that is NEWS ----
+   ⚠️ NOT A PROMPT. There used to be a timed buy-back offer here with Take and Decline
+   buttons and an expiry. The re-deploy is automatic, so there is nothing to press — this
+   just tells you what already happened to you and what it costs you next time.
+
+   This is the only piece of the Royale block that stays high on the page, because it is
+   a state change the reader has not seen yet. Once the week it reports is no longer the
+   most recent graded week it is history, and history is a receipt: it stops rendering
+   here and the chop log at the bottom of the board carries it instead.
+
+   ⚠️ "Most recent" is read off the chop records themselves, not stored. There is no
+   seen-key and no dismissal: a localStorage flag here would be rebuilding the
+   lever-reveal mechanism for something that does not need it, and it would mean a reader
+   on a second device gets a different page. */
+function paintRoyaleAlert(){
+  const el = document.getElementById('royaleAlert');
+  el.innerHTML = '';
+  if(!isRoyale() || onHub() || view()!=='board' || !ME) return;
+
+  const R = S.royale || {};
+  // ⚠️ filter(c=>c && c.week) — Firebase turns an object keyed by sequential week
+  // numbers into an array with a null at index 0, and an unfiltered read throws.
+  const chopsList = Object.values(R.chops||{}).filter(c=>c&&c.week).sort((a,b)=>b.week-a.week);
+  if(!chopsList.length) return;
+  const mine = chopsList.find(c=>c.chopped===ME.name);
+  // ⚠️ Both spellings — a chop written before the rename says `boughtBack`. Reading only
+  // the new name silently relabels a historical re-deploy as "out for good".
+  if(!(mine && (mine.redeployed ?? mine.boughtBack) && hasChute(ME.name))) return;
+  if(mine.week !== Math.max(...chopsList.map(c=>c.week))) return;
+
+  el.innerHTML = `<div class="redeploy">
+      <h3>🪂 You were chopped in week ${mine.week} — and re-deployed.</h3>
+      <p>You're back on the next ticket automatically${mine.cost?` for <b>$${mine.cost}</b>`:''}, and you funded
+      that ticket on the way through. There was nothing to accept: waiting is the one thing a way back can't
+      allow, or you'd sit out the ugly weeks and drop in at the final two.
+      <b>That was your one.</b> The parachute stays next to your name now, and the next chop is the end of it.</p>
+    </div>`;
+}
+
+/* ---- the receipt: the epitaph, the chop log and the rules ---- */
+function paintRoyaleLog(){
   const card = document.getElementById('royaleCard');
   if(!isRoyale() || onHub() || view()!=='board'){ card.style.display='none'; return; }
   card.style.display='';
@@ -5609,38 +5858,27 @@ function paintRoyale(){
 
   let h = '';
 
-  /* ---- were you re-deployed? ----
-     ⚠️ NOT A PROMPT. There used to be a timed buy-back offer here with Take and Decline
-     buttons and an expiry. The re-deploy is automatic, so there is nothing to press —
-     this just tells you what already happened to you and what it costs you next time. */
   const chopsList = Object.values(R.chops||{}).filter(c=>c&&c.week).sort((a,b)=>b.week-a.week);
   const mine = ME ? chopsList.find(c=>c.chopped===ME.name) : null;
-  // ⚠️ Both spellings again — a chop written before the rename says `boughtBack`.
-  if(mine && (mine.redeployed ?? mine.boughtBack) && ME && hasChute(ME.name)){
-    h += `<div class="redeploy">
-      <h3>🪂 You were chopped in week ${mine.week} — and re-deployed.</h3>
-      <p>You're back on the next ticket automatically${mine.cost?` for <b>$${mine.cost}</b>`:''}, and you funded
-      that ticket on the way through. There was nothing to accept: waiting is the one thing a way back can't
-      allow, or you'd sit out the ugly weeks and drop in at the final two.
-      <b>That was your one.</b> The parachute stays next to your name now, and the next chop is the end of it.</p>
-    </div>`;
+  /* Your own re-deploy, once it is no longer the most recent graded week — the banner
+     under the header has already stopped carrying it by then, and it still belongs
+     somewhere. ⚠️ Both spellings again. */
+  if(mine && (mine.redeployed ?? mine.boughtBack) && ME && hasChute(ME.name)
+     && mine.week !== Math.max(...chopsList.map(c=>c.week))){
+    h += `<p class="note">You were chopped in week ${mine.week} and re-deployed onto the next ticket, which you
+      funded on the way through. That was your one: the parachute next to your name says the next chop is final.</p>`;
   } else if(ME && royaleOf(ME.name)?.alive === false){
+    /* A season-over epitaph, not news — which is why it is down here now rather than the
+       first paragraph on the board. Your own cell in the cast strip already says
+       "out · wk 14"; this is the sentence explaining what that means. */
     const out = chopsList.find(c=>c.chopped===ME.name);
     h += `<p class="note">You were chopped in week ${out?out.week:'?'} and you'd already used your re-deploy —
       that's the season. You still show on the board, the ledger and the chart; your line just stops.</p>`;
   }
 
-  /* ---- who is left, and who isn't ---- */
-  h += `<div class="rosterline">` + names().map(p=>{
-    const r = royaleOf(p);
-    const dead = r && r.alive === false;
-    return `<span class="rr${dead?' dead':''}">${esc(teamOf(p))}${chute(p)}`
-      + (dead?`<span class="dead">OUT · WK ${r.eliminatedWeek??'?'}</span>`:'')
-      // ⚠️ "one left" is a fact, not an offer. There is no button.
-      + (!dead && !hasChute(p) ? '<span class="bb">re-deploy in hand</span>' : '')
-      + (!dead && hasChute(p) ? '<span class="bb last">last life</span>' : '')
-      + `</span>`;
-  }).join('') + `</div>`;
+  /* ⚠️ There is no roster line here any more. Who is alive, who is out and in which week
+     is rendered exactly once, on the cast strip in the playbill header. Two renderings
+     of one fact can disagree, and the strip is already the roster. */
 
   /* ---- the chop log. This is a receipt for an elimination, so it records not just who
        went but which lever decided it and which levers passed on the way — and whether
@@ -6050,11 +6288,35 @@ function clvShowTip(d,px,py){
   tip.style.opacity = 1;
 }
 
-function clvFootnote(){
-  const c = CLV.data.coverage, syn = CLV.data.synthetic;
-  return (syn ? `<b>Simulated league.</b> Every price, close and result below is fabricated by the seeding `
-      + `script. It is here to show what a populated board looks like, counts toward nothing, and can be `
-      + `deleted from the leagues card.<br><br>` : '')
+/* ---- the footnote, split ----
+   ⚠️ Three things are deliberately NOT in the drawer.
+   1. "Simulated league" — a truth claim about the numbers on screen, and the demo-badge
+      rule is site-wide. It is a visible strip above the plot (#clvSim), not a paragraph.
+   2. The coverage counts — they ARE the sample. A drawer that hides "4 of 176 excluded"
+      hides it from everyone who does not click.
+   3. The entry-price caveat, in short form. The chart is displaying CLV; that CLV mixes
+      one checked number with one unchecked one, and that has to be readable next to it.
+      The full paragraph is still in the drawer.
+   Everything static goes below, verbatim. */
+function clvFootLive(){
+  const c = CLV.data.coverage;
+  // n per player over the whole season, for the band's range — the same counts the band
+  // takes its median from, so the two cannot drift.
+  const ns = CLV.players.map(p => (clvSeriesFor('all')[p]||[]).length).filter(n => n > 0).sort((a,b)=>a-b);
+  const band = ns.length
+    ? `luck band n = ${ns[0]}${ns[ns.length-1] !== ns[0] ? '–' + ns[ns.length-1] : ''}` : '';
+  return `<p class="live"><b>${c.noClose} of ${c.legs}</b> legs have no capturable close and are excluded`
+    + ` · <b>${c.pushes}</b> push${c.pushes===1?'':'es'} dropped`
+    + (band ? ` · ${band}` : '')
+    + ` · entry prices are self-reported</p>`;
+}
+
+function clvMethod(){
+  // The counts appear on the live line too, and on purpose: up there they are the
+  // sample, down here they are the sentence explaining what an exclusion means. Same
+  // source both times, so they cannot disagree.
+  const c = CLV.data.coverage;
+  return `<details class="method"><summary>How this chart is built</summary><div class="method-body">`
     + `<b>How the axes are built.</b> Both prices are de-vigged proportionally against the opposite side, so a `
     + `<code>-200</code> favourite quoted with the usual hold is treated as roughly 65%, not 66.7%. `
     + `<b>x</b> = mean of <code>p_close − p_entry</code> across a player's graded legs to date, in probability `
@@ -6087,7 +6349,8 @@ function clvFootnote(){
       ? `<br><br><b>Bozo Royale changes what n means.</b> A player chopped in week 1 has one charted leg and a `
         + `delta that says nothing about them; the survivor has fourteen. Dot size already encodes that — the `
         + `band's <code>n</code> range is printed on its label for the same reason, because a median no longer `
-        + `describes most of the roster.` : '');
+        + `describes most of the roster.` : '')
+    + `</div></details>`;
 }
 
 /* Draw the survival curves. Same colour + shape identity as the CLV chart above — a
@@ -6155,8 +6418,22 @@ function paintSurvival(){
           <td class="tm">${pool.length}${pool.length<3?' — thin':''}</td></tr>`;
       }).join('') + `</tbody>`;
 
+  /* Same split as the CLV footnote. What stays visible is what changes between loads and
+     what is a claim about these numbers: that they are simulated, how many seasons, and
+     whether anyone on the table has too little history to be resampled honestly. The
+     method — what the sim does and does not model — is the drawer.
+     ⚠️ "Simulation, not a forecast" does NOT go in the drawer. It is the same class of
+     claim as the CLV chart's demo strip. */
+  const thin = R.players.filter(p => royalePool(p).length < 3).length;
   document.getElementById('survFoot').innerHTML =
-      `<b>Simulation, not a forecast.</b> ${R.sims.toLocaleString()} seasons, each week dealing every survivor `
+      `<p class="live"><b>Simulation, not a forecast.</b> ${R.sims.toLocaleString()} seasons resampled from `
+    + `players' own graded legs`
+    + (thin ? ` · <b>${thin} of ${R.players.length}</b> ${thin===1?'has':'have'} fewer than three legs to `
+        + `resample — treat those numbers as decoration` : '')
+    + (R.softLegs ? ` · <b>${R.softLegs} of ${R.totalLegs}</b> resampled legs price off a self-reported entry` : '')
+    + `</p>`
+    + `<details class="method"><summary>How this simulation is built</summary><div class="method-body">`
+    + `<b>Simulation, not a forecast.</b> ${R.sims.toLocaleString()} seasons, each week dealing every survivor `
     + `one of their own graded legs at random and re-rolling only the outcome from that leg's de-vigged closing `
     + `price. Nobody's future betting is invented — but a player is only as predictable as their history is long, `
     + `and the <i>legs resampled</i> column is how much history there is. Under three, treat their number as `
@@ -6170,7 +6447,8 @@ function paintSurvival(){
       : ``)
     + (R.softLegs ? `<br><br><b>${R.softLegs} of ${R.totalLegs} resampled legs have no captured close</b>, so their `
       + `win probability comes from the entry price instead — a self-reported number. Those legs flatter whoever `
-      + `entered them optimistically.` : '');
+      + `entered them optimistically.` : '')
+    + `</div></details>`;
 }
 
 async function clvLoad(force){
@@ -6201,7 +6479,10 @@ async function clvLoad(force){
     wk.max = CLV.maxWeek; wk.value = CLV.maxWeek;
     document.getElementById('clvSport').innerHTML = '<option value="all">All sports</option>'
       + CLV.sports.map(s=>`<option value="${esc(s)}">${esc(s.toUpperCase())}</option>`).join('');
-    document.getElementById('clvFoot').innerHTML = clvFootnote();
+    // The demo warning is a strip above the plot, not a line in the footnote — see the
+    // note above clvFootLive for why it does not go in the drawer.
+    document.getElementById('clvSim').style.display = CLV.data.synthetic ? '' : 'none';
+    document.getElementById('clvFoot').innerHTML = clvFootLive() + clvMethod();
     clvRender();
     paintSurvival();
   }catch(e){
