@@ -1,0 +1,136 @@
+# Record draft picks from the Actions tab — no laptop, no terminal, no PR.
+#
+# Draft night is the wrong time to need a dev environment. Open Actions → "Record
+# draft picks" → Run workflow, type the picks, press the button. The pipe recomputes
+# the rosters, the board, the diagnostics and the 100,000-season Monte Carlo, the data
+# contract is validated, and the result is committed straight to main. The page reads
+# the new file on the next load, roughly a minute later.
+#
+# ⚠️ THIS COMMITS TO main, WHICH DEPLOYS. That is the point — a pick recorded into a
+# review PR is a pick nobody can see. The safety is not a human gate, it is that
+# scripts/team_draft_pool.py refuses anything it cannot place unambiguously: a drafter
+# who is not in the draft order, a team abbreviation that does not exist, a team
+# already gone, or a drafter who already has four. Any of those fails the run and
+# nothing is committed. Use dry_run first if you want to see the result before it ships.
+#
+# ⚠️ DATA ONLY. This never touches an HTML file, so sw.js VERSION deliberately does not
+# move — teamdraft.html fetches /data/draft-2026.json at runtime and the service worker
+# is not allowed to cache it stale. Do not "helpfully" add a version bump here.
+name: Record draft picks
+
+on:
+  workflow_dispatch:
+    inputs:
+      picks:
+        description: 'Picks, in order. "Jared:NYG Alan:CLE" — space or comma separated. Leave blank to just re-run the simulation.'
+        required: false
+        type: string
+      as_of:
+        description: "Stamp a new as_of (YYYY-MM-DD). Blank keeps the current one."
+        required: false
+        type: string
+      trials:
+        description: "Monte Carlo seasons for the stored reference."
+        required: false
+        default: "100000"
+        type: string
+      dry_run:
+        description: "Run it and show the result, but commit nothing."
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+# One at a time. Two people recording picks concurrently would race on the same file.
+concurrency:
+  group: draft-picks
+  cancel-in-progress: false
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Record the picks
+        env:
+          # ⚠️ Through the environment, never interpolated into the script body.
+          # `${{ inputs.picks }}` inline would let the text of an input run as shell.
+          PICKS: ${{ inputs.picks }}
+          AS_OF: ${{ inputs.as_of }}
+          TRIALS: ${{ inputs.trials }}
+        run: |
+          set -euo pipefail
+          args=(--trials "${TRIALS:-100000}")
+          if [ -n "${AS_OF:-}" ]; then
+            args+=(--as-of "$AS_OF")
+          fi
+          # Commas are the natural separator when you are typing on a phone; treat
+          # them and spaces the same. The script validates every entry.
+          for p in $(printf '%s' "${PICKS:-}" | tr ',' ' '); do
+            args+=(--pick "$p")
+          done
+          echo "Running: scripts/team_draft_pool.py ${args[*]}"
+          # 2>&1 so a REFUSED PICK lands in the run summary. The script rejects on
+          # stderr, and without this the summary is blank on exactly the failure you
+          # most need to read — "LAR already went at pick 1 to Matt" is the whole
+          # message, and it belongs on the page you are already looking at.
+          python3 scripts/team_draft_pool.py "${args[@]}" 2>&1 | tee /tmp/pipe.txt
+
+      - name: Rebuild the manifest and validate the data contract
+        run: |
+          set -euo pipefail
+          node tools/data-manifest.js
+          node tools/validate-data.js
+
+      - name: Report
+        if: always()
+        run: |
+          {
+            echo '## Draft pool'
+            echo
+            echo '```'
+            cat /tmp/pipe.txt 2>/dev/null || echo 'the pipe did not run'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit to main
+        if: ${{ inputs.dry_run == false }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- data/draft-2026.json data/index.json; then
+            echo "Nothing changed — no picks to record."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/draft-2026.json data/index.json
+          made=$(python3 -c "import json;d=json.load(open('data/draft-2026.json'))['data'];print(f\"{d['picks_made']}/{d['picks_total']}\")")
+          git commit -m "Draft picks recorded: ${made}" \
+            -m "Rosters, board, diagnostics and the Monte Carlo reference are derived by scripts/team_draft_pool.py. Data only — no HTML changed, so sw.js VERSION is unmoved."
+          # Somebody may have pushed while this ran. Rebase rather than clobber:
+          # this repo has concurrent writers and a force push here would eat their work.
+          git pull --rebase origin main
+          node tools/validate-data.js
+          git push origin HEAD:main
+          echo "Recorded ${made}. https://datadawgs216.com/teamdraft.html updates in about a minute."
+
+      - name: Dry run — nothing committed
+        if: ${{ inputs.dry_run == true }}
+        run: |
+          echo "dry_run was set. The result above was computed but not committed."
+          git --no-pager diff --stat -- data/draft-2026.json

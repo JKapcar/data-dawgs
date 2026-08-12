@@ -40,6 +40,15 @@ Append the picks as they land, then rebuild the manifest:
 refuses a pick that is out of turn, a team already gone, or a name not in the draft
 order — a silently misfiled pick is the one error the page cannot show you.
 
+WITHOUT A TERMINAL
+------------------
+.github/workflows/draft-picks.yml runs exactly this from the Actions tab: open
+"Record draft picks", press Run workflow, type `Jared:NYG Alan:CLE`, and GitHub runs
+the pipe, validates, and commits to main. That path exists so draft night does not
+require a laptop, and it is why this script's refusals have to stay strict and its
+messages have to stay readable — they are the only thing standing between a typo and
+a wrong board in front of eight people.
+
 Other entry points:
 
     --import RAW.json     first load, from the upstream generator's payload
