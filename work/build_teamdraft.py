@@ -199,12 +199,13 @@ CSS = r"""
   font:10.5px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--ink-3);
   letter-spacing:.05em}
 .td-rfoot b{color:var(--ink-2)}
-.td-disc{margin-top:12px}
+.td-disc{margin-top:2px}
 .td-disc summary{cursor:pointer;font:750 12px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;
-  color:var(--ink-3);letter-spacing:.05em}
+  color:var(--ink-3);letter-spacing:.05em;padding:12px 0;min-height:40px;
+  display:flex;align-items:center;gap:6px}
 .td-disc summary:hover{color:var(--ink-1)}
 .td-disc summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-.td-disc[open] summary{margin-bottom:10px;color:var(--ink-2)}
+.td-disc[open] summary{margin-bottom:2px;color:var(--ink-2)}
 
 /* ---- 2 · roster cards ------------------------------------------------------ */
 .td-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
@@ -446,8 +447,9 @@ CSS = r"""
 .td-empty{padding:26px 16px;text-align:center;color:var(--ink-3);font-size:13.5px;line-height:1.6}
 
 @media (max-width:860px){
-  .td-row{grid-template-columns:20px 40px 1fr 48px;gap:7px}
-  .td-own{display:none}
+  .td-row{grid-template-columns:20px 38px 1fr 44px 40px;gap:6px;
+    padding:6px 0;min-height:34px}
+  .td-own{font-size:11px}
   .td-matrix{--cell:14px}
   .td-cards{grid-template-columns:1fr}
   .td-board{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -460,6 +462,7 @@ CSS = r"""
   .td-rail-in{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;
     scrollbar-width:none;-webkit-overflow-scrolling:touch;
     padding-bottom:2px;scroll-padding-left:8px}
+  .td-rail-in .td-chip,.td-rail-in .td-pick{min-height:38px}
   .td-rail-in::-webkit-scrollbar{display:none}
   .td-rail-in > *{flex:0 0 auto}
   .td-rail-lab{display:none}
