@@ -116,10 +116,11 @@ const token = await sessionFor();
 {
   const response = await worker.fetch(new Request("https://toto.example/auth/draft-state", {
     method: "OPTIONS", headers: { Origin: ORIGIN, "Access-Control-Request-Method": "PUT",
-      "Access-Control-Request-Headers": "content-type,x-bozo-session" },
+      "Access-Control-Request-Headers": "content-type,x-dawg-session,x-bozo-session" },
   }), ENV);
   assert.equal(response.status, 200);
   assert.match(response.headers.get("Access-Control-Allow-Methods"), /(?:^|,\s*)PUT(?:,|$)/);
+  assert.match(response.headers.get("Access-Control-Allow-Headers"), /X-Dawg-Session/);
   assert.match(response.headers.get("Access-Control-Allow-Headers"), /X-Bozo-Session/);
 }
 
