@@ -4,7 +4,8 @@
  *
  * ⚠️ WHAT THIS IS ACTUALLY GUARDING.
  * The draw is the SERVER's — one permutation, written once at the close, immutable.
- * The only thing this change made per-reader is whether you have watched it land.
+ * The only thing that is per-reader is whether you have watched it land, and that resets
+ * on every page load: the machine starts blank and you pull it, every time.
  * So the assertions below are mostly about one property: the page must never let the
  * reveal state change what the reels stop on, and must never leak the order before
  * the pull. A test that only screenshots the skin would miss both.
@@ -66,9 +67,10 @@ const browser = await chromium.launch({
   executablePath: process.env.PW_CHROME || chromiumExecutable(chromium),
 });
 
-/* One browser context per case. `storage` lets a case start with a reveal already
-   recorded, which is how "second visit paints statically" is tested. */
-async function open(scen, { theme = "light", width = 1200, reduced = false, seen = null } = {}) {
+/* One browser context per case.
+   ⚠️ There is no "seed the seen-flag" option any more, because there is no seen-flag —
+   the machine arms on every load. Case 4 reloads a real page instead of faking state. */
+async function open(scen, { theme = "light", width = 1200, reduced = false } = {}) {
   const ctx = await browser.newContext({
     viewport: { width, height: 1100 },
     reducedMotion: reduced ? "reduce" : "no-preference",
@@ -76,13 +78,12 @@ async function open(scen, { theme = "light", width = 1200, reduced = false, seen
   const page = await ctx.newPage();
   const errors = [];
   page.on("pageerror", e => errors.push(e.message));
-  await ctx.addInitScript(([t, s]) => {
+  await ctx.addInitScript((t) => {
     try {
       localStorage.setItem("dd-theme2", t);
       localStorage.setItem("dd-theme2-bozo", t);
-      if (s) localStorage.setItem("dd-bozo-seen-draw", s);
     } catch (e) {}
-  }, [theme, seen]);
+  }, theme);
   // ⚠️ Playwright matches the MOST RECENTLY registered route first — catch-alls go on
   // before the specific routes or they swallow them.
   await page.route("**firebaseio.com**", r => r.abort());
@@ -152,38 +153,62 @@ const orderText = page => page.$eval("#ord", n => n.textContent.replace(/\s+/g, 
   ok(await page.getAttribute("#lever", "disabled") !== null, "the lever cannot be pulled twice");
   const cls = await machineClasses(page);
   ok(!cls.includes("armed") && !cls.includes("pending") && cls.includes("locked"), "machine ends locked", cls);
+  /* ⚠️ NOTHING IS PERSISTED. The first version remembered in localStorage that you had
+     seen a draw and painted it statically ever after. Pulling it is the fun part, and
+     making it a once-per-draw privilege takes the fun away to save a click. */
   const flag = await page.evaluate(() => localStorage.getItem("dd-bozo-seen-draw"));
-  ok(/main:2026:1:2301/.test(flag), "the reveal is recorded against league:season:week:order", flag);
+  ok(flag === null, "the pull is NOT persisted — a reload is a new show", String(flag));
   await ctx.close();
 }
 
-/* ---------- 4. second visit on the same device: static, no second show ---------- */
+/* ---------- 4. a fresh load re-arms: every visit gets the pull ---------- */
 {
-  const seen = JSON.stringify({ "main:2026:1:2301": 1 });
-  const { ctx, page } = await open(SCEN.drawn, { seen });
-  ok(!(await machineClasses(page)).includes("pending"), "already seen → not pending");
-  ok((await page.$$eval(".win.locked", n => n.length)) === 4, "already seen → reels are locked on load");
-  ok(await page.getAttribute("#lever", "disabled") !== null, "already seen → lever disabled");
+  const { ctx, page } = await open(SCEN.drawn);
+  await page.click("#lever");
+  await page.waitForTimeout(4200);
+  ok((await page.$$eval(".win.locked", n => n.length)) === 4, "pulled once: reels locked");
+  // ⚠️ render() runs on a 15s poll and on every EventSource put. It must NOT blank the
+  // reels back out under the reader's cursor after they pulled.
+  await page.evaluate(() => window.dispatchEvent(new HashChangeEvent("hashchange")));
+  await page.waitForTimeout(200);
+  ok((await page.$$eval(".win.locked", n => n.length)) === 4, "a re-render does not un-reveal what this load pulled");
+  ok(!(await machineClasses(page)).includes("pending"), "…and does not re-arm it either");
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(1200);
+  ok((await machineClasses(page)).includes("pending"), "but a RELOAD arms again — blank on every load");
+  ok(await page.getAttribute("#lever", "disabled") === null, "…with the lever live again");
   await ctx.close();
 }
 
-/* ---------- 5. a re-drawn week is a fresh reveal ---------- */
+/* ---------- 5. a re-drawn week still arms ---------- */
 {
-  const seen = JSON.stringify({ "main:2026:1:2301": 1 });   // the OLD order
-  const { ctx, page } = await open(SCEN.redraw, { seen });
-  ok((await machineClasses(page)).includes("pending"), "a different order on the same week arms again");
+  const { ctx, page } = await open(SCEN.redraw);
+  ok((await machineClasses(page)).includes("pending"), "a re-drawn week arms like any other");
   await ctx.close();
 }
 
-/* ---------- 6. graded weeks auto-reveal ---------- */
+/* ---------- 6. a GRADED week still requires the pull ---------- */
 {
+  /* ⚠️ This is why the lever never fired in practice. It used to auto-reveal once the
+     bozo was named, on the grounds that the verdict card already says which lever named
+     them. But the verdict names ONE lever and the reels show the whole drawn order, so
+     the pull still reveals something — and every board that exists is either graded or
+     undrawn, which left nothing pullable anywhere. */
   const { ctx, page, errors } = await open(SCEN.graded);
   ok(errors.length === 0, "graded board renders without a page error", errors[0]);
-  ok(!(await machineClasses(page)).includes("pending"), "graded → no pull required");
-  ok((await page.$$eval(".win.locked", n => n.length)) === 4, "graded → the hierarchy is on the reels");
+  ok((await machineClasses(page)).includes("pending"), "graded → STILL waiting on the pull");
+  ok(await page.getAttribute("#lever", "disabled") === null, "graded → the lever is live");
+  ok((await page.$$eval(".win.locked", n => n.length)) === 0, "graded → nothing revealed until pulled");
+  await page.click("#lever");
+  await page.waitForTimeout(4200);
+  ok((await page.$$eval(".win.locked", n => n.length)) === 4, "graded → the pull reveals the hierarchy");
   // the season board is the other half of a graded week
   ok((await page.$$eval('#seasonCard .trow[data-worn="1"]', n => n.length)) === 1, "exactly one dawg has worn one");
-  ok((await page.$$eval("#seasonCard .fund", n => n.length)) === 1, "the leader carries the funding plaque");
+  /* ⚠️ The plaque follows the BELT now, not the season’s highest count. Same person,
+     one rule — the bozo who wears it is the one who funds the next ticket. */
+  ok((await page.$$eval("#seasonCard .fund", n => n.length)) === 1, "one funding plaque");
+  const fundRow = await page.$eval("#seasonCard .fund", n => n.closest(".trow").dataset.belt);
+  ok(fundRow === "1", "…and it is on the belt holder's row", fundRow);
   await ctx.close();
 }
 

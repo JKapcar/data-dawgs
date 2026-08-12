@@ -24,12 +24,18 @@ const ok = (c, n, x) => { if (c) pass++; else { fail++; console.error("FAIL:", n
    thing a test must never do. Plain string search rather than a regex: the bodies contain
    braces, slashes and template literals, and escaping all of those correctly is its own
    source of bugs. */
-function lift(name) {
+function src(name) {
   const at = page.indexOf("function " + name + "(");
   if (at < 0) throw new Error("could not find " + name + " in bozo.html — renamed?");
   const end = page.indexOf("\n}", at);
   if (end < 0) throw new Error("could not find the end of " + name);
-  const body = page.slice(at, end + 2);
+  return page.slice(at, end + 2);
+}
+// Several of these call each other, so they are lifted together into one scope rather
+// than one at a time — a lifted function whose dependency is missing throws at call
+// time, which looks like a broken test rather than a broken lift.
+function lift(name, ...deps) {
+  const body = [...deps.map(src), src(name)].join("\n");
   return new Function(body + "\nreturn " + name + ";")();
 }
 
@@ -50,8 +56,10 @@ ok(legLabel("total", "over", 47.5, null, "DET@GB") === "DET@GB o47.5", "a total 
    The grader used `m > x.line`, which has no third state. Landing exactly on the number
    is a PUSH: the stake comes back, the leg voids on the ticket, and it says nothing
    about whether you beat the number. Scored as a loss it makes you eligible to wear it. */
-const grade = lift("gradeLeg");
+const grade = lift("gradeLeg", "legEdge");
 ok(typeof grade === "function", "gradeLeg is liftable from the page");
+const beatDeficit = lift("beatDeficit", "legEdge");
+ok(typeof beatDeficit === "function", "beatDeficit is liftable too");
 
 ok(/results\[p\]\.result = outcome;/.test(page), "autoGrade stores the three-state result");
 ok(/results\[p\]\.won\s+= outcome==='won' \? true : outcome==='lost' \? false : null;/.test(page),
@@ -103,6 +111,63 @@ ok(/<option value="p">Push \/ void<\/option>/.test(page),
    "manual grading offers Push / void");
 ok(/r\.result = s\.value==='1' \? 'won' : s\.value==='0' \? 'lost' : 'push';/.test(code),
    "…and carries it through as the three-state result");
+
+/* =============== 4. Worst Beat measures from the NUMBER ==================
+   ⚠️ THE CORRECTION. This used to measure the gap to expected(), which folds the price
+   in — so a −400 favourite missing by three scored worse than a −110 missing by three.
+   But SHORTEST ODDS is already the lever that punishes chalk, and pricing it in here too
+   made two of the four levers measure overlapping things. A randomised hierarchy is only
+   interesting while its levers stay independent. The rule text says "furthest under its
+   number, in standard deviations", and that is now literally what it computes. */
+{
+  const SD = 13.5;   // nfl
+  const a = beatDeficit("spread", "over", 3, -1, null, SD);
+  ok(Math.abs(a - 4 / SD) < 1e-9, "the deficit is exactly the points missed, over the SD", a);
+
+  ok(beatDeficit("spread", "over", 3, -10, null, SD) > beatDeficit("spread", "over", 3, -1, null, SD),
+     "missing by more is a worse beat");
+  ok(beatDeficit("spread", "over", 3, 9, null, SD) < 0, "a leg that covered has a negative deficit");
+
+  // It is the grader's own edge, negated — one definition of "missed", not two.
+  for (const [mkt, dir, line, m, tot] of [
+    ["spread","over",3,-1,null], ["ml","over",0,-6,null],
+    ["total","over",47.5,null,41], ["total","under",47.5,null,55], ["spread","over",-1.5,-4,null]]) {
+    const d = beatDeficit(mkt, dir, line, m, tot, SD);
+    const g = grade(mkt, dir, line, m, tot);
+    ok((d > 0) === (g === "lost"), `${mkt} ${dir}: a positive deficit means exactly 'lost'`, `${d} / ${g}`);
+  }
+
+  // The MLB/NHL runline dog: it TAKES 1.5, so losing by 1 covered and the deficit must
+  // be negative even though the margin is.
+  ok(beatDeficit("spread", "over", -1.5, -1, null, 2.2) < 0,
+     "a puckline dog that covered has a negative deficit despite losing the game");
+
+  ok(beatDeficit("spread", "over", 3, -1, null, 0) === null, "a zero SD yields null, not Infinity");
+
+  const body = page.slice(page.indexOf("function beatDeficit"), page.indexOf("function beatDeficit") + 300);
+  ok(!/expected\(/.test(body), "beatDeficit no longer consults the price-implied expectation");
+}
+
+/* =============== 5. the lever ==========================================
+   ⚠️ It has to be pullable. Twice now this has been "simplified" into an auto-paint and
+   twice the result was that nobody saw the reels move — most recently because every
+   board that exists is either graded (auto-revealed) or undrawn (lever disabled). */
+{
+  const code = page.replace(/\/\*[\s\S]*?\*\//g, "").replace(/<!--[\s\S]*?-->/g, "");
+  ok(!/hasSeenDraw|markDrawSeen|SEEN_KEY/.test(code),
+     "the once-per-draw localStorage memory is gone — every load gets the pull");
+  ok(/let revealedThisLoad=null;/.test(code),
+     "…replaced by a page-lifetime flag, so a reload is a new show");
+  ok(/if\(revealedThisLoad !== key\) return armPending\(ord\);/.test(code),
+     "a draw always arms unless THIS load already revealed it");
+  ok(!/const graded = \(S\.status\|\|'open'\)==='graded'/.test(code),
+     "a graded week no longer auto-reveals — the reels show the whole order, the verdict names one lever");
+  // The poll must not blank the reels under the reader's cursor.
+  ok(/revealedThisLoad=ord\.join\(','\);/.test(code),
+     "pulling records the reveal for this load, so render() on the 15s poll repaints statically");
+  ok(/pendingDraw=null; revealedThisLoad=null;/.test(code),
+     "…and clearing the machine resets it, so a new week does not inherit the last one's reveal");
+}
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

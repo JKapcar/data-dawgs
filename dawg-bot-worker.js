@@ -4922,13 +4922,29 @@ function royaleBeatDeficit(x, r) {
     if (!(p > 0 && p < 1)) return { v: null, basis: "unpriced" };
     return { v: rInvNorm(p), basis };
   }
-  // Margin markets: how far under its own number the leg finished, in SDs.
+  /* Margin markets: how far under ITS OWN NUMBER the leg finished, in SDs.
+
+     ⚠️ FROM THE NUMBER, NOT FROM THE PRICE. This measured the gap to rExpected(), which
+     folds the price in — so the same miss scored worse for a −400 favourite than for a
+     −110. But SHORTEST ODDS is already the lever that punishes taking chalk, and pricing
+     it in here made two of the four levers measure overlapping things. A randomised
+     hierarchy is only interesting while its levers are independent.
+     data/bozo-rules.json says "finished furthest under its number, in standard
+     deviations", and this now is that.
+
+     ⚠️ It is the grader's own edge, negated — you lost by exactly the amount you missed
+     by, with no second definition of "missed" to drift from the first. `line` is what
+     this side gives up, so margin − line is the edge in both directions, including an
+     MLB/NHL dog at +1.5 stored as −1.5. */
   if (r == null || r.actual == null) return { v: null, basis: "no-result" };
   const sd = rSd(x);
   if (!(sd > 0)) return { v: null, basis: "no-sd" };
-  const exp = rExpected(x);
-  const v = (rDir(x) === "under" ? (Number(r.actual) - exp) : (exp - Number(r.actual))) / sd;
-  return { v, basis: "margin" };
+  const actual = Number(r.actual);
+  const line = x.mkt === "ml" ? 0 : (Number(x.line) || 0);
+  const edge = x.mkt === "total" ? (rDir(x) === "under" ? (line - actual) : (actual - line))
+             : x.mkt === "ml"    ? actual
+             :                     (actual - line);
+  return { v: -edge / sd, basis: "margin" };
 }
 
 /* Score every losing leg on one lever.

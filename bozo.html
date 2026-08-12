@@ -3139,11 +3139,31 @@ function paintGames(){
 
    ⚠️ A moneyline has no number, so the margin itself is the edge, and a drawn game is a
    push rather than a loss. */
+function legEdge(mkt, dir, line, margin, total){
+  return mkt === 'total' ? (dir === 'over' ? (total - line) : (line - total))
+       : mkt === 'ml'    ? margin
+       :                   (margin - line);
+}
 function gradeLeg(mkt, dir, line, margin, total){
-  const edge = mkt === 'total' ? (dir === 'over' ? (total - line) : (line - total))
-             : mkt === 'ml'    ? margin
-             :                   (margin - line);
+  const edge = legEdge(mkt, dir, line, margin, total);
   return edge > 0 ? 'won' : edge < 0 ? 'lost' : 'push';
+}
+
+/* WORST BEAT: how far under its number the leg finished, in standard deviations.
+
+   ⚠️ FROM THE NUMBER, NOT FROM THE PRICE, and that is the correction. This used to
+   measure the gap to expected(), which folds the price in — a −400 favourite is
+   "expected" to win by more, so the same miss scored worse for them. But SHORTEST ODDS
+   is already the lever that punishes taking chalk. Pricing it in here too made two of
+   the four levers measure overlapping things, which is the opposite of what a randomised
+   hierarchy of independent levers is for. data/bozo-rules.json says "finished furthest
+   under its number, in standard deviations" — the number, and this now is that.
+
+   ⚠️ It is the SAME edge the grader uses, negated. You lost by exactly the amount you
+   missed by; there is no second definition of "missed" to drift from the first. */
+function beatDeficit(mkt, dir, line, margin, total, sd){
+  if(!(sd > 0)) return null;
+  return -legEdge(mkt, dir, line, margin, total) / sd;
 }
 
 /* The leg exactly as the board will print it. ONE definition, used by the live preview
@@ -4540,10 +4560,16 @@ function paintTicker(players, t, mx, holder){
       // ⚠️ The belt supersedes the nose on the holder's row rather than sitting beside
       // it: holding it already implies having worn one, and two badges saying
       // overlapping things is how a row stops being readable at a glance.
+      /* ⚠️ THE PLAQUE FOLLOWS THE BELT. "Funds this week" used to be computed from the
+         season's highest bozo count, which is a different person the moment someone else
+         is named — the demo showed Squatch holding the plaque while Tucholski held the
+         belt, off the same board. In this game the bozo funds the NEXT ticket, so the
+         plaque was describing the belt all along and measuring something else. One
+         person, one rule, and `mx` is now only the sort order. */
       const holds = holder && p===holder;
       return `<div class="trow${ME&&p===ME.name?' me2':''}" data-worn="${t[p]?1:0}" data-belt="${holds?1:0}">
         <span class="rk">${i+1}</span>
-        <span class="nm2">${esc(teamOf(p))}${t[p]===mx&&mx>0?'<span class="fund">funds this week</span>':''}${holds?`<span class="beltcrest" role="img" aria-label="Currently wearing the belt"></span>`:''}</span>
+        <span class="nm2">${esc(teamOf(p))}${holds?'<span class="fund">funds this week</span><span class="beltcrest" role="img" aria-label="Wearing the belt"></span>':''}</span>
         <span class="flap">${flaps}</span></div>`;
     }).join('');
   const trs=el.querySelectorAll('.trow');
@@ -4715,36 +4741,33 @@ function activeLevers(ord){
   const l=(settings().levers||[]).slice().sort((a,b)=>a-b);
   return l.length ? l : [0,1,2,3];
 }
-/* ---------------- per-reader reveal ----------------
-   ⚠️ Read this before "simplifying" it into an auto-paint.
+/* ---------------- the pull ----------------
+   ⚠️ Read this before "simplifying" it into an auto-paint. It has been simplified into
+   one twice, and both times the result was that almost nobody ever saw the reels move.
 
-   The DRAW is the server's: one permutation, written once at the close, immutable.
-   What is per-reader is whether THIS person has watched it land. Before this, only
-   whoever happened to have the tab open at the moment of the close saw the reels
-   move; everybody else loaded a board that was already locked. Now the machine
-   stays armed on your device until YOU pull it, and the reels stop on exactly the
-   order the server wrote.
+   The DRAW is the server's: one permutation, written once at the close, immutable, and
+   nothing here can re-roll it. What is yours is WATCHING it land. The machine starts
+   blank on every page load for every reader, spins while it waits, and stops on exactly
+   the order the server wrote when you pull the lever.
 
-   The reveal flag is localStorage, which means it is not authoritative and does not
-   need to be — the worst a tampered flag can do is skip your own animation. Nothing
-   about the result, the grading or the bozo depends on it.
+   ⚠️ EVERY LOAD, and that is deliberate rather than sloppy. The first version remembered
+   in localStorage that you had already seen a given draw and painted it statically ever
+   after — which is defensible and which nobody asked for. Pulling it is the fun part;
+   making it a once-per-draw privilege takes the fun away to save a click. Kap's call:
+   blank on load, always pullable.
 
-   Auto-reveal (no pull required) in one case only: the week is already GRADED. Once
-   the bozo is named the hierarchy is in the verdict text anyway, so gating it behind
-   a lever would hide public information behind a toy.  */
-const SEEN_KEY='dd-bozo-seen-draw';
-const seenStore = () => { try{ return JSON.parse(localStorage.getItem(SEEN_KEY)||'{}'); }catch(e){ return {}; } };
-// keyed on the ORDER too, so a re-drawn week is a fresh reveal rather than a
-// silently-skipped one
-const drawKey = ord => `${LID}:${S.season||''}:${S.week||1}:${ord.join('')}`;
-const hasSeenDraw = ord => !!seenStore()[drawKey(ord)];
-function markDrawSeen(ord){
-  const s=seenStore(); s[drawKey(ord)]=1;
-  const k=Object.keys(s);                      // one entry per league-week; cap it
-  if(k.length>40) k.slice(0,k.length-40).forEach(x=>delete s[x]);
-  try{ localStorage.setItem(SEEN_KEY, JSON.stringify(s)); }catch(e){}
-}
-let pendingDraw=null;   // an order that exists on the server and is waiting on this reader
+   ⚠️ A GRADED WEEK STILL REQUIRES THE PULL. The earlier version auto-revealed once the
+   bozo was named, on the grounds that the verdict card already says which lever named
+   them and gating public information behind a toy is silly. But the verdict names ONE
+   lever; the reels show the whole drawn order, which is not in the verdict text. So the
+   pull still reveals something, and the fun survives the week being over.
+
+   ⚠️ The one thing that must NOT re-arm is a poll. render() runs on a 15-second timer
+   and on every EventSource put, so `revealedThisLoad` is what stops the reels blanking
+   themselves under your cursor ten seconds after you pulled them. It is a page-lifetime
+   variable on purpose — a reload is a new show. */
+let pendingDraw=null;        // an order that exists on the server, waiting on this reader
+let revealedThisLoad=null;   // an order this PAGE LOAD has already revealed
 
 function paintMachine(ord){
   const m=document.getElementById('machine');
@@ -4753,7 +4776,7 @@ function paintMachine(ord){
     m.classList.add('armed');
     m.classList.remove('pending','locked');
     setLever('idle');
-    pendingDraw=null;
+    pendingDraw=null; revealedThisLoad=null;
     wins.forEach(w=>w.classList.remove('locked'));
     // '' rather than null: null means "nothing has ever been painted", which is
     // what makes a page loaded onto an already-drawn week render statically
@@ -4768,11 +4791,10 @@ function paintMachine(ord){
       + 'The server draws a fresh permutation the moment the last leg lands and writes it once — these reels stop on that. Nothing on this page can re-roll it.';
     return;
   }
-  // A draw exists. Graded weeks paint straight through; everything else waits for
-  // this reader's pull.
-  const graded = (S.status||'open')==='graded' || !!S.bozo;
-  if(!graded && !hasSeenDraw(ord)) return armPending(ord);
-  revealDraw(ord, false);
+  // A draw exists. It waits for this reader's pull — every load, graded or not.
+  const key = ord.join(',');
+  if(revealedThisLoad !== key) return armPending(ord);
+  revealDraw(ord, false);        // already pulled this load: repaint statically
 }
 
 /* the machine knows the draw has happened and is refusing to say what it is until
@@ -4797,7 +4819,7 @@ function armPending(ord){
 function revealDraw(ord, animate){
   const m=document.getElementById('machine');
   m.classList.remove('armed','pending'); m.classList.add('locked');
-  pendingDraw=null; setLever('done');
+  pendingDraw=null; revealedThisLoad=ord.join(','); setLever('done');
   document.getElementById('drawState').textContent =
     'drawn ' + (S.closeTs ? when(S.closeTs) : 'at the close');
   document.getElementById('drawNote').textContent =
@@ -4826,7 +4848,6 @@ function setLever(state){
 document.getElementById('lever').addEventListener('click', ()=>{
   const ord=S.order;
   if(!pendingDraw || !ord || !ord.length) return;
-  markDrawSeen(ord);
   revealDraw(ord, true);
 });
 function spin(order){
@@ -5025,7 +5046,8 @@ async function decide(){
       // A zero on a market where zero is possible takes the floor rather than
       // pretending a Bernoulli outcome sits on the same scale as a point margin.
       if(r.actual===0 && (x.mkt==='prop'||x.mkt==='total'||x.mkt==='other') && dirOf(x)==='over') beat=999;
-      else { const exp=expected(x); beat = (dirOf(x)==='under' ? (r.actual-exp) : (exp-r.actual))/sd; }
+      else beat = beatDeficit(x.mkt, dirOf(x), x.mkt==='ml'?0:x.line,
+                              x.mkt==='total'?null:r.actual, x.mkt==='total'?r.actual:null, sd) ?? 0;
     }
     /* ⚠️ CLV IS NULL WHEN THERE IS NO CLOSE, AND NULL MEANS UNMEASURABLE.
        This used to read `r.close != null ? r.close : x.price`, which quietly scored every
