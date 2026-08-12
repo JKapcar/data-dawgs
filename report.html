@@ -344,12 +344,22 @@ body{margin:0;background:var(--page);color:var(--ink-1);
 @media(max-width:419px){
   /* ⚠️ CEP-5A Stage 7: the links get their own row here. See the note above. */
   .sitenav{flex-wrap:wrap}
-  .sitenav .links{flex:1 1 100%;margin-left:0;justify-content:flex-start;flex-wrap:wrap;gap:2px 3px;padding-top:3px}
+  /* ⚠️ space-between, not flex-start. The links own this row outright below 420, so a
+     left-packed run leaves a ragged 34px hole at 393 and reads as broken rather than
+     tight. Spreading costs nothing measurable: the run is the same width and only the
+     gaps grow, so every overlap figure in work/test-nav-fit.mjs is unchanged. */
+  .sitenav .links{flex:1 1 100%;margin-left:0;justify-content:space-between;flex-wrap:wrap;gap:2px 3px;padding-top:3px}
   /* ⚠️ NO margin-left:auto on the theme button here. In a WRAPPING flex row an
      auto margin eats every pixel of free space, which forced a third line at 320px
      with 16px to spare. Let it sit inline with the links. */
   .sitenav .links .theme-btn{margin-left:2px}
-  .sitenav .navauth{margin-left:3px}
+  /* The chip shares a row with the brand and nothing else, so it goes to the far end
+     of it — 259px of dead space at 393px, next to a bar the reader called terrible.
+     ⚠️ An auto margin here is safe in a way it is NOT on the theme button below: this
+     row's only other item is the brand, and .links takes a 100% basis onto its own
+     line regardless. The theme button lives INSIDE that wrapping run, where an auto
+     margin eats the free space the last line needs and forces another one. */
+  .sitenav .navauth{margin-left:auto}
   .sitenav .navauth .authbtn{padding:3px 7px;font-size:10px;max-width:84px}
   /* ⚠️ Measured at 320px BEFORE this tightening: the links run needed 243.4px inside a
      244.0px box — 0.6px of margin, which is not margin. Two pixels off each link's
@@ -389,6 +399,19 @@ body{margin:0;background:var(--page);color:var(--ink-1);
      the launcher ever grows or moves. Pages WITH a footer are not safe by default — the
      .wrap's 60px bottom padding left only ~2px of margin, which is not margin. */
   .udfoot{justify-content:flex-start;padding-bottom:72px}
+}
+/* ⚠️ THE SPREAD STOPS WHERE THE RUN WRAPS. Measured on teamdraft: the links run is one
+   line from 360 to 419 and wraps below it — two rows at 330-350, three at 320. On a
+   wrapped run space-between spreads the LAST line too, so at 320 "Dawgs" sat at x=24
+   and the theme button at x=271 with nothing between them. There is no CSS for "spread
+   every line except the last", so the narrow end packs left, which is what it did
+   before and what it should keep doing until a ninth-section overflow menu exists.
+   ⚠️ IT MUST SIT AFTER THE 419 BLOCK, NOT BEFORE IT. Same specificity, so the later
+   rule wins — written above the 419 block, the spread simply overrode this and 320 was
+   unchanged. A stray line outside the comment does the same thing more quietly: the
+   parser drops the @media that follows it and everything still looks like a no-op. */
+@media(max-width:359px){
+  .sitenav .links{justify-content:flex-start}
 }
 /* ---- cards & type ---- */
 .card{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:18px}
@@ -1495,7 +1518,11 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
        scraped, and nothing here changes what the draft pages send. */
     return {sys:   h.sys   || base.sys,
             label: h.label || base.label,
-            ctx:   typeof h.ctx === "function" ? h.ctx : base.ctx};
+            /* ⚠️ BIND IT. This is called as SF.ctx(), which detaches the method from
+               DD_BOTCTX — a ctx() written in method shorthand loses `this` and throws,
+               and ask()'s catch reports that as "Couldn't reach Toto. Check this device
+               is online." A page's own object is the only sane `this` here. */
+            ctx:   typeof h.ctx === "function" ? h.ctx.bind(h) : base.ctx};
   }
 
   /* ---------- The page reader ------------------------------------------------
