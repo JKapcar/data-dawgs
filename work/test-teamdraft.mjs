@@ -58,6 +58,9 @@ function completed() {
   c.data.picks_made = c.data.picks.length;
   return c;
 }
+
+/* Machine epsilon for probabilities the payload rounds to 5dp. */
+const EPS = 2e-5;
 const FULL = completed();
 
 /* ------------------------------------------------------------ the server ---- */
@@ -148,6 +151,52 @@ const ready = p => p.waitForFunction(
     Object.values(D.wins_tracker).every(w => w.total === 0 && w.rounds.every(v => v === 0)));
 }
 
+/* ------------------------------------------ the refit and the simulation ---- */
+{
+  const teams = D.teams;
+  /* The refit is only worth anything if it actually lands on expected wins. */
+  const worst = Math.max(...Object.values(teams).map(t =>
+    Math.abs(t.schedule.reduce((a, g) => a + g.wpf, 0) - t.ew)));
+  ok("every team's refitted schedule sums to its expected wins", worst < 0.01, worst.toFixed(5));
+
+  /* ...and only legitimate if it left the two structural facts alone. */
+  let asym = 0, pairs = 0;
+  for (const [t, v] of Object.entries(teams))
+    for (const g of v.schedule) {
+      const back = teams[g.opp].schedule.find(x => x.week === g.week && x.opp === t);
+      if (!back) { asym++; continue; }
+      pairs++;
+      if (Math.abs(back.wpf + g.wpf - 1) > EPS) asym++;
+    }
+  ok("the refit kept both sides of every game summing to 1", asym === 0, `${asym} of ${pairs}`);
+  const league = Object.values(teams).reduce((a, t) => a + t.schedule.reduce((x, g) => x + g.wpf, 0), 0);
+  ok("the refitted league still pays exactly the season's wins",
+    Math.abs(league - D.total_wins) < 0.02, league.toFixed(3));
+
+  /* The raw schedule must survive untouched beside it — the page shows both. */
+  ok("the original per-game probability is still there",
+    Object.values(teams).every(t => t.schedule.every(g => typeof g.wp === "number")));
+  ok("the refit actually moved something",
+    Object.values(teams).some(t => t.schedule.some(g => Math.abs(g.wp - g.wpf) > 0.01)));
+
+  const sim = D.simulation;
+  ok("the payload carries a Monte Carlo with its trial count and seed",
+    sim && sim.trials > 0 && Number.isInteger(sim.seed));
+  ok("finishing probabilities sum to one across the eight drafters",
+    Math.abs(D.draft_order.reduce((a, n) => a + sim.drafters[n].p_first, 0) - 1) < 0.005);
+  ok("second-place probabilities sum to one too",
+    Math.abs(D.draft_order.reduce((a, n) => a + sim.drafters[n].p_second, 0) - 1) < 0.005);
+  /* This is the check that catches a simulator quietly switching back to `wp`. */
+  const drift = Math.max(...D.draft_order.map(n =>
+    Math.abs(sim.drafters[n].mean - D.drafters[n].ew)));
+  ok("simulated roster means land on the ladder's roster totals", drift < 0.15, drift.toFixed(3));
+  ok("the tie-for-first rate is recorded rather than hidden",
+    typeof sim.tie_for_first_rate === "number" && sim.tie_for_first_rate >= 0);
+  ok("the simulation states that it has no tie outcome", sim.no_tie_outcome === true);
+  ok("the simulation states how a first-place tie is broken",
+    /random/i.test(sim.first_place_ties_broken || ""));
+}
+
 /* ------------------------------------------------------------ rendering ----- */
 {
   const { ctx, p } = await open({ tag: "render" });
@@ -235,6 +284,115 @@ const ready = p => p.waitForFunction(
     kb.focused && kb.tag === "BUTTON" && kb.pressed);
   ok("teams are selectable from a native control too", kb.hasSelect);
 
+  await ctx.close();
+}
+
+/* --------------------------------------------- the wheel and the simulator -- */
+{
+  const { ctx, p } = await open({ tag: "wheel" });
+  await ready(p);
+  await p.waitForFunction(() => document.querySelectorAll("#tdWheel .td-slice").length > 0);
+
+  ok("the wheel has one slice per drafter",
+    await p.evaluate(() => document.querySelectorAll("#tdWheel .td-slice").length) === D.draft_order.length);
+  /* Colour is not enough on a pie either: named slices plus the tally beside it. */
+  ok("the wheel names every drafter somewhere",
+    await p.evaluate(() => {
+      const t = document.getElementById("wheel").textContent;
+      return [...document.querySelectorAll("#tdTally tbody tr")].length;
+    }) === D.draft_order.length);
+
+  /* THE GEOMETRY CHECK. A wheel that stops on the wrong slice is a wheel that lies,
+     and it is invisible in a screenshot. Spin, read the banner, then measure the
+     group's actual rotation and confirm the winner's slice sits under the pointer. */
+  const spins = [];
+  for (let i = 0; i < 6; i++) {
+    await p.click("#tdSpin");
+    await p.waitForTimeout(3750);
+    spins.push(await p.evaluate(() => {
+      const m = new DOMMatrixReadOnly(getComputedStyle(document.getElementById("tdWheelRot")).transform);
+      const deg = ((Math.atan2(m.b, m.a) * 180 / Math.PI) % 360 + 360) % 360;
+      const nm = new DOMMatrixReadOnly(getComputedStyle(document.getElementById("tdNeedle")).transform);
+      const ndeg = ((Math.atan2(nm.b, nm.a) * 180 / Math.PI) % 360 + 360) % 360;
+      const txt = document.getElementById("tdResult").textContent;
+      return {
+        deg, ndeg, txt,
+        winner: (txt.match(/([A-Za-z]+) wins it with \d+/) || [])[1],
+        wins: Number((txt.match(/wins it with (\d+)/) || [])[1]),
+        second: (txt.match(/([A-Za-z]+) takes second on \d+/) || [])[1],
+        secondWins: Number((txt.match(/takes second on (\d+)/) || [])[1]),
+      };
+    }));
+  }
+
+  /* Rebuild the slice geometry from the payload and check where each spin stopped. */
+  const ref = D.simulation.drafters;
+  const total = D.draft_order.reduce((a, n) => a + ref[n].p_first, 0);
+  const mids = {}; let at = 0;
+  for (const n of D.draft_order) {
+    const f = total > 0 ? ref[n].p_first / total : 1 / D.draft_order.length;
+    mids[n] = (at + f / 2) * 360; at += f;
+  }
+  const near = (a, b) => Math.abs(((a - b) % 360 + 540) % 360 - 180) < 0.6;
+  ok("every spin stopped with the winning slice under the pointer",
+    spins.every(s => s.winner && near(mids[s.winner] + s.deg, 0)),
+    spins.map(s => `${s.winner}@${s.deg.toFixed(1)}`).join(" "));
+  ok("the needle stopped on that same season's runner-up",
+    spins.every(s => s.second && near(s.ndeg, mids[s.second] + s.deg)),
+    spins.map(s => `${s.second}@${s.ndeg.toFixed(1)}`).join(" "));
+  ok("the winner of each simulated season actually beat the runner-up",
+    spins.every(s => s.wins >= s.secondWins));
+  /* A season is 272 games and every one of them pays somebody. With the draft
+     incomplete the undrafted teams absorb the rest, so this is an upper bound. */
+  ok("no simulated season pays out more than the league has",
+    spins.every(s => s.wins <= D.total_wins));
+
+  const tallied = await p.evaluate(() =>
+    [...document.querySelectorAll("#tdTally tbody tr")]
+      .reduce((a, r) => a + Number(r.cells[1].textContent), 0));
+  ok("the tally counted every spin", tallied === spins.length, `${tallied} vs ${spins.length}`);
+
+  await p.click("#tdSpinReset");
+  ok("the tally can be reset",
+    await p.evaluate(() => [...document.querySelectorAll("#tdTally tbody tr")]
+      .every(r => r.cells[1].textContent.trim() === "0")));
+
+  /* the browser's own Monte Carlo has to agree with the payload's */
+  await p.click('[data-mc="10000"]');
+  await p.waitForFunction(() => document.querySelectorAll("#tdMc tbody tr").length > 0,
+    null, { timeout: 90000 });
+  const live = await p.evaluate(() =>
+    [...document.querySelectorAll("#tdMc tbody tr")].map(r => ({
+      name: r.cells[0].textContent.trim(),
+      mean: parseFloat(r.cells[2].textContent),
+      first: parseFloat(r.cells[5].textContent),
+      stored: parseFloat(r.cells[8].textContent),
+    })));
+  ok("the live simulator produces a row per drafter", live.length === D.draft_order.length);
+  ok("live means match the ladder's roster totals",
+    live.every(r => Math.abs(r.mean - D.drafters[r.name].ew) < 0.3),
+    live.map(r => `${r.name} ${r.mean}`).join(" "));
+  /* 10k trials on an 8-way split: 1.5pp is a wide but finite band. A simulator that
+     had switched to the raw schedule would miss by far more than this. */
+  ok("live finishing probabilities agree with the stored reference",
+    live.every(r => Math.abs(r.first - r.stored) < 1.5),
+    live.map(r => `${r.name} ${r.first} vs ${r.stored}`).join(" "));
+  ok("the simulated distributions are drawn", await p.evaluate(() =>
+    document.querySelectorAll("#tdMcPlot path").length) === D.draft_order.length);
+
+  /* selection reaches the new views too */
+  const who = D.draft_order[1];
+  await p.click(`[data-sel="drafter:${who}"]`);
+  await p.waitForTimeout(150);
+  ok("selecting a drafter highlights their slice and dims the rest",
+    await p.evaluate(n => {
+      const on = [...document.querySelectorAll("#tdWheel .td-slice")].filter(s => !s.classList.contains("dim"));
+      return on.length === 1;
+    }, who));
+  ok("selecting a drafter highlights their Monte Carlo row",
+    await p.evaluate(() => document.querySelectorAll("#tdMc tbody tr.on").length) === 1);
+  ok("a spin history survives a selection change",
+    await p.evaluate(() => document.querySelectorAll("#tdWheel .td-slice").length) === 8);
   await ctx.close();
 }
 

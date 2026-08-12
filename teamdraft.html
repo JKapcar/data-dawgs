@@ -886,6 +886,61 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 .td-tracker .sw{display:inline-block;width:9px;height:9px;border-radius:2px;
   background:var(--own);margin-right:7px;vertical-align:baseline}
 
+/* ---- the wheel ------------------------------------------------------------ */
+.td-wheelwrap{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:22px;align-items:start}
+.td-wheelbox{position:relative;border:1px solid var(--border);border-radius:14px;
+  background:var(--surface-1);padding:14px}
+.td-wheelbox svg{display:block;width:100%;height:auto}
+.td-slice{stroke:var(--surface-1);stroke-width:2;stroke-linejoin:round}
+.td-slice.dim{opacity:.34}
+.td-wlab{font:800 12px/1 ui-monospace,SFMono-Regular,Consolas,monospace;fill:#fff;
+  paint-order:stroke;stroke:rgba(0,0,0,.55);stroke-width:3}
+.td-wpct{font:650 10px/1 ui-monospace,SFMono-Regular,Consolas,monospace;fill:#fff;
+  paint-order:stroke;stroke:rgba(0,0,0,.55);stroke-width:3}
+/* The wheel and the needle spin independently, so the needle can land on second place
+   while the rim lands on first. Both honour prefers-reduced-motion below. */
+#tdWheelRot,#tdNeedle,#tdWheel .td-labrot{transition:transform 3.6s cubic-bezier(.16,.72,.16,1)}
+.td-result{margin:0 0 12px;padding:13px 15px;border:1px solid var(--border);
+  border-left:3px solid var(--own,var(--ink-3));border-radius:0 12px 12px 0;
+  background:var(--surface-1);font-size:14px;line-height:1.6;color:var(--ink-2);min-height:74px}
+.td-result b{color:var(--ink-1)}
+.td-result .big{display:block;font:800 20px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;
+  color:var(--ink-1);margin-bottom:3px}
+.td-spinrow{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.td-go{appearance:none;border:1px solid var(--accent);background:var(--accent);
+  color:var(--accent-ink);border-radius:999px;padding:9px 17px;font:inherit;font-size:14px;
+  font-weight:800;cursor:pointer}
+.td-go:hover{filter:brightness(1.08)}
+.td-go:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.td-go[disabled]{opacity:.5;cursor:progress}
+.td-go.ghost{background:transparent;color:var(--ink-2);border-color:var(--border)}
+.td-go.ghost:hover{color:var(--ink-1);border-color:var(--ink-3)}
+.td-tally{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.td-tally th,.td-tally td{padding:6px 8px;border-bottom:1px solid var(--grid);text-align:right;
+  font:650 12px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace}
+.td-tally th{font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3)}
+.td-tally th:first-child,.td-tally td:first-child{text-align:left}
+.td-tally tbody tr:last-child td{border-bottom:0}
+.td-tally .sw{display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--own);
+  margin-right:6px}
+.td-tally tr.on td{background:color-mix(in srgb,var(--own) 12%,transparent)}
+.td-tally .gap{color:var(--ink-3)}
+
+/* ---- monte carlo ---------------------------------------------------------- */
+.td-mcbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+.td-prog{display:block;width:130px;height:7px;border-radius:999px;
+  background:color-mix(in srgb,var(--ink-3) 20%,transparent);overflow:hidden}
+.td-prog>span{display:block;height:100%;width:0;background:var(--accent);border-radius:999px}
+.td-dtable tr.on td{background:color-mix(in srgb,var(--own) 12%,transparent)}
+
+@media (max-width:860px){
+  .td-wheelwrap{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){
+  #tdWheelRot,#tdNeedle,#tdWheel .td-labrot{transition:none}
+  .td-prog>span{transition:none}
+}
+
 /* ---- 4 · distributions ---------------------------------------------------- */
 .td-plot{border:1px solid var(--border);border-radius:12px;background:var(--surface-1);padding:12px 14px}
 .td-plot svg{display:block;width:100%;height:auto}
@@ -2396,6 +2451,53 @@ STATE: everything saves in the browser on that device. A different device shows 
       <div class="p-table-wrap"><table class="td-tracker" id="tdTracker"></table></div>
     </section>
 
+    <section class="p-section" id="wheel">
+      <header><div><h2>Spin it</h2><p class="dek">A pie of <b>finishing probabilities</b> — each
+        slice is how often that roster comes first across the simulated seasons in the payload, so
+        the wheel is the answer rather than a decoration. Press the button and it plays one whole
+        season, 272 games, and stops on whoever actually won it. The <b>inner needle</b> swings to
+        that same season's runner-up, because second place pays too. Spin it enough and the tally
+        underneath converges on the slices — that is the wheel checking its own arithmetic in
+        public.</p></div>
+        <div class="p-meta" id="wheelMeta" aria-live="polite"></div></header>
+      <div class="td-wheelwrap">
+        <div class="td-wheelbox">
+          <svg id="tdWheel" viewBox="0 0 400 400" role="img"
+            aria-label="Finishing probability by drafter, as a wheel"></svg>
+        </div>
+        <div class="td-wheelside">
+          <p class="td-result" id="tdResult" role="status" aria-live="polite"></p>
+          <div class="td-spinrow">
+            <button type="button" class="td-go" id="tdSpin">Simulate winners</button>
+            <button type="button" class="td-go ghost" id="tdSpin10">Spin &times;10</button>
+            <button type="button" class="td-go ghost" id="tdSpinReset">Reset tally</button>
+          </div>
+          <div class="p-table-wrap"><table class="td-tally" id="tdTally"></table></div>
+          <p class="td-note" id="tdWheelNote"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="p-section" id="montecarlo">
+      <header><div><h2>Monte Carlo</h2><p class="dek">The same machine, without the theatre. Each
+        trial plays all 272 games once — a win goes to exactly one side, so every simulated season
+        pays exactly 272 and a roster owning both sides of a game <b>cannot</b> bank both. That is
+        why this is simulated game by game instead of by drawing each team's win total: drawing
+        totals independently would break the conservation and hand a division-stacked roster a
+        spread it does not have.</p></div>
+        <div class="p-meta" id="mcMeta" aria-live="polite"></div></header>
+      <div class="td-mcbar">
+        <span class="td-rail-lab">Run</span>
+        <button type="button" class="td-go" data-mc="1000">1,000 seasons</button>
+        <button type="button" class="td-go" data-mc="10000">10,000</button>
+        <button type="button" class="td-go" data-mc="50000">50,000</button>
+        <span class="td-prog" id="tdProg" hidden><span></span></span>
+      </div>
+      <div class="p-table-wrap"><table class="td-dtable" id="tdMc"></table></div>
+      <div class="td-plot" id="tdMcPlot" style="margin-top:14px"></div>
+      <p class="td-note" id="tdMcNote"></p>
+    </section>
+
     <section class="p-section" id="curves">
       <header><div><h2>How a season lands</h2><p class="dek">Probability mass over final win counts,
         0 through 17, straight from the payload. The default view is all 32 at once, which is the
@@ -2482,9 +2584,26 @@ STATE: everything saves in the browser on that device. A different device shows 
           flatters it: the line carries the hold and this does not.</li>
         <li><b>Win distribution</b> — probability mass by final win count. Its mean is close to, but not
           identical with, expected wins; the Diagnostics sheet measures the gap and says why.</li>
-        <li><b>Per-game probability</b> — one coherent set of games where both sides always sum to 1.
-          It reproduces the league's 272 wins but not each team's own total. Both numbers are shown;
-          neither is quietly preferred.</li>
+        <li><b>Per-game probability</b> (<code>wp</code>) — one coherent set of games where both
+          sides always sum to 1. It reproduces the league's 272 wins but not each team's own total.
+          Both numbers are shown; neither is quietly preferred.</li>
+        <li><b>The refitted game probability</b> (<code>wpf</code>) — the same game after the
+          schedule was bent onto the expected wins, which are taken as given. One offset per team,
+          solved so that every team's 17 fitted games sum to its expected-wins figure;
+          both sides of a game still sum to 1, so the league still pays 272. <b>Expected wins are
+          not recomputed</b> — this is the other number moving. Everything simulated on this page
+          runs on <code>wpf</code>, which is why a roster's simulated mean lands on the total
+          printed on its own card. Simulating the raw schedule would have put a roster up to 2.7
+          wins away from its own card.</li>
+        <li><b>Finishing probabilities</b> — Monte Carlo over the refitted schedule, played game by
+          game so a season always pays exactly 272 and a roster owning both sides of a game cannot
+          bank both. They are <b>not a forecast</b>: they inherit every assumption in the prices,
+          they assume games are independent given those prices, and they know nothing about
+          injuries or a team having a different season than its number. Two limits worth stating
+          plainly — the simulation has <b>no tie outcome</b>, so the league's half-win-for-a-tie
+          rule is not modelled; and a tie for first is broken <b>at random</b>, because the real
+          tiebreakers are playoff wins and point differential and neither is in this payload. The
+          Diagnostics sheet reports how often that matters, and the answer is: often.</li>
         <li><b>Internal games</b> — head-to-head meetings inside one roster, counted off the overlap
           matrix. This is the only figure on the page that is purely structural: it does not depend on
           anybody's price being right.</li>
@@ -2932,6 +3051,321 @@ window.DDSheets = function(cfg){
     $("tdTracker").innerHTML = head + `<tbody>${body}</tbody>`;
   }
 
+  /* ====================== the season simulator ========================== */
+  /* The browser replays seasons off the SAME refitted probabilities the payload's
+     stored Monte Carlo ran on (`wpf`, not `wp`), so a spin here and the slice it lands
+     in are two views of one model rather than two models.
+
+     ⚠️ GAMES, NOT TOTALS. Each of the 272 games hands its single win to exactly one
+     side. That is what keeps a simulated season paying exactly 272 and what stops a
+     roster owning both sides of a game from banking both. Drawing each team's season
+     total independently would be far faster and would quietly destroy the only claim
+     this page makes. */
+  let GAMES = [];        // [ownerIndexA, ownerIndexB, p] — -1 where the team is undrafted
+  let NAMES = [];
+
+  function buildGames(){
+    NAMES = [...D.draft_order];
+    const slot = {};
+    NAMES.forEach((n,i)=> teamsOf(n).forEach(t=>{ slot[t] = i; }));
+    GAMES = [];
+    for(const [t, T] of Object.entries(D.teams))
+      for(const g of T.schedule)
+        if(t < g.opp) GAMES.push([
+          slot[t] === undefined ? -1 : slot[t],
+          slot[g.opp] === undefined ? -1 : slot[g.opp],
+          g.wpf != null ? g.wpf : g.wp]);
+  }
+
+  /* One season. Returns per-drafter win totals plus the finishing order, ties broken
+     at random — the league's real tiebreakers are playoff wins and point differential,
+     and neither is in this payload. */
+  function season(){
+    const s = new Array(NAMES.length).fill(0);
+    for(let i=0;i<GAMES.length;i++){
+      const g = GAMES[i], w = Math.random() < g[2] ? g[0] : g[1];
+      if(w >= 0) s[w]++;
+    }
+    const order = s.map((v,i)=>[v, Math.random(), i])
+                   .sort((a,b)=> b[0]-a[0] || a[1]-b[1]).map(x=>x[2]);
+    const tied = s.filter(v=>v === s[order[0]]).length > 1;
+    return {wins:s, order, tied};
+  }
+
+  /* ====================== the wheel ===================================== */
+  const REF = () => D.simulation?.drafters || {};
+  let slices = [], wheelRot = 0, spins = 0, tally = {}, tieSpins = 0, spinning = false;
+
+  function layout(){
+    /* Slices are the STORED reference probabilities, so the wheel is stable and dated
+       rather than redrawn under the reader every time they press the button. */
+    const ref = REF();
+    const p = NAMES.map(n => ref[n]?.p_first || 0);
+    const sum = p.reduce((a,b)=>a+b, 0);
+    slices = []; let at = 0;
+    NAMES.forEach((n,i)=>{
+      const frac = sum > 0 ? p[i]/sum : 1/NAMES.length;
+      slices.push({name:n, from:at*360, to:(at+frac)*360, mid:(at+frac/2)*360, frac, p:p[i]});
+      at += frac;
+    });
+  }
+
+  /* Angles run clockwise from 12 o'clock, which is where the pointer is. */
+  const pt = (deg, r) => {
+    const a = (deg - 90) * Math.PI/180;
+    return [(200 + r*Math.cos(a)).toFixed(2), (200 + r*Math.sin(a)).toFixed(2)];
+  };
+  function arc(from, to, r){
+    if(to - from >= 359.999){            // a lone slice is a full circle, not an arc
+      return `M200 ${200-r} A${r} ${r} 0 1 1 199.99 ${200-r} Z`;
+    }
+    const [x1,y1] = pt(from, r), [x2,y2] = pt(to, r);
+    return `M200 200 L${x1} ${y1} A${r} ${r} 0 ${(to-from) > 180 ? 1 : 0} 1 ${x2} ${y2} Z`;
+  }
+
+  function drawWheel(){
+    const R = 152, selName = sel.kind === "drafter" ? sel.id
+                          : sel.kind === "team" ? ownerOf(sel.id) : null;
+    const wedges = slices.map(s=>{
+      const dim = selName && s.name !== selName;
+      return `<path class="td-slice ${oc(s.name)} ${dim?"dim":""}" d="${arc(s.from, s.to, R)}"
+        fill="var(--own)" data-sel="drafter:${esc(s.name)}"
+        data-tip="<b>${esc(s.name)}</b><br>first in ${(s.p*100).toFixed(1)}% of simulated seasons"/>`;
+    }).join("");
+    /* Direct labels, because eight categorical colours cannot carry identity alone.
+       A slice under ~5% has no room for a name; the tally beside the wheel is where
+       those drafters stay legible.
+
+       ⚠️ Each label is translated into place and then counter-rotated by the wheel's
+       own angle, so the names stay UPRIGHT while the rim turns underneath them. Without
+       the inner <g> the labels tumble with the wheel and land at whatever angle the spin
+       stopped on, which is unreadable exactly when the reader most wants to read it. The
+       counter-rotation carries the same transition, so it tracks during the spin too. */
+    const labs = slices.filter(s=>s.frac > 0.05).map(s=>{
+      const [lx,ly] = pt(s.mid, R*0.62);
+      return `<g transform="translate(${lx} ${ly})"><g class="td-labrot"
+          style="transform:rotate(${-wheelRot}deg)">
+          <text class="td-wlab" text-anchor="middle">${esc(s.name)}</text>
+          <text class="td-wpct" y="14" text-anchor="middle">${(s.p*100).toFixed(1)}%</text>
+        </g></g>`;
+    }).join("");
+
+    $("tdWheel").innerHTML =
+      `<g id="tdWheelRot" style="transform:rotate(${wheelRot}deg);transform-origin:200px 200px">
+         ${wedges}${labs}
+       </g>
+       <circle cx="200" cy="200" r="${R}" fill="none" stroke="var(--border)" stroke-width="2"/>
+       <!-- the runner-up needle: thin, inside the hub, never mistaken for the rim pointer -->
+       <g id="tdNeedle" style="transform:rotate(0deg);transform-origin:200px 200px">
+         <line x1="200" y1="200" x2="200" y2="86" stroke="var(--surface-1)" stroke-width="6"/>
+         <line x1="200" y1="200" x2="200" y2="86" stroke="var(--ink-1)" stroke-width="2.5"/>
+         <path d="M200 72 L208 94 L192 94 Z" fill="var(--ink-1)"
+           stroke="var(--surface-1)" stroke-width="1.5"/>
+       </g>
+       <circle cx="200" cy="200" r="31" fill="var(--surface-1)" stroke="var(--border)" stroke-width="2"/>
+       <text x="200" y="196" text-anchor="middle" fill="var(--ink-2)"
+         font-family="ui-monospace,monospace" font-size="10" font-weight="800">2ND</text>
+       <text x="200" y="207" text-anchor="middle" fill="var(--ink-3)"
+         font-family="ui-monospace,monospace" font-size="8" font-weight="700">PLACE</text>
+       <!-- the rim pointer is fixed at 12 o'clock; the wheel turns under it -->
+       <path d="M200 34 L212 8 L188 8 Z" fill="var(--accent)"/>`;
+
+    const zero = slices.filter(s=>s.p === 0).map(s=>s.name);
+    $("tdWheelNote").innerHTML = zero.length
+      ? `${zero.map(esc).join(" and ")} have no slice: across ${(D.simulation.trials).toLocaleString()}
+         simulated seasons they never finished first, because they are still short of a full roster.
+         A spin can still land there — the wheel shows the stored probability, the spin plays a
+         real season — and the banner above would say so.`
+      : `Slices are the stored ${(D.simulation.trials).toLocaleString()}-season reference in the
+         payload. Each spin is a fresh season played in your browser off the same probabilities.`;
+  }
+
+  function renderTally(){
+    const ref = REF();
+    const rows = NAMES.map(n=>{
+      const t = tally[n] || 0;
+      const on = (sel.kind === "drafter" && sel.id === n)
+              || (sel.kind === "team" && ownerOf(sel.id) === n);
+      return {n, t, on, refp: (ref[n]?.p_first || 0)};
+    }).sort((a,b)=> b.t - a.t || b.refp - a.refp);
+    $("tdTally").innerHTML =
+      `<thead><tr><th>Drafter</th><th>Spins won</th><th>Your rate</th><th>Model</th></tr></thead>`
+      + `<tbody>${rows.map(r=>
+        `<tr class="${oc(r.n)} ${r.on?"on":""}"><td><span class="sw"></span>${esc(r.n)}</td>
+          <td>${r.t}</td>
+          <td>${spins ? (r.t/spins*100).toFixed(1)+"%" : "—"}</td>
+          <td class="gap">${(r.refp*100).toFixed(1)}%</td></tr>`).join("")}</tbody>`;
+    $("wheelMeta").textContent = spins
+      ? `${spins} spin${spins===1?"":"s"} · ${tieSpins} ended tied for first`
+      : `${(D.simulation.trials).toLocaleString()} stored seasons · press the button to play one`;
+  }
+
+  function spin(){
+    if(spinning) return;
+    const r = season();
+    const win = NAMES[r.order[0]], run = NAMES[r.order[1]];
+    const iw = slices.findIndex(s=>s.name === win), ir = slices.findIndex(s=>s.name === run);
+
+    /* Land the winner's slice under the fixed pointer: after rotating by `wheelRot`,
+       a slice that started at `mid` sits at `mid + wheelRot`, so drive that to 0. */
+    const turns = 4 + Math.floor(Math.random()*3);
+    const delta = ((-(slices[iw].mid + wheelRot)) % 360 + 360) % 360;
+    wheelRot += turns*360 + delta;
+
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const rot = $("tdWheelRot"), needle = $("tdNeedle");
+    if(reduce){ rot.style.transition = needle.style.transition = "none"; }
+    rot.style.transform = `rotate(${wheelRot}deg)`;
+    needle.style.transform = `rotate(${slices[ir].mid + wheelRot}deg)`;
+    /* keep the names the right way up while the rim turns under them */
+    document.querySelectorAll("#tdWheel .td-labrot").forEach(el=>{
+      if(reduce) el.style.transition = "none";
+      el.style.transform = `rotate(${-wheelRot}deg)`;
+    });
+
+    spins++; tally[win] = (tally[win] || 0) + 1;
+    if(r.tied) tieSpins++;
+
+    const w = r.wins[r.order[0]], s2 = r.wins[r.order[1]];
+    $("tdResult").className = "td-result " + oc(win);
+    $("tdResult").innerHTML =
+      `<span class="big">${esc(win)} wins it with ${w}.</span>`
+      + `${esc(run)} takes second on ${s2}`
+      + (r.tied ? ` — <b>and this one was a tie at the top</b>, broken at random here because the
+          league breaks it on playoff wins and then point differential.` : `.`)
+      + ` <span class="gap">One simulated season, 272 games. Not a prediction.</span>`;
+    renderTally();
+
+    spinning = true;
+    setTimeout(()=>{ spinning = false; }, reduce ? 60 : 3650);
+  }
+
+  /* ====================== monte carlo =================================== */
+  let mcRun = null;
+
+  function mcTable(res, trials){
+    const ref = REF();
+    const rows = NAMES.map((n,i)=>({n, i, ...res[i]}))
+      .sort((a,b)=> b.first - a.first || b.mean - a.mean);
+    $("tdMc").innerHTML =
+      `<thead><tr><th>Drafter</th><th>Roster</th><th>Mean wins</th><th>p10</th><th>p90</th>
+        <th>1st</th><th>2nd</th><th>Paid</th><th>Stored 1st</th></tr></thead><tbody>`
+      + rows.map(r=>{
+        const on = (sel.kind === "drafter" && sel.id === r.n)
+                || (sel.kind === "team" && ownerOf(sel.id) === r.n);
+        return `<tr class="${oc(r.n)} ${on?"on":""}"><td><span class="sw"></span>${esc(r.n)}</td>
+          <td>${teamsOf(r.n).map(esc).join(" ") || "—"}</td>
+          <td>${r.mean.toFixed(2)}</td><td>${r.p10}</td><td>${r.p90}</td>
+          <td>${(r.first/trials*100).toFixed(1)}%</td>
+          <td>${(r.second/trials*100).toFixed(1)}%</td>
+          <td>${((r.first+r.second)/trials*100).toFixed(1)}%</td>
+          <td class="gap">${((ref[r.n]?.p_first||0)*100).toFixed(1)}%</td></tr>`;
+      }).join("") + `</tbody>`;
+  }
+
+  /* Roster win totals from the run, drawn the same way the team curves are so the two
+     read as one family. Selection focuses; league view shows all eight. */
+  function mcPlot(res, trials){
+    const W = 720, H = 210, PL = 34, PR = 12, PT = 12, PB = 26;
+    const iw = W-PL-PR, ih = H-PT-PB;
+    const lo = Math.min(...res.map(r=>r.lo)), hi = Math.max(...res.map(r=>r.hi));
+    const span = Math.max(1, hi - lo);
+    const top = Math.max(...res.flatMap(r=>[...r.hist.values()].map(c=>c/trials)));
+    const X = w => PL + (w-lo)/span * iw;
+    const Y = p => PT + ih - (p/top) * ih;
+    const on = sel.kind === "league" ? null
+             : (sel.kind === "drafter" ? sel.id : ownerOf(sel.id));
+
+    const line = (r) => {
+      let d = "";
+      for(let w = lo; w <= hi; w++)
+        d += `${d?"L":"M"}${X(w).toFixed(1)} ${Y((r.hist.get(w)||0)/trials).toFixed(1)}`;
+      return d;
+    };
+    const paths = res.map((r,i)=>{
+      const nm = NAMES[i], lit = !on || on === nm;
+      return `<g class="${oc(nm)}"><path d="${line(r)}" fill="none"
+        stroke="${lit?"var(--own)":"var(--ink-3)"}" stroke-width="${lit?2:1}"
+        opacity="${lit?1:.22}" stroke-linejoin="round"/></g>`;
+    }).join("");
+
+    const ticks = [];
+    for(let w = Math.ceil(lo/5)*5; w <= hi; w += 5)
+      ticks.push(`<line x1="${X(w)}" y1="${PT}" x2="${X(w)}" y2="${PT+ih}" stroke="var(--grid)"/>`
+        + `<text x="${X(w)}" y="${H-8}" text-anchor="middle" fill="var(--ink-3)" font-size="10"
+            font-family="ui-monospace,monospace">${w}</text>`);
+    const par = D.par >= lo && D.par <= hi
+      ? `<line x1="${X(D.par)}" y1="${PT}" x2="${X(D.par)}" y2="${PT+ih}" stroke="var(--axis)"
+           stroke-dasharray="3 3"/><text x="${X(D.par)}" y="${PT+9}" text-anchor="middle"
+           fill="var(--ink-3)" font-size="9.5" font-family="ui-monospace,monospace">par ${D.par.toFixed(0)}</text>`
+      : "";
+
+    $("tdMcPlot").innerHTML =
+      `<svg viewBox="0 0 ${W} ${H}" role="img" preserveAspectRatio="xMidYMid meet"
+        aria-label="Simulated roster win totals for ${on ? esc(on) : "all eight drafters"}">
+        ${ticks.join("")}${par}
+        <line x1="${PL}" y1="${PT+ih}" x2="${PL+iw}" y2="${PT+ih}" stroke="var(--axis)"/>
+        ${paths}</svg>`;
+  }
+
+  function runMC(trials){
+    if(mcRun) return;
+    const btns = [...document.querySelectorAll("[data-mc]")];
+    btns.forEach(b=>{ b.disabled = true; });
+    const prog = $("tdProg"); prog.hidden = false;
+
+    const res = NAMES.map(()=>({first:0, second:0, sum:0, hist:new Map(), lo:99, hi:0,
+                                mean:0, p10:0, p90:0}));
+    let done = 0, ties = 0;
+    const CHUNK = 1500;                 // keeps the main thread responsive on 50k
+
+    function step(){
+      const end = Math.min(done + CHUNK, trials);
+      for(; done < end; done++){
+        const r = season();
+        if(r.tied) ties++;
+        res[r.order[0]].first++;
+        res[r.order[1]].second++;
+        for(let i=0;i<NAMES.length;i++){
+          const w = r.wins[i], a = res[i];
+          a.sum += w;
+          a.hist.set(w, (a.hist.get(w)||0) + 1);
+          if(w < a.lo) a.lo = w;
+          if(w > a.hi) a.hi = w;
+        }
+      }
+      prog.firstElementChild.style.width = (done/trials*100).toFixed(1) + "%";
+      if(done < trials){ mcRun = requestAnimationFrame(step); return; }
+
+      res.forEach(a=>{
+        a.mean = a.sum/trials;
+        const ws = [...a.hist.keys()].sort((x,y)=>x-y);
+        let cum = 0;
+        for(const w of ws){
+          cum += a.hist.get(w);
+          if(!a._p10 && cum >= trials*0.10){ a.p10 = w; a._p10 = 1; }
+          if(!a._p90 && cum >= trials*0.90){ a.p90 = w; a._p90 = 1; break; }
+        }
+      });
+      mcTable(res, trials); mcPlot(res, trials);
+      LAST_MC = {res, trials};
+      $("mcMeta").textContent = `${trials.toLocaleString()} seasons run here · `
+        + `${(ties/trials*100).toFixed(1)}% ended tied for first`;
+      $("tdMcNote").innerHTML =
+        `Run in your browser just now, so it will not match the stored column to the last decimal —
+         that gap <em>is</em> the sampling error, and it shrinks as you raise the trial count.
+         The stored figure is ${(D.simulation.trials).toLocaleString()} seasons at seed
+         ${D.simulation.seed}, recorded in the payload. Neither has a tie OUTCOME: every game here
+         is decided, so no half-wins are produced, and the league's rule that a tied game counts
+         half is not modelled.`;
+      prog.hidden = true; prog.firstElementChild.style.width = "0";
+      btns.forEach(b=>{ b.disabled = false; });
+      mcRun = null;
+    }
+    step();
+  }
+  let LAST_MC = null;
+
   /* ====================== 4 · distributions ============================= */
   function curves(){
     const W = 720, H = 250, PL = 34, PR = 12, PT = 12, PB = 26;
@@ -3181,10 +3615,15 @@ window.DDSheets = function(cfg){
       renderAll();
     });
     ladder(); matrix(); cards(); tracker(); curves(); strip(); board();
+    /* The wheel keeps its rotation and its tally across a selection change — a spin
+       history is the reader's, not the filter's. Only the highlight is re-derived. */
+    drawWheel(); renderTally();
+    if(LAST_MC){ mcTable(LAST_MC.res, LAST_MC.trials); mcPlot(LAST_MC.res, LAST_MC.trials); }
   }
 
   function fail(msg){
-    const where = ["tdLadder","tdMatrix","tdCards","tdCurves","tdStrip","tdBoard","tdChecks"];
+    const where = ["tdLadder","tdMatrix","tdCards","tdCurves","tdStrip","tdBoard","tdChecks",
+                   "tdResult","tdMc"];
     where.forEach(id=>{ const el = $(id); if(el)
       el.innerHTML = `<div class="p-error">The draft payload could not be read, so this view is
         empty rather than wrong: ${esc(msg)}</div>`; });
@@ -3209,10 +3648,38 @@ window.DDSheets = function(cfg){
       return dd || (D.teams[b].ew - D.teams[a].ew);
     });
 
+    buildGames();
+    layout();
     renderAll();
     diagnostics();
     rules();
     wireTips(document.body);
+
+    $("tdResult").innerHTML = D.picks_made < D.picks_total
+      ? `<span class="big">${D.picks_total - D.picks_made} picks still to come.</span>
+         The wheel already works, but it is turning on <b>partial rosters</b> — a drafter holding
+         ${Math.min(...D.draft_order.map(n=>D.drafters[n].roster.length))} teams cannot win a
+         four-team competition. These slices describe the board as it stands, and they will move
+         hard when the rest of the draft lands.`
+      : `<span class="big">Press the button.</span> Every spin plays one full season — all 272
+         games — and stops on whoever won it. The needle finds that season's runner-up.`;
+
+    $("tdSpin").addEventListener("click", spin);
+    $("tdSpin10").addEventListener("click", ()=>{
+      /* Ten seasons, one animation: the tally is the point of a run this size, and ten
+         consecutive 3.6s spins is not a feature. */
+      for(let i=0;i<9;i++){
+        const r = season();
+        tally[NAMES[r.order[0]]] = (tally[NAMES[r.order[0]]] || 0) + 1;
+        spins++; if(r.tied) tieSpins++;
+      }
+      spin();
+    });
+    $("tdSpinReset").addEventListener("click", ()=>{
+      spins = 0; tieSpins = 0; tally = {}; renderTally();
+    });
+    document.querySelectorAll("[data-mc]").forEach(btn=>
+      btn.addEventListener("click", ()=> runMC(Number(btn.dataset.mc))));
 
     DDSheets({key:"teamdraft", mount:"#sheets",
       sheets:[{id:"pool",  label:"The pool",       panel:"#sheetPool"},

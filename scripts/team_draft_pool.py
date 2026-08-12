@@ -49,7 +49,9 @@ Other entry points:
 import argparse
 import datetime
 import json
+import math
 import pathlib
+import random
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
@@ -120,6 +122,153 @@ def model_sd(roster, teams):
     return round(max(var, 0.0) ** 0.5, 3)
 
 
+# ------------------------------------------------------- the schedule refit ----
+# The payload arrives with two numbers that do not agree: each team's expected wins,
+# and a schedule of per-game probabilities whose sum lands up to 2.67 wins away from it.
+# Both are internally fine — every game's two sides sum to 1, and the league total is
+# 272 either way — but a simulation has to pick one, and simulating the raw schedule
+# would have Miami winning 6.6 games on a page whose ladder says 3.9.
+#
+# So the schedule is refit TO the expected wins, which are taken as given. For a game
+# between i and j the fitted probability is
+#
+#     p'  =  sigmoid( logit(p) + a_i - a_j )
+#
+# with one offset per team, solved by Newton so that every team's fitted games sum to
+# its expected wins. Complementarity survives by construction (the same expression
+# gives 1 - p' from j's side), so the league still pays exactly 272.
+#
+# ⚠️ THIS DOES NOT RECOMPUTE EXPECTED WINS. It moves the schedule onto them. The devig
+# is upstream work and stays untouched; this is the other number bending.
+SIG = lambda x: 1.0 / (1.0 + math.exp(-x))
+
+
+def refit_schedule(teams, max_iter=60, tol=1e-6):
+    """Return (games, residual, iterations).
+
+    `games` is the 272-game list as (home_side, away_side, fitted_p) with the fitted
+    probability from the FIRST team's point of view. Each game appears once.
+    """
+    # ⚠️ THE WEEK IS PART OF THE IDENTITY OF A GAME. Division rivals meet twice, so a
+    # (team, opponent) pair is not unique — keying on it collapses both meetings into
+    # one and silently gives the second the first's probability. That bug put four
+    # teams 0.3+ wins off their own target while the solver reported convergence.
+    games = [(t, g["opp"], g["week"], g["wp"])
+             for t, v in sorted(teams.items()) for g in v["schedule"] if t < g["opp"]]
+    base = [math.log(p / (1 - p)) for _, _, _, p in games]
+    off = {t: 0.0 for t in teams}
+
+    residual, it = float("inf"), 0
+    for it in range(1, max_iter + 1):
+        exp = {t: 0.0 for t in teams}
+        slope = {t: 0.0 for t in teams}
+        for k, (x, y, _, _) in enumerate(games):
+            q = SIG(base[k] + off[x] - off[y])
+            exp[x] += q
+            exp[y] += 1 - q
+            v = q * (1 - q)                      # d(exp)/d(offset) for both sides
+            slope[x] += v
+            slope[y] += v
+        residual = max(abs(exp[t] - teams[t]["ew"]) for t in teams)
+        if residual < tol:
+            break
+        for t in teams:
+            off[t] += (teams[t]["ew"] - exp[t]) / max(slope[t], 1e-9)
+
+    fitted = [(x, y, w, SIG(base[k] + off[x] - off[y]))
+              for k, (x, y, w, _) in enumerate(games)]
+    return fitted, residual, it
+
+
+# --------------------------------------------------------------- monte carlo ----
+def simulate(fitted, rosters, order, trials, seed):
+    """Play `trials` whole seasons, game by game, and count where each roster lands.
+
+    Simulating GAMES rather than team win totals is the only version that keeps the
+    thing this pool is about. Every game hands its one win to exactly one side, so a
+    season always pays 272 and a roster that owns both sides of a game cannot bank
+    both — the self-cancellation falls out of the mechanic instead of being modelled
+    on top of it. Sampling each team's win distribution independently would break
+    both and quietly inflate the spread of a division-stacked roster.
+
+    Known limits, reported alongside the output rather than buried:
+      · no tie outcome. The league counts an NFL tie as half a win; this draws a
+        winner every game, so a season here has no halves in it.
+      · a tie for FIRST is broken at random. The real rules break it on playoff wins
+        and then point differential, neither of which is in this payload — so the
+        honest thing is to report how often it happens, which is often.
+      · games are independent given the fitted probabilities. No injuries, no
+        in-season correlation, no team having a different season than its price.
+    """
+    rnd = random.Random(seed)
+    owner = {t: name for name, r in rosters.items() for t in r}
+    names = list(order)
+    idx = {n: i for i, n in enumerate(names)}
+    # Flatten to (owner_index_or_-1, owner_index_or_-1, p) so the hot loop is arithmetic.
+    flat = [(idx.get(owner.get(x), -1), idx.get(owner.get(y), -1), p) for x, y, _w, p in fitted]
+
+    n = len(names)
+    first = [0] * n
+    second = [0] * n
+    top2 = [0] * n
+    total = [0] * n
+    hist = [{} for _ in range(n)]
+    tied_first = 0
+    random_ = rnd.random
+
+    for _ in range(trials):
+        s = [0] * n
+        for oa, ob, p in flat:
+            w = oa if random_() < p else ob
+            if w >= 0:
+                s[w] += 1
+        order_ = sorted(range(n), key=lambda i: (-s[i], random_()))
+        best = s[order_[0]]
+        if sum(1 for v in s if v == best) > 1:
+            tied_first += 1
+        first[order_[0]] += 1
+        second[order_[1]] += 1
+        top2[order_[0]] += 1
+        top2[order_[1]] += 1
+        for i in range(n):
+            total[i] += s[i]
+            hist[i][s[i]] = hist[i].get(s[i], 0) + 1
+
+    out = {}
+    for i, name in enumerate(names):
+        counts = hist[i]
+        mean = total[i] / trials
+        var = sum(c * (w - mean) ** 2 for w, c in counts.items()) / trials
+        ordered = sorted(counts)
+        cum, q = 0, {}
+        for w in ordered:
+            cum += counts[w]
+            for tag, target in (("p10", 0.10), ("p50", 0.50), ("p90", 0.90)):
+                if tag not in q and cum >= trials * target:
+                    q[tag] = w
+        out[name] = {
+            "p_first": round(first[i] / trials, 5),
+            "p_second": round(second[i] / trials, 5),
+            "p_top2": round(top2[i] / trials, 5),
+            "mean": round(mean, 3),
+            "sd": round(var ** 0.5, 3),
+            "p10": q.get("p10"), "p50": q.get("p50"), "p90": q.get("p90"),
+            # The full mass, so the page can draw the curve without re-simulating.
+            "dist": {str(w): round(counts[w] / trials, 6) for w in ordered},
+        }
+    return {
+        "trials": trials,
+        "seed": seed,
+        "method": "game-level Bernoulli over the refitted schedule; one win per game, "
+                  "so every simulated season pays exactly 272",
+        "tie_for_first_rate": round(tied_first / trials, 5),
+        "no_tie_outcome": True,
+        "first_place_ties_broken": "at random — the league's real tiebreakers (playoff "
+                                   "wins, then point differential) are not in this payload",
+        "drafters": out,
+    }
+
+
 def build_board(picks, teams, order):
     """The snake grid, with the reach/value signal per pick.
 
@@ -156,14 +305,28 @@ def build_board(picks, teams, order):
     return board
 
 
-def derive(d, sd_source):
-    """Everything that follows from picks. Pure — no I/O, no upstream numbers touched."""
+def derive(d, sd_source, trials, seed):
+    """Everything that follows from picks. No I/O, no upstream number rewritten.
+
+    Also refits the schedule onto the expected wins and runs the Monte Carlo, and
+    writes the fitted per-game probability back onto each schedule row as `wpf` so the
+    page can replay seasons in the browser off the same numbers this ran on.
+    """
     teams, overlap, order = d["teams"], d["overlap"], d["draft_order"]
     picks = sorted(d["picks"], key=lambda p: p["pick"])
 
     rosters = {name: [] for name in order}
     for p in picks:
         rosters[p["drafter"]].append(p["team"])
+
+    fitted, fit_residual, fit_iters = refit_schedule(teams)
+    by_game = {}
+    for x, y, w, p in fitted:
+        by_game[(x, y, w)] = p
+        by_game[(y, x, w)] = 1 - p
+    for t, v in teams.items():
+        for g in v["schedule"]:
+            g["wpf"] = round(by_game[(t, g["opp"], g["week"])], 5)
 
     drafters = {}
     for slot, name in enumerate(order, start=1):
@@ -191,6 +354,15 @@ def derive(d, sd_source):
         "board": build_board(picks, teams, order),
         "picks_made": len(picks),
         "picks_total": len(order) * ROUNDS,
+        "schedule_fit": {
+            "method": "per-team logit offsets solved by Newton so each team's 17 fitted "
+                      "game probabilities sum to its expected wins; complementarity and "
+                      "the 272-win league total hold by construction",
+            "residual": round(fit_residual, 8),
+            "iterations": fit_iters,
+            "field": "wpf",
+        },
+        "simulation": simulate(fitted, rosters, order, trials, seed),
     }
 
 
@@ -312,6 +484,57 @@ def diagnose(d, derived):
         f"drafter's gain is another's loss — that is the whole game.",
         owned, "hard")
 
+    # --- the refit that makes the simulation possible -----------------------------
+    fit = derived["schedule_fit"]
+    fitted_sums = {k: round(sum(g["wpf"] for g in t["schedule"]), 4) for k, t in teams.items()}
+    fit_worst = max(abs(fitted_sums[k] - teams[k]["ew"]) for k in teams)
+    add("schedule_fit", "The refitted schedule does re-add to expected wins",
+        fit_worst < 0.01,
+        f"Solved in {fit['iterations']} Newton steps; the worst team is now "
+        f"{fit_worst:.4f} wins from its expected-wins figure, against {max(abs(sum(g['wp'] for g in t['schedule']) - t['ew']) for t in teams.values()):.2f} "
+        f"before the refit. The residual cannot reach zero: the 32 expected-win values "
+        f"sum to {ew_sum:.2f} rather than {TOTAL_WINS}, and a schedule of whole games "
+        f"always pays exactly {TOTAL_WINS}, so that one hundredth has to live somewhere. "
+        f"`wp` is untouched — `wpf` sits beside it and the simulation uses only `wpf`.",
+        round(fit_worst, 6), "hard")
+
+    sim = derived["simulation"]
+    sim_worst = max(abs(sim["drafters"][n]["mean"] - derived["drafters"][n]["ew"])
+                    for n in d["draft_order"])
+    add("sim_vs_ladder", "Simulated roster totals land on the ladder's totals",
+        sim_worst < 0.15,
+        f"Across {sim['trials']:,} simulated seasons the worst roster mean sits "
+        f"{sim_worst:.3f} wins from the sum of its teams' expected wins. That agreement "
+        f"is the refit working — simulating the raw schedule instead would have put a "
+        f"roster up to 2.7 wins away from the number printed on its own card.",
+        round(sim_worst, 4), "hard")
+
+    tie = sim["tie_for_first_rate"]
+    add("tie_rate", "A tie for first is common, and this payload cannot break one",
+        True,
+        f"{tie * 100:.1f}% of simulated seasons end with two or more rosters level at the "
+        f"top — roughly one in {round(1 / tie) if tie else 0}. The league breaks that on total "
+        f"playoff wins and then point differential; neither is in this payload, so the "
+        f"simulation breaks it at random and the page reports the rate instead of "
+        f"pretending to a winner. The simulation also has no tie OUTCOME: every game is "
+        f"decided, so no half-wins are produced.",
+        tie, "info")
+
+    incomplete = [n for n in d["draft_order"] if derived["drafters"][n]["picks_remaining"]]
+    add("sim_rosters_complete", "The simulation is running on complete rosters",
+        not incomplete,
+        "Every roster has all four teams, so the finishing probabilities are about the "
+        "league as drafted."
+        if not incomplete else
+        f"{len(incomplete)} of {len(d['draft_order'])} rosters are still short "
+        f"({', '.join(incomplete)}), and {len(derived['undrafted'])} teams worth "
+        f"{sum(teams[t]['ew'] for t in derived['undrafted']):.2f} expected wins are "
+        f"unowned. Finishing probabilities on partial rosters are not a forecast of this "
+        f"pool — a drafter holding two teams cannot win a four-team competition. They "
+        f"describe the board as it stands right now and will move, hard, when the "
+        f"remaining picks land.",
+        len(incomplete), "known")
+
     # --- the two standard deviations ---------------------------------------------
     gaps = [(n, round(v["sd_model"] - v["sd_sim"], 3))
             for n, v in derived["drafters"].items()
@@ -356,6 +579,9 @@ def envelope(d, derived, diagnostics, as_of, built):
             "sd": "Season win standard deviation from the upstream simulation.",
             "dist": "Probability mass by final win count, 0 through 17. Sums to 1 within rounding.",
             "schedule": "17 games: week, opponent, home flag, and this team's win probability.",
+            "schedule[].wp": "The payload's original per-game probability. Coherent game by game; does not re-add to `ew`.",
+            "schedule[].wpf": "The same game after the schedule was refit onto `ew`. This is what the simulation uses.",
+            "simulation": "Monte Carlo over `wpf`, game by game. Finishing probabilities, not a forecast; nothing graded.",
             "overlap": "Sparse symmetric head-to-head game counts. 2 = division rival, 1 = other, absent = 0.",
             "wins_tracker": "Actual wins, by round, per drafter. Every value is zero — no game has been played.",
             "board[].delta": "Chosen team's expected wins minus the best still available. Descriptive, not a grade.",
@@ -455,6 +681,10 @@ def main():
     ap.add_argument("--pick", action="append", default=[], metavar="Drafter:TEAM",
                     help="append a pick into the next open snake slot (repeatable)")
     ap.add_argument("--as-of", metavar="YYYY-MM-DD", help="stamp a new as_of")
+    ap.add_argument("--trials", type=int, default=100_000, metavar="N",
+                    help="Monte Carlo seasons for the stored reference (default 100000)")
+    ap.add_argument("--seed", type=int, default=20260812, metavar="N",
+                    help="Monte Carlo seed. Fixed by default so the payload is reproducible.")
     ap.add_argument("--check", action="store_true",
                     help="recompute and report; write nothing; exit 1 if the file would change")
     args = ap.parse_args()
@@ -470,7 +700,7 @@ def main():
 
     as_of = args.as_of or d["as_of"]
     built = datetime.date.today().isoformat()
-    derived = derive(d, sd_source)
+    derived = derive(d, sd_source, args.trials, args.seed)
     diagnostics = diagnose(d, derived)
     env = envelope(d, derived, diagnostics, as_of, built)
 
@@ -489,6 +719,15 @@ def main():
         print(f"  {name:<7} {v['ew']:6.2f} EW  {v['par_delta']:+6.2f} vs par  "
               f"{v['internal_games']} internal  SD {sd}  "
               f"{', '.join(v['roster']) or '—'}{flag}")
+
+    sim = derived["simulation"]["drafters"]
+    print(f"\n  {derived['simulation']['trials']:,} simulated seasons "
+          f"(seed {derived['simulation']['seed']}) · "
+          f"{derived['simulation']['tie_for_first_rate'] * 100:.1f}% end tied for first")
+    for name in sorted(d["draft_order"], key=lambda n: -sim[n]["p_first"]):
+        v = sim[name]
+        print(f"  {name:<7} wins {v['mean']:6.2f}  1st {v['p_first'] * 100:5.1f}%  "
+              f"2nd {v['p_second'] * 100:5.1f}%  paid {v['p_top2'] * 100:5.1f}%")
 
     for c in diagnostics["checks"]:
         mark = {"hard": "FAIL", "known": "note", "info": "ok  "}[c["severity"]] if not c["ok"] else "ok  "
