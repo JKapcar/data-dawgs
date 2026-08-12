@@ -2814,16 +2814,32 @@ window.DDSheets = function(cfg){
   const TRACK_MAX = 48;                 // fixed, so the par rule never moves week to week
 
   let D = null, ORDER = [], sheets = null;
-  let sel = {kind:"league", id:null};
+  /* SELECTION IS A SET, not one thing. Two drafters' distributions laid over each
+     other is the question this page gets asked most, and a single-value selection
+     cannot answer it. A token is a drafter name or a team code; `selTeams()` unions
+     them, and every view already reads that. Empty set = the whole league. */
+  const sel = {d:new Set(), t:new Set()};
+  const selEmpty = () => sel.d.size === 0 && sel.t.size === 0;
+  /* The Team sheet opens on the top of the ladder so it is not a blank page. That is a
+     PLACEHOLDER, not a choice — the first real pick replaces it instead of unioning
+     with it, or you end up comparing your two drafters against a team you never asked
+     for. */
+  let autoPick = null;
 
   const ownerOf = t => D.board.find(b=>b.team===t)?.drafter || null;
   const slotOf  = name => name ? (D.drafters[name]?.slot || 0) : 0;
   const oc      = name => "td-o" + slotOf(name);
   const teamsOf = name => D.drafters[name]?.roster || [];
-  const selTeams = () => sel.kind==="team" ? [sel.id]
-                       : sel.kind==="drafter" ? teamsOf(sel.id) : [];
-  const selOwner = () => sel.kind==="drafter" ? sel.id
-                       : sel.kind==="team" ? ownerOf(sel.id) : null;
+  function selTeams(){
+    const out = [];
+    for(const n of sel.d) for(const t of teamsOf(n)) if(!out.includes(t)) out.push(t);
+    for(const t of sel.t) if(!out.includes(t)) out.push(t);
+    return out;
+  }
+  const selOwners = () => new Set(selTeams().map(ownerOf).filter(Boolean));
+  /* One owner, or null when the selection spans several. Used only where a single
+     colour or a single roster genuinely applies. */
+  const selOwner = () => { const o = selOwners(); return o.size === 1 ? [...o][0] : null; };
 
   /* ---- one tooltip, moved. Shows on hover AND focus. -------------------- */
   const tip = document.createElement("div");
@@ -2853,13 +2869,18 @@ window.DDSheets = function(cfg){
 
   /* ---- selection -------------------------------------------------------- */
   function select(kind, id, opts){
-    sel = (kind==="league" || (sel.kind===kind && sel.id===id))
-        ? {kind:"league", id:null} : {kind, id};
+    if(kind === "league"){ sel.d.clear(); sel.t.clear(); autoPick = null; }
+    else {
+      if(autoPick && autoPick !== id){ sel.t.delete(autoPick); }
+      autoPick = null;
+      const bag = kind === "drafter" ? sel.d : sel.t;
+      if(bag.has(id)) bag.delete(id); else bag.add(id);
+    }
     renderAll();
     /* Clicking a team on the Pool sheet is a request to SEE that team, and the
        detail lives on the other sheet. Chips in the rail do not jump — they are
        a filter for whichever sheet you are already reading. */
-    if(opts && opts.jump && sel.kind!=="league" && sheets) sheets.show("team");
+    if(opts && opts.jump && !selEmpty() && sheets) sheets.show("team");
   }
   document.addEventListener("click", e=>{
     const el = e.target.closest("[data-sel]");
@@ -2871,26 +2892,40 @@ window.DDSheets = function(cfg){
   /* ====================== the control rail ============================== */
   function railHTML(){
     const chips = D.draft_order.map(name=>{
-      const v = D.drafters[name], on = sel.kind==="drafter" && sel.id===name;
+      const v = D.drafters[name];
       return `<button type="button" class="td-chip ${oc(name)}" data-sel="drafter:${esc(name)}"
-        aria-pressed="${on}"><span class="sw"></span>${esc(name)}
+        aria-pressed="${sel.d.has(name)}"><span class="sw"></span>${esc(name)}
         <span class="ew">${n2(v.projected)}</span></button>`;
     }).join("");
     const byDiv = DIVS.map(div=>{
       const opts = ORDER.filter(t=>D.teams[t].division===div).map(t=>{
         const own = ownerOf(t);
-        return `<option value="${esc(t)}"${sel.kind==="team"&&sel.id===t?" selected":""}>`
-          + `${esc(D.teams[t].name)} · ${n2(D.teams[t].ew)} · ${own?esc(own):"on the board"}</option>`;
+        return `<option value="${esc(t)}">${esc(D.teams[t].name)} · ${n2(D.teams[t].ew)} · `
+          + `${own?esc(own):"on the board"}</option>`;
       }).join("");
       return `<optgroup label="${esc(div)}">${opts}</optgroup>`;
     }).join("");
+    /* Teams picked one at a time get their own removable chips — a <select> holds one
+       value, so without these there is no way to see or undo a multi-team pick. */
+    const picked = [...sel.t].map(t=>
+      `<button type="button" class="td-chip ${oc(ownerOf(t))}" data-sel="team:${esc(t)}"
+        aria-pressed="true" title="Remove ${esc(t)}"><span class="sw"></span>${esc(t)}
+        <span class="ew">&times;</span></button>`).join("");
+    /* ⚠️ "All 32" is a POOL control. On the Team sheet it is a lever back to a view
+       that sheet does not have — the sheet is one-thing-at-a-time by definition, and
+       clearing there just bounces you to the top of the ladder. Chips toggle, so
+       deselecting is the chip itself. */
+    const clearChip = (sheets && sheets.current === "team")
+      ? (selEmpty() ? "" : `<button type="button" class="td-chip" data-sel="league:"
+          aria-pressed="false">Clear</button>`)
+      : `<button type="button" class="td-chip" data-sel="league:"
+          aria-pressed="${selEmpty()}">All 32</button>`;
     return `<span class="td-rail-lab">View</span>
-      <button type="button" class="td-chip" data-sel="league:"
-        aria-pressed="${sel.kind==="league"}">All 32</button>
-      ${chips}
-      <label class="td-rail-lab" for="tdTeamPick" style="margin-left:6px">Team</label>
-      <select class="td-pick" id="tdTeamPick" aria-label="Select a team">
-        <option value="">All 32 teams…</option>${byDiv}</select>`;
+      ${clearChip}
+      ${chips}${picked}
+      <label class="td-rail-lab" for="tdTeamPick" style="margin-left:6px">Add team</label>
+      <select class="td-pick" id="tdTeamPick" aria-label="Add a team to the selection">
+        <option value="">Choose a team…</option>${byDiv}</select>`;
   }
 
   /* ====================== 1 · the wins tracker ========================== */
@@ -2988,8 +3023,7 @@ window.DDSheets = function(cfg){
         ()=>`<span class="td-tteam open">open</span>`).join("");
       const roster = v.roster.map(t=>
         `<span class="td-tteam">${esc(t)} <s>${n2(D.teams[t].ew)}</s></span>`).join("") + open;
-      const on = (sel.kind==="drafter" && sel.id===name)
-              || (sel.kind==="team" && ownerOf(sel.id)===name);
+      const on = sel.d.has(name) || selOwners().has(name);
       return `<button type="button" class="td-card ${oc(name)}" data-sel="drafter:${esc(name)}"
           aria-pressed="${on}">
         <h3>${esc(name)}<em>slot ${v.slot}</em></h3>
@@ -3132,8 +3166,7 @@ window.DDSheets = function(cfg){
     $("tdRatio").innerHTML =
       `<thead><tr><th>Drafter</th><th>EW</th><th>1st</th><th>2nd</th><th>2nd&divide;1st</th></tr></thead>`
       + `<tbody>${rows.map(r=>{
-        const on = (sel.kind==="drafter" && sel.id===r.n)
-                || (sel.kind==="team" && ownerOf(sel.id)===r.n);
+        const on = sel.d.has(r.n) || selOwners().has(r.n);
         const rat = r.p_first ? (r.p_second/r.p_first) : null;
         return `<tr class="${oc(r.n)} ${on?"on":""}">
           <td><span class="sw"></span>${esc(r.n)}</td>
@@ -3195,8 +3228,7 @@ window.DDSheets = function(cfg){
       `<thead><tr><th>Drafter</th><th>Roster</th><th>Mean wins</th><th>p10</th><th>p90</th>
         <th>1st</th><th>2nd</th><th>Paid</th><th>Stored 1st</th></tr></thead><tbody>`
       + rows.map(r=>{
-        const on = (sel.kind==="drafter" && sel.id===r.n)
-                || (sel.kind==="team" && ownerOf(sel.id)===r.n);
+        const on = sel.d.has(r.n) || selOwners().has(r.n);
         return `<tr class="${oc(r.n)} ${on?"on":""}"><td><span class="sw"></span>${esc(r.n)}</td>
           <td>${teamsOf(r.n).map(esc).join(" ") || "—"}</td>
           <td>${r.mean.toFixed(2)}</td><td>${n1(r.p10)}</td><td>${n1(r.p90)}</td>
@@ -3309,7 +3341,7 @@ window.DDSheets = function(cfg){
        this is a chart of single teams, so the rule is the league total over 32. */
     const TEAM_PAR = D.total_wins / rows.length;
 
-    $("tdLadder").className = "td-ladder" + (sel.kind==="league" ? "" : " sel");
+    $("tdLadder").className = "td-ladder" + (selEmpty() ? "" : " sel");
     $("tdLadder").innerHTML = rows.map((t,i)=>{
       const T = D.teams[t], own = ownerOf(t);
       const cls = [oc(own), on.has(t)?"on":"", own?"":"und"].filter(Boolean).join(" ");
@@ -3337,7 +3369,7 @@ window.DDSheets = function(cfg){
         `<span class="td-par" style="left:${left.toFixed(1)}px"></span>`
         + `<span class="td-parlab" style="left:${left.toFixed(1)}px">par ${TEAM_PAR.toFixed(1)}</span>`);
     }
-    $("ladderMeta").textContent = sel.kind==="league"
+    $("ladderMeta").textContent = selEmpty()
       ? `32 teams · scale 0–${MAX} wins` : `${on.size} of 32 highlighted`;
   }
 
@@ -3372,20 +3404,28 @@ window.DDSheets = function(cfg){
       });
     });
     const m = $("tdMatrix");
-    m.className = "td-matrix" + (sel.kind==="league" ? "" : " sel");
+    m.className = "td-matrix" + (selEmpty() ? "" : " sel");
     m.innerHTML = out.join("");
 
-    if(sel.kind==="drafter"){
-      const v = D.drafters[sel.id];
+    if(sel.d.size === 1 && sel.t.size === 0){
+      const name = [...sel.d][0], v = D.drafters[name];
       $("matrixMeta").textContent = v.internal_games
-        ? `${sel.id}: ${v.internal_games} internal game${v.internal_games>1?"s":""} inside the roster`
-        : `${sel.id}: no internal games — nothing in this roster cancels`;
-    } else if(sel.kind==="team"){
-      const own = ownerOf(sel.id);
-      const rivals = own ? teamsOf(own).filter(t=>t!==sel.id && cell(sel.id,t)>0) : [];
+        ? `${name}: ${v.internal_games} internal game${v.internal_games>1?"s":""} inside the roster`
+        : `${name}: no internal games — nothing in this roster cancels`;
+    } else if(sel.t.size === 1 && sel.d.size === 0){
+      const t0 = [...sel.t][0], own = ownerOf(t0);
+      const rivals = own ? teamsOf(own).filter(t=>t!==t0 && cell(t0,t)>0) : [];
       $("matrixMeta").textContent = rivals.length
-        ? `${sel.id} meets ${own}'s own ${rivals.join(" and ")}`
-        : `${sel.id} plays nobody else on ${own?own+"'s roster":"any one roster"}`;
+        ? `${t0} meets ${own}'s own ${rivals.join(" and ")}`
+        : `${t0} plays nobody else on ${own?own+"'s roster":"any one roster"}`;
+    } else if(!selEmpty()){
+      /* Across a multi-selection the interesting count is games INSIDE the selection,
+         which is a different number from any one roster's internal games. */
+      const list = selTeams();
+      let n = 0;
+      for(let i=0;i<list.length;i++) for(let j=i+1;j<list.length;j++) n += cell(list[i],list[j]);
+      $("matrixMeta").textContent = `${list.length} teams selected · ${n} game`
+        + `${n===1?"":"s"} between them`;
     } else {
       const tot = D.draft_order.reduce((a,n)=>a+D.drafters[n].internal_games,0);
       $("matrixMeta").textContent = `${tot} of ${D.total_wins} games have the same owner on both sides`;
@@ -3421,7 +3461,7 @@ window.DDSheets = function(cfg){
       }
     }
     const el = $("tdBoard");
-    el.className = "td-board" + (sel.kind==="league" ? "" : " sel");
+    el.className = "td-board" + (selEmpty() ? "" : " sel");
     el.innerHTML = head + cells;
     const made = D.board.filter(b=>b.team);
     $("boardMeta").textContent = `${made.length} picks · ${made.filter(b=>b.delta===0).length} took the `
@@ -3449,25 +3489,41 @@ window.DDSheets = function(cfg){
   }
 
   function hero(){
-    const own = selOwner();
+    const own = selOwner();          // null when the selection spans several rosters
     $("tdHero").className = "td-hero " + (own ? oc(own) : "");
     const stat = (v,l) => `<div class="td-hstat"><b>${v}</b><span>${l}</span></div>`;
-    if(sel.kind==="team"){
-      const T = D.teams[sel.id];
+    if(sel.t.size === 1 && sel.d.size === 0){
+      const t0 = [...sel.t][0], T = D.teams[t0];
       $("tdHero").innerHTML = `<h2>${esc(T.name)}</h2>
         <p class="sub">${esc(T.division)} · ${own?`drafted by ${esc(own)}`:"still on the board"}</p>
         <div class="td-hstats">${stat(n2(T.ew),"expected wins")}${stat(n2(T.line),"posted line")}
           ${stat(sgn(T.ew-T.line),"vig")}${stat(n2(T.sd),"season SD")}
           ${stat(`${T.p10}–${T.p90}`,"p10 to p90")}${stat(n2(T.projected),"projected")}</div>`;
-    } else {
-      const v = D.drafters[sel.id];
-      $("tdHero").innerHTML = `<h2>${esc(sel.id)}</h2>
+    } else if(sel.d.size === 1 && sel.t.size === 0){
+      const name = [...sel.d][0], v = D.drafters[name];
+      $("tdHero").innerHTML = `<h2>${esc(name)}</h2>
         <p class="sub">${v.roster.map(esc).join(" · ") || "no picks yet"}${
           v.picks_remaining?` · ${v.picks_remaining} pick${v.picks_remaining>1?"s":""} left`:""}</p>
         <div class="td-hstats">${stat(n2(v.ew),"expected wins")}${stat(sgn(v.par_delta),"vs par")}
           ${stat(v.internal_games,"internal games")}
           ${stat(n2(v.sd_sim!=null?v.sd_sim:v.sd_model),"roster SD")}
           ${stat(n1(v.banked),"banked")}${stat(n2(v.projected),"projected")}</div>`;
+    } else {
+      /* A comparison. The combined expected wins is a real number but a meaningless
+         one — these rosters are not a team — so it is labelled as a sum and nothing
+         is said about who is ahead. */
+      const list = selTeams();
+      const ew = list.reduce((a,t)=>a+D.teams[t].ew, 0);
+      const names = [...sel.d];
+      const covered = new Set(names.flatMap(teamsOf));
+      const loose = [...sel.t].filter(t=>!covered.has(t));
+      const title = [...names, ...loose];
+      $("tdHero").innerHTML = `<h2>${(title.length ? title : list).map(esc).join(" vs ")}</h2>
+        <p class="sub">${list.length} teams overlaid${names.length
+          ? ` · ${names.map(n=>`${esc(n)} ${D.teams ? n2(D.drafters[n].ew) : ""}`).join(" · ")}` : ""}</p>
+        <div class="td-hstats">${stat(list.length,"teams in view")}
+          ${stat(names.length || "—","drafters")}
+          ${stat(n2(ew),"expected wins, summed")}</div>`;
     }
   }
 
@@ -3500,7 +3556,9 @@ window.DDSheets = function(cfg){
         <span class="td-slab"><span class="dot"></span>${esc(t)}</span>${cells}</div>`;
     }).join("");
     $("tdStrip").innerHTML = head + rows;
-    const games = sel.kind==="team" ? clashes : Math.round(clashes/2);
+    /* A clash is counted once from each side, but only when BOTH sides are on screen. */
+    const shown = new Set(list);
+    const games = Math.round(clashes / (list.every(t=>shown.has(t)) && list.length > 1 ? 2 : 1));
     $("schedMeta").textContent = games
       ? `${games} self-cancelling game${games===1?"":"s"} in view`
       : `no self-cancelling games in view`;
@@ -3526,7 +3584,9 @@ window.DDSheets = function(cfg){
         + `<path d="${path(t)}" fill="none" stroke="var(--own)" stroke-width="2"
              stroke-linejoin="round"/></g>`;
     }).join("");
-    const labels = on.map((t,i)=>{
+    /* Direct labels stop at four. Past that they collide around the shared median and
+       the legend chips underneath already name every curve with its quantiles. */
+    const labels = (on.length > 4 ? [] : on).map((t,i)=>{
       const T = D.teams[t], px = X(T.p50), py = Y(T.dist[T.p50]||0);
       const ly = Math.max(PT + 9, py - 12 - (i % 4) * 14);
       return `<g class="${oc(ownerOf(t))}">
@@ -3627,8 +3687,12 @@ window.DDSheets = function(cfg){
     $("tdRail").innerHTML = railHTML();
     $("tdTeamPick").addEventListener("change", e=>{
       const v = e.target.value;
-      sel = v ? {kind:"team", id:v} : {kind:"league", id:null};
-      renderAll();
+      if(v){
+        if(autoPick && autoPick !== v) sel.t.delete(autoPick);
+        autoPick = null;
+        sel.t.add(v);
+      }
+      renderAll();          // rail is rebuilt, so the select resets to its placeholder
     });
     race(); cards(); drawWheel(); ratio(); ladder(); matrix(); board(); teamSheet();
     if(LAST_MC){ mcTable(LAST_MC.res, LAST_MC.trials); mcPlot(LAST_MC.res, LAST_MC.trials); }
@@ -3698,11 +3762,11 @@ window.DDSheets = function(cfg){
       onShow(id){
         /* Opening the Team sheet with nothing chosen would show an empty page, so it
            lands on the top of the ladder rather than on a prompt. */
-        if(id === "team" && sel.kind === "league"){
-          const top = Object.keys(D.teams).sort((a,b)=>D.teams[b].ew - D.teams[a].ew)[0];
-          sel = {kind:"team", id:top};
-          renderAll();
+        if(id === "team" && selEmpty()){
+          autoPick = Object.keys(D.teams).sort((a,b)=>D.teams[b].ew - D.teams[a].ew)[0];
+          sel.t.add(autoPick);
         }
+        renderAll();      // the rail differs per sheet: no "All 32" lever on Team
       }});
 
     let rz; addEventListener("resize", ()=>{ clearTimeout(rz); rz = setTimeout(ladder, 140); });

@@ -124,6 +124,8 @@ async function open(opts = {}) {
   if (opts.theme) await p.evaluate(t => { document.documentElement.dataset.theme = t; }, opts.theme);
   return { ctx, p };
 }
+const teamsOfBoth = (a, b) =>
+  [...new Set([...D.drafters[a].roster, ...D.drafters[b].roster])];
 const ready = p => p.waitForFunction(
   () => document.querySelectorAll("#tdRace .td-rrow").length === 8, null, { timeout: 15000 });
 
@@ -304,6 +306,11 @@ const ready = p => p.waitForFunction(
   /* A rail chip filters the sheet you are on; it must not teleport you. */
   ok("a rail chip does not jump sheets", s.sheet === "pool", s.sheet);
 
+  /* Chips TOGGLE and selection is a set, so clear before testing the single-team
+     case — otherwise the ladder click adds to the drafter already chosen, which is
+     the multi-select behaviour tested separately below. */
+  await p.click('[data-sel="league:"]');
+  await p.waitForTimeout(120);
   /* clicking a TEAM on the pool sheet is a request to see it, so it does jump */
   await p.click('#tdLadder .td-row');
   await p.waitForTimeout(250);
@@ -324,6 +331,58 @@ const ready = p => p.waitForFunction(
   ok("the curve shows one team, not all 32", jumped.curves === 2, String(jumped.curves));
   ok("every game in the table states its basis",
     jumped.gameRows === 17 && jumped.bases.length >= 1, jumped.bases.join(","));
+
+  /* ---- multi-select: two rosters laid over each other ---------------------- */
+  const [dA, dB] = D.draft_order;
+  await p.click('[data-sel="league:"]');
+  await p.waitForTimeout(100);
+  await p.click(`[data-sel="drafter:${dA}"]`);
+  await p.click(`[data-sel="drafter:${dB}"]`);
+  await p.waitForTimeout(250);
+  const multi = await p.evaluate(() => ({
+    hero: document.querySelector("#tdHero h2")?.textContent.trim(),
+    strips: document.querySelectorAll("#tdStrip .td-srow:not(.head)").length,
+    quant: document.querySelectorAll("#tdQuant .td-qi").length,
+    pressed: document.querySelectorAll('.td-chip[aria-pressed="true"]').length,
+    ratioOn: document.querySelectorAll("#tdRatio tr.on").length,
+    lit: document.querySelectorAll("#tdLadder .td-row.on").length,
+  }));
+  const both = teamsOfBoth(dA, dB);
+  ok("two drafters can be selected at once", multi.pressed === 2, String(multi.pressed));
+  ok("the hero names both", multi.hero === `${dA} vs ${dB}`, multi.hero);
+  ok("every team from both rosters gets a strip", multi.strips === both.length,
+    `${multi.strips} vs ${both.length}`);
+  ok("every team from both rosters gets a curve legend chip", multi.quant === both.length);
+  ok("both rosters light up on the ladder", multi.lit === both.length);
+  ok("both drafters highlight in the ratio table", multi.ratioOn === 2, String(multi.ratioOn));
+
+  await p.click(`[data-sel="drafter:${dA}"]`);
+  await p.waitForTimeout(200);
+  const one = await p.evaluate(() => ({
+    hero: document.querySelector("#tdHero h2")?.textContent.trim(),
+    strips: document.querySelectorAll("#tdStrip .td-srow:not(.head)").length,
+  }));
+  ok("toggling one drafter off leaves the other selected", one.hero === dB, one.hero);
+  ok("the strip drops to the remaining roster",
+    one.strips === D.drafters[dB].roster.length, String(one.strips));
+
+  /* the Team sheet's placeholder must not survive as a selection nobody made */
+  await p.click('[data-sel="league:"]');
+  await p.waitForTimeout(120);
+  await p.click(`[data-sel="drafter:${dA}"]`);
+  await p.waitForTimeout(200);
+  const clean = await p.evaluate(() =>
+    document.querySelectorAll("#tdStrip .td-srow:not(.head)").length);
+  ok("the sheet's default team does not linger once a real pick is made",
+    clean === D.drafters[dA].roster.length, `${clean} vs ${D.drafters[dA].roster.length}`);
+
+  /* "All 32" is a Pool control; on the Team sheet it reads Clear */
+  ok("the Team sheet offers Clear, not the All 32 lever", await p.evaluate(() =>
+    document.querySelector('[data-sel="league:"]')?.textContent.trim()) === "Clear");
+  await p.click('.sheet-tab[data-id="pool"]');
+  await p.waitForTimeout(200);
+  ok("the Pool sheet keeps All 32", await p.evaluate(() =>
+    document.querySelector('[data-sel="league:"]')?.textContent.trim()) === "All 32");
 
   await ctx.close();
 }
