@@ -278,9 +278,9 @@ const ON = () => makeEnv({ RESEND_KEY: "re_test", MAIL_FROM: "Data Dawgs <no-rep
   ok("verify-request accepts a signed-in caller", asked.status === 200, JSON.stringify(asked.j));
   ok("…and the response never contains the token", !JSON.stringify(asked.j).includes("verify="));
   const link = mailLink("verify");
-  ok("⚠️ a verify token cannot be used to reset a password",
-    (await call(env, "/auth/reset-password", { token: link, password: "brand-new-pw" })).status === 400);
-  reset(); allowMail = true;                              // that consumed the token
+  ok("⚠️ a domain-separated verify token cannot be found in the reset namespace",
+    (await call(env, "/auth/reset-password", { token: link, password: "brand-new-pw" })).status === 410);
+  reset(); allowMail = true;
   const env2 = ON();
   await call(env2, "/auth/verify-request", {}, { "X-Bozo-Session": await sessionFor(env2, "Kap") });
   const link2 = mailLink("verify");

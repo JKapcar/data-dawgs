@@ -6,7 +6,11 @@
   const LEAGUE_DIR_KEY = "dd-leagues-v1";
   const LEAGUE_KEY_PREFIX = "dd-league-v2:";
   const LEGACY_SYNC_KEY = "dd-sync-v1";
-  const LEAGUE_RE = /^dd_[A-Za-z0-9_-]{22,}$/;
+  // Generation and every draft-league route share this bounded contract. The Worker
+  // contract test compares this source string with DRAFT_LEAGUE_ID_PATTERN so neither
+  // side can widen or narrow it alone.
+  const LEAGUE_ID_PATTERN = "^dd_[A-Za-z0-9_-]{22,64}$";
+  const LEAGUE_RE = new RegExp(LEAGUE_ID_PATTERN);
 
   const hasWindow = typeof window !== "undefined" && root === window;
   const storage = hasWindow ? window.localStorage : null;
@@ -392,6 +396,6 @@
   }
 
   if(typeof module !== "undefined" && module.exports){
-    module.exports={activeLeagueId,generateId,normalizeLeague,normalizeDraftState,stateFromLeague,storageKey,LEAGUE_RE};
+    module.exports={activeLeagueId,generateId,normalizeLeague,normalizeDraftState,stateFromLeague,storageKey,LEAGUE_RE,LEAGUE_ID_PATTERN};
   }
 })(typeof window !== "undefined" ? window : globalThis);

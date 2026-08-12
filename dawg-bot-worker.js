@@ -36,12 +36,21 @@
  *   POST /league/team    — manager: {player, team} display name inside this league
  * ⚠️ The lock threshold is THAT LEAGUE'S member count, never the global roster.
  *
+ * Universal UID leagues share /league/create and /league/join through explicit v2
+ * request shapes, plus GET /league/mine and PUT /league/gate. They live under the
+ * default-deny /leagues branch and use append-only events for shared changes.
+ *
  * IDENTITY IS SITE-WIDE. The auth routes answer on BOTH /auth/* and /bozo/*:
  *   GET  /auth/roster  POST /auth/claim  /auth/login  /auth/passwd  /auth/reset
  *   POST /auth/invite  — admin re-issues a join link (returns the raw token ONCE)
  *   POST /auth/signup  — OPEN SIGNUP (8/7): {name, email, password} creates a
  *     site-wide account, no invite. An account is NOT a league seat — membership
  *     stays invite/manager-gated. The only unauthenticated write; IP-capped.
+ *   POST /auth/lookup — bounded email-first account lookup
+ *   POST /auth/email-confirm — proves a new primary address before switching login
+ *   GET/PUT /auth/draft-state — private UID scratch state with ETag-backed CAS
+ * New accounts are keyed by immutable UID; lowercase email is unique and display names
+ * are mutable/non-unique. Legacy name-keyed records remain readable until the approved wipe.
  * The roster lives at /users in RTDB — Worker-only (no rule, so RTDB default-denies
  * every browser; the Worker reads it with FB_SECRET). BOZO_TOKENS is now only a
  * BOOTSTRAP: /users is seeded from it on first read, and after that it is the truth.
@@ -128,7 +137,13 @@ function corsFor(origin) {
     // browser-side bot test preflights, and it is accepted on POST /forecast/entry and
     // NOWHERE else — that scoping lives in the route table, not in a handler branch.
     "Access-Control-Allow-Headers": "Content-Type, X-Dawg-Pass, X-Bozo-Session, X-Dawg-Session, X-DD-Bot",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    // PUT is load-bearing for /auth/draft-state. application/json plus the session
+    // header makes that browser request preflight; omitting PUT here produces a
+    // silent client-side "Failed to fetch" before the route ever runs.
+    "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
+    // A session older than seven days is rotated on any authenticated request. Pages
+    // must be allowed to read the replacement without exposing any other header.
+    "Access-Control-Expose-Headers": "X-Dawg-Session",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
   };
@@ -145,6 +160,165 @@ const json = (obj, status, cors) =>
     status,
     headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" },
   });
+
+/* ======================= Personal draft-state contract ================== */
+// Shared inside the Worker by draft-state validation and every universal draft-league
+// create path. Browser minting carries the same source string in draft-league.js, and
+// the contract suite asserts they stay identical.
+const DRAFT_LEAGUE_ID_PATTERN = "^dd_[A-Za-z0-9_-]{22,64}$";
+const DRAFT_LEAGUE_ID_RE = new RegExp(DRAFT_LEAGUE_ID_PATTERN);
+const DRAFT_STATE_MAX_BYTES = 65_536;
+const DRAFT_PLAYER_ID_RE = /^[a-z0-9][a-z0-9._:-]{0,63}$/;
+const DRAFT_POSITIONS = ["ALL", "QB", "RB", "WR", "TE", "DST", "K"];
+// Keep this in step with board.html's actual sortable columns. The test reads both
+// declarations so a post-refresh column rename cannot silently strand saved filters.
+const DRAFT_SORT_KEYS = ["rank", "name", "pos", "team", "full", "half", "sf", "silva"];
+const DRAFT_SORT_DIRECTIONS = ["asc", "desc"];
+const DRAFT_MARKS = ["target", "taken"];
+const DRAFT_EMPTY_STATE = Object.freeze({
+  filters: Object.freeze({
+    query: "", position: "ALL", hideTaken: false, taggedOnly: false,
+    sort: Object.freeze({ key: "rank", direction: "asc" }),
+  }),
+  marks: Object.freeze([]),
+  keeperIds: Object.freeze([]),
+});
+
+function mintDraftLeagueId(cryptoImpl) {
+  const source = cryptoImpl || crypto;
+  const bytes = new Uint8Array(16);
+  source.getRandomValues(bytes);
+  return "dd_" + Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
+}
+
+const draftError = (cors, status, error, message, extra) =>
+  json({ ok: false, error, message, ...(extra || {}) }, status, cors);
+
+function draftExactKeys(value, keys) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const actual = Object.keys(value).sort();
+  const wanted = [...keys].sort();
+  return actual.length === wanted.length && actual.every((key, i) => key === wanted[i]);
+}
+
+function draftUnicodeLength(value) {
+  return Array.from(value).length;
+}
+
+function validateDraftState(input) {
+  const bad = (field, message) => ({ ok: false, field, message });
+  if (!draftExactKeys(input, ["filters", "marks", "keeperIds"]))
+    return bad("/state", "state must contain exactly filters, marks and keeperIds.");
+
+  const filters = input.filters;
+  if (!draftExactKeys(filters, ["query", "position", "hideTaken", "taggedOnly", "sort"]))
+    return bad("/state/filters", "filters contains missing or unsupported fields.");
+  if (typeof filters.query !== "string") return bad("/state/filters/query", "query must be a string.");
+  const query = filters.query.normalize("NFC");
+  if (draftUnicodeLength(query) > 80 || /[\u0000-\u001f\u007f]/.test(query))
+    return bad("/state/filters/query", "query must be at most 80 characters and contain no control characters.");
+  if (!DRAFT_POSITIONS.includes(filters.position))
+    return bad("/state/filters/position", "position is not supported.");
+  if (typeof filters.hideTaken !== "boolean")
+    return bad("/state/filters/hideTaken", "hideTaken must be boolean.");
+  if (typeof filters.taggedOnly !== "boolean")
+    return bad("/state/filters/taggedOnly", "taggedOnly must be boolean.");
+  if (!draftExactKeys(filters.sort, ["key", "direction"]))
+    return bad("/state/filters/sort", "sort must contain exactly key and direction.");
+  if (!DRAFT_SORT_KEYS.includes(filters.sort.key))
+    return bad("/state/filters/sort/key", "sort key is not supported.");
+  if (!DRAFT_SORT_DIRECTIONS.includes(filters.sort.direction))
+    return bad("/state/filters/sort/direction", "sort direction must be asc or desc.");
+
+  if (!Array.isArray(input.marks) || input.marks.length > 512)
+    return bad("/state/marks", "marks must be an array of at most 512 entries.");
+  const markIds = new Set();
+  const marks = [];
+  for (let i = 0; i < input.marks.length; i++) {
+    const mark = input.marks[i];
+    if (!draftExactKeys(mark, ["playerId", "mark"]))
+      return bad(`/state/marks/${i}`, "each mark must contain exactly playerId and mark.");
+    if (typeof mark.playerId !== "string" || !DRAFT_PLAYER_ID_RE.test(mark.playerId))
+      return bad(`/state/marks/${i}/playerId`, "playerId is invalid.");
+    if (!DRAFT_MARKS.includes(mark.mark))
+      return bad(`/state/marks/${i}/mark`, "mark must be target or taken.");
+    if (markIds.has(mark.playerId))
+      return bad(`/state/marks/${i}/playerId`, "playerId must be unique within marks.");
+    markIds.add(mark.playerId);
+    marks.push({ playerId: mark.playerId, mark: mark.mark });
+  }
+
+  if (!Array.isArray(input.keeperIds) || input.keeperIds.length > 32)
+    return bad("/state/keeperIds", "keeperIds must be an array of at most 32 entries.");
+  const keeperSet = new Set();
+  for (let i = 0; i < input.keeperIds.length; i++) {
+    const id = input.keeperIds[i];
+    if (typeof id !== "string" || !DRAFT_PLAYER_ID_RE.test(id))
+      return bad(`/state/keeperIds/${i}`, "keeper playerId is invalid.");
+    if (keeperSet.has(id))
+      return bad(`/state/keeperIds/${i}`, "keeper playerIds must be unique.");
+    keeperSet.add(id);
+  }
+
+  return {
+    ok: true,
+    state: {
+      filters: {
+        query, position: filters.position, hideTaken: filters.hideTaken,
+        taggedOnly: filters.taggedOnly,
+        sort: { key: filters.sort.key, direction: filters.sort.direction },
+      },
+      marks: marks.sort((a, b) => a.playerId.localeCompare(b.playerId)),
+      keeperIds: [...keeperSet].sort((a, b) => a.localeCompare(b)),
+    },
+  };
+}
+
+async function readCappedJson(request, limit) {
+  const declared = request.headers.get("Content-Length");
+  if (declared !== null && /^\d+$/.test(declared) && Number(declared) > limit)
+    return { tooLarge: true };
+  if (!request.body) return { malformed: true };
+  const reader = request.body.getReader();
+  const chunks = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > limit) {
+      try { await reader.cancel(); } catch {}
+      return { tooLarge: true };
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  try { return { value: JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) }; }
+  catch { return { malformed: true }; }
+}
+
+function draftStateEnvelope(leagueId, record) {
+  const exists = !!record;
+  return {
+    ok: true,
+    leagueId,
+    exists,
+    version: exists ? record.version : 0,
+    updatedAt: exists ? record.updatedAt : null,
+    state: exists ? record.state : DRAFT_EMPTY_STATE,
+  };
+}
+
+function checkedDraftRecord(record) {
+  if (!record) return { ok: true, record: null };
+  const checked = validateDraftState(record.state);
+  if (!checked.ok || !Number.isSafeInteger(record.version) || record.version < 1 ||
+      !Number.isSafeInteger(record.updatedAt) || record.updatedAt < 0)
+    return { ok: false };
+  return { ok: true, record: { version: record.version, updatedAt: record.updatedAt, state: checked.state } };
+}
 
 
 // ============================================================
@@ -645,6 +819,9 @@ export default {
     }
   },
   async fetch(request, env) {
+    // Keep renewal outside the dispatcher: every authenticated route, including old
+    // compatibility aliases, gets the same sliding-session behavior automatically.
+    const dispatch = async () => {
     const url = new URL(request.url);
     // DD-MCP-ROUTE — matched before ANY Origin-gated handler; see the block at the bottom.
     if (url.pathname === "/mcp" || url.pathname.startsWith("/mcp/")) return handleMcp(request, url, env);
@@ -669,20 +846,25 @@ export default {
     // hitting a route with completely different semantics.
     const AUTH = { "/roster": bozoRoster, "/claim": bozoClaim, "/login": bozoLogin,
                    "/passwd": bozoPasswd, "/reset": bozoReset, "/invite": authInvite,
-                   "/mcp-token": authMcpToken, "/email": authEmail, "/signup": bozoSignup,
+                   "/mcp-token": authMcpToken, "/email": authEmail,
+                   "/email-confirm": authEmailConfirm, "/signup": bozoSignup,
+                   "/lookup": authLookup,
                    "/verify-request": authVerifyRequest, "/verify": authVerify,
                    "/forgot": authForgot, "/reset-password": authReset };
     for (const [suffix, fn] of Object.entries(AUTH)) {
       if (url.pathname === "/auth" + suffix || url.pathname === "/bozo" + suffix)
         return suffix === "/roster" ? fn(env, cors) : fn(request, env, cors);
     }
+    if (url.pathname === "/auth/draft-state") return authDraftState(request, url, env, cors);
+    if (url.pathname === "/league/mine")   return universalLeagueMine(request, env, cors);
+    if (url.pathname === "/league/gate")   return universalLeagueGate(request, env, cors);
     if (url.pathname === "/league/list")   return leagueList(env, cors);
-    if (url.pathname === "/league/create") return leagueCreate(request, env, cors);
+    if (url.pathname === "/league/create") return leagueCreateDispatch(request, env, cors);
     if (url.pathname === "/league/delete") return leagueDelete(request, env, cors);
     if (url.pathname === "/league/import") return leagueImport(request, env, cors);
     if (url.pathname === "/league/member") return leagueMember(request, env, cors);
     if (url.pathname === "/league/join")
-      return request.method === "GET" ? leagueJoinPreview(request, url, env, cors) : leagueJoin(request, env, cors);
+      return request.method === "GET" ? leagueJoinPreview(request, url, env, cors) : leagueJoinDispatch(request, env, cors);
     if (url.pathname === "/league/join-code") return leagueJoinCode(request, env, cors);
     if (url.pathname === "/league/lock")   return leagueLock(request, env, cors);
     if (url.pathname === "/league/config") return bozoConfigSet(request, env, cors);
@@ -724,6 +906,9 @@ export default {
     if (url.pathname === "/tts/voices")   return ttsVoices(request, env, cors);
 
     return handleChat(request, env, origin, cors);
+    };
+    const response = await dispatch();
+    return attachSlidingSession(request, env, response);
   },
 };
 
@@ -1110,9 +1295,26 @@ async function fbPatch(env, path, value) {
   return true;
 }
 
-async function fbDelete(env, path) {
-  const r = await fetch(fbUrl(env, path), { method: "DELETE" });
+async function fbDelete(env, path, etag) {
+  const r = await fetch(fbUrl(env, path), {
+    method: "DELETE",
+    headers: etag ? { "if-match": etag } : {},
+  });
+  if (r.status === 412) return false;
   if (!r.ok) throw new Error("RTDB delete " + r.status);
+  return true;
+}
+
+async function fbPost(env, path, value) {
+  const r = await fetch(fbUrl(env, path), {
+    method: "POST",
+    body: JSON.stringify(value),
+  });
+  if (!r.ok) throw new Error("RTDB append " + r.status);
+  const data = await r.json();
+  if (!data || typeof data.name !== "string" || !data.name)
+    throw new Error("RTDB append returned no event id");
+  return data.name;
 }
 
 async function readBody(request) {
@@ -1180,8 +1382,12 @@ async function runBackup(env, nowMs) {
 // little work here and is not worth blowing the CPU budget over.
 const PBKDF2_ITERS = 5_000;
 const SESSION_DAYS = 60;
+const SESSION_RENEW_AFTER_MS = 7 * 864e5;
 const LOGIN_FAIL_CAP = 10;        // per player per hour; needs the RL binding
+const LOOKUP_IP_CAP = 60;         // explicit enumeration is accepted, not unlimited
 const MIN_PW = 8;
+const UID_PATTERN = "^u_[A-Za-z0-9_-]{22,64}$";
+const UID_RE = new RegExp(UID_PATTERN);
 
 const te = new TextEncoder();
 const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
@@ -1214,9 +1420,11 @@ async function hmac(secret, msg) {
 // get reset by the admin and every older session stops authenticating — without
 // it, a reset would leave a stolen session working forever, which defeats the
 // point of having a reset.
-async function makeSession(env, name, setAt) {
+async function makeSession(env, name, setAt, uid) {
+  const now = Date.now();
   const payload = b64urlStr(JSON.stringify({
-    n: name, e: Date.now() + SESSION_DAYS * 864e5, p: setAt || 0,
+    ...(uid ? { u: uid } : {}), n: name, i: now,
+    e: now + SESSION_DAYS * 864e5, p: setAt || 0,
   }));
   return payload + "." + (await hmac(env.BOZO_PEPPER, payload));
 }
@@ -1227,7 +1435,7 @@ async function readSession(env, tok) {
   if (!timingSafeEqual(sig || "", await hmac(env.BOZO_PEPPER, payload))) return null;
   let o;
   try { o = JSON.parse(unb64urlStr(payload)); } catch { return null; }
-  if (!o || !o.n || !o.e || Date.now() > o.e) return null;
+  if (!o || (!o.n && !o.u) || !o.e || Date.now() > o.e) return null;
   return o;
 }
 
@@ -1255,12 +1463,32 @@ async function sessionAuth(request, env) {
   const sess = await readSession(env, tok);
   if (!sess) return { err: "Sign in first.", code: 401 };
 
-  let players;
-  try { players = userNames(await loadUsers(env)); }
+  // Greenfield identity sessions carry immutable `u`. Legacy name-keyed sessions carry
+  // only `n` and continue through the untouched branch below until the post-draft wipe.
+  // Draft-state refuses the legacy shape rather than pretending a mutable display name
+  // is a UID. That keeps Tranche B inert until the UID auth deployment is complete.
+  if (sess.u) {
+    let rec;
+    try { rec = (await fbGet(env, "/users/" + encodeURIComponent(sess.u))).data; }
+    catch (e) { return { err: "Database unreachable: " + e.message, code: 502 }; }
+    if (!rec || typeof rec !== "object") return { err: "Unknown account.", code: 403 };
+    const setAt = rec.passwordSetAt == null ? rec.setAt : rec.passwordSetAt;
+    if ((setAt || 0) !== (sess.p || 0))
+      return { err: "Your password changed — sign in again.", code: 401 };
+    return { uid: sess.u, name: String(rec.name || sess.n || ""), user: rec,
+             passwordSetAt: setAt || 0 };
+  }
+
+  let players, legacyUser;
+  try {
+    const users = await loadUsers(env);
+    players = userNames(users);
+    legacyUser = users[encodeURIComponent(sess.n)] || users[sess.n];
+  }
   catch (e) { return { err: e.message, code: 502 }; }
   // Membership is checked against /users, so removing someone from the roster kills
   // their session on the next request rather than leaving it valid until expiry.
-  if (!players.includes(sess.n)) return { err: "Unknown player.", code: 403 };
+  if (!legacyUser) return { err: "Unknown player.", code: 403 };
 
   // The session must still match the password on file (see makeSession).
   let rec;
@@ -1270,7 +1498,105 @@ async function sessionAuth(request, env) {
   if ((rec.setAt || 0) !== (sess.p || 0))
     return { err: "Your password changed — sign in again.", code: 401 };
 
-  return { name: sess.n, players };
+  return { name: sess.n, players, passwordSetAt: rec.setAt || 0 };
+}
+
+async function attachSlidingSession(request, env, response) {
+  if (!(response instanceof Response) || request.method === "OPTIONS") return response;
+  const token = request.headers.get("X-Dawg-Session") || request.headers.get("X-Bozo-Session") || "";
+  if (!token) return response;
+  const sess = await readSession(env, token);
+  // Tokens minted before `i` existed renew on their first successful authenticated call.
+  if (!sess || (Number.isFinite(sess.i) && Date.now() - sess.i < SESSION_RENEW_AFTER_MS)) return response;
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return response;
+  const renewed = await makeSession(env, auth.name, auth.passwordSetAt, auth.uid);
+  const headers = new Headers(response.headers);
+  headers.set("X-Dawg-Session", renewed);
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+
+// GET/PUT /auth/draft-state?league_id=<id>
+//
+// This dirty-local-wins CAS policy is ONLY for one user's private scratchpad. Shared
+// game writes never copy it: they append immutable /leagues/<id>/events rows under D7.
+async function authDraftState(request, url, env, cors) {
+  if (request.method !== "GET" && request.method !== "PUT")
+    return draftError(cors, 405, "method_not_allowed", "Use GET or PUT.");
+
+  const auth = await sessionAuth(request, env);
+  if (auth.err) {
+    const code = auth.code || 401;
+    return draftError(cors, code, code === 401 ? "unauthenticated" : code === 403 ? "forbidden" : "backend_unavailable", auth.err);
+  }
+  if (!auth.uid)
+    return draftError(cors, 403, "forbidden", "This account must use the UID identity system before personal draft state can sync.");
+
+  const ids = url.searchParams.getAll("league_id");
+  const leagueId = ids.length === 1 ? ids[0] : "";
+  if (!DRAFT_LEAGUE_ID_RE.test(leagueId))
+    return draftError(cors, 400, "invalid_league_id", "Provide exactly one valid league_id.");
+
+  let league;
+  try { league = (await fbGet(env, "/leagues/" + leagueId)).data; }
+  catch (e) { return draftError(cors, 502, "backend_unavailable", "The league store could not be read."); }
+  if (!league) return draftError(cors, 404, "league_not_found", "That league does not exist.");
+  if (league.game !== "draft" || (league.visibility != null && league.visibility !== "public"))
+    return draftError(cors, 403, "forbidden", "Personal draft state is available only for public draft leagues.");
+
+  const statePath = "/users/" + encodeURIComponent(auth.uid) + "/draftState/" + leagueId;
+  if (request.method === "GET") {
+    try {
+      const stored = checkedDraftRecord((await fbGet(env, statePath)).data);
+      if (!stored.ok) return draftError(cors, 502, "backend_unavailable", "The saved draft state is invalid.");
+      return json(draftStateEnvelope(leagueId, stored.record), 200, cors);
+    } catch (e) {
+      return draftError(cors, 502, "backend_unavailable", "The draft-state store could not be read.");
+    }
+  }
+
+  const contentType = request.headers.get("Content-Type") || "";
+  if (!/^application\/json(?:\s*;|$)/i.test(contentType))
+    return draftError(cors, 415, "unsupported_media_type", "PUT requires Content-Type: application/json.");
+  const parsed = await readCappedJson(request, DRAFT_STATE_MAX_BYTES);
+  if (parsed.tooLarge)
+    return draftError(cors, 413, "payload_too_large", "The request body exceeds 65,536 bytes.");
+  if (parsed.malformed)
+    return draftError(cors, 400, "invalid_json", "The request body must be valid UTF-8 JSON.");
+  if (!draftExactKeys(parsed.value, ["baseVersion", "state"]) ||
+      !Number.isSafeInteger(parsed.value.baseVersion) || parsed.value.baseVersion < 0)
+    return draftError(cors, 422, "invalid_state", "The body must contain exactly a non-negative baseVersion and state.", { field: "/" });
+  const checked = validateDraftState(parsed.value.state);
+  if (!checked.ok)
+    return draftError(cors, 422, "invalid_state", checked.message, { field: checked.field });
+
+  let currentRead;
+  try { currentRead = await fbGet(env, statePath, true); }
+  catch (e) { return draftError(cors, 502, "backend_unavailable", "The draft-state store could not be read."); }
+  const stored = checkedDraftRecord(currentRead.data);
+  if (!stored.ok || !currentRead.etag)
+    return draftError(cors, 502, "backend_unavailable", "The saved draft-state version is invalid.");
+  const current = stored.record;
+  const currentVersion = current ? current.version : 0;
+  if (currentVersion === Number.MAX_SAFE_INTEGER)
+    return draftError(cors, 502, "backend_unavailable", "The saved draft-state version is invalid.");
+  if (parsed.value.baseVersion !== currentVersion)
+    return draftError(cors, 409, "version_conflict", "The saved draft state changed after this client loaded it.",
+      { current: draftStateEnvelope(leagueId, current) });
+
+  const record = { version: currentVersion + 1, updatedAt: Date.now(), state: checked.state };
+  let wrote;
+  try { wrote = await fbPut(env, statePath, record, currentRead.etag); }
+  catch (e) { return draftError(cors, 502, "backend_unavailable", "The draft-state store could not be written."); }
+  if (!wrote) {
+    let raced;
+    try { raced = checkedDraftRecord((await fbGet(env, statePath)).data); }
+    catch (e) { return draftError(cors, 502, "backend_unavailable", "The draft-state store could not be read after a conflict."); }
+    if (!raced.ok) return draftError(cors, 502, "backend_unavailable", "The saved draft state is invalid after a conflict.");
+    return draftError(cors, 409, "version_conflict", "The saved draft state changed after this client loaded it.",
+      { current: draftStateEnvelope(leagueId, raced.record) });
+  }
+  return json(draftStateEnvelope(leagueId, record), 200, cors);
 }
 
 /* ================= Data Dawgs Confidence Calibration V1 ================== */
@@ -1679,13 +2005,32 @@ function newMcpToken() {
 // opt-in (POST /auth/verify-request); it proves an address is reachable, and it is never
 // a precondition for signing in with it.
 async function emailToName(env, email) {
-  const want = String(email || "").trim().toLowerCase();
-  if (!want || want.indexOf("@") < 1) return null;
-  let users;
-  try { users = await loadUsers(env); } catch { return null; }
-  for (const [k, u] of Object.entries(users))
-    if (u && typeof u.email === "string" && u.email.trim().toLowerCase() === want) return playerName(k);
-  return null;
+  try {
+    const owners = await accountsForEmail(env, email);
+    return owners.length === 1 ? owners[0].name : null;
+  } catch { return null; }
+}
+
+// POST /auth/lookup {email} — intentional, disclosed enumeration for email-first UX.
+// It is bounded per IP and returns no name, UID, verification, or membership data.
+async function authLookup(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  if (!env.RL) return json({ error: "Rate limiting is not configured." }, 503, cors);
+  let body;
+  try { body = await readBody(request); } catch { return json({ error: "Bad JSON." }, 400, cors); }
+  const email = normEmail(body && body.email);
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))
+    return json({ error: "That does not look like an email address." }, 400, cors);
+  const hour = Math.floor(Date.now() / 3600000);
+  const ip = request.headers.get("CF-Connecting-IP") || "noip";
+  const key = "lookup:" + hour + ":" + ip;
+  const used = parseInt((await env.RL.get(key)) || "0", 10);
+  if (used >= LOOKUP_IP_CAP) return json({ error: "Too many account lookups. Try again in an hour." }, 429, cors);
+  await env.RL.put(key, String(used + 1), { expirationTtl: 7200 });
+  let owners;
+  try { owners = await accountsForEmail(env, email); }
+  catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+  return json({ ok: true, known: owners.length === 1 }, 200, cors);
 }
 
 // POST /auth/mcp-token {action:"mint"|"revoke"} — session required, acts only on SELF.
@@ -1693,11 +2038,14 @@ async function authMcpToken(request, env, cors) {
   if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
   const auth = await sessionAuth(request, env);
   if (auth.err) return json({ error: auth.err }, auth.code || 401, cors);
+  if (auth.uid && auth.user.emailVerified !== true)
+    return json({ error: "Confirm your email before creating a personal connector credential.",
+                  verificationRequired: true }, 403, cors);
 
   let body;
   try { body = await readBody(request); } catch { return json({ error: "Bad JSON." }, 400, cors); }
   const action = String((body && body.action) || "mint");
-  const key = encodeURIComponent(auth.name);
+  const key = encodeURIComponent(auth.uid || auth.name);
 
   if (action === "revoke") {
     try { await fbPatch(env, "/users/" + key, { mcpToken: null, mcpTokenTs: null }); }
@@ -1731,12 +2079,74 @@ async function authEmail(request, env, cors) {
   const email = String((body && body.email) || "").trim();
   if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))
     return json({ error: "That does not look like an email address." }, 400, cors);
+  if (auth.uid) {
+    const next = normEmail(email);
+    if (!next) return json({ error: "A UID account must keep a primary email address." }, 400, cors);
+    if (next === normEmail(auth.user.email))
+      return json({ ok: true, player: auth.name, email: next,
+                    alreadyCurrent: true, verified: auth.user.emailVerified === true }, 200, cors);
+    if (!mailReady(env)) return json({ error: MAIL_OFF }, 503, cors);
+    let owners;
+    try { owners = await accountsForEmail(env, next); }
+    catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+    if (owners.length) return json({ error: "Another account already uses that address." }, 409, cors);
+    const q = await mailQuota(env, request, next);
+    if (q.err) return json({ error: q.err }, q.code || 429, cors);
+    const tok = await mintMailToken(env, "email-change", auth.name, next, auth.uid,
+                                    { o: normEmail(auth.user.email) });
+    try {
+      await sendMail(env, next, "Confirm your new Data Dawgs address",
+        "Confirm this new address for the Data Dawgs account \"" + auth.name + "\".\n\n" +
+        MAIL_BASE + "/signon.html?email-change=" + tok + "\n\n" +
+        "The current sign-in address stays active until this one-time link is used. The link expires in an hour.\n");
+      await q.bump();
+    } catch (e) { return json({ error: "Could not send that email: " + e.message }, 502, cors); }
+    return json({ ok: true, player: auth.name, pendingEmail: next,
+                  note: "The current address stays active until the new address is confirmed." }, 202, cors);
+  }
   const taken = email ? await emailToName(env, email) : null;
   if (taken && taken !== auth.name) return json({ error: "Another player already uses that address." }, 409, cors);
   try { await fbPatch(env, "/users/" + encodeURIComponent(auth.name), { email: email || null }); }
   catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
   return json({ ok: true, player: auth.name, email: email || null,
                 note: "Saved but unconfirmed. It lets you sign in, and a reset link goes here." }, 200, cors);
+}
+
+// POST /auth/email-confirm {token} — proves the new address before changing login.
+async function authEmailConfirm(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  let body;
+  try { body = await readBody(request); } catch { return json({ error: "Bad JSON." }, 400, cors); }
+  const t = await consumeMailToken(env, "email-change", body && body.token);
+  if (t.err) return json({ error: t.err }, t.code || 400, cors);
+  if (!t.u || !UID_RE.test(t.u)) return json({ error: "That link is not valid for a UID account." }, 400, cors);
+  let user;
+  try { user = (await fbGet(env, uidUserPath(t.u))).data; }
+  catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+  if (!user) return json({ error: "That account no longer exists." }, 410, cors);
+  if (normEmail(user.email) !== normEmail(t.o))
+    return json({ error: "The account address changed after this link was sent. Ask for a new one." }, 409, cors);
+  let owners;
+  try { owners = await accountsForEmail(env, t.e); }
+  catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+  if (owners.some(o => o.uid !== t.u)) return json({ error: "Another account now uses that address." }, 409, cors);
+  let reservation;
+  try {
+    reservation = await reserveEmail(env, t.e, t.u);
+    if (!reservation.ok) return json({ error: "Another account now uses that address." }, 409, cors);
+    await fbPatch(env, uidUserPath(t.u), {
+      email: normEmail(t.e), emailVerified: true, emailVerifiedAt: Date.now(), emailChangedAt: Date.now(),
+    });
+    if (t.o && normEmail(t.o) !== normEmail(t.e)) {
+      const oldPath = await emailIndexPath(t.o);
+      const old = await fbGet(env, oldPath, true);
+      if (old.data && old.data.uid === t.u && old.etag) await fbDelete(env, oldPath, old.etag);
+    }
+    return json({ ok: true, player: user.name || t.n, email: normEmail(t.e), verified: true }, 200, cors);
+  } catch (e) {
+    if (normEmail(user.email) !== normEmail(t.e)) await releaseEmailReservation(env, reservation, t.u);
+    return json({ error: "Database write failed: " + e.message }, 502, cors);
+  }
 }
 
 // POST /auth/signup {name, email, password} — TRUE OPEN SIGNUP (Kap's call, 8/7).
@@ -1760,6 +2170,72 @@ async function authEmail(request, env, cors) {
 const SIGNUP_CAP = 5;
 
 async function bozoSignup(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const cfg = bozoConfig(env);
+  if (cfg) return json({ error: cfg }, 500, cors);
+
+  let used = 0, rlKey = null;
+  if (env.RL) {
+    const ip = request.headers.get("CF-Connecting-IP") || "noip";
+    const day = new Date().toISOString().slice(0, 10);
+    rlKey = "signup:" + day + ":" + ip;
+    used = parseInt((await env.RL.get(rlKey)) || "0", 10);
+    if (used >= SIGNUP_CAP)
+      return json({ error: "Too many new accounts from this connection today. Try again tomorrow." }, 429, cors);
+  }
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+  const name = String(body.name || "").trim();
+  if (!name) return json({ error: "Pick a name - it is what shows on rosters." }, 400, cors);
+  if (Array.from(name).length > 60 || /[\u0000-\u001f\u007f]/.test(name))
+    return json({ error: "That display name is not valid." }, 400, cors);
+  const email = normEmail(body.email);
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))
+    return json({ error: "That does not look like an email address." }, 400, cors);
+  const pw = String(body.password || "");
+  if (pw.length < MIN_PW)
+    return json({ error: `Password must be at least ${MIN_PW} characters.` }, 400, cors);
+  if (rlKey) await env.RL.put(rlKey, String(used + 1), { expirationTtl: 172800 });
+
+  let owners;
+  try { owners = await accountsForEmail(env, email); }
+  catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+  if (owners.length)
+    return json({ error: "An account already uses that address. Sign in with it instead." }, 409, cors);
+
+  const uid = newUid();
+  if (!UID_RE.test(uid)) return json({ error: "Account ID generation failed." }, 500, cors);
+  let reservation;
+  try {
+    reservation = await reserveEmail(env, email, uid);
+    if (!reservation.ok)
+      return json({ error: "An account already uses that address. Sign in with it instead." }, 409, cors);
+    const saltBytes = new Uint8Array(16);
+    crypto.getRandomValues(saltBytes);
+    const salt = b64(saltBytes);
+    const hash = await pbkdf2(pw, env.BOZO_PEPPER, salt, PBKDF2_ITERS);
+    const setAt = Date.now();
+    const user = {
+      uid, email, emailVerified: false, name,
+      passwordHash: hash, passwordSalt: salt, passwordIters: PBKDF2_ITERS,
+      passwordSetAt: setAt, roles: {}, apps: {}, entitlement: freeEntitlement(),
+      createdAt: new Date(setAt).toISOString(), src: "signup-v2",
+    };
+    await fbPut(env, uidUserPath(uid), user);
+    return json({ ok: true, uid, name, email, emailVerified: false,
+                  session: await makeSession(env, name, setAt, uid),
+                  note: "Account created. Confirm the address before creating a personal connector credential." }, 201, cors);
+  } catch (e) {
+    await releaseEmailReservation(env, reservation, uid);
+    return json({ error: "Database write failed: " + e.message }, 502, cors);
+  }
+}
+
+// Retained as executable compatibility documentation until the post-draft wipe. No
+// route calls it: all new signups use immutable UID records above.
+async function legacyBozoSignup(request, env, cors) {
   if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
   const cfg = bozoConfig(env);
   if (cfg) return json({ error: cfg }, 500, cors);
@@ -1854,7 +2330,7 @@ async function loadUsers(env) {
   return seed;
 }
 
-const userNames = users => Object.keys(users).map(playerName);
+const userNames = users => Object.entries(users).map(([key, rec]) => accountName(key, rec));
 
 // POST /auth/invite {player} — admin mints a FRESH join token for one player and
 // returns it ONCE. Replaces "edit an encrypted secret you cannot read".
@@ -2061,6 +2537,64 @@ async function bozoLogin(request, env, cors) {
   if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
   const cfg = bozoConfig(env);
   if (cfg) return json({ error: cfg }, 500, cors);
+  if (!env.RL) return json({ error: "Rate limiting is not configured." }, 503, cors);
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const identifier = String(body.email || body.name || "").trim();
+  const password = String(body.password || "");
+  if (!identifier || !password) return json({ error: "Email and password are required." }, 400, cors);
+  const normalized = identifier.indexOf("@") > 0 ? normEmail(identifier) : identifier;
+  const hour = Math.floor(Date.now() / 3600000);
+  const ip = request.headers.get("CF-Connecting-IP") || "noip";
+  const identKey = "loginid:" + hour + ":" + (await sha256hex(normalized));
+  const ipKey = "loginip:" + hour + ":" + ip;
+  const identFails = parseInt((await env.RL.get(identKey)) || "0", 10);
+  const ipFails = parseInt((await env.RL.get(ipKey)) || "0", 10);
+  if (identFails >= LOGIN_FAIL_CAP || ipFails >= LOGIN_FAIL_CAP)
+    return json({ error: "Too many wrong passwords. Try again in an hour." }, 429, cors);
+
+  let account = null, users;
+  try {
+    users = await loadUsers(env);
+    if (normalized.indexOf("@") > 0) {
+      const found = await accountsForEmail(env, normalized);
+      if (found.length === 1) account = found[0];
+    } else {
+      const rec = users[encodeURIComponent(normalized)] || users[normalized];
+      if (rec) account = { key: normalized, uid: null, name: normalized, user: rec };
+    }
+  } catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+
+  let authRec = null;
+  try {
+    authRec = account && account.uid ? {
+      hash: account.user.passwordHash, salt: account.user.passwordSalt,
+      iters: account.user.passwordIters, setAt: account.user.passwordSetAt,
+    } : account ? (await fbGet(env, authPath(account.name))).data : null;
+  } catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+
+  let valid = false;
+  if (authRec && authRec.hash && authRec.salt) {
+    const hash = await pbkdf2(password, env.BOZO_PEPPER, authRec.salt, authRec.iters || PBKDF2_ITERS);
+    valid = timingSafeEqual(hash, authRec.hash);
+  }
+  if (!valid) {
+    await env.RL.put(identKey, String(identFails + 1), { expirationTtl: 7200 });
+    await env.RL.put(ipKey, String(ipFails + 1), { expirationTtl: 7200 });
+    return json({ error: "Email or password not recognized." }, 401, cors);
+  }
+
+  return json({ ok: true, ...(account.uid ? { uid: account.uid } : {}), name: account.name,
+                email: account.user.email || null, emailVerified: account.user.emailVerified === true,
+                session: await makeSession(env, account.name, authRec.setAt || 0, account.uid) }, 200, cors);
+}
+
+async function legacyBozoLogin(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const cfg = bozoConfig(env);
+  if (cfg) return json({ error: cfg }, 500, cors);
 
   let body;
   try { body = await readBody(request); }
@@ -2119,6 +2653,24 @@ async function bozoPasswd(request, env, cors) {
   const oldPw = String(body.oldPassword || "");
   const newPw = String(body.newPassword || "");
   if (newPw.length < MIN_PW) return json({ error: `Password must be at least ${MIN_PW} characters.` }, 400, cors);
+
+  if (auth.uid) {
+    const rec = auth.user;
+    if (!rec.passwordHash || !rec.passwordSalt) return json({ error: "No password on file." }, 409, cors);
+    const check = await pbkdf2(oldPw, env.BOZO_PEPPER, rec.passwordSalt, rec.passwordIters || PBKDF2_ITERS);
+    if (!timingSafeEqual(check, rec.passwordHash)) return json({ error: "Current password is wrong." }, 401, cors);
+    try {
+      const saltBytes = new Uint8Array(16); crypto.getRandomValues(saltBytes);
+      const salt = b64(saltBytes);
+      const hash = await pbkdf2(newPw, env.BOZO_PEPPER, salt, PBKDF2_ITERS);
+      const setAt = Date.now();
+      await fbPatch(env, uidUserPath(auth.uid), {
+        passwordHash: hash, passwordSalt: salt, passwordIters: PBKDF2_ITERS, passwordSetAt: setAt,
+      });
+      return json({ ok: true, session: await makeSession(env, auth.name, setAt, auth.uid),
+                    note: "Password changed. Every other sign-in was ended." }, 200, cors);
+    } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  }
 
   try {
     const rec = (await fbGet(env, authPath(auth.name))).data;
@@ -2203,6 +2755,60 @@ async function sha256hex(str) {
 
 const normEmail = e => String(e || "").trim().toLowerCase();
 
+function newUid() {
+  const raw = crypto.getRandomValues(new Uint8Array(18));
+  let s = ""; for (const b of raw) s += String.fromCharCode(b);
+  return "u_" + btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+const uidUserPath = uid => "/users/" + encodeURIComponent(uid);
+const accountName = (key, rec) => String((rec && rec.name) || playerName(key) || "");
+
+async function accountsForEmail(env, email) {
+  const want = normEmail(email);
+  if (!want || want.indexOf("@") < 1) return [];
+  const users = await loadUsers(env);
+  return Object.entries(users).filter(([, rec]) => rec && typeof rec === "object" && normEmail(rec.email) === want)
+    .map(([key, rec]) => ({ key: playerName(key), uid: UID_RE.test(playerName(key)) ? playerName(key) : null,
+                           name: accountName(key, rec), user: rec }));
+}
+
+async function emailIndexPath(email) {
+  return "/emailIndex/" + (await sha256hex(normEmail(email)));
+}
+
+// RTDB has no unique index. Reserve the normalized-email hash with an ETag before the
+// user write, then keep that immutable UID as the index value. A failed user write
+// releases only the reservation carrying the same ETag, so it cannot delete a winner.
+async function reserveEmail(env, email, uid) {
+  const path = await emailIndexPath(email);
+  for (let tries = 0; tries < 3; tries++) {
+    const got = await fbGet(env, path, true);
+    if (!got.etag) throw new Error("email index returned no ETag");
+    if (got.data && got.data.uid === uid)
+      return { ok: true, path, email: normEmail(email), etag: got.etag, existing: true };
+    if (got.data) return { ok: false, conflict: true };
+    const value = { uid, email: normEmail(email), reservedAt: Date.now() };
+    if (await fbPut(env, path, value, got.etag)) {
+      const confirmed = await fbGet(env, path, true);
+      return { ok: true, path, email: normEmail(email), etag: confirmed.etag };
+    }
+  }
+  return { ok: false, conflict: true };
+}
+
+async function releaseEmailReservation(env, reservation, uid) {
+  if (!reservation || !reservation.path) return;
+  try {
+    // A fetch can fail after Firebase committed the user write. Never release the
+    // uniqueness row if the account now owns that address; that would permit a duplicate.
+    const user = (await fbGet(env, uidUserPath(uid))).data;
+    if (user && normEmail(user.email) === reservation.email) return;
+    const got = await fbGet(env, reservation.path, true);
+    if (got.data && got.data.uid === uid && got.etag) await fbDelete(env, reservation.path, got.etag);
+  } catch { /* a cleanup failure leaves a safe conflict, never a duplicate account */ }
+}
+
 // Every account holding this address. /auth/email and /auth/signup both refuse
 // duplicates, so this should never return more than one — but reset has to resolve an
 // address to exactly one account, and guessing which one would be the wrong kind of
@@ -2243,12 +2849,14 @@ async function mailQuota(env, request, email) {
   } };
 }
 
-async function mintMailToken(env, kind, name, email) {
+async function mintMailToken(env, kind, name, email, uid, extra) {
   const raw = new Uint8Array(32);
   crypto.getRandomValues(raw);
   const tok = b64(raw).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  await env.RL.put("mailtok:" + (await sha256hex(tok)),
-                   JSON.stringify({ k: kind, n: name, e: normEmail(email), iat: Date.now() }),
+  const tokenKey = "mailtok:" + (await hmac(env.BOZO_PEPPER, "mail|" + kind + "|" + tok));
+  await env.RL.put(tokenKey,
+                   JSON.stringify({ k: kind, n: name, ...(uid ? { u: uid } : {}),
+                                    e: normEmail(email), iat: Date.now(), ...(extra || {}) }),
                    { expirationTtl: MAIL_TOKEN_TTL });
   return tok;
 }
@@ -2257,10 +2865,15 @@ async function consumeMailToken(env, kind, tok) {
   if (!env.RL) return { err: "Token storage is not configured.", code: 503 };
   if (typeof tok !== "string" || tok.length < 20 || tok.length > 200)
     return { err: "That link is not valid.", code: 400 };
-  const key = "mailtok:" + (await sha256hex(tok));
-  const raw = await env.RL.get(key);
+  // New links use a peppered, purpose-separated HMAC. The SHA fallback only lets
+  // one-hour links minted by the previous deployed Worker finish their lifecycle.
+  const key = "mailtok:" + (await hmac(env.BOZO_PEPPER, "mail|" + kind + "|" + tok));
+  const legacyKey = "mailtok:" + (await sha256hex(tok));
+  let usedKey = key;
+  let raw = await env.RL.get(key);
+  if (!raw) { raw = await env.RL.get(legacyKey); usedKey = legacyKey; }
   if (!raw) return { err: "That link has expired or has already been used.", code: 410 };
-  await env.RL.delete(key);                  // single use — see the note at the top
+  await env.RL.delete(usedKey);              // single use; delete before authorized work
   let o;
   try { o = JSON.parse(raw); } catch { return { err: "That link is not valid.", code: 400 }; }
   if (!o || o.k !== kind) return { err: "That link is not valid for this.", code: 400 };
@@ -2292,10 +2905,13 @@ async function authVerifyRequest(request, env, cors) {
   const auth = await sessionAuth(request, env);
   if (auth.err) return json({ error: auth.err }, auth.code || 401, cors);
 
-  let users;
-  try { users = await loadUsers(env); }
-  catch (e) { return json({ error: e.message }, 502, cors); }
-  const rec = users[auth.name] || users[encodeURIComponent(auth.name)] || null;
+  let rec = auth.user || null;
+  if (!rec) {
+    let users;
+    try { users = await loadUsers(env); }
+    catch (e) { return json({ error: e.message }, 502, cors); }
+    rec = users[auth.name] || users[encodeURIComponent(auth.name)] || null;
+  }
   const email = rec && typeof rec.email === "string" ? rec.email.trim() : "";
   if (!email) return json({ error: "There is no address on your account to verify." }, 409, cors);
   if (rec.emailVerified === true)
@@ -2304,7 +2920,7 @@ async function authVerifyRequest(request, env, cors) {
   const q = await mailQuota(env, request, email);
   if (q.err) return json({ error: q.err }, q.code || 429, cors);
 
-  const tok = await mintMailToken(env, "verify", auth.name, email);
+  const tok = await mintMailToken(env, "verify", auth.name, email, auth.uid);
   try {
     await sendMail(env, email, "Confirm your Data Dawgs address",
       "Someone asked to confirm this address for the Data Dawgs account \"" + auth.name + "\".\n\n" +
@@ -2329,15 +2945,19 @@ async function authVerify(request, env, cors) {
 
   // The address may have been changed after the link was sent. Verifying the OLD
   // address against the NEW one would mark an unverified address verified.
-  let users;
-  try { users = await loadUsers(env); }
-  catch (e) { return json({ error: e.message }, 502, cors); }
-  const rec = users[t.n] || users[encodeURIComponent(t.n)] || null;
+  let rec;
+  try {
+    if (t.u) rec = (await fbGet(env, uidUserPath(t.u))).data;
+    else {
+      const users = await loadUsers(env);
+      rec = users[t.n] || users[encodeURIComponent(t.n)] || null;
+    }
+  } catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
   if (!rec) return json({ error: "That account no longer exists." }, 410, cors);
   if (normEmail(rec.email) !== t.e)
     return json({ error: "That address has changed since the link was sent. Ask for a new one." }, 409, cors);
 
-  try { await fbPatch(env, "/users/" + encodeURIComponent(t.n),
+  try { await fbPatch(env, t.u ? uidUserPath(t.u) : "/users/" + encodeURIComponent(t.n),
                       { emailVerified: true, emailVerifiedAt: Date.now() }); }
   catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
   return json({ ok: true, player: t.n, email: t.e, verified: true }, 200, cors);
@@ -2367,12 +2987,14 @@ async function authForgot(request, env, cors) {
   const q = await mailQuota(env, request, email);
   if (q.err) return json({ error: q.err }, q.code || 429, cors);
 
-  const owners = await emailOwners(env, email);
+  let owners = [];
+  try { owners = await accountsForEmail(env, email); } catch { owners = []; }
   if (owners.length === 1) {
     try {
-      const tok = await mintMailToken(env, "reset", owners[0], email);
+      const owner = owners[0];
+      const tok = await mintMailToken(env, "reset", owner.name, email, owner.uid);
       await sendMail(env, email, "Reset your Data Dawgs password",
-        "Someone asked to reset the password for the Data Dawgs account \"" + owners[0] + "\".\n\n" +
+        "Someone asked to reset the password for the Data Dawgs account \"" + owner.name + "\".\n\n" +
         MAIL_BASE + "/signon.html?reset=" + tok + "\n\n" +
         "The link works once and expires in an hour. If this wasn't you, ignore it — " +
         "your password does not change until that link is used.\n");
@@ -2402,10 +3024,14 @@ async function authReset(request, env, cors) {
   const t = await consumeMailToken(env, "reset", body && body.token);
   if (t.err) return json({ error: t.err }, t.code || 400, cors);
 
-  let users;
-  try { users = await loadUsers(env); }
-  catch (e) { return json({ error: e.message }, 502, cors); }
-  const rec = users[t.n] || users[encodeURIComponent(t.n)] || null;
+  let rec;
+  try {
+    if (t.u) rec = (await fbGet(env, uidUserPath(t.u))).data;
+    else {
+      const users = await loadUsers(env);
+      rec = users[t.n] || users[encodeURIComponent(t.n)] || null;
+    }
+  } catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
   if (!rec) return json({ error: "That account no longer exists." }, 410, cors);
   // Same reason as verify: the address may have moved since the link was sent, and a
   // link sent to an address that is no longer on the account must not still open it.
@@ -2421,8 +3047,11 @@ async function authReset(request, env, cors) {
     // session payload pins `p` to it. Without this, whoever prompted the reset keeps
     // their stolen session and the reset accomplishes nothing.
     const setAt = Date.now();
-    await fbPut(env, authPath(t.n), { v: 1, salt, hash, iters: PBKDF2_ITERS, setAt });
-    return json({ ok: true, player: t.n, session: await makeSession(env, t.n, setAt),
+    if (t.u) await fbPatch(env, uidUserPath(t.u), {
+      passwordHash: hash, passwordSalt: salt, passwordIters: PBKDF2_ITERS, passwordSetAt: setAt,
+    });
+    else await fbPut(env, authPath(t.n), { v: 1, salt, hash, iters: PBKDF2_ITERS, setAt });
+    return json({ ok: true, player: t.n, session: await makeSession(env, t.n, setAt, t.u),
                   note: "Password changed. Every other sign-in was ended." }, 200, cors);
   } catch (e) {
     return json({ error: "Database write failed: " + e.message }, 502, cors);
@@ -2466,6 +3095,172 @@ async function bozoConfigSet(request, env, cors) {
 }
 
 /* ================================ Leagues ================================= */
+// Universal account-backed leagues live outside the public legacy /bozo tree. Firebase
+// rules must default-deny this branch; clients receive projections from these routes.
+const UNIVERSAL_GAMES = ["bozo", "guillotine", "draft"];
+const UNIVERSAL_SETTINGS_MAX_BYTES = 12_000;
+
+function validUniversalLeagueId(id) { return DRAFT_LEAGUE_ID_RE.test(String(id || "")); }
+function validGateCode(code) {
+  return typeof code === "string" && Array.from(code.trim()).length >= 6 &&
+    Array.from(code.trim()).length <= 64 && !/[\u0000-\u001f\u007f]/.test(code);
+}
+function validLeagueSettings(settings) {
+  if (settings == null) return {};
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) return null;
+  if (Object.keys(settings).some(k => ["__proto__", "prototype", "constructor"].includes(k))) return null;
+  try {
+    if (te.encode(JSON.stringify(settings)).byteLength > UNIVERSAL_SETTINGS_MAX_BYTES) return null;
+  } catch { return null; }
+  return settings;
+}
+function universalLeagueView(id, league, auth) {
+  const members = league && league.members && typeof league.members === "object" ? league.members : {};
+  return {
+    id, game: league.game, name: league.name, visibility: league.visibility,
+    managerUid: league.managerUid, managed: !!auth && league.managerUid === auth.uid,
+    member: !!auth && !!members[auth.uid], memberCount: Object.values(members).filter(m => m && m.status === "active").length,
+    settings: league.settings || {}, createdAt: league.createdAt,
+  };
+}
+function universalEvent(type, auth, payload) {
+  return { type, uid: auth.uid, at: new Date().toISOString(), payload: payload || {} };
+}
+async function requireUniversalManager(request, env, leagueId) {
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return auth;
+  if (!auth.uid) return { err: "This action requires a UID account.", code: 403 };
+  let league;
+  try { league = (await fbGet(env, "/leagues/" + leagueId)).data; }
+  catch (e) { return { err: "Database unreachable: " + e.message, code: 502 }; }
+  if (!league) return { err: "No such league.", code: 404 };
+  const siteAdmin = auth.user && auth.user.roles && auth.user.roles.site_admin === true;
+  if (!siteAdmin && league.managerUid !== auth.uid)
+    return { err: "That league is managed by another account.", code: 403 };
+  return { ...auth, league, leagueId, siteAdmin };
+}
+
+async function universalLeagueCreate(request, env, cors, body) {
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 401, cors);
+  if (!auth.uid) return json({ error: "League creation requires a UID account." }, 403, cors);
+  const game = String(body.game || "").trim().toLowerCase();
+  if (!UNIVERSAL_GAMES.includes(game))
+    return json({ error: "game must be bozo, guillotine, or draft" }, 400, cors);
+  const name = String(body.name || "").trim();
+  if (!name || Array.from(name).length > 100 || /[\u0000-\u001f\u007f]/.test(name))
+    return json({ error: "League name must be 1-100 printable characters." }, 400, cors);
+  const gateCode = String(body.gateCode || "").trim();
+  if (!validGateCode(gateCode)) return json({ error: "Gate code must be 6-64 printable characters." }, 400, cors);
+  const settings = validLeagueSettings(body.settings);
+  if (settings == null) return json({ error: "settings must be an object no larger than 12,000 UTF-8 bytes." }, 400, cors);
+
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const id = mintDraftLeagueId();
+    if (!validUniversalLeagueId(id)) return json({ error: "League ID generation failed." }, 500, cors);
+    const now = new Date().toISOString();
+    const league = {
+      game, name, managerUid: auth.uid, gate: { mode: "code", code: gateCode }, settings,
+      visibility: game === "draft" ? "public" : "members",
+      members: { [auth.uid]: { joinedAt: now, status: "active" } },
+      events: { ["league_created_" + auth.uid]: universalEvent("league_created", auth, { game, name }) },
+      createdAt: now,
+    };
+    let got;
+    try { got = await fbGet(env, "/leagues/" + id, true); }
+    catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+    if (got.data) continue;
+    try {
+      if (await fbPut(env, "/leagues/" + id, league, got.etag))
+        return json({ ok: true, league: universalLeagueView(id, league, auth) }, 201, cors);
+    } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  }
+  return json({ error: "Could not allocate a unique league ID." }, 503, cors);
+}
+
+async function leagueCreateDispatch(request, env, cors) {
+  let body = null;
+  try { body = await request.clone().json(); } catch { /* legacy handler owns its error */ }
+  if (body && Object.prototype.hasOwnProperty.call(body, "game"))
+    return universalLeagueCreate(request, env, cors, body);
+  return leagueCreate(request, env, cors);
+}
+
+async function universalLeagueJoin(request, env, cors, body) {
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err, needSignIn: true }, auth.code || 401, cors);
+  if (!auth.uid) return json({ error: "League joining requires a UID account." }, 403, cors);
+  const id = String(body.leagueId || "");
+  if (!validUniversalLeagueId(id)) return json({ error: "Invalid leagueId." }, 400, cors);
+  let league;
+  try { league = (await fbGet(env, "/leagues/" + id)).data; }
+  catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+  if (!league) return json({ error: "No such league." }, 404, cors);
+  if (!league.gate || league.gate.mode !== "code" ||
+      !timingSafeEqual(String(body.gateCode || ""), String(league.gate.code || "")))
+    return json({ error: "That league code is not valid." }, 403, cors);
+  const memberPath = "/leagues/" + id + "/members/" + auth.uid;
+  const eventPath = "/leagues/" + id + "/events/member_joined_" + auth.uid;
+  let existing;
+  try { existing = await fbGet(env, eventPath, true); }
+  catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+  const now = new Date().toISOString();
+  try {
+    if (!existing.data) {
+      const wrote = await fbPut(env, eventPath, universalEvent("member_joined", auth, {}), existing.etag);
+      if (!wrote) existing = await fbGet(env, eventPath, true);
+    }
+    await fbPut(env, memberPath, { joinedAt: (existing.data && existing.data.at) || now, status: "active" });
+  } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  league.members = league.members || {};
+  const already = !!league.members[auth.uid];
+  league.members[auth.uid] = { joinedAt: now, status: "active" };
+  return json({ ok: true, already, league: universalLeagueView(id, league, auth) }, 200, cors);
+}
+
+async function leagueJoinDispatch(request, env, cors) {
+  let body = null;
+  try { body = await request.clone().json(); } catch { /* legacy handler owns its error */ }
+  if (body && Object.prototype.hasOwnProperty.call(body, "leagueId"))
+    return universalLeagueJoin(request, env, cors, body);
+  return leagueJoin(request, env, cors);
+}
+
+async function universalLeagueGate(request, env, cors) {
+  if (request.method !== "PUT") return json({ error: "PUT only" }, 405, cors);
+  let body;
+  try { body = await readBody(request); } catch { return json({ error: "Bad JSON." }, 400, cors); }
+  const id = String(body.leagueId || "");
+  if (!validUniversalLeagueId(id)) return json({ error: "Invalid leagueId." }, 400, cors);
+  const code = String(body.gateCode || "").trim();
+  if (!validGateCode(code)) return json({ error: "Gate code must be 6-64 printable characters." }, 400, cors);
+  const auth = await requireUniversalManager(request, env, id);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+  try {
+    // /leagues is default-deny, so the event may carry the code needed to reconstruct
+    // the manager setting. The projection returned to clients never includes it.
+    await fbPost(env, "/leagues/" + id + "/events",
+                 universalEvent("gate_changed", auth, { mode: "code", code }));
+    await fbPut(env, "/leagues/" + id + "/gate", { mode: "code", code });
+  } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  return json({ ok: true, leagueId: id, gate: { mode: "code" } }, 200, cors);
+}
+
+async function universalLeagueMine(request, env, cors) {
+  if (request.method !== "GET") return json({ error: "GET only" }, 405, cors);
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 401, cors);
+  if (!auth.uid) return json({ error: "League membership requires a UID account." }, 403, cors);
+  let leagues;
+  try { leagues = (await fbGet(env, "/leagues")).data || {}; }
+  catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+  const out = Object.entries(leagues).filter(([, lg]) => lg &&
+    (lg.managerUid === auth.uid || (lg.members && lg.members[auth.uid] && lg.members[auth.uid].status === "active")))
+    .map(([id, lg]) => universalLeagueView(id, lg, auth))
+    .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  return json({ ok: true, leagues: out }, 200, cors);
+}
+
 // Bozo is multi-tenant: several groups, each with its own roster size, band, week,
 // picks and ledger. A league of 8 and a league of 4 run side by side.
 //
