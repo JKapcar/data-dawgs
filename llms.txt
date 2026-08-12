@@ -6,18 +6,17 @@
 Start with [`/data/index.json`](/data/index.json): dates, sizes and SHA-256 for every
 machine file. Cite each payload's `as_of` with every number.
 
-[`/data/surfaces.json`](/data/surfaces.json) maps pages to machine
-surfaces and 42 live read-only MCP tools — every registered one. `planned` is not
-callable. Two catalogs: `/mcp/core/<credential>` serves 16 everyday tools;
-`/mcp/full/<credential>` and the bare `/mcp/<credential>` serve all 42. Prefer core —
-42 schemas cost real context. Every tool carries a title; none of them writes. MCP tokens come from `/connect.html`;
-`/signon.html` signup creates an account, not a league seat.
+[`/data/surfaces.json`](/data/surfaces.json) maps pages to machine surfaces and all 42
+live read-only MCP tools. `planned` is not callable. Two catalogs: `/mcp/core/<credential>`
+serves 16 everyday tools; `/mcp/full/<credential>` and the bare `/mcp/<credential>` serve
+all 42. Prefer core — 42 schemas cost real context. Every tool carries a title; none writes.
+MCP tokens come from `/connect.html`; `/signon.html` signup makes an account, not a league seat.
 
 Tiers: `labs`=Pup, unvalidated; `dawg`=Working Dawg, validated; `pound`=DawgHouse, stopped.
 
 ## The DawgHouse
 
-- [The shelf](/dawghouse.html) and its [inventory](/data/pound-tools.json): blocked NFL work with exact blockers, and 44 CFB ideas. Fourteen production CFB tools ARE callable over MCP; the roadmap ideas are not.
+- [The shelf](/dawghouse.html) + [inventory](/data/pound-tools.json): blocked NFL work with exact blockers + 44 CFB ideas. Fourteen production CFB tools ARE callable over MCP; roadmap ideas are not.
 - [Contracts](/data/model-contracts.json): forecast fields, receipt rules and calculator I/O.
 - [Provenance](/data/upstream-models.json): repos, commits, dates, licenses, integration mode.
 - [NFL schedule](/data/nfl-schedule.json): 272 validated 2026 games, locked snapshot.
@@ -29,8 +28,9 @@ passer rating, Elo, margin translation, forecast scoring, belief summary. Inputs
 
 ## Hubs
 
-- [Arena](/arena.html): the games played against other people — Bozo, Guillotine, Survivor, DFS,
-the live draft rig. Rendered from the `domain: "arena"` rows of surfaces.json; owns no data file.
+- [Arena](/arena.html): games played against other people — Bozo, Guillotine, Survivor, DFS,
+the live draft rig, a [32-team wins pool](/teamdraft.html).
+Rendered from the `domain: "arena"` rows of surfaces.json; owns no data file.
 - [Library](/data.html): every file in index.json, shelved by the surface that owns it, plus
 the sources we read and do not republish. Owns no data file either.
 - [NFL](/nfl.html): EPA, nfelo, calculators, and the blocked NFL work with its exact blockers.

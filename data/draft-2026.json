@@ -1,0 +1,6516 @@
+{
+ "source_page": "/teamdraft.html",
+ "tier": "labs",
+ "graded": false,
+ "as_of": "2026-08-11",
+ "source": "VegasInsider 4-book devigged win totals (2026-08-09), normalized to 272; game probabilities from Data Dawgs nfelo schedule refit to market totals",
+ "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. Nothing here is graded — the 2026 season has not started, every wins_tracker row reads zero, and no figure on this surface is a result. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run.",
+ "field_notes": {
+  "line": "Median posted regular-season win total. Half-point lines are the book's.",
+  "ew": "Devigged expected wins, normalized so all 32 sum to 272. Not the posted line.",
+  "sd": "Season win standard deviation from the upstream simulation.",
+  "dist": "Probability mass by final win count, 0 through 17. Sums to 1 within rounding.",
+  "schedule": "17 games: week, opponent, home flag, and this team's win probability.",
+  "schedule[].wp": "The payload's original per-game probability. Coherent game by game; does not re-add to `ew`.",
+  "schedule[].wpf": "The same game after the schedule was refit onto `ew`. This is what the simulation uses.",
+  "simulation": "Monte Carlo over `wpf`, game by game. Finishing probabilities, not a forecast; nothing graded.",
+  "overlap": "Sparse symmetric head-to-head game counts. 2 = division rival, 1 = other, absent = 0.",
+  "wins_tracker": "Actual wins, by round, per drafter. Every value is zero — no game has been played.",
+  "board[].delta": "Chosen team's expected wins minus the best still available. Descriptive, not a grade."
+ },
+ "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
+ "built": "2026-08-12",
+ "canonical_url": "https://datadawgs216.com/data/draft-2026.json",
+ "data": {
+  "season": 2026,
+  "format": {
+   "drafters": 8,
+   "teams_per_drafter": 4,
+   "rounds": 4,
+   "order": "snake",
+   "criterion": "total regular-season wins",
+   "tie_value": 0.5,
+   "prizes": {
+    "first": 120,
+    "second": 40,
+    "currency": "USD"
+   },
+   "tiebreakers": [
+    "total playoff wins among the four teams",
+    "total regular-season point differential among the four teams"
+   ]
+  },
+  "par": 34.0,
+  "total_wins": 272,
+  "draft_order": [
+   "Matt",
+   "Rob",
+   "Kevin",
+   "Chris",
+   "Tyler",
+   "Jason",
+   "Jared",
+   "Alan"
+  ],
+  "teams": {
+   "ARI": {
+    "name": "Cardinals",
+    "division": "NFC West",
+    "line": 4.0,
+    "ew": 3.8,
+    "sd": 2.24,
+    "dist": {
+     "0": 0.0257,
+     "1": 0.0819,
+     "2": 0.1404,
+     "3": 0.177,
+     "4": 0.1749,
+     "5": 0.145,
+     "6": 0.1063,
+     "7": 0.0705,
+     "8": 0.039,
+     "9": 0.0219,
+     "10": 0.0107,
+     "11": 0.0044,
+     "12": 0.0016,
+     "13": 0.0004,
+     "14": 0.0001,
+     "15": 0.0,
+     "16": 0.0,
+     "17": 0.0
+    },
+    "p10": 1,
+    "p50": 4,
+    "p90": 7,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "LAC",
+      "home": false,
+      "wp": 0.2151,
+      "wpf": 0.07686
+     },
+     {
+      "week": 2,
+      "opp": "SEA",
+      "home": true,
+      "wp": 0.2278,
+      "wpf": 0.13537
+     },
+     {
+      "week": 3,
+      "opp": "SF",
+      "home": false,
+      "wp": 0.2092,
+      "wpf": 0.10053
+     },
+     {
+      "week": 4,
+      "opp": "NYG",
+      "home": false,
+      "wp": 0.3882,
+      "wpf": 0.24938
+     },
+     {
+      "week": 5,
+      "opp": "DET",
+      "home": true,
+      "wp": 0.3944,
+      "wpf": 0.24003
+     },
+     {
+      "week": 6,
+      "opp": "LAR",
+      "home": false,
+      "wp": 0.2663,
+      "wpf": 0.09944
+     },
+     {
+      "week": 7,
+      "opp": "DEN",
+      "home": true,
+      "wp": 0.3909,
+      "wpf": 0.23655
+     },
+     {
+      "week": 8,
+      "opp": "DAL",
+      "home": false,
+      "wp": 0.3557,
+      "wpf": 0.17816
+     },
+     {
+      "week": 9,
+      "opp": "SEA",
+      "home": false,
+      "wp": 0.218,
+      "wpf": 0.12888
+     },
+     {
+      "week": 10,
+      "opp": "LAR",
+      "home": true,
+      "wp": 0.3802,
+      "wpf": 0.15727
+     },
+     {
+      "week": 11,
+      "opp": "KC",
+      "home": false,
+      "wp": 0.3079,
+      "wpf": 0.1542
+     },
+     {
+      "week": 12,
+      "opp": "WAS",
+      "home": true,
+      "wp": 0.4809,
+      "wpf": 0.33636
+     },
+     {
+      "week": 13,
+      "opp": "PHI",
+      "home": true,
+      "wp": 0.4197,
+      "wpf": 0.24041
+     },
+     {
+      "week": 15,
+      "opp": "NYJ",
+      "home": true,
+      "wp": 0.6144,
+      "wpf": 0.50132
+     },
+     {
+      "week": 16,
+      "opp": "NO",
+      "home": false,
+      "wp": 0.4009,
+      "wpf": 0.28452
+     },
+     {
+      "week": 17,
+      "opp": "LV",
+      "home": true,
+      "wp": 0.5628,
+      "wpf": 0.44638
+     },
+     {
+      "week": 18,
+      "opp": "SF",
+      "home": true,
+      "wp": 0.4198,
+      "wpf": 0.23412
+     }
+    ]
+   },
+   "ATL": {
+    "name": "Falcons",
+    "division": "NFC South",
+    "line": 7.5,
+    "ew": 7.07,
+    "sd": 2.78,
+    "dist": {
+     "0": 0.002,
+     "1": 0.0094,
+     "2": 0.0264,
+     "3": 0.0513,
+     "4": 0.0811,
+     "5": 0.1086,
+     "6": 0.133,
+     "7": 0.1369,
+     "8": 0.1278,
+     "9": 0.1126,
+     "10": 0.0848,
+     "11": 0.058,
+     "12": 0.036,
+     "13": 0.0191,
+     "14": 0.0085,
+     "15": 0.0037,
+     "16": 0.0006,
+     "17": 0.0001
+    },
+    "p10": 4,
+    "p50": 7,
+    "p90": 11,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "PIT",
+      "home": false,
+      "wp": 0.3952,
+      "wpf": 0.35698
+     },
+     {
+      "week": 2,
+      "opp": "CAR",
+      "home": true,
+      "wp": 0.548,
+      "wpf": 0.52098
+     },
+     {
+      "week": 3,
+      "opp": "GB",
+      "home": false,
+      "wp": 0.2868,
+      "wpf": 0.19721
+     },
+     {
+      "week": 4,
+      "opp": "NO",
+      "home": false,
+      "wp": 0.4675,
+      "wpf": 0.4471
+     },
+     {
+      "week": 5,
+      "opp": "BAL",
+      "home": true,
+      "wp": 0.4711,
+      "wpf": 0.34951
+     },
+     {
+      "week": 6,
+      "opp": "CHI",
+      "home": true,
+      "wp": 0.5034,
+      "wpf": 0.43689
+     },
+     {
+      "week": 7,
+      "opp": "SF",
+      "home": true,
+      "wp": 0.4868,
+      "wpf": 0.38315
+     },
+     {
+      "week": 8,
+      "opp": "TB",
+      "home": false,
+      "wp": 0.4342,
+      "wpf": 0.38722
+     },
+     {
+      "week": 9,
+      "opp": "CIN",
+      "home": true,
+      "wp": 0.5408,
+      "wpf": 0.42189
+     },
+     {
+      "week": 10,
+      "opp": "KC",
+      "home": true,
+      "wp": 0.4946,
+      "wpf": 0.38332
+     },
+     {
+      "week": 12,
+      "opp": "MIN",
+      "home": false,
+      "wp": 0.3434,
+      "wpf": 0.34782
+     },
+     {
+      "week": 13,
+      "opp": "DET",
+      "home": true,
+      "wp": 0.4608,
+      "wpf": 0.39113
+     },
+     {
+      "week": 14,
+      "opp": "CLE",
+      "home": false,
+      "wp": 0.4769,
+      "wpf": 0.53714
+     },
+     {
+      "week": 15,
+      "opp": "WAS",
+      "home": false,
+      "wp": 0.4217,
+      "wpf": 0.38209
+     },
+     {
+      "week": 16,
+      "opp": "TB",
+      "home": true,
+      "wp": 0.5609,
+      "wpf": 0.51264
+     },
+     {
+      "week": 17,
+      "opp": "NO",
+      "home": true,
+      "wp": 0.5938,
+      "wpf": 0.57383
+     },
+     {
+      "week": 18,
+      "opp": "CAR",
+      "home": false,
+      "wp": 0.4677,
+      "wpf": 0.44078
+     }
+    ]
+   },
+   "BAL": {
+    "name": "Ravens",
+    "division": "AFC North",
+    "line": 11.0,
+    "ew": 10.94,
+    "sd": 2.65,
+    "dist": {
+     "0": 0.0,
+     "1": 0.0002,
+     "2": 0.001,
+     "3": 0.0032,
+     "4": 0.0084,
+     "5": 0.0184,
+     "6": 0.0341,
+     "7": 0.0556,
+     "8": 0.0854,
+     "9": 0.1112,
+     "10": 0.1348,
+     "11": 0.1455,
+     "12": 0.1407,
+     "13": 0.1121,
+     "14": 0.0824,
+     "15": 0.0436,
+     "16": 0.0191,
+     "17": 0.0042
+    },
+    "p10": 7,
+    "p50": 11,
+    "p90": 14,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "IND",
+      "home": false,
+      "wp": 0.5982,
+      "wpf": 0.67294
+     },
+     {
+      "week": 2,
+      "opp": "NO",
+      "home": true,
+      "wp": 0.7264,
+      "wpf": 0.80214
+     },
+     {
+      "week": 3,
+      "opp": "DAL",
+      "home": false,
+      "wp": 0.5417,
+      "wpf": 0.54392
+     },
+     {
+      "week": 4,
+      "opp": "TEN",
+      "home": true,
+      "wp": 0.7325,
+      "wpf": 0.78601
+     },
+     {
+      "week": 5,
+      "opp": "ATL",
+      "home": false,
+      "wp": 0.5289,
+      "wpf": 0.65049
+     },
+     {
+      "week": 6,
+      "opp": "CLE",
+      "home": false,
+      "wp": 0.5691,
+      "wpf": 0.73594
+     },
+     {
+      "week": 7,
+      "opp": "CIN",
+      "home": true,
+      "wp": 0.631,
+      "wpf": 0.63724
+     },
+     {
+      "week": 8,
+      "opp": "BUF",
+      "home": false,
+      "wp": 0.4029,
+      "wpf": 0.40949
+     },
+     {
+      "week": 9,
+      "opp": "JAX",
+      "home": true,
+      "wp": 0.5732,
+      "wpf": 0.64765
+     },
+     {
+      "week": 10,
+      "opp": "LAC",
+      "home": true,
+      "wp": 0.6529,
+      "wpf": 0.59489
+     },
+     {
+      "week": 11,
+      "opp": "CAR",
+      "home": false,
+      "wp": 0.56,
+      "wpf": 0.6543
+     },
+     {
+      "week": 12,
+      "opp": "HOU",
+      "home": false,
+      "wp": 0.4515,
+      "wpf": 0.46376
+     },
+     {
+      "week": 14,
+      "opp": "TB",
+      "home": true,
+      "wp": 0.65,
+      "wpf": 0.71713
+     },
+     {
+      "week": 15,
+      "opp": "PIT",
+      "home": false,
+      "wp": 0.5005,
+      "wpf": 0.58528
+     },
+     {
+      "week": 16,
+      "opp": "CLE",
+      "home": true,
+      "wp": 0.689,
+      "wpf": 0.82379
+     },
+     {
+      "week": 17,
+      "opp": "CIN",
+      "home": false,
+      "wp": 0.5062,
+      "wpf": 0.51292
+     },
+     {
+      "week": 18,
+      "opp": "PIT",
+      "home": true,
+      "wp": 0.6256,
+      "wpf": 0.7018
+     }
+    ]
+   },
+   "BUF": {
+    "name": "Bills",
+    "division": "AFC East",
+    "line": 10.5,
+    "ew": 10.76,
+    "sd": 2.64,
+    "dist": {
+     "0": 0.0,
+     "1": 0.0003,
+     "2": 0.001,
+     "3": 0.0034,
+     "4": 0.0088,
+     "5": 0.0198,
+     "6": 0.0355,
+     "7": 0.0592,
+     "8": 0.0869,
+     "9": 0.1171,
+     "10": 0.1366,
+     "11": 0.1484,
+     "12": 0.1352,
+     "13": 0.1097,
+     "14": 0.0785,
+     "15": 0.0415,
+     "16": 0.0152,
+     "17": 0.003
+    },
+    "p10": 7,
+    "p50": 11,
+    "p90": 14,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "HOU",
+      "home": false,
+      "wp": 0.5095,
+      "wpf": 0.51501
+     },
+     {
+      "week": 2,
+      "opp": "DET",
+      "home": true,
+      "wp": 0.584,
+      "wpf": 0.62993
+     },
+     {
+      "week": 3,
+      "opp": "LAC",
+      "home": true,
+      "wp": 0.6214,
+      "wpf": 0.55492
+     },
+     {
+      "week": 4,
+      "opp": "NE",
+      "home": true,
+      "wp": 0.5919,
+      "wpf": 0.62911
+     },
+     {
+      "week": 5,
+      "opp": "LAR",
+      "home": false,
+      "wp": 0.4459,
+      "wpf": 0.37968
+     },
+     {
+      "week": 6,
+      "opp": "LV",
+      "home": false,
+      "wp": 0.6282,
+      "wpf": 0.72572
+     },
+     {
+      "week": 8,
+      "opp": "BAL",
+      "home": true,
+      "wp": 0.5971,
+      "wpf": 0.59051
+     },
+     {
+      "week": 9,
+      "opp": "MIN",
+      "home": false,
+      "wp": 0.4663,
+      "wpf": 0.58968
+     },
+     {
+      "week": 10,
+      "opp": "NYJ",
+      "home": false,
+      "wp": 0.6771,
+      "wpf": 0.76786
+     },
+     {
+      "week": 11,
+      "opp": "MIA",
+      "home": true,
+      "wp": 0.7283,
+      "wpf": 0.87555
+     },
+     {
+      "week": 12,
+      "opp": "KC",
+      "home": true,
+      "wp": 0.6198,
+      "wpf": 0.6255
+     },
+     {
+      "week": 13,
+      "opp": "NE",
+      "home": false,
+      "wp": 0.4655,
+      "wpf": 0.50459
+     },
+     {
+      "week": 14,
+      "opp": "GB",
+      "home": false,
+      "wp": 0.5393,
+      "wpf": 0.53565
+     },
+     {
+      "week": 15,
+      "opp": "CHI",
+      "home": true,
+      "wp": 0.6281,
+      "wpf": 0.67586
+     },
+     {
+      "week": 16,
+      "opp": "DEN",
+      "home": false,
+      "wp": 0.457,
+      "wpf": 0.50394
+     },
+     {
+      "week": 17,
+      "opp": "MIA",
+      "home": false,
+      "wp": 0.6135,
+      "wpf": 0.80643
+     },
+     {
+      "week": 18,
+      "opp": "NYJ",
+      "home": true,
+      "wp": 0.7819,
+      "wpf": 0.84974
+     }
+    ]
+   },
+   "CAR": {
+    "name": "Panthers",
+    "division": "NFC South",
+    "line": 7.0,
+    "ew": 7.09,
+    "sd": 2.79,
+    "dist": {
+     "0": 0.0018,
+     "1": 0.0098,
+     "2": 0.0259,
+     "3": 0.052,
+     "4": 0.082,
+     "5": 0.1082,
+     "6": 0.1268,
+     "7": 0.1369,
+     "8": 0.1312,
+     "9": 0.1126,
+     "10": 0.0842,
+     "11": 0.0595,
+     "12": 0.0376,
+     "13": 0.019,
+     "14": 0.0083,
+     "15": 0.0034,
+     "16": 0.0008,
+     "17": 0.0002
+    },
+    "p10": 4,
+    "p50": 7,
+    "p90": 11,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "CHI",
+      "home": true,
+      "wp": 0.4389,
+      "wpf": 0.40026
+     },
+     {
+      "week": 2,
+      "opp": "ATL",
+      "home": false,
+      "wp": 0.452,
+      "wpf": 0.47902
+     },
+     {
+      "week": 3,
+      "opp": "CLE",
+      "home": false,
+      "wp": 0.5108,
+      "wpf": 0.59703
+     },
+     {
+      "week": 4,
+      "opp": "DET",
+      "home": true,
+      "wp": 0.4298,
+      "wpf": 0.38711
+     },
+     {
+      "week": 6,
+      "opp": "PHI",
+      "home": false,
+      "wp": 0.3334,
+      "wpf": 0.27439
+     },
+     {
+      "week": 7,
+      "opp": "TB",
+      "home": true,
+      "wp": 0.5298,
+      "wpf": 0.50842
+     },
+     {
+      "week": 8,
+      "opp": "GB",
+      "home": false,
+      "wp": 0.3827,
+      "wpf": 0.29685
+     },
+     {
+      "week": 9,
+      "opp": "DEN",
+      "home": true,
+      "wp": 0.4262,
+      "wpf": 0.38256
+     },
+     {
+      "week": 10,
+      "opp": "NO",
+      "home": false,
+      "wp": 0.4364,
+      "wpf": 0.44291
+     },
+     {
+      "week": 11,
+      "opp": "BAL",
+      "home": true,
+      "wp": 0.44,
+      "wpf": 0.3457
+     },
+     {
+      "week": 12,
+      "opp": "TB",
+      "home": false,
+      "wp": 0.4036,
+      "wpf": 0.38317
+     },
+     {
+      "week": 13,
+      "opp": "MIN",
+      "home": false,
+      "wp": 0.3151,
+      "wpf": 0.34339
+     },
+     {
+      "week": 14,
+      "opp": "NO",
+      "home": true,
+      "wp": 0.5632,
+      "wpf": 0.56969
+     },
+     {
+      "week": 15,
+      "opp": "CIN",
+      "home": true,
+      "wp": 0.5095,
+      "wpf": 0.41776
+     },
+     {
+      "week": 16,
+      "opp": "PIT",
+      "home": false,
+      "wp": 0.3785,
+      "wpf": 0.3658
+     },
+     {
+      "week": 17,
+      "opp": "SEA",
+      "home": true,
+      "wp": 0.356,
+      "wpf": 0.33639
+     },
+     {
+      "week": 18,
+      "opp": "ATL",
+      "home": true,
+      "wp": 0.5323,
+      "wpf": 0.55922
+     }
+    ]
+   },
+   "CHI": {
+    "name": "Bears",
+    "division": "NFC North",
+    "line": 9.5,
+    "ew": 9.25,
+    "sd": 2.76,
+    "dist": {
+     "0": 0.0001,
+     "1": 0.0013,
+     "2": 0.0046,
+     "3": 0.0132,
+     "4": 0.0278,
+     "5": 0.048,
+     "6": 0.075,
+     "7": 0.1038,
+     "8": 0.1258,
+     "9": 0.1389,
+     "10": 0.1332,
+     "11": 0.1184,
+     "12": 0.0906,
+     "13": 0.0623,
+     "14": 0.035,
+     "15": 0.0156,
+     "16": 0.0053,
+     "17": 0.0009
+    },
+    "p10": 6,
+    "p50": 9,
+    "p90": 13,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "CAR",
+      "home": false,
+      "wp": 0.5611,
+      "wpf": 0.59974
+     },
+     {
+      "week": 2,
+      "opp": "MIN",
+      "home": true,
+      "wp": 0.599,
+      "wpf": 0.66557
+     },
+     {
+      "week": 3,
+      "opp": "PHI",
+      "home": true,
+      "wp": 0.5248,
+      "wpf": 0.49461
+     },
+     {
+      "week": 4,
+      "opp": "NYJ",
+      "home": true,
+      "wp": 0.7613,
+      "wpf": 0.80296
+     },
+     {
+      "week": 5,
+      "opp": "GB",
+      "home": false,
+      "wp": 0.4726,
+      "wpf": 0.41699
+     },
+     {
+      "week": 6,
+      "opp": "ATL",
+      "home": false,
+      "wp": 0.4966,
+      "wpf": 0.56311
+     },
+     {
+      "week": 7,
+      "opp": "NE",
+      "home": true,
+      "wp": 0.5259,
+      "wpf": 0.51238
+     },
+     {
+      "week": 8,
+      "opp": "SEA",
+      "home": false,
+      "wp": 0.3232,
+      "wpf": 0.33917
+     },
+     {
+      "week": 9,
+      "opp": "TB",
+      "home": true,
+      "wp": 0.6196,
+      "wpf": 0.63668
+     },
+     {
+      "week": 11,
+      "opp": "NO",
+      "home": true,
+      "wp": 0.6512,
+      "wpf": 0.69201
+     },
+     {
+      "week": 12,
+      "opp": "DET",
+      "home": false,
+      "wp": 0.395,
+      "wpf": 0.39069
+     },
+     {
+      "week": 13,
+      "opp": "JAX",
+      "home": true,
+      "wp": 0.5412,
+      "wpf": 0.55993
+     },
+     {
+      "week": 14,
+      "opp": "MIA",
+      "home": false,
+      "wp": 0.5482,
+      "wpf": 0.72063
+     },
+     {
+      "week": 15,
+      "opp": "BUF",
+      "home": false,
+      "wp": 0.3719,
+      "wpf": 0.32414
+     },
+     {
+      "week": 16,
+      "opp": "GB",
+      "home": true,
+      "wp": 0.5988,
+      "wpf": 0.54364
+     },
+     {
+      "week": 17,
+      "opp": "DET",
+      "home": true,
+      "wp": 0.521,
+      "wpf": 0.51649
+     },
+     {
+      "week": 18,
+      "opp": "MIN",
+      "home": false,
+      "wp": 0.4005,
+      "wpf": 0.47092
+     }
+    ]
+   },
+   "CIN": {
+    "name": "Bengals",
+    "division": "AFC North",
+    "line": 10.5,
+    "ew": 10.11,
+    "sd": 2.75,
+    "dist": {
+     "0": 0.0001,
+     "1": 0.0008,
+     "2": 0.0024,
+     "3": 0.0069,
+     "4": 0.017,
+     "5": 0.0335,
+     "6": 0.0538,
+     "7": 0.0809,
+     "8": 0.1057,
+     "9": 0.1293,
+     "10": 0.1368,
+     "11": 0.1328,
+     "12": 0.118,
+     "13": 0.0868,
+     "14": 0.0553,
+     "15": 0.0271,
+     "16": 0.0109,
+     "17": 0.002
+    },
+    "p10": 6,
+    "p50": 10,
+    "p90": 13,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "TB",
+      "home": true,
+      "wp": 0.6192,
+      "wpf": 0.68362
+     },
+     {
+      "week": 2,
+      "opp": "HOU",
+      "home": false,
+      "wp": 0.432,
+      "wpf": 0.43753
+     },
+     {
+      "week": 3,
+      "opp": "PIT",
+      "home": false,
+      "wp": 0.507,
+      "wpf": 0.58507
+     },
+     {
+      "week": 4,
+      "opp": "JAX",
+      "home": true,
+      "wp": 0.5038,
+      "wpf": 0.57496
+     },
+     {
+      "week": 5,
+      "opp": "MIA",
+      "home": false,
+      "wp": 0.5109,
+      "wpf": 0.73282
+     },
+     {
+      "week": 7,
+      "opp": "BAL",
+      "home": false,
+      "wp": 0.369,
+      "wpf": 0.36276
+     },
+     {
+      "week": 8,
+      "opp": "TEN",
+      "home": true,
+      "wp": 0.672,
+      "wpf": 0.72791
+     },
+     {
+      "week": 9,
+      "opp": "ATL",
+      "home": false,
+      "wp": 0.4592,
+      "wpf": 0.57811
+     },
+     {
+      "week": 10,
+      "opp": "PIT",
+      "home": true,
+      "wp": 0.5577,
+      "wpf": 0.63354
+     },
+     {
+      "week": 11,
+      "opp": "WAS",
+      "home": false,
+      "wp": 0.4442,
+      "wpf": 0.52237
+     },
+     {
+      "week": 12,
+      "opp": "NO",
+      "home": true,
+      "wp": 0.6158,
+      "wpf": 0.70436
+     },
+     {
+      "week": 13,
+      "opp": "CLE",
+      "home": false,
+      "wp": 0.4996,
+      "wpf": 0.67223
+     },
+     {
+      "week": 14,
+      "opp": "KC",
+      "home": true,
+      "wp": 0.5174,
+      "wpf": 0.52357
+     },
+     {
+      "week": 15,
+      "opp": "CAR",
+      "home": false,
+      "wp": 0.4905,
+      "wpf": 0.58224
+     },
+     {
+      "week": 16,
+      "opp": "IND",
+      "home": false,
+      "wp": 0.4537,
+      "wpf": 0.52771
+     },
+     {
+      "week": 17,
+      "opp": "BAL",
+      "home": true,
+      "wp": 0.4938,
+      "wpf": 0.48708
+     },
+     {
+      "week": 18,
+      "opp": "CLE",
+      "home": true,
+      "wp": 0.6248,
+      "wpf": 0.77379
+     }
+    ]
+   },
+   "CLE": {
+    "name": "Browns",
+    "division": "AFC North",
+    "line": 5.5,
+    "ew": 5.65,
+    "sd": 2.63,
+    "dist": {
+     "0": 0.0053,
+     "1": 0.0243,
+     "2": 0.0593,
+     "3": 0.0976,
+     "4": 0.1294,
+     "5": 0.1442,
+     "6": 0.1427,
+     "7": 0.127,
+     "8": 0.1004,
+     "9": 0.0726,
+     "10": 0.0471,
+     "11": 0.0279,
+     "12": 0.013,
+     "13": 0.0062,
+     "14": 0.0023,
+     "15": 0.0007,
+     "16": 0.0001,
+     "17": 0.0
+    },
+    "p10": 3,
+    "p50": 6,
+    "p90": 9,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "JAX",
+      "home": false,
+      "wp": 0.2589,
+      "wpf": 0.18472
+     },
+     {
+      "week": 2,
+      "opp": "TB",
+      "home": false,
+      "wp": 0.3419,
+      "wpf": 0.25154
+     },
+     {
+      "week": 3,
+      "opp": "CAR",
+      "home": true,
+      "wp": 0.4892,
+      "wpf": 0.40297
+     },
+     {
+      "week": 4,
+      "opp": "PIT",
+      "home": true,
+      "wp": 0.46,
+      "wpf": 0.36248
+     },
+     {
+      "week": 5,
+      "opp": "NYJ",
+      "home": false,
+      "wp": 0.5158,
+      "wpf": 0.45007
+     },
+     {
+      "week": 6,
+      "opp": "BAL",
+      "home": true,
+      "wp": 0.4309,
+      "wpf": 0.26406
+     },
+     {
+      "week": 7,
+      "opp": "TEN",
+      "home": false,
+      "wp": 0.4872,
+      "wpf": 0.37654
+     },
+     {
+      "week": 8,
+      "opp": "PIT",
+      "home": false,
+      "wp": 0.3698,
+      "wpf": 0.28144
+     },
+     {
+      "week": 9,
+      "opp": "NO",
+      "home": false,
+      "wp": 0.4274,
+      "wpf": 0.3507
+     },
+     {
+      "week": 10,
+      "opp": "HOU",
+      "home": true,
+      "wp": 0.4457,
+      "wpf": 0.28589
+     },
+     {
+      "week": 12,
+      "opp": "LV",
+      "home": true,
+      "wp": 0.5894,
+      "wpf": 0.52263
+     },
+     {
+      "week": 13,
+      "opp": "CIN",
+      "home": true,
+      "wp": 0.5004,
+      "wpf": 0.32777
+     },
+     {
+      "week": 14,
+      "opp": "ATL",
+      "home": true,
+      "wp": 0.5231,
+      "wpf": 0.46286
+     },
+     {
+      "week": 15,
+      "opp": "NYG",
+      "home": false,
+      "wp": 0.4145,
+      "wpf": 0.31099
+     },
+     {
+      "week": 16,
+      "opp": "BAL",
+      "home": false,
+      "wp": 0.311,
+      "wpf": 0.17621
+     },
+     {
+      "week": 17,
+      "opp": "IND",
+      "home": true,
+      "wp": 0.5175,
+      "wpf": 0.41261
+     },
+     {
+      "week": 18,
+      "opp": "CIN",
+      "home": false,
+      "wp": 0.3752,
+      "wpf": 0.22621
+     }
+    ]
+   },
+   "DAL": {
+    "name": "Cowboys",
+    "division": "NFC East",
+    "line": 9.5,
+    "ew": 9.15,
+    "sd": 2.74,
+    "dist": {
+     "0": 0.0002,
+     "1": 0.0012,
+     "2": 0.0049,
+     "3": 0.0134,
+     "4": 0.0284,
+     "5": 0.0515,
+     "6": 0.0783,
+     "7": 0.1073,
+     "8": 0.1296,
+     "9": 0.1367,
+     "10": 0.1338,
+     "11": 0.1168,
+     "12": 0.0891,
+     "13": 0.0576,
+     "14": 0.0321,
+     "15": 0.0141,
+     "16": 0.0044,
+     "17": 0.0006
+    },
+    "p10": 6,
+    "p50": 9,
+    "p90": 13,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "NYG",
+      "home": false,
+      "wp": 0.5469,
+      "wpf": 0.61678
+     },
+     {
+      "week": 2,
+      "opp": "WAS",
+      "home": true,
+      "wp": 0.6146,
+      "wpf": 0.68962
+     },
+     {
+      "week": 3,
+      "opp": "BAL",
+      "home": true,
+      "wp": 0.4583,
+      "wpf": 0.45608
+     },
+     {
+      "week": 4,
+      "opp": "HOU",
+      "home": false,
+      "wp": 0.3772,
+      "wpf": 0.38675
+     },
+     {
+      "week": 5,
+      "opp": "TB",
+      "home": true,
+      "wp": 0.5771,
+      "wpf": 0.64866
+     },
+     {
+      "week": 6,
+      "opp": "GB",
+      "home": false,
+      "wp": 0.4291,
+      "wpf": 0.43001
+     },
+     {
+      "week": 7,
+      "opp": "PHI",
+      "home": false,
+      "wp": 0.3779,
+      "wpf": 0.40368
+     },
+     {
+      "week": 8,
+      "opp": "ARI",
+      "home": true,
+      "wp": 0.6443,
+      "wpf": 0.82184
+     },
+     {
+      "week": 9,
+      "opp": "IND",
+      "home": false,
+      "wp": 0.4474,
+      "wpf": 0.52584
+     },
+     {
+      "week": 10,
+      "opp": "SF",
+      "home": true,
+      "wp": 0.5032,
+      "wpf": 0.52147
+     },
+     {
+      "week": 11,
+      "opp": "TEN",
+      "home": true,
+      "wp": 0.6662,
+      "wpf": 0.72628
+     },
+     {
+      "week": 12,
+      "opp": "PHI",
+      "home": true,
+      "wp": 0.5032,
+      "wpf": 0.53024
+     },
+     {
+      "week": 13,
+      "opp": "SEA",
+      "home": false,
+      "wp": 0.2848,
+      "wpf": 0.34989
+     },
+     {
+      "week": 15,
+      "opp": "LAR",
+      "home": false,
+      "wp": 0.3397,
+      "wpf": 0.28498
+     },
+     {
+      "week": 16,
+      "opp": "JAX",
+      "home": true,
+      "wp": 0.4975,
+      "wpf": 0.57319
+     },
+     {
+      "week": 17,
+      "opp": "NYG",
+      "home": true,
+      "wp": 0.597,
+      "wpf": 0.6639
+     },
+     {
+      "week": 18,
+      "opp": "WAS",
+      "home": false,
+      "wp": 0.4379,
+      "wpf": 0.52048
+     }
+    ]
+   },
+   "DEN": {
+    "name": "Broncos",
+    "division": "AFC West",
+    "line": 9.5,
+    "ew": 9.67,
+    "sd": 2.72,
+    "dist": {
+     "0": 0.0002,
+     "1": 0.0007,
+     "2": 0.0029,
+     "3": 0.0088,
+     "4": 0.0209,
+     "5": 0.0388,
+     "6": 0.0626,
+     "7": 0.092,
+     "8": 0.1173,
+     "9": 0.1379,
+     "10": 0.1417,
+     "11": 0.1277,
+     "12": 0.1029,
+     "13": 0.0724,
+     "14": 0.0444,
+     "15": 0.0207,
+     "16": 0.0069,
+     "17": 0.001
+    },
+    "p10": 6,
+    "p50": 10,
+    "p90": 13,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "KC",
+      "home": false,
+      "wp": 0.4233,
+      "wpf": 0.38387
+     },
+     {
+      "week": 2,
+      "opp": "JAX",
+      "home": true,
+      "wp": 0.5694,
+      "wpf": 0.59331
+     },
+     {
+      "week": 3,
+      "opp": "LAR",
+      "home": true,
+      "wp": 0.4505,
+      "wpf": 0.34063
+     },
+     {
+      "week": 4,
+      "opp": "SF",
+      "home": false,
+      "wp": 0.4661,
+      "wpf": 0.43309
+     },
+     {
+      "week": 5,
+      "opp": "LAC",
+      "home": false,
+      "wp": 0.5435,
+      "wpf": 0.42832
+     },
+     {
+      "week": 6,
+      "opp": "SEA",
+      "home": true,
+      "wp": 0.4905,
+      "wpf": 0.51416
+     },
+     {
+      "week": 7,
+      "opp": "ARI",
+      "home": false,
+      "wp": 0.6091,
+      "wpf": 0.76345
+     },
+     {
+      "week": 8,
+      "opp": "KC",
+      "home": true,
+      "wp": 0.6001,
+      "wpf": 0.5602
+     },
+     {
+      "week": 9,
+      "opp": "CAR",
+      "home": false,
+      "wp": 0.5738,
+      "wpf": 0.61744
+     },
+     {
+      "week": 11,
+      "opp": "LV",
+      "home": true,
+      "wp": 0.7239,
+      "wpf": 0.77281
+     },
+     {
+      "week": 12,
+      "opp": "PIT",
+      "home": false,
+      "wp": 0.5144,
+      "wpf": 0.54602
+     },
+     {
+      "week": 13,
+      "opp": "MIA",
+      "home": true,
+      "wp": 0.7109,
+      "wpf": 0.84244
+     },
+     {
+      "week": 14,
+      "opp": "NYJ",
+      "home": false,
+      "wp": 0.6584,
+      "wpf": 0.71581
+     },
+     {
+      "week": 15,
+      "opp": "LV",
+      "home": false,
+      "wp": 0.6086,
+      "wpf": 0.66858
+     },
+     {
+      "week": 16,
+      "opp": "BUF",
+      "home": true,
+      "wp": 0.543,
+      "wpf": 0.49606
+     },
+     {
+      "week": 17,
+      "opp": "NE",
+      "home": false,
+      "wp": 0.4451,
+      "wpf": 0.43731
+     },
+     {
+      "week": 18,
+      "opp": "LAC",
+      "home": true,
+      "wp": 0.6657,
+      "wpf": 0.55618
+     }
+    ]
+   },
+   "DET": {
+    "name": "Lions",
+    "division": "NFC North",
+    "line": 10.5,
+    "ew": 10.68,
+    "sd": 2.67,
+    "dist": {
+     "0": 0.0,
+     "1": 0.0002,
+     "2": 0.0013,
+     "3": 0.0041,
+     "4": 0.0107,
+     "5": 0.0209,
+     "6": 0.0394,
+     "7": 0.0646,
+     "8": 0.0922,
+     "9": 0.1163,
+     "10": 0.1403,
+     "11": 0.144,
+     "12": 0.1307,
+     "13": 0.1054,
+     "14": 0.0728,
+     "15": 0.0393,
+     "16": 0.0146,
+     "17": 0.0032
+    },
+    "p10": 7,
+    "p50": 11,
+    "p90": 14,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "NO",
+      "home": true,
+      "wp": 0.717,
+      "wpf": 0.75637
+     },
+     {
+      "week": 2,
+      "opp": "BUF",
+      "home": false,
+      "wp": 0.416,
+      "wpf": 0.37007
+     },
+     {
+      "week": 3,
+      "opp": "NYJ",
+      "home": true,
+      "wp": 0.7774,
+      "wpf": 0.81961
+     },
+     {
+      "week": 4,
+      "opp": "CAR",
+      "home": false,
+      "wp": 0.5702,
+      "wpf": 0.61289
+     },
+     {
+      "week": 5,
+      "opp": "ARI",
+      "home": false,
+      "wp": 0.6056,
+      "wpf": 0.75997
+     },
+     {
+      "week": 7,
+      "opp": "GB",
+      "home": true,
+      "wp": 0.6394,
+      "wpf": 0.59034
+     },
+     {
+      "week": 8,
+      "opp": "MIN",
+      "home": true,
+      "wp": 0.5689,
+      "wpf": 0.64161
+     },
+     {
+      "week": 9,
+      "opp": "MIA",
+      "home": false,
+      "wp": 0.5901,
+      "wpf": 0.75706
+     },
+     {
+      "week": 10,
+      "opp": "NE",
+      "home": true,
+      "wp": 0.5682,
+      "wpf": 0.55932
+     },
+     {
+      "week": 11,
+      "opp": "TB",
+      "home": true,
+      "wp": 0.6595,
+      "wpf": 0.67967
+     },
+     {
+      "week": 12,
+      "opp": "CHI",
+      "home": true,
+      "wp": 0.605,
+      "wpf": 0.60931
+     },
+     {
+      "week": 13,
+      "opp": "ATL",
+      "home": false,
+      "wp": 0.5392,
+      "wpf": 0.60887
+     },
+     {
+      "week": 14,
+      "opp": "TEN",
+      "home": true,
+      "wp": 0.7409,
+      "wpf": 0.75479
+     },
+     {
+      "week": 15,
+      "opp": "MIN",
+      "home": false,
+      "wp": 0.4423,
+      "wpf": 0.51828
+     },
+     {
+      "week": 16,
+      "opp": "NYG",
+      "home": true,
+      "wp": 0.6781,
+      "wpf": 0.6946
+     },
+     {
+      "week": 17,
+      "opp": "CHI",
+      "home": false,
+      "wp": 0.479,
+      "wpf": 0.48351
+     },
+     {
+      "week": 18,
+      "opp": "GB",
+      "home": false,
+      "wp": 0.5152,
+      "wpf": 0.46342
+     }
+    ]
+   },
+   "GB": {
+    "name": "Packers",
+    "division": "NFC North",
+    "line": 10.0,
+    "ew": 9.66,
+    "sd": 2.73,
+    "dist": {
+     "0": 0.0001,
+     "1": 0.0008,
+     "2": 0.003,
+     "3": 0.0092,
+     "4": 0.0213,
+     "5": 0.0398,
+     "6": 0.0643,
+     "7": 0.0891,
+     "8": 0.1181,
+     "9": 0.1352,
+     "10": 0.1402,
+     "11": 0.1295,
+     "12": 0.1043,
+     "13": 0.0746,
+     "14": 0.0415,
+     "15": 0.021,
+     "16": 0.0064,
+     "17": 0.0016
+    },
+    "p10": 6,
+    "p50": 10,
+    "p90": 13,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "MIN",
+      "home": false,
+      "wp": 0.4691,
+      "wpf": 0.59595
+     },
+     {
+      "week": 2,
+      "opp": "NYJ",
+      "home": false,
+      "wp": 0.66,
+      "wpf": 0.75654
+     },
+     {
+      "week": 3,
+      "opp": "ATL",
+      "home": true,
+      "wp": 0.7132,
+      "wpf": 0.80279
+     },
+     {
+      "week": 4,
+      "opp": "TB",
+      "home": false,
+      "wp": 0.4581,
+      "wpf": 0.5326
+     },
+     {
+      "week": 5,
+      "opp": "CHI",
+      "home": true,
+      "wp": 0.5274,
+      "wpf": 0.58301
+     },
+     {
+      "week": 6,
+      "opp": "DAL",
+      "home": true,
+      "wp": 0.5709,
+      "wpf": 0.56999
+     },
+     {
+      "week": 7,
+      "opp": "DET",
+      "home": false,
+      "wp": 0.3606,
+      "wpf": 0.40966
+     },
+     {
+      "week": 8,
+      "opp": "CAR",
+      "home": true,
+      "wp": 0.6173,
+      "wpf": 0.70315
+     },
+     {
+      "week": 9,
+      "opp": "NE",
+      "home": false,
+      "wp": 0.3652,
+      "wpf": 0.40575
+     },
+     {
+      "week": 10,
+      "opp": "MIN",
+      "home": true,
+      "wp": 0.4905,
+      "wpf": 0.61642
+     },
+     {
+      "week": 12,
+      "opp": "LAR",
+      "home": false,
+      "wp": 0.3467,
+      "wpf": 0.29059
+     },
+     {
+      "week": 13,
+      "opp": "NO",
+      "home": false,
+      "wp": 0.4916,
+      "wpf": 0.59316
+     },
+     {
+      "week": 14,
+      "opp": "BUF",
+      "home": true,
+      "wp": 0.4607,
+      "wpf": 0.46435
+     },
+     {
+      "week": 15,
+      "opp": "MIA",
+      "home": true,
+      "wp": 0.6366,
+      "wpf": 0.8235
+     },
+     {
+      "week": 16,
+      "opp": "CHI",
+      "home": false,
+      "wp": 0.4012,
+      "wpf": 0.45636
+     },
+     {
+      "week": 17,
+      "opp": "HOU",
+      "home": true,
+      "wp": 0.5101,
+      "wpf": 0.51928
+     },
+     {
+      "week": 18,
+      "opp": "DET",
+      "home": true,
+      "wp": 0.4848,
+      "wpf": 0.53658
+     }
+    ]
+   },
+   "HOU": {
+    "name": "Texans",
+    "division": "AFC South",
+    "line": 9.5,
+    "ew": 9.96,
+    "sd": 2.77,
+    "dist": {
+     "0": 0.0001,
+     "1": 0.0008,
+     "2": 0.003,
+     "3": 0.0077,
+     "4": 0.0184,
+     "5": 0.0365,
+     "6": 0.0564,
+     "7": 0.0824,
+     "8": 0.1086,
+     "9": 0.1314,
+     "10": 0.1378,
+     "11": 0.1318,
+     "12": 0.1114,
+     "13": 0.0825,
+     "14": 0.053,
+     "15": 0.0262,
+     "16": 0.0103,
+     "17": 0.0018
+    },
+    "p10": 6,
+    "p50": 10,
+    "p90": 13,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "BUF",
+      "home": true,
+      "wp": 0.4905,
+      "wpf": 0.48499
+     },
+     {
+      "week": 2,
+      "opp": "CIN",
+      "home": true,
+      "wp": 0.568,
+      "wpf": 0.56247
+     },
+     {
+      "week": 3,
+      "opp": "IND",
+      "home": false,
+      "wp": 0.5265,
+      "wpf": 0.59393
+     },
+     {
+      "week": 4,
+      "opp": "DAL",
+      "home": true,
+      "wp": 0.6228,
+      "wpf": 0.61325
+     },
+     {
+      "week": 5,
+      "opp": "TEN",
+      "home": false,
+      "wp": 0.604,
+      "wpf": 0.66071
+     },
+     {
+      "week": 6,
+      "opp": "JAX",
+      "home": false,
+      "wp": 0.4317,
+      "wpf": 0.49737
+     },
+     {
+      "week": 7,
+      "opp": "NYG",
+      "home": true,
+      "wp": 0.655,
+      "wpf": 0.70855
+     },
+     {
+      "week": 9,
+      "opp": "LAC",
+      "home": false,
+      "wp": 0.5146,
+      "wpf": 0.44063
+     },
+     {
+      "week": 10,
+      "opp": "CLE",
+      "home": false,
+      "wp": 0.5543,
+      "wpf": 0.71411
+     },
+     {
+      "week": 11,
+      "opp": "IND",
+      "home": true,
+      "wp": 0.6331,
+      "wpf": 0.69417
+     },
+     {
+      "week": 12,
+      "opp": "BAL",
+      "home": true,
+      "wp": 0.5485,
+      "wpf": 0.53624
+     },
+     {
+      "week": 13,
+      "opp": "PIT",
+      "home": false,
+      "wp": 0.4855,
+      "wpf": 0.5585
+     },
+     {
+      "week": 14,
+      "opp": "WAS",
+      "home": false,
+      "wp": 0.4988,
+      "wpf": 0.57111
+     },
+     {
+      "week": 15,
+      "opp": "JAX",
+      "home": true,
+      "wp": 0.5584,
+      "wpf": 0.62224
+     },
+     {
+      "week": 16,
+      "opp": "PHI",
+      "home": false,
+      "wp": 0.4374,
+      "wpf": 0.45416
+     },
+     {
+      "week": 17,
+      "opp": "GB",
+      "home": false,
+      "wp": 0.4899,
+      "wpf": 0.48072
+     },
+     {
+      "week": 18,
+      "opp": "TEN",
+      "home": true,
+      "wp": 0.72,
+      "wpf": 0.76652
+     }
+    ]
+   },
+   "IND": {
+    "name": "Colts",
+    "division": "AFC South",
+    "line": 8.0,
+    "ew": 7.8,
+    "sd": 2.76,
+    "dist": {
+     "0": 0.0009,
+     "1": 0.0047,
+     "2": 0.0143,
+     "3": 0.0323,
+     "4": 0.0615,
+     "5": 0.0895,
+     "6": 0.119,
+     "7": 0.1336,
+     "8": 0.137,
+     "9": 0.126,
+     "10": 0.103,
+     "11": 0.0776,
+     "12": 0.0509,
+     "13": 0.0286,
+     "14": 0.014,
+     "15": 0.0058,
+     "16": 0.0012,
+     "17": 0.0002
+    },
+    "p10": 4,
+    "p50": 8,
+    "p90": 12,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "BAL",
+      "home": true,
+      "wp": 0.4018,
+      "wpf": 0.32706
+     },
+     {
+      "week": 2,
+      "opp": "KC",
+      "home": false,
+      "wp": 0.3143,
+      "wpf": 0.25883
+     },
+     {
+      "week": 3,
+      "opp": "HOU",
+      "home": true,
+      "wp": 0.4735,
+      "wpf": 0.40607
+     },
+     {
+      "week": 4,
+      "opp": "WAS",
+      "home": false,
+      "wp": 0.4687,
+      "wpf": 0.47294
+     },
+     {
+      "week": 5,
+      "opp": "PIT",
+      "home": false,
+      "wp": 0.4141,
+      "wpf": 0.4187
+     },
+     {
+      "week": 6,
+      "opp": "TEN",
+      "home": true,
+      "wp": 0.6562,
+      "wpf": 0.64944
+     },
+     {
+      "week": 7,
+      "opp": "MIN",
+      "home": false,
+      "wp": 0.3486,
+      "wpf": 0.39562
+     },
+     {
+      "week": 8,
+      "opp": "JAX",
+      "home": false,
+      "wp": 0.3623,
+      "wpf": 0.36005
+     },
+     {
+      "week": 9,
+      "opp": "DAL",
+      "home": true,
+      "wp": 0.5526,
+      "wpf": 0.47416
+     },
+     {
+      "week": 10,
+      "opp": "MIA",
+      "home": true,
+      "wp": 0.6191,
+      "wpf": 0.76032
+     },
+     {
+      "week": 11,
+      "opp": "HOU",
+      "home": false,
+      "wp": 0.3669,
+      "wpf": 0.30583
+     },
+     {
+      "week": 12,
+      "opp": "NYG",
+      "home": true,
+      "wp": 0.5865,
+      "wpf": 0.57997
+     },
+     {
+      "week": 14,
+      "opp": "PHI",
+      "home": false,
+      "wp": 0.3676,
+      "wpf": 0.32108
+     },
+     {
+      "week": 15,
+      "opp": "TEN",
+      "home": false,
+      "wp": 0.5332,
+      "wpf": 0.52576
+     },
+     {
+      "week": 16,
+      "opp": "CIN",
+      "home": true,
+      "wp": 0.5463,
+      "wpf": 0.47229
+     },
+     {
+      "week": 17,
+      "opp": "CLE",
+      "home": false,
+      "wp": 0.4825,
+      "wpf": 0.58739
+     },
+     {
+      "week": 18,
+      "opp": "JAX",
+      "home": true,
+      "wp": 0.4866,
+      "wpf": 0.48416
+     }
+    ]
+   },
+   "JAX": {
+    "name": "Jaguars",
+    "division": "AFC South",
+    "line": 9.5,
+    "ew": 9.03,
+    "sd": 2.78,
+    "dist": {
+     "0": 0.0002,
+     "1": 0.0017,
+     "2": 0.006,
+     "3": 0.0157,
+     "4": 0.0321,
+     "5": 0.0538,
+     "6": 0.0814,
+     "7": 0.109,
+     "8": 0.1283,
+     "9": 0.1383,
+     "10": 0.1297,
+     "11": 0.1122,
+     "12": 0.0867,
+     "13": 0.0561,
+     "14": 0.0296,
+     "15": 0.014,
+     "16": 0.0044,
+     "17": 0.0007
+    },
+    "p10": 5,
+    "p50": 9,
+    "p90": 13,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "CLE",
+      "home": true,
+      "wp": 0.7411,
+      "wpf": 0.81528
+     },
+     {
+      "week": 2,
+      "opp": "DEN",
+      "home": false,
+      "wp": 0.4306,
+      "wpf": 0.40669
+     },
+     {
+      "week": 3,
+      "opp": "NE",
+      "home": true,
+      "wp": 0.5251,
+      "wpf": 0.49265
+     },
+     {
+      "week": 4,
+      "opp": "CIN",
+      "home": false,
+      "wp": 0.4962,
+      "wpf": 0.42504
+     },
+     {
+      "week": 5,
+      "opp": "PHI",
+      "home": true,
+      "wp": 0.569,
+      "wpf": 0.5203
+     },
+     {
+      "week": 6,
+      "opp": "HOU",
+      "home": true,
+      "wp": 0.5683,
+      "wpf": 0.50263
+     },
+     {
+      "week": 8,
+      "opp": "IND",
+      "home": true,
+      "wp": 0.6377,
+      "wpf": 0.63995
+     },
+     {
+      "week": 9,
+      "opp": "BAL",
+      "home": false,
+      "wp": 0.4268,
+      "wpf": 0.35235
+     },
+     {
+      "week": 10,
+      "opp": "TEN",
+      "home": false,
+      "wp": 0.6088,
+      "wpf": 0.60401
+     },
+     {
+      "week": 11,
+      "opp": "NYG",
+      "home": false,
+      "wp": 0.5368,
+      "wpf": 0.53254
+     },
+     {
+      "week": 12,
+      "opp": "TEN",
+      "home": true,
+      "wp": 0.7241,
+      "wpf": 0.72007
+     },
+     {
+      "week": 13,
+      "opp": "CHI",
+      "home": false,
+      "wp": 0.4588,
+      "wpf": 0.44007
+     },
+     {
+      "week": 14,
+      "opp": "PIT",
+      "home": true,
+      "wp": 0.616,
+      "wpf": 0.62277
+     },
+     {
+      "week": 15,
+      "opp": "HOU",
+      "home": false,
+      "wp": 0.4416,
+      "wpf": 0.37776
+     },
+     {
+      "week": 16,
+      "opp": "DAL",
+      "home": false,
+      "wp": 0.5025,
+      "wpf": 0.42681
+     },
+     {
+      "week": 17,
+      "opp": "WAS",
+      "home": true,
+      "wp": 0.6287,
+      "wpf": 0.63493
+     },
+     {
+      "week": 18,
+      "opp": "IND",
+      "home": false,
+      "wp": 0.5134,
+      "wpf": 0.51584
+     }
+    ]
+   },
+   "KC": {
+    "name": "Chiefs",
+    "division": "AFC West",
+    "line": 10.5,
+    "ew": 10.06,
+    "sd": 2.63,
+    "dist": {
+     "0": 0.0001,
+     "1": 0.0005,
+     "2": 0.0016,
+     "3": 0.0052,
+     "4": 0.0139,
+     "5": 0.0289,
+     "6": 0.0513,
+     "7": 0.0802,
+     "8": 0.1101,
+     "9": 0.1348,
+     "10": 0.1486,
+     "11": 0.1399,
+     "12": 0.1148,
+     "13": 0.0832,
+     "14": 0.0524,
+     "15": 0.0251,
+     "16": 0.0079,
+     "17": 0.0015
+    },
+    "p10": 6,
+    "p50": 10,
+    "p90": 13,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "DEN",
+      "home": true,
+      "wp": 0.5767,
+      "wpf": 0.61613
+     },
+     {
+      "week": 2,
+      "opp": "IND",
+      "home": true,
+      "wp": 0.6857,
+      "wpf": 0.74117
+     },
+     {
+      "week": 3,
+      "opp": "MIA",
+      "home": false,
+      "wp": 0.7042,
+      "wpf": 0.85912
+     },
+     {
+      "week": 4,
+      "opp": "LV",
+      "home": false,
+      "wp": 0.572,
+      "wpf": 0.67135
+     },
+     {
+      "week": 6,
+      "opp": "LAC",
+      "home": true,
+      "wp": 0.6309,
+      "wpf": 0.55894
+     },
+     {
+      "week": 7,
+      "opp": "SEA",
+      "home": false,
+      "wp": 0.3312,
+      "wpf": 0.39074
+     },
+     {
+      "week": 8,
+      "opp": "DEN",
+      "home": false,
+      "wp": 0.3999,
+      "wpf": 0.4398
+     },
+     {
+      "week": 9,
+      "opp": "NYJ",
+      "home": true,
+      "wp": 0.7367,
+      "wpf": 0.8116
+     },
+     {
+      "week": 10,
+      "opp": "ATL",
+      "home": false,
+      "wp": 0.5054,
+      "wpf": 0.61668
+     },
+     {
+      "week": 11,
+      "opp": "ARI",
+      "home": true,
+      "wp": 0.6921,
+      "wpf": 0.8458
+     },
+     {
+      "week": 12,
+      "opp": "BUF",
+      "home": false,
+      "wp": 0.3802,
+      "wpf": 0.3745
+     },
+     {
+      "week": 13,
+      "opp": "LAR",
+      "home": false,
+      "wp": 0.3891,
+      "wpf": 0.32104
+     },
+     {
+      "week": 14,
+      "opp": "CIN",
+      "home": false,
+      "wp": 0.4826,
+      "wpf": 0.47643
+     },
+     {
+      "week": 15,
+      "opp": "NE",
+      "home": true,
+      "wp": 0.5346,
+      "wpf": 0.56732
+     },
+     {
+      "week": 16,
+      "opp": "SF",
+      "home": true,
+      "wp": 0.5557,
+      "wpf": 0.56321
+     },
+     {
+      "week": 17,
+      "opp": "LAC",
+      "home": false,
+      "wp": 0.5061,
+      "wpf": 0.43173
+     },
+     {
+      "week": 18,
+      "opp": "LV",
+      "home": true,
+      "wp": 0.6916,
+      "wpf": 0.77415
+     }
+    ]
+   },
+   "LAC": {
+    "name": "Chargers",
+    "division": "AFC West",
+    "line": 10.0,
+    "ew": 9.9,
+    "sd": 2.63,
+    "dist": {
+     "0": 0.0001,
+     "1": 0.0003,
+     "2": 0.0018,
+     "3": 0.0055,
+     "4": 0.0149,
+     "5": 0.0321,
+     "6": 0.0565,
+     "7": 0.0852,
+     "8": 0.116,
+     "9": 0.1379,
+     "10": 0.1446,
+     "11": 0.1363,
+     "12": 0.1125,
+     "13": 0.0783,
+     "14": 0.0473,
+     "15": 0.0221,
+     "16": 0.0072,
+     "17": 0.0015
+    },
+    "p10": 6,
+    "p50": 10,
+    "p90": 13,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "ARI",
+      "home": true,
+      "wp": 0.7849,
+      "wpf": 0.92314
+     },
+     {
+      "week": 2,
+      "opp": "LV",
+      "home": true,
+      "wp": 0.743,
+      "wpf": 0.85633
+     },
+     {
+      "week": 3,
+      "opp": "BUF",
+      "home": false,
+      "wp": 0.3786,
+      "wpf": 0.44508
+     },
+     {
+      "week": 4,
+      "opp": "SEA",
+      "home": false,
+      "wp": 0.2705,
+      "wpf": 0.3931
+     },
+     {
+      "week": 5,
+      "opp": "DEN",
+      "home": true,
+      "wp": 0.4565,
+      "wpf": 0.57168
+     },
+     {
+      "week": 6,
+      "opp": "KC",
+      "home": false,
+      "wp": 0.3691,
+      "wpf": 0.44106
+     },
+     {
+      "week": 8,
+      "opp": "LAR",
+      "home": false,
+      "wp": 0.3241,
+      "wpf": 0.32438
+     },
+     {
+      "week": 9,
+      "opp": "HOU",
+      "home": true,
+      "wp": 0.4854,
+      "wpf": 0.55937
+     },
+     {
+      "week": 10,
+      "opp": "BAL",
+      "home": false,
+      "wp": 0.3471,
+      "wpf": 0.40511
+     },
+     {
+      "week": 11,
+      "opp": "NYJ",
+      "home": true,
+      "wp": 0.6767,
+      "wpf": 0.81297
+     },
+     {
+      "week": 12,
+      "opp": "NE",
+      "home": true,
+      "wp": 0.465,
+      "wpf": 0.57231
+     },
+     {
+      "week": 13,
+      "opp": "TB",
+      "home": false,
+      "wp": 0.4336,
+      "wpf": 0.5724
+     },
+     {
+      "week": 14,
+      "opp": "LV",
+      "home": false,
+      "wp": 0.5028,
+      "wpf": 0.67583
+     },
+     {
+      "week": 15,
+      "opp": "SF",
+      "home": true,
+      "wp": 0.4862,
+      "wpf": 0.56819
+     },
+     {
+      "week": 16,
+      "opp": "MIA",
+      "home": false,
+      "wp": 0.4874,
+      "wpf": 0.76664
+     },
+     {
+      "week": 17,
+      "opp": "KC",
+      "home": true,
+      "wp": 0.4939,
+      "wpf": 0.56827
+     },
+     {
+      "week": 18,
+      "opp": "DEN",
+      "home": false,
+      "wp": 0.3343,
+      "wpf": 0.44382
+     }
+    ]
+   },
+   "LAR": {
+    "name": "Rams",
+    "division": "NFC West",
+    "line": 11.5,
+    "ew": 11.73,
+    "sd": 2.56,
+    "dist": {
+     "0": 0.0,
+     "1": 0.0,
+     "2": 0.0004,
+     "3": 0.0012,
+     "4": 0.004,
+     "5": 0.0098,
+     "6": 0.0198,
+     "7": 0.038,
+     "8": 0.0614,
+     "9": 0.0899,
+     "10": 0.1182,
+     "11": 0.1432,
+     "12": 0.1521,
+     "13": 0.1405,
+     "14": 0.111,
+     "15": 0.0708,
+     "16": 0.0318,
+     "17": 0.0079
+    },
+    "p10": 8,
+    "p50": 12,
+    "p90": 15,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "SF",
+      "home": true,
+      "wp": 0.6132,
+      "wpf": 0.68766
+     },
+     {
+      "week": 2,
+      "opp": "NYG",
+      "home": true,
+      "wp": 0.7436,
+      "wpf": 0.8331
+     },
+     {
+      "week": 3,
+      "opp": "DEN",
+      "home": false,
+      "wp": 0.5495,
+      "wpf": 0.65937
+     },
+     {
+      "week": 4,
+      "opp": "PHI",
+      "home": false,
+      "wp": 0.4772,
+      "wpf": 0.56766
+     },
+     {
+      "week": 5,
+      "opp": "BUF",
+      "home": true,
+      "wp": 0.5541,
+      "wpf": 0.62032
+     },
+     {
+      "week": 6,
+      "opp": "ARI",
+      "home": true,
+      "wp": 0.7337,
+      "wpf": 0.90056
+     },
+     {
+      "week": 7,
+      "opp": "LV",
+      "home": false,
+      "wp": 0.6193,
+      "wpf": 0.77008
+     },
+     {
+      "week": 8,
+      "opp": "LAC",
+      "home": true,
+      "wp": 0.6759,
+      "wpf": 0.67562
+     },
+     {
+      "week": 9,
+      "opp": "WAS",
+      "home": false,
+      "wp": 0.5389,
+      "wpf": 0.67761
+     },
+     {
+      "week": 10,
+      "opp": "ARI",
+      "home": false,
+      "wp": 0.6198,
+      "wpf": 0.84273
+     },
+     {
+      "week": 12,
+      "opp": "GB",
+      "home": true,
+      "wp": 0.6533,
+      "wpf": 0.70941
+     },
+     {
+      "week": 13,
+      "opp": "KC",
+      "home": true,
+      "wp": 0.6109,
+      "wpf": 0.67896
+     },
+     {
+      "week": 14,
+      "opp": "SF",
+      "home": false,
+      "wp": 0.4773,
+      "wpf": 0.55911
+     },
+     {
+      "week": 15,
+      "opp": "DAL",
+      "home": true,
+      "wp": 0.6603,
+      "wpf": 0.71502
+     },
+     {
+      "week": 16,
+      "opp": "SEA",
+      "home": false,
+      "wp": 0.3765,
+      "wpf": 0.51301
+     },
+     {
+      "week": 17,
+      "opp": "TB",
+      "home": false,
+      "wp": 0.5515,
+      "wpf": 0.68228
+     },
+     {
+      "week": 18,
+      "opp": "SEA",
+      "home": true,
+      "wp": 0.5017,
+      "wpf": 0.63721
+     }
+    ]
+   },
+   "LV": {
+    "name": "Raiders",
+    "division": "AFC West",
+    "line": 6.0,
+    "ew": 5.98,
+    "sd": 2.59,
+    "dist": {
+     "0": 0.0032,
+     "1": 0.0172,
+     "2": 0.0457,
+     "3": 0.0824,
+     "4": 0.1217,
+     "5": 0.1452,
+     "6": 0.1474,
+     "7": 0.1358,
+     "8": 0.1096,
+     "9": 0.08,
+     "10": 0.054,
+     "11": 0.0312,
+     "12": 0.0162,
+     "13": 0.0068,
+     "14": 0.0027,
+     "15": 0.0007,
+     "16": 0.0001,
+     "17": 0.0
+    },
+    "p10": 3,
+    "p50": 6,
+    "p90": 10,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "MIA",
+      "home": true,
+      "wp": 0.6152,
+      "wpf": 0.72822
+     },
+     {
+      "week": 2,
+      "opp": "LAC",
+      "home": false,
+      "wp": 0.257,
+      "wpf": 0.14367
+     },
+     {
+      "week": 3,
+      "opp": "NO",
+      "home": false,
+      "wp": 0.3726,
+      "wpf": 0.36039
+     },
+     {
+      "week": 4,
+      "opp": "KC",
+      "home": true,
+      "wp": 0.428,
+      "wpf": 0.32865
+     },
+     {
+      "week": 5,
+      "opp": "NE",
+      "home": false,
+      "wp": 0.2833,
+      "wpf": 0.22792
+     },
+     {
+      "week": 6,
+      "opp": "BUF",
+      "home": true,
+      "wp": 0.3718,
+      "wpf": 0.27428
+     },
+     {
+      "week": 7,
+      "opp": "LAR",
+      "home": true,
+      "wp": 0.3807,
+      "wpf": 0.22992
+     },
+     {
+      "week": 8,
+      "opp": "NYJ",
+      "home": false,
+      "wp": 0.4893,
+      "wpf": 0.49112
+     },
+     {
+      "week": 9,
+      "opp": "SF",
+      "home": false,
+      "wp": 0.3015,
+      "wpf": 0.22549
+     },
+     {
+      "week": 10,
+      "opp": "SEA",
+      "home": true,
+      "wp": 0.3232,
+      "wpf": 0.28807
+     },
+     {
+      "week": 11,
+      "opp": "DEN",
+      "home": false,
+      "wp": 0.2761,
+      "wpf": 0.22719
+     },
+     {
+      "week": 12,
+      "opp": "CLE",
+      "home": false,
+      "wp": 0.4106,
+      "wpf": 0.47737
+     },
+     {
+      "week": 14,
+      "opp": "LAC",
+      "home": true,
+      "wp": 0.4972,
+      "wpf": 0.32417
+     },
+     {
+      "week": 15,
+      "opp": "DEN",
+      "home": true,
+      "wp": 0.3914,
+      "wpf": 0.33142
+     },
+     {
+      "week": 16,
+      "opp": "TEN",
+      "home": true,
+      "wp": 0.5871,
+      "wpf": 0.54236
+     },
+     {
+      "week": 17,
+      "opp": "ARI",
+      "home": false,
+      "wp": 0.4372,
+      "wpf": 0.55362
+     },
+     {
+      "week": 18,
+      "opp": "KC",
+      "home": false,
+      "wp": 0.3084,
+      "wpf": 0.22585
+     }
+    ]
+   },
+   "MIA": {
+    "name": "Dolphins",
+    "division": "AFC East",
+    "line": 4.0,
+    "ew": 3.92,
+    "sd": 2.3,
+    "dist": {
+     "0": 0.0246,
+     "1": 0.0757,
+     "2": 0.1359,
+     "3": 0.1676,
+     "4": 0.1706,
+     "5": 0.1466,
+     "6": 0.1113,
+     "7": 0.0751,
+     "8": 0.0462,
+     "9": 0.0252,
+     "10": 0.0126,
+     "11": 0.0054,
+     "12": 0.0022,
+     "13": 0.0008,
+     "14": 0.0001,
+     "15": 0.0001,
+     "16": 0.0,
+     "17": 0.0
+    },
+    "p10": 1,
+    "p50": 4,
+    "p90": 7,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "LV",
+      "home": false,
+      "wp": 0.3848,
+      "wpf": 0.27178
+     },
+     {
+      "week": 2,
+      "opp": "SF",
+      "home": false,
+      "wp": 0.2165,
+      "wpf": 0.10008
+     },
+     {
+      "week": 3,
+      "opp": "KC",
+      "home": true,
+      "wp": 0.2958,
+      "wpf": 0.14088
+     },
+     {
+      "week": 4,
+      "opp": "MIN",
+      "home": false,
+      "wp": 0.2971,
+      "wpf": 0.20943
+     },
+     {
+      "week": 5,
+      "opp": "CIN",
+      "home": true,
+      "wp": 0.4891,
+      "wpf": 0.26718
+     },
+     {
+      "week": 7,
+      "opp": "NYJ",
+      "home": false,
+      "wp": 0.5046,
+      "wpf": 0.37973
+     },
+     {
+      "week": 8,
+      "opp": "NE",
+      "home": true,
+      "wp": 0.4146,
+      "wpf": 0.23989
+     },
+     {
+      "week": 9,
+      "opp": "DET",
+      "home": true,
+      "wp": 0.4099,
+      "wpf": 0.24294
+     },
+     {
+      "week": 10,
+      "opp": "IND",
+      "home": false,
+      "wp": 0.3809,
+      "wpf": 0.23968
+     },
+     {
+      "week": 11,
+      "opp": "BUF",
+      "home": false,
+      "wp": 0.2717,
+      "wpf": 0.12445
+     },
+     {
+      "week": 12,
+      "opp": "NYJ",
+      "home": true,
+      "wp": 0.6295,
+      "wpf": 0.50524
+     },
+     {
+      "week": 13,
+      "opp": "DEN",
+      "home": false,
+      "wp": 0.2891,
+      "wpf": 0.15756
+     },
+     {
+      "week": 14,
+      "opp": "CHI",
+      "home": true,
+      "wp": 0.4518,
+      "wpf": 0.27937
+     },
+     {
+      "week": 15,
+      "opp": "GB",
+      "home": false,
+      "wp": 0.3634,
+      "wpf": 0.1765
+     },
+     {
+      "week": 16,
+      "opp": "LAC",
+      "home": true,
+      "wp": 0.5126,
+      "wpf": 0.23336
+     },
+     {
+      "week": 17,
+      "opp": "BUF",
+      "home": true,
+      "wp": 0.3865,
+      "wpf": 0.19357
+     },
+     {
+      "week": 18,
+      "opp": "NE",
+      "home": false,
+      "wp": 0.2965,
+      "wpf": 0.15811
+     }
+    ]
+   },
+   "MIN": {
+    "name": "Vikings",
+    "division": "NFC North",
+    "line": 8.5,
+    "ew": 8.52,
+    "sd": 2.77,
+    "dist": {
+     "0": 0.0004,
+     "1": 0.0022,
+     "2": 0.008,
+     "3": 0.0209,
+     "4": 0.0433,
+     "5": 0.0679,
+     "6": 0.0973,
+     "7": 0.1215,
+     "8": 0.1358,
+     "9": 0.1339,
+     "10": 0.1234,
+     "11": 0.0977,
+     "12": 0.0691,
+     "13": 0.0434,
+     "14": 0.0227,
+     "15": 0.0095,
+     "16": 0.0024,
+     "17": 0.0005
+    },
+    "p10": 5,
+    "p50": 9,
+    "p90": 12,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "GB",
+      "home": true,
+      "wp": 0.5309,
+      "wpf": 0.40405
+     },
+     {
+      "week": 2,
+      "opp": "CHI",
+      "home": false,
+      "wp": 0.401,
+      "wpf": 0.33443
+     },
+     {
+      "week": 3,
+      "opp": "TB",
+      "home": false,
+      "wp": 0.4834,
+      "wpf": 0.4304
+     },
+     {
+      "week": 4,
+      "opp": "MIA",
+      "home": true,
+      "wp": 0.7029,
+      "wpf": 0.79057
+     },
+     {
+      "week": 5,
+      "opp": "NO",
+      "home": false,
+      "wp": 0.5644,
+      "wpf": 0.53925
+     },
+     {
+      "week": 7,
+      "opp": "IND",
+      "home": true,
+      "wp": 0.6514,
+      "wpf": 0.60438
+     },
+     {
+      "week": 8,
+      "opp": "DET",
+      "home": false,
+      "wp": 0.4311,
+      "wpf": 0.35839
+     },
+     {
+      "week": 9,
+      "opp": "BUF",
+      "home": true,
+      "wp": 0.5337,
+      "wpf": 0.41032
+     },
+     {
+      "week": 10,
+      "opp": "GB",
+      "home": false,
+      "wp": 0.5095,
+      "wpf": 0.38358
+     },
+     {
+      "week": 11,
+      "opp": "SF",
+      "home": false,
+      "wp": 0.4569,
+      "wpf": 0.35075
+     },
+     {
+      "week": 12,
+      "opp": "ATL",
+      "home": true,
+      "wp": 0.6566,
+      "wpf": 0.65218
+     },
+     {
+      "week": 13,
+      "opp": "CAR",
+      "home": true,
+      "wp": 0.6849,
+      "wpf": 0.65661
+     },
+     {
+      "week": 14,
+      "opp": "NE",
+      "home": false,
+      "wp": 0.4359,
+      "wpf": 0.3546
+     },
+     {
+      "week": 15,
+      "opp": "DET",
+      "home": true,
+      "wp": 0.5577,
+      "wpf": 0.48172
+     },
+     {
+      "week": 16,
+      "opp": "WAS",
+      "home": true,
+      "wp": 0.6425,
+      "wpf": 0.59912
+     },
+     {
+      "week": 17,
+      "opp": "NYJ",
+      "home": false,
+      "wp": 0.6498,
+      "wpf": 0.64022
+     },
+     {
+      "week": 18,
+      "opp": "CHI",
+      "home": true,
+      "wp": 0.5995,
+      "wpf": 0.52908
+     }
+    ]
+   },
+   "NE": {
+    "name": "Patriots",
+    "division": "AFC East",
+    "line": 9.5,
+    "ew": 9.95,
+    "sd": 2.67,
+    "dist": {
+     "0": 0.0,
+     "1": 0.0004,
+     "2": 0.0025,
+     "3": 0.0061,
+     "4": 0.0159,
+     "5": 0.0318,
+     "6": 0.0554,
+     "7": 0.0844,
+     "8": 0.1127,
+     "9": 0.134,
+     "10": 0.142,
+     "11": 0.136,
+     "12": 0.1146,
+     "13": 0.0833,
+     "14": 0.0482,
+     "15": 0.0237,
+     "16": 0.0073,
+     "17": 0.0015
+    },
+    "p10": 6,
+    "p50": 10,
+    "p90": 13,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "SEA",
+      "home": false,
+      "wp": 0.3618,
+      "wpf": 0.39143
+     },
+     {
+      "week": 2,
+      "opp": "PIT",
+      "home": true,
+      "wp": 0.6596,
+      "wpf": 0.69426
+     },
+     {
+      "week": 3,
+      "opp": "JAX",
+      "home": false,
+      "wp": 0.4749,
+      "wpf": 0.50735
+     },
+     {
+      "week": 4,
+      "opp": "BUF",
+      "home": false,
+      "wp": 0.4081,
+      "wpf": 0.37089
+     },
+     {
+      "week": 5,
+      "opp": "LV",
+      "home": true,
+      "wp": 0.7167,
+      "wpf": 0.77208
+     },
+     {
+      "week": 6,
+      "opp": "NYJ",
+      "home": true,
+      "wp": 0.7598,
+      "wpf": 0.81012
+     },
+     {
+      "week": 7,
+      "opp": "CHI",
+      "home": false,
+      "wp": 0.4741,
+      "wpf": 0.48762
+     },
+     {
+      "week": 8,
+      "opp": "MIA",
+      "home": false,
+      "wp": 0.5854,
+      "wpf": 0.76011
+     },
+     {
+      "week": 9,
+      "opp": "GB",
+      "home": true,
+      "wp": 0.6348,
+      "wpf": 0.59425
+     },
+     {
+      "week": 10,
+      "opp": "DET",
+      "home": false,
+      "wp": 0.4318,
+      "wpf": 0.44068
+     },
+     {
+      "week": 12,
+      "opp": "LAC",
+      "home": false,
+      "wp": 0.535,
+      "wpf": 0.42769
+     },
+     {
+      "week": 13,
+      "opp": "BUF",
+      "home": true,
+      "wp": 0.5345,
+      "wpf": 0.49541
+     },
+     {
+      "week": 14,
+      "opp": "MIN",
+      "home": true,
+      "wp": 0.5641,
+      "wpf": 0.6454
+     },
+     {
+      "week": 15,
+      "opp": "KC",
+      "home": false,
+      "wp": 0.4654,
+      "wpf": 0.43268
+     },
+     {
+      "week": 16,
+      "opp": "NYJ",
+      "home": false,
+      "wp": 0.6505,
+      "wpf": 0.71514
+     },
+     {
+      "week": 17,
+      "opp": "DEN",
+      "home": true,
+      "wp": 0.5549,
+      "wpf": 0.56269
+     },
+     {
+      "week": 18,
+      "opp": "MIA",
+      "home": true,
+      "wp": 0.7035,
+      "wpf": 0.84189
+     }
+    ]
+   },
+   "NO": {
+    "name": "Saints",
+    "division": "NFC South",
+    "line": 7.5,
+    "ew": 7.64,
+    "sd": 2.74,
+    "dist": {
+     "0": 0.0007,
+     "1": 0.0053,
+     "2": 0.0167,
+     "3": 0.0356,
+     "4": 0.0644,
+     "5": 0.0941,
+     "6": 0.1215,
+     "7": 0.1372,
+     "8": 0.1381,
+     "9": 0.1254,
+     "10": 0.0987,
+     "11": 0.0732,
+     "12": 0.0467,
+     "13": 0.025,
+     "14": 0.0117,
+     "15": 0.0042,
+     "16": 0.0012,
+     "17": 0.0002
+    },
+    "p10": 4,
+    "p50": 8,
+    "p90": 11,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "DET",
+      "home": false,
+      "wp": 0.283,
+      "wpf": 0.24363
+     },
+     {
+      "week": 2,
+      "opp": "BAL",
+      "home": false,
+      "wp": 0.2736,
+      "wpf": 0.19786
+     },
+     {
+      "week": 3,
+      "opp": "LV",
+      "home": true,
+      "wp": 0.6274,
+      "wpf": 0.63961
+     },
+     {
+      "week": 4,
+      "opp": "ATL",
+      "home": true,
+      "wp": 0.5325,
+      "wpf": 0.5529
+     },
+     {
+      "week": 5,
+      "opp": "MIN",
+      "home": true,
+      "wp": 0.4356,
+      "wpf": 0.46075
+     },
+     {
+      "week": 6,
+      "opp": "NYG",
+      "home": false,
+      "wp": 0.4237,
+      "wpf": 0.39312
+     },
+     {
+      "week": 7,
+      "opp": "PIT",
+      "home": true,
+      "wp": 0.504,
+      "wpf": 0.48381
+     },
+     {
+      "week": 9,
+      "opp": "CLE",
+      "home": true,
+      "wp": 0.5726,
+      "wpf": 0.6493
+     },
+     {
+      "week": 10,
+      "opp": "CAR",
+      "home": true,
+      "wp": 0.5636,
+      "wpf": 0.55709
+     },
+     {
+      "week": 11,
+      "opp": "CHI",
+      "home": false,
+      "wp": 0.3488,
+      "wpf": 0.30799
+     },
+     {
+      "week": 12,
+      "opp": "CIN",
+      "home": false,
+      "wp": 0.3842,
+      "wpf": 0.29564
+     },
+     {
+      "week": 13,
+      "opp": "GB",
+      "home": true,
+      "wp": 0.5084,
+      "wpf": 0.40684
+     },
+     {
+      "week": 14,
+      "opp": "CAR",
+      "home": false,
+      "wp": 0.4368,
+      "wpf": 0.43031
+     },
+     {
+      "week": 15,
+      "opp": "TB",
+      "home": false,
+      "wp": 0.4038,
+      "wpf": 0.37714
+     },
+     {
+      "week": 16,
+      "opp": "ARI",
+      "home": true,
+      "wp": 0.5991,
+      "wpf": 0.71548
+     },
+     {
+      "week": 17,
+      "opp": "ATL",
+      "home": false,
+      "wp": 0.4062,
+      "wpf": 0.42617
+     },
+     {
+      "week": 18,
+      "opp": "TB",
+      "home": true,
+      "wp": 0.53,
+      "wpf": 0.50202
+     }
+    ]
+   },
+   "NYG": {
+    "name": "Giants",
+    "division": "NFC East",
+    "line": 7.5,
+    "ew": 7.39,
+    "sd": 2.69,
+    "dist": {
+     "0": 0.0009,
+     "1": 0.0056,
+     "2": 0.019,
+     "3": 0.0398,
+     "4": 0.0714,
+     "5": 0.1036,
+     "6": 0.1306,
+     "7": 0.1391,
+     "8": 0.1364,
+     "9": 0.1224,
+     "10": 0.0928,
+     "11": 0.0642,
+     "12": 0.0403,
+     "13": 0.0208,
+     "14": 0.0094,
+     "15": 0.0029,
+     "16": 0.0007,
+     "17": 0.0001
+    },
+    "p10": 4,
+    "p50": 7,
+    "p90": 11,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "DAL",
+      "home": true,
+      "wp": 0.4531,
+      "wpf": 0.38322
+     },
+     {
+      "week": 2,
+      "opp": "LAR",
+      "home": false,
+      "wp": 0.2564,
+      "wpf": 0.1669
+     },
+     {
+      "week": 3,
+      "opp": "TEN",
+      "home": true,
+      "wp": 0.6115,
+      "wpf": 0.61079
+     },
+     {
+      "week": 4,
+      "opp": "ARI",
+      "home": true,
+      "wp": 0.6118,
+      "wpf": 0.75062
+     },
+     {
+      "week": 5,
+      "opp": "WAS",
+      "home": false,
+      "wp": 0.4042,
+      "wpf": 0.41481
+     },
+     {
+      "week": 6,
+      "opp": "NO",
+      "home": true,
+      "wp": 0.5763,
+      "wpf": 0.60688
+     },
+     {
+      "week": 7,
+      "opp": "HOU",
+      "home": false,
+      "wp": 0.345,
+      "wpf": 0.29145
+     },
+     {
+      "week": 9,
+      "opp": "PHI",
+      "home": false,
+      "wp": 0.3456,
+      "wpf": 0.30622
+     },
+     {
+      "week": 10,
+      "opp": "WAS",
+      "home": true,
+      "wp": 0.5305,
+      "wpf": 0.54142
+     },
+     {
+      "week": 11,
+      "opp": "JAX",
+      "home": true,
+      "wp": 0.4632,
+      "wpf": 0.46746
+     },
+     {
+      "week": 12,
+      "opp": "IND",
+      "home": false,
+      "wp": 0.4135,
+      "wpf": 0.42003
+     },
+     {
+      "week": 13,
+      "opp": "SF",
+      "home": true,
+      "wp": 0.4689,
+      "wpf": 0.41601
+     },
+     {
+      "week": 14,
+      "opp": "SEA",
+      "home": false,
+      "wp": 0.2563,
+      "wpf": 0.25888
+     },
+     {
+      "week": 15,
+      "opp": "CLE",
+      "home": true,
+      "wp": 0.5855,
+      "wpf": 0.68901
+     },
+     {
+      "week": 16,
+      "opp": "DET",
+      "home": false,
+      "wp": 0.3219,
+      "wpf": 0.3054
+     },
+     {
+      "week": 17,
+      "opp": "DAL",
+      "home": false,
+      "wp": 0.403,
+      "wpf": 0.3361
+     },
+     {
+      "week": 18,
+      "opp": "PHI",
+      "home": true,
+      "wp": 0.4688,
+      "wpf": 0.42448
+     }
+    ]
+   },
+   "NYJ": {
+    "name": "Jets",
+    "division": "AFC East",
+    "line": 5.5,
+    "ew": 5.54,
+    "sd": 2.53,
+    "dist": {
+     "0": 0.0054,
+     "1": 0.0249,
+     "2": 0.0603,
+     "3": 0.0995,
+     "4": 0.1358,
+     "5": 0.1527,
+     "6": 0.1499,
+     "7": 0.1267,
+     "8": 0.0968,
+     "9": 0.0688,
+     "10": 0.0404,
+     "11": 0.0216,
+     "12": 0.0106,
+     "13": 0.0044,
+     "14": 0.0016,
+     "15": 0.0003,
+     "16": 0.0001,
+     "17": 0.0
+    },
+    "p10": 3,
+    "p50": 6,
+    "p90": 9,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "TEN",
+      "home": false,
+      "wp": 0.4149,
+      "wpf": 0.36977
+     },
+     {
+      "week": 2,
+      "opp": "GB",
+      "home": true,
+      "wp": 0.34,
+      "wpf": 0.24346
+     },
+     {
+      "week": 3,
+      "opp": "DET",
+      "home": false,
+      "wp": 0.2226,
+      "wpf": 0.18039
+     },
+     {
+      "week": 4,
+      "opp": "CHI",
+      "home": false,
+      "wp": 0.2387,
+      "wpf": 0.19704
+     },
+     {
+      "week": 5,
+      "opp": "CLE",
+      "home": true,
+      "wp": 0.4842,
+      "wpf": 0.54993
+     },
+     {
+      "week": 6,
+      "opp": "NE",
+      "home": false,
+      "wp": 0.2402,
+      "wpf": 0.18988
+     },
+     {
+      "week": 7,
+      "opp": "MIA",
+      "home": true,
+      "wp": 0.4954,
+      "wpf": 0.62027
+     },
+     {
+      "week": 8,
+      "opp": "LV",
+      "home": true,
+      "wp": 0.5107,
+      "wpf": 0.50888
+     },
+     {
+      "week": 9,
+      "opp": "KC",
+      "home": false,
+      "wp": 0.2633,
+      "wpf": 0.1884
+     },
+     {
+      "week": 10,
+      "opp": "BUF",
+      "home": true,
+      "wp": 0.3229,
+      "wpf": 0.23214
+     },
+     {
+      "week": 11,
+      "opp": "LAC",
+      "home": false,
+      "wp": 0.3233,
+      "wpf": 0.18703
+     },
+     {
+      "week": 12,
+      "opp": "MIA",
+      "home": false,
+      "wp": 0.3705,
+      "wpf": 0.49476
+     },
+     {
+      "week": 14,
+      "opp": "DEN",
+      "home": true,
+      "wp": 0.3416,
+      "wpf": 0.28419
+     },
+     {
+      "week": 15,
+      "opp": "ARI",
+      "home": false,
+      "wp": 0.3856,
+      "wpf": 0.49868
+     },
+     {
+      "week": 16,
+      "opp": "NE",
+      "home": true,
+      "wp": 0.3495,
+      "wpf": 0.28486
+     },
+     {
+      "week": 17,
+      "opp": "MIN",
+      "home": true,
+      "wp": 0.3502,
+      "wpf": 0.35978
+     },
+     {
+      "week": 18,
+      "opp": "BUF",
+      "home": false,
+      "wp": 0.2181,
+      "wpf": 0.15026
+     }
+    ]
+   },
+   "PHI": {
+    "name": "Eagles",
+    "division": "NFC East",
+    "line": 10.5,
+    "ew": 9.98,
+    "sd": 2.77,
+    "dist": {
+     "0": 0.0001,
+     "1": 0.0008,
+     "2": 0.0032,
+     "3": 0.0083,
+     "4": 0.018,
+     "5": 0.0343,
+     "6": 0.0556,
+     "7": 0.0809,
+     "8": 0.11,
+     "9": 0.1307,
+     "10": 0.1379,
+     "11": 0.1309,
+     "12": 0.1134,
+     "13": 0.0837,
+     "14": 0.0537,
+     "15": 0.0273,
+     "16": 0.0096,
+     "17": 0.0017
+    },
+    "p10": 6,
+    "p50": 10,
+    "p90": 13,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "WAS",
+      "home": true,
+      "wp": 0.6394,
+      "wpf": 0.68914
+     },
+     {
+      "week": 2,
+      "opp": "TEN",
+      "home": false,
+      "wp": 0.6345,
+      "wpf": 0.67437
+     },
+     {
+      "week": 3,
+      "opp": "CHI",
+      "home": false,
+      "wp": 0.4752,
+      "wpf": 0.50539
+     },
+     {
+      "week": 4,
+      "opp": "LAR",
+      "home": true,
+      "wp": 0.5228,
+      "wpf": 0.43234
+     },
+     {
+      "week": 5,
+      "opp": "JAX",
+      "home": false,
+      "wp": 0.431,
+      "wpf": 0.4797
+     },
+     {
+      "week": 6,
+      "opp": "CAR",
+      "home": true,
+      "wp": 0.6666,
+      "wpf": 0.72561
+     },
+     {
+      "week": 7,
+      "opp": "DAL",
+      "home": true,
+      "wp": 0.6221,
+      "wpf": 0.59632
+     },
+     {
+      "week": 8,
+      "opp": "WAS",
+      "home": false,
+      "wp": 0.4981,
+      "wpf": 0.55372
+     },
+     {
+      "week": 9,
+      "opp": "NYG",
+      "home": true,
+      "wp": 0.6544,
+      "wpf": 0.69378
+     },
+     {
+      "week": 11,
+      "opp": "PIT",
+      "home": true,
+      "wp": 0.6105,
+      "wpf": 0.66255
+     },
+     {
+      "week": 12,
+      "opp": "DAL",
+      "home": false,
+      "wp": 0.4968,
+      "wpf": 0.46976
+     },
+     {
+      "week": 13,
+      "opp": "ARI",
+      "home": false,
+      "wp": 0.5803,
+      "wpf": 0.75959
+     },
+     {
+      "week": 14,
+      "opp": "IND",
+      "home": true,
+      "wp": 0.6324,
+      "wpf": 0.67892
+     },
+     {
+      "week": 15,
+      "opp": "SEA",
+      "home": true,
+      "wp": 0.4609,
+      "wpf": 0.50905
+     },
+     {
+      "week": 16,
+      "opp": "HOU",
+      "home": true,
+      "wp": 0.5626,
+      "wpf": 0.54584
+     },
+     {
+      "week": 17,
+      "opp": "SF",
+      "home": false,
+      "wp": 0.4367,
+      "wpf": 0.42807
+     },
+     {
+      "week": 18,
+      "opp": "NYG",
+      "home": false,
+      "wp": 0.5312,
+      "wpf": 0.57552
+     }
+    ]
+   },
+   "PIT": {
+    "name": "Steelers",
+    "division": "AFC North",
+    "line": 8.5,
+    "ew": 8.14,
+    "sd": 2.77,
+    "dist": {
+     "0": 0.0006,
+     "1": 0.0032,
+     "2": 0.012,
+     "3": 0.0272,
+     "4": 0.0495,
+     "5": 0.0788,
+     "6": 0.1085,
+     "7": 0.1308,
+     "8": 0.1358,
+     "9": 0.131,
+     "10": 0.1121,
+     "11": 0.0874,
+     "12": 0.0601,
+     "13": 0.036,
+     "14": 0.0179,
+     "15": 0.0071,
+     "16": 0.002,
+     "17": 0.0002
+    },
+    "p10": 5,
+    "p50": 8,
+    "p90": 12,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "ATL",
+      "home": true,
+      "wp": 0.6048,
+      "wpf": 0.64302
+     },
+     {
+      "week": 2,
+      "opp": "NE",
+      "home": false,
+      "wp": 0.3404,
+      "wpf": 0.30574
+     },
+     {
+      "week": 3,
+      "opp": "CIN",
+      "home": true,
+      "wp": 0.493,
+      "wpf": 0.41493
+     },
+     {
+      "week": 4,
+      "opp": "CLE",
+      "home": false,
+      "wp": 0.54,
+      "wpf": 0.63752
+     },
+     {
+      "week": 5,
+      "opp": "IND",
+      "home": true,
+      "wp": 0.5859,
+      "wpf": 0.5813
+     },
+     {
+      "week": 6,
+      "opp": "TB",
+      "home": false,
+      "wp": 0.4625,
+      "wpf": 0.45473
+     },
+     {
+      "week": 7,
+      "opp": "NO",
+      "home": false,
+      "wp": 0.496,
+      "wpf": 0.51619
+     },
+     {
+      "week": 8,
+      "opp": "CLE",
+      "home": true,
+      "wp": 0.6302,
+      "wpf": 0.71856
+     },
+     {
+      "week": 10,
+      "opp": "CIN",
+      "home": false,
+      "wp": 0.4423,
+      "wpf": 0.36646
+     },
+     {
+      "week": 11,
+      "opp": "PHI",
+      "home": false,
+      "wp": 0.3895,
+      "wpf": 0.33745
+     },
+     {
+      "week": 12,
+      "opp": "DEN",
+      "home": true,
+      "wp": 0.4856,
+      "wpf": 0.45398
+     },
+     {
+      "week": 13,
+      "opp": "HOU",
+      "home": true,
+      "wp": 0.5145,
+      "wpf": 0.4415
+     },
+     {
+      "week": 14,
+      "opp": "JAX",
+      "home": false,
+      "wp": 0.384,
+      "wpf": 0.37723
+     },
+     {
+      "week": 15,
+      "opp": "BAL",
+      "home": true,
+      "wp": 0.4995,
+      "wpf": 0.41472
+     },
+     {
+      "week": 16,
+      "opp": "CAR",
+      "home": true,
+      "wp": 0.6215,
+      "wpf": 0.6342
+     },
+     {
+      "week": 17,
+      "opp": "TEN",
+      "home": false,
+      "wp": 0.556,
+      "wpf": 0.54393
+     },
+     {
+      "week": 18,
+      "opp": "BAL",
+      "home": false,
+      "wp": 0.3744,
+      "wpf": 0.2982
+     }
+    ]
+   },
+   "SEA": {
+    "name": "Seahawks",
+    "division": "NFC West",
+    "line": 10.5,
+    "ew": 10.53,
+    "sd": 2.67,
+    "dist": {
+     "0": 0.0,
+     "1": 0.0003,
+     "2": 0.0011,
+     "3": 0.0043,
+     "4": 0.0115,
+     "5": 0.0229,
+     "6": 0.0415,
+     "7": 0.0667,
+     "8": 0.0979,
+     "9": 0.1211,
+     "10": 0.1396,
+     "11": 0.1422,
+     "12": 0.1293,
+     "13": 0.1032,
+     "14": 0.0668,
+     "15": 0.035,
+     "16": 0.0136,
+     "17": 0.0029
+    },
+    "p10": 7,
+    "p50": 10,
+    "p90": 14,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "NE",
+      "home": true,
+      "wp": 0.6382,
+      "wpf": 0.60857
+     },
+     {
+      "week": 2,
+      "opp": "ARI",
+      "home": false,
+      "wp": 0.7722,
+      "wpf": 0.86463
+     },
+     {
+      "week": 3,
+      "opp": "WAS",
+      "home": false,
+      "wp": 0.6168,
+      "wpf": 0.62396
+     },
+     {
+      "week": 4,
+      "opp": "LAC",
+      "home": true,
+      "wp": 0.7295,
+      "wpf": 0.6069
+     },
+     {
+      "week": 5,
+      "opp": "SF",
+      "home": true,
+      "wp": 0.6617,
+      "wpf": 0.60892
+     },
+     {
+      "week": 6,
+      "opp": "DEN",
+      "home": false,
+      "wp": 0.5095,
+      "wpf": 0.48584
+     },
+     {
+      "week": 7,
+      "opp": "KC",
+      "home": true,
+      "wp": 0.6688,
+      "wpf": 0.60926
+     },
+     {
+      "week": 8,
+      "opp": "CHI",
+      "home": true,
+      "wp": 0.6768,
+      "wpf": 0.66083
+     },
+     {
+      "week": 9,
+      "opp": "ARI",
+      "home": true,
+      "wp": 0.782,
+      "wpf": 0.87112
+     },
+     {
+      "week": 10,
+      "opp": "LV",
+      "home": false,
+      "wp": 0.6768,
+      "wpf": 0.71193
+     },
+     {
+      "week": 12,
+      "opp": "SF",
+      "home": false,
+      "wp": 0.5391,
+      "wpf": 0.48216
+     },
+     {
+      "week": 13,
+      "opp": "DAL",
+      "home": true,
+      "wp": 0.7152,
+      "wpf": 0.65011
+     },
+     {
+      "week": 14,
+      "opp": "NYG",
+      "home": true,
+      "wp": 0.7437,
+      "wpf": 0.74112
+     },
+     {
+      "week": 15,
+      "opp": "PHI",
+      "home": false,
+      "wp": 0.5391,
+      "wpf": 0.49095
+     },
+     {
+      "week": 16,
+      "opp": "LAR",
+      "home": true,
+      "wp": 0.6235,
+      "wpf": 0.48699
+     },
+     {
+      "week": 17,
+      "opp": "CAR",
+      "home": false,
+      "wp": 0.644,
+      "wpf": 0.66361
+     },
+     {
+      "week": 18,
+      "opp": "LAR",
+      "home": false,
+      "wp": 0.4983,
+      "wpf": 0.36279
+     }
+    ]
+   },
+   "SF": {
+    "name": "49ers",
+    "division": "NFC West",
+    "line": 10.5,
+    "ew": 10.02,
+    "sd": 2.62,
+    "dist": {
+     "0": 0.0,
+     "1": 0.0002,
+     "2": 0.0019,
+     "3": 0.005,
+     "4": 0.0132,
+     "5": 0.0286,
+     "6": 0.0542,
+     "7": 0.0845,
+     "8": 0.111,
+     "9": 0.1347,
+     "10": 0.1437,
+     "11": 0.1392,
+     "12": 0.116,
+     "13": 0.0851,
+     "14": 0.0494,
+     "15": 0.0241,
+     "16": 0.0079,
+     "17": 0.0013
+    },
+    "p10": 6,
+    "p50": 10,
+    "p90": 13,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "LAR",
+      "home": false,
+      "wp": 0.3868,
+      "wpf": 0.31234
+     },
+     {
+      "week": 2,
+      "opp": "MIA",
+      "home": true,
+      "wp": 0.7835,
+      "wpf": 0.89992
+     },
+     {
+      "week": 3,
+      "opp": "ARI",
+      "home": true,
+      "wp": 0.7908,
+      "wpf": 0.89947
+     },
+     {
+      "week": 4,
+      "opp": "DEN",
+      "home": true,
+      "wp": 0.5339,
+      "wpf": 0.56691
+     },
+     {
+      "week": 5,
+      "opp": "SEA",
+      "home": false,
+      "wp": 0.3383,
+      "wpf": 0.39108
+     },
+     {
+      "week": 6,
+      "opp": "WAS",
+      "home": true,
+      "wp": 0.6232,
+      "wpf": 0.68171
+     },
+     {
+      "week": 7,
+      "opp": "ATL",
+      "home": false,
+      "wp": 0.5132,
+      "wpf": 0.61685
+     },
+     {
+      "week": 9,
+      "opp": "LV",
+      "home": true,
+      "wp": 0.6985,
+      "wpf": 0.77451
+     },
+     {
+      "week": 10,
+      "opp": "DAL",
+      "home": false,
+      "wp": 0.4968,
+      "wpf": 0.47853
+     },
+     {
+      "week": 11,
+      "opp": "MIN",
+      "home": true,
+      "wp": 0.5431,
+      "wpf": 0.64925
+     },
+     {
+      "week": 12,
+      "opp": "SEA",
+      "home": true,
+      "wp": 0.4609,
+      "wpf": 0.51784
+     },
+     {
+      "week": 13,
+      "opp": "NYG",
+      "home": false,
+      "wp": 0.5311,
+      "wpf": 0.58399
+     },
+     {
+      "week": 14,
+      "opp": "LAR",
+      "home": true,
+      "wp": 0.5227,
+      "wpf": 0.44089
+     },
+     {
+      "week": 15,
+      "opp": "LAC",
+      "home": false,
+      "wp": 0.5138,
+      "wpf": 0.43181
+     },
+     {
+      "week": 16,
+      "opp": "KC",
+      "home": false,
+      "wp": 0.4443,
+      "wpf": 0.43679
+     },
+     {
+      "week": 17,
+      "opp": "PHI",
+      "home": true,
+      "wp": 0.5633,
+      "wpf": 0.57193
+     },
+     {
+      "week": 18,
+      "opp": "ARI",
+      "home": false,
+      "wp": 0.5802,
+      "wpf": 0.76588
+     }
+    ]
+   },
+   "TB": {
+    "name": "Buccaneers",
+    "division": "NFC South",
+    "line": 8.5,
+    "ew": 8.04,
+    "sd": 2.76,
+    "dist": {
+     "0": 0.0004,
+     "1": 0.0042,
+     "2": 0.0126,
+     "3": 0.029,
+     "4": 0.0527,
+     "5": 0.0839,
+     "6": 0.1085,
+     "7": 0.1307,
+     "8": 0.1393,
+     "9": 0.1306,
+     "10": 0.1102,
+     "11": 0.0848,
+     "12": 0.0563,
+     "13": 0.0331,
+     "14": 0.0163,
+     "15": 0.0056,
+     "16": 0.0014,
+     "17": 0.0003
+    },
+    "p10": 5,
+    "p50": 8,
+    "p90": 12,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "CIN",
+      "home": false,
+      "wp": 0.3808,
+      "wpf": 0.31638
+     },
+     {
+      "week": 2,
+      "opp": "CLE",
+      "home": true,
+      "wp": 0.6581,
+      "wpf": 0.74846
+     },
+     {
+      "week": 3,
+      "opp": "MIN",
+      "home": true,
+      "wp": 0.5166,
+      "wpf": 0.5696
+     },
+     {
+      "week": 4,
+      "opp": "GB",
+      "home": true,
+      "wp": 0.5419,
+      "wpf": 0.4674
+     },
+     {
+      "week": 5,
+      "opp": "DAL",
+      "home": false,
+      "wp": 0.4229,
+      "wpf": 0.35134
+     },
+     {
+      "week": 6,
+      "opp": "PIT",
+      "home": true,
+      "wp": 0.5375,
+      "wpf": 0.54527
+     },
+     {
+      "week": 7,
+      "opp": "CAR",
+      "home": false,
+      "wp": 0.4702,
+      "wpf": 0.49158
+     },
+     {
+      "week": 8,
+      "opp": "ATL",
+      "home": true,
+      "wp": 0.5658,
+      "wpf": 0.61278
+     },
+     {
+      "week": 9,
+      "opp": "CHI",
+      "home": false,
+      "wp": 0.3804,
+      "wpf": 0.36332
+     },
+     {
+      "week": 11,
+      "opp": "DET",
+      "home": false,
+      "wp": 0.3405,
+      "wpf": 0.32033
+     },
+     {
+      "week": 12,
+      "opp": "CAR",
+      "home": true,
+      "wp": 0.5964,
+      "wpf": 0.61683
+     },
+     {
+      "week": 13,
+      "opp": "LAC",
+      "home": true,
+      "wp": 0.5664,
+      "wpf": 0.4276
+     },
+     {
+      "week": 14,
+      "opp": "BAL",
+      "home": false,
+      "wp": 0.35,
+      "wpf": 0.28287
+     },
+     {
+      "week": 15,
+      "opp": "NO",
+      "home": true,
+      "wp": 0.5962,
+      "wpf": 0.62286
+     },
+     {
+      "week": 16,
+      "opp": "ATL",
+      "home": false,
+      "wp": 0.4391,
+      "wpf": 0.48736
+     },
+     {
+      "week": 17,
+      "opp": "LAR",
+      "home": true,
+      "wp": 0.4485,
+      "wpf": 0.31772
+     },
+     {
+      "week": 18,
+      "opp": "NO",
+      "home": false,
+      "wp": 0.47,
+      "wpf": 0.49798
+     }
+    ]
+   },
+   "TEN": {
+    "name": "Titans",
+    "division": "AFC South",
+    "line": 6.5,
+    "ew": 6.43,
+    "sd": 2.69,
+    "dist": {
+     "0": 0.0032,
+     "1": 0.0136,
+     "2": 0.038,
+     "3": 0.0709,
+     "4": 0.1046,
+     "5": 0.1303,
+     "6": 0.1408,
+     "7": 0.1371,
+     "8": 0.1198,
+     "9": 0.0938,
+     "10": 0.0668,
+     "11": 0.0413,
+     "12": 0.0228,
+     "13": 0.0109,
+     "14": 0.0042,
+     "15": 0.0015,
+     "16": 0.0004,
+     "17": 0.0
+    },
+    "p10": 3,
+    "p50": 6,
+    "p90": 10,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "NYJ",
+      "home": true,
+      "wp": 0.5851,
+      "wpf": 0.63023
+     },
+     {
+      "week": 2,
+      "opp": "PHI",
+      "home": true,
+      "wp": 0.3655,
+      "wpf": 0.32563
+     },
+     {
+      "week": 3,
+      "opp": "NYG",
+      "home": false,
+      "wp": 0.3885,
+      "wpf": 0.38921
+     },
+     {
+      "week": 4,
+      "opp": "BAL",
+      "home": false,
+      "wp": 0.2675,
+      "wpf": 0.21399
+     },
+     {
+      "week": 5,
+      "opp": "HOU",
+      "home": true,
+      "wp": 0.396,
+      "wpf": 0.33929
+     },
+     {
+      "week": 6,
+      "opp": "IND",
+      "home": false,
+      "wp": 0.3438,
+      "wpf": 0.35056
+     },
+     {
+      "week": 7,
+      "opp": "CLE",
+      "home": true,
+      "wp": 0.5128,
+      "wpf": 0.62346
+     },
+     {
+      "week": 8,
+      "opp": "CIN",
+      "home": false,
+      "wp": 0.328,
+      "wpf": 0.27209
+     },
+     {
+      "week": 10,
+      "opp": "JAX",
+      "home": true,
+      "wp": 0.3912,
+      "wpf": 0.39599
+     },
+     {
+      "week": 11,
+      "opp": "DAL",
+      "home": false,
+      "wp": 0.3338,
+      "wpf": 0.27372
+     },
+     {
+      "week": 12,
+      "opp": "JAX",
+      "home": false,
+      "wp": 0.2759,
+      "wpf": 0.27993
+     },
+     {
+      "week": 13,
+      "opp": "WAS",
+      "home": true,
+      "wp": 0.4573,
+      "wpf": 0.46895
+     },
+     {
+      "week": 14,
+      "opp": "DET",
+      "home": false,
+      "wp": 0.2591,
+      "wpf": 0.24521
+     },
+     {
+      "week": 15,
+      "opp": "IND",
+      "home": true,
+      "wp": 0.4668,
+      "wpf": 0.47424
+     },
+     {
+      "week": 16,
+      "opp": "LV",
+      "home": false,
+      "wp": 0.4129,
+      "wpf": 0.45764
+     },
+     {
+      "week": 17,
+      "opp": "PIT",
+      "home": true,
+      "wp": 0.444,
+      "wpf": 0.45607
+     },
+     {
+      "week": 18,
+      "opp": "HOU",
+      "home": false,
+      "wp": 0.28,
+      "wpf": 0.23348
+     }
+    ]
+   },
+   "WAS": {
+    "name": "Commanders",
+    "division": "NFC East",
+    "line": 7.5,
+    "ew": 7.62,
+    "sd": 2.78,
+    "dist": {
+     "0": 0.001,
+     "1": 0.0054,
+     "2": 0.0172,
+     "3": 0.0383,
+     "4": 0.0665,
+     "5": 0.0928,
+     "6": 0.1204,
+     "7": 0.1359,
+     "8": 0.1345,
+     "9": 0.1215,
+     "10": 0.1009,
+     "11": 0.0742,
+     "12": 0.0466,
+     "13": 0.0258,
+     "14": 0.0124,
+     "15": 0.0051,
+     "16": 0.0013,
+     "17": 0.0002
+    },
+    "p10": 4,
+    "p50": 8,
+    "p90": 11,
+    "schedule": [
+     {
+      "week": 1,
+      "opp": "PHI",
+      "home": false,
+      "wp": 0.3606,
+      "wpf": 0.31086
+     },
+     {
+      "week": 2,
+      "opp": "DAL",
+      "home": false,
+      "wp": 0.3854,
+      "wpf": 0.31038
+     },
+     {
+      "week": 3,
+      "opp": "SEA",
+      "home": true,
+      "wp": 0.3832,
+      "wpf": 0.37604
+     },
+     {
+      "week": 4,
+      "opp": "IND",
+      "home": true,
+      "wp": 0.5313,
+      "wpf": 0.52706
+     },
+     {
+      "week": 5,
+      "opp": "NYG",
+      "home": true,
+      "wp": 0.5958,
+      "wpf": 0.58519
+     },
+     {
+      "week": 6,
+      "opp": "SF",
+      "home": false,
+      "wp": 0.3768,
+      "wpf": 0.31829
+     },
+     {
+      "week": 8,
+      "opp": "PHI",
+      "home": true,
+      "wp": 0.5019,
+      "wpf": 0.44628
+     },
+     {
+      "week": 9,
+      "opp": "LAR",
+      "home": true,
+      "wp": 0.4611,
+      "wpf": 0.32239
+     },
+     {
+      "week": 10,
+      "opp": "NYG",
+      "home": false,
+      "wp": 0.4695,
+      "wpf": 0.45858
+     },
+     {
+      "week": 11,
+      "opp": "CIN",
+      "home": true,
+      "wp": 0.5558,
+      "wpf": 0.47763
+     },
+     {
+      "week": 12,
+      "opp": "ARI",
+      "home": false,
+      "wp": 0.5191,
+      "wpf": 0.66364
+     },
+     {
+      "week": 13,
+      "opp": "TEN",
+      "home": false,
+      "wp": 0.5427,
+      "wpf": 0.53105
+     },
+     {
+      "week": 14,
+      "opp": "HOU",
+      "home": true,
+      "wp": 0.5012,
+      "wpf": 0.42889
+     },
+     {
+      "week": 15,
+      "opp": "ATL",
+      "home": true,
+      "wp": 0.5783,
+      "wpf": 0.61791
+     },
+     {
+      "week": 16,
+      "opp": "MIN",
+      "home": false,
+      "wp": 0.3575,
+      "wpf": 0.40088
+     },
+     {
+      "week": 17,
+      "opp": "JAX",
+      "home": false,
+      "wp": 0.3713,
+      "wpf": 0.36507
+     },
+     {
+      "week": 18,
+      "opp": "DAL",
+      "home": true,
+      "wp": 0.5621,
+      "wpf": 0.47952
+     }
+    ]
+   }
+  },
+  "overlap": {
+   "ARI": {
+    "DAL": 1,
+    "DEN": 1,
+    "DET": 1,
+    "KC": 1,
+    "LAC": 1,
+    "LAR": 2,
+    "LV": 1,
+    "NO": 1,
+    "NYG": 1,
+    "NYJ": 1,
+    "PHI": 1,
+    "SEA": 2,
+    "SF": 2,
+    "WAS": 1
+   },
+   "DAL": {
+    "ARI": 1,
+    "BAL": 1,
+    "GB": 1,
+    "HOU": 1,
+    "IND": 1,
+    "JAX": 1,
+    "LAR": 1,
+    "NYG": 2,
+    "PHI": 2,
+    "SEA": 1,
+    "SF": 1,
+    "TB": 1,
+    "TEN": 1,
+    "WAS": 2
+   },
+   "DEN": {
+    "ARI": 1,
+    "BUF": 1,
+    "CAR": 1,
+    "JAX": 1,
+    "KC": 2,
+    "LAC": 2,
+    "LAR": 1,
+    "LV": 2,
+    "MIA": 1,
+    "NE": 1,
+    "NYJ": 1,
+    "PIT": 1,
+    "SEA": 1,
+    "SF": 1
+   },
+   "DET": {
+    "ARI": 1,
+    "ATL": 1,
+    "BUF": 1,
+    "CAR": 1,
+    "CHI": 2,
+    "GB": 2,
+    "MIA": 1,
+    "MIN": 2,
+    "NE": 1,
+    "NO": 1,
+    "NYG": 1,
+    "NYJ": 1,
+    "TB": 1,
+    "TEN": 1
+   },
+   "KC": {
+    "ARI": 1,
+    "ATL": 1,
+    "BUF": 1,
+    "CIN": 1,
+    "DEN": 2,
+    "IND": 1,
+    "LAC": 2,
+    "LAR": 1,
+    "LV": 2,
+    "MIA": 1,
+    "NE": 1,
+    "NYJ": 1,
+    "SEA": 1,
+    "SF": 1
+   },
+   "LAC": {
+    "ARI": 1,
+    "BAL": 1,
+    "BUF": 1,
+    "DEN": 2,
+    "HOU": 1,
+    "KC": 2,
+    "LAR": 1,
+    "LV": 2,
+    "MIA": 1,
+    "NE": 1,
+    "NYJ": 1,
+    "SEA": 1,
+    "SF": 1,
+    "TB": 1
+   },
+   "LAR": {
+    "ARI": 2,
+    "BUF": 1,
+    "DAL": 1,
+    "DEN": 1,
+    "GB": 1,
+    "KC": 1,
+    "LAC": 1,
+    "LV": 1,
+    "NYG": 1,
+    "PHI": 1,
+    "SEA": 2,
+    "SF": 2,
+    "TB": 1,
+    "WAS": 1
+   },
+   "LV": {
+    "ARI": 1,
+    "BUF": 1,
+    "CLE": 1,
+    "DEN": 2,
+    "KC": 2,
+    "LAC": 2,
+    "LAR": 1,
+    "MIA": 1,
+    "NE": 1,
+    "NO": 1,
+    "NYJ": 1,
+    "SEA": 1,
+    "SF": 1,
+    "TEN": 1
+   },
+   "NO": {
+    "ARI": 1,
+    "ATL": 2,
+    "BAL": 1,
+    "CAR": 2,
+    "CHI": 1,
+    "CIN": 1,
+    "CLE": 1,
+    "DET": 1,
+    "GB": 1,
+    "LV": 1,
+    "MIN": 1,
+    "NYG": 1,
+    "PIT": 1,
+    "TB": 2
+   },
+   "NYG": {
+    "ARI": 1,
+    "CLE": 1,
+    "DAL": 2,
+    "DET": 1,
+    "HOU": 1,
+    "IND": 1,
+    "JAX": 1,
+    "LAR": 1,
+    "NO": 1,
+    "PHI": 2,
+    "SEA": 1,
+    "SF": 1,
+    "TEN": 1,
+    "WAS": 2
+   },
+   "NYJ": {
+    "ARI": 1,
+    "BUF": 2,
+    "CHI": 1,
+    "CLE": 1,
+    "DEN": 1,
+    "DET": 1,
+    "GB": 1,
+    "KC": 1,
+    "LAC": 1,
+    "LV": 1,
+    "MIA": 2,
+    "MIN": 1,
+    "NE": 2,
+    "TEN": 1
+   },
+   "PHI": {
+    "ARI": 1,
+    "CAR": 1,
+    "CHI": 1,
+    "DAL": 2,
+    "HOU": 1,
+    "IND": 1,
+    "JAX": 1,
+    "LAR": 1,
+    "NYG": 2,
+    "PIT": 1,
+    "SEA": 1,
+    "SF": 1,
+    "TEN": 1,
+    "WAS": 2
+   },
+   "SEA": {
+    "ARI": 2,
+    "CAR": 1,
+    "CHI": 1,
+    "DAL": 1,
+    "DEN": 1,
+    "KC": 1,
+    "LAC": 1,
+    "LAR": 2,
+    "LV": 1,
+    "NE": 1,
+    "NYG": 1,
+    "PHI": 1,
+    "SF": 2,
+    "WAS": 1
+   },
+   "SF": {
+    "ARI": 2,
+    "ATL": 1,
+    "DAL": 1,
+    "DEN": 1,
+    "KC": 1,
+    "LAC": 1,
+    "LAR": 2,
+    "LV": 1,
+    "MIA": 1,
+    "MIN": 1,
+    "NYG": 1,
+    "PHI": 1,
+    "SEA": 2,
+    "WAS": 1
+   },
+   "WAS": {
+    "ARI": 1,
+    "ATL": 1,
+    "CIN": 1,
+    "DAL": 2,
+    "HOU": 1,
+    "IND": 1,
+    "JAX": 1,
+    "LAR": 1,
+    "MIN": 1,
+    "NYG": 2,
+    "PHI": 2,
+    "SEA": 1,
+    "SF": 1,
+    "TEN": 1
+   },
+   "ATL": {
+    "BAL": 1,
+    "CAR": 2,
+    "CHI": 1,
+    "CIN": 1,
+    "CLE": 1,
+    "DET": 1,
+    "GB": 1,
+    "KC": 1,
+    "MIN": 1,
+    "NO": 2,
+    "PIT": 1,
+    "SF": 1,
+    "TB": 2,
+    "WAS": 1
+   },
+   "BAL": {
+    "ATL": 1,
+    "BUF": 1,
+    "CAR": 1,
+    "CIN": 2,
+    "CLE": 2,
+    "DAL": 1,
+    "HOU": 1,
+    "IND": 1,
+    "JAX": 1,
+    "LAC": 1,
+    "NO": 1,
+    "PIT": 2,
+    "TB": 1,
+    "TEN": 1
+   },
+   "CAR": {
+    "ATL": 2,
+    "BAL": 1,
+    "CHI": 1,
+    "CIN": 1,
+    "CLE": 1,
+    "DEN": 1,
+    "DET": 1,
+    "GB": 1,
+    "MIN": 1,
+    "NO": 2,
+    "PHI": 1,
+    "PIT": 1,
+    "SEA": 1,
+    "TB": 2
+   },
+   "CHI": {
+    "ATL": 1,
+    "BUF": 1,
+    "CAR": 1,
+    "DET": 2,
+    "GB": 2,
+    "JAX": 1,
+    "MIA": 1,
+    "MIN": 2,
+    "NE": 1,
+    "NO": 1,
+    "NYJ": 1,
+    "PHI": 1,
+    "SEA": 1,
+    "TB": 1
+   },
+   "CIN": {
+    "ATL": 1,
+    "BAL": 2,
+    "CAR": 1,
+    "CLE": 2,
+    "HOU": 1,
+    "IND": 1,
+    "JAX": 1,
+    "KC": 1,
+    "MIA": 1,
+    "NO": 1,
+    "PIT": 2,
+    "TB": 1,
+    "TEN": 1,
+    "WAS": 1
+   },
+   "CLE": {
+    "ATL": 1,
+    "BAL": 2,
+    "CAR": 1,
+    "CIN": 2,
+    "HOU": 1,
+    "IND": 1,
+    "JAX": 1,
+    "LV": 1,
+    "NO": 1,
+    "NYG": 1,
+    "NYJ": 1,
+    "PIT": 2,
+    "TB": 1,
+    "TEN": 1
+   },
+   "GB": {
+    "ATL": 1,
+    "BUF": 1,
+    "CAR": 1,
+    "CHI": 2,
+    "DAL": 1,
+    "DET": 2,
+    "HOU": 1,
+    "LAR": 1,
+    "MIA": 1,
+    "MIN": 2,
+    "NE": 1,
+    "NO": 1,
+    "NYJ": 1,
+    "TB": 1
+   },
+   "MIN": {
+    "ATL": 1,
+    "BUF": 1,
+    "CAR": 1,
+    "CHI": 2,
+    "DET": 2,
+    "GB": 2,
+    "IND": 1,
+    "MIA": 1,
+    "NE": 1,
+    "NO": 1,
+    "NYJ": 1,
+    "SF": 1,
+    "TB": 1,
+    "WAS": 1
+   },
+   "PIT": {
+    "ATL": 1,
+    "BAL": 2,
+    "CAR": 1,
+    "CIN": 2,
+    "CLE": 2,
+    "DEN": 1,
+    "HOU": 1,
+    "IND": 1,
+    "JAX": 1,
+    "NE": 1,
+    "NO": 1,
+    "PHI": 1,
+    "TB": 1,
+    "TEN": 1
+   },
+   "TB": {
+    "ATL": 2,
+    "BAL": 1,
+    "CAR": 2,
+    "CHI": 1,
+    "CIN": 1,
+    "CLE": 1,
+    "DAL": 1,
+    "DET": 1,
+    "GB": 1,
+    "LAC": 1,
+    "LAR": 1,
+    "MIN": 1,
+    "NO": 2,
+    "PIT": 1
+   },
+   "BUF": {
+    "BAL": 1,
+    "CHI": 1,
+    "DEN": 1,
+    "DET": 1,
+    "GB": 1,
+    "HOU": 1,
+    "KC": 1,
+    "LAC": 1,
+    "LAR": 1,
+    "LV": 1,
+    "MIA": 2,
+    "MIN": 1,
+    "NE": 2,
+    "NYJ": 2
+   },
+   "HOU": {
+    "BAL": 1,
+    "BUF": 1,
+    "CIN": 1,
+    "CLE": 1,
+    "DAL": 1,
+    "GB": 1,
+    "IND": 2,
+    "JAX": 2,
+    "LAC": 1,
+    "NYG": 1,
+    "PHI": 1,
+    "PIT": 1,
+    "TEN": 2,
+    "WAS": 1
+   },
+   "IND": {
+    "BAL": 1,
+    "CIN": 1,
+    "CLE": 1,
+    "DAL": 1,
+    "HOU": 2,
+    "JAX": 2,
+    "KC": 1,
+    "MIA": 1,
+    "MIN": 1,
+    "NYG": 1,
+    "PHI": 1,
+    "PIT": 1,
+    "TEN": 2,
+    "WAS": 1
+   },
+   "JAX": {
+    "BAL": 1,
+    "CHI": 1,
+    "CIN": 1,
+    "CLE": 1,
+    "DAL": 1,
+    "DEN": 1,
+    "HOU": 2,
+    "IND": 2,
+    "NE": 1,
+    "NYG": 1,
+    "PHI": 1,
+    "PIT": 1,
+    "TEN": 2,
+    "WAS": 1
+   },
+   "TEN": {
+    "BAL": 1,
+    "CIN": 1,
+    "CLE": 1,
+    "DAL": 1,
+    "DET": 1,
+    "HOU": 2,
+    "IND": 2,
+    "JAX": 2,
+    "LV": 1,
+    "NYG": 1,
+    "NYJ": 1,
+    "PHI": 1,
+    "PIT": 1,
+    "WAS": 1
+   },
+   "MIA": {
+    "BUF": 2,
+    "CHI": 1,
+    "CIN": 1,
+    "DEN": 1,
+    "DET": 1,
+    "GB": 1,
+    "IND": 1,
+    "KC": 1,
+    "LAC": 1,
+    "LV": 1,
+    "MIN": 1,
+    "NE": 2,
+    "NYJ": 2,
+    "SF": 1
+   },
+   "NE": {
+    "BUF": 2,
+    "CHI": 1,
+    "DEN": 1,
+    "DET": 1,
+    "GB": 1,
+    "JAX": 1,
+    "KC": 1,
+    "LAC": 1,
+    "LV": 1,
+    "MIA": 2,
+    "MIN": 1,
+    "NYJ": 2,
+    "PIT": 1,
+    "SEA": 1
+   }
+  },
+  "picks": [
+   {
+    "pick": 1,
+    "round": 1,
+    "drafter": "Matt",
+    "team": "LAR"
+   },
+   {
+    "pick": 2,
+    "round": 1,
+    "drafter": "Rob",
+    "team": "BAL"
+   },
+   {
+    "pick": 3,
+    "round": 1,
+    "drafter": "Kevin",
+    "team": "BUF"
+   },
+   {
+    "pick": 4,
+    "round": 1,
+    "drafter": "Chris",
+    "team": "PHI"
+   },
+   {
+    "pick": 5,
+    "round": 1,
+    "drafter": "Tyler",
+    "team": "DET"
+   },
+   {
+    "pick": 6,
+    "round": 1,
+    "drafter": "Jason",
+    "team": "SEA"
+   },
+   {
+    "pick": 7,
+    "round": 1,
+    "drafter": "Jared",
+    "team": "DAL"
+   },
+   {
+    "pick": 8,
+    "round": 1,
+    "drafter": "Alan",
+    "team": "NE"
+   },
+   {
+    "pick": 9,
+    "round": 2,
+    "drafter": "Alan",
+    "team": "DEN"
+   },
+   {
+    "pick": 10,
+    "round": 2,
+    "drafter": "Jared",
+    "team": "KC"
+   },
+   {
+    "pick": 11,
+    "round": 2,
+    "drafter": "Jason",
+    "team": "CIN"
+   },
+   {
+    "pick": 12,
+    "round": 2,
+    "drafter": "Tyler",
+    "team": "SF"
+   },
+   {
+    "pick": 13,
+    "round": 2,
+    "drafter": "Chris",
+    "team": "TB"
+   },
+   {
+    "pick": 14,
+    "round": 2,
+    "drafter": "Kevin",
+    "team": "GB"
+   },
+   {
+    "pick": 15,
+    "round": 2,
+    "drafter": "Rob",
+    "team": "LAC"
+   },
+   {
+    "pick": 16,
+    "round": 2,
+    "drafter": "Matt",
+    "team": "HOU"
+   },
+   {
+    "pick": 17,
+    "round": 3,
+    "drafter": "Matt",
+    "team": "NO"
+   },
+   {
+    "pick": 18,
+    "round": 3,
+    "drafter": "Rob",
+    "team": "CHI"
+   },
+   {
+    "pick": 19,
+    "round": 3,
+    "drafter": "Kevin",
+    "team": "JAX"
+   },
+   {
+    "pick": 20,
+    "round": 3,
+    "drafter": "Chris",
+    "team": "PIT"
+   },
+   {
+    "pick": 21,
+    "round": 3,
+    "drafter": "Tyler",
+    "team": "IND"
+   },
+   {
+    "pick": 22,
+    "round": 3,
+    "drafter": "Jason",
+    "team": "MIN"
+   }
+  ],
+  "wins_tracker": {
+   "Matt": {
+    "rounds": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "total": 0
+   },
+   "Rob": {
+    "rounds": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "total": 0
+   },
+   "Kevin": {
+    "rounds": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "total": 0
+   },
+   "Chris": {
+    "rounds": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "total": 0
+   },
+   "Tyler": {
+    "rounds": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "total": 0
+   },
+   "Jason": {
+    "rounds": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "total": 0
+   },
+   "Jared": {
+    "rounds": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "total": 0
+   },
+   "Alan": {
+    "rounds": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "total": 0
+   }
+  },
+  "drafters": {
+   "Matt": {
+    "slot": 1,
+    "roster": [
+     "LAR",
+     "HOU",
+     "NO"
+    ],
+    "ew": 29.33,
+    "par_delta": -4.67,
+    "internal_games": 0,
+    "sd_sim": 4.7,
+    "sd_model": 4.662,
+    "picks_remaining": 1
+   },
+   "Rob": {
+    "slot": 2,
+    "roster": [
+     "BAL",
+     "LAC",
+     "CHI"
+    ],
+    "ew": 30.09,
+    "par_delta": -3.91,
+    "internal_games": 1,
+    "sd_sim": 4.55,
+    "sd_model": 4.594,
+    "picks_remaining": 1
+   },
+   "Kevin": {
+    "slot": 3,
+    "roster": [
+     "BUF",
+     "GB",
+     "JAX"
+    ],
+    "ew": 29.45,
+    "par_delta": -4.55,
+    "internal_games": 1,
+    "sd_sim": 4.64,
+    "sd_model": 4.653,
+    "picks_remaining": 1
+   },
+   "Chris": {
+    "slot": 4,
+    "roster": [
+     "PHI",
+     "TB",
+     "PIT"
+    ],
+    "ew": 26.16,
+    "par_delta": -7.84,
+    "internal_games": 2,
+    "sd_sim": 4.57,
+    "sd_model": 4.689,
+    "picks_remaining": 1
+   },
+   "Tyler": {
+    "slot": 5,
+    "roster": [
+     "DET",
+     "SF",
+     "IND"
+    ],
+    "ew": 28.5,
+    "par_delta": -5.5,
+    "internal_games": 0,
+    "sd_sim": 4.7,
+    "sd_model": 4.649,
+    "picks_remaining": 1
+   },
+   "Jason": {
+    "slot": 6,
+    "roster": [
+     "SEA",
+     "CIN",
+     "MIN"
+    ],
+    "ew": 29.16,
+    "par_delta": -4.84,
+    "internal_games": 0,
+    "sd_sim": 4.77,
+    "sd_model": 4.729,
+    "picks_remaining": 1
+   },
+   "Jared": {
+    "slot": 7,
+    "roster": [
+     "DAL",
+     "KC"
+    ],
+    "ew": 19.21,
+    "par_delta": -14.79,
+    "internal_games": 0,
+    "sd_sim": 3.83,
+    "sd_model": 3.798,
+    "picks_remaining": 2
+   },
+   "Alan": {
+    "slot": 8,
+    "roster": [
+     "NE",
+     "DEN"
+    ],
+    "ew": 19.62,
+    "par_delta": -14.38,
+    "internal_games": 1,
+    "sd_sim": 3.69,
+    "sd_model": 3.746,
+    "picks_remaining": 2
+   }
+  },
+  "undrafted": [
+   "WAS",
+   "NYG",
+   "CAR",
+   "ATL",
+   "TEN",
+   "LV",
+   "CLE",
+   "NYJ",
+   "MIA",
+   "ARI"
+  ],
+  "board": [
+   {
+    "pick": 1,
+    "round": 1,
+    "drafter": "Matt",
+    "team": "LAR",
+    "ew": 11.73,
+    "best_available": "LAR",
+    "best_available_ew": 11.73,
+    "delta": 0.0,
+    "rank_at_pick": 1,
+    "available_at_pick": 32
+   },
+   {
+    "pick": 2,
+    "round": 1,
+    "drafter": "Rob",
+    "team": "BAL",
+    "ew": 10.94,
+    "best_available": "BAL",
+    "best_available_ew": 10.94,
+    "delta": 0.0,
+    "rank_at_pick": 1,
+    "available_at_pick": 31
+   },
+   {
+    "pick": 3,
+    "round": 1,
+    "drafter": "Kevin",
+    "team": "BUF",
+    "ew": 10.76,
+    "best_available": "BUF",
+    "best_available_ew": 10.76,
+    "delta": 0.0,
+    "rank_at_pick": 1,
+    "available_at_pick": 30
+   },
+   {
+    "pick": 4,
+    "round": 1,
+    "drafter": "Chris",
+    "team": "PHI",
+    "ew": 9.98,
+    "best_available": "DET",
+    "best_available_ew": 10.68,
+    "delta": -0.7,
+    "rank_at_pick": 6,
+    "available_at_pick": 29
+   },
+   {
+    "pick": 5,
+    "round": 1,
+    "drafter": "Tyler",
+    "team": "DET",
+    "ew": 10.68,
+    "best_available": "DET",
+    "best_available_ew": 10.68,
+    "delta": 0.0,
+    "rank_at_pick": 1,
+    "available_at_pick": 28
+   },
+   {
+    "pick": 6,
+    "round": 1,
+    "drafter": "Jason",
+    "team": "SEA",
+    "ew": 10.53,
+    "best_available": "SEA",
+    "best_available_ew": 10.53,
+    "delta": 0.0,
+    "rank_at_pick": 1,
+    "available_at_pick": 27
+   },
+   {
+    "pick": 7,
+    "round": 1,
+    "drafter": "Jared",
+    "team": "DAL",
+    "ew": 9.15,
+    "best_available": "CIN",
+    "best_available_ew": 10.11,
+    "delta": -0.96,
+    "rank_at_pick": 10,
+    "available_at_pick": 26
+   },
+   {
+    "pick": 8,
+    "round": 1,
+    "drafter": "Alan",
+    "team": "NE",
+    "ew": 9.95,
+    "best_available": "CIN",
+    "best_available_ew": 10.11,
+    "delta": -0.16,
+    "rank_at_pick": 5,
+    "available_at_pick": 25
+   },
+   {
+    "pick": 9,
+    "round": 2,
+    "drafter": "Alan",
+    "team": "DEN",
+    "ew": 9.67,
+    "best_available": "CIN",
+    "best_available_ew": 10.11,
+    "delta": -0.44,
+    "rank_at_pick": 6,
+    "available_at_pick": 24
+   },
+   {
+    "pick": 10,
+    "round": 2,
+    "drafter": "Jared",
+    "team": "KC",
+    "ew": 10.06,
+    "best_available": "CIN",
+    "best_available_ew": 10.11,
+    "delta": -0.05,
+    "rank_at_pick": 2,
+    "available_at_pick": 23
+   },
+   {
+    "pick": 11,
+    "round": 2,
+    "drafter": "Jason",
+    "team": "CIN",
+    "ew": 10.11,
+    "best_available": "CIN",
+    "best_available_ew": 10.11,
+    "delta": 0.0,
+    "rank_at_pick": 1,
+    "available_at_pick": 22
+   },
+   {
+    "pick": 12,
+    "round": 2,
+    "drafter": "Tyler",
+    "team": "SF",
+    "ew": 10.02,
+    "best_available": "SF",
+    "best_available_ew": 10.02,
+    "delta": 0.0,
+    "rank_at_pick": 1,
+    "available_at_pick": 21
+   },
+   {
+    "pick": 13,
+    "round": 2,
+    "drafter": "Chris",
+    "team": "TB",
+    "ew": 8.04,
+    "best_available": "HOU",
+    "best_available_ew": 9.96,
+    "delta": -1.92,
+    "rank_at_pick": 8,
+    "available_at_pick": 20
+   },
+   {
+    "pick": 14,
+    "round": 2,
+    "drafter": "Kevin",
+    "team": "GB",
+    "ew": 9.66,
+    "best_available": "HOU",
+    "best_available_ew": 9.96,
+    "delta": -0.3,
+    "rank_at_pick": 3,
+    "available_at_pick": 19
+   },
+   {
+    "pick": 15,
+    "round": 2,
+    "drafter": "Rob",
+    "team": "LAC",
+    "ew": 9.9,
+    "best_available": "HOU",
+    "best_available_ew": 9.96,
+    "delta": -0.06,
+    "rank_at_pick": 2,
+    "available_at_pick": 18
+   },
+   {
+    "pick": 16,
+    "round": 2,
+    "drafter": "Matt",
+    "team": "HOU",
+    "ew": 9.96,
+    "best_available": "HOU",
+    "best_available_ew": 9.96,
+    "delta": 0.0,
+    "rank_at_pick": 1,
+    "available_at_pick": 17
+   },
+   {
+    "pick": 17,
+    "round": 3,
+    "drafter": "Matt",
+    "team": "NO",
+    "ew": 7.64,
+    "best_available": "CHI",
+    "best_available_ew": 9.25,
+    "delta": -1.61,
+    "rank_at_pick": 6,
+    "available_at_pick": 16
+   },
+   {
+    "pick": 18,
+    "round": 3,
+    "drafter": "Rob",
+    "team": "CHI",
+    "ew": 9.25,
+    "best_available": "CHI",
+    "best_available_ew": 9.25,
+    "delta": 0.0,
+    "rank_at_pick": 1,
+    "available_at_pick": 15
+   },
+   {
+    "pick": 19,
+    "round": 3,
+    "drafter": "Kevin",
+    "team": "JAX",
+    "ew": 9.03,
+    "best_available": "JAX",
+    "best_available_ew": 9.03,
+    "delta": 0.0,
+    "rank_at_pick": 1,
+    "available_at_pick": 14
+   },
+   {
+    "pick": 20,
+    "round": 3,
+    "drafter": "Chris",
+    "team": "PIT",
+    "ew": 8.14,
+    "best_available": "MIN",
+    "best_available_ew": 8.52,
+    "delta": -0.38,
+    "rank_at_pick": 2,
+    "available_at_pick": 13
+   },
+   {
+    "pick": 21,
+    "round": 3,
+    "drafter": "Tyler",
+    "team": "IND",
+    "ew": 7.8,
+    "best_available": "MIN",
+    "best_available_ew": 8.52,
+    "delta": -0.72,
+    "rank_at_pick": 2,
+    "available_at_pick": 12
+   },
+   {
+    "pick": 22,
+    "round": 3,
+    "drafter": "Jason",
+    "team": "MIN",
+    "ew": 8.52,
+    "best_available": "MIN",
+    "best_available_ew": 8.52,
+    "delta": 0.0,
+    "rank_at_pick": 1,
+    "available_at_pick": 11
+   },
+   {
+    "pick": 23,
+    "round": 3,
+    "drafter": "Jared",
+    "team": null
+   },
+   {
+    "pick": 24,
+    "round": 3,
+    "drafter": "Alan",
+    "team": null
+   },
+   {
+    "pick": 25,
+    "round": 4,
+    "drafter": "Alan",
+    "team": null
+   },
+   {
+    "pick": 26,
+    "round": 4,
+    "drafter": "Jared",
+    "team": null
+   },
+   {
+    "pick": 27,
+    "round": 4,
+    "drafter": "Jason",
+    "team": null
+   },
+   {
+    "pick": 28,
+    "round": 4,
+    "drafter": "Tyler",
+    "team": null
+   },
+   {
+    "pick": 29,
+    "round": 4,
+    "drafter": "Chris",
+    "team": null
+   },
+   {
+    "pick": 30,
+    "round": 4,
+    "drafter": "Kevin",
+    "team": null
+   },
+   {
+    "pick": 31,
+    "round": 4,
+    "drafter": "Rob",
+    "team": null
+   },
+   {
+    "pick": 32,
+    "round": 4,
+    "drafter": "Matt",
+    "team": null
+   }
+  ],
+  "picks_made": 22,
+  "picks_total": 32,
+  "schedule_fit": {
+   "method": "per-team logit offsets solved by Newton so each team's 17 fitted game probabilities sum to its expected wins; complementarity and the 272-win league total hold by construction",
+   "residual": 0.00033578,
+   "iterations": 60,
+   "field": "wpf"
+  },
+  "simulation": {
+   "trials": 100000,
+   "seed": 20260812,
+   "method": "game-level Bernoulli over the refitted schedule; one win per game, so every simulated season pays exactly 272",
+   "tie_for_first_rate": 0.15841,
+   "no_tie_outcome": true,
+   "first_place_ties_broken": "at random — the league's real tiebreakers (playoff wins, then point differential) are not in this payload",
+   "drafters": {
+    "Matt": {
+     "p_first": 0.19238,
+     "p_second": 0.1896,
+     "p_top2": 0.38198,
+     "mean": 29.328,
+     "sd": 3.374,
+     "p10": 25,
+     "p50": 29,
+     "p90": 34,
+     "dist": {
+      "15": 3e-05,
+      "16": 6e-05,
+      "17": 0.00011,
+      "18": 0.00049,
+      "19": 0.00129,
+      "20": 0.00279,
+      "21": 0.00602,
+      "22": 0.0116,
+      "23": 0.02087,
+      "24": 0.03343,
+      "25": 0.05183,
+      "26": 0.07113,
+      "27": 0.09307,
+      "28": 0.10863,
+      "29": 0.11482,
+      "30": 0.11597,
+      "31": 0.10609,
+      "32": 0.08768,
+      "33": 0.06632,
+      "34": 0.04746,
+      "35": 0.02927,
+      "36": 0.01643,
+      "37": 0.00809,
+      "38": 0.00415,
+      "39": 0.00152,
+      "40": 0.0006,
+      "41": 0.00015,
+      "42": 8e-05,
+      "43": 2e-05
+     }
+    },
+    "Rob": {
+     "p_first": 0.25628,
+     "p_second": 0.21115,
+     "p_top2": 0.46743,
+     "mean": 30.085,
+     "sd": 3.285,
+     "p10": 26,
+     "p50": 30,
+     "p90": 34,
+     "dist": {
+      "16": 1e-05,
+      "17": 3e-05,
+      "18": 0.0002,
+      "19": 0.00043,
+      "20": 0.00115,
+      "21": 0.00288,
+      "22": 0.0065,
+      "23": 0.01212,
+      "24": 0.02191,
+      "25": 0.03699,
+      "26": 0.05446,
+      "27": 0.07844,
+      "28": 0.09761,
+      "29": 0.11396,
+      "30": 0.12056,
+      "31": 0.11764,
+      "32": 0.10314,
+      "33": 0.08268,
+      "34": 0.06182,
+      "35": 0.03976,
+      "36": 0.02375,
+      "37": 0.01332,
+      "38": 0.00647,
+      "39": 0.00267,
+      "40": 0.00105,
+      "41": 0.00032,
+      "42": 0.00011,
+      "43": 1e-05,
+      "44": 1e-05
+     }
+    },
+    "Kevin": {
+     "p_first": 0.19837,
+     "p_second": 0.19146,
+     "p_top2": 0.38983,
+     "mean": 29.422,
+     "sd": 3.317,
+     "p10": 25,
+     "p50": 29,
+     "p90": 34,
+     "dist": {
+      "15": 2e-05,
+      "16": 4e-05,
+      "17": 0.00015,
+      "18": 0.0003,
+      "19": 0.00087,
+      "20": 0.00228,
+      "21": 0.00496,
+      "22": 0.00948,
+      "23": 0.01973,
+      "24": 0.03282,
+      "25": 0.0489,
+      "26": 0.0693,
+      "27": 0.09033,
+      "28": 0.10882,
+      "29": 0.11914,
+      "30": 0.11794,
+      "31": 0.10812,
+      "32": 0.08882,
+      "33": 0.06924,
+      "34": 0.04753,
+      "35": 0.02954,
+      "36": 0.01683,
+      "37": 0.00857,
+      "38": 0.0041,
+      "39": 0.00151,
+      "40": 0.00042,
+      "41": 0.00017,
+      "42": 6e-05,
+      "43": 1e-05
+     }
+    },
+    "Chris": {
+     "p_first": 0.03893,
+     "p_second": 0.07141,
+     "p_top2": 0.11034,
+     "mean": 26.168,
+     "sd": 3.298,
+     "p10": 22,
+     "p50": 26,
+     "p90": 30,
+     "dist": {
+      "13": 5e-05,
+      "14": 0.00011,
+      "15": 0.00047,
+      "16": 0.00101,
+      "17": 0.00236,
+      "18": 0.00537,
+      "19": 0.01133,
+      "20": 0.02105,
+      "21": 0.03682,
+      "22": 0.05386,
+      "23": 0.07745,
+      "24": 0.09705,
+      "25": 0.11378,
+      "26": 0.11967,
+      "27": 0.11613,
+      "28": 0.10281,
+      "29": 0.08252,
+      "30": 0.06381,
+      "31": 0.04228,
+      "32": 0.02547,
+      "33": 0.01423,
+      "34": 0.00727,
+      "35": 0.00316,
+      "36": 0.00141,
+      "37": 0.00035,
+      "38": 0.00014,
+      "39": 2e-05,
+      "40": 1e-05,
+      "41": 1e-05
+     }
+    },
+    "Tyler": {
+     "p_first": 0.13403,
+     "p_second": 0.15582,
+     "p_top2": 0.28985,
+     "mean": 28.507,
+     "sd": 3.367,
+     "p10": 24,
+     "p50": 29,
+     "p90": 33,
+     "dist": {
+      "15": 3e-05,
+      "16": 0.00012,
+      "17": 0.00037,
+      "18": 0.00098,
+      "19": 0.0023,
+      "20": 0.00495,
+      "21": 0.01016,
+      "22": 0.01843,
+      "23": 0.03151,
+      "24": 0.04818,
+      "25": 0.06848,
+      "26": 0.08872,
+      "27": 0.10621,
+      "28": 0.11735,
+      "29": 0.1164,
+      "30": 0.1076,
+      "31": 0.09189,
+      "32": 0.07003,
+      "33": 0.04921,
+      "34": 0.03074,
+      "35": 0.01834,
+      "36": 0.00993,
+      "37": 0.00481,
+      "38": 0.00196,
+      "39": 0.00083,
+      "40": 0.00024,
+      "41": 0.00018,
+      "42": 5e-05
+     }
+    },
+    "Jason": {
+     "p_first": 0.17999,
+     "p_second": 0.18033,
+     "p_top2": 0.36032,
+     "mean": 29.146,
+     "sd": 3.409,
+     "p10": 25,
+     "p50": 29,
+     "p90": 33,
+     "dist": {
+      "15": 7e-05,
+      "16": 5e-05,
+      "17": 0.00023,
+      "18": 0.00054,
+      "19": 0.00166,
+      "20": 0.00331,
+      "21": 0.00652,
+      "22": 0.0129,
+      "23": 0.02386,
+      "24": 0.03771,
+      "25": 0.0559,
+      "26": 0.07621,
+      "27": 0.09525,
+      "28": 0.1082,
+      "29": 0.1162,
+      "30": 0.11367,
+      "31": 0.10132,
+      "32": 0.08417,
+      "33": 0.06241,
+      "34": 0.04347,
+      "35": 0.02661,
+      "36": 0.01578,
+      "37": 0.00799,
+      "38": 0.00355,
+      "39": 0.00142,
+      "40": 0.00067,
+      "41": 0.00022,
+      "42": 9e-05,
+      "43": 1e-05,
+      "45": 1e-05
+     }
+    },
+    "Jared": {
+     "p_first": 1e-05,
+     "p_second": 8e-05,
+     "p_top2": 9e-05,
+     "mean": 19.215,
+     "sd": 2.742,
+     "p10": 16,
+     "p50": 19,
+     "p90": 23,
+     "dist": {
+      "6": 1e-05,
+      "7": 1e-05,
+      "8": 3e-05,
+      "9": 0.00013,
+      "10": 0.0005,
+      "11": 0.00155,
+      "12": 0.00481,
+      "13": 0.01166,
+      "14": 0.02503,
+      "15": 0.04398,
+      "16": 0.07233,
+      "17": 0.10462,
+      "18": 0.13107,
+      "19": 0.14339,
+      "20": 0.13888,
+      "21": 0.11859,
+      "22": 0.08907,
+      "23": 0.05814,
+      "24": 0.0311,
+      "25": 0.01528,
+      "26": 0.00682,
+      "27": 0.00213,
+      "28": 0.00065,
+      "29": 0.00019,
+      "30": 2e-05,
+      "31": 1e-05
+     }
+    },
+    "Alan": {
+     "p_first": 1e-05,
+     "p_second": 0.00015,
+     "p_top2": 0.00016,
+     "mean": 19.63,
+     "sd": 2.657,
+     "p10": 16,
+     "p50": 20,
+     "p90": 23,
+     "dist": {
+      "9": 6e-05,
+      "10": 0.00025,
+      "11": 0.00097,
+      "12": 0.00311,
+      "13": 0.00695,
+      "14": 0.01547,
+      "15": 0.03362,
+      "16": 0.05817,
+      "17": 0.09209,
+      "18": 0.12223,
+      "19": 0.14386,
+      "20": 0.1484,
+      "21": 0.1327,
+      "22": 0.10273,
+      "23": 0.06883,
+      "24": 0.03974,
+      "25": 0.01957,
+      "26": 0.00763,
+      "27": 0.00278,
+      "28": 0.00062,
+      "29": 0.00016,
+      "30": 6e-05
+     }
+    }
+   }
+  },
+  "diagnostics": {
+   "checked_at_as_of": "2026-08-11",
+   "hard_failures": [],
+   "checks": [
+    {
+     "id": "ew_sum",
+     "label": "Expected wins sum to 272",
+     "ok": true,
+     "detail": "272.01 against a league total of 272. The teams carry two decimals each, so a drift of a hundredth or two is the rounding and nothing else; anything larger means the devig was not renormalized.",
+     "value": 272.01,
+     "severity": "hard"
+    },
+    {
+     "id": "team_count",
+     "label": "32 teams, 4 per division",
+     "ok": true,
+     "detail": "32 teams across 8 divisions.",
+     "value": 32,
+     "severity": "hard"
+    },
+    {
+     "id": "overlap",
+     "label": "Head-to-head matrix is symmetric and complete",
+     "ok": true,
+     "detail": "0 asymmetric entries, 272 games total (expect 272), 0 teams not playing exactly 17.",
+     "value": 272,
+     "severity": "hard"
+    },
+    {
+     "id": "schedule_pairs",
+     "label": "Every game's two win probabilities sum to 1",
+     "ok": true,
+     "detail": "0 games where the two sides do not complement. The schedule is one coherent set of games, not 32 independent lists.",
+     "value": 0,
+     "severity": "hard"
+    },
+    {
+     "id": "schedule_vs_ew",
+     "label": "Game probabilities do not re-add to expected wins",
+     "ok": false,
+     "detail": "Summing a team's 17 game probabilities lands up to 2.67 wins away from its expected-wins figure (MIA: 6.59 against 3.92). Across all 32 the game probabilities sum to 272 — the league total is right and the split between teams is not. The refit to market totals did not converge per team, so the ladder and the schedule strip are two different numbers and the page labels them as such rather than quietly picking one.",
+     "value": 2.674,
+     "severity": "known"
+    },
+    {
+     "id": "dist_vs_ew",
+     "label": "Win distributions run above expected wins at the bottom of the board",
+     "ok": false,
+     "detail": "The mean of the 0-17 distribution sits up to 0.36 wins from expected wins (MIA). The gap is positive for the worst teams and negative for the best, which is what truncation at 0 and 17 does to a distribution built around a mean near the edge. The curves are the shape of a season, not a second estimate of its total.",
+     "value": 0.361,
+     "severity": "known"
+    },
+    {
+     "id": "dist_mass",
+     "label": "Each win distribution sums to 1",
+     "ok": true,
+     "detail": "Worst total mass is off by 0.00020 — four-decimal rounding across 18 buckets.",
+     "value": 0.0002,
+     "severity": "hard"
+    },
+    {
+     "id": "picks",
+     "label": "The draft log is a valid snake",
+     "ok": true,
+     "detail": "22 of 32 picks recorded. 0 out of turn, 0 teams taken twice, 0 unknown abbreviations.",
+     "value": 22,
+     "severity": "hard"
+    },
+    {
+     "id": "conservation",
+     "label": "Rostered wins plus the pool still add to the league total",
+     "ok": true,
+     "detail": "211.52 on rosters, 60.49 still on the board, 272.01 together. With every pick made, the eight roster totals must sum to 272 and one drafter's gain is another's loss — that is the whole game.",
+     "value": 211.52,
+     "severity": "hard"
+    },
+    {
+     "id": "schedule_fit",
+     "label": "The refitted schedule does re-add to expected wins",
+     "ok": true,
+     "detail": "Solved in 60 Newton steps; the worst team is now 0.0003 wins from its expected-wins figure, against 2.67 before the refit. The residual cannot reach zero: the 32 expected-win values sum to 272.01 rather than 272, and a schedule of whole games always pays exactly 272, so that one hundredth has to live somewhere. `wp` is untouched — `wpf` sits beside it and the simulation uses only `wpf`.",
+     "value": 0.0003,
+     "severity": "hard"
+    },
+    {
+     "id": "sim_vs_ladder",
+     "label": "Simulated roster totals land on the ladder's totals",
+     "ok": true,
+     "detail": "Across 100,000 simulated seasons the worst roster mean sits 0.028 wins from the sum of its teams' expected wins. That agreement is the refit working — simulating the raw schedule instead would have put a roster up to 2.7 wins away from the number printed on its own card.",
+     "value": 0.028,
+     "severity": "hard"
+    },
+    {
+     "id": "tie_rate",
+     "label": "A tie for first is common, and this payload cannot break one",
+     "ok": true,
+     "detail": "15.8% of simulated seasons end with two or more rosters level at the top — roughly one in 6. The league breaks that on total playoff wins and then point differential; neither is in this payload, so the simulation breaks it at random and the page reports the rate instead of pretending to a winner. The simulation also has no tie OUTCOME: every game is decided, so no half-wins are produced.",
+     "value": 0.15841,
+     "severity": "info"
+    },
+    {
+     "id": "sim_rosters_complete",
+     "label": "The simulation is running on complete rosters",
+     "ok": false,
+     "detail": "8 of 8 rosters are still short (Matt, Rob, Kevin, Chris, Tyler, Jason, Jared, Alan), and 10 teams worth 60.49 expected wins are unowned. Finishing probabilities on partial rosters are not a forecast of this pool — a drafter holding two teams cannot win a four-team competition. They describe the board as it stands right now and will move, hard, when the remaining picks land.",
+     "value": 8,
+     "severity": "known"
+    },
+    {
+     "id": "sd_models",
+     "label": "Two roster standard deviations, and they disagree",
+     "ok": true,
+     "detail": "The upstream simulation and the quadrature-plus-head-to-head calculation sit within 0.12 wins of each other (worst: Chris). They diverge most for rosters with internal games, and the simulation is the smaller of the two — it also draws correlated team strength, which quadrature cannot see. The page shows the simulated figure wherever it exists and says when it is falling back.",
+     "value": 0.119,
+     "severity": "info"
+    }
+   ]
+  }
+ }
+}
