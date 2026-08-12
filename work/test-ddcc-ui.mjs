@@ -36,6 +36,10 @@ try {
   const rollo = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   await rollo.route(/youtube|googlevideo|burst-/, r => r.abort());
   await rollo.goto(url, { waitUntil: "domcontentloaded" });
+  ok("hero heading is real DOM copy", (await rollo.locator("#poundTitle").textContent()) === "Dawg Pound" && (await rollo.locator(".dp-welcome").textContent()).includes("Good ideas need room to run."));
+  const heroImage = await rollo.locator(".dp-hero-art").evaluate(img => ({complete:img.complete,naturalWidth:img.naturalWidth,width:img.getAttribute("width"),height:img.getAttribute("height")}));
+  ok("hero image loads with intrinsic dimensions", heroImage.complete && heroImage.naturalWidth > 0 && heroImage.width === "1944" && heroImage.height === "810");
+  ok("desktop hero causes no body overflow", await rollo.evaluate(() => document.documentElement.scrollWidth === document.documentElement.clientWidth));
   const rolloColumns = await rollo.locator(".rollo-grid").evaluate(el => {
     const media = el.querySelector(".rollo-media").getBoundingClientRect();
     const story = el.querySelector(".rollo-story").getBoundingClientRect();
@@ -49,7 +53,14 @@ try {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await page.route(/youtube|googlevideo|burst-|\.jpg$/, r => r.abort());
   await page.goto(url, { waitUntil: "domcontentloaded" });
+  ok("mobile hero is a full-scene horizontal viewport", await page.locator("#dpHeroScroll").evaluate(el => el.scrollWidth > el.clientWidth));
+  ok("mobile pan cue starts visible", await page.locator("#dpHeroHint").isVisible());
+  await page.locator("#dpHeroScroll").evaluate(el => el.scrollLeft = 80);
+  await page.waitForTimeout(50);
+  ok("mobile pan cue retires after horizontal scroll", await page.locator(".dp-hero").evaluate(el => el.classList.contains("panned")));
   ok("Rollo is the default sheet", await page.locator("#rolloSheet").isVisible() && !(await page.locator("#ddccSheet").isVisible()));
+  await page.locator("#rolloTab").hover();
+  ok("hover preview does not mutate hash", new URL(page.url()).hash === "" && (await page.locator("#dpProjectPreview").innerText()).includes("music-synced photo tribute"));
   await page.locator("#ddccTab").click();
   await page.locator("#ddccSheet").waitFor({state:"visible"});
   ok("DDCC sheet writes restorable URL state", new URL(page.url()).hash === "#ddcc" && await page.locator("#ddccSheet").isVisible());
@@ -62,6 +73,11 @@ try {
   ok("browser back restores Rollo", await page.locator("#rolloSheet").isVisible());
   await page.locator("#rolloTab").focus(); await page.keyboard.press("ArrowRight");
   ok("arrow key selects and focuses DDCC", await page.locator("#ddccTab").getAttribute("aria-selected") === "true" && await page.locator("#ddccTab").evaluate(e => e === document.activeElement));
+  ok("focused DDCC exposes its preview", (await page.locator("#dpProjectPreview").innerText()).includes("Put probabilities on 40 claims"));
+  await page.locator("#ddccSheet .dp-sheet-close").click();
+  ok("collapse preserves active project and hash", new URL(page.url()).hash === "#ddcc" && !(await page.locator("#ddccSheet").isVisible()));
+  await page.locator("#ddccTab").click();
+  ok("one click reopens the collapsed project", await page.locator("#ddccSheet").isVisible() && new URL(page.url()).hash === "#ddcc");
   await page.screenshot({path:path.join(shots,"ddcc-mobile-signed-out.png"),fullPage:true});
   await page.close();
 
