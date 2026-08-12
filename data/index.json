@@ -281,9 +281,9 @@
    {
     "path": "/data/draft-2026.json",
     "url": "https://datadawgs216.com/data/draft-2026.json",
-    "bytes": 112709,
+    "bytes": 158437,
     "as_of": "2026-08-11",
-    "sha256": "c49677ff7f89ae15a70e8f6739be59db25778704667c7899783934f7dfb7a0f0",
+    "sha256": "706ca9bfb33df9b52eb370a7049751572c6244fb9a9d0630714a987a1cfca38a",
     "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. Nothing here is graded — the 2026 season has not started, every wins_tracker row reads zero, and no figure on this surface is a result. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run."
    }
   ],

@@ -3,7 +3,7 @@
  "tier": "labs",
  "graded": false,
  "as_of": "2026-08-11",
- "source": "VegasInsider 4-book devigged win totals (2026-08-09), normalized to 272; game probabilities from Data Dawgs nfelo schedule refit to market totals",
+ "source": "VegasInsider 4-book devigged win totals (2026-08-09) normalized to 272; per-game probabilities refit to those totals over the nflverse 2026 schedule",
  "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. Nothing here is graded — the 2026 season has not started, every wins_tracker row reads zero, and no figure on this surface is a result. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run.",
  "field_notes": {
   "line": "Median posted regular-season win total. Half-point lines are the book's.",
@@ -13,7 +13,12 @@
   "schedule": "17 games: week, opponent, home flag, and this team's win probability.",
   "schedule[].wp": "The payload's original per-game probability. Coherent game by game; does not re-add to `ew`.",
   "schedule[].wpf": "The same game after the schedule was refit onto `ew`. This is what the simulation uses.",
-  "simulation": "Monte Carlo over `wpf`, game by game. Finishing probabilities, not a forecast; nothing graded.",
+  "simulation": "Monte Carlo over `live`, game by game, on top of whatever is banked. Finishing probabilities, not a forecast; nothing graded.",
+  "schedule[].live": "What this game is worth right now: a settled result, a market price, a model price, or the frozen preseason number. `tier` says which.",
+  "schedule[].tier": "settled | market | model | preseason. Every game carries its own provenance.",
+  "teams[].banked": "Wins actually recorded. A tie counts half.",
+  "teams[].remaining": "Sum of the live probabilities for games not yet played.",
+  "teams[].projected": "banked + remaining. The in-season number. `ew` stays frozen at the draft-day devig beside it.",
   "overlap": "Sparse symmetric head-to-head game counts. 2 = division rival, 1 = other, absent = 0.",
   "wins_tracker": "Actual wins, by round, per drafter. Every value is zero — no game has been played.",
   "board[].delta": "Chosen team's expected wins minus the best still available. Descriptive, not a grade."
@@ -58,22 +63,22 @@
     "division": "NFC West",
     "line": 4.0,
     "ew": 3.8,
-    "sd": 2.24,
+    "sd": 2.23,
     "dist": {
-     "0": 0.0257,
-     "1": 0.0819,
-     "2": 0.1404,
-     "3": 0.177,
-     "4": 0.1749,
-     "5": 0.145,
-     "6": 0.1063,
-     "7": 0.0705,
-     "8": 0.039,
-     "9": 0.0219,
-     "10": 0.0107,
+     "0": 0.0253,
+     "1": 0.0822,
+     "2": 0.1413,
+     "3": 0.1718,
+     "4": 0.1759,
+     "5": 0.1474,
+     "6": 0.1075,
+     "7": 0.0706,
+     "8": 0.0406,
+     "9": 0.0209,
+     "10": 0.0098,
      "11": 0.0044,
-     "12": 0.0016,
-     "13": 0.0004,
+     "12": 0.0017,
+     "13": 0.0005,
      "14": 0.0001,
      "15": 0.0,
      "16": 0.0,
@@ -87,122 +92,176 @@
       "week": 1,
       "opp": "LAC",
       "home": false,
-      "wp": 0.2151,
-      "wpf": 0.07686
+      "wp": 0.0767,
+      "wpf": 0.07685,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.07685
      },
      {
       "week": 2,
       "opp": "SEA",
       "home": true,
-      "wp": 0.2278,
-      "wpf": 0.13537
+      "wp": 0.1351,
+      "wpf": 0.13537,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.13537
      },
      {
       "week": 3,
       "opp": "SF",
       "home": false,
-      "wp": 0.2092,
-      "wpf": 0.10053
+      "wp": 0.1005,
+      "wpf": 0.10057,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.10057
      },
      {
       "week": 4,
       "opp": "NYG",
       "home": false,
-      "wp": 0.3882,
-      "wpf": 0.24938
+      "wp": 0.2494,
+      "wpf": 0.24939,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.24939
      },
      {
       "week": 5,
       "opp": "DET",
       "home": true,
-      "wp": 0.3944,
-      "wpf": 0.24003
+      "wp": 0.2396,
+      "wpf": 0.24008,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.24008
      },
      {
       "week": 6,
       "opp": "LAR",
       "home": false,
-      "wp": 0.2663,
-      "wpf": 0.09944
+      "wp": 0.0992,
+      "wpf": 0.09939,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.09939
      },
      {
       "week": 7,
       "opp": "DEN",
       "home": true,
-      "wp": 0.3909,
-      "wpf": 0.23655
+      "wp": 0.2361,
+      "wpf": 0.23653,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.23653
      },
      {
       "week": 8,
       "opp": "DAL",
       "home": false,
-      "wp": 0.3557,
-      "wpf": 0.17816
+      "wp": 0.1781,
+      "wpf": 0.17818,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.17818
      },
      {
       "week": 9,
       "opp": "SEA",
       "home": false,
-      "wp": 0.218,
-      "wpf": 0.12888
+      "wp": 0.1286,
+      "wpf": 0.12886,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.12886
      },
      {
       "week": 10,
       "opp": "LAR",
       "home": true,
-      "wp": 0.3802,
-      "wpf": 0.15727
+      "wp": 0.157,
+      "wpf": 0.15728,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.15728
      },
      {
       "week": 11,
       "opp": "KC",
       "home": false,
-      "wp": 0.3079,
-      "wpf": 0.1542
+      "wp": 0.154,
+      "wpf": 0.15419,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.15419
      },
      {
       "week": 12,
       "opp": "WAS",
       "home": true,
-      "wp": 0.4809,
-      "wpf": 0.33636
+      "wp": 0.3362,
+      "wpf": 0.33638,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.33638
      },
      {
       "week": 13,
       "opp": "PHI",
       "home": true,
-      "wp": 0.4197,
-      "wpf": 0.24041
+      "wp": 0.2402,
+      "wpf": 0.24038,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.24038
      },
      {
       "week": 15,
       "opp": "NYJ",
       "home": true,
-      "wp": 0.6144,
-      "wpf": 0.50132
+      "wp": 0.5007,
+      "wpf": 0.5013,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.5013
      },
      {
       "week": 16,
       "opp": "NO",
       "home": false,
-      "wp": 0.4009,
-      "wpf": 0.28452
+      "wp": 0.2841,
+      "wpf": 0.28449,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.28449
      },
      {
       "week": 17,
       "opp": "LV",
       "home": true,
-      "wp": 0.5628,
-      "wpf": 0.44638
+      "wp": 0.4463,
+      "wpf": 0.44637,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.44637
      },
      {
       "week": 18,
       "opp": "SF",
       "home": true,
-      "wp": 0.4198,
-      "wpf": 0.23412
+      "wp": 0.234,
+      "wpf": 0.23415,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.23415
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 3.8,
+    "projected": 3.8
    },
    "ATL": {
     "name": "Falcons",
@@ -211,23 +270,23 @@
     "ew": 7.07,
     "sd": 2.78,
     "dist": {
-     "0": 0.002,
+     "0": 0.0021,
      "1": 0.0094,
-     "2": 0.0264,
-     "3": 0.0513,
-     "4": 0.0811,
-     "5": 0.1086,
-     "6": 0.133,
-     "7": 0.1369,
-     "8": 0.1278,
-     "9": 0.1126,
-     "10": 0.0848,
-     "11": 0.058,
+     "2": 0.0259,
+     "3": 0.0515,
+     "4": 0.0823,
+     "5": 0.112,
+     "6": 0.1287,
+     "7": 0.1364,
+     "8": 0.1294,
+     "9": 0.1102,
+     "10": 0.0862,
+     "11": 0.0581,
      "12": 0.036,
-     "13": 0.0191,
-     "14": 0.0085,
-     "15": 0.0037,
-     "16": 0.0006,
+     "13": 0.0192,
+     "14": 0.0086,
+     "15": 0.003,
+     "16": 0.0007,
      "17": 0.0001
     },
     "p10": 4,
@@ -238,148 +297,202 @@
       "week": 1,
       "opp": "PIT",
       "home": false,
-      "wp": 0.3952,
-      "wpf": 0.35698
+      "wp": 0.3576,
+      "wpf": 0.35701,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.35701
      },
      {
       "week": 2,
       "opp": "CAR",
       "home": true,
-      "wp": 0.548,
-      "wpf": 0.52098
+      "wp": 0.5214,
+      "wpf": 0.52096,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.52096
      },
      {
       "week": 3,
       "opp": "GB",
       "home": false,
-      "wp": 0.2868,
-      "wpf": 0.19721
+      "wp": 0.1971,
+      "wpf": 0.19717,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.19717
      },
      {
       "week": 4,
       "opp": "NO",
       "home": false,
-      "wp": 0.4675,
-      "wpf": 0.4471
+      "wp": 0.4473,
+      "wpf": 0.4471,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.4471
      },
      {
       "week": 5,
       "opp": "BAL",
       "home": true,
-      "wp": 0.4711,
-      "wpf": 0.34951
+      "wp": 0.3502,
+      "wpf": 0.34953,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.34953
      },
      {
       "week": 6,
       "opp": "CHI",
       "home": true,
-      "wp": 0.5034,
-      "wpf": 0.43689
+      "wp": 0.4368,
+      "wpf": 0.43694,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.43694
      },
      {
       "week": 7,
       "opp": "SF",
       "home": true,
-      "wp": 0.4868,
-      "wpf": 0.38315
+      "wp": 0.3836,
+      "wpf": 0.38315,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.38315
      },
      {
       "week": 8,
       "opp": "TB",
       "home": false,
-      "wp": 0.4342,
-      "wpf": 0.38722
+      "wp": 0.3875,
+      "wpf": 0.38726,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.38726
      },
      {
       "week": 9,
       "opp": "CIN",
       "home": true,
-      "wp": 0.5408,
-      "wpf": 0.42189
+      "wp": 0.4223,
+      "wpf": 0.42186,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.42186
      },
      {
       "week": 10,
       "opp": "KC",
       "home": true,
-      "wp": 0.4946,
-      "wpf": 0.38332
+      "wp": 0.3836,
+      "wpf": 0.3833,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.3833
      },
      {
       "week": 12,
       "opp": "MIN",
       "home": false,
-      "wp": 0.3434,
-      "wpf": 0.34782
+      "wp": 0.3477,
+      "wpf": 0.34777,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.34777
      },
      {
       "week": 13,
       "opp": "DET",
       "home": true,
-      "wp": 0.4608,
-      "wpf": 0.39113
+      "wp": 0.3912,
+      "wpf": 0.39118,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.39118
      },
      {
       "week": 14,
       "opp": "CLE",
       "home": false,
-      "wp": 0.4769,
-      "wpf": 0.53714
+      "wp": 0.5379,
+      "wpf": 0.53716,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.53716
      },
      {
       "week": 15,
       "opp": "WAS",
       "home": false,
-      "wp": 0.4217,
-      "wpf": 0.38209
+      "wp": 0.3825,
+      "wpf": 0.38205,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.38205
      },
      {
       "week": 16,
       "opp": "TB",
       "home": true,
-      "wp": 0.5609,
-      "wpf": 0.51264
+      "wp": 0.5129,
+      "wpf": 0.51265,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.51265
      },
      {
       "week": 17,
       "opp": "NO",
       "home": true,
-      "wp": 0.5938,
-      "wpf": 0.57383
+      "wp": 0.574,
+      "wpf": 0.5738,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.5738
      },
      {
       "week": 18,
       "opp": "CAR",
       "home": false,
-      "wp": 0.4677,
-      "wpf": 0.44078
+      "wp": 0.4412,
+      "wpf": 0.44077,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.44077
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 7.07,
+    "projected": 7.07
    },
    "BAL": {
     "name": "Ravens",
     "division": "AFC North",
     "line": 11.0,
     "ew": 10.94,
-    "sd": 2.65,
+    "sd": 2.66,
     "dist": {
      "0": 0.0,
-     "1": 0.0002,
-     "2": 0.001,
+     "1": 0.0003,
+     "2": 0.0009,
      "3": 0.0032,
-     "4": 0.0084,
-     "5": 0.0184,
-     "6": 0.0341,
-     "7": 0.0556,
-     "8": 0.0854,
-     "9": 0.1112,
-     "10": 0.1348,
-     "11": 0.1455,
-     "12": 0.1407,
-     "13": 0.1121,
-     "14": 0.0824,
-     "15": 0.0436,
-     "16": 0.0191,
-     "17": 0.0042
+     "4": 0.009,
+     "5": 0.0179,
+     "6": 0.0337,
+     "7": 0.0558,
+     "8": 0.0841,
+     "9": 0.1125,
+     "10": 0.1339,
+     "11": 0.145,
+     "12": 0.137,
+     "13": 0.1166,
+     "14": 0.0816,
+     "15": 0.0463,
+     "16": 0.0185,
+     "17": 0.0037
     },
     "p10": 7,
     "p50": 11,
@@ -389,122 +502,176 @@
       "week": 1,
       "opp": "IND",
       "home": false,
-      "wp": 0.5982,
-      "wpf": 0.67294
+      "wp": 0.6728,
+      "wpf": 0.6729,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.6729
      },
      {
       "week": 2,
       "opp": "NO",
       "home": true,
-      "wp": 0.7264,
-      "wpf": 0.80214
+      "wp": 0.8018,
+      "wpf": 0.80214,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.80214
      },
      {
       "week": 3,
       "opp": "DAL",
       "home": false,
-      "wp": 0.5417,
-      "wpf": 0.54392
+      "wp": 0.5437,
+      "wpf": 0.5439,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.5439
      },
      {
       "week": 4,
       "opp": "TEN",
       "home": true,
-      "wp": 0.7325,
-      "wpf": 0.78601
+      "wp": 0.7861,
+      "wpf": 0.78606,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.78606
      },
      {
       "week": 5,
       "opp": "ATL",
       "home": false,
-      "wp": 0.5289,
-      "wpf": 0.65049
+      "wp": 0.6498,
+      "wpf": 0.65047,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.65047
      },
      {
       "week": 6,
       "opp": "CLE",
       "home": false,
-      "wp": 0.5691,
-      "wpf": 0.73594
+      "wp": 0.736,
+      "wpf": 0.73599,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.73599
      },
      {
       "week": 7,
       "opp": "CIN",
       "home": true,
-      "wp": 0.631,
-      "wpf": 0.63724
+      "wp": 0.637,
+      "wpf": 0.63727,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.63727
      },
      {
       "week": 8,
       "opp": "BUF",
       "home": false,
-      "wp": 0.4029,
-      "wpf": 0.40949
+      "wp": 0.409,
+      "wpf": 0.40948,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.40948
      },
      {
       "week": 9,
       "opp": "JAX",
       "home": true,
-      "wp": 0.5732,
-      "wpf": 0.64765
+      "wp": 0.6477,
+      "wpf": 0.64762,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.64762
      },
      {
       "week": 10,
       "opp": "LAC",
       "home": true,
-      "wp": 0.6529,
-      "wpf": 0.59489
+      "wp": 0.5943,
+      "wpf": 0.59488,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.59488
      },
      {
       "week": 11,
       "opp": "CAR",
       "home": false,
-      "wp": 0.56,
-      "wpf": 0.6543
+      "wp": 0.6541,
+      "wpf": 0.65437,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.65437
      },
      {
       "week": 12,
       "opp": "HOU",
       "home": false,
-      "wp": 0.4515,
-      "wpf": 0.46376
+      "wp": 0.4638,
+      "wpf": 0.46374,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.46374
      },
      {
       "week": 14,
       "opp": "TB",
       "home": true,
-      "wp": 0.65,
-      "wpf": 0.71713
+      "wp": 0.7167,
+      "wpf": 0.7171,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.7171
      },
      {
       "week": 15,
       "opp": "PIT",
       "home": false,
-      "wp": 0.5005,
-      "wpf": 0.58528
+      "wp": 0.5852,
+      "wpf": 0.58529,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.58529
      },
      {
       "week": 16,
       "opp": "CLE",
       "home": true,
-      "wp": 0.689,
-      "wpf": 0.82379
+      "wp": 0.8238,
+      "wpf": 0.8238,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.8238
      },
      {
       "week": 17,
       "opp": "CIN",
       "home": false,
-      "wp": 0.5062,
-      "wpf": 0.51292
+      "wp": 0.5126,
+      "wpf": 0.51289,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.51289
      },
      {
       "week": 18,
       "opp": "PIT",
       "home": true,
-      "wp": 0.6256,
-      "wpf": 0.7018
+      "wp": 0.7017,
+      "wpf": 0.70178,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.70178
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 10.94,
+    "projected": 10.94
    },
    "BUF": {
     "name": "Bills",
@@ -514,22 +681,22 @@
     "sd": 2.64,
     "dist": {
      "0": 0.0,
-     "1": 0.0003,
+     "1": 0.0002,
      "2": 0.001,
      "3": 0.0034,
-     "4": 0.0088,
-     "5": 0.0198,
-     "6": 0.0355,
-     "7": 0.0592,
-     "8": 0.0869,
-     "9": 0.1171,
-     "10": 0.1366,
-     "11": 0.1484,
-     "12": 0.1352,
-     "13": 0.1097,
-     "14": 0.0785,
-     "15": 0.0415,
-     "16": 0.0152,
+     "4": 0.0086,
+     "5": 0.0201,
+     "6": 0.0367,
+     "7": 0.0602,
+     "8": 0.0892,
+     "9": 0.118,
+     "10": 0.1368,
+     "11": 0.1463,
+     "12": 0.135,
+     "13": 0.1095,
+     "14": 0.0749,
+     "15": 0.0411,
+     "16": 0.0158,
      "17": 0.003
     },
     "p10": 7,
@@ -540,148 +707,202 @@
       "week": 1,
       "opp": "HOU",
       "home": false,
-      "wp": 0.5095,
-      "wpf": 0.51501
+      "wp": 0.5156,
+      "wpf": 0.51505,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.51505
      },
      {
       "week": 2,
       "opp": "DET",
       "home": true,
-      "wp": 0.584,
-      "wpf": 0.62993
+      "wp": 0.6297,
+      "wpf": 0.62991,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.62991
      },
      {
       "week": 3,
       "opp": "LAC",
       "home": true,
-      "wp": 0.6214,
-      "wpf": 0.55492
+      "wp": 0.5548,
+      "wpf": 0.55491,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.55491
      },
      {
       "week": 4,
       "opp": "NE",
       "home": true,
-      "wp": 0.5919,
-      "wpf": 0.62911
+      "wp": 0.6291,
+      "wpf": 0.62911,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.62911
      },
      {
       "week": 5,
       "opp": "LAR",
       "home": false,
-      "wp": 0.4459,
-      "wpf": 0.37968
+      "wp": 0.3796,
+      "wpf": 0.37969,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.37969
      },
      {
       "week": 6,
       "opp": "LV",
       "home": false,
-      "wp": 0.6282,
-      "wpf": 0.72572
+      "wp": 0.726,
+      "wpf": 0.72571,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.72571
      },
      {
       "week": 8,
       "opp": "BAL",
       "home": true,
-      "wp": 0.5971,
-      "wpf": 0.59051
+      "wp": 0.591,
+      "wpf": 0.59052,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.59052
      },
      {
       "week": 9,
       "opp": "MIN",
       "home": false,
-      "wp": 0.4663,
-      "wpf": 0.58968
+      "wp": 0.5894,
+      "wpf": 0.58971,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.58971
      },
      {
       "week": 10,
       "opp": "NYJ",
       "home": false,
-      "wp": 0.6771,
-      "wpf": 0.76786
+      "wp": 0.7677,
+      "wpf": 0.76782,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.76782
      },
      {
       "week": 11,
       "opp": "MIA",
       "home": true,
-      "wp": 0.7283,
-      "wpf": 0.87555
+      "wp": 0.8756,
+      "wpf": 0.87552,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.87552
      },
      {
       "week": 12,
       "opp": "KC",
       "home": true,
-      "wp": 0.6198,
-      "wpf": 0.6255
+      "wp": 0.6256,
+      "wpf": 0.62553,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.62553
      },
      {
       "week": 13,
       "opp": "NE",
       "home": false,
-      "wp": 0.4655,
-      "wpf": 0.50459
+      "wp": 0.5046,
+      "wpf": 0.50461,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.50461
      },
      {
       "week": 14,
       "opp": "GB",
       "home": false,
-      "wp": 0.5393,
-      "wpf": 0.53565
+      "wp": 0.5353,
+      "wpf": 0.53566,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.53566
      },
      {
       "week": 15,
       "opp": "CHI",
       "home": true,
-      "wp": 0.6281,
-      "wpf": 0.67586
+      "wp": 0.6755,
+      "wpf": 0.67583,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.67583
      },
      {
       "week": 16,
       "opp": "DEN",
       "home": false,
-      "wp": 0.457,
-      "wpf": 0.50394
+      "wp": 0.5038,
+      "wpf": 0.50396,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.50396
      },
      {
       "week": 17,
       "opp": "MIA",
       "home": false,
-      "wp": 0.6135,
-      "wpf": 0.80643
+      "wp": 0.8065,
+      "wpf": 0.80638,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.80638
      },
      {
       "week": 18,
       "opp": "NYJ",
       "home": true,
-      "wp": 0.7819,
-      "wpf": 0.84974
+      "wp": 0.8497,
+      "wpf": 0.84978,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.84978
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 10.76,
+    "projected": 10.76
    },
    "CAR": {
     "name": "Panthers",
     "division": "NFC South",
     "line": 7.0,
     "ew": 7.09,
-    "sd": 2.79,
+    "sd": 2.78,
     "dist": {
      "0": 0.0018,
-     "1": 0.0098,
-     "2": 0.0259,
-     "3": 0.052,
-     "4": 0.082,
-     "5": 0.1082,
-     "6": 0.1268,
-     "7": 0.1369,
-     "8": 0.1312,
-     "9": 0.1126,
-     "10": 0.0842,
-     "11": 0.0595,
-     "12": 0.0376,
-     "13": 0.019,
-     "14": 0.0083,
-     "15": 0.0034,
+     "1": 0.0091,
+     "2": 0.0261,
+     "3": 0.0515,
+     "4": 0.0807,
+     "5": 0.1105,
+     "6": 0.1297,
+     "7": 0.1353,
+     "8": 0.1299,
+     "9": 0.1124,
+     "10": 0.0854,
+     "11": 0.0591,
+     "12": 0.0362,
+     "13": 0.0197,
+     "14": 0.0087,
+     "15": 0.003,
      "16": 0.0008,
-     "17": 0.0002
+     "17": 0.0001
     },
     "p10": 4,
     "p50": 7,
@@ -691,147 +912,201 @@
       "week": 1,
       "opp": "CHI",
       "home": true,
-      "wp": 0.4389,
-      "wpf": 0.40026
+      "wp": 0.3997,
+      "wpf": 0.40025,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.40025
      },
      {
       "week": 2,
       "opp": "ATL",
       "home": false,
-      "wp": 0.452,
-      "wpf": 0.47902
+      "wp": 0.4786,
+      "wpf": 0.47904,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.47904
      },
      {
       "week": 3,
       "opp": "CLE",
       "home": false,
-      "wp": 0.5108,
-      "wpf": 0.59703
+      "wp": 0.5973,
+      "wpf": 0.59701,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.59701
      },
      {
       "week": 4,
       "opp": "DET",
       "home": true,
-      "wp": 0.4298,
-      "wpf": 0.38711
+      "wp": 0.3867,
+      "wpf": 0.3871,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.3871
      },
      {
       "week": 6,
       "opp": "PHI",
       "home": false,
-      "wp": 0.3334,
-      "wpf": 0.27439
+      "wp": 0.2744,
+      "wpf": 0.27441,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.27441
      },
      {
       "week": 7,
       "opp": "TB",
       "home": true,
-      "wp": 0.5298,
-      "wpf": 0.50842
+      "wp": 0.5082,
+      "wpf": 0.50839,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.50839
      },
      {
       "week": 8,
       "opp": "GB",
       "home": false,
-      "wp": 0.3827,
-      "wpf": 0.29685
+      "wp": 0.2964,
+      "wpf": 0.29686,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.29686
      },
      {
       "week": 9,
       "opp": "DEN",
       "home": true,
-      "wp": 0.4262,
-      "wpf": 0.38256
+      "wp": 0.3822,
+      "wpf": 0.38253,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.38253
      },
      {
       "week": 10,
       "opp": "NO",
       "home": false,
-      "wp": 0.4364,
-      "wpf": 0.44291
+      "wp": 0.4427,
+      "wpf": 0.44293,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.44293
      },
      {
       "week": 11,
       "opp": "BAL",
       "home": true,
-      "wp": 0.44,
-      "wpf": 0.3457
+      "wp": 0.3459,
+      "wpf": 0.34563,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.34563
      },
      {
       "week": 12,
       "opp": "TB",
       "home": false,
-      "wp": 0.4036,
-      "wpf": 0.38317
+      "wp": 0.383,
+      "wpf": 0.38318,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.38318
      },
      {
       "week": 13,
       "opp": "MIN",
       "home": false,
-      "wp": 0.3151,
-      "wpf": 0.34339
+      "wp": 0.3429,
+      "wpf": 0.34337,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.34337
      },
      {
       "week": 14,
       "opp": "NO",
       "home": true,
-      "wp": 0.5632,
-      "wpf": 0.56969
+      "wp": 0.5695,
+      "wpf": 0.56973,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.56973
      },
      {
       "week": 15,
       "opp": "CIN",
       "home": true,
-      "wp": 0.5095,
-      "wpf": 0.41776
+      "wp": 0.4178,
+      "wpf": 0.41779,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.41779
      },
      {
       "week": 16,
       "opp": "PIT",
       "home": false,
-      "wp": 0.3785,
-      "wpf": 0.3658
+      "wp": 0.366,
+      "wpf": 0.36581,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.36581
      },
      {
       "week": 17,
       "opp": "SEA",
       "home": true,
-      "wp": 0.356,
-      "wpf": 0.33639
+      "wp": 0.3361,
+      "wpf": 0.3364,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.3364
      },
      {
       "week": 18,
       "opp": "ATL",
       "home": true,
-      "wp": 0.5323,
-      "wpf": 0.55922
+      "wp": 0.5588,
+      "wpf": 0.55923,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.55923
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 7.09,
+    "projected": 7.09
    },
    "CHI": {
     "name": "Bears",
     "division": "NFC North",
     "line": 9.5,
     "ew": 9.25,
-    "sd": 2.76,
+    "sd": 2.75,
     "dist": {
-     "0": 0.0001,
+     "0": 0.0002,
      "1": 0.0013,
-     "2": 0.0046,
+     "2": 0.0045,
      "3": 0.0132,
-     "4": 0.0278,
-     "5": 0.048,
-     "6": 0.075,
-     "7": 0.1038,
-     "8": 0.1258,
-     "9": 0.1389,
-     "10": 0.1332,
-     "11": 0.1184,
-     "12": 0.0906,
-     "13": 0.0623,
-     "14": 0.035,
-     "15": 0.0156,
-     "16": 0.0053,
+     "4": 0.027,
+     "5": 0.0487,
+     "6": 0.0772,
+     "7": 0.1052,
+     "8": 0.1247,
+     "9": 0.1368,
+     "10": 0.134,
+     "11": 0.1187,
+     "12": 0.0915,
+     "13": 0.0618,
+     "14": 0.0343,
+     "15": 0.0152,
+     "16": 0.0048,
      "17": 0.0009
     },
     "p10": 6,
@@ -842,148 +1117,202 @@
       "week": 1,
       "opp": "CAR",
       "home": false,
-      "wp": 0.5611,
-      "wpf": 0.59974
+      "wp": 0.6003,
+      "wpf": 0.59975,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.59975
      },
      {
       "week": 2,
       "opp": "MIN",
       "home": true,
-      "wp": 0.599,
-      "wpf": 0.66557
+      "wp": 0.6656,
+      "wpf": 0.66555,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.66555
      },
      {
       "week": 3,
       "opp": "PHI",
       "home": true,
-      "wp": 0.5248,
-      "wpf": 0.49461
+      "wp": 0.4952,
+      "wpf": 0.49464,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.49464
      },
      {
       "week": 4,
       "opp": "NYJ",
       "home": true,
-      "wp": 0.7613,
-      "wpf": 0.80296
+      "wp": 0.8031,
+      "wpf": 0.80296,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.80296
      },
      {
       "week": 5,
       "opp": "GB",
       "home": false,
-      "wp": 0.4726,
-      "wpf": 0.41699
+      "wp": 0.417,
+      "wpf": 0.41698,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.41698
      },
      {
       "week": 6,
       "opp": "ATL",
       "home": false,
-      "wp": 0.4966,
-      "wpf": 0.56311
+      "wp": 0.5632,
+      "wpf": 0.56306,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.56306
      },
      {
       "week": 7,
       "opp": "NE",
       "home": true,
-      "wp": 0.5259,
-      "wpf": 0.51238
+      "wp": 0.5127,
+      "wpf": 0.51233,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.51233
      },
      {
       "week": 8,
       "opp": "SEA",
       "home": false,
-      "wp": 0.3232,
-      "wpf": 0.33917
+      "wp": 0.3394,
+      "wpf": 0.33919,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.33919
      },
      {
       "week": 9,
       "opp": "TB",
       "home": true,
-      "wp": 0.6196,
-      "wpf": 0.63668
+      "wp": 0.637,
+      "wpf": 0.63664,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.63664
      },
      {
       "week": 11,
       "opp": "NO",
       "home": true,
-      "wp": 0.6512,
-      "wpf": 0.69201
+      "wp": 0.6923,
+      "wpf": 0.69201,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.69201
      },
      {
       "week": 12,
       "opp": "DET",
       "home": false,
-      "wp": 0.395,
-      "wpf": 0.39069
+      "wp": 0.3908,
+      "wpf": 0.39065,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.39065
      },
      {
       "week": 13,
       "opp": "JAX",
       "home": true,
-      "wp": 0.5412,
-      "wpf": 0.55993
+      "wp": 0.5609,
+      "wpf": 0.55995,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.55995
      },
      {
       "week": 14,
       "opp": "MIA",
       "home": false,
-      "wp": 0.5482,
-      "wpf": 0.72063
+      "wp": 0.7211,
+      "wpf": 0.72064,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.72064
      },
      {
       "week": 15,
       "opp": "BUF",
       "home": false,
-      "wp": 0.3719,
-      "wpf": 0.32414
+      "wp": 0.3245,
+      "wpf": 0.32417,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.32417
      },
      {
       "week": 16,
       "opp": "GB",
       "home": true,
-      "wp": 0.5988,
-      "wpf": 0.54364
+      "wp": 0.5437,
+      "wpf": 0.54368,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.54368
      },
      {
       "week": 17,
       "opp": "DET",
       "home": true,
-      "wp": 0.521,
-      "wpf": 0.51649
+      "wp": 0.5167,
+      "wpf": 0.51654,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.51654
      },
      {
       "week": 18,
       "opp": "MIN",
       "home": false,
-      "wp": 0.4005,
-      "wpf": 0.47092
+      "wp": 0.471,
+      "wpf": 0.47094,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.47094
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 9.25,
+    "projected": 9.25
    },
    "CIN": {
     "name": "Bengals",
     "division": "AFC North",
     "line": 10.5,
     "ew": 10.11,
-    "sd": 2.75,
+    "sd": 2.74,
     "dist": {
      "0": 0.0001,
-     "1": 0.0008,
-     "2": 0.0024,
+     "1": 0.0006,
+     "2": 0.0022,
      "3": 0.0069,
-     "4": 0.017,
-     "5": 0.0335,
-     "6": 0.0538,
-     "7": 0.0809,
-     "8": 0.1057,
-     "9": 0.1293,
-     "10": 0.1368,
-     "11": 0.1328,
-     "12": 0.118,
-     "13": 0.0868,
-     "14": 0.0553,
-     "15": 0.0271,
-     "16": 0.0109,
-     "17": 0.002
+     "4": 0.0168,
+     "5": 0.0319,
+     "6": 0.0526,
+     "7": 0.078,
+     "8": 0.1071,
+     "9": 0.1288,
+     "10": 0.1391,
+     "11": 0.1358,
+     "12": 0.1163,
+     "13": 0.0873,
+     "14": 0.0555,
+     "15": 0.0283,
+     "16": 0.0106,
+     "17": 0.0022
     },
     "p10": 6,
     "p50": 10,
@@ -993,145 +1322,199 @@
       "week": 1,
       "opp": "TB",
       "home": true,
-      "wp": 0.6192,
-      "wpf": 0.68362
+      "wp": 0.6834,
+      "wpf": 0.68357,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.68357
      },
      {
       "week": 2,
       "opp": "HOU",
       "home": false,
-      "wp": 0.432,
-      "wpf": 0.43753
+      "wp": 0.4379,
+      "wpf": 0.43756,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.43756
      },
      {
       "week": 3,
       "opp": "PIT",
       "home": false,
-      "wp": 0.507,
-      "wpf": 0.58507
+      "wp": 0.5853,
+      "wpf": 0.58511,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.58511
      },
      {
       "week": 4,
       "opp": "JAX",
       "home": true,
-      "wp": 0.5038,
-      "wpf": 0.57496
+      "wp": 0.5753,
+      "wpf": 0.57493,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.57493
      },
      {
       "week": 5,
       "opp": "MIA",
       "home": false,
-      "wp": 0.5109,
-      "wpf": 0.73282
+      "wp": 0.7328,
+      "wpf": 0.73281,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.73281
      },
      {
       "week": 7,
       "opp": "BAL",
       "home": false,
-      "wp": 0.369,
-      "wpf": 0.36276
+      "wp": 0.363,
+      "wpf": 0.36273,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.36273
      },
      {
       "week": 8,
       "opp": "TEN",
       "home": true,
-      "wp": 0.672,
-      "wpf": 0.72791
+      "wp": 0.7282,
+      "wpf": 0.72792,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.72792
      },
      {
       "week": 9,
       "opp": "ATL",
       "home": false,
-      "wp": 0.4592,
-      "wpf": 0.57811
+      "wp": 0.5777,
+      "wpf": 0.57814,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.57814
      },
      {
       "week": 10,
       "opp": "PIT",
       "home": true,
-      "wp": 0.5577,
-      "wpf": 0.63354
+      "wp": 0.6337,
+      "wpf": 0.63352,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.63352
      },
      {
       "week": 11,
       "opp": "WAS",
       "home": false,
-      "wp": 0.4442,
-      "wpf": 0.52237
+      "wp": 0.5224,
+      "wpf": 0.52237,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.52237
      },
      {
       "week": 12,
       "opp": "NO",
       "home": true,
-      "wp": 0.6158,
-      "wpf": 0.70436
+      "wp": 0.7042,
+      "wpf": 0.7044,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.7044
      },
      {
       "week": 13,
       "opp": "CLE",
       "home": false,
-      "wp": 0.4996,
-      "wpf": 0.67223
+      "wp": 0.6725,
+      "wpf": 0.67224,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.67224
      },
      {
       "week": 14,
       "opp": "KC",
       "home": true,
-      "wp": 0.5174,
-      "wpf": 0.52357
+      "wp": 0.5234,
+      "wpf": 0.52353,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.52353
      },
      {
       "week": 15,
       "opp": "CAR",
       "home": false,
-      "wp": 0.4905,
-      "wpf": 0.58224
+      "wp": 0.5822,
+      "wpf": 0.58221,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.58221
      },
      {
       "week": 16,
       "opp": "IND",
       "home": false,
-      "wp": 0.4537,
-      "wpf": 0.52771
+      "wp": 0.5279,
+      "wpf": 0.52773,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.52773
      },
      {
       "week": 17,
       "opp": "BAL",
       "home": true,
-      "wp": 0.4938,
-      "wpf": 0.48708
+      "wp": 0.4874,
+      "wpf": 0.48711,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.48711
      },
      {
       "week": 18,
       "opp": "CLE",
       "home": true,
-      "wp": 0.6248,
-      "wpf": 0.77379
+      "wp": 0.774,
+      "wpf": 0.77379,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.77379
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 10.11,
+    "projected": 10.11
    },
    "CLE": {
     "name": "Browns",
     "division": "AFC North",
     "line": 5.5,
     "ew": 5.65,
-    "sd": 2.63,
+    "sd": 2.64,
     "dist": {
-     "0": 0.0053,
-     "1": 0.0243,
-     "2": 0.0593,
-     "3": 0.0976,
-     "4": 0.1294,
-     "5": 0.1442,
-     "6": 0.1427,
-     "7": 0.127,
-     "8": 0.1004,
-     "9": 0.0726,
-     "10": 0.0471,
-     "11": 0.0279,
-     "12": 0.013,
-     "13": 0.0062,
-     "14": 0.0023,
+     "0": 0.006,
+     "1": 0.0254,
+     "2": 0.0584,
+     "3": 0.0968,
+     "4": 0.1293,
+     "5": 0.147,
+     "6": 0.1441,
+     "7": 0.1243,
+     "8": 0.0992,
+     "9": 0.0723,
+     "10": 0.0462,
+     "11": 0.0273,
+     "12": 0.014,
+     "13": 0.0066,
+     "14": 0.0022,
      "15": 0.0007,
      "16": 0.0001,
      "17": 0.0
@@ -1144,122 +1527,176 @@
       "week": 1,
       "opp": "JAX",
       "home": false,
-      "wp": 0.2589,
-      "wpf": 0.18472
+      "wp": 0.1848,
+      "wpf": 0.18475,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.18475
      },
      {
       "week": 2,
       "opp": "TB",
       "home": false,
-      "wp": 0.3419,
-      "wpf": 0.25154
+      "wp": 0.2512,
+      "wpf": 0.25157,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.25157
      },
      {
       "week": 3,
       "opp": "CAR",
       "home": true,
-      "wp": 0.4892,
-      "wpf": 0.40297
+      "wp": 0.4027,
+      "wpf": 0.40299,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.40299
      },
      {
       "week": 4,
       "opp": "PIT",
       "home": true,
-      "wp": 0.46,
-      "wpf": 0.36248
+      "wp": 0.3624,
+      "wpf": 0.3625,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.3625
      },
      {
       "week": 5,
       "opp": "NYJ",
       "home": false,
-      "wp": 0.5158,
-      "wpf": 0.45007
+      "wp": 0.4494,
+      "wpf": 0.45006,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.45006
      },
      {
       "week": 6,
       "opp": "BAL",
       "home": true,
-      "wp": 0.4309,
-      "wpf": 0.26406
+      "wp": 0.264,
+      "wpf": 0.26401,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.26401
      },
      {
       "week": 7,
       "opp": "TEN",
       "home": false,
-      "wp": 0.4872,
-      "wpf": 0.37654
+      "wp": 0.3766,
+      "wpf": 0.37655,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.37655
      },
      {
       "week": 8,
       "opp": "PIT",
       "home": false,
-      "wp": 0.3698,
-      "wpf": 0.28144
+      "wp": 0.2814,
+      "wpf": 0.28148,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.28148
      },
      {
       "week": 9,
       "opp": "NO",
       "home": false,
-      "wp": 0.4274,
-      "wpf": 0.3507
+      "wp": 0.3502,
+      "wpf": 0.35069,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.35069
      },
      {
       "week": 10,
       "opp": "HOU",
       "home": true,
-      "wp": 0.4457,
-      "wpf": 0.28589
+      "wp": 0.2859,
+      "wpf": 0.28586,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.28586
      },
      {
       "week": 12,
       "opp": "LV",
       "home": true,
-      "wp": 0.5894,
-      "wpf": 0.52263
+      "wp": 0.5225,
+      "wpf": 0.52264,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.52264
      },
      {
       "week": 13,
       "opp": "CIN",
       "home": true,
-      "wp": 0.5004,
-      "wpf": 0.32777
+      "wp": 0.3275,
+      "wpf": 0.32776,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.32776
      },
      {
       "week": 14,
       "opp": "ATL",
       "home": true,
-      "wp": 0.5231,
-      "wpf": 0.46286
+      "wp": 0.4621,
+      "wpf": 0.46284,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.46284
      },
      {
       "week": 15,
       "opp": "NYG",
       "home": false,
-      "wp": 0.4145,
-      "wpf": 0.31099
+      "wp": 0.3109,
+      "wpf": 0.31095,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.31095
      },
      {
       "week": 16,
       "opp": "BAL",
       "home": false,
-      "wp": 0.311,
-      "wpf": 0.17621
+      "wp": 0.1762,
+      "wpf": 0.1762,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.1762
      },
      {
       "week": 17,
       "opp": "IND",
       "home": true,
-      "wp": 0.5175,
-      "wpf": 0.41261
+      "wp": 0.4125,
+      "wpf": 0.41262,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.41262
      },
      {
       "week": 18,
       "opp": "CIN",
       "home": false,
-      "wp": 0.3752,
-      "wpf": 0.22621
+      "wp": 0.226,
+      "wpf": 0.22621,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.22621
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 5.65,
+    "projected": 5.65
    },
    "DAL": {
     "name": "Cowboys",
@@ -1270,24 +1707,24 @@
     "dist": {
      "0": 0.0002,
      "1": 0.0012,
-     "2": 0.0049,
-     "3": 0.0134,
-     "4": 0.0284,
-     "5": 0.0515,
-     "6": 0.0783,
-     "7": 0.1073,
+     "2": 0.0052,
+     "3": 0.0136,
+     "4": 0.0287,
+     "5": 0.0514,
+     "6": 0.0778,
+     "7": 0.1067,
      "8": 0.1296,
-     "9": 0.1367,
-     "10": 0.1338,
-     "11": 0.1168,
-     "12": 0.0891,
-     "13": 0.0576,
+     "9": 0.139,
+     "10": 0.1336,
+     "11": 0.1163,
+     "12": 0.0866,
+     "13": 0.0584,
      "14": 0.0321,
-     "15": 0.0141,
-     "16": 0.0044,
-     "17": 0.0006
+     "15": 0.0142,
+     "16": 0.0043,
+     "17": 0.0009
     },
-    "p10": 6,
+    "p10": 5,
     "p50": 9,
     "p90": 13,
     "schedule": [
@@ -1295,148 +1732,202 @@
       "week": 1,
       "opp": "NYG",
       "home": false,
-      "wp": 0.5469,
-      "wpf": 0.61678
+      "wp": 0.6169,
+      "wpf": 0.61675,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.61675
      },
      {
       "week": 2,
       "opp": "WAS",
       "home": true,
-      "wp": 0.6146,
-      "wpf": 0.68962
+      "wp": 0.6896,
+      "wpf": 0.68965,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.68965
      },
      {
       "week": 3,
       "opp": "BAL",
       "home": true,
-      "wp": 0.4583,
-      "wpf": 0.45608
+      "wp": 0.4563,
+      "wpf": 0.4561,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.4561
      },
      {
       "week": 4,
       "opp": "HOU",
       "home": false,
-      "wp": 0.3772,
-      "wpf": 0.38675
+      "wp": 0.387,
+      "wpf": 0.38675,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.38675
      },
      {
       "week": 5,
       "opp": "TB",
       "home": true,
-      "wp": 0.5771,
-      "wpf": 0.64866
+      "wp": 0.6484,
+      "wpf": 0.64866,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.64866
      },
      {
       "week": 6,
       "opp": "GB",
       "home": false,
-      "wp": 0.4291,
-      "wpf": 0.43001
+      "wp": 0.4294,
+      "wpf": 0.43004,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.43004
      },
      {
       "week": 7,
       "opp": "PHI",
       "home": false,
-      "wp": 0.3779,
-      "wpf": 0.40368
+      "wp": 0.4036,
+      "wpf": 0.4037,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.4037
      },
      {
       "week": 8,
       "opp": "ARI",
       "home": true,
-      "wp": 0.6443,
-      "wpf": 0.82184
+      "wp": 0.8219,
+      "wpf": 0.82182,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.82182
      },
      {
       "week": 9,
       "opp": "IND",
       "home": false,
-      "wp": 0.4474,
-      "wpf": 0.52584
+      "wp": 0.5259,
+      "wpf": 0.52581,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.52581
      },
      {
       "week": 10,
       "opp": "SF",
       "home": true,
-      "wp": 0.5032,
-      "wpf": 0.52147
+      "wp": 0.5214,
+      "wpf": 0.52146,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.52146
      },
      {
       "week": 11,
       "opp": "TEN",
       "home": true,
-      "wp": 0.6662,
-      "wpf": 0.72628
+      "wp": 0.7265,
+      "wpf": 0.72629,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.72629
      },
      {
       "week": 12,
       "opp": "PHI",
       "home": true,
-      "wp": 0.5032,
-      "wpf": 0.53024
+      "wp": 0.5301,
+      "wpf": 0.53021,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.53021
      },
      {
       "week": 13,
       "opp": "SEA",
       "home": false,
-      "wp": 0.2848,
-      "wpf": 0.34989
+      "wp": 0.3495,
+      "wpf": 0.34989,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.34989
      },
      {
       "week": 15,
       "opp": "LAR",
       "home": false,
-      "wp": 0.3397,
-      "wpf": 0.28498
+      "wp": 0.2847,
+      "wpf": 0.28501,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.28501
      },
      {
       "week": 16,
       "opp": "JAX",
       "home": true,
-      "wp": 0.4975,
-      "wpf": 0.57319
+      "wp": 0.5735,
+      "wpf": 0.57321,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.57321
      },
      {
       "week": 17,
       "opp": "NYG",
       "home": true,
-      "wp": 0.597,
-      "wpf": 0.6639
+      "wp": 0.664,
+      "wpf": 0.66386,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.66386
      },
      {
       "week": 18,
       "opp": "WAS",
       "home": false,
-      "wp": 0.4379,
-      "wpf": 0.52048
+      "wp": 0.5204,
+      "wpf": 0.52046,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.52046
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 9.15,
+    "projected": 9.15
    },
    "DEN": {
     "name": "Broncos",
     "division": "AFC West",
     "line": 9.5,
     "ew": 9.67,
-    "sd": 2.72,
+    "sd": 2.71,
     "dist": {
-     "0": 0.0002,
-     "1": 0.0007,
+     "0": 0.0001,
+     "1": 0.0006,
      "2": 0.0029,
-     "3": 0.0088,
-     "4": 0.0209,
-     "5": 0.0388,
-     "6": 0.0626,
-     "7": 0.092,
-     "8": 0.1173,
-     "9": 0.1379,
-     "10": 0.1417,
-     "11": 0.1277,
-     "12": 0.1029,
-     "13": 0.0724,
-     "14": 0.0444,
+     "3": 0.0087,
+     "4": 0.02,
+     "5": 0.0389,
+     "6": 0.0638,
+     "7": 0.0924,
+     "8": 0.1178,
+     "9": 0.1363,
+     "10": 0.1403,
+     "11": 0.1288,
+     "12": 0.1039,
+     "13": 0.0735,
+     "14": 0.0432,
      "15": 0.0207,
-     "16": 0.0069,
-     "17": 0.001
+     "16": 0.0068,
+     "17": 0.0013
     },
     "p10": 6,
     "p50": 10,
@@ -1446,148 +1937,202 @@
       "week": 1,
       "opp": "KC",
       "home": false,
-      "wp": 0.4233,
-      "wpf": 0.38387
+      "wp": 0.3841,
+      "wpf": 0.38388,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.38388
      },
      {
       "week": 2,
       "opp": "JAX",
       "home": true,
-      "wp": 0.5694,
-      "wpf": 0.59331
+      "wp": 0.594,
+      "wpf": 0.59329,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.59329
      },
      {
       "week": 3,
       "opp": "LAR",
       "home": true,
-      "wp": 0.4505,
-      "wpf": 0.34063
+      "wp": 0.3407,
+      "wpf": 0.34064,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.34064
      },
      {
       "week": 4,
       "opp": "SF",
       "home": false,
-      "wp": 0.4661,
-      "wpf": 0.43309
+      "wp": 0.4335,
+      "wpf": 0.43312,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.43312
      },
      {
       "week": 5,
       "opp": "LAC",
       "home": false,
-      "wp": 0.5435,
-      "wpf": 0.42832
+      "wp": 0.4284,
+      "wpf": 0.42835,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.42835
      },
      {
       "week": 6,
       "opp": "SEA",
       "home": true,
-      "wp": 0.4905,
-      "wpf": 0.51416
+      "wp": 0.5142,
+      "wpf": 0.51418,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.51418
      },
      {
       "week": 7,
       "opp": "ARI",
       "home": false,
-      "wp": 0.6091,
-      "wpf": 0.76345
+      "wp": 0.7639,
+      "wpf": 0.76347,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.76347
      },
      {
       "week": 8,
       "opp": "KC",
       "home": true,
-      "wp": 0.6001,
-      "wpf": 0.5602
+      "wp": 0.5604,
+      "wpf": 0.56018,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.56018
      },
      {
       "week": 9,
       "opp": "CAR",
       "home": false,
-      "wp": 0.5738,
-      "wpf": 0.61744
+      "wp": 0.6178,
+      "wpf": 0.61747,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.61747
      },
      {
       "week": 11,
       "opp": "LV",
       "home": true,
-      "wp": 0.7239,
-      "wpf": 0.77281
+      "wp": 0.7732,
+      "wpf": 0.77284,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.77284
      },
      {
       "week": 12,
       "opp": "PIT",
       "home": false,
-      "wp": 0.5144,
-      "wpf": 0.54602
+      "wp": 0.5466,
+      "wpf": 0.54605,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.54605
      },
      {
       "week": 13,
       "opp": "MIA",
       "home": true,
-      "wp": 0.7109,
-      "wpf": 0.84244
+      "wp": 0.8426,
+      "wpf": 0.84241,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.84241
      },
      {
       "week": 14,
       "opp": "NYJ",
       "home": false,
-      "wp": 0.6584,
-      "wpf": 0.71581
+      "wp": 0.7158,
+      "wpf": 0.7158,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.7158
      },
      {
       "week": 15,
       "opp": "LV",
       "home": false,
-      "wp": 0.6086,
-      "wpf": 0.66858
+      "wp": 0.669,
+      "wpf": 0.66854,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.66854
      },
      {
       "week": 16,
       "opp": "BUF",
       "home": true,
-      "wp": 0.543,
-      "wpf": 0.49606
+      "wp": 0.4962,
+      "wpf": 0.49604,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.49604
      },
      {
       "week": 17,
       "opp": "NE",
       "home": false,
-      "wp": 0.4451,
-      "wpf": 0.43731
+      "wp": 0.4374,
+      "wpf": 0.43726,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.43726
      },
      {
       "week": 18,
       "opp": "LAC",
       "home": true,
-      "wp": 0.6657,
-      "wpf": 0.55618
+      "wp": 0.5562,
+      "wpf": 0.55615,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.55615
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 9.67,
+    "projected": 9.67
    },
    "DET": {
     "name": "Lions",
     "division": "NFC North",
     "line": 10.5,
     "ew": 10.68,
-    "sd": 2.67,
+    "sd": 2.68,
     "dist": {
      "0": 0.0,
-     "1": 0.0002,
+     "1": 0.0003,
      "2": 0.0013,
      "3": 0.0041,
-     "4": 0.0107,
-     "5": 0.0209,
-     "6": 0.0394,
-     "7": 0.0646,
-     "8": 0.0922,
-     "9": 0.1163,
-     "10": 0.1403,
-     "11": 0.144,
-     "12": 0.1307,
-     "13": 0.1054,
-     "14": 0.0728,
-     "15": 0.0393,
-     "16": 0.0146,
-     "17": 0.0032
+     "4": 0.0102,
+     "5": 0.0219,
+     "6": 0.0396,
+     "7": 0.0626,
+     "8": 0.0915,
+     "9": 0.1182,
+     "10": 0.1372,
+     "11": 0.1438,
+     "12": 0.1333,
+     "13": 0.1052,
+     "14": 0.073,
+     "15": 0.0392,
+     "16": 0.0155,
+     "17": 0.0031
     },
     "p10": 7,
     "p50": 11,
@@ -1597,148 +2142,202 @@
       "week": 1,
       "opp": "NO",
       "home": true,
-      "wp": 0.717,
-      "wpf": 0.75637
+      "wp": 0.7565,
+      "wpf": 0.75637,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.75637
      },
      {
       "week": 2,
       "opp": "BUF",
       "home": false,
-      "wp": 0.416,
-      "wpf": 0.37007
+      "wp": 0.3703,
+      "wpf": 0.37009,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.37009
      },
      {
       "week": 3,
       "opp": "NYJ",
       "home": true,
-      "wp": 0.7774,
-      "wpf": 0.81961
+      "wp": 0.8196,
+      "wpf": 0.81957,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.81957
      },
      {
       "week": 4,
       "opp": "CAR",
       "home": false,
-      "wp": 0.5702,
-      "wpf": 0.61289
+      "wp": 0.6133,
+      "wpf": 0.6129,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.6129
      },
      {
       "week": 5,
       "opp": "ARI",
       "home": false,
-      "wp": 0.6056,
-      "wpf": 0.75997
+      "wp": 0.7604,
+      "wpf": 0.75992,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.75992
      },
      {
       "week": 7,
       "opp": "GB",
       "home": true,
-      "wp": 0.6394,
-      "wpf": 0.59034
+      "wp": 0.5902,
+      "wpf": 0.59033,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.59033
      },
      {
       "week": 8,
       "opp": "MIN",
       "home": true,
-      "wp": 0.5689,
-      "wpf": 0.64161
+      "wp": 0.6415,
+      "wpf": 0.64159,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.64159
      },
      {
       "week": 9,
       "opp": "MIA",
       "home": false,
-      "wp": 0.5901,
-      "wpf": 0.75706
+      "wp": 0.7574,
+      "wpf": 0.75709,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.75709
      },
      {
       "week": 10,
       "opp": "NE",
       "home": true,
-      "wp": 0.5682,
-      "wpf": 0.55932
+      "wp": 0.5595,
+      "wpf": 0.55929,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.55929
      },
      {
       "week": 11,
       "opp": "TB",
       "home": true,
-      "wp": 0.6595,
-      "wpf": 0.67967
+      "wp": 0.6799,
+      "wpf": 0.6797,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.6797
      },
      {
       "week": 12,
       "opp": "CHI",
       "home": true,
-      "wp": 0.605,
-      "wpf": 0.60931
+      "wp": 0.6092,
+      "wpf": 0.60935,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.60935
      },
      {
       "week": 13,
       "opp": "ATL",
       "home": false,
-      "wp": 0.5392,
-      "wpf": 0.60887
+      "wp": 0.6088,
+      "wpf": 0.60882,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.60882
      },
      {
       "week": 14,
       "opp": "TEN",
       "home": true,
-      "wp": 0.7409,
-      "wpf": 0.75479
+      "wp": 0.7554,
+      "wpf": 0.75483,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.75483
      },
      {
       "week": 15,
       "opp": "MIN",
       "home": false,
-      "wp": 0.4423,
-      "wpf": 0.51828
+      "wp": 0.5182,
+      "wpf": 0.5183,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.5183
      },
      {
       "week": 16,
       "opp": "NYG",
       "home": true,
-      "wp": 0.6781,
-      "wpf": 0.6946
+      "wp": 0.6952,
+      "wpf": 0.69463,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.69463
      },
      {
       "week": 17,
       "opp": "CHI",
       "home": false,
-      "wp": 0.479,
-      "wpf": 0.48351
+      "wp": 0.4833,
+      "wpf": 0.48346,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.48346
      },
      {
       "week": 18,
       "opp": "GB",
       "home": false,
-      "wp": 0.5152,
-      "wpf": 0.46342
+      "wp": 0.4633,
+      "wpf": 0.46344,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.46344
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 10.68,
+    "projected": 10.68
    },
    "GB": {
     "name": "Packers",
     "division": "NFC North",
     "line": 10.0,
     "ew": 9.66,
-    "sd": 2.73,
+    "sd": 2.72,
     "dist": {
      "0": 0.0001,
      "1": 0.0008,
-     "2": 0.003,
-     "3": 0.0092,
-     "4": 0.0213,
-     "5": 0.0398,
-     "6": 0.0643,
-     "7": 0.0891,
-     "8": 0.1181,
-     "9": 0.1352,
-     "10": 0.1402,
-     "11": 0.1295,
-     "12": 0.1043,
-     "13": 0.0746,
-     "14": 0.0415,
-     "15": 0.021,
-     "16": 0.0064,
-     "17": 0.0016
+     "2": 0.0031,
+     "3": 0.0089,
+     "4": 0.0201,
+     "5": 0.0397,
+     "6": 0.0647,
+     "7": 0.0916,
+     "8": 0.1196,
+     "9": 0.1364,
+     "10": 0.1377,
+     "11": 0.1289,
+     "12": 0.1045,
+     "13": 0.0733,
+     "14": 0.0427,
+     "15": 0.0199,
+     "16": 0.0067,
+     "17": 0.0013
     },
     "p10": 6,
     "p50": 10,
@@ -1748,122 +2347,176 @@
       "week": 1,
       "opp": "MIN",
       "home": false,
-      "wp": 0.4691,
-      "wpf": 0.59595
+      "wp": 0.596,
+      "wpf": 0.59596,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.59596
      },
      {
       "week": 2,
       "opp": "NYJ",
       "home": false,
-      "wp": 0.66,
-      "wpf": 0.75654
+      "wp": 0.7567,
+      "wpf": 0.75656,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.75656
      },
      {
       "week": 3,
       "opp": "ATL",
       "home": true,
-      "wp": 0.7132,
-      "wpf": 0.80279
+      "wp": 0.8029,
+      "wpf": 0.80283,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.80283
      },
      {
       "week": 4,
       "opp": "TB",
       "home": false,
-      "wp": 0.4581,
-      "wpf": 0.5326
+      "wp": 0.533,
+      "wpf": 0.53264,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.53264
      },
      {
       "week": 5,
       "opp": "CHI",
       "home": true,
-      "wp": 0.5274,
-      "wpf": 0.58301
+      "wp": 0.583,
+      "wpf": 0.58302,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.58302
      },
      {
       "week": 6,
       "opp": "DAL",
       "home": true,
-      "wp": 0.5709,
-      "wpf": 0.56999
+      "wp": 0.5706,
+      "wpf": 0.56996,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.56996
      },
      {
       "week": 7,
       "opp": "DET",
       "home": false,
-      "wp": 0.3606,
-      "wpf": 0.40966
+      "wp": 0.4098,
+      "wpf": 0.40967,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.40967
      },
      {
       "week": 8,
       "opp": "CAR",
       "home": true,
-      "wp": 0.6173,
-      "wpf": 0.70315
+      "wp": 0.7036,
+      "wpf": 0.70314,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.70314
      },
      {
       "week": 9,
       "opp": "NE",
       "home": false,
-      "wp": 0.3652,
-      "wpf": 0.40575
+      "wp": 0.4061,
+      "wpf": 0.40577,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.40577
      },
      {
       "week": 10,
       "opp": "MIN",
       "home": true,
-      "wp": 0.4905,
-      "wpf": 0.61642
+      "wp": 0.6164,
+      "wpf": 0.61636,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.61636
      },
      {
       "week": 12,
       "opp": "LAR",
       "home": false,
-      "wp": 0.3467,
-      "wpf": 0.29059
+      "wp": 0.2908,
+      "wpf": 0.29058,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.29058
      },
      {
       "week": 13,
       "opp": "NO",
       "home": false,
-      "wp": 0.4916,
-      "wpf": 0.59316
+      "wp": 0.5935,
+      "wpf": 0.59319,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.59319
      },
      {
       "week": 14,
       "opp": "BUF",
       "home": true,
-      "wp": 0.4607,
-      "wpf": 0.46435
+      "wp": 0.4647,
+      "wpf": 0.46434,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.46434
      },
      {
       "week": 15,
       "opp": "MIA",
       "home": true,
-      "wp": 0.6366,
-      "wpf": 0.8235
+      "wp": 0.8238,
+      "wpf": 0.82348,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.82348
      },
      {
       "week": 16,
       "opp": "CHI",
       "home": false,
-      "wp": 0.4012,
-      "wpf": 0.45636
+      "wp": 0.4563,
+      "wpf": 0.45632,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.45632
      },
      {
       "week": 17,
       "opp": "HOU",
       "home": true,
-      "wp": 0.5101,
-      "wpf": 0.51928
+      "wp": 0.5202,
+      "wpf": 0.51929,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.51929
      },
      {
       "week": 18,
       "opp": "DET",
       "home": true,
-      "wp": 0.4848,
-      "wpf": 0.53658
+      "wp": 0.5367,
+      "wpf": 0.53656,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.53656
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 9.66,
+    "projected": 9.66
    },
    "HOU": {
     "name": "Texans",
@@ -1873,22 +2526,22 @@
     "sd": 2.77,
     "dist": {
      "0": 0.0001,
-     "1": 0.0008,
+     "1": 0.0006,
      "2": 0.003,
-     "3": 0.0077,
-     "4": 0.0184,
-     "5": 0.0365,
-     "6": 0.0564,
-     "7": 0.0824,
-     "8": 0.1086,
-     "9": 0.1314,
-     "10": 0.1378,
-     "11": 0.1318,
-     "12": 0.1114,
-     "13": 0.0825,
-     "14": 0.053,
-     "15": 0.0262,
-     "16": 0.0103,
+     "3": 0.0085,
+     "4": 0.0186,
+     "5": 0.0352,
+     "6": 0.0571,
+     "7": 0.0841,
+     "8": 0.1099,
+     "9": 0.1287,
+     "10": 0.137,
+     "11": 0.1314,
+     "12": 0.113,
+     "13": 0.0828,
+     "14": 0.0522,
+     "15": 0.0265,
+     "16": 0.0096,
      "17": 0.0018
     },
     "p10": 6,
@@ -1899,299 +2552,407 @@
       "week": 1,
       "opp": "BUF",
       "home": true,
-      "wp": 0.4905,
-      "wpf": 0.48499
+      "wp": 0.4844,
+      "wpf": 0.48495,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.48495
      },
      {
       "week": 2,
       "opp": "CIN",
       "home": true,
-      "wp": 0.568,
-      "wpf": 0.56247
+      "wp": 0.5621,
+      "wpf": 0.56244,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.56244
      },
      {
       "week": 3,
       "opp": "IND",
       "home": false,
-      "wp": 0.5265,
-      "wpf": 0.59393
+      "wp": 0.5938,
+      "wpf": 0.59397,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.59397
      },
      {
       "week": 4,
       "opp": "DAL",
       "home": true,
-      "wp": 0.6228,
-      "wpf": 0.61325
+      "wp": 0.613,
+      "wpf": 0.61325,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.61325
      },
      {
       "week": 5,
       "opp": "TEN",
       "home": false,
-      "wp": 0.604,
-      "wpf": 0.66071
+      "wp": 0.6607,
+      "wpf": 0.6607,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.6607
      },
      {
       "week": 6,
       "opp": "JAX",
       "home": false,
-      "wp": 0.4317,
-      "wpf": 0.49737
+      "wp": 0.4974,
+      "wpf": 0.49737,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.49737
      },
      {
       "week": 7,
       "opp": "NYG",
       "home": true,
-      "wp": 0.655,
-      "wpf": 0.70855
+      "wp": 0.7085,
+      "wpf": 0.70859,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.70859
      },
      {
       "week": 9,
       "opp": "LAC",
       "home": false,
-      "wp": 0.5146,
-      "wpf": 0.44063
+      "wp": 0.44,
+      "wpf": 0.44065,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.44065
      },
      {
       "week": 10,
       "opp": "CLE",
       "home": false,
-      "wp": 0.5543,
-      "wpf": 0.71411
+      "wp": 0.7141,
+      "wpf": 0.71414,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.71414
      },
      {
       "week": 11,
       "opp": "IND",
       "home": true,
-      "wp": 0.6331,
-      "wpf": 0.69417
+      "wp": 0.694,
+      "wpf": 0.69415,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.69415
      },
      {
       "week": 12,
       "opp": "BAL",
       "home": true,
-      "wp": 0.5485,
-      "wpf": 0.53624
+      "wp": 0.5362,
+      "wpf": 0.53626,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.53626
      },
      {
       "week": 13,
       "opp": "PIT",
       "home": false,
-      "wp": 0.4855,
-      "wpf": 0.5585
+      "wp": 0.5583,
+      "wpf": 0.55845,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.55845
      },
      {
       "week": 14,
       "opp": "WAS",
       "home": false,
-      "wp": 0.4988,
-      "wpf": 0.57111
+      "wp": 0.5708,
+      "wpf": 0.57111,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.57111
      },
      {
       "week": 15,
       "opp": "JAX",
       "home": true,
-      "wp": 0.5584,
-      "wpf": 0.62224
+      "wp": 0.6223,
+      "wpf": 0.62227,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.62227
      },
      {
       "week": 16,
       "opp": "PHI",
       "home": false,
-      "wp": 0.4374,
-      "wpf": 0.45416
+      "wp": 0.4538,
+      "wpf": 0.45417,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.45417
      },
      {
       "week": 17,
       "opp": "GB",
       "home": false,
-      "wp": 0.4899,
-      "wpf": 0.48072
+      "wp": 0.4798,
+      "wpf": 0.48071,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.48071
      },
      {
       "week": 18,
       "opp": "TEN",
       "home": true,
-      "wp": 0.72,
-      "wpf": 0.76652
+      "wp": 0.7665,
+      "wpf": 0.7665,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.7665
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 9.96,
+    "projected": 9.96
    },
    "IND": {
     "name": "Colts",
     "division": "AFC South",
     "line": 8.0,
     "ew": 7.8,
-    "sd": 2.76,
+    "sd": 2.75,
     "dist": {
-     "0": 0.0009,
-     "1": 0.0047,
-     "2": 0.0143,
-     "3": 0.0323,
-     "4": 0.0615,
-     "5": 0.0895,
-     "6": 0.119,
-     "7": 0.1336,
-     "8": 0.137,
-     "9": 0.126,
-     "10": 0.103,
-     "11": 0.0776,
-     "12": 0.0509,
-     "13": 0.0286,
+     "0": 0.0008,
+     "1": 0.0042,
+     "2": 0.0149,
+     "3": 0.0328,
+     "4": 0.0591,
+     "5": 0.0898,
+     "6": 0.1168,
+     "7": 0.1342,
+     "8": 0.1388,
+     "9": 0.1281,
+     "10": 0.1041,
+     "11": 0.0766,
+     "12": 0.0506,
+     "13": 0.0285,
      "14": 0.014,
-     "15": 0.0058,
-     "16": 0.0012,
+     "15": 0.0052,
+     "16": 0.0013,
      "17": 0.0002
     },
     "p10": 4,
     "p50": 8,
-    "p90": 12,
+    "p90": 11,
     "schedule": [
      {
       "week": 1,
       "opp": "BAL",
       "home": true,
-      "wp": 0.4018,
-      "wpf": 0.32706
+      "wp": 0.3272,
+      "wpf": 0.3271,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.3271
      },
      {
       "week": 2,
       "opp": "KC",
       "home": false,
-      "wp": 0.3143,
-      "wpf": 0.25883
+      "wp": 0.2586,
+      "wpf": 0.25884,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.25884
      },
      {
       "week": 3,
       "opp": "HOU",
       "home": true,
-      "wp": 0.4735,
-      "wpf": 0.40607
+      "wp": 0.4062,
+      "wpf": 0.40603,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.40603
      },
      {
       "week": 4,
       "opp": "WAS",
       "home": false,
-      "wp": 0.4687,
-      "wpf": 0.47294
+      "wp": 0.4728,
+      "wpf": 0.47294,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.47294
      },
      {
       "week": 5,
       "opp": "PIT",
       "home": false,
-      "wp": 0.4141,
-      "wpf": 0.4187
+      "wp": 0.4187,
+      "wpf": 0.41868,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.41868
      },
      {
       "week": 6,
       "opp": "TEN",
       "home": true,
-      "wp": 0.6562,
-      "wpf": 0.64944
+      "wp": 0.6496,
+      "wpf": 0.64944,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.64944
      },
      {
       "week": 7,
       "opp": "MIN",
       "home": false,
-      "wp": 0.3486,
-      "wpf": 0.39562
+      "wp": 0.395,
+      "wpf": 0.39567,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.39567
      },
      {
       "week": 8,
       "opp": "JAX",
       "home": false,
-      "wp": 0.3623,
-      "wpf": 0.36005
+      "wp": 0.3602,
+      "wpf": 0.36001,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.36001
      },
      {
       "week": 9,
       "opp": "DAL",
       "home": true,
-      "wp": 0.5526,
-      "wpf": 0.47416
+      "wp": 0.4741,
+      "wpf": 0.47419,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.47419
      },
      {
       "week": 10,
       "opp": "MIA",
       "home": true,
-      "wp": 0.6191,
-      "wpf": 0.76032
+      "wp": 0.7602,
+      "wpf": 0.76034,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.76034
      },
      {
       "week": 11,
       "opp": "HOU",
       "home": false,
-      "wp": 0.3669,
-      "wpf": 0.30583
+      "wp": 0.306,
+      "wpf": 0.30585,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.30585
      },
      {
       "week": 12,
       "opp": "NYG",
       "home": true,
-      "wp": 0.5865,
-      "wpf": 0.57997
+      "wp": 0.58,
+      "wpf": 0.57993,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.57993
      },
      {
       "week": 14,
       "opp": "PHI",
       "home": false,
-      "wp": 0.3676,
-      "wpf": 0.32108
+      "wp": 0.3209,
+      "wpf": 0.32107,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.32107
      },
      {
       "week": 15,
       "opp": "TEN",
       "home": false,
-      "wp": 0.5332,
-      "wpf": 0.52576
+      "wp": 0.5259,
+      "wpf": 0.52573,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.52573
      },
      {
       "week": 16,
       "opp": "CIN",
       "home": true,
-      "wp": 0.5463,
-      "wpf": 0.47229
+      "wp": 0.4721,
+      "wpf": 0.47227,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.47227
      },
      {
       "week": 17,
       "opp": "CLE",
       "home": false,
-      "wp": 0.4825,
-      "wpf": 0.58739
+      "wp": 0.5875,
+      "wpf": 0.58738,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.58738
      },
      {
       "week": 18,
       "opp": "JAX",
       "home": true,
-      "wp": 0.4866,
-      "wpf": 0.48416
+      "wp": 0.4844,
+      "wpf": 0.4842,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.4842
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 7.8,
+    "projected": 7.8
    },
    "JAX": {
     "name": "Jaguars",
     "division": "AFC South",
     "line": 9.5,
     "ew": 9.03,
-    "sd": 2.78,
+    "sd": 2.77,
     "dist": {
-     "0": 0.0002,
+     "0": 0.0003,
      "1": 0.0017,
-     "2": 0.006,
-     "3": 0.0157,
-     "4": 0.0321,
-     "5": 0.0538,
-     "6": 0.0814,
-     "7": 0.109,
-     "8": 0.1283,
-     "9": 0.1383,
+     "2": 0.0053,
+     "3": 0.0154,
+     "4": 0.0314,
+     "5": 0.0547,
+     "6": 0.0834,
+     "7": 0.1097,
+     "8": 0.1292,
+     "9": 0.1377,
      "10": 0.1297,
-     "11": 0.1122,
-     "12": 0.0867,
-     "13": 0.0561,
-     "14": 0.0296,
-     "15": 0.014,
+     "11": 0.1114,
+     "12": 0.0849,
+     "13": 0.0559,
+     "14": 0.031,
+     "15": 0.0132,
      "16": 0.0044,
-     "17": 0.0007
+     "17": 0.0008
     },
     "p10": 5,
     "p50": 9,
@@ -2201,122 +2962,176 @@
       "week": 1,
       "opp": "CLE",
       "home": true,
-      "wp": 0.7411,
-      "wpf": 0.81528
+      "wp": 0.8152,
+      "wpf": 0.81525,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.81525
      },
      {
       "week": 2,
       "opp": "DEN",
       "home": false,
-      "wp": 0.4306,
-      "wpf": 0.40669
+      "wp": 0.406,
+      "wpf": 0.40671,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.40671
      },
      {
       "week": 3,
       "opp": "NE",
       "home": true,
-      "wp": 0.5251,
-      "wpf": 0.49265
+      "wp": 0.4921,
+      "wpf": 0.4927,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.4927
      },
      {
       "week": 4,
       "opp": "CIN",
       "home": false,
-      "wp": 0.4962,
-      "wpf": 0.42504
+      "wp": 0.4247,
+      "wpf": 0.42507,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.42507
      },
      {
       "week": 5,
       "opp": "PHI",
       "home": true,
-      "wp": 0.569,
-      "wpf": 0.5203
+      "wp": 0.5199,
+      "wpf": 0.5203,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.5203
      },
      {
       "week": 6,
       "opp": "HOU",
       "home": true,
-      "wp": 0.5683,
-      "wpf": 0.50263
+      "wp": 0.5026,
+      "wpf": 0.50263,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.50263
      },
      {
       "week": 8,
       "opp": "IND",
       "home": true,
-      "wp": 0.6377,
-      "wpf": 0.63995
+      "wp": 0.6398,
+      "wpf": 0.63999,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.63999
      },
      {
       "week": 9,
       "opp": "BAL",
       "home": false,
-      "wp": 0.4268,
-      "wpf": 0.35235
+      "wp": 0.3523,
+      "wpf": 0.35238,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.35238
      },
      {
       "week": 10,
       "opp": "TEN",
       "home": false,
-      "wp": 0.6088,
-      "wpf": 0.60401
+      "wp": 0.604,
+      "wpf": 0.60403,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.60403
      },
      {
       "week": 11,
       "opp": "NYG",
       "home": false,
-      "wp": 0.5368,
-      "wpf": 0.53254
+      "wp": 0.5324,
+      "wpf": 0.53253,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.53253
      },
      {
       "week": 12,
       "opp": "TEN",
       "home": true,
-      "wp": 0.7241,
-      "wpf": 0.72007
+      "wp": 0.72,
+      "wpf": 0.72002,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.72002
      },
      {
       "week": 13,
       "opp": "CHI",
       "home": false,
-      "wp": 0.4588,
-      "wpf": 0.44007
+      "wp": 0.4391,
+      "wpf": 0.44005,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.44005
      },
      {
       "week": 14,
       "opp": "PIT",
       "home": true,
-      "wp": 0.616,
-      "wpf": 0.62277
+      "wp": 0.6226,
+      "wpf": 0.62277,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.62277
      },
      {
       "week": 15,
       "opp": "HOU",
       "home": false,
-      "wp": 0.4416,
-      "wpf": 0.37776
+      "wp": 0.3777,
+      "wpf": 0.37773,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.37773
      },
      {
       "week": 16,
       "opp": "DAL",
       "home": false,
-      "wp": 0.5025,
-      "wpf": 0.42681
+      "wp": 0.4265,
+      "wpf": 0.42679,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.42679
      },
      {
       "week": 17,
       "opp": "WAS",
       "home": true,
-      "wp": 0.6287,
-      "wpf": 0.63493
+      "wp": 0.6346,
+      "wpf": 0.63492,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.63492
      },
      {
       "week": 18,
       "opp": "IND",
       "home": false,
-      "wp": 0.5134,
-      "wpf": 0.51584
+      "wp": 0.5156,
+      "wpf": 0.5158,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.5158
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 9.03,
+    "projected": 9.03
    },
    "KC": {
     "name": "Chiefs",
@@ -2326,22 +3141,22 @@
     "sd": 2.63,
     "dist": {
      "0": 0.0001,
-     "1": 0.0005,
-     "2": 0.0016,
+     "1": 0.0003,
+     "2": 0.0015,
      "3": 0.0052,
-     "4": 0.0139,
-     "5": 0.0289,
-     "6": 0.0513,
-     "7": 0.0802,
-     "8": 0.1101,
-     "9": 0.1348,
-     "10": 0.1486,
-     "11": 0.1399,
-     "12": 0.1148,
-     "13": 0.0832,
-     "14": 0.0524,
-     "15": 0.0251,
-     "16": 0.0079,
+     "4": 0.0144,
+     "5": 0.0292,
+     "6": 0.0525,
+     "7": 0.081,
+     "8": 0.109,
+     "9": 0.1369,
+     "10": 0.1463,
+     "11": 0.1367,
+     "12": 0.1167,
+     "13": 0.0848,
+     "14": 0.0514,
+     "15": 0.0243,
+     "16": 0.0082,
      "17": 0.0015
     },
     "p10": 6,
@@ -2352,122 +3167,176 @@
       "week": 1,
       "opp": "DEN",
       "home": true,
-      "wp": 0.5767,
-      "wpf": 0.61613
+      "wp": 0.6159,
+      "wpf": 0.61612,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.61612
      },
      {
       "week": 2,
       "opp": "IND",
       "home": true,
-      "wp": 0.6857,
-      "wpf": 0.74117
+      "wp": 0.7414,
+      "wpf": 0.74116,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.74116
      },
      {
       "week": 3,
       "opp": "MIA",
       "home": false,
-      "wp": 0.7042,
-      "wpf": 0.85912
+      "wp": 0.8592,
+      "wpf": 0.85914,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.85914
      },
      {
       "week": 4,
       "opp": "LV",
       "home": false,
-      "wp": 0.572,
-      "wpf": 0.67135
+      "wp": 0.6716,
+      "wpf": 0.67134,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.67134
      },
      {
       "week": 6,
       "opp": "LAC",
       "home": true,
-      "wp": 0.6309,
-      "wpf": 0.55894
+      "wp": 0.5588,
+      "wpf": 0.55898,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.55898
      },
      {
       "week": 7,
       "opp": "SEA",
       "home": false,
-      "wp": 0.3312,
-      "wpf": 0.39074
+      "wp": 0.3905,
+      "wpf": 0.3907,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.3907
      },
      {
       "week": 8,
       "opp": "DEN",
       "home": false,
-      "wp": 0.3999,
-      "wpf": 0.4398
+      "wp": 0.4396,
+      "wpf": 0.43982,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.43982
      },
      {
       "week": 9,
       "opp": "NYJ",
       "home": true,
-      "wp": 0.7367,
-      "wpf": 0.8116
+      "wp": 0.8115,
+      "wpf": 0.81164,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.81164
      },
      {
       "week": 10,
       "opp": "ATL",
       "home": false,
-      "wp": 0.5054,
-      "wpf": 0.61668
+      "wp": 0.6164,
+      "wpf": 0.6167,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.6167
      },
      {
       "week": 11,
       "opp": "ARI",
       "home": true,
-      "wp": 0.6921,
-      "wpf": 0.8458
+      "wp": 0.846,
+      "wpf": 0.84581,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.84581
      },
      {
       "week": 12,
       "opp": "BUF",
       "home": false,
-      "wp": 0.3802,
-      "wpf": 0.3745
+      "wp": 0.3744,
+      "wpf": 0.37447,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.37447
      },
      {
       "week": 13,
       "opp": "LAR",
       "home": false,
-      "wp": 0.3891,
-      "wpf": 0.32104
+      "wp": 0.3209,
+      "wpf": 0.32104,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.32104
      },
      {
       "week": 14,
       "opp": "CIN",
       "home": false,
-      "wp": 0.4826,
-      "wpf": 0.47643
+      "wp": 0.4766,
+      "wpf": 0.47647,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.47647
      },
      {
       "week": 15,
       "opp": "NE",
       "home": true,
-      "wp": 0.5346,
-      "wpf": 0.56732
+      "wp": 0.5672,
+      "wpf": 0.56728,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.56728
      },
      {
       "week": 16,
       "opp": "SF",
       "home": true,
-      "wp": 0.5557,
-      "wpf": 0.56321
+      "wp": 0.5634,
+      "wpf": 0.56324,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.56324
      },
      {
       "week": 17,
       "opp": "LAC",
       "home": false,
-      "wp": 0.5061,
-      "wpf": 0.43173
+      "wp": 0.4315,
+      "wpf": 0.43168,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.43168
      },
      {
       "week": 18,
       "opp": "LV",
       "home": true,
-      "wp": 0.6916,
-      "wpf": 0.77415
+      "wp": 0.7743,
+      "wpf": 0.7741,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.7741
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 10.06,
+    "projected": 10.06
    },
    "LAC": {
     "name": "Chargers",
@@ -2476,23 +3345,23 @@
     "ew": 9.9,
     "sd": 2.63,
     "dist": {
-     "0": 0.0001,
+     "0": 0.0,
      "1": 0.0003,
-     "2": 0.0018,
-     "3": 0.0055,
-     "4": 0.0149,
-     "5": 0.0321,
-     "6": 0.0565,
-     "7": 0.0852,
-     "8": 0.116,
-     "9": 0.1379,
-     "10": 0.1446,
-     "11": 0.1363,
-     "12": 0.1125,
-     "13": 0.0783,
-     "14": 0.0473,
-     "15": 0.0221,
-     "16": 0.0072,
+     "2": 0.0017,
+     "3": 0.0057,
+     "4": 0.0151,
+     "5": 0.0312,
+     "6": 0.0558,
+     "7": 0.0857,
+     "8": 0.1148,
+     "9": 0.1375,
+     "10": 0.1434,
+     "11": 0.1368,
+     "12": 0.1143,
+     "13": 0.0788,
+     "14": 0.0477,
+     "15": 0.0222,
+     "16": 0.0075,
      "17": 0.0015
     },
     "p10": 6,
@@ -2503,148 +3372,202 @@
       "week": 1,
       "opp": "ARI",
       "home": true,
-      "wp": 0.7849,
-      "wpf": 0.92314
+      "wp": 0.9233,
+      "wpf": 0.92315,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.92315
      },
      {
       "week": 2,
       "opp": "LV",
       "home": true,
-      "wp": 0.743,
-      "wpf": 0.85633
+      "wp": 0.8566,
+      "wpf": 0.85637,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.85637
      },
      {
       "week": 3,
       "opp": "BUF",
       "home": false,
-      "wp": 0.3786,
-      "wpf": 0.44508
+      "wp": 0.4452,
+      "wpf": 0.44509,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.44509
      },
      {
       "week": 4,
       "opp": "SEA",
       "home": false,
-      "wp": 0.2705,
-      "wpf": 0.3931
+      "wp": 0.3931,
+      "wpf": 0.39313,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.39313
      },
      {
       "week": 5,
       "opp": "DEN",
       "home": true,
-      "wp": 0.4565,
-      "wpf": 0.57168
+      "wp": 0.5716,
+      "wpf": 0.57165,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.57165
      },
      {
       "week": 6,
       "opp": "KC",
       "home": false,
-      "wp": 0.3691,
-      "wpf": 0.44106
+      "wp": 0.4412,
+      "wpf": 0.44102,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.44102
      },
      {
       "week": 8,
       "opp": "LAR",
       "home": false,
-      "wp": 0.3241,
-      "wpf": 0.32438
+      "wp": 0.3244,
+      "wpf": 0.32439,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.32439
      },
      {
       "week": 9,
       "opp": "HOU",
       "home": true,
-      "wp": 0.4854,
-      "wpf": 0.55937
+      "wp": 0.56,
+      "wpf": 0.55935,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.55935
      },
      {
       "week": 10,
       "opp": "BAL",
       "home": false,
-      "wp": 0.3471,
-      "wpf": 0.40511
+      "wp": 0.4057,
+      "wpf": 0.40512,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.40512
      },
      {
       "week": 11,
       "opp": "NYJ",
       "home": true,
-      "wp": 0.6767,
-      "wpf": 0.81297
+      "wp": 0.8129,
+      "wpf": 0.81293,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.81293
      },
      {
       "week": 12,
       "opp": "NE",
       "home": true,
-      "wp": 0.465,
-      "wpf": 0.57231
+      "wp": 0.5724,
+      "wpf": 0.57231,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.57231
      },
      {
       "week": 13,
       "opp": "TB",
       "home": false,
-      "wp": 0.4336,
-      "wpf": 0.5724
+      "wp": 0.5725,
+      "wpf": 0.57239,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.57239
      },
      {
       "week": 14,
       "opp": "LV",
       "home": false,
-      "wp": 0.5028,
-      "wpf": 0.67583
+      "wp": 0.6762,
+      "wpf": 0.67579,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.67579
      },
      {
       "week": 15,
       "opp": "SF",
       "home": true,
-      "wp": 0.4862,
-      "wpf": 0.56819
+      "wp": 0.5685,
+      "wpf": 0.56817,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.56817
      },
      {
       "week": 16,
       "opp": "MIA",
       "home": false,
-      "wp": 0.4874,
-      "wpf": 0.76664
+      "wp": 0.7669,
+      "wpf": 0.76668,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.76668
      },
      {
       "week": 17,
       "opp": "KC",
       "home": true,
-      "wp": 0.4939,
-      "wpf": 0.56827
+      "wp": 0.5685,
+      "wpf": 0.56832,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.56832
      },
      {
       "week": 18,
       "opp": "DEN",
       "home": false,
-      "wp": 0.3343,
-      "wpf": 0.44382
+      "wp": 0.4438,
+      "wpf": 0.44385,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.44385
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 9.9,
+    "projected": 9.9
    },
    "LAR": {
     "name": "Rams",
     "division": "NFC West",
     "line": 11.5,
     "ew": 11.73,
-    "sd": 2.56,
+    "sd": 2.58,
     "dist": {
      "0": 0.0,
-     "1": 0.0,
+     "1": 0.0001,
      "2": 0.0004,
-     "3": 0.0012,
-     "4": 0.004,
-     "5": 0.0098,
-     "6": 0.0198,
-     "7": 0.038,
-     "8": 0.0614,
-     "9": 0.0899,
-     "10": 0.1182,
-     "11": 0.1432,
-     "12": 0.1521,
-     "13": 0.1405,
-     "14": 0.111,
-     "15": 0.0708,
-     "16": 0.0318,
-     "17": 0.0079
+     "3": 0.0016,
+     "4": 0.0041,
+     "5": 0.0101,
+     "6": 0.0205,
+     "7": 0.0369,
+     "8": 0.0625,
+     "9": 0.0898,
+     "10": 0.1171,
+     "11": 0.1411,
+     "12": 0.1503,
+     "13": 0.1413,
+     "14": 0.1102,
+     "15": 0.072,
+     "16": 0.0332,
+     "17": 0.0089
     },
     "p10": 8,
     "p50": 12,
@@ -2654,146 +3577,200 @@
       "week": 1,
       "opp": "SF",
       "home": true,
-      "wp": 0.6132,
-      "wpf": 0.68766
+      "wp": 0.6879,
+      "wpf": 0.68762,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.68762
      },
      {
       "week": 2,
       "opp": "NYG",
       "home": true,
-      "wp": 0.7436,
-      "wpf": 0.8331
+      "wp": 0.8334,
+      "wpf": 0.8331,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.8331
      },
      {
       "week": 3,
       "opp": "DEN",
       "home": false,
-      "wp": 0.5495,
-      "wpf": 0.65937
+      "wp": 0.6593,
+      "wpf": 0.65936,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.65936
      },
      {
       "week": 4,
       "opp": "PHI",
       "home": false,
-      "wp": 0.4772,
-      "wpf": 0.56766
+      "wp": 0.5679,
+      "wpf": 0.56763,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.56763
      },
      {
       "week": 5,
       "opp": "BUF",
       "home": true,
-      "wp": 0.5541,
-      "wpf": 0.62032
+      "wp": 0.6204,
+      "wpf": 0.62031,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.62031
      },
      {
       "week": 6,
       "opp": "ARI",
       "home": true,
-      "wp": 0.7337,
-      "wpf": 0.90056
+      "wp": 0.9008,
+      "wpf": 0.90061,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.90061
      },
      {
       "week": 7,
       "opp": "LV",
       "home": false,
-      "wp": 0.6193,
-      "wpf": 0.77008
+      "wp": 0.7704,
+      "wpf": 0.77008,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.77008
      },
      {
       "week": 8,
       "opp": "LAC",
       "home": true,
-      "wp": 0.6759,
-      "wpf": 0.67562
+      "wp": 0.6756,
+      "wpf": 0.67561,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.67561
      },
      {
       "week": 9,
       "opp": "WAS",
       "home": false,
-      "wp": 0.5389,
-      "wpf": 0.67761
+      "wp": 0.6779,
+      "wpf": 0.67761,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.67761
      },
      {
       "week": 10,
       "opp": "ARI",
       "home": false,
-      "wp": 0.6198,
-      "wpf": 0.84273
+      "wp": 0.843,
+      "wpf": 0.84272,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.84272
      },
      {
       "week": 12,
       "opp": "GB",
       "home": true,
-      "wp": 0.6533,
-      "wpf": 0.70941
+      "wp": 0.7092,
+      "wpf": 0.70942,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.70942
      },
      {
       "week": 13,
       "opp": "KC",
       "home": true,
-      "wp": 0.6109,
-      "wpf": 0.67896
+      "wp": 0.6791,
+      "wpf": 0.67896,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.67896
      },
      {
       "week": 14,
       "opp": "SF",
       "home": false,
-      "wp": 0.4773,
-      "wpf": 0.55911
+      "wp": 0.5594,
+      "wpf": 0.55908,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.55908
      },
      {
       "week": 15,
       "opp": "DAL",
       "home": true,
-      "wp": 0.6603,
-      "wpf": 0.71502
+      "wp": 0.7153,
+      "wpf": 0.71499,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.71499
      },
      {
       "week": 16,
       "opp": "SEA",
       "home": false,
-      "wp": 0.3765,
-      "wpf": 0.51301
+      "wp": 0.513,
+      "wpf": 0.51305,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.51305
      },
      {
       "week": 17,
       "opp": "TB",
       "home": false,
-      "wp": 0.5515,
-      "wpf": 0.68228
+      "wp": 0.6824,
+      "wpf": 0.68231,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.68231
      },
      {
       "week": 18,
       "opp": "SEA",
       "home": true,
-      "wp": 0.5017,
-      "wpf": 0.63721
+      "wp": 0.6372,
+      "wpf": 0.63724,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.63724
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 11.73,
+    "projected": 11.73
    },
    "LV": {
     "name": "Raiders",
     "division": "AFC West",
     "line": 6.0,
     "ew": 5.98,
-    "sd": 2.59,
+    "sd": 2.58,
     "dist": {
-     "0": 0.0032,
-     "1": 0.0172,
-     "2": 0.0457,
-     "3": 0.0824,
-     "4": 0.1217,
-     "5": 0.1452,
-     "6": 0.1474,
-     "7": 0.1358,
-     "8": 0.1096,
-     "9": 0.08,
-     "10": 0.054,
-     "11": 0.0312,
-     "12": 0.0162,
-     "13": 0.0068,
-     "14": 0.0027,
-     "15": 0.0007,
+     "0": 0.0035,
+     "1": 0.0173,
+     "2": 0.0456,
+     "3": 0.0828,
+     "4": 0.1189,
+     "5": 0.1454,
+     "6": 0.1516,
+     "7": 0.1359,
+     "8": 0.1089,
+     "9": 0.0812,
+     "10": 0.0535,
+     "11": 0.0302,
+     "12": 0.0149,
+     "13": 0.0066,
+     "14": 0.0026,
+     "15": 0.0008,
      "16": 0.0001,
      "17": 0.0
     },
@@ -2805,145 +3782,199 @@
       "week": 1,
       "opp": "MIA",
       "home": true,
-      "wp": 0.6152,
-      "wpf": 0.72822
+      "wp": 0.7281,
+      "wpf": 0.72823,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.72823
      },
      {
       "week": 2,
       "opp": "LAC",
       "home": false,
-      "wp": 0.257,
-      "wpf": 0.14367
+      "wp": 0.1434,
+      "wpf": 0.14363,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.14363
      },
      {
       "week": 3,
       "opp": "NO",
       "home": false,
-      "wp": 0.3726,
-      "wpf": 0.36039
+      "wp": 0.36,
+      "wpf": 0.36037,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.36037
      },
      {
       "week": 4,
       "opp": "KC",
       "home": true,
-      "wp": 0.428,
-      "wpf": 0.32865
+      "wp": 0.3284,
+      "wpf": 0.32866,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.32866
      },
      {
       "week": 5,
       "opp": "NE",
       "home": false,
-      "wp": 0.2833,
-      "wpf": 0.22792
+      "wp": 0.2277,
+      "wpf": 0.22796,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.22796
      },
      {
       "week": 6,
       "opp": "BUF",
       "home": true,
-      "wp": 0.3718,
-      "wpf": 0.27428
+      "wp": 0.274,
+      "wpf": 0.27429,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.27429
      },
      {
       "week": 7,
       "opp": "LAR",
       "home": true,
-      "wp": 0.3807,
-      "wpf": 0.22992
+      "wp": 0.2296,
+      "wpf": 0.22992,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.22992
      },
      {
       "week": 8,
       "opp": "NYJ",
       "home": false,
-      "wp": 0.4893,
-      "wpf": 0.49112
+      "wp": 0.4906,
+      "wpf": 0.49112,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.49112
      },
      {
       "week": 9,
       "opp": "SF",
       "home": false,
-      "wp": 0.3015,
-      "wpf": 0.22549
+      "wp": 0.2254,
+      "wpf": 0.22549,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.22549
      },
      {
       "week": 10,
       "opp": "SEA",
       "home": true,
-      "wp": 0.3232,
-      "wpf": 0.28807
+      "wp": 0.2876,
+      "wpf": 0.28801,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.28801
      },
      {
       "week": 11,
       "opp": "DEN",
       "home": false,
-      "wp": 0.2761,
-      "wpf": 0.22719
+      "wp": 0.2268,
+      "wpf": 0.22716,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.22716
      },
      {
       "week": 12,
       "opp": "CLE",
       "home": false,
-      "wp": 0.4106,
-      "wpf": 0.47737
+      "wp": 0.4775,
+      "wpf": 0.47736,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.47736
      },
      {
       "week": 14,
       "opp": "LAC",
       "home": true,
-      "wp": 0.4972,
-      "wpf": 0.32417
+      "wp": 0.3238,
+      "wpf": 0.32421,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.32421
      },
      {
       "week": 15,
       "opp": "DEN",
       "home": true,
-      "wp": 0.3914,
-      "wpf": 0.33142
+      "wp": 0.331,
+      "wpf": 0.33146,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.33146
      },
      {
       "week": 16,
       "opp": "TEN",
       "home": true,
-      "wp": 0.5871,
-      "wpf": 0.54236
+      "wp": 0.5425,
+      "wpf": 0.54231,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.54231
      },
      {
       "week": 17,
       "opp": "ARI",
       "home": false,
-      "wp": 0.4372,
-      "wpf": 0.55362
+      "wp": 0.5537,
+      "wpf": 0.55363,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.55363
      },
      {
       "week": 18,
       "opp": "KC",
       "home": false,
-      "wp": 0.3084,
-      "wpf": 0.22585
+      "wp": 0.2257,
+      "wpf": 0.2259,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.2259
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 5.98,
+    "projected": 5.98
    },
    "MIA": {
     "name": "Dolphins",
     "division": "AFC East",
     "line": 4.0,
     "ew": 3.92,
-    "sd": 2.3,
+    "sd": 2.31,
     "dist": {
-     "0": 0.0246,
-     "1": 0.0757,
-     "2": 0.1359,
-     "3": 0.1676,
-     "4": 0.1706,
-     "5": 0.1466,
-     "6": 0.1113,
-     "7": 0.0751,
-     "8": 0.0462,
+     "0": 0.0245,
+     "1": 0.0781,
+     "2": 0.1333,
+     "3": 0.1688,
+     "4": 0.1694,
+     "5": 0.1479,
+     "6": 0.1105,
+     "7": 0.0749,
+     "8": 0.0456,
      "9": 0.0252,
-     "10": 0.0126,
-     "11": 0.0054,
+     "10": 0.0129,
+     "11": 0.0059,
      "12": 0.0022,
-     "13": 0.0008,
-     "14": 0.0001,
+     "13": 0.0007,
+     "14": 0.0002,
      "15": 0.0001,
      "16": 0.0,
      "17": 0.0
@@ -2956,122 +3987,176 @@
       "week": 1,
       "opp": "LV",
       "home": false,
-      "wp": 0.3848,
-      "wpf": 0.27178
+      "wp": 0.2719,
+      "wpf": 0.27177,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.27177
      },
      {
       "week": 2,
       "opp": "SF",
       "home": false,
-      "wp": 0.2165,
-      "wpf": 0.10008
+      "wp": 0.1001,
+      "wpf": 0.10009,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.10009
      },
      {
       "week": 3,
       "opp": "KC",
       "home": true,
-      "wp": 0.2958,
-      "wpf": 0.14088
+      "wp": 0.1408,
+      "wpf": 0.14086,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.14086
      },
      {
       "week": 4,
       "opp": "MIN",
       "home": false,
-      "wp": 0.2971,
-      "wpf": 0.20943
+      "wp": 0.2091,
+      "wpf": 0.20944,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.20944
      },
      {
       "week": 5,
       "opp": "CIN",
       "home": true,
-      "wp": 0.4891,
-      "wpf": 0.26718
+      "wp": 0.2672,
+      "wpf": 0.26719,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.26719
      },
      {
       "week": 7,
       "opp": "NYJ",
       "home": false,
-      "wp": 0.5046,
-      "wpf": 0.37973
+      "wp": 0.3794,
+      "wpf": 0.37974,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.37974
      },
      {
       "week": 8,
       "opp": "NE",
       "home": true,
-      "wp": 0.4146,
-      "wpf": 0.23989
+      "wp": 0.2397,
+      "wpf": 0.23985,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.23985
      },
      {
       "week": 9,
       "opp": "DET",
       "home": true,
-      "wp": 0.4099,
-      "wpf": 0.24294
+      "wp": 0.2426,
+      "wpf": 0.24291,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.24291
      },
      {
       "week": 10,
       "opp": "IND",
       "home": false,
-      "wp": 0.3809,
-      "wpf": 0.23968
+      "wp": 0.2398,
+      "wpf": 0.23966,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.23966
      },
      {
       "week": 11,
       "opp": "BUF",
       "home": false,
-      "wp": 0.2717,
-      "wpf": 0.12445
+      "wp": 0.1244,
+      "wpf": 0.12448,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.12448
      },
      {
       "week": 12,
       "opp": "NYJ",
       "home": true,
-      "wp": 0.6295,
-      "wpf": 0.50524
+      "wp": 0.5049,
+      "wpf": 0.50526,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.50526
      },
      {
       "week": 13,
       "opp": "DEN",
       "home": false,
-      "wp": 0.2891,
-      "wpf": 0.15756
+      "wp": 0.1574,
+      "wpf": 0.15759,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.15759
      },
      {
       "week": 14,
       "opp": "CHI",
       "home": true,
-      "wp": 0.4518,
-      "wpf": 0.27937
+      "wp": 0.2789,
+      "wpf": 0.27936,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.27936
      },
      {
       "week": 15,
       "opp": "GB",
       "home": false,
-      "wp": 0.3634,
-      "wpf": 0.1765
+      "wp": 0.1762,
+      "wpf": 0.17652,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.17652
      },
      {
       "week": 16,
       "opp": "LAC",
       "home": true,
-      "wp": 0.5126,
-      "wpf": 0.23336
+      "wp": 0.2331,
+      "wpf": 0.23332,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.23332
      },
      {
       "week": 17,
       "opp": "BUF",
       "home": true,
-      "wp": 0.3865,
-      "wpf": 0.19357
+      "wp": 0.1935,
+      "wpf": 0.19362,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.19362
      },
      {
       "week": 18,
       "opp": "NE",
       "home": false,
-      "wp": 0.2965,
-      "wpf": 0.15811
+      "wp": 0.158,
+      "wpf": 0.15811,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.15811
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 3.92,
+    "projected": 3.92
    },
    "MIN": {
     "name": "Vikings",
@@ -3080,24 +4165,24 @@
     "ew": 8.52,
     "sd": 2.77,
     "dist": {
-     "0": 0.0004,
-     "1": 0.0022,
-     "2": 0.008,
-     "3": 0.0209,
-     "4": 0.0433,
-     "5": 0.0679,
-     "6": 0.0973,
-     "7": 0.1215,
-     "8": 0.1358,
-     "9": 0.1339,
-     "10": 0.1234,
-     "11": 0.0977,
-     "12": 0.0691,
-     "13": 0.0434,
-     "14": 0.0227,
-     "15": 0.0095,
+     "0": 0.0003,
+     "1": 0.0025,
+     "2": 0.0087,
+     "3": 0.0214,
+     "4": 0.0416,
+     "5": 0.0698,
+     "6": 0.0957,
+     "7": 0.1225,
+     "8": 0.1341,
+     "9": 0.1366,
+     "10": 0.1235,
+     "11": 0.095,
+     "12": 0.0707,
+     "13": 0.0428,
+     "14": 0.023,
+     "15": 0.009,
      "16": 0.0024,
-     "17": 0.0005
+     "17": 0.0004
     },
     "p10": 5,
     "p50": 9,
@@ -3107,122 +4192,176 @@
       "week": 1,
       "opp": "GB",
       "home": true,
-      "wp": 0.5309,
-      "wpf": 0.40405
+      "wp": 0.404,
+      "wpf": 0.40404,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.40404
      },
      {
       "week": 2,
       "opp": "CHI",
       "home": false,
-      "wp": 0.401,
-      "wpf": 0.33443
+      "wp": 0.3344,
+      "wpf": 0.33445,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.33445
      },
      {
       "week": 3,
       "opp": "TB",
       "home": false,
-      "wp": 0.4834,
-      "wpf": 0.4304
+      "wp": 0.4307,
+      "wpf": 0.43038,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.43038
      },
      {
       "week": 4,
       "opp": "MIA",
       "home": true,
-      "wp": 0.7029,
-      "wpf": 0.79057
+      "wp": 0.7909,
+      "wpf": 0.79056,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.79056
      },
      {
       "week": 5,
       "opp": "NO",
       "home": false,
-      "wp": 0.5644,
-      "wpf": 0.53925
+      "wp": 0.5395,
+      "wpf": 0.53922,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.53922
      },
      {
       "week": 7,
       "opp": "IND",
       "home": true,
-      "wp": 0.6514,
-      "wpf": 0.60438
+      "wp": 0.605,
+      "wpf": 0.60433,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.60433
      },
      {
       "week": 8,
       "opp": "DET",
       "home": false,
-      "wp": 0.4311,
-      "wpf": 0.35839
+      "wp": 0.3585,
+      "wpf": 0.35841,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.35841
      },
      {
       "week": 9,
       "opp": "BUF",
       "home": true,
-      "wp": 0.5337,
-      "wpf": 0.41032
+      "wp": 0.4106,
+      "wpf": 0.41029,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.41029
      },
      {
       "week": 10,
       "opp": "GB",
       "home": false,
-      "wp": 0.5095,
-      "wpf": 0.38358
+      "wp": 0.3836,
+      "wpf": 0.38364,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.38364
      },
      {
       "week": 11,
       "opp": "SF",
       "home": false,
-      "wp": 0.4569,
-      "wpf": 0.35075
+      "wp": 0.3512,
+      "wpf": 0.3507,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.3507
      },
      {
       "week": 12,
       "opp": "ATL",
       "home": true,
-      "wp": 0.6566,
-      "wpf": 0.65218
+      "wp": 0.6523,
+      "wpf": 0.65223,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.65223
      },
      {
       "week": 13,
       "opp": "CAR",
       "home": true,
-      "wp": 0.6849,
-      "wpf": 0.65661
+      "wp": 0.6571,
+      "wpf": 0.65663,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.65663
      },
      {
       "week": 14,
       "opp": "NE",
       "home": false,
-      "wp": 0.4359,
-      "wpf": 0.3546
+      "wp": 0.3549,
+      "wpf": 0.35462,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.35462
      },
      {
       "week": 15,
       "opp": "DET",
       "home": true,
-      "wp": 0.5577,
-      "wpf": 0.48172
+      "wp": 0.4818,
+      "wpf": 0.4817,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.4817
      },
      {
       "week": 16,
       "opp": "WAS",
       "home": true,
-      "wp": 0.6425,
-      "wpf": 0.59912
+      "wp": 0.5997,
+      "wpf": 0.59917,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.59917
      },
      {
       "week": 17,
       "opp": "NYJ",
       "home": false,
-      "wp": 0.6498,
-      "wpf": 0.64022
+      "wp": 0.6404,
+      "wpf": 0.64026,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.64026
      },
      {
       "week": 18,
       "opp": "CHI",
       "home": true,
-      "wp": 0.5995,
-      "wpf": 0.52908
+      "wp": 0.529,
+      "wpf": 0.52906,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.52906
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 8.52,
+    "projected": 8.52
    },
    "NE": {
     "name": "Patriots",
@@ -3231,23 +4370,23 @@
     "ew": 9.95,
     "sd": 2.67,
     "dist": {
-     "0": 0.0,
+     "0": 0.0001,
      "1": 0.0004,
-     "2": 0.0025,
-     "3": 0.0061,
-     "4": 0.0159,
-     "5": 0.0318,
-     "6": 0.0554,
-     "7": 0.0844,
-     "8": 0.1127,
+     "2": 0.0021,
+     "3": 0.007,
+     "4": 0.0158,
+     "5": 0.0322,
+     "6": 0.0553,
+     "7": 0.0837,
+     "8": 0.1118,
      "9": 0.134,
-     "10": 0.142,
-     "11": 0.136,
-     "12": 0.1146,
-     "13": 0.0833,
-     "14": 0.0482,
-     "15": 0.0237,
-     "16": 0.0073,
+     "10": 0.1426,
+     "11": 0.1368,
+     "12": 0.1133,
+     "13": 0.0821,
+     "14": 0.0502,
+     "15": 0.0236,
+     "16": 0.0075,
      "17": 0.0015
     },
     "p10": 6,
@@ -3258,148 +4397,202 @@
       "week": 1,
       "opp": "SEA",
       "home": false,
-      "wp": 0.3618,
-      "wpf": 0.39143
+      "wp": 0.3913,
+      "wpf": 0.39142,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.39142
      },
      {
       "week": 2,
       "opp": "PIT",
       "home": true,
-      "wp": 0.6596,
-      "wpf": 0.69426
+      "wp": 0.6946,
+      "wpf": 0.69425,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.69425
      },
      {
       "week": 3,
       "opp": "JAX",
       "home": false,
-      "wp": 0.4749,
-      "wpf": 0.50735
+      "wp": 0.5079,
+      "wpf": 0.5073,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.5073
      },
      {
       "week": 4,
       "opp": "BUF",
       "home": false,
-      "wp": 0.4081,
-      "wpf": 0.37089
+      "wp": 0.3709,
+      "wpf": 0.37089,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.37089
      },
      {
       "week": 5,
       "opp": "LV",
       "home": true,
-      "wp": 0.7167,
-      "wpf": 0.77208
+      "wp": 0.7723,
+      "wpf": 0.77204,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.77204
      },
      {
       "week": 6,
       "opp": "NYJ",
       "home": true,
-      "wp": 0.7598,
-      "wpf": 0.81012
+      "wp": 0.81,
+      "wpf": 0.81009,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.81009
      },
      {
       "week": 7,
       "opp": "CHI",
       "home": false,
-      "wp": 0.4741,
-      "wpf": 0.48762
+      "wp": 0.4873,
+      "wpf": 0.48767,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.48767
      },
      {
       "week": 8,
       "opp": "MIA",
       "home": false,
-      "wp": 0.5854,
-      "wpf": 0.76011
+      "wp": 0.7603,
+      "wpf": 0.76015,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.76015
      },
      {
       "week": 9,
       "opp": "GB",
       "home": true,
-      "wp": 0.6348,
-      "wpf": 0.59425
+      "wp": 0.5939,
+      "wpf": 0.59423,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.59423
      },
      {
       "week": 10,
       "opp": "DET",
       "home": false,
-      "wp": 0.4318,
-      "wpf": 0.44068
+      "wp": 0.4405,
+      "wpf": 0.44071,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.44071
      },
      {
       "week": 12,
       "opp": "LAC",
       "home": false,
-      "wp": 0.535,
-      "wpf": 0.42769
+      "wp": 0.4276,
+      "wpf": 0.42769,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.42769
      },
      {
       "week": 13,
       "opp": "BUF",
       "home": true,
-      "wp": 0.5345,
-      "wpf": 0.49541
+      "wp": 0.4954,
+      "wpf": 0.49539,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.49539
      },
      {
       "week": 14,
       "opp": "MIN",
       "home": true,
-      "wp": 0.5641,
-      "wpf": 0.6454
+      "wp": 0.6451,
+      "wpf": 0.64538,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.64538
      },
      {
       "week": 15,
       "opp": "KC",
       "home": false,
-      "wp": 0.4654,
-      "wpf": 0.43268
+      "wp": 0.4328,
+      "wpf": 0.43272,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.43272
      },
      {
       "week": 16,
       "opp": "NYJ",
       "home": false,
-      "wp": 0.6505,
-      "wpf": 0.71514
+      "wp": 0.715,
+      "wpf": 0.71512,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.71512
      },
      {
       "week": 17,
       "opp": "DEN",
       "home": true,
-      "wp": 0.5549,
-      "wpf": 0.56269
+      "wp": 0.5626,
+      "wpf": 0.56274,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.56274
      },
      {
       "week": 18,
       "opp": "MIA",
       "home": true,
-      "wp": 0.7035,
-      "wpf": 0.84189
+      "wp": 0.842,
+      "wpf": 0.84189,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.84189
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 9.95,
+    "projected": 9.95
    },
    "NO": {
     "name": "Saints",
     "division": "NFC South",
     "line": 7.5,
     "ew": 7.64,
-    "sd": 2.74,
+    "sd": 2.73,
     "dist": {
-     "0": 0.0007,
-     "1": 0.0053,
-     "2": 0.0167,
-     "3": 0.0356,
-     "4": 0.0644,
-     "5": 0.0941,
-     "6": 0.1215,
-     "7": 0.1372,
-     "8": 0.1381,
-     "9": 0.1254,
-     "10": 0.0987,
-     "11": 0.0732,
-     "12": 0.0467,
-     "13": 0.025,
-     "14": 0.0117,
-     "15": 0.0042,
-     "16": 0.0012,
-     "17": 0.0002
+     "0": 0.0008,
+     "1": 0.0052,
+     "2": 0.0161,
+     "3": 0.0363,
+     "4": 0.0638,
+     "5": 0.0956,
+     "6": 0.1212,
+     "7": 0.1381,
+     "8": 0.1383,
+     "9": 0.1237,
+     "10": 0.1001,
+     "11": 0.0726,
+     "12": 0.0464,
+     "13": 0.0254,
+     "14": 0.0114,
+     "15": 0.004,
+     "16": 0.0009,
+     "17": 0.0001
     },
     "p10": 4,
     "p50": 8,
@@ -3409,147 +4602,201 @@
       "week": 1,
       "opp": "DET",
       "home": false,
-      "wp": 0.283,
-      "wpf": 0.24363
+      "wp": 0.2435,
+      "wpf": 0.24363,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.24363
      },
      {
       "week": 2,
       "opp": "BAL",
       "home": false,
-      "wp": 0.2736,
-      "wpf": 0.19786
+      "wp": 0.1982,
+      "wpf": 0.19786,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.19786
      },
      {
       "week": 3,
       "opp": "LV",
       "home": true,
-      "wp": 0.6274,
-      "wpf": 0.63961
+      "wp": 0.64,
+      "wpf": 0.63963,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.63963
      },
      {
       "week": 4,
       "opp": "ATL",
       "home": true,
-      "wp": 0.5325,
-      "wpf": 0.5529
+      "wp": 0.5527,
+      "wpf": 0.5529,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.5529
      },
      {
       "week": 5,
       "opp": "MIN",
       "home": true,
-      "wp": 0.4356,
-      "wpf": 0.46075
+      "wp": 0.4605,
+      "wpf": 0.46078,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.46078
      },
      {
       "week": 6,
       "opp": "NYG",
       "home": false,
-      "wp": 0.4237,
-      "wpf": 0.39312
+      "wp": 0.3936,
+      "wpf": 0.39314,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.39314
      },
      {
       "week": 7,
       "opp": "PIT",
       "home": true,
-      "wp": 0.504,
-      "wpf": 0.48381
+      "wp": 0.4842,
+      "wpf": 0.48376,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.48376
      },
      {
       "week": 9,
       "opp": "CLE",
       "home": true,
-      "wp": 0.5726,
-      "wpf": 0.6493
+      "wp": 0.6498,
+      "wpf": 0.64931,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.64931
      },
      {
       "week": 10,
       "opp": "CAR",
       "home": true,
-      "wp": 0.5636,
-      "wpf": 0.55709
+      "wp": 0.5573,
+      "wpf": 0.55707,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.55707
      },
      {
       "week": 11,
       "opp": "CHI",
       "home": false,
-      "wp": 0.3488,
-      "wpf": 0.30799
+      "wp": 0.3077,
+      "wpf": 0.30799,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.30799
      },
      {
       "week": 12,
       "opp": "CIN",
       "home": false,
-      "wp": 0.3842,
-      "wpf": 0.29564
+      "wp": 0.2958,
+      "wpf": 0.2956,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.2956
      },
      {
       "week": 13,
       "opp": "GB",
       "home": true,
-      "wp": 0.5084,
-      "wpf": 0.40684
+      "wp": 0.4065,
+      "wpf": 0.40681,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.40681
      },
      {
       "week": 14,
       "opp": "CAR",
       "home": false,
-      "wp": 0.4368,
-      "wpf": 0.43031
+      "wp": 0.4305,
+      "wpf": 0.43027,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.43027
      },
      {
       "week": 15,
       "opp": "TB",
       "home": false,
-      "wp": 0.4038,
-      "wpf": 0.37714
+      "wp": 0.3772,
+      "wpf": 0.37716,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.37716
      },
      {
       "week": 16,
       "opp": "ARI",
       "home": true,
-      "wp": 0.5991,
-      "wpf": 0.71548
+      "wp": 0.7159,
+      "wpf": 0.71551,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.71551
      },
      {
       "week": 17,
       "opp": "ATL",
       "home": false,
-      "wp": 0.4062,
-      "wpf": 0.42617
+      "wp": 0.426,
+      "wpf": 0.4262,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.4262
      },
      {
       "week": 18,
       "opp": "TB",
       "home": true,
-      "wp": 0.53,
-      "wpf": 0.50202
+      "wp": 0.5021,
+      "wpf": 0.50205,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.50205
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 7.64,
+    "projected": 7.64
    },
    "NYG": {
     "name": "Giants",
     "division": "NFC East",
     "line": 7.5,
     "ew": 7.39,
-    "sd": 2.69,
+    "sd": 2.7,
     "dist": {
-     "0": 0.0009,
+     "0": 0.0011,
      "1": 0.0056,
-     "2": 0.019,
-     "3": 0.0398,
-     "4": 0.0714,
-     "5": 0.1036,
-     "6": 0.1306,
-     "7": 0.1391,
-     "8": 0.1364,
-     "9": 0.1224,
-     "10": 0.0928,
-     "11": 0.0642,
+     "2": 0.0179,
+     "3": 0.0408,
+     "4": 0.0707,
+     "5": 0.104,
+     "6": 0.1272,
+     "7": 0.1422,
+     "8": 0.1367,
+     "9": 0.1199,
+     "10": 0.0943,
+     "11": 0.0652,
      "12": 0.0403,
-     "13": 0.0208,
-     "14": 0.0094,
-     "15": 0.0029,
-     "16": 0.0007,
+     "13": 0.0211,
+     "14": 0.0089,
+     "15": 0.0031,
+     "16": 0.0008,
      "17": 0.0001
     },
     "p10": 4,
@@ -3560,122 +4807,176 @@
       "week": 1,
       "opp": "DAL",
       "home": true,
-      "wp": 0.4531,
-      "wpf": 0.38322
+      "wp": 0.3831,
+      "wpf": 0.38325,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.38325
      },
      {
       "week": 2,
       "opp": "LAR",
       "home": false,
-      "wp": 0.2564,
-      "wpf": 0.1669
+      "wp": 0.1666,
+      "wpf": 0.1669,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.1669
      },
      {
       "week": 3,
       "opp": "TEN",
       "home": true,
-      "wp": 0.6115,
-      "wpf": 0.61079
+      "wp": 0.6109,
+      "wpf": 0.6108,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.6108
      },
      {
       "week": 4,
       "opp": "ARI",
       "home": true,
-      "wp": 0.6118,
-      "wpf": 0.75062
+      "wp": 0.7506,
+      "wpf": 0.75061,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.75061
      },
      {
       "week": 5,
       "opp": "WAS",
       "home": false,
-      "wp": 0.4042,
-      "wpf": 0.41481
+      "wp": 0.4146,
+      "wpf": 0.41481,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.41481
      },
      {
       "week": 6,
       "opp": "NO",
       "home": true,
-      "wp": 0.5763,
-      "wpf": 0.60688
+      "wp": 0.6064,
+      "wpf": 0.60686,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.60686
      },
      {
       "week": 7,
       "opp": "HOU",
       "home": false,
-      "wp": 0.345,
-      "wpf": 0.29145
+      "wp": 0.2915,
+      "wpf": 0.29141,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.29141
      },
      {
       "week": 9,
       "opp": "PHI",
       "home": false,
-      "wp": 0.3456,
-      "wpf": 0.30622
+      "wp": 0.306,
+      "wpf": 0.30622,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.30622
      },
      {
       "week": 10,
       "opp": "WAS",
       "home": true,
-      "wp": 0.5305,
-      "wpf": 0.54142
+      "wp": 0.5412,
+      "wpf": 0.54141,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.54141
      },
      {
       "week": 11,
       "opp": "JAX",
       "home": true,
-      "wp": 0.4632,
-      "wpf": 0.46746
+      "wp": 0.4676,
+      "wpf": 0.46747,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.46747
      },
      {
       "week": 12,
       "opp": "IND",
       "home": false,
-      "wp": 0.4135,
-      "wpf": 0.42003
+      "wp": 0.42,
+      "wpf": 0.42007,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.42007
      },
      {
       "week": 13,
       "opp": "SF",
       "home": true,
-      "wp": 0.4689,
-      "wpf": 0.41601
+      "wp": 0.4158,
+      "wpf": 0.41601,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.41601
      },
      {
       "week": 14,
       "opp": "SEA",
       "home": false,
-      "wp": 0.2563,
-      "wpf": 0.25888
+      "wp": 0.2584,
+      "wpf": 0.25885,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.25885
      },
      {
       "week": 15,
       "opp": "CLE",
       "home": true,
-      "wp": 0.5855,
-      "wpf": 0.68901
+      "wp": 0.6891,
+      "wpf": 0.68905,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.68905
      },
      {
       "week": 16,
       "opp": "DET",
       "home": false,
-      "wp": 0.3219,
-      "wpf": 0.3054
+      "wp": 0.3048,
+      "wpf": 0.30537,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.30537
      },
      {
       "week": 17,
       "opp": "DAL",
       "home": false,
-      "wp": 0.403,
-      "wpf": 0.3361
+      "wp": 0.336,
+      "wpf": 0.33614,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.33614
      },
      {
       "week": 18,
       "opp": "PHI",
       "home": true,
-      "wp": 0.4688,
-      "wpf": 0.42448
+      "wp": 0.4242,
+      "wpf": 0.42446,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.42446
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 7.39,
+    "projected": 7.39
    },
    "NYJ": {
     "name": "Jets",
@@ -3684,22 +4985,22 @@
     "ew": 5.54,
     "sd": 2.53,
     "dist": {
-     "0": 0.0054,
-     "1": 0.0249,
-     "2": 0.0603,
-     "3": 0.0995,
-     "4": 0.1358,
-     "5": 0.1527,
-     "6": 0.1499,
-     "7": 0.1267,
-     "8": 0.0968,
-     "9": 0.0688,
-     "10": 0.0404,
-     "11": 0.0216,
-     "12": 0.0106,
-     "13": 0.0044,
+     "0": 0.0055,
+     "1": 0.024,
+     "2": 0.0588,
+     "3": 0.1005,
+     "4": 0.1355,
+     "5": 0.1523,
+     "6": 0.15,
+     "7": 0.1281,
+     "8": 0.0977,
+     "9": 0.067,
+     "10": 0.041,
+     "11": 0.0224,
+     "12": 0.0107,
+     "13": 0.0046,
      "14": 0.0016,
-     "15": 0.0003,
+     "15": 0.0004,
      "16": 0.0001,
      "17": 0.0
     },
@@ -3711,148 +5012,202 @@
       "week": 1,
       "opp": "TEN",
       "home": false,
-      "wp": 0.4149,
-      "wpf": 0.36977
+      "wp": 0.3704,
+      "wpf": 0.36973,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.36973
      },
      {
       "week": 2,
       "opp": "GB",
       "home": true,
-      "wp": 0.34,
-      "wpf": 0.24346
+      "wp": 0.2433,
+      "wpf": 0.24344,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.24344
      },
      {
       "week": 3,
       "opp": "DET",
       "home": false,
-      "wp": 0.2226,
-      "wpf": 0.18039
+      "wp": 0.1804,
+      "wpf": 0.18043,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.18043
      },
      {
       "week": 4,
       "opp": "CHI",
       "home": false,
-      "wp": 0.2387,
-      "wpf": 0.19704
+      "wp": 0.1969,
+      "wpf": 0.19704,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.19704
      },
      {
       "week": 5,
       "opp": "CLE",
       "home": true,
-      "wp": 0.4842,
-      "wpf": 0.54993
+      "wp": 0.5506,
+      "wpf": 0.54994,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.54994
      },
      {
       "week": 6,
       "opp": "NE",
       "home": false,
-      "wp": 0.2402,
-      "wpf": 0.18988
+      "wp": 0.19,
+      "wpf": 0.18991,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.18991
      },
      {
       "week": 7,
       "opp": "MIA",
       "home": true,
-      "wp": 0.4954,
-      "wpf": 0.62027
+      "wp": 0.6206,
+      "wpf": 0.62026,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.62026
      },
      {
       "week": 8,
       "opp": "LV",
       "home": true,
-      "wp": 0.5107,
-      "wpf": 0.50888
+      "wp": 0.5094,
+      "wpf": 0.50888,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.50888
      },
      {
       "week": 9,
       "opp": "KC",
       "home": false,
-      "wp": 0.2633,
-      "wpf": 0.1884
+      "wp": 0.1885,
+      "wpf": 0.18836,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.18836
      },
      {
       "week": 10,
       "opp": "BUF",
       "home": true,
-      "wp": 0.3229,
-      "wpf": 0.23214
+      "wp": 0.2323,
+      "wpf": 0.23218,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.23218
      },
      {
       "week": 11,
       "opp": "LAC",
       "home": false,
-      "wp": 0.3233,
-      "wpf": 0.18703
+      "wp": 0.1871,
+      "wpf": 0.18707,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.18707
      },
      {
       "week": 12,
       "opp": "MIA",
       "home": false,
-      "wp": 0.3705,
-      "wpf": 0.49476
+      "wp": 0.4951,
+      "wpf": 0.49474,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.49474
      },
      {
       "week": 14,
       "opp": "DEN",
       "home": true,
-      "wp": 0.3416,
-      "wpf": 0.28419
+      "wp": 0.2842,
+      "wpf": 0.2842,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.2842
      },
      {
       "week": 15,
       "opp": "ARI",
       "home": false,
-      "wp": 0.3856,
-      "wpf": 0.49868
+      "wp": 0.4993,
+      "wpf": 0.4987,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.4987
      },
      {
       "week": 16,
       "opp": "NE",
       "home": true,
-      "wp": 0.3495,
-      "wpf": 0.28486
+      "wp": 0.285,
+      "wpf": 0.28488,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.28488
      },
      {
       "week": 17,
       "opp": "MIN",
       "home": true,
-      "wp": 0.3502,
-      "wpf": 0.35978
+      "wp": 0.3596,
+      "wpf": 0.35974,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.35974
      },
      {
       "week": 18,
       "opp": "BUF",
       "home": false,
-      "wp": 0.2181,
-      "wpf": 0.15026
+      "wp": 0.1503,
+      "wpf": 0.15022,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.15022
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 5.54,
+    "projected": 5.54
    },
    "PHI": {
     "name": "Eagles",
     "division": "NFC East",
     "line": 10.5,
     "ew": 9.98,
-    "sd": 2.77,
+    "sd": 2.76,
     "dist": {
      "0": 0.0001,
-     "1": 0.0008,
-     "2": 0.0032,
-     "3": 0.0083,
-     "4": 0.018,
-     "5": 0.0343,
-     "6": 0.0556,
-     "7": 0.0809,
-     "8": 0.11,
-     "9": 0.1307,
-     "10": 0.1379,
-     "11": 0.1309,
-     "12": 0.1134,
-     "13": 0.0837,
-     "14": 0.0537,
-     "15": 0.0273,
-     "16": 0.0096,
-     "17": 0.0017
+     "1": 0.0006,
+     "2": 0.003,
+     "3": 0.008,
+     "4": 0.0179,
+     "5": 0.0335,
+     "6": 0.057,
+     "7": 0.0838,
+     "8": 0.111,
+     "9": 0.1288,
+     "10": 0.1377,
+     "11": 0.1314,
+     "12": 0.1129,
+     "13": 0.0833,
+     "14": 0.0529,
+     "15": 0.0268,
+     "16": 0.0093,
+     "17": 0.0019
     },
     "p10": 6,
     "p50": 10,
@@ -3862,148 +5217,202 @@
       "week": 1,
       "opp": "WAS",
       "home": true,
-      "wp": 0.6394,
-      "wpf": 0.68914
+      "wp": 0.6892,
+      "wpf": 0.68916,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.68916
      },
      {
       "week": 2,
       "opp": "TEN",
       "home": false,
-      "wp": 0.6345,
-      "wpf": 0.67437
+      "wp": 0.6747,
+      "wpf": 0.67437,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.67437
      },
      {
       "week": 3,
       "opp": "CHI",
       "home": false,
-      "wp": 0.4752,
-      "wpf": 0.50539
+      "wp": 0.5048,
+      "wpf": 0.50536,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.50536
      },
      {
       "week": 4,
       "opp": "LAR",
       "home": true,
-      "wp": 0.5228,
-      "wpf": 0.43234
+      "wp": 0.4321,
+      "wpf": 0.43237,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.43237
      },
      {
       "week": 5,
       "opp": "JAX",
       "home": false,
-      "wp": 0.431,
-      "wpf": 0.4797
+      "wp": 0.4801,
+      "wpf": 0.4797,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.4797
      },
      {
       "week": 6,
       "opp": "CAR",
       "home": true,
-      "wp": 0.6666,
-      "wpf": 0.72561
+      "wp": 0.7256,
+      "wpf": 0.72559,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.72559
      },
      {
       "week": 7,
       "opp": "DAL",
       "home": true,
-      "wp": 0.6221,
-      "wpf": 0.59632
+      "wp": 0.5964,
+      "wpf": 0.5963,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.5963
      },
      {
       "week": 8,
       "opp": "WAS",
       "home": false,
-      "wp": 0.4981,
-      "wpf": 0.55372
+      "wp": 0.5538,
+      "wpf": 0.55375,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.55375
      },
      {
       "week": 9,
       "opp": "NYG",
       "home": true,
-      "wp": 0.6544,
-      "wpf": 0.69378
+      "wp": 0.694,
+      "wpf": 0.69378,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.69378
      },
      {
       "week": 11,
       "opp": "PIT",
       "home": true,
-      "wp": 0.6105,
-      "wpf": 0.66255
+      "wp": 0.6627,
+      "wpf": 0.66251,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.66251
      },
      {
       "week": 12,
       "opp": "DAL",
       "home": false,
-      "wp": 0.4968,
-      "wpf": 0.46976
+      "wp": 0.4699,
+      "wpf": 0.46979,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.46979
      },
      {
       "week": 13,
       "opp": "ARI",
       "home": false,
-      "wp": 0.5803,
-      "wpf": 0.75959
+      "wp": 0.7598,
+      "wpf": 0.75962,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.75962
      },
      {
       "week": 14,
       "opp": "IND",
       "home": true,
-      "wp": 0.6324,
-      "wpf": 0.67892
+      "wp": 0.6791,
+      "wpf": 0.67893,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.67893
      },
      {
       "week": 15,
       "opp": "SEA",
       "home": true,
-      "wp": 0.4609,
-      "wpf": 0.50905
+      "wp": 0.5087,
+      "wpf": 0.50902,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.50902
      },
      {
       "week": 16,
       "opp": "HOU",
       "home": true,
-      "wp": 0.5626,
-      "wpf": 0.54584
+      "wp": 0.5462,
+      "wpf": 0.54583,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.54583
      },
      {
       "week": 17,
       "opp": "SF",
       "home": false,
-      "wp": 0.4367,
-      "wpf": 0.42807
+      "wp": 0.4281,
+      "wpf": 0.42805,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.42805
      },
      {
       "week": 18,
       "opp": "NYG",
       "home": false,
-      "wp": 0.5312,
-      "wpf": 0.57552
+      "wp": 0.5758,
+      "wpf": 0.57554,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.57554
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 9.98,
+    "projected": 9.98
    },
    "PIT": {
     "name": "Steelers",
     "division": "AFC North",
     "line": 8.5,
     "ew": 8.14,
-    "sd": 2.77,
+    "sd": 2.78,
     "dist": {
      "0": 0.0006,
-     "1": 0.0032,
-     "2": 0.012,
-     "3": 0.0272,
-     "4": 0.0495,
-     "5": 0.0788,
-     "6": 0.1085,
-     "7": 0.1308,
-     "8": 0.1358,
-     "9": 0.131,
-     "10": 0.1121,
-     "11": 0.0874,
+     "1": 0.0035,
+     "2": 0.0119,
+     "3": 0.0278,
+     "4": 0.0506,
+     "5": 0.0805,
+     "6": 0.1068,
+     "7": 0.1283,
+     "8": 0.1375,
+     "9": 0.1313,
+     "10": 0.1116,
+     "11": 0.0864,
      "12": 0.0601,
      "13": 0.036,
-     "14": 0.0179,
-     "15": 0.0071,
-     "16": 0.002,
-     "17": 0.0002
+     "14": 0.018,
+     "15": 0.0069,
+     "16": 0.0019,
+     "17": 0.0003
     },
     "p10": 5,
     "p50": 8,
@@ -4013,122 +5422,176 @@
       "week": 1,
       "opp": "ATL",
       "home": true,
-      "wp": 0.6048,
-      "wpf": 0.64302
+      "wp": 0.6424,
+      "wpf": 0.64299,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.64299
      },
      {
       "week": 2,
       "opp": "NE",
       "home": false,
-      "wp": 0.3404,
-      "wpf": 0.30574
+      "wp": 0.3054,
+      "wpf": 0.30575,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.30575
      },
      {
       "week": 3,
       "opp": "CIN",
       "home": true,
-      "wp": 0.493,
-      "wpf": 0.41493
+      "wp": 0.4147,
+      "wpf": 0.41489,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.41489
      },
      {
       "week": 4,
       "opp": "CLE",
       "home": false,
-      "wp": 0.54,
-      "wpf": 0.63752
+      "wp": 0.6376,
+      "wpf": 0.6375,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.6375
      },
      {
       "week": 5,
       "opp": "IND",
       "home": true,
-      "wp": 0.5859,
-      "wpf": 0.5813
+      "wp": 0.5813,
+      "wpf": 0.58132,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.58132
      },
      {
       "week": 6,
       "opp": "TB",
       "home": false,
-      "wp": 0.4625,
-      "wpf": 0.45473
+      "wp": 0.4543,
+      "wpf": 0.45469,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.45469
      },
      {
       "week": 7,
       "opp": "NO",
       "home": false,
-      "wp": 0.496,
-      "wpf": 0.51619
+      "wp": 0.5158,
+      "wpf": 0.51624,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.51624
      },
      {
       "week": 8,
       "opp": "CLE",
       "home": true,
-      "wp": 0.6302,
-      "wpf": 0.71856
+      "wp": 0.7186,
+      "wpf": 0.71852,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.71852
      },
      {
       "week": 10,
       "opp": "CIN",
       "home": false,
-      "wp": 0.4423,
-      "wpf": 0.36646
+      "wp": 0.3663,
+      "wpf": 0.36648,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.36648
      },
      {
       "week": 11,
       "opp": "PHI",
       "home": false,
-      "wp": 0.3895,
-      "wpf": 0.33745
+      "wp": 0.3373,
+      "wpf": 0.33749,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.33749
      },
      {
       "week": 12,
       "opp": "DEN",
       "home": true,
-      "wp": 0.4856,
-      "wpf": 0.45398
+      "wp": 0.4534,
+      "wpf": 0.45395,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.45395
      },
      {
       "week": 13,
       "opp": "HOU",
       "home": true,
-      "wp": 0.5145,
-      "wpf": 0.4415
+      "wp": 0.4417,
+      "wpf": 0.44155,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.44155
      },
      {
       "week": 14,
       "opp": "JAX",
       "home": false,
-      "wp": 0.384,
-      "wpf": 0.37723
+      "wp": 0.3774,
+      "wpf": 0.37723,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.37723
      },
      {
       "week": 15,
       "opp": "BAL",
       "home": true,
-      "wp": 0.4995,
-      "wpf": 0.41472
+      "wp": 0.4148,
+      "wpf": 0.41471,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.41471
      },
      {
       "week": 16,
       "opp": "CAR",
       "home": true,
-      "wp": 0.6215,
-      "wpf": 0.6342
+      "wp": 0.634,
+      "wpf": 0.63419,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.63419
      },
      {
       "week": 17,
       "opp": "TEN",
       "home": false,
-      "wp": 0.556,
-      "wpf": 0.54393
+      "wp": 0.5441,
+      "wpf": 0.54395,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.54395
      },
      {
       "week": 18,
       "opp": "BAL",
       "home": false,
-      "wp": 0.3744,
-      "wpf": 0.2982
+      "wp": 0.2983,
+      "wpf": 0.29822,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.29822
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 8.14,
+    "projected": 8.14
    },
    "SEA": {
     "name": "Seahawks",
@@ -4139,22 +5602,22 @@
     "dist": {
      "0": 0.0,
      "1": 0.0003,
-     "2": 0.0011,
-     "3": 0.0043,
-     "4": 0.0115,
-     "5": 0.0229,
-     "6": 0.0415,
-     "7": 0.0667,
-     "8": 0.0979,
-     "9": 0.1211,
-     "10": 0.1396,
-     "11": 0.1422,
-     "12": 0.1293,
-     "13": 0.1032,
-     "14": 0.0668,
-     "15": 0.035,
-     "16": 0.0136,
-     "17": 0.0029
+     "2": 0.0013,
+     "3": 0.0044,
+     "4": 0.0104,
+     "5": 0.0225,
+     "6": 0.0428,
+     "7": 0.0669,
+     "8": 0.0958,
+     "9": 0.1238,
+     "10": 0.1398,
+     "11": 0.142,
+     "12": 0.1284,
+     "13": 0.1014,
+     "14": 0.0682,
+     "15": 0.0355,
+     "16": 0.0135,
+     "17": 0.003
     },
     "p10": 7,
     "p50": 10,
@@ -4164,122 +5627,176 @@
       "week": 1,
       "opp": "NE",
       "home": true,
-      "wp": 0.6382,
-      "wpf": 0.60857
+      "wp": 0.6087,
+      "wpf": 0.60858,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.60858
      },
      {
       "week": 2,
       "opp": "ARI",
       "home": false,
-      "wp": 0.7722,
-      "wpf": 0.86463
+      "wp": 0.8649,
+      "wpf": 0.86463,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.86463
      },
      {
       "week": 3,
       "opp": "WAS",
       "home": false,
-      "wp": 0.6168,
-      "wpf": 0.62396
+      "wp": 0.6243,
+      "wpf": 0.62395,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.62395
      },
      {
       "week": 4,
       "opp": "LAC",
       "home": true,
-      "wp": 0.7295,
-      "wpf": 0.6069
+      "wp": 0.6069,
+      "wpf": 0.60687,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.60687
      },
      {
       "week": 5,
       "opp": "SF",
       "home": true,
-      "wp": 0.6617,
-      "wpf": 0.60892
+      "wp": 0.6093,
+      "wpf": 0.60895,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.60895
      },
      {
       "week": 6,
       "opp": "DEN",
       "home": false,
-      "wp": 0.5095,
-      "wpf": 0.48584
+      "wp": 0.4858,
+      "wpf": 0.48582,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.48582
      },
      {
       "week": 7,
       "opp": "KC",
       "home": true,
-      "wp": 0.6688,
-      "wpf": 0.60926
+      "wp": 0.6095,
+      "wpf": 0.6093,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.6093
      },
      {
       "week": 8,
       "opp": "CHI",
       "home": true,
-      "wp": 0.6768,
-      "wpf": 0.66083
+      "wp": 0.6606,
+      "wpf": 0.66081,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.66081
      },
      {
       "week": 9,
       "opp": "ARI",
       "home": true,
-      "wp": 0.782,
-      "wpf": 0.87112
+      "wp": 0.8714,
+      "wpf": 0.87114,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.87114
      },
      {
       "week": 10,
       "opp": "LV",
       "home": false,
-      "wp": 0.6768,
-      "wpf": 0.71193
+      "wp": 0.7124,
+      "wpf": 0.71199,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.71199
      },
      {
       "week": 12,
       "opp": "SF",
       "home": false,
-      "wp": 0.5391,
-      "wpf": 0.48216
+      "wp": 0.4825,
+      "wpf": 0.48213,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.48213
      },
      {
       "week": 13,
       "opp": "DAL",
       "home": true,
-      "wp": 0.7152,
-      "wpf": 0.65011
+      "wp": 0.6505,
+      "wpf": 0.65011,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.65011
      },
      {
       "week": 14,
       "opp": "NYG",
       "home": true,
-      "wp": 0.7437,
-      "wpf": 0.74112
+      "wp": 0.7416,
+      "wpf": 0.74115,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.74115
      },
      {
       "week": 15,
       "opp": "PHI",
       "home": false,
-      "wp": 0.5391,
-      "wpf": 0.49095
+      "wp": 0.4913,
+      "wpf": 0.49098,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.49098
      },
      {
       "week": 16,
       "opp": "LAR",
       "home": true,
-      "wp": 0.6235,
-      "wpf": 0.48699
+      "wp": 0.487,
+      "wpf": 0.48695,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.48695
      },
      {
       "week": 17,
       "opp": "CAR",
       "home": false,
-      "wp": 0.644,
-      "wpf": 0.66361
+      "wp": 0.6639,
+      "wpf": 0.6636,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.6636
      },
      {
       "week": 18,
       "opp": "LAR",
       "home": false,
-      "wp": 0.4983,
-      "wpf": 0.36279
+      "wp": 0.3628,
+      "wpf": 0.36276,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.36276
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 10.53,
+    "projected": 10.53
    },
    "SF": {
     "name": "49ers",
@@ -4289,23 +5806,23 @@
     "sd": 2.62,
     "dist": {
      "0": 0.0,
-     "1": 0.0002,
-     "2": 0.0019,
-     "3": 0.005,
-     "4": 0.0132,
-     "5": 0.0286,
-     "6": 0.0542,
-     "7": 0.0845,
-     "8": 0.111,
-     "9": 0.1347,
-     "10": 0.1437,
-     "11": 0.1392,
-     "12": 0.116,
-     "13": 0.0851,
-     "14": 0.0494,
+     "1": 0.0003,
+     "2": 0.0016,
+     "3": 0.0051,
+     "4": 0.0135,
+     "5": 0.0292,
+     "6": 0.052,
+     "7": 0.0824,
+     "8": 0.1122,
+     "9": 0.1357,
+     "10": 0.1465,
+     "11": 0.1389,
+     "12": 0.1147,
+     "13": 0.0827,
+     "14": 0.0515,
      "15": 0.0241,
-     "16": 0.0079,
-     "17": 0.0013
+     "16": 0.008,
+     "17": 0.0015
     },
     "p10": 6,
     "p50": 10,
@@ -4315,148 +5832,202 @@
       "week": 1,
       "opp": "LAR",
       "home": false,
-      "wp": 0.3868,
-      "wpf": 0.31234
+      "wp": 0.3121,
+      "wpf": 0.31238,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.31238
      },
      {
       "week": 2,
       "opp": "MIA",
       "home": true,
-      "wp": 0.7835,
-      "wpf": 0.89992
+      "wp": 0.8999,
+      "wpf": 0.89991,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.89991
      },
      {
       "week": 3,
       "opp": "ARI",
       "home": true,
-      "wp": 0.7908,
-      "wpf": 0.89947
+      "wp": 0.8995,
+      "wpf": 0.89943,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.89943
      },
      {
       "week": 4,
       "opp": "DEN",
       "home": true,
-      "wp": 0.5339,
-      "wpf": 0.56691
+      "wp": 0.5665,
+      "wpf": 0.56688,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.56688
      },
      {
       "week": 5,
       "opp": "SEA",
       "home": false,
-      "wp": 0.3383,
-      "wpf": 0.39108
+      "wp": 0.3907,
+      "wpf": 0.39105,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.39105
      },
      {
       "week": 6,
       "opp": "WAS",
       "home": true,
-      "wp": 0.6232,
-      "wpf": 0.68171
+      "wp": 0.6817,
+      "wpf": 0.68169,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.68169
      },
      {
       "week": 7,
       "opp": "ATL",
       "home": false,
-      "wp": 0.5132,
-      "wpf": 0.61685
+      "wp": 0.6164,
+      "wpf": 0.61685,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.61685
      },
      {
       "week": 9,
       "opp": "LV",
       "home": true,
-      "wp": 0.6985,
-      "wpf": 0.77451
+      "wp": 0.7746,
+      "wpf": 0.77451,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.77451
      },
      {
       "week": 10,
       "opp": "DAL",
       "home": false,
-      "wp": 0.4968,
-      "wpf": 0.47853
+      "wp": 0.4786,
+      "wpf": 0.47854,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.47854
      },
      {
       "week": 11,
       "opp": "MIN",
       "home": true,
-      "wp": 0.5431,
-      "wpf": 0.64925
+      "wp": 0.6488,
+      "wpf": 0.6493,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.6493
      },
      {
       "week": 12,
       "opp": "SEA",
       "home": true,
-      "wp": 0.4609,
-      "wpf": 0.51784
+      "wp": 0.5175,
+      "wpf": 0.51787,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.51787
      },
      {
       "week": 13,
       "opp": "NYG",
       "home": false,
-      "wp": 0.5311,
-      "wpf": 0.58399
+      "wp": 0.5842,
+      "wpf": 0.58399,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.58399
      },
      {
       "week": 14,
       "opp": "LAR",
       "home": true,
-      "wp": 0.5227,
-      "wpf": 0.44089
+      "wp": 0.4406,
+      "wpf": 0.44092,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.44092
      },
      {
       "week": 15,
       "opp": "LAC",
       "home": false,
-      "wp": 0.5138,
-      "wpf": 0.43181
+      "wp": 0.4315,
+      "wpf": 0.43183,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.43183
      },
      {
       "week": 16,
       "opp": "KC",
       "home": false,
-      "wp": 0.4443,
-      "wpf": 0.43679
+      "wp": 0.4366,
+      "wpf": 0.43676,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.43676
      },
      {
       "week": 17,
       "opp": "PHI",
       "home": true,
-      "wp": 0.5633,
-      "wpf": 0.57193
+      "wp": 0.5719,
+      "wpf": 0.57195,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.57195
      },
      {
       "week": 18,
       "opp": "ARI",
       "home": false,
-      "wp": 0.5802,
-      "wpf": 0.76588
+      "wp": 0.766,
+      "wpf": 0.76585,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.76585
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 10.02,
+    "projected": 10.02
    },
    "TB": {
     "name": "Buccaneers",
     "division": "NFC South",
     "line": 8.5,
     "ew": 8.04,
-    "sd": 2.76,
+    "sd": 2.77,
     "dist": {
-     "0": 0.0004,
-     "1": 0.0042,
-     "2": 0.0126,
-     "3": 0.029,
-     "4": 0.0527,
-     "5": 0.0839,
-     "6": 0.1085,
-     "7": 0.1307,
-     "8": 0.1393,
+     "0": 0.0007,
+     "1": 0.0039,
+     "2": 0.0125,
+     "3": 0.0292,
+     "4": 0.0535,
+     "5": 0.0832,
+     "6": 0.1094,
+     "7": 0.1296,
+     "8": 0.1371,
      "9": 0.1306,
      "10": 0.1102,
      "11": 0.0848,
-     "12": 0.0563,
-     "13": 0.0331,
-     "14": 0.0163,
-     "15": 0.0056,
-     "16": 0.0014,
-     "17": 0.0003
+     "12": 0.0573,
+     "13": 0.033,
+     "14": 0.0165,
+     "15": 0.0064,
+     "16": 0.0017,
+     "17": 0.0002
     },
     "p10": 5,
     "p50": 8,
@@ -4466,298 +6037,406 @@
       "week": 1,
       "opp": "CIN",
       "home": false,
-      "wp": 0.3808,
-      "wpf": 0.31638
+      "wp": 0.3166,
+      "wpf": 0.31643,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.31643
      },
      {
       "week": 2,
       "opp": "CLE",
       "home": true,
-      "wp": 0.6581,
-      "wpf": 0.74846
+      "wp": 0.7488,
+      "wpf": 0.74843,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.74843
      },
      {
       "week": 3,
       "opp": "MIN",
       "home": true,
-      "wp": 0.5166,
-      "wpf": 0.5696
+      "wp": 0.5693,
+      "wpf": 0.56962,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.56962
      },
      {
       "week": 4,
       "opp": "GB",
       "home": true,
-      "wp": 0.5419,
-      "wpf": 0.4674
+      "wp": 0.467,
+      "wpf": 0.46736,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.46736
      },
      {
       "week": 5,
       "opp": "DAL",
       "home": false,
-      "wp": 0.4229,
-      "wpf": 0.35134
+      "wp": 0.3516,
+      "wpf": 0.35134,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.35134
      },
      {
       "week": 6,
       "opp": "PIT",
       "home": true,
-      "wp": 0.5375,
-      "wpf": 0.54527
+      "wp": 0.5457,
+      "wpf": 0.54531,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.54531
      },
      {
       "week": 7,
       "opp": "CAR",
       "home": false,
-      "wp": 0.4702,
-      "wpf": 0.49158
+      "wp": 0.4918,
+      "wpf": 0.49161,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.49161
      },
      {
       "week": 8,
       "opp": "ATL",
       "home": true,
-      "wp": 0.5658,
-      "wpf": 0.61278
+      "wp": 0.6125,
+      "wpf": 0.61274,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.61274
      },
      {
       "week": 9,
       "opp": "CHI",
       "home": false,
-      "wp": 0.3804,
-      "wpf": 0.36332
+      "wp": 0.363,
+      "wpf": 0.36336,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.36336
      },
      {
       "week": 11,
       "opp": "DET",
       "home": false,
-      "wp": 0.3405,
-      "wpf": 0.32033
+      "wp": 0.3201,
+      "wpf": 0.3203,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.3203
      },
      {
       "week": 12,
       "opp": "CAR",
       "home": true,
-      "wp": 0.5964,
-      "wpf": 0.61683
+      "wp": 0.617,
+      "wpf": 0.61682,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.61682
      },
      {
       "week": 13,
       "opp": "LAC",
       "home": true,
-      "wp": 0.5664,
-      "wpf": 0.4276
+      "wp": 0.4275,
+      "wpf": 0.42761,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.42761
      },
      {
       "week": 14,
       "opp": "BAL",
       "home": false,
-      "wp": 0.35,
-      "wpf": 0.28287
+      "wp": 0.2833,
+      "wpf": 0.2829,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.2829
      },
      {
       "week": 15,
       "opp": "NO",
       "home": true,
-      "wp": 0.5962,
-      "wpf": 0.62286
+      "wp": 0.6228,
+      "wpf": 0.62284,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.62284
      },
      {
       "week": 16,
       "opp": "ATL",
       "home": false,
-      "wp": 0.4391,
-      "wpf": 0.48736
+      "wp": 0.4871,
+      "wpf": 0.48735,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.48735
      },
      {
       "week": 17,
       "opp": "LAR",
       "home": true,
-      "wp": 0.4485,
-      "wpf": 0.31772
+      "wp": 0.3176,
+      "wpf": 0.31769,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.31769
      },
      {
       "week": 18,
       "opp": "NO",
       "home": false,
-      "wp": 0.47,
-      "wpf": 0.49798
+      "wp": 0.4979,
+      "wpf": 0.49795,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.49795
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 8.04,
+    "projected": 8.04
    },
    "TEN": {
     "name": "Titans",
     "division": "AFC South",
     "line": 6.5,
     "ew": 6.43,
-    "sd": 2.69,
+    "sd": 2.68,
     "dist": {
-     "0": 0.0032,
-     "1": 0.0136,
-     "2": 0.038,
-     "3": 0.0709,
-     "4": 0.1046,
-     "5": 0.1303,
-     "6": 0.1408,
-     "7": 0.1371,
-     "8": 0.1198,
-     "9": 0.0938,
-     "10": 0.0668,
-     "11": 0.0413,
-     "12": 0.0228,
-     "13": 0.0109,
-     "14": 0.0042,
-     "15": 0.0015,
-     "16": 0.0004,
-     "17": 0.0
+     "0": 0.0028,
+     "1": 0.0143,
+     "2": 0.0359,
+     "3": 0.0686,
+     "4": 0.1031,
+     "5": 0.1305,
+     "6": 0.1432,
+     "7": 0.1396,
+     "8": 0.1194,
+     "9": 0.0926,
+     "10": 0.0667,
+     "11": 0.0423,
+     "12": 0.0231,
+     "13": 0.0114,
+     "14": 0.0046,
+     "15": 0.0014,
+     "16": 0.0003,
+     "17": 0.0001
     },
     "p10": 3,
-    "p50": 6,
+    "p50": 7,
     "p90": 10,
     "schedule": [
      {
       "week": 1,
       "opp": "NYJ",
       "home": true,
-      "wp": 0.5851,
-      "wpf": 0.63023
+      "wp": 0.6296,
+      "wpf": 0.63027,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.63027
      },
      {
       "week": 2,
       "opp": "PHI",
       "home": true,
-      "wp": 0.3655,
-      "wpf": 0.32563
+      "wp": 0.3253,
+      "wpf": 0.32563,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.32563
      },
      {
       "week": 3,
       "opp": "NYG",
       "home": false,
-      "wp": 0.3885,
-      "wpf": 0.38921
+      "wp": 0.3891,
+      "wpf": 0.3892,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.3892
      },
      {
       "week": 4,
       "opp": "BAL",
       "home": false,
-      "wp": 0.2675,
-      "wpf": 0.21399
+      "wp": 0.2139,
+      "wpf": 0.21394,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.21394
      },
      {
       "week": 5,
       "opp": "HOU",
       "home": true,
-      "wp": 0.396,
-      "wpf": 0.33929
+      "wp": 0.3393,
+      "wpf": 0.3393,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.3393
      },
      {
       "week": 6,
       "opp": "IND",
       "home": false,
-      "wp": 0.3438,
-      "wpf": 0.35056
+      "wp": 0.3504,
+      "wpf": 0.35056,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.35056
      },
      {
       "week": 7,
       "opp": "CLE",
       "home": true,
-      "wp": 0.5128,
-      "wpf": 0.62346
+      "wp": 0.6234,
+      "wpf": 0.62345,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.62345
      },
      {
       "week": 8,
       "opp": "CIN",
       "home": false,
-      "wp": 0.328,
-      "wpf": 0.27209
+      "wp": 0.2718,
+      "wpf": 0.27208,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.27208
      },
      {
       "week": 10,
       "opp": "JAX",
       "home": true,
-      "wp": 0.3912,
-      "wpf": 0.39599
+      "wp": 0.396,
+      "wpf": 0.39597,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.39597
      },
      {
       "week": 11,
       "opp": "DAL",
       "home": false,
-      "wp": 0.3338,
-      "wpf": 0.27372
+      "wp": 0.2735,
+      "wpf": 0.27371,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.27371
      },
      {
       "week": 12,
       "opp": "JAX",
       "home": false,
-      "wp": 0.2759,
-      "wpf": 0.27993
+      "wp": 0.28,
+      "wpf": 0.27998,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.27998
      },
      {
       "week": 13,
       "opp": "WAS",
       "home": true,
-      "wp": 0.4573,
-      "wpf": 0.46895
+      "wp": 0.4686,
+      "wpf": 0.46892,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.46892
      },
      {
       "week": 14,
       "opp": "DET",
       "home": false,
-      "wp": 0.2591,
-      "wpf": 0.24521
+      "wp": 0.2446,
+      "wpf": 0.24517,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.24517
      },
      {
       "week": 15,
       "opp": "IND",
       "home": true,
-      "wp": 0.4668,
-      "wpf": 0.47424
+      "wp": 0.4741,
+      "wpf": 0.47427,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.47427
      },
      {
       "week": 16,
       "opp": "LV",
       "home": false,
-      "wp": 0.4129,
-      "wpf": 0.45764
+      "wp": 0.4575,
+      "wpf": 0.45769,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.45769
      },
      {
       "week": 17,
       "opp": "PIT",
       "home": true,
-      "wp": 0.444,
-      "wpf": 0.45607
+      "wp": 0.4559,
+      "wpf": 0.45605,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.45605
      },
      {
       "week": 18,
       "opp": "HOU",
       "home": false,
-      "wp": 0.28,
-      "wpf": 0.23348
+      "wp": 0.2335,
+      "wpf": 0.2335,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.2335
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 6.43,
+    "projected": 6.43
    },
    "WAS": {
     "name": "Commanders",
     "division": "NFC East",
     "line": 7.5,
     "ew": 7.62,
-    "sd": 2.78,
+    "sd": 2.79,
     "dist": {
-     "0": 0.001,
-     "1": 0.0054,
-     "2": 0.0172,
-     "3": 0.0383,
-     "4": 0.0665,
-     "5": 0.0928,
-     "6": 0.1204,
-     "7": 0.1359,
+     "0": 0.0013,
+     "1": 0.0058,
+     "2": 0.018,
+     "3": 0.0392,
+     "4": 0.0664,
+     "5": 0.0933,
+     "6": 0.1199,
+     "7": 0.1341,
      "8": 0.1345,
-     "9": 0.1215,
-     "10": 0.1009,
-     "11": 0.0742,
-     "12": 0.0466,
-     "13": 0.0258,
+     "9": 0.1229,
+     "10": 0.0997,
+     "11": 0.0739,
+     "12": 0.0456,
+     "13": 0.0268,
      "14": 0.0124,
-     "15": 0.0051,
-     "16": 0.0013,
+     "15": 0.0047,
+     "16": 0.0014,
      "17": 0.0002
     },
     "p10": 4,
@@ -4768,122 +6447,176 @@
       "week": 1,
       "opp": "PHI",
       "home": false,
-      "wp": 0.3606,
-      "wpf": 0.31086
+      "wp": 0.3108,
+      "wpf": 0.31084,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.31084
      },
      {
       "week": 2,
       "opp": "DAL",
       "home": false,
-      "wp": 0.3854,
-      "wpf": 0.31038
+      "wp": 0.3104,
+      "wpf": 0.31035,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.31035
      },
      {
       "week": 3,
       "opp": "SEA",
       "home": true,
-      "wp": 0.3832,
-      "wpf": 0.37604
+      "wp": 0.3757,
+      "wpf": 0.37605,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.37605
      },
      {
       "week": 4,
       "opp": "IND",
       "home": true,
-      "wp": 0.5313,
-      "wpf": 0.52706
+      "wp": 0.5272,
+      "wpf": 0.52706,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.52706
      },
      {
       "week": 5,
       "opp": "NYG",
       "home": true,
-      "wp": 0.5958,
-      "wpf": 0.58519
+      "wp": 0.5854,
+      "wpf": 0.58519,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.58519
      },
      {
       "week": 6,
       "opp": "SF",
       "home": false,
-      "wp": 0.3768,
-      "wpf": 0.31829
+      "wp": 0.3183,
+      "wpf": 0.31831,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.31831
      },
      {
       "week": 8,
       "opp": "PHI",
       "home": true,
-      "wp": 0.5019,
-      "wpf": 0.44628
+      "wp": 0.4462,
+      "wpf": 0.44625,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.44625
      },
      {
       "week": 9,
       "opp": "LAR",
       "home": true,
-      "wp": 0.4611,
-      "wpf": 0.32239
+      "wp": 0.3221,
+      "wpf": 0.32239,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.32239
      },
      {
       "week": 10,
       "opp": "NYG",
       "home": false,
-      "wp": 0.4695,
-      "wpf": 0.45858
+      "wp": 0.4588,
+      "wpf": 0.45859,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.45859
      },
      {
       "week": 11,
       "opp": "CIN",
       "home": true,
-      "wp": 0.5558,
-      "wpf": 0.47763
+      "wp": 0.4776,
+      "wpf": 0.47763,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.47763
      },
      {
       "week": 12,
       "opp": "ARI",
       "home": false,
-      "wp": 0.5191,
-      "wpf": 0.66364
+      "wp": 0.6638,
+      "wpf": 0.66362,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.66362
      },
      {
       "week": 13,
       "opp": "TEN",
       "home": false,
-      "wp": 0.5427,
-      "wpf": 0.53105
+      "wp": 0.5314,
+      "wpf": 0.53108,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.53108
      },
      {
       "week": 14,
       "opp": "HOU",
       "home": true,
-      "wp": 0.5012,
-      "wpf": 0.42889
+      "wp": 0.4292,
+      "wpf": 0.42889,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.42889
      },
      {
       "week": 15,
       "opp": "ATL",
       "home": true,
-      "wp": 0.5783,
-      "wpf": 0.61791
+      "wp": 0.6175,
+      "wpf": 0.61795,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.61795
      },
      {
       "week": 16,
       "opp": "MIN",
       "home": false,
-      "wp": 0.3575,
-      "wpf": 0.40088
+      "wp": 0.4003,
+      "wpf": 0.40083,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.40083
      },
      {
       "week": 17,
       "opp": "JAX",
       "home": false,
-      "wp": 0.3713,
-      "wpf": 0.36507
+      "wp": 0.3654,
+      "wpf": 0.36508,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.36508
      },
      {
       "week": 18,
       "opp": "DAL",
       "home": true,
-      "wp": 0.5621,
-      "wpf": 0.47952
+      "wp": 0.4796,
+      "wpf": 0.47954,
+      "tier": "preseason",
+      "settled": false,
+      "live": 0.47954
      }
-    ]
+    ],
+    "banked": 0.0,
+    "remaining": 7.62,
+    "projected": 7.62
    }
   },
   "overlap": {
@@ -5555,75 +7288,139 @@
   "wins_tracker": {
    "Matt": {
     "rounds": [
-     0,
-     0,
-     0,
-     0
+     0.0,
+     0.0,
+     0.0,
+     null
     ],
-    "total": 0
+    "teams": [
+     "LAR",
+     "HOU",
+     "NO",
+     null
+    ],
+    "total": 0,
+    "projected": 29.33,
+    "remaining": 29.33
    },
    "Rob": {
     "rounds": [
-     0,
-     0,
-     0,
-     0
+     0.0,
+     0.0,
+     0.0,
+     null
     ],
-    "total": 0
+    "teams": [
+     "BAL",
+     "LAC",
+     "CHI",
+     null
+    ],
+    "total": 0,
+    "projected": 30.09,
+    "remaining": 30.09
    },
    "Kevin": {
     "rounds": [
-     0,
-     0,
-     0,
-     0
+     0.0,
+     0.0,
+     0.0,
+     null
     ],
-    "total": 0
+    "teams": [
+     "BUF",
+     "GB",
+     "JAX",
+     null
+    ],
+    "total": 0,
+    "projected": 29.45,
+    "remaining": 29.45
    },
    "Chris": {
     "rounds": [
-     0,
-     0,
-     0,
-     0
+     0.0,
+     0.0,
+     0.0,
+     null
     ],
-    "total": 0
+    "teams": [
+     "PHI",
+     "TB",
+     "PIT",
+     null
+    ],
+    "total": 0,
+    "projected": 26.16,
+    "remaining": 26.16
    },
    "Tyler": {
     "rounds": [
-     0,
-     0,
-     0,
-     0
+     0.0,
+     0.0,
+     0.0,
+     null
     ],
-    "total": 0
+    "teams": [
+     "DET",
+     "SF",
+     "IND",
+     null
+    ],
+    "total": 0,
+    "projected": 28.5,
+    "remaining": 28.5
    },
    "Jason": {
     "rounds": [
-     0,
-     0,
-     0,
-     0
+     0.0,
+     0.0,
+     0.0,
+     null
     ],
-    "total": 0
+    "teams": [
+     "SEA",
+     "CIN",
+     "MIN",
+     null
+    ],
+    "total": 0,
+    "projected": 29.16,
+    "remaining": 29.16
    },
    "Jared": {
     "rounds": [
-     0,
-     0,
-     0,
-     0
+     0.0,
+     0.0,
+     0.0,
+     null
     ],
-    "total": 0
+    "teams": [
+     "DAL",
+     "KC",
+     "NYG",
+     null
+    ],
+    "total": 0,
+    "projected": 26.6,
+    "remaining": 26.6
    },
    "Alan": {
     "rounds": [
-     0,
-     0,
-     0,
-     0
+     0.0,
+     0.0,
+     0.0,
+     0.0
     ],
-    "total": 0
+    "teams": [
+     "NE",
+     "DEN",
+     "ARI",
+     "TEN"
+    ],
+    "total": 0,
+    "projected": 29.85,
+    "remaining": 29.85
    }
   },
   "drafters": {
@@ -5635,10 +7432,13 @@
      "NO"
     ],
     "ew": 29.33,
+    "banked": 0.0,
+    "remaining": 29.33,
+    "projected": 29.33,
     "par_delta": -4.67,
     "internal_games": 0,
-    "sd_sim": 4.7,
-    "sd_model": 4.662,
+    "sd_sim": 4.71,
+    "sd_model": 4.667,
     "picks_remaining": 1
    },
    "Rob": {
@@ -5649,10 +7449,13 @@
      "CHI"
     ],
     "ew": 30.09,
+    "banked": 0.0,
+    "remaining": 30.09,
+    "projected": 30.09,
     "par_delta": -3.91,
     "internal_games": 1,
     "sd_sim": 4.55,
-    "sd_model": 4.594,
+    "sd_model": 4.591,
     "picks_remaining": 1
    },
    "Kevin": {
@@ -5663,10 +7466,13 @@
      "JAX"
     ],
     "ew": 29.45,
+    "banked": 0.0,
+    "remaining": 29.45,
+    "projected": 29.45,
     "par_delta": -4.55,
     "internal_games": 1,
-    "sd_sim": 4.64,
-    "sd_model": 4.653,
+    "sd_sim": 4.62,
+    "sd_model": 4.641,
     "picks_remaining": 1
    },
    "Chris": {
@@ -5677,10 +7483,13 @@
      "PIT"
     ],
     "ew": 26.16,
+    "banked": 0.0,
+    "remaining": 26.16,
+    "projected": 26.16,
     "par_delta": -7.84,
     "internal_games": 2,
-    "sd_sim": 4.57,
-    "sd_model": 4.689,
+    "sd_sim": 4.58,
+    "sd_model": 4.699,
     "picks_remaining": 1
    },
    "Tyler": {
@@ -5691,6 +7500,9 @@
      "IND"
     ],
     "ew": 28.5,
+    "banked": 0.0,
+    "remaining": 28.5,
+    "projected": 28.5,
     "par_delta": -5.5,
     "internal_games": 0,
     "sd_sim": 4.7,
@@ -5705,10 +7517,13 @@
      "MIN"
     ],
     "ew": 29.16,
+    "banked": 0.0,
+    "remaining": 29.16,
+    "projected": 29.16,
     "par_delta": -4.84,
     "internal_games": 0,
-    "sd_sim": 4.77,
-    "sd_model": 4.729,
+    "sd_sim": 4.76,
+    "sd_model": 4.723,
     "picks_remaining": 1
    },
    "Jared": {
@@ -5719,10 +7534,13 @@
      "NYG"
     ],
     "ew": 26.6,
+    "banked": 0.0,
+    "remaining": 26.6,
+    "projected": 26.6,
     "par_delta": -7.4,
     "internal_games": 2,
-    "sd_sim": 3.83,
-    "sd_model": 4.548,
+    "sd_sim": 4.46,
+    "sd_model": 4.56,
     "picks_remaining": 1
    },
    "Alan": {
@@ -5734,10 +7552,13 @@
      "TEN"
     ],
     "ew": 29.85,
+    "banked": 0.0,
+    "remaining": 29.85,
+    "projected": 29.85,
     "par_delta": -4.15,
     "internal_games": 2,
-    "sd_sim": 3.69,
-    "sd_model": 5.08,
+    "sd_sim": 5.08,
+    "sd_model": 5.077,
     "picks_remaining": 0
    }
   },
@@ -6096,6 +7917,29 @@
   ],
   "picks_made": 25,
   "picks_total": 32,
+  "basis": {
+   "mode": "preseason",
+   "settled_games": 0,
+   "total_games": 272,
+   "tiers": {
+    "settled": 0,
+    "market": 0,
+    "model": 0,
+    "preseason": 544
+   },
+   "resolution": [
+    "settled — the game was played; banked, not projected",
+    "market — unplayed with a real price; market primacy does not lapse in-season",
+    "model — beyond the market's horizon",
+    "preseason — the frozen 2026-08-09 devigged total, refit onto expected wins"
+   ],
+   "feeds": {
+    "results": "/data/nfl-schedule.json",
+    "prices": "/data/survivor.json"
+   },
+   "switch": "data-driven: one settled game anywhere flips the payload to the composite. No date is hardcoded.",
+   "field": "live"
+  },
   "schedule_fit": {
    "method": "per-team logit offsets solved by Newton so each team's 17 fitted game probabilities sum to its expected wins; complementarity and the 272-win league total hold by construction",
    "residual": 0.00033578,
@@ -6106,44 +7950,44 @@
    "trials": 100000,
    "seed": 20260812,
    "method": "game-level Bernoulli over the refitted schedule; one win per game, so every simulated season pays exactly 272",
-   "tie_for_first_rate": 0.17181,
+   "tie_for_first_rate": 0.1718,
    "no_tie_outcome": true,
    "first_place_ties_broken": "at random — the league's real tiebreakers (playoff wins, then point differential) are not in this payload",
    "drafters": {
     "Matt": {
-     "p_first": 0.14815,
-     "p_second": 0.14838,
-     "p_top2": 0.29653,
+     "p_first": 0.14813,
+     "p_second": 0.14835,
+     "p_top2": 0.29648,
      "mean": 29.328,
      "sd": 3.374,
-     "p10": 25,
-     "p50": 29,
-     "p90": 34,
+     "p10": 25.0,
+     "p50": 29.0,
+     "p90": 34.0,
      "dist": {
       "15": 3e-05,
       "16": 6e-05,
       "17": 0.00011,
       "18": 0.00049,
-      "19": 0.00129,
-      "20": 0.00279,
+      "19": 0.0013,
+      "20": 0.00278,
       "21": 0.00602,
-      "22": 0.0116,
-      "23": 0.02087,
-      "24": 0.03343,
-      "25": 0.05183,
-      "26": 0.07113,
-      "27": 0.09307,
-      "28": 0.10863,
-      "29": 0.11482,
-      "30": 0.11597,
+      "22": 0.01161,
+      "23": 0.02085,
+      "24": 0.03341,
+      "25": 0.05186,
+      "26": 0.07116,
+      "27": 0.09305,
+      "28": 0.10861,
+      "29": 0.11484,
+      "30": 0.11596,
       "31": 0.10609,
-      "32": 0.08768,
+      "32": 0.08767,
       "33": 0.06632,
-      "34": 0.04746,
-      "35": 0.02927,
+      "34": 0.04745,
+      "35": 0.02929,
       "36": 0.01643,
-      "37": 0.00809,
-      "38": 0.00415,
+      "37": 0.0081,
+      "38": 0.00414,
       "39": 0.00152,
       "40": 0.0006,
       "41": 0.00015,
@@ -6152,14 +7996,14 @@
      }
     },
     "Rob": {
-     "p_first": 0.19907,
-     "p_second": 0.1757,
+     "p_first": 0.19913,
+     "p_second": 0.17564,
      "p_top2": 0.37477,
-     "mean": 30.085,
+     "mean": 30.084,
      "sd": 3.285,
-     "p10": 26,
-     "p50": 30,
-     "p90": 34,
+     "p10": 26.0,
+     "p50": 30.0,
+     "p90": 34.0,
      "dist": {
       "16": 1e-05,
       "17": 3e-05,
@@ -6167,24 +8011,24 @@
       "19": 0.00043,
       "20": 0.00115,
       "21": 0.00288,
-      "22": 0.0065,
-      "23": 0.01212,
-      "24": 0.02191,
-      "25": 0.03699,
-      "26": 0.05446,
-      "27": 0.07844,
-      "28": 0.09761,
-      "29": 0.11396,
-      "30": 0.12056,
-      "31": 0.11764,
-      "32": 0.10314,
-      "33": 0.08268,
-      "34": 0.06182,
+      "22": 0.00651,
+      "23": 0.01211,
+      "24": 0.02195,
+      "25": 0.0369,
+      "26": 0.05448,
+      "27": 0.07847,
+      "28": 0.09765,
+      "29": 0.11384,
+      "30": 0.12062,
+      "31": 0.11769,
+      "32": 0.10315,
+      "33": 0.08271,
+      "34": 0.06175,
       "35": 0.03976,
       "36": 0.02375,
-      "37": 0.01332,
-      "38": 0.00647,
-      "39": 0.00267,
+      "37": 0.01333,
+      "38": 0.00645,
+      "39": 0.00268,
       "40": 0.00105,
       "41": 0.00032,
       "42": 0.00011,
@@ -6193,55 +8037,55 @@
      }
     },
     "Kevin": {
-     "p_first": 0.15472,
-     "p_second": 0.15208,
+     "p_first": 0.15477,
+     "p_second": 0.15203,
      "p_top2": 0.3068,
      "mean": 29.422,
      "sd": 3.317,
-     "p10": 25,
-     "p50": 29,
-     "p90": 34,
+     "p10": 25.0,
+     "p50": 29.0,
+     "p90": 34.0,
      "dist": {
       "15": 2e-05,
       "16": 4e-05,
       "17": 0.00015,
       "18": 0.0003,
       "19": 0.00087,
-      "20": 0.00228,
+      "20": 0.00229,
       "21": 0.00496,
-      "22": 0.00948,
-      "23": 0.01973,
-      "24": 0.03282,
-      "25": 0.0489,
-      "26": 0.0693,
-      "27": 0.09033,
-      "28": 0.10882,
-      "29": 0.11914,
-      "30": 0.11794,
-      "31": 0.10812,
-      "32": 0.08882,
-      "33": 0.06924,
-      "34": 0.04753,
-      "35": 0.02954,
-      "36": 0.01683,
-      "37": 0.00857,
-      "38": 0.0041,
-      "39": 0.00151,
-      "40": 0.00042,
+      "22": 0.00945,
+      "23": 0.01976,
+      "24": 0.03277,
+      "25": 0.04891,
+      "26": 0.06935,
+      "27": 0.09031,
+      "28": 0.10888,
+      "29": 0.11907,
+      "30": 0.11793,
+      "31": 0.10819,
+      "32": 0.08874,
+      "33": 0.06928,
+      "34": 0.04749,
+      "35": 0.02957,
+      "36": 0.01682,
+      "37": 0.00859,
+      "38": 0.00409,
+      "39": 0.0015,
+      "40": 0.00043,
       "41": 0.00017,
       "42": 6e-05,
       "43": 1e-05
      }
     },
     "Chris": {
-     "p_first": 0.02683,
-     "p_second": 0.04788,
-     "p_top2": 0.07471,
+     "p_first": 0.0268,
+     "p_second": 0.04792,
+     "p_top2": 0.07472,
      "mean": 26.168,
      "sd": 3.298,
-     "p10": 22,
-     "p50": 26,
-     "p90": 30,
+     "p10": 22.0,
+     "p50": 26.0,
+     "p90": 30.0,
      "dist": {
       "13": 5e-05,
       "14": 0.00011,
@@ -6249,24 +8093,24 @@
       "16": 0.00101,
       "17": 0.00236,
       "18": 0.00537,
-      "19": 0.01133,
-      "20": 0.02105,
-      "21": 0.03682,
-      "22": 0.05386,
-      "23": 0.07745,
-      "24": 0.09705,
-      "25": 0.11378,
+      "19": 0.01132,
+      "20": 0.02109,
+      "21": 0.0368,
+      "22": 0.05389,
+      "23": 0.0774,
+      "24": 0.09707,
+      "25": 0.11379,
       "26": 0.11967,
-      "27": 0.11613,
-      "28": 0.10281,
-      "29": 0.08252,
-      "30": 0.06381,
-      "31": 0.04228,
-      "32": 0.02547,
-      "33": 0.01423,
+      "27": 0.1161,
+      "28": 0.10285,
+      "29": 0.08242,
+      "30": 0.06392,
+      "31": 0.04222,
+      "32": 0.0255,
+      "33": 0.01422,
       "34": 0.00727,
-      "35": 0.00316,
-      "36": 0.00141,
+      "35": 0.00315,
+      "36": 0.00142,
       "37": 0.00035,
       "38": 0.00014,
       "39": 2e-05,
@@ -6275,37 +8119,37 @@
      }
     },
     "Tyler": {
-     "p_first": 0.10253,
+     "p_first": 0.10255,
      "p_second": 0.11892,
-     "p_top2": 0.22145,
+     "p_top2": 0.22147,
      "mean": 28.507,
      "sd": 3.367,
-     "p10": 24,
-     "p50": 29,
-     "p90": 33,
+     "p10": 24.0,
+     "p50": 29.0,
+     "p90": 33.0,
      "dist": {
       "15": 3e-05,
       "16": 0.00012,
       "17": 0.00037,
       "18": 0.00098,
-      "19": 0.0023,
-      "20": 0.00495,
-      "21": 0.01016,
-      "22": 0.01843,
-      "23": 0.03151,
+      "19": 0.00229,
+      "20": 0.00497,
+      "21": 0.01017,
+      "22": 0.01842,
+      "23": 0.0315,
       "24": 0.04818,
       "25": 0.06848,
-      "26": 0.08872,
-      "27": 0.10621,
-      "28": 0.11735,
-      "29": 0.1164,
-      "30": 0.1076,
-      "31": 0.09189,
-      "32": 0.07003,
-      "33": 0.04921,
-      "34": 0.03074,
+      "26": 0.08868,
+      "27": 0.1062,
+      "28": 0.11743,
+      "29": 0.11634,
+      "30": 0.10763,
+      "31": 0.09192,
+      "32": 0.07001,
+      "33": 0.04918,
+      "34": 0.03075,
       "35": 0.01834,
-      "36": 0.00993,
+      "36": 0.00994,
       "37": 0.00481,
       "38": 0.00196,
       "39": 0.00083,
@@ -6315,38 +8159,38 @@
      }
     },
     "Jason": {
-     "p_first": 0.13828,
-     "p_second": 0.14146,
-     "p_top2": 0.27974,
+     "p_first": 0.13822,
+     "p_second": 0.1415,
+     "p_top2": 0.27972,
      "mean": 29.146,
      "sd": 3.409,
-     "p10": 25,
-     "p50": 29,
-     "p90": 33,
+     "p10": 25.0,
+     "p50": 29.0,
+     "p90": 33.0,
      "dist": {
       "15": 7e-05,
       "16": 5e-05,
       "17": 0.00023,
       "18": 0.00054,
-      "19": 0.00166,
-      "20": 0.00331,
-      "21": 0.00652,
-      "22": 0.0129,
+      "19": 0.00165,
+      "20": 0.00333,
+      "21": 0.00649,
+      "22": 0.01294,
       "23": 0.02386,
-      "24": 0.03771,
-      "25": 0.0559,
-      "26": 0.07621,
-      "27": 0.09525,
-      "28": 0.1082,
+      "24": 0.03764,
+      "25": 0.05591,
+      "26": 0.07617,
+      "27": 0.09523,
+      "28": 0.1083,
       "29": 0.1162,
-      "30": 0.11367,
-      "31": 0.10132,
-      "32": 0.08417,
-      "33": 0.06241,
+      "30": 0.11365,
+      "31": 0.10138,
+      "32": 0.08407,
+      "33": 0.06247,
       "34": 0.04347,
-      "35": 0.02661,
-      "36": 0.01578,
-      "37": 0.00799,
+      "35": 0.0266,
+      "36": 0.0158,
+      "37": 0.00798,
       "38": 0.00355,
       "39": 0.00142,
       "40": 0.00067,
@@ -6362,9 +8206,9 @@
      "p_top2": 0.08767,
      "mean": 26.605,
      "sd": 3.218,
-     "p10": 22,
-     "p50": 27,
-     "p90": 31,
+     "p10": 22.0,
+     "p50": 27.0,
+     "p90": 31.0,
      "dist": {
       "11": 1e-05,
       "12": 1e-05,
@@ -6373,24 +8217,24 @@
       "15": 0.00017,
       "16": 0.00052,
       "17": 0.00119,
-      "18": 0.00337,
-      "19": 0.00767,
-      "20": 0.01577,
-      "21": 0.02789,
-      "22": 0.04383,
-      "23": 0.06569,
-      "24": 0.08944,
-      "25": 0.10972,
-      "26": 0.12193,
-      "27": 0.12192,
+      "18": 0.00336,
+      "19": 0.00769,
+      "20": 0.01575,
+      "21": 0.0279,
+      "22": 0.04386,
+      "23": 0.06564,
+      "24": 0.08946,
+      "25": 0.10977,
+      "26": 0.12188,
+      "27": 0.12196,
       "28": 0.11322,
-      "29": 0.09317,
-      "30": 0.07186,
-      "31": 0.04901,
-      "32": 0.03086,
-      "33": 0.01742,
+      "29": 0.09311,
+      "30": 0.07194,
+      "31": 0.04896,
+      "32": 0.03085,
+      "33": 0.01744,
       "34": 0.00881,
-      "35": 0.004,
+      "35": 0.00398,
       "36": 0.00144,
       "37": 0.00068,
       "38": 0.00014,
@@ -6399,14 +8243,14 @@
      }
     },
     "Alan": {
-     "p_first": 0.19829,
-     "p_second": 0.16004,
-     "p_top2": 0.35833,
+     "p_first": 0.19827,
+     "p_second": 0.1601,
+     "p_top2": 0.35837,
      "mean": 29.856,
      "sd": 3.638,
-     "p10": 25,
-     "p50": 30,
-     "p90": 35,
+     "p10": 25.0,
+     "p50": 30.0,
+     "p90": 35.0,
      "dist": {
       "15": 1e-05,
       "16": 8e-05,
@@ -6415,24 +8259,24 @@
       "19": 0.00126,
       "20": 0.00265,
       "21": 0.00534,
-      "22": 0.01037,
-      "23": 0.01847,
-      "24": 0.03014,
-      "25": 0.04558,
-      "26": 0.06381,
+      "22": 0.01038,
+      "23": 0.0185,
+      "24": 0.03009,
+      "25": 0.04559,
+      "26": 0.06383,
       "27": 0.08004,
-      "28": 0.09569,
-      "29": 0.10804,
+      "28": 0.0957,
+      "29": 0.10798,
       "30": 0.11241,
-      "31": 0.10395,
-      "32": 0.0903,
-      "33": 0.07377,
-      "34": 0.05645,
-      "35": 0.03985,
-      "36": 0.0267,
-      "37": 0.01623,
-      "38": 0.00876,
-      "39": 0.00513,
+      "31": 0.104,
+      "32": 0.09028,
+      "33": 0.07379,
+      "34": 0.05643,
+      "35": 0.03984,
+      "36": 0.02672,
+      "37": 0.01622,
+      "38": 0.00877,
+      "39": 0.00512,
       "40": 0.00244,
       "41": 0.00114,
       "42": 0.00048,
@@ -6482,10 +8326,10 @@
     },
     {
      "id": "schedule_vs_ew",
-     "label": "Game probabilities do not re-add to expected wins",
-     "ok": false,
-     "detail": "Summing a team's 17 game probabilities lands up to 2.67 wins away from its expected-wins figure (MIA: 6.59 against 3.92). Across all 32 the game probabilities sum to 272 — the league total is right and the split between teams is not. The refit to market totals did not converge per team, so the ladder and the schedule strip are two different numbers and the page labels them as such rather than quietly picking one.",
-     "value": 2.674,
+     "label": "The supplied game probabilities re-add to expected wins",
+     "ok": true,
+     "detail": "Summing a team's 17 supplied probabilities lands at most 0.0050 wins from its expected-wins figure (worst: ATL). That is four-decimal rounding across 17 games, not a disagreement — the ladder and the schedule strip are one number.",
+     "value": 0.005,
      "severity": "known"
     },
     {
@@ -6493,7 +8337,7 @@
      "label": "Win distributions run above expected wins at the bottom of the board",
      "ok": false,
      "detail": "The mean of the 0-17 distribution sits up to 0.36 wins from expected wins (MIA). The gap is positive for the worst teams and negative for the best, which is what truncation at 0 and 17 does to a distribution built around a mean near the edge. The curves are the shape of a season, not a second estimate of its total.",
-     "value": 0.361,
+     "value": 0.36,
      "severity": "known"
     },
     {
@@ -6524,15 +8368,15 @@
      "id": "schedule_fit",
      "label": "The refitted schedule does re-add to expected wins",
      "ok": true,
-     "detail": "Solved in 60 Newton steps; the worst team is now 0.0003 wins from its expected-wins figure, against 2.67 before the refit. The residual cannot reach zero: the 32 expected-win values sum to 272.01 rather than 272, and a schedule of whole games always pays exactly 272, so that one hundredth has to live somewhere. `wp` is untouched — `wpf` sits beside it and the simulation uses only `wpf`.",
+     "detail": "Solved in 60 Newton steps; the worst team is now 0.0003 wins from its expected-wins figure, against 0.00 before the refit. The residual cannot reach zero: the 32 expected-win values sum to 272.01 rather than 272, and a schedule of whole games always pays exactly 272, so that one hundredth has to live somewhere. `wp` is untouched — `wpf` sits beside it and the simulation uses only `wpf`.",
      "value": 0.0003,
      "severity": "hard"
     },
     {
      "id": "sim_vs_ladder",
-     "label": "Simulated roster totals land on the ladder's totals",
+     "label": "Simulated roster totals land on each roster's ew total",
      "ok": true,
-     "detail": "Across 100,000 simulated seasons the worst roster mean sits 0.028 wins from the sum of its teams' expected wins. That agreement is the refit working — simulating the raw schedule instead would have put a roster up to 2.7 wins away from the number printed on its own card.",
+     "detail": "Across 100,000 simulated seasons the worst roster mean sits 0.028 wins from its ew total. That agreement is the refit and the banked floor working together — simulating the raw preseason schedule instead would have put a roster up to 2.7 wins away from the number printed on its own card, and re-simulating settled games would widen every range for the rest of the season.",
      "value": 0.028,
      "severity": "hard"
     },
@@ -6541,7 +8385,7 @@
      "label": "A tie for first is common, and this payload cannot break one",
      "ok": true,
      "detail": "17.2% of simulated seasons end with two or more rosters level at the top — roughly one in 6. The league breaks that on total playoff wins and then point differential; neither is in this payload, so the simulation breaks it at random and the page reports the rate instead of pretending to a winner. The simulation also has no tie OUTCOME: every game is decided, so no half-wins are produced.",
-     "value": 0.17181,
+     "value": 0.1718,
      "severity": "info"
     },
     {
@@ -6553,11 +8397,27 @@
      "severity": "known"
     },
     {
+     "id": "live_conservation",
+     "label": "Banked plus projected still totals the season",
+     "ok": true,
+     "detail": "0.00 banked + 272.01 projected = 272.01 against 272. 0 of 272 games are played. Per-game basis: preseason 544.",
+     "value": 272.01,
+     "severity": "hard"
+    },
+    {
+     "id": "basis_mode",
+     "label": "The payload is in preseason mode",
+     "ok": true,
+     "detail": "Nothing has been played, so every game carries the frozen 2026-08-09 devigged total refit onto expected wins. The moment one game is settled this flips to the composite by itself — no date is hardcoded.",
+     "value": 0,
+     "severity": "info"
+    },
+    {
      "id": "sd_models",
      "label": "Two roster standard deviations, and they disagree",
      "ok": true,
-     "detail": "The upstream simulation and the quadrature-plus-head-to-head calculation sit within 1.39 wins of each other (worst: Alan). They diverge most for rosters with internal games, and the simulation is the smaller of the two — it also draws correlated team strength, which quadrature cannot see. The page shows the simulated figure wherever it exists and says when it is falling back.",
-     "value": 1.39,
+     "detail": "The upstream simulation and the quadrature-plus-head-to-head calculation sit within 0.12 wins of each other (worst: Chris). They diverge most for rosters with internal games, and the simulation is the smaller of the two — it also draws correlated team strength, which quadrature cannot see. The page shows the simulated figure wherever it exists and says when it is falling back.",
+     "value": 0.119,
      "severity": "info"
     }
    ]
