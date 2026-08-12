@@ -415,5 +415,30 @@ ok(/clv-tablewrap/.test(page), "the table twin ships — it is the WCAG counterp
   ok(/alive\.length < 2/.test(code), "…nor on a finished one");
 }
 
+/* ============ 8. the diagnostics panel stopped lying ====================
+   ⚠️ This panel said "No closing prices are captured yet" in three places and printed
+   TBD for every player. That was true the day it was written and false the day the
+   capture shipped — the worst kind of stale copy, because it is a confident factual
+   claim about the system's own state that nothing forces to stay true. */
+{
+  const code = page.replace(/\/\*[\s\S]*?\*\//g, "").replace(/<!--[\s\S]*?-->/g, "");
+  ok(!/No closing prices are captured yet/.test(code),
+     "the panel no longer claims closes are never captured");
+  ok(!/<span class="tbd">TBD<\/span>/.test(code),
+     "…and no longer prints a blanket TBD for every player's CLV");
+
+  // Three states, and the two that are NOT a number matter most: zero would be a claim
+  // that the market did not move, and a raw-implied number would be wrong by the hold.
+  ok(/awaiting close/.test(code), "a leg whose game has not started reads 'awaiting close'");
+  ok(/one side/.test(code) && /can't be de-vigged/.test(code),
+     "a close with only one side captured says so, rather than being de-vigged against nothing");
+  ok(/closeUnavailableReason/.test(code) && /no close/.test(code),
+     "a leg the capture could not match reads 'no close' and carries the reason");
+  ok(/clvup|clvdn/.test(code) && !/class="px \$\{v>=0\?'pos'/.test(code),
+     "the CLV cell uses its own classes — .pos is already the reel position label");
+  ok(/Worst CLV is measured on/.test(code),
+     "the lever flag counts how many legs it can actually measure instead of claiming none");
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

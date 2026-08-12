@@ -618,6 +618,195 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
 .ord li.ghost{opacity:1}
 .ord li.ghost b{color:var(--ink-3);font-weight:650}
 .ord li.ghost .n{color:var(--ink-3)}
+
+/* ================= carnival-casino skin =================
+   Applies to exactly three surfaces: the hierarchy machine (#drawCard), the
+   diagnostics plate (#diagCard) and the season board (#seasonCard).
+
+   ⚠️ This is PAINT ONLY. No class the JS reads is renamed and no layout box is
+   restructured — the reveal logic below is the only behavioural change on this
+   page. If you need to undo the look, delete this block and the three
+   `bz-carnival` classes in the markup; everything still works.
+
+   ⚠️ These three plates are dark in BOTH themes, which is the call .machine,
+   .verdict and .tboard already made before this skin existed. A felt/brass
+   surface that flips to cream in light theme stops reading as a machine, and
+   the reel windows have to stay cream either way for the type to survive.
+   So all inks inside a plate are declared literally here rather than inherited
+   from --ink-*, which in light theme are dark-on-dark. */
+.bz-carnival{
+  /* the cabinet's own metals — brown-and-gold, unchanged */
+  --bulb:#ffd98a; --bulb-off:#5d4826; --brass:#c9a24a; --brass-hi:#f2dda6; --brass-lo:#6d5220;
+  --nose:#e33b26; --cream:#fff8ea;
+  /* the midway palette: tent red, gold, grape signs, turquoise booth */
+  --candy:#e03131; --gold:#f0b429; --gold-hi:#ffe9a8; --gold-lo:#8a6212;
+  --grape:#2c1a52; --grape-lo:#1a0f33;
+  --teal:#0f7a75; --teal-hi:#13908a; --teal-lo:#06423e;
+}
+/* --- the big top: stripes FAN from a peak, with a scalloped valance and a pennant.
+   ⚠️ A plain diagonal stripe band was tried first and reads as a decorative header,
+   not a tent — the fan and the peak are what make it a big top. The `at 50% 165%`
+   focus puts the vanishing point below the card so the fan spreads across the full
+   width instead of pinching in the middle. --- */
+.card.bz-carnival{position:relative;overflow:hidden;padding-top:52px;border-color:var(--gold-lo)}
+.card.bz-carnival::before{
+  content:"";position:absolute;left:0;right:0;top:0;height:42px;pointer-events:none;
+  background:repeating-conic-gradient(from -92deg at 50% 165%,
+    var(--candy) 0 2.6deg, var(--cream) 2.6deg 5.2deg);
+  /* two mask layers: a solid band on top, scallops punched along the bottom edge */
+  -webkit-mask:linear-gradient(#000 0 0) 0 0/100% 28px no-repeat,
+          radial-gradient(circle at 13px 100%,transparent 0 12px,#000 12.6px) 0 100%/26px 15px repeat-x;
+          mask:linear-gradient(#000 0 0) 0 0/100% 28px no-repeat,
+          radial-gradient(circle at 13px 100%,transparent 0 12px,#000 12.6px) 0 100%/26px 15px repeat-x;
+  box-shadow:inset 0 -2px 0 rgba(0,0,0,.12)}
+/* the pole and pennant at the peak */
+.card.bz-carnival::after{
+  content:"";position:absolute;left:50%;top:-2px;width:2px;height:16px;background:var(--gold);
+  box-shadow:6px 3px 0 -1px var(--candy),8px 3px 0 -1px var(--candy),10px 4px 0 -2px var(--candy);
+  z-index:2;pointer-events:none}
+.card.bz-carnival > .bz-hdr{position:relative;margin-top:2px}
+/* --- every card title is a bulb-outlined marquee sign. The dotted gold border IS
+   the bulb row — at 3px it reads as lamps, and it costs no extra element. --- */
+.card.bz-carnival > .bz-hdr h2.bz{
+  display:inline-block;padding:7px 14px;border-radius:8px;letter-spacing:2px;text-transform:uppercase;
+  font-size:14px;color:var(--bulb);background:linear-gradient(180deg,var(--grape),var(--grape-lo));
+  border:3px dotted var(--bulb);text-shadow:0 0 12px rgba(255,224,138,.7);
+  box-shadow:0 0 18px rgba(255,224,138,.22),inset 0 0 22px rgba(0,0,0,.5)}
+
+/* --- the cabinet --- */
+.bz-carnival .machine{
+  position:relative;padding:26px 22px;border:2px solid var(--brass-lo);border-top:3px solid var(--brass);
+  background:linear-gradient(180deg,#31261700,#31261755),radial-gradient(120% 90% at 50% -10%,#3a2c19,#1b1409 72%);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.05),inset 0 20px 36px rgba(0,0,0,.45),0 10px 22px rgba(0,0,0,.32);
+}
+/* Bulb rail: four repeating radial layers, one per edge of the cabinet. The chase
+   is a background-position shift of the whole layer list — one bulb pitch per
+   cycle, so it loops seamlessly. */
+.bz-carnival .machine::before{
+  content:"";position:absolute;inset:8px;border-radius:8px;pointer-events:none;z-index:3;
+  background:
+    radial-gradient(circle,var(--bulb) 0 2.5px,transparent 3.1px) 0 0/17px 17px repeat-x,
+    radial-gradient(circle,var(--bulb) 0 2.5px,transparent 3.1px) 0 100%/17px 17px repeat-x,
+    radial-gradient(circle,var(--bulb) 0 2.5px,transparent 3.1px) 0 0/17px 17px repeat-y,
+    radial-gradient(circle,var(--bulb) 0 2.5px,transparent 3.1px) 100% 0/17px 17px repeat-y;
+  filter:drop-shadow(0 0 4px rgba(255,201,116,.5));opacity:.5;transition:opacity .4s}
+@keyframes bulbchase{to{background-position:17px 0,-17px 100%,0 17px,100% -17px}}
+.bz-carnival .machine.armed::before{opacity:.72;animation:bulbchase 1.15s linear infinite}
+/* the draw exists on the server and THIS reader has not pulled yet — the machine
+   is visibly begging for it */
+.bz-carnival .machine.pending::before{opacity:1;animation:bulbchase .42s linear infinite}
+.bz-carnival .machine.locked::before{opacity:.9}
+
+/* --- reel windows: cream glass, brass bezel, a payline through the middle --- */
+.bz-carnival .win{border:2px solid var(--brass-lo);box-shadow:inset 0 0 14px rgba(43,28,14,.18)}
+.bz-carnival .win::before{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,0) 38%,rgba(43,28,14,.06) 62%,rgba(43,28,14,.16))}
+.bz-carnival .win::after{content:"";position:absolute;left:0;right:0;top:50%;height:2px;margin-top:-1px;z-index:2;
+  pointer-events:none;background:linear-gradient(90deg,transparent,var(--nose),transparent);opacity:.32}
+.bz-carnival .win.locked{border-color:var(--brass-hi);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 32%,transparent),0 0 22px rgba(255,201,116,.4),
+             inset 0 0 20px rgba(255,180,80,.22)}
+/* 1st is the lever that actually decides most weeks — it gets the jackpot frame.
+   :first-child on the reel column, so it follows the reel set rather than a
+   hardcoded index. */
+.bz-carnival .reels > div:first-child .win.locked{
+  box-shadow:0 0 0 3px var(--accent),0 0 26px color-mix(in srgb,var(--accent) 55%,transparent),
+             inset 0 0 22px rgba(255,150,50,.28)}
+.bz-carnival .reels > div:first-child .win.locked::after{opacity:.6}
+.bz-carnival .pos{color:var(--bulb);text-shadow:0 0 8px rgba(255,201,116,.35)}
+
+/* --- the lever, now a real control --- */
+.bz-carnival .lever{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:default;
+  -webkit-tap-highlight-color:transparent}
+.bz-carnival .lever .rod{background:linear-gradient(90deg,#40311a,#a8873c 24%,var(--brass-hi) 47%,#a8873c 70%,#40311a);
+  box-shadow:0 0 0 1px rgba(0,0,0,.45)}
+.bz-carnival .lever .knob{background:radial-gradient(circle at 34% 28%,#ff9a86 0 10%,var(--nose) 48%,#8a1a0c 100%);
+  box-shadow:inset 0 -5px 9px rgba(0,0,0,.4),0 0 0 3px #3a2a12,0 5px 12px rgba(0,0,0,.45)}
+.bz-carnival .pulllab{display:block;margin-top:7px;font:800 8.5px/1 ui-monospace,monospace;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--bulb-off);text-align:center;transition:color .3s}
+.bz-carnival .lever.live{cursor:pointer}
+.bz-carnival .lever.live .pulllab{color:var(--bulb);text-shadow:0 0 8px rgba(255,201,116,.6)}
+@keyframes knobbeg{0%,100%{transform:none;box-shadow:inset 0 -5px 9px rgba(0,0,0,.4),0 0 0 3px #3a2a12,0 0 0 0 rgba(227,59,38,.55)}
+  50%{transform:translateY(3px);box-shadow:inset 0 -5px 9px rgba(0,0,0,.4),0 0 0 3px #3a2a12,0 0 0 12px rgba(227,59,38,0)}}
+.bz-carnival .machine.pending .knob{animation:knobbeg 1.25s ease-in-out infinite}
+.bz-carnival .lever:focus-visible{outline:2px solid var(--bulb);outline-offset:4px;border-radius:8px}
+/* the armed idle knob-pulse is for "nothing has happened yet"; when a draw is
+   waiting on this reader, knobbeg replaces it — two pulses at once reads as noise */
+.bz-carnival .machine.pending.armed .knob{animation:knobbeg 1.25s ease-in-out infinite}
+
+/* --- the drawn order, as a lit marquee list --- */
+.bz-carnival .ord li:first-child:not(.ghost) b{color:var(--accent);text-shadow:0 0 10px color-mix(in srgb,var(--accent) 45%,transparent)}
+
+/* --- diagnostics: the sideshow odds plate, turquoise under a gold rail --- */
+#diagCard.bz-carnival .stat-grid{
+  border:3px solid var(--gold);border-radius:11px;padding:16px 18px;margin:8px 0 4px;gap:16px 20px;
+  background:
+    repeating-linear-gradient(45deg,rgba(255,255,255,.05) 0 20px,transparent 20px 40px),
+    linear-gradient(180deg,var(--teal-hi),var(--teal-lo));
+  box-shadow:inset 0 0 0 2px rgba(224,49,49,.35),inset 0 14px 28px rgba(0,0,0,.4)}
+#diagCard.bz-carnival .stat-grid .lil{color:#9ff0e4}
+#diagCard.bz-carnival .stat-grid .big{color:var(--bulb);text-shadow:0 0 14px rgba(255,224,138,.45)}
+#diagCard.bz-carnival .stat-grid .big.cost{color:var(--cream);text-shadow:none}
+#diagCard.bz-carnival .stat-grid .tm{color:#7fd8ca}
+#diagCard.bz-carnival #dgNote{color:var(--ink-3)}
+#diagCard.bz-carnival #dgTable th{border-bottom:2px solid var(--gold);color:var(--candy)}
+/* the caution stripe reads as a fairground barrier, not a browser warning box.
+   ⚠️ It is absolutely positioned because .flag is a flex row — a ::before in flow
+   becomes a flex item and pushes the ⚠ glyph off its text. */
+#diagCard.bz-carnival .flag{border-left:0;position:relative;padding-left:15px}
+#diagCard.bz-carnival .flag::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;border-radius:3px;
+  background:repeating-linear-gradient(135deg,var(--candy) 0 7px,var(--cream) 7px 14px)}
+#diagCard.bz-carnival .flag.corr::before{background:repeating-linear-gradient(135deg,var(--nose) 0 6px,var(--grape-lo) 6px 12px)}
+/* the empty state is the house waiting for a bet, not an error */
+#diagCard.bz-carnival.empty #dgNote{
+  border-top:0;background:linear-gradient(180deg,var(--teal-hi),var(--teal-lo));border:3px solid var(--gold);
+  border-radius:11px;padding:18px 20px;color:#9ff0e4;text-align:center;font-size:13.5px;
+  box-shadow:inset 0 0 0 2px rgba(224,49,49,.35),inset 0 14px 28px rgba(0,0,0,.4)}
+#diagCard.bz-carnival.empty #dgNote::before{
+  content:"";display:block;width:26px;height:26px;border-radius:50%;margin:0 auto 10px;
+  background:radial-gradient(circle at 34% 30%,#ff9a86 0 12%,var(--nose) 52%,#7c1608 100%);opacity:.55}
+
+/* --- season: the ticket booth. Turquoise board, polka dots, a scalloped red
+   valance under the bulb rail. --- */
+#seasonCard.bz-carnival .tboard{
+  border:3px solid var(--gold);border-top:3px solid var(--gold);padding-top:30px;position:relative;
+  background:
+    radial-gradient(circle,rgba(255,255,255,.07) 1.8px,transparent 2.3px) 0 0/18px 18px,
+    radial-gradient(130% 100% at 50% -10%,var(--teal-hi),var(--teal-lo) 72%);
+  box-shadow:inset 0 0 0 2px rgba(224,49,49,.3),inset 0 16px 30px rgba(0,0,0,.45)}
+#seasonCard.bz-carnival .tboard::before{
+  content:"";position:absolute;left:10px;right:10px;top:9px;height:6px;pointer-events:none;
+  background:radial-gradient(circle,var(--bulb) 0 2.4px,transparent 3px) 0 50%/17px 6px repeat-x;
+  filter:drop-shadow(0 0 4px rgba(255,201,116,.5));opacity:.85}
+#seasonCard.bz-carnival .tboard::after{
+  content:"";position:absolute;left:0;right:0;top:19px;height:11px;pointer-events:none;
+  background:repeating-linear-gradient(90deg,var(--candy) 0 13px,var(--cream) 13px 26px);
+  -webkit-mask:radial-gradient(circle at 8px 0,#000 0 7px,transparent 7.6px) 0 0/16px 11px repeat-x;
+          mask:radial-gradient(circle at 8px 0,#000 0 7px,transparent 7.6px) 0 0/16px 11px repeat-x;
+  opacity:.9}
+#seasonCard.bz-carnival .thead{border-bottom-color:rgba(240,180,41,.35)}
+#seasonCard.bz-carnival .thead span{color:#9ff0e4}
+#seasonCard.bz-carnival .trow{border-bottom-color:rgba(255,255,255,.08)}
+#seasonCard.bz-carnival .trow .rk{color:var(--bulb)}
+#seasonCard.bz-carnival .trow .nm2{color:var(--cream)}
+#seasonCard.bz-carnival .trow.me2 .nm2{color:#ffd166}
+/* one red nose = this dawg has worn the belt. Presence only, never a count —
+   the flap digits are the count and two encodings of one number invite a
+   disagreement between them. */
+#seasonCard.bz-carnival .trow[data-worn="1"] .nm2::after{
+  content:"";width:9px;height:9px;border-radius:50%;flex:0 0 9px;
+  background:radial-gradient(circle at 34% 30%,#ff9a86 0 14%,var(--nose) 55%,#7c1608 100%);
+  box-shadow:0 0 7px rgba(227,59,38,.6)}
+#seasonCard.bz-carnival .fund{
+  background:linear-gradient(180deg,#ff6b5e,var(--candy));color:var(--cream);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 0 0 2px var(--gold)}
+/* the counts are torn ticket stubs — cream card, red numerals, gold edge */
+#seasonCard.bz-carnival .flap b{
+  background:linear-gradient(180deg,var(--cream),#efe2c8);color:var(--candy);
+  box-shadow:inset 0 0 0 2px var(--gold),0 1px 0 rgba(0,0,0,.35);text-shadow:none}
+#seasonCard.bz-carnival .flap b.zero{color:#b9a98c}
+#seasonCard.bz-carnival #next{border-color:var(--gold-lo);color:var(--gold)}
+#seasonCard.bz-carnival #next:hover{border-color:var(--gold);color:var(--gold-hi)}
 .note{font-size:13px;color:var(--ink-3);margin:12px 0 0;border-top:1px solid var(--grid);padding-top:11px}
 .row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
 .gr{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:8px 0;
@@ -640,6 +829,18 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
   .lever{flex-direction:row;width:100%;flex:0 0 auto;gap:12px;align-items:center}
   .rod{flex:1;min-height:0;height:8px;transform-origin:0 50%}
   .lever.pulled .rod{transform:scaleX(.72)}.knob{margin:0}
+  /* the lever lies on its side on a phone, so PULL sits beside the knob, not under it */
+  .bz-carnival .pulllab{margin:0 0 0 2px}
+  .bz-carnival .machine{padding:22px 14px}
+  .bz-carnival .machine::before{inset:6px}
+  /* the tent scales down but keeps its peak — the fan is the whole point of it */
+  .card.bz-carnival{padding-top:44px}
+  .card.bz-carnival::before{height:34px;
+    -webkit-mask:linear-gradient(#000 0 0) 0 0/100% 22px no-repeat,
+            radial-gradient(circle at 11px 100%,transparent 0 10px,#000 10.6px) 0 100%/22px 13px repeat-x;
+            mask:linear-gradient(#000 0 0) 0 0/100% 22px no-repeat,
+            radial-gradient(circle at 11px 100%,transparent 0 10px,#000 10.6px) 0 100%/22px 13px repeat-x}
+  .card.bz-carnival > .bz-hdr h2.bz{font-size:12.5px;letter-spacing:1.4px;padding:6px 11px}
   table.bz td,table.bz th{padding-left:5px;padding-right:5px}
   /* the leg itself is already spelled out on the slip above, and "usually named by"
      is the least load-bearing column — drop both rather than shrink everything */
@@ -654,7 +855,18 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
   .trow .nm2{font-size:13px;letter-spacing:1.1px}
   .bz-hdr h1{font-size:24px}
 }
-@media(prefers-reduced-motion:reduce){.strip,.rod,.ord li{transition:none!important}}
+@media(prefers-reduced-motion:reduce){.strip,.rod,.ord li{transition:none!important}
+  /* the bulbs stay LIT, they just stop travelling — an unlit machine would read
+     as broken rather than as motion-reduced */
+  .bz-carnival .machine::before,.bz-carnival .machine .knob{animation:none!important}
+  .bz-carnival .machine.pending::before{opacity:1}
+  /* ⚠️ Stopping the idle reel scroll is NOT enough on its own: a frozen strip parks
+     every window on the same cell, and four windows reading "Shortest Odds" looks
+     exactly like a drawn hierarchy. Blank the glass instead — hatched cream says
+     "no result here", which is the true statement. The lever list underneath still
+     names which levers are in the draw. */
+  .bz-carnival .machine.armed .strip{animation:none!important;visibility:hidden}
+  .bz-carnival .machine.armed .win{background:repeating-linear-gradient(45deg,#e7dcc6 0 7px,#f7f1e6 7px 14px)}}
 /* ---- sheets nav: board / one chip per player / league ---- */
 .snav{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 16px}
 .snav button{background:none;border:1px solid var(--grid);color:var(--ink-2);border-radius:999px;
@@ -835,6 +1047,11 @@ table.gaptbl th{font:650 10px/1 ui-monospace,monospace;letter-spacing:.7px;text-
 table.gaptbl td{padding:6px 8px;border-top:1px solid var(--grid);vertical-align:top;font-size:12.5px}
 table.gaptbl input{width:82px}
 table.gaptbl .gwhy{font-size:11px;color:var(--ink-3);margin-top:2px;max-width:46ch;line-height:1.45}
+/* CLV in the diagnostics table. Own names on purpose — see the note at clvCell. */
+#dgTable td.clvup{color:var(--good);font-weight:700}
+#dgTable td.clvdn{color:var(--bad);font-weight:700}
+#diagCard.bz-carnival #dgTable td.clvup{color:#7ef0a8}
+#diagCard.bz-carnival #dgTable td.clvdn{color:#ff8f7a}
 /* ---- league switcher ---- */
 .lgbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
 .lgbar select{background:var(--surface-1);border:1px solid var(--grid);color:var(--ink-1);
@@ -2471,10 +2688,15 @@ STATE: everything saves in the browser on that device. A different device shows 
   <div id="royaleBody"></div>
 </div>
 
-<div class="card" id="drawCard">
+<div class="card bz-carnival" id="drawCard">
   <div class="bz-hdr"><h2 class="bz" style="margin:0">This week's hierarchy</h2><span class="tm" id="drawState"></span></div>
   <div class="machine" id="machine"><div class="reels" id="reels"></div>
-    <div class="lever" id="lever"><div class="rod"></div><div class="knob"></div></div></div>
+    <!-- The lever is a real <button> because it is now a real control: the server's
+         draw is written once, but each reader pulls it themselves to see it. Keyboard
+         and screen-reader users get the same moment; the label is set from JS. -->
+    <button type="button" class="lever" id="lever" disabled
+            aria-label="The hierarchy has not been drawn yet"><div class="rod"></div><div class="knob"></div>
+      <span class="pulllab" id="pullLab">armed</span></button></div>
   <ol class="ord" id="ord"></ol>
   <p class="note" id="drawNote"></p>
 </div>
@@ -2554,7 +2776,7 @@ STATE: everything saves in the browser on that device. A different device shows 
 </div>
 
 <!-- ---------- diagnostics ---------- -->
-<div class="card" id="diagCard" style="display:none">
+<div class="card bz-carnival" id="diagCard" style="display:none">
   <div class="bz-hdr"><h2 class="bz" style="margin:0">Diagnostics</h2><span class="tm" id="dgMeta"></span></div>
   <div class="stat-grid" id="dgTiles"></div>
   <div id="dgFlags"></div>
@@ -2577,7 +2799,7 @@ STATE: everything saves in the browser on that device. A different device shows 
 </div>
 
 <!-- ---------- season ---------- -->
-<div class="card" id="seasonCard">
+<div class="card bz-carnival" id="seasonCard">
   <div class="bz-hdr"><h2 class="bz" style="margin:0">Season</h2><span class="tm" id="lbMeta"></span></div>
   <div class="tboard" id="lb"></div>
   <div class="row" style="margin-top:14px" id="adminRow" style="display:none">
@@ -4114,6 +4336,7 @@ function paintDiag(live, players, status){
   const card=document.getElementById('diagCard');
   if(!live.length){
     card.style.display='';
+    card.classList.add('empty');   // the empty note becomes the felt plaque
     document.getElementById('dgMeta').textContent='';
     document.getElementById('dgTiles').innerHTML='';
     document.getElementById('dgFlags').innerHTML='';
@@ -4123,6 +4346,7 @@ function paintDiag(live, players, status){
     return;
   }
   card.style.display='';
+  card.classList.remove('empty');
   const st = settings(), levers = (st.levers && st.levers.length) ? st.levers : [0,1,2,3];
   const stake = st.stake ?? 50;
   const key = simKeyFor(live, levers, status);
@@ -4174,14 +4398,52 @@ function paintDiag(live, players, status){
       + (fl.length>6?`<br>· …and ${fl.length-6} more, on the player sheets.`:'')
       + `</span></div>`);
   }
-  if(levers.includes(3))
-    flags.push(`<div class="flag"><span>⚠</span><span><b>Worst CLV is unmeasured.</b> No closing prices are captured yet,
-      so in the simulation CLV picks uniformly among whoever is still tied — that is what "no information" means.
-      It stays TBD in the table until the close snapshot ships.</span></div>`);
+  /* ⚠️ THIS FLAG USED TO SAY "no closing prices are captured yet". They are now — the
+     kickoff capture ships — so the honest statement is per-leg rather than blanket: a
+     close exists for some legs and not others, and only a leg with BOTH sides at BOTH
+     ends can be de-vigged into a CLV at all. Say which, and how many. */
+  if(levers.includes(3)){
+    const withClv = live.filter(x=>{ const r=(S.results||{})[kEnc(x.p)]||{};
+      return devigP(r.close, r.closeOpp)!=null && devigP(x.price, x.entryPriceOpp)!=null; }).length;
+    if(withClv === 0)
+      flags.push(`<div class="flag"><span>⚠</span><span><b>Worst CLV can't be measured on this board yet.</b>
+        The closes are captured at kickoff, so until the games start there is nothing to compare against — in the
+        simulation CLV picks uniformly among whoever is still tied, which is what "no information" actually means.
+        It fills in once the snapshot lands.</span></div>`);
+    else if(withClv < live.length)
+      flags.push(`<div class="flag"><span>⚠</span><span><b>Worst CLV is measured on ${withClv} of ${live.length} legs.</b>
+        The rest have no capturable close, or only one side of one — and a price with no opposite side can't be
+        de-vigged, so it is not a CLV. In the simulation this lever ranks the legs it can and passes when it can't;
+        it never guesses at the others.</span></div>`);
+  }
   if(levers.length<4)
     flags.push(`<div class="flag"><span>⚠</span><span><b>Only ${levers.length} of 4 levers are in the draw.</b>
       Fewer levers is a more deterministic objective, which is the thing the randomised hierarchy exists to prevent.</span></div>`);
   document.getElementById('dgFlags').innerHTML = flags.join('');
+
+  /* One leg's CLV cell.
+     ⚠️ Three states, not two. A captured close gives a real number. NO close is "no
+     close" — not zero, because zero is a claim that the market did not move, and this
+     column used to say TBD for everything precisely so that claim was never made by
+     accident. One side only is its own state again: the price is there but cannot be
+     de-vigged, and a raw-implied number here would be wrong by roughly the whole hold
+     while looking exactly as authoritative as a real one. */
+  const clvCell = x => {
+    const r = (S.results||{})[kEnc(x.p)] || {};
+    const pC = devigP(r.close, r.closeOpp), pE = devigP(x.price, x.entryPriceOpp);
+    if(pC != null && pE != null){
+      const v = (pC - pE) * 100;
+      // ⚠️ NOT .pos/.neg — .pos is already the reel position label ("1ST"), and the
+      // carnival skin restyles it. A CLV number would silently inherit both.
+      return `<td class="px ${v>=0?'clvup':'clvdn'}" title="de-vigged close ${(pC*100).toFixed(1)}% − de-vigged entry ${(pE*100).toFixed(1)}%">`
+        + `${v>0?'+':''}${v.toFixed(2)}</td>`;
+    }
+    if(r.close != null && r.closeOpp == null)
+      return `<td><span class="tbd" title="Only one side of the close was captured, so it can't be de-vigged.">one side</span></td>`;
+    if(r.closeUnavailableReason)
+      return `<td><span class="tbd" title="${esc(r.closeUnavailableReason)}">no close</span></td>`;
+    return `<td><span class="tbd" title="Closes are captured at kickoff.">awaiting close</span></td>`;
+  };
 
   // ---- per-player table ----
   const order = live.map((x,i)=>i).sort((a,b)=>R.bozo[b]-R.bozo[a]);
@@ -4196,7 +4458,7 @@ function paintDiag(live, players, status){
         <td><span class="mcell"><span class="v">${pct(R.win[i])}</span>${meter(R.win[i])}</span></td>
         <td><span class="mcell"><span class="v">${pct(R.bozo[i])}</span>${meter(R.bozo[i],true)}</span></td>
         <td class="px">${pct(R.solo[i])}</td>
-        <td><span class="tbd">TBD</span></td>
+        ${clvCell(x)}
         <td class="tm">${by ? esc(by.name)+' · '+pct(by.share) : '—'}</td></tr>`;
     }).join('');
 
@@ -4206,8 +4468,10 @@ function paintDiag(live, players, status){
      <b>Killed it alone</b> is the chance your leg is the only loser on the ticket.
      Both are model output, not observation — they inherit whatever the SD table gets wrong.
      <b>Review flags</b> compare the submitted price against where the market closed and mark anything too far
-     apart to be ordinary line movement. ⚠️ No closing prices are captured yet, so that check is dormant —
-     an empty list means nothing has been checked, not that everything is clean.`;
+     apart to be ordinary line movement — that check only runs on a leg whose close has been captured, so an
+     empty list on an open board means nothing has been checked yet, not that everything is clean.
+     <b>CLV</b> is the de-vigged close minus the de-vigged entry, in probability points, and it needs both sides
+     of both prices; a leg missing any of them reads “no close”, never zero.`;
 }
 
 /* ---------------- season, as a split-flap board ---------------- */
@@ -4223,7 +4487,10 @@ function paintTicker(players, t, mx){
     rows.map((p,i)=>{
       const n=String(t[p]||0);
       const flaps=n.split('').map(ch=>`<b class="${t[p]?'':'zero'}">${ch}</b>`).join('');
-      return `<div class="trow${ME&&p===ME.name?' me2':''}">
+      // data-worn drives the red nose next to the name — presence only, never a
+      // count. The flap digits are the count; two encodings of one number can
+      // disagree, and the nose is the one that would be wrong.
+      return `<div class="trow${ME&&p===ME.name?' me2':''}" data-worn="${t[p]?1:0}">
         <span class="rk">${i+1}</span>
         <span class="nm2">${esc(teamOf(p))}${t[p]===mx&&mx>0?'<span class="fund">funds this week</span>':''}</span>
         <span class="flap">${flaps}</span></div>`;
@@ -4397,11 +4664,45 @@ function activeLevers(ord){
   const l=(settings().levers||[]).slice().sort((a,b)=>a-b);
   return l.length ? l : [0,1,2,3];
 }
+/* ---------------- per-reader reveal ----------------
+   ⚠️ Read this before "simplifying" it into an auto-paint.
+
+   The DRAW is the server's: one permutation, written once at the close, immutable.
+   What is per-reader is whether THIS person has watched it land. Before this, only
+   whoever happened to have the tab open at the moment of the close saw the reels
+   move; everybody else loaded a board that was already locked. Now the machine
+   stays armed on your device until YOU pull it, and the reels stop on exactly the
+   order the server wrote.
+
+   The reveal flag is localStorage, which means it is not authoritative and does not
+   need to be — the worst a tampered flag can do is skip your own animation. Nothing
+   about the result, the grading or the bozo depends on it.
+
+   Auto-reveal (no pull required) in one case only: the week is already GRADED. Once
+   the bozo is named the hierarchy is in the verdict text anyway, so gating it behind
+   a lever would hide public information behind a toy.  */
+const SEEN_KEY='dd-bozo-seen-draw';
+const seenStore = () => { try{ return JSON.parse(localStorage.getItem(SEEN_KEY)||'{}'); }catch(e){ return {}; } };
+// keyed on the ORDER too, so a re-drawn week is a fresh reveal rather than a
+// silently-skipped one
+const drawKey = ord => `${LID}:${S.season||''}:${S.week||1}:${ord.join('')}`;
+const hasSeenDraw = ord => !!seenStore()[drawKey(ord)];
+function markDrawSeen(ord){
+  const s=seenStore(); s[drawKey(ord)]=1;
+  const k=Object.keys(s);                      // one entry per league-week; cap it
+  if(k.length>40) k.slice(0,k.length-40).forEach(x=>delete s[x]);
+  try{ localStorage.setItem(SEEN_KEY, JSON.stringify(s)); }catch(e){}
+}
+let pendingDraw=null;   // an order that exists on the server and is waiting on this reader
+
 function paintMachine(ord){
   const m=document.getElementById('machine');
   buildReels(activeLevers(ord));
   if(!ord || !ord.length){
     m.classList.add('armed');
+    m.classList.remove('pending','locked');
+    setLever('idle');
+    pendingDraw=null;
     wins.forEach(w=>w.classList.remove('locked'));
     // '' rather than null: null means "nothing has ever been painted", which is
     // what makes a page loaded onto an already-drawn week render statically
@@ -4416,14 +4717,67 @@ function paintMachine(ord){
       + 'The server draws a fresh permutation the moment the last leg lands and writes it once — these reels stop on that. Nothing on this page can re-roll it.';
     return;
   }
-  m.classList.remove('armed');
+  // A draw exists. Graded weeks paint straight through; everything else waits for
+  // this reader's pull.
+  const graded = (S.status||'open')==='graded' || !!S.bozo;
+  if(!graded && !hasSeenDraw(ord)) return armPending(ord);
+  revealDraw(ord, false);
+}
+
+/* the machine knows the draw has happened and is refusing to say what it is until
+   you pull. Idempotent: render() runs on every poll and must not restart this. */
+function armPending(ord){
+  const m=document.getElementById('machine'), key=ord.join(',');
+  if(pendingDraw===key) return;
+  pendingDraw=key; drawnOrder='';
+  m.classList.add('armed','pending'); m.classList.remove('locked');
+  wins.forEach(w=>w.classList.remove('locked'));
+  strips.forEach(s=>{ s.style.transition='none'; s.style.transform=''; });  // back to the idle loop
+  setLever('pull');
+  document.getElementById('drawState').textContent='drawn · waiting on your pull';
+  document.getElementById('ord').innerHTML = reelSet.map(li=>
+    `<li class="on ghost"><span class="n">·</span><span><b>${LEVERS[li].name}</b>`
+    + `<span class="d"> — ${LEVERS[li].desc}</span></span></li>`).join('');
+  document.getElementById('drawNote').textContent =
+    'The hierarchy is already decided — the server drew it the moment the last leg landed and wrote it once. '
+    + 'Pull the lever to watch it stop. Everyone pulls their own; the reels stop on the same order for all of us and nothing here can re-roll it.';
+}
+
+function revealDraw(ord, animate){
+  const m=document.getElementById('machine');
+  m.classList.remove('armed','pending'); m.classList.add('locked');
+  pendingDraw=null; setLever('done');
   document.getElementById('drawState').textContent =
     'drawn ' + (S.closeTs ? when(S.closeTs) : 'at the close');
   document.getElementById('drawNote').textContent =
     'Drawn on the server the moment the last leg landed — the reels are showing a result that already exists. Only legs that lost are eligible. Ties fall to the next rule down.';
   const key=ord.join(',');
-  if(drawnOrder!==key){ const first = drawnOrder===null; drawnOrder=key; first?paintOrder(ord):spin(ord); }
+  if(drawnOrder===key) return;
+  drawnOrder=key;
+  (animate && !reduced) ? spin(ord) : paintOrder(ord);
 }
+
+/* one place that owns the lever's three states, so the disabled flag, the class,
+   the decal and the accessible name can never disagree */
+function setLever(state){
+  const lv=document.getElementById('lever'), lab=document.getElementById('pullLab');
+  if(!lv) return;
+  const cfg={
+    idle:['armed', true,  'The hierarchy has not been drawn yet — nothing to pull'],
+    pull:['Pull',  false, "Pull the lever to reveal this week's drawn hierarchy"],
+    done:['drawn', true,  "This week's hierarchy is showing on the reels"]
+  }[state];
+  lab.textContent=cfg[0]; lv.disabled=cfg[1];
+  lv.classList.toggle('live', state==='pull');
+  lv.setAttribute('aria-label', cfg[2]);
+}
+
+document.getElementById('lever').addEventListener('click', ()=>{
+  const ord=S.order;
+  if(!pendingDraw || !ord || !ord.length) return;
+  markDrawSeen(ord);
+  revealDraw(ord, true);
+});
 function spin(order){
   const lv=document.getElementById('lever');
   lv.classList.add('pulled'); setTimeout(()=>lv.classList.remove('pulled'),430);
