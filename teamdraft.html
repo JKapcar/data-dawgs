@@ -2119,7 +2119,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     const root = document.querySelector("main") || document.querySelector(".wrap") || document.body;
     if(!root) return "This page has not rendered anything readable yet.";
     const SKIP_TAG = {SCRIPT:1, STYLE:1, NOSCRIPT:1, SVG:1, CANVAS:1, IFRAME:1, TEMPLATE:1,
-                      NAV:1, FOOTER:1, VIDEO:1, AUDIO:1, BUTTON:1, OPTION:1, PICTURE:1};
+                      NAV:1, FOOTER:1, VIDEO:1, AUDIO:1, OPTION:1, PICTURE:1};
     const SKIP_ID  = {nav:1, ddbDock:1, ddbLaunch:1, ddbCSS:1, ddbMsgs:1};
     const secs = [{head:"", lines:[], seen:false}];
     const said = {};
@@ -2142,6 +2142,24 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
         }
         if(tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA"){
           const s = ddControl(el); if(s) cur.lines.push(s);
+          continue;
+        }
+        if(tag === "BUTTON"){
+          /* ⚠️ Buttons were skipped outright as chrome, and on this site that threw
+             away the data. Every pick on the draft board, every roster card and every
+             expected-wins bar is a button — the summary line under the board was all
+             Toto could see, so he could not name a steal that was on screen.
+             Keep the ones carrying content, drop the ones carrying a verb. */
+          const s = ddTxt(el);
+          if(!s || said[s]) continue;
+          if(!(el.hasAttribute("data-tip") || el.children.length >= 2 || s.length > 24)) continue;
+          said[s] = 1;
+          if(ddInView(el)) cur.seen = true;
+          // The tip is built as markup and lives in an attribute, so textContent never
+          // sees it — and on the board it is the half that says what the pick passed on.
+          const tip = (el.getAttribute("data-tip") || el.getAttribute("title") || "")
+            .replace(/<[^>]*>/g, " ").replace(/&quot;/g, '"').replace(/\s+/g, " ").trim();
+          cur.lines.push(s.slice(0, 220) + (tip ? "  (" + tip.slice(0, 200) + ")" : ""));
           continue;
         }
         if(tag === "P" || tag === "LI" || tag === "DT" || tag === "DD" || tag === "BLOCKQUOTE"
@@ -3999,12 +4017,46 @@ window.DD_BOTCTX = {
 - FINISHING PROBABILITIES ARE MONTE CARLO OVER THE SCHEDULE, not a forecast. No tie outcome is modelled, so the league's half-win-for-a-tie rule does not appear, and a tie for first is broken at random because the real tiebreakers are not in the payload.
 - The win distribution's mean sits up to 0.36 wins from expected wins at either extreme, which is what truncating at 0 and 17 does — that belongs to the distribution and nowhere else.
 - This is a private pool on a public site because the arithmetic is interesting. There is no signup and no money handled here; do not imply anyone can enter.`,
-  ctx: () => `THE 32-TEAM DRAFT PAGE. Everything is read from /data/draft-2026.json, built by scripts/team_draft_pool.py; the results and price feeds it composes are /data/nfl-schedule.json and /data/survivor.json. Tier: Pup. Nothing on the page is graded.
+  /* The board is the answer to the most obvious question this page invites — who
+     reached, who stole — and it is 32 cells deep, which is more than the shared
+     reader's round-robin will ever hand over. So take it directly. The data-tip is
+     already rendered on every cell; this is the same numbers, compacted. */
+  board(){
+    const cells = document.querySelectorAll('#tdBoard .td-bc');
+    if(!cells.length) return 'The board has not rendered yet.';
+    const L = ['THE BOARD, PICK BY PICK. "Gap" is expected wins given up against the best team still on the board at that moment — a description of draft day computed against the numbers as they stood then, NOT a grade of the pick and never recomputed against live ratings:'];
+    for(let i = 0; i < cells.length; i++){
+      const c = cells[i];
+      /* ⚠️ Keep the line breaks as a delimiter. Flattening them to spaces makes the
+         drafter's name unparseable the moment a team name starts with a digit — "Pick
+         12 · Tyler 49ers — 10.02 expected wins…" ran the name on to the next capital
+         letter and put half the tip in the drafter field. */
+      const tip = (c.getAttribute('data-tip') || '').replace(/<br\s*\/?>/gi, '|')
+        .replace(/<[^>]*>/g, ' ').replace(/&quot;/g, '"').replace(/\s+/g, ' ').trim();
+      if(!tip){ continue; }                       // an empty slot — still on the clock
+      const pick = /Pick (\d+) . ([^|]+)/.exec(tip), ew = /— ([\d.]+) expected wins/.exec(tip);
+      const best = /best available was (\S+) at ([\d.]+)/.exec(tip);
+      const rank = /was #(\d+) of (\d+)/.exec(tip);
+      const code = c.querySelector('.t'), d = c.querySelector('.d');
+      const delta = d ? d.textContent.replace(/\s+/g, ' ').trim() : '';
+      L.push('P' + (pick ? pick[1] : '?') + ' ' + (pick ? pick[2].trim() : '?')
+        + ' · ' + (code ? code.textContent.trim() : '?') + ' ' + (ew ? ew[1] : '?') + ' EW'
+        + (best ? ' · best available ' + best[1] + ' ' + best[2] : '')
+        + (rank ? ' · #' + rank[1] + ' of ' + rank[2] + ' left' : '')
+        + ' · gap ' + (delta === 'best available' ? '0 (took the best available)' : delta));
+    }
+    const onClock = cells.length - (L.length - 1);
+    if(onClock > 0) L.push(onClock + ' slot' + (onClock > 1 ? 's are' : ' is') + ' still on the clock — the draft is not finished, so every roster figure is a partial roster.');
+    return L.join('\n');
+  },
+  ctx(){ return this.spine() + '\n\n' + this.board() + '\n\n'
+    + (window.DDBotScan ? window.DDBotScan(4200) : 'The page reader could not run.'); },
+  spine: () => `THE 32-TEAM DRAFT PAGE. Everything is read from /data/draft-2026.json, built by scripts/team_draft_pool.py; the results and price feeds it composes are /data/nfl-schedule.json and /data/survivor.json. Tier: Pup. Nothing on the page is graded.
 WHAT EACH FIGURE IS: Posted line = the median regular-season win total on the board, half-points included. Expected wins = the four-book prices devigged and renormalised to 272, frozen at the draft-day devig. Δvig = the gap between the two. Σp = the 17 game probabilities summed. μdist = the mean of the win distribution. Internal = head-to-head meetings inside one roster, the only purely structural figure here. Par is 34 wins per roster (272 split eight ways) and 8.5 per team.
 WHERE A GAME'S NUMBER COMES FROM, resolved per game in order: a settled result if it has been played, a market price for an unplayed game, the model beyond the market's horizon, and before the season the frozen preseason devig. The switch is data-driven — one settled game anywhere flips the whole payload — so no date is hardcoded.
 THE SECTIONS: wins tracker against par · a spin wheel whose slices are finishing probability from the payload · Monte Carlo over all 272 games · expected wins for all 32 with the posted line marked · the 32x32 head-to-head grid · the snake board with reach · eight roster cards · week-by-week probabilities with same-owner collisions outlined · win distributions · every game as a table · a diagnostics panel that reports drift rather than only printing OK.
 
-` + (window.DDBotScan ? window.DDBotScan(5200) : "The page reader could not run, so nothing on the page can be read right now.")
+`
 };
 </script>
 </body>

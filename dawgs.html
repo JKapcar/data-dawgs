@@ -1557,7 +1557,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     const root = document.querySelector("main") || document.querySelector(".wrap") || document.body;
     if(!root) return "This page has not rendered anything readable yet.";
     const SKIP_TAG = {SCRIPT:1, STYLE:1, NOSCRIPT:1, SVG:1, CANVAS:1, IFRAME:1, TEMPLATE:1,
-                      NAV:1, FOOTER:1, VIDEO:1, AUDIO:1, BUTTON:1, OPTION:1, PICTURE:1};
+                      NAV:1, FOOTER:1, VIDEO:1, AUDIO:1, OPTION:1, PICTURE:1};
     const SKIP_ID  = {nav:1, ddbDock:1, ddbLaunch:1, ddbCSS:1, ddbMsgs:1};
     const secs = [{head:"", lines:[], seen:false}];
     const said = {};
@@ -1580,6 +1580,24 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
         }
         if(tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA"){
           const s = ddControl(el); if(s) cur.lines.push(s);
+          continue;
+        }
+        if(tag === "BUTTON"){
+          /* ⚠️ Buttons were skipped outright as chrome, and on this site that threw
+             away the data. Every pick on the draft board, every roster card and every
+             expected-wins bar is a button — the summary line under the board was all
+             Toto could see, so he could not name a steal that was on screen.
+             Keep the ones carrying content, drop the ones carrying a verb. */
+          const s = ddTxt(el);
+          if(!s || said[s]) continue;
+          if(!(el.hasAttribute("data-tip") || el.children.length >= 2 || s.length > 24)) continue;
+          said[s] = 1;
+          if(ddInView(el)) cur.seen = true;
+          // The tip is built as markup and lives in an attribute, so textContent never
+          // sees it — and on the board it is the half that says what the pick passed on.
+          const tip = (el.getAttribute("data-tip") || el.getAttribute("title") || "")
+            .replace(/<[^>]*>/g, " ").replace(/&quot;/g, '"').replace(/\s+/g, " ").trim();
+          cur.lines.push(s.slice(0, 220) + (tip ? "  (" + tip.slice(0, 200) + ")" : ""));
           continue;
         }
         if(tag === "P" || tag === "LI" || tag === "DT" || tag === "DD" || tag === "BLOCKQUOTE"
