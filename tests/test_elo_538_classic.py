@@ -90,12 +90,20 @@ class PublishedClassicTests(unittest.TestCase):
             {row["game_id"] for row in self.schedule["data"]["games"]},
         )
 
-    def test_public_receipts_are_two_complete_model_sets(self):
+    def test_public_receipts_are_four_complete_model_sets(self):
         elo.validate_public(self.model, self.ledger, self.legacy, self.schedule)
         counts = {}
         for row in self.ledger["data"]:
             counts[row["model_id"]] = counts.get(row["model_id"], 0) + 1
-        self.assertEqual(counts, {"nfelo": 272, "538-classic": 272})
+        self.assertEqual(
+            counts,
+            {
+                "nfelo": 272,
+                "538-classic": 272,
+                "ddpr-nfl": 272,
+                "ddpr-nfl-linear": 272,
+            },
+        )
 
     def test_every_receipt_precedes_kickoff(self):
         for row in self.ledger["data"]:

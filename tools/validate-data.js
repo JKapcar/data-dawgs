@@ -577,7 +577,7 @@ console.log('\nWorker deployment contract');
     try { w = JSON.parse(fs.readFileSync(configPath, 'utf8')); }
     catch (e) { fail(`wrangler.jsonc: unparseable — ${e.message}`); }
     if (w) {
-      const expectedSecrets = ['BOZO_PEPPER', 'BOZO_TOKENS', 'DAWG_PASS', 'ELEVEN_KEY', 'FB_SECRET', 'RESEND_KEY', 'SGO_KEY', 'XAI_KEY'];
+      const expectedSecrets = ['BOZO_PEPPER', 'BOZO_TOKENS', 'DAWG_PASS', 'DDCC_IMPORT_TOKEN', 'ELEVEN_KEY', 'FB_SECRET', 'RESEND_KEY', 'SGO_KEY', 'XAI_KEY'];
       const required = [...((w.secrets && w.secrets.required) || [])].sort();
       const crons = [...((w.triggers && w.triggers.crons) || [])].sort();
       const rl = (w.kv_namespaces || []).find(x => x.binding === 'RL');

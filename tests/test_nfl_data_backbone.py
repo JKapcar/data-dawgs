@@ -100,7 +100,7 @@ class ContractTests(unittest.TestCase):
 
     def test_committed_multi_model_ledger_contract(self):
         backbone.validate_receipt_ledger(self.ledger)
-        self.assertEqual(len(self.ledger["data"]), 544)
+        self.assertEqual(len(self.ledger["data"]), 1088)
         self.assertEqual(
             self.ledger["integrity"]["sha256"],
             backbone.receipt_ledger_hash(self.ledger["data"]),

@@ -6,6 +6,10 @@
    Run:  cd work && node test-guillotine.mjs
 */
 import { readFileSync } from "fs";
+import { fileURLToPath } from "url";
+import { dirname, resolve } from "path";
+
+const HERE = dirname(fileURLToPath(import.meta.url));
 
 let pass = 0, fail = 0;
 const ok = (name, cond, detail) => {
@@ -103,7 +107,7 @@ globalThis.fetch = async (u) => {
 };
 
 /* ------------------------- load the page's scripts ------------------------ */
-const html = readFileSync("../guillotine.html", "utf8");
+const html = readFileSync(resolve(HERE, "../guillotine.html"), "utf8");
 const blocks = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1]);
 const syncBlock = blocks.find(b => b.includes('"dd-guillotine-v1"'));
 const botBlock = blocks.find(b => b.includes("GUILLOTINE LEAGUE"));

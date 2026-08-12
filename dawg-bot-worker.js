@@ -690,6 +690,14 @@ export default {
     if (url.pathname === "/league/team")   return leagueTeam(request, env, cors);
     if (url.pathname === "/league/invite") return authInvite(request, env, cors);
 
+    // DDCC is account-backed. Every handler derives its user from the signed session;
+    // no request body can choose whose attempts or receipts are read or written.
+    if (url.pathname === "/ddcc/state")  return ddccState(request, env, cors);
+    if (url.pathname === "/ddcc/start")  return ddccStart(request, env, cors);
+    if (url.pathname === "/ddcc/answer") return ddccAnswer(request, env, cors);
+    if (url.pathname === "/ddcc/review") return ddccReview(request, url, env, cors);
+    if (url.pathname === "/ddcc/admin/questions") return ddccImportQuestions(request, env, cors);
+
     // The forecasting challenge. Storage and entrants — no page calls these yet.
     // ⚠️ A BOT TOKEN IS HONOURED ON /forecast/entry AND NOWHERE ELSE, and that scoping
     // lives HERE rather than inside the handlers. Only forecastEntry calls fcEntrantAuth;
@@ -1263,6 +1271,323 @@ async function sessionAuth(request, env) {
     return { err: "Your password changed — sign in again.", code: 401 };
 
   return { name: sess.n, players };
+}
+
+/* ================= Data Dawgs Confidence Calibration V1 ================== */
+// The question bank lives at /ddcc/questions behind Firebase's default-deny rules. It is
+// deliberately NOT a file in the public Pages tree. Active-attempt payloads are projected
+// through ddccPublicQuestion, so truth values, explanations and sources stay server-side
+// until the whole 40-response attempt is complete.
+const DDCC_DOMAINS = [
+  ["sports", "Sports"], ["us_history", "United States History"],
+  ["world_history", "World History"], ["geography", "Geography"],
+  ["government_civics_law", "Government, Civics & Law"], ["world_affairs", "World Affairs"],
+  ["biology", "Biology"], ["medicine_human_body", "Medicine & the Human Body"],
+  ["animals_nature", "Animals & Nature"], ["physics_chemistry", "Physics & Chemistry"],
+  ["earth_environment", "Earth & Environment"], ["space_astronomy", "Space & Astronomy"],
+  ["math_statistics_logic", "Mathematics, Statistics & Logic"],
+  ["economics_finance", "Economics & Finance"], ["business_industry", "Business & Industry"],
+  ["technology_computing_engineering", "Technology, Computing & Engineering"],
+  ["psychology_human_behavior", "Psychology & Human Behavior"],
+  ["arts_literature_language", "Arts, Literature & Language"],
+  ["film_tv_music_pop_culture", "Film, Television, Music & Popular Culture"],
+  ["food_everyday_life", "Food & Everyday Life"],
+].map(([key, label]) => ({ key, label }));
+const DDCC_DOMAIN_KEYS = DDCC_DOMAINS.map(d => d.key);
+const DDCC_DOMAIN_LABELS = Object.fromEntries(DDCC_DOMAINS.map(d => [d.key, d.label]));
+const DDCC_BINS = [[0, 20], [21, 40], [41, 60], [61, 80], [81, 100]];
+const ddccUserPath = name => "/ddcc/users/" + encodeURIComponent(name).replace(/\./g, "%2E");
+
+function ddccShuffle(values, random = Math.random) {
+  const out = values.slice();
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+function ddccSelectQuestions(questions, completedIds, random = Math.random) {
+  const seen = completedIds instanceof Set ? completedIds : new Set(completedIds || []);
+  const active = (questions || []).filter(q => q && q.status === "active" && q.verified === true && !seen.has(q.id));
+  const selected = [], shortages = [];
+  for (const domain of DDCC_DOMAIN_KEYS) {
+    const available = active.filter(q => q.domain === domain);
+    if (available.length < 2) shortages.push({ domain, available: available.length, needed: 2 });
+    else selected.push(...ddccShuffle(available, random).slice(0, 2));
+  }
+  if (shortages.length) {
+    const e = new Error("Not enough unseen verified questions in every domain.");
+    e.code = "DDCC_EXHAUSTED"; e.shortages = shortages; throw e;
+  }
+  return ddccShuffle(selected, random);
+}
+
+const ddccBrier = (p, truth) => ((p / 100) - (truth ? 1 : 0)) ** 2;
+function ddccAggregate(rows, domain) {
+  const use = (rows || []).filter(r => r && (!domain || r.domainSnapshot === domain) &&
+    Number.isInteger(r.probability) && r.probability >= 0 && r.probability <= 100 &&
+    typeof r.truthValueSnapshot === "boolean");
+  const bins = DDCC_BINS.map(([min, max]) => ({ min, max, label: min + "–" + max,
+    responseCount: 0, meanForecast: null, truthRate: null, _p: 0, _t: 0 }));
+  let ps = 0, ts = 0, bs = 0, right = 0, directional = 0;
+  for (const r of use) {
+    const p = r.probability / 100, t = r.truthValueSnapshot ? 1 : 0;
+    ps += p; ts += t; bs += ddccBrier(r.probability, r.truthValueSnapshot);
+    if (r.probability !== 50) { directional++; if ((r.probability > 50) === r.truthValueSnapshot) right++; }
+    const b = bins.find(x => r.probability >= x.min && r.probability <= x.max);
+    b.responseCount++; b._p += p; b._t += t;
+  }
+  for (const b of bins) {
+    if (b.responseCount) { b.meanForecast = b._p / b.responseCount; b.truthRate = b._t / b.responseCount; }
+    delete b._p; delete b._t;
+  }
+  const n = use.length, meanForecast = n ? ps / n : null, truthRate = n ? ts / n : null;
+  return { responseCount: n, meanForecast, truthRate,
+    calibrationBias: n ? meanForecast - truthRate : null,
+    meanBrierLoss: n ? bs / n : null,
+    accuracy: directional ? right / directional : null, accuracyDenominator: directional, bins };
+}
+
+function ddccMilestone(n) {
+  n = Math.max(0, Number(n) || 0);
+  if (n >= 216) return { label: "Established DDCC Profile", threshold: 216, next: null, remaining: 0 };
+  if (n >= 100) return { label: "Developing DDCC Profile", threshold: 100, next: 216, remaining: 216 - n };
+  if (n >= 40) return { label: "Initial DDCC Profile", threshold: 40, next: 100, remaining: 100 - n };
+  return { label: "Profile in progress", threshold: 0, next: 40, remaining: 40 - n };
+}
+
+function ddccAllAttempts(user) { return Object.values((user && user.attempts) || {}); }
+function ddccResponses(attempt) { return Object.values((attempt && attempt.responses) || {}); }
+function ddccCompletedRows(user) {
+  return ddccAllAttempts(user).filter(a => a.status === "completed" && ddccResponses(a).length === 40)
+    .flatMap(ddccResponses);
+}
+function ddccCompletedIds(user) { return new Set(ddccCompletedRows(user).map(r => r.questionId)); }
+function ddccActiveAttempt(user) {
+  if (!user || !user.activeAttemptId) return null;
+  const a = user.attempts && user.attempts[user.activeAttemptId];
+  return a && a.status === "in_progress" ? a : null;
+}
+function ddccPublicQuestion(q) {
+  return q ? { id: q.id, claim: q.claim, domain: q.domain,
+    domainLabel: DDCC_DOMAIN_LABELS[q.domain] || q.domain, version: q.version } : null;
+}
+function ddccCurrentIndex(attempt) {
+  const responses = attempt.responses || {};
+  const idx = attempt.questionOrder.findIndex(id => !responses[id]);
+  return idx < 0 ? attempt.questionOrder.length : idx;
+}
+function ddccAttemptSummary(attempt) {
+  const index = ddccCurrentIndex(attempt);
+  const id = attempt.questionOrder[index];
+  return { id: attempt.id, status: attempt.status, currentIndex: index,
+    completedCount: ddccResponses(attempt).length, total: 40, startedAt: attempt.startedAt,
+    currentQuestion: id ? ddccPublicQuestion(attempt.items[id]) : null };
+}
+function ddccProfile(user, domain) {
+  const attempts = ddccAllAttempts(user).filter(a => a.status === "completed" && ddccResponses(a).length === 40);
+  const rows = attempts.flatMap(ddccResponses);
+  const metrics = ddccAggregate(rows, domain);
+  return { ...metrics, completedQuizCount: attempts.length, milestone: ddccMilestone(rows.length),
+    history: attempts.map(a => {
+      const m = ddccAggregate(ddccResponses(a));
+      return { id: a.id, completedAt: a.completedAt, responseCount: m.responseCount,
+        meanBrierLoss: m.meanBrierLoss, calibrationBias: m.calibrationBias };
+    }).sort((a, b) => String(b.completedAt).localeCompare(String(a.completedAt))) };
+}
+function ddccStatePayload(user) {
+  const active = ddccActiveAttempt(user);
+  return { ok: true, activeAttempt: active ? ddccAttemptSummary(active) : null,
+    profile: ddccProfile(user),
+    domainProfiles: Object.fromEntries(DDCC_DOMAIN_KEYS.map(k => [k, ddccAggregate(ddccCompletedRows(user), k)])),
+    domains: DDCC_DOMAINS };
+}
+
+async function ddccAuth(request, env, cors) {
+  const auth = await sessionAuth(request, env);
+  return auth.err ? { response: json({ error: auth.err }, auth.code || 401, cors) } : { auth };
+}
+async function ddccReadUser(env, name, etag = false) {
+  const got = await fbGet(env, ddccUserPath(name), etag);
+  return { user: got.data && typeof got.data === "object" ? got.data : { attempts: {} }, etag: got.etag };
+}
+async function ddccReadQuestions(env) {
+  const raw = (await fbGet(env, "/ddcc/questions")).data || {};
+  return Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw);
+}
+
+function ddccValidateQuestionBank(rows) {
+  const errors = [], ids = new Set(), claims = new Set();
+  const counts = Object.fromEntries(DDCC_DOMAIN_KEYS.map(k => [k, { active: 0, true: 0, false: 0 }]));
+  if (!Array.isArray(rows)) return { errors: ["questions must be an array"], counts };
+  if (rows.length > 5000) errors.push("question bank exceeds the 5,000-record operational limit");
+  rows.forEach((q, i) => {
+    const at = "record " + (i + 1);
+    if (!q || typeof q !== "object" || Array.isArray(q)) { errors.push(at + " must be an object"); return; }
+    for (const key of ["id", "claim", "explanation", "sourceTitle", "sourceUrl", "sourceAccessedAt", "createdAt", "updatedAt"])
+      if (typeof q[key] !== "string" || !q[key].trim()) errors.push(at + " missing " + key);
+    if (typeof q.id === "string" && !/^[a-z0-9][a-z0-9-]{2,79}$/.test(q.id)) errors.push(at + " has an unsafe id");
+    if (ids.has(q.id)) errors.push(at + " duplicates id " + q.id); else ids.add(q.id);
+    const claim = typeof q.claim === "string" ? q.claim.trim().replace(/\s+/g, " ").toLowerCase() : "";
+    if (claims.has(claim)) errors.push(at + " duplicates a claim"); else if (claim) claims.add(claim);
+    if (!DDCC_DOMAIN_KEYS.includes(q.domain)) errors.push(at + " has an unknown domain");
+    if (typeof q.truthValue !== "boolean") errors.push(at + " truthValue must be Boolean");
+    if (!Array.isArray(q.secondaryTags) || q.secondaryTags.some(x => typeof x !== "string" || !x.trim()))
+      errors.push(at + " secondaryTags must be non-empty strings");
+    if (!Number.isInteger(q.version) || q.version < 1) errors.push(at + " version must be positive");
+    if (!["draft", "active", "retired"].includes(q.status)) errors.push(at + " has an invalid status");
+    if (q.status === "active" && q.verified !== true) errors.push(at + " active questions must be verified");
+    try { const u = new URL(q.sourceUrl); if (!/^https?:$/.test(u.protocol)) throw new Error(); }
+    catch { errors.push(at + " sourceUrl must be absolute http(s)"); }
+    if (counts[q.domain] && q.status === "active" && q.verified === true) {
+      counts[q.domain].active++;
+      counts[q.domain][q.truthValue ? "true" : "false"]++;
+    }
+  });
+  for (const domain of DDCC_DOMAIN_KEYS) {
+    const c = counts[domain];
+    if (c.active < 2) errors.push(domain + " needs at least two active verified questions");
+    if (Math.abs(c.true - c.false) > 1) errors.push(domain + " active truth values are imbalanced");
+  }
+  return { errors, counts };
+}
+
+async function ddccImportQuestions(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST required." }, 405, cors);
+  if (!env.DDCC_IMPORT_TOKEN) return json({ error: "DDCC importer is not configured." }, 503, cors);
+  if (!timingSafeEqual(request.headers.get("X-DDCC-Import") || "", env.DDCC_IMPORT_TOKEN))
+    return json({ error: "Importer credential rejected." }, 401, cors);
+  let body;
+  try {
+    const raw = await request.text();
+    if (raw.length > 2_000_000) return json({ error: "Question-bank payload exceeds 2 MB." }, 413, cors);
+    body = JSON.parse(raw);
+  } catch { return json({ error: "Invalid JSON." }, 400, cors); }
+  const rows = body && body.questions;
+  const checked = ddccValidateQuestionBank(rows);
+  if (checked.errors.length) return json({ error: "Question-bank validation failed.", errors: checked.errors.slice(0, 50) }, 400, cors);
+  const keyed = Object.fromEntries(rows.filter(q => q.status !== "draft").map(q => [q.id, q]));
+  try { await fbPut(env, "/ddcc/questions", keyed); }
+  catch (e) { return json({ error: "Question-bank import failed: " + e.message }, 502, cors); }
+  return json({ ok: true, imported: Object.keys(keyed).length, counts: checked.counts }, 200, cors);
+}
+function ddccId(prefix) {
+  if (crypto.randomUUID) return prefix + "-" + crypto.randomUUID();
+  const bytes = new Uint8Array(16); crypto.getRandomValues(bytes);
+  return prefix + "-" + [...bytes].map(x => x.toString(16).padStart(2, "0")).join("");
+}
+
+async function ddccState(request, env, cors) {
+  if (request.method !== "GET") return json({ error: "GET required." }, 405, cors);
+  const gate = await ddccAuth(request, env, cors); if (gate.response) return gate.response;
+  try { const { user } = await ddccReadUser(env, gate.auth.name); return json(ddccStatePayload(user), 200, cors); }
+  catch (e) { return json({ error: "DDCC storage is unavailable: " + e.message }, 502, cors); }
+}
+
+async function ddccStart(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST required." }, 405, cors);
+  const gate = await ddccAuth(request, env, cors); if (gate.response) return gate.response;
+  let bank;
+  try { bank = await ddccReadQuestions(env); }
+  catch (e) { return json({ error: "The DDCC question library is unavailable." }, 503, cors); }
+  for (let tries = 0; tries < 4; tries++) {
+    let got;
+    try { got = await ddccReadUser(env, gate.auth.name, true); }
+    catch (e) { return json({ error: "DDCC storage is unavailable: " + e.message }, 502, cors); }
+    const existing = ddccActiveAttempt(got.user);
+    if (existing) return json(ddccStatePayload(got.user), 200, cors);
+    let selected;
+    try { selected = ddccSelectQuestions(bank, ddccCompletedIds(got.user)); }
+    catch (e) {
+      if (e.code !== "DDCC_EXHAUSTED") throw e;
+      const diagnostic = { at: new Date().toISOString(), user: gate.auth.name, shortages: e.shortages };
+      try { await fbPut(env, "/ddcc/diagnostics/" + ddccId("exhausted"), diagnostic); } catch {}
+      return json({ error: "A balanced 40-question quiz is not available yet.", code: e.code,
+        shortages: e.shortages }, 409, cors);
+    }
+    const id = ddccId("attempt"), now = new Date().toISOString();
+    const items = Object.fromEntries(selected.map(q => [q.id, {
+      id: q.id, claim: q.claim, domain: q.domain, truthValue: q.truthValue,
+      explanation: q.explanation, sourceTitle: q.sourceTitle, sourceUrl: q.sourceUrl,
+      sourcePublisher: q.sourcePublisher || null, version: q.version,
+    }]));
+    const order = selected.map(q => q.id);
+    const attempt = { id, userId: gate.auth.name, status: "in_progress", questionIds: order,
+      questionOrder: order, currentIndex: 0, startedAt: now, scoringVersion: "ddcc-v1", items,
+      responses: {} };
+    got.user.attempts = got.user.attempts || {};
+    got.user.attempts[id] = attempt; got.user.activeAttemptId = id;
+    try {
+      if (await fbPut(env, ddccUserPath(gate.auth.name), got.user, got.etag))
+        return json(ddccStatePayload(got.user), 201, cors);
+    } catch (e) { return json({ error: "The quiz could not be saved: " + e.message }, 502, cors); }
+  }
+  return json({ error: "The quiz changed in another tab. Try again." }, 409, cors);
+}
+
+async function ddccAnswer(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST required." }, 405, cors);
+  const gate = await ddccAuth(request, env, cors); if (gate.response) return gate.response;
+  let body;
+  try { body = await readBody(request); } catch { return json({ error: "Invalid JSON." }, 400, cors); }
+  const probability = body && body.probability;
+  if (!Number.isInteger(probability) || probability < 0 || probability > 100)
+    return json({ error: "Probability must be a whole number from 0 through 100." }, 400, cors);
+  for (let tries = 0; tries < 4; tries++) {
+    let got;
+    try { got = await ddccReadUser(env, gate.auth.name, true); }
+    catch (e) { return json({ error: "DDCC storage is unavailable: " + e.message }, 502, cors); }
+    const attempt = got.user.attempts && got.user.attempts[body.attemptId];
+    if (!attempt || attempt.userId !== gate.auth.name) return json({ error: "That attempt was not found." }, 404, cors);
+    const locked = attempt.responses && attempt.responses[body.questionId];
+    if (locked) {
+      if (locked.probability === probability) return json(ddccStatePayload(got.user), 200, cors);
+      return json({ error: "That answer is already locked." }, 409, cors);
+    }
+    if (attempt.status !== "in_progress" || got.user.activeAttemptId !== attempt.id)
+      return json({ error: "That attempt is already complete." }, 409, cors);
+    const index = ddccCurrentIndex(attempt), expected = attempt.questionOrder[index];
+    if (body.questionId !== expected) return json({ error: "That is not the current question." }, 409, cors);
+    const q = attempt.items[expected], now = new Date().toISOString();
+    attempt.responses = attempt.responses || {};
+    attempt.responses[expected] = { id: ddccId("response"), attemptId: attempt.id,
+      userId: gate.auth.name, questionId: q.id, questionVersion: q.version,
+      claimSnapshot: q.claim, domainSnapshot: q.domain, truthValueSnapshot: q.truthValue,
+      explanationSnapshot: q.explanation, sourceTitleSnapshot: q.sourceTitle,
+      sourceUrlSnapshot: q.sourceUrl, sourcePublisherSnapshot: q.sourcePublisher || null,
+      probability, submittedAt: now };
+    attempt.currentIndex = index + 1;
+    if (attempt.currentIndex === 40) {
+      attempt.status = "completed"; attempt.completedAt = now;
+      got.user.activeAttemptId = null;
+    }
+    try {
+      if (await fbPut(env, ddccUserPath(gate.auth.name), got.user, got.etag)) {
+        const payload = ddccStatePayload(got.user);
+        if (attempt.status === "completed") payload.completedAttemptId = attempt.id;
+        return json(payload, 200, cors);
+      }
+    } catch (e) { return json({ error: "The answer was not saved: " + e.message }, 502, cors); }
+  }
+  return json({ error: "The answer changed in another tab. Reload before continuing." }, 409, cors);
+}
+
+async function ddccReview(request, url, env, cors) {
+  if (request.method !== "GET") return json({ error: "GET required." }, 405, cors);
+  const gate = await ddccAuth(request, env, cors); if (gate.response) return gate.response;
+  const id = url.searchParams.get("attempt") || "";
+  try {
+    const { user } = await ddccReadUser(env, gate.auth.name);
+    const attempt = user.attempts && user.attempts[id];
+    if (!attempt || attempt.userId !== gate.auth.name) return json({ error: "Receipt not found." }, 404, cors);
+    if (attempt.status !== "completed" || ddccResponses(attempt).length !== 40)
+      return json({ error: "Results stay sealed until all 40 answers are complete." }, 409, cors);
+    const responses = attempt.questionOrder.map(qid => attempt.responses[qid]).map(r => ({ ...r,
+      brierLoss: ddccBrier(r.probability, r.truthValueSnapshot) }));
+    return json({ ok: true, attempt: { id: attempt.id, completedAt: attempt.completedAt,
+      scoringVersion: attempt.scoringVersion, metrics: ddccAggregate(responses), responses } }, 200, cors);
+  } catch (e) { return json({ error: "DDCC storage is unavailable: " + e.message }, 502, cors); }
 }
 
 /* ============================ the /users roster =========================== */

@@ -77,7 +77,9 @@ const WIDTHS = [320, 340, 360, 390, 419, 420, 440, 460, 500, 519, 520, 560, 600,
    the nav label reads "Prediction Markets" — shortening that label to "Markets" is the
    only thing that does. It is allowed here explicitly rather than by loosening the whole
    table, so that if 1100 ever returns to one row this assertion says so. */
-const MAX_H = {320:109, 340:108, 360:82, 390:82, 419:82, 420:54, 440:54, 460:54, 500:54,
+/* Current Chromium rounds the two-row mobile bar to 83px at 360–419px; the row count and
+   collision checks below remain the invariant, while a one-pixel engine rounding change is safe. */
+const MAX_H = {320:109, 340:108, 360:83, 390:83, 419:83, 420:54, 440:54, 460:54, 500:54,
                519:54, 520:54, 560:54, 600:54, 760:54, 761:125, 900:125, 1024:125,
                1100:123,   /* was 69 with six groups — see above */
                1280:69};

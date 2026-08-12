@@ -294,7 +294,7 @@ let code;
 
 /* ------------------------- draft rig stays ungated ----------------------- */
 {
-  const src = (await import("fs")).readFileSync("../dawg-bot-worker.js", "utf8");
+  const src = (await import("fs")).readFileSync(new URL("../dawg-bot-worker.js", import.meta.url), "utf8");
   const draftRoutes = ["/drafts", "/draft"];
   const gated = draftRoutes.some(r => new RegExp('pathname === "' + r + '"[^\\n]*leagueJoin').test(src));
   ok("no draft route was wired through the join gate (AGENTS.md rule 6)", !gated);

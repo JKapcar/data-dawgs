@@ -13,11 +13,12 @@ The file contains secret **names only**. Secret values stay encrypted in Cloudfl
 - Standard usage model CPU ceiling: 1,000 ms.
 - Workers Logs enabled.
 - `RL` KV namespace: `ffee9157b0a04cebb796acfa6046880a`.
-- Plain variables: `BOZO_ADMIN`, `ELEVEN_VOICE`, `MODEL`.
+- Plain variables: `BOZO_ADMIN`, `ELEVEN_VOICE`, `MAIL_FROM`, `MODEL`.
 - Required encrypted secrets: `BOZO_PEPPER`, `BOZO_TOKENS`, `DAWG_PASS`,
-  `ELEVEN_KEY`, `FB_SECRET`, `SGO_KEY`, `XAI_KEY`.
+  `DDCC_IMPORT_TOKEN`, `ELEVEN_KEY`, `FB_SECRET`, `RESEND_KEY`, `SGO_KEY`, `XAI_KEY`.
 - Daily `0 9 * * *` trigger: private Firebase disaster-recovery backup.
 - Hourly `9 * * * *` trigger: prospective CFB 24-hour market receipts.
+- Five-minute `*/5 * * * *` trigger: Bozo close-price capture.
 
 The scheduled handler dispatches by the exact cron expression. An unknown expression
 fails closed. Never change the hourly trigger to the daily expression or remove the
@@ -41,7 +42,7 @@ node tools/validate-data.js
 wrangler deploy --dry-run --config wrangler.jsonc
 ```
 
-The dry run must report the `RL` binding and all three plain variables. It performs no
+The dry run must report the `RL` binding and all four plain variables. It performs no
 upload and changes no traffic.
 
 ## Safe release sequence
