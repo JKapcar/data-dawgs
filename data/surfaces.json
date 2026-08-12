@@ -1,5 +1,5 @@
 {
- "as_of": "2026-08-11",
+ "as_of": "2026-08-12",
  "source": "Generated from the site itself. Tier is read from each page's live chip.",
  "tier": "labs",
  "graded": false,
@@ -186,7 +186,7 @@
   }
  },
  "counts": {
-  "surfaces": 19,
+  "surfaces": 20,
   "with_live_machine_access": 15,
   "with_no_machine_access": 4,
   "mcp_tools_registered": 42,
@@ -563,6 +563,23 @@
    "tier": "labs"
   },
   {
+   "id": "team-draft-2026",
+   "domain": "arena",
+   "name": "The 32-team draft — an eight-person NFL wins pool",
+   "page": "/teamdraft.html",
+   "machine": [
+    {
+     "kind": "json",
+     "url": "/data/draft-2026.json",
+     "status": "live",
+     "covers": "the whole surface — 32 teams with posted line, devigged expected wins, season SD, the 0-17 win distribution and a 17-game schedule; the sparse head-to-head matrix; the draft log; and the derived rosters, board and diagnostics"
+    }
+   ],
+   "planned": [],
+   "gap": "The draft is in progress and the payload says how many picks are in. Expected wins are a dated market snapshot, not a forecast this site has graded, and no game has been played — the wins tracker is all zeroes by construction. The per-game probabilities are internally consistent and reproduce the league's 272 wins, but they do not re-add to each team's own expected-wins figure; the page's Diagnostics sheet measures that drift rather than hiding it.",
+   "tier": "labs"
+  },
+  {
    "id": "pound",
    "domain": "site",
    "name": "The DawgHouse shelf (formerly The Pound)",
@@ -904,6 +921,6 @@
   }
  ],
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-08-11",
+ "built": "2026-08-12",
  "canonical_url": "https://datadawgs216.com/data/surfaces.json"
 }
