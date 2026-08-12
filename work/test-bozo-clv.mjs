@@ -440,5 +440,31 @@ ok(/clv-tablewrap/.test(page), "the table twin ships — it is the WCAG counterp
      "the lever flag counts how many legs it can actually measure instead of claiming none");
 }
 
+/* ============ 9. the belt ============================================== */
+{
+  const code = page.replace(/<!--[\s\S]*?-->/g, "");
+  // ⚠️ Declared ONCE. Two copies of an 8 KB data URI in one file is duplication that
+  // will eventually disagree with itself — a new belt in one place, the old one in the
+  // other, with nothing to notice.
+  ok((page.match(/data:image\/jpeg;base64/g) || []).length === 1,
+     "the belt image is inlined exactly once and referenced by variable");
+  ok(/--belt:url\(/.test(code), "…as a CSS custom property");
+  ok(/\.beltcrest\{/.test(code) && /\.verdict \.belttrophy\{/.test(code),
+     "both the season crest and the verdict trophy read that one variable");
+
+  // ⚠️ Inline, not assets/. sw.js caches by a hash of the HTML, so an external image
+  // sits outside that hash and can go stale independently of the page referencing it.
+  ok(!/src="assets\/bozo-belt/.test(code), "the belt is not an external file");
+
+  /* ⚠️ The belt goes to the CURRENT holder — the most recent bozo — not to whoever has
+     worn it most. Those are different people the moment someone else gets named, and
+     `.fund` (max count) already occupies the second meaning. */
+  ok(/const holder = bzNow \|\| \(hist\.length/.test(code),
+     "the holder is this week's bozo, falling back to the last one named");
+  ok(/data-belt="\$\{holds\?1:0\}"/.test(code), "the holder's row is marked");
+  ok(/\[data-belt="1"\] \.nm2::after\{display:none\}/.test(code),
+     "…and the red nose is suppressed there, since holding it already implies having worn one");
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
