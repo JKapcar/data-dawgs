@@ -583,7 +583,10 @@ console.log('\nWorker deployment contract');
       const rl = (w.kv_namespaces || []).find(x => x.binding === 'RL');
       if (w.name !== 'toto' || w.main !== 'dawg-bot-worker.js') fail('wrangler.jsonc: wrong Worker name or entry point');
       if (w.compatibility_date !== '2026-07-31') fail('wrangler.jsonc: compatibility date drifted from production');
-      if (!w.keep_vars || w.preview_urls !== false) fail('wrangler.jsonc: keep_vars/preview_urls safety settings missing');
+      // Preview URLs are intentionally enabled so a real cross-origin browser can prove
+      // preflight behavior before production traffic moves. Disposable preview versions
+      // are deleted after verification; keep_vars remains the manifest safety invariant.
+      if (!w.keep_vars || w.preview_urls !== true) fail('wrangler.jsonc: keep_vars/preview_urls safety settings missing');
       if (!w.observability || w.observability.enabled !== true || !w.observability.logs || w.observability.logs.enabled !== true)
         fail('wrangler.jsonc: Workers Logs must stay enabled');
       if (!w.limits || w.limits.cpu_ms !== 1000) fail('wrangler.jsonc: production CPU ceiling must stay 1000 ms');

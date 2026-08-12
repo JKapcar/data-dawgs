@@ -9,7 +9,8 @@ The file contains secret **names only**. Secret values stay encrypted in Cloudfl
 
 - Worker: `toto`; entry point: `dawg-bot-worker.js`.
 - Compatibility date: `2026-07-31`.
-- Workers.dev enabled; version preview URLs disabled.
+- Workers.dev and version preview URLs enabled. Delete disposable, non-deployed preview
+  versions after verification; never delete a version referenced by a deployment.
 - Standard usage model CPU ceiling: 1,000 ms.
 - Workers Logs enabled.
 - `RL` KV namespace: `ffee9157b0a04cebb796acfa6046880a`.
