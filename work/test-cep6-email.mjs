@@ -313,7 +313,7 @@ const ON = () => makeEnv({ RESEND_KEY: "re_test", MAIL_FROM: "Data Dawgs <no-rep
   // keeps that property by echoing the Worker's OWN note on success instead of composing a
   // message of its own — there is no client-side state that could branch on existence.
   ok("signon.html echoes the Worker's enumeration-safe note for forgot",
-    /mailPost\("\/auth\/forgot"[\s\S]{0,400}res\.j\.note/.test(signon));
+    /api\("\/auth\/forgot"[\s\S]{0,500}j\.note/.test(signon));
   for (const page of ["bozo.html", "connect.html"]) {
     const html = fs.readFileSync(page, "utf8");
     ok(`${page} still keeps identity UX on signon.html`,

@@ -594,7 +594,11 @@ test('every shared-nav page reaches the shelf, and never by the old name', () =>
     assert.equal((html.match(/(?:href="|href:"|\[")pound\.html/g) || []).length, 0,
       `${page} still links pound.html — the stub is not a destination`);
   }
-  assert.equal(covered, 29, 'the nav page set changed');   // +cfb.html and the 8/11 section hubs/challenge
+  /* Redirect stubs intentionally carry no shared chrome: pound.html and, since Tranche A,
+     connect.html. The canonical member/connector destination is signon.html#connect. */
+  const redirectStubs = pages.filter(page => /http-equiv="refresh"/i.test(fs.readFileSync(page, 'utf8')));
+  assert.deepEqual(redirectStubs.sort(), ['connect.html', 'pound.html', 'survivor-settings.html']);
+  assert.equal(covered, 28, 'the nav page set changed');
 });
 
 test('the flipped nav is identical on every page and carries the locked order', () => {
@@ -642,7 +646,7 @@ test('the flipped nav is identical on every page and carries the locked order', 
     assert.ok(!block.includes('"draft-leagues.html"'),
       `${page}: draft-leagues.html is back in the nav — it belongs to the draft hub now`);
   }
-  assert.equal(covered, 29);   // +cfb.html and the 8/11 section hubs/challenge
+  assert.equal(covered, 28);   // connect.html is now a redirect to signon.html#connect
   assert.equal(blocks.size, 1, 'the NAV array is not identical across pages');
 });
 

@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 32485,
+    "bytes": 32951,
     "as_of": "2026-08-12",
-    "sha256": "e0426e79eb5b5c85cb775859664ef7c2df7d064ea73dd5993d3c9ea13ba3d05e",
+    "sha256": "abfc5461338a54a485e9a6f7a150aa380aa03a9766478fc4d7e61675bd85f871",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -343,6 +343,20 @@
     "bytes": 3400,
     "sha256": "efd765656566d79b8dcbcc9f8f9ca25a4fa100d627758f3746faf332174688fe",
     "as_of": "2026-08-10"
+   },
+   {
+    "path": "/data/dawg-project-instructions.md",
+    "url": "https://datadawgs216.com/data/dawg-project-instructions.md",
+    "bytes": 1833,
+    "sha256": "e1f2e28e5f6bd991b37bd1e31a4d60202e83181d681a84471ff873b7153419ca",
+    "as_of": "2026-08-12"
+   },
+   {
+    "path": "/data/site-guide.md",
+    "url": "https://datadawgs216.com/data/site-guide.md",
+    "bytes": 1689,
+    "sha256": "8676f4087108e812e2cf722f18348e426920c195d6a9978ab0348467184d1f6f",
+    "as_of": "2026-08-12"
    }
   ]
  }

@@ -102,9 +102,8 @@ await page.click("#ddAuthBtn");
 await page.waitForURL("**/signon.html?next=bozo.html", { timeout: 4000 });
 ok("from bozo.html the chip routes with ?next=bozo.html", true);
 await go("connect.html");
-await page.click("#ddAuthBtn");
-await page.waitForURL("**/signon.html?next=connect.html", { timeout: 4000 });
-ok("from connect.html the chip routes with ?next=connect.html", true);
+await page.waitForURL("**/signon.html#connect", { timeout: 4000 });
+ok("connect.html redirects to the folded-in sheet", true);
 /* on signon itself the chip must NOT navigate — the cards are already here */
 await page.click("#ddAuthBtn");
 await page.waitForTimeout(350);
@@ -154,22 +153,13 @@ await go("index.html");
 ok("garbage reads as signed out too", (await page.locator("#ddAuthBtn").innerText()).trim() === "Sign in");
 ok("and is cleared", (await page.evaluate(() => localStorage.getItem("dd-bozo-sess"))) === null);
 
-console.log("\nconnect.html agrees with the banner");
+console.log("\nConnect Your Dawg lives on signon.html");
 await page.evaluate(t => localStorage.setItem("dd-bozo-sess", t), GOOD);
 await go("connect.html");
-ok("it opens already signed in, with no probe request",
-  await page.locator("#cSignedIn").isVisible() && !(await page.locator("#cSignedOut").isVisible()));
-ok("it greets the name from the token", (await page.locator("#cWho2").innerText()).trim() === "Jeff Carbaugh");
-await page.click("#cMint");
-await page.waitForTimeout(300);
-ok("minting carries X-Bozo-Session, the header the deployed Worker advertises", sessionSeen === GOOD);
-ok("the URL appears", (await page.inputValue("#cUrl")).endsWith("/mcp/u_ABC"));
-/* sign-out happens on signon.html; connect must repaint when the key clears */
-await page.evaluate(() => window.DDAuth.clear());
-await page.waitForTimeout(300);
-ok("a cleared session repaints connect.html without a reload",
-  await page.locator("#cSignedOut").isVisible() && !(await page.locator("#cSignedIn").isVisible()));
-ok("and takes the minted URL off the screen", !(await page.locator("#cUrlBox").isVisible()));
+await page.waitForURL("**/signon.html#connect", { timeout: 4000 });
+ok("redirect lands signed in on signon.html", await page.locator("#sMe").isVisible());
+ok("the Connect sheet is selected", await page.locator("#pConnect").isVisible());
+ok("the greeting comes from the shared token", /Jeff/.test(await page.locator("#meName").innerText()));
 
 console.log("\nlayout, measured — 18 pages would be a long way to find an overflow");
 const PAGES = ["index.html", "bozo.html", "dfs.html", "guillotine.html", "dashboard.html", "stats.html", "connect.html"];

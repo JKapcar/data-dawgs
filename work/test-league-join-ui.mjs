@@ -41,6 +41,7 @@ async function newPage({ signedIn = false, url } = {}) {
     const method = route.request().method();
     const j = (o, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(o) });
     if (u.pathname === "/auth/roster") return j({ players: [{ name: "Sam", claimed: true }] });
+    if (u.pathname === "/auth/lookup") return j({ ok: true, known: true });
     if (u.pathname === "/league/join" && method === "GET") {
       if (state.preview !== 200) return j({ error: "That join link is no longer good — ask the manager for a new one." }, state.preview);
       return j({ league: "main", name: "Data Dawgs", manager: "Kap", size: state.size, cap: state.cap, full: state.full, open: true });
@@ -75,7 +76,7 @@ const shown = (p, sel) => p.$eval(sel, e => !e.hidden && getComputedStyle(e).dis
   ok("signed out: it explains you'll join after signing in", /join automatically/i.test(await txt(p, "#lgSub") || ""));
   ok("signed out: seats are shown", /4 of 20 seats/.test(await txt(p, "#lgSub") || ""));
   ok("signed out: no Join button yet", !(await shown(p, "#lgGo")));
-  ok("signed out: sign-in and signup are still offered", await shown(p, "#sIn") && await shown(p, "#sNew"));
+  ok("signed out: the email-first card is still offered", await shown(p, "#sIn") && await shown(p, "#stepEmail"));
   ok("signed out: no page errors", errs.length === 0, errs[0]);
   await ctx.close();
 }
@@ -84,7 +85,8 @@ const shown = (p, sel) => p.$eval(sel, e => !e.hidden && getComputedStyle(e).dis
 {
   resetState();
   const { p, ctx, errs } = await newPage({ url: `http://127.0.0.1:8921/signon.html?league=${CODE}` });
-  await p.fill("#sWho", "Sam"); await p.fill("#sPw", "password123");
+  await p.fill("#sEmail", "sam@example.com"); await p.click("#lookupGo");
+  await p.fill("#sPw", "password123");
   await p.click("#sGo");
   await p.waitForTimeout(900);
   ok("sign-in triggers the join", state.joined === true);
@@ -147,7 +149,7 @@ const shown = (p, sel) => p.$eval(sel, e => !e.hidden && getComputedStyle(e).dis
   resetState();
   const { p, ctx, errs } = await newPage({ url: "http://127.0.0.1:8921/signon.html" });
   ok("no code: join card stays hidden", !(await shown(p, "#sLeague")));
-  ok("no code: sign-in, signup and help all render", await shown(p, "#sIn") && await shown(p, "#sNew") && await shown(p, "#sHelp"));
+  ok("no code: email-first sign-in and help render", await shown(p, "#sIn") && await shown(p, "#stepEmail") && await shown(p, "#sHelp"));
   ok("no code: no errors", errs.length === 0, errs[0]);
   await ctx.close();
 }

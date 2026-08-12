@@ -18,8 +18,8 @@
   "path": "/mcp/u_<personal token>   ·   catalogs: /mcp/core/<credential> and /mcp/full/<credential>   (legacy: /mcp/<league passphrase>, still full)",
   "transport": "streamable-http",
   "host": "https://toto.jkapcar4.workers.dev",
-  "mint": "https://datadawgs216.com/connect.html",
-  "auth": "PER-USER tokens, minted at /connect.html, stored hashed and revocable one at a time — so the server knows who is asking and a leak costs one member, not fourteen. The older shared league passphrase still works and is ANONYMOUS; it is kept only so nobody is cut off mid-season. Either way the URL IS the credential: per-user makes a leak containable, not secure, and it must never be described as security.",
+  "mint": "https://datadawgs216.com/signon.html#connect",
+  "auth": "PER-USER tokens are minted on the Connect Your Dawg sheet at /signon.html after email confirmation, stored hashed and revocable one at a time — so the server knows who is asking and a leak costs one member, not fourteen. The older shared league passphrase still works and is ANONYMOUS; it is kept only so nobody is cut off mid-season. Either way the URL IS the credential: per-user makes a leak containable, not secure, and it must never be described as security.",
   "identity": "dd_whoami reports the caller. Rows belonging to them are marked `you: true`. An anonymous connection is told so explicitly and instructed to ask rather than assume whose is whose.",
   "writes": "None. Every tool is read-only, asserted by test against the source.",
   "tools_live": [
@@ -185,9 +185,9 @@
    }
   }
  },
- "counts": {
-  "surfaces": 20,
-  "with_live_machine_access": 15,
+  "counts": {
+   "surfaces": 21,
+   "with_live_machine_access": 16,
   "with_no_machine_access": 4,
   "mcp_tools_registered": 42,
   "mcp_tools_live": 42,
@@ -877,6 +877,26 @@
    "planned": [
     "mcp:prompts"
    ],
+   "tier": "labs"
+  },
+  {
+   "id": "member-connect",
+   "domain": "site",
+   "name": "Member home and personal AI connector",
+   "page": "/signon.html",
+   "machine": [
+    {
+     "kind": "markdown",
+     "url": "/data/dawg-project-instructions.md",
+     "status": "live"
+    },
+    {
+     "kind": "markdown",
+     "url": "/data/site-guide.md",
+     "status": "live"
+    }
+   ],
+   "planned": [],
    "tier": "labs"
   },
   {

@@ -10,7 +10,9 @@ machine file. Cite each payload's `as_of` with every number.
 live read-only MCP tools. `planned` is not callable. Two catalogs: `/mcp/core/<credential>`
 serves 16 everyday tools; `/mcp/full/<credential>` and the bare `/mcp/<credential>` serve
 all 42. Prefer core — 42 schemas cost real context. Every tool carries a title; none writes.
-MCP tokens come from `/connect.html`; `/signon.html` signup makes an account, not a league seat.
+Identity and MCP credentials live on [`/signon.html`](/signon.html); `/connect.html` redirects
+there. Signup is not a league seat; email confirmation gates credential minting only.
+[Project instructions](/data/dawg-project-instructions.md) · [site guide](/data/site-guide.md).
 
 Tiers: `labs`=Pup, unvalidated; `dawg`=Working Dawg, validated; `pound`=DawgHouse, stopped.
 
@@ -38,10 +40,10 @@ the sources we read and do not republish. Owns no data file either.
 ## College football
 
 - [CFB Lab](/cfb.html): explorer, matchup calculator, Elo backtest, divergence, and the 44-idea build roadmap (moved from the workbench 2026-08-09).
-- [2025 results](/data/cfb-schedule.json): 934 games; [latest games](/data/cfb-games-latest.json): one final per FBS team; [latest periods](/data/cfb-team-week-latest.json); [ratings](/data/cfb-teams.json): records + retrodictive Elo.
-- [Book market](/data/cfb-market.json): spreads, totals, devigged moneylines. Books are named but observation time is unknown; not closing lines, so no CLV.
+- [2025 results](/data/cfb-schedule.json), [latest games](/data/cfb-games-latest.json), [latest periods](/data/cfb-team-week-latest.json), and [ratings](/data/cfb-teams.json).
+- [Book market](/data/cfb-market.json): timestamp unknown; not closing lines, so no CLV.
 - [CFB Elo](/data/cfb-elo.json), [registry](/data/cfb-ratings.json) and [card](/data/cfb-model-cards.json): end-2025; retrodictive, modelled, ungraded, not consensus or forecast.
-- [Fraud test](/data/cfb-record-divergence-validation.json): small held-out lift beyond Elo; retrodictive, no team labels. [Disagreement](/data/cfb-disagreement.json): blocked on timestamped prices.
+- [Fraud test](/data/cfb-record-divergence-validation.json): held-out aggregate only. [Disagreement](/data/cfb-disagreement.json): blocked on timestamped prices.
 - [Prospective receipts](/data/cfb-model-receipts.json): append-only contract, zero rows; no CFB forecast has been frozen before kickoff.
 - The 24-to-25-hour CFB market collector is staged; its endpoint is not live yet.
 

@@ -525,6 +525,31 @@ button.btn.sm{font-size:12.5px;padding:7px 12px}
    signed-in controls. */
 .card[hidden],.banner[hidden],div[hidden],label.fld[hidden]{display:none !important}
 
+
+/* ---- member home: Signon + Connect, 2026-08-12 ---- */
+.pgh{margin:10px 0 0;font-size:27px;font-weight:800;letter-spacing:-.01em}
+.memberhead{display:flex;gap:16px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}
+.memberhead .lab-sub{margin-bottom:16px}.signcard{max-width:520px}
+.sheetbar{display:flex;gap:4px;flex-wrap:wrap;margin:0 0 18px;border-bottom:1px solid var(--grid)}
+.sheet-tab{appearance:none;background:transparent;border:0;border-bottom:2px solid transparent;color:var(--ink-3);font:inherit;font-size:14px;font-weight:700;padding:9px 15px 8px;cursor:pointer;border-radius:7px 7px 0 0;display:inline-flex;align-items:center;gap:7px;margin-bottom:-1px}
+.sheet-tab:hover{color:var(--ink-1);background:color-mix(in srgb,var(--ink-3) 9%,transparent)}
+.sheet-tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.sheet-tab:focus-visible,.linkbtn:focus-visible,.provbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sheet-hint{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);background:color-mix(in srgb,var(--ink-3) 16%,transparent);border-radius:5px;padding:2px 6px}
+[role=tabpanel][hidden]{display:none}.linkbtn{appearance:none;background:none;border:0;color:var(--accent);font:inherit;font-size:12.5px;cursor:pointer;padding:0;text-decoration:underline}
+.showpw{display:flex;gap:7px;align-items:center;margin:-4px 0 10px;color:var(--ink-3);font-size:12.5px}.showpw input{accent-color:var(--accent)}
+.dawgrow{display:flex;gap:14px;align-items:flex-start;padding:15px 0;border-top:1px solid var(--grid)}.dawgrow:first-child{border-top:0;padding-top:4px}.dawgrow .body{flex:1 1 auto;min-width:0}.dawgrow .ttl{font-size:15px;font-weight:700;margin:0 0 3px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.dawgrow .when{font-size:13.5px;margin:0}.dawgrow .standing{font-size:12.5px;color:var(--ink-3);margin:3px 0 0}.dawgrow .act{flex:0 0 auto;align-self:center}
+.tick{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:5px;padding:2px 7px}.tick.open{color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent)}.tick.in{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}.tick.idle{color:var(--ink-3);background:color-mix(in srgb,var(--ink-3) 15%,transparent)}
+.pitch{display:grid;grid-template-columns:repeat(auto-fit,minmax(232px,1fr));gap:12px}.pitch .p{border:1px solid var(--border);border-radius:11px;padding:14px 15px;background:color-mix(in srgb,var(--ink-3) 5%,transparent)}.pitch .p h4{margin:0 0 5px}.pitch .p p{margin:0 0 10px;font-size:13px;color:var(--ink-2)}
+.steps{counter-reset:s;margin:0;padding:0;list-style:none}.steps>li{counter-increment:s;position:relative;padding:0 0 18px 38px}.steps>li:before{content:counter(s);position:absolute;left:0;top:-1px;width:25px;height:25px;border-radius:50%;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent);font-size:12.5px;font-weight:800;display:grid;place-items:center}.steps h4{margin:2px 0 4px}.steps p{margin:0;font-size:13.5px;color:var(--ink-2)}
+.provrow{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}.provbtn{appearance:none;background:transparent;border:1px solid var(--border);color:var(--ink-2);border-radius:999px;padding:5px 13px;font:inherit;font-size:12.5px;cursor:pointer}.provbtn.on{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,transparent)}.provbtn .st{font-size:10px;color:var(--ink-3);margin-left:5px}
+.urlbox{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0}.urlbox .fi{flex:1 1 320px}.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}.instr{background:color-mix(in srgb,var(--ink-3) 7%,transparent);border:1px solid var(--border);border-radius:10px;padding:14px 15px;margin:12px 0 0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.62;color:var(--ink-2);white-space:pre-wrap;max-height:270px;overflow:auto}
+.contract{margin:12px 0 0;padding:0;list-style:none;font-size:13.5px}.contract li{padding:7px 0 7px 20px;position:relative;color:var(--ink-2);border-top:1px solid var(--grid)}.contract li:first-child{border-top:0}.contract li:before{content:"→";position:absolute;left:0;color:var(--accent)}.contract b{color:var(--ink-1)}
+.wip{border:1px dashed var(--axis);border-radius:12px;padding:18px 20px;background:repeating-linear-gradient(135deg,transparent,transparent 9px,color-mix(in srgb,var(--ink-3) 5%,transparent) 9px,color-mix(in srgb,var(--ink-3) 5%,transparent) 18px)}
+details.drawer{border:1px solid var(--border);border-radius:11px;margin:0 0 12px;background:var(--surface-1)}details.drawer>summary{cursor:pointer;padding:13px 17px;font-size:14px;font-weight:650;list-style:none;display:flex;gap:8px}details.drawer>summary:after{content:"▾";margin-left:auto;color:var(--ink-3)}details.drawer[open]>summary:after{content:"▴"}details.drawer .dbody{padding:0 17px 16px}
+.callout{border-left:3px solid var(--accent);padding:10px 14px;background:color-mix(in srgb,var(--accent) 6%,transparent);border-radius:0 8px 8px 0;margin:12px 0;font-size:14px}.callout.warn{border-left-color:var(--warn);background:color-mix(in srgb,var(--warn) 8%,transparent)}
+@media(max-width:560px){.pgh{font-size:22px}.sheet-tab{font-size:13px;padding:8px 11px 7px}.sheet-hint{display:none}.dawgrow{flex-direction:column;gap:8px}.dawgrow .act,.dawgrow .act .btn{width:100%}}
+
 </style>
 </head>
 <body>
@@ -2078,528 +2103,180 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
 </script>
 
-  <div class="lab-hd"><span class="lab-chip">Members</span></div>
-  <h1 style="margin:10px 0 0;font-size:27px;font-weight:800;letter-spacing:-.01em">Sign in</h1>
-  <p class="lab-sub">Every account chore lives on this one page — sign in, create an account,
-  claim a texted invite, fix a forgotten password. The boards, the pool and the season tables
-  stay public either way; an account is for playing.</p>
+  <div id="signedOut">
+    <div class="lab-hd"><span class="lab-chip">Members</span></div>
+    <h1 class="pgh">Sign in</h1>
+    <p class="lab-sub">One account for the Bozo board, the draft room, and your own AI's connection to the site.</p>
 
-  <!-- CEP-7: a league join link (?league=<code>). Reusable, carries no password, and
-       creates no account on its own — it only says WHICH league, once you are signed in. -->
-  <div class="card" id="sLeague" hidden>
-    <h3>Join <span class="rt" id="lgName"></span></h3>
-    <p class="sub" id="lgSub"></p>
-    <div class="btnrow"><button class="btn" id="lgGo" hidden>Join this league</button></div>
-    <p class="note" id="lgMsg"></p>
+    <div class="card" id="sLeague" hidden><h3>Join <span class="rt" id="lgName"></span></h3><p class="sub" id="lgSub"></p><div class="btnrow"><button class="btn" id="lgGo" hidden>Join this league</button></div><p class="note" id="lgMsg"></p></div>
+    <div class="card" id="sJoin" hidden><h3>Claim your slot <span class="rt" id="jWho"></span></h3><p class="sub">This one-use link claims the slot Kap sent you.</p><label class="fld"><span>Password <span class="hint">— 8+ characters</span></span><input class="fi" id="jPw" type="password" autocomplete="new-password"></label><label class="fld"><span>Confirm</span><input class="fi" id="jPw2" type="password" autocomplete="new-password"></label><label class="fld"><span>Email <span class="hint">— needed for self-service recovery</span></span><input class="fi" id="jEmail" type="email" autocomplete="email"></label><div class="btnrow"><button class="btn" id="jGo">Claim it</button></div><p class="note" id="jMsg"></p></div>
+
+    <div class="card signcard" id="sIn">
+      <div id="stepEmail"><h3>Your email</h3><p class="sub">We'll check whether you already have an account.</p><label class="fld"><span>Email</span><input class="fi" id="sEmail" type="email" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false" placeholder="you@example.com"></label><div class="btnrow"><button class="btn" id="lookupGo">Continue</button></div><p class="note" id="lookupMsg"></p></div>
+      <div id="stepKnown" hidden><h3>Welcome back</h3><p class="sub"><span class="mono" id="knownEmail"></span> · <button class="linkbtn" data-email-back>change</button></p><label class="fld"><span>Password</span><input class="fi" id="sPw" type="password" autocomplete="current-password"></label><label class="showpw"><input type="checkbox" data-show="sPw"> Show password</label><div class="btnrow"><button class="btn" id="sGo">Sign in</button><button class="linkbtn" id="forgotOpen">Forgot your password?</button></div><p class="note" id="sMsg"></p></div>
+      <div id="stepCreate" hidden><h3>Create your account</h3><p class="sub"><span class="mono" id="createEmail"></span> · <button class="linkbtn" data-email-back>change</button></p><label class="fld"><span>Name <span class="hint">— what shows on rosters</span></span><input class="fi" id="nName" maxlength="40" autocomplete="nickname"></label><label class="fld"><span>Password <span class="hint">— 8 characters or more</span></span><input class="fi" id="nPw" type="password" autocomplete="new-password"></label><label class="showpw"><input type="checkbox" data-show="nPw"> Show password</label><div class="btnrow"><button class="btn" id="nGo">Create account</button></div><p class="note" id="nMsg">You can join and play right away. Confirm your email before creating a personal AI credential.</p></div>
+    </div>
+    <p class="note signcard">One account per email address. An account alone does not put you in a league. If Kap sent a join link, open it and it lands here.</p>
+    <details class="drawer signcard" id="sHelp"><summary>Locked out?</summary><div class="dbody"><p class="sub">Enter the email on your account. The reset link works once and expires in an hour.</p><label class="fld"><span>Email</span><input class="fi" id="fEmail" type="email" autocomplete="email"></label><div class="btnrow"><button class="btn sm" id="fGo">Send the link</button></div><p class="note" id="fMsg"></p><p class="note">No email on a legacy account? Text Kap.</p></div></details>
   </div>
 
-  <!-- claim a texted join link (?join=<token>) -->
-  <div class="card" id="sJoin" hidden>
-    <h3>Claim your slot <span class="rt" id="jWho"></span></h3>
-    <p class="sub">Kap sent you this link. <b>It works once.</b> Set a password and the slot is
-    yours — after that the link is dead, so forwarding it does nothing.</p>
-    <div class="grid2">
-      <label class="fld"><span>Password <span class="hint">— 8+ characters</span></span>
-        <input class="fi" id="jPw" type="password" autocomplete="new-password"></label>
-      <label class="fld"><span>Confirm</span>
-        <input class="fi" id="jPw2" type="password" autocomplete="new-password"></label>
+  <div class="card" id="sReset" hidden><h3>Set a new password</h3><p class="sub">This link works once. A new password ends every other session on every device.</p><label class="fld"><span>New password</span><input class="fi" id="rPw" type="password" autocomplete="new-password"></label><label class="fld"><span>Confirm</span><input class="fi" id="rPw2" type="password" autocomplete="new-password"></label><div class="btnrow"><button class="btn" id="rGo">Set it</button></div><p class="note" id="rMsg"></p></div>
+  <div class="card" id="sVerify" hidden><h3>Confirming your address</h3><p class="note" id="vMsg">Checking that link…</p></div>
+
+  <section id="sMe" hidden>
+    <div class="memberhead"><div><div class="lab-hd"><span class="lab-chip">Members</span></div><h1 class="pgh" id="hello">Your Dawgs</h1><p class="lab-sub" id="helloSub">Checking what has your name on it…</p></div><button class="btn ghost sm" id="meOut">Sign out</button></div>
+    <p class="note warn" id="meJoinWarn" hidden>Sign out before claiming a different one-use slot. The link remains good until used.</p><a class="btn sm" id="meBack" href="index.html" hidden>Back to where you were</a>
+    <div class="sheetbar" role="tablist" aria-label="Member sheets">
+      <button type="button" role="tab" class="sheet-tab on" data-sheet="dawgs" aria-selected="true">Your Dawgs <span class="sheet-hint" id="dawgCount">Checking</span></button>
+      <button type="button" role="tab" class="sheet-tab" data-sheet="connect" aria-selected="false" tabindex="-1">Connect Your Dawg</button>
+      <button type="button" role="tab" class="sheet-tab" data-sheet="build" aria-selected="false" tabindex="-1">Build-a-Dawg <span class="sheet-hint">Soon</span></button>
+      <button type="button" role="tab" class="sheet-tab" data-sheet="account" aria-selected="false" tabindex="-1">Account</button>
     </div>
-    <label class="fld"><span>Email <span class="hint">— optional, but it is the only way to reset a forgotten password.</span></span>
-      <input class="fi" id="jEmail" type="email" autocomplete="email" placeholder="you@example.com"></label>
-    <div class="btnrow"><button class="btn" id="jGo">Claim it</button></div>
-    <p class="note" id="jMsg"></p>
-  </div>
-
-  <!-- sign in -->
-  <div class="card" id="sIn">
-    <h3>Sign in</h3>
-    <p class="sub">One account for the whole site — the Bozo board, the draft, your AI connector.</p>
-    <div class="grid2">
-      <label class="fld"><span>Name or email</span>
-        <input class="fi" id="sWho" list="sRoster" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Jeff, or jeff@example.com"></label>
-      <label class="fld"><span>Password</span>
-        <input class="fi" id="sPw" type="password" autocomplete="current-password"></label>
+    <div id="pDawgs" role="tabpanel"><div class="card"><h3>What's open</h3><p class="sub">Real league memberships, sorted by what closes first.</p><div id="dawgRows"><p class="note">Checking…</p></div><p class="note">Survivor and DFS are not listed: Survivor ownership is modelled, and DFS slate data never leaves your browser.</p></div><div class="card" id="dawgsEmpty" hidden><h3>You're not in anything yet</h3><div class="pitch"><div class="p"><h4>Bozo</h4><p>One parlay leg each week. Ask the manager for the league code.</p><a class="btn sm" href="bozo.html">See Bozo</a></div><div class="p"><h4>Auction draft rig</h4><p>Live board, budgets and draft-night controls.</p><a class="btn sm ghost" href="draft-leagues.html">Open the rig</a></div><div class="p"><h4>Guillotine</h4><p>Track the last-team-standing league.</p><a class="btn sm ghost" href="guillotine.html">View</a></div></div></div></div>
+    <div id="pConnect" role="tabpanel" hidden>
+      <div class="card"><h3>Give your AI a line into Data Dawgs</h3><p class="sub">One personal URL, pasted once. Nothing to install.</p><div class="provrow"><button class="provbtn on" data-prov="claude">Claude</button><button class="provbtn" data-prov="chatgpt">ChatGPT <span class="st">workspace</span></button><button class="provbtn" data-prov="gemini">Gemini <span class="st">Spark only</span></button><button class="provbtn" data-prov="other">Something else</button></div>
+        <ol class="steps"><li><h4>Make your personal URL</h4><p>Email confirmation is required because this credential acts as you.</p><div class="urlbox" id="cUrlBox" hidden><input class="fi mono" id="cUrl" readonly><button class="btn sm ghost" id="cCopy">Copy</button></div><div class="btnrow"><button class="btn sm" id="cMint">Create my URL</button><button class="btn sm ghost" id="cRevoke">Turn it off</button></div><p class="note" id="cMintMsg"></p></li><li><h4>Add it as a connector</h4><p id="stepAddP"></p></li><li><h4>Make a project called <span class="mono">DataDawgs</span></h4><p id="stepProjP"></p><div class="instr" id="instrBox">Loading the dated instructions…</div><div class="btnrow"><button class="btn sm" id="copyInstr">Copy instructions</button><a class="btn sm ghost" href="/data/dawg-project-instructions.md">View source</a></div></li><li><h4>Try it</h4><p id="samplePrompts">Ask “What can my credential do?”, “What is open in my leagues?”, or “Show me the latest graded receipts.”</p></li></ol>
+      </div>
+      <div class="card"><h3>Capabilities snapshot · 2026-08-12</h3><p class="sub">Static orientation only. <b>dd_site_map is the live authority</b> for this credential. The site does not yet publish an instructions_version, so this card is not generated.</p><ul class="contract"><li><b>Read:</b> dated public Data Dawgs surfaces and the personal league surfaces granted by the map.</li><li><b>Write:</b> only an action the live map marks granted, after you confirm it in the same turn.</li><li><b>Unavailable:</b> no control on this page promises betting, drafting or contest-entry capability.</li></ul></div>
+      <div class="callout warn"><b>The URL is the password.</b> Anyone holding it can use your access. Do not screenshot it or put it in a group chat. Replacing it kills the old URL immediately. Header auth (<span class="mono">Authorization: Bearer</span> or <span class="mono">X-Dawg-Pass</span>) is also accepted when a client supports it.</div>
     </div>
-    <datalist id="sRoster"></datalist>
-    <div class="btnrow"><button class="btn" id="sGo">Sign in</button></div>
-    <p class="note" id="sMsg"></p>
-    <p class="note">Email sign-in works once an email is saved on the account. Older accounts
-    never saved one — sign in with your name, add your email below, and the address works from
-    then on.</p>
-  </div>
-
-  <!-- open signup -->
-  <div class="card" id="sNew">
-    <h3>Create an account</h3>
-    <p class="sub">Open to anyone. Your <b>name</b> is what shows on rosters. Your <b>email</b>
-    is a second way to sign in, and the address a password-reset link goes to — so put in one
-    you can actually open. The only mail this site sends is the one you ask it for: a reset
-    link, or a confirmation link. An account on its own does not put you in
-    a league &mdash; you get in by opening a manager's join link, or by them adding you.</p>
-    <div class="grid2">
-      <label class="fld"><span>Name <span class="hint">— shows on rosters</span></span>
-        <input class="fi" id="nName" autocomplete="off" maxlength="40"></label>
-      <label class="fld"><span>Email</span>
-        <input class="fi" id="nEmail" type="email" autocomplete="email" placeholder="you@example.com"></label>
-      <label class="fld"><span>Password <span class="hint">— 8+ characters</span></span>
-        <input class="fi" id="nPw" type="password" autocomplete="new-password"></label>
-      <label class="fld"><span>Confirm</span>
-        <input class="fi" id="nPw2" type="password" autocomplete="new-password"></label>
-    </div>
-    <div class="btnrow"><button class="btn" id="nGo">Create account</button></div>
-    <p class="note" id="nMsg"></p>
-  </div>
-
-  <!-- recovery, in plain words -->
-  <div class="card" id="sHelp">
-    <h3>Locked out?</h3>
-    <p class="sub"><b>Forgot your password?</b> Put in the email address on your account and
-    we'll send a reset link. It works once and expires in an hour.</p>
-    <div class="grid2">
-      <label class="fld"><span>Email</span>
-        <input class="fi" id="fEmail" type="email" autocomplete="email" placeholder="you@example.com"></label>
-      <div style="display:flex;align-items:flex-end"><button class="btn sm" id="fGo" style="margin-bottom:11px">Send the link</button></div>
-    </div>
-    <p class="note" id="fMsg"></p>
-    <p class="sub" style="margin-bottom:0">
-    <b>No email on your account?</b> Older accounts never saved one, and a reset link has
-    nowhere to go without it. Text Kap — he resets you by hand, and your original join link
-    works again.<br><br>
-    <b>Lost the join link too?</b> Also Kap. He mints a fresh one and the old one stops working.<br><br>
-    <b>Change your password or email?</b> Sign in above — those controls appear right here.</p>
-  </div>
-
-  <!-- ?reset=<token> — the link from a reset email lands here -->
-  <div class="card" id="sReset" hidden>
-    <h3>Set a new password</h3>
-    <p class="sub">This link works once and expires an hour after it was sent. Setting a new
-    password ends every other sign-in, on every device.</p>
-    <div class="grid2">
-      <label class="fld"><span>New password <span class="hint">— 8+ characters</span></span>
-        <input class="fi" id="rPw" type="password" autocomplete="new-password"></label>
-      <label class="fld"><span>Confirm</span>
-        <input class="fi" id="rPw2" type="password" autocomplete="new-password"></label>
-    </div>
-    <div class="btnrow"><button class="btn" id="rGo">Set it</button></div>
-    <p class="note" id="rMsg"></p>
-  </div>
-
-  <!-- ?verify=<token> — the link from a confirmation email lands here -->
-  <div class="card" id="sVerify" hidden>
-    <h3>Confirming your address</h3>
-    <p class="note" id="vMsg">Checking that link&hellip;</p>
-  </div>
-
-  <!-- signed in -->
-  <div class="card" id="sMe" hidden>
-    <h3>Your account <span class="rt" id="meName"></span></h3>
-    <p class="sub" id="meExp"></p>
-    <p class="note warn" id="meJoinWarn" hidden>This device is already signed in. To claim a
-    different slot with your join link, sign out first — the link survives until it is used.</p>
-    <div class="btnrow">
-      <a class="btn sm" id="meBack" href="index.html" hidden>Back to where you were</a>
-      <a class="btn ghost sm" href="connect.html">Connect your AI</a>
-      <a class="btn ghost sm" href="bozo.html">Bozo board</a>
-      <button class="btn ghost sm" id="meOut">Sign out</button>
-    </div>
-
-    <h3 style="margin-top:26px">Change password</h3>
-    <div class="grid2">
-      <label class="fld"><span>Current password</span>
-        <input class="fi" id="pOld" type="password" autocomplete="current-password"></label>
-      <label class="fld"><span>New password <span class="hint">— 8+ characters</span></span>
-        <input class="fi" id="pNew" type="password" autocomplete="new-password"></label>
-    </div>
-    <div class="btnrow"><button class="btn sm" id="pGo">Change it</button></div>
-    <p class="note" id="pMsg"></p>
-
-    <h3 style="margin-top:26px">Email</h3>
-    <p class="sub">A second way to sign in, and where a password-reset link would go. Clear it
-    and you are back to signing in by name &mdash; and back to texting Kap if you ever forget
-    your password.</p>
-    <div class="grid2">
-      <label class="fld"><span>Email</span>
-        <input class="fi" id="eEmail" type="email" autocomplete="email" placeholder="you@example.com"></label>
-      <div style="display:flex;align-items:flex-end"><button class="btn sm" id="eGo" style="margin-bottom:11px">Save</button></div>
-    </div>
-    <p class="note" id="eMsg"></p>
-    <p class="sub">Confirming the address proves you can open it. Reset still works without
-    this &mdash; it is only proof, not a gate.</p>
-    <div class="btnrow"><button class="btn ghost sm" id="vGo">Send me a confirmation link</button></div>
-    <p class="note" id="vrMsg"></p>
-  </div>
-
-  <footer>
-    Source: Establish The Run, 2026 Draft Kit Pro (subscriber content, personal-use synthesis), captured 2026-07-28. Structural claims and player takes deliberately separated per house rules.<br><a class="udmach" href="/data/strategy.md">🤖 For machines</a> · This site is mirrored for machines. 🙃 shows you the other side.
-  </footer>
+    <div id="pBuild" role="tabpanel" hidden><div class="wip"><div class="lab-hd"><span class="lab-chip">Not built yet</span></div><h3 style="font-size:19px;margin:12px 0 6px">Build-a-Dawg</h3><p>A future advisor harness that returns its work, not a confident black box.</p><ul class="contract"><li><b>A recommendation</b> and next-best option.</li><li><b>Uncertainty</b> as a range.</li><li><b>What would reverse it.</b></li><li><b>Assumptions and missing evidence.</b></li><li><b>An abstention</b> whenever evidence does not reach.</li></ul><div class="callout"><b>What would move this:</b> the narrow Bozo write path shipping and staying clean for a month.</div></div></div>
+    <div id="pAccount" role="tabpanel" hidden><div class="card"><h3><span id="meName"></span> <span class="muted mono" id="meEmail"></span></h3><p class="sub" id="meExp"></p></div><details class="drawer"><summary>Change your password</summary><div class="dbody"><label class="fld"><span>Current password</span><input class="fi" id="pOld" type="password" autocomplete="current-password"></label><label class="fld"><span>New password <span class="hint">— 8+ characters</span></span><input class="fi" id="pNew" type="password" autocomplete="new-password"></label><div class="btnrow"><button class="btn sm" id="pGo">Change password</button></div><p class="note" id="pMsg"></p></div></details><details class="drawer"><summary>Email address</summary><div class="dbody"><p class="sub">A new address becomes your login only after you open its confirmation email.</p><label class="fld"><span>New email</span><input class="fi" id="eEmail" type="email" autocomplete="email"></label><div class="btnrow"><button class="btn sm" id="eGo">Send confirmation</button><button class="btn sm ghost" id="vGo">Confirm my current email</button></div><p class="note" id="eMsg"></p><p class="note" id="vrMsg"></p></div></details></div>
+  </section>
+  <footer>Data Dawgs · data, not dogma.<br><a class="udmach" href="/data/site-guide.md">🤖 Plain-English site guide</a> · <a href="/data/index.json">Machine-readable index</a></footer>
 </div>
-
+<script src="dawg-slate.js"></script>
 <script>
-/* signon.html — the one page that owns every identity workflow (house rule, 8/7).
-   Sign in, open signup, join-link claim (+email in the same breath), recovery text,
-   password change, email save, sign out, and ?next= return-to.
-
-   ⚠️ Session plumbing goes through DDAuth (inlined in the nav shell above): same
-   localStorage key, same X-Bozo-Session header, and the banner chip repaints in the
-   same tick. Writing localStorage directly here would work today and desync the
-   chip tomorrow. */
 (function () {
+  "use strict";
   var $ = function (id) { return document.getElementById(id); };
-  var msg = function (el, text, kind) {
-    var n = $(el); n.textContent = text || "";
-    n.className = "note" + (kind ? " " + kind : "");
-  };
-
-  /* ---- ?next= and ?join=, both read once ---- */
+  var WORKER = "https://toto.jkapcar4.workers.dev";
+  var PROFILE_KEY = "dd-auth-profile-v1";
+  var CONNECTOR_KEY = "dd-mcp-active-v1";
+  var selectedEmail = "";
   var qs = new URLSearchParams(location.search);
-  /* ⚠️ next is a same-folder page name or nothing. Anything else (protocol, slash,
-     signon itself) is dropped — this must never become an open redirect. */
   var next = qs.get("next") || "";
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]*\.html$/.test(next) || next === "signon.html") next = "";
-  /* ⚠️ A LEAGUE CODE IS NOT AN INVITE TOKEN. ?join= is one-time and carries account
-     creation, so it is burned out of the URL below. ?league= is reusable, grants no
-     account and no password, and is meant to be shared — so it stays in the address
-     bar until it is successfully redeemed. Do not "tidy" these into one path. */
   var leagueCode = qs.get("league") || "";
   if (!/^[A-Za-z0-9_-]{22}$/.test(leagueCode)) leagueCode = "";
   var joinTok = qs.get("join") || "";
-  /* ⚠️ ?reset= and ?verify= are one-time mail tokens and are burned for exactly the same
-     reason ?join= is: a screenshot, a shared address or a browser-history sync must not
-     carry a live credential. Read into variables first — the flows below use them from
-     memory, never from the URL. */
   var resetTok = qs.get("reset") || "";
   var verifyTok = qs.get("verify") || "";
-  /* A verify link resolves the moment the page opens, so the token is gone by the time
-     anything renders. This flag remembers that the banner should still be on screen. */
-  var sawVerify = !!verifyTok;
-  if (joinTok || resetTok || verifyTok) {
-    /* Burn the token out of the URL bar and history NOW, exactly as bozo.html did —
-       a screenshot or a shared address must not carry a live invite. */
-    var clean = location.pathname + (next ? "?next=" + encodeURIComponent(next) : "");
-    history.replaceState(null, "", clean);
-  }
-
-  /* ⚠️ leave() must not fire while a league code is still pending — a signed-in user
-     who arrived with ?next= would be bounced away before the join ever ran, and the
-     link would look broken while being perfectly good. redeemLeague() calls leave()
-     itself once the join settles. */
-  var leave = function () {
-    if (leaguePending) return true;
-    if (next) { location.replace(next); return true; }
-    return false;
-  };
+  var emailTok = qs.get("email-change") || "";
   var leaguePending = !!leagueCode;
+  var leagueInfo = null;
 
-  /* ---- ?league=: preview, then redeem once there is a session ---- */
-  var LG_WORKER = "https://toto.jkapcar4.workers.dev";   // DDAuth's copy is IIFE-scoped
-  var lgInfo = null;
-  function lgShow(text, kind) { msg("lgMsg", text, kind); }
+  function msg(id, text, kind) {
+    var el = $(id); if (!el) return;
+    el.textContent = text || "";
+    el.className = "note" + (kind ? " " + kind : "");
+  }
+  function profile() { try { return JSON.parse(localStorage.getItem(PROFILE_KEY) || "null"); } catch (_) { return null; } }
+  function saveProfile(value) { if (value) localStorage.setItem(PROFILE_KEY, JSON.stringify(value)); else localStorage.removeItem(PROFILE_KEY); }
+  function tokenData() {
+    try {
+      var token = localStorage.getItem("dd-bozo-sess") || "";
+      var raw = token.split(".")[0].replace(/-/g, "+").replace(/_/g, "/");
+      return JSON.parse(atob(raw));
+    } catch (_) { return {}; }
+  }
+  function session() { return localStorage.getItem("dd-bozo-sess") || ""; }
+  function setSession(j, fallback) {
+    if (!j.session) throw new Error("No session came back.");
+    window.DDAuth.set(j.session);
+    var old = profile() || {};
+    var tok = tokenData();
+    saveProfile({ uid:j.uid || tok.u || old.uid || null, name:j.name || tok.n || fallback.name || old.name || "Member", email:j.email || fallback.email || old.email || "", emailVerified:j.emailVerified === true || old.emailVerified === true });
+  }
+  async function api(path, body, method) {
+    var headers = { "Content-Type":"application/json" };
+    if (session()) { headers["X-Dawg-Session"] = session(); headers["X-Bozo-Session"] = session(); }
+    var res = await fetch(WORKER + path, { method:method || "POST", headers:headers, body:body == null ? undefined : JSON.stringify(body), cache:"no-store" });
+    var renewed = res.headers.get("X-Dawg-Session") || res.headers.get("X-Bozo-Session");
+    if (renewed) window.DDAuth.set(renewed);
+    var json = await res.json().catch(function () { return {}; });
+    if (!res.ok) { var e = new Error(json.error || ("Request failed (" + res.status + ").")); e.status=res.status; e.body=json; throw e; }
+    return json;
+  }
+  function leave() { if (leaguePending) return true; if (next) { location.replace(next); return true; } return false; }
 
-  function paintLeague() {
-    if (!leagueCode) { $("sLeague").hidden = true; return; }
-    $("sLeague").hidden = false;
-    var m = window.DDAuth ? window.DDAuth.me() : null;
-    $("lgName").textContent = lgInfo ? (lgInfo.name || lgInfo.league) : "";
-    $("lgGo").hidden = !m || !lgInfo;
-    if (!lgInfo) { $("lgSub").textContent = "Checking that link…"; return; }
-    if (lgInfo.full && !m) {
-      $("lgSub").textContent = "This league is full (" + lgInfo.cap + " members). Ask "
-        + (lgInfo.manager || "the manager") + " to raise the cap before you sign up for it.";
-      return;
-    }
-    $("lgSub").textContent = m
-      ? "You're signed in as " + m.name + ". One click and you're on the roster — "
-        + lgInfo.size + " of " + lgInfo.cap + " seats used."
-      : "Sign in below, or create an account, and you'll join automatically. "
-        + lgInfo.size + " of " + lgInfo.cap + " seats used"
-        + (lgInfo.manager ? ", run by " + lgInfo.manager : "") + ".";
+  if (joinTok || resetTok || verifyTok || emailTok) {
+    history.replaceState(null, "", location.pathname + (next ? "?next=" + encodeURIComponent(next) : ""));
   }
 
-  if (leagueCode) {
-    fetch(LG_WORKER + "/league/join?code=" + encodeURIComponent(leagueCode))
-      .then(function (r) { return r.json().then(function (j) { return {ok: r.ok, j: j}; }); })
-      .then(function (res) {
-        if (!res.ok) throw new Error(res.j.error || "That link didn't work.");
-        lgInfo = res.j;
-        paintLeague();
-        /* Already signed in when the page opened? Redeem straight away — the click
-           would be pure ceremony. */
-        if (window.DDAuth && window.DDAuth.me()) redeemLeague();
-      })
-      .catch(function (e) {
-        leagueCode = ""; leaguePending = false;
-        $("sLeague").hidden = false;
-        $("lgName").textContent = "";
-        $("lgSub").textContent = e.message || String(e);
-        $("lgGo").hidden = true;
-        render();
-      });
-  }
-
-  function redeemLeague() {
-    if (!leagueCode) return;
-    lgShow("Joining…");
-    window.DDAuth.post("/league/join", { code: leagueCode }).then(function (j) {
-      var name = j.name || "the league";
-      leagueCode = ""; leaguePending = false;
-      /* Strip the code now that it is spent for this person — a refresh should not
-         re-run a join that already happened. */
-      history.replaceState(null, "", location.pathname + (next ? "?next=" + encodeURIComponent(next) : ""));
-      $("lgGo").hidden = true;
-      $("lgSub").textContent = j.already
-        ? "You were already in " + name + "."
-        : "You're in " + name + " — " + j.size + " member" + (j.size === 1 ? "" : "s") + " now.";
-      lgShow(j.already ? "" : "Joined.", "good");
-      if (!leave()) render();
-    }).catch(function (e) {
-      /* ⚠️ A failed join must NOT strip the code. The league being full or the week
-         being placed are both temporary — the same link works later. */
-      leaguePending = false;
-      lgShow(e.message || String(e), "bad");
-      if (next) $("meBack").hidden = false;
-    });
-  }
-  $("lgGo").addEventListener("click", redeemLeague);
-
-  /* ---- render: exactly one of signed-out / signed-in ---- */
-  function render() {
-    var m = window.DDAuth ? window.DDAuth.me() : null;
-    /* ⚠️ A live reset token is EXCLUSIVE: it hides every other card, signed in or out.
-       Someone who followed a reset link has exactly one job, and leaving the sign-in form
-       on screen invites them to try the password they have already forgotten. The verify
-       banner is the opposite — it only reports, so it sits above the normal page. */
-    var resetting = !!resetTok;
-    $("sReset").hidden = !resetting;
-    $("sVerify").hidden = !sawVerify;
-    $("sMe").hidden = !m || resetting;
-    $("sIn").hidden = !!m || resetting;
-    $("sNew").hidden = !!m || !!joinTok || resetting;   // invited people claim; they don't need signup
-    $("sHelp").hidden = !!m || resetting;
-    paintLeague();
-    // paintLeague() un-hides the league card on its own; "exclusive" has to mean exclusive.
-    if (resetting) $("sLeague").hidden = true;
-    $("sJoin").hidden = !!m || !joinTok || resetting;
-    $("meJoinWarn").hidden = !(m && joinTok);
-    if (m) {
-      $("meName").textContent = m.name;
-      var days = Math.max(0, Math.round((m.expires - Date.now()) / 86400000));
-      $("meExp").textContent = "Signed in on this device for about " + days + " more day" + (days === 1 ? "" : "s") + ".";
-      var back = $("meBack");
-      back.hidden = !next;
-      if (next) back.href = next;
-    }
-  }
-
-  /* ---- roster autocomplete (claimed names only; free text always allowed) ---- */
-  (function () {
-    if (!window.DDAuth) return;
-    fetch("https://toto.jkapcar4.workers.dev/auth/roster?cb=" + Date.now().toString(36))
-      .then(function (r) { return r.json(); })
-      .then(function (j) {
-        var dl = $("sRoster"); dl.replaceChildren();
-        (j.players || []).filter(function (p) { return p.claimed; }).forEach(function (p) {
-          var o = document.createElement("option"); o.value = p.name; dl.appendChild(o);
-        });
-      }).catch(function () { /* autocomplete only */ });
-  })();
-
-  /* ---- sign in ---- */
-  function doSignIn() {
-    var who = $("sWho").value.trim(), pw = $("sPw").value;
-    if (!who || !pw) { msg("sMsg", "Name (or email) and password, both.", "warn"); return; }
-    msg("sMsg", "Signing in…");
-    /* one field, two identifiers: the Worker resolves an email to a name itself */
-    window.DDAuth.post("/auth/login", { name: who, password: pw }).then(function (j) {
-      if (!j.session) throw new Error("No session came back.");
-      $("sPw").value = "";
-      window.DDAuth.set(j.session);
-      if (j.email) $("eEmail").value = j.email;
-      if (leagueCode) { msg("sMsg", ""); render(); redeemLeague(); return; }
-      if (!leave()) { msg("sMsg", ""); render(); }
-    }).catch(function (e) { msg("sMsg", e.message || String(e), "bad"); });
-  }
-  $("sGo").addEventListener("click", doSignIn);
-  $("sPw").addEventListener("keydown", function (e) { if (e.key === "Enter") doSignIn(); });
-
-  /* ---- create an account (open signup) ---- */
-  $("nGo").addEventListener("click", function () {
-    var name = $("nName").value.trim(), email = $("nEmail").value.trim();
-    var pw = $("nPw").value, pw2 = $("nPw2").value;
-    if (!name) { msg("nMsg", "Pick a name — it's what shows on rosters.", "warn"); return; }
-    if (!email) { msg("nMsg", "An email is required — it's your other sign-in.", "warn"); return; }
-    if (pw.length < 8) { msg("nMsg", "Password must be at least 8 characters.", "warn"); return; }
-    if (pw !== pw2) { msg("nMsg", "Those passwords don't match.", "warn"); return; }
-    msg("nMsg", "Creating…");
-    window.DDAuth.post("/auth/signup", { name: name, email: email, password: pw }).then(function (j) {
-      if (!j.session) throw new Error("No session came back.");
-      $("nPw").value = ""; $("nPw2").value = "";
-      window.DDAuth.set(j.session);
-      $("eEmail").value = j.email || email;
-      if (leagueCode) { msg("nMsg", ""); render(); redeemLeague(); return; }
-      if (!leave()) { msg("nMsg", ""); render(); }
-    }).catch(function (e) { msg("nMsg", e.message || String(e), "bad"); });
+  document.querySelectorAll("[data-show]").forEach(function (box) {
+    box.addEventListener("change", function () { var input=$(box.dataset.show); if (input) input.type=box.checked?"text":"password"; });
   });
 
-  /* ---- claim a join link, email collected in the same breath ---- */
-  $("jGo").addEventListener("click", function () {
-    var pw = $("jPw").value, pw2 = $("jPw2").value, email = $("jEmail").value.trim();
-    if (pw.length < 8) { msg("jMsg", "Password must be at least 8 characters.", "warn"); return; }
-    if (pw !== pw2) { msg("jMsg", "Those passwords don't match.", "warn"); return; }
-    msg("jMsg", "Claiming…");
-    window.DDAuth.post("/auth/claim", { token: joinTok, password: pw }).then(function (j) {
-      window.DDAuth.set(j.session);       // signed in from this moment
-      $("jWho").textContent = j.name || "";
-      var done = function (extra) {
-        joinTok = "";
-        if (!leave()) { msg("jMsg", "Claimed." + (extra || ""), "good"); render(); }
-      };
-      if (!email) return done("");
-      /* the email rides the brand-new session; a failure here must not undo the claim */
-      window.DDAuth.post("/auth/email", { email: email })
-        .then(function () { done(" Email saved — you can sign in with it now."); })
-        .catch(function (e2) { done(" But the email didn't save: " + e2.message + " — add it below."); });
-    }).catch(function (e) { msg("jMsg", e.message || String(e), "bad"); });
-  });
-
-  /* ---- change password ---- */
-  $("pGo").addEventListener("click", function () {
-    var oldPw = $("pOld").value, newPw = $("pNew").value;
-    if (newPw.length < 8) { msg("pMsg", "New password must be at least 8 characters.", "warn"); return; }
-    msg("pMsg", "Changing…");
-    window.DDAuth.post("/auth/passwd", { oldPassword: oldPw, newPassword: newPw }).then(function (j) {
-      window.DDAuth.set(j.session);       // the old session died server-side with the old password
-      $("pOld").value = ""; $("pNew").value = "";
-      msg("pMsg", "Changed.", "good");
-    }).catch(function (e) { msg("pMsg", e.message || String(e), "bad"); });
-  });
-
-  /* ---- save / change / clear email ---- */
-  $("eGo").addEventListener("click", function () {
-    var email = $("eEmail").value.trim();
-    msg("eMsg", "Saving…");
-    window.DDAuth.post("/auth/email", { email: email }).then(function (j) {
-      msg("eMsg", j.email ? "Saved. You can sign in with that address now, and reset a forgotten password through it."
-                          : "Cleared. You sign in by name now — and a reset link has nowhere to go.", "good");
-    }).catch(function (e) { msg("eMsg", e.message || String(e), "bad"); });
-  });
-
-  /* ---- the four mail flows (CEP-6) ----
-     ⚠️ These use their own fetch instead of DDAuth.post because DDAuth.post throws away
-     the status code, and 503 is the one answer here that is NOT a failure: it is what
-     every mail route returns while RESEND_KEY or MAIL_FROM is unset. That is guidance
-     ("ask Kap"), not something the visitor did wrong, so it is styled as a warning. The
-     routes stay inert in that state — no token is minted and nothing is written. */
-  var MAIL_WORKER = "https://toto.jkapcar4.workers.dev";   // DDAuth's copy is IIFE-scoped
-  function mailPost(path, body) {
-    return fetch(MAIL_WORKER + path, {
-      method: "POST",
-      headers: Object.assign({ "Content-Type": "application/json" },
-                             window.DDAuth ? window.DDAuth.headers() : {}),
-      body: JSON.stringify(body || {})
-    }).then(function (r) {
-      return r.json().catch(function () { return { error: "HTTP " + r.status }; })
-        .then(function (j) { return { ok: r.ok, status: r.status, j: j }; });
-    });
+  function showEmailStep() {
+    selectedEmail=""; $("stepEmail").hidden=false; $("stepKnown").hidden=true; $("stepCreate").hidden=true; msg("lookupMsg",""); $("sEmail").focus();
   }
-  function mailFail(el, res) {
-    msg(el, res.j.error || ("HTTP " + res.status), res.status === 503 ? "warn" : "bad");
+  document.querySelectorAll("[data-email-back]").forEach(function (b) { b.addEventListener("click", showEmailStep); });
+  async function lookup() {
+    var email=$("sEmail").value.trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { msg("lookupMsg","That doesn't look like an email address.","bad"); return; }
+    msg("lookupMsg","Checking…");
+    try {
+      var j=await api("/auth/lookup",{email:email}); selectedEmail=email; $("stepEmail").hidden=true;
+      if (j.known) { $("knownEmail").textContent=email; $("stepKnown").hidden=false; $("sPw").focus(); }
+      else { $("createEmail").textContent=email; $("stepCreate").hidden=false; $("nName").focus(); }
+    } catch(e) { msg("lookupMsg",e.message,"bad"); }
   }
+  $("lookupGo").addEventListener("click",lookup); $("sEmail").addEventListener("keydown",function(e){if(e.key==="Enter")lookup();});
 
-  /* ---- forgot password ---- */
-  /* ⚠️ /auth/forgot answers IDENTICALLY whether or not that address has an account. That
-     is deliberate: any other shape turns this box into a "does this person play?" oracle
-     for anyone holding a list of addresses. Render the Worker's own note and NEVER add a
-     "no account found" branch here — doing so would rebuild, in the page, exactly the
-     oracle the Worker refuses to be. */
-  function doForgot() {
-    var email = $("fEmail").value.trim();
-    if (!email) { msg("fMsg", "Put in the address on your account.", "warn"); return; }
-    msg("fMsg", "Sending…");
-    mailPost("/auth/forgot", { email: email }).then(function (res) {
-      if (!res.ok) return mailFail("fMsg", res);
-      msg("fMsg", res.j.note || "If that address has an account, a reset link is on its way.", "good");
-    }).catch(function (e) { msg("fMsg", e.message || String(e), "bad"); });
+  async function signIn() {
+    var pw=$("sPw").value;
+    if (!selectedEmail || !pw) { msg("sMsg","Email and password, both.","warn"); return; }
+    msg("sMsg","Signing in…");
+    try { var j=await api("/auth/login",{email:selectedEmail,password:pw}); $("sPw").value=""; setSession(j,{email:selectedEmail}); if (leagueCode) { render(); await redeemLeague(); } else if (!leave()) render(); }
+    catch(e){msg("sMsg",e.message,"bad");}
   }
-  $("fGo").addEventListener("click", doForgot);
-  $("fEmail").addEventListener("keydown", function (e) { if (e.key === "Enter") doForgot(); });
-
-  /* ---- set a new password from a ?reset= link ---- */
-  function doReset() {
-    var pw = $("rPw").value, pw2 = $("rPw2").value;
-    if (pw.length < 8) { msg("rMsg", "Password must be at least 8 characters.", "warn"); return; }
-    if (pw !== pw2) { msg("rMsg", "Those passwords don't match.", "warn"); return; }
-    msg("rMsg", "Setting…");
-    mailPost("/auth/reset-password", { token: resetTok, password: pw }).then(function (res) {
-      if (!res.ok) return mailFail("rMsg", res);
-      $("rPw").value = ""; $("rPw2").value = "";
-      /* The Worker hands back a fresh session, so the reset signs you in right here. Every
-         older session died server-side the moment the password's setAt moved. */
-      if (res.j.session && window.DDAuth) window.DDAuth.set(res.j.session);
-      resetTok = "";                       // the card is exclusive; let the page come back
-      msg("rMsg", "");
-      if (!leave()) { render(); msg("pMsg", res.j.note || "Password changed. Every other sign-in was ended.", "good"); }
-    }).catch(function (e) { msg("rMsg", e.message || String(e), "bad"); });
-  }
-  $("rGo").addEventListener("click", doReset);
-  $("rPw2").addEventListener("keydown", function (e) { if (e.key === "Enter") doReset(); });
-
-  /* ---- confirm an address from a ?verify= link: no click, the token is the proof ---- */
-  if (verifyTok) {
-    mailPost("/auth/verify", { token: verifyTok }).then(function (res) {
-      verifyTok = "";
-      if (!res.ok) return mailFail("vMsg", res);
-      msg("vMsg", "Confirmed" + (res.j.email ? " — " + res.j.email : "") +
-                  ". Nothing else to do.", "good");
-    }).catch(function (e) { msg("vMsg", e.message || String(e), "bad"); });
-  }
-
-  /* ---- ask for a confirmation link (signed in; goes only to your own address) ---- */
-  $("vGo").addEventListener("click", function () {
-    msg("vrMsg", "Sending…");
-    mailPost("/auth/verify-request", {}).then(function (res) {
-      if (!res.ok) return mailFail("vrMsg", res);
-      msg("vrMsg", res.j.alreadyVerified
-            ? "That address is already confirmed."
-            : (res.j.note || "Check that inbox. The link works once and expires in an hour."), "good");
-    }).catch(function (e) { msg("vrMsg", e.message || String(e), "bad"); });
+  $("sGo").addEventListener("click",signIn); $("sPw").addEventListener("keydown",function(e){if(e.key==="Enter")signIn();});
+  $("nGo").addEventListener("click",async function(){
+    var name=$("nName").value.trim(), pw=$("nPw").value;
+    if(!name){msg("nMsg","Pick a name — it's what shows on rosters.","warn");return;} if(pw.length<8){msg("nMsg","Password must be at least 8 characters.","warn");return;}
+    msg("nMsg","Creating…"); try{var j=await api("/auth/signup",{name:name,email:selectedEmail,password:pw});$("nPw").value="";setSession(j,{name:name,email:selectedEmail});if(leagueCode){render();await redeemLeague();}else if(!leave())render();}catch(e){msg("nMsg",e.message,"bad");}
   });
+  $("forgotOpen").addEventListener("click",function(){ $("sHelp").open=true; $("fEmail").value=selectedEmail; $("fEmail").focus(); });
+  $("fGo").addEventListener("click",async function(){var email=$("fEmail").value.trim();if(!email){msg("fMsg","Enter your email.","warn");return;}msg("fMsg","Sending…");try{var j=await api("/auth/forgot",{email:email});msg("fMsg",j.note || "If that address is on an account, the reset link is on its way.","good");}catch(e){msg("fMsg",e.message,"bad");}});
 
-  /* ---- sign out ---- */
-  $("meOut").addEventListener("click", function () {
-    window.DDAuth.clear();                // chip flips in the same tick
-    msg("sMsg", "Signed out.", "good");
-    render();
-  });
+  $("jGo").addEventListener("click",async function(){var pw=$("jPw").value,pw2=$("jPw2").value,email=$("jEmail").value.trim();if(pw.length<8){msg("jMsg","Password must be at least 8 characters.","warn");return;}if(pw!==pw2){msg("jMsg","Those passwords don't match.","warn");return;}msg("jMsg","Claiming…");try{var j=await api("/auth/claim",{token:joinTok,password:pw});setSession(j,{name:j.name,email:email});if(email)await api("/auth/email",{email:email});joinTok="";if(!leave())render();}catch(e){msg("jMsg",e.message,"bad");}});
 
-  /* the banner (or another tab) signing in/out repaints this page */
-  window.onDDAuth = function () { render(); };
+  $("rGo").addEventListener("click",async function(){var a=$("rPw").value,b=$("rPw2").value;if(a.length<8){msg("rMsg","Password must be at least 8 characters.","warn");return;}if(a!==b){msg("rMsg","Those passwords don't match.","warn");return;}try{var j=await api("/auth/reset-password",{token:resetTok,password:a});resetTok="";setSession(j,{});msg("rMsg","Password changed. Every older session is ended.","good");render();}catch(e){msg("rMsg",e.message,"bad");}});
+
+  async function confirmToken(path, token) { $("sVerify").hidden=false; try{var j=await api(path,{token:token});var p=profile()||{};if(path==="/auth/verify")p.emailVerified=true;if(j.email)p.email=j.email;saveProfile(p);msg("vMsg",path==="/auth/verify"?"Email confirmed. You can now create your personal connector.":"New email confirmed and now used for sign-in.","good");}catch(e){msg("vMsg",e.message,"bad");} }
+  if(verifyTok)confirmToken("/auth/verify",verifyTok);if(emailTok)confirmToken("/auth/email-confirm",emailTok);
+
+  function paintLeague(){if(!leagueCode){$("sLeague").hidden=true;return;}$("sLeague").hidden=false;var m=window.DDAuth.me();$("lgName").textContent=leagueInfo?(leagueInfo.name||leagueInfo.league):"";$("lgGo").hidden=!m||!leagueInfo;if(!leagueInfo){$("lgSub").textContent="Checking that link…";return;}if(leagueInfo.full&&!m){$("lgSub").textContent="This league is full ("+leagueInfo.cap+" members). Ask "+(leagueInfo.manager||"the manager")+" to raise the cap.";return;}$("lgSub").textContent=m?"You're signed in as "+m.name+". "+leagueInfo.size+" of "+leagueInfo.cap+" seats used.":"Sign in or create an account and you'll join automatically. "+leagueInfo.size+" of "+leagueInfo.cap+" seats used.";}
+  async function previewLeague(){try{var r=await fetch(WORKER+"/league/join?code="+encodeURIComponent(leagueCode),{cache:"no-store"}),j=await r.json();if(!r.ok)throw new Error(j.error||"That link didn't work.");leagueInfo=j;paintLeague();if(window.DDAuth.me())await redeemLeague();}catch(e){leagueCode="";leaguePending=false;$("sLeague").hidden=false;$("lgName").textContent="";$("lgSub").textContent=e.message;$("lgGo").hidden=true;render();}}
+  async function redeemLeague(){if(!leagueCode)return;msg("lgMsg","Joining…");try{var j=await api("/league/join",{code:leagueCode});var name=j.name||"the league";leagueCode="";leaguePending=false;history.replaceState(null,"",location.pathname+(next?"?next="+encodeURIComponent(next):""));$("lgGo").hidden=true;$("lgSub").textContent=j.already?"You were already in "+name+".":"You're in "+name+" — "+j.size+" members now.";msg("lgMsg",j.already?"":"Joined.","good");if(!leave())render();}catch(e){leaguePending=false;msg("lgMsg",e.message,"bad");if(next)$("meBack").hidden=false;}}
+  $("lgGo").addEventListener("click",redeemLeague);if(leagueCode)previewLeague();
+
+  var PANELS={dawgs:"pDawgs",connect:"pConnect",build:"pBuild",account:"pAccount"};
+  function showSheet(id){if(!PANELS[id])id="dawgs";document.querySelectorAll(".sheet-tab").forEach(function(t){var on=t.dataset.sheet===id;t.classList.toggle("on",on);t.setAttribute("aria-selected",on?"true":"false");t.tabIndex=on?0:-1;$(PANELS[t.dataset.sheet]).hidden=!on;});history.replaceState(null,"",location.pathname+location.search+"#"+id);}
+  document.querySelectorAll(".sheet-tab").forEach(function(t){t.addEventListener("click",function(){showSheet(t.dataset.sheet);});t.addEventListener("keydown",function(e){var tabs=[].slice.call(document.querySelectorAll(".sheet-tab")),i=tabs.indexOf(t),n;if(e.key==="ArrowRight")n=tabs[(i+1)%tabs.length];if(e.key==="ArrowLeft")n=tabs[(i-1+tabs.length)%tabs.length];if(n){e.preventDefault();n.focus();showSheet(n.dataset.sheet);}});});
+
+  function formatDeadline(ms){if(ms==null)return "Nothing needs you right now.";var d=new Date(ms),days=Math.ceil((ms-Date.now())/86400000);return "Closes "+d.toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})+(days>=0?" · "+days+" day"+(days===1?"":"s"):"");}
+  function paintRows(rows){var box=$("dawgRows");box.replaceChildren();$("dawgsEmpty").hidden=rows.length>0;$("dawgCount").textContent=rows.length?String(rows.length):"None";$("helloSub").textContent=rows.length?rows.length+" thing"+(rows.length===1?"":"s")+" connected to you.":"Nothing has your name on it yet.";rows.forEach(function(r){var row=document.createElement("div");row.className="dawgrow";row.innerHTML='<div class="body"><p class="ttl"><a></a> <span class="tick idle"></span></p><p class="when"></p><p class="standing"></p></div><div class="act"><a class="btn sm ghost"></a></div>';row.querySelector("a").textContent=r.title;row.querySelector("a").href=r.href;row.querySelector(".tick").textContent=r.status;row.querySelector(".when").textContent=r.deadline==null?r.action:formatDeadline(r.deadline);row.querySelector(".standing").textContent=r.detail;var a=row.querySelector(".act a");a.textContent=r.actionLabel;a.href=r.href;box.appendChild(row);});}
+  async function loadDawgs(){try{var j=await api("/league/mine",null,"GET");paintRows(window.DDSummarize.summarize({leagues:j.leagues,connector:{active:localStorage.getItem(CONNECTOR_KEY)==="1"}}));}catch(e){if(e.status===403){$("dawgRows").innerHTML='<p class="note warn">This is a legacy session. Existing pages still work, but new personal league features require signing up through the new email-first door after the planned account transition.</p>';$("dawgCount").textContent="Legacy";$("helloSub").textContent="Your existing session is still valid.";}else{$("dawgRows").innerHTML='<p class="note bad"></p>';$("dawgRows").firstChild.textContent=e.message;}}}
+
+  var PROV={claude:{add:"Claude → Settings → Connectors → Add custom connector → paste the URL → Save.",proj:"Create a DataDawgs project, paste the instructions below, then in each project chat check that the Data Dawgs connector is enabled — connectors are turned on per conversation."},chatgpt:{add:"ChatGPT custom MCP apps require an eligible Business or Enterprise/Edu workspace and an admin or owner to add the app. Paste the URL during app setup.",proj:"Create a DataDawgs project and paste the instructions below. If your workspace does not offer custom MCP apps, use another supported provider."},gemini:{add:"Gemini Spark on the web → Settings & help → Connected Apps → Custom apps for Spark → add the URL. Spark custom apps currently require a US personal Google account, age 18+, English and Keep Activity on.",proj:"Create a saved DataDawgs chat in Spark and keep the instructions below with it."},other:{add:"Use the URL as a Streamable HTTP MCP endpoint. If supported, send the credential as Authorization: Bearer or X-Dawg-Pass instead of placing it in a URL.",proj:"Paste the instructions below wherever your client keeps standing project instructions."}};
+  document.querySelectorAll(".provbtn").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll(".provbtn").forEach(function(x){x.classList.remove("on");});b.classList.add("on");$("stepAddP").textContent=PROV[b.dataset.prov].add;$("stepProjP").textContent=PROV[b.dataset.prov].proj;});});$("stepAddP").textContent=PROV.claude.add;$("stepProjP").textContent=PROV.claude.proj;
+  fetch("/data/dawg-project-instructions.md",{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("Instructions unavailable.");return r.text();}).then(function(t){$("instrBox").textContent=t.replace(/^---[\s\S]*?---\s*/,"");}).catch(function(e){$("instrBox").textContent=e.message;});
+  $("copyInstr").addEventListener("click",async function(){try{await navigator.clipboard.writeText($("instrBox").textContent);$("copyInstr").textContent="Copied";setTimeout(function(){$("copyInstr").textContent="Copy instructions";},1400);}catch(_){msg("cMintMsg","Select and copy the text above.","warn");}});
+  $("cMint").addEventListener("click",async function(){msg("cMintMsg","Creating…");try{var j=await api("/auth/mcp-token",{action:"mint"});$("cUrl").value=j.url;$("cUrlBox").hidden=false;$("cMint").textContent="Replace it";localStorage.setItem(CONNECTOR_KEY,"1");msg("cMintMsg","Shown once. Save it now; replacing it kills the old URL immediately.","warn");loadDawgs();}catch(e){msg("cMintMsg",e.body&&e.body.verificationRequired?"Confirm your email first. Open Account and send the confirmation link.":e.message,e.body&&e.body.verificationRequired?"warn":"bad");}});
+  $("cCopy").addEventListener("click",async function(){try{await navigator.clipboard.writeText($("cUrl").value);$("cCopy").textContent="Copied";}catch(_){msg("cMintMsg","Select and copy the URL.","warn");}});
+  $("cRevoke").addEventListener("click",async function(){msg("cMintMsg","Turning it off…");try{await api("/auth/mcp-token",{action:"revoke"});$("cUrl").value="";$("cUrlBox").hidden=true;$("cMint").textContent="Create my URL";localStorage.removeItem(CONNECTOR_KEY);msg("cMintMsg","Connector turned off.","good");loadDawgs();}catch(e){msg("cMintMsg",e.message,"bad");}});
+
+  $("pGo").addEventListener("click",async function(){var old=$("pOld").value,nw=$("pNew").value;if(nw.length<8){msg("pMsg","New password must be at least 8 characters.","warn");return;}try{var j=await api("/auth/passwd",{oldPassword:old,newPassword:nw});setSession(j,profile()||{});$("pOld").value=$("pNew").value="";msg("pMsg","Changed. Every older session on every device is now ended.","good");}catch(e){msg("pMsg",e.message,"bad");}});
+  $("eGo").addEventListener("click",async function(){var email=$("eEmail").value.trim();if(!email){msg("eMsg","Enter the new email.","warn");return;}try{var j=await api("/auth/email",{email:email});msg("eMsg",j.note||"Confirmation sent to the new address. Your current login stays unchanged until you open it.","good");}catch(e){msg("eMsg",e.message,"bad");}});
+  $("vGo").addEventListener("click",async function(){msg("vrMsg","Sending…");try{var j=await api("/auth/verify-request",{});if(j.alreadyVerified){var p=profile()||{};p.emailVerified=true;saveProfile(p);msg("vrMsg","This email is already confirmed.","good");}else msg("vrMsg",j.note||"Confirmation link sent.","good");}catch(e){msg("vrMsg",e.message,"bad");}});
+  $("meOut").addEventListener("click",function(){window.DDAuth.clear();saveProfile(null);localStorage.removeItem(CONNECTOR_KEY);showEmailStep();render();});
+
+  function render(){var m=window.DDAuth&&window.DDAuth.me(),resetting=!!resetTok;$("sReset").hidden=!resetting;$("signedOut").hidden=!!m||resetting;$("sMe").hidden=!m||resetting;if(resetting)$("sVerify").hidden=true;$("sJoin").hidden=!!m||!joinTok||resetting;$("sIn").hidden=!!joinTok;$("sHelp").hidden=!!joinTok;$("meJoinWarn").hidden=!(m&&joinTok);paintLeague();if(resetting)$("sLeague").hidden=true;if(m){var p=profile()||{},days=Math.max(0,Math.round((m.expires-Date.now())/86400000));$("meName").textContent=p.name||m.name;$("meEmail").textContent=p.email?(" · "+p.email):"";$("meExp").textContent="Signed in on this device for about "+days+" more day"+(days===1?"":"s")+".";$("hello").textContent="Welcome, "+(p.name||m.name);$("meBack").hidden=!next;if(next)$("meBack").href=next;loadDawgs();showSheet(location.hash.slice(1)||"dawgs");}}
   render();
 })();
+
 </script>
-<script>
-/* ---------------- Toto's surface: the sign-in page (curated, deliberately not scraped) ----------------
-   The system block is where the honesty constraints have to live, because Toto
-   answers from it and not from the page copy. Every limit the page states about
-   itself is restated here as an instruction, so he cannot be talked past one. */
-window.DD_BOTCTX = {
-  label: 'THE SIGN-IN PAGE (described from a fixed summary — this page is never scraped)',
-  title: 'Ask Toto — he can walk you through it',
-  chrome: {sub:'explains account chores', ph:'Ask Toto about your account…', chips:[
-    ['I forgot my password and I never added an email.','Locked out'],
-    ['What does an account actually get me?','Why an account?'],
-    ['Someone texted me a join link. What do I do with it?','Join link']]},
-  sys: `RIGHT NOW you are on the sign-in page — every account chore on this site lives here: signing in, creating an account, claiming a texted invite, resetting a forgotten password, changing a password or email.
-- ⚠️ YOU CANNOT SEE THIS PAGE AND THAT IS DELIBERATE. Somebody is typing a password, a name or an email address into it, and none of that is read into your prompt. Answer from the summary below.
-- NEVER ASK FOR A PASSWORD, A RESET LINK, A JOIN LINK OR AN EMAIL ADDRESS IN THIS CHAT, and never repeat one back if it appears. You cannot sign anyone in, reset anything, or look up whether an account exists. Say so and describe the control on the page that does it.
-- WALK THEM THROUGH THE PAGE, DO NOT INVENT IT. If a step is not in the summary below, say you do not know rather than naming a button that might not exist.
-- AN ACCOUNT DOES NOT PUT ANYONE IN A LEAGUE. You get in by opening a manager's join link or by being added. The boards, the pool and the season tables are public either way — an account is for playing.
-- The genuinely dead end is worth stating plainly: an older account with no email saved has nowhere for a reset link to go, and the only way back is texting Kap, who resets by hand and revives the original join link.`,
-  ctx: () => `THE SIGN-IN PAGE — fixed summary. Deliberately not read into the prompt: this is where people type credentials. Every other page's sign-in chip routes here with a ?next= parameter, and old bozo.html?join= links forward here too.
-WHAT IS ON IT: Sign in (name or email, plus password — email sign-in works once an email is saved on the account) · Create an account (open to anyone; the name is what shows on rosters; the email is a second way in and where a reset link goes) · Claim your slot (a texted join link, which works once — set a password and the slot is yours, after which the link is dead and forwarding it does nothing) · Locked out (a reset link to the email on the account, good once, expires in an hour) · Set a new password (also one use, one hour; setting one ends every other sign-in on every device) · and, once signed in, Change password and Email, which appear on this same page.
-THE ONE DEAD END: an older account with no email saved cannot be sent a reset link. Kap resets it by hand and the original join link works again. Same for a lost join link — he mints a fresh one and the old one stops working.
-THE ONLY MAIL THIS SITE SENDS is the one someone asks for: a reset link or a confirmation link. Confirming an address proves you can open it; it is not a gate on resetting.
-WHERE TO GO NEXT: connect.html to point your own AI at the league, arena.html for the games, draft-leagues.html to create or join a league.`
-};
-</script>
-</body>
-</html>
+<script>window.DD_BOTCTX={label:"Account",title:"Sign in and Your Dawgs",chrome:{sub:"Identity, league memberships and your personal AI connector.",ph:"Ask about this account page…",chips:["How do I connect my AI?","Why is email confirmation required?","What is Build-a-Dawg?"]},sys:"Identity controls live only on signon.html. Never ask for or repeat a password, session token, reset link, verification link or MCP URL. The capabilities card is a dated static orientation; dd_site_map is the live authority.",ctx:function(){return "This is the identity and personal connector page. It deliberately excludes all form values and credentials from Toto's context."}};</script>
+</body></html>
