@@ -851,15 +851,19 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 .td-mini b{color:var(--ink-2);font-weight:750}
 
 /* ---- 3 · the ring ---------------------------------------------------------- */
-.td-wheelwrap{display:grid;grid-template-columns:minmax(0,330px) minmax(0,1fr);gap:22px;align-items:start}
-.td-wheelbox{border:1px solid var(--border);border-radius:14px;background:var(--surface-1);padding:8px}
+/* ONE COLUMN, ring on top. Side by side the ring was capped near 330px and read as a
+   thumbnail beside its own result; stacked it gets the page column and the result line
+   sits directly under the thing that produced it. */
+.td-wheelwrap{display:block}
+.td-wheelbox{border:1px solid var(--border);border-radius:14px;background:var(--surface-1);
+  padding:16px;max-width:620px;margin:0 auto 16px}
 .td-wheelbox svg{display:block;width:100%;height:auto;overflow:visible}
 .td-slice{stroke:var(--surface-1);stroke-width:2;stroke-linejoin:round}
 .td-slice.dim{opacity:.3}
 .td-wlab{font:700 11px/1 ui-monospace,SFMono-Regular,Consolas,monospace;fill:var(--ink-1)}
 .td-wpct{font:650 11px/1 ui-monospace,SFMono-Regular,Consolas,monospace;fill:var(--ink-3)}
 #tdWheelRot,#tdWheel .td-labrot{transition:transform 3.6s cubic-bezier(.16,.72,.16,1)}
-.td-spinrow{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:13px}
+.td-spinrow{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;justify-content:center}
 .td-go{appearance:none;border:1px solid var(--accent);background:var(--accent);
   color:var(--accent-ink);border-radius:999px;padding:9px 17px;font:inherit;font-size:14px;
   font-weight:800;cursor:pointer}
@@ -1064,7 +1068,6 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
   .td-matrix{--cell:14px}
   .td-cards{grid-template-columns:1fr}
   .td-board{grid-template-columns:repeat(4,minmax(0,1fr))}
-  .td-wheelwrap{grid-template-columns:1fr}
 }
 @media (max-width:560px){
   .td-matrix{--cell:11px;grid-template-columns:26px repeat(32,var(--cell))}
@@ -2450,14 +2453,6 @@ STATE: everything saves in the browser on that device. A different device shows 
       </details>
     </section>
 
-    <section class="p-section" id="rosters">
-      <header><div><h2>The eight rosters</h2><p class="dek">Sorted by expected wins, which is a market
-        snapshot and not a standing. &ldquo;Internal&rdquo; is games the roster plays against
-        itself — the wins that cannot help. Every card is a button.</p></div>
-        <div class="p-meta" id="standMeta" aria-live="polite"></div></header>
-      <div class="td-cards" id="tdCards"></div>
-    </section>
-
     <section class="p-section" id="wheel">
       <header><div><h2>Spin wheel</h2><p class="dek">The ring is <b>finishing probability</b> — each
         slice is how often that roster comes first across the simulated seasons in the payload, so the
@@ -2466,26 +2461,22 @@ STATE: everything saves in the browser on that device. A different device shows 
         slices.</p></div>
         <div class="p-meta" id="wheelMeta" aria-live="polite"></div></header>
       <div class="td-wheelwrap">
-        <div>
-          <div class="td-spinrow">
-            <button type="button" class="td-go" id="tdSpin">Spin wheel</button>
-            <button type="button" class="td-go ghost" id="tdSpin10">Spin &times;10</button>
-            <button type="button" class="td-go ghost" id="tdSpinReset">Reset tally</button>
-          </div>
-          <div class="td-wheelbox">
-            <!-- ⚠️ The viewBox is WIDER THAN TALL on purpose. Labels sit outside the
-                 ring on leader lines, and "Kevin 15.3%" runs ~73px past the rim, so a
-                 square 0 0 300 300 box clips the east and west names to "Rob 19.7" and
-                 a bare percentage. Do not tidy this back to a square. -->
-            <svg id="tdWheel" viewBox="-52 -6 404 312" role="img"
-              aria-label="Finishing probability by drafter"></svg>
-          </div>
+        <div class="td-spinrow">
+          <button type="button" class="td-go" id="tdSpin">Spin wheel</button>
+          <button type="button" class="td-go ghost" id="tdSpin10">Spin &times;10</button>
+          <button type="button" class="td-go ghost" id="tdSpinReset">Reset tally</button>
         </div>
-        <div>
-          <p class="td-result" id="tdResult" role="status" aria-live="polite"></p>
-          <div class="p-table-wrap"><table class="td-ratio" id="tdRatio"></table></div>
-          <p class="td-note" id="tdWheelNote"></p>
+        <div class="td-wheelbox">
+          <!-- ⚠️ The viewBox is WIDER THAN TALL on purpose. Labels sit outside the ring
+               on leader lines and "Kevin 15.5%" runs well past the rim, so a square
+               0 0 300 300 box clips the east and west names to "Rob 19.9" and a bare
+               percentage. Do not tidy this back to a square. -->
+          <svg id="tdWheel" viewBox="-52 -6 404 312" role="img"
+            aria-label="Finishing probability by drafter"></svg>
         </div>
+        <p class="td-result" id="tdResult" role="status" aria-live="polite"></p>
+        <div class="p-table-wrap"><table class="td-ratio" id="tdRatio"></table></div>
+        <p class="td-note" id="tdWheelNote"></p>
       </div>
     </section>
 
@@ -2547,6 +2538,14 @@ STATE: everything saves in the browser on that device. A different device shows 
         recomputed against live ratings later, because that would make it retroactively wrong.</p></div>
         <div class="p-meta" id="boardMeta" aria-live="polite"></div></header>
       <div class="td-board" id="tdBoard"></div>
+    </section>
+
+    <section class="p-section" id="rosters">
+      <header><div><h2>The eight rosters</h2><p class="dek">Sorted by expected wins, which is a market
+        snapshot and not a standing. &ldquo;Internal&rdquo; is games the roster plays against
+        itself — the wins that cannot help. Every card is a button.</p></div>
+        <div class="p-meta" id="standMeta" aria-live="polite"></div></header>
+      <div class="td-cards" id="tdCards"></div>
     </section>
   </section>
 
