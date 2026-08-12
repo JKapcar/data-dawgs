@@ -195,6 +195,10 @@ for (const job of JOBS) {
     id: job.id, name: job.name, format: job.format, buyback: job.buyback || 0,
     season: payload.season, weeks: payload.weeks, weeksPlayed: payload.weeksPlayed,
     note: payload.note, players: payload.players,
+    // ⚠️ The per-week drawn hierarchies. Without them the import replays every week under
+    // a default lever order that was never drawn, and names bozos the simulated season
+    // never had.
+    hierarchies: payload.hierarchies,
     playersStatus: payload.playersStatus, chops: payload.chops, survivor: payload.survivor,
   };
 

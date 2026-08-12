@@ -2346,6 +2346,129 @@ function leagueImportRows(id, season, legs) {
   return rows;
 }
 
+/* Turn an imported ledger into a BOARD.
+   ⚠️ WITHOUT THIS THE DEMO DEMOS ALMOST NOTHING. The first version wrote 176 ledger rows
+   and stopped, which is everything the CLV chart needs and nothing the rest of the page
+   reads: the ticket renders from /picks, the hierarchy from /order, the verdict from
+   /bozo, and the season counts from /history. All four were empty, so a league with a
+   full simulated season showed "0 legs" and eight rows of "no leg yet" — the exact
+   surfaces the demo exists to populate.
+
+   So the last batch replays the season out of the ledger: every week's legs become picks
+   and results, each week's drawn hierarchy names its bozo, and the final week is left
+   loaded on the board.
+
+   ⚠️ The bozo is named by royaleDecideChop — the SAME cascade the live grader runs — not
+   by a second implementation written for the demo. A demo that resolved weeks by
+   different rules than the real thing would be worse than no demo. */
+const IMPORT_LEVER_IX = { "Shortest Odds": 0, "Worst Beat": 1, "Last In": 2, "Worst CLV": 3 };
+
+async function leagueImportFinalise(env, id, lg) {
+  let ledger = {};
+  try { ledger = (await fbGet(env, LG(id) + "/ledger")).data || {}; }
+  catch (e) { throw new Error("ledger read failed: " + e.message); }
+
+  const rows = Object.values(ledger).filter(r => r && r.week && r.player);
+  if (!rows.length) return null;
+
+  const byWeek = new Map();
+  for (const r of rows) {
+    if (!byWeek.has(r.week)) byWeek.set(r.week, []);
+    byWeek.get(r.week).push(r);
+  }
+  const weeks = [...byWeek.keys()].sort((a, b) => a - b);
+  const season = lg.season || SEASON;
+  const orders = lg.weekOrders || {};
+
+  // One week's legs, in the shape /picks and /results actually hold.
+  const shape = (wk) => {
+    const picks = {}, results = {};
+    for (const r of byWeek.get(wk) || []) {
+      const k = encodeURIComponent(r.player);
+      picks[k] = {
+        sport: r.sport, eventId: r.eventId, game: r.game, mkt: r.mkt, side: r.side,
+        line: r.line ?? 0, dir: r.dir || "over", price: r.price, label: r.label,
+        prop: r.prop || null, ts: r.ts || null, priceSource: r.priceSource || "simulated",
+        entryPriceOpp: r.priceOpp ?? null, entryBook: r.entryBook || null,
+        selectionKey: r.selectionKey || null, marketKey: null, startsAt: null,
+        dkSgpEligible: r.dkSgpEligible || null,
+      };
+      results[k] = {
+        result: r.result || null,
+        won: r.result === "won" ? true : r.result === "lost" ? false : null,
+        actual: r.actual ?? null,
+        close: r.close ?? null, closeOpp: r.closeOpp ?? null,
+        closeBook: r.closeBook || null, closeSource: r.closeSource || null,
+        closeObservedAt: r.closeObservedAt || null,
+        closeUnavailableReason: r.closeUnavailableReason || null,
+      };
+    }
+    return { picks, results };
+  };
+
+  /* Build the history the season board counts from.
+
+     ⚠️ A ROYALE SEASON'S HISTORY COMES FROM ITS CHOP LOG, NOT FROM A REPLAY, and the
+     reason is causal rather than tidy. The chop decides who is on the roster the
+     following week, so the legs that were generated after it only make sense under the
+     chops that actually happened. Re-deciding week 6 under different rules would give
+     week 7 a roster that never bet those legs — a season that contradicts its own rows.
+
+     ⚠️ It matters because the two DO disagree. The simulator scores Worst Beat as raw
+     distance past the line; the site scores it as distance from the price-implied
+     expectation in standard deviations, which is what data/bozo-rules.json describes and
+     which makes a −400 favourite missing by three a worse beat than a −110 missing by
+     three. Replaying the seeded Royale season under the site's rule reproduces 12 of 13
+     chops and disagrees on week 6. The chop log wins there, because it is the season the
+     legs were dealt for.
+
+     A Standard league has no chop log — nobody is eliminated, so nothing downstream
+     depends on last week's verdict — and its history is replayed under the live cascade,
+     which is the rule that will decide real weeks. */
+  const chops = (lg.royale || {}).chops || {};
+  const chopByWeek = {};
+  for (const c of Object.values(chops)) if (c && c.week && c.chopped) chopByWeek[c.week] = c.chopped;
+  const fromChops = Object.keys(chopByWeek).length > 0;
+
+  const history = [];
+  for (const wk of weeks) {
+    if (fromChops) {
+      const who = chopByWeek[wk];
+      history.push({ week: wk, bozo: who ? encodeURIComponent(who) : null });
+      continue;
+    }
+    const { picks, results } = shape(wk);
+    const d = royaleDecideChop({ picks, results }, orders[wk] || [0, 1, 2, 3]);
+    history.push({ week: wk, bozo: d.choppedKey || null });
+  }
+
+  // The last week stays loaded on the board, so the ticket, hierarchy, diagnostics and
+  // verdict all have something real to draw.
+  const last = weeks[weeks.length - 1];
+  const { picks, results } = shape(last);
+  const order = orders[last] || [0, 1, 2, 3];
+  // Same rule as the history above: a Royale week's verdict is its chop record.
+  const decided = fromChops && chopByWeek[last]
+    ? { choppedKey: encodeURIComponent(chopByWeek[last]), chopped: chopByWeek[last],
+        decidedBy: (Object.values(chops).find(c => c && c.week === last) || {}).decidedBy || "the drawn hierarchy" }
+    : royaleDecideChop({ picks, results }, order);
+  const bozoLeg = decided.choppedKey ? picks[decided.choppedKey] : null;
+
+  const patch = {
+    week: last, season, status: "graded",
+    picks, results, order,
+    history: history.slice(0, -1),        // the current week is `bozo`, not history
+    bozo: decided.choppedKey || null,
+    bozoWhy: decided.choppedKey
+      ? `${decided.decidedBy} · lost ${bozoLeg ? bozoLeg.label : ""}${bozoLeg ? " at " + bozoLeg.price : ""} · funds next week`
+      : "Ticket cashed. Nobody wears it.",
+    closeTs: Math.max(0, ...Object.values(picks).map(p => p.ts || 0)) || null,
+  };
+  await fbPatch(env, LG(id), patch);
+  return { week: last, legs: Object.keys(picks).length, bozo: decided.chopped,
+           decidedBy: decided.decidedBy, weeksReplayed: weeks.length };
+}
+
 async function leagueImport(request, env, cors) {
   if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
   const auth = await requireAdmin(request, env);
@@ -2387,13 +2510,18 @@ async function leagueImport(request, env, cors) {
       catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
     }
     if (body.done === true) {
+      // Everything is in — now make it a BOARD, not just a ledger. See the note there.
+      let live = null;
+      try { live = await leagueImportFinalise(env, id, lg); }
+      catch (e) { console.log("import: finalise failed — " + e.message); }
       // ⚠️ The flag clears LAST, after every row has landed. An import interrupted
       // halfway leaves `importing: true` — visibly unfinished, and still appendable —
       // rather than a league that looks complete and silently isn't.
       try { await fbPatch(env, LG(id), { importing: null }); }
       catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+      return json({ ok: true, id, appended: legs.length, done: true, live }, 200, cors);
     }
-    return json({ ok: true, id, appended: legs.length, done: body.done === true }, 200, cors);
+    return json({ ok: true, id, appended: legs.length, done: false }, 200, cors);
   }
 
   /* ---------- the first batch, which creates the league ---------- */
@@ -2419,6 +2547,18 @@ async function leagueImport(request, env, cors) {
     if (w && w.week) { weekLabels[w.week] = w.label || ("Week " + w.week); weekPhases[w.week] = w.phase || "regular"; }
   }
 
+  /* ⚠️ The drawn hierarchy per week, converted from the simulator's lever NAMES to the
+     indices the page's LEVERS array uses. Stored on the first batch because the finalise
+     step runs on the last one and needs all of them — and without it every replayed week
+     would resolve under a default 0,1,2,3 order that was never actually drawn, quietly
+     naming different bozos than the season it claims to be. */
+  const weekOrders = {};
+  for (const h of (Array.isArray(body.hierarchies) ? body.hierarchies : [])) {
+    if (!h || !h.week || !Array.isArray(h.order)) continue;
+    const ix = h.order.map(n => IMPORT_LEVER_IX[n]).filter(n => Number.isInteger(n));
+    if (ix.length) weekOrders[h.week] = ix;
+  }
+
   const lg = {
     name: String(body.name || id).slice(0, 60),
     manager: auth.name,
@@ -2432,7 +2572,7 @@ async function leagueImport(request, env, cors) {
     // than looking complete while missing most of its season.
     importing: body.done === true ? null : true,
     demoNote: String(body.note || "SIMULATED SEASON — every leg, price, close and result is fabricated."),
-    weekLabels, weekPhases,
+    weekLabels, weekPhases, weekOrders,
     ledger,
     createdTs: Date.now(), createdBy: auth.name, importedTs: Date.now(),
   };

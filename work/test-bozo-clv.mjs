@@ -459,9 +459,15 @@ ok(/clv-tablewrap/.test(page), "the table twin ships — it is the WCAG counterp
   /* ⚠️ The belt goes to the CURRENT holder — the most recent bozo — not to whoever has
      worn it most. Those are different people the moment someone else gets named, and
      `.fund` (max count) already occupies the second meaning. */
-  ok(/const holder = bzNow \|\| \(hist\.length/.test(code),
-     "the holder is this week's bozo, falling back to the last one named");
-  ok(/data-belt="\$\{holds\?1:0\}"/.test(code), "the holder's row is marked");
+  /* ⚠️ ONE definition, called by both the season board and the ticket. Two copies of
+     this rule would eventually disagree about who is wearing it, on the same screen. */
+  ok(/function beltHolder\(\)\{/.test(code), "there is a single beltHolder() rule");
+  ok(/const now = S\.bozo && playerName\(S\.bozo\);/.test(code) && /hist\[hist\.length-1\]\.bozo/.test(code),
+     "…and it is this week's bozo, falling back to the last one named");
+  ok((code.match(/beltHolder\(\)/g) || []).length >= 3,
+     "…and both surfaces call it rather than re-deriving it");
+  ok(/data-belt="\$\{holds\?1:0\}"/.test(code), "the holder's row is marked on the season board");
+  ok(/belt===p\?'<span class="beltcrest"/.test(code), "…and the token appears on the ticket too");
   ok(/\[data-belt="1"\] \.nm2::after\{display:none\}/.test(code),
      "…and the red nose is suppressed there, since holding it already implies having worn one");
 }
