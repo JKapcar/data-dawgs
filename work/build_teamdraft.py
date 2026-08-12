@@ -72,6 +72,16 @@ CSS = r"""
   border-radius:5px;padding:2px 6px}
 .sheet-tab.on .sheet-hint{color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent)}
 [role=tabpanel][hidden]{display:none}
+/* Rules is the tab a first-time reader needs and the one they are least likely to
+   try, so it is tinted rather than left as the quietest word in the row. It still
+   reads as a tab, not a button — the accent is a border and a wash, not a fill. */
+#tab-rules{border:1px solid color-mix(in srgb,var(--accent) 42%,transparent);
+  border-bottom-width:2px;border-radius:8px 8px 0 0;
+  background:color-mix(in srgb,var(--accent) 9%,transparent);color:var(--ink-1)}
+#tab-rules:hover{background:color-mix(in srgb,var(--accent) 16%,transparent)}
+#tab-rules.on{background:color-mix(in srgb,var(--accent) 14%,transparent)}
+#tab-rules .sheet-hint{color:var(--accent);
+  background:color-mix(in srgb,var(--accent) 18%,transparent)}
 @media (max-width:560px){
   .sheetbar{gap:2px}
   .sheet-tab{font-size:13px;padding:8px 11px 7px}
@@ -121,8 +131,14 @@ CSS = r"""
 .td-o0{--own:var(--td-none)}
 
 /* ---- the one control ------------------------------------------------------ */
-.td-rail{position:sticky;top:0;z-index:40;margin:0 0 18px;padding:11px 0 10px;
-  background:var(--page);border-bottom:1px solid var(--grid)}
+.td-sticky{position:sticky;top:0;z-index:40;background:var(--page);margin-bottom:18px;
+  box-shadow:0 6px 14px -12px rgba(0,0,0,.55)}
+.td-sticky .sheetbar{margin-bottom:0;padding-top:2px}
+.td-rail{padding:11px 0 10px;border-bottom:1px solid var(--grid)}
+/* ⚠️ The rail filters the two sheets that HAVE something to filter. On Diagnostics
+   and Rules it is eight buttons that do nothing, which on a phone is a screenful of
+   dead control. Hidden there rather than left inert. */
+.td-rail[hidden]{display:none}
 .td-rail-in{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
 .td-rail-lab{font:800 10.5px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;
   text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-right:2px}
@@ -433,6 +449,23 @@ CSS = r"""
   .td-cards{grid-template-columns:1fr}
   .td-board{grid-template-columns:repeat(4,minmax(0,1fr))}
 }
+/* ⚠️ THE RAIL IS A SINGLE SCROLLING ROW ON A PHONE. Wrapped, eight drafter chips
+   plus a select stacked four rows deep and the sticky bar ate 206px — a quarter of a
+   390x844 screen, permanently, the moment you scrolled. One row that swipes costs
+   ~52px and is the pattern people already know from every app's filter strip. */
+@media (max-width:700px){
+  .td-rail-in{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;
+    scrollbar-width:none;-webkit-overflow-scrolling:touch;
+    padding-bottom:2px;scroll-padding-left:8px}
+  .td-rail-in::-webkit-scrollbar{display:none}
+  .td-rail-in > *{flex:0 0 auto}
+  .td-rail-lab{display:none}
+  .td-pick{max-width:150px}
+}
+/* Anything the reader jumps to has to clear the sticky rail, or the heading lands
+   underneath it and the section looks like it starts mid-sentence. */
+.p-section{scroll-margin-top:74px}
+
 @media (max-width:560px){
   .td-matrix{--cell:11px;grid-template-columns:26px repeat(32,var(--cell))}
   .td-mh{font-size:7px;height:30px}
@@ -490,9 +523,14 @@ MAIN = r"""
   and normalized to 272 — a market snapshot, not a forecast this site has graded. The tracker reads
   zero because zero is the true number, and nothing here says who is winning.</div>
 
-  <div id="sheets"></div>
-  <div class="td-rail">
-    <div class="td-rail-in" id="tdRail" role="group" aria-label="Choose a drafter or a team"></div>
+  <!-- Tabs and the rail stick together. Separately, scrolling past the tabs left the
+       reader with a filter strip and no way back to another sheet without scrolling to
+       the top — on a phone the hero alone is most of a screen. -->
+  <div class="td-sticky">
+    <div id="sheets"></div>
+    <div class="td-rail">
+      <div class="td-rail-in" id="tdRail" role="group" aria-label="Choose a drafter or a team"></div>
+    </div>
   </div>
 
   <!-- ============================ THE POOL ============================ -->
@@ -836,7 +874,7 @@ __DDSHEETS__
   function select(kind, id, opts){
     if(kind === "league"){ sel.d.clear(); sel.t.clear(); autoPick = null; }
     else {
-      if(autoPick && autoPick !== id){ sel.t.delete(autoPick); }
+      if(autoPick && autoPick !== id){ sel.d.delete(autoPick); sel.t.delete(autoPick); }
       autoPick = null;
       const bag = kind === "drafter" ? sel.d : sel.t;
       if(bag.has(id)) bag.delete(id); else bag.add(id);
@@ -1441,9 +1479,9 @@ __DDSHEETS__
     const list = selTeams();
     if(!list.length){
       $("tdHero").className = "td-hero";
-      $("tdHero").innerHTML = `<h2>Pick a team</h2><p class="sub">Use the rail above, or click any
-        bar on the ladder. This sheet is the one-team view — the week-by-week strip, the season
-        curve and the full schedule.</p>`;
+      $("tdHero").innerHTML = `<h2>Pick a drafter</h2><p class="sub">Tap a name above to see their
+        four teams week by week, how their season lands, and every game. Tap a second name to lay
+        two of them over each other, or add a single NFL team from the menu.</p>`;
       ["tdStrip","tdCurves","tdGameTable"].forEach(id=>{ $(id).innerHTML =
         `<div class="td-empty">Nothing selected.</div>`; });
       $("tdQuant").innerHTML = "";
@@ -1653,7 +1691,7 @@ __DDSHEETS__
     $("tdTeamPick").addEventListener("change", e=>{
       const v = e.target.value;
       if(v){
-        if(autoPick && autoPick !== v) sel.t.delete(autoPick);
+        if(autoPick && autoPick !== v){ sel.d.delete(autoPick); sel.t.delete(autoPick); }
         autoPick = null;
         sel.t.add(v);
       }
@@ -1720,16 +1758,33 @@ __DDSHEETS__
       btn.addEventListener("click", ()=> runMC(Number(btn.dataset.mc))));
 
     sheets = DDSheets({key:"teamdraft", mount:"#sheets",
-      sheets:[{id:"pool",  label:"The pool",       panel:"#sheetPool"},
-              {id:"team",  label:"One team",       panel:"#sheetTeam"},
-              {id:"diag",  label:"Diagnostics",    panel:"#sheetDiag", hint:"what drifts"},
-              {id:"rules", label:"Rules & method", panel:"#sheetRules"}],
+      /* ⚠️ ONE WORD EACH. At 390px "The pool / One team / Diagnostics / Rules &
+         method" wrapped onto two rows with Rules stranded alone underneath, which is
+         exactly the tab nobody then clicks. Four short labels fit one row on a phone.
+         "Roster" rather than "One team": the sheet is a person's four teams, and
+         calling it a team is what made a stray NFL club look like a sensible default. */
+      sheets:[{id:"pool",  label:"Pool",        panel:"#sheetPool"},
+              {id:"team",  label:"Roster",      panel:"#sheetTeam"},
+              {id:"diag",  label:"Diagnostics", panel:"#sheetDiag"},
+              {id:"rules", label:"Rules",       panel:"#sheetRules", hint:"start here"}],
       onShow(id){
+        const rail = document.querySelector(".td-rail");
+        if(rail) rail.hidden = (id === "diag" || id === "rules");
         /* Opening the Team sheet with nothing chosen would show an empty page, so it
            lands on the top of the ladder rather than on a prompt. */
+        /* ⚠️ OPENS ON A PERSON, NOT A TEAM. This sheet is somebody's four teams; the
+           old default picked the top of the expected-wins ladder, so it opened on the
+           Rams — a club nobody in the league is called — and read as though the page
+           were about NFL teams rather than about the eight people playing. The
+           placeholder is now the drafter at the top of the tracker, and it is still a
+           placeholder: the first real pick replaces it. */
         if(id === "team" && selEmpty()){
-          autoPick = Object.keys(D.teams).sort((a,b)=>D.teams[b].ew - D.teams[a].ew)[0];
-          sel.t.add(autoPick);
+          const W = D.wins_tracker || {};
+          const played = D.draft_order.some(n => (W[n]?.total || 0) > 0);
+          autoPick = played
+            ? [...D.draft_order].sort((a,b)=>(W[b].total||0)-(W[a].total||0))[0]
+            : D.draft_order[0];
+          sel.d.add(autoPick);
         }
         renderAll();      // the rail differs per sheet: no "All 32" lever on Team
       }});

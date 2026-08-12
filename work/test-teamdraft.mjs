@@ -162,6 +162,9 @@ const ready = p => p.waitForFunction(
   /* Check 6: the palette is the re-snapped one. The mockup's mint fails on this
      site's cream at 1.56:1 and must never come back. */
   ok("the mockup's unvalidated palette did not ship", !/#5FE3C0|#B4A5F5|#A8821A/i.test(html));
+  ok("the Rules tab is styled to be noticed", /#tab-rules\{/.test(html));
+  ok("the sheet labels are short enough not to wrap",
+    /label:"Pool"/.test(html) && /label:"Roster"/.test(html) && /label:"Rules"/.test(html));
   ok("both themes define all eight drafter slots",
     (html.match(/--d[1-8]:#[0-9a-f]{6}/gi) || []).length === 16);
 
@@ -260,6 +263,30 @@ const ready = p => p.waitForFunction(
   }));
 
   ok("four sheets, pool first", got.tabs.join(",") === "pool,team,diag,rules", got.tabs.join(","));
+  /* ⚠️ The Roster sheet is somebody's four teams. Defaulting it to the top of the
+     expected-wins ladder opened it on the Rams — a club nobody in this league is
+     called — and made the page read as though it were about NFL teams. */
+  ok("the Roster sheet opens on a person, not an NFL team", await (async () => {
+    await p.click('[data-sel="league:"]');
+    await p.click('.sheet-tab[data-id="team"]');
+    await p.waitForTimeout(250);
+    const h = await p.evaluate(() => document.querySelector("#tdHero h2")?.textContent.trim());
+    await p.click('.sheet-tab[data-id="pool"]');
+    await p.waitForTimeout(150);
+    return D.draft_order.includes(h);
+  })());
+  /* The rail filters two sheets; on the other two it is dead control. */
+  ok("the rail is hidden where it does nothing", await (async () => {
+    const seen = {};
+    for (const id of ["pool", "team", "diag", "rules"]) {
+      await p.click(`.sheet-tab[data-id="${id}"]`);
+      await p.waitForTimeout(150);
+      seen[id] = await p.evaluate(() => !document.querySelector(".td-rail").hidden);
+    }
+    await p.click('.sheet-tab[data-id="pool"]');
+    await p.waitForTimeout(150);
+    return seen.pool && seen.team && !seen.diag && !seen.rules;
+  })());
   ok("the tracker opens the page with one row per drafter", got.trackRows === D.draft_order.length);
   ok("every tracker row draws the season still to play", got.ghosts === D.draft_order.length);
   ok("every tracker row carries the par rule", got.pars === D.draft_order.length);
@@ -491,6 +518,21 @@ for (const theme of ["dark", "light"]) {
       const w = document.querySelector(".td-mwrap");
       return w.scrollWidth > w.clientWidth ? getComputedStyle(w).overflowX !== "visible" : true;
     });
+    /* ⚠️ The tab bar must not wrap. At 390px the old four-word labels put "Rules &
+       method" alone on a second row, which is the tab a first-time reader most needs
+       and the one they are then least likely to see. */
+    const tabRows = await p.evaluate(() =>
+      new Set([...document.querySelectorAll(".sheet-tab")].map(t =>
+        Math.round(t.getBoundingClientRect().y))).size);
+    ok(`the sheet tabs sit on one row at ${width} (${theme})`, tabRows === 1, `${tabRows} rows`);
+    /* And the sticky header cannot eat the screen: wrapped, the rail alone was 206px
+       of a 844px phone. */
+    const stickyPct = await p.evaluate(() => {
+      const e = document.querySelector(".td-sticky");
+      return Math.round(e.getBoundingClientRect().height / innerHeight * 100);
+    });
+    ok(`the sticky header stays under a fifth of the screen at ${width} (${theme})`,
+      stickyPct <= 20, `${stickyPct}%`);
     ok(`the matrix scrolls inside its own box at ${width} (${theme})`, contained);
     /* the tracker is the element that opens the page; it has to work at 375 */
     const fits = await p.evaluate(() => {
