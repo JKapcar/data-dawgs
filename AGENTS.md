@@ -69,6 +69,37 @@ SHA-256. Regenerate it whenever you touch a data file; do not hand-edit it.
 Data currently lives inside the HTML pages as JS literals and is *extracted* into `data/`.
 That means the two can drift. If you change a number on a page, rebuild `data/`.
 
+## Toto's surface on a page
+
+Toto is on every page. What he can see there is decided by two things, in this order:
+
+1. **`window.DD_BOTCTX`** — the page's own surface, set in a `<script>` just before
+   `</body>`. Shape: `{label, title, chrome:{sub, ph, chips}, sys, ctx()}`. A *partial*
+   hook is legal: supply `sys` alone to claim the voice, `chrome` alone to claim the
+   chips. Only supplying `ctx()` replaces the state.
+2. **The page reader** — the fallback. It walks the rendered DOM and hands him headings,
+   prose, settings, and tables with the rows trimmed, with the section on the reader's
+   screen hoisted to the front. Exposed as `window.DDBotScan(budget)`, so a curated
+   `ctx()` can fold the live rendering in under its own spine. That is the normal
+   pattern: a hand-written spine for dates and provenance (which scraping gets wrong),
+   the reader for what is actually on screen (which prose goes stale about).
+
+Rules that are not optional:
+
+- **`sys` is where a caveat has to live.** Toto answers from the system block, not from
+  the page copy. A limit stated in prose on the page but not restated as an instruction
+  is a limit he will be talked past.
+- **The reader never reads free text.** It takes selects, checkboxes, numbers, ranges and
+  dates — never a text or email box, and never anything under `data-ddb-skip`. Somebody
+  is typing into those. `signon.html` and `connect.html` deliberately have a curated
+  `ctx()` with no reader at all: the connector URL on that page *is* the credential.
+- **A page with no `DD_BOTCTX` still works** — it gets the reader and the generic chips.
+  Adding a page without a surface is a soft failure, not a broken one.
+- The draft rig (`window.DD_POOL`) keeps the draft surface and ignores all of this.
+- The prompt also carries `HELP` (the draft-rig manual) and `MAP` (the site map). Both are
+  copy-pasted into every page. If the UI or the page list changes, change them in the
+  **same commit** or Toto starts confidently lying about it.
+
 ## House style for anything user-facing
 
 - Values are labelled **MV / Market Value**. Do not add new vendor-name instances, and do not

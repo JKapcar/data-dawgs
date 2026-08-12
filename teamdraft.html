@@ -1947,8 +1947,17 @@ How-to questions about the site are also yours to answer, from the SITE MANUAL s
 - When asked to decide, name the player(s) and the price you would pay.
 - If the state shows no picks yet, say so and talk strategy rather than pretending to see a board.`;
 
-  // No live state on this page — say so rather than reaching for the draft.
-  const SYS_PLAIN = `RIGHT NOW you are on a page that exposes no live game state to you. Answer from the site manual, and when someone asks about data on the page in front of them, say plainly that you cannot see it and name the page that would let you.`;
+  /* ⚠️ This used to say "you are on a page that exposes no live game state to you"
+     and instruct him to admit he could not see it. That was true of exactly one page
+     and false of twenty. Now the fallback hands him a text rendering of the page the
+     reader is actually looking at, so the floor everywhere is "he reads what you
+     read" — and the honesty constraint moves to what that rendering IS. */
+  const SYS_PAGE = `RIGHT NOW you are on a page that has not handed you a curated state block, so what follows is a TEXT RENDERING OF THE PAGE THE READER IS LOOKING AT — its headings, prose, settings and tables, read off the rendered page at the moment they asked.
+- It is what is ON SCREEN, not the dataset behind it. Rows that a filter hid are not in it, long tables are cut, and charts are pictures you cannot see. Say which of those is biting when it bites.
+- The section marked THE READER IS LOOKING AT is the one on their screen. An unqualified "this" means that section.
+- Describe, summarise, compare and explain what is in the rendering. Do not compute new numbers from it beyond arithmetic you can show, and never fill a gap in it from memory of football.
+- Numbers on this site carry dates. If the rendering gives a date or an as_of, quote it. If it gives a tier (Pup, Working Dawg, DawgHouse), respect what that tier means.
+- If the question needs a page other than this one, answer what you can and name the page from the site map. Routing someone correctly beats guessing at their answer.`;
 
   /* ⚠️ The dock's subtitle, starter chips and placeholder were hardcoded to the draft.
      Left alone they follow Toto onto every page and tell a Bozo player he "reads the
@@ -1959,10 +1968,13 @@ How-to questions about the site are also yours to answer, from the SITE MANUAL s
     ["What should I do with the rest of my picks?","Rest-of-draft plan"],
     ["Who is the best value on the board right now, and what would you pay?","Best value now"],
     ["Where is the next positional cliff, and should I pay to beat it?","Next cliff"]]};
-  const CHROME_PLAIN = {sub:"ask about the site", ph:"Ask Toto…", chips:[
-    ["How do I enter a sale on the auctioneer page?","Log a sale"],
-    ["How do I fix a pick I got wrong?","Fix a pick"],
-    ["What can you actually see from this page?","What can you see?"]]};
+  /* ⚠️ These chips used to ask about logging an auction sale — on every page that
+     had no surface of its own, including pages with no draft anywhere near them.
+     The default now asks about the page you are standing on. */
+  const CHROME_PLAIN = {sub:"reads this page", ph:"Ask Toto about this page…", chips:[
+    ["What is this page for, in plain terms?","What is this?"],
+    ["What can you actually see from this page?","What can you see?"],
+    ["Where do these numbers come from, and how fresh are they?","Where's it from?"]]};
   function chrome(){
     const h=window.DD_BOTCTX;
     if(h && h.chrome) return Object.assign({}, CHROME_PLAIN, h.chrome);
@@ -1988,18 +2000,208 @@ ON THE CLOCK is shown in the page header. "Advance nomination" moves it to the n
 OTHER PAGES: Big Board is the projector view — it is deliberately not in the nav, open it by URL on the projector machine, and what it displays is set from "Projector shows". LIVE DRAFT in the nav is the read-only board for everyone else. Draft Data Viz, Report Card, Cheat Sheet and Master Data are read-only views of the same draft.
 STATE: everything saves in the browser on that device. A different device shows a different draft unless the live mirror is switched on. Pages are cached for offline so the draft survives losing wifi — but Toto itself needs the network, so say so if someone asks for help while offline.`;
 
+/* The manual above is the draft rig, because that is where how-to questions used to
+   come from. This is the rest of the site in one screen: enough for Toto to route a
+   question he cannot answer from the page in front of him. Keep it honest — a page
+   listed here as empty must stay listed as empty until it isn't. */
+const MAP = `SITE MAP — what lives where. Use it to send someone to the right page instead of guessing at their answer.
+index.html — the manifesto: what Data Dawgs is for, "Data, not dogma", Bring Your Own Dawg, how the tiers work.
+receipts.html — every pre-registered forecast, the grading, calibration, the model scoreboard, 538 Classic, provenance, the tier audit.
+dawghouse.html — the shelf: work that was stopped, each item with its blocker and the condition that would reopen it.
+arena.html — the hub for games played against other people; links to all of the below.
+bozo.html — the weekly one-leg parlay game: board, ledger, closing-line value, standings, the belt.
+challenge.html — the Forecast Challenge: put a probability on a game before kickoff, get graded after.
+survivor.html — survivor pool: this week's board, pick popularity, an optimal path, a season simulation, model settings.
+guillotine.html — guillotine league companion. dfs.html — DFS solver, contest simulator, exposure, bankroll. The projections there are the USER'S OWN.
+teamdraft.html — the 32-team wins pool: spin wheel, board, eight rosters, Monte Carlo season sim.
+The draft rig: dashboard.html (a drafter's view), auction.html (the operator), board.html (read-only room view), bigboard.html (the projector), dataviz.html and report.html (afterwards), master.html (the player pool and scouting).
+strategy.html — the 2026 draft thesis, a dated snapshot of one analyst's argument.
+nfl.html — the NFL hub. stats.html — the EPA explorer. nfelo.html — nfelo power ratings and their backtest. calculators.html — ten deterministic calculators, nothing stored.
+cfb.html — the College Football lab: 2025 results, one retrodictive Elo, a matchup calculator, the build roadmap.
+markets.html — the prediction-markets section. ai.html — the A.I. section. Both are deliberately near-empty and say so above the fold; do not imply either has tools yet.
+data.html — the Library: every machine-readable file, shelved by the surface that owns it. connect.html — point your own AI at the site over MCP.
+signon.html — sign in, sign up, recover an account; every other page's sign-in chip lands here. dawgs.html — Rollo, the OG Data Dawg.
+Machine surfaces: /data/index.json lists every file with its as_of and hash; /llms.txt is the curated index; /data/surfaces.json maps pages to files and MCP tools.
+TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a standard declared in advance. DawgHouse = stopped, with the blocker still attached.`;
+
   /* Which surface are we on? A page can claim one by setting window.DD_BOTCTX:
        { sys: "...system block...", label: "LIVE TICKET", ctx: () => "...live data..." }
      Draft pages set nothing and keep exactly the behaviour they had, which is the point —
      this change must not move a single token of the auction prompt. */
   function surface(){
     const h = window.DD_BOTCTX;
-    if(h && typeof h.ctx === "function")
-      return {sys: h.sys || SYS_PLAIN, label: h.label || "CURRENT PAGE STATE", ctx: h.ctx};
-    if(window.DD_POOL && window.DD_POOL.length)
-      return {sys: SYS_DRAFT, label: "CURRENT DRAFT STATE", ctx};
-    return {sys: SYS_PLAIN, label: "PAGE STATE", ctx: () => "This page exposes no live state."};
+    const base = (window.DD_POOL && window.DD_POOL.length)
+      ? {sys: SYS_DRAFT, label: "CURRENT DRAFT STATE", ctx}
+      : {sys: SYS_PAGE, label: "THE PAGE IN FRONT OF THE READER, RENDERED AS TEXT", ctx: scan};
+    if(!h) return base;
+    /* A partial hook is legal and useful: a page can claim its own voice with sys
+       alone, or its own chips with chrome alone, and still inherit the reader below
+       it. Only a page that supplies ctx() replaces the state — curated beats
+       scraped, and nothing here changes what the draft pages send. */
+    return {sys:   h.sys   || base.sys,
+            label: h.label || base.label,
+            ctx:   typeof h.ctx === "function" ? h.ctx : base.ctx};
   }
+
+  /* ---------- The page reader ------------------------------------------------
+     Turns the rendered page into text. Deliberately literal: it reads the DOM after
+     the page has drawn it, so it sees the filter the reader set, the sheet they are
+     on and the rows they can actually see — and it cannot see a canvas chart, which
+     is why SYS_PAGE says so. Exposed as window.DDBotScan(budget) so a page with its
+     own curated ctx() can fold the rendering in underneath it. */
+  const ddTxt = el => (el.textContent || "").replace(/\s+/g, " ").trim();
+
+  function ddShown(el){
+    if(el.hidden || el.getAttribute("aria-hidden") === "true") return false;
+    return el.getClientRects().length > 0;
+  }
+  function ddInView(el){
+    const r = el.getBoundingClientRect();
+    return r.bottom > 0 && r.top < (window.innerHeight || 800);
+  }
+
+  function ddTable(tb, rowCap){
+    const all = tb.rows, keep = [];
+    let total = 0;
+    for(let i = 0; i < all.length; i++){
+      const tr = all[i];
+      if(!ddShown(tr)) continue;
+      total++;
+      if(keep.length >= rowCap) continue;
+      const cells = [];
+      for(let c = 0; c < tr.cells.length; c++) cells.push(ddTxt(tr.cells[c]));
+      while(cells.length && cells[cells.length - 1] === "") cells.pop();
+      if(cells.join("") !== "") keep.push(cells.join(" | "));
+    }
+    if(!keep.length) return "";
+    const cap = tb.caption ? " (" + ddTxt(tb.caption) + ")" : "";
+    return "TABLE" + cap + (total > keep.length ? " — first " + keep.length + " of " + total + " rows on screen" : "")
+      + ":\n" + keep.join("\n");
+  }
+
+  /* Settings ARE state on this site: the survivor model, a calculator's dials, a
+     filter. textContent cannot see them, so read the controls directly.
+     ⚠️ SETTINGS ONLY — dropdowns, checkboxes, numbers, sliders, dates. Free-text
+     boxes are deliberately NOT read. A page with a text field has a person typing
+     into it, and on signon.html and connect.html what they are typing is a name, an
+     email address or a personal connector URL that is itself the credential. None of
+     that belongs in a prompt leaving this browser. */
+  const DD_READ_TYPE = {number:1, range:1, checkbox:1, radio:1, date:1, month:1, week:1, time:1};
+  function ddControl(el){
+    const t = (el.type || "").toLowerCase();
+    if(el.tagName !== "SELECT" && !DD_READ_TYPE[t]) return "";
+    let name = el.getAttribute("aria-label") || el.getAttribute("data-label") || "";
+    if(!name && el.id){
+      try{ const lb = document.querySelector('label[for="' + (window.CSS && CSS.escape ? CSS.escape(el.id) : el.id) + '"]');
+           if(lb) name = ddTxt(lb); }catch(e){}
+    }
+    /* A wrapping label contains the control, so its textContent includes every
+       option in the dropdown — "Week Week 1Week 2Week 3…". Clone it, strip the
+       controls out, and what is left is the human label. */
+    if(!name && el.closest){
+      const lb = el.closest("label");
+      if(lb){
+        const c = lb.cloneNode(true), kids = c.querySelectorAll("input,select,textarea,option,datalist,button");
+        for(let i = 0; i < kids.length; i++) kids[i].remove();
+        name = ddTxt(c);
+      }
+    }
+    name = (name || el.placeholder || el.name || el.id || "setting").slice(0, 60);
+    let v = el.value;
+    if(t === "checkbox" || t === "radio"){ if(!el.checked) return ""; v = "on"; }
+    if(el.tagName === "SELECT"){ const o = el.options[el.selectedIndex]; v = o ? o.text : el.value; }
+    v = String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+    return v ? "[setting] " + name + ": " + v.slice(0, 80) : "";
+  }
+
+  function scan(budget){
+    const CAP = budget || 9000;
+    const root = document.querySelector("main") || document.querySelector(".wrap") || document.body;
+    if(!root) return "This page has not rendered anything readable yet.";
+    const SKIP_TAG = {SCRIPT:1, STYLE:1, NOSCRIPT:1, SVG:1, CANVAS:1, IFRAME:1, TEMPLATE:1,
+                      NAV:1, FOOTER:1, VIDEO:1, AUDIO:1, BUTTON:1, OPTION:1, PICTURE:1};
+    const SKIP_ID  = {nav:1, ddbDock:1, ddbLaunch:1, ddbCSS:1, ddbMsgs:1};
+    const secs = [{head:"", lines:[], seen:false}];
+    const said = {};
+    let cur = secs[0];
+
+    (function walk(node){
+      for(let el = node.firstElementChild; el; el = el.nextElementSibling){
+        const tag = el.tagName;
+        if(SKIP_TAG[tag] || SKIP_ID[el.id]) continue;
+        // data-ddb-skip is the page's own opt-out: anything under it is never read.
+        if(el.hasAttribute && el.hasAttribute("data-ddb-skip")) continue;
+        if(!ddShown(el)) continue;
+        if(/^H[1-3]$/.test(tag)){ cur = {head: ddTxt(el).slice(0, 120), lines: [], seen: ddInView(el)}; secs.push(cur); continue; }
+        if(/^H[4-6]$/.test(tag)){ cur.lines.push("### " + ddTxt(el)); continue; }
+        if(tag === "TABLE"){
+          const near = ddInView(el);
+          const s = ddTable(el, near ? 24 : 8);
+          if(s){ if(near) cur.seen = true; cur.lines.push(s); }
+          continue;
+        }
+        if(tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA"){
+          const s = ddControl(el); if(s) cur.lines.push(s);
+          continue;
+        }
+        if(tag === "P" || tag === "LI" || tag === "DT" || tag === "DD" || tag === "BLOCKQUOTE"
+           || tag === "FIGCAPTION" || tag === "SUMMARY"){
+          const s = ddTxt(el);
+          if(s && !said[s]){ said[s] = 1; if(ddInView(el)) cur.seen = true;
+            cur.lines.push((tag === "LI" ? "- " : "") + (s.length > 420 ? s.slice(0, 420) + "…" : s)); }
+          continue;
+        }
+        // A leaf-ish wrapper — a stat tile, a badge, a figure caption row. Keep it
+        // whole so "3.2" stays attached to the word that says what 3.2 is.
+        const deeper = el.querySelector
+          && el.querySelector("div,section,article,ul,ol,dl,table,form,h1,h2,h3,h4,p,input,select,textarea");
+        if(!deeper){
+          const s = ddTxt(el);
+          if(s && s.length <= 220 && !said[s]){ said[s] = 1; if(ddInView(el)) cur.seen = true; cur.lines.push(s); }
+          continue;
+        }
+        walk(el);
+      }
+    })(root);
+
+    const live = secs.filter(s => s.lines.length);
+    if(!live.length) return "This page has rendered nothing this reader can see yet.";
+    const focus = live.filter(s => s.seen)[0] || null;
+
+    /* Budget by ROUND ROBIN, not by fixed share. A fixed share per section starves
+       the sections after a long one — on the survivor page the whole equity board
+       fell off the end while the intro copy got the room. Every section takes one
+       line a round, the section on the reader's screen takes three, and the last
+       lines to be dropped are the ones nobody was looking at. */
+    const take = live.map(() => 0);
+    let used = live.reduce((a, s) => a + (s.head || "").length + 8, 0);
+    let cutSome = false, moved = true;
+    while(moved){
+      moved = false;
+      for(let i = 0; i < live.length; i++){
+        const s = live[i], quota = (s === focus) ? 3 : 1;
+        for(let k = 0; k < quota && take[i] < s.lines.length; k++){
+          const ln = s.lines[take[i]];
+          if(used + ln.length + 1 > CAP){ cutSome = true; break; }
+          take[i]++; used += ln.length + 1; moved = true;
+        }
+      }
+    }
+
+    const order = focus ? [focus].concat(live.filter(s => s !== focus)) : live;
+    const out = order.map(s => {
+      const i = live.indexOf(s), got = s.lines.slice(0, take[i]), rest = s.lines.length - take[i];
+      if(rest > 0){ got.push("[… " + rest + " more line" + (rest > 1 ? "s" : "") + " in this section, not shown]"); cutSome = true; }
+      return "## " + (s.head || "(top of the page)") + (s === focus ? "   <-- THE READER IS LOOKING AT THIS SECTION" : "")
+        + "\n" + got.join("\n");
+    });
+
+    const head = ["PAGE: " + (document.title || "") + "  (" + location.pathname.replace(/^\//, "") + ")",
+      "Below is the page as it is drawn right now. Sections are in document order except the one on the reader's screen, which is hoisted to the front. Hidden rows are excluded and long tables are trimmed."];
+    if(cutSome) head.push("⚠️ Parts of the page did not fit and were cut. If the answer needs a part that is not here, say the page has more rather than guessing at it.");
+    return head.join("\n") + "\n\n" + out.join("\n\n");
+  }
+  window.DDBotScan = scan;   // per-page ctx() blocks fold this in under their own state
 
   function ctx(){
     const POOL = window.DD_POOL || [];
@@ -2107,6 +2309,7 @@ STATE: everything saves in the browser on that device. A different device shows 
       const frame = () => JSON.stringify({max_tokens:700, messages:[
         {role:"system",content:SYS+"\n\n"+SF.sys},
         {role:"system",content:HELP},
+        {role:"system",content:MAP},
         {role:"system",content:SF.label},
         ...HIST.slice(-8)]}).length;
       const room = BODY_CAP - frame();
@@ -2121,6 +2324,7 @@ STATE: everything saves in the browser on that device. A different device shows 
       const payload = {max_tokens:700,
         messages:[{role:"system",content:SYS+"\n\n"+SF.sys},
                   {role:"system",content:"SITE MANUAL (how the site works — use for how-to questions):\n"+HELP},
+                  {role:"system",content:"SITE MAP (what lives on which page — use it to route):\n"+MAP},
                   {role:"system",content:SF.label+" (regenerated for every question):\n"+stateTxt},
                   ...HIST.slice(-8)]};
       if(direct) payload.model = window.DDBot.cfg().model;
@@ -3775,5 +3979,33 @@ window.DDSheets = function(cfg){
 })();
 </script>
 </div>
+<script>
+/* ---------------- Toto's surface: the 32-team wins pool ----------------
+   The system block is where the honesty constraints have to live, because Toto
+   answers from it and not from the page copy. Every limit the page states about
+   itself is restated here as an instruction, so he cannot be talked past one. */
+window.DD_BOTCTX = {
+  label: 'THE 32-TEAM DRAFT PAGE — board, rosters and simulation, as drawn right now',
+  title: 'Ask Toto — he reads this pool',
+  chrome: {sub:'reads the wins pool', ph:'Ask Toto about the pool…', chips:[
+    ['Who has the best roster, and how confident should I be?','Best roster?'],
+    ['Why do games between two of my own teams not help me?','Internal games'],
+    ['What does the reach number on a pick actually mean?','Reach explained']]},
+  sys: `RIGHT NOW you are on The 32-Team Draft: a private eight-person pool where everyone owns four NFL teams and total regular-season wins is the only criterion. Every number is read from /data/draft-2026.json.
+- ⚠️ NOTHING HERE IS GRADED AND NOBODY IS WINNING. If no game has been played, the tracker reads zero because zero is the true number. Say that before discussing any standing.
+- ⚠️ EXPECTED WINS IS A MARKET SNAPSHOT, NOT A FORECAST THIS SITE MADE OR GRADED. It is four books' prices devigged and renormalised so all 32 teams sum to 272, frozen at the draft-day devig and never recomputed — because the board's reach and value are claims about that day. It is NOT the posted line; the line carries the hold and this does not.
+- CONSERVATION IS THE WHOLE TRICK: a game pays exactly one win. Seasons are simulated game by game, not by drawing each team's win total, because independent draws would break that and hand a division-stacked roster a spread it does not have. Internal games — two teams on the same roster meeting — are a win that roster is guaranteed to collect and guaranteed to lose.
+- THE REACH FIGURE ON A PICK IS A DESCRIPTION OF THE BOARD, NOT A GRADE OF THE PICK, and it is a statement about draft day computed against the numbers as they stood then.
+- FINISHING PROBABILITIES ARE MONTE CARLO OVER THE SCHEDULE, not a forecast. No tie outcome is modelled, so the league's half-win-for-a-tie rule does not appear, and a tie for first is broken at random because the real tiebreakers are not in the payload.
+- The win distribution's mean sits up to 0.36 wins from expected wins at either extreme, which is what truncating at 0 and 17 does — that belongs to the distribution and nowhere else.
+- This is a private pool on a public site because the arithmetic is interesting. There is no signup and no money handled here; do not imply anyone can enter.`,
+  ctx: () => `THE 32-TEAM DRAFT PAGE. Everything is read from /data/draft-2026.json, built by scripts/team_draft_pool.py; the results and price feeds it composes are /data/nfl-schedule.json and /data/survivor.json. Tier: Pup. Nothing on the page is graded.
+WHAT EACH FIGURE IS: Posted line = the median regular-season win total on the board, half-points included. Expected wins = the four-book prices devigged and renormalised to 272, frozen at the draft-day devig. Δvig = the gap between the two. Σp = the 17 game probabilities summed. μdist = the mean of the win distribution. Internal = head-to-head meetings inside one roster, the only purely structural figure here. Par is 34 wins per roster (272 split eight ways) and 8.5 per team.
+WHERE A GAME'S NUMBER COMES FROM, resolved per game in order: a settled result if it has been played, a market price for an unplayed game, the model beyond the market's horizon, and before the season the frozen preseason devig. The switch is data-driven — one settled game anywhere flips the whole payload — so no date is hardcoded.
+THE SECTIONS: wins tracker against par · a spin wheel whose slices are finishing probability from the payload · Monte Carlo over all 272 games · expected wins for all 32 with the posted line marked · the 32x32 head-to-head grid · the snake board with reach · eight roster cards · week-by-week probabilities with same-owner collisions outlined · win distributions · every game as a table · a diagnostics panel that reports drift rather than only printing OK.
+
+` + (window.DDBotScan ? window.DDBotScan(5200) : "The page reader could not run, so nothing on the page can be read right now.")
+};
+</script>
 </body>
 </html>
