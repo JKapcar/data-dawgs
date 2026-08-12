@@ -65,6 +65,8 @@ import sys
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 OUT = REPO / "data" / "draft-2026.json"
+CANON = REPO / "data" / "nfl-schedule.json"     # settled results, tier 1
+LIVE = REPO / "data" / "survivor.json"          # market/model per game, tiers 2 and 3
 
 ROUNDS = 4
 TOTAL_TEAMS = 32
@@ -131,6 +133,55 @@ def model_sd(roster, teams):
     return round(max(var, 0.0) ** 0.5, 3)
 
 
+# --------------------------------------------------------------- the basis ----
+# WHERE A GAME'S NUMBER COMES FROM, resolved per game, in this order:
+#
+#   1. settled    the game was played. It is banked, not projected. Grows 0 -> 272.
+#   2. market     unplayed, a real price exists. Market primacy does not lapse in
+#                 September; nfelo backtests about a tenth of a point a game against
+#                 closing lines, which is not enough to override a live price.
+#   3. model      everything past the market's horizon, which is most of the season
+#                 for most of the year.
+#
+# Tiers 2 and 3 are already resolved by /data/survivor.json — that file's `src` says
+# which one each game is. So the in-season change is not "market to nfelo", it is
+# "frozen preseason totals to survivor.json plus a results feed".
+#
+# ⚠️ THE JOIN KEY IS (week, home, away), NOT the game id. survivor.json writes the
+# Rams as `LA` inside its `id` string while its own `h`/`a` fields say `LAR`. Joining
+# on the id silently drops all 17 Rams games — they just quietly fall back to the
+# preseason number and nothing looks wrong.
+#
+# ⚠️ PRESEASON IS THE DEFAULT AND IT IS DATA-DRIVEN. If nothing has been played, the
+# page uses the frozen 2026-08-09 devigged totals. The moment one game is settled the
+# whole payload flips to the composite. No date is hardcoded anywhere.
+def load_basis():
+    """Return {(week, home, away): {...}} for every canonical game, or {} if the
+    feeds are missing. Never raises — a missing feed means preseason, not a crash."""
+    out = {}
+    try:
+        canon = json.loads(CANON.read_text(encoding="utf-8"))
+        live = json.loads(LIVE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return out
+    price = {(g["wk"], g["h"], g["a"]): g for g in live["data"]["games"]}
+    for g in canon["data"]["games"]:
+        key = (g["week"], g["home_team"], g["away_team"])
+        p = price.get(key)
+        hs, as_ = g.get("home_score"), g.get("away_score")
+        settled = g.get("status") in ("final", "FINAL", "closed") and hs is not None and as_ is not None
+        row = {"settled": settled, "tier": None, "p_home": None, "home_win": None}
+        if settled:
+            row["tier"] = "settled"
+            # A tie is half a win to each side, which is also how the league scores it.
+            row["home_win"] = 1.0 if hs > as_ else 0.0 if hs < as_ else 0.5
+        elif p is not None:
+            row["tier"] = "market" if p.get("src") == "market" else "model"
+            row["p_home"] = p.get("p")
+        out[key] = row
+    return out
+
+
 # ------------------------------------------------------- the schedule refit ----
 # The payload arrives with two numbers that do not agree: each team's expected wins,
 # and a schedule of per-game probabilities whose sum lands up to 2.67 wins away from it.
@@ -190,7 +241,7 @@ def refit_schedule(teams, max_iter=60, tol=1e-6):
 
 
 # --------------------------------------------------------------- monte carlo ----
-def simulate(fitted, rosters, order, trials, seed):
+def simulate(fitted, rosters, order, trials, seed, banked=None):
     """Play `trials` whole seasons, game by game, and count where each roster lands.
 
     Simulating GAMES rather than team win totals is the only version that keeps the
@@ -213,6 +264,9 @@ def simulate(fitted, rosters, order, trials, seed):
     owner = {t: name for name, r in rosters.items() for t in r}
     names = list(order)
     idx = {n: i for i, n in enumerate(names)}
+    # Wins already on the board. Preseason this is all zeros and the loop below is the
+    # whole season; in-season it is the floor every simulated season starts from.
+    base = [float((banked or {}).get(n, 0.0)) for n in names]
     # Flatten to (owner_index_or_-1, owner_index_or_-1, p) so the hot loop is arithmetic.
     flat = [(idx.get(owner.get(x), -1), idx.get(owner.get(y), -1), p) for x, y, _w, p in fitted]
 
@@ -226,7 +280,7 @@ def simulate(fitted, rosters, order, trials, seed):
     random_ = rnd.random
 
     for _ in range(trials):
-        s = [0] * n
+        s = list(base)
         for oa, ob, p in flat:
             w = oa if random_() < p else ob
             if w >= 0:
@@ -241,6 +295,8 @@ def simulate(fitted, rosters, order, trials, seed):
         top2[order_[1]] += 1
         for i in range(n):
             total[i] += s[i]
+            # A tied game banks half a win, so a season total can land on .5. Bucket on
+            # the exact value rather than rounding it away — the tracker prints halves.
             hist[i][s[i]] = hist[i].get(s[i], 0) + 1
 
     out = {}
@@ -248,7 +304,7 @@ def simulate(fitted, rosters, order, trials, seed):
         counts = hist[i]
         mean = total[i] / trials
         var = sum(c * (w - mean) ** 2 for w, c in counts.items()) / trials
-        ordered = sorted(counts)
+        ordered = sorted(counts)          # numeric sort; keys may carry a .5 from a tie
         cum, q = 0, {}
         for w in ordered:
             cum += counts[w]
@@ -263,7 +319,8 @@ def simulate(fitted, rosters, order, trials, seed):
             "sd": round(var ** 0.5, 3),
             "p10": q.get("p10"), "p50": q.get("p50"), "p90": q.get("p90"),
             # The full mass, so the page can draw the curve without re-simulating.
-            "dist": {str(w): round(counts[w] / trials, 6) for w in ordered},
+            "dist": {(str(int(w)) if float(w).is_integer() else str(w)): round(counts[w] / trials, 6)
+                     for w in ordered},
         }
     return {
         "trials": trials,
@@ -337,6 +394,39 @@ def derive(d, sd_source, trials, seed):
         for g in v["schedule"]:
             g["wpf"] = round(by_game[(t, g["opp"], g["week"])], 5)
 
+    # ---- resolve where each game's number comes from, right now ------------------
+    basis = load_basis()
+    settled_total = sum(1 for r in basis.values() if r["settled"]) // 1
+    settled_games = len({k for k, r in basis.items() if r["settled"]})
+    in_season = settled_games > 0
+    tier_counts = {"settled": 0, "market": 0, "model": 0, "preseason": 0}
+
+    for t, v in teams.items():
+        banked = remaining = 0.0
+        for g in v["schedule"]:
+            home, away = (t, g["opp"]) if g["home"] else (g["opp"], t)
+            row = basis.get((g["week"], home, away))
+            if in_season and row and row["settled"]:
+                share = row["home_win"] if g["home"] else 1 - row["home_win"]
+                g["tier"], g["settled"], g["live"] = "settled", True, round(share, 4)
+                banked += share
+            elif in_season and row and row["p_home"] is not None:
+                share = row["p_home"] if g["home"] else 1 - row["p_home"]
+                g["tier"], g["settled"], g["live"] = row["tier"], False, round(share, 5)
+                remaining += share
+            else:
+                # Preseason, or a game the live feeds do not carry: the frozen
+                # 2026-08-09 devigged number, refit onto this team's expected wins.
+                g["tier"], g["settled"], g["live"] = "preseason", False, g["wpf"]
+                remaining += g["wpf"]
+            tier_counts[g["tier"]] += 1
+        # ⚠️ `ew` IS NEVER TOUCHED. It is what the market said on 2026-08-09 and it is
+        # what the draft was made against; the board's reach/value column is a claim
+        # about that day. `projected` is the live number and lives beside it.
+        v["banked"] = round(banked, 3)
+        v["remaining"] = round(remaining, 3)
+        v["projected"] = round(banked + remaining, 3)
+
     drafters = {}
     for slot, name in enumerate(order, start=1):
         roster = rosters[name]
@@ -347,6 +437,11 @@ def derive(d, sd_source, trials, seed):
             "slot": slot,
             "roster": roster,
             "ew": ew,
+            # Preseason these are 0 / ew / ew. In-season the first grows and the second
+            # shrinks, and their sum is what the tracker draws.
+            "banked": round(sum(teams[t]["banked"] for t in roster), 3),
+            "remaining": round(sum(teams[t]["remaining"] for t in roster), 3),
+            "projected": round(sum(teams[t]["projected"] for t in roster), 3),
             "par_delta": round(ew - d["par"], 2),
             "internal_games": internal_games(roster, overlap),
             "sd_sim": sd_source.get(name),
@@ -357,12 +452,44 @@ def derive(d, sd_source, trials, seed):
     drafted = {p["team"] for p in picks}
     undrafted = sorted((t for t in teams if t not in drafted), key=lambda t: -teams[t]["ew"])
 
+    # The 272 games as the simulation sees them: one entry per unplayed game at its live
+    # probability, and a constant per drafter for everything already decided.
+    sim_games, seen = [], set()
+    for t, v in teams.items():
+        for g in v["schedule"]:
+            key = tuple(sorted((t, g["opp"]))) + (g["week"],)
+            if key in seen or g["settled"]:
+                continue
+            seen.add(key)
+            sim_games.append((t, g["opp"], g["week"], g["live"]))
+    owner_of = {tm: name for name, r in rosters.items() for tm in r}
+    banked_by_owner = {name: 0.0 for name in order}
+    for t, v in teams.items():
+        if owner_of.get(t):
+            banked_by_owner[owner_of[t]] += v["banked"]
+
     return {
         "drafters": drafters,
         "undrafted": undrafted,
         "board": build_board(picks, teams, order),
         "picks_made": len(picks),
         "picks_total": len(order) * ROUNDS,
+        "basis": {
+            "mode": "in-season" if in_season else "preseason",
+            "settled_games": settled_games,
+            "total_games": TOTAL_WINS,
+            "tiers": tier_counts,
+            "resolution": [
+                "settled — the game was played; banked, not projected",
+                "market — unplayed with a real price; market primacy does not lapse in-season",
+                "model — beyond the market's horizon",
+                "preseason — the frozen 2026-08-09 devigged total, refit onto expected wins",
+            ],
+            "feeds": {"results": "/data/nfl-schedule.json", "prices": "/data/survivor.json"},
+            "switch": "data-driven: one settled game anywhere flips the payload to the "
+                      "composite. No date is hardcoded.",
+            "field": "live",
+        },
         "schedule_fit": {
             "method": "per-team logit offsets solved by Newton so each team's 17 fitted "
                       "game probabilities sum to its expected wins; complementarity and "
@@ -371,7 +498,10 @@ def derive(d, sd_source, trials, seed):
             "iterations": fit_iters,
             "field": "wpf",
         },
-        "simulation": simulate(fitted, rosters, order, trials, seed),
+        # ⚠️ The simulation plays the UNPLAYED games and adds what is already banked.
+        # Re-simulating a settled game would throw away a known result and quietly widen
+        # everybody's range for the rest of the season.
+        "simulation": simulate(sim_games, rosters, order, trials, seed, banked_by_owner),
     }
 
 
@@ -437,15 +567,24 @@ def diagnose(d, derived):
         ((k, round(sum(g["wp"] for g in t["schedule"]) - t["ew"], 3)) for k, t in teams.items()),
         key=lambda kv: -abs(kv[1]))
     worst = sched_drift[0]
-    add("schedule_vs_ew", "Game probabilities do not re-add to expected wins",
-        False,
-        f"Summing a team's 17 game probabilities lands up to {abs(worst[1]):.2f} wins away "
-        f"from its expected-wins figure ({worst[0]}: {sum(g['wp'] for g in teams[worst[0]]['schedule']):.2f} "
-        f"against {teams[worst[0]]['ew']:.2f}). Across all 32 the game probabilities sum to "
-        f"{sum(g['wp'] for t in teams.values() for g in t['schedule']):.0f} — the league total is "
-        f"right and the split between teams is not. The refit to market totals did not converge "
-        f"per team, so the ladder and the schedule strip are two different numbers and the page "
-        f"labels them as such rather than quietly picking one.",
+    # ⚠️ EVALUATED, NOT ASSERTED. This read "known drift" for the first payload, whose
+    # `wp` was the pre-refit model output and missed expected wins by up to 2.67 wins.
+    # The upstream generator fixed it. The check stays as the regression guard — if a
+    # future payload reintroduces the split, this is what catches it — but it reports
+    # what it measures rather than a conclusion baked in when the bug was live.
+    add("schedule_vs_ew", "The supplied game probabilities re-add to expected wins",
+        abs(worst[1]) < 0.05,
+        f"Summing a team's 17 supplied probabilities lands at most {abs(worst[1]):.4f} wins "
+        f"from its expected-wins figure (worst: {worst[0]}). That is four-decimal rounding "
+        f"across 17 games, not a disagreement — the ladder and the schedule strip are one "
+        f"number."
+        if abs(worst[1]) < 0.05 else
+        f"Summing a team's 17 supplied probabilities lands up to {abs(worst[1]):.2f} wins away "
+        f"from its expected-wins figure ({worst[0]}: "
+        f"{sum(g['wp'] for g in teams[worst[0]]['schedule']):.2f} against "
+        f"{teams[worst[0]]['ew']:.2f}). The league total is right and the split between teams "
+        f"is not, so the refit below is doing real work and the two numbers are not "
+        f"interchangeable.",
         abs(worst[1]), "known")
 
     # --- the drift worth knowing about, #2 ---------------------------------------
@@ -508,14 +647,21 @@ def diagnose(d, derived):
         round(fit_worst, 6), "hard")
 
     sim = derived["simulation"]
-    sim_worst = max(abs(sim["drafters"][n]["mean"] - derived["drafters"][n]["ew"])
+    # ⚠️ Compare against PROJECTED, not `ew`. In-season `ew` is deliberately frozen at
+    # the draft-day devig while the simulation plays the live board, so measuring the
+    # sim against `ew` would fail this check every week for a correct payload. Preseason
+    # the two are the same number, which is why the bug hid until results appeared.
+    live_total = "projected" if derived["basis"]["mode"] == "in-season" else "ew"
+    sim_worst = max(abs(sim["drafters"][n]["mean"] - derived["drafters"][n][live_total])
                     for n in d["draft_order"])
-    add("sim_vs_ladder", "Simulated roster totals land on the ladder's totals",
+    add("sim_vs_ladder", f"Simulated roster totals land on each roster's {live_total} total",
         sim_worst < 0.15,
         f"Across {sim['trials']:,} simulated seasons the worst roster mean sits "
-        f"{sim_worst:.3f} wins from the sum of its teams' expected wins. That agreement "
-        f"is the refit working — simulating the raw schedule instead would have put a "
-        f"roster up to 2.7 wins away from the number printed on its own card.",
+        f"{sim_worst:.3f} wins from its {live_total} total. That agreement is the refit and "
+        f"the banked floor working together — simulating the raw preseason schedule instead "
+        f"would have put a roster up to 2.7 wins away from the number printed on its own "
+        f"card, and re-simulating settled games would widen every range for the rest of "
+        f"the season.",
         round(sim_worst, 4), "hard")
 
     tie = sim["tie_for_first_rate"]
@@ -543,6 +689,43 @@ def diagnose(d, derived):
         f"describe the board as it stands right now and will move, hard, when the "
         f"remaining picks land.",
         len(incomplete), "known")
+
+    # --- the live conservation check ----------------------------------------------
+    # THE STRONGEST TEST THAT THE COMPOSITE IS WIRED RIGHT. Banked plus projected must
+    # equal 272 at every point in the season. If the three tiers are being blended
+    # wrongly — a game counted twice, a settled game also projected, the Rams silently
+    # falling back to preseason — this is where it shows up first.
+    b = derived["basis"]
+    banked = sum(t["banked"] for t in teams.values())
+    remaining = sum(t["remaining"] for t in teams.values())
+    add("live_conservation", "Banked plus projected still totals the season",
+        abs(banked + remaining - TOTAL_WINS) < 0.05,
+        f"{banked:.2f} banked + {remaining:.2f} projected = {banked + remaining:.2f} "
+        f"against {TOTAL_WINS}. {b['settled_games']} of {TOTAL_WINS} games are played. "
+        f"Per-game basis: " + ", ".join(f"{k} {v}" for k, v in b["tiers"].items() if v) + ".",
+        round(banked + remaining, 3), "hard")
+
+    add("basis_mode", f"The payload is in {b['mode']} mode",
+        True,
+        ("Nothing has been played, so every game carries the frozen 2026-08-09 devigged "
+         "total refit onto expected wins. The moment one game is settled this flips to "
+         "the composite by itself — no date is hardcoded."
+         if b["mode"] == "preseason" else
+         f"{b['settled_games']} games are settled and banked. Unplayed games take a real "
+         f"price where one exists ({b['tiers']['market']} of them) and the model beyond "
+         f"that ({b['tiers']['model']}). Expected wins on the ladder stay frozen at the "
+         f"draft-day devig — the board's reach and value are claims about that day and "
+         f"recomputing them against live ratings would make them retroactively wrong."),
+        b["settled_games"], "info")
+
+    if b["tiers"].get("preseason") and b["mode"] == "in-season":
+        add("basis_gaps", "Some games fell back to the preseason number",
+            False,
+            f"{b['tiers']['preseason']} games are in-season but matched neither the "
+            f"results feed nor the price feed, so they are still carrying the frozen "
+            f"preseason figure. That is the failure mode the (week, home, away) join "
+            f"exists to prevent; check the feeds rather than trusting these games.",
+            b["tiers"]["preseason"], "hard")
 
     # --- the two standard deviations ---------------------------------------------
     gaps = [(n, round(v["sd_model"] - v["sd_sim"], 3))
@@ -573,6 +756,32 @@ def diagnose(d, derived):
 
 
 # ------------------------------------------------------------------------ io ----
+def tracker(d, derived):
+    """Per drafter: banked wins by DRAFT ROUND, the total, and the projected finish."""
+    teams = d["teams"]
+    by_round = {}
+    for b in derived["board"]:
+        if b.get("team"):
+            by_round.setdefault(b["drafter"], {})[b["round"]] = b["team"]
+    out = {}
+    for name in d["draft_order"]:
+        slots = by_round.get(name, {})
+        rounds, teams_by_round = [], []
+        for r in range(1, ROUNDS + 1):
+            t = slots.get(r)
+            rounds.append(round(teams[t]["banked"], 1) if t else None)
+            teams_by_round.append(t)
+        v = derived["drafters"][name]
+        out[name] = {
+            "rounds": rounds,
+            "teams": teams_by_round,
+            "total": round(sum(x for x in rounds if x), 1),
+            "projected": v["projected"],
+            "remaining": v["remaining"],
+        }
+    return out
+
+
 def envelope(d, derived, diagnostics, as_of, built):
     """The /data/ contract: as_of and source on the outside, payload under `data`."""
     return {
@@ -590,7 +799,12 @@ def envelope(d, derived, diagnostics, as_of, built):
             "schedule": "17 games: week, opponent, home flag, and this team's win probability.",
             "schedule[].wp": "The payload's original per-game probability. Coherent game by game; does not re-add to `ew`.",
             "schedule[].wpf": "The same game after the schedule was refit onto `ew`. This is what the simulation uses.",
-            "simulation": "Monte Carlo over `wpf`, game by game. Finishing probabilities, not a forecast; nothing graded.",
+            "simulation": "Monte Carlo over `live`, game by game, on top of whatever is banked. Finishing probabilities, not a forecast; nothing graded.",
+            "schedule[].live": "What this game is worth right now: a settled result, a market price, a model price, or the frozen preseason number. `tier` says which.",
+            "schedule[].tier": "settled | market | model | preseason. Every game carries its own provenance.",
+            "teams[].banked": "Wins actually recorded. A tie counts half.",
+            "teams[].remaining": "Sum of the live probabilities for games not yet played.",
+            "teams[].projected": "banked + remaining. The in-season number. `ew` stays frozen at the draft-day devig beside it.",
             "overlap": "Sparse symmetric head-to-head game counts. 2 = division rival, 1 = other, absent = 0.",
             "wins_tracker": "Actual wins, by round, per drafter. Every value is zero — no game has been played.",
             "board[].delta": "Chosen team's expected wins minus the best still available. Descriptive, not a grade.",
@@ -619,13 +833,12 @@ def envelope(d, derived, diagnostics, as_of, built):
             "teams": d["teams"],
             "overlap": d["overlap"],
             "picks": sorted(d["picks"], key=lambda p: p["pick"]),
-            # Zeroes, deliberately. The tracker ships with the shape the season will
-            # fill in so nothing has to be rebuilt in week 1, and it reads zero because
-            # zero is the true number today.
-            "wins_tracker": {
-                name: {"rounds": [0, 0, 0, 0], "total": 0}
-                for name in d["draft_order"]
-            },
+            # DERIVED, not typed. Round N is the team taken in round N, so each cell is
+            # that team's banked wins and the row sums to the roster's. Preseason every
+            # cell is zero because zero is the true number; the shape does not change in
+            # week 1, it just starts filling in. `projected` rides alongside so the
+            # tracker can draw the remaining season as a ghost without a second lookup.
+            "wins_tracker": tracker(d, derived),
             **derived,
             "diagnostics": diagnostics,
         },

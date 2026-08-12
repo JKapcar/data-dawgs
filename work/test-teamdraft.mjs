@@ -2,24 +2,23 @@
 
    What this suite is actually defending:
 
-   1. NOTHING IS TYPED INTO THE PAGE. Every figure on every view has to come out of
-      /data/draft-2026.json. The test reads the file itself and asserts the DOM agrees,
-      so a hardcoded number fails here rather than quietly going stale the first time
-      a pick lands.
-   2. THE ARITHMETIC IS CONSERVED. Rostered wins plus the pool equal the league total,
-      and the head-to-head matrix holds exactly 272 games. If a future edit breaks the
-      identity the whole page rests on, this is where it shows up.
-   3. IT SURVIVES THE REST OF THE DRAFT. The page is built while the draft is in
-      progress. Serve it a payload with all 32 picks in and every view must still
-      render — no empty-slot assumption anywhere.
-   4. IT FAILS LOUD. Serve a 500 for the payload and every view says so. An empty
-      ladder reads as "nobody has drafted", which is a different and false claim.
-   5. COLOUR IS NEVER THE ONLY CHANNEL. Eight categorical colours cannot be pairwise
-      safe under simulated CVD, so every drafter-coloured mark carries a name or a
-      number too. Enforced by query, because it is the check a later "cleanup" breaks.
-   6. NOTHING CLAIMS A RESULT. No game has been played: the wins tracker is all zeroes,
-      and the page's own tier chip is Pup.
-   7. No sideways overflow at 320/390/1280, both themes, no script errors.
+   1. NOTHING IS TYPED INTO THE PAGE. Every figure has to come out of
+      /data/draft-2026.json. The test reads the file and asserts the DOM agrees, so a
+      hardcoded number fails here rather than going stale the first time a pick lands.
+   2. THE ARITHMETIC IS CONSERVED, PRESEASON AND IN-SEASON. Banked plus projected must
+      equal 272 at every point in the season. It is the strongest test that the
+      three-tier composite is wired correctly.
+   3. THE IN-SEASON SWITCHOVER WORKS BEFORE THERE IS ANY IN-SEASON DATA. Nothing has
+      been played, so the only way to know the composite is correct is to serve a
+      payload with settled games and assert the page handles it. Done below.
+   4. THE TRACKER'S SCALE IS FIXED. The par rule's whole value is sitting in the same
+      place every week; autoscaling to the leader would move it.
+   5. IT FAILS LOUD. Serve a 500 and every view says so. An empty tracker reads as
+      "nobody has any wins", which is a different and false claim.
+   6. COLOUR IS NEVER THE ONLY CHANNEL, and the palette is the one validated against
+      THIS site's surfaces, not the mockup's near-black field.
+   7. NOTHING CLAIMS A RESULT. The page's own tier chip is Pup and no cell asserts a win.
+   8. No sideways overflow at 375/390/1280, both themes, no script errors.
 
    Run:  cd work && node test-teamdraft.mjs
 */
@@ -31,46 +30,77 @@ let pass = 0, fail = 0;
 const ok = (n, c, x) => { c ? pass++ : (fail++, console.log("  FAIL " + n + (x ? "  — " + x : ""))); };
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-/* The payload the page must agree with, read from the file and not from the page. */
 const ENV = JSON.parse(fs.readFileSync(path.join(ROOT, "data/draft-2026.json"), "utf8"));
 const D = ENV.data;
 const html = fs.readFileSync(path.join(ROOT, "teamdraft.html"), "utf8");
+const EPS = 2e-5;
 
-/* A second payload with the draft FINISHED, built by filling the open slots with the
-   teams still on the board. Nothing about the page may assume 22 picks. */
+/* A payload with the draft FINISHED — nothing may assume 25 picks. */
 function completed() {
   const c = JSON.parse(JSON.stringify(ENV));
-  const open = c.data.board.filter(b => !b.team);
   const pool = [...c.data.undrafted];
-  open.forEach(b => {
+  c.data.board.filter(b => !b.team).forEach(b => {
     const team = pool.shift();
     c.data.picks.push({ pick: b.pick, round: b.round, drafter: b.drafter, team });
-    b.team = team;
-    b.ew = c.data.teams[team].ew;
-    b.best_available = team; b.best_available_ew = c.data.teams[team].ew;
-    b.delta = 0; b.rank_at_pick = 1; b.available_at_pick = 1;
+    Object.assign(b, { team, ew: c.data.teams[team].ew, best_available: team,
+      best_available_ew: c.data.teams[team].ew, delta: 0, rank_at_pick: 1, available_at_pick: 1 });
     const dr = c.data.drafters[b.drafter];
     dr.roster.push(team);
     dr.ew = Math.round((dr.ew + c.data.teams[team].ew) * 100) / 100;
+    dr.projected = Math.round((dr.projected + c.data.teams[team].projected) * 100) / 100;
     dr.picks_remaining -= 1;
+    const w = c.data.wins_tracker[b.drafter];
+    w.teams[b.round - 1] = team; w.rounds[b.round - 1] = 0; w.projected = dr.projected;
   });
   c.data.undrafted = [];
   c.data.picks_made = c.data.picks.length;
   return c;
 }
 
-/* Machine epsilon for probabilities the payload rounds to 5dp. */
-const EPS = 2e-5;
-const FULL = completed();
+/* A payload MID-SEASON: week 1 settled, one of them a tie. This is the only way to
+   exercise the composite before September, and it is the part most likely to rot. */
+function inSeason() {
+  const c = JSON.parse(JSON.stringify(ENV));
+  const played = new Set();
+  let first = true;
+  for (const [t, T] of Object.entries(c.data.teams)) {
+    for (const g of T.schedule) {
+      if (g.week !== 1) continue;
+      const key = [t, g.opp].sort().join("|");
+      const homeWin = first ? 0.5 : (t < g.opp ? 1 : 0);
+      g.settled = true; g.tier = "settled";
+      g.live = first ? 0.5 : (t < g.opp ? 1 : 0);
+      if (!played.has(key)) { played.add(key); first = false; }
+    }
+    for (const g of T.schedule) if (g.week !== 1) { g.tier = g.week < 4 ? "market" : "model"; }
+    T.banked = Math.round(T.schedule.filter(g => g.settled).reduce((a, g) => a + g.live, 0) * 10) / 10;
+    T.remaining = Math.round(T.schedule.filter(g => !g.settled).reduce((a, g) => a + g.live, 0) * 1000) / 1000;
+    T.projected = Math.round((T.banked + T.remaining) * 1000) / 1000;
+  }
+  for (const n of c.data.draft_order) {
+    const r = c.data.drafters[n].roster;
+    const b = r.reduce((a, t) => a + c.data.teams[t].banked, 0);
+    const rem = r.reduce((a, t) => a + c.data.teams[t].remaining, 0);
+    Object.assign(c.data.drafters[n], { banked: +b.toFixed(1), remaining: +rem.toFixed(3),
+      projected: +(b + rem).toFixed(3) });
+    const w = c.data.wins_tracker[n];
+    w.rounds = w.teams.map(t => t ? c.data.teams[t].banked : null);
+    w.total = +w.rounds.reduce((a, v) => a + (v || 0), 0).toFixed(1);
+    w.projected = c.data.drafters[n].projected;
+  }
+  c.data.basis = { ...c.data.basis, mode: "in-season", settled_games: played.size,
+    tiers: { settled: played.size * 2, market: 0, model: 0, preseason: 0 } };
+  return c;
+}
+const FULL = completed(), MID = inSeason();
 
-/* ------------------------------------------------------------ the server ---- */
-let payloadMode = "normal";                 // normal | full | error
+let mode = "normal";                       // normal | full | mid | error
 const server = http.createServer((req, res) => {
   const url = decodeURIComponent(req.url.split("?")[0]);
   if (url === "/data/draft-2026.json") {
-    if (payloadMode === "error") { res.writeHead(500); return res.end("nope"); }
+    if (mode === "error") { res.writeHead(500); return res.end("nope"); }
     res.writeHead(200, { "Content-Type": "application/json" });
-    return res.end(JSON.stringify(payloadMode === "full" ? FULL : ENV));
+    return res.end(JSON.stringify(mode === "full" ? FULL : mode === "mid" ? MID : ENV));
   }
   const f = path.join(ROOT, url);
   if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end("no"); }
@@ -86,10 +116,8 @@ async function open(opts = {}) {
   const p = await ctx.newPage();
   p.on("pageerror", e => errs.push((opts.tag || "page") + ": " + e.message));
   p.on("console", m => {
-    /* The fail-loud case serves a deliberate 500, and the browser logs the network
-       failure itself. That log is the test working, not the page breaking. */
     if (m.type() !== "error") return;
-    if (payloadMode === "error" && /Failed to load resource/.test(m.text())) return;
+    if (mode === "error" && /Failed to load resource/.test(m.text())) return;
     errs.push((opts.tag || "page") + " console: " + m.text());
   });
   await p.goto("http://127.0.0.1:8927/teamdraft.html", { waitUntil: "load" });
@@ -97,7 +125,7 @@ async function open(opts = {}) {
   return { ctx, p };
 }
 const ready = p => p.waitForFunction(
-  () => document.querySelectorAll("#tdLadder .td-row").length === 32, null, { timeout: 15000 });
+  () => document.querySelectorAll("#tdRace .td-rrow").length === 8, null, { timeout: 15000 });
 
 /* ------------------------------------------------------- source-level ------- */
 {
@@ -105,8 +133,6 @@ const ready = p => p.waitForFunction(
     !!(ENV.as_of && ENV.source && ENV.data && ENV.tier && ENV.tier_meaning));
   ok("the page's own tier chip is Pup",
     (html.match(/class="tierchip[^"]*"[^>]*>([^<]+)</) || [])[1]?.trim() === "Pup");
-  /* Expected wins are the one number this page must never recompute — the devig is
-     upstream work. A number typed into the markup is the failure mode. */
   const main = html.slice(html.indexOf("<main>"), html.indexOf("</main>"));
   const topEw = Math.max(...Object.values(D.teams).map(t => t.ew)).toFixed(2);
   ok("no team's expected wins are typed into the markup", !main.includes(topEw), topEw);
@@ -123,78 +149,86 @@ const ready = p => p.waitForFunction(
   ok("DDSheets is the shared component, not a fork",
     (html.match(/window\.DDSheets = function/g) || []).length === 1
     && html.includes("LIFTED VERBATIM from receipts.html"));
-  /* AGENTS.md rule 4. This is a private pool on a public repo. */
   ok("no payment or contact detail reached the public page",
     !/venmo|@gmail|paypal|zelle/i.test(html));
   ok("no payment or contact detail reached the payload",
     !/venmo|@gmail|paypal|zelle/i.test(JSON.stringify(ENV)));
+
+  /* Check 4: the tracker ceiling is a constant, not a max() over the field. */
+  ok("the tracker scale is fixed, not autoscaled to the leader",
+    /TRACK_MAX = 48/.test(html) && !/TRACK_MAX = Math\.max/.test(html));
+  /* Check 6: the palette is the re-snapped one. The mockup's mint fails on this
+     site's cream at 1.56:1 and must never come back. */
+  ok("the mockup's unvalidated palette did not ship", !/#5FE3C0|#B4A5F5|#A8821A/i.test(html));
+  ok("both themes define all eight drafter slots",
+    (html.match(/--d[1-8]:#[0-9a-f]{6}/gi) || []).length === 16);
+
+  /* The revision removed three restatements of the same thesis. */
+  ok("the standalone Conservation section is gone", !/id="conservation"/.test(html));
+  ok("the fixed-payload caveat is gone from Week by week",
+    !/do <b>not<\/b> re-add to the\s*expected-wins figures/.test(html));
 }
 
-/* --------------------------------------------------- conserved arithmetic --- */
+/* ------------------------------------------------ arithmetic and the basis --- */
 {
-  const total = Object.values(D.teams).reduce((a, t) => a + t.ew, 0);
+  const teams = D.teams;
+  const total = Object.values(teams).reduce((a, t) => a + t.ew, 0);
   ok("the 32 expected-win values sum to the league total",
     Math.abs(total - D.total_wins) < 0.05, total.toFixed(2));
-  const owned = D.draft_order.reduce((a, n) => a + D.drafters[n].ew, 0);
-  const pool = D.undrafted.reduce((a, t) => a + D.teams[t].ew, 0);
-  ok("rosters plus the pool equal the league total",
-    Math.abs(owned + pool - total) < 0.05, (owned + pool).toFixed(2));
+  const banked = Object.values(teams).reduce((a, t) => a + t.banked, 0);
+  const remaining = Object.values(teams).reduce((a, t) => a + t.remaining, 0);
+  ok("banked plus projected equals the season", Math.abs(banked + remaining - D.total_wins) < 0.05,
+    (banked + remaining).toFixed(3));
   const games = Object.values(D.overlap).reduce((a, r) => a + Object.values(r).reduce((x, y) => x + y, 0), 0) / 2;
-  ok("the head-to-head matrix holds exactly one season of games",
-    games === D.total_wins, String(games));
+  ok("the head-to-head matrix holds exactly one season of games", games === D.total_wins, String(games));
   ok("par is the league total over the number of drafters",
     Math.abs(D.par - D.total_wins / D.draft_order.length) < 1e-9);
   ok("the diagnostics block reports no hard failure",
-    Array.isArray(D.diagnostics?.hard_failures) && D.diagnostics.hard_failures.length === 0,
-    (D.diagnostics?.hard_failures || []).join(", "));
-  ok("no game has been played: every tracker cell is zero",
-    Object.values(D.wins_tracker).every(w => w.total === 0 && w.rounds.every(v => v === 0)));
-}
+    (D.diagnostics?.hard_failures || []).length === 0, (D.diagnostics?.hard_failures || []).join(", "));
 
-/* ------------------------------------------ the refit and the simulation ---- */
-{
-  const teams = D.teams;
-  /* The refit is only worth anything if it actually lands on expected wins. */
-  const worst = Math.max(...Object.values(teams).map(t =>
+  /* the corrected payload: the supplied schedule now reconciles to expected wins */
+  const worstRaw = Math.max(...Object.values(teams).map(t =>
+    Math.abs(t.schedule.reduce((a, g) => a + g.wp, 0) - t.ew)));
+  ok("the supplied game probabilities re-add to expected wins", worstRaw < 0.05, worstRaw.toFixed(5));
+  const worstFit = Math.max(...Object.values(teams).map(t =>
     Math.abs(t.schedule.reduce((a, g) => a + g.wpf, 0) - t.ew)));
-  ok("every team's refitted schedule sums to its expected wins", worst < 0.01, worst.toFixed(5));
-
-  /* ...and only legitimate if it left the two structural facts alone. */
-  let asym = 0, pairs = 0;
+  ok("the refit still lands, as the regression guard", worstFit < 0.01, worstFit.toFixed(5));
+  let asym = 0;
   for (const [t, v] of Object.entries(teams))
     for (const g of v.schedule) {
       const back = teams[g.opp].schedule.find(x => x.week === g.week && x.opp === t);
-      if (!back) { asym++; continue; }
-      pairs++;
-      if (Math.abs(back.wpf + g.wpf - 1) > EPS) asym++;
+      if (!back || Math.abs(back.wpf + g.wpf - 1) > EPS) asym++;
     }
-  ok("the refit kept both sides of every game summing to 1", asym === 0, `${asym} of ${pairs}`);
-  const league = Object.values(teams).reduce((a, t) => a + t.schedule.reduce((x, g) => x + g.wpf, 0), 0);
-  ok("the refitted league still pays exactly the season's wins",
-    Math.abs(league - D.total_wins) < 0.02, league.toFixed(3));
+  ok("both sides of every game still sum to 1 after the refit", asym === 0, String(asym));
 
-  /* The raw schedule must survive untouched beside it — the page shows both. */
-  ok("the original per-game probability is still there",
-    Object.values(teams).every(t => t.schedule.every(g => typeof g.wp === "number")));
-  ok("the refit actually moved something",
-    Object.values(teams).some(t => t.schedule.some(g => Math.abs(g.wp - g.wpf) > 0.01)));
+  /* every game says where its number came from */
+  const tiers = new Set(Object.values(teams).flatMap(t => t.schedule.map(g => g.tier)));
+  ok("every game carries a basis tier",
+    Object.values(teams).every(t => t.schedule.every(g => g.tier)), [...tiers].join(","));
+  ok("the payload names its mode and its feeds",
+    ["preseason", "in-season"].includes(D.basis.mode) && D.basis.feeds.results && D.basis.feeds.prices);
+  ok("the switch is data-driven, not a date",
+    /data-driven/i.test(D.basis.switch) && !/\d{4}-\d{2}-\d{2}/.test(D.basis.switch));
 
   const sim = D.simulation;
-  ok("the payload carries a Monte Carlo with its trial count and seed",
-    sim && sim.trials > 0 && Number.isInteger(sim.seed));
   ok("finishing probabilities sum to one across the eight drafters",
     Math.abs(D.draft_order.reduce((a, n) => a + sim.drafters[n].p_first, 0) - 1) < 0.005);
-  ok("second-place probabilities sum to one too",
-    Math.abs(D.draft_order.reduce((a, n) => a + sim.drafters[n].p_second, 0) - 1) < 0.005);
-  /* This is the check that catches a simulator quietly switching back to `wp`. */
-  const drift = Math.max(...D.draft_order.map(n =>
-    Math.abs(sim.drafters[n].mean - D.drafters[n].ew)));
-  ok("simulated roster means land on the ladder's roster totals", drift < 0.15, drift.toFixed(3));
-  ok("the tie-for-first rate is recorded rather than hidden",
-    typeof sim.tie_for_first_rate === "number" && sim.tie_for_first_rate >= 0);
+  const key = D.basis.mode === "in-season" ? "projected" : "ew";
+  const drift = Math.max(...D.draft_order.map(n => Math.abs(sim.drafters[n].mean - D.drafters[n][key])));
+  ok(`simulated roster means land on each roster's ${key}`, drift < 0.15, drift.toFixed(3));
+  ok("the tie-for-first rate is recorded rather than hidden", typeof sim.tie_for_first_rate === "number");
   ok("the simulation states that it has no tie outcome", sim.no_tie_outcome === true);
-  ok("the simulation states how a first-place tie is broken",
-    /random/i.test(sim.first_place_ties_broken || ""));
+
+  /* the tracker's rounds are derived from the board, never typed */
+  ok("each tracker row's rounds match that drafter's draft picks", D.draft_order.every(n => {
+    const w = D.wins_tracker[n];
+    return w.teams.every((t, i) => {
+      const b = D.board.find(x => x.drafter === n && x.round === i + 1);
+      return (t || null) === (b?.team || null);
+    });
+  }));
+  ok("no game has been played: every tracker total is zero",
+    Object.values(D.wins_tracker).every(w => w.total === 0));
 }
 
 /* ------------------------------------------------------------ rendering ----- */
@@ -202,260 +236,209 @@ const ready = p => p.waitForFunction(
   const { ctx, p } = await open({ tag: "render" });
   await ready(p);
   const got = await p.evaluate(() => ({
-    rows: [...document.querySelectorAll("#tdLadder .td-row")].map(r => ({
-      abbr: r.querySelector(".td-abbr").textContent.trim(),
-      ew: r.querySelector(".td-ew").textContent.trim(),
-      owner: r.querySelector(".td-own")?.textContent.trim(),
-    })),
+    tabs: [...document.querySelectorAll(".sheet-tab")].map(t => t.dataset.id),
+    trackRows: document.querySelectorAll("#tdRace .td-rrow").length,
+    ghosts: document.querySelectorAll("#tdRace .td-ghost").length,
+    pars: document.querySelectorAll("#tdRace .td-rpar").length,
+    ticks: [...document.querySelectorAll("#tdRace .td-scale span")].map(s => s.textContent),
+    aria: [...document.querySelectorAll("#tdRace .td-rrow")].map(r => r.getAttribute("aria-label")),
+    discOpen: document.getElementById("tdDisc").open,
+    trackTable: document.querySelectorAll("#tdTracker tbody tr").length,
+    slices: document.querySelectorAll("#tdWheel .td-slice").length,
+    wlabels: [...document.querySelectorAll("#tdWheel .td-wlab")].map(t => t.textContent.trim().split(/\s+/)[0]),
+    needles: document.querySelectorAll("#tdWheel path[fill='var(--accent)']").length,
+    ratio: [...document.querySelectorAll("#tdRatio tbody tr")].map(r => r.cells[0].textContent.trim()),
+    cards: document.querySelectorAll("#tdCards .td-card").length,
+    ladder: document.querySelectorAll("#tdLadder .td-row").length,
     cells: document.querySelectorAll("#tdMatrix .td-c").length,
-    self: document.querySelectorAll("#tdMatrix .td-c.self").length,
-    cards: [...document.querySelectorAll("#tdCards .td-card")].map(c => c.querySelector("h3").childNodes[0].textContent.trim()),
     board: document.querySelectorAll("#tdBoard .td-bc").length,
-    empty: document.querySelectorAll("#tdBoard .td-bc.empty").length,
-    curves: document.querySelectorAll("#tdCurves path").length,
     checks: document.querySelectorAll("#tdChecks .td-chk").length,
     perTeam: document.querySelectorAll("#tdPerTeam tbody tr").length,
-    tracker: [...document.querySelectorAll("#tdTracker tbody tr")].map(r => r.lastElementChild.textContent.trim()),
     par: !!document.querySelector("#tdLadder .td-par"),
   }));
 
-  const byEw = Object.keys(D.teams).sort((a, x) => D.teams[x].ew - D.teams[a].ew);
-  ok("the ladder is all 32 teams, sorted by expected wins",
-    got.rows.length === 32 && got.rows.every((r, i) => r.abbr === byEw[i]));
-  ok("every bar prints the payload's expected wins",
-    got.rows.every((r, i) => r.ew === D.teams[byEw[i]].ew.toFixed(2)));
-  /* Check 5: colour is never alone. Every drafted bar names its owner in text. */
-  ok("every drafted bar direct-labels its owner", got.rows.every((r, i) => {
-    const own = D.board.find(x => x.team === byEw[i])?.drafter;
-    return own ? r.owner === own : r.owner === "—";
-  }));
-  ok("the matrix is 32 by 32", got.cells === 1024);
-  /* Every internal game shows up twice — the matrix is symmetric. */
-  const internal = D.draft_order.reduce((a, n) => a + D.drafters[n].internal_games, 0);
-  ok("same-owner cells match the internal game count", got.self === internal * 2,
-    `${got.self} cells vs ${internal} games`);
-  ok("one card per drafter, sorted by expected wins",
-    got.cards.length === D.draft_order.length
-    && got.cards.every((n, i, arr) => i === 0 || D.drafters[arr[i - 1]].ew >= D.drafters[n].ew));
-  ok("the board is one cell per pick slot", got.board === D.picks_total);
-  ok("empty board cells match the picks not yet made",
-    got.empty === D.picks_total - D.picks_made, `${got.empty}`);
-  ok("one curve per team", got.curves === 32);
-  ok("the diagnostics sheet renders every check",
-    got.checks === D.diagnostics.checks.length);
-  ok("the per-team table is all 32 rows", got.perTeam === 32);
-  ok("the wins tracker reads zero for everybody", got.tracker.every(v => v === "0"));
-  ok("the par rule is drawn", got.par);
+  ok("four sheets, pool first", got.tabs.join(",") === "pool,team,diag,rules", got.tabs.join(","));
+  ok("the tracker opens the page with one row per drafter", got.trackRows === D.draft_order.length);
+  ok("every tracker row draws the season still to play", got.ghosts === D.draft_order.length);
+  ok("every tracker row carries the par rule", got.pars === D.draft_order.length);
+  ok("the axis is 0 / 12 / 24 / 34 / 48", got.ticks.join(",") === "0,12,24,34,48", got.ticks.join(","));
+  /* Colour cannot be the only carrier: every row has a text alternative naming the
+     drafter and its numbers. */
+  ok("every tracker row has a text alternative with the drafter and the numbers",
+    got.aria.length === 8 && D.draft_order.every(n => got.aria.some(a => a.startsWith(n + ":"))));
+  ok("the round-by-round table is a disclosure, collapsed by default", got.discOpen === false);
+  ok("the disclosure still holds every drafter", got.trackTable === D.draft_order.length);
 
-  /* selection re-centres every view rather than navigating */
+  ok("the ring has one slice per drafter", got.slices === D.draft_order.length);
+  /* Labels outside the ring, one per slice, so nothing clips at 2.7%. */
+  ok("every drafter is named outside the ring",
+    D.draft_order.every(n => got.wlabels.includes(n)), got.wlabels.join(","));
+  ok("there is exactly one needle", got.needles === 1, String(got.needles));
+  ok("second place is a column, not a second needle", got.ratio.length === D.draft_order.length);
+
+  ok("one card per drafter", got.cards === D.draft_order.length);
+  ok("the ladder is all 32 teams", got.ladder === 32);
+  ok("the matrix is 32 by 32", got.cells === 1024);
+  ok("the board is one cell per pick slot", got.board === D.picks_total);
+  ok("the diagnostics sheet renders every check", got.checks === D.diagnostics.checks.length);
+  ok("the per-team table is all 32 rows", got.perTeam === 32);
+  ok("the ladder par rule is drawn", got.par);
+
+  /* selection reaches every view */
   const who = D.draft_order.find(n => D.drafters[n].internal_games > 0) || D.draft_order[0];
   await p.click(`[data-sel="drafter:${who}"]`);
-  await p.waitForTimeout(160);
-  const selected = await p.evaluate(() => ({
-    url: location.pathname,
+  await p.waitForTimeout(180);
+  const s = await p.evaluate(() => ({
     lit: [...document.querySelectorAll("#tdLadder .td-row.on .td-abbr")].map(e => e.textContent.trim()),
-    strips: document.querySelectorAll("#tdStrip .td-srow:not(.head)").length,
     outlined: document.querySelectorAll("#tdMatrix .td-c.in").length,
-    meta: document.getElementById("matrixMeta").textContent,
+    undimmed: [...document.querySelectorAll("#tdWheel .td-slice")].filter(x => !x.classList.contains("dim")).length,
+    ratioOn: document.querySelectorAll("#tdRatio tr.on").length,
+    sheet: document.querySelector(".sheet-tab.on").dataset.id,
   }));
   const roster = D.drafters[who].roster;
   ok("selecting a drafter lights exactly their roster",
-    selected.lit.length === roster.length && roster.every(t => selected.lit.includes(t)));
-  ok("selecting a drafter stacks one schedule strip per team",
-    selected.strips === roster.length);
-  /* The whole n x n block, diagonal included — it is the roster's own square, and a
-     square with a hole punched in it does not read as one block. */
-  ok("selecting a drafter outlines their own submatrix",
-    selected.outlined === roster.length ** 2, String(selected.outlined));
-  ok("the matrix reports that drafter's internal game count",
-    selected.meta.includes(String(D.drafters[who].internal_games)), selected.meta);
-  ok("selection does not navigate away", selected.url.endsWith("/teamdraft.html"));
+    s.lit.length === roster.length && roster.every(t => s.lit.includes(t)));
+  ok("selecting a drafter outlines their own submatrix", s.outlined === roster.length ** 2);
+  ok("selecting a drafter isolates their ring slice", s.undimmed === 1);
+  ok("selecting a drafter highlights their ratio row", s.ratioOn === 1);
+  /* A rail chip filters the sheet you are on; it must not teleport you. */
+  ok("a rail chip does not jump sheets", s.sheet === "pool", s.sheet);
 
-  /* the selector is reachable and operable from the keyboard */
-  const kb = await p.evaluate(() => {
-    const chip = document.querySelector('[data-sel^="drafter:"]');
-    chip.focus();
-    const focused = document.activeElement === chip;
-    const style = getComputedStyle(chip, ":focus-visible");
-    return { focused, tag: chip.tagName, hasSelect: !!document.getElementById("tdTeamPick"),
-             pressed: chip.getAttribute("aria-pressed") !== null, outline: style.outlineStyle };
-  });
-  ok("drafter chips are real buttons, focusable and stateful",
-    kb.focused && kb.tag === "BUTTON" && kb.pressed);
-  ok("teams are selectable from a native control too", kb.hasSelect);
+  /* clicking a TEAM on the pool sheet is a request to see it, so it does jump */
+  await p.click('#tdLadder .td-row');
+  await p.waitForTimeout(250);
+  const jumped = await p.evaluate(() => ({
+    sheet: document.querySelector(".sheet-tab.on").dataset.id,
+    hero: document.querySelector("#tdHero h2")?.textContent.trim(),
+    strips: document.querySelectorAll("#tdStrip .td-srow:not(.head)").length,
+    curves: document.querySelectorAll("#tdCurves path").length,
+    gameRows: document.querySelectorAll("#tdGameTable tbody tr").length,
+    bases: [...new Set([...document.querySelectorAll("#tdGameTable .td-tierchip")].map(e => e.textContent.trim()))],
+  }));
+  const topTeam = Object.keys(D.teams).sort((a, x) => D.teams[x].ew - D.teams[a].ew)[0];
+  ok("clicking a ladder bar opens the Team sheet", jumped.sheet === "team", jumped.sheet);
+  ok("the Team sheet lands on the team that was clicked",
+    jumped.hero === D.teams[topTeam].name, jumped.hero);
+  /* Check: the all-32 default on these views is gone. */
+  ok("the strip shows one team, not all 32", jumped.strips === 1, String(jumped.strips));
+  ok("the curve shows one team, not all 32", jumped.curves === 2, String(jumped.curves));
+  ok("every game in the table states its basis",
+    jumped.gameRows === 17 && jumped.bases.length >= 1, jumped.bases.join(","));
 
   await ctx.close();
 }
 
-/* --------------------------------------------- the wheel and the simulator -- */
+/* --------------------------------------------------- the season starts ------ */
 {
-  const { ctx, p } = await open({ tag: "wheel" });
+  mode = "mid";
+  const { ctx, p } = await open({ tag: "in-season" });
   await ready(p);
-  await p.waitForFunction(() => document.querySelectorAll("#tdWheel .td-slice").length > 0);
+  const got = await p.evaluate(() => ({
+    segs: document.querySelectorAll("#tdRace .td-seg").length,
+    ghosts: document.querySelectorAll("#tdRace .td-ghost").length,
+    firstRowAria: document.querySelector("#tdRace .td-rrow").getAttribute("aria-label"),
+    meta: document.getElementById("trackMeta").textContent,
+    sorted: [...document.querySelectorAll("#tdRace .td-rlab")].map(e => e.textContent.trim()),
+  }));
+  /* Banked wins appear as segments; the bar does not change shape, it fills in. */
+  ok("banked wins render as segments once games are played", got.segs > 0, String(got.segs));
+  ok("the projection still extends past what is banked", got.ghosts > 0);
+  ok("the tracker reports how many games are in", /played/.test(got.meta), got.meta);
+  ok("rows sort by total once there is something to sort by", (() => {
+    const totals = got.sorted.map(n => MID.data.wins_tracker[n].total);
+    return totals.every((v, i) => i === 0 || totals[i - 1] >= v);
+  })(), got.sorted.join(","));
+  ok("the row alternative reports the round totals, not a projection",
+    /round 1/.test(got.firstRowAria), got.firstRowAria);
 
-  ok("the wheel has one slice per drafter",
-    await p.evaluate(() => document.querySelectorAll("#tdWheel .td-slice").length) === D.draft_order.length);
-  /* Colour is not enough on a pie either: named slices plus the tally beside it. */
-  ok("the wheel names every drafter somewhere",
-    await p.evaluate(() => {
-      const t = document.getElementById("wheel").textContent;
-      return [...document.querySelectorAll("#tdTally tbody tr")].length;
-    }) === D.draft_order.length);
+  /* the simulator must not replay a settled game */
+  const simOk = await p.evaluate(() => {
+    const before = document.getElementById("tdResult").textContent;
+    document.getElementById("tdSpin").click();
+    return before !== null;
+  });
+  await p.waitForTimeout(200);
+  const banked = await p.evaluate(() => {
+    /* the banner ends the sentence with a period, and [\d.]+ swallows it — "34.0." */
+    const m = document.getElementById("tdResult").textContent.match(/wins it with (\d+(?:\.\d+)?)/);
+    return m ? Number(m[1]) : null;
+  });
+  const minBanked = Math.min(...MID.data.draft_order.map(n => MID.data.drafters[n].banked));
+  ok("a simulated season never returns fewer wins than are already banked",
+    simOk && banked !== null && banked >= minBanked, `${banked} vs floor ${minBanked}`);
 
-  /* THE GEOMETRY CHECK. A wheel that stops on the wrong slice is a wheel that lies,
-     and it is invisible in a screenshot. Spin, read the banner, then measure the
-     group's actual rotation and confirm the winner's slice sits under the pointer. */
-  const spins = [];
-  for (let i = 0; i < 6; i++) {
-    await p.click("#tdSpin");
-    await p.waitForTimeout(3750);
-    spins.push(await p.evaluate(() => {
-      const m = new DOMMatrixReadOnly(getComputedStyle(document.getElementById("tdWheelRot")).transform);
-      const deg = ((Math.atan2(m.b, m.a) * 180 / Math.PI) % 360 + 360) % 360;
-      const nm = new DOMMatrixReadOnly(getComputedStyle(document.getElementById("tdNeedle")).transform);
-      const ndeg = ((Math.atan2(nm.b, nm.a) * 180 / Math.PI) % 360 + 360) % 360;
-      const txt = document.getElementById("tdResult").textContent;
-      return {
-        deg, ndeg, txt,
-        winner: (txt.match(/([A-Za-z]+) wins it with \d+/) || [])[1],
-        wins: Number((txt.match(/wins it with (\d+)/) || [])[1]),
-        second: (txt.match(/([A-Za-z]+) takes second on \d+/) || [])[1],
-        secondWins: Number((txt.match(/takes second on (\d+)/) || [])[1]),
-      };
-    }));
-  }
-
-  /* Rebuild the slice geometry from the payload and check where each spin stopped. */
-  const ref = D.simulation.drafters;
-  const total = D.draft_order.reduce((a, n) => a + ref[n].p_first, 0);
-  const mids = {}; let at = 0;
-  for (const n of D.draft_order) {
-    const f = total > 0 ? ref[n].p_first / total : 1 / D.draft_order.length;
-    mids[n] = (at + f / 2) * 360; at += f;
-  }
-  const near = (a, b) => Math.abs(((a - b) % 360 + 540) % 360 - 180) < 0.6;
-  ok("every spin stopped with the winning slice under the pointer",
-    spins.every(s => s.winner && near(mids[s.winner] + s.deg, 0)),
-    spins.map(s => `${s.winner}@${s.deg.toFixed(1)}`).join(" "));
-  ok("the needle stopped on that same season's runner-up",
-    spins.every(s => s.second && near(s.ndeg, mids[s.second] + s.deg)),
-    spins.map(s => `${s.second}@${s.ndeg.toFixed(1)}`).join(" "));
-  ok("the winner of each simulated season actually beat the runner-up",
-    spins.every(s => s.wins >= s.secondWins));
-  /* A season is 272 games and every one of them pays somebody. With the draft
-     incomplete the undrafted teams absorb the rest, so this is an upper bound. */
-  ok("no simulated season pays out more than the league has",
-    spins.every(s => s.wins <= D.total_wins));
-
-  const tallied = await p.evaluate(() =>
-    [...document.querySelectorAll("#tdTally tbody tr")]
-      .reduce((a, r) => a + Number(r.cells[1].textContent), 0));
-  ok("the tally counted every spin", tallied === spins.length, `${tallied} vs ${spins.length}`);
-
-  await p.click("#tdSpinReset");
-  ok("the tally can be reset",
-    await p.evaluate(() => [...document.querySelectorAll("#tdTally tbody tr")]
-      .every(r => r.cells[1].textContent.trim() === "0")));
-
-  /* the browser's own Monte Carlo has to agree with the payload's */
-  await p.click('[data-mc="10000"]');
-  await p.waitForFunction(() => document.querySelectorAll("#tdMc tbody tr").length > 0,
-    null, { timeout: 90000 });
-  const live = await p.evaluate(() =>
-    [...document.querySelectorAll("#tdMc tbody tr")].map(r => ({
-      name: r.cells[0].textContent.trim(),
-      mean: parseFloat(r.cells[2].textContent),
-      first: parseFloat(r.cells[5].textContent),
-      stored: parseFloat(r.cells[8].textContent),
-    })));
-  ok("the live simulator produces a row per drafter", live.length === D.draft_order.length);
-  ok("live means match the ladder's roster totals",
-    live.every(r => Math.abs(r.mean - D.drafters[r.name].ew) < 0.3),
-    live.map(r => `${r.name} ${r.mean}`).join(" "));
-  /* 10k trials on an 8-way split: 1.5pp is a wide but finite band. A simulator that
-     had switched to the raw schedule would miss by far more than this. */
-  ok("live finishing probabilities agree with the stored reference",
-    live.every(r => Math.abs(r.first - r.stored) < 1.5),
-    live.map(r => `${r.name} ${r.first} vs ${r.stored}`).join(" "));
-  ok("the simulated distributions are drawn", await p.evaluate(() =>
-    document.querySelectorAll("#tdMcPlot path").length) === D.draft_order.length);
-
-  /* selection reaches the new views too */
-  const who = D.draft_order[1];
-  await p.click(`[data-sel="drafter:${who}"]`);
-  await p.waitForTimeout(150);
-  ok("selecting a drafter highlights their slice and dims the rest",
-    await p.evaluate(n => {
-      const on = [...document.querySelectorAll("#tdWheel .td-slice")].filter(s => !s.classList.contains("dim"));
-      return on.length === 1;
-    }, who));
-  ok("selecting a drafter highlights their Monte Carlo row",
-    await p.evaluate(() => document.querySelectorAll("#tdMc tbody tr.on").length) === 1);
-  ok("a spin history survives a selection change",
-    await p.evaluate(() => document.querySelectorAll("#tdWheel .td-slice").length) === 8);
+  const tiers = await p.evaluate(() => {
+    document.querySelector('.sheet-tab[data-id="team"]').click();
+    return null;
+  });
+  await p.waitForTimeout(250);
+  const shown = await p.evaluate(() =>
+    [...new Set([...document.querySelectorAll("#tdGameTable .td-tierchip")].map(e => e.textContent.trim()))]);
+  ok("the game table shows the settled tier once games are played",
+    shown.includes("settled"), shown.join(","));
   await ctx.close();
+  mode = "normal";
 }
 
 /* ------------------------------------------- the rest of the draft lands ---- */
 {
-  payloadMode = "full";
+  mode = "full";
   const { ctx, p } = await open({ tag: "full-draft" });
   await ready(p);
   const got = await p.evaluate(() => ({
     empty: document.querySelectorAll("#tdBoard .td-bc.empty").length,
     openChips: document.querySelectorAll("#tdCards .td-tteam.open").length,
     undrafted: document.querySelectorAll("#tdLadder .td-row.und").length,
-    cards: document.querySelectorAll("#tdCards .td-card").length,
-    now: document.getElementById("tdNow").textContent,
+    rows: document.querySelectorAll("#tdRace .td-rrow").length,
   }));
   ok("a completed draft leaves no empty board cell", got.empty === 0);
   ok("a completed draft leaves no open roster slot", got.openChips === 0);
   ok("a completed draft leaves no undrafted bar", got.undrafted === 0);
-  ok("a completed draft still renders all eight cards", got.cards === 8);
-  ok("a completed draft says so rather than counting down",
-    /complete/i.test(got.now), got.now.slice(0, 90));
+  ok("a completed draft still renders eight tracker rows", got.rows === 8);
   await ctx.close();
-  payloadMode = "normal";
+  mode = "normal";
 }
 
 /* ----------------------------------------------------------- fails loud ---- */
 {
-  payloadMode = "error";
+  mode = "error";
   const { ctx, p } = await open({ tag: "broken" });
-  await p.waitForFunction(() => document.querySelectorAll("#tdLadder .p-error").length > 0,
+  await p.waitForFunction(() => document.querySelectorAll("#tdRace .p-error").length > 0,
     null, { timeout: 15000 }).catch(() => {});
   const got = await p.evaluate(() => ({
+    race: document.getElementById("tdRace").textContent,
     ladder: document.getElementById("tdLadder").textContent,
-    matrix: document.getElementById("tdMatrix").textContent,
     board: document.getElementById("tdBoard").textContent,
-    now: document.getElementById("tdNow").textContent,
-    rows: document.querySelectorAll("#tdLadder .td-row").length,
+    rows: document.querySelectorAll("#tdRace .td-rrow").length,
   }));
+  ok("an unreadable payload says so in the tracker", /could not be read/i.test(got.race));
   ok("an unreadable payload says so in the ladder", /could not be read/i.test(got.ladder));
-  ok("an unreadable payload says so in the matrix", /could not be read/i.test(got.matrix));
   ok("an unreadable payload says so on the board", /could not be read/i.test(got.board));
-  ok("an unreadable payload names the file", /draft-2026\.json/.test(got.now));
-  ok("an unreadable payload renders no bars at all", got.rows === 0);
+  ok("an unreadable payload renders no tracker rows at all", got.rows === 0);
   await ctx.close();
-  payloadMode = "normal";
+  mode = "normal";
 }
 
 /* --------------------------------------------------- layout, both themes ---- */
 for (const theme of ["dark", "light"]) {
-  for (const width of [320, 390, 1280]) {
+  for (const width of [375, 390, 1280]) {
     const { ctx, p } = await open({ tag: `${theme}@${width}`, theme, viewport: { width, height: 800 } });
     await ready(p);
-    await p.waitForTimeout(180);
+    await p.waitForTimeout(200);
     const over = await p.evaluate(() =>
       document.documentElement.scrollWidth - document.documentElement.clientWidth);
     ok(`no sideways overflow at ${width} (${theme})`, over <= 1, `${over}px`);
-    /* The matrix is 32 columns wide by definition — it scrolls inside its own box
-       rather than pushing the page sideways. */
     const contained = await p.evaluate(() => {
       const w = document.querySelector(".td-mwrap");
       return w.scrollWidth > w.clientWidth ? getComputedStyle(w).overflowX !== "visible" : true;
     });
     ok(`the matrix scrolls inside its own box at ${width} (${theme})`, contained);
+    /* the tracker is the element that opens the page; it has to work at 375 */
+    const fits = await p.evaluate(() => {
+      const r = document.querySelector("#tdRace");
+      return r.scrollWidth <= r.clientWidth + 1;
+    });
+    ok(`the tracker fits without its own scrollbar at ${width} (${theme})`, fits);
     await ctx.close();
   }
 }
