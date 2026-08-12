@@ -5532,6 +5532,24 @@
     "round": 3,
     "drafter": "Jason",
     "team": "MIN"
+   },
+   {
+    "pick": 23,
+    "round": 3,
+    "drafter": "Jared",
+    "team": "NYG"
+   },
+   {
+    "pick": 24,
+    "round": 3,
+    "drafter": "Alan",
+    "team": "ARI"
+   },
+   {
+    "pick": 25,
+    "round": 4,
+    "drafter": "Alan",
+    "team": "TEN"
    }
   ],
   "wins_tracker": {
@@ -5697,40 +5715,40 @@
     "slot": 7,
     "roster": [
      "DAL",
-     "KC"
+     "KC",
+     "NYG"
     ],
-    "ew": 19.21,
-    "par_delta": -14.79,
-    "internal_games": 0,
+    "ew": 26.6,
+    "par_delta": -7.4,
+    "internal_games": 2,
     "sd_sim": 3.83,
-    "sd_model": 3.798,
-    "picks_remaining": 2
+    "sd_model": 4.548,
+    "picks_remaining": 1
    },
    "Alan": {
     "slot": 8,
     "roster": [
      "NE",
-     "DEN"
+     "DEN",
+     "ARI",
+     "TEN"
     ],
-    "ew": 19.62,
-    "par_delta": -14.38,
-    "internal_games": 1,
+    "ew": 29.85,
+    "par_delta": -4.15,
+    "internal_games": 2,
     "sd_sim": 3.69,
-    "sd_model": 3.746,
-    "picks_remaining": 2
+    "sd_model": 5.08,
+    "picks_remaining": 0
    }
   },
   "undrafted": [
    "WAS",
-   "NYG",
    "CAR",
    "ATL",
-   "TEN",
    "LV",
    "CLE",
    "NYJ",
-   "MIA",
-   "ARI"
+   "MIA"
   ],
   "board": [
    {
@@ -6001,19 +6019,37 @@
     "pick": 23,
     "round": 3,
     "drafter": "Jared",
-    "team": null
+    "team": "NYG",
+    "ew": 7.39,
+    "best_available": "WAS",
+    "best_available_ew": 7.62,
+    "delta": -0.23,
+    "rank_at_pick": 2,
+    "available_at_pick": 10
    },
    {
     "pick": 24,
     "round": 3,
     "drafter": "Alan",
-    "team": null
+    "team": "ARI",
+    "ew": 3.8,
+    "best_available": "WAS",
+    "best_available_ew": 7.62,
+    "delta": -3.82,
+    "rank_at_pick": 9,
+    "available_at_pick": 9
    },
    {
     "pick": 25,
     "round": 4,
     "drafter": "Alan",
-    "team": null
+    "team": "TEN",
+    "ew": 6.43,
+    "best_available": "WAS",
+    "best_available_ew": 7.62,
+    "delta": -1.19,
+    "rank_at_pick": 4,
+    "available_at_pick": 8
    },
    {
     "pick": 26,
@@ -6058,7 +6094,7 @@
     "team": null
    }
   ],
-  "picks_made": 22,
+  "picks_made": 25,
   "picks_total": 32,
   "schedule_fit": {
    "method": "per-team logit offsets solved by Newton so each team's 17 fitted game probabilities sum to its expected wins; complementarity and the 272-win league total hold by construction",
@@ -6070,14 +6106,14 @@
    "trials": 100000,
    "seed": 20260812,
    "method": "game-level Bernoulli over the refitted schedule; one win per game, so every simulated season pays exactly 272",
-   "tie_for_first_rate": 0.15841,
+   "tie_for_first_rate": 0.17181,
    "no_tie_outcome": true,
    "first_place_ties_broken": "at random — the league's real tiebreakers (playoff wins, then point differential) are not in this payload",
    "drafters": {
     "Matt": {
-     "p_first": 0.19238,
-     "p_second": 0.1896,
-     "p_top2": 0.38198,
+     "p_first": 0.14815,
+     "p_second": 0.14838,
+     "p_top2": 0.29653,
      "mean": 29.328,
      "sd": 3.374,
      "p10": 25,
@@ -6116,9 +6152,9 @@
      }
     },
     "Rob": {
-     "p_first": 0.25628,
-     "p_second": 0.21115,
-     "p_top2": 0.46743,
+     "p_first": 0.19907,
+     "p_second": 0.1757,
+     "p_top2": 0.37477,
      "mean": 30.085,
      "sd": 3.285,
      "p10": 26,
@@ -6157,9 +6193,9 @@
      }
     },
     "Kevin": {
-     "p_first": 0.19837,
-     "p_second": 0.19146,
-     "p_top2": 0.38983,
+     "p_first": 0.15472,
+     "p_second": 0.15208,
+     "p_top2": 0.3068,
      "mean": 29.422,
      "sd": 3.317,
      "p10": 25,
@@ -6198,9 +6234,9 @@
      }
     },
     "Chris": {
-     "p_first": 0.03893,
-     "p_second": 0.07141,
-     "p_top2": 0.11034,
+     "p_first": 0.02683,
+     "p_second": 0.04788,
+     "p_top2": 0.07471,
      "mean": 26.168,
      "sd": 3.298,
      "p10": 22,
@@ -6239,9 +6275,9 @@
      }
     },
     "Tyler": {
-     "p_first": 0.13403,
-     "p_second": 0.15582,
-     "p_top2": 0.28985,
+     "p_first": 0.10253,
+     "p_second": 0.11892,
+     "p_top2": 0.22145,
      "mean": 28.507,
      "sd": 3.367,
      "p10": 24,
@@ -6279,9 +6315,9 @@
      }
     },
     "Jason": {
-     "p_first": 0.17999,
-     "p_second": 0.18033,
-     "p_top2": 0.36032,
+     "p_first": 0.13828,
+     "p_second": 0.14146,
+     "p_top2": 0.27974,
      "mean": 29.146,
      "sd": 3.409,
      "p10": 25,
@@ -6321,75 +6357,89 @@
      }
     },
     "Jared": {
-     "p_first": 1e-05,
-     "p_second": 8e-05,
-     "p_top2": 9e-05,
-     "mean": 19.215,
-     "sd": 2.742,
-     "p10": 16,
-     "p50": 19,
-     "p90": 23,
+     "p_first": 0.03213,
+     "p_second": 0.05554,
+     "p_top2": 0.08767,
+     "mean": 26.605,
+     "sd": 3.218,
+     "p10": 22,
+     "p50": 27,
+     "p90": 31,
      "dist": {
-      "6": 1e-05,
-      "7": 1e-05,
-      "8": 3e-05,
-      "9": 0.00013,
-      "10": 0.0005,
-      "11": 0.00155,
-      "12": 0.00481,
-      "13": 0.01166,
-      "14": 0.02503,
-      "15": 0.04398,
-      "16": 0.07233,
-      "17": 0.10462,
-      "18": 0.13107,
-      "19": 0.14339,
-      "20": 0.13888,
-      "21": 0.11859,
-      "22": 0.08907,
-      "23": 0.05814,
-      "24": 0.0311,
-      "25": 0.01528,
-      "26": 0.00682,
-      "27": 0.00213,
-      "28": 0.00065,
-      "29": 0.00019,
-      "30": 2e-05,
-      "31": 1e-05
+      "11": 1e-05,
+      "12": 1e-05,
+      "13": 1e-05,
+      "14": 6e-05,
+      "15": 0.00017,
+      "16": 0.00052,
+      "17": 0.00119,
+      "18": 0.00337,
+      "19": 0.00767,
+      "20": 0.01577,
+      "21": 0.02789,
+      "22": 0.04383,
+      "23": 0.06569,
+      "24": 0.08944,
+      "25": 0.10972,
+      "26": 0.12193,
+      "27": 0.12192,
+      "28": 0.11322,
+      "29": 0.09317,
+      "30": 0.07186,
+      "31": 0.04901,
+      "32": 0.03086,
+      "33": 0.01742,
+      "34": 0.00881,
+      "35": 0.004,
+      "36": 0.00144,
+      "37": 0.00068,
+      "38": 0.00014,
+      "39": 0.00016,
+      "40": 3e-05
      }
     },
     "Alan": {
-     "p_first": 1e-05,
-     "p_second": 0.00015,
-     "p_top2": 0.00016,
-     "mean": 19.63,
-     "sd": 2.657,
-     "p10": 16,
-     "p50": 20,
-     "p90": 23,
+     "p_first": 0.19829,
+     "p_second": 0.16004,
+     "p_top2": 0.35833,
+     "mean": 29.856,
+     "sd": 3.638,
+     "p10": 25,
+     "p50": 30,
+     "p90": 35,
      "dist": {
-      "9": 6e-05,
-      "10": 0.00025,
-      "11": 0.00097,
-      "12": 0.00311,
-      "13": 0.00695,
-      "14": 0.01547,
-      "15": 0.03362,
-      "16": 0.05817,
-      "17": 0.09209,
-      "18": 0.12223,
-      "19": 0.14386,
-      "20": 0.1484,
-      "21": 0.1327,
-      "22": 0.10273,
-      "23": 0.06883,
-      "24": 0.03974,
-      "25": 0.01957,
-      "26": 0.00763,
-      "27": 0.00278,
-      "28": 0.00062,
-      "29": 0.00016,
-      "30": 6e-05
+      "15": 1e-05,
+      "16": 8e-05,
+      "17": 0.00019,
+      "18": 0.00036,
+      "19": 0.00126,
+      "20": 0.00265,
+      "21": 0.00534,
+      "22": 0.01037,
+      "23": 0.01847,
+      "24": 0.03014,
+      "25": 0.04558,
+      "26": 0.06381,
+      "27": 0.08004,
+      "28": 0.09569,
+      "29": 0.10804,
+      "30": 0.11241,
+      "31": 0.10395,
+      "32": 0.0903,
+      "33": 0.07377,
+      "34": 0.05645,
+      "35": 0.03985,
+      "36": 0.0267,
+      "37": 0.01623,
+      "38": 0.00876,
+      "39": 0.00513,
+      "40": 0.00244,
+      "41": 0.00114,
+      "42": 0.00048,
+      "43": 0.00025,
+      "44": 7e-05,
+      "45": 3e-05,
+      "46": 1e-05
      }
     }
    }
@@ -6458,16 +6508,16 @@
      "id": "picks",
      "label": "The draft log is a valid snake",
      "ok": true,
-     "detail": "22 of 32 picks recorded. 0 out of turn, 0 teams taken twice, 0 unknown abbreviations.",
-     "value": 22,
+     "detail": "25 of 32 picks recorded. 0 out of turn, 0 teams taken twice, 0 unknown abbreviations.",
+     "value": 25,
      "severity": "hard"
     },
     {
      "id": "conservation",
      "label": "Rostered wins plus the pool still add to the league total",
      "ok": true,
-     "detail": "211.52 on rosters, 60.49 still on the board, 272.01 together. With every pick made, the eight roster totals must sum to 272 and one drafter's gain is another's loss — that is the whole game.",
-     "value": 211.52,
+     "detail": "229.14 on rosters, 42.87 still on the board, 272.01 together. With every pick made, the eight roster totals must sum to 272 and one drafter's gain is another's loss — that is the whole game.",
+     "value": 229.14,
      "severity": "hard"
     },
     {
@@ -6490,24 +6540,24 @@
      "id": "tie_rate",
      "label": "A tie for first is common, and this payload cannot break one",
      "ok": true,
-     "detail": "15.8% of simulated seasons end with two or more rosters level at the top — roughly one in 6. The league breaks that on total playoff wins and then point differential; neither is in this payload, so the simulation breaks it at random and the page reports the rate instead of pretending to a winner. The simulation also has no tie OUTCOME: every game is decided, so no half-wins are produced.",
-     "value": 0.15841,
+     "detail": "17.2% of simulated seasons end with two or more rosters level at the top — roughly one in 6. The league breaks that on total playoff wins and then point differential; neither is in this payload, so the simulation breaks it at random and the page reports the rate instead of pretending to a winner. The simulation also has no tie OUTCOME: every game is decided, so no half-wins are produced.",
+     "value": 0.17181,
      "severity": "info"
     },
     {
      "id": "sim_rosters_complete",
      "label": "The simulation is running on complete rosters",
      "ok": false,
-     "detail": "8 of 8 rosters are still short (Matt, Rob, Kevin, Chris, Tyler, Jason, Jared, Alan), and 10 teams worth 60.49 expected wins are unowned. Finishing probabilities on partial rosters are not a forecast of this pool — a drafter holding two teams cannot win a four-team competition. They describe the board as it stands right now and will move, hard, when the remaining picks land.",
-     "value": 8,
+     "detail": "7 of 8 rosters are still short (Matt, Rob, Kevin, Chris, Tyler, Jason, Jared), and 7 teams worth 42.87 expected wins are unowned. Finishing probabilities on partial rosters are not a forecast of this pool — a drafter holding two teams cannot win a four-team competition. They describe the board as it stands right now and will move, hard, when the remaining picks land.",
+     "value": 7,
      "severity": "known"
     },
     {
      "id": "sd_models",
      "label": "Two roster standard deviations, and they disagree",
      "ok": true,
-     "detail": "The upstream simulation and the quadrature-plus-head-to-head calculation sit within 0.12 wins of each other (worst: Chris). They diverge most for rosters with internal games, and the simulation is the smaller of the two — it also draws correlated team strength, which quadrature cannot see. The page shows the simulated figure wherever it exists and says when it is falling back.",
-     "value": 0.119,
+     "detail": "The upstream simulation and the quadrature-plus-head-to-head calculation sit within 1.39 wins of each other (worst: Alan). They diverge most for rosters with internal games, and the simulation is the smaller of the two — it also draws correlated team strength, which quadrature cannot see. The page shows the simulated figure wherever it exists and says when it is falling back.",
+     "value": 1.39,
      "severity": "info"
     }
    ]
