@@ -34,12 +34,27 @@ const noDomains = { sports:{...emptyProfile}, biology:{...emptyProfile} };
 try {
   console.log("\nsigned-out sheets");
   const rollo = await browser.newPage({ viewport: { width: 1280, height: 900 } });
-  await rollo.route(/youtube|googlevideo|burst-/, r => r.abort());
+  const pageErrors = [];
+  rollo.on("console", message => { if (message.type() === "error") pageErrors.push("console: " + message.text()); });
+  rollo.on("pageerror", error => pageErrors.push("pageerror: " + error.message));
+  rollo.on("response", response => { if (response.status() >= 400) pageErrors.push(`${response.status()} ${response.url()}`); });
+  await rollo.route(/youtube|googlevideo|burst-/, r => r.fulfill({status:204,body:""}));
   await rollo.goto(url, { waitUntil: "domcontentloaded" });
   ok("hero heading is real DOM copy", (await rollo.locator("#poundTitle").textContent()) === "Dawg Pound" && (await rollo.locator(".dp-welcome").textContent()).includes("Good ideas need room to run."));
   const heroImage = await rollo.locator(".dp-hero-art").evaluate(img => ({complete:img.complete,naturalWidth:img.naturalWidth,width:img.getAttribute("width"),height:img.getAttribute("height")}));
-  ok("hero image loads with intrinsic dimensions", heroImage.complete && heroImage.naturalWidth > 0 && heroImage.width === "1944" && heroImage.height === "810");
+  ok("hero image loads with intrinsic dimensions", heroImage.complete && heroImage.naturalWidth === 1725 && heroImage.width === "1725" && heroImage.height === "448");
+  ok("production markup declares Rollo camera and physical collar assets", await rollo.locator('[data-dp-hero-composition="rollo-camera-cleveland-lab"]').count() === 1 && await rollo.locator('[data-rack-asset="approved-physical-collar-rack"]').count() === 1 && await rollo.locator("[data-collar-asset]").count() === 2);
+  const rackImage = await rollo.locator(".dp-rack-art").evaluate(img => ({complete:img.complete,naturalWidth:img.naturalWidth,naturalHeight:img.naturalHeight}));
+  ok("approved rack asset loads with wood, hooks, collars, tags, and future capacity", rackImage.complete && rackImage.naturalWidth === 1725 && rackImage.naturalHeight === 224);
+  ok("rejected card-only collar treatment is absent", await rollo.locator("#rolloTab").evaluate(el => { const style=getComputedStyle(el); return style.backgroundImage === "none" && style.borderTopWidth === "0px"; }));
   ok("desktop hero causes no body overflow", await rollo.evaluate(() => document.documentElement.scrollWidth === document.documentElement.clientWidth));
+  ok("desktop contextual preview is hidden at rest", !(await rollo.locator("#dpProjectPreview").isVisible()));
+  const restHash = new URL(rollo.url()).hash;
+  await rollo.locator("#ddccTab").hover();
+  await rollo.waitForTimeout(180);
+  ok("desktop hover reveals DDCC preview without changing hash", await rollo.locator("#dpProjectPreview").isVisible() && (await rollo.locator("#dpProjectPreview").innerText()).includes("Put probabilities on 40 claims") && new URL(rollo.url()).hash === restHash);
+  await rollo.locator("#ddccTab").focus();
+  ok("keyboard focus keeps the contextual preview available", await rollo.locator("#dpProjectPreview").isVisible());
   const rolloColumns = await rollo.locator(".rollo-grid").evaluate(el => {
     const media = el.querySelector(".rollo-media").getBoundingClientRect();
     const story = el.querySelector(".rollo-story").getBoundingClientRect();
@@ -47,6 +62,7 @@ try {
   });
   ok("Rollo desktop layout keeps the media at roughly two-thirds", rolloColumns.ratio > 1.75 && rolloColumns.ratio < 2.25 && !rolloColumns.stacked);
   ok("Rollo playback and attribution controls remain present", await rollo.locator("#btnPlay").isVisible() && await rollo.locator("#credit a[href*='youtube.com']").isVisible());
+  ok("page has no console errors or unhandled exceptions", pageErrors.length === 0);
   await rollo.screenshot({path:path.join(shots,"rollo-desktop-light.png"),fullPage:true});
   await rollo.close();
 
@@ -54,16 +70,22 @@ try {
   await page.route(/youtube|googlevideo|burst-|\.jpg$/, r => r.abort());
   await page.goto(url, { waitUntil: "domcontentloaded" });
   ok("mobile hero is a full-scene horizontal viewport", await page.locator("#dpHeroScroll").evaluate(el => el.scrollWidth > el.clientWidth));
+  ok("mobile rack and hero create no document-level overflow", await page.evaluate(() => document.documentElement.scrollWidth === document.documentElement.clientWidth));
   ok("mobile pan cue starts visible", await page.locator("#dpHeroHint").isVisible());
-  await page.locator("#dpHeroScroll").evaluate(el => el.scrollLeft = 80);
+  await page.locator("#dpHeroScroll").evaluate(el => el.scrollLeft += 80);
   await page.waitForTimeout(50);
   ok("mobile pan cue retires after horizontal scroll", await page.locator(".dp-hero").evaluate(el => el.classList.contains("panned")));
   ok("Rollo is the default sheet", await page.locator("#rolloSheet").isVisible() && !(await page.locator("#ddccSheet").isVisible()));
+  ok("touch-width preview is persistently visible for the centered collar", await page.locator("#dpProjectPreview").isVisible() && (await page.locator("#dpPreviewTitle").innerText()) === "Rollo");
+  const hashBeforeRackSwipe = new URL(page.url()).hash;
+  await page.locator("#dpRackTrack").evaluate(el => { const tab=el.querySelector("#ddccTab"); el.scrollLeft=tab.offsetLeft+tab.offsetWidth/2-el.clientWidth/2; });
+  await page.waitForTimeout(180);
+  ok("rack swipe changes preview target without changing active hash", (await page.locator("#dpPreviewTitle").innerText()) === "DDCC Profile" && new URL(page.url()).hash === hashBeforeRackSwipe);
   await page.locator("#rolloTab").hover();
   ok("hover preview does not mutate hash", new URL(page.url()).hash === "" && (await page.locator("#dpProjectPreview").innerText()).includes("music-synced photo tribute"));
   await page.locator("#ddccTab").click();
   await page.locator("#ddccSheet").waitFor({state:"visible"});
-  ok("DDCC sheet writes restorable URL state", new URL(page.url()).hash === "#ddcc" && await page.locator("#ddccSheet").isVisible());
+  ok("one touch-width tap opens DDCC and writes restorable URL state", new URL(page.url()).hash === "#ddcc" && await page.locator("#ddccSheet").isVisible());
   ok("only the active sheet is visible", !(await page.locator("#rolloSheet").isVisible()));
   ok("signed-out demonstration is present", await page.locator("#ddccDemo").isVisible() && await page.locator("#ddccSignIn").isVisible());
   ok("centered demo control is initially unanswered", await page.locator("#ddccDemoOut").innerText() === "Not answered");
@@ -71,6 +93,9 @@ try {
   ok("demo reports deliberate interaction", await page.locator("#ddccDemoOut").innerText() === "67%");
   await page.goBack();
   ok("browser back restores Rollo", await page.locator("#rolloSheet").isVisible());
+  await page.goForward();
+  ok("browser forward restores DDCC", await page.locator("#ddccSheet").isVisible() && new URL(page.url()).hash === "#ddcc");
+  await page.goBack();
   await page.locator("#rolloTab").focus(); await page.keyboard.press("ArrowRight");
   ok("arrow key selects and focuses DDCC", await page.locator("#ddccTab").getAttribute("aria-selected") === "true" && await page.locator("#ddccTab").evaluate(e => e === document.activeElement));
   ok("focused DDCC exposes its preview", (await page.locator("#dpProjectPreview").innerText()).includes("Put probabilities on 40 claims"));
@@ -80,6 +105,12 @@ try {
   ok("one click reopens the collapsed project", await page.locator("#ddccSheet").isVisible() && new URL(page.url()).hash === "#ddcc");
   await page.screenshot({path:path.join(shots,"ddcc-mobile-signed-out.png"),fullPage:true});
   await page.close();
+
+  const invalid = await browser.newPage({ viewport: { width: 900, height: 700 } });
+  await invalid.route(/youtube|googlevideo|burst-/, r => r.abort());
+  await invalid.goto(url + "#ddccthis", { waitUntil:"domcontentloaded" });
+  ok("unknown project hash normalizes to canonical Rollo", new URL(invalid.url()).hash === "#rollo" && await invalid.locator("#rolloSheet").isVisible() && !(await invalid.locator("#ddccSheet").isVisible()));
+  await invalid.close();
 
   console.log("\nsigned-in quiz");
   const quiz = await browser.newPage({ viewport: { width: 1280, height: 900 } });
@@ -155,6 +186,12 @@ try {
   ok("mobile dark theme preserves DDCC profile content", await dark.locator("html").getAttribute("data-theme")==="dark" && await dark.locator("#profileTitle").isVisible());
   await dark.screenshot({path:path.join(shots,"ddcc-mobile-profile-dark.png"),fullPage:true});
   await dark.close();
+
+  const reduced = await browser.newPage({viewport:{width:1024,height:768},reducedMotion:"reduce"});
+  await reduced.route(/youtube|googlevideo|burst-/, r => r.fulfill({status:204,body:""}));
+  await reduced.goto(url+"#rollo",{waitUntil:"domcontentloaded"});
+  ok("reduced-motion state keeps the rack and active sheet legible", await reduced.locator(".dp-rack-art").isVisible() && await reduced.locator("#rolloSheet").isVisible() && await reduced.locator("#rolloTab").evaluate(el=>getComputedStyle(el).transitionDuration==="0s"));
+  await reduced.close();
 
   console.log(`\n${pass} DDCC UI assertions passed.`);
 } finally {
