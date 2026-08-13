@@ -93,11 +93,21 @@ once("async function mcpDispatch", "mcpDispatch definition");
 once("DD-MCP-ROUTE", "injected route");
 once("export default", "worker default export");
 
-// The read-only invariant, enforced by the build rather than by memory.
+// The write-scope invariant, enforced by the build rather than by memory.
+// History: this block was fully read-only until dd_submit_bozo_leg (2026-08-13), the
+// deliberately-added two-phase write tool spec'd in claude/data-dawgs-cep-identity.md §4.
+// The invariant did not get weaker, it got precise:
+//   - the block still NEVER calls a Firebase write helper directly;
+//   - the only route to a Firebase write is commitBozoLeg — the same single write path
+//     bozoPick uses — and the block may call it EXACTLY once, inside the confirm branch;
+//   - KV writes (env.RL.put) exist only for rate limits and the mcpconfirm: staging keys.
 const blockOnly = out.slice(out.indexOf(START));
 for (const banned of ["fbPut(", "fbPatch(", "fbDelete("]) {
-  if (blockOnly.includes(banned)) fail(`the MCP block calls ${banned} — read-only invariant broken`);
+  if (blockOnly.includes(banned)) fail(`the MCP block calls ${banned} — no direct Firebase write is ever allowed here`);
 }
+const commitCalls = (blockOnly.match(/commitBozoLeg\(/g) || []).length;
+if (commitCalls !== 1)
+  fail(`the MCP block calls commitBozoLeg ${commitCalls} times — exactly 1 is allowed, inside dd_submit_bozo_leg's confirm branch`);
 
 /* ---- 4b. every registered tool carries its full annotation set ----
  * ⚠️ A tool added without a title, catalog and readOnlyHint would list with an undefined
@@ -113,10 +123,15 @@ for (const [what, n] of [["title", count(/\n    title: "[^"]+",\n/g)],
   if (n !== nTools) fail(`${nTools} tools declared but ${n} carry a ${what} — run work/patch-mcp-annotations.py`);
 }
 if (nTools === 0) fail("no tools found in the block — the registry regex has drifted");
-// The block still claims, in its own header and in every tool description, that nothing
-// writes. A `readOnlyHint: false` here would make that claim false on the wire.
-if (/readOnlyHint: false/.test(blockOnly))
-  fail("a tool declares readOnlyHint: false while the block is still asserted read-only");
+// Exactly ONE tool may declare readOnlyHint: false, and it must be dd_submit_bozo_leg.
+// A second write tool showing up here is a design decision, not a code change — it has
+// to argue with this guard (and the spec) first, on purpose.
+const writeHints = count(/\n    readOnlyHint: false,\n/g);
+if (writeHints !== 1)
+  fail(`${writeHints} tools declare readOnlyHint: false — exactly 1 is allowed (dd_submit_bozo_leg)`);
+const writeToolBody = blockOnly.slice(blockOnly.indexOf('name: "dd_submit_bozo_leg"'));
+if (blockOnly.indexOf('name: "dd_submit_bozo_leg"') < 0 || !/readOnlyHint: false/.test(writeToolBody.slice(0, 400)))
+  fail("the readOnlyHint: false declaration does not belong to dd_submit_bozo_leg");
 
 writeFileSync(TARGET, out);
 try {
@@ -138,6 +153,6 @@ const secondPass = (() => {
 if (secondPass !== out) fail("build is not idempotent — a second run would change the file");
 
 console.log(`assembled ${TARGET}: ${out.split("\n").length} lines, ${(out.length / 1024).toFixed(1)} KB`);
-console.log("  shared DFS + survivor sources · single declarations · parses · idempotent · no write calls in the block");
+console.log("  shared DFS + survivor sources · single declarations · parses · idempotent · write scope pinned to dd_submit_bozo_leg → commitBozoLeg ×1");
 
 function fail(msg) { console.error("BUILD FAILED: " + msg); process.exit(1); }

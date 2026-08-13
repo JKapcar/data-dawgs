@@ -256,16 +256,24 @@ console.log("\nguillotine odds");
   ok("a non-numeric league id is a readable tool error", bad.isError === true);
 }
 
-console.log("\nthe read-only invariant still holds");
+console.log("\nthe write-scope invariant still holds");
+/* ⚠️ Until 2026-08-13 this section was "the read-only invariant". dd_submit_bozo_leg
+   (cep-identity §4) retired that claim deliberately, so what these pin now is the
+   precise scope: one named write tool, one route to Firebase (commitBozoLeg, exactly
+   once), and KV writes only on the caller's own mcpconfirm: staging key. */
 {
   const block = SRC.slice(SRC.indexOf("DD-MCP-BLOCK START"));
   ok("no fbPut in the MCP block", !/fbPut\s*\(/.test(block));
   ok("no fbPatch in the MCP block", !/fbPatch\s*\(/.test(block));
   ok("no fbDelete in the MCP block", !/fbDelete\s*\(/.test(block));
-  ok("no KV writes in the MCP block", !/\.put\s*\(/.test(block));
+  ok("commitBozoLeg is called exactly once in the block",
+     (block.match(/commitBozoLeg\s*\(/g) || []).length === 1);
+  ok("every KV write in the block targets the caller's own mcpconfirm staging key",
+     (block.match(/\.put\s*\(/g) || []).length === (block.match(/env\.RL\.put\(kvKey/g) || []).length);
   ok("every tool name is namespaced", W.MCP_TOOLS.every(t => t.name.startsWith("dd_")));
-  ok("no tool is named like a write",
-     W.MCP_TOOLS.every(t => !/(submit|place|set|write|delete|grade|lock)_/.test(t.name)));
+  ok("exactly one tool is named like a write, and it is the one write tool",
+     W.MCP_TOOLS.filter(t => /(submit|place|set|write|delete|grade|lock)_/.test(t.name))
+       .map(t => t.name).join("|") === "dd_submit_bozo_leg");
   ok("the token minting route is OUTSIDE the block, where writes are allowed",
      SRC.indexOf("async function authMcpToken") < SRC.indexOf("DD-MCP-BLOCK START"));
   ok("minting requires a session", /authMcpToken[\s\S]{0,400}sessionAuth\(request, env\)/.test(SRC));

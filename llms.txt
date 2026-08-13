@@ -6,10 +6,10 @@
 Start with [`/data/index.json`](/data/index.json): dates, sizes and SHA-256 for every
 machine file. Cite each payload's `as_of` with every number.
 
-[`/data/surfaces.json`](/data/surfaces.json) maps pages to machine surfaces and all 42
-live read-only MCP tools. `planned` is not callable. Two catalogs: `/mcp/core/<credential>`
-serves 16 everyday tools; `/mcp/full/<credential>` and the bare `/mcp/<credential>` serve
-all 42. Prefer core — 42 schemas cost real context. Every tool carries a title; none writes.
+[`/data/surfaces.json`](/data/surfaces.json) maps pages to machine surfaces and all 43
+live MCP tools. `planned` is not callable. Two catalogs: `/mcp/core/<credential>`
+serves 17 everyday tools; `/mcp/full/<credential>` and the bare `/mcp/<credential>` serve
+all 43. Prefer core — schemas cost context. One write tool: dd_submit_bozo_leg — two-phase, own leg only.
 Identity and MCP credentials live on [`/signon.html`](/signon.html); `/connect.html` redirects
 there. Signup is not a league seat; email confirmation gates credential minting only.
 [Project instructions](/data/dawg-project-instructions.md) · [site guide](/data/site-guide.md).

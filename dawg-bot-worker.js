@@ -4977,6 +4977,85 @@ async function forecastBots(request, env, cors) {
 // timestamp, which is what "editing resets your clock and your price" means.
 // When the last leg lands, the board locks and the permutation is drawn.
 
+// The single place a Bozo leg is written. Both entry paths — the site form via
+// bozoPick below, and the MCP two-phase tool dd_submit_bozo_leg — land here AFTER
+// their own auth, membership, status and validatePick checks have passed. Extracted
+// so the stored pick shape can never drift between the two: a second copy of this
+// object is how an MCP leg would silently stop carrying startsAt and fall out of the
+// close capture.
+// `via` records HOW the leg arrived ("mcp"), not who submitted it — identity is
+// `name`, checked by the caller. Site submissions carry no `via`, exactly as before.
+async function commitBozoLeg(env, lid, state, name, p, via = null) {
+  const set = settingsOf(state);
+
+  // ⚠️ The opposite side is NOT optional. Without it there is no de-vig, and the
+  // chart's y-axis baseline is wrong by the whole hold — about two probability
+  // points, which is comparable to the entire spread of CLV across the league. A leg
+  // that arrives without it is stored with null and flagged, never quietly de-vigged
+  // against nothing. See handoff §4 rule 6.
+  const oppRaw = Number(p.priceOpp);
+  const entryPriceOpp = Number.isFinite(oppRaw) && Math.abs(oppRaw) >= 100 ? Math.round(oppRaw) : null;
+
+  const pick = {
+    sport: p.sport, eventId: String(p.eventId), game: String(p.game).slice(0, 80),
+    mkt: p.mkt, side: String(p.side).slice(0, 40),
+    line: p.mkt === "ml" ? 0 : Number(p.line),
+    // market-agnostic: a side of over/under sets the direction, anything else
+    // (a team abbreviation on a spread or ML) resolves to "over", which is the
+    // branch expected() has always wanted for those.
+    dir: (p.side === "over" || p.side === "under") ? p.side : "over",
+    price: Math.round(Number(p.price)),
+    label: String(p.label).slice(0, 90),
+    prop: p.prop ? String(p.prop).slice(0, 80) : null,
+    // ⚠️ Where the PRICE came from, not where the pick came from. "self" means a
+    // human typed it and nothing checked it; "market" is reserved for the day a
+    // licensed odds source writes it server-side. Recorded now, before any such
+    // source exists, so that legs entered under the honour system stay honestly
+    // labelled forever instead of becoming indistinguishable from verified ones.
+    // The client cannot assert "market" — only this file may ever set that.
+    priceSource: "self",
+    // ⚠️ Stored so the uniqueness and contradiction checks never have to re-derive a
+    // key from a row written under an older version of the rules. A key that drifts
+    // between write time and read time silently stops catching collisions.
+    selectionKey: selectionKeyOf(p),
+    marketKey: marketKeyOf(p),
+    // ⚠️ Kickoff, carried from the ESPN game the player picked. The close capture has
+    // no other way to know WHEN to snap: event ids don't line up between ESPN and the
+    // odds source, so this timestamp is what schedules the whole thing. A leg without
+    // it is never captured — see bozoCloseTargets.
+    startsAt: typeof p.startsAt === "string" && !isNaN(Date.parse(p.startsAt)) ? p.startsAt : null,
+    entryPriceOpp,
+    entryBook: "draftkings",        // league rule: there is no other book at either end
+    // ⚠️ "asserted", not "verified". DK has no public API, so this records that the
+    // player is claiming an SGP-legal selection and that it passed the structural
+    // checks — nothing has asked DraftKings.
+    dkSgpEligible: "asserted",
+    // ⚠️ Audit, spec'd in cep-identity §4.4: an agent-submitted leg must be
+    // distinguishable from a hand-submitted one forever, without guessing. Only the
+    // Worker sets this; no request body may carry it.
+    ...(via ? { via } : {}),
+    ts: Date.now(),                 // SERVER time — the reason this route exists
+  };
+  await fbPut(env, LG(lid) + "/picks/" + encodeURIComponent(name), pick);
+
+  const picks = (await fbGet(env, LG(lid) + "/picks")).data || {};
+  // ⚠️ THIS league's threshold, never the global roster. Default is "everyone in",
+  // where the size IS the member count — an 8-person league locks on the 8th leg and
+  // a 4-person league on the 4th. A league can instead lock at a fixed count, which
+  // turns Last In into a race with a real risk of not making the ticket at all.
+  // ⚠️ In Bozo Royale the threshold is the ALIVE roster, not the member count. A
+  // chopped player never submits again, so waiting for "everyone in" would mean the
+  // ticket could never lock once the first elimination landed — the board would just
+  // sit open forever with the league unable to play.
+  const size = set.format === "royale" ? royaleRoster(state).length : memberNames(state).length;
+  const need = set.lockRule === "count" ? Math.min(set.lockCount || size, size || set.lockCount) : size;
+  let placed = false;
+  if (need > 0 && Object.keys(picks).length >= need) {
+    placed = await placeAndDraw(env, lid, picks, state);
+  }
+  return { ok: true, ts: pick.ts, placed, size, need };
+}
+
 async function bozoPick(request, env, cors) {
   if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
   const auth = await sessionAuth(request, env);
@@ -5026,68 +5105,8 @@ async function bozoPick(request, env, cors) {
     const err = validatePick(p, name, state.picks || {}, bandOf(state), set.format);
     if (err) return json({ error: err }, 400, cors);
 
-    // ⚠️ The opposite side is NOT optional. Without it there is no de-vig, and the
-    // chart's y-axis baseline is wrong by the whole hold — about two probability
-    // points, which is comparable to the entire spread of CLV across the league. A leg
-    // that arrives without it is stored with null and flagged, never quietly de-vigged
-    // against nothing. See handoff §4 rule 6.
-    const oppRaw = Number(p.priceOpp);
-    const entryPriceOpp = Number.isFinite(oppRaw) && Math.abs(oppRaw) >= 100 ? Math.round(oppRaw) : null;
-
-    const pick = {
-      sport: p.sport, eventId: String(p.eventId), game: String(p.game).slice(0, 80),
-      mkt: p.mkt, side: String(p.side).slice(0, 40),
-      line: p.mkt === "ml" ? 0 : Number(p.line),
-      // market-agnostic: a side of over/under sets the direction, anything else
-      // (a team abbreviation on a spread or ML) resolves to "over", which is the
-      // branch expected() has always wanted for those.
-      dir: (p.side === "over" || p.side === "under") ? p.side : "over",
-      price: Math.round(Number(p.price)),
-      label: String(p.label).slice(0, 90),
-      prop: p.prop ? String(p.prop).slice(0, 80) : null,
-      // ⚠️ Where the PRICE came from, not where the pick came from. "self" means a
-      // human typed it and nothing checked it; "market" is reserved for the day a
-      // licensed odds source writes it server-side. Recorded now, before any such
-      // source exists, so that legs entered under the honour system stay honestly
-      // labelled forever instead of becoming indistinguishable from verified ones.
-      // The client cannot assert "market" — only this file may ever set that.
-      priceSource: "self",
-      // ⚠️ Stored so the uniqueness and contradiction checks never have to re-derive a
-      // key from a row written under an older version of the rules. A key that drifts
-      // between write time and read time silently stops catching collisions.
-      selectionKey: selectionKeyOf(p),
-      marketKey: marketKeyOf(p),
-      // ⚠️ Kickoff, carried from the ESPN game the player picked. The close capture has
-      // no other way to know WHEN to snap: event ids don't line up between ESPN and the
-      // odds source, so this timestamp is what schedules the whole thing. A leg without
-      // it is never captured — see bozoCloseTargets.
-      startsAt: typeof p.startsAt === "string" && !isNaN(Date.parse(p.startsAt)) ? p.startsAt : null,
-      entryPriceOpp,
-      entryBook: "draftkings",        // league rule: there is no other book at either end
-      // ⚠️ "asserted", not "verified". DK has no public API, so this records that the
-      // player is claiming an SGP-legal selection and that it passed the structural
-      // checks — nothing has asked DraftKings.
-      dkSgpEligible: "asserted",
-      ts: Date.now(),                 // SERVER time — the reason this route exists
-    };
-    await fbPut(env, LG(lid) + "/picks/" + encodeURIComponent(name), pick);
-
-    const picks = (await fbGet(env, LG(lid) + "/picks")).data || {};
-    // ⚠️ THIS league's threshold, never the global roster. Default is "everyone in",
-    // where the size IS the member count — an 8-person league locks on the 8th leg and
-    // a 4-person league on the 4th. A league can instead lock at a fixed count, which
-    // turns Last In into a race with a real risk of not making the ticket at all.
-    // ⚠️ In Bozo Royale the threshold is the ALIVE roster, not the member count. A
-    // chopped player never submits again, so waiting for "everyone in" would mean the
-    // ticket could never lock once the first elimination landed — the board would just
-    // sit open forever with the league unable to play.
-    const size = set.format === "royale" ? royaleRoster(state).length : memberNames(state).length;
-    const need = set.lockRule === "count" ? Math.min(set.lockCount || size, size || set.lockCount) : size;
-    let placed = false;
-    if (need > 0 && Object.keys(picks).length >= need) {
-      placed = await placeAndDraw(env, lid, picks, state);
-    }
-    return json({ ok: true, ts: pick.ts, placed, size, need }, 200, cors);
+    const out = await commitBozoLeg(env, lid, state, name, p);
+    return json(out, 200, cors);
   } catch (e) {
     return json({ error: "Database write failed: " + e.message }, 502, cors);
   }
@@ -9880,12 +9899,19 @@ function mcpModelScoreboardRows(envelope, input) {
 }
 
 // Resolve the credential in the URL (or header) to a caller.
-//   { kind:"user", name }  — a per-user token, matched by HASH against /users
-//   { kind:"shared" }      — the legacy league passphrase; anonymous
-//   null                   — no match; the caller gets a 401
+//   { kind:"user", name, uid }  — a per-user token, matched by HASH against /users
+//   { kind:"shared" }           — the legacy league passphrase; anonymous
+//   null                        — no match; the caller gets a 401
 // ⚠️ Matched by hash and compared timing-safely against EVERY row, so a wrong token
 // leaks no timing signal about which member it nearly matched — the same discipline
 // bozoClaim already applies to invite tokens.
+// ⚠️ `name` is the DISPLAY name — rec.name when the account has one, the /users key
+// otherwise. Greenfield accounts are keyed by immutable uid (u_…), and before this
+// resolution every `you:` marker and membership check compared that raw uid against
+// league rosters keyed by display name, so a uid-keyed member's own leg showed
+// you:false. sessionAuth already resolves rec.name the same way; this mirrors it.
+// `uid` is the /users key and is what anything durable (KV keys, audit fields) must
+// use — display names are mutable.
 async function mcpAuth(request, url, env) {
   const supplied = mcpPassOf(request, url);
   if (!supplied) return null;
@@ -9903,8 +9929,12 @@ async function mcpAuth(request, url, env) {
     // check instead of re-fetching /users on every tool call.
     // ⚠️ THIS IS A READ. entitlementOf() never writes, and the backfill that persists the
     // field deliberately lives on /auth/roster instead of in loadUsers, so that no MCP call
-    // can ever trigger a Firebase write. "Every tool is read-only" is a published claim.
-    return hit ? { kind: "user", name: hit, entitlement: entitlementOf(hitUser) } : null;
+    // can ever trigger a Firebase write. Every tool except dd_submit_bozo_leg is read-only,
+    // and that one writes only at its confirm step — never during auth.
+    if (!hit) return null;
+    const display = hitUser && typeof hitUser.name === "string" && hitUser.name.trim()
+      ? hitUser.name.trim() : hit;
+    return { kind: "user", name: display, uid: hit, entitlement: entitlementOf(hitUser) };
   }
 
   if (env.DAWG_PASS && timingSafeEqual(supplied, env.DAWG_PASS)) return { kind: "shared" };
@@ -10048,7 +10078,10 @@ async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG) {
             ? "You are connected as " + caller.name + ". When a tool marks a row `you: true`, that is them.\n"
             : "⚠️ This is the SHARED league connector — you do NOT know which member you are talking to. " +
               "Never assume whose team, leg or ledger is whose; ask. A personal URL from " + SITE + "/connect.html fixes this.\n") +
-          "Everything here is read-only and is either the league's own data, public play-by-play, " +
+          "Every tool here is read-only except dd_submit_bozo_leg, which can write exactly one thing — " +
+          "the caller's own Bozo leg, in an open week, and only after the human has read back the parsed bet and " +
+          "confirmed with the code it returns. Never call its confirm step without showing the human the echo first. " +
+          "Everything else is the league's own data, public play-by-play, " +
           "or a deterministic calculation over caller-supplied inputs. Calculator inputs and results are not stored. " +
           "The model scoreboard reads dated prospective receipts and returns descriptive disagreement only; it is ungraded and is not a validated consensus or ranking. " +
           "The CFB reads separate observed 2025 results from one end-of-2025 retrodictive Elo row. Compact profiles also expose non-ranked expected-versus-observed Elo diagnostics; these are not luck, team-quality labels, forecasts or grades. dd_find_cfb_games reads the actual canonical 2025 schedule/results surface; it is historical and not the unpublished 2026 schedule. dd_find_cfb_team_games and dd_find_cfb_team_periods return schedule-derived results only, for one exact team by default or for every team's most recent game or period under scope=latest-per-team; latest means latest within the 2025 FBS-involved surface, not current 2026 form, and FCS records are partial. dd_find_cfb_historical_market returns book-identified prices whose observation time is unknown: never call them closing lines, compute CLV or cite them as prospective inputs. dd_get_cfb_model_card returns generated governance and retrodictive evidence, not a current forecast or leaderboard. dd_get_cfb_rating_system describes registered methods and output availability; registration is not evidence of prospective skill. dd_rank_cfb_teams returns one declared system's dated ranking, not a consensus or current power ranking. dd_project_cfb_matchup and dd_project_cfb_schedule_path are hypothetical rating-period calculations, not scheduled 2026 forecasts. dd_find_cfb_record_divergence returns descriptive record-versus-scoring gaps whose small held-out lift does not authorize current-team labels. dd_get_cfb_model_disagreement returns a blocked study whose untimestamped market input prevents a winner or blend conclusion. dd_get_cfb_model_receipt_status reports the append-only prospective ledger honestly; receipt rows remain ungraded and outcomes belong in a separate surface. All CFB outputs are ungraded, not market-adjusted and are not a consensus. " +
@@ -10066,7 +10099,12 @@ async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG) {
       // `catalog` is ours and stays server-side — it is not part of the Tool wire shape.
       return rpcOk(id, { tools: mcpCatalogTools(catalog).map(t => ({
         name: t.name, title: t.title, description: t.description, inputSchema: t.inputSchema,
-        annotations: { title: t.title, readOnlyHint: t.readOnlyHint === true },
+        annotations: {
+          title: t.title, readOnlyHint: t.readOnlyHint === true,
+          // Defined ONLY for the write tool, per the rule above: an edit overwrites the
+          // caller's existing leg, so destructive is the honest value.
+          ...(t.readOnlyHint === true ? {} : { destructiveHint: t.destructiveHint === true }),
+        },
       })) });
     case "tools/call": {
       const name = m.params && m.params.name;
@@ -10084,7 +10122,8 @@ async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG) {
 }
 
 /* ------------------------------- the tools ------------------------------- */
-// All read-only. Data tools use the same Firebase paths, KV keys and published pages
+// All read-only except dd_submit_bozo_leg (two-phase, own leg only — see the tool).
+// Data tools use the same Firebase paths, KV keys and published pages
 // the site itself uses; calculator tools mirror work/pound-core.js and are parity-tested.
 
 const MCP_NO_ARGS = { type: "object", properties: {}, additionalProperties: false };
@@ -10100,7 +10139,10 @@ const MCP_TOOLS = [
     async run(args, env, caller) {
       if (caller && caller.kind === "user")
         return toolText({
-          player: caller.name, anonymous: false, access: "read-only",
+          player: caller.name, anonymous: false,
+          // Read everything, write one thing: your own Bozo leg, two-phase. Stated here
+          // because "read-only" was a published claim and its retirement should be too.
+          access: "read-only, except your own Bozo leg via dd_submit_bozo_leg (two-phase confirm)",
           // This caller's own subscription state, from their own record. Everything on the
           // site is free today: plan is "free" for every account and NOTHING is gated on
           // it, so never tell a user a tool is being withheld from them on this basis.
@@ -10475,6 +10517,204 @@ const MCP_TOOLS = [
           "The price is whatever you typed. Nothing here checks it against a book, and it is recorded as self-reported.",
           "A pass here is a pass at this instant. Someone else can take your exact leg, or fill the board, before you press submit.",
         ],
+      });
+    },
+  },
+  {
+    // ⚠️ THE ONE WRITE TOOL. Spec: claude/data-dawgs-cep-identity.md §4 — two-phase
+    // commit, idempotent replay, server-enforced blast radius, audit stamp. The blast
+    // radius is absolute: this tool can touch the CALLER'S OWN LEG, in the CURRENT
+    // week, while the board is OPEN — never another member's pick, league config, the
+    // hierarchy draw, grading, or the draft. Nothing in the arguments can widen that.
+    name: "dd_submit_bozo_leg",
+    title: "Submit your Bozo leg (two-phase)",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: true,   // an edit overwrites your existing leg and resets your clock
+    description:
+      "Submit (or replace) YOUR OWN leg on the live Bozo board. TWO-PHASE, and phase one writes " +
+      "nothing: call with the bet fields and it validates against the live board, then returns a " +
+      "plain-English echo of the parsed bet plus a confirm_code. ⚠️ SHOW THE HUMAN THE ECHO and only " +
+      "call again with {confirm: code} after they have approved it — the echo is what stops a " +
+      "misparsed team, line or price from becoming a real bet. The code expires in 5 minutes; " +
+      "replaying a used code is a no-op that returns the original result. Editing an existing leg " +
+      "resets its server timestamp AND price, which moves you in the Last In lever. If the response " +
+      "says the submission would lock the board, say so out loud before confirming: the last leg " +
+      "places the ticket for everyone and draws the lever hierarchy, and there is no undo.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        sport: { type: "string", description: "nfl | cfb | nba | cbb | mlb | nhl" },
+        eventId: { type: "string", description: "The game's id, from dd_scores" },
+        game: { type: "string", description: "Human-readable matchup, e.g. \"BUF @ MIA\"" },
+        mkt: { type: "string", description: "spread | ml | total | prop | other" },
+        side: { type: "string", description: "Team abbreviation, or over / under" },
+        line: { type: "number", description: "The number. Required for everything except ml." },
+        price: { type: "number", description: "American odds, e.g. -180. Favourites only; the band is league-set." },
+        label: { type: "string", description: "How the leg reads on the ticket, e.g. \"BUF -6.5\"" },
+        prop: { type: "string", description: "Required when mkt is \"other\": what the bet actually is" },
+        priceOpp: { type: "number", description: "American odds of the OPPOSITE side, for de-vig. Optional but strongly encouraged — without it the leg has no CLV baseline." },
+        startsAt: { type: "string", description: "Kickoff ISO timestamp from dd_scores. Optional but strongly encouraged — without it the closing line is never captured." },
+        league: { type: "string", description: "League id (default: main)" },
+        confirm: { type: "string", description: "PHASE TWO ONLY: the confirm_code returned by phase one, after the human approved the echo. Sends the bet." },
+      },
+      required: [],
+      additionalProperties: false,
+    },
+    async run(args, env, caller) {
+      // Identity first, same reasoning as dd_draft_bozo_leg — every check below is a
+      // question about who is asking, and a WRITE with no identity is unattributable.
+      if (!caller || caller.kind !== "user")
+        return toolErr(
+          "Submitting needs to know who you are, and the shared league connector cannot tell. " +
+          "Mint a personal URL at " + SITE + "/connect.html and this works.");
+      if (!env.RL)
+        return toolErr("The confirmation store is not configured on this deployment.");
+      const name = caller.name;
+      const uid = caller.uid || caller.name;
+      // ⚠️ Keyed by uid, not display name: display names are mutable, and a rename
+      // between propose and confirm must not orphan (or worse, cross-match) a pending bet.
+      const kvKey = "mcpconfirm:" + uid;
+
+      /* -------------------------- phase two: confirm -------------------------- */
+      if (args.confirm !== undefined) {
+        const code = String(args.confirm || "").trim().toUpperCase();
+        if (!code) return toolErr("Empty confirm code.");
+        let pend;
+        try { pend = JSON.parse((await env.RL.get(kvKey)) || "null"); } catch { pend = null; }
+        if (!pend)
+          return toolText({ status: "nothing_pending", detail: "No proposal is waiting on a confirmation — it may have expired (codes live 5 minutes). Propose the leg again." });
+        if (pend.code !== code)
+          return toolErr(pend.consumed
+            ? "That code was already used for a different submission. Propose again if you want to change the leg."
+            : "Wrong confirm code. The pending proposal is: " + pend.echo);
+        // ⚠️ Idempotent replay, spec §4.2: the same code returns the ORIGINAL result and
+        // writes nothing. An agent retry must not become a second submission.
+        if (pend.consumed) return toolText(pend.result);
+
+        // Re-check EVERYTHING against the live board. The confirm may arrive minutes
+        // after the propose; someone can have taken the selection, filled the board, or
+        // locked it in between. A stale pass must not write.
+        const lid = pend.lid;
+        let lg;
+        try { lg = await loadLeague(env, lid); }
+        catch (e) { return toolErr("Database unreachable: " + e.message); }
+        if (!lg) return toolErr("No such league: " + lid);
+        if (!isMember(lg, name))
+          return toolErr("You are not in " + lid + " any more, so nothing can go on that board under your name.");
+        if ((lg.week || 1) !== pend.week) {
+          try { await env.RL.put(kvKey, "null", { expirationTtl: 60 }); } catch {}
+          return toolText({ status: "stale", detail: "The league moved to week " + (lg.week || 1) + " since this was proposed for week " + pend.week + ". Propose again on the current board." });
+        }
+        if ((lg.status || "open") !== "open")
+          return toolText({ status: "board-locked", detail: "The ticket is placed and the board is locked — nothing can be added or changed for week " + (lg.week || 1) + "." });
+        const set = settingsOf(lg);
+        const picks = lg.picks || {};
+        if (!set.allowEdit && (picks[encodeURIComponent(name)] || picks[name]))
+          return toolText({ status: "edits-locked", detail: "This league locks your leg the moment it lands, and yours is already in." });
+        if (set.format === "royale" && !royaleAlive(lg, name))
+          return toolText({ status: "chopped", detail: "You're out this season — you fund the ticket, you don't have a leg on it." });
+        const err = validatePick(pend.p, name, picks, bandOf(lg), set.format);
+        if (err) {
+          try { await env.RL.put(kvKey, "null", { expirationTtl: 60 }); } catch {}
+          return toolText({ status: "rejected", detail: "The board changed since this was proposed and the leg no longer passes: " + err + " Propose again." });
+        }
+
+        // The same single write path the site form uses, stamped as agent-submitted.
+        const out = await commitBozoLeg(env, lid, lg, name, pend.p, "mcp");
+        const result = {
+          status: "submitted", league: lid, week: pend.week, you: name,
+          leg: { label: pend.p.label, price: pend.p.price, game: pend.p.game },
+          ts: out.ts, via: "mcp",
+          boardLocked: !!out.placed,
+          legsIn: null,   // read dd_bozo_week for the live board; this result is frozen for replay
+          detail: out.placed
+            ? "That was the last leg. The ticket is placed, the board is locked and the lever hierarchy has been drawn."
+            : "Your leg is on the board. Others can still see and react to it; the board locks when the last leg lands.",
+        };
+        // Consumed marker, kept 1 hour so a retry storm keeps getting the same answer.
+        try { await env.RL.put(kvKey, JSON.stringify({ code, consumed: true, result }), { expirationTtl: 3600 }); } catch {}
+        return toolText(result);
+      }
+
+      /* -------------------------- phase one: propose -------------------------- */
+      const lid = validLeagueId(args.league || DEFAULT_LEAGUE) ? (args.league || DEFAULT_LEAGUE) : null;
+      if (!lid) return toolErr("Bad league id.");
+      let lg;
+      try { lg = await loadLeague(env, lid); }
+      catch (e) { return toolErr("Database unreachable: " + e.message); }
+      if (!lg) return toolErr("No such league: " + lid);
+      if (!isMember(lg, name))
+        return toolErr("You are not in " + lid + ", so nothing can go on that board under your name.");
+      if ((lg.status || "open") !== "open")
+        return toolText({ status: "board-locked", detail: "The ticket is placed and the board is locked — nothing can be added or changed for week " + (lg.week || 1) + ". The lever hierarchy has already been drawn." });
+
+      const set = settingsOf(lg);
+      const picks = lg.picks || {};
+      const mine = picks[encodeURIComponent(name)] || picks[name] || null;
+      if (mine && !set.allowEdit)
+        return toolText({ status: "edits-locked", detail: "This league locks your leg the moment it lands, and yours is already in — no edit is possible, by league setting.", yourExistingLeg: { label: mine.label, price: mine.price, ts: mine.ts || null } });
+      if (set.format === "royale" && !royaleAlive(lg, name))
+        return toolText({ status: "chopped", detail: "You're out this season — you fund the ticket, you don't have a leg on it." });
+
+      // Shaped exactly the way /bozo/pick reads it, priceOpp and startsAt included —
+      // this object is what gets frozen into the pending record and later committed.
+      const p = {
+        sport: String(args.sport || "").toLowerCase(),
+        eventId: String(args.eventId || ""),
+        game: String(args.game || "").slice(0, 80),
+        mkt: String(args.mkt || "").toLowerCase(),
+        side: String(args.side || "").slice(0, 40),
+        line: args.mkt === "ml" ? 0 : Number(args.line),
+        price: Math.round(Number(args.price)),
+        label: String(args.label || "").slice(0, 90),
+        prop: args.prop ? String(args.prop).slice(0, 80) : null,
+        priceOpp: args.priceOpp,
+        startsAt: typeof args.startsAt === "string" ? args.startsAt : null,
+      };
+      // ⚠️ The server's own validator, same as the site form and dd_draft_bozo_leg.
+      const band = bandOf(lg);
+      const err = validatePick(p, name, picks, band, set.format);
+      if (err)
+        return toolText({ status: "rejected", detail: err, band, note: "That is the literal string the server would reject with. Fix it and propose again." });
+
+      const size = set.format === "royale" ? royaleRoster(lg).length : memberNames(lg).length;
+      const need = set.lockRule === "count" ? Math.min(set.lockCount || size, size || set.lockCount) : size;
+      const already = Object.keys(picks).length;
+      const wouldLock = need > 0 && (mine ? already : already + 1) >= need;
+
+      // The echo IS the safety mechanism (spec §4.1): the human reads the parsed bet in
+      // plain English before anything can happen. Consequences ride in the same sentence.
+      const echo =
+        p.label + " — " + p.game + ", " + (p.mkt === "ml" ? "moneyline" : p.mkt + " " + p.line) +
+        " at " + p.price + ", for " + name + ", week " + (lg.week || 1) + " in league " + lid + "." +
+        (mine ? " ⚠️ This REPLACES your current leg (" + mine.label + " at " + mine.price + ") and resets your submission clock — that moves you in the Last In lever." : "") +
+        (wouldLock ? " ⚠️ THIS IS THE LAST LEG: confirming places the ticket, locks the board for all " + size + " and draws the lever hierarchy. No undo." : "");
+
+      const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+      const rnd = new Uint32Array(6);
+      crypto.getRandomValues(rnd);
+      let code = "";
+      for (const r of rnd) code += alphabet[r % alphabet.length];
+
+      // ⚠️ The pending record is the ONLY thing written in phase one, it lives in KV —
+      // never Firebase — and it expires on its own. Nothing on the board changes here.
+      try {
+        await env.RL.put(kvKey, JSON.stringify({ code, lid, week: lg.week || 1, p, echo, ts: Date.now() }), { expirationTtl: 300 });
+      } catch (e) { return toolErr("Could not stage the confirmation: " + e.message); }
+
+      return toolText({
+        status: "confirm_required",
+        echo,
+        confirm_code: code,
+        expires_in: 300,
+        editingAnExistingLeg: !!mine,
+        wouldLockTheBoard: wouldLock,
+        missing: [
+          ...(p.priceOpp == null ? ["priceOpp — without the opposite side's price this leg has no de-vig baseline and no CLV"] : []),
+          ...(p.startsAt ? [] : ["startsAt — without kickoff time the closing line is never captured for this leg"]),
+        ],
+        note: "NOTHING has been submitted. Show the human the echo verbatim; only after they approve, call this tool again with {confirm: \"" + code + "\"}.",
       });
     },
   },

@@ -1,5 +1,5 @@
 {
- "as_of": "2026-08-12",
+ "as_of": "2026-08-13",
  "source": "Generated from the site itself. Tier is read from each page's live chip.",
  "tier": "labs",
  "graded": false,
@@ -21,7 +21,7 @@
   "mint": "https://datadawgs216.com/signon.html#connect",
   "auth": "PER-USER tokens are minted on the Connect Your Dawg sheet at /signon.html after email confirmation, stored hashed and revocable one at a time — so the server knows who is asking and a leak costs one member, not fourteen. The older shared league passphrase still works and is ANONYMOUS; it is kept only so nobody is cut off mid-season. Either way the URL IS the credential: per-user makes a leak containable, not secure, and it must never be described as security.",
   "identity": "dd_whoami reports the caller. Rows belonging to them are marked `you: true`. An anonymous connection is told so explicitly and instructed to ask rather than assume whose is whose.",
-  "writes": "None. Every tool is read-only, asserted by test against the source.",
+  "writes": "ONE tool writes: dd_submit_bozo_leg, two-phase (propose returns a plain-English echo and a confirm code; nothing is written until the human-approved code is sent back). Blast radius asserted by test against the source: the caller's own Bozo leg, current open week, never anyone else's pick, config, draw or grading. Every other tool is read-only, also asserted by test. Agent-submitted legs are stamped via:\"mcp\".",
   "tools_live": [
    "dd_whoami",
    "dd_league_overview",
@@ -29,6 +29,7 @@
    "dd_bozo_week",
    "dd_bozo_standings",
    "dd_draft_bozo_leg",
+   "dd_submit_bozo_leg",
    "dd_draft_board",
    "dd_draft_pool",
    "dd_survivor_week",
@@ -189,11 +190,11 @@
    "surfaces": 21,
    "with_live_machine_access": 16,
   "with_no_machine_access": 4,
-  "mcp_tools_registered": 42,
-  "mcp_tools_live": 42,
+  "mcp_tools_registered": 43,
+  "mcp_tools_live": 43,
   "mcp_tools_staged": 0,
-  "mcp_tools_core": 16,
-  "mcp_tools_planned": 5
+  "mcp_tools_core": 17,
+  "mcp_tools_planned": 4
  },
  "data": [
   {
@@ -514,12 +515,16 @@
      "kind": "mcp",
      "tool": "dd_league_overview",
      "status": "live"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_submit_bozo_leg",
+     "status": "live",
+     "covers": "two-phase submission of the caller's OWN leg: propose echoes the parsed bet, nothing writes until the confirm code is returned"
     }
    ],
-   "planned": [
-    "mcp:submit_bozo_leg"
-   ],
-   "gap": "Reads are live over MCP. Write access (submitting a leg) waits on the trust layer, deliberately.",
+   "planned": [],
+   "gap": "Reads and the one scoped write (your own leg, two-phase) are live over MCP. The board does not yet visually mark agent-submitted legs; the via field is stored.",
    "tier": "labs"
   },
   {

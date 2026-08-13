@@ -489,11 +489,26 @@ const cfbModelCardsJson = {
 };
 
 let netMode = "normal"; // normal | dbdown | emptyRoom | espnDown | simulatedRoom | simulatedSettings
+/* ⚠️ THE WRITE GATE. `livePicks` is null for the entire suite except inside the
+   dd_submit_bozo_leg group, so the historical invariant — no read tool ever issues a
+   non-GET — still hard-fails for all 42 read tools. When armed, exactly one URL may be
+   PUT: the caller's own pick. Anything else non-GET still throws. */
+let livePicks = null;      // armed = { ...leagueRec.picks }, mutated by the allowed PUT
+let legWrites = [];        // every allowed PUT lands here for the assertions
 globalThis.fetch = async (input, init) => {
   const u = String(input instanceof URL ? input.href : (input && input.url) || input);
   const method = (init && init.method) || (input && input.method) || "GET";
   const J = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json" } });
-  if (method !== "GET") throw new Error("TEST: non-GET network call attempted by MCP path: " + method + " " + u);
+  if (method !== "GET") {
+    if (livePicks && method === "PUT" && u.startsWith(FB + "/bozo/leagues/main/picks/Kap.json")) {
+      const body = JSON.parse((init && init.body) || "null");
+      livePicks.Kap = body;
+      legWrites.push({ url: u, body });
+      return J(body);
+    }
+    throw new Error("TEST: non-GET network call attempted by MCP path: " + method + " " + u);
+  }
+  if (livePicks && u.startsWith(FB + "/bozo/leagues/main/picks.json")) return J(livePicks);
   if (u.startsWith(FB + "/bozo/leagues.json") || u.startsWith(FB + "/bozo/leagues.json?")) {
     if (netMode === "dbdown") throw new Error("connect refused");
     return J({ main: leagueRec });
@@ -548,6 +563,11 @@ const USERS = {
   "Kap": { mcpToken: await hmacB64u(PEPPER, "mcp|u_kap") },
   "The%20Kid": { mcpToken: await hmacB64u(PEPPER, "mcp|" + USER_TOKEN) },
   "Outsider": { mcpToken: await hmacB64u(PEPPER, "mcp|u_outsider") },
+  // ⚠️ A GREENFIELD UID-KEYED ACCOUNT, display name on the record. Before mcpAuth
+  // resolved rec.name, this caller's `you:` markers and membership checks compared the
+  // raw uid against name-keyed league rosters and always missed — a uid-keyed member's
+  // own leg showed you:false on their own connector. These fixtures pin the fix.
+  "u_jeffuid00000000000000001": { name: "Jeff", mcpToken: await hmacB64u(PEPPER, "mcp|u_jefftok") },
 };
 const env = { DAWG_PASS: PASS, BOZO_PEPPER: PEPPER, RL: { async get(k) { return k === "survivor:2026:1" ? JSON.stringify({ season: 2026, week: 1, stored: NOW - 3600e3, picks: { CLE: 40 } }) : null; } } };
 const req = (body, { path = "/mcp/" + PASS, headers = {}, method = "POST" } = {}) =>
@@ -627,7 +647,7 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 {
   const j = await (await req(rpc("tools/list"))).json();
   const t = j.result.tools;
-  ok(t.length === 42, "forty-two tools listed in the staged Worker source");
+  ok(t.length === 43, "forty-three tools listed in the staged Worker source");
   ok(t.some(x => x.name === "dd_draft_bozo_leg" && /READ-ONLY/.test(x.description)),
      "dd_draft_bozo_leg is listed and says in its own description that it writes nothing");
   ok(t.every(x => x.name.startsWith("dd_")), "all tools dd_-prefixed");
@@ -654,14 +674,21 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 
   ok(full.every(x => typeof x.title === "string" && x.title.length > 0), "every tool carries a display title");
   ok(full.every(x => x.annotations && x.annotations.title === x.title), "…mirrored into annotations.title, where MCP clients read it");
-  ok(full.every(x => x.annotations.readOnlyHint === true), "every tool declares readOnlyHint:true — the block writes nothing");
-  ok(full.every(x => !("destructiveHint" in x.annotations) && !("idempotentHint" in x.annotations) && !("openWorldHint" in x.annotations)),
+  // ⚠️ Was "every tool declares readOnlyHint:true". dd_submit_bozo_leg retired that
+  // claim deliberately (2026-08-13): the wire now says exactly one tool writes, and which.
+  ok(full.filter(x => x.annotations.readOnlyHint !== true).length === 1 &&
+     full.find(x => x.name === "dd_submit_bozo_leg").annotations.readOnlyHint === false,
+     "every tool declares readOnlyHint:true except dd_submit_bozo_leg, which says false on the wire");
+  ok(full.find(x => x.name === "dd_submit_bozo_leg").annotations.destructiveHint === true,
+     "the write tool declares destructiveHint:true — an edit overwrites the existing leg");
+  ok(full.every(x => (x.annotations.readOnlyHint === true ? !("destructiveHint" in x.annotations) : true) &&
+                     !("idempotentHint" in x.annotations) && !("openWorldHint" in x.annotations)),
      "the hints nobody verified are ABSENT, not guessed");
   ok(new Set(full.map(x => x.title)).size === full.length, "titles are unique — two tools with one title is a UI that lies");
   ok(full.every(x => !("catalog" in x)), "`catalog` is server-side bookkeeping and never reaches the wire");
 
   ok(fullNamed.length === full.length, "/mcp/full/<pass> lists the same set as the bare /mcp/<pass>");
-  ok(full.length === 42 && core.length === 16, "full lists 42, core lists 16");
+  ok(full.length === 43 && core.length === 17, "full lists 43, core lists 17");
   const fullNames = new Set(full.map(x => x.name)), coreNames = new Set(core.map(x => x.name));
   ok([...coreNames].every(n => fullNames.has(n)), "core is a strict subset of full");
   ok(coreNames.has("dd_whoami") && coreNames.has("dd_bozo_week") && coreNames.has("dd_draft_board") && coreNames.has("dd_site_map"),
@@ -689,7 +716,7 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
   ok((await req(rpc("ping"), { path: "/mcp/core" })).status === 401, "a bare catalog word is a credential, and a wrong one → 401");
   {
     const r = await req(rpc("tools/list"), { path: "/mcp/core", headers: { "X-Dawg-Pass": PASS } });
-    ok(r.status === 200 && (await r.json()).result.tools.length === 16, "header auth can still pick a catalog");
+    ok(r.status === 200 && (await r.json()).result.tools.length === 17, "header auth can still pick a catalog");
   }
 
   /* ⚠️ THE RESERVED-WORD PASSPHRASE. A DAWG_PASS that IS "core" or "full" used to be
@@ -710,7 +737,7 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
     ok(r.status === 200, `a passphrase of "${word}" still authenticates at /mcp/${word}`, "status " + r.status);
     if (r.status === 200) {
       const n = (await r.json()).result.tools.length;
-      ok(n === 42, `…and gets the default full catalog, not an empty or partial one`, "tools=" + n);
+      ok(n === 43, `…and gets the default full catalog, not an empty or partial one`, "tools=" + n);
     }
     // it must still be a real credential check, not a hole that lets the word through
     const bad = await reqWord(rpc("ping"), "/mcp/" + (word === "core" ? "full" : "core"));
@@ -719,13 +746,13 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
   // per-user tokens route the same way
   {
     const j = await (await req(rpc("tools/list"), { path: "/mcp/core/" + USER_TOKEN })).json();
-    ok(j.result.tools.length === 16, "a per-user token gets the same catalog treatment");
+    ok(j.result.tools.length === 17, "a per-user token gets the same catalog treatment");
   }
   // initialize says which catalog you are on
   for (const [path, needle] of [["/mcp/core/" + PASS, "Catalog `core`"], ["/mcp/" + PASS, "Catalog `full`"]]) {
     const j = await (await req(rpc("initialize", { protocolVersion: "2025-06-18" }), { path })).json();
     ok(j.result.instructions.startsWith(needle), "initialize opens by naming the catalog: " + needle);
-    ok(/16 of 42|42 of 42/.test(j.result.instructions), "…with the honest count for that path");
+    ok(/17 of 43|43 of 43/.test(j.result.instructions), "…with the honest count for that path");
   }
   {
     const r = await req(null, { path: "/mcp/" + PASS, method: "GET" });
@@ -740,12 +767,20 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
   const reg = src.slice(src.indexOf("const MCP_TOOLS = ["));
   const n = (re) => (reg.match(re) || []).length;
   const tools = n(/\n    name: "dd_\w+",\n/g);
-  ok(tools === 42, "42 tools declared in work/mcp-block.js");
+  ok(tools === 43, "43 tools declared in work/mcp-block.js");
   ok(n(/\n    title: "[^"]+",\n/g) === tools, "every declared tool carries a title");
   ok(n(/\n    catalog: "(?:core|full)",\n/g) === tools, "every declared tool carries a core/full catalog tag");
   ok(n(/\n    readOnlyHint: (?:true|false),\n/g) === tools, "every declared tool carries a readOnlyHint");
-  ok(!/readOnlyHint: false/.test(reg), "no tool claims readOnlyHint:false while the block is asserted read-only");
-  ok(n(/\n    catalog: "core",\n/g) === 16, "16 tools are tagged core in the source");
+  // ⚠️ This used to assert ZERO readOnlyHint:false while the block was fully read-only.
+  // dd_submit_bozo_leg (2026-08-13) retired that claim on purpose — see cep-identity §4.
+  // The invariant is now: exactly one write tool, this one, and it says so on the wire.
+  ok(n(/readOnlyHint: false/g) === 1, "exactly ONE tool claims readOnlyHint:false");
+  const wtool = reg.slice(reg.indexOf('name: "dd_submit_bozo_leg"'));
+  ok(reg.indexOf('name: "dd_submit_bozo_leg"') >= 0 && /readOnlyHint: false/.test(wtool.slice(0, 400)),
+     "…and it is dd_submit_bozo_leg");
+  ok(/destructiveHint: true/.test(wtool.slice(0, 400)),
+     "the write tool declares destructiveHint — an edit overwrites the caller's existing leg");
+  ok(n(/\n    catalog: "core",\n/g) === 17, "17 tools are tagged core in the source");
 }
 // dd_league_overview
 {
@@ -2045,8 +2080,99 @@ const LEG = { sport: "nfl", eventId: "403", game: "SF @ SEA", mkt: "spread", sid
      "…and does not carry its own copy of the rules to drift from");
 }
 
-ok(!/fbPut|fbPatch|fbDelete/.test(noComments), "block calls NO Firebase write helper");
-ok(!/\.put\(|\.delete\(/.test(noComments), "block performs NO KV writes");
+/* ---------------- dd_submit_bozo_leg — the ONE write tool, two-phase ---------------- */
+{
+  const kv = new Map();
+  const envW = { ...env, RL: {
+    async get(k) { return kv.has(k) ? kv.get(k) : null; },
+    async put(k, v) { kv.set(k, v); },
+  } };
+  const reqW = (body, path) => worker.fetch(new Request("https://toto.jkapcar4.workers.dev" + path, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  }), envW);
+  const submit = (args, tok = "u_kap") => reqW(call("dd_submit_bozo_leg", args), "/mcp/" + tok);
+  const NEWLEG = { sport: "nfl", eventId: "402", game: "DET @ GB", mkt: "spread", side: "DET", line: 6.5,
+                   price: -150, label: "DET -6.5", priceOpp: 130, startsAt: "2026-09-13T17:00:00Z" };
+
+  livePicks = { ...leagueRec.picks }; legWrites = [];
+
+  // the shared connector cannot write — identity is the whole ballgame
+  const shared = await (await reqW(call("dd_submit_bozo_leg", NEWLEG), "/mcp/" + PASS)).json();
+  ok(shared.result.isError === true && /connect\.html/.test(shared.result.content[0].text),
+     "shared connector: dd_submit_bozo_leg refuses and points at a personal URL");
+
+  // phase one: validates, echoes, stages — and writes NOTHING
+  const p1 = text(await (await submit(NEWLEG)).json());
+  ok(p1.status === "confirm_required" && typeof p1.confirm_code === "string" && p1.confirm_code.length === 6,
+     "propose returns confirm_required with a code");
+  ok(/DET -6\.5/.test(p1.echo) && /for Kap/.test(p1.echo) && /week 1/.test(p1.echo),
+     "the echo reads the parsed bet back in plain English, named to the caller");
+  ok(/REPLACES your current leg/.test(p1.echo) && p1.editingAnExistingLeg === true,
+     "the echo says it replaces the existing leg and resets the clock");
+  ok(p1.wouldLockTheBoard === false, "replacing an already-counted leg does not lock the board");
+  ok(legWrites.length === 0, "phase one wrote NOTHING to the board");
+  ok(Array.isArray(p1.missing) && p1.missing.length === 0,
+     "priceOpp and startsAt were supplied, so nothing is flagged missing");
+
+  // a wrong code commits nothing
+  const wrong = await (await submit({ confirm: "NOPE99" })).json();
+  ok(wrong.result.isError === true && legWrites.length === 0, "a wrong confirm code writes nothing");
+
+  // phase two: the same code commits, through the same write path the site uses
+  const p2 = text(await (await submit({ confirm: p1.confirm_code })).json());
+  ok(p2.status === "submitted" && p2.you === "Kap" && p2.leg.label === "DET -6.5",
+     "confirm submits the staged leg for the caller");
+  ok(legWrites.length === 1 && legWrites[0].url.includes("/picks/Kap.json"),
+     "exactly one write, to the caller's OWN pick and nowhere else");
+  const stored = legWrites[0].body;
+  ok(stored.via === "mcp", "the stored leg is stamped via:'mcp' — the audit answer to 'did a human do this?'");
+  ok(typeof stored.ts === "number" && stored.ts >= NOW, "the server stamped the time, not the client");
+  ok(stored.priceSource === "self" && stored.entryPriceOpp === 130 && stored.startsAt === "2026-09-13T17:00:00Z",
+     "priceOpp and startsAt rode through to the stored pick");
+  ok(!!stored.selectionKey && !!stored.marketKey, "selection and market keys are stored at write time");
+  ok(p2.boardLocked === false, "2 of 3 legs in — the board did not lock");
+
+  // idempotent replay: same code, same answer, still one write
+  const replay = text(await (await submit({ confirm: p1.confirm_code })).json());
+  ok(replay.status === "submitted" && replay.ts === p2.ts && legWrites.length === 1,
+     "replaying a used code is a no-op returning the ORIGINAL result");
+
+  // a non-member with a valid personal token still cannot touch the board
+  const out = await (await submit(NEWLEG, "u_outsider")).json();
+  ok(out.result.isError === true && legWrites.length === 1, "a non-member's propose is refused");
+
+  // the lock warning: The Kid's leg would be the third of three
+  const kid = text(await (await submit({ sport: "nfl", eventId: "402", game: "DET @ GB", mkt: "ml", side: "GB",
+    price: -140, label: "GB ML" }, USER_TOKEN)).json());
+  ok(kid.status === "confirm_required" && kid.wouldLockTheBoard === true && /LAST LEG/.test(kid.echo),
+     "the echo shouts when confirming would lock the board and draw the hierarchy");
+  ok(kid.missing.length === 2, "missing priceOpp and startsAt are named, not silently accepted");
+  ok(legWrites.length === 1, "…and proposing it still wrote nothing");
+
+  // identity: a uid-keyed account resolves to its display name end to end
+  const who = text(await (await reqW(call("dd_whoami"), "/mcp/u_jefftok")).json());
+  ok(who.player === "Jeff", "a uid-keyed account's connector resolves to its display name");
+  ok(/dd_submit_bozo_leg/.test(who.access), "whoami states the write scope instead of claiming read-only");
+  const wk = text(await (await reqW(call("dd_bozo_week"), "/mcp/u_jefftok")).json());
+  ok(wk.legs.some(l => l.player === "Jeff" && l.you === true),
+     "a uid-keyed member's own leg is marked you:true — the exact miss the live board showed");
+
+  livePicks = null; legWrites = [];
+}
+
+/* ⚠️ These three pinned "the block writes nothing" until dd_submit_bozo_leg
+   (2026-08-13, cep-identity §4) retired that claim ON PURPOSE. What they pin now is the
+   PRECISE write scope, so any second write path has to argue with a failing test:
+   - still no direct Firebase write helper in the block — the only route to a Firebase
+     write is commitBozoLeg, the same single write path the site form uses, exactly once;
+   - every KV write in the block targets the caller's own mcpconfirm: staging key;
+   - still no hand-rolled writing HTTP request anywhere in the block. */
+ok(!/fbPut|fbPatch|fbDelete/.test(noComments), "block calls NO Firebase write helper directly");
+ok((noComments.match(/commitBozoLeg\(/g) || []).length === 1,
+   "the block reaches the Firebase write path via commitBozoLeg exactly once");
+ok((noComments.match(/\.put\(/g) || []).length === (noComments.match(/env\.RL\.put\(kvKey/g) || []).length,
+   "every KV write in the block is env.RL.put on the caller's own mcpconfirm staging key");
+ok(!/\.delete\(/.test(noComments), "block performs NO KV deletes");
 ok(!/method:\s*["'](PUT|POST|PATCH|DELETE)/.test(noComments), "block issues NO writing HTTP methods");
 const assembled = readFileSync(resolve(WORK, "..", "dawg-bot-worker.js"), "utf8");
 /* ⚠️ THIS USED TO BE AN ASSERTION THAT COULD NOT FAIL. It read dawg-bot-worker.js into
@@ -2069,8 +2195,8 @@ ok(assembled.split(MCP_START).length === 2 && assembled.split(MCP_END).length ==
   const outOfBlock = assembled.slice(0, assembled.indexOf(MCP_START)) + assembled.slice(assembled.indexOf(MCP_END));
   const names = s => (s.match(/\n    name: "dd_\w+",\n/g) || []).map(m => m.trim());
   const registry = names(blockSrc);
-  ok(registry.length === 42 && names(inBlock).join("|") === registry.join("|"),
-     "the assembled block declares the registry's 42 tools, in the registry's order",
+  ok(registry.length === 43 && names(inBlock).join("|") === registry.join("|"),
+     "the assembled block declares the registry's 43 tools, in the registry's order",
      `${names(inBlock).length} assembled vs ${registry.length} declared`);
   ok(names(outOfBlock).length === 0,
      "no tool is declared outside the markers, where assemble.mjs would never regenerate it");
