@@ -3451,6 +3451,34 @@ function paintPriceWarn(){
   const w = (mk && px) ? priceWarning(mk.value, +px.value) : '';
   el.textContent = w; el.style.display = w ? '' : 'none';
 }
+/* ⚠️ SWITCH THE MARKET ONLY WHERE NOTHING IS THROWN AWAY. A moneyline-shaped price on a
+   spread with NO number typed cannot be submitted as a spread at all — validatePick
+   rejects it with "Number is required for that market" — so there is exactly one bet
+   the entry can mean, and converting destroys nothing.
+
+   ⚠️ IF A NUMBER IS TYPED, LEAVE THE LEG ALONE. A bought-down alternate line is a real
+   spread at a real price, so that entry is genuinely ambiguous, and silently dropping
+   the number to make the price fit would change WHICH BET the member is making. That
+   case keeps the warning priceWarning() already writes and changes nothing. Guessing
+   between two live bets is not a convenience, it is a wrong ticket.
+
+   ⚠️ Bound to `change`, not `input`. On every keystroke, someone typing -165 into a
+   spread they had not numbered yet would be switched to Moneyline mid-entry and watch
+   the Number field vanish under them. */
+function maybeSwitchToMl(){
+  const mk = document.getElementById('fMkt'), px = document.getElementById('fPrice'),
+        ln = document.getElementById('fLine'), el = document.getElementById('priceWarn');
+  if(!mk || !px || !ln || !el) return;
+  const p = +px.value;
+  if(mk.value !== 'spread' || ln.value !== '' || !Number.isFinite(p) || p >= SANE_FLAT_PRICE)
+    return paintPriceWarn();
+  mk.value = 'ml';
+  paintSides();                       // rebuilds Side, hides the now-meaningless Number
+  el.textContent = `Switched to Moneyline — ${p} is a moneyline price and no spread number was typed. `
+    + `Set the market back to Spread if you meant one, and type the number.`;
+  el.style.display = '';
+  paintLegPreview();
+}
 
 /* ---------------- scores: the page calls ESPN itself ---------------- */
 // The Worker's /scores proxy is dead — ESPN answers 403 to Cloudflare egress and
@@ -3497,6 +3525,8 @@ async function loadGames(sport){
     document.getElementById('srcNote').textContent='Scores unreachable — '+e.message+'. Grading falls back to manual entry.';
   }
   paintGames();
+  // The games are the last thing the prefill was waiting on — see myLegNow().
+  try{ prefillFromMyLeg(); }catch(e){ /* never let a prefill break the game list */ }
 }
 function paintGames(){
   const sp=document.getElementById('fSport').value, sel=document.getElementById('fGame');
@@ -3506,6 +3536,69 @@ function paintGames(){
     : '<option value="">no games in window</option>';
   paintSides();
 }
+
+/* ---------------- the form opens on the leg you already have ----------------
+   ⚠️ IT USED TO OPEN ON ITS OWN DEFAULTS. Market fell to Spread (the first <option>),
+   the game fell to whatever loaded first, and your actual leg sat two cards below in
+   your sheet. Nothing in this file ever read your pick back into the form — there was
+   no `fMkt.value =` anywhere — so a member holding a moneyline saw "Spread" selected,
+   typed their moneyline price against it, and got the off-market warning. That reads
+   as the page telling you your BET is wrong when what is really wrong is that the form
+   never knew what your bet was.
+
+   ⚠️ THE PRICE IS DELIBERATELY NOT PREFILLED, and that is the whole judgement here.
+   "Editing resets your clock AND your price" is a rule, not a side effect: an edit
+   takes the price at the moment you edit. Filling the old number back in would let a
+   stale price ride out on a fresh timestamp, which is the exact thing the reset exists
+   to prevent. So the SELECTION comes back — sport, game, market, side, number — and
+   the price you pay is re-read from the book every time. Same for the other side.
+
+   ⚠️ Only fires while the form is untouched. render() runs on the 15-second poll and
+   on every EventSource put, so a prefill that ignored that would overwrite what you
+   were typing, mid-keystroke, every time somebody else's leg landed. */
+let formTouched = false, prefilledFor = null;
+// ⚠️ Derived here rather than passed in, because this runs from TWO places that know
+// different things: render(), which has the board but maybe not the games, and
+// loadGames(), which has the games but no board context. The games arrive after the
+// first render and nothing re-renders until the 15s poll, so a prefill that only ran
+// from render() left the form on its defaults for up to fifteen seconds after load —
+// which is the whole window in which somebody reads the form and starts typing.
+const myLegNow = () => (ME && S && S.picks) ? (S.picks[kEnc(ME.name)] || null) : null;
+function prefillFromMyLeg(mine = myLegNow()){
+  if(!mine){ prefilledFor = null; return; }              // leg removed — allow a re-fill
+  // ⚠️ Keyed on the leg's own ts, so an edit (which restamps it) re-fills, and a poll
+  // that returns the same leg does not.
+  const key = [S.season||'', S.week||1, mine.ts||0].join(':');
+  if(formTouched || prefilledFor === key) return;
+
+  const fS=document.getElementById('fSport'), fG=document.getElementById('fGame'),
+        fM=document.getElementById('fMkt'),  fSd=document.getElementById('fSide'),
+        fL=document.getElementById('fLine'), fPr=document.getElementById('fProp');
+
+  // Sport first: the game list is per-sport and every field below reads out of it.
+  if(mine.sport && SPORTS[mine.sport] && fS.value !== mine.sport){
+    fS.value = mine.sport;
+    if(GAMES[mine.sport]) paintGames();
+    else { loadGames(mine.sport); return; }   // async — resume on the next render
+  }
+  // ⚠️ Bail rather than guess if the game is gone from the window. A leg whose game has
+  // aged out still exists on the board; silently selecting a DIFFERENT game so the form
+  // looks populated would be worse than leaving it alone.
+  if(!(GAMES[fS.value]||[]).some(x => String(x.id) === String(mine.eventId))) return;
+
+  prefilledFor = key;
+  fG.value = String(mine.eventId);
+  if(mine.mkt) fM.value = mine.mkt;
+  // paintSides() rebuilds Side FOR THIS MARKET and shows/hides Number, so it has to run
+  // after the market is set and before the side is chosen.
+  paintSides();
+  if(mine.side) fSd.value = mine.side;
+  if(mine.mkt !== 'ml' && mine.line != null) fL.value = mine.line;
+  if(mine.prop) fPr.value = mine.prop;
+  // fPrice and fPriceOpp stay empty on purpose — see the note above.
+  paintLegPreview(); paintPriceWarn();
+}
+
 /* Grade one leg against its game's realised numbers. PURE, and separate from autoGrade
    so it can be tested for real rather than re-implemented in a test — a second copy of
    this arithmetic would be exactly as wrong as the first and agree with it perfectly.
@@ -4054,7 +4147,8 @@ function render(){
   // else claiming the selection you are looking at is exactly the moment you need to
   // know, and a preview that only updates when YOU touch something would still be
   // telling you it is available.
-  if(document.getElementById('submitCard').style.display !== 'none') paintLegPreview();
+  if(document.getElementById('submitCard').style.display !== 'none'){ prefillFromMyLeg(mine); paintLegPreview(); }
+  else if(!mine) prefilledFor = null;
   // The chart sits under the hierarchy on the board view only — it is a season-long
   // read, and it has no meaning on one player's sheet.
   if(onBoard){ clvLoad(); paintSurvival(); }
@@ -5591,6 +5685,16 @@ document.getElementById('fSport').onchange = ()=>loadGames(fSport.value);
 document.getElementById('fGame').onchange = paintSides;
 document.getElementById('fMkt').onchange = ()=>{ paintSides(); paintPriceWarn(); };
 document.getElementById('fPrice').addEventListener('input', paintPriceWarn);
+document.getElementById('fPrice').addEventListener('change', maybeSwitchToMl);
+// ⚠️ Any touch of the form means the reader owns it from here — prefillFromMyLeg() must
+// never write over what they are in the middle of typing. Price fields count: clearing
+// the price and walking away is a deliberate state, not an empty form to be refilled.
+['fLine','fSide','fProp','fGame','fMkt','fSport','fPrice','fPriceOpp'].forEach(id=>{
+  const el=document.getElementById(id); if(!el) return;
+  const touch = ()=>{ formTouched = true; };
+  el.addEventListener('input', touch);
+  el.addEventListener('change', touch);
+});
 // ⚠️ Every control that can change the printed leg repaints the preview. Miss one
 // and the preview goes stale, which is worse than not having it — it would be
 // confidently showing a leg you are no longer submitting.
