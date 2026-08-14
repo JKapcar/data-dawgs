@@ -747,8 +747,8 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 }
 
 /* ---- the eight drafter colours -------------------------------------------
-   The hues are the ones chosen in tracker-mockups.html — Matt blue, Rob rust,
-   Kevin teal, Chris gold, Tyler magenta, Jason green, Jared violet, Alan red —
+   The hues are the ones chosen in tracker-mockups.html — Matt blue, Rob green,
+   Kevin teal, Chris gold, Tyler magenta, Kap orange, Jared violet, Alan red —
    but the STEPS are not that file's. Those were tuned against a near-black
    mockup field and fail on both of this site's surfaces: the mint read L 0.833
    (outside the band in either mode) and 1.56:1 on the cream paper, which is
@@ -773,14 +773,14 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
    ⚠️ Slot order is the DRAFT order and is frozen for the season. Colour follows the
    person, never their rank — re-sorting the tracker must not repaint anybody. */
 :root{
-  --d1:#4a90d8; --d2:#c45218; --d3:#00ae8d; --d4:#997400;
-  --d5:#cb5282; --d6:#1bb253; --d7:#9788d3; --d8:#b6433f;
+  --d1:#4a90d8; --d2:#1bb253; --d3:#00ae8d; --d4:#997400;
+  --d5:#cb5282; --d6:#c45218; --d7:#9788d3; --d8:#b6433f;
   --td-none:#6f6656;
   --td-cell1:#256abf; --td-cell2:#86b6ef;
 }
 :root[data-theme="light"]{
-  --d1:#3e83cb; --d2:#c45218; --d3:#009878; --d4:#845f00;
-  --d5:#ac3668; --d6:#199947; --d7:#8273bc; --d8:#b2403c;
+  --d1:#3e83cb; --d2:#199947; --d3:#009878; --d4:#845f00;
+  --d5:#ac3668; --d6:#c45218; --d7:#8273bc; --d8:#b2403c;
   --td-none:#a99e8a;
   --td-cell1:#6da7ec; --td-cell2:#1c5cab;
 }
@@ -3184,41 +3184,12 @@ window.DDSheets = function(cfg){
 
   /* ====================== the control rail ============================== */
   function railHTML(){
-    const chips = D.draft_order.map(name=>{
+    return D.draft_order.map(name=>{
       const v = D.drafters[name];
       return `<button type="button" class="td-chip ${oc(name)}" data-sel="drafter:${esc(name)}"
         aria-pressed="${sel.d.has(name)}"><span class="sw"></span>${esc(name)}
         <span class="ew">${n2(v.projected)}</span></button>`;
     }).join("");
-    const byDiv = DIVS.map(div=>{
-      const opts = ORDER.filter(t=>D.teams[t].division===div).map(t=>{
-        const own = ownerOf(t);
-        return `<option value="${esc(t)}">${esc(D.teams[t].name)} · ${n2(D.teams[t].ew)} · `
-          + `${own?esc(own):"on the board"}</option>`;
-      }).join("");
-      return `<optgroup label="${esc(div)}">${opts}</optgroup>`;
-    }).join("");
-    /* Teams picked one at a time get their own removable chips — a <select> holds one
-       value, so without these there is no way to see or undo a multi-team pick. */
-    const picked = [...sel.t].map(t=>
-      `<button type="button" class="td-chip ${oc(ownerOf(t))}" data-sel="team:${esc(t)}"
-        aria-pressed="true" title="Remove ${esc(t)}"><span class="sw"></span>${esc(t)}
-        <span class="ew">&times;</span></button>`).join("");
-    /* ⚠️ "All 32" is a POOL control. On the Team sheet it is a lever back to a view
-       that sheet does not have — the sheet is one-thing-at-a-time by definition, and
-       clearing there just bounces you to the top of the ladder. Chips toggle, so
-       deselecting is the chip itself. */
-    const clearChip = (sheets && sheets.current === "team")
-      ? (selEmpty() ? "" : `<button type="button" class="td-chip" data-sel="league:"
-          aria-pressed="false">Clear</button>`)
-      : `<button type="button" class="td-chip" data-sel="league:"
-          aria-pressed="${selEmpty()}">All 32</button>`;
-    return `<span class="td-rail-lab">View</span>
-      ${clearChip}
-      ${chips}${picked}
-      <label class="td-rail-lab" for="tdTeamPick" style="margin-left:6px">Add team</label>
-      <select class="td-pick" id="tdTeamPick" aria-label="Add a team to the selection">
-        <option value="">Choose a team…</option>${byDiv}</select>`;
   }
 
   /* ====================== 1 · the wins tracker ========================== */
@@ -3978,14 +3949,6 @@ window.DDSheets = function(cfg){
   /* ====================== wiring ======================================== */
   function renderAll(){
     $("tdRail").innerHTML = railHTML();
-    $("tdTeamPick").addEventListener("change", e=>{
-      const v = e.target.value;
-      if(v){
-        autoPick = null;
-        sel.t.add(v);
-      }
-      renderAll();          // rail is rebuilt, so the select resets to its placeholder
-    });
     race(); cards(); drawWheel(); ratio(); ladder(); matrix(); board(); teamSheet();
     if(LAST_MC){ mcTable(LAST_MC.res, LAST_MC.trials); mcPlot(LAST_MC.res, LAST_MC.trials); }
   }
