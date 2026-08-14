@@ -602,7 +602,7 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
    the payout reads as good news */
 .big.cost{color:var(--ink-1)}
 /* slot machine */
-.machine{background:#241c12;border-radius:12px;border-top:3px solid var(--accent);padding:18px 16px;display:flex;gap:16px}
+.machine{background:#241c12;border-radius:12px;border-top:3px solid var(--accent);padding:18px 16px;display:flex;gap:24px}
 .reels{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;flex:1;min-width:0}
 .pos{font:700 9.5px/1 ui-monospace,monospace;letter-spacing:1.4px;color:#b7a488;text-transform:uppercase;margin-bottom:5px;text-align:center}
 .win{position:relative;height:70px;overflow:hidden;border-radius:7px;background:#f7f1e6;
@@ -611,11 +611,12 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
 .cell{height:70px;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 4px;
   font-weight:800;font-size:12px;line-height:1.2;text-transform:uppercase;color:#2b1c0e;
   border-bottom:1px solid rgba(43,28,14,.14)}
-.lever{width:50px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;flex:0 0 50px}
-.rod{width:7px;flex:1;background:linear-gradient(90deg,#6b5636,#c9b287,#6b5636);border-radius:4px;min-height:48px;
-  transform-origin:50% 100%;transition:transform .42s cubic-bezier(.3,1.5,.5,1)}
-.knob{width:28px;height:28px;border-radius:50%;background:var(--accent);margin-top:-6px;box-shadow:inset 0 -4px 8px rgba(0,0,0,.32)}
-.lever.pulled .rod{transform:rotate(24deg) scaleY(.7)}
+.lever{width:82px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;flex:0 0 82px;padding:4px 8px 0}
+.rod{width:11px;flex:1;background:linear-gradient(90deg,#6b5636,#c9b287,#6b5636);border-radius:6px;min-height:78px;
+  transform-origin:50% 100%;transition:transform .68s cubic-bezier(.16,.82,.24,1.28)}
+.knob{width:46px;height:46px;border-radius:50%;background:var(--accent);margin-top:-7px;box-shadow:inset 0 -6px 11px rgba(0,0,0,.34)}
+.lever.pulled .rod{transform:rotate(67deg) scaleY(.56)}
+.lever.pulled .knob{transform:translate(27px,19px) scale(.93)}
 .ord{list-style:none;padding:0;margin:14px 0 0;display:grid;gap:6px}
 .ord li{display:flex;gap:10px;align-items:baseline;opacity:0;transform:translateY(4px);
   transition:opacity .3s,transform .3s;font-size:14px}
@@ -851,8 +852,9 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
 .bz-carnival .lever .rod{background:linear-gradient(90deg,#40311a,#a8873c 24%,var(--brass-hi) 47%,#a8873c 70%,#40311a);
   box-shadow:0 0 0 1px rgba(0,0,0,.45)}
 .bz-carnival .lever .knob{background:radial-gradient(circle at 34% 28%,#ff9a86 0 10%,var(--nose) 48%,#8a1a0c 100%);
-  box-shadow:inset 0 -5px 9px rgba(0,0,0,.4),0 0 0 3px #3a2a12,0 5px 12px rgba(0,0,0,.45)}
-.bz-carnival .pulllab{display:block;margin-top:7px;font:800 8.5px/1 ui-monospace,monospace;letter-spacing:1.5px;
+  box-shadow:inset 0 -5px 9px rgba(0,0,0,.4),0 0 0 3px #3a2a12,0 5px 12px rgba(0,0,0,.45);
+  transition:transform .22s cubic-bezier(.2,.9,.3,1),box-shadow .22s}
+.bz-carnival .pulllab{display:block;margin-top:9px;font:800 10px/1 ui-monospace,monospace;letter-spacing:1.7px;
   text-transform:uppercase;color:var(--bulb-off);text-align:center;transition:color .3s}
 .bz-carnival .lever.live{cursor:pointer}
 .bz-carnival .lever.live .pulllab{color:var(--bulb);text-shadow:0 0 8px rgba(255,201,116,.6)}
@@ -863,6 +865,8 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
 /* the armed idle knob-pulse is for "nothing has happened yet"; when a draw is
    waiting on this reader, knobbeg replaces it — two pulses at once reads as noise */
 .bz-carnival .machine.pending.armed .knob{animation:knobbeg 1.25s ease-in-out infinite}
+@keyframes cabinetthunk{0%,100%{transform:none}18%{transform:translateY(6px) rotate(.28deg)}36%{transform:translateY(-4px) rotate(-.22deg)}55%{transform:translateY(2px) rotate(.12deg)}72%{transform:translateY(-1px)}}
+.bz-carnival .machine.pulling{animation:cabinetthunk .78s cubic-bezier(.2,.8,.2,1)}
 
 /* --- the drawn order, as a lit marquee list --- */
 .bz-carnival .ord li:first-child:not(.ghost) b{color:var(--accent);text-shadow:0 0 10px color-mix(in srgb,var(--accent) 45%,transparent)}
@@ -956,9 +960,11 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
   .machine{flex-direction:column;padding:14px 10px}
   .cell{font-size:9.5px;letter-spacing:0;padding:0 2px}
   .pos{font-size:8.5px;letter-spacing:.8px}
-  .lever{flex-direction:row;width:100%;flex:0 0 auto;gap:12px;align-items:center}
-  .rod{flex:1;min-height:0;height:8px;transform-origin:0 50%}
-  .lever.pulled .rod{transform:scaleX(.72)}.knob{margin:0}
+  .lever{flex-direction:row;width:100%;flex:0 0 auto;gap:14px;align-items:center;padding:8px 8px 2px}
+  .rod{flex:1;min-height:0;height:11px;transform-origin:0 50%}
+  .lever.pulled .rod{transform:scaleX(.52)}
+  .lever.pulled .knob{transform:translateX(-34px) scale(.93)}
+  .knob{margin:0}
   /* the lever lies on its side on a phone, so PULL sits beside the knob, not under it */
   .bz-carnival .pulllab{margin:0 0 0 2px}
   .bz-carnival .machine{padding:22px 14px}
@@ -2450,7 +2456,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
     const L=[];
     L.push(`LEAGUE: 14-team offline auction, $${st.budget} budget, ${st.spots} roster spots each (QB, 2 RB, 2 WR, TE, 2 FLEX W/R/T, DEF, rest bench; no kicker). Scoring: ${{half:"Half PPR",full:"Full PPR",sf:"Superflex"}[scoring]||scoring}. $0 bids are legal, so a team's max bid = its dollars left.`);
-    L.push(`MV = Market Value, a market-consensus auction-dollar snapshot dated 2026-07-29. It is not a points projection.`);
+    L.push(`MV = Market Value, a market-consensus auction-dollar snapshot dated 2026-08-14. It is not a points projection.`);
     L.push(`STATE: ${picks.length} sold. Inflation ${infl.toFixed(2)}x — $${remDollars} chasing $${Math.round(remValue)} of MV still on the board.`);
     L.push(`TEAMS (name | $ left = max bid | spots open | QB/RB/WR/TE/DST drafted):`);
     // whoever is looking at this device — falls back to the operator's team if unset
@@ -5406,21 +5412,49 @@ function setLever(state){
   const cfg={
     idle:['armed', true,  'The hierarchy has not been drawn yet — nothing to pull'],
     pull:['Pull',  false, "Pull the lever to reveal this week's drawn hierarchy"],
-    done:['drawn', true,  "This week's hierarchy is showing on the reels"]
+    done:['Pull again', false, "Pull again to replay this week's drawn hierarchy"]
   }[state];
   lab.textContent=cfg[0]; lv.disabled=cfg[1];
-  lv.classList.toggle('live', state==='pull');
+  lv.classList.toggle('live', state==='pull'||state==='done');
   lv.setAttribute('aria-label', cfg[2]);
+}
+
+let leverAudio=null;
+function leverThunk(){
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC) return;
+    leverAudio=leverAudio||new AC();
+    const now=leverAudio.currentTime, gain=leverAudio.createGain();
+    gain.gain.setValueAtTime(.0001,now);
+    gain.gain.exponentialRampToValueAtTime(.22,now+.012);
+    gain.gain.exponentialRampToValueAtTime(.0001,now+.24);
+    gain.connect(leverAudio.destination);
+    [82,146].forEach((hz,i)=>{
+      const osc=leverAudio.createOscillator();
+      osc.type=i?'square':'triangle';
+      osc.frequency.setValueAtTime(hz,now);
+      osc.frequency.exponentialRampToValueAtTime(hz*.46,now+.19);
+      osc.connect(gain); osc.start(now+i*.018); osc.stop(now+.25);
+    });
+    if(navigator.vibrate) navigator.vibrate([38,28,58]);
+  }catch(e){}
 }
 
 document.getElementById('lever').addEventListener('click', ()=>{
   const ord=S.order;
-  if(!pendingDraw || !ord || !ord.length) return;
-  revealDraw(ord, true);
+  if(!ord || !ord.length || document.getElementById('machine').classList.contains('pulling')) return;
+  leverThunk();
+  if(pendingDraw) revealDraw(ord, true);
+  else spin(ord);
 });
 function spin(order){
-  const lv=document.getElementById('lever');
-  lv.classList.add('pulled'); setTimeout(()=>lv.classList.remove('pulled'),430);
+  const lv=document.getElementById('lever'), machine=document.getElementById('machine');
+  const maxDur=reduced?0:2000+(order.length-1)*450;
+  lv.disabled=true; document.getElementById('pullLab').textContent='Spinning';
+  lv.classList.add('pulled'); machine.classList.add('pulling');
+  setTimeout(()=>lv.classList.remove('pulled'),720);
+  setTimeout(()=>{machine.classList.remove('pulling');setLever('done')},maxDur+180);
   document.getElementById('ord').innerHTML=''; wins.forEach(w=>w.classList.remove('locked'));
   order.forEach((lev,slot)=>{
     const s=strips[slot]; if(!s) return;

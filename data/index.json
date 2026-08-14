@@ -9,17 +9,17 @@
    {
     "path": "/data/pool.json",
     "url": "https://datadawgs216.com/data/pool.json",
-    "bytes": 82143,
-    "as_of": "2026-07-29",
-    "sha256": "270af293e452e40ad2d77bdb4303d5081743ebe031dcf62d24f227fc8fb8393a",
-    "note": "MV is a market-consensus auction-dollar value, NOT a points projection. STALENESS WARNING: this snapshot is 13 days old as of the build date and the underlying market moves through August. Do not quote these dollars as current without saying the date out loud."
+    "bytes": 82121,
+    "as_of": "2026-08-14",
+    "sha256": "cf1a348fa6a6d5c0233ed7fa6cb66a98604ed20dffd5f87d7b2a06840d74133c",
+    "note": "MV is a market-consensus auction-dollar value, NOT a points projection. STALENESS WARNING: this snapshot is 0 days old as of the build date and the underlying market moves through August. Do not quote these dollars as current without saying the date out loud."
    },
    {
     "path": "/data/receipts.json",
     "url": "https://datadawgs216.com/data/receipts.json",
     "bytes": 42989,
     "as_of": "2026-08-06",
-    "sha256": "65066f398efd5961e9f089076f4ea15a07d1f88d2468bce4f214c973e258f128",
+    "sha256": "3889e20f94d8240cafe6fe4f4537a2454dadaf6f6dafbb196edaa02938bd6159",
     "note": "These are PRE-REGISTERED calls: written down before the season and locked with a SHA-256 hash. n=272 games, 51 of them carrying a devigged closing-line benchmark. None are graded yet — the 2026 season has not started. Anything claiming a hit rate for these is wrong."
    },
    {
@@ -27,7 +27,7 @@
     "url": "https://datadawgs216.com/data/nfelo.json",
     "bytes": 9992,
     "as_of": "2026-08-06",
-    "sha256": "bcca058a84505504a61c4492f57e2fd3d627f6836fca520b2f1623b946fffa08",
+    "sha256": "b4be2c8112c89753c04e218ae09f9ba0b688f01da2ef3f617ca5a081bb57928b",
     "note": "Backtest figures span 2009-2025 and OVERLAP the model's own optimisation window, so they are in-sample-ish and should not be read as out-of-sample skill. nfelo straight-up 0.6674 vs market 0.6677 over n=4053 is a difference well inside noise (SE 0.20 pp)."
    },
    {
@@ -35,7 +35,7 @@
     "url": "https://datadawgs216.com/data/models.json",
     "bytes": 2794,
     "as_of": "2026-08-06",
-    "sha256": "7763fa661e5dd10888cfd3b46efb9f7b7c753339f177e4eed1d1eca76fc319f3",
+    "sha256": "4bdd5c0f73c155130a125b940367d5606edf803ec82c42a1a1eb8c858dabd0e8",
     "note": "These are the exact parameters the site uses. Return them alongside any number you derive from them. The margin model is a linear Elo-to-points map with a normal residual — it is deliberately simple and its residual SD (13.18) is larger than most people intuit, which is the whole point."
    },
    {
@@ -43,7 +43,7 @@
     "url": "https://datadawgs216.com/data/survivor.json",
     "bytes": 52900,
     "as_of": "2026-08-06",
-    "sha256": "3a8201cfee9d270d7a728edbe13531655f1c1837068e4045f4c58be63bebb39d",
+    "sha256": "565956e2fc8bbd284dd5b95f12d39df4f75cb051eda91ed88862f36fff296a33",
     "note": "Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: \"market\" = derived from a real line, \"model\" = Elo-only. Ownership is modelled, not observed."
    },
    {
@@ -51,7 +51,7 @@
     "url": "https://datadawgs216.com/data/epa-teams.json",
     "bytes": 85221,
     "as_of": "2026-07-29",
-    "sha256": "65df64e2f832ac1c0112261d61ba857a05281c6abb12a0ab01f7db4a28f27bfc",
+    "sha256": "6bf913f54dca24758dd2c427f1cdc4832cad472213d21060c3ccb86352cde16f",
     "note": "Regular season only, plays with a down (excludes kickoffs/XPs/etc). Per-season tables use a 200-dropback minimum for QBs; the pooled table uses 500. These are descriptive aggregates, not projections — team EPA is famously unstable year to year, so do not read 2025 as 2026."
    },
    {
@@ -59,7 +59,7 @@
     "url": "https://datadawgs216.com/data/league.json",
     "bytes": 1992,
     "as_of": "2026-08-06",
-    "sha256": "dd16f6198a5f80029e97c833b7e409a0a782c63677e513a704b8e2c6483ceb8c",
+    "sha256": "537173c90831e7ab87fbff77a4407803340c01f38ea4f2090056712d112ab573",
     "note": "Public configuration only. No rosters, no tokens, nothing league-private lives in this repo."
    },
    {
@@ -67,7 +67,7 @@
     "url": "https://datadawgs216.com/data/bozo-rules.json",
     "bytes": 7699,
     "as_of": "2026-08-06",
-    "sha256": "266dfa18bb1237209d8345a964c5be5133bf29ef47a1202eaba36ca4bf229823",
+    "sha256": "fea51ceb78a787836872647b87b04e4d74b6f69d2a78070006c4d34a6cf50e7e",
     "note": "The board is fully open by design — every leg, price and timestamp is visible to everyone and to everyone's bots before they place. That was a decision, not an oversight."
    },
    {
@@ -75,7 +75,7 @@
     "url": "https://datadawgs216.com/data/upstream-models.json",
     "bytes": 7874,
     "as_of": "2026-08-08",
-    "sha256": "4a4cc426277158b754ecedd0010bc94cfbdd556ebe75a14d1bf0f1aaa5d02430",
+    "sha256": "43dce1d8c86265f5ac8578ce376a8c78182b7fb69ee6def423bccdbc65f49fcf",
     "note": "License status is an implementation gate, not legal advice. Public code without a verified reusable license is not copied or repackaged, and a reference-only source is not republished in any form."
    },
    {
@@ -83,7 +83,7 @@
     "url": "https://datadawgs216.com/data/model-contracts.json",
     "bytes": 14355,
     "as_of": "2026-08-10",
-    "sha256": "0ffffa597fc7476f2cfdd453e6f8528c92ca2dce3b24bca582ee77101de07d1d",
+    "sha256": "a4ceef2d780a45354670ccd31353ccf09a55a5c26a58343f5ad24505fb346bbe",
     "note": "A contract is not a forecast. It prevents incompatible models and missing values from being silently normalized into false agreement."
    },
    {
@@ -91,7 +91,7 @@
     "url": "https://datadawgs216.com/data/pound-tools.json",
     "bytes": 132102,
     "as_of": "2026-08-08",
-    "sha256": "314b7335d87e25cffb0e8821e493af8e43c694cae40058fcc1c223dbc046f0d6",
+    "sha256": "e1f61e1f5c80de21375f865cdee48a3aea5464be1dc23065e42965537ca30ee0",
     "note": "Two kinds of entry share this inventory. kind \"tool\" (NFL) carries delivery status. kind \"roadmap-idea\" (College Football) carries recommendation plus evidence-backed lifecycle and implementation state. A CFB artifact may be implemented without any MCP tool; candidate_mcp_tools are reservations and remain non-callable unless the independent Worker registry proves otherwise."
    },
    {
@@ -99,15 +99,15 @@
     "url": "https://datadawgs216.com/data/tier-audit.json",
     "bytes": 7287,
     "as_of": "2026-08-07",
-    "sha256": "a316ef008a6b30b6c1f85a847c6281d9a466f285d9dabbe280500e8488231ee8",
+    "sha256": "4b4065e447816151ac5c870ab919892ecff5ae74a437c49ffd61a1a827047261",
     "note": "ONE REVIEWER, ONE DAY, reasoning from the code and the published data. This is a judgment, not a measurement — which is the gate’s known weakness and the reason the audit is published rather than held. Result: NO promotions, NO demotions. That is a suspiciously comfortable outcome and is flagged as such; it survives only because every collar came back with a condition attached. Treat these verdicts as falsifiable."
    },
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 33586,
+    "bytes": 31598,
     "as_of": "2026-08-14",
-    "sha256": "dedd81edf50d24e5600ec19f362ae960176a8bc914e11636e9921fb29509beae",
+    "sha256": "8ccfadb0fc00148557dd44446bf43d847171ef6c82ae86941c094a9356f50602",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -251,15 +251,15 @@
     "url": "https://datadawgs216.com/data/epa-players.json",
     "bytes": 151018,
     "as_of": "2026-07-29",
-    "sha256": "c12e59f5ef1221a5a6aaccbfe1dde0219dd4f5b52c0b523ea98613c2cf8117e7",
+    "sha256": "99122e26772eca4cabb7a9fe5b466998b9f0bb7f252b5bac54206166f972bf9a",
     "note": "Aggregated by the PRIMARY BALL HANDLER: the passer on a dropback, the ball carrier on a rush. There is no receiving EPA here and there cannot be — the play-by-play snapshot carries one name per play, so the whole value of a completed pass is credited to the quarterback and a receiver appears only for his own carries. Regular season only, plays with a down. Descriptive aggregates, not projections: do not read 2025 as 2026."
    },
    {
     "path": "/data/receipts-inventory.json",
     "url": "https://datadawgs216.com/data/receipts-inventory.json",
     "bytes": 3415,
-    "as_of": "2026-08-11",
-    "sha256": "4080ae0b73e0922b8f4db618261d527106cac67e7bea55de3033eaf77cefa0f2",
+    "as_of": "2026-08-14",
+    "sha256": "b4edca08e85468cd16c2877fdd420eac7c57a5fadba4ec881b34fa80dbaa9e28",
     "note": "An INVENTORY, not a scoreboard. There is no honest Brier across domains, so this file counts what has been registered and settled and never scores it. The ledgers OVERLAP: receipts.json and the nfelo half of model-receipts.json are the same forecasts, as are 538-classic.json and its half. aggregate is therefore computed from aggregate.counted_from alone; aggregate.naive_sum is what summing the registered column would wrongly give, published so it can be named and corrected rather than quietly reproduced."
    },
    {
@@ -274,8 +274,8 @@
     "path": "/data/model-board.json",
     "url": "https://datadawgs216.com/data/model-board.json",
     "bytes": 14489,
-    "as_of": "2026-08-11",
-    "sha256": "ff3fb7689e01fe235ad8cd2da2812dd07275c5aec4ac1504bcaa1a503e819b72",
+    "as_of": "2026-08-14",
+    "sha256": "288dca5fa745497af4691dc35ef101a8f364ad46c7ea39816882442a02f66e0f",
     "note": "The per-model board behind receipts.html#models. Rows and columns are DERIVED from the ledger's distinct model_id values, so registering a new model puts it on the board with no page edit. Per-game spread statistics are computed over the independent lines only -- an ensemble of two models averaged back in with them counts the same two beliefs twice. ddpr-nfl-linear is registered and carries displayed:false; it is published here for completeness and must not be rendered."
    },
    {

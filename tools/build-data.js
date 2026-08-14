@@ -293,12 +293,12 @@ write('pool.json', {
   source_page: '/master.html',
   tier: tierOf('master.html'),
   graded: false,
-  as_of: '2026-07-29',
-  source: 'Market Value (MV) auction-dollar snapshot, captured 2026-07-29 and republished unchanged since.',
+  as_of: '2026-08-14',
+  source: 'Market Value (MV) auction-dollar snapshot, captured 2026-08-14.',
   note:
     'MV is a market-consensus auction-dollar value, NOT a points projection. ' +
     'STALENESS WARNING: this snapshot is ' +
-    Math.round((Date.parse(BUILT) - Date.parse('2026-07-29')) / 86400000) +
+    Math.round((Date.parse(BUILT) - Date.parse('2026-08-14')) / 86400000) +
     ' days old as of the build date and the underlying market moves through August. ' +
     'Do not quote these dollars as current without saying the date out loud.',
   scoring_keys: {
