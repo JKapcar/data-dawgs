@@ -65,12 +65,13 @@ for path in sorted(ROOT.glob("*.html")):
     patched = patched.replace(OLD_NARROW, NEW_NARROW, 1)
     old_auth = '''  nav.appendChild(authSec);
   window.DDAuth.render();'''
-    new_auth = '''  // The account chip joins the domain run after the six groups below.
-  window.DDAuth.render();'''
+    new_auth = '''  // The account chip joins the domain run after the six groups below.'''
     old_links = '''  nav.appendChild(links);
   document.addEventListener("click", ()=>{'''
     new_links = '''  links.appendChild(authSec);
   nav.appendChild(links);
+  // render() resolves the button by id, so it must run after nav is in the document.
+  window.DDAuth.render();
   document.addEventListener("click", ()=>{'''
     assert patched.count(old_auth) == 1, f"{path.name}: auth insertion drifted"
     assert patched.count(old_links) == 1, f"{path.name}: links insertion drifted"

@@ -109,6 +109,7 @@ const MEASURE = () => {
   const domainGaps = domainRects.slice(1).map((r, i) => r.left - domainRects[i].right);
   const brandR = nav.querySelector(".brand")?.getBoundingClientRect();
   const authR = nav.querySelector(".navauth")?.getBoundingClientRect();
+  const authLabel = nav.querySelector(".navauth .who")?.textContent?.trim() || "";
   const themeR = links?.querySelector(".theme-btn")?.getBoundingClientRect();
   const brandLogoR = nav.querySelector(".brand .logo")?.getBoundingClientRect();
   const brandTagR = nav.querySelector(".brand .tag")?.getBoundingClientRect();
@@ -122,6 +123,7 @@ const MEASURE = () => {
   return {
     hits, outside, boxes: boxes.length, navH, rowSpread,
     brandToDomains, domainsToAuth, authToTheme, rightSlack, navGap, linksGap,
+    authLabel, authWidth: authR?.width || 0,
     brandLogoVisible:!!brandLogoR?.width, brandTagVisible:!!brandTagR?.width,
     minDomainGap: domainGaps.length ? Math.min(...domainGaps) : -Infinity,
     groups: links ? [...links.querySelectorAll(".navgrp")].length : 0,
@@ -170,6 +172,10 @@ for (const page of PAGES) {
       ok(tag + " mobile retains the Data, Not Dogma line", m.brandTagVisible === true);
       ok(tag + " mobile controls finish at the right edge", m.rightSlack <= 1,
          `right slack ${m.rightSlack.toFixed(1)}px`);
+      ok(tag + " account pill keeps its label", m.authLabel.length > 0,
+         `account label ${JSON.stringify(m.authLabel)}`);
+      ok(tag + " account pill remains a usable size", m.authWidth >= 28,
+         `account width ${m.authWidth.toFixed(1)}px`);
     }
     await ctx.close();
   }

@@ -1201,7 +1201,6 @@ body.proj .blockbar .bb-v{font-size:26px}
   });
   authSec.appendChild(authBtn);
   // The account chip joins the domain run after the six groups below.
-  window.DDAuth.render();
   document.addEventListener("keydown", e=>{ if(e.key === "Escape") window.DDAuth.close(); });
   // sign out in one tab, sign out in all of them
   window.addEventListener("storage", e=>{ if(e.key === AUTH_KEY){ window.DDAuth.render(); window.DDAuth.fire(); } });
@@ -1255,6 +1254,8 @@ body.proj .blockbar .bb-v{font-size:26px}
   });
   links.appendChild(authSec);
   nav.appendChild(links);
+  // render() resolves the button by id, so it must run after nav is in the document.
+  window.DDAuth.render();
   document.addEventListener("click", ()=>{
     document.querySelectorAll(".navgrp.open").forEach(g=>g.classList.remove("open"));
   });

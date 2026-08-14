@@ -982,7 +982,6 @@ details.drawer{border:1px solid var(--border);border-radius:11px;margin:0 0 12px
   });
   authSec.appendChild(authBtn);
   // The account chip joins the domain run after the six groups below.
-  window.DDAuth.render();
   document.addEventListener("keydown", e=>{ if(e.key === "Escape") window.DDAuth.close(); });
   // sign out in one tab, sign out in all of them
   window.addEventListener("storage", e=>{ if(e.key === AUTH_KEY){ window.DDAuth.render(); window.DDAuth.fire(); } });
@@ -1036,6 +1035,8 @@ details.drawer{border:1px solid var(--border);border-radius:11px;margin:0 0 12px
   });
   links.appendChild(authSec);
   nav.appendChild(links);
+  // render() resolves the button by id, so it must run after nav is in the document.
+  window.DDAuth.render();
   document.addEventListener("click", ()=>{
     document.querySelectorAll(".navgrp.open").forEach(g=>g.classList.remove("open"));
   });

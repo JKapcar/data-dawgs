@@ -38,14 +38,15 @@ NEW_NARROW = '''  .sitenav{gap:0 6px}
 OLD_AUTH = '''  nav.appendChild(authSec);
   window.DDAuth.render();'''
 
-NEW_AUTH = '''  // The account chip joins the domain run after the six groups below.
-  window.DDAuth.render();'''
+NEW_AUTH = '''  // The account chip joins the domain run after the six groups below.'''
 
 OLD_LINKS = '''  nav.appendChild(links);
   document.addEventListener("click", ()=>{'''
 
 NEW_LINKS = '''  links.appendChild(authSec);
   nav.appendChild(links);
+  // render() resolves the button by id, so it must run after nav is in the document.
+  window.DDAuth.render();
   document.addEventListener("click", ()=>{'''
 
 changed = []
