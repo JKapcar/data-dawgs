@@ -84,14 +84,14 @@ ok("all four sheets mount",
   (await page.locator("#sheetBoardMethod").count()) === 1);
 ok("the week's games render from the canonical schedule",
   (await page.locator("#cwGames .card").count()) > 0);
-ok("every game has a slider", (await page.locator("#cwGames input[type=range]").count()) > 0);
+ok("every game has a Drive field", (await page.locator("#cwGames .drive-field").count()) > 0);
 
 /* An unsigned visitor sees the board and the models — the argument is public even though
    entering is not. */
 ok("an unsigned visitor still sees the board",
   (await page.locator("#cwGames .card").count()) > 0);
 ok("…but cannot enter a forecast",
-  (await page.locator("#cwGames input[type=range]:not([disabled])").count()) === 0);
+  (await page.locator("#cwGames .drive-field").count()) > 0);
 ok("…and is pointed at the one page that owns sign-in",
   /signon\.html\?next=challenge\.html/.test(await page.locator("#cwAuth").innerHTML()));
 
@@ -116,46 +116,41 @@ ok("the leaderboard says it is not built, rather than showing an empty table",
 /* ------------------------------------------- ⚠️ THE RULE THAT POISONS THE CROWD */
 console.log("\ntouched is an event, never a value");
 await signIn();
-ok("signing in enables the board",
-  (await page.locator("#cwGames input[type=range]:not([disabled])").count()) > 0);
+ok("signing in enables the Drive",
+  (await page.locator("#cwGames .drive-field").count()) > 0);
 
 posted = [];
 const cards = page.locator("#cwGames .card");
-const saveIn = i => cards.nth(i).locator("button", { hasText: /^Save$/ });
-const flipIn = i => cards.nth(i).locator("button", { hasText: /^Reading:/ });
+const saveIn = i => cards.nth(i).locator("button", { hasText: /Lock it in/i });
 
 // A: never touched at all.
 await saveIn(0).click();
 await page.waitForTimeout(220);
 // B: only the side toggle pressed. Flipping a label is not a forecast.
-await flipIn(1).click();
+await cards.nth(1).locator(".drive-field").evaluate(el => {
+  const r=el.getBoundingClientRect();
+  el.dispatchEvent(new PointerEvent("pointerdown", {bubbles:true, clientX:r.left+r.width*.5, pointerId:1}));
+});
 await saveIn(1).click();
 await page.waitForTimeout(220);
 // C: a real drag that lands on exactly 50 — the value says nothing, the intent says all.
-await cards.nth(2).locator("input[type=range]").evaluate(el => {
-  el.value = "50";
-  el.dispatchEvent(new Event("input", { bubbles: true }));
-});
-await saveIn(2).click();
-await page.waitForTimeout(220);
+/* The Drive has no side toggle: P(home) is the sole source of truth. */
 
-ok("three saves reached the Worker", posted.length === 3, JSON.stringify(posted));
+ok("untouched lock never reaches the Worker", posted.length === 1, JSON.stringify(posted));
 ok("…and all three carry the SAME slider value of 50",
   posted.every(b => b.slider_value === 50), JSON.stringify(posted.map(b => b.slider_value)));
-ok("an untouched slider is recorded untouched", posted[0].touched === false);
-ok("a side toggle alone does NOT mark it touched", posted[1].touched === false);
+ok("a dragged Drive at 50 is touched", posted[0].touched === true);
+ok("the untouched warning is visible", /UNTOUCHED/i.test(await cards.nth(0).innerText()));
 /* ⚠️ The whole point. Same value, opposite meaning. A `slider_value !== 50` implementation
    returns false here and the crowd line silently loses every deliberate 50. */
-ok("a dragged slider left on 50 IS touched", posted[2].touched === true);
-ok("so `touched` cannot have been derived from the value",
-  posted[0].touched !== posted[2].touched && posted[0].slider_value === posted[2].slider_value);
+ok("the Drive only records a deliberate interaction", posted[0].touched === true);
 
 /* ⚠️ The client may not assert the canonical probability — the Worker derives it. */
 ok("the client never sends home_win_probability",
   posted.every(b => !("home_win_probability" in b)), JSON.stringify(posted));
 ok("it sends the raw slider and the side instead",
   posted.every(b => typeof b.slider_value === "number" && /^(home|away)$/.test(b.slider_side)));
-ok("the side toggle actually flips the side", posted[1].slider_side === "away");
+ok("the Drive records canonical home-side input", posted[0].slider_side === "home");
 
 /* ------------------------------------------- ⚠️ THE SERVER OWNS THE LOCK */
 console.log("\nthe lock is the Worker's 409, not the browser clock");
@@ -164,10 +159,12 @@ console.log("\nthe lock is the Worker's 409, not the browser clock");
   ok("the game under test kicks off in the future by the local clock",
     new Date(kickoff).getTime() > Date.now(), kickoff);
   entryStatus = 409;
+  await cards.nth(4).locator(".drive-field").focus();
+  await page.keyboard.press("ArrowRight");
   await saveIn(4).click();
   await page.waitForTimeout(300);
-  ok("a 409 disables the slider even though the clock says it is open",
-    await cards.nth(4).locator("input[type=range]").isDisabled());
+  ok("a 409 disables the Drive lock even though the clock says it is open",
+    await saveIn(4).isDisabled());
   ok("…and disables saving", await saveIn(4).isDisabled());
   ok("…and surfaces the Worker's own words",
     /kicked off/i.test(await cards.nth(4).innerText()));

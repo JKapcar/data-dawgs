@@ -799,7 +799,10 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 .ddfacet .ft{font-size:11.5px;font-weight:700;color:var(--ink-2);letter-spacing:.04em;text-transform:uppercase;margin-bottom:2px}
 .ddfacet .ft span{font-weight:500;color:var(--ink-3);text-transform:none;letter-spacing:0}
 .ddfacet svg{width:100%;height:auto;display:block;overflow:visible}
-</style>
+
+/* === The Dawg House · The Drive (Phase 1) ================================ */
+.drive-card{padding:0;overflow:hidden;border-color:color-mix(in srgb,var(--accent) 30%,var(--border))}.drive-head{padding:14px 16px 0}.drive-field{height:235px;position:relative;overflow:hidden;touch-action:none;cursor:ew-resize;background:repeating-linear-gradient(90deg,transparent 0 7.9%,rgba(255,255,255,.12) 8% 8.25%),linear-gradient(#28653b,#1b4d2e)}.drive-field:before,.drive-field:after{content:"";position:absolute;top:0;bottom:0;width:10%;background:repeating-linear-gradient(45deg,rgba(0,20,50,.75) 0 4px,rgba(0,20,50,.5) 4px 8px)}.drive-field:after{right:0;background:repeating-linear-gradient(45deg,rgba(0,88,65,.78) 0 4px,rgba(0,88,65,.48) 4px 8px)}.drive-yard{position:absolute;top:0;bottom:0;border-left:1px solid rgba(255,255,255,.32);font:800 11px ui-monospace,monospace;color:rgba(255,255,255,.62);padding:4px}.drive-yard b{position:absolute;bottom:4px;left:-7px}.drive-chain{position:absolute;top:0;bottom:0;background:rgba(255,176,32,.17);border-left:3px solid #ffb020;border-right:3px solid #ffb020;pointer-events:none}.drive-chain:before{content:"";position:absolute;top:29px;left:0;right:0;border-top:6px dotted #ffd48b}.drive-chain span{position:absolute;top:3px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#ffb020;color:#261400;padding:1px 6px;border-radius:3px;font:800 9px ui-monospace,monospace}.drive-cluster{position:absolute;top:72px;width:150px;height:98px;transform:translateX(-50%);pointer-events:none}.drive-helmet{position:absolute;width:76px;height:68px;object-fit:contain;top:8px}.drive-away{left:0}.drive-home{right:0}.drive-ball{position:absolute;left:62px;top:31px;width:28px;height:38px;border-radius:50%;background:#7c3e18;border:2px solid #f1b17b;transform:rotate(22deg)}.drive-ball:after{content:"";position:absolute;left:5px;right:5px;top:16px;border-top:2px solid #f7d3ad}.drive-value{position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);padding:2px 8px;border-radius:999px;background:#161009;color:#fff;font:800 13px ui-monospace,monospace}.drive-bottom{padding:12px 16px 16px}.drive-coach{margin:0 0 10px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;text-align:center;font-size:13px}.drive-cards{display:flex;gap:7px;overflow:auto;margin:10px 0}.drive-model{min-width:118px;padding:7px;border:1px solid var(--border);border-radius:7px;background:var(--surface-1);cursor:pointer}.drive-model b{display:block;color:var(--accent);font-size:17px}.drive-model[hidden]{display:none}.drive-note{min-height:1.4em}.drive-touchdown{outline:4px solid color-mix(in srgb,#ffb020 70%,transparent);animation:dddriveflash .4s 2}@keyframes dddriveflash{50%{transform:translateX(3px)}}@media(prefers-reduced-motion:reduce){.drive-touchdown{animation:none}}
+.nav-section{padding:9px 13px 3px;color:var(--accent);font:800 10px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase}.nav-section:not(:first-child){margin-top:5px;border-top:1px solid var(--grid);padding-top:10px}</style>
 </head>
 <body>
 <div class="wrap">
@@ -971,23 +974,18 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
         historical spellings.
      Keep this array identical on every page; the flattened HTML is the source. */
   const NAV = [
-    {label:"Receipts", short:"Rcpt", href:"receipts.html", key:"receipts", items:[
-      ["receipts.html#models","Model scoreboard","receipts-models"],
-      ["receipts.html","Pre-registered calls","receipts"],
-      ["receipts.html#scoreboard","Grading","receipts-scoreboard"],
-      ["receipts.html#provenance","Provenance","pound-provenance"],
-      ["dawghouse.html","The DawgHouse","pound"],
-    ]},
-    /* Arena = the surfaces where a person competes against other people. */
+    /* Arena is split so games can have a little casino character without making tools noisy. */
     {label:"Arena", href:"arena.html", key:"arena", items:[
-      ["arena.html","All the games","arena"],
+      ["arena.html","Arena home","arena"],
+      ["#","Games","nav-section"],
+      ["dashboard.html","Fantasy Draft Dashboard","dashboard","hot"],
       ["bozo.html","Bozo","bozo"],
       ["challenge.html","Forecast Challenge","challenge"],
-      ["dashboard.html","Fantasy Draft Dashboard","dashboard","hot"],
+      ["teamdraft.html","NFL Team Draft","teamdraft"],
+      ["#","Tools","nav-section"],
       ["dfs.html","DFS Solver","dfs"],
       ["guillotine.html","Guillotine Companion","guillotine"],
       ["survivor.html","Survivor","survivor"],
-      ["teamdraft.html","NFL Team Draft","teamdraft"],
     ]},
     /* Two sections that are not football, placed where they were asked for: after the
        games people play against each other, before the sport pages. Both are EMPTY today
@@ -999,19 +997,20 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
     {label:"A.I.", href:"ai.html", key:"ai", items:[
       ["ai.html","The AI work","ai"],
     ]},
-    {label:"NFL", href:"nfl.html", key:"nfl", items:[
-      ["nfl.html","The NFL work","nfl"],
+    {label:"Sports", href:"nfl.html", key:"sports", items:[
+      ["#","NFL","nav-section"],
+      ["nfl.html","NFL hub","nfl"],
       ["stats.html","NFL EPA Stats","stats"],
       ["nfelo.html","nfelo Power Ratings","nfelo"],
       ["calculators.html","Calculators · NFL","calculators"],
-    ]},
-    {label:"CFB", href:"cfb.html", key:"cfb", items:[
+      ["#","CFB","nav-section"],
       ["cfb.html","College Football Lab","cfb"],
       ["cfb.html#matchup","Calculators · CFB matchup","cfb-matchup"],
       ["cfb.html#roadmap","Build roadmap","cfb-roadmap"],
     ]},
     {label:"Data", href:"data.html", key:"data", items:[
       ["data.html","The Library","data"],
+      ["receipts.html","Receipts","receipts"],
       ["master.html","Master Data","master"],
       ["strategy.html","2026 Strategy","strategy"],
     ]},
@@ -1264,6 +1263,10 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
     });
     const menu = document.createElement("div"); menu.className = "grpmenu";
     entry.items.forEach(([href,label,key,hot,sep])=>{
+      if(key==="nav-section"){
+        const h=document.createElement("div"); h.className="nav-section"; h.textContent=label;
+        menu.appendChild(h); return;
+      }
       const a = document.createElement("a");
       a.href = href; a.textContent = label;
       if(key===page) a.classList.add("on");
@@ -2372,19 +2375,11 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
   <!-- ===================== BOARD ===================== -->
   <div id="sheetBoard">
-  <div class="card">
-    <h3>This week <span class="rt" id="cwWeekTag"></span></h3>
-    <p class="sub">Drag a slider to say how likely the game is to end the way the label reads.
-    <b>50 means nothing either way</b> &mdash; and a slider you never touch is recorded as
-    untouched, not as a 50, because those two things mean opposite things.</p>
-    <div class="btnrow" style="margin-bottom:12px">
-      <label class="fld" style="max-width:220px"><span>Week</span>
-        <select class="fi" id="cwWeek"></select></label>
-    </div>
-    <p class="note" id="cwAuth"></p>
-    <p class="note" id="cwMsg"></p>
-    <div id="cwGames"></div>
-  </div>
+  <div class="card drive-card" id="cwDriveBoard">
+    <div class="drive-head"><h3>The Drive <span class="rt" id="cwWeekTag"></span></h3>
+    <p class="sub">Drag the football between the goal lines to set <b>P(home)</b>. Untouched is an absence, not 50.</p>
+    <div class="btnrow" style="margin-bottom:12px"><label class="fld" style="max-width:220px"><span>Week</span><select class="fi" id="cwWeek"></select></label></div>
+    <p class="note" id="cwAuth"></p><p class="note" id="cwMsg"></p></div><div id="cwGames"></div>
   </div>
 
   <!-- ===================== LEADERBOARD ===================== -->
@@ -2618,121 +2613,36 @@ window.DDSheets = function(cfg){
   function isLocked(g) { return lockedGames.has(g.game_id) || Date.now() >= g.kickoff_ms; }
 
   /* ---------------------------------------------------------------- the board */
+  function independentLines(g) {
+    /* ddpr-linear is correlated with ddpr and is deliberately excluded. */
+    var ids = {"nfelo":true,"ddpr-nfl":true,"538-classic":true};
+    return (modelsByGame[g.game_id] || []).filter(function(m){ return ids[m.model_id]; });
+  }
+  function driveCoach(p, touched, lo, hi) {
+    if (!touched) return "Chains are out at <b>"+lo+"–"+hi+"</b>. Where do you stand?";
+    var inside=p>=lo&&p<=hi ? " You’re <b>inside the chains</b>." : " You’re <b>outside the chains</b>.";
+    if (p===0 || p===100) return "<b>"+(p===100?"TOUCHDOWN":"PICK SIX")+" — "+p+"%.</b> Wrong means the maximum Brier penalty.";
+    if (p>=48&&p<=52) return "Midfield — a <b>coin flip</b>. Chains sit "+lo+"–"+hi+".";
+    return "Your call: <b>"+p+"%</b>."+inside;
+  }
   function drawBoard() {
-    var host = $("cwGames");
-    host.replaceChildren();
-    var rows = byWeek[week] || [];
-    if (!rows.length) {
-      var none = document.createElement("p");
-      none.className = "note";
-      none.textContent = "No games in the canonical schedule for that week.";
-      host.appendChild(none);
-      return;
-    }
+    var host = $("cwGames"); host.replaceChildren(); var rows = byWeek[week] || [];
+    if (!rows.length) { host.textContent = "No games in the canonical schedule for that week."; return; }
     var signedIn = !!(window.DDAuth && window.DDAuth.me());
-
-    rows.forEach(function (g) {
-      var locked = isLocked(g);
-      var card = document.createElement("div");
-      card.className = "card";
-      card.style.marginBottom = "14px";
-      if (locked) card.style.opacity = "0.62";
-
-      var h = document.createElement("h3");
-      h.textContent = g.away_team + " @ " + g.home_team;
-      var tag = document.createElement("span");
-      tag.className = "rt";
-      tag.textContent = locked ? "locked" : until(g.kickoff_ms);
-      h.appendChild(tag);
-      card.appendChild(h);
-
-      var when = document.createElement("p");
-      when.className = "sub";
-      when.textContent = new Date(g.kickoff_ms).toLocaleString();
-      card.appendChild(when);
-
-      /* Model numbers are visible BEFORE you pick, deliberately. Copying is expected and
-         is handled by measuring each entrant's correlation to each model, not by hiding
-         numbers — see crowd_consensus.extremize_reason in the contract. */
-      var ml = modelsByGame[g.game_id] || [];
-      if (ml.length) {
-        var mp = document.createElement("p");
-        mp.className = "note";
-        mp.textContent = "Models on " + g.home_team + ": " +
-          ml.map(function (m) { return m.model_id + " " + pct(m.p); }).join(" · ");
-        card.appendChild(mp);
-      }
-
-      var side = sideOf[g.game_id] || "home";
-      var val = valueOf[g.game_id];
-      if (val == null) val = 50;
-
-      var lab = document.createElement("p");
-      lab.className = "sub";
-      lab.style.marginBottom = "4px";
-      var team = function () { return side === "home" ? g.home_team : g.away_team; };
-      lab.textContent = "Chance " + team() + " wins: " + val + "%";
-      card.appendChild(lab);
-
-      var slider = document.createElement("input");
-      slider.type = "range"; slider.min = "0"; slider.max = "100"; slider.step = "1";
-      slider.value = String(val);
-      slider.style.width = "100%";
-      slider.disabled = locked || !signedIn;
-      slider.setAttribute("aria-label", "Chance " + team() + " beats " +
-        (side === "home" ? g.away_team : g.home_team));
-
-      /* ⚠️ THE ONLY PLACE touched IS EVER SET. */
-      slider.addEventListener("input", function () {
-        valueOf[g.game_id] = Number(slider.value);
-        touchedGames.add(g.game_id);
-        lab.textContent = "Chance " + team() + " wins: " + slider.value + "%";
-      });
-      card.appendChild(slider);
-
-      var row = document.createElement("div");
-      row.className = "btnrow";
-
-      var flip = document.createElement("button");
-      flip.className = "btn ghost sm";
-      flip.textContent = "Reading: " + team();
-      flip.disabled = locked || !signedIn;
-      /* Flipping the side is a UI choice, NOT a forecast. It must not mark the game
-         touched — otherwise idly toggling a label would enter you into the crowd. */
-      flip.addEventListener("click", function () {
-        side = side === "home" ? "away" : "home";
-        sideOf[g.game_id] = side;
-        var v = Number(slider.value);
-        valueOf[g.game_id] = 100 - v;
-        slider.value = String(100 - v);
-        flip.textContent = "Reading: " + team();
-        lab.textContent = "Chance " + team() + " wins: " + slider.value + "%";
-      });
-      row.appendChild(flip);
-
-      var save = document.createElement("button");
-      save.className = "btn sm";
-      save.textContent = "Save";
-      save.disabled = locked || !signedIn;
-      row.appendChild(save);
-      card.appendChild(row);
-
-      var st = document.createElement("p");
-      st.className = "note";
-      var prior = mine[g.game_id];
-      if (prior) {
-        st.textContent = "Saved · revision " + prior.revision +
-          (prior.touched ? "" : " · recorded as untouched");
-      }
-      card.appendChild(st);
-
-      save.addEventListener("click", function () {
-        st.className = "note"; st.textContent = "Saving…";
-        submit(g, Number(slider.value), sideOf[g.game_id] || "home",
-               touchedGames.has(g.game_id), st, card, slider, flip, save);
-      });
-
-      host.appendChild(card);
+    rows.forEach(function(g) {
+      var locked=isLocked(g), val=valueOf[g.game_id]; if(val==null) val=50;
+      var lines=independentLines(g), vals=lines.map(function(m){return Math.round(m.p*100);});
+      var lo=vals.length?Math.min.apply(null,vals):50, hi=vals.length?Math.max.apply(null,vals):50;
+      var card=document.createElement("section"); card.className="card drive-card"; if(locked) card.style.opacity=".62";
+      card.innerHTML='<div class="drive-head"><h3>'+esc(g.away_team)+' @ '+esc(g.home_team)+' <span class="rt">'+(locked?"locked":until(g.kickoff_ms))+'</span></h3><p class="sub">'+new Date(g.kickoff_ms).toLocaleString()+'</p></div><div class="drive-field" role="slider" tabindex="0" aria-label="Home win probability for '+esc(g.home_team)+'" aria-valuemin="0" aria-valuemax="100"><div class="drive-chain"><span>CHAINS '+lo+'–'+hi+' · SPREAD '+(hi-lo)+'</span></div><div class="drive-cluster"><img class="drive-helmet drive-away" alt="'+esc(g.away_team)+' helmet" src="assets/helmets/'+esc(g.away_team)+'_right.png"><i class="drive-ball"></i><img class="drive-helmet drive-home" alt="'+esc(g.home_team)+' helmet" src="assets/helmets/'+esc(g.home_team)+'_left.png"><output class="drive-value"></output></div></div><div class="drive-bottom"><p class="drive-coach"></p><button type="button" class="btn sm drive-ask">Ask Madden</button><div class="drive-cards"></div><p class="note drive-corr" hidden>⚠ ddpr-linear rides the bench: it is correlated with ddpr. Chains show independent disagreement only.</p><div class="btnrow"><button type="button" class="btn sm drive-lock">Lock it in</button></div><p class="note drive-note"></p></div>';
+      var field=card.querySelector(".drive-field"), chain=card.querySelector(".drive-chain"), cluster=card.querySelector(".drive-cluster"), out=card.querySelector("output"), coach=card.querySelector(".drive-coach"), ask=card.querySelector(".drive-ask"), cards=card.querySelector(".drive-cards"), corr=card.querySelector(".drive-corr"), lock=card.querySelector(".drive-lock"), note=card.querySelector(".drive-note"), p=val, naive=null;
+      chain.style.left=(10+lo*.8)+"%"; chain.style.width=Math.max(1,(hi-lo)*.8)+"%";
+      function paint(){ cluster.style.left=(10+p*.8)+"%"; out.value=out.textContent=Math.round(p)+"%"; field.setAttribute("aria-valuenow",Math.round(p)); coach.innerHTML=driveCoach(Math.round(p),touchedGames.has(g.game_id),lo,hi); card.classList.toggle("drive-touchdown",p===0||p===100); }
+      function set(ev){ var r=field.getBoundingClientRect(); p=Math.max(0,Math.min(100,Math.round((ev.clientX-r.left-r.width*.1)/(r.width*.8)*100))); valueOf[g.game_id]=p; touchedGames.add(g.game_id); paint(); }
+      if(!locked&&signedIn){ field.addEventListener("pointerdown",function(e){try{field.setPointerCapture(e.pointerId)}catch(ignore){}set(e)}); field.addEventListener("pointermove",function(e){if(e.buttons)set(e)}); field.addEventListener("keydown",function(e){if(e.key!=="ArrowLeft"&&e.key!=="ArrowRight")return;e.preventDefault();p=Math.max(0,Math.min(100,p+(e.key==="ArrowLeft"?-1:1)));valueOf[g.game_id]=p;touchedGames.add(g.game_id);paint();}); }
+      ask.addEventListener("click",function(){ if(ask.disabled)return; naive=touchedGames.has(g.game_id)?p:null; ask.hidden=true; lines.forEach(function(m){var b=document.createElement("button");b.type="button";b.className="drive-model";b.textContent=m.model_id+" · tap";b.addEventListener("click",function(){b.innerHTML="<small>"+esc(m.model_id)+"</small><b>"+pct(m.p)+"</b>"});cards.appendChild(b)});corr.hidden=false; });
+      lock.addEventListener("click",function(){ if(!touchedGames.has(g.game_id)){note.className="note warn drive-note";note.textContent="UNTOUCHED ≠ 50 — set the ball first.";return;} note.textContent="Saving…"; submit(g,p,"home",true,note,card,field,null,lock,{p_naive:naive,entry_method:"drive",hints_revealed:!ask.hidden}); });
+      if(!signedIn) note.innerHTML='Sign in to lock a forecast.'; if(locked){ask.disabled=true;lock.disabled=true;} paint(); host.appendChild(card);
     });
   }
 
@@ -2765,7 +2675,7 @@ window.DDSheets = function(cfg){
       if (res.status === 409) {
         lockedGames.add(g.game_id);
         card.style.opacity = "0.62";
-        slider.disabled = true; flip.disabled = true; save.disabled = true;
+        slider.disabled = true; if (flip) flip.disabled = true; save.disabled = true;
         st.className = "note warn";
         st.textContent = res.j.error || "That game has kicked off. Forecasts are locked.";
         return;

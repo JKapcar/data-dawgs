@@ -480,7 +480,7 @@ footer a{color:var(--accent)}
   border:1px solid color-mix(in srgb,var(--good) 55%,transparent)}
 .tierchip:hover{border-color:var(--good)}
 
-</style>
+.nav-section{padding:9px 13px 3px;color:var(--accent);font:800 10px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase}.nav-section:not(:first-child){margin-top:5px;border-top:1px solid var(--grid);padding-top:10px}</style>
 <style>
 .vh1{font-size:24px;font-weight:750;margin:6px 0 2px}
 /* A "dashboard" is a titled strip of stat tiles with one scope control of its own.
@@ -739,23 +739,18 @@ svg text{font-family:inherit}
         historical spellings.
      Keep this array identical on every page; the flattened HTML is the source. */
   const NAV = [
-    {label:"Receipts", short:"Rcpt", href:"receipts.html", key:"receipts", items:[
-      ["receipts.html#models","Model scoreboard","receipts-models"],
-      ["receipts.html","Pre-registered calls","receipts"],
-      ["receipts.html#scoreboard","Grading","receipts-scoreboard"],
-      ["receipts.html#provenance","Provenance","pound-provenance"],
-      ["dawghouse.html","The DawgHouse","pound"],
-    ]},
-    /* Arena = the surfaces where a person competes against other people. */
+    /* Arena is split so games can have a little casino character without making tools noisy. */
     {label:"Arena", href:"arena.html", key:"arena", items:[
-      ["arena.html","All the games","arena"],
+      ["arena.html","Arena home","arena"],
+      ["#","Games","nav-section"],
+      ["dashboard.html","Fantasy Draft Dashboard","dashboard","hot"],
       ["bozo.html","Bozo","bozo"],
       ["challenge.html","Forecast Challenge","challenge"],
-      ["dashboard.html","Fantasy Draft Dashboard","dashboard","hot"],
+      ["teamdraft.html","NFL Team Draft","teamdraft"],
+      ["#","Tools","nav-section"],
       ["dfs.html","DFS Solver","dfs"],
       ["guillotine.html","Guillotine Companion","guillotine"],
       ["survivor.html","Survivor","survivor"],
-      ["teamdraft.html","NFL Team Draft","teamdraft"],
     ]},
     /* Two sections that are not football, placed where they were asked for: after the
        games people play against each other, before the sport pages. Both are EMPTY today
@@ -767,19 +762,20 @@ svg text{font-family:inherit}
     {label:"A.I.", href:"ai.html", key:"ai", items:[
       ["ai.html","The AI work","ai"],
     ]},
-    {label:"NFL", href:"nfl.html", key:"nfl", items:[
-      ["nfl.html","The NFL work","nfl"],
+    {label:"Sports", href:"nfl.html", key:"sports", items:[
+      ["#","NFL","nav-section"],
+      ["nfl.html","NFL hub","nfl"],
       ["stats.html","NFL EPA Stats","stats"],
       ["nfelo.html","nfelo Power Ratings","nfelo"],
       ["calculators.html","Calculators · NFL","calculators"],
-    ]},
-    {label:"CFB", href:"cfb.html", key:"cfb", items:[
+      ["#","CFB","nav-section"],
       ["cfb.html","College Football Lab","cfb"],
       ["cfb.html#matchup","Calculators · CFB matchup","cfb-matchup"],
       ["cfb.html#roadmap","Build roadmap","cfb-roadmap"],
     ]},
     {label:"Data", href:"data.html", key:"data", items:[
       ["data.html","The Library","data"],
+      ["receipts.html","Receipts","receipts"],
       ["master.html","Master Data","master"],
       ["strategy.html","2026 Strategy","strategy"],
     ]},
@@ -1032,6 +1028,10 @@ svg text{font-family:inherit}
     });
     const menu = document.createElement("div"); menu.className = "grpmenu";
     entry.items.forEach(([href,label,key,hot,sep])=>{
+      if(key==="nav-section"){
+        const h=document.createElement("div"); h.className="nav-section"; h.textContent=label;
+        menu.appendChild(h); return;
+      }
       const a = document.createElement("a");
       a.href = href; a.textContent = label;
       if(key===page) a.classList.add("on");
