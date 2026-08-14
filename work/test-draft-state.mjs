@@ -201,4 +201,39 @@ const personal = {
   assert.deepEqual([...clientSortKeys].sort(), [...workerSortKeys].sort(), "client and Worker share the same sort-key contract");
 }
 
+/* Signed-in Last Dawg Standing league shelf. This is deliberately a much
+ * smaller contract than draft-state: IDs + an unverified private focus roster. */
+const guillotineRequest = async ({ method = "GET", token: authToken, body } = {}) => {
+  const init = { method, headers: { Origin: ORIGIN } };
+  if (authToken) init.headers["X-Dawg-Session"] = authToken;
+  if (body !== undefined) { init.headers["Content-Type"] = "application/json"; init.body = JSON.stringify(body); }
+  const response = await worker.fetch(new Request("https://toto.example/auth/guillotine-state", init), ENV);
+  const text = await response.text();
+  return { response, json: text ? JSON.parse(text) : null };
+};
+
+assert.equal((await guillotineRequest()).response.status, 401, "guillotine shelf requires a session");
+{
+  const empty = await guillotineRequest({ token });
+  assert.equal(empty.response.status, 200);
+  assert.deepEqual(empty.json.state, { leagues: [] });
+}
+const savedShelf = { leagues: [
+  { leagueId: "1234567890123456789", focusRosterId: 2 },
+  { leagueId: "9876543210987654321", focusRosterId: null },
+] };
+{
+  const put = await guillotineRequest({ method: "PUT", token, body: savedShelf });
+  assert.equal(put.response.status, 200);
+  assert.deepEqual(put.json.state, savedShelf);
+  assert.deepEqual(db.users[UID].guillotineState.state, savedShelf, "shelf is written beneath the session UID");
+  assert.deepEqual((await guillotineRequest({ token })).json.state, savedShelf, "shelf survives reload");
+}
+assert.equal((await guillotineRequest({ method: "PUT", token, body: { leagues: [{ leagueId: "abc", focusRosterId: null }] } })).response.status, 422,
+  "Sleeper IDs must be numeric");
+assert.equal((await guillotineRequest({ method: "PUT", token, body: { uid: "victim", ...savedShelf } })).response.status, 422,
+  "a caller cannot select another account UID");
+assert.equal((await guillotineRequest({ method: "PUT", token, body: { leagues: [{ leagueId: "1234567890123456789", focusRosterId: "2" }] } })).response.status, 422,
+  "focus roster IDs must be numeric when present");
+
 console.log("draft-state contract tests: ok");

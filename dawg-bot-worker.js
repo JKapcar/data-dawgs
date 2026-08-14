@@ -184,6 +184,40 @@ const DRAFT_EMPTY_STATE = Object.freeze({
   keeperIds: Object.freeze([]),
 });
 
+/* ==================== Personal guillotine-state contract ==================
+ * This is a private convenience shelf, not league ownership. A signed-in user
+ * may remember Sleeper league IDs and a focus roster for each one. The focus
+ * choice is deliberately unverified: Sleeper's public API cannot prove that the
+ * Data Dawgs account controls that roster. The UID always comes from sessionAuth;
+ * accepting one in the body would create a cross-account write primitive. */
+const GUILLOTINE_STATE_MAX_BYTES = 16_384;
+const GUILLOTINE_LEAGUE_ID_RE = /^\d{6,24}$/;
+const GUILLOTINE_MAX_LEAGUES = 24;
+
+function validateGuillotineState(input) {
+  const bad = (field, message) => ({ ok: false, field, message });
+  if (!draftExactKeys(input, ["leagues"]))
+    return bad("/", "State must contain exactly leagues.");
+  if (!Array.isArray(input.leagues) || input.leagues.length > GUILLOTINE_MAX_LEAGUES)
+    return bad("/leagues", "leagues must be an array with at most 24 entries.");
+  const seen = new Set(), leagues = [];
+  for (let i = 0; i < input.leagues.length; i++) {
+    const item = input.leagues[i];
+    if (!draftExactKeys(item, ["leagueId", "focusRosterId"]))
+      return bad(`/leagues/${i}`, "Each league must contain exactly leagueId and focusRosterId.");
+    const leagueId = String(item.leagueId || "");
+    if (!GUILLOTINE_LEAGUE_ID_RE.test(leagueId))
+      return bad(`/leagues/${i}/leagueId`, "Sleeper league IDs must contain 6 to 24 digits.");
+    if (seen.has(leagueId)) return bad(`/leagues/${i}/leagueId`, "League IDs must be unique.");
+    seen.add(leagueId);
+    const focus = item.focusRosterId;
+    if (focus !== null && (!Number.isSafeInteger(focus) || focus < 1 || focus > 1000))
+      return bad(`/leagues/${i}/focusRosterId`, "focusRosterId must be null or a positive integer.");
+    leagues.push({ leagueId, focusRosterId: focus });
+  }
+  return { ok: true, state: { leagues } };
+}
+
 function mintDraftLeagueId(cryptoImpl) {
   const source = cryptoImpl || crypto;
   const bytes = new Uint8Array(16);
@@ -856,6 +890,7 @@ export default {
         return suffix === "/roster" ? fn(env, cors) : fn(request, env, cors);
     }
     if (url.pathname === "/auth/draft-state") return authDraftState(request, url, env, cors);
+    if (url.pathname === "/auth/guillotine-state") return authGuillotineState(request, env, cors);
     if (url.pathname === "/league/mine")   return universalLeagueMine(request, env, cors);
     if (url.pathname === "/league/gate")   return universalLeagueGate(request, env, cors);
     if (url.pathname === "/league/list")   return leagueList(env, cors);
@@ -1597,6 +1632,46 @@ async function authDraftState(request, url, env, cors) {
       { current: draftStateEnvelope(leagueId, raced.record) });
   }
   return json(draftStateEnvelope(leagueId, record), 200, cors);
+}
+
+// GET/PUT /auth/guillotine-state
+// Private per-UID shelf only. It stores no league data, prediction receipts, or
+// ownership claim—just Sleeper IDs and the user's unverified focus-roster choices.
+async function authGuillotineState(request, env, cors) {
+  if (request.method !== "GET" && request.method !== "PUT")
+    return draftError(cors, 405, "method_not_allowed", "Use GET or PUT.");
+  const auth = await sessionAuth(request, env);
+  if (auth.err) {
+    const code = auth.code || 401;
+    return draftError(cors, code, code === 401 ? "unauthenticated" : code === 403 ? "forbidden" : "backend_unavailable", auth.err);
+  }
+  if (!auth.uid)
+    return draftError(cors, 403, "forbidden", "This account must use the UID identity system before its league shelf can sync.");
+
+  const statePath = "/users/" + encodeURIComponent(auth.uid) + "/guillotineState";
+  if (request.method === "GET") {
+    try {
+      const record = (await fbGet(env, statePath)).data;
+      const checked = validateGuillotineState(record && record.state ? record.state : { leagues: [] });
+      if (!checked.ok) return draftError(cors, 502, "backend_unavailable", "The saved guillotine state is invalid.");
+      return json({ ok: true, state: checked.state, updatedAt: Number(record && record.updatedAt) || null }, 200, cors);
+    } catch (e) {
+      return draftError(cors, 502, "backend_unavailable", "The guillotine-state store could not be read.");
+    }
+  }
+
+  const contentType = request.headers.get("Content-Type") || "";
+  if (!/^application\/json(?:\s*;|$)/i.test(contentType))
+    return draftError(cors, 415, "unsupported_media_type", "PUT requires Content-Type: application/json.");
+  const parsed = await readCappedJson(request, GUILLOTINE_STATE_MAX_BYTES);
+  if (parsed.tooLarge) return draftError(cors, 413, "payload_too_large", "The request body exceeds 16,384 bytes.");
+  if (parsed.malformed) return draftError(cors, 400, "invalid_json", "The request body must be valid UTF-8 JSON.");
+  const checked = validateGuillotineState(parsed.value);
+  if (!checked.ok) return draftError(cors, 422, "invalid_state", checked.message, { field: checked.field });
+  const record = { updatedAt: Date.now(), state: checked.state };
+  try { await fbPut(env, statePath, record); }
+  catch (e) { return draftError(cors, 502, "backend_unavailable", "The guillotine-state store could not be written."); }
+  return json({ ok: true, state: checked.state, updatedAt: record.updatedAt }, 200, cors);
 }
 
 /* ================= Data Dawgs Confidence Calibration V1 ================== */
@@ -12670,10 +12745,10 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_guillotine_odds",
-    title: "Guillotine survival odds",
+    title: "Last Dawg Standing odds",
     catalog: "core",
     readOnlyHint: true,
-    description: "Survival odds for every team in a Sleeper guillotine league, plus the projected chop line — who is most likely to be eliminated this week. Built ONLY from that league's own completed weeks. ⚠️ Needs at least two completed weeks; with fewer it returns the roster and says so rather than inventing a probability.",
+    description: "Modeled weekly survival odds for every team in a Sleeper guillotine league, plus the projected chop line. Built ONLY from completed weeks; it does not ingest live in-game scores. ⚠️ Needs at least two completed weeks; with fewer it returns the roster and says so rather than inventing a probability.",
     inputSchema: {
       type: "object",
       properties: {

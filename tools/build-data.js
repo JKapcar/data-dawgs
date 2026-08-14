@@ -1361,7 +1361,7 @@ const SURFACES = [
               { kind: 'mcp', tool: 'dd_solve_dfs_lineup', status: 'live', covers: 'bounded exact lineup optimization over caller-supplied slate data; inputs and results are not stored' }],
     planned: [],
     gap: 'The exact solver is live over MCP; contest simulation remains browser-only. Projections and ownership are caller-supplied and never hosted.' },
-  { id: 'guillotine', domain: 'arena', name: 'Guillotine league tools', page: '/guillotine.html',
+  { id: 'guillotine', domain: 'arena', name: 'Last Dawg Standing', page: '/guillotine.html',
     machine: [{ kind: 'mcp', tool: 'dd_guillotine_odds', status: 'live' }],
     planned: ['json:/data/guillotine.json'] },
   { id: 'pound', domain: 'site', name: 'The DawgHouse shelf (formerly The Pound)', page: '/dawghouse.html',

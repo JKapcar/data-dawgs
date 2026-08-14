@@ -70,7 +70,7 @@ TOOLS = [
     ("dd_scores",                        "Live scores",                  "core"),
     ("dd_dfs_correlations",              "DFS correlations",             "full"),
     ("dd_solve_dfs_lineup",              "DFS lineup solver",            "full"),
-    ("dd_guillotine_odds",               "Guillotine survival odds",     "core"),
+    ("dd_guillotine_odds",               "Last Dawg Standing odds",      "core"),
     ("dd_site_map",                      "Site map",                     "core"),
 ]
 

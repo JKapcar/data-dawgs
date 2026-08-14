@@ -4570,10 +4570,10 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_guillotine_odds",
-    title: "Guillotine survival odds",
+    title: "Last Dawg Standing odds",
     catalog: "core",
     readOnlyHint: true,
-    description: "Survival odds for every team in a Sleeper guillotine league, plus the projected chop line — who is most likely to be eliminated this week. Built ONLY from that league's own completed weeks. ⚠️ Needs at least two completed weeks; with fewer it returns the roster and says so rather than inventing a probability.",
+    description: "Modeled weekly survival odds for every team in a Sleeper guillotine league, plus the projected chop line. Built ONLY from completed weeks; it does not ingest live in-game scores. ⚠️ Needs at least two completed weeks; with fewer it returns the roster and says so rather than inventing a probability.",
     inputSchema: {
       type: "object",
       properties: {

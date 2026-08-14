@@ -154,7 +154,7 @@ ok("dropped player appears with observed avg (21,22,23 -> 22)", wonder && wonder
 ok("chopped roster's players appear on the board", W && W.some(w => w.name === "Chopped One"));
 const wvHtml = byId("gxWvTab").innerHTML;
 ok("waiver table renders names, not raw ids", wvHtml.includes("Waiver Wonder") && !wvHtml.includes("id p9"));
-ok("module 06 card flips to Live when the backend answers", byId("gxM6").textContent === "Live");
+ok("module 06 card is labeled observed when the backend answers", byId("gxM6").textContent === "Observed");
 
 /* Toto context */
 const BC = globalThis.DD_BOTCTX;
@@ -207,6 +207,18 @@ ok("pre-season: no team reads as chopped when nothing is scored", byId("gxFaabTa
 const ctx0 = globalThis.DD_BOTCTX.ctx();
 ok("pre-season ctx says the maths is off, with FAAB", ctx0.includes("not on yet") && ctx0.includes("FAAB"));
 globalThis.fetch = realFetch;
+
+/* ----------------------- Last Dawg Standing V1 contract ------------------ */
+ok("locked product name and descriptor ship together",
+  html.includes("Last Dawg Standing") && html.includes("The Guillotine League Companion"));
+ok("Chop Chamber has weighted-wheel and repeat-spin controls",
+  html.includes('id="gxWheel"') && html.includes('id="gxSpinOne"') && html.includes('id="gxSpinTen"'));
+ok("all five lower sheets are present",
+  ["survival", "waivers", "danger", "season", "fragility"].every(k => html.includes(`data-gx-panel="${k}"`)));
+ok("prediction receipt is explicitly local-device V1",
+  html.includes("DEVICE RECEIPT") && html.includes("local only") && html.includes("not server-persisted"));
+ok("Sunday model cannot be presented as live scoring",
+  html.includes("THIS IS NOT A LIVE SUNDAY SCORE TRACKER") && html.includes("not live scores"));
 
 console.log("\nguillotine: " + pass + " passed, " + fail + " failed");
 if (fail) process.exit(1);

@@ -1,9 +1,9 @@
 {
- "as_of": "2026-08-13",
+ "as_of": "2026-08-14",
  "source": "Generated manifest of every machine-readable surface on datadawgs216.com.",
  "note": "Start here. Each entry carries its own as_of — check it before quoting anything. The sha256 is of the file as served; recompute it if you care.",
  "site": "https://datadawgs216.com",
- "built": "2026-08-13",
+ "built": "2026-08-14",
  "data": {
   "files": [
    {
@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 33592,
-    "as_of": "2026-08-13",
-    "sha256": "d0dd876ec7a110ee5021e09cbd1efb599f4fbb35bf0e15f6cea7523d494c4bd4",
+    "bytes": 33586,
+    "as_of": "2026-08-14",
+    "sha256": "dedd81edf50d24e5600ec19f362ae960176a8bc914e11636e9921fb29509beae",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -281,9 +281,9 @@
    {
     "path": "/data/draft-2026.json",
     "url": "https://datadawgs216.com/data/draft-2026.json",
-    "bytes": 160283,
+    "bytes": 160259,
     "as_of": "2026-08-11",
-    "sha256": "3f090fffff52442dcb1eb7be34de9c952fb350a3453639139db7f2d0d92372ee",
+    "sha256": "ee3bc8764d613eb3adc91b6915009b4317cddc3ba40b767ce9254dd028a26d50",
     "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. Nothing here is graded — the 2026 season has not started, every wins_tracker row reads zero, and no figure on this surface is a result. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run."
    }
   ],
