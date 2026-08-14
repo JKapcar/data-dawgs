@@ -93,6 +93,7 @@ ok("fields carry two hash rows", await page.locator("#cwGames .drive-card").firs
 ok("goalposts have uprights and crossbars", await page.locator("#cwGames .drive-card").first().locator(".drive-gp i").count() === 8);
 ok("helmets advertise WebP sources", await page.locator("#cwGames .drive-card").first().locator('source[type="image/webp"]').count() === 2);
 ok("helmet PNG fallbacks load", await page.locator("#cwGames .drive-card").first().locator(".drive-helmet").evaluateAll(xs=>xs.every(x=>x.naturalWidth>0)));
+ok("helmets cannot enter native drag or selection state", await page.locator("#cwGames .drive-card").first().locator(".drive-helmet").evaluateAll(xs=>xs.every(x=>x.draggable===false&&getComputedStyle(x).pointerEvents==="none"&&getComputedStyle(x).userSelect==="none")));
 ok("the board contains no stale slider copy", !/slider/i.test(await page.locator("#sheetBoard").innerText()));
 ok("team end zones differ across games", await page.locator("#cwGames .drive-ez.l").evaluateAll(xs=>new Set(xs.slice(0,4).map(x=>getComputedStyle(x).backgroundColor)).size>1));
 

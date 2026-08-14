@@ -956,7 +956,8 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
   width:clamp(112px,20cqw,152px);margin-left:calc(clamp(112px,20cqw,152px) / -2);
   transition:left .05s linear}
 .drive-helmet{position:absolute;top:8px;width:38%;aspect-ratio:179/161;object-fit:contain;
-  filter:drop-shadow(var(--dz-shadow))}
+  filter:drop-shadow(var(--dz-shadow));pointer-events:none;user-select:none;-webkit-user-select:none;-webkit-user-drag:none}
+.drive-cluster picture{pointer-events:none;user-select:none;-webkit-user-select:none}
 .drive-helmet.away{left:0}.drive-helmet.home{right:0}
 .drive-ball{position:absolute;left:38%;right:38%;top:24%;aspect-ratio:17/12;border-radius:50%;
   background:radial-gradient(circle at 34% 28%,#c08a4e,#7a4a1c 68%,#432708);
@@ -2861,8 +2862,8 @@ window.DDSheets = function(cfg){
       <b class="drive-gp l"><i class="up a"></i><i class="up b"></i><i class="bar"></i><i class="post"></i></b>
       <b class="drive-gp r"><i class="up a"></i><i class="up b"></i><i class="bar"></i><i class="post"></i></b>
       <div class="drive-cluster"><span class="drive-hint">GRAB THE BALL</span>
-        <picture><source class="away" type="image/webp"><img class="drive-helmet away" alt=""></picture><i class="drive-ball"></i>
-        <picture><source class="home" type="image/webp"><img class="drive-helmet home" alt=""></picture>
+        <picture><source class="away" type="image/webp"><img class="drive-helmet away" alt="" draggable="false"></picture><i class="drive-ball"></i>
+        <picture><source class="home" type="image/webp"><img class="drive-helmet home" alt="" draggable="false"></picture>
       </div><b class="drive-banner"></b>
     </div>
     <div class="drive-bottom"><output class="drive-value">50</output><p class="drive-cap"></p><p class="drive-coach"></p>
