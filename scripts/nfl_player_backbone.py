@@ -258,10 +258,9 @@ def append_snapshot(ledger: dict[str, Any], envelope: dict[str, Any]) -> dict[st
     }
     existing = next((r for r in rows if r.get("snapshot_id") == snapshot_id), None)
     if existing:
-        immutable = {k: v for k, v in existing.items() if k != "captured_at"}
-        proposed = {k: v for k, v in new_row.items() if k != "captured_at"}
-        if immutable != proposed:
-            raise ContractError(f"conflicting snapshot metadata for {snapshot_id}")
+        # snapshot_id identifies canonical Data Dawgs rows, not every upstream byte revision.
+        if existing.get("player_count") != new_row["player_count"] or existing.get("id_version") != new_row["id_version"]:
+            raise ContractError(f"conflicting canonical snapshot metadata for {snapshot_id}")
         return ledger
     rows.append(new_row)
     out = dict(ledger)
@@ -374,7 +373,7 @@ def main() -> None:
     if args.command == "refresh":
         refresh(args.players, args.snapshots)
     elif args.command == "validate":
-        if args.allow_missing and (not args.players.exists() or not args.snapshots.exists()):
+        if args.allow_missing and not args.players.exists() and not args.snapshots.exists():
             return
         validate_envelope(read_json(args.players))
         validate_ledger(read_json(args.snapshots))
