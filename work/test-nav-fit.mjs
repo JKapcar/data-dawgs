@@ -123,7 +123,7 @@ for (const page of PAGES) {
     const tag = `${page}@${W}`;
     ok(tag + " nothing in the bar overlaps anything else", !m.err && m.hits.length === 0, (m.hits || []).join(" | "));
     ok(tag + " nothing is painted outside the bar", !m.err && m.outside.length === 0, (m.outside || []).join(","));
-    ok(tag + " all eight groups are present", m.groups === 8, String(m.groups));
+    ok(tag + " all six groups are present", m.groups === 6, String(m.groups));
     /* the belt to the braces: this is what USED to pass while the bar was unreadable */
     ok(tag + " and the document still does not scroll sideways", m.docOverflow === false);
     ok(tag + " the bar is no taller than its six-group baseline", m.navH <= MAX_H[W] + 0.5,

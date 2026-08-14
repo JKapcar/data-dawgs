@@ -187,7 +187,8 @@ const entryOf = (sport, season, week, user, gameId) =>
 console.log("\nthe entry write path");
 {
   const r = await call("/forecast/entry", {
-    session: JEFF, body: { sport: "nfl", game_id: G_OPEN, slider_value: 62, slider_side: "home", touched: true },
+    session: JEFF, body: { sport: "nfl", game_id: G_OPEN, slider_value: 62, slider_side: "home", touched: true,
+                            p_naive: 55, entry_method: "drive", hints_revealed: true },
   });
   ok("a forecast before kickoff is accepted", r.status === 200, r.text);
   const stored = entryOf("nfl", 2026, 1, "Jeff", G_OPEN);
@@ -204,6 +205,7 @@ console.log("\nthe entry write path");
   ok("submitted_at is server time and precedes kickoff",
     stored && stored.submitted_at >= NOW && stored.submitted_at < OPEN_KICK, stored && stored.submitted_at);
   ok("the first write is revision 1", stored && stored.revision === 1, stored && stored.revision);
+  ok("optional Drive metadata is retained without changing the forecast", stored && stored.p_naive === 55 && stored.entry_method === "drive" && stored.hints_revealed === true, stored && JSON.stringify(stored));
 }
 {
   const r = await call("/forecast/entry", {

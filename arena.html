@@ -894,7 +894,7 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
       ["#","Games","nav-section"],
       ["dashboard.html","Fantasy Draft Dashboard","dashboard","hot"],
       ["bozo.html","Bozo","bozo"],
-      ["challenge.html","Forecast Challenge","challenge"],
+      ["challenge.html","NFL Forecasting Challenge","challenge"],
       ["teamdraft.html","NFL Team Draft","teamdraft"],
       ["#","Tools","nav-section"],
       ["dfs.html","DFS Solver","dfs"],
@@ -1646,7 +1646,7 @@ receipts.html — every pre-registered forecast, the grading, calibration, the m
 dawghouse.html — the shelf: work that was stopped, each item with its blocker and the condition that would reopen it.
 arena.html — the hub for games played against other people; links to all of the below.
 bozo.html — the weekly one-leg parlay game: board, ledger, closing-line value, standings, the belt.
-challenge.html — the Forecast Challenge: put a probability on a game before kickoff, get graded after.
+challenge.html — the NFL Forecasting Challenge: put a probability on a game before kickoff, get graded after.
 survivor.html — survivor pool: this week's board, pick popularity, an optimal path, a season simulation, model settings.
 guillotine.html — guillotine league companion. dfs.html — DFS solver, contest simulator, exposure, bankroll. The projections there are the USER'S OWN.
 teamdraft.html — the 32-team wins pool: spin wheel, board, eight rosters, Monte Carlo season sim.
@@ -2457,7 +2457,7 @@ window.DD_BOTCTX = {
 - Creating and joining leagues lives on draft-leagues.html; signing in lives on signon.html; pointing your own AI at the league lives on connect.html. Route rather than improvise.
 - If someone asks which game to start with, it is fair to describe what each one demands of a player, but say plainly that none of them is graded.`,
   ctx: () => `THE ARENA HUB. Cards render live from the domain:"arena" rows of /data/surfaces.json — the count is the file's, not typed into this page. Arena owns no data file of its own, so it has no row in the map. Tier: Pup.
-WHAT IT POINTS AT: bozo.html (the weekly one-leg parlay game) · guillotine.html (guillotine league companion) · survivor.html (survivor board, path and simulation) · dfs.html (solver, contest simulator, bankroll — projections there are the user's own) · the live draft rig (dashboard, auction, board, big board, data viz, report card) · teamdraft.html (the private 32-team wins pool) · challenge.html (the Forecast Challenge) · and draft-leagues.html for creating and joining leagues, which owns no machine surface and so is a link rather than a card.
+WHAT IT POINTS AT: bozo.html (the weekly one-leg parlay game) · guillotine.html (guillotine league companion) · survivor.html (survivor board, path and simulation) · dfs.html (solver, contest simulator, bankroll — projections there are the user's own) · the live draft rig (dashboard, auction, board, big board, data viz, report card) · teamdraft.html (the private 32-team wins pool) · challenge.html (the NFL Forecasting Challenge) · and draft-leagues.html for creating and joining leagues, which owns no machine surface and so is a link rather than a card.
 MACHINE READS: /data/surfaces.json, /data/league.json, /data/bozo-rules.json, /data/survivor.json, and the read-only Worker tools dd_bozo_week, dd_bozo_standings, dd_draft_board, dd_survivor_week, dd_survivor_ev, dd_optimize_survivor_path, dd_solve_dfs_lineup, dd_league_overview. The map is the authority on which are live.
 
 ` + (window.DDBotScan ? window.DDBotScan(5200) : "The page reader could not run, so nothing on the page can be read right now.")

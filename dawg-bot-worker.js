@@ -4621,6 +4621,15 @@ async function forecastEntry(request, env, cors) {
   if ("home_win_probability" in body)
     return json({ error: "home_win_probability is derived, not submitted." }, 400, cors);
 
+  const pNaive = body.p_naive == null ? null : Number(body.p_naive);
+  if (pNaive !== null && (!Number.isInteger(pNaive) || pNaive < 0 || pNaive > 100))
+    return json({ error: "p_naive must be null or a whole number from 0 to 100." }, 400, cors);
+  const entryMethod = body.entry_method == null ? "legacy" : String(body.entry_method);
+  if (entryMethod !== "legacy" && entryMethod !== "drive")
+    return json({ error: "entry_method must be legacy or drive." }, 400, cors);
+  if (body.hints_revealed != null && typeof body.hints_revealed !== "boolean")
+    return json({ error: "hints_revealed must be true or false." }, 400, cors);
+
   const idemKey = body.idempotency_key == null ? null : String(body.idempotency_key);
   if (idemKey !== null && (!idemKey || idemKey.length > 128))
     return json({ error: "idempotency_key must be a string of 1 to 128 characters." }, 400, cors);
@@ -4673,6 +4682,9 @@ async function forecastEntry(request, env, cors) {
     // one alone" is real coverage information, and discarding it would make an absent
     // record ambiguous between two states that mean opposite things.
     touched: body.touched,
+    p_naive: pNaive,
+    entry_method: entryMethod,
+    hints_revealed: body.hints_revealed === true,
     submitted_at: now,
     revision: (prior && Number.isInteger(prior.revision) ? prior.revision : 0) + 1,
     // Where the write came from, decided by which credential authenticated it — never
