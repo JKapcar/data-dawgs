@@ -12,7 +12,7 @@ account recovery, saved personal state and a personal AI connector.
 ## Start here
 
 - **Draft:** the auction board, player pool, strategy and league rooms.
-- **Games:** Bozo, Guillotine, Survivor, DFS and the live draft rig.
+- **Games:** Bozo, Guillotine, NFL Survivor, DFS and the live draft rig.
 - **Lab:** dated models, calculators and experiments.
 - **Receipts:** forecasts locked before the result and graded in public.
 - **Your Dawgs:** after sign-in, a compact list of your real league memberships and

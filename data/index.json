@@ -97,17 +97,17 @@
    {
     "path": "/data/tier-audit.json",
     "url": "https://datadawgs216.com/data/tier-audit.json",
-    "bytes": 7287,
+    "bytes": 7291,
     "as_of": "2026-08-07",
-    "sha256": "4b4065e447816151ac5c870ab919892ecff5ae74a437c49ffd61a1a827047261",
+    "sha256": "8c9f545f8a3dd391698f803c0b9ca8033aa9b6a2d38a88b4a61affc7a3306fb9",
     "note": "ONE REVIEWER, ONE DAY, reasoning from the code and the published data. This is a judgment, not a measurement — which is the gate’s known weakness and the reason the audit is published rather than held. Result: NO promotions, NO demotions. That is a suspiciously comfortable outcome and is flagged as such; it survives only because every collar came back with a condition attached. Treat these verdicts as falsifiable."
    },
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 31598,
+    "bytes": 31594,
     "as_of": "2026-08-14",
-    "sha256": "8ccfadb0fc00148557dd44446bf43d847171ef6c82ae86941c094a9356f50602",
+    "sha256": "6689588821d0961e092278f1e760ab9859954efe3d14fe5fb533c0dbfbbcaefd",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -354,8 +354,8 @@
    {
     "path": "/data/site-guide.md",
     "url": "https://datadawgs216.com/data/site-guide.md",
-    "bytes": 1689,
-    "sha256": "8676f4087108e812e2cf722f18348e426920c195d6a9978ab0348467184d1f6f",
+    "bytes": 1693,
+    "sha256": "59a81b10b96d5580722028452bf38a9fd0fe7d7e36e0ec00718358cc3c632252",
     "as_of": "2026-08-12"
    }
   ]
