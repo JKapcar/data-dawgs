@@ -5,6 +5,8 @@ on:
     paths:
       - ".github/workflows/nfl-data.yml"
       - "data/nfl-schedule.json"
+      - "data/nfl-players.json"
+      - "data/nfl-player-snapshots.json"
       - "data/538-classic.json"
       - "data/538-classic-methodology.md"
       - "data/model-receipts.json"
@@ -12,8 +14,11 @@ on:
       - "requirements-data.txt"
       - "scripts/elo_538_classic.py"
       - "scripts/nfl_data_backbone.py"
+      - "scripts/nfl_player_backbone.py"
       - "tests/test_elo_538_classic.py"
       - "tests/test_nfl_data_backbone.py"
+      - "tests/test_nfl_player_backbone.py"
+      - "docs/nfl-player-backbone.md"
       - "tools/data-manifest.js"
       - "tools/validate-data.js"
   schedule:
@@ -47,10 +52,13 @@ jobs:
           BASE_REF: origin/${{ github.base_ref }}
         run: |
           python -m unittest tests.test_nfl_data_backbone
+          python -m unittest tests.test_nfl_player_backbone
           python -m unittest tests.test_elo_538_classic
           python scripts/nfl_data_backbone.py validate
+          python scripts/nfl_player_backbone.py validate --allow-missing
           python scripts/elo_538_classic.py validate
           python scripts/nfl_data_backbone.py verify-history --base-ref "$BASE_REF"
+          python scripts/nfl_player_backbone.py verify-history --base-ref "$BASE_REF"
           node tools/validate-data.js
 
   refresh:
@@ -80,30 +88,37 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           python scripts/nfl_data_backbone.py refresh --season 2026
+          python scripts/nfl_player_backbone.py refresh
           python scripts/elo_538_classic.py refresh
-          if git diff --quiet -- data/nfl-schedule.json data/538-classic.json data/model-receipts.json; then
-            echo "Canonical rows, model state and receipts are unchanged."
+          if git diff --quiet -- data/nfl-schedule.json data/nfl-players.json data/nfl-player-snapshots.json data/538-classic.json data/model-receipts.json; then
+            echo "Canonical rows, player identities, model state and receipts are unchanged."
             python -m unittest tests.test_nfl_data_backbone
+            python -m unittest tests.test_nfl_player_backbone
             python -m unittest tests.test_elo_538_classic
             python scripts/nfl_data_backbone.py validate
+            python scripts/nfl_player_backbone.py validate
             python scripts/elo_538_classic.py validate
             python scripts/nfl_data_backbone.py verify-history --base-ref origin/main
+            python scripts/nfl_player_backbone.py verify-history --base-ref origin/main
             node tools/validate-data.js
             exit 0
           fi
           node tools/data-manifest.js
           python -m unittest tests.test_nfl_data_backbone
+          python -m unittest tests.test_nfl_player_backbone
           python -m unittest tests.test_elo_538_classic
           python scripts/nfl_data_backbone.py validate
+          python scripts/nfl_player_backbone.py validate
           python scripts/elo_538_classic.py validate
           python scripts/nfl_data_backbone.py verify-history --base-ref origin/main
+          python scripts/nfl_player_backbone.py verify-history --base-ref origin/main
           node tools/validate-data.js
       - name: Open or update a review PR
         env:
           GH_TOKEN: ${{ github.token }}
           REFRESH_BRANCH: automation/nfl-data-refresh
         run: |
-          if git diff --quiet -- data/nfl-schedule.json data/538-classic.json data/model-receipts.json data/index.json; then
+          if git diff --quiet -- data/nfl-schedule.json data/nfl-players.json data/nfl-player-snapshots.json data/538-classic.json data/model-receipts.json data/index.json; then
             echo "Canonical snapshot is unchanged."
             exit 0
           fi
@@ -111,7 +126,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin "refs/heads/$REFRESH_BRANCH:refs/remotes/origin/$REFRESH_BRANCH" || true
           git switch -C "$REFRESH_BRANCH"
-          git add data/nfl-schedule.json data/538-classic.json data/model-receipts.json data/index.json
+          git add data/nfl-schedule.json data/nfl-players.json data/nfl-player-snapshots.json data/538-classic.json data/model-receipts.json data/index.json
           git commit -m "Refresh canonical NFL model data"
           git push --force-with-lease origin "HEAD:refs/heads/$REFRESH_BRANCH"
           if [ "$(gh pr list --state open --head "$REFRESH_BRANCH" --json number --jq 'length')" = "0" ]; then
@@ -119,5 +134,5 @@ jobs:
               --base main \
               --head "$REFRESH_BRANCH" \
               --title "Refresh canonical NFL model data" \
-              --body "Automated nfelodcm and 538 Classic refresh. This PR failed closed on schema, freshness, row-count, team, week, historical-reproduction, manifest and receipt-history validation before it was opened. Review and merge manually; this workflow never writes directly to production."
+              --body "Automated NFL schedule, player identity and 538 Classic refresh. This PR failed closed on source digests, identity collisions, schema, freshness, row-count, team, week, historical-reproduction, manifest and append-only history validation before it was opened. Review and merge manually; this workflow never writes directly to production."
           fi
