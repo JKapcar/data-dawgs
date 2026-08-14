@@ -85,6 +85,16 @@ ok("all four sheets mount",
 ok("the week's games render from the canonical schedule",
   (await page.locator("#cwGames .card").count()) > 0);
 ok("every game has a Drive field", (await page.locator("#cwGames .drive-field").count()) > 0);
+ok("the card and model templates are reviewable DOM",
+  (await page.locator("#tplDriveCard").count()) === 1 && (await page.locator("#tplDriveModel").count()) === 1);
+ok("every field has nine yard lines", await page.locator("#cwGames .drive-card").first().locator(".drive-yard").count() === 9);
+ok("yard lines carry top and bottom numbers", await page.locator("#cwGames .drive-card").first().locator(".drive-yard b").count() === 18);
+ok("fields carry two hash rows", await page.locator("#cwGames .drive-card").first().locator(".drive-hash").count() === 2);
+ok("goalposts have uprights and crossbars", await page.locator("#cwGames .drive-card").first().locator(".drive-gp i").count() === 8);
+ok("helmets advertise WebP sources", await page.locator("#cwGames .drive-card").first().locator('source[type="image/webp"]').count() === 2);
+ok("helmet PNG fallbacks load", await page.locator("#cwGames .drive-card").first().locator(".drive-helmet").evaluateAll(xs=>xs.every(x=>x.naturalWidth>0)));
+ok("the board contains no stale slider copy", !/slider/i.test(await page.locator("#sheetBoard").innerText()));
+ok("team end zones differ across games", await page.locator("#cwGames .drive-ez.l").evaluateAll(xs=>new Set(xs.slice(0,4).map(x=>getComputedStyle(x).backgroundColor)).size>1));
 
 /* An unsigned visitor sees the board and the models — the argument is public even though
    entering is not. */
@@ -118,6 +128,30 @@ console.log("\ntouched is an event, never a value");
 await signIn();
 ok("signing in enables the Drive",
   (await page.locator("#cwGames .drive-field").count()) > 0);
+
+/* Ask Madden is a dealt play call, not a glyph, and its state is recorded honestly. */
+const preview = page.locator("#cwGames .drive-card").nth(2);
+await preview.locator(".drive-ask").click();
+ok("Ask Madden disappears after dealing", await preview.locator(".drive-ask").evaluate(x=>getComputedStyle(x).display==="none"));
+ok("dealt tiles contain drawn plays", await preview.locator(".dm-play svg").count() >= 2);
+ok("each play has multiple route paths", await preview.locator(".dm-play svg").first().locator("path").count() >= 3);
+await preview.locator(".drive-model").first().click();
+ok("a called play flips", await preview.locator(".drive-model").first().evaluate(x=>x.classList.contains("flipped")));
+ok("the back carries receipt provenance", /captured 2026-/.test(await preview.locator(".dm-prov").first().innerText()));
+ok("model faces use the theme surface", await preview.locator(".dm-face").first().evaluate(x=>getComputedStyle(x).backgroundColor!=="rgb(20, 20, 20)"));
+await preview.locator(".drive-field").focus(); await page.keyboard.press("ArrowRight"); await preview.locator(".drive-lock").click(); await page.waitForTimeout(220);
+ok("hints are recorded after plays were dealt", posted.at(-1)?.hints_revealed === true);
+ok("untouched-at-deal keeps p_naive null", posted.at(-1)?.p_naive === null);
+
+const keyboard = page.locator("#cwGames .drive-card").nth(3).locator(".drive-field");
+await keyboard.focus(); await page.keyboard.press("Home");
+ok("Home moves the ball to zero", await keyboard.getAttribute("aria-valuenow") === "0");
+await page.keyboard.press("End");
+ok("End moves the ball to 100", await keyboard.getAttribute("aria-valuenow") === "100");
+await page.keyboard.press("PageDown");
+ok("PageDown moves in ten-point steps", await keyboard.getAttribute("aria-valuenow") === "90");
+
+posted = [];
 
 posted = [];
 const cards = page.locator("#cwGames .card");
@@ -173,6 +207,14 @@ console.log("\nthe lock is the Worker's 409, not the browser clock");
 
 /* ------------------------------------------------------------ layout, measured */
 console.log("\nlayout, measured");
+fs.mkdirSync(path.join(ROOT,"work","artifacts"),{recursive:true});
+await page.setViewportSize({width:1280,height:950});
+await page.evaluate(()=>document.documentElement.setAttribute("data-theme","light"));
+await page.waitForTimeout(120);
+await page.locator("#cwGames .drive-card").first().screenshot({path:path.join(ROOT,"work","artifacts","drive-light.png")});
+await page.evaluate(()=>document.documentElement.setAttribute("data-theme","dark"));
+await page.waitForTimeout(120);
+await page.locator("#cwGames .drive-card").first().screenshot({path:path.join(ROOT,"work","artifacts","drive-dark.png")});
 for (const [w, h, label] of [[1280, 950, "desktop"], [390, 844, "phone"], [320, 700, "small"]]) {
   for (const theme of ["light", "dark"]) {
     await page.setViewportSize({ width: w, height: h });
