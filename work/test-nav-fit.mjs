@@ -23,12 +23,10 @@
    at 420 (12.5px) and 520 (5px). A ninth section needs an overflow menu, not another
    array entry, and this suite is where that gets caught.
 
-   ⚠️ THIS SUITE ONLY SEES OVERLAP, AND OVERLAP IS ONLY HOW THE 420-760 BAND FAILS.
-   Outside it the bar WRAPS instead, so the failure is an extra ROW and every assertion
-   here stays green through it. Eight groups added a row at 360/375/390/393 and another at
-   761/820, and this file reported 205 passed while both were live. Both were caught by
-   looking at a screenshot. The height table is in work/patch-nav-sections.py; if you
-   change this bar, measure height below 420 and above 761 as well as overlap here.
+   The 419px breakpoint once forced the links onto a second row even after the menu shrank
+   back to six groups. In addition to overlap and height, the suite now measures the
+   vertical centre of every visible control at 320-419px. That directly enforces the
+   one-row mobile banner instead of treating a shorter bar as an indirect proxy.
 
    ⚠️ THE WIDTH LIST IS THE POINT. Breakpoints are where this breaks, so the list walks
    both sides of every one: 419/420 (the wordmark), 519/520 (its new ceiling), 760/761
@@ -77,9 +75,9 @@ const WIDTHS = [320, 340, 360, 390, 419, 420, 440, 460, 500, 519, 520, 560, 600,
    the nav label reads "Prediction Markets" — shortening that label to "Markets" is the
    only thing that does. It is allowed here explicitly rather than by loosening the whole
    table, so that if 1100 ever returns to one row this assertion says so. */
-/* Current Chromium rounds the two-row mobile bar to 83px at 360–419px; the row count and
-   collision checks below remain the invariant, while a one-pixel engine rounding change is safe. */
-const MAX_H = {320:109, 340:108, 360:83, 390:83, 419:83, 420:54, 440:54, 460:54, 500:54,
+/* The mobile banner is one row through 419px; 54px leaves room for engine rounding while
+   the centre-line assertion below is the actual row-count invariant. */
+const MAX_H = {320:54, 340:54, 360:54, 390:54, 419:54, 420:54, 440:54, 460:54, 500:54,
                519:54, 520:54, 560:54, 600:54, 760:54, 761:125, 900:125, 1024:125,
                1100:123,   /* was 69 with six groups — see above */
                1280:69};
@@ -103,9 +101,11 @@ const MEASURE = () => {
   }
   const navR = nav.getBoundingClientRect();
   const navH = Math.round(navR.height);
+  const centres = boxes.map(([, r]) => (r.top + r.bottom) / 2);
+  const rowSpread = centres.length ? Math.max(...centres) - Math.min(...centres) : Infinity;
   const outside = boxes.filter(([, r]) => r.left < navR.left - 0.5 || r.right > navR.right + 0.5).map(([n]) => n);
   return {
-    hits, outside, boxes: boxes.length, navH,
+    hits, outside, boxes: boxes.length, navH, rowSpread,
     groups: links ? [...links.querySelectorAll(".navgrp")].length : 0,
     docOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
   };
@@ -128,6 +128,10 @@ for (const page of PAGES) {
     ok(tag + " and the document still does not scroll sideways", m.docOverflow === false);
     ok(tag + " the bar is no taller than its six-group baseline", m.navH <= MAX_H[W] + 0.5,
        `${m.navH} > ${MAX_H[W]}`);
+    if (W <= 419) {
+      ok(tag + " every mobile banner control is on one row", m.rowSpread <= 1,
+         `vertical centre spread ${m.rowSpread.toFixed(1)}px`);
+    }
     await ctx.close();
   }
 }

@@ -344,76 +344,31 @@ body{margin:0;background:var(--page);color:var(--ink-1);
   .sitenav .brand .logo{display:none}
 }
 @media(max-width:419px){
-  /* ⚠️ CEP-5A Stage 7: the links get their own row here. See the note above. */
-  .sitenav{flex-wrap:wrap}
-  /* ⚠️ space-between, not flex-start. The links own this row outright below 420, so a
-     left-packed run leaves a ragged 34px hole at 393 and reads as broken rather than
-     tight. Spreading costs nothing measurable: the run is the same width and only the
-     gaps grow, so every overlap figure in work/test-nav-fit.mjs is unchanged. */
-  .sitenav .links{flex:1 1 100%;margin-left:0;justify-content:space-between;flex-wrap:wrap;gap:2px 3px;padding-top:3px}
-  /* ⚠️ NO margin-left:auto on the theme button here. In a WRAPPING flex row an
-     auto margin eats every pixel of free space, which forced a third line at 320px
-     with 16px to spare. Let it sit inline with the links. */
-  .sitenav .links .theme-btn{margin-left:2px}
-  /* The chip shares a row with the brand and nothing else, so it goes to the far end
-     of it — 259px of dead space at 393px, next to a bar the reader called terrible.
-     ⚠️ An auto margin here is safe in a way it is NOT on the theme button below: this
-     row's only other item is the brand, and .links takes a 100% basis onto its own
-     line regardless. The theme button lives INSIDE that wrapping run, where an auto
-     margin eats the free space the last line needs and forces another one. */
-  .sitenav .navauth{margin-left:auto}
-  .sitenav .navauth .authbtn{padding:3px 7px;font-size:10px;max-width:84px}
-  /* ⚠️ Measured at 320px BEFORE this tightening: the links run needed 243.4px inside a
-     244.0px box — 0.6px of margin, which is not margin. Two pixels off each link's
-     horizontal padding buys 12px back. Every figure in this note was taken with six
-     groups and while 🙃 still sat in this row; both changed, so read them as history.
-     ⚠️ RE-MEASURED 2026-08-11 WITH EIGHT GROUPS, AND THIS BLOCK FAILS DIFFERENTLY FROM
-     THE ONE ABOVE. Here the links WRAP rather than collide, so the failure is not overlap
-     — it is an extra ROW. Two more groups took the bar from 82px to 108px at 360, 375,
-     390 and 393 with every overlap assertion still green, because the theme button simply
-     moved to a third line. It was caught by looking at a screenshot. The 2px padding and
-     3px gap are why, and together they put every width from 340 up back to its six-group
-     height; 320px is 109px, which is what it was before as well.
-     ⚠️ Add anything here again and measure the bar's HEIGHT below 420 and above 761, and
-     its OVERLAP between 420 and 760. They are different failures and no one check sees
-     more than one of them. */
-  .sitenav .links a,.sitenav .links .grpbtn{padding:4px 2px;font-size:11px}
-
-  /* ⚠️ The old two-row phone rules were DELETED here, not commented out. They sat AFTER
-     these, at the same specificity, and quietly won the cascade — the one-row layout
-     silently did nothing until they were removed. If the old behaviour is ever wanted
-     back, revert the whole block; do not paste those rules below this one. */
+  /* The six-section nav fits beside the logo and account chip. Keep the desktop
+     composition instead of forcing .links onto a second row. The old two-row rule
+     was written for an eight-group nav and survived after the menu became smaller. */
+  .sitenav{flex-wrap:nowrap;gap:0 4px}
+  .sitenav .links{flex:1 1 auto;margin-left:0;justify-content:flex-end;
+    flex-wrap:nowrap;gap:0;padding-top:0}
+  .sitenav .links .theme-btn{margin-left:1px}
+  .sitenav .navauth{margin-left:0}
+  .sitenav .navauth .authbtn{padding:3px 6px;font-size:10px;max-width:72px}
+  .sitenav .links a,.sitenav .links .grpbtn{
+    padding:4px 1px;font-size:10px;letter-spacing:-.3px}
   .sitenav .links a.livebtn{margin-left:0}
   :root[data-theme="light"] .sitenav .links > a.livebtn{margin-left:0}
 
-  /* ⚠️ 🙃 STOPS BEING CENTRED HERE, and that is a collision fix, not taste. Ask Toto's
-     launcher is fixed 20px off the bottom-right and is 145px wide, so at 320px its left
-     edge lands at x=163 — while a centred 38px 🙃 spans 143 to 177. A 14px overlap, on
-     18 of the 20 pages, measured 2026-08-08. It is 320px-only: at 390px the launcher's
-     left edge is 233 against a 🙃 ending at 212.
-     ⚠️ WHY IT SHIPPED IN 52af998 UNSEEN: the launcher is position:fixed, so at scroll 0
-     the two are nowhere near each other. The first test-udfoot.mjs measured at scroll 0,
-     passed 659/659, and proved nothing. The suite now scrolls to the document bottom
-     before it measures — it fails 18 times against 52af998. Do not "simplify" that
-     scroll out of the test.
-     Two independent guards, deliberately redundant: flex-start moves 🙃 out of the
-     launcher's column, and the bottom padding lifts it above the launcher's band even if
-     the launcher ever grows or moves. Pages WITH a footer are not safe by default — the
-     .wrap's 60px bottom padding left only ~2px of margin, which is not margin. */
+  /* Ask Toto occupies the lower-right corner when the page is scrolled to its foot. */
   .udfoot{justify-content:flex-start;padding-bottom:72px}
 }
-/* ⚠️ THE SPREAD STOPS WHERE THE RUN WRAPS. Measured on teamdraft: the links run is one
-   line from 360 to 419 and wraps below it — two rows at 330-350, three at 320. On a
-   wrapped run space-between spreads the LAST line too, so at 320 "Dawgs" sat at x=24
-   and the theme button at x=271 with nothing between them. There is no CSS for "spread
-   every line except the last", so the narrow end packs left, which is what it did
-   before and what it should keep doing until a ninth-section overflow menu exists.
-   ⚠️ IT MUST SIT AFTER THE 419 BLOCK, NOT BEFORE IT. Same specificity, so the later
-   rule wins — written above the 419 block, the spread simply overrode this and 320 was
-   unchanged. A stray line outside the comment does the same thing more quietly: the
-   parser drops the @media that follows it and everything still looks like a no-op. */
+/* The smallest supported phones need another few pixels, but still keep the same row. */
 @media(max-width:359px){
-  .sitenav .links{justify-content:flex-start}
+  .sitenav{gap:0 2px}
+  .sitenav .brand img{width:20px;height:25px}
+  .sitenav .navauth .authbtn{padding:3px 5px;font-size:9.5px;max-width:64px}
+  .sitenav .links{justify-content:flex-end}
+  .sitenav .links a,.sitenav .links .grpbtn{padding:3px 1px;font-size:9px}
+  .sitenav .links .theme-btn{margin-left:0;padding:3px 4px;font-size:11px}
 }
 /* ---- cards & type ---- */
 .card{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:18px}
