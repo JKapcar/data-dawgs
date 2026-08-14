@@ -18,7 +18,7 @@ const ok = (n, c, x) => { c ? (pass++, console.log("  ok   " + n)) : (fail++, co
 const WORK = dirname(fileURLToPath(import.meta.url));
 const SRC = fs.readFileSync(resolve(WORK, "..", "dawg-bot-worker.js"), "utf8");
 const BUNDLE = join(tmpdir(), "worker-identity.mjs");
-fs.writeFileSync(BUNDLE, SRC + "\nexport { handleMcp, MCP_TOOLS, mcpAuth, mcpTokenHash, newMcpToken, emailToName, bozoSignup, bozoLogin, readSession, loadUsers, bozoRoster, authInvite, makeSession, entitlementOf, freeEntitlement };\n");
+fs.writeFileSync(BUNDLE, SRC + "\nexport { handleMcp, MCP_TOOLS, mcpAuth, mcpTokenHash, newMcpToken, emailToName, bozoSignup, bozoLogin, readSession, loadUsers, bozoRoster, authInvite, makeSession, entitlementOf, freeEntitlement , authName };\n");
 
 const DB = "https://data-dawgs-draft-default-rtdb.firebaseio.com";
 const PEPPER = "test-pepper-value";
@@ -325,6 +325,18 @@ const WRITES = [];                      // every write path, for the no-seat pro
       }
       return new Response("{}");
     }
+    /* A DEEP write under one account: fbPut(env, "/users/<uid>/nameLog/<ts>", {...}).
+       Without this the append-only rename log would look written and be absent, and the
+       assertion about it would be green against a Worker that recorded nothing. */
+    let deep = url.match(/\/users\/([^./]+)\/([^.]+)\.json/);
+    if (deep && (method === "PUT" || method === "PATCH")) {
+      const parts = deep[2].split("/");
+      let node = (USERS[deep[1]] = USERS[deep[1]] || {});
+      while (parts.length > 1) node = (node[parts[0]] = node[parts.shift()] || {});
+      const val = JSON.parse(opts.body);
+      node[parts[0]] = method === "PUT" ? val : { ...(node[parts[0]] || {}), ...val };
+      return new Response("null");
+    }
     let m = url.match(/\/users\/([^./]+)\.json/);
     if (m && method === "GET") return new Response(JSON.stringify(USERS[m[1]] ?? null));
     if (m && method === "PUT") { USERS[m[1]] = JSON.parse(opts.body); return new Response("null"); }
@@ -626,6 +638,60 @@ console.log("\nsignup source invariants");
   ok("the IP cap is checked before any database work", fn.indexOf("env.RL") < fn.indexOf("loadUsers"));
   ok("signup never touches league membership", !/LG\(|\/members/.test(fn));
   ok("signup records unverified state and does not grant verification", /emailVerified:\s*false/.test(fn) && !/emailVerified:\s*true/.test(fn));
+}
+
+/* ================= display name: a mutable, NON-UNIQUE label ================= */
+/* Email is the uniqueness key. The name is decoration, and the whole point of this
+   route is that it can be changed and that two members may share one. */
+console.log("\ndisplay name");
+{
+  const uid = Object.keys(USERS).find(k => /^u_/.test(k) && USERS[k].email === "zed@example.com");
+  const pwSetAt = USERS[uid].passwordSetAt;
+  const sess = await W.makeSession(ENV, USERS[uid].name, pwSetAt, uid);
+  const renameAs = (session, name) => new Request("https://w.example.com/auth/name", {
+    method: "POST", headers: { "Content-Type": "application/json", "X-Dawg-Session": session },
+    body: JSON.stringify({ name }),
+  });
+
+  ok("an anonymous rename is refused", (await W.authName(new Request("https://w.example.com/auth/name",
+     { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }), ENV, CORS)).status === 401);
+  ok("GET is refused", (await W.authName(new Request("https://w.example.com/auth/name"), ENV, CORS)).status === 405);
+
+  const r = await W.authName(renameAs(sess, "Zedediah"), ENV, CORS);
+  const j = await jbody(r);
+  ok("a member can change their own display name", r.status === 200 && j.name === "Zedediah", JSON.stringify(j));
+  ok("the change lands on the account record", USERS[uid].name === "Zedediah" && !!USERS[uid].nameSetAt);
+  ok("the previous name is recorded, append-only", !!USERS[uid].nameLog &&
+     Object.values(USERS[uid].nameLog).some(e => e.from === "Zed" && e.to === "Zedediah"));
+  ok("a renewed session comes back", !!j.session && (await W.readSession(ENV, j.session))?.n === "Zedediah");
+  ok("⚠️ the account is still found by EMAIL, not by name", (await W.emailToName(ENV, "zed@example.com")) === "Zedediah");
+
+  const dup = await W.authName(renameAs(await W.makeSession(ENV, "Zedediah", pwSetAt, uid), "Kap"), ENV, CORS);
+  ok("⚠️ taking a name somebody else already uses is ALLOWED", dup.status === 200,
+     dup.status + " " + JSON.stringify(await jbody(dup)));
+  USERS[uid].name = "Zedediah";
+
+  const s2 = await W.makeSession(ENV, "Zedediah", pwSetAt, uid);
+  for (const [label, name, status, re] of [
+    ["an empty name", "   ", 400, /name/i],
+    ["a control character", "a\u0000b", 400, /not valid/i],
+    ["a 61-character name", "x".repeat(61), 400, /not valid/i],
+  ]) {
+    const bad = await W.authName(renameAs(s2, name), ENV, CORS);
+    ok(label + " is refused", bad.status === status && re.test((await jbody(bad)).error || ""));
+  }
+  const same = await W.authName(renameAs(s2, "Zedediah"), ENV, CORS);
+  ok("renaming to the name you already have is a clean no-op", same.status === 200 && (await jbody(same)).unchanged === true);
+
+  /* ⚠️ The guard that keeps the ledger honest. LEAGUE.picks is keyed by display name. */
+  LEAGUE.picks["Zedediah"] = { label: "BUF -3.5", ts: 400 };
+  const blocked = await W.authName(renameAs(s2, "Somebody Else"), ENV, CORS);
+  const bj = await jbody(blocked);
+  ok("⚠️ a rename is REFUSED while a leg is standing", blocked.status === 409 && /leg on the board/i.test(bj.error || ""),
+     blocked.status + " " + JSON.stringify(bj));
+  ok("…and the stored pick key is untouched", !!LEAGUE.picks["Zedediah"] && !LEAGUE.picks["Somebody Else"]);
+  ok("…and the account still carries the old name", USERS[uid].name === "Zedediah");
+  delete LEAGUE.picks["Zedediah"];
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);

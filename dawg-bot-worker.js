@@ -846,7 +846,7 @@ export default {
     // hitting a route with completely different semantics.
     const AUTH = { "/roster": bozoRoster, "/claim": bozoClaim, "/login": bozoLogin,
                    "/passwd": bozoPasswd, "/reset": bozoReset, "/invite": authInvite,
-                   "/mcp-token": authMcpToken, "/email": authEmail,
+                   "/mcp-token": authMcpToken, "/email": authEmail, "/name": authName,
                    "/email-confirm": authEmailConfirm, "/signup": bozoSignup,
                    "/lookup": authLookup,
                    "/verify-request": authVerifyRequest, "/verify": authVerify,
@@ -2031,6 +2031,81 @@ async function authLookup(request, env, cors) {
   try { owners = await accountsForEmail(env, email); }
   catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
   return json({ ok: true, known: owners.length === 1 }, 200, cors);
+}
+
+// POST /auth/name {name} — change the display name. Session required, acts only on SELF.
+//
+// ⚠️ DISPLAY NAMES ARE DELIBERATELY NOT UNIQUE. Email is the uniqueness key: one account
+// per address, enforced by accountsForEmail plus the ETag reservation on /emailIndex.
+// Five members may all be "John". Nothing here checks /users for a collision, and adding
+// such a check later would be a regression, not a fix — test-identity asserts a duplicate
+// display name is ALLOWED at signup, and this route holds the same line.
+//
+// ⚠️ UID ACCOUNTS ONLY. A legacy record IS its name — /users/<name> and /bozoauth/<name>
+// are both keyed by it — so renaming one is a migration, not a field write. After the
+// legacy wipe no such account exists and this branch is dead; it stays because a stale
+// service-worker copy of an old page can still present a legacy session.
+//
+// ⚠️ REFUSED WHILE A LEG IS ON A BOARD. Bozo picks live at LG(lid)/picks/<display name>
+// (commitBozoLeg). A rename with a leg standing would orphan that row and let the member
+// submit a second leg under the new name. The ledger is append-only, so the answer is to
+// refuse the rename, never to rewrite the pick key.
+const RENAME_CAP = 5;   // per account per day
+
+async function picksHeldBy(env, name) {
+  const key = encodeURIComponent(name);
+  let leagues;
+  try { leagues = await loadLeagues(env); } catch { return null; }
+  const held = [];
+  for (const [lid, lg] of Object.entries(leagues || {})) {
+    if (lg && lg.picks && Object.prototype.hasOwnProperty.call(lg.picks, key)) held.push(lid);
+    else if (lg && lg.picks && Object.prototype.hasOwnProperty.call(lg.picks, name)) held.push(lid);
+  }
+  return held;
+}
+
+async function authName(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 401, cors);
+  if (!auth.uid)
+    return json({ error: "This account predates renaming and cannot be renamed." }, 409, cors);
+
+  let body;
+  try { body = await readBody(request); } catch { return json({ error: "Bad JSON." }, 400, cors); }
+  const name = String(body.name || "").trim();
+  if (!name) return json({ error: "Pick a name - it is what shows on rosters." }, 400, cors);
+  if (Array.from(name).length > 60 || /[\u0000-\u001f\u007f]/.test(name))
+    return json({ error: "That display name is not valid." }, 400, cors);
+  if (name === auth.name) return json({ ok: true, name, unchanged: true }, 200, cors);
+
+  if (env.RL) {
+    const day = new Date().toISOString().slice(0, 10);
+    const rlKey = "rename:" + day + ":" + auth.uid;
+    const used = parseInt((await env.RL.get(rlKey)) || "0", 10);
+    if (used >= RENAME_CAP)
+      return json({ error: "That is enough name changes for one day." }, 429, cors);
+    await env.RL.put(rlKey, String(used + 1), { expirationTtl: 172800 });
+  }
+
+  const held = await picksHeldBy(env, auth.name);
+  if (held === null) return json({ error: "Database unreachable." }, 502, cors);
+  if (held.length)
+    return json({ error: "You have a leg on the board. Names are locked until that week is graded.",
+                  blockedBy: held }, 409, cors);
+
+  const at = Date.now();
+  try {
+    // The log is append-only and written FIRST: a rename that is not recorded is worse
+    // than a rename that is recorded twice.
+    await fbPut(env, uidUserPath(auth.uid) + "/nameLog/" + at, { from: auth.name, to: name, at });
+    await fbPatch(env, uidUserPath(auth.uid), { name, nameSetAt: at });
+  } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+
+  // sessionAuth prefers rec.name over the token's n, so the old session keeps working.
+  // A fresh one is returned anyway so every page stops showing the stale label at once.
+  return json({ ok: true, name, previous: auth.name,
+                session: await makeSession(env, name, auth.passwordSetAt || 0, auth.uid) }, 200, cors);
 }
 
 // POST /auth/mcp-token {action:"mint"|"revoke"} — session required, acts only on SELF.
