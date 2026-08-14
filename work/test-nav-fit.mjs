@@ -113,6 +113,8 @@ const MEASURE = () => {
   const themeR = links?.querySelector(".theme-btn")?.getBoundingClientRect();
   const brandLogoR = nav.querySelector(".brand .logo")?.getBoundingClientRect();
   const brandTagR = nav.querySelector(".brand .tag")?.getBoundingClientRect();
+  const activeDropdown = links?.querySelector(".grpmenu a.on");
+  const activeDropdownStyle = activeDropdown ? getComputedStyle(activeDropdown) : null;
   const brandToDomains = brandR && domainRects.length ? domainRects[0].left - brandR.right : Infinity;
   const domainsToAuth = authR && domainRects.length ? authR.left - domainRects.at(-1).right : -Infinity;
   const authToTheme = authR && themeR ? themeR.left - authR.right : -Infinity;
@@ -124,6 +126,8 @@ const MEASURE = () => {
     hits, outside, boxes: boxes.length, navH, rowSpread,
     brandToDomains, domainsToAuth, authToTheme, rightSlack, navGap, linksGap,
     authLabel, authWidth: authR?.width || 0,
+    activeDropdownShadow: activeDropdownStyle?.boxShadow || "none",
+    activeDropdownWeight: parseInt(activeDropdownStyle?.fontWeight || "0", 10),
     brandLogoVisible:!!brandLogoR?.width, brandTagVisible:!!brandTagR?.width,
     minDomainGap: domainGaps.length ? Math.min(...domainGaps) : -Infinity,
     groups: links ? [...links.querySelectorAll(".navgrp")].length : 0,
@@ -148,6 +152,12 @@ for (const page of PAGES) {
     ok(tag + " and the document still does not scroll sideways", m.docOverflow === false);
     ok(tag + " the bar is no taller than its six-group baseline", m.navH <= MAX_H[W] + 0.5,
        `${m.navH} > ${MAX_H[W]}`);
+    ok(tag + " active dropdown item has no underline", m.activeDropdownShadow === "none",
+       `dropdown box-shadow ${m.activeDropdownShadow}`);
+    if (m.activeDropdownWeight) {
+      ok(tag + " active dropdown item remains bold", m.activeDropdownWeight >= 700,
+         `dropdown font weight ${m.activeDropdownWeight}`);
+    }
     if (W <= 419) {
       ok(tag + " every mobile banner control is on one row", m.rowSpread <= 1,
          `vertical centre spread ${m.rowSpread.toFixed(1)}px`);
