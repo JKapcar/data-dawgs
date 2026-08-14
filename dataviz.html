@@ -57,7 +57,8 @@
 :root[data-theme="light"] .grpbtn:hover{background:rgba(255,106,2,0.16);color:#fff}
 :root[data-theme="light"] .sitenav .links a.on,
 :root[data-theme="light"] .grpbtn.on{color:#ff8a4d;box-shadow:inset 0 -2px 0 #ff8a4d}
-:root[data-theme="light"] .theme-btn{border-color:rgba(236,223,201,0.35);color:var(--navink2)}
+:root[data-theme="light"] .theme-btn{background:rgba(255,106,2,.22);border-color:#ff8a4d;color:#fff;box-shadow:0 0 0 1px rgba(255,138,77,.22)}
+:root[data-theme="light"] .theme-btn:hover{background:#ff6a02;border-color:#ff6a02;color:#fff}
 *{box-sizing:border-box}
 body{margin:0;background:var(--page);color:var(--ink-1);
   font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:15px;line-height:1.55}
@@ -200,7 +201,8 @@ body{margin:0;background:var(--page);color:var(--ink-1);
 .authmodal .x{position:absolute;top:8px;right:10px;background:none;border:0;color:var(--ink-3);
   font-size:22px;line-height:1;cursor:pointer;padding:4px 8px}
 .authmodal .x:hover{color:var(--ink-1)}
-.theme-btn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--ink-2);padding:4px 10px;cursor:pointer;font-size:12.5px}
+.theme-btn{display:inline-flex;align-items:center;gap:4px;background:rgba(255,106,2,.10);border:1px solid var(--accent);border-radius:999px;color:var(--ink-1);padding:4px 10px;cursor:pointer;font-size:12.5px;font-weight:800;box-shadow:0 0 0 1px rgba(255,106,2,.12)}
+.theme-btn:hover{background:var(--accent);color:var(--accent-ink)}
 .sitenav .links .theme-btn{margin-left:10px}
 /* ---- 🙃 The Upside Down: the machine-readable mirror, made visible ----
    Sits NEXT TO the theme pill but is deliberately not part of it: dashed border, no
@@ -684,10 +686,10 @@ svg text{font-family:inherit}
 (function(){
   const page = window.DD_PAGE || document.currentScript.getAttribute('data-page') || "";
   // ---- per-page theme: each page remembers its own light/dark ----
-  // key bumped to v2 when light became the default — old saved prefs (mostly from testing)
-  // would otherwise pin existing visitors to dark forever
-  const TKEY = "dd-theme2-" + (page || "home");
-  const GKEY = "dd-theme2";
+  // Key bumped when light became the default so stale dark preferences do not keep
+  // reopening the site in dark mode. A new choice persists normally after the bump.
+  const TKEY = "dd-theme3-" + (page || "home");
+  const GKEY = "dd-theme3";
   window.DDTheme = {
     current(){
       // light is the site default; the live draft board overrides via DD_THEME_DEFAULT
@@ -706,8 +708,11 @@ svg text{font-family:inherit}
         const i = document.createElement("span"); i.className = "ticon";
         i.textContent = t === "dark" ? "☀" : "☾";
         const w = document.createElement("span"); w.className = "tword";
-        w.textContent = t === "dark" ? " Light" : " Dark";
+        w.textContent = t === "dark" ? "Light mode" : "Dark mode";
         b.append(i, w);
+        const action = t === "dark" ? "Switch to light mode" : "Switch to dark mode";
+        b.setAttribute("aria-label", action);
+        b.title = action;
       });
       return t;
     },
