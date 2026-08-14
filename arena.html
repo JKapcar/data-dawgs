@@ -716,7 +716,7 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 @media(max-width:760px){.p-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.calc-grid,.inventory{grid-template-columns:1fr}.fields.five{grid-template-columns:repeat(2,minmax(0,1fr))}.provenance{grid-template-columns:1fr}.p-section>header{display:block}.p-meta{text-align:left;margin-top:7px}}
 @media(max-width:430px){.fields{grid-template-columns:1fr}.fields.five{grid-template-columns:1fr}.p-summary{grid-template-columns:1fr 1fr}.calc{padding:13px}}
 
-.nav-section{padding:9px 13px 3px;color:var(--accent);font:800 10px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase}.nav-section:not(:first-child){margin-top:5px;border-top:1px solid var(--grid);padding-top:10px}</style>
+.nav-section{padding:9px 13px 3px;color:var(--accent);font:800 10px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase}.nav-section:not(:first-child){margin-top:5px;border-top:1px solid var(--grid);padding-top:10px}.grpmenu a[class*="kennel-"]{font-family:ui-rounded,"Trebuchet MS",system-ui,sans-serif;font-weight:800;letter-spacing:.01em}.grpmenu a.kennel-scoreboard{color:#8ed6ff}.grpmenu a.kennel-nfeloml{color:#c9b3ff}.grpmenu a.kennel-qb{color:#ffc06a}.grpmenu a.kennel-wepa{color:#7ce7b0}.grpmenu a.kennel-srs{color:#ff9bb4}.grpmenu a.kennel-hfa{color:#ffe082}.grpmenu a.kennel-units{color:#8ee8e3}.grpmenu a.kennel-receipts{color:#f2c4ff}.grpmenu a.kennel-regimes{color:#a8d88c}</style>
 </head>
 <body>
 <div class="wrap">
@@ -928,9 +928,18 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
       ["master.html","Master Data","master"],
       ["strategy.html","2026 Strategy","strategy"],
     ]},
-    {label:"Dawgs", href:"index.html#tiers", items:[
-      ["index.html#tiers","How the tiers work","tiers"],
-      ["dawgs.html","Rollo · OG Data Dawg","dawgs"],
+    {label:"Dawgs", href:"dawgs.html", key:"dawgs", items:[
+      ["dawgs.html","🐾 Rollo · OG Data Dawg","dawgs"],
+      ["#","The DawgHouse","nav-section"],
+      ["dawghouse.html#scoreboard","📊 Model Scoreboard","kennel-scoreboard"],
+      ["dawghouse.html#inventory","🧪 nfeloml · EP / EPA / WP","kennel-nfeloml"],
+      ["dawghouse.html#inventory","🏈 QB Context","kennel-qb"],
+      ["dawghouse.html#inventory","⚖️ Weighted EPA","kennel-wepa"],
+      ["dawghouse.html#inventory","📈 SRS / Win-Total Ratings","kennel-srs"],
+      ["dawghouse.html#inventory","🏟️ Home-Field Tracker","kennel-hfa"],
+      ["dawghouse.html#inventory","🛡️ Unit Ratings","kennel-units"],
+      ["dawghouse.html#inventory","🧾 Immutable Receipts","kennel-receipts"],
+      ["dawghouse.html#inventory","🌦️ Regime Analysis","kennel-regimes"],
     ]},
   ];
   const nav = document.getElementById("nav");

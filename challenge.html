@@ -802,7 +802,7 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 
 /* === The Dawg House · The Drive (Phase 1) ================================ */
 .drive-card{padding:0;overflow:hidden;border-color:color-mix(in srgb,var(--accent) 30%,var(--border))}.drive-head{padding:14px 16px 0}.drive-field{height:235px;position:relative;overflow:hidden;touch-action:none;cursor:ew-resize;background:repeating-linear-gradient(90deg,transparent 0 7.9%,rgba(255,255,255,.12) 8% 8.25%),linear-gradient(#28653b,#1b4d2e)}.drive-field:before,.drive-field:after{content:"";position:absolute;top:0;bottom:0;width:10%;background:repeating-linear-gradient(45deg,rgba(0,20,50,.75) 0 4px,rgba(0,20,50,.5) 4px 8px)}.drive-field:after{right:0;background:repeating-linear-gradient(45deg,rgba(0,88,65,.78) 0 4px,rgba(0,88,65,.48) 4px 8px)}.drive-yard{position:absolute;top:0;bottom:0;border-left:1px solid rgba(255,255,255,.32);font:800 11px ui-monospace,monospace;color:rgba(255,255,255,.62);padding:4px}.drive-yard b{position:absolute;bottom:4px;left:-7px}.drive-chain{position:absolute;top:0;bottom:0;background:rgba(255,176,32,.17);border-left:3px solid #ffb020;border-right:3px solid #ffb020;pointer-events:none}.drive-chain:before{content:"";position:absolute;top:29px;left:0;right:0;border-top:6px dotted #ffd48b}.drive-chain span{position:absolute;top:3px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#ffb020;color:#261400;padding:1px 6px;border-radius:3px;font:800 9px ui-monospace,monospace}.drive-cluster{position:absolute;top:72px;width:150px;height:98px;transform:translateX(-50%);pointer-events:none}.drive-helmet{position:absolute;width:76px;height:68px;object-fit:contain;top:8px}.drive-away{left:0}.drive-home{right:0}.drive-ball{position:absolute;left:62px;top:31px;width:28px;height:38px;border-radius:50%;background:#7c3e18;border:2px solid #f1b17b;transform:rotate(22deg)}.drive-ball:after{content:"";position:absolute;left:5px;right:5px;top:16px;border-top:2px solid #f7d3ad}.drive-value{position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);padding:2px 8px;border-radius:999px;background:#161009;color:#fff;font:800 13px ui-monospace,monospace}.drive-bottom{padding:12px 16px 16px}.drive-coach{margin:0 0 10px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;text-align:center;font-size:13px}.drive-cards{display:flex;gap:7px;overflow:auto;margin:10px 0}.drive-model{min-width:118px;padding:7px;border:1px solid var(--border);border-radius:7px;background:var(--surface-1);cursor:pointer}.drive-model b{display:block;color:var(--accent);font-size:17px}.drive-model[hidden]{display:none}.drive-note{min-height:1.4em}.drive-touchdown{outline:4px solid color-mix(in srgb,#ffb020 70%,transparent);animation:dddriveflash .4s 2}@keyframes dddriveflash{50%{transform:translateX(3px)}}@media(prefers-reduced-motion:reduce){.drive-touchdown{animation:none}}
-.nav-section{padding:9px 13px 3px;color:var(--accent);font:800 10px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase}.nav-section:not(:first-child){margin-top:5px;border-top:1px solid var(--grid);padding-top:10px}</style>
+.nav-section{padding:9px 13px 3px;color:var(--accent);font:800 10px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase}.nav-section:not(:first-child){margin-top:5px;border-top:1px solid var(--grid);padding-top:10px}.grpmenu a[class*="kennel-"]{font-family:ui-rounded,"Trebuchet MS",system-ui,sans-serif;font-weight:800;letter-spacing:.01em}.grpmenu a.kennel-scoreboard{color:#8ed6ff}.grpmenu a.kennel-nfeloml{color:#c9b3ff}.grpmenu a.kennel-qb{color:#ffc06a}.grpmenu a.kennel-wepa{color:#7ce7b0}.grpmenu a.kennel-srs{color:#ff9bb4}.grpmenu a.kennel-hfa{color:#ffe082}.grpmenu a.kennel-units{color:#8ee8e3}.grpmenu a.kennel-receipts{color:#f2c4ff}.grpmenu a.kennel-regimes{color:#a8d88c}</style>
 </head>
 <body>
 <div class="wrap">
@@ -1014,9 +1014,18 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
       ["master.html","Master Data","master"],
       ["strategy.html","2026 Strategy","strategy"],
     ]},
-    {label:"Dawgs", href:"index.html#tiers", items:[
-      ["index.html#tiers","How the tiers work","tiers"],
-      ["dawgs.html","Rollo · OG Data Dawg","dawgs"],
+    {label:"Dawgs", href:"dawgs.html", key:"dawgs", items:[
+      ["dawgs.html","🐾 Rollo · OG Data Dawg","dawgs"],
+      ["#","The DawgHouse","nav-section"],
+      ["dawghouse.html#scoreboard","📊 Model Scoreboard","kennel-scoreboard"],
+      ["dawghouse.html#inventory","🧪 nfeloml · EP / EPA / WP","kennel-nfeloml"],
+      ["dawghouse.html#inventory","🏈 QB Context","kennel-qb"],
+      ["dawghouse.html#inventory","⚖️ Weighted EPA","kennel-wepa"],
+      ["dawghouse.html#inventory","📈 SRS / Win-Total Ratings","kennel-srs"],
+      ["dawghouse.html#inventory","🏟️ Home-Field Tracker","kennel-hfa"],
+      ["dawghouse.html#inventory","🛡️ Unit Ratings","kennel-units"],
+      ["dawghouse.html#inventory","🧾 Immutable Receipts","kennel-receipts"],
+      ["dawghouse.html#inventory","🌦️ Regime Analysis","kennel-regimes"],
     ]},
   ];
   const nav = document.getElementById("nav");

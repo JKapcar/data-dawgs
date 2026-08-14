@@ -25,9 +25,12 @@ def main():
  for f in glob.glob(str(ROOT/'*.html')):
   p=Path(f); s=p.read_text(encoding='utf-8')
   if 'const NAV = [' not in s: continue
-  if OLD not in s: raise SystemExit(f'{p.name}: Dawgs anchor drifted')
+  if OLD not in s:
+   s,n=__import__('re').subn(r'    \{label:"Dawgs"[\s\S]*?    \]\},\n  \];', NEW+'\n  ];',s,count=1)
+   if n!=1:raise SystemExit(f'{p.name}: Dawgs anchor drifted')
+  else:s=s.replace(OLD,NEW,1)
   if CSS in s: raise SystemExit(f'{p.name}: already patched')
-  staged[p]=s.replace(OLD,NEW,1).replace('</style>',CSS+'</style>',1)
+  staged[p]=s.replace('</style>',CSS+'</style>',1)
  if len(staged)!=28: raise SystemExit(f'expected 28 banners, got {len(staged)}')
  for p,s in staged.items():p.write_text(s,encoding='utf-8')
  print(f'updated {len(staged)} Dawgs menus')
