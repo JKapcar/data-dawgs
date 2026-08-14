@@ -347,14 +347,14 @@ body{margin:0;background:var(--page);color:var(--ink-1);
   /* The six-section nav fits beside the logo and account chip. Keep the desktop
      composition instead of forcing .links onto a second row. The old two-row rule
      was written for an eight-group nav and survived after the menu became smaller. */
-  .sitenav{flex-wrap:nowrap;gap:0 4px}
-  .sitenav .links{flex:1 1 auto;margin-left:0;justify-content:flex-end;
-    flex-wrap:nowrap;gap:0;padding-top:0}
-  .sitenav .links .theme-btn{margin-left:1px}
-  .sitenav .navauth{margin-left:0}
+  .sitenav{flex-wrap:nowrap;gap:0 10px}
+  .sitenav .links{flex:1 1 auto;margin-left:0;justify-content:flex-start;
+    flex-wrap:nowrap;gap:4px;padding-top:0}
+  .sitenav .links .theme-btn{margin-left:2px}
+  .sitenav .navauth{margin-left:auto}
   .sitenav .navauth .authbtn{padding:3px 6px;font-size:10px;max-width:72px}
   .sitenav .links a,.sitenav .links .grpbtn{
-    padding:4px 1px;font-size:10px;letter-spacing:-.3px}
+    padding:4px 1px;font-size:11px;letter-spacing:-.2px}
   .sitenav .links a.livebtn{margin-left:0}
   :root[data-theme="light"] .sitenav .links > a.livebtn{margin-left:0}
 
@@ -363,11 +363,11 @@ body{margin:0;background:var(--page);color:var(--ink-1);
 }
 /* The smallest supported phones need another few pixels, but still keep the same row. */
 @media(max-width:359px){
-  .sitenav{gap:0 2px}
+  .sitenav{gap:0 6px}
   .sitenav .brand img{width:20px;height:25px}
   .sitenav .navauth .authbtn{padding:3px 5px;font-size:9.5px;max-width:64px}
-  .sitenav .links{justify-content:flex-end}
-  .sitenav .links a,.sitenav .links .grpbtn{padding:3px 1px;font-size:9px}
+  .sitenav .links{justify-content:flex-start;gap:2px}
+  .sitenav .links a,.sitenav .links .grpbtn{padding:3px 1px;font-size:9.5px}
   .sitenav .links .theme-btn{margin-left:0;padding:3px 4px;font-size:11px}
 }
 /* ---- cards & type ---- */
@@ -1405,7 +1405,7 @@ label.fld[hidden], .statrow[hidden], .card[hidden], .sheet[hidden], .banner[hidd
     location.href = "signon.html?next=" + encodeURIComponent(here);
   });
   authSec.appendChild(authBtn);
-  nav.appendChild(authSec);
+  // The account chip joins the domain run after the six groups below.
   window.DDAuth.render();
   document.addEventListener("keydown", e=>{ if(e.key === "Escape") window.DDAuth.close(); });
   // sign out in one tab, sign out in all of them
@@ -1458,6 +1458,7 @@ label.fld[hidden], .statrow[hidden], .card[hidden], .sheet[hidden], .banner[hidd
     grp.appendChild(btn); grp.appendChild(menu);
     links.appendChild(grp);
   });
+  links.appendChild(authSec);
   nav.appendChild(links);
   document.addEventListener("click", ()=>{
     document.querySelectorAll(".navgrp.open").forEach(g=>g.classList.remove("open"));

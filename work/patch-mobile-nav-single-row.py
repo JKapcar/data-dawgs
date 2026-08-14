@@ -16,14 +16,14 @@ REPLACEMENT = r'''@media(max-width:419px){
   /* The six-section nav fits beside the logo and account chip. Keep the desktop
      composition instead of forcing .links onto a second row. The old two-row rule
      was written for an eight-group nav and survived after the menu became smaller. */
-  .sitenav{flex-wrap:nowrap;gap:0 4px}
-  .sitenav .links{flex:1 1 auto;margin-left:0;justify-content:flex-end;
-    flex-wrap:nowrap;gap:0;padding-top:0}
-  .sitenav .links .theme-btn{margin-left:1px}
-  .sitenav .navauth{margin-left:0}
+  .sitenav{flex-wrap:nowrap;gap:0 10px}
+  .sitenav .links{flex:1 1 auto;margin-left:0;justify-content:flex-start;
+    flex-wrap:nowrap;gap:4px;padding-top:0}
+  .sitenav .links .theme-btn{margin-left:2px}
+  .sitenav .navauth{margin-left:auto}
   .sitenav .navauth .authbtn{padding:3px 6px;font-size:10px;max-width:72px}
   .sitenav .links a,.sitenav .links .grpbtn{
-    padding:4px 1px;font-size:10px;letter-spacing:-.3px}
+    padding:4px 1px;font-size:11px;letter-spacing:-.2px}
   .sitenav .links a.livebtn{margin-left:0}
   :root[data-theme="light"] .sitenav .links > a.livebtn{margin-left:0}
 
@@ -38,11 +38,11 @@ OLD_NARROW = '''@media(max-width:359px){
 }'''
 
 NEW_NARROW = '''@media(max-width:359px){
-  .sitenav{gap:0 2px}
+  .sitenav{gap:0 6px}
   .sitenav .brand img{width:20px;height:25px}
   .sitenav .navauth .authbtn{padding:3px 5px;font-size:9.5px;max-width:64px}
-  .sitenav .links{justify-content:flex-end}
-  .sitenav .links a,.sitenav .links .grpbtn{padding:3px 1px;font-size:9px}
+  .sitenav .links{justify-content:flex-start;gap:2px}
+  .sitenav .links a,.sitenav .links .grpbtn{padding:3px 1px;font-size:9.5px}
   .sitenav .links .theme-btn{margin-left:0;padding:3px 4px;font-size:11px}
 }'''
 
@@ -63,6 +63,18 @@ for path in sorted(ROOT.glob("*.html")):
         f"{path.name}: expected one narrow-phone rule, found {patched.count(OLD_NARROW)}"
     )
     patched = patched.replace(OLD_NARROW, NEW_NARROW, 1)
+    old_auth = '''  nav.appendChild(authSec);
+  window.DDAuth.render();'''
+    new_auth = '''  // The account chip joins the domain run after the six groups below.
+  window.DDAuth.render();'''
+    old_links = '''  nav.appendChild(links);
+  document.addEventListener("click", ()=>{'''
+    new_links = '''  links.appendChild(authSec);
+  nav.appendChild(links);
+  document.addEventListener("click", ()=>{'''
+    assert patched.count(old_auth) == 1, f"{path.name}: auth insertion drifted"
+    assert patched.count(old_links) == 1, f"{path.name}: links insertion drifted"
+    patched = patched.replace(old_auth, new_auth, 1).replace(old_links, new_links, 1)
     path.write_text(patched, encoding="utf-8")
     changed.append(path.name)
 

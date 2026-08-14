@@ -91,7 +91,8 @@ const MEASURE = () => {
   const add = (name, el) => { if (el) { const r = el.getBoundingClientRect(); if (r.width > 0 && r.height > 0) boxes.push([name, r]); } };
   add("brand", nav.querySelector(".brand"));
   add("auth", nav.querySelector(".navauth"));
-  if (links) [...links.children].forEach((c, i) => add((c.textContent || "link").trim().slice(0, 14) || "link" + i, c));
+  if (links) [...links.children].filter(c => !c.classList.contains("navauth"))
+    .forEach((c, i) => add((c.textContent || "link").trim().slice(0, 14) || "link" + i, c));
   const hits = [];
   for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
     const a = boxes[i][1], c = boxes[j][1];
@@ -103,9 +104,20 @@ const MEASURE = () => {
   const navH = Math.round(navR.height);
   const centres = boxes.map(([, r]) => (r.top + r.bottom) / 2);
   const rowSpread = centres.length ? Math.max(...centres) - Math.min(...centres) : Infinity;
+  const domainRects = links ? [...links.querySelectorAll(".navgrp")]
+    .map(c => c.getBoundingClientRect()).sort((a, c) => a.left - c.left) : [];
+  const domainGaps = domainRects.slice(1).map((r, i) => r.left - domainRects[i].right);
+  const brandR = nav.querySelector(".brand")?.getBoundingClientRect();
+  const authR = nav.querySelector(".navauth")?.getBoundingClientRect();
+  const themeR = links?.querySelector(".theme-btn")?.getBoundingClientRect();
+  const brandToDomains = brandR && domainRects.length ? domainRects[0].left - brandR.right : Infinity;
+  const domainsToAuth = authR && domainRects.length ? authR.left - domainRects.at(-1).right : -Infinity;
+  const authToTheme = authR && themeR ? themeR.left - authR.right : -Infinity;
   const outside = boxes.filter(([, r]) => r.left < navR.left - 0.5 || r.right > navR.right + 0.5).map(([n]) => n);
   return {
     hits, outside, boxes: boxes.length, navH, rowSpread,
+    brandToDomains, domainsToAuth, authToTheme,
+    minDomainGap: domainGaps.length ? Math.min(...domainGaps) : -Infinity,
     groups: links ? [...links.querySelectorAll(".navgrp")].length : 0,
     docOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
   };
@@ -131,6 +143,15 @@ for (const page of PAGES) {
     if (W <= 419) {
       ok(tag + " every mobile banner control is on one row", m.rowSpread <= 1,
          `vertical centre spread ${m.rowSpread.toFixed(1)}px`);
+      ok(tag + " dog and domains have a deliberate gap",
+         m.brandToDomains >= 5.5 && m.brandToDomains <= 14.5,
+         `brand-to-domains gap ${m.brandToDomains.toFixed(1)}px`);
+      ok(tag + " domain labels read as a separated group", m.minDomainGap >= 1.5,
+         `minimum domain gap ${m.minDomainGap.toFixed(1)}px`);
+      ok(tag + " account follows the domain group", m.domainsToAuth >= 1.5,
+         `domains-to-account gap ${m.domainsToAuth.toFixed(1)}px`);
+      ok(tag + " theme follows the account", m.authToTheme >= 1.5,
+         `account-to-theme gap ${m.authToTheme.toFixed(1)}px`);
     }
     await ctx.close();
   }
