@@ -991,6 +991,7 @@ table.md tr.mine td{background:color-mix(in srgb, var(--good) 9%, transparent)}
       const a = document.createElement("a");
       a.href = href; a.textContent = label;
       if(key===page) a.classList.add("on");
+      if(key && key.indexOf("kennel-")===0) a.classList.add(key);
       if(hot) a.classList.add("hot");
       if(sep) a.classList.add("sep");            // rule above = operator territory
       menu.appendChild(a);

@@ -1481,6 +1481,7 @@ label.fld[hidden], .statrow[hidden], .card[hidden], .sheet[hidden], .banner[hidd
       const a = document.createElement("a");
       a.href = href; a.textContent = label;
       if(key===page) a.classList.add("on");
+      if(key && key.indexOf("kennel-")===0) a.classList.add(key);
       if(hot) a.classList.add("hot");
       if(sep) a.classList.add("sep");            // rule above = operator territory
       menu.appendChild(a);
