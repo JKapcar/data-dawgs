@@ -116,10 +116,12 @@ const MEASURE = () => {
   const domainsToAuth = authR && domainRects.length ? authR.left - domainRects.at(-1).right : -Infinity;
   const authToTheme = authR && themeR ? themeR.left - authR.right : -Infinity;
   const rightSlack = themeR ? navR.right - themeR.right : Infinity;
+  const navGap = parseFloat(getComputedStyle(nav).columnGap || getComputedStyle(nav).gap) || 0;
+  const linksGap = links ? (parseFloat(getComputedStyle(links).columnGap || getComputedStyle(links).gap) || 0) : 0;
   const outside = boxes.filter(([, r]) => r.left < navR.left - 0.5 || r.right > navR.right + 0.5).map(([n]) => n);
   return {
     hits, outside, boxes: boxes.length, navH, rowSpread,
-    brandToDomains, domainsToAuth, authToTheme, rightSlack,
+    brandToDomains, domainsToAuth, authToTheme, rightSlack, navGap, linksGap,
     brandLogoVisible:!!brandLogoR?.width, brandTagVisible:!!brandTagR?.width,
     minDomainGap: domainGaps.length ? Math.min(...domainGaps) : -Infinity,
     groups: links ? [...links.querySelectorAll(".navgrp")].length : 0,
@@ -147,15 +149,21 @@ for (const page of PAGES) {
     if (W <= 419) {
       ok(tag + " every mobile banner control is on one row", m.rowSpread <= 1,
          `vertical centre spread ${m.rowSpread.toFixed(1)}px`);
-      ok(tag + " dog and domains have a deliberate gap",
-         m.brandToDomains >= 5.5 && m.brandToDomains <= 14.5,
+      ok(tag + " dog and domains have a deliberate gap", m.brandToDomains >= 5.5,
          `brand-to-domains gap ${m.brandToDomains.toFixed(1)}px`);
-      ok(tag + " domain labels read as a separated group", m.minDomainGap >= 1.5,
+      ok(tag + " domain labels read as a separated group", m.minDomainGap >= 2.5,
          `minimum domain gap ${m.minDomainGap.toFixed(1)}px`);
       ok(tag + " account follows the domain group", m.domainsToAuth >= 1.5,
          `domains-to-account gap ${m.domainsToAuth.toFixed(1)}px`);
       ok(tag + " theme follows the account", m.authToTheme >= 1.5,
          `account-to-theme gap ${m.authToTheme.toFixed(1)}px`);
+      if (W >= 380) {
+        const balanceError = Math.abs(
+          (m.brandToDomains - m.domainsToAuth) - (m.navGap - m.linksGap));
+        ok(tag + " domains are centered between the lockup and account controls",
+           balanceError <= 1.5,
+           `balance error ${balanceError.toFixed(1)}px`);
+      }
     }
     if (W >= 360 && W <= 519) {
       ok(tag + " mobile retains the DATA DAWGS wordmark", m.brandLogoVisible === true);
