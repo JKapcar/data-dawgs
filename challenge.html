@@ -895,6 +895,7 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 :root:not([data-theme="light"]) .drive-field{box-shadow:inset 0 0 44px rgba(0,0,0,.55)}
 .drive-field:active{cursor:grabbing}
 .drive-field:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.drive-card.is-done .drive-field,.drive-card.is-locked .drive-field{touch-action:pan-y;cursor:default}
 
 /* end zones — REAL elements, per team. Today these are pseudo-elements with
    New England navy and Seattle green hardcoded, on all sixteen games. */
@@ -3031,9 +3032,10 @@ var playName = function(i){return PLAYS[i % PLAYS.length].name;};
       for(var y=10;y<100;y+=10){var mark=document.createElement("i"),n=y<=50?y:100-y;mark.className="drive-yard"+(y===50?" mid":"");mark.style.left=(10+y*.8)+"%";mark.innerHTML='<b class="t">'+n+'</b><b class="b">'+n+'</b>';field.insertBefore(mark,chain);}
       chain.style.left=(10+lo*.8)+"%";chain.style.width=Math.max(1,(hi-lo)*.8)+"%";chain.querySelector("span").textContent="CHAINS "+lo+"–"+hi+" · SPREAD "+(hi-lo);
       field.setAttribute("aria-label","Probability "+g.home_team+" wins");q(".drive-cap").textContent="CHANCE "+g.home_team+" WINS — DRAG THE BALL";
+      if(mine[g.game_id]||locked){field.setAttribute("aria-disabled","true");field.tabIndex=-1;q(".drive-cap").textContent=mine[g.game_id]?"YOUR LOCKED FORECAST":"FORECASTING CLOSED";}
       function paint(){cluster.style.left=(10+p*.8)+"%";out.value=out.textContent=Math.round(p);field.setAttribute("aria-valuenow",Math.round(p));coach.innerHTML=driveCoach(Math.round(p),touchedGames.has(g.game_id),lo,hi);if(touchedGames.has(g.game_id))cluster.classList.add("touched");}
       function set(e){if(card.classList.contains("is-done")||card.classList.contains("is-locked"))return;var rr=field.getBoundingClientRect();p=Math.max(0,Math.min(100,Math.round((e.clientX-rr.left-rr.width*.1)/(rr.width*.8)*100)));valueOf[g.game_id]=p;touchedGames.add(g.game_id);paint();}
-      if(!locked&&signedIn){
+      if(!locked&&signedIn&&!mine[g.game_id]){
         field.addEventListener("pointerdown",function(e){if(activePointer!==null)return;activePointer=e.pointerId;e.preventDefault();try{field.setPointerCapture(e.pointerId);}catch(ignore){}set(e);});
         field.addEventListener("pointermove",function(e){/* Android touch pointers commonly report buttons=0 while still down. Pointer capture plus the active id is the drag state. */if(e.pointerId!==activePointer)return;e.preventDefault();set(e);});
         function endPointer(e){if(e.pointerId===activePointer)activePointer=null;}
@@ -3042,7 +3044,10 @@ var playName = function(i){return PLAYS[i % PLAYS.length].name;};
       }
       ask.addEventListener("click",function(){if(ask.disabled)return;naive=touchedGames.has(g.game_id)?Math.round(p):null;ask.hidden=true;modelLines.forEach(function(m,i){var b=mtpl.content.firstElementChild.cloneNode(true),name=m.model_name||m.model_id;b.querySelectorAll(".dm-hd").forEach(function(h){h.textContent=name;});b.querySelector(".dm-play").innerHTML=playSVG(i);b.querySelector(".dm-name").textContent=playName(i);b.querySelector(".dm-num").textContent=Math.round(m.p*100);b.querySelector(".dm-for").textContent=g.home_team+" TO WIN";b.querySelector(".dm-prov").textContent="v"+(m.model_version||"unknown")+" · captured "+String(m.captured_at||"").slice(0,10);b.addEventListener("click",function(){b.classList.add("flipped");});cards.appendChild(b);});corr.hidden=false;});
       lock.addEventListener("click",function(){if(!touchedGames.has(g.game_id)){note.className="drive-note warn";note.textContent="UNTOUCHED ≠ 50 — set the ball first.";return;}note.textContent="Saving…";submit(g,p,"home",true,note,card,field,null,lock,{p_naive:naive,entry_method:"drive",hints_revealed:cards.children.length>0});});
-      if(!signedIn)note.innerHTML='Sign in to lock a forecast.';if(locked){ask.disabled=true;lock.disabled=true;lock.classList.add("done");lock.textContent="LOCKED";}paint();host.appendChild(card);
+      if(!signedIn)note.innerHTML='Sign in to lock a forecast.';
+      if(mine[g.game_id]){lock.disabled=true;lock.classList.add("done");lock.textContent="LOCKED IN";note.textContent="Your forecast is stored and cannot be changed.";}
+      if(locked){ask.disabled=true;lock.disabled=true;lock.classList.add("done");lock.textContent="LOCKED";}
+      paint();host.appendChild(card);
     });updateProgress();
   }
 
