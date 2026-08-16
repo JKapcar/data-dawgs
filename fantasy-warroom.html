@@ -2368,6 +2368,50 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 .wr-trade strong{display:block;margin-bottom:3px}
 .wr-filter{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
 .wr-filter .wr-chip{background:color-mix(in srgb,var(--accent) 12%,transparent);border-color:var(--accent)}
+.wr-kd{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.wr-reject{border-top:1px solid var(--grid);padding-top:12px;margin-top:14px}
+.wr-nomv{opacity:.8}
+.wr-edge{color:var(--warn)}
+.wr-mv{display:block;margin-top:8px;color:var(--ink-3);font-size:12px}
+.wr-gradewrap{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+.wr-gradebox{text-align:center;flex:none}
+.wr-grade{font-size:76px;font-weight:800;letter-spacing:-.07em;line-height:.9;color:var(--accent);
+  border:3px solid var(--accent);border-radius:16px;padding:10px 20px;min-width:132px}
+.wr-gradelab{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-top:7px}
+.wr-gradenote{flex:1;min-width:220px}
+.wr-gradenote h2{margin:0 0 4px}
+.wr-subgrades{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+.wr-sub{border:1px solid var(--grid);border-radius:9px;padding:8px 11px;background:var(--page);min-width:104px}
+.wr-sub b{display:block;font-size:22px;line-height:1.1;color:var(--ink-1)}
+.wr-sub span{font-size:11px;color:var(--ink-3);letter-spacing:.04em;text-transform:uppercase;font-weight:700}
+.wr-rec{border-left:3px solid var(--accent);padding:2px 0 2px 14px;margin:16px 0}
+.wr-rec.hold{border-left-color:var(--warn)}
+.wr-rec.abstain{border-left-color:var(--ink-3)}
+.wr-rec h4{margin:0 0 5px;font-size:16px}
+.wr-rec p{margin:0 0 4px;font-size:14px;color:var(--ink-2)}
+.wr-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.wr-tile{border:1px solid var(--grid);border-radius:11px;padding:13px 14px;background:var(--surface-1)}
+.wr-tile .tl{font-size:10px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3)}
+.wr-tile .tv{font-size:29px;font-weight:800;letter-spacing:-.04em;color:var(--accent);line-height:1.15;margin-top:3px}
+.wr-tile .td{font-size:12px;color:var(--ink-3)}
+table.wr-money{font-size:13px;min-width:560px}
+table.wr-money th{cursor:pointer;white-space:nowrap;user-select:none}
+table.wr-money th:hover{color:var(--accent)}
+table.wr-money tr.avg td{border-top:2px solid var(--grid);color:var(--ink-3);font-style:italic}
+.wr-legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:9px;font-size:12px;color:var(--ink-3)}
+.wr-legend .sw{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.wr-srlist .sr{display:flex;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--grid);font-size:13px}
+.wr-srlist .sr .p{flex:1;font-weight:650}
+.wr-srlist .sr .t{color:var(--ink-3);font-size:12px}
+.wr-radars{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:12px}
+.wr-radarcard{border:1px solid var(--grid);border-radius:10px;padding:9px;background:var(--page);text-align:center}
+.wr-radarcard.mine{border-color:var(--accent)}
+.wr-radarcard .rn{font-size:12px;font-weight:700;margin-bottom:2px}
+.wr-radarcard .rf{font-size:11px;color:var(--ink-3);margin-top:3px}
+.wr-warn{border-left:4px solid var(--warn);background:color-mix(in srgb,var(--warn) 8%,transparent);
+  border-radius:0 9px 9px 0;padding:12px 15px;margin-bottom:16px;font-size:14px}
+.wr-rec .lab{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-right:6px}
+svg{display:block;max-width:100%;height:auto}
 
 .wr-connect form{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
 .wr-connect input{min-width:min(100%,460px);flex:1;padding:11px 13px;border:1px solid var(--grid);
@@ -2418,17 +2462,60 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
 <div id="sheets"></div>
 
-<!-- ============================== OVERVIEW ============================== -->
-<section id="sheetOverview">
-  <div class="wr-grid">
+<!-- ============================= REPORT CARD ============================= -->
+<section id="sheetReport">
+  <!-- No league: this sheet carries the "what is this room" job, so the page still explains
+       itself before anything is connected. -->
+  <div class="wr-grid wr-needs-league">
     <article class="wr-card wr-full">
       <h2>What this room does</h2>
-      <p>It turns your league's own settings into one number per roster — <b>value over replacement per week</b>,
-      where replacement is computed from your slot counts and your flex usage rather than assumed — then runs
-      20,000 seeded seasons over your real schedule to turn that into a playoff probability.</p>
-      <p class="wr-note">What it never does: place a bid, accept a trade, or set a lineup. It ranks, prices and
-      drafts proposals. You act. Nothing here is a graded forecast — see Receipts &amp; Method.</p>
+      <p>Connect your league and this sheet becomes its report card: your team graded against <b>this league</b>
+      rather than a curve, where the strength and the holes are, and what to do about it. Everything is built from
+      your own roster slots, your own scoring and your own schedule.</p>
+      <p class="wr-note">What it never does: place a bid, accept a trade, or set a lineup. It ranks, prices and drafts
+      proposals. You act. Nothing here is a graded forecast — see Receipts &amp; Method.</p>
       <div class="wr-stations" id="stations"></div>
+    </article>
+  </div>
+
+  <div class="wr-grid wr-has-league wr-hide">
+    <article class="wr-card wr-full">
+      <div class="wr-gradewrap">
+        <div class="wr-gradebox"><div class="wr-grade" id="rcGrade">—</div><div class="wr-gradelab">Overall</div></div>
+        <div class="wr-gradenote">
+          <h2 id="rcTeam">—</h2>
+          <p class="wr-note" id="rcSummary"></p>
+          <div class="wr-subgrades" id="rcSub"></div>
+        </div>
+      </div>
+    </article>
+
+    <article class="wr-card">
+      <h3>Positional shape</h3>
+      <p class="wr-note">Your starters against the league average on each axis, each axis scaled by the league's best.
+      Shape reads as relative strength, not raw points.</p>
+      <div id="rcRadar"></div>
+    </article>
+
+    <article class="wr-card">
+      <h3>Where you gain and lose</h3>
+      <p class="wr-note">Points per week above or below the league average at each spot. Long bars are where a trade
+      actually moves your season.</p>
+      <div id="rcBars"></div>
+    </article>
+
+    <article class="wr-card wr-full">
+      <h3>Starters and depth</h3>
+      <p class="wr-note">Market value of the lineup you start against the market value sitting on your bench. Depth is
+      what you trade from, and what saves you when somebody pulls a hamstring.</p>
+      <div id="rcSplit"></div>
+    </article>
+
+    <article class="wr-card wr-full">
+      <h3>What to do about it</h3>
+      <p class="wr-note">Each call names what would change it. Where the evidence does not support a recommendation,
+      it says so instead of inventing one.</p>
+      <div id="rcRecs"></div>
     </article>
   </div>
 </section>
@@ -2490,20 +2577,96 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   </div>
 </section>
 
+<!-- ================================ MONEY =============================== -->
+<section id="sheetMoney" hidden>
+  <div class="wr-empty wr-needs-league">
+    <h3>What your roster is worth, and how that compares</h3>
+    <p>Every rostered player is priced against Public Market Value — the hand-maintained weekly auction-dollar
+    snapshot this site already drafts on. That turns a roster into one number you can put next to everyone else's,
+    and splits it into the money you start and the money you sit.</p>
+    <button class="wr-btn" data-sheet="settings">Open settings to connect</button>
+  </div>
+  <div class="wr-has-league wr-hide">
+    <div class="wr-tiles" id="mnTiles"></div>
+    <div id="mnDynasty"></div>
+    <div class="wr-grid">
+      <article class="wr-card wr-full">
+        <h3>The money table</h3>
+        <p class="wr-note">Click a column to sort. <b>Starting</b> is the money that scores on Sunday; <b>bench</b> is
+        what you trade from and what covers an injury. The league-average row stays pinned at the bottom whichever
+        column you sort on.</p>
+        <div style="overflow-x:auto"><table class="wr-money" id="mnTable"></table></div>
+      </article>
+
+      <article class="wr-card wr-full">
+        <h3>Where the money is</h3>
+        <p class="wr-note">Each team's <b>starting lineup only</b>, split by position, strongest first. Bench is
+        excluded here on purpose — it does not score. The dashed line is the league average.</p>
+        <div id="mnBars"></div>
+        <div class="wr-legend" id="mnLegend"></div>
+      </article>
+
+      <article class="wr-card wr-full">
+        <h3>Every rostered player: price against production</h3>
+        <p class="wr-note" id="mnScatterNote"></p>
+        <div class="wr-filter"><select class="wr-mini" id="mnTeamSel" aria-label="Filter by team"></select></div>
+        <div id="mnScatter"></div>
+        <div class="wr-legend" id="mnLegend2"></div>
+      </article>
+
+      <article class="wr-card">
+        <h3>Best value on the board</h3>
+        <p class="wr-note">Most production per dollar relative to the league-wide fit.</p>
+        <div class="wr-srlist" id="mnBest"></div>
+      </article>
+      <article class="wr-card">
+        <h3>Priciest relative to production</h3>
+        <p class="wr-note">The market pays up for these. Sometimes that is name value; sometimes the market knows
+        something a week-1 projection does not.</p>
+        <div class="wr-srlist" id="mnWorst"></div>
+      </article>
+
+      <article class="wr-card wr-full">
+        <h3>Shape of every roster</h3>
+        <p class="wr-note">Each team's starting-lineup dollars at each position, scaled so the outer ring is the
+        league's best there. Dashed grey is the league average — anything poking outside it is a strength. Your team
+        is outlined in accent.</p>
+        <div class="wr-radars" id="mnRadars"></div>
+      </article>
+
+      <article class="wr-card wr-full wr-method">
+        <h3>What these dollars are, and what they are not</h3>
+        <p>Market Value is a market-consensus estimate of what a player <b>should cost</b>, not a points projection.
+        That makes it a good yardstick for one question — is this roster expensive — and a poor one for another:
+        whether it will outscore the roster next to it. Both numbers are on this page for exactly that reason.</p>
+        <p class="wr-note" id="mnCaveat"></p>
+      </article>
+    </div>
+  </div>
+</section>
+
 <!-- =============================== TRADES =============================== -->
 <section id="sheetTrades" hidden>
   <div class="wr-empty wr-needs-league" id="emptyTrades">
     <h3>The trade finder searches for mutual gains only</h3>
-    <p>It compares every cross-position 1-for-1 between your roster and each rival. For each one it rebuilds both
-    starting lineups after the swap and keeps the proposal only when both totals go up. Nothing is ranked by who wins
-    the trade — a proposal a rival would refuse is not a proposal.</p>
+    <p>It compares every cross-position 1-for-1 between your roster and each rival, rebuilds both starting lineups
+    after the swap, and keeps the proposal only when both totals go up <b>and</b> the two players carry near-equal
+    value over replacement. That second test is what stops it proposing a kicker for a benched WR1 — a bench player
+    contributes nothing to a lineup total, so lineup gain alone will price a real asset at nothing. Nothing is ranked
+    by who wins the trade; a proposal a rival would laugh at is not a proposal.</p>
     <button class="wr-btn" data-sheet="settings">Open settings to connect</button>
   </div>
   <div class="wr-grid wr-has-league wr-hide">
     <article class="wr-card wr-full">
       <h2>Trade finder</h2>
       <div class="wr-filter" id="filterbar"></div>
-      <p class="wr-note" id="tradeNote">Each proposal rebuilds both starting lineups after the swap and reports what each side actually gains. Nothing is forced, and no proposal is sent anywhere.</p>
+      <p class="wr-note" id="tradeNote">This is a <b>candidate screen</b>, not a fairness oracle. A pairing survives three gates: both starting
+      lineups improve after the swap, neither side is left unable to fill a starting slot, and the two players carry
+      near-equal <b>Public Market Value</b> — the hand-maintained weekly auction-dollar snapshot this site already
+      drafts on. Market value is what stops it offering you a kicker for a benched WR1: your lineup is delighted, and
+      the market says $1 against $23. What it cannot see: whether a manager would actually accept, their preferences,
+      depth needs, injury risk, or dynasty value. Kickers and defenses are excluded by default. Nothing is forced,
+      and no proposal is sent anywhere.</p>
       <div id="trades"></div>
     </article>
   </div>
@@ -2573,6 +2736,23 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
         The seed is derived from the league ID and your settings, so identical inputs give an identical number every
         time — rerun it and check. A sanity check asserts that expected berths sum to the playoff spots, and throws
         rather than reporting a number if they don't.</dd>
+        <dt>What a trade proposal has to clear</dt>
+        <dd>Three gates. Both starting lineups must improve when the slot assignment is re-run after the swap. A swap
+        that would leave either side unable to fill a starting slot it could fill before is refused outright, whatever
+        the points say — that is how you get offered your only quarterback for a wideout. And the two players must be
+        within <code>max($4, 35% of the dearer player)</code> of each other in <b>Public Market Value</b> — the
+        auction dollars in <a href="/data/pool.json"><code>/data/pool.json</code></a>, maintained by hand each week,
+        in whichever column matches this league (full PPR, half, or superflex). If either player has no published
+        price, that pairing falls back to <code>max(1.0, 35%)</code> in projected value over replacement and the row
+        is labelled as model-based.</dd>
+        <dt>Why market value and not points</dt>
+        <dd>A bench player contributes exactly zero to a starting-lineup total. Judge a trade on lineup gain alone and
+        a rival holding a benched WR1 "gains" by shipping him for anything that fills an empty slot — which is how
+        this tool once offered Harrison Butker for Jaylen Waddle and reported both lineups improving. It did. The
+        arithmetic was right and the question was wrong. Market value asks the question a league-mate actually
+        answers. <b>Prices are a dated snapshot, not a live market</b>, and every board says which date it is using.
+        This is a candidate screen, not a fairness oracle: it cannot see acceptance probability, a manager's
+        preferences, depth needs, injury risk, or dynasty value.</dd>
         <dt>Not modeled</dt>
         <dd>Injuries, byes, trades, waivers, lineup decisions, in-season projection updates, and correlation between
         the two teams in a matchup. Before three completed weeks, σ is a stated generic assumption, not an estimate
@@ -2688,6 +2868,12 @@ let state=null,sim=null,tradeFilter=null,SHEETS=null;
    re-hit the provider. Each entry keeps its own sim, because a simulation belongs to the
    settings and schedule it was run against and must not follow you to another league. */
 const LOADED=new Map(),keyOf=(provider,id)=>provider+':'+id;
+/* Public Market Value — /data/pool.json, the hand-maintained weekly auction-dollar
+   snapshot the draft rig already runs on. It is a MARKET price, not a projection, which is
+   exactly what the trade finder was missing: model points say a benched WR1 is worth a
+   kicker, the market says $23 against $1. Loaded once per session and shared by every
+   league. If it fails to load the finder falls back to model value and says so per row. */
+let MV=null;
 
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fnv=s=>{let h=2166136261;for(let i=0;i<s.length;i++)h=Math.imul(h^s.charCodeAt(i),16777619);return h>>>0};
@@ -2724,7 +2910,368 @@ function replacement(pool,s){
   return r;
 }
 
+/* ⚠️ Name join, so it is fuzzy by nature. Suffixes, periods and apostrophes are stripped;
+   defenses join on TEAM ABBREVIATION because Sleeper says "Jacksonville Jaguars" where the
+   pool says "JAX DST". Anything that fails to match is reported as unmatched rather than
+   silently treated as worthless — a $0 default would resurrect the exact bug this fixes. */
+const mvKey=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+  .toLowerCase().replace(/\b(jr|sr|ii|iii|iv|v)\b/g,'').replace(/[^a-z ]/g,'').replace(/\s+/g,' ').trim();
+async function loadMV(){
+  if(MV)return MV;
+  try{
+    const j=await (await fetch('data/pool.json',{cache:'no-cache'})).json();
+    const by=new Map();
+    (j.data||[]).forEach(r=>{
+      const dst=/^([A-Z]{2,3}) DST$/.exec(r.name||'');
+      by.set(dst?'dst:'+dst[1]:mvKey(r.name),r);
+    });
+    MV={by,asOf:j.as_of||j.built||null,source:j.source||''};
+  }catch(e){ MV={by:new Map(),asOf:null,source:'',failed:true}; }
+  return MV;
+}
+/* Which auction column this league actually drafts in. */
+function mvColumn(){
+  if(state.slots.SUPERFLEX)return 'sf';
+  const rec=Number(state.league?.scoring_settings?.rec);
+  return rec>=1?'full':'half';
+}
+function mvOf(p){
+  if(!MV||!MV.by.size)return null;
+  const row=p.pos==='DST'?MV.by.get('dst:'+String(p.team||'').toUpperCase()):MV.by.get(mvKey(p.name));
+  if(!row)return null;
+  const v=Number(row[mvColumn()]);
+  return Number.isFinite(v)?v:null;
+}
 async function fetchJson(url){const r=await fetch(url);if(!r.ok)throw Error('Request failed ('+r.status+').');return r.json()}
+
+/* =========================== THE REPORT CARD ==============================
+   Grading convention is deliberately the same as report.html: z-scores against
+   THIS league, never a forced curve. If everyone is identical everyone gets a B,
+   which is the honest answer rather than a manufactured spread. Thresholds are
+   copied from that page so a grade means the same thing in both places. */
+function letter(z){
+  return z>=1.3?'A+':z>=0.9?'A':z>=0.6?'A-':z>=0.3?'B+':z>=0.1?'B':z>=-0.1?'B-'
+       :z>=-0.35?'C+':z>=-0.65?'C':z>=-0.95?'C-':z>=-1.3?'D+':'D';
+}
+function zOf(v,arr){
+  const n=arr.length,m=arr.reduce((a,b)=>a+b,0)/n;
+  const sd=Math.sqrt(arr.reduce((a,b)=>a+(b-m)*(b-m),0)/n);
+  return sd<1e-9?0:(v-m)/sd;
+}
+/* Which players actually start, so bench value can be measured rather than assumed.
+   Mirrors starterValues' assignment exactly; keep the two in step. */
+function chooseStarters(players,s){
+  const avail=players.slice(),picked=[];
+  for(const slot of Object.keys(s)){
+    if(['BN','IR','TAXI'].includes(slot))continue;
+    for(let i=0;i<s[slot];i++){
+      let best=-1,bi=-1;
+      avail.forEach((p,j)=>{if(eligible(p.pos,slot)&&p.p>best){best=p.p;bi=j}});
+      if(bi>=0)picked.push(avail.splice(bi,1)[0]);
+    }
+  }
+  return {starters:picked,bench:avail};
+}
+function rosterMoney(players){
+  let known=0,priced=0,unpriced=0;
+  players.forEach(p=>{const v=mvOf(p);if(v==null)unpriced++;else{known+=v;priced++}});
+  return {dollars:known,priced,unpriced};
+}
+const AXES=()=>['QB','RB','WR','TE','FLEX','SUPERFLEX'].filter(k=>state.slots[k]);
+
+function svgRadar(axes,mine,avg,max){
+  const S=250,c=S/2,R=S/2-34,n=axes.length;
+  if(n<3)return '<p class="wr-note">Not enough distinct starting slots to draw a shape.</p>';
+  const pt=(i,r)=>{const a=-Math.PI/2+i*2*Math.PI/n;return [c+Math.cos(a)*r,c+Math.sin(a)*r]};
+  const poly=vals=>vals.map((v,i)=>pt(i,R*Math.max(0,Math.min(1,max[i]?v/max[i]:0))).join(',')).join(' ');
+  let g='';
+  [0.25,0.5,0.75,1].forEach(f=>{g+='<polygon points="'+axes.map((_,i)=>pt(i,R*f).join(',')).join(' ')+
+    '" style="fill:none;stroke:var(--grid);stroke-width:1"/>'});
+  axes.forEach((a,i)=>{const[x,y]=pt(i,R);g+='<line x1="'+c+'" y1="'+c+'" x2="'+x+'" y2="'+y+'" style="stroke:var(--grid)"/>';
+    const[lx,ly]=pt(i,R+18);
+    g+='<text x="'+lx+'" y="'+ly+'" text-anchor="middle" dominant-baseline="middle" style="fill:var(--ink-3);font:700 11px system-ui">'+a+'</text>'});
+  g+='<polygon points="'+poly(avg)+'" style="fill:none;stroke:var(--ink-3);stroke-width:1.5;stroke-dasharray:5 4"/>';
+  g+='<polygon points="'+poly(mine)+'" style="fill:color-mix(in srgb,var(--accent) 22%,transparent);stroke:var(--accent);stroke-width:2.5"/>';
+  mine.forEach((v,i)=>{const[x,y]=pt(i,R*Math.max(0,Math.min(1,max[i]?v/max[i]:0)));
+    g+='<circle cx="'+x+'" cy="'+y+'" r="3.5" style="fill:var(--accent)"><title>'+axes[i]+': you '+v.toFixed(1)+
+       ' · league average '+avg[i].toFixed(1)+'</title></circle>'});
+  return '<svg viewBox="0 0 '+S+' '+S+'" width="'+S+'" role="img" aria-label="Positional shape against the league average">'+g+
+    '</svg><p class="wr-note">Solid is you; dashed is the league average.</p>';
+}
+
+function svgDiverge(rows){
+  const W=340,rh=30,pad=96,H=rows.length*rh+16;
+  const span=Math.max(1,...rows.map(r=>Math.abs(r.v)));
+  const mid=pad+(W-pad-14)/2,half=(W-pad-14)/2;
+  let g='<line x1="'+mid+'" y1="4" x2="'+mid+'" y2="'+(H-10)+'" style="stroke:var(--grid)"/>';
+  rows.forEach((r,i)=>{
+    const y=i*rh+10,w=Math.abs(r.v)/span*half,x=r.v>=0?mid:mid-w;
+    g+='<text x="0" y="'+(y+13)+'" style="fill:var(--ink-2);font:700 12px system-ui">'+r.k+'</text>';
+    g+='<rect x="'+x+'" y="'+y+'" width="'+Math.max(w,1)+'" height="17" rx="3" style="fill:var(--'+(r.v>=0?'good':'bad')+')"><title>'+
+       r.k+': '+(r.v>=0?'+':'')+r.v.toFixed(1)+'/wk against the league average</title></rect>';
+    g+='<text x="'+(r.v>=0?x+w+5:x-5)+'" y="'+(y+13)+'" text-anchor="'+(r.v>=0?'start':'end')+
+       '" style="fill:var(--ink-3);font:600 11px system-ui">'+(r.v>=0?'+':'')+r.v.toFixed(1)+'</text>';
+  });
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" role="img" aria-label="Points per week above or below the league average by position">'+g+'</svg>';
+}
+
+function svgSplit(mine,league){
+  const W=420,H=104,pad=104,bar=W-pad-10;
+  const max=Math.max(1,...league.map(t=>t.st+t.bn),mine.st+mine.bn);
+  const row=(y,label,st,bn,accent)=>{
+    const ws=st/max*bar,wb=bn/max*bar;
+    return '<text x="0" y="'+(y+15)+'" style="fill:var(--ink-2);font:700 12px system-ui">'+label+'</text>'
+      +'<rect x="'+pad+'" y="'+y+'" width="'+ws+'" height="20" rx="3" style="fill:var(--'+(accent?'accent':'ink-3')+')"><title>Starters $'+st+'</title></rect>'
+      +'<rect x="'+(pad+ws)+'" y="'+y+'" width="'+wb+'" height="20" rx="3" style="fill:color-mix(in srgb,var(--'+(accent?'accent':'ink-3')+') 35%,transparent)"><title>Bench $'+bn+'</title></rect>'
+      +'<text x="'+(pad+ws+wb+6)+'" y="'+(y+15)+'" style="fill:var(--ink-3);font:600 11px system-ui">$'+(st+bn)+'</text>';
+  };
+  const avg={st:Math.round(league.reduce((a,t)=>a+t.st,0)/league.length),bn:Math.round(league.reduce((a,t)=>a+t.bn,0)/league.length)};
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" role="img" aria-label="Starter and bench market value against the league average">'
+    +row(14,'You',mine.st,mine.bn,true)+row(58,'League avg',avg.st,avg.bn,false)+'</svg>'
+    +'<p class="wr-note">Solid is the lineup you start, faded is the bench. Dollars are Public Market Value'
+    +(MV&&MV.asOf?' as of '+esc(MV.asOf):'')+'.</p>';
+}
+
+function renderReport(){
+  if(!state)return;
+  const me=state.teams[+$('teamPicker').value||0],axes=AXES();
+  const split=state.teams.map(t=>{
+    const {starters,bench}=chooseStarters(t.players,state.slots);
+    return {t,st:rosterMoney(starters).dollars,bn:rosterMoney(bench).dollars,benchN:bench.length};
+  });
+  const mineSplit=split.find(x=>x.t===me);
+  const startersArr=state.teams.map(t=>t.total);
+  const depthArr=split.map(x=>x.bn);
+  const zStart=zOf(me.total,startersArr), zDepth=zOf(mineSplit.bn,depthArr);
+  const overall=(zStart*2+zDepth)/3;   /* the lineup you start counts double; depth is insurance, not points */
+
+  $('rcTeam').textContent=me.name;
+  $('rcGrade').textContent=letter(overall);
+  $('rcSub').innerHTML=
+     '<div class="wr-sub"><b>'+letter(zStart)+'</b><span>Starters</span></div>'
+    +'<div class="wr-sub"><b>'+letter(zDepth)+'</b><span>Depth</span></div>'
+    +'<div class="wr-sub"><b>'+(me.total>=0?'+':'')+me.total.toFixed(1)+'</b><span>VOR / wk</span></div>'
+    +'<div class="wr-sub"><b>'+(sim?Math.round(sim.odds[me.id]*100)+'%':'—')+'</b><span>Playoff odds</span></div>';
+
+  const rank=state.teams.slice().sort((a,b)=>b.total-a.total).indexOf(me)+1;
+  $('rcSummary').textContent='Ranked '+rank+' of '+state.teams.length+' on projected starter value. '
+    +'Grades are z-scores against this league, not a curve — if everyone drafted alike, everyone gets a B.'
+    +(sim?'':' Playoff odds are blank until you run the simulation on the Standings sheet.');
+
+  const mineAx=axes.map(a=>me.values[a]||0);
+  const avgAx=axes.map(a=>state.teams.reduce((s,t)=>s+(t.values[a]||0),0)/state.teams.length);
+  const maxAx=axes.map(a=>Math.max(...state.teams.map(t=>t.values[a]||0),0.001));
+  $('rcRadar').innerHTML=svgRadar(axes,mineAx,avgAx,maxAx);
+  $('rcBars').innerHTML=svgDiverge(axes.map((a,i)=>({k:a,v:mineAx[i]-avgAx[i]})).sort((x,y)=>y.v-x.v));
+  $('rcSplit').innerHTML=svgSplit(mineSplit,split);
+
+  /* ---- recommendations. Every one names what would reverse it, and where the evidence
+     does not support a call the honest output is an abstention, not a guess. ---- */
+  const gaps=axes.map((a,i)=>({k:a,v:mineAx[i]-avgAx[i]})).sort((x,y)=>x.v-y.v);
+  const weak=gaps[0],strong=gaps[gaps.length-1];
+  const recs=[];
+  if(weak&&weak.v<-0.5){
+    recs.push({cls:'',h:'Upgrade at '+weak.k,
+      why:'You are '+Math.abs(weak.v).toFixed(1)+' points per week below the league average there — your largest single hole.',
+      alt:gaps[1]&&gaps[1].v<0?'Next-largest hole is '+gaps[1].k+' at '+gaps[1].v.toFixed(1)+'/wk.':'No other position is below average.',
+      rev:'A change in projections, or acquiring anyone above the '+weak.k+' replacement line, closes this without a trade.'});
+  }
+  if(strong&&strong.v>0.5&&mineSplit.benchN>0){
+    recs.push({cls:'',h:'Trade from your '+strong.k+' surplus',
+      why:'You are '+strong.v.toFixed(1)+'/wk above average there, and $'+mineSplit.bn+' of market value is on your bench doing nothing on Sunday.',
+      alt:'Holding is defensible if you are thin — depth is what covers an injury.',
+      rev:'An injury to a starter turns that surplus from tradeable into load-bearing overnight.'});
+  }
+  const best=window.__wrTop;
+  if(best){
+    recs.push({cls:'',h:'Concrete offer: '+best.give.name+' for '+best.get.name,
+      why:'Against '+best.o.name+'. '+(best.av.basis==='market'?'$'+best.av.give+' out against $'+best.av.get+' in':'model value '+best.av.give.toFixed(1)+' out against '+best.av.get.toFixed(1)+' in')
+        +', and both starting lineups improve — yours by '+best.mine.toFixed(1)+'/wk, theirs by '+best.theirs.toFixed(1)+'/wk.',
+      alt:'The full board is on the Trades sheet; this is only the top of it.',
+      rev:'It stops being fair the moment the market moves — these prices are dated '+(MV&&MV.asOf?MV.asOf:'unknown')+'.'});
+  }else{
+    recs.push({cls:'abstain',h:'No trade to recommend right now',
+      why:'Nothing on the board both improves the two starting lineups and trades near-equal market value. That is a real answer, not an empty screen.',
+      alt:'Widen it yourself by including K and DST on the Trades sheet, or wait for the weekly price update.',
+      rev:'New prices, an injury, or a rival\u2019s roster changing all reopen this.'});
+  }
+  if(!sim){
+    recs.push({cls:'abstain',h:'Abstaining on your playoff odds',
+      why:'The simulation has not been run for this league, so there is no probability to report and none is being guessed at.',
+      alt:'Run 20,000 seeded seasons on the Standings sheet.',
+      rev:'Running it. The seed is fixed, so the same inputs give the same number every time.'});
+  }
+  recs.push({cls:'hold',h:'What none of this can see',
+    why:'Every simulated week reuses the same week-1 projection. No byes, no opponent adjustment, no injuries, no waivers.',
+    alt:'Treat the grade as a snapshot of roster construction, not a forecast of results.',
+    rev:'Three completed weeks would let the weekly spread come from your league instead of a stated assumption.'});
+
+  $('rcRecs').innerHTML=recs.map(r=>'<div class="wr-rec '+r.cls+'"><h4>'+esc(r.h)+'</h4>'
+    +'<p>'+esc(r.why)+'</p>'
+    +'<p><span class="lab">Instead</span>'+esc(r.alt)+'</p>'
+    +'<p><span class="lab">Would change this</span>'+esc(r.rev)+'</p></div>').join('');
+}
+
+
+/* ============================== THE MONEY SHEET ==========================
+   Public Market Value applied to a whole league at once. Panels deliberately
+   mirror report.html so a Data Dawg reads the same shapes in both places:
+   tiles, a sortable table with a pinned league-average row, starters-only
+   stacked bars, a price-against-production scatter with a fitted line, the
+   two residual lists, and small-multiple radars.
+
+   ⚠️ The one thing that does NOT carry over is surplus. report.html can grade
+   value because it knows what was PAID. In-season there is no purchase price,
+   so nothing here claims anyone bought well; it prices what is held. */
+const POS_ORDER=['QB','RB','WR','TE','K','DST'];
+const POS_COLOR={QB:'#d13a00',RB:'#087532',WR:'#2f6fb0',TE:'#8a4fbf',K:'#a86e00',DST:'#5b4a37'};
+let mnSort={key:'total',dir:-1},mnTeam='ALL';
+
+function teamMoney(t){
+  const {starters,bench}=chooseStarters(t.players,state.slots);
+  const byPos={};POS_ORDER.forEach(p=>byPos[p]=0);
+  let unpriced=0;
+  starters.forEach(p=>{const v=mvOf(p);if(v==null)unpriced++;else byPos[p.pos]=(byPos[p.pos]||0)+v});
+  const st=Object.values(byPos).reduce((a,b)=>a+b,0);
+  const bn=bench.reduce((a,p)=>{const v=mvOf(p);if(v==null)unpriced++;return a+(v||0)},0);
+  return {t,byPos,st,bn,total:st+bn,unpriced,n:t.players.length};
+}
+function fmt$(n){return '$'+Math.round(n)}
+
+function mnStackedBars(M){
+  const rows=M.slice().sort((a,b)=>b.st-a.st);
+  const W=560,rh=26,pad=120,barW=W-pad-58,H=rows.length*rh+26;
+  const max=Math.max(1,...rows.map(r=>r.st));
+  const avg=rows.reduce((a,r)=>a+r.st,0)/rows.length;
+  let g='';
+  rows.forEach((r,i)=>{
+    const y=i*rh+8;let x=pad;
+    g+='<text x="0" y="'+(y+13)+'" style="fill:var(--ink-2);font:'+(r.t===mnMe()?'800':'600')+' 12px system-ui">'+esc(r.t.name).slice(0,16)+'</text>';
+    POS_ORDER.forEach(P=>{const v=r.byPos[P]||0;if(v<=0)return;const w=v/max*barW;
+      g+='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="17" style="fill:'+POS_COLOR[P]+'"><title>'+esc(r.t.name)+' · '+P+' '+fmt$(v)+'</title></rect>';x+=w});
+    g+='<text x="'+(x+6)+'" y="'+(y+13)+'" style="fill:var(--ink-3);font:600 11px system-ui">'+fmt$(r.st)+'</text>';
+  });
+  const ax=pad+avg/max*barW;
+  g+='<line x1="'+ax+'" y1="2" x2="'+ax+'" y2="'+(H-16)+'" style="stroke:var(--ink-3);stroke-dasharray:5 4"/>'
+    +'<text x="'+(ax+4)+'" y="'+(H-4)+'" style="fill:var(--ink-3);font:600 10px system-ui">league avg '+fmt$(avg)+'</text>';
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" role="img" aria-label="Starting-lineup market value by position, by team">'+g+'</svg>';
+}
+
+function mnScatterSvg(pts,fit){
+  const W=560,H=300,l=46,b=34;
+  const xm=Math.max(1,...pts.map(p=>p.x)),ym=Math.max(...pts.map(p=>p.y)),yn=Math.min(0,...pts.map(p=>p.y));
+  const X=v=>l+v/xm*(W-l-14),Y=v=>H-b-(v-yn)/((ym-yn)||1)*(H-b-14);
+  let g='<line x1="'+l+'" y1="'+(H-b)+'" x2="'+(W-8)+'" y2="'+(H-b)+'" style="stroke:var(--grid)"/>'
+       +'<line x1="'+l+'" y1="10" x2="'+l+'" y2="'+(H-b)+'" style="stroke:var(--grid)"/>';
+  [0,.25,.5,.75,1].forEach(f=>{const v=f*xm;g+='<text x="'+X(v)+'" y="'+(H-b+15)+'" text-anchor="middle" style="fill:var(--ink-3);font:600 10px system-ui">$'+Math.round(v)+'</text>'});
+  g+='<text x="'+(l+(W-l)/2)+'" y="'+(H-4)+'" text-anchor="middle" style="fill:var(--ink-3);font:700 11px system-ui">Market value</text>';
+  g+='<text x="12" y="'+(H/2)+'" transform="rotate(-90 12 '+(H/2)+')" text-anchor="middle" style="fill:var(--ink-3);font:700 11px system-ui">Projected VOR / wk</text>';
+  g+='<line x1="'+X(0)+'" y1="'+Y(fit.a)+'" x2="'+X(xm)+'" y2="'+Y(fit.a+fit.b*xm)+'" style="stroke:var(--ink-3);stroke-dasharray:6 4;stroke-width:1.5"/>';
+  pts.forEach(p=>{g+='<circle cx="'+X(p.x)+'" cy="'+Y(p.y)+'" r="4" style="fill:'+POS_COLOR[p.pos]+';opacity:.85"><title>'+
+    esc(p.name)+' ('+p.pos+') · '+esc(p.team)+'\n'+fmt$(p.x)+' · '+p.y.toFixed(1)+'/wk · '+(p.r>=0?'+':'')+p.r.toFixed(1)+' against the fit</title></circle>'});
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" role="img" aria-label="Market value against projected value over replacement">'+g+'</svg>';
+}
+function mnMe(){return state.teams[+$('teamPicker').value||0]}
+
+function renderMoney(){
+  if(!state)return;
+  const me=mnMe(),M=state.teams.map(teamMoney),mine=M.find(x=>x.t===me);
+  const totals=M.map(x=>x.total),leagueTotal=totals.reduce((a,b)=>a+b,0);
+  const avgTotal=leagueTotal/M.length;
+  const ranked=M.slice().sort((a,b)=>b.total-a.total);
+  const rank=ranked.indexOf(mine)+1;
+  const richest=ranked[0],leanest=ranked[ranked.length-1];
+
+  $('mnTiles').innerHTML=[
+    ['Your roster',fmt$(mine.total),'across '+mine.n+' players'],
+    ['League average',fmt$(avgTotal),(mine.total>=avgTotal?'+':'−')+fmt$(Math.abs(mine.total-avgTotal))+' for you'],
+    ['Your rank',rank+' of '+M.length,(mine.total/leagueTotal*100).toFixed(1)+'% of all money'],
+    ['Starting / bench',fmt$(mine.st)+' / '+fmt$(mine.bn),Math.round(mine.st/(mine.total||1)*100)+'% of it starts'],
+    ['Richest roster',esc(richest.t.name).slice(0,14),fmt$(richest.total)],
+    ['Leanest roster',esc(leanest.t.name).slice(0,14),fmt$(leanest.total)]
+  ].map(([l,v,d])=>'<div class="wr-tile"><div class="tl">'+l+'</div><div class="tv">'+v+'</div><div class="td">'+d+'</div></div>').join('');
+
+  /* dynasty and keeper leagues get an explicit warning: this price list is a REDRAFT one */
+  const type=Number(state.league?.settings?.type);
+  $('mnDynasty').innerHTML=(type===1||type===2)
+    ? '<div class="wr-warn"><b>'+(type===2?'Dynasty':'Keeper')+' league detected.</b> These prices are a redraft auction list — '
+      +'what a player is worth for <i>this season only</i>. In a league where you keep him, that systematically underprices '
+      +'young players and overprices ageing ones. The comparisons below are still internally consistent; the dollars are not '
+      +'dynasty dollars, and nothing here knows a player\u2019s age.</div>'
+    : '';
+
+  /* ---- table, sortable, league-average row pinned regardless of sort ---- */
+  const cols=[['name','Team',0],['total','Total',1],['st','Starting',1],['bn','Bench',1],
+              ['share','Share',1],['ppl','Per player',1],['unpriced','No price',1]];
+  const val=(r,k)=>k==='name'?r.t.name:k==='share'?r.total/leagueTotal*100:k==='ppl'?r.total/(r.n||1):r[k];
+  const sorted=M.slice().sort((a,b)=>{const x=val(a,mnSort.key),y=val(b,mnSort.key);
+    return (typeof x==='string'?String(x).localeCompare(String(y)):x-y)*mnSort.dir});
+  const cell=(r,k)=>k==='name'?esc(r.t.name):k==='share'?(r.total/leagueTotal*100).toFixed(1)+'%'
+    :k==='ppl'?fmt$(r.total/(r.n||1)):k==='unpriced'?(r.unpriced||'—'):fmt$(r[k]);
+  const avgRow={t:{name:'League average'},total:avgTotal,st:M.reduce((a,r)=>a+r.st,0)/M.length,
+    bn:M.reduce((a,r)=>a+r.bn,0)/M.length,n:M.reduce((a,r)=>a+r.n,0)/M.length,
+    unpriced:Math.round(M.reduce((a,r)=>a+r.unpriced,0)/M.length)};
+  $('mnTable').innerHTML='<thead><tr>'+cols.map(([k,l])=>'<th data-k="'+k+'">'+l+(mnSort.key===k?(mnSort.dir<0?' ▾':' ▴'):'')+'</th>').join('')+'</tr></thead>'
+    +'<tbody>'+sorted.map(r=>'<tr class="'+(r.t===me?'wr-you':'')+'">'+cols.map(([k])=>'<td>'+cell(r,k)+'</td>').join('')+'</tr>').join('')
+    +'<tr class="avg">'+cols.map(([k])=>'<td>'+(k==='name'?'League average':k==='share'?(100/M.length).toFixed(1)+'%':cell(avgRow,k))+'</td>').join('')+'</tr></tbody>';
+  $('mnTable').querySelectorAll('th').forEach(th=>th.onclick=()=>{
+    const k=th.dataset.k;
+    mnSort=mnSort.key===k?{key:k,dir:-mnSort.dir}:{key:k,dir:k==='name'?1:-1};
+    renderMoney();
+  });
+
+  $('mnBars').innerHTML=mnStackedBars(M);
+  $('mnLegend').innerHTML=$('mnLegend2').innerHTML=POS_ORDER.map(P=>'<span><span class="sw" style="background:'+POS_COLOR[P]+'"></span>'+(P==='DST'?'D/ST':P)+'</span>').join('');
+
+  /* ---- price against production, with a least-squares fit ---- */
+  /* ⚠️ Skill positions only. Kickers and defenses all cost about a dollar and their value
+     over replacement is compressed into almost nothing, so against a league-wide fit every
+     one of them lands far above the line and the "best value" list fills up with defenses.
+     That is an artifact of a flat market, not a finding. They stay in the totals above,
+     where a dollar is a dollar; they are out of the residual analysis. */
+  const all=[];
+  state.teams.forEach((t,ti)=>t.players.forEach(p=>{const v=mvOf(p);
+    if(v!=null&&!['K','DST'].includes(p.pos))all.push({name:p.name,pos:p.pos,team:t.name,ti,x:v,y:assetValue(p)})}));
+  const n=all.length||1,sx=all.reduce((a,p)=>a+p.x,0),sy=all.reduce((a,p)=>a+p.y,0),
+        sxx=all.reduce((a,p)=>a+p.x*p.x,0),sxy=all.reduce((a,p)=>a+p.x*p.y,0);
+  const den=n*sxx-sx*sx, b=Math.abs(den)<1e-9?0:(n*sxy-sx*sy)/den, a=(sy-b*sx)/n;
+  all.forEach(p=>p.r=p.y-(a+b*p.x));
+  const shown=mnTeam==='ALL'?all:all.filter(p=>String(p.ti)===String(mnTeam));
+  const above=shown.filter(p=>p.r>0).length;
+  $('mnScatterNote').innerHTML='Dots above the dashed fit produce more per dollar than the market\u2019s price implies; '
+    +'below it, you are paying for name value or for something a week-1 projection cannot see. <b>'+shown.length
+    +'</b> priced player'+(shown.length===1?'':'s')+' shown · '+above+' above the line. '
+    +'Kickers and defenses are left out: they all cost about a dollar, so every one of them clears a league-wide fit '
+    +'and they would crowd out everything worth looking at.';
+  $('mnTeamSel').innerHTML='<option value="ALL"'+(mnTeam==='ALL'?' selected':'')+'>All teams</option>'
+    +state.teams.map((t,i)=>'<option value="'+i+'"'+(String(mnTeam)===String(i)?' selected':'')+'>'+esc(t.name)+'</option>').join('');
+  $('mnTeamSel').onchange=e=>{mnTeam=e.target.value;renderMoney()};
+  $('mnScatter').innerHTML=shown.length?mnScatterSvg(shown,{a,b}):'<p class="wr-note">No priced players for that filter.</p>';
+
+  const byRes=all.slice().sort((x,y)=>y.r-x.r);
+  const list=arr=>arr.map(p=>'<div class="sr"><span class="p">'+esc(p.name)+'</span>'
+    +'<span class="t">'+esc(p.team)+' · '+fmt$(p.x)+'</span>'
+    +'<span class="'+(p.r>=0?'wr-up':'wr-down')+'">'+(p.r>=0?'+':'')+p.r.toFixed(1)+'/wk</span></div>').join('')
+    ||'<p class="wr-note">No priced players.</p>';
+  $('mnBest').innerHTML=list(byRes.slice(0,10));
+  $('mnWorst').innerHTML=list(byRes.slice(-10).reverse());
+
+  /* ---- small-multiple radars, one per team ---- */
+  const axes=POS_ORDER.filter(P=>state.slots[P]);
+  const maxAx=axes.map(P=>Math.max(...M.map(r=>r.byPos[P]||0),0.001));
+  const avgAx=axes.map(P=>M.reduce((s,r)=>s+(r.byPos[P]||0),0)/M.length);
+  $('mnRadars').innerHTML=ranked.map(r=>'<div class="wr-radarcard'+(r.t===me?' mine':'')+'">'
+    +'<div class="rn">'+esc(r.t.name).slice(0,18)+'</div>'
+    +svgRadar(axes,axes.map(P=>r.byPos[P]||0),avgAx,maxAx).replace('width="250"','width="150"').replace(/<p class="wr-note">[\s\S]*?<\/p>/,'')
+    +'<div class="rf">Starting '+fmt$(r.st)+'</div></div>').join('');
+
+  const priced=all.length, held=state.teams.reduce((a,t)=>a+t.players.length,0);
+  $('mnCaveat').textContent='Prices are Public Market Value ('+mvColumn().toUpperCase()+') captured '
+    +(MV&&MV.asOf?MV.asOf:'unknown date')+' and updated by hand each week. '+priced+' of '+held
+    +' rostered players carry a published price; the rest are counted as $0 in these totals and shown in the "No price" column, '
+    +'so a team full of deep waiver adds will read leaner than it is. Per-axis scaling on the radars is relative to this league, '
+    +'so a shape maxed at a position only means nobody else spent there either.';
+}
 
 /* ------------------------------------------------ the station board ------- */
 const STATIONS=[
@@ -2733,7 +3280,9 @@ const STATIONS=[
   {sheet:'rosters',title:'Replacement level',what:'The rank at each position where a startable player stops being scarce, derived from your slots.',needs:'Needs: roster slots'},
   {sheet:'rosters',title:'Roster strength',what:'Your starters priced against that baseline, position by position, in points per week.',needs:'Needs: your roster'},
   {sheet:'rosters',title:'Value matrix',what:'The whole league as surpluses and deficits. Click a cell to carry it into the trade finder.',needs:'Needs: all rosters'},
+  {sheet:'money',title:'Money',what:'Every roster priced in auction dollars, split into what you start and what you sit.',needs:'Needs: all rosters'},
   {sheet:'trades',title:'Trade finder',what:'Every cross-position 1-for-1 where both starting lineups improve. Mutual gains only.',needs:'Needs: all rosters'},
+  {sheet:'report',title:'Report card',what:'Your team graded against this league, the shape of it, and what to do about it.',needs:'Needs: your roster'},
   {sheet:'settings',title:'League settings',what:'Playoff spots, playoff start and weekly σ, read from the league and overridable as a what-if.',needs:'Always available'},
   {sheet:'method',title:'Receipts & Method',what:'The formulas, the frozen inputs, what is not modeled, and why these numbers are not graded receipts.',needs:'Always available'}
 ];
@@ -2813,6 +3362,7 @@ async function connect(input){
   $('sigma').value=state.settings.sigma;
   $('teamPicker').innerHTML=teams.map((t,i)=>'<option value="'+i+'">'+esc(t.name)+'</option>').join('');
   LOADED.set(keyOf(ref.provider,ref.id),{state,sim:null});
+  await loadMV();
   rememberLeague(ref,league.name);
   setLoaded(true);
   render();
@@ -2862,49 +3412,140 @@ function render(){
   $('matrixHead').innerHTML='<tr><th>Team</th>'+cols.map(x=>'<th>'+x+'</th>').join('')+'<th>Total</th></tr>';
   $('matrix').innerHTML=state.teams.map(t=>'<tr class="'+(t===me?'wr-you':'')+'"><td>'+esc(t.name)+'</td>'+cols.map(p=>{const v=t.values[p]||0;return '<td class="'+(v>=0?'wr-up':'wr-down')+'" data-team="'+t.id+'" data-pos="'+p+'">'+(v>=0?'+':'')+v.toFixed(1)+'</td>'}).join('')+'<td>'+t.total.toFixed(1)+'</td></tr>').join('');
   trades(me);
+  renderReport();
+  renderMoney();
   const changed=JSON.stringify(state.settings)!==state.defaults;
   $('overrideStatus').className='wr-status'+(changed?' bad':'');
   $('overrideStatus').textContent=changed?'What-if: these are your overrides, not the settings this league actually uses.':'Reading this league exactly as the provider reports it. No overrides in effect.';
   $('provenance').textContent='Rosters and settings: '+state.ref.provider+' · Projections: Sleeper, Week 1 2026 · Seed: '+(sim?.seed??'not run')+' · σ: '+state.settings.sigma+' (generic preseason assumption) · injuries not modeled.';
 }
 
-/* ⚠️ REWRITTEN. The previous version scored a swap as
-     mine   = get.p - repGive - (give.p - repGet)
-     theirs = give.p - repGet - (get.p - repGive)
-   which is identically theirs === -mine, so the mutual-gain test mine>0 && theirs>0 could
-   never pass and the finder returned nothing for every league ever connected. Both sides
-   are now recomputed properly: clone each roster, make the swap, re-run the starting-slot
-   assignment, and compare each team's new lineup total with its own current total. This
-   also picks up flex eligibility and bench knock-on effects the closed form ignored.
+/* ⚠️ REWRITTEN TWICE. Read both notes before changing this.
 
-   The matrix cell filter is also live here; it was described in copy and never wired. */
+   (1) The original scored a swap as
+         mine   = get.p - repGive - (give.p - repGet)
+         theirs = give.p - repGet - (get.p - repGive)
+       which is identically theirs === -mine, so the mutual-gain test could never pass and
+       the finder returned nothing for every league ever connected.
+
+   (2) The recompute that replaced it was correct and still produced absurd proposals —
+       live, it offered a kicker for Jaylen Waddle and reported BOTH lineups improving.
+       That is not a bug in the arithmetic. A bench player contributes exactly ZERO to a
+       starting-lineup total, so a rival holding Waddle as his WR4 "gains" by shipping him
+       for anything that fills an unfilled slot. Lineup delta answers "does this help my
+       week", which is the wrong question for the other side of a trade. Nobody accepts on
+       lineup delta; they accept on what the player is worth.
+
+   So a proposal now has to clear two independent tests:
+       LINEUP  — both starting lineups improve after re-running slot assignment (as before)
+       VALUE   — the two players are worth roughly the same as assets, where a player's
+                 asset value is his own points over replacement at his position, bench or
+                 not. Waddle benched is still a ~6/wk asset; a kicker is ~1/wk because the
+                 10th-best kicker scores nearly what the best one does. The gap between
+                 them is the whole reason the Waddle trade was laughable.
+
+   Rejected-as-lopsided swaps are COUNTED AND REPORTED rather than silently dropped, so a
+   short board reads as a working filter instead of a broken tool. */
+/* Two fairness bands, same shape, different units. Market is preferred; model is the
+   fallback when a player has no published price. */
+const MV_FLOOR=4, MV_SHARE=0.35;      /* auction dollars */
+const VOR_FLOOR=1.0, VOR_SHARE=0.35;  /* points over replacement per week */
+function assetValue(p){return p.p-(state.rep[p.pos]?.pts??0)}
 function lineupTotal(players){
   return Object.values(starterValues(players,state.slots,state.rep)).reduce((a,b)=>a+b,0);
 }
+/* Which starting slots this roster can actually fill, PER SLOT. ⚠️ A single total is not
+   enough: trading your only QB for a fourth wideout leaves the same number of slots filled
+   overall — the QB slot empties and a WR slot fills — so a count-based guard waves it
+   through. Dedicated slots are compared one at a time; FLEX is left out because losing a
+   flex body is a real cost the points already price. */
+function slotFill(players,s){
+  const avail=players.slice(),out={};
+  for(const slot of Object.keys(s)){
+    if(['BN','IR','TAXI'].includes(slot))continue;
+    out[slot]=0;
+    for(let i=0;i<s[slot];i++){
+      const j=avail.findIndex(p=>eligible(p.pos,slot));
+      if(j<0)break;
+      avail.splice(j,1);out[slot]++;
+    }
+  }
+  return out;
+}
+function emptiesASlot(before,after){
+  for(const slot of Object.keys(before)){
+    if(['FLEX','SUPERFLEX'].includes(slot))continue;
+    if(after[slot]<before[slot])return true;
+  }
+  return false;
+}
 function swap(players,out,inn){const c=players.filter(p=>p!==out);c.push(inn);return c}
+function band(a,b,floor,share){
+  const hi=Math.max(a,b),lo=Math.min(a,b);
+  return (hi-lo)<=Math.max(floor,share*Math.max(hi,0));
+}
+function fairSwap(give,get){
+  const mg=mvOf(give),mt=mvOf(get);
+  if(mg!=null&&mt!=null)
+    return {ok:band(mg,mt,MV_FLOOR,MV_SHARE),basis:'market',give:mg,get:mt,
+            unit:'$',model:{give:assetValue(give),get:assetValue(get)}};
+  const a=assetValue(give),b=assetValue(get);
+  return {ok:band(a,b,VOR_FLOOR,VOR_SHARE),basis:'model',give:a,get:b,unit:'',
+          missing:[mg==null?give.name:null,mt==null?get.name:null].filter(Boolean)};
+}
 function trades(me){
-  const EPS=1e-9;
+  const EPS=1e-9, skipKD=!$('includeKD')?.checked;
   const rivals=state.teams.filter(t=>t!==me&&(!tradeFilter||t.id===tradeFilter.team));
-  const rows=[];
+  const rows=[];let lopsided=0,illegal=0;
+  const myFill=slotFill(me.players,state.slots);
   for(const o of rivals){
     for(const give of me.players){
+      if(skipKD&&['K','DST'].includes(give.pos))continue;
       for(const get of o.players){
         if(give.pos===get.pos)continue;
+        if(skipKD&&['K','DST'].includes(get.pos))continue;
         if(tradeFilter&&tradeFilter.pos&&!['FLEX','SUPERFLEX'].includes(tradeFilter.pos)&&get.pos!==tradeFilter.pos)continue;
-        const mine=lineupTotal(swap(me.players,give,get))-me.total;
-        const theirs=lineupTotal(swap(o.players,get,give))-o.total;
-        if(mine>EPS&&theirs>EPS)rows.push({o,give,get,mine,theirs});
+        const mineRoster=swap(me.players,give,get),theirRoster=swap(o.players,get,give);
+        if(emptiesASlot(myFill,slotFill(mineRoster,state.slots))
+         ||emptiesASlot(slotFill(o.players,state.slots),slotFill(theirRoster,state.slots))){illegal++;continue}
+        const mine=lineupTotal(mineRoster)-me.total;
+        const theirs=lineupTotal(theirRoster)-o.total;
+        if(mine<=EPS||theirs<=EPS)continue;
+        const fair=fairSwap(give,get);
+        if(!fair.ok){lopsided++;continue}
+        /* Market says they'd entertain it; the model says who actually gains. When the two
+           disagree that is the interesting part, not something to smooth over. */
+        let edge=null;
+        if(fair.basis==='market'&&fair.model){
+          const mvEdge=fair.get-fair.give, vorEdge=fair.model.get-fair.model.give;
+          if(mvEdge<-1&&vorEdge>0.5)edge='you pay up in market value for a player your lineup wants more';
+          else if(mvEdge>1&&vorEdge<-0.5)edge='the market rates the incoming player higher than your lineup does';
+        }
+        rows.push({o,give,get,mine,theirs,av:fair,edge});
       }
     }
   }
   rows.sort((a,b)=>b.mine-a.mine);
+  window.__wrTop=rows[0]||null;
   const target=tradeFilter?state.teams.find(t=>t.id===tradeFilter.team):null;
-  $('filterbar').innerHTML=tradeFilter&&target
+  $('filterbar').innerHTML=(tradeFilter&&target
     ? '<span class="wr-chip">Filtered to <b>'+esc(target.name)+' · '+esc(tradeFilter.pos)+'</b></span><button class="wr-mini" id="clearFilter">Clear filter</button>'
-    : '<span class="wr-note">Showing every rival. Click a value-matrix cell to narrow this to one team and position.</span>';
+    : '<span class="wr-note">Showing every rival. Click a value-matrix cell to narrow this to one team and position.</span>')
+    +'<label class="wr-note wr-kd"><input type="checkbox" id="includeKD"'+(skipKD?'':' checked')+'> Include K and DST</label>';
+  $('includeKD').onchange=()=>trades(me);
   if($('clearFilter'))$('clearFilter').onclick=()=>{tradeFilter=null;trades(me)};
-  $('trades').innerHTML=rows.slice(0,25).map((x,i)=>'<div class="wr-trade"><strong>'+(i+1)+'. '+esc(x.o.name)+' · both lineups recomputed after the swap</strong><div>You send <b>'+esc(x.give.name)+'</b> ('+x.give.pos+') \u21c4 you get <b>'+esc(x.get.name)+'</b> ('+x.get.pos+')</div><div class="wr-note">Your lineup: <span class="wr-up">+'+x.mine.toFixed(1)+'/wk</span> · Their lineup: <span class="wr-up">+'+x.theirs.toFixed(1)+'/wk</span> · Playoff-odds re-simulation of a proposed trade is not built yet.</div></div>').join('')
-    ||'<p class="wr-note">No proposal generated: no cross-position 1-for-1 improves both starting lineups'+(tradeFilter?' within this filter':'')+'.</p>';
+  const asOf=MV&&MV.by.size
+    ? '<span class="wr-mv">Prices are Public Market Value auction dollars ('+esc(mvColumn().toUpperCase())+'), captured '+esc(MV.asOf||'unknown date')+' and updated by hand each week. A market price is not a projection, and a stale one is not a current price.</span>'
+    : '<span class="wr-mv">⚠️ No market prices loaded, so candidate filtering falls back to model value over replacement instead. That is the weaker test — it cannot see name value.</span>';
+  const bits=[];
+  if(lopsided)bits.push(lopsided+' improved both starting lineups but '+(lopsided===1?'was':'were')+' rejected as lopsided in player value');
+  if(illegal)bits.push(illegal+' would have left one side unable to fill a starting slot');
+  const reject='<p class="wr-note wr-reject">'+(bits.length?'Also considered: '+bits.join('; ')+'. That is the filter working, not a shortage of ideas.':'')+asOf+'</p>';
+  const priceOf=x=>x.av.basis==='market'
+    ? 'Market value: <b>$'+x.av.give+'</b> out, <b>$'+x.av.get+'</b> in'
+    : 'Model value: <b>'+x.av.give.toFixed(1)+'</b> out, <b>'+x.av.get.toFixed(1)+'</b> in <span class="wr-nomv">(no published price for '+esc(x.av.missing.join(' or '))+')</span>';
+  $('trades').innerHTML=(rows.slice(0,25).map((x,i)=>'<div class="wr-trade"><strong>'+(i+1)+'. '+esc(x.o.name)+'</strong><div>You send <b>'+esc(x.give.name)+'</b> ('+x.give.pos+') \u21c4 you get <b>'+esc(x.get.name)+'</b> ('+x.get.pos+')</div><div class="wr-note">'+priceOf(x)+' · Your lineup <span class="wr-up">+'+x.mine.toFixed(1)+'/wk</span> · Their lineup <span class="wr-up">+'+x.theirs.toFixed(1)+'/wk</span>'+(x.edge?' · <b class="wr-edge">'+x.edge+'</b>':'')+'</div></div>').join('')
+    ||'<p class="wr-note">No proposal generated: nothing here both improves the two starting lineups and trades near-equal player value'+(tradeFilter?' within this filter':'')+'.</p>')+reject;
 }
 
 /* ---------------------------------------------------------- simulation ---- */
@@ -2935,9 +3576,10 @@ function runSim(){
 
 /* ------------------------------------------------------------- wiring ----- */
 SHEETS=DDSheets({key:'warroom',mount:'#sheets',sheets:[
-  {id:'overview',label:'Overview',panel:'#sheetOverview'},
+  {id:'report',label:'Report Card',panel:'#sheetReport'},
   {id:'standings',label:'Standings',panel:'#sheetStandings'},
   {id:'rosters',label:'Rosters',panel:'#sheetRosters'},
+  {id:'money',label:'Money',panel:'#sheetMoney'},
   {id:'trades',label:'Trades',panel:'#sheetTrades'},
   {id:'settings',label:'Settings',panel:'#sheetSettings'},
   {id:'method',label:'Receipts & Method',panel:'#sheetMethod'}
@@ -3018,7 +3660,8 @@ window.DD_BOTCTX = {
 - NOT MODELED: injuries, byes, trades, waivers, lineup decisions, in-season projection updates, and correlation between the two teams in a matchup. Before three completed weeks, σ is a stated generic assumption rather than an estimate from the league.
 - NOT BUILT: ESPN and Yahoo authenticated reads, the man-games baseline, multi-player trades, Stage 2 playoff re-simulation, and account sync of the saved league list. Say so plainly rather than describing how to use them.
 - AN EDITED SETTING IS A WHAT-IF and is marked pool_eligible false. Do not present an overridden run as the league's own number.
-- THE TRADE FINDER PROPOSES, IT DOES NOT ACT. It never accepts, sends or executes anything. It keeps a proposal only when BOTH lineups, recomputed after the swap, improve — so it will often return nothing, and returning nothing is a real answer rather than a failure.
+- THE TRADE FINDER IS A CANDIDATE SCREEN, NOT A FAIRNESS ORACLE. It cannot see acceptance probability, manager preferences, depth needs, injury risk, or dynasty value; never present a surviving proposal as one the rival would accept. IT PROPOSES, IT DOES NOT ACT. It never accepts, sends or executes anything. A proposal must pass THREE tests: both lineups improve when recomputed after the swap, neither side is left unable to fill a starting slot, AND the two players are within max($4, 35% of the dearer) in Public Market Value — the hand-maintained weekly auction-dollar snapshot at /data/pool.json. A swap that would leave either side short a startable player at some slot is refused whatever the points say. It will often return nothing, and returning nothing is a real answer rather than a failure.
+- ⚠️ NEVER PRESENT A LINEUP GAIN AS A REASON A RIVAL WOULD ACCEPT. A benched player adds zero to a starting-lineup total, so lineup gain alone would price a benched WR1 at a kicker. If anyone asks why a lopsided swap is not listed, that is the reason. The candidate value-band test uses PUBLIC MARKET VALUE in auction dollars, and you must always say which capture date those dollars are from — they are a weekly hand-maintained snapshot, not a live market. If a player has no published price the row falls back to model value over replacement and says so; never quote a fallback row as a market price.
 - SAVED LEAGUES LIVE IN THIS BROWSER ONLY. There is no server copy and no cross-device sync.
 
 ` + (window.DDBotScan ? window.DDBotScan(5200) : "The page reader could not run, so nothing on the page can be read right now.")
