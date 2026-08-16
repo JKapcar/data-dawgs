@@ -2364,7 +2364,16 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 .wr-chip b{display:block;font-size:15px;color:var(--ink-1)}
 .wr-matrix td[data-pos]{cursor:pointer}
 .wr-matrix td[data-pos]:hover{background:color-mix(in srgb,var(--accent) 14%,transparent)}
-.wr-trade{border-top:1px solid var(--grid);padding:13px 0;color:var(--ink-1)}
+.wr-trade{border-top:1px solid var(--grid);padding:13px 0;color:var(--ink-1);display:flex;gap:16px;align-items:flex-start}
+.wr-trade .tw{flex:1;min-width:0}
+.wr-trade .rival{display:inline-block;font:800 10px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px}
+.wr-trade .swap{font-size:15px;line-height:1.4}
+.wr-trade .gain{flex:none;text-align:right;min-width:104px}
+.wr-trade .gain b{display:block;font-size:21px;font-weight:800;letter-spacing:-.03em;color:var(--good);line-height:1.1}
+.wr-trade .gain span{display:block;font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);margin-top:2px}
+.wr-trade .gain em{display:block;font-style:normal;font-size:11px;color:var(--ink-3);margin-top:6px}
+@media(max-width:560px){.wr-trade{flex-direction:column;gap:8px}.wr-trade .gain{text-align:left;min-width:0}
+  .wr-trade .gain b{display:inline}.wr-trade .gain span{display:inline;margin-left:5px}.wr-trade .gain em{display:inline;margin-left:8px}}
 .wr-trade:first-of-type{border-top:0}
 .wr-trade strong{display:block;margin-bottom:3px}
 .wr-filter{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
@@ -2464,7 +2473,7 @@ svg{display:block;max-width:100%;height:auto}
 .wr-flow{display:flex;align-items:center;gap:7px;overflow-x:auto;padding:10px 0 3px;margin-bottom:12px;scrollbar-width:none}
 .wr-flow::-webkit-scrollbar{display:none}.wr-flow button,.wr-flow select{flex:none;border:1px solid var(--grid);background:var(--surface-1);color:var(--ink-2);border-radius:999px;padding:8px 12px;font:700 12px/1 system-ui,sans-serif}
 .wr-flow button.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--surface-1));color:var(--accent)}
-.wr-flow select{max-width:150px}.sheetbar{display:none!important}
+.wr-flow select{max-width:none;padding-right:26px}.sheetbar{display:none!important}
 .wr-identity{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px dashed var(--grid)}
 .wr-identity label{font-size:12px;color:var(--ink-3);flex:1;min-width:210px;max-width:360px}
 .wr-identity input{display:block;width:100%;margin-top:4px;padding:9px 11px;border:1px solid var(--grid);border-radius:8px;
@@ -3892,7 +3901,12 @@ function trades(me){
   const priceOf=x=>x.av.basis==='market'
     ? 'Market value: <b>$'+x.av.give+'</b> out, <b>$'+x.av.get+'</b> in'
     : 'Model value: <b>'+x.av.give.toFixed(1)+'</b> out, <b>'+x.av.get.toFixed(1)+'</b> in <span class="wr-nomv">(no published price for '+esc(x.av.missing.join(' or '))+')</span>';
-  $('trades').innerHTML=(rows.slice(0,25).map((x,i)=>'<div class="wr-trade"><strong>'+(i+1)+'. '+esc(x.o.name)+'</strong><div>You send <b>'+esc(x.give.name)+'</b> ('+x.give.pos+') \u21c4 you get <b>'+esc(x.get.name)+'</b> ('+x.get.pos+')</div><div class="wr-note">'+priceOf(x)+' · Your lineup <span class="wr-up">+'+x.mine.toFixed(1)+'/wk</span> · Their lineup <span class="wr-up">+'+x.theirs.toFixed(1)+'/wk</span>'+(x.edge?' · <b class="wr-edge">'+x.edge+'</b>':'')+'</div></div>').join('')
+  $('trades').innerHTML=(rows.slice(0,25).map((x,i)=>'<div class="wr-trade">'
+    +'<div class="tw"><span class="rival">'+(i+1)+' · '+esc(x.o.name)+'</span>'
+    +'<div class="swap">You send <b>'+esc(x.give.name)+'</b> ('+x.give.pos+') \u21c4 you get <b>'+esc(x.get.name)+'</b> ('+x.get.pos+')</div>'
+    +'<div class="wr-note">'+priceOf(x)+' · Their lineup <span class="wr-up">+'+x.theirs.toFixed(1)+'/wk</span>'
+    +(x.edge?' · <b class="wr-edge">'+x.edge+'</b>':'')+'</div></div>'
+    +'<div class="gain"><b>+'+x.mine.toFixed(1)+'</b><span>your lineup /wk</span></div></div>').join('')
     ||'<p class="wr-note">No proposal generated: nothing here both improves the two starting lineups and trades near-equal player value'+(tradeFilter?' within this filter':'')+'.</p>')+reject;
 }
 
