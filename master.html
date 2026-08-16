@@ -2356,18 +2356,13 @@ function render(){
 function srcBanner(){
   const el=document.getElementById("srcNote");
   if(state.view==="dynasty"){
-    el.className="srcnote";el.innerHTML='<b>Overall dynasty view.</b> Independent research rankings and dynasty auction values supplied by the site owner, captured 8/15/26. These are analyst estimates — not an observed market, brand ranking, or points projection. Tied ranks are preserved.';
+    el.className="srcnote";el.innerHTML='<b>Overall dynasty.</b> Independent 1QB and Superflex / TE-premium values · 8/15/26.';
     document.getElementById('masterFoot').innerHTML='<b>Overall dynasty</b> uses '+(state.format==='sf'?'Superflex / TE-premium ranks and 2QB auction dollars.':'1QB ranks and 1QB auction dollars.')+' <a class="udmach" href="/data/dynasty-ranks.json">🤖 For machines</a>';
     return;
   }
   document.getElementById('masterFoot').innerHTML='<b>MV</b> = Market Value, a market-consensus estimate of what a player should cost (12-team, $200, half-PPR basis), captured 8/14/26. Ranks and commentary are one analyst\'s opinions, not facts. Everything here has a date and an author.<br><a class="udmach" href="/data/pool.json">🤖 For machines</a> · This site is mirrored for machines. 🙃 shows you the other side.';
-  const missing=SOURCES.filter(s=>!LOADED.includes(s));
-  if(!missing.length){ el.innerHTML=""; return; }
   el.className="srcnote";
-  el.innerHTML=`<b>${LOADED.length} of ${SOURCES.length} value sources loaded.</b> The spread column shows one dot per
-    source, sized by the weight we give it — Market Value is the anchor and the biggest. Right now there is only
-    one source, so there is nothing to disagree with and every strip shows a single dot. Send
-    ${missing.map(m=>m.label).join(", ")} values and each becomes a dot: <code>{"name":"Jahmyr Gibbs","pff":74,"espn":88}</code>.`;
+  el.innerHTML='<b>This season.</b> Half-PPR auction market values · 8/14/26.';
 }
 
 function legend(){

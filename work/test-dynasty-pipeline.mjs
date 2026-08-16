@@ -26,6 +26,7 @@ ok(warroom.includes('id="dyTeamPlot"') && warroom.includes('id="dyPlayerPlot"'),
 ok(warroom.includes('data-dydir="now"') && warroom.includes('data-dydir="future"'), "trade lens supports win-now and future-building directions");
 ok(/nowGain>=3&&futureGain<=-3/.test(warroom) && /futureGain>=3&&nowGain<=-3/.test(warroom), "trade candidates require an explicit exchange between timelines");
 ok(warroom.includes('candidate conversations, not fair-trade verdicts'), "dynasty trade screen disclaims acceptance and fairness");
+ok(warroom.includes('data-flow="dynasty"') && warroom.includes('data-flow="trades"'), "decision flow prioritizes dynasty and trade actions");
 ok(/state\.slots\.SUPERFLEX\?row\.two_qb_auction:row\.one_qb_auction/.test(warroom), "war room chooses auction values from actual roster slots");
 ok(warroom.includes("Keeper league detected") && warroom.includes("remains this-season market value"), "keeper uncertainty is explicit");
 

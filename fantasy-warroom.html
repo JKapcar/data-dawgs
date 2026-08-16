@@ -2449,6 +2449,10 @@ svg{display:block;max-width:100%;height:auto}
 .wr-horizon{display:none;align-items:center;padding:2px;border:1px solid var(--grid);border-radius:999px;background:var(--page)}
 .wr-horizon.on{display:flex}.wr-horizon button{border:0;background:transparent;color:var(--ink-3);border-radius:999px;padding:6px 10px;font:750 11px/1 system-ui,sans-serif;white-space:nowrap}
 .wr-horizon button.on{background:var(--accent);color:var(--accent-ink,#fff)}
+.wr-flow{display:flex;align-items:center;gap:7px;overflow-x:auto;padding:10px 0 3px;margin-bottom:12px;scrollbar-width:none}
+.wr-flow::-webkit-scrollbar{display:none}.wr-flow button,.wr-flow select{flex:none;border:1px solid var(--grid);background:var(--surface-1);color:var(--ink-2);border-radius:999px;padding:8px 12px;font:700 12px/1 system-ui,sans-serif}
+.wr-flow button.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--surface-1));color:var(--accent)}
+.wr-flow select{max-width:150px}.sheetbar{display:none!important}
 .wr-identity{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px dashed var(--grid)}
 .wr-identity label{font-size:12px;color:var(--ink-3);flex:1;min-width:210px;max-width:360px}
 .wr-identity input{display:block;width:100%;margin-top:4px;padding:9px 11px;border:1px solid var(--grid);border-radius:8px;
@@ -2474,13 +2478,12 @@ svg{display:block;max-width:100%;height:auto}
 <header class="p-hero">
   <div class="p-kicker">Fantasy League War Room · a league-specific scenario model, not a generic ranking</div>
   <h1>Your league, priced against its own replacement level.</h1>
-  <p class="p-lead">Save every league once, move between them from the shelf, and run each room against its actual
-  roster slots, scoring and schedule.</p>
+  <p class="p-lead">See where your team stands, what its assets are worth, and which moves change the picture.</p>
 </header>
 
 <div class="wr-strip" id="strip">
   <span class="wr-dot"></span>
-  <span class="wr-grow" id="stripText">No league connected. Every station below explains itself without one.</span>
+  <span class="wr-grow" id="stripText">No league connected. Add or open one to begin.</span>
   <div class="wr-horizon" id="valueHorizon" role="group" aria-label="Value horizon">
     <button type="button" data-horizon="season">This season</button><button type="button" data-horizon="dynasty">Overall dynasty</button>
   </div>
@@ -2489,14 +2492,22 @@ svg{display:block;max-width:100%;height:auto}
   <button class="wr-mini wr-hide" id="reset">Disconnect</button>
 </div>
 
+<nav class="wr-flow" id="flowNav" aria-label="War Room sections">
+  <button type="button" data-flow="report" class="on">Overview</button>
+  <button type="button" data-flow="dynasty" id="flowDynasty">Dynasty lens</button>
+  <button type="button" data-flow="trades">Trade ideas</button>
+  <select id="flowLeague" aria-label="League analysis"><option value="">League analysis…</option><option value="standings">Standings</option><option value="rosters">Roster strengths</option><option value="money">Money</option></select>
+  <button type="button" data-flow="all">All leagues</button>
+  <select id="flowMore" aria-label="Settings and methodology"><option value="">More…</option><option value="settings">Settings</option><option value="method">Method &amp; footnotes</option></select>
+</nav>
+
 <div id="sheets"></div>
 
 <!-- ============================= REPORT CARD ============================= -->
 <section id="sheetReport">
   <div class="wr-leaguehub">
     <div class="wr-leaguehead">
-      <div><h2>Your fantasy leagues</h2><p>Add a Sleeper league once, then open or switch leagues from here. Signed-in
-      leagues sync to your Data Dawgs account; signed-out leagues remain safely available on this device.</p></div>
+      <div><h2>Your fantasy leagues</h2><p>Add once. Open or switch anytime.</p></div>
       <span class="wr-sync" id="shelfState">Checking saved leagues…</span>
     </div>
     <div class="wr-connect">
@@ -2506,10 +2517,6 @@ svg{display:block;max-width:100%;height:auto}
       </form>
       <p class="wr-status" id="connectionStatus">Sleeper leagues connect without a Sleeper login.</p>
     </div>
-    <div class="wr-identity">
-      <label>Your Sleeper display name<input id="meName" autocomplete="username" placeholder="e.g. Kap"></label>
-      <p class="wr-status" id="meStatus">Set this once and every league opens on your roster.</p>
-    </div>
     <div class="wr-saved" id="savedList"></div>
   </div>
 
@@ -2517,13 +2524,9 @@ svg{display:block;max-width:100%;height:auto}
        itself before anything is connected. -->
   <div class="wr-grid wr-needs-league">
     <article class="wr-card wr-full">
-      <h2>What this room does</h2>
-      <p>Connect your league and this sheet becomes its report card: your team graded against <b>this league</b>
-      rather than a curve, where the strength and the holes are, and what to do about it. Everything is built from
-      your own roster slots, your own scoring and your own schedule.</p>
-      <p class="wr-note">What it never does: place a bid, accept a trade, or set a lineup. It ranks, prices and drafts
-      proposals. You act. Nothing here is a graded forecast — see Receipts &amp; Method.</p>
-      <div class="wr-stations" id="stations"></div>
+      <h2>Start with a league</h2>
+      <p>Connect above to see your team, dynasty position, and trade opportunities.</p>
+      <div class="wr-stations wr-hide" id="stations"></div>
     </article>
   </div>
 
@@ -2541,29 +2544,25 @@ svg{display:block;max-width:100%;height:auto}
 
     <article class="wr-card">
       <h3>Positional shape</h3>
-      <p class="wr-note">Your starters against the league average on each axis, each axis scaled by the league's best.
-      Shape reads as relative strength, not raw points.</p>
+      <p class="wr-note">Your starters against this league’s average.</p>
       <div id="rcRadar"></div>
     </article>
 
     <article class="wr-card">
       <h3>Where you gain and lose</h3>
-      <p class="wr-note">Points per week above or below the league average at each spot. Long bars are where a trade
-      actually moves your season.</p>
+      <p class="wr-note">Weekly advantage or deficit at each position.</p>
       <div id="rcBars"></div>
     </article>
 
     <article class="wr-card wr-full">
       <h3>Starters and depth</h3>
-      <p class="wr-note">Market value of the lineup you start against the market value sitting on your bench. Depth is
-      what you trade from, and what saves you when somebody pulls a hamstring.</p>
+      <p class="wr-note">Value in your lineup versus value on your bench.</p>
       <div id="rcSplit"></div>
     </article>
 
     <article class="wr-card wr-full">
       <h3>What to do about it</h3>
-      <p class="wr-note">Each call names what would change it. Where the evidence does not support a recommendation,
-      it says so instead of inventing one.</p>
+      <p class="wr-note">Highest-impact moves supported by the current inputs.</p>
       <div id="rcRecs"></div>
     </article>
   </div>
@@ -2630,9 +2629,7 @@ svg{display:block;max-width:100%;height:auto}
 <section id="sheetMoney" hidden>
   <div class="wr-empty wr-needs-league">
     <h3>What your roster is worth, and how that compares</h3>
-    <p>Every rostered player is priced against the league-matched horizon — the dated this-season market for redraft
-    and keeper, or the independent overall board for dynasty. That turns a roster into one number you can put next to everyone else's,
-    and splits it into the money you start and the money you sit.</p>
+    <p>Connect a league to compare roster value.</p>
     <button class="wr-btn" data-sheet="report">Manage your leagues</button>
   </div>
   <div class="wr-has-league wr-hide">
@@ -2641,23 +2638,19 @@ svg{display:block;max-width:100%;height:auto}
     <div class="wr-grid">
       <article class="wr-card wr-full">
         <h3>The money table</h3>
-        <p class="wr-note">Click a column to sort. <b>Starting</b> is the money that scores on Sunday; <b>bench</b> is
-        what you trade from and what covers an injury. The league-average row stays pinned at the bottom whichever
-        column you sort on.</p>
+        <p class="wr-note">Starting value, bench value, and league rank.</p>
         <div style="overflow-x:auto"><table class="wr-money" id="mnTable"></table></div>
       </article>
 
       <article class="wr-card wr-full wr-hide" id="mnHorizonCard">
         <h3>Your roster: this season vs dynasty</h3>
-        <p class="wr-note">This is the tension the toggle is for. A veteran can be expensive because he helps win now
-        while carrying much less long-term asset value; a young player can show the reverse. Delta is dynasty minus this season.</p>
+        <p class="wr-note">Delta = dynasty minus this season.</p>
         <div style="overflow-x:auto"><table class="wr-money" id="mnHorizon"></table></div>
       </article>
 
       <article class="wr-card wr-full">
         <h3>Where the money is</h3>
-        <p class="wr-note">Each team's <b>starting lineup only</b>, split by position, strongest first. Bench is
-        excluded here on purpose — it does not score. The dashed line is the league average.</p>
+        <p class="wr-note">Starting-lineup dollars by position. Dashed = league average.</p>
         <div id="mnBars"></div>
         <div class="wr-legend" id="mnLegend"></div>
       </article>
@@ -2677,26 +2670,17 @@ svg{display:block;max-width:100%;height:auto}
       </article>
       <article class="wr-card">
         <h3>Priciest relative to production</h3>
-        <p class="wr-note">The market pays up for these. Sometimes that is name value; sometimes the market knows
-        something a week-1 projection does not.</p>
+        <p class="wr-note">Highest price relative to projected production.</p>
         <div class="wr-srlist" id="mnWorst"></div>
       </article>
 
       <article class="wr-card wr-full">
         <h3>Shape of every roster</h3>
-        <p class="wr-note">Each team's starting-lineup dollars at each position, scaled so the outer ring is the
-        league's best there. Dashed grey is the league average — anything poking outside it is a strength. Your team
-        is outlined in accent.</p>
+        <p class="wr-note">Position-by-position roster shape. Dashed = league average.</p>
         <div class="wr-radars" id="mnRadars"></div>
       </article>
 
-      <article class="wr-card wr-full wr-method">
-        <h3>What these dollars are, and what they are not</h3>
-        <p>Market Value is a market-consensus estimate of what a player <b>should cost</b>, not a points projection.
-        That makes it a good yardstick for one question — is this roster expensive — and a poor one for another:
-        whether it will outscore the roster next to it. Both numbers are on this page for exactly that reason.</p>
-        <p class="wr-note" id="mnCaveat"></p>
-      </article>
+      <p class="wr-note wr-full" id="mnCaveat"></p>
     </div>
   </div>
 </section>
@@ -2704,25 +2688,15 @@ svg{display:block;max-width:100%;height:auto}
 <!-- =============================== TRADES =============================== -->
 <section id="sheetTrades" hidden>
   <div class="wr-empty wr-needs-league" id="emptyTrades">
-    <h3>The trade finder searches for mutual gains only</h3>
-    <p>It compares every cross-position 1-for-1 between your roster and each rival, rebuilds both starting lineups
-    after the swap, and keeps the proposal only when both totals go up <b>and</b> the two players carry near-equal
-    value over replacement. That second test is what stops it proposing a kicker for a benched WR1 — a bench player
-    contributes nothing to a lineup total, so lineup gain alone will price a real asset at nothing. Nothing is ranked
-    by who wins the trade; a proposal a rival would laugh at is not a proposal.</p>
+    <h3>Connect a league to find mutual gains</h3>
+    <p>The screen keeps one-for-one swaps that improve both starting lineups.</p>
     <button class="wr-btn" data-sheet="report">Manage your leagues</button>
   </div>
   <div class="wr-grid wr-has-league wr-hide">
     <article class="wr-card wr-full">
       <h2>Trade finder</h2>
       <div class="wr-filter" id="filterbar"></div>
-      <p class="wr-note" id="tradeNote">This is a <b>candidate screen</b>, not a fairness oracle. A pairing survives three gates: both starting
-      lineups improve after the swap, neither side is left unable to fill a starting slot, and the two players carry
-      near-equal <b>league-matched auction value</b> — this-season market value for redraft, overall dynasty value for
-      dynasty. That screen is what stops it offering you a kicker for a benched WR1: your lineup is delighted, and
-      the value board says $1 against $23. What it cannot see: whether a manager would actually accept, their preferences,
-      depth needs, or injury risk. Kickers and defenses are excluded by default. Nothing is forced,
-      and no proposal is sent anywhere.</p>
+      <p class="wr-note" id="tradeNote">One-for-one candidates that improve both lineups and clear the active value screen. Candidate ideas—not acceptance predictions.</p>
       <div id="trades"></div>
     </article>
   </div>
@@ -2739,8 +2713,7 @@ svg{display:block;max-width:100%;height:auto}
     <div class="wr-grid">
       <article class="wr-card wr-full">
         <h2>Win now vs overall dynasty</h2>
-        <p class="wr-note">Two prices, two questions. This-season dollars describe current buying power. Dynasty dollars
-        describe long-term asset value. The gap is a strategic signal, not proof that either price is correct.</p>
+        <p class="wr-note">Current-season buying power versus long-term asset value.</p>
         <div class="wr-tiles" id="dyTiles"></div><p class="wr-status" id="dyStatus"></p>
       </article>
       <article class="wr-card wr-full">
@@ -2756,9 +2729,7 @@ svg{display:block;max-width:100%;height:auto}
       </article>
       <article class="wr-card wr-full">
         <h3>Trades across the two timelines</h3>
-        <p class="wr-note">These swaps exchange time horizons: one side gains this-season dollars while the other gains
-        dynasty dollars. They are candidate conversations, not fair-trade verdicts; acceptance, depth, picks, injuries and
-        multi-player construction remain outside the screen.</p>
+        <p class="wr-note">One side gains now; the other gains long-term value. Candidate conversations—not verdicts.</p>
         <div class="wr-filter"><button class="wr-mini on" data-dydir="now">Help me win now</button><button class="wr-mini" data-dydir="future">Build dynasty value</button></div>
         <div id="dyTrades"></div>
       </article>
@@ -2771,9 +2742,7 @@ svg{display:block;max-width:100%;height:auto}
   <div class="wr-grid">
     <article class="wr-card wr-full">
       <h2>Every league, one desk</h2>
-      <p class="wr-note">Your team in each saved league, side by side, plus what you hold across all of them. A
-      league has to be loaded to be counted — nothing here is guessed from a league that has not been read. Grades
-      are z-scores <b>within each league</b>, so compare dollars across leagues, not letters.</p>
+      <p class="wr-note">Your teams side by side, plus repeated-player exposure.</p>
       <p class="wr-status" id="pfStatus"></p>
       <button class="wr-btn quiet wr-hide" id="pfLoadAll">Load every saved league</button>
     </article>
@@ -2784,8 +2753,7 @@ svg{display:block;max-width:100%;height:auto}
     </article>
     <article class="wr-card wr-full">
       <h3>Your exposure</h3>
-      <p class="wr-note">Players you hold in more than one league. Concentration is a choice, not a flaw — but it
-      should be a choice you made on purpose, because one injury lands on every one of these rosters at once.</p>
+      <p class="wr-note">Players you hold in more than one league.</p>
       <div class="wr-srlist" id="pfExposure"></div>
     </article>
   </div>
@@ -2795,9 +2763,15 @@ svg{display:block;max-width:100%;height:auto}
 <section id="sheetSettings" hidden>
   <div class="wr-grid">
     <article class="wr-card wr-full">
+      <h2>Your team identity</h2>
+      <div class="wr-identity">
+        <label>Sleeper display name<input id="meName" autocomplete="username" placeholder="e.g. Kap"></label>
+        <p class="wr-status" id="meStatus">Used only when a league does not already have your team saved.</p>
+      </div>
+    </article>
+    <article class="wr-card wr-full">
       <h2>League settings</h2>
-      <p class="wr-note">Read from the league and editable. An override is a what-if: it is not eligible for pooled
-      calibration, and the line below says so as soon as you change one.</p>
+      <p class="wr-note">Provider values. Editing one creates a labelled what-if.</p>
       <div class="wr-settings">
         <label>Playoff spots<input id="playoffSpots" type="number" min="1" disabled></label>
         <label>Playoffs start<input id="playoffStart" type="number" min="2" max="18" disabled></label>
@@ -2812,11 +2786,11 @@ svg{display:block;max-width:100%;height:auto}
   </div>
 </section>
 
-<!-- ========================== RECEIPTS &amp; METHOD ======================= -->
+<!-- =========================== METHOD &amp; FOOTNOTES ====================== -->
 <section id="sheetMethod" hidden>
   <div class="wr-grid">
     <article class="wr-card wr-full wr-method">
-      <h2>How this works — and what it can't tell you</h2>
+      <h2>Method &amp; footnotes</h2>
       <dl>
         <dt>Inputs</dt>
         <dd>Rosters, scoring and schedule come from your league provider at the moment you connect, and are frozen
@@ -3515,7 +3489,7 @@ const STATIONS=[
   {sheet:'report',title:'Report card',what:'Your team graded against this league, the shape of it, and what to do about it.',needs:'Needs: your roster'},
   {sheet:'all',title:'All leagues',what:'Your team in every saved league on one desk, plus the players you hold in more than one of them.',needs:'Needs: one saved league'},
   {sheet:'settings',title:'League settings',what:'Playoff spots, playoff start and weekly σ, read from the league and overridable as a what-if.',needs:'Always available'},
-  {sheet:'method',title:'Receipts & Method',what:'The formulas, the frozen inputs, what is not modeled, and why these numbers are not graded receipts.',needs:'Always available'}
+  {sheet:'method',title:'Method & footnotes',what:'Formulas, inputs, limitations, and receipt status.',needs:'Always available'}
 ];
 function paintStations(){
   const loaded=!!state;
@@ -3637,10 +3611,11 @@ function setLoaded(on){
   $('strip').classList.toggle('on',on);
   $('stripText').innerHTML=on
     ? '<b>'+esc(state.league.name)+'</b> · '+esc(state.ref.provider)+' · '+state.teams.length+' teams · rosters frozen '+new Date().toLocaleString()
-    : 'No league connected. Every station below explains itself without one.';
+    : 'No league connected. Add or open one to begin.';
   $('stripAction').textContent='Manage leagues';
   $('valueHorizon').classList.toggle('on',on&&isDynastyLeague());
   $('valueHorizon').querySelectorAll('[data-horizon]').forEach(b=>b.classList.toggle('on',on&&state.valueHorizon===b.dataset.horizon));
+  $('flowDynasty').classList.toggle('wr-hide',on&&!isDynastyLeague());
   paintStations();paintShelf();paintSwitch();
 }
 
@@ -3904,6 +3879,11 @@ function runSim(){
 }
 
 /* ------------------------------------------------------------- wiring ----- */
+function syncFlow(id){
+  document.querySelectorAll('[data-flow]').forEach(b=>b.classList.toggle('on',b.dataset.flow===id));
+  $('flowLeague').value=['standings','rosters','money'].includes(id)?id:'';
+  $('flowMore').value=['settings','method'].includes(id)?id:'';
+}
 SHEETS=DDSheets({key:'warroom',mount:'#sheets',sheets:[
   {id:'report',label:'Report Card',panel:'#sheetReport'},
   {id:'standings',label:'Standings',panel:'#sheetStandings'},
@@ -3913,8 +3893,8 @@ SHEETS=DDSheets({key:'warroom',mount:'#sheets',sheets:[
   {id:'dynasty',label:'Dynasty Lens',panel:'#sheetDynasty'},
   {id:'all',label:'All Leagues',panel:'#sheetAll'},
   {id:'settings',label:'Settings',panel:'#sheetSettings'},
-  {id:'method',label:'Receipts & Method',panel:'#sheetMethod'}
-],onShow(id){if(id==='all')renderPortfolio();if(id==='dynasty')renderDynastyLens()}});
+  {id:'method',label:'Method & Footnotes',panel:'#sheetMethod'}
+],onShow(id){syncFlow(id);if(id==='all')renderPortfolio();if(id==='dynasty')renderDynastyLens()}});
 
 document.addEventListener('click',e=>{
   const jump=e.target.closest('[data-sheet]');
@@ -3944,6 +3924,9 @@ $('connectForm').addEventListener('submit',async e=>{
   try{await connect($('leagueInput').value);st.className='wr-status good';st.textContent=readShelf().length+' league'+(readShelf().length===1?'':'s')+' saved. This league is open now.';$('leagueInput').value=''}
   catch(err){st.className='wr-status bad';st.textContent=err.message}
 });
+$('flowNav').onclick=e=>{const b=e.target.closest('[data-flow]');if(b)SHEETS.show(b.dataset.flow)};
+$('flowLeague').onchange=e=>{if(e.target.value)SHEETS.show(e.target.value)};
+$('flowMore').onchange=e=>{if(e.target.value)SHEETS.show(e.target.value)};
 $('leagueSwitch').onchange=e=>{
   const v=e.target.value;
   if(!v){paintSwitch();return}

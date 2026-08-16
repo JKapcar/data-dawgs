@@ -35,6 +35,11 @@ ok(html.includes("if(v==='__all'){paintSwitch();SHEETS.show('all');return}"),
   "league switcher opens the portfolio without treating it as a provider ID");
 ok(html.includes('function withState(st,fn)'), "portfolio isolates each league calculation state");
 ok(html.includes('ALL LEAGUES is a cross-league portfolio view'), "Toto states portfolio boundaries");
+ok(html.includes('id="flowNav"') && html.includes('League analysis…') && html.includes('Method &amp; footnotes'),
+  "compact flow navigation exposes primary decisions and secondary detail");
+ok(html.includes('.sheetbar{display:none!important}'), "legacy nine-tab wall is hidden behind the compact navigation");
+ok(html.indexOf('id="meName"') > html.indexOf('id="sheetSettings"'), "identity controls live in settings, not the landing hub");
+ok(!html.includes('A pairing survives three gates'), "trade methodology is removed from the human-facing trade intro");
 
 const start = html.indexOf("function cleanShelf(raw)");
 const end = html.indexOf("function stored(key)", start);
