@@ -21,6 +21,10 @@ ok(!html.includes('SAVED LEAGUES LIVE IN THIS BROWSER ONLY'), "Toto no longer cl
 ok(!html.includes('account sync of the saved league list'), "Method no longer calls sync unbuilt");
 ok(html.includes('sync privately through the Worker and follow the account across devices'),
   "Toto states the signed-in persistence boundary");
+ok(html.includes('.wr-up,.wr-card .wr-up{color:var(--good)}'),
+  "table surplus cells outrank the generic table-cell color");
+ok(html.includes('.wr-down,.wr-card .wr-down{color:var(--bad)}'),
+  "table deficit cells outrank the generic table-cell color");
 
 const start = html.indexOf("function cleanShelf(raw)");
 const end = html.indexOf("function stored(key)", start);
