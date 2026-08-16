@@ -25,6 +25,16 @@ ok(html.includes('.wr-up,.wr-card .wr-up{color:var(--good)}'),
   "table surplus cells outrank the generic table-cell color");
 ok(html.includes('.wr-down,.wr-card .wr-down{color:var(--bad)}'),
   "table deficit cells outrank the generic table-cell color");
+ok(html.includes('id="meName"'), "landing includes optional Sleeper identity");
+ok(html.includes('id="sheetAll"'), "all-leagues portfolio sheet exists");
+ok(html.includes("{id:'all',label:'All Leagues',panel:'#sheetAll'}"), "portfolio is registered in navigation");
+ok(html.includes('function pickMyTeam(teams,ref,users)'), "team identity resolution is explicit");
+ok(/function pickMyTeam[\s\S]*focusRosterId[\s\S]*display_name[\s\S]*return 0/.test(html),
+  "team resolution prefers saved roster, then identity, then fallback");
+ok(html.includes("if(v==='__all'){paintSwitch();SHEETS.show('all');return}"),
+  "league switcher opens the portfolio without treating it as a provider ID");
+ok(html.includes('function withState(st,fn)'), "portfolio isolates each league calculation state");
+ok(html.includes('ALL LEAGUES is a cross-league portfolio view'), "Toto states portfolio boundaries");
 
 const start = html.indexOf("function cleanShelf(raw)");
 const end = html.indexOf("function stored(key)", start);

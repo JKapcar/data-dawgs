@@ -2445,6 +2445,10 @@ svg{display:block;max-width:100%;height:auto}
 .wr-leaguehub .wr-row.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--page))}
 .wr-leaguehub .wr-row small{display:block;margin-top:4px}.wr-league-actions{display:flex;gap:7px;margin-left:auto}
 .wr-empty-shelf{grid-column:1/-1;border:1px dashed var(--grid);border-radius:10px;padding:14px;color:var(--ink-3);font-size:13px}
+.wr-identity{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px dashed var(--grid)}
+.wr-identity label{font-size:12px;color:var(--ink-3);flex:1;min-width:210px;max-width:360px}
+.wr-identity input{display:block;width:100%;margin-top:4px;padding:9px 11px;border:1px solid var(--grid);border-radius:8px;
+  background:var(--page);color:var(--ink-1);font:inherit}
 .wr-method{border-left:4px solid var(--accent)}
 .wr-method dl{margin:0}
 .wr-method dt{font-weight:750;margin-top:14px;color:var(--ink-1)}
@@ -2494,6 +2498,10 @@ svg{display:block;max-width:100%;height:auto}
         <button class="wr-btn">Add league</button>
       </form>
       <p class="wr-status" id="connectionStatus">Sleeper leagues connect without a Sleeper login.</p>
+    </div>
+    <div class="wr-identity">
+      <label>Your Sleeper display name<input id="meName" autocomplete="username" placeholder="e.g. Kap"></label>
+      <p class="wr-status" id="meStatus">Set this once and every league opens on your roster.</p>
     </div>
     <div class="wr-saved" id="savedList"></div>
   </div>
@@ -2706,6 +2714,31 @@ svg{display:block;max-width:100%;height:auto}
   </div>
 </section>
 
+<!-- ============================ ALL LEAGUES ============================= -->
+<section id="sheetAll" hidden>
+  <div class="wr-grid">
+    <article class="wr-card wr-full">
+      <h2>Every league, one desk</h2>
+      <p class="wr-note">Your team in each saved league, side by side, plus what you hold across all of them. A
+      league has to be loaded to be counted — nothing here is guessed from a league that has not been read. Grades
+      are z-scores <b>within each league</b>, so compare dollars across leagues, not letters.</p>
+      <p class="wr-status" id="pfStatus"></p>
+      <button class="wr-btn quiet wr-hide" id="pfLoadAll">Load every saved league</button>
+    </article>
+    <article class="wr-card wr-full"><div class="wr-tiles" id="pfTiles"></div></article>
+    <article class="wr-card wr-full">
+      <h3>League by league</h3>
+      <div style="overflow-x:auto"><table class="wr-money" id="pfTable"></table></div>
+    </article>
+    <article class="wr-card wr-full">
+      <h3>Your exposure</h3>
+      <p class="wr-note">Players you hold in more than one league. Concentration is a choice, not a flaw — but it
+      should be a choice you made on purpose, because one injury lands on every one of these rosters at once.</p>
+      <div class="wr-srlist" id="pfExposure"></div>
+    </article>
+  </div>
+</section>
+
 <!-- ============================== SETTINGS ============================== -->
 <section id="sheetSettings" hidden>
   <div class="wr-grid">
@@ -2876,6 +2909,8 @@ window.DDSheets = function(cfg){
 const API='https://api.sleeper.app/v1',PROJ='https://api.sleeper.app/projections/nfl/2026';
 const SHELF='dd-warroom-leagues-v1',SHARED_SHELF='dd-guillotine-leagues-v1';
 const SHELF_API='https://toto.jkapcar4.workers.dev/auth/guillotine-state';
+const ME_KEY='dd-warroom-me-v1';
+function myName(){try{return localStorage.getItem(ME_KEY)||''}catch(e){return ''}}
 let state=null,sim=null,tradeFilter=null,SHEETS=null;
 /* Parsed leagues live here for the session so toggling between them is instant and does not
    re-hit the provider. Each entry keeps its own sim, because a simulation belongs to the
@@ -3286,6 +3321,61 @@ function renderMoney(){
     +'so a shape maxed at a position only means nobody else spent there either.';
 }
 
+/* ============================ THE PORTFOLIO ================================
+   Every row is computed inside its own league state. Unloaded leagues stay explicit
+   rather than inheriting numbers from whichever league happens to be active. */
+function withState(st,fn){const keep=state;state=st;try{return fn()}finally{state=keep}}
+function leagueRow(entry){
+  return withState(entry.state,()=>{
+    const st=entry.state,mi=pickMyTeam(st.teams,st.ref,st.users||null);
+    const rep=replacement(st.pool,st.slots);st.rep=rep;
+    st.teams.forEach(t=>{t.values=starterValues(t.players,st.slots,rep);t.total=Object.values(t.values).reduce((a,b)=>a+b,0)});
+    const me=st.teams[mi],money=teamMoney(me),z=zOf(me.total,st.teams.map(t=>t.total));
+    const rk=st.teams.slice().sort((a,b)=>b.total-a.total).indexOf(me)+1;
+    const odds=entry.sim?entry.sim.odds[me.id]:null;
+    return {name:st.league.name,id:st.ref.id,teamName:me.name,teams:st.teams.length,
+      grade:letter(z),vor:me.total,rank:rk,odds,st:money.st,bn:money.bn,total:money.total,players:me.players.slice()};
+  });
+}
+async function loadAllSaved(){
+  const btn=$('pfLoadAll');btn.disabled=true;await loadMV();
+  const todo=readShelf().filter(x=>x.provider==='sleeper'&&!LOADED.has(keyOf(x.provider,x.leagueId)));
+  let done=0;
+  for(const x of todo){
+    $('pfStatus').textContent='Reading '+x.name+'… ('+(++done)+' of '+todo.length+')';
+    try{const st=await fetchLeague(x.leagueId);LOADED.set(keyOf('sleeper',x.leagueId),{state:st,sim:null})}
+    catch(e){$('pfStatus').textContent='Could not read '+x.name+': '+e.message}
+  }
+  btn.disabled=false;renderPortfolio();
+}
+function renderPortfolio(){
+  if(!$('pfStatus'))return;
+  const saved=readShelf(),rows=saved.map(x=>{
+    const e=LOADED.get(keyOf(x.provider,x.leagueId));return e?leagueRow(e):{name:x.name,id:x.leagueId,unloaded:true};
+  });
+  const loaded=rows.filter(r=>!r.unloaded),pending=rows.filter(r=>r.unloaded);
+  $('pfLoadAll').classList.toggle('wr-hide',!pending.length);
+  $('pfStatus').textContent=!saved.length?'No saved leagues yet. Add one from the Report Card landing sheet.'
+    :pending.length?loaded.length+' of '+saved.length+' saved league'+(saved.length===1?'':'s')+' loaded this session. The rest are one click away.'
+    :'All '+saved.length+' saved league'+(saved.length===1?'':'s')+' loaded.';
+  const money=loaded.reduce((a,r)=>a+r.total,0),withOdds=loaded.filter(r=>r.odds!=null);
+  $('pfTiles').innerHTML=loaded.length?[
+    ['Leagues on the desk',String(loaded.length),pending.length?pending.length+' not loaded':'all loaded'],
+    ['Your combined rosters',fmt$(money),'Public Market Value'+(MV&&MV.asOf?' · '+MV.asOf:'')],
+    ['Average finish (proj.)','#'+(loaded.reduce((a,r)=>a+r.rank,0)/loaded.length).toFixed(1),'by starter value, within each league'],
+    ['Playoff odds known',withOdds.length+' of '+loaded.length,withOdds.length?Math.round(withOdds.reduce((a,r)=>a+r.odds,0)/withOdds.length*100)+'% avg where run':'run sims per league']
+  ].map(([l,v,d])=>'<div class="wr-tile"><div class="tl">'+l+'</div><div class="tv">'+v+'</div><div class="td">'+d+'</div></div>').join('')
+  :'<p class="wr-note">Load a league to see the combined picture.</p>';
+  $('pfTable').innerHTML='<thead><tr><th>League</th><th>Your team</th><th>Grade</th><th>Rank</th><th>VOR / wk</th><th>Playoff</th><th>Roster $</th></tr></thead><tbody>'
+    +rows.map(r=>r.unloaded?'<tr><td>'+esc(r.name)+'</td><td colspan="5" style="text-align:left;color:var(--ink-3)">not loaded this session</td><td><button class="wr-mini" data-load="'+esc(r.id)+'" data-provider="sleeper">Load</button></td></tr>'
+      :'<tr><td>'+esc(r.name)+'</td><td style="text-align:left">'+esc(r.teamName)+'</td><td>'+r.grade+'</td><td>'+r.rank+' / '+r.teams+'</td><td class="'+(r.vor>=0?'wr-up':'wr-down')+'">'+(r.vor>=0?'+':'')+r.vor.toFixed(1)+'</td><td>'+(r.odds!=null?Math.round(r.odds*100)+'%':'—')+'</td><td>'+fmt$(r.total)+'</td></tr>').join('')+'</tbody>';
+  const held=new Map();
+  loaded.forEach(r=>r.players.forEach(p=>{const k=mvKey(p.name)+'|'+p.pos;if(!held.has(k))held.set(k,{name:p.name,pos:p.pos,mv:withState(LOADED.get(keyOf('sleeper',r.id)).state,()=>mvOf(p)),leagues:[]});held.get(k).leagues.push(r.name)}));
+  const multi=[...held.values()].filter(x=>x.leagues.length>1).sort((a,b)=>b.leagues.length-a.leagues.length||(b.mv||0)-(a.mv||0));
+  $('pfExposure').innerHTML=multi.length?multi.slice(0,15).map(x=>'<div class="sr"><span class="p">'+esc(x.name)+' <span class="t">('+x.pos+')</span></span><span class="t">'+(x.mv!=null?fmt$(x.mv)+' · ':'')+x.leagues.length+' leagues</span><span class="t">'+esc(x.leagues.join(' · ')).slice(0,60)+'</span></div>').join('')
+    :(loaded.length>1?'<p class="wr-note">No player appears on more than one of your rosters.</p>':'<p class="wr-note">Exposure needs at least two loaded leagues.</p>');
+}
+
 /* ------------------------------------------------ the station board ------- */
 const STATIONS=[
   {sheet:'standings',title:'Playoff odds',what:'20,000 seeded seasons over your real schedule, ending in one probability for your team.',needs:'Needs: schedule + rosters'},
@@ -3296,6 +3386,7 @@ const STATIONS=[
   {sheet:'money',title:'Money',what:'Every roster priced in auction dollars, split into what you start and what you sit.',needs:'Needs: all rosters'},
   {sheet:'trades',title:'Trade finder',what:'Every cross-position 1-for-1 where both starting lineups improve. Mutual gains only.',needs:'Needs: all rosters'},
   {sheet:'report',title:'Report card',what:'Your team graded against this league, the shape of it, and what to do about it.',needs:'Needs: your roster'},
+  {sheet:'all',title:'All leagues',what:'Your team in every saved league on one desk, plus the players you hold in more than one of them.',needs:'Needs: one saved league'},
   {sheet:'settings',title:'League settings',what:'Playoff spots, playoff start and weekly σ, read from the league and overridable as a what-if.',needs:'Always available'},
   {sheet:'method',title:'Receipts & Method',what:'The formulas, the frozen inputs, what is not modeled, and why these numbers are not graded receipts.',needs:'Always available'}
 ];
@@ -3396,6 +3487,7 @@ function paintSwitch(){
   sel.innerHTML=(state?'':'<option value="">Choose a saved league…</option>')
     +list.map(x=>{const k=keyOf(x.provider,x.leagueId);
       return '<option value="'+esc(k)+'"'+(k===cur?' selected':'')+'>'+esc(x.name)+'</option>'}).join('')
+    +(list.length>1?'<option value="__all">▤ All leagues…</option>':'')
     +'<option value="__add">＋ Add a league…</option>';
 }
 function paintShelf(){
@@ -3423,31 +3515,52 @@ function setLoaded(on){
   paintStations();paintShelf();paintSwitch();
 }
 
-async function connect(input){
-  const ref=window.DDProviders?.parse(input);
-  if(!ref)throw Error('Paste a Sleeper ID or a Sleeper, ESPN, or Yahoo league URL.');
-  if(ref.provider!=='sleeper')throw Error(ref.provider.toUpperCase()+' was recognized (league '+ref.id+'), but its authenticated adapter is not connected yet. Sleeper is live now.');
-  $('connectionStatus').className='wr-status';$('connectionStatus').textContent='Reading Sleeper league '+ref.id+'…';
+function pickMyTeam(teams,ref,users){
+  const saved=readShelf().find(x=>x.provider===ref.provider&&x.leagueId===String(ref.id));
+  if(saved&&saved.focusRosterId!=null){const i=teams.findIndex(t=>String(t.id)===String(saved.focusRosterId));if(i>=0)return i}
+  const wanted=myName().trim().toLowerCase();
+  if(wanted&&users){
+    const u=users.find(x=>[x.display_name,x.metadata?.team_name].some(v=>String(v||'').trim().toLowerCase()===wanted));
+    if(u){const i=teams.findIndex(t=>String(t.ownerId)===String(u.user_id));if(i>=0)return i}
+  }
+  return 0;
+}
+function saveFocus(){
+  if(!state)return;
+  const list=readShelf(),x=list.find(y=>keyOf(y.provider,y.leagueId)===keyOf(state.ref.provider,state.ref.id));
+  const team=state.teams[+$('teamPicker').value||0];
+  if(x&&team){x.focusRosterId=Number(team.id);writeShelf(list);paintShelf();saveAccountShelf()}
+}
+async function fetchLeague(id){
+  const ref={provider:'sleeper',id:String(id)};
   const [league,users,rosters]=await Promise.all([fetchJson(API+'/league/'+ref.id),fetchJson(API+'/league/'+ref.id+'/users'),fetchJson(API+'/league/'+ref.id+'/rosters')]);
   if(!league?.league_id)throw Error('Sleeper did not return a league for that ID.');
   const playoffStart=Number(league.settings?.playoff_week_start)||15;
   const [players,weeklyMatchups]=await Promise.all([fetchJson(PROJ+'/1?season_type=regular'),Promise.all(Array.from({length:playoffStart-1},(_,i)=>fetchJson(API+'/league/'+ref.id+'/matchups/'+(i+1)).catch(()=>[])))]);
   const pool=players.filter(p=>p.player&&['QB','RB','WR','TE','K','DEF'].includes(p.player.position)).map(p=>({id:String(p.player_id),name:p.player.full_name||p.player.first_name+' '+p.player.last_name,pos:p.player.position==='DEF'?'DST':p.player.position,p:points(p,league.scoring_settings),team:p.team}));
   const byId=Object.fromEntries(pool.map(p=>[p.id,p])),user=Object.fromEntries(users.map(u=>[u.user_id,u]));
-  const teams=rosters.map(r=>({id:String(r.roster_id),name:user[r.owner_id]?.metadata?.team_name||user[r.owner_id]?.display_name||'Roster '+r.roster_id,players:(r.players||[]).map(id=>byId[id]).filter(Boolean),starters:new Set(r.starters||[])}));
+  const teams=rosters.map(r=>({id:String(r.roster_id),ownerId:String(r.owner_id||''),name:user[r.owner_id]?.metadata?.team_name||user[r.owner_id]?.display_name||'Roster '+r.roster_id,players:(r.players||[]).map(id=>byId[id]).filter(Boolean),starters:new Set(r.starters||[])}));
   const schedule=weeklyMatchups.map(rows=>{const groups={};(rows||[]).forEach(x=>{if(x.matchup_id!=null)(groups[x.matchup_id]=groups[x.matchup_id]||[]).push(String(x.roster_id))});return Object.values(groups).filter(g=>g.length===2)});
-  state={ref,league,slots:slots(league.roster_positions),pool,teams,schedule,settings:{playoffSpots:Number(league.settings?.playoff_teams)||Math.max(2,Math.round(teams.length/3)),playoffStart,sigma:20},defaults:null};
+  const st={ref,league,users,slots:slots(league.roster_positions),pool,teams,schedule,settings:{playoffSpots:Number(league.settings?.playoff_teams)||Math.max(2,Math.round(teams.length/3)),playoffStart,sigma:20},defaults:null};
+  st.defaults=JSON.stringify(st.settings);
+  return st;
+}
+async function connect(input){
+  const ref=window.DDProviders?.parse(input);
+  if(!ref)throw Error('Paste a Sleeper ID or a Sleeper, ESPN, or Yahoo league URL.');
+  if(ref.provider!=='sleeper')throw Error(ref.provider.toUpperCase()+' was recognized (league '+ref.id+'), but its authenticated adapter is not connected yet. Sleeper is live now.');
+  $('connectionStatus').className='wr-status';$('connectionStatus').textContent='Reading Sleeper league '+ref.id+'…';
+  state=await fetchLeague(ref.id);
   state.defaults=JSON.stringify(state.settings);
   sim=null;tradeFilter=null;
   $('playoffSpots').value=state.settings.playoffSpots;
   $('playoffStart').value=state.settings.playoffStart;
   $('sigma').value=state.settings.sigma;
-  $('teamPicker').innerHTML=teams.map((t,i)=>'<option value="'+i+'">'+esc(t.name)+'</option>').join('');
-  const saved=readShelf().find(x=>x.provider===ref.provider&&x.leagueId===String(ref.id));
-  if(saved&&saved.focusRosterId!=null){const i=teams.findIndex(t=>String(t.id)===String(saved.focusRosterId));if(i>=0)$('teamPicker').value=String(i)}
+  $('teamPicker').innerHTML=state.teams.map((t,i)=>'<option value="'+i+'">'+esc(t.name)+'</option>').join('');
+  $('teamPicker').value=String(pickMyTeam(state.teams,state.ref,state.users));
   LOADED.set(keyOf(ref.provider,ref.id),{state,sim:null});
   await loadMV();
-  rememberLeague(ref,league.name);
+  rememberLeague(ref,state.league.name);
   setLoaded(true);
   render();
   try{const u=new URL(location.href);u.searchParams.set('league',ref.id);history.replaceState(null,'',u.pathname+u.search+location.hash)}catch(e){}
@@ -3464,9 +3577,10 @@ function restore(key){
   $('playoffStart').value=state.settings.playoffStart;
   $('sigma').value=state.settings.sigma;
   $('teamPicker').innerHTML=state.teams.map((t,i)=>'<option value="'+i+'">'+esc(t.name)+'</option>').join('');
+  $('teamPicker').value=String(pickMyTeam(state.teams,state.ref,state.users));
   setLoaded(true);
   render();
-  if(sim){const me=state.teams[0];$('odds').innerHTML=Math.round(sim.odds[me.id]*100)+'<small>%</small>';
+  if(sim){const me=state.teams[+$('teamPicker').value||0];$('odds').innerHTML=Math.round(sim.odds[me.id]*100)+'<small>%</small>';
     $('oddsNote').textContent='Chance '+me.name+' makes the playoffs across 20,000 deterministic seasons.'}
   try{const u=new URL(location.href);u.searchParams.set('league',state.ref.id);history.replaceState(null,'',u.pathname+u.search+location.hash)}catch(e){}
   return true;
@@ -3665,9 +3779,10 @@ SHEETS=DDSheets({key:'warroom',mount:'#sheets',sheets:[
   {id:'rosters',label:'Rosters',panel:'#sheetRosters'},
   {id:'money',label:'Money',panel:'#sheetMoney'},
   {id:'trades',label:'Trades',panel:'#sheetTrades'},
+  {id:'all',label:'All Leagues',panel:'#sheetAll'},
   {id:'settings',label:'Settings',panel:'#sheetSettings'},
   {id:'method',label:'Receipts & Method',panel:'#sheetMethod'}
-]});
+],onShow(id){if(id==='all')renderPortfolio()}});
 
 document.addEventListener('click',e=>{
   const jump=e.target.closest('[data-sheet]');
@@ -3698,13 +3813,13 @@ $('connectForm').addEventListener('submit',async e=>{
 $('leagueSwitch').onchange=e=>{
   const v=e.target.value;
   if(!v){paintSwitch();return}
+  if(v==='__all'){paintSwitch();SHEETS.show('all');return}
   if(v==='__add'){paintSwitch();SHEETS.show('report');$('leagueInput').focus();return}
   const i=v.indexOf(':');openLeague(v.slice(0,i),v.slice(i+1));
 };
 $('teamPicker').onchange=()=>{
   tradeFilter=null;
-  if(state){const list=readShelf(),x=list.find(y=>keyOf(y.provider,y.leagueId)===keyOf(state.ref.provider,state.ref.id));
-    const team=state.teams[+$('teamPicker').value||0];if(x&&team){x.focusRosterId=Number(team.id);writeShelf(list);paintShelf();saveAccountShelf()}}
+  saveFocus();
   render();
 };
 $('simulate').onclick=()=>{const s=$('simStatus');s.className='wr-status';s.textContent='';try{runSim()}catch(err){s.className='wr-status bad';s.textContent=err.message}};
@@ -3725,6 +3840,14 @@ $('reset').onclick=()=>{
   render();
 });
 
+$('pfLoadAll').onclick=loadAllSaved;
+$('meName').value=myName();
+$('meName').onchange=()=>{
+  const value=$('meName').value.trim();
+  try{if(value)localStorage.setItem(ME_KEY,value);else localStorage.removeItem(ME_KEY)}catch(e){}
+  $('meStatus').textContent=value?'Saved on this device. Your explicit team choice in each league still wins.':'No display name saved; each league uses its saved team choice.';
+  if(state){$('teamPicker').value=String(pickMyTeam(state.teams,state.ref,state.users));render()}
+};
 setLoaded(false);
 paintShelf();paintSwitch();loadAccountShelf();
 addEventListener('dd-auth',loadAccountShelf);
@@ -3754,6 +3877,8 @@ window.DD_BOTCTX = {
 - THE TRADE FINDER IS A CANDIDATE SCREEN, NOT A FAIRNESS ORACLE. It cannot see acceptance probability, manager preferences, depth needs, injury risk, or dynasty value; never present a surviving proposal as one the rival would accept. IT PROPOSES, IT DOES NOT ACT. It never accepts, sends or executes anything. A proposal must pass THREE tests: both lineups improve when recomputed after the swap, neither side is left unable to fill a starting slot, AND the two players are within max($4, 35% of the dearer) in Public Market Value — the hand-maintained weekly auction-dollar snapshot at /data/pool.json. A swap that would leave either side short a startable player at some slot is refused whatever the points say. It will often return nothing, and returning nothing is a real answer rather than a failure.
 - ⚠️ NEVER PRESENT A LINEUP GAIN AS A REASON A RIVAL WOULD ACCEPT. A benched player adds zero to a starting-lineup total, so lineup gain alone would price a benched WR1 at a kicker. If anyone asks why a lopsided swap is not listed, that is the reason. The candidate value-band test uses PUBLIC MARKET VALUE in auction dollars, and you must always say which capture date those dollars are from — they are a weekly hand-maintained snapshot, not a live market. If a player has no published price the row falls back to model value over replacement and says so; never quote a fallback row as a market price.
 - SAVED LEAGUES use a local-first shelf. For signed-in UID accounts, only Sleeper league IDs and the optional focus-roster IDs sync privately through the Worker and follow the account across devices; league rosters, projections and simulations are fetched fresh and are not stored there. Signed-out users keep a device-only shelf. The same account shelf is shared with Last Dawg Standing.
+- ALL LEAGUES is a cross-league portfolio view. It computes each saved league inside that league's own scoring, roster and replacement-level context, and shows repeated-player exposure only after those leagues are loaded. It must never mix one league's replacement baseline into another.
+- TEAM IDENTITY is resolved in this order: the explicit team saved for that league, then an exact Sleeper display-name or team-name match from the optional identity field, then the first roster as a fallback. Never imply the name alone is an authenticated ownership claim.
 
 ` + (window.DDBotScan ? window.DDBotScan(5200) : "The page reader could not run, so nothing on the page can be read right now.")
 };
