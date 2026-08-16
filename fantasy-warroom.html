@@ -2409,6 +2409,11 @@ table.wr-money tr.avg td{border-top:2px solid var(--grid);color:var(--ink-3);fon
 .wr-radarcard.mine{border-color:var(--accent)}
 .wr-radarcard .rn{font-size:12px;font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wr-radarcard .rf{font-size:11px;color:var(--ink-3);margin-top:3px}
+.wr-teamh2{margin:0;position:relative;display:inline-block;max-width:100%}
+.wr-teamh2::after{content:"\25be";color:var(--accent);position:absolute;right:4px;top:50%;transform:translateY(-52%);pointer-events:none;font-size:.65em}
+.wr-teamh2 select{appearance:none;-webkit-appearance:none;font:inherit;font-weight:800;letter-spacing:-.02em;color:inherit;background:transparent;border:0;border-bottom:2px dashed color-mix(in srgb,var(--accent) 55%,transparent);border-radius:0;padding:0 26px 3px 2px;cursor:pointer;max-width:100%}
+.wr-teamh2 select:hover,.wr-teamh2 select:focus-visible{border-bottom-color:var(--accent);outline:none}
+.wr-nudge{color:var(--accent);font-weight:650}
 .wr-warn{border-left:4px solid var(--warn);background:color-mix(in srgb,var(--warn) 8%,transparent);
   border-radius:0 9px 9px 0;padding:12px 15px;margin-bottom:16px;font-size:14px}
 .wr-rec .lab{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-right:6px}
@@ -2536,7 +2541,8 @@ svg{display:block;max-width:100%;height:auto}
       <div class="wr-gradewrap">
         <div class="wr-gradebox"><div class="wr-grade" id="rcGrade">—</div><div class="wr-gradelab">Overall</div></div>
         <div class="wr-gradenote">
-          <h2 id="rcTeam">—</h2>
+          <h2 class="wr-teamh2"><select id="rcTeamSel" aria-label="Your team in this league"><option>—</option></select></h2>
+          <p class="wr-note wr-nudge wr-hide" id="rcNudge">Guessed at your team — tap the name above to set yours. Saved per league.</p>
           <p class="wr-note" id="rcSummary"></p>
           <div class="wr-subgrades" id="rcSub"></div>
         </div>
@@ -3146,7 +3152,8 @@ function renderReport(){
   const zStart=zOf(me.total,startersArr), zDepth=zOf(mineSplit.bn,depthArr);
   const overall=(zStart*2+zDepth)/3;   /* the lineup you start counts double; depth is insurance, not points */
 
-  $('rcTeam').textContent=me.name;
+  $('rcTeamSel').innerHTML=state.teams.map((t,i)=>'<option value="'+i+'"'+(t===me?' selected':'')+'>'+esc(t.name)+'</option>').join('');
+  $('rcNudge').classList.toggle('wr-hide',!state.focusGuessed);
   $('rcGrade').textContent=letter(overall);
   $('rcSub').innerHTML=
      '<div class="wr-sub"><b>'+letter(zStart)+'</b><span>Starters</span></div>'
@@ -3622,6 +3629,7 @@ function setLoaded(on){
 }
 
 function pickMyTeam(teams,ref,users){
+  state.focusGuessed=false;
   const saved=readShelf().find(x=>x.provider===ref.provider&&x.leagueId===String(ref.id));
   if(saved&&saved.focusRosterId!=null){const i=teams.findIndex(t=>String(t.id)===String(saved.focusRosterId));if(i>=0)return i}
   const wanted=myName().trim().toLowerCase();
@@ -3629,10 +3637,12 @@ function pickMyTeam(teams,ref,users){
     const u=users.find(x=>[x.display_name,x.metadata?.team_name].some(v=>String(v||'').trim().toLowerCase()===wanted));
     if(u){const i=teams.findIndex(t=>String(t.ownerId)===String(u.user_id));if(i>=0)return i}
   }
+  state.focusGuessed=true;
   return 0;
 }
 function saveFocus(){
   if(!state)return;
+  state.focusGuessed=false;
   const list=readShelf(),x=list.find(y=>keyOf(y.provider,y.leagueId)===keyOf(state.ref.provider,state.ref.id));
   const team=state.teams[+$('teamPicker').value||0];
   if(x&&team){x.focusRosterId=Number(team.id);writeShelf(list);paintShelf();saveAccountShelf()}
@@ -3937,6 +3947,12 @@ $('leagueSwitch').onchange=e=>{
   const i=v.indexOf(':');openLeague(v.slice(0,i),v.slice(i+1));
 };
 $('teamPicker').onchange=()=>{
+  tradeFilter=null;
+  saveFocus();
+  render();
+};
+$('rcTeamSel').onchange=e=>{
+  $('teamPicker').value=e.target.value;
   tradeFilter=null;
   saveFocus();
   render();
