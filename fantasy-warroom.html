@@ -2317,7 +2317,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 .sheet-tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 .wr-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-.wr-card{background:var(--surface-1);border:1px solid var(--grid);border-radius:12px;padding:18px}
+.wr-card{background:var(--surface-1);border:1px solid var(--grid);border-radius:12px;padding:18px;min-width:0}
 .wr-card h2,.wr-card h3{margin:0 0 6px}
 .wr-full{grid-column:1/-1}
 .wr-note{color:var(--ink-3);font-size:13px}
@@ -2389,7 +2389,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 .wr-rec.abstain{border-left-color:var(--ink-3)}
 .wr-rec h4{margin:0 0 5px;font-size:16px}
 .wr-rec p{margin:0 0 4px;font-size:14px;color:var(--ink-2)}
-.wr-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.wr-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr));gap:12px;margin-bottom:16px}
 .wr-tile{border:1px solid var(--grid);border-radius:11px;padding:13px 14px;background:var(--surface-1)}
 .wr-tile .tl{font-size:10px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3)}
 .wr-tile .tv{font-size:29px;font-weight:800;letter-spacing:-.04em;color:var(--accent);line-height:1.15;margin-top:3px}
@@ -2404,11 +2404,14 @@ table.wr-money tr.avg td{border-top:2px solid var(--grid);color:var(--ink-3);fon
 .wr-srlist .sr{display:flex;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--grid);font-size:13px}
 .wr-srlist .sr .p{flex:1;font-weight:650}
 .wr-srlist .sr .t{color:var(--ink-3);font-size:12px}
-.wr-radars{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:12px}
+.wr-radars{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(168px,100%),1fr));gap:12px}
 .wr-radarcard{border:1px solid var(--grid);border-radius:10px;padding:9px;background:var(--page);text-align:center}
 .wr-radarcard.mine{border-color:var(--accent)}
 .wr-radarcard .rn{font-size:12px;font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wr-radarcard .rf{font-size:11px;color:var(--ink-3);margin-top:3px}
+.wr-svg{display:block;width:100%;height:auto;margin:0 auto}
+.wr-svg-wide{max-width:1100px}.wr-svg-bars{max-width:980px}.wr-svg-small{max-width:620px}.wr-svg-radar{max-width:320px}
+.wr-svg-mini{max-width:150px}
 .wr-teamh2{margin:0;position:relative;display:inline-block;max-width:100%}
 .wr-teamh2::after{content:"\25be";color:var(--accent);position:absolute;right:4px;top:50%;transform:translateY(-52%);pointer-events:none;font-size:.65em}
 .wr-teamh2 select{appearance:none;-webkit-appearance:none;font:inherit;font-weight:800;letter-spacing:-.02em;color:inherit;background:transparent;border:0;border-bottom:2px dashed color-mix(in srgb,var(--accent) 55%,transparent);border-radius:0;padding:0 26px 3px 2px;cursor:pointer;max-width:100%}
@@ -2447,10 +2450,12 @@ svg{display:block;max-width:100%;height:auto}
 .wr-sync.good{color:var(--good)}.wr-sync.good::before{background:var(--good)}
 .wr-sync.bad{color:var(--bad)}.wr-sync.bad::before{background:var(--bad)}
 .wr-leaguehub .wr-connect form{margin-top:16px}
-.wr-leaguehub .wr-saved{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));margin-top:16px}
-.wr-leaguehub .wr-row{min-height:86px;border-radius:11px;padding:12px;flex-wrap:wrap}
+.wr-leaguehub .wr-saved{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr));margin-top:16px}
+.wr-leaguehub .wr-row{min-height:86px;border-radius:11px;padding:12px;flex-direction:column;align-items:stretch;gap:10px}
+.wr-leaguehub .wr-row .wr-grow b{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.25}
 .wr-leaguehub .wr-row.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--page))}
 .wr-leaguehub .wr-row small{display:block;margin-top:4px}.wr-league-actions{display:flex;gap:7px;margin-left:auto}
+.wr-leaguehub .wr-league-actions{margin-left:0;margin-top:auto}.wr-leaguehub .wr-league-actions .wr-mini{flex:1}
 .wr-empty-shelf{grid-column:1/-1;border:1px dashed var(--grid);border-radius:10px;padding:14px;color:var(--ink-3);font-size:13px}
 .wr-horizon{display:none;align-items:center;padding:2px;border:1px solid var(--grid);border-radius:999px;background:var(--page)}
 .wr-horizon.on{display:flex}.wr-horizon button{border:0;background:transparent;color:var(--ink-3);border-radius:999px;padding:6px 10px;font:750 11px/1 system-ui,sans-serif;white-space:nowrap}
@@ -2468,7 +2473,7 @@ svg{display:block;max-width:100%;height:auto}
 .wr-method dt{font-weight:750;margin-top:14px;color:var(--ink-1)}
 .wr-method dd{margin:3px 0 0;color:var(--ink-2);font-size:14px;max-width:78ch}
 @media(max-width:760px){
-  .wr-grid{grid-template-columns:1fr}
+  .wr-grid{grid-template-columns:minmax(0,1fr)}
   .wr-settings{grid-template-columns:repeat(2,1fr)}
   .sheet-tab{font-size:13px;padding:8px 11px 7px}
   .wr-strip{align-items:flex-start}
@@ -3102,7 +3107,7 @@ function svgRadar(axes,mine,avg,max){
   mine.forEach((v,i)=>{const[x,y]=pt(i,R*Math.max(0,Math.min(1,max[i]?v/max[i]:0)));
     g+='<circle cx="'+x+'" cy="'+y+'" r="3.5" style="fill:var(--accent)"><title>'+axes[i]+': you '+v.toFixed(1)+
        ' · league average '+avg[i].toFixed(1)+'</title></circle>'});
-  return '<svg viewBox="0 0 '+S+' '+S+'" width="'+S+'" role="img" aria-label="Positional shape against the league average">'+g+
+  return '<svg viewBox="0 0 '+S+' '+S+'" class="wr-svg wr-svg-radar" role="img" aria-label="Positional shape against the league average">'+g+
     '</svg><p class="wr-note">Solid is you; dashed is the league average.</p>';
 }
 
@@ -3119,7 +3124,7 @@ function svgDiverge(rows){
     g+='<text x="'+(r.v>=0?x+w+5:x-5)+'" y="'+(y+13)+'" text-anchor="'+(r.v>=0?'start':'end')+
        '" style="fill:var(--ink-3);font:600 11px system-ui">'+(r.v>=0?'+':'')+r.v.toFixed(1)+'</text>';
   });
-  return '<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" role="img" aria-label="Points per week above or below the league average by position">'+g+'</svg>';
+  return '<svg viewBox="0 0 '+W+' '+H+'" class="wr-svg wr-svg-small" role="img" aria-label="Points per week above or below the league average by position">'+g+'</svg>';
 }
 
 function svgSplit(mine,league){
@@ -3133,7 +3138,7 @@ function svgSplit(mine,league){
       +'<text x="'+(pad+ws+wb+6)+'" y="'+(y+15)+'" style="fill:var(--ink-3);font:600 11px system-ui">$'+(st+bn)+'</text>';
   };
   const avg={st:Math.round(league.reduce((a,t)=>a+t.st,0)/league.length),bn:Math.round(league.reduce((a,t)=>a+t.bn,0)/league.length)};
-  return '<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" role="img" aria-label="Starter and bench market value against the league average">'
+  return '<svg viewBox="0 0 '+W+' '+H+'" class="wr-svg wr-svg-small" role="img" aria-label="Starter and bench market value against the league average">'
     +row(14,'You',mine.st,mine.bn,true)+row(58,'League avg',avg.st,avg.bn,false)+'</svg>'
     +'<p class="wr-note">Solid is the lineup you start, faded is the bench. Dollars are '+esc(valueLabel())
     +(valueAsOf()?' as of '+esc(valueAsOf()):'')+'.</p>';
@@ -3262,7 +3267,7 @@ function mnStackedBars(M){
   const ax=pad+avg/max*barW;
   g+='<line x1="'+ax+'" y1="2" x2="'+ax+'" y2="'+(H-16)+'" style="stroke:var(--ink-3);stroke-dasharray:5 4"/>'
     +'<text x="'+(ax+4)+'" y="'+(H-4)+'" style="fill:var(--ink-3);font:600 10px system-ui">league avg '+fmt$(avg)+'</text>';
-  return '<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" role="img" aria-label="Starting-lineup market value by position, by team">'+g+'</svg>';
+  return '<svg viewBox="0 0 '+W+' '+H+'" class="wr-svg wr-svg-bars" role="img" aria-label="Starting-lineup market value by position, by team">'+g+'</svg>';
 }
 
 function mnScatterSvg(pts,fit){
@@ -3277,7 +3282,7 @@ function mnScatterSvg(pts,fit){
   g+='<line x1="'+X(0)+'" y1="'+Y(fit.a)+'" x2="'+X(xm)+'" y2="'+Y(fit.a+fit.b*xm)+'" style="stroke:var(--ink-3);stroke-dasharray:6 4;stroke-width:1.5"/>';
   pts.forEach(p=>{g+='<circle cx="'+X(p.x)+'" cy="'+Y(p.y)+'" r="4" style="fill:'+POS_COLOR[p.pos]+';opacity:.85"><title>'+
     esc(p.name)+' ('+p.pos+') · '+esc(p.team)+'\n'+fmt$(p.x)+' · '+p.y.toFixed(1)+'/wk · '+(p.r>=0?'+':'')+p.r.toFixed(1)+' against the fit</title></circle>'});
-  return '<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" role="img" aria-label="Market value against projected value over replacement">'+g+'</svg>';
+  return '<svg viewBox="0 0 '+W+' '+H+'" class="wr-svg wr-svg-wide" role="img" aria-label="Market value against projected value over replacement">'+g+'</svg>';
 }
 function mnMe(){return state.teams[+$('teamPicker').value||0]}
 
@@ -3378,7 +3383,7 @@ function renderMoney(){
   const avgAx=axes.map(P=>M.reduce((s,r)=>s+(r.byPos[P]||0),0)/M.length);
   $('mnRadars').innerHTML=ranked.map(r=>'<div class="wr-radarcard'+(r.t===me?' mine':'')+'">'
     +'<div class="rn" title="'+esc(r.t.name)+'">'+esc(r.t.name)+'</div>'
-    +svgRadar(axes,axes.map(P=>r.byPos[P]||0),avgAx,maxAx).replace('width="250"','width="150"').replace(/<p class="wr-note">[\s\S]*?<\/p>/,'')
+    +svgRadar(axes,axes.map(P=>r.byPos[P]||0),avgAx,maxAx).replace('wr-svg-radar','wr-svg-radar wr-svg-mini').replace(/<p class="wr-note">[\s\S]*?<\/p>/,'')
     +'<div class="rf">Starting '+fmt$(r.st)+'</div></div>').join('');
 
   const priced=all.length, held=state.teams.reduce((a,t)=>a+t.players.length,0);
@@ -3398,14 +3403,28 @@ function dualPrice(p){const season=mvOf(p,'season'),dynasty=mvOf(p,'dynasty');re
 function dualTeam(t){const rows=t.players.map(p=>({p,...dualPrice(p)})).filter(x=>x.season!=null&&x.dynasty!=null);return {t,rows,season:rows.reduce((a,x)=>a+x.season,0),dynasty:rows.reduce((a,x)=>a+x.dynasty,0)}}
 function dyScatter(points,{xKey,yKey,labelKey,aria,diagonal=false}){
   if(!points.length)return '<p class="wr-note">No players are priced in both views.</p>';
-  const W=640,H=380,l=48,r=18,t=18,b=42,xm=Math.max(1,...points.map(x=>x[xKey])),ym=Math.max(1,...points.map(x=>x[yKey]));
-  const X=v=>l+v/xm*(W-l-r),Y=v=>H-b-v/ym*(H-t-b),avgX=points.reduce((a,x)=>a+x[xKey],0)/points.length,avgY=points.reduce((a,x)=>a+x[yKey],0)/points.length;
-  let g=diagonal?'<line x1="'+X(0)+'" y1="'+Y(0)+'" x2="'+X(Math.min(xm,ym))+'" y2="'+Y(Math.min(xm,ym))+'" style="stroke:var(--ink-3);stroke-dasharray:6 4;opacity:.7"/>'
+  const W=640,H=380,l=56,r=18,t=18,b=46;
+  /* ⚠️ Zero-anchored axes drew a league of $128–$224 teams into one corner of an
+     empty canvas. Fit the domain to the data with an 8% margin instead. Where the
+     y=x diagonal is drawn, both axes MUST share a domain or the 45° line lies. */
+  const span=vals=>{const lo=Math.min(...vals),hi=Math.max(...vals),pad=Math.max(1,(hi-lo)*.08);
+    return [Math.max(0,lo-pad),hi+pad]};
+  let[x0,x1]=span(points.map(p=>p[xKey])),[y0,y1]=span(points.map(p=>p[yKey]));
+  if(diagonal){const lo=Math.min(x0,y0),hi=Math.max(x1,y1);x0=y0=lo;x1=y1=hi}
+  const X=v=>l+(v-x0)/((x1-x0)||1)*(W-l-r),Y=v=>H-b-(v-y0)/((y1-y0)||1)*(H-t-b);
+  const avgX=points.reduce((a,x)=>a+x[xKey],0)/points.length,avgY=points.reduce((a,x)=>a+x[yKey],0)/points.length;
+  const ticks=(lo,hi)=>[0,1,2,3].map(i=>lo+(hi-lo)*i/3);
+  let g='';
+  ticks(x0,x1).forEach(v=>{g+='<line x1="'+X(v)+'" y1="'+t+'" x2="'+X(v)+'" y2="'+(H-b)+'" style="stroke:var(--grid);opacity:.7"/>'
+    +'<text x="'+X(v)+'" y="'+(H-b+15)+'" text-anchor="middle" style="fill:var(--ink-3);font:600 10px system-ui">'+fmt$(Math.round(v))+'</text>'});
+  ticks(y0,y1).forEach(v=>{g+='<line x1="'+l+'" y1="'+Y(v)+'" x2="'+(W-r)+'" y2="'+Y(v)+'" style="stroke:var(--grid);opacity:.7"/>'
+    +'<text x="'+(l-6)+'" y="'+(Y(v)+3.5)+'" text-anchor="end" style="fill:var(--ink-3);font:600 10px system-ui">'+fmt$(Math.round(v))+'</text>'});
+  g+=diagonal?'<line x1="'+X(x0)+'" y1="'+Y(y0)+'" x2="'+X(x1)+'" y2="'+Y(y1)+'" style="stroke:var(--ink-3);stroke-dasharray:6 4;opacity:.7"/>'
     :'<line x1="'+X(avgX)+'" y1="'+t+'" x2="'+X(avgX)+'" y2="'+(H-b)+'" style="stroke:var(--ink-3);stroke-dasharray:5 4;opacity:.55"/><line x1="'+l+'" y1="'+Y(avgY)+'" x2="'+(W-r)+'" y2="'+Y(avgY)+'" style="stroke:var(--ink-3);stroke-dasharray:5 4;opacity:.55"/>';
   points.forEach(x=>{const color=x.color||POS_COLOR[x.p?.pos]||'var(--accent)';g+='<circle cx="'+X(x[xKey])+'" cy="'+Y(x[yKey])+'" r="'+(x.mine?6:4.5)+'" style="fill:'+color+';opacity:'+(x.mine?1:.72)+';stroke:'+(x.mine?'var(--ink-1)':'none')+';stroke-width:1.5"><title>'+esc(x[labelKey])+' · this season '+fmt$(x[xKey])+' · dynasty '+fmt$(x[yKey])+'</title></circle>'});
-  g+='<text x="'+((l+W-r)/2)+'" y="'+(H-7)+'" text-anchor="middle" style="fill:var(--ink-3);font:700 11px system-ui">This-season value →</text>'+
-    '<text x="14" y="'+((t+H-b)/2)+'" text-anchor="middle" transform="rotate(-90 14 '+((t+H-b)/2)+')" style="fill:var(--ink-3);font:700 11px system-ui">Overall dynasty value →</text>';
-  return '<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" role="img" aria-label="'+esc(aria)+'">'+g+'</svg>';
+  g+='<text x="'+((l+W-r)/2)+'" y="'+(H-4)+'" text-anchor="middle" style="fill:var(--ink-3);font:700 11px system-ui">This-season value →</text>'+
+    '<text x="13" y="'+((t+H-b)/2)+'" text-anchor="middle" transform="rotate(-90 13 '+((t+H-b)/2)+')" style="fill:var(--ink-3);font:700 11px system-ui">Overall dynasty value →</text>';
+  return '<svg viewBox="0 0 '+W+' '+H+'" class="wr-svg wr-svg-wide" role="img" aria-label="'+esc(aria)+'">'+g+'</svg>';
 }
 function renderDynastyLens(){
   if(!$('dyStatus')||!state)return;
