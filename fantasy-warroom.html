@@ -2428,7 +2428,15 @@ table.wr-money tr.avg td{border-top:2px solid var(--grid);color:var(--ink-3);fon
 .wr-teamh2::after{content:"\25be";color:var(--accent);position:absolute;right:4px;top:50%;transform:translateY(-52%);pointer-events:none;font-size:.65em}
 .wr-teamh2 select{appearance:none;-webkit-appearance:none;font:inherit;font-weight:800;letter-spacing:-.02em;color:inherit;background:transparent;border:0;border-bottom:2px dashed color-mix(in srgb,var(--accent) 55%,transparent);border-radius:0;padding:0 26px 3px 2px;cursor:pointer;max-width:100%;min-width:0;flex:0 1 auto;text-overflow:ellipsis}
 .wr-teamh2 select:hover,.wr-teamh2 select:focus-visible{border-bottom-color:var(--accent);outline:none}
-.wr-nudge{color:var(--accent);font-weight:650}
+.wr-gate{border-color:color-mix(in srgb,var(--accent) 45%,var(--grid));background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 7%,var(--surface-1)),var(--surface-1) 58%)}
+.wr-gate h2{font-size:clamp(20px,3vw,27px)}
+.wr-chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(210px,100%),1fr));gap:9px;margin-top:15px}
+.wr-teamchip{display:block;width:100%;text-align:left;border:1px solid var(--grid);border-radius:11px;padding:11px 13px;background:var(--page);color:var(--ink-1);cursor:pointer;font:inherit;transition:transform .09s ease,border-color .09s ease,background .09s ease}
+.wr-teamchip b{display:block;font-size:15px;font-weight:750;letter-spacing:-.01em;overflow-wrap:anywhere}
+.wr-teamchip small{display:block;margin-top:3px;font-size:11px;color:var(--ink-3)}
+.wr-teamchip:hover,.wr-teamchip:focus-visible{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--page));transform:translateY(-1px);outline:none}
+.wr-teamchip:active{transform:translateY(0)}
+@media(prefers-reduced-motion:reduce){.wr-teamchip{transition:none}.wr-teamchip:hover{transform:none}}
 .wr-warn{border-left:4px solid var(--warn);background:color-mix(in srgb,var(--warn) 8%,transparent);
   border-radius:0 9px 9px 0;padding:12px 15px;margin-bottom:16px;font-size:14px}
 .wr-rec .lab{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-right:6px}
@@ -2535,6 +2543,11 @@ svg{display:block;max-width:100%;height:auto}
 
 <!-- ============================= REPORT CARD ============================= -->
 <section id="sheetReport">
+  <article class="wr-card wr-full wr-gate wr-hide" id="teamGate">
+    <h2 id="gateTitle">Which team is yours?</h2>
+    <p class="wr-note" id="gateNote">Pick it once. Everything on this page is measured against it, so nothing is calculated until you do.</p>
+    <div class="wr-chips" id="gateChips"></div>
+  </article>
   <div class="wr-leaguehub">
     <div class="wr-leaguehead">
       <div><h2>Your fantasy leagues</h2><p>Add once. Open or switch anytime.</p></div>
@@ -2566,7 +2579,6 @@ svg{display:block;max-width:100%;height:auto}
         <div class="wr-gradebox"><div class="wr-grade" id="rcGrade">—</div><div class="wr-gradelab">Overall</div></div>
         <div class="wr-gradenote">
           <h2 class="wr-teamh2"><select id="rcTeamSel" aria-label="Your team in this league"><option>—</option></select></h2>
-          <p class="wr-note wr-nudge wr-hide" id="rcNudge">Guessed at your team — tap the name above to set yours. Saved per league.</p>
           <p class="wr-note" id="rcSummary"></p>
           <div class="wr-subgrades" id="rcSub"></div>
         </div>
@@ -3179,7 +3191,7 @@ function renderReport(){
   const overall=(zStart*2+zDepth)/3;   /* the lineup you start counts double; depth is insurance, not points */
 
   $('rcTeamSel').innerHTML=state.teams.map((t,i)=>'<option value="'+i+'"'+(t===me?' selected':'')+'>'+esc(t.name)+'</option>').join('');
-  $('rcNudge').classList.toggle('wr-hide',!state.focusGuessed);
+
   $('rcGrade').textContent=letter(overall);
   $('rcSub').innerHTML=
      '<div class="wr-sub"><b>'+letter(zStart)+'</b><span>Starters</span></div>'
@@ -3656,8 +3668,35 @@ function paintShelf(){
 }
 
 /* ------------------------------------------------------- connection ------- */
+/* One card, every team in the league, one tap. Painted only while the team is
+   unconfirmed — see setLoaded, which hides every team-specific surface until then. */
+function paintTeamGate(){
+  const gate=$('teamGate'),show=!!state&&state.focusGuessed===true;
+  gate.classList.toggle('wr-hide',!show);
+  if(!show)return;
+  $('gateTitle').textContent='Which team is yours in '+state.league.name+'?';
+  $('gateChips').innerHTML=state.teams.map((t,i)=>{
+    const {starters}=chooseStarters(t.players,state.slots);
+    return '<button type="button" class="wr-teamchip" data-team-index="'+i+'">'
+      +'<b>'+esc(t.name)+'</b><small>'+starters.length+' starters · '+t.players.length+' rostered</small></button>';
+  }).join('');
+  $('gateChips').querySelectorAll('[data-team-index]').forEach(b=>{
+    b.onclick=()=>{
+      $('teamPicker').value=b.dataset.teamIndex;
+      tradeFilter=null;
+      saveFocus();          /* clears focusGuessed and persists the choice */
+      render();
+      setLoaded(true);
+      $('strip').scrollIntoView({block:'start',behavior:'smooth'});
+    };
+  });
+}
+
 function setLoaded(on){
-  document.querySelectorAll('.wr-has-league').forEach(el=>el.classList.toggle('wr-hide',!on));
+  /* ⚠️ A grade for a roster that might not be yours is worse than no grade. Every
+     team-specific surface stays hidden until the team is confirmed for this league. */
+  const ready=on&&!(state&&state.focusGuessed);
+  document.querySelectorAll('.wr-has-league').forEach(el=>el.classList.toggle('wr-hide',!ready));
   document.querySelectorAll('.wr-needs-league').forEach(el=>el.classList.toggle('wr-hide',on));
   ['playoffSpots','playoffStart','sigma','baseline'].forEach(id=>{$(id).disabled=!on});
   $('reset').classList.toggle('wr-hide',!on);
@@ -3669,7 +3708,7 @@ function setLoaded(on){
   $('valueHorizon').classList.toggle('on',on&&isDynastyLeague());
   $('valueHorizon').querySelectorAll('[data-horizon]').forEach(b=>b.classList.toggle('on',on&&state.valueHorizon===b.dataset.horizon));
   $('flowDynasty').classList.toggle('wr-hide',on&&!isDynastyLeague());
-  paintStations();paintShelf();paintSwitch();
+  paintTeamGate();paintStations();paintShelf();paintSwitch();
 }
 
 function pickMyTeam(teams,ref,users){
