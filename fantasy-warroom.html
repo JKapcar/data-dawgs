@@ -2301,7 +2301,9 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
    No literal colours. Every value is a site token, so the theme button works.
    ========================================================================== */
 
-.wr-strip{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:20px 0 4px;padding:12px 15px;
+.wr-strip .wr-grow b{display:block;font-size:15px;letter-spacing:-.01em}
+.wr-strip .wr-meta{display:block;margin-top:2px;font-size:12px;color:var(--ink-3)}
+.wr-strip{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:20px 0 4px;padding:12px 15px;
   border:1px solid var(--grid);background:var(--surface-1);border-radius:10px}
 .wr-strip .wr-dot{width:9px;height:9px;border-radius:50%;background:var(--ink-3);flex:none}
 .wr-strip.on .wr-dot{background:var(--good)}
@@ -2455,7 +2457,8 @@ svg{display:block;max-width:100%;height:auto}
 .wr-row .wr-grow{flex:1;min-width:0}
 .wr-row .wr-grow b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .wr-row small{color:var(--ink-3)}
-.wr-mini{border:1px solid var(--grid);background:var(--surface-1);color:var(--ink-1);border-radius:6px;
+.wr-strip select{flex:none;border:1px solid var(--grid);background:var(--surface-1);color:var(--ink-2);border-radius:999px;padding:8px 12px;font:700 12px/1 system-ui,sans-serif;max-width:230px;text-overflow:ellipsis;overflow:hidden;white-space:nowrap}
+.wr-mini{border:1px solid var(--grid);background:var(--surface-1);color:var(--ink-1);border-radius:999px;
   padding:6px 10px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .wr-mini:hover{border-color:var(--accent);color:var(--accent)}
 .wr-mini.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--surface-1));color:var(--accent);font-weight:750}
@@ -2483,7 +2486,13 @@ svg{display:block;max-width:100%;height:auto}
 .wr-flow{display:flex;align-items:center;gap:7px;overflow-x:auto;padding:10px 0 3px;margin-bottom:12px;scrollbar-width:none}
 .wr-flow::-webkit-scrollbar{display:none}.wr-flow button,.wr-flow select{flex:none;border:1px solid var(--grid);background:var(--surface-1);color:var(--ink-2);border-radius:999px;padding:8px 12px;font:700 12px/1 system-ui,sans-serif}
 .wr-flow button.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--surface-1));color:var(--accent)}
-.wr-flow select{max-width:none;padding-right:26px}.sheetbar{display:none!important}
+/* One language for the whole row: the selects match the pills exactly and carry a
+   drawn caret instead of the platform's. The native popup is deliberately kept —
+   on a phone it is a full-height wheel, better than anything hand-built here. */
+.wr-flow select,.wr-strip select{max-width:none;appearance:none;-webkit-appearance:none;padding-right:28px;cursor:pointer;background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 15px) calc(50% + 1px),calc(100% - 10px) calc(50% + 1px);background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+.wr-flow select:hover,.wr-strip select:hover{border-color:var(--accent);color:var(--accent)}
+/* A group whose sheet is open reads active, exactly as a pill does. */
+.wr-flow select.on{border-color:var(--accent);background-color:color-mix(in srgb,var(--accent) 14%,var(--surface-1));color:var(--accent)}.sheetbar{display:none!important}
 .wr-identity{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px dashed var(--grid)}
 .wr-identity label{font-size:12px;color:var(--ink-3);flex:1;min-width:210px;max-width:360px}
 .wr-identity input{display:block;width:100%;margin-top:4px;padding:9px 11px;border:1px solid var(--grid);border-radius:8px;
@@ -3702,7 +3711,8 @@ function setLoaded(on){
   $('reset').classList.toggle('wr-hide',!on);
   $('strip').classList.toggle('on',on);
   $('stripText').innerHTML=on
-    ? '<b>'+esc(state.league.name)+'</b> · '+esc(state.ref.provider)+' · '+state.teams.length+' teams · rosters frozen '+new Date().toLocaleString([],{dateStyle:'short',timeStyle:'short'})
+    ? '<b>'+esc(state.league.name)+'</b><span class="wr-meta">'+esc(state.ref.provider)+' · '+state.teams.length
+      +' teams · rosters frozen '+new Date().toLocaleString([],{dateStyle:'short',timeStyle:'short'})+'</span>'
     : 'No league connected. Add or open one to begin.';
   $('stripAction').textContent='Manage leagues';
   $('valueHorizon').classList.toggle('on',on&&isDynastyLeague());
@@ -3982,6 +3992,10 @@ function syncFlow(id){
   document.querySelectorAll('[data-flow]').forEach(b=>b.classList.toggle('on',b.dataset.flow===id));
   $('flowLeague').value=['standings','rosters','money'].includes(id)?id:'';
   $('flowMore').value=['settings','method'].includes(id)?id:'';
+  /* Without this, opening Standings left every pill inactive and the group looking
+     untouched — nothing on screen said which sheet you were on. */
+  $('flowLeague').classList.toggle('on',!!$('flowLeague').value);
+  $('flowMore').classList.toggle('on',!!$('flowMore').value);
 }
 SHEETS=DDSheets({key:'warroom',mount:'#sheets',sheets:[
   {id:'report',label:'Report Card',panel:'#sheetReport'},
