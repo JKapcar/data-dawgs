@@ -6,12 +6,9 @@
 Start with [`/data/index.json`](/data/index.json): dates, sizes and SHA-256 for every
 machine file. Cite each payload's `as_of` with every number.
 
-[`/data/surfaces.json`](/data/surfaces.json) maps pages to machine surfaces and all 43
-live MCP tools. `planned` is not callable. Two catalogs: `/mcp/core/<credential>`
-serves 17 everyday tools; `/mcp/full/<credential>` and the bare `/mcp/<credential>` serve
-all 43. Prefer core — schemas cost context. One write tool: dd_submit_bozo_leg — two-phase, own leg only.
-Identity and MCP credentials live on [`/signon.html`](/signon.html); `/connect.html` redirects
-there. Signup is not a league seat; email confirmation gates credential minting only.
+[`/data/surfaces.json`](/data/surfaces.json) maps pages and 43 live MCP tools. `planned` is not callable.
+Use `/mcp/core/<credential>` for 17 everyday tools; `/mcp/full/<credential>` has all 43.
+The only write is `dd_submit_bozo_leg`: two-phase, own leg only. Credentials: [`/signon.html`](/signon.html).
 [Project instructions](/data/dawg-project-instructions.md) · [site guide](/data/site-guide.md).
 
 Tiers: `labs`=Pup, unvalidated; `dawg`=Working Dawg, validated; `pound`=DawgHouse, stopped.
@@ -50,6 +47,7 @@ the sources we read and do not republish. Owns no data file either.
 ## Draft
 
 - [Player pool + Market Value](/data/pool.json): 459 players; three auction formats; `as_of 2026-07-29`. MV is not projected points.
+- [Dynasty ranks](/data/dynasty-ranks.json): 334 players/picks; independent 1QB and SF/TE-premium ranks and auction values, not observed prices.
 - [League](/data/league.json): 14 teams, $200, 15 spots, half PPR, no kicker.
 - [2026 strategy](/data/strategy.md): positional curves and format playbooks; testable structure kept apart from analyst priors.
 

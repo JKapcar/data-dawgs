@@ -212,6 +212,11 @@
      "status": "live"
     },
     {
+     "kind": "json",
+     "url": "/data/dynasty-ranks.json",
+     "status": "live"
+    },
+    {
      "kind": "mcp",
      "tool": "dd_draft_pool",
      "status": "live"
@@ -220,8 +225,8 @@
    "reading": [
     {
      "url": "/master.html",
-     "title": "Player pool + Market Value",
-     "covers": "The full player pool as a page: every Market Value in auction dollars, sortable and filterable, with the staleness of the snapshot stated on the page rather than in a footnote."
+     "title": "Player pool: this season + overall dynasty",
+     "covers": "A toggled player table: dated this-season Market Value plus independent overall dynasty ranks and auction values for 1QB and Superflex / TE-premium formats. Each view states its source and limitations."
     }
    ],
    "planned": [

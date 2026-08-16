@@ -2623,8 +2623,8 @@ svg{display:block;max-width:100%;height:auto}
 <section id="sheetMoney" hidden>
   <div class="wr-empty wr-needs-league">
     <h3>What your roster is worth, and how that compares</h3>
-    <p>Every rostered player is priced against Public Market Value — the hand-maintained weekly auction-dollar
-    snapshot this site already drafts on. That turns a roster into one number you can put next to everyone else's,
+    <p>Every rostered player is priced against the league-matched horizon — the dated this-season market for redraft
+    and keeper, or the independent overall board for dynasty. That turns a roster into one number you can put next to everyone else's,
     and splits it into the money you start and the money you sit.</p>
     <button class="wr-btn" data-sheet="report">Manage your leagues</button>
   </div>
@@ -2704,10 +2704,10 @@ svg{display:block;max-width:100%;height:auto}
       <div class="wr-filter" id="filterbar"></div>
       <p class="wr-note" id="tradeNote">This is a <b>candidate screen</b>, not a fairness oracle. A pairing survives three gates: both starting
       lineups improve after the swap, neither side is left unable to fill a starting slot, and the two players carry
-      near-equal <b>Public Market Value</b> — the hand-maintained weekly auction-dollar snapshot this site already
-      drafts on. Market value is what stops it offering you a kicker for a benched WR1: your lineup is delighted, and
-      the market says $1 against $23. What it cannot see: whether a manager would actually accept, their preferences,
-      depth needs, injury risk, or dynasty value. Kickers and defenses are excluded by default. Nothing is forced,
+      near-equal <b>league-matched auction value</b> — this-season market value for redraft, overall dynasty value for
+      dynasty. That screen is what stops it offering you a kicker for a benched WR1: your lineup is delighted, and
+      the value board says $1 against $23. What it cannot see: whether a manager would actually accept, their preferences,
+      depth needs, or injury risk. Kickers and defenses are excluded by default. Nothing is forced,
       and no proposal is sent anywhere.</p>
       <div id="trades"></div>
     </article>
@@ -2798,7 +2798,12 @@ svg{display:block;max-width:100%;height:auto}
         arithmetic was right and the question was wrong. Market value asks the question a league-mate actually
         answers. <b>Prices are a dated snapshot, not a live market</b>, and every board says which date it is using.
         This is a candidate screen, not a fairness oracle: it cannot see acceptance probability, a manager's
-        preferences, depth needs, injury risk, or dynasty value.</dd>
+        preferences, depth needs, injury risk, or multi-player construction.</dd>
+        <dt>Which value horizon is used</dt><dd>Redraft and keeper leagues use the dated this-season market snapshot in
+        <a href="/data/pool.json"><code>/data/pool.json</code></a>. Sleeper dynasty leagues use the independent overall
+        dynasty board in <a href="/data/dynasty-ranks.json"><code>/data/dynasty-ranks.json</code></a>, selecting 1QB or
+        Superflex / TE-premium values from the actual roster slots. Keeper rules vary too much to infer a multi-year value
+        without contract length and keeper cost, so the page labels them and stays on this-season values.</dd>
         <dt>Not modeled</dt>
         <dd>Injuries, byes, trades, waivers, lineup decisions, in-season projection updates, and correlation between
         the two teams in a matchup. Before three completed weeks, σ is a stated generic assumption, not an estimate
@@ -2921,7 +2926,7 @@ const LOADED=new Map(),keyOf=(provider,id)=>provider+':'+id;
    exactly what the trade finder was missing: model points say a benched WR1 is worth a
    kicker, the market says $23 against $1. Loaded once per session and shared by every
    league. If it fails to load the finder falls back to model value and says so per row. */
-let MV=null;
+let MV=null,DYNASTY_MV=null;
 
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fnv=s=>{let h=2166136261;for(let i=0;i<s.length;i++)h=Math.imul(h^s.charCodeAt(i),16777619);return h>>>0};
@@ -2977,6 +2982,18 @@ async function loadMV(){
   }catch(e){ MV={by:new Map(),asOf:null,source:'',failed:true}; }
   return MV;
 }
+async function loadDynastyMV(){
+  if(DYNASTY_MV)return DYNASTY_MV;
+  try{
+    const j=await (await fetch('data/dynasty-ranks.json',{cache:'no-cache'})).json(),by=new Map();
+    (j.data||[]).forEach(r=>by.set(mvKey(r.name),r));
+    DYNASTY_MV={by,asOf:j.as_of||null,source:j.source||''};
+  }catch(e){DYNASTY_MV={by:new Map(),asOf:null,source:'',failed:true}}
+  return DYNASTY_MV;
+}
+function usesDynasty(){return Number(state?.league?.settings?.type)===2}
+function valueLabel(){return usesDynasty()?'Overall dynasty value':'Public Market Value'}
+function valueAsOf(){return (usesDynasty()?DYNASTY_MV:MV)?.asOf||null}
 /* Which auction column this league actually drafts in. */
 function mvColumn(){
   if(state.slots.SUPERFLEX)return 'sf';
@@ -2984,6 +3001,12 @@ function mvColumn(){
   return rec>=1?'full':'half';
 }
 function mvOf(p){
+  if(usesDynasty()){
+    if(!DYNASTY_MV||!DYNASTY_MV.by.size)return null;
+    const row=DYNASTY_MV.by.get(mvKey(p.name));if(!row)return null;
+    const v=Number(state.slots.SUPERFLEX?row.two_qb_auction:row.one_qb_auction);
+    return Number.isFinite(v)?v:null;
+  }
   if(!MV||!MV.by.size)return null;
   const row=p.pos==='DST'?MV.by.get('dst:'+String(p.team||'').toUpperCase()):MV.by.get(mvKey(p.name));
   if(!row)return null;
@@ -3076,8 +3099,8 @@ function svgSplit(mine,league){
   const avg={st:Math.round(league.reduce((a,t)=>a+t.st,0)/league.length),bn:Math.round(league.reduce((a,t)=>a+t.bn,0)/league.length)};
   return '<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" role="img" aria-label="Starter and bench market value against the league average">'
     +row(14,'You',mine.st,mine.bn,true)+row(58,'League avg',avg.st,avg.bn,false)+'</svg>'
-    +'<p class="wr-note">Solid is the lineup you start, faded is the bench. Dollars are Public Market Value'
-    +(MV&&MV.asOf?' as of '+esc(MV.asOf):'')+'.</p>';
+    +'<p class="wr-note">Solid is the lineup you start, faded is the bench. Dollars are '+esc(valueLabel())
+    +(valueAsOf()?' as of '+esc(valueAsOf()):'')+'.</p>';
 }
 
 function renderReport(){
@@ -3136,7 +3159,7 @@ function renderReport(){
       why:'Against '+best.o.name+'. '+(best.av.basis==='market'?'$'+best.av.give+' out against $'+best.av.get+' in':'model value '+best.av.give.toFixed(1)+' out against '+best.av.get.toFixed(1)+' in')
         +', and both starting lineups improve — yours by '+best.mine.toFixed(1)+'/wk, theirs by '+best.theirs.toFixed(1)+'/wk.',
       alt:'The full board is on the Trades sheet; this is only the top of it.',
-      rev:'It stops being fair the moment the market moves — these prices are dated '+(MV&&MV.asOf?MV.asOf:'unknown')+'.'});
+      rev:'The value screen is only as current as its source — these values are dated '+(valueAsOf()||'unknown')+'.'});
   }else{
     recs.push({cls:'abstain',h:'No trade to recommend right now',
       why:'Nothing on the board both improves the two starting lineups and trades near-equal market value. That is a real answer, not an empty screen.',
@@ -3239,14 +3262,14 @@ function renderMoney(){
     ['Leanest roster',esc(leanest.t.name).slice(0,14),fmt$(leanest.total)]
   ].map(([l,v,d])=>'<div class="wr-tile"><div class="tl">'+l+'</div><div class="tv">'+v+'</div><div class="td">'+d+'</div></div>').join('');
 
-  /* dynasty and keeper leagues get an explicit warning: this price list is a REDRAFT one */
+  /* The horizon follows league type. Dynasty gets the independent overall board; keeper
+     still uses this-season market because retained-year rules are not available here. */
   const type=Number(state.league?.settings?.type);
-  $('mnDynasty').innerHTML=(type===1||type===2)
-    ? '<div class="wr-warn"><b>'+(type===2?'Dynasty':'Keeper')+' league detected.</b> These prices are a redraft auction list — '
-      +'what a player is worth for <i>this season only</i>. In a league where you keep him, that systematically underprices '
-      +'young players and overprices ageing ones. The comparisons below are still internally consistent; the dollars are not '
-      +'dynasty dollars, and nothing here knows a player\u2019s age.</div>'
-    : '';
+  $('mnDynasty').innerHTML=type===2
+    ? '<div class="wr-status good"><b>Dynasty league detected.</b> Money, roster value, and the trade value-band use '+
+      (state.slots.SUPERFLEX?'Superflex / TE-premium ranks with 2QB auction dollars.':'1QB ranks and 1QB auction dollars.')+
+      ' These are independent analyst estimates, not an observed market or points projection.</div>'
+    :type===1?'<div class="wr-warn"><b>Keeper league detected.</b> Keeper duration and cost rules are unavailable, so this view remains this-season market value rather than pretending to know the keeper horizon.</div>':'';
 
   /* ---- table, sortable, league-average row pinned regardless of sort ---- */
   const cols=[['name','Team',0],['total','Total',1],['st','Starting',1],['bn','Bench',1],
@@ -3286,8 +3309,8 @@ function renderMoney(){
   all.forEach(p=>p.r=p.y-(a+b*p.x));
   const shown=mnTeam==='ALL'?all:all.filter(p=>String(p.ti)===String(mnTeam));
   const above=shown.filter(p=>p.r>0).length;
-  $('mnScatterNote').innerHTML='Dots above the dashed fit produce more per dollar than the market\u2019s price implies; '
-    +'below it, you are paying for name value or for something a week-1 projection cannot see. <b>'+shown.length
+  $('mnScatterNote').innerHTML='Dots above the dashed fit produce more per dollar than the '+esc(valueLabel().toLowerCase())+' implies; '
+    +'below it, the value source prices something a week-1 projection cannot see. <b>'+shown.length
     +'</b> priced player'+(shown.length===1?'':'s')+' shown · '+above+' above the line. '
     +'Kickers and defenses are left out: they all cost about a dollar, so every one of them clears a league-wide fit '
     +'and they would crowd out everything worth looking at.';
@@ -3314,8 +3337,8 @@ function renderMoney(){
     +'<div class="rf">Starting '+fmt$(r.st)+'</div></div>').join('');
 
   const priced=all.length, held=state.teams.reduce((a,t)=>a+t.players.length,0);
-  $('mnCaveat').textContent='Prices are Public Market Value ('+mvColumn().toUpperCase()+') captured '
-    +(MV&&MV.asOf?MV.asOf:'unknown date')+' and updated by hand each week. '+priced+' of '+held
+  $('mnCaveat').textContent='Prices are '+valueLabel()+(usesDynasty()?' ('+(state.slots.SUPERFLEX?'SF / 2QB':'1QB')+')':' ('+mvColumn().toUpperCase()+')')+' captured '
+    +(valueAsOf()||'unknown date')+'. '+priced+' of '+held
     +' rostered players carry a published price; the rest are counted as $0 in these totals and shown in the "No price" column, '
     +'so a team full of deep waiver adds will read leaner than it is. Per-axis scaling on the radars is relative to this league, '
     +'so a shape maxed at a position only means nobody else spent there either.';
@@ -3338,7 +3361,7 @@ function leagueRow(entry){
   });
 }
 async function loadAllSaved(){
-  const btn=$('pfLoadAll');btn.disabled=true;await loadMV();
+  const btn=$('pfLoadAll');btn.disabled=true;await Promise.all([loadMV(),loadDynastyMV()]);
   const todo=readShelf().filter(x=>x.provider==='sleeper'&&!LOADED.has(keyOf(x.provider,x.leagueId)));
   let done=0;
   for(const x of todo){
@@ -3361,7 +3384,7 @@ function renderPortfolio(){
   const money=loaded.reduce((a,r)=>a+r.total,0),withOdds=loaded.filter(r=>r.odds!=null);
   $('pfTiles').innerHTML=loaded.length?[
     ['Leagues on the desk',String(loaded.length),pending.length?pending.length+' not loaded':'all loaded'],
-    ['Your combined rosters',fmt$(money),'Public Market Value'+(MV&&MV.asOf?' · '+MV.asOf:'')],
+    ['Your combined rosters',fmt$(money),'league-matched value horizon'],
     ['Average finish (proj.)','#'+(loaded.reduce((a,r)=>a+r.rank,0)/loaded.length).toFixed(1),'by starter value, within each league'],
     ['Playoff odds known',withOdds.length+' of '+loaded.length,withOdds.length?Math.round(withOdds.reduce((a,r)=>a+r.odds,0)/withOdds.length*100)+'% avg where run':'run sims per league']
   ].map(([l,v,d])=>'<div class="wr-tile"><div class="tl">'+l+'</div><div class="tv">'+v+'</div><div class="td">'+d+'</div></div>').join('')
@@ -3559,7 +3582,7 @@ async function connect(input){
   $('teamPicker').innerHTML=state.teams.map((t,i)=>'<option value="'+i+'">'+esc(t.name)+'</option>').join('');
   $('teamPicker').value=String(pickMyTeam(state.teams,state.ref,state.users));
   LOADED.set(keyOf(ref.provider,ref.id),{state,sim:null});
-  await loadMV();
+  await loadMV();if(usesDynasty())await loadDynastyMV();
   rememberLeague(ref,state.league.name);
   setLoaded(true);
   render();
@@ -3732,8 +3755,9 @@ function trades(me){
     +'<label class="wr-note wr-kd"><input type="checkbox" id="includeKD"'+(skipKD?'':' checked')+'> Include K and DST</label>';
   $('includeKD').onchange=()=>trades(me);
   if($('clearFilter'))$('clearFilter').onclick=()=>{tradeFilter=null;trades(me)};
-  const asOf=MV&&MV.by.size
-    ? '<span class="wr-mv">Prices are Public Market Value auction dollars ('+esc(mvColumn().toUpperCase())+'), captured '+esc(MV.asOf||'unknown date')+' and updated by hand each week. A market price is not a projection, and a stale one is not a current price.</span>'
+  const source=(usesDynasty()?DYNASTY_MV:MV);
+  const asOf=source&&source.by.size
+    ? '<span class="wr-mv">Prices are '+esc(valueLabel())+' auction dollars'+(usesDynasty()?' ('+(state.slots.SUPERFLEX?'SF / 2QB':'1QB')+')':' ('+esc(mvColumn().toUpperCase())+')')+', captured '+esc(valueAsOf()||'unknown date')+'. '+(usesDynasty()?'These are independent analyst estimates, not a live market or projection.':'A market price is not a projection, and a stale one is not a current price.')+'</span>'
     : '<span class="wr-mv">⚠️ No market prices loaded, so candidate filtering falls back to model value over replacement instead. That is the weaker test — it cannot see name value.</span>';
   const bits=[];
   if(lopsided)bits.push(lopsided+' improved both starting lineups but '+(lopsided===1?'was':'were')+' rejected as lopsided in player value');
@@ -3874,8 +3898,8 @@ window.DD_BOTCTX = {
 - NOT MODELED: injuries, byes, trades, waivers, lineup decisions, in-season projection updates, and correlation between the two teams in a matchup. Before three completed weeks, σ is a stated generic assumption rather than an estimate from the league.
 - NOT BUILT: ESPN and Yahoo authenticated reads, the man-games baseline, multi-player trades, and Stage 2 playoff re-simulation. Say so plainly rather than describing how to use them.
 - AN EDITED SETTING IS A WHAT-IF and is marked pool_eligible false. Do not present an overridden run as the league's own number.
-- THE TRADE FINDER IS A CANDIDATE SCREEN, NOT A FAIRNESS ORACLE. It cannot see acceptance probability, manager preferences, depth needs, injury risk, or dynasty value; never present a surviving proposal as one the rival would accept. IT PROPOSES, IT DOES NOT ACT. It never accepts, sends or executes anything. A proposal must pass THREE tests: both lineups improve when recomputed after the swap, neither side is left unable to fill a starting slot, AND the two players are within max($4, 35% of the dearer) in Public Market Value — the hand-maintained weekly auction-dollar snapshot at /data/pool.json. A swap that would leave either side short a startable player at some slot is refused whatever the points say. It will often return nothing, and returning nothing is a real answer rather than a failure.
-- ⚠️ NEVER PRESENT A LINEUP GAIN AS A REASON A RIVAL WOULD ACCEPT. A benched player adds zero to a starting-lineup total, so lineup gain alone would price a benched WR1 at a kicker. If anyone asks why a lopsided swap is not listed, that is the reason. The candidate value-band test uses PUBLIC MARKET VALUE in auction dollars, and you must always say which capture date those dollars are from — they are a weekly hand-maintained snapshot, not a live market. If a player has no published price the row falls back to model value over replacement and says so; never quote a fallback row as a market price.
+- THE TRADE FINDER IS A CANDIDATE SCREEN, NOT A FAIRNESS ORACLE. It cannot see acceptance probability, manager preferences, depth needs, injury risk, or multi-player construction; never present a surviving proposal as one the rival would accept. IT PROPOSES, IT DOES NOT ACT. It never accepts, sends or executes anything. A proposal must pass THREE tests: both lineups improve when recomputed after the swap, neither side is left unable to fill a starting slot, AND the two players are within max($4, 35% of the dearer) in the league-matched auction-value source. Redraft and keeper leagues use /data/pool.json; Sleeper dynasty leagues use /data/dynasty-ranks.json and automatically select 1QB or Superflex / TE-premium values from roster slots. A swap that would leave either side short a startable player at some slot is refused whatever the points say. It will often return nothing, and returning nothing is a real answer rather than a failure.
+- ⚠️ NEVER PRESENT A LINEUP GAIN AS A REASON A RIVAL WOULD ACCEPT. A benched player adds zero to a starting-lineup total, so lineup gain alone would price a benched WR1 at a kicker. If anyone asks why a lopsided swap is not listed, that is the reason. Always name the active value horizon and capture date. This-season dollars are a dated market snapshot; overall dynasty dollars are independent analyst estimates. Neither is a live offer price. If a player has no published value the row falls back to model value over replacement and says so; never quote a fallback row as a market price or dynasty rank.
 - SAVED LEAGUES use a local-first shelf. For signed-in UID accounts, only Sleeper league IDs and the optional focus-roster IDs sync privately through the Worker and follow the account across devices; league rosters, projections and simulations are fetched fresh and are not stored there. Signed-out users keep a device-only shelf. The same account shelf is shared with Last Dawg Standing.
 - ALL LEAGUES is a cross-league portfolio view. It computes each saved league inside that league's own scoring, roster and replacement-level context, and shows repeated-player exposure only after those leagues are loaded. It must never mix one league's replacement baseline into another.
 - TEAM IDENTITY is resolved in this order: the explicit team saved for that league, then an exact Sleeper display-name or team-name match from the optional identity field, then the first roster as a fallback. Never imply the name alone is an authenticated ownership claim.

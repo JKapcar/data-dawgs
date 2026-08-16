@@ -1,9 +1,9 @@
 {
- "as_of": "2026-08-14",
+ "as_of": "2026-08-15",
  "source": "Generated manifest of every machine-readable surface on datadawgs216.com.",
  "note": "Start here. Each entry carries its own as_of — check it before quoting anything. The sha256 is of the file as served; recompute it if you care.",
  "site": "https://datadawgs216.com",
- "built": "2026-08-14",
+ "built": "2026-08-15",
  "data": {
   "files": [
    {
@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 31815,
+    "bytes": 31952,
     "as_of": "2026-08-14",
-    "sha256": "b90d291fdd23c412f4c91d4fc1efe9becf8eec2b67130b25241b2c7b48177060",
+    "sha256": "7fb6b23955f86f20c340aa7d0375427bdf4ac6e4472bd624ba25c65ecce98bab",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -293,6 +293,14 @@
     "as_of": "2026-08-14",
     "sha256": "ba5a0df506266ae4c7c8fd929cd4948ebf46d6a238bad0667da6a2055ded0386",
     "note": "Team codes match data/nfl-schedule.json. Text contrast is computed at render time from relative luminance."
+   },
+   {
+    "path": "/data/dynasty-ranks.json",
+    "url": "https://datadawgs216.com/data/dynasty-ranks.json",
+    "bytes": 107691,
+    "as_of": "2026-08-15",
+    "sha256": "6f5578adb4591cd43748eb4992fa8c556eebe756b4cbf2a897cfebe5700001b3",
+    "note": "Dynasty rankings and auction values are analyst estimates, not observed market prices or projections. Tied ranks are preserved from the supplied source."
    }
   ],
   "markdown": [
