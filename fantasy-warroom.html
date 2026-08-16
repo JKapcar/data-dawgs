@@ -2394,6 +2394,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 .wr-tile .tl{font-size:10px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3)}
 .wr-tile .tv{font-size:29px;font-weight:800;letter-spacing:-.04em;color:var(--accent);line-height:1.15;margin-top:3px}
 .wr-tile .td{font-size:12px;color:var(--ink-3)}
+.wr-tile .tv .tname{display:block;font-size:17px;line-height:1.25;letter-spacing:-.02em;overflow-wrap:anywhere;padding:3px 0 2px}
 table.wr-money{font-size:13px;min-width:560px}
 table.wr-money th{cursor:pointer;white-space:nowrap;user-select:none}
 table.wr-money th:hover{color:var(--accent)}
@@ -2406,7 +2407,7 @@ table.wr-money tr.avg td{border-top:2px solid var(--grid);color:var(--ink-3);fon
 .wr-radars{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:12px}
 .wr-radarcard{border:1px solid var(--grid);border-radius:10px;padding:9px;background:var(--page);text-align:center}
 .wr-radarcard.mine{border-color:var(--accent)}
-.wr-radarcard .rn{font-size:12px;font-weight:700;margin-bottom:2px}
+.wr-radarcard .rn{font-size:12px;font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wr-radarcard .rf{font-size:11px;color:var(--ink-3);margin-top:3px}
 .wr-warn{border-left:4px solid var(--warn);background:color-mix(in srgb,var(--warn) 8%,transparent);
   border-radius:0 9px 9px 0;padding:12px 15px;margin-bottom:16px;font-size:14px}
@@ -3088,7 +3089,8 @@ function svgRadar(axes,mine,avg,max){
     '" style="fill:none;stroke:var(--grid);stroke-width:1"/>'});
   axes.forEach((a,i)=>{const[x,y]=pt(i,R);g+='<line x1="'+c+'" y1="'+c+'" x2="'+x+'" y2="'+y+'" style="stroke:var(--grid)"/>';
     const[lx,ly]=pt(i,R+18);
-    g+='<text x="'+lx+'" y="'+ly+'" text-anchor="middle" dominant-baseline="middle" style="fill:var(--ink-3);font:700 11px system-ui">'+a+'</text>'});
+    const aw=a.length*6.6,tx=Math.max(2,Math.min(S-2-aw,lx-aw/2));
+    g+='<text x="'+tx+'" y="'+ly+'" dominant-baseline="middle" style="fill:var(--ink-3);font:700 11px system-ui">'+a+'</text>'});
   g+='<polygon points="'+poly(avg)+'" style="fill:none;stroke:var(--ink-3);stroke-width:1.5;stroke-dasharray:5 4"/>';
   g+='<polygon points="'+poly(mine)+'" style="fill:color-mix(in srgb,var(--accent) 22%,transparent);stroke:var(--accent);stroke-width:2.5"/>';
   mine.forEach((v,i)=>{const[x,y]=pt(i,R*Math.max(0,Math.min(1,max[i]?v/max[i]:0)));
@@ -3115,7 +3117,7 @@ function svgDiverge(rows){
 }
 
 function svgSplit(mine,league){
-  const W=420,H=104,pad=104,bar=W-pad-10;
+  const W=420,H=104,pad=104,bar=W-pad-58;
   const max=Math.max(1,...league.map(t=>t.st+t.bn),mine.st+mine.bn);
   const row=(y,label,st,bn,accent)=>{
     const ws=st/max*bar,wb=bn/max*bar;
@@ -3245,7 +3247,7 @@ function mnStackedBars(M){
   let g='';
   rows.forEach((r,i)=>{
     const y=i*rh+8;let x=pad;
-    g+='<text x="0" y="'+(y+13)+'" style="fill:var(--ink-2);font:'+(r.t===mnMe()?'800':'600')+' 12px system-ui">'+esc(r.t.name).slice(0,16)+'</text>';
+    g+='<text x="0" y="'+(y+13)+'"'+(r.t.name.length>15?' textLength="'+(pad-8)+'" lengthAdjust="spacingAndGlyphs"':'')+' style="fill:var(--ink-2);font:'+(r.t===mnMe()?'800':'600')+' '+(r.t.name.length>15?11:12)+'px system-ui">'+esc(r.t.name)+'</text>';
     POS_ORDER.forEach(P=>{const v=r.byPos[P]||0;if(v<=0)return;const w=v/max*barW;
       g+='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="17" style="fill:'+POS_COLOR[P]+'"><title>'+esc(r.t.name)+' · '+P+' '+fmt$(v)+'</title></rect>';x+=w});
     g+='<text x="'+(x+6)+'" y="'+(y+13)+'" style="fill:var(--ink-3);font:600 11px system-ui">'+fmt$(r.st)+'</text>';
@@ -3287,8 +3289,8 @@ function renderMoney(){
     ['League average',fmt$(avgTotal),(mine.total>=avgTotal?'+':'−')+fmt$(Math.abs(mine.total-avgTotal))+' for you'],
     ['Your rank',rank+' of '+M.length,(mine.total/leagueTotal*100).toFixed(1)+'% of all money'],
     ['Starting / bench',fmt$(mine.st)+' / '+fmt$(mine.bn),Math.round(mine.st/(mine.total||1)*100)+'% of it starts'],
-    ['Richest roster',esc(richest.t.name).slice(0,14),fmt$(richest.total)],
-    ['Leanest roster',esc(leanest.t.name).slice(0,14),fmt$(leanest.total)],
+    ['Richest roster','<span class="tname">'+esc(richest.t.name)+'</span>',fmt$(richest.total)],
+    ['Leanest roster','<span class="tname">'+esc(leanest.t.name)+'</span>',fmt$(leanest.total)],
     ...(isDynastyLeague()?[['Season → dynasty',fmt$(seasonMine.total)+' → '+fmt$(dynastyMine.total),(dynastyMine.total-seasonMine.total>=0?'+':'−')+fmt$(Math.abs(dynastyMine.total-seasonMine.total))]]:[])
   ].map(([l,v,d])=>'<div class="wr-tile"><div class="tl">'+l+'</div><div class="tv">'+v+'</div><div class="td">'+d+'</div></div>').join('');
 
@@ -3368,7 +3370,7 @@ function renderMoney(){
   const maxAx=axes.map(P=>Math.max(...M.map(r=>r.byPos[P]||0),0.001));
   const avgAx=axes.map(P=>M.reduce((s,r)=>s+(r.byPos[P]||0),0)/M.length);
   $('mnRadars').innerHTML=ranked.map(r=>'<div class="wr-radarcard'+(r.t===me?' mine':'')+'">'
-    +'<div class="rn">'+esc(r.t.name).slice(0,18)+'</div>'
+    +'<div class="rn" title="'+esc(r.t.name)+'">'+esc(r.t.name)+'</div>'
     +svgRadar(axes,axes.map(P=>r.byPos[P]||0),avgAx,maxAx).replace('width="250"','width="150"').replace(/<p class="wr-note">[\s\S]*?<\/p>/,'')
     +'<div class="rf">Starting '+fmt$(r.st)+'</div></div>').join('');
 
@@ -3610,7 +3612,7 @@ function setLoaded(on){
   $('reset').classList.toggle('wr-hide',!on);
   $('strip').classList.toggle('on',on);
   $('stripText').innerHTML=on
-    ? '<b>'+esc(state.league.name)+'</b> · '+esc(state.ref.provider)+' · '+state.teams.length+' teams · rosters frozen '+new Date().toLocaleString()
+    ? '<b>'+esc(state.league.name)+'</b> · '+esc(state.ref.provider)+' · '+state.teams.length+' teams · rosters frozen '+new Date().toLocaleString([],{dateStyle:'short',timeStyle:'short'})
     : 'No league connected. Add or open one to begin.';
   $('stripAction').textContent='Manage leagues';
   $('valueHorizon').classList.toggle('on',on&&isDynastyLeague());
