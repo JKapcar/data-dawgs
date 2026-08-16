@@ -2430,6 +2430,21 @@ svg{display:block;max-width:100%;height:auto}
   padding:6px 10px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .wr-mini:hover{border-color:var(--accent);color:var(--accent)}
 .wr-switch{max-width:min(100%,240px);font-weight:700}
+.wr-leaguehub{border:1px solid color-mix(in srgb,var(--accent) 42%,var(--grid));border-radius:14px;padding:18px;
+  margin-bottom:16px;background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 8%,var(--surface-1)),var(--surface-1) 54%)}
+.wr-leaguehead{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.wr-leaguehead h2{margin:0 0 4px;font-size:24px}.wr-leaguehead p{margin:0;color:var(--ink-2);max-width:68ch}
+.wr-sync{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--grid);border-radius:999px;padding:6px 10px;
+  background:var(--page);color:var(--ink-3);font-size:11px;font-weight:800;white-space:nowrap}
+.wr-sync::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ink-3)}
+.wr-sync.good{color:var(--good)}.wr-sync.good::before{background:var(--good)}
+.wr-sync.bad{color:var(--bad)}.wr-sync.bad::before{background:var(--bad)}
+.wr-leaguehub .wr-connect form{margin-top:16px}
+.wr-leaguehub .wr-saved{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));margin-top:16px}
+.wr-leaguehub .wr-row{min-height:86px;border-radius:11px;padding:12px;flex-wrap:wrap}
+.wr-leaguehub .wr-row.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--page))}
+.wr-leaguehub .wr-row small{display:block;margin-top:4px}.wr-league-actions{display:flex;gap:7px;margin-left:auto}
+.wr-empty-shelf{grid-column:1/-1;border:1px dashed var(--grid);border-radius:10px;padding:14px;color:var(--ink-3);font-size:13px}
 .wr-method{border-left:4px solid var(--accent)}
 .wr-method dl{margin:0}
 .wr-method dt{font-weight:750;margin-top:14px;color:var(--ink-1)}
@@ -2440,6 +2455,9 @@ svg{display:block;max-width:100%;height:auto}
   .sheet-tab{font-size:13px;padding:8px 11px 7px}
   .wr-strip{align-items:flex-start}
   .wr-strip .wr-grow{flex:1 0 100%;min-width:0}
+  .wr-strip .wr-switch{order:3;max-width:none;width:100%;padding:9px 10px}
+  .wr-leaguehub{padding:15px}.wr-leaguehub .wr-saved{grid-template-columns:1fr}
+  .wr-leaguehub .wr-row{align-items:flex-start}.wr-league-actions{width:100%;margin-left:0}.wr-league-actions .wr-mini{flex:1;padding:9px}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
 </style>
@@ -2448,15 +2466,15 @@ svg{display:block;max-width:100%;height:auto}
 <header class="p-hero">
   <div class="p-kicker">Fantasy League War Room · a league-specific scenario model, not a generic ranking</div>
   <h1>Your league, priced against its own replacement level.</h1>
-  <p class="p-lead">Every station in this room reads your actual roster slots, your actual scoring and your actual
-  schedule. Look around first — connect a league in Settings when you want it to run on yours.</p>
+  <p class="p-lead">Save every league once, move between them from the shelf, and run each room against its actual
+  roster slots, scoring and schedule.</p>
 </header>
 
 <div class="wr-strip" id="strip">
   <span class="wr-dot"></span>
   <span class="wr-grow" id="stripText">No league connected. Every station below explains itself without one.</span>
   <select class="wr-mini wr-switch wr-hide" id="leagueSwitch" aria-label="Switch league"></select>
-  <button class="wr-mini" id="stripAction" data-sheet="settings">Connect a league</button>
+  <button class="wr-mini" id="stripAction" data-sheet="report">Manage leagues</button>
   <button class="wr-mini wr-hide" id="reset">Disconnect</button>
 </div>
 
@@ -2464,6 +2482,22 @@ svg{display:block;max-width:100%;height:auto}
 
 <!-- ============================= REPORT CARD ============================= -->
 <section id="sheetReport">
+  <div class="wr-leaguehub">
+    <div class="wr-leaguehead">
+      <div><h2>Your fantasy leagues</h2><p>Add a Sleeper league once, then open or switch leagues from here. Signed-in
+      leagues sync to your Data Dawgs account; signed-out leagues remain safely available on this device.</p></div>
+      <span class="wr-sync" id="shelfState">Checking saved leagues…</span>
+    </div>
+    <div class="wr-connect">
+      <form id="connectForm">
+        <input id="leagueInput" inputmode="url" autocomplete="url" placeholder="Paste a Sleeper league URL or ID" aria-label="League URL or Sleeper ID">
+        <button class="wr-btn">Add league</button>
+      </form>
+      <p class="wr-status" id="connectionStatus">Sleeper leagues connect without a Sleeper login.</p>
+    </div>
+    <div class="wr-saved" id="savedList"></div>
+  </div>
+
   <!-- No league: this sheet carries the "what is this room" job, so the page still explains
        itself before anything is connected. -->
   <div class="wr-grid wr-needs-league">
@@ -2527,7 +2561,7 @@ svg{display:block;max-width:100%;height:auto}
     <p>The simulation needs three things this page cannot invent: your roster slots, your scoring settings and your
     week-by-week schedule. All three come from the league you connect. Nothing here is precomputed from a generic
     12-team default.</p>
-    <button class="wr-btn" data-sheet="settings">Open settings to connect</button>
+    <button class="wr-btn" data-sheet="report">Manage your leagues</button>
   </div>
   <div class="wr-grid wr-has-league wr-hide">
     <article class="wr-card">
@@ -2554,7 +2588,7 @@ svg{display:block;max-width:100%;height:auto}
     <p>Two leagues with the same team count can have different replacement levels if one runs two flex spots and the
     other runs one. This station derives the replacement rank for every position from your slot counts and the
     positional mix that actually fills your flex, then prices each starter against it.</p>
-    <button class="wr-btn" data-sheet="settings">Open settings to connect</button>
+    <button class="wr-btn" data-sheet="report">Manage your leagues</button>
   </div>
   <div class="wr-grid wr-has-league wr-hide">
     <article class="wr-card wr-full">
@@ -2584,7 +2618,7 @@ svg{display:block;max-width:100%;height:auto}
     <p>Every rostered player is priced against Public Market Value — the hand-maintained weekly auction-dollar
     snapshot this site already drafts on. That turns a roster into one number you can put next to everyone else's,
     and splits it into the money you start and the money you sit.</p>
-    <button class="wr-btn" data-sheet="settings">Open settings to connect</button>
+    <button class="wr-btn" data-sheet="report">Manage your leagues</button>
   </div>
   <div class="wr-has-league wr-hide">
     <div class="wr-tiles" id="mnTiles"></div>
@@ -2654,7 +2688,7 @@ svg{display:block;max-width:100%;height:auto}
     value over replacement. That second test is what stops it proposing a kicker for a benched WR1 — a bench player
     contributes nothing to a lineup total, so lineup gain alone will price a real asset at nothing. Nothing is ranked
     by who wins the trade; a proposal a rival would laugh at is not a proposal.</p>
-    <button class="wr-btn" data-sheet="settings">Open settings to connect</button>
+    <button class="wr-btn" data-sheet="report">Manage your leagues</button>
   </div>
   <div class="wr-grid wr-has-league wr-hide">
     <article class="wr-card wr-full">
@@ -2675,27 +2709,6 @@ svg{display:block;max-width:100%;height:auto}
 <!-- ============================== SETTINGS ============================== -->
 <section id="sheetSettings" hidden>
   <div class="wr-grid">
-    <article class="wr-card wr-full wr-connect">
-      <h2>Connect a league</h2>
-      <p class="wr-note">Paste a Sleeper URL or league ID, an ESPN league URL, or a Yahoo league URL. The provider is
-      detected from the link.</p>
-      <form id="connectForm">
-        <input id="leagueInput" autocomplete="url" placeholder="https://sleeper.com/leagues/…" aria-label="League URL or Sleeper ID">
-        <button class="wr-btn">Open war room</button>
-      </form>
-      <p class="wr-status" id="connectionStatus">Sleeper is public and reads without an account. ESPN and Yahoo are
-      recognized from a link, but their authenticated adapters are not connected yet.</p>
-    </article>
-
-    <article class="wr-card wr-full">
-      <h2>Saved leagues</h2>
-      <p class="wr-note">Save as many as you like and switch between them from the picker at the top of the page. A
-      league you have already opened this session reopens instantly, with its own simulation, and without another call
-      to the provider. Stored on this device only, in this browser — no account sync and no server copy, so a
-      different phone will not see this list, and clearing site data clears it.</p>
-      <div class="wr-saved" id="savedList"></div>
-    </article>
-
     <article class="wr-card wr-full">
       <h2>League settings</h2>
       <p class="wr-note">Read from the league and editable. An override is a what-if: it is not eligible for pooled
@@ -2759,8 +2772,7 @@ svg{display:block;max-width:100%;height:auto}
         from your league.</dd>
         <dt>Not built yet</dt>
         <dd>Rest-of-season or per-week projections · ESPN and Yahoo authenticated reads · the man-games replacement
-        baseline · multi-player and 2-for-1 trades · playoff-odds re-simulation of a proposed trade · account sync of
-        the saved league list.</dd>
+        baseline · multi-player and 2-for-1 trades · playoff-odds re-simulation of a proposed trade.</dd>
         <dt>Receipts</dt>
         <dd>This tool issues none. Its odds are recomputed live from current inputs and are never logged before
         kickoff, so they are not receipts and do not appear on the scoreboard. Treat them as a calculator, not a
@@ -2862,7 +2874,8 @@ window.DDSheets = function(cfg){
 <script>
 'use strict';
 const API='https://api.sleeper.app/v1',PROJ='https://api.sleeper.app/projections/nfl/2026';
-const SHELF='dd-warroom-leagues-v1';   /* device-local; same shape as dd-guillotine-leagues-v1 plus provider */
+const SHELF='dd-warroom-leagues-v1',SHARED_SHELF='dd-guillotine-leagues-v1';
+const SHELF_API='https://toto.jkapcar4.workers.dev/auth/guillotine-state';
 let state=null,sim=null,tradeFilter=null,SHEETS=null;
 /* Parsed leagues live here for the session so toggling between them is instant and does not
    re-hit the provider. Each entry keeps its own sim, because a simulation belongs to the
@@ -3298,18 +3311,87 @@ function paintStations(){
   }).join('');
 }
 
-/* ------------------------------------------------- saved leagues ---------- */
-function readShelf(){try{const v=JSON.parse(localStorage.getItem(SHELF)||'[]');return Array.isArray(v)?v.filter(x=>x&&x.leagueId&&x.provider).slice(0,24):[]}catch(e){return[]}}
-function writeShelf(list){try{localStorage.setItem(SHELF,JSON.stringify(list.slice(0,24)))}catch(e){}}
+/* ------------------------------------------------- saved leagues ----------
+   The Worker route predates this page and is named guillotine-state, but its contract is
+   intentionally generic: a private per-UID shelf of Sleeper IDs plus an optional focus
+   roster. War Room and Last Dawg Standing share it so a league added in either place is
+   available in both. Rich display names stay device-local and are refreshed from Sleeper. */
+function cleanShelf(raw){
+  const out=[];
+  (Array.isArray(raw)?raw:[]).forEach(x=>{
+    if(!x||!/^\d{6,24}$/.test(String(x.leagueId)))return;
+    const focus=x.focusRosterId==null?null:Number(x.focusRosterId);
+    const row={provider:'sleeper',leagueId:String(x.leagueId),name:String(x.name||x.leagueId),
+      focusRosterId:Number.isFinite(focus)?focus:null,savedAt:Number(x.savedAt)||0};
+    const hit=out.find(y=>y.leagueId===row.leagueId);
+    if(hit)Object.assign(hit,{name:hit.name===hit.leagueId?row.name:hit.name,
+      focusRosterId:hit.focusRosterId==null?row.focusRosterId:hit.focusRosterId,savedAt:Math.max(hit.savedAt,row.savedAt)});
+    else out.push(row);
+  });
+  return out.sort((a,b)=>b.savedAt-a.savedAt).slice(0,24);
+}
+function stored(key){try{return JSON.parse(localStorage.getItem(key)||'[]')}catch(e){return[]}}
+function readShelf(){const a=stored(SHELF),b=stored(SHARED_SHELF);return cleanShelf([
+  ...(Array.isArray(a)?a:[]),...(Array.isArray(b)?b:[])])}
+function writeShelf(list){
+  const clean=cleanShelf(list);
+  try{
+    localStorage.setItem(SHELF,JSON.stringify(clean));
+    localStorage.setItem(SHARED_SHELF,JSON.stringify(clean.map(x=>({leagueId:x.leagueId,focusRosterId:x.focusRosterId,name:x.name}))));
+  }catch(e){}
+  return clean;
+}
+const shelfPayload=list=>({leagues:cleanShelf(list).map(x=>({leagueId:x.leagueId,
+  focusRosterId:Number.isFinite(x.focusRosterId)?x.focusRosterId:null}))});
+function shelfStatus(text,cls=''){$('shelfState').className='wr-sync'+(cls?' '+cls:'');$('shelfState').textContent=text}
+let shelfBusy=false,shelfQueued=false,serverShelfSig='';
+async function saveAccountShelf(){
+  const me=window.DDAuth?.me?.();
+  if(!me){shelfStatus(readShelf().length+' saved on this device');return}
+  if(shelfBusy){shelfQueued=true;return}
+  const body=shelfPayload(readShelf()),sig=JSON.stringify(body);
+  if(sig===serverShelfSig){shelfStatus(body.leagues.length+' saved to your account','good');return}
+  shelfBusy=true;shelfStatus('Saving to your account…');
+  try{
+    const r=await fetch(SHELF_API,{method:'PUT',headers:Object.assign({'Content-Type':'application/json'},DDAuth.headers()),body:sig});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok)throw Error(j.message||j.error||'Account save failed.');
+    const renewed=r.headers.get('X-Dawg-Session');if(renewed)DDAuth.set(renewed);
+    serverShelfSig=sig;shelfStatus(body.leagues.length+' saved to your account','good');
+  }catch(e){shelfStatus('Device saved · account sync failed','bad')}
+  finally{ shelfBusy=false;if(shelfQueued){shelfQueued=false;saveAccountShelf()} }
+}
+async function hydrateShelfNames(){
+  const list=readShelf();let changed=false;
+  await Promise.all(list.map(async x=>{
+    if(x.name&&x.name!==x.leagueId)return;
+    try{const league=await fetchJson(API+'/league/'+x.leagueId);if(league?.name){x.name=league.name;changed=true}}catch(e){}
+  }));
+  if(changed){writeShelf(list);paintShelf();paintSwitch()}
+}
+async function loadAccountShelf(){
+  const local=readShelf(),me=window.DDAuth?.me?.();
+  if(!me){paintShelf();paintSwitch();shelfStatus(local.length+' saved on this device');hydrateShelfNames();return}
+  shelfStatus('Loading your saved leagues…');
+  try{
+    const r=await fetch(SHELF_API,{headers:DDAuth.headers()}),j=await r.json();
+    if(!r.ok)throw Error(j.message||j.error||'Account load failed.');
+    const remote=cleanShelf((j.state?.leagues||[]).map(x=>({...x,savedAt:0}))),merged=writeShelf([...local,...remote]);
+    serverShelfSig=JSON.stringify(shelfPayload(remote));paintShelf();paintSwitch();
+    shelfStatus(merged.length+' saved to your account','good');
+    await hydrateShelfNames();
+    if(JSON.stringify(shelfPayload(merged))!==serverShelfSig)saveAccountShelf();
+  }catch(e){paintShelf();paintSwitch();shelfStatus('Device leagues available · account sync failed','bad');hydrateShelfNames()}
+}
 function rememberLeague(ref,name){
   const list=readShelf(),hit=list.find(x=>x.provider===ref.provider&&String(x.leagueId)===String(ref.id));
   if(hit){hit.name=name||hit.name;hit.savedAt=Date.now()}
   else list.unshift({provider:ref.provider,leagueId:String(ref.id),name:name||String(ref.id),focusRosterId:null,savedAt:Date.now()});
-  writeShelf(list);paintShelf();paintSwitch();
+  writeShelf(list);paintShelf();paintSwitch();saveAccountShelf();
 }
 function paintSwitch(){
   const list=readShelf(),sel=$('leagueSwitch');
-  sel.classList.toggle('wr-hide',list.length<2&&!state);
+  sel.classList.toggle('wr-hide',list.length===0);
   const cur=state?keyOf(state.ref.provider,state.ref.id):'';
   sel.innerHTML=(state?'':'<option value="">Choose a saved league…</option>')
     +list.map(x=>{const k=keyOf(x.provider,x.leagueId);
@@ -3320,11 +3402,11 @@ function paintShelf(){
   const list=readShelf();
   $('savedList').innerHTML=list.length?list.map(x=>{
     const on=state&&state.ref.provider===x.provider&&String(state.ref.id)===String(x.leagueId);
-    return `<div class="wr-row"><div class="wr-grow"><b>${esc(x.name)}</b>
-      <small>${esc(x.provider)} · ${esc(x.leagueId)}${on?' · connected now':''}</small></div>
-      <button class="wr-mini" data-load="${esc(x.leagueId)}" data-provider="${esc(x.provider)}">${on?'Reload':'Load'}</button>
-      <button class="wr-mini" data-forget="${esc(x.leagueId)}" data-provider="${esc(x.provider)}">Forget</button></div>`;
-  }).join(''):'<p class="wr-note">Nothing saved yet. A league you connect above is remembered here on this device.</p>';
+    return `<div class="wr-row${on?' on':''}"><div class="wr-grow"><b>${esc(x.name)}</b>
+      <small>Sleeper · ${esc(x.leagueId)}${on?' · open now':''}</small></div><div class="wr-league-actions">
+      <button class="wr-mini" data-load="${esc(x.leagueId)}" data-provider="${esc(x.provider)}">${on?'Refresh':'Open league'}</button>
+      <button class="wr-mini" data-forget="${esc(x.leagueId)}" data-provider="${esc(x.provider)}">Remove</button></div></div>`;
+  }).join(''):'<div class="wr-empty-shelf"><b>No leagues saved yet.</b><br>Paste your first Sleeper league URL or ID above. It will stay here for one-tap access.</div>';
 }
 
 /* ------------------------------------------------------- connection ------- */
@@ -3337,7 +3419,7 @@ function setLoaded(on){
   $('stripText').innerHTML=on
     ? '<b>'+esc(state.league.name)+'</b> · '+esc(state.ref.provider)+' · '+state.teams.length+' teams · rosters frozen '+new Date().toLocaleString()
     : 'No league connected. Every station below explains itself without one.';
-  $('stripAction').textContent=on?'Change league':'Connect a league';
+  $('stripAction').textContent='Manage leagues';
   paintStations();paintShelf();paintSwitch();
 }
 
@@ -3361,6 +3443,8 @@ async function connect(input){
   $('playoffStart').value=state.settings.playoffStart;
   $('sigma').value=state.settings.sigma;
   $('teamPicker').innerHTML=teams.map((t,i)=>'<option value="'+i+'">'+esc(t.name)+'</option>').join('');
+  const saved=readShelf().find(x=>x.provider===ref.provider&&x.leagueId===String(ref.id));
+  if(saved&&saved.focusRosterId!=null){const i=teams.findIndex(t=>String(t.id)===String(saved.focusRosterId));if(i>=0)$('teamPicker').value=String(i)}
   LOADED.set(keyOf(ref.provider,ref.id),{state,sim:null});
   await loadMV();
   rememberLeague(ref,league.name);
@@ -3602,22 +3686,27 @@ document.addEventListener('click',e=>{
     writeShelf(readShelf().filter(x=>keyOf(x.provider,x.leagueId)!==k));
     LOADED.delete(k);
     if(state&&keyOf(state.ref.provider,state.ref.id)===k)$('reset').click();
-    paintShelf();paintSwitch();return}
+    paintShelf();paintSwitch();saveAccountShelf();return}
 });
 
 $('connectForm').addEventListener('submit',async e=>{
   e.preventDefault();
   const st=$('connectionStatus');
-  try{await connect($('leagueInput').value);st.className='wr-status good';st.textContent='Connected. Standings, Rosters and Trades are live.'}
+  try{await connect($('leagueInput').value);st.className='wr-status good';st.textContent=readShelf().length+' league'+(readShelf().length===1?'':'s')+' saved. This league is open now.';$('leagueInput').value=''}
   catch(err){st.className='wr-status bad';st.textContent=err.message}
 });
 $('leagueSwitch').onchange=e=>{
   const v=e.target.value;
   if(!v){paintSwitch();return}
-  if(v==='__add'){paintSwitch();SHEETS.show('settings');$('leagueInput').focus();return}
+  if(v==='__add'){paintSwitch();SHEETS.show('report');$('leagueInput').focus();return}
   const i=v.indexOf(':');openLeague(v.slice(0,i),v.slice(i+1));
 };
-$('teamPicker').onchange=()=>{tradeFilter=null;render()};
+$('teamPicker').onchange=()=>{
+  tradeFilter=null;
+  if(state){const list=readShelf(),x=list.find(y=>keyOf(y.provider,y.leagueId)===keyOf(state.ref.provider,state.ref.id));
+    const team=state.teams[+$('teamPicker').value||0];if(x&&team){x.focusRosterId=Number(team.id);writeShelf(list);paintShelf();saveAccountShelf()}}
+  render();
+};
 $('simulate').onclick=()=>{const s=$('simStatus');s.className='wr-status';s.textContent='';try{runSim()}catch(err){s.className='wr-status bad';s.textContent=err.message}};
 $('reset').onclick=()=>{
   state=sim=null;tradeFilter=null;
@@ -3637,6 +3726,8 @@ $('reset').onclick=()=>{
 });
 
 setLoaded(false);
+paintShelf();paintSwitch();loadAccountShelf();
+addEventListener('dd-auth',loadAccountShelf);
 (function(){
   let deep=null;try{deep=new URLSearchParams(location.search).get('league')}catch(e){}
   if(deep){$('leagueInput').value=deep;$('connectForm').requestSubmit()}
@@ -3658,11 +3749,11 @@ window.DD_BOTCTX = {
 - ⚠️ IF NO LEAGUE IS CONNECTED THERE ARE NO NUMBERS AT ALL. The sheets show empty states that explain the method. Do not invent standings, odds or trades for a league that is not loaded, and do not fall back to generic 12-team defaults.
 - INPUTS ARE THIRD-PARTY AND FROZEN. Rosters, scoring and schedule come from the provider at the moment of connection. Projections are Sleeper's own week-1 numbers, unaudited, and this page produces none of its own. ⚠️ EVERY SIMULATED WEEK REUSES THAT ONE WEEK-1 PROJECTION — no byes, no opponent adjustment, no rest-of-season curve. Say so whenever anyone asks how much the playoff odds are worth.
 - NOT MODELED: injuries, byes, trades, waivers, lineup decisions, in-season projection updates, and correlation between the two teams in a matchup. Before three completed weeks, σ is a stated generic assumption rather than an estimate from the league.
-- NOT BUILT: ESPN and Yahoo authenticated reads, the man-games baseline, multi-player trades, Stage 2 playoff re-simulation, and account sync of the saved league list. Say so plainly rather than describing how to use them.
+- NOT BUILT: ESPN and Yahoo authenticated reads, the man-games baseline, multi-player trades, and Stage 2 playoff re-simulation. Say so plainly rather than describing how to use them.
 - AN EDITED SETTING IS A WHAT-IF and is marked pool_eligible false. Do not present an overridden run as the league's own number.
 - THE TRADE FINDER IS A CANDIDATE SCREEN, NOT A FAIRNESS ORACLE. It cannot see acceptance probability, manager preferences, depth needs, injury risk, or dynasty value; never present a surviving proposal as one the rival would accept. IT PROPOSES, IT DOES NOT ACT. It never accepts, sends or executes anything. A proposal must pass THREE tests: both lineups improve when recomputed after the swap, neither side is left unable to fill a starting slot, AND the two players are within max($4, 35% of the dearer) in Public Market Value — the hand-maintained weekly auction-dollar snapshot at /data/pool.json. A swap that would leave either side short a startable player at some slot is refused whatever the points say. It will often return nothing, and returning nothing is a real answer rather than a failure.
 - ⚠️ NEVER PRESENT A LINEUP GAIN AS A REASON A RIVAL WOULD ACCEPT. A benched player adds zero to a starting-lineup total, so lineup gain alone would price a benched WR1 at a kicker. If anyone asks why a lopsided swap is not listed, that is the reason. The candidate value-band test uses PUBLIC MARKET VALUE in auction dollars, and you must always say which capture date those dollars are from — they are a weekly hand-maintained snapshot, not a live market. If a player has no published price the row falls back to model value over replacement and says so; never quote a fallback row as a market price.
-- SAVED LEAGUES LIVE IN THIS BROWSER ONLY. There is no server copy and no cross-device sync.
+- SAVED LEAGUES use a local-first shelf. For signed-in UID accounts, only Sleeper league IDs and the optional focus-roster IDs sync privately through the Worker and follow the account across devices; league rosters, projections and simulations are fetched fresh and are not stored there. Signed-out users keep a device-only shelf. The same account shelf is shared with Last Dawg Standing.
 
 ` + (window.DDBotScan ? window.DDBotScan(5200) : "The page reader could not run, so nothing on the page can be read right now.")
 };
