@@ -17,7 +17,10 @@ ok(master.includes('data-view="season"') && master.includes('data-view="dynasty"
 ok(master.includes('id="dynastyFormat"'), "master data exposes the format selector");
 ok(master.includes("fetch('data/dynasty-ranks.json'"), "master data reads the published dynasty source");
 ok(warroom.includes("fetch('data/dynasty-ranks.json'"), "war room reads the same dynasty source");
-ok(/function usesDynasty\(\).*settings\?\.type\)===2/.test(warroom), "only Sleeper dynasty leagues switch horizon automatically");
+ok(/function isDynastyLeague\(\).*settings\?\.type\)===2/.test(warroom), "only Sleeper dynasty leagues expose the dynasty horizon");
+ok(warroom.includes('data-horizon="season"') && warroom.includes('data-horizon="dynasty"'), "war room exposes both value horizons");
+ok(warroom.includes('id="mnHorizon"') && warroom.includes('This season</th><th>Dynasty</th><th>Δ'), "war room renders player-level price differences");
+ok(/function usesDynasty\(\).*valueHorizon!==['"]season['"]/.test(warroom), "active horizon controls the war room value source");
 ok(/state\.slots\.SUPERFLEX\?row\.two_qb_auction:row\.one_qb_auction/.test(warroom), "war room chooses auction values from actual roster slots");
 ok(warroom.includes("Keeper league detected") && warroom.includes("remains this-season market value"), "keeper uncertainty is explicit");
 
