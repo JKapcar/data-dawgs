@@ -2362,6 +2362,8 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 .wr-chips{display:flex;gap:7px;flex-wrap:wrap}
 .wr-chip{border:1px solid var(--grid);border-radius:8px;padding:6px 9px;background:var(--page);font-size:12px;color:var(--ink-2)}
 .wr-chip b{display:block;font-size:15px;color:var(--ink-1)}
+.wr-tablewrap{overflow-x:auto}
+table.wr-matrix{min-width:520px}
 .wr-matrix td[data-pos]{cursor:pointer}
 .wr-matrix td[data-pos]:hover{background:color-mix(in srgb,var(--accent) 14%,transparent)}
 .wr-trade{border-top:1px solid var(--grid);padding:13px 0;color:var(--ink-1);display:flex;gap:16px;align-items:flex-start}
@@ -2648,7 +2650,7 @@ svg{display:block;max-width:100%;height:auto}
       <h2>Value matrix</h2>
       <p class="wr-note">Green is a surplus, red a deficit. Click any cell to carry that team and position into the
       trade finder.</p>
-      <table class="wr-matrix"><thead id="matrixHead"></thead><tbody id="matrix"></tbody></table>
+      <div class="wr-tablewrap"><table class="wr-matrix"><thead id="matrixHead"></thead><tbody id="matrix"></tbody></table></div>
     </article>
   </div>
 </section>
