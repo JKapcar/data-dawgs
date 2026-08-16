@@ -3111,8 +3111,11 @@ function svgRadar(axes,mine,avg,max){
     '</svg><p class="wr-note">Solid is you; dashed is the league average.</p>';
 }
 
+/* Chart geometry is chosen per draw: a phone gets a narrower viewBox rather than a
+   shrunken wide one, so label sizes survive. Same 760px breakpoint as the CSS. */
+const NARROW=()=>window.matchMedia('(max-width:760px)').matches;
 function svgDiverge(rows){
-  const W=340,rh=30,pad=96,H=rows.length*rh+16;
+  const W=NARROW()?300:340,rh=30,pad=NARROW()?78:96,H=rows.length*rh+16;
   const span=Math.max(1,...rows.map(r=>Math.abs(r.v)));
   const mid=pad+(W-pad-14)/2,half=(W-pad-14)/2;
   let g='<line x1="'+mid+'" y1="4" x2="'+mid+'" y2="'+(H-10)+'" style="stroke:var(--grid)"/>';
@@ -3128,7 +3131,7 @@ function svgDiverge(rows){
 }
 
 function svgSplit(mine,league){
-  const W=420,H=104,pad=104,bar=W-pad-58;
+  const W=NARROW()?320:420,H=104,pad=NARROW()?84:104,bar=W-pad-58;
   const max=Math.max(1,...league.map(t=>t.st+t.bn),mine.st+mine.bn);
   const row=(y,label,st,bn,accent)=>{
     const ws=st/max*bar,wb=bn/max*bar;
@@ -3253,7 +3256,7 @@ function fmt$(n){return '$'+Math.round(n)}
 
 function mnStackedBars(M){
   const rows=M.slice().sort((a,b)=>b.st-a.st);
-  const W=560,rh=26,pad=120,barW=W-pad-58,H=rows.length*rh+26;
+  const W=NARROW()?340:560,rh=26,pad=NARROW()?92:120,barW=W-pad-58,H=rows.length*rh+26;
   const max=Math.max(1,...rows.map(r=>r.st));
   const avg=rows.reduce((a,r)=>a+r.st,0)/rows.length;
   let g='';
@@ -3271,7 +3274,7 @@ function mnStackedBars(M){
 }
 
 function mnScatterSvg(pts,fit){
-  const W=560,H=300,l=46,b=34;
+  const W=NARROW()?340:560,H=NARROW()?260:300,l=NARROW()?38:46,b=34;
   const xm=Math.max(1,...pts.map(p=>p.x)),ym=Math.max(...pts.map(p=>p.y)),yn=Math.min(0,...pts.map(p=>p.y));
   const X=v=>l+v/xm*(W-l-14),Y=v=>H-b-(v-yn)/((ym-yn)||1)*(H-b-14);
   let g='<line x1="'+l+'" y1="'+(H-b)+'" x2="'+(W-8)+'" y2="'+(H-b)+'" style="stroke:var(--grid)"/>'
@@ -3403,7 +3406,7 @@ function dualPrice(p){const season=mvOf(p,'season'),dynasty=mvOf(p,'dynasty');re
 function dualTeam(t){const rows=t.players.map(p=>({p,...dualPrice(p)})).filter(x=>x.season!=null&&x.dynasty!=null);return {t,rows,season:rows.reduce((a,x)=>a+x.season,0),dynasty:rows.reduce((a,x)=>a+x.dynasty,0)}}
 function dyScatter(points,{xKey,yKey,labelKey,aria,diagonal=false}){
   if(!points.length)return '<p class="wr-note">No players are priced in both views.</p>';
-  const W=640,H=380,l=56,r=18,t=18,b=46;
+  const W=NARROW()?340:640,H=NARROW()?300:380,l=NARROW()?44:56,r=NARROW()?10:18,t=14,b=46;
   /* ⚠️ Zero-anchored axes drew a league of $128–$224 teams into one corner of an
      empty canvas. Fit the domain to the data with an 8% margin instead. Where the
      y=x diagonal is drawn, both axes MUST share a domain or the 45° line lies. */
@@ -3415,15 +3418,19 @@ function dyScatter(points,{xKey,yKey,labelKey,aria,diagonal=false}){
   const avgX=points.reduce((a,x)=>a+x[xKey],0)/points.length,avgY=points.reduce((a,x)=>a+x[yKey],0)/points.length;
   const ticks=(lo,hi)=>[0,1,2,3].map(i=>lo+(hi-lo)*i/3);
   let g='';
-  ticks(x0,x1).forEach(v=>{g+='<line x1="'+X(v)+'" y1="'+t+'" x2="'+X(v)+'" y2="'+(H-b)+'" style="stroke:var(--grid);opacity:.7"/>'
-    +'<text x="'+X(v)+'" y="'+(H-b+15)+'" text-anchor="middle" style="fill:var(--ink-3);font:600 10px system-ui">'+fmt$(Math.round(v))+'</text>'});
+  ticks(x0,x1).forEach((v,i,all)=>{const anchor=i===0?'start':i===all.length-1?'end':'middle';
+    g+='<line x1="'+X(v)+'" y1="'+t+'" x2="'+X(v)+'" y2="'+(H-b)+'" style="stroke:var(--grid);opacity:.7"/>'
+    +'<text x="'+X(v)+'" y="'+(H-b+15)+'" text-anchor="'+anchor+'" style="fill:var(--ink-3);font:600 10px system-ui">'+fmt$(Math.round(v))+'</text>'});
   ticks(y0,y1).forEach(v=>{g+='<line x1="'+l+'" y1="'+Y(v)+'" x2="'+(W-r)+'" y2="'+Y(v)+'" style="stroke:var(--grid);opacity:.7"/>'
     +'<text x="'+(l-6)+'" y="'+(Y(v)+3.5)+'" text-anchor="end" style="fill:var(--ink-3);font:600 10px system-ui">'+fmt$(Math.round(v))+'</text>'});
   g+=diagonal?'<line x1="'+X(x0)+'" y1="'+Y(y0)+'" x2="'+X(x1)+'" y2="'+Y(y1)+'" style="stroke:var(--ink-3);stroke-dasharray:6 4;opacity:.7"/>'
     :'<line x1="'+X(avgX)+'" y1="'+t+'" x2="'+X(avgX)+'" y2="'+(H-b)+'" style="stroke:var(--ink-3);stroke-dasharray:5 4;opacity:.55"/><line x1="'+l+'" y1="'+Y(avgY)+'" x2="'+(W-r)+'" y2="'+Y(avgY)+'" style="stroke:var(--ink-3);stroke-dasharray:5 4;opacity:.55"/>';
   points.forEach(x=>{const color=x.color||POS_COLOR[x.p?.pos]||'var(--accent)';g+='<circle cx="'+X(x[xKey])+'" cy="'+Y(x[yKey])+'" r="'+(x.mine?6:4.5)+'" style="fill:'+color+';opacity:'+(x.mine?1:.72)+';stroke:'+(x.mine?'var(--ink-1)':'none')+';stroke-width:1.5"><title>'+esc(x[labelKey])+' · this season '+fmt$(x[xKey])+' · dynasty '+fmt$(x[yKey])+'</title></circle>'});
-  g+='<text x="'+((l+W-r)/2)+'" y="'+(H-4)+'" text-anchor="middle" style="fill:var(--ink-3);font:700 11px system-ui">This-season value →</text>'+
-    '<text x="13" y="'+((t+H-b)/2)+'" text-anchor="middle" transform="rotate(-90 13 '+((t+H-b)/2)+')" style="fill:var(--ink-3);font:700 11px system-ui">Overall dynasty value →</text>';
+  g+='<text x="'+((l+W-r)/2)+'" y="'+(H-4)+'" text-anchor="middle" style="fill:var(--ink-3);font:700 11px system-ui">This-season value →</text>'
+    /* The rotated caption shares a band with the right-anchored tick labels. There is
+       room for it on the desktop canvas and not on the phone one, and the card's prose
+       already names both axes — so the narrow layout goes without. */
+    +(NARROW()?'':'<text x="13" y="'+((t+H-b)/2)+'" text-anchor="middle" transform="rotate(-90 13 '+((t+H-b)/2)+')" style="fill:var(--ink-3);font:700 11px system-ui">Overall dynasty value →</text>');
   return '<svg viewBox="0 0 '+W+' '+H+'" class="wr-svg wr-svg-wide" role="img" aria-label="'+esc(aria)+'">'+g+'</svg>';
 }
 function renderDynastyLens(){
@@ -3970,6 +3977,14 @@ $('teamPicker').onchange=()=>{
   saveFocus();
   render();
 };
+/* Geometry is picked at draw time, so a rotation or a window drag across the
+   breakpoint would strand the previous chart shape on screen. Redraw on the
+   crossing only — a raw resize listener would rerun the pipeline mid-drag. */
+try{
+  const mq=window.matchMedia('(max-width:760px)');
+  const redraw=()=>{if(state)render()};
+  mq.addEventListener?mq.addEventListener('change',redraw):mq.addListener(redraw);
+}catch(e){}
 $('rcTeamSel').onchange=e=>{
   $('teamPicker').value=e.target.value;
   tradeFilter=null;
