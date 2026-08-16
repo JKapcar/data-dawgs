@@ -2302,6 +2302,51 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
    ========================================================================== */
 
 .wr-strip .wr-grow b{display:block;font-size:15px;letter-spacing:-.01em}
+/* ---- context bar, tabs and menus: three jobs, three treatments ---------- */
+.wr-who{min-width:0;flex:1 1 260px}
+.wr-whorow{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.wr-pick{appearance:none;border:0;background:none;font:inherit;font-size:17px;font-weight:800;
+  letter-spacing:-.02em;color:var(--ink-1);cursor:pointer;padding:1px 20px 2px 3px;position:relative;
+  border-bottom:2px dashed color-mix(in srgb,var(--accent) 55%,transparent);border-radius:0;
+  max-width:100%;text-align:left}
+.wr-pick::after{content:"\25be";position:absolute;right:2px;top:50%;transform:translateY(-52%);
+  color:var(--accent);font-size:.7em}
+.wr-pick:hover,.wr-pick:focus-visible{border-bottom-color:var(--accent);outline:none}
+.wr-pick.sm{font-size:14px;font-weight:700;color:var(--ink-2)}
+.wr-youlab{font-size:10px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3)}
+.wr-stripright{display:flex;align-items:center;gap:9px;margin-left:auto;flex-wrap:wrap}
+.wr-seg{display:inline-flex;border:1px solid var(--grid);border-radius:999px;overflow:hidden;background:var(--page)}
+.wr-seg button{appearance:none;border:0;background:none;color:var(--ink-2);cursor:pointer;
+  font:800 12px system-ui,sans-serif;padding:8px 15px;white-space:nowrap}
+.wr-seg button.on{background:var(--accent);color:var(--accent-ink)}
+.wr-iconbtn{border:1px solid var(--grid);background:var(--surface-1);color:var(--ink-2);
+  border-radius:999px;width:34px;height:34px;cursor:pointer;font-size:15px;line-height:1;flex:none}
+.wr-iconbtn:hover,.wr-iconbtn:focus-visible{border-color:var(--accent);color:var(--accent);outline:none}
+.wr-tabs{display:flex;gap:4px;margin:18px 0 0;overflow-x:auto;scrollbar-width:none;
+  border-bottom:2px solid var(--grid)}
+.wr-tabs::-webkit-scrollbar{display:none}
+.wr-tabs button{appearance:none;border:0;background:none;color:var(--ink-2);cursor:pointer;
+  font:800 14px system-ui,sans-serif;padding:11px 15px 12px;white-space:nowrap;
+  border-bottom:3px solid transparent;margin-bottom:-2px}
+.wr-tabs button:hover{color:var(--ink-1)}
+.wr-tabs button.on{color:var(--accent);border-bottom-color:var(--accent)}
+.wr-tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
+.wr-menu{position:fixed;z-index:60;min-width:255px;max-height:70vh;overflow:auto;display:none;
+  border:1px solid var(--grid);border-radius:12px;background:var(--surface-1);padding:6px;
+  box-shadow:0 14px 40px rgba(0,0,0,.28)}
+.wr-menu.on{display:block}
+.wr-menu button{display:block;width:100%;text-align:left;appearance:none;border:0;background:none;
+  color:var(--ink-1);cursor:pointer;font:600 14px system-ui,sans-serif;padding:10px 12px;border-radius:8px}
+.wr-menu button:hover,.wr-menu button:focus-visible{background:color-mix(in srgb,var(--accent) 12%,transparent);outline:none}
+.wr-menu button.on{color:var(--accent);font-weight:800}
+.wr-menu button.danger{color:var(--bad)}
+.wr-menu button small{display:block;color:var(--ink-3);font-size:11px;font-weight:600;margin-top:2px}
+.wr-menu .mhd{font:800 10px system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);padding:8px 12px 4px}
+.wr-menu hr{border:0;border-top:1px solid var(--grid);margin:6px 4px}
+.wr-scrim{position:fixed;inset:0;z-index:55;display:none}
+.wr-scrim.on{display:block}
+@media(max-width:560px){.wr-stripright{width:100%;margin-left:0}.wr-seg{flex:1}.wr-seg button{flex:1}}
 .wr-strip .wr-meta{display:block;margin-top:2px;font-size:12px;color:var(--ink-3)}
 .wr-strip{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:20px 0 4px;padding:12px 15px;
   border:1px solid var(--grid);background:var(--surface-1);border-radius:10px}
@@ -2542,33 +2587,49 @@ svg{display:block;max-width:100%;height:auto}
 
 <div class="wr-strip" id="strip">
   <span class="wr-dot"></span>
-  <span class="wr-grow" id="stripText">No league connected. Add or open one to begin.</span>
-  <div class="wr-horizon" id="valueHorizon" role="group" aria-label="Value horizon">
-    <button type="button" data-horizon="season">This season</button><button type="button" data-horizon="dynasty">Overall dynasty</button>
+  <div class="wr-who">
+    <div class="wr-whorow">
+      <button type="button" class="wr-pick" id="leagueBtn" aria-haspopup="true" aria-expanded="false">No league connected</button>
+      <span class="wr-youlab wr-hide" id="youLab">you are</span>
+      <button type="button" class="wr-pick sm wr-hide" id="teamBtn" aria-haspopup="true" aria-expanded="false">&mdash;</button>
+    </div>
+    <div class="wr-meta" id="stripText">Add or open a league to begin.</div>
   </div>
-  <select class="wr-mini wr-switch wr-hide" id="leagueSwitch" aria-label="Switch league"></select>
-  <button class="wr-mini" id="stripAction" data-sheet="report">Manage leagues</button>
-  <button class="wr-mini wr-hide" id="reset">Disconnect</button>
+  <div class="wr-stripright">
+    <div class="wr-horizon" id="valueHorizon" role="group" aria-label="Value horizon">
+      <button type="button" data-horizon="season">This season</button><button type="button" data-horizon="dynasty">Overall dynasty</button>
+    </div>
+    <div class="wr-seg wr-hide" id="scopeSeg" role="group" aria-label="Scope">
+      <button type="button" data-scope="one" class="on">One league</button><button type="button" data-scope="all" id="scopeAll">All leagues</button>
+    </div>
+    <button type="button" class="wr-iconbtn" id="gearBtn" aria-haspopup="true" aria-expanded="false" aria-label="Settings and methodology">&#9881;</button>
+  </div>
 </div>
 
-<nav class="wr-flow" id="flowNav" aria-label="War Room sections">
-  <button type="button" data-flow="report" class="on">Overview</button>
-  <button type="button" data-flow="dynasty" id="flowDynasty">Dynasty lens</button>
-  <button type="button" data-flow="trades">Trade ideas</button>
-  <select id="flowLeague" aria-label="League analysis"><option value="">League analysis…</option><option value="standings">Standings</option><option value="rosters">Roster strengths</option><option value="money">Money</option></select>
-  <button type="button" data-flow="all">All leagues</button>
-  <select id="flowMore" aria-label="Settings and methodology"><option value="">More…</option><option value="settings">Settings</option><option value="method">Method &amp; footnotes</option></select>
+<nav class="wr-tabs" id="flowNav" aria-label="War Room views">
+  <button type="button" data-flow="report" class="on">My Team</button>
+  <button type="button" data-flow="standings">Standings</button>
+  <button type="button" data-flow="rosters">Rosters</button>
+  <button type="button" data-flow="money">Money</button>
+  <button type="button" data-flow="trades">Trades</button>
+  <button type="button" data-flow="dynasty" id="flowDynasty">Dynasty</button>
 </nav>
+
+<div class="wr-menu" id="leagueMenu" role="menu"></div>
+<div class="wr-menu" id="teamMenu" role="menu"></div>
+<div class="wr-menu" id="gearMenu" role="menu">
+  <button type="button" data-sheet="settings">Settings</button>
+  <button type="button" data-sheet="method">Method &amp; footnotes</button>
+  <hr>
+  <button type="button" class="danger" id="reset">Disconnect this league</button>
+</div>
+<div class="wr-scrim" id="wrScrim"></div>
 
 <div id="sheets"></div>
 
 <!-- ============================= REPORT CARD ============================= -->
-<section id="sheetReport">
-  <article class="wr-card wr-full wr-gate wr-hide" id="teamGate">
-    <h2 id="gateTitle">Which team is yours?</h2>
-    <p class="wr-note" id="gateNote">Pick it once. Everything on this page is measured against it, so nothing is calculated until you do.</p>
-    <div class="wr-chips" id="gateChips"></div>
-  </article>
+<!-- ========================== LEAGUES (admin) ========================== -->
+<section id="sheetLeagues" hidden>
   <div class="wr-leaguehub">
     <div class="wr-leaguehead">
       <div><h2>Your fantasy leagues</h2><p>Add once. Open or switch anytime.</p></div>
@@ -2593,6 +2654,14 @@ svg{display:block;max-width:100%;height:auto}
       <div class="wr-stations wr-hide" id="stations"></div>
     </article>
   </div>
+</section>
+
+<section id="sheetReport">
+  <article class="wr-card wr-full wr-gate wr-hide" id="teamGate">
+    <h2 id="gateTitle">Which team is yours?</h2>
+    <p class="wr-note" id="gateNote">Pick it once. Everything on this page is measured against it, so nothing is calculated until you do.</p>
+    <div class="wr-chips" id="gateChips"></div>
+  </article>
 
   <div class="wr-grid wr-has-league wr-hide">
     <article class="wr-card wr-full">
@@ -2639,7 +2708,7 @@ svg{display:block;max-width:100%;height:auto}
     <p>The simulation needs three things this page cannot invent: your roster slots, your scoring settings and your
     week-by-week schedule. All three come from the league you connect. Nothing here is precomputed from a generic
     12-team default.</p>
-    <button class="wr-btn" data-sheet="report">Manage your leagues</button>
+    <button class="wr-btn" data-sheet="leagues">Manage your leagues</button>
   </div>
   <div class="wr-grid wr-has-league wr-hide">
     <article class="wr-card">
@@ -2665,7 +2734,7 @@ svg{display:block;max-width:100%;height:auto}
     <p>Two leagues with the same team count can have different replacement levels if one runs two flex spots and the
     other runs one. This station derives the replacement rank for every position from your slot counts and the
     positional mix that actually fills your flex, then prices each starter against it.</p>
-    <button class="wr-btn" data-sheet="report">Manage your leagues</button>
+    <button class="wr-btn" data-sheet="leagues">Manage your leagues</button>
   </div>
   <div class="wr-grid wr-has-league wr-hide">
     <article class="wr-card wr-full">
@@ -2693,7 +2762,7 @@ svg{display:block;max-width:100%;height:auto}
   <div class="wr-empty wr-needs-league">
     <h3>What your roster is worth, and how that compares</h3>
     <p>Connect a league to compare roster value.</p>
-    <button class="wr-btn" data-sheet="report">Manage your leagues</button>
+    <button class="wr-btn" data-sheet="leagues">Manage your leagues</button>
   </div>
   <div class="wr-has-league wr-hide">
     <div class="wr-tiles" id="mnTiles"></div>
@@ -2753,7 +2822,7 @@ svg{display:block;max-width:100%;height:auto}
   <div class="wr-empty wr-needs-league" id="emptyTrades">
     <h3>Connect a league to find mutual gains</h3>
     <p>The screen keeps one-for-one swaps that improve both starting lineups.</p>
-    <button class="wr-btn" data-sheet="report">Manage your leagues</button>
+    <button class="wr-btn" data-sheet="leagues">Manage your leagues</button>
   </div>
   <div class="wr-grid wr-has-league wr-hide">
     <article class="wr-card wr-full">
@@ -2770,7 +2839,7 @@ svg{display:block;max-width:100%;height:auto}
   <div class="wr-empty wr-needs-league">
     <h3>The dynasty lens needs a connected dynasty league</h3>
     <p>Connect a Sleeper dynasty league to compare what each roster can do this season with what its assets are worth overall.</p>
-    <button class="wr-btn" data-sheet="report">Manage your leagues</button>
+    <button class="wr-btn" data-sheet="leagues">Manage your leagues</button>
   </div>
   <div class="wr-has-league wr-hide">
     <div class="wr-grid">
@@ -3736,15 +3805,27 @@ function rememberLeague(ref,name){
   else list.unshift({provider:ref.provider,leagueId:String(ref.id),name:name||String(ref.id),focusRosterId:null,savedAt:Date.now()});
   writeShelf(list);paintShelf();paintSwitch();saveAccountShelf();
 }
+/* The league menu. "Add" and "Manage" live at its foot because that is where you
+   already are when you are thinking about which league you are in. */
 function paintSwitch(){
-  const list=readShelf(),sel=$('leagueSwitch');
-  sel.classList.toggle('wr-hide',list.length===0);
-  const cur=state?keyOf(state.ref.provider,state.ref.id):'';
-  sel.innerHTML=(state?'':'<option value="">Choose a saved league…</option>')
+  const list=readShelf(),cur=state?keyOf(state.ref.provider,state.ref.id):'';
+  $('leagueBtn').textContent=state?state.league.name:(list.length?'Choose a league':'No league connected');
+  $('scopeSeg').classList.toggle('wr-hide',list.length<2);
+  $('scopeAll').textContent='All '+list.length;
+  $('leagueMenu').innerHTML=(list.length?'<div class="mhd">Your leagues</div>':'')
     +list.map(x=>{const k=keyOf(x.provider,x.leagueId);
-      return '<option value="'+esc(k)+'"'+(k===cur?' selected':'')+'>'+esc(x.name)+'</option>'}).join('')
-    +(list.length>1?'<option value="__all">▤ All leagues…</option>':'')
-    +'<option value="__add">＋ Add a league…</option>';
+      return '<button type="button" role="menuitem" data-open="'+esc(x.leagueId)+'" data-provider="'+esc(x.provider)
+        +'"'+(k===cur?' class="on"':'')+'>'+esc(x.name)+'<small>Sleeper \u00b7 '+esc(x.leagueId)+'</small></button>'}).join('')
+    +(list.length?'<hr>':'')
+    +'<button type="button" role="menuitem" data-sheet="leagues">\uff0b Add a league</button>'
+    +'<button type="button" role="menuitem" data-sheet="leagues">Manage leagues\u2026</button>';
+  $('leagueMenu').querySelectorAll('[data-open]').forEach(b=>{
+    b.onclick=()=>{closeMenus();openLeague(b.dataset.provider,b.dataset.open)};
+  });
+  $('leagueMenu').querySelectorAll('[data-sheet]').forEach(b=>{
+    b.addEventListener('click',()=>{closeMenus();setTimeout(()=>$('leagueInput')&&$('leagueInput').focus(),80)});
+  });
+  paintTeamMenu();
 }
 function paintShelf(){
   const list=readShelf();
@@ -3791,11 +3872,13 @@ function setLoaded(on){
   ['playoffSpots','playoffStart','sigma','baseline'].forEach(id=>{$(id).disabled=!on});
   $('reset').classList.toggle('wr-hide',!on);
   $('strip').classList.toggle('on',on);
-  $('stripText').innerHTML=on
-    ? '<b>'+esc(state.league.name)+'</b><span class="wr-meta">'+esc(state.ref.provider)+' · '+state.teams.length
-      +' teams · rosters frozen '+new Date().toLocaleString([],{dateStyle:'short',timeStyle:'short'})+'</span>'
-    : 'No league connected. Add or open one to begin.';
-  $('stripAction').textContent='Manage leagues';
+  $('stripText').textContent=on
+    ? esc(state.ref.provider)+' \u00b7 '+state.teams.length+' teams \u00b7 rosters frozen '
+      +new Date().toLocaleString([],{dateStyle:'short',timeStyle:'short'})
+    : 'Add or open a league to begin.';
+  $('youLab').classList.toggle('wr-hide',!ready);
+  $('teamBtn').classList.toggle('wr-hide',!ready);
+  if(ready)$('teamBtn').textContent=state.teams[+$('teamPicker').value||0].name;
   $('valueHorizon').classList.toggle('on',on&&isDynastyLeague());
   $('valueHorizon').querySelectorAll('[data-horizon]').forEach(b=>b.classList.toggle('on',on&&state.valueHorizon===b.dataset.horizon));
   $('flowDynasty').classList.toggle('wr-hide',on&&!isDynastyLeague());
@@ -4071,20 +4154,89 @@ function runSim(){
 /* ------------------------------------------------------------- wiring ----- */
 function syncFlow(id){
   document.querySelectorAll('[data-flow]').forEach(b=>b.classList.toggle('on',b.dataset.flow===id));
-  $('flowLeague').value=['standings','rosters','money'].includes(id)?id:'';
-  $('flowMore').value=['settings','method'].includes(id)?id:'';
-  /* Without this, opening Standings left every pill inactive and the group looking
-     untouched — nothing on screen said which sheet you were on. */
-  $('flowLeague').classList.toggle('on',!!$('flowLeague').value);
-  $('flowMore').classList.toggle('on',!!$('flowMore').value);
+  /* Remember the last per-league view so the scope toggle can come back to it
+     instead of dumping you on My Team every time. */
+  if(typeof lastLeagueSheet!=='undefined'&&!['all','settings','method','leagues'].includes(id))lastLeagueSheet=id;
+  if(typeof wrScope!=='undefined'){
+    const isAll=id==='all';
+    if(isAll!==(wrScope==='all')){
+      wrScope=isAll?'all':'one';
+      $('scopeSeg').querySelectorAll('[data-scope]').forEach(b=>b.classList.toggle('on',b.dataset.scope===wrScope));
+    }
+    $('flowNav').classList.toggle('wr-hide',isAll);
+  }
 }
+/* ---- the chrome: context menus, scope toggle, tabs ---------------------- */
+/* One opener for all three menus. The scrim catches the outside click; Escape
+   closes. aria-expanded rides the anchor so the state is not colour-only. */
+let openAnchor=null;
+function closeMenus(){
+  document.querySelectorAll('.wr-menu').forEach(m=>m.classList.remove('on'));
+  $('wrScrim').classList.remove('on');
+  if(openAnchor){openAnchor.setAttribute('aria-expanded','false');openAnchor=null}
+}
+function openMenu(id,anchor){
+  const already=$(id).classList.contains('on');
+  closeMenus();
+  if(already)return;
+  const m=$(id),r=anchor.getBoundingClientRect();
+  m.classList.add('on');
+  const left=Math.min(r.left,window.innerWidth-m.offsetWidth-12);
+  m.style.left=Math.max(10,left)+'px';
+  m.style.top=Math.min(r.bottom+8,window.innerHeight-m.offsetHeight-12)+'px';
+  $('wrScrim').classList.add('on');
+  anchor.setAttribute('aria-expanded','true');
+  openAnchor=anchor;
+}
+$('wrScrim').onclick=closeMenus;
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenus()});
+$('leagueBtn').onclick=e=>openMenu('leagueMenu',e.currentTarget);
+$('teamBtn').onclick=e=>openMenu('teamMenu',e.currentTarget);
+$('gearBtn').onclick=e=>openMenu('gearMenu',e.currentTarget);
+$('gearMenu').addEventListener('click',closeMenus);
+
+/* Scope: 'all' hides the tabs rather than disabling them — nothing per-league
+   applies on that sheet, and a row of dead tabs is worse than no row. */
+let wrScope='one',lastLeagueSheet='report';
+function setScope(s){
+  wrScope=s;
+  $('scopeSeg').querySelectorAll('[data-scope]').forEach(b=>b.classList.toggle('on',b.dataset.scope===s));
+  $('flowNav').classList.toggle('wr-hide',s==='all');
+  SHEETS.show(s==='all'?'all':lastLeagueSheet);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+$('scopeSeg').addEventListener('click',e=>{
+  const b=e.target.closest('[data-scope]');if(b)setScope(b.dataset.scope);
+});
+
+function paintTeamMenu(){
+  const m=$('teamMenu');
+  if(!state){m.innerHTML='';return}
+  const cur=+$('teamPicker').value||0;
+  m.innerHTML='<div class="mhd">Which team is yours?</div>'+state.teams.map((t,i)=>{
+    const {starters}=chooseStarters(t.players,state.slots);
+    return '<button type="button" role="menuitem" data-menu-team="'+i+'"'+(i===cur?' class="on"':'')+'>'
+      +esc(t.name)+'<small>'+starters.length+' starters \u00b7 '+t.players.length+' rostered</small></button>';
+  }).join('');
+  m.querySelectorAll('[data-menu-team]').forEach(b=>{
+    b.onclick=()=>{
+      $('teamPicker').value=b.dataset.menuTeam;
+      tradeFilter=null;saveFocus();render();closeMenus();
+    };
+  });
+}
+
+/* Nothing connected means nothing to analyse: open on Leagues rather than an
+   empty My Team. */
+if(!readShelf().length&&!location.search.includes('league='))setTimeout(()=>SHEETS&&SHEETS.show('leagues'),0);
 SHEETS=DDSheets({key:'warroom',mount:'#sheets',sheets:[
-  {id:'report',label:'Report Card',panel:'#sheetReport'},
+  {id:'leagues',label:'Leagues',panel:'#sheetLeagues'},
+  {id:'report',label:'My Team',panel:'#sheetReport'},
   {id:'standings',label:'Standings',panel:'#sheetStandings'},
   {id:'rosters',label:'Rosters',panel:'#sheetRosters'},
   {id:'money',label:'Money',panel:'#sheetMoney'},
   {id:'trades',label:'Trades',panel:'#sheetTrades'},
-  {id:'dynasty',label:'Dynasty Lens',panel:'#sheetDynasty'},
+  {id:'dynasty',label:'Dynasty',panel:'#sheetDynasty'},
   {id:'all',label:'All Leagues',panel:'#sheetAll'},
   {id:'settings',label:'Settings',panel:'#sheetSettings'},
   {id:'method',label:'Method & Footnotes',panel:'#sheetMethod'}
@@ -4115,19 +4267,14 @@ document.addEventListener('click',e=>{
 $('connectForm').addEventListener('submit',async e=>{
   e.preventDefault();
   const st=$('connectionStatus');
-  try{await connect($('leagueInput').value);st.className='wr-status good';st.textContent=readShelf().length+' league'+(readShelf().length===1?'':'s')+' saved. This league is open now.';$('leagueInput').value=''}
+  try{await connect($('leagueInput').value);st.className='wr-status good';st.textContent=readShelf().length+' league'+(readShelf().length===1?'':'s')+' saved. This league is open now.';$('leagueInput').value='';
+    /* ⚠️ Connecting from the Leagues sheet used to leave you there, so the
+       "which team is yours" gate — which lives on My Team — never came into
+       view and the league looked connected but inert. */
+    SHEETS.show('report');window.scrollTo({top:0,behavior:'smooth'})}
   catch(err){st.className='wr-status bad';st.textContent=err.message}
 });
 $('flowNav').onclick=e=>{const b=e.target.closest('[data-flow]');if(b)SHEETS.show(b.dataset.flow)};
-$('flowLeague').onchange=e=>{if(e.target.value)SHEETS.show(e.target.value)};
-$('flowMore').onchange=e=>{if(e.target.value)SHEETS.show(e.target.value)};
-$('leagueSwitch').onchange=e=>{
-  const v=e.target.value;
-  if(!v){paintSwitch();return}
-  if(v==='__all'){paintSwitch();SHEETS.show('all');return}
-  if(v==='__add'){paintSwitch();SHEETS.show('report');$('leagueInput').focus();return}
-  const i=v.indexOf(':');openLeague(v.slice(0,i),v.slice(i+1));
-};
 $('teamPicker').onchange=()=>{
   tradeFilter=null;
   saveFocus();

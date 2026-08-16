@@ -21,7 +21,11 @@ ok(/function isDynastyLeague\(\).*settings\?\.type\)===2/.test(warroom), "only S
 ok(warroom.includes('data-horizon="season"') && warroom.includes('data-horizon="dynasty"'), "war room exposes both value horizons");
 ok(warroom.includes('id="mnHorizon"') && warroom.includes('This season</th><th>Dynasty</th><th>Δ'), "war room renders player-level price differences");
 ok(/function usesDynasty\(\).*valueHorizon!==['"]season['"]/.test(warroom), "active horizon controls the war room value source");
-ok(warroom.includes('id="sheetDynasty"') && warroom.includes("{id:'dynasty',label:'Dynasty Lens'"), "dedicated dynasty lens is registered");
+/* The label shortened to "Dynasty" in the nav rebuild — plain one-word tabs. The
+   contract is that the sheet exists and is registered, not what it is called. */
+ok(warroom.includes('id="sheetDynasty"') && /\{id:'dynasty',label:'[^']+',panel:'#sheetDynasty'\}/.test(warroom),
+  "dedicated dynasty lens is registered");
+ok(warroom.includes('<button type="button" data-flow="dynasty"'), "the dynasty lens is a visible tab");
 ok(warroom.includes('id="dyTeamPlot"') && warroom.includes('id="dyPlayerPlot"'), "team and player timeline visualizations exist");
 ok(warroom.includes('data-dydir="now"') && warroom.includes('data-dydir="future"'), "trade lens supports win-now and future-building directions");
 ok(/nowGain>=3&&futureGain<=-3/.test(warroom) && /futureGain>=3&&nowGain<=-3/.test(warroom), "trade candidates require an explicit exchange between timelines");

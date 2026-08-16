@@ -31,12 +31,31 @@ ok(html.includes("{id:'all',label:'All Leagues',panel:'#sheetAll'}"), "portfolio
 ok(html.includes('function pickMyTeam(teams,ref,users)'), "team identity resolution is explicit");
 ok(/function pickMyTeam[\s\S]*focusRosterId[\s\S]*display_name[\s\S]*return 0/.test(html),
   "team resolution prefers saved roster, then identity, then fallback");
-ok(html.includes("if(v==='__all'){paintSwitch();SHEETS.show('all');return}"),
-  "league switcher opens the portfolio without treating it as a provider ID");
+ok(html.includes("SHEETS.show(s==='all'?'all':lastLeagueSheet)"),
+  "the scope toggle opens the portfolio and returns to the view you left");
+ok(html.includes("$('flowNav').classList.toggle('wr-hide',s==='all')"),
+  "scope 'all' hides the per-league tabs rather than leaving dead ones on screen");
+ok(html.includes('data-open="') && html.includes('openLeague(b.dataset.provider,b.dataset.open)'),
+  "the league menu opens a league by provider+id, never by parsing a composite value");
 ok(html.includes('function withState(st,fn)'), "portfolio isolates each league calculation state");
 ok(html.includes('ALL LEAGUES is a cross-league portfolio view'), "Toto states portfolio boundaries");
-ok(html.includes('id="flowNav"') && html.includes('League analysis…') && html.includes('Method &amp; footnotes'),
-  "compact flow navigation exposes primary decisions and secondary detail");
+/* The nav rebuild's core contract: every view is a visible tab, and nothing that
+   is not a view sits in the view switcher. Regressing either is what made the old
+   row unnavigable — three of six views were hidden inside a <select>. */
+ok(html.includes('id="flowNav"'), "the view switcher exists");
+["report","standings","rosters","money","trades","dynasty"].forEach(id=>
+  ok(new RegExp('<button type="button" data-flow="'+id+'"').test(html),
+    "view '"+id+"' is a visible tab, not a dropdown entry"));
+ok(!/<select[^>]*id="flow(League|More)"/.test(html),
+  "no view is buried in a grouped <select>");
+ok(html.includes('id="gearMenu"') && html.includes('data-sheet="settings"') && html.includes('data-sheet="method"'),
+  "settings and method live in the gear menu, not in the view switcher");
+ok(html.includes('id="sheetLeagues"') && html.includes("{id:'leagues',label:'Leagues',panel:'#sheetLeagues'}"),
+  "league admin is its own sheet so My Team can open on the team");
+ok(!/data-flow="leagues"/.test(html),
+  "league admin is deliberately NOT a tab");
+ok(/id="reset"/.test(html),
+  "#reset survives the move into the gear menu — the forget-a-league path clicks it");
 ok(html.includes('.sheetbar{display:none!important}'), "legacy nine-tab wall is hidden behind the compact navigation");
 ok(html.indexOf('id="meName"') > html.indexOf('id="sheetSettings"'), "identity controls live in settings, not the landing hub");
 ok(!html.includes('A pairing survives three gates'), "trade methodology is removed from the human-facing trade intro");
