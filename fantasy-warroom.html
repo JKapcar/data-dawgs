@@ -2429,6 +2429,7 @@ svg{display:block;max-width:100%;height:auto}
 .wr-mini{border:1px solid var(--grid);background:var(--surface-1);color:var(--ink-1);border-radius:6px;
   padding:6px 10px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .wr-mini:hover{border-color:var(--accent);color:var(--accent)}
+.wr-mini.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--surface-1));color:var(--accent);font-weight:750}
 .wr-switch{max-width:min(100%,240px);font-weight:700}
 .wr-leaguehub{border:1px solid color-mix(in srgb,var(--accent) 42%,var(--grid));border-radius:14px;padding:18px;
   margin-bottom:16px;background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 8%,var(--surface-1)),var(--surface-1) 54%)}
@@ -2724,6 +2725,44 @@ svg{display:block;max-width:100%;height:auto}
       and no proposal is sent anywhere.</p>
       <div id="trades"></div>
     </article>
+  </div>
+</section>
+
+<!-- =========================== DYNASTY LENS ============================= -->
+<section id="sheetDynasty" hidden>
+  <div class="wr-empty wr-needs-league">
+    <h3>The dynasty lens needs a connected dynasty league</h3>
+    <p>Connect a Sleeper dynasty league to compare what each roster can do this season with what its assets are worth overall.</p>
+    <button class="wr-btn" data-sheet="report">Manage your leagues</button>
+  </div>
+  <div class="wr-has-league wr-hide">
+    <div class="wr-grid">
+      <article class="wr-card wr-full">
+        <h2>Win now vs overall dynasty</h2>
+        <p class="wr-note">Two prices, two questions. This-season dollars describe current buying power. Dynasty dollars
+        describe long-term asset value. The gap is a strategic signal, not proof that either price is correct.</p>
+        <div class="wr-tiles" id="dyTiles"></div><p class="wr-status" id="dyStatus"></p>
+      </article>
+      <article class="wr-card wr-full">
+        <h3>League map</h3>
+        <p class="wr-note">Right means more this-season value; up means more dynasty value. The dashed lines are league averages.</p>
+        <div id="dyTeamPlot"></div><div class="wr-legend" id="dyTeamLegend"></div>
+      </article>
+      <article class="wr-card wr-full">
+        <h3>Your roster’s price gaps</h3>
+        <p class="wr-note">Above the diagonal is a long-term asset premium. Below it is win-now value that dynasty pricing discounts.</p>
+        <div id="dyPlayerPlot"></div><div class="wr-legend" id="dyPlayerLegend"></div>
+        <div style="overflow-x:auto"><table class="wr-money" id="dyPlayers"></table></div>
+      </article>
+      <article class="wr-card wr-full">
+        <h3>Trades across the two timelines</h3>
+        <p class="wr-note">These swaps exchange time horizons: one side gains this-season dollars while the other gains
+        dynasty dollars. They are candidate conversations, not fair-trade verdicts; acceptance, depth, picks, injuries and
+        multi-player construction remain outside the screen.</p>
+        <div class="wr-filter"><button class="wr-mini on" data-dydir="now">Help me win now</button><button class="wr-mini" data-dydir="future">Build dynasty value</button></div>
+        <div id="dyTrades"></div>
+      </article>
+    </div>
   </div>
 </section>
 
@@ -3367,6 +3406,47 @@ function renderMoney(){
     +'so a shape maxed at a position only means nobody else spent there either.';
 }
 
+/* ============================ DYNASTY LENS ===============================
+   This sheet never blends the two horizons into one score. The disagreement is
+   the information: contenders can rationally pay future value for current value,
+   while rebuilders can take the other side. */
+let dyDir='now';
+function dualPrice(p){const season=mvOf(p,'season'),dynasty=mvOf(p,'dynasty');return {season,dynasty,gap:season==null||dynasty==null?null:dynasty-season}}
+function dualTeam(t){const rows=t.players.map(p=>({p,...dualPrice(p)})).filter(x=>x.season!=null&&x.dynasty!=null);return {t,rows,season:rows.reduce((a,x)=>a+x.season,0),dynasty:rows.reduce((a,x)=>a+x.dynasty,0)}}
+function dyScatter(points,{xKey,yKey,labelKey,aria,diagonal=false}){
+  if(!points.length)return '<p class="wr-note">No players are priced in both views.</p>';
+  const W=640,H=380,l=48,r=18,t=18,b=42,xm=Math.max(1,...points.map(x=>x[xKey])),ym=Math.max(1,...points.map(x=>x[yKey]));
+  const X=v=>l+v/xm*(W-l-r),Y=v=>H-b-v/ym*(H-t-b),avgX=points.reduce((a,x)=>a+x[xKey],0)/points.length,avgY=points.reduce((a,x)=>a+x[yKey],0)/points.length;
+  let g=diagonal?'<line x1="'+X(0)+'" y1="'+Y(0)+'" x2="'+X(Math.min(xm,ym))+'" y2="'+Y(Math.min(xm,ym))+'" style="stroke:var(--ink-3);stroke-dasharray:6 4;opacity:.7"/>'
+    :'<line x1="'+X(avgX)+'" y1="'+t+'" x2="'+X(avgX)+'" y2="'+(H-b)+'" style="stroke:var(--ink-3);stroke-dasharray:5 4;opacity:.55"/><line x1="'+l+'" y1="'+Y(avgY)+'" x2="'+(W-r)+'" y2="'+Y(avgY)+'" style="stroke:var(--ink-3);stroke-dasharray:5 4;opacity:.55"/>';
+  points.forEach(x=>{const color=x.color||POS_COLOR[x.p?.pos]||'var(--accent)';g+='<circle cx="'+X(x[xKey])+'" cy="'+Y(x[yKey])+'" r="'+(x.mine?6:4.5)+'" style="fill:'+color+';opacity:'+(x.mine?1:.72)+';stroke:'+(x.mine?'var(--ink-1)':'none')+';stroke-width:1.5"><title>'+esc(x[labelKey])+' · this season '+fmt$(x[xKey])+' · dynasty '+fmt$(x[yKey])+'</title></circle>'});
+  g+='<text x="'+((l+W-r)/2)+'" y="'+(H-7)+'" text-anchor="middle" style="fill:var(--ink-3);font:700 11px system-ui">This-season value →</text>'+
+    '<text x="14" y="'+((t+H-b)/2)+'" text-anchor="middle" transform="rotate(-90 14 '+((t+H-b)/2)+')" style="fill:var(--ink-3);font:700 11px system-ui">Overall dynasty value →</text>';
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" role="img" aria-label="'+esc(aria)+'">'+g+'</svg>';
+}
+function renderDynastyLens(){
+  if(!$('dyStatus')||!state)return;
+  if(!isDynastyLeague()){$('dyStatus').className='wr-status bad';$('dyStatus').textContent='This is not marked as a Sleeper dynasty league, so the page will not pretend its keeper horizon is known.';$('dyTiles').innerHTML=$('dyTeamPlot').innerHTML=$('dyPlayerPlot').innerHTML=$('dyPlayers').innerHTML=$('dyTrades').innerHTML='';return}
+  const me=mnMe(),teams=state.teams.map(dualTeam),mine=teams.find(x=>x.t===me),avgS=teams.reduce((a,x)=>a+x.season,0)/teams.length,avgD=teams.reduce((a,x)=>a+x.dynasty,0)/teams.length;
+  const profile=mine.season>=avgS?(mine.dynasty>=avgD?'Powerhouse':'Win-now contender'):(mine.dynasty>=avgD?'Rebuilder / rising':'Value-poor roster');
+  $('dyStatus').className='wr-status good';$('dyStatus').textContent=(state.slots.SUPERFLEX?'Superflex / TE-premium':'1QB')+' dynasty inputs · both horizons shown regardless of the active War Room toggle.';
+  $('dyTiles').innerHTML=[['This season',fmt$(mine.season),(mine.season-avgS>=0?'+':'−')+fmt$(Math.abs(mine.season-avgS))+' vs avg'],['Overall dynasty',fmt$(mine.dynasty),(mine.dynasty-avgD>=0?'+':'−')+fmt$(Math.abs(mine.dynasty-avgD))+' vs avg'],['Timeline gap',(mine.dynasty-mine.season>=0?'+':'−')+fmt$(Math.abs(mine.dynasty-mine.season)),'dynasty minus season'],['Roster profile',profile,'relative to this league']].map(([l,v,d])=>'<div class="wr-tile"><div class="tl">'+l+'</div><div class="tv">'+v+'</div><div class="td">'+d+'</div></div>').join('');
+  $('dyTeamPlot').innerHTML=dyScatter(teams.map((x,i)=>({...x,name:x.t.name,mine:x===mine,color:x===mine?'var(--accent)':'var(--ink-3)'})),{xKey:'season',yKey:'dynasty',labelKey:'name',aria:'Team this-season value against overall dynasty value'});
+  $('dyTeamLegend').innerHTML='<span><span class="sw" style="background:var(--accent)"></span>Your team</span><span><span class="sw" style="background:var(--ink-3)"></span>League rival</span>';
+  $('dyPlayerPlot').innerHTML=dyScatter(mine.rows.map(x=>({...x,name:x.p.name,mine:true})),{xKey:'season',yKey:'dynasty',labelKey:'name',aria:'Your player this-season prices against overall dynasty prices',diagonal:true});
+  $('dyPlayerLegend').innerHTML=POS_ORDER.map(P=>'<span><span class="sw" style="background:'+POS_COLOR[P]+'"></span>'+P+'</span>').join('');
+  const rows=mine.rows.slice().sort((a,b)=>Math.abs(b.gap)-Math.abs(a.gap));
+  $('dyPlayers').innerHTML='<thead><tr><th>Player</th><th>Pos</th><th>This season</th><th>Dynasty</th><th>Dynasty − season</th><th>Lens</th></tr></thead><tbody>'+rows.map(x=>'<tr><td style="text-align:left">'+esc(x.p.name)+'</td><td>'+x.p.pos+'</td><td>'+fmt$(x.season)+'</td><td>'+fmt$(x.dynasty)+'</td><td class="'+(x.gap>=0?'wr-up':'wr-down')+'">'+(x.gap>=0?'+':'−')+fmt$(Math.abs(x.gap))+'</td><td style="text-align:left">'+(x.gap>=3?'future premium':x.gap<=-3?'win-now discount':'similar')+'</td></tr>').join('')+'</tbody>';
+  const candidates=[];
+  mine.rows.filter(x=>!['K','DST'].includes(x.p.pos)).forEach(give=>teams.filter(x=>x!==mine).forEach(other=>other.rows.filter(x=>!['K','DST'].includes(x.p.pos)).forEach(get=>{
+    const nowGain=get.season-give.season,futureGain=get.dynasty-give.dynasty;
+    if(dyDir==='now'&&nowGain>=3&&futureGain<=-3)candidates.push({give,get,other,primary:nowGain,cost:-futureGain});
+    if(dyDir==='future'&&futureGain>=3&&nowGain<=-3)candidates.push({give,get,other,primary:futureGain,cost:-nowGain});
+  })));
+  candidates.sort((a,b)=>(b.primary+b.cost)-(a.primary+a.cost));
+  $('dyTrades').innerHTML=candidates.length?'<div style="overflow-x:auto"><table class="wr-money"><thead><tr><th>You give</th><th>You get</th><th>Rival</th><th>'+(dyDir==='now'?'Season gain':'Dynasty gain')+'</th><th>'+(dyDir==='now'?'Dynasty cost':'Season cost')+'</th></tr></thead><tbody>'+candidates.slice(0,25).map(x=>'<tr><td style="text-align:left">'+esc(x.give.p.name)+'<br><small>'+fmt$(x.give.season)+' now · '+fmt$(x.give.dynasty)+' dynasty</small></td><td style="text-align:left">'+esc(x.get.p.name)+'<br><small>'+fmt$(x.get.season)+' now · '+fmt$(x.get.dynasty)+' dynasty</small></td><td style="text-align:left">'+esc(x.other.t.name)+'</td><td class="wr-up">+'+fmt$(x.primary)+'</td><td class="wr-down">−'+fmt$(x.cost)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="wr-note">No one-for-one swap clears a $3 gain on one timeline and a $3 concession on the other. That is a real result, not a reason to loosen the screen until something appears.</p>';
+}
+
 /* ============================ THE PORTFOLIO ================================
    Every row is computed inside its own league state. Unloaded leagues stay explicit
    rather than inheriting numbers from whichever league happens to be active. */
@@ -3431,6 +3511,7 @@ const STATIONS=[
   {sheet:'rosters',title:'Value matrix',what:'The whole league as surpluses and deficits. Click a cell to carry it into the trade finder.',needs:'Needs: all rosters'},
   {sheet:'money',title:'Money',what:'Every roster priced in auction dollars, split into what you start and what you sit.',needs:'Needs: all rosters'},
   {sheet:'trades',title:'Trade finder',what:'Every cross-position 1-for-1 where both starting lineups improve. Mutual gains only.',needs:'Needs: all rosters'},
+  {sheet:'dynasty',title:'Dynasty lens',what:'Win-now price against overall dynasty value, with roster maps and trades across the two timelines.',needs:'Needs: a dynasty league'},
   {sheet:'report',title:'Report card',what:'Your team graded against this league, the shape of it, and what to do about it.',needs:'Needs: your roster'},
   {sheet:'all',title:'All leagues',what:'Your team in every saved league on one desk, plus the players you hold in more than one of them.',needs:'Needs: one saved league'},
   {sheet:'settings',title:'League settings',what:'Playoff spots, playoff start and weekly σ, read from the league and overridable as a what-if.',needs:'Always available'},
@@ -3440,11 +3521,11 @@ function paintStations(){
   const loaded=!!state;
   $('stations').innerHTML=STATIONS.map(s=>{
     const always=s.needs==='Always available';
-    const ready=always||loaded;
+    const ready=always||loaded&&(s.sheet!=='dynasty'||isDynastyLeague());
     return `<button class="wr-station" data-sheet="${s.sheet}">
       <span><span class="wr-tag ${ready?'on':'wait'}">${always?'Open':(loaded?'Live':'Needs league')}</span></span>
       <h3>${esc(s.title)}</h3><p>${esc(s.what)}</p>
-      <span class="wr-needs">${esc(loaded&&!always?'Running on '+state.league.name:s.needs)}</span></button>`;
+      <span class="wr-needs">${esc(loaded&&!always?(ready?'Running on '+state.league.name:s.needs):s.needs)}</span></button>`;
   }).join('');
 }
 
@@ -3660,6 +3741,7 @@ function render(){
   trades(me);
   renderReport();
   renderMoney();
+  renderDynastyLens();
   const changed=JSON.stringify(state.settings)!==state.defaults;
   $('overrideStatus').className='wr-status'+(changed?' bad':'');
   $('overrideStatus').textContent=changed?'What-if: these are your overrides, not the settings this league actually uses.':'Reading this league exactly as the provider reports it. No overrides in effect.';
@@ -3828,10 +3910,11 @@ SHEETS=DDSheets({key:'warroom',mount:'#sheets',sheets:[
   {id:'rosters',label:'Rosters',panel:'#sheetRosters'},
   {id:'money',label:'Money',panel:'#sheetMoney'},
   {id:'trades',label:'Trades',panel:'#sheetTrades'},
+  {id:'dynasty',label:'Dynasty Lens',panel:'#sheetDynasty'},
   {id:'all',label:'All Leagues',panel:'#sheetAll'},
   {id:'settings',label:'Settings',panel:'#sheetSettings'},
   {id:'method',label:'Receipts & Method',panel:'#sheetMethod'}
-],onShow(id){if(id==='all')renderPortfolio()}});
+],onShow(id){if(id==='all')renderPortfolio();if(id==='dynasty')renderDynastyLens()}});
 
 document.addEventListener('click',e=>{
   const jump=e.target.closest('[data-sheet]');
@@ -3842,6 +3925,8 @@ document.addEventListener('click',e=>{
     trades(state.teams[+$('teamPicker').value||0]);
     SHEETS.show('trades');window.scrollTo({top:0,behavior:'smooth'});return
   }
+  const dydir=e.target.closest('[data-dydir]');
+  if(dydir){dyDir=dydir.dataset.dydir;document.querySelectorAll('[data-dydir]').forEach(x=>x.classList.toggle('on',x===dydir));renderDynastyLens();return}
   const load=e.target.closest('[data-load]');
   if(load){openLeague(load.dataset.provider,load.dataset.load);return}
   const forget=e.target.closest('[data-forget]');
@@ -3931,6 +4016,7 @@ window.DD_BOTCTX = {
 - AN EDITED SETTING IS A WHAT-IF and is marked pool_eligible false. Do not present an overridden run as the league's own number.
 - THE TRADE FINDER IS A CANDIDATE SCREEN, NOT A FAIRNESS ORACLE. It cannot see acceptance probability, manager preferences, depth needs, injury risk, or multi-player construction; never present a surviving proposal as one the rival would accept. IT PROPOSES, IT DOES NOT ACT. It never accepts, sends or executes anything. A proposal must pass THREE tests: both lineups improve when recomputed after the swap, neither side is left unable to fill a starting slot, AND the two players are within max($4, 35% of the dearer) in the ACTIVE auction-value horizon. Redraft and keeper leagues use /data/pool.json. Sleeper dynasty leagues let the user toggle between this-season values and /data/dynasty-ranks.json; the dynasty side automatically selects 1QB or Superflex / TE-premium values from roster slots. A swap that would leave either side short a startable player at some slot is refused whatever the points say. It will often return nothing, and returning nothing is a real answer rather than a failure.
 - ⚠️ NEVER PRESENT A LINEUP GAIN AS A REASON A RIVAL WOULD ACCEPT. A benched player adds zero to a starting-lineup total, so lineup gain alone would price a benched WR1 at a kicker. If anyone asks why a lopsided swap is not listed, that is the reason. Always name the active value horizon and capture date. This-season dollars are a dated market snapshot; overall dynasty dollars are independent analyst estimates. Neither is a live offer price. If a player has no published value the row falls back to model value over replacement and says so; never quote a fallback row as a market price or dynasty rank.
+- THE DYNASTY LENS KEEPS THE TWO TIMELINES SEPARATE. Its team map, player gaps and roster profile compare this-season auction dollars with overall dynasty auction dollars; it does not average them into a fake master score. Its trade rows deliberately exchange timelines: for "win now," the selected team gains at least $3 this-season value while conceding at least $3 dynasty value; "build dynasty value" reverses that. These are candidate conversations, not fair-trade verdicts, and do not model acceptance, depth, picks, injuries or packages.
 - SAVED LEAGUES use a local-first shelf. For signed-in UID accounts, only Sleeper league IDs and the optional focus-roster IDs sync privately through the Worker and follow the account across devices; league rosters, projections and simulations are fetched fresh and are not stored there. Signed-out users keep a device-only shelf. The same account shelf is shared with Last Dawg Standing.
 - ALL LEAGUES is a cross-league portfolio view. It computes each saved league inside that league's own scoring, roster and replacement-level context, and shows repeated-player exposure only after those leagues are loaded. It must never mix one league's replacement baseline into another.
 - TEAM IDENTITY is resolved in this order: the explicit team saved for that league, then an exact Sleeper display-name or team-name match from the optional identity field, then the first roster as a fallback. Never imply the name alone is an authenticated ownership claim.

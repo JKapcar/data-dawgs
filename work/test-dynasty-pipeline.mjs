@@ -21,6 +21,11 @@ ok(/function isDynastyLeague\(\).*settings\?\.type\)===2/.test(warroom), "only S
 ok(warroom.includes('data-horizon="season"') && warroom.includes('data-horizon="dynasty"'), "war room exposes both value horizons");
 ok(warroom.includes('id="mnHorizon"') && warroom.includes('This season</th><th>Dynasty</th><th>Δ'), "war room renders player-level price differences");
 ok(/function usesDynasty\(\).*valueHorizon!==['"]season['"]/.test(warroom), "active horizon controls the war room value source");
+ok(warroom.includes('id="sheetDynasty"') && warroom.includes("{id:'dynasty',label:'Dynasty Lens'"), "dedicated dynasty lens is registered");
+ok(warroom.includes('id="dyTeamPlot"') && warroom.includes('id="dyPlayerPlot"'), "team and player timeline visualizations exist");
+ok(warroom.includes('data-dydir="now"') && warroom.includes('data-dydir="future"'), "trade lens supports win-now and future-building directions");
+ok(/nowGain>=3&&futureGain<=-3/.test(warroom) && /futureGain>=3&&nowGain<=-3/.test(warroom), "trade candidates require an explicit exchange between timelines");
+ok(warroom.includes('candidate conversations, not fair-trade verdicts'), "dynasty trade screen disclaims acceptance and fairness");
 ok(/state\.slots\.SUPERFLEX\?row\.two_qb_auction:row\.one_qb_auction/.test(warroom), "war room chooses auction values from actual roster slots");
 ok(warroom.includes("Keeper league detected") && warroom.includes("remains this-season market value"), "keeper uncertainty is explicit");
 
