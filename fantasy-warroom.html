@@ -2424,6 +2424,18 @@ table.wr-money tr.avg td{border-top:2px solid var(--grid);color:var(--ink-3);fon
 .wr-radarcard .rn{font-size:12px;font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wr-radarcard .rf{font-size:11px;color:var(--ink-3);margin-top:3px}
 .wr-svg{display:block;width:100%;height:auto;margin:0 auto}
+.wr-plot{position:relative}
+.wr-labeltog{float:right;font-size:11px;font-weight:700}
+.wr-labeltog[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--surface-1))}
+.wr-hit{fill:transparent;cursor:pointer}
+.wr-hit:focus-visible{outline:none}
+.wr-dot{transition:r .08s ease;pointer-events:none}
+.wr-hit:hover+.wr-dot,.wr-hit:focus-visible+.wr-dot{r:8;stroke:var(--surface-1);stroke-width:2}
+.wr-tip{position:absolute;z-index:5;pointer-events:none;opacity:0;transform:translate(-50%,-124%);border:1px solid var(--grid);border-radius:9px;background:var(--surface-1);padding:8px 10px;box-shadow:0 6px 18px rgba(0,0,0,.16);white-space:nowrap;transition:opacity .09s ease}
+.wr-tip.on{opacity:1}
+.wr-tip b{display:block;font-size:15px;font-weight:800;letter-spacing:-.02em;color:var(--ink-1)}
+.wr-tip span{display:block;font-size:11px;color:var(--ink-3);margin-top:2px}
+@media(prefers-reduced-motion:reduce){.wr-dot,.wr-tip{transition:none}}
 .wr-svg-wide{max-width:1100px}.wr-svg-bars{max-width:980px}.wr-svg-small{max-width:620px}.wr-svg-radar{max-width:320px}
 .wr-svg-mini{max-width:150px}
 .wr-teamh2{margin:0;position:relative;display:inline-flex;align-items:center;max-width:100%}
@@ -2768,7 +2780,7 @@ svg{display:block;max-width:100%;height:auto}
         <div class="wr-tiles" id="dyTiles"></div><p class="wr-status" id="dyStatus"></p>
       </article>
       <article class="wr-card wr-full">
-        <h3>League map</h3>
+        <h3>League map <button type="button" class="wr-mini wr-labeltog" id="mapLabelTog" aria-pressed="false">Label every team</button></h3>
         <p class="wr-note">Right means more this-season value; up means more dynasty value. The dashed lines are league averages.</p>
         <div id="dyTeamPlot"></div><div class="wr-legend" id="dyTeamLegend"></div>
       </article>
@@ -3464,13 +3476,78 @@ function dyScatter(points,{xKey,yKey,labelKey,aria,diagonal=false}){
     +'<text x="'+(l-6)+'" y="'+(Y(v)+3.5)+'" text-anchor="end" style="fill:var(--ink-3);font:600 10px system-ui">'+fmt$(Math.round(v))+'</text>'});
   g+=diagonal?'<line x1="'+X(x0)+'" y1="'+Y(y0)+'" x2="'+X(x1)+'" y2="'+Y(y1)+'" style="stroke:var(--ink-3);stroke-dasharray:6 4;opacity:.7"/>'
     :'<line x1="'+X(avgX)+'" y1="'+t+'" x2="'+X(avgX)+'" y2="'+(H-b)+'" style="stroke:var(--ink-3);stroke-dasharray:5 4;opacity:.55"/><line x1="'+l+'" y1="'+Y(avgY)+'" x2="'+(W-r)+'" y2="'+Y(avgY)+'" style="stroke:var(--ink-3);stroke-dasharray:5 4;opacity:.55"/>';
-  points.forEach(x=>{const color=x.color||POS_COLOR[x.p?.pos]||'var(--accent)';g+='<circle cx="'+X(x[xKey])+'" cy="'+Y(x[yKey])+'" r="'+(x.mine?6:4.5)+'" style="fill:'+color+';opacity:'+(x.mine?1:.72)+';stroke:'+(x.mine?'var(--ink-1)':'none')+';stroke-width:1.5"><title>'+esc(x[labelKey])+' · this season '+fmt$(x[xKey])+' · dynasty '+fmt$(x[yKey])+'</title></circle>'});
+  /* ⚠️ The hit circle is 24px while the mark stays 5px: an 8px dot is a pinpoint
+     nobody hits reliably. It precedes its dot so the CSS sibling selector can lift
+     the mark on hover and on keyboard focus alike. */
+  points.forEach((x,i)=>{
+    const color=x.color||POS_COLOR[x.p?.pos]||'var(--accent)',cx=X(x[xKey]),cy=Y(x[yKey]);
+    g+='<circle class="wr-hit" cx="'+cx+'" cy="'+cy+'" r="12" tabindex="0" role="img"'
+      +' data-i="'+i+'" data-x="'+cx+'" data-y="'+cy+'"'
+      +' aria-label="'+esc(x[labelKey])+', this season '+fmt$(x[xKey])+', dynasty '+fmt$(x[yKey])+'"></circle>'
+      +'<circle class="wr-dot" cx="'+cx+'" cy="'+cy+'" r="'+(x.mine?6:4.5)+'" style="fill:'+color
+      +';opacity:'+(x.mine?1:.72)+';stroke:'+(x.mine?'var(--ink-1)':'none')+';stroke-width:1.5"></circle>';
+  });
+  /* Direct labels for everyone, on demand. This — not twelve hues — is the readable
+     answer to "which dot is which" for the whole chart at once. */
+  /* ⚠️ Twelve labels on one plot WILL collide — the first render overprinted
+     "The Slobberknockers" onto "Lake Erie Lightning". Greedy placement: try above,
+     then below, then either side, and drop the label if all four collide. A dropped
+     label is not lost, it is one hover away; an overprinted pair is unreadable. */
+  if(mapLabels){
+    const placed=[],hit=(a,b)=>!(a.x2<b.x1||b.x2<a.x1||a.y2<b.y1||b.y2<a.y1);
+    points.forEach(x=>{
+      const raw=String(x[labelKey]),txt=raw.length>20?raw.slice(0,19)+'…':raw;
+      const cx=X(x[xKey]),cy=Y(x[yKey]),w=txt.length*5.4,h=11;
+      const spots=[[cx,cy-10,'middle'],[cx,cy+17,'middle'],[cx-9,cy+4,'end'],[cx+9,cy+4,'start']];
+      for(const[tx,ty,anchor]of spots){
+        const x1=anchor==='middle'?tx-w/2:anchor==='end'?tx-w:tx;
+        const box={x1,x2:x1+w,y1:ty-h,y2:ty+3};
+        if(box.x1<2||box.x2>W-2||box.y1<t-4||box.y2>H-b+2)continue;
+        if(placed.some(q=>hit(q,box)))continue;
+        placed.push(box);
+        g+='<text x="'+tx+'" y="'+ty+'" text-anchor="'+anchor+'" style="fill:var(--ink-2);font:700 10px system-ui;'
+          +'paint-order:stroke;stroke:var(--surface-1);stroke-width:3">'+esc(txt)+'</text>';
+        break;
+      }
+    });
+  }
   g+='<text x="'+((l+W-r)/2)+'" y="'+(H-4)+'" text-anchor="middle" style="fill:var(--ink-3);font:700 11px system-ui">This-season value →</text>'
     /* The rotated caption shares a band with the right-anchored tick labels. There is
        room for it on the desktop canvas and not on the phone one, and the card's prose
        already names both axes — so the narrow layout goes without. */
     +(NARROW()?'':'<text x="13" y="'+((t+H-b)/2)+'" text-anchor="middle" transform="rotate(-90 13 '+((t+H-b)/2)+')" style="fill:var(--ink-3);font:700 11px system-ui">Overall dynasty value →</text>');
-  return '<svg viewBox="0 0 '+W+' '+H+'" class="wr-svg wr-svg-wide" role="img" aria-label="'+esc(aria)+'">'+g+'</svg>';
+  return '<div class="wr-plot" data-plot="1">'
+    +'<svg viewBox="0 0 '+W+' '+H+'" class="wr-svg wr-svg-wide" role="img" aria-label="'+esc(aria)+'">'+g+'</svg>'
+    +'<div class="wr-tip" role="status" aria-live="polite"></div></div>';
+}
+
+/* Tooltip text is set with textContent, never innerHTML: team names come from a
+   league provider and are untrusted. The readout leads with the values because the
+   reader already knows which dot they are pointing at. */
+let mapLabels=false;
+function wirePlot(host,points,keys){
+  const plot=host.querySelector('.wr-plot');if(!plot)return;
+  const svg=plot.querySelector('svg'),tip=plot.querySelector('.wr-tip');
+  const show=el=>{
+    const p=points[+el.dataset.i];if(!p)return;
+    const box=svg.getBoundingClientRect(),vb=svg.viewBox.baseVal;
+    tip.textContent='';
+    const b=document.createElement('b');b.textContent=String(p[keys.labelKey]);
+    const s=document.createElement('span');
+    s.textContent='this season '+fmt$(p[keys.xKey])+' · dynasty '+fmt$(p[keys.yKey]);
+    tip.append(b,s);
+    tip.style.left=(+el.dataset.x/vb.width*box.width)+'px';
+    tip.style.top=(+el.dataset.y/vb.height*box.height)+'px';
+    tip.classList.add('on');
+  };
+  const hide=()=>tip.classList.remove('on');
+  plot.querySelectorAll('.wr-hit').forEach(el=>{
+    el.addEventListener('pointerenter',()=>show(el));
+    el.addEventListener('focus',()=>show(el));
+    el.addEventListener('pointerleave',hide);
+    el.addEventListener('blur',hide);
+  });
+  plot.addEventListener('pointerleave',hide);
 }
 function renderDynastyLens(){
   if(!$('dyStatus')||!state)return;
@@ -3479,9 +3556,13 @@ function renderDynastyLens(){
   const profile=mine.season>=avgS?(mine.dynasty>=avgD?'Powerhouse':'Win-now contender'):(mine.dynasty>=avgD?'Rebuilder / rising':'Value-poor roster');
   $('dyStatus').className='wr-status good';$('dyStatus').textContent=(state.slots.SUPERFLEX?'Superflex / TE-premium':'1QB')+' dynasty inputs · both horizons shown regardless of the active War Room toggle.';
   $('dyTiles').innerHTML=[['This season',fmt$(mine.season),(mine.season-avgS>=0?'+':'−')+fmt$(Math.abs(mine.season-avgS))+' vs avg'],['Overall dynasty',fmt$(mine.dynasty),(mine.dynasty-avgD>=0?'+':'−')+fmt$(Math.abs(mine.dynasty-avgD))+' vs avg'],['Timeline gap',(mine.dynasty-mine.season>=0?'+':'−')+fmt$(Math.abs(mine.dynasty-mine.season)),'dynasty minus season'],['Roster profile',profile,'relative to this league']].map(([l,v,d])=>'<div class="wr-tile"><div class="tl">'+l+'</div><div class="tv">'+v+'</div><div class="td">'+d+'</div></div>').join('');
-  $('dyTeamPlot').innerHTML=dyScatter(teams.map((x,i)=>({...x,name:x.t.name,mine:x===mine,color:x===mine?'var(--accent)':'var(--ink-3)'})),{xKey:'season',yKey:'dynasty',labelKey:'name',aria:'Team this-season value against overall dynasty value'});
+  const teamPoints=teams.map(x=>({...x,name:x.t.name,mine:x===mine,color:x===mine?'var(--accent)':'var(--ink-3)'}));
+  $('dyTeamPlot').innerHTML=dyScatter(teamPoints,{xKey:'season',yKey:'dynasty',labelKey:'name',aria:'Team this-season value against overall dynasty value'});
+  wirePlot($('dyTeamPlot'),teamPoints,{xKey:'season',yKey:'dynasty',labelKey:'name'});
   $('dyTeamLegend').innerHTML='<span><span class="sw" style="background:var(--accent)"></span>Your team</span><span><span class="sw" style="background:var(--ink-3)"></span>League rival</span>';
-  $('dyPlayerPlot').innerHTML=dyScatter(mine.rows.map(x=>({...x,name:x.p.name,mine:true})),{xKey:'season',yKey:'dynasty',labelKey:'name',aria:'Your player this-season prices against overall dynasty prices',diagonal:true});
+  const playerPoints=mine.rows.map(x=>({...x,name:x.p.name,mine:true}));
+  $('dyPlayerPlot').innerHTML=dyScatter(playerPoints,{xKey:'season',yKey:'dynasty',labelKey:'name',aria:'Your player this-season prices against overall dynasty prices',diagonal:true});
+  wirePlot($('dyPlayerPlot'),playerPoints,{xKey:'season',yKey:'dynasty',labelKey:'name'});
   $('dyPlayerLegend').innerHTML=POS_ORDER.map(P=>'<span><span class="sw" style="background:'+POS_COLOR[P]+'"></span>'+P+'</span>').join('');
   const rows=mine.rows.slice().sort((a,b)=>Math.abs(b.gap)-Math.abs(a.gap));
   $('dyPlayers').innerHTML='<thead><tr><th>Player</th><th>Pos</th><th>This season</th><th>Dynasty</th><th>Dynasty − season</th><th>Lens</th></tr></thead><tbody>'+rows.map(x=>'<tr><td style="text-align:left">'+esc(x.p.name)+'</td><td>'+x.p.pos+'</td><td>'+fmt$(x.season)+'</td><td>'+fmt$(x.dynasty)+'</td><td class="'+(x.gap>=0?'wr-up':'wr-down')+'">'+(x.gap>=0?'+':'−')+fmt$(Math.abs(x.gap))+'</td><td style="text-align:left">'+(x.gap>=3?'future premium':x.gap<=-3?'win-now discount':'similar')+'</td></tr>').join('')+'</tbody>';
@@ -4060,6 +4141,11 @@ try{
   const redraw=()=>{if(state)render()};
   mq.addEventListener?mq.addEventListener('change',redraw):mq.addListener(redraw);
 }catch(e){}
+$('mapLabelTog').onclick=e=>{
+  mapLabels=!mapLabels;
+  e.currentTarget.setAttribute('aria-pressed',String(mapLabels));
+  renderDynastyLens();
+};
 $('rcTeamSel').onchange=e=>{
   $('teamPicker').value=e.target.value;
   tradeFilter=null;
