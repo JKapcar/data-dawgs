@@ -27,7 +27,7 @@ edits = [
     # 2 — CSS for the h2-select, its caret, and the nudge
     (".wr-radarcard .rf{font-size:11px;color:var(--ink-3);margin-top:3px}",
      ".wr-radarcard .rf{font-size:11px;color:var(--ink-3);margin-top:3px}\n"
-     ".wr-teamh2{margin:0;position:relative;display:flex;align-items:center;max-width:100%}\n"
+     ".wr-teamh2{margin:0;position:relative;display:inline-flex;align-items:center;max-width:100%}\n"
      ".wr-teamh2::after{content:\"\\25be\";color:var(--accent);position:absolute;right:4px;top:50%;transform:translateY(-52%);pointer-events:none;font-size:.65em}\n"
      ".wr-teamh2 select{appearance:none;-webkit-appearance:none;font:inherit;font-weight:800;letter-spacing:-.02em;color:inherit;background:transparent;border:0;border-bottom:2px dashed color-mix(in srgb,var(--accent) 55%,transparent);border-radius:0;padding:0 26px 3px 2px;cursor:pointer;max-width:100%;min-width:0;flex:0 1 auto;text-overflow:ellipsis}\n"
      ".wr-teamh2 select:hover,.wr-teamh2 select:focus-visible{border-bottom-color:var(--accent);outline:none}\n"
