@@ -236,4 +236,24 @@ assert.equal((await guillotineRequest({ method: "PUT", token, body: { uid: "vict
 assert.equal((await guillotineRequest({ method: "PUT", token, body: { leagues: [{ leagueId: "1234567890123456789", focusRosterId: "2" }] } })).response.status, 422,
   "focus roster IDs must be numeric when present");
 
+/* Legacy shelf records predate the strict validator (older guillotine.html stored
+ * display names alongside the IDs). A GET must salvage them, not 502 — a 502 here
+ * bricked account sync on every device (observed live 2026-08-15, Kap's account). */
+{
+  db.users[UID].guillotineState = { updatedAt: 111, state: { leagues: [
+    { leagueId: "1315018026927554560", focusRosterId: "2", name: "Legacy League" },
+    { leagueId: "not-a-sleeper-id", focusRosterId: null, name: "Corrupt row" },
+  ] } };
+  const salvaged = await guillotineRequest({ token });
+  assert.equal(salvaged.response.status, 200, "a legacy shelf record no longer 502s the read");
+  assert.deepEqual(salvaged.json.state, { leagues: [{ leagueId: "1315018026927554560", focusRosterId: 2 }] },
+    "salvage keeps every entry that coerces to the current shape and drops the rest");
+  assert.equal(salvaged.json.recovered, true, "the response discloses that the stored record needed repair");
+  const repair = await guillotineRequest({ method: "PUT", token, body: savedShelf });
+  assert.equal(repair.response.status, 200, "the client's next save overwrites the legacy record");
+  const clean = await guillotineRequest({ token });
+  assert.deepEqual(clean.json.state, savedShelf, "after the repair PUT the read is strict-valid again");
+  assert.equal(clean.json.recovered, undefined, "a valid record is not flagged as recovered");
+}
+
 console.log("draft-state contract tests: ok");

@@ -218,6 +218,26 @@ function validateGuillotineState(input) {
   return { ok: true, state: { leagues } };
 }
 
+// Reads tolerate what writes refuse. Shelf records written before validateGuillotineState
+// existed (older guillotine.html stored display names alongside the IDs) fail the strict
+// check, and a GET that 502s on them bricks account sync on every device until someone
+// hand-edits Firebase. Instead: keep each entry that can be coerced to the current shape,
+// drop what cannot, and let the client's next save PUT the clean form back. PUT stays strict.
+function salvageGuillotineState(input) {
+  const rows = input && typeof input === "object" && !Array.isArray(input) && Array.isArray(input.leagues) ? input.leagues : [];
+  const seen = new Set(), leagues = [];
+  for (const item of rows) {
+    if (leagues.length >= GUILLOTINE_MAX_LEAGUES) break;
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const leagueId = String(item.leagueId || "");
+    if (!GUILLOTINE_LEAGUE_ID_RE.test(leagueId) || seen.has(leagueId)) continue;
+    seen.add(leagueId);
+    const focus = Number(item.focusRosterId);
+    leagues.push({ leagueId, focusRosterId: Number.isSafeInteger(focus) && focus >= 1 && focus <= 1000 ? focus : null });
+  }
+  return { leagues };
+}
+
 function mintDraftLeagueId(cryptoImpl) {
   const source = cryptoImpl || crypto;
   const bytes = new Uint8Array(16);
@@ -1652,9 +1672,13 @@ async function authGuillotineState(request, env, cors) {
   if (request.method === "GET") {
     try {
       const record = (await fbGet(env, statePath)).data;
-      const checked = validateGuillotineState(record && record.state ? record.state : { leagues: [] });
-      if (!checked.ok) return draftError(cors, 502, "backend_unavailable", "The saved guillotine state is invalid.");
-      return json({ ok: true, state: checked.state, updatedAt: Number(record && record.updatedAt) || null }, 200, cors);
+      const stored = record && record.state ? record.state : { leagues: [] };
+      const checked = validateGuillotineState(stored);
+      // A legacy or malformed stored record is salvaged, not 502'd — see salvageGuillotineState.
+      const state = checked.ok ? checked.state : salvageGuillotineState(stored);
+      const body = { ok: true, state, updatedAt: Number(record && record.updatedAt) || null };
+      if (!checked.ok) body.recovered = true;
+      return json(body, 200, cors);
     } catch (e) {
       return draftError(cors, 502, "backend_unavailable", "The guillotine-state store could not be read.");
     }
