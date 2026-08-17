@@ -48,14 +48,14 @@ const errs = [];
 
 const SURFACES = JSON.parse(fs.readFileSync(path.join(ROOT, "data/surfaces.json"), "utf8"));
 const PAGES = [
-  /* `label` is the page's own name; `navGroup` is the top-level group it now lights.
-     Release 1 (2026-08-17) demoted both of these out of the banner — Prediction Markets
-     to an item under Arena, the A.I. Model Board to an item under Data — so the group
-     that reads as active is no longer the one named after the page. */
-  { file: "markets.html", domain: "markets", label: "Prediction Markets", navGroup: "Arena",
+  /* `navGroup` is the top-level group the page lights. Release 1 (2026-08-17) demoted both
+     of these out of the banner and Kap reversed it the same day, so each is a section again
+     and lights the group named after it. ⚠️ The Markets group is labelled "Markets", not
+     "Prediction Markets": seven groups only hold one row at 1100px with the short form. */
+  { file: "markets.html", domain: "markets", label: "Markets", navGroup: "Markets",
     h1: "prediction-markets work",
     tabLabels: ["Open board", "Calibration", "By subject", "Method"] },
-  { file: "ai.html", domain: "ai", label: "A.I.", navGroup: "Data", h1: "A.I. work",
+  { file: "ai.html", domain: "ai", label: "A.I.", navGroup: "A.I.", h1: "A.I. work",
     tabLabels: ["Model board", "Frontier", "Forecast study", "Method"] },
 ];
 
@@ -160,15 +160,16 @@ for (const P of PAGES) {
     if (chip) ok(`${P.file}: the chip declares its tier as an attribute`,
                  (await chip.getAttribute("data-tier")) === "labs");
 
-    /* The nav change travels here too. Release 1 put the bar back to SIX groups and moved
-       these two pages underneath other groups, so what is asserted is that the page still
-       lights exactly one group — and that it is the group that now owns it. Exactly one
-       matters as much as which: a page that lights none looks orphaned, and a page that
-       lights two means a key is duplicated across groups. */
+    /* The nav change travels here too. The bar is SEVEN groups and each of these pages owns
+       one, so what is asserted is that the page lights exactly one group and that it is the
+       right one. Exactly one matters as much as which: a page that lights none looks
+       orphaned, and a page that lights two means one key sits in two groups — the specific
+       failure that follows from leaving markets.html in Arena's Tools run after promoting
+       it back to a section of its own. */
     const groups = await p.$$eval(".sitenav .links .navgrp", n => n.length);
-    ok(`${P.file}: the bar carries all six groups`, groups === 6, String(groups));
+    ok(`${P.file}: the bar carries all seven groups`, groups === 7, String(groups));
     const on = await p.$$eval(".sitenav .links .grpbtn.on", n => n.map(x => x.innerText.trim().replace(/\s*▾$/, "")));
-    ok(`${P.file}: the group that now owns it is the active one`,
+    ok(`${P.file}: its own nav group is the active one`,
        on.length === 1 && on[0] === P.navGroup, JSON.stringify(on) + " want " + P.navGroup);
 
     /* ⚠️ THESE TOOLS ADVERTISE NO MCP TOOL. They compute in the browser from a third party's

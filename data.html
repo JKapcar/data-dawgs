@@ -409,7 +409,12 @@ body{margin:0;background:var(--page);color:var(--ink-1);
   .sitenav .links .theme-btn{margin-left:0;padding:3px 4px;font-size:11px}
 }
 @media(min-width:380px) and (max-width:419px){
-  .sitenav .links{gap:5px}
+  /* ⚠️ gap was 5px and had to come down when the bar went to SEVEN groups: at exactly
+     390px the run ended 1px past the viewport and the document scrolled sideways. This
+     band is the tight one because the brand lockup is at its full 22px here while the
+     widths below 380 shrink it. 4px keeps minDomainGap well clear of the 2.5px floor
+     work/test-nav-fit.mjs enforces, and buys 6px — the overflow was 1. */
+  .sitenav .links{gap:4px}
   .sitenav .links a,.sitenav .links .grpbtn{padding:4px 1px;font-size:10.5px}
 }
 /* ---- cards & type ---- */
@@ -932,19 +937,7 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
         historical spellings.
      Keep this array identical on every page; the flattened HTML is the source. */
   const NAV = [
-    /* Receipts is top-level because it is the page the whole site is judged against.
-       Burying it under Data made the ledger look like one more dataset. The hashes are
-       DDSheets sheet ids, already routed by receipts.html — see its DDSheets({key:"receipts"}). */
-    {label:"Receipts", href:"receipts.html", key:"receipts", items:[
-      ["receipts.html","Receipts home","receipts"],
-      ["receipts.html#scoreboard","Scoreboard","receipts-scoreboard"],
-      ["receipts.html#calls","Registered calls","receipts-calls"],
-      ["receipts.html#models","Model beliefs","receipts-models"],
-      ["receipts.html#provenance","Provenance","pound-provenance"],
-    ]},
-    /* Arena is split so games can have a little casino character without making tools noisy.
-       Prediction Markets sits at the end of Tools: it is a place you go to play, not a domain
-       of the site, and a near-empty section does not earn a slot in the banner. */
+    /* Arena is split so games can have a little casino character without making tools noisy. */
     {label:"Arena", href:"arena.html", key:"arena", items:[
       ["arena.html","Arena home","arena"],
       ["#","Games","nav-section"],
@@ -957,10 +950,21 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
       ["fantasy-warroom.html","Fantasy League War Room","fantasy-warroom"],
       ["guillotine.html","Last Dawg Standing","guillotine"],
       ["survivor.html","Survivor","survivor"],
-      ["markets.html","Prediction Markets","markets"],
     ]},
-    /* NFL and CFB are separate top-level groups again. One "Sports" group meant every
-       college reader opened a dropdown built for the NFL and scrolled past it. */
+    /* Two sections that are not football, placed where they were asked for: after the
+       games people play against each other, before the sport pages. Release 1 demoted
+       both and Kap reversed it the same day — they are domains of the site, not tools
+       inside somebody else's group.
+       ⚠️ The label is "Markets", not "Prediction Markets". Seven groups only hold one
+       row at 1100px with the short form; see the 1100 note in work/test-nav-fit.mjs. */
+    {label:"Markets", short:"Mkts", href:"markets.html", key:"markets", items:[
+      ["markets.html","The markets work","markets"],
+    ]},
+    {label:"A.I.", href:"ai.html", key:"ai", items:[
+      ["ai.html","A.I. Model Board","ai"],
+    ]},
+    /* NFL and CFB are separate top-level groups. One "Sports" group meant every college
+       reader opened a dropdown built for the NFL and scrolled past it. */
     {label:"NFL", href:"nfl.html", key:"nfl", items:[
       ["nfl.html","NFL hub","nfl"],
       ["stats.html","NFL EPA Stats","stats"],
@@ -968,15 +972,20 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
       ["calculators.html","NFL Calculators","calculators"],
     ]},
     /* The build roadmap is off the visible dropdown deliberately: it is our own planning
-       surface, not a destination. It stays reachable at cfb.html#roadmap and through the
-       machine surfaces — removing the nav entry does not remove the page. */
+       surface, not a destination. It stays reachable on the page and through the machine
+       surfaces — removing the nav entry does not remove it. */
     {label:"CFB", href:"cfb.html", key:"cfb", items:[
       ["cfb.html","College Football Lab","cfb"],
       ["cfb.html#matchup","CFB Matchup Calculator","cfb-matchup"],
     ]},
+    /* Receipts is an item here, not a top-level group. Release 1 promoted it on the
+       argument that it is the page the site is judged against; Kap's ruling is that
+       being the evidence does not make it a domain, and it reads as one of the Library's
+       holdings. The deep links into its sheets went with the promotion — receipts.html
+       carries its own sheet bar, which is the better place for them. */
     {label:"Data", href:"data.html", key:"data", items:[
       ["data.html","The Library","data"],
-      ["ai.html","A.I. Model Board","ai"],
+      ["receipts.html","Receipts","receipts"],
       ["master.html","Master Data","master"],
       ["strategy.html","2026 Strategy","strategy"],
     ]},
@@ -1704,11 +1713,11 @@ The draft rig: dashboard.html (a drafter's view), auction.html (the operator), b
 strategy.html — the 2026 draft thesis, a dated snapshot of one analyst's argument.
 nfl.html — the NFL hub. stats.html — the EPA explorer. nfelo.html — nfelo power ratings and their backtest. calculators.html — ten deterministic calculators, nothing stored.
 cfb.html — the College Football lab: 2025 results, one retrodictive Elo, a matchup calculator. Its build roadmap is at cfb.html#roadmap and is our own planning surface, not a public destination.
-markets.html — the prediction-markets section, reached under Arena. ai.html — the A.I. Model Board, reached under Data. Neither is a top-level section. Both are deliberately near-empty and say so above the fold; do not imply either has tools yet.
+markets.html — the prediction-markets section, its own top-level group labelled Markets. ai.html — the A.I. Model Board, its own top-level group. Both are deliberately near-empty and say so above the fold; do not imply either has tools yet.
 data.html — the Library: every machine-readable file, shelved by the surface that owns it. connect.html — point your own AI at the site over MCP.
 signon.html — sign in, sign up, recover an account; every other page's sign-in chip lands here. dawgs.html — the Dawg Pound: Rollo, the OG Data Dawg, and the DDCC profile. swoledawg.html — body and training. fantasy-warroom.html — the fantasy league war room.
 Machine surfaces: /data/index.json lists every file with its as_of and hash; /llms.txt is the curated index; /data/surfaces.json maps pages to files and MCP tools.
-NAVIGATION: the banner is Sign in/account, then exactly six groups — Receipts, Arena, NFL, CFB, Data, Dawgs — then the theme button. The wordmark is Home. There is no top-level Sports, Prediction Markets or A.I. group: NFL and CFB are separate groups, markets.html lives under Arena, and ai.html lives under Data.
+NAVIGATION: the banner is Sign in/account, then exactly seven groups — Arena, Markets, A.I., NFL, CFB, Data, Dawgs — then the theme button. The wordmark is Home. There is no top-level Sports group and no top-level Receipts group: NFL and CFB are separate groups, and receipts.html is an item under Data.
 TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a standard declared in advance. DawgHouse = stopped, with the blocker still attached.`;
 
   /* Which surface are we on? A page can claim one by setting window.DD_BOTCTX:

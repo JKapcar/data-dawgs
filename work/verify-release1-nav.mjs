@@ -25,20 +25,23 @@ const server = http.createServer((req, res) => {
 await new Promise(r => server.listen(8931, r));
 const b = await chromium.launch({ executablePath: chromiumExecutable(chromium), args: ["--no-sandbox"] });
 
-/* page -> the ONE top-level group that must read as active on it. This is the release's
-   central claim: markets.html lights Arena and ai.html lights Data, because those pages
-   are no longer sections of their own. */
+/* page -> the ONE top-level group that must read as active on it. These are the claims
+   the shape rests on: markets.html and ai.html light their own sections, and receipts.html
+   lights Data because Receipts is an item there rather than a group. */
 const PAGES = [
   ["index.html",    null],        // the homepage lights nothing; the wordmark is Home
-  ["markets.html",  "Arena"],
-  ["ai.html",       "Data"],
+  ["markets.html",  "Markets"],
+  ["ai.html",       "A.I."],
   ["nfl.html",      "NFL"],
   ["cfb.html",      "CFB"],
   ["dawgs.html",    "Dawgs"],
-  ["receipts.html", "Receipts"],
+  ["receipts.html", "Data"],
 ];
 const WIDTHS = [320, 390, 420, 520, 760, 1280];
-const ORDER = ["Receipts", "Arena", "NFL", "CFB", "Data", "Dawgs"];
+/* ⚠️ The DESKTOP label. Below 520px the bar swaps in the `short` label and "Markets"
+   becomes "Mkts", so the order check reads the wide form only above that. */
+const ORDER = ["Arena", "Markets", "A.I.", "NFL", "CFB", "Data", "Dawgs"];
+const ORDER_PHONE = ["Arena", "Mkts", "A.I.", "NFL", "CFB", "Data", "Dawgs"];
 
 for (const [file, wantActive] of PAGES) {
   for (const W of WIDTHS) {
@@ -69,11 +72,18 @@ for (const [file, wantActive] of PAGES) {
     });
 
     ok(`${tag} no horizontal scroll`, m.overflow <= 0, `${m.overflow}px`);
-    ok(`${tag} six groups in the locked order`,
-       JSON.stringify(m.labels) === JSON.stringify(ORDER), JSON.stringify(m.labels));
-    if (wantActive)
+    /* Either label set is accepted at any width — which one shows is CSS's business and
+       test-nav-fit owns it. What this asserts is the ORDER, and that no third variant
+       appears. */
+    ok(`${tag} seven groups in the locked order`,
+       JSON.stringify(m.labels) === JSON.stringify(ORDER) ||
+       JSON.stringify(m.labels) === JSON.stringify(ORDER_PHONE), JSON.stringify(m.labels));
+    if (wantActive) {
+      // same short-label caveat as the order check above
+      const want = wantActive === "Markets" ? ["Markets", "Mkts"] : [wantActive];
       ok(`${tag} ${wantActive} is the one active group`,
-         m.on.length === 1 && m.on[0] === wantActive, JSON.stringify(m.on));
+         m.on.length === 1 && want.includes(m.on[0]), JSON.stringify(m.on));
+    }
     else
       ok(`${tag} no group is active on the homepage`, m.on.length === 0, JSON.stringify(m.on));
     /* the account pill is a control, not decoration: it has to be on screen and big

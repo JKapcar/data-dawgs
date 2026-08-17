@@ -621,13 +621,19 @@ test('the flipped nav is identical on every page and carries the locked order', 
   /* ⚠️ THE ORDER IS ASSERTED, NOT JUST THE MEMBERSHIP. The bar is a claim about what this
      site is about, so its sequence is a product decision and not an implementation detail.
 
-     Release 1, 2026-08-17. Two near-empty sections had been inserted between Arena and NFL
-     on 2026-08-11, and NFL and CFB had been folded together into one "Sports" group. Both
-     moves put the shape of our roadmap ahead of what a reader came to do. This is the
-     reversal: Prediction Markets is an item under Arena, the A.I. Model Board is an item
-     under Data, NFL and CFB are separate groups again, and Receipts is back at top level
-     because it is the page the whole site is judged against. */
-  const ORDER = ['Receipts', 'Arena', 'NFL', 'CFB', 'Data', 'Dawgs'];
+     Release 1, 2026-08-17, split the single "Sports" group back into NFL and CFB — that
+     part stands. It also promoted Receipts to top level and demoted Markets and A.I. into
+     other groups. Kap read that live and reversed all three the same day (Release 1b):
+
+       - Markets and A.I. are top-level sections again, in the "not football" block between
+         Arena and the sport groups. They are domains of the site, not tools inside a group.
+       - Receipts is an item under Data. Being the evidence the site is judged against does
+         not make it a domain; it reads as one of the Library's holdings.
+
+     ⚠️ The Markets label is "Markets", not "Prediction Markets". Seven groups only hold one
+     row at 1100px with the short form — see the 1100 note in test-nav-fit.mjs. The phone
+     label is "Mkts" via `short`, which is a separate mechanism and unaffected. */
+  const ORDER = ['Arena', 'Markets', 'A.I.', 'NFL', 'CFB', 'Data', 'Dawgs'];
   let covered = 0;
   for (const page of pages) {
     const html = fs.readFileSync(page, 'utf8');
@@ -658,10 +664,10 @@ test('the flipped nav is identical on every page and carries the locked order', 
     assert.ok(!block.includes('"draft-leagues.html"'),
       `${page}: draft-leagues.html is back in the nav — it belongs to the draft hub now`);
 
-    /* ---- Release 1: the demotions, asserted as placement and not merely as absence ----
-       "Not top-level" is only half the contract. A group can vanish from the bar because
-       it was demoted, or because somebody deleted the line — and those look identical to
-       an assertion that only checks the bar. So each one is pinned to its new parent. */
+    /* ---- placement, asserted positively and not merely as absence ----
+       "Not top-level" is only half a contract. A group can leave the bar because it was
+       moved, or because somebody deleted the line — and those look identical to an
+       assertion that only checks the bar. So each one is pinned to where it actually is. */
     const group = (label) => {
       const s = block.indexOf(`{label:"${label}"`);
       assert.ok(s >= 0, `${page}: no ${label} group`);
@@ -669,14 +675,19 @@ test('the flipped nav is identical on every page and carries the locked order', 
       return block.slice(s, e < 0 ? undefined : e);
     };
 
-    // 3. PREDICTION MARKETS IS UNDER ARENA. A.I. IS UNDER DATA. Both pages stay live.
-    assert.ok(group('Arena').includes('["markets.html","Prediction Markets","markets"],'),
-      `${page}: markets.html is not an item under Arena`);
-    assert.ok(group('Data').includes('["ai.html","A.I. Model Board","ai"],'),
-      `${page}: ai.html is not an item under Data`);
-    for (const gone of ['Prediction Markets', 'A.I.', 'Sports'])
-      assert.ok(!new RegExp(`\\{label:"${gone.replace(/\./g, '\\.')}"`).test(block),
-        `${page}: "${gone}" is a top-level group again`);
+    // 3. MARKETS AND A.I. ARE THEIR OWN SECTIONS, and each still owns its page. The label
+    //    is the short form; the phone label rides along as `short` and is asserted with it.
+    assert.ok(block.includes('{label:"Markets", short:"Mkts", href:"markets.html", key:"markets"'),
+      `${page}: the Markets group lost its label, short label or href`);
+    assert.ok(group('Markets').includes('["markets.html","The markets work","markets"],'),
+      `${page}: the Markets group does not link its own page`);
+    assert.ok(group('A.I.').includes('["ai.html","A.I. Model Board","ai"],'),
+      `${page}: the A.I. group does not link its own page`);
+    //    ⚠️ Not "Prediction Markets" at top level: seven groups need the short form to hold
+    //    one row at 1100px. Nothing else in the bar may reintroduce a Sports group.
+    assert.ok(!/\{label:"Prediction Markets"/.test(block),
+      `${page}: the long Markets label is back — seven groups will not hold one row at 1100`);
+    assert.ok(!/\{label:"Sports"/.test(block), `${page}: "Sports" is a top-level group again`);
 
     // 4. NFL AND CFB ARE SEPARATE GROUPS, each owning its own pages.
     assert.ok(group('NFL').includes('["stats.html","NFL EPA Stats","stats"],'), `${page}: NFL group lost stats`);
@@ -686,10 +697,14 @@ test('the flipped nav is identical on every page and carries the locked order', 
     //    destination. The PAGE keeps it — this asserts the nav entry is gone, nothing more.
     assert.ok(!/roadmap/i.test(group('CFB')), `${page}: Build roadmap is back in the CFB dropdown`);
 
-    // 6. RECEIPTS IS TOP-LEVEL and its hashes are DDSheets sheet ids that receipts.html routes.
-    for (const h of ['#scoreboard', '#calls', '#models', '#provenance'])
-      assert.ok(group('Receipts').includes(`["receipts.html${h}"`),
-        `${page}: the Receipts group lost ${h}`);
+    // 6. RECEIPTS IS AN ITEM UNDER DATA, exactly once, and is not a group of its own.
+    //    Its key must stay "receipts" — receipts.html declares data-page="receipts" and the
+    //    nav lights an item by `it[2] === page`, so any other key leaves Data dark there.
+    assert.equal((block.match(/\["receipts\.html","Receipts","receipts"\],/g) || []).length, 1,
+      `${page}: Receipts is not an item in the nav exactly once`);
+    assert.ok(group('Data').includes('["receipts.html","Receipts","receipts"],'),
+      `${page}: Receipts is not an item under Data`);
+    assert.ok(!/\{label:"Receipts"/.test(block), `${page}: Receipts is a top-level group again`);
 
     // 7. THE DAWGS DROPDOWN IS THE FIVE AGREED DESTINATIONS, IN ORDER, and exactly one
     //    DawgHouse entry. It was thirteen, nine of them deep links into that one page.
@@ -705,6 +720,12 @@ test('the flipped nav is identical on every page and carries the locked order', 
     //    handoff was written before either landed and would have quietly unlinked both.
     assert.ok(group('Arena').includes('["fantasy-warroom.html","Fantasy League War Room","fantasy-warroom"],'),
       `${page}: the war room fell out of the Arena group`);
+    //    Markets left the Arena Tools run when it became a section again; it must not be in
+    //    both places, or two groups light at once on markets.html.
+    assert.ok(!group('Arena').includes('markets.html'),
+      `${page}: markets.html is in Arena AND a section — two groups will light at once`);
+    assert.ok(!group('Data').includes('ai.html'),
+      `${page}: ai.html is in Data AND a section — two groups will light at once`);
     assert.ok(group('Dawgs').includes('["swoledawg.html"'), `${page}: SwoleDawg fell out of the Dawgs group`);
   }
   assert.equal(covered, 29);   // connect.html is now a redirect to signon.html#connect
@@ -748,7 +769,13 @@ test('the hubs the reorg built are in the menu, and machine values did not move'
   assert.equal(surfaces.data.find(s => s.id === 'pound').tier, 'pound');
   assert.equal(surfaces.data.find(s => s.id === 'pound').page, '/dawghouse.html');
   assert.ok(fs.existsSync('data/pound-tools.json'));
-  assert.match(html, /"pound-provenance"/, 'a historical nav key was renamed to match the menu');
+  /* This used to assert the "pound-provenance" key, guarding the rule that a nav KEY is a
+     stable identifier and is not renamed just because the menu around it moved. Release 1
+     added Receipts deep links that carried that key and Release 1b removed them again, so
+     the key no longer exists anywhere. The rule it protected is unchanged and is now
+     carried by "pound" — dawghouse.html declares data-page="pound", and renaming the key
+     to "dawghouse" to match the label would leave the item permanently unlit. */
+  assert.match(html, /"pound"\]/, 'the DawgHouse nav key was renamed to match its label');
   // the lifecycle section is the other half of "off-nav, not unreachable"
   assert.match(html, /<h3><a href="dawghouse\.html">The DawgHouse<\/a><\/h3>/);
 });
