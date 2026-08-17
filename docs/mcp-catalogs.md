@@ -35,16 +35,24 @@ Three paths, and the catalog segment is stripped before the credential is read:
 
 | Path | Catalog | Tools |
 |---|---|---|
-| `/mcp/<credential>` | full | 41 — still the default path |
-| `/mcp/full/<credential>` | full | 41 |
-| `/mcp/core/<credential>` | core | 16 |
+| `/mcp/<credential>` | full | 43 — still the default path |
+| `/mcp/full/<credential>` | full | 43 |
+| `/mcp/core/<credential>` | core | 17 |
+
+**Amended 2026-08-17.** The table above had been left at the 41/16 shape after Stage WC-A
+and never moved again. Current registry, read back from the live connector's own catalog
+(`43 of 43`) and matching `data/surfaces.json`: **43 full, 17 core**. The extra core name
+is `dd_submit_bozo_leg`. This is a correction to a stale checklist, not a deploy.
 
 Core is the everyday league surface: `dd_whoami`, `dd_league_overview`, `dd_bozo_week`,
-`dd_bozo_standings`, `dd_draft_bozo_leg`, `dd_draft_board`, `dd_draft_pool`,
-`dd_survivor_week`, `dd_survivor_ev`, `dd_analyze_matchup`, `dd_convert_odds`,
-`dd_price_parlay`, `dd_calculate_bet_ev`, `dd_scores`, `dd_guillotine_odds`,
-`dd_site_map`. Everything else — the fourteen college-football evidence tools, the DFS and
-survivor solvers, the model scoreboard, the less common price math — is full only.
+`dd_bozo_standings`, `dd_draft_bozo_leg`, `dd_submit_bozo_leg`, `dd_draft_board`,
+`dd_draft_pool`, `dd_survivor_week`, `dd_survivor_ev`, `dd_analyze_matchup`,
+`dd_convert_odds`, `dd_price_parlay`, `dd_calculate_bet_ev`, `dd_scores`,
+`dd_guillotine_odds`, `dd_site_map`. Everything else — the college-football evidence tools,
+the DFS and survivor solvers, the model scoreboard, the less common price math — is full
+only. ⚠️ `dd_submit_bozo_leg` is the one tool on either catalog that WRITES; it is core
+because submitting a leg is an everyday league action, and it is gated by its own
+read-back-and-confirm step rather than by catalog placement.
 
 ## Three decisions worth knowing
 

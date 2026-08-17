@@ -83,7 +83,12 @@ test('surface generator reports the deployed Pound MCP tools as live', () => {
     'dd_calculate_bet_ev', 'dd_calculate_hedge', 'dd_nfl_passer_rating',
     'dd_score_forecast', 'dd_summarize_beliefs', 'dd_elo_game',
     'dd_translate_probability'];
-  assert.equal(surfaces.counts.mcp_tools_live, 42);   // 43 after the 2026-08-09 deploy, 41 after Stage WC-A merged two CFB readers away, 42 with dd_bozo_clv
+  // 43 after the 2026-08-09 deploy, 41 after Stage WC-A merged two CFB readers away, 42 with
+  // dd_bozo_clv, 43 again as of 2026-08-17 — verified against the live connector's own catalog
+  // ("43 of 43 tools"), not only against surfaces.json, which is generated from the same list.
+  // ⚠️ A stale count here throws, and a throw kills the FILE, not just this test. That is how
+  // the nav order assertions below sat green-by-absence while the shipped bar disagreed with them.
+  assert.equal(surfaces.counts.mcp_tools_live, 43);
   assert.ok(surfaces.mcp.tools_live.includes('dd_survivor_ev'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_optimize_survivor_path'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_analyze_matchup'));
@@ -474,7 +479,12 @@ test('the deployed CFB MCP tools are live while unimplemented candidate names re
     else assert.ok(!surfaces.mcp.tools_live.includes(name), `${name} falsely live`);
     assert.ok(!surfaces.mcp.tools_staged.includes(name), `${name} falsely staged`);
   }
-  assert.equal(surfaces.counts.mcp_tools_live, 42);   // 43 after the 2026-08-09 deploy, 41 after Stage WC-A merged two CFB readers away, 42 with dd_bozo_clv
+  // 43 after the 2026-08-09 deploy, 41 after Stage WC-A merged two CFB readers away, 42 with
+  // dd_bozo_clv, 43 again as of 2026-08-17 — verified against the live connector's own catalog
+  // ("43 of 43 tools"), not only against surfaces.json, which is generated from the same list.
+  // ⚠️ A stale count here throws, and a throw kills the FILE, not just this test. That is how
+  // the nav order assertions below sat green-by-absence while the shipped bar disagreed with them.
+  assert.equal(surfaces.counts.mcp_tools_live, 43);
   /* CEP-5A Stage 3: the sixteen CFB tools ride on the cfb surface, whose page renders
      the roadmap that names them. The DawgHouse surface must no longer claim them, and
      its pound-tools.json entry must stop advertising a roadmap it does not render. */
@@ -578,7 +588,9 @@ test('every shared-nav page reaches the shelf, and never by the old name', () =>
      group. What did NOT change is that it stays its own PAGE — its content is prose per
      tenant, not a graded table, so it is not a sheet inside receipts.html.
      ⚠️ It is still not a TOP-LEVEL chip, which is what `label:"The DawgHouse"` would mean.
-     The footer row link stays as well: exactly one, injected sitewide by the nav script. */
+     The footer row link stays as well: exactly one, injected sitewide by the nav script.
+     Release 1 (2026-08-17) moved it from the Receipts group to the Dawgs group — the shelf
+     is still evidence, but it is Dawgs-shaped evidence, and Receipts is now the ledger only. */
   const pages = fs.readdirSync('.').filter(x => x.endsWith('.html'));
   let covered = 0;
   for (const page of pages) {
@@ -598,7 +610,7 @@ test('every shared-nav page reaches the shelf, and never by the old name', () =>
      connect.html. The canonical member/connector destination is signon.html#connect. */
   const redirectStubs = pages.filter(page => /http-equiv="refresh"/i.test(fs.readFileSync(page, 'utf8')));
   assert.deepEqual(redirectStubs.sort(), ['connect.html', 'pound.html', 'survivor-settings.html']);
-  assert.equal(covered, 28, 'the nav page set changed');
+  assert.equal(covered, 29, 'the nav page set changed');
 });
 
 test('the flipped nav is identical on every page and carries the locked order', () => {
@@ -606,11 +618,16 @@ test('the flipped nav is identical on every page and carries the locked order', 
   // disagrees with itself and nothing catches it at runtime.
   const pages = fs.readdirSync('.').filter(x => x.endsWith('.html'));
   const blocks = new Set();
-  /* ⚠️ Two sections were inserted between Arena and NFL on 2026-08-11, which is where
-     Kap asked for them. The ORDER is asserted, not just the membership: the bar is a claim
-     about what this site is about, and "not football" sitting ahead of the football groups
-     is part of that claim. Both pages are empty and say so above the fold. */
-  const ORDER = ['Receipts', 'Arena', 'Prediction Markets', 'A.I.', 'NFL', 'CFB', 'Data', 'Dawgs'];
+  /* ⚠️ THE ORDER IS ASSERTED, NOT JUST THE MEMBERSHIP. The bar is a claim about what this
+     site is about, so its sequence is a product decision and not an implementation detail.
+
+     Release 1, 2026-08-17. Two near-empty sections had been inserted between Arena and NFL
+     on 2026-08-11, and NFL and CFB had been folded together into one "Sports" group. Both
+     moves put the shape of our roadmap ahead of what a reader came to do. This is the
+     reversal: Prediction Markets is an item under Arena, the A.I. Model Board is an item
+     under Data, NFL and CFB are separate groups again, and Receipts is back at top level
+     because it is the page the whole site is judged against. */
+  const ORDER = ['Receipts', 'Arena', 'NFL', 'CFB', 'Data', 'Dawgs'];
   let covered = 0;
   for (const page of pages) {
     const html = fs.readFileSync(page, 'utf8');
@@ -626,27 +643,71 @@ test('the flipped nav is identical on every page and carries the locked order', 
     assert.ok(!block.includes('"bigboard.html"'), `${page}: bigboard.html was restored to the nav`);
     assert.ok(!/\{label:"Home"/.test(block), page);   // the wordmark is already the link home
 
-    /* Stage NB, 2026-08-10. Three rulings, asserted on the array rather than on the
-       rendered bar, because the array is what 25 files have to agree about. */
+    /* Stage NB, 2026-08-10, as amended by Release 1, 2026-08-17. Rulings asserted on the
+       array rather than on the rendered bar, because the array is what 29 files agree about. */
 
-    // 1. THE MODEL SCOREBOARD IS FRONT AND CENTRE. Not "somewhere in the Receipts group":
-    //    first item, named for what it is. A reorder has to turn this red.
-    assert.ok(block.includes('key:"receipts", items:[\n      ["receipts.html#models","Model scoreboard","receipts-models"],'),
-      `${page}: the model scoreboard is not the first item in the Receipts group`);
-
-    // 2. THE SHELF IS AN ITEM UNDER RECEIPTS, exactly once.
+    // 1. THE SHELF IS AN ITEM UNDER DAWGS, exactly once.
     //    ⚠️ The key is "pound", not "dawghouse". dawghouse.html declares data-page="pound"
     //    and the nav lights an item by `it[2] === page`, so "dawghouse" would render a
-    //    dead item that never highlights and a Receipts group that never reads as active
+    //    dead item that never highlights and a Dawgs group that never reads as active
     //    on the shelf page. Same reasoning that kept the "pound-provenance" key.
     assert.equal((block.match(/\["dawghouse\.html","The DawgHouse","pound"\],/g) || []).length, 1,
       `${page}: the shelf is not an item in the nav exactly once, keyed "pound"`);
 
-    // 3. LEAGUE SETUP LEFT THE ARENA GROUP. It lives in the hub whose rooms it creates.
+    // 2. LEAGUE SETUP LEFT THE ARENA GROUP. It lives in the hub whose rooms it creates.
     assert.ok(!block.includes('"draft-leagues.html"'),
       `${page}: draft-leagues.html is back in the nav — it belongs to the draft hub now`);
+
+    /* ---- Release 1: the demotions, asserted as placement and not merely as absence ----
+       "Not top-level" is only half the contract. A group can vanish from the bar because
+       it was demoted, or because somebody deleted the line — and those look identical to
+       an assertion that only checks the bar. So each one is pinned to its new parent. */
+    const group = (label) => {
+      const s = block.indexOf(`{label:"${label}"`);
+      assert.ok(s >= 0, `${page}: no ${label} group`);
+      const e = block.indexOf('\n    ]},', s);
+      return block.slice(s, e < 0 ? undefined : e);
+    };
+
+    // 3. PREDICTION MARKETS IS UNDER ARENA. A.I. IS UNDER DATA. Both pages stay live.
+    assert.ok(group('Arena').includes('["markets.html","Prediction Markets","markets"],'),
+      `${page}: markets.html is not an item under Arena`);
+    assert.ok(group('Data').includes('["ai.html","A.I. Model Board","ai"],'),
+      `${page}: ai.html is not an item under Data`);
+    for (const gone of ['Prediction Markets', 'A.I.', 'Sports'])
+      assert.ok(!new RegExp(`\\{label:"${gone.replace(/\./g, '\\.')}"`).test(block),
+        `${page}: "${gone}" is a top-level group again`);
+
+    // 4. NFL AND CFB ARE SEPARATE GROUPS, each owning its own pages.
+    assert.ok(group('NFL').includes('["stats.html","NFL EPA Stats","stats"],'), `${page}: NFL group lost stats`);
+    assert.ok(group('CFB').includes('["cfb.html","College Football Lab","cfb"],'), `${page}: CFB group lost the lab`);
+
+    // 5. THE BUILD ROADMAP IS OFF THE VISIBLE DROPDOWN. It is our planning surface, not a
+    //    destination. The PAGE keeps it — this asserts the nav entry is gone, nothing more.
+    assert.ok(!/roadmap/i.test(group('CFB')), `${page}: Build roadmap is back in the CFB dropdown`);
+
+    // 6. RECEIPTS IS TOP-LEVEL and its hashes are DDSheets sheet ids that receipts.html routes.
+    for (const h of ['#scoreboard', '#calls', '#models', '#provenance'])
+      assert.ok(group('Receipts').includes(`["receipts.html${h}"`),
+        `${page}: the Receipts group lost ${h}`);
+
+    // 7. THE DAWGS DROPDOWN IS THE FIVE AGREED DESTINATIONS, IN ORDER, and exactly one
+    //    DawgHouse entry. It was thirteen, nine of them deep links into that one page.
+    assert.deepEqual(
+      [...group('Dawgs').matchAll(/\["([^"]+)","([^"]+)"/g)].map(m => m[1]),
+      ['dawgs.html', 'dawgs.html#rollo', 'dawgs.html#ddcc', 'swoledawg.html', 'dawghouse.html'],
+      `${page}: the Dawgs dropdown drifted from its five destinations`);
+    assert.equal((group('Dawgs').match(/dawghouse\.html/g) || []).length, 1,
+      `${page}: the DawgHouse is in the Dawgs dropdown more than once`);
+    assert.ok(!/kennel-/.test(block), `${page}: the DawgHouse inventory is back in the dropdown`);
+
+    // 8. THE TWO PAGES THAT MOST RECENTLY SHIPPED ARE STILL REACHABLE. Release 1's own
+    //    handoff was written before either landed and would have quietly unlinked both.
+    assert.ok(group('Arena').includes('["fantasy-warroom.html","Fantasy League War Room","fantasy-warroom"],'),
+      `${page}: the war room fell out of the Arena group`);
+    assert.ok(group('Dawgs').includes('["swoledawg.html"'), `${page}: SwoleDawg fell out of the Dawgs group`);
   }
-  assert.equal(covered, 28);   // connect.html is now a redirect to signon.html#connect
+  assert.equal(covered, 29);   // connect.html is now a redirect to signon.html#connect
   assert.equal(blocks.size, 1, 'the NAV array is not identical across pages');
 });
 
@@ -675,7 +736,12 @@ test('the draft hub owns league setup now that the menu does not', () => {
 
 test('the hubs the reorg built are in the menu, and machine values did not move', () => {
   const html = fs.readFileSync('index.html', 'utf8');
-  for (const [href, label] of [['arena.html', 'All the games'], ['nfl.html', 'The NFL work'],
+  /* The point of this assertion is that each hub the reorg built still has a door in the
+     menu — not that the door keeps a particular wording. The first two labels were renamed
+     to "Arena home" and "NFL hub" before Release 1 and this test never noticed, because it
+     sat behind a throwing assertion earlier in the file. Kept as href + current label so a
+     rename is still a deliberate edit here rather than a silent one. */
+  for (const [href, label] of [['arena.html', 'Arena home'], ['nfl.html', 'NFL hub'],
                                ['data.html', 'The Library']])
     assert.ok(html.includes(`["${href}","${label}"`), `${href} is not in the menu`);
   // ⚠️ a tier is a maturity claim, not an address. The menu changed; the stored values did not.
@@ -794,7 +860,11 @@ test('every shared-nav page points the Calculators item at the canonical page', 
     const html = fs.readFileSync(page, 'utf8');
     if (!html.includes('const NAV = [')) continue;
     covered++;
-    assert.equal((html.match(/\["calculators\.html","Calculators · NFL","calculators"\],/g) || []).length, 1, page);
+    /* Relabelled "Calculators · NFL" → "NFL Calculators" in Release 1: the dotted form was
+       there to disambiguate from the CFB entry while both sat inside one "Sports" dropdown,
+       and that dropdown is gone. The assertion that matters is unchanged — the item points
+       at calculators.html and never at the retired dawghouse.html#calculators deep link. */
+    assert.equal((html.match(/\["calculators\.html","NFL Calculators","calculators"\],/g) || []).length, 1, page);
     assert.equal((html.match(/dawghouse\.html#calculators/g) || []).length, 0, page);
   }
   assert.ok(covered >= 20);

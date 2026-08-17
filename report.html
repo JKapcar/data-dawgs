@@ -745,11 +745,23 @@ svg text{font-family:inherit}
         historical spellings.
      Keep this array identical on every page; the flattened HTML is the source. */
   const NAV = [
-    /* Arena is split so games can have a little casino character without making tools noisy. */
+    /* Receipts is top-level because it is the page the whole site is judged against.
+       Burying it under Data made the ledger look like one more dataset. The hashes are
+       DDSheets sheet ids, already routed by receipts.html — see its DDSheets({key:"receipts"}). */
+    {label:"Receipts", href:"receipts.html", key:"receipts", items:[
+      ["receipts.html","Receipts home","receipts"],
+      ["receipts.html#scoreboard","Scoreboard","receipts-scoreboard"],
+      ["receipts.html#calls","Registered calls","receipts-calls"],
+      ["receipts.html#models","Model beliefs","receipts-models"],
+      ["receipts.html#provenance","Provenance","pound-provenance"],
+    ]},
+    /* Arena is split so games can have a little casino character without making tools noisy.
+       Prediction Markets sits at the end of Tools: it is a place you go to play, not a domain
+       of the site, and a near-empty section does not earn a slot in the banner. */
     {label:"Arena", href:"arena.html", key:"arena", items:[
       ["arena.html","Arena home","arena"],
       ["#","Games","nav-section"],
-      ["dashboard.html","Fantasy Draft Dashboard","dashboard"],
+      ["dashboard.html","Fantasy Draft Dashboard","dashboard","hot"],
       ["bozo.html","Bozo","bozo"],
       ["challenge.html","NFL Forecasting Challenge","challenge"],
       ["teamdraft.html","NFL Team Draft","teamdraft"],
@@ -757,48 +769,38 @@ svg text{font-family:inherit}
       ["dfs.html","DFS Solver","dfs"],
       ["fantasy-warroom.html","Fantasy League War Room","fantasy-warroom"],
       ["guillotine.html","Last Dawg Standing","guillotine"],
-      ["survivor.html","NFL Survivor","survivor"],
+      ["survivor.html","Survivor","survivor"],
+      ["markets.html","Prediction Markets","markets"],
     ]},
-    /* Two sections that are not football, placed where they were asked for: after the
-       games people play against each other, before the sport pages. Both are EMPTY today
-       and their pages say so above the fold — a nav entry pointing at a page with nothing
-       on it is only honest while the page admits it. See work/build_section_hub.py. */
-    {label:"Prediction Markets", short:"Mkts", href:"markets.html", key:"markets", items:[
-      ["markets.html","The markets work","markets"],
-    ]},
-    {label:"A.I.", href:"ai.html", key:"ai", items:[
-      ["ai.html","The AI work","ai"],
-    ]},
-    {label:"Sports", href:"nfl.html", key:"sports", items:[
-      ["#","NFL","nav-section"],
+    /* NFL and CFB are separate top-level groups again. One "Sports" group meant every
+       college reader opened a dropdown built for the NFL and scrolled past it. */
+    {label:"NFL", href:"nfl.html", key:"nfl", items:[
       ["nfl.html","NFL hub","nfl"],
       ["stats.html","NFL EPA Stats","stats"],
       ["nfelo.html","nfelo Power Ratings","nfelo"],
-      ["calculators.html","Calculators · NFL","calculators"],
-      ["#","CFB","nav-section"],
+      ["calculators.html","NFL Calculators","calculators"],
+    ]},
+    /* The build roadmap is off the visible dropdown deliberately: it is our own planning
+       surface, not a destination. It stays reachable at cfb.html#roadmap and through the
+       machine surfaces — removing the nav entry does not remove the page. */
+    {label:"CFB", href:"cfb.html", key:"cfb", items:[
       ["cfb.html","College Football Lab","cfb"],
-      ["cfb.html#matchup","Calculators · CFB matchup","cfb-matchup"],
-      ["cfb.html#roadmap","Build roadmap","cfb-roadmap"],
+      ["cfb.html#matchup","CFB Matchup Calculator","cfb-matchup"],
     ]},
     {label:"Data", href:"data.html", key:"data", items:[
       ["data.html","The Library","data"],
-      ["receipts.html","Receipts","receipts"],
+      ["ai.html","A.I. Model Board","ai"],
       ["master.html","Master Data","master"],
       ["strategy.html","2026 Strategy","strategy"],
     ]},
+    /* Was thirteen entries, nine of them deep links into one DawgHouse page. The shelf
+       inventory belongs on the shelf, not in a dropdown nobody could read on a phone. */
     {label:"Dawgs", href:"dawgs.html", key:"dawgs", items:[
-      ["dawgs.html","🐾 Rollo · OG Data Dawg","dawgs"],
-      ["swoledawg.html","💪 SwoleDawg · Body & Training","swoledawg"],
-      ["#","The DawgHouse","nav-section"],
-      ["dawghouse.html#scoreboard","📊 Model Scoreboard","kennel-scoreboard"],
-      ["dawghouse.html#inventory","🧪 nfeloml · EP / EPA / WP","kennel-nfeloml"],
-      ["dawghouse.html#inventory","🏈 QB Context","kennel-qb"],
-      ["dawghouse.html#inventory","⚖️ Weighted EPA","kennel-wepa"],
-      ["dawghouse.html#inventory","📈 SRS / Win-Total Ratings","kennel-srs"],
-      ["dawghouse.html#inventory","🏟️ Home-Field Tracker","kennel-hfa"],
-      ["dawghouse.html#inventory","🛡️ Unit Ratings","kennel-units"],
-      ["dawghouse.html#inventory","🧾 Immutable Receipts","kennel-receipts"],
-      ["dawghouse.html#inventory","🌦️ Regime Analysis","kennel-regimes"],
+      ["dawgs.html","The Dawg Pound","dawgs"],
+      ["dawgs.html#rollo","Rollo · OG Data Dawg","dawgs-rollo"],
+      ["dawgs.html#ddcc","DDCC Profile","dawgs-ddcc"],
+      ["swoledawg.html","SwoleDawg · Body & Training","swoledawg"],
+      ["dawghouse.html","The DawgHouse","pound"],
     ]},
   ];
   const nav = document.getElementById("nav");
@@ -1511,11 +1513,12 @@ teamdraft.html — the 32-team wins pool: spin wheel, board, eight rosters, Mont
 The draft rig: dashboard.html (a drafter's view), auction.html (the operator), board.html (read-only room view), bigboard.html (the projector), dataviz.html and report.html (afterwards), master.html (the player pool and scouting).
 strategy.html — the 2026 draft thesis, a dated snapshot of one analyst's argument.
 nfl.html — the NFL hub. stats.html — the EPA explorer. nfelo.html — nfelo power ratings and their backtest. calculators.html — ten deterministic calculators, nothing stored.
-cfb.html — the College Football lab: 2025 results, one retrodictive Elo, a matchup calculator, the build roadmap.
-markets.html — the prediction-markets section. ai.html — the A.I. section. Both are deliberately near-empty and say so above the fold; do not imply either has tools yet.
+cfb.html — the College Football lab: 2025 results, one retrodictive Elo, a matchup calculator. Its build roadmap is at cfb.html#roadmap and is our own planning surface, not a public destination.
+markets.html — the prediction-markets section, reached under Arena. ai.html — the A.I. Model Board, reached under Data. Neither is a top-level section. Both are deliberately near-empty and say so above the fold; do not imply either has tools yet.
 data.html — the Library: every machine-readable file, shelved by the surface that owns it. connect.html — point your own AI at the site over MCP.
-signon.html — sign in, sign up, recover an account; every other page's sign-in chip lands here. dawgs.html — Rollo, the OG Data Dawg.
+signon.html — sign in, sign up, recover an account; every other page's sign-in chip lands here. dawgs.html — the Dawg Pound: Rollo, the OG Data Dawg, and the DDCC profile. swoledawg.html — body and training. fantasy-warroom.html — the fantasy league war room.
 Machine surfaces: /data/index.json lists every file with its as_of and hash; /llms.txt is the curated index; /data/surfaces.json maps pages to files and MCP tools.
+NAVIGATION: the banner is Sign in/account, then exactly six groups — Receipts, Arena, NFL, CFB, Data, Dawgs — then the theme button. The wordmark is Home. There is no top-level Sports, Prediction Markets or A.I. group: NFL and CFB are separate groups, markets.html lives under Arena, and ai.html lives under Data.
 TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a standard declared in advance. DawgHouse = stopped, with the blocker still attached.`;
 
   /* Which surface are we on? A page can claim one by setting window.DD_BOTCTX:
