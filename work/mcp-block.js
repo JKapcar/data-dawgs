@@ -2115,6 +2115,10 @@ async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG) {
 
 const MCP_NO_ARGS = { type: "object", properties: {}, additionalProperties: false };
 
+// The one sentence every sd_* tool gives an unidentified caller. A training log is
+// personal: without a uid there is no correct log to read or write.
+const SWOLE_NEEDS_USER = "SwoleDawg needs to know who you are, and the shared league connector cannot tell. Mint a personal URL at " + SITE + "/connect.html and this works.";
+
 const MCP_TOOLS = [
   {
     name: "dd_whoami",
@@ -4750,4 +4754,250 @@ const MCP_TOOLS = [
       });
     },
   },
+  /* ------------------------------- SwoleDawg ------------------------------- */
+  // ⚠️ THESE WRITE. Every one of them is gated on caller.kind === "user": the shared
+  // league connector cannot tell one caller from another, and a write with no identity is
+  // unattributable — it would land in whoever's log the server guessed. Same gate, same
+  // reasoning, as dd_submit_bozo_leg.
+  //
+  // Set logging is deliberately SINGLE-phase, unlike the Bozo submission. A misparsed leg
+  // is money on a shared board with no undo; a misparsed set is private and corrected by
+  // saying "that was 11 not 10", which UPSERTs the same row. The human is between sets
+  // holding dumbbells. Two-phase belongs on sd_update_program, which rewrites the plan.
+  {
+    name: "sd_whoami",
+    title: "SwoleDawg — who am I, and what is today",
+    catalog: "core",
+    readOnlyHint: true,
+    description: "Whose training log this connection can write to, the current block and derived week, and today's prescribed day. Call this before logging anything if you are unsure who is asking.",
+    inputSchema: MCP_NO_ARGS,
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user")
+        return toolText({ athlete: null, anonymous: true, can_write: false,
+          note: "The shared league connector cannot tell who is asking, so it can neither read nor write a personal training log. Mint a personal URL at " + SITE + "/connect.html." });
+      const uid = caller.uid || caller.name;
+      const prog = await swoleGetProgram(env, uid);
+      if (!prog) return toolText({ athlete: caller.name, can_write: true, program: null,
+        note: "No program seeded for this account yet. Seed program.json before logging." });
+      const today = new Date().toISOString().slice(0, 10);
+      const week = swoleWeekOf(prog.doc, today);
+      const effort = swoleEffortFor(prog.doc, week);
+      const dayKey = swoleDayKeyFor(today);
+      const day = swoleDayOf(prog.doc, dayKey);
+      return toolText({
+        athlete: caller.name, can_write: true,
+        block: prog.doc.block || 1, week, date: today, day: dayKey,
+        session: day ? day.name : null,
+        reps_in_reserve: effort ? effort.reps_in_reserve : null,
+        sets_override: effort ? (effort.sets_override || null) : null,
+        note: effort && effort.sets_override
+          ? "Week " + week + " overrides the tables to " + effort.sets_override + " working sets per exercise."
+          : null,
+      });
+    },
+  },
+  {
+    name: "sd_get_program",
+    title: "SwoleDawg — the program",
+    catalog: "core",
+    readOnlyHint: true,
+    description: "The athlete's current training program, or one day of it, with rest values and rep ranges. Sets shown already have the current week's sets_override applied — do not re-apply it.",
+    inputSchema: { type: "object", properties: { day: { type: "string", description: "monday|tuesday|… (omit for the whole program)" } }, additionalProperties: false },
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user") return toolErr(SWOLE_NEEDS_USER);
+      const uid = caller.uid || caller.name;
+      const prog = await swoleGetProgram(env, uid);
+      if (!prog) return toolErr("No program seeded for this account yet.");
+      const today = new Date().toISOString().slice(0, 10);
+      const week = swoleWeekOf(prog.doc, today);
+      const effort = swoleEffortFor(prog.doc, week);
+      const shape = d => ({
+        day: d.day, name: d.name,
+        exercises: (d.exercises || []).map(e => ({
+          id: e.id, name: e.name, sets: swoleSetsFor(e, effort),
+          reps: e.rep_min + "-" + e.rep_max,
+          start_weight_lb_per_hand: e.start_weight_lb_per_hand,
+          rest_between_sets_s: e.rest_between_sets, rest_after_exercise_s: e.rest_after_exercise,
+          cue: e.cue || null,
+        })),
+      });
+      if (args.day) {
+        const d = swoleDayOf(prog.doc, String(args.day).toLowerCase());
+        if (!d) return toolErr("No day '" + args.day + "' in the program.");
+        return toolText({ week, reps_in_reserve: effort ? effort.reps_in_reserve : null, ...shape(d) });
+      }
+      return toolText({ block: prog.doc.block || 1, week,
+        reps_in_reserve: effort ? effort.reps_in_reserve : null,
+        rules: prog.doc.rules || null, progression: prog.doc.progression || null,
+        days: (prog.doc.days || []).map(shape) });
+    },
+  },
+  {
+    name: "sd_start_session",
+    title: "SwoleDawg — start a session",
+    catalog: "core",
+    readOnlyHint: false,
+    description: "Open a training session. The day is inferred from the date's weekday unless you name one. Idempotent: starting a session that already exists returns it rather than creating a second. sd_log_set opens the session on its own, so you rarely need this first.",
+    inputSchema: { type: "object", properties: {
+      date: { type: "string", description: "YYYY-MM-DD (default: today)" },
+      day_key: { type: "string", description: "monday|tuesday|… — override the weekday inference" },
+    }, additionalProperties: false },
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user") return toolErr(SWOLE_NEEDS_USER);
+      const uid = caller.uid || caller.name;
+      const r = await swoleStartSession(env, uid, args.date || new Date().toISOString().slice(0, 10), args.day_key, "mcp");
+      return r.error ? toolErr(r.error) : toolText(r);
+    },
+  },
+  {
+    name: "sd_log_set",
+    title: "SwoleDawg — log a set",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: true,
+    description:
+      "Log ONE working set and get back what is left in the exercise plus the rest time. Writes immediately — do not ask the user to confirm first; they are between sets. " +
+      "Omit set_number and it takes the next one. Re-logging an existing set_number OVERWRITES it, which is how a correction works: 'that was 11 not 10' is an edit, not a new set. " +
+      "The exercise is matched against the day's program by id, then exact name, then substring; an ambiguous or absent match is REFUSED with the day's candidates rather than guessed, because a wrong match corrupts two lifts' histories at once. " +
+      "If the response sets below_rep_range, tell the user and ask whether the set was cut short by failure or by the week's RIR cap before touching the load — those imply opposite actions.",
+    inputSchema: { type: "object", properties: {
+      exercise: { type: "string", description: "Exercise id ('mon_1') or name ('flat bench')" },
+      weight_lb: { type: "number", description: "Per hand for dumbbell work, matching the program's start_weight_lb_per_hand" },
+      reps: { type: "number" },
+      set_number: { type: "number", description: "Omit to append the next set; supply to correct an existing one" },
+      rir: { type: "number", description: "Reps in reserve, if the user said" },
+      rest_taken_s: { type: "number", description: "Actual rest before this set. Stored separately from prescribed — a stalled lift is usually collapsed rest." },
+      date: { type: "string", description: "YYYY-MM-DD (default: today)" },
+      day_key: { type: "string" },
+    }, required: ["exercise", "weight_lb", "reps"], additionalProperties: false },
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user") return toolErr(SWOLE_NEEDS_USER);
+      const uid = caller.uid || caller.name;
+      const a = { ...args, date: args.date || new Date().toISOString().slice(0, 10) };
+      const r = await swoleLogSet(env, uid, a, "mcp");
+      return r.error ? toolText({ status: "rejected", ...r }) : toolText(r);
+    },
+  },
+  {
+    name: "sd_log_sets",
+    title: "SwoleDawg — log several sets",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: true,
+    description: "Bulk version of sd_log_set, for 'I did 12, 11 and 10 at thirty'. Each entry takes the same fields. Entries are applied in order and each is reported separately, so a rejection in the middle does not hide the ones that landed.",
+    inputSchema: { type: "object", properties: {
+      sets: { type: "array", description: "Each: {exercise, weight_lb, reps, set_number?, rir?, rest_taken_s?}",
+        items: { type: "object", properties: {
+          exercise: { type: "string" }, weight_lb: { type: "number" }, reps: { type: "number" },
+          set_number: { type: "number" }, rir: { type: "number" }, rest_taken_s: { type: "number" },
+        }, required: ["exercise", "weight_lb", "reps"], additionalProperties: false } },
+      date: { type: "string" }, day_key: { type: "string" },
+    }, required: ["sets"], additionalProperties: false },
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user") return toolErr(SWOLE_NEEDS_USER);
+      const uid = caller.uid || caller.name;
+      const date = args.date || new Date().toISOString().slice(0, 10);
+      const out = [];
+      for (const s of args.sets || []) {
+        const r = await swoleLogSet(env, uid, { ...s, date, day_key: args.day_key }, "mcp");
+        out.push(r.error ? { status: "rejected", input: s, ...r } : r);
+      }
+      return toolText({ date, results: out,
+        logged: out.filter(r => r.ok).length, rejected: out.filter(r => !r.ok).length });
+    },
+  },
+  {
+    name: "sd_finish_session",
+    title: "SwoleDawg — finish the session",
+    catalog: "core",
+    readOnlyHint: false,
+    description: "Close the day's session and return its summary: sets, exercises touched and total volume.",
+    inputSchema: { type: "object", properties: {
+      date: { type: "string", description: "YYYY-MM-DD (default: today)" },
+      notes: { type: "string" },
+    }, additionalProperties: false },
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user") return toolErr(SWOLE_NEEDS_USER);
+      const r = await swoleFinishSession(env, caller.uid || caller.name, args.date || new Date().toISOString().slice(0, 10), args.notes);
+      return r.error ? toolErr(r.error) : toolText(r);
+    },
+  },
+  {
+    name: "sd_session",
+    title: "SwoleDawg — read one session",
+    catalog: "core",
+    readOnlyHint: true,
+    description: "Every set recorded on one date, with the source each row arrived from.",
+    inputSchema: { type: "object", properties: { date: { type: "string", description: "YYYY-MM-DD" } }, required: ["date"], additionalProperties: false },
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user") return toolErr(SWOLE_NEEDS_USER);
+      const r = await swoleSession(env, caller.uid || caller.name, args.date);
+      return r.error ? toolErr(r.error) : toolText(r);
+    },
+  },
+  {
+    name: "sd_recent_sessions",
+    title: "SwoleDawg — recent sessions",
+    catalog: "core",
+    readOnlyHint: true,
+    description: "The last N sessions with set counts and volume. Use it to answer 'how many did I train last week' without pulling every set.",
+    inputSchema: { type: "object", properties: { n: { type: "number", description: "Default 10, max 50" } }, additionalProperties: false },
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user") return toolErr(SWOLE_NEEDS_USER);
+      return toolText(await swoleRecentSessions(env, caller.uid || caller.name, args.n));
+    },
+  },
+  {
+    name: "sd_log_measurement",
+    title: "SwoleDawg — log a measurement",
+    catalog: "full",
+    readOnlyHint: false,
+    destructiveHint: true,
+    description:
+      "Record one tape or scale reading. One value per field per day; a re-read on the same date overwrites it. " +
+      "Pass reads:[…] when the protocol's replication rule was used (two within 0.125\" averaged, or the median of three) — the raw reads are stored beside the value so an averaged number stays auditable. " +
+      "⚠️ NEVER invent a value for a field the user did not measure. Pass null, or leave it out. A null reads as a gap; a guess reads as data and corrupts every trend built on it.",
+    inputSchema: { type: "object", properties: {
+      field: { type: "string", description: "e.g. waist_navel_in, ankle_l_in" },
+      value: { type: ["number", "null"], description: "null records an explicit gap" },
+      reads: { type: "array", items: { type: "number" }, description: "Raw reads before averaging" },
+      date: { type: "string", description: "YYYY-MM-DD (default: today)" },
+      note: { type: "string" },
+    }, required: ["field"], additionalProperties: false },
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user") return toolErr(SWOLE_NEEDS_USER);
+      const r = await swoleLogMeasurement(env, caller.uid || caller.name, args, "mcp");
+      return r.error ? toolErr(r.error) : toolText(r);
+    },
+  },
+  {
+    name: "sd_measurement_history",
+    title: "SwoleDawg — measurement history",
+    catalog: "full",
+    readOnlyHint: true,
+    description: "Every recorded reading for one field, newest first, with the raw reads where they were kept.",
+    inputSchema: { type: "object", properties: {
+      field: { type: "string" }, n: { type: "number", description: "Default 20, max 200" },
+    }, required: ["field"], additionalProperties: false },
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user") return toolErr(SWOLE_NEEDS_USER);
+      return toolText(await swoleMeasurementHistory(env, caller.uid || caller.name, args.field, args.n));
+    },
+  },
+  {
+    name: "sd_log_nutrition",
+    title: "SwoleDawg — log nutrition",
+    catalog: "full",
+    readOnlyHint: false,
+    description: "Record a day's calories and protein. Needs actual numbers: \"hit target\" is not one, and this refuses rather than storing the program's target as though it were an observation.",
+    inputSchema: { type: "object", properties: {
+      date: { type: "string" }, kcal: { type: "number" }, protein_g: { type: "number" }, note: { type: "string" },
+    }, additionalProperties: false },
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user") return toolErr(SWOLE_NEEDS_USER);
+      const r = await swoleLogNutrition(env, caller.uid || caller.name, args, "mcp");
+      return r.error ? toolErr(r.error) : toolText(r);
+    },
+  },
+
 ];

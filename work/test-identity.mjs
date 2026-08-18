@@ -270,7 +270,9 @@ console.log("\nthe write-scope invariant still holds");
      (block.match(/commitBozoLeg\s*\(/g) || []).length === 1);
   ok("every KV write in the block targets the caller's own mcpconfirm staging key",
      (block.match(/\.put\s*\(/g) || []).length === (block.match(/env\.RL\.put\(kvKey/g) || []).length);
-  ok("every tool name is namespaced", W.MCP_TOOLS.every(t => t.name.startsWith("dd_")));
+  // Two namespaces, and nothing outside them: dd_* reads the league, sd_* reads and
+  // writes the signed-in athlete's own training log.
+  ok("every tool name is namespaced", W.MCP_TOOLS.every(t => /^(dd|sd)_/.test(t.name)));
   ok("exactly one tool is named like a write, and it is the one write tool",
      W.MCP_TOOLS.filter(t => /(submit|place|set|write|delete|grade|lock)_/.test(t.name))
        .map(t => t.name).join("|") === "dd_submit_bozo_leg");

@@ -14,6 +14,11 @@ The file contains secret **names only**. Secret values stay encrypted in Cloudfl
 - Standard usage model CPU ceiling: 1,000 ms.
 - Workers Logs enabled.
 - `RL` KV namespace: `ffee9157b0a04cebb796acfa6046880a`.
+- `SWOLE_DB` D1 database `swoledawg`: SwoleDawg training data. **`database_id` in
+  `wrangler.jsonc` is the placeholder `PASTE_FROM_WRANGLER_D1_CREATE` until the database
+  exists — a deploy with it unset binds nothing and every SwoleDawg route answers 503
+  rather than failing silently. Note `wrangler.jsonc` must stay comment-free despite the
+  extension: `tools/validate-data.js` parses it with strict `JSON.parse`.
 - Plain variables: `BOZO_ADMIN`, `ELEVEN_VOICE`, `MAIL_FROM`, `MODEL`.
 - Required encrypted secrets: `BOZO_PEPPER`, `BOZO_TOKENS`, `DAWG_PASS`,
   `DDCC_IMPORT_TOKEN`, `ELEVEN_KEY`, `FB_SECRET`, `RESEND_KEY`, `SGO_KEY`, `XAI_KEY`.
@@ -39,9 +44,29 @@ node work/test-cfb-market-capture.mjs
 node work/test-backup.mjs
 node work/test-identity.mjs
 node work/test-mcp.mjs
+node work/test-swoledawg.mjs
 node tools/validate-data.js
 wrangler deploy --dry-run --config wrangler.jsonc
 ```
+
+## First-time SwoleDawg setup
+
+Once only, before the first deploy that carries the `sd_*` tools. Steps 1 and 2 need
+Cloudflare credentials and cannot be done from a sandbox.
+
+```
+wrangler d1 create swoledawg                       # 1. prints a database_id
+                                                   # 2. paste it into wrangler.jsonc
+wrangler d1 execute swoledawg --file=work/swoledawg-schema.sql --remote
+```
+
+Then seed the program and the measurement fields through the site while signed in —
+`POST /api/swoledawg/program` with `{program: <program.json>}`. Seeding is a write of a
+supplied document rather than a copy baked into the Worker, so there is exactly one
+authoritative `program.json` and no second copy to drift.
+
+⚠️ SwoleDawg rows are personal health data. They live in D1 behind a per-user credential
+for that reason — never mirror them into `data/`, which is public.
 
 The dry run must report the `RL` binding and all four plain variables. It performs no
 upload and changes no traffic.
