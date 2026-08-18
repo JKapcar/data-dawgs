@@ -1,13 +1,14 @@
 <!DOCTYPE html>
-<html lang="en" data-sd-theme="plate">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SwoleDawg</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
-:root, [data-sd-theme="plate"]{
-  /* SWOLEDAWG SKIN · PLATE — diamond tread steel, rubber-bumper orange. Default. */
+:root{
+  /* SWOLEDAWG SKIN — diamond tread steel, rubber-bumper orange. Dark is the base,
+     matching the rest of the site; light overrides below. */
   color-scheme:dark;
   --surface-1:#232323; --surface-2:#2c2c2c; --page:#191919;
   --ink-1:#f2f0ec; --ink-2:#b9b4ab; --ink-3:#7e7970;
@@ -21,8 +22,8 @@
         repeating-linear-gradient(-45deg,rgba(255,255,255,.028) 0 2px,transparent 2px 13px),
         linear-gradient(180deg,#1f1f1f,#131313);
 }
-[data-sd-theme="day"]{
-  /* DAY — same material in powder-coated aluminium. For reading outdoors. */
+:root[data-theme="light"]{
+  /* Same material in powder-coated aluminium. Driven by the sitewide theme toggle. */
   color-scheme:light;
   --surface-1:#f7f5f0; --surface-2:#e9e6df; --page:#dedbd4;
   --ink-1:#1e1c19; --ink-2:#514d47; --ink-3:#847f77;
@@ -36,33 +37,7 @@
         repeating-linear-gradient(-45deg,rgba(0,0,0,.030) 0 2px,transparent 2px 13px),
         linear-gradient(180deg,#e7e4dd,#d3d0c8);
 }
-[data-sd-theme="outrun"]{
-  /* OUTRUN — after hours. Sunset runs orange into magenta so the brand survives. */
-  color-scheme:dark;
-  --surface-1:rgba(26,10,52,.74); --surface-2:rgba(38,16,72,.86); --page:#0d0320;
-  --ink-1:#f6ecff; --ink-2:#c3aee0; --ink-3:#8a76ad;
-  --grid:rgba(0,229,255,.13); --axis:rgba(0,229,255,.22); --border:rgba(255,122,26,.26);
-  --accent:#ff7a1a; --accent-ink:#170a00; --hot:#ff2d95;
-  --good:#3dffb0; --bad:#ff5470; --warn:#ffc861; --cool:#00e5ff;
-  --navbar:rgba(20,7,42,.92); --navink:#f6ecff; --navink2:#8a76ad;
-  --glow:0 0 20px var(--accent); --blur:blur(9px);
-  --press:0 3px 0 rgba(0,0,0,.55); --press-in:0 1px 0 rgba(0,0,0,.55);
-  --tex:none;
-}
 body{background-color:var(--page);background-image:var(--tex);background-attachment:fixed}
-[data-sd-theme="outrun"] body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
-  background:
-    radial-gradient(circle at 50% 16%,#ff7a1a 0,#ff2d95 15%,rgba(123,47,247,.38) 23%,transparent 33%),
-    linear-gradient(180deg,rgba(13,3,32,.2) 0,rgba(13,3,32,.75) 48%,rgba(13,3,32,.96) 100%)}
-[data-sd-theme="outrun"] body::after{content:"";position:fixed;left:-50%;right:-50%;bottom:-4%;height:50%;
-  z-index:-1;pointer-events:none;
-  background-image:repeating-linear-gradient(90deg,rgba(0,229,255,.4) 0 1px,transparent 1px 60px),
-    repeating-linear-gradient(0deg,rgba(0,229,255,.28) 0 1px,transparent 1px 44px);
-  transform:perspective(260px) rotateX(74deg);transform-origin:50% 100%;
-  -webkit-mask-image:linear-gradient(180deg,transparent,#000 45%);
-  mask-image:linear-gradient(180deg,transparent,#000 45%)}
-[data-sd-theme="outrun"] .card,[data-sd-theme="outrun"] .strip .cell{backdrop-filter:var(--blur)}
-[data-sd-theme="outrun"] .kpi .v,[data-sd-theme="outrun"] .strip .v{text-shadow:0 0 18px currentColor}
 .btn{box-shadow:var(--press)}
 .btn:active{transform:translateY(2px);box-shadow:var(--press-in)}
 .dbtn.on{box-shadow:var(--glow)}
@@ -1810,7 +1785,6 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <p class="lede" id="subline"></p></div>
   <div style="flex:none">
     <button class="chip" id="unitBtn">lb / in</button>
-    <button class="chip" id="sdThemeBtn">■ Plate</button>
     <span class="pill pup">PUP</span> <span class="pill mod">v0.3.0</span></div>
 </div>
 
@@ -7335,13 +7309,10 @@ function wire(){
     UNITS=UNITS==='imperial'?'metric':'imperial';
     this.textContent=UNITS==='imperial'?'lb / in':'kg / cm';renderAll();
   };
-  const THEMES=['plate','day','outrun'];
-  const THEME_LABEL={plate:'■ Plate',day:'☀ Day',outrun:'◆ Outrun'};
-  document.getElementById('sdThemeBtn').onclick=function(){
-    const r=document.documentElement;
-    const next=THEMES[(THEMES.indexOf(r.getAttribute('data-sd-theme'))+1)%THEMES.length];
-    r.setAttribute('data-sd-theme',next); this.textContent=THEME_LABEL[next];
-    if(DATA&&DATA.profile)DATA.profile.theme=next;
+  /* Theme is the site's, not this page's — the nav owns the light/dark toggle and calls
+     this after it flips data-theme. Charts read the CSS variables once at construction,
+     so they have to be torn down and rebuilt rather than merely re-rendered. */
+  window.onThemeChange=function(){
     setTimeout(()=>{Object.values(charts).forEach(c=>c&&c.destroy());
       for(const k in charts)delete charts[k];renderAll();},30);
   };
@@ -7368,9 +7339,6 @@ async function boot2(){
   UNITS=(DATA.units&&DATA.units.display)||'imperial';
   MODE=(DATA.goal&&DATA.goal.primary)||'visual_hypertrophy';
   if(!DATA.profile)DATA.profile={};
-  if(DATA.profile.theme){document.documentElement.setAttribute('data-sd-theme',DATA.profile.theme);
-    const tb=document.getElementById('sdThemeBtn');
-    if(tb)tb.textContent={plate:'■ Plate',day:'☀ Day',outrun:'◆ Outrun'}[DATA.profile.theme]||'■ Plate';}
   if(!Array.isArray(DATA.profile.equipment))
     DATA.profile.equipment=['bodyweight','dumbbells','bench_adj','bands'];
   AVAIL_SET=new Set(DATA.profile.equipment);
