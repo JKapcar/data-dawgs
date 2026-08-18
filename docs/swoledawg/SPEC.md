@@ -180,6 +180,20 @@ prescription on the site is replaced with the stop notice. Do not make this dism
 Mount at `/mcp/{token}` mirroring the Data Dawgs worker. Token in path, not header, because
 Claude connector config takes a URL.
 
+**Use the per-user token, not a shared one.** The Data Dawgs worker exposes two shapes and
+they are not equivalent: `/mcp/{DAWG_PASS}` is shared, anonymous and read-only — the server
+cannot tell one caller from another — while `/mcp/u_{token}` is minted per member from a
+signed-in session at `signon.html#connect`, stored hashed, and revocable individually. That
+per-user form is the one that makes the call know *who* is asking, which is the precondition
+for attributing a write to an account. SwoleDawg writes, so it must mint through the same
+session-authenticated flow rather than issuing a standalone token: mirror `mint`/`revoke`,
+store only the hash, and show the URL exactly once.
+
+The URL is the credential either way — Claude's connector UI takes a URL and has no field for
+a custom header, so the secret rides in the path and leaks through screenshots. Per-user makes
+a leak *containable* (rotate one row, nobody else is disturbed); it does not make it secure and
+must never be described as security.
+
 | Tool | Args | Returns |
 |---|---|---|
 | `sd_whoami` | — | athlete, current block, derived week, today's prescribed day |

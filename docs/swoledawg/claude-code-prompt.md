@@ -9,7 +9,7 @@ Paste this as your first message. Working directory must contain:
 | `restrictions.json` | Restriction schema, six kinds, preset catalog, seeded rows. |
 | `claude-project-setup.md` | Content for the Settings tab. Verbatim, except `{{MCP_BASE}}` — substitute the deployed worker origin. Never hardcode a workers.dev hostname. |
 | `swoledawg-session.html` | Working UI mockup. **Behavioral reference only — see below.** |
-| `radar.html` | Already working. Wire it to `/api/summary`; do not redesign it. |
+| `/radar.html` | Live at the repo root as a Pup (unvalidated). Wire it to `/api/summary`; do not redesign it. |
 | week number | Derive from `program.json` `block_start_date` — never read or store a `current_week`. Apply week 1's `sets_override`. |
 
 ---
