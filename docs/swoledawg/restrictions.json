@@ -1,0 +1,325 @@
+{
+  "schema_version": "1.0",
+  "doc": "Restrictions are user data, not program data. The program references them; it never embeds them. Claude calls sd_get_restrictions before generating or modifying any plan.",
+  "kinds": {
+    "movement_ban": "A pattern, implement, or exercise that must not appear in any plan. Hard.",
+    "load_cap": "A numeric ceiling on an exercise or pattern. Enforced by clamping and by tool rejection.",
+    "range_cap": "A range-of-motion limit. Cannot be enforced numerically \u2014 renders as persistent inline text.",
+    "monitor": "A signal to watch for, with a defined action. Not a restriction on the plan; a restriction on ignoring symptoms.",
+    "gate": "A restriction pending external resolution, usually medical clearance. Carries a resolution date and note when lifted.",
+    "preference": "User choice, not a medical constraint. Same enforcement, different framing in the UI \u2014 nobody wants their dislike of burpees labeled an injury."
+  },
+  "scope_types": {
+    "equipment": "barbell | dumbbell | kettlebell | machine | bodyweight | band | spring",
+    "pattern": "horizontal_press | vertical_press | horizontal_pull | vertical_pull | squat | hinge | lunge | carry | isolation",
+    "joint": "shoulder | ac_joint | elbow | wrist | spine_lumbar | hip | knee | ankle",
+    "exercise_id": "targets one exercise in the program",
+    "exercise_name_match": "substring match, for exercises not currently in the plan",
+    "surface": "flat_stable | uneven | cambered | elevated_heel",
+    "trait": "unilateral | bilateral | overhead | fixed_path | free_path | end_range_stretch | seated | standing"
+  },
+  "restrictions": [
+    {
+      "id": "r_barbell_press",
+      "label": "No barbell pressing",
+      "kind": "movement_ban",
+      "scope": {
+        "equipment": [
+          "barbell"
+        ],
+        "pattern": [
+          "horizontal_press",
+          "vertical_press"
+        ]
+      },
+      "severity": "hard",
+      "reason": "Repaired AC separation, right side. A fixed bar path forces end-range shoulder extension. At 315 lb the shoulder failed before the chest.",
+      "user_note": "Dumbbell versions of every one of these are fine \u2014 it is specifically the bar.",
+      "source": "user_experience",
+      "active": true,
+      "created_at": "2026-08-18"
+    },
+    {
+      "id": "r_ac_patterns",
+      "label": "AC-provocative movements",
+      "kind": "movement_ban",
+      "scope": {
+        "exercise_name_match": [
+          "dip",
+          "upright row",
+          "behind the neck",
+          "behind-the-neck",
+          "barbell shrug"
+        ]
+      },
+      "severity": "hard",
+      "reason": "Same AC repair. These load the joint at end range regardless of implement.",
+      "source": "user_experience",
+      "active": true,
+      "created_at": "2026-08-18"
+    },
+    {
+      "id": "r_ac_monitor",
+      "label": "AC joint symptom watch",
+      "kind": "monitor",
+      "scope": {
+        "joint": [
+          "ac_joint"
+        ]
+      },
+      "watch_for": [
+        "pain on top of the shoulder at the AC joint, distinct from front-of-shoulder or deltoid soreness",
+        "clicking or catching under load",
+        "ache persisting into the following day"
+      ],
+      "action": "Cut seated DB shoulder press first \u2014 front delts are already covered by incline pressing and it contributes nothing to the chest priority.",
+      "escalate": "Pain persisting past a week, or any sense of joint instability, goes to an orthopedist before the next push day.",
+      "source": "user_history",
+      "active": true,
+      "created_at": "2026-08-18"
+    },
+    {
+      "id": "r_foot_load",
+      "label": "Loaded lower body \u2014 awaiting clearance",
+      "kind": "gate",
+      "scope": {
+        "pattern": [
+          "squat",
+          "lunge"
+        ]
+      },
+      "load_cap_lb": 0,
+      "severity": "hard",
+      "reason": "Right foot modified double arthrodesis with Achilles lengthening; left Achilles procedure. Hindfoot fusion raises load at the joint above it and adjacent-joint arthritis is a documented sequela.",
+      "effect": "Goblet squat and reverse lunge stay bodyweight. Leg developer and RDL proceed normally.",
+      "resolution_required": "Surgeon clearance for loaded lower-body training",
+      "resolved_at": null,
+      "source": "surgical_history",
+      "active": true,
+      "created_at": "2026-08-18",
+      "scope_note": "joint:[ankle] was removed \u2014 it caught seated calf raise, which is permitted. Pattern alone is the correct scope."
+    },
+    {
+      "id": "r_foot_patterns",
+      "label": "Ankle-contraindicated patterns",
+      "kind": "movement_ban",
+      "scope": {
+        "exercise_name_match": [
+          "jump",
+          "plyometric",
+          "box",
+          "hop",
+          "bound",
+          "rear-foot-elevated",
+          "rear foot elevated",
+          "bulgarian",
+          "standing calf raise",
+          "pivot",
+          "cutting"
+        ]
+      },
+      "severity": "hard",
+      "reason": "Hindfoot fusion removes inversion and eversion \u2014 the foot cannot accommodate uneven or angled ground. Achilles lengthening permanently reduces right push-off force.",
+      "exceptions": "Seated calf raise is permitted. Rear-foot-elevated is banned only with the right foot rear.",
+      "source": "surgical_history",
+      "active": true,
+      "created_at": "2026-08-18"
+    },
+    {
+      "id": "r_heel_elevation",
+      "label": "Squatting requires heel elevation",
+      "kind": "range_cap",
+      "scope": {
+        "pattern": [
+          "squat"
+        ]
+      },
+      "text": "Heels elevated 1\u20131.5 inches, not optional. If the heels lift or the low back rounds at the bottom, range is being borrowed from the spine because the right ankle cannot supply it.",
+      "severity": "hard",
+      "source": "surgical_history",
+      "active": true,
+      "created_at": "2026-08-18"
+    },
+    {
+      "id": "r_unstable_surface",
+      "label": "No loaded work on unstable or cambered surfaces",
+      "kind": "movement_ban",
+      "scope": {
+        "surface": [
+          "uneven",
+          "cambered"
+        ]
+      },
+      "severity": "hard",
+      "reason": "Fused hindfoot cannot accommodate angled ground.",
+      "applies_to_conditioning": "Rucking: treadmill or known-flat ground only. No trails, no camber.",
+      "source": "surgical_history",
+      "active": true,
+      "created_at": "2026-08-18",
+      "scope_note": "Scoped by surface, not pattern. Nothing in the current plan runs on unstable ground; this governs conditioning and any future exercise tagged uneven or cambered."
+    },
+    {
+      "id": "r_ankle_monitor",
+      "label": "Ankle swelling hard stop",
+      "kind": "monitor",
+      "scope": {
+        "joint": [
+          "ankle"
+        ]
+      },
+      "watch_for": [
+        "ankle_r_in more than 0.5 in larger than ankle_l_in",
+        "either ankle rising two weeks running",
+        "ankle ache with stiffness"
+      ],
+      "action": "Suspend rucking and contact the surgeon. Not a variable to push through.",
+      "instrument_status": "UNARMED \u2014 ankle_l_in and ankle_r_in baselines are TBD. Cannot evaluate.",
+      "source": "surgical_history",
+      "active": true,
+      "created_at": "2026-08-18"
+    },
+    {
+      "id": "r_lumbar_hinge",
+      "label": "Hinge terminates on lumbar rounding",
+      "kind": "range_cap",
+      "scope": {
+        "pattern": [
+          "hinge"
+        ]
+      },
+      "text": "End the set at any hint of lumbar rounding rather than at a rep count.",
+      "reason": "Inseam is 41% of height against a 45\u201347% population norm. The long torso means a longer spinal moment arm, so the RDL is more lumbar-demanding at a given load than height alone predicts.",
+      "severity": "soft",
+      "source": "anthropometry",
+      "active": true,
+      "created_at": "2026-08-18"
+    },
+    {
+      "id": "r_no_solo_failure",
+      "label": "No training to failure on dumbbell bench",
+      "kind": "movement_ban",
+      "scope": {
+        "exercise_name_match": [
+          "bench press"
+        ]
+      },
+      "severity": "hard",
+      "reason": "No spotter. Failure means dumping the weights.",
+      "source": "environment",
+      "active": true,
+      "created_at": "2026-08-18"
+    }
+  ],
+  "preset_catalog": {
+    "doc": "Consumer-facing starting points. A preset seeds a restriction the user then edits. Presets are not clinical advice and the UI must say so once, plainly, without turning into a disclaimer wall.",
+    "presets": [
+      {
+        "id": "p_shoulder_impingement",
+        "label": "Shoulder impingement",
+        "seeds": [
+          "no overhead pressing",
+          "raises to shoulder height only",
+          "no behind-the-neck"
+        ]
+      },
+      {
+        "id": "p_ac_repair",
+        "label": "AC joint repair or separation",
+        "seeds": [
+          "no barbell pressing",
+          "no dips",
+          "no upright rows",
+          "no barbell shrugs"
+        ]
+      },
+      {
+        "id": "p_rotator_cuff",
+        "label": "Rotator cuff repair",
+        "seeds": [
+          "no overhead pressing",
+          "no behind-the-neck",
+          "external rotation warm-up required"
+        ]
+      },
+      {
+        "id": "p_lower_back",
+        "label": "Lower back \u2014 disc or strain history",
+        "seeds": [
+          "no loaded spinal flexion",
+          "hinge terminates on rounding",
+          "no barbell back squat"
+        ]
+      },
+      {
+        "id": "p_knee",
+        "label": "Knee \u2014 ACL, meniscus, or patellar",
+        "seeds": [
+          "no deep squatting",
+          "no plyometrics",
+          "no pivoting under load"
+        ]
+      },
+      {
+        "id": "p_ankle_fusion",
+        "label": "Ankle or hindfoot fusion",
+        "seeds": [
+          "heel elevation required for squatting",
+          "no unstable surfaces",
+          "no jumping",
+          "no standing calf raises"
+        ]
+      },
+      {
+        "id": "p_hip_replacement",
+        "label": "Hip replacement",
+        "seeds": [
+          "no deep hip flexion past 90\u00b0",
+          "no adduction across midline",
+          "no internal rotation under load"
+        ]
+      },
+      {
+        "id": "p_wrist_elbow",
+        "label": "Wrist or elbow",
+        "seeds": [
+          "neutral grip preferred",
+          "no straight-bar curling",
+          "no full lockout pressing"
+        ]
+      },
+      {
+        "id": "p_hypertension",
+        "label": "Blood pressure",
+        "seeds": [
+          "no valsalva",
+          "no inverted positions",
+          "longer rest between compounds"
+        ]
+      },
+      {
+        "id": "p_no_spotter",
+        "label": "Training alone",
+        "seeds": [
+          "no training to failure on free-weight pressing"
+        ]
+      },
+      {
+        "id": "p_no_equipment",
+        "label": "Equipment I don't have",
+        "seeds": []
+      },
+      {
+        "id": "p_custom",
+        "label": "Something else",
+        "seeds": []
+      }
+    ]
+  },
+  "disclaimer": "Restrictions are declared by the user. They are not a medical assessment and the app does not validate them clinically. Users with surgical history should confirm training tolerance with the surgeon or clinician who treated them.",
+  "match_semantics": {
+    "rule": "AND across scope keys, OR within a key. {equipment:[barbell], pattern:[horizontal_press]} means barbell AND horizontal press \u2014 it does NOT match a dumbbell bench press.",
+    "why": "OR semantics silently over-restricts. A barbell-pressing ban evaluated as OR bans every horizontal press the user owns, including the dumbbell versions they explicitly said are fine. This is the single most important line in the file.",
+    "name_match": "exercise_name_match is evaluated as an additional OR branch alongside the AND group \u2014 it exists to catch lifts not currently in the plan.",
+    "no_scope": "A restriction with an empty scope matches nothing and must fail validation, not match everything."
+  }
+}

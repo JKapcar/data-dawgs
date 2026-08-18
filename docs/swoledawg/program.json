@@ -1,0 +1,885 @@
+{
+  "schema_version": "3.0",
+  "program_name": "Kap \u2014 Block 1",
+  "athlete": "Kap",
+  "baseline_date": "2026-08-18",
+  "block": 1,
+  "block_start_date": "2026-08-17",
+  "week_derivation": "current_week = floor((monday_of(today) - block_start_date) / 7 days) + 1. The week number is never stored; block_start_date is the only week fact in this file. Weeks turn over on Monday so they line up with the day list.",
+  "priority": [
+    "chest",
+    "biceps",
+    "v-taper"
+  ],
+  "nutrition": {
+    "deficit_kcal": [
+      200,
+      250
+    ],
+    "protein_g": 180,
+    "rule": "Do not eat back training calories.",
+    "deficit_review_trigger": "waist_navel_in reaches 35.0 \u2014 not a calendar date"
+  },
+  "rules": {
+    "rest_units": "seconds",
+    "rest_between_sets": "timer starts when the last rep of a set is racked",
+    "rest_after_exercise": "transition timer \u2014 includes changing selector and bench angle",
+    "same_weight_every_set": true,
+    "no_pyramiding": "Straight sets give more quality volume and a clean read on progression",
+    "calibration_override": "6+ reps in reserve on set one \u2192 add 5 lb and restart. Can't hit bottom of range clean \u2192 drop 5.",
+    "never_to_failure": "No failure on dumbbell bench without a spotter",
+    "log_both_rest_values": "Store rest_prescribed_s and rest_taken_s separately. A stalled lift is usually collapsed rest, not insufficient volume.",
+    "loading_heavy_dumbbells": "Sit with the bells on your thighs, kick one knee up at a time as you lie back. Reverse to get out."
+  },
+  "effort_schedule": [
+    {
+      "week": 1,
+      "reps_in_reserve": 4,
+      "sets_override": 2,
+      "note": "2 working sets per exercise regardless of the tables"
+    },
+    {
+      "week": 2,
+      "reps_in_reserve": 2,
+      "sets_override": null
+    },
+    {
+      "week": 3,
+      "reps_in_reserve": 2,
+      "sets_override": null
+    },
+    {
+      "week": "4+",
+      "reps_in_reserve": 1,
+      "sets_override": null,
+      "note": "1 RIR on isolation, 2 on presses"
+    }
+  ],
+  "progression": {
+    "model": "double_progression",
+    "trigger": "top of rep range on every working set, two consecutive sessions",
+    "increment_lb_per_hand": 2.5,
+    "increment_lb_per_hand_above_25": 5,
+    "falsifiable_test": "If retained myonuclei are doing real work, loads climb 5\u201310 lb session over session on curls and presses. If that happens, this scheme is holding you back and gets rewritten.",
+    "first_check": "2026-08-31"
+  },
+  "days": [
+    {
+      "day": "monday",
+      "name": "Push",
+      "focus": "chest priority",
+      "warmup": {
+        "exercise": "Flat DB bench press",
+        "sets": 1,
+        "reps": 10,
+        "weight_lb_per_hand": 15,
+        "rest_after": 90
+      },
+      "exercises": [
+        {
+          "id": "mon_1",
+          "name": "Flat DB bench press",
+          "equipment": "dumbbell",
+          "pattern": "horizontal_press",
+          "joint": [
+            "shoulder",
+            "ac_joint",
+            "elbow"
+          ],
+          "trait": [
+            "bilateral",
+            "free_path",
+            "supine"
+          ],
+          "surface": "flat_stable",
+          "type": "compound",
+          "sets": 3,
+          "rep_min": 8,
+          "rep_max": 12,
+          "start_weight_lb_per_hand": 30,
+          "step": 2.5,
+          "rest_between_sets": 180,
+          "rest_after_exercise": 180,
+          "cue": "Sit with the bells on your thighs, kick one knee up at a time as you lie back."
+        },
+        {
+          "id": "mon_2",
+          "name": "Incline DB press (30\u00b0)",
+          "equipment": "dumbbell",
+          "pattern": "horizontal_press",
+          "joint": [
+            "shoulder",
+            "ac_joint",
+            "elbow"
+          ],
+          "trait": [
+            "bilateral",
+            "free_path",
+            "incline"
+          ],
+          "surface": "flat_stable",
+          "type": "compound",
+          "sets": 3,
+          "rep_min": 10,
+          "rep_max": 12,
+          "start_weight_lb_per_hand": 20,
+          "step": 2.5,
+          "load_rule": "flat working weight minus 5 to 10",
+          "rest_between_sets": 180,
+          "rest_after_exercise": 180
+        },
+        {
+          "id": "mon_3",
+          "name": "DB flye (flat or slight incline)",
+          "equipment": "dumbbell",
+          "pattern": "isolation",
+          "joint": [
+            "shoulder",
+            "ac_joint"
+          ],
+          "trait": [
+            "bilateral",
+            "free_path",
+            "end_range_stretch"
+          ],
+          "surface": "flat_stable",
+          "type": "isolation",
+          "sets": 3,
+          "rep_min": 12,
+          "rep_max": 15,
+          "start_weight_lb_per_hand": 15,
+          "step": 2.5,
+          "rest_between_sets": 75,
+          "rest_after_exercise": 90,
+          "cue": "The point of this day. Slight elbow bend held fixed, wide arc, stop before the shoulders roll forward. Don't chase load.",
+          "rationale": "Presses load the mid-range; nothing else here loads chest in the stretched position."
+        },
+        {
+          "id": "mon_4",
+          "name": "Seated DB shoulder press",
+          "equipment": "dumbbell",
+          "pattern": "vertical_press",
+          "joint": [
+            "shoulder",
+            "ac_joint",
+            "elbow"
+          ],
+          "trait": [
+            "bilateral",
+            "free_path",
+            "overhead",
+            "seated"
+          ],
+          "surface": "flat_stable",
+          "type": "compound",
+          "sets": 3,
+          "rep_min": 10,
+          "rep_max": 12,
+          "start_weight_lb_per_hand": 20,
+          "step": 2.5,
+          "rest_between_sets": 180,
+          "rest_after_exercise": 150,
+          "cue": "Third press of the day \u2014 a drop-off here is expected."
+        },
+        {
+          "id": "mon_5",
+          "name": "Lateral raise",
+          "equipment": "dumbbell",
+          "pattern": "isolation",
+          "joint": [
+            "shoulder"
+          ],
+          "trait": [
+            "bilateral",
+            "standing"
+          ],
+          "surface": "flat_stable",
+          "type": "isolation",
+          "sets": 3,
+          "rep_min": 12,
+          "rep_max": 15,
+          "start_weight_lb_per_hand": 10,
+          "step": 2.5,
+          "rest_between_sets": 75,
+          "rest_after_exercise": 75,
+          "cue": "Lead with the elbows. Stop at shoulder height. No body English."
+        },
+        {
+          "id": "mon_6",
+          "name": "DB curl",
+          "equipment": "dumbbell",
+          "pattern": "isolation",
+          "joint": [
+            "elbow"
+          ],
+          "trait": [
+            "bilateral",
+            "standing"
+          ],
+          "surface": "flat_stable",
+          "type": "isolation",
+          "sets": 2,
+          "rep_min": 10,
+          "rep_max": 12,
+          "start_weight_lb_per_hand": 20,
+          "step": 2.5,
+          "rest_between_sets": 75,
+          "rest_after_exercise": 0
+        }
+      ]
+    },
+    {
+      "day": "tuesday",
+      "name": "Lower + Core",
+      "exercises": [
+        {
+          "id": "tue_1",
+          "name": "Leg extension (leg developer)",
+          "equipment": "machine",
+          "pattern": "isolation",
+          "joint": [
+            "knee"
+          ],
+          "trait": [
+            "bilateral",
+            "seated"
+          ],
+          "surface": "flat_stable",
+          "type": "machine",
+          "sets": 3,
+          "rep_min": 12,
+          "rep_max": 15,
+          "start_weight_lb_total": null,
+          "load_rule": "find it",
+          "rest_between_sets": 90,
+          "rest_after_exercise": 90,
+          "rationale": "Primary tool, not accessory. Zero ankle demand, routes around the fusion completely."
+        },
+        {
+          "id": "tue_2",
+          "name": "Leg curl (leg developer)",
+          "equipment": "machine",
+          "pattern": "isolation",
+          "joint": [
+            "knee"
+          ],
+          "trait": [
+            "bilateral",
+            "seated"
+          ],
+          "surface": "flat_stable",
+          "type": "machine",
+          "sets": 3,
+          "rep_min": 12,
+          "rep_max": 15,
+          "start_weight_lb_total": null,
+          "load_rule": "find it",
+          "rest_between_sets": 90,
+          "rest_after_exercise": 120
+        },
+        {
+          "id": "tue_3",
+          "name": "Goblet squat, heels elevated 1\u20131.5\"",
+          "equipment": "kettlebell",
+          "pattern": "squat",
+          "joint": [
+            "knee",
+            "hip",
+            "ankle"
+          ],
+          "trait": [
+            "bilateral",
+            "standing"
+          ],
+          "surface": "elevated_heel",
+          "type": "compound",
+          "sets": 3,
+          "rep_min": 10,
+          "rep_max": 12,
+          "start_weight_lb_total": 0,
+          "rest_between_sets": 180,
+          "rest_after_exercise": 180,
+          "cue": "Heel elevation is not optional. If the heels lift or the low back rounds at the bottom, you're borrowing range from the spine because the right ankle can't supply it."
+        },
+        {
+          "id": "tue_4",
+          "name": "DB Romanian deadlift",
+          "equipment": "dumbbell",
+          "pattern": "hinge",
+          "joint": [
+            "hip",
+            "spine_lumbar"
+          ],
+          "trait": [
+            "bilateral",
+            "standing"
+          ],
+          "surface": "flat_stable",
+          "type": "compound",
+          "sets": 3,
+          "rep_min": 10,
+          "rep_max": 12,
+          "start_weight_lb_per_hand": 30,
+          "step": 5,
+          "rest_between_sets": 180,
+          "rest_after_exercise": 150,
+          "cue": "Hinge from the hips, dumbbells tight to the legs. End the set on any hint of lumbar rounding rather than at a rep count."
+        },
+        {
+          "id": "tue_5",
+          "name": "Reverse lunge",
+          "equipment": "dumbbell",
+          "pattern": "lunge",
+          "joint": [
+            "knee",
+            "hip",
+            "ankle"
+          ],
+          "trait": [
+            "unilateral",
+            "standing"
+          ],
+          "surface": "flat_stable",
+          "type": "compound",
+          "sets": 2,
+          "rep_min": 8,
+          "rep_max": 10,
+          "per_side": true,
+          "start_weight_lb_per_hand": 0,
+          "progression_note": "bodyweight \u2192 20/hand",
+          "rest_between_sides": 0,
+          "rest_between_sets": 90,
+          "rest_after_exercise": 90,
+          "rationale": "Unilateral bias is deliberate \u2014 bilateral work lets the left leg quietly do the job and the gap widens."
+        },
+        {
+          "id": "tue_6",
+          "name": "Seated calf raise",
+          "equipment": "bodyweight",
+          "pattern": "isolation",
+          "joint": [
+            "ankle"
+          ],
+          "trait": [
+            "bilateral",
+            "seated"
+          ],
+          "surface": "flat_stable",
+          "type": "isolation",
+          "sets": 2,
+          "rep_min": 15,
+          "rep_max": 20,
+          "start_weight_lb_total": null,
+          "load_rule": "light",
+          "rest_between_sets": 60,
+          "rest_after_exercise": 60
+        },
+        {
+          "id": "tue_7",
+          "name": "Plank",
+          "equipment": "bodyweight",
+          "pattern": "isolation",
+          "joint": [
+            "spine_lumbar"
+          ],
+          "trait": [
+            "bilateral"
+          ],
+          "surface": "flat_stable",
+          "type": "isometric",
+          "sets": 3,
+          "hold_seconds_min": 30,
+          "hold_seconds_max": 45,
+          "rest_between_sets": 45,
+          "rest_after_exercise": 45
+        },
+        {
+          "id": "tue_8",
+          "name": "Dead bug",
+          "equipment": "bodyweight",
+          "pattern": "isolation",
+          "joint": [
+            "spine_lumbar"
+          ],
+          "trait": [
+            "unilateral"
+          ],
+          "surface": "flat_stable",
+          "type": "core",
+          "sets": 2,
+          "rep_min": 10,
+          "rep_max": 10,
+          "per_side": true,
+          "rest_between_sets": 45,
+          "rest_after_exercise": 0
+        }
+      ]
+    },
+    {
+      "day": "wednesday",
+      "name": "Ruck",
+      "type": "conditioning",
+      "exercises": [],
+      "prescription": {
+        "duration_min": [
+          30,
+          45
+        ],
+        "incline_pct": [
+          5,
+          8
+        ],
+        "speed_mph": [
+          3.0,
+          3.5
+        ],
+        "ruck_lb": [
+          10,
+          20
+        ],
+        "ruck_lb_cap": 30,
+        "progression_order": "load before incline, incline before speed",
+        "rationale": "This is the fat-loss lever, not the lifting. 300\u2013500 kcal/hr vs 150\u2013250 for a lifting session. Lifting decides which tissue the deficit takes; rucking creates room in the deficit.",
+        "surface": "treadmill or known-flat ground only \u2014 no trails, no camber",
+        "footwear": "rigid or rocker-soled shoe, size 16 2E. Flexible cushioned trainers push demand into joints that can no longer share it.",
+        "abort": "If strain moves to the front of the ankle rather than calf and glutes, drop the incline."
+      }
+    },
+    {
+      "day": "thursday",
+      "name": "Pull",
+      "focus": "v-taper",
+      "exercises": [
+        {
+          "id": "thu_1",
+          "name": "One-arm DB row",
+          "equipment": "dumbbell",
+          "pattern": "horizontal_pull",
+          "joint": [
+            "shoulder",
+            "elbow"
+          ],
+          "trait": [
+            "unilateral",
+            "free_path"
+          ],
+          "surface": "flat_stable",
+          "type": "compound",
+          "sets": 3,
+          "rep_min": 8,
+          "rep_max": 12,
+          "per_side": true,
+          "start_weight_lb_per_hand": 35,
+          "step": 5,
+          "rest_between_sides": 30,
+          "rest_between_sets": 180,
+          "rest_after_exercise": 180,
+          "cue": "Straps once this gets heavy. The target is the back; ending a set because your hands gave out leaves the stimulus on the table."
+        },
+        {
+          "id": "thu_2",
+          "name": "Chest-supported incline row (bench 30\u00b0, face down)",
+          "equipment": "dumbbell",
+          "pattern": "horizontal_pull",
+          "joint": [
+            "shoulder",
+            "elbow"
+          ],
+          "trait": [
+            "bilateral",
+            "free_path",
+            "chest_supported"
+          ],
+          "surface": "flat_stable",
+          "type": "compound",
+          "sets": 3,
+          "rep_min": 10,
+          "rep_max": 12,
+          "start_weight_lb_per_hand": 20,
+          "step": 2.5,
+          "rest_between_sets": 180,
+          "rest_after_exercise": 150
+        },
+        {
+          "id": "thu_3",
+          "name": "DB pullover",
+          "equipment": "dumbbell",
+          "pattern": "isolation",
+          "joint": [
+            "shoulder",
+            "ac_joint"
+          ],
+          "trait": [
+            "bilateral",
+            "overhead",
+            "end_range_stretch"
+          ],
+          "surface": "flat_stable",
+          "type": "isolation",
+          "sets": 3,
+          "rep_min": 12,
+          "rep_max": 15,
+          "start_weight_lb_total": 25,
+          "two_handed_single_bell": true,
+          "step": 5,
+          "rest_between_sets": 90,
+          "rest_after_exercise": 90
+        },
+        {
+          "id": "thu_4",
+          "name": "Spring device pull-apart",
+          "equipment": "spring",
+          "pattern": "horizontal_pull",
+          "joint": [
+            "shoulder"
+          ],
+          "trait": [
+            "bilateral",
+            "standing"
+          ],
+          "surface": "flat_stable",
+          "type": "isolation",
+          "sets": 2,
+          "rep_min": 15,
+          "rep_max": 20,
+          "load_rule": "mid tension",
+          "rest_between_sets": 60,
+          "rest_after_exercise": 75,
+          "note": "Partially covers the vertical-pull gap. Ignore the built-in rep counter; count to a target RIR."
+        },
+        {
+          "id": "thu_5",
+          "name": "Rear-delt fly (chest-supported)",
+          "equipment": "dumbbell",
+          "pattern": "isolation",
+          "joint": [
+            "shoulder"
+          ],
+          "trait": [
+            "bilateral",
+            "chest_supported"
+          ],
+          "surface": "flat_stable",
+          "type": "isolation",
+          "sets": 3,
+          "rep_min": 12,
+          "rep_max": 15,
+          "start_weight_lb_per_hand": 10,
+          "step": 2.5,
+          "rest_between_sets": 75,
+          "rest_after_exercise": 75
+        },
+        {
+          "id": "thu_6",
+          "name": "DB curl",
+          "equipment": "dumbbell",
+          "pattern": "isolation",
+          "joint": [
+            "elbow"
+          ],
+          "trait": [
+            "bilateral",
+            "standing"
+          ],
+          "surface": "flat_stable",
+          "type": "isolation",
+          "sets": 3,
+          "rep_min": 8,
+          "rep_max": 12,
+          "start_weight_lb_per_hand": 20,
+          "step": 2.5,
+          "rest_between_sets": 75,
+          "rest_after_exercise": 75
+        },
+        {
+          "id": "thu_7",
+          "name": "Hammer curl",
+          "equipment": "dumbbell",
+          "pattern": "isolation",
+          "joint": [
+            "elbow"
+          ],
+          "trait": [
+            "bilateral",
+            "standing"
+          ],
+          "surface": "flat_stable",
+          "type": "isolation",
+          "sets": 2,
+          "rep_min": 10,
+          "rep_max": 12,
+          "start_weight_lb_per_hand": 20,
+          "step": 2.5,
+          "rest_between_sets": 75,
+          "rest_after_exercise": 0,
+          "rationale": "Neutral grip loads the brachialis, which sits under the biceps \u2014 building it pushes the peak up and widens the arm visually."
+        }
+      ]
+    },
+    {
+      "day": "friday",
+      "name": "Arms, Delts, Chest",
+      "exercises": [
+        {
+          "id": "fri_1",
+          "name": "Incline DB press",
+          "equipment": "dumbbell",
+          "pattern": "horizontal_press",
+          "joint": [
+            "shoulder",
+            "ac_joint",
+            "elbow"
+          ],
+          "trait": [
+            "bilateral",
+            "free_path",
+            "incline"
+          ],
+          "surface": "flat_stable",
+          "type": "compound",
+          "sets": 3,
+          "rep_min": 10,
+          "rep_max": 12,
+          "start_weight_lb_per_hand": 20,
+          "step": 2.5,
+          "rest_between_sets": 180,
+          "rest_after_exercise": 150
+        },
+        {
+          "id": "fri_2",
+          "name": "Spring device chest squeeze",
+          "equipment": "spring",
+          "pattern": "isolation",
+          "joint": [
+            "shoulder"
+          ],
+          "trait": [
+            "bilateral",
+            "standing"
+          ],
+          "surface": "flat_stable",
+          "type": "isolation",
+          "sets": 2,
+          "rep_min": 15,
+          "rep_max": 20,
+          "load_rule": "mid tension",
+          "rest_between_sets": 60,
+          "rest_after_exercise": 75,
+          "note": "Spring resistance is ascending \u2014 hardest at peak contraction, the opposite of a flye. Complementary, not redundant. Two-set finisher, not a chest builder."
+        },
+        {
+          "id": "fri_3",
+          "name": "Lateral raise",
+          "equipment": "dumbbell",
+          "pattern": "isolation",
+          "joint": [
+            "shoulder"
+          ],
+          "trait": [
+            "bilateral",
+            "standing"
+          ],
+          "surface": "flat_stable",
+          "type": "isolation",
+          "sets": 4,
+          "rep_min": 12,
+          "rep_max": 15,
+          "start_weight_lb_per_hand": 10,
+          "step": 2.5,
+          "rest_between_sets": 75,
+          "rest_after_exercise": 90,
+          "rationale": "Delt width is most of the V-taper illusion and this is the only movement here that builds it. Four sets is deliberate."
+        },
+        {
+          "id": "fri_4",
+          "name": "Incline DB curl",
+          "equipment": "dumbbell",
+          "pattern": "isolation",
+          "joint": [
+            "elbow"
+          ],
+          "trait": [
+            "bilateral",
+            "seated",
+            "end_range_stretch"
+          ],
+          "surface": "flat_stable",
+          "type": "isolation",
+          "sets": 3,
+          "rep_min": 10,
+          "rep_max": 12,
+          "start_weight_lb_per_hand": 15,
+          "step": 2.5,
+          "rest_between_sets": 75,
+          "rest_after_exercise": 75,
+          "rationale": "The long head crosses the shoulder, so an incline curl loads it in a stretch a standing curl never reaches. Two stimuli, not redundancy."
+        },
+        {
+          "id": "fri_5",
+          "name": "Hammer curl",
+          "equipment": "dumbbell",
+          "pattern": "isolation",
+          "joint": [
+            "elbow"
+          ],
+          "trait": [
+            "bilateral",
+            "standing"
+          ],
+          "surface": "flat_stable",
+          "type": "isolation",
+          "sets": 3,
+          "rep_min": 10,
+          "rep_max": 12,
+          "start_weight_lb_per_hand": 20,
+          "step": 2.5,
+          "rest_between_sets": 75,
+          "rest_after_exercise": 75
+        },
+        {
+          "id": "fri_6",
+          "name": "Overhead triceps extension",
+          "equipment": "dumbbell",
+          "pattern": "isolation",
+          "joint": [
+            "elbow",
+            "shoulder"
+          ],
+          "trait": [
+            "bilateral",
+            "overhead"
+          ],
+          "surface": "flat_stable",
+          "type": "isolation",
+          "sets": 3,
+          "rep_min": 12,
+          "rep_max": 15,
+          "start_weight_lb_total": 20,
+          "two_handed_single_bell": true,
+          "step": 5,
+          "rest_between_sets": 75,
+          "rest_after_exercise": 75
+        },
+        {
+          "id": "fri_7",
+          "name": "Bent-over rear delt raise",
+          "equipment": "dumbbell",
+          "pattern": "isolation",
+          "joint": [
+            "shoulder"
+          ],
+          "trait": [
+            "bilateral",
+            "standing"
+          ],
+          "surface": "flat_stable",
+          "type": "isolation",
+          "sets": 3,
+          "rep_min": 15,
+          "rep_max": 15,
+          "start_weight_lb_per_hand": 10,
+          "load_rule": "light",
+          "step": 2.5,
+          "rest_between_sets": 60,
+          "rest_after_exercise": 0
+        }
+      ]
+    },
+    {
+      "day": "saturday",
+      "name": "Ruck",
+      "type": "conditioning",
+      "exercises": [],
+      "prescription": {
+        "same_as": "wednesday"
+      }
+    },
+    {
+      "day": "sunday",
+      "name": "Off",
+      "exercises": [],
+      "prescription": {
+        "tape": [
+          "waist_navel_in",
+          "neck_in",
+          "ankle_l_in",
+          "ankle_r_in"
+        ]
+      }
+    }
+  ],
+  "weekly_volume_audit": {
+    "chest": 15,
+    "biceps": 13,
+    "delts_side": 7,
+    "back": 11,
+    "quads_hams": 11,
+    "triceps_direct": 3,
+    "notes": {
+      "back": "still the weakest link, capped by no vertical pull",
+      "quads_hams": "ankle-safe routes only",
+      "delts_side": "drives the V-taper more than lats do"
+    }
+  },
+  "open_items": [
+    {
+      "id": "spring_rating",
+      "item": "Spring device max resistance rating",
+      "status": "open"
+    },
+    {
+      "id": "pullup_bar",
+      "item": "Doorway pull-up bar + assistance band, ~$30",
+      "note": "Highest-return purchase available. Closes the vertical-pull gap. Add to Thursday.",
+      "status": "open"
+    },
+    {
+      "id": "shoe",
+      "item": "Rocker-soled shoe, 16 2E",
+      "note": "New Balance, Brooks, Hoka, Altra stock this size; several Hoka models are natively rockered",
+      "status": "open"
+    }
+  ],
+  "recalibration": {
+    "date": "2026-10-13",
+    "basis": "actuals, not this page",
+    "note": "Ten years detrained is past where the evidence reaches \u2014 the progression scheme is genuinely open."
+  },
+  "set_log_template": {
+    "date": "YYYY-MM-DD",
+    "exercise_id": "mon_1",
+    "set_number": 1,
+    "weight_lb": null,
+    "reps": null,
+    "rir": null,
+    "rest_prescribed_s": null,
+    "rest_taken_s": null,
+    "source": "claude|web",
+    "completed": false
+  },
+  "constraints": {
+    "source": "sd_get_restrictions",
+    "doc": "Restrictions live in the user's restrictions table, not here. Any client or model generating or modifying a plan must call sd_get_restrictions first and apply the returned preamble. Nothing medical is hardcoded in this file.",
+    "active_ids_at_write": [
+      "r_barbell_press",
+      "r_ac_patterns",
+      "r_ac_monitor",
+      "r_foot_load",
+      "r_foot_patterns",
+      "r_heel_elevation",
+      "r_unstable_surface",
+      "r_ankle_monitor",
+      "r_lumbar_hinge",
+      "r_no_solo_failure"
+    ]
+  },
+  "restrictions_ref": {
+    "source": "restrictions.json / sd_get_restrictions",
+    "note": "This program carries no medical content. Restrictions are user data and are applied at plan-generation time by intersecting exercise tags against the user's active restrictions. A user with no restrictions gets this program unmodified."
+  },
+  "restriction_source": "Resolved at runtime from /api/restrictions \u2014 never embedded in this file.",
+  "tagging": {
+    "doc": "Every exercise carries equipment/pattern/joint/trait/surface tags. The restriction engine matches on these, never on exercise names. Adding an exercise without tags means it bypasses every restriction \u2014 validate on write.",
+    "vocabulary_source": "restrictions.json scope_types"
+  }
+}
