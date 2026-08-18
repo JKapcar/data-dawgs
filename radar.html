@@ -108,12 +108,17 @@ const SD_METRICS = [
 const CX=310, CY=272, R=176;
 
 function pct(m){
+  /* No target, or no reading: there is no progress to express. Pinned at the baseline
+     ring rather than dropped, so the polygon keeps eight sides and the gap is visible. */
+  if(m.nodata || m.target == null || m.current == null || m.baseline == null) return 0;
   const span = m.target - m.baseline;
   if (span === 0) return 100;
   const moved = m.current - m.baseline;
   return Math.max(0, Math.min(100, (moved/span)*100));
 }
 function fmt(v,u){
+  /* A missing value is an em dash, not a crash and not a zero. */
+  if(v==null || !Number.isFinite(v)) return '—';
   const s = (Math.abs(v)>=100 || Number.isInteger(v)) ? String(v)
           : (Math.abs(v)<2 ? v.toFixed(3) : v.toFixed(2).replace(/0$/,''));
   return u==='%' ? s+'%' : (u ? s+' '+u : s);
@@ -164,9 +169,15 @@ function draw(metrics){
     svg.appendChild(c); return c;
   });
 
-  const mean = metrics.reduce((s,m)=>s+pct(m),0)/n;
-  svg.appendChild(el('text',{x:CX,y:CY+2,class:'core','font-size':'27','text-anchor':'middle'},mean.toFixed(1)+'%'));
-  svg.appendChild(el('text',{x:CX,y:CY+18,class:'core-sub','text-anchor':'middle'},'CONVERGED'));
+  /* ⚠️ Average only the spokes that HAVE a value and a target. Counting a spoke with no
+     data as 0% converged states that no progress was made on it, which is a claim about
+     a measurement nobody took. With nothing measurable the dial reads a dash. */
+  const scored = metrics.filter(m=>!m.nodata);
+  const mean = scored.length ? scored.reduce((s,m)=>s+pct(m),0)/scored.length : null;
+  svg.appendChild(el('text',{x:CX,y:CY+2,class:'core','font-size':'27','text-anchor':'middle'},
+    mean==null ? '—' : mean.toFixed(1)+'%'));
+  svg.appendChild(el('text',{x:CX,y:CY+18,class:'core-sub','text-anchor':'middle'},
+    mean==null ? 'NO TARGETS SET' : 'CONVERGED · ' + scored.length + '/' + n));
 
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if(reduce){ settle(); } else { requestAnimationFrame(()=>requestAnimationFrame(settle)); }
@@ -185,29 +196,86 @@ function table(metrics){
   metrics.forEach(m=>{
     const p=pct(m);
     const tr=document.createElement('tr');
+    /* A percentage printed for a spoke with no target is a number invented to fill a
+       cell. It reads as 0% progress, which is a claim. An em dash is the truth. */
+    const cell = v => fmt(v,m.unit);
     tr.innerHTML =
-      '<td>'+m.label+' <span class="tagpill">'+m.tag+'</span></td>'+
-      '<td>'+fmt(m.baseline,m.unit)+'</td>'+
-      '<td>'+fmt(m.current,m.unit)+'</td>'+
-      '<td>'+fmt(m.target,m.unit)+'</td>'+
-      '<td>'+p.toFixed(1)+'%</td>'+
-      '<td><span class="bar"><i style="width:'+p.toFixed(1)+'%"></i></span></td>';
+      '<td>'+m.label+' <span class="tagpill">'+m.tag+'</span>'+
+        (m.nodata?' <span class="tagpill">NO DATA</span>':'')+'</td>'+
+      '<td>'+cell(m.baseline)+'</td>'+
+      '<td>'+cell(m.current)+'</td>'+
+      '<td>'+cell(m.target)+'</td>'+
+      '<td>'+(m.nodata?'—':p.toFixed(1)+'%')+'</td>'+
+      '<td>'+(m.nodata?'':'<span class="bar"><i style="width:'+p.toFixed(1)+'%"></i></span>')+'</td>';
     tb.appendChild(tr);
   });
 }
 
-/* Prefer live values from the site API; fall back to the embedded baseline. */
+/* ---------- live values -----------------------------------------------
+   ⚠️ The old fetch here pointed at '/api/summary' on THIS origin. This origin is
+   GitHub Pages; the API is the Worker. It 404'd every time and fell silently back
+   to the embedded numbers, so the page has always claimed a baseline it was not
+   reading. That silence is the bug — a fallback that cannot be distinguished from
+   a success reports stale data as live.
+
+   Each spoke maps to a seeded measurement field. A spoke whose field has no value,
+   or no target, renders as NO DATA and is pinned at the baseline ring rather than
+   dropped — an eight-sided chart drawn with four metrics misrepresents coverage.
+   ---------------------------------------------------------------------- */
+const SD_WORKER = 'https://toto.jkapcar4.workers.dev';
+const SD_FIELD = {
+  waist:'waist_navel_in', bodyfat:'bodyfat_pct', chest:'chest_in',
+  arm:'arm_flex_r_in', shoulders:'shoulder_in', weight:'weight_lb', hips:'hips_in'
+  /* vtaper is a ratio, derived below from shoulders and waist. */
+};
+
 async function boot(){
-  let metrics = SD_METRICS;
-  try{
-    const r = await fetch('/api/summary',{headers:{'Accept':'application/json'}});
-    if(r.ok){
-      const live = await r.json();
-      metrics = SD_METRICS.map(m => (live[m.key]!=null ? {...m,current:Number(live[m.key])} : m));
-      document.getElementById('prov').textContent =
-        'Source: /api/summary · OBSERVED and DERIVED only · no MODELLED values plotted';
-    }
-  }catch(e){ /* embedded baseline stands */ }
+  let metrics = SD_METRICS, live = null;
+  const prov = document.getElementById('prov');
+  let tok = ''; try{ tok = localStorage.getItem('dd-bozo-sess') || ''; }catch(e){}
+
+  if(tok){
+    try{
+      const r = await fetch(SD_WORKER + '/api/swoledawg/summary',
+        {headers:{'Accept':'application/json','X-Bozo-Session':tok}});
+      if(r.ok){ const j = await r.json(); if(j && j.fields) live = j.fields; }
+    }catch(e){ live = null; }
+  }
+
+  if(live){
+    const val = k => { const f = live[k]; if(!f) return null;
+      /* ⚠️ MODELLED values are not plotted — the footer says so and it has to stay true.
+         bodyfat is a Navy estimate; a derived number on a progress ring reads as a
+         measurement. */
+      if(String(f.tag||'').toUpperCase() === 'MODELLED') return null;
+      return {cur: f.current != null ? f.current : f.baseline,
+              base: f.baseline, target: f.target};
+    };
+    const sh = val('shoulder_in'), wa = val('waist_navel_in');
+    metrics = SD_METRICS.map(m => {
+      /* ⚠️ A spoke with no live field is BLANKED, not left holding the embedded example's
+         numbers. Showing 13.5 in beside a NO DATA pill is worse than showing nothing —
+         it is a fictional measurement wearing this athlete's chart. */
+      const blank = {...m, baseline:null, current:null, target:null, nodata:true};
+      if(m.key === 'vtaper'){
+        const ok = sh && wa && sh.cur != null && wa.cur != null && sh.base != null && wa.base != null;
+        return ok ? {...m, baseline: sh.base/wa.base, current: sh.cur/wa.cur, target: null, nodata:true}
+                  : blank;
+      }
+      const f = val(SD_FIELD[m.key]);
+      if(!f || f.cur == null) return blank;
+      return {...m, baseline: f.base != null ? f.base : f.cur, current: f.cur,
+              target: f.target, nodata: f.target == null};
+    });
+    const drawn = metrics.filter(m => !m.nodata).length;
+    prov.textContent = 'Source: live training log · ' + drawn + ' of ' + metrics.length +
+      ' spokes have both a value and a target · OBSERVED and DERIVED only · no MODELLED values plotted';
+  } else {
+    /* Say which it is. The embedded numbers are a worked example, not this athlete. */
+    prov.textContent = tok
+      ? 'Source: embedded example — the live training log could not be read · not your data'
+      : 'Source: embedded example — sign in to plot your own log · not your data';
+  }
   draw(metrics); table(metrics);
 }
 boot();

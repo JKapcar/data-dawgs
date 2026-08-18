@@ -2316,13 +2316,13 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div class="card">
     <div class="card-h"><h2>Log measurements</h2><span class="pill obs">INPUT</span></div>
     <div class="daysel" id="bodyDays"></div>
-    <div class="form-grid" style="margin-top:12px">
+    <div class="form-grid" id="bodyGrid" style="margin-top:12px">
       <div><label>Weight <span id="uW"></span></label><input id="mW" type="number" step="0.1" inputmode="decimal" placeholder="—"></div>
       <div><label>Waist <span id="uL1"></span></label><input id="mWaist" type="number" step="0.1" inputmode="decimal" placeholder="—"></div>
       <div><label>Neck <span id="uL2"></span></label><input id="mNeck" type="number" step="0.1" inputmode="decimal" placeholder="—"></div>
       <div><label>Chest <span id="uL3"></span></label><input id="mChest" type="number" step="0.1" inputmode="decimal" placeholder="—"></div>
       <div><label>Shoulder <span id="uL4"></span></label><input id="mSh" type="number" step="0.1" inputmode="decimal" placeholder="—"></div>
-      <div><label>Arm flexed <span id="uL5"></span></label><input id="mArm" type="number" step="0.1" inputmode="decimal" placeholder="—"></div>
+      <div><label>Arm relaxed <span id="uL5"></span></label><input id="mArm" type="number" step="0.1" inputmode="decimal" placeholder="—"></div>
     </div>
     <div class="btn-row"><button class="btn primary" id="saveBody">Save measurements</button></div>
   </div>
@@ -7119,6 +7119,9 @@ function recalcNutrition(day){
 
 /* ---------------- 3 · TRAINING ---------------- */
 function training(){
+  /* Signed in with a seeded program, the program is what gets rendered and logged.
+     The generated planner below is the DEMO surface. See the SWOLEDAWG API block. */
+  if(APIMODE && PROG) return trainingProgram();
   planPicker('trDays',PLAN_DAY,d=>{PLAN_DAY=d;training();});
   document.getElementById('eqGrid').innerHTML=EQUIP.map(e=>
     `<button class="dbtn${AVAIL_SET.has(e.id)?' on':''}" data-id="${e.id}" ${e.locked?'disabled':''}>${esc(e.label)}</button>`).join('');
@@ -7213,6 +7216,430 @@ function training(){
     `<br><br>A recommendation, not a forecast. Not graded, and no claim that it beats any other plan.`;
 }
 
+/* ================================================================
+   SWOLEDAWG API — the program is the authority
+   ================================================================
+   Signed in with a seeded program, the Training tab renders THE PROGRAM's day
+   (mon_1 … mon_6) and not the plan this page can generate for itself. That is
+   not a style choice. Every write needs an `exercise_id` the server recognises,
+   and the generated planner invents exercises the program has never heard of —
+   mapping one onto the other is exactly the fuzzy match the spec forbids,
+   because a wrong match corrupts the history of two lifts at once.
+
+   The generated planner stays alive for the SIGNED-OUT demo athlete. That is
+   what it is good at: showing the shape of the thing to someone with no data.
+
+   ⚠️ In API mode the other tabs render from the API too, which means they render
+   EMPTY until something is logged. That is correct. Filling them from the
+   embedded seed would show a signed-in athlete a fictional lifter's numbers and
+   label them as their own.
+   ================================================================ */
+const SD_BASE = 'https://toto.jkapcar4.workers.dev';
+const SD_API  = SD_BASE + '/api/swoledawg';
+let PROG = null, PROG_V = null, SUMMARY = null, APIMODE = false, API_NOTE = null;
+
+const sdHeaders = () => {
+  try { return (window.DDAuth && window.DDAuth.headers) ? window.DDAuth.headers() : {}; }
+  catch(e){ return {}; }
+};
+async function sdGet(path){
+  const r = await fetch(SD_API + path, {cache:'no-store', headers:sdHeaders()});
+  const j = await r.json().catch(()=>({error:'HTTP ' + r.status}));
+  if(!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+  return j;
+}
+async function sdPost(path, body){
+  const r = await fetch(SD_API + path, {method:'POST',
+    headers:Object.assign({'Content-Type':'application/json'}, sdHeaders()),
+    body:JSON.stringify(body||{})});
+  const j = await r.json().catch(()=>({error:'HTTP ' + r.status}));
+  if(!r.ok || j.error) throw new Error(j.error || ('HTTP ' + r.status));
+  return j;
+}
+
+/* Week derivation — mirrors the worker exactly, and for the same reason the worker
+   states: the week is NEVER stored in program.json and never typed into a page.
+   Weeks turn over on Monday. Clamped to 1 so a date before the block starts reads
+   week 1 rather than week 0. */
+function sdMonday(dateISO){
+  const d = new Date(dateISO + 'T12:00:00');
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  d.setHours(12,0,0,0);
+  return d;
+}
+function sdWeekOf(doc, dateISO){
+  const bs = doc && doc.block_start_date;
+  if(!bs) return 1;
+  return Math.max(1, Math.floor((sdMonday(dateISO) - sdMonday(bs)) / 604800000) + 1);
+}
+/* ⚠️ Match the week EXACTLY. Only fall through to the open-ended "4+" row when the
+   week really is 4 or more — falling through on an unmatched low week hands the most
+   aggressive setting to a block that has not started. */
+function sdEffort(doc, week){
+  const es = (doc && doc.effort_schedule) || [];
+  const exact = es.find(e => e.week === week);
+  if(exact) return exact;
+  const open = es.find(e => typeof e.week === 'string' && e.week.endsWith('+'));
+  if(open && week >= parseInt(open.week, 10)) return open;
+  /* Falling back to the FIRST row, not to null and not to the open-ended one: the first
+     row is the most conservative setting in the block. This mirrors swoleEffortFor in the
+     worker line for line — if the page and the server disagree about the week's effort,
+     the page prescribes one thing and Claude prescribes another. */
+  return es[0] || null;
+}
+/* sets_override wins over the per-exercise `sets` in the day tables — but only downward.
+   ⚠️ Math.min, matching swoleSetsFor. An override that RAISED the count would have the
+   page prescribe a set the server does not consider prescribed, so the card would read
+   3/2 logged forever. */
+function sdSetsFor(ex, effort){
+  const o = effort && effort.sets_override;
+  const base = ex.sets == null ? 3 : ex.sets;
+  return o == null ? base : Math.min(o, base);
+}
+const SD_DAYKEYS = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+const sdDayKey = dateISO => SD_DAYKEYS[new Date(dateISO + 'T12:00:00').getDay()];
+const sdDayOf = (doc, key) => (((doc && doc.days) || []).find(d => d.day === key) || null);
+
+/* Rest is stored in seconds; a bare "180" on a card reads as a typo. */
+function sdRest(s){
+  if(s == null) return '—';
+  return s % 60 === 0 ? (s/60) + ' min' : s + ' s';
+}
+
+/* ---- load the API surface -------------------------------------------------
+   A failure here is reported, never papered over. If the program cannot be read
+   the page falls back to the signed-out demo path rather than showing a signed-in
+   athlete a plan that is not theirs. */
+async function sdLoad(){
+  PROG = null; PROG_V = null; SUMMARY = null; APIMODE = false; API_NOTE = null;
+  try {
+    const p = await sdGet('/program');
+    if(p && p.program && Array.isArray(p.program.days)){
+      PROG = p.program; PROG_V = p.version; APIMODE = true;
+    } else {
+      API_NOTE = 'No program is seeded for this account yet.';
+      return false;
+    }
+  } catch(e){
+    API_NOTE = 'Could not reach the training log: ' + e.message;
+    return false;
+  }
+  try { SUMMARY = await sdGet('/summary'); }
+  catch(e){ SUMMARY = null; API_NOTE = 'Measurements unavailable: ' + e.message; }
+  return true;
+}
+
+/* Build the page's day model out of real logged sessions. Sessions the athlete has
+   not logged simply do not exist — no placeholder days, because an empty day and an
+   unlogged day are different facts and the charts count them differently. */
+async function sdHydrateDays(){
+  let list = [];
+  try { const r = await sdGet('/sessions?n=30'); list = (r && r.sessions) || []; }
+  catch(e){ return []; }
+  const days = [];
+  for(const s of list){
+    let detail = null;
+    try { detail = await sdGet('/session?date=' + encodeURIComponent(s.date)); }
+    catch(e){ continue; }
+    const byEx = new Map();
+    for(const row of (detail.sets || [])){
+      if(!byEx.has(row.exercise_id))
+        byEx.set(row.exercise_id, {name:row.exercise_name, muscle_groups:[], sets:[]});
+      byEx.get(row.exercise_id).sets.push({
+        reps: row.reps,
+        /* the page's internal model is metric; the ledger is imperial. Convert on the
+           way in, never on the way out — the stored pound value is the record. */
+        load_kg: row.weight_lb == null ? null : row.weight_lb / 2.20462,
+        rir: row.rir
+      });
+    }
+    const exercises = [...byEx.values()];
+    days.push({
+      date: s.date,
+      training: exercises.length
+        ? {type:['weights'], weights:{focus:s.day_key, exercises,
+            total_sets: exercises.reduce((a,e)=>a+e.sets.length,0)}}
+        : {type:[], weights:null},
+      nutrition:{foods:[], totals:{}},
+      recovery:{}, subjective:{}, measurements:null,
+      week: s.week, session_id: s.id, day_key: s.day_key
+    });
+  }
+  return days;
+}
+
+/* ---- Training tab, program mode ------------------------------------------ */
+function trainingProgram(){
+  planPicker('trDays', PLAN_DAY, d=>{ PLAN_DAY=d; training(); });
+
+  /* Equipment drives the generated planner, and the generated planner is not what is
+     on screen here. Leaving the picker live would imply it changes the prescription. */
+  const eqT = document.getElementById('eqToggle');
+  if(eqT) eqT.style.display = 'none';
+  const eqP = document.getElementById('eqPanel');
+  if(eqP) eqP.style.display = 'none';
+  document.getElementById('eqGrid').innerHTML = '';
+  document.getElementById('eqNote').innerHTML =
+    `<b>${esc(PROG.program_name || 'Program')}</b>, version ${esc(String(PROG_V))}. These are the
+     prescribed exercises, not a generated plan — the equipment picker and substitution engine
+     drive the demo planner and do not apply here.`;
+
+  const week   = sdWeekOf(PROG, PLAN_DAY);
+  const effort = sdEffort(PROG, week);
+  const dayKey = sdDayKey(PLAN_DAY);
+  const day    = sdDayOf(PROG, dayKey);
+  const date   = new Date(PLAN_DAY + 'T12:00:00');
+  const rirTxt = effort && effort.reps_in_reserve != null ? effort.reps_in_reserve + ' RIR' : 'see effort_schedule';
+
+  const logged = (DATA.days || []).find(x => x.date === PLAN_DAY);
+  const doneBy = new Map();
+  if(logged && logged.training && logged.training.weights)
+    for(const e of (logged.training.weights.exercises || [])) doneBy.set(normKey(e.name), e);
+
+  const exs = (day && day.exercises) || [];
+  document.getElementById('answerBox').innerHTML =
+    `<div class="q">${esc(date.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'}))}
+       · week ${week}</div>
+     <div class="a"><span class="${exs.length?'yes':'no'}">${esc(day ? day.name : 'Not in the program')}</span></div>
+     <div class="why">${exs.length
+        ? `${exs.length} exercises · ${rirTxt}${effort && effort.sets_override != null
+            ? ` · <b>${effort.sets_override} working sets</b> this week, overriding the ${exs[0].sets ?? 3} in the table`
+            : ''}${effort && effort.note ? ' · ' + esc(effort.note) : ''}`
+        : (day ? esc(day.name) + ' — nothing to lift.' : 'No day matching ' + esc(dayKey) + ' in the program.')}</div>`;
+
+  if(!exs.length){
+    document.getElementById('planBody').innerHTML =
+      `<div class="card"><div class="empty">${esc(day ? day.name : 'No prescribed day.')}</div></div>`;
+    document.getElementById('planNote').innerHTML =
+      `Program version ${esc(String(PROG_V))} · week ${week} derived from block_start_date
+       ${esc(PROG.block_start_date || '—')}.`;
+    return;
+  }
+
+  document.getElementById('planBody').innerHTML = exs.map((ex,n)=>{
+    const nSets = sdSetsFor(ex, effort);
+    const done  = doneBy.get(normKey(ex.name));
+    const nDone = done ? (done.sets || []).length : 0;
+    const start = ex.start_weight_lb_per_hand;
+    /* ⚠️ An isometric has no reps — it has a hold. The sets table stores reps and the
+       volume aggregate multiplies weight × reps, so writing 45 seconds into the reps
+       column would inflate volume and quietly corrupt every trend built on it. Until the
+       schema carries a hold, a timed exercise is PRESCRIBED here and not loggable. */
+    const iso   = ex.type === 'isometric' || ex.hold_seconds_min != null;
+    const reps  = iso
+      ? `${ex.hold_seconds_min}–${ex.hold_seconds_max} s hold`
+      : (ex.rep_min === ex.rep_max ? `${ex.rep_min}` : `${ex.rep_min}–${ex.rep_max}`)
+        + (ex.per_side ? ' per side' : '');
+    const load  = start == null ? '' : (start === 0 ? ' · bodyweight' : ` @ ${start} lb`);
+    const tgt   = `${nSets} × ${reps}${load}`;
+    return `<div class="exlog" data-exid="${esc(ex.id)}" data-ex="${esc(ex.name)}">
+      <div class="exlog-h"><span class="exlog-n"><span class="num">${n+1}</span>${esc(ex.name)}</span>
+        <span class="exlog-m">${nDone?`<span class="done">${nDone}/${nSets} logged</span>`:esc(tgt)}</span></div>
+      <div class="exlog-b">
+        ${iso ? `<div class="cue" style="border-left:2px solid var(--accent)">
+            <b>Prescribed, not logged.</b> ${esc(String(ex.hold_seconds_min))}–${esc(String(ex.hold_seconds_max))} s
+            × ${nSets}. The training log stores reps, and a hold is not reps — recording seconds in
+            a reps column would inflate session volume. Do the sets; the log stays honest about
+            not having a field for them.</div>` : ''}
+        ${iso ? '' : [...Array(nSets)].map((_,si)=>{
+          const s = done && done.sets && done.sets[si] ? done.sets[si] : {};
+          return `<div class="setrow"><span class="sn">${si+1}</span>
+            <input type="number" inputmode="numeric" placeholder="reps" data-f="reps" data-si="${si}" value="${s.reps??''}">
+            <input type="number" inputmode="decimal" step="2.5" placeholder="lb" data-f="load" data-si="${si}" value="${s.load_kg!=null?Math.round(s.load_kg*2.20462*10)/10:''}">
+            <input type="number" inputmode="numeric" step="1" placeholder="RIR" data-f="rir" data-si="${si}" value="${s.rir??''}">
+            <span></span></div>`;}).join('')}
+        ${iso ? '' : `<div class="btn-row"><button class="btn sm primary" data-sdsave="${esc(ex.id)}">Save sets</button></div>`}
+        <div class="cue">Target ${esc(String(ex.rep_min))}–${esc(String(ex.rep_max))} reps, leave ${esc(String(effort && effort.reps_in_reserve != null ? effort.reps_in_reserve : '—'))} in reserve ·
+          rest ${esc(sdRest(ex.rest_between_sets))} between sets${ex.load_rule?' · '+esc(ex.load_rule):''}
+          ${ex.cue?'<br>'+esc(ex.cue):''}
+          ${ex.rationale?'<br><i>'+esc(ex.rationale)+'</i>':''}</div>
+        <div class="cue" data-sdflag="${esc(ex.id)}" style="display:none"></div>
+      </div></div>`;
+  }).join('');
+
+  document.querySelectorAll('.exlog-h').forEach(h=>h.onclick=()=>h.parentElement.classList.toggle('open'));
+  document.querySelectorAll('[data-sdsave]').forEach(b=>b.onclick=()=>sdSaveSets(b));
+
+  document.getElementById('planNote').innerHTML =
+    `<code>${esc(PROG.program_name || 'program')}</code> v${esc(String(PROG_V))} · week ${week},
+     derived from block_start_date ${esc(PROG.block_start_date || '—')} · ${esc(rirTxt)}.
+     Dumbbell loads are per hand in pounds, as the program states them; a bodyweight lift shows
+     no load. Sets write to your training log with <code>source: "web"</code> — the same row a set
+     spoken to Claude writes.`;
+}
+
+/* ⚠️ Writes go one set at a time and STOP on the first refusal. A partial save that
+   silently skipped a rejected set would look identical to a complete one. */
+async function sdSaveSets(btn){
+  const exId = btn.dataset.sdsave;
+  const box  = btn.closest('.exlog');
+  const rows = [...box.querySelectorAll('.setrow')];
+  const flag = box.querySelector('[data-sdflag]');
+  if(flag){ flag.style.display='none'; flag.innerHTML=''; }
+
+  const payloads = [];
+  rows.forEach((r,si)=>{
+    const g = f => num(r.querySelector(`[data-f="${f}"]`).value);
+    const reps = g('reps'), load = g('load'), rir = g('rir');
+    if(reps == null && load == null) return;
+    /* The server requires both. Half a set is not a set, and a null weight stored as
+       zero would read as a bodyweight rep forever. */
+    if(reps == null || load == null){
+      payloads.push({bad:'Set ' + (si+1) + ' needs both reps and weight.'});
+      return;
+    }
+    payloads.push({date:PLAN_DAY, exercise:exId, set_number:si+1,
+                   weight_lb:load, reps, rir});
+  });
+  const bad = payloads.find(p=>p.bad);
+  if(bad){ toast(bad.bad); return; }
+  if(!payloads.length){ toast('Nothing to save'); return; }
+
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const notes = [];
+  try {
+    for(const p of payloads){
+      const res = await sdPost('/set', p);
+      if(res.below_rep_range && res.note)
+        notes.push(`Set ${res.set}: ${res.reps} reps, below the ${res.rep_range[0]}–${res.rep_range[1]} range. ${res.note}`);
+    }
+    DATA.days = await sdHydrateDays();
+    renderAll();
+    toast(`${payloads.length} set${payloads.length===1?'':'s'} logged`);
+  } catch(e){
+    toast('Refused: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save sets';
+  }
+  if(notes.length){
+    const f = document.querySelector(`[data-sdflag="${CSS.escape(exId)}"]`);
+    if(f){
+      /* Flagged, never auto-applied — the program's drop-5 rule and the week's RIR cap
+         imply opposite actions and only the human knows which happened. */
+      f.style.display = '';
+      f.style.borderLeft = '2px solid var(--accent)';
+      f.innerHTML = notes.map(esc).join('<br><br>');
+    }
+  }
+}
+
+
+/* ---- Body tab, program mode ------------------------------------------------
+   Twenty seeded fields, not the six this form was built with. A field the athlete
+   has never measured renders an empty input and a "—", never a zero and never a
+   carried-forward value: the gap is the fact.
+
+   `bodyfat_pct` is MODELLED and has no input. It is a Navy estimate derived from
+   waist, neck and height; giving it a box would invite a typed number to be stored
+   as though it were observed. A measured reading goes in `bf_measured_pct`, which
+   does have one. */
+function bodyProgram(){
+  dayPicker('bodyDays', BODY_DAY, d=>{ BODY_DAY=d; body(); });
+  const grid = document.getElementById('bodyGrid');
+  const fields = (SUMMARY && SUMMARY.fields) || {};
+  const keys = Object.keys(fields);
+
+  if(!keys.length){
+    grid.innerHTML = '<div class="empty">No measurement fields are seeded for this account.</div>';
+    document.getElementById('bcCard').innerHTML =
+      '<div class="card-h"><h2>Body composition</h2></div><div class="empty">No measurement fields.</div>';
+    document.getElementById('protoCard').innerHTML = '';
+    return;
+  }
+
+  /* Order: the tape protocol's order, then anything the server knows that this list
+     has not been taught about — an unknown field renders rather than disappearing. */
+  const ORDER = ['weight_lb','height_in','neck_in','shoulder_in','chest_in','waist_navel_in',
+    'waist_narrow_in','hips_in','arm_relax_l_in','arm_relax_r_in','arm_flex_l_in','arm_flex_r_in',
+    'forearm_l_in','forearm_r_in','thigh_l_in','thigh_r_in','calf_l_in','calf_r_in',
+    'bodyfat_pct','bf_measured_pct'];
+  const ordered = keys.slice().sort((a,b)=>{
+    const ia = ORDER.indexOf(a), ib = ORDER.indexOf(b);
+    return (ia<0?999:ia) - (ib<0?999:ib) || a.localeCompare(b);
+  });
+
+  grid.innerHTML = ordered.map(k=>{
+    const f = fields[k] || {};
+    const modelled = String(f.tag||'').toUpperCase() === 'MODELLED';
+    const cur  = f.current;
+    const base = f.baseline;
+    const shown = cur != null ? cur : (base != null ? base : null);
+    const prov = cur != null ? 'latest' : (base != null ? 'baseline' : null);
+    return `<div>
+      <label>${esc(f.label || k)}
+        ${modelled?'<span class="pill mod">MODELLED</span>':''}</label>
+      ${modelled
+        ? `<div class="r" style="padding:6px 0;color:var(--ink-2);font-size:13px">
+             ${shown!=null?esc(String(shown)):'—'} <span class="muted">derived, not entered</span></div>`
+        : `<input id="sdm_${esc(k)}" type="number" step="0.1" inputmode="decimal" placeholder="—" data-sdfield="${esc(k)}">`}
+      <div class="muted" style="font-size:11px;margin-top:3px;color:var(--ink-2)">
+        ${shown!=null
+          ? `${esc(prov)} ${esc(String(shown))}${f.as_of?' · '+esc(f.as_of):''}`
+          : '<b>not measured</b>'}
+        ${f.dir?' · '+esc(f.dir):''}</div>
+    </div>`;
+  }).join('');
+
+  /* Body composition is a computation over fields that may not exist. Missing input
+     is stated, not filled in. */
+  const val = k => { const f = fields[k]; if(!f) return null;
+                     return f.current != null ? f.current : (f.baseline != null ? f.baseline : null); };
+  const missing = ['weight_lb','waist_navel_in','neck_in','height_in'].filter(k=>val(k)==null);
+  document.getElementById('bcCard').innerHTML = missing.length
+    ? `<div class="card-h"><h2>Body composition</h2><span class="pill miss">UNARMED</span></div>
+       <div class="empty">Needs ${esc(missing.join(', '))}. Nothing is estimated from the fields that
+         are present — a body-fat number built on a guessed height is a guess wearing a decimal point.</div>`
+    : (function(){
+        const w=val('weight_lb'), waist=val('waist_navel_in'), neck=val('neck_in'), h=val('height_in');
+        const bf = 86.010*Math.log10(waist-neck) - 70.041*Math.log10(h) + 36.76;
+        const lean = w*(1-bf/100);
+        const sh = val('shoulder_in');
+        return `<div class="card-h"><h2>Body composition</h2><span class="pill mod">MODELLED</span></div>
+          <table><tbody>
+            <tr><td>Body fat (Navy)</td><td class="r">${Math.round(bf*10)/10}%</td></tr>
+            <tr><td>Lean mass</td><td class="r">${Math.round(lean*10)/10} lb</td></tr>
+            <tr><td>Fat mass</td><td class="r">${Math.round((w-lean)*10)/10} lb</td></tr>
+            <tr><td>Waist ÷ height</td><td class="r">${Math.round(waist/h*1000)/1000}</td></tr>
+            <tr><td>Shoulder ÷ waist</td><td class="r">${sh!=null?Math.round(sh/waist*1000)/1000:dash}</td></tr>
+          </tbody></table>
+          <div class="note">Navy estimate, ±3–4 points against DXA. Level is rough; the trend is what
+            counts. A measured reading belongs in <b>Body fat, measured</b> — this row is not it.</div>`;
+      })();
+
+  document.getElementById('protoCard').innerHTML =
+    `<div class="card-h"><h2>How to measure</h2><span class="pill mod">PROTOCOL</span></div>
+     <p class="muted" style="margin:0 0 9px">Consistency beats accuracy. A repeatable method with a
+       fixed bias still tracks change correctly; one that drifts tracks nothing.</p>
+     <div style="font-size:12.5px;color:var(--ink-2)">
+       ${ordered.filter(k=>fields[k] && fields[k].site).map(k=>
+         `<div style="margin-bottom:8px"><b style="color:var(--ink-1)">${esc(fields[k].label||k)}</b><br>
+            ${esc(fields[k].site)}${fields[k].note?'<br><i>'+esc(fields[k].note)+'</i>':''}</div>`).join('')
+        || '<div class="empty">No protocol text stored with these fields.</div>'}
+     </div>`;
+}
+
+/* Each field is its own row and its own write. One refused field does not silently
+   discard the others, and a blank input is skipped rather than sent as a null that
+   would overwrite a real reading with a gap. */
+async function sdSaveMeasurements(btn){
+  const inputs = [...document.querySelectorAll('#bodyGrid [data-sdfield]')];
+  const jobs = inputs.map(el=>({field:el.dataset.sdfield, value:num(el.value)}))
+                     .filter(j=>j.value!=null);
+  if(!jobs.length){ toast('Nothing entered'); return; }
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const failed = [];
+  let ok = 0;
+  for(const j of jobs){
+    try { await sdPost('/measurement', {field:j.field, value:j.value, date:BODY_DAY}); ok++; }
+    catch(e){ failed.push(j.field + ': ' + e.message); }
+  }
+  try { SUMMARY = await sdGet('/summary'); } catch(e){}
+  btn.disabled = false; btn.textContent = 'Save measurements';
+  renderAll();
+  toast(failed.length ? `${ok} saved, ${failed.length} refused — ${failed[0]}`
+                      : `${ok} measurement${ok===1?'':'s'} saved for ${BODY_DAY}`);
+}
+
 /* ---------------- 4 · RECOVERY ---------------- */
 function recovery(){
   dayPicker('recDays',REC_DAY,d=>{REC_DAY=d;recovery();});
@@ -7272,6 +7699,7 @@ function recovery(){
 
 /* ---------------- 5 · BODY ---------------- */
 function body(){
+  if(APIMODE && SUMMARY) return bodyProgram();
   dayPicker('bodyDays',BODY_DAY,d=>{BODY_DAY=d;body();});
   ['uW'].forEach(i=>document.getElementById(i).textContent=wU());
   ['uL1','uL2','uL3','uL4','uL5'].forEach(i=>document.getElementById(i).textContent=lU());
@@ -7572,7 +8000,18 @@ window.addEventListener('dd-auth',()=>{ SESSION=null; DATA=null; boot(); });
    is never confusable with a real log. */
 function renderGate(){
   const g=document.getElementById('gate');
-  if(SESSION){g.innerHTML='';return;}
+  if(SESSION){
+    /* Signed in and something is wrong with the log — say so where the demo banner
+       would be, rather than rendering an empty page that looks like a finished one. */
+    g.innerHTML = API_NOTE
+      ? `<div class="card" style="border-left:3px solid var(--accent)">
+           <div class="card-h" style="margin-bottom:4px"><h2>Training log</h2>
+             <span class="pill miss">NOT LOADED</span></div>
+           <p class="muted" style="margin:0;color:var(--ink-2);font-size:13.5px">${esc(API_NOTE)}
+             Nothing below is your logged data.</p></div>`
+      : '';
+    return;
+  }
   g.innerHTML=
     `<div class="card" style="border-left:3px solid var(--accent);display:flex;
        justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
@@ -7611,8 +8050,9 @@ function lockInputs(){
    ================================================================ */
 function renderAll(){
   document.getElementById('subline').textContent=
-    `${esc(SESSION?(SESSION.name||SESSION.email||''):'Demo athlete')} · `+
-    `${(DATA.profile||{}).height_display||''} · source: ${SOURCE}`;
+    [SESSION?(SESSION.name||SESSION.email||''):'Demo athlete',
+     (DATA.profile||{}).height_display||'',
+     'source: '+SOURCE].filter(Boolean).join(' · ');
   overview();nutrition();training();recovery();body();settings();method();lockInputs();
   document.getElementById('footer').innerHTML=
     `SwoleDawg · Pup · v${esc(DATA.version||'0.3.0')} · <code>${RULES.derive}</code> ·
@@ -7644,7 +8084,8 @@ function wire(){
     Object.assign(day.subjective,{energy:g('rEnergy'),mood:g('rMood'),joint_feel:g('rJoint')});
     renderAll();toast('Recovery saved for '+REC_DAY);
   };
-  document.getElementById('saveBody').onclick=()=>{
+  document.getElementById('saveBody').onclick=function(){
+    if(APIMODE && SUMMARY) return sdSaveMeasurements(this);
     const g=id=>num(document.getElementById(id).value);
     const toKg=v=>v==null?null:(UNITS==='imperial'?v/2.20462:v);
     const toCm=v=>v==null?null:(UNITS==='imperial'?v*2.54:v);
@@ -7714,8 +8155,20 @@ async function boot(){
 
 async function boot2(){
   let got=null;
+  APIMODE=false;
   if(!SESSION){
     try{got={d:JSON.parse(document.getElementById('demoData').textContent),s:'Demo athlete'};}catch(e){}
+  }else{
+    /* ⚠️ A signed-in athlete NEVER falls back to the embedded seed. The seed is a
+       fictional lifter; rendering it under this athlete's name and letting them log
+       against it is the failure this whole write path exists to remove. If the log
+       cannot be read the page renders empty and says why. */
+    const live = await sdLoad();
+    got={d:{version:'api',
+            profile:{user_id:SESSION.uid,name:SESSION.name,email:SESSION.email},
+            goal:{primary:'visual_hypertrophy'},units:{display:'imperial'},days:[]},
+         s: live ? 'Training log (D1)' : 'Training log unavailable'};
+    if(live) got.d.days = await sdHydrateDays();
   }
   if(!got) for(const [url,label] of [['/data/swoledawg.json','Live surface'],['swoledawg.json','Local file']]){
     try{const r=await fetch(url,{cache:'no-store'});if(r.ok){got={d:await r.json(),s:label};break;}}catch(e){}
