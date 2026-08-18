@@ -38,6 +38,394 @@
         linear-gradient(180deg,#e7e4dd,#d3d0c8);
 }
 body{background-color:var(--page);background-image:var(--tex);background-attachment:fixed}
+
+/* ---- shared site chrome, inlined from the canonical pages (AGENTS.md: site.css is
+   inlined into every page). The nav script builds the DOM; these rules style it. ---- */
+/* Light theme paints the nav as a full-bleed seal-brown bar with cream links; dark
+   leaves it on the page ground. Without these the light nav is cream-on-cream. */
+:root[data-theme="light"] .sitenav{
+  background:var(--navbar);
+  border-bottom:3px solid var(--accent);
+  margin:0 calc(50% - 50vw) 24px;
+  /* ⚠️ NO `+ 24px` here. The 50% resolves against this element's containing block
+     — the page column's CONTENT box, which is already inside the column's own 24px
+     padding. Adding 24 again double-counted it and pushed the logo 24px right of
+     every page title. Measured 8/5 at 1512/1180/900/390: 24.0px off on all 15 pages,
+     light theme only (dark is not full-bleed, so dark always looked correct). */
+  padding:12px calc(50vw - 50%);
+}
+:root[data-theme="light"] .brand{color:var(--navink)}
+:root[data-theme="light"] .brand .tag{color:var(--navink2)}
+/* cream nav text applies to the bar itself, NOT to the dropdown panel —
+   the panel is near-white, so cream-on-white made the items unreadable */
+:root[data-theme="light"] .sitenav .links > a,
+:root[data-theme="light"] .grpbtn{color:var(--navink)}
+:root[data-theme="light"] .grpmenu a{color:var(--ink-1);font-weight:650}
+:root[data-theme="light"] .grpmenu a:hover,
+:root[data-theme="light"] .grpmenu a.on,
+:root[data-theme="light"] .grpmenu a.hot{color:var(--accent)}
+:root[data-theme="light"] .sitenav .links a:hover,
+:root[data-theme="light"] .grpbtn:hover{background:rgba(255,106,2,0.16);color:#fff}
+:root[data-theme="light"] .sitenav .links a.on,
+:root[data-theme="light"] .grpbtn.on{color:#ff8a4d;box-shadow:inset 0 -2px 0 #ff8a4d}
+:root[data-theme="light"] .theme-btn{background:rgba(255,106,2,.22);border-color:#ff8a4d;color:#fff;box-shadow:0 0 0 1px rgba(255,138,77,.22)}
+:root[data-theme="light"] .theme-btn:hover{background:#ff6a02;border-color:#ff6a02;color:#fff}
+
+/* ---- site nav ---- */
+.sitenav{display:flex;align-items:center;gap:22px;padding:14px 0;border-bottom:1px solid var(--grid);margin-bottom:24px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:var(--ink-1)}
+.brand img{width:34px;height:42px;object-fit:contain}
+.brand .logo{font-size:19px;font-weight:800;letter-spacing:.02em}
+.brand .logo span{color:var(--accent)}
+.brand .tag{font-size:11.5px;color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase;align-self:center}
+/* ⚠️ Banner armour. `.tag` is a tempting class name and bozo.html already took it for
+   its own W/L chips — `.tag{font:700 9.5px/1 ui-monospace...;padding:3px 6px}`. That is
+   specificity 0-1-0 against this rule's 0-2-0, which loses on every property this rule
+   declares and WINS on every one it does not. Result: the tagline rendered monospace
+   with 6px of side padding on exactly one page, and the banner stopped matching the
+   other fourteen. Caught 8/5 by measuring computed styles, not by looking.
+   These declarations are the reset, so no page's local CSS can reach the banner again.
+   ⚠️ Do NOT add font-size or white-space here — the narrow-width media query below
+   overrides both at the same specificity and would lose to this earlier-but-equal rule. */
+.sitenav .brand .tag{font-family:inherit;font-weight:400;font-style:normal;line-height:inherit;
+  padding:0;margin:0;background:none;border:0;border-radius:0;box-shadow:none}
+/* ⚠️ align-items:center, not the default stretch. The nav row holds THREE different
+   box models — a plain <a> (Home, The DawgHouse), an <a class=grpbtn> inside a
+   .navgrp (a group header that also links: Labs, Dawgs), and a <button
+   class=grpbtn> inside a .navgrp (a group header that does not link: Data) — plus the
+   theme pill. Under stretch each one resolved its own height and its text landed on a
+   different baseline: measured 8/5 at 1512px, text tops were 24.2 / 19.2 / 22.2 / 26.5.
+   Labs and Dawgs sat 5px high because an inline <a> inside a stretched .navgrp
+   overflows its line box upward. Centering makes every item size to its own content and
+   share one axis; the .navgrp and .grpbtn rules below finish the job by giving the two
+   header variants the same block box and line-height as a plain link. */
+.sitenav .links{display:flex;gap:2px;margin-left:auto;flex-wrap:wrap;align-items:center}
+.sitenav .links a{color:var(--ink-2);text-decoration:none;padding:6px 6px;border-radius:8px;font-size:13px;font-weight:550}
+.sitenav .links a:hover{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--ink-1)}
+.sitenav .links a.on{color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent);border-radius:8px 8px 0 0}
+/* nav dropdown groups */
+.navgrp{position:relative;display:flex;align-items:center}
+.grpbtn{background:none;border:none;color:var(--ink-2);padding:6px 6px;border-radius:8px;font-size:13px;font-weight:550;cursor:pointer;font-family:inherit;
+  /* ⚠️ display:block and an explicit line-height are what put a group header on the
+     same baseline as a plain link. <a> defaults to inline (wrong height, overflows
+     upward) and <button> to inline-block with line-height:normal (~16px vs the 20.2px
+     a 13px/1.55 link gets — 14px until 2026-08-11, when an eight-group bar took the type
+     down a point). Both drifted. Do not drop either declaration. */
+  display:block;line-height:1.55}
+.grpbtn:hover{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--ink-1)}
+.grpbtn.on{color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent);border-radius:8px 8px 0 0}
+.grpbtn .caret{font-size:10px;opacity:.7}
+/* ⚠️ The Labs header is an <a>, so `.sitenav .links a` (0-2-1) reclaims its colour and
+   out-specifies `:root[data-theme="light"] .grpbtn` (0-2-0) — dark ink on the dark nav
+   bar, i.e. invisible in light theme. Style it as `a.grpbtn`, never bare `.grpbtn`. */
+.sitenav .links a.grpbtn{color:var(--ink-2);text-decoration:none}
+.sitenav .links a.grpbtn:hover{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--ink-1)}
+.sitenav .links a.grpbtn.on{color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent);border-radius:8px 8px 0 0}
+:root[data-theme="light"] .sitenav .links a.grpbtn{color:var(--navink)}
+:root[data-theme="light"] .sitenav .links a.grpbtn:hover{background:rgba(255,106,2,0.16);color:#fff}
+:root[data-theme="light"] .sitenav .links a.grpbtn.on{color:#ff8a4d;box-shadow:inset 0 -2px 0 #ff8a4d}
+.grpmenu{position:absolute;top:100%;left:0;min-width:190px;background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:6px;display:none;z-index:60;box-shadow:0 10px 30px rgba(0,0,0,.35);margin-top:4px}
+.grpmenu::before{content:"";position:absolute;top:-8px;left:0;right:0;height:8px}
+.navgrp.open .grpmenu{display:block}
+@media (hover:hover){ .navgrp:hover .grpmenu{display:block} }
+.grpmenu a{display:block;padding:9px 13px;border-radius:7px;color:var(--ink-1);text-decoration:none;font-size:14px;font-weight:650;white-space:nowrap}
+.grpmenu a:hover{background:color-mix(in srgb, var(--accent) 14%, transparent);color:var(--accent)}
+/* Dropdown selection is a text treatment, not the top-level tab treatment.
+   The stronger selectors override `.sitenav .links a.on`, whose inset shadow is the
+   underline reserved for the active domain header. */
+.sitenav .links .grpmenu a.on{color:var(--accent);font-weight:750;
+  box-shadow:none;border-radius:7px}
+:root[data-theme="light"] .sitenav .links .grpmenu a.on{
+  color:var(--accent);font-weight:750;box-shadow:none;border-radius:7px}
+.grpmenu a.hot{color:var(--accent);font-weight:750}
+.grpmenu a.hot::before{content:"●";font-size:9px;margin-right:7px;vertical-align:1px;animation:ddpulse 1.6s ease-in-out infinite}
+@keyframes ddpulse{0%,100%{opacity:1}50%{opacity:.3}}
+/* The one live control — status light and route to the board in a single button.
+   Selectors must out-specify `.sitenav .links a`, which otherwise reclaims padding,
+   radius and weight and flattens the pill into plain text. */
+.sitenav .links a.livebtn,
+:root[data-theme="light"] .sitenav .links > a.livebtn{
+  display:inline-flex;align-items:center;gap:7px;
+  background:var(--accent);color:#fff;text-decoration:none;border-radius:999px;
+  padding:6px 15px;font-size:12.5px;font-weight:800;letter-spacing:.06em;margin-left:8px;
+  box-shadow:0 2px 10px color-mix(in srgb, var(--accent) 45%, transparent)}
+.sitenav .links a.livebtn:hover,
+:root[data-theme="light"] .sitenav .links a.livebtn:hover{
+  background:var(--accent);color:#fff;filter:brightness(1.12)}
+.sitenav .links a.livebtn .dot{width:7px;height:7px;border-radius:50%;background:#fff;
+  animation:ddpulse 1.6s ease-in-out infinite;flex:none}
+.sitenav .links a.livebtn.off,
+:root[data-theme="light"] .sitenav .links > a.livebtn.off{
+  background:none;box-shadow:none;border:1px solid var(--border);color:var(--ink-3);font-weight:700}
+.sitenav .links a.livebtn.off .dot{animation:none;opacity:.45;background:currentColor}
+/* operator sits below a rule — its own zone, locked down on draft day */
+.grpmenu a.sep{border-top:1px solid var(--grid);margin-top:5px;padding-top:10px;
+  color:var(--ink-3)!important;font-weight:600}
+.grpmenu a.sep{display:flex;align-items:baseline;gap:10px}
+.grpmenu a.sep::after{content:"operator";margin-left:auto;font-size:9.5px;letter-spacing:.06em;
+  text-transform:uppercase;opacity:.6}
+.grpmenu a.sep:hover{color:var(--accent)!important}
+/* ---------- navauth — sign-in as its own section of the banner (8/7) ----------
+   ⚠️ It is a direct child of .sitenav sitting BETWEEN .brand and .links, in the dead
+   space between the logo and the menu. It is deliberately NOT inside .links: that row
+   is flex-wrap:nowrap on phones and already runs five nav items plus two buttons in a
+   single line, so an eighth child there pushes the theme button off-screen. In the gap
+   it costs nothing, because the gap was already empty.
+   ⚠️ Light theme paints the bar seal-brown (--navbar), so the chip needs the same
+   cream-on-brown override .theme-btn already carries. Without it the border and text
+   inherit page colours and vanish into the bar. */
+.navauth{display:flex;align-items:center;flex:0 0 auto;min-width:0;margin-left:4px}
+.navauth .authbtn{display:inline-flex;align-items:center;gap:6px;background:none;
+  border:1px solid var(--border);border-radius:999px;color:var(--ink-2);
+  padding:4px 12px;cursor:pointer;font:inherit;font-size:12.5px;font-weight:600;
+  line-height:1.6;white-space:nowrap;max-width:170px}
+.navauth .authbtn:hover{border-color:var(--accent);color:var(--ink-1)}
+.navauth .authbtn .who{overflow:hidden;text-overflow:ellipsis}
+.navauth .authbtn .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex:0 0 auto}
+.navauth.in .authbtn{border-color:color-mix(in srgb, var(--accent) 55%, transparent);color:var(--ink-1)}
+:root[data-theme="light"] .navauth .authbtn{border-color:rgba(236,223,201,0.35);color:var(--navink)}
+:root[data-theme="light"] .navauth .authbtn:hover{border-color:var(--accent);color:#fff}
+:root[data-theme="light"] .navauth.in .authbtn{border-color:rgba(255,138,77,0.7);color:#ffd9c2}
+/* ---- the sign-in dialog: one per page, built lazily on first open ---- */
+.authmodal{position:fixed;inset:0;z-index:9500;display:none;align-items:center;
+  justify-content:center;background:rgba(0,0,0,0.62);padding:18px}
+.authmodal.open{display:flex}
+/* ⚠️ Enumerated, and !important. The `hidden` attribute loses to any `display` rule
+   that out-specifies it — that is exactly how the DFS custom-payout box shipped
+   visible. Do not delete this line thinking the attribute is enough. */
+.authmodal [hidden]{display:none !important}
+.authmodal .box{position:relative;background:var(--surface-1);border:1px solid var(--border);
+  border-radius:14px;width:min(380px,100%);max-height:88vh;overflow:auto;padding:22px;
+  box-shadow:0 20px 60px rgba(0,0,0,0.5);color:var(--ink-1)}
+.authmodal h3{margin:0 0 6px;font-size:18px;color:var(--ink-1)}
+.authmodal .sub{margin:0 0 4px;color:var(--ink-2);font-size:13px}
+.authmodal label{display:block;font-size:11px;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-3);margin:12px 0 4px}
+.authmodal input{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:9px;
+  background:var(--page);color:var(--ink-1);font:inherit;font-size:14px}
+.authmodal input:focus{outline:2px solid var(--accent);outline-offset:1px}
+.authmodal .go{display:block;width:100%;margin-top:12px;padding:10px 14px;border-radius:10px;
+  border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);
+  font:inherit;font-size:14px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none}
+.authmodal .go.alt{background:none;color:var(--ink-1);border-color:var(--border)}
+.authmodal .go.alt:hover{border-color:var(--accent)}
+.authmodal .err{margin:10px 0 0;color:var(--bad);font-size:13px;min-height:1.2em}
+.authmodal .err.ok{color:var(--good)}
+.authmodal .note{margin:14px 0 0;color:var(--ink-3);font-size:12px;line-height:1.5}
+.authmodal .x{position:absolute;top:8px;right:10px;background:none;border:0;color:var(--ink-3);
+  font-size:22px;line-height:1;cursor:pointer;padding:4px 8px}
+.authmodal .x:hover{color:var(--ink-1)}
+.theme-btn{display:inline-flex;align-items:center;gap:4px;background:rgba(255,106,2,.10);border:1px solid var(--accent);border-radius:999px;color:var(--ink-1);padding:4px 10px;cursor:pointer;font-size:12.5px;font-weight:800;box-shadow:0 0 0 1px rgba(255,106,2,.12)}
+.theme-btn:hover{background:var(--accent);color:var(--accent-ink)}
+.sitenav .links .theme-btn{margin-left:10px}
+/* ---- 🙃 The Upside Down: the machine-readable mirror, made visible ----
+   Sits NEXT TO the theme pill but is deliberately not part of it: dashed border, no
+   word label. The everyday light/dark toggle stays binary — this is a third door, not
+   a third state. See the .livebtn note above for why every selector here is scoped
+   `.sitenav .links`: a bare `.udbtn` loses to `.sitenav .links a` on anything it
+   shares, and would silently flatten the day the button becomes an <a>. */
+.udbtn{background:none;border:1px dashed var(--border);border-radius:8px;color:var(--ink-2);
+  padding:4px 9px;cursor:pointer;font-size:13px;line-height:1.55;font-family:inherit;
+  display:block}
+/* ⚠️ 🙃 IS NOT A NAV ITEM. Moved 2026-08-08 out of the nav's flex run and down to
+   its own centred row at the foot of every page — see the .udfoot injection in the nav
+   script. Bottom-CENTRE, not bottom-right: Ask Toto owns the right corner as a fixed
+   button and would sit on top of it. The two phone rules that used to squeeze 🙃 into
+   the one-row nav were deleted with this move, which hands ~24px of slack back to the
+   360px layout. If 🙃 ever returns to the nav, restore all three together. */
+.udfoot{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;padding:20px 0 4px}
+/* ⚠️ CEP-5A Stage 7: the DawgHouse link lives in this row because the row is the only
+   footer markup identical on all 28 pages — the <footer> elements themselves are not.
+   The shelf is off-nav on purpose; this is how it stays reachable. */
+.udhouse{border:1px dashed var(--border);border-radius:8px;color:var(--ink-3);text-decoration:none;padding:5px 10px;font:700 11px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace}
+.udhouse:hover{border-color:var(--accent);color:var(--accent)}
+:root[data-theme="light"] .udhouse{border-color:rgba(236,223,201,0.40);color:var(--navink2)}
+:root[data-theme="light"] .udhouse:hover{border-color:#ff8a4d;color:#ff8a4d}
+.udbtn:hover{border-color:var(--accent);color:var(--accent)}
+:root[data-theme="light"] .udbtn{border-color:rgba(236,223,201,0.40);color:var(--navink2)}
+:root[data-theme="light"] .udbtn:hover{border-color:#ff8a4d;color:#ff8a4d}
+
+/* ---- the overlay itself ----
+   ALWAYS dark, whatever the page is set to — the Upside Down is one fixed place, and
+   a light-mode version of it would be a fourth theme nobody asked for. Colours are
+   therefore hard-coded to the dark tokens, NOT var(--page)/var(--ink-*), which would
+   flip to cream under :root[data-theme="light"]. Do not "tidy" them into variables. */
+.ud-ov{position:fixed;inset:0;z-index:9000;display:none;background:#161009;color:#c8c1b4;
+  overflow:auto;overscroll-behavior:contain;
+  font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.ud-ov.on{display:block}
+.ud-cv{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;opacity:.55}
+.ud-in{position:relative;max-width:1040px;margin:0 auto;padding:18px 20px 70px}
+.ud-hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  border-bottom:1px solid #2b251d;padding-bottom:12px;margin-bottom:14px}
+.ud-ttl{font-size:15px;font-weight:800;color:#f5f1ea;letter-spacing:.02em;
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.ud-ttl b{color:#ff6a02}
+.ud-path{color:#8f897d;font-size:11.5px;word-break:break-all}
+.ud-path a{color:#ff6a02}
+.ud-x{margin-left:auto;background:none;border:1px solid rgba(255,255,255,.18);
+  border-radius:8px;color:#c8c1b4;padding:5px 11px;cursor:pointer;font:inherit;flex:0 0 auto}
+.ud-x:hover{border-color:#ff6a02;color:#ff6a02}
+.ud-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.ud-chip{border:1px solid #2b251d;background:#241c12;border-radius:999px;
+  padding:4px 12px;font-size:11.5px;color:#c8c1b4;max-width:100%;overflow-wrap:anywhere}
+.ud-chip b{color:#ff6a02;font-weight:800;text-transform:uppercase;letter-spacing:.07em;
+  font-size:9.5px;margin-right:7px}
+.ud-chip.dawg{border-color:#2fbf3f}
+.ud-chip.dawg b{color:#2fbf3f}
+.ud-note{background:#241c12;border:1px solid #2b251d;border-left:2px solid #ff6a02;
+  border-radius:0 8px 8px 0;padding:10px 13px;margin:0 0 12px;color:#c8c1b4;
+  font:13px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+.ud-note b{color:#f5f1ea}
+/* ⚠️ inline-block + anywhere, not a plain inline run with margin-right: at 360px the
+   third path ran straight off the right edge of the overlay. Caught by looking, not by
+   a bounds check — the overlay scrolls, so nothing reported an overflow. */
+.ud-also{margin:0 0 12px;color:#8f897d;font-size:11.5px;overflow-wrap:anywhere}
+.ud-also a{color:#ff6a02;display:inline-block;margin:0 12px 4px 0}
+.ud-body{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;
+  background:#241c12;border:1px solid #2b251d;border-radius:10px;padding:14px 16px;
+  color:#c8c1b4;font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.ud-k{color:#8f897d}
+.ud-s{color:#ffab6b}
+.ud-n{color:#2fbf3f}
+.ud-w{color:#ff6b6b}
+.ud-foot{margin:14px 0 0;color:#8f897d;font-size:11.5px;
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+@media(max-width:760px){
+  .ud-in{padding:14px 13px 60px}
+  .ud-body{font-size:11.5px;padding:11px 12px}
+}
+
+/* Copy A — index.html only. A footnote to the manifesto, not a line of it: the
+   manifesto still ends on the Cleveland kicker and this sits after that block closes. */
+.udnote{margin:22px 0 0;padding:12px 16px;border:1px dashed var(--border);border-radius:10px;
+  color:var(--ink-2);font-size:13.5px;line-height:1.55;
+  background:color-mix(in srgb, var(--accent) 5%, transparent)}
+.udmach{white-space:nowrap}
+.navbrk{display:none}
+/* A few nav items ship BOTH a full label and a phone label; exactly one is ever shown.
+   Desktop gets the full one. The phone rule below flips them.
+   ⚠️ These defaults must live OUTSIDE the media query — without them every page at every
+   width renders "The DawgHouseDawgHouse". */
+.nlg{display:inline}
+.nsm{display:none}
+@media(max-width:760px){
+  /* ⚠️ ONE ROW ON PHONES — brand, all six links and the theme button share a single
+     line. It used to wrap onto four rows and eat 181px before any content; this is 44px.
+     What pays for it: the tagline is hidden, the wordmark drops to 12px, two labels use
+     their `short` form, and the theme button becomes its icon.
+     ⚠️ flex-wrap:nowrap on BOTH .sitenav and .links is load-bearing — leave either one
+     wrapping and the theme button returns to a line of its own.
+     ⚠️ .navbrk is a forced flex break belonging to the OLD two-row layout. It must be
+     hidden here or it breaks the very row it was written to organise. */
+  .sitenav{flex-wrap:nowrap;justify-content:flex-start;gap:0 6px;padding:8px 0}
+  .sitenav .brand{width:auto;flex:0 0 auto;justify-content:flex-start;gap:5px}
+  .sitenav .brand img{width:22px;height:27px}
+  .sitenav .brand .logo{font-size:12px;letter-spacing:-.2px;white-space:nowrap}
+  .sitenav .brand .tag{display:none}
+  .sitenav .navauth{margin-left:auto}
+  .sitenav .navauth .authbtn{padding:3px 8px;font-size:10.5px;max-width:104px;gap:4px;line-height:1.5}
+  .sitenav .navauth .authbtn .dot{width:6px;height:6px}
+  .sitenav .links{width:auto;flex:1 1 auto;margin-left:auto;flex-wrap:nowrap;
+    justify-content:flex-end;gap:0 1px;min-width:0}
+  .sitenav .links .navbrk{display:none}
+  .sitenav .links a,.sitenav .links .grpbtn{padding:4px 2px;font-size:10px;
+    white-space:nowrap;letter-spacing:-.2px}
+  .sitenav .links .caret{display:none}
+  .sitenav .links .theme-btn{margin-left:4px;padding:4px 6px;font-size:12px;flex:0 0 auto}
+  .theme-btn .tword{display:none}
+  /* ⚠️ THE SLACK IS SPENT. The ~28px that 🙃 freed when it moved to the footer row on
+     2026-08-08 was taken on 2026-08-11 by the Prediction Markets and A.I. groups, along
+     with 1px per side off the padding below and two `short:` labels (Rcpt, Mkts). Eight
+     groups now fit with nothing left over: a ninth collides at 420 and 520 even with the
+     font at 9.5px, the gap at zero and the theme button and sign-in chip tightened. The
+     next section is an overflow menu, not another entry.
+     ⚠️ Re-measure with an element-vs-element overlap check, never a bounds check —
+     work/test-nav-fit.mjs explains why a bounds check cannot see this failure. */
+  .nlg{display:none} .nsm{display:inline}
+}
+/* ⚠️ Second breakpoint, and it is not cosmetic. Measured at 360px: the brand (105px)
+   + six links (222px) + the theme button (29px) + gaps need ~362px inside a ~312px
+   container. .links is `flex:1 1 auto; min-width:0`, so instead of wrapping it gets
+   SQUEEZED and — because it is justify-content:flex-end — its content spills LEFT,
+   printing the nav straight over the wordmark. It is not clipped and it is not
+   overflowing the viewport, so a bounds check will not see it. Only an element-vs-
+   element overlap check catches it; test_nav.mjs has one now.
+   Dropping the wordmark buys back ~78px, which is the whole deficit. The logo mark
+   stays, and the whole brand is still the link home. Above 420px the wordmark fits
+   and comes back. */
+@media(max-width:519px){
+  .sitenav .brand .logo{display:none}
+}
+@media(max-width:419px){
+  /* The six-section nav fits beside the logo and account chip. Keep the desktop
+     composition instead of forcing .links onto a second row. The old two-row rule
+     was written for an eight-group nav and survived after the menu became smaller. */
+  .sitenav{flex-wrap:nowrap;gap:0 10px}
+  .sitenav .links{flex:1 1 auto;margin-left:0;justify-content:flex-start;
+    flex-wrap:nowrap;gap:4px;padding-top:0}
+  .sitenav .links .theme-btn{margin-left:2px}
+  .sitenav .navauth{margin-left:auto}
+  .sitenav .navauth .authbtn{padding:3px 6px;font-size:10px;max-width:72px}
+  .sitenav .links a,.sitenav .links .grpbtn{
+    padding:4px 1px;font-size:11px;letter-spacing:-.2px}
+  .sitenav .links a.livebtn{margin-left:0}
+  :root[data-theme="light"] .sitenav .links > a.livebtn{margin-left:0}
+
+  /* Ask Toto occupies the lower-right corner when the page is scrolled to its foot. */
+  .udfoot{justify-content:flex-start;padding-bottom:72px}
+}
+/* The smallest supported phones need another few pixels, but still keep the same row. */
+@media(max-width:359px){
+  .sitenav{gap:0 6px}
+  .sitenav .brand img{width:20px;height:25px}
+  .sitenav .navauth .authbtn{padding:3px 5px;font-size:9.5px;max-width:64px}
+  .sitenav .links{justify-content:flex-start;gap:2px}
+  .sitenav .links a,.sitenav .links .grpbtn{padding:3px 1px;font-size:9.5px}
+  .sitenav .links .theme-btn{margin-left:0;padding:3px 4px;font-size:11px}
+}
+/* Desktop's compact brand lockup belongs on phones too. Stack the tagline under
+   DATA DAWGS so it costs height, not horizontal room. The dog-only fallback remains
+   below 360px, where the full lockup and six domains cannot coexist legibly. */
+@media(min-width:360px) and (max-width:519px){
+  /* Pull the lockup into the wrapper gutter. Its negative margin also returns those
+     pixels to the middle group instead of shrinking the tap targets. */
+  .sitenav .brand{display:grid;grid-template-columns:22px auto;
+    grid-template-rows:auto auto;column-gap:5px;row-gap:0;align-items:center;
+    margin-left:-8px}
+  .sitenav .brand img{grid-column:1;grid-row:1/3}
+  .sitenav .brand .logo{display:block;grid-column:2;grid-row:1;
+    font-size:9.5px;line-height:1;letter-spacing:-.3px;white-space:nowrap}
+  .sitenav .brand .tag{display:block;grid-column:2;grid-row:2;
+    font-size:5.5px;line-height:1;letter-spacing:.04em;white-space:nowrap}
+  /* Equal auto margins bookend the domain run inside .links. This spends the open
+     middle space on both sides of the run instead of leaving one dead patch before
+     the account controls. */
+  .sitenav .links{gap:4px}
+  .sitenav .links .navgrp:first-child{margin-left:auto}
+  .sitenav .navauth{margin-left:auto}
+}
+@media(min-width:360px) and (max-width:379px){
+  .sitenav{gap:0 6px}
+  .sitenav .brand{grid-template-columns:20px auto;column-gap:4px}
+  .sitenav .brand img{width:20px;height:25px}
+  .sitenav .brand .logo{font-size:8.5px}
+  .sitenav .brand .tag{font-size:5px}
+  .sitenav .links{gap:3px}
+  .sitenav .links a,.sitenav .links .grpbtn{padding:3px 1px;font-size:9.5px}
+  .sitenav .navauth .authbtn{padding:3px 4px;font-size:9px;max-width:58px}
+  .sitenav .links .theme-btn{margin-left:0;padding:3px 4px;font-size:11px}
+}
+@media(min-width:380px) and (max-width:419px){
+  /* ⚠️ gap was 5px and had to come down when the bar went to SEVEN groups: at exactly
+     390px the run ended 1px past the viewport and the document scrolled sideways. This
+     band is the tight one because the brand lockup is at its full 22px here while the
+     widths below 380 shrink it. 4px keeps minDomainGap well clear of the 2.5px floor
+     work/test-nav-fit.mjs enforces, and buys 6px — the overflow was 1. */
+  .sitenav .links{gap:4px}
+  .sitenav .links a,.sitenav .links .grpbtn{padding:4px 1px;font-size:10.5px}
+}
+
 .btn{box-shadow:var(--press)}
 .btn:active{transform:translateY(2px);box-shadow:var(--press-in)}
 .dbtn.on{box-shadow:var(--glow)}
