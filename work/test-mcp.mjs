@@ -13,6 +13,11 @@ const DDFS = require("./dfs-engine.js").DDFS;
 const DDSurvivorPath = require("./survivor-path-engine.js").DDSurvivorPath;
 const makeSlate = require("./mkslate.js");
 
+// Counts are pinned deliberately: a tool appearing or vanishing should break a test, not
+// slip through. They live here so adding a tool is one edit, not nine.
+const N_TOOLS = 54, N_CORE = 25;
+const WRITE_TOOLS = ["dd_submit_bozo_leg", "sd_start_session", "sd_log_set", "sd_log_sets",
+                     "sd_finish_session", "sd_log_measurement", "sd_log_nutrition"];
 let pass = 0, fail = 0;
 const ok = (cond, name) => { if (cond) pass++; else { fail++; console.error("FAIL:", name); } };
 
@@ -647,10 +652,10 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
 {
   const j = await (await req(rpc("tools/list"))).json();
   const t = j.result.tools;
-  ok(t.length === 43, "forty-three tools listed in the staged Worker source");
+  ok(t.length === N_TOOLS, `${N_TOOLS} tools listed in the staged Worker source`);
   ok(t.some(x => x.name === "dd_draft_bozo_leg" && /READ-ONLY/.test(x.description)),
      "dd_draft_bozo_leg is listed and says in its own description that it writes nothing");
-  ok(t.every(x => x.name.startsWith("dd_")), "all tools dd_-prefixed");
+  ok(t.every(x => /^(dd|sd)_/.test(x.name)), "all tools namespaced dd_ or sd_");
   ok(t.every(x => x.inputSchema && x.inputSchema.type === "object"), "all tools carry an inputSchema");
   for (const name of ["dd_convert_odds", "dd_devig_market", "dd_price_parlay", "dd_calculate_bet_ev",
     "dd_calculate_hedge", "dd_nfl_passer_rating", "dd_score_forecast", "dd_summarize_beliefs",
@@ -676,9 +681,11 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
   ok(full.every(x => x.annotations && x.annotations.title === x.title), "…mirrored into annotations.title, where MCP clients read it");
   // ⚠️ Was "every tool declares readOnlyHint:true". dd_submit_bozo_leg retired that
   // claim deliberately (2026-08-13): the wire now says exactly one tool writes, and which.
-  ok(full.filter(x => x.annotations.readOnlyHint !== true).length === 1 &&
-     full.find(x => x.name === "dd_submit_bozo_leg").annotations.readOnlyHint === false,
-     "every tool declares readOnlyHint:true except dd_submit_bozo_leg, which says false on the wire");
+  // Allowlist, not a count: dd_submit_bozo_leg writes one Bozo leg, the sd_* writers each
+  // write the caller's OWN training log. Anything else claiming a write fails here.
+  ok(full.filter(x => x.annotations && x.annotations.readOnlyHint === false).map(x => x.name).sort().join("|")
+       === WRITE_TOOLS.slice().sort().join("|"),
+     "the tools that say they write on the wire are exactly the allowlisted ones");
   ok(full.find(x => x.name === "dd_submit_bozo_leg").annotations.destructiveHint === true,
      "the write tool declares destructiveHint:true — an edit overwrites the existing leg");
   ok(full.every(x => (x.annotations.readOnlyHint === true ? !("destructiveHint" in x.annotations) : true) &&
@@ -688,7 +695,7 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
   ok(full.every(x => !("catalog" in x)), "`catalog` is server-side bookkeeping and never reaches the wire");
 
   ok(fullNamed.length === full.length, "/mcp/full/<pass> lists the same set as the bare /mcp/<pass>");
-  ok(full.length === 43 && core.length === 17, "full lists 43, core lists 17");
+  ok(full.length === N_TOOLS && core.length === N_CORE, `full lists ${N_TOOLS}, core lists ${N_CORE}`);
   const fullNames = new Set(full.map(x => x.name)), coreNames = new Set(core.map(x => x.name));
   ok([...coreNames].every(n => fullNames.has(n)), "core is a strict subset of full");
   ok(coreNames.has("dd_whoami") && coreNames.has("dd_bozo_week") && coreNames.has("dd_draft_board") && coreNames.has("dd_site_map"),
@@ -716,7 +723,7 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
   ok((await req(rpc("ping"), { path: "/mcp/core" })).status === 401, "a bare catalog word is a credential, and a wrong one → 401");
   {
     const r = await req(rpc("tools/list"), { path: "/mcp/core", headers: { "X-Dawg-Pass": PASS } });
-    ok(r.status === 200 && (await r.json()).result.tools.length === 17, "header auth can still pick a catalog");
+    ok(r.status === 200 && (await r.json()).result.tools.length === N_CORE, "header auth can still pick a catalog");
   }
 
   /* ⚠️ THE RESERVED-WORD PASSPHRASE. A DAWG_PASS that IS "core" or "full" used to be
@@ -737,7 +744,7 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
     ok(r.status === 200, `a passphrase of "${word}" still authenticates at /mcp/${word}`, "status " + r.status);
     if (r.status === 200) {
       const n = (await r.json()).result.tools.length;
-      ok(n === 43, `…and gets the default full catalog, not an empty or partial one`, "tools=" + n);
+      ok(n === N_TOOLS, `…and gets the default full catalog, not an empty or partial one`, "tools=" + n);
     }
     // it must still be a real credential check, not a hole that lets the word through
     const bad = await reqWord(rpc("ping"), "/mcp/" + (word === "core" ? "full" : "core"));
@@ -746,13 +753,13 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
   // per-user tokens route the same way
   {
     const j = await (await req(rpc("tools/list"), { path: "/mcp/core/" + USER_TOKEN })).json();
-    ok(j.result.tools.length === 17, "a per-user token gets the same catalog treatment");
+    ok(j.result.tools.length === N_CORE, "a per-user token gets the same catalog treatment");
   }
   // initialize says which catalog you are on
   for (const [path, needle] of [["/mcp/core/" + PASS, "Catalog `core`"], ["/mcp/" + PASS, "Catalog `full`"]]) {
     const j = await (await req(rpc("initialize", { protocolVersion: "2025-06-18" }), { path })).json();
     ok(j.result.instructions.startsWith(needle), "initialize opens by naming the catalog: " + needle);
-    ok(/17 of 43|43 of 43/.test(j.result.instructions), "…with the honest count for that path");
+    ok(new RegExp(`${N_CORE} of ${N_TOOLS}|${N_TOOLS} of ${N_TOOLS}`).test(j.result.instructions), "…with the honest count for that path");
   }
   {
     const r = await req(null, { path: "/mcp/" + PASS, method: "GET" });
@@ -766,21 +773,26 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
   const src = readFileSync(resolve(WORK, "mcp-block.js"), "utf8");
   const reg = src.slice(src.indexOf("const MCP_TOOLS = ["));
   const n = (re) => (reg.match(re) || []).length;
-  const tools = n(/\n    name: "dd_\w+",\n/g);
-  ok(tools === 43, "43 tools declared in work/mcp-block.js");
+  const tools = n(/\n    name: "(?:dd|sd)_\w+",\n/g);
+  ok(tools === N_TOOLS, `${N_TOOLS} tools declared in work/mcp-block.js`);
   ok(n(/\n    title: "[^"]+",\n/g) === tools, "every declared tool carries a title");
   ok(n(/\n    catalog: "(?:core|full)",\n/g) === tools, "every declared tool carries a core/full catalog tag");
   ok(n(/\n    readOnlyHint: (?:true|false),\n/g) === tools, "every declared tool carries a readOnlyHint");
-  // ⚠️ This used to assert ZERO readOnlyHint:false while the block was fully read-only.
-  // dd_submit_bozo_leg (2026-08-13) retired that claim on purpose — see cep-identity §4.
-  // The invariant is now: exactly one write tool, this one, and it says so on the wire.
-  ok(n(/readOnlyHint: false/g) === 1, "exactly ONE tool claims readOnlyHint:false");
+  // ⚠️ This asserted ZERO readOnlyHint:false while the block was fully read-only, then
+  // exactly one when dd_submit_bozo_leg landed (2026-08-13, cep-identity §4). SwoleDawg
+  // (2026-08-18) made it a NAMED SET rather than a number — the invariant was never the
+  // count, it was that no tool acquires a write quietly.
+  ok(n(/readOnlyHint: false/g) === WRITE_TOOLS.length,
+     `exactly ${WRITE_TOOLS.length} tools claim readOnlyHint:false in the source`);
+  for (const name of WRITE_TOOLS) {
+    const at = reg.indexOf(`name: "${name}"`);
+    ok(at >= 0 && /readOnlyHint: false/.test(reg.slice(at, at + 700)),
+       `…including ${name}, which declares it`);
+  }
   const wtool = reg.slice(reg.indexOf('name: "dd_submit_bozo_leg"'));
-  ok(reg.indexOf('name: "dd_submit_bozo_leg"') >= 0 && /readOnlyHint: false/.test(wtool.slice(0, 400)),
-     "…and it is dd_submit_bozo_leg");
   ok(/destructiveHint: true/.test(wtool.slice(0, 400)),
      "the write tool declares destructiveHint — an edit overwrites the caller's existing leg");
-  ok(n(/\n    catalog: "core",\n/g) === 17, "17 tools are tagged core in the source");
+  ok(n(/\n    catalog: "core",\n/g) === N_CORE, `${N_CORE} tools are tagged core in the source`);
 }
 // dd_league_overview
 {
@@ -2193,10 +2205,10 @@ ok(assembled.split(MCP_START).length === 2 && assembled.split(MCP_END).length ==
 {
   const inBlock = assembled.slice(assembled.indexOf(MCP_START), assembled.indexOf(MCP_END));
   const outOfBlock = assembled.slice(0, assembled.indexOf(MCP_START)) + assembled.slice(assembled.indexOf(MCP_END));
-  const names = s => (s.match(/\n    name: "dd_\w+",\n/g) || []).map(m => m.trim());
+  const names = s => (s.match(/\n    name: "(?:dd|sd)_\w+",\n/g) || []).map(m => m.trim());
   const registry = names(blockSrc);
-  ok(registry.length === 43 && names(inBlock).join("|") === registry.join("|"),
-     "the assembled block declares the registry's 43 tools, in the registry's order",
+  ok(registry.length === N_TOOLS && names(inBlock).join("|") === registry.join("|"),
+     `the assembled block declares the registry's ${N_TOOLS} tools, in the registry's order`,
      `${names(inBlock).length} assembled vs ${registry.length} declared`);
   ok(names(outOfBlock).length === 0,
      "no tool is declared outside the markers, where assemble.mjs would never regenerate it");

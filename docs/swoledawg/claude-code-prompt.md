@@ -25,7 +25,9 @@ finish a set, say "bench, 30, 11," and have it write to the live site.
 
 ## Deliverables
 
-1. **`sd_*` tools inside the existing `toto` worker** (`dawg-bot-worker.js`) — MCP tools for
+1. **`sd_*` tools inside the existing `toto` worker** (edit `work/mcp-block.js`, then rebuild
+   with `node work/assemble.mjs` — `dawg-bot-worker.js` is assembled output, never hand-edited
+   for MCP code; see `docs/worker-deploy.md`) — MCP tools for
    Claude plus a read/write API for the site, with D1 bound in the existing `wrangler.jsonc`.
    **Do not create a second worker.** Identity lives in `toto` — `sessionAuth()`, the hashed
    per-user token store, `/users/{uid}` — and a separate worker cannot see any of it. Reuse the

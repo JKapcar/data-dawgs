@@ -116,22 +116,54 @@ if (commitCalls !== 1)
  * from this same file. Counting is enough to catch it and costs nothing.
  */
 const count = re => (blockOnly.match(re) || []).length;
-const nTools = count(/\n    name: "dd_\w+",\n/g);
+// Both tool families: dd_* reads the league, sd_* reads and writes the signed-in
+// athlete's training log. A prefix-specific count would silently stop guarding the
+// moment a second family was added, which is exactly what happened when sd_* landed.
+const nTools = count(/\n    name: "(?:dd|sd)_\w+",\n/g);
 for (const [what, n] of [["title", count(/\n    title: "[^"]+",\n/g)],
                          ["catalog", count(/\n    catalog: "(?:core|full)",\n/g)],
                          ["readOnlyHint", count(/\n    readOnlyHint: (?:true|false),\n/g)]]) {
   if (n !== nTools) fail(`${nTools} tools declared but ${n} carry a ${what} — run work/patch-mcp-annotations.py`);
 }
 if (nTools === 0) fail("no tools found in the block — the registry regex has drifted");
-// Exactly ONE tool may declare readOnlyHint: false, and it must be dd_submit_bozo_leg.
-// A second write tool showing up here is a design decision, not a code change — it has
-// to argue with this guard (and the spec) first, on purpose.
+// Every write tool is named here, and nothing else may declare readOnlyHint: false.
+// This started as "exactly one, and it must be dd_submit_bozo_leg" — the guard's real
+// point was never the number, it was that a write tool cannot appear by accident. SwoleDawg
+// (2026-08-18) added a second family that writes the signed-in athlete's own training log,
+// so the check becomes an explicit ALLOWLIST rather than a count: a write tool that is not
+// on this list still fails the build, and a name on this list that no longer exists fails
+// it too, so the list cannot rot into a rubber stamp.
+const WRITE_TOOLS = [
+  "dd_submit_bozo_leg",   // league: own Bozo leg, two-phase, spec'd in claude/data-dawgs-cep-identity.md §4
+  "sd_start_session",     // SwoleDawg: all five write the caller's OWN log, gated on caller.kind === "user"
+  "sd_log_set",
+  "sd_log_sets",
+  "sd_finish_session",
+  "sd_log_measurement",
+  "sd_log_nutrition",
+];
 const writeHints = count(/\n    readOnlyHint: false,\n/g);
-if (writeHints !== 1)
-  fail(`${writeHints} tools declare readOnlyHint: false — exactly 1 is allowed (dd_submit_bozo_leg)`);
-const writeToolBody = blockOnly.slice(blockOnly.indexOf('name: "dd_submit_bozo_leg"'));
-if (blockOnly.indexOf('name: "dd_submit_bozo_leg"') < 0 || !/readOnlyHint: false/.test(writeToolBody.slice(0, 400)))
-  fail("the readOnlyHint: false declaration does not belong to dd_submit_bozo_leg");
+if (writeHints !== WRITE_TOOLS.length)
+  fail(`${writeHints} tools declare readOnlyHint: false but ${WRITE_TOOLS.length} are allowlisted — add it to WRITE_TOOLS in assemble.mjs, on purpose, or make it read-only`);
+for (const name of WRITE_TOOLS) {
+  const at = blockOnly.indexOf(`name: "${name}"`);
+  if (at < 0) fail(`WRITE_TOOLS lists ${name} but no such tool is in the block — remove it rather than leaving a stale allowance`);
+  if (!/readOnlyHint: false/.test(blockOnly.slice(at, at + 700)))
+    fail(`${name} is allowlisted as a write tool but does not declare readOnlyHint: false`);
+}
+// ⚠️ The block must not touch D1 directly either. Every SwoleDawg read and write goes
+// through the swole* layer in the hand-written half of the Worker, so there is exactly one
+// implementation of what a valid write is and exactly one place the uid filter can be
+// forgotten. A .prepare( in here would be a second one.
+if (/\.prepare\(/.test(blockOnly))
+  fail("the MCP block calls .prepare( — D1 access belongs in the swole* layer, not in a tool body");
+// Every sd_* tool is personal data, so every one of them must gate on caller identity.
+for (const m of blockOnly.matchAll(/\n    name: "(sd_\w+)",\n/g)) {
+  const at = blockOnly.indexOf(`name: "${m[1]}"`);
+  const body = blockOnly.slice(at, blockOnly.indexOf('\n  },', at));
+  if (!body.includes('caller.kind !== "user"'))
+    fail(`${m[1]} does not gate on caller.kind === "user" — a training log call with no identity is unattributable`);
+}
 
 writeFileSync(TARGET, out);
 try {

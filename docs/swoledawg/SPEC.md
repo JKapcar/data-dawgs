@@ -7,6 +7,14 @@ you can write to it; signed out or anonymous, you can read and nothing else. Boz
 exactly this, and the pattern below is its pattern. Do not invent a parallel one — an
 independent identity story is how a second, subtly different notion of "who is Kap" gets born.
 
+**Build path.** MCP code is edited in `work/mcp-block.js` and assembled into
+`dawg-bot-worker.js` by `node work/assemble.mjs`; the committed worker is generated output and
+hand-editing its MCP block is overwritten on the next build. Non-MCP routes — the `/api/*`
+read/write surface in §4 — live directly in `dawg-bot-worker.js` and survive assembly. Add
+tests beside `work/test-mcp.mjs` and `work/test-identity.mjs`. `docs/worker-deploy.md` is the
+runbook and it governs: deploys go through `wrangler versions upload`, inspection, then an
+explicitly authorized `wrangler versions deploy`, never a bare `wrangler deploy`.
+
 **Live in the existing `toto` worker, not a new one.** This is the decisive constraint:
 identity already lives there. `sessionAuth()`, the hashed per-user MCP token store, the user
 records under `/users/{uid}`, and the CORS story are all in that worker. A separate SwoleDawg

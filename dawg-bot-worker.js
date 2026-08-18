@@ -888,6 +888,7 @@ export default {
     if (url.pathname === "/survivor-picks") return handleSurvivorPicks(request, url, env, cors);
     if (url.pathname === "/cfb/market-snapshots") return handleCfbMarketSnapshots(request, url, env, cors);
     if (url.pathname === "/sleeper/players-slim") return handleSleeperPlayersSlim(request, env, cors);
+    if (url.pathname.startsWith("/api/swoledawg")) return handleSwole(request, url, env, cors);
 
     // ⚠️ Identity is SITE-WIDE, not Bozo's. /auth/* is canonical; the /bozo/* spellings
     // are permanent aliases because bozo.html in the wild (and any phone with a cached
@@ -6764,6 +6765,341 @@ function timingSafeEqual(a, b) {
   return diff === 0;
 }
 
+/* ============================ SwoleDawg — D1 layer ============================ */
+// Training data for the signed-in athlete. Identity is NOT re-invented here: it is the
+// same uid Firebase already keys /users/{uid} by, resolved by sessionAuth() for the
+// browser and by the per-user MCP token for Claude. D1 holds the training rows; the uid
+// is the only join between the two stores.
+//
+// ⚠️ EVERY function here takes a uid and every statement binds it. There is one athlete
+// today and the code must not assume one — a dropped uid filter is one member reading or
+// overwriting another's log. This is the single place that reads or writes those tables:
+// the browser routes below and the sd_* MCP tools both come through these functions, so
+// there is exactly one implementation of what a valid write is.
+
+const SWOLE_DAYS = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
+
+function swoleDb(env) { return env && env.SWOLE_DB ? env.SWOLE_DB : null; }
+function swoleNoDb() { return { error: "SwoleDawg storage is not configured on this deployment (no SWOLE_DB binding)." }; }
+const swoleNow = () => new Date().toISOString();
+
+function swoleValidDate(s) { return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s); }
+function swoleDayKeyFor(dateISO) { return SWOLE_DAYS[new Date(dateISO + "T12:00:00Z").getUTCDay()]; }
+function swoleSessionId(uid, dateISO, dayKey) { return uid + ":" + dateISO + ":" + dayKey; }
+
+// Week is DERIVED from block_start_date, never stored in the program and never typed by
+// hand — then frozen onto the session row at write time. Weeks turn over on Monday so
+// they line up with the day list; a date before the block starts reads week 1, not 0.
+function swoleMondayOf(dateISO) {
+  const d = new Date(dateISO + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+  return d;
+}
+function swoleWeekOf(programDoc, dateISO) {
+  const start = programDoc && programDoc.block_start_date;
+  if (!swoleValidDate(start) || !swoleValidDate(dateISO)) return 1;
+  const n = Math.floor((swoleMondayOf(dateISO) - swoleMondayOf(start)) / 604800000) + 1;
+  return Math.max(1, n);
+}
+// The effort schedule is keyed by that derived week. Week 1 carries sets_override, which
+// WINS over the per-exercise sets in the day tables — anything that prescribes or renders
+// sets must apply it. Only fall through to the open-ended "4+" row when the week really is
+// >= 4; never fall through to it for an unmatched low week, which would hand the most
+// aggressive setting to a block that has not started.
+function swoleEffortFor(programDoc, week) {
+  const sched = (programDoc && programDoc.effort_schedule) || [];
+  const exact = sched.find(e => e.week === week);
+  if (exact) return exact;
+  const open = sched.find(e => typeof e.week === "string" && e.week.endsWith("+"));
+  if (open && week >= parseInt(open.week, 10)) return open;
+  return sched[0] || null;
+}
+function swoleSetsFor(exercise, effort) {
+  const o = effort && effort.sets_override;
+  return o == null ? exercise.sets : Math.min(o, exercise.sets);
+}
+
+async function swoleGetProgram(env, uid) {
+  const db = swoleDb(env); if (!db) return null;
+  const row = await db.prepare(
+    "SELECT doc, version FROM program WHERE uid = ? AND active = 1 ORDER BY version DESC LIMIT 1"
+  ).bind(uid).first();
+  if (!row) return null;
+  try { return { doc: JSON.parse(row.doc), version: row.version }; } catch { return null; }
+}
+
+// Seeding is an explicit write of a supplied document, not a copy baked into this file.
+// A second copy of program.json living in the Worker would drift from the one in the repo
+// and there would be no way to tell which was authoritative.
+async function swolePutProgram(env, uid, doc, note) {
+  const db = swoleDb(env); if (!db) return { error: swoleNoDb().error };
+  if (!doc || typeof doc !== "object" || !Array.isArray(doc.days))
+    return { error: "That does not look like a program document (no days array)." };
+  const cur = await db.prepare("SELECT MAX(version) v FROM program WHERE uid = ?").bind(uid).first();
+  const version = ((cur && cur.v) || 0) + 1;
+  await db.batch([
+    db.prepare("UPDATE program SET active = 0 WHERE uid = ?").bind(uid),
+    db.prepare("INSERT INTO program (uid, version, doc, active, created_at, note) VALUES (?, ?, ?, 1, ?, ?)")
+      .bind(uid, version, JSON.stringify(doc), swoleNow(), note || null),
+  ]);
+  return { ok: true, version };
+}
+
+function swoleDayOf(programDoc, dayKey) {
+  return ((programDoc && programDoc.days) || []).find(d => d.day === dayKey) || null;
+}
+
+async function swoleStartSession(env, uid, dateISO, dayKey, source) {
+  const db = swoleDb(env); if (!db) return swoleNoDb();
+  if (!swoleValidDate(dateISO)) return { error: "Date must be YYYY-MM-DD." };
+  const prog = await swoleGetProgram(env, uid);
+  if (!prog) return { error: "No program is seeded for this account yet. Seed program.json first." };
+  const key = dayKey || swoleDayKeyFor(dateISO);
+  const day = swoleDayOf(prog.doc, key);
+  if (!day) return { error: "No day '" + key + "' in the program." };
+  const id = swoleSessionId(uid, dateISO, key);
+  const week = swoleWeekOf(prog.doc, dateISO);
+  const type = (day.exercises && day.exercises.length) ? "lift" : (day.name || "").toLowerCase().includes("ruck") ? "ruck" : "rest";
+  const existing = await db.prepare("SELECT id, started_at, completed_at FROM sessions WHERE id = ? AND uid = ?").bind(id, uid).first();
+  if (existing) return { ok: true, id, week, day: key, already_open: !existing.completed_at, reopened: false };
+  await db.prepare(
+    "INSERT INTO sessions (id, uid, date, day_key, session_type, block, week, started_at) VALUES (?,?,?,?,?,?,?,?)"
+  ).bind(id, uid, dateISO, key, type, prog.doc.block || 1, week, swoleNow()).run();
+  return { ok: true, id, week, day: key, name: day.name, source };
+}
+
+// One write path for a set, shared by the browser and by sd_log_set. UPSERT on
+// (session, exercise, set_number) so "that was 11 not 10" corrects the row instead of
+// appending a second, contradictory one.
+async function swoleLogSet(env, uid, a, source) {
+  const db = swoleDb(env); if (!db) return swoleNoDb();
+  const dateISO = a.date;
+  if (!swoleValidDate(dateISO)) return { error: "Date must be YYYY-MM-DD." };
+  const prog = await swoleGetProgram(env, uid);
+  if (!prog) return { error: "No program is seeded for this account yet." };
+  const dayKey = a.day_key || swoleDayKeyFor(dateISO);
+  const day = swoleDayOf(prog.doc, dayKey);
+  if (!day) return { error: "No day '" + dayKey + "' in the program." };
+
+  // id, then exact name, then substring, then every token present — "flat bench" has to
+  // reach "Flat DB bench press", which no substring match does. AMBIGUITY IS A REFUSAL at
+  // every stage: two candidates mean the caller gets the list back, never the first one.
+  const wanted = String(a.exercise || "").toLowerCase().trim();
+  const list = day.exercises || [];
+  const narrow = () => {
+    const byId = list.filter(e => e.id.toLowerCase() === wanted);
+    if (byId.length) return byId;
+    const exact = list.filter(e => e.name.toLowerCase() === wanted);
+    if (exact.length) return exact;
+    const sub = list.filter(e => e.name.toLowerCase().includes(wanted));
+    if (sub.length) return sub;
+    const toks = wanted.split(/[^a-z0-9]+/).filter(Boolean);
+    if (!toks.length) return [];
+    return list.filter(e => { const n = e.name.toLowerCase(); return toks.every(t => n.includes(t)); });
+  };
+  const hits = narrow();
+  const ex = hits.length === 1 ? hits[0] : null;
+  if (hits.length > 1) {
+    return { error: "'" + a.exercise + "' matches more than one exercise on " + dayKey + " — say which.",
+             candidates: hits.map(e => ({ id: e.id, name: e.name })) };
+  }
+  if (!ex) {
+    // ⚠️ Refuse rather than guess. A wrong exercise match corrupts the history of two
+    // lifts at once and will not be noticed for weeks.
+    return { error: "No exercise matching '" + a.exercise + "' on " + dayKey + ".",
+             candidates: list.map(e => ({ id: e.id, name: e.name })) };
+  }
+  const started = await swoleStartSession(env, uid, dateISO, dayKey, source);
+  if (started.error) return started;
+
+  const effort = swoleEffortFor(prog.doc, started.week);
+  const prescribed = swoleSetsFor(ex, effort);
+  let n = Number(a.set_number);
+  if (!Number.isFinite(n) || n < 1) {
+    const done = await db.prepare(
+      "SELECT COUNT(*) c FROM sets WHERE uid = ? AND session_id = ? AND exercise_id = ?"
+    ).bind(uid, started.id, ex.id).first();
+    n = ((done && done.c) || 0) + 1;
+  }
+  const reps = Number(a.reps), weight = Number(a.weight_lb);
+  if (!Number.isFinite(reps) || reps < 1) return { error: "reps is required." };
+  if (!Number.isFinite(weight)) return { error: "weight_lb is required." };
+
+  await db.prepare(
+    "INSERT INTO sets (uid, session_id, exercise_id, exercise_name, set_number, weight_lb, reps, rir, rest_prescribed_s, rest_taken_s, source, logged_at) " +
+    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?) " +
+    "ON CONFLICT(session_id, exercise_id, set_number) DO UPDATE SET " +
+    "weight_lb=excluded.weight_lb, reps=excluded.reps, rir=excluded.rir, " +
+    "rest_taken_s=excluded.rest_taken_s, source=excluded.source, logged_at=excluded.logged_at"
+  ).bind(uid, started.id, ex.id, ex.name, n, weight, reps,
+         Number.isFinite(Number(a.rir)) ? Number(a.rir) : null,
+         ex.rest_between_sets == null ? null : ex.rest_between_sets,
+         Number.isFinite(Number(a.rest_taken_s)) ? Number(a.rest_taken_s) : null,
+         source, swoleNow()).run();
+
+  const rows = await db.prepare(
+    "SELECT set_number, weight_lb, reps FROM sets WHERE uid = ? AND session_id = ? AND exercise_id = ? ORDER BY set_number"
+  ).bind(uid, started.id, ex.id).all();
+  const logged = (rows && rows.results) || [];
+  const belowRange = reps < ex.rep_min;
+  return {
+    ok: true, session: started.id, week: started.week,
+    exercise: { id: ex.id, name: ex.name },
+    set: n, weight_lb: weight, reps,
+    prescribed_sets: prescribed, sets_logged: logged.length,
+    remaining: Math.max(0, prescribed - logged.length),
+    rep_range: [ex.rep_min, ex.rep_max],
+    rest_s: ex.rest_between_sets,
+    // Flagged, never auto-applied. The program's calibration_override fires on "can't hit
+    // bottom of range CLEAN" — and in a week whose RIR cap is high, stopping short of the
+    // bottom is obedience to the cap, not a failed set. Only the human knows which it was.
+    below_rep_range: belowRange,
+    note: belowRange
+      ? "Below the bottom of the " + ex.rep_min + "-" + ex.rep_max + " range. Program rule: can't hit bottom clean -> drop 5. " +
+        "Do not apply it without asking whether the set was cut short by the week's RIR cap (" +
+        (effort && effort.reps_in_reserve != null ? effort.reps_in_reserve + " RIR" : "see effort_schedule") +
+        ") rather than by failure — those imply opposite actions."
+      : null,
+  };
+}
+
+async function swoleFinishSession(env, uid, dateISO, notes) {
+  const db = swoleDb(env); if (!db) return swoleNoDb();
+  if (!swoleValidDate(dateISO)) return { error: "Date must be YYYY-MM-DD." };
+  const row = await db.prepare("SELECT id, day_key, week FROM sessions WHERE uid = ? AND date = ? ORDER BY started_at DESC LIMIT 1").bind(uid, dateISO).first();
+  if (!row) return { error: "No session on " + dateISO + "." };
+  await db.prepare("UPDATE sessions SET completed_at = ?, notes = COALESCE(?, notes) WHERE id = ? AND uid = ?")
+    .bind(swoleNow(), notes || null, row.id, uid).run();
+  const agg = await db.prepare(
+    "SELECT COUNT(*) sets, SUM(weight_lb * reps) volume, COUNT(DISTINCT exercise_id) exercises FROM sets WHERE uid = ? AND session_id = ?"
+  ).bind(uid, row.id).first();
+  return { ok: true, session: row.id, day: row.day_key, week: row.week,
+           sets: (agg && agg.sets) || 0, exercises: (agg && agg.exercises) || 0,
+           volume_lb: (agg && agg.volume) || 0 };
+}
+
+async function swoleSession(env, uid, dateISO) {
+  const db = swoleDb(env); if (!db) return swoleNoDb();
+  const s = await db.prepare("SELECT * FROM sessions WHERE uid = ? AND date = ? ORDER BY started_at DESC LIMIT 1").bind(uid, dateISO).first();
+  if (!s) return { error: "No session on " + dateISO + "." };
+  const rows = await db.prepare(
+    "SELECT exercise_id, exercise_name, set_number, weight_lb, reps, rir, rest_taken_s, source FROM sets WHERE uid = ? AND session_id = ? ORDER BY exercise_id, set_number"
+  ).bind(uid, s.id).all();
+  return { session: s, sets: (rows && rows.results) || [] };
+}
+
+async function swoleRecentSessions(env, uid, n) {
+  const db = swoleDb(env); if (!db) return swoleNoDb();
+  const rows = await db.prepare(
+    "SELECT s.id, s.date, s.day_key, s.week, s.completed_at, COUNT(x.id) sets, SUM(x.weight_lb * x.reps) volume " +
+    "FROM sessions s LEFT JOIN sets x ON x.session_id = s.id AND x.uid = s.uid " +
+    "WHERE s.uid = ? GROUP BY s.id ORDER BY s.date DESC LIMIT ?"
+  ).bind(uid, Math.min(Math.max(Number(n) || 10, 1), 50)).all();
+  return { sessions: (rows && rows.results) || [] };
+}
+
+// A null value is a RECORDED GAP, not a zero and not a reason to interpolate. Storing the
+// raw reads beside the value is what makes an averaged number auditable later.
+async function swoleLogMeasurement(env, uid, m, source) {
+  const db = swoleDb(env); if (!db) return swoleNoDb();
+  const field = String(m.field || "").trim();
+  if (!field) return { error: "field is required." };
+  const date = m.date || swoleNow().slice(0, 10);
+  if (!swoleValidDate(date)) return { error: "Date must be YYYY-MM-DD." };
+  const known = await db.prepare("SELECT field, label, direction, tag FROM measurement_fields WHERE uid = ? AND field = ?").bind(uid, field).first();
+  if (!known) return { error: "Unknown measurement field '" + field + "'. Seed measurement_fields first." };
+  const value = m.value === null || m.value === undefined || m.value === "" ? null : Number(m.value);
+  if (value !== null && !Number.isFinite(value)) return { error: "value must be a number or null." };
+  const reads = Array.isArray(m.reads) && m.reads.length ? JSON.stringify(m.reads.map(Number)) : null;
+  await db.prepare(
+    "INSERT INTO measurements (uid, field, date, value, reads, source, note, logged_at) VALUES (?,?,?,?,?,?,?,?) " +
+    "ON CONFLICT(uid, field, date) DO UPDATE SET value=excluded.value, reads=excluded.reads, source=excluded.source, note=excluded.note, logged_at=excluded.logged_at"
+  ).bind(uid, field, date, value, reads, source, m.note || null, swoleNow()).run();
+  return { ok: true, field, label: known.label, date, value, direction: known.direction, tag: known.tag };
+}
+
+async function swoleMeasurementHistory(env, uid, field, n) {
+  const db = swoleDb(env); if (!db) return swoleNoDb();
+  const rows = await db.prepare(
+    "SELECT date, value, reads, source, note FROM measurements WHERE uid = ? AND field = ? ORDER BY date DESC LIMIT ?"
+  ).bind(uid, field, Math.min(Math.max(Number(n) || 20, 1), 200)).all();
+  return { field, readings: (rows && rows.results) || [] };
+}
+
+async function swoleLogNutrition(env, uid, d, source) {
+  const db = swoleDb(env); if (!db) return swoleNoDb();
+  const date = d.date || swoleNow().slice(0, 10);
+  if (!swoleValidDate(date)) return { error: "Date must be YYYY-MM-DD." };
+  const kcal = d.kcal == null || d.kcal === "" ? null : Number(d.kcal);
+  const pro  = d.protein_g == null || d.protein_g === "" ? null : Number(d.protein_g);
+  if (kcal === null && pro === null && !d.note)
+    return { error: "Nothing to log: give kcal, protein_g, or a note. 'Hit target' is not a number." };
+  await db.prepare(
+    "INSERT INTO nutrition (uid, date, kcal, protein_g, note, source, logged_at) VALUES (?,?,?,?,?,?,?) " +
+    "ON CONFLICT(uid, date) DO UPDATE SET kcal=excluded.kcal, protein_g=excluded.protein_g, note=excluded.note, source=excluded.source, logged_at=excluded.logged_at"
+  ).bind(uid, date, kcal, pro, d.note || null, source, swoleNow()).run();
+  return { ok: true, date, kcal, protein_g: pro };
+}
+
+// What the page and radar.html read. OBSERVED and DERIVED only — nothing MODELLED is
+// plotted here, because a modelled number rendered beside a measured one is treated as
+// measured within a month.
+async function swoleSummary(env, uid) {
+  const db = swoleDb(env); if (!db) return swoleNoDb();
+  const fields = await db.prepare("SELECT field, label, direction, tag, baseline, target_lo, target_hi FROM measurement_fields WHERE uid = ?").bind(uid).all();
+  const out = {};
+  for (const f of (fields && fields.results) || []) {
+    const latest = await db.prepare("SELECT date, value FROM measurements WHERE uid = ? AND field = ? AND value IS NOT NULL ORDER BY date DESC LIMIT 1").bind(uid, f.field).first();
+    out[f.field] = {
+      label: f.label, unit: null, dir: f.direction, tag: f.tag,
+      baseline: f.baseline, current: latest ? latest.value : null,
+      target: f.target_lo != null && f.target_hi != null && f.target_lo !== f.target_hi
+        ? [f.target_lo, f.target_hi] : (f.target_lo != null ? f.target_lo : null),
+      as_of: latest ? latest.date : null,
+    };
+  }
+  const recent = await db.prepare(
+    "SELECT COUNT(*) n FROM sessions WHERE uid = ? AND completed_at IS NOT NULL AND date >= date('now','-7 day')"
+  ).bind(uid).first();
+  return { fields: out, sessions_last_7d: (recent && recent.n) || 0, as_of: swoleNow() };
+}
+
+/* ------------------------- SwoleDawg — browser routes ------------------------- */
+// Session-authenticated, uid-scoped. The same functions the sd_* MCP tools call, so a
+// set tapped in the browser and a set spoken to Claude are the same write with a
+// different `source` stamp.
+async function handleSwole(request, url, env, cors) {
+  const path = url.pathname.replace(/^\/api\/swoledawg/, "") || "/";
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 401, cors);
+  const uid = auth.uid || ("name:" + auth.name);
+  if (!swoleDb(env)) return json(swoleNoDb(), 503, cors);
+
+  const body = request.method === "POST"
+    ? await request.json().catch(() => ({}))
+    : {};
+  const q = url.searchParams;
+  const wrap = r => json(r && r.error ? r : r, r && r.error ? 400 : 200, cors);
+
+  if (request.method === "GET") {
+    if (path === "/summary")  return wrap(await swoleSummary(env, uid));
+    if (path === "/program")  { const p = await swoleGetProgram(env, uid); return wrap(p ? { version: p.version, program: p.doc } : { error: "No program seeded." }); }
+    if (path === "/sessions") return wrap(await swoleRecentSessions(env, uid, q.get("n")));
+    if (path === "/session")  return wrap(await swoleSession(env, uid, q.get("date") || ""));
+    if (path === "/measurements") return wrap(await swoleMeasurementHistory(env, uid, q.get("field") || "", q.get("n")));
+    return json({ error: "Unknown SwoleDawg route." }, 404, cors);
+  }
+  if (request.method !== "POST") return json({ error: "GET or POST only." }, 405, cors);
+
+  if (path === "/program")   return wrap(await swolePutProgram(env, uid, body.program, body.note));
+  if (path === "/session/start")  return wrap(await swoleStartSession(env, uid, body.date, body.day_key, "web"));
+  if (path === "/session/finish") return wrap(await swoleFinishSession(env, uid, body.date, body.notes));
+  if (path === "/set")       return wrap(await swoleLogSet(env, uid, body, "web"));
+  if (path === "/nutrition") return wrap(await swoleLogNutrition(env, uid, body, "web"));
+  if (path === "/measurement") return wrap(await swoleLogMeasurement(env, uid, body, "web"));
+  return json({ error: "Unknown SwoleDawg route." }, 404, cors);
+}
+
 /* ===== DD-MCP-BLOCK START — generated from work/mcp-block.js; edit THERE ===== */
 /* Shared DFS engine — generated verbatim from work/dfs-engine.js except for its private root. */
 const mcpDdfsRoot = {};
@@ -10314,6 +10650,10 @@ async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG) {
 
 const MCP_NO_ARGS = { type: "object", properties: {}, additionalProperties: false };
 
+// The one sentence every sd_* tool gives an unidentified caller. A training log is
+// personal: without a uid there is no correct log to read or write.
+const SWOLE_NEEDS_USER = "SwoleDawg needs to know who you are, and the shared league connector cannot tell. Mint a personal URL at " + SITE + "/connect.html and this works.";
+
 const MCP_TOOLS = [
   {
     name: "dd_whoami",
@@ -12949,5 +13289,251 @@ const MCP_TOOLS = [
       });
     },
   },
+  /* ------------------------------- SwoleDawg ------------------------------- */
+  // ⚠️ THESE WRITE. Every one of them is gated on caller.kind === "user": the shared
+  // league connector cannot tell one caller from another, and a write with no identity is
+  // unattributable — it would land in whoever's log the server guessed. Same gate, same
+  // reasoning, as dd_submit_bozo_leg.
+  //
+  // Set logging is deliberately SINGLE-phase, unlike the Bozo submission. A misparsed leg
+  // is money on a shared board with no undo; a misparsed set is private and corrected by
+  // saying "that was 11 not 10", which UPSERTs the same row. The human is between sets
+  // holding dumbbells. Two-phase belongs on sd_update_program, which rewrites the plan.
+  {
+    name: "sd_whoami",
+    title: "SwoleDawg — who am I, and what is today",
+    catalog: "core",
+    readOnlyHint: true,
+    description: "Whose training log this connection can write to, the current block and derived week, and today's prescribed day. Call this before logging anything if you are unsure who is asking.",
+    inputSchema: MCP_NO_ARGS,
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user")
+        return toolText({ athlete: null, anonymous: true, can_write: false,
+          note: "The shared league connector cannot tell who is asking, so it can neither read nor write a personal training log. Mint a personal URL at " + SITE + "/connect.html." });
+      const uid = caller.uid || caller.name;
+      const prog = await swoleGetProgram(env, uid);
+      if (!prog) return toolText({ athlete: caller.name, can_write: true, program: null,
+        note: "No program seeded for this account yet. Seed program.json before logging." });
+      const today = new Date().toISOString().slice(0, 10);
+      const week = swoleWeekOf(prog.doc, today);
+      const effort = swoleEffortFor(prog.doc, week);
+      const dayKey = swoleDayKeyFor(today);
+      const day = swoleDayOf(prog.doc, dayKey);
+      return toolText({
+        athlete: caller.name, can_write: true,
+        block: prog.doc.block || 1, week, date: today, day: dayKey,
+        session: day ? day.name : null,
+        reps_in_reserve: effort ? effort.reps_in_reserve : null,
+        sets_override: effort ? (effort.sets_override || null) : null,
+        note: effort && effort.sets_override
+          ? "Week " + week + " overrides the tables to " + effort.sets_override + " working sets per exercise."
+          : null,
+      });
+    },
+  },
+  {
+    name: "sd_get_program",
+    title: "SwoleDawg — the program",
+    catalog: "core",
+    readOnlyHint: true,
+    description: "The athlete's current training program, or one day of it, with rest values and rep ranges. Sets shown already have the current week's sets_override applied — do not re-apply it.",
+    inputSchema: { type: "object", properties: { day: { type: "string", description: "monday|tuesday|… (omit for the whole program)" } }, additionalProperties: false },
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user") return toolErr(SWOLE_NEEDS_USER);
+      const uid = caller.uid || caller.name;
+      const prog = await swoleGetProgram(env, uid);
+      if (!prog) return toolErr("No program seeded for this account yet.");
+      const today = new Date().toISOString().slice(0, 10);
+      const week = swoleWeekOf(prog.doc, today);
+      const effort = swoleEffortFor(prog.doc, week);
+      const shape = d => ({
+        day: d.day, name: d.name,
+        exercises: (d.exercises || []).map(e => ({
+          id: e.id, name: e.name, sets: swoleSetsFor(e, effort),
+          reps: e.rep_min + "-" + e.rep_max,
+          start_weight_lb_per_hand: e.start_weight_lb_per_hand,
+          rest_between_sets_s: e.rest_between_sets, rest_after_exercise_s: e.rest_after_exercise,
+          cue: e.cue || null,
+        })),
+      });
+      if (args.day) {
+        const d = swoleDayOf(prog.doc, String(args.day).toLowerCase());
+        if (!d) return toolErr("No day '" + args.day + "' in the program.");
+        return toolText({ week, reps_in_reserve: effort ? effort.reps_in_reserve : null, ...shape(d) });
+      }
+      return toolText({ block: prog.doc.block || 1, week,
+        reps_in_reserve: effort ? effort.reps_in_reserve : null,
+        rules: prog.doc.rules || null, progression: prog.doc.progression || null,
+        days: (prog.doc.days || []).map(shape) });
+    },
+  },
+  {
+    name: "sd_start_session",
+    title: "SwoleDawg — start a session",
+    catalog: "core",
+    readOnlyHint: false,
+    description: "Open a training session. The day is inferred from the date's weekday unless you name one. Idempotent: starting a session that already exists returns it rather than creating a second. sd_log_set opens the session on its own, so you rarely need this first.",
+    inputSchema: { type: "object", properties: {
+      date: { type: "string", description: "YYYY-MM-DD (default: today)" },
+      day_key: { type: "string", description: "monday|tuesday|… — override the weekday inference" },
+    }, additionalProperties: false },
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user") return toolErr(SWOLE_NEEDS_USER);
+      const uid = caller.uid || caller.name;
+      const r = await swoleStartSession(env, uid, args.date || new Date().toISOString().slice(0, 10), args.day_key, "mcp");
+      return r.error ? toolErr(r.error) : toolText(r);
+    },
+  },
+  {
+    name: "sd_log_set",
+    title: "SwoleDawg — log a set",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: true,
+    description:
+      "Log ONE working set and get back what is left in the exercise plus the rest time. Writes immediately — do not ask the user to confirm first; they are between sets. " +
+      "Omit set_number and it takes the next one. Re-logging an existing set_number OVERWRITES it, which is how a correction works: 'that was 11 not 10' is an edit, not a new set. " +
+      "The exercise is matched against the day's program by id, then exact name, then substring; an ambiguous or absent match is REFUSED with the day's candidates rather than guessed, because a wrong match corrupts two lifts' histories at once. " +
+      "If the response sets below_rep_range, tell the user and ask whether the set was cut short by failure or by the week's RIR cap before touching the load — those imply opposite actions.",
+    inputSchema: { type: "object", properties: {
+      exercise: { type: "string", description: "Exercise id ('mon_1') or name ('flat bench')" },
+      weight_lb: { type: "number", description: "Per hand for dumbbell work, matching the program's start_weight_lb_per_hand" },
+      reps: { type: "number" },
+      set_number: { type: "number", description: "Omit to append the next set; supply to correct an existing one" },
+      rir: { type: "number", description: "Reps in reserve, if the user said" },
+      rest_taken_s: { type: "number", description: "Actual rest before this set. Stored separately from prescribed — a stalled lift is usually collapsed rest." },
+      date: { type: "string", description: "YYYY-MM-DD (default: today)" },
+      day_key: { type: "string" },
+    }, required: ["exercise", "weight_lb", "reps"], additionalProperties: false },
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user") return toolErr(SWOLE_NEEDS_USER);
+      const uid = caller.uid || caller.name;
+      const a = { ...args, date: args.date || new Date().toISOString().slice(0, 10) };
+      const r = await swoleLogSet(env, uid, a, "mcp");
+      return r.error ? toolText({ status: "rejected", ...r }) : toolText(r);
+    },
+  },
+  {
+    name: "sd_log_sets",
+    title: "SwoleDawg — log several sets",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: true,
+    description: "Bulk version of sd_log_set, for 'I did 12, 11 and 10 at thirty'. Each entry takes the same fields. Entries are applied in order and each is reported separately, so a rejection in the middle does not hide the ones that landed.",
+    inputSchema: { type: "object", properties: {
+      sets: { type: "array", description: "Each: {exercise, weight_lb, reps, set_number?, rir?, rest_taken_s?}",
+        items: { type: "object", properties: {
+          exercise: { type: "string" }, weight_lb: { type: "number" }, reps: { type: "number" },
+          set_number: { type: "number" }, rir: { type: "number" }, rest_taken_s: { type: "number" },
+        }, required: ["exercise", "weight_lb", "reps"], additionalProperties: false } },
+      date: { type: "string" }, day_key: { type: "string" },
+    }, required: ["sets"], additionalProperties: false },
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user") return toolErr(SWOLE_NEEDS_USER);
+      const uid = caller.uid || caller.name;
+      const date = args.date || new Date().toISOString().slice(0, 10);
+      const out = [];
+      for (const s of args.sets || []) {
+        const r = await swoleLogSet(env, uid, { ...s, date, day_key: args.day_key }, "mcp");
+        out.push(r.error ? { status: "rejected", input: s, ...r } : r);
+      }
+      return toolText({ date, results: out,
+        logged: out.filter(r => r.ok).length, rejected: out.filter(r => !r.ok).length });
+    },
+  },
+  {
+    name: "sd_finish_session",
+    title: "SwoleDawg — finish the session",
+    catalog: "core",
+    readOnlyHint: false,
+    description: "Close the day's session and return its summary: sets, exercises touched and total volume.",
+    inputSchema: { type: "object", properties: {
+      date: { type: "string", description: "YYYY-MM-DD (default: today)" },
+      notes: { type: "string" },
+    }, additionalProperties: false },
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user") return toolErr(SWOLE_NEEDS_USER);
+      const r = await swoleFinishSession(env, caller.uid || caller.name, args.date || new Date().toISOString().slice(0, 10), args.notes);
+      return r.error ? toolErr(r.error) : toolText(r);
+    },
+  },
+  {
+    name: "sd_session",
+    title: "SwoleDawg — read one session",
+    catalog: "core",
+    readOnlyHint: true,
+    description: "Every set recorded on one date, with the source each row arrived from.",
+    inputSchema: { type: "object", properties: { date: { type: "string", description: "YYYY-MM-DD" } }, required: ["date"], additionalProperties: false },
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user") return toolErr(SWOLE_NEEDS_USER);
+      const r = await swoleSession(env, caller.uid || caller.name, args.date);
+      return r.error ? toolErr(r.error) : toolText(r);
+    },
+  },
+  {
+    name: "sd_recent_sessions",
+    title: "SwoleDawg — recent sessions",
+    catalog: "core",
+    readOnlyHint: true,
+    description: "The last N sessions with set counts and volume. Use it to answer 'how many did I train last week' without pulling every set.",
+    inputSchema: { type: "object", properties: { n: { type: "number", description: "Default 10, max 50" } }, additionalProperties: false },
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user") return toolErr(SWOLE_NEEDS_USER);
+      return toolText(await swoleRecentSessions(env, caller.uid || caller.name, args.n));
+    },
+  },
+  {
+    name: "sd_log_measurement",
+    title: "SwoleDawg — log a measurement",
+    catalog: "full",
+    readOnlyHint: false,
+    destructiveHint: true,
+    description:
+      "Record one tape or scale reading. One value per field per day; a re-read on the same date overwrites it. " +
+      "Pass reads:[…] when the protocol's replication rule was used (two within 0.125\" averaged, or the median of three) — the raw reads are stored beside the value so an averaged number stays auditable. " +
+      "⚠️ NEVER invent a value for a field the user did not measure. Pass null, or leave it out. A null reads as a gap; a guess reads as data and corrupts every trend built on it.",
+    inputSchema: { type: "object", properties: {
+      field: { type: "string", description: "e.g. waist_navel_in, ankle_l_in" },
+      value: { type: ["number", "null"], description: "null records an explicit gap" },
+      reads: { type: "array", items: { type: "number" }, description: "Raw reads before averaging" },
+      date: { type: "string", description: "YYYY-MM-DD (default: today)" },
+      note: { type: "string" },
+    }, required: ["field"], additionalProperties: false },
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user") return toolErr(SWOLE_NEEDS_USER);
+      const r = await swoleLogMeasurement(env, caller.uid || caller.name, args, "mcp");
+      return r.error ? toolErr(r.error) : toolText(r);
+    },
+  },
+  {
+    name: "sd_measurement_history",
+    title: "SwoleDawg — measurement history",
+    catalog: "full",
+    readOnlyHint: true,
+    description: "Every recorded reading for one field, newest first, with the raw reads where they were kept.",
+    inputSchema: { type: "object", properties: {
+      field: { type: "string" }, n: { type: "number", description: "Default 20, max 200" },
+    }, required: ["field"], additionalProperties: false },
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user") return toolErr(SWOLE_NEEDS_USER);
+      return toolText(await swoleMeasurementHistory(env, caller.uid || caller.name, args.field, args.n));
+    },
+  },
+  {
+    name: "sd_log_nutrition",
+    title: "SwoleDawg — log nutrition",
+    catalog: "full",
+    readOnlyHint: false,
+    description: "Record a day's calories and protein. Needs actual numbers: \"hit target\" is not one, and this refuses rather than storing the program's target as though it were an observation.",
+    inputSchema: { type: "object", properties: {
+      date: { type: "string" }, kcal: { type: "number" }, protein_g: { type: "number" }, note: { type: "string" },
+    }, additionalProperties: false },
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user") return toolErr(SWOLE_NEEDS_USER);
+      const r = await swoleLogNutrition(env, caller.uid || caller.name, args, "mcp");
+      return r.error ? toolErr(r.error) : toolText(r);
+    },
+  },
+
 ];
 /* ===== DD-MCP-BLOCK END ===== */
