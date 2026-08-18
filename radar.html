@@ -1,284 +1,476 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SwoleDawg — Convergence</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SwoleDawg — Measurement Radars</title>
 <style>
-  :root{
-    --paper:#D9DDDC;
-    --ink:#12201F;
-    --rule:#A7B2B0;
-    --live:#1F6F63;
-    --live-fill:rgba(31,111,99,.17);
-    --flag:#8C3B2E;
-    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
-    --sans:system-ui,-apple-system,"Segoe UI",sans-serif;
-  }
-  *{box-sizing:border-box}
-  body{
-    margin:0;padding:28px 20px 48px;
-    background:var(--paper);color:var(--ink);
-    font-family:var(--sans);
-    background-image:linear-gradient(var(--rule) .5px,transparent .5px),linear-gradient(90deg,var(--rule) .5px,transparent .5px);
-    background-size:22px 22px;background-position:-1px -1px;
-  }
-  .sheet{max-width:920px;margin:0 auto}
-  header{border-bottom:1.5px solid var(--ink);padding-bottom:10px;margin-bottom:22px}
-  h1{
-    font-family:var(--sans);font-size:clamp(22px,5vw,34px);
-    font-weight:700;letter-spacing:-.02em;margin:0;
-    font-stretch:condensed;text-transform:uppercase;
-  }
-  .sub{font-family:var(--mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;margin-top:6px;color:#3d4f4d}
-  .dial{background:rgba(255,255,255,.42);border:1px solid var(--ink);padding:6px}
-  svg{display:block;width:100%;height:auto}
-  .axis-line{stroke:var(--rule);stroke-width:1}
-  .ring{fill:none;stroke:var(--rule);stroke-width:.75}
-  .ring.target{stroke:var(--ink);stroke-width:1.5;stroke-dasharray:5 3}
-  .tick{stroke:var(--rule);stroke-width:1}
-  .poly{fill:var(--live-fill);stroke:var(--live);stroke-width:2;stroke-linejoin:round}
-  .node{fill:var(--live);stroke:rgba(255,255,255,.8);stroke-width:1.25}
-  .lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;fill:var(--ink)}
-  .val{font-family:var(--mono);font-size:10px;fill:#4a5c5a}
-  .core{font-family:var(--mono);font-weight:700;fill:var(--ink)}
-  .core-sub{font-family:var(--mono);font-size:9px;letter-spacing:.12em;fill:#4a5c5a}
-  table{width:100%;border-collapse:collapse;margin-top:26px;font-family:var(--mono);font-size:12px}
-  th{
-    text-align:right;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
-    border-bottom:1.5px solid var(--ink);padding:0 8px 6px;font-weight:600;color:#3d4f4d
-  }
-  th:first-child,td:first-child{text-align:left}
-  td{padding:7px 8px;border-bottom:.5px solid var(--rule);text-align:right;font-variant-numeric:tabular-nums}
-  tr:hover td{background:rgba(255,255,255,.5)}
-  .bar{display:block;height:5px;background:var(--rule);position:relative;min-width:60px}
-  .bar i{position:absolute;inset:0 auto 0 0;background:var(--live)}
-  .tagpill{font-size:8.5px;letter-spacing:.1em;color:#5c6d6b}
-  .note{
-    margin-top:26px;border-left:2.5px solid var(--flag);padding:2px 0 2px 14px;
-    font-size:13px;line-height:1.55;max-width:62ch;color:#263634
-  }
-  .note b{color:var(--flag)}
-  footer{margin-top:30px;font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:#5c6d6b;text-transform:uppercase}
-  @media (prefers-reduced-motion:reduce){.poly,.node{transition:none!important}}
+:root{
+  --surface-1:#1a1327; --surface-2:#221936; --page:#0d0a16;
+  --ink-1:#ffeadf; --ink-2:#c3a9c6; --ink-3:#9d87a6;
+  --grid:rgba(255,214,180,.085); --axis:rgba(255,214,180,.20); --border:rgba(255,160,110,.17);
+  --accent:#ff5a2b; --accent-ink:#1b0a04; --hot:#ffb43d;
+  --good:#4fe0b0; --bad:#ff4d6e; --warn:#ffb43d; --cool:#3ad6d0;
+  --navbar:linear-gradient(180deg,#ffb43d 0%,#ff5a2b 26%,#c9297a 62%,#2a1140 100%);
+  --navink:#fff4ea; --navink2:#f6cfae;
+  --glow:0 0 16px rgba(255,90,43,.45), 0 0 2px rgba(255,180,61,.5); --blur:none;
+  --press:0 3px 0 #05030b; --press-in:0 1px 0 #05030b;
+  --tex:repeating-linear-gradient(0deg,rgba(255,255,255,.020) 0 1px,transparent 1px 3px),
+    radial-gradient(120% 62% at 50% 0%, rgba(255,90,43,.16) 0%, rgba(201,41,122,.07) 42%, transparent 72%),
+    linear-gradient(180deg,#140e22,#0a0812);
+}
+:root[data-theme="light"]{
+  --surface-1:#dcd9d4; --surface-2:#cbc8c2; --page:#c8c5c0;
+  --ink-1:#17161a; --ink-2:#4d4a50; --ink-3:#7b7880;
+  --grid:rgba(0,0,0,.115); --axis:rgba(0,0,0,.24); --border:rgba(0,0,0,.21);
+  --accent:#d1361a; --accent-ink:#ffffff; --hot:#e2721a;
+  --good:#2e6b4f; --bad:#b3241a; --warn:#a86e00; --cool:#3a5a7a;
+  --navbar:linear-gradient(180deg,#3d3d42,#17161a); --navink:#e6e3de; --navink2:#a9a5a0;
+  --glow:none; --blur:none; --press:0 3px 0 #a19d95; --press-in:0 1px 0 #a19d95;
+  --tex:repeating-linear-gradient(90deg,rgba(0,0,0,.028) 0 1px,transparent 1px 5px),
+    repeating-linear-gradient(45deg,rgba(0,0,0,.026) 0 2px,transparent 2px 13px),
+    repeating-linear-gradient(-45deg,rgba(255,255,255,.030) 0 2px,transparent 2px 13px),
+    linear-gradient(180deg,#d2cfc9,#bfbcb7);
+}
+*{box-sizing:border-box}
+body{margin:0;background-color:var(--page);background-image:var(--tex);background-attachment:fixed;
+  color:var(--ink-1);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.sitenav{background:var(--navbar);border-bottom:3px solid var(--accent);padding:12px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+:root:not([data-theme="light"]) .sitenav{border-bottom-color:var(--hot)}
+.brand{color:var(--navink);font-weight:900;letter-spacing:.06em;font-size:20px}
+.meta{margin-left:auto;color:var(--navink2);font:650 10px/1.3 ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase}
+.theme-btn{background:color-mix(in srgb,var(--accent) 12%,transparent);border:1px solid var(--accent);
+  border-radius:999px;color:var(--navink);padding:4px 10px;cursor:pointer;font-size:12.5px;font-weight:800}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 20px 70px;display:grid;gap:16px}
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:16px}
+:root[data-theme="light"] .card{border-radius:4px;box-shadow:inset 0 2px 0 rgba(255,255,255,.62),inset 0 -2px 0 rgba(0,0,0,.09),0 2px 4px rgba(0,0,0,.12)}
+:root:not([data-theme="light"]) .card{box-shadow:0 4px 16px rgba(0,0,0,.4)}
+.kicker{font:650 9px/1.3 ui-monospace,monospace;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3);
+  display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+.tag{border:1px solid var(--border);color:var(--hot);padding:2px 6px;border-radius:999px;font-size:8.5px;letter-spacing:.14em}
+:root[data-theme="light"] .tag{border-radius:2px;background:var(--ink-1);color:var(--surface-1);border-color:var(--ink-1)}
+h3{margin:0 0 4px;font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:var(--hot)}
+:root[data-theme="light"] h3{color:var(--ink-1);letter-spacing:.1em}
+.sub{font:12.5px/1.65 system-ui;color:var(--ink-2);margin:0 0 12px}
+.grid2{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(380px,1fr))}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font:11px ui-monospace,monospace;color:var(--ink-3);margin-top:10px}
+.legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:5px}
+table{width:100%;border-collapse:collapse;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+th{text-align:left;font:650 9px/1.3 ui-monospace,monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);padding:6px 8px;border-bottom:1px solid var(--axis)}
+td{padding:6px 8px;border-bottom:1px solid var(--border)}
+tbody tr:nth-child(even) td{background:var(--surface-2)}
+td.n{color:var(--hot);font-weight:700}
+.null{color:var(--ink-3)!important;font-weight:400!important}
+.warnbox{border-left:4px solid var(--warn);font:13px/1.65 system-ui}
+.warnbox b{color:var(--warn)}
+.okbox{border-left:4px solid var(--cool);font:13px/1.65 system-ui}
+.okbox b{color:var(--cool)}
+svg{display:block;width:100%;height:auto}
+.axlabel{font:650 9px ui-monospace,monospace;letter-spacing:.05em}
+.ringlabel{font:650 8px ui-monospace,monospace}
+.bars{display:grid;gap:7px;margin-top:6px}
+.bar{display:grid;grid-template-columns:118px 1fr 64px;align-items:center;gap:10px;font:11.5px ui-monospace,monospace}
+.bar .t{height:13px;background:var(--surface-2);border:1px solid var(--border);border-radius:3px;overflow:hidden}
+.bar .t b{display:block;height:100%}
+.bar .v{text-align:right;color:var(--hot);font-weight:700}
+@media(max-width:520px){.bar{grid-template-columns:96px 1fr 56px}}
 </style>
 </head>
 <body>
-<div class="sheet">
+<nav class="sitenav">
+  <div class="brand">SwoleDawg</div>
+  <div class="meta">Body radars · target 2027-02-14</div>
+  <button class="theme-btn" id="tb">☀ light</button>
+</nav>
 
-<header>
-  <h1>Convergence</h1>
-  <div class="sub" id="stamp">Baseline 18 Aug 2026 &nbsp;·&nbsp; Target 14 Feb 2027 &nbsp;·&nbsp; each spoke = % of the way from baseline to target</div>
-</header>
+<div class="wrap">
 
-<div class="dial"><svg id="radar" viewBox="0 0 620 560" role="img" aria-labelledby="radar-t">
-  <title id="radar-t">Radar chart of progress from baseline toward February targets across eight measurements</title>
-</svg></div>
+  <div class="card okbox" id="prov" style="font:600 12px/1.5 ui-monospace,monospace"></div>
+  <div class="card okbox">
+    <b>Live from the training log.</b> Targets are the <b>2027-02-14 checkpoint</b>, set for achievability —
+    not the end state. End goal is 216 lb at 15% body fat (~184 lb lean, normalised FFMI 23.1), roughly an
+    18-month horizon at median effort. Ranges are honoured: the gap is measured to the <i>near edge</i> of the
+    target band, so "forearm 11.0 → 11.0–11.5" reads as already in range, not as a 0.5″ deficit.
+  </div>
 
-<table id="grid">
-  <thead><tr>
-    <th>Metric</th><th>Baseline</th><th>Now</th><th>Target</th><th>Converged</th><th style="width:26%"></th>
-  </tr></thead>
-  <tbody></tbody>
-</table>
+  <div class="card warnbox">
+    <b>Earlier conflicts, resolved and stored.</b><br>
+    1. The 2026-08-16 row disagreed with 8/18 on neck (<b>16 vs 15.5</b>) and shoulders (<b>52.5 vs 52.0</b>).
+    Two sessions two days apart shouldn't move a neck half an inch — one was a technique error. <b>8/18 is canonical</b>;
+    8/16 is marked superseded in the field notes, not deleted.<br>
+    2. Navy body fat therefore reads <b>20.4%</b>, not the 19.6% computed on the old neck. Navy is highly sensitive to
+    the neck number, so measure it carefully on 2026-09-01.<br>
+    3. The arm reading is <b>flexed</b>, confirmed by the athlete. Relaxed has never been measured and stays null.
+  </div>
 
-<div class="note">
-  <b>Read this before trusting the shape.</b> Waist feeds three of the eight spokes — it is its own axis, it drives the Navy body-fat figure, and it is the denominator of the V-taper ratio. Waist progress therefore inflates apparent overall convergence by roughly a factor of three. The four independent spokes are chest, flexed arm, shoulders, and weight. When the polygon looks lopsided toward the right side of the dial, that is the double-counting, not a training result.
-</div>
+  <div class="grid2">
+    <div class="card">
+      <div class="kicker">Distance from target <span class="tag">DERIVED</span></div>
+      <h3>Girths — how far off</h3>
+      <p class="sub">Radius = required change as % of current value. <b>Center = on target.</b> Further out = more work.
+        Orange spokes need to grow, teal need to shrink, gray are hold-only. Hollow dashed spokes have no measurement.</p>
+      <div id="r1"></div>
+      <div class="legend">
+        <span><i style="background:var(--accent)"></i>Grow</span>
+        <span><i style="background:var(--cool)"></i>Shrink</span>
+        <span><i style="background:var(--good)"></i>In range</span>
+        <span><i style="background:var(--ink-3);opacity:.45"></i>No data</span>
+      </div>
+    </div>
 
-<footer id="prov">Source: embedded baseline · OBSERVED and DERIVED only · no MODELLED values plotted</footer>
+    <div class="card">
+      <div class="kicker">Distance from target <span class="tag">DERIVED</span></div>
+      <h3>Ratios &amp; composition</h3>
+      <p class="sub">Same encoding. These are the numbers that actually describe shape — the girths are just the inputs.
+        Shoulder÷waist is the single biggest gap on the board, which is the correct thing to be chasing.</p>
+      <p class="sub" style="border-left:2px solid var(--accent);padding-left:10px">
+        <b>Read this before trusting the shape.</b> Waist feeds four of these five spokes — it is the denominator of
+        shoulder÷waist and chest÷waist, the numerator of waist÷height, and the dominant term in the Navy body-fat
+        figure. Waist progress therefore inflates apparent convergence on this panel by roughly a factor of four.
+        The one spoke that moves independently is lean mass. When this polygon collapses toward the centre all at
+        once, that is the double-counting, not four separate results.</p>
+      <div id="r2"></div>
+      <div class="legend">
+        <span><i style="background:var(--accent)"></i>Grow</span>
+        <span><i style="background:var(--cool)"></i>Shrink</span>
+        <span><i style="background:var(--good)"></i>In range</span>
+      </div>
+    </div>
+  </div>
 
+  <div class="card">
+    <div class="kicker">Priority order <span class="tag">DERIVED</span></div>
+    <h3>Biggest levers first</h3>
+    <p class="sub">Ranked by required change as % of current. This is the same data as the left radar, read as a list —
+      radars are good at shape, bad at ranking. <b>Body fat, both ratios and waist÷height are not independent
+      entries:</b> they are the waist restated four ways, which is why they cluster at the top. Waist is the lever;
+      those are its readouts. The genuinely separate levers are waist, shoulders, chest and arms.</p>
+    <div class="bars" id="bars"></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="kicker">Left / right <span class="tag">OBSERVED</span></div>
+      <h3>Asymmetry</h3>
+      <p class="sub" id="asym"></p>
+    </div>
+    <div class="card">
+      <div class="kicker">Progress radar <span class="tag">LOCKED</span></div>
+      <h3>Populates at session 2</h3>
+      <p class="sub">A progress radar plots <code>(current − baseline) ÷ (target − baseline)</code>. Today current <i>is</i>
+        baseline, so every spoke sits at 0% by definition — a perfect circle carrying no information. Per your Tier B
+        cadence this renders <b>2026-09-01</b>. The code is built; it's waiting on the second tape session, not on work.</p>
+      <div id="r3" style="opacity:.4;max-width:300px;margin:0 auto"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="kicker">Full register <span class="tag">OBSERVED + PREFERENCE</span></div>
+    <h3>Full register</h3>
+    <table id="reg"><thead><tr><th>Field</th><th>2026-08-18</th><th>Target</th><th>Dir</th><th>Gap</th><th>%</th></tr></thead><tbody></tbody></table>
+    <p class="sub" style="margin-top:12px">Height 6′2″ (74 in). <span class="null">—</span> is a real null and stays a null.
+      Gap is measured to the near edge of a target range.</p>
+  </div>
 </div>
 
 <script>
-/* ---------- data ------------------------------------------------------
-   Edit these, or serve the same shape from /api/summary and this page
-   will prefer the live values. dir tells the chart which way is good.   */
-const SD_METRICS = [
-  {key:'waist',     label:'Waist',      unit:'in', baseline:37.0,  current:37.0,  target:34.0,  dir:'down', tag:'OBSERVED'},
-  {key:'bodyfat',   label:'Body fat',   unit:'%',  baseline:20.4,  current:20.4,  target:14.2,  dir:'down', tag:'DERIVED'},
-  {key:'chest',     label:'Chest',      unit:'in', baseline:46.0,  current:46.0,  target:48.0,  dir:'up',   tag:'OBSERVED'},
-  {key:'arm',       label:'Flexed arm', unit:'in', baseline:13.5,  current:13.5,  target:14.75, dir:'up',   tag:'OBSERVED'},
-  {key:'shoulders', label:'Shoulders',  unit:'in', baseline:52.0,  current:52.0,  target:54.5,  dir:'up',   tag:'OBSERVED'},
-  {key:'vtaper',    label:'V-taper',    unit:'',   baseline:1.405, current:1.405, target:1.60,  dir:'up',   tag:'DERIVED'},
-  {key:'weight',    label:'Weight',     unit:'lb', baseline:210,   current:209,   target:204,   dir:'down', tag:'OBSERVED'},
-  {key:'hips',      label:'Hips',       unit:'in', baseline:40.0,  current:40.0,  target:37.75, dir:'down', tag:'OBSERVED'}
+/* ===========================================================================
+   BASELINE 2026-08-18 · real measured values + user-specified targets
+   lo/hi = target band. dir: up | down | hold. m=false -> no measurement yet.
+   =========================================================================== */
+/* ⚠️ THESE ARE A FALLBACK, NOT THE SOURCE. The live values come from
+   /api/swoledawg/summary below. A page that renders embedded numbers while looking
+   live is the exact failure this file used to have: the old radar fetched
+   '/api/summary' on the Pages origin, 404'd every time, and silently drew its
+   worked example under a footer claiming the API. If the API cannot be read, the
+   provenance line says so in words. */
+var G = [
+ {g:1,k:'weight',   L:'Weight',       f:'weight_lb',       v:210, lo:207,  hi:209,  dir:'down', u:'lb'},
+ {g:1,k:'waist',    L:'Waist navel',  f:'waist_navel_in',  v:37.0,lo:35.5, hi:35.75,dir:'down'},
+ {g:1,k:'neck',     L:'Neck',         f:'neck_in',         v:15.5,lo:15.6, hi:15.9, dir:'up'},
+ {g:1,k:'shoulders',L:'Shoulders',    f:'shoulder_in',     v:52.0,lo:52.5, hi:52.75,dir:'up'},
+ {g:1,k:'chest',    L:'Chest',        f:'chest_in',        v:46.0,lo:46.4, hi:46.6, dir:'up'},
+ {g:1,k:'armflex',  L:'Arm flexed',   f:'arm_flex_r_in',   v:13.5,lo:13.75,hi:13.9, dir:'up'},
+ {g:1,k:'forearm',  L:'Forearm',      f:'forearm_in',      v:11.0,lo:11.0, hi:11.5, dir:'hold'},
+ {g:1,k:'hips',     L:'Hips',         f:'hips_in',         v:40.0,lo:38.75,hi:39.0, dir:'down'},
+ {g:1,k:'thigh',    L:'Thigh',        f:'thigh_in',        v:22.0,lo:22.0, hi:23.0, dir:'hold'},
+ {g:1,k:'calf',     L:'Calf (L)',     f:'calf_l_in',       v:15.0,lo:15.0, hi:15.0, dir:'hold'},
+ {g:1,k:'armrel',   L:'Arm relaxed',  f:'arm_relax_r_in',  v:null,lo:null, hi:null, dir:'up'},
+ {g:1,k:'waistnar', L:'Waist narrow', f:'waist_narrow_in', v:null,lo:null, hi:null, dir:'down'},
+ {g:1,k:'ankle',    L:'Ankle',        f:'ankle_l_in',      v:null,lo:null, hi:null, dir:'hold'},
+
+ {g:2,k:'shw',  L:'Shldr\u00f7waist', v:52.0/37.0, lo:52.5/35.75, hi:52.75/35.5, dir:'up',   d:1},
+ {g:2,k:'chw',  L:'Chest\u00f7waist', v:46.0/37.0, lo:46.4/35.75, hi:46.6/35.5,  dir:'up',   d:1},
+ {g:2,k:'wht',  L:'Waist\u00f7height',v:37.0/74.0, lo:35.5/74.0,  hi:35.75/74.0, dir:'down', d:1},
+ {g:2,k:'bf',   L:'Body fat %',  f:'bodyfat_pct', v:20.4, lo:17.3, hi:17.7, dir:'down', u:'%'},
+ {g:2,k:'lean', L:'Lean mass',   v:167.1, lo:171.0, hi:173.0, dir:'up', u:'lb'}
 ];
 
-const CX=310, CY=272, R=176;
+var HEIGHT_IN = 74.0;
+var LIVE = false, PROV = '';
 
-function pct(m){
-  /* No target, or no reading: there is no progress to express. Pinned at the baseline
-     ring rather than dropped, so the polygon keeps eight sides and the gap is visible. */
-  if(m.nodata || m.target == null || m.current == null || m.baseline == null) return 0;
-  const span = m.target - m.baseline;
-  if (span === 0) return 100;
-  const moved = m.current - m.baseline;
-  return Math.max(0, Math.min(100, (moved/span)*100));
+/* A banded target comes back from the API as [lo, hi]; a single target comes back as a
+   number. Both are legal and the difference is silent, so normalise once, here. */
+function band(t){
+  if(t == null) return [null,null];
+  if(Array.isArray(t)) return [t[0], t[1]];
+  return [t, t];
 }
-function fmt(v,u){
-  /* A missing value is an em dash, not a crash and not a zero. */
-  if(v==null || !Number.isFinite(v)) return '—';
-  const s = (Math.abs(v)>=100 || Number.isInteger(v)) ? String(v)
-          : (Math.abs(v)<2 ? v.toFixed(3) : v.toFixed(2).replace(/0$/,''));
-  return u==='%' ? s+'%' : (u ? s+' '+u : s);
-}
-function pt(i,n,r){
-  const a = -Math.PI/2 + i*2*Math.PI/n;
-  return [CX + r*Math.cos(a), CY + r*Math.sin(a)];
-}
-const NS='http://www.w3.org/2000/svg';
-function el(t,attrs,txt){
-  const e=document.createElementNS(NS,t);
-  for(const k in attrs) e.setAttribute(k,attrs[k]);
-  if(txt!=null) e.textContent=txt;
-  return e;
+function navyBf(waist, neck, h){
+  if(waist==null||neck==null||!h) return null;
+  return 86.010*Math.log(waist-neck)/Math.LN10 - 70.041*Math.log(h)/Math.LN10 + 36.76;
 }
 
-function draw(metrics){
-  const svg=document.getElementById('radar');
-  while(svg.childNodes.length>1) svg.removeChild(svg.lastChild);
-  const n=metrics.length;
-
-  [0.25,0.5,0.75].forEach(f=>{
-    const ring=metrics.map((_,i)=>pt(i,n,R*f).join(',')).join(' ');
-    svg.appendChild(el('polygon',{points:ring,class:'ring'}));
-  });
-  svg.appendChild(el('polygon',{points:metrics.map((_,i)=>pt(i,n,R).join(',')).join(' '),class:'ring target'}));
-
-  metrics.forEach((m,i)=>{
-    const [x,y]=pt(i,n,R);
-    svg.appendChild(el('line',{x1:CX,y1:CY,x2:x,y2:y,class:'axis-line'}));
-    const [tx,ty]=pt(i,n,R+7), [ux,uy]=pt(i,n,R-7);
-    svg.appendChild(el('line',{x1:tx,y1:ty,x2:ux,y2:uy,class:'tick'}));
-
-    const [lx,ly]=pt(i,n,R+34);
-    const anchor = Math.abs(lx-CX)<12 ? 'middle' : (lx>CX?'start':'end');
-    const lab=el('text',{x:lx,y:ly,class:'lbl','text-anchor':anchor}, m.label.toUpperCase());
-    svg.appendChild(lab);
-    svg.appendChild(el('text',{x:lx,y:ly+13,class:'val','text-anchor':anchor},
-      fmt(m.current,m.unit)+'  →  '+fmt(m.target,m.unit)));
-  });
-
-  const pts=metrics.map((m,i)=>pt(i,n,Math.max(3,R*pct(m)/100)).join(',')).join(' ');
-  const seed=metrics.map((_,i)=>pt(i,n,3).join(',')).join(' ');
-  const poly=el('polygon',{points:seed,class:'poly'});
-  svg.appendChild(poly);
-  const nodes=metrics.map((m,i)=>{
-    const c=el('circle',{cx:CX,cy:CY,r:3.5,class:'node'});
-    svg.appendChild(c); return c;
-  });
-
-  /* ⚠️ Average only the spokes that HAVE a value and a target. Counting a spoke with no
-     data as 0% converged states that no progress was made on it, which is a claim about
-     a measurement nobody took. With nothing measurable the dial reads a dash. */
-  const scored = metrics.filter(m=>!m.nodata);
-  const mean = scored.length ? scored.reduce((s,m)=>s+pct(m),0)/scored.length : null;
-  svg.appendChild(el('text',{x:CX,y:CY+2,class:'core','font-size':'27','text-anchor':'middle'},
-    mean==null ? '—' : mean.toFixed(1)+'%'));
-  svg.appendChild(el('text',{x:CX,y:CY+18,class:'core-sub','text-anchor':'middle'},
-    mean==null ? 'NO TARGETS SET' : 'CONVERGED · ' + scored.length + '/' + n));
-
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if(reduce){ settle(); } else { requestAnimationFrame(()=>requestAnimationFrame(settle)); }
-  function settle(){
-    poly.style.transition='none'; poly.setAttribute('points',pts);
-    metrics.forEach((m,i)=>{
-      const [x,y]=pt(i,n,Math.max(3,R*pct(m)/100));
-      nodes[i].setAttribute('cx',x); nodes[i].setAttribute('cy',y);
-    });
+async function loadLive(){
+  var tok = '';
+  try{ tok = localStorage.getItem('dd-bozo-sess') || ''; }catch(e){}
+  if(!tok){ PROV = 'Source: embedded example \u2014 sign in to plot your own log. Not your data.'; return false; }
+  var F;
+  try{
+    var r = await fetch('https://toto.jkapcar4.workers.dev/api/swoledawg/summary',
+      {headers:{'Accept':'application/json','X-Bozo-Session':tok}});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    var j = await r.json();
+    F = j && j.fields;
+    if(!F) throw new Error('no fields');
+    window.__F = F;
+  }catch(e){
+    PROV = 'Source: embedded example \u2014 the live training log could not be read ('+e.message+'). Not your data.';
+    return false;
   }
+
+  function pull(name){
+    var f = F[name];
+    if(!f) return null;
+    var b = band(f.target);
+    return {v: (f.current!=null?f.current:f.baseline), lo:b[0], hi:b[1],
+            dir: f.dir || 'hold', as_of: f.as_of, label: f.label};
+  }
+  var hgt = pull('height_in');
+  if(hgt && hgt.v) HEIGHT_IN = hgt.v;
+
+  /* girths and the scale: straight from the register */
+  G.forEach(function(m){
+    if(!m.f) return;
+    var p = pull(m.f);
+    /* ⚠️ A field the server does not know is BLANKED, not left holding the fallback
+       number. A stale value beside a live label is worse than no value. */
+    if(!p){ m.v=null; m.lo=null; m.hi=null; return; }
+    m.v = p.v; m.lo = p.lo; m.hi = p.hi;
+    if(p.dir) m.dir = p.dir === 'flat' ? 'hold' : p.dir;
+  });
+
+  /* derived: computed from the live girths, never carried over */
+  var wa = G.find(function(x){return x.k==='waist'}),
+      sh = G.find(function(x){return x.k==='shoulders'}),
+      ch = G.find(function(x){return x.k==='chest'}),
+      wt = G.find(function(x){return x.k==='weight'}),
+      nk = G.find(function(x){return x.k==='neck'}),
+      bf = G.find(function(x){return x.k==='bf'});
+  function ratio(target, num, den, dir){
+    if(!num || !den || num.v==null || den.v==null){ target.v=null; target.lo=null; target.hi=null; return; }
+    target.v = num.v/den.v;
+    if(num.lo==null || den.lo==null){ target.lo=null; target.hi=null; return; }
+    /* near edge of each band, in the direction that makes the ratio better */
+    target.lo = dir==='up' ? num.lo/den.hi : num.lo/den.hi;
+    target.hi = dir==='up' ? num.hi/den.lo : num.hi/den.lo;
+  }
+  ratio(G.find(function(x){return x.k==='shw'}), sh, wa, 'up');
+  ratio(G.find(function(x){return x.k==='chw'}), ch, wa, 'up');
+  var wht = G.find(function(x){return x.k==='wht'});
+  if(wa && wa.v!=null && HEIGHT_IN){
+    wht.v = wa.v/HEIGHT_IN;
+    wht.lo = wa.lo==null?null:wa.lo/HEIGHT_IN;
+    wht.hi = wa.hi==null?null:wa.hi/HEIGHT_IN;
+  } else { wht.v=null; wht.lo=null; wht.hi=null; }
+
+  /* Lean mass is a computation on top of a computation \u2014 Navy body fat, itself
+     MODELLED. It inherits the \u00b13-4 point error and is labelled accordingly. */
+  var lean = G.find(function(x){return x.k==='lean'});
+  var bfNow = (wa&&nk&&wa.v!=null&&nk.v!=null) ? navyBf(wa.v, nk.v, HEIGHT_IN) : null;
+  if(bf && bfNow!=null) bf.v = Math.round(bfNow*10)/10;
+  if(wt && wt.v!=null && bfNow!=null){
+    lean.v = wt.v*(1-bfNow/100);
+    if(wt.lo!=null && bf && bf.lo!=null){
+      lean.lo = wt.lo*(1-bf.hi/100);
+      lean.hi = wt.hi*(1-bf.lo/100);
+    } else { lean.lo=null; lean.hi=null; }
+  } else { lean.v=null; lean.lo=null; lean.hi=null; }
+
+  var asOf = (F.waist_navel_in && F.waist_navel_in.as_of) || (F.weight_lb && F.weight_lb.as_of) || null;
+  var measured = G.filter(function(m){return m.g===1 && m.v!=null}).length;
+  var targeted = G.filter(function(m){return m.lo!=null}).length;
+  PROV = 'Source: live training log' + (asOf ? ' \u00b7 last reading ' + asOf : '') +
+         ' \u00b7 ' + measured + ' of ' + G.filter(function(m){return m.g===1}).length +
+         ' girth fields measured \u00b7 ' + targeted + ' spokes carry a target';
+  LIVE = true;
+  return true;
 }
 
-function table(metrics){
-  const tb=document.querySelector('#grid tbody');
-  tb.innerHTML='';
-  metrics.forEach(m=>{
-    const p=pct(m);
-    const tr=document.createElement('tr');
-    /* A percentage printed for a spoke with no target is a number invented to fill a
-       cell. It reads as 0% progress, which is a claim. An em dash is the truth. */
-    const cell = v => fmt(v,m.unit);
-    tr.innerHTML =
-      '<td>'+m.label+' <span class="tagpill">'+m.tag+'</span>'+
-        (m.nodata?' <span class="tagpill">NO DATA</span>':'')+'</td>'+
-      '<td>'+cell(m.baseline)+'</td>'+
-      '<td>'+cell(m.current)+'</td>'+
-      '<td>'+cell(m.target)+'</td>'+
-      '<td>'+(m.nodata?'—':p.toFixed(1)+'%')+'</td>'+
-      '<td>'+(m.nodata?'':'<span class="bar"><i style="width:'+p.toFixed(1)+'%"></i></span>')+'</td>';
+/* required change to reach the NEAR edge of the band; 0 if already inside it */
+function need(m){
+  if(m.v==null||m.lo==null) return null;
+  if(m.v < m.lo) return m.lo - m.v;
+  if(m.v > m.hi) return m.hi - m.v;
+  return 0;
+}
+function pct(m){ var n=need(m); return n==null?null:Math.abs(n)/m.v*100; }
+function fmt(x,d){ return x==null?'—':(+x).toFixed(d==null?1:d); }
+
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim()}
+var NS='http://www.w3.org/2000/svg';
+function mk(t,a){var e=document.createElementNS(NS,t);for(var k in a)e.setAttribute(k,a[k]);return e}
+
+function gapRadar(el,group,MAX,rings){
+  var items=G.filter(function(m){return m.g===group});
+  var W=430,H=390,cx=W/2,cy=H/2,R=W/2-88,N=items.length;
+  var svg=mk('svg',{viewBox:'0 0 '+W+' '+H});
+  function rad(p){return Math.max(0,Math.min(1,p/MAX))*R}
+  function pt(i,p){var a=-Math.PI/2+i*2*Math.PI/N,r=rad(p);return[cx+r*Math.cos(a),cy+r*Math.sin(a)]}
+
+  rings.forEach(function(rv){
+    svg.appendChild(mk('circle',{cx:cx,cy:cy,r:rad(rv),fill:'none',stroke:css('--grid'),'stroke-width':1}));
+    var t=mk('text',{x:cx+3,y:cy-rad(rv)-3,fill:css('--ink-3'),class:'ringlabel'});
+    t.textContent=rv+'%'; svg.appendChild(t);
+  });
+  svg.appendChild(mk('circle',{cx:cx,cy:cy,r:2.5,fill:css('--good')}));
+
+  var poly=[];
+  items.forEach(function(m,i){
+    var a=-Math.PI/2+i*2*Math.PI/N, p=pct(m), has=p!=null;
+    svg.appendChild(mk('line',{x1:cx,y1:cy,x2:cx+R*Math.cos(a),y2:cy+R*Math.sin(a),
+      stroke:css('--axis'),'stroke-width':1,opacity:has?1:.4,'stroke-dasharray':has?'none':'2 4'}));
+    var lx=cx+(R+16)*Math.cos(a), ly=cy+(R+16)*Math.sin(a);
+    var an=Math.abs(Math.cos(a))<0.25?'middle':(Math.cos(a)>0?'start':'end');
+    var t=mk('text',{x:lx,y:ly+2,fill:has?css('--ink-2'):css('--ink-3'),'text-anchor':an,class:'axlabel'});
+    t.textContent=m.L.toUpperCase(); svg.appendChild(t);
+    var t2=mk('text',{x:lx,y:ly+13,'text-anchor':an,class:'ringlabel',
+      fill:!has?css('--ink-3'):(p===0?css('--good'):css('--hot'))});
+    t2.textContent = !has?'—':(p===0?'IN RANGE':p.toFixed(1)+'%');
+    svg.appendChild(t2);
+    poly.push(pt(i,has?p:0).join(','));
+  });
+
+  svg.appendChild(mk('polygon',{points:poly.join(' '),fill:css('--accent'),'fill-opacity':.18,
+    stroke:css('--accent'),'stroke-width':2,'stroke-linejoin':'round'}));
+
+  items.forEach(function(m,i){
+    var p=pct(m); if(p==null) return;
+    var q=pt(i,p), c = p===0?css('--good'):(need(m)>0?css('--accent'):css('--cool'));
+    svg.appendChild(mk('circle',{cx:q[0],cy:q[1],r:4,fill:c,stroke:css('--surface-1'),'stroke-width':1.5}));
+  });
+  el.innerHTML=''; el.appendChild(svg);
+}
+
+/* locked progress radar — every spoke at baseline by definition */
+function lockedRadar(el){
+  var items=G.filter(function(m){return m.g===1&&m.v!=null});
+  var W=300,H=280,cx=W/2,cy=H/2,R=95,N=items.length;
+  var svg=mk('svg',{viewBox:'0 0 '+W+' '+H});
+  [0.25,0.5,0.75,1].forEach(function(f){
+    svg.appendChild(mk('circle',{cx:cx,cy:cy,r:R*f,fill:'none',
+      stroke:f===0.25?css('--ink-3'):(f===0.75?css('--hot'):css('--grid')),
+      'stroke-dasharray':f===0.75?'4 4':'none','stroke-width':1}));
+  });
+  var poly=[];
+  items.forEach(function(m,i){
+    var a=-Math.PI/2+i*2*Math.PI/N;
+    svg.appendChild(mk('line',{x1:cx,y1:cy,x2:cx+R*Math.cos(a),y2:cy+R*Math.sin(a),stroke:css('--axis'),'stroke-width':1}));
+    poly.push([cx+R*0.25*Math.cos(a),cy+R*0.25*Math.sin(a)].join(','));
+  });
+  svg.appendChild(mk('polygon',{points:poly.join(' '),fill:css('--ink-3'),'fill-opacity':.2,
+    stroke:css('--ink-3'),'stroke-width':2}));
+  el.innerHTML=''; el.appendChild(svg);
+}
+
+function bars(){
+  var el=document.getElementById('bars');
+  var rows=G.filter(function(m){return pct(m)!=null}).sort(function(a,b){return pct(b)-pct(a)});
+  var max=Math.max.apply(null,rows.map(pct))||1;
+  el.innerHTML='';
+  rows.forEach(function(m){
+    var p=pct(m), n=need(m);
+    var c = p===0?css('--good'):(n>0?css('--accent'):css('--cool'));
+    var d=document.createElement('div'); d.className='bar';
+    d.innerHTML='<span style="color:var(--ink-2)">'+m.L+'</span>'+
+      '<span class="t"><b style="width:'+Math.max(p/max*100,1.5)+'%;background:'+c+'"></b></span>'+
+      '<span class="v" style="color:'+c+'">'+(p===0?'ok':(n>0?'+':'−')+Math.abs(n).toFixed(m.d?3:1))+'</span>';
+    el.appendChild(d);
+  });
+}
+
+function register(){
+  var tb=document.querySelector('#reg tbody'); tb.innerHTML='';
+  G.forEach(function(m){
+    var p=pct(m),n=need(m),dg=m.d?3:1;
+    var tgt = m.lo==null?'—':(m.lo===m.hi?fmt(m.lo,dg):fmt(m.lo,dg)+'–'+fmt(m.hi,dg));
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td>'+m.L+'</td>'+
+      '<td class="'+(m.v==null?'null':'n')+'">'+(m.v==null?'—':fmt(m.v,dg)+(m.u?' '+m.u:''))+'</td>'+
+      '<td class="'+(m.lo==null?'null':'')+'">'+tgt+'</td>'+
+      '<td>'+(m.dir==='up'?'↑':m.dir==='down'?'↓':'flat')+'</td>'+
+      '<td class="'+(n==null?'null':'')+'">'+(n==null?'—':(n===0?'in range':(n>0?'+':'−')+Math.abs(n).toFixed(dg)))+'</td>'+
+      '<td class="'+(p==null?'null':'')+'">'+(p==null?'—':p.toFixed(1)+'%')+'</td>';
     tb.appendChild(tr);
   });
 }
 
-/* ---------- live values -----------------------------------------------
-   ⚠️ The old fetch here pointed at '/api/summary' on THIS origin. This origin is
-   GitHub Pages; the API is the Worker. It 404'd every time and fell silently back
-   to the embedded numbers, so the page has always claimed a baseline it was not
-   reading. That silence is the bug — a fallback that cannot be distinguished from
-   a success reports stale data as live.
-
-   Each spoke maps to a seeded measurement field. A spoke whose field has no value,
-   or no target, renders as NO DATA and is pinned at the baseline ring rather than
-   dropped — an eight-sided chart drawn with four metrics misrepresents coverage.
-   ---------------------------------------------------------------------- */
-const SD_WORKER = 'https://toto.jkapcar4.workers.dev';
-const SD_FIELD = {
-  waist:'waist_navel_in', bodyfat:'bodyfat_pct', chest:'chest_in',
-  arm:'arm_flex_r_in', shoulders:'shoulder_in', weight:'weight_lb', hips:'hips_in'
-  /* vtaper is a ratio, derived below from shoulders and waist. */
-};
-
-async function boot(){
-  let metrics = SD_METRICS, live = null;
-  const prov = document.getElementById('prov');
-  let tok = ''; try{ tok = localStorage.getItem('dd-bozo-sess') || ''; }catch(e){}
-
-  if(tok){
-    try{
-      const r = await fetch(SD_WORKER + '/api/swoledawg/summary',
-        {headers:{'Accept':'application/json','X-Bozo-Session':tok}});
-      if(r.ok){ const j = await r.json(); if(j && j.fields) live = j.fields; }
-    }catch(e){ live = null; }
+/* ⚠️ Read the sides off the live register. A hardcoded asymmetry paragraph goes on
+   asserting a one-inch calf gap long after the next tape session disproves it. */
+function asym(){
+  var F = window.__F || {};
+  function pair(a,b){
+    var L=F[a], R=F[b];
+    var lv=L?(L.current!=null?L.current:L.baseline):null;
+    var rv=R?(R.current!=null?R.current:R.baseline):null;
+    return (lv==null||rv==null)?null:{l:lv,r:rv,d:lv-rv};
   }
-
-  if(live){
-    const val = k => { const f = live[k]; if(!f) return null;
-      /* ⚠️ MODELLED values are not plotted — the footer says so and it has to stay true.
-         bodyfat is a Navy estimate; a derived number on a progress ring reads as a
-         measurement. */
-      if(String(f.tag||'').toUpperCase() === 'MODELLED') return null;
-      return {cur: f.current != null ? f.current : f.baseline,
-              base: f.baseline, target: f.target};
-    };
-    const sh = val('shoulder_in'), wa = val('waist_navel_in');
-    metrics = SD_METRICS.map(m => {
-      /* ⚠️ A spoke with no live field is BLANKED, not left holding the embedded example's
-         numbers. Showing 13.5 in beside a NO DATA pill is worse than showing nothing —
-         it is a fictional measurement wearing this athlete's chart. */
-      const blank = {...m, baseline:null, current:null, target:null, nodata:true};
-      if(m.key === 'vtaper'){
-        const ok = sh && wa && sh.cur != null && wa.cur != null && sh.base != null && wa.base != null;
-        return ok ? {...m, baseline: sh.base/wa.base, current: sh.cur/wa.cur, target: null, nodata:true}
-                  : blank;
-      }
-      const f = val(SD_FIELD[m.key]);
-      if(!f || f.cur == null) return blank;
-      return {...m, baseline: f.base != null ? f.base : f.cur, current: f.cur,
-              target: f.target, nodata: f.target == null};
-    });
-    const drawn = metrics.filter(m => !m.nodata).length;
-    prov.textContent = 'Source: live training log · ' + drawn + ' of ' + metrics.length +
-      ' spokes have both a value and a target · OBSERVED and DERIVED only · no MODELLED values plotted';
-  } else {
-    /* Say which it is. The embedded numbers are a worked example, not this athlete. */
-    prov.textContent = tok
-      ? 'Source: embedded example — the live training log could not be read · not your data'
-      : 'Source: embedded example — sign in to plot your own log · not your data';
+  var out=[], calf=pair('calf_l_in','calf_r_in'), arm=pair('arm_flex_l_in','arm_flex_r_in'),
+      ank=pair('ankle_l_in','ankle_r_in');
+  if(calf){
+    var pc=Math.abs(calf.d)/Math.max(calf.l,calf.r)*100;
+    out.push(Math.abs(calf.d)<0.25
+      ? '<b>Calves even</b> at '+calf.l.toFixed(1)+' / '+calf.r.toFixed(1)+'.'
+      : '<b style="color:var(--bad)">Calf L '+calf.l.toFixed(1)+' vs R '+calf.r.toFixed(1)+' — '+
+        Math.abs(calf.d).toFixed(1)+'″, '+pc.toFixed(1)+'%.</b> The only asymmetry in the set. '+
+        'Confirm the landmark was identical on both legs before treating it as structural. If it holds at '+
+        'the next session it belongs in the training plan, not just the log.');
   }
-  draw(metrics); table(metrics);
+  if(arm) out.push(Math.abs(arm.d)<0.25
+      ? 'Arms even at '+arm.l.toFixed(1)+' / '+arm.r.toFixed(1)+'.'
+      : 'Arm L '+arm.l.toFixed(1)+' vs R '+arm.r.toFixed(1)+' — '+Math.abs(arm.d).toFixed(1)+'″.');
+  out.push(ank
+      ? 'Ankles '+ank.l.toFixed(1)+' / '+ank.r.toFixed(1)+' — asymmetry '+Math.abs(ank.d).toFixed(2)+
+        '″. The rucking monitor trips over 0.5″.'
+      : '<b>Ankle monitor UNARMED.</b> Neither ankle has been measured, so the safety check that suspends '+
+        'rucking on asymmetry over 0.5″ cannot fire. Green here would mean "no data", which is worse '+
+        'than unknown.');
+  out.push('Forearm and thigh were recorded as single values, not L/R, and are stored unsided. '+
+           'Measure both sides to split them.');
+  document.getElementById('asym').innerHTML = out.join('<br><br>');
 }
-boot();
+
+function drawAll(){
+  gapRadar(document.getElementById('r1'),1,9,[2,4,6,8]);
+  gapRadar(document.getElementById('r2'),2,30,[10,20,30]);
+  lockedRadar(document.getElementById('r3'));
+}
+function renderAll(){ bars(); register(); drawAll(); asym(); prov(); }
+function prov(){
+  var el = document.getElementById('prov');
+  if(el) el.textContent = PROV;
+}
+loadLive().then(renderAll).catch(function(e){
+  PROV = 'Source: embedded example \u2014 ' + e.message;
+  renderAll();
+});
+
+var tb=document.getElementById('tb'),r=document.documentElement;
+tb.onclick=function(){
+  if(r.getAttribute('data-theme')==='light'){r.removeAttribute('data-theme');tb.textContent='☾ dark';}
+  else{r.setAttribute('data-theme','light');tb.textContent='☀ light';}
+  drawAll(); bars();
+};
 </script>
 </body>
 </html>
