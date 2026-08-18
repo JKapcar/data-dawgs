@@ -1,0 +1,16 @@
+  <div class="machine armed" id="machine">
+    <div class="marq"><b id="marqText">BOZO · BOZO · BOZO</b></div>
+    <div class="reels" id="reels"></div>
+    <div class="leverbay">
+      <span class="boss"></span>
+      <!-- Real <button>: the pull is a real control. Pointer Events only — no
+           touchstart branch, so mouse / pen / touch take one code path. -->
+      <button type="button" class="lever" id="lever" disabled
+              aria-label="The hierarchy has not been drawn yet — nothing to pull">
+        <span class="arm" id="arm"><span class="rod"></span><span class="knob"></span></span>
+      </button>
+      <span class="pulllab" id="pullLab">armed</span>
+    </div>
+    <div class="coins" id="coins"></div>
+    <div class="flash"></div>
+  </div>

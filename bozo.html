@@ -606,23 +606,156 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
 /* accent carries the headline numbers only — a cost painted the same orange as
    the payout reads as good news */
 .big.cost{color:var(--ink-1)}
-/* slot machine */
-.machine{background:#241c12;border-radius:12px;border-top:3px solid var(--accent);padding:18px 16px;display:flex;gap:24px}
-.reels{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;flex:1;min-width:0}
-.pos{font:700 9.5px/1 ui-monospace,monospace;letter-spacing:1.4px;color:#b7a488;text-transform:uppercase;margin-bottom:5px;text-align:center}
-.win{position:relative;height:70px;overflow:hidden;border-radius:7px;background:#f7f1e6;
-  border:2px solid rgba(255,255,255,.09);transition:border-color .18s,box-shadow .18s}
-.win.locked{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent)}
-.cell{height:70px;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 4px;
-  font-weight:800;font-size:12px;line-height:1.2;text-transform:uppercase;color:#2b1c0e;
-  border-bottom:1px solid rgba(43,28,14,.14)}
-.lever{width:82px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;flex:0 0 82px;padding:4px 8px 0}
-.leverarm{display:flex;flex:1;min-height:117px;flex-direction:column;align-items:center;width:100%;
-  transform-origin:50% 100%;transition:transform .68s cubic-bezier(.16,.82,.24,1.28)}
-.rod{width:11px;flex:1;background:linear-gradient(90deg,#6b5636,#c9b287,#6b5636);border-radius:6px;min-height:78px}
-.knob{width:46px;height:46px;flex:0 0 46px;border-radius:50%;background:var(--accent);margin-bottom:-7px;z-index:1;
-  box-shadow:inset 0 -6px 11px rgba(0,0,0,.34)}
-.lever.pulled .leverarm{transform:rotate(58deg) scaleY(.94)}
+/* BOZO MACHINE v2 — cabinet, reels, lever. Was two blocks (base + .bz-carnival
+   overrides); folded into one so the geometry has a single home. */
+/* ===================== the cabinet ===================== */
+/* The lever is mounted on a boss on the cabinet's right flank and swings into
+   reserved padding — that is why the arc never crosses the reels. The old build
+   rotated a full-height flex column 58deg about its own centre-bottom inside an
+   82px track, so the knob left the cabinet and landed on the reel glass. */
+.machine{
+  position:relative;isolation:isolate;
+  padding:56px 104px 34px 22px;border-radius:12px;
+  border:2px solid var(--brass-lo);border-top:3px solid var(--brass);
+  background:
+    linear-gradient(180deg,rgba(49,38,23,0),rgba(49,38,23,.33)),
+    radial-gradient(120% 90% at 50% -10%,#3a2c19,#1b1409 72%);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.05),inset 0 20px 36px rgba(0,0,0,.45),0 10px 22px rgba(0,0,0,.32);
+  transition:box-shadow .3s}
+/* bulb rail — four repeating radial layers, one per edge. Chase speed is a
+   custom property so escalation is one variable, not four keyframe sets. */
+.machine::before{
+  content:"";position:absolute;inset:8px;border-radius:8px;pointer-events:none;z-index:4;
+  background:
+    radial-gradient(circle,var(--bulb) 0 2.5px,transparent 3.1px) 0 0/17px 17px repeat-x,
+    radial-gradient(circle,var(--bulb) 0 2.5px,transparent 3.1px) 0 100%/17px 17px repeat-x,
+    radial-gradient(circle,var(--bulb) 0 2.5px,transparent 3.1px) 0 0/17px 17px repeat-y,
+    radial-gradient(circle,var(--bulb) 0 2.5px,transparent 3.1px) 100% 0/17px 17px repeat-y;
+  filter:drop-shadow(0 0 4px rgba(255,201,116,.5));
+  opacity:var(--bulbo,.5);
+  animation:bulbchase var(--bulbspeed,1.15s) linear infinite;
+  animation-play-state:var(--bulbrun,paused);
+  transition:opacity .35s}
+@keyframes bulbchase{to{background-position:17px 0,-17px 100%,0 17px,100% -17px}}
+.machine.armed  {--bulbo:.72;--bulbspeed:1.15s;--bulbrun:running}
+.machine.pending{--bulbo:1;  --bulbspeed:.42s; --bulbrun:running}
+.machine.spin1  {--bulbo:1;  --bulbspeed:.30s; --bulbrun:running}
+.machine.spin2  {--bulbo:1;  --bulbspeed:.20s; --bulbrun:running}
+.machine.spin3  {--bulbo:1;  --bulbspeed:.13s; --bulbrun:running}
+.machine.locked {--bulbo:.92;--bulbspeed:1.6s; --bulbrun:running}
+
+@keyframes cabinetthunk{0%,100%{transform:none}
+  16%{transform:translateY(7px) rotate(.3deg)}38%{transform:translateY(-5px) rotate(-.24deg)}
+  58%{transform:translateY(3px) rotate(.12deg)}78%{transform:translateY(-1px)}}
+.machine.pulling{animation:cabinetthunk .8s cubic-bezier(.2,.8,.2,1)}
+@keyframes reelthunk{0%,100%{transform:none}30%{transform:translateY(2.5px)}62%{transform:translateY(-1px)}}
+.machine.thunk{animation:reelthunk .16s ease-out}
+
+/* jackpot wash on the final lock */
+.machine .flash{position:absolute;inset:0;border-radius:12px;pointer-events:none;z-index:5;opacity:0;
+  background:radial-gradient(120% 100% at 50% 40%,rgba(255,224,138,.85),rgba(255,150,50,.28) 45%,transparent 72%)}
+@keyframes jackpotflash{0%{opacity:0}12%{opacity:1}100%{opacity:0}}
+.machine.jackpot .flash{animation:jackpotflash 1.1s ease-out}
+
+/* ===================== marquee ===================== */
+.marq{position:absolute;left:22px;right:104px;top:22px;height:22px;z-index:3;pointer-events:none;
+  display:flex;align-items:center;justify-content:center;border-radius:6px;
+  background:linear-gradient(180deg,var(--grape),var(--grape-lo));
+  box-shadow:inset 0 0 14px rgba(0,0,0,.6),0 1px 0 rgba(255,255,255,.06)}
+.marq b{font:800 9.5px/1 ui-monospace,monospace;letter-spacing:5px;color:var(--bulb-off);
+  transition:color .3s,text-shadow .3s;white-space:nowrap;overflow:hidden;text-overflow:clip}
+.machine.pending .marq b,.machine.locked .marq b{color:var(--bulb);text-shadow:0 0 12px rgba(255,224,138,.8)}
+
+/* ===================== reels ===================== */
+.reels{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;position:relative;z-index:2}
+.pos{font:700 9.5px/1 ui-monospace,monospace;letter-spacing:1.4px;color:#b7a488;text-transform:uppercase;
+  margin:0 0 6px;text-align:center;transition:color .25s,text-shadow .25s}
+.reel.lock .pos{color:var(--bulb);text-shadow:0 0 9px rgba(255,224,138,.55)}
+
+.win{position:relative;height:104px;overflow:hidden;border-radius:8px;
+  background:linear-gradient(180deg,#fffdf7,#efe6d4);
+  border:2px solid var(--brass-lo);
+  box-shadow:inset 0 0 14px rgba(43,28,14,.18);
+  transition:border-color .2s,box-shadow .25s}
+/* curved glass + payline. Both are ::pseudo so a reel is one element. */
+.win::before{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.62),rgba(255,255,255,0) 34%,
+             rgba(43,28,14,.05) 60%,rgba(43,28,14,.20))}
+.win::after{content:"";position:absolute;left:6px;right:6px;top:50%;height:2px;margin-top:-1px;z-index:3;
+  pointer-events:none;background:linear-gradient(90deg,transparent,var(--nose),transparent);
+  opacity:.3;transition:opacity .25s}
+.reel.lock .win{border-color:var(--brass-hi);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 34%,transparent),0 0 24px rgba(255,201,116,.42),
+             inset 0 0 20px rgba(255,180,80,.22)}
+.reel.lock .win::after{opacity:.65}
+/* 1st decides most weeks, so it gets the jackpot frame — :first-child, so it
+   follows the reel set rather than a hardcoded index. */
+.reels > .reel:first-child.lock .win{
+  box-shadow:0 0 0 3px var(--accent),0 0 30px color-mix(in srgb,var(--accent) 58%,transparent),
+             inset 0 0 22px rgba(255,150,50,.3)}
+
+.strip{position:absolute;left:0;right:0;top:0;will-change:transform;
+  transform:translate3d(0,0,0);filter:blur(0px)}
+.cell{height:104px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  text-align:center;padding:0 5px;color:#2b1c0e;border-bottom:1px solid rgba(43,28,14,.12)}
+.cell svg{width:26px;height:26px;flex:0 0 26px;opacity:.88}
+.cell span{font:800 11.5px/1.15 system-ui;letter-spacing:.4px;text-transform:uppercase}
+/* the strip blurs with velocity — set from JS as a px value */
+.reel.moving .strip{filter:blur(var(--mblur,2px))}
+/* a reel that has just stopped gets a one-frame gold pop on the payline */
+@keyframes cellpop{0%{transform:scale(1)}40%{transform:scale(1.09)}100%{transform:scale(1)}}
+.reel.pop .cell{animation:cellpop .28s ease-out}
+
+/* ===================== the lever ===================== */
+.leverbay{position:absolute;right:0;top:0;bottom:0;width:104px;z-index:3}
+/* brass boss the arm pivots on */
+/* mounting plate the arm pivots on — a plate, not a second ball */
+.boss{position:absolute;bottom:32px;left:26px;width:44px;height:30px;margin-left:-22px;border-radius:6px 6px 4px 4px;
+  background:linear-gradient(180deg,var(--brass),#5c4718);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 -4px 8px rgba(0,0,0,.5),0 2px 6px rgba(0,0,0,.5);z-index:1}
+.boss::after{content:"";position:absolute;left:50%;top:6px;width:16px;height:16px;margin-left:-8px;border-radius:50%;
+  background:radial-gradient(circle at 34% 30%,#e8cf9a,#8a6a2c 60%,#3a2a12);
+  box-shadow:inset 0 -2px 4px rgba(0,0,0,.55)}
+/* the arc track: shows where the knob goes before you touch it */
+
+.lever{position:absolute;left:0;right:2px;bottom:16px;top:16px;background:none;border:0;padding:0;margin:0;
+  color:inherit;font:inherit;cursor:default;touch-action:none;-webkit-tap-highlight-color:transparent;
+  display:block}
+.lever:focus-visible{outline:2px solid var(--bulb);outline-offset:-6px;border-radius:10px}
+.lever.live{cursor:grab}
+.lever.live:active{cursor:grabbing}
+.arm{position:absolute;left:26px;bottom:46px;width:13px;height:96px;margin-left:-6.5px;
+  transform-origin:50% 100%;
+  transform:rotate(calc(var(--pull,0)*34deg)) scaleY(calc(1 - var(--pull,0)*.12));
+  transition:transform var(--armT,.5s) cubic-bezier(.18,.86,.28,1.06)}
+.rod{position:absolute;inset:0;border-radius:7px;
+  background:linear-gradient(90deg,#40311a,#a8873c 24%,var(--brass-hi) 47%,#a8873c 70%,#40311a);
+  box-shadow:0 0 0 1px rgba(0,0,0,.45),inset 0 0 8px rgba(0,0,0,.25)}
+.knob{position:absolute;left:50%;top:-13px;width:50px;height:50px;margin-left:-25px;border-radius:50%;
+  background:radial-gradient(circle at 34% 28%,#ff9a86 0 10%,var(--nose) 48%,#8a1a0c 100%);
+  box-shadow:inset 0 -6px 11px rgba(0,0,0,.42),0 0 0 3px #3a2a12,0 6px 14px rgba(0,0,0,.5);
+  transform:scale(calc(1 - var(--pull,0)*.09))}
+/* "beg" pulse only when a draw is sitting on the server waiting for this reader */
+@keyframes knobbeg{
+  0%,100%{box-shadow:inset 0 -6px 11px rgba(0,0,0,.42),0 0 0 3px #3a2a12,0 0 0 0 rgba(227,59,38,.55)}
+  50%    {box-shadow:inset 0 -6px 11px rgba(0,0,0,.42),0 0 0 3px #3a2a12,0 0 0 15px rgba(227,59,38,0)}}
+.machine.pending .lever:not(.dragging) .knob{animation:knobbeg 1.2s ease-in-out infinite}
+.pulllab{position:absolute;left:-13px;width:78px;bottom:17px;text-align:center;white-space:nowrap;
+  font:800 10px/1 ui-monospace,monospace;letter-spacing:1.8px;text-transform:uppercase;
+  color:var(--bulb-off);transition:color .3s;pointer-events:none}
+.lever.live ~ .pulllab{color:var(--bulb);text-shadow:0 0 9px rgba(255,201,116,.6)}
+/* the commit threshold, drawn on the track so "how far is far enough" is visible */
+.detent{position:absolute;left:50%;bottom:59px;width:6px;height:6px;margin-left:-3px;border-radius:50%;
+  background:var(--bulb);opacity:0;transform-origin:50% 50%;
+  translate:0 0;pointer-events:none;transition:opacity .25s}
+.lever.dragging ~ .detent{opacity:.85}
+
+/* ===================== coins ===================== */
+.coins{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:6;border-radius:12px}
+.coin{position:absolute;width:14px;height:14px;border-radius:50%;
+  background:radial-gradient(circle at 32% 28%,var(--bulb),var(--gold) 52%,#8a6412);
+  box-shadow:0 0 8px rgba(255,201,116,.7),inset 0 -2px 3px rgba(0,0,0,.35)}
+
 .ord{list-style:none;padding:0;margin:14px 0 0;display:grid;gap:6px}
 .ord li{display:flex;gap:10px;align-items:baseline;opacity:0;transform:translateY(4px);
   transition:opacity .3s,transform .3s;font-size:14px}
@@ -747,11 +880,9 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
 .flap b.flip{animation:flap .45s cubic-bezier(.2,.9,.3,1);transform-origin:50% 0}
 /* ---- machine: armed (pre-draw) idle state ---- */
 .machine.armed .win{border-color:rgba(255,255,255,.09)}
-@keyframes reelidle{from{transform:translateY(0)}to{transform:translateY(calc(-1 * var(--spin,280px)))}}
-.machine.armed .strip{animation:reelidle 2.9s linear infinite}
-.machine.armed .cell{opacity:.55}
-@keyframes knobpulse{0%,100%{transform:none}50%{transform:translateY(2px)}}
-.machine.armed .knob{animation:knobpulse 2.1s ease-in-out infinite}
+/* idle motion is owned by the v2 rAF engine, not CSS — see the BOZO MACHINE v2
+   block above. A CSS animation on `transform` would override it. */
+.machine.armed .cell{opacity:.62}
 .ord li.ghost{opacity:1}
 .ord li.ghost b{color:var(--ink-3);font-weight:650}
 .ord li.ghost .n{color:var(--ink-3)}
@@ -810,70 +941,7 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
   border:3px dotted var(--bulb);text-shadow:0 0 12px rgba(255,224,138,.7);
   box-shadow:0 0 18px rgba(255,224,138,.22),inset 0 0 22px rgba(0,0,0,.5)}
 
-/* --- the cabinet --- */
-.bz-carnival .machine{
-  position:relative;padding:26px 22px;border:2px solid var(--brass-lo);border-top:3px solid var(--brass);
-  background:linear-gradient(180deg,#31261700,#31261755),radial-gradient(120% 90% at 50% -10%,#3a2c19,#1b1409 72%);
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.05),inset 0 20px 36px rgba(0,0,0,.45),0 10px 22px rgba(0,0,0,.32);
-}
-/* Bulb rail: four repeating radial layers, one per edge of the cabinet. The chase
-   is a background-position shift of the whole layer list — one bulb pitch per
-   cycle, so it loops seamlessly. */
-.bz-carnival .machine::before{
-  content:"";position:absolute;inset:8px;border-radius:8px;pointer-events:none;z-index:3;
-  background:
-    radial-gradient(circle,var(--bulb) 0 2.5px,transparent 3.1px) 0 0/17px 17px repeat-x,
-    radial-gradient(circle,var(--bulb) 0 2.5px,transparent 3.1px) 0 100%/17px 17px repeat-x,
-    radial-gradient(circle,var(--bulb) 0 2.5px,transparent 3.1px) 0 0/17px 17px repeat-y,
-    radial-gradient(circle,var(--bulb) 0 2.5px,transparent 3.1px) 100% 0/17px 17px repeat-y;
-  filter:drop-shadow(0 0 4px rgba(255,201,116,.5));opacity:.5;transition:opacity .4s}
-@keyframes bulbchase{to{background-position:17px 0,-17px 100%,0 17px,100% -17px}}
-.bz-carnival .machine.armed::before{opacity:.72;animation:bulbchase 1.15s linear infinite}
-/* the draw exists on the server and THIS reader has not pulled yet — the machine
-   is visibly begging for it */
-.bz-carnival .machine.pending::before{opacity:1;animation:bulbchase .42s linear infinite}
-.bz-carnival .machine.locked::before{opacity:.9}
-
-/* --- reel windows: cream glass, brass bezel, a payline through the middle --- */
-.bz-carnival .win{border:2px solid var(--brass-lo);box-shadow:inset 0 0 14px rgba(43,28,14,.18)}
-.bz-carnival .win::before{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
-  background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,0) 38%,rgba(43,28,14,.06) 62%,rgba(43,28,14,.16))}
-.bz-carnival .win::after{content:"";position:absolute;left:0;right:0;top:50%;height:2px;margin-top:-1px;z-index:2;
-  pointer-events:none;background:linear-gradient(90deg,transparent,var(--nose),transparent);opacity:.32}
-.bz-carnival .win.locked{border-color:var(--brass-hi);
-  box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 32%,transparent),0 0 22px rgba(255,201,116,.4),
-             inset 0 0 20px rgba(255,180,80,.22)}
-/* 1st is the lever that actually decides most weeks — it gets the jackpot frame.
-   :first-child on the reel column, so it follows the reel set rather than a
-   hardcoded index. */
-.bz-carnival .reels > div:first-child .win.locked{
-  box-shadow:0 0 0 3px var(--accent),0 0 26px color-mix(in srgb,var(--accent) 55%,transparent),
-             inset 0 0 22px rgba(255,150,50,.28)}
-.bz-carnival .reels > div:first-child .win.locked::after{opacity:.6}
-.bz-carnival .pos{color:var(--bulb);text-shadow:0 0 8px rgba(255,201,116,.35)}
-
-/* --- the lever, now a real control --- */
-.bz-carnival .lever{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:default;
-  -webkit-tap-highlight-color:transparent}
-.bz-carnival .lever .rod{background:linear-gradient(90deg,#40311a,#a8873c 24%,var(--brass-hi) 47%,#a8873c 70%,#40311a);
-  box-shadow:0 0 0 1px rgba(0,0,0,.45)}
-.bz-carnival .lever .knob{background:radial-gradient(circle at 34% 28%,#ff9a86 0 10%,var(--nose) 48%,#8a1a0c 100%);
-  box-shadow:inset 0 -5px 9px rgba(0,0,0,.4),0 0 0 3px #3a2a12,0 5px 12px rgba(0,0,0,.45);
-  transition:transform .22s cubic-bezier(.2,.9,.3,1),box-shadow .22s}
-.bz-carnival .pulllab{display:block;margin-top:9px;font:800 10px/1 ui-monospace,monospace;letter-spacing:1.7px;
-  text-transform:uppercase;color:var(--bulb-off);text-align:center;transition:color .3s}
-.bz-carnival .lever.live{cursor:pointer}
-.bz-carnival .lever.live .pulllab{color:var(--bulb);text-shadow:0 0 8px rgba(255,201,116,.6)}
-@keyframes knobbeg{0%,100%{transform:none;box-shadow:inset 0 -5px 9px rgba(0,0,0,.4),0 0 0 3px #3a2a12,0 0 0 0 rgba(227,59,38,.55)}
-  50%{transform:translateY(3px);box-shadow:inset 0 -5px 9px rgba(0,0,0,.4),0 0 0 3px #3a2a12,0 0 0 12px rgba(227,59,38,0)}}
-.bz-carnival .machine.pending .knob{animation:knobbeg 1.25s ease-in-out infinite}
-.bz-carnival .lever:focus-visible{outline:2px solid var(--bulb);outline-offset:4px;border-radius:8px}
-/* the armed idle knob-pulse is for "nothing has happened yet"; when a draw is
-   waiting on this reader, knobbeg replaces it — two pulses at once reads as noise */
-.bz-carnival .machine.pending.armed .knob{animation:knobbeg 1.25s ease-in-out infinite}
-@keyframes cabinetthunk{0%,100%{transform:none}18%{transform:translateY(6px) rotate(.28deg)}36%{transform:translateY(-4px) rotate(-.22deg)}55%{transform:translateY(2px) rotate(.12deg)}72%{transform:translateY(-1px)}}
-.bz-carnival .machine.pulling{animation:cabinetthunk .78s cubic-bezier(.2,.8,.2,1)}
-
+/* --- cabinet, reel windows and lever: see the BOZO MACHINE v2 block above. --- */
 /* --- the drawn order, as a lit marquee list --- */
 .bz-carnival .ord li:first-child:not(.ghost) b{color:var(--accent);text-shadow:0 0 10px color-mix(in srgb,var(--accent) 45%,transparent)}
 
@@ -963,18 +1031,27 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
   /* buildReels sets grid-template-columns inline to the live lever count, so the
      reels stay in a single left-to-right row at every width. Shrink the type
      instead of wrapping — the row IS the hierarchy. */
-  .machine{flex-direction:column;padding:14px 10px}
-  .cell{font-size:9.5px;letter-spacing:0;padding:0 2px}
-  .pos{font-size:8.5px;letter-spacing:.8px}
-  .lever{flex-direction:row;width:100%;flex:0 0 auto;gap:14px;align-items:center;padding:8px 8px 2px}
-  .leverarm{flex-direction:row;width:auto;min-height:0;height:46px;transform-origin:100% 50%}
-  .rod{flex:1;min-height:0;height:11px}
-  .lever.pulled .leverarm{transform:rotate(7deg) scaleX(.58)}
-  .knob{margin:0 -7px 0 0}
-  /* the lever lies on its side on a phone, so PULL sits beside the knob, not under it */
-  .bz-carnival .pulllab{margin:0 0 0 2px}
-  .bz-carnival .machine{padding:22px 14px}
-  .bz-carnival .machine::before{inset:6px}
+@media(max-width:640px){
+  /* the lever lies on its side under the reels; the arm sweeps left-to-right so it
+     still reads as a pull rather than a squash */
+  .machine{padding:48px 20px 20px}
+  .marq{right:20px;left:20px;top:20px}
+  .reels{gap:7px}
+  .win{height:86px}.cell{height:86px}
+  .cell span{font-size:10px;letter-spacing:0}
+  .cell svg{width:21px;height:21px;flex:0 0 21px}
+  .leverbay{position:relative;right:auto;top:auto;bottom:auto;width:100%;height:60px;padding:0;margin-top:14px}
+  .boss{bottom:6px;left:40px;width:40px;height:32px;margin-left:-20px;border-radius:6px}
+  .track{display:none}
+  .arm{left:40px;bottom:15px;margin-left:0;width:152px;height:15px;transform-origin:0 50%;
+    transform:rotate(calc(var(--pull,0)*34deg)) scaleX(calc(1 - var(--pull,0)*.13))}
+  .rod{border-radius:7px}
+  .knob{left:auto;right:-10px;top:50%;width:40px;height:40px;margin:-20px 0 0 0}
+  .lever{inset:0}
+  .pulllab{bottom:4px;left:auto;right:10px;width:auto;text-align:right}
+  .card.bz-carnival{padding-top:46px}
+  h2.bz{font-size:12.5px;letter-spacing:1.4px;padding:6px 11px}
+}
   /* the tent scales down but keeps its peak — the fan is the whole point of it */
   .card.bz-carnival{padding-top:44px}
   .card.bz-carnival::before{height:34px;
@@ -996,6 +1073,14 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
   .trow,.thead{grid-template-columns:22px minmax(0,1fr) auto;gap:8px}
   .trow .nm2{font-size:13px;letter-spacing:1.1px}
   .bz-hdr h1{font-size:24px}
+}
+@media(prefers-reduced-motion:reduce){
+  .machine::before{animation:none!important}
+  .machine.pulling,.machine.thunk,.machine.jackpot .flash{animation:none!important}
+  .machine.pending .lever .knob{animation:none!important}
+  .strip{filter:none!important}
+  .arm{transition:none}
+  .ord li{transition:none}
 }
 @media(prefers-reduced-motion:reduce){.strip,.rod,.ord li{transition:none!important}
   /* the bulbs stay LIT, they just stop travelling — an unlit machine would read
@@ -3105,14 +3190,26 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
      armed/idle state — the reels only STOP when the server has actually drawn. -->
 <div class="card bz-carnival" id="drawCard">
   <div class="bz-hdr"><h2 class="bz" style="margin:0">This week's hierarchy</h2><span class="tm" id="drawState"></span></div>
-  <div class="machine" id="machine"><div class="reels" id="reels"></div>
-    <!-- The lever is a real <button> because it is now a real control: the server's
-         draw is written once, but each reader pulls it themselves to see it. Keyboard
-         and screen-reader users get the same moment; the label is set from JS. -->
-    <button type="button" class="lever" id="lever" disabled
-            aria-label="The hierarchy has not been drawn yet"><div class="leverarm"><div class="knob"></div><div class="rod"></div></div>
-      <span class="pulllab" id="pullLab">armed</span></button></div>
+  <div class="machine armed" id="machine">
+    <div class="marq"><b id="marqText">BOZO · BOZO · BOZO</b></div>
+    <div class="reels" id="reels"></div>
+    <div class="leverbay">
+      <span class="boss"></span>
+      <!-- Real <button>: the pull is a real control. Pointer Events only — no
+           touchstart branch, so mouse / pen / touch take one code path. -->
+      <button type="button" class="lever" id="lever" disabled
+              aria-label="The hierarchy has not been drawn yet — nothing to pull">
+        <span class="arm" id="arm"><span class="rod"></span><span class="knob"></span></span>
+      </button>
+      <span class="pulllab" id="pullLab">armed</span>
+    </div>
+    <div class="coins" id="coins"></div>
+    <div class="flash"></div>
+  </div>
   <ol class="ord" id="ord"></ol>
+  <div class="row" style="margin-top:12px">
+    <button type="button" class="btn ghost sm" id="mute" aria-pressed="false">Sound on</button>
+  </div>
   <p class="note" id="drawNote"></p>
 </div>
 
@@ -3290,6 +3387,15 @@ const LEVERS = [{k:'odds',name:'Shortest Odds',desc:'biggest favorite in the poo
   {k:'beat',name:'Worst Beat',desc:'finished furthest under its number'},
   {k:'last',name:'Last In',desc:'final leg submitted'},
   {k:'clv', name:'Worst CLV', desc:'price moved most against it'}];
+/* Reel glyphs. Kept out of LEVERS so that array keeps its shape for every other
+   consumer (the grader, the simulator, DD_BOTCTX); keyed by lever k. */
+const LEVER_ICON = {
+  odds :'<svg viewBox="0 0 24 24" fill="none" stroke="#8a1a0c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 12.7 12.9 20.4a1.6 1.6 0 0 1-2.3 0l-7-7a1.6 1.6 0 0 1-.5-1.1V4.7c0-.9.7-1.6 1.6-1.6h7.6c.4 0 .8.2 1.1.5l7.2 7.2a1.6 1.6 0 0 1 0 2.3Z"/><circle cx="7.6" cy="7.6" r="1.4" fill="#8a1a0c"/></svg>',
+  beat :'<svg viewBox="0 0 24 24" fill="none" stroke="#8a1a0c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.6 14.9 8.5l6.5.95-4.7 4.6 1.1 6.5L12 17.5l-5.8 3.05 1.1-6.5-4.7-4.6 6.5-.95z"/><path d="M12 8.6v3.2" stroke-width="2.2"/><circle cx="12" cy="14.6" r=".9" fill="#8a1a0c" stroke="none"/></svg>',
+  last :'<svg viewBox="0 0 24 24" fill="none" stroke="#8a1a0c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.6"/><path d="M12 9.4v4.1l2.8 1.7M9.4 2.7h5.2M18.6 6.1l1.6-1.6"/></svg>',
+  clv  :'<svg viewBox="0 0 24 24" fill="none" stroke="#8a1a0c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 6.4 9.6 13l3.5-3.5 7.7 7.7"/><path d="M20.8 12.4v4.8H16"/></svg>'
+};
+
 
 let S = {};                 // live state for the SELECTED league, from RTDB
 let LEAGUES = [];           // [{id,name,manager,size,members,week,status}]
@@ -3297,7 +3403,7 @@ let LID = 'main';           // which league we're looking at (?l=)
 let ROSTER = [];            // every account on the site, [{name, claimed}]
 let ME = null;              // {name, session}
 let GAMES = {};             // sport -> games[]
-let drawnOrder = null;      // so the reels only animate once per draw
+let drawnOrder = null;      // the key this PAGE LOAD has already revealed; null = not yet
 
 /* ---------------- session ---------------- */
 // The session is an HMAC-signed blob the Worker minted. We decode the payload
@@ -5282,219 +5388,485 @@ window.DD_BOTCTX = {
   }
 };
 
-/* ---------------- slot machine ----------------
-   Four reels in a row: left to right is 1st through 4th in the hierarchy.
-   The machine now lives on the board at ALL times. Before the draw it is ARMED —
-   reels idling, nothing decided. It stops only when the server has actually drawn,
-   so a stopped reel is always a result that already exists on the server, never a
-   client-side roll. That distinction is the whole reason the draw is server-side.
-   Reel COUNT follows the league's live levers, so a three-lever league gets three
-   reels rather than a fourth that never stops. */
-const REP=9;
-let strips=[], wins=[], reelSet=[];
-const reduced = matchMedia('(prefers-reduced-motion:reduce)').matches;
+/* ---------------- slot machine (BOZO MACHINE v2) ----------------
+   Four reels in a row: left to right is 1st through 4th in the hierarchy. The
+   machine lives on the board at ALL times. Before the draw it idles; it STOPS
+   only when the server has actually drawn, so a stopped reel is always a result
+   that already exists on the server, never a client-side roll. Reel COUNT
+   follows the league's live levers.
+
+   ⚠️ THE LEVER IS NEVER DISABLED, and that is deliberate. A pull decides nothing
+   — it only ever shows what the server already wrote — so there is no state in
+   which it needs to be refused. The one constraint that falls out of that:
+   before the last leg lands the server has written nothing, so the reels SPIN
+   AND COME BACK rather than stop. They must never park on a permutation that
+   does not exist. The only moment the lever is inert is while its own reels are
+   still moving.
+
+   ⚠️ Blank on every load, for every reader, graded or not. This has been
+   "simplified" into an auto-paint twice and both times almost nobody saw the
+   reels move. Pulling it is the fun part. A graded week still requires the pull:
+   the verdict names ONE lever, the reels show the whole drawn order.
+
+   ⚠️ `drawnOrder` is what stops a poll re-arming the reels under your cursor —
+   render() runs on a 15s timer and on every EventSource put. /bozo/next resets
+   it to null, which is what re-arms the machine for a new week.
+
+   ⚠️ Cell height is measured with offsetHeight, NOT getBoundingClientRect(). The
+   cabinet's thunk keyframes rotate the machine a fraction of a degree, and a
+   rotated element's bounding rect is its axis-aligned box — measuring mid-spin
+   returned ~101px for a 96px window and every reel landed off its payline.
+
+   ⚠️ No reel tease. Parking on a lever the server did not draw and then slipping
+   off it is the standard near-miss trick; here it would also mean the page
+   showing a hierarchy that does not exist. The sub-cell overshoot in the settle
+   is momentum and returns to the true cell. Do not extend it into a tease. */
+
 const ORD_LBL=['1st','2nd','3rd','4th','5th','6th','7th','8th'];
+const REP=11;                   // repeats of the lever set down each strip
+
+/* The order the server wrote, mirrored here so the pull handler and the reveal
+   read one value. Set only by paintMachine(), only from S.order. `drawnOrder` is
+   declared near the top of the page and is the revealed-this-load key. */
+let serverOrder=null;
+let pendingDraw=null;
+
+/* ---- motion / audio prefs ---- */
+const mq=matchMedia('(prefers-reduced-motion:reduce)');
+const reduced=()=>mq.matches;
+let muted=false;
+
+/* ============================================================================
+   REEL CONSTRUCTION
+   ============================================================================ */
+let reels=[],strips=[],reelSet=[];
+/* ⚠️ offsetHeight, NOT getBoundingClientRect(). The cabinet's thunk/pull keyframes
+   rotate the machine a fraction of a degree, and a rotated element's bounding rect
+   is the axis-aligned box — measuring mid-animation returned ~101px for a 96px
+   window and every reel landed a few pixels off its payline. offsetHeight is layout
+   height and ignores transforms. */
+const cellH=()=>reels[0]?reels[0].querySelector('.win').offsetHeight:104;
 
 function buildReels(active){
   if(reelSet.join(',')===active.join(',')) return;
-  reelSet=active.slice(); strips=[]; wins=[];
-  const r=document.getElementById('reels'); r.innerHTML='';
-  r.style.gridTemplateColumns=`repeat(${active.length},minmax(0,1fr))`;
-  for(let i=0;i<active.length;i++){
-    const s=document.createElement('div');
-    s.innerHTML=`<div class="pos">${ORD_LBL[i]||(i+1)}</div>`;
-    const w=document.createElement('div'); w.className='win';
-    const st=document.createElement('div'); st.className='strip';
-    st.style.animationDelay=(-0.62*i)+'s';
-    for(let k=0;k<REP;k++) active.forEach(li=>{
+  reelSet=active.slice(); reels=[]; strips=[];
+  const host=document.getElementById('reels');
+  host.innerHTML='';
+  host.style.gridTemplateColumns=`repeat(${active.length},minmax(0,1fr))`;
+  active.forEach((li,i)=>{
+    const r=document.createElement('div'); r.className='reel';
+    r.innerHTML=`<div class="pos">${ORD_LBL[i]||(i+1)}</div><div class="win"><div class="strip"></div></div>`;
+    const st=r.querySelector('.strip');
+    for(let k=0;k<REP;k++) active.forEach(l=>{
       const c=document.createElement('div'); c.className='cell';
-      c.textContent=LEVERS[li].name; st.appendChild(c);
+      c.innerHTML=LEVER_ICON[LEVERS[l].k]+`<span>${LEVERS[l].name}</span>`;
+      st.appendChild(c);
     });
-    w.appendChild(st); s.appendChild(w); r.appendChild(s); strips.push(st); wins.push(w);
+    host.appendChild(r); reels.push(r); strips.push(st);
+  });
+  setStrips(0);
+}
+const setLen=()=>reelSet.length*cellH();
+function setStrips(y){ strips.forEach(s=>{s.style.transform=`translate3d(0,${y}px,0)`;}); }
+
+/* ============================================================================
+   SPIN ENGINE — rAF, per-reel velocity, blur that tracks speed, and a settle
+   that overshoots by a fraction of a cell and springs back.
+
+   ⚠️ The overshoot shows the NEIGHBOURING cell edge for ~140ms and returns. That
+   is momentum, and it is honest. What is deliberately NOT here is a "reel tease"
+   that parks on a lever the server did not draw and then slips off it — on a real
+   book that is a near-miss dark pattern, and on this site it would also be the
+   page displaying a hierarchy that does not exist. Don't add it.
+   ============================================================================ */
+const reelState=[];   // {y,v,phase,target,t0,from}
+
+function reelStopY(lev){
+  const pos=Math.max(0,reelSet.indexOf(lev));
+  return -( (REP-3)*setLen() + pos*cellH() );
+}
+const IDLE_V=0.62;                       // px per ms
+let rafId=null,t0=0,lastNow=0,spinning=false;
+function tick(now){
+  if(!spinning) return;
+  const dt=Math.min(60,now-lastNow||16); lastNow=now;
+  const L=setLen()||1;
+  reelState.forEach((st,i)=>{
+    const r=reels[i],s=strips[i];
+    if(!r||!s) return;
+    if(st.phase==='idle'){
+      /* integrate, don't sample an absolute clock — a reel resuming from a stop
+         must continue from where it is, not snap to wherever the clock says. */
+      st.y-=IDLE_V*dt; while(st.y<=-L) st.y+=L;
+      s.style.transform=`translate3d(0,${st.y}px,0)`;
+      r.style.setProperty('--mblur','2.6px');
+      r.classList.add('moving');
+    }else if(st.phase==='stopping'){
+      const p=Math.min(1,(now-st.t0)/st.dur);
+      /* travel eases out hard over the first 88%; the last 12% is a single
+         sub-cell bounce measured in PIXELS, not in a fraction of the travel —
+         a percentage overshoot on a 4000px run throws the reel half a screen. */
+      const trav=Math.min(1,p/.88);
+      const e=1-Math.pow(1-trav,3.2);
+      let y=st.from+(st.target-st.from)*e;
+      if(p>.88){ const q=(p-.88)/.12; y-=Math.sin(q*Math.PI)*st.cell*.26*(1-q*.55); }
+      st.y=y;
+      s.style.transform=`translate3d(0,${y}px,0)`;
+      const speed=Math.max(0,1-trav);
+      r.style.setProperty('--mblur',(speed*speed*3.4).toFixed(2)+'px');
+      if(p>=1){
+        st.phase='done';
+        s.style.transform=`translate3d(0,${st.target}px,0)`;
+        r.classList.remove('moving');
+        r.style.setProperty('--mblur','0px');
+        lockReel(i);
+      }
+    }
+  });
+  rafId=requestAnimationFrame(tick);
+}
+/* A reel that has already stopped sits several sets down the strip. Before it can
+   spin again its offset must be folded back into the first set, or the next run
+   walks off the end of the strip and the window goes blank. The strip repeats, so
+   the fold is invisible. */
+function rewindStrips(){
+  const L=setLen()||1;
+  reelState.forEach((st,i)=>{
+    if(!st) return;
+    let y=st.y%L; if(y>0) y-=L;
+    st.y=y; st.phase='idle';
+    if(strips[i]) strips[i].style.transform=`translate3d(0,${y}px,0)`;
+    if(reels[i]) reels[i].classList.remove('lock','pop');
+  });
+}
+
+function startIdle(){
+  if(!reels.length) return;
+  const L=setLen()||1;
+  reelState.length=0;
+  // stagger the reels so the row never looks like one tall strip
+  reels.forEach((r,i)=>{ reelState[i]={phase:'idle',y:-((i*0.31*L)%L)}; r.classList.remove('lock','pop'); });
+  if(reduced()){ setStrips(0); reels.forEach(r=>r.classList.remove('moving')); return; }
+  spinning=true; t0=lastNow=performance.now();
+  cancelAnimationFrame(rafId); rafId=requestAnimationFrame(tick);
+}
+function stopAll(){ spinning=false; cancelAnimationFrame(rafId);
+  reels.forEach(r=>{r.classList.remove('moving');r.style.setProperty('--mblur','0px');}); }
+
+/* ============================================================================
+   THE REVEAL
+   ============================================================================ */
+let sequenceGuard=0;
+function revealSpin(order){
+  const machine=document.getElementById('machine'),run=++sequenceGuard;
+  document.getElementById('ord').innerHTML='';
+  reels.forEach(r=>r.classList.remove('lock','pop'));
+
+  if(reduced()){                                  // no motion: paint it, say so
+    paintOrder(order); afterLock(order,run); return;
   }
-  // the idle loop scrolls exactly one full lever set, so it seams invisibly.
-  // Measure rather than assume 70px — the cell height is CSS and will get retuned.
-  const H=cellH();
-  strips.forEach(st=>st.style.setProperty('--spin',(active.length*H)+'px'));
+  machine.classList.add('pulling');
+  setTimeout(()=>machine.classList.remove('pulling'),820);
+  machine.classList.remove('armed','pending','locked','spin2','spin3');
+  machine.classList.add('spin1');
+
+  rewindStrips();
+  if(!spinning){ spinning=true; lastNow=performance.now(); rafId=requestAnimationFrame(tick); }
+
+  order.forEach((lev,slot)=>{
+    const last = slot===order.length-1;
+    // anticipation: the reel that decides the tail spins visibly longer
+    const dur = 1500 + slot*520 + (last?700:0);
+    const st=reelState[slot]; if(!st) return;
+    setTimeout(()=>{
+      if(run!==sequenceGuard) return;
+      st.phase='stopping'; st.t0=performance.now(); st.dur=dur*0.72;
+      st.from=st.y; st.cell=cellH();
+      // land at least ~2.5 full sets further down so the stop reads as travel
+      let target=reelStopY(lev);
+      while(target > st.from - setLen()*2.4) target -= setLen();
+      st.target=target;
+    }, 240+slot*140);
+  });
+  const total=240+(order.length-1)*140 + (1500+(order.length-1)*520+700)*0.72 + 120;
+  setTimeout(()=>{ if(run===sequenceGuard) afterLock(order,run); }, total);
 }
-function cellH(){ return (wins[0] && wins[0].getBoundingClientRect().height) || 70; }
-function reelStop(lev){
-  const pos=Math.max(0, reelSet.indexOf(lev));
-  return ((REP-3)*reelSet.length + pos)*cellH();
-}
-/* Which levers are on the machine. Once a draw exists, the machine shows THAT
-   draw's levers — a manager who edits the lever set mid-week must not silently
-   repaint a hierarchy that has already been written. */
-function activeLevers(ord){
-  if(ord && ord.length) return ord.slice().sort((a,b)=>a-b);
-  const l=(settings().levers||[]).slice().sort((a,b)=>a-b);
-  return l.length ? l : [0,1,2,3];
-}
-/* ---------------- the pull ----------------
-   ⚠️ Read this before "simplifying" it into an auto-paint. It has been simplified into
-   one twice, and both times the result was that almost nobody ever saw the reels move.
 
-   The DRAW is the server's: one permutation, written once at the close, immutable, and
-   nothing here can re-roll it. What is yours is WATCHING it land. The machine starts
-   blank on every page load for every reader, spins while it waits, and stops on exactly
-   the order the server wrote when you pull the lever.
-
-   ⚠️ EVERY LOAD, and that is deliberate rather than sloppy. The first version remembered
-   in localStorage that you had already seen a given draw and painted it statically ever
-   after — which is defensible and which nobody asked for. Pulling it is the fun part;
-   making it a once-per-draw privilege takes the fun away to save a click. Kap's call:
-   blank on load, always pullable.
-
-   ⚠️ A GRADED WEEK STILL REQUIRES THE PULL. The earlier version auto-revealed once the
-   bozo was named, on the grounds that the verdict card already says which lever named
-   them and gating public information behind a toy is silly. But the verdict names ONE
-   lever; the reels show the whole drawn order, which is not in the verdict text. So the
-   pull still reveals something, and the fun survives the week being over.
-
-   ⚠️ The one thing that must NOT re-arm is a poll. render() runs on a 15-second timer
-   and on every EventSource put, so `revealedThisLoad` is what stops the reels blanking
-   themselves under your cursor ten seconds after you pulled them. It is a page-lifetime
-   variable on purpose — a reload is a new show. */
-let pendingDraw=null;        // an order that exists on the server, waiting on this reader
-let revealedThisLoad=null;   // an order this PAGE LOAD has already revealed
-
-function paintMachine(ord){
+function lockReel(i){
+  const r=reels[i]; if(!r) return;
+  r.classList.add('lock','pop');
+  setTimeout(()=>r.classList.remove('pop'),300);
   const m=document.getElementById('machine');
-  buildReels(activeLevers(ord));
-  if(!ord || !ord.length){
-    m.classList.add('armed');
-    m.classList.remove('pending','locked');
-    setLever('idle');
-    pendingDraw=null; revealedThisLoad=null;
-    wins.forEach(w=>w.classList.remove('locked'));
-    // '' rather than null: null means "nothing has ever been painted", which is
-    // what makes a page loaded onto an already-drawn week render statically
-    // instead of replaying an animation for a draw that happened days ago.
-    drawnOrder='';
-    document.getElementById('drawState').textContent='armed · not drawn';
-    document.getElementById('ord').innerHTML = reelSet.map(li=>
-      `<li class="on ghost"><span class="n">·</span><span><b>${LEVERS[li].name}</b>`
-      + `<span class="d"> — ${LEVERS[li].desc}</span></span></li>`).join('');
-    document.getElementById('drawNote').textContent =
-      `${reelSet.length} lever${reelSet.length===1?'':'s'} are in the draw; the order is not decided yet. `
-      + 'The server draws a fresh permutation the moment the last leg lands and writes it once — these reels stop on that. Nothing on this page can re-roll it.';
-    return;
-  }
-  // A draw exists. It waits for this reader's pull — every load, graded or not.
-  const key = ord.join(',');
-  if(revealedThisLoad !== key) return armPending(ord);
-  revealDraw(ord, false);        // already pulled this load: repaint statically
+  m.classList.add('thunk'); setTimeout(()=>m.classList.remove('thunk'),170);
+  // the bulb chase escalates with each reel that lands, not with the clock
+  m.classList.remove('spin1','spin2','spin3');
+  m.classList.add(['spin1','spin2','spin3'][Math.min(2,i)]);
+  clunk(i);
+  addOrd(currentOrder[i],i);
 }
 
-/* the machine knows the draw has happened and is refusing to say what it is until
-   you pull. Idempotent: render() runs on every poll and must not restart this. */
-function armPending(ord){
-  const m=document.getElementById('machine'), key=ord.join(',');
-  if(pendingDraw===key) return;
-  pendingDraw=key; drawnOrder='';
-  m.classList.add('armed','pending'); m.classList.remove('locked');
-  wins.forEach(w=>w.classList.remove('locked'));
-  strips.forEach(s=>{ s.style.transition='none'; s.style.transform=''; });  // back to the idle loop
-  setLever('pull');
-  document.getElementById('drawState').textContent='drawn · waiting on your pull';
-  document.getElementById('ord').innerHTML = reelSet.map(li=>
-    `<li class="on ghost"><span class="n">·</span><span><b>${LEVERS[li].name}</b>`
-    + `<span class="d"> — ${LEVERS[li].desc}</span></span></li>`).join('');
-  document.getElementById('drawNote').textContent =
-    'The hierarchy is already decided — the server drew it the moment the last leg landed and wrote it once. '
-    + 'Pull the lever to watch it stop. Everyone pulls their own; the reels stop on the same order for all of us and nothing here can re-roll it.';
-}
-
-function revealDraw(ord, animate){
+let currentOrder=[];
+function afterLock(order,run){
+  if(run!==sequenceGuard) return;
+  stopAll();
   const m=document.getElementById('machine');
-  m.classList.remove('armed','pending'); m.classList.add('locked');
-  pendingDraw=null; revealedThisLoad=ord.join(','); setLever('done');
-  document.getElementById('drawState').textContent =
-    'drawn ' + (S.closeTs ? when(S.closeTs) : 'at the close');
-  document.getElementById('drawNote').textContent =
-    'Drawn on the server the moment the last leg landed — the reels are showing a result that already exists. Only legs that lost are eligible. Ties fall to the next rule down.';
-  const key=ord.join(',');
-  if(drawnOrder===key) return;
-  drawnOrder=key;
-  (animate && !reduced) ? spin(ord) : paintOrder(ord);
+  m.classList.remove('spin1','spin2','spin3','pending','armed');
+  m.classList.add('locked');
+  if(!reduced()){ m.classList.add('jackpot'); setTimeout(()=>m.classList.remove('jackpot'),1200); coinBurst(); }
+  jackpotChord();
+  setLever('done');
+  drawnOrder=order.join(',');
+  document.getElementById('drawState').textContent='drawn · at the close';
+  document.getElementById('drawNote').textContent=
+    'Drawn on the server the moment the last leg landed — the reels are showing a result that already existed before you pulled. '
+    +'Only legs that lost are eligible. Ties fall to the next rule down.';
+  document.getElementById('marqText').textContent='HIERARCHY DRAWN';
 }
 
-/* one place that owns the lever's three states, so the disabled flag, the class,
-   the decal and the accessible name can never disagree */
-function setLever(state){
-  const lv=document.getElementById('lever'), lab=document.getElementById('pullLab');
-  if(!lv) return;
-  const cfg={
-    idle:['armed', true,  'The hierarchy has not been drawn yet — nothing to pull'],
-    pull:['Pull',  false, "Pull the lever to reveal this week's drawn hierarchy"],
-    done:['Pull again', false, "Pull again to replay this week's drawn hierarchy"]
-  }[state];
-  lab.textContent=cfg[0]; lv.disabled=cfg[1];
-  lv.classList.toggle('live', state==='pull'||state==='done');
-  lv.setAttribute('aria-label', cfg[2]);
-}
-
-let leverAudio=null;
-function leverThunk(){
-  try{
-    const AC=window.AudioContext||window.webkitAudioContext;
-    if(!AC) return;
-    leverAudio=leverAudio||new AC();
-    const now=leverAudio.currentTime, gain=leverAudio.createGain();
-    gain.gain.setValueAtTime(.0001,now);
-    gain.gain.exponentialRampToValueAtTime(.22,now+.012);
-    gain.gain.exponentialRampToValueAtTime(.0001,now+.24);
-    gain.connect(leverAudio.destination);
-    [82,146].forEach((hz,i)=>{
-      const osc=leverAudio.createOscillator();
-      osc.type=i?'square':'triangle';
-      osc.frequency.setValueAtTime(hz,now);
-      osc.frequency.exponentialRampToValueAtTime(hz*.46,now+.19);
-      osc.connect(gain); osc.start(now+i*.018); osc.stop(now+.25);
-    });
-    if(navigator.vibrate) navigator.vibrate([38,28,58]);
-  }catch(e){}
-}
-
-document.getElementById('lever').addEventListener('click', ()=>{
-  const ord=S.order;
-  if(!ord || !ord.length || document.getElementById('machine').classList.contains('pulling')) return;
-  leverThunk();
-  if(pendingDraw) revealDraw(ord, true);
-  else spin(ord);
-});
-function spin(order){
-  const lv=document.getElementById('lever'), machine=document.getElementById('machine');
-  const maxDur=reduced?0:2000+(order.length-1)*450;
-  lv.disabled=true; document.getElementById('pullLab').textContent='Spinning';
-  lv.classList.add('pulled'); machine.classList.add('pulling');
-  setTimeout(()=>lv.classList.remove('pulled'),720);
-  setTimeout(()=>{machine.classList.remove('pulling');setLever('done')},maxDur+180);
-  document.getElementById('ord').innerHTML=''; wins.forEach(w=>w.classList.remove('locked'));
+function paintOrder(order){
+  document.getElementById('ord').innerHTML='';
+  stopAll();
   order.forEach((lev,slot)=>{
     const s=strips[slot]; if(!s) return;
-    s.style.transition='none'; s.style.transform='translateY(0)'; void s.offsetHeight;
-    const dur = reduced ? 0 : 2000+slot*450;
-    s.style.transition=`transform ${dur}ms cubic-bezier(.11,.7,.14,1)`;
-    s.style.transform=`translateY(-${reelStop(lev)}px)`;
-    setTimeout(()=>{ if(wins[slot]) wins[slot].classList.add('locked'); addOrd(lev,slot); }, dur+30);
+    const y=reelStopY(lev);
+    s.style.transform=`translate3d(0,${y}px,0)`;
+    // keep reelState in step with the DOM or the next pull rewinds from stale y
+    reelState[slot]=Object.assign(reelState[slot]||{},{phase:'done',y});
+    reels[slot].classList.add('lock');
+    addOrd(lev,slot);
   });
 }
 function addOrd(lev,slot){
-  const l=LEVERS[lev], li=document.createElement('li');
+  if(lev===undefined||lev===null) return;
+  const l=LEVERS[lev],li=document.createElement('li');
   li.innerHTML=`<span class="n">${slot+1}</span><span><b>${l.name}</b> <span class="d">— ${l.desc}</span></span>`;
   document.getElementById('ord').appendChild(li);
   requestAnimationFrame(()=>li.classList.add('on'));
 }
-function paintOrder(order){
-  document.getElementById('ord').innerHTML='';
-  order.forEach((lev,slot)=>{
-    const s=strips[slot]; if(!s) return;
-    s.style.transition='none';
-    s.style.transform=`translateY(-${reelStop(lev)}px)`;
-    wins[slot].classList.add('locked'); addOrd(lev,slot);
-  });
+function ghostList(){
+  document.getElementById('ord').innerHTML=reelSet.map(li=>
+    `<li class="ghost"><span class="n">·</span><span><b>${LEVERS[li].name}</b>`
+    +`<span class="d"> — ${LEVERS[li].desc}</span></span></li>`).join('');
 }
+
+/* ============================================================================
+   BOARD STATES — one function owns which of the three the machine is in, so the
+   disabled flag, the class, the decal and the accessible name cannot disagree.
+   ============================================================================ */
+function paintMachine(ord){
+  const m=document.getElementById('machine');
+  serverOrder = (ord && ord.length) ? ord.slice() : null;
+  buildReels(activeLevers(serverOrder));
+  currentOrder = serverOrder ? serverOrder.slice() : [];
+  if(!serverOrder){
+    m.className='machine armed';
+    pendingDraw=null; drawnOrder=null;
+    setLever('idle'); startIdle(); ghostList();
+    document.getElementById('marqText').textContent='ARMED · ARMED · ARMED';
+    document.getElementById('drawState').textContent='armed · not drawn';
+    document.getElementById('drawNote').textContent=
+      `${reelSet.length} lever${reelSet.length===1?'':'s'} are in the draw; the order is not decided yet. `
+      +'The server draws a fresh permutation the moment the last leg lands and writes it once — these reels stop on that. '
+      +'Nothing on this page can re-roll it. Pull whenever you like: until the draw exists the reels just spin and come back.';
+    return;
+  }
+  const key=serverOrder.join(',');
+  if(drawnOrder===key){ // already pulled this load — repaint statically
+    m.className='machine locked'; setLever('done'); paintOrder(serverOrder);
+    document.getElementById('drawState').textContent='drawn · at the close';
+    document.getElementById('marqText').textContent='HIERARCHY DRAWN';
+    document.getElementById('drawNote').textContent=
+      'Drawn on the server the moment the last leg landed. Pull again to replay it.';
+    return;
+  }
+  if(pendingDraw===key) return;                  // idempotent under the 15s poll
+  pendingDraw=key;
+  m.className='machine armed pending';
+  setLever('pull'); startIdle(); ghostList();
+  document.getElementById('marqText').textContent='PULL · PULL · PULL';
+  document.getElementById('drawState').textContent='drawn · waiting on your pull';
+  document.getElementById('drawNote').textContent=
+    'The hierarchy is already decided — the server drew it the moment the last leg landed and wrote it once. '
+    +'Pull the lever to watch it stop. Everyone pulls their own; the reels stop on the same order for all of us.';
+}
+function activeLevers(ord){
+  if(ord&&ord.length) return ord.slice().sort((a,b)=>a-b);
+  const l=(settings().levers||[]).slice().sort((a,b)=>a-b);
+  return l.length ? l : [0,1,2,3];
+}
+function setLever(state){
+  const lv=document.getElementById('lever'),lab=document.getElementById('pullLab');
+  /* ⚠️ There is no disabled state any more, and that is deliberate. Kap's call:
+     the lever is always pullable, because a pull never decides anything — it only
+     shows what the server already wrote. Before the last leg lands the server has
+     written nothing, so the reels spin and come back to idle rather than stopping;
+     they must never stop on a permutation that does not exist. The only moment the
+     lever is inert is while its own reels are still moving. */
+  const cfg={
+    idle:['Pull',  false, 'Pull the lever. The hierarchy has not been drawn yet, so the reels will spin and come back — there is nothing for them to stop on.'],
+    pull:['Pull',  false, "Pull the lever to reveal this week's drawn hierarchy"],
+    done:['Again', false, "Pull again to replay this week's drawn hierarchy"],
+    busy:['· · ·', true,  'Reels are spinning']
+  }[state];
+  lab.textContent=cfg[0]; lv.disabled=cfg[1];
+  lv.classList.toggle('live',!cfg[1]);
+  lv.setAttribute('aria-label',cfg[2]);
+}
+
+/* ============================================================================
+   THE PULL — one Pointer Events path for mouse / pen / touch, plus click and
+   keyboard. Commit past 62% of travel; short of that it springs back.
+   ============================================================================ */
+const lever=document.getElementById('lever'),arm=document.getElementById('arm');
+let dragging=false,pullV=0,startPt=0,moved=0,pointerId=null,lastRatchet=0;
+const TRAVEL=118;   // px of pointer travel = full pull
+const COMMIT=0.62;
+
+function setPull(v,instant){
+  pullV=Math.max(0,Math.min(1,v));
+  arm.style.setProperty('--armT',instant?'0s':'.5s');
+  arm.parentElement.style.setProperty('--pull',pullV.toFixed(3));
+  arm.style.setProperty('--pull',pullV.toFixed(3));
+  // ratchet clicks as the arm passes detents — the feedback the old lever had none of
+  const step=Math.floor(pullV*9);
+  if(step!==lastRatchet){ lastRatchet=step; if(dragging) ratchet(pullV); }
+}
+function canPull(){ return !lever.disabled; }
+
+lever.addEventListener('pointerdown',e=>{
+  if(!canPull()) return;
+  dragging=true; pointerId=e.pointerId; startPt=coord(e); moved=0;
+  lever.classList.add('dragging');
+  try{lever.setPointerCapture(e.pointerId);}catch(_){}
+  e.preventDefault();
+});
+lever.addEventListener('pointermove',e=>{
+  if(!dragging||e.pointerId!==pointerId) return;
+  const d=coord(e)-startPt;
+  moved=Math.max(moved,Math.abs(d));
+  setPull(d/TRAVEL,true);
+  if(pullV>=1) commit();
+});
+['pointerup','pointercancel','lostpointercapture'].forEach(ev=>
+  lever.addEventListener(ev,e=>{
+    if(!dragging) return;
+    dragging=false; lever.classList.remove('dragging');
+    if(pullV>=COMMIT) commit();
+    else if(moved<7 && canPull()) commit();       // a plain click is a full pull
+    else setPull(0,false);
+  }));
+// downward drag at every width — on a phone the arm lies on its side and its
+// right-hand knob swings down, so "pull down" stays the same gesture.
+function coord(e){ return e.clientY; }
+
+lever.addEventListener('keydown',e=>{
+  if(!canPull()) return;
+  if(e.key===' '||e.key==='Enter'){ e.preventDefault(); if(!e.repeat) keyWind(); }
+});
+lever.addEventListener('keyup',e=>{ if(e.key===' '||e.key==='Enter') keyRelease(); });
+let keyTimer=null;
+function keyWind(){
+  if(keyTimer) return;
+  keyTimer=setInterval(()=>{ setPull(pullV+0.09,true); if(pullV>=1){ keyRelease(); commit(); } },26);
+}
+function keyRelease(){ if(keyTimer){clearInterval(keyTimer);keyTimer=null;} if(pullV<1&&pullV<COMMIT) setPull(0,false); else if(pullV<1) commit(); }
+
+function commit(){
+  if(lever.disabled) return;
+  dragging=false; lever.classList.remove('dragging');
+  setPull(1,true);
+  setLever('busy');
+  thunk();
+  setTimeout(()=>setPull(0,false),380);          // the arm springs back, reels keep going
+  // one pull, two outcomes, decided entirely by whether the server has written
+  // an order — never by which control was used
+  const ord=serverOrder;
+  if(!ord||!ord.length){ emptySpin(); return; }
+  revealSpin(ord);
+}
+
+/* ---- A pull on an undrawn board. It spins, it feels identical, and it lands on
+   NOTHING — the reels come back to idle and the copy says why. No hierarchy is
+   displayed, because none exists yet. ---- */
+function emptySpin(){
+  const m=document.getElementById('machine'),run=++sequenceGuard;
+  m.classList.add('pulling'); setTimeout(()=>m.classList.remove('pulling'),820);
+  document.getElementById('drawState').textContent='spinning · nothing drawn';
+  document.getElementById('marqText').textContent='· · · · · · ·';
+  if(reduced()){ setTimeout(()=>{emptyEnd(run)},400); return; }
+  rewindStrips();
+  if(!spinning){ spinning=true; lastNow=performance.now(); rafId=requestAnimationFrame(tick); }
+  m.classList.add('spin2');
+  clunk(0);
+  setTimeout(()=>emptyEnd(run),1900);
+}
+function emptyEnd(run){
+  if(run!==sequenceGuard) return;
+  const m=document.getElementById('machine');
+  m.classList.remove('spin1','spin2','spin3');
+  m.classList.add('armed');
+  setLever(serverOrder?'pull':'idle');
+  document.getElementById('drawState').textContent='armed · not drawn';
+  document.getElementById('marqText').textContent='ARMED · ARMED · ARMED';
+  document.getElementById('drawNote').textContent=
+    'Nothing to stop on yet — the hierarchy has not been drawn. The server draws it the moment the last leg '
+    +'lands and writes it once; the reels stop on that and only that. Pull as often as you like in the meantime.';
+  softChirp();
+}
+
+/* ============================================================================
+   AUDIO — Web Audio only, no assets. Rising pitch per reel so the sequence has
+   a shape, a mechanical thunk on the pull, a chord on the final lock.
+   ============================================================================ */
+let AC=null;
+function ac(){ if(muted) return null; try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==='suspended')AC.resume(); return AC; }catch(_){return null;} }
+function env(g,peak,dur,now){ g.gain.setValueAtTime(.0001,now);
+  g.gain.exponentialRampToValueAtTime(peak,now+.008); g.gain.exponentialRampToValueAtTime(.0001,now+dur); }
+function tone(hz,type,peak,dur,slideTo){
+  const c=ac(); if(!c) return; const now=c.currentTime,g=c.createGain(),o=c.createOscillator();
+  env(g,peak,dur,now); o.type=type; o.frequency.setValueAtTime(hz,now);
+  if(slideTo) o.frequency.exponentialRampToValueAtTime(slideTo,now+dur*.8);
+  o.connect(g); g.connect(c.destination); o.start(now); o.stop(now+dur+.02);
+}
+function thunk(){
+  tone(84,'triangle',.24,.26,40); tone(148,'square',.14,.2,66);
+  if(navigator.vibrate&&!reduced()) navigator.vibrate([38,26,58]);
+}
+function ratchet(v){ tone(900+v*700,'square',.035,.035); }
+function clunk(i){ tone(180+i*46,'triangle',.2,.16,90+i*20); tone(700+i*120,'square',.05,.06);
+  if(navigator.vibrate&&!reduced()) navigator.vibrate(18); }
+function softChirp(){ tone(440,'sine',.08,.12,330); }
+function jackpotChord(){
+  [523,659,784,1047].forEach((hz,i)=>setTimeout(()=>tone(hz,'triangle',.13,.5),i*95));
+  setTimeout(()=>tone(1568,'sine',.07,.7),420);
+}
+
+/* ============================================================================
+   COINS — the payoff. Purely on the final lock, never on a near-anything.
+   ============================================================================ */
+function coinBurst(){
+  const host=document.getElementById('coins'); if(!host) return;
+  const w=host.clientWidth,h=host.clientHeight;
+  for(let i=0;i<20;i++){
+    const c=document.createElement('div'); c.className='coin';
+    const x=w*(.2+Math.random()*.6);
+    c.style.left=x+'px'; c.style.top=(h*.42)+'px';
+    host.appendChild(c);
+    const dx=(Math.random()-.5)*w*.75, up=-(90+Math.random()*130), dur=900+Math.random()*700;
+    c.animate([
+      {transform:'translate(0,0) scale(.6)',opacity:0},
+      {transform:`translate(${dx*.5}px,${up}px) scale(1)`,opacity:1,offset:.35},
+      {transform:`translate(${dx}px,${h*.75}px) scale(.85)`,opacity:0}
+    ],{duration:dur,easing:'cubic-bezier(.3,.7,.5,1)'}).onfinish=()=>c.remove();
+  }
+}
+
+/* ---------------- sound ---------------- */
+document.getElementById('mute').addEventListener('click', e=>{
+  muted = !muted;
+  e.currentTarget.setAttribute('aria-pressed', String(muted));
+  e.currentTarget.textContent = muted ? 'Sound on' : 'Sound off';
+});
 
 /* ---------------- grading (admin) ---------------- */
 async function autoGrade(){

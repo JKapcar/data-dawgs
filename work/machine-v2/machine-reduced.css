@@ -1,0 +1,8 @@
+@media(prefers-reduced-motion:reduce){
+  .machine::before{animation:none!important}
+  .machine.pulling,.machine.thunk,.machine.jackpot .flash{animation:none!important}
+  .machine.pending .lever .knob{animation:none!important}
+  .strip{filter:none!important}
+  .arm{transition:none}
+  .ord li{transition:none}
+}

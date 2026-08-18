@@ -1,0 +1,147 @@
+/* ===================== the cabinet ===================== */
+/* The lever is mounted on a boss on the cabinet's right flank and swings into
+   reserved padding — that is why the arc never crosses the reels. The old build
+   rotated a full-height flex column 58deg about its own centre-bottom inside an
+   82px track, so the knob left the cabinet and landed on the reel glass. */
+.machine{
+  position:relative;isolation:isolate;
+  padding:56px 104px 34px 22px;border-radius:12px;
+  border:2px solid var(--brass-lo);border-top:3px solid var(--brass);
+  background:
+    linear-gradient(180deg,rgba(49,38,23,0),rgba(49,38,23,.33)),
+    radial-gradient(120% 90% at 50% -10%,#3a2c19,#1b1409 72%);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.05),inset 0 20px 36px rgba(0,0,0,.45),0 10px 22px rgba(0,0,0,.32);
+  transition:box-shadow .3s}
+/* bulb rail — four repeating radial layers, one per edge. Chase speed is a
+   custom property so escalation is one variable, not four keyframe sets. */
+.machine::before{
+  content:"";position:absolute;inset:8px;border-radius:8px;pointer-events:none;z-index:4;
+  background:
+    radial-gradient(circle,var(--bulb) 0 2.5px,transparent 3.1px) 0 0/17px 17px repeat-x,
+    radial-gradient(circle,var(--bulb) 0 2.5px,transparent 3.1px) 0 100%/17px 17px repeat-x,
+    radial-gradient(circle,var(--bulb) 0 2.5px,transparent 3.1px) 0 0/17px 17px repeat-y,
+    radial-gradient(circle,var(--bulb) 0 2.5px,transparent 3.1px) 100% 0/17px 17px repeat-y;
+  filter:drop-shadow(0 0 4px rgba(255,201,116,.5));
+  opacity:var(--bulbo,.5);
+  animation:bulbchase var(--bulbspeed,1.15s) linear infinite;
+  animation-play-state:var(--bulbrun,paused);
+  transition:opacity .35s}
+@keyframes bulbchase{to{background-position:17px 0,-17px 100%,0 17px,100% -17px}}
+.machine.armed  {--bulbo:.72;--bulbspeed:1.15s;--bulbrun:running}
+.machine.pending{--bulbo:1;  --bulbspeed:.42s; --bulbrun:running}
+.machine.spin1  {--bulbo:1;  --bulbspeed:.30s; --bulbrun:running}
+.machine.spin2  {--bulbo:1;  --bulbspeed:.20s; --bulbrun:running}
+.machine.spin3  {--bulbo:1;  --bulbspeed:.13s; --bulbrun:running}
+.machine.locked {--bulbo:.92;--bulbspeed:1.6s; --bulbrun:running}
+
+@keyframes cabinetthunk{0%,100%{transform:none}
+  16%{transform:translateY(7px) rotate(.3deg)}38%{transform:translateY(-5px) rotate(-.24deg)}
+  58%{transform:translateY(3px) rotate(.12deg)}78%{transform:translateY(-1px)}}
+.machine.pulling{animation:cabinetthunk .8s cubic-bezier(.2,.8,.2,1)}
+@keyframes reelthunk{0%,100%{transform:none}30%{transform:translateY(2.5px)}62%{transform:translateY(-1px)}}
+.machine.thunk{animation:reelthunk .16s ease-out}
+
+/* jackpot wash on the final lock */
+.machine .flash{position:absolute;inset:0;border-radius:12px;pointer-events:none;z-index:5;opacity:0;
+  background:radial-gradient(120% 100% at 50% 40%,rgba(255,224,138,.85),rgba(255,150,50,.28) 45%,transparent 72%)}
+@keyframes jackpotflash{0%{opacity:0}12%{opacity:1}100%{opacity:0}}
+.machine.jackpot .flash{animation:jackpotflash 1.1s ease-out}
+
+/* ===================== marquee ===================== */
+.marq{position:absolute;left:22px;right:104px;top:22px;height:22px;z-index:3;pointer-events:none;
+  display:flex;align-items:center;justify-content:center;border-radius:6px;
+  background:linear-gradient(180deg,var(--grape),var(--grape-lo));
+  box-shadow:inset 0 0 14px rgba(0,0,0,.6),0 1px 0 rgba(255,255,255,.06)}
+.marq b{font:800 9.5px/1 ui-monospace,monospace;letter-spacing:5px;color:var(--bulb-off);
+  transition:color .3s,text-shadow .3s;white-space:nowrap;overflow:hidden;text-overflow:clip}
+.machine.pending .marq b,.machine.locked .marq b{color:var(--bulb);text-shadow:0 0 12px rgba(255,224,138,.8)}
+
+/* ===================== reels ===================== */
+.reels{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;position:relative;z-index:2}
+.pos{font:700 9.5px/1 ui-monospace,monospace;letter-spacing:1.4px;color:#b7a488;text-transform:uppercase;
+  margin:0 0 6px;text-align:center;transition:color .25s,text-shadow .25s}
+.reel.lock .pos{color:var(--bulb);text-shadow:0 0 9px rgba(255,224,138,.55)}
+
+.win{position:relative;height:104px;overflow:hidden;border-radius:8px;
+  background:linear-gradient(180deg,#fffdf7,#efe6d4);
+  border:2px solid var(--brass-lo);
+  box-shadow:inset 0 0 14px rgba(43,28,14,.18);
+  transition:border-color .2s,box-shadow .25s}
+/* curved glass + payline. Both are ::pseudo so a reel is one element. */
+.win::before{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.62),rgba(255,255,255,0) 34%,
+             rgba(43,28,14,.05) 60%,rgba(43,28,14,.20))}
+.win::after{content:"";position:absolute;left:6px;right:6px;top:50%;height:2px;margin-top:-1px;z-index:3;
+  pointer-events:none;background:linear-gradient(90deg,transparent,var(--nose),transparent);
+  opacity:.3;transition:opacity .25s}
+.reel.lock .win{border-color:var(--brass-hi);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 34%,transparent),0 0 24px rgba(255,201,116,.42),
+             inset 0 0 20px rgba(255,180,80,.22)}
+.reel.lock .win::after{opacity:.65}
+/* 1st decides most weeks, so it gets the jackpot frame — :first-child, so it
+   follows the reel set rather than a hardcoded index. */
+.reels > .reel:first-child.lock .win{
+  box-shadow:0 0 0 3px var(--accent),0 0 30px color-mix(in srgb,var(--accent) 58%,transparent),
+             inset 0 0 22px rgba(255,150,50,.3)}
+
+.strip{position:absolute;left:0;right:0;top:0;will-change:transform;
+  transform:translate3d(0,0,0);filter:blur(0px)}
+.cell{height:104px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  text-align:center;padding:0 5px;color:#2b1c0e;border-bottom:1px solid rgba(43,28,14,.12)}
+.cell svg{width:26px;height:26px;flex:0 0 26px;opacity:.88}
+.cell span{font:800 11.5px/1.15 system-ui;letter-spacing:.4px;text-transform:uppercase}
+/* the strip blurs with velocity — set from JS as a px value */
+.reel.moving .strip{filter:blur(var(--mblur,2px))}
+/* a reel that has just stopped gets a one-frame gold pop on the payline */
+@keyframes cellpop{0%{transform:scale(1)}40%{transform:scale(1.09)}100%{transform:scale(1)}}
+.reel.pop .cell{animation:cellpop .28s ease-out}
+
+/* ===================== the lever ===================== */
+.leverbay{position:absolute;right:0;top:0;bottom:0;width:104px;z-index:3}
+/* brass boss the arm pivots on */
+/* mounting plate the arm pivots on — a plate, not a second ball */
+.boss{position:absolute;bottom:32px;left:26px;width:44px;height:30px;margin-left:-22px;border-radius:6px 6px 4px 4px;
+  background:linear-gradient(180deg,var(--brass),#5c4718);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 -4px 8px rgba(0,0,0,.5),0 2px 6px rgba(0,0,0,.5);z-index:1}
+.boss::after{content:"";position:absolute;left:50%;top:6px;width:16px;height:16px;margin-left:-8px;border-radius:50%;
+  background:radial-gradient(circle at 34% 30%,#e8cf9a,#8a6a2c 60%,#3a2a12);
+  box-shadow:inset 0 -2px 4px rgba(0,0,0,.55)}
+/* the arc track: shows where the knob goes before you touch it */
+
+.lever{position:absolute;left:0;right:2px;bottom:16px;top:16px;background:none;border:0;padding:0;margin:0;
+  color:inherit;font:inherit;cursor:default;touch-action:none;-webkit-tap-highlight-color:transparent;
+  display:block}
+.lever:focus-visible{outline:2px solid var(--bulb);outline-offset:-6px;border-radius:10px}
+.lever.live{cursor:grab}
+.lever.live:active{cursor:grabbing}
+.arm{position:absolute;left:26px;bottom:46px;width:13px;height:96px;margin-left:-6.5px;
+  transform-origin:50% 100%;
+  transform:rotate(calc(var(--pull,0)*34deg)) scaleY(calc(1 - var(--pull,0)*.12));
+  transition:transform var(--armT,.5s) cubic-bezier(.18,.86,.28,1.06)}
+.rod{position:absolute;inset:0;border-radius:7px;
+  background:linear-gradient(90deg,#40311a,#a8873c 24%,var(--brass-hi) 47%,#a8873c 70%,#40311a);
+  box-shadow:0 0 0 1px rgba(0,0,0,.45),inset 0 0 8px rgba(0,0,0,.25)}
+.knob{position:absolute;left:50%;top:-13px;width:50px;height:50px;margin-left:-25px;border-radius:50%;
+  background:radial-gradient(circle at 34% 28%,#ff9a86 0 10%,var(--nose) 48%,#8a1a0c 100%);
+  box-shadow:inset 0 -6px 11px rgba(0,0,0,.42),0 0 0 3px #3a2a12,0 6px 14px rgba(0,0,0,.5);
+  transform:scale(calc(1 - var(--pull,0)*.09))}
+/* "beg" pulse only when a draw is sitting on the server waiting for this reader */
+@keyframes knobbeg{
+  0%,100%{box-shadow:inset 0 -6px 11px rgba(0,0,0,.42),0 0 0 3px #3a2a12,0 0 0 0 rgba(227,59,38,.55)}
+  50%    {box-shadow:inset 0 -6px 11px rgba(0,0,0,.42),0 0 0 3px #3a2a12,0 0 0 15px rgba(227,59,38,0)}}
+.machine.pending .lever:not(.dragging) .knob{animation:knobbeg 1.2s ease-in-out infinite}
+.pulllab{position:absolute;left:-13px;width:78px;bottom:17px;text-align:center;white-space:nowrap;
+  font:800 10px/1 ui-monospace,monospace;letter-spacing:1.8px;text-transform:uppercase;
+  color:var(--bulb-off);transition:color .3s;pointer-events:none}
+.lever.live ~ .pulllab{color:var(--bulb);text-shadow:0 0 9px rgba(255,201,116,.6)}
+/* the commit threshold, drawn on the track so "how far is far enough" is visible */
+.detent{position:absolute;left:50%;bottom:59px;width:6px;height:6px;margin-left:-3px;border-radius:50%;
+  background:var(--bulb);opacity:0;transform-origin:50% 50%;
+  translate:0 0;pointer-events:none;transition:opacity .25s}
+.lever.dragging ~ .detent{opacity:.85}
+
+/* ===================== coins ===================== */
+.coins{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:6;border-radius:12px}
+.coin{position:absolute;width:14px;height:14px;border-radius:50%;
+  background:radial-gradient(circle at 32% 28%,var(--bulb),var(--gold) 52%,#8a6412);
+  box-shadow:0 0 8px rgba(255,201,116,.7),inset 0 -2px 3px rgba(0,0,0,.35)}

@@ -156,17 +156,42 @@ ok(/r\.result = s\.value==='1' \? 'won' : s\.value==='0' \? 'lost' : 'push';/.te
   const code = page.replace(/\/\*[\s\S]*?\*\//g, "").replace(/<!--[\s\S]*?-->/g, "");
   ok(!/hasSeenDraw|markDrawSeen|SEEN_KEY/.test(code),
      "the once-per-draw localStorage memory is gone — every load gets the pull");
-  ok(/let revealedThisLoad=null;/.test(code),
+  ok(/let drawnOrder = null;/.test(code),
      "…replaced by a page-lifetime flag, so a reload is a new show");
-  ok(/if\(revealedThisLoad !== key\) return armPending\(ord\);/.test(code),
+  ok(/if\(pendingDraw===key\) return;/.test(code) && /if\(drawnOrder===key\)/.test(code),
      "a draw always arms unless THIS load already revealed it");
   ok(!/const graded = \(S\.status\|\|'open'\)==='graded'/.test(code),
      "a graded week no longer auto-reveals — the reels show the whole order, the verdict names one lever");
   // The poll must not blank the reels under the reader's cursor.
-  ok(/revealedThisLoad=ord\.join\(','\);/.test(code),
+  ok(/drawnOrder=order\.join\(','\);/.test(code),
      "pulling records the reveal for this load, so render() on the 15s poll repaints statically");
-  ok(/pendingDraw=null; revealedThisLoad=null;/.test(code),
+  ok(/pendingDraw=null; drawnOrder=null;/.test(code),
      "…and clearing the machine resets it, so a new week does not inherit the last one's reveal");
+
+  // ---- v2 machine invariants ----
+  // The lever decides nothing, so there is no state in which it is refused. The
+  // only guard is against pulling reels that are already moving.
+  ok(!/lv\.disabled=cfg\[1\][\s\S]{0,400}idle:\['[^']*',\s*true/.test(code)
+     && /idle:\['Pull',\s*false/.test(code),
+     "the lever is live on an undrawn board — a pull reveals, it never decides");
+  ok(/busy:\['[^']*',\s*true/.test(code),
+     "…and is inert only while its own reels are still moving");
+  // Before the draw exists there is nothing to stop on, so the reels must come back.
+  ok(/function emptySpin\(\)/.test(code) && /function emptyEnd\(run\)/.test(code),
+     "a pull on an undrawn board spins and returns to idle rather than stopping");
+  // scope the check to the two function bodies rather than a span of source
+  const body = n => (code.match(new RegExp("function " + n + "\\([^)]*\\)\\{[\\s\\S]*?\\n\\}")) || [""])[0];
+  const empties = body("emptySpin") + body("emptyEnd");
+  ok(empties.length > 0 && !/paintOrder|revealSpin|addOrd|lockReel/.test(empties),
+     "…and never paints an order, because none has been written");
+  ok(/if\(!ord\|\|!ord\.length\)\{ emptySpin\(\); return; \}/.test(code),
+     "one pull, two outcomes, chosen by whether the server wrote an order");
+  // Cell height must not be read while the cabinet is mid-rotation.
+  ok(/offsetHeight/.test(code) && !/\.win'\)\.getBoundingClientRect/.test(code),
+     "cell height is measured with offsetHeight, so a rotating cabinet cannot skew the payline");
+  // The near-miss is the one casino mechanic that is off the table here.
+  ok(!/tease|nearMiss|near_miss/i.test(code),
+     "no reel tease — the reels never park on a lever the server did not draw");
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
