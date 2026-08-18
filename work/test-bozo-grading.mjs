@@ -192,6 +192,12 @@ ok(/r\.result = s\.value==='1' \? 'won' : s\.value==='0' \? 'lost' : 'push';/.te
   // The near-miss is the one casino mechanic that is off the table here.
   ok(!/tease|nearMiss|near_miss/i.test(code),
      "no reel tease — the reels never park on a lever the server did not draw");
+  // A <button> driven only by Pointer Events ignores anything that ACTIVATES it
+  // rather than pointing at it: screen readers, voice control, element.click().
+  ok(/lever\.addEventListener\('click'/.test(code),
+     "the lever answers a plain click, so assistive tech can activate it");
+  ok(/performance\.now\(\)-handledAt < 600/.test(code),
+     "…without double-firing on the click the browser sends after pointerup");
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

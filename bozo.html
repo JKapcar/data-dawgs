@@ -5725,6 +5725,7 @@ function setLever(state){
    ============================================================================ */
 const lever=document.getElementById('lever'),arm=document.getElementById('arm');
 let dragging=false,pullV=0,startPt=0,moved=0,pointerId=null,lastRatchet=0;
+let handledAt=0;   // when the pointer/key path last ran, so click can't double-fire
 const TRAVEL=118;   // px of pointer travel = full pull
 const COMMIT=0.62;
 
@@ -5757,10 +5758,24 @@ lever.addEventListener('pointermove',e=>{
   lever.addEventListener(ev,e=>{
     if(!dragging) return;
     dragging=false; lever.classList.remove('dragging');
+    handledAt=performance.now();
     if(pullV>=COMMIT) commit();
     else if(moved<7 && canPull()) commit();       // a plain click is a full pull
     else setPull(0,false);
   }));
+
+/* ⚠️ The pull is driven by Pointer Events, and a <button> that only listens for
+   those is broken for anything that ACTIVATES it rather than pointing at it:
+   a screen reader's "activate", voice control, an extension, or plain
+   element.click(). Real mouse input reaches here too — the browser fires click
+   after pointerup — so `handledAt` suppresses the duplicate. It is set on every
+   pointer and key release, not only on the ones that commit, so letting go of a
+   half-pull short of the threshold does not then fire on the trailing click. */
+lever.addEventListener('click',()=>{
+  if(lever.disabled) return;
+  if(performance.now()-handledAt < 600) return;
+  commit();
+});
 // downward drag at every width — on a phone the arm lies on its side and its
 // right-hand knob swings down, so "pull down" stays the same gesture.
 function coord(e){ return e.clientY; }
@@ -5769,7 +5784,7 @@ lever.addEventListener('keydown',e=>{
   if(!canPull()) return;
   if(e.key===' '||e.key==='Enter'){ e.preventDefault(); if(!e.repeat) keyWind(); }
 });
-lever.addEventListener('keyup',e=>{ if(e.key===' '||e.key==='Enter') keyRelease(); });
+lever.addEventListener('keyup',e=>{ if(e.key===' '||e.key==='Enter'){ handledAt=performance.now(); keyRelease(); } });
 let keyTimer=null;
 function keyWind(){
   if(keyTimer) return;
