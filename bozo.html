@@ -740,7 +740,10 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
   0%,100%{box-shadow:inset 0 -6px 11px rgba(0,0,0,.42),0 0 0 3px #3a2a12,0 0 0 0 rgba(227,59,38,.55)}
   50%    {box-shadow:inset 0 -6px 11px rgba(0,0,0,.42),0 0 0 3px #3a2a12,0 0 0 15px rgba(227,59,38,0)}}
 .machine.pending .lever:not(.dragging) .knob{animation:knobbeg 1.2s ease-in-out infinite}
-.pulllab{position:absolute;left:-13px;width:78px;bottom:17px;text-align:center;white-space:nowrap;
+/* centred on the boss (26px in), and NARROW ENOUGH TO STAY IN THE BAY — at
+   78px it hung 13px past the bay's left edge and sat over the 4th reel's
+   column. If the decal text ever gets longer again, shorten the text. */
+.pulllab{position:absolute;left:0;width:52px;bottom:17px;text-align:center;white-space:nowrap;
   font:800 10px/1 ui-monospace,monospace;letter-spacing:1.8px;text-transform:uppercase;
   color:var(--bulb-off);transition:color .3s;pointer-events:none}
 .lever.live ~ .pulllab{color:var(--bulb);text-shadow:0 0 9px rgba(255,201,116,.6)}
@@ -3197,8 +3200,11 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       <span class="boss"></span>
       <!-- Real <button>: the pull is a real control. Pointer Events only — no
            touchstart branch, so mouse / pen / touch take one code path. -->
-      <button type="button" class="lever" id="lever" disabled
-              aria-label="The hierarchy has not been drawn yet — nothing to pull">
+      <!-- Not disabled, and the label matches setLever('idle'): the lever is never
+           refused, so the pre-JS default must not claim otherwise. JS overwrites
+           both within a frame; this is what a reader with no JS is told. -->
+      <button type="button" class="lever live" id="lever"
+              aria-label="Pull the lever. The hierarchy has not been drawn yet, so the reels will spin and come back — there is nothing for them to stop on.">
         <span class="arm" id="arm"><span class="rod"></span><span class="knob"></span></span>
       </button>
       <span class="pulllab" id="pullLab">armed</span>

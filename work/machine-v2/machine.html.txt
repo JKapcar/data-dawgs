@@ -5,8 +5,11 @@
       <span class="boss"></span>
       <!-- Real <button>: the pull is a real control. Pointer Events only — no
            touchstart branch, so mouse / pen / touch take one code path. -->
-      <button type="button" class="lever" id="lever" disabled
-              aria-label="The hierarchy has not been drawn yet — nothing to pull">
+      <!-- Not disabled, and the label matches setLever('idle'): the lever is never
+           refused, so the pre-JS default must not claim otherwise. JS overwrites
+           both within a frame; this is what a reader with no JS is told. -->
+      <button type="button" class="lever live" id="lever"
+              aria-label="Pull the lever. The hierarchy has not been drawn yet, so the reels will spin and come back — there is nothing for them to stop on.">
         <span class="arm" id="arm"><span class="rod"></span><span class="knob"></span></span>
       </button>
       <span class="pulllab" id="pullLab">armed</span>
