@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SwoleDawg — Session</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0E0E10;
+  --panel:#1A1A1D;
+  --panel-hi:#212125;
+  --rule:#2E2E33;
+  --brass:#F97316;
+  --brass-dim:#8A4514;
+  --bone:#EDEDEF;
+  --muted:#8A8A93;
+  --steel:#4ADE80;
+  --alert:#EF4444;
+  --pad:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--ink);color:var(--bone);font-family:'Archivo',system-ui,sans-serif}
+body{padding-bottom:64px}
+.wrap{max-width:460px;margin:0 auto;padding:0 var(--pad)}
+
+/* ---------- site chrome ---------- */
+.livebar{background:var(--brass);color:#1A0E03;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.04em;text-align:center;padding:7px 14px;line-height:1.4}
+.wordmark{display:flex;align-items:center;gap:10px;padding:18px 0 4px}
+.wordmark h1{font-size:31px;font-weight:800;letter-spacing:-.025em;line-height:1;flex:1}
+.wordmark h1 i{font-style:normal;color:var(--brass)}
+.badge{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;padding:4px 8px;border-radius:3px;background:var(--panel-hi);color:var(--muted)}
+.badge.pup{background:#3A2A08;color:#FBBF24}
+.whoami{font-size:13px;color:var(--muted);padding-bottom:14px}
+.tabs{display:flex;gap:20px;border-bottom:1px solid var(--rule);overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{background:none;border:0;color:var(--muted);font:inherit;font-size:15px;font-weight:600;padding:0 0 11px;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.on{color:var(--brass);border-bottom-color:var(--brass)}
+.tab:focus-visible{outline:2px solid var(--brass);outline-offset:3px}
+
+/* ---------- masthead ---------- */
+.masthead{padding:22px 0 14px;border-bottom:1px solid var(--rule)}
+.brand{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.session-line{display:flex;align-items:baseline;justify-content:space-between;margin-top:10px;gap:12px}
+.session-title{font-size:29px;font-weight:800;letter-spacing:-.02em;line-height:1}
+.session-meta{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);text-align:right;line-height:1.5}
+.session-meta b{color:var(--brass);font-weight:500}
+.effort-strip{display:flex;gap:6px;margin-top:14px;align-items:center}
+.effort-chip{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;padding:4px 8px;border:1px solid var(--rule);color:var(--muted)}
+.effort-chip.on{border-color:var(--brass-dim);color:var(--brass)}
+
+/* ---------- timer rail ---------- */
+.rail{position:sticky;top:0;z-index:50;background:var(--ink);border-bottom:1px solid var(--rule);transition:border-color .2s}
+.rail.live{border-bottom-color:var(--brass-dim)}
+.rail-inner{max-width:460px;margin:0 auto;padding:12px var(--pad) 14px}
+.rail-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.rail-label{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.rail-label span{color:var(--bone)}
+.rail-clock{font-family:'IBM Plex Mono',monospace;font-size:34px;font-weight:500;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
+.rail.live .rail-clock{color:var(--brass)}
+.rail.over .rail-clock{color:var(--alert)}
+.rail-btns{display:flex;gap:6px}
+.tbtn{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;background:transparent;color:var(--muted);border:1px solid var(--rule);padding:9px 11px;cursor:pointer;min-height:36px}
+.tbtn:hover{color:var(--bone);border-color:var(--muted)}
+.tbtn.primary{color:var(--brass);border-color:var(--brass-dim)}
+.tbtn:focus-visible,.stepbtn:focus-visible,.logbtn:focus-visible,.toggle:focus-visible,.exhead:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+
+/* gauge */
+.gauge{display:flex;gap:2px;margin-top:11px;height:7px}
+.seg{flex:1;background:var(--rule);position:relative;overflow:hidden}
+.seg i{position:absolute;inset:0;background:var(--brass);transform-origin:left center;display:block}
+.gauge.idle .seg i{background:var(--rule)}
+.gauge-ticks{display:flex;justify-content:space-between;margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.04em}
+.adjust{display:flex;align-items:center;justify-content:space-between;margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.04em}
+.adj-ctl{display:flex;align-items:center;gap:2px}
+.adjbtn{font-family:'IBM Plex Mono',monospace;font-size:10px;background:none;border:1px solid var(--rule);color:var(--muted);padding:5px 7px;cursor:pointer;min-height:28px;letter-spacing:.02em}
+.adjbtn:hover{color:var(--brass);border-color:var(--brass-dim)}
+.adj-val{font-size:11px;color:var(--bone);padding:0 8px;min-width:46px;text-align:center;font-variant-numeric:tabular-nums}
+.adj-val.custom{color:var(--brass)}
+.adjreset{font-family:'IBM Plex Mono',monospace;font-size:10px;background:none;border:0;color:var(--steel);cursor:pointer;padding:5px 0 5px 8px;text-decoration:underline;text-underline-offset:3px}
+.adjbtn:focus-visible,.adjreset:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+
+/* ---------- exercise cards ---------- */
+.list{margin-top:8px}
+.ex{border-bottom:1px solid var(--rule)}
+.exhead{width:100%;background:none;border:0;color:inherit;font:inherit;text-align:left;display:flex;align-items:center;gap:12px;padding:15px 0;cursor:pointer}
+.exidx{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);width:22px;flex:0 0 22px}
+.exname{flex:1;font-size:15px;font-weight:600;letter-spacing:-.01em;line-height:1.25}
+.ex.done .exname{color:var(--muted);font-weight:500}
+.exsum{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--steel);text-align:right;white-space:nowrap}
+.ex.active .exidx{color:var(--brass)}
+.exbody{padding:0 0 20px}
+.prescribe{display:flex;gap:0;border:1px solid var(--rule);margin-bottom:14px}
+.pcell{flex:1;padding:9px 10px;border-right:1px solid var(--rule)}
+.pcell:last-child{border-right:0}
+.pcell dt{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.pcell dd{font-family:'IBM Plex Mono',monospace;font-size:15px;margin-top:3px;color:var(--bone)}
+
+.setrow{display:flex;align-items:center;gap:9px;padding:9px 0;border-top:1px dotted var(--rule)}
+.setrow:first-of-type{border-top:0}
+.setno{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);width:22px;flex:0 0 22px}
+.field{flex:1;display:flex;align-items:center;border:1px solid var(--rule);background:var(--panel)}
+.stepbtn{width:34px;height:42px;background:none;border:0;color:var(--muted);font-size:17px;cursor:pointer;font-family:'IBM Plex Mono',monospace}
+.stepbtn:hover{color:var(--brass)}
+.val{flex:1;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:15px;font-variant-numeric:tabular-nums}
+.val em{font-style:normal;font-size:9px;color:var(--muted);letter-spacing:.1em;display:block;margin-top:-1px}
+.logbtn{width:44px;height:44px;flex:0 0 44px;background:none;border:1px solid var(--rule);color:var(--muted);cursor:pointer;font-size:16px;line-height:1}
+.logbtn:hover{border-color:var(--brass-dim);color:var(--brass)}
+.setrow.logged .field{background:transparent;border-color:transparent}
+.setrow.logged .val{color:var(--steel)}
+.setrow.logged .stepbtn{visibility:hidden}
+.setrow.logged .logbtn{border-color:transparent;color:var(--steel)}
+.setrow.pending .val{color:var(--muted)}
+
+.exfoot{display:flex;align-items:center;justify-content:space-between;margin-top:14px;gap:10px}
+.cue{font-size:12px;color:var(--muted);line-height:1.45;flex:1}
+.cue b{color:var(--bone);font-weight:600}
+
+/* auto-timer toggle */
+.toggle{display:flex;align-items:center;gap:9px;background:none;border:0;color:inherit;cursor:pointer;padding:4px 0}
+.track{width:38px;height:21px;border:1px solid var(--rule);position:relative;flex:0 0 38px;transition:border-color .2s}
+.knob{position:absolute;top:2px;left:2px;width:15px;height:15px;background:var(--muted);transition:transform .18s,background .18s}
+.toggle.on .track{border-color:var(--brass-dim)}
+.toggle.on .knob{transform:translateX(17px);background:var(--brass)}
+.toggle-cap{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.toggle.on .toggle-cap{color:var(--brass)}
+
+.footnote{padding:22px 0 0;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);line-height:1.7;letter-spacing:.03em}
+.footnote span{color:var(--steel)}
+
+/* end-of-rest cue */
+.flash{position:fixed;inset:0;z-index:99;pointer-events:none;background:var(--brass);opacity:0}
+.flash.fire{animation:pulse 1.05s ease-out}
+@keyframes pulse{
+  0%{opacity:0} 6%{opacity:.30} 22%{opacity:0}
+  34%{opacity:0} 40%{opacity:.30} 56%{opacity:0}
+  100%{opacity:0}
+}
+.rail.fire{border-bottom-color:var(--brass)}
+.rail.fire .rail-clock{animation:blink .5s steps(1) 3}
+@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:.25}}
+.cuewrap{display:flex;gap:14px;align-items:center}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important}
+  .flash.fire{animation:none;opacity:0}
+  .rail.fire .rail-clock{animation:none}
+  .rail.fire{border-bottom-width:3px}
+}
+</style>
+</head>
+<body>
+
+<div class="livebar">SwoleDawg · logging is live in this session · export to keep it</div>
+
+<div class="wrap">
+  <div class="wordmark">
+    <h1>Swole<i>Dawg</i></h1>
+    <span class="badge pup">PUP</span>
+    <span class="badge">v0.3.0</span>
+  </div>
+  <p class="whoami">Kap · 6'2" · source: Embedded seed</p>
+  <nav class="tabs">
+    <button class="tab">Overview</button>
+    <button class="tab">Nutrition</button>
+    <button class="tab on">Training</button>
+    <button class="tab">Recovery</button>
+    <button class="tab">Body</button>
+  </nav>
+</div>
+
+<div class="wrap">
+  <header class="masthead">
+    <div class="brand">Training · Session Log</div>
+    <div class="session-line">
+      <h1 class="session-title">Monday — Push</h1>
+      <div class="session-meta">Block 1 · Wk <b id="wkNum">—</b><br>Target <b id="wkRir">—</b></div>
+    </div>
+    <div class="effort-strip" id="effortStrip">
+      <span class="effort-chip" data-weeks="1">WK1 · 2 SETS</span>
+      <span class="effort-chip" data-weeks="2,3">WK2–3 · 2 RIR</span>
+      <span class="effort-chip" data-weeks="4+">WK4+ · 1 RIR</span>
+    </div>
+  </header>
+</div>
+
+<div class="flash" id="flash" aria-hidden="true"></div>
+
+<div class="rail" id="rail">
+  <div class="rail-inner">
+    <div class="rail-top">
+      <div>
+        <div class="rail-label" id="railLabel">Rest · <span id="railFor">DB flye (flat or slight incline)</span></div>
+        <div class="rail-clock" id="clock">1:15</div>
+      </div>
+      <div class="rail-btns">
+        <button class="tbtn primary" id="btnStart">START</button>
+        <button class="tbtn" id="btnSkip">SKIP</button>
+      </div>
+    </div>
+    <div class="gauge idle" id="gauge"></div>
+    <div class="adjust">
+      <span class="adj-zero">0:00</span>
+      <div class="adj-ctl">
+        <button class="adjbtn" id="adjDn" aria-label="Shorten rest by 15 seconds">−15</button>
+        <span class="adj-val" id="adjVal">1:15</span>
+        <button class="adjbtn" id="adjUp" aria-label="Lengthen rest by 15 seconds">+15</button>
+        <button class="adjreset" id="adjReset" hidden>rec 1:15 ↺</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="list" id="list"></div>
+
+  <p class="footnote">
+    Logged sets write <span>weight_lb</span> · <span>reps</span> · <span>rest_taken_seconds</span> to the session record.<br>
+    Rest values pull from program.json — they are not typed by hand.<br>
+    At zero: <span>two short tones + one long</span> · <span>screen flash</span> · <span>haptic buzz</span>.
+  </p>
+  <p class="footnote" style="padding-top:10px">
+    <button class="tbtn" id="btnDemo">TEST ALERT</button>
+  </p>
+</div>
+
+<script>
+/* Mirrors program.json. The week is derived from block_start_date — never stored,
+   never typed by hand. Weeks turn over on Monday so they line up with the day list. */
+const BLOCK_START = '2026-08-17';
+const EFFORT = [
+  { week:1,     rir:4, setsOverride:2    },
+  { week:2,     rir:2, setsOverride:null },
+  { week:3,     rir:2, setsOverride:null },
+  { week:'4+',  rir:1, setsOverride:null }
+];
+
+function mondayOf(d){
+  const m = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  m.setDate(m.getDate() - ((m.getDay() + 6) % 7));   // Sunday(0) -> back 6, Monday(1) -> back 0
+  return m;
+}
+function currentWeek(today){
+  const start = mondayOf(new Date(BLOCK_START + 'T00:00:00'));
+  const here  = mondayOf(today || new Date());
+  const n = Math.floor((here - start) / 604800000) + 1;
+  return Math.max(1, n);            // before the block starts, week 1 — never week 0
+}
+function effortFor(week){
+  const exact = EFFORT.find(e => e.week === week);
+  if(exact) return exact;
+  const open = EFFORT.find(e => typeof e.week === 'string' && e.week.endsWith('+'));
+  if(open && week >= parseInt(open.week, 10)) return open;
+  return EFFORT[0];                 // never fall through to the most aggressive row
+}
+
+const WEEK   = currentWeek();
+const EFF    = effortFor(WEEK);
+
+/* Working sets for this week: the schedule's override wins over the exercise table. */
+function setsFor(ex){ return EFF.setsOverride == null ? ex.sets : Math.min(EFF.setsOverride, ex.sets); }
+function allLogged(ex){ const n = setsFor(ex); return ex.log.slice(0, n).every(s => s); }
+
+const PROGRAM = [
+  { id:'mon_1', name:"Flat DB bench press", type:'compound', sets:3, repMin:8, repMax:12, start:30, step:2.5,
+    restSet:180, restAfter:180, cue:"Sit with the bells on your thighs, kick one knee up at a time as you lie back.",
+    log:[{w:30,r:12},{w:30,r:11},{w:30,r:10}] },
+  { id:'mon_2', name:"Incline DB press (30°)", type:'compound', sets:3, repMin:10, repMax:12, start:20, step:2.5,
+    restSet:180, restAfter:180, cue:"",
+    log:[{w:20,r:12},{w:20,r:11},{w:20,r:10}] },
+  { id:'mon_3', name:"DB flye (flat or slight incline)", type:'isolation', sets:3, repMin:12, repMax:15, start:15, step:2.5,
+    restSet:75, restAfter:90, cue:"The point of this day. Slight elbow bend held fixed, wide arc, stop before the shoulders roll forward. Don't chase load.",
+    log:[null,null,null] },
+  { id:'mon_4', name:"Seated DB shoulder press", type:'compound', sets:3, repMin:10, repMax:12, start:20, step:2.5,
+    restSet:180, restAfter:150, cue:"Third press of the day — a drop-off here is expected.",
+    log:[null,null,null] },
+  { id:'mon_5', name:"Lateral raise", type:'isolation', sets:3, repMin:12, repMax:15, start:10, step:2.5,
+    restSet:75, restAfter:75, cue:"Lead with the elbows. Stop at shoulder height. No body English.",
+    log:[null,null,null] },
+  { id:'mon_6', name:"DB curl", type:'isolation', sets:2, repMin:10, repMax:12, start:20, step:2.5,
+    restSet:75, restAfter:0, cue:"",
+    log:[null,null] }
+];
+
+let activeIdx = 2;
+let autoTimer = true;
+const overrides = {};   // key -> seconds, survives the session
+let timer = { total:75, left:75, running:false, over:false, id:null, label:'Rest', forName:"DB flye (flat or slight incline)", key:'mon_3:set', rec:75 };
+
+const draft = {};
+PROGRAM.forEach(ex => draft[ex.id] = ex.log.map(s => s ? {...s} : { w:ex.start, r:ex.repMax }));
+
+const fmt = s => { const n = Math.abs(s); return (s<0?'+':'') + Math.floor(n/60) + ':' + String(n%60).padStart(2,'0'); };
+
+/* ---------- gauge ---------- */
+function buildGauge(){
+  const g = document.getElementById('gauge');
+  const n = timer.total >= 120 ? Math.round(timer.total/30) : Math.round(timer.total/15);
+  g.innerHTML = '';
+  for(let i=0;i<Math.max(n,1);i++){ const d=document.createElement('div'); d.className='seg'; d.innerHTML='<i></i>'; g.appendChild(d); }
+  paintAdjust();
+  paintGauge();
+}
+function paintAdjust(){
+  const v = document.getElementById('adjVal');
+  const r = document.getElementById('adjReset');
+  const custom = timer.total !== timer.rec;
+  v.textContent = fmt(timer.total);
+  v.classList.toggle('custom', custom);
+  r.hidden = !custom;
+  r.textContent = 'rec ' + fmt(timer.rec) + ' ↺';
+}
+function adjustRest(delta){
+  const next = Math.max(15, Math.min(600, timer.total + delta));
+  const applied = next - timer.total;
+  timer.total = next;
+  timer.left = Math.min(timer.left + applied, timer.total);
+  timer.over = timer.left <= 0;
+  if(timer.key){
+    if(timer.total === timer.rec) delete overrides[timer.key];
+    else overrides[timer.key] = timer.total;
+  }
+  buildGauge(); paintClock();
+}
+function resetRest(){ adjustRest(timer.rec - timer.total); }
+function paintGauge(){
+  const g = document.getElementById('gauge');
+  const segs = [...g.children];
+  const pct = Math.max(0, Math.min(1, timer.left / timer.total));
+  const filled = pct * segs.length;
+  g.classList.toggle('idle', !timer.running && timer.left === timer.total);
+  segs.forEach((s,i) => {
+    const f = Math.max(0, Math.min(1, filled - i));
+    s.firstChild.style.transform = 'scaleX(' + f + ')';
+    s.firstChild.style.background = timer.over ? 'var(--alert)' : 'var(--brass)';
+  });
+}
+function paintClock(){
+  document.getElementById('clock').textContent = fmt(timer.left);
+  document.getElementById('railFor').textContent = timer.forName;
+  document.getElementById('railLabel').innerHTML = timer.label + ' · <span id="railFor">' + timer.forName + '</span>';
+  const rail = document.getElementById('rail');
+  rail.classList.toggle('live', timer.running);
+  rail.classList.toggle('over', timer.over);
+  document.getElementById('btnStart').textContent = timer.running ? 'PAUSE' : (timer.left < timer.total ? 'RESUME' : 'START');
+  paintGauge();
+}
+function armTimer(sec,label,forName,key){
+  clearInterval(timer.id);
+  const rec = sec;
+  const use = (key && overrides[key] != null) ? overrides[key] : sec;
+  timer = { total:use, left:use, running:false, over:false, id:null, label, forName, key:key||null, rec };
+  buildGauge(); paintClock();
+  if(autoTimer) runTimer();
+}
+/* ---------- end-of-rest cue ---------- */
+let cueOn = true;
+let audioCtx = null;
+
+function beep(at, freq, dur, vol){
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type = 'triangle';
+  o.frequency.setValueAtTime(freq, at);
+  g.gain.setValueAtTime(0, at);
+  g.gain.linearRampToValueAtTime(vol, at + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+  o.connect(g); g.connect(audioCtx.destination);
+  o.start(at); o.stop(at + dur + 0.02);
+}
+
+function fireCue(){
+  const rail = document.getElementById('rail');
+  const fl = document.getElementById('flash');
+  rail.classList.add('fire'); fl.classList.add('fire');
+  setTimeout(()=>{ rail.classList.remove('fire'); fl.classList.remove('fire'); }, 1100);
+
+  if(!cueOn) return;
+
+  if(navigator.vibrate) navigator.vibrate([220, 120, 220]);
+
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    const t = audioCtx.currentTime;
+    beep(t,        784, 0.14, 0.30);  // G5
+    beep(t + 0.20, 784, 0.14, 0.30);
+    beep(t + 0.42, 1047, 0.30, 0.34); // C6 — resolves upward so it reads as "go"
+  }catch(e){ /* audio unavailable — flash and haptic still fire */ }
+}
+
+function runTimer(){
+  if(!audioCtx){
+    try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){}
+  }
+  if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+
+  if(timer.running){ clearInterval(timer.id); timer.running=false; paintClock(); return; }
+  timer.running = true;
+  timer.id = setInterval(()=>{
+    timer.left--;
+    if(timer.left === 0){ timer.over = true; fireCue(); }
+    if(timer.left <= 0) timer.over = true;
+    if(timer.left < -300){ clearInterval(timer.id); timer.running=false; }
+    paintClock();
+  },1000);
+  paintClock();
+}
+
+/* ---------- render ---------- */
+function render(){
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  PROGRAM.forEach((ex,i)=>{
+    const done = allLogged(ex);
+    const active = i === activeIdx;
+    const card = document.createElement('section');
+    card.className = 'ex' + (active?' active':'') + (done && !active?' done':'');
+
+    const head = document.createElement('button');
+    head.className = 'exhead';
+    head.setAttribute('aria-expanded', active);
+    const summary = done
+      ? ex.log.slice(0,setsFor(ex)).map(s=>s.r).join(' / ') + ' @ ' + ex.log[0].w
+      : (active ? 'now' : setsFor(ex) + '×' + ex.repMin + '–' + ex.repMax);
+    head.innerHTML = '<span class="exidx">'+String(i+1).padStart(2,'0')+'</span>'
+      + '<span class="exname">'+ex.name+'</span>'
+      + '<span class="exsum">'+summary+'</span>';
+    head.onclick = ()=>{ activeIdx = active ? -1 : i; if(!active) armTimer(ex.restSet,'Rest',ex.name,ex.id+':set'); render(); };
+    card.appendChild(head);
+
+    if(active){
+      const body = document.createElement('div');
+      body.className = 'exbody';
+      body.innerHTML =
+        '<dl class="prescribe">'
+        + '<div class="pcell"><dt>Sets</dt><dd>'+setsFor(ex)+'</dd></div>'
+        + '<div class="pcell"><dt>Reps</dt><dd>'+ex.repMin+'–'+ex.repMax+'</dd></div>'
+        + '<div class="pcell"><dt>Rec rest</dt><dd>'+fmt(ex.restSet)+'</dd></div>'
+        + '<div class="pcell"><dt>Then</dt><dd>'+(ex.restAfter?fmt(ex.restAfter):'—')+'</dd></div>'
+        + '</dl>';
+
+      for(let s=0;s<setsFor(ex);s++){
+        const logged = !!ex.log[s];
+        const d = draft[ex.id][s];
+        const row = document.createElement('div');
+        row.className = 'setrow ' + (logged?'logged':'pending');
+        row.innerHTML =
+          '<span class="setno">S'+(s+1)+'</span>'
+          + '<div class="field"><button class="stepbtn" aria-label="Less weight">−</button>'
+          + '<span class="val">'+(logged?ex.log[s].w:d.w)+'<em>LB / HAND</em></span>'
+          + '<button class="stepbtn" aria-label="More weight">+</button></div>'
+          + '<div class="field"><button class="stepbtn" aria-label="Fewer reps">−</button>'
+          + '<span class="val">'+(logged?ex.log[s].r:d.r)+'<em>REPS</em></span>'
+          + '<button class="stepbtn" aria-label="More reps">+</button></div>'
+          + '<button class="logbtn" aria-label="Log set">'+(logged?'✓':'○')+'</button>';
+
+        if(!logged){
+          const [wDn,wUp,rDn,rUp] = row.querySelectorAll('.stepbtn');
+          wDn.onclick = ()=>{ d.w = Math.max(5, d.w-ex.step); render(); };
+          wUp.onclick = ()=>{ d.w = Math.min(52.5, d.w+ex.step); render(); };
+          rDn.onclick = ()=>{ d.r = Math.max(1, d.r-1); render(); };
+          rUp.onclick = ()=>{ d.r = d.r+1; render(); };
+          row.querySelector('.logbtn').onclick = ()=>{
+            ex.log[s] = { w:d.w, r:d.r };
+            const last = allLogged(ex);
+            if(last && ex.restAfter){
+              const next = PROGRAM[i+1];
+              armTimer(ex.restAfter,'Transition', next ? next.name : 'Done', ex.id+':after');
+              activeIdx = i+1 < PROGRAM.length ? i+1 : -1;
+            } else if(last){
+              activeIdx = -1;
+            } else {
+              armTimer(ex.restSet,'Rest',ex.name,ex.id+':set');
+            }
+            render();
+          };
+        }
+        body.appendChild(row);
+      }
+
+      const foot = document.createElement('div');
+      foot.className = 'exfoot';
+      foot.innerHTML = '<p class="cue">'+ex.cue+'</p>';
+      const wrap = document.createElement('div');
+      wrap.className = 'cuewrap';
+
+      const tg = document.createElement('button');
+      tg.className = 'toggle' + (autoTimer?' on':'');
+      tg.innerHTML = '<span class="track"><span class="knob"></span></span><span class="toggle-cap">Auto</span>';
+      tg.onclick = ()=>{ autoTimer = !autoTimer; render(); };
+      wrap.appendChild(tg);
+
+      const sg = document.createElement('button');
+      sg.className = 'toggle' + (cueOn?' on':'');
+      sg.innerHTML = '<span class="track"><span class="knob"></span></span><span class="toggle-cap">Alert</span>';
+      sg.onclick = ()=>{
+        cueOn = !cueOn;
+        if(cueOn) fireCue();
+        render();
+      };
+      wrap.appendChild(sg);
+
+      foot.appendChild(wrap);
+      body.appendChild(foot);
+      card.appendChild(body);
+    }
+    list.appendChild(card);
+  });
+}
+
+document.getElementById('adjDn').onclick = ()=>adjustRest(-15);
+document.getElementById('adjUp').onclick = ()=>adjustRest(15);
+document.getElementById('adjReset').onclick = resetRest;
+document.getElementById('btnDemo').onclick = ()=>{
+  if(!audioCtx){ try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){} }
+  if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  fireCue();
+};
+document.getElementById('btnStart').onclick = runTimer;
+document.getElementById('btnSkip').onclick = ()=>{ clearInterval(timer.id); timer.running=false; timer.left=timer.total; timer.over=false; paintClock(); };
+
+/* ---------- header reflects the derived week ---------- */
+function paintWeek(){
+  document.getElementById('wkNum').textContent = WEEK;
+  document.getElementById('wkRir').textContent = EFF.rir + ' RIR';
+  document.querySelectorAll('#effortStrip .effort-chip').forEach(chip => {
+    const spec = chip.dataset.weeks;
+    const on = spec.endsWith('+')
+      ? WEEK >= parseInt(spec, 10)
+      : spec.split(',').map(Number).includes(WEEK);
+    chip.classList.toggle('on', on);
+  });
+}
+
+buildGauge(); paintClock(); paintWeek(); render();
+</script>
+</body>
+</html>

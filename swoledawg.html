@@ -1,13 +1,14 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="plate">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SwoleDawg</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
-:root, [data-theme="plate"]{
-  /* SWOLEDAWG SKIN · PLATE — diamond tread steel, rubber-bumper orange. Default. */
+:root{
+  /* SWOLEDAWG SKIN — diamond tread steel, rubber-bumper orange. Dark is the base,
+     matching the rest of the site; light overrides below. */
   color-scheme:dark;
   --surface-1:#232323; --surface-2:#2c2c2c; --page:#191919;
   --ink-1:#f2f0ec; --ink-2:#b9b4ab; --ink-3:#7e7970;
@@ -21,8 +22,8 @@
         repeating-linear-gradient(-45deg,rgba(255,255,255,.028) 0 2px,transparent 2px 13px),
         linear-gradient(180deg,#1f1f1f,#131313);
 }
-[data-theme="day"]{
-  /* DAY — same material in powder-coated aluminium. For reading outdoors. */
+:root[data-theme="light"]{
+  /* Same material in powder-coated aluminium. Driven by the sitewide theme toggle. */
   color-scheme:light;
   --surface-1:#f7f5f0; --surface-2:#e9e6df; --page:#dedbd4;
   --ink-1:#1e1c19; --ink-2:#514d47; --ink-3:#847f77;
@@ -36,33 +37,7 @@
         repeating-linear-gradient(-45deg,rgba(0,0,0,.030) 0 2px,transparent 2px 13px),
         linear-gradient(180deg,#e7e4dd,#d3d0c8);
 }
-[data-theme="outrun"]{
-  /* OUTRUN — after hours. Sunset runs orange into magenta so the brand survives. */
-  color-scheme:dark;
-  --surface-1:rgba(26,10,52,.74); --surface-2:rgba(38,16,72,.86); --page:#0d0320;
-  --ink-1:#f6ecff; --ink-2:#c3aee0; --ink-3:#8a76ad;
-  --grid:rgba(0,229,255,.13); --axis:rgba(0,229,255,.22); --border:rgba(255,122,26,.26);
-  --accent:#ff7a1a; --accent-ink:#170a00; --hot:#ff2d95;
-  --good:#3dffb0; --bad:#ff5470; --warn:#ffc861; --cool:#00e5ff;
-  --navbar:rgba(20,7,42,.92); --navink:#f6ecff; --navink2:#8a76ad;
-  --glow:0 0 20px var(--accent); --blur:blur(9px);
-  --press:0 3px 0 rgba(0,0,0,.55); --press-in:0 1px 0 rgba(0,0,0,.55);
-  --tex:none;
-}
 body{background-color:var(--page);background-image:var(--tex);background-attachment:fixed}
-[data-theme="outrun"] body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
-  background:
-    radial-gradient(circle at 50% 16%,#ff7a1a 0,#ff2d95 15%,rgba(123,47,247,.38) 23%,transparent 33%),
-    linear-gradient(180deg,rgba(13,3,32,.2) 0,rgba(13,3,32,.75) 48%,rgba(13,3,32,.96) 100%)}
-[data-theme="outrun"] body::after{content:"";position:fixed;left:-50%;right:-50%;bottom:-4%;height:50%;
-  z-index:-1;pointer-events:none;
-  background-image:repeating-linear-gradient(90deg,rgba(0,229,255,.4) 0 1px,transparent 1px 60px),
-    repeating-linear-gradient(0deg,rgba(0,229,255,.28) 0 1px,transparent 1px 44px);
-  transform:perspective(260px) rotateX(74deg);transform-origin:50% 100%;
-  -webkit-mask-image:linear-gradient(180deg,transparent,#000 45%);
-  mask-image:linear-gradient(180deg,transparent,#000 45%)}
-[data-theme="outrun"] .card,[data-theme="outrun"] .strip .cell{backdrop-filter:var(--blur)}
-[data-theme="outrun"] .kpi .v,[data-theme="outrun"] .strip .v{text-shadow:0 0 18px currentColor}
 .btn{box-shadow:var(--press)}
 .btn:active{transform:translateY(2px);box-shadow:var(--press-in)}
 .dbtn.on{box-shadow:var(--glow)}
@@ -71,22 +46,9 @@ body{margin:0;background:var(--page);color:var(--ink-1);
   font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:15px;line-height:1.5}
 .wrap{max-width:1180px;margin:0 auto;padding:0 18px 60px}
 
-.sitenav{display:flex;align-items:center;gap:20px;padding:13px 0;
-  border-bottom:1px solid var(--grid);margin-bottom:16px}
-.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink-1)}
-.brand .mark{width:26px;height:32px;border-radius:5px;flex:none;
-  background:linear-gradient(160deg,#ff6a02,#c24b00);position:relative}
-.brand .mark::after{content:"";position:absolute;inset:6px 5px;border-radius:3px;background:var(--navbar);opacity:.55}
-.brand .logo{font-size:17px;font-weight:800;letter-spacing:.02em;white-space:nowrap}
-.brand .logo span{color:var(--accent)}
-.brand .tag{font-size:10.5px;color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
-.sitenav .links{display:flex;gap:2px;margin-left:auto;align-items:center}
-.sitenav .links a{color:var(--ink-2);text-decoration:none;padding:5px 6px;border-radius:8px;font-size:12.5px;font-weight:550}
-.sitenav .links a.on{color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent);border-radius:8px 8px 0 0}
 .chip{background:none;border:1px solid var(--border);color:var(--ink-2);border-radius:999px;
   padding:4px 11px;font-size:12px;cursor:pointer;font-family:inherit;margin-left:6px;white-space:nowrap}
-@media(max-width:900px){.brand .tag{display:none}.sitenav .links a{padding:4px 3px;font-size:11px}.sitenav{gap:9px}}
-@media(max-width:620px){.wrap{padding:0 12px 60px}.brand .logo{font-size:15px}}
+@media(max-width:620px){.wrap{padding:0 12px 60px}}
 
 h1{font-size:26px;margin:0 0 3px;letter-spacing:-.02em;line-height:1.12}
 h1 em{font-style:normal;color:var(--accent)}
@@ -245,22 +207,1585 @@ footer{border-top:1px solid var(--grid);padding-top:15px;margin-top:24px;color:v
 <div class="mockbar" id="mockbar">SwoleDawg · logging is live in this session · export to keep it</div>
 <div class="wrap">
 
-<nav class="sitenav">
-  <a class="brand" href="#"><span class="mark"></span>
-    <span class="logo">DATA <span>DAWGS</span></span><span class="tag">Data, Not Dogma</span></a>
-  <div class="links">
-    <a href="#">Arena</a><a href="#">Mkts</a><a href="#">A.I.</a>
-    <a href="#">Sports</a><a href="#">Data</a><a href="#">Dawgs</a>
-    <a href="#" class="on">SwoleDawg</a>
-    <button class="chip" id="unitBtn">lb / in</button>
-    <button class="chip" id="themeBtn">■ Plate</button>
-  </div>
-</nav>
+<div id="nav"></div>
+<script data-page="swoledawg">
+// Shared nav + theme + live-sync client. Each page: <div id="nav"></div> then this script with data-page attr.
+
+// ---------- DDSync: one-way live mirror (operator writes, everyone else reads) ----------
+// Firebase Realtime Database over plain REST — no SDK. Writes are PUT; reads are an
+// EventSource stream, so phones get pushes instead of polling. The operator stays
+// localStorage-first: a failed push never blocks a sale.
+(function(){
+  const LS_CFG = "dd-sync-v1";
+  // Permanent league DB (created 7/31/26). Baked in so leaguemates need no ?sync= link —
+  // the normal Live Draft URL just works. Rules allow read+write on /drafts only.
+  const DEFAULT = { url: "https://data-dawgs-draft-default-rtdb.firebaseio.com", room: "pepperoninipples" };
+  let cfg = null;
+
+  function readCfg(){
+    if(cfg) return cfg;
+    let c = null;
+    try{
+      const q = new URLSearchParams(location.search).get("sync");
+      if(q){
+        c = JSON.parse(atob(q.replace(/-/g,"+").replace(/_/g,"/")));
+        localStorage.setItem(LS_CFG, JSON.stringify(c));   // shared link sticks on this device
+      }
+    }catch(e){}
+    if(!c){ try{ c = JSON.parse(localStorage.getItem(LS_CFG)); }catch(e){} }
+    if(!c || !c.url) c = DEFAULT;
+    c.url = (c.url||"").replace(/\/+$/,"");
+    c.room = (c.room||"pepperoninipples").replace(/[.#$\[\]\/]/g,"-");
+    cfg = c; return c;
+  }
+
+  let pushTimer = null, lastSent = "";
+  window.DDSync = {
+    get config(){ return readCfg(); },
+    get on(){ return !!readCfg().url },
+    save(url, room){
+      const c = { url:(url||"").trim().replace(/\/+$/,""), room:(room||"pepperoninipples").trim() };
+      try{ localStorage.setItem(LS_CFG, JSON.stringify(c)); }catch(e){}
+      cfg = null; return readCfg();
+    },
+    endpoint(){ const c = readCfg(); return c.url ? `${c.url}/drafts/${c.room}.json` : null; },
+    // shareable link for the league: carries the config so phones need no setup
+    link(page){
+      const c = readCfg();
+      if(!c.url) return location.origin + "/" + (page||"board.html?view=live");
+      const tok = btoa(JSON.stringify(c)).replace(/\+/g,"-").replace(/\//g,"_");
+      const p = page || "board.html?view=live";
+      return location.origin + "/" + p + (p.includes("?") ? "&" : "?") + "sync=" + tok;
+    },
+    // operator → cloud. debounced, best-effort, never throws into the caller
+    push(state){
+      const ep = this.endpoint(); if(!ep) return;
+      clearTimeout(pushTimer);
+      pushTimer = setTimeout(()=>{
+        let body;
+        try{ body = JSON.stringify({ ts: Date.now(), state }); }catch(e){ return; }
+        if(body === lastSent) return;
+        lastSent = body;
+        fetch(ep, { method:"PUT", body, headers:{"Content-Type":"application/json"} })
+          .then(()=>window.dispatchEvent(new CustomEvent("ddsync", {detail:{ok:true,dir:"up"}})))
+          .catch(()=>window.dispatchEvent(new CustomEvent("ddsync", {detail:{ok:false,dir:"up"}})));
+      }, 500);
+    },
+    // live when the stream is open OR we heard from it in the last 30s
+    get connected(){
+      const es = this._es;
+      if(es && es.readyState === 1) return true;
+      return (Date.now() - (this._lastHeard||0)) < 30000;
+    },
+    // readers ← cloud. cb(state) whenever the operator publishes something newer
+    subscribe(cb){
+      const ep = this.endpoint(); if(!ep) return null;
+      const self = this;
+      let es, lastTs = 0, retry = 0;
+      const open = ()=>{
+        try{ es = new EventSource(ep); self._es = es; }catch(e){ return; }
+        es.addEventListener("open", ()=>{ retry = 0; self._lastHeard = Date.now();
+          window.dispatchEvent(new CustomEvent("ddsync",{detail:{ok:true,dir:"down"}})); });
+        const handle = ev=>{
+          self._lastHeard = Date.now();
+          let msg; try{ msg = JSON.parse(ev.data); }catch(e){ return; }
+          const d = msg && msg.data;
+          const payload = d && (d.state || (d.ts ? null : d));
+          const ts = d && d.ts;
+          if(!payload) return;
+          if(ts && ts <= lastTs) return;
+          lastTs = ts || Date.now();
+          window.dispatchEvent(new CustomEvent("ddsync",{detail:{ok:true,dir:"down"}}));
+          try{ cb(payload); }catch(e){}
+        };
+        es.addEventListener("put", handle);
+        es.addEventListener("patch", handle);
+        es.addEventListener("error", ()=>{
+          try{ es.close(); }catch(e){}
+          retry = Math.min(retry + 1, 6);
+          setTimeout(()=>{
+            open();
+            // only call it down once a reconnect has actually failed to land
+            setTimeout(()=>window.dispatchEvent(new CustomEvent("ddsync",
+              {detail:{ok:self.connected,dir:"down"}})), 1200);
+          }, 1000 * retry);
+        });
+      };
+      open();
+      return ()=>{ try{ es.close(); }catch(e){} };
+    }
+  };
+})();
+
+(function(){
+  const page = window.DD_PAGE || document.currentScript.getAttribute('data-page') || "";
+  // ---- per-page theme: each page remembers its own light/dark ----
+  // Key bumped when light became the default so stale dark preferences do not keep
+  // reopening the site in dark mode. A new choice persists normally after the bump.
+  const TKEY = "dd-theme3-" + (page || "home");
+  const GKEY = "dd-theme3";
+  window.DDTheme = {
+    current(){
+      // light is the site default; the live draft board overrides via DD_THEME_DEFAULT
+      try{
+        return localStorage.getItem(TKEY) || window.DD_THEME_DEFAULT
+            || localStorage.getItem(GKEY) || "light";
+      }catch(e){ return window.DD_THEME_DEFAULT || "light"; }
+    },
+    apply(){
+      const t = this.current();
+      document.documentElement.dataset.theme = t;
+      document.querySelectorAll("[data-ddtheme-btn]").forEach(b=>{
+        // icon and word are separate spans so the phone rule can drop the word and
+        // still leave a real tap target. textContent would wipe them on every toggle.
+        b.replaceChildren();
+        const i = document.createElement("span"); i.className = "ticon";
+        i.textContent = t === "dark" ? "☀" : "☾";
+        const w = document.createElement("span"); w.className = "tword";
+        w.textContent = t === "dark" ? "Light mode" : "Dark mode";
+        b.append(i, w);
+        const action = t === "dark" ? "Switch to light mode" : "Switch to dark mode";
+        b.setAttribute("aria-label", action);
+        b.title = action;
+      });
+      return t;
+    },
+    toggle(){
+      const next = this.current() === "dark" ? "light" : "dark";
+      try{ localStorage.setItem(TKEY, next); localStorage.setItem(GKEY, next); }catch(e){}
+      this.apply();
+      if(window.onThemeChange) window.onThemeChange();
+    }
+  };
+  window.DDTheme.apply();
+  /* ⚠️ CEP-5A Stage 7, 2026-08-09. THE NAV IS NO LONGER THE TIER LADDER. It supersedes
+     the 8/5 note that said it was. Kap's locked order:
+         Sign in · Receipts · Arena · NFL · CFB · Data · Dawgs
+     The menu now answers "what kind of thing is this", and the CHIP on each page answers
+     "how far along is it". Those had been collapsed onto one axis since 8/5, which is how
+     a shelf of blocked work ended up being a top-level destination.
+
+     ⚠️ NO "Home" ITEM — the wordmark is already an <a> to index.html.
+     ⚠️ NO "Sign in" ITEM — sign-in is its own banner section (.navauth, 8/7), appended
+        before these links, routing to signon.html?next= and showing who you are once you
+        are in. A menu item with the same label would be a second identical control.
+     ⚠️ NO LIVE DRAFT top-level item — the pill was retired 8/1; Live is a Dashboard tab.
+     ⚠️ THE DAWGHOUSE AND LABS ARE OFF-NAV. The shelf is linked from the .udfoot row at
+        the foot of every page and from the lifecycle section on index.html#tiers.
+     ⚠️ auction.html and bigboard.html stay deliberately unlinked. They run draft night
+        from the operator machine. Do not "restore" them here.
+     ⚠️ Machine values did not move: tier is still "pound" and the keys below keep their
+        historical spellings.
+     Keep this array identical on every page; the flattened HTML is the source. */
+  const NAV = [
+    /* Arena is split so games can have a little casino character without making tools noisy. */
+    {label:"Arena", href:"arena.html", key:"arena", items:[
+      ["arena.html","Arena home","arena"],
+      ["#","Games","nav-section"],
+      ["dashboard.html","Fantasy Draft Dashboard","dashboard","hot"],
+      ["bozo.html","Bozo","bozo"],
+      ["challenge.html","NFL Forecasting Challenge","challenge"],
+      ["teamdraft.html","NFL Team Draft","teamdraft"],
+      ["#","Tools","nav-section"],
+      ["dfs.html","DFS Solver","dfs"],
+      ["fantasy-warroom.html","Fantasy League War Room","fantasy-warroom"],
+      ["guillotine.html","Last Dawg Standing","guillotine"],
+      ["survivor.html","Survivor","survivor"],
+    ]},
+    /* Two sections that are not football, placed where they were asked for: after the
+       games people play against each other, before the sport pages. Release 1 demoted
+       both and Kap reversed it the same day — they are domains of the site, not tools
+       inside somebody else's group.
+       ⚠️ The label is "Markets", not "Prediction Markets". Seven groups only hold one
+       row at 1100px with the short form; see the 1100 note in work/test-nav-fit.mjs. */
+    {label:"Markets", short:"Mkts", href:"markets.html", key:"markets", items:[
+      ["markets.html","The markets work","markets"],
+    ]},
+    {label:"A.I.", href:"ai.html", key:"ai", items:[
+      ["ai.html","A.I. Model Board","ai"],
+    ]},
+    /* NFL and CFB are separate top-level groups. One "Sports" group meant every college
+       reader opened a dropdown built for the NFL and scrolled past it. */
+    {label:"NFL", href:"nfl.html", key:"nfl", items:[
+      ["nfl.html","NFL hub","nfl"],
+      ["stats.html","NFL EPA Stats","stats"],
+      ["nfelo.html","nfelo Power Ratings","nfelo"],
+      ["calculators.html","NFL Calculators","calculators"],
+    ]},
+    /* The build roadmap is off the visible dropdown deliberately: it is our own planning
+       surface, not a destination. It stays reachable on the page and through the machine
+       surfaces — removing the nav entry does not remove it. */
+    {label:"CFB", href:"cfb.html", key:"cfb", items:[
+      ["cfb.html","College Football Lab","cfb"],
+      ["cfb.html#matchup","CFB Matchup Calculator","cfb-matchup"],
+    ]},
+    /* Receipts is an item here, not a top-level group. Release 1 promoted it on the
+       argument that it is the page the site is judged against; Kap's ruling is that
+       being the evidence does not make it a domain, and it reads as one of the Library's
+       holdings. The deep links into its sheets went with the promotion — receipts.html
+       carries its own sheet bar, which is the better place for them. */
+    {label:"Data", href:"data.html", key:"data", items:[
+      ["data.html","The Library","data"],
+      ["receipts.html","Receipts","receipts"],
+      ["master.html","Master Data","master"],
+      ["strategy.html","2026 Strategy","strategy"],
+    ]},
+    /* Was thirteen entries, nine of them deep links into one DawgHouse page. The shelf
+       inventory belongs on the shelf, not in a dropdown nobody could read on a phone. */
+    {label:"Dawgs", href:"dawgs.html", key:"dawgs", items:[
+      ["dawgs.html","The Dawg Pound","dawgs"],
+      ["dawgs.html#rollo","Rollo · OG Data Dawg","dawgs-rollo"],
+      ["dawgs.html#ddcc","DDCC Profile","dawgs-ddcc"],
+      ["swoledawg.html","SwoleDawg · Body & Training","swoledawg"],
+      ["dawghouse.html","The DawgHouse","pound"],
+    ]},
+  ];
+  const nav = document.getElementById("nav");
+  nav.className = "sitenav";
+  // full label + phone label, both in the DOM; CSS shows exactly one
+  function navLabel(entry){
+    /* ⚠️ An item with no phone label gets a PLAIN text node, never a .nlg span. The
+       phone rule hides .nlg outright, so wrapping every label in one made Home, Labs,
+       Data and Dawgs vanish on phones while only the two shortened items survived. */
+    if(!entry.short) return document.createTextNode(entry.label);
+    const frag = document.createDocumentFragment();
+    const f = document.createElement("span"); f.className = "nlg"; f.textContent = entry.label;
+    const s = document.createElement("span"); s.className = "nsm"; s.textContent = entry.short;
+    frag.append(f, s);
+    return frag;
+  }
+  const brand = document.createElement("a");
+  brand.className = "brand"; brand.href = "index.html";
+  brand.innerHTML = '<img src="data:image/png;base64,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" alt="Data Dawgs logo"><span class="logo">DATA <span>DAWGS</span></span><span class="tag">Data, Not Dogma</span>';
+  nav.appendChild(brand);
+
+  /* ---------- DDAuth — one sign-in for the whole site (8/7) ----------
+     Every page in the banner gets the same chip, backed by the same key, so signing
+     in on the guillotine page signs you in on Bozo. Before this, sign-in lived only
+     inside bozo.html and connect.html and nowhere else knew your name.
+
+     ⚠️ The session token is SELF-DESCRIBING: base64url(JSON) "." signature, where the
+     JSON carries {n:name, e:expiryMs}. So "who is signed in" is answerable from
+     localStorage alone — no request, no spinner, and no flash of the wrong state on
+     any page. The signature is verified by the WORKER and never here; this only
+     decides what to draw. Forging it locally buys you a nav chip and nothing else,
+     because every read that matters is public and every write is checked server-side.
+
+     ⚠️ The key is "dd-bozo-sess". bozo.html and connect.html read that exact string;
+     a near-miss like "dd-bozo-session" silently splits the site in two and looks fine
+     in a screenshot.
+
+     ⚠️ The header is X-Bozo-Session, NOT X-Dawg-Session. The Worker accepts both, but
+     only X-Bozo-Session is advertised in Access-Control-Allow-Headers on the currently
+     DEPLOYED worker, and a custom header the preflight does not advertise is dropped
+     by the browser. Using X-Bozo-Session means this works today, before the pending
+     worker paste. */
+  const AUTH_KEY = "dd-bozo-sess";
+  const AUTH_WORKER = "https://toto.jkapcar4.workers.dev";
+  window.DDAuth = {
+    token(){ try{ return localStorage.getItem(AUTH_KEY) || ""; }catch(e){ return ""; } },
+    me(){
+      const raw = this.token(); if(!raw) return null;
+      try{
+        const b = JSON.parse(atob(raw.split(".")[0].replace(/-/g,"+").replace(/_/g,"/")));
+        if(!b.n || !b.e || Date.now() > b.e){ this.wipe(); return null; }
+        return {name:b.n, session:raw, expires:b.e};
+      }catch(e){ this.wipe(); return null; }
+    },
+    wipe(){ try{ localStorage.removeItem(AUTH_KEY); }catch(e){} },
+    set(tok){ try{ localStorage.setItem(AUTH_KEY, tok); }catch(e){} this.render(); this.fire(); },
+    clear(){ this.wipe(); this.render(); this.fire(); },
+    /* Pages that already hold their own copy of the session (bozo.html, connect.html)
+       listen for this instead of reloading. A page that does not care ignores it. */
+    fire(){
+      const m = this.me();
+      try{ window.dispatchEvent(new CustomEvent("dd-auth", {detail:m})); }catch(e){}
+      if(typeof window.onDDAuth === "function"){ try{ window.onDDAuth(m); }catch(e){} }
+    },
+    headers(){ const t = this.token(); return t ? {"X-Bozo-Session":t} : {}; },
+    async post(path, body){
+      const r = await fetch(AUTH_WORKER + path, {method:"POST",
+        headers:Object.assign({"Content-Type":"application/json"}, this.headers()),
+        body:JSON.stringify(body||{})});
+      const j = await r.json().catch(()=>({error:"HTTP " + r.status}));
+      if(!r.ok) throw new Error(j.error || ("HTTP " + r.status));
+      return j;
+    },
+    render(){
+      const b = document.getElementById("ddAuthBtn"); if(!b) return;
+      const m = this.me();
+      b.replaceChildren();
+      if(m){
+        b.parentNode.classList.add("in");
+        const d = document.createElement("span"); d.className = "dot";
+        const w = document.createElement("span"); w.className = "who";
+        // first token only: the chip is 170px at most and "Signed in as" is the title
+        w.textContent = String(m.name).split(/\s+/)[0];
+        b.append(d, w);
+        b.title = "Signed in as " + m.name;
+        b.setAttribute("aria-label", "Account — signed in as " + m.name);
+      }else{
+        b.parentNode.classList.remove("in");
+        const w = document.createElement("span"); w.className = "who";
+        w.textContent = "Sign in";
+        b.append(w);
+        b.title = "Sign in";
+        b.setAttribute("aria-label", "Sign in");
+      }
+      // pages can hide their own duplicate sign-in affordance once the nav has one
+      document.querySelectorAll("[data-dd-signedin]").forEach(n=>{ n.hidden = !m; });
+      document.querySelectorAll("[data-dd-signedout]").forEach(n=>{ n.hidden = !!m; });
+    },
+    build(){
+      if(document.getElementById("ddAuthModal")) return;
+      const host = document.body || document.documentElement;
+      const ov = document.createElement("div");
+      ov.className = "authmodal"; ov.id = "ddAuthModal";
+      ov.innerHTML =
+        '<div class="box" role="dialog" aria-modal="true" aria-labelledby="ddAuthH">' +
+          '<button class="x" id="ddAuthX" aria-label="Close">×</button>' +
+          '<h3 id="ddAuthH">Sign in</h3>' +
+          '<div id="ddAuthOut">' +
+            '<p class="sub">One sign-in for the whole site — the Bozo board, the draft, and your AI connector.</p>' +
+            '<label for="ddAuthWho">Name or email</label>' +
+            '<input id="ddAuthWho" list="ddAuthRoster" autocomplete="username" autocapitalize="none" spellcheck="false">' +
+            '<datalist id="ddAuthRoster"></datalist>' +
+            '<label for="ddAuthPw">Password</label>' +
+            '<input id="ddAuthPw" type="password" autocomplete="current-password">' +
+            '<button class="go" id="ddAuthGo">Sign in</button>' +
+            '<p class="err" id="ddAuthErr"></p>' +
+            '<p class="note">No account yet? Use the join link Kap sent you — that is the only way in. ' +
+            'Nothing here is gated on signing in: the boards, the pool and the season tables are public either way.</p>' +
+          '</div>' +
+          '<div id="ddAuthIn" hidden>' +
+            '<p class="sub">Signed in as <b id="ddAuthName"></b>.</p>' +
+            '<a class="go" href="connect.html">Connect your AI</a>' +
+            '<a class="go alt" href="bozo.html">Bozo board</a>' +
+            /* ⚠️ Sign out is the GHOST button. It was the filled accent one for
+               about ten minutes; a destructive action should not be the loudest
+               thing in a panel you opened to check your own name. */
+            '<button class="go alt" id="ddAuthOutBtn">Sign out</button>' +
+            '<p class="note" id="ddAuthExp"></p>' +
+          '</div>' +
+        '</div>';
+      host.appendChild(ov);
+      ov.addEventListener("click", e=>{ if(e.target === ov) this.close(); });
+      document.getElementById("ddAuthX").onclick = ()=>this.close();
+      document.getElementById("ddAuthOutBtn").onclick = ()=>{ this.clear(); this.close(); };
+      const go = document.getElementById("ddAuthGo");
+      const err = document.getElementById("ddAuthErr");
+      const submit = async ()=>{
+        const who = document.getElementById("ddAuthWho").value.trim();
+        const pw  = document.getElementById("ddAuthPw").value;
+        err.className = "err"; err.textContent = "";
+        if(!who || !pw){ err.textContent = "Name and password, both."; return; }
+        go.disabled = true; go.textContent = "Signing in…";
+        try{
+          // `name` carries either a roster name or an email; the Worker resolves an
+          // email to a name before it does anything else. One field, two identifiers.
+          const r = await this.post("/auth/login", {name:who, password:pw});
+          if(!r.session) throw new Error("No session came back.");
+          document.getElementById("ddAuthPw").value = "";
+          this.set(r.session);
+          this.close();
+        }catch(e){ err.textContent = e.message || String(e); }
+        finally{ go.disabled = false; go.textContent = "Sign in"; }
+      };
+      go.onclick = submit;
+      ov.addEventListener("keydown", e=>{
+        if(e.key === "Enter" && !document.getElementById("ddAuthOut").hidden) submit();
+      });
+    },
+    async roster(){
+      const dl = document.getElementById("ddAuthRoster");
+      if(!dl || dl.dataset.loaded) return;
+      try{
+        const r = await fetch(AUTH_WORKER + "/auth/roster?cb=" + Date.now().toString(36));
+        const j = await r.json();
+        dl.replaceChildren();
+        (j.players || []).filter(p=>p.claimed).forEach(p=>{
+          const o = document.createElement("option"); o.value = p.name; dl.appendChild(o);
+        });
+        dl.dataset.loaded = "1";
+      }catch(e){ /* the field is free text; a missing roster costs autocomplete only */ }
+    },
+    open(){
+      this.build();
+      const m = this.me();
+      document.getElementById("ddAuthH").textContent = m ? "Your account" : "Sign in";
+      document.getElementById("ddAuthOut").hidden = !!m;
+      document.getElementById("ddAuthIn").hidden  = !m;
+      if(m){
+        document.getElementById("ddAuthName").textContent = m.name;
+        const days = Math.max(0, Math.round((m.expires - Date.now()) / 86400000));
+        document.getElementById("ddAuthExp").textContent =
+          "This sign-in lasts about " + days + " more day" + (days === 1 ? "" : "s") +
+          " on this device. It is stored in this browser only.";
+      }else{
+        this.roster();
+      }
+      document.getElementById("ddAuthModal").classList.add("open");
+      const f = document.getElementById(m ? "ddAuthOutBtn" : "ddAuthWho");
+      if(f) setTimeout(()=>f.focus(), 30);
+    },
+    close(){
+      const ov = document.getElementById("ddAuthModal");
+      if(ov) ov.classList.remove("open");
+      const e = document.getElementById("ddAuthErr");
+      if(e){ e.className = "err"; e.textContent = ""; }
+    }
+  };
+  const authSec = document.createElement("div");
+  authSec.className = "navauth";
+  const authBtn = document.createElement("button");
+  authBtn.className = "authbtn"; authBtn.id = "ddAuthBtn"; authBtn.type = "button";
+  authBtn.addEventListener("click", ()=>{
+    /* one page owns every identity workflow (8/7) — the chip goes there, not to a modal */
+    const here = location.pathname.split("/").pop() || "index.html";
+    if (here === "signon.html") { window.scrollTo({top:0, behavior:"smooth"}); return; }
+    location.href = "signon.html?next=" + encodeURIComponent(here);
+  });
+  authSec.appendChild(authBtn);
+  // The account chip joins the domain run after the six groups below.
+  document.addEventListener("keydown", e=>{ if(e.key === "Escape") window.DDAuth.close(); });
+  // sign out in one tab, sign out in all of them
+  window.addEventListener("storage", e=>{ if(e.key === AUTH_KEY){ window.DDAuth.render(); window.DDAuth.fire(); } });
+  const links = document.createElement("div"); links.className = "links";
+  NAV.forEach(entry=>{
+    if(entry.href && !entry.items){          // a group may ALSO carry an href
+      const a = document.createElement("a");
+      a.href = entry.href; a.append(navLabel(entry));
+      if(entry.key===page) a.className = "on";
+      links.appendChild(a);
+      return;
+    }
+    const grp = document.createElement("div"); grp.className = "navgrp";
+    const active = entry.items.some(it=>it[2]===page);
+    /* A group header that also navigates. ⚠️ It has to keep working on touch, where
+       there is no hover to open the menu with — so: hover-capable devices navigate on
+       click (the menu is already showing), touch devices open the menu on the first tap
+       and follow the link on the second. Navigating on the first tap would make the
+       dropdown unreachable on a phone. */
+    const btn = document.createElement(entry.href ? "a" : "button");
+    if(entry.href) btn.href = entry.href;
+    btn.className = "grpbtn"+(active?" on":"");
+    btn.append(navLabel(entry));
+    const car = document.createElement("span"); car.className = "caret"; car.textContent = "▾";
+    btn.append(" ", car);
+    btn.addEventListener("click", e=>{
+      const hoverable = !window.matchMedia || matchMedia("(hover: hover)").matches;
+      if(entry.href && (hoverable || grp.classList.contains("open"))) return;   // let it navigate
+      e.preventDefault();
+      e.stopPropagation();
+      const wasOpen = grp.classList.contains("open");
+      document.querySelectorAll(".navgrp.open").forEach(g=>g.classList.remove("open"));
+      if(!wasOpen) grp.classList.add("open");
+    });
+    const menu = document.createElement("div"); menu.className = "grpmenu";
+    entry.items.forEach(([href,label,key,hot,sep])=>{
+      if(key==="nav-section"){
+        const h=document.createElement("div"); h.className="nav-section"; h.textContent=label;
+        menu.appendChild(h); return;
+      }
+      const a = document.createElement("a");
+      a.href = href; a.textContent = label;
+      if(key===page) a.classList.add("on");
+      if(key && key.indexOf("kennel-")===0) a.classList.add(key);
+      if(hot) a.classList.add("hot");
+      if(sep) a.classList.add("sep");            // rule above = operator territory
+      menu.appendChild(a);
+    });
+    grp.appendChild(btn); grp.appendChild(menu);
+    links.appendChild(grp);
+  });
+  links.appendChild(authSec);
+  nav.appendChild(links);
+  // render() resolves the button by id, so it must run after nav is in the document.
+  window.DDAuth.render();
+  document.addEventListener("click", ()=>{
+    document.querySelectorAll(".navgrp.open").forEach(g=>g.classList.remove("open"));
+  });
+  // Forced flex line-break: on phones the nav links fill row 1 and the LIVE DRAFT pill +
+  // theme button get row 2 to themselves, both rows centred. Without it the wrap lands
+  // wherever the widths happen to fall (3 links / 1 link + pill + button) and looks arbitrary.
+  const brk = document.createElement("i"); brk.className = "navbrk";
+  links.appendChild(brk);
+
+  // The LIVE DRAFT pill is gone (8/1): Live is a tab inside the Dashboard, so the pill
+  // was a second route to the same place. Its other job — showing DDSync connection —
+  // moved to the dashboard's summary strip.
+
+  const btn = document.createElement("button");
+  btn.className = "theme-btn"; btn.id = "themeBtn";
+  btn.setAttribute("data-ddtheme-btn","");
+  btn.addEventListener("click", ()=>window.DDTheme.toggle());
+  links.appendChild(btn);   // in .links, not nav: one flex run, so it wraps with the rest on mobile
+
+  /* ---------- 🙃 The Upside Down — this page's machine-readable mirror ----------
+     An OVERLAY, not a third theme. It writes NOTHING: dd-theme2-* is untouched, there
+     is no dd-upsidedown key, and it closes on a second tap or Esc. Nobody wants to
+     reload into JSON tomorrow morning, so it deliberately cannot persist.
+     Always dark regardless of the page's own theme — the Upside Down is one fixed
+     place. Exiting restores whatever the user actually had, because we never changed
+     documentElement.dataset.theme in the first place.
+     ⚠️ The content is FETCHED from the served file, never inlined. The joke only lands
+     because it is the genuine article; an inlined copy would drift the first time a
+     /data/ file was rebuilt and the mirror would quietly start lying. */
+  const UD = {
+    /* page → mirror. One object, so a new /data/ file is a one-line edit here and not
+       a sitewide pass. Keys are the page's filename stem (location.pathname), NOT the
+       nav `page` key — board.html sets DD_PAGE="live", which would miss.
+       Verified against /data/surfaces.json on 8/7/26: every url below is status:live.
+       Anything not listed falls through to llms.txt, which is the correct answer for
+       dfs and guillotine — surfaces.json records those as having no machine surface. */
+    map:{
+      "":"/llms.txt", "index":"/llms.txt",
+      "board":"/data/pool.json", "master":"/data/pool.json",
+      "bigboard":"/data/pool.json", "auction":"/data/pool.json",
+      "report":"/data/pool.json",
+      "dashboard":"/data/league.json",
+      "receipts":"/data/receipts.json",
+      "stats":"/data/epa-teams.json",
+      "nfelo":"/data/nfelo.json",
+      "survivor":"/data/survivor.json",
+      "bozo":"/data/bozo-rules.json",
+      "cfb":"/data/cfb-teams.json",
+      "strategy":"/data/strategy.md"
+    },
+    /* secondary live mirrors — linked, not rendered, so the primary view stays one file */
+    also:{
+      "receipts":["/data/receipts-method.md","/data/tier-audit.json"],
+      "cfb":["/data/cfb-elo.json","/data/cfb-record-divergence.json","/data/cfb-model-cards.json"],
+      "nfelo":["/data/models.json"],
+      "bozo":["/data/bozo-rules.md"],
+      "survivor":["/data/models.json"],
+      "index":["/data/index.json","/data/method.md","/data/surfaces.json"],
+      "":["/data/index.json","/data/method.md","/data/surfaces.json"]
+    },
+    stem(){
+      const f = (location.pathname.split("/").pop()||"").replace(/\.html?$/,"");
+      return f;
+    },
+    url(){ const s=this.stem(); return this.map[s] || "/llms.txt"; },
+    ov:null, cv:null, raf:0, loaded:"",
+
+    build(){
+      if(this.ov) return this.ov;
+      const ov = document.createElement("div");
+      ov.className = "ud-ov"; ov.id = "udOverlay";
+      ov.setAttribute("role","dialog");
+      ov.setAttribute("aria-label","The Upside Down — machine-readable mirror of this page");
+      const cv = document.createElement("canvas"); cv.className = "ud-cv"; cv.setAttribute("aria-hidden","true");
+      const inr = document.createElement("div"); inr.className = "ud-in";
+      inr.innerHTML =
+        '<div class="ud-hd">'+
+          '<span class="ud-ttl">🙃 THE <b>UPSIDE DOWN</b></span>'+
+          '<span class="ud-path" id="udPath"></span>'+
+          /* ⚠️ The close control carries 🙃 on purpose. The overlay is fixed inset:0,
+             so the nav button underneath it is unreachable while it is open — "tap 🙃
+             again" has to land on something that is actually on top. This is it, and
+             it sits in the same top-right corner the nav button does. */
+          '<button class="ud-x" id="udX" type="button">🙃 close · esc</button>'+
+        '</div>'+
+        '<div class="ud-chips" id="udChips"></div>'+
+        '<div id="udNote"></div>'+
+        '<div class="ud-also" id="udAlso"></div>'+
+        '<pre class="ud-body" id="udBody">loading the served file…</pre>'+
+        '<p class="ud-foot">This is the actual file your AI reads, fetched live from this site — '+
+        'not a copy pasted into the page. Same data, dated and sourced. '+
+        'Start at <a href="/data/index.json" style="color:#ff6a02">/data/index.json</a>.</p>';
+      ov.append(cv, inr);
+      document.body.appendChild(ov);
+      inr.querySelector("#udX").addEventListener("click", ()=>this.close());
+      this.ov = ov; this.cv = cv;
+      return ov;
+    },
+
+    esc(s){ return String(s).replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); },
+
+    /* ⚠️ ONE regex with alternation, not three chained replaces. Chaining them nests
+       spans — the number pass finds the digits inside a string span it just wrote
+       ("captured 2026-07-29") and repaints them green mid-sentence. One sweep, one
+       decision per token.
+       Only JSON gets coloured: llms.txt and strategy.md are prose, where quoted words
+       would light up at random. Capped at 300KB — pool.json (82KB) and epa-teams
+       (85KB) are fine; past that, plain text beats spending a phone's frame budget
+       building a hundred thousand spans. */
+    hilite(t, json){
+      const e = this.esc(t);
+      if(!json || t.length > 300000) return e;
+      return e.replace(
+        /("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false|null)\b|(-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?)/g,
+        (m, str, colon, lit, num)=>{
+          if(str) return colon
+            ? '<span class="ud-k">'+str+'</span>'+colon
+            : '<span class="ud-s">'+str+'</span>';
+          if(lit) return '<span class="ud-n">'+lit+'</span>';
+          return '<span class="ud-n">'+num+'</span>';
+        });
+    },
+
+    chip(label, value, cls){
+      return '<span class="ud-chip'+(cls?" "+cls:"")+'"><b>'+this.esc(label)+'</b>'+this.esc(value)+'</span>';
+    },
+
+    render(url, text, manifest){
+      const path = this.ov.querySelector("#udPath");
+      const chips = this.ov.querySelector("#udChips");
+      const note  = this.ov.querySelector("#udNote");
+      const also  = this.ov.querySelector("#udAlso");
+      const body  = this.ov.querySelector("#udBody");
+      path.innerHTML = '<a href="'+this.esc(url)+'" target="_blank" rel="noopener">'+this.esc(url)+'</a> · '+
+                       (text.length>1024 ? Math.round(text.length/1024)+" KB" : text.length+" B");
+
+      let d = null;
+      if(/\.json$/.test(url)){ try{ d = JSON.parse(text); }catch(e){ d = null; } }
+
+      const c = [];
+      if(d && typeof d === "object"){
+        if(d.as_of) c.push(this.chip("as_of", d.as_of));
+        if(d.tier)  c.push(this.chip("tier", d.tier==="dawg" ? "Working Dawg" : d.tier, d.tier==="dawg"?"dawg":""));
+        if(d.graded === false) c.push(this.chip("graded","not yet"));
+        if(d.built) c.push(this.chip("built", d.built));
+        if(d.count != null) c.push(this.chip("rows", d.count));
+        if(d.source) c.push(this.chip("source", d.source));
+        /* receipts is the one file whose whole point is that you can check it without
+           trusting us, so the hash and the canonical-string spec come to the top. */
+        if(d.integrity && d.integrity.sha256){
+          c.push(this.chip("sha256", d.integrity.sha256));
+        }
+      } else {
+        /* markdown mirrors carry the same envelope in YAML front matter */
+        const fm = text.match(/^(?:<!--[^]*?-->\s*)?---\r?\n([^]*?)\r?\n---/);
+        if(fm){
+          fm[1].split(/\r?\n/).forEach(line=>{
+            const m = line.match(/^(as_of|source|title|tier|staleness):\s*(.+)$/);
+            if(m) c.push(this.chip(m[1], m[2]));
+          });
+        }
+      }
+      /* llms.txt is prose — it is the one live surface with no envelope of its own, so
+         its dates come from the manifest and are LABELLED as the manifest's, not as
+         llms.txt's. Borrowing a date without saying where it came from is the exact
+         failure mode this whole layer exists to argue against. */
+      if(!c.length && manifest){
+        if(manifest.as_of) c.push(this.chip("manifest as_of", manifest.as_of));
+        if(manifest.data && manifest.data.files) c.push(this.chip("files", manifest.data.files.length));
+        if(manifest.site) c.push(this.chip("site", manifest.site));
+      }
+      if(!c.length) c.push(this.chip("file", url));
+      chips.innerHTML = c.join("");
+
+      let n = "";
+      if(d && d.note) n += '<div class="ud-note"><b>note:</b> '+this.esc(d.note)+'</div>';
+      if(!d && manifest){
+        n += '<div class="ud-note"><b>'+this.esc(url)+'</b> is prose and carries no <code>as_of</code> of its own. '+
+             'The dates above are the manifest’s, from <code>/data/index.json</code> — every file listed there '+
+             'carries its own <code>as_of</code>, and those are the ones to quote.</div>';
+      }
+      if(d && d.integrity && d.integrity.canonical_string_spec){
+        n += '<div class="ud-note"><b>canonical string:</b> '+this.esc(d.integrity.canonical_string_spec)+
+             (d.integrity.canonical_example_first_row
+               ? ' <br><b>first row:</b> <code>'+this.esc(d.integrity.canonical_example_first_row)+'</code>' : '')+
+             '</div>';
+      }
+      note.innerHTML = n;
+
+      const extra = this.also[this.stem()] || [];
+      also.innerHTML = extra.length
+        ? "also mirrored: " + extra.map(u=>'<a href="'+this.esc(u)+'" target="_blank" rel="noopener">'+this.esc(u)+'</a>').join("")
+        : "";
+
+      body.innerHTML = this.hilite(text, !!d);
+    },
+
+    async load(){
+      const url = this.url();
+      if(this.loaded === url) return;
+      const body = this.ov.querySelector("#udBody");
+      try{
+        const r = await fetch(url, {cache:"no-cache"});
+        if(!r.ok) throw new Error(r.status+" "+r.statusText);
+        const t = await r.text();
+        let man = null;
+        if(!/\.json$/.test(url) && !/^---/m.test(t.slice(0,400))){
+          /* no envelope in the file itself — go get the manifest so the view still
+             opens on a date. Failure here is not fatal: the body is the point. */
+          try{ man = await (await fetch("/data/index.json", {cache:"no-cache"})).json(); }catch(e){}
+        }
+        this.render(url, t, man);
+        this.loaded = url;
+      }catch(e){
+        /* llms.txt is the documented fallback; /data/index.json is the fallback's
+           fallback, because the manifest is the one file that is always worth having. */
+        if(url !== "/data/index.json"){
+          try{
+            const r2 = await fetch("/data/index.json", {cache:"no-cache"});
+            const t2 = await r2.text();
+            this.render("/data/index.json", t2);
+            this.loaded = "/data/index.json";
+            return;
+          }catch(e2){}
+        }
+        body.innerHTML = '<span class="ud-w">Could not fetch '+this.esc(url)+' — '+this.esc(e.message)+
+          '</span>\n\nThe file is still there: try it directly.';
+      }
+    },
+
+    /* Faint drift, for the Stranger Things read. Cheap by construction: ~40 motes,
+       stopped dead on close so nothing burns battery behind a closed overlay, and
+       skipped entirely under prefers-reduced-motion. First thing to cut if it ever
+       fights performance on the 2MB stats page. */
+    motes(){
+      const cv = this.cv, ctx = cv.getContext && cv.getContext("2d");
+      if(!ctx) return;
+      if(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      const dpr = Math.min(window.devicePixelRatio||1, 2);
+      const fit = ()=>{ cv.width = innerWidth*dpr; cv.height = innerHeight*dpr; };
+      fit();
+      const N = innerWidth < 700 ? 22 : 44;
+      const p = Array.from({length:N}, (_,i)=>({
+        x: (i*97 % 100)/100, y:(i*61 % 100)/100,
+        r: 0.6 + (i%5)*0.35, v: 0.06 + (i%7)*0.02, d:(i%2?1:-1)*0.03
+      }));
+      let t0 = 0;
+      const step = (ts)=>{
+        if(!this.ov.classList.contains("on")){ this.raf = 0; return; }
+        const dt = t0 ? Math.min((ts-t0)/1000, 0.05) : 0; t0 = ts;
+        ctx.clearRect(0,0,cv.width,cv.height);
+        for(const m of p){
+          m.y -= m.v*dt*0.12; m.x += m.d*dt*0.05;
+          if(m.y < -0.05){ m.y = 1.05; }
+          if(m.x < -0.05) m.x = 1.05; if(m.x > 1.05) m.x = -0.05;
+          ctx.beginPath();
+          ctx.fillStyle = "rgba(255,106,2,0.28)";
+          ctx.arc(m.x*cv.width, m.y*cv.height, m.r*dpr, 0, 6.284);
+          ctx.fill();
+        }
+        this.raf = requestAnimationFrame(step);
+      };
+      addEventListener("resize", fit);
+      this.raf = requestAnimationFrame(step);
+    },
+
+    open(){
+      this.build();
+      this.ov.classList.add("on");
+      this.prevY = window.scrollY;
+      document.documentElement.style.overflow = "hidden";
+      this.ov.scrollTop = 0;
+      this.load();
+      if(!this.raf) this.motes();
+      const x = this.ov.querySelector("#udX"); if(x) x.focus();
+    },
+    close(){
+      if(!this.ov) return;
+      this.ov.classList.remove("on");
+      document.documentElement.style.overflow = "";
+      if(this.raf){ cancelAnimationFrame(this.raf); this.raf = 0; }
+      const b = document.getElementById("udBtn"); if(b) b.focus();
+    },
+    toggle(){
+      this.build();
+      this.ov.classList.contains("on") ? this.close() : this.open();
+    }
+  };
+  window.DDUpsideDown = UD;
+
+  const udb = document.createElement("button");
+  udb.className = "udbtn"; udb.id = "udBtn"; udb.type = "button";
+  udb.textContent = "🙃";
+  udb.title = "The Upside Down — the machine-readable version of this page";
+  udb.setAttribute("aria-label","Open the Upside Down: the machine-readable version of this page");
+  udb.addEventListener("click", ()=>UD.toggle());
+  /* ⚠️ 🙃 goes at the FOOT of the page, not in the nav (moved 2026-08-08). It is placed
+     immediately AFTER <footer> where one exists, so it inherits the page column, and at
+     the end of <body> on the six pages that ship no footer (auction, bigboard, bozo,
+     dashboard, dataviz, dawgs). Do not switch this to position:fixed bottom-right —
+     Ask Toto's launcher already owns that corner and 🙃 would land underneath it. */
+  const udrow = document.createElement("div");
+  udrow.className = "udfoot";
+  /* ⚠️ CEP-5A Stage 7: THE DAWGHOUSE LIVES HERE NOW, not in the menu. A shelf of blocked
+     work is not somewhere to route people; it is somewhere to be able to look. This row is
+     injected on every page, so one edit here reaches all 28 — the <footer> elements are not
+     identical and could not carry it. */
+  const udh = document.createElement("a");
+  udh.className = "udhouse"; udh.href = "dawghouse.html";
+  udh.textContent = "The DawgHouse";
+  udh.title = "The shelf: work that is blocked, with the reason and the way back attached";
+  udrow.appendChild(udh);
+  udrow.appendChild(udb);
+  const udft = document.querySelector("footer");
+  if(udft && udft.parentNode) udft.parentNode.insertBefore(udrow, udft.nextSibling);
+  else document.body.appendChild(udrow);
+  document.addEventListener("keydown", e=>{
+    if(e.key === "Escape" && UD.ov && UD.ov.classList.contains("on")) UD.close();
+  });
+
+  window.DDTheme.apply();
+
+  // offline insurance: cache the draft pages so a dead venue wifi can't kill the room
+  if("serviceWorker" in navigator &&
+     (location.protocol === "https:" || location.hostname === "localhost")){
+    navigator.serviceWorker.register("/sw.js").catch(()=>{});
+  }
+})();
+
+/* ---------- Toto: shared draft assistant, available on every draft page ----------
+   The API key is NOT here and must never be. datadawgs216.com is a static site in a
+   public repo, so anything in this file is world-readable. The key lives in a Cloudflare
+   Worker; this talks to the Worker and sends a shared league passphrase instead.
+   Any page that sets window.DD_POOL (the player pool) gets the bot automatically. */
+(function(){
+  const BOT_URL = "https://toto.jkapcar4.workers.dev/";              // Worker endpoint, baked at build time
+  const LS_PASS = "dd-bot-pass";             // league passphrase, per browser
+  const LS_AI   = "dd-ai-v1";                // optional personal-key override (operator)
+  const LS_STATE= "dd-auction-v1";
+
+  const cfgAI = () => { try{ return JSON.parse(localStorage.getItem(LS_AI)||"{}"); }catch(e){ return {}; } };
+  const getPass = () => { try{ return localStorage.getItem(LS_PASS)||""; }catch(e){ return ""; } };
+  const setPass = v => { try{ localStorage.setItem(LS_PASS, v); }catch(e){} };
+  const state = () => { try{ return JSON.parse(localStorage.getItem(LS_STATE)||"null"); }catch(e){ return null; } };
+  /* ⚠️ The Worker has always accepted a Bozo session on the chat route — and gives it its
+     OWN daily bucket instead of the shared one — but this client only ever sent
+     X-Dawg-Pass. So a signed-in Bozo player was still asked for the league passphrase and
+     still spent the shared cap. Send the session when there is one.
+     ⚠️ X-Bozo-Session is in the deployed Worker's Access-Control-Allow-Headers.
+     X-Dawg-Session is NOT (see bozo-next-session.md) — do not switch to it here. */
+  const sess = () => { try{ return localStorage.getItem("dd-bozo-sess")||""; }catch(e){ return ""; } };
+
+  /* ⚠️ SYS is the SURFACE-AGNOSTIC core. Everything specific to one page — the auction,
+     Bozo, whatever comes next — lives in a surface block that the page supplies via
+     window.DD_BOTCTX. It used to be one prompt that asserted "you are the live auction
+     assistant" on every page, which is why Toto was gated to the draft pages: ungating
+     him without splitting this would have had him answering Bozo questions in the voice
+     of a man staring at an auction board he cannot see. */
+  const SYS = `You are Toto, the assistant for the Data Dawgs site ("Data, not dogma").
+You are named for the dog in The Wizard of Oz — the one who pulled back the curtain and showed the wizard was just a man working levers. That is the job: cut through theater and say what the numbers actually support.
+Rules that hold everywhere:
+- Use ONLY the numbers in the state provided below. Never invent a name, price, number or result that is not there.
+- Be direct and short. 3-8 sentences or a tight list. Plain text only: no markdown, no headers, no tables.
+- When asked to decide, decide — and name the one thing that would change your mind.
+- When the state does not support a confident answer, say so plainly instead of dressing a guess up as analysis. That is the whole point of you.
+- Never present a model's output as an observation. If a number came from a simulation or an estimate, say so in the same breath.
+How-to questions about the site are also yours to answer, from the SITE MANUAL supplied below.
+- Answer how-to questions from the manual ONLY. If a step is not in it, say you do not know and suggest what is — never invent a button, menu or shortcut. Made-up UI steps are worse than no answer.
+- Reason across the manual freely: combine steps to solve a problem it does not spell out (e.g. wrong player AND wrong team = undo, then re-enter). Just do not invent the steps themselves.
+- Same voice for how-to as for analysis: short, plain text, no markdown.`;
+
+  // The auction surface — what SYS used to assert unconditionally.
+  const SYS_DRAFT = `RIGHT NOW you are the live auction assistant, advising whoever is asking, mid-draft, in a 14-team fantasy football auction.
+- MV is a dated market-consensus value snapshot, not a points projection. Surplus vs MV measures buying below consensus, not winning.
+- Reason from: dollars left, open starting slots, positional scarcity on the board, inflation, and each rival's max bid. $1-3 endgame fills are a real plan, not a failure.
+- When asked to decide, name the player(s) and the price you would pay.
+- If the state shows no picks yet, say so and talk strategy rather than pretending to see a board.`;
+
+  /* ⚠️ This used to say "you are on a page that exposes no live game state to you"
+     and instruct him to admit he could not see it. That was true of exactly one page
+     and false of twenty. Now the fallback hands him a text rendering of the page the
+     reader is actually looking at, so the floor everywhere is "he reads what you
+     read" — and the honesty constraint moves to what that rendering IS. */
+  const SYS_PAGE = `RIGHT NOW you are on a page that has not handed you a curated state block, so what follows is a TEXT RENDERING OF THE PAGE THE READER IS LOOKING AT — its headings, prose, settings and tables, read off the rendered page at the moment they asked.
+- It is what is ON SCREEN, not the dataset behind it. Rows that a filter hid are not in it, long tables are cut, and charts are pictures you cannot see. Say which of those is biting when it bites.
+- The section marked THE READER IS LOOKING AT is the one on their screen. An unqualified "this" means that section.
+- Describe, summarise, compare and explain what is in the rendering. Do not compute new numbers from it beyond arithmetic you can show, and never fill a gap in it from memory of football.
+- Numbers on this site carry dates. If the rendering gives a date or an as_of, quote it. If it gives a tier (Pup, Working Dawg, DawgHouse), respect what that tier means.
+- If the question needs a page other than this one, answer what you can and name the page from the site map. Routing someone correctly beats guessing at their answer.`;
+
+  /* ⚠️ The dock's subtitle, starter chips and placeholder were hardcoded to the draft.
+     Left alone they follow Toto onto every page and tell a Bozo player he "reads the
+     live draft" — the copy would be lying about what he can see, which is exactly the
+     failure the surface split exists to prevent. A page overrides them through the
+     same DD_BOTCTX hook. */
+  const CHROME_DRAFT = {sub:"reads the live draft", ph:"Ask Toto about the draft…", chips:[
+    ["What should I do with the rest of my picks?","Rest-of-draft plan"],
+    ["Who is the best value on the board right now, and what would you pay?","Best value now"],
+    ["Where is the next positional cliff, and should I pay to beat it?","Next cliff"]]};
+  /* ⚠️ These chips used to ask about logging an auction sale — on every page that
+     had no surface of its own, including pages with no draft anywhere near them.
+     The default now asks about the page you are standing on. */
+  const CHROME_PLAIN = {sub:"reads this page", ph:"Ask Toto about this page…", chips:[
+    ["What is this page for, in plain terms?","What is this?"],
+    ["What can you actually see from this page?","What can you see?"],
+    ["Where do these numbers come from, and how fresh are they?","Where's it from?"]]};
+  function chrome(){
+    const h=window.DD_BOTCTX;
+    if(h && h.chrome) return Object.assign({}, CHROME_PLAIN, h.chrome);
+    return (window.DD_POOL && window.DD_POOL.length) ? CHROME_DRAFT : CHROME_PLAIN;
+  }
+  const escAttr = s => String(s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+
+// Site manual — single source of truth for Toto's how-to answers. If the UI changes,
+// change this in the SAME commit or Toto starts confidently lying about it.
+const HELP = `AUCTIONEER CONTROLS (auction.html) — the operator's page. One device runs the draft.
+ENTERING A SALE: type into "Player (select = on the block)". An autocomplete list appears; Down/Up arrows move, Enter selects, Escape closes. Selecting a player puts them on the block. Then pick the winning Team, type Price $, and press SOLD. A player not in the pool gets a "Pos (custom)" dropdown so you can set the position by hand.
+VOICE: the microphone button, or press V when you are not typing in a field. Say "nominate {player}" to put someone on the block, or "{player} {team} {price}" to log a sale. Including the word "keeper" marks that pick as a keeper.
+UNDO THE LAST SALE: the "Last sale" row sits under the entry bar and has an "Undo this pick" button. It asks to confirm — "Yes, undo" or "Cancel".
+FIX AN OLDER PICK: open the gear Menu, then "Pick log (undo / edit)". Every pick there has an editable price box and a team dropdown, and both save the moment you change them. The x button on a row deletes that pick. Price edits are clamped so a team cannot be pushed past $0.
+NOMINATION QUEUE (gear Menu): type a name and press +. Click a queued name to load it into the entry bar. The x removes it. Only the operator sees this.
+BEST AVAILABLE: four buttons under the entry bar showing the top remaining QB, RB, WR and TE with an inflation-adjusted price. Tapping one loads that player.
+THE MONEY PILE: every team's remaining budget, sorted, at the bottom of the operator page.
+GEAR MENU also holds: Setup, "Start <n>s timer", "Advance nomination", "Projector shows" (Draft Board / Rosters / What's Left / Report Card), Recap, Export CSV, and Reset draft.
+RESET DRAFT is deliberately two clicks: the first turns it into "Click again to RESET ALL", and it disarms itself after about 4 seconds.
+SETUP holds: Budget $, Roster spots, Values (Half PPR / Full PPR / Superflex), Timer secs, My team, Voice announcer, Snark mode, and Announcer voice.
+EXPORT CSV columns: pick, player, pos, team, owner, price, etr_value, keeper.
+ON THE CLOCK is shown in the page header. "Advance nomination" moves it to the next team. Undoing a non-keeper pick steps it back one.
+OTHER PAGES: Big Board is the projector view — it is deliberately not in the nav, open it by URL on the projector machine, and what it displays is set from "Projector shows". LIVE DRAFT in the nav is the read-only board for everyone else. Draft Data Viz, Report Card, Cheat Sheet and Master Data are read-only views of the same draft.
+STATE: everything saves in the browser on that device. A different device shows a different draft unless the live mirror is switched on. Pages are cached for offline so the draft survives losing wifi — but Toto itself needs the network, so say so if someone asks for help while offline.`;
+
+/* The manual above is the draft rig, because that is where how-to questions used to
+   come from. This is the rest of the site in one screen: enough for Toto to route a
+   question he cannot answer from the page in front of him. Keep it honest — a page
+   listed here as empty must stay listed as empty until it isn't. */
+const MAP = `SITE MAP — what lives where. Use it to send someone to the right page instead of guessing at their answer.
+index.html — the manifesto: what Data Dawgs is for, "Data, not dogma", Bring Your Own Dawg, how the tiers work.
+receipts.html — every pre-registered forecast, the grading, calibration, the model scoreboard, 538 Classic, provenance, the tier audit.
+dawghouse.html — the shelf: work that was stopped, each item with its blocker and the condition that would reopen it.
+arena.html — the hub for games played against other people; links to all of the below.
+bozo.html — the weekly one-leg parlay game: board, ledger, closing-line value, standings, the belt.
+challenge.html — the NFL Forecasting Challenge: put a probability on a game before kickoff, get graded after.
+survivor.html — survivor pool: this week's board, pick popularity, an optimal path, a season simulation, model settings.
+guillotine.html — guillotine league companion. dfs.html — DFS solver, contest simulator, exposure, bankroll. The projections there are the USER'S OWN.
+teamdraft.html — the 32-team wins pool: spin wheel, board, eight rosters, Monte Carlo season sim.
+The draft rig: dashboard.html (a drafter's view), auction.html (the operator), board.html (read-only room view), bigboard.html (the projector), dataviz.html and report.html (afterwards), master.html (the player pool and scouting).
+strategy.html — the 2026 draft thesis, a dated snapshot of one analyst's argument.
+nfl.html — the NFL hub. stats.html — the EPA explorer. nfelo.html — nfelo power ratings and their backtest. calculators.html — ten deterministic calculators, nothing stored.
+cfb.html — the College Football lab: 2025 results, one retrodictive Elo, a matchup calculator. Its build roadmap is at cfb.html#roadmap and is our own planning surface, not a public destination.
+markets.html — the prediction-markets section, its own top-level group labelled Markets. ai.html — the A.I. Model Board, its own top-level group. Both are deliberately near-empty and say so above the fold; do not imply either has tools yet.
+data.html — the Library: every machine-readable file, shelved by the surface that owns it. connect.html — point your own AI at the site over MCP.
+signon.html — sign in, sign up, recover an account; every other page's sign-in chip lands here. dawgs.html — the Dawg Pound: Rollo, the OG Data Dawg, and the DDCC profile. swoledawg.html — body and training. fantasy-warroom.html — the fantasy league war room.
+Machine surfaces: /data/index.json lists every file with its as_of and hash; /llms.txt is the curated index; /data/surfaces.json maps pages to files and MCP tools.
+NAVIGATION: the banner is Sign in/account, then exactly seven groups — Arena, Markets, A.I., NFL, CFB, Data, Dawgs — then the theme button. The wordmark is Home. There is no top-level Sports group and no top-level Receipts group: NFL and CFB are separate groups, and receipts.html is an item under Data.
+TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a standard declared in advance. DawgHouse = stopped, with the blocker still attached.`;
+
+  /* Which surface are we on? A page can claim one by setting window.DD_BOTCTX:
+       { sys: "...system block...", label: "LIVE TICKET", ctx: () => "...live data..." }
+     Draft pages set nothing and keep exactly the behaviour they had, which is the point —
+     this change must not move a single token of the auction prompt. */
+  function surface(){
+    const h = window.DD_BOTCTX;
+    const base = (window.DD_POOL && window.DD_POOL.length)
+      ? {sys: SYS_DRAFT, label: "CURRENT DRAFT STATE", ctx}
+      : {sys: SYS_PAGE, label: "THE PAGE IN FRONT OF THE READER, RENDERED AS TEXT", ctx: scan};
+    if(!h) return base;
+    /* A partial hook is legal and useful: a page can claim its own voice with sys
+       alone, or its own chips with chrome alone, and still inherit the reader below
+       it. Only a page that supplies ctx() replaces the state — curated beats
+       scraped, and nothing here changes what the draft pages send. */
+    return {sys:   h.sys   || base.sys,
+            label: h.label || base.label,
+            /* ⚠️ BIND IT. This is called as SF.ctx(), which detaches the method from
+               DD_BOTCTX — a ctx() written in method shorthand loses `this` and throws,
+               and ask()'s catch reports that as "Couldn't reach Toto. Check this device
+               is online." A page's own object is the only sane `this` here. */
+            ctx:   typeof h.ctx === "function" ? h.ctx.bind(h) : base.ctx};
+  }
+
+  /* ---------- The page reader ------------------------------------------------
+     Turns the rendered page into text. Deliberately literal: it reads the DOM after
+     the page has drawn it, so it sees the filter the reader set, the sheet they are
+     on and the rows they can actually see — and it cannot see a canvas chart, which
+     is why SYS_PAGE says so. Exposed as window.DDBotScan(budget) so a page with its
+     own curated ctx() can fold the rendering in underneath it. */
+  const ddTxt = el => (el.textContent || "").replace(/\s+/g, " ").trim();
+
+  function ddShown(el){
+    if(el.hidden || el.getAttribute("aria-hidden") === "true") return false;
+    return el.getClientRects().length > 0;
+  }
+  function ddInView(el){
+    const r = el.getBoundingClientRect();
+    return r.bottom > 0 && r.top < (window.innerHeight || 800);
+  }
+
+  function ddTable(tb, rowCap){
+    const all = tb.rows, keep = [];
+    let total = 0;
+    for(let i = 0; i < all.length; i++){
+      const tr = all[i];
+      if(!ddShown(tr)) continue;
+      total++;
+      if(keep.length >= rowCap) continue;
+      const cells = [];
+      for(let c = 0; c < tr.cells.length; c++) cells.push(ddTxt(tr.cells[c]));
+      while(cells.length && cells[cells.length - 1] === "") cells.pop();
+      if(cells.join("") !== "") keep.push(cells.join(" | "));
+    }
+    if(!keep.length) return "";
+    const cap = tb.caption ? " (" + ddTxt(tb.caption) + ")" : "";
+    return "TABLE" + cap + (total > keep.length ? " — first " + keep.length + " of " + total + " rows on screen" : "")
+      + ":\n" + keep.join("\n");
+  }
+
+  /* Settings ARE state on this site: the survivor model, a calculator's dials, a
+     filter. textContent cannot see them, so read the controls directly.
+     ⚠️ SETTINGS ONLY — dropdowns, checkboxes, numbers, sliders, dates. Free-text
+     boxes are deliberately NOT read. A page with a text field has a person typing
+     into it, and on signon.html and connect.html what they are typing is a name, an
+     email address or a personal connector URL that is itself the credential. None of
+     that belongs in a prompt leaving this browser. */
+  const DD_READ_TYPE = {number:1, range:1, checkbox:1, radio:1, date:1, month:1, week:1, time:1};
+  function ddControl(el){
+    const t = (el.type || "").toLowerCase();
+    if(el.tagName !== "SELECT" && !DD_READ_TYPE[t]) return "";
+    let name = el.getAttribute("aria-label") || el.getAttribute("data-label") || "";
+    if(!name && el.id){
+      try{ const lb = document.querySelector('label[for="' + (window.CSS && CSS.escape ? CSS.escape(el.id) : el.id) + '"]');
+           if(lb) name = ddTxt(lb); }catch(e){}
+    }
+    /* A wrapping label contains the control, so its textContent includes every
+       option in the dropdown — "Week Week 1Week 2Week 3…". Clone it, strip the
+       controls out, and what is left is the human label. */
+    if(!name && el.closest){
+      const lb = el.closest("label");
+      if(lb){
+        const c = lb.cloneNode(true), kids = c.querySelectorAll("input,select,textarea,option,datalist,button");
+        for(let i = 0; i < kids.length; i++) kids[i].remove();
+        name = ddTxt(c);
+      }
+    }
+    name = (name || el.placeholder || el.name || el.id || "setting").slice(0, 60);
+    let v = el.value;
+    if(t === "checkbox" || t === "radio"){ if(!el.checked) return ""; v = "on"; }
+    if(el.tagName === "SELECT"){ const o = el.options[el.selectedIndex]; v = o ? o.text : el.value; }
+    v = String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+    return v ? "[setting] " + name + ": " + v.slice(0, 80) : "";
+  }
+
+  function scan(budget){
+    const CAP = budget || 9000;
+    const root = document.querySelector("main") || document.querySelector(".wrap") || document.body;
+    if(!root) return "This page has not rendered anything readable yet.";
+    const SKIP_TAG = {SCRIPT:1, STYLE:1, NOSCRIPT:1, SVG:1, CANVAS:1, IFRAME:1, TEMPLATE:1,
+                      NAV:1, FOOTER:1, VIDEO:1, AUDIO:1, OPTION:1, PICTURE:1};
+    const SKIP_ID  = {nav:1, ddbDock:1, ddbLaunch:1, ddbCSS:1, ddbMsgs:1};
+    const secs = [{head:"", lines:[], seen:false}];
+    const said = {};
+    let cur = secs[0];
+
+    (function walk(node){
+      for(let el = node.firstElementChild; el; el = el.nextElementSibling){
+        const tag = el.tagName;
+        if(SKIP_TAG[tag] || SKIP_ID[el.id]) continue;
+        // data-ddb-skip is the page's own opt-out: anything under it is never read.
+        if(el.hasAttribute && el.hasAttribute("data-ddb-skip")) continue;
+        if(!ddShown(el)) continue;
+        if(/^H[1-3]$/.test(tag)){ cur = {head: ddTxt(el).slice(0, 120), lines: [], seen: ddInView(el)}; secs.push(cur); continue; }
+        if(/^H[4-6]$/.test(tag)){ cur.lines.push("### " + ddTxt(el)); continue; }
+        if(tag === "TABLE"){
+          const near = ddInView(el);
+          const s = ddTable(el, near ? 24 : 8);
+          if(s){ if(near) cur.seen = true; cur.lines.push(s); }
+          continue;
+        }
+        if(tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA"){
+          const s = ddControl(el); if(s) cur.lines.push(s);
+          continue;
+        }
+        if(tag === "BUTTON"){
+          /* ⚠️ Buttons were skipped outright as chrome, and on this site that threw
+             away the data. Every pick on the draft board, every roster card and every
+             expected-wins bar is a button — the summary line under the board was all
+             Toto could see, so he could not name a steal that was on screen.
+             Keep the ones carrying content, drop the ones carrying a verb. */
+          const s = ddTxt(el);
+          if(!s || said[s]) continue;
+          if(!(el.hasAttribute("data-tip") || el.children.length >= 2 || s.length > 24)) continue;
+          said[s] = 1;
+          if(ddInView(el)) cur.seen = true;
+          // The tip is built as markup and lives in an attribute, so textContent never
+          // sees it — and on the board it is the half that says what the pick passed on.
+          const tip = (el.getAttribute("data-tip") || el.getAttribute("title") || "")
+            .replace(/<[^>]*>/g, " ").replace(/&quot;/g, '"').replace(/\s+/g, " ").trim();
+          cur.lines.push(s.slice(0, 220) + (tip ? "  (" + tip.slice(0, 200) + ")" : ""));
+          continue;
+        }
+        if(tag === "P" || tag === "LI" || tag === "DT" || tag === "DD" || tag === "BLOCKQUOTE"
+           || tag === "FIGCAPTION" || tag === "SUMMARY"){
+          const s = ddTxt(el);
+          if(s && !said[s]){ said[s] = 1; if(ddInView(el)) cur.seen = true;
+            cur.lines.push((tag === "LI" ? "- " : "") + (s.length > 420 ? s.slice(0, 420) + "…" : s)); }
+          continue;
+        }
+        // A leaf-ish wrapper — a stat tile, a badge, a figure caption row. Keep it
+        // whole so "3.2" stays attached to the word that says what 3.2 is.
+        const deeper = el.querySelector
+          && el.querySelector("div,section,article,ul,ol,dl,table,form,h1,h2,h3,h4,p,input,select,textarea");
+        if(!deeper){
+          const s = ddTxt(el);
+          if(s && s.length <= 220 && !said[s]){ said[s] = 1; if(ddInView(el)) cur.seen = true; cur.lines.push(s); }
+          continue;
+        }
+        walk(el);
+      }
+    })(root);
+
+    const live = secs.filter(s => s.lines.length);
+    if(!live.length) return "This page has rendered nothing this reader can see yet.";
+    const focus = live.filter(s => s.seen)[0] || null;
+
+    /* Budget by ROUND ROBIN, not by fixed share. A fixed share per section starves
+       the sections after a long one — on the survivor page the whole equity board
+       fell off the end while the intro copy got the room. Every section takes one
+       line a round, the section on the reader's screen takes three, and the last
+       lines to be dropped are the ones nobody was looking at. */
+    const take = live.map(() => 0);
+    let used = live.reduce((a, s) => a + (s.head || "").length + 8, 0);
+    let cutSome = false, moved = true;
+    while(moved){
+      moved = false;
+      for(let i = 0; i < live.length; i++){
+        const s = live[i], quota = (s === focus) ? 3 : 1;
+        for(let k = 0; k < quota && take[i] < s.lines.length; k++){
+          const ln = s.lines[take[i]];
+          if(used + ln.length + 1 > CAP){ cutSome = true; break; }
+          take[i]++; used += ln.length + 1; moved = true;
+        }
+      }
+    }
+
+    const order = focus ? [focus].concat(live.filter(s => s !== focus)) : live;
+    const out = order.map(s => {
+      const i = live.indexOf(s), got = s.lines.slice(0, take[i]), rest = s.lines.length - take[i];
+      if(rest > 0){ got.push("[… " + rest + " more line" + (rest > 1 ? "s" : "") + " in this section, not shown]"); cutSome = true; }
+      return "## " + (s.head || "(top of the page)") + (s === focus ? "   <-- THE READER IS LOOKING AT THIS SECTION" : "")
+        + "\n" + got.join("\n");
+    });
+
+    const head = ["PAGE: " + (document.title || "") + "  (" + location.pathname.replace(/^\//, "") + ")",
+      "Below is the page as it is drawn right now. Sections are in document order except the one on the reader's screen, which is hoisted to the front. Hidden rows are excluded and long tables are trimmed."];
+    if(cutSome) head.push("⚠️ Parts of the page did not fit and were cut. If the answer needs a part that is not here, say the page has more rather than guessing at it.");
+    return head.join("\n") + "\n\n" + out.join("\n\n");
+  }
+  window.DDBotScan = scan;   // per-page ctx() blocks fold this in under their own state
+
+  function ctx(){
+    const POOL = window.DD_POOL || [];
+    const S = state();
+    if(!S || !S.settings) return "No draft state on this device yet.";
+    const st = S.settings, picks = S.picks || [];
+    const scoring = st.scoring || "half";
+    const val = p => +p[scoring] || 0;
+    const norm = p => p==="D" ? "DST" : p;
+    const teams = st.teams || [];
+    const sold = new Set(picks.map(p=>p.player));
+
+    const T = teams.map((t,i)=>({name:t.name, ti:i, spent:0, n:0,
+      pos:{QB:0,RB:0,WR:0,TE:0,DST:0}}));
+    picks.forEach(pk=>{ const t=T[pk.ti]; if(!t) return;
+      t.spent+=pk.price; t.n++; const P=norm(pk.pos); if(t.pos[P]!==undefined) t.pos[P]++; });
+    T.forEach(t=>{ t.left=(st.budget||200)-t.spent; t.open=(st.spots||15)-t.n; });
+
+    let remValue=0;
+    POOL.forEach(p=>{ if(!sold.has(p.name) && val(p)>=1) remValue+=val(p); });
+    const remDollars=T.reduce((a,t)=>a+Math.max(0,t.left),0);
+    const infl = remValue>0 ? remDollars/remValue : 1;
+
+    const L=[];
+    L.push(`LEAGUE: 14-team offline auction, $${st.budget} budget, ${st.spots} roster spots each (QB, 2 RB, 2 WR, TE, 2 FLEX W/R/T, DEF, rest bench; no kicker). Scoring: ${{half:"Half PPR",full:"Full PPR",sf:"Superflex"}[scoring]||scoring}. $0 bids are legal, so a team's max bid = its dollars left.`);
+    L.push(`MV = Market Value, a market-consensus auction-dollar snapshot dated 2026-08-14. It is not a points projection.`);
+    L.push(`STATE: ${picks.length} sold. Inflation ${infl.toFixed(2)}x — $${remDollars} chasing $${Math.round(remValue)} of MV still on the board.`);
+    L.push(`TEAMS (name | $ left = max bid | spots open | QB/RB/WR/TE/DST drafted):`);
+    // whoever is looking at this device — falls back to the operator's team if unset
+    const me = (window.DDMe && window.DDMe.idx(teams));
+    const my = (me==null ? st.myTeam : me);
+    T.forEach((t,i)=>L.push(`${i===my?"*":"-"} ${t.name} | $${t.left} | ${t.open} | ${t.pos.QB}/${t.pos.RB}/${t.pos.WR}/${t.pos.TE}/${t.pos.DST}${i===my?"  <-- THE TEAM I AM ASKING ABOUT (mine)":""}`));
+
+    if(T[my]){
+      const mine=picks.filter(p=>p.ti===my);
+      L.push(`MY ROSTER${mine.length?"":" (no picks yet)"}:`);
+      mine.forEach(p=>L.push(`- ${p.player} (${norm(p.pos)}) paid $${p.price}, MV $${p.etr||0}`));
+      const c=T[my].pos, flexUsed=Math.max(0,c.RB-2)+Math.max(0,c.WR-2)+Math.max(0,c.TE-1), holes=[];
+      if(c.QB<1)holes.push("QB"); if(c.RB<2)holes.push((2-c.RB)+" RB"); if(c.WR<2)holes.push((2-c.WR)+" WR");
+      if(c.TE<1)holes.push("TE"); const fl=Math.max(0,2-flexUsed); if(fl)holes.push(fl+" FLEX"); if(c.DST<1)holes.push("DEF");
+      L.push(`MY OPEN STARTING SLOTS: ${holes.length?holes.join(", "):"none — starters filled, bench only"}. I have $${T[my].left} for ${T[my].open} open spots.`);
+    }
+
+    L.push(`BEST AVAILABLE by position (MV, inflation-adjusted in parens):`);
+    ["QB","RB","WR","TE"].forEach(P=>{
+      const av=POOL.filter(p=>p.pos===P && !sold.has(p.name) && val(p)>=1)
+                   .sort((a,b)=>val(b)-val(a)).slice(0,8);
+      L.push(P+": "+(av.map(p=>`${p.name} $${val(p)} (adj $${Math.max(1,Math.round(val(p)*infl))}${p.tags&&p.tags.length?", "+p.tags.join("/"):""})`).join("; ")||"none left worth $1+"));
+    });
+    // master-data layer: tags + commentary, so Toto can say WHY a player is a target or a fade
+    const tagged=POOL.filter(p=>!sold.has(p.name) && val(p)>=1 && ((p.tags||[]).length || p.note))
+                     .sort((a,b)=>val(b)-val(a)).slice(0,16);
+    if(tagged.length){
+      L.push(`SCOUTING on available players (one analyst's opinions, not facts — tags: buy = target, fade = avoid, zrb = late-round RB plan):`);
+      tagged.forEach(p=>{
+        const tg=(p.tags||[]).length ? " ["+p.tags.join(", ")+"]" : "";
+        L.push(`- ${p.name} $${val(p)}${tg}${p.note?": "+p.note:""}`);
+      });
+    }
+    const lastPick = picks.length ? picks[picks.length-1] : null;
+    if(lastPick){
+      const lp = POOL.find(x=>x.name===lastPick.player);
+      const own=(teams[lastPick.ti]||{}).name||"?";
+      const d=(lastPick.etr||0)-lastPick.price;
+      L.push(`MOST RECENT SALE: ${lastPick.player} to ${own} for $${lastPick.price} (MV $${lastPick.etr||0}, ${d>=0?"under":"over"} by $${Math.abs(d)})${lp&&lp.note?" — scouting: "+lp.note:""}`);
+    }
+    const rec=picks.slice(-6).reverse();
+    if(rec.length){ L.push(`LAST ${rec.length} SALES:`); rec.forEach(p=>L.push(`- ${p.player} (${norm(p.pos)}) $${p.price} to ${(teams[p.ti]||{}).name||"?"} (MV $${p.etr||0})`)); }
+    return L.join("\n");
+  }
+
+  const HIST=[]; let busy=false;
+
+  function say(who,txt){
+    const box=document.getElementById("ddbMsgs"); if(!box) return null;
+    const el=document.createElement("div");
+    el.className="ddb-m "+who+(txt==="…thinking"?" dim":"");
+    el.textContent=txt;                     // textContent, never innerHTML — no XSS from a reply
+    box.appendChild(el); box.scrollTop=box.scrollHeight;
+    return el;
+  }
+
+  async function ask(q){
+    if(busy) return;
+    const ai=cfgAI(), pass=getPass();
+    const direct = !!ai.key;                        // operator override: own key, straight to xAI
+    if(!direct && !BOT_URL){ say("sys","Toto isn't wired up yet — no proxy configured."); return; }
+    if(!direct && !pass && !sess()){ askPass(); return; }
+    if(window.DDMe && !window.DDMe.isSet && window.DD_POOL){
+      say("sys","First — which team are you? Tap the “Who are you?” chip at the bottom-left, then ask again. Otherwise I'd be advising the operator's team, not yours.");
+      return;
+    }
+    say("you",q); HIST.push({role:"user",content:q});
+    busy=true; const th=say("bot","…thinking");
+    try{
+      const SF = surface();
+      /* ⚠️ The Worker rejects any body over 24,000 bytes with a 413, which surfaces to
+         the user as a bare error with no hint about what went wrong. Every surface's
+         state block competes for that budget with the core prompt, the manual and the
+         history — and a page like the EPA explorer can generate a lot of text. So
+         budget it explicitly rather than hoping, and TELL the model it was cut, so it
+         says "I can't see that part" instead of answering from a half-table. */
+      const BODY_CAP = 20000;
+      let stateTxt = SF.ctx();
+      const frame = () => JSON.stringify({max_tokens:700, messages:[
+        {role:"system",content:SYS+"\n\n"+SF.sys},
+        {role:"system",content:HELP},
+        {role:"system",content:MAP},
+        {role:"system",content:SF.label},
+        ...HIST.slice(-8)]}).length;
+      const room = BODY_CAP - frame();
+      if(stateTxt.length > room)
+        stateTxt = stateTxt.slice(0, Math.max(400, room))
+          + "\n[TRUNCATED to fit the request size limit. If a question needs the part that was cut, say so plainly rather than guessing.]";
+      const url = direct ? (ai.url||"https://api.x.ai/v1")+"/chat/completions" : BOT_URL;
+      const headers = direct
+        ? {"Content-Type":"application/json","Authorization":"Bearer "+ai.key}
+        : Object.assign({"Content-Type":"application/json"},
+            sess() ? {"X-Bozo-Session":sess()} : {"X-Dawg-Pass":pass});
+      const payload = {max_tokens:700,
+        messages:[{role:"system",content:SYS+"\n\n"+SF.sys},
+                  {role:"system",content:"SITE MANUAL (how the site works — use for how-to questions):\n"+HELP},
+                  {role:"system",content:"SITE MAP (what lives on which page — use it to route):\n"+MAP},
+                  {role:"system",content:SF.label+" (regenerated for every question):\n"+stateTxt},
+                  ...HIST.slice(-8)]};
+      if(direct) payload.model = window.DDBot.cfg().model;
+      const r=await fetch(url,{method:"POST",headers,body:JSON.stringify(payload)});
+      const t=await r.text();
+      if(!r.ok){
+        let msg=t.slice(0,200);
+        try{ const j=JSON.parse(t); msg=j.error||msg; }catch(e){}
+        if(r.status===401 && !direct){ setPass(""); throw new Error(msg+" Tap 🤖 again to re-enter it."); }
+        throw new Error(msg);
+      }
+      const data=JSON.parse(t);
+      const out=(((data.choices||[])[0]||{}).message||{}).content||"(empty reply)";
+      HIST.push({role:"assistant",content:out});
+      if(th){ th.textContent=out; th.classList.remove("dim"); }
+    }catch(e){
+      if(th){ th.classList.add("err"); th.classList.remove("dim");
+        th.textContent = (e instanceof TypeError)
+          ? "Couldn't reach Toto. Check this device is online. ("+e.message+")"
+          : String(e.message||e); }
+      HIST.pop();
+    }finally{ busy=false; }
+  }
+
+  function askPass(){
+    const box=document.getElementById("ddbMsgs"); if(!box) return;
+    if(document.getElementById("ddbPass")) return;
+    const w=document.createElement("div"); w.className="ddb-m sys"; w.id="ddbPass";
+    w.innerHTML='<div style="margin-bottom:6px">Enter the league passphrase to use Toto.</div>';
+    const i=document.createElement("input");
+    i.type="password"; i.placeholder="league passphrase"; i.autocomplete="off";
+    i.style.cssText="width:100%;padding:7px 9px;border-radius:8px;border:1px solid var(--border);background:var(--surface-1);color:var(--ink-1);font-size:14px";
+    const go=()=>{ const v=i.value.trim(); if(!v) return; setPass(v); w.remove(); say("sys","Saved on this device. Ask away."); };
+    i.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); go(); } e.stopPropagation(); });
+    const b=document.createElement("button"); b.className="ddb-go"; b.textContent="Save"; b.style.marginTop="6px";
+    b.addEventListener("click",go);
+    w.appendChild(i); w.appendChild(b); box.appendChild(w); i.focus();
+  }
+
+  function style(){
+    if(document.getElementById("ddbCSS")) return;
+    const s=document.createElement("style"); s.id="ddbCSS";
+    s.textContent=`
+/* Launcher: deliberately loud. Casual leaguemates need to spot this without being told. */
+#ddbLaunch{position:fixed;right:18px;bottom:18px;z-index:58;border:0;
+  display:flex;align-items:center;gap:11px;padding:8px 22px 8px 8px;
+  background:var(--accent);color:var(--accent-ink,#fff);border-radius:999px;
+  font-size:16px;font-weight:750;letter-spacing:.01em;cursor:pointer;font-family:inherit;
+  box-shadow:0 8px 26px rgba(0,0,0,.30);
+  transition:transform .13s ease, box-shadow .13s ease, opacity .16s ease}
+#ddbLaunch:hover{transform:translateY(-2px);box-shadow:0 13px 32px rgba(0,0,0,.36)}
+#ddbLaunch:active{transform:translateY(0)}
+/* ⚠️ GUARD B (2026-08-10). The launcher is fixed, so it owns the bottom-right ~74px band at
+   EVERY scroll position and at rest it sits on top of whatever is there: measured 4,303 px2
+   over two cells on receipts.html#models and 3,947 px2 over a heading on nfl.html. It steps
+   aside while the page is moving and returns when it stops, which is when reading happens.
+   The transform is decoration. opacity and pointer-events are what actually clear the
+   text, which is why reduced motion still HIDES it instead of keeping it over the words —
+   honouring the preference means dropping the movement, not dropping the fix.
+   Gate: work/test-launcher-overlap.mjs. */
+#ddbLaunch.ddb-away{opacity:0;pointer-events:none;transform:translateY(12px) scale(.97)}
+@media (prefers-reduced-motion:reduce){#ddbLaunch.ddb-away{transform:none;transition:none}}
+/* seal-brown badge + orange dawg = the same pairing as the site banner. On white the
+   thin binary artwork washed out; on brown it reads at 40px. */
+#ddbLaunch .dg{width:40px;height:40px;border-radius:50%;background:#2a1a06;flex:none;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
+#ddbLaunch .dg img{width:26px;height:33px;object-fit:contain;display:block}
+#ddbLaunch .lb{white-space:nowrap}
+/* one-time nudge so first-timers notice it, then it goes quiet forever */
+#ddbLaunch.nudge{animation:ddbNudge 2.6s ease-in-out 3}
+@keyframes ddbNudge{
+  0%,100%{box-shadow:0 8px 26px rgba(0,0,0,.30), 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent)}
+  50%    {box-shadow:0 8px 26px rgba(0,0,0,.30), 0 0 0 14px color-mix(in srgb, var(--accent) 0%, transparent)}
+}
+@media (prefers-reduced-motion:reduce){#ddbLaunch.nudge{animation:none}}
+/* avatar in the dock header */
+#ddbDock .ddb-av{width:26px;height:26px;border-radius:50%;background:var(--accent);flex:none;
+  display:flex;align-items:center;justify-content:center;overflow:hidden}
+#ddbDock .ddb-av img{width:17px;height:21px;object-fit:contain;display:block;filter:brightness(0) invert(1)}
+#ddbDock{position:fixed;right:14px;bottom:14px;z-index:60;width:min(400px,calc(100vw - 28px));
+  max-height:min(560px,78vh);display:flex;flex-direction:column;background:var(--surface-1);
+  border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.28);overflow:hidden}
+#ddbDock .ddb-h{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--grid);font-size:14px}
+#ddbDock .ddb-h .sub{color:var(--ink-3);font-size:11px}
+#ddbDock .ddb-x{margin-left:auto;background:none;border:0;color:var(--ink-2);font-size:15px;cursor:pointer;padding:2px 6px}
+.ddb-chips{display:flex;gap:6px;flex-wrap:wrap;padding:8px 10px 0}
+.ddb-chips button{font-size:11.5px;padding:4px 9px;border-radius:999px;border:1px solid var(--border);
+  background:transparent;color:var(--ink-2);cursor:pointer;font-family:inherit}
+.ddb-chips button:hover{color:var(--accent);border-color:var(--accent)}
+.ddb-msgs{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px;min-height:120px}
+.ddb-m{font-size:13px;line-height:1.45;white-space:pre-wrap;border-radius:10px;padding:7px 10px;max-width:94%;overflow-wrap:anywhere}
+.ddb-m.you{align-self:flex-end;background:var(--accent);color:var(--accent-ink,#fff)}
+.ddb-m.bot{align-self:flex-start;background:transparent;border:1px solid var(--grid);color:var(--ink-1)}
+.ddb-m.sys{align-self:stretch;color:var(--ink-3);font-size:12px;text-align:center}
+.ddb-m.dim{opacity:.6}
+.ddb-m.err{color:var(--bad);border-color:var(--bad)}
+.ddb-row{display:flex;gap:8px;padding:10px;border-top:1px solid var(--grid)}
+.ddb-row input{flex:1;min-width:0;background:var(--surface-1);border:1px solid var(--border);
+  border-radius:8px;padding:8px 10px;color:var(--ink-1);font-size:14px;font-family:inherit}
+.ddb-go{background:var(--accent);color:var(--accent-ink,#fff);border:0;border-radius:8px;
+  padding:8px 14px;font-size:13.5px;font-weight:650;cursor:pointer;font-family:inherit}
+@media (max-width:760px){#ddbDock{right:0;left:0;bottom:0;width:100vw;border-radius:14px 14px 0 0;max-height:74vh}
+  #ddbLaunch{right:12px;bottom:12px;font-size:15px;padding:7px 18px 7px 7px}
+  #ddbLaunch .dg{width:36px;height:36px} #ddbLaunch .dg img{width:23px;height:29px}}
+@media print{#ddbLaunch,#ddbDock{display:none!important}}`;
+    document.head.appendChild(s);
+  }
+
+  function mount(){
+    if(document.getElementById("ddbDock")) return;
+    style();
+    const CH=chrome();
+    const d=document.createElement("div"); d.id="ddbDock"; d.style.display="none";
+    d.innerHTML=`<div class="ddb-h"><span class="ddb-av"><img src="data:image/png;base64,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" alt=""></span>
+        <b>Toto</b><span class="sub">${escAttr(CH.sub)}</span>
+        <button class="ddb-x" id="ddbClose" title="Close">✕</button></div>
+      <div class="ddb-chips">${CH.chips.map(c=>
+        `<button data-q="${escAttr(c[0])}">${escAttr(c[1])}</button>`).join("")}</div>
+      <div id="ddbMsgs" class="ddb-msgs"></div>
+      <div class="ddb-row"><input type="text" id="ddbIn" placeholder="${escAttr(CH.ph)}" autocomplete="off">
+        <button class="ddb-go" id="ddbGo">Ask</button></div>`;
+    document.body.appendChild(d);
+    const go=()=>{ const i=document.getElementById("ddbIn"); const v=i.value.trim(); if(v&&!busy){ i.value=""; ask(v); } };
+    d.querySelector("#ddbGo").addEventListener("click",go);
+    d.querySelector("#ddbIn").addEventListener("keydown",e=>{ if(e.key==="Enter") go(); e.stopPropagation(); });
+    d.querySelector("#ddbClose").addEventListener("click",()=>{ d.style.display="none"; });
+    d.querySelectorAll(".ddb-chips button").forEach(b=>b.addEventListener("click",()=>ask(b.dataset.q)));
+    if(!cfgAI().key && !getPass()) askPass();
+  }
+
+  const AI_DEFAULTS={url:"https://api.x.ai/v1",key:"",model:"grok-4-1-fast"};
+  const AI_MODEL_FIX={"grok-4.1-fast":"grok-4-1-fast","grok-4.1":"grok-4-1-fast"};
+
+  window.DDBot={
+    // personal-key override (operator only) — everyone else goes through the proxy
+    cfg(){ const c=Object.assign({},AI_DEFAULTS,cfgAI());
+           if(AI_MODEL_FIX[c.model]) c.model=AI_MODEL_FIX[c.model];
+           return c; },
+    saveCfg(url,key,model){ try{ localStorage.setItem(LS_AI, JSON.stringify({
+        url:(url||"").trim().replace(/\/+$/,"")||AI_DEFAULTS.url,
+        key:(key||"").trim(),
+        model:(model||"").trim()||AI_DEFAULTS.model })); }catch(e){} },
+    open(){ mount(); document.getElementById("ddbDock").style.display="";
+            const i=document.getElementById("ddbIn"); if(i&&innerWidth>760) i.focus(); },
+    toggle(){ mount(); const d=document.getElementById("ddbDock");
+              const opening=d.style.display==="none"; d.style.display=opening?"":"none";
+              if(opening){ const i=document.getElementById("ddbIn"); if(i&&innerWidth>760) i.focus(); } },
+    forgetPass(){ setPass(""); }
+  };
+
+  // Auto-launcher on any page that exposes a player pool — unless the page supplies its
+  // own button (#aiBtn on the operator). Deferred so page scripts can define DD_POOL first.
+  addEventListener("load", ()=>{
+    setTimeout(()=>{
+      // ⚠️ No DD_POOL gate any more — Toto is on every page. The DDMe chip further
+      // down KEEPS its gate: "which of the 14 teams are you" is a draft-only question,
+      // and on Bozo identity comes from the login instead.
+      style();
+      if(document.getElementById("aiBtn")) return;
+      if(document.getElementById("ddbLaunch")) return;
+      const b=document.createElement("button");
+      b.id="ddbLaunch"; b.type="button";
+      b.title = (window.DD_BOTCTX && window.DD_BOTCTX.title)
+        || (window.DD_POOL && window.DD_POOL.length ? "Ask Toto — he reads the live draft board" : "Ask Toto");
+      b.innerHTML='<span class="dg"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHAAAACMCAMAAACTbt0bAAAAwFBMVEUAAAD+agP+aAL+aQP+ZwX+aAP+cAb/bAP+aQL/cAj+cAb+cAb/exQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABU7ULNAAAAQHRSTlMAj1JvFDalyLMmZULhAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOmwTNAAAEtlJREFUeNrtW9ty3DoOHJIgxYv+/3u3uwFq5LGT2OOqfdha55zEliVSxKXRaHIej/9//Ve+ZinlVwPUMot9//bcjuOov5mQAxw/uD3nlH81YUm5tPztu1vKKf3KpinVko7xTYOevY92pN+48DxqSsf5zYhZeTxy/Y1JbeWH1fW9uEktwfp4P/uFC1syDvQdo9ajtI67jzP/woUHhii9fydScx205qi/CdNa14Nj1PxPM6WzpY67S2/tfRfiYczUe+vn+Fd49ZR4c2o/SdxXKyHrOQa8c/zjtWe2UWkGq1bejppRl/yx7F+eSUhBWeORez/fTv2GURxvOob5y3uvM+FLr1SO43zXiQaL6lmbmPBvRoVBbfgLWa1jve3DYRErFeNN+zPEM65G+L23d1O/HG2HeIOHjrP+CUNbKokQanwIWfumE1maAokXJkx/ive16rAaq8I3lt+0aYU/tnEMTqrzyyW21hFURTdhduT/cY63cA0GbSnGMSBzS18ZFUWplZ4ecWMlEL4Vp4xRNynHIaK28lWhykC+cVsRIbXOdybEc6M+483knfE5QrH27u/lpuDX+caMsCAiZfpIfPPekNzHSzyUE6YuaVwTyqTv2LQi6cOkQxM+Up+lvxp1rTHqsA+hZkj9n9dEgCcGyi9D2Uuhwpq57lhfmBTX2ll/blE9mPdYBDAN3+qdESA+D5mZecOVCg/fsOk4kV6HY8aICQHiCJE7cE0kah3bfLajNI+8fsrdRqmWXys9A7fezMwSAVCzy6JcIS7ANvmnTrQs5zxNGktE7xB1SJQnATrLRrTwYW/5LaDBGMlNypE8IcGKy617YMZvGmqXSePWpgRqM8HReM+GN80gPbM/8N3ktalrHhPJIz3muWU/Jlj1btKW9m9suEnxPyDpPKLb6J1TMqnLgdYqH5gQ0Jva7IUVwduthAdoucLBxwiLsj26SrvgDm+ZLnT3m8bDTjxNS5MPLdCGhXV04FHDRcOEcFfPvMZU6BOPPEZveGrycWHpNeGHxMj4+oLZN9bHss3sf/jf8NEe+yp/tEf1SQqS7ovsHZigrm3ifrAwyWMbAAk+IBy5ZiEF+o2ySp2llpqLIaCRLzlPXsu6NnjNuwokWH6a6+EUqTE9N55m5KHfM+4EDjW/K9oQNx1hLKvAhwxqMAK4nrDc+Ye/KI8mwOBT542qjcjEMi9y01JQC9SobfVywqKHr/tAb4OgafQXK0FHLbCOvhwQNvGbpmv5IUtiJFbS4wr6yhlXYdCMq0Qj4JoD7+VAIk2AA96M3CM/VNhgZVoD/RjimdcGyPMymKLIt4KoJ6sw2a6Sol5Bs2DRNR53/x1dENy8vtTI4aFiWuksi2uMfV3LzJ1N1GDiTaN9zLHAmK6q3EgJu17GvW3n4RDskYRnE5kCvNX8a24f9uc1ezjSF390t3s5M+F5sR8bJ9dcMqZt+jodzavnyuSElYmf8kFKdKRJYGAepplW1zV0IsGx8aiBANboTbh8BC/C8goaYXd5upAJ2EmKvYGlHJEHhmeWpJVTpffLg6GtayXzGuD3iOEaEy1FqBpXmBWXF3jj5Rk0VneHAXCEK0LICKZwIaPdMfJ+zTzPKuOD4wd6mSacMOq6gmbIoTFfmvAwXnzzixO+KcrB5m5MPbsP9SNTEb5MYDPBufDw4rrnDglvVa6gsd4jaDxEzi4C5U2lJgSq1CYfdoH3nKgi7kNdA/9C6bEe/ACYgXhj6Jzp0rYQNH0HzUwzp3RLyjyVpxHY8Af8hfUMwFuHtQugxwhtSK4xK55IacKnLWw4aE/8dqbIK+Ek/DRu4L2L1Sz8adKg+32u3uuT514v785kwZ4r8++8QxWQuzZ4gy/BhrYDlHTn6Jc4x3JzshAnVkNWYTCuipLG4FaFLGQjKIAZEOrJV2DTnY3nNtxx5aHNeWU8UkwrBAWZoiUYIx1EjaYC3Ev3Yos0oMmuAgykA71uPqMBqOvCEHMWZwyImvwE77LVUWuFU+GvEEzzeXr4ANRTQwFWRJae3YcIUCSmQpWE9Eg7TrIG4YxkHz7JfEqwKD0z4lFmYMweWv9cpiI7/pqHQYJIEuDG5KyWUCbSf3o5rsdTLgRaWGQgwAM5hIDxOgEoS17tcLNiL02AGWAfrwuTzsa1MJwHxjuYmDFs5kiZI62ZI5Ke75m0wCmi4xyV9zSsax7eJ56o1rXAX8o5kij3IW7Gtck2m4BKSBN3Y27EVwvEyek2YXaNk1SDM/BnQxFVr58OZ/26rwluAK6of8V9mLnAdCJ9mdzJA5sDcLUOIUIgS5/anjXU5HsXhTgTlrPZYMVbN946PmUkYMt2HhqKjwKS1VrV2MUCe+VoXV8If2NJOuVvrZEv7tUMiwK8MC4ySiISO4GqGFutg6Hae9wfXVDyIfvFOD5qJk3RIaMUVeDmKhK/KwwdQmLBCx0ly4ewIf5nLegCgQ5AgNdb2RUZ8EBcb+2zoG0sETlogIFbApWAB0XhBIyqa9ayxKDDh56Hie1V5e/rUvuVBRwIUcQzPaKIX7DDejWo4Ex2W5HtJ6GKwaKsCt/ngXGdHTuJwr8pUjeL7O1Sg6eL0u+4Q9xlUaK776YMGkqAI7hgxNYGoEI7k7wS5D6Uh1g/jciqAXuwnlspQuzJfwF7Sw9omBd5QpdLdn08ZZ/RmzpGPbtFjYFoKbkj6oqbVMXc72QFT/6UQyMmbo5zs9yTMLQHGtTuTSTaxoOWPsm+wYOPAEoms+ohCI44P0C7S3GpNCZ8fIiCW+gh9Ej08x90E/hVhBWNgqpZZbAwcPCCQwVNpmFfIh/WaLQK9aOiHkQ2IDtTcWDHgb6jaPD8SSfMGizniLGlGS2p2CX5EW7QPUX2AeGhuyrMmLwQGOs+q0P1estOH69cqg/7SZHrZDWiPjR/FOeIsZPNcjtO9jYGLFvqnrgyFIietEvxEJSGfsEVsgCiqDIweMenZhAoS4TijTehDGGQQw+wpn9odAQIeSiGjBVnsdeyYf8JliRwVJo/7/O4g8f8JCSQ7Q09htaPYV4LfQhSzpcr2pvULwmbnzZGBvexGECfhu0uY3ymR9bcrEXlJBQQYx4iLQomYAUJXtS/0JDNW7jX3xAo6uNLnYsCitQ6k0ZIxM6mtIDH6euEuFhN5fBLVWcA7z7tQhECuYf33Mzp7Sa8DOlUY8p0czAmM81VPQZNQTKe4mB6kl5WToMf0ot+hA7SHk9loZ538EssPhzGFOH0iiO1gr7BNjmV+5aq4+h+XfaB66N3sxN7EZLqGt15F7zZnhgYuprX4SxVQg6jhqIZy9f4MOEKkWLSGWQNH8w9k0zYiEDeZ/dTDOMRfE5Jw/QWlUajUYvPSEfoVylY135YxjSSqyZk7OmjPGbRn1voVsbahDgILk1PYHXxNpm9vatlNC1/FdsrmEkPyTy8gfzEs65+DES+gZFBEUuETmd8xY2k9x5WtVMgx72tXBNG06LXjIesBOhj0YzSe+pnwjkbPIITCK3jYeeTz9sk8VT5GxNmEnvO6NLPRZL9IeEwAsqh0f+9C/bDdSluqAgras1/E7VtMSnYYP5lK1y7sgMxpqZJmHk/VyB9lo045UjG+/zDUAt3zkTyplL7p9MIq2RFGIsN4JtHM1K67aV0mZLSiH9HTqWqqG7xZvzK3h8mFUdTuzTv2VzUq7PgJAL8kZqj4lDJeXpnLhUskCuUHBUU0i7VXjRA+UPVlEQPJxd1Gur3b+viyliqJy20CqnQ5Hgc7bnFKyoi3BexEbfR+ggQpe5dpNiBMMqXFvW+qmnaG1aI2ek8kQ7Lm4tVdYSaeBMa7vE5aSb9JaE1Eo0SnWMdu63jb3kDqbhk2c2WI33JC7IbFL1F977k4VBzy4t6bUtTmc4KqDGooikMd87CZRgLqbPTIvE7vGR9rpH7XAzfCMz6HPge0YXvvA9ibAVcBmYhEAOkoJdXsep935QONXBhVlar5eJE3Y/5yQNu0jjjQKz1ct/dKFs1YgBS6pHd2ZVXj9IBb6nyg9OjK8qmlwfZyFZAqFQ8TDPix6L+BoBeukOQTZi+fiyH67kxK9ImSsGKJYZTAalAM3lQZixqfWRSXAAQZndjDYG0BP97KjPrhWEcYReyWWZjZ1gbYktePHkApciHPXwoWUMTZlQm33UdFGYYZ9owF4uQNywdL/1TyJduXwa2ZCPbgFTkHXNVlssYzrok1uKPMekd0DzMxEsj81iIPp07KTzxERerEI4KdQ05ajaEwUIvr8ZEXYYgoFA0QbEn8O9OnhsS5KqXxg02wQL00iBWNq8jCDmVRynUETBo4I+p8ydkrwS2g4oQtabE70GRAV5NCo0ChxwOkeejUVWz1Mvrpljd3NT35NSaes/OQ1mAdt91pw+p7FM1R+Qc+PuY7eQRo3bGlpo4TF3jRnjXK2E1Bg2hum4O0yWUxN7Chjd77tLcd2zG8Ah1oS2zkh9bj6b5L7H4nhhZmvcFmkViwVYbYNF8UNrT1jT/0e5iovZGBQ7+y+ySz2BO+doVoQAyxE5e6yWDhrpRDjynyy0oMhs+uKhRaqKoQJm9+baM+5NJRCVD2oVJFIpxHMgt2edjTM5mIw/I30Nxr0W1C8x0JipdTVrHszylvsRJVT3bDkHHV+TV8gm/OKngSRTIAv7nbU07vOlGAvzxQCbnLi5K+rGWEfKk+YBjy+8fnwLSTBRQL1vUrbLL143fadP7TwRmMEYmt1e2enmQpAtOWF0Dar94UPvg3iGUSMFMxOajkz9T8lHkNAk2UvrZlE7RrgqGoR4CKDxtn20B2/qTaC3hwa1hAlNFSpICpTLTuIXiNTAnyYfMPq48ScFiYXPNq2mF5CnzQ4/6usKq3ayrtslITKODesWDKaGDoI0KP9aWPUVYgnJ3+onUsL2lppMDH8+wvMKNMxnZkgRwNN9HHdIxMFlVGLAaApoW/+YfsRYBMWktUX/JINw8ewr7X7JJObn4+YmqnKdeME/ygfOM/Z2mlN/iK7+h6ujqXxwrG5oQCFm9o/vznr+s6ht+0sDZZcGwidvaDc08RT8VE8vTv2XtIIqWnjBtPhxuQmolwbG/H2yYTuvUgzH4HHhrbKfEqQBSDJKtIHNohJlqKoWYYaoNF02dufzjwCEP0TCMwTQoDfY+QpqWarI3PYvkuM0zs44EkEPCHKP3MwV2ogex8a/jFdmBTBM2yWwse+xW0xNpwJxtzXnrN8w7sJMdL5tR1SYGzD8PjxjpryKap16yCzBh06cCgF/ceKarurhJO8nVC49ajfqNk3FW696gbNof4CayE4RrK4eJcFNAvQzq0MTBk7obA2ut3zlsuEoEcmFRLmci40ovPdu0/HIQvInXA2dsnxOtpXzvgNM2lsJtLlI3+/gk5e38clKVds+SKeveOavfPGpoF8/IVJj8gJZ2osYzsuDrbVIdt8uxDcMN6rTZxXdPbzqVMcbo5JlhkLOkU6AleQ+BZLUcaVEdxXhW4/DTVzVOIv/gGHUNZCVVVf9irpGwxfVYkJbIA4E5xZHi5SaFFSw27H9wQm24BAgGXxwsU5AU85aVqQrmIX3aiV0qG16Z+60E4f7ZqU2qH4URqlMR3idoFa6IawPEoXL0JJP6sctxvPfBgsVdDB7NQesPi87gc0RkxfHYJ7TpdPShE+CzyISsvHcIvvGA/yySSdRRpIi6OtXpPOUG36uI7QttBr9zLrVqHwN2ZeKT6x7PHavBqa+sVvOdYiOX96R+vrHEKnKDtx7c5aHcj17pCzJUqZpqTztEED30xoRFW02FB60kpRR2CbufupGS9dDJBsolhSxTuwbpjY9OFBE1bupSp0gyabfBKmy36glv6pzU3aTlrQ/cdPU/sM7i5tnKCh4aemWPQu0MsuDlhRWBkPpBq6ze641PMpRKsKSMvnQKDuxs8NBOjazYjQExZ/HULM+zidczQ3++wnVINObeLq2VXL1gDrKpljzF/VQ2dS1sLilCUfrOx7RmPNvV65LykhN6g1UkgZAEqoPl9joIXNPJUmp95WCL/uOzxUtnmSQBrTFEeZdruLETxuWy23SJiLyY95IGrzV/fDRVZzLsQcM21/KovIAD5mflNZ28eYTNVZ7CD8fxY6zR7r1x+wBJpi6C5VWc9G4HwvicLUyadM5Fh/V/fiLdKOU9qKYJvAdNOh+vRBo0Vgf/9IkjqYfSMPI7n9QopPlJhy49CBtNaltoz5dmSXP2tM1e2Ei990GNebBjaItFeBa1n5svsam9xCxKkZMm5Suh9s63P9g3fNgVFtunbP3TBjp1G71GdWTg+Rkefn3/Q2/crBGJUuLHNpQ2Oci81z7lNdUMN9eKEbWP33yltqYSv3kFCDzLflYyKCz3JmTS50G2t7+4YTC19R1KLpJa0rTkCZSkYGgomgT5X37WVV0hRddL7jS7TmbfvhW5Qhrl/LtPnv5vfP0HOX2SYkO1T+AAAAAASUVORK5CYII=" alt=""></span><span class="lb">Ask Toto</span>';
+      // gentle attention ring until it's been opened once on this device
+      try{ if(!localStorage.getItem("dd-bot-seen")) b.classList.add("nudge"); }catch(e){}
+      b.addEventListener("click",()=>{
+        try{ localStorage.setItem("dd-bot-seen","1"); }catch(e){}
+        b.classList.remove("nudge");
+        window.DDBot.toggle();
+      });
+      document.body.appendChild(b);
+      /* ⚠️ GUARD B. 140ms of quiet before it comes back: long enough that momentum scrolling
+         does not flicker it, short enough that it is already there when a reader reaches for
+         it. passive so this can never delay a scroll.
+         ⚠️ capture:true IS LOAD-BEARING. Scroll events do not bubble, and the tables on
+         cfb.html and the receipts sheets scroll INSIDE their own container while the document
+         never grows — a window-only listener sees nothing on exactly the surfaces the
+         complaint named. Capture reaches them because the capture path runs even for
+         non-bubbling events. */
+      let ddbIdle = 0;
+      addEventListener("scroll", () => {
+        b.classList.add("ddb-away");
+        clearTimeout(ddbIdle);
+        ddbIdle = setTimeout(() => b.classList.remove("ddb-away"), 140);
+      }, { passive: true, capture: true });
+    }, 300);
+  });
+})();
+
+/* ---------- DDMe: who is looking at THIS device ----------
+   The mirrored draft state carries the OPERATOR's `settings.myTeam`. Every other device
+   needs its own answer to "which team am I", so identity lives in its own localStorage
+   key that DDSync never touches. Resolve by NAME first — team order can change. */
+(function(){
+  const KEY="dd-me-v1", listeners=[];
+  const raw=()=>{ try{ return JSON.parse(localStorage.getItem(KEY)||"null"); }catch(e){ return null; } };
+  const teams=()=>{ try{ const S=JSON.parse(localStorage.getItem("dd-auction-v1")||"null");
+      return (S&&S.settings&&S.settings.teams)||[]; }catch(e){ return []; } };
+  const fire=()=>listeners.forEach(f=>{ try{ f(); }catch(e){} });
+
+  window.DDMe={
+    get isSet(){ return !!raw(); },
+    get name(){ const m=raw(); return m?m.name:null; },
+    teams,
+    idx(list){
+      const t=list||teams(), m=raw();
+      if(!m || !t.length) return null;
+      const byName=t.findIndex(x=>x && x.name===m.name);
+      if(byName>=0) return byName;                                   // name wins
+      if(typeof m.ti==="number" && m.ti>=0 && m.ti<t.length) return m.ti;
+      return null;
+    },
+    set(ti){
+      const t=teams(), nm=(t[ti]||{}).name||null;
+      try{ localStorage.setItem(KEY, JSON.stringify({ti:+ti, name:nm})); }catch(e){}
+      fire(); return nm;
+    },
+    clear(){ try{ localStorage.removeItem(KEY); }catch(e){} fire(); },
+    onChange(fn){ listeners.push(fn); },
+    openPicker(){ openPicker(); }
+  };
+
+  function style(){
+    if(document.getElementById("ddmeCSS")) return;
+    const s=document.createElement("style"); s.id="ddmeCSS";
+    s.textContent=`
+#ddmeChip{position:fixed;left:16px;bottom:18px;z-index:58;display:flex;align-items:center;gap:7px;
+  border:1px solid var(--border);background:var(--surface-1);color:var(--ink-2);border-radius:999px;
+  padding:8px 15px;font-size:13.5px;font-weight:650;cursor:pointer;font-family:inherit;
+  box-shadow:0 5px 18px rgba(0,0,0,.20)}
+#ddmeChip:hover{border-color:var(--accent);color:var(--accent)}
+#ddmeChip .who{color:var(--ink-1);font-weight:750}
+#ddmeChip.unset{background:var(--accent);color:var(--accent-ink,#fff);border-color:transparent;font-size:14.5px}
+#ddmeChip.unset .who{color:inherit}
+#ddmePanel{position:fixed;left:16px;bottom:64px;z-index:59;background:var(--surface-1);
+  border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 34px rgba(0,0,0,.28);
+  padding:8px;min-width:214px;max-height:60vh;overflow-y:auto;display:none}
+#ddmePanel .hd{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);
+  font-weight:700;padding:5px 9px 7px}
+#ddmePanel button{display:block;width:100%;text-align:left;background:none;border:0;font-family:inherit;
+  padding:8px 10px;border-radius:8px;color:var(--ink-1);font-size:14px;cursor:pointer}
+#ddmePanel button:hover{background:color-mix(in srgb, var(--accent) 13%, transparent);color:var(--accent)}
+#ddmePanel button.on{color:var(--accent);font-weight:750}
+@media(max-width:760px){#ddmeChip{left:10px;bottom:12px;font-size:12.5px;padding:7px 12px}
+  #ddmePanel{left:10px;bottom:56px}}
+@media print{#ddmeChip,#ddmePanel{display:none!important}}`;
+    document.head.appendChild(s);
+  }
+
+  function openPicker(){
+    style();
+    let p=document.getElementById("ddmePanel");
+    if(!p){ p=document.createElement("div"); p.id="ddmePanel"; document.body.appendChild(p);
+      addEventListener("click",e=>{ if(p.style.display!=="none" &&
+        !p.contains(e.target) && e.target.id!=="ddmeChip" && !e.target.closest("#ddmeChip")) p.style.display="none"; });
+    }
+    const t=teams(), cur=window.DDMe.idx(t);
+    p.textContent="";
+    const h=document.createElement("div"); h.className="hd"; h.textContent="Which team are you?"; p.appendChild(h);
+    t.forEach((tm,i)=>{
+      const b=document.createElement("button");
+      b.textContent=tm.name + (tm.owner && tm.owner!==tm.name ? "  ·  "+tm.owner : "");
+      if(i===cur) b.className="on";
+      b.addEventListener("click",()=>{ window.DDMe.set(i); p.style.display="none"; render();
+        if(typeof window.ddRerender==="function") window.ddRerender(); else location.reload(); });
+      p.appendChild(b);
+    });
+    p.style.display="block";
+  }
+
+  function render(){
+    const c=document.getElementById("ddmeChip"); if(!c) return;
+    const nm=window.DDMe.idx()!=null ? teams()[window.DDMe.idx()].name : null;
+    c.className = nm ? "" : "unset";
+    c.innerHTML = nm ? `You: <span class="who">${nm.replace(/[<>&]/g,"")}</span> ▾`
+                     : `👤 Who are you? ▾`;
+    c.title = nm ? "Change which team you are" : "Pick your team to personalize this page";
+  }
+
+  addEventListener("load",()=>{
+    setTimeout(()=>{
+      if(!window.DD_POOL || !window.DD_POOL.length) return;      // draft pages only
+      if(document.getElementById("ddmeChip")) return;
+      style();
+      const b=document.createElement("button");
+      b.id="ddmeChip"; b.type="button";
+      b.addEventListener("click",e=>{ e.stopPropagation(); openPicker(); });
+      document.body.appendChild(b);
+      render();
+      window.DDMe.onChange(render);
+    }, 340);
+  });
+})();
+
+</script>
 
 <div class="hdr">
   <div><h1>Swole<em>Dawg</em></h1>
     <p class="lede" id="subline"></p></div>
-  <div style="flex:none"><span class="pill pup">PUP</span> <span class="pill mod">v0.3.0</span></div>
+  <div style="flex:none">
+    <button class="chip" id="unitBtn">lb / in</button>
+    <span class="pill pup">PUP</span> <span class="pill mod">v0.3.0</span></div>
 </div>
 
 <div id="gate"></div>
@@ -5784,13 +7309,10 @@ function wire(){
     UNITS=UNITS==='imperial'?'metric':'imperial';
     this.textContent=UNITS==='imperial'?'lb / in':'kg / cm';renderAll();
   };
-  const THEMES=['plate','day','outrun'];
-  const THEME_LABEL={plate:'■ Plate',day:'☀ Day',outrun:'◆ Outrun'};
-  document.getElementById('themeBtn').onclick=function(){
-    const r=document.documentElement;
-    const next=THEMES[(THEMES.indexOf(r.getAttribute('data-theme'))+1)%THEMES.length];
-    r.setAttribute('data-theme',next); this.textContent=THEME_LABEL[next];
-    if(DATA&&DATA.profile)DATA.profile.theme=next;
+  /* Theme is the site's, not this page's — the nav owns the light/dark toggle and calls
+     this after it flips data-theme. Charts read the CSS variables once at construction,
+     so they have to be torn down and rebuilt rather than merely re-rendered. */
+  window.onThemeChange=function(){
     setTimeout(()=>{Object.values(charts).forEach(c=>c&&c.destroy());
       for(const k in charts)delete charts[k];renderAll();},30);
   };
@@ -5817,9 +7339,6 @@ async function boot2(){
   UNITS=(DATA.units&&DATA.units.display)||'imperial';
   MODE=(DATA.goal&&DATA.goal.primary)||'visual_hypertrophy';
   if(!DATA.profile)DATA.profile={};
-  if(DATA.profile.theme){document.documentElement.setAttribute('data-theme',DATA.profile.theme);
-    const tb=document.getElementById('themeBtn');
-    if(tb)tb.textContent={plate:'■ Plate',day:'☀ Day',outrun:'◆ Outrun'}[DATA.profile.theme]||'■ Plate';}
   if(!Array.isArray(DATA.profile.equipment))
     DATA.profile.equipment=['bodyweight','dumbbells','bench_adj','bands'];
   AVAIL_SET=new Set(DATA.profile.equipment);
