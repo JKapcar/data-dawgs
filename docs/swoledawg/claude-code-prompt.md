@@ -25,9 +25,13 @@ finish a set, say "bench, 30, 11," and have it write to the live site.
 
 ## Deliverables
 
-1. **Cloudflare Worker** (`workers/swoledawg/`) — MCP server for Claude plus a read/write API
-   for the site. D1 storage. Bearer token in the MCP URL path, matching the Data Dawgs worker.
-   Spec §1–4.
+1. **`sd_*` tools inside the existing `toto` worker** (`dawg-bot-worker.js`) — MCP tools for
+   Claude plus a read/write API for the site, with D1 bound in the existing `wrangler.jsonc`.
+   **Do not create a second worker.** Identity lives in `toto` — `sessionAuth()`, the hashed
+   per-user token store, `/users/{uid}` — and a separate worker cannot see any of it. Reuse the
+   Bozo identity pattern exactly: signed in means your own session, writes require
+   `caller.kind === "user"`, everything is keyed by uid, and the personal URL the user already
+   minted carries the new tools with no second connector. Spec §0–4.
 
 2. **Restrictions engine** — spec §8. This is the architectural core, not a feature. Injuries
    and limitations are user rows matched against exercise tags, never hardcoded. `sd_get_restrictions`

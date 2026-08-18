@@ -1,5 +1,52 @@
 # SwoleDawg v0.4.0 — Technical Spec
 
+## 0. Identity — build it the way Bozo is built
+
+**SwoleDawg is a personal surface on a shared site.** Signed in, you get your own session and
+you can write to it; signed out or anonymous, you can read and nothing else. Bozo already does
+exactly this, and the pattern below is its pattern. Do not invent a parallel one — an
+independent identity story is how a second, subtly different notion of "who is Kap" gets born.
+
+**Live in the existing `toto` worker, not a new one.** This is the decisive constraint:
+identity already lives there. `sessionAuth()`, the hashed per-user MCP token store, the user
+records under `/users/{uid}`, and the CORS story are all in that worker. A separate SwoleDawg
+worker cannot see any of it and would have to duplicate the whole stack — at which point the
+two copies drift and one of them is wrong about who you are. Add `sd_*` tools alongside `dd_*`.
+
+**Three doors, one account.** Every write path resolves to the same uid:
+
+| Door | How identity arrives | May write |
+|---|---|---|
+| `swoledawg.html` in a browser | `X-Dawg-Session` header → `sessionAuth()` → `{uid, name, user}` | yes |
+| `/mcp/u_{token}` personal connector | hashed token lookup → `{kind:"user", uid, name}` | yes |
+| `/mcp/{DAWG_PASS}` shared connector | anonymous — `{kind:"shared"}` | **no** |
+
+**The write gate is the first line of every writing tool**, copied from `dd_submit_bozo_leg`:
+
+```js
+if (!caller || caller.kind !== "user")
+  return toolErr("Logging needs to know who you are, and the shared league connector cannot " +
+                 "tell. Mint a personal URL at " + SITE + "/connect.html and this works.");
+```
+
+**Key by uid, never by display name.** Display names are mutable. Bozo keys its pending-confirm
+records by uid for exactly this reason: a rename between two calls must not orphan a record or,
+worse, cross-match someone else's. Every SwoleDawg row carries `uid`, and every read is scoped
+to the caller's uid — there is no unscoped "all sessions" query.
+
+**No new connector.** Because the tools live in `toto`, the personal URL Kap already minted at
+`signon.html#connect` carries them the moment they ship. Do not mint a second SwoleDawg token,
+and do not ask the user to add a second connector. Register `sd_*` in the `full` catalog, and
+the everyday logging tools in `core` as well.
+
+**One write path per fact, stamped with provenance.** Bozo's site form and its MCP tool both
+terminate in `commitBozoLeg(..., via)`, so there is one place a leg can be created and the row
+records how it arrived. Do the same: the browser tap and `sd_log_set` land in one function, with
+`source` set to `web` or `mcp`. Two write paths for one fact is two sets of validation to keep
+in sync, and they will not stay in sync.
+
+---
+
 ## 1. Why a worker
 
 Claude in a chat window cannot write to a static site. It has no filesystem there, no FTP, no
@@ -19,10 +66,11 @@ Options considered and rejected:
 Third option. The rest of this spec assumes it.
 
 ```
-  Claude (phone, voice)  ──MCP──►  ┌─────────────────┐
-                                    │  Worker + D1    │
-  swoledawg.html         ──GET──►  └─────────────────┘
-  (browser)              ──POST─►   (logger UI writes here too)
+  Claude (phone, voice)  ──/mcp/u_{token}──►  ┌──────────────────────┐
+                                              │  toto worker         │
+  swoledawg.html         ──GET──────────────► │  sessionAuth + D1    │
+  (browser)              ──POST + session───► └──────────────────────┘
+                                               both doors resolve to one uid
 ```
 
 The browser logger and Claude write through the same endpoints. There is one source of truth
@@ -31,10 +79,19 @@ same table.
 
 ---
 
-## 2. Storage — D1
+## 2. Storage — D1, every row scoped to a uid
 
 Not KV. Sets need to be queried by exercise across time (`what did I bench three weeks ago`,
 `has anything hit top-of-range twice`) and that is a SQL question.
+
+D1 rather than the Firebase tree Bozo writes to, and the split is deliberate: identity stays in
+Firebase under `/users/{uid}` where it already lives, and training data goes in D1 where it can
+be queried. They are joined by the uid and nothing else. Bind the D1 database in the existing
+`wrangler.jsonc` alongside the `RL` KV namespace.
+
+**Every table below carries `uid TEXT NOT NULL`, and every query filters on it.** The schemas
+show a single athlete because there is one today; they must not assume one. A missing uid
+filter is not a cosmetic bug — it is one signed-in member reading or overwriting another's log.
 
 ```sql
 CREATE TABLE sessions (
@@ -180,6 +237,21 @@ prescription on the site is replaced with the stop notice. Do not make this dism
 Mount at `/mcp/{token}` mirroring the Data Dawgs worker. Token in path, not header, because
 Claude connector config takes a URL.
 
+**Two-phase confirm where the write is irreversible, single-phase where it is not.** Bozo makes
+every submission two-phase — propose, echo, confirm — because a misparsed leg is real money, it
+locks a shared board, and there is no undo. Set logging is none of those things: it is private,
+correctable, and the project instructions explicitly say log immediately without confirming,
+because the user is between sets holding dumbbells. So:
+
+- `sd_log_set`, `sd_log_sets`, `sd_log_measurement` — **single-phase.** A correction is an
+  UPSERT on the same key, exactly as the custom instructions describe.
+- `sd_update_program`, and anything that deactivates or overrides a restriction — **two-phase**,
+  mirroring `dd_submit_bozo_leg`: phase one writes nothing and returns a plain-English echo plus
+  a `confirm_code`; phase two re-validates against live state before committing, because the
+  confirm can arrive minutes later. Replaying a used code returns the original result and writes
+  nothing. These rewrite the plan or drop a safety rule, and a misparse there is not correctable
+  by saying "that was 11 not 10."
+
 **Use the per-user token, not a shared one.** The Data Dawgs worker exposes two shapes and
 they are not equivalent: `/mcp/{DAWG_PASS}` is shared, anonymous and read-only — the server
 cannot tell one caller from another — while `/mcp/u_{token}` is minted per member from a
@@ -296,6 +368,11 @@ New tab, last position. Renders the content of `claude-project-setup.md`. Requir
 
 - Copy buttons on the connector URL, the custom instructions block, and the project knowledge
   block. Setup must be doable on a phone with zero manual typing.
+- **No second connector.** `sd_*` ships inside the existing `toto` worker, so the personal URL
+  minted at `signon.html#connect` already carries it. Settings shows that URL and a link to mint
+  or rotate one if the user has none — it never mints a SwoleDawg-specific token. If the user is
+  signed out, Settings says so and links to `signon.html`, rather than showing a URL that cannot
+  be attributed to anyone.
 - The connector URL is **composed, never hardcoded**. `claude-project-setup.md` ships the
   literal placeholder `{{MCP_BASE}}`; Settings substitutes the worker origin at render time
   from the same constant the page uses for the read API (§4), so there is exactly one place
@@ -507,7 +584,14 @@ should be confirmed with the treating clinician. One line, not a disclaimer wall
 ## 9. Definition of done
 
 1. `wrangler deploy` puts the worker live with D1 bound and `program.json` seeded.
-2. Adding the MCP URL as a custom connector in Claude exposes all tools.
+2. The personal MCP URL Kap already holds exposes the `sd_*` tools with no new connector
+   added and no second token minted.
+2a. Signed in as Kap in a browser and calling `sd_log_set` from Kap's personal connector write
+   to the same session; a second signed-in member's log is not visible or writable from either.
+2b. The shared `/mcp/{DAWG_PASS}` connector can read nothing writable and refuses every `sd_*`
+   write with the mint-a-personal-URL message, exactly as `dd_submit_bozo_leg` does.
+2c. `sd_update_program` returns an echo and a confirm_code and writes nothing until confirmed;
+   `sd_log_set` writes immediately with no confirm step.
 3. Saying "log flat bench, 30 pounds, 11 reps" in a Claude Project writes a row and the
    Training tab shows it after refresh.
 4. Tapping a set in the browser writes the same row shape with `source='web'`.
