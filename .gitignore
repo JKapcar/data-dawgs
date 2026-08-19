@@ -6,3 +6,11 @@ __pycache__/
 *.py[cod]
 work/.shots
 private/ddcc-question-library.json
+
+# Local scratch and archives — never served, never deployed. Kept out of `git status`
+# so a real pending change is visible at a glance.
+.wrangler/
+tmp/
+_to_delete/
+_deferred/
+work/artifacts/
