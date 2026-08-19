@@ -126,8 +126,20 @@ class PublishedClassicTests(unittest.TestCase):
             self.assertNotIn("market_home_win_probability", row)
 
     def test_input_and_schedule_snapshots_are_distinct_contracts(self):
+        """A receipt is dated evidence; 538-classic.json is the current model state.
+
+        This deliberately does NOT require the row's input_snapshot_id to equal the
+        published envelope's. One prospective forecast per game is kept forever, so
+        when an upstream refresh moves the envelope forward the receipt stays pinned
+        to the inputs it was actually made from — that divergence is the append-only
+        contract working, not drift. The row is instead tied to its OWN snapshot
+        through the forecast_id, which is a stronger claim than matching whatever
+        happens to be published today.
+        """
         sample = next(row for row in self.ledger["data"] if row["model_id"] == "538-classic")
-        self.assertEqual(sample["input_snapshot_id"], self.model["integrity"]["input_snapshot_id"])
+        self.assertRegex(sample["input_snapshot_id"], r"^sha256:[0-9a-f]{64}$")
+        prefix = sample["input_snapshot_id"].removeprefix("sha256:")[:12]
+        self.assertIn(prefix, sample["forecast_id"])
         self.assertEqual(sample["schedule_snapshot_id"], self.schedule["integrity"]["snapshot_id"])
         self.assertNotEqual(sample["input_snapshot_id"], sample["schedule_snapshot_id"])
 
