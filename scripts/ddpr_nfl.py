@@ -400,10 +400,15 @@ def validate_public(
     validate_envelope(envelope, schedule)
     backbone.validate_receipt_ledger(ledger)
     by_id = {row["forecast_id"]: row for row in ledger["data"]}
+    covered = {(row["model_id"], row["game_id"]) for row in ledger["data"]}
     expected = model_receipts(envelope)
     for row in expected:
-        if by_id.get(row["forecast_id"]) != row:
-            raise ModelError(f"DDPR receipt missing or changed: {row['forecast_id']}")
+        prior = by_id.get(row["forecast_id"])
+        if prior is not None:
+            if prior != row:
+                raise ModelError(f"DDPR receipt changed: {row['forecast_id']}")
+        elif (row["model_id"], row["game_id"]) not in covered:
+            raise ModelError(f"DDPR receipt missing: {row['forecast_id']}")
     displayed = [r for r in ledger["data"] if r["model_id"] == LOGIT_MODEL_ID]
     linear = [r for r in ledger["data"] if r["model_id"] == LINEAR_MODEL_ID]
     if len(displayed) != len(linear):

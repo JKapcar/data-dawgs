@@ -35,7 +35,7 @@ def source_row(index=0):
     }
 
 
-def valid_receipt(snapshot_id, game):
+def valid_receipt(snapshot_id, game, model_id="nfelo"):
     return {
         "forecast_id": "nfelo-2026-01-ari-atl-v1",
         "game_id": game["game_id"],
@@ -43,7 +43,7 @@ def valid_receipt(snapshot_id, game):
         "week": game["week"],
         "kickoff_at": game["kickoff_at"],
         "captured_at": "2026-08-07T12:00:00Z",
-        "model_id": "nfelo",
+        "model_id": model_id,
         "model_name": "nfelo",
         "model_version": "4.3.0",
         "source_repo": "greerreNFL/nfelo",
@@ -132,7 +132,7 @@ class ContractTests(unittest.TestCase):
 
     def test_append_is_idempotent_but_conflicts_fail(self):
         game = self.schedule["data"]["games"][0]
-        receipt = valid_receipt(self.schedule["integrity"]["snapshot_id"], game)
+        receipt = valid_receipt(self.schedule["integrity"]["snapshot_id"], game, "test-model")
         once = backbone.append_receipts(self.ledger, [receipt], self.schedule)
         twice = backbone.append_receipts(once, [receipt], self.schedule)
         self.assertEqual(len(twice["data"]), len(self.ledger["data"]) + 1)
@@ -140,6 +140,35 @@ class ContractTests(unittest.TestCase):
         changed["home_win_probability"] = 0.62
         with self.assertRaisesRegex(backbone.ContractError, "conflicting duplicate"):
             backbone.append_receipts(once, [changed], self.schedule)
+
+    def test_refreshed_input_snapshot_does_not_mint_a_second_slate(self):
+        game = self.schedule["data"]["games"][0]
+        snapshot_id = self.schedule["integrity"]["snapshot_id"]
+        first = valid_receipt(snapshot_id, game, "test-model")
+        once = backbone.append_receipts(self.ledger, [first], self.schedule)
+        self.assertEqual(len(once["data"]), len(self.ledger["data"]) + 1)
+        refreshed = copy.deepcopy(first)
+        refreshed["forecast_id"] = "test-model-2026-01-ari-atl-v2"
+        refreshed["input_snapshot_id"] = "sha256:" + "b" * 64
+        again = backbone.append_receipts(once, [refreshed], self.schedule)
+        self.assertEqual(again["data"], once["data"])
+
+    def test_ledger_rejects_two_forecasts_for_one_model_and_game(self):
+        game = self.schedule["data"]["games"][0]
+        snapshot_id = self.schedule["integrity"]["snapshot_id"]
+        first = valid_receipt(snapshot_id, game, "test-model")
+        second = copy.deepcopy(first)
+        second["forecast_id"] = "test-model-2026-01-ari-atl-v2"
+        rows = self.ledger["data"] + [first, second]
+        envelope = dict(self.ledger)
+        envelope["data"] = rows
+        envelope["integrity"] = {
+            "sha256": backbone.receipt_ledger_hash(rows),
+            "algorithm": self.ledger["integrity"]["algorithm"],
+            "rows": len(rows),
+        }
+        with self.assertRaisesRegex(backbone.ContractError, "duplicate forecast for test-model"):
+            backbone.validate_receipt_ledger(envelope)
 
     def test_history_allows_append_but_not_mutation_or_removal(self):
         game = self.schedule["data"]["games"][0]
