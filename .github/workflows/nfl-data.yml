@@ -91,6 +91,7 @@ jobs:
             node tools/validate-data.js
             exit 0
           fi
+          node tools/build-data.js receipts-inventory.json
           node tools/data-manifest.js
           python -m unittest tests.test_nfl_data_backbone
           python -m unittest tests.test_elo_538_classic
@@ -103,7 +104,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REFRESH_BRANCH: automation/nfl-data-refresh
         run: |
-          if git diff --quiet -- data/nfl-schedule.json data/538-classic.json data/model-receipts.json data/index.json; then
+          if git diff --quiet -- data/nfl-schedule.json data/538-classic.json data/model-receipts.json data/receipts-inventory.json data/index.json; then
             echo "Canonical snapshot is unchanged."
             exit 0
           fi
@@ -111,7 +112,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin "refs/heads/$REFRESH_BRANCH:refs/remotes/origin/$REFRESH_BRANCH" || true
           git switch -C "$REFRESH_BRANCH"
-          git add data/nfl-schedule.json data/538-classic.json data/model-receipts.json data/index.json
+          git add data/nfl-schedule.json data/538-classic.json data/model-receipts.json data/receipts-inventory.json data/index.json
           git commit -m "Refresh canonical NFL model data"
           git push --force-with-lease origin "HEAD:refs/heads/$REFRESH_BRANCH"
           if [ "$(gh pr list --state open --head "$REFRESH_BRANCH" --json number --jq 'length')" = "0" ]; then

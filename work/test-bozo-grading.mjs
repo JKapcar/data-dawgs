@@ -160,7 +160,17 @@ ok(/r\.result = s\.value==='1' \? 'won' : s\.value==='0' \? 'lost' : 'push';/.te
      "…replaced by a page-lifetime flag, so a reload is a new show");
   ok(/if\(pendingDraw===key\) return;/.test(code) && /if\(drawnOrder===key\)/.test(code),
      "a draw always arms unless THIS load already revealed it");
-  ok(!/const graded = \(S\.status\|\|'open'\)==='graded'/.test(code),
+  /* ⚠️ SCOPED to paintMachine, not to the whole page. When this was written that
+     expression existed only in the auto-paint, so grepping the file was the same thing as
+     grepping the reveal path. 952e932 added the betslip bar, and paintSlipBar() computes
+     the identical expression for an unrelated and entirely correct reason — a graded week
+     cannot accept a new slip. The guard then failed on code 1,500 lines from the reels,
+     which reads like the auto-reveal came back when it never did. Ask the reveal path. */
+  const mStart = code.indexOf("function paintMachine(");
+  ok(mStart > 0, "paintMachine is still there to be checked");
+  const mEnd = code.indexOf("\nfunction ", mStart + 1);
+  const machine = code.slice(mStart, mEnd === -1 ? undefined : mEnd);
+  ok(!/const graded = \(S\.status\|\|'open'\)==='graded'/.test(machine),
      "a graded week no longer auto-reveals — the reels show the whole order, the verdict names one lever");
   // The poll must not blank the reels under the reader's cursor.
   ok(/drawnOrder=order\.join\(','\);/.test(code),
