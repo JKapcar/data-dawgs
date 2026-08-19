@@ -369,6 +369,7 @@ def validate_receipt_ledger(envelope: dict[str, Any]) -> None:
     if not isinstance(receipts, list):
         raise ContractError("receipt ledger data must be an array")
     ids: set[str] = set()
+    model_games: set[tuple[str, str]] = set()
     for receipt in receipts:
         if not isinstance(receipt, dict):
             raise ContractError("every receipt must be an object")
@@ -376,6 +377,12 @@ def validate_receipt_ledger(envelope: dict[str, Any]) -> None:
         if receipt["forecast_id"] in ids:
             raise ContractError(f"duplicate forecast_id: {receipt['forecast_id']}")
         ids.add(receipt["forecast_id"])
+        model_game = (receipt["model_id"], receipt["game_id"])
+        if model_game in model_games:
+            raise ContractError(
+                f"duplicate forecast for {receipt['model_id']} on {receipt['game_id']}"
+            )
+        model_games.add(model_game)
     integrity = envelope.get("integrity", {})
     expected = receipt_ledger_hash(receipts)
     if integrity.get("sha256") != expected:
@@ -401,6 +408,7 @@ def append_receipts(
     snapshot_id = schedule["integrity"]["snapshot_id"]
     schedule_games = {game["game_id"]: game for game in schedule["data"]["games"]}
     existing = {receipt["forecast_id"]: receipt for receipt in ledger["data"]}
+    covered = {(receipt["model_id"], receipt["game_id"]) for receipt in ledger["data"]}
     appended = list(ledger["data"])
     for receipt in additions:
         validate_receipt(receipt)
@@ -414,8 +422,15 @@ def append_receipts(
             if prior != receipt:
                 raise ContractError(f"conflicting duplicate forecast_id: {receipt['forecast_id']}")
             continue
+        model_game = (receipt["model_id"], receipt["game_id"])
+        if model_game in covered:
+            # forecast_id carries the input snapshot, so an upstream refresh mints a new
+            # id for a game this model already forecast. The first prospective row stands;
+            # a later re-forecast of the same game is not a second receipt.
+            continue
         appended.append(receipt)
         existing[receipt["forecast_id"]] = receipt
+        covered.add(model_game)
     result = dict(ledger)
     result["data"] = appended
     result["integrity"] = {

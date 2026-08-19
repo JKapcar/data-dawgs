@@ -622,9 +622,14 @@ def validate_public(
     expected_nfelo = migrate_nfelo_receipts(legacy, schedule)
     expected_538 = model_receipts(model)
     by_id = {row["forecast_id"]: row for row in ledger["data"]}
+    covered = {(row["model_id"], row["game_id"]) for row in ledger["data"]}
     for expected in expected_nfelo + expected_538:
-        if by_id.get(expected["forecast_id"]) != expected:
-            raise ModelError(f"normalized receipt missing or changed: {expected['forecast_id']}")
+        prior = by_id.get(expected["forecast_id"])
+        if prior is not None:
+            if prior != expected:
+                raise ModelError(f"normalized receipt changed: {expected['forecast_id']}")
+        elif (expected["model_id"], expected["game_id"]) not in covered:
+            raise ModelError(f"normalized receipt missing: {expected['forecast_id']}")
     if len(expected_nfelo) != 272:
         raise ModelError("normalized nfelo adapter did not preserve all 272 forecasts")
 
