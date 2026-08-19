@@ -75,7 +75,33 @@ for that reason — never mirror them into `data/`, which is public.
 The dry run must report the `RL` binding and all four plain variables. It performs no
 upload and changes no traffic.
 
-## Safe release sequence
+## Releasing from CI (preferred)
+
+`.github/workflows/worker-deploy.yml` runs this same sequence on GitHub, so a release needs
+no local Node, no wrangler install and no terminal. Actions → **worker-deploy** → Run
+workflow. It is `workflow_dispatch` only and never fires on push: pushing main deploys
+Pages, and moving Worker traffic is a second production system that the policy below
+requires fresh explicit authorization for. Clicking Run workflow IS that authorization.
+
+Leave **promote** unchecked for an upload-and-inspect run — the version id and the full
+`versions view` output land in the run summary and no traffic moves. Check it to move 100%
+to the version that run just uploaded. The id is parsed from the upload output rather than
+retyped, which removes the step that has gone wrong most often.
+
+It refuses to deploy a `dawg-bot-worker.js` that is not the current assembled output of
+`work/mcp-block.js`, and runs the whole test list first.
+
+Repository secrets required, set once under Settings → Secrets and variables → Actions:
+
+| Secret | Scope |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` | Workers Scripts:Edit, D1:Edit, Account Settings:Read |
+| `CLOUDFLARE_ACCOUNT_ID` | the account `toto` lives in |
+
+Worker secrets are not set from CI and are not touched — `versions upload` carries the
+manifest while encrypted values stay in Cloudflare.
+
+## Safe release sequence (by hand)
 
 Do not deploy merely because tests pass. Pushing `main` deploys GitHub Pages, and moving
 Worker traffic changes a second production system. Both require fresh explicit owner

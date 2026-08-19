@@ -1,0 +1,118 @@
+name: worker-deploy
+
+# Deploy the `toto` Worker from CI instead of a laptop. docs/worker-deploy.md is still the
+# runbook; this runs its sequence with the same gates, so nothing about the release policy
+# is relaxed — only the terminal it happens in changes.
+#
+# ⚠️ NEVER on push. Pushing main deploys GitHub Pages; moving Worker traffic is a SECOND
+# production system and the runbook requires fresh explicit owner authorization for it.
+# Clicking "Run workflow" IS that authorization, which is why this is dispatch-only.
+#
+# Two-stage by default, exactly as the runbook prescribes:
+#   promote = false  →  test, verify, upload a version, print its id. No traffic moves.
+#   promote = true   →  the same, then move 100% of traffic to the version just uploaded.
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN   Workers Scripts:Edit, D1:Edit, Account Settings:Read
+#   CLOUDFLARE_ACCOUNT_ID  the account the `toto` Worker lives in
+# Worker secrets (BOZO_PEPPER, DAWG_PASS, …) are NOT set here and are not touched:
+# `versions upload` carries the manifest, and encrypted values stay in Cloudflare.
+
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: "Deployment message — commit and purpose"
+        required: true
+        default: "manual deploy"
+      promote:
+        description: "Move 100% of traffic to the uploaded version"
+        type: boolean
+        required: true
+        default: false
+
+concurrency:
+  # One release at a time. Two overlapping runs would upload two versions and race over
+  # which one ends up serving.
+  group: worker-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+
+      # The runbook's build-and-verify list, in full. A deploy that skips these is how a
+      # red suite reaches production.
+      - name: Verify the committed Worker is the assembled output
+        run: |
+          cd work && node assemble.mjs && cd ..
+          if ! git diff --quiet dawg-bot-worker.js; then
+            echo "::error::dawg-bot-worker.js is not the assembled output of work/mcp-block.js."
+            echo "Run 'cd work && node assemble.mjs' and commit the result before deploying."
+            git diff --stat dawg-bot-worker.js
+            exit 1
+          fi
+      - run: node --check dawg-bot-worker.js
+      - run: node work/test-cfb-market-capture.mjs
+      - run: node work/test-backup.mjs
+      - run: node work/test-identity.mjs
+      - run: node work/test-mcp.mjs
+      - run: node work/test-swoledawg.mjs
+      - run: node tools/validate-data.js
+
+      # Fails closed on a malformed manifest without uploading anything.
+      - name: Dry run
+        run: npx wrangler@4 deploy --dry-run --config wrangler.jsonc
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Upload a version — no traffic moves
+        id: upload
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -o pipefail
+          npx wrangler@4 versions upload --config wrangler.jsonc \
+            --message "${{ inputs.message }} (${GITHUB_SHA::7})" 2>&1 | tee upload.log
+          # The id is what steps 4 and 5 of the runbook take. Parsed rather than retyped —
+          # a hand-copied uuid is the step that has gone wrong most often.
+          id=$(grep -oiE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' upload.log | tail -1)
+          if [ -z "$id" ]; then
+            echo "::error::No version id in the upload output — refusing to guess one."
+            exit 1
+          fi
+          echo "version_id=$id" >> "$GITHUB_OUTPUT"
+          echo "### Uploaded version \`$id\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Inspect the version
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx wrangler@4 versions view "${{ steps.upload.outputs.version_id }}" \
+            --name toto --json | tee version.json
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          head -c 4000 version.json >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Move traffic
+        if: ${{ inputs.promote }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx wrangler@4 versions deploy "${{ steps.upload.outputs.version_id }}@100%" \
+            --name toto --yes
+          echo "### Traffic moved to \`${{ steps.upload.outputs.version_id }}\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Not promoted
+        if: ${{ !inputs.promote }}
+        run: |
+          echo "Version uploaded but NOT serving. Re-run with promote checked to move traffic." \
+            >> "$GITHUB_STEP_SUMMARY"
