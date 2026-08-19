@@ -219,6 +219,7 @@ EPA_PLAYERS.pooled = aggregatePlayers(new Set(SEASONS.map((_, i) => i)), PLAYER_
  * ------------------------------------------------------------- */
 fs.mkdirSync(OUT, { recursive: true });
 const BUILT = process.env.DD_BUILD_DATE || new Date().toISOString().slice(0, 10);
+const ONLY = new Set(process.argv.slice(2));  // empty = publish everything, as before
 
 /* ⚠️ BUILT is when this script RAN. It is not an as_of.
    league.json and bozo-rules.json describe configuration captured from the pages on a
@@ -278,13 +279,26 @@ function write(name, env) {
   if (typeof env.graded !== 'boolean') throw new Error('missing graded: ' + name);
   const body = { ...env, tier_meaning: TIER_MEANING[env.tier], built: BUILT, canonical_url: 'https://datadawgs216.com/data/' + name };
   const txt = JSON.stringify(body, null, 1);
-  fs.writeFileSync(path.join(OUT, name), txt);
+  /* Manifest bookkeeping happens for every envelope even in targeted mode, so index.json
+     stays correct whenever it IS the thing being written. */
   files[name] = {
     bytes: Buffer.byteLength(txt),
     as_of: env.as_of,
     sha256: crypto.createHash('sha256').update(txt).digest('hex'),
     note: env.note,
   };
+  /* ⚠️ TARGETED MODE. `node tools/build-data.js receipts-inventory.json` recomputes
+     everything but publishes only the files named on the command line.
+
+     This exists for the scheduled NFL refresh. receipts-inventory.json is DERIVED from
+     the receipt ledgers, but those ledgers are written by the Python backbones, so a
+     refresh leaves the inventory stale and tools/validate-data.js correctly fails on the
+     drift. The workflow needs to regenerate that ONE file. It must not run a full build to
+     do it: a full build republishes every surface from this generator, and any surface this
+     generator has fallen behind on would be silently dropped on a schedule. Name the file
+     you mean. */
+  if (ONLY.size && !ONLY.has(name)) return;
+  fs.writeFileSync(path.join(OUT, name), txt);
 }
 
 /* ---------- pool.json ---------- */
@@ -1799,7 +1813,10 @@ write('model-board.json', {
    The directory is the source of truth for what exists. Do not go back to a hand-kept
    list here; add hand-authored Markdown mirrors in data-manifest.js instead. */
 const { writeDataManifest } = require('./data-manifest.js');
-const manifestResult = writeDataManifest({ built: BUILT });
+/* In targeted mode the caller asked for specific files, so publishing the manifest too
+   would quietly exceed what they named. Callers that need it run tools/data-manifest.js
+   directly — the scheduled refresh already does. */
+const manifestResult = ONLY.size ? { bytes: 0 } : writeDataManifest({ built: BUILT });
 
 console.log('name'.padEnd(20), 'KB'.padStart(7), 'as_of');
 for (const [n, m] of Object.entries(files)) console.log(n.padEnd(20), (m.bytes / 1024).toFixed(1).padStart(7), m.as_of);
