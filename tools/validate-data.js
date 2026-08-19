@@ -233,15 +233,26 @@ console.log('\nNFL backbone — canonical schedule and append-only model receipt
       !Array.isArray(classic.data.forecasts) || classic.data.forecasts.length !== expectedProspective)
     fail(`538-classic.json: expected 32 teams and ${expectedProspective} still-prospective forecasts`);
   else ok(`538 Classic covers 32 teams and ${expectedProspective} still-prospective games`);
-  const currentClassicReceipts = new Map(rows
-    .filter(row => row.model_id === '538-classic' && row.input_snapshot_id === classic.integrity.input_snapshot_id)
+  /* ⚠️ COVERAGE, not equality with today's envelope. This used to select only ledger rows
+     whose input_snapshot_id equalled the CURRENT envelope's, which was the same set only
+     because the ledger was rewritten on every refresh — the duplicate-slate bug. The ledger
+     now keeps ONE prospective row per model per game forever, so when an upstream commit
+     moves the envelope forward the receipt stays pinned to the inputs it was made from and
+     the two snapshot ids legitimately differ. A receipt is dated evidence; the envelope is
+     current model state.
+     What must still hold: every game the envelope forecasts has a prospective receipt, and
+     any receipt that DOES come from this envelope's snapshot agrees with it exactly. */
+  const classicReceiptByGame = new Map(rows
+    .filter(row => row.model_id === '538-classic')
     .map(row => [row.game_id, row]));
   if (classic.data.forecasts.some(forecast => {
-    const receipt = currentClassicReceipts.get(forecast.game_id);
-    return !receipt || receipt.home_win_probability !== forecast.home_win_probability ||
+    const receipt = classicReceiptByGame.get(forecast.game_id);
+    if (!receipt) return true;
+    if (receipt.input_snapshot_id !== classic.integrity.input_snapshot_id) return false;
+    return receipt.home_win_probability !== forecast.home_win_probability ||
       receipt.schedule_snapshot_id !== schedule.integrity.snapshot_id;
   })) fail('538-classic.json: a current forecast is absent from or disagrees with the receipt ledger');
-  else ok('every current 538 Classic forecast has a matching immutable receipt');
+  else ok('every current 538 Classic forecast has an immutable receipt for its game');
 }
 
 console.log('\nCFB ratings registry — normalized evidence without invented consensus');
