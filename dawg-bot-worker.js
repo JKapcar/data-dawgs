@@ -7146,6 +7146,31 @@ async function swoleLogNutrition(env, uid, d, source) {
   return { ok: true, date, kcal, protein_g: pro };
 }
 
+// ⚠️ Nutrition was WRITE-ONLY until this existed. swoleLogNutrition could store a day's
+// kcal and protein and nothing in the Worker — no route, no tool, no query — could read
+// one back. A store you cannot read is not a log; it is a hole that accepts input.
+async function swoleNutrition(env, uid, a) {
+  const db = swoleDb(env); if (!db) return swoleNoDb();
+  if (a && a.date) {
+    if (!swoleValidDate(a.date)) return { error: "Date must be YYYY-MM-DD." };
+    const row = await db.prepare(
+      "SELECT date, kcal, protein_g, note, source, logged_at FROM nutrition WHERE uid = ? AND date = ?"
+    ).bind(uid, a.date).first();
+    return row ? { date: a.date, day: row } : { date: a.date, day: null, note: "Nothing logged on " + a.date + "." };
+  }
+  const rows = await db.prepare(
+    "SELECT date, kcal, protein_g, note, source FROM nutrition WHERE uid = ? ORDER BY date DESC LIMIT ?"
+  ).bind(uid, Math.min(Math.max(Number(a && a.n) || 14, 1), 200)).all();
+  const days = (rows && rows.results) || [];
+  // Averages over the days that CARRY a number, and the count is reported beside them —
+  // a mean over 3 logged days out of 14 is not a 14-day average and must not read as one.
+  const withKcal = days.filter(d => d.kcal != null), withPro = days.filter(d => d.protein_g != null);
+  const mean = (list, k) => list.length ? Math.round(list.reduce((a2, d) => a2 + d[k], 0) / list.length) : null;
+  return { days, days_returned: days.length,
+           mean_kcal: mean(withKcal, "kcal"), kcal_days: withKcal.length,
+           mean_protein_g: mean(withPro, "protein_g"), protein_days: withPro.length };
+}
+
 // What the page and radar.html read. OBSERVED and DERIVED only — nothing MODELLED is
 // plotted here, because a modelled number rendered beside a measured one is treated as
 // measured within a month.
@@ -7192,6 +7217,7 @@ async function handleSwole(request, url, env, cors) {
     if (path === "/sessions") return wrap(await swoleRecentSessions(env, uid, q.get("n")));
     if (path === "/session")  return wrap(await swoleSession(env, uid, q.get("date") || ""));
     if (path === "/measurements") return wrap(await swoleMeasurementHistory(env, uid, q.get("field") || "", q.get("n")));
+    if (path === "/nutrition") return wrap(await swoleNutrition(env, uid, { date: q.get("date"), n: q.get("n") }));
     return json({ error: "Unknown SwoleDawg route." }, 404, cors);
   }
   if (request.method !== "POST") return json({ error: "GET or POST only." }, 405, cors);
@@ -13622,6 +13648,22 @@ const MCP_TOOLS = [
     async run(args, env, caller) {
       if (!caller || caller.kind !== "user") return toolErr(SWOLE_NEEDS_USER);
       return toolText(await swoleMeasurementHistory(env, caller.uid || caller.name, args.field, args.n));
+    },
+  },
+  {
+    name: "sd_nutrition",
+    title: "SwoleDawg — read nutrition back",
+    catalog: "full",
+    readOnlyHint: true,
+    description: "Logged calories and protein: one day with `date`, or the recent run without it. Means are computed only over the days that carry a number, and the count is returned beside them — a mean over 3 logged days out of 14 is not a 14-day average.",
+    inputSchema: { type: "object", properties: {
+      date: { type: "string", description: "YYYY-MM-DD for one day; omit for the recent run" },
+      n: { type: "number", description: "Days to return when no date is given. Default 14, max 200" },
+    }, additionalProperties: false },
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user") return toolErr(SWOLE_NEEDS_USER);
+      const r = await swoleNutrition(env, caller.uid || caller.name, args);
+      return r.error ? toolErr(r.error) : toolText(r);
     },
   },
   {
