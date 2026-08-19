@@ -27,7 +27,7 @@ const SRC = fs.readFileSync(resolve(WORK, "..", "dawg-bot-worker.js"), "utf8");
 const BUNDLE = join(tmpdir(), "worker-swoledawg.mjs");
 fs.writeFileSync(BUNDLE, SRC +
   "\nexport { MCP_TOOLS, swoleWeekOf, swoleEffortFor, swoleSetsFor, swoleStartSession," +
-  " swoleLogSet, swoleFinishSession, swoleLogMeasurement, swoleLogNutrition, swoleSummary," +
+  " swoleLogSet, swoleFinishSession, swoleLogMeasurement, swoleLogNutrition, swoleNutrition, swoleSummary," +
   " swoleGetProgram, swolePutProgram, swoleSession, swoleDayKeyFor };\n");
 globalThis.fetch = async () => new Response("null", { status: 404 });
 const W = await import(pathToFileURL(BUNDLE).href);
@@ -83,6 +83,10 @@ function makeDb(seed) {
       return { first: null };
     }
     if (/^INSERT INTO nutrition/.test(s)) { t.nutrition.push({ uid: b[0], date: b[1], kcal: b[2], protein_g: b[3] }); return { first: null }; }
+    if (/^SELECT date, kcal, protein_g, note, source, logged_at FROM nutrition/.test(s))
+      return { first: t.nutrition.find(x => x.uid === b[0] && x.date === b[1]) || null };
+    if (/^SELECT date, kcal, protein_g, note, source FROM nutrition/.test(s))
+      return { all: { results: t.nutrition.filter(x => x.uid === b[0]) } };
     if (/^SELECT \* FROM sessions/.test(s)) return { first: t.sessions.find(x => x.uid === b[0] && x.date === b[1]) || null };
     if (/^SELECT exercise_id, exercise_name/.test(s))
       return { all: { results: t.sets.filter(x => x.uid === b[0] && x.session_id === b[1]) } };
@@ -196,7 +200,7 @@ console.log("\nuid isolation — the bug that would matter most");
 console.log("\nthe write gate — an anonymous caller writes nothing");
 {
   const sd = W.MCP_TOOLS.filter(t => t.name.startsWith("sd_"));
-  ok("eleven sd_ tools are registered", sd.length === 11, sd.length + " found");
+  ok("twelve sd_ tools are registered", sd.length === 12, sd.length + " found");
   const db = seeded();
   let refused = 0;
   for (const t of sd) {
@@ -209,6 +213,23 @@ console.log("\nthe write gate — an anonymous caller writes nothing");
      db._t.sets.length === 0 && db._t.sessions.length === 0 && db._t.measurements.length === 0);
   ok("the refusal points at how to get a personal URL",
      /connect\.html/.test((await sd.find(t => t.name === "sd_log_set").run({ exercise: "mon_1", weight_lb: 30, reps: 10 }, env(db), null)).content[0].text));
+}
+
+console.log("\nnutrition reads back — the write-only hole");
+{
+  const db = seeded();
+  await W.swoleLogNutrition(env(db), "kap", { date: "2026-08-17", kcal: 2390, protein_g: 203 }, "mcp");
+  const one = await W.swoleNutrition(env(db), "kap", { date: "2026-08-17" });
+  ok("a logged day reads back", one.day && one.day.kcal === 2390 && one.day.protein_g === 203);
+  const miss = await W.swoleNutrition(env(db), "kap", { date: "2026-08-16" });
+  ok("a day with nothing logged says so rather than inventing zeros", miss.day === null);
+  ok("…and does not report a 0 kcal day", !(miss.day && miss.day.kcal === 0));
+  const other = await W.swoleNutrition(env(db), "someone_else", { date: "2026-08-17" });
+  ok("another athlete cannot read this one's nutrition", other.day === null || !!other.error);
+  const tool = W.MCP_TOOLS.find(t => t.name === "sd_nutrition");
+  ok("sd_nutrition exists and is read-only", !!tool && tool.readOnlyHint === true);
+  ok("the shared connector cannot read nutrition either",
+     /connect\.html/.test((await tool.run({}, env(db), { kind: "shared" })).content[0].text));
 }
 
 console.log("\nannotations match what these tools actually do");

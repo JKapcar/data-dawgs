@@ -4985,6 +4985,22 @@ const MCP_TOOLS = [
     },
   },
   {
+    name: "sd_nutrition",
+    title: "SwoleDawg — read nutrition back",
+    catalog: "full",
+    readOnlyHint: true,
+    description: "Logged calories and protein: one day with `date`, or the recent run without it. Means are computed only over the days that carry a number, and the count is returned beside them — a mean over 3 logged days out of 14 is not a 14-day average.",
+    inputSchema: { type: "object", properties: {
+      date: { type: "string", description: "YYYY-MM-DD for one day; omit for the recent run" },
+      n: { type: "number", description: "Days to return when no date is given. Default 14, max 200" },
+    }, additionalProperties: false },
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user") return toolErr(SWOLE_NEEDS_USER);
+      const r = await swoleNutrition(env, caller.uid || caller.name, args);
+      return r.error ? toolErr(r.error) : toolText(r);
+    },
+  },
+  {
     name: "sd_log_nutrition",
     title: "SwoleDawg — log nutrition",
     catalog: "full",

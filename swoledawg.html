@@ -7356,6 +7356,14 @@ function sdRest(s){
    A failure here is reported, never papered over. If the program cannot be read
    the page falls back to the signed-out demo path rather than showing a signed-in
    athlete a plan that is not theirs. */
+/* Height is a measurement field like any other, so it arrives in /summary. Read the
+   current value, falling back to the recorded baseline. */
+function sdHeightCm(){
+  const f = SUMMARY && SUMMARY.fields && SUMMARY.fields.height_in;
+  const inches = f && (f.current != null ? f.current : f.baseline);
+  return inches == null ? null : Math.round(inches * 2.54 * 10) / 10;
+}
+
 async function sdLoad(){
   PROG = null; PROG_V = null; SUMMARY = null; APIMODE = false; API_NOTE = null;
   try {
@@ -7411,6 +7419,99 @@ async function sdHydrateDays(){
       week: s.week, session_id: s.id, day_key: s.day_key
     });
   }
+  await sdMergeMeasurements(days);
+  await sdMergeNutrition(days);
+  return days;
+}
+
+/* Nutrition was write-only end to end: the Worker had POST /nutrition and no GET, and the
+   page never asked for it either. weekStats() reads d.nutrition.protein_g, so the Protein
+   KPI could only ever render "—" no matter how many days were logged.
+
+   ⚠️ The manual path sums totals from logged food items and says so on screen. The ledger
+   stores a day's totals directly, with no items behind them, so `foods` stays empty here
+   rather than being back-filled with a single invented item to make the sum work out. */
+async function sdMergeNutrition(days){
+  let rows = [];
+  try {
+    const r = await sdGet('/nutrition?n=200');
+    rows = (r && r.days) || [];
+  } catch(e){ return days; }        // route absent on an older Worker — leave nutrition empty
+  if(!rows.length) return days;
+
+  const seen = new Map(days.map(d => [d.date, d]));
+  for(const row of rows){
+    const nut = { foods: [], totals: {} };
+    if(row.kcal != null) nut.kcal = row.kcal;
+    if(row.protein_g != null) nut.protein_g = row.protein_g;
+    // Nothing logged is not a zero-calorie day. Skip rather than write a 0 the KPI counts.
+    if(nut.kcal == null && nut.protein_g == null) continue;
+    const day = seen.get(row.date);
+    if(day){ day.nutrition = Object.assign(day.nutrition || {}, nut); continue; }
+    const fresh = { date: row.date, training:{type:[], weights:null}, nutrition: nut,
+                    recovery:{}, subjective:{}, measurements:null };
+    days.push(fresh); seen.set(row.date, fresh);
+  }
+  days.sort((a,b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
+  return days;
+}
+
+/* The ledger stores imperial, the page's internal model is metric, and the page has one
+   arm slot where the ledger tracks both sides. Convert on the way IN only: the stored
+   pound and inch values are the record, so nothing here is ever written back. Left arm
+   is used for the single arm series rather than whichever is larger — a series that
+   silently swaps sides is not a series. */
+const SD_MEASUREMENT_MAP = [
+  ["weight_lb",       "weight_kg",     v => v / 2.20462],
+  ["waist_navel_in",  "waist_cm",      v => v * 2.54],
+  ["neck_in",         "neck_cm",       v => v * 2.54],
+  ["shoulders_in",    "shoulder_cm",   v => v * 2.54],
+  ["chest_in",        "chest_cm",      v => v * 2.54],
+  ["arm_flexed_l_in", "arm_flexed_cm", v => v * 2.54],
+];
+
+/* ⚠️ This is the fix for measurements never appearing. sdHydrateDays used to hardcode
+   measurements:null on every day, so the KPI row, the bodyweight chart and the whole of
+   bodyComp() read a field that could not populate — while /summary was fetched and then
+   ignored. Sessions worked because they read training, which WAS hydrated; that
+   asymmetry is what made it look like a rendering bug rather than a wiring one.
+
+   /summary only carries the LATEST value per field, which cannot fill a chart, so the
+   history endpoint is what gets read here — one call per mapped field, merged by date.
+   A tape session on a rest day has no training row, so a measurement date with no
+   session gets a day of its own rather than being dropped. */
+async function sdMergeMeasurements(days){
+  const have = (SUMMARY && SUMMARY.fields) || {};
+  const wanted = SD_MEASUREMENT_MAP.filter(([field]) => field in have);
+  if(!wanted.length) return days;
+
+  const byDate = new Map();
+  await Promise.all(wanted.map(async ([field, key, toMetric]) => {
+    let readings = [];
+    try {
+      const r = await sdGet('/measurements?field=' + encodeURIComponent(field) + '&n=200');
+      readings = (r && r.readings) || [];
+    } catch(e){ return; }              // one unreadable field must not empty the others
+    for(const row of readings){
+      // A null is a RECORDED GAP, not a zero. Skip it: writing 0 here would put a
+      // fabricated point on a chart and drag every average through it.
+      if(row.value == null) continue;
+      if(!byDate.has(row.date)) byDate.set(row.date, {});
+      byDate.get(row.date)[key] = toMetric(row.value);
+    }
+  }));
+  if(!byDate.size) return days;
+
+  const seen = new Map(days.map(d => [d.date, d]));
+  for(const [date, m] of byDate){
+    const day = seen.get(date);
+    if(day){ day.measurements = Object.assign({}, day.measurements, m); continue; }
+    const fresh = { date, training:{type:[], weights:null}, nutrition:{foods:[], totals:{}},
+                    recovery:{}, subjective:{}, measurements:m };
+    days.push(fresh); seen.set(date, fresh);
+  }
+  // Newest first — latestWeight() and bodyComp() both take the FIRST match as current.
+  days.sort((a,b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
   return days;
 }
 
@@ -8210,8 +8311,14 @@ async function boot2(){
        against it is the failure this whole write path exists to remove. If the log
        cannot be read the page renders empty and says why. */
     const live = await sdLoad();
+    /* ⚠️ height_cm or bodyComp() returns null forever: it needs waist, neck, weight AND
+       a height, and the API-mode profile is built here from scratch rather than from the
+       seed. Height comes from the ledger's own height_in — never from the demo seed,
+       which is a fictional lifter who happens to be a similar size. Absent, body fat
+       stays null and reads as a gap, which is the honest state. */
     got={d:{version:'api',
-            profile:{user_id:SESSION.uid,name:SESSION.name,email:SESSION.email},
+            profile:{user_id:SESSION.uid,name:SESSION.name,email:SESSION.email,
+                     height_cm:sdHeightCm()},
             goal:{primary:'visual_hypertrophy'},units:{display:'imperial'},days:[]},
          s: live ? 'Training log (D1)' : 'Training log unavailable'};
     if(live) got.d.days = await sdHydrateDays();
