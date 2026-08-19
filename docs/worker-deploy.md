@@ -37,8 +37,12 @@ Use Wrangler 4.x. The committed Worker is assembled output; edit `work/mcp-block
 for MCP code, then rebuild. Non-MCP routes, including the CFB collector, live directly
 in `dawg-bot-worker.js` and survive the idempotent assembly process.
 
+⚠️ `assemble.mjs` resolves its target as `../dawg-bot-worker.js`, relative to the working
+directory — so it MUST be run from `work/`. Run from the repo root it writes outside the
+repo. Wrangler is not assumed to be installed globally; `npx wrangler@4` works either way.
+
 ```
-node work/assemble.mjs
+cd work && node assemble.mjs && cd ..
 node --check dawg-bot-worker.js
 node work/test-cfb-market-capture.mjs
 node work/test-backup.mjs
@@ -82,6 +86,9 @@ authorization.
    `secrets.required`; never request or print values.
 3. Upload a version without moving traffic:
    `wrangler versions upload --config wrangler.jsonc --message "<commit and purpose>"`.
+   The command prints a **version id**; steps 4 and 5 take that literal id. `<version-id>`
+   in this runbook is a placeholder, and PowerShell rejects `<` outright rather than
+   passing it through, which is a useful accident.
 4. Inspect that version with `wrangler versions view <version-id> --name toto --json`.
    Confirm compatibility date, 1,000 ms CPU, `RL`, plain variables and every secret.
 5. Only after explicit approval, move traffic with
