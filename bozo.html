@@ -1240,6 +1240,49 @@ table.clv-tbl .pos{color:var(--good)} table.clv-tbl .neg{color:var(--bad)}
 /* ---- correlated-ticket honesty + Bozo Royale ---- */
 .slip-ft .ind{font:700 8.5px/1 ui-monospace,monospace;letter-spacing:.9px;text-transform:uppercase;
   color:var(--warn);vertical-align:top}
+/* ---- the betslip link, at the top of the ticket ----
+   Mono and boxed, because this is the slip speaking. The destination host is
+   printed next to the button on purpose: one member posts this and seven click
+   it, so "where does this go" is answered before the click, not after. */
+.slipbar{margin:0 0 14px}
+.slipbar .sb-live{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;
+  padding:11px 13px;border:1px solid var(--grid);border-radius:8px}
+.slipbar .sb-go{background:var(--accent);color:var(--accent-ink);border-radius:7px;
+  padding:9px 15px;text-decoration:none;white-space:nowrap;
+  font:800 12px/1 ui-monospace,Menlo,monospace;letter-spacing:1.5px;text-transform:uppercase}
+.slipbar .sb-meta{font:600 11px/1.5 ui-monospace,Menlo,monospace;color:var(--ink-3);
+  letter-spacing:.6px;min-width:0;word-break:break-word}
+.slipbar .sb-meta b{color:var(--ink-2);font-weight:700}
+.slipbar .sb-acts{margin-left:auto;display:flex;gap:7px;flex-wrap:wrap}
+.slipbar .sb-acts button{background:none;border:1px solid var(--border);border-radius:6px;
+  color:var(--ink-3);padding:5px 9px;cursor:pointer;
+  font:700 10px/1 ui-monospace,Menlo,monospace;letter-spacing:1.1px;text-transform:uppercase}
+.slipbar .sb-acts button:hover{color:var(--ink-2)}
+.slipbar .sb-ask{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:10px 13px;border:1px dashed var(--grid);border-radius:8px;
+  font:600 11.5px/1.5 ui-monospace,Menlo,monospace;color:var(--ink-3);letter-spacing:.5px}
+.slipbar .sb-ask button{margin-left:auto}
+.slipbar .sb-edit{padding:11px 13px;border:1px solid var(--grid);border-radius:8px}
+.slipbar .sb-edit label{display:block;font:700 10px/1 ui-monospace,Menlo,monospace;
+  letter-spacing:1.4px;text-transform:uppercase;color:var(--ink-3);margin:0 0 7px}
+.slipbar .sb-edit .row{display:flex;gap:8px;flex-wrap:wrap}
+.slipbar .sb-edit input{flex:1 1 260px;min-width:0;background:var(--surface-1);
+  border:1px solid var(--border);border-radius:7px;color:var(--ink-1);padding:9px 11px;
+  font:500 13px/1.3 ui-monospace,Menlo,monospace}
+.slipbar .sb-quiet{font:600 11px/1.5 ui-monospace,Menlo,monospace;color:var(--ink-3);
+  letter-spacing:.6px;padding:2px 1px}
+/* The hub's read-only twin. On the slip stock, like everything else there. */
+.sl-slip{margin:12px 0 0;padding:11px 12px;border:1px solid var(--slip-rule);border-radius:7px;
+  display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.sl-slip a{font:800 11.5px/1 ui-monospace,Menlo,monospace;letter-spacing:1.3px;
+  text-transform:uppercase;color:var(--slip-red);text-decoration:none}
+.sl-slip a:hover{text-decoration:underline}
+.sl-slip span{font:600 10.5px/1.4 ui-monospace,Menlo,monospace;color:var(--slip-ink2);letter-spacing:.5px}
+.slipbar .sb-err{color:var(--bad);font-size:12.5px;font-weight:600;margin:8px 0 0;min-height:16px}
+@media(max-width:520px){
+  .slipbar .sb-acts{margin-left:0;width:100%}
+  .slipbar .sb-go{width:100%;text-align:center}
+}
 .sgpwarn{margin-top:12px;padding:10px 12px;border:1px solid var(--warn);border-radius:8px;
   background:color-mix(in srgb, var(--warn) 10%, transparent);font-size:12px;line-height:1.6;color:var(--ink-2)}
 .sgpwarn b{color:var(--ink-1)}
@@ -3719,6 +3762,8 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 <!-- ---------- the ticket, as a parlay slip ---------- -->
 <div class="card" id="ticketCard">
   <div class="bz-hdr"><h2 class="bz" style="margin:0">The ticket</h2><span class="tm" id="fill"></span></div>
+  <!-- The shared betslip link. Above the slip because it opens the thing below it. -->
+  <div class="slipbar" id="slipBar"></div>
   <div class="slip" id="board"></div>
   <p class="note" id="placeNote"></p>
 </div>
@@ -4601,6 +4646,15 @@ function paintHouseTicket(){
       `${nAll-nIn} ${nAll-nIn===1?'leg is':'legs are'} still to come.</p>`;
   }
 
+  // The betslip link, read-only here: the hub advertises, the board is where you
+  // act. Same slipOf() gate, so the host is checked before this becomes an anchor.
+  const hs = slipOf();
+  const hubSlip = hs
+    ? `<p class="sl-slip"><a href="${esc(hs.url)}" target="_blank" rel="noopener noreferrer">` +
+      `Open this ticket at DraftKings &rarr;</a>` +
+      `<span>${esc(hs.host)} &middot; posted by ${esc(hs.by||'someone')}</span></p>`
+    : '';
+
   slip.innerHTML =
     `<div class="sl-hd"><span class="sl-t">The house ticket</span>` +
     `<span class="sl-m">${esc(lg.name)} &middot; week ${week} &middot; ${esc(status)}</span></div>` +
@@ -4610,7 +4664,7 @@ function paintHouseTicket(){
       `<div><dt>Format</dt><dd>${st.format==='royale'?'Royale':'Standard'}</dd></div>` +
       `<div><dt>Closes</dt><dd>${st.lockRule==='count' ? 'on leg '+st.lockCount : 'on leg '+nAll}</dd></div>` +
     `</dl>` +
-    `<div class="sl-rows">${rowHtml}</div>` + tot + exp +
+    `<div class="sl-rows">${rowHtml}</div>` + tot + exp + hubSlip +
     `<p class="sl-note">Favorites only, inside the band. No exact duplicate legs. ` +
     `<b>The ticket locks the moment the last leg lands</b> &mdash; that instant is the close, ` +
     `and there are no edits after it. Prices above are <b>self-reported</b> and are not ` +
@@ -4858,6 +4912,131 @@ window.addEventListener('hashchange', ()=>render());
 // a player with a space in their name showed "no leg yet" after submitting.)
 const kEnc = p => (S.picks && S.picks[p]) ? p : encodeURIComponent(p);
 
+/* ---------------- the shared betslip link ----------------
+   One DraftKings link per league per week, posted by any member.
+
+   ⚠️ THE HOST IS RE-CHECKED HERE, before anything becomes an anchor. The Worker
+   validates on write and is the authority, but this node streams straight out of
+   RTDB to every reader — so the page never renders a value it has not itself
+   checked into a link somebody is going to click. Belt and braces, deliberately:
+   the two checks are in different trust domains. */
+const DK_SHARE_HOSTS = ['dksb.sng.link','draftkings.onelink.me'];
+function dkHostOk(h){
+  h = String(h||'').toLowerCase();
+  return h==='draftkings.com' || /\.draftkings\.com$/.test(h) || DK_SHARE_HOSTS.indexOf(h)>=0;
+}
+// Returns a slip only if it still passes, so every caller downstream is safe.
+function slipOf(){
+  const sl = S.slip;
+  if(!sl || typeof sl.url !== 'string') return null;
+  let u; try{ u = new URL(sl.url); }catch(e){ return null; }
+  if(u.protocol !== 'https:' || !dkHostOk(u.hostname)) return null;
+  return {url:u.toString(), host:u.hostname.toLowerCase(), by:sl.by||'', ts:sl.ts||0};
+}
+let slipEdit = false, slipBusy = false;
+
+function paintSlipBar(){
+  const el = document.getElementById('slipBar');
+  if(!el) return;
+  const sl = slipOf();
+  const mine = !!(ME && names().indexOf(ME.name)>=0);
+  const graded = (S.status||'open')==='graded';
+  const canPost = mine && !graded;
+
+  if(slipEdit && canPost){
+    el.innerHTML =
+      `<div class="sb-edit">` +
+        `<label for="slipUrl">Paste the DraftKings betslip link</label>` +
+        `<div class="row">` +
+          `<input id="slipUrl" type="url" inputmode="url" autocomplete="off" spellcheck="false" ` +
+            `placeholder="https://sportsbook.draftkings.com/..." value="${sl?esc(sl.url):''}">` +
+          `<button class="btn" data-slip="save"${slipBusy?' disabled':''}>${slipBusy?'Saving…':'Save'}</button>` +
+          `<button class="chip" data-slip="cancel">Cancel</button>` +
+        `</div>` +
+        `<p class="sb-err" id="slipErr"></p>` +
+      `</div>`;
+    wireSlipBar();
+    return;
+  }
+
+  if(sl){
+    el.innerHTML =
+      `<div class="sb-live">` +
+        `<a class="sb-go" href="${esc(sl.url)}" target="_blank" rel="noopener noreferrer">Open the betslip &rarr;</a>` +
+        `<span class="sb-meta">${esc(sl.host)}<br>posted by <b>${esc(sl.by||'someone')}</b>` +
+          (sl.ts?` &middot; ${esc(when(sl.ts))}`:'') + `</span>` +
+        (canPost ? `<span class="sb-acts">` +
+          `<button data-slip="add">Replace</button>` +
+          `<button data-slip="clear">Remove</button></span>` : '') +
+      `</div>`;
+    wireSlipBar();
+    return;
+  }
+
+  if(canPost){
+    el.innerHTML =
+      `<div class="sb-ask"><span>No betslip link yet &mdash; whoever places it can put it here.</span>` +
+        `<button class="btn" data-slip="add">Add the link</button></div>`;
+    wireSlipBar();
+    return;
+  }
+
+  // Nothing to show and nothing you could do about it. Say which of the two.
+  el.innerHTML = (sl===null && graded)
+    ? `<p class="sb-quiet">No betslip link was posted for this week.</p>`
+    : `<p class="sb-quiet">No betslip link yet &mdash; anyone in the league can post one.</p>`;
+}
+
+function wireSlipBar(){
+  const el = document.getElementById('slipBar');
+  if(!el || el.dataset.wired) return;
+  el.dataset.wired = '1';
+  el.addEventListener('click', ev=>{
+    const b = ev.target.closest('[data-slip]');
+    if(!b) return;
+    ev.preventDefault();
+    const act = b.getAttribute('data-slip');
+    if(act==='add'){ slipEdit = true; paintSlipBar();
+      const i = document.getElementById('slipUrl'); if(i){ i.focus(); i.select(); } return; }
+    if(act==='cancel'){ slipEdit = false; paintSlipBar(); return; }
+    if(act==='save'){ saveSlip(); return; }
+    if(act==='clear'){
+      if(!confirm('Take the betslip link down?')) return;
+      saveSlip('');
+    }
+  });
+  el.addEventListener('keydown', ev=>{
+    if(ev.key==='Enter' && ev.target && ev.target.id==='slipUrl'){ ev.preventDefault(); saveSlip(); }
+  });
+}
+
+async function saveSlip(force){
+  const err = document.getElementById('slipErr');
+  const inp = document.getElementById('slipUrl');
+  const raw = force!==undefined ? force : (inp ? inp.value.trim() : '');
+  const say = m => { if(err) err.textContent = m; else alert(m); };
+
+  // Mirror the Worker's rules so the ordinary mistake is answered instantly and
+  // without a round trip. The Worker still decides — this only saves a request.
+  if(raw){
+    let u;
+    try{ u = new URL(raw); }catch(e){ return say('That is not a link.'); }
+    if(u.protocol !== 'https:') return say('The link has to be https.');
+    if(!dkHostOk(u.hostname))
+      return say('Only DraftKings links go on the ticket — that one points at ' + u.hostname.toLowerCase() + '.');
+  }
+  slipBusy = true; paintSlipBar();
+  try{
+    await wPost('/league/slip', {url: raw});
+    slipEdit = false;
+    if(raw) S.slip = {url: raw, host: new URL(raw).hostname.toLowerCase(), by: ME?ME.name:'', ts: Date.now()};
+    else S.slip = null;
+  }catch(e){
+    slipBusy = false; paintSlipBar(); say(e.message); return;
+  }
+  slipBusy = false; paintSlipBar();
+}
+
 function render(){
   const players = names();
   const picks = S.picks || {};
@@ -4933,6 +5112,7 @@ function render(){
 
   // the sheets themselves
   document.getElementById('ticketCard').style.display = onBoard ? '' : 'none';
+  if(onBoard) paintSlipBar();
   document.getElementById('seasonCard').style.display = onBoard ? '' : 'none';
   document.getElementById('sheetCard').style.display = players.includes(v) ? '' : 'none';
   // The sheet bar is part of the header, so it is cleared here rather than left stale

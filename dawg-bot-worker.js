@@ -30,6 +30,7 @@
  *   POST /league/member  — manager: {league, player, action:"add"|"remove"}  ← the size dial
  *   POST /league/invite  — manager: mints a join link, CREATES the account if new
  *   POST /league/lock    — manager: force-place when someone never submits
+ *   POST /league/slip    — any member: publish the week's DraftKings betslip link
  *   POST /league/config  — manager: the price band for that league
  *   POST /league/settings — manager: name, manager, stake, allowDupes, allowEdit,
  *                          lockRule/lockCount, levers, band — the whole rules panel
@@ -923,6 +924,7 @@ export default {
       return request.method === "GET" ? leagueJoinPreview(request, url, env, cors) : leagueJoinDispatch(request, env, cors);
     if (url.pathname === "/league/join-code") return leagueJoinCode(request, env, cors);
     if (url.pathname === "/league/lock")   return leagueLock(request, env, cors);
+    if (url.pathname === "/league/slip")   return leagueSlip(request, env, cors);
     if (url.pathname === "/league/config") return bozoConfigSet(request, env, cors);
     if (url.pathname === "/league/settings") return leagueSettings(request, env, cors);
     if (url.pathname === "/league/team")   return leagueTeam(request, env, cors);
@@ -3522,6 +3524,27 @@ async function requireManager(request, env, lid) {
   return { ...auth, league: lg, lid, siteAdmin };
 }
 
+// Anyone whose name is on THIS league's roster. The betslip link is the first
+// write a plain member can make about the WHOLE ticket rather than about their
+// own leg, so it needed a power that did not exist yet: not the manager, not the
+// site admin, just "you are in this league".
+//
+// ⚠️ Membership is checked against the STORED roster and identity comes from the
+// session. Neither is ever read from the request body — a body that could name
+// its own author is a body that can post as anybody.
+async function requireMember(request, env, lid) {
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return auth;
+  let lg;
+  try { lg = await loadLeague(env, lid); }
+  catch (e) { return { err: e.message, code: 502 }; }
+  if (!lg) return { err: "No such league.", code: 404 };
+  const siteAdmin = env.BOZO_ADMIN && auth.name === env.BOZO_ADMIN;
+  if (!siteAdmin && !memberNames(lg).includes(auth.name))
+    return { err: "You're not in this league.", code: 403 };
+  return { ...auth, league: lg, lid, siteAdmin };
+}
+
 // GET /league/list — public. The board is public, so the league directory is too.
 // Deliberately thin: no picks, no ledger, just enough to draw a switcher.
 async function leagueList(env, cors) {
@@ -4212,6 +4235,84 @@ async function leagueLock(request, env, cors) {
 
   const placed = await placeAndDraw(env, lid, picks, lg);
   return json({ ok: true, placed, legs: n, waitingOn: memberNames(lg).filter(p => !picks[encodeURIComponent(p)]) }, 200, cors);
+}
+
+/* ============================ the betslip link ============================
+   One DraftKings link per league per week, posted by any member, so that seven
+   people do not retype an eight-leg parlay by hand.
+
+   ⚠️ This is the only place on the site where one member hands the other seven a
+   link to click. Two rules follow from that, and neither is negotiable:
+
+   1. DRAFTKINGS HOSTS ONLY, ENFORCED HERE. The page checks too, but the page is a
+      convenience and this function is the authority. The league books one place
+      and one place only — every pick is written with entryBook "draftkings" — so
+      a link pointing anywhere else is either a mistake or an attack, and both get
+      the same answer.
+
+   2. SUBDOMAIN-SCOPED, NEVER A WHOLE SHORTENER. `*.draftkings.com` is DraftKings.
+      A link shortener is by definition an open redirect: allowlisting one would
+      let anybody with an account there aim this button wherever they liked. The
+      two share hosts below are pinned as EXACT hosts for exactly that reason.
+
+   ⚠️ Those two share hosts are what the DraftKings app is BELIEVED to emit. They
+   have not been checked against a real shared link — no sample was available when
+   this shipped. A rejection names the host it saw, so if the app emits something
+   else the error message is the bug report: add that exact host to this set. Do
+   not answer a rejected paste by loosening the rule. */
+const DK_SHARE_HOSTS = new Set(["dksb.sng.link", "draftkings.onelink.me"]);
+const MAX_SLIP_URL = 600;
+
+function dkSlipUrl(raw) {
+  if (typeof raw !== "string") return { err: "Send the link as text." };
+  const s = raw.trim();
+  if (!s) return { err: "Paste a link first." };
+  if (s.length > MAX_SLIP_URL) return { err: "That link is over " + MAX_SLIP_URL + " characters." };
+  let u;
+  try { u = new URL(s); } catch { return { err: "That is not a link." }; }
+  if (u.protocol !== "https:") return { err: "The link has to be https." };
+  // A URL carrying credentials can render as one host and resolve to another.
+  if (u.username || u.password) return { err: "That link carries credentials. Paste the plain share link." };
+  const host = u.hostname.toLowerCase();
+  const dk = host === "draftkings.com" || host.endsWith(".draftkings.com") || DK_SHARE_HOSTS.has(host);
+  if (!dk) return { err: "Only DraftKings links go on the ticket — that one points at " + host + "." };
+  return { url: u.toString(), host };
+}
+
+// POST /league/slip {league, url} — ANY MEMBER. An empty url takes it down.
+//
+// Deliberately NOT manager-gated. Whoever actually placed the parlay is whoever
+// placed it, and making them chase the manager to publish the link is how the
+// link never gets published. Attribution is the check instead: the row records
+// who put it up and when, and the ticket prints that next to the button.
+async function leagueSlip(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const lid = leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+  const auth = await requireMember(request, env, lid);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  // ⚠️ A graded week is a record. The link is archived into the history row on
+  // rollover, so editing it afterwards rewrites a receipt that is already filed.
+  if ((auth.league.status || "open") === "graded")
+    return json({ error: "That week is graded. Its ticket is a receipt now." }, 409, cors);
+
+  const raw = body.url == null ? "" : String(body.url);
+  if (!raw.trim()) {
+    await fbPut(env, LG(lid) + "/slip", null);
+    return json({ ok: true, slip: null }, 200, cors);
+  }
+  const v = dkSlipUrl(raw);
+  if (v.err) return json({ error: v.err }, 400, cors);
+
+  // by/ts come from the SESSION and the SERVER, never from the body.
+  const slip = { url: v.url, host: v.host, by: auth.name, ts: Date.now() };
+  await fbPut(env, LG(lid) + "/slip", slip);
+  return json({ ok: true, slip }, 200, cors);
 }
 
 /* ============================== league join links ==========================
@@ -6734,7 +6835,7 @@ async function bozoNext(request, env, cors) {
   try {
     const state = auth.league;
     const history = Array.isArray(state.history) ? state.history : [];
-    history.push({ week: state.week || 1, bozo: state.bozo || null });
+    history.push({ week: state.week || 1, bozo: state.bozo || null, slip: state.slip || null });
 
     // ⚠️ PATCH, not PUT. A wholesale PUT of the league node would delete its ledger,
     // members and config every single week — the site whose thesis is "the receipts
@@ -6748,6 +6849,10 @@ async function bozoNext(request, env, cors) {
       history,
       picks: null, order: null, results: null,
       bozo: null, bozoWhy: null, closeTs: null,
+      // ⚠️ Named on purpose. Anything NOT named here survives the rollover, and a
+      // betslip link surviving means last week's settled parlay stays on the new
+      // week's ticket, still clickable. Archived into `history` just above.
+      slip: null,
     });
     return json({ ok: true, week: (state.week || 1) + 1 }, 200, cors);
   } catch (e) {
