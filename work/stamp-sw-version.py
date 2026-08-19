@@ -30,5 +30,5 @@ old = s.split(marker)[1].split('"')[0]
 if old == new:
     print(f"  sw.js VERSION already current at {new}")
 else:
-    p.write_text(s.replace(f'{marker}{old}"', f'{marker}{new}"', 1), encoding="utf-8")
+    p.write_text(s.replace(f'{marker}{old}"', f'{marker}{new}"', 1), encoding="utf-8", newline=chr(10))
     print(f"  sw.js VERSION {old} -> {new}")
