@@ -373,6 +373,42 @@ console.log("\nrecovery is a real row, not a toast");
      !/sleep_hours\s*[:=]\s*[^;\n]*sleep_total_min/.test(page));
 }
 
+console.log("\nan empty account gets the example week, and only an empty one");
+{
+  const page = fs.readFileSync(resolve(WORK, "..", "swoledawg.html"), "utf8");
+
+  ok("the example state exists and is gated on the ledger being empty",
+     page.includes("if(live && (forced || !sdHasAnything(got.d.days)))"));
+
+  /* ⚠️ All-or-nothing is the whole design. If this ever becomes per-card, a fictional
+     sleep chart ends up beside a real bodyweight chart with only a badge between them. */
+  ok("one row of ANY kind counts as started — training, food, tape, recovery or device",
+     ["d.training && d.training.weights", "d.nutrition.eaten_kcal != null",
+      "d.nutrition.protein_g != null", "Object.keys(d.measurements).length",
+      "Object.values(d.recovery).some", "Object.keys(d.device).length"]
+       .every(frag => page.includes(frag)));
+
+  ok("the example week brings its own targets, or the volume radar renders blank",
+     page.includes("if(demo.targets) got.d.targets = demo.targets"));
+
+  // The numbers are the example's; the name on screen stays the reader's own.
+  ok("the fictional athlete's profile is NOT adopted",
+     !/got\.d\.profile\s*=\s*demo\.profile/.test(page));
+
+  ok("the banner says the numbers are not yours, in its own colour",
+     page.includes("EXAMPLE DATA — none of these numbers are yours")
+     && page.includes(".mockbar.sample{background:var(--warn)"));
+
+  ok("…and is a THIRD state, not a rename of the live-logging one",
+     page.includes("logging is live in this session") && page.includes(": SAMPLE_MODE"));
+
+  ok("the Body tape grid joins the example instead of staying the one empty card",
+     page.includes("if(APIMODE && SUMMARY && !SAMPLE_MODE) return bodyProgram()"));
+
+  ok("the demo seed carries device rows, so Nightly vitals is not blank in the example",
+     (page.match(/"device": \{"sleep_total_min"/g) || []).length >= 20);
+}
+
 console.log("\nannotations match what these tools actually do");
 {
   const sd = W.MCP_TOOLS.filter(t => t.name.startsWith("sd_"));

@@ -604,6 +604,9 @@ td.dim{color:var(--ink-3)}
 footer{border-top:1px solid var(--grid);padding-top:15px;margin-top:24px;color:var(--ink-3);font-size:11.5px;line-height:1.6}
 .mockbar{background:var(--accent);color:var(--accent-ink);text-align:center;padding:5px 14px;
   font:700 11px/1.4 ui-monospace,monospace;letter-spacing:.05em}
+/* The example state gets the warning colour, not the accent. Reading "logging is live"
+   and "none of this is yours" in the same orange is how the second one stops landing. */
+.mockbar.sample{background:var(--warn);color:#fff}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 /* ---- THEME ADD-ONS (from swoledawg-theme/INTEGRATION.md) --------------------
    A1 un-hardcodes .theme-btn, which carried the retired orange as a literal.
@@ -2422,6 +2425,19 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 <section class="sheet" data-s="settings">
   <div class="card" id="idCard"></div>
 
+  <div class="card">
+    <div class="card-h"><h2>Empty-account view</h2><span class="pill mod">PREVIEW</span></div>
+    <label style="display:flex;gap:9px;align-items:flex-start;cursor:pointer">
+      <input type="checkbox" id="previewEmpty" style="margin-top:3px;width:auto">
+      <span>Show what a brand-new account sees.</span>
+    </label>
+    <div class="note">An account with nothing logged renders the example week rather than a
+      page of empty cards, so the shape of the thing is visible before there is any data in
+      it. One real row anywhere — a set, a meal, a tape measurement, a night's sleep — turns
+      it off permanently. This toggle only changes what YOU see; it stores nothing and
+      writes nothing.</div>
+  </div>
+
   <div class="g g2">
     <div class="card">
       <div class="card-h"><h2>Athlete</h2><span class="pill obs">INPUT</span></div>
@@ -2841,7 +2857,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     },
     "cardio": []
    },
-   "recovery": {
+   "device": {"sleep_total_min": 384, "sleep_hr_bpm": 57, "sleep_spo2_pct": 97, "sleep_rr_min": 14.7}, "recovery": {
     "sleep_hours": 6.4,
     "sleep_score": 58,
     "hrv": 46,
@@ -3027,7 +3043,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     },
     "cardio": []
    },
-   "recovery": {
+   "device": {"sleep_total_min": 474, "sleep_hr_bpm": 62, "sleep_spo2_pct": 96, "sleep_rr_min": 15.1}, "recovery": {
     "sleep_hours": 7.9,
     "sleep_score": 78,
     "hrv": 50,
@@ -3212,7 +3228,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     },
     "cardio": []
    },
-   "recovery": {
+   "device": {"sleep_total_min": 444, "sleep_hr_bpm": 57, "sleep_spo2_pct": 98, "sleep_rr_min": 14.2}, "recovery": {
     "sleep_hours": 7.4,
     "sleep_score": 88,
     "hrv": 51,
@@ -3295,7 +3311,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
      }
     ]
    },
-   "recovery": {
+   "device": {"sleep_total_min": 396, "sleep_hr_bpm": 61, "sleep_spo2_pct": 97, "sleep_rr_min": 14.9}, "recovery": {
     "sleep_hours": 6.6,
     "sleep_score": 86,
     "hrv": 71,
@@ -3483,7 +3499,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     },
     "cardio": []
    },
-   "recovery": {
+   "device": {"sleep_total_min": 504, "sleep_hr_bpm": 62, "sleep_spo2_pct": 96, "sleep_rr_min": 15.2}, "recovery": {
     "sleep_hours": 8.4,
     "sleep_score": 88,
     "hrv": 70,
@@ -3673,7 +3689,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     },
     "cardio": []
    },
-   "recovery": {
+   "device": {"sleep_total_min": 492, "sleep_hr_bpm": 60, "sleep_spo2_pct": 97, "sleep_rr_min": 14.4}, "recovery": {
     "sleep_hours": 8.2,
     "sleep_score": 76,
     "hrv": 65,
@@ -3756,7 +3772,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
      }
     ]
    },
-   "recovery": {
+   "device": {"sleep_total_min": 480, "sleep_hr_bpm": 60, "sleep_spo2_pct": 98, "sleep_rr_min": 14.6}, "recovery": {
     "sleep_hours": 8.0,
     "sleep_score": 60,
     "hrv": 47,
@@ -3939,7 +3955,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     },
     "cardio": []
    },
-   "recovery": {
+   "device": {"sleep_total_min": 474, "sleep_hr_bpm": 61, "sleep_spo2_pct": 97, "sleep_rr_min": 14.7}, "recovery": {
     "sleep_hours": 7.9,
     "sleep_score": 93,
     "hrv": 63,
@@ -4127,7 +4143,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     },
     "cardio": []
    },
-   "recovery": {
+   "device": {"sleep_total_min": 486, "sleep_hr_bpm": 59, "sleep_spo2_pct": 96, "sleep_rr_min": 15.1}, "recovery": {
     "sleep_hours": 8.1,
     "sleep_score": 73,
     "hrv": 59,
@@ -4307,7 +4323,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     },
     "cardio": []
    },
-   "recovery": {
+   "device": {"sleep_total_min": 498, "sleep_hr_bpm": 63, "sleep_spo2_pct": 98, "sleep_rr_min": 14.2}, "recovery": {
     "sleep_hours": 8.3,
     "sleep_score": 80,
     "hrv": 50,
@@ -4390,7 +4406,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
      }
     ]
    },
-   "recovery": {
+   "device": {"sleep_total_min": 474, "sleep_hr_bpm": 59, "sleep_spo2_pct": 97, "sleep_rr_min": 14.9}, "recovery": {
     "sleep_hours": 7.9,
     "sleep_score": 75,
     "hrv": 48,
@@ -4577,7 +4593,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     },
     "cardio": []
    },
-   "recovery": {
+   "device": {"sleep_total_min": 450, "sleep_hr_bpm": 58, "sleep_spo2_pct": 96, "sleep_rr_min": 15.2}, "recovery": {
     "sleep_hours": 7.5,
     "sleep_score": 61,
     "hrv": 55,
@@ -4765,7 +4781,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     },
     "cardio": []
    },
-   "recovery": {
+   "device": {"sleep_total_min": 474, "sleep_hr_bpm": 64, "sleep_spo2_pct": 97, "sleep_rr_min": 14.4}, "recovery": {
     "sleep_hours": 7.9,
     "sleep_score": 74,
     "hrv": 47,
@@ -4848,7 +4864,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
      }
     ]
    },
-   "recovery": {
+   "device": {"sleep_total_min": 390, "sleep_hr_bpm": 63, "sleep_spo2_pct": 98, "sleep_rr_min": 14.6}, "recovery": {
     "sleep_hours": 6.5,
     "sleep_score": 68,
     "hrv": 69,
@@ -5033,7 +5049,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     },
     "cardio": []
    },
-   "recovery": {
+   "device": {"sleep_total_min": 438, "sleep_hr_bpm": 58, "sleep_spo2_pct": 97, "sleep_rr_min": 14.7}, "recovery": {
     "sleep_hours": 7.3,
     "sleep_score": 79,
     "hrv": 58,
@@ -5222,7 +5238,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     },
     "cardio": []
    },
-   "recovery": {
+   "device": {"sleep_total_min": 438, "sleep_hr_bpm": 64, "sleep_spo2_pct": 96, "sleep_rr_min": 15.1}, "recovery": {
     "sleep_hours": 7.3,
     "sleep_score": 88,
     "hrv": 65,
@@ -5404,7 +5420,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     },
     "cardio": []
    },
-   "recovery": {
+   "device": {"sleep_total_min": 504, "sleep_hr_bpm": 59, "sleep_spo2_pct": 98, "sleep_rr_min": 14.2}, "recovery": {
     "sleep_hours": 8.4,
     "sleep_score": 80,
     "hrv": 71,
@@ -5487,7 +5503,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
      }
     ]
    },
-   "recovery": {
+   "device": {"sleep_total_min": 480, "sleep_hr_bpm": 62, "sleep_spo2_pct": 97, "sleep_rr_min": 14.9}, "recovery": {
     "sleep_hours": 8.0,
     "sleep_score": 72,
     "hrv": 48,
@@ -5672,7 +5688,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     },
     "cardio": []
    },
-   "recovery": {
+   "device": {"sleep_total_min": 492, "sleep_hr_bpm": 58, "sleep_spo2_pct": 96, "sleep_rr_min": 15.2}, "recovery": {
     "sleep_hours": 8.2,
     "sleep_score": 58,
     "hrv": 62,
@@ -5859,7 +5875,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     },
     "cardio": []
    },
-   "recovery": {
+   "device": {"sleep_total_min": 444, "sleep_hr_bpm": 62, "sleep_spo2_pct": 97, "sleep_rr_min": 14.4}, "recovery": {
     "sleep_hours": 7.4,
     "sleep_score": 58,
     "hrv": 64,
@@ -5942,7 +5958,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
      }
     ]
    },
-   "recovery": {
+   "device": {"sleep_total_min": 474, "sleep_hr_bpm": 62, "sleep_spo2_pct": 98, "sleep_rr_min": 14.6}, "recovery": {
     "sleep_hours": 7.9,
     "sleep_score": 63,
     "hrv": 71,
@@ -6763,6 +6779,14 @@ const PAT_LABEL = { h_push:'Horizontal push', i_push:'Incline push', chest_iso:'
    STATE
    ================================================================ */
 let DATA=null, SOURCE='', MODE='visual_hypertrophy', SHEET='overview';
+/* An account with nothing in it renders the example week instead of six empty cards.
+   ⚠️ ALL OR NOTHING, on purpose. The moment ONE real row exists this turns off and the
+   page shows only the athlete's own data. A per-card version — real bodyweight beside a
+   fictional sleep chart — would put invented numbers on the same screen as measured ones
+   with nothing but a badge between them, and badges are exactly what people stop seeing.
+   The banner and the subline both say it, and logging anything at all ends it. */
+let SAMPLE_MODE=false;
+const SAMPLE_PREVIEW_KEY='dd-swole-preview-empty';
 /* Nothing on this page is readable or writable without a session. Identity is never typed:
    it comes from DDAuth, where email is the uniqueness key and the display name is mutable. */
 let SESSION=null;
@@ -8080,7 +8104,8 @@ function recovery(){
 
 /* ---------------- 5 · BODY ---------------- */
 function body(){
-  if(APIMODE && SUMMARY) return bodyProgram();
+  // In the example state the tape grid would be the one empty card left on a full page.
+  if(APIMODE && SUMMARY && !SAMPLE_MODE) return bodyProgram();
   dayPicker('bodyDays',BODY_DAY,d=>{BODY_DAY=d;body();});
   ['uW'].forEach(i=>document.getElementById(i).textContent=wU());
   ['uL1','uL2','uL3','uL4','uL5'].forEach(i=>document.getElementById(i).textContent=lU());
@@ -8155,6 +8180,19 @@ const SESSION_TYPES=['Upper A','Upper B','Lower A','Lower B','Delts & Arms','Rec
 
 function settings(){
   const p=DATA.profile||{},t=DATA.targets||{},g=DATA.goal||{};
+  /* Kap's own account has data, so the empty-account view is otherwise unreachable for
+     the one person who needs to judge it. This forces it on; it changes nothing that is
+     stored and the next real row still turns it off for everyone else. */
+  const prev=document.getElementById('previewEmpty');
+  if(prev){
+    prev.checked = localStorage.getItem(SAMPLE_PREVIEW_KEY)==='1';
+    prev.onchange = () => {
+      if(prev.checked) localStorage.setItem(SAMPLE_PREVIEW_KEY,'1');
+      else localStorage.removeItem(SAMPLE_PREVIEW_KEY);
+      DATA=null; SAMPLE_MODE=false; boot2();
+      toast(prev.checked ? 'Showing the empty-account view' : 'Showing your own log');
+    };
+  }
 
   /* Identity is read from the session, never typed. Email is the uniqueness key and the
      display name is mutable — neither is SwoleDawg's to edit, so neither gets a field here. */
@@ -8412,6 +8450,18 @@ function renderGate(){
     SESSION={uid:'u_dev_local',email:'dev@localhost',name:'Dev'};
     DATA=null;boot2();toast('Dev session — not a real sign-in');};
 }
+/* One row anywhere counts. A tape measurement with no session, or a logged meal on a
+   rest day, is still an athlete who has started — and someone who has started should
+   never be shown a fictional lifter's week over the top of their own first entry. */
+function sdHasAnything(days){
+  return (days||[]).some(d =>
+    (d.training && d.training.weights) ||
+    (d.nutrition && (d.nutrition.eaten_kcal != null || d.nutrition.protein_g != null)) ||
+    (d.measurements && Object.keys(d.measurements).length) ||
+    (d.recovery && Object.values(d.recovery).some(v => v != null)) ||
+    (d.device && Object.keys(d.device).length));
+}
+
 /* One place decides whether input is live, so a new control cannot forget to check. */
 function readOnly(){return !SESSION||!ownFile();}
 function lockInputs(){
@@ -8421,9 +8471,15 @@ function lockInputs(){
   document.querySelectorAll('.sheet .btn.primary,.sheet .btn:not(.ghost)')
     .forEach(b=>{if(b.id==='exportBtn'||b.id==='copyBtn'||b.id==='importBtn')return;
       b.disabled=ro;b.style.opacity=ro?'.45':'';b.style.pointerEvents=ro?'none':'';});
+  /* Three states, not two. The middle one is the new account: logging IS live, but what
+     is on screen belongs to a fictional lifter, and saying only "logging is live" there
+     would be true and still leave the reader thinking the charts are theirs. */
   document.getElementById('mockbar').textContent = ro
     ? 'DEMO — fictional athlete, nothing is saved. Sign in to log your own.'
-    : 'SwoleDawg · logging is live in this session · export to keep it';
+    : SAMPLE_MODE
+      ? 'EXAMPLE DATA — none of these numbers are yours. Log anything and this is replaced by your own week.'
+      : 'SwoleDawg · logging is live in this session · export to keep it';
+  document.getElementById('mockbar').classList.toggle('sample', !ro && SAMPLE_MODE);
 }
 
 /* ================================================================
@@ -8557,6 +8613,27 @@ async function boot2(){
             goal:{primary:'visual_hypertrophy'},units:{display:'imperial'},days:[]},
          s: live ? 'Training log (D1)' : 'Training log unavailable'};
     if(live) got.d.days = await sdHydrateDays();
+    /* Empty means empty: no sessions, no measurements, no nutrition, no recovery. The
+       Settings toggle forces this branch so the state can be looked at from an account
+       that already has data — otherwise the only way to see it is to be new. */
+    const forced = localStorage.getItem(SAMPLE_PREVIEW_KEY)==='1';
+    if(live && (forced || !sdHasAnything(got.d.days))){
+      try {
+        const demo = JSON.parse(document.getElementById('demoData').textContent);
+        got.d.days = demo.days || [];
+        /* The targets travel with the week. Without them weekly_volume_targets_sets is
+           empty, so the volume radar and the priority-muscle bars have nothing to divide
+           by and render blank — a page of example data with two dead cards in it, which
+           is the failure this whole state exists to avoid.
+           ⚠️ `profile` is NOT copied. The name, email and uid on screen stay the reader's
+           own; the numbers are the example's. Borrowing the fictional lifter's identity
+           as well is the one thing the signed-in path has always refused to do. */
+        if(demo.targets) got.d.targets = demo.targets;
+        if(demo.goal) got.d.goal = demo.goal;
+        SAMPLE_MODE = true;
+        got.s = 'Example data — nothing logged yet';
+      } catch(e){ /* seed unreadable: fall through to the honest empty page */ }
+    }
   }
   if(!got) for(const [url,label] of [['/data/swoledawg.json','Live surface'],['swoledawg.json','Local file']]){
     try{const r=await fetch(url,{cache:'no-store'});if(r.ok){got={d:await r.json(),s:label};break;}}catch(e){}
