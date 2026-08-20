@@ -2285,7 +2285,6 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
         <div class="card-h"><h2>Tales of the Tape</h2><span class="pill obs">OBSERVED</span></div>
         <div class="chart tall"><canvas id="cTape"></canvas><div class="chart-empty" id="eTape"></div></div>
         <div class="note" id="tapeNote"></div>
-        <div class="chart short" style="margin-top:10px"><canvas id="cGirth"></canvas><div class="chart-empty" id="eGirth"></div></div>
       </div>
       <div class="card">
         <div class="card-h"><h2>This week</h2><span class="pill der">DERIVED</span></div>
@@ -7135,30 +7134,36 @@ function overview(){
     ? [Math.round(maint-dk[1]), Math.round(maint-dk[0])]
     : (t.kcal ? [Math.round(t.kcal*0.95),Math.round(t.kcal*1.05)] : null);
   const kcals=asc.map(x=>x.nutrition?.eaten_kcal??null);
-  /* ⚠️ The band has to be READABLE AT ARM'S LENGTH ON A PHONE, which the tinted fill alone
-     was not — it was a pale rectangle behind the bars and disappeared. Both edges are now
-     drawn as solid rules in their own colours and named on the chart: the floor is "eat at
-     least this", the cap is "do not go past this". Bars are coloured by which side they
-     fall on, so the answer arrives from the colour before the axis is read at all. */
-  const barCol=v=>!kBand||v==null?c.accent
-    :v<kBand[0]?c.cool:v>kBand[1]?c.bad:c.good;
-  const yMax=Math.max(kBand?kBand[1]:0,...kcals.filter(v=>v!=null))*1.15||null;
-  mk('cFuel','eFuel',{type:'bar',data:{labels:dl,datasets:[
-      {label:'kcal',data:kcals,backgroundColor:kcals.map(barCol),borderRadius:3,
-       barPercentage:.72,categoryPercentage:.86,order:3},
+  /* ⚠️ THE BAND WAS INVISIBLE BECAUSE THE AXIS STARTED AT ZERO. A 50-kcal window on a
+     0-3100 axis is 1.6% of the height — two lines that touch. Zooming the axis to the data
+     makes the band a stripe you can see from across the room, which is the entire ask.
+
+     ⚠️ That is why this is no longer a BAR chart. Truncating the axis under bars is a
+     genuine lie — bar length stops being proportional to the value and a 5% difference can
+     look like double. Points on a line carry no such claim: they say "here, against the
+     band", which is the only question this chart is asked. */
+  const kseen=kcals.filter(v=>v!=null);
+  const kLo=Math.min(...kseen,kBand?kBand[0]:Infinity), kHi=Math.max(...kseen,kBand?kBand[1]:-Infinity);
+  const kPad=Math.max(120,(kHi-kLo)*0.22);
+  const ptCol=v=>!kBand||v==null?c.accent:v<kBand[0]?c.cool:v>kBand[1]?c.bad:c.good;
+  mk('cFuel','eFuel',{type:'line',data:{labels:dl,datasets:[
+      {label:'kcal',data:kcals,borderColor:c.ink3,borderWidth:1.5,tension:.25,spanGaps:false,
+       pointRadius:5,pointHoverRadius:7,pointBackgroundColor:kcals.map(ptCol),
+       pointBorderColor:kcals.map(ptCol),backgroundColor:'transparent',order:3},
       ...(kBand?[
-        {type:'line',label:'Do not exceed',data:dl.map(()=>kBand[1]),borderColor:c.bad,
-         borderWidth:2,pointRadius:0,
-         backgroundColor:'color-mix(in srgb,'+c.good+' 18%,transparent)',fill:'+1',order:1},
-        {type:'line',label:'Eat at least',data:dl.map(()=>kBand[0]),borderColor:c.cool,
-         borderWidth:2,pointRadius:0,fill:false,order:2}]:[])]},
+        {label:'Do not exceed',data:dl.map(()=>kBand[1]),borderColor:c.bad,borderWidth:2,
+         pointRadius:0,backgroundColor:'color-mix(in srgb,'+c.good+' 20%,transparent)',
+         fill:'+1',order:1},
+        {label:'Eat at least',data:dl.map(()=>kBand[0]),borderColor:c.cool,borderWidth:2,
+         pointRadius:0,fill:false,order:2}]:[])]},
     options:AX(c,{
       plugins:{legend:{display:!!kBand,labels:{color:c.ink3,boxWidth:14,font:{size:11},
                  filter:i=>i.text!=='kcal'}},
                tooltip:{filter:i=>i.datasetIndex===0}},
       scales:{
         x:{grid:{display:false},ticks:{color:c.ink3,font:{size:10},maxRotation:0,autoSkipPadding:8}},
-        y:{grid:{color:c.grid},ticks:{color:c.ink3,font:{size:10}},min:0,...(yMax?{max:Math.round(yMax)}:{}),
+        y:{grid:{color:c.grid},ticks:{color:c.ink3,font:{size:10}},
+           min:Math.round(kLo-kPad),max:Math.round(kHi+kPad),
            title:{display:true,text:kBand?('kcal · '+kBand[0]+' to '+kBand[1]):'kcal',color:c.ink3}}}})},
     1,'Log food on the <b>Nutrition</b> sheet.');
   mk('cPro','ePro',{type:'line',data:{labels:dl,datasets:[
@@ -7252,18 +7257,10 @@ function overview(){
      where you started, where you are, and how far that is from where you said you were
      going. The trend line lives on below once there are two days to draw it with. */
   tapeProgress();
-  const gpts=realDays().slice().reverse().filter(x=>x.measurements&&(x.measurements.waist_cm||x.measurements.shoulder_cm));
-  mk('cGirth','eGirth',{type:'line',data:{
-      labels:gpts.map(x=>new Date(x.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})),
-      datasets:[
-      {label:'Waist in',data:gpts.map(x=>x.measurements.waist_cm?r1(x.measurements.waist_cm/2.54):null),
-       borderColor:c.bad,borderWidth:2.5,pointRadius:4,pointBackgroundColor:c.bad,backgroundColor:'transparent',spanGaps:true},
-      {label:'Shoulder in',data:gpts.map(x=>x.measurements.shoulder_cm?r1(x.measurements.shoulder_cm/2.54):null),
-       borderColor:c.accent,borderWidth:2.5,pointRadius:4,pointBackgroundColor:c.accent,backgroundColor:'transparent',spanGaps:true}]},
-    options:AX(c,{scales:{x:{grid:{display:false},ticks:{color:c.ink3,font:{size:10}}},
-      y:{grid:{color:c.grid},ticks:{color:c.ink3,font:{size:10}}}}})},
-    2,'Two measurement days needed before the tape has a story.<br>Log them weekly on the <b>Body</b> sheet.');
-
+  /* The waist/shoulder trend line lived here and has been removed: the radar above answers
+     "where am I against target" on the first measurement, and a second chart that says
+     "come back after you have measured twice" is a second empty box on a card that is no
+     longer empty. The history is still in the ledger and still on the Body sheet. */
   document.getElementById('rings').innerHTML=
     ring(ws.proteinDays?ws.proteinHit/ws.proteinDays:0,'Protein',
       ws.proteinDays?ws.proteinHit+'/'+ws.proteinDays:'—',c.good)+
@@ -8108,60 +8105,70 @@ async function sdSaveRecovery(btn){
 function tapeProgress(){
   const note=document.getElementById('tapeNote'); if(!note) return;
   const fields=(SUMMARY&&SUMMARY.fields)||{};
-  let noBase=0;
   const rows=Object.keys(fields).map(k=>{
     const f=fields[k]||{};
     if(String(f.tag||'').toUpperCase()==='DEVICE') return null;
-    const now=f.current!=null?f.current:f.baseline, tg=f.target, base=f.baseline;
-    if(now==null||tg==null) return null;
+    const now=f.current!=null?f.current:f.baseline, tg=f.target;
+    if(now==null||tg==null||!now) return null;
     const down=String(f.dir||'').toLowerCase()==='down';
-    // A range is met at its near edge — the point the goal is reached, not the middle past it.
+    // A range is met at its near edge: the point the goal is reached, not the middle past it.
     const goal=Array.isArray(tg)?(down?tg[1]:tg[0]):tg;
-    if(goal==null) return null;
-    /* ⚠️ THE SCALE IS THE JOURNEY, NOT THE TARGET. Dividing today by the target looked
-       right and was useless: body measurements have a tiny dynamic range, so a waist of 37
-       against a 35.75 goal — over an inch, months of work — plots at 97% and the whole
-       chart collapses into a circle sitting on the ring, reading as finished. Scaling
-       baseline→target to the full radius puts that same waist at 0%, which is what it is:
-       not started. The chart's job is to show what is LEFT, and only this scale does. */
-    if(base==null){ noBase++; return null; }
-    const span=goal-base;
-    if(!span) return null;                       // nowhere to travel; nothing to plot
-    const pct=Math.max(0,Math.min(120,((now-base)/span)*100));
-    return {label:f.label||k,now,base,goal,pct};
+    if(!goal) return null;
+    return {label:f.label||k,now,goal,down,pct:(now/goal)*100};
   }).filter(Boolean).sort((a,b)=>b.pct-a.pct);
 
   if(!rows.length){
-    note.innerHTML='No field on this account carries both a baseline and a target yet.';
+    note.innerHTML='No field on this account carries a target yet.';
     mk('cTape','eTape',{type:'radar',data:{labels:[],datasets:[]}},1,
-       'Set a baseline and a target on the <b>Body</b> sheet.');
+       'Set a target on the <b>Body</b> sheet.');
     return;
   }
+  /* ⚠️ TWO SCALES HAVE ALREADY FAILED HERE AND BOTH FAILED THE SAME WAY: the interesting
+     range got squeezed into nothing.
+
+     Today ÷ target on a 0-based axis put every spoke within a few percent of the ring,
+     because body measurements barely vary — the shape was a circle sitting on the target
+     and read as finished. Scaling baseline → target fixed the compression and broke
+     something worse: with ONE measurement day today IS the baseline, so every spoke
+     collapsed to the centre and the chart said nothing at all.
+
+     So: today ÷ target again, but with the axis ZOOMED to where the values actually are.
+     The ring stays in view, the ticks are labelled so the centre cannot be mistaken for
+     zero, and a 3% waist gap is 3% of the visible radius instead of 3% of everything from
+     nothing to the target. This works on the first measurement, which is the point. */
+  const vals=rows.map(r=>r.pct);
+  const lo=Math.min(100,...vals), hi=Math.max(100,...vals);
+  const pad=Math.max(1.5,(hi-lo)*0.28);
+  const rMin=Math.max(0,Math.floor(lo-pad)), rMax=Math.ceil(hi+pad);
+
   const c=C();
   mk('cTape','eTape',{type:'radar',data:{labels:rows.map(r=>shortLabel(r.label)),datasets:[
-      {label:'Today',data:rows.map(r=>Math.round(r.pct)),
+      {label:'Today',data:rows.map(r=>Math.round(r.pct*10)/10),
        borderColor:c.accent,borderWidth:2,
        backgroundColor:'color-mix(in srgb,'+c.accent+' 15%,transparent)',
-       pointBackgroundColor:rows.map(r=>r.pct>=100?c.good:c.accent),pointRadius:3.5},
+       pointBackgroundColor:c.accent,pointRadius:3.5},
       {label:'Target',data:rows.map(()=>100),borderColor:c.ink3,borderWidth:1.5,
        borderDash:[4,4],backgroundColor:'transparent',pointRadius:0}]},
     options:AX(c,{plugins:{tooltip:{callbacks:{label:i=>{
         const r=rows[i.dataIndex];
         return i.datasetIndex===1 ? 'Target ' + fmtN(r.goal)
-          : 'Today ' + fmtN(r.now) + '  ·  from ' + fmtN(r.base) + '  ·  target ' + fmtN(r.goal)
-            + '  (' + Math.round(r.pct) + '%)';
+          : 'Today ' + fmtN(r.now) + '  ·  target ' + fmtN(r.goal)
+            + '  (' + (r.pct>=100?'+':'') + (Math.round((r.pct-100)*10)/10) + '%)';
       }}}},
-      scales:{r:{beginAtZero:true,min:0,max:120,ticks:{display:false},grid:{color:c.grid},
-        angleLines:{color:c.grid},pointLabels:{color:c.ink3,font:{size:9.5,weight:'600'}}}}})},
-    1,'Set a baseline and a target on the <b>Body</b> sheet.');
+      scales:{r:{min:rMin,max:rMax,beginAtZero:false,
+        ticks:{display:true,showLabelBackdrop:false,color:c.ink3,font:{size:9},
+               callback:v=>v+'%',count:4},
+        grid:{color:c.grid},angleLines:{color:c.grid},
+        pointLabels:{color:c.ink3,font:{size:9.5,weight:'600'}}}}})},
+    1,'Set a target on the <b>Body</b> sheet.');
 
-  const done=rows.filter(r=>r.pct>=100).length;
-  note.innerHTML=`Each spoke is <b>how far that measurement has travelled from its baseline
-    to its target</b> — the centre is where you started, the dashed ring is the goal. Scaled
-    this way because a percentage of the target is not the question: an inch of waist is 3%
-    of the number and most of the work. ${done} of ${rows.length} at or past target.` +
-    (noBase?` ${noBase} field${noBase===1?'':'s'} not shown — no baseline recorded, so there
-      is no journey to measure against.`:'');
+  const over=rows.filter(r=>r.down&&r.pct>100).length + rows.filter(r=>!r.down&&r.pct>=100).length;
+  note.innerHTML=`Every measurement against its own target — the dashed ring is 100% of
+    target on every spoke. <b>The axis is zoomed to your numbers</b> (${rMin}-${rMax}%), not
+    to zero, or a 3% waist gap would be invisible. Which side of the ring a point sits on
+    says which way it has to move: <b>outside</b> is above target (come down on waist, hips,
+    bodyweight), <b>inside</b> is below it (go up on chest, shoulders, arms). ${over} of
+    ${rows.length} at or past target. Hover for the real numbers.`;
 }
 function shortLabel(s){
   return String(s)
