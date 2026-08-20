@@ -7194,6 +7194,81 @@ async function swoleSummary(env, uid) {
   return { fields: out, sessions_last_7d: (recent && recent.n) || 0, as_of: swoleNow() };
 }
 
+/* ------------------------------- recovery -------------------------------------
+   ⚠️ This closes a hole that read as missing data and was actually a missing
+   feature. The Recovery sheet has carried a ten-field form since v0.3, and
+   `saveRec` only ever mutated the in-memory day object and toasted "Recovery
+   saved" — there was no table, no route, and `sdHydrateDays` hardcoded
+   `recovery:{}`. So the value was gone on reload, the Overview sleep KPI could
+   never populate, and the Sleep and HRV charts could never draw. Nothing about
+   that was visible on screen: it looked like Kap had not logged anything.
+
+   The whole day is one row. The form posts every field at once and says on
+   screen that a blank stays null, so an absent value here means "not measured",
+   NOT "leave whatever was there". The upsert overwrites accordingly — that is
+   the promise the UI already makes, and the two must not disagree.
+
+   A null is a recorded gap, not a zero, exactly as in `measurements`. Nothing
+   here is derived from the DEVICE sleep fields: a watch's estimate and a number
+   Kap typed are different claims, and merging them would launder one into the
+   other. */
+const SWOLE_RECOVERY_FIELDS = ["sleep_hours", "sleep_score", "hrv", "resting_hr",
+  "readiness", "soreness", "energy", "mood", "joint_feel"];
+
+async function swoleLogRecovery(env, uid, d, source) {
+  const db = swoleDb(env); if (!db) return swoleNoDb();
+  const date = (d && d.date) || swoleNow().slice(0, 10);
+  if (!swoleValidDate(date)) return { error: "Date must be YYYY-MM-DD." };
+
+  const vals = {};
+  for (const f of SWOLE_RECOVERY_FIELDS) {
+    const raw = d ? d[f] : null;
+    if (raw == null || raw === "") { vals[f] = null; continue; }
+    const n = Number(raw);
+    if (!Number.isFinite(n)) return { error: f + " must be a number, or blank for not measured." };
+    vals[f] = n;
+  }
+  if (SWOLE_RECOVERY_FIELDS.every(f => vals[f] === null) && !(d && d.note))
+    return { error: "Nothing to log: give at least one reading, or a note. A blank day is not a zero day." };
+
+  await db.prepare(
+    "INSERT INTO recovery (uid, date, sleep_hours, sleep_score, hrv, resting_hr, readiness, soreness, energy, mood, joint_feel, note, source, logged_at) " +
+    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) " +
+    "ON CONFLICT(uid, date) DO UPDATE SET sleep_hours=excluded.sleep_hours, sleep_score=excluded.sleep_score, " +
+    "hrv=excluded.hrv, resting_hr=excluded.resting_hr, readiness=excluded.readiness, soreness=excluded.soreness, " +
+    "energy=excluded.energy, mood=excluded.mood, joint_feel=excluded.joint_feel, note=excluded.note, " +
+    "source=excluded.source, logged_at=excluded.logged_at"
+  ).bind(uid, date, vals.sleep_hours, vals.sleep_score, vals.hrv, vals.resting_hr, vals.readiness,
+         vals.soreness, vals.energy, vals.mood, vals.joint_feel,
+         (d && d.note) || null, source, swoleNow()).run();
+  return Object.assign({ ok: true, date }, vals);
+}
+
+async function swoleRecovery(env, uid, a) {
+  const db = swoleDb(env); if (!db) return swoleNoDb();
+  const cols = "date, " + SWOLE_RECOVERY_FIELDS.join(", ") + ", note, source, logged_at";
+  if (a && a.date) {
+    if (!swoleValidDate(a.date)) return { error: "Date must be YYYY-MM-DD." };
+    const row = await db.prepare(
+      "SELECT " + cols + " FROM recovery WHERE uid = ? AND date = ?"
+    ).bind(uid, a.date).first();
+    return row ? { date: a.date, day: row }
+               : { date: a.date, day: null, note: "Nothing logged on " + a.date + "." };
+  }
+  const rows = await db.prepare(
+    "SELECT " + cols + " FROM recovery WHERE uid = ? ORDER BY date DESC LIMIT ?"
+  ).bind(uid, Math.min(Math.max(Number(a && a.n) || 30, 1), 200)).all();
+  const days = (rows && rows.results) || [];
+  // Same rule as nutrition: a mean is taken over the days that CARRY the number,
+  // and the count travels beside it so 3-of-30 cannot read as a 30-day average.
+  const slept = days.filter(x => x.sleep_hours != null);
+  return { days, days_returned: days.length,
+           mean_sleep_hours: slept.length
+             ? Math.round((slept.reduce((t, x) => t + x.sleep_hours, 0) / slept.length) * 10) / 10
+             : null,
+           sleep_days: slept.length };
+}
+
 /* ------------------------- SwoleDawg — browser routes ------------------------- */
 // Session-authenticated, uid-scoped. The same functions the sd_* MCP tools call, so a
 // set tapped in the browser and a set spoken to Claude are the same write with a
@@ -7218,6 +7293,7 @@ async function handleSwole(request, url, env, cors) {
     if (path === "/session")  return wrap(await swoleSession(env, uid, q.get("date") || ""));
     if (path === "/measurements") return wrap(await swoleMeasurementHistory(env, uid, q.get("field") || "", q.get("n")));
     if (path === "/nutrition") return wrap(await swoleNutrition(env, uid, { date: q.get("date"), n: q.get("n") }));
+    if (path === "/recovery") return wrap(await swoleRecovery(env, uid, { date: q.get("date"), n: q.get("n") }));
     return json({ error: "Unknown SwoleDawg route." }, 404, cors);
   }
   if (request.method !== "POST") return json({ error: "GET or POST only." }, 405, cors);
@@ -7227,6 +7303,7 @@ async function handleSwole(request, url, env, cors) {
   if (path === "/session/finish") return wrap(await swoleFinishSession(env, uid, body.date, body.notes));
   if (path === "/set")       return wrap(await swoleLogSet(env, uid, body, "web"));
   if (path === "/nutrition") return wrap(await swoleLogNutrition(env, uid, body, "web"));
+  if (path === "/recovery")  return wrap(await swoleLogRecovery(env, uid, body, "web"));
   if (path === "/measurement") return wrap(await swoleLogMeasurement(env, uid, body, "web"));
   return json({ error: "Unknown SwoleDawg route." }, 404, cors);
 }

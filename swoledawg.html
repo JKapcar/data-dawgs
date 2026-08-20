@@ -7441,6 +7441,54 @@ async function sdHydrateDays(){
   await sdMergeMeasurements(days);
   await sdMergeNutrition(days);
   await sdMergeDevice(days);
+  await sdMergeRecovery(days);
+  return days;
+}
+
+/* ⚠️ Recovery was the worst of the three holes, because it looked like nothing was
+   wrong. The sheet has had a ten-field form for versions; `saveRec` wrote to the
+   in-memory day and toasted "Recovery saved", and the value was gone on reload. There
+   was no table and no route to save it to. Meanwhile this function hardcoded
+   `recovery:{}`, so the Overview sleep KPI and both Recovery charts read a field that
+   could never populate. Every symptom looked like "Kap has not logged anything yet".
+
+   The ledger keeps one row per day. `subjective` is a page-side split of that same row —
+   energy, mood and joint_feel are stored beside the rest and only separated here,
+   because that is the shape the rest of the page already reads. */
+const SD_SUBJECTIVE = ['energy', 'mood', 'joint_feel'];
+
+async function sdMergeRecovery(days){
+  let rows = [];
+  try {
+    const r = await sdGet('/recovery?n=200');
+    rows = (r && r.days) || [];
+  } catch(e){ return days; }        // route absent on an older Worker — leave recovery empty
+  if(!rows.length) return days;
+
+  const seen = new Map(days.map(d => [d.date, d]));
+  for(const row of rows){
+    const rec = {}, subj = {};
+    for(const [k, v] of Object.entries(row)){
+      // A null is a recorded gap. Copying it in would be harmless, but leaving it out
+      // keeps `Object.values(...).some(v=>v!=null)` in the log table meaningful.
+      if(v == null || k === 'date' || k === 'logged_at') continue;
+      if(SD_SUBJECTIVE.includes(k)) subj[k] = v; else rec[k] = v;
+    }
+    if(!Object.keys(rec).length && !Object.keys(subj).length) continue;
+    const day = seen.get(row.date);
+    if(day){
+      day.recovery = Object.assign(day.recovery || {}, rec);
+      day.subjective = Object.assign(day.subjective || {}, subj);
+      continue;
+    }
+    // Recovery is logged on rest days too, so a date with no session gets a day of
+    // its own rather than being dropped.
+    const fresh = { date: row.date, training:{type:[], weights:null},
+                    nutrition:{foods:[], totals:{}}, recovery:rec, subjective:subj,
+                    measurements:null };
+    days.push(fresh); seen.set(row.date, fresh);
+  }
+  days.sort((a,b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
   return days;
 }
 
@@ -7853,6 +7901,28 @@ async function sdSaveMeasurements(btn){
   renderAll();
   toast(failed.length ? `${ok} saved, ${failed.length} refused — ${failed[0]}`
                       : `${ok} measurement${ok===1?'':'s'} saved for ${BODY_DAY}`);
+}
+
+/* The counterpart to sdSaveMeasurements. One POST, not one per field: the ledger keeps
+   a day as a single row, and the form's own note promises a blank stays null — so the
+   whole day goes up together and a cleared box clears the stored value. */
+async function sdSaveRecovery(btn){
+  const g = id => num(document.getElementById(id).value);
+  const body = { date: REC_DAY, sleep_hours:g('rSleep'), sleep_score:g('rScore'), hrv:g('rHrv'),
+                 resting_hr:g('rRhr'), readiness:g('rReady'), soreness:g('rSore'),
+                 energy:g('rEnergy'), mood:g('rMood'), joint_feel:g('rJoint'),
+                 note:document.getElementById('rSrc').value.trim() || null };
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    await sdPost('/recovery', body);
+    DATA.days = await sdHydrateDays();      // read back, so the page shows what LANDED
+    renderAll();
+    toast('Recovery saved for ' + REC_DAY);
+  } catch(e){
+    toast('Not saved — ' + e.message);      // never claim a save that did not happen
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save day';
+  }
 }
 
 /* ---------------- 4 · RECOVERY ---------------- */
@@ -8327,7 +8397,8 @@ function wire(){
     ['fItem','fP','fK','fC','fF'].forEach(id=>g(id).value='');
     renderAll();toast('Added to '+NUT_DAY);
   };
-  document.getElementById('saveRec').onclick=()=>{
+  document.getElementById('saveRec').onclick=function(){
+    if(APIMODE) return sdSaveRecovery(this);
     const g=id=>num(document.getElementById(id).value);
     const day=dayFor(REC_DAY); if(!day)return;
     Object.assign(day.recovery,{sleep_hours:g('rSleep'),sleep_score:g('rScore'),hrv:g('rHrv'),

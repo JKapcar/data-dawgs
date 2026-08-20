@@ -28,7 +28,7 @@ const BUNDLE = join(tmpdir(), "worker-swoledawg.mjs");
 fs.writeFileSync(BUNDLE, SRC +
   "\nexport { MCP_TOOLS, swoleWeekOf, swoleEffortFor, swoleSetsFor, swoleStartSession," +
   " swoleLogSet, swoleFinishSession, swoleLogMeasurement, swoleLogNutrition, swoleNutrition, swoleSummary," +
-  " swoleMeasurementHistory," +
+  " swoleMeasurementHistory, swoleLogRecovery, swoleRecovery," +
   " swoleGetProgram, swolePutProgram, swoleSession, swoleDayKeyFor };\n");
 globalThis.fetch = async () => new Response("null", { status: 404 });
 const W = await import(pathToFileURL(BUNDLE).href);
@@ -39,7 +39,7 @@ const W = await import(pathToFileURL(BUNDLE).href);
 // bindings, so "did every statement carry a uid" is answerable.
 const STATEMENTS = [];
 function makeDb(seed) {
-  const t = { sessions: [], sets: [], program: [], measurement_fields: [], measurements: [], nutrition: [], ...seed };
+  const t = { sessions: [], sets: [], program: [], measurement_fields: [], measurements: [], nutrition: [], recovery: [], ...seed };
   const run = (sql, b) => {
     STATEMENTS.push({ sql, bind: b });
     const s = sql.replace(/\s+/g, " ").trim();
@@ -98,6 +98,19 @@ function makeDb(seed) {
       return { first: null };
     }
     if (/^INSERT INTO nutrition/.test(s)) { t.nutrition.push({ uid: b[0], date: b[1], kcal: b[2], protein_g: b[3] }); return { first: null }; }
+    if (/^INSERT INTO recovery/.test(s)) {
+      const row = { uid: b[0], date: b[1], sleep_hours: b[2], sleep_score: b[3], hrv: b[4],
+                    resting_hr: b[5], readiness: b[6], soreness: b[7], energy: b[8], mood: b[9],
+                    joint_feel: b[10], note: b[11], source: b[12], logged_at: b[13] };
+      const at = t.recovery.findIndex(x => x.uid === row.uid && x.date === row.date);
+      if (at >= 0) t.recovery[at] = row; else t.recovery.push(row);   // the ON CONFLICT branch
+      return { first: null };
+    }
+    if (/FROM recovery WHERE uid = \? AND date = \?/.test(s))
+      return { first: t.recovery.find(x => x.uid === b[0] && x.date === b[1]) || null };
+    if (/FROM recovery WHERE uid = \?/.test(s))
+      return { all: { results: t.recovery.filter(x => x.uid === b[0])
+        .sort((x, y) => y.date.localeCompare(x.date)).slice(0, b[1]) } };
     if (/^SELECT date, kcal, protein_g, note, source, logged_at FROM nutrition/.test(s))
       return { first: t.nutrition.find(x => x.uid === b[0] && x.date === b[1]) || null };
     if (/^SELECT date, kcal, protein_g, note, source FROM nutrition/.test(s))
@@ -299,6 +312,65 @@ console.log("\nDEVICE is a real tag, and it stays out of the tape grid");
      new RegExp("SD_DEVICE_FIELDS = \\[" + DEVICE_FIELDS.map(f => "'" + f + "'").join(", ") + "\\]").test(page));
   ok("DEVICE values are kept out of `measurements`, which bodyComp and the radar read",
      /day\.device = Object\.assign/.test(page) && !/measurements\[field\] = row\.value/.test(page));
+}
+
+console.log("\nrecovery is a real row, not a toast");
+{
+  const db = seeded();
+  const full = await W.swoleLogRecovery(env(db), "kap",
+    { date: "2026-08-19", sleep_hours: 7.5, hrv: 62, resting_hr: 54, readiness: 81,
+      soreness: 3, energy: 7, mood: 8, joint_feel: 9 }, "web");
+  ok("a recovery day is accepted", full.ok === true);
+  ok("…and lands as ONE row for the day, not one per field", db._t.recovery.length === 1);
+
+  const back = await W.swoleRecovery(env(db), "kap", { date: "2026-08-19" });
+  ok("…and reads back with the numbers intact",
+     back.day && back.day.sleep_hours === 7.5 && back.day.hrv === 62 && back.day.mood === 8);
+
+  const partial = await W.swoleLogRecovery(env(db), "kap",
+    { date: "2026-08-18", sleep_hours: 6 }, "web");
+  ok("a day with one reading is fine", partial.ok === true);
+  ok("…and the boxes left blank stay null, never 0",
+     partial.hrv === null && partial.readiness === null
+     && db._t.recovery.find(r => r.date === "2026-08-18").hrv === null);
+
+  const empty = await W.swoleLogRecovery(env(db), "kap", { date: "2026-08-17" }, "web");
+  ok("an entirely blank day is refused rather than stored as zeros", !!empty.error);
+  const junk = await W.swoleLogRecovery(env(db), "kap",
+    { date: "2026-08-17", hrv: "pretty good" }, "web");
+  ok("a non-numeric reading is refused", !!junk.error);
+
+  /* The form says on screen that a blank stays null. That makes a re-save the whole
+     day, so clearing a box must CLEAR the stored value — if this ever became a
+     partial merge, the page would be lying about what it does. */
+  await W.swoleLogRecovery(env(db), "kap", { date: "2026-08-19", sleep_hours: 7.5 }, "web");
+  const recleared = await W.swoleRecovery(env(db), "kap", { date: "2026-08-19" });
+  ok("re-saving the day overwrites rather than adding a second row",
+     db._t.recovery.filter(r => r.date === "2026-08-19").length === 1);
+  ok("…and a box cleared on screen clears the stored value",
+     recleared.day.hrv === null && recleared.day.sleep_hours === 7.5);
+
+  const theirs = await W.swoleRecovery(env(db), "someone_else", { date: "2026-08-19" });
+  ok("another athlete cannot read this one's recovery", theirs.day === null || !!theirs.error);
+
+  const list = await W.swoleRecovery(env(db), "kap", {});
+  ok("the list reads newest first, which is what the page charts",
+     list.days[0].date === "2026-08-19");
+  ok("the mean is taken over the days that carry a number, and says how many",
+     list.mean_sleep_hours === 6.8 && list.sleep_days === 2);
+
+  const page = fs.readFileSync(resolve(WORK, "..", "swoledawg.html"), "utf8");
+  /* ⚠️ The actual bug: saveRec mutated the in-memory day and toasted "Recovery saved"
+     with nothing behind it. If this assertion ever fails, the page is silently
+     dropping recovery again. */
+  ok("saveRec goes to the API instead of only the in-memory day",
+     /saveRec'\)\.onclick=function\(\)\{\s*if\(APIMODE\) return sdSaveRecovery/.test(page));
+  ok("the page hydrates recovery instead of hardcoding an empty object",
+     /await sdMergeRecovery\(days\)/.test(page));
+  ok("a failed save says so rather than claiming it worked",
+     /toast\('Not saved — '/.test(page));
+  ok("the watch's sleep estimate is NOT laundered into the typed sleep_hours",
+     !/sleep_hours\s*[:=]\s*[^;\n]*sleep_total_min/.test(page));
 }
 
 console.log("\nannotations match what these tools actually do");

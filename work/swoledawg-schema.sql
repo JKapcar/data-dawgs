@@ -69,7 +69,12 @@ CREATE TABLE IF NOT EXISTS measurement_fields (
   label       TEXT NOT NULL,
   tier        INTEGER,
   cadence     TEXT,
-  tag         TEXT NOT NULL,               -- OBSERVED|DERIVED|MODELLED
+  -- DEVICE was added 2026-08-20 for the Samsung Health sleep channels. A wearable's
+  -- number is an algorithm's claim about the body, not a tape reading, and it is kept in
+  -- its own bucket so the tape grid and the radar can exclude it. ⚠️ swoleSummary() does
+  -- NOT filter on this column — it returns every field for the uid, and swoledawg.html is
+  -- what keeps DEVICE out of the body grid. Filter here and you can drop that guard.
+  tag         TEXT NOT NULL,               -- OBSERVED|DERIVED|MODELLED|DEVICE
   -- ⚠️ Never inferred in the UI. weight, waist, hips and body fat all DECREASE on
   -- success; a page that colours any decrease as regression reports failure for six
   -- months while the plan is working.
@@ -110,3 +115,38 @@ CREATE TABLE IF NOT EXISTS nutrition (
   logged_at  TEXT NOT NULL,
   PRIMARY KEY (uid, date)
 );
+
+
+-- One row per day, written by the Recovery sheet's ten-field form.
+--
+-- ⚠️ Added 2026-08-20 to close a SILENT hole. The form shipped in v0.3; `saveRec` only
+-- mutated the in-memory day and toasted "Recovery saved", and there was no table behind
+-- it. sdHydrateDays hardcoded `recovery:{}`, so the Overview sleep KPI and both Recovery
+-- charts read a field that could never populate. Every symptom looked like "nothing
+-- logged yet" rather than "nothing was ever saved".
+--
+-- The form posts the WHOLE day and promises on screen that a blank stays null, so the
+-- upsert overwrites every column. A cleared box must clear the stored value; a partial
+-- merge here would make the page a liar.
+--
+-- ⚠️ Nothing in here is derived from the DEVICE sleep fields. `sleep_hours` is what Kap
+-- typed; `sleep_total_min` is what the watch estimated. They are different claims and
+-- merging them launders one into the other.
+CREATE TABLE IF NOT EXISTS recovery (
+  uid          TEXT NOT NULL,
+  date         TEXT NOT NULL,
+  sleep_hours  REAL,                       -- NULL is "not measured", never 0
+  sleep_score  REAL,
+  hrv          REAL,
+  resting_hr   REAL,
+  readiness    REAL,
+  soreness     REAL,                       -- 1-10, self-reported
+  energy       REAL,                       -- 1-10  ⎫ the page calls these three
+  mood         REAL,                       -- 1-10  ⎬ `subjective`; they are stored
+  joint_feel   REAL,                       -- 1-10  ⎭ here and split only on read
+  note         TEXT,
+  source       TEXT NOT NULL,              -- web|mcp
+  logged_at    TEXT NOT NULL,
+  PRIMARY KEY (uid, date)
+);
+CREATE INDEX IF NOT EXISTS ix_recovery_uid_date ON recovery(uid, date DESC);
