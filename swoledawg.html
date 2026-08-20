@@ -824,6 +824,92 @@ footer{border-top:1px solid var(--grid);padding-top:15px;margin-top:24px;color:v
   border:1px solid var(--border);background:var(--surface-1);color:var(--ink-1)}
 .rt-presets button:active{transform:scale(.94)}
 :root[data-theme="light"] .rt-presets button{background:#fffdf8;border-color:#e2d5bf}
+/* ---- FOUNDRY weekly volume: the mockup's molten channel bars, verbatim ---- */
+.vol{display:grid;gap:9px;margin-top:4px}
+.vrow{display:grid;grid-template-columns:minmax(64px,86px) 1fr minmax(52px,auto);align-items:center;gap:9px}
+.vrow .n{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.vrow .val{font-family:var(--dmono);font-size:11px;font-weight:800;font-variant-numeric:tabular-nums;text-align:right;color:var(--ink-1);white-space:nowrap}
+.vrow .val small{color:var(--ink-3);font-weight:700}
+.vch{height:14px;border-radius:7px;background:var(--channel);position:relative;
+  box-shadow:inset 0 1.5px 3px rgba(0,0,0,.25), inset 0 -1px 0 rgba(255,255,255,.25)}
+:root[data-theme="light"] .vch{box-shadow:inset 0 1.5px 3px rgba(60,45,25,.25), inset 0 -1px 0 rgba(255,255,255,.6)}
+.vfill{position:absolute;left:2px;top:2px;bottom:2px;border-radius:2px 5px 5px 2px;width:0%;
+  background:var(--molten-x)}
+.vfill[data-w]:not([data-w="0.0"]){min-width:6px}
+.vfill::after{content:"";position:absolute;right:-2px;top:-2px;bottom:-2px;width:9px;border-radius:50%;
+  background:radial-gradient(circle,#fff3d6 0 26%,rgba(255,180,84,.85) 55%,transparent 75%);filter:blur(1.2px)}
+.vtick{position:absolute;top:-3px;bottom:-3px;width:2px;border-radius:1px;background:var(--ink-1);opacity:.55;transform:translateX(-1px)}
+.vrow.low .vfill{background:linear-gradient(90deg,#40729f,#2f639c,#6e9cc9)}
+.vrow.low .vfill::after{background:radial-gradient(circle,#e7f1fb 0 26%,rgba(110,156,201,.8) 55%,transparent 75%)}
+.vrow.low .n{color:var(--cool)}
+.flag{font-family:var(--dmono);font-size:8.5px;font-weight:800;color:#fff;background:var(--cool);
+  border-radius:4px;padding:1px 5px;margin-left:5px;letter-spacing:.04em;vertical-align:2px}
+.vleg{display:flex;gap:14px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.vleg .li{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;color:var(--ink-2)}
+.vleg .sw{width:16px;height:4px;border-radius:2px}
+.vleg .sw.molten{background:var(--molten-soft);box-shadow:var(--heat-sm)}
+.vleg .sw.steel{background:var(--cool)}
+.vleg .sw.tick{width:3px;height:12px;background:var(--ink-1);opacity:.6}
+@media (prefers-reduced-motion: no-preference){
+  .vfill{transition:width 1.15s cubic-bezier(.22,.9,.3,1)}
+  .vrow:nth-child(1) .vfill{transition-delay:.15s}.vrow:nth-child(2) .vfill{transition-delay:.24s}
+  .vrow:nth-child(3) .vfill{transition-delay:.33s}.vrow:nth-child(4) .vfill{transition-delay:.42s}
+  .vrow:nth-child(5) .vfill{transition-delay:.51s}.vrow:nth-child(6) .vfill{transition-delay:.6s}
+  .vrow:nth-child(7) .vfill{transition-delay:.69s}.vrow:nth-child(8) .vfill{transition-delay:.78s}
+}
+
+/* ---- FOUNDRY training flow: plate exercise cards, session progress strip,
+   inline per-exercise rest timers. The floating chip stays as a mirror. ---- */
+:root[data-theme="light"] .exlog{background:var(--plate);border-color:#e6dac6;border-radius:14px;box-shadow:var(--bevel)}
+:root[data-theme="light"] .answer{background:var(--plate);border-color:#e6dac6;border-left:4px solid var(--accent);box-shadow:var(--bevel)}
+.exlog{border-radius:14px}
+.exlog-h{min-height:48px}
+.exlog-n{font-size:14.5px}
+.exlog-n .num{font-weight:800}
+.exlog.done .exlog-h{opacity:.72}
+.exlog.done .exlog-n .num{color:var(--good)}
+.exlog.done .exlog-m .done{color:var(--good)}
+.exlog.open{border-color:var(--accent);box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 30%,transparent)}
+:root[data-theme="light"] .exlog.open{border-color:#d13d08;
+  box-shadow:var(--bevel),0 0 0 1px rgba(209,61,8,.35),0 0 14px rgba(255,122,26,.18)}
+.setrow input{min-height:44px;font-size:16px;font-variant-numeric:tabular-nums}
+.cue{color:var(--ink-2)}
+.cue b{color:var(--ink-1)}
+/* session progress strip */
+.wkprog{display:flex;align-items:center;gap:12px;margin:0 0 12px;padding:11px 14px;border-radius:14px;
+  border:1px solid var(--border);background:var(--surface-1)}
+:root[data-theme="light"] .wkprog{background:var(--plate);border-color:#e6dac6;box-shadow:var(--bevel)}
+.wkprog .wp-k{font:800 8.5px/1.3 var(--dmono);letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
+.wkprog .wp-n{font-family:var(--dmono);font-weight:800;font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.wkprog .wp-ch{flex:1;height:8px;border-radius:5px;background:var(--channel);
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.25);overflow:hidden;position:relative}
+.wkprog .wp-fill{height:100%;border-radius:5px;background:var(--molten-x);width:0%}
+.wkprog .wp-fill::after{content:"";position:absolute;right:-1px;top:-2px;bottom:-2px;width:7px;border-radius:50%;
+  background:radial-gradient(circle,#fff3d6 0 30%,rgba(255,180,84,.8) 60%,transparent);filter:blur(1px)}
+.wkprog.complete .wp-n{color:var(--good)}
+/* inline rest timer button */
+.extimer-row{display:flex;gap:9px;align-items:stretch}
+.extimer-row .btn[data-sdsave]{flex:0 0 auto}
+.extimer{
+  flex:1;position:relative;overflow:hidden;cursor:pointer;font-family:inherit;
+  display:flex;align-items:center;justify-content:center;gap:7px;min-height:44px;
+  border:1px solid var(--border);border-radius:11px;background:var(--surface-2);color:var(--ink-1)}
+:root[data-theme="light"] .extimer{background:linear-gradient(180deg,#fffdf8,#f4ecdd);border-color:#e2d5bf;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.85),0 1px 2px rgba(60,45,25,.08)}
+.extimer .xt-ic{font-size:15px;position:relative;z-index:1}
+.extimer .xt-t{font:800 12.5px/1 var(--dmono);letter-spacing:.08em;font-variant-numeric:tabular-nums;position:relative;z-index:1}
+.extimer .xt-fill{position:absolute;left:0;top:0;bottom:0;width:0%;background:var(--molten-x);opacity:.28;border-radius:0}
+.extimer.run{border-color:#b3541f;box-shadow:var(--heat-sm)}
+.extimer.run .xt-t{color:var(--accent)}
+:root[data-theme="light"] .extimer.run .xt-t{color:#a33107}
+.extimer.zero{border-color:var(--good)}
+.extimer.zero .xt-t{color:var(--good)}
+.extimer:active{transform:scale(.98)}
+@media (prefers-reduced-motion: no-preference){
+  .extimer:active{transition:transform .1s ease}
+  .wkprog .wp-fill{transition:width .9s cubic-bezier(.22,.9,.3,1) .15s}
+}
+
 /* FOUNDRY overflow guard. The shared nav's ≤419px rule pins .links to one nowrap
    row ("keep the desktop composition"), but the current 7-group menu + auth chip +
    theme pill measures ~426px at a 390px viewport. The overflowing row widened the
@@ -7254,7 +7340,7 @@ const SHEETS=[['overview','Overview'],['nutrition','Nutrition'],['training','Tra
 
 function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
 function C(){return{ink3:css('--ink-3'),grid:css('--grid'),accent:css('--accent'),
-  good:css('--good'),warn:css('--warn'),cool:css('--cool'),bad:css('--bad')};}
+  good:css('--good'),warn:css('--warn'),cool:css('--cool'),bad:css('--bad'),axis:css('--axis')};}
 
 function mk(id,emptyId,cfg,minPts,msg){
   const el=document.getElementById(id); if(!el) return;
@@ -7472,14 +7558,25 @@ function overview(){
              text:kBand?('kcal · '+kBand[0]+'-'+kBand[1]
                           +(TG.nutrition_mode?' · '+TG.nutrition_mode:'')):'kcal'}}}})},
     1,'Log food on the <b>Nutrition</b> sheet.');
-  mk('cPro','ePro',{type:'line',data:{labels:dl,datasets:[
-      {label:'Protein g',data:asc.map(x=>x.nutrition?.protein_g??null),
-       borderColor:c.good,borderWidth:2.5,pointRadius:4,pointBackgroundColor:c.good,
-       backgroundColor:'transparent',spanGaps:false},
-      {label:'Target '+(t.protein??'—')+'g',data:dl.map(()=>t.protein),
-       borderColor:c.good,borderDash:[5,5],borderWidth:1,pointRadius:0}]},
-    options:AX(c,{scales:{x:{grid:{display:false},ticks:{color:c.ink3,font:{size:10}}},
-      y:{grid:{color:c.grid},ticks:{color:c.good,font:{size:10}},min:0,
+  /* Columns, not dots — Kap's call 8/20: when every day lands near target, points sit
+     ON the dashed line and vanish into it. A column against the line reads instantly:
+     tall enough or not. Colored by hit/miss so the axis never needs reading. Bars start
+     at zero because truncating a bar's base lies about its length. */
+  const proVals=asc.map(x=>x.nutrition?.protein_g??null);
+  const proHit=v=>v==null?c.ink3:(t.protein&&v>=t.protein?c.good:c.cool);
+  mk('cPro','ePro',{type:'bar',data:{labels:dl,datasets:[
+      {label:'Protein g',data:proVals,
+       backgroundColor:proVals.map(proHit),borderRadius:{topLeft:4,topRight:4},
+       borderSkipped:'bottom',barPercentage:.62,order:2},
+      {type:'line',label:'Target '+(t.protein??'—')+'g',data:dl.map(()=>t.protein),
+       borderColor:c.axis||c.ink3,borderDash:[5,5],borderWidth:1.5,pointRadius:0,order:1}]},
+    options:AX(c,{plugins:{legend:{labels:{color:c.ink3,boxWidth:10,font:{size:11},
+        generateLabels:ch=>[{text:'hit',fillStyle:c.good,strokeStyle:c.good,lineWidth:0},
+          {text:'under',fillStyle:c.cool,strokeStyle:c.cool,lineWidth:0},
+          {text:'target '+(t.protein??'—')+'g',fillStyle:'transparent',strokeStyle:c.ink3,lineWidth:1,lineDash:[4,3]}]}},
+      tooltip:{filter:i=>i.datasetIndex===0}},
+      scales:{x:{grid:{display:false},ticks:{color:c.ink3,font:{size:10},maxRotation:0,autoSkipPadding:8}},
+      y:{grid:{color:c.grid},ticks:{color:c.ink3,font:{size:10}},min:0,
          title:{display:true,text:'protein (g)',color:c.ink3}}}})},
     1,'Log protein on the <b>Nutrition</b> sheet.');
 
@@ -7497,20 +7594,33 @@ function overview(){
   const sleepAvg=rawSleep.map((_,i)=>{
     const w=rawSleep.slice(Math.max(0,i-6),i+1).filter(v=>v!=null);
     return w.length>=3?Math.round(w.reduce((a,b)=>a+b,0)/w.length*10)/10:null;});
-  mk('cRec','eRec',{type:'line',data:{labels:dl,datasets:[
-      {label:'7-night avg',data:sleepAvg,borderColor:c.cool,borderWidth:2.5,
-       pointRadius:3,pointBackgroundColor:c.cool,backgroundColor:'transparent',
-       spanGaps:false,tension:.3,order:2},
+  /* Redesigned 8/20 (Kap: "doesn't tell us much"): a lone 7-night-average line on a
+     0-12 axis was a flat wire in a big box. Now it is the mockup's Sleep — Cooldown:
+     each night is a COLUMN against the shaded target band (colored in-band / short /
+     long), with the 7-night average drawn over the top once it exists. One axis, in
+     hours; bars start at zero because bars must. */
+  const nightCol=v=>v==null?c.ink3
+    :(v>=sBand[0]&&v<=sBand[1]?c.good:(v<sBand[0]?c.cool:c.warn));
+  mk('cRec','eRec',{type:'bar',data:{labels:dl,datasets:[
+      {label:'Night h',data:rawSleep,backgroundColor:rawSleep.map(nightCol),
+       borderRadius:{topLeft:4,topRight:4},borderSkipped:'bottom',barPercentage:.62,order:3},
+      {type:'line',label:'7-night avg',data:sleepAvg,borderColor:c.accent,borderWidth:2.5,
+       pointRadius:0,tension:.3,spanGaps:true,order:2},
       {type:'line',label:'band-hi',data:dl.map(()=>sBand[1]),borderWidth:0,pointRadius:0,
-       backgroundColor:'color-mix(in srgb,'+c.good+' 13%,transparent)',fill:'+1',order:1},
+       backgroundColor:'color-mix(in srgb,'+c.good+' 12%,transparent)',fill:'+1',order:1},
       {type:'line',label:'band-lo',data:dl.map(()=>sBand[0]),borderWidth:0,pointRadius:0,
        fill:false,order:1}]},
-    options:AX(c,{plugins:{legend:{display:false},tooltip:{filter:i=>i.datasetIndex===0}},scales:{
-      x:{grid:{display:false},ticks:{color:c.ink3,font:{size:10}}},
-      y:{grid:{color:c.grid},ticks:{color:c.cool,font:{size:10}},min:0,max:12,
-         title:{display:true,text:'7-night avg h · '+sBand[0]+'-'+sBand[1]+(slT?'':' (default)'),
+    options:AX(c,{plugins:{legend:{labels:{color:c.ink3,boxWidth:10,font:{size:11},
+        generateLabels:ch=>[{text:'in band',fillStyle:c.good,strokeStyle:c.good,lineWidth:0},
+          {text:'short',fillStyle:c.cool,strokeStyle:c.cool,lineWidth:0},
+          {text:'7-night avg',fillStyle:'transparent',strokeStyle:c.accent,lineWidth:2}]}},
+      tooltip:{filter:i=>i.datasetIndex<2}},scales:{
+      x:{grid:{display:false},ticks:{color:c.ink3,font:{size:10},maxRotation:0,autoSkipPadding:8}},
+      y:{grid:{color:c.grid},ticks:{color:c.ink3,font:{size:10}},min:0,
+         suggestedMax:Math.max(10,sBand[1]+1),
+         title:{display:true,text:'sleep h · band '+sBand[0]+'-'+sBand[1]+(slT?'':' (default)'),
                 color:c.ink3}}}})},
-    1,'Three logged nights before an average means anything.<br>Log sleep on the <b>Recovery</b> sheet.');
+    1,'Log sleep on the <b>Recovery</b> sheet — each night draws as a column against the band.');
   mk('cReady','eReady',{type:'line',data:{labels:dl,datasets:[
       {label:'Readiness',data:asc.map(x=>x.recovery?.readiness??null),borderColor:c.warn,
        borderWidth:2,pointRadius:4,pointBackgroundColor:c.warn,backgroundColor:'transparent',
@@ -7538,11 +7648,23 @@ function overview(){
   const volKeys=[...new Set([...Object.keys(t.vol), ...Object.keys(v.b||{}), ...Object.keys(pri)])]
     .filter(k=>(t.vol[k]||0)>0 || (v.b[k]||0)>0)
     .sort((a,b)=>(v.b[b]||0)-(v.b[a]||0));
-  document.getElementById('priBars').innerHTML=volKeys.map(k=>{
-    const done=v.b[k]||0,tg=t.vol[k]||0,pct=tg?Math.min(100,done/tg*100):0;
-    return `<div class="bar-row"><span>${esc(BUCKETS[k]||k)}${pri[k]?'<span class="pri-dot"></span>':''}</span>
-      <span class="bar-track"><span class="bar-fill${tg?(pct>=100?' full':''):' dim'}" style="width:${tg?pct:100}%"></span></span>
-      <span class="bar-val">${tg?r1(done)+'/'+tg:r1(done)}</span></div>`;}).join('')+
+  /* Molten channel bars — the mockup's Weekly Volume, verbatim in behavior: molten
+     fill in a recessed channel, a target tick, steel-blue + flag when under target.
+     One shared scale so bar lengths compare across rows; with no targets set the
+     bars are honest counts against the biggest bucket and no tick is drawn. */
+  const vmax=Math.max(1,...volKeys.map(k=>Math.max(v.b[k]||0,t.vol[k]||0)))*1.12;
+  document.getElementById('priBars').innerHTML='<div class="vol">'+volKeys.map(k=>{
+    const done=v.b[k]||0,tg=t.vol[k]||0,low=tg>0&&done<tg;
+    return `<div class="vrow${low?' low':''}">
+      <span class="n">${esc(BUCKETS[k]||k)}${pri[k]?'<span class="pri-dot"></span>':''}</span>
+      <div class="vch"><div class="vfill" data-w="${(done/vmax*100).toFixed(1)}" style="width:0%"></div>
+        ${tg?`<span class="vtick" style="left:${(tg/vmax*100).toFixed(1)}%"></span>`:''}</div>
+      <span class="val">${r1(done)}${tg?`<small>/${tg}</small>`:''}${low?`<span class="flag">${r1(done-tg)}</span>`:''}</span>
+    </div>`;}).join('')+'</div>'+
+    (Object.keys(t.vol).length?`<div class="vleg">
+      <span class="li"><span class="sw molten"></span>Sets this week</span>
+      <span class="li"><span class="sw tick"></span>Target</span>
+      <span class="li"><span class="sw steel"></span>Under target</span></div>`:'')+
     (noTargets
       ? `<div class="note"><b>Sets logged</b> over the last ${RULES.window} real logged days, every
          bucket you trained. A dot marks the muscles carrying a stated priority.
@@ -7555,6 +7677,8 @@ function overview(){
          days. Primary muscle counts 1.0 per set, secondary 0.5 — so a row gives lats 1.0 and biceps 0.5.
          Chest, lats and side delts carry the V-taper; biceps is the stated priority. A partial week
          always reads short against a full-week target.</div>`);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    document.querySelectorAll('#priBars .vfill').forEach(f=>{f.style.width=f.dataset.w+'%';});}));
 
   /* ⚠️ This card used to be a two-point trend line and therefore said "come back after
      you have measured twice" to someone who had already measured once and knows exactly
@@ -8172,9 +8296,11 @@ function trainingProgram(){
         + (ex.per_side ? ' per side' : '');
     const load  = start == null ? '' : (start === 0 ? ' · bodyweight' : ` @ ${start} lb`);
     const tgt   = `${nSets} × ${reps}${load}`;
-    return `<div class="exlog" data-exid="${esc(ex.id)}" data-ex="${esc(ex.name)}">
+    return `<div class="exlog${nDone>=nSets&&nSets>0&&!iso?' done':''}" data-exid="${esc(ex.id)}" data-ex="${esc(ex.name)}"
+        data-rest="${typeof ex.rest_between_sets==='number'?ex.rest_between_sets:120}" data-nsets="${iso?0:nSets}" data-ndone="${iso?0:nDone}">
       <div class="exlog-h"><span class="exlog-n"><span class="num">${n+1}</span>${esc(ex.name)}</span>
-        <span class="exlog-m">${nDone?`<span class="done">${nDone}/${nSets} logged</span>`:esc(tgt)}</span></div>
+        <span class="exlog-m">${nDone>=nSets&&nSets>0&&!iso?`<span class="done">✓ ${nDone}/${nSets}</span>`
+          :nDone?`<span class="done">${nDone}/${nSets} logged</span>`:esc(tgt)}</span></div>
       <div class="exlog-b">
         ${iso ? `<div class="cue" style="border-left:2px solid var(--accent)">
             <b>Prescribed, not logged.</b> ${esc(String(ex.hold_seconds_min))}–${esc(String(ex.hold_seconds_max))} s
@@ -8188,7 +8314,10 @@ function trainingProgram(){
             <input type="number" inputmode="decimal" step="2.5" placeholder="lb" data-f="load" data-si="${si}" value="${s.load_kg!=null?Math.round(s.load_kg*2.20462*10)/10:''}">
             <input type="number" inputmode="numeric" step="1" placeholder="RIR" data-f="rir" data-si="${si}" value="${s.rir??''}">
             <span></span></div>`;}).join('')}
-        ${iso ? '' : `<div class="btn-row"><button class="btn sm primary" data-sdsave="${esc(ex.id)}">Save sets</button></div>`}
+        ${iso ? '' : `<div class="btn-row extimer-row">
+          <button class="extimer" type="button" data-rest="${typeof ex.rest_between_sets==='number'?ex.rest_between_sets:120}"
+            aria-label="Start rest timer"><span class="xt-fill" aria-hidden="true"></span><span class="xt-ic">⏱</span><span class="xt-t">REST ${esc(sdRest(ex.rest_between_sets))}</span></button>
+          <button class="btn sm primary" data-sdsave="${esc(ex.id)}">Save sets</button></div>`}
         <div class="cue">Target ${esc(String(ex.rep_min))}–${esc(String(ex.rep_max))} reps, leave ${esc(String(effort && effort.reps_in_reserve != null ? effort.reps_in_reserve : '—'))} in reserve ·
           rest ${esc(sdRest(ex.rest_between_sets))} between sets${ex.load_rule?' · '+esc(ex.load_rule):''}
           ${ex.cue?'<br>'+esc(ex.cue):''}
@@ -8456,7 +8585,15 @@ function tapeProgress(){
   const vals=rows.map(r=>r.pct);
   const lo=Math.min(100,...vals), hi=Math.max(100,...vals);
   const pad=Math.max(0.25,(hi-lo)*0.09);
-  const rMin=Math.max(0,lo-pad), rMax=hi+pad;
+  /* ⚠️ THE RING SITS ON THE SECOND-TO-LAST GRIDLINE, ALWAYS (Kap, 8/20: the zoomed
+     axis put the 100% ring a third of the way out and the chart was mostly empty
+     space). With 5 ticks the gridlines land on quarters of the span, so pinning
+     100% at three quarters means: span above the ring = one third of the span below
+     it. `above` must still contain the biggest overshoot, so it is the max of that
+     geometric need and the data's own reach past the ring. Everything below stays
+     zoomed to the data as before — the ring position is the only new constraint. */
+  const above=Math.max((100-lo+pad)/3, hi-100+pad, 0.75);
+  const rMin=Math.max(0,100-3*above), rMax=100+above;
   const rDec=(rMax-rMin)<6?1:0;
 
   const c=C();
@@ -8474,8 +8611,10 @@ function tapeProgress(){
             + '  (' + (r.pct>=100?'+':'') + (Math.round((r.pct-100)*10)/10) + '%)';
       }}}},
       scales:{r:{min:rMin,max:rMax,beginAtZero:false,
+        /* count:5 → gridlines at quarters of the span → the 100% ring IS the
+           second-to-last ring. Changing the count moves the ring off it. */
         ticks:{display:true,showLabelBackdrop:false,color:c.ink3,font:{size:9},
-               callback:v=>v.toFixed(rDec)+'%',count:4},
+               callback:v=>v.toFixed(rDec)+'%',count:5},
         grid:{color:c.grid},angleLines:{color:c.grid},
         pointLabels:{color:c.ink3,font:{size:9.5,weight:'600'}}}}})},
     1,'Set a target on the <b>Body</b> sheet.');
@@ -9283,25 +9422,58 @@ function fBuildTimer(){
   };
   document.addEventListener('click',e=>{
     const sv=e.target.closest&&e.target.closest('[data-sdsave]');
-    if(sv)fStartTimer(RT.last);              // logging a set = rest starts itself
+    if(sv){
+      /* logging a set = rest starts itself, at THIS exercise's prescribed rest */
+      const card=sv.closest('.exlog');
+      const secs=card&&card.dataset.rest?+card.dataset.rest:RT.last;
+      RT.exid=card?card.dataset.exid:null;
+      fStartTimer(secs,card?card.querySelector('.extimer'):null);
+    }
   },true);
 }
 const fmtRT=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
-function fStartTimer(secs){
-  fStopTimer(false);
-  RT.left=secs;RT.total=secs;RT.last=secs;
+/* One countdown, two faces: the floating chip mirrors whatever inline .extimer
+   button started it (RT.btn). Tapping a running inline button cancels. */
+function fPaintBtn(){
+  if(!RT.btn||!document.contains(RT.btn)){RT.btn=null;return;}
+  RT.btn.classList.add('run');RT.btn.classList.remove('zero');
+  RT.btn.querySelector('.xt-t').textContent=fmtRT(Math.max(0,RT.left));
+  RT.btn.querySelector('.xt-fill').style.width=(100*(1-RT.left/RT.total))+'%';
+}
+function fResetBtn(zero){
+  if(!RT.btn||!document.contains(RT.btn)){RT.btn=null;return;}
+  const b=RT.btn;
+  if(zero){b.classList.remove('run');b.classList.add('zero');
+    b.querySelector('.xt-t').textContent='GO — next set';
+    b.querySelector('.xt-fill').style.width='100%';
+    setTimeout(()=>{if(!RT.t&&document.contains(b)){b.classList.remove('zero');
+      b.querySelector('.xt-t').textContent='REST '+fmtRT(+b.dataset.rest||120);
+      b.querySelector('.xt-fill').style.width='0%';}},6000);
+  }else{b.classList.remove('run','zero');
+    b.querySelector('.xt-t').textContent='REST '+fmtRT(+b.dataset.rest||120);
+    b.querySelector('.xt-fill').style.width='0%';}
+  if(!zero)RT.btn=null;
+}
+function fStartTimer(secs,btn){
+  fStopTimer(false);fResetBtn(false);
+  RT.left=secs;RT.total=secs;RT.last=secs;RT.btn=btn||null;
   try{localStorage.setItem('sd-rest-last',secs);}catch(e){}
-  const el=document.getElementById('rtimer');el.classList.add('hot');el.classList.remove('zero');
-  document.getElementById('rtPresets').classList.remove('show');
-  document.getElementById('rtL').textContent='resting';
+  const el=document.getElementById('rtimer');
+  if(el){el.classList.add('hot');el.classList.remove('zero');
+    document.getElementById('rtPresets').classList.remove('show');
+    document.getElementById('rtL').textContent='resting';
+    document.getElementById('rtT').textContent=fmtRT(secs);
+    document.getElementById('rtArc').setAttribute('stroke-dashoffset','0');}
+  fPaintBtn();
   const t0=Date.now();
   RT.t=setInterval(()=>{
     RT.left=RT.total-Math.floor((Date.now()-t0)/1000);
     if(RT.left<=0){
       fStopTimer(false);
-      document.getElementById('rtT').textContent='GO';
-      document.getElementById('rtL').textContent='next set';
-      document.getElementById('rtimer').classList.add('zero');
+      if(el){document.getElementById('rtT').textContent='GO';
+        document.getElementById('rtL').textContent='next set';
+        el.classList.add('zero');}
+      fResetBtn(true);
       try{navigator.vibrate&&navigator.vibrate([200,120,200]);}catch(e){}
       try{const log=JSON.parse(localStorage.getItem('sd-rest-log')||'[]');
         log.push({ts:new Date().toISOString(),secs:RT.total});
@@ -9309,15 +9481,14 @@ function fStartTimer(secs){
       setTimeout(()=>{if(!RT.t)fIdleTimer();},6000);
       return;
     }
-    document.getElementById('rtT').textContent=fmtRT(RT.left);
-    document.getElementById('rtArc').setAttribute('stroke-dashoffset',RT_CIRC*(1-RT.left/RT.total));
+    if(el){document.getElementById('rtT').textContent=fmtRT(RT.left);
+      document.getElementById('rtArc').setAttribute('stroke-dashoffset',RT_CIRC*(1-RT.left/RT.total));}
+    fPaintBtn();
   },250);
-  document.getElementById('rtT').textContent=fmtRT(secs);
-  document.getElementById('rtArc').setAttribute('stroke-dashoffset','0');
 }
 function fStopTimer(reset){
   if(RT.t){clearInterval(RT.t);RT.t=null;}
-  if(reset)fIdleTimer();
+  if(reset){fIdleTimer();fResetBtn(false);}
 }
 function fIdleTimer(){
   const el=document.getElementById('rtimer');if(!el)return;
@@ -9325,6 +9496,63 @@ function fIdleTimer(){
   document.getElementById('rtT').textContent='REST';
   document.getElementById('rtL').textContent='tap to set';
   document.getElementById('rtArc').setAttribute('stroke-dashoffset','0');
+}
+
+/* ---- training flow: progress strip, inline timers, open the next lift ---- */
+function fTrainFlow(){
+  const pb=document.getElementById('planBody');if(!pb)return;
+  const cards=[...pb.querySelectorAll('.exlog')];
+  const strip0=document.getElementById('wkProg');if(strip0)strip0.remove();
+  if(!cards.length)return;
+  // inline timer taps (program template ships the buttons; demo cards get one here)
+  cards.forEach(c=>{
+    let bt=c.querySelector('.extimer');
+    if(!bt){
+      const row=c.querySelector('.btn-row');
+      if(row){row.classList.add('extimer-row');
+        bt=document.createElement('button');bt.type='button';bt.className='extimer';
+        bt.dataset.rest=c.dataset.rest||120;
+        bt.innerHTML='<span class="xt-fill" aria-hidden="true"></span><span class="xt-ic">⏱</span><span class="xt-t">REST '+fmtRT(+(c.dataset.rest||120))+'</span>';
+        row.insertBefore(bt,row.firstChild);}
+    }
+    if(bt&&!bt.dataset.wired){bt.dataset.wired='1';
+      bt.onclick=e=>{e.stopPropagation();
+        if(RT.t&&RT.btn===bt){fStopTimer(true);return;}
+        RT.exid=c.dataset.exid||null;
+        fStartTimer(+(bt.dataset.rest)||120,bt);};}
+  });
+  /* a save re-renders the sheet mid-countdown; re-adopt the fresh button so the
+     inline face keeps ticking instead of dying with the old DOM */
+  if(RT.t&&RT.exid){
+    const c=cards.find(x=>x.dataset.exid===RT.exid);
+    if(c){RT.btn=c.querySelector('.extimer');fPaintBtn();}
+  }
+  // progress strip from the cards' own counts (loggable lifts only)
+  const logg=cards.filter(c=>+(c.dataset.nsets||0)>0);
+  if(logg.length){
+    const exDone=logg.filter(c=>c.classList.contains('done')).length;
+    const sTot=logg.reduce((a,c)=>a+ +(c.dataset.nsets),0);
+    const sDone=logg.reduce((a,c)=>a+Math.min(+(c.dataset.ndone||0),+(c.dataset.nsets)),0);
+    const pct=sTot?Math.min(100,sDone/sTot*100):0;
+    const strip=document.createElement('div');
+    strip.className='wkprog'+(sDone>=sTot?' complete':'');strip.id='wkProg';
+    strip.innerHTML='<span class="wp-k">Session</span>'
+      +'<span class="wp-n">'+exDone+'/'+logg.length+' lifts</span>'
+      +'<div class="wp-ch"><div class="wp-fill"></div></div>'
+      +'<span class="wp-n">'+sDone+'/'+sTot+' sets</span>';
+    pb.parentElement.insertBefore(strip,pb);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      strip.querySelector('.wp-fill').style.width=pct+'%';}));
+  }
+  // flow: nothing open -> open the first unfinished lift so the next station is ready
+  if(!cards.some(c=>c.classList.contains('open'))){
+    const next=logg.find(c=>!c.classList.contains('done'));
+    if(next)next.classList.add('open');
+  }
+}
+if(typeof training==='function'){
+  const _training=training;
+  training=function(){_training();try{fTrainFlow();}catch(e){}};
 }
 
 /* hook everything into the page's own render cycle. The finally matters: if a
