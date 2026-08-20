@@ -7129,9 +7129,20 @@ function overview(){
   /* The plan says "200-250 under maintenance". That IS the band — eating to a single
      number makes every day a miss, and a made-up ±% would be this file inventing a goal
      the athlete never set. Falls back to ±5% only where no deficit is declared. */
-  const maint=maintenance(), dk=(DATA.targets||{}).deficit_kcal;
-  const kBand = (maint!=null&&Array.isArray(dk))
-    ? [Math.round(maint-dk[1]), Math.round(maint-dk[0])]
+  /* Three ways to get a band, in order of how directly the athlete stated it:
+       1. an explicit target ± an explicit width — a recomp says "2960, give or take 300"
+       2. a declared deficit range under maintenance — a cut says "200-250 under"
+       3. nothing stated, so ±5% of whatever targets() computed, which is a guess and is
+          the only one of the three this file invented.
+     ⚠️ A one-number target is unhittable and reads as failure every single day. The width
+     is what makes the chart usable, and it has to come from the plan. */
+  const maint=maintenance(), TG=(DATA.targets||{}), dk=TG.deficit_kcal;
+  const kAim = TG.kcal_target==='maintenance' ? maint
+             : (TG.kcal_target!=null ? Number(TG.kcal_target) : null);
+  const kWide = TG.kcal_band!=null ? Number(TG.kcal_band) : null;
+  const kBand =
+      (kAim!=null&&kWide!=null) ? [Math.round(kAim-kWide), Math.round(kAim+kWide)]
+    : (maint!=null&&Array.isArray(dk)) ? [Math.round(maint-dk[1]), Math.round(maint-dk[0])]
     : (t.kcal ? [Math.round(t.kcal*0.95),Math.round(t.kcal*1.05)] : null);
   const kcals=asc.map(x=>x.nutrition?.eaten_kcal??null);
   /* ⚠️ THE BAND WAS INVISIBLE BECAUSE THE AXIS STARTED AT ZERO. A 50-kcal window on a
@@ -7164,7 +7175,9 @@ function overview(){
         x:{grid:{display:false},ticks:{color:c.ink3,font:{size:10},maxRotation:0,autoSkipPadding:8}},
         y:{grid:{color:c.grid},ticks:{color:c.ink3,font:{size:10}},
            min:Math.round(kLo-kPad),max:Math.round(kHi+kPad),
-           title:{display:true,text:kBand?('kcal · '+kBand[0]+' to '+kBand[1]):'kcal',color:c.ink3}}}})},
+           title:{display:true,color:c.ink3,
+             text:kBand?('kcal · '+kBand[0]+'-'+kBand[1]
+                          +(TG.nutrition_mode?' · '+TG.nutrition_mode:'')):'kcal'}}}})},
     1,'Log food on the <b>Nutrition</b> sheet.');
   mk('cPro','ePro',{type:'line',data:{labels:dl,datasets:[
       {label:'Protein g',data:asc.map(x=>x.nutrition?.protein_g??null),
@@ -7561,6 +7574,13 @@ function sdTargetsFrom(prog){
   const n=(prog&&prog.nutrition)||{};
   const out={maintenance_mode:'computed',activity_factor:1.45,fat_g_per_lb:0.36};
   if(n.protein_g!=null) out.protein_floor_g=n.protein_g;
+  /* An explicit calorie target beats a deficit, and a RECOMP has no deficit to state — the
+     whole idea is eating at maintenance while training hard, so "200-250 under" is the
+     wrong shape of number to describe it. kcal_target is either a figure or the string
+     'maintenance', which tracks lean mass down as it falls instead of going stale. */
+  if(n.kcal_target!=null) out.kcal_target=n.kcal_target;
+  if(n.kcal_band!=null) out.kcal_band=Number(n.kcal_band);
+  if(n.mode!=null) out.nutrition_mode=n.mode;
   if(Array.isArray(n.deficit_kcal)&&n.deficit_kcal.length===2)
     out.deficit_kcal=[Number(n.deficit_kcal[0]),Number(n.deficit_kcal[1])];
   else if(n.deficit_kcal!=null) out.deficit_kcal=[Number(n.deficit_kcal),Number(n.deficit_kcal)];
