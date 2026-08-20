@@ -6995,11 +6995,25 @@ function weekStats(){
   return{proteinHit,proteinDays:proteinDays.length,trained,trainTarget:5,
     sleepAvg:sleepAvg==null?null:r1(sleepAvg),sleepN:slept.length,logged,win:win.length};
 }
-/* 7-day rolling average of bodyweight — the only honest read of a daily scale */
+/* 7-day rolling average of bodyweight — the only honest read of a daily scale.
+
+   ⚠️ THE WINDOW IS SEVEN DAYS, NOT SEVEN READINGS. It used to take the previous six
+   entries regardless of when they happened, which equals a seven-day window only if you
+   weigh in every single morning. Kap logged St Patrick's Day, the 4th of July and two days
+   in August, and the "7-day average" drew a line through 235, 216 and 210 — five months
+   averaged together and labelled a week. A window counted in ROWS is not a window measured
+   in DAYS, and only one of them is what the label promises.
+
+   Three readings inside those seven days or no point: two mornings is not an average, it
+   is two mornings. Where nothing qualifies the line does not draw at all, which is the
+   honest output for someone who has not been weighing in. */
 function weightSeries(){
   const pts=realDays().slice().reverse().filter(d=>d.measurements&&typeof d.measurements.weight_kg==='number')
-    .map(d=>({date:d.date,lb:d.measurements.weight_kg*2.20462}));
-  const avg=pts.map((p,i)=>{const w=pts.slice(Math.max(0,i-6),i+1);
+    .map(d=>({date:d.date,lb:d.measurements.weight_kg*2.20462,
+              t:new Date(d.date+'T12:00:00').getTime()}));
+  const WEEK=6*864e5;                     // six days back, inclusive of today = seven
+  const avg=pts.map((p,i)=>{
+    const w=pts.filter((x,j)=>j<=i && p.t-x.t<=WEEK);
     return w.length>=3?r1(w.reduce((a,x)=>a+x.lb,0)/w.length):null;});
   return{pts,avg};
 }
@@ -7104,9 +7118,19 @@ function overview(){
     options:AX(c,{scales:{x:{grid:{display:false},ticks:{color:c.ink3,font:{size:10}}},
       y:{grid:{color:c.grid},ticks:{color:c.ink3,font:{size:10}},title:{display:true,text:'lb',color:c.ink3}}}})},
     1,'Log weight on the <b style="color:inherit">Body</b> sheet.<br>The 7-day average needs 3 readings before it draws.');
-  document.getElementById('nWeight').innerHTML=ws2.pts.length<3
-    ? `<b>${ws2.pts.length} reading${ws2.pts.length===1?'':'s'}.</b> Daily weight swings 2–4 lb on water alone — the thick line is the only one worth reading, and it needs 3 days before it appears.`
-    : `${ws2.pts.length} readings. Judge the week by the 7-day average, never a single morning.`;
+  /* ⚠️ This counted READINGS and then talked about the AVERAGE, which are now different
+     things: four readings spread over five months produce no seven-day window with three
+     weigh-ins in it, so the line does not draw and "judge the week by the 7-day average"
+     was advice about a line that was not on screen. Describe what is actually drawn. */
+  const nAvg=ws2.avg.filter(v=>v!=null).length;
+  document.getElementById('nWeight').innerHTML=
+    nAvg ? `${ws2.pts.length} readings. Judge the week by the 7-day average, never a single morning.`
+    : ws2.pts.length
+      ? `<b>${ws2.pts.length} reading${ws2.pts.length===1?'':'s'}, no 7-day average yet.</b>
+         The average needs three weigh-ins inside the same seven days; none of these windows
+         has that. Daily weight swings 2–4 lb on water alone, so the dots are worth less than
+         the line they cannot yet form.`
+      : `Nothing logged yet.`;
 
   /* ⚠️ A DAILY chart plots recent days, not all of history. Logging bodyweight for
      St Patrick's Day and the 4th of July put those dates in the series, and every daily
@@ -8156,10 +8180,15 @@ function tapeProgress(){
      The ring stays in view, the ticks are labelled so the centre cannot be mistaken for
      zero, and a 3% waist gap is 3% of the visible radius instead of 3% of everything from
      nothing to the target. This works on the first measurement, which is the point. */
+  /* ⚠️ Zoom hard. These values sit within a few percent of each other, so padding that
+     looks modest on a normal axis eats most of the radius here — and rounding the bounds
+     out to whole percent ate more. Tight padding, no rounding, and the tick labels gain a
+     decimal when the span is small enough to need one. */
   const vals=rows.map(r=>r.pct);
   const lo=Math.min(100,...vals), hi=Math.max(100,...vals);
-  const pad=Math.max(1.5,(hi-lo)*0.28);
-  const rMin=Math.max(0,Math.floor(lo-pad)), rMax=Math.ceil(hi+pad);
+  const pad=Math.max(0.25,(hi-lo)*0.09);
+  const rMin=Math.max(0,lo-pad), rMax=hi+pad;
+  const rDec=(rMax-rMin)<6?1:0;
 
   const c=C();
   mk('cTape','eTape',{type:'radar',data:{labels:rows.map(r=>shortLabel(r.label)),datasets:[
@@ -8177,14 +8206,14 @@ function tapeProgress(){
       }}}},
       scales:{r:{min:rMin,max:rMax,beginAtZero:false,
         ticks:{display:true,showLabelBackdrop:false,color:c.ink3,font:{size:9},
-               callback:v=>v+'%',count:4},
+               callback:v=>v.toFixed(rDec)+'%',count:4},
         grid:{color:c.grid},angleLines:{color:c.grid},
         pointLabels:{color:c.ink3,font:{size:9.5,weight:'600'}}}}})},
     1,'Set a target on the <b>Body</b> sheet.');
 
   const over=rows.filter(r=>r.down&&r.pct>100).length + rows.filter(r=>!r.down&&r.pct>=100).length;
   note.innerHTML=`Every measurement against its own target — the dashed ring is 100% of
-    target on every spoke. <b>The axis is zoomed to your numbers</b> (${rMin}-${rMax}%), not
+    target on every spoke. <b>The axis is zoomed to your numbers</b> (${rMin.toFixed(rDec)}-${rMax.toFixed(rDec)}%), not
     to zero, or a 3% waist gap would be invisible. Which side of the ring a point sits on
     says which way it has to move: <b>outside</b> is above target (come down on waist, hips,
     bodyweight), <b>inside</b> is below it (go up on chest, shoulders, arms). ${over} of
