@@ -894,19 +894,55 @@ footer{border-top:1px solid var(--grid);padding-top:15px;margin-top:24px;color:v
   flex:1;position:relative;overflow:hidden;cursor:pointer;font-family:inherit;
   display:flex;align-items:center;justify-content:center;gap:7px;min-height:44px;
   border:1px solid var(--border);border-radius:11px;background:var(--surface-2);color:var(--ink-1)}
-:root[data-theme="light"] .extimer{background:linear-gradient(180deg,#fffdf8,#f4ecdd);border-color:#e2d5bf;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.85),0 1px 2px rgba(60,45,25,.08)}
-.extimer .xt-ic{font-size:15px;position:relative;z-index:1}
+/* ⚠️ THE GLOW IS THE POINT. Sitting between the set inputs and Save sets, this button was
+   the same weight as every other control in the card, so it read as a label rather than
+   the thing you tap between sets. Molten at rest, hotter while running — the one heat
+   source in a card that is otherwise paper and steel, which is exactly the rule the
+   foundry skin sets: heat marks the thing that is live. Only ONE card is open at a time,
+   so a resting glow here is a single accent, not seven. */
+.extimer{
+  border-color:color-mix(in srgb,var(--accent) 42%,var(--border));
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 16%,transparent), var(--heat-sm)}
+/* ⚠️ This override wins on specificity and sets BOTH border-color and box-shadow, so the
+   glow added to the bare .extimer rule above never reached light mode — the theme the
+   foundry skin is actually built for. The bevel is kept and the heat is added to it
+   rather than either one replacing the other. */
+:root[data-theme="light"] .extimer{background:linear-gradient(180deg,#fffdf8,#f4ecdd);
+  border-color:color-mix(in srgb,var(--accent) 40%,#e2d5bf);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.85),0 1px 2px rgba(60,45,25,.08),
+             0 0 0 1px color-mix(in srgb,var(--accent) 15%,transparent), var(--heat-sm)}
+:root[data-theme="light"] .extimer.run{border-color:var(--accent);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.6),
+             0 0 0 1px color-mix(in srgb,var(--accent) 34%,transparent), var(--heat)}
+:root[data-theme="light"] .extimer.zero{border-color:var(--good);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.7),
+             0 0 0 1px color-mix(in srgb,var(--good) 30%,transparent),
+             0 0 8px color-mix(in srgb,var(--good) 45%,transparent)}
+.extimer .xt-ic{font-size:15px;position:relative;z-index:1;display:flex;align-items:center;
+  color:var(--accent);filter:drop-shadow(0 0 4px color-mix(in srgb,var(--accent) 55%,transparent))}
+.extimer .xt-egg{display:block}
+/* The sand sits a touch lighter than the frame so the bulb reads as full rather than solid. */
+.extimer .xt-sand{opacity:.85}
 .extimer .xt-t{font:800 12.5px/1 var(--dmono);letter-spacing:.08em;font-variant-numeric:tabular-nums;position:relative;z-index:1}
 .extimer .xt-fill{position:absolute;left:0;top:0;bottom:0;width:0%;background:var(--molten-x);opacity:.28;border-radius:0}
-.extimer.run{border-color:#b3541f;box-shadow:var(--heat-sm)}
+.extimer.run{border-color:var(--accent);box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 34%,transparent), var(--heat)}
 .extimer.run .xt-t{color:var(--accent)}
 :root[data-theme="light"] .extimer.run .xt-t{color:#a33107}
-.extimer.zero{border-color:var(--good)}
+/* Done is NOT hot. The glow means "running"; a finished timer going green with no heat
+   is the whole signal that the rest is over. */
+.extimer.zero{border-color:var(--good);box-shadow:0 0 0 1px color-mix(in srgb,var(--good) 30%,transparent),
+  0 0 8px color-mix(in srgb,var(--good) 45%,transparent)}
+.extimer.zero .xt-ic{color:var(--good);filter:none}
 .extimer.zero .xt-t{color:var(--good)}
 .extimer:active{transform:scale(.98)}
 @media (prefers-reduced-motion: no-preference){
   .extimer:active{transition:transform .1s ease}
+  .extimer.run{animation:xtBreathe 1.7s ease-in-out infinite}
+  .extimer.run .xt-sand{animation:xtSand 1.7s ease-in-out infinite}
+  @keyframes xtBreathe{
+    0%,100%{box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 30%,transparent), var(--heat-sm)}
+    50%    {box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 46%,transparent), var(--heat)}}
+  @keyframes xtSand{0%,100%{opacity:.9}50%{opacity:.35}}
   .wkprog .wp-fill{transition:width .9s cubic-bezier(.22,.9,.3,1) .15s}
 }
 
@@ -8316,7 +8352,7 @@ function trainingProgram(){
             <span></span></div>`;}).join('')}
         ${iso ? '' : `<div class="btn-row extimer-row">
           <button class="extimer" type="button" data-rest="${typeof ex.rest_between_sets==='number'?ex.rest_between_sets:120}"
-            aria-label="Start rest timer"><span class="xt-fill" aria-hidden="true"></span><span class="xt-ic">⏱</span><span class="xt-t">REST ${esc(sdRest(ex.rest_between_sets))}</span></button>
+            aria-label="Start rest timer"><span class="xt-fill" aria-hidden="true"></span><span class="xt-ic">${XT_EGG}</span><span class="xt-t">REST ${esc(sdRest(ex.rest_between_sets))}</span></button>
           <button class="btn sm primary" data-sdsave="${esc(ex.id)}">Save sets</button></div>`}
         <div class="cue">Target ${esc(String(ex.rep_min))}–${esc(String(ex.rep_max))} reps, leave ${esc(String(effort && effort.reps_in_reserve != null ? effort.reps_in_reserve : '—'))} in reserve ·
           rest ${esc(sdRest(ex.rest_between_sets))} between sets${ex.load_rule?' · '+esc(ex.load_rule):''}
@@ -9432,6 +9468,20 @@ function fBuildTimer(){
   },true);
 }
 const fmtRT=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+/* ⚠️ Authored ONCE and used by both render paths — the card template and the timer's own
+   repaint. The stopwatch emoji it replaces rendered at whatever the platform felt like:
+   a flat glyph on Windows, a colour bitmap on Mac, and on neither did it read as "this
+   is a countdown you tap". An hourglass is the one timer shape nobody has to learn, and
+   as inline SVG it takes the foundry accent through currentColor and stays crisp. */
+const XT_EGG =
+  '<svg class="xt-egg" viewBox="0 0 20 24" width="15" height="18" aria-hidden="true" focusable="false">'
+  + '<rect x="3" y="1" width="14" height="2" rx="1" fill="currentColor"/>'
+  + '<rect x="3" y="21" width="14" height="2" rx="1" fill="currentColor"/>'
+  + '<path d="M5 3h10v3.2c0 2.1-3.1 3.6-3.1 5.8s3.1 3.7 3.1 5.8V21H5v-3.2c0-2.1 3.1-3.6 3.1-5.8S5 8.3 5 6.2Z"'
+  + ' fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>'
+  + '<path class="xt-sand" d="M6.7 4.7h6.6v1.4c0 1.5-2.2 2.8-2.2 4.2H8.9c0-1.4-2.2-2.7-2.2-4.2Z"'
+  + ' fill="currentColor"/></svg>';
+
 /* One countdown, two faces: the floating chip mirrors whatever inline .extimer
    button started it (RT.btn). Tapping a running inline button cancels. */
 function fPaintBtn(){
@@ -9512,7 +9562,7 @@ function fTrainFlow(){
       if(row){row.classList.add('extimer-row');
         bt=document.createElement('button');bt.type='button';bt.className='extimer';
         bt.dataset.rest=c.dataset.rest||120;
-        bt.innerHTML='<span class="xt-fill" aria-hidden="true"></span><span class="xt-ic">⏱</span><span class="xt-t">REST '+fmtRT(+(c.dataset.rest||120))+'</span>';
+        bt.innerHTML='<span class="xt-fill" aria-hidden="true"></span><span class="xt-ic">'+XT_EGG+'</span><span class="xt-t">REST '+fmtRT(+(c.dataset.rest||120))+'</span>';
         row.insertBefore(bt,row.firstChild);}
     }
     if(bt&&!bt.dataset.wired){bt.dataset.wired='1';
