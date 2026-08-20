@@ -952,6 +952,57 @@ footer{border-top:1px solid var(--grid);padding-top:15px;margin-top:24px;color:v
   .wkprog .wp-fill{transition:width .9s cubic-bezier(.22,.9,.3,1) .15s}
 }
 
+/* ---- FOUNDRY desktop tabs: the mobile app bar's pro treatment, ported up.
+   A recessed channel holds pill tabs with icons; the active tab is a raised
+   plate with the molten top indicator. Mobile keeps the bottom bar. ---- */
+@media(min-width:701px){
+  .sheets{gap:4px;padding:6px;border:1px solid var(--border);border-radius:14px;
+    background:var(--surface-2);margin-bottom:18px}
+  :root[data-theme="light"] .sheets{background:var(--channel);border-color:#e2d5bf;
+    box-shadow:inset 0 1.5px 3px rgba(60,45,25,.16), inset 0 -1px 0 rgba(255,255,255,.55)}
+  .sheets .tab{display:flex;align-items:center;gap:7px;border-radius:9px;padding:8px 14px;
+    font-weight:700;color:var(--ink-3);position:relative}
+  .sheets .tab svg{width:15px;height:15px;flex:none}
+  .sheets .tab:hover{color:var(--ink-1)}
+  .sheets .tab.on{color:var(--accent);background:var(--surface-1);border-radius:9px;
+    box-shadow:0 1px 3px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.07)}
+  :root[data-theme="light"] .sheets .tab.on{color:#a33107;
+    background:linear-gradient(180deg,#fffdf8,#fdf6ea);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.9), 0 1px 3px rgba(60,45,25,.2)}
+  .sheets .tab.on::after{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);
+    width:26px;height:3px;border-radius:0 0 3px 3px;background:var(--molten-soft);box-shadow:var(--heat-sm)}
+  .sheets .tab.on svg{filter:drop-shadow(0 0 3px rgba(255,122,26,.55))}
+  .sheets .tab.last{margin-left:auto}
+}
+@media(max-width:700px){.sheets .tab svg{display:none}}
+
+/* ---- FOUNDRY dark-nav legibility. The Cleveland Sunset bar is the dark theme's
+   signature and stays — but cream-on-coral and orange-on-orange were unreadable
+   (Kap, 8/20: "you can't see"). Brighter inks, depth shadows behind every glyph,
+   and the active link goes gold instead of orange-on-orange. Page-scoped; the
+   sitewide chrome copy is unchanged elsewhere. ---- */
+:root:not([data-theme="light"]) .sitenav .links > a,
+:root:not([data-theme="light"]) .grpbtn,
+:root:not([data-theme="light"]) .sitenav .links a.grpbtn{
+  color:#fff3e6;font-weight:650;text-shadow:0 1px 3px rgba(30,8,26,.75),0 0 1px rgba(30,8,26,.6)}
+:root:not([data-theme="light"]) .brand .logo{color:#fff;text-shadow:0 1px 3px rgba(30,8,26,.8)}
+:root:not([data-theme="light"]) .brand .logo span{color:#ffe2ae;
+  text-shadow:0 1px 3px rgba(30,8,26,.85),0 0 8px rgba(255,180,61,.35)}
+:root:not([data-theme="light"]) .brand .tag{color:#ffddcb;text-shadow:0 1px 2px rgba(30,8,26,.7)}
+:root:not([data-theme="light"]) .brand img{
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.65)) drop-shadow(0 0 6px rgba(255,180,61,.4))}
+:root:not([data-theme="light"]) .sitenav .links a.on,
+:root:not([data-theme="light"]) .grpbtn.on,
+:root:not([data-theme="light"]) .sitenav .links a.grpbtn.on{
+  color:#ffd9a0;box-shadow:inset 0 -2px 0 #ffd9a0}
+:root:not([data-theme="light"]) .navauth .authbtn{
+  color:#fff3e6;border-color:rgba(255,244,234,.5);text-shadow:0 1px 2px rgba(30,8,26,.7)}
+:root:not([data-theme="light"]) .theme-btn{
+  color:#fff3e6;border-color:rgba(255,244,234,.55);text-shadow:0 1px 2px rgba(30,8,26,.7)}
+:root:not([data-theme="light"]) .streak-chip{background:#2c2140;border-color:rgba(255,180,61,.45)}
+:root:not([data-theme="light"]) .streak-chip .num{color:#ffb43d}
+:root:not([data-theme="light"]) .streak-chip .lbl{color:#cdbad2}
+
 /* FOUNDRY overflow guard. The shared nav's ≤419px rule pins .links to one nowrap
    row ("keep the desktop composition"), but the current 7-group menu + auth chip +
    theme pill measures ~426px at a 390px viewport. The overflowing row widened the
@@ -8872,11 +8923,47 @@ function body(){
     :'<div class="empty">No measurements logged.</div>';
 }
 
+/* Writes weekly volume targets into the program, the same versioned path the calorie
+   target uses. Reads back what landed instead of trusting the POST, and refuses to
+   claim a save it did not get. */
+async function sdSaveVolumeTargets(btn){
+  const out={};
+  document.querySelectorAll('[data-v]').forEach(i=>{
+    const n=num(i.value); if(n!=null&&n>=0) out[i.dataset.v]=n;});
+  if(!Object.keys(out).length){ toast('Nothing to save — every box is blank'); return; }
+
+  // Signed out, or no program seeded: there is nowhere durable to put these.
+  if(!APIMODE || !PROG){
+    DATA.targets=Object.assign(DATA.targets||{},{weekly_volume_targets_sets:out});
+    renderAll(); toast('Applied for this session only — not signed in, nothing is stored');
+    return;
+  }
+  const label=btn?btn.textContent:''; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const doc=JSON.parse(JSON.stringify(PROG));
+    doc.weekly_volume_targets_sets=out;
+    const res=await sdPost('/program',{program:doc,
+      note:'Weekly volume targets set from the Settings sheet.'});
+    const back=await sdGet('/program');          // read back — the POST is not the proof
+    if(back&&back.program){ PROG=back.program; PROG_V=back.version; }
+    DATA.targets=sdTargetsFrom(PROG);
+    renderAll();
+    toast('Volume targets saved — program v'+(res&&res.version!=null?res.version:PROG_V));
+  }catch(e){
+    toast('Not saved — '+e.message);            // never claim a write that did not land
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=label||'Save targets';}
+  }
+}
+
 /* ---------------- 6 · SETTINGS ---------------- */
 const ALL_MUSCLES=['chest','back','side_delts','rear_delts','front_delts','biceps','triceps',
   'quads','hamstrings_glutes','core','calves'];
+/* ⚠️ calves was missing, so the one muscle sitting at 0 on the volume card was also the
+   one muscle with no box to type a target into. Every bucket the card can draw needs a
+   row here or the two lists disagree about what a muscle is. */
 const DEFAULT_VOL={chest:14,back:14,side_delts:14,rear_delts:8,front_delts:6,biceps:12,
-  triceps:10,quads:8,hamstrings_glutes:10,core:6};
+  triceps:10,quads:8,hamstrings_glutes:10,core:6,calves:8};
 const SESSION_TYPES=['Upper A','Upper B','Lower A','Lower B','Delts & Arms','Recovery','Rest'];
 
 function settings(){
@@ -8981,14 +9068,19 @@ function settings(){
   // volume targets
   const vt=t.weekly_volume_targets_sets||DEFAULT_VOL;
   document.getElementById('volTargets').innerHTML=
-    `<div class="form-grid">`+ALL_MUSCLES.filter(k=>k in vt||k in DEFAULT_VOL).map(k=>
+    `<div class="form-grid">`+ALL_MUSCLES.map(k=>
       `<div><label>${esc(BUCKETS[k]||k)}${pri.includes(k)?' •':''}</label>
        <input type="number" inputmode="numeric" data-v="${k}" value="${vt[k]??''}"></div>`).join('')+`</div>`;
-  document.getElementById('saveVol').onclick=()=>{
-    const out={};document.querySelectorAll('[data-v]').forEach(i=>{
-      const n=num(i.value);if(n!=null&&n>=0)out[i.dataset.v]=n;});
-    DATA.targets=Object.assign(DATA.targets||{},{weekly_volume_targets_sets:out});
-    renderAll();toast('Volume targets saved');};
+  /* ⚠️ THIS SAVED NOTHING. It assigned to DATA.targets and toasted "saved" — but in API
+     mode DATA.targets is rebuilt from sdTargetsFrom(PROG) on every boot, so the numbers
+     were gone on reload with the page still claiming it had kept them. Identical in shape
+     to the recovery form that shipped for versions writing to an in-memory object, and
+     the reason that one survived so long: a save that lies looks exactly like a save.
+
+     Targets belong to the PROGRAM, which is where the calorie target already lives and
+     which versions every write, so a target change is auditable and reversible. Signed
+     out there is no program to write to, so it stays in memory and says so. */
+  document.getElementById('saveVol').onclick=function(){ sdSaveVolumeTargets(this); };
   const scale=RULES.modes[MODE].vol;
   document.getElementById('volNote').innerHTML=
     `10–20 sets a week is the defensible range for a prioritised muscle, 6–10 for one you are
@@ -8999,8 +9091,8 @@ function settings(){
       in a deficit because recovery does.`
      :`<br><br>${esc(RULES.modes[MODE].label)} mode applies these unscaled.`);
   document.getElementById('resetVol').onclick=()=>{
-    DATA.targets=Object.assign(DATA.targets||{},{weekly_volume_targets_sets:Object.assign({},DEFAULT_VOL)});
-    renderAll();toast('Reset to default');};
+    document.querySelectorAll('[data-v]').forEach(i=>{ i.value = DEFAULT_VOL[i.dataset.v] ?? ''; });
+    toast('Defaults filled in — Save targets to keep them');};
 
   // energy
   const mm=t.maintenance_mode||'computed';
@@ -9633,9 +9725,25 @@ renderAll=function(){
     try{fStreak();}catch(e){}
     try{fTwk();}catch(e){}
     try{fSync();}catch(e){}
+    try{fDecorateTabs();}catch(e){}
   }
 };
 document.addEventListener('click',()=>setTimeout(fSync,0));
+
+/* Desktop sheet tabs get the app bar's icons. renderTabs rebuilds the strip with
+   innerHTML, so decoration re-runs after every renderAll; data-fic guards dupes. */
+function fDecorateTabs(){
+  const EXTRA={settings:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/>',
+    method:'<path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>'};
+  document.querySelectorAll('#sheets .tab').forEach(b=>{
+    if(b.dataset.fic)return;b.dataset.fic='1';
+    const k=b.dataset.k,f=FTABS.find(x=>x[0]===k);
+    const ic=f?f[2]:EXTRA[k];
+    if(!ic)return;
+    b.insertAdjacentHTML('afterbegin',
+      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ic}</svg>`);
+  });
+}
 
 boot();
 
