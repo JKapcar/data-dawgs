@@ -468,6 +468,12 @@ code{background:color-mix(in srgb,var(--ink-3) 14%,transparent);padding:1px 5px;
 .pill.mod{background:color-mix(in srgb,var(--ink-3) 18%,transparent);color:var(--ink-2)}
 .pill.miss{background:color-mix(in srgb,var(--bad) 12%,transparent);color:var(--bad)}
 .pill.dev{background:color-mix(in srgb,var(--cool) 15%,transparent);color:var(--cool)}
+/* The shared .bar-row reserves 56px for its number; these rows carry a value AND the
+   band it is being judged against, so they need the room. */
+#tapeRows .bar-row{grid-template-columns:96px 1fr 108px}
+#tapeRows .bar-row>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tape-n{font:600 11.5px/1.3 ui-monospace,monospace;color:var(--ink-2);white-space:nowrap;text-align:right}
+.tape-n b{color:var(--good)}
 
 .sheets{display:flex;gap:2px;border-bottom:1px solid var(--grid);margin-bottom:16px;
   overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -2278,7 +2284,8 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       </div>
       <div class="card">
         <div class="card-h"><h2>Tales of the Tape</h2><span class="pill obs">OBSERVED</span></div>
-        <div class="chart short"><canvas id="cGirth"></canvas><div class="chart-empty" id="eGirth"></div></div>
+        <div id="tapeRows"></div>
+        <div class="chart short" style="margin-top:10px"><canvas id="cGirth"></canvas><div class="chart-empty" id="eGirth"></div></div>
       </div>
       <div class="card">
         <div class="card-h"><h2>This week</h2><span class="pill der">DERIVED</span></div>
@@ -7110,13 +7117,33 @@ function overview(){
      something — when all it means is that two axes were scaled independently. Splitting
      them costs a little width and removes the invitation to read a relationship that is
      not there. Same rule as the Nightly vitals card. */
+  /* The band, not the line. A single target number makes every day a miss — nobody eats
+     to the calorie, and a chart that says "wrong" seven times a week gets ignored. ±5%
+     is the width at which the number is being hit on purpose rather than by luck, and
+     each bar is coloured against it so over, under and in-range read at a glance without
+     reading the axis. Bars sit ON the band, so the question the chart answers is the one
+     that was asked: am I inside it. */
+  /* The plan says "200-250 under maintenance". That IS the band — eating to a single
+     number makes every day a miss, and a made-up ±% would be this file inventing a goal
+     the athlete never set. Falls back to ±5% only where no deficit is declared. */
+  const maint=maintenance(), dk=(DATA.targets||{}).deficit_kcal;
+  const kBand = (maint!=null&&Array.isArray(dk))
+    ? [Math.round(maint-dk[1]), Math.round(maint-dk[0])]
+    : (t.kcal ? [Math.round(t.kcal*0.95),Math.round(t.kcal*1.05)] : null);
+  const kcals=asc.map(x=>x.nutrition?.eaten_kcal??null);
+  const barCol=v=>!kBand||v==null?c.accent
+    :v<kBand[0]?c.cool:v>kBand[1]?c.warn:c.good;
   mk('cFuel','eFuel',{type:'bar',data:{labels:dl,datasets:[
-      {label:'kcal',data:asc.map(x=>x.nutrition?.eaten_kcal??null),backgroundColor:c.accent,
-       borderRadius:3,barPercentage:.6}]},
-    options:AX(c,{plugins:{legend:{display:false}},scales:{
+      {label:'kcal',data:kcals,backgroundColor:kcals.map(barCol),borderRadius:3,barPercentage:.6,order:2},
+      ...(kBand?[
+        {type:'line',label:'band-hi',data:dl.map(()=>kBand[1]),borderWidth:0,pointRadius:0,
+         backgroundColor:'color-mix(in srgb,'+c.good+' 13%,transparent)',fill:'+1',order:1},
+        {type:'line',label:'band-lo',data:dl.map(()=>kBand[0]),borderWidth:0,pointRadius:0,
+         fill:false,order:1}]:[])]},
+    options:AX(c,{plugins:{legend:{display:false},tooltip:{filter:i=>i.datasetIndex===0}},scales:{
       x:{grid:{display:false},ticks:{color:c.ink3,font:{size:10}}},
       y:{grid:{color:c.grid},ticks:{color:c.ink3,font:{size:10}},min:0,
-         title:{display:true,text:'kcal',color:c.ink3}}}})},
+         title:{display:true,text:kBand?('kcal · target '+kBand[0]+'-'+kBand[1]):'kcal',color:c.ink3}}}})},
     1,'Log food on the <b>Nutrition</b> sheet.');
   mk('cPro','ePro',{type:'line',data:{labels:dl,datasets:[
       {label:'Protein g',data:asc.map(x=>x.nutrition?.protein_g??null),
@@ -7159,16 +7186,35 @@ function overview(){
       angleLines:{color:c.grid},pointLabels:{color:c.ink3,font:{size:9.5,weight:'600'}}}}})},
     1,'Log a session on the <b>Training</b> sheet.');
 
+  /* ⚠️ "12/0" is not a target of zero, it is the ABSENCE of a target, and rendering the two
+     the same way is how a missing configuration passes for a finished feature. No weekly
+     volume target is carried in API mode — see sdTargetsFrom — so where there is none the
+     row shows the sets logged and says so, rather than dividing by a number nobody set. */
+  const noTargets=!Object.keys(t.vol).length;
   document.getElementById('priBars').innerHTML=Object.keys(priorityMap()).map(k=>{
     const done=v.b[k]||0,tg=t.vol[k]||0,pct=tg?Math.min(100,done/tg*100):0;
     return `<div class="bar-row"><span>${esc(BUCKETS[k]||k)}<span class="pri-dot"></span></span>
-      <span class="bar-track"><span class="bar-fill${pct>=100?' full':''}" style="width:${pct}%"></span></span>
-      <span class="bar-val">${r1(done)}/${tg}</span></div>`;}).join('')+
-    `<div class="note"><b>Weekly sets: logged ÷ target</b>, over the last ${RULES.window} real logged
-      days. Primary muscle counts 1.0 per set, secondary 0.5 — so a row gives lats 1.0 and biceps 0.5.
-      Chest, lats and side delts carry the V-taper; biceps is the stated priority. A partial week
-      always reads short against a full-week target.</div>`;
+      <span class="bar-track"><span class="bar-fill${tg?(pct>=100?' full':''):' dim'}" style="width:${tg?pct:100}%"></span></span>
+      <span class="bar-val">${tg?r1(done)+'/'+tg:r1(done)}</span></div>`;}).join('')+
+    (noTargets
+      ? `<div class="note"><b>Sets logged</b> over the last ${RULES.window} real logged days.
+         Primary muscle counts 1.0 per set, secondary 0.5 — so a row gives lats 1.0 and biceps 0.5.
+         <b>No weekly volume target is set on this account</b>, so these are counts, not progress.
+         The program's <code>weekly_volume_audit</code> uses its own bucket names and reads as an
+         audit of what the plan delivers rather than a target to hit — mapping one onto the other
+         is a decision for you, not a guess for this page.</div>`
+      : `<div class="note"><b>Weekly sets: logged ÷ target</b>, over the last ${RULES.window} real logged
+         days. Primary muscle counts 1.0 per set, secondary 0.5 — so a row gives lats 1.0 and biceps 0.5.
+         Chest, lats and side delts carry the V-taper; biceps is the stated priority. A partial week
+         always reads short against a full-week target.</div>`);
 
+  /* ⚠️ This card used to be a two-point trend line and therefore said "come back after
+     you have measured twice" to someone who had already measured once and knows exactly
+     what he is aiming at. Every tape field carries a baseline and a target band in
+     measurement_fields, so the honest answer on day one is not "no story yet" — it is
+     where you started, where you are, and how far that is from where you said you were
+     going. The trend line lives on below once there are two days to draw it with. */
+  tapeProgress();
   const gpts=realDays().slice().reverse().filter(x=>x.measurements&&(x.measurements.waist_cm||x.measurements.shoulder_cm));
   mk('cGirth','eGirth',{type:'line',data:{
       labels:gpts.map(x=>new Date(x.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})),
@@ -7460,6 +7506,31 @@ async function sdLoad(){
   try { SUMMARY = await sdGet('/summary'); }
   catch(e){ SUMMARY = null; API_NOTE = 'Measurements unavailable: ' + e.message; }
   return true;
+}
+
+/* ⚠️ API mode built a DATA object with no `targets` key at all, so targets() had nothing
+   to read: t.kcal was null, t.vol was {}, and the Priority-muscle bars rendered "0/0" —
+   which looks like a target of zero and is actually the absence of one. The program is
+   already seeded in D1 and states these numbers; they were simply never carried across.
+
+   ⚠️ deficit_kcal is a RANGE in the program ([200,250] under it). That range is where the
+   calorie band on the Overview comes from — not from a percentage invented here. A band
+   the athlete's own plan declares is a target; a band this file makes up is decoration.
+
+   Volume is deliberately NOT mapped. weekly_volume_audit uses its own bucket names
+   (delts_side, quads_hams, triceps_direct) against the page's (side_delts, quads,
+   hamstrings_glutes, triceps), and it reads as an audit of what the plan currently
+   delivers rather than a target to hit. Guessing that mapping would put invented targets
+   under real logged sets, so the bars stay honest about having none until someone says
+   what the targets are. */
+function sdTargetsFrom(prog){
+  const n=(prog&&prog.nutrition)||{};
+  const out={maintenance_mode:'computed',activity_factor:1.45,fat_g_per_lb:0.36};
+  if(n.protein_g!=null) out.protein_floor_g=n.protein_g;
+  if(Array.isArray(n.deficit_kcal)&&n.deficit_kcal.length===2)
+    out.deficit_kcal=[Number(n.deficit_kcal[0]),Number(n.deficit_kcal[1])];
+  else if(n.deficit_kcal!=null) out.deficit_kcal=[Number(n.deficit_kcal),Number(n.deficit_kcal)];
+  return out;
 }
 
 /* Build the page's day model out of real logged sessions. Sessions the athlete has
@@ -7989,6 +8060,49 @@ async function sdSaveRecovery(btn){
     btn.disabled = false; btn.textContent = 'Save day';
   }
 }
+
+/* Baseline → now → target band, for every field that declares one.
+   ⚠️ Deliberately NOT a chart. Pounds, inches and a percentage share no axis, and the
+   progress figure is the only thing that IS comparable across them — so the number stays
+   in text where its unit travels with it, and only the unit-free share of the journey
+   gets a bar. A "target" that is a RANGE is honoured as a range: the goal is reached at
+   the near edge, not the middle, and being inside the band says so rather than reading
+   as 96% of the way to somewhere. */
+function tapeProgress(){
+  const host=document.getElementById('tapeRows'); if(!host) return;
+  const fields=(SUMMARY&&SUMMARY.fields)||{};
+  const rows=Object.keys(fields).map(k=>{
+    const f=fields[k]||{};
+    if(String(f.tag||'').toUpperCase()==='DEVICE') return null;
+    const now=f.current!=null?f.current:f.baseline;
+    const base=f.baseline, tg=f.target;
+    if(now==null||base==null||tg==null) return null;
+    const lo=Array.isArray(tg)?tg[0]:tg, hi=Array.isArray(tg)?tg[1]:tg;
+    const down=String(f.dir||'').toLowerCase()==='down';
+    // The near edge of the band is the finish line, whichever direction you are travelling.
+    const goal=down?hi:lo;
+    const span=goal-base;
+    const inBand=now>=Math.min(lo,hi)&&now<=Math.max(lo,hi);
+    const pct=inBand?100:(span===0?0:Math.max(0,Math.min(100,(now-base)/span*100)));
+    return {k,label:f.label||k,now,base,lo,hi,pct,inBand,
+            moved:Math.round((now-base)*10)/10};
+  }).filter(Boolean).sort((a,b)=>b.pct-a.pct);
+
+  if(!rows.length){
+    host.innerHTML='<div class="empty">No field on this account carries a baseline and a target yet.</div>';
+    return;
+  }
+  const band=r=>r.lo===r.hi?fmtN(r.lo):fmtN(r.lo)+'-'+fmtN(r.hi);
+  host.innerHTML=rows.map(r=>
+    `<div class="bar-row"><span>${esc(r.label)}</span>
+       <span class="bar-track"><span class="bar-fill${r.inBand?' full':''}" style="width:${r.pct.toFixed(0)}%"></span></span>
+       <span class="tape-n">${fmtN(r.now)}${r.inBand?' <b>in band</b>':' → '+band(r)}</span></div>`).join('')
+    +`<div class="note">Baseline → today → the target band each field declares. A range is
+      reached at its near edge, not its middle, so a value inside the band reads as done
+      rather than as a percentage of somewhere else. ${rows.filter(r=>r.inBand).length} of
+      ${rows.length} in band.</div>`;
+}
+const fmtN=v=>v==null?dash:(Math.round(v*10)/10).toString();
 
 /* ---------------- 4 · RECOVERY ---------------- */
 function recovery(){
@@ -8610,7 +8724,8 @@ async function boot2(){
     got={d:{version:'api',
             profile:{user_id:SESSION.uid,name:SESSION.name,email:SESSION.email,
                      height_cm:sdHeightCm()},
-            goal:{primary:'visual_hypertrophy'},units:{display:'imperial'},days:[]},
+            goal:{primary:'visual_hypertrophy'},units:{display:'imperial'},
+            targets:sdTargetsFrom(PROG),days:[]},
          s: live ? 'Training log (D1)' : 'Training log unavailable'};
     if(live) got.d.days = await sdHydrateDays();
     /* Empty means empty: no sessions, no measurements, no nutrition, no recovery. The
