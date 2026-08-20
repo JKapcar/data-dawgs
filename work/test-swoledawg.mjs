@@ -28,6 +28,7 @@ const BUNDLE = join(tmpdir(), "worker-swoledawg.mjs");
 fs.writeFileSync(BUNDLE, SRC +
   "\nexport { MCP_TOOLS, swoleWeekOf, swoleEffortFor, swoleSetsFor, swoleStartSession," +
   " swoleLogSet, swoleFinishSession, swoleLogMeasurement, swoleLogNutrition, swoleNutrition, swoleSummary," +
+  " swoleMeasurementHistory," +
   " swoleGetProgram, swolePutProgram, swoleSession, swoleDayKeyFor };\n");
 globalThis.fetch = async () => new Response("null", { status: 404 });
 const W = await import(pathToFileURL(BUNDLE).href);
@@ -78,6 +79,20 @@ function makeDb(seed) {
     }
     if (/^SELECT field, label, direction, tag FROM measurement_fields/.test(s))
       return { first: t.measurement_fields.find(f => f.uid === b[0] && f.field === b[1]) || null };
+    // swoleSummary's read. Note it selects every field for the uid and passes no tag —
+    // the fixture matches that exactly, so a test can see the unfiltered result.
+    if (/^SELECT field, label, direction, tag, baseline/.test(s))
+      return { all: { results: t.measurement_fields.filter(f => f.uid === b[0]) } };
+    if (/^SELECT date, value FROM measurements/.test(s)) {
+      const r = t.measurements.filter(x => x.uid === b[0] && x.field === b[1] && x.value != null)
+        .sort((x, y) => y.date.localeCompare(x.date))[0];
+      return { first: r ? { date: r.date, value: r.value } : null };
+    }
+    if (/^SELECT date, value, reads, source, note FROM measurements/.test(s))
+      return { all: { results: t.measurements.filter(x => x.uid === b[0] && x.field === b[1])
+        .sort((x, y) => y.date.localeCompare(x.date)).slice(0, b[2]) } };
+    if (/^SELECT COUNT\(\*\) n FROM sessions/.test(s))
+      return { first: { n: t.sessions.filter(x => x.uid === b[0]).length } };
     if (/^INSERT INTO measurements/.test(s)) {
       t.measurements.push({ uid: b[0], field: b[1], date: b[2], value: b[3], reads: b[4], source: b[5] });
       return { first: null };
@@ -118,6 +133,21 @@ const PROGRAM = {
 const seeded = () => makeDb({
   program: [{ uid: "kap", version: 1, doc: JSON.stringify(PROGRAM), active: 1 }],
   measurement_fields: [{ uid: "kap", field: "waist_navel_in", label: "Waist (navel)", direction: "down", tag: "OBSERVED" }],
+});
+/* The four fields the Recovery card reads. They are DEVICE, not OBSERVED, and this
+   list is the vocabulary — if someone renames a field or retags one, a test fails here
+   rather than the card silently going blank in front of Kap. */
+const DEVICE_FIELDS = ["sleep_total_min", "sleep_hr_bpm", "sleep_spo2_pct", "sleep_rr_min"];
+const seededDevice = () => makeDb({
+  measurement_fields: [
+    { uid: "kap", field: "waist_navel_in", label: "Waist (navel)", direction: "down", tag: "OBSERVED" },
+    ...DEVICE_FIELDS.map(f => ({ uid: "kap", field: f, label: f, direction: "flat", tag: "DEVICE" })),
+  ],
+  measurements: [
+    { uid: "kap", field: "sleep_total_min", date: "2026-08-19", value: 582 },
+    { uid: "kap", field: "sleep_total_min", date: "2026-08-18", value: 582 },
+    { uid: "other", field: "sleep_total_min", date: "2026-08-19", value: 400 },
+  ],
 });
 const env = db => ({ SWOLE_DB: db });
 
@@ -230,6 +260,45 @@ console.log("\nnutrition reads back — the write-only hole");
   ok("sd_nutrition exists and is read-only", !!tool && tool.readOnlyHint === true);
   ok("the shared connector cannot read nutrition either",
      /connect\.html/.test((await tool.run({}, env(db), { kind: "shared" })).content[0].text));
+}
+
+console.log("\nDEVICE is a real tag, and it stays out of the tape grid");
+{
+  const db = seededDevice();
+  const wrote = await W.swoleLogMeasurement(env(db), "kap", { field: "sleep_hr_bpm", value: 64 }, "mcp");
+  ok("a DEVICE-tagged field is a valid write target", wrote.ok === true);
+  ok("…stored against the caller's uid, like any other field",
+     db._t.measurements.some(m => m.uid === "kap" && m.field === "sleep_hr_bpm" && m.value === 64));
+
+  const sum = await W.swoleSummary(env(db), "kap");
+  ok("every DEVICE field the card reads survives into /summary",
+     DEVICE_FIELDS.every(f => sum.fields[f]));
+  ok("…carrying the DEVICE tag verbatim, not normalised to OBSERVED",
+     DEVICE_FIELDS.every(f => sum.fields[f].tag === "DEVICE"));
+  /* ⚠️ This pins CURRENT behaviour, not desired behaviour. swoleSummary applies no tag
+     filter, so DEVICE fields do reach the client mixed in with the tape fields. The page
+     is what keeps them out of the body grid — see the assertion below. If a filter is
+     ever added Worker-side, this test is the one that should fail and be rewritten. */
+  ok("/summary does NOT filter by tag — the tape field arrives alongside them",
+     !!sum.fields.waist_navel_in && Object.keys(sum.fields).length === DEVICE_FIELDS.length + 1);
+
+  const hist = await W.swoleMeasurementHistory(env(db), "kap", "sleep_total_min", 200);
+  ok("the Recovery card's read returns the owner's nights", hist.readings.length === 2);
+  ok("…newest first, so the card charts them in order",
+     hist.readings[0].date === "2026-08-19");
+  const theirs = await W.swoleMeasurementHistory(env(db), "other", "sleep_total_min", 200);
+  ok("…and the other athlete sees only their own night, never Kap's",
+     theirs.readings.length === 1 && theirs.readings[0].value === 400);
+  ok("…which is the same boundary in the other direction",
+     hist.readings.every(r => r.value !== 400));
+
+  const page = fs.readFileSync(resolve(WORK, "..", "swoledawg.html"), "utf8");
+  ok("the page filters DEVICE out of the body tape grid",
+     /tag \|\| ''\)\.toUpperCase\(\) !== 'DEVICE'/.test(page));
+  ok("the Recovery card reads exactly the four DEVICE fields",
+     new RegExp("SD_DEVICE_FIELDS = \\[" + DEVICE_FIELDS.map(f => "'" + f + "'").join(", ") + "\\]").test(page));
+  ok("DEVICE values are kept out of `measurements`, which bodyComp and the radar read",
+     /day\.device = Object\.assign/.test(page) && !/measurements\[field\] = row\.value/.test(page));
 }
 
 console.log("\nannotations match what these tools actually do");

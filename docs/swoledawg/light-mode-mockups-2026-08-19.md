@@ -55,10 +55,20 @@ Light and dark at 390px and 1280px; repo test suite 48/48.
 Two pre-existing issues were found during that pass and are **not** caused by
 this change, and are **not** fixed:
 
-1. ~36px horizontal document overflow at 390px, from the shared site-nav chrome
-   (`theme-btn` / `navauth` overflow the bar). Sitewide — needs the
-   every-page treatment per AGENTS.md rule 2.
-2. The Energy & protein and Sleep & readiness charts use dual y-axes.
+1. Horizontal document overflow from the shared site-nav chrome (`theme-btn` /
+   `navauth` overflow the bar). Sitewide — needs the every-page treatment per
+   AGENTS.md rule 2. Measured 2026-08-20 on `swoledawg.html`:
+
+   | Width | Light | Dark |
+   |---|---|---|
+   | 390px | overflows | — |
+   | 1280px | 8px (`.sitenav` right edge 1273 vs 1265) | 0 |
+
+   It is **light-mode only** at 1280. Checked against the pre-Molten-Foundry page at
+   `8e4ef0b` and the number is identical there, so the theme did not cause it — the
+   light nav chrome was always this wide.
+2. The Energy & protein and Sleep & readiness charts use dual y-axes. The Nightly
+   vitals card added 2026-08-20 deliberately does not: see its comment.
 
 ## Note on sources
 

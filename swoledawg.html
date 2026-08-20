@@ -467,6 +467,7 @@ code{background:color-mix(in srgb,var(--ink-3) 14%,transparent);padding:1px 5px;
 .pill.der{background:color-mix(in srgb,var(--accent) 13%,transparent);color:var(--accent)}
 .pill.mod{background:color-mix(in srgb,var(--ink-3) 18%,transparent);color:var(--ink-2)}
 .pill.miss{background:color-mix(in srgb,var(--bad) 12%,transparent);color:var(--bad)}
+.pill.dev{background:color-mix(in srgb,var(--cool) 15%,transparent);color:var(--cool)}
 
 .sheets{display:flex;gap:2px;border-bottom:1px solid var(--grid);margin-bottom:16px;
   overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -2357,6 +2358,17 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <div class="card-h"><h2>Sleep vs next-day training</h2><span class="pill der">DERIVED</span></div>
     <div class="chart"><canvas id="cSleepTrain"></canvas><div class="chart-empty" id="eSleepTrain"></div></div>
     <div class="note" id="stNote"></div>
+  </div>
+  <div class="card">
+    <div class="card-h"><h2>Nightly vitals</h2><span class="pill dev">DEVICE</span></div>
+    <div class="note">A wearable's algorithm reporting on the body, not a tape reading or
+      anything you typed. Kept apart from the tape grid and the KPI row for that reason.</div>
+    <div class="g g3" style="margin-top:10px">
+      <div class="chart short"><canvas id="cSleepDur"></canvas><div class="chart-empty" id="eSleepDur"></div></div>
+      <div class="chart short"><canvas id="cNightRates"></canvas><div class="chart-empty" id="eNightRates"></div></div>
+      <div class="chart short"><canvas id="cSpo2"></canvas><div class="chart-empty" id="eSpo2"></div></div>
+    </div>
+    <div class="note" id="devNote"></div>
   </div>
   <div class="card">
     <div class="card-h"><h2>Recovery log</h2><span class="pill obs">OBSERVED</span></div>
@@ -7428,6 +7440,49 @@ async function sdHydrateDays(){
   }
   await sdMergeMeasurements(days);
   await sdMergeNutrition(days);
+  await sdMergeDevice(days);
+  return days;
+}
+
+/* DEVICE-tagged fields land in their own `device` bag, NOT in `measurements`.
+
+   That separation is the whole point. bodyComp(), the girth chart, the tape grid and the
+   volume radar all read `measurements`, and every one of them would be wrong to plot a
+   wearable's sleep estimate as though someone had put a tape around it. Keeping the bag
+   separate means those surfaces cannot pick this up by accident later.
+
+   These fields are NOT in SD_MEASUREMENT_MAP and are deliberately not gated on
+   SUMMARY.fields: they are fetched by name, so the card works the moment the rows exist. */
+const SD_DEVICE_FIELDS = ['sleep_total_min', 'sleep_hr_bpm', 'sleep_spo2_pct', 'sleep_rr_min'];
+
+async function sdMergeDevice(days){
+  const byDate = new Map();
+  await Promise.all(SD_DEVICE_FIELDS.map(async field => {
+    let readings = [];
+    try {
+      const r = await sdGet('/measurements?field=' + encodeURIComponent(field) + '&n=200');
+      readings = (r && r.readings) || [];
+    } catch(e){ return; }             // one unreadable field must not empty the others
+    for(const row of readings){
+      // A null is a recorded gap, not a zero — same rule as the tape fields.
+      if(row.value == null) continue;
+      if(!byDate.has(row.date)) byDate.set(row.date, {});
+      byDate.get(row.date)[field] = row.value;
+    }
+  }));
+  if(!byDate.size) return days;
+
+  const seen = new Map(days.map(d => [d.date, d]));
+  for(const [date, dev] of byDate){
+    const day = seen.get(date);
+    if(day){ day.device = Object.assign({}, day.device, dev); continue; }
+    // A night's sleep on a rest day is still a night. Same reasoning as the tape merge:
+    // a date with data and no session gets a day rather than being dropped.
+    const fresh = { date, training:{type:[], weights:null}, nutrition:{foods:[], totals:{}},
+                    recovery:{}, subjective:{}, measurements:null, device:dev };
+    days.push(fresh); seen.set(date, fresh);
+  }
+  days.sort((a,b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
   return days;
 }
 
@@ -7691,7 +7746,13 @@ function bodyProgram(){
   dayPicker('bodyDays', BODY_DAY, d=>{ BODY_DAY=d; body(); });
   const grid = document.getElementById('bodyGrid');
   const fields = (SUMMARY && SUMMARY.fields) || {};
-  const keys = Object.keys(fields);
+  /* ⚠️ swoleSummary() returns EVERY field for the uid with no tag filter, and the grid
+     below deliberately renders fields it has never been taught about. Without this line a
+     seeded DEVICE field lands in the tape grid, and a wearable's sleep estimate reads as
+     something Kap measured. DEVICE belongs to Recovery; this is the only thing holding
+     that line on the client. */
+  const keys = Object.keys(fields)
+    .filter(k => String((fields[k] || {}).tag || '').toUpperCase() !== 'DEVICE');
 
   if(!keys.length){
     grid.innerHTML = '<div class="empty">No measurement fields are seeded for this account.</div>';
@@ -7839,6 +7900,43 @@ function recovery(){
     `${pairs.length} paired day${pairs.length===1?'':'s'}. <b>This plot cannot show causation</b> and at
      any realistic n it cannot show correlation either. It is here to make a pattern visible enough
      to test deliberately, not to be read as a result.`;
+
+  /* Three single-axis charts rather than one with stacked axes. sleep minutes, a
+     per-minute rate and a percentage share no scale, and a second y-axis invites the
+     reader to see a crossing as a relationship when it only means two axes were
+     picked. HR and resp rate DO share a unit (per minute), so they share one axis. */
+  const dev=asc.map(x=>x.device||{});
+  mk('cSleepDur','eSleepDur',{type:'bar',data:{labels:dl,datasets:[
+      {label:'Asleep (h)',data:dev.map(d=>d.sleep_total_min!=null?d.sleep_total_min/60:null),
+       backgroundColor:c.cool,borderRadius:3,barPercentage:.6}]},
+    options:AX(c,{plugins:{legend:{display:false}},scales:{
+      x:{grid:{display:false},ticks:{color:c.ink3,font:{size:10}}},
+      y:{grid:{color:c.grid},ticks:{color:c.cool,font:{size:10}},min:0,
+         title:{display:true,text:'Asleep (h)',color:c.ink3}}}})},
+    1,'No device sleep yet.');
+  mk('cNightRates','eNightRates',{type:'line',data:{labels:dl,datasets:[
+      {label:'Heart rate',data:dev.map(d=>d.sleep_hr_bpm??null),borderColor:c.bad,borderWidth:2.5,
+       pointRadius:3,pointBackgroundColor:c.bad,backgroundColor:'transparent',spanGaps:false,tension:.3},
+      {label:'Resp rate',data:dev.map(d=>d.sleep_rr_min??null),borderColor:c.good,borderWidth:2,
+       pointRadius:3,pointBackgroundColor:c.good,backgroundColor:'transparent',spanGaps:false,tension:.3}]},
+    options:AX(c,{scales:{x:{grid:{display:false},ticks:{color:c.ink3,font:{size:10}}},
+      y:{grid:{color:c.grid},ticks:{color:c.ink3,font:{size:10}},min:0,
+         title:{display:true,text:'per minute',color:c.ink3}}}})},
+    1,'No device heart or resp rate yet.');
+  mk('cSpo2','eSpo2',{type:'line',data:{labels:dl,datasets:[
+      {label:'SpO2 %',data:dev.map(d=>d.sleep_spo2_pct??null),borderColor:c.accent,borderWidth:2.5,
+       pointRadius:3,pointBackgroundColor:c.accent,backgroundColor:'transparent',spanGaps:false,tension:.3}]},
+    options:AX(c,{plugins:{legend:{display:false}},scales:{
+      x:{grid:{display:false},ticks:{color:c.ink3,font:{size:10}}},
+      y:{grid:{color:c.grid},ticks:{color:c.accent,font:{size:10}},min:88,max:100,
+         title:{display:true,text:'SpO2 %',color:c.ink3}}}})},
+    1,'No device SpO2 yet.');
+  const devN=dev.filter(d=>SD_DEVICE_FIELDS.some(f=>d[f]!=null)).length;
+  document.getElementById('devNote').innerHTML=devN
+    ? `${devN} night${devN===1?'':'s'} with device data. Values a device reports are its
+       estimate, not a measurement you took, and back-filled nights carry that in their note.`
+    : `Nothing here yet. These read <code>/measurements</code> for the DEVICE-tagged sleep
+       fields; until those rows exist the card stays empty rather than drawing a flat line.`;
 
   const rows=days().filter(x=>x.recovery&&Object.values(x.recovery).some(v=>v!=null));
   document.getElementById('recTable').innerHTML=rows.length?
