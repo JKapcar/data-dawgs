@@ -652,6 +652,207 @@ footer{border-top:1px solid var(--grid);padding-top:15px;margin-top:24px;color:v
               0 2px 5px rgba(96,74,44,.16);
 }
 .null, .is-null, [data-null="true"]{ color: var(--ink-3) !important; font-weight: 400 !important; }
+
+/* ==========================================================================
+   FOUNDRY LAYER — the Molten Foundry design language, ported 8/20/26 from
+   mockups/01-molten-foundry.html after Kap called the token-only port out
+   (rightly). Shared structure (header, app tabs, FAB, workout card, timer)
+   works in BOTH themes; the light theme carries the full foundry skin.
+   ========================================================================== */
+:root{
+  --channel:#2c2140; --molten-x:linear-gradient(90deg,#8e1a06 0%,#d13d08 30%,#ff7a1a 62%,#ffb454 86%,#ffe9c4 100%);
+  --molten-soft:linear-gradient(90deg,#b32a07,#f06011,#ffa03a);
+  --heat:0 0 10px rgba(255,122,26,.55),0 0 22px rgba(209,61,8,.28);
+  --heat-sm:0 0 7px rgba(255,122,26,.5);
+  --hazard:repeating-linear-gradient(-45deg,#2b2830 0 9px,#f5a623 9px 18px);
+  --dmono:ui-monospace,"SF Mono",Menlo,monospace;
+}
+:root[data-theme="light"]{
+  --channel:#ece2d1;
+  --plate:
+    radial-gradient(2.5px 2.5px at 9px 9px, #cdbfa8 0 1.1px, rgba(0,0,0,.14) 1.4px, transparent 2.1px),
+    radial-gradient(2.5px 2.5px at calc(100% - 9px) 9px, #cdbfa8 0 1.1px, rgba(0,0,0,.14) 1.4px, transparent 2.1px),
+    radial-gradient(2.5px 2.5px at 9px calc(100% - 9px), #cdbfa8 0 1.1px, rgba(0,0,0,.14) 1.4px, transparent 2.1px),
+    radial-gradient(2.5px 2.5px at calc(100% - 9px) calc(100% - 9px), #cdbfa8 0 1.1px, rgba(0,0,0,.14) 1.4px, transparent 2.1px),
+    repeating-linear-gradient(45deg, rgba(33,31,36,.022) 0 1px, transparent 1px 9px),
+    repeating-linear-gradient(-45deg, rgba(255,255,255,.5) 0 1px, transparent 1px 9px),
+    linear-gradient(180deg,#fffdf8,#fdf8ee);
+  --bevel:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    inset 0 -1px 0 rgba(120,100,70,.14),
+    0 1px 2px rgba(60,45,25,.08),
+    0 3px 10px rgba(60,45,25,.07);
+}
+/* riveted plate cards (light); dark keeps its surfaces */
+:root[data-theme="light"] .card{
+  background:var(--plate);
+  border:1px solid #e6dac6;border-radius:14px;
+  box-shadow:var(--bevel);
+}
+/* stencil card headers (light) */
+:root[data-theme="light"] .card-h h2{
+  font-size:10.5px;font-weight:800;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-2);
+}
+/* ---- foundry page header ---- */
+.fhdr{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:0}
+.fhdr .fbrand{display:flex;align-items:center;gap:9px;min-width:0}
+.fhdr .fmark{width:32px;height:32px;flex:none}
+.fhdr h1{font-size:22px;letter-spacing:-.3px;font-weight:800;white-space:nowrap;margin:0}
+.fhdr h1 em{font-style:normal;color:var(--accent)}
+:root[data-theme="light"] .fhdr h1 em{
+  background:var(--molten-soft);-webkit-background-clip:text;background-clip:text;color:transparent}
+.fhdr .fsub{font-size:8.5px;font-weight:700;letter-spacing:.22em;color:var(--ink-3);text-transform:uppercase;margin-top:1px;white-space:nowrap}
+@media(max-width:420px){.fhdr h1{font-size:19px}.fhdr .fsub{font-size:7.5px;letter-spacing:.16em}}
+.fhdr .fright{display:flex;align-items:center;gap:8px;flex:none}
+.streak-chip{
+  display:flex;align-items:center;gap:6px;flex:none;cursor:default;user-select:none;
+  border:1px solid var(--border);border-radius:999px;padding:6px 11px 6px 8px;
+  background:var(--surface-2);font-family:inherit}
+:root[data-theme="light"] .streak-chip{
+  border-color:#efc9a2;background:linear-gradient(180deg,#fff6e6,#ffe9cd);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.8),0 1px 2px rgba(60,45,25,.08)}
+.streak-chip .num{font-family:var(--dmono);font-weight:800;font-size:15px;font-variant-numeric:tabular-nums;color:var(--hot)}
+:root[data-theme="light"] .streak-chip .num{
+  background:linear-gradient(180deg,#d13d08,#8e1a06);-webkit-background-clip:text;background-clip:text;color:transparent}
+.streak-chip .lbl{font-size:8.5px;font-weight:800;letter-spacing:.14em;color:var(--ink-3);text-transform:uppercase;line-height:1.05;text-align:left}
+:root[data-theme="light"] .streak-chip .lbl{color:#9a4b12}
+.streak-chip.cold{opacity:.65}
+.streak-chip.cold .num{background:none;color:var(--ink-3);-webkit-text-fill-color:currentColor}
+.hazard{height:5px;background:var(--hazard);opacity:.85;border-radius:2px;margin:10px 0 16px;box-shadow:0 1px 0 rgba(60,45,25,.15)}
+.hdr-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px}
+/* ---- KPI plates ---- */
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;background:none;border:none;margin-bottom:14px}
+@media(max-width:1000px){.kpis{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:560px){.kpis{grid-template-columns:1fr 1fr}}
+.kpi{background:var(--surface-1);border:1px solid var(--border);border-radius:14px;padding:12px 12px 11px}
+:root[data-theme="light"] .kpi{background:var(--plate);border-color:#e6dac6;box-shadow:var(--bevel)}
+.kpi .k{font:800 8.5px/1.3 var(--dmono);letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3)}
+.kpi .v{font-family:var(--dmono);font-variant-numeric:tabular-nums;font-weight:800;font-size:23px;letter-spacing:-.5px;margin-top:5px;line-height:1.1}
+.kpi .v.sm{font-size:16px}
+.kpi .mini-channel{margin-top:8px;height:6px;border-radius:4px;background:var(--channel);
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.25);overflow:hidden;position:relative}
+.kpi .mini-fill{height:100%;border-radius:4px;background:var(--molten-x);position:relative;width:0%}
+.kpi .mini-fill::after{content:"";position:absolute;right:-1px;top:-2px;bottom:-2px;width:6px;border-radius:50%;
+  background:radial-gradient(circle,#fff3d6 0 30%,rgba(255,180,84,.8) 60%,transparent);filter:blur(1px)}
+/* ---- big number head on the bodyweight card ---- */
+.bw-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:2px 0 6px}
+.bw-head .big{font-family:var(--dmono);font-variant-numeric:tabular-nums;font-weight:800;font-size:30px;letter-spacing:-1px;color:var(--ink-1)}
+.bw-head .big small{font-size:13px;color:var(--ink-3);font-weight:700}
+.fchip{font-family:var(--dmono);font-variant-numeric:tabular-nums;font-size:9.5px;font-weight:800;
+  padding:2px 7px;border-radius:5px;display:inline-flex;align-items:center;gap:3px}
+.fchip.hot{color:#fff;background:var(--molten-soft);box-shadow:var(--heat-sm)}
+.fchip.cool{color:#fff;background:var(--cool)}
+.fchip.flat{color:var(--ink-2);background:var(--channel)}
+/* ---- Today's Workout banner ---- */
+.twk{
+  border:1px solid #b3541f;border-radius:14px;overflow:hidden;position:relative;cursor:pointer;
+  background:
+    radial-gradient(90% 160% at 8% 118%, rgba(255,180,84,.5) 0%, transparent 55%),
+    linear-gradient(100deg,#4a1203 0%,#8e1a06 34%,#d13d08 68%,#f06011 100%);
+  color:#fff3e2;box-shadow:var(--heat), inset 0 1px 0 rgba(255,220,160,.35);
+  padding:13px 14px 13px 15px;display:flex;align-items:center;gap:12px;margin-bottom:14px;
+  width:100%;text-align:left;font-family:inherit}
+.twk:active{transform:scale(.98)}
+.twk .ic{width:36px;height:36px;flex:none;filter:drop-shadow(0 0 6px rgba(255,200,110,.7))}
+.twk .k{font-size:9px;font-weight:800;letter-spacing:.26em;text-transform:uppercase;color:#ffcf96}
+.twk .v{font-size:15.5px;font-weight:800;margin-top:2px;letter-spacing:-.1px}
+.twk .v .mono{font-family:var(--dmono);font-variant-numeric:tabular-nums;
+  background:linear-gradient(180deg,#fff8ea,#ffcf8a);-webkit-background-clip:text;background-clip:text;color:transparent}
+.twk .sub{font-size:10.5px;color:#ffc79a;margin-top:2px}
+.twk .go{margin-left:auto;flex:none;font-family:var(--dmono);font-size:20px;color:#ffcf96}
+.sparks{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.sparks i{position:absolute;width:3px;height:3px;border-radius:50%;
+  background:radial-gradient(circle,#fff6dd 0 35%,#ffb454 70%,transparent);opacity:0;left:var(--x);top:var(--y)}
+/* ---- bottom app tabs + FAB (mobile) ---- */
+.apptabs{display:none}
+.ffab{display:none}
+@media(max-width:700px){
+  body{padding-bottom:calc(74px + env(safe-area-inset-bottom))}
+  .sheets .tab:not([data-k="settings"]):not([data-k="method"]){display:none}
+  .sheets{border-bottom:none;margin-bottom:4px;justify-content:flex-end}
+  .sheets .tab{font-size:11px;padding:5px 9px;opacity:.75}
+  .apptabs{
+    position:fixed;bottom:0;left:0;right:0;z-index:80;
+    display:grid;grid-template-columns:repeat(5,1fr);
+    background:var(--surface-1);border-top:1px solid var(--border);
+    box-shadow:0 -4px 18px rgba(0,0,0,.18);
+    padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+  :root[data-theme="light"] .apptabs{
+    background:linear-gradient(180deg,#fffdf8,#f4ecdd);border-top-color:#e2d5bf;
+    box-shadow:0 -4px 18px rgba(60,45,25,.1), inset 0 1px 0 rgba(255,255,255,.9)}
+  .apptabs .atab{
+    appearance:none;border:none;background:none;cursor:pointer;
+    min-height:48px;border-radius:11px;padding:5px 2px 4px;
+    display:grid;justify-items:center;align-content:center;gap:3px;
+    color:var(--ink-3);font-family:inherit;position:relative}
+  .apptabs .atab svg{width:22px;height:22px}
+  .apptabs .atab .tl{font-size:8.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+  .apptabs .atab:active{transform:scale(.93)}
+  .apptabs .atab.active{color:var(--accent)}
+  :root[data-theme="light"] .apptabs .atab.active{color:#a33107}
+  .apptabs .atab.active::before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);
+    width:26px;height:3px;border-radius:0 0 3px 3px;background:var(--molten-soft);box-shadow:var(--heat-sm)}
+  .apptabs .atab.active svg{filter:drop-shadow(0 0 3px rgba(255,122,26,.55))}
+  .ffab{
+    display:grid;place-items:center;position:fixed;right:16px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:81;
+    width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;color:#fff7ea;
+    background:radial-gradient(circle at 32% 28%, #ffd9a0 0%, #ff9026 34%, #d13d08 72%, #8e1a06 100%);
+    box-shadow:var(--heat), 0 6px 16px rgba(120,40,5,.4), inset 0 1px 0 rgba(255,235,190,.7)}
+  .ffab svg{width:24px;height:24px}
+  .ffab:active{transform:scale(.94)}
+  /* Toto launcher shares the corner with the FAB on mobile — lift him above it */
+  #ddbLaunch{bottom:calc(150px + env(safe-area-inset-bottom)) !important}
+}
+/* ---- rest timer ---- */
+.rtimer{
+  position:fixed;left:16px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:81;display:none;
+  align-items:center;gap:9px;border-radius:999px;padding:8px 14px 8px 10px;cursor:pointer;border:1px solid var(--border);
+  background:var(--surface-1);box-shadow:0 6px 18px rgba(0,0,0,.25);font-family:inherit;color:var(--ink-1)}
+:root[data-theme="light"] .rtimer{background:linear-gradient(180deg,#fffdf8,#f7efe0);border-color:#e2d5bf;
+  box-shadow:0 6px 18px rgba(60,45,25,.22), inset 0 1px 0 rgba(255,255,255,.9)}
+.rtimer.show{display:flex}
+@media(min-width:701px){.rtimer.show{bottom:20px}}
+.rtimer .rt-ring{width:34px;height:34px;flex:none}
+.rtimer .rt-t{font-family:var(--dmono);font-variant-numeric:tabular-nums;font-weight:800;font-size:17px;letter-spacing:-.3px}
+.rtimer .rt-l{font-size:8px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.rtimer.hot{border-color:#b3541f;box-shadow:var(--heat), 0 6px 18px rgba(120,40,5,.35)}
+.rtimer.zero .rt-t{color:var(--accent)}
+.rt-presets{position:fixed;left:16px;bottom:calc(128px + env(safe-area-inset-bottom));z-index:81;display:none;gap:6px}
+@media(min-width:701px){.rt-presets{bottom:72px}}
+.rt-presets.show{display:flex}
+.rt-presets button{font-family:var(--dmono);font-weight:800;font-size:12px;border-radius:999px;padding:7px 11px;cursor:pointer;
+  border:1px solid var(--border);background:var(--surface-1);color:var(--ink-1)}
+.rt-presets button:active{transform:scale(.94)}
+:root[data-theme="light"] .rt-presets button{background:#fffdf8;border-color:#e2d5bf}
+/* FOUNDRY overflow guard. The shared nav's ≤419px rule pins .links to one nowrap
+   row ("keep the desktop composition"), but the current 7-group menu + auth chip +
+   theme pill measures ~426px at a 390px viewport. The overflowing row widened the
+   mobile layout viewport to 426, which slid every position:fixed element (app tab
+   bar, FAB, rest timer, Toto) 36px off the bottom of the screen. Wrap is the lesser
+   evil; the clip stops any residual overflow from re-widening the viewport. */
+@media(max-width:419px){
+  .sitenav .links{flex-wrap:wrap}
+}
+/* ⚠️ The clip is NOT phone-only. The light nav is full-bleed via
+   `margin:0 calc(50% - 50vw)`, and 50vw counts the scrollbar — so on any viewport with a
+   vertical scrollbar the bar is ~15px wider than the content box and the document scrolls
+   sideways. Light mode is the taller render, which is why only it showed 8px at 1280 while
+   dark read clean. `clip` rather than `hidden` on purpose: hidden would make html a scroll
+   container and kill position:sticky on the nav itself.
+   ⚠️ This is a GUARD, not the fix. The 50vw full-bleed is on 29 pages and the real repair
+   is the every-page treatment per AGENTS.md rule 2 — out of scope for a re-skin commit. */
+html,body{overflow-x:clip}
+@media(max-width:700px){
+  /* Settings / Receipts strip: right-aligned pair, no stray margin-auto gap */
+  .sheets .tab.last{margin-left:0}
+}
+@media (prefers-reduced-motion: no-preference){
+  .twk:active,.ffab:active,.apptabs .atab:active,.rt-presets button:active{transition:transform .1s ease}
+  .kpi .mini-fill{transition:width 1.1s cubic-bezier(.22,.9,.3,1) .25s}
+  .sparks i{animation:fspark 2.6s ease-out infinite;animation-delay:var(--d)}
+  @keyframes fspark{0%{opacity:0;transform:translate(0,0) scale(.6)}8%{opacity:1}55%{opacity:.9}
+    100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.2)}}
+}
 @media print{
   :root{ color-scheme: light; --page:#fff; --surface-1:#fff; --surface-2:#f2f2f2;
          --ink-1:#000; --ink-2:#333; --ink-3:#666; --tex:none; --glow:none;
@@ -2239,13 +2440,39 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
 </script>
 
-<div class="hdr">
-  <div><h1>Swole<em>Dawg</em></h1>
-    <p class="lede" id="subline"></p></div>
-  <div style="flex:none">
-    <button class="chip" id="unitBtn">lb / in</button>
-    <span class="pill pup">PUP</span> <span class="pill mod">v0.3.0</span></div>
+<div class="fhdr">
+  <div class="fbrand">
+    <svg class="fmark" viewBox="0 0 32 32" aria-hidden="true">
+      <defs><linearGradient id="fmg" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stop-color="#8e1a06"/><stop offset=".5" stop-color="#f06011"/><stop offset="1" stop-color="#ffb454"/>
+      </linearGradient></defs>
+      <rect x="2.5" y="3" width="27" height="26" rx="6" fill="#2b2830"/>
+      <path d="M8 9h11l3 3-3 3H8z" fill="#8b8490"/>
+      <path d="M12 15c0 0-1 6 4 6s4-6 4-6" fill="none" stroke="url(#fmg)" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="16" cy="24" r="2.4" fill="url(#fmg)"/>
+    </svg>
+    <div>
+      <h1>Swole<em>Dawg</em></h1>
+      <div class="fsub">Foundry No. 216 · CLE</div>
+    </div>
+  </div>
+  <div class="fright">
+    <span class="streak-chip cold" id="streakChip" title="Consecutive days with something logged">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M8 1.5c.6 2.4-2.8 3.9-2.8 7a3.9 3.9 0 0 0 7.8 0c0-1.6-.8-2.6-1.5-3.4-.2 1-.6 1.6-1.3 2C10.5 5 10.5 3 8 1.5z" fill="#d13d08"/>
+        <path d="M8 14.4a2.6 2.6 0 0 1-2.6-2.6c0-1.7 1.6-2.5 2.6-4 1 1.5 2.6 2.3 2.6 4A2.6 2.6 0 0 1 8 14.4z" fill="#ffb454"/>
+      </svg>
+      <span class="num" id="streakNum">0</span>
+      <span class="lbl">day<br>streak</span>
+    </span>
+  </div>
 </div>
+<div class="hdr-meta">
+  <p class="lede" id="subline" style="margin:0"></p>
+  <button class="chip" id="unitBtn">lb / in</button>
+  <span class="pill pup">PUP</span> <span class="pill mod">v0.3.0</span>
+</div>
+<div class="hazard" aria-hidden="true"></div>
 
 <div id="gate"></div>
 <div class="sheets" id="sheets"></div>
@@ -2253,11 +2480,13 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 <!-- ============ 1 · OVERVIEW ============ -->
 <section class="sheet on" data-s="overview">
   <div id="sampleBanner"></div>
+  <div id="twkCard"></div>
   <div class="kpis" id="kpis"></div>
   <div class="g g21">
     <div>
       <div class="card">
         <div class="card-h"><h2>Bodyweight</h2><span class="pill obs">OBSERVED</span></div>
+        <div class="bw-head" id="bwHead" style="display:none"></div>
         <div class="chart tall"><canvas id="cWeight"></canvas><div class="chart-empty" id="eWeight"></div></div>
         <div class="note" id="nWeight"></div>
       </div>
@@ -7096,25 +7325,44 @@ function overview(){
   if(nSample) document.getElementById('purgeBtn').onclick=()=>{
     DATA.days=(DATA.days||[]).filter(x=>!x.sample);renderAll();toast('Seed days removed');};
 
+  /* Foundry KPI plates: mono numerals; Protein and Sessions carry a molten
+     mini-channel whose fill is the week's completion fraction. */
   document.getElementById('kpis').innerHTML=[
-    ['Weight',w==null?'—':wt(w),w==null?'null':'',wU()],
-    ['Body fat',bc?bc.bf+'%':'—',bc?'':'null',bc?'Navy est.':'need waist+neck'],
-    ['Lean mass',bc?bc.leanLb:'—',bc?'good':'null','lb · FFMI '+(bc?bc.ffmiNorm:'—')],
-    ['Waist',bc?bc.waistIn:'—',bc&&bc.waistHeight>=0.5?'warn':'','in · W/H '+(bc?bc.waistHeight:'—')],
+    ['Weight',w==null?'—':wt(w),w==null?'null':'',wU(),null],
+    ['Body fat',bc?bc.bf+'%':'—',bc?'':'null',bc?'Navy est.':'need waist+neck',null],
+    ['Lean mass',bc?bc.leanLb:'—',bc?'good':'null','lb · FFMI '+(bc?bc.ffmiNorm:'—'),null],
+    ['Waist',bc?bc.waistIn:'—',bc&&bc.waistHeight>=0.5?'warn':'','in · W/H '+(bc?bc.waistHeight:'—'),null],
     ['Protein',ws.proteinDays?ws.proteinHit+'/'+ws.proteinDays:'—',
-      ws.proteinHit&&ws.proteinHit===ws.proteinDays?'good':'warn','days at '+(t.protein??'—')+'g'],
-    ['Sessions',ws.trained+'/'+ws.trainTarget,ws.trained>=ws.trainTarget?'good':'warn','last 7 days']
-  ].map(([k,val,cls,n])=>`<div class="kpi"><div class="k">${esc(k)}</div>
+      ws.proteinHit&&ws.proteinHit===ws.proteinDays?'good':'warn','days at '+(t.protein??'—')+'g',
+      ws.proteinDays?Math.min(100,ws.proteinHit/ws.proteinDays*100):null],
+    ['Sessions',ws.trained+'/'+ws.trainTarget,ws.trained>=ws.trainTarget?'good':'warn','last 7 days',
+      ws.trainTarget?Math.min(100,ws.trained/ws.trainTarget*100):null]
+  ].map(([k,val,cls,n,pct])=>`<div class="kpi"><div class="k">${esc(k)}</div>
     <div class="v ${cls||''}${String(val).length>5?' sm':''}">${esc(val)}</div>
-    <div class="n">${esc(n||'')}</div></div>`).join('');
+    <div class="n">${esc(n||'')}</div>
+    ${pct==null?'':`<div class="mini-channel"><div class="mini-fill" data-w="${pct.toFixed(1)}"></div></div>`}</div>`).join('');
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    document.querySelectorAll('#kpis .mini-fill').forEach(f=>{f.style.width=f.dataset.w+'%';});}));
 
   const c=C(),ws2=weightSeries();
   const lbl=ws2.pts.map(p=>new Date(p.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+  /* Foundry: the 7-day average is the molten pour — a warm gradient stroke with a
+     soft heat area under it (light theme only; dark keeps the sunset accent).
+     Scriptable colors re-resolve on resize, so the gradient tracks the chart area. */
+  const isLight=()=>document.documentElement.getAttribute('data-theme')==='light';
+  const meltStroke=ctx=>{const ca=ctx.chart.chartArea;if(!ca||!isLight())return c.accent;
+    const g=ctx.chart.ctx.createLinearGradient(ca.left,0,ca.right,0);
+    g.addColorStop(0,'#8e1a06');g.addColorStop(.4,'#d13d08');g.addColorStop(.75,'#f06011');g.addColorStop(1,'#ff9a2e');return g;};
+  const meltFill=ctx=>{const ca=ctx.chart.chartArea;if(!ca)return 'transparent';
+    const g=ctx.chart.ctx.createLinearGradient(0,ca.top,0,ca.bottom);
+    if(isLight()){g.addColorStop(0,'rgba(240,96,17,.16)');g.addColorStop(1,'rgba(240,96,17,0)');}
+    else{g.addColorStop(0,'rgba(255,90,43,.18)');g.addColorStop(1,'rgba(255,90,43,0)');}
+    return g;};
   mk('cWeight','eWeight',{type:'line',data:{labels:lbl,datasets:[
-      {label:'Daily',data:ws2.pts.map(p=>r1(p.lb)),borderColor:c.ink3,borderWidth:1.5,
-       pointRadius:3,pointBackgroundColor:c.ink3,backgroundColor:'transparent',tension:.25},
-      {label:'7-day avg',data:ws2.avg,borderColor:c.accent,borderWidth:3,pointRadius:0,
-       backgroundColor:'transparent',tension:.3,spanGaps:true}]},
+      {label:'Daily',data:ws2.pts.map(p=>r1(p.lb)),borderColor:c.cool,borderWidth:1.4,
+       pointRadius:2.5,pointBackgroundColor:c.cool,backgroundColor:'transparent',tension:.25},
+      {label:'7-day avg',data:ws2.avg,borderColor:meltStroke,borderWidth:3,pointRadius:0,
+       backgroundColor:meltFill,fill:'origin',tension:.3,spanGaps:true}]},
     options:AX(c,{scales:{x:{grid:{display:false},ticks:{color:c.ink3,font:{size:10}}},
       y:{grid:{color:c.grid},ticks:{color:c.ink3,font:{size:10}},title:{display:true,text:'lb',color:c.ink3}}}})},
     1,'Log weight on the <b style="color:inherit">Body</b> sheet.<br>The 7-day average needs 3 readings before it draws.');
@@ -7131,6 +7379,27 @@ function overview(){
          has that. Daily weight swings 2–4 lb on water alone, so the dots are worth less than
          the line they cannot yet form.`
       : `Nothing logged yet.`;
+
+  /* Foundry big-number head: latest 7-day average, delta vs the earliest average
+     in the window (max 6 weeks back). Hidden until the average exists. */
+  const bwHead=document.getElementById('bwHead');
+  const avIdx=ws2.avg.map((v,i)=>v==null?null:i).filter(i=>i!=null);
+  if(bwHead){
+    if(!avIdx.length){bwHead.style.display='none';}
+    else{
+      const li=avIdx[avIdx.length-1], latest=ws2.avg[li];
+      const cut=new Date(ws2.pts[li].date+'T12:00:00'); cut.setDate(cut.getDate()-42);
+      const base=avIdx.filter(i=>new Date(ws2.pts[i].date+'T12:00:00')>=cut)[0];
+      const dLb=base!=null&&base!==li?r1(latest-ws2.avg[base]):null;
+      const disp=v=>wt(v/2.20462);
+      const chip=dLb==null?'':(dLb<0
+        ?`<span class="fchip hot">▼ ${Math.abs(disp(dLb))} ${wU()}</span>`
+        :dLb>0?`<span class="fchip cool">▲ ${disp(dLb)} ${wU()}</span>`
+        :`<span class="fchip flat">— 0.0</span>`);
+      bwHead.style.display='flex';
+      bwHead.innerHTML=`<div class="big">${disp(latest)} <small>${wU()}</small></div>${chip}`;
+    }
+  }
 
   /* ⚠️ A DAILY chart plots recent days, not all of history. Logging bodyweight for
      St Patrick's Day and the 4th of July put those dates in the series, and every daily
@@ -8900,6 +9169,178 @@ async function boot2(){
   renderGate();renderTabs();wire();renderAll();
 }
 const ownFile=()=>!!SESSION&&!!DATA&&(!DATA.profile.user_id||DATA.profile.user_id===SESSION.uid);
+
+/* ================================================================
+   FOUNDRY CHROME — streak chip, Today's Workout card, bottom app
+   tabs + FAB (mobile), and the between-sets rest timer. Lives inside
+   the main IIFE so it reads the same DATA/PROG/SHEET the page does.
+   ================================================================ */
+const FTABS=[
+  ['overview','Overview','<rect x="3" y="3" width="7.5" height="9" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="5.5" rx="1.5"/><rect x="13.5" y="12" width="7.5" height="9" rx="1.5"/><rect x="3" y="15.5" width="7.5" height="5.5" rx="1.5"/>'],
+  ['nutrition','Nutrition','<path d="M5 3s5 4.5 5 9a5 5 0 0 1-2.6 4.4"/><path d="M12 21a6.5 6.5 0 0 0 6.5-6.5C18.5 9 12 3 12 3"/><path d="M12 21a6.5 6.5 0 0 1-6.5-6.5c0-1 .2-1.9.6-2.8"/>'],
+  ['training','Training','<path d="M6.5 6.5v11M17.5 6.5v11M3 9v6M21 9v6M6.5 12h11"/>'],
+  ['recovery','Recovery','<path d="M20.5 14.5A8.5 8.5 0 1 1 9.5 3.5a7 7 0 0 0 11 11z"/>'],
+  ['body','Body','<circle cx="12" cy="5" r="2.5"/><path d="M8 10h8l-1.5 4H14v6h-4v-6H9.5z"/>']];
+
+function fSwitch(k){const b=document.querySelector('#sheets .tab[data-k="'+k+'"]');if(b)b.click();fSync();}
+
+function fBuildChrome(){
+  if(document.getElementById('apptabs'))return;
+  const nav=document.createElement('nav');nav.className='apptabs';nav.id='apptabs';nav.setAttribute('aria-label','Primary');
+  nav.innerHTML=FTABS.map(([k,l,ic])=>
+    `<button class="atab" data-k="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic}</svg><span class="tl">${l}</span></button>`).join('');
+  document.body.appendChild(nav);
+  nav.querySelectorAll('.atab').forEach(b=>b.onclick=()=>fSwitch(b.dataset.k));
+  const fab=document.createElement('button');fab.className='ffab';fab.id='ffab';fab.setAttribute('aria-label','Log');
+  fab.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
+  fab.onclick=()=>{ if(SHEET==='nutrition'){const f=document.getElementById('fItem');if(f){f.focus();return;}}
+    fSwitch(SHEET==='training'?'training':'training');
+    const pb=document.getElementById('planBody');if(pb)pb.scrollIntoView({behavior:'smooth',block:'start'}); };
+  document.body.appendChild(fab);
+  fBuildTimer();
+}
+
+function fSync(){
+  document.querySelectorAll('#apptabs .atab').forEach(b=>b.classList.toggle('active',b.dataset.k===SHEET));
+  const rt=document.getElementById('rtimer');
+  if(rt)rt.classList.toggle('show',SHEET==='training');
+  const rp=document.getElementById('rtPresets');
+  if(rp&&SHEET!=='training')rp.classList.remove('show');
+}
+
+/* ---- streak: consecutive days (ending today or yesterday) with anything logged ---- */
+function fStreak(){
+  const el=document.getElementById('streakNum'),chip=document.getElementById('streakChip');
+  if(!el||!chip)return;
+  const has=new Set(realDays().filter(d=>
+    (d.nutrition&&(d.nutrition.foods||[]).length)||(d.nutrition&&d.nutrition.eaten_kcal!=null)||
+    d.training||d.recovery||(d.measurements&&Object.keys(d.measurements).length)).map(d=>d.date));
+  let n=0,dt=new Date();
+  if(!has.has(iso(dt)))dt.setDate(dt.getDate()-1); // today not logged yet doesn't kill the streak
+  while(has.has(iso(dt))){n++;dt.setDate(dt.getDate()-1);}
+  el.textContent=n;
+  chip.classList.toggle('cold',n===0);
+}
+
+/* ---- Today's Workout card ---- */
+function fTwk(){
+  const el=document.getElementById('twkCard');if(!el)return;
+  const ds=iso(new Date());
+  let name='Open the plan',sub='',n=0,restSet=[];
+  if(PROG){
+    const week=sdWeekOf(PROG,ds),eff=sdEffort(PROG,week),day=sdDayOf(PROG,sdDayKey(ds));
+    const exs=(day&&day.exercises)||[];n=exs.length;
+    name=day?day.name:'Not in the program';
+    sub=n?`${n} exercises · week ${week}${eff&&eff.reps_in_reserve!=null?' · '+eff.reps_in_reserve+' RIR':''}`
+        :(day?'Nothing to lift today — recovery counts too':'No day matching '+sdDayKey(ds));
+    restSet=exs.map(e=>e.rest_between_sets).filter(s=>typeof s==='number');
+  } else {
+    sub=SESSION?'Program still loading — tap to open Training':'Demo plan — tap to open Training';
+  }
+  window.__fRests=[...new Set(restSet)].sort((a,b)=>a-b);
+  const logged=(DATA&&DATA.days||[]).find(x=>x.date===ds);
+  let done=0;
+  if(logged&&logged.training&&logged.training.weights)
+    done=(logged.training.weights.exercises||[]).reduce((a,e)=>a+((e.sets||[]).length),0);
+  el.innerHTML=`<button class="twk" id="twkGo">
+    <svg class="ic" viewBox="0 0 36 36" aria-hidden="true"><path d="M9 12v12M27 12v12M4 15v6M32 15v6M9 18h18" stroke="#ffcf96" stroke-width="3" stroke-linecap="round" fill="none"/></svg>
+    <div><div class="k">Today's Workout</div>
+      <div class="v">${esc(name)}${done?` <span class="mono">· ${done} sets in</span>`:''}</div>
+      <div class="sub">${esc(sub)}</div></div>
+    <span class="go">→</span>
+    <span class="sparks" aria-hidden="true">
+      <i style="--x:78%;--y:64%;--dx:14px;--dy:-30px;--d:0s"></i>
+      <i style="--x:84%;--y:58%;--dx:-10px;--dy:-26px;--d:.5s"></i>
+      <i style="--x:90%;--y:70%;--dx:8px;--dy:-34px;--d:1.1s"></i>
+      <i style="--x:12%;--y:26%;--dx:-8px;--dy:-22px;--d:.8s"></i>
+      <i style="--x:8%;--y:60%;--dx:10px;--dy:-28px;--d:1.9s"></i>
+    </span></button>`;
+  document.getElementById('twkGo').onclick=()=>fSwitch('training');
+}
+
+/* ---- rest timer: tap for presets, preset starts the countdown, Save sets
+   auto-starts the last one. Completions land in localStorage for the future
+   rest_taken_s capture — quiet data now, a column later. ---- */
+let RT={t:null,left:0,total:0,last:+(localStorage.getItem('sd-rest-last')||120)};
+const RT_CIRC=2*Math.PI*14;
+function fBuildTimer(){
+  const el=document.createElement('button');el.className='rtimer';el.id='rtimer';
+  el.innerHTML=`<svg class="rt-ring" viewBox="0 0 34 34">
+      <circle cx="17" cy="17" r="14" fill="none" stroke="var(--channel)" stroke-width="4"/>
+      <circle id="rtArc" cx="17" cy="17" r="14" fill="none" stroke="url(#fmg)" stroke-width="4"
+        stroke-linecap="round" transform="rotate(-90 17 17)" stroke-dasharray="${RT_CIRC}" stroke-dashoffset="0"/></svg>
+    <span><span class="rt-t" id="rtT">REST</span><br><span class="rt-l" id="rtL">tap to set</span></span>`;
+  document.body.appendChild(el);
+  const pr=document.createElement('div');pr.className='rt-presets';pr.id='rtPresets';
+  document.body.appendChild(pr);
+  el.onclick=()=>{
+    if(RT.t){fStopTimer(true);return;}       // running → tap stops
+    const rests=(window.__fRests&&window.__fRests.length?window.__fRests:[60,90,120,180]);
+    const opts=[...new Set([...rests,RT.last])].sort((a,b)=>a-b).slice(0,5);
+    pr.innerHTML=opts.map(s=>`<button data-s="${s}">${fmtRT(s)}</button>`).join('');
+    pr.querySelectorAll('button').forEach(b=>b.onclick=e=>{e.stopPropagation();fStartTimer(+b.dataset.s);});
+    pr.classList.toggle('show');
+  };
+  document.addEventListener('click',e=>{
+    const sv=e.target.closest&&e.target.closest('[data-sdsave]');
+    if(sv)fStartTimer(RT.last);              // logging a set = rest starts itself
+  },true);
+}
+const fmtRT=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+function fStartTimer(secs){
+  fStopTimer(false);
+  RT.left=secs;RT.total=secs;RT.last=secs;
+  try{localStorage.setItem('sd-rest-last',secs);}catch(e){}
+  const el=document.getElementById('rtimer');el.classList.add('hot');el.classList.remove('zero');
+  document.getElementById('rtPresets').classList.remove('show');
+  document.getElementById('rtL').textContent='resting';
+  const t0=Date.now();
+  RT.t=setInterval(()=>{
+    RT.left=RT.total-Math.floor((Date.now()-t0)/1000);
+    if(RT.left<=0){
+      fStopTimer(false);
+      document.getElementById('rtT').textContent='GO';
+      document.getElementById('rtL').textContent='next set';
+      document.getElementById('rtimer').classList.add('zero');
+      try{navigator.vibrate&&navigator.vibrate([200,120,200]);}catch(e){}
+      try{const log=JSON.parse(localStorage.getItem('sd-rest-log')||'[]');
+        log.push({ts:new Date().toISOString(),secs:RT.total});
+        localStorage.setItem('sd-rest-log',JSON.stringify(log.slice(-500)));}catch(e){}
+      setTimeout(()=>{if(!RT.t)fIdleTimer();},6000);
+      return;
+    }
+    document.getElementById('rtT').textContent=fmtRT(RT.left);
+    document.getElementById('rtArc').setAttribute('stroke-dashoffset',RT_CIRC*(1-RT.left/RT.total));
+  },250);
+  document.getElementById('rtT').textContent=fmtRT(secs);
+  document.getElementById('rtArc').setAttribute('stroke-dashoffset','0');
+}
+function fStopTimer(reset){
+  if(RT.t){clearInterval(RT.t);RT.t=null;}
+  if(reset)fIdleTimer();
+}
+function fIdleTimer(){
+  const el=document.getElementById('rtimer');if(!el)return;
+  el.classList.remove('hot','zero');
+  document.getElementById('rtT').textContent='REST';
+  document.getElementById('rtL').textContent='tap to set';
+  document.getElementById('rtArc').setAttribute('stroke-dashoffset','0');
+}
+
+/* hook everything into the page's own render cycle. The finally matters: if a
+   chart throws (Chart.js blocked, canvas quirk), the app chrome still builds. */
+const _renderAll=renderAll;
+renderAll=function(){
+  try{_renderAll();}
+  finally{
+    try{fBuildChrome();}catch(e){}
+    try{fStreak();}catch(e){}
+    try{fTwk();}catch(e){}
+    try{fSync();}catch(e){}
+  }
+};
+document.addEventListener('click',()=>setTimeout(fSync,0));
+
 boot();
 
 })();
