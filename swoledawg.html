@@ -506,6 +506,15 @@ code{background:color-mix(in srgb,var(--ink-3) 14%,transparent);padding:1px 5px;
 .chart{position:relative;height:200px;margin-top:4px}
 .chart.tall{height:250px}
 .chart.short{height:150px}
+/* ⚠️ On a phone the two-up grids collapse to one column, so a "short" chart is no longer
+   sharing a row with anything and has the full width to itself — at 150px tall that is a
+   letterbox with unreadable labels. Give them real height once they are stacked. This is
+   the chart half of "readable at arm's length"; the band colours are the other half. */
+@media(max-width:900px){
+  .chart.short{height:210px}
+  .chart{height:230px}
+  .chart.tall{height:260px}
+}
 .chart-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   text-align:center;font-size:12.5px;color:var(--ink-3);background:color-mix(in srgb,var(--surface-1) 88%,transparent);
   border-radius:8px;padding:16px;line-height:1.5}
@@ -6516,6 +6525,8 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 (function(){
 'use strict';
 const RULES = {
+  // How many recent days a DAILY chart shows. Two weeks reads on a phone; a year does not.
+  chart_days: 14,
   derive: 'swoledawg-derive-1.0.0',
   plan: 'swoledawg-plan-1.0.0',
   primary_weight: 1.0, secondary_weight: 0.5,
@@ -7098,7 +7109,12 @@ function overview(){
     ? `<b>${ws2.pts.length} reading${ws2.pts.length===1?'':'s'}.</b> Daily weight swings 2–4 lb on water alone — the thick line is the only one worth reading, and it needs 3 days before it appears.`
     : `${ws2.pts.length} readings. Judge the week by the 7-day average, never a single morning.`;
 
-  const asc=realDays().slice().reverse();
+  /* ⚠️ A DAILY chart plots recent days, not all of history. Logging bodyweight for
+     St Patrick's Day and the 4th of July put those dates in the series, and every daily
+     chart went from a readable week to seven labels spanning five months with nothing in
+     between — on a phone, unreadable. The long view belongs to the bodyweight chart, which
+     builds its own series and is the one place the whole journey is the point. */
+  const asc=realDays().slice().reverse().slice(-RULES.chart_days);
   const dl=asc.map(x=>new Date(x.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}));
   /* Two charts, one scale each. Calories and grams of protein have no common unit, and a
      second y-axis lets the reader see the bars crossing the line as though that meant
@@ -7119,19 +7135,31 @@ function overview(){
     ? [Math.round(maint-dk[1]), Math.round(maint-dk[0])]
     : (t.kcal ? [Math.round(t.kcal*0.95),Math.round(t.kcal*1.05)] : null);
   const kcals=asc.map(x=>x.nutrition?.eaten_kcal??null);
+  /* ⚠️ The band has to be READABLE AT ARM'S LENGTH ON A PHONE, which the tinted fill alone
+     was not — it was a pale rectangle behind the bars and disappeared. Both edges are now
+     drawn as solid rules in their own colours and named on the chart: the floor is "eat at
+     least this", the cap is "do not go past this". Bars are coloured by which side they
+     fall on, so the answer arrives from the colour before the axis is read at all. */
   const barCol=v=>!kBand||v==null?c.accent
-    :v<kBand[0]?c.cool:v>kBand[1]?c.warn:c.good;
+    :v<kBand[0]?c.cool:v>kBand[1]?c.bad:c.good;
+  const yMax=Math.max(kBand?kBand[1]:0,...kcals.filter(v=>v!=null))*1.15||null;
   mk('cFuel','eFuel',{type:'bar',data:{labels:dl,datasets:[
-      {label:'kcal',data:kcals,backgroundColor:kcals.map(barCol),borderRadius:3,barPercentage:.6,order:2},
+      {label:'kcal',data:kcals,backgroundColor:kcals.map(barCol),borderRadius:3,
+       barPercentage:.72,categoryPercentage:.86,order:3},
       ...(kBand?[
-        {type:'line',label:'band-hi',data:dl.map(()=>kBand[1]),borderWidth:0,pointRadius:0,
-         backgroundColor:'color-mix(in srgb,'+c.good+' 13%,transparent)',fill:'+1',order:1},
-        {type:'line',label:'band-lo',data:dl.map(()=>kBand[0]),borderWidth:0,pointRadius:0,
-         fill:false,order:1}]:[])]},
-    options:AX(c,{plugins:{legend:{display:false},tooltip:{filter:i=>i.datasetIndex===0}},scales:{
-      x:{grid:{display:false},ticks:{color:c.ink3,font:{size:10}}},
-      y:{grid:{color:c.grid},ticks:{color:c.ink3,font:{size:10}},min:0,
-         title:{display:true,text:kBand?('kcal · target '+kBand[0]+'-'+kBand[1]):'kcal',color:c.ink3}}}})},
+        {type:'line',label:'Do not exceed',data:dl.map(()=>kBand[1]),borderColor:c.bad,
+         borderWidth:2,pointRadius:0,
+         backgroundColor:'color-mix(in srgb,'+c.good+' 18%,transparent)',fill:'+1',order:1},
+        {type:'line',label:'Eat at least',data:dl.map(()=>kBand[0]),borderColor:c.cool,
+         borderWidth:2,pointRadius:0,fill:false,order:2}]:[])]},
+    options:AX(c,{
+      plugins:{legend:{display:!!kBand,labels:{color:c.ink3,boxWidth:14,font:{size:11},
+                 filter:i=>i.text!=='kcal'}},
+               tooltip:{filter:i=>i.datasetIndex===0}},
+      scales:{
+        x:{grid:{display:false},ticks:{color:c.ink3,font:{size:10},maxRotation:0,autoSkipPadding:8}},
+        y:{grid:{color:c.grid},ticks:{color:c.ink3,font:{size:10}},min:0,...(yMax?{max:Math.round(yMax)}:{}),
+           title:{display:true,text:kBand?('kcal · '+kBand[0]+' to '+kBand[1]):'kcal',color:c.ink3}}}})},
     1,'Log food on the <b>Nutrition</b> sheet.');
   mk('cPro','ePro',{type:'line',data:{labels:dl,datasets:[
       {label:'Protein g',data:asc.map(x=>x.nutrition?.protein_g??null),
@@ -8080,29 +8108,33 @@ async function sdSaveRecovery(btn){
 function tapeProgress(){
   const note=document.getElementById('tapeNote'); if(!note) return;
   const fields=(SUMMARY&&SUMMARY.fields)||{};
+  let noBase=0;
   const rows=Object.keys(fields).map(k=>{
     const f=fields[k]||{};
     if(String(f.tag||'').toUpperCase()==='DEVICE') return null;
-    const now=f.current!=null?f.current:f.baseline, tg=f.target;
-    if(now==null||tg==null||!now) return null;
+    const now=f.current!=null?f.current:f.baseline, tg=f.target, base=f.baseline;
+    if(now==null||tg==null) return null;
     const down=String(f.dir||'').toLowerCase()==='down';
-    /* A range still has to become one number to be "the target", and the number to hit is
-       the near edge — the point at which the goal is met, not the middle of the room past
-       it. Which edge is near depends on which way you are travelling. */
+    // A range is met at its near edge — the point the goal is reached, not the middle past it.
     const goal=Array.isArray(tg)?(down?tg[1]:tg[0]):tg;
-    if(!goal) return null;
-    /* Raw ratio, NOT inverted by direction. Kap's call, and it is the more literal chart:
-       the spoke says where the number sits against its target, and which side of the ring
-       it falls on says which way it has to move. Outside on a waist means come down;
-       inside on a chest means go up. The direction lives in the field, not in the maths. */
-    const pct=(now/goal)*100;
-    return {label:f.label||k,now,goal,down,pct:Math.max(0,Math.min(140,pct))};
+    if(goal==null) return null;
+    /* ⚠️ THE SCALE IS THE JOURNEY, NOT THE TARGET. Dividing today by the target looked
+       right and was useless: body measurements have a tiny dynamic range, so a waist of 37
+       against a 35.75 goal — over an inch, months of work — plots at 97% and the whole
+       chart collapses into a circle sitting on the ring, reading as finished. Scaling
+       baseline→target to the full radius puts that same waist at 0%, which is what it is:
+       not started. The chart's job is to show what is LEFT, and only this scale does. */
+    if(base==null){ noBase++; return null; }
+    const span=goal-base;
+    if(!span) return null;                       // nowhere to travel; nothing to plot
+    const pct=Math.max(0,Math.min(120,((now-base)/span)*100));
+    return {label:f.label||k,now,base,goal,pct};
   }).filter(Boolean).sort((a,b)=>b.pct-a.pct);
 
   if(!rows.length){
-    note.innerHTML='No field on this account carries a target yet.';
+    note.innerHTML='No field on this account carries both a baseline and a target yet.';
     mk('cTape','eTape',{type:'radar',data:{labels:[],datasets:[]}},1,
-       'Set a target on the <b>Body</b> sheet.');
+       'Set a baseline and a target on the <b>Body</b> sheet.');
     return;
   }
   const c=C();
@@ -8110,27 +8142,27 @@ function tapeProgress(){
       {label:'Today',data:rows.map(r=>Math.round(r.pct)),
        borderColor:c.accent,borderWidth:2,
        backgroundColor:'color-mix(in srgb,'+c.accent+' 15%,transparent)',
-       pointBackgroundColor:c.accent,pointRadius:3.5},
+       pointBackgroundColor:rows.map(r=>r.pct>=100?c.good:c.accent),pointRadius:3.5},
       {label:'Target',data:rows.map(()=>100),borderColor:c.ink3,borderWidth:1.5,
        borderDash:[4,4],backgroundColor:'transparent',pointRadius:0}]},
     options:AX(c,{plugins:{tooltip:{callbacks:{label:i=>{
         const r=rows[i.dataIndex];
         return i.datasetIndex===1 ? 'Target ' + fmtN(r.goal)
-                                  : 'Today ' + fmtN(r.now) + '  ·  target ' + fmtN(r.goal);
+          : 'Today ' + fmtN(r.now) + '  ·  from ' + fmtN(r.base) + '  ·  target ' + fmtN(r.goal)
+            + '  (' + Math.round(r.pct) + '%)';
       }}}},
-      scales:{r:{beginAtZero:true,suggestedMax:110,ticks:{display:false},grid:{color:c.grid},
+      scales:{r:{beginAtZero:true,min:0,max:120,ticks:{display:false},grid:{color:c.grid},
         angleLines:{color:c.grid},pointLabels:{color:c.ink3,font:{size:9.5,weight:'600'}}}}})},
-    1,'Set a target on the <b>Body</b> sheet.');
+    1,'Set a baseline and a target on the <b>Body</b> sheet.');
 
-  note.innerHTML=`Today against the target, per tape field. Each spoke is scaled so the
-    dashed ring IS that field's target — the only way inches, pounds and a percentage share
-    one chart. Which side of the ring a point sits on says which way it has to move:
-    <b>outside</b> means above target (come down on waist, bodyweight and body fat),
-    <b>inside</b> means below it (go up on chest, shoulders and arms). Hover for the real
-    numbers.`;
+  const done=rows.filter(r=>r.pct>=100).length;
+  note.innerHTML=`Each spoke is <b>how far that measurement has travelled from its baseline
+    to its target</b> — the centre is where you started, the dashed ring is the goal. Scaled
+    this way because a percentage of the target is not the question: an inch of waist is 3%
+    of the number and most of the work. ${done} of ${rows.length} at or past target.` +
+    (noBase?` ${noBase} field${noBase===1?'':'s'} not shown — no baseline recorded, so there
+      is no journey to measure against.`:'');
 }
-/* The ring has no room for "Upper arm flexed, left (in)". The unit is dropped because
-   the axis is a ratio against that field's own target, not the unit itself. */
 function shortLabel(s){
   return String(s)
     .replace(/\s*\((in|lb|pct|cm|kg)\)\s*$/i, '')
@@ -8155,7 +8187,7 @@ function recovery(){
   set('rRhr',r.resting_hr);set('rReady',r.readiness);set('rSore',r.soreness);
   set('rEnergy',s.energy);set('rMood',s.mood);set('rJoint',s.joint_feel);set('rSrc',r.source);
 
-  const c=C(),asc=realDays().slice().reverse();
+  const c=C(),asc=realDays().slice().reverse().slice(-RULES.chart_days);
   const dl=asc.map(x=>new Date(x.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}));
   /* Hours against a 0-100 score, and milliseconds against beats per minute. Neither pair
      shares a scale, so each gets its own chart rather than a second y-axis. See the
