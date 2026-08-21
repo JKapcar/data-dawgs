@@ -7316,6 +7316,56 @@ function targets(){
 
 const LIB_BY_KEY={};
 
+/* ⚠️ The ledger's exercise names and this library's are two vocabularies, written at
+   different times by different hands: "One-arm DB row" against "Single-Arm Dumbbell Row",
+   "Flat DB bench press" against "Dumbbell Bench Press". normKey strips equipment words,
+   which is enough for the names that happen to differ only there and useless for the rest
+   — a qualifier the library omits ("Flat"), a synonym it spells differently ("One-arm" /
+   "Single-Arm"), or the parenthetical a program uses to carry setup ("(bench 30°, face
+   down)") each miss by one token and the lookup returns nothing.
+
+   Missing is not loud. daySets falls through to ex.muscle_groups, and sdHydrateDays builds
+   every logged exercise with muscle_groups:[] — the ledger stores sets, not muscle tags —
+   so an unmatched lift contributes zero to every bar and the panel reads as though the work
+   was never done. Block 1 Week 1 logged 11 exercises; 5 resolved. Chest showed 1 set
+   against 4 pressed, rear delts showed 0 against 4 flown. Those are two of the four
+   priority_muscles the goal declares, reading short on the page meant to govern them.
+
+   So the join is declared, not inferred. Aliases point at library ids; a name the library
+   has no equivalent for gets its own pri/sec here rather than a wrong-equipment stand-in
+   that the plan generator might then prescribe. Renaming a lift means adding one line to
+   this table, and the receipts list under Method names anything still unmatched. */
+const LIB_ALIASES = {
+  // qualifier the library omits
+  'flat bench press':                                'db_bench',
+  // parenthetical setup the program carries in the name
+  'incline press 30':                                'db_incline',
+  'flye flat or slight incline':                     'db_fly',
+  'chest supported incline row bench 30 face down':  'db_row_cs',
+  'rear delt fly chest supported':                   'rear_fly',
+  'goblet squat heels elevated 1 1 5':               'goblet',
+  // synonym the library spells differently
+  'one arm row':                                     'db_row_1a',
+  'bent over rear delt raise':                       'rear_fly',
+  'overhead triceps extension':                      'oh_ext',
+  'plank':                                           'plank',
+  // spring device is a band by another name — same pattern, same muscles
+  'spring device pull apart':                        'band_facepull',
+  'spring device chest squeeze':                     'band_fly'
+};
+
+/* No library equivalent exists for these. They are attribution-only: enough for daySets to
+   count the sets, deliberately without id, pat or equip so the plan generator can never
+   select one. Aliasing them to a band or barbell lift would have counted the volume and
+   then recommended equipment Kap does not own. */
+const LIB_EXTRA = {
+  'leg extension leg developer': {name:'Leg Extension',  pri:'quads',      sec:[]},
+  'leg curl leg developer':      {name:'Leg Curl',       pri:'hamstrings', sec:[]},
+  'reverse lunge':               {name:'Reverse Lunge',  pri:'quads',      sec:['glutes']},
+  'dead bug':                    {name:'Dead Bug',       pri:'core',       sec:[]}
+};
+
+
 /* ---- Exercise art: cartoon form guides ----
    One inline SVG per movement pattern, matched to the exercise NAME by the ordered
    keyword rules below — first hit wins, so specific patterns sit above generic ones
@@ -7378,7 +7428,26 @@ function sdArt(name){
   const svg=SD_ART[sdArtKey(name)]||SD_ART.generic;
   return '<div class="exart">'+svg+'</div>';
 }
-function indexLib(){LIB.forEach(e=>LIB_BY_KEY[normKey(e.name)]=e);}
+function indexLib(){
+  /* First entry wins. Several library names normalise to the same key once the equipment
+     word is stripped — "Dumbbell Bench Press" and "Barbell Bench Press" are both
+     `bench press`, both RDLs are `romanian deadlift`. Last-wins handed those keys to the
+     barbell variant, so a logged "DB Romanian deadlift" resolved to bb_rdl: harmless for
+     volume, since pri/sec match, and wrong for anything reading equip. The library lists
+     the dumbbell variant first in every such pair. */
+  LIB.forEach(e=>{const k=normKey(e.name); if(!LIB_BY_KEY[k]) LIB_BY_KEY[k]=e;});
+  const byId={}; LIB.forEach(e=>byId[e.id]=e);
+  /* Aliases never overwrite a real library name — if a future rename makes a program name
+     collide with a catalogued one, the catalogue entry is the better answer and wins. */
+  Object.keys(LIB_ALIASES).forEach(k=>{
+    const e=byId[LIB_ALIASES[k]], key=normKey(k);
+    if(e && !LIB_BY_KEY[key]) LIB_BY_KEY[key]=e;
+  });
+  Object.keys(LIB_EXTRA).forEach(k=>{
+    const key=normKey(k);
+    if(!LIB_BY_KEY[key]) LIB_BY_KEY[key]=LIB_EXTRA[k];
+  });
+}
 const STRIP=/\b(dumbbell|db|barbell|bb|kettlebell|kb|seated|standing|lying)\b/g;
 const normKey=n=>n.toLowerCase().replace(STRIP,' ').replace(/[^a-z0-9]+/g,' ').trim();
 
@@ -9245,8 +9314,10 @@ function method(){
      site and display names are mutable, so neither belongs in a SwoleDawg field.`,
     `<b>One athlete per file</b>, keyed by <code>user_id</code>. A file whose uid does not match the
      session renders read-only rather than accepting sets into someone else's ledger.`,
-    v.unmatched.length?`<b>Not in the exercise library:</b> ${v.unmatched.map(esc).join(', ')} — their
-      sets were attributed from the log's own coarser muscle tags.`:null,
+    v.unmatched.length?`<b>Not in the exercise library:</b> ${v.unmatched.map(esc).join(', ')} — the
+      ledger stores sets, not muscle tags, so these contributed <b>nothing</b> to the bars above.
+      Add each to <code>LIB_ALIASES</code> or <code>LIB_EXTRA</code>; until then the weekly volume
+      panel is reading short by exactly their sets.`:null,
     `No graded claim exists. Tier stays <b style="color:var(--warn)">Pup</b> until a predeclared
      standard is met. A plan is a recommendation, not a forecast.`
   ].filter(Boolean).map(x=>`<li>${x}</li>`).join('');
