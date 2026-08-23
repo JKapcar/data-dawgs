@@ -1275,12 +1275,23 @@ const LEDGER_MODELS = [...new Set(LEDGER.data.map(r => r.model_id))];
    A new key derives with no typed list and changes the meaning of nothing that already
    grades `machine`. Add a `reading` entry to any surface whose page is worth reading in
    full, and it shelves itself. Kap ruled on this in chat 5. */
+/* ⚠️ THIS ARRAY IS THE SOURCE. data/surfaces.json is its OUTPUT.
+   Twice now an entry has been added by editing data/surfaces.json directly and leaving
+   this array alone — 0d7e436 added dynasty-ranks.json, a3a9fc1 added nfl-team-colors.json,
+   and neither touched this file. Nothing caught it, because a hand-edited output looks
+   correct until the next full rebuild silently deletes the addition. If you are adding a
+   machine surface, add it HERE and rebuild; validate-data.js will warn about a published
+   file no surface references, which is the check that would have caught both. */
 const SURFACES = [
+  // ⚠️ `name` is deliberately still the short form: 0d7e436 updated the reading title
+  // and left this alone, and this commit is a RECONCILIATION — the generator catching up
+  // to the shipped output, not a content change riding along with it.
   { id: 'draft-pool', domain: 'data', name: 'Player pool + Market Value', page: '/master.html',
     machine: [{ kind: 'json', url: '/data/pool.json', status: 'live' },
+              { kind: 'json', url: '/data/dynasty-ranks.json', status: 'live' },
               { kind: 'mcp', tool: 'dd_draft_pool', status: 'live' }],
-    reading: [{ url: '/master.html', title: 'Player pool + Market Value',
-                covers: 'The full player pool as a page: every Market Value in auction dollars, sortable and filterable, with the staleness of the snapshot stated on the page rather than in a footnote.' }],
+    reading: [{ url: '/master.html', title: 'Player pool: this season + overall dynasty',
+                covers: 'A toggled player table: dated this-season Market Value plus independent overall dynasty ranks and auction values for 1QB and Superflex / TE-premium formats. Each view states its source and limitations.' }],
     planned: ['rest:/api/pool'] },
   { id: 'draft-strategy', domain: 'data', name: '2026 draft strategy', page: '/strategy.html',
     machine: [{ kind: 'markdown', url: '/data/strategy.md', status: 'live' }],
@@ -1332,7 +1343,9 @@ const SURFACES = [
     machine: [{ kind: 'json', url: '/data/model-receipts.json', status: 'live',
                 covers: 'the dated model lines the challenge is played against — the same prospective receipts the scoreboard grades' },
               { kind: 'json', url: '/data/model-contracts.json', status: 'live',
-                covers: 'the scoring formula, the entry schema, the entrant model and the crowd-consensus rules, which the Method sheet renders rather than restates' }],
+                covers: 'the scoring formula, the entry schema, the entrant model and the crowd-consensus rules, which the Method sheet renders rather than restates' },
+              { kind: 'json', url: '/data/nfl-team-colors.json', status: 'live',
+                covers: 'the per-team end-zone colors used by the Drive field; text contrast is computed from relative luminance' }],
     planned: ['json:/data/forecast-grades.json'],
     gap: 'The entry side is live: you forecast, the models are already on the record, and the crowd line seals at kickoff. Nothing is graded — no game has been played — so there is no leaderboard, and the page says so rather than showing an empty table that looks broken.' },
   { id: 'receipts', domain: 'receipts', name: 'Pre-registered forecasts, the model scoreboard and provenance', page: '/receipts.html',
