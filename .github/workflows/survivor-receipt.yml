@@ -101,4 +101,11 @@ jobs:
             const c=require("./data/survivor-receipts.json").counts;
             process.stdout.write(`${c.registered} registered, ${c.resolved} resolved`);
           ')"
-          git push
+          # ⚠️ Rebase before pushing, and push an EXPLICIT ref. This repo has concurrent
+          # writers, so somebody may have pushed while the solve ran — a clobber here
+          # would eat their work. And a bare `git push` relies on checkout having left us
+          # on a branch rather than a detached HEAD, which is true today and is not a
+          # thing to depend on. Same shape draft-picks.yml already uses.
+          git pull --rebase origin main
+          node tools/validate-data.js
+          git push origin HEAD:main
