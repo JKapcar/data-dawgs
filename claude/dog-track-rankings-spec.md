@@ -378,7 +378,7 @@ verify capture strip → Tuesday grade → check unmatched list).
 Recorded here as they are taken, per rule 8. Each is raised at a stage checkpoint rather
 than applied silently.
 
-### D1 — kickoff source order (Stage A, ratified by Kap 2026-08-23)
+### D1 — kickoff source order (Stage A, raised 2026-08-23 — AWAITING RATIFICATION)
 
 §4 and trap #5 name the ESPN scoreboard as the kickoff source. The Worker already
 documents at its `/scores` route (8/4/26) that **ESPN answers 403 to Cloudflare Worker
@@ -387,7 +387,10 @@ tested, "another permutation will not fix it." Taken literally, ESPN fails every
 every capture lands in `deferred`, and the pre-kickoff gate silently degrades into a
 grade-time post-mortem.
 
-**Resolution:** the site's own canonical `data/nfl-schedule.json` (nflverse-derived, the
+**Proposed resolution, implemented but not yet ratified** — Kap accepts or vetoes this at
+the Stage A checkpoint; vetoing it costs one small edit to `rankingsFirstKickoff`, and the
+gate still functions, it just stops gating in practice. The site's own canonical
+`data/nfl-schedule.json` (nflverse-derived, the
 same source the survivor receipt ledger refuses captures against) is consulted first; ESPN
 stays exactly where the spec put it as tier 2; `deferred` remains the last resort. The
 property the spec asks for — a capture that could not have been written after kickoff — is
