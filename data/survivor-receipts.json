@@ -1,0 +1,31 @@
+{
+ "source_page": "/survivor.html",
+ "tier": "labs",
+ "graded": false,
+ "as_of": "2026-08-23",
+ "source": "Captured by work/survivor-receipt.mjs from survivor.html's own engine, before each week's earliest kickoff.",
+ "note": "PROSPECTIVE RECEIPTS. Every row was written before the week it forecasts kicked off — captured_at < kickoff_at is enforced at capture, not flagged afterwards, and a row is never edited once written. What is graded is CALIBRATION of the stated win probabilities (Brier) and whether the pick survived. This is NOT a claim that the tool beats a pool: whether an entry would have won depends on the rest of the field, which is not ours to score. `n` is small and stays small — 18 weeks is at most 18 scored predictions per entry — so read every figure next to its n and do not draw a calibration curve on a season.",
+ "field_notes": {
+  "recommended": "the board's number-one pick, as an array — a double-pick week states two",
+  "stated_win_probability": "per leg, in the same order, as stated at capture",
+  "survived": "AND over the legs; a double week with one loss is false",
+  "brier": "mean over legs of (p - outcome)^2; null until resolved",
+  "forecast_status": "prospective | resolved | void",
+  "supersedes": "receipt_id this row replaces, when lines moved before kickoff; both rows stay"
+ },
+ "counts": {
+  "registered": 0,
+  "resolved": 0,
+  "prospective": 0,
+  "survived": 0,
+  "brier_n": 0,
+  "brier_mean": null
+ },
+ "integrity": {
+  "rows": 0
+ },
+ "data": [],
+ "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
+ "built": "2026-08-23",
+ "canonical_url": "https://datadawgs216.com/data/survivor-receipts.json"
+}

@@ -831,28 +831,28 @@ tr.sv-used td{opacity:.42}
 @media(max-width:760px){#sheetModels .p-summary{grid-template-columns:repeat(2,minmax(0,1fr))}#sheetProv .provenance{grid-template-columns:1fr}}
 @media(max-width:430px){#sheetModels .p-summary{grid-template-columns:1fr 1fr}}
 /* ---- CEP-5A Stage 8 — per-tool sheets ------------------------------------
-   #sheetClassic / #sheetCfbRec / #sheetAudit. Every selector below is scoped to
+   #sheetClassic / #sheetCfbRec / #sheetSurvRec / #sheetAudit. Every selector below is scoped to
    one of those three; nothing here may reach the other five sheets. */
 #sheetClassic .s8-sum,#sheetAudit .s8-sum{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:18px 0}
 #sheetClassic .s8-stat,#sheetCfbRec .s8-stat,#sheetAudit .s8-stat{border:1px solid var(--border);background:var(--surface-1);border-radius:10px;padding:13px}
 #sheetClassic .s8-stat b,#sheetCfbRec .s8-stat b,#sheetAudit .s8-stat b{display:block;font-size:25px;line-height:1;color:var(--ink-1)}
 #sheetClassic .s8-stat span,#sheetCfbRec .s8-stat span,#sheetAudit .s8-stat span{display:block;color:var(--ink-3);font:650 11px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;margin-top:6px;text-transform:uppercase}
-#sheetClassic .s8-wrap,#sheetAudit .s8-wrap{overflow:auto;border:1px solid var(--border);border-radius:11px;background:var(--surface-1)}
-#sheetClassic .s8-tbl,#sheetAudit .s8-tbl{width:100%;border-collapse:collapse;min-width:min(620px,100%);font-variant-numeric:tabular-nums}
-#sheetClassic .s8-tbl th,#sheetAudit .s8-tbl th{position:sticky;top:0;background:var(--surface-1);color:var(--ink-3);font:750 10.5px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;letter-spacing:.04em;padding:10px;text-align:right;border-bottom:1px solid var(--grid)}
-#sheetClassic .s8-tbl th:first-child,#sheetAudit .s8-tbl th:first-child,#sheetClassic .s8-tbl td:first-child,#sheetAudit .s8-tbl td:first-child{text-align:left}
-#sheetClassic .s8-tbl td,#sheetAudit .s8-tbl td{padding:11px 10px;border-bottom:1px solid var(--grid);text-align:right}
-#sheetClassic .s8-tbl tr:last-child td,#sheetAudit .s8-tbl tr:last-child td{border-bottom:0}
+#sheetClassic .s8-wrap,#sheetSurvRec .s8-wrap,#sheetAudit .s8-wrap{overflow:auto;border:1px solid var(--border);border-radius:11px;background:var(--surface-1)}
+#sheetClassic .s8-tbl,#sheetSurvRec .s8-tbl,#sheetAudit .s8-tbl{width:100%;border-collapse:collapse;min-width:min(620px,100%);font-variant-numeric:tabular-nums}
+#sheetClassic .s8-tbl th,#sheetSurvRec .s8-tbl th,#sheetAudit .s8-tbl th{position:sticky;top:0;background:var(--surface-1);color:var(--ink-3);font:750 10.5px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;letter-spacing:.04em;padding:10px;text-align:right;border-bottom:1px solid var(--grid)}
+#sheetClassic .s8-tbl th:first-child,#sheetAudit .s8-tbl th:first-child,#sheetSurvRec .s8-tbl th:first-child,#sheetClassic .s8-tbl td:first-child,#sheetAudit .s8-tbl td:first-child,#sheetSurvRec .s8-tbl td:first-child{text-align:left}
+#sheetClassic .s8-tbl td,#sheetSurvRec .s8-tbl td,#sheetAudit .s8-tbl td{padding:11px 10px;border-bottom:1px solid var(--grid);text-align:right}
+#sheetClassic .s8-tbl tr:last-child td,#sheetSurvRec .s8-tbl tr:last-child td,#sheetAudit .s8-tbl tr:last-child td{border-bottom:0}
 #sheetClassic .s8-tbl .game{font-weight:800}
 #sheetClassic .s8-tbl .date{display:block;color:var(--ink-3);font:11px ui-monospace,SFMono-Regular,Consolas,monospace;margin-top:2px}
 #sheetClassic .s8-load,#sheetCfbRec .s8-load,#sheetAudit .s8-load{padding:20px;color:var(--ink-3)}
-#sheetClassic .s8-err,#sheetCfbRec .s8-err,#sheetAudit .s8-err{padding:20px;color:var(--bad)}
+#sheetClassic .s8-err,#sheetCfbRec .s8-err,#sheetSurvRec .s8-err,#sheetAudit .s8-err{padding:20px;color:var(--bad)}
 #sheetClassic .s8-params,#sheetCfbRec .s8-terms{margin:16px 0 0;padding:0;list-style:none;display:grid;gap:7px}
 #sheetClassic .s8-params li,#sheetCfbRec .s8-terms li{color:var(--ink-3);font-size:12.5px;line-height:1.55;padding-left:15px;position:relative}
 #sheetClassic .s8-params li::before,#sheetCfbRec .s8-terms li::before{content:"\203A";position:absolute;left:0;color:var(--accent);font-weight:800}
-#sheetCfbRec .s8-zero{border:1px solid var(--border);border-left:3px solid var(--accent);background:color-mix(in srgb,var(--accent) 5%,var(--surface-1));border-radius:11px;padding:20px;margin:18px 0}
-#sheetCfbRec .s8-zero b.s8-n{display:block;font-size:52px;line-height:1;color:var(--ink-1);font-variant-numeric:tabular-nums}
-#sheetCfbRec .s8-zero .s8-lbl{display:block;color:var(--ink-3);font:750 11px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;letter-spacing:.05em;margin-top:8px}
+#sheetCfbRec .s8-zero,#sheetSurvRec .s8-zero{border:1px solid var(--border);border-left:3px solid var(--accent);background:color-mix(in srgb,var(--accent) 5%,var(--surface-1));border-radius:11px;padding:20px;margin:18px 0}
+#sheetCfbRec .s8-zero b.s8-n,#sheetSurvRec .s8-zero b.s8-n{display:block;font-size:52px;line-height:1;color:var(--ink-1);font-variant-numeric:tabular-nums}
+#sheetCfbRec .s8-zero .s8-lbl,#sheetSurvRec .s8-zero .s8-lbl{display:block;color:var(--ink-3);font:750 11px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;letter-spacing:.05em;margin-top:8px}
 #sheetAudit .s8-verdict{display:inline-block;font:800 10.5px/1 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;letter-spacing:.05em;border-radius:5px;padding:4px 7px;border:1px solid var(--border);color:var(--ink-2)}
 #sheetAudit .s8-verdict.s8-stands{color:var(--good,var(--accent));border-color:color-mix(in srgb,var(--good,var(--accent)) 45%,transparent)}
 #sheetAudit .s8-verdict.s8-outside{color:var(--ink-3)}
@@ -861,7 +861,7 @@ tr.sv-used td{opacity:.42}
 #sheetAudit .s8-neither b{color:var(--ink-1)}
 #sheetAudit .s8-owed{display:block;color:var(--ink-3);font-size:11.5px;line-height:1.5;margin-top:5px}
 @media(max-width:760px){#sheetClassic .s8-sum,#sheetAudit .s8-sum{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:430px){#sheetClassic .s8-sum,#sheetAudit .s8-sum{grid-template-columns:1fr 1fr}#sheetCfbRec .s8-zero b.s8-n{font-size:42px}}
+@media(max-width:430px){#sheetClassic .s8-sum,#sheetAudit .s8-sum{grid-template-columns:1fr 1fr}#sheetCfbRec .s8-zero b.s8-n,#sheetSurvRec .s8-zero b.s8-n{font-size:42px}}
 .nav-section{padding:9px 13px 3px;color:var(--accent);font:800 10px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase}.nav-section:not(:first-child){margin-top:5px;border-top:1px solid var(--grid);padding-top:10px}.grpmenu a[class*="kennel-"]{font-family:ui-rounded,"Trebuchet MS",system-ui,sans-serif;font-weight:800;letter-spacing:.01em}.grpmenu a.kennel-scoreboard{color:#8ed6ff}.grpmenu a.kennel-nfeloml{color:#c9b3ff}.grpmenu a.kennel-qb{color:#ffc06a}.grpmenu a.kennel-wepa{color:#7ce7b0}.grpmenu a.kennel-srs{color:#ff9bb4}.grpmenu a.kennel-hfa{color:#ffe082}.grpmenu a.kennel-units{color:#8ee8e3}.grpmenu a.kennel-receipts{color:#f2c4ff}.grpmenu a.kennel-regimes{color:#a8d88c}</style>
 </head>
 <body>
@@ -2522,6 +2522,34 @@ Locked <b>2026-08-06</b> &middot; <b id="rcN">&mdash;</b> calls &middot;
   </div>
 </div>
 
+<div id="sheetSurvRec">
+  <div class="card">
+    <h2>Survivor receipts &mdash; what the board said, before kickoff</h2>
+    <p class="muted" style="margin-top:0">Every week, the survivor board's number-one
+    recommendation is written down <em>before the week's earliest kickoff</em> and graded
+    afterwards. <b>Nobody else in this space grades survivor recommendations
+    prospectively</b>, which is the only reason this ledger is worth keeping.</p>
+    <!-- ⚠️ Same idiom as the CFB contract above: a zero-row file renders a STATED zero.
+         An empty table reads as "nothing happened yet"; the count reads as "we looked,
+         and the answer is none." -->
+    <div class="s8-zero" id="srvZero"><b class="s8-n" id="srvCount">&mdash;</b><span class="s8-lbl" id="srvLbl">receipts registered</span><p class="muted" id="srvNote" style="margin:12px 0 0">Loading the survivor receipt ledger&hellip;</p></div>
+    <div class="s8-wrap" id="srvWrap" style="display:none;margin-top:16px"><table class="s8-tbl" id="srvTbl"></table></div>
+    <div class="callout warn" style="margin-top:16px">
+      <b>What is graded here is calibration, not victory.</b> The score is whether the
+      pick survived and the Brier on the win probability the board stated at the time.
+      Whether an entry would actually have <em>won a pool</em> depends on the rest of the
+      field &mdash; that is not ours to score and this ledger does not claim it.
+      <b>And n stays small.</b> A season is at most eighteen scored predictions per entry,
+      so every figure is printed next to its n and there is deliberately no calibration
+      curve: eighteen points cannot support one.
+    </div>
+    <p class="muted">Machine read:
+    <a href="/data/survivor-receipts.json"><code>/data/survivor-receipts.json</code></a>.
+    Captured by <code>work/survivor-receipt.mjs</code>, which refuses to write once a
+    week has kicked off &mdash; a late receipt is not a receipt.</p>
+  </div>
+</div>
+
 <div id="sheetCalls">
   <div class="card">
     <h2>The locked call sheet</h2>
@@ -3406,6 +3434,40 @@ async function loadCfbReceipts(){
       .map(([k,val])=>`<li><b>${mdlEsc(k)}:</b> ${mdlEsc(val)}</li>`).join("");
   }catch(err){cfrLoaded=false;mdlEl("cfrNote").className="s8-err";mdlEl("cfrNote").textContent="CFB receipt contract unavailable: "+err.message}
 }
+let srvLoaded=false;
+async function loadSurvivorReceipts(){
+  if(srvLoaded)return;srvLoaded=true;
+  try{
+    const env=await mdlJson("/data/survivor-receipts.json");
+    const rows=env.data;
+    if(!Array.isArray(rows))throw new Error("the survivor receipt ledger is not an array");
+    const c=env.counts||{};
+    mdlEl("srvCount").textContent=String(rows.length);
+    mdlEl("srvLbl").textContent=rows.length===1?"receipt registered":"receipts registered";
+    /* ⚠️ The Brier is printed WITH its n or not at all. A mean over three legs and a
+       mean over sixty are different claims and the number alone cannot tell them apart. */
+    mdlEl("srvNote").textContent = rows.length
+      ? `${c.resolved||0} resolved, ${c.prospective||0} still awaiting results`
+        + (c.brier_mean!=null ? ` · Brier ${c.brier_mean} over n=${c.brier_n} legs` : ` · no Brier yet`)
+      : (env.note ? "Nothing captured yet. The first capture is due the Thursday before Week 1."
+                  : "");
+    if(!rows.length) return;
+    mdlEl("srvWrap").style.display="";
+    mdlEl("srvTbl").innerHTML =
+      `<tr><th>Week</th><th>Pick</th><th>Stated</th><th>Result</th><th>Brier</th><th>Captured</th></tr>`
+      + rows.slice().sort((a,b)=>a.week-b.week).map(r=>{
+          const res = r.resolved
+            ? (r.resolved.survived?'<b style="color:var(--good)">survived</b>':'<b style="color:var(--bad)">out</b>')
+            : '<span style="color:var(--ink-3)">pending</span>';
+          return `<tr><td>${r.week}</td>`
+            + `<td>${mdlEsc(r.recommended.join(" + "))}</td>`
+            + `<td>${r.stated_win_probability.map(p=>(p*100).toFixed(1)+"%").join(" + ")}</td>`
+            + `<td>${res}</td>`
+            + `<td>${r.resolved?r.resolved.brier:"&mdash;"}</td>`
+            + `<td>${mdlEsc(String(r.captured_at).slice(0,10))}</td></tr>`;
+        }).join("");
+  }catch(err){srvLoaded=false;mdlEl("srvNote").className="s8-err";mdlEl("srvNote").textContent="Survivor receipt ledger unavailable: "+err.message}
+}
 let invLoaded=false;
 /* Stage RI. ONE fetch of ~1 KB. The counts are derived at BUILD time by
    tools/build-data.js and gated by tools/validate-data.js against the source payloads --
@@ -3507,13 +3569,15 @@ DDSheets({key:"receipts",mount:"#sheets",
           {id:"models",label:"Model scoreboard",panel:"#sheetModels"},
           {id:"classic",label:"538 Classic",panel:"#sheetClassic"},
           {id:"cfbrec",label:"CFB Receipts",panel:"#sheetCfbRec"},
+          {id:"survrec",label:"Survivor Receipts",panel:"#sheetSurvRec"},
           {id:"calls",label:"Calls",panel:"#sheetCalls"},
           {id:"provenance",label:"Provenance",panel:"#sheetProv"},
           {id:"audit",label:"Tier Audit",panel:"#sheetAudit"},
           {id:"receipts",label:"Receipts & Method",panel:"#sheetMethod",hint:"pre-registered"}],
   onShow(id){ if(id==="inventory") loadInventory();
     if(id==="scoreboard") drawCal(resolved()); if(id==="models") loadModels(); if(id==="provenance") loadProvenance();
-    if(id==="classic") loadClassic(); if(id==="cfbrec") loadCfbReceipts(); if(id==="audit") loadAudit(); }});
+    if(id==="classic") loadClassic(); if(id==="cfbrec") loadCfbReceipts();
+    if(id==="survrec") loadSurvivorReceipts(); if(id==="audit") loadAudit(); }});
 const prev=window.onThemeChange;
 window.onThemeChange=function(){ if(typeof prev==="function") prev(); drawCal(resolved()); };
 let rz; addEventListener("resize",()=>{clearTimeout(rz); rz=setTimeout(()=>drawCal(resolved()),140);});

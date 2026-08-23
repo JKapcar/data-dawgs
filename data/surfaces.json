@@ -1,5 +1,5 @@
 {
- "as_of": "2026-08-14",
+ "as_of": "2026-08-23",
  "source": "Generated from the site itself. Tier is read from each page's live chip.",
  "tier": "labs",
  "graded": false,
@@ -365,10 +365,16 @@
      "tool": "dd_optimize_survivor_path",
      "status": "live",
      "covers": "exact maximum-product path including double-pick weeks, dated probabilities and future-cost options"
+    },
+    {
+     "kind": "json",
+     "url": "/data/survivor-receipts.json",
+     "status": "live",
+     "covers": "the board's weekly number-one recommendation, captured before kickoff and graded after — survival and Brier on the stated probability, never a claim about winning a pool"
     }
    ],
    "planned": [],
-   "gap": "The exact path is live, double-pick weeks included. Pool ownership is modelled, not observed, and the field is simulated as a count rather than as individual rosters.",
+   "gap": "The exact path is live, double-pick weeks included. Pool ownership is modelled, not observed, and the field is simulated as a count rather than as individual rosters. The receipt ledger exists and is empty: the first capture is due the Thursday before Week 1, and back-filling it would be inventing a receipt nobody wrote.",
    "tier": "labs"
   },
   {
@@ -919,6 +925,6 @@
   }
  ],
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-08-14",
+ "built": "2026-08-23",
  "canonical_url": "https://datadawgs216.com/data/surfaces.json"
 }

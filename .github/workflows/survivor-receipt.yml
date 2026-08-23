@@ -1,0 +1,104 @@
+name: survivor-receipt
+
+# Capture the week's survivor recommendation BEFORE kickoff, and resolve last week's
+# once the games are final.
+#
+# ⚠️ THIS IS THE WHOLE FEATURE. A receipt nobody captures is a spec, and the reason this
+# is a cron rather than a note in a runbook is that the survivor snapshot spent seventeen
+# days stale precisely because its refresh was a note in a runbook. If the capture is
+# manual it will be forgotten in week 3 and the ledger will have a hole in it that can
+# never be honestly filled — a backfilled receipt is not prospective.
+#
+# ⚠️ NEVER on push. This writes a dated claim, so it fires on a schedule or by explicit
+# dispatch and nothing else. A capture triggered by an unrelated commit would stamp
+# captured_at with whenever someone happened to push.
+#
+# Thursday 15:00 UTC is 11:00 ET — comfortably before the Thursday night kickoff that
+# opens most weeks, and after Wednesday's injury reports have moved the lines. The
+# script refuses on its own if that ever stops being true, so a schedule slip fails
+# loudly rather than recording a late call.
+
+on:
+  schedule:
+    - cron: "0 15 * * 4"          # Thursdays, 15:00 UTC, in season
+  workflow_dispatch:
+    inputs:
+      week:
+        description: "Week to capture (blank = derive from the schedule)"
+        required: false
+        default: ""
+      resolve_only:
+        description: "Only resolve finished weeks; capture nothing"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: survivor-receipt
+  cancel-in-progress: false
+
+jobs:
+  receipt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+
+      # Resolve first. Last week's games are final by Thursday, and resolving before
+      # capturing means a failed capture still lands the grading it was owed.
+      - name: Resolve anything that has finished
+        run: node work/survivor-receipt.mjs resolve
+
+      - name: Work out which week to capture
+        if: ${{ !inputs.resolve_only }}
+        id: pick
+        run: |
+          set -euo pipefail
+          WEEK="${{ inputs.week }}"
+          if [ -z "$WEEK" ]; then
+            # the earliest week whose first kickoff is still in the future
+            WEEK=$(node -e '
+              const s=require("./data/nfl-schedule.json").data.games;
+              const now=Date.now();
+              const next=s.filter(g=>g.season_type==="REG"&&new Date(g.kickoff_at)>now)
+                          .sort((a,b)=>new Date(a.kickoff_at)-new Date(b.kickoff_at))[0];
+              process.stdout.write(next?String(next.week):"");
+            ')
+          fi
+          echo "week=$WEEK" >> "$GITHUB_OUTPUT"
+          if [ -z "$WEEK" ]; then echo "no upcoming week — nothing to capture"; fi
+
+      # ⚠️ continue-on-error, and ONLY here. capture refuses on purpose in states that
+      # are not errors: the week is already captured (write-once), or the season has not
+      # started, or kickoff has passed. None of those should paint the run red and send
+      # someone looking for a bug. A genuine failure still shows in the log, and the
+      # commit step below simply finds nothing to commit.
+      - name: Capture the upcoming week
+        if: ${{ !inputs.resolve_only && steps.pick.outputs.week != '' }}
+        continue-on-error: true
+        run: node work/survivor-receipt.mjs capture --week ${{ steps.pick.outputs.week }}
+
+      - name: Republish the manifest
+        run: node tools/data-manifest.js
+
+      - name: Validate before committing anything
+        run: node tools/validate-data.js
+
+      - name: Commit if the ledger moved
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- data/survivor-receipts.json data/index.json; then
+            echo "ledger unchanged — nothing to commit"
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/survivor-receipts.json data/index.json
+          git commit -m "survivor receipts: $(node -e '
+            const c=require("./data/survivor-receipts.json").counts;
+            process.stdout.write(`${c.registered} registered, ${c.resolved} resolved`);
+          ')"
+          git push

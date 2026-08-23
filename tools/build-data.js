@@ -1327,9 +1327,13 @@ const SURFACES = [
     machine: [{ kind: 'json', url: '/data/survivor.json', status: 'live', covers: 'schedule and win probabilities' },
               { kind: 'mcp', tool: 'dd_survivor_week', status: 'live', covers: 'stored weekly ownership snapshots, staleness-flagged' },
               { kind: 'mcp', tool: 'dd_survivor_ev', status: 'live', covers: 'modelled pool survival EV with assumptions returned in the payload' },
-              { kind: 'mcp', tool: 'dd_optimize_survivor_path', status: 'live', covers: 'exact maximum-product path including double-pick weeks, dated probabilities and future-cost options' }],
+              { kind: 'mcp', tool: 'dd_optimize_survivor_path', status: 'live', covers: 'exact maximum-product path including double-pick weeks, dated probabilities and future-cost options' },
+              // ⚠️ This claim ships in the same commit as the write path, not before it.
+              // The ledger is real and currently empty, which is a state, not a promise.
+              { kind: 'json', url: '/data/survivor-receipts.json', status: 'live',
+                covers: "the board's weekly number-one recommendation, captured before kickoff and graded after — survival and Brier on the stated probability, never a claim about winning a pool" }],
     planned: [],
-    gap: 'The exact path is live, double-pick weeks included. Pool ownership is modelled, not observed, and the field is simulated as a count rather than as individual rosters.' },
+    gap: 'The exact path is live, double-pick weeks included. Pool ownership is modelled, not observed, and the field is simulated as a count rather than as individual rosters. The receipt ledger exists and is empty: the first capture is due the Thursday before Week 1, and back-filling it would be inventing a receipt nobody wrote.' },
   // The forecasting challenge. Arena, because it is the one surface where a person
   // competes against the models rather than reading them.
   //
