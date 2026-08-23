@@ -101,6 +101,16 @@ async function open(scen, { theme = "light", width = 1200, reduced = false } = {
   return { ctx, page, errors };
 }
 const machineClasses = page => page.getAttribute("#machine", "class");
+/* ⚠️ THE REEL-STOP SIGNAL MOVED. There is no `.win.locked` any more — the MACHINE
+   carries `locked` and the individual windows carry nothing. Nine assertions in this
+   file counted `.win.locked` and every one of them silently became "0 === 4" when the
+   lever was rebuilt in aa2e36f, which is what left this suite red on main. Ask the
+   machine, and read the painted order for what it actually stopped on. */
+const stopped = async page => (await machineClasses(page)).includes("locked");
+const spinning = async page => /\bspin\d|\bpulling\b/.test(await machineClasses(page));
+/* The pull is a real animation: spin1 -> spin3 -> locked takes a little over four
+   seconds. 4200ms landed mid-spin3 and read as "never stopped". */
+const PULL_MS = 6000;
 const orderText = page => page.$eval("#ord", n => n.textContent.replace(/\s+/g, " ").trim());
 
 /* ---------- 1. not drawn: the lever is inert ---------- */
@@ -109,8 +119,14 @@ const orderText = page => page.$eval("#ord", n => n.textContent.replace(/\s+/g, 
   ok(errors.length === 0, "open board renders without a page error", errors[0]);
   ok((await machineClasses(page)).includes("armed"), "no draw → machine armed");
   ok(!(await machineClasses(page)).includes("pending"), "no draw → NOT pending");
-  ok(await page.getAttribute("#lever", "disabled") !== null, "no draw → lever disabled");
-  ok((await page.textContent("#pullLab")).trim() === "armed", "no draw → decal reads 'armed'");
+  /* ⚠️ The lever is ALWAYS pullable now, including before a draw exists. Kap's call,
+     and the reason is in setLever: a pull decides nothing, it only shows what the
+     server already wrote, so with nothing written the reels spin and come back to idle
+     rather than stopping on a permutation that does not exist. The old contract
+     disabled the lever here; asserting that again would be asking for the bug back. */
+  ok(await page.getAttribute("#lever", "disabled") === null, "no draw → the lever is still pullable");
+  ok((await page.textContent("#pullLab")).trim() === "Pull", "no draw → decal reads 'Pull'");
+  ok(!(await stopped(page)), "no draw → nothing is stopped on");
   ok((await page.textContent("#drawState")).includes("not drawn"), "no draw → state line says not drawn");
   await ctx.close();
 }
@@ -142,15 +158,24 @@ const orderText = page => page.$eval("#ord", n => n.textContent.replace(/\s+/g, 
 {
   const { ctx, page, errors } = await open(SCEN.drawn);
   await page.click("#lever");
-  await page.waitForTimeout(4200);
+  await page.waitForTimeout(PULL_MS);
   ok(errors.length === 0, "pull raises no page error", errors[0]);
-  ok((await page.$$eval(".win.locked", n => n.length)) === 4, "after the pull every reel is locked");
+  ok(await stopped(page) && !(await spinning(page)), "after the pull the reels have stopped",
+     await machineClasses(page));
   const txt = await orderText(page);
   const want = DRAW.map(i => NAMES[i]);
   ok(want.every((n, i) => txt.indexOf(n) >= 0 && (i === 0 || txt.indexOf(n) > txt.indexOf(want[i - 1]))),
      "the painted order is exactly the server's draw, in order", txt.slice(0, 80));
-  ok((await page.textContent("#pullLab")).trim() === "drawn", "after the pull the decal reads 'drawn'");
-  ok(await page.getAttribute("#lever", "disabled") !== null, "the lever cannot be pulled twice");
+  ok((await page.textContent("#pullLab")).trim() === "Again", "after the pull the decal reads 'Again'");
+  /* ⚠️ It CAN be pulled twice, and that is the point of the rebuild — the draw is the
+     server's and immutable, so a replay is free. What must hold is that the replay
+     lands on the SAME order; a second pull that re-rolled would mean the reveal was
+     client-side all along, which is the one thing this machine must never be. */
+  ok(await page.getAttribute("#lever", "disabled") === null, "the lever can be pulled again");
+  const first = await orderText(page);
+  await page.click("#lever");
+  await page.waitForTimeout(PULL_MS);
+  ok(await orderText(page) === first, "a replay stops on exactly the same order", first.slice(0, 60));
   const cls = await machineClasses(page);
   ok(!cls.includes("armed") && !cls.includes("pending") && cls.includes("locked"), "machine ends locked", cls);
   /* ⚠️ NOTHING IS PERSISTED. The first version remembered in localStorage that you had
@@ -165,13 +190,13 @@ const orderText = page => page.$eval("#ord", n => n.textContent.replace(/\s+/g, 
 {
   const { ctx, page } = await open(SCEN.drawn);
   await page.click("#lever");
-  await page.waitForTimeout(4200);
-  ok((await page.$$eval(".win.locked", n => n.length)) === 4, "pulled once: reels locked");
+  await page.waitForTimeout(PULL_MS);
+  ok(await stopped(page), "pulled once: the reels stopped", await machineClasses(page));
   // ⚠️ render() runs on a 15s poll and on every EventSource put. It must NOT blank the
   // reels back out under the reader's cursor after they pulled.
   await page.evaluate(() => window.dispatchEvent(new HashChangeEvent("hashchange")));
   await page.waitForTimeout(200);
-  ok((await page.$$eval(".win.locked", n => n.length)) === 4, "a re-render does not un-reveal what this load pulled");
+  ok(await stopped(page), "a re-render does not un-reveal what this load pulled", await machineClasses(page));
   ok(!(await machineClasses(page)).includes("pending"), "…and does not re-arm it either");
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForTimeout(1200);
@@ -198,10 +223,10 @@ const orderText = page => page.$eval("#ord", n => n.textContent.replace(/\s+/g, 
   ok(errors.length === 0, "graded board renders without a page error", errors[0]);
   ok((await machineClasses(page)).includes("pending"), "graded → STILL waiting on the pull");
   ok(await page.getAttribute("#lever", "disabled") === null, "graded → the lever is live");
-  ok((await page.$$eval(".win.locked", n => n.length)) === 0, "graded → nothing revealed until pulled");
+  ok(!(await stopped(page)), "graded → nothing revealed until pulled", await machineClasses(page));
   await page.click("#lever");
-  await page.waitForTimeout(4200);
-  ok((await page.$$eval(".win.locked", n => n.length)) === 4, "graded → the pull reveals the hierarchy");
+  await page.waitForTimeout(PULL_MS);
+  ok(await stopped(page), "graded → the pull reveals the hierarchy", await machineClasses(page));
   // the season board is the other half of a graded week
   ok((await page.$$eval('#seasonCard .trow[data-worn="1"]', n => n.length)) === 1, "exactly one dawg has worn one");
   /* ⚠️ The plaque follows the BELT now, not the season’s highest count. Same person,
@@ -222,7 +247,8 @@ const orderText = page => page.$eval("#ord", n => n.textContent.replace(/\s+/g, 
   ok(vis === "hidden", "reduced motion + armed → reel strips are blanked, not frozen mid-word", vis);
   await page.click("#lever");
   await page.waitForTimeout(400);
-  ok((await page.$$eval(".win.locked", n => n.length)) === 4, "reduced motion reveals instantly on pull");
+  ok(await stopped(page), "reduced motion reveals instantly on pull — no animation to wait out",
+     await machineClasses(page));
   ok((await page.$eval(".strip", n => getComputedStyle(n).visibility)) === "visible", "the reels come back for the result");
   await ctx.close();
 }
