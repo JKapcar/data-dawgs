@@ -8619,13 +8619,27 @@ const mcpSurvivorPathRoot = {};
    maximum-product assignment, solved as minimum -log(probability) with Hungarian.
    If a pool explicitly allows reuse, each week is independent and the exact solution
    is simply that week's highest-probability team; the same team may appear repeatedly.
+
+   DOUBLE-PICK WEEKS are the same problem with more columns. A week that requires two
+   picks is two SLOTS, and the assignment formulation already forbids a team from
+   taking two slots when reuse is off — the distinct-team rule falls out of the
+   assignment rather than being bolted on. `slotsPerWeek` carries that; absent, every
+   week is one slot and the maths is bit-for-bit what it always was.
    ========================================================================== */
 (function (root) {
 "use strict";
 
 const MAX_WEEKS = 18;
 const MAX_TEAMS = 64;
-const BIG = 25; // impossible cell; -log(1e-6) is only 13.82
+const MAX_SLOTS_PER_WEEK = 4;   // no real pool asks for more; the cap bounds the matrix
+/* ⚠️ BIG must dominate PER CELL, not per path. The Hungarian minimises a sum, so the
+   only thing that matters is that swapping a BIG cell for any legal cell always lowers
+   the total — i.e. BIG > the most expensive legal cell, which is -log(1e-6) = 13.8155.
+   It is tempting to reason "a full path is ~19 slots so BIG must beat 19 × 1.6 = 30",
+   and that comparison is not the binding one: a path's total cost is never weighed
+   against a single BIG. test-survivor-path.js asserts the per-cell inequality instead
+   of trusting either sentence. */
+const BIG = 25;
 
 function finiteProbability(value, label) {
   if (value === null || value === undefined) return null;
@@ -8652,7 +8666,37 @@ function validateInput(input) {
       throw new Error("probabilities row " + (i + 1) + " must have one cell per week");
     return row.map((p, j) => finiteProbability(p, "probability for " + teams[i] + " week " + weeks[j]));
   });
-  return { weeks: weeks.slice(), teams: teams.slice(), probabilities: matrix, reuse: input.reuse === true };
+  /* ⚠️ Slots are validated SEPARATELY and AFTER the caller-facing shape, on purpose.
+     The distinct-weeks rule above is what stops a caller passing week 3 twice and
+     silently getting a double-pick week it never asked for; weakening it so that
+     "weeks" could carry duplicates would make the double-pick rule unstateable and
+     the accidental-duplicate bug unreportable at the same time. A week appears once
+     in `weeks` and says how many picks it wants in `slotsPerWeek`. */
+  return {
+    weeks: weeks.slice(), teams: teams.slice(), probabilities: matrix,
+    reuse: input.reuse === true,
+    slotCounts: validateSlots(weeks, input.slotsPerWeek),
+  };
+}
+
+/* slotsPerWeek: { [week]: count }. Absent, or absent for a given week, means one pick —
+   so every existing caller keeps the exact matrix it had before slots existed. */
+function validateSlots(weeks, slotsPerWeek) {
+  if (slotsPerWeek === null || slotsPerWeek === undefined) return weeks.map(() => 1);
+  if (typeof slotsPerWeek !== "object" || Array.isArray(slotsPerWeek))
+    throw new Error("slotsPerWeek must be an object keyed by week");
+  for (const key of Object.keys(slotsPerWeek)) {
+    const week = Number(key);
+    if (!Number.isInteger(week) || week < 1 || week > 18)
+      throw new Error("slotsPerWeek keys must be whole weeks from 1 to 18");
+  }
+  return weeks.map(week => {
+    const raw = slotsPerWeek[week] !== undefined ? slotsPerWeek[week] : slotsPerWeek[String(week)];
+    if (raw === undefined || raw === null) return 1;
+    if (!Number.isInteger(raw) || raw < 1 || raw > MAX_SLOTS_PER_WEEK)
+      throw new Error("slotsPerWeek for week " + week + " must be a whole number from 1 to " + MAX_SLOTS_PER_WEEK);
+    return raw;
+  });
 }
 
 function hungarian(cost) { // square matrix, minimizes
@@ -8688,33 +8732,66 @@ function hungarian(cost) { // square matrix, minimizes
   return result; // result[row] = column
 }
 
+/* ⚠️ `covered` COUNTS SLOTS, not weeks. With one pick a week those are the same number,
+   which is why every pre-slots caller is unaffected; with a double-pick week they are
+   not, and a "covered N of M" string built on weeks would under-report a half-filled
+   double week as fully covered. `weeksCovered` and `slots` are alongside it so a
+   consumer that genuinely wants weeks does not have to derive it — and the MCP payload
+   names which one it is returning. */
 function finish(input, assignments) {
-  assignments.sort((a, b) => a.weekIndex - b.weekIndex || a.teamIndex - b.teamIndex);
+  assignments.sort((a, b) => a.weekIndex - b.weekIndex || a.slotIndex - b.slotIndex
+    || a.teamIndex - b.teamIndex);
   let logSurvival = 0;
   for (const pick of assignments) logSurvival += Math.log(pick.probability);
+  const slots = input.slotCounts.reduce((sum, n) => sum + n, 0);
   return {
     weeks: input.weeks.slice(), assignments,
     survival: assignments.length ? Math.exp(logSurvival) : 0,
     covered: assignments.length,
-    complete: assignments.length === input.weeks.length,
+    weeksCovered: new Set(assignments.map(a => a.week)).size,
+    slots,
+    slotsPerWeek: input.weeks.reduce((out, w, j) => { out[w] = input.slotCounts[j]; return out; }, {}),
+    complete: assignments.length === slots,
     reuse: input.reuse,
   };
 }
 
+/* Expand weeks into slots: week index j appears slotCounts[j] times. One pick a week
+   gives back exactly the old column order, so the cost matrix is unchanged. */
+function expandSlots(input) {
+  const weekOf = [], nth = [];
+  for (let j = 0; j < input.weeks.length; j++)
+    for (let k = 0; k < input.slotCounts[j]; k++) { weekOf.push(j); nth.push(k); }
+  return { weekOf, nth };
+}
+
 function solvePath(rawInput) {
   const input = validateInput(rawInput);
-  const R = input.teams.length, C = input.weeks.length;
+  const R = input.teams.length;
+  const { weekOf, nth } = expandSlots(input);
+  const C = weekOf.length;
+
   if (input.reuse) {
+    /* Reuse mode: weeks are independent, so each week just takes its best teams.
+       ⚠️ With two slots that is the top TWO DISTINCT teams, not the best team twice.
+       Nothing in this branch forbids a repeat — the assignment's distinct-team rule is
+       what does that when reuse is off, and this branch never builds an assignment.
+       Taking the top k distinct teams is both the fix and the exact optimum: within a
+       week you need k different teams and the product is maximised by the k largest
+       probabilities. (An earlier plan was to solve, detect a same-team collision, mark
+       that cell impossible and re-solve in a bounded loop. That works, but it is a
+       search for something this branch can read straight off a sort.) */
     const assignments = [];
-    for (let j = 0; j < C; j++) {
-      let best = -1, bestP = -1;
+    for (let j = 0; j < input.weeks.length; j++) {
+      const ranked = [];
       for (let i = 0; i < R; i++) {
         const p = input.probabilities[i][j];
-        if (p !== null && p > bestP) { best = i; bestP = p; }
+        if (p !== null) ranked.push({ i, p });
       }
-      if (best >= 0) assignments.push({
-        week: input.weeks[j], team: input.teams[best], probability: bestP,
-        teamIndex: best, weekIndex: j,
+      ranked.sort((a, b) => b.p - a.p || a.i - b.i);
+      for (let k = 0; k < input.slotCounts[j] && k < ranked.length; k++) assignments.push({
+        week: input.weeks[j], team: input.teams[ranked[k].i], probability: ranked[k].p,
+        teamIndex: ranked[k].i, weekIndex: j, slotIndex: k,
       });
     }
     return finish(input, assignments);
@@ -8722,22 +8799,23 @@ function solvePath(rawInput) {
 
   const N = Math.max(R, C);
   const cost = Array.from({ length: N }, () => new Float64Array(N).fill(BIG));
-  for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) {
-    const p = input.probabilities[i][j];
-    if (p !== null) cost[i][j] = -Math.log(Math.max(p, 1e-6));
+  for (let i = 0; i < R; i++) for (let s = 0; s < C; s++) {
+    const p = input.probabilities[i][weekOf[s]];
+    if (p !== null) cost[i][s] = -Math.log(Math.max(p, 1e-6));
   }
   const assignment = hungarian(cost), picks = [];
   for (let i = 0; i < R; i++) {
-    const j = assignment[i];
-    if (j >= 0 && j < C && cost[i][j] < BIG) picks.push({
-      week: input.weeks[j], team: input.teams[i], probability: input.probabilities[i][j],
-      teamIndex: i, weekIndex: j,
+    const s = assignment[i];
+    if (s >= 0 && s < C && cost[i][s] < BIG) picks.push({
+      week: input.weeks[weekOf[s]], team: input.teams[i],
+      probability: input.probabilities[i][weekOf[s]],
+      teamIndex: i, weekIndex: weekOf[s], slotIndex: nth[s],
     });
   }
   return finish(input, picks);
 }
 
-root.DDSurvivorPath = { MAX_WEEKS, MAX_TEAMS, hungarian, solvePath };
+root.DDSurvivorPath = { MAX_WEEKS, MAX_TEAMS, MAX_SLOTS_PER_WEEK, BIG, hungarian, solvePath };
 
 })(mcpSurvivorPathRoot);
 
@@ -9179,9 +9257,26 @@ function mcpDfsSolve(args) {
 // the nfelo Elo table and the margin-model constants — one fetch feeds both the
 // survivor EV tool and the matchup tool. 15 min cache: it changes on data pushes,
 // not per request, but weekly ownership context makes an hour feel stale.
+//
+// ⚠️ cacheTtlByStatus, NOT a bare cacheTtl. `cacheTtl` forces the response into the
+// edge cache REGARDLESS of its status, so a single transient 503 from Pages gets
+// pinned for the full 15 minutes and every caller in that window is told the file is
+// unavailable while the file is sitting there, valid, on the origin. That is the
+// shape of the outage reported 2026-08-23: both survivor tools returning
+// "survivor.json unavailable: HTTP 503" against a file that was fine.
+// Success caches for 15 minutes; a 404 caches for one second so a genuinely missing
+// file is still noticed quickly; 5xx caches for zero, so the next call retries.
+//
+// ⚠️ This fix is UNFALSIFIED. By the time it was written the tools had recovered on
+// their own and the origin was unreachable from the dev container (network policy),
+// so the 503 could not be reproduced to confirm the cause. The change is correct
+// regardless — pinning an error response for 15 minutes is a defect whether or not it
+// is firing right now — but if 503s return, this was not the (only) cause.
 async function mcpSurvivor() {
   if (!mcpSurvCache.data || Date.now() - mcpSurvCache.at > 900e3) {
-    const r = await fetch(`${SITE}/data/survivor.json`, { cf: { cacheTtl: 900, cacheEverything: true } });
+    const r = await fetch(`${SITE}/data/survivor.json`, {
+      cf: { cacheTtlByStatus: { "200-299": 900, "404": 1, "500-599": 0 }, cacheEverything: true },
+    });
     if (!r.ok) throw new Error("survivor.json unavailable: HTTP " + r.status);
     mcpSurvCache = { at: Date.now(), data: (await r.json()).data };
   }
@@ -9200,15 +9295,21 @@ function mcpSurvivorWeekTable(D, week) {
   return table;
 }
 
-function mcpSolveSurvivorPath(D, fromWeek, used, reuse) {
+// doubleWeeks: a Set of weeks requiring two picks. Empty means one pick a week and the
+// cost matrix is exactly what it was before slots existed.
+function mcpSolveSurvivorPath(D, fromWeek, used, reuse, doubleWeeks) {
   const weeks = [];
   for (let week = fromWeek; week <= 18; week++) weeks.push(week);
-  if (!weeks.length) return { weeks, assignments: [], survival: 1, covered: 0, complete: true, reuse };
+  const dbl = doubleWeeks || new Set();
+  const slotsPerWeek = {};
+  for (const week of weeks) if (dbl.has(week)) slotsPerWeek[week] = 2;
+  const slots = weeks.reduce((n, w) => n + (slotsPerWeek[w] || 1), 0);
+  if (!weeks.length) return { weeks, assignments: [], survival: 1, covered: 0, slots: 0, weeksCovered: 0, complete: true, reuse };
   const tables = weeks.map(week => mcpSurvivorWeekTable(D, week));
   const teams = Object.keys(D.elo).filter(team => reuse || !used.has(team));
-  if (!teams.length) return { weeks, assignments: [], survival: 0, covered: 0, complete: false, reuse };
+  if (!teams.length) return { weeks, assignments: [], survival: 0, covered: 0, slots, weeksCovered: 0, complete: false, reuse };
   const solved = mcpSurvivorPathRoot.DDSurvivorPath.solvePath({
-    weeks, teams, reuse,
+    weeks, teams, reuse, slotsPerWeek,
     probabilities: teams.map(team => tables.map(table => table[team] ? table[team].probability : null)),
   });
   solved.assignments = solved.assignments.map(pick => ({
@@ -10815,7 +10916,7 @@ async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG) {
           "or a deterministic calculation over caller-supplied inputs. Calculator inputs and results are not stored. " +
           "The model scoreboard reads dated prospective receipts and returns descriptive disagreement only; it is ungraded and is not a validated consensus or ranking. " +
           "The CFB reads separate observed 2025 results from one end-of-2025 retrodictive Elo row. Compact profiles also expose non-ranked expected-versus-observed Elo diagnostics; these are not luck, team-quality labels, forecasts or grades. dd_find_cfb_games reads the actual canonical 2025 schedule/results surface; it is historical and not the unpublished 2026 schedule. dd_find_cfb_team_games and dd_find_cfb_team_periods return schedule-derived results only, for one exact team by default or for every team's most recent game or period under scope=latest-per-team; latest means latest within the 2025 FBS-involved surface, not current 2026 form, and FCS records are partial. dd_find_cfb_historical_market returns book-identified prices whose observation time is unknown: never call them closing lines, compute CLV or cite them as prospective inputs. dd_get_cfb_model_card returns generated governance and retrodictive evidence, not a current forecast or leaderboard. dd_get_cfb_rating_system describes registered methods and output availability; registration is not evidence of prospective skill. dd_rank_cfb_teams returns one declared system's dated ranking, not a consensus or current power ranking. dd_project_cfb_matchup and dd_project_cfb_schedule_path are hypothetical rating-period calculations, not scheduled 2026 forecasts. dd_find_cfb_record_divergence returns descriptive record-versus-scoring gaps whose small held-out lift does not authorize current-team labels. dd_get_cfb_model_disagreement returns a blocked study whose untimestamped market input prevents a winner or blend conclusion. dd_get_cfb_model_receipt_status reports the append-only prospective ledger honestly; receipt rows remain ungraded and outcomes belong in a separate surface. All CFB outputs are ungraded, not market-adjusted and are not a consensus. " +
-          "There is no built-in DFS projection or ownership feed: dd_solve_dfs_lineup requires the caller to supply every value per call, and stores none of them. dd_optimize_survivor_path is an ungraded ceiling over a dated snapshot and does not model double-pick weeks. When quoting bozo odds, survivor odds " +
+          "There is no built-in DFS projection or ownership feed: dd_solve_dfs_lineup requires the caller to supply every value per call, and stores none of them. dd_optimize_survivor_path is an ungraded ceiling over a dated snapshot; it models double-pick weeks exactly, as two assignment slots spending two distinct teams. When quoting bozo odds, survivor odds " +
           "or the correlation matrix, say it is model output or a measured historical average, never a forecast " +
           "of a specific game. Team names, weeks and league ids come from dd_league_overview — do not guess them.",
       });
@@ -11659,7 +11760,8 @@ const MCP_TOOLS = [
       return toolText({
         season: D.meta.season, week, entries, ownership, ageHours, stale,
         asOf: D.meta.captured,
-        model: "One-week closed-form leverage: equity = P(win) × E[1/(1+survivors)], games independent, field mass survives by ownership share, E[1/(1+S)] by second-order Taylor. Win probabilities are the " + D.meta.captured + " snapshot blend (market 0.75 where a line existed). No future-value term: a team spent today is not priced against the weeks it could have covered — survivor.html's optimal-path view does that.",
+        ownership_adjustment: "alive-count projection; pick mix assumed independent of survival",
+    model: "One-week closed-form leverage: equity = P(win) × E[1/(1+survivors)], games independent, field mass survives by ownership share, E[1/(1+S)] by second-order Taylor. Win probabilities are the " + D.meta.captured + " snapshot blend (market 0.75 where a line existed). No future-value term: a team spent today is not priced against the weeks it could have covered — survivor.html's optimal-path view does that.",
         note: ownership === "modelled"
           ? "OWNERSHIP IS MODELLED (chalk softmax, exponent 2.4), not observed. A modelled ranking cannot see narrative picks and is wrong exactly where fading the field pays most. Post real pick data via /survivor-picks and this caveat disappears."
           : (stale ? "Posted ownership is over 72h old — treat as directional-only." : undefined),
@@ -11672,19 +11774,20 @@ const MCP_TOOLS = [
     title: "Survivor path optimizer",
     catalog: "full",
     readOnlyHint: true,
-    description: "Computes the exact maximum-product survivor path from a starting week through Week 18, subject to teams already used. Returns the path, run-the-table probability, each current-week option's future cost, and explicit rule/data caveats. This is a deterministic ceiling over a dated probability snapshot, not a recommendation or graded forecast.",
+    description: "Computes the exact maximum-product survivor path from a starting week through Week 18, subject to teams already used and to any weeks that require two picks. Returns the path, run-the-table probability, each current-week option's future cost, and explicit rule/data caveats. This is a deterministic ceiling over a dated probability snapshot, not a recommendation or graded forecast.",
     inputSchema: {
       type: "object",
       properties: {
         from_week: { type: "integer", minimum: 1, maximum: 18, description: "First week to optimize (default 1)" },
         used_teams: { type: "array", maxItems: 32, items: { type: "string" }, description: "NFL team abbreviations already spent; case-insensitive" },
         reuse_teams: { type: "boolean", description: "Allow the same team in multiple weeks (default false)" },
-        double_pick_from: { type: "integer", minimum: 0, maximum: 18, description: "Pool requires two picks beginning this week; 0 means never. Accepted so the result can warn that this rule is not yet modelled." },
+        double_pick_from: { type: "integer", minimum: 0, maximum: 18, description: "Pool requires two picks every week from this week through Week 18; 0 means never. Modelled exactly: each such week is two assignment slots and spends two distinct teams." },
+        double_pick_weeks: { type: "array", maxItems: 18, items: { type: "integer", minimum: 1, maximum: 18 }, description: "Specific weeks requiring two picks, for formats that are not a suffix (e.g. [9,12,13,14,15,16]). Combined with double_pick_from if both are given." },
       },
       additionalProperties: false,
     },
     async run(args) {
-      const allowed = ["from_week", "used_teams", "reuse_teams", "double_pick_from"];
+      const allowed = ["from_week", "used_teams", "reuse_teams", "double_pick_from", "double_pick_weeks"];
       if (!args || typeof args !== "object" || Array.isArray(args)) return toolErr("arguments must be an object");
       const extra = Object.keys(args).filter(key => !allowed.includes(key));
       if (extra.length) return toolErr("Unknown argument" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
@@ -11695,6 +11798,14 @@ const MCP_TOOLS = [
       const doublePickFrom = args.double_pick_from === undefined ? 0 : args.double_pick_from;
       if (!Number.isInteger(doublePickFrom) || doublePickFrom < 0 || doublePickFrom > 18)
         return toolErr("double_pick_from must be 0 or a whole number from 1 to 18");
+      if (args.double_pick_weeks !== undefined && !Array.isArray(args.double_pick_weeks))
+        return toolErr("double_pick_weeks must be an array");
+      const explicitDouble = args.double_pick_weeks || [];
+      if (explicitDouble.some(w => !Number.isInteger(w) || w < 1 || w > 18))
+        return toolErr("double_pick_weeks entries must be whole numbers from 1 to 18");
+      // from_week is a suffix rule, double_pick_weeks is a list; a caller may state both.
+      const doubleWeeks = new Set(explicitDouble);
+      if (doublePickFrom > 0) for (let w = doublePickFrom; w <= 18; w++) doubleWeeks.add(w);
       if (args.used_teams !== undefined && !Array.isArray(args.used_teams)) return toolErr("used_teams must be an array");
       if ((args.used_teams || []).length > 32) return toolErr("used_teams is limited to 32 teams");
 
@@ -11704,18 +11815,18 @@ const MCP_TOOLS = [
       const unknown = usedList.filter(team => !Object.prototype.hasOwnProperty.call(D.elo, team));
       if (unknown.length) return toolErr("Unknown team abbreviation" + (unknown.length > 1 ? "s" : "") + ": " + unknown.join(", "));
       const used = new Set(usedList);
-      const path = mcpSolveSurvivorPath(D, fromWeek, used, reuse);
+      const path = mcpSolveSurvivorPath(D, fromWeek, used, reuse, doubleWeeks);
       const currentTable = mcpSurvivorWeekTable(D, fromWeek);
       if (!Object.keys(currentTable).length) return toolErr("No games found for week " + fromWeek + ".");
 
-      const baselineFuture = fromWeek === 18 ? 1 : mcpSolveSurvivorPath(D, fromWeek + 1, used, reuse).survival;
+      const baselineFuture = fromWeek === 18 ? 1 : mcpSolveSurvivorPath(D, fromWeek + 1, used, reuse, doubleWeeks).survival;
       const selected = path.assignments.find(pick => pick.week === fromWeek);
       const currentOptions = Object.keys(currentTable)
         .filter(team => reuse || !used.has(team))
         .map(team => {
           const nextUsed = new Set(used);
           if (!reuse) nextUsed.add(team);
-          const future = fromWeek === 18 ? 1 : mcpSolveSurvivorPath(D, fromWeek + 1, nextUsed, reuse).survival;
+          const future = fromWeek === 18 ? 1 : mcpSolveSurvivorPath(D, fromWeek + 1, nextUsed, reuse, doubleWeeks).survival;
           const game = currentTable[team];
           return {
             team, opponent: game.opponent, home: game.home, probability: game.probability,
@@ -11738,8 +11849,9 @@ const MCP_TOOLS = [
         modelGames + " of " + D.games.length + " games have model-only probabilities; the rest use the published market/model blend where a captured line exists.",
         "Run-the-table probability is modelled and ungraded. It is the product of the selected weekly probabilities, not evidence of a validated edge.",
       ];
-      if (doublePickFrom > 0)
-        warnings.push("DOUBLE-PICK RULE NOT MODELLED: this solver still assigns exactly one team per week, including Week " + doublePickFrom + " onward. Do not use the path as a legal pool entry after that point.");
+      if (doubleWeeks.size)
+        warnings.push("Double-pick weeks are modelled exactly: " + [...doubleWeeks].sort((a, b) => a - b).join(", ")
+          + " each spend two distinct teams, and covered_picks counts slots rather than weeks.");
       if (reuse) warnings.push("reuse_teams is on: used_teams is ignored and the same team may be selected in multiple weeks.");
 
       return toolText({
@@ -11751,11 +11863,17 @@ const MCP_TOOLS = [
         stored: false,
         modelled: true,
         graded: false,
-        rules_fully_modelled: doublePickFrom === 0,
+        rules_fully_modelled: true,
+        double_pick_weeks: [...doubleWeeks].sort((a, b) => a - b),
         reuse_teams: reuse,
         used_teams: usedList,
         path: path.assignments,
-        covered_weeks: path.covered,
+        // ⚠️ covered_picks counts SLOTS, not weeks — a double-pick week wants two of
+        // them. covered_weeks is kept alongside and named so a consumer never has to
+        // guess which quantity it is reading.
+        covered_picks: path.covered,
+        requested_picks: path.slots,
+        covered_weeks: path.weeksCovered,
         requested_weeks: path.weeks.length,
         complete: path.complete,
         run_the_table_probability: path.survival,

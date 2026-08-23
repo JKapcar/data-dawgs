@@ -1,7 +1,7 @@
 // Data Dawgs service worker — draft-night insurance.
 // HTML is network-first (so deploys land immediately) with a cache fallback,
 // so a dead venue wifi can't take the draft down mid-auction.
-const VERSION = "a2eb573764";
+const VERSION = "61e7e29920";
 const CACHE = "dd-" + VERSION;
 
 // the pages that must survive a network drop (stats.html is 2MB — cached on first visit instead)
