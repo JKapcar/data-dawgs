@@ -436,9 +436,26 @@ function mcpDfsSolve(args) {
 // the nfelo Elo table and the margin-model constants — one fetch feeds both the
 // survivor EV tool and the matchup tool. 15 min cache: it changes on data pushes,
 // not per request, but weekly ownership context makes an hour feel stale.
+//
+// ⚠️ cacheTtlByStatus, NOT a bare cacheTtl. `cacheTtl` forces the response into the
+// edge cache REGARDLESS of its status, so a single transient 503 from Pages gets
+// pinned for the full 15 minutes and every caller in that window is told the file is
+// unavailable while the file is sitting there, valid, on the origin. That is the
+// shape of the outage reported 2026-08-23: both survivor tools returning
+// "survivor.json unavailable: HTTP 503" against a file that was fine.
+// Success caches for 15 minutes; a 404 caches for one second so a genuinely missing
+// file is still noticed quickly; 5xx caches for zero, so the next call retries.
+//
+// ⚠️ This fix is UNFALSIFIED. By the time it was written the tools had recovered on
+// their own and the origin was unreachable from the dev container (network policy),
+// so the 503 could not be reproduced to confirm the cause. The change is correct
+// regardless — pinning an error response for 15 minutes is a defect whether or not it
+// is firing right now — but if 503s return, this was not the (only) cause.
 async function mcpSurvivor() {
   if (!mcpSurvCache.data || Date.now() - mcpSurvCache.at > 900e3) {
-    const r = await fetch(`${SITE}/data/survivor.json`, { cf: { cacheTtl: 900, cacheEverything: true } });
+    const r = await fetch(`${SITE}/data/survivor.json`, {
+      cf: { cacheTtlByStatus: { "200-299": 900, "404": 1, "500-599": 0 }, cacheEverything: true },
+    });
     if (!r.ok) throw new Error("survivor.json unavailable: HTTP " + r.status);
     mcpSurvCache = { at: Date.now(), data: (await r.json()).data };
   }

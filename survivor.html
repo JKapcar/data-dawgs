@@ -679,6 +679,27 @@ textarea{width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font
   font:inherit;font-size:12px;font-weight:700;padding:5px 9px;cursor:pointer;min-width:44px}
 .sv-team.on{background:color-mix(in srgb,var(--bad) 16%,transparent);border-color:color-mix(in srgb,var(--bad) 50%,transparent);
   color:var(--bad);text-decoration:line-through}
+/* ---- backup-option cards (Stage A) ---- */
+.sv-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(212px,1fr));gap:12px;margin:0 0 16px}
+.sv-cards:empty{display:none}
+.sv-card{display:block;width:100%;text-align:left;background:var(--surface-1);
+  border:1px solid var(--border);border-radius:10px;padding:13px 15px;font:inherit;
+  color:inherit;cursor:pointer}
+.sv-card:hover{border-color:var(--ink-3)}
+.sv-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* the selected card is the one whose path the heatmap is drawing — same state, said twice */
+.sv-card.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.sv-card .rk{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);font-weight:700}
+.sv-card .tm{font-size:22px;font-weight:800;letter-spacing:-.02em;margin:3px 0 1px}
+.sv-card .opp{font-size:12px;color:var(--ink-3);margin-bottom:10px}
+.sv-card dl{display:grid;grid-template-columns:1fr auto;gap:4px 10px;margin:0;font-size:12px}
+.sv-card dt{color:var(--ink-3);min-width:0}
+.sv-card dd{margin:0;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.sv-card .act{margin-top:11px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;
+  font-weight:800;color:var(--accent)}
+.sv-card.on .act{color:var(--ink-3)}
+.sv-linkish{background:none;border:0;padding:0;font:inherit;color:var(--accent);
+  text-decoration:underline;cursor:pointer}
 .sv-mini{display:block;height:4px;border-radius:3px;background:color-mix(in srgb,var(--ink-3) 22%,transparent);margin-top:3px}
 .sv-mini i{display:block;height:100%;border-radius:3px;background:var(--accent)}
 tr.sv-top td{background:color-mix(in srgb,var(--accent) 7%,transparent)}
@@ -2354,6 +2375,11 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <p class="muted" style="margin-top:0">Ranked on <b>closed-form equity</b>, not on the
   simulation. Equity = your win probability divided by how crowded the pool still is if your
   team wins &mdash; so a 70% team nobody owns can beat a 78% team half the field is on.</p>
+  <!-- Backup options. The top three by the same closed-form equity the table below
+       ranks on — there is deliberately no second "recommended" heuristic. Each card
+       carries its OWN re-optimized season, so the question "what does taking this
+       one cost me later" is answered on the card instead of inferred from a column. -->
+  <div class="sv-cards" id="svCards"></div>
   <div class="nf-scroll"><table id="svBoard"></table></div>
   <p class="muted" id="svBoardNote" style="margin-top:12px"></p>
 </div>
@@ -2375,6 +2401,11 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
 <div class="card">
   <h2>The optimal path</h2>
+  <!-- ⚠️ One path is on screen at a time, and this line says which one. The heatmap
+       overlay, these tiles and the table below are all painted from the same path
+       object — a panel left describing the global optimum while the map draws a
+       backup would be two renderings of one fact, free to disagree. -->
+  <p class="muted" id="svPathWho" style="margin-top:0"></p>
   <div class="nf-tiles" id="svPathTiles"></div>
   <div class="nf-scroll" style="margin-top:12px"><table id="svPathTable"></table></div>
   <div class="callout" style="margin-top:12px">
@@ -2920,6 +2951,42 @@ function optimalPath(cfg, D, fromWeek, used){
   return {path,weeks,survival:solved.survival,covered:solved.covered};
 }
 
+/* ---- candidate paths: one re-optimized season per contender ---------------
+   The board ranks this week's picks; this answers the question the ranking
+   cannot: "and then what?" For each candidate the current week's leg is FORCED,
+   and the whole remaining season is re-solved from scratch under the teams that
+   leg leaves behind. Three extra Hungarian solves on a ≤32×17 matrix — the same
+   solve rankWeek already runs once per candidate for its future-cost column.
+
+   The best of these IS the global optimum: optimalPath(week) maximises over every
+   possible current-week leg, so max over candidates of p_leg · survival(rest) can
+   never exceed it, and equals it for the leg the global path actually chose. The
+   test asserts exactly that, because it is the property that makes these cards
+   the same object as the path panel rather than a second opinion.                */
+function candidatePaths(week, cfg, D, teams){
+  const tab = weekTable(week,cfg,D);
+  const used = new Set(cfg.used);
+  return teams.filter(t=>tab[t]).map(t=>{
+    /* ⚠️ Branch on cfg.reuse exactly as optimalPath does. With reuse ON the
+       candidate is still legal in later weeks, and spending it into `used` here
+       would forbid the one thing that setting exists to allow. */
+    const u2 = new Set(used); if(!cfg.reuse) u2.add(t);
+    const rest = optimalPath(cfg,D,week+1,u2);
+    /* ⚠️ The current-week leg's probability comes from weekTable(week), NOT from
+       the sub-solve — the sub-solve starts at week+1 and has never seen this leg.
+       Reading survival off `rest` alone drops the first leg out of the product
+       and every card reads too optimistic by exactly one factor. */
+    const legP = tab[t].p;
+    const path = Object.assign({}, rest.path);
+    path[week] = { team:t, p:legP };
+    return { team:t, opp:tab[t].opp, home:tab[t].home, p:legP, src:tab[t].src,
+             path, weeks:[week].concat(rest.weeks),
+             restSurvival: rest.survival,
+             survival: legP * rest.survival,
+             covered: rest.covered + 1 };
+  });
+}
+
 /* ---- closed-form one-week leverage -------------------------------------
    ⚠️ This does NOT need Monte Carlo and must not be simulated. Games in a week
    are independent, so conditioning on YOUR team winning changes only the field
@@ -3133,7 +3200,8 @@ function rankWeek(week, cfg, D){
 }
 
 return { LS, DEFAULTS, load, save, reset, ncdf, nppf, gameProb, weekTable,
-         popularityFor, modelPopularity, optimalPath, hungarian:window.DDSurvivorPath.hungarian,
+         popularityFor, modelPopularity, optimalPath, candidatePaths,
+         hungarian:window.DDSurvivorPath.hungarian,
          leverage, simulateAll, rankWeek };
 })();
 
@@ -3145,6 +3213,11 @@ const $=id=>document.getElementById(id);
 const pct=(x,d=1)=>(x*100).toFixed(d)+"%";
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 let cfg=S.load(), week=Math.min(18,Math.max(1,cfg.startWeek|0||1)), lastRank=null, lastPath=null;
+/* Stage A state. activeCand is the backup card the reader selected (null = the
+   global optimum); candCards is this week's three re-optimized seasons; shownPath
+   is whichever of them the heatmap, the overlay and the path panel are all drawing.
+   One variable, three surfaces — that is the point. */
+let activeCand=null, candCards=[], shownPath=null;
 
 /* nickname / city -> code, so a paste from any host parses */
 const ALIAS={};
@@ -3169,7 +3242,13 @@ function bar(){
 /* ---------- week select ---------- */
 $("svWeek").innerHTML=Array.from({length:18},(_,i)=>i+1)
   .map(w=>`<option value="${w}"${w===week?" selected":""}>Week ${w}</option>`).join("");
-$("svWeek").addEventListener("change",()=>{ week=Number($("svWeek").value); render(); });
+$("svWeek").addEventListener("change",()=>{
+  week=Number($("svWeek").value);
+  // A backup selected on one week means nothing on the next, even if the same team
+  // happens to be in both top threes — the path behind it is a different solve.
+  activeCand=null;
+  render();
+});
 
 /* ---------- popularity ---------- */
 function popState(){
@@ -3263,9 +3342,15 @@ function heat(){
   const from=week, weeks=[]; for(let w=from;w<=18;w++) weeks.push(w);
   const used=new Set(cfg.used);
   const op=S.optimalPath(cfg,D,from,used); lastPath=op;
+  /* Which path is on the map: the global optimum, or the backup card the reader
+     picked. `shown` is the single source for the overlay, the cell highlighting,
+     the tiles and the table — see the note in the markup. */
+  const sel = activeCand ? candCards.find(c=>c.team===activeCand) : null;
+  const shown = sel ? {path:sel.path, survival:sel.survival, covered:sel.covered} : op;
+  shownPath = shown.path;
   const tabs={}; weeks.forEach(w=>tabs[w]=S.weekTable(w,cfg,D));
   const onlyPath=$("svOnlyPath").checked, hideUsed=$("svHideUsed").checked;
-  const pathTeams=new Set(Object.values(op.path).map(x=>x.team));
+  const pathTeams=new Set(Object.values(shown.path).map(x=>x.team));
   let teams=Object.keys(D.elo).sort();
   if(hideUsed) teams=teams.filter(t=>!used.has(t));
   if(onlyPath) teams=teams.filter(t=>pathTeams.has(t));
@@ -3277,10 +3362,15 @@ function heat(){
     weeks.forEach(w=>{
       const e=tabs[w][t];
       if(!e){ h+=`<td class="sv-bye" title="bye">·</td>`; return; }
-      const on=op.path[w]&&op.path[w].team===t;
+      const on=shown.path[w]&&shown.path[w].team===t;
       // sequential single-hue ramp: opacity on the brand accent, light -> dark
       const a=Math.max(0,Math.min(1,(e.p-0.30)/0.55));
-      h+=`<td class="sv-cell${on?" sv-path":""}"${on?` data-path-week="${w}" data-path-team="${t}"`:""} style="background:color-mix(in srgb, ${acc} ${(a*72).toFixed(0)}%, transparent)"
+      /* ⚠️ EVERY cell carries data-week/data-team, not just the ones on the path.
+         The overlay used to find its points by selecting the cells heat() had
+         already marked, which meant it could only ever draw whatever heat() had
+         decided — three backup cards would all paint the same line. Addressing
+         every cell is what lets drawOptimalPath take a path as an argument. */
+      h+=`<td class="sv-cell${on?" sv-path":""}" data-week="${w}" data-team="${t}" style="background:color-mix(in srgb, ${acc} ${(a*72).toFixed(0)}%, transparent)"
            title="Week ${w} · ${t} ${e.home?"vs":"at"} ${e.opp} · ${pct(e.p)}${e.src==="model"?" (model only)":""}">${Math.round(e.p*100)}</td>`;
     });
     h+=`</tr>`;
@@ -3289,21 +3379,32 @@ function heat(){
   $("svHeatLegend").innerHTML=[30,45,60,75,85].map(v=>{
     const a=Math.max(0,Math.min(1,(v/100-0.30)/0.55));
     return `<span class="sv-lg"><i style="background:color-mix(in srgb, ${acc} ${(a*72).toFixed(0)}%, transparent)"></i>${v}%</span>`;
-  }).join("")+`<span class="sv-lg"><i class="sv-k-path"></i>optimal path</span>`;
-  requestAnimationFrame(drawOptimalPath);
+  }).join("")+`<span class="sv-lg"><i class="sv-k-path"></i>${sel?"selected path":"optimal path"}</span>`;
+  /* ⚠️ Wrapped, not passed by reference: requestAnimationFrame hands its callback a
+     DOMHighResTimeStamp, which would arrive as the `path` argument and be neither a
+     path nor null. */
+  requestAnimationFrame(()=>drawOptimalPath());
+
+  // which path this panel is describing
+  $("svPathWho").innerHTML = sel
+    ? `Showing the season <b>if you take ${esc(sel.team)}</b> this week — re-optimized around that pick. `
+      + `<button type="button" class="sv-linkish" id="svPathReset">Show the best path instead</button>`
+    : `Showing the <b>best remaining path</b> from week ${from}. Pick a backup card above to re-solve the season around it.`;
+  const rs=$("svPathReset");
+  if(rs) rs.addEventListener("click",()=>{ activeCand=null; heat(); paintCards(); });
 
   // path panel
-  const covered=op.covered, surv=op.survival;
+  const covered=shown.covered, surv=shown.survival;
   $("svPathTiles").innerHTML=[
     {k:"Weeks covered",v:covered+" of "+weeks.length,d:covered<weeks.length?"Not enough unspent teams to fill every week":"Every remaining week has a team"},
     {k:"Run-the-table odds",v:surv<0.0001?"<0.01%":pct(surv,2),d:"Playing this exact path perfectly, from week "+from},
-    {k:"Weakest link",v:(()=>{let m=null;Object.keys(op.path).forEach(w=>{if(!m||op.path[w].p<op.path[m].p)m=w;});
-       return m?`W${m} ${op.path[m].team}`:"—";})(),d:(()=>{let m=null;Object.keys(op.path).forEach(w=>{if(!m||op.path[w].p<op.path[m].p)m=w;});
-       return m?pct(op.path[m].p)+" — the week the path most likely dies":"";})()},
+    {k:"Weakest link",v:(()=>{let m=null;Object.keys(shown.path).forEach(w=>{if(!m||shown.path[w].p<shown.path[m].p)m=w;});
+       return m?`W${m} ${shown.path[m].team}`:"—";})(),d:(()=>{let m=null;Object.keys(shown.path).forEach(w=>{if(!m||shown.path[w].p<shown.path[m].p)m=w;});
+       return m?pct(shown.path[m].p)+" — the week the path most likely dies":"";})()},
     {k:"Teams left",v:(32-cfg.used.length)+" of 32",d:cfg.used.length+" already spent"}
   ].map(t=>`<div class="nf-tile flat"><div class="k">${t.k}</div><div class="v">${t.v}</div><div class="d">${t.d}</div></div>`).join("");
   $("svPathTable").innerHTML=`<tr><th class="tl">Week</th><th class="tl">Team</th><th class="tl">Opponent</th><th>Win %</th><th class="tl">Source</th></tr>`+
-    weeks.map(w=>{ const p=op.path[w];
+    weeks.map(w=>{ const p=shown.path[w];
       if(!p) return `<tr><td class="tl">${w}</td><td class="tl" colspan="4" style="color:var(--bad)">no team available</td></tr>`;
       const e=tabs[w][p.team];
       return `<tr><td class="tl">${w}</td><td class="tl nf-tm">${p.team}</td>
@@ -3313,13 +3414,20 @@ function heat(){
 }
 
 let showOptimalPath=false;
-function drawOptimalPath(){
+/* Takes the path to draw. It used to read back whichever cells heat() had marked,
+   which made it structurally incapable of drawing anything except the one path
+   heat() had chosen — the three backup cards would all have painted the same line.
+   Now every heat cell is addressable and this walks the path it is handed. */
+function drawOptimalPath(path){
   const heat=$('svHeat');
   heat.querySelector('.sv-path-overlay')?.remove();
   if(!showOptimalPath) return;
+  const p = path || shownPath;
+  if(!p) return;
   const box=heat.getBoundingClientRect();
-  const cells=[...heat.querySelectorAll('[data-path-week]')]
-    .sort((a,b)=>+a.dataset.pathWeek-+b.dataset.pathWeek);
+  const cells=Object.keys(p).map(Number).sort((a,b)=>a-b)
+    .map(w=>heat.querySelector(`[data-week="${w}"][data-team="${cssAttr(p[w].team)}"]`))
+    .filter(Boolean);
   if(cells.length<2) return;
   const points=cells.map(cell=>{
     const r=cell.getBoundingClientRect();
@@ -3340,7 +3448,55 @@ $('svShowPath').addEventListener('click',()=>{
   b.textContent=showOptimalPath?'Hide optimal path':'Show optimal path';
   drawOptimalPath();
 });
-addEventListener('resize',()=>{ if(showOptimalPath) requestAnimationFrame(drawOptimalPath); });
+// ⚠️ Wrapped: rAF passes a timestamp, which would land in the `path` parameter.
+addEventListener('resize',()=>{ if(showOptimalPath) requestAnimationFrame(()=>drawOptimalPath()); });
+
+/* ---------- backup options (Stage A) ----------
+   The top three by the SAME closed-form equity the board ranks on. There is no
+   separate "recommended" heuristic here on purpose: the ranking already exists,
+   is documented, and a second one would be a third opinion nobody asked for. */
+/* ⚠️ Split in two because of an ordering hazard, not for tidiness. heat() draws
+   whichever candidate path is selected, so the cards must be SOLVED before it runs
+   — otherwise a settings change repaints the map from paths computed under the old
+   config. But which card is lit depends on the optimum heat() just solved, so the
+   PAINT has to come after. Compute, draw, then paint. */
+function computeCards(){
+  if(!lastRank || !lastRank.rows.length){ candCards=[]; activeCand=null; return; }
+  candCards = S.candidatePaths(week,cfg,D,lastRank.rows.slice(0,3).map(r=>r.team));
+  // a selection from another week's board is not a selection on this one
+  if(activeCand && !candCards.some(c=>c.team===activeCand)) activeCand=null;
+}
+function paintCards(){
+  const el=$("svCards");
+  if(!candCards.length){ el.innerHTML=""; return; }
+  const byTeam={}; lastRank.rows.forEach(r=>{ byTeam[r.team]=r; });
+  /* Which card is lit is not its own state: it is "whose path is on the map".
+     With nothing selected that is the global optimum's leg for this week. */
+  const litTeam = activeCand || (lastPath && lastPath.path[week] && lastPath.path[week].team);
+  el.innerHTML = candCards.map((c,i)=>{
+    const r=byTeam[c.team]||{};
+    const on = c.team===litTeam;
+    return `<button type="button" class="sv-card${on?" on":""}" data-cand="${esc(c.team)}"
+        aria-pressed="${on}">
+      <div class="rk">${i===0?"Top pick":"Backup "+i}</div>
+      <div class="tm nf-tm">${esc(c.team)}</div>
+      <div class="opp">${c.home?"vs":"at"} ${esc(c.opp)}${c.src==="model"?" · model only":""}</div>
+      <dl>
+        <dt>Win %</dt><dd>${pct(c.p)}</dd>
+        <dt>Owned</dt><dd>${r.popReal?pct(r.pop||0):`<span title="modelled, not real data">~${pct(r.pop||0)}</span>`}</dd>
+        <dt>Equity index</dt><dd>${r.evIndex!=null?(r.evIndex*100).toFixed(0):"—"}</dd>
+        <dt>Run the table</dt><dd>${c.survival<0.0001?"&lt;0.01%":pct(c.survival,2)}</dd>
+      </dl>
+      <div class="act">${on?"On the map":"View path →"}</div>
+    </button>`;
+  }).join("");
+}
+$("svCards").addEventListener("click",e=>{
+  const b=e.target.closest("[data-cand]"); if(!b) return;
+  // candCards is already current for this config — only the selection moved
+  activeCand = b.dataset.cand;
+  heat(); paintCards();
+});
 
 /* ---------- simulation ---------- */
 $("svRun").addEventListener("click",()=>{
@@ -3372,7 +3528,10 @@ $("svRun").addEventListener("click",()=>{
 
 /* ---------- render ---------- */
 const esc=s=>String(s==null?"":s).replace(/[<>&"]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c]));
-function render(){ cfg=S.load(); bar(); popState(); board(); heat(); }
+/* Team codes are A-Z today, but this value is built from data and goes into an
+   attribute SELECTOR rather than into HTML, so esc() is the wrong escaper for it. */
+const cssAttr=s=>(window.CSS&&CSS.escape) ? CSS.escape(String(s)) : String(s).replace(/["\\]/g,"\\$&");
+function render(){ cfg=S.load(); bar(); popState(); board(); computeCards(); heat(); paintCards(); }
 $("svOnlyPath").addEventListener("change",heat);
 $("svHideUsed").addEventListener("change",heat);
 const prev=window.onThemeChange;
