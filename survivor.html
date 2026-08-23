@@ -700,6 +700,12 @@ textarea{width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font
 .sv-card.on .act{color:var(--ink-3)}
 .sv-linkish{background:none;border:0;padding:0;font:inherit;color:var(--accent);
   text-decoration:underline;cursor:pointer}
+/* a week that wants two picks, marked where the two rows meet */
+.sv-dbl{font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;
+  color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 45%,transparent);
+  border-radius:4px;padding:2px 5px;margin-left:6px;white-space:nowrap}
+.sv-card .mate{font-size:11.5px;color:var(--ink-3);margin:-4px 0 9px}
+.sv-card .mate b{color:var(--ink-2);font-weight:750}
 .sv-mini{display:block;height:4px;border-radius:3px;background:color-mix(in srgb,var(--ink-3) 22%,transparent);margin-top:3px}
 .sv-mini i{display:block;height:100%;border-radius:3px;background:var(--accent)}
 tr.sv-top td{background:color-mix(in srgb,var(--accent) 7%,transparent)}
@@ -2484,9 +2490,12 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <label class="sv-f"><span>Share of eliminated entries who buy back</span>
       <input type="number" id="cBuybackRate" min="0" max="1" step="0.05">
       <em>0 to 1. A guess, and the model is only as good as it. Ignored unless buybacks are on.</em></label>
-    <label class="sv-f"><span>Double picks required from week</span>
-      <input type="number" id="cDoubleFrom" min="0" max="18" step="1">
-      <em>0 = never. ⚠️ Recorded and shown, but the engine does not yet simulate two picks a week — see the note below.</em></label>
+    <label class="sv-f"><span>Double-pick weeks</span>
+      <input type="text" id="cDoubleWeeks" placeholder="e.g. 9, 12-16" inputmode="text">
+      <em>Weeks where the pool requires two picks. A list, a range, or <code>12+</code> for
+      "from week 12 on" — because real formats are not always a suffix. Blank = never.
+      Two picks a week is now modelled exactly in the path, the cards and the simulation.</em>
+      <output id="cDoubleOut"></output></label>
     <label class="sv-f"><span>If more than one entry survives</span>
       <select id="cTiebreak">
         <option value="split">Split the pot</option>
@@ -2494,11 +2503,21 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       </select>
       <em>Splitting is the common rule and is what the equity numbers assume.</em></label>
   </div>
-  <div class="callout warn" id="svDoubleWarn" style="display:none">
-    <b>Double picks are not simulated yet.</b> You have set a double-pick week, and the engine
-    still models one pick per week from there. Every survival number after week
-    <b id="svDW">—</b> is therefore <b>too optimistic</b>. The board will carry this warning
-    until the two-pick path is built. Treat those weeks as directional only.
+  <!-- ⚠️ The old warning here said double picks were recorded but not simulated, and
+       every survival number after such a week was too optimistic. That is no longer
+       true: the path, the backup cards and the season simulation all model two picks.
+       What replaces it is NOT nothing — it is the one thing that is still approximate,
+       stated narrowly. Deleting the box outright would have removed a live caveat
+       along with a dead one. -->
+  <div class="callout" id="svDoubleWarn" style="display:none">
+    <b>Double picks are modelled.</b> Weeks <b id="svDW">—</b> require two picks, and the
+    exact path, the backup cards and the simulation all spend two teams there.
+    <b>One approximation remains, in the field only:</b> the pool is simulated as a count
+    rather than as individual rosters, so a double week is modelled as every surviving
+    entry making two independent picks from the ownership vector — which cannot stop the
+    same entry drawing one team twice, and a real entry could not do that. That flatters
+    the field slightly in double weeks, which understates your equity slightly. Your own
+    path is exact; the field around it is not.
   </div>
 </div>
 
@@ -2699,13 +2718,27 @@ window.DDSheets = function(cfg){
    maximum-product assignment, solved as minimum -log(probability) with Hungarian.
    If a pool explicitly allows reuse, each week is independent and the exact solution
    is simply that week's highest-probability team; the same team may appear repeatedly.
+
+   DOUBLE-PICK WEEKS are the same problem with more columns. A week that requires two
+   picks is two SLOTS, and the assignment formulation already forbids a team from
+   taking two slots when reuse is off — the distinct-team rule falls out of the
+   assignment rather than being bolted on. `slotsPerWeek` carries that; absent, every
+   week is one slot and the maths is bit-for-bit what it always was.
    ========================================================================== */
 (function (root) {
 "use strict";
 
 const MAX_WEEKS = 18;
 const MAX_TEAMS = 64;
-const BIG = 25; // impossible cell; -log(1e-6) is only 13.82
+const MAX_SLOTS_PER_WEEK = 4;   // no real pool asks for more; the cap bounds the matrix
+/* ⚠️ BIG must dominate PER CELL, not per path. The Hungarian minimises a sum, so the
+   only thing that matters is that swapping a BIG cell for any legal cell always lowers
+   the total — i.e. BIG > the most expensive legal cell, which is -log(1e-6) = 13.8155.
+   It is tempting to reason "a full path is ~19 slots so BIG must beat 19 × 1.6 = 30",
+   and that comparison is not the binding one: a path's total cost is never weighed
+   against a single BIG. test-survivor-path.js asserts the per-cell inequality instead
+   of trusting either sentence. */
+const BIG = 25;
 
 function finiteProbability(value, label) {
   if (value === null || value === undefined) return null;
@@ -2732,7 +2765,37 @@ function validateInput(input) {
       throw new Error("probabilities row " + (i + 1) + " must have one cell per week");
     return row.map((p, j) => finiteProbability(p, "probability for " + teams[i] + " week " + weeks[j]));
   });
-  return { weeks: weeks.slice(), teams: teams.slice(), probabilities: matrix, reuse: input.reuse === true };
+  /* ⚠️ Slots are validated SEPARATELY and AFTER the caller-facing shape, on purpose.
+     The distinct-weeks rule above is what stops a caller passing week 3 twice and
+     silently getting a double-pick week it never asked for; weakening it so that
+     "weeks" could carry duplicates would make the double-pick rule unstateable and
+     the accidental-duplicate bug unreportable at the same time. A week appears once
+     in `weeks` and says how many picks it wants in `slotsPerWeek`. */
+  return {
+    weeks: weeks.slice(), teams: teams.slice(), probabilities: matrix,
+    reuse: input.reuse === true,
+    slotCounts: validateSlots(weeks, input.slotsPerWeek),
+  };
+}
+
+/* slotsPerWeek: { [week]: count }. Absent, or absent for a given week, means one pick —
+   so every existing caller keeps the exact matrix it had before slots existed. */
+function validateSlots(weeks, slotsPerWeek) {
+  if (slotsPerWeek === null || slotsPerWeek === undefined) return weeks.map(() => 1);
+  if (typeof slotsPerWeek !== "object" || Array.isArray(slotsPerWeek))
+    throw new Error("slotsPerWeek must be an object keyed by week");
+  for (const key of Object.keys(slotsPerWeek)) {
+    const week = Number(key);
+    if (!Number.isInteger(week) || week < 1 || week > 18)
+      throw new Error("slotsPerWeek keys must be whole weeks from 1 to 18");
+  }
+  return weeks.map(week => {
+    const raw = slotsPerWeek[week] !== undefined ? slotsPerWeek[week] : slotsPerWeek[String(week)];
+    if (raw === undefined || raw === null) return 1;
+    if (!Number.isInteger(raw) || raw < 1 || raw > MAX_SLOTS_PER_WEEK)
+      throw new Error("slotsPerWeek for week " + week + " must be a whole number from 1 to " + MAX_SLOTS_PER_WEEK);
+    return raw;
+  });
 }
 
 function hungarian(cost) { // square matrix, minimizes
@@ -2768,33 +2831,66 @@ function hungarian(cost) { // square matrix, minimizes
   return result; // result[row] = column
 }
 
+/* ⚠️ `covered` COUNTS SLOTS, not weeks. With one pick a week those are the same number,
+   which is why every pre-slots caller is unaffected; with a double-pick week they are
+   not, and a "covered N of M" string built on weeks would under-report a half-filled
+   double week as fully covered. `weeksCovered` and `slots` are alongside it so a
+   consumer that genuinely wants weeks does not have to derive it — and the MCP payload
+   names which one it is returning. */
 function finish(input, assignments) {
-  assignments.sort((a, b) => a.weekIndex - b.weekIndex || a.teamIndex - b.teamIndex);
+  assignments.sort((a, b) => a.weekIndex - b.weekIndex || a.slotIndex - b.slotIndex
+    || a.teamIndex - b.teamIndex);
   let logSurvival = 0;
   for (const pick of assignments) logSurvival += Math.log(pick.probability);
+  const slots = input.slotCounts.reduce((sum, n) => sum + n, 0);
   return {
     weeks: input.weeks.slice(), assignments,
     survival: assignments.length ? Math.exp(logSurvival) : 0,
     covered: assignments.length,
-    complete: assignments.length === input.weeks.length,
+    weeksCovered: new Set(assignments.map(a => a.week)).size,
+    slots,
+    slotsPerWeek: input.weeks.reduce((out, w, j) => { out[w] = input.slotCounts[j]; return out; }, {}),
+    complete: assignments.length === slots,
     reuse: input.reuse,
   };
 }
 
+/* Expand weeks into slots: week index j appears slotCounts[j] times. One pick a week
+   gives back exactly the old column order, so the cost matrix is unchanged. */
+function expandSlots(input) {
+  const weekOf = [], nth = [];
+  for (let j = 0; j < input.weeks.length; j++)
+    for (let k = 0; k < input.slotCounts[j]; k++) { weekOf.push(j); nth.push(k); }
+  return { weekOf, nth };
+}
+
 function solvePath(rawInput) {
   const input = validateInput(rawInput);
-  const R = input.teams.length, C = input.weeks.length;
+  const R = input.teams.length;
+  const { weekOf, nth } = expandSlots(input);
+  const C = weekOf.length;
+
   if (input.reuse) {
+    /* Reuse mode: weeks are independent, so each week just takes its best teams.
+       ⚠️ With two slots that is the top TWO DISTINCT teams, not the best team twice.
+       Nothing in this branch forbids a repeat — the assignment's distinct-team rule is
+       what does that when reuse is off, and this branch never builds an assignment.
+       Taking the top k distinct teams is both the fix and the exact optimum: within a
+       week you need k different teams and the product is maximised by the k largest
+       probabilities. (An earlier plan was to solve, detect a same-team collision, mark
+       that cell impossible and re-solve in a bounded loop. That works, but it is a
+       search for something this branch can read straight off a sort.) */
     const assignments = [];
-    for (let j = 0; j < C; j++) {
-      let best = -1, bestP = -1;
+    for (let j = 0; j < input.weeks.length; j++) {
+      const ranked = [];
       for (let i = 0; i < R; i++) {
         const p = input.probabilities[i][j];
-        if (p !== null && p > bestP) { best = i; bestP = p; }
+        if (p !== null) ranked.push({ i, p });
       }
-      if (best >= 0) assignments.push({
-        week: input.weeks[j], team: input.teams[best], probability: bestP,
-        teamIndex: best, weekIndex: j,
+      ranked.sort((a, b) => b.p - a.p || a.i - b.i);
+      for (let k = 0; k < input.slotCounts[j] && k < ranked.length; k++) assignments.push({
+        week: input.weeks[j], team: input.teams[ranked[k].i], probability: ranked[k].p,
+        teamIndex: ranked[k].i, weekIndex: j, slotIndex: k,
       });
     }
     return finish(input, assignments);
@@ -2802,22 +2898,23 @@ function solvePath(rawInput) {
 
   const N = Math.max(R, C);
   const cost = Array.from({ length: N }, () => new Float64Array(N).fill(BIG));
-  for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) {
-    const p = input.probabilities[i][j];
-    if (p !== null) cost[i][j] = -Math.log(Math.max(p, 1e-6));
+  for (let i = 0; i < R; i++) for (let s = 0; s < C; s++) {
+    const p = input.probabilities[i][weekOf[s]];
+    if (p !== null) cost[i][s] = -Math.log(Math.max(p, 1e-6));
   }
   const assignment = hungarian(cost), picks = [];
   for (let i = 0; i < R; i++) {
-    const j = assignment[i];
-    if (j >= 0 && j < C && cost[i][j] < BIG) picks.push({
-      week: input.weeks[j], team: input.teams[i], probability: input.probabilities[i][j],
-      teamIndex: i, weekIndex: j,
+    const s = assignment[i];
+    if (s >= 0 && s < C && cost[i][s] < BIG) picks.push({
+      week: input.weeks[weekOf[s]], team: input.teams[i],
+      probability: input.probabilities[i][weekOf[s]],
+      teamIndex: i, weekIndex: weekOf[s], slotIndex: nth[s],
     });
   }
   return finish(input, picks);
 }
 
-root.DDSurvivorPath = { MAX_WEEKS, MAX_TEAMS, hungarian, solvePath };
+root.DDSurvivorPath = { MAX_WEEKS, MAX_TEAMS, MAX_SLOTS_PER_WEEK, BIG, hungarian, solvePath };
 
 })(typeof module !== "undefined" && module.exports ? module.exports : (typeof self !== "undefined" ? self : this));
 /* ===== DD-SURVIVOR-PATH-ENGINE END ===== */
@@ -2838,7 +2935,12 @@ const DEFAULTS = {
   buybacks: false,
   buybackThrough: 4,     // buybacks permitted through this week
   buybackRate: 0.35,     // share of eliminated entries that buy back
-  doublePickFrom: 0,     // 0 = never; else two picks required from this week on
+  doublePickFrom: 0,     // legacy: 0 = never; else two picks required from this week on
+  /* Which weeks require two picks. An ARRAY, because real pools are not always a
+     suffix — ClevAnalytics-style formats run W9 plus a W12-16 block, which
+     "from week N on" cannot express. doublePickFrom is kept above and still read
+     forever (see load()); it is the shape every stored config on the planet has today. */
+  doublePickWeeks: [],
   reuse: false,          // may a team be picked more than once
   startWeek: 1,
   used: [],              // teams you have already spent
@@ -2858,8 +2960,31 @@ function load(){
      a new field arrives with its default instead of undefined. */
   out.used = Array.isArray(out.used) ? out.used : [];
   out.popularity = (out.popularity && typeof out.popularity === "object") ? out.popularity : {};
+  /* ⚠️ Migrate the legacy scalar, and keep reading it forever. Every config written
+     before double weeks became an array says `doublePickFrom: N`, meaning "two picks
+     required from week N ON" — a suffix, not a single week. Expanding it to
+     [N..18] is what preserves what that reader actually configured; reading it as
+     one week would quietly halve their remaining season's rules.
+     (The build note called this key `doublePickWeek` and treated it as a single
+     week. No such key has ever existed in this file — `git log -S` finds nothing —
+     so there is nothing else to migrate from.) */
+  out.doublePickWeeks = Array.isArray(out.doublePickWeeks)
+    ? out.doublePickWeeks.filter(w => Number.isInteger(w) && w >= 1 && w <= 18) : [];
+  if (!out.doublePickWeeks.length && Number(out.doublePickFrom) > 0) {
+    const from = Math.min(18, Math.max(1, Number(out.doublePickFrom) | 0));
+    for (let w = from; w <= 18; w++) out.doublePickWeeks.push(w);
+  }
+  out.doublePickWeeks = [...new Set(out.doublePickWeeks)].sort((a, b) => a - b);
   return out;
 }
+/* Weeks -> slot count, for the window a solve actually covers. Absent weeks are one
+   pick, which is what the engine assumes when the map says nothing about them. */
+function slotsFor(cfg, fromWeek, toWeek){
+  const out = {};
+  (cfg.doublePickWeeks || []).forEach(w => { if (w >= fromWeek && w <= toWeek) out[w] = 2; });
+  return out;
+}
+const isDoubleWeek = (cfg, w) => (cfg.doublePickWeeks || []).indexOf(w) >= 0;
 function save(c){ try{ localStorage.setItem(LS, JSON.stringify(c)); }catch(e){} return c; }
 function reset(){ try{ localStorage.removeItem(LS); }catch(e){} return load(); }
 
@@ -2936,19 +3061,35 @@ function popularityFor(week, cfg, D, availableTo){
    Teams x weeks, maximising the product of survival probabilities across the
    remaining season. This is the future-value engine — it answers "which weeks
    is this team actually needed for" instead of guessing.                     */
+/* ⚠️ path[week] is an ARRAY of legs, always — one entry in an ordinary week, two in a
+   double-pick week. It used to be a single {team,p} object. Making it an array only in
+   double weeks would mean every consumer has to test the shape before reading it, and
+   the one that forgets renders a double week as a single pick and reports a survival
+   number that is too optimistic in a known direction — the exact defect this stage
+   exists to remove. One shape, checked once. */
 function optimalPath(cfg, D, fromWeek, used){
   const weeks=[]; for(let w=fromWeek; w<=18; w++) weeks.push(w);
-  if(!weeks.length) return {path:{},weeks,survival:1,covered:0};
+  const empty = {path:{},weeks,survival:1,covered:0,slots:0,weeksCovered:0,complete:true};
+  if(!weeks.length) return empty;
+  const slotsPerWeek = slotsFor(cfg, fromWeek, 18);
+  const slots = weeks.reduce((n,w)=>n+(slotsPerWeek[w]||1),0);
   const tables = weeks.map(w=>weekTable(w,cfg,D));
   const teams = Object.keys(D.elo).filter(t=>cfg.reuse || !used.has(t));
-  if(!teams.length) return {path:{},weeks,survival:0,covered:0};
+  if(!teams.length) return {path:{},weeks,survival:0,covered:0,slots,weeksCovered:0,complete:false};
   const solved = window.DDSurvivorPath.solvePath({
-    weeks, teams, reuse:cfg.reuse,
+    weeks, teams, reuse:cfg.reuse, slotsPerWeek,
     probabilities:teams.map(t=>tables.map(tab=>tab[t] ? tab[t].p : null))
   });
   const path = {};
-  solved.assignments.forEach(x=>{ path[x.week]={team:x.team,p:x.probability}; });
-  return {path,weeks,survival:solved.survival,covered:solved.covered};
+  solved.assignments.forEach(x=>{ (path[x.week] || (path[x.week]=[])).push({team:x.team,p:x.probability}); });
+  return {path, weeks, survival:solved.survival, covered:solved.covered,
+          slots:solved.slots, weeksCovered:solved.weeksCovered, complete:solved.complete};
+}
+/* Every leg of a path, flat and in week order — for anything that needs to walk legs
+   rather than weeks (the overlay, the table, the weakest link). */
+function pathLegs(path){
+  return Object.keys(path).map(Number).sort((a,b)=>a-b)
+    .flatMap(w => path[w].map((leg,i)=>({week:w, slot:i, team:leg.team, p:leg.p})));
 }
 
 /* ---- candidate paths: one re-optimized season per contender ---------------
@@ -2966,24 +3107,53 @@ function optimalPath(cfg, D, fromWeek, used){
 function candidatePaths(week, cfg, D, teams){
   const tab = weekTable(week,cfg,D);
   const used = new Set(cfg.used);
+  const dbl = isDoubleWeek(cfg, week);
   return teams.filter(t=>tab[t]).map(t=>{
     /* ⚠️ Branch on cfg.reuse exactly as optimalPath does. With reuse ON the
        candidate is still legal in later weeks, and spending it into `used` here
        would forbid the one thing that setting exists to allow. */
     const u2 = new Set(used); if(!cfg.reuse) u2.add(t);
-    const rest = optimalPath(cfg,D,week+1,u2);
-    /* ⚠️ The current-week leg's probability comes from weekTable(week), NOT from
-       the sub-solve — the sub-solve starts at week+1 and has never seen this leg.
-       Reading survival off `rest` alone drops the first leg out of the product
-       and every card reads too optimistic by exactly one factor. */
     const legP = tab[t].p;
-    const path = Object.assign({}, rest.path);
-    path[week] = { team:t, p:legP };
+    let rest, partner = null, path = {}, survival, covered;
+
+    if(!dbl){
+      rest = optimalPath(cfg, D, week+1, u2);
+      Object.keys(rest.path).forEach(w=>{ path[w]=rest.path[w].slice(); });
+      path[week] = [{team:t, p:legP}];
+      survival = legP * rest.survival;
+      covered  = rest.covered + 1;
+
+    } else if(cfg.reuse){
+      /* Reuse on: weeks are independent, so forcing this leg cannot change any other
+         week. The partner is simply this week's best OTHER team — "other" because
+         distinct-within-a-week holds even when a team may be reused ACROSS weeks. */
+      let best=null, bp=-1;
+      for(const o in tab){ if(o!==t && tab[o].p>bp){ bp=tab[o].p; best=o; } }
+      partner = best ? {team:best, p:bp} : null;
+      rest = optimalPath(cfg, D, week+1, u2);
+      Object.keys(rest.path).forEach(w=>{ path[w]=rest.path[w].slice(); });
+      path[week] = partner ? [{team:t,p:legP}, partner] : [{team:t,p:legP}];
+      survival = legP * (partner ? partner.p : 1) * rest.survival;
+      covered  = rest.covered + path[week].length;
+
+    } else {
+      /* Reuse off, and THIS week wants two picks. Forcing one leg leaves the other
+         slot of this same week still open, so the re-solve starts HERE with this week
+         knocked down to a single pick — not at week+1. Solving from week+1 would price
+         a half-legal entry and report it as a full one. */
+      const cfgRest = Object.assign({}, cfg,
+        {doublePickWeeks:(cfg.doublePickWeeks||[]).filter(w=>w!==week)});
+      rest = optimalPath(cfgRest, D, week, u2);
+      Object.keys(rest.path).forEach(w=>{ path[w]=rest.path[w].slice(); });
+      partner = (rest.path[week]||[])[0] || null;
+      path[week] = [{team:t,p:legP}].concat(rest.path[week] ? rest.path[week].slice() : []);
+      survival = legP * rest.survival;      // rest already carries the partner's leg
+      covered  = rest.covered + 1;
+    }
+
     return { team:t, opp:tab[t].opp, home:tab[t].home, p:legP, src:tab[t].src,
-             path, weeks:[week].concat(rest.weeks),
-             restSurvival: rest.survival,
-             survival: legP * rest.survival,
-             covered: rest.covered + 1 };
+             partner, path, weeks:[week].concat(rest.weeks.filter(w=>w!==week)),
+             restSurvival: rest.survival, survival, covered };
   });
 }
 
@@ -3060,6 +3230,7 @@ function leverage(week, cfg, D){
 function simulateAll(week, cfg, D, candidates){
   const SIMS = Math.max(200, Math.min(20000, cfg.sims|0));
   const weeks = []; for(let w=week; w<=18; w++) weeks.push(w);
+  const slotsMap = slotsFor(cfg, week, 18);
   const tables = {}; weeks.forEach(w=>tables[w]=weekTable(w,cfg,D));
   const pops   = {}; weeks.forEach(w=>pops[w]=popularityFor(w,cfg,D).w);
   const cands  = candidates.slice();
@@ -3097,7 +3268,17 @@ function simulateAll(week, cfg, D, candidates){
     for(const w of weeks){
       let next = 0;
       const pop = pops[w], ww = won[w];
-      for(const t in pop) if(ww[t]) next += others * pop[t];
+      let share = 0;
+      for(const t in pop) if(ww[t]) share += pop[t];
+      /* ⚠️ A double-pick week raises the field's survival to the power of the slot
+         count. The field is a COUNT here, not a set of rosters (see the header), so
+         "each entry makes k picks drawn independently from the same ownership vector
+         and must win them all" is the only statement this model can make — it cannot
+         forbid an entry from drawing the same team twice, and real entries could not
+         do that. It biases the field's survival slightly HIGH in double weeks, which
+         biases your equity slightly LOW. Said on the page, not hidden here. */
+      const k = slotsMap[w] || 1;
+      next = others * Math.pow(share, k);
       eliminated += (others - next);
       others = next;
       if(cfg.buybacks && w <= cfg.buybackThrough){
@@ -3115,19 +3296,29 @@ function simulateAll(week, cfg, D, candidates){
       let eq = 0;
       for(let wi=0; wi<weeks.length; wi++){
         const w = weeks[wi], tab = tables[w], ww = won[w];
-        let pick;
-        if(wi===0){ pick = cands[ci]; }
-        else {
+        const need = slotsMap[w] || 1;
+        /* ⚠️ Every slot this week, not just the first. The week-0 candidate fills one
+           slot and the rest are filled the same greedy way later weeks are — by best
+           remaining probability, distinct within the week. A double week that only
+           played one leg here would let the simulated entry survive on half an entry,
+           which is the exact optimism this stage exists to remove. */
+        const picks = [];
+        if(wi===0) picks.push(cands[ci]);
+        while(picks.length < need){
           let best=null, bp=-1;
           for(const t in tab){
             if(!cfg.reuse && used.has(t)) continue;
+            if(picks.indexOf(t) >= 0) continue;      // distinct within the week, always
             if(tab[t].p > bp){ bp = tab[t].p; best = t; }
           }
-          pick = best;
+          if(!best) break;
+          picks.push(best);
         }
-        if(!pick){ alive=false; break; }        // no legal team left
-        used.add(pick);
-        if(!ww[pick]){ lives--; if(lives<=0){ alive=false; } }
+        if(picks.length < need){ alive=false; break; }   // cannot field a legal entry
+        for(const pick of picks){
+          used.add(pick);
+          if(!ww[pick]){ lives--; if(lives<=0){ alive=false; } }
+        }
         if(wi===0 && alive) survW[ci]++;
         if(!alive) break;
         if(fieldSeq[wi] < 1){ eq = 1; break; }  // last one standing
@@ -3200,7 +3391,8 @@ function rankWeek(week, cfg, D){
 }
 
 return { LS, DEFAULTS, load, save, reset, ncdf, nppf, gameProb, weekTable,
-         popularityFor, modelPopularity, optimalPath, candidatePaths,
+         popularityFor, modelPopularity, optimalPath, candidatePaths, pathLegs,
+         slotsFor, isDoubleWeek,
          hungarian:window.DDSurvivorPath.hungarian,
          leverage, simulateAll, rankWeek };
 })();
@@ -3332,6 +3524,10 @@ function board(){
       <td class="tl" style="color:var(--ink-3)">${x.src==="market"?"market":"model only"}</td></tr>`;
     }).join("");
   $("svBoardNote").innerHTML=
+    (S.isDoubleWeek(cfg,week)
+      ? `<b>Week ${week} needs two picks.</b> The board ranks the FIRST one; each card above pairs it with the
+         best legal partner and prices both legs. `
+      : "")+
     `Top of the board is <b>${best.team}</b> at ${pct(best.p)} to win, ${best.popReal?pct(best.pop)+" owned":"ownership modelled"}. `+
     (r.popReal?``:`<b>Ownership is a guess this week</b>, so the equity column is close to a win-probability sort — `)+
     `Future cost is how much of the best remaining full-season path you give up by spending that team now.`;
@@ -3349,8 +3545,10 @@ function heat(){
   const shown = sel ? {path:sel.path, survival:sel.survival, covered:sel.covered} : op;
   shownPath = shown.path;
   const tabs={}; weeks.forEach(w=>tabs[w]=S.weekTable(w,cfg,D));
+  const slots=S.slotsFor(cfg, from, 18);
   const onlyPath=$("svOnlyPath").checked, hideUsed=$("svHideUsed").checked;
-  const pathTeams=new Set(Object.values(shown.path).map(x=>x.team));
+  const legs=S.pathLegs(shown.path);
+  const pathTeams=new Set(legs.map(x=>x.team));
   let teams=Object.keys(D.elo).sort();
   if(hideUsed) teams=teams.filter(t=>!used.has(t));
   if(onlyPath) teams=teams.filter(t=>pathTeams.has(t));
@@ -3362,7 +3560,7 @@ function heat(){
     weeks.forEach(w=>{
       const e=tabs[w][t];
       if(!e){ h+=`<td class="sv-bye" title="bye">·</td>`; return; }
-      const on=shown.path[w]&&shown.path[w].team===t;
+      const on=(shown.path[w]||[]).some(x=>x.team===t);
       // sequential single-hue ramp: opacity on the brand accent, light -> dark
       const a=Math.max(0,Math.min(1,(e.p-0.30)/0.55));
       /* ⚠️ EVERY cell carries data-week/data-team, not just the ones on the path.
@@ -3395,21 +3593,34 @@ function heat(){
 
   // path panel
   const covered=shown.covered, surv=shown.survival;
+  const totalSlots=weeks.reduce((n,w)=>n+(slots[w]||1),0);
   $("svPathTiles").innerHTML=[
-    {k:"Weeks covered",v:covered+" of "+weeks.length,d:covered<weeks.length?"Not enough unspent teams to fill every week":"Every remaining week has a team"},
+    /* ⚠️ PICKS, not weeks. `covered` counts SLOTS now — a double-pick week wants two
+       of them — so "N of M weeks" would report a half-filled double week as covered. */
+    {k:"Picks covered",v:covered+" of "+totalSlots,d:covered<totalSlots?"Not enough unspent teams to fill every pick":(totalSlots>weeks.length?"Every remaining pick has a team, double weeks included":"Every remaining week has a team")},
     {k:"Run-the-table odds",v:surv<0.0001?"<0.01%":pct(surv,2),d:"Playing this exact path perfectly, from week "+from},
-    {k:"Weakest link",v:(()=>{let m=null;Object.keys(shown.path).forEach(w=>{if(!m||shown.path[w].p<shown.path[m].p)m=w;});
-       return m?`W${m} ${shown.path[m].team}`:"—";})(),d:(()=>{let m=null;Object.keys(shown.path).forEach(w=>{if(!m||shown.path[w].p<shown.path[m].p)m=w;});
-       return m?pct(shown.path[m].p)+" — the week the path most likely dies":"";})()},
+    /* The weakest LEG, not the weakest week — in a double week the two legs have
+       different probabilities and the week as a whole is the product of both. */
+    {k:"Weakest link",v:(()=>{const m=legs.slice().sort((a,b)=>a.p-b.p)[0];
+       return m?`W${m.week} ${m.team}`:"—";})(),d:(()=>{const m=legs.slice().sort((a,b)=>a.p-b.p)[0];
+       return m?pct(m.p)+" — the leg the path most likely dies on":"";})()},
     {k:"Teams left",v:(32-cfg.used.length)+" of 32",d:cfg.used.length+" already spent"}
   ].map(t=>`<div class="nf-tile flat"><div class="k">${t.k}</div><div class="v">${t.v}</div><div class="d">${t.d}</div></div>`).join("");
+  /* One row per LEG. A double-pick week prints two rows carrying the same week number
+     and a "2 picks" marker, rather than one row that silently shows half the entry. */
   $("svPathTable").innerHTML=`<tr><th class="tl">Week</th><th class="tl">Team</th><th class="tl">Opponent</th><th>Win %</th><th class="tl">Source</th></tr>`+
-    weeks.map(w=>{ const p=shown.path[w];
-      if(!p) return `<tr><td class="tl">${w}</td><td class="tl" colspan="4" style="color:var(--bad)">no team available</td></tr>`;
-      const e=tabs[w][p.team];
-      return `<tr><td class="tl">${w}</td><td class="tl nf-tm">${p.team}</td>
-        <td class="tl" style="color:var(--ink-3)">${e.home?"vs":"at"} ${e.opp}</td>
-        <td>${pct(p.p)}</td><td class="tl" style="color:var(--ink-3)">${e.src==="market"?"market":"model only"}</td></tr>`;
+    weeks.map(w=>{ const ls=shown.path[w], want=slots[w]||1;
+      if(!ls || !ls.length) return `<tr><td class="tl">${w}</td><td class="tl" colspan="4" style="color:var(--bad)">no team available</td></tr>`;
+      let out = ls.map((p,i)=>{
+        const e=tabs[w][p.team];
+        return `<tr><td class="tl">${i===0?w:""}${i===0&&want>1?` <span class="sv-dbl">${want} picks</span>`:""}</td>
+          <td class="tl nf-tm">${esc(p.team)}</td>
+          <td class="tl" style="color:var(--ink-3)">${e.home?"vs":"at"} ${esc(e.opp)}</td>
+          <td>${pct(p.p)}</td><td class="tl" style="color:var(--ink-3)">${e.src==="market"?"market":"model only"}</td></tr>`;
+      }).join("");
+      // a double week that could only be half-filled says so where it happened
+      if(ls.length < want) out += `<tr><td class="tl"></td><td class="tl" colspan="4" style="color:var(--bad)">no second team available for week ${w}</td></tr>`;
+      return out;
     }).join("");
 }
 
@@ -3425,8 +3636,11 @@ function drawOptimalPath(path){
   const p = path || shownPath;
   if(!p) return;
   const box=heat.getBoundingClientRect();
-  const cells=Object.keys(p).map(Number).sort((a,b)=>a-b)
-    .map(w=>heat.querySelector(`[data-week="${w}"][data-team="${cssAttr(p[w].team)}"]`))
+  /* One point per LEG, in week order then slot order — a double-pick week contributes
+     two cells, so the line visibly doubles back through that column instead of
+     pretending the week had one pick. */
+  const cells=S.pathLegs(p)
+    .map(leg=>heat.querySelector(`[data-week="${leg.week}"][data-team="${cssAttr(leg.team)}"]`))
     .filter(Boolean);
   if(cells.length<2) return;
   const points=cells.map(cell=>{
@@ -3472,7 +3686,8 @@ function paintCards(){
   const byTeam={}; lastRank.rows.forEach(r=>{ byTeam[r.team]=r; });
   /* Which card is lit is not its own state: it is "whose path is on the map".
      With nothing selected that is the global optimum's leg for this week. */
-  const litTeam = activeCand || (lastPath && lastPath.path[week] && lastPath.path[week].team);
+  const litTeam = activeCand
+    || (lastPath && lastPath.path[week] && lastPath.path[week][0] && lastPath.path[week][0].team);
   el.innerHTML = candCards.map((c,i)=>{
     const r=byTeam[c.team]||{};
     const on = c.team===litTeam;
@@ -3481,6 +3696,7 @@ function paintCards(){
       <div class="rk">${i===0?"Top pick":"Backup "+i}</div>
       <div class="tm nf-tm">${esc(c.team)}</div>
       <div class="opp">${c.home?"vs":"at"} ${esc(c.opp)}${c.src==="model"?" · model only":""}</div>
+      ${c.partner?`<div class="mate">two picks this week — paired with <b>${esc(c.partner.team)}</b> at ${pct(c.partner.p)}</div>`:""}
       <dl>
         <dt>Win %</dt><dd>${pct(c.p)}</dd>
         <dt>Owned</dt><dd>${r.popReal?pct(r.pop||0):`<span title="modelled, not real data">~${pct(r.pop||0)}</span>`}</dd>
@@ -3561,22 +3777,54 @@ function put(){ S.save(cfg); flash(); paintWarn();
   window.SVDirty=true; }
 
 const NUM=[["cEntries","entries"],["cLives","lives"],["cLifeLost","lifeLost"],["cStartWeek","startWeek"],
-  ["cBuybackThrough","buybackThrough"],["cBuybackRate","buybackRate"],["cDoubleFrom","doublePickFrom"],["cSims","sims"]];
+  ["cBuybackThrough","buybackThrough"],["cBuybackRate","buybackRate"],["cSims","sims"]];
 const CHK=[["cReuse","reuse"],["cBuybacks","buybacks"]];
 const RNG=[["cBlend","blendMarket","cBlendOut",v=>Math.round(v*100)+"% market / "+Math.round((1-v)*100)+"% model"],
            ["cChalk","chalk","cChalkOut",v=>v.toFixed(1)]];
 
+/* "9, 12-16" or "12+" -> [9,12,13,14,15,16] / [12..18]. Unparseable fragments are
+   REPORTED, never dropped quietly: a silently-ignored "12-16" would leave the reader
+   looking at a board that says double picks are off while their pool says otherwise. */
+function parseDoubleWeeks(txt){
+  const out=new Set(), bad=[];
+  String(txt||"").split(/[,\s]+/).filter(Boolean).forEach(tok=>{
+    let m;
+    if((m=tok.match(/^(\d{1,2})\+$/))){
+      const a=+m[1]; if(a>=1&&a<=18){ for(let w=a;w<=18;w++) out.add(w); return; }
+    } else if((m=tok.match(/^(\d{1,2})-(\d{1,2})$/))){
+      const a=+m[1], b=+m[2];
+      if(a>=1&&b<=18&&a<=b){ for(let w=a;w<=b;w++) out.add(w); return; }
+    } else if((m=tok.match(/^(\d{1,2})$/))){
+      const a=+m[1]; if(a>=1&&a<=18){ out.add(a); return; }
+    }
+    bad.push(tok);
+  });
+  return { weeks:[...out].sort((a,b)=>a-b), bad };
+}
+/* Print back as compact ranges, so a stored [12..18] reads as "12-18" not eighteen
+   numbers — and so what the reader typed round-trips recognisably. */
+function formatDoubleWeeks(ws){
+  const a=(ws||[]).slice().sort((x,y)=>x-y), out=[];
+  for(let i=0;i<a.length;){
+    let j=i; while(j+1<a.length && a[j+1]===a[j]+1) j++;
+    out.push(j>i+0 ? (j>i+1 ? a[i]+"-"+a[j] : a[i]+", "+a[j]) : String(a[i]));
+    i=j+1;
+  }
+  return out.join(", ");
+}
+
 function paint(){
   NUM.forEach(([id,k])=>$(id).value=cfg[k]);
+  $("cDoubleWeeks").value=formatDoubleWeeks(cfg.doublePickWeeks);
   CHK.forEach(([id,k])=>$(id).checked=!!cfg[k]);
   RNG.forEach(([id,k,o,f])=>{ $(id).value=cfg[k]; $(o).textContent=f(Number(cfg[k])); });
   $("cTiebreak").value=cfg.tiebreak;
   paintTeams(); paintWarn();
 }
 function paintWarn(){
-  const on=Number(cfg.doublePickFrom)>0;
-  $("svDoubleWarn").style.display=on?"":"none";
-  if(on) $("svDW").textContent=cfg.doublePickFrom;
+  const ws=cfg.doublePickWeeks||[];
+  $("svDoubleWarn").style.display=ws.length?"":"none";
+  if(ws.length) $("svDW").textContent=formatDoubleWeeks(ws);
 }
 function paintTeams(){
   const used=new Set(cfg.used);
@@ -3590,6 +3838,18 @@ function paintTeams(){
 }
 NUM.forEach(([id,k])=>$(id).addEventListener("input",()=>{
   const v=Number($(id).value); if(Number.isFinite(v)){ cfg[k]=v; put(); } }));
+$("cDoubleWeeks").addEventListener("input",()=>{
+  const {weeks,bad}=parseDoubleWeeks($("cDoubleWeeks").value);
+  cfg.doublePickWeeks=weeks;
+  /* ⚠️ The legacy scalar is cleared whenever the array is edited. Leaving a stale
+     doublePickFrom behind would make load()'s migration fight the reader: clear the
+     text box and the old suffix rule would silently reappear on the next load. */
+  cfg.doublePickFrom=0;
+  $("cDoubleOut").textContent = bad.length
+    ? `ignored: ${bad.join(", ")}` : (weeks.length ? `${weeks.length} double week${weeks.length===1?"":"s"}` : "");
+  $("cDoubleOut").style.color = bad.length ? "var(--warn)" : "";
+  put();
+});
 CHK.forEach(([id,k])=>$(id).addEventListener("change",()=>{ cfg[k]=$(id).checked; put(); }));
 RNG.forEach(([id,k,o,f])=>$(id).addEventListener("input",()=>{
   cfg[k]=Number($(id).value); $(o).textContent=f(cfg[k]); put(); }));

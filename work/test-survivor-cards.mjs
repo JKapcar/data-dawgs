@@ -145,11 +145,13 @@ for (const reuse of [false, true]) {
     const S = window.DDSurvivor, D = window.SV, cfg = S.load();
     const wk = Math.min(18, Math.max(1, cfg.startWeek | 0 || 1));
     const opt = S.optimalPath(cfg, D, wk, new Set(cfg.used));
-    const leg = opt.path[wk].team;
+    const leg = opt.path[wk][0].team;
     const card = S.candidatePaths(wk, cfg, D, [leg])[0];
+    // ⚠️ path[week] is an ARRAY of legs since double-pick weeks landed. Comparing it
+    // as an object silently passes by comparing undefined to undefined.
+    const key = ls => (ls || []).map(x => x.team + "@" + x.p).join("|");
     const weeks = Object.keys(opt.path).map(Number).sort((a, b) => a - b);
-    const diff = weeks.filter(w =>
-      !card.path[w] || card.path[w].team !== opt.path[w].team || card.path[w].p !== opt.path[w].p);
+    const diff = weeks.filter(w => key(card.path[w]) !== key(opt.path[w]));
     return { leg, diff, cardSurv: card.survival, optSurv: opt.survival,
              sameWeekCount: Object.keys(card.path).length === weeks.length };
   });
@@ -167,7 +169,7 @@ for (const reuse of [false, true]) {
     const wk = Math.min(18, Math.max(1, cfg.startWeek | 0 || 1));
     const opt = S.optimalPath(cfg, D, wk, new Set(cfg.used));
     const rank = S.rankWeek(wk, cfg, D);
-    return { equityFirst: rank.rows[0].team, pathLeg: opt.path[wk].team };
+    return { equityFirst: rank.rows[0].team, pathLeg: opt.path[wk][0].team };
   });
   if (r.equityFirst === r.pathLeg) {
     ok(true, "card #1 is also the optimum's leg on this snapshot, so it reproduces the path");
@@ -197,20 +199,20 @@ for (const reuse of [false, true]) {
        missing: a team the unconstrained solve uses again later. Hard-coding two
        abbreviations would make this pass for the wrong reason in any week where
        neither happens to be a later leg. */
-    const repeatable = free.path[laterWeeks[0]].team;
+    const repeatable = free.path[laterWeeks[0]][0].team;
     const cards = S.candidatePaths(1, cfg, D, [repeatable, "KC", "PHI"]);
 
     return {
       repeatable,
       restMatchesFree: cards.map(c => ({
         team: c.team,
-        same: laterWeeks.every(w => c.path[w]
-          && c.path[w].team === free.path[w].team && c.path[w].p === free.path[w].p),
+        same: laterWeeks.every(w => (c.path[w] || []).map(x => x.team + "@" + x.p).join("|")
+          === (free.path[w] || []).map(x => x.team + "@" + x.p).join("|")),
       })),
       // and the concrete version: the forced team is still on its later leg
       forcedTeamStillLater: (() => {
         const c = cards.find(x => x.team === repeatable);
-        return !!c && c.path[laterWeeks[0]] && c.path[laterWeeks[0]].team === repeatable;
+        return !!c && (c.path[laterWeeks[0]] || []).some(l => l.team === repeatable);
       })(),
     };
   });
@@ -292,13 +294,14 @@ for (const reuse of [false, true]) {
       teams: cards.map(c => c.team),
       // a spent team must never appear anywhere in a re-solved path
       leaks: cards.flatMap(c => Object.keys(c.path)
-        .filter(w => spent.has(c.path[w].team))
-        .map(w => `${c.team}@w${w}:${c.path[w].team}`)),
+        .flatMap(w => c.path[w].filter(l => spent.has(l.team)).map(l => `${c.team}@w${w}:${l.team}`))),
       startsAt6: cards.every(c => Object.keys(c.path).map(Number).sort((a, b) => a - b)[0] === 6),
+      arrayShape: cards.every(c => Object.keys(c.path).every(w => Array.isArray(c.path[w]))),
     };
   });
   ok(r.leaks.length === 0, "no spent team reappears in any candidate path", r.leaks.join(","));
   ok(r.startsAt6, "every candidate path starts at the configured week", r.teams.join(","));
+  ok(r.arrayShape, "every path week is an array of legs, uniformly");
   ok(!r.teams.some(t => ["KC", "PHI", "BAL", "SF", "DET"].includes(t)),
      "spent teams are not offered as candidates", r.teams.join(","));
   await ctx.close();

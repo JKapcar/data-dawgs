@@ -10,13 +10,27 @@
    maximum-product assignment, solved as minimum -log(probability) with Hungarian.
    If a pool explicitly allows reuse, each week is independent and the exact solution
    is simply that week's highest-probability team; the same team may appear repeatedly.
+
+   DOUBLE-PICK WEEKS are the same problem with more columns. A week that requires two
+   picks is two SLOTS, and the assignment formulation already forbids a team from
+   taking two slots when reuse is off — the distinct-team rule falls out of the
+   assignment rather than being bolted on. `slotsPerWeek` carries that; absent, every
+   week is one slot and the maths is bit-for-bit what it always was.
    ========================================================================== */
 (function (root) {
 "use strict";
 
 const MAX_WEEKS = 18;
 const MAX_TEAMS = 64;
-const BIG = 25; // impossible cell; -log(1e-6) is only 13.82
+const MAX_SLOTS_PER_WEEK = 4;   // no real pool asks for more; the cap bounds the matrix
+/* ⚠️ BIG must dominate PER CELL, not per path. The Hungarian minimises a sum, so the
+   only thing that matters is that swapping a BIG cell for any legal cell always lowers
+   the total — i.e. BIG > the most expensive legal cell, which is -log(1e-6) = 13.8155.
+   It is tempting to reason "a full path is ~19 slots so BIG must beat 19 × 1.6 = 30",
+   and that comparison is not the binding one: a path's total cost is never weighed
+   against a single BIG. test-survivor-path.js asserts the per-cell inequality instead
+   of trusting either sentence. */
+const BIG = 25;
 
 function finiteProbability(value, label) {
   if (value === null || value === undefined) return null;
@@ -43,7 +57,37 @@ function validateInput(input) {
       throw new Error("probabilities row " + (i + 1) + " must have one cell per week");
     return row.map((p, j) => finiteProbability(p, "probability for " + teams[i] + " week " + weeks[j]));
   });
-  return { weeks: weeks.slice(), teams: teams.slice(), probabilities: matrix, reuse: input.reuse === true };
+  /* ⚠️ Slots are validated SEPARATELY and AFTER the caller-facing shape, on purpose.
+     The distinct-weeks rule above is what stops a caller passing week 3 twice and
+     silently getting a double-pick week it never asked for; weakening it so that
+     "weeks" could carry duplicates would make the double-pick rule unstateable and
+     the accidental-duplicate bug unreportable at the same time. A week appears once
+     in `weeks` and says how many picks it wants in `slotsPerWeek`. */
+  return {
+    weeks: weeks.slice(), teams: teams.slice(), probabilities: matrix,
+    reuse: input.reuse === true,
+    slotCounts: validateSlots(weeks, input.slotsPerWeek),
+  };
+}
+
+/* slotsPerWeek: { [week]: count }. Absent, or absent for a given week, means one pick —
+   so every existing caller keeps the exact matrix it had before slots existed. */
+function validateSlots(weeks, slotsPerWeek) {
+  if (slotsPerWeek === null || slotsPerWeek === undefined) return weeks.map(() => 1);
+  if (typeof slotsPerWeek !== "object" || Array.isArray(slotsPerWeek))
+    throw new Error("slotsPerWeek must be an object keyed by week");
+  for (const key of Object.keys(slotsPerWeek)) {
+    const week = Number(key);
+    if (!Number.isInteger(week) || week < 1 || week > 18)
+      throw new Error("slotsPerWeek keys must be whole weeks from 1 to 18");
+  }
+  return weeks.map(week => {
+    const raw = slotsPerWeek[week] !== undefined ? slotsPerWeek[week] : slotsPerWeek[String(week)];
+    if (raw === undefined || raw === null) return 1;
+    if (!Number.isInteger(raw) || raw < 1 || raw > MAX_SLOTS_PER_WEEK)
+      throw new Error("slotsPerWeek for week " + week + " must be a whole number from 1 to " + MAX_SLOTS_PER_WEEK);
+    return raw;
+  });
 }
 
 function hungarian(cost) { // square matrix, minimizes
@@ -79,33 +123,66 @@ function hungarian(cost) { // square matrix, minimizes
   return result; // result[row] = column
 }
 
+/* ⚠️ `covered` COUNTS SLOTS, not weeks. With one pick a week those are the same number,
+   which is why every pre-slots caller is unaffected; with a double-pick week they are
+   not, and a "covered N of M" string built on weeks would under-report a half-filled
+   double week as fully covered. `weeksCovered` and `slots` are alongside it so a
+   consumer that genuinely wants weeks does not have to derive it — and the MCP payload
+   names which one it is returning. */
 function finish(input, assignments) {
-  assignments.sort((a, b) => a.weekIndex - b.weekIndex || a.teamIndex - b.teamIndex);
+  assignments.sort((a, b) => a.weekIndex - b.weekIndex || a.slotIndex - b.slotIndex
+    || a.teamIndex - b.teamIndex);
   let logSurvival = 0;
   for (const pick of assignments) logSurvival += Math.log(pick.probability);
+  const slots = input.slotCounts.reduce((sum, n) => sum + n, 0);
   return {
     weeks: input.weeks.slice(), assignments,
     survival: assignments.length ? Math.exp(logSurvival) : 0,
     covered: assignments.length,
-    complete: assignments.length === input.weeks.length,
+    weeksCovered: new Set(assignments.map(a => a.week)).size,
+    slots,
+    slotsPerWeek: input.weeks.reduce((out, w, j) => { out[w] = input.slotCounts[j]; return out; }, {}),
+    complete: assignments.length === slots,
     reuse: input.reuse,
   };
 }
 
+/* Expand weeks into slots: week index j appears slotCounts[j] times. One pick a week
+   gives back exactly the old column order, so the cost matrix is unchanged. */
+function expandSlots(input) {
+  const weekOf = [], nth = [];
+  for (let j = 0; j < input.weeks.length; j++)
+    for (let k = 0; k < input.slotCounts[j]; k++) { weekOf.push(j); nth.push(k); }
+  return { weekOf, nth };
+}
+
 function solvePath(rawInput) {
   const input = validateInput(rawInput);
-  const R = input.teams.length, C = input.weeks.length;
+  const R = input.teams.length;
+  const { weekOf, nth } = expandSlots(input);
+  const C = weekOf.length;
+
   if (input.reuse) {
+    /* Reuse mode: weeks are independent, so each week just takes its best teams.
+       ⚠️ With two slots that is the top TWO DISTINCT teams, not the best team twice.
+       Nothing in this branch forbids a repeat — the assignment's distinct-team rule is
+       what does that when reuse is off, and this branch never builds an assignment.
+       Taking the top k distinct teams is both the fix and the exact optimum: within a
+       week you need k different teams and the product is maximised by the k largest
+       probabilities. (An earlier plan was to solve, detect a same-team collision, mark
+       that cell impossible and re-solve in a bounded loop. That works, but it is a
+       search for something this branch can read straight off a sort.) */
     const assignments = [];
-    for (let j = 0; j < C; j++) {
-      let best = -1, bestP = -1;
+    for (let j = 0; j < input.weeks.length; j++) {
+      const ranked = [];
       for (let i = 0; i < R; i++) {
         const p = input.probabilities[i][j];
-        if (p !== null && p > bestP) { best = i; bestP = p; }
+        if (p !== null) ranked.push({ i, p });
       }
-      if (best >= 0) assignments.push({
-        week: input.weeks[j], team: input.teams[best], probability: bestP,
-        teamIndex: best, weekIndex: j,
+      ranked.sort((a, b) => b.p - a.p || a.i - b.i);
+      for (let k = 0; k < input.slotCounts[j] && k < ranked.length; k++) assignments.push({
+        week: input.weeks[j], team: input.teams[ranked[k].i], probability: ranked[k].p,
+        teamIndex: ranked[k].i, weekIndex: j, slotIndex: k,
       });
     }
     return finish(input, assignments);
@@ -113,21 +190,22 @@ function solvePath(rawInput) {
 
   const N = Math.max(R, C);
   const cost = Array.from({ length: N }, () => new Float64Array(N).fill(BIG));
-  for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) {
-    const p = input.probabilities[i][j];
-    if (p !== null) cost[i][j] = -Math.log(Math.max(p, 1e-6));
+  for (let i = 0; i < R; i++) for (let s = 0; s < C; s++) {
+    const p = input.probabilities[i][weekOf[s]];
+    if (p !== null) cost[i][s] = -Math.log(Math.max(p, 1e-6));
   }
   const assignment = hungarian(cost), picks = [];
   for (let i = 0; i < R; i++) {
-    const j = assignment[i];
-    if (j >= 0 && j < C && cost[i][j] < BIG) picks.push({
-      week: input.weeks[j], team: input.teams[i], probability: input.probabilities[i][j],
-      teamIndex: i, weekIndex: j,
+    const s = assignment[i];
+    if (s >= 0 && s < C && cost[i][s] < BIG) picks.push({
+      week: input.weeks[weekOf[s]], team: input.teams[i],
+      probability: input.probabilities[i][weekOf[s]],
+      teamIndex: i, weekIndex: weekOf[s], slotIndex: nth[s],
     });
   }
   return finish(input, picks);
 }
 
-root.DDSurvivorPath = { MAX_WEEKS, MAX_TEAMS, hungarian, solvePath };
+root.DDSurvivorPath = { MAX_WEEKS, MAX_TEAMS, MAX_SLOTS_PER_WEEK, BIG, hungarian, solvePath };
 
 })(typeof module !== "undefined" && module.exports ? module.exports : (typeof self !== "undefined" ? self : this));

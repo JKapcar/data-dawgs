@@ -971,9 +971,67 @@ function refLeverage(week, pop, games, entries, used) {
   const reused = text(await (await req(call("dd_optimize_survivor_path", { from_week: 1, reuse_teams: true }))).json());
   ok(Math.abs(reused.run_the_table_probability - 0.56) < 1e-12 && reused.path.filter(x => x.team === "SEA").length === 2,
      "reuse mode truly permits SEA in both fixture weeks");
-  const doubled = text(await (await req(call("dd_optimize_survivor_path", { double_pick_from: 10 }))).json());
-  ok(doubled.rules_fully_modelled === false && doubled.warnings.some(w => /DOUBLE-PICK RULE NOT MODELLED/.test(w)),
-     "double-pick rule fails visibly instead of pretending to be modelled");
+  /* ⚠️ This block used to assert the OPPOSITE — that the tool refused to model double
+     picks and said so in a warning. That warning was true until Stage B and is now
+     false, so the assertion is REPLACED by one pinning the new behaviour rather than
+     deleted. Both numbers below are hand-computed from the fixture, not captured.
+
+     Fixture: wk1 SEA .8 / ARI .2, PIT .55 / CLE .45; wk2 SEA .7 / PIT .3, CLE .6 / ARI .4.
+     ⚠️ It also declares 18 weeks of which only two have games, so requested_picks and
+     requested_weeks count the whole horizon and `complete` is false for reasons that
+     predate slots. The Stage B quantities are covered_picks and covered_weeks. */
+
+  // --- week 2 doubled: one slot in wk1, two in wk2, four teams, no reuse.
+  //   w1=SEA .8  -> wk2 best pair CLE .6 x ARI .4 = .24  -> .192
+  //   w1=PIT .55 -> wk2 best pair SEA .7 x CLE .6 = .42  -> .231   <- max
+  //   w1=CLE .45 -> .7 x .4 = .28                        -> .126
+  //   w1=ARI .2  -> .7 x .6 = .42                        -> .084
+  const doubled = text(await (await req(call("dd_optimize_survivor_path", { double_pick_weeks: [2] }))).json());
+  ok(Math.abs(doubled.run_the_table_probability - 0.231) < 1e-12,
+     "double-pick week 2 solves to the hand-computed 0.231 optimum", String(doubled.run_the_table_probability));
+  const wk2 = doubled.path.filter(x => x.week === 2);
+  ok(wk2.length === 2 && new Set(wk2.map(x => x.team)).size === 2,
+     "week 2 spends two DISTINCT teams", wk2.map(x => x.team).join(","));
+  ok(doubled.covered_picks === 3 && doubled.covered_weeks === 2,
+     "covered_picks counts slots while covered_weeks still counts weeks",
+     `${doubled.covered_picks} picks / ${doubled.covered_weeks} weeks`);
+  ok(doubled.requested_picks === doubled.requested_weeks + 1,
+     "one double week asks for exactly one extra pick over the horizon",
+     `${doubled.requested_picks} vs ${doubled.requested_weeks}`);
+  ok(doubled.rules_fully_modelled === true &&
+       doubled.warnings.some(w => /Double-pick weeks are modelled exactly/.test(w)) &&
+       !doubled.warnings.some(w => /NOT MODELLED/.test(w)),
+     "the tool now claims double picks ARE modelled, and the old warning is gone");
+  ok(JSON.stringify(doubled.double_pick_weeks) === JSON.stringify([2]),
+     "the payload names which weeks it treated as double", JSON.stringify(doubled.double_pick_weeks));
+
+  // --- BOTH weeks doubled: four slots, four teams, every team spent exactly once.
+  //   {SEA,PIT} wk1 = .44 x {ARI,CLE} wk2 = .24 -> .1056   <- max
+  //   {SEA,CLE} = .36 x {ARI,PIT} = .12         -> .0432
+  //   {SEA,ARI} = .16 x {PIT,CLE} = .18         -> .0288
+  //   {PIT,CLE} = .2475 x {SEA,ARI} = .28       -> .0693
+  //   {PIT,ARI} = .11 x {SEA,CLE} = .42         -> .0462
+  //   {CLE,ARI} = .09 x {SEA,PIT} = .21         -> .0189
+  const both = text(await (await req(call("dd_optimize_survivor_path", { double_pick_weeks: [1, 2] }))).json());
+  ok(Math.abs(both.run_the_table_probability - 0.1056) < 1e-12,
+     "two double weeks solve to the hand-computed 0.1056 optimum", String(both.run_the_table_probability));
+  ok(both.covered_picks === 4 && new Set(both.path.map(x => x.team)).size === 4,
+     "four slots spend four distinct teams", `${both.covered_picks} picks`);
+
+  // --- the suffix rule and the explicit list are the same thing, and they union
+  const suffix = text(await (await req(call("dd_optimize_survivor_path", { double_pick_from: 2 }))).json());
+  ok(Math.abs(suffix.run_the_table_probability - 0.231) < 1e-12,
+     "double_pick_from: 2 matches the equivalent explicit list — empty weeks cost nothing",
+     String(suffix.run_the_table_probability));
+  ok(suffix.double_pick_weeks.length === 17 && suffix.double_pick_weeks[0] === 2,
+     "a suffix rule expands to every week from there to 18", JSON.stringify(suffix.double_pick_weeks));
+  const union = text(await (await req(call("dd_optimize_survivor_path", { double_pick_from: 18, double_pick_weeks: [1] }))).json());
+  ok(JSON.stringify(union.double_pick_weeks) === JSON.stringify([1, 18]),
+     "a suffix and a list given together are unioned", JSON.stringify(union.double_pick_weeks));
+
+  const badList = await (await req(call("dd_optimize_survivor_path", { double_pick_weeks: [0] }))).json();
+  ok(/whole numbers from 1 to 18/.test(JSON.stringify(badList)),
+     "an out-of-range double-pick week is rejected", JSON.stringify(badList).slice(0, 140));
 }
 {
   const badTeam = await (await req(call("dd_optimize_survivor_path", { used_teams: ["XXX"] }))).json();

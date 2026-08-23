@@ -1316,9 +1316,9 @@ const SURFACES = [
     machine: [{ kind: 'json', url: '/data/survivor.json', status: 'live', covers: 'schedule and win probabilities' },
               { kind: 'mcp', tool: 'dd_survivor_week', status: 'live', covers: 'stored weekly ownership snapshots, staleness-flagged' },
               { kind: 'mcp', tool: 'dd_survivor_ev', status: 'live', covers: 'modelled pool survival EV with assumptions returned in the payload' },
-              { kind: 'mcp', tool: 'dd_optimize_survivor_path', status: 'live', covers: 'exact one-pick-per-week maximum-product path, dated probabilities and future-cost options' }],
+              { kind: 'mcp', tool: 'dd_optimize_survivor_path', status: 'live', covers: 'exact maximum-product path including double-pick weeks, dated probabilities and future-cost options' }],
     planned: [],
-    gap: 'The exact one-pick-per-week path is live. Pool ownership is modelled, not observed, and double-pick weeks are recorded but not optimized.' },
+    gap: 'The exact path is live, double-pick weeks included. Pool ownership is modelled, not observed, and the field is simulated as a count rather than as individual rosters.' },
   // The forecasting challenge. Arena, because it is the one surface where a person
   // competes against the models rather than reading them.
   //
