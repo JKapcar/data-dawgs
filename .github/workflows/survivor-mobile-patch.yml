@@ -1,0 +1,158 @@
+name: Survivor mobile patch
+
+on:
+  push:
+    branches:
+      - gpt/survivor-mobile-first
+    paths:
+      - .github/workflows/survivor-mobile-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gpt/survivor-mobile-first
+          fetch-depth: 0
+
+      - name: Apply mobile-first Survivor layout
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib, re
+
+          p = Path('survivor.html')
+          html = p.read_text(encoding='utf-8')
+
+          def div_block(text, start):
+              token = re.compile(r'<div\b[^>]*>|</div>', re.I)
+              depth = 0
+              for m in token.finditer(text, start):
+                  if m.group(0).lower().startswith('</div'):
+                      depth -= 1
+                      if depth == 0:
+                          return start, m.end()
+                  else:
+                      depth += 1
+              raise RuntimeError('Unbalanced div block')
+
+          # Move the season heatmap directly under the board summary bar. It is the
+          # season-level decision surface and should be the first thing a phone sees.
+          h2 = html.index('<h2>Season heatmap</h2>')
+          heat_start = html.rfind('<div class="card">', 0, h2)
+          assert heat_start >= 0
+          heat_start, heat_end = div_block(html, heat_start)
+          heat = html[heat_start:heat_end]
+          assert heat.count('<h2>Season heatmap</h2>') == 1
+          html = html[:heat_start] + html[heat_end:]
+
+          heat = heat.replace('<div class="card">', '<div class="card sv-heat-card" id="seasonHeatmap">', 1)
+          heat_scroll = '<div class="nf-scroll"><div class="sv-heat" id="svHeat"></div></div>'
+          assert heat.count(heat_scroll) == 1
+          heat = heat.replace(
+              heat_scroll,
+              '<div class="sv-swipe-hint">Swipe sideways for later weeks · team names stay pinned</div>\n    ' + heat_scroll,
+              1,
+          )
+
+          bar_start = html.index('<div class="sv-bar" id="svBar">')
+          _, bar_end = div_block(html, bar_start)
+          html = html[:bar_end] + '\n\n  ' + heat + html[bar_end:]
+
+          mobile_css = r'''
+
+/* ---- Survivor mobile-first pass (8/23/26) ----
+   Keep dense season tables locally scrollable, never let the page itself overflow,
+   and put tap-first controls ahead of hover-era desktop assumptions. */
+.sv-swipe-hint{display:none;color:var(--ink-3);font-size:11px;font-weight:700;letter-spacing:.01em;margin:0 0 7px}
+.sv-heat-t th:first-child,.sv-heat-t td:first-child{
+  position:sticky;left:0;z-index:4;background:var(--surface-1);
+  box-shadow:1px 0 0 var(--grid)
+}
+.sv-heat-t thead th:first-child{z-index:5}
+#sheetBoard,#sheetSettings,.sv-grid,.sv-cards,.nf-scroll{min-width:0;max-width:100%}
+
+@media(max-width:560px){
+  #sheetBoard .card,#sheetSettings .card{padding:14px 14px;margin-bottom:12px}
+  #sheetBoard h2,#sheetSettings h2{font-size:16px;line-height:1.25;margin-bottom:7px}
+  #sheetBoard .nf-sub,#sheetSettings .nf-sub{font-size:12px;line-height:1.48}
+
+  .sheetbar{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:4px}
+  .sheet-tab{display:flex;align-items:center;justify-content:center;min-height:44px;padding:9px 8px;font-size:13px}
+
+  .sv-bar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px}
+  .sv-bit{min-width:0;padding:8px 10px;overflow:hidden}
+  .sv-bit .v{font-size:13.5px;overflow-wrap:anywhere}
+  .sv-bit .k{font-size:9px}
+  a.sv-edit{min-height:44px;display:flex;align-items:center;justify-content:center}
+
+  .sv-grid{grid-template-columns:minmax(0,1fr);gap:13px}
+  .sv-cards{grid-template-columns:minmax(0,1fr);gap:9px}
+  .sv-card{padding:12px 13px}
+
+  .sv-btn,.sv-inline select,.sv-f select,.sv-f input[type=number],.sv-f input[type=text],.sv-f textarea{
+    min-height:44px;font-size:16px;max-width:100%
+  }
+  .sv-f input[type=range]{min-height:44px;max-width:100%}
+  .sv-f input[type=number],.sv-f input[type=text],.sv-f select,.sv-f textarea{width:100%;min-width:0}
+  .sv-inline{min-height:44px;max-width:100%}
+  .sv-inline input[type=checkbox]{width:20px;height:20px;flex:0 0 auto}
+  .sv-team{min-width:52px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;padding:7px 9px}
+  .sv-row{gap:8px}
+  #popCard .sv-btn{min-height:44px;flex:1 1 130px}
+
+  .sv-heat-card .sv-row{display:grid;grid-template-columns:minmax(0,1fr);align-items:stretch;margin-bottom:7px!important}
+  .sv-heat-card .sv-btn{width:100%}
+  .sv-heat-card .sv-inline{justify-content:flex-start}
+  .sv-heat-card .nf-scroll{margin-inline:-14px;padding-inline:14px;scroll-padding-inline:14px}
+  .sv-swipe-hint{display:block}
+  .nf-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-inline:contain}
+  .sv-heat-t{min-width:max-content}
+  .sv-cell{min-width:29px;height:28px;font-size:10.5px}
+}
+'''
+          style_end = html.find('</style>')
+          assert style_end > 0
+          html = html[:style_end] + mobile_css + html[style_end:]
+
+          # Static guardrails for the intended mobile information hierarchy.
+          assert html.index('<h2>Season heatmap</h2>') < html.index('<h2>Pick popularity')
+          assert html.count('id="seasonHeatmap"') == 1
+          assert html.count('Survivor mobile-first pass') == 1
+          p.write_text(html, encoding='utf-8')
+
+          # Repo rule: any HTML change bumps the service-worker cache version.
+          html_files = sorted(Path('.').glob('*.html'), key=lambda x: x.name)
+          version = hashlib.md5(b''.join(f.read_bytes() for f in html_files)).hexdigest()[:10]
+          sw = Path('sw.js')
+          sw_text = sw.read_text(encoding='utf-8')
+          sw_text, n = re.subn(r'const VERSION = "[0-9a-f]+";', f'const VERSION = "{version}";', sw_text, count=1)
+          assert n == 1
+          sw.write_text(sw_text, encoding='utf-8')
+          print('service worker version:', version)
+          PY
+
+      - name: Static checks
+        run: |
+          git diff --check
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('survivor.html').read_text(encoding='utf-8')
+          assert s.index('Season heatmap') < s.index('Pick popularity') < s.index("This week's board")
+          assert 'grid-template-columns:minmax(0,1fr);gap:13px' in s
+          assert 'position:sticky;left:0' in s
+          assert 'font-size:16px;max-width:100%' in s
+          print('survivor mobile static checks passed')
+          PY
+
+      - name: Commit mobile pass
+        run: |
+          git config user.name "Data Dawgs mobile patch"
+          git config user.email "actions@users.noreply.github.com"
+          git add survivor.html sw.js
+          git commit -m "Make Survivor mobile-first"
+          git push origin HEAD:gpt/survivor-mobile-first
