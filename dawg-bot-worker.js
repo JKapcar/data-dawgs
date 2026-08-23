@@ -9253,6 +9253,22 @@ function mcpDfsSolve(args) {
   };
 }
 
+/* ⚠️ EVERY /data fetch below uses cacheTtlByStatus, never a bare cacheTtl, and the
+   difference is not cosmetic. `cacheTtl` forces the response into Cloudflare's edge
+   cache REGARDLESS of its status, so one transient 5xx from Pages is pinned for the
+   full TTL and every caller in that window is told the file is unavailable while the
+   file sits there, valid, on the origin. That is a self-inflicted outage lasting as
+   long as the success TTL.
+
+   Success caches for the helper's own TTL; 404 caches for one second so a genuinely
+   missing file is still noticed quickly; 5xx caches for zero, so the next call retries.
+
+   This shape came out of the 2026-08-23 survivor.json incident, where both survivor
+   tools returned "unavailable: HTTP 503" against a healthy file. That diagnosis was
+   never confirmed — the tools had recovered before it could be reproduced — but the
+   defect is real independent of whether it caused that outage, and it was identical in
+   all sixteen helpers rather than unique to one. */
+
 // survivor.json carries the whole 2026 schedule with blended win probabilities,
 // the nfelo Elo table and the margin-model constants — one fetch feeds both the
 // survivor EV tool and the matchup tool. 15 min cache: it changes on data pushes,
@@ -9324,7 +9340,7 @@ function mcpSolveSurvivorPath(D, fromWeek, used, reuse, doubleWeeks) {
 // its source date and integrity receipt. The returned rows are always bounded by the tool.
 async function mcpModelReceipts() {
   if (!mcpModelReceiptsCache.data || Date.now() - mcpModelReceiptsCache.at > 900e3) {
-    const r = await fetch(`${SITE}/data/model-receipts.json`, { cf: { cacheTtl: 900, cacheEverything: true } });
+    const r = await fetch(`${SITE}/data/model-receipts.json`, { cf: { cacheTtlByStatus: { "200-299": 900, "404": 1, "500-599": 0 }, cacheEverything: true } });
     if (!r.ok) throw new Error("model-receipts.json unavailable: HTTP " + r.status);
     const envelope = await r.json();
     if (!envelope || !Array.isArray(envelope.data)) throw new Error("model-receipts.json has an invalid envelope");
@@ -9341,7 +9357,7 @@ async function mcpModelReceipts() {
 // snapshot receipt that produced every rating. The tool below returns one team only.
 async function mcpCfbTeamProfiles() {
   if (!mcpCfbProfilesCache.data || Date.now() - mcpCfbProfilesCache.at > 900e3) {
-    const r = await fetch(`${SITE}/data/cfb-teams.json`, { cf: { cacheTtl: 900, cacheEverything: true } });
+    const r = await fetch(`${SITE}/data/cfb-teams.json`, { cf: { cacheTtlByStatus: { "200-299": 900, "404": 1, "500-599": 0 }, cacheEverything: true } });
     if (!r.ok) throw new Error("cfb-teams.json unavailable: HTTP " + r.status);
     const envelope = await r.json();
     const data = envelope && envelope.data;
@@ -9415,8 +9431,8 @@ async function mcpCfbTeamProfiles() {
 async function mcpCfbRecordDivergenceEvidence() {
   if (!mcpCfbDivergenceCache.data || Date.now() - mcpCfbDivergenceCache.at > 900e3) {
     const [baselineResponse, validationResponse] = await Promise.all([
-      fetch(`${SITE}/data/cfb-record-divergence.json`, { cf: { cacheTtl: 900, cacheEverything: true } }),
-      fetch(`${SITE}/data/cfb-record-divergence-validation.json`, { cf: { cacheTtl: 900, cacheEverything: true } }),
+      fetch(`${SITE}/data/cfb-record-divergence.json`, { cf: { cacheTtlByStatus: { "200-299": 900, "404": 1, "500-599": 0 }, cacheEverything: true } }),
+      fetch(`${SITE}/data/cfb-record-divergence-validation.json`, { cf: { cacheTtlByStatus: { "200-299": 900, "404": 1, "500-599": 0 }, cacheEverything: true } }),
     ]);
     if (!baselineResponse.ok) throw new Error("cfb-record-divergence.json unavailable: HTTP " + baselineResponse.status);
     if (!validationResponse.ok) throw new Error("cfb-record-divergence-validation.json unavailable: HTTP " + validationResponse.status);
@@ -9454,7 +9470,7 @@ async function mcpCfbRecordDivergenceEvidence() {
 
 async function mcpCfbModelDisagreementEvidence() {
   if (!mcpCfbDisagreementCache.data || Date.now() - mcpCfbDisagreementCache.at > 900e3) {
-    const response = await fetch(`${SITE}/data/cfb-disagreement.json`, { cf: { cacheTtl: 900, cacheEverything: true } });
+    const response = await fetch(`${SITE}/data/cfb-disagreement.json`, { cf: { cacheTtlByStatus: { "200-299": 900, "404": 1, "500-599": 0 }, cacheEverything: true } });
     if (!response.ok) throw new Error("cfb-disagreement.json unavailable: HTTP " + response.status);
     const envelope = await response.json();
     const data = envelope && envelope.data;
@@ -9485,7 +9501,7 @@ async function mcpCfbModelDisagreementEvidence() {
 
 async function mcpCfbModelReceipts() {
   if (!mcpCfbReceiptCache.data || Date.now() - mcpCfbReceiptCache.at > 900e3) {
-    const response = await fetch(`${SITE}/data/cfb-model-receipts.json`, { cf: { cacheTtl: 900, cacheEverything: true } });
+    const response = await fetch(`${SITE}/data/cfb-model-receipts.json`, { cf: { cacheTtlByStatus: { "200-299": 900, "404": 1, "500-599": 0 }, cacheEverything: true } });
     if (!response.ok) throw new Error("cfb-model-receipts.json unavailable: HTTP " + response.status);
     const envelope = await response.json();
     const rows = envelope && envelope.data;
@@ -9515,7 +9531,7 @@ async function mcpCfbModelReceipts() {
 
 async function mcpCfbSchedule() {
   if (!mcpCfbScheduleCache.data || Date.now() - mcpCfbScheduleCache.at > 900e3) {
-    const response = await fetch(`${SITE}/data/cfb-schedule.json`, { cf: { cacheTtl: 900, cacheEverything: true } });
+    const response = await fetch(`${SITE}/data/cfb-schedule.json`, { cf: { cacheTtlByStatus: { "200-299": 900, "404": 1, "500-599": 0 }, cacheEverything: true } });
     if (!response.ok) throw new Error("cfb-schedule.json unavailable: HTTP " + response.status);
     const envelope = await response.json();
     const data = envelope && envelope.data;
@@ -9546,7 +9562,7 @@ async function mcpCfbSchedule() {
 
 async function mcpCfbTeamPeriods() {
   if (!mcpCfbTeamPeriodsCache.data || Date.now() - mcpCfbTeamPeriodsCache.at > 900e3) {
-    const response = await fetch(`${SITE}/data/cfb-team-week.json`, { cf: { cacheTtl: 900, cacheEverything: true } });
+    const response = await fetch(`${SITE}/data/cfb-team-week.json`, { cf: { cacheTtlByStatus: { "200-299": 900, "404": 1, "500-599": 0 }, cacheEverything: true } });
     if (!response.ok) throw new Error("cfb-team-week.json unavailable: HTTP " + response.status);
     const envelope = await response.json();
     const data = envelope && envelope.data;
@@ -9596,7 +9612,7 @@ async function mcpCfbTeamPeriods() {
 
 async function mcpCfbLatestPeriods() {
   if (!mcpCfbLatestPeriodsCache.data || Date.now() - mcpCfbLatestPeriodsCache.at > 900e3) {
-    const response = await fetch(`${SITE}/data/cfb-team-week-latest.json`, { cf: { cacheTtl: 900, cacheEverything: true } });
+    const response = await fetch(`${SITE}/data/cfb-team-week-latest.json`, { cf: { cacheTtlByStatus: { "200-299": 900, "404": 1, "500-599": 0 }, cacheEverything: true } });
     if (!response.ok) throw new Error("cfb-team-week-latest.json unavailable: HTTP " + response.status);
     const envelope = await response.json();
     const data = envelope && envelope.data;
@@ -9639,7 +9655,7 @@ async function mcpCfbLatestPeriods() {
 
 async function mcpCfbLatestGames() {
   if (!mcpCfbLatestGamesCache.data || Date.now() - mcpCfbLatestGamesCache.at > 900e3) {
-    const response = await fetch(`${SITE}/data/cfb-games-latest.json`, { cf: { cacheTtl: 900, cacheEverything: true } });
+    const response = await fetch(`${SITE}/data/cfb-games-latest.json`, { cf: { cacheTtlByStatus: { "200-299": 900, "404": 1, "500-599": 0 }, cacheEverything: true } });
     if (!response.ok) throw new Error("cfb-games-latest.json unavailable: HTTP " + response.status);
     const envelope = await response.json();
     const data = envelope && envelope.data;
@@ -9683,7 +9699,7 @@ async function mcpCfbLatestGames() {
 
 async function mcpCfbTeamGames() {
   if (!mcpCfbTeamGamesCache.data || Date.now() - mcpCfbTeamGamesCache.at > 900e3) {
-    const response = await fetch(`${SITE}/data/cfb-team-game.json`, { cf: { cacheTtl: 900, cacheEverything: true } });
+    const response = await fetch(`${SITE}/data/cfb-team-game.json`, { cf: { cacheTtlByStatus: { "200-299": 900, "404": 1, "500-599": 0 }, cacheEverything: true } });
     if (!response.ok) throw new Error("cfb-team-game.json unavailable: HTTP " + response.status);
     const envelope = await response.json();
     const data = envelope && envelope.data;
@@ -9730,7 +9746,7 @@ async function mcpCfbTeamGames() {
 
 async function mcpCfbHistoricalMarket() {
   if (!mcpCfbMarketCache.data || Date.now() - mcpCfbMarketCache.at > 900e3) {
-    const response = await fetch(`${SITE}/data/cfb-market.json`, { cf: { cacheTtl: 900, cacheEverything: true } });
+    const response = await fetch(`${SITE}/data/cfb-market.json`, { cf: { cacheTtlByStatus: { "200-299": 900, "404": 1, "500-599": 0 }, cacheEverything: true } });
     if (!response.ok) throw new Error("cfb-market.json unavailable: HTTP " + response.status);
     const envelope = await response.json();
     const data = envelope && envelope.data;
@@ -9767,7 +9783,7 @@ async function mcpCfbHistoricalMarket() {
 
 async function mcpCfbModelCards() {
   if (!mcpCfbModelCardsCache.data || Date.now() - mcpCfbModelCardsCache.at > 900e3) {
-    const response = await fetch(`${SITE}/data/cfb-model-cards.json`, { cf: { cacheTtl: 900, cacheEverything: true } });
+    const response = await fetch(`${SITE}/data/cfb-model-cards.json`, { cf: { cacheTtlByStatus: { "200-299": 900, "404": 1, "500-599": 0 }, cacheEverything: true } });
     if (!response.ok) throw new Error("cfb-model-cards.json unavailable: HTTP " + response.status);
     const envelope = await response.json();
     const cards = envelope && envelope.data && envelope.data.cards;
@@ -11620,7 +11636,7 @@ const MCP_TOOLS = [
     },
     async run(args) {
       if (!mcpPoolCache.data || Date.now() - mcpPoolCache.at > 3600e3) {
-        const r = await fetch(`${SITE}/data/pool.json`, { cf: { cacheTtl: 3600, cacheEverything: true } });
+        const r = await fetch(`${SITE}/data/pool.json`, { cf: { cacheTtlByStatus: { "200-299": 3600, "404": 1, "500-599": 0 }, cacheEverything: true } });
         if (!r.ok) return toolErr("pool.json unavailable: HTTP " + r.status);
         mcpPoolCache = { at: Date.now(), data: await r.json() };
       }
@@ -13356,7 +13372,7 @@ const MCP_TOOLS = [
     inputSchema: MCP_NO_ARGS,
     async run() {
       if (!mcpCorrCache.data || Date.now() - mcpCorrCache.at > 3600e3) {
-        const r = await fetch(`${SITE}/dfs.html`, { cf: { cacheTtl: 3600, cacheEverything: true } });
+        const r = await fetch(`${SITE}/dfs.html`, { cf: { cacheTtlByStatus: { "200-299": 3600, "404": 1, "500-599": 0 }, cacheEverything: true } });
         if (!r.ok) return toolErr("dfs.html unavailable: HTTP " + r.status);
         const html = await r.text();
         const tag = "const CORR = ";
@@ -13459,7 +13475,7 @@ const MCP_TOOLS = [
       // pull it at most once a day. Names come from /users + /rosters, scores from
       // /matchups. The page has always worked this way and so does this.
       const get = async (path) => {
-        const r = await fetch(API + path, { cf: { cacheTtl: 300, cacheEverything: true } });
+        const r = await fetch(API + path, { cf: { cacheTtlByStatus: { "200-299": 300, "404": 1, "500-599": 0 }, cacheEverything: true } });
         if (!r.ok) throw new Error("Sleeper " + path + " returned " + r.status);
         return r.json();
       };
