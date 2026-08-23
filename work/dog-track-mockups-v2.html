@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Dog Track — Rankings Report Card Mockup v2</title>
+<style>
+:root{
+  --page:#0a0806; --surface:#16120d; --felt:#12100b; --ink1:#f5f1ea; --ink2:#c8c1b4; --ink3:#8f897d;
+  --grid:#2b251d; --accent:#ff6a02; --good:#2fbf3f; --bad:#ff6b6b; --warn:#d19a30;
+  --led:#ffb15e; --ledglow:rgba(255,106,2,.55);
+}
+[data-theme="light"]{
+  --page:#f2ecdf; --surface:#fffdf7; --felt:#efe7d4; --ink1:#2b1c0e; --ink2:#5b4a37; --ink3:#8c7b66;
+  --grid:#e3dac6; --accent:#d13a00; --good:#006300; --bad:#c73030; --warn:#a86e00;
+  --led:#d13a00; --ledglow:rgba(209,58,0,.25);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--page);color:var(--ink1);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding-bottom:70px}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+/* header marquee */
+header{background:#16100a;border-bottom:3px solid var(--accent);padding:16px;position:relative;overflow:hidden}
+[data-theme="light"] header{background:#2a1a06}
+header h1{font-size:20px;font-weight:900;letter-spacing:.06em;color:#ecdfc9;text-align:center}
+header h1 .neon{color:var(--led);text-shadow:0 0 10px var(--ledglow),0 0 22px var(--ledglow)}
+header .sub{font-size:11.5px;color:#b7a488;text-align:center;margin-top:3px}
+.bulbs{display:flex;justify-content:center;gap:9px;margin-top:9px}
+.bulb{width:7px;height:7px;border-radius:50%;background:#3a2c18}
+.bulb.lit{background:var(--led);box-shadow:0 0 7px var(--ledglow)}
+.mocktag{display:inline-block;background:var(--accent);color:#140a02;font-size:10px;font-weight:900;padding:1px 8px;border-radius:3px;letter-spacing:.1em;vertical-align:4px;margin-left:8px}
+
+/* tabs styled as chips */
+.bar{display:flex;gap:8px;flex-wrap:wrap;padding:12px;position:sticky;top:0;background:var(--page);border-bottom:1px solid var(--grid);z-index:5;align-items:center}
+.bar button{border:2px dashed color-mix(in srgb,var(--ink3) 55%,transparent);background:var(--surface);color:var(--ink2);font-size:12px;font-weight:800;padding:8px 13px;border-radius:50px;cursor:pointer;letter-spacing:.02em}
+.bar button.on{background:var(--accent);border-color:#fff3;border-style:dashed;color:#140a02;box-shadow:0 0 12px var(--ledglow)}
+.bar .theme{margin-left:auto;border-radius:8px;border-style:solid}
+
+main{max-width:780px;margin:0 auto;padding:16px 12px}
+.view{display:none}.view.on{display:block;animation:vin .3s ease-out}
+@keyframes vin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.vh{margin:2px 0 2px;font-size:22px;font-weight:900;letter-spacing:.02em}
+.vh .neon{color:var(--led);text-shadow:0 0 9px var(--ledglow)}
+
+/* plain-english explainer */
+.explain{display:flex;gap:10px;background:color-mix(in srgb,var(--accent) 6%,var(--surface));border:1px solid color-mix(in srgb,var(--accent) 30%,var(--grid));border-radius:10px;padding:11px 13px;font-size:13px;color:var(--ink2);margin:10px 0 14px;line-height:1.55}
+.explain .tag{flex-shrink:0;font-size:9.5px;font-weight:900;letter-spacing:.08em;color:var(--accent);writing-mode:vertical-rl;transform:rotate(180deg);text-align:center;border-right:2px solid var(--accent);padding-right:8px}
+.explain b{color:var(--ink1)}
+
+/* scope toggle: ALL + positions, styled as bet buttons */
+.scope{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.scope button{border:1.5px solid var(--grid);background:var(--surface);color:var(--ink2);font-size:12px;font-weight:900;padding:6px 14px;border-radius:7px;cursor:pointer;font-family:ui-monospace,Menlo,monospace}
+.scope button.on{background:var(--led);color:#140a02;border-color:var(--led);box-shadow:0 0 10px var(--ledglow)}
+
+.card{background:var(--surface);border:1px solid var(--grid);border-radius:12px;padding:14px;margin-bottom:14px}
+.foot{font-size:10.5px;color:var(--ink3);margin-top:10px;line-height:1.5}
+
+/* ===== VIEW 1: THE BOARD (sportsbook LED) ===== */
+.board{background:#0d0a06;border:2px solid #241c10;border-radius:12px;padding:6px 0;overflow:hidden}
+[data-theme="light"] .board{background:#241708;border-color:#3a2a12}
+.board table{width:100%;border-collapse:collapse}
+.board th{font-size:9.5px;letter-spacing:.14em;color:#8f7a58;text-transform:uppercase;padding:8px 10px;text-align:left;border-bottom:1px solid #241c10}
+.board td{padding:11px 10px;border-bottom:1px solid #1a1409;vertical-align:middle}
+.board tr:last-child td{border-bottom:none}
+.board .svc{font-weight:900;color:#ecdfc9;font-size:14px;letter-spacing:.03em;white-space:nowrap}
+.lanechip{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:5px;color:#fff;font-size:11px;font-weight:900;margin-right:8px;font-family:ui-monospace,Menlo,monospace}
+.lednum{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:800;font-size:19px;color:var(--led);text-shadow:0 0 8px var(--ledglow)}
+.ledci{display:block;font-size:9.5px;color:#8f7a58;font-weight:400;letter-spacing:.03em}
+.pf{display:inline-block;font-size:9px;font-weight:900;letter-spacing:.09em;padding:2px 7px;border-radius:3px;background:var(--warn);color:#140a02;animation:pfblink 1.6s steps(2) infinite}
+@keyframes pfblink{50%{opacity:.55}}
+.trail{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.07em;padding:2px 7px;border-radius:3px;background:#241c10;color:#8f7a58}
+
+/* ===== VIEW 2: THE TRACK (dog race) ===== */
+.track{background:var(--felt);border:1px solid var(--grid);border-radius:12px;padding:14px 10px 8px;position:relative;overflow:hidden}
+.lane{position:relative;height:44px;border-bottom:1.5px dashed color-mix(in srgb,var(--ink3) 30%,transparent);}
+.lane:last-of-type{border-bottom:none}
+.lane .who{position:absolute;left:6px;top:4px;font-size:10px;font-weight:900;color:var(--ink3);letter-spacing:.06em}
+.dog{position:absolute;top:50%;transform:translate(-50%,-50%);transition:left 1.4s cubic-bezier(.2,.8,.25,1);display:flex;flex-direction:column;align-items:center;gap:0}
+.dog .pup{font-size:21px;transform:scaleX(-1);filter:drop-shadow(0 0 5px var(--ledglow))}
+.dog .tagv{font-family:ui-monospace,Menlo,monospace;font-size:10px;font-weight:900;padding:0 5px;border-radius:3px;color:#fff}
+.finish{position:absolute;right:44px;top:0;bottom:26px;width:8px;background:repeating-conic-gradient(#fff 0 25%,#111 0 50%) 0 0/8px 8px;opacity:.7;border-radius:2px}
+.trackscale{display:flex;justify-content:space-between;font-size:9.5px;color:var(--ink3);padding:6px 4px 0;font-family:ui-monospace,Menlo,monospace}
+.pfoverlay{position:absolute;right:10px;top:8px;z-index:3}
+.rerun{border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-weight:900;font-size:11px;padding:5px 12px;border-radius:6px;cursor:pointer;margin-top:10px}
+
+/* ===== VIEW 3: WILD WEEKS (chips on felt) ===== */
+.feltbox{background:var(--felt);border:1px solid var(--grid);border-radius:12px;padding:10px 6px 4px}
+.chipdot{transition:cy .5s ease,opacity .5s ease}
+
+/* ===== VIEW 4: THE CAGE (chip stacks) ===== */
+.cage{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-items:end;background:var(--felt);border:1px solid var(--grid);border-radius:12px;padding:18px 10px 10px;min-height:240px}
+.stackcol{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px}
+.chip{width:56px;height:11px;border-radius:6px;border:1.5px dashed rgba(255,255,255,.5);box-shadow:0 2px 0 rgba(0,0,0,.35);opacity:0;transform:translateY(-14px)}
+.chip.in{opacity:1;transform:none;transition:opacity .25s ease,transform .25s cubic-bezier(.2,.9,.3,1.3)}
+.stackval{font-family:ui-monospace,Menlo,monospace;font-weight:900;font-size:16px;margin-top:8px;color:var(--led);text-shadow:0 0 7px var(--ledglow)}
+.stackwho{font-size:11px;font-weight:900;color:var(--ink2);letter-spacing:.05em;margin-top:1px}
+@media(max-width:480px){.chip{width:44px}}
+
+/* ===== VIEW 5: REPORT CARD (marquee) ===== */
+.rc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+@media(max-width:560px){.rc-grid{grid-template-columns:1fr}}
+.rc-card{background:var(--surface);border:1.5px solid var(--grid);border-radius:12px;padding:14px;position:relative}
+.rc-card.lead{border-color:var(--led);box-shadow:0 0 0 1px var(--led),0 0 16px var(--ledglow)}
+.rc-card.lead::after{content:"";position:absolute;inset:-1.5px;border-radius:12px;pointer-events:none;border:1.5px dashed color-mix(in srgb,var(--led) 70%,transparent);animation:marq 1.2s linear infinite}
+@keyframes marq{to{stroke-dashoffset:10px;opacity:.55}}
+.rc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.svcname{font-weight:900;font-size:15px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px}
+.gradebig{font-size:38px;font-weight:900;font-family:ui-monospace,Menlo,monospace;line-height:1;text-shadow:0 0 10px var(--ledglow)}
+.badge{display:inline-block;font-size:9.5px;font-weight:900;letter-spacing:.06em;padding:2px 7px;border-radius:3px;text-transform:uppercase}
+.b-pf{background:var(--warn);color:#140a02;animation:pfblink 1.6s steps(2) infinite}
+.b-prov{background:color-mix(in srgb,var(--ink3) 18%,transparent);color:var(--ink3)}
+.rc-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:11px;text-align:center;margin-bottom:10px}
+.rc-metrics .m{background:color-mix(in srgb,var(--grid) 45%,transparent);border-radius:7px;padding:8px 4px}
+.rc-metrics .lab{color:var(--ink3);font-size:9px;text-transform:uppercase;letter-spacing:.05em}
+.rc-metrics .v{font-family:ui-monospace,Menlo,monospace;font-weight:900;font-size:15px;margin-top:2px;color:var(--ink1)}
+.hyg{font-size:11px;color:var(--ink3)}
+.hyg b{color:var(--warn)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="neon">THE DOG TRACK</span><span class="mocktag">MOCKUP v2</span></h1>
+  <div class="sub">Rankings Report Card · ETR vs PFF vs ESPN vs The Blend · every Thursday, receipts stamped · Weeks 1–8 sample data</div>
+  <div class="bulbs" id="bulbs"></div>
+</header>
+
+<div class="bar" id="tabs">
+  <button data-v="v1" class="on">🎰 The Board</button>
+  <button data-v="v2">🐕 The Race</button>
+  <button data-v="v3">🎲 Wild Weeks</button>
+  <button data-v="v4">🪙 The Cage</button>
+  <button data-v="v5">🏆 Report Card</button>
+  <button class="theme" id="themeBtn">◐</button>
+</div>
+
+<main>
+
+<!-- ============ V1: THE BOARD ============ -->
+<section class="view on" id="v1">
+  <div class="vh">The <span class="neon">Board</span></div>
+  <div class="explain"><span class="tag">PLAIN ENGLISH</span><div>
+    Every Thursday before kickoff, each service hands in its rankings. After Monday night, we check how close each one's <b>order</b> was to how players <b>actually finished</b>. A score of <b>1.00</b> means the order was perfect; <b>0</b> means it was no better than shuffling names in a hat. The big number is each service's <b>season average so far</b>. If two services are inside each other's error bars, the board calls it a <b>PHOTO FINISH</b> — too close to name a winner yet.
+  </div></div>
+  <div class="scope" data-scope="board"></div>
+  <div class="board"><table id="boardTbl"></table></div>
+  <div class="foot">Score = mean weekly Spearman ρ on the shared player pool, shrunk toward the field. Range under the number = bootstrap 95% CI. 8 of 18 weeks graded — everything is provisional until the declared season gate. Method → Receipts &amp; Method.</div>
+</section>
+
+<!-- ============ V2: THE RACE ============ -->
+<section class="view" id="v2">
+  <div class="vh">The <span class="neon">Race</span></div>
+  <div class="explain"><span class="tag">PLAIN ENGLISH</span><div>
+    Same scores, run as a dog race. Each dog's position on the track is its <b>season accuracy so far</b> — further right is better. The checkered post is a perfect score, which nobody reaches. Dogs bunched together are in a <b>photo finish</b>: the season hasn't separated them yet. Hit <b>Re-run</b> to watch them come out of the gate again.
+  </div></div>
+  <div class="scope" data-scope="race"></div>
+  <div class="track" id="track"></div>
+  <button class="rerun" id="rerunBtn">🔫 RE-RUN THE RACE</button>
+  <div class="foot">Dog position = season-to-date mean ρ mapped onto the track (0.30 at the gate, 1.00 at the post). Bunching = overlapping confidence intervals.</div>
+</section>
+
+<!-- ============ V3: WILD WEEKS ============ -->
+<section class="view" id="v3">
+  <div class="vh">Wild <span class="neon">Weeks</span></div>
+  <div class="explain"><span class="tag">PLAIN ENGLISH</span><div>
+    One chip per week, per service. A chip far right = that service nailed that week's order; far left = a rough week. Notice every service has chips scattered all over — <b>week-to-week luck is huge</b>, and the scatter inside one service is bigger than the gap between services. That's why we won't crown a winner on 8 weeks of data. The bar is each service's typical (median) week.
+  </div></div>
+  <div class="scope" data-scope="spread"></div>
+  <div class="feltbox"><div id="spreadChart"></div></div>
+  <div class="foot">Each chip = one week's Spearman ρ. Bar = median week.</div>
+</section>
+
+<!-- ============ V4: THE CAGE ============ -->
+<section class="view" id="v4">
+  <div class="vh">The <span class="neon">Cage</span></div>
+  <div class="explain"><span class="tag">PLAIN ENGLISH</span><div>
+    Forget correlations — this is the money view. Imagine the perfect lineup: the players who <b>actually</b> scored the most that week. Those points are the whole pot. Each service's chip stack shows <b>how much of the pot its top-ranked players grabbed</b>. 100% would mean their top group WAS the perfect group. A couple of points of difference ≈ one busted start a week.
+  </div></div>
+  <div class="scope" data-scope="cage"></div>
+  <div class="cage" id="cage"></div>
+  <div class="foot">Capture rate = points scored by each service's top-ranked group ÷ points scored by the actual top group, season to date. Differences under ~1.5 pts are noise at this sample.</div>
+</section>
+
+<!-- ============ V5: REPORT CARD ============ -->
+<section class="view" id="v5">
+  <div class="vh">Report <span class="neon">Card</span></div>
+  <div class="explain"><span class="tag">PLAIN ENGLISH</span><div>
+    The season grade, one card per service. The letter blends three things: <b>whole-list order</b> (Spearman), <b>getting the top guys right</b> (weighted τ — misses at the top cost more), and <b>points captured</b> (the money view). <b>Hygiene</b> counts how often a service left a ruled-OUT player ranked high on Thursday — sloppy, so we track it separately. Cards with the flashing lights are tied for the lead: a photo finish, not a champion.
+  </div></div>
+  <div class="scope" data-scope="rc"></div>
+  <div class="rc-grid" id="rcGrid"></div>
+  <div class="foot">Grade = blended percentile of the three metrics vs. the field, shrunk. Provisional until Week 10 (declared gate). Every input snapshot stamped before Thursday kickoff.</div>
+</section>
+
+</main>
+
+<script>
+// ---------- sample data ----------
+const SVCS=[
+  {id:'BLEND',name:'The Blend',color:'#2fbf3f',colorL:'#006300',lane:1},
+  {id:'ETR',name:'ETR',color:'#ff6a02',colorL:'#d13a00',lane:2},
+  {id:'PFF',name:'PFF',color:'#4aa3d6',colorL:'#1f6f9f',lane:3},
+  {id:'ESPN',name:'ESPN',color:'#e05555',colorL:'#8c1d1d',lane:4}
+];
+const POS=['RB','WR','QB','TE'];
+const RHO={
+  RB:{BLEND:[.71,.58,.77,.64,.69,.74,.61,.72],ETR:[.69,.55,.79,.60,.71,.70,.58,.74],PFF:[.66,.60,.72,.57,.65,.71,.55,.68],ESPN:[.62,.51,.70,.55,.63,.66,.52,.64]},
+  WR:{BLEND:[.63,.55,.60,.68,.57,.66,.59,.64],ETR:[.61,.57,.56,.70,.55,.63,.61,.62],PFF:[.60,.50,.58,.64,.54,.64,.55,.61],ESPN:[.55,.48,.54,.61,.50,.59,.51,.57]},
+  QB:{BLEND:[.74,.66,.71,.78,.69,.72,.75,.70],ETR:[.72,.68,.69,.76,.71,.70,.73,.68],PFF:[.71,.63,.70,.74,.66,.71,.72,.67],ESPN:[.69,.62,.66,.72,.64,.68,.70,.65]},
+  TE:{BLEND:[.52,.44,.58,.49,.55,.47,.53,.50],ETR:[.50,.46,.54,.47,.57,.44,.51,.48],PFF:[.49,.40,.56,.45,.52,.46,.48,.47],ESPN:[.45,.38,.51,.42,.49,.41,.46,.43]}
+};
+// ALL = per-week mean across positions
+const RHO_ALL={};SVCS.forEach(s=>{RHO_ALL[s.id]=[0,1,2,3,4,5,6,7].map(i=>POS.reduce((t,p)=>t+RHO[p][s.id][i],0)/4)});
+const CAP={RB:{BLEND:85.1,ETR:84.2,PFF:82.9,ESPN:80.7},WR:{BLEND:81.8,ETR:81.2,PFF:80.1,ESPN:78.3},QB:{BLEND:88.4,ETR:87.9,PFF:87.1,ESPN:85.6},TE:{BLEND:76.2,ETR:75.5,PFF:74.0,ESPN:71.8}};
+const HYGP={RB:{BLEND:0,ETR:1,PFF:1,ESPN:2},WR:{BLEND:0,ETR:0,PFF:1,ESPN:1},QB:{BLEND:0,ETR:0,PFF:0,ESPN:0},TE:{BLEND:0,ETR:0,PFF:0,ESPN:1}};
+const WTAUP={RB:{BLEND:.64,ETR:.63,PFF:.58,ESPN:.54},WR:{BLEND:.57,ETR:.58,PFF:.54,ESPN:.50},QB:{BLEND:.68,ETR:.66,PFF:.65,ESPN:.62},TE:{BLEND:.46,ETR:.45,PFF:.42,ESPN:.38}};
+const GRADES={ALL:{BLEND:'A−',ETR:'A−',PFF:'B+',ESPN:'B'},RB:{BLEND:'A−',ETR:'A−',PFF:'B+',ESPN:'B'},WR:{BLEND:'B+',ETR:'B+',PFF:'B',ESPN:'B−'},QB:{BLEND:'A',ETR:'A−',PFF:'A−',ESPN:'B+'},TE:{BLEND:'B',ETR:'B',PFF:'B−',ESPN:'C+'}};
+const TIES={ALL:['BLEND','ETR'],RB:['BLEND','ETR'],WR:['BLEND','ETR','PFF'],QB:['BLEND','ETR','PFF'],TE:['BLEND','ETR','PFF']};
+
+const mean=a=>a.reduce((s,x)=>s+x,0)/a.length;
+const sd=a=>{const m=mean(a);return Math.sqrt(a.reduce((s,x)=>s+(x-m)**2,0)/(a.length-1))};
+const weekly=(scope,svc)=>scope==='ALL'?RHO_ALL[svc]:RHO[scope][svc];
+function stats(scope,svc){
+  const w=weekly(scope,svc),m=mean(w);
+  const field=mean(SVCS.map(s=>mean(weekly(scope,s.id))));
+  const se=sd(w)/Math.sqrt(w.length);
+  return {weekly:w,raw:m,shrunk:field+(m-field)*0.7,lo:m-2.36*se,hi:m+2.36*se};
+}
+const col=s=>document.documentElement.dataset.theme==='light'?s.colorL:s.color;
+const fmt=x=>x.toFixed(2).replace(/^0/,'.');
+function capOf(scope,svc){return scope==='ALL'?mean(POS.map(p=>CAP[p][svc])):CAP[scope][svc]}
+function tauOf(scope,svc){return scope==='ALL'?mean(POS.map(p=>WTAUP[p][svc])):WTAUP[scope][svc]}
+function hygOf(scope,svc){return scope==='ALL'?POS.reduce((t,p)=>t+HYGP[p][svc],0):HYGP[scope][svc]}
+
+// scopes state
+const scopes={board:'ALL',race:'ALL',spread:'ALL',cage:'ALL',rc:'ALL'};
+function drawScopes(){
+  document.querySelectorAll('.scope').forEach(el=>{
+    const k=el.dataset.scope;
+    el.innerHTML=['ALL',...POS].map(p=>`<button class="${scopes[k]===p?'on':''}" data-p="${p}">${p}</button>`).join('');
+    el.onclick=e=>{const p=e.target.dataset.p;if(p){scopes[k]=p;drawScopes();DRAW[k]()}};
+  });
+}
+
+// count-up
+function countUp(el,target,dec,suffix){
+  const dur=800,t0=performance.now();
+  function step(t){
+    const k=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-k,3);
+    el.textContent=(target*e).toFixed(dec).replace(/^0\./,'.')+ (suffix||'');
+    if(k<1)requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// ---------- V1 board ----------
+function drawBoard(){
+  const sc=scopes.board;
+  const rows=SVCS.map(s=>({s,st:stats(sc,s.id)})).sort((a,b)=>b.st.shrunk-a.st.shrunk);
+  const lead=rows[0];rows.forEach(r=>r.tied=r!==lead&&r.st.hi>=lead.st.lo);
+  const anyTie=rows.some(r=>r.tied);
+  let h=`<tr><th>#</th><th>Runner</th><th>Season Score</th><th>Call</th></tr>`;
+  rows.forEach((r,i)=>{
+    const c=col(r.s);
+    const call=i===0?(anyTie?`<span class="pf">📸 PHOTO FINISH</span>`:`<span class="pf" style="background:var(--good)">LEADER</span>`)
+      :r.tied?`<span class="pf">📸 PHOTO FINISH</span>`:`<span class="trail">TRAILING</span>`;
+    h+=`<tr><td><span class="lanechip" style="background:${c}">${r.s.lane}</span></td>
+      <td class="svc">${r.s.name}</td>
+      <td><span class="lednum" data-cu="${r.st.shrunk}"></span><span class="ledci">range ${fmt(r.st.lo)} – ${fmt(r.st.hi)}</span></td>
+      <td>${call}</td></tr>`;
+  });
+  document.getElementById('boardTbl').innerHTML=h;
+  document.querySelectorAll('#boardTbl [data-cu]').forEach(el=>countUp(el,+el.dataset.cu,2));
+}
+
+// ---------- V2 race ----------
+function drawRace(rerun){
+  const sc=scopes.race,el=document.getElementById('track');
+  const rows=SVCS.map(s=>({s,st:stats(sc,s.id)}));
+  const min=.30,max=1.0;
+  el.innerHTML=`<div class="finish"></div>`+rows.map(r=>{
+    const c=col(r.s);
+    return `<div class="lane"><span class="who">LANE ${r.s.lane} · ${r.s.name.toUpperCase()}</span>
+      <div class="dog" data-x="${(r.st.shrunk-min)/(max-min)*100}" style="left:4%">
+        <span class="pup">🐕</span><span class="tagv" style="background:${c}">${fmt(r.st.shrunk)}</span>
+      </div></div>`;
+  }).join('')+`<div class="trackscale"><span>GATE .30</span><span>.65</span><span>PERFECT 1.00 🏁</span></div>`;
+  // tie overlay
+  const lead=rows.reduce((a,b)=>a.st.shrunk>b.st.shrunk?a:b);
+  const anyTie=rows.some(r=>r!==lead&&r.st.hi>=lead.st.lo);
+  if(anyTie)el.insertAdjacentHTML('beforeend',`<div class="pfoverlay"><span class="pf">📸 PHOTO FINISH</span></div>`);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    el.querySelectorAll('.dog').forEach(d=>d.style.left=Math.min(92,4+ +d.dataset.x*0.88)+'%');
+  }));
+}
+document.getElementById('rerunBtn').onclick=()=>drawRace(true);
+
+// ---------- V3 spread ----------
+function drawSpread(){
+  const sc=scopes.spread,W=680,H=224,min=.30,max=.90;
+  const xv=v=>66+(v-min)/(max-min)*(W-96);
+  let rows='';
+  SVCS.forEach((s,i)=>{
+    const c=col(s),yy=36+i*48,w=weekly(sc,s.id);
+    const srt=[...w].sort((a,b)=>a-b),m=(srt[3]+srt[4])/2;
+    rows+=`<text x="6" y="${yy+4}" font-size="11" font-weight="900" fill="var(--ink1)" font-family="ui-monospace,Menlo,monospace">${s.id}</text>
+      <line x1="66" x2="${W-30}" y1="${yy}" y2="${yy}" stroke="var(--grid)"/>
+      <rect x="${xv(m)-1.5}" y="${yy-12}" width="3" height="24" rx="1.5" fill="${c}"/>`
+      +w.map(v=>`<g><circle cx="${xv(v)}" cy="${yy}" r="7" fill="${c}" opacity=".8"/><circle cx="${xv(v)}" cy="${yy}" r="7" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1.4" stroke-dasharray="2.5 2.5"/></g>`).join('');
+  });
+  const ax=[.3,.4,.5,.6,.7,.8,.9].map(v=>`<line x1="${xv(v)}" x2="${xv(v)}" y1="18" y2="${H-26}" stroke="var(--grid)" opacity=".55"/><text x="${xv(v)}" y="${H-8}" font-size="9.5" fill="var(--ink3)" text-anchor="middle" font-family="ui-monospace,Menlo,monospace">${fmt(v)}</text>`).join('');
+  document.getElementById('spreadChart').innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%">${ax}${rows}</svg>`;
+}
+
+// ---------- V4 cage ----------
+function drawCage(){
+  const sc=scopes.cage,el=document.getElementById('cage');
+  const rows=SVCS.map(s=>({s,v:capOf(sc,s.id)})).sort((a,b)=>b.v-a.v);
+  el.innerHTML=rows.map(r=>{
+    const c=col(r.s),n=Math.round((r.v-68)/1.6); // chips scaled
+    let chips='';for(let i=0;i<n;i++)chips+=`<div class="chip" style="background:${c};transition-delay:${i*45}ms"></div>`;
+    return `<div class="stackcol">${chips}<div class="stackval" data-cu="${r.v}"></div><div class="stackwho">${r.s.id}</div></div>`;
+  }).join('');
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    el.querySelectorAll('.chip').forEach(ch=>ch.classList.add('in'));
+    el.querySelectorAll('[data-cu]').forEach(e=>{
+      const t=+e.dataset.cu,t0=performance.now();
+      (function step(tm){const k=Math.min(1,(tm-t0)/900),ez=1-Math.pow(1-k,3);
+        e.textContent=(t*ez).toFixed(1)+'%';if(k<1)requestAnimationFrame(step)})(t0);
+    });
+  }));
+}
+
+// ---------- V5 report card ----------
+function drawRC(){
+  const sc=scopes.rc,g=document.getElementById('rcGrid');
+  const rows=SVCS.map(s=>({s,rho:stats(sc,s.id).shrunk})).sort((a,b)=>b.rho-a.rho);
+  const scope=sc==='ALL'?'All positions · Weeks 1–8':sc+' · Weeks 1–8';
+  g.innerHTML=rows.map(({s,rho})=>{
+    const c=col(s),tied=TIES[sc].includes(s.id);
+    return `<div class="rc-card ${tied?'lead':''}">
+      <div class="rc-top">
+        <div><div class="svcname"><span class="dot" style="background:${c}"></span>${s.name}</div>
+        <div style="font-size:10.5px;color:var(--ink3)">${scope}</div></div>
+        <div style="text-align:right"><div class="gradebig" style="color:${c}">${GRADES[sc][s.id]}</div>
+        ${tied?'<span class="badge b-pf">📸 Photo finish</span>':'<span class="badge b-prov">Provisional</span>'}</div>
+      </div>
+      <div class="rc-metrics">
+        <div class="m"><div class="lab">Order (ρ)</div><div class="v">${fmt(rho)}</div></div>
+        <div class="m"><div class="lab">Top-heavy (τ)</div><div class="v">${fmt(tauOf(sc,s.id))}</div></div>
+        <div class="m"><div class="lab">Pot captured</div><div class="v">${capOf(sc,s.id).toFixed(1)}%</div></div>
+      </div>
+      <div class="hyg">Hygiene: <b>${hygOf(sc,s.id)}</b> OUT player${hygOf(sc,s.id)===1?'':'s'} left ranked at capture</div>
+    </div>`;
+  }).join('');
+}
+
+// ---------- wiring ----------
+const DRAW={board:drawBoard,race:drawRace,spread:drawSpread,cage:drawCage,rc:drawRC};
+function drawAll(){drawScopes();Object.values(DRAW).forEach(f=>f())}
+document.getElementById('tabs').addEventListener('click',e=>{
+  const v=e.target.closest('button')?.dataset.v;if(!v)return;
+  document.querySelectorAll('#tabs button[data-v]').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on',s.id===v));
+  if(v==='v2')drawRace();if(v==='v4')drawCage();
+});
+document.getElementById('themeBtn').onclick=()=>{
+  const r=document.documentElement;r.dataset.theme=r.dataset.theme==='dark'?'light':'dark';drawAll();
+};
+// marquee bulbs
+const bulbs=document.getElementById('bulbs');
+for(let i=0;i<15;i++)bulbs.insertAdjacentHTML('beforeend','<span class="bulb"></span>');
+let bi=0;setInterval(()=>{document.querySelectorAll('.bulb').forEach((b,i)=>b.classList.toggle('lit',(i+bi)%3===0));bi++;},420);
+drawAll();
+</script>
+</body>
+</html>

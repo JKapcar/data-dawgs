@@ -24,6 +24,26 @@ than leave a broken Worker on disk.
 
 Tests: `node test-mcp.mjs`.
 
+## The Dog Track (rankings)
+
+`rankings-block.js` is the capture half of the rankings report card — the entrants
+registry and the Thursday snapshot route. **Edit it there, never in the assembled
+Worker**; `assemble.mjs` regenerates the DD-RANKINGS-BLOCK region on every build.
+
+    node test-rankings-snapshot.mjs   # 98 assertions, mostly refusals
+
+⚠️ **The block is injected ABOVE the MCP block, and the build asserts it.** The MCP
+block's write-scope guard scans from the DD-MCP-BLOCK marker to end of file and bans every
+Firebase write helper there. This block is a capture ledger and legitimately calls
+`fbPut`/`fbPost`, so below that marker it would fail a guard written about something else
+entirely — and the tempting "fix" would be to weaken the guard.
+
+Raw third-party ranks are paid content: they live in Firebase behind toto and never appear
+in a route response, an error body, the audit log, or a test fixture. The test file's
+player names are all invented, and several assertions do nothing but scan responses for
+them. Spec: `claude/dog-track-rankings-spec.md`. Visual contract:
+`dog-track-mockups-v2.html`.
+
 ## The survivor path engine
 
 `survivor-path-engine.js` is the bounded exact maximum-product assignment used by both
