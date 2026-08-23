@@ -704,6 +704,33 @@ textarea{width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font
 .sv-dbl{font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;
   color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 45%,transparent);
   border-radius:4px;padding:2px 5px;margin-left:6px;white-space:nowrap}
+/* note chips — display conventions, documented in the methodology block below the board */
+.sv-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.sv-chip{font:700 9px/1.4 ui-monospace,monospace;letter-spacing:.05em;text-transform:uppercase;
+  border-radius:4px;padding:2px 5px;white-space:nowrap;cursor:help;border:1px solid transparent}
+.sv-chip.chalk{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 40%,transparent)}
+.sv-chip.drag{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,transparent)}
+.sv-chip.cost{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,transparent)}
+.sv-chip.clean{color:var(--good);border-color:color-mix(in srgb,var(--good) 40%,transparent)}
+.sv-method{margin-top:14px;border-top:1px solid var(--grid);padding-top:12px}
+.sv-method>summary{cursor:pointer;list-style:none;font:700 10.5px/1 ui-monospace,monospace;
+  letter-spacing:.09em;text-transform:uppercase;color:var(--accent);padding:4px 0}
+.sv-method>summary::-webkit-details-marker{display:none}
+.sv-method>summary::after{content:" ↓"}
+.sv-method[open]>summary::after{content:" ↑"}
+.sv-method>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sv-method dl{margin:8px 0 0;font-size:12.5px;line-height:1.6}
+.sv-method dt{font-weight:750;color:var(--ink-1);margin-top:8px}
+.sv-method dd{margin:1px 0 0;color:var(--ink-2)}
+.sv-method code{font-size:11.5px;background:var(--grid);padding:1px 5px;border-radius:4px}
+.sv-sort{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;
+  letter-spacing:inherit;text-transform:inherit}
+.sv-sort:hover{color:var(--accent)}
+.sv-sort.on{color:var(--accent);font-weight:800}
+.sv-sort:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+.sv-heat-t th.sv-sorted{border-bottom:2px solid var(--accent)}
+/* spent: struck AND dimmed. Dim alone reads as "less relevant"; this is "unavailable". */
+.sv-cell.sv-spent{opacity:.5;text-decoration:line-through;text-decoration-thickness:1px}
 /* a week the path deliberately leaves unspent — dimmed and labelled, never hidden */
 .sv-heat-t th.sv-openh{color:var(--ink-3);border-bottom:2px dashed var(--grid)}
 .sv-cell.sv-openc{opacity:.45}
@@ -2393,6 +2420,36 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div class="sv-cards" id="svCards"></div>
   <div class="nf-scroll"><table id="svBoard"></table></div>
   <p class="muted" id="svBoardNote" style="margin-top:12px"></p>
+  <!-- ⚠️ Every threshold on this page in one place, and labelled as a CONVENTION.
+       A chip that says "heavy chalk" with no number behind it is a model claim the
+       reader cannot check; a chip with its cut-off written down is a reading aid. -->
+  <details class="sv-method">
+    <summary>What the chips mean, and where the lines are drawn</summary>
+    <p class="muted" style="margin:8px 0 0"><b>These four are display conventions, not
+    findings.</b> Each is a threshold someone picked on a number the board already shows,
+    so you can see the same thing at a glance. Nothing below is a claim that the cut-off
+    is where the edge changes &mdash; move them in your head if you disagree.</p>
+    <dl>
+      <dt>Heavy chalk &mdash; ownership above <code id="mChalk"></code></dt>
+      <dd>Share of the field on this team. Modelled ownership carries a tilde on the board
+      and this chip inherits that: with no posted data it is a guess about a guess.</dd>
+      <dt>Duplication drag &mdash; above <code id="mDrag"></code> of your fellow survivors</dt>
+      <dd>Of everyone still alive if your team wins, the fraction on your exact team:
+      <code>E &times; own &divide; survivorsIfWin</code>. Read straight out of the equity
+      denominator rather than computed again, so it can never disagree with the equity
+      column next to it.</dd>
+      <dt>Meaningful future cost &mdash; above <code id="mCost"></code></dt>
+      <dd>How much of the best remaining full-season path you give up by spending this
+      team now. The re-solve behind it is the same one the backup cards use.
+      <b>Expect this one to be common early.</b> With a full board of unspent teams almost
+      every good team is wanted by some later week, so most rows clear the line in week 1
+      and fewer do by week 12. That is the board reporting a real property of an untouched
+      season, not the threshold being set too low &mdash; but if it is firing on everything
+      and telling you nothing, it is a threshold, and you may want it higher.</dd>
+      <dt>Clean use &mdash; below <code id="mClean"></code></dt>
+      <dd>No other week needs this team, so spending it costs you effectively nothing later.</dd>
+    </dl>
+  </details>
 </div>
 
 <div class="card">
@@ -3459,6 +3516,11 @@ function simulateAll(week, cfg, D, candidates){
   return { sims:SIMS, byTeam:out, field:Array.from(fieldAt).map(x=>x/SIMS) };
 }
 
+/* Thresholds for the board's note chips. ⚠️ Conventions for reading the numbers, not
+   findings about them — see the methodology block on the page. Named here so there is
+   one place to change them and one place to read them from. */
+const CHIP = { chalk: 0.25, drag: 0.25, cost: 0.03, clean: 0.005 };
+
 /* Rank every legal pick for a week. */
 function rankWeek(week, cfg, D){
   const tab = weekTable(week,cfg,D);
@@ -3506,13 +3568,37 @@ function rankWeek(week, cfg, D){
     r.tiedWithLeader = (lead.pWin - r.pWin) <= 2*se;
   });
   rows.forEach((r,i)=>{ r.rank = i+1; });
+  /* ---- note chips ----------------------------------------------------------
+     ⚠️ These are DISPLAY CONVENTIONS, not model claims, and the methodology block on
+     the page says so in those words. Every one is derived from a number the row
+     already carries — nothing here computes a second opinion about anything.
+
+     "Duplication drag" comes straight out of the equity denominator rather than a
+     parallel calculation: survivorsIfWin is E·(own + Σ_{t≠you} own_t·p_t), so
+     E·own / survivorsIfWin is the share of the people who survive ALONGSIDE you who
+     are on your exact team. That is what duplication costs you, expressed as the
+     fraction of the surviving field you are sharing your ticket with. */
+  const E = Math.max(1, cfg.entries - 1);
+  rows.forEach(r=>{
+    const chips = [];
+    if(r.pop > CHIP.chalk) chips.push({k:"chalk", t:"Heavy chalk",
+      d:`${Math.round(r.pop*100)}% of the field is here${r.popReal?"":" (modelled)"}`});
+    const shareOfSurvivors = r.survivorsIfWin > 0 ? (E*r.pop)/r.survivorsIfWin : 0;
+    if(shareOfSurvivors > CHIP.drag) chips.push({k:"drag", t:"Duplication drag",
+      d:`${Math.round(shareOfSurvivors*100)}% of everyone who survives with you is on this same team`});
+    if(r.futureCost > CHIP.cost) chips.push({k:"cost", t:"Meaningful future cost",
+      d:`spending it costs ${(r.futureCost*100).toFixed(1)}% of the best remaining path`});
+    else if(r.futureCost < CHIP.clean) chips.push({k:"clean", t:"Clean use",
+      d:"no other week needs this team"});
+    r.chips = chips;
+  });
   const nTied = rows.filter(r=>r.tiedWithLeader).length;
   return { rows, baselinePath:base, popReal:real, sims:sim.sims, field:sim.field, nTied };
 }
 
 return { LS, DEFAULTS, load, save, reset, ncdf, nppf, gameProb, weekTable,
          popularityFor, modelPopularity, optimalPath, candidatePaths, pathLegs,
-         slotsFor, isDoubleWeek, lastPathWeek, fieldWeek, aliveProjection,
+         slotsFor, isDoubleWeek, lastPathWeek, fieldWeek, aliveProjection, CHIP,
          hungarian:window.DDSurvivorPath.hungarian,
          leverage, simulateAll, rankWeek };
 })();
@@ -3530,6 +3616,9 @@ let cfg=S.load(), week=Math.min(18,Math.max(1,cfg.startWeek|0||1)), lastRank=nul
    is whichever of them the heatmap, the overlay and the path panel are all drawing.
    One variable, three surfaces — that is the point. */
 let activeCand=null, candCards=[], shownPath=null;
+/* Which week's column the heatmap is sorted by. null = alphabetical, the default and
+   the only order in which a reader can find a specific team. */
+let heatSort={week:null, dir:"desc"};
 
 /* nickname / city -> code, so a paste from any host parses */
 const ALIAS={};
@@ -3622,6 +3711,13 @@ $("popFetch").addEventListener("click",async()=>{
 });
 
 /* ---------- board table ---------- */
+/* ⚠️ Printed from S.CHIP, never typed into the copy. A threshold written twice is a
+   threshold that will be changed once. */
+(function paintChipThresholds(){
+  const m={mChalk:S.CHIP.chalk, mDrag:S.CHIP.drag, mCost:S.CHIP.cost, mClean:S.CHIP.clean};
+  Object.keys(m).forEach(id=>{ const el=$(id); if(el) el.textContent=(m[id]*100).toFixed(m[id]<0.01?1:0)+"%"; });
+})();
+
 function board(){
   const r=S.rankWeek(week,cfg,D); lastRank=r;
   if(!r.rows.length){ $("svBoard").innerHTML=`<tr><td class="tl">No legal picks left this week.</td></tr>`;
@@ -3634,7 +3730,8 @@ function board(){
       const fv=x.futureCost;
       return `<tr class="${i===0?"sv-top":""}">
       <td class="tl" style="color:var(--ink-3)">${i+1}</td>
-      <td class="tl nf-tm">${x.team}</td>
+      <td class="tl nf-tm"><span class="tmname">${x.team}</span>${(x.chips||[]).length?`<span class="sv-chips">`+
+        x.chips.map(c=>`<span class="sv-chip ${c.k}" title="${esc(c.d)}">${c.t}</span>`).join("")+`</span>`:""}</td>
       <td class="tl" style="color:var(--ink-3)">${x.home?"vs":"at"} ${x.opp}</td>
       <td>${pct(x.p)}</td>
       <td>${x.popReal?pct(x.pop):`<span title="modelled, not real data">~${pct(x.pop)}</span>`}</td>
@@ -3676,20 +3773,52 @@ function heat(){
   const legs=S.pathLegs(shown.path);
   const pathTeams=new Set(legs.map(x=>x.team));
   const openW=new Set(op.openWeeks||[]);
+  // spent teams still shown (hideUsed off) get struck cells rather than only a dim row
+  const spentOut=cfg.reuse ? new Set() : used;
   let teams=Object.keys(D.elo).sort();
   if(hideUsed) teams=teams.filter(t=>!used.has(t));
   if(onlyPath) teams=teams.filter(t=>pathTeams.has(t));
+  /* Sort by one week's column. ⚠️ Byes sort LAST in both directions, not as zero: a
+     team with no game that week has no win probability, and ranking it below a 22%
+     underdog in one direction and above an 85% favourite in the other would both be
+     statements the data does not support. */
+  if(heatSort.week!=null){
+    // desc = best first, so (b - a); asc flips the sign. Getting this backwards is
+    // invisible in a screenshot and obvious the moment you read the numbers.
+    const w=heatSort.week, dir=heatSort.dir==="asc"?-1:1;
+    teams=teams.slice().sort((a,b)=>{
+      const ea=tabs[w]&&tabs[w][a], eb=tabs[w]&&tabs[w][b];
+      if(!ea&&!eb) return a.localeCompare(b);
+      if(!ea) return 1;
+      if(!eb) return -1;
+      return dir*(eb.p-ea.p) || a.localeCompare(b);
+    });
+  }
   const acc=css("--accent");
   /* ⚠️ A week left open still gets its column — the games are real and the reader may
      want to look at them. It is marked, not hidden, so "we chose not to spend here"
      never reads as "there was nothing here". */
-  let h=`<table class="sv-heat-t"><tr><th class="tl">Team</th>`+
-    weeks.map(w=>`<th${openW.has(w)?' class="sv-openh" title="left open — no team spent here"':''}>${w}</th>`).join("")+`</tr>`;
+  const arrow=w=>heatSort.week===w?(heatSort.dir==="asc"?" ↑":" ↓"):"";
+  let h=`<table class="sv-heat-t"><tr>`+
+    `<th class="tl"><button type="button" class="sv-sort${heatSort.week==null?" on":""}" data-sort="team">Team${heatSort.week==null?" ↓":""}</button></th>`+
+    weeks.map(w=>{
+      const cls=[openW.has(w)?"sv-openh":"", heatSort.week===w?"sv-sorted":""].filter(Boolean).join(" ");
+      return `<th${cls?` class="${cls}"`:""}${openW.has(w)?' title="left open — no team spent here"':""}>`+
+        `<button type="button" class="sv-sort${heatSort.week===w?" on":""}" data-sort="${w}" title="Sort every team by week ${w}">${w}${arrow(w)}</button></th>`;
+    }).join("")+`</tr>`;
   teams.forEach(t=>{
     h+=`<tr${used.has(t)?' class="sv-used"':''}><td class="tl nf-tm">${t}</td>`;
     weeks.forEach(w=>{
       const e=tabs[w][t];
       if(!e){ h+=`<td class="sv-bye" title="bye">·</td>`; return; }
+      /* ⚠️ A spent team's cells are struck out as WELL as dimmed. Dimming alone reads
+         as "less relevant"; this team is not less relevant, it is unavailable, and the
+         two are different claims about a number that is still perfectly real. */
+      if(spentOut.has(t)){
+        h+=`<td class="sv-cell sv-spent" data-week="${w}" data-team="${t}"
+             title="Week ${w} · ${t} ${e.home?"vs":"at"} ${e.opp} · ${pct(e.p)} — already spent, not available">${Math.round(e.p*100)}</td>`;
+        return;
+      }
       const on=(shown.path[w]||[]).some(x=>x.team===t);
       // sequential single-hue ramp: opacity on the brand accent, light -> dark
       const a=Math.max(0,Math.min(1,(e.p-0.30)/0.55));
@@ -3898,6 +4027,17 @@ const esc=s=>String(s==null?"":s).replace(/[<>&"]/g,c=>({"<":"&lt;",">":"&gt;","
    attribute SELECTOR rather than into HTML, so esc() is the wrong escaper for it. */
 const cssAttr=s=>(window.CSS&&CSS.escape) ? CSS.escape(String(s)) : String(s).replace(/["\\]/g,"\\$&");
 function render(){ cfg=S.load(); bar(); popState(); board(); computeCards(); heat(); paintCards(); }
+$("svHeat").addEventListener("click",e=>{
+  const b=e.target.closest("[data-sort]"); if(!b) return;
+  const key=b.dataset.sort;
+  if(key==="team"){ heatSort={week:null,dir:"desc"}; }
+  else {
+    const w=Number(key);
+    // same column twice flips direction; a new column starts at best-first
+    heatSort = (heatSort.week===w && heatSort.dir==="desc") ? {week:w,dir:"asc"} : {week:w,dir:"desc"};
+  }
+  heat();
+});
 $("svOnlyPath").addEventListener("change",heat);
 $("svHideUsed").addEventListener("change",heat);
 const prev=window.onThemeChange;

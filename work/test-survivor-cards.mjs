@@ -91,7 +91,9 @@ async function open(cfgPatch = {}, { theme = "light", width = 1280 } = {}) {
   const cardTeams = await page.$$eval("#svCards .sv-card", ns => ns.map(n => n.dataset.cand));
   ok(cardTeams.length === 3, "three backup cards render", cardTeams.join(","));
 
-  const boardTop = await page.$$eval("#svBoard tr td:nth-child(2)", ns =>
+  /* ⚠️ .tmname, not the whole cell. The team cell also carries note chips, and reading
+     its textContent silently appends "Meaningful future cost" to the team name. */
+  const boardTop = await page.$$eval("#svBoard tr td:nth-child(2) .tmname", ns =>
     ns.slice(0, 3).map(n => n.textContent.trim()));
   ok(JSON.stringify(cardTeams) === JSON.stringify(boardTop),
      "the cards ARE the board's top three, in the board's order — no second heuristic",
