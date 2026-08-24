@@ -107,6 +107,17 @@ function api(path, opts){
   return fetch(TOTO + path, opts).then(function(r){
     return r.json().catch(function(){ return { error: "non-JSON response " + r.status }; })
       .then(function(j){ return { status: r.status, body: j }; });
+  }, function(err){
+    /* ⚠️ A REJECTED fetch never reached the server at all, and the first version of this
+     * page swallowed it — no message, no status, nothing. In the field that rendered as
+     * "it fails before reaching the server" with everyone guessing at causes. The usual
+     * culprit is an ad-block/privacy extension killing requests to workers.dev wholesale
+     * (ERR_BLOCKED_BY_CLIENT). Say so, on screen, so nobody has to diagnose a silence. */
+    return { status: 0, body: { error: "BLOCKED BEFORE REACHING THE SERVER (" + err + "). "
+      + "This console talks to toto.jkapcar4.workers.dev; ad-block and privacy extensions "
+      + "often block *.workers.dev wholesale. Pause the blocker for this site (puzzle icon "
+      + "\u2192 your blocker \u2192 pause/allowlist), reload, retry. A key problem looks "
+      + "different: that returns 403 forbidden." } };
   });
 }
 function show(el, res){
