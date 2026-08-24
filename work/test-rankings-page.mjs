@@ -139,7 +139,7 @@ async function main() {
     ok(await page.$eval("#dt-view-rc .dt-card .dt-dot", el => getComputedStyle(el).backgroundColor) !== "rgba(0, 0, 0, 0)",
       "entrant colour comes from the doc, not a stylesheet default");
     ok(await page.$$eval("#dt-view-rc .dt-hyg", els => els.every(e => /not tracked yet/.test(e.textContent))),
-      "hygiene renders as 'not tracked yet', never as 0 (gap G1)");
+      "an untracked doc renders hygiene as 'not tracked yet', never as 0");
 
     await tab(page, "race");
     const lanes = await page.$$("#dt-view-race .dt-lane");
@@ -174,6 +174,21 @@ async function main() {
     ok((await page.$$("#dt-view-board tbody tr")).length === IDS.length, "the board lists every entrant");
     ok((await page.$$("#dt-view-board .dt-pf")).length >= 1, "a photo finish is called when intervals overlap");
     if (SHOT) writeFileSync("/tmp/dt-board.png", await page.screenshot({ fullPage: true }));
+    await ctx.close();
+  }
+
+  /* ---------- hygiene, once the doc actually carries it (G1 resolved) ---------- */
+  {
+    const tracked = makeDoc(6);
+    tracked.hygiene_tracked = true;
+    for (const sc of SCOPES) IDS.forEach((id, i) => { tracked.scopes[sc][id].hygiene = i % 3; });
+    const { ctx, page } = await open(browser, { doc: tracked });
+    const hyg = await page.$$eval("#dt-view-rc .dt-hyg", els => els.map(e => e.textContent.trim()));
+    ok(hyg.some(t => /\b0\b OUT players/.test(t) || /: 0 OUT/.test(t) || /\b0\b/.test(t)),
+      "a tracked doc renders a real 0 — a clean week is a claim the data now backs", hyg[0]);
+    ok(hyg.some(t => /1 OUT player left ranked/.test(t)), "singular count reads 'player', not 'players'", hyg[1]);
+    ok(hyg.some(t => /2 OUT players left ranked/.test(t)), "plural counts render with the count", hyg[2]);
+    ok(!hyg.some(t => /not tracked yet/.test(t)), "no 'not tracked yet' left once tracking is real");
     await ctx.close();
   }
 

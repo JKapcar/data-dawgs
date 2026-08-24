@@ -188,6 +188,58 @@ async function rankingsFirstKickoff(env, season, week) {
   return { ...resolved, cached: false };
 }
 
+/* ----------------------------------------------------------------- the Thursday OUT list --
+ * WHAT HYGIENE IS COMPUTED FROM (spec §3, gap G1 resolved). "Officially OUT at capture
+ * time" is a fact about Thursday, so it has to be recorded on Thursday — it cannot be
+ * reconstructed from who failed to play on Sunday without blaming services for warmup
+ * injuries nobody could have known about.
+ *
+ * Same shape as the kickoff cache, for the same reason: resolved ONCE per (season, week)
+ * at the first snapshot attempt, cached at /rankings/out/{season}/{week}, and reused by
+ * every later paste that Thursday. One Sleeper /players/nfl pull per week keeps to
+ * Sleeper's own once-a-day guidance. A player ruled out BETWEEN the first and last paste
+ * of the session is therefore missed — hygiene UNDERCOUNTS in that window, which is the
+ * fair direction: it can fail to flag sloppiness, it can never invent it.
+ *
+ * Statuses counted: Out, IR, PUP, Sus — the ones that mean "will not play", knowable at
+ * capture. Questionable and Doubtful are deliberately excluded: ranking a Questionable
+ * player is a judgement call, not hygiene.
+ *
+ * A fetch failure returns null, is NEVER cached, and NEVER blocks the capture — losing a
+ * week of hygiene is an annotation gap; losing a Thursday capture is unrecoverable.
+ * This is public injury data from Sleeper, not paid content; storing it is fine. */
+const RANKINGS_OUT_STATUSES = ["Out", "IR", "PUP", "Sus"];
+
+async function rankingsOutList(env, season, week) {
+  const cachePath = `/rankings/out/${season}/${week}`;
+  try {
+    const { data } = await fbGet(env, cachePath);
+    if (data && Array.isArray(data.players)) return data.players;
+  } catch (e) { /* a cache read failure just means we resolve again */ }
+
+  let players = null;
+  try {
+    const r = await fetch(SLEEPER_PLAYERS_URL);
+    if (r.ok) {
+      const raw = await r.json();
+      players = [];
+      for (const [id, p] of Object.entries(raw || {})) {
+        if (!p || typeof p !== "object") continue;
+        if (!RANKINGS_POS.includes(String(p.position || ""))) continue;
+        if (!RANKINGS_OUT_STATUSES.includes(String(p.injury_status || ""))) continue;
+        const name = String(p.full_name || ((p.first_name || "") + " " + (p.last_name || "")).trim());
+        players.push({ id, name, pos: String(p.position), status: String(p.injury_status) });
+      }
+    }
+  } catch (e) { players = null; }
+
+  if (players === null) return null;                     // failure is not cached
+  try {
+    await fbPut(env, cachePath, { players, stamped_at: new Date().toISOString() });
+  } catch (e) { /* an uncached list is still a valid list */ }
+  return players;
+}
+
 /* ----------------------------------------------------------------------------- CSV ---
  * Format (handoff §4):   pos,rank,player,team
  * One paste per entrant covering all four positions; ranks restart at 1 per position.
@@ -426,11 +478,16 @@ async function rankingsSnapshot(request, env, cors) {
     }, 409, cors);
   }
 
+  /* The Thursday OUT list, stamped with the capture (G1). null = source was down; the
+   * capture proceeds and that week's hygiene honestly reads null instead of 0. */
+  const outList = season === 0 ? [] : await rankingsOutList(env, season, week);
+
   const captureId = "c" + Date.parse(capturedAt).toString(36) + "-" + sha256.slice(0, 8);
   captures[captureId] = {
     rows: parsed.rows,                                  // PRIVATE — never leaves this Worker
     captured_at: capturedAt,
     sha256,
+    out_at_capture: outList === null ? null : outList.map(o => o.id),
     source_label: String(body.source_label || "").trim().slice(0, 60) || null,
     kickoff_check: kickoffCheck,
     kickoff_at: kickoffAt,

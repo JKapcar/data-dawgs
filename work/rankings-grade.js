@@ -325,22 +325,21 @@ function rankingsEntrantRanks(pool, rankedByKey, consensusRank) {
   return pool.map(k => (rankedByKey[k] !== undefined ? rankedByKey[k] : imputed[k]));
 }
 
-/* Hygiene (§3): count the players who were officially OUT at capture time yet sat inside
- * the startable range of that entrant's list. Never touches the correlation.
+/* Hygiene (§3, G1 resolved): count the players who were officially OUT at capture time yet
+ * sat inside the startable range of that entrant's list. Never touches the correlation.
  *
- * ⚠️ GAP G1, raised at the Stage B checkpoint. This needs to know who was ruled OUT ON
- * THURSDAY, which is a fact about capture time — not about who failed to play on Sunday.
- * Stage A's snapshot stores rows only, so that fact is not currently captured anywhere and
- * this returns null rather than a plausible wrong number computed from did-not-play.
- * Making hygiene real is a small Stage A addition: capture the Thursday OUT list alongside
- * the ranks. Until then the public doc carries hygiene: null and the page must say
- * "not tracked yet" rather than "0". */
-function rankingsHygiene(capture, ranked, pos, matchedIdOf) {
-  const outList = capture && capture.out_at_capture;
-  if (!Array.isArray(outList)) return null;
-  const outKeys = new Set(outList.map(o => `${rankingsNormName(o.name)}|${String(o.pos || "").toUpperCase()}`));
+ * The OUT list is stamped onto the capture on Thursday as Sleeper player ids
+ * (rankingsOutList — statuses Out/IR/PUP/Sus, once per week, undercount-safe), and the
+ * ranked rows arriving here are the MATCHED rows, already carrying their ids — so this is
+ * a set lookup, not a second name-matching pass that could disagree with the first.
+ * A capture whose OUT fetch failed carries null and that week's hygiene honestly reads
+ * null: an annotation gap is not a clean record, and it is never rendered as 0. */
+function rankingsHygiene(capture, ranked, pos) {
+  const out = capture && capture.out_at_capture;
+  if (!Array.isArray(out)) return null;
+  const outSet = new Set(out);
   const window = RANKINGS_STARTABLE[pos];
-  return ranked.filter(r => r.rank <= window && outKeys.has(`${rankingsNormName(r.name)}|${pos}`)).length;
+  return ranked.filter(r => r.rank <= window && outSet.has(r.key)).length;
 }
 
 function rankingsGradeWeek({ captures, entrants, stats, index, aliases, blendMembers }) {
@@ -430,7 +429,7 @@ function rankingsGradeWeek({ captures, entrants, stats, index, aliases, blendMem
         rho: pool.length >= 2 ? rankingsSpearman(serviceRanks, actualRanks) : null,
         tau: pool.length >= 2 ? rankingsWeightedTau(serviceRanks, actualRanks) : null,
         capture: rankingsCaptureRate(g.ranked, pointsOf, actualPool, RANKINGS_G[pos]),
-        hygiene: g.cap ? rankingsHygiene(g.cap, g.ranked, pos, null) : null,
+        hygiene: g.cap ? rankingsHygiene(g.cap, g.ranked, pos) : null,
         ranked_n: g.ranked.length,
         imputed_n: pool.filter(k => byKey[k] === undefined).length,
       };
@@ -471,7 +470,7 @@ async function rankingsRebuildPublic(env, season, entrants, blend, dryRun) {
         const m = ((row.positions[pos] || {}).entrants || {})[id];
         if (!m) continue;
         perWeekMetric[w][pos][id] = { rho: m.rho, tau: m.tau, capture: m.capture, hygiene: m.hygiene };
-        for (const [metric, val] of [["rho", m.rho], ["tau", m.tau], ["capture", m.capture]]) {
+        for (const [metric, val] of [["rho", m.rho], ["tau", m.tau], ["capture", m.capture], ["hygiene", m.hygiene]]) {
           if (!Number.isFinite(val)) continue;
           seriesFor[pos] = seriesFor[pos] || {};
           seriesFor[pos][id] = seriesFor[pos][id] || {};
@@ -489,7 +488,18 @@ async function rankingsRebuildPublic(env, season, entrants, blend, dryRun) {
         return vals.length === RANKINGS_POS.length ? rankingsMean(vals) : null;
       };
       const rho = pick("rho"), tau = pick("tau"), capture = pick("capture");
-      perWeekMetric[w].ALL[id] = { rho, tau, capture, hygiene: null };
+      /* Hygiene at the ALL scope is a SUM across positions, not a mean — it is a counter
+       * (the mockup's hygOf does the same). A week whose OUT list was unavailable has all
+       * four positions null and stays null rather than becoming a fake zero. */
+      const hygVals = RANKINGS_POS.map(p => (perWeekMetric[w][p][id] || {}).hygiene).filter(Number.isFinite);
+      const hygiene = hygVals.length ? hygVals.reduce((a, b) => a + b, 0) : null;
+      perWeekMetric[w].ALL[id] = { rho, tau, capture, hygiene };
+      if (Number.isFinite(hygiene)) {
+        seriesFor.ALL = seriesFor.ALL || {};
+        seriesFor.ALL[id] = seriesFor.ALL[id] || {};
+        seriesFor.ALL[id].hygiene = seriesFor.ALL[id].hygiene || [];
+        seriesFor.ALL[id].hygiene.push(hygiene);
+      }
       for (const [metric, val] of [["rho", rho], ["tau", tau], ["capture", capture]]) {
         if (!Number.isFinite(val)) continue;
         seriesFor.ALL = seriesFor.ALL || {};
@@ -534,7 +544,9 @@ async function rankingsRebuildPublic(env, season, entrants, blend, dryRun) {
         ci: rankingsBootstrapCI(weekly, `${season}|${scope}|${id}`),
         tau: rankingsMean(byEntrant[id].tau || []),
         capture: rankingsMean(byEntrant[id].capture || []),
-        hygiene: null,
+        // season hygiene = the sum of the weeks that had an OUT list; null if none did
+        hygiene: (byEntrant[id].hygiene || []).length
+          ? (byEntrant[id].hygiene).reduce((a, b) => a + b, 0) : null,
         relative_to_field: relative,
         weeks_graded: weekly.length,
         weekly_rho: weekly,
@@ -575,7 +587,11 @@ async function rankingsRebuildPublic(env, season, entrants, blend, dryRun) {
     provisional: true,                        // stays true until the declared promotion gate
     shrinkage_mode: rankingsShrinkWeights(seriesFor.ALL || {}, latestWeek).mode,
     excluded_unmatched: excludedUnmatched,
-    hygiene_tracked: false,                   // gap G1 — see rankingsHygiene
+    /* true the moment any graded week carried an OUT list. Stays false over weeks graded
+     * before this capability shipped — those can never be backfilled (G1), and the page
+     * renders their hygiene as "not tracked yet" rather than 0. */
+    hygiene_tracked: Object.values(scopes).some(rows =>
+      Object.values(rows).some(r => Number.isFinite(r.hygiene))),
     entrants: Object.fromEntries(Object.entries(entrants).map(([id, e]) => [id, {
       name: e.name, type: e.type, color: e.color, first_week: e.first_week,
       blend_member: (blend.members || []).includes(id),
