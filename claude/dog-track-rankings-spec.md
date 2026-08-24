@@ -428,3 +428,44 @@ source Kap already reads on Thursday). **Decision needed before Week 1**, becaus
 captured without it can never have its hygiene computed after the fact. Until then the
 mockup's "Hygiene: N OUT players left ranked at capture" line must render as "not tracked
 yet" rather than "0" — a zero here would be a claim, not an absence.
+
+### F1 — the Arena hub card could not be added: `work/build_arena.py` is broken on main (Stage D, 2026-08-24)
+
+§4 requires an Arena hub card and is explicit that `arena.html` is generated — edit the
+builder, never the page, or the card reverts on the next rebuild. **The builder cannot run.**
+It slices `dawghouse.html` on two content markers, and against the *committed* template one
+appears twice (`\n<script>\n`, now both an inventory block and a `DD_BOTCTX` block) and the
+other (`</script>\n</div>\n</body>`) has disappeared entirely. Verified pre-existing: the
+same counts hold on `git show HEAD:dawghouse.html`, before any Dog Track change.
+
+**No card was added, and `arena.html` was NOT hand-edited.** Hand-editing it would plant a
+change that silently vanishes the moment anyone repairs the builder — the exact failure the
+spec's warning is about. The page is still registered four other ways: the Arena nav item,
+the `surfaces.json` row (`domain: "arena"`, which is what the hub renders from), `llms.txt`
+and `sitemap.xml`. Repairing `build_arena.py` is its own task; the card appears on the next
+successful rebuild with no further Dog Track work.
+
+### F2 — `llms.txt` is at its size ceiling (Stage D, 2026-08-24)
+
+The convention is under 5 KB and `validate-data.js` enforces it. The file was already at
+5105 bytes — 15 bytes of headroom — so adding the required `rankings` line broke the check
+and several unrelated entries had to be tightened to fit. It now sits at 5109. **The next
+surface added to this file will not fit.** Either the file needs a real prune or the
+convention needs raising; doing it under deadline while shipping something else is how a
+useful line gets deleted to make room.
+
+### F3 — `cfb-power.html` was shipped without a sitemap row (Stage D, 2026-08-24, fixed)
+
+`test-machine-surfaces.mjs` failed on it — a live page invisible to the machine index,
+which is precisely the named `challenge.html` mistake in §4. Added. Not a Dog Track change,
+but it was blocking the gate and the fix is one line.
+
+### F4 — pre-existing suite failures, unchanged by this work (Stage D, 2026-08-24)
+
+Verified by stashing and re-running, so none of these are attributed to the Dog Track:
+
+- `work/test-nav-fit.mjs` — **531 passed, 51 failed, identical before and after** the nav
+  change. Adding a dropdown item genuinely costs no row width, exactly as §4 predicts.
+- `work/test-pound-contracts.js` — fails on a clean tree (`one-pick-per-week path is live`).
+- The 22px/48px horizontal overflow at 360/390 reproduces identically on every flattened
+  page, caused by the nav's `theme-btn`. Sitewide chrome, not this page.

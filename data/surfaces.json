@@ -1,5 +1,5 @@
 {
- "as_of": "2026-08-23",
+ "as_of": "2026-08-24",
  "source": "Generated from the site itself. Tier is read from each page's live chip.",
  "tier": "labs",
  "graded": false,
@@ -190,14 +190,14 @@
   }
  },
  "counts": {
-  "surfaces": 19,
-  "with_live_machine_access": 15,
+  "surfaces": 20,
+  "with_live_machine_access": 16,
   "with_no_machine_access": 4,
   "mcp_tools_registered": 43,
   "mcp_tools_live": 43,
   "mcp_tools_staged": 0,
   "mcp_tools_core": 17,
-  "mcp_tools_planned": 5
+  "mcp_tools_planned": 6
  },
  "data": [
   {
@@ -280,6 +280,32 @@
    ],
    "gap": "The Firebase mirror still has no dated JSON snapshot surface; dd_draft_board reads it live instead.",
    "tier": "dawg"
+  },
+  {
+   "id": "rankings",
+   "domain": "arena",
+   "name": "The Dog Track — rankings report card",
+   "page": "/rankings.html",
+   "machine": [
+    {
+     "kind": "json",
+     "url": "/data/rankings-grades.json",
+     "status": "live",
+     "covers": "derived weekly and season scores per entrant per position — Spearman, weighted Kendall tau and points-capture rate, with bootstrap intervals. Contains NO player-level or third-party rank data, by design."
+    }
+   ],
+   "reading": [
+    {
+     "url": "/rankings.html",
+     "title": "The Dog Track — how well do ranking services actually rank?",
+     "covers": "Grades fantasy ranking services against actual weekly PPR finishes on a pre-registered method. Five views, ALL and per-position scopes, season and single-week. Ties render as photo finishes and the page refuses to name a winner the intervals do not support."
+    }
+   ],
+   "planned": [
+    "mcp:dd_rankings_grades"
+   ],
+   "gap": "Hygiene is not tracked yet: the Thursday OUT list is not captured, so the hygiene column reads null rather than zero. The MCP tool is not registered until the Stage E dry run completes.",
+   "tier": "labs"
   },
   {
    "id": "epa",
@@ -925,6 +951,6 @@
   }
  ],
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-08-23",
+ "built": "2026-08-24",
  "canonical_url": "https://datadawgs216.com/data/surfaces.json"
 }

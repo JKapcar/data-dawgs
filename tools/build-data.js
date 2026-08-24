@@ -1304,6 +1304,18 @@ const SURFACES = [
               { kind: 'mcp', tool: 'dd_draft_board', status: 'live', covers: 'live budgets, open slots, true max bids, clock, block, recent sales' }],
     planned: ['rest:/api/draft'],
     gap: 'The Firebase mirror still has no dated JSON snapshot surface; dd_draft_board reads it live instead.' },
+  /* The Dog Track. ⚠️ `status` is HONEST, not aspirational: the MCP tool is declared
+     `planned` and stays there until the Stage E dry run passes the tool-honesty gate, and
+     the JSON mirror reads `live` only once Week 1 rows exist. A surface that claims machine
+     access it does not have is the exact failure this registry exists to prevent. */
+  { id: 'rankings', domain: 'arena', name: 'The Dog Track — rankings report card',
+    page: '/rankings.html',
+    machine: [{ kind: 'json', url: '/data/rankings-grades.json', status: 'live',
+                covers: 'derived weekly and season scores per entrant per position — Spearman, weighted Kendall tau and points-capture rate, with bootstrap intervals. Contains NO player-level or third-party rank data, by design.' }],
+    reading: [{ url: '/rankings.html', title: 'The Dog Track — how well do ranking services actually rank?',
+                covers: 'Grades fantasy ranking services against actual weekly PPR finishes on a pre-registered method. Five views, ALL and per-position scopes, season and single-week. Ties render as photo finishes and the page refuses to name a winner the intervals do not support.' }],
+    planned: ['mcp:dd_rankings_grades'],
+    gap: 'Hygiene is not tracked yet: the Thursday OUT list is not captured, so the hygiene column reads null rather than zero. The MCP tool is not registered until the Stage E dry run completes.' },
   { id: 'epa', domain: 'nfl', name: 'NFL EPA explorer', page: '/stats.html',
     machine: [{ kind: 'json', url: '/data/epa-teams.json', status: 'live', covers: 'team and QB aggregates' },
               { kind: 'json', url: '/data/epa-players.json', status: 'live',
