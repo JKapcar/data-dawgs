@@ -794,8 +794,8 @@ button.danger{background:transparent;color:var(--bad);border:1px solid var(--bad
   <div class="card">
     <h2>Register an entrant</h2>
     <div class="row">
-      <div><label for="eid">ID</label><input id="eid" placeholder="ETR"></div>
-      <div><label for="ename">Name</label><input id="ename" placeholder="Establish The Run"></div>
+      <div><label for="eid">ID</label><input id="eid" placeholder="4-16 chars, A-Z 0-9 _"></div>
+      <div><label for="ename">Name</label><input id="ename" placeholder="Display name"></div>
     </div>
     <div class="row">
       <div><label for="etype">Type</label><select id="etype"><option value="service">service</option><option value="house">house</option></select></div>
@@ -942,9 +942,12 @@ def build_admin():
     out = ROOT / "rankings-admin.html"
     out.write_text(ADMIN, encoding="utf-8")
     assert "noindex" in ADMIN
-    for name in ("ETR", "PFF", "ESPN", "BLEND"):
-        # placeholders in an input are fine; a rendered row for a named service is not
-        assert f'>{name}<' not in ADMIN, f"hardcoded service row for {name}"
+    # ⚠️ ZERO hardcoded service names, and that includes form PLACEHOLDERS. The first
+    # version used "ETR" and "Establish The Run" as input hints — harmless-looking, but
+    # §4 says the admin UI names no service anywhere, and a hint is still the page
+    # asserting which services exist. Checked against the whole file, not just rendered rows.
+    for name in ("ETR", "PFF", "ESPN", "Establish The Run", "Pro Football Focus"):
+        assert name not in ADMIN, f"hardcoded service name in the admin page: {name}"
     return out, len(ADMIN)
 
 

@@ -469,3 +469,31 @@ Verified by stashing and re-running, so none of these are attributed to the Dog 
 - `work/test-pound-contracts.js` — fails on a clean tree (`one-pick-per-week path is live`).
 - The 22px/48px horizontal overflow at 360/390 reproduces identically on every flattened
   page, caused by the nav's `theme-btn`. Sitewide chrome, not this page.
+
+### F5 — a closed `<details>` is not hidden as far as the page is concerned (Stage C/D, 2026-08-24, fixed)
+
+`work/test-launcher-overlap.mjs` scored 6,648 px² (390) and 3,708 px² (1280) of the
+methodology drawer's text as **unreachable** — permanently covered by the fixed launcher at
+maximum scroll — **while the drawer was closed**. In Chrome a closed `<details>` still gives
+its children a real bounding rect and a computed `display: block`, so anything that measures
+the page treats the whole methodology as visible content laid out wherever it would be.
+
+Two things on this site measure pages that way: the overlap guard, and `DDBotScan`, which
+walks the DOM to tell Toto what is on screen. The same bug would have had Toto reading
+hidden prose as though the reader could see it.
+
+**Fixed** with `.dt-method:not([open]) .dt-methodbody { display: none }` — not a workaround
+but a statement of what is true; `[open]` removes it. Both states are asserted in the render
+suite. **Worth checking on every other Playbill-pattern `<details>` drawer on the site**,
+which will have the same property.
+
+Result: the suite went from 3 failures to 1, and the survivor is `signon.html` — verified
+pre-existing by measuring it with and without the Dog Track nav item (2,299 px² either way).
+
+### F6 — form placeholders count as hardcoded service names (Stage C, 2026-08-24, fixed)
+
+`rankings-admin.html` shipped with `placeholder="ETR"` and
+`placeholder="Establish The Run"` on the register-entrant form. The builder's guard only
+looked for *rendered rows* (`>NAME<`), so it passed. §4 says the admin UI names no service
+anywhere, and a placeholder is still the page asserting which services exist. Neutralised,
+and the builder now checks the whole file rather than rendered rows.
