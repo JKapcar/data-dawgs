@@ -429,21 +429,38 @@ captured without it can never have its hygiene computed after the fact. Until th
 mockup's "Hygiene: N OUT players left ranked at capture" line must render as "not tracked
 yet" rather than "0" — a zero here would be a claim, not an absence.
 
-### F1 — the Arena hub card could not be added: `work/build_arena.py` is broken on main (Stage D, 2026-08-24)
+### F1 — CORRECTED: the Arena hub card was never missing (Stage D, 2026-08-24)
 
-§4 requires an Arena hub card and is explicit that `arena.html` is generated — edit the
-builder, never the page, or the card reverts on the next rebuild. **The builder cannot run.**
+**⚠️ This entry was wrong when first written, and the error is left visible rather than
+edited away, because the reasoning that produced it is the interesting part.**
+
+I found that `work/build_arena.py` cannot run, concluded from that that the Arena hub card
+could not be added, and recorded it as a blocked requirement — in this spec, in two commit
+messages and in the PR body. I never loaded `arena.html` to check.
+
+**The card was already there.** `build_arena.py`'s own header says so in the second
+paragraph: *"The card set is NOT typed in here — it is every `/data/surfaces.json` row with
+`domain: "arena"`, read at runtime. A hand-written hub list drifts within a month."* Adding
+the surface row in Stage D was all the card ever needed. Verified by rendering the page:
+`article.tool[data-surface="rankings"]`, tier `labs`, with the JSON surface listed live and
+the hygiene gap shown as a known gap.
+
+The lesson is not "read the docs". It is that I reasoned from a broken tool to a blocked
+outcome without checking the outcome itself, and a one-minute page load would have
+falsified it at any point. **§4's Arena hub card requirement is met.**
+
+### F1b — `work/build_arena.py` is still broken, and that is a separate, lower-stakes problem
+
+The builder cannot run:
 It slices `dawghouse.html` on two content markers, and against the *committed* template one
 appears twice (`\n<script>\n`, now both an inventory block and a `DD_BOTCTX` block) and the
 other (`</script>\n</div>\n</body>`) has disappeared entirely. Verified pre-existing: the
 same counts hold on `git show HEAD:dawghouse.html`, before any Dog Track change.
 
-**No card was added, and `arena.html` was NOT hand-edited.** Hand-editing it would plant a
-change that silently vanishes the moment anyone repairs the builder — the exact failure the
-spec's warning is about. The page is still registered four other ways: the Arena nav item,
-the `surfaces.json` row (`domain: "arena"`, which is what the hub renders from), `llms.txt`
-and `sitemap.xml`. Repairing `build_arena.py` is its own task; the card appears on the next
-successful rebuild with no further Dog Track work.
+`arena.html` was correctly NOT hand-edited — that decision stands on its own merits, and
+happens to have cost nothing since the card was rendering anyway. What the broken builder
+actually blocks is any change to arena.html's *shell* (its hero, its copy, its CSS), not
+its card set. Worth fixing on its own schedule; it is not a Dog Track blocker and never was.
 
 ### F2 — `llms.txt` is at its size ceiling (Stage D, 2026-08-24)
 
