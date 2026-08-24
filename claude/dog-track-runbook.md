@@ -92,7 +92,7 @@ overwritten — earlier weeks were graded against it.
 | `late — first kickoff has passed` | You missed the deadline | Nothing to do. That service has no snapshot this week. Do not try to backdate it |
 | A snapshot is refused as immutable | Something is already captured for that entrant/week | Void it (with a reason), then paste again — before kickoff |
 | `excluded_unmatched` is high | Names are not matching the player index | Work the review list; most will be team changes with a suggested alias |
-| Hygiene reads "not tracked yet" | Correct. The Thursday OUT list is not captured yet | Nothing, unless you want it — see gap G1 in the spec |
+| Hygiene reads "not tracked yet" | That week's OUT-list fetch failed at capture (it is null, not zero) | Nothing — the capture is intact; hygiene resumes the next week the fetch succeeds |
 | The page says "not reachable" | The Worker is down or the route is not deployed | Check the Worker; the page never caches scores |
 
 ---

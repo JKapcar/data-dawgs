@@ -86,12 +86,16 @@ function makeDb() {
 }
 
 /* ------------------------------------------------------------------- vm harness ---- */
-function makeCtx({ schedule, espn } = {}) {
+function makeCtx({ schedule, espn, players } = {}) {
   const db = makeDb();
   const fetchLog = [];
 
   async function fetchStub(url) {
     fetchLog.push(String(url));
+    if (String(url).includes("api.sleeper.app/v1/players")) {
+      if (players === null) return { ok: false, status: 502 };
+      return { ok: true, status: 200, json: async () => (players || {}) };
+    }
     if (String(url).includes("datadawgs216.com/data/nfl-schedule.json")) {
       if (!schedule) return { ok: false, status: 502 };
       return { ok: true, status: 200, json: async () => schedule };
@@ -111,6 +115,7 @@ function makeCtx({ schedule, espn } = {}) {
     TextEncoder,
     crypto: webcrypto,
     FETCH_SHAPES: [{ name: "browser", headers: {} }, { name: "ua-only", headers: {} }, { name: "bare", headers: {} }],
+    SLEEPER_PLAYERS_URL: "https://api.sleeper.app/v1/players/nfl",
     json: (obj, status, cors) => new Response(JSON.stringify(obj), {
       status, headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" },
     }),
@@ -412,6 +417,42 @@ async function main() {
     await registerEntrant(ctx, "TEST");
     const r = await call(ctx, "POST", "/rankings/snapshot", { key: KEY, body: { season: 0, week: 1, entrant: "TEST", csv: CSV } });
     ok(r.status === 200 && r.body.receipt.kickoff_check === "sandbox", "season 0 bypasses the kickoff gate for the dry run");
+  }
+
+  /* ------------------------------------------------- the Thursday OUT list (G1) ---- */
+  {
+    const players = {
+      hurt1: { position: "RB", injury_status: "Out", full_name: "Grievous Hamstring" },
+      hurt2: { position: "WR", injury_status: "IR", full_name: "Longterm Clavicle" },
+      fine1: { position: "RB", injury_status: "Questionable", full_name: "Maybe Toe" },
+      fine2: { position: "QB", injury_status: "", full_name: "Healthy Fellow" },
+      kick1: { position: "K", injury_status: "Out", full_name: "Legless Kicker" },
+    };
+    const { ctx, db, fetchLog } = makeCtx({ schedule: FUTURE, players });
+    await registerEntrant(ctx, "ETR");
+    await registerEntrant(ctx, "PFF");
+    const r = await call(ctx, "POST", "/rankings/snapshot", { key: KEY, body: { season: 2026, week: 1, entrant: "ETR", csv: CSV } });
+    ok(r.status === 200, "a snapshot with a live OUT source succeeds");
+    const cap = Object.values(db.read("/rankings/snapshots/2026/1/ETR"))[0];
+    ok(Array.isArray(cap.out_at_capture) && cap.out_at_capture.includes("hurt1") && cap.out_at_capture.includes("hurt2"),
+      "the capture carries the ids ruled Out and IR at capture time", JSON.stringify(cap.out_at_capture));
+    ok(!cap.out_at_capture.includes("fine1"), "Questionable is NOT hygiene — ranking him is a judgement call");
+    ok(!cap.out_at_capture.includes("kick1"), "non-graded positions stay off the list");
+    const pulls = fetchLog.filter(u => u.includes("v1/players")).length;
+    await call(ctx, "POST", "/rankings/snapshot", { key: KEY, body: { season: 2026, week: 1, entrant: "PFF", csv: CSV } });
+    ok(fetchLog.filter(u => u.includes("v1/players")).length === pulls,
+      "the OUT list is resolved ONCE per week — the second paste reuses the cache");
+    ok(Array.isArray(db.read("/rankings/out/2026/1").players), "the week's OUT list is cached in Firebase");
+  }
+  {
+    // the source being down must cost the annotation, never the capture
+    const { ctx, db } = makeCtx({ schedule: FUTURE, players: null });
+    await registerEntrant(ctx, "ETR");
+    const r = await call(ctx, "POST", "/rankings/snapshot", { key: KEY, body: { season: 2026, week: 1, entrant: "ETR", csv: CSV } });
+    ok(r.status === 200, "an OUT-source failure never blocks a Thursday capture");
+    const cap = Object.values(db.read("/rankings/snapshots/2026/1/ETR"))[0];
+    ok(cap.out_at_capture === null, "the capture records null — an unknown OUT list is not an empty one");
+    ok(db.read("/rankings/out/2026/1") === null, "a failed OUT fetch is NOT cached — the next paste retries");
   }
 
   /* ------------------------------------------------------------- registry gating --- */

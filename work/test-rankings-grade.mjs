@@ -75,7 +75,18 @@ function makeCtx({ stats, slim, schedule } = {}) {
     FETCH_SHAPES: [{ name: "bare", headers: {} }],
     SLEEPER_SLIM_KEY: "sleeper:players:slim",
     SLEEPER_PLAYERS_URL: "https://api.sleeper.app/v1/players/nfl",
-    sleeperSlimFromRaw: raw => ({ players: raw, count: Object.keys(raw).length }),
+    /* Mirrors the real function's shape contract: RAW Sleeper objects in, slim
+     * [name, pos, team] arrays out. The first version was an identity stub, which let the
+     * tests pass slim arrays as "raw" — and rankingsOutList, which reads the raw shape,
+     * silently saw no positions and produced an empty OUT list that looked like data. */
+    sleeperSlimFromRaw: raw => {
+      const players = {};
+      for (const [id, pp] of Object.entries(raw || {})) {
+        if (Array.isArray(pp)) { players[id] = pp; continue; }        // already slim
+        players[id] = [String(pp.full_name || ""), String(pp.position || ""), pp.team ? String(pp.team) : null];
+      }
+      return { players, count: Object.keys(players).length };
+    },
     json: (obj, status, cors) => new Response(JSON.stringify(obj), { status, headers: { ...cors, "Content-Type": "application/json" } }),
     sha256hex: async str => {
       const buf = await webcrypto.subtle.digest("SHA-256", new TextEncoder().encode(String(str)));
@@ -353,21 +364,26 @@ async function main() {
 
   /* ========================================================== the routes ========== */
   {
-    const slim = {}; const stats = {}; const rows = [];
+    const raw = {}; const stats = {}; const rows = [];
     for (const pos of ["RB", "WR", "QB", "TE"]) {
       const depth = { RB: 36, WR: 48, QB: 24, TE: 24 }[pos];
       for (let i = 1; i <= depth; i++) {
         const id = `${pos}_${i}`;
         const name = `Fixture ${pos}${i} Wobblesworth`;
-        slim[id] = [name, pos, "ATL"];
-        stats[id] = { gp: 1, pts_ppr: 200 - i };
+        /* RB_3 is ruled Out on Thursday and every service still ranks him 3rd — inside the
+         * startable window — so hygiene must read exactly 1 at RB. He also does not play,
+         * so the correlation pool must drop him while hygiene still counts him: the two
+         * mechanisms are independent by design (§3: "hygiene never touches the correlation"). */
+        raw[id] = { full_name: name, position: pos, team: "ATL",
+                    injury_status: id === "RB_3" ? "Out" : "" };
+        if (id !== "RB_3") stats[id] = { gp: 1, pts_ppr: 200 - i };
         rows.push({ pos, rank: i, name, team: "ATL" });
       }
     }
     const csv = rows.map(r => `${r.pos},${r.rank},${r.name},${r.team}`).join("\n");
     const FUTURE = { data: { season: 2026, games: [{ season: 2026, week: 1, kickoff_at: "2099-09-10T00:20:00Z" }] } };
 
-    const { ctx, db } = makeCtx({ stats, slim: { raw: slim }, schedule: FUTURE });
+    const { ctx, db } = makeCtx({ stats, slim: { raw }, schedule: FUTURE });
     for (const id of ["ETR", "PFF"]) {
       await call(ctx, "POST", "/rankings/entrants", { key: KEY, body: { id, name: id, type: "service", first_week: 1 } });
       await call(ctx, "POST", "/rankings/snapshot", { key: KEY, body: { season: 2026, week: 1, entrant: id, csv } });
@@ -397,7 +413,12 @@ async function main() {
     ok(pub.body.scopes.ALL.ETR !== undefined && pub.body.scopes.RB.ETR !== undefined, "ALL and per-position scopes both publish");
     ok(pub.body.scopes.ALL.ETR.provisional === true, "one graded week is flagged provisional (< 4 weeks)");
     ok(pub.body.scopes.ALL.ETR.ci === null, "a single week publishes NO confidence interval");
-    ok(pub.body.hygiene_tracked === false, "the doc states plainly that hygiene is not tracked yet");
+    ok(pub.body.hygiene_tracked === true, "hygiene is tracked once a graded week carries an OUT list (G1 resolved)");
+    ok(pub.body.scopes.RB.ETR.hygiene === 1,
+      "the Out player ranked 3rd counts exactly once against RB hygiene", String(pub.body.scopes.RB.ETR.hygiene));
+    ok(pub.body.scopes.WR.ETR.hygiene === 0, "a position with no OUT players reads 0, honestly");
+    ok(pub.body.scopes.ALL.ETR.hygiene === 1, "ALL-scope hygiene is the SUM across positions");
+    ok(pub.body.weeks["1"].RB.ETR.hygiene === 1, "the week view carries the same count");
     ok(pub.body.entrants.ETR.color !== undefined, "entrant identity travels with the doc so the page can render N entrants");
 
     /* the review list is admin-only and DOES carry names — that is how aliases get added */

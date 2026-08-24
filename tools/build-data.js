@@ -1315,7 +1315,7 @@ const SURFACES = [
     reading: [{ url: '/rankings.html', title: 'The Dog Track — how well do ranking services actually rank?',
                 covers: 'Grades fantasy ranking services against actual weekly PPR finishes on a pre-registered method. Five views, ALL and per-position scopes, season and single-week. Ties render as photo finishes and the page refuses to name a winner the intervals do not support.' }],
     planned: ['mcp:dd_rankings_grades'],
-    gap: 'Hygiene is not tracked yet: the Thursday OUT list is not captured, so the hygiene column reads null rather than zero. The MCP tool is not registered until the Stage E dry run completes.' },
+    gap: 'The MCP tool is not registered until the Stage E dry run completes. Weeks graded before 2026-08-24 (there are none) would carry null hygiene; the Thursday OUT list is captured from that date.' },
   { id: 'epa', domain: 'nfl', name: 'NFL EPA explorer', page: '/stats.html',
     machine: [{ kind: 'json', url: '/data/epa-teams.json', status: 'live', covers: 'team and QB aggregates' },
               { kind: 'json', url: '/data/epa-players.json', status: 'live',

@@ -610,7 +610,7 @@ window.DD_BOTCTX = {
     "The promotion gate is declared: this becomes a Working Dawg only if at least one pair of services separates with non-overlapping shrunk intervals on the ALL scope at season's end. If that has not happened, say it has not.",
     "Three metrics only: Spearman rho, weighted Kendall tau, and points-capture rate. There is no fourth. Do not invent one.",
     "An entrant with fewer than 4 graded weeks is provisional regardless of score. A single-week view has NO confidence interval and NO shrinkage — one week is one observation, never evidence of skill.",
-    "Hygiene is NOT TRACKED YET: the Thursday OUT list is not captured, so hygiene reads null. Do not report it as zero — absence is not a clean record.",
+    "Hygiene counts players officially OUT (Out, IR, PUP, Sus) at Thursday capture time who sat inside the startable range. A null hygiene means that week's OUT list was unavailable at capture — report it as 'not tracked', NEVER as zero. A real 0 is a clean week and may be stated as one.",
     "RAW THIRD-PARTY RANKS ARE PAID CONTENT AND ARE NOT AVAILABLE HERE OR ANYWHERE PUBLIC. You cannot show a player-level rank from any service, and there is no player-level data on this page to read. If asked, say the ranks are private by design and only derived scores publish.",
     "Methodology was pre-registered before Week 1 and is published in the drawer on this page. Any amendment carries a dated note.",
   ].join(" "),
@@ -620,7 +620,7 @@ window.DD_BOTCTX = {
       + "STATUS: " + (d && d.weeks_graded ? (d.weeks_graded + " week(s) graded, season " + d.season) : "no graded weeks yet; season opens Sep 10") + ".\n"
       + "SCORING: full PPR. Method version " + ((d && d.method_version) || "1.0") + ". Provisional: "
       + (d ? String(d.provisional !== false) : "true") + ".\n"
-      + "HYGIENE TRACKED: " + (d && d.hygiene_tracked === true ? "yes" : "no — the Thursday OUT list is not captured, hygiene reads null") + ".\n"
+      + "HYGIENE TRACKED: " + (d && d.hygiene_tracked === true ? "yes — counted from the Thursday OUT list stamped at capture" : "no — no graded week has carried an OUT list yet; hygiene reads null, not zero") + ".\n"
       + "ENTRANTS: " + (d && d.entrants ? Object.keys(d.entrants).join(", ") : "not yet registered") + ".\n"
       + "THE BLEND: " + (d && d.blend && d.blend.members ? ("mean rank across " + d.blend.members.join(", ") + ", membership frozen at Week " + d.blend.frozen_at_week) : "membership freezes at Week 1") + ".\n"
       + "EXCLUDED (unmatched names): " + ((d && d.excluded_unmatched) || 0) + ".\n"

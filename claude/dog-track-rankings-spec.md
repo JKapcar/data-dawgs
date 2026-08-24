@@ -410,7 +410,7 @@ tie, which is what the text says. Flagged rather than assumed: if (b) was intend
 small change in `rankingsEntrantRanks`, and it must happen before Week 1 because it changes
 every graded ρ.
 
-### G1 — hygiene needs the Thursday OUT list, which nothing captures yet (Stage B, raised 2026-08-24)
+### G1 — RESOLVED 2026-08-24: the Thursday OUT list is now captured (raised Stage B, built post-launch on Kap's finish authorization)
 
 §3 defines the hygiene counter as players who were **officially OUT at capture time** yet
 sat inside the startable range of a service's list. That is a fact about Thursday, not
@@ -422,12 +422,27 @@ The grading engine therefore publishes `hygiene: null` and `hygiene_tracked: fal
 than computing a plausible-but-wrong number from did-not-play data. `rankingsHygiene` is
 implemented and works the moment the data exists.
 
-**To make hygiene real:** capture the Thursday OUT list alongside the ranks — a small Stage
-A addition (an `out_at_capture` array on the snapshot body, populated from whatever injury
-source Kap already reads on Thursday). **Decision needed before Week 1**, because a week
-captured without it can never have its hygiene computed after the fact. Until then the
-mockup's "Hygiene: N OUT players left ranked at capture" line must render as "not tracked
-yet" rather than "0" — a zero here would be a claim, not an absence.
+**Resolution, implemented before Week 1.** The snapshot route now stamps `out_at_capture`
+— Sleeper player ids whose `injury_status` is Out, IR, PUP or Sus at fantasy positions —
+onto every capture. Design choices, all deliberate:
+
+- **Resolved once per (season, week)** at the first snapshot attempt and cached at
+  `/rankings/out/{season}/{week}`, mirroring the kickoff cache: one Sleeper pull per week,
+  inside Sleeper's own once-a-day guidance. A ruling that lands between the first and last
+  paste of a Thursday session is missed, so hygiene **undercounts** in that window — the
+  fair direction: it can fail to flag sloppiness, it can never invent it.
+- **Questionable and Doubtful are excluded.** Ranking a Questionable player is a judgement
+  call, not hygiene.
+- **A fetch failure records `null`, is never cached, and never blocks the capture.** That
+  week's hygiene reads null, and the page renders "not tracked yet" — an unknown OUT list
+  is not an empty one, and a lost annotation must never cost a Thursday capture.
+- At grade time hygiene is a set lookup on the already-matched player ids — no second
+  name-matching pass that could disagree with the first. ALL-scope hygiene is a **sum**
+  across positions (it is a counter), and season hygiene sums the weeks that carried a
+  list. `hygiene_tracked` in the public doc flips true the moment any graded week did.
+
+Weeks graded before this shipped can never be backfilled; they stay null and render as
+"not tracked yet" rather than 0.
 
 ### F1 — CORRECTED: the Arena hub card was never missing (Stage D, 2026-08-24)
 
