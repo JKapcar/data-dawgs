@@ -5,11 +5,17 @@
  * the output are lost on the next build.
  *
  * ⚠️ WHY THIS BLOCK IS INJECTED *ABOVE* THE MCP BLOCK.
- * assemble.mjs enforces "no Firebase write helper is ever called inside the MCP block"
- * by scanning from the DD-MCP-BLOCK START marker to end of file. This block legitimately
- * calls fbPut/fbPost — it is a capture ledger — so it must live before that marker or it
- * would trip a guard that exists for a completely different reason. assemble.mjs asserts
- * the ordering rather than trusting it.
+ * Both assemble.mjs and work/test-identity.mjs enforce "no Firebase write helper is ever
+ * called inside the MCP block" by slicing from that block's opening marker to end of file.
+ * This block legitimately calls fbPut/fbPost — it is a capture ledger — so it must live
+ * before that marker or it would trip a guard written for a completely different reason.
+ * assemble.mjs asserts the ordering rather than trusting it.
+ *
+ * ⚠️ AND THIS COMMENT MUST NOT SPELL THAT MARKER OUT. It did, once. test-identity.mjs
+ * locates the block with a bare indexOf on the short marker text, so the sentence above
+ * BECAME the earliest match: the guard sliced from this comment instead of from the real
+ * marker, scanned this ledger, found fbPut and failed the deploy — a code comment breaking
+ * a build by being quoted too accurately. Describe the marker; never reproduce it.
  *
  * WHAT THIS IS
  * Kap pastes each ranking service's positional ranks every Thursday BEFORE the first
