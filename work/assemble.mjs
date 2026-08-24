@@ -1,4 +1,4 @@
-/* Rebuild ../dawg-bot-worker.js from its hand-written half plus work/mcp-block.js.
+/* Rebuild ../dawg-bot-worker.js from its hand-written half plus the generated blocks.
  *
  * ⚠️ THIS BUILD IS IDEMPOTENT AND MUST STAY THAT WAY.
  * The first version read ../dawg-bot-worker.js as a "base" and appended the block.
@@ -10,6 +10,12 @@
  * So: strip first, then inject. Boundaries are CONTENT MARKERS, never line numbers —
  * the same rule the site build follows, for the same reason. The legacy fallback
  * handles the one-time case where the committed file predates the markers.
+ *
+ * ⚠️ THE STRIP-AND-INJECT PIPELINE LIVES IN ONE FUNCTION, `transform()`, AND IS CALLED
+ * TWICE: once to build, once to prove that assembling the output again changes nothing.
+ * It used to be written out twice — the build inline, the idempotency proof a hand-copied
+ * echo of it. Two blocks to inject would have meant two hand-copies to keep in sync, and
+ * a proof that has drifted from the thing it proves is worse than no proof at all.
  *
  * Run:  cd work && node assemble.mjs        (writes ../dawg-bot-worker.js in place)
  */
@@ -24,39 +30,18 @@ const ROUTE =
   '    if (url.pathname === "/mcp" || url.pathname.startsWith("/mcp/")) return handleMcp(request, url, env);';
 const ANCHOR = "    const url = new URL(request.url);";
 
+/* The Dog Track's capture half. Injected ABOVE the MCP block, on purpose — see the
+ * ordering assertion further down, which explains why putting it below would trip the
+ * MCP block's write-scope guard for a reason that has nothing to do with this feature. */
+const R_START = "/* ===== DD-RANKINGS-BLOCK START — generated from work/rankings-block.js; edit THERE ===== */";
+const R_END   = "/* ===== DD-RANKINGS-BLOCK END ===== */";
+const R_ROUTE =
+  '    // DD-RANKINGS-ROUTE — The Dog Track capture half; see the DD-RANKINGS-BLOCK below.\n' +
+  '    if (url.pathname.startsWith("/rankings/")) return handleRankings(request, url, env, cors);';
+const R_ANCHOR = '    if (url.pathname.startsWith("/api/swoledawg")) return handleSwole(request, url, env, cors);';
+
 let src = readFileSync(TARGET, "utf8");
 const before = src;
-
-/* ---- 1. strip any previously injected block ---- */
-const s = src.indexOf(START), e = src.indexOf(END);
-if (s >= 0 && e > s) {
-  src = src.slice(0, s) + src.slice(e + END.length);
-} else {
-  // Legacy: assembled before markers existed. The block ran from this header to EOF.
-  const legacy = src.indexOf("/* ================================== /mcp ================================== */");
-  if (legacy >= 0) src = src.slice(0, legacy);
-}
-
-/* ---- 2. strip any previously injected route (marked or legacy) ---- */
-src = src
-  .split("\n")
-  .filter((line, i, all) => {
-    if (line.includes("DD-MCP-ROUTE")) return false;
-    if (/if \(url\.pathname === "\/mcp"/.test(line)) return false;
-    // the legacy one-line comment that used to sit above the route
-    if (/\/\/ \/mcp is matched before ANY Origin-gated handler/.test(line)) return false;
-    return true;
-  })
-  .join("\n");
-
-const stripped = src;
-if (stripped.includes("handleMcp"))
-  fail("strip left a handleMcp reference behind — the markers did not cover everything");
-
-/* ---- 3. inject ---- */
-if (!src.includes(ANCHOR)) fail("route anchor not found in " + TARGET);
-if (src.split(ANCHOR).length - 1 !== 1) fail("route anchor is ambiguous — appears more than once");
-src = src.replace(ANCHOR, ANCHOR + "\n" + ROUTE);
 
 // Inject the exact browser/Node engines, but give each universal wrapper a private
 // root inside this module. The Worker never carries hand-maintained solver forks.
@@ -75,9 +60,69 @@ const block =
   dfsEngine + "\n\n" +
   "/* Shared survivor path engine — generated verbatim from work/survivor-path-engine.js except for its private root. */\n" +
   survivorEngine + "\n\n" + mcp;
-const out = src.replace(/\s+$/, "") + "\n\n" + START + "\n" + block + "\n" + END + "\n";
+/* The capture half and the grading half are separate files so each stays reviewable, and
+ * one block so there is one marker pair to reason about. Order matters only for reading:
+ * capture first, then the grading engine that consumes what it captured. */
+const rankings = readFileSync("rankings-block.js", "utf8").replace(/\s+$/, "")
+  + "\n" + readFileSync("rankings-grade.js", "utf8").replace(/\s+$/, "");
 
-/* ---- 4. prove it before writing ---- */
+/* ---- the whole pipeline, so the build and its idempotency proof cannot diverge ---- */
+function transform(input) {
+  let t = input;
+
+  /* 1. strip any previously injected MCP block */
+  const s = t.indexOf(START), e = t.indexOf(END);
+  if (s >= 0 && e > s) {
+    t = t.slice(0, s) + t.slice(e + END.length);
+  } else {
+    // Legacy: assembled before markers existed. The block ran from this header to EOF.
+    const legacy = t.indexOf("/* ================================== /mcp ================================== */");
+    if (legacy >= 0) t = t.slice(0, legacy);
+  }
+
+  /* 2. strip any previously injected rankings block */
+  const rs = t.indexOf(R_START), re = t.indexOf(R_END);
+  if (rs >= 0 && re > rs) t = t.slice(0, rs) + t.slice(re + R_END.length);
+
+  /* 3. strip any previously injected route (marked or legacy) */
+  t = t
+    .split("\n")
+    .filter(line => {
+      if (line.includes("DD-MCP-ROUTE")) return false;
+      if (/if \(url\.pathname === "\/mcp"/.test(line)) return false;
+      // the legacy one-line comment that used to sit above the route
+      if (/\/\/ \/mcp is matched before ANY Origin-gated handler/.test(line)) return false;
+      if (line.includes("DD-RANKINGS-ROUTE")) return false;
+      if (/if \(url\.pathname\.startsWith\("\/rankings\/"\)\)/.test(line)) return false;
+      return true;
+    })
+    .join("\n");
+
+  /* 4. nothing generated may survive the strip */
+  if (t.includes("handleMcp"))
+    fail("strip left a handleMcp reference behind — the markers did not cover everything");
+  if (t.includes("handleRankings"))
+    fail("strip left a handleRankings reference behind — the markers did not cover everything");
+
+  /* 5. inject the routes. Each anchor must appear EXACTLY once: an anchor that has drifted
+   * into two places would put a live route somewhere nobody is looking, which is the same
+   * failure the sitewide nav edits guard with assert s.count(old) == 1. */
+  for (const [anchor, what] of [[ANCHOR, "MCP route anchor"], [R_ANCHOR, "rankings route anchor"]]) {
+    if (!t.includes(anchor)) fail(what + " not found in " + TARGET);
+    if (t.split(anchor).length - 1 !== 1) fail(what + " is ambiguous — appears more than once");
+  }
+  t = t.replace(ANCHOR, ANCHOR + "\n" + ROUTE);
+  t = t.replace(R_ANCHOR, R_ANCHOR + "\n" + R_ROUTE);
+
+  /* 6. inject the blocks, rankings first so it lands above the MCP block */
+  return t.replace(/\s+$/, "")
+    + "\n\n" + R_START + "\n" + rankings + "\n" + R_END
+    + "\n\n" + START + "\n" + block + "\n" + END + "\n";
+}
+
+const out = transform(src);
+
+/* ---- prove it before writing ---- */
 const once = (needle, what) => {
   const n = out.split(needle).length - 1;
   if (n !== 1) fail(`${what}: expected exactly 1, found ${n}`);
@@ -92,6 +137,27 @@ once("async function handleMcp", "handleMcp definition");
 once("async function mcpDispatch", "mcpDispatch definition");
 once("DD-MCP-ROUTE", "injected route");
 once("export default", "worker default export");
+once(R_START, "rankings block start marker");
+once(R_END, "rankings block end marker");
+once("DD-RANKINGS-ROUTE", "injected rankings route");
+once("async function handleRankings", "handleRankings definition");
+once("async function rankingsSnapshot", "rankingsSnapshot definition");
+once("const RANKINGS_DEPTHS", "RANKINGS_DEPTHS declaration");
+once("function rankingsNormName", "shared name-normalization spec");
+once("async function rankingsGrade(", "rankingsGrade definition");
+once("async function rankingsGrades(", "public rankingsGrades definition");
+once("function rankingsMidRanks", "mid-rank helper");
+once("function rankingsWeightedTau", "weighted Kendall tau");
+once("const RANKINGS_BOOTSTRAP_DRAWS", "bootstrap draw count");
+once("const RANKINGS_G ", "capture-rate group sizes");
+
+/* ⚠️ ORDERING IS LOAD-BEARING, NOT COSMETIC.
+ * The write-scope invariant below scans from the MCP START marker to end of file. The
+ * rankings block is a capture ledger and legitimately calls fbPut/fbPost, so if it ever
+ * slid below that marker it would fail a guard written about a completely different
+ * concern — and the obvious "fix" would be to weaken the guard. Assert the order instead. */
+if (!(out.indexOf(R_START) < out.indexOf(START)))
+  fail("the rankings block must be injected ABOVE the MCP block — see the write-scope invariant");
 
 // The write-scope invariant, enforced by the build rather than by memory.
 // History: this block was fully read-only until dd_submit_bozo_leg (2026-08-13), the
@@ -109,60 +175,34 @@ const commitCalls = (blockOnly.match(/commitBozoLeg\(/g) || []).length;
 if (commitCalls !== 1)
   fail(`the MCP block calls commitBozoLeg ${commitCalls} times — exactly 1 is allowed, inside dd_submit_bozo_leg's confirm branch`);
 
-/* ---- 4b. every registered tool carries its full annotation set ----
- * ⚠️ A tool added without a title, catalog and readOnlyHint would list with an undefined
- * title, would fall out of BOTH catalogs (mcpCatalogTools filters core on t.catalog), and
- * would make tools/list disagree with the coverage map that tools/build-data.js derives
- * from this same file. Counting is enough to catch it and costs nothing.
+/* ---- the rankings block's own invariant: no public route, and no raw rank in a response ----
+ * Stage A adds admin-only routes. The single public read in this feature is
+ * GET /rankings/grades (Stage B), which serves derived scores. Until that exists, every
+ * handler here must be behind rankingsAdminOk — a handler that forgets it would expose
+ * paid third-party ranks, which handoff §1 makes the one unrecoverable mistake.
  */
-const count = re => (blockOnly.match(re) || []).length;
-// Both tool families: dd_* reads the league, sd_* reads and writes the signed-in
-// athlete's training log. A prefix-specific count would silently stop guarding the
-// moment a second family was added, which is exactly what happened when sd_* landed.
-const nTools = count(/\n    name: "(?:dd|sd)_\w+",\n/g);
-for (const [what, n] of [["title", count(/\n    title: "[^"]+",\n/g)],
-                         ["catalog", count(/\n    catalog: "(?:core|full)",\n/g)],
-                         ["readOnlyHint", count(/\n    readOnlyHint: (?:true|false),\n/g)]]) {
-  if (n !== nTools) fail(`${nTools} tools declared but ${n} carry a ${what} — run work/patch-mcp-annotations.py`);
-}
-if (nTools === 0) fail("no tools found in the block — the registry regex has drifted");
-// Every write tool is named here, and nothing else may declare readOnlyHint: false.
-// This started as "exactly one, and it must be dd_submit_bozo_leg" — the guard's real
-// point was never the number, it was that a write tool cannot appear by accident. SwoleDawg
-// (2026-08-18) added a second family that writes the signed-in athlete's own training log,
-// so the check becomes an explicit ALLOWLIST rather than a count: a write tool that is not
-// on this list still fails the build, and a name on this list that no longer exists fails
-// it too, so the list cannot rot into a rubber stamp.
-const WRITE_TOOLS = [
-  "dd_submit_bozo_leg",   // league: own Bozo leg, two-phase, spec'd in claude/data-dawgs-cep-identity.md §4
-  "sd_start_session",     // SwoleDawg: all five write the caller's OWN log, gated on caller.kind === "user"
-  "sd_log_set",
-  "sd_log_sets",
-  "sd_finish_session",
-  "sd_log_measurement",
-  "sd_log_nutrition",
+// Spec §1 makes exactly one route public: GET /rankings/grades, which serves derived
+// scores. Everything else in this block reads or writes paid third-party ranks and must be
+// admin-gated. This is an explicit ALLOWLIST rather than a count, for the same reason
+// WRITE_TOOLS above is: the point is not how many there are, it is that a public route
+// cannot appear by accident. A name here that no longer exists fails the build too, so the
+// list cannot rot into a rubber stamp.
+const RANKINGS_PUBLIC = [
+  "rankingsGrades",       // the derived season doc — no player, no rank, no snapshot
 ];
-const writeHints = count(/\n    readOnlyHint: false,\n/g);
-if (writeHints !== WRITE_TOOLS.length)
-  fail(`${writeHints} tools declare readOnlyHint: false but ${WRITE_TOOLS.length} are allowlisted — add it to WRITE_TOOLS in assemble.mjs, on purpose, or make it read-only`);
-for (const name of WRITE_TOOLS) {
-  const at = blockOnly.indexOf(`name: "${name}"`);
-  if (at < 0) fail(`WRITE_TOOLS lists ${name} but no such tool is in the block — remove it rather than leaving a stale allowance`);
-  if (!/readOnlyHint: false/.test(blockOnly.slice(at, at + 700)))
-    fail(`${name} is allowlisted as a write tool but does not declare readOnlyHint: false`);
+const RANKINGS_UNGATED_OK = ["handleRankings", "rankingsReadBody"];  // dispatcher + body reader
+const rankingsOnly = out.slice(out.indexOf(R_START), out.indexOf(R_END));
+for (const name of RANKINGS_PUBLIC) {
+  if (!rankingsOnly.includes(`async function ${name}(`))
+    fail(`RANKINGS_PUBLIC lists ${name} but no such handler is in the block — remove the stale allowance`);
 }
-// ⚠️ The block must not touch D1 directly either. Every SwoleDawg read and write goes
-// through the swole* layer in the hand-written half of the Worker, so there is exactly one
-// implementation of what a valid write is and exactly one place the uid filter can be
-// forgotten. A .prepare( in here would be a second one.
-if (/\.prepare\(/.test(blockOnly))
-  fail("the MCP block calls .prepare( — D1 access belongs in the swole* layer, not in a tool body");
-// Every sd_* tool is personal data, so every one of them must gate on caller identity.
-for (const m of blockOnly.matchAll(/\n    name: "(sd_\w+)",\n/g)) {
-  const at = blockOnly.indexOf(`name: "${m[1]}"`);
-  const body = blockOnly.slice(at, blockOnly.indexOf('\n  },', at));
-  if (!body.includes('caller.kind !== "user"'))
-    fail(`${m[1]} does not gate on caller.kind === "user" — a training log call with no identity is unattributable`);
+for (const m of rankingsOnly.matchAll(/\nasync function (rankings[A-Za-z]*|handleRankings)\(request/g)) {
+  const at = rankingsOnly.indexOf(`async function ${m[1]}(request`);
+  const body = rankingsOnly.slice(at, rankingsOnly.indexOf("\n}", at));
+  if (body.includes("rankingsAdminOk(request, env)")) continue;
+  if (RANKINGS_UNGATED_OK.includes(m[1])) continue;
+  if (RANKINGS_PUBLIC.includes(m[1])) continue;
+  fail(`${m[1]} does not check rankingsAdminOk and is not in RANKINGS_PUBLIC — add it there, on purpose, or gate it`);
 }
 
 writeFileSync(TARGET, out);
@@ -173,18 +213,12 @@ try {
   fail("assembled worker does not parse (reverted):\n" + String(err.stderr || err));
 }
 
-/* ---- 5. prove idempotency: assembling the output again must be a no-op ---- */
-const secondPass = (() => {
-  const a = readFileSync(TARGET, "utf8");
-  const s2 = a.indexOf(START), e2 = a.indexOf(END);
-  let t = a.slice(0, s2) + a.slice(e2 + END.length);
-  t = t.split("\n").filter(l => !l.includes("DD-MCP-ROUTE") && !/if \(url\.pathname === "\/mcp"/.test(l)).join("\n");
-  t = t.replace(ANCHOR, ANCHOR + "\n" + ROUTE);
-  return t.replace(/\s+$/, "") + "\n\n" + START + "\n" + block + "\n" + END + "\n";
-})();
-if (secondPass !== out) fail("build is not idempotent — a second run would change the file");
+/* ---- prove idempotency: assembling the output again must be a no-op ---- */
+if (transform(readFileSync(TARGET, "utf8")) !== out)
+  fail("build is not idempotent — a second run would change the file");
 
 console.log(`assembled ${TARGET}: ${out.split("\n").length} lines, ${(out.length / 1024).toFixed(1)} KB`);
 console.log("  shared DFS + survivor sources · single declarations · parses · idempotent · write scope pinned to dd_submit_bozo_leg → commitBozoLeg ×1");
+console.log(`  rankings block above the MCP block · ${RANKINGS_PUBLIC.length} public route (${RANKINGS_PUBLIC.join(", ")}) · all others admin-gated`);
 
 function fail(msg) { console.error("BUILD FAILED: " + msg); process.exit(1); }

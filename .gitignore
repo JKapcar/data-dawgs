@@ -1,4 +1,10 @@
 work/node_modules/
+# ⚠️ Root-level too. `npm install playwright` at the repo root put 176 files and 366k
+# lines into a commit that only wanted two test files — work/node_modules/ alone did not
+# cover it, because the install was not in work/.
+/node_modules/
+/package-lock.json
+/package.json
 work/package-lock.json
 work/package.json
 work/*.png

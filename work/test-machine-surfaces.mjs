@@ -197,8 +197,11 @@ ok("redirect stubs are not in the sitemap",
    stubs.every(p => !htmlLocs.includes(p)), `stub(s) listed: ${stubs.filter(p => htmlLocs.includes(p))}`);
 
 /* Deliberately unlinked operator pages stay out; everything else a person can reach
-   should be findable. auction and bigboard are unlinked on purpose (see AGENTS.md). */
-const UNLINKED = new Set(["auction.html", "bigboard.html"]);
+   should be findable. auction and bigboard are unlinked on purpose (see AGENTS.md), and
+   rankings-admin.html is the Dog Track's operator console: noindex, absent from the nav,
+   and reachable only by someone who already holds the admin key. Listing it would invite
+   a crawler to index a page whose whole purpose is to be unlisted. */
+const UNLINKED = new Set(["auction.html", "bigboard.html", "rankings-admin.html"]);
 const shouldList = pages.filter(p => p !== "index.html" && !UNLINKED.has(p) && !stubs.includes(p));
 const missing = shouldList.filter(p => !htmlLocs.includes(p));
 ok("every reachable page is in the sitemap", missing.length === 0, `missing: ${missing}`);

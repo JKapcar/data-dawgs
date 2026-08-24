@@ -890,6 +890,8 @@ export default {
     if (url.pathname === "/cfb/market-snapshots") return handleCfbMarketSnapshots(request, url, env, cors);
     if (url.pathname === "/sleeper/players-slim") return handleSleeperPlayersSlim(request, env, cors);
     if (url.pathname.startsWith("/api/swoledawg")) return handleSwole(request, url, env, cors);
+    // DD-RANKINGS-ROUTE — The Dog Track capture half; see the DD-RANKINGS-BLOCK below.
+    if (url.pathname.startsWith("/rankings/")) return handleRankings(request, url, env, cors);
 
     // ⚠️ Identity is SITE-WIDE, not Bozo's. /auth/* is canonical; the /bozo/* spellings
     // are permanent aliases because bozo.html in the wild (and any phone with a cached
@@ -7307,6 +7309,1327 @@ async function handleSwole(request, url, env, cors) {
   if (path === "/measurement") return wrap(await swoleLogMeasurement(env, uid, body, "web"));
   return json({ error: "Unknown SwoleDawg route." }, 404, cors);
 }
+
+/* ===== DD-RANKINGS-BLOCK START — generated from work/rankings-block.js; edit THERE ===== */
+/* The Dog Track — capture half (Stage A): entrants registry + Thursday snapshots.
+ *
+ * ⚠️ EDIT THIS FILE, NEVER THE ASSEMBLED WORKER. `node work/assemble.mjs` regenerates
+ * the DD-RANKINGS-BLOCK region of ../dawg-bot-worker.js from this source; edits made to
+ * the output are lost on the next build.
+ *
+ * ⚠️ WHY THIS BLOCK IS INJECTED *ABOVE* THE MCP BLOCK.
+ * assemble.mjs enforces "no Firebase write helper is ever called inside the MCP block"
+ * by scanning from the DD-MCP-BLOCK START marker to end of file. This block legitimately
+ * calls fbPut/fbPost — it is a capture ledger — so it must live before that marker or it
+ * would trip a guard that exists for a completely different reason. assemble.mjs asserts
+ * the ordering rather than trusting it.
+ *
+ * WHAT THIS IS
+ * Kap pastes each ranking service's positional ranks every Thursday BEFORE the first
+ * kickoff of that NFL week. This block validates the paste, stamps captured_at with
+ * SERVER time, refuses anything late, refuses to overwrite what was already captured,
+ * and appends an audit row for every attempt — accepted or rejected.
+ *
+ * THE PRIVACY INVARIANT, WHICH IS THE WHOLE ARCHITECTURE (handoff §1)
+ * Raw third-party ranks are paid content. They live at /rankings/snapshots/… behind the
+ * Firebase secret and are readable ONLY by this Worker. Consequences, all load-bearing:
+ *   · no route in this block returns a player name — not in a receipt, not in an error;
+ *   · validation errors carry (line, pos, rank) coordinates so the admin page can point
+ *     at the bad row in the paste box without the name making a round trip;
+ *   · Stage A adds ZERO public routes. The only public read in this feature is
+ *     GET /rankings/grades, which is Stage B and serves derived scores only.
+ *
+ * APPEND-ONLY, AND WHAT A "CORRECTION" MEANS (handoff §2, trap #10)
+ * /rankings/snapshots/{season}/{week}/{entrant} is a MAP of capture_id → capture, not a
+ * single record. Nothing in it is ever rewritten or deleted. At most one capture per
+ * entrant/week is active (voided !== true); a bad paste is corrected by voiding the
+ * original — which stays, flagged, forever — and pasting again before kickoff. After
+ * kickoff the void still works but the replacement will not: that week then honestly
+ * shows no active snapshot rather than a quietly-swapped one.
+ */
+
+const RANKINGS_POS = ["RB", "WR", "QB", "TE"];
+const RANKINGS_DEPTHS = { RB: 36, WR: 48, QB: 24, TE: 24 };   // handoff §3, pre-registered
+
+/* A four-position paste is legitimately bigger than any other body this Worker takes
+ * (132 rows at the depth minimums, and services publish deeper), so it gets its own cap
+ * rather than borrowing MAX_BODY = 24_000 and failing on a normal Thursday. */
+const RANKINGS_MAX_BODY = 96_000;
+
+/* Trap #12: a mid-season entrant must not shift anybody else's colour. Derived from a
+ * hash of the entrant id, never from registry size or array index, so registering an
+ * eighth service leaves the other seven exactly where they were. An explicit colour on
+ * the create call always wins; this is only the default. */
+const RANKINGS_PALETTE = [
+  "#ff6a02", "#4aa3d6", "#e05555", "#2fbf3f",
+  "#d19a30", "#9b7ede", "#3fbfb0", "#e0708f",
+];
+
+const RANKINGS_SCHEDULE_URL = "https://datadawgs216.com/data/nfl-schedule.json";
+
+/* ---------------------------------------------------------------- name normalization --
+ * THE SHARED SPEC (handoff §8.5 contract #1). These four rules are the contract between
+ * this Worker and the local pipeline's normalize.py. Implement them identically in both
+ * or trap #1 reappears as a cross-system divergence:
+ *   1. lowercase
+ *   2. strip punctuation and symbols
+ *   3. strip a trailing generational suffix (jr, sr, ii, iii, iv, v), repeatedly
+ *   4. collapse whitespace, trim
+ * ⚠️ Punctuation is stripped by Unicode property (\p{P}\p{S}), NOT by deleting every
+ * non-[a-z0-9] character. The naive version turns "André" into "andr" and "Amon-Ra" into
+ * two tokens that no longer match the alias map — a silent corruption of exactly the
+ * names this feature exists to line up.
+ * Matching is on (normalized name + team + pos) — never on the name alone.
+ */
+function rankingsNormName(raw) {
+  let s = String(raw == null ? "" : raw).toLowerCase();
+  s = s.replace(/[\p{P}\p{S}]/gu, " ");
+  s = s.replace(/\s+/g, " ").trim();
+  let parts = s.split(" ").filter(Boolean);
+  while (parts.length > 1 && /^(jr|sr|ii|iii|iv|v)$/.test(parts[parts.length - 1])) parts.pop();
+  return parts.join(" ");
+}
+
+/* --------------------------------------------------------------------------- admin ---
+ * FAILS CLOSED. Until RANKINGS_ADMIN_KEY exists in the Cloudflare dashboard every admin
+ * route here answers 403 — an unset secret must never mean an open door. The length floor
+ * refuses a placeholder or a truncated paste for the same reason.
+ */
+const RANKINGS_KEY_MIN = 16;
+
+function rankingsAdminOk(request, env) {
+  const key = String((env && env.RANKINGS_ADMIN_KEY) || "");
+  const got = String(request.headers.get("x-dd-admin") || "");
+  if (key.length < RANKINGS_KEY_MIN) return false;
+  if (got.length !== key.length) return false;
+  let diff = 0;
+  for (let i = 0; i < key.length; i++) diff |= got.charCodeAt(i) ^ key.charCodeAt(i);
+  return diff === 0;
+}
+
+async function rankingsReadBody(request) {
+  const raw = await request.text();
+  if (raw.length > RANKINGS_MAX_BODY) throw new Error("body too large");
+  return JSON.parse(raw);
+}
+
+/* Every write AND every refusal appends here. Best-effort by design: losing the audit row
+ * is bad, but failing a Thursday capture because the log write 500'd is worse. The caller
+ * surfaces `logged:false` in the receipt so the admin strip can show that it happened
+ * rather than the failure being invisible. */
+async function rankingsLog(env, event) {
+  try {
+    await fbPost(env, "/rankings/log", { at: new Date().toISOString(), ...event });
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+/* ------------------------------------------------------------------------- kickoff ---
+ * WHAT "BEFORE KICKOFF" IS CHECKED AGAINST, in order:
+ *   1. data/nfl-schedule.json on the site — the canonical nflverse-derived schedule this
+ *      repo already ships and already refuses survivor captures against.
+ *   2. the ESPN scoreboard (handoff trap #5, the documented recovery path).
+ *   3. nothing — accept with kickoff_check:"deferred" and re-verify at grade time.
+ *
+ * ⚠️ DEVIATION FROM THE HANDOFF, RAISED RATHER THAN TAKEN SILENTLY (rule 8).
+ * The handoff names ESPN as the kickoff source. This Worker already documents, at the
+ * /scores route, that ESPN answers 403 to Cloudflare egress and 200 to a browser on the
+ * identical path — an IP/ASN block, three header shapes tested, "another permutation will
+ * not fix it" (8/4/26). Taking that literally, tier 2 fails on every Thursday and every
+ * capture lands in "deferred", which turns the pre-kickoff gate into a grade-time
+ * post-mortem and quietly drops the property the handoff actually asks for. So the site's
+ * own canonical schedule goes in front of ESPN, ESPN stays exactly where the handoff put
+ * it, and deferred remains the last resort. Kap ratifies or reverts this at the checkpoint.
+ *
+ * A RESOLVED kickoff is cached at /rankings/kickoffs/{season}/{week} at the first snapshot
+ * attempt of the week, so a Thursday outage cannot block a capture. A FAILURE is never
+ * cached — poisoning the week with a transient 502 is the bug that cache is meant to prevent.
+ */
+async function rankingsFirstKickoff(env, season, week) {
+  const cachePath = `/rankings/kickoffs/${season}/${week}`;
+  try {
+    const { data } = await fbGet(env, cachePath);
+    if (data && data.at) return { at: data.at, source: data.source, cached: true };
+  } catch (e) { /* a cache read failure just means we resolve again */ }
+
+  let resolved = null;
+
+  // 1. the canonical schedule this site already publishes
+  try {
+    const r = await fetch(RANKINGS_SCHEDULE_URL, { cf: { cacheTtl: 3600, cacheEverything: true } });
+    if (r.ok) {
+      const doc = await r.json();
+      const games = (doc && doc.data && doc.data.games) || [];
+      const kicks = games
+        .filter(g => Number(g.season) === Number(season) && Number(g.week) === Number(week) && g.kickoff_at)
+        .map(g => Date.parse(g.kickoff_at))
+        .filter(t => Number.isFinite(t));
+      if (kicks.length) resolved = { at: new Date(Math.min(...kicks)).toISOString(), source: "site-schedule" };
+    }
+  } catch (e) { /* fall through to ESPN */ }
+
+  // 2. ESPN — the handoff's documented path, kept even though Worker egress is blocked
+  if (!resolved) {
+    const src = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
+      + `?dates=${encodeURIComponent(season)}&seasontype=2&week=${encodeURIComponent(week)}`;
+    for (const shape of FETCH_SHAPES) {
+      try {
+        const r = await fetch(src, { cf: { cacheTtl: 300, cacheEverything: true }, headers: shape.headers });
+        if (!r.ok) continue;
+        const raw = await r.json();
+        const kicks = (raw.events || [])
+          .map(ev => Date.parse(ev.date))
+          .filter(t => Number.isFinite(t));
+        if (kicks.length) { resolved = { at: new Date(Math.min(...kicks)).toISOString(), source: "espn" }; break; }
+      } catch (e) { /* try the next shape, then give up */ }
+    }
+  }
+
+  if (!resolved) return { at: null, source: null, cached: false };
+
+  try {
+    await fbPut(env, cachePath, { at: resolved.at, source: resolved.source, cached_at: new Date().toISOString() });
+  } catch (e) { /* an uncached but resolved kickoff is still a valid gate */ }
+  return { ...resolved, cached: false };
+}
+
+/* ----------------------------------------------------------------------------- CSV ---
+ * Format (handoff §4):   pos,rank,player,team
+ * One paste per entrant covering all four positions; ranks restart at 1 per position.
+ *
+ * Returns { rows, canonical, counts } or { errors: [{line,pos,rank,code}] }. Errors carry
+ * coordinates and a code — never a player name (see the privacy invariant at the top).
+ */
+function rankingsParseCsv(csv) {
+  const errors = [];
+  const text = String(csv == null ? "" : csv).replace(/^﻿/, "");
+  const lines = text.split(/\r\n|\r|\n/);
+  const rows = [];
+  const seen = new Map();          // pos → Set(normalized name+team), for duplicate detection
+
+  lines.forEach((line, i) => {
+    const lineNo = i + 1;
+    const t = line.trim();
+    if (!t) return;
+    // an optional header, tolerated because the admin page shows the format above the box
+    if (i === 0 && /^pos\s*,\s*rank\s*,\s*player\s*,\s*team$/i.test(t)) return;
+
+    const parts = t.split(",");
+    if (parts.length < 4) { errors.push({ line: lineNo, code: "fields" }); return; }
+
+    const pos = String(parts[0]).trim().toUpperCase();
+    const rankRaw = String(parts[1]).trim();
+    const team = String(parts[parts.length - 1]).trim().toUpperCase();
+    const player = parts.slice(2, -1).join(",").trim();   // a name may legally contain a comma
+
+    if (!RANKINGS_POS.includes(pos)) { errors.push({ line: lineNo, code: "pos" }); return; }
+    if (!/^\d+$/.test(rankRaw)) { errors.push({ line: lineNo, pos, code: "rank" }); return; }
+    const rank = Number(rankRaw);
+    if (rank < 1) { errors.push({ line: lineNo, pos, rank, code: "rank" }); return; }
+    if (!player) { errors.push({ line: lineNo, pos, rank, code: "player" }); return; }
+    if (!/^[A-Z]{2,4}$/.test(team)) { errors.push({ line: lineNo, pos, rank, code: "team" }); return; }
+
+    const key = rankingsNormName(player) + "|" + team;
+    if (!seen.has(pos)) seen.set(pos, new Set());
+    if (seen.get(pos).has(key)) { errors.push({ line: lineNo, pos, rank, code: "duplicate" }); return; }
+    seen.get(pos).add(key);
+
+    rows.push({ pos, rank, name: player, team });
+  });
+
+  if (errors.length) return { errors };
+
+  // ranks contiguous 1..n per position, and deep enough to grade
+  const counts = {};
+  for (const pos of RANKINGS_POS) {
+    const at = rows.filter(r => r.pos === pos).map(r => r.rank).sort((a, b) => a - b);
+    counts[pos] = at.length;
+    if (!at.length) { errors.push({ pos, code: "missing_position" }); continue; }
+    for (let i = 0; i < at.length; i++) {
+      if (at[i] !== i + 1) { errors.push({ pos, rank: at[i], code: "not_contiguous" }); break; }
+    }
+    if (at.length < RANKINGS_DEPTHS[pos])
+      errors.push({ pos, code: "too_shallow", got: at.length, need: RANKINGS_DEPTHS[pos] });
+  }
+  if (errors.length) return { errors };
+
+  /* The idempotency key. Sorting by (pos, rank) means re-pasting the same list with the
+   * positions in a different order is correctly recognised as the same content rather
+   * than rejected as a conflicting rewrite. Case and spacing are normalized; the player's
+   * own capitalisation is preserved because it is what gets stored. */
+  const canonical = rows
+    .slice()
+    .sort((a, b) => (RANKINGS_POS.indexOf(a.pos) - RANKINGS_POS.indexOf(b.pos)) || (a.rank - b.rank))
+    .map(r => `${r.pos},${r.rank},${r.name.replace(/\s+/g, " ")},${r.team}`)
+    .join("\n");
+
+  return { rows, canonical, counts };
+}
+
+/* -------------------------------------------------------------------------- registry --*/
+const RANKINGS_ID_RE = /^[A-Z0-9_]{2,16}$/;
+const RANKINGS_TYPES = ["service", "house"];
+
+function rankingsAutoColor(id) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return RANKINGS_PALETTE[h % RANKINGS_PALETTE.length];
+}
+
+async function rankingsEntrants(env) {
+  const { data } = await fbGet(env, "/rankings/entrants");
+  return data || {};
+}
+
+async function rankingsEntrantsList(request, env, cors) {
+  if (!rankingsAdminOk(request, env)) return json({ error: "forbidden" }, 403, cors);
+  return json({ ok: true, entrants: await rankingsEntrants(env) }, 200, cors);
+}
+
+async function rankingsEntrantCreate(request, env, cors) {
+  if (!rankingsAdminOk(request, env)) return json({ error: "forbidden" }, 403, cors);
+
+  let body;
+  try { body = await rankingsReadBody(request); }
+  catch (e) { return json({ error: "bad body" }, 400, cors); }
+
+  const id = String(body.id || "").trim().toUpperCase();
+  const name = String(body.name || "").trim();
+  const type = String(body.type || "").trim().toLowerCase();
+  const firstWeek = Number(body.first_week);
+
+  if (!RANKINGS_ID_RE.test(id)) return json({ error: "bad id" }, 400, cors);
+  if (!name || name.length > 40) return json({ error: "bad name" }, 400, cors);
+  if (!RANKINGS_TYPES.includes(type)) return json({ error: "bad type" }, 400, cors);
+  if (!Number.isInteger(firstWeek) || firstWeek < 0 || firstWeek > 18)
+    return json({ error: "bad first_week" }, 400, cors);
+  const color = body.color ? String(body.color).trim() : rankingsAutoColor(id);
+  if (!/^#[0-9a-fA-F]{6}$/.test(color)) return json({ error: "bad color" }, 400, cors);
+
+  const { data, etag } = await fbGet(env, "/rankings/entrants", true);
+  const reg = data || {};
+  if (reg[id]) return json({ error: "entrant exists", id }, 409, cors);
+
+  reg[id] = { name, type, first_week: firstWeek, color, registered_at: new Date().toISOString() };
+  const wrote = await fbPut(env, "/rankings/entrants", reg, etag);
+  if (!wrote) return json({ error: "registry changed under us, retry" }, 409, cors);
+
+  const logged = await rankingsLog(env, { action: "entrant_add", entrant: id, detail: { name, type, first_week: firstWeek, color } });
+  return json({ ok: true, id, entrant: reg[id], logged }, 200, cors);
+}
+
+/* Only name and colour are mutable. id, type and first_week are what comparability is
+ * computed from — changing first_week after the fact would silently rewrite which weeks
+ * an entrant is judged on. */
+async function rankingsEntrantUpdate(request, env, cors) {
+  if (!rankingsAdminOk(request, env)) return json({ error: "forbidden" }, 403, cors);
+
+  let body;
+  try { body = await rankingsReadBody(request); }
+  catch (e) { return json({ error: "bad body" }, 400, cors); }
+
+  const id = String(body.id || "").trim().toUpperCase();
+  const { data, etag } = await fbGet(env, "/rankings/entrants", true);
+  const reg = data || {};
+  if (!reg[id]) return json({ error: "unknown entrant", id }, 404, cors);
+
+  const next = { ...reg[id] };
+  if (body.name !== undefined) {
+    const name = String(body.name).trim();
+    if (!name || name.length > 40) return json({ error: "bad name" }, 400, cors);
+    next.name = name;
+  }
+  if (body.color !== undefined) {
+    const color = String(body.color).trim();
+    if (!/^#[0-9a-fA-F]{6}$/.test(color)) return json({ error: "bad color" }, 400, cors);
+    next.color = color;
+  }
+  reg[id] = next;
+  const wrote = await fbPut(env, "/rankings/entrants", reg, etag);
+  if (!wrote) return json({ error: "registry changed under us, retry" }, 409, cors);
+
+  const logged = await rankingsLog(env, { action: "entrant_update", entrant: id, detail: { name: next.name, color: next.color } });
+  return json({ ok: true, id, entrant: next, logged }, 200, cors);
+}
+
+/* -------------------------------------------------------------------------- snapshot --*/
+function rankingsActiveCapture(captures) {
+  for (const [id, c] of Object.entries(captures || {})) {
+    if (c && c.voided !== true) return { id, capture: c };
+  }
+  return null;
+}
+
+async function rankingsSnapshot(request, env, cors) {
+  if (!rankingsAdminOk(request, env)) return json({ error: "forbidden" }, 403, cors);
+
+  let body;
+  try { body = await rankingsReadBody(request); }
+  catch (e) { return json({ error: "bad body" }, 400, cors); }
+
+  const season = Number(body.season);
+  const week = Number(body.week);
+  const entrant = String(body.entrant || body.service || "").trim().toUpperCase();
+
+  if (!Number.isInteger(season) || season < 0) return json({ error: "bad season" }, 400, cors);
+  if (!Number.isInteger(week) || week < 1 || week > 18) return json({ error: "bad week" }, 400, cors);
+  if (!RANKINGS_ID_RE.test(entrant)) return json({ error: "bad entrant" }, 400, cors);
+
+  const reg = await rankingsEntrants(env);
+  if (!reg[entrant]) return json({ error: "unknown entrant", entrant }, 404, cors);
+  if (season !== 0 && week < Number(reg[entrant].first_week))
+    return json({ error: "week precedes entrant first_week", entrant, first_week: reg[entrant].first_week }, 400, cors);
+
+  const parsed = rankingsParseCsv(body.csv);
+  if (parsed.errors) {
+    await rankingsLog(env, { action: "snapshot_reject", entrant, season, week, detail: { reason: "invalid_csv", count: parsed.errors.length } });
+    return json({ error: "invalid csv", errors: parsed.errors.slice(0, 25) }, 400, cors);
+  }
+
+  const sha256 = await sha256hex(parsed.canonical);
+  const capturedAt = new Date().toISOString();          // SERVER time, never the client's
+
+  /* Season 0 is the Stage E sandbox: it has no real kickoff and is excluded from the
+   * public doc, so the gate does not apply to it. Every other season is gated. */
+  let kickoffCheck = "sandbox";
+  let kickoffAt = null;
+  if (season !== 0) {
+    const ko = await rankingsFirstKickoff(env, season, week);
+    kickoffAt = ko.at;
+    if (!ko.at) {
+      kickoffCheck = "deferred";                        // trap #5 — verified again at grade time
+    } else if (Date.parse(capturedAt) >= Date.parse(ko.at)) {
+      await rankingsLog(env, { action: "snapshot_reject", entrant, season, week, detail: { reason: "late", kickoff_at: ko.at, captured_at: capturedAt } });
+      return json({ error: "late — first kickoff has passed", kickoff_at: ko.at, captured_at: capturedAt }, 409, cors);
+    } else {
+      kickoffCheck = "verified";
+    }
+  }
+
+  const path = `/rankings/snapshots/${season}/${week}/${entrant}`;
+  const { data, etag } = await fbGet(env, path, true);
+  const captures = data || {};
+  const active = rankingsActiveCapture(captures);
+
+  if (active) {
+    /* Identical content is a no-op that returns the ORIGINAL receipt — re-pasting because
+     * the phone lost signal must not look like a second capture. */
+    if (active.capture.sha256 === sha256) {
+      return json({
+        ok: true, idempotent: true,
+        receipt: {
+          season, week, entrant, capture_id: active.id,
+          captured_at: active.capture.captured_at, sha256: active.capture.sha256,
+          kickoff_check: active.capture.kickoff_check, counts: active.capture.counts,
+        },
+      }, 200, cors);
+    }
+    await rankingsLog(env, { action: "snapshot_reject", entrant, season, week, detail: { reason: "immutable", existing: active.id } });
+    return json({
+      error: "a snapshot already exists for this entrant and week; void it first",
+      capture_id: active.id, captured_at: active.capture.captured_at,
+    }, 409, cors);
+  }
+
+  const captureId = "c" + Date.parse(capturedAt).toString(36) + "-" + sha256.slice(0, 8);
+  captures[captureId] = {
+    rows: parsed.rows,                                  // PRIVATE — never leaves this Worker
+    captured_at: capturedAt,
+    sha256,
+    source_label: String(body.source_label || "").trim().slice(0, 60) || null,
+    kickoff_check: kickoffCheck,
+    kickoff_at: kickoffAt,
+    counts: parsed.counts,
+    voided: false,
+  };
+
+  const wrote = await fbPut(env, path, captures, etag);
+  if (!wrote) return json({ error: "snapshot changed under us, retry" }, 409, cors);
+
+  const logged = await rankingsLog(env, {
+    action: "snapshot", entrant, season, week,
+    detail: { capture_id: captureId, sha256, kickoff_check: kickoffCheck, counts: parsed.counts },
+  });
+
+  return json({
+    ok: true, idempotent: false, logged,
+    receipt: {
+      season, week, entrant, capture_id: captureId, captured_at: capturedAt,
+      sha256, kickoff_check: kickoffCheck, kickoff_at: kickoffAt,
+      counts: parsed.counts, rows: parsed.rows.length,
+    },
+  }, 200, cors);
+}
+
+/* ------------------------------------------------------------------------------ void --
+ * Flags a capture; never removes one. Permitted after kickoff (a wrong capture should be
+ * markable as wrong whenever it is noticed) — but the replacement paste is still gated,
+ * so voiding late leaves the week with no active snapshot rather than a swapped one.
+ */
+async function rankingsVoid(request, env, cors) {
+  if (!rankingsAdminOk(request, env)) return json({ error: "forbidden" }, 403, cors);
+
+  let body;
+  try { body = await rankingsReadBody(request); }
+  catch (e) { return json({ error: "bad body" }, 400, cors); }
+
+  const season = Number(body.season);
+  const week = Number(body.week);
+  const entrant = String(body.entrant || "").trim().toUpperCase();
+  const captureId = String(body.capture_id || "").trim();
+  const reason = String(body.reason || "").trim().slice(0, 200);
+
+  if (!Number.isInteger(season) || season < 0) return json({ error: "bad season" }, 400, cors);
+  if (!Number.isInteger(week) || week < 1 || week > 18) return json({ error: "bad week" }, 400, cors);
+  if (!RANKINGS_ID_RE.test(entrant)) return json({ error: "bad entrant" }, 400, cors);
+  if (!captureId) return json({ error: "capture_id required" }, 400, cors);
+  if (!reason) return json({ error: "reason required" }, 400, cors);
+
+  const path = `/rankings/snapshots/${season}/${week}/${entrant}`;
+  const { data, etag } = await fbGet(env, path, true);
+  const captures = data || {};
+  if (!captures[captureId]) return json({ error: "unknown capture", capture_id: captureId }, 404, cors);
+  if (captures[captureId].voided === true) return json({ error: "already voided", capture_id: captureId }, 409, cors);
+
+  captures[captureId] = {
+    ...captures[captureId],
+    voided: true,
+    voided_at: new Date().toISOString(),
+    void_reason: reason,
+  };
+  const wrote = await fbPut(env, path, captures, etag);
+  if (!wrote) return json({ error: "snapshot changed under us, retry" }, 409, cors);
+
+  const logged = await rankingsLog(env, { action: "void", entrant, season, week, detail: { capture_id: captureId, reason } });
+  return json({ ok: true, capture_id: captureId, voided_at: captures[captureId].voided_at, logged }, 200, cors);
+}
+
+/* ---------------------------------------------------------------------------- status --
+ * Feeds the admin page's per-week capture strip (captured ✓ / missing / voided). Derived
+ * counts and hashes only — no rows, so the strip can render without the paid content ever
+ * being sent to a browser.
+ */
+async function rankingsStatus(request, url, env, cors) {
+  if (!rankingsAdminOk(request, env)) return json({ error: "forbidden" }, 403, cors);
+
+  const season = Number(url.searchParams.get("season"));
+  const week = Number(url.searchParams.get("week"));
+  if (!Number.isInteger(season) || season < 0) return json({ error: "bad season" }, 400, cors);
+  if (!Number.isInteger(week) || week < 1 || week > 18) return json({ error: "bad week" }, 400, cors);
+
+  const reg = await rankingsEntrants(env);
+  const { data } = await fbGet(env, `/rankings/snapshots/${season}/${week}`);
+  const byEntrant = data || {};
+
+  const entrants = Object.entries(reg).map(([id, e]) => {
+    const captures = byEntrant[id] || {};
+    const active = rankingsActiveCapture(captures);
+    const voided = Object.values(captures).filter(c => c && c.voided === true).length;
+    return {
+      id, name: e.name, type: e.type, color: e.color, first_week: e.first_week,
+      state: active ? "captured" : (voided ? "voided" : "missing"),
+      capture_id: active ? active.id : null,
+      captured_at: active ? active.capture.captured_at : null,
+      sha256: active ? active.capture.sha256 : null,
+      kickoff_check: active ? active.capture.kickoff_check : null,
+      counts: active ? active.capture.counts : null,
+      voided_count: voided,
+    };
+  });
+
+  const ko = season === 0 ? { at: null, source: "sandbox" } : await rankingsFirstKickoff(env, season, week);
+  return json({ ok: true, season, week, first_kickoff: ko.at, kickoff_source: ko.source, entrants }, 200, cors);
+}
+
+async function handleRankings(request, url, env, cors) {
+  const p = url.pathname;
+  if (p === "/rankings/entrants") {
+    if (request.method === "GET")   return rankingsEntrantsList(request, env, cors);
+    if (request.method === "POST")  return rankingsEntrantCreate(request, env, cors);
+    if (request.method === "PATCH") return rankingsEntrantUpdate(request, env, cors);
+    return json({ error: "method not allowed" }, 405, cors);
+  }
+  if (p === "/rankings/snapshot" && request.method === "POST") return rankingsSnapshot(request, env, cors);
+  if (p === "/rankings/void"     && request.method === "POST") return rankingsVoid(request, env, cors);
+  if (p === "/rankings/status"   && request.method === "GET")  return rankingsStatus(request, url, env, cors);
+  if (p === "/rankings/grade"    && request.method === "POST") return rankingsGrade(request, env, cors);
+  if (p === "/rankings/aliases"  && request.method === "POST") return rankingsAliasAdd(request, env, cors);
+  // ⚠️ THE ONLY PUBLIC ROUTE IN THIS FEATURE. Everything above is admin-gated; this one
+  // serves derived scores to the page and to nobody's detriment. Adding a second public
+  // route here means re-reading spec §1 first — assemble.mjs keeps an explicit allowlist.
+  if (p === "/rankings/grades"   && request.method === "GET")  return rankingsGrades(request, url, env, cors);
+  return json({ error: "not found" }, 404, cors);
+}
+
+/* The Dog Track — grading half (Stage B): stats, matching, metrics, publication.
+ *
+ * ⚠️ EDIT THIS FILE, NEVER THE ASSEMBLED WORKER. It is concatenated with
+ * rankings-block.js into the DD-RANKINGS-BLOCK region by work/assemble.mjs.
+ *
+ * ⚠️ THE METHODOLOGY IS PRE-REGISTERED (spec §3) AND THIS FILE IMPLEMENTS IT LITERALLY.
+ * Three metrics, no fourth. The depths, the G values, the 2,000 bootstrap draws, the 0.7
+ * shrinkage, the grade cutoffs and the tie rule are all spec constants, not tuning knobs.
+ * The page publishes §3 verbatim before Week 1; changing a number here after that is an
+ * amendment that owes the reader a dated note saying what changed and why.
+ *
+ * WHAT PUBLISHES AND WHAT DOES NOT
+ * /rankings/graded/{season}/{week} and the snapshots stay private: they are derived from
+ * paid inputs at player level. /rankings/public/{season} carries scores only, and
+ * GET /rankings/grades is the single public read in this entire feature. The unmatched
+ * review list DOES carry player names — it is returned from the admin-only grade route,
+ * because adding an alias requires seeing the name — and the public doc carries only the
+ * count, as excluded_unmatched.
+ */
+
+const RANKINGS_G = { RB: 12, WR: 12, QB: 6, TE: 6 };            // capture-rate group size, §3
+const RANKINGS_STARTABLE = { RB: 24, WR: 24, QB: 12, TE: 12 };  // hygiene window, §3
+const RANKINGS_BOOTSTRAP_DRAWS = 2000;
+const RANKINGS_SHRINK_K = 0.7;
+const RANKINGS_EB_FROM_WEEK = 10;
+const RANKINGS_MIN_WEEKS = 4;                                   // provisional + matched-week floor
+const RANKINGS_METHOD_VERSION = "1.0";
+const RANKINGS_SLEEPER_STATS = "https://api.sleeper.app/v1/stats/nfl/regular";
+
+/* ============================================================== rank arithmetic ==== */
+
+/* Mid-ranks for ties (§3: "actual finish = within-position rank by PPR points, mid-ranks
+ * for ties"). Two players tied for 3rd both get 3.5, and the next player gets 5 — the
+ * positions are consumed, not compressed. Feeding competition ranks (3,3,5) or dense
+ * ranks (3,3,4) into Spearman instead would quietly bias every tied week. */
+function rankingsMidRanks(scores) {
+  const order = scores.map((v, i) => [v, i]).sort((a, b) => b[0] - a[0]);
+  const ranks = new Array(scores.length);
+  let i = 0;
+  while (i < order.length) {
+    let j = i;
+    while (j + 1 < order.length && order[j + 1][0] === order[i][0]) j++;
+    const mid = ((i + 1) + (j + 1)) / 2;
+    for (let k = i; k <= j; k++) ranks[order[k][1]] = mid;
+    i = j + 1;
+  }
+  return ranks;
+}
+
+function rankingsPearson(a, b) {
+  const n = a.length;
+  if (n < 2) return null;
+  let ma = 0, mb = 0;
+  for (let i = 0; i < n; i++) { ma += a[i]; mb += b[i]; }
+  ma /= n; mb /= n;
+  let num = 0, da = 0, db = 0;
+  for (let i = 0; i < n; i++) {
+    const x = a[i] - ma, y = b[i] - mb;
+    num += x * y; da += x * x; db += y * y;
+  }
+  if (da === 0 || db === 0) return null;      // a constant vector has no correlation
+  return num / Math.sqrt(da * db);
+}
+
+/* Spearman ρ IS Pearson on the rank vectors. Both inputs here are already mid-ranks, so
+ * this is the tie-corrected form rather than the 1 - 6Σd²/n(n²-1) shortcut, which is only
+ * valid without ties. */
+const rankingsSpearman = (serviceRanks, actualRanks) => rankingsPearson(serviceRanks, actualRanks);
+
+/* Weighted Kendall τ, §3: "hyperbolic weights on actual-finish rank (scipy weightedtau
+ * semantics; implement in JS: additive hyperbolic weighting, w(r)=1/(r+1))".
+ *
+ * Pair weight is additive — w(r_i) + w(r_j) — so a pair involving the actual RB1 carries
+ * far more than a pair of week-long benchwarmers. r is the 1-based actual finish rank
+ * exactly as §3 writes it, so the actual winner weighs 1/2. A tied pair contributes 0 to
+ * the numerator and its full weight to the denominator (tau-a treatment of ties). */
+function rankingsWeightedTau(serviceRanks, actualRanks) {
+  const n = serviceRanks.length;
+  if (n < 2) return null;
+  let num = 0, den = 0;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const w = 1 / (actualRanks[i] + 1) + 1 / (actualRanks[j] + 1);
+      num += w * Math.sign(serviceRanks[j] - serviceRanks[i]) * Math.sign(actualRanks[j] - actualRanks[i]);
+      den += w;
+    }
+  }
+  return den === 0 ? null : num / den;
+}
+
+/* Capture rate, §3: points scored by the service's top-G group ÷ points scored by the
+ * actual top-G group. Computed on the service's list as pasted — a top-12 RB who did not
+ * play contributes 0 and correctly costs the service, which is the whole point of the
+ * "money view". This is why it runs on the full ranked list rather than the
+ * inactive-stripped correlation pool. */
+function rankingsCaptureRate(entrantRanked, pointsOf, actualPool, G) {
+  const topG = entrantRanked.slice().sort((a, b) => a.rank - b.rank).slice(0, G);
+  const got = topG.reduce((s, r) => s + (pointsOf(r.key) || 0), 0);
+  const best = actualPool.slice().sort((a, b) => b.points - a.points).slice(0, G)
+    .reduce((s, p) => s + p.points, 0);
+  if (!best) return null;
+  return (got / best) * 100;
+}
+
+/* ⚠️ SEEDED, DELIBERATELY. The public season doc is rebuilt from the immutable graded rows
+ * at every grade run. With Math.random the same unchanged week would print a slightly
+ * different CI on every rebuild, and a number that moves when nothing happened is a number
+ * a reader is right to distrust. The seed is derived from (season, scope, entrant), so a
+ * rebuild reproduces the interval exactly and a genuinely new week changes it. */
+function rankingsSeedFrom(str) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+function rankingsPrng(seed) {
+  let s = seed >>> 0;
+  return function () {
+    s = (s + 0x6D2B79F5) >>> 0;
+    let t = Math.imul(s ^ (s >>> 15), s | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/* Bootstrap 95% CI on the season mean: resample weeks with replacement, 2,000 draws,
+ * percentile method (§3). One week cannot produce an interval and must not pretend to —
+ * a CI of width zero implying certainty is trap #11's failure mode. */
+function rankingsBootstrapCI(weekly, seedStr) {
+  const vals = weekly.filter(v => Number.isFinite(v));
+  if (vals.length < 2) return null;
+  const rnd = rankingsPrng(rankingsSeedFrom(seedStr));
+  const means = new Array(RANKINGS_BOOTSTRAP_DRAWS);
+  for (let d = 0; d < RANKINGS_BOOTSTRAP_DRAWS; d++) {
+    let s = 0;
+    for (let i = 0; i < vals.length; i++) s += vals[Math.floor(rnd() * vals.length)];
+    means[d] = s / vals.length;
+  }
+  means.sort((a, b) => a - b);
+  return [means[Math.floor(0.025 * RANKINGS_BOOTSTRAP_DRAWS)],
+          means[Math.ceil(0.975 * RANKINGS_BOOTSTRAP_DRAWS) - 1]];
+}
+
+const rankingsMean = a => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : null);
+function rankingsVariance(a) {
+  if (a.length < 2) return 0;
+  const m = rankingsMean(a);
+  return a.reduce((s, x) => s + (x - m) ** 2, 0) / (a.length - 1);
+}
+
+/* Shrinkage, §3. Before Week 10 it is the declared flat 0.7. From Week 10 the
+ * empirical-Bayes weight is used where it is computable: w = var_between /
+ * (var_between + var_within/n). var_between is the spread of entrant means with the
+ * portion attributable to within-entrant noise removed, floored at zero — a negative
+ * between-variance estimate means the field is indistinguishable, and the honest response
+ * is to shrink everything to the field mean rather than to report a negative weight. */
+function rankingsShrinkWeights(perEntrantWeekly, week) {
+  const series = Object.values(perEntrantWeekly).filter(w => w.length >= 1);
+  if (week < RANKINGS_EB_FROM_WEEK || series.length < 2) {
+    return { mode: "fixed-0.7", weightFor: () => RANKINGS_SHRINK_K };
+  }
+  const means = series.map(w => rankingsMean(w));
+  const withins = series.filter(w => w.length >= 2).map(w => rankingsVariance(w));
+  if (!withins.length) return { mode: "fixed-0.7", weightFor: () => RANKINGS_SHRINK_K };
+  const varWithin = rankingsMean(withins);
+  const nBar = rankingsMean(series.map(w => w.length));
+  const varBetween = Math.max(0, rankingsVariance(means) - varWithin / nBar);
+  if (varBetween === 0) return { mode: "empirical-bayes", weightFor: () => 0 };
+  return {
+    mode: "empirical-bayes",
+    weightFor: n => varBetween / (varBetween + varWithin / Math.max(1, n)),
+  };
+}
+
+/* Letter grades, §3: blended percentile of the three metrics vs. the field per scope.
+ * A metric the field cannot supply (an all-null hygiene column, say) is dropped from the
+ * blend rather than scored as zero. */
+function rankingsPercentile(value, field) {
+  const vals = field.filter(v => Number.isFinite(v));
+  if (!vals.length || !Number.isFinite(value)) return null;
+  if (vals.length === 1) return 50;
+  const below = vals.filter(v => v < value).length;
+  const equal = vals.filter(v => v === value).length;
+  return ((below + 0.5 * equal) / vals.length) * 100;
+}
+function rankingsLetter(p) {
+  if (p >= 90) return "A";
+  if (p >= 80) return "A−";
+  if (p >= 70) return "B+";
+  if (p >= 60) return "B";
+  if (p >= 50) return "B−";
+  if (p >= 40) return "C+";
+  return "C";
+}
+
+/* ============================================================= name matching ======= */
+
+/* THE ALIAS KEY FORMAT, which aliases.csv must mirror exactly (spec §8.5 contract #2).
+ * Two accepted shapes, tried in this order:
+ *     "<normalized name>|<TEAM>|<POS>"   → player_id      (most specific)
+ *     "<normalized name>|<POS>"          → player_id      (team-independent)
+ * The team-independent form exists because a trade is the common reason a Thursday paste
+ * disagrees with the player index, and re-aliasing every traded player every week would
+ * guarantee the map rots. Normalization is rankingsNormName — the ONE shared spec.
+ */
+const rankingsAliasKeys = (norm, team, pos) => [`${norm}|${team}|${pos}`, `${norm}|${pos}`];
+
+function rankingsPlayerIndex(slim) {
+  const byTriple = new Map(), byNamePos = new Map();
+  for (const [id, row] of Object.entries(slim || {})) {
+    const [name, pos, team] = row;
+    const norm = rankingsNormName(name);
+    if (!norm || !pos) continue;
+    byTriple.set(`${norm}|${String(team || "")}|${pos}`, id);
+    const np = `${norm}|${pos}`;
+    if (!byNamePos.has(np)) byNamePos.set(np, []);
+    byNamePos.get(np).push(id);
+  }
+  return { byTriple, byNamePos };
+}
+
+/* ⚠️ TRAP #1 LIVES HERE — name matching is the failure mode of this entire feature.
+ * Exact on (normalized name + team + pos), then the alias map, then FAIL LOUDLY. There is
+ * deliberately no fuzzy fallback: a wrong merge corrupts a graded row that is immutable by
+ * design, and an edit-distance match between two real players is indistinguishable from a
+ * correct one at review time. Unmatched rows are excluded from the week and surfaced to
+ * the admin with a suggestion, which is how the alias map grows. */
+function rankingsMatchRow(row, index, aliases) {
+  const norm = rankingsNormName(row.name);
+  const triple = `${norm}|${row.team}|${row.pos}`;
+  if (index.byTriple.has(triple)) return { id: index.byTriple.get(triple), via: "exact" };
+
+  for (const key of rankingsAliasKeys(norm, row.team, row.pos)) {
+    const id = aliases && aliases[key];
+    if (id) return { id: String(id), via: "alias" };
+  }
+
+  // Unique on name+pos but the team disagrees: almost always a trade. NOT auto-matched —
+  // it is offered to the admin as a one-click alias instead.
+  const np = index.byNamePos.get(`${norm}|${row.pos}`) || [];
+  const suggestion = np.length === 1 ? np[0] : null;
+  return { id: null, via: "unmatched", suggestion, alias_key: `${norm}|${row.pos}` };
+}
+
+/* ============================================================= stats fetching ===== */
+
+/* Source order per §4: Sleeper first, ESPN as the fallback.
+ * ⚠️ The ESPN leg will almost certainly fail from Worker egress — this Worker documents at
+ * /scores (8/4/26) that ESPN 403s Cloudflare IPs across every header shape. It is
+ * implemented because the spec names it and because the block is not the right place to
+ * decide the spec is wrong, but a grade run that reaches it should be read as "Sleeper is
+ * down", not as "we have a second working source". Same finding as deviation D1. */
+async function rankingsFetchStats(season, week) {
+  try {
+    const r = await fetch(`${RANKINGS_SLEEPER_STATS}/${season}/${week}`, { cf: { cacheTtl: 300, cacheEverything: true } });
+    if (r.ok) {
+      const raw = await r.json();
+      if (raw && typeof raw === "object" && Object.keys(raw).length) return { stats: raw, source: "sleeper" };
+    }
+  } catch (e) { /* fall through */ }
+
+  for (const shape of FETCH_SHAPES) {
+    try {
+      const r = await fetch(
+        `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=${season}&seasontype=2&week=${week}`,
+        { cf: { cacheTtl: 300, cacheEverything: true }, headers: shape.headers });
+      if (!r.ok) continue;
+      await r.json();
+      // ESPN's scoreboard does not carry per-player PPR; reaching here means Sleeper is
+      // down and the run cannot be graded honestly. Refuse rather than invent a number.
+      return { stats: null, source: "espn-unusable" };
+    } catch (e) { /* try the next shape */ }
+  }
+  return { stats: null, source: null };
+}
+
+/* Did a player actually play? §3 removes inactives, byes and ruled-OUT players from the
+ * correlation pool — but NOT a player who suited up and scored zero, who is a genuine
+ * ranking miss and must keep costing the service that ranked him. Sleeper omits the row
+ * entirely for a player who did not appear, and carries gp on those who did. */
+function rankingsPlayed(entry) {
+  if (!entry || typeof entry !== "object") return false;
+  if (entry.gp !== undefined) return Number(entry.gp) > 0;
+  return Object.keys(entry).length > 0;
+}
+const rankingsPprOf = entry => (entry && Number.isFinite(Number(entry.pts_ppr)) ? Number(entry.pts_ppr) : 0);
+
+/* ============================================================ the weekly grade ==== */
+
+/* BLEND membership freezes at Week 1 and is written once (§3: "a mutating benchmark
+ * corrupts comparability"). Recomputing it every week from the live registry would quietly
+ * admit every mid-season entrant into the benchmark that all the relative-to-field numbers
+ * are measured against, which is the same class of error as a moving goalpost. */
+async function rankingsBlendMembers(env, season, entrants, dryRun) {
+  const path = `/rankings/blend/${season}`;
+  const { data } = await fbGet(env, path);
+  if (data && Array.isArray(data.members)) return data;
+
+  const members = Object.entries(entrants)
+    .filter(([, e]) => e.type === "service" && Number(e.first_week) <= 1)
+    .map(([id]) => id)
+    .sort();
+  const frozen = { members, frozen_at_week: 1, frozen_at: new Date().toISOString() };
+  if (!dryRun) {
+    try { await fbPut(env, path, frozen); } catch (e) { /* a failed freeze retries next run */ }
+  }
+  return frozen;
+}
+
+/* Imputation for a player the entrant did not rank (§3: "slot at that service's deepest
+ * ranked player + 1, ties broken by consensus order").
+ *
+ * ⚠️ INTERPRETATION I1, recorded in the spec. "Ties broken by consensus order" is read as
+ * assigning consecutive slots — deepest+1, deepest+2, … in consensus order — rather than
+ * giving every unranked player the identical value deepest+1 and mid-ranking the block.
+ * The two readings agree on ordering and differ in how hard the unranked tail pulls on ρ.
+ * Consecutive slots is the reading that actually breaks the tie, which is what the text
+ * says. Raised for ratification rather than assumed. */
+function rankingsEntrantRanks(pool, rankedByKey, consensusRank) {
+  const deepest = Math.max(0, ...Object.values(rankedByKey));
+  const unranked = pool.filter(k => rankedByKey[k] === undefined)
+    .sort((a, b) => (consensusRank[a] ?? Infinity) - (consensusRank[b] ?? Infinity));
+  const imputed = {};
+  unranked.forEach((k, i) => { imputed[k] = deepest + 1 + i; });
+  return pool.map(k => (rankedByKey[k] !== undefined ? rankedByKey[k] : imputed[k]));
+}
+
+/* Hygiene (§3): count the players who were officially OUT at capture time yet sat inside
+ * the startable range of that entrant's list. Never touches the correlation.
+ *
+ * ⚠️ GAP G1, raised at the Stage B checkpoint. This needs to know who was ruled OUT ON
+ * THURSDAY, which is a fact about capture time — not about who failed to play on Sunday.
+ * Stage A's snapshot stores rows only, so that fact is not currently captured anywhere and
+ * this returns null rather than a plausible wrong number computed from did-not-play.
+ * Making hygiene real is a small Stage A addition: capture the Thursday OUT list alongside
+ * the ranks. Until then the public doc carries hygiene: null and the page must say
+ * "not tracked yet" rather than "0". */
+function rankingsHygiene(capture, ranked, pos, matchedIdOf) {
+  const outList = capture && capture.out_at_capture;
+  if (!Array.isArray(outList)) return null;
+  const outKeys = new Set(outList.map(o => `${rankingsNormName(o.name)}|${String(o.pos || "").toUpperCase()}`));
+  const window = RANKINGS_STARTABLE[pos];
+  return ranked.filter(r => r.rank <= window && outKeys.has(`${rankingsNormName(r.name)}|${pos}`)).length;
+}
+
+function rankingsGradeWeek({ captures, entrants, stats, index, aliases, blendMembers }) {
+  const unmatched = [];
+  const positions = {};
+
+  // player_id -> PPR points, and the per-position actual boards, from the stats source
+  const pointsOf = id => rankingsPprOf(stats[id]);
+  const playedOf = id => rankingsPlayed(stats[id]);
+
+  const actualByPos = {};
+  for (const pos of RANKINGS_POS) actualByPos[pos] = [];
+  for (const [id, row] of Object.entries(index.slim || {})) {
+    const pos = row[1];
+    if (!RANKINGS_POS.includes(pos)) continue;
+    if (!playedOf(id)) continue;
+    actualByPos[pos].push({ key: id, points: pointsOf(id) });
+  }
+
+  // match every entrant's rows once, up front
+  const matched = {};
+  for (const [eid, cap] of Object.entries(captures)) {
+    matched[eid] = { byPos: {}, capture: cap };
+    for (const pos of RANKINGS_POS) matched[eid].byPos[pos] = [];
+    for (const row of cap.rows || []) {
+      const m = rankingsMatchRow(row, index, aliases);
+      if (!m.id) {
+        unmatched.push({ entrant: eid, pos: row.pos, rank: row.rank, name: row.name, team: row.team,
+                         suggestion: m.suggestion, alias_key: m.alias_key });
+        continue;
+      }
+      matched[eid].byPos[row.pos].push({ key: m.id, rank: row.rank, name: row.name, team: row.team });
+    }
+  }
+
+  for (const pos of RANKINGS_POS) {
+    const depth = RANKINGS_DEPTHS[pos];
+
+    // consensus = mean rank across the uploaded SERVICE entrants (§3)
+    const serviceIds = Object.keys(captures).filter(id => entrants[id] && entrants[id].type === "service");
+    const consensusAcc = {};
+    for (const eid of serviceIds) {
+      for (const r of matched[eid].byPos[pos]) {
+        if (!consensusAcc[r.key]) consensusAcc[r.key] = [];
+        consensusAcc[r.key].push(r.rank);
+      }
+    }
+    const consensusRank = {};
+    Object.entries(consensusAcc).forEach(([k, arr]) => { consensusRank[k] = rankingsMean(arr); });
+    const consensusTop = Object.keys(consensusRank)
+      .sort((a, b) => consensusRank[a] - consensusRank[b]).slice(0, depth);
+
+    const actualTop = actualByPos[pos].slice().sort((a, b) => b.points - a.points)
+      .slice(0, depth).map(p => p.key);
+
+    // pool = union, minus anyone who did not play (§3 removes inactives from the correlation)
+    const pool = [...new Set([...consensusTop, ...actualTop])].filter(playedOf);
+    const actualRanks = rankingsMidRanks(pool.map(pointsOf));
+    const actualPool = pool.map(k => ({ key: k, points: pointsOf(k) }));
+
+    // BLEND's per-player mean rank across the frozen membership, using each member's own
+    // imputation so a player one member skipped is not scored as if the field skipped him
+    const blendPresent = blendMembers.filter(id => captures[id]);
+    const blendRanked = [];
+    if (blendPresent.length) {
+      const universe = [...new Set(blendPresent.flatMap(id => matched[id].byPos[pos].map(r => r.key)))];
+      const perMember = blendPresent.map(id => {
+        const byKey = {};
+        matched[id].byPos[pos].forEach(r => { byKey[r.key] = r.rank; });
+        const vals = rankingsEntrantRanks(universe, byKey, consensusRank);
+        return Object.fromEntries(universe.map((k, i) => [k, vals[i]]));
+      });
+      const means = universe.map(k => ({ key: k, mean: rankingsMean(perMember.map(m => m[k])) }));
+      means.sort((a, b) => a.mean - b.mean);
+      means.forEach((m, i) => blendRanked.push({ key: m.key, rank: i + 1, name: "", team: "" }));
+    }
+
+    const rows = {};
+    const graders = Object.keys(captures).map(id => ({ id, ranked: matched[id].byPos[pos], cap: matched[id].capture }));
+    if (blendRanked.length) graders.push({ id: "BLEND", ranked: blendRanked, cap: null });
+
+    for (const g of graders) {
+      const byKey = {};
+      g.ranked.forEach(r => { byKey[r.key] = r.rank; });
+      const serviceRanks = rankingsEntrantRanks(pool, byKey, consensusRank);
+      rows[g.id] = {
+        rho: pool.length >= 2 ? rankingsSpearman(serviceRanks, actualRanks) : null,
+        tau: pool.length >= 2 ? rankingsWeightedTau(serviceRanks, actualRanks) : null,
+        capture: rankingsCaptureRate(g.ranked, pointsOf, actualPool, RANKINGS_G[pos]),
+        hygiene: g.cap ? rankingsHygiene(g.cap, g.ranked, pos, null) : null,
+        ranked_n: g.ranked.length,
+        imputed_n: pool.filter(k => byKey[k] === undefined).length,
+      };
+    }
+
+    positions[pos] = { pool_size: pool.length, entrants: rows };
+  }
+
+  return { positions, unmatched };
+}
+
+/* ======================================================== season aggregation ====== */
+
+/* Rebuilt from the immutable graded rows at every run — derivable, so rebuilding is safe
+ * (§2). Everything below is a score; nothing player-level reaches this document. */
+async function rankingsRebuildPublic(env, season, entrants, blend, dryRun) {
+  const { data } = await fbGet(env, `/rankings/graded/${season}`);
+  const gradedWeeks = Object.keys(data || {}).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+
+  const scopes = {};
+  const weeks = {};
+  const latestWeek = gradedWeeks.length ? gradedWeeks[gradedWeeks.length - 1] : 0;
+  let excludedUnmatched = 0;
+
+  const seriesFor = {};                       // scope -> entrant -> [weekly value]
+  const perWeekMetric = {};                   // week -> scope -> entrant -> raw metrics
+
+  for (const w of gradedWeeks) {
+    const row = data[String(w)];
+    excludedUnmatched += Number(row.excluded_unmatched || 0);
+    perWeekMetric[w] = {};
+    const ids = new Set();
+    for (const pos of RANKINGS_POS) Object.keys((row.positions[pos] || {}).entrants || {}).forEach(i => ids.add(i));
+
+    for (const pos of RANKINGS_POS) {
+      perWeekMetric[w][pos] = {};
+      for (const id of ids) {
+        const m = ((row.positions[pos] || {}).entrants || {})[id];
+        if (!m) continue;
+        perWeekMetric[w][pos][id] = { rho: m.rho, tau: m.tau, capture: m.capture, hygiene: m.hygiene };
+        for (const [metric, val] of [["rho", m.rho], ["tau", m.tau], ["capture", m.capture]]) {
+          if (!Number.isFinite(val)) continue;
+          seriesFor[pos] = seriesFor[pos] || {};
+          seriesFor[pos][id] = seriesFor[pos][id] || {};
+          seriesFor[pos][id][metric] = seriesFor[pos][id][metric] || [];
+          seriesFor[pos][id][metric].push(val);
+        }
+      }
+    }
+
+    // ALL = equal-weight mean across the four positions (§3, a declared choice)
+    perWeekMetric[w].ALL = {};
+    for (const id of ids) {
+      const pick = metric => {
+        const vals = RANKINGS_POS.map(p => (perWeekMetric[w][p][id] || {})[metric]).filter(Number.isFinite);
+        return vals.length === RANKINGS_POS.length ? rankingsMean(vals) : null;
+      };
+      const rho = pick("rho"), tau = pick("tau"), capture = pick("capture");
+      perWeekMetric[w].ALL[id] = { rho, tau, capture, hygiene: null };
+      for (const [metric, val] of [["rho", rho], ["tau", tau], ["capture", capture]]) {
+        if (!Number.isFinite(val)) continue;
+        seriesFor.ALL = seriesFor.ALL || {};
+        seriesFor.ALL[id] = seriesFor.ALL[id] || {};
+        seriesFor.ALL[id][metric] = seriesFor.ALL[id][metric] || [];
+        seriesFor.ALL[id][metric].push(val);
+      }
+    }
+    weeks[String(w)] = perWeekMetric[w];
+  }
+
+  for (const scope of ["ALL", ...RANKINGS_POS]) {
+    const byEntrant = seriesFor[scope] || {};
+    const ids = Object.keys(byEntrant);
+    if (!ids.length) { scopes[scope] = {}; continue; }
+
+    const rhoSeries = Object.fromEntries(ids.map(id => [id, byEntrant[id].rho || []]));
+    const fieldMean = rankingsMean(ids.map(id => rankingsMean(rhoSeries[id])).filter(Number.isFinite));
+    const shrink = rankingsShrinkWeights(rhoSeries, latestWeek);
+
+    const rows = {};
+    for (const id of ids) {
+      const weekly = rhoSeries[id];
+      const raw = rankingsMean(weekly);
+      const w = shrink.weightFor(weekly.length);
+      const shrunk = Number.isFinite(raw) && Number.isFinite(fieldMean) ? fieldMean + w * (raw - fieldMean) : null;
+
+      // relative-to-field: this entrant's weekly ρ minus BLEND's that same week, over the
+      // weeks THIS entrant was graded — the headline cross-entrant comparison (§3)
+      let relative = null;
+      const blendWeekly = [];
+      const mineWeekly = [];
+      for (const wk of gradedWeeks) {
+        const mine = ((perWeekMetric[wk][scope] || {})[id] || {}).rho;
+        const bl = ((perWeekMetric[wk][scope] || {}).BLEND || {}).rho;
+        if (Number.isFinite(mine) && Number.isFinite(bl)) { mineWeekly.push(mine); blendWeekly.push(bl); }
+      }
+      if (mineWeekly.length) relative = rankingsMean(mineWeekly.map((v, i) => v - blendWeekly[i]));
+
+      rows[id] = {
+        rho: shrunk, rho_raw: raw,
+        ci: rankingsBootstrapCI(weekly, `${season}|${scope}|${id}`),
+        tau: rankingsMean(byEntrant[id].tau || []),
+        capture: rankingsMean(byEntrant[id].capture || []),
+        hygiene: null,
+        relative_to_field: relative,
+        weeks_graded: weekly.length,
+        weekly_rho: weekly,
+        provisional: weekly.length < RANKINGS_MIN_WEEKS,
+      };
+    }
+
+    // PHOTO FINISH (§3): tied with the leader if your CI upper ≥ the leader's CI lower
+    const ranked = Object.entries(rows).filter(([, r]) => Number.isFinite(r.rho))
+      .sort((a, b) => b[1].rho - a[1].rho);
+    const leader = ranked.length ? ranked[0] : null;
+    for (const [id, r] of Object.entries(rows)) {
+      r.tied_with_leader = !!(leader && r.ci && leader[1].ci && r.ci[1] >= leader[1].ci[0]);
+      if (leader && id === leader[0]) r.tied_with_leader = true;
+    }
+
+    // letter grades from the blended percentile of the three metrics vs. the field
+    const field = m => Object.values(rows).map(r => r[m]);
+    for (const [id, r] of Object.entries(rows)) {
+      const ps = [rankingsPercentile(r.rho, field("rho")),
+                  rankingsPercentile(r.tau, field("tau")),
+                  rankingsPercentile(r.capture, field("capture"))].filter(Number.isFinite);
+      r.grade = ps.length ? rankingsLetter(rankingsMean(ps)) : null;
+    }
+    // "Tied services display the leader's grade" (§3)
+    if (leader && rows[leader[0]] && rows[leader[0]].grade) {
+      for (const r of Object.values(rows)) if (r.tied_with_leader) r.grade = rows[leader[0]].grade;
+    }
+    scopes[scope] = rows;
+  }
+
+  const doc = {
+    season,
+    weeks_graded: gradedWeeks.length,
+    scoring: "PPR",
+    updated_at: new Date().toISOString(),
+    method_version: RANKINGS_METHOD_VERSION,
+    provisional: true,                        // stays true until the declared promotion gate
+    shrinkage_mode: rankingsShrinkWeights(seriesFor.ALL || {}, latestWeek).mode,
+    excluded_unmatched: excludedUnmatched,
+    hygiene_tracked: false,                   // gap G1 — see rankingsHygiene
+    entrants: Object.fromEntries(Object.entries(entrants).map(([id, e]) => [id, {
+      name: e.name, type: e.type, color: e.color, first_week: e.first_week,
+      blend_member: (blend.members || []).includes(id),
+    }])),
+    blend: { members: blend.members || [], frozen_at_week: blend.frozen_at_week || 1 },
+    scopes,
+    weeks,
+  };
+  if (!dryRun) await fbPut(env, `/rankings/public/${season}`, doc);
+  return doc;
+}
+
+/* ================================================================== the routes ==== */
+
+async function rankingsGrade(request, env, cors) {
+  if (!rankingsAdminOk(request, env)) return json({ error: "forbidden" }, 403, cors);
+
+  let body;
+  try { body = await rankingsReadBody(request); }
+  catch (e) { return json({ error: "bad body" }, 400, cors); }
+
+  const season = Number(body.season);
+  const week = Number(body.week);
+  const dryRun = body.dry_run === true;
+  if (!Number.isInteger(season) || season < 0) return json({ error: "bad season" }, 400, cors);
+  if (!Number.isInteger(week) || week < 1 || week > 18) return json({ error: "bad week" }, 400, cors);
+
+  /* Write-once. A graded row is the record of what a service said BEFORE the games; a
+   * re-grade is how that record silently becomes a record of something else. */
+  const existing = await fbGet(env, `/rankings/graded/${season}/${week}`);
+  if (existing.data && !dryRun)
+    return json({ error: "week already graded — graded rows are immutable", graded_at: existing.data.graded_at }, 409, cors);
+
+  const entrants = await rankingsEntrants(env);
+  const { data: snapRaw } = await fbGet(env, `/rankings/snapshots/${season}/${week}`);
+  const captures = {};
+  const skipped = [];
+  for (const [eid, caps] of Object.entries(snapRaw || {})) {
+    const active = rankingsActiveCapture(caps);
+    if (!active) { skipped.push({ entrant: eid, reason: "no_snapshot" }); continue; }
+
+    /* Trap #5's other half: a capture accepted with kickoff_check "deferred" has never
+     * actually been checked against a kickoff. Grade time is where that debt comes due —
+     * verify now, and refuse the row if it turns out to have been late. */
+    if (active.capture.kickoff_check === "deferred" && season !== 0) {
+      const ko = await rankingsFirstKickoff(env, season, week);
+      if (ko.at && Date.parse(active.capture.captured_at) >= Date.parse(ko.at)) {
+        skipped.push({ entrant: eid, reason: "late_on_deferred_check", captured_at: active.capture.captured_at, kickoff_at: ko.at });
+        await rankingsLog(env, { action: "grade_exclude", entrant: eid, season, week,
+                                 detail: { reason: "late_on_deferred_check", capture_id: active.id } });
+        continue;
+      }
+    }
+    captures[eid] = active.capture;
+  }
+
+  if (!Object.keys(captures).length)
+    return json({ error: "no gradeable snapshots for this week", skipped }, 400, cors);
+
+  const { stats, source } = await rankingsFetchStats(season, week);
+  if (!stats) return json({ error: "no usable stats source — refusing to grade", stats_source: source }, 502, cors);
+
+  const slim = await rankingsSlimIndex(env);
+  if (!slim) return json({ error: "player index unavailable — refusing to grade" }, 503, cors);
+  const index = rankingsPlayerIndex(slim);
+  index.slim = slim;
+
+  const { data: aliases } = await fbGet(env, "/rankings/aliases");
+  const blend = await rankingsBlendMembers(env, season, entrants, dryRun);
+
+  const { positions, unmatched } = rankingsGradeWeek({
+    captures, entrants, stats, index, aliases: aliases || {}, blendMembers: blend.members,
+  });
+
+  const row = {
+    graded_at: new Date().toISOString(),
+    stats_source: source,
+    method_version: RANKINGS_METHOD_VERSION,
+    excluded_unmatched: unmatched.length,
+    entrants_graded: Object.keys(positions.RB ? positions.RB.entrants : {}),
+    positions,
+  };
+  if (!dryRun) {
+    await fbPut(env, `/rankings/graded/${season}/${week}`, row);
+    await rankingsLog(env, { action: "grade", season, week,
+                             detail: { stats_source: source, excluded_unmatched: unmatched.length } });
+  }
+
+  const doc = season === 0 && !dryRun
+    ? null                                     // season 0 is the sandbox; it never publishes
+    : await rankingsRebuildPublic(env, season, entrants, blend, dryRun || season === 0);
+
+  return json({
+    ok: true, dry_run: dryRun, season, week, stats_source: source,
+    entrants_graded: row.entrants_graded, skipped,
+    excluded_unmatched: unmatched.length,
+    unmatched,                                 // admin-only: names are needed to add aliases
+    weeks_graded: doc ? doc.weeks_graded : null,
+  }, 200, cors);
+}
+
+/* The player index. Reuses the Worker's existing daily-cached slim copy rather than adding
+ * a second index — Sleeper's own guidance is one /players/nfl pull per day, and two
+ * independent caches would mean two different answers to "who is a WR". */
+async function rankingsSlimIndex(env) {
+  const kv = env.RL || null;
+  if (kv) {
+    try {
+      const cached = await kv.get(SLEEPER_SLIM_KEY);
+      if (cached) {
+        const payload = JSON.parse(cached);
+        if (payload && payload.data && payload.data.players) return payload.data.players;
+      }
+    } catch (e) { /* fall through to a live pull */ }
+  }
+  try {
+    const r = await fetch(SLEEPER_PLAYERS_URL);
+    if (!r.ok) return null;
+    return sleeperSlimFromRaw(await r.json()).players;
+  } catch (e) { return null; }
+}
+
+/* THE ONLY PUBLIC READ IN THIS FEATURE. Derived scores, entrant identity and the method
+ * version — no player, no rank, no snapshot. Before Week 1 it answers with an honest empty
+ * state rather than a 404, so the page can render "season opens Sep 10" from real data. */
+async function rankingsGrades(request, url, env, cors) {
+  const season = Number(url.searchParams.get("season") || new Date().getUTCFullYear());
+  if (!Number.isInteger(season) || season < 0) return json({ error: "bad season" }, 400, cors);
+  // ⚠️ Order matters: `season < 1` first would swallow 0 into a generic "bad season" and
+  // leave this branch dead, which is exactly how it was written the first time.
+  if (season === 0) return json({ error: "the sandbox season is not published" }, 404, cors);
+
+  const { data } = await fbGet(env, `/rankings/public/${season}`);
+  if (!data) {
+    return json({
+      season, weeks_graded: 0, scoring: "PPR", method_version: RANKINGS_METHOD_VERSION,
+      provisional: true, empty: true,
+      note: "No graded weeks yet. Methodology is pre-registered and published; receipts follow the first Tuesday grade run.",
+      entrants: {}, scopes: {}, weeks: {},
+    }, 200, cors);
+  }
+  return json(data, 200, cors);
+}
+
+/* The other half of trap #1's loop: the review list surfaces an unmatched name, this turns
+ * it into an alias, and the next grade run matches it. Bulk form accepts the seed import
+ * from the local pipeline's aliases.csv (§8.5 contract #2) through the same door — one
+ * validation path, one audit trail, no special-case importer. */
+async function rankingsAliasAdd(request, env, cors) {
+  if (!rankingsAdminOk(request, env)) return json({ error: "forbidden" }, 403, cors);
+
+  let body;
+  try { body = await rankingsReadBody(request); }
+  catch (e) { return json({ error: "bad body" }, 400, cors); }
+
+  const incoming = Array.isArray(body.aliases) ? body.aliases
+    : (body.key && body.player_id ? [{ key: body.key, player_id: body.player_id }] : null);
+  if (!incoming || !incoming.length) return json({ error: "aliases required" }, 400, cors);
+  if (incoming.length > 4000) return json({ error: "too many aliases in one call" }, 400, cors);
+
+  const { data, etag } = await fbGet(env, "/rankings/aliases", true);
+  const map = data || {};
+  const added = [], rejected = [], conflicts = [];
+
+  for (const a of incoming) {
+    const key = String((a && a.key) || "").trim().toLowerCase();
+    const pid = String((a && a.player_id) || "").trim();
+    // key is "<normalized name>|<POS>" or "<normalized name>|<TEAM>|<POS>" — see rankingsAliasKeys
+    if (!/^[^|]+\|[a-z]{2,4}(\|[a-z]{2,4})?$/.test(key) || !pid) { rejected.push({ key, reason: "bad_key" }); continue; }
+    const norm = key.split("|");
+    const canonical = [rankingsNormName(norm[0]), ...norm.slice(1).map(s => s.toUpperCase())].join("|");
+    if (map[canonical] && map[canonical] !== pid) {
+      // An alias that already points somewhere else is a corruption risk, not an update:
+      // it would silently re-point a name that previous weeks were graded against.
+      conflicts.push({ key: canonical, existing: map[canonical], proposed: pid });
+      continue;
+    }
+    if (map[canonical] === pid) continue;
+    map[canonical] = pid;
+    added.push(canonical);
+  }
+
+  if (added.length) {
+    const wrote = await fbPut(env, "/rankings/aliases", map, etag);
+    if (!wrote) return json({ error: "alias map changed under us, retry" }, 409, cors);
+    await rankingsLog(env, { action: "alias_add", detail: { count: added.length } });
+  }
+  return json({ ok: true, added: added.length, rejected, conflicts, total: Object.keys(map).length }, 200, cors);
+}
+/* ===== DD-RANKINGS-BLOCK END ===== */
 
 /* ===== DD-MCP-BLOCK START — generated from work/mcp-block.js; edit THERE ===== */
 /* Shared DFS engine — generated verbatim from work/dfs-engine.js except for its private root. */

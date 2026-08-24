@@ -1,0 +1,50 @@
+{
+  "as_of": "2026-08-24",
+  "source": "Derived from Thursday rank snapshots captured by the Data Dawgs Worker (toto) and graded against actual PPR finishes after MNF. Scores only \u2014 the underlying third-party ranks are paid content and are never published.",
+  "tier": "labs",
+  "tier_meaning": "Pup \u2014 live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
+  "graded": false,
+  "note": "No weeks graded yet. The season opens with NFL Week 1 (~Sep 10, 2026); the first grade run is the following Tuesday. `graded` flips to true when Week 1 rows exist. The live document is served by the Worker at GET /rankings/grades and mirrored here at each grade run. This file contains no player-level data of any kind, by design.",
+  "built": "2026-08-24T01:17:52Z",
+  "canonical_url": "https://datadawgs216.com/data/rankings-grades.json",
+  "data": {
+    "season": 2026,
+    "weeks_graded": 0,
+    "scoring": "PPR",
+    "method_version": "1.0",
+    "provisional": true,
+    "empty": true,
+    "hygiene_tracked": false,
+    "excluded_unmatched": 0,
+    "entrants": {},
+    "blend": {
+      "members": [],
+      "frozen_at_week": 1
+    },
+    "scopes": {},
+    "weeks": {},
+    "method": {
+      "metrics": [
+        "spearman_rho",
+        "weighted_kendall_tau",
+        "capture_rate"
+      ],
+      "depths": {
+        "RB": 36,
+        "WR": 48,
+        "QB": 24,
+        "TE": 24
+      },
+      "capture_group": {
+        "RB": 12,
+        "WR": 12,
+        "QB": 6,
+        "TE": 6
+      },
+      "bootstrap_draws": 2000,
+      "shrinkage": "field + 0.7*(raw-field) until week 10, empirical Bayes after",
+      "promotion_gate": "Pup to Working Dawg only if at least one service pair separates with non-overlapping shrunk CIs on the ALL scope at season end."
+    },
+    "page": "https://datadawgs216.com/rankings.html"
+  }
+}
