@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Conference Power Curves — Data Dawgs</title>
+<meta name="description" content="Compare the strength and depth of the Power Four conferences by rank within conference using the Data Dawgs CFB Elo baseline.">
+<style>
+:root{
+  color-scheme:dark;
+  --page:#0d0a06;--panel:#17110b;--panel2:#21180f;--ink:#f4efe7;--muted:#a99f92;
+  --grid:#35291f;--border:rgba(255,255,255,.11);--accent:#ff6a00;--accent2:#ff9a52;
+  --sec:#b85d42;--b10:#6f8fb8;--acc:#a177a8;--b12:#b79b54;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--page);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+body{min-height:100vh;background-image:radial-gradient(900px 500px at 50% -180px,rgba(255,106,0,.13),transparent 70%)}
+a{color:inherit}
+.shell{max-width:1240px;margin:0 auto;padding:0 20px 56px}
+.sitebar{height:64px;display:flex;align-items:center;gap:18px;border-bottom:1px solid var(--border);margin-bottom:30px}
+.brand{font-weight:900;letter-spacing:.035em;text-decoration:none;font-size:18px;white-space:nowrap}.brand span{color:var(--accent)}
+.crumb{color:var(--muted);font-size:13px}.crumb a{text-decoration:none}.crumb a:hover{color:var(--ink)}
+.spacer{flex:1}
+.back{font-size:13px;color:var(--muted);text-decoration:none;border:1px solid var(--border);padding:7px 11px;border-radius:999px}.back:hover{color:var(--ink);border-color:rgba(255,106,0,.5)}
+.hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:22px;align-items:end;margin-bottom:22px}
+.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.14em;color:var(--accent);font-weight:800;margin-bottom:8px}
+h1{font-size:clamp(34px,6vw,66px);line-height:.94;letter-spacing:-.055em;margin:0;max-width:820px}
+.sub{max-width:760px;color:var(--muted);font-size:15px;line-height:1.55;margin:14px 0 0}
+.period{font:700 11px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--muted);text-align:right;text-transform:uppercase;letter-spacing:.06em;padding-bottom:4px}
+.card{background:linear-gradient(180deg,rgba(255,255,255,.025),rgba(255,255,255,.008)),var(--panel);border:1px solid var(--border);border-radius:18px}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px;margin-bottom:14px}
+.ctrl-label{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 4px 0 2px}
+.pill{appearance:none;border:1px solid var(--border);background:var(--panel2);color:var(--muted);font:750 12px/1 system-ui;padding:9px 12px;border-radius:999px;cursor:pointer;transition:.15s ease}
+.pill:hover{color:var(--ink);border-color:rgba(255,106,0,.35)}
+.pill.active{background:var(--accent);border-color:var(--accent);color:#160c04;box-shadow:0 0 0 3px rgba(255,106,0,.12)}
+.sep{width:1px;height:25px;background:var(--border);margin:0 3px}
+.chart-card{padding:18px 18px 12px;position:relative;overflow:hidden}
+.chart-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:10px}
+.chart-title{font-size:14px;font-weight:850;letter-spacing:.01em}.chart-note{font-size:12px;color:var(--muted);margin-top:3px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;justify-content:flex-end}
+.legend-item{display:flex;gap:6px;align-items:center;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;user-select:none}
+.legend-item.is-dim{opacity:.35}.swatch{width:18px;height:3px;border-radius:9px;background:var(--c)}
+.chart-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--grid) transparent;padding-bottom:4px}
+#chart{display:block;width:100%;min-width:900px;height:auto;touch-action:pan-x pan-y}
+.gridline{stroke:var(--grid);stroke-width:1}.axisline{stroke:#69584a;stroke-width:1}.ticktext{fill:#8f8275;font:11px ui-monospace,SFMono-Regular,Consolas,monospace}.axislabel{fill:#aa9d90;font:700 11px system-ui;letter-spacing:.04em;text-transform:uppercase}
+.curve{fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;opacity:.83;transition:opacity .16s,stroke-width .16s}.curve.dim{opacity:.12}.curve.focus{stroke:var(--accent)!important;stroke-width:4;opacity:1}
+.point{cursor:pointer;transition:opacity .16s,transform .16s;transform-box:fill-box;transform-origin:center}.point.dim{opacity:.13}.point.focus{opacity:1}.point:hover{transform:scale(1.14)}
+.point circle{stroke:#0d0a06;stroke-width:2}.point.focus circle{fill:var(--accent)!important;stroke:#ffe0c8;stroke-width:2.5}.point text{fill:#fff;font:800 8.5px/1 ui-sans-serif,system-ui;text-anchor:middle;dominant-baseline:central;pointer-events:none;text-shadow:0 1px 2px #000}
+.hoverline{stroke:rgba(255,255,255,.16);stroke-width:1;stroke-dasharray:3 4;pointer-events:none}
+.tooltip{position:fixed;z-index:50;pointer-events:none;background:#0f0b07;border:1px solid rgba(255,106,0,.45);border-radius:12px;padding:11px 12px;box-shadow:0 16px 45px rgba(0,0,0,.45);min-width:185px;opacity:0;transform:translateY(5px);transition:opacity .1s,transform .1s}
+.tooltip.show{opacity:1;transform:none}.tt-team{font-weight:900;font-size:14px}.tt-conf{font-size:11px;color:var(--accent);font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-top:1px}.tt-grid{display:grid;grid-template-columns:1fr auto;gap:5px 18px;margin-top:9px;font-size:11.5px;color:var(--muted)}.tt-grid b{color:var(--ink);font-weight:800}
+.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}
+.sum-card{padding:13px 14px;min-width:0}.sum-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:11px}.sum-name{font-weight:900;font-size:14px}.sum-dot{width:8px;height:8px;border-radius:50%;background:var(--c);box-shadow:0 0 0 4px color-mix(in srgb,var(--c) 16%,transparent)}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:9px}.metric small{display:block;color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.08em;font-weight:800}.metric strong{display:block;margin-top:2px;font:800 15px/1.1 ui-monospace,SFMono-Regular,Consolas,monospace}.metric .neg{color:#c4b7aa}
+.insight{margin-top:14px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start}.insight-mark{color:var(--accent);font-size:17px;line-height:1}.insight b{font-size:12px}.insight p{margin:2px 0 0;color:var(--muted);font-size:12.5px;line-height:1.5}
+.method{margin-top:14px;padding:14px 16px;color:var(--muted);font-size:11.5px;line-height:1.55}.method summary{cursor:pointer;color:var(--ink);font-weight:800}.method p{margin:9px 0 0}.method code{color:var(--accent2)}
+.state{padding:70px 20px;text-align:center;color:var(--muted);font-size:13px}.state b{color:var(--ink)}
+@media(max-width:800px){.hero{grid-template-columns:1fr}.period{text-align:left}.summary{grid-template-columns:1fr 1fr}.chart-card{padding:14px 10px 10px}.chart-head{padding:0 4px;display:block}.legend{justify-content:flex-start;margin-top:9px}.sitebar{gap:10px}.crumb{display:none}.shell{padding-left:14px;padding-right:14px}.back{font-size:11px}}
+@media(max-width:500px){h1{font-size:42px}.summary{grid-template-columns:1fr 1fr;gap:8px}.sum-card{padding:11px}.metrics{grid-template-columns:1fr}.controls{gap:6px}.sep{display:none}.pill{padding:9px 10px}.hero{margin-bottom:18px}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="sitebar" aria-label="Site navigation">
+    <a class="brand" href="index.html">DATA <span>DAWGS</span></a>
+    <span class="crumb"><a href="cfb.html">CFB Lab</a> / Conference Power</span>
+    <span class="spacer"></span>
+    <a class="back" href="cfb.html">← CFB Lab</a>
+  </nav>
+
+  <header class="hero">
+    <div>
+      <div class="eyebrow">College Football Lab</div>
+      <h1>Conference Power Curves</h1>
+      <p class="sub">The usual “best conference” debate hides the shape of the league. Rank each team inside its own conference, then compare the curves: elite ceiling, middle-class strength, and how hard the bottom falls away.</p>
+    </div>
+    <div class="period" id="period">loading rating period…</div>
+  </header>
+
+  <div class="controls card" aria-label="Conference filters">
+    <span class="ctrl-label">View</span>
+    <button class="pill active" data-filter="ALL">All P4</button>
+    <button class="pill" data-filter="SEC">SEC</button>
+    <button class="pill" data-filter="Big Ten">Big Ten</button>
+    <button class="pill" data-filter="ACC">ACC</button>
+    <button class="pill" data-filter="Big 12">Big 12</button>
+    <span class="sep"></span>
+    <span class="ctrl-label">Focus</span>
+    <button class="pill" id="clearFocus" type="button">Clear team</button>
+  </div>
+
+  <section class="card chart-card" aria-labelledby="chartTitle">
+    <div class="chart-head">
+      <div>
+        <div class="chart-title" id="chartTitle">Power Four depth by conference rank</div>
+        <div class="chart-note">Higher is stronger. Tap or hover a team for detail.</div>
+      </div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="chart-scroll" id="chartScroll">
+      <div class="state" id="loading"><b>Fetching the Dawgs’ rating registry…</b><br>Using the published CFB Elo snapshot.</div>
+      <svg id="chart" viewBox="0 0 1040 570" role="img" aria-label="Power Four conference strength curves" hidden></svg>
+    </div>
+  </section>
+
+  <section class="summary" id="summary" aria-label="Conference summaries"></section>
+
+  <aside class="card insight" id="insight" hidden>
+    <div class="insight-mark">↗</div>
+    <div><b>What the curves say</b><p id="insightText"></p></div>
+  </aside>
+
+  <details class="card method">
+    <summary>Methodology &amp; source</summary>
+    <p>This visualization reads <code>/data/cfb-ratings.json</code> directly from Data Dawgs and uses the published <code>dd-cfb-elo</code> team-strength field. Teams are sorted from strongest to weakest inside each Power Four conference. The source registry currently describes this baseline as <strong>modelled, retrodictive, ungraded</strong>; it is not a current betting-market power rating or a prospective 2026 forecast. Conference summary values are calculated in the browser from the same snapshot.</p>
+    <p>Visualization concept inspired by the conference-rank comparison graphic shared by PEA Ratings / Statsowar. This is an independent Data Dawgs implementation using Data Dawgs data and interaction design.</p>
+  </details>
+</div>
+
+<div class="tooltip" id="tooltip" role="status" aria-live="polite"></div>
+<script>
+(() => {
+  'use strict';
+  const CONFS=['SEC','Big Ten','ACC','Big 12'];
+  const COLORS={'SEC':'var(--sec)','Big Ten':'var(--b10)','ACC':'var(--acc)','Big 12':'var(--b12)'};
+  const NS='http://www.w3.org/2000/svg';
+  const svg=document.getElementById('chart');
+  const loading=document.getElementById('loading');
+  const tooltip=document.getElementById('tooltip');
+  const legend=document.getElementById('legend');
+  const summary=document.getElementById('summary');
+  const insight=document.getElementById('insight');
+  const insightText=document.getElementById('insightText');
+  let allTeams=[],byConf={},filter='ALL',focused=null;
+
+  const esc=s=>String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  const fmt=n=>Number.isFinite(n)?Math.round(n).toLocaleString():'—';
+  const median=a=>{const b=[...a].sort((x,y)=>x-y),m=Math.floor(b.length/2);return b.length%2?b[m]:(b[m-1]+b[m])/2};
+  const avg=a=>a.reduce((s,x)=>s+x,0)/a.length;
+  const abbr=name=>{
+    const special={'Ohio State':'OSU','Penn State':'PSU','Michigan State':'MSU','Iowa State':'ISU','Kansas State':'KSU','Florida State':'FSU','NC State':'NCS','Texas Tech':'TTU','Arizona State':'ASU','Virginia Tech':'VT','North Carolina':'UNC','South Carolina':'SC','Ole Miss':'MISS','Miami':'MIA','Louisville':'LOU','Clemson':'CLEM','SMU':'SMU','TCU':'TCU','UCF':'UCF'};
+    if(special[name]) return special[name];
+    const words=name.replace(/[^A-Za-z ]/g,' ').split(/\s+/).filter(Boolean);
+    if(words.length===1) return words[0].slice(0,4).toUpperCase();
+    return words.map(w=>w[0]).join('').slice(0,4).toUpperCase();
+  };
+  const S=(tag,attrs={})=>{const e=document.createElementNS(NS,tag);for(const [k,v] of Object.entries(attrs))e.setAttribute(k,v);return e};
+
+  function setFilter(next){
+    filter=next;
+    document.querySelectorAll('[data-filter]').forEach(b=>b.classList.toggle('active',b.dataset.filter===next));
+    applyHighlight();
+    renderSummary();
+    makeInsight();
+  }
+  function focusTeam(team){focused=(focused&&focused.team_slug===team.team_slug)?null:team;applyHighlight();}
+  function applyHighlight(){
+    document.querySelectorAll('.curve').forEach(el=>{
+      const c=el.dataset.conf;el.classList.toggle('dim',filter!=='ALL'&&c!==filter);el.classList.toggle('focus',filter!=='ALL'&&c===filter);
+    });
+    document.querySelectorAll('.point').forEach(el=>{
+      const c=el.dataset.conf,slug=el.dataset.slug;
+      const dimByFilter=filter!=='ALL'&&c!==filter;
+      const dimByTeam=focused&&slug!==focused.team_slug;
+      el.classList.toggle('dim',dimByFilter||dimByTeam);el.classList.toggle('focus',focused&&slug===focused.team_slug);
+    });
+    document.querySelectorAll('.legend-item').forEach(el=>el.classList.toggle('is-dim',filter!=='ALL'&&el.dataset.conf!==filter));
+  }
+  function showTip(team,evt){
+    const confRank=byConf[team.conference].findIndex(t=>t.team_slug===team.team_slug)+1;
+    tooltip.innerHTML=`<div class="tt-team">${esc(team.team)}</div><div class="tt-conf">${esc(team.conference)}</div><div class="tt-grid"><span>Elo strength</span><b>${fmt(team.strength)}</b><span>Conference rank</span><b>#${confRank}</b><span>National rank</span><b>#${team.nationalRank}</b><span>Games rated</span><b>${team.gamesRated??'—'}</b></div>`;
+    const x=Math.min(window.innerWidth-205,Math.max(10,evt.clientX+14));
+    const y=Math.min(window.innerHeight-165,Math.max(10,evt.clientY+14));
+    tooltip.style.left=x+'px';tooltip.style.top=y+'px';tooltip.classList.add('show');
+  }
+  function hideTip(){tooltip.classList.remove('show')}
+
+  function renderChart(){
+    svg.innerHTML='';
+    const W=1040,H=570,m={l:72,r:25,t:28,b:62},plotW=W-m.l-m.r,plotH=H-m.t-m.b;
+    const strengths=allTeams.map(t=>t.strength);let yMin=Math.floor((Math.min(...strengths)-35)/100)*100,yMax=Math.ceil((Math.max(...strengths)+35)/100)*100;
+    const maxRank=Math.max(...CONFS.map(c=>byConf[c].length));
+    const x=r=>m.l+(r-1)/(maxRank-1)*plotW;
+    const y=v=>m.t+(yMax-v)/(yMax-yMin)*plotH;
+    const yStep=100;
+    for(let v=Math.ceil(yMin/yStep)*yStep;v<=yMax;v+=yStep){
+      const yy=y(v);svg.appendChild(S('line',{x1:m.l,x2:W-m.r,y1:yy,y2:yy,class:'gridline'}));
+      const tx=S('text',{x:m.l-11,y:yy+4,class:'ticktext','text-anchor':'end'});tx.textContent=fmt(v);svg.appendChild(tx);
+    }
+    for(let r=1;r<=maxRank;r++){
+      const xx=x(r);svg.appendChild(S('line',{x1:xx,x2:xx,y1:m.t,y2:H-m.b,class:'gridline'}));
+      const tx=S('text',{x:xx,y:H-m.b+24,class:'ticktext','text-anchor':'middle'});tx.textContent=r;svg.appendChild(tx);
+    }
+    svg.appendChild(S('line',{x1:m.l,x2:m.l,y1:m.t,y2:H-m.b,class:'axisline'}));
+    svg.appendChild(S('line',{x1:m.l,x2:W-m.r,y1:H-m.b,y2:H-m.b,class:'axisline'}));
+    let lab=S('text',{x:m.l+plotW/2,y:H-16,class:'axislabel','text-anchor':'middle'});lab.textContent='RANK WITHIN CONFERENCE';svg.appendChild(lab);
+    lab=S('text',{x:18,y:m.t+plotH/2,class:'axislabel','text-anchor':'middle',transform:`rotate(-90 18 ${m.t+plotH/2})`});lab.textContent='DATA DAWGS ELO STRENGTH';svg.appendChild(lab);
+
+    for(const conf of CONFS){
+      const teams=byConf[conf];
+      const path=teams.map((t,i)=>`${i?'L':'M'} ${x(i+1).toFixed(1)} ${y(t.strength).toFixed(1)}`).join(' ');
+      const p=S('path',{d:path,class:'curve',stroke:COLORS[conf]});p.dataset.conf=conf;svg.appendChild(p);
+      teams.forEach((team,i)=>{
+        const g=S('g',{class:'point',transform:`translate(${x(i+1)},${y(team.strength)})`,tabindex:'0',role:'button','aria-label':`${team.team}, ${conf} rank ${i+1}, Elo ${Math.round(team.strength)}`});
+        g.dataset.conf=conf;g.dataset.slug=team.team_slug;
+        const circle=S('circle',{r:i<4?15:13,fill:COLORS[conf]});g.appendChild(circle);
+        const text=S('text',{y:.5});text.textContent=abbr(team.team);g.appendChild(text);
+        g.addEventListener('mouseenter',e=>showTip(team,e));g.addEventListener('mousemove',e=>showTip(team,e));g.addEventListener('mouseleave',hideTip);
+        g.addEventListener('click',e=>{showTip(team,e);focusTeam(team)});
+        g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();focusTeam(team);const box=g.getBoundingClientRect();showTip(team,{clientX:box.left+box.width/2,clientY:box.top})}});
+        svg.appendChild(g);
+      });
+    }
+    applyHighlight();
+  }
+
+  function renderLegend(){
+    legend.innerHTML=CONFS.map(c=>`<div class="legend-item" data-conf="${esc(c)}" style="--c:${COLORS[c]}"><span class="swatch"></span>${esc(c)}</div>`).join('');
+    legend.querySelectorAll('.legend-item').forEach(el=>el.addEventListener('click',()=>setFilter(filter===el.dataset.conf?'ALL':el.dataset.conf)));
+  }
+  function stats(conf){
+    const vals=byConf[conf].map(t=>t.strength),top=vals.slice(0,4),bottom=vals.slice(-4);
+    return {top4:avg(top),med:median(vals),bottom4:avg(bottom),drop:avg(top)-avg(bottom)};
+  }
+  function renderSummary(){
+    summary.innerHTML=CONFS.map(c=>{
+      const s=stats(c),muted=filter!=='ALL'&&filter!==c?'opacity:.42':'';
+      return `<article class="card sum-card" style="--c:${COLORS[c]};${muted}" data-summary="${esc(c)}"><div class="sum-top"><span class="sum-name">${esc(c)}</span><span class="sum-dot"></span></div><div class="metrics"><div class="metric"><small>Top 4 avg</small><strong>${fmt(s.top4)}</strong></div><div class="metric"><small>Median</small><strong>${fmt(s.med)}</strong></div><div class="metric"><small>Bottom 4 avg</small><strong>${fmt(s.bottom4)}</strong></div><div class="metric"><small>Drop-off</small><strong class="neg">${fmt(s.drop)}</strong></div></div></article>`;
+    }).join('');
+    summary.querySelectorAll('[data-summary]').forEach(el=>{el.style.cursor='pointer';el.addEventListener('click',()=>setFilter(filter===el.dataset.summary?'ALL':el.dataset.summary))});
+  }
+  function makeInsight(){
+    const ss=Object.fromEntries(CONFS.map(c=>[c,stats(c)]));
+    const bestTop=[...CONFS].sort((a,b)=>ss[b].top4-ss[a].top4)[0];
+    const bestMed=[...CONFS].sort((a,b)=>ss[b].med-ss[a].med)[0];
+    const bestBottom=[...CONFS].sort((a,b)=>ss[b].bottom4-ss[a].bottom4)[0];
+    if(filter==='ALL'){
+      insightText.textContent=`${bestTop} owns the strongest top-four average in this snapshot. ${bestMed} has the highest conference median, while ${bestBottom} has the strongest bottom-four average. Those can be different answers — which is exactly why one conference average hides useful structure.`;
+    }else{
+      const s=ss[filter],teams=byConf[filter];
+      insightText.textContent=`${filter} runs from ${teams[0].team} at ${fmt(teams[0].strength)} to ${teams[teams.length-1].team} at ${fmt(teams[teams.length-1].strength)} Elo. Its top-four average is ${fmt(s.top4)}, median is ${fmt(s.med)}, and the top-to-bottom-four drop-off is ${fmt(s.drop)} Elo points.`;
+    }
+    insight.hidden=false;
+  }
+
+  document.querySelectorAll('[data-filter]').forEach(b=>b.addEventListener('click',()=>setFilter(b.dataset.filter)));
+  document.getElementById('clearFocus').addEventListener('click',()=>{focused=null;hideTip();applyHighlight()});
+  document.addEventListener('scroll',hideTip,{passive:true});
+
+  fetch('data/cfb-ratings.json',{cache:'no-store'})
+    .then(r=>{if(!r.ok)throw new Error(`HTTP ${r.status}`);return r.json()})
+    .then(reg=>{
+      const period=reg?.data?.rating_period;
+      document.getElementById('period').textContent=period?.label?`${period.label} · published ${reg.as_of||'snapshot'}`:'published rating snapshot';
+      const raw=Array.isArray(reg?.data?.teams)?reg.data.teams:[];
+      allTeams=raw.map(t=>({team:t.team,team_slug:t.team_slug,conference:t.conference,nationalRank:t.systems?.['dd-cfb-elo']?.rank,strength:Number(t.systems?.['dd-cfb-elo']?.team_strength),gamesRated:t.systems?.['dd-cfb-elo']?.games_rated})).filter(t=>CONFS.includes(t.conference)&&Number.isFinite(t.strength));
+      if(!allTeams.length)throw new Error('No Power Four teams found in registry');
+      byConf=Object.fromEntries(CONFS.map(c=>[c,allTeams.filter(t=>t.conference===c).sort((a,b)=>b.strength-a.strength)]));
+      loading.remove();svg.hidden=false;renderLegend();renderChart();renderSummary();makeInsight();
+    })
+    .catch(err=>{loading.innerHTML=`<b>Couldn’t load the published CFB ratings.</b><br>${esc(err.message)} · Try refreshing or open the CFB Lab.`;console.error(err)});
+})();
+</script>
+</body>
+</html>
