@@ -60,7 +60,11 @@ const block =
   dfsEngine + "\n\n" +
   "/* Shared survivor path engine — generated verbatim from work/survivor-path-engine.js except for its private root. */\n" +
   survivorEngine + "\n\n" + mcp;
-const rankings = readFileSync("rankings-block.js", "utf8").replace(/\s+$/, "");
+/* The capture half and the grading half are separate files so each stays reviewable, and
+ * one block so there is one marker pair to reason about. Order matters only for reading:
+ * capture first, then the grading engine that consumes what it captured. */
+const rankings = readFileSync("rankings-block.js", "utf8").replace(/\s+$/, "")
+  + "\n" + readFileSync("rankings-grade.js", "utf8").replace(/\s+$/, "");
 
 /* ---- the whole pipeline, so the build and its idempotency proof cannot diverge ---- */
 function transform(input) {
@@ -140,6 +144,12 @@ once("async function handleRankings", "handleRankings definition");
 once("async function rankingsSnapshot", "rankingsSnapshot definition");
 once("const RANKINGS_DEPTHS", "RANKINGS_DEPTHS declaration");
 once("function rankingsNormName", "shared name-normalization spec");
+once("async function rankingsGrade(", "rankingsGrade definition");
+once("async function rankingsGrades(", "public rankingsGrades definition");
+once("function rankingsMidRanks", "mid-rank helper");
+once("function rankingsWeightedTau", "weighted Kendall tau");
+once("const RANKINGS_BOOTSTRAP_DRAWS", "bootstrap draw count");
+once("const RANKINGS_G ", "capture-rate group sizes");
 
 /* ⚠️ ORDERING IS LOAD-BEARING, NOT COSMETIC.
  * The write-scope invariant below scans from the MCP START marker to end of file. The
@@ -171,14 +181,28 @@ if (commitCalls !== 1)
  * handler here must be behind rankingsAdminOk — a handler that forgets it would expose
  * paid third-party ranks, which handoff §1 makes the one unrecoverable mistake.
  */
+// Spec §1 makes exactly one route public: GET /rankings/grades, which serves derived
+// scores. Everything else in this block reads or writes paid third-party ranks and must be
+// admin-gated. This is an explicit ALLOWLIST rather than a count, for the same reason
+// WRITE_TOOLS above is: the point is not how many there are, it is that a public route
+// cannot appear by accident. A name here that no longer exists fails the build too, so the
+// list cannot rot into a rubber stamp.
+const RANKINGS_PUBLIC = [
+  "rankingsGrades",       // the derived season doc — no player, no rank, no snapshot
+];
+const RANKINGS_UNGATED_OK = ["handleRankings", "rankingsReadBody"];  // dispatcher + body reader
 const rankingsOnly = out.slice(out.indexOf(R_START), out.indexOf(R_END));
+for (const name of RANKINGS_PUBLIC) {
+  if (!rankingsOnly.includes(`async function ${name}(`))
+    fail(`RANKINGS_PUBLIC lists ${name} but no such handler is in the block — remove the stale allowance`);
+}
 for (const m of rankingsOnly.matchAll(/\nasync function (rankings[A-Za-z]*|handleRankings)\(request/g)) {
   const at = rankingsOnly.indexOf(`async function ${m[1]}(request`);
   const body = rankingsOnly.slice(at, rankingsOnly.indexOf("\n}", at));
-  const gated = body.includes("rankingsAdminOk(request, env)")
-    || m[1] === "handleRankings"          // the dispatcher delegates; every leaf is checked
-    || m[1] === "rankingsReadBody";
-  if (!gated) fail(`${m[1]} does not check rankingsAdminOk — Stage A has no public routes`);
+  if (body.includes("rankingsAdminOk(request, env)")) continue;
+  if (RANKINGS_UNGATED_OK.includes(m[1])) continue;
+  if (RANKINGS_PUBLIC.includes(m[1])) continue;
+  fail(`${m[1]} does not check rankingsAdminOk and is not in RANKINGS_PUBLIC — add it there, on purpose, or gate it`);
 }
 
 writeFileSync(TARGET, out);
@@ -195,6 +219,6 @@ if (transform(readFileSync(TARGET, "utf8")) !== out)
 
 console.log(`assembled ${TARGET}: ${out.split("\n").length} lines, ${(out.length / 1024).toFixed(1)} KB`);
 console.log("  shared DFS + survivor sources · single declarations · parses · idempotent · write scope pinned to dd_submit_bozo_leg → commitBozoLeg ×1");
-console.log("  rankings block above the MCP block · every rankings handler admin-gated · no public route");
+console.log(`  rankings block above the MCP block · ${RANKINGS_PUBLIC.length} public route (${RANKINGS_PUBLIC.join(", ")}) · all others admin-gated`);
 
 function fail(msg) { console.error("BUILD FAILED: " + msg); process.exit(1); }

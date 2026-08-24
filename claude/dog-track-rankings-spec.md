@@ -378,7 +378,7 @@ verify capture strip → Tuesday grade → check unmatched list).
 Recorded here as they are taken, per rule 8. Each is raised at a stage checkpoint rather
 than applied silently.
 
-### D1 — kickoff source order (Stage A, raised 2026-08-23 — AWAITING RATIFICATION)
+### D1 — kickoff source order (Stage A, raised 2026-08-23, APPROVED by Kap 2026-08-24)
 
 §4 and trap #5 name the ESPN scoreboard as the kickoff source. The Worker already
 documents at its `/scores` route (8/4/26) that **ESPN answers 403 to Cloudflare Worker
@@ -387,11 +387,44 @@ tested, "another permutation will not fix it." Taken literally, ESPN fails every
 every capture lands in `deferred`, and the pre-kickoff gate silently degrades into a
 grade-time post-mortem.
 
-**Proposed resolution, implemented but not yet ratified** — Kap accepts or vetoes this at
-the Stage A checkpoint; vetoing it costs one small edit to `rankingsFirstKickoff`, and the
-gate still functions, it just stops gating in practice. The site's own canonical
+**Resolution, approved at the Stage A checkpoint.** The site's own canonical
 `data/nfl-schedule.json` (nflverse-derived, the
 same source the survivor receipt ledger refuses captures against) is consulted first; ESPN
 stays exactly where the spec put it as tier 2; `deferred` remains the last resort. The
 property the spec asks for — a capture that could not have been written after kickoff — is
 preserved rather than weakened.
+
+### I1 — "ties broken by consensus order" in the unranked imputation (Stage B, raised 2026-08-24)
+
+§3 says an unranked-but-relevant player is slotted "at that service's deepest ranked player
++ 1 (ties broken by consensus order)". Two readings:
+
+- **(a) implemented:** unranked players take *consecutive* slots — deepest+1, deepest+2, …
+  — ordered by consensus rank.
+- **(b) alternative:** every unranked player takes the identical value deepest+1, and that
+  tied block is mid-ranked, with consensus order used only for display.
+
+Both agree on the ordering of the unranked tail and differ in how hard that tail pulls on
+Spearman ρ. Reading (a) is implemented because it is the one that actually *breaks* the
+tie, which is what the text says. Flagged rather than assumed: if (b) was intended it is a
+small change in `rankingsEntrantRanks`, and it must happen before Week 1 because it changes
+every graded ρ.
+
+### G1 — hygiene needs the Thursday OUT list, which nothing captures yet (Stage B, raised 2026-08-24)
+
+§3 defines the hygiene counter as players who were **officially OUT at capture time** yet
+sat inside the startable range of a service's list. That is a fact about Thursday, not
+about who failed to play on Sunday — a player ruled out on Thursday is knowable at capture,
+a player hurt in warmups is not, and only the first is a hygiene failure.
+
+Stage A's snapshot stores ranks and nothing else, so that fact is not recorded anywhere.
+The grading engine therefore publishes `hygiene: null` and `hygiene_tracked: false` rather
+than computing a plausible-but-wrong number from did-not-play data. `rankingsHygiene` is
+implemented and works the moment the data exists.
+
+**To make hygiene real:** capture the Thursday OUT list alongside the ranks — a small Stage
+A addition (an `out_at_capture` array on the snapshot body, populated from whatever injury
+source Kap already reads on Thursday). **Decision needed before Week 1**, because a week
+captured without it can never have its hygiene computed after the fact. Until then the
+mockup's "Hygiene: N OUT players left ranked at capture" line must render as "not tracked
+yet" rather than "0" — a zero here would be a claim, not an absence.

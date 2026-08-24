@@ -541,5 +541,11 @@ async function handleRankings(request, url, env, cors) {
   if (p === "/rankings/snapshot" && request.method === "POST") return rankingsSnapshot(request, env, cors);
   if (p === "/rankings/void"     && request.method === "POST") return rankingsVoid(request, env, cors);
   if (p === "/rankings/status"   && request.method === "GET")  return rankingsStatus(request, url, env, cors);
+  if (p === "/rankings/grade"    && request.method === "POST") return rankingsGrade(request, env, cors);
+  if (p === "/rankings/aliases"  && request.method === "POST") return rankingsAliasAdd(request, env, cors);
+  // ⚠️ THE ONLY PUBLIC ROUTE IN THIS FEATURE. Everything above is admin-gated; this one
+  // serves derived scores to the page and to nobody's detriment. Adding a second public
+  // route here means re-reading spec §1 first — assemble.mjs keeps an explicit allowlist.
+  if (p === "/rankings/grades"   && request.method === "GET")  return rankingsGrades(request, url, env, cors);
   return json({ error: "not found" }, 404, cors);
 }
