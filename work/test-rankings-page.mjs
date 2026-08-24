@@ -211,6 +211,19 @@ async function main() {
     const t = await page.$eval("#dt-view-rc", el => el.textContent);
     ok(/Season opens Sep 10/.test(t), "before Week 1 the page renders an honest empty state");
     ok(/pre-registered/.test(await page.$eval("#method", el => el.textContent)), "the methodology drawer is present with no data at all");
+    /* ⚠️ A closed <details> still reports geometry in Chrome — its children keep a real
+     * bounding rect and display:block — so anything that measures the page sees the whole
+     * methodology as visible content. That produced 6,648 px² of text scored "unreachable"
+     * under the fixed launcher. The body must be display:none while shut, and must come
+     * back when opened. */
+    ok(await page.$eval(".dt-methodbody", el => getComputedStyle(el).display) === "none",
+      "the closed drawer's body is display:none, not merely visually collapsed");
+    await page.$eval("#method", el => { el.open = true; });
+    await page.waitForTimeout(120);
+    ok(await page.$eval(".dt-methodbody", el => getComputedStyle(el).display) !== "none",
+      "opening the drawer reveals it again");
+    ok(/Promotion gate/i.test(await page.$eval("#method", el => el.textContent)),
+      "the drawer states the declared promotion gate");
     ok(!/NaN|undefined/.test(t), "the empty state prints no NaN or undefined", t.slice(0, 120));
     await ctx.close();
   }

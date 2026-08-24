@@ -832,7 +832,13 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 .dt-rc{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
 .dt-card{background:var(--surface-1);border:1.5px solid var(--grid);border-radius:12px;padding:14px;position:relative}
 .dt-card.lead{border-color:var(--led);box-shadow:0 0 0 1px var(--led),0 0 16px var(--ledglow)}
-.dt-rctop{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px}
+.dt-rctop{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:10px}
+/* The left column must be allowed to shrink (min-width:0) or the flex default of `auto`
+   keeps it at its content width and the scope line breaks mid-token — "Weeks 1–" then "4"
+   on the next line, which reads like a bug in the number. */
+.dt-rctop>div:first-child{min-width:0;flex:1 1 auto}
+.dt-rctop>div:last-child{flex:0 0 auto;text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.dt-scopeline{font-size:10.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dt-svcname{font-weight:900;font-size:15px}
 .dt-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px}
 .dt-grade{font-size:38px;font-weight:900;font-family:ui-monospace,Menlo,monospace;line-height:1;
@@ -849,6 +855,19 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 .dt-hyg b{color:var(--dtwarn)}
 .dt-spark{display:block;margin-top:8px}
 
+/* ⚠️ A CLOSED <details> STILL REPORTS GEOMETRY IN CHROME. Its children keep a real
+   bounding rect and a computed display of block, so anything measuring the page — the
+   launcher-overlap guard, and DDBotScan, which walks the DOM to tell Toto what is on
+   screen — sees the entire methodology as visible content sitting wherever it would be.
+   That is how a closed drawer produced 6,648 px² of "unreachable" text under the fixed
+   launcher at 390px. Hiding the body explicitly when the drawer is shut makes the DOM say
+   what is actually true; [open] takes the rule off again. */
+.dt-method:not([open]) .dt-methodbody{display:none}
+.dt-method{margin-top:18px}
+.dt-method summary{cursor:pointer;padding:10px 0;font-size:14px}
+.dt-methodbody h4{margin:16px 0 6px;font-size:13px;letter-spacing:.02em}
+.dt-methodbody p,.dt-methodbody li{font-size:13px;line-height:1.6;color:var(--ink-2);margin:0 0 8px}
+.dt-methodbody ol{padding-left:20px;margin:0 0 8px}
 .dt-empty{background:var(--surface-1);border:1px dashed var(--grid);border-radius:12px;padding:26px 18px;text-align:center}
 .dt-empty h3{margin:0 0 8px;font-size:17px}
 .dt-empty p{margin:0 auto;max-width:520px;color:var(--ink-2);font-size:13.5px;line-height:1.6}
@@ -2661,8 +2680,8 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       var tied = r.season && r.m.tied_with_leader;
       return '<div class="dt-card'+(tied?" lead":"")+'">'
         + '<div class="dt-rctop"><div><div class="dt-svcname"><span class="dt-dot" style="background:'+esc(r.color)+'"></span>'+esc(r.name)+'</div>'
-        + '<div style="font-size:10.5px;color:var(--ink-3)">'+esc(scopeLabel("rc"))+'</div></div>'
-        + '<div style="text-align:right"><div class="dt-grade" style="color:'+esc(r.color)+'">'+esc(r.season?(r.m.grade||"—"):"—")+'</div>'
+        + '<div class="dt-scopeline">'+esc(scopeLabel("rc"))+'</div></div>'
+        + '<div><div class="dt-grade" style="color:'+esc(r.color)+'">'+esc(r.season?(r.m.grade||"—"):"—")+'</div>'
         + (r.season
             ? (tied ? '<span class="dt-badge pf">📸 Photo finish</span>'
                     : '<span class="dt-badge prov">'+(r.m.provisional?"Provisional":"Season to date")+'</span>')
