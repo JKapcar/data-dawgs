@@ -112,6 +112,7 @@ function sessionPayload(token) {
   }), ENV);
   equal(response.status, 200, "preflight succeeds");
   check(response.headers.get("Access-Control-Allow-Methods").includes("PUT"), "preflight advertises PUT");
+  check(response.headers.get("Access-Control-Allow-Methods").includes("PATCH"), "preflight advertises PATCH for entrant label edits");
   check(response.headers.get("Access-Control-Allow-Headers").includes("X-Dawg-Session"), "preflight accepts X-Dawg-Session requests");
   equal(response.headers.get("Access-Control-Expose-Headers"), "X-Dawg-Session", "renewal header exposed");
 }

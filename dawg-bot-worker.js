@@ -144,7 +144,7 @@ function corsFor(origin) {
     // PUT is load-bearing for /auth/draft-state. application/json plus the session
     // header makes that browser request preflight; omitting PUT here produces a
     // silent client-side "Failed to fetch" before the route ever runs.
-    "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, OPTIONS",
     // A session older than seven days is rotated on any authenticated request. Pages
     // must be allowed to read the replacement without exposing any other header.
     "Access-Control-Expose-Headers": "X-Dawg-Session",

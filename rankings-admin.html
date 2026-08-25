@@ -145,6 +145,7 @@ function load(){
     boxes.innerHTML = ents.map(function(e){
       return '<div class="card"><h2><span class="dot" style="background:' + e.color + '"></span> '
         + e.name + ' <span class="note">(' + e.id + ' · ' + e.type + ' · from W' + e.first_week + ')</span></h2>'
+        + '<button class="ghost" data-rename="' + e.id + '">Rename label</button>'
         + (e.state === "captured"
             ? '<div class="note ok">Captured ' + e.captured_at + '<br>sha ' + String(e.sha256).slice(0,16)
               + ' · kickoff check: ' + e.kickoff_check + '</div>'
@@ -181,6 +182,13 @@ document.addEventListener("click", function(ev){
       key:a, player_id:t.getAttribute("data-pid") }) })
       .then(function(res){ t.outerHTML = res.status===200
         ? '<span class="ok">alias added</span>' : '<span class="err">' + (res.body.error||res.status) + '</span>'; });
+  }
+  var r = t.getAttribute && t.getAttribute("data-rename");
+  if(r){
+    var name = prompt("New display name for " + r + ":");
+    if(!name || !name.trim()) return;
+    api("/rankings/entrants", { method:"PATCH", body: JSON.stringify({ id:r, name:name.trim() }) })
+      .then(function(res){ show(document.querySelector('[data-out="' + r + '"]'), res); if(res.status === 200) load(); });
   }
 });
 
