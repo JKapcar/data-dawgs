@@ -295,7 +295,8 @@
         teams:(L.teams||[]).map((t,i)=>({name:t.name,owner:t.owner||"",providerId:t.providerId,slot:i+1})),
         budget:L.budget,
         draftType:L.draftType,
-        rosterSlots:(L.rosterSlots||[]).filter(s=>s.slot!=="BENCH"&&s.slot!=="IR"),
+        rosterSlots:(L.rosterSlots||[]).filter(s=>s.slot!=="IR")
+          .map(s=>s.slot==="BENCH"?{slot:"BN",count:s.count}:s),
         benchSlots:((L.rosterSlots||[]).find(s=>s.slot==="BENCH")||{}).count||0,
         scoring:Object.assign({},L.scoring,{mode:key||"custom"})
       },

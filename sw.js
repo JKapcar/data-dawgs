@@ -15,9 +15,13 @@
 // concatenated in sorted order, first 10 hex. It covers the scripts as well as the
 // pages because the draft rig's behaviour lives in draft-*.js: hashing only the HTML
 // meant a JS-only fix never invalidated a phone's cache.
+// VERSION = md5 of every *.html and *.js in the repo root (sw.js itself excluded),
+// concatenated in sorted order, first 10 hex. It covers the scripts as well as the
+// pages because the draft rig's behaviour lives in draft-*.js: hashing only the HTML
+// meant a JS-only fix never invalidated a phone's cache.
 // HTML is network-first (so deploys land immediately) with a cache fallback,
 // so a dead venue wifi can't take the draft down mid-auction.
-const VERSION = "ffb9221b48";
+const VERSION = "20637044ca";
 const CACHE = "dd-" + VERSION;
 
 // the pages that must survive a network drop (stats.html is 2MB — cached on first visit instead)
