@@ -122,6 +122,9 @@ const token = await sessionFor();
   assert.match(response.headers.get("Access-Control-Allow-Methods"), /(?:^|,\s*)PUT(?:,|$)/);
   assert.match(response.headers.get("Access-Control-Allow-Headers"), /X-Dawg-Session/);
   assert.match(response.headers.get("Access-Control-Allow-Headers"), /X-Bozo-Session/);
+  // The Dog Track admin key. rankings-admin.html sends it on every call, and a custom
+  // header missing from this list dies at preflight as an unexplained "Failed to fetch".
+  assert.match(response.headers.get("Access-Control-Allow-Headers"), /X-DD-Admin/);
 }
 
 assert.equal((await request()).response.status, 401, "missing session");

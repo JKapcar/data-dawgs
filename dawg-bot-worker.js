@@ -137,7 +137,10 @@ function corsFor(origin) {
     // X-DD-Bot is a forecast-challenge bot credential (FC-C). It is listed here so a
     // browser-side bot test preflights, and it is accepted on POST /forecast/entry and
     // NOWHERE else — that scoping lives in the route table, not in a handler branch.
-    "Access-Control-Allow-Headers": "Content-Type, X-Dawg-Pass, X-Bozo-Session, X-Dawg-Session, X-DD-Bot",
+    // X-DD-Admin is the Dog Track admin key rankings-admin.html sends on every call.
+    // Advertising it here is preflight permission, never authorization — the rankings
+    // block still checks it, and an unrecognised header on this list grants nothing.
+    "Access-Control-Allow-Headers": "Content-Type, X-Dawg-Pass, X-Bozo-Session, X-Dawg-Session, X-DD-Bot, X-DD-Admin",
     // PUT is load-bearing for /auth/draft-state. application/json plus the session
     // header makes that browser request preflight; omitting PUT here produces a
     // silent client-side "Failed to fetch" before the route ever runs.
