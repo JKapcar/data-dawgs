@@ -2867,10 +2867,157 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     }
   });
 
-  fetch(TOTO + "/rankings/grades?season=" + (new Date().getUTCFullYear()))
-    .then(function(r){ if(!r.ok) throw new Error("worker returned " + r.status); return r.json(); })
-    .then(function(d){ doc = d; window.DD_RANKINGS = d; drawAll(); })
-    .catch(function(e){ err = String(e && e.message || e); drawAll(); });
+  /* ---------------- demo mode (?demo=1) ----------------
+   * A synthetic grades document, built client-side, so the five views can be looked at
+   * before Week 1 exists. It is OFF unless the URL asks for it: the bare page still
+   * fetches the worker and still shows "Season opens Sep 10" while the season is empty.
+   *
+   * ⚠ The entrants below are INVENTED and every name is prefixed DEMO. No real ranking
+   * service appears here, because a fabricated score under a real service's name is a
+   * fabricated record no matter how clearly the page is labelled. Do not "improve" this
+   * by pasting in the real registry names.
+   * ⚠ The doc is built to the SAME shape rankingsRebuildPublic() returns in
+   * dawg-bot-worker.js. If that shape changes, this changes with it, or the preview
+   * quietly stops previewing the real thing. */
+  var DEMO = /(?:^|[?&])demo=1(?:&|$)/.test(location.search);
+
+  function demoDoc(){
+    var season = new Date().getUTCFullYear(), WEEKS = 6, POS = ["RB","WR","QB","TE"];
+    /* seeded LCG — the same demo on every load, so a screenshot keeps matching the page */
+    var seed = 20260910;
+    function rnd(){ seed = (seed*1103515245 + 12345) % 2147483648; return seed/2147483648; }
+    function jit(sd){ return (rnd()+rnd()+rnd()-1.5)*sd; }          /* rough normal */
+    function mean(a){ return a.length ? a.reduce(function(x,y){return x+y;},0)/a.length : null; }
+
+    var ENTRANTS = [
+      { id:"BLEND",   name:"DEMO Blend",      color:"#ff6a02", base:.741, from:1 },
+      { id:"KENNEL",  name:"DEMO Kennel",     color:"#4fb0ff", base:.736, from:1 },
+      { id:"WHISTLE", name:"DEMO Whistle",    color:"#7ee081", base:.672, from:1 },
+      { id:"BARKX",   name:"DEMO Bark Index", color:"#ffd166", base:.618, from:1 },
+      { id:"FETCH",   name:"DEMO Fetch",      color:"#c58bff", base:.585, from:4 }
+    ];
+    var SCOPE_OFF = { ALL:0, RB:-.06, WR:-.03, QB:.09, TE:-.01 };
+
+    /* the raw side: per week, per scope, per entrant */
+    var weeks = {}, series = {};
+    for (var w=1; w<=WEEKS; w++){
+      var wk = {};
+      ["ALL"].concat(POS).forEach(function(sc){ wk[sc] = {}; });
+      ENTRANTS.forEach(function(e){
+        if (w < e.from) return;                                     /* a mid-season entrant */
+        var perPos = {}, hygSum = 0;
+        POS.forEach(function(p){
+          var rho = Math.max(.34, Math.min(.92, e.base + SCOPE_OFF[p] + jit(.055)));
+          var hyg = rnd() < .62 ? 0 : (rnd() < .75 ? 1 : 2);
+          hygSum += hyg;
+          perPos[p] = { rho:rho,
+                        tau:Math.max(.28, rho - .045 + jit(.02)),
+                        capture:Math.max(64, Math.min(92, 68 + (rho-.55)*70 + jit(1.8))),
+                        hygiene:hyg };
+          wk[p][e.id] = perPos[p];
+        });
+        /* ALL is the equal-weight mean of the four positions, and its hygiene is a SUM,
+           not a mean — it is a counter. Same rule the worker uses. */
+        wk.ALL[e.id] = {
+          rho: mean(POS.map(function(p){ return perPos[p].rho; })),
+          tau: mean(POS.map(function(p){ return perPos[p].tau; })),
+          capture: mean(POS.map(function(p){ return perPos[p].capture; })),
+          hygiene: hygSum
+        };
+        ["ALL"].concat(POS).forEach(function(sc){
+          series[sc] = series[sc] || {}; series[sc][e.id] = series[sc][e.id] || [];
+          series[sc][e.id].push(wk[sc][e.id]);
+        });
+      });
+      weeks[String(w)] = wk;
+    }
+
+    /* the season side: shrink toward the field, interval, photo finish, letter */
+    function pct(v, field){
+      var vals = field.filter(function(x){ return isFinite(x); });
+      if(!vals.length || !isFinite(v)) return null;
+      if(vals.length===1) return 50;
+      var below = vals.filter(function(x){ return x<v; }).length;
+      var eq = vals.filter(function(x){ return x===v; }).length;
+      return ((below + .5*eq)/vals.length)*100;
+    }
+    function letter(p){ return p>=90?"A":p>=80?"A−":p>=70?"B+":p>=60?"B":p>=50?"B−":p>=40?"C+":"C"; }
+
+    var scopes = {};
+    ["ALL"].concat(POS).forEach(function(sc){
+      var ids = Object.keys(series[sc] || {}), rawOf = {}, rows = {};
+      ids.forEach(function(id){ rawOf[id] = mean(series[sc][id].map(function(m){ return m.rho; })); });
+      var field = mean(ids.map(function(id){ return rawOf[id]; }));
+      ids.forEach(function(id){
+        var ms = series[sc][id], weekly = ms.map(function(m){ return m.rho; });
+        var n = weekly.length, raw = rawOf[id];
+        var shrunk = field + .7*(raw - field);                      /* the pre-week-10 rule */
+        var sd = Math.sqrt(mean(weekly.map(function(v){ return (v-raw)*(v-raw); })) || 0);
+        var half = Math.max(.018, 1.96*sd/Math.sqrt(n));
+        rows[id] = {
+          rho: shrunk, rho_raw: raw,
+          ci: [shrunk-half, shrunk+half],
+          tau: mean(ms.map(function(m){ return m.tau; })),
+          capture: mean(ms.map(function(m){ return m.capture; })),
+          hygiene: ms.reduce(function(a,m){ return a + m.hygiene; }, 0),
+          weeks_graded: n, weekly_rho: weekly,
+          provisional: n < 4                                        /* RANKINGS_MIN_WEEKS */
+        };
+      });
+      var ranked = Object.keys(rows).sort(function(a,b){ return rows[b].rho - rows[a].rho; });
+      var lead = ranked[0];
+      ranked.forEach(function(id){
+        rows[id].tied_with_leader = id===lead || rows[id].ci[1] >= rows[lead].ci[0];
+      });
+      var f = function(m){ return ranked.map(function(id){ return rows[id][m]; }); };
+      ranked.forEach(function(id){
+        rows[id].grade = letter(mean(["rho","tau","capture"].map(function(m){
+          return pct(rows[id][m], f(m)); }).filter(function(x){ return isFinite(x); })));
+      });
+      if(rows[lead] && rows[lead].grade)
+        ranked.forEach(function(id){ if(rows[id].tied_with_leader) rows[id].grade = rows[lead].grade; });
+      scopes[sc] = rows;
+    });
+
+    return {
+      demo: true, season: season, weeks_graded: WEEKS, scoring: "PPR",
+      method_version: "1.0", provisional: true, shrinkage_mode: "fixed-0.7",
+      excluded_unmatched: 0, hygiene_tracked: true,
+      entrants: ENTRANTS.reduce(function(o,e){
+        o[e.id] = { name:e.name, type:(e.id==="BLEND" ? "blend" : "service"), color:e.color,
+                    first_week:e.from, blend_member:(e.id!=="BLEND" && e.from===1) };
+        return o;
+      }, {}),
+      blend: { members:["KENNEL","WHISTLE","BARKX"], frozen_at_week:1 },
+      scopes: scopes, weeks: weeks
+    };
+  }
+
+  /* Loud, dashed, and above the tabs — a screenshot of any view carries the label with it. */
+  function demoBanner(){
+    var tabs = document.getElementById("dt-tabs");
+    if(!tabs || document.getElementById("dt-demobar")) return;
+    var b = document.createElement("div");
+    b.id = "dt-demobar";
+    b.style.cssText = "margin:0 0 14px;padding:10px 13px;border-radius:10px;"
+      + "border:1px dashed color-mix(in srgb,var(--warn) 60%,var(--border));"
+      + "background:color-mix(in srgb,var(--warn) 9%,transparent);color:var(--ink-2);"
+      + "font:600 12.5px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace";
+    b.innerHTML = '<b style="color:var(--warn)">DEMO DATA — NOT A RECEIPT.</b> Every number and every '
+      + 'entrant on this screen is invented, to show what the views look like. No real ranking service is '
+      + 'named here and no week has actually been graded. '
+      + '<a href="rankings.html" style="color:var(--warn)">Leave demo mode</a>.';
+    tabs.parentNode.insertBefore(b, tabs);
+  }
+
+  if(DEMO){
+    doc = demoDoc(); window.DD_RANKINGS = doc; demoBanner(); drawAll();
+  } else {
+    fetch(TOTO + "/rankings/grades?season=" + (new Date().getUTCFullYear()))
+      .then(function(r){ if(!r.ok) throw new Error("worker returned " + r.status); return r.json(); })
+      .then(function(d){ doc = d; window.DD_RANKINGS = d; drawAll(); })
+      .catch(function(e){ err = String(e && e.message || e); drawAll(); });
+  }
 
   drawAll();
 })();
@@ -2898,7 +3045,8 @@ window.DD_BOTCTX = {
   ].join(" "),
   ctx: function(){
     var d = window.DD_RANKINGS || null;
-    var spine = "THE DOG TRACK — rankings report card.\n"
+    var spine = (d && d.demo ? "⚠ DEMO MODE IS ON (?demo=1). Every entrant and every score readable on this page right now is INVENTED sample data, not a graded result, and no real ranking service is on screen. Say so in any answer that touches a name or a number.\n\n" : "")
+      + "THE DOG TRACK — rankings report card.\n"
       + "STATUS: " + (d && d.weeks_graded ? (d.weeks_graded + " week(s) graded, season " + d.season) : "no graded weeks yet; season opens Sep 10") + ".\n"
       + "SCORING: full PPR. Method version " + ((d && d.method_version) || "1.0") + ". Provisional: "
       + (d ? String(d.provisional !== false) : "true") + ".\n"
