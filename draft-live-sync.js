@@ -84,15 +84,19 @@
       if(providerOf()==="espn"){
         /* The Worker has already normalised these, including the team-index mapping,
            so there is no per-pick player lookup to do here. A pick whose name has not
-           landed yet is held back rather than written as a blank row: ESPN publishes
-           the roster entry a moment after the pick and the next poll resolves it. */
+           landed yet is held back rather than written as a blank row. */
         const res=await DDProviders.espn.fetchPicks();
         draft={status:res.complete?"complete":res.inProgress?"drafting":"ready"};
         incoming=(res.picks||[]).filter(p=>p.player&&Number.isInteger(p.ti)).map(p=>({
           providerPickId:p.providerPickId, player:p.player, pos:p.pos, ti:p.ti,
           price:p.price==null?0:p.price, nfl:p.nfl, keeper:!!p.keeper, mapping:"mapped"
         }));
-        unresolvedRows=(res.picks||[]).filter(p=>!p.player).map(p=>({
+        /* ⚠️ Before a draft ESPN lists EVERY remaining slot as a pick with playerId "-1"
+           and no name. Counting those as unresolved made an undrafted 12-team league
+           announce "180 players could not be mapped" — an empty board reported as a
+           broken one, and a number that would have sat there shrinking all draft night.
+           Only a pick with a real player id and no name is genuinely unresolved. */
+        unresolvedRows=(res.picks||[]).filter(p=>!p.player&&p.playerId!=="-1"&&p.playerId!=="0").map(p=>({
           providerPickId:p.providerPickId, playerName:"", position:p.pos||"", nflTeam:p.nfl||""}));
       }else{
       const [d,rawPicks]=await Promise.all([DDProviders.sleeper.fetchDraft(L),DDProviders.sleeper.fetchPicks(L)]);
