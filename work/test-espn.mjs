@@ -85,6 +85,18 @@ console.log("\ndraft picks");
   ok("in-progress state is surfaced", d.inProgress === true && d.complete === false);
 }
 
+console.log("\nan undrafted league");
+{
+  const empty = league();
+  empty.draftDetail = { drafted:false, inProgress:false, picks:
+    Array.from({length:204},(_,i)=>({ id:i+1, playerId:-1, teamId:0, roundId:1+Math.floor(i/12), roundPickNumber:(i%12)+1, overallPickNumber:i+1, bidAmount:0, keeper:false })) };
+  const d = mod.espnNormalizePicks(empty);
+  ok("ESPN's pre-made empty slots are not counted as pending picks", d.diagnostics.unnamed === 0, JSON.stringify(d.diagnostics));
+  ok("they are reported as empty slots instead", d.diagnostics.empty === 204 && d.diagnostics.made === 0, JSON.stringify(d.diagnostics));
+  ok("and the note says the draft has not started", /No picks yet/.test(d.diagnostics.note), d.diagnostics.note);
+  ok("none of them can reach the board", d.picks.filter(p=>p.player && Number.isInteger(p.ti)).length === 0);
+}
+
 console.log("\nempty and hostile shapes");
 {
   ok("a league with no draft yet returns no picks", mod.espnNormalizePicks({ teams: [], draftDetail: { picks: [] } }).picks.length === 0);

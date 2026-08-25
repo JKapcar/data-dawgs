@@ -263,9 +263,28 @@
 
   /* The Worker already returns the site's league shape, so importing is a rename
      into the envelope the rest of the rig expects rather than a second parse. */
+  /* ESPN tells us reception points and whether a superflex/OP slot exists; turning that
+     into one of THIS site's price columns is a Data Dawgs decision, so it is made here
+     rather than in the Worker. It matters: a 12-team superflex HALF league priced off the
+     superflex FULL column reads Josh Allen at $49 instead of $52. */
+  function espnScoringKey(scoring){
+    const ppr = scoring && typeof scoring.ppr === "number" ? scoring.ppr : null;
+    const sfx = !!(scoring && scoring.superflex);
+    if(sfx){
+      if(ppr === 0.5) return "sfhalf12";
+      if(ppr === 1)   return "sf";
+      return null;              // superflex standard has no column here
+    }
+    if(ppr === 1)   return "full";
+    if(ppr === 0.5) return "half";
+    if(ppr === 0)   return "std";
+    return null;
+  }
+
   function importEspn(payload){
     const L=payload&&payload.league;
     if(!L) throw new Error("ESPN returned no league.");
+    const key=espnScoringKey(L.scoring);
     return {
       provider:{name:"espn",leagueId:L.leagueId,draftId:null,sourceUrl:null,
         syncMode:"live-read",status:payload.draft&&payload.draft.inProgress?"drafting":"ready"},
@@ -278,10 +297,12 @@
         draftType:L.draftType,
         rosterSlots:(L.rosterSlots||[]).filter(s=>s.slot!=="BENCH"&&s.slot!=="IR"),
         benchSlots:((L.rosterSlots||[]).find(s=>s.slot==="BENCH")||{}).count||0,
-        scoring:L.scoring
+        scoring:Object.assign({},L.scoring,{mode:key||"custom"})
       },
-      diagnostics:{warnings:(L.scoring&&L.scoring.mode==="custom")
-        ? ["ESPN reports a reception value this rig has no column for, so Market Value is shown in half-PPR dollars. Check the format before you trust a price."] : []}
+      diagnostics:{warnings:key ? [] : [
+        "ESPN reports "+(L.scoring&&L.scoring.superflex?"a superflex league at ":"")+
+        (L.scoring&&L.scoring.ppr!=null?L.scoring.ppr:"an unknown")+" points per reception, which this rig has no price column for. "+
+        "Market Value falls back to 12-team half-PPR dollars — check the format before you trust a price."]}
     };
   }
 
@@ -293,5 +314,5 @@
       disconnect:disconnectEspn,fetchLeague:fetchEspnLeague,fetchPicks:fetchEspnPicks,importLeague:importEspn}
   };
   root.DDProviders=providers;
-  if(typeof module!=="undefined"&&module.exports) module.exports={parseProvider,parseSleeper,parseYahoo,parseEspn,importEspn,rosterSlots,scoringConfig,mapPlayer,normalizePick,normalizeImport,chooseDraft};
+  if(typeof module!=="undefined"&&module.exports) module.exports={parseProvider,parseSleeper,parseYahoo,parseEspn,importEspn,espnScoringKey,rosterSlots,scoringConfig,mapPlayer,normalizePick,normalizeImport,chooseDraft};
 })(typeof window!=="undefined"?window:globalThis);

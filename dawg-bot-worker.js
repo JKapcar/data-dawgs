@@ -954,13 +954,19 @@ function espnNormalizePicks(body) {
       keeper: !!p.keeper,
     };
   });
-  const unresolved = picks.filter(p => !p.player).length;
+  /* Before a draft starts ESPN already lists every slot, as playerId "-1" with no team.
+     Those are not picks waiting on a name — they are an empty board — and counting them
+     as pending made an undrafted league look like 204 stuck picks. */
+  const made = picks.filter(p => p.playerId !== "-1" && p.playerId !== "0");
+  const pending = made.filter(p => !p.player).length;
   return {
     complete: !!(body.draftDetail && body.draftDetail.drafted),
     inProgress: !!(body.draftDetail && body.draftDetail.inProgress),
     picks,
-    diagnostics: { total: picks.length, unnamed: unresolved,
-      note: unresolved ? "Some picks have no name yet: ESPN publishes the roster entry a moment after the pick. They resolve on the next poll." : "" },
+    diagnostics: { total: picks.length, made: made.length, empty: picks.length - made.length, unnamed: pending,
+      note: pending
+        ? "Some picks have no name yet: ESPN publishes the roster entry a moment after the pick. They resolve on the next poll."
+        : (made.length ? "" : "No picks yet — ESPN is listing " + (picks.length - made.length) + " empty draft slots.") },
   };
 }
 

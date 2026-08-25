@@ -474,6 +474,13 @@
       $("espnS2").value=""; $("espnSwid").value="";
       const full=await DDProviders.espn.fetchLeague();
       const imported=DDProviders.espn.importLeague(full);
+      /* Reconnecting the same ESPN league must UPDATE it, not add a second copy.
+         importLeague has no DDLeague access so it returns id:null; match on the
+         provider league id here and reuse the existing row's id when there is one. */
+      const existing=(DDLeague.list()||[]).map(r=>DDLeague.load(r.id)).find(l=>
+        l && l.provider && l.provider.name==="espn" &&
+        String(l.provider.leagueId)===String(imported.provider.leagueId));
+      if(existing) imported.id=existing.id;
       const league=DDLeague.save(imported);
       const state=DDLeague.stateFromLeague(league);
       DDLeague.saveState(league.id,state);
