@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
+<meta name="apple-mobile-web-app-title" content="Data Dawgs">
+<meta name="theme-color" content="#161009" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f2ecdf" media="(prefers-color-scheme: light)">
 <title>nfelo Power Ratings · Data Dawgs</title>
 <link rel="icon" href="data:image/png;base64,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">
 <style>
@@ -1567,13 +1572,13 @@ UNDO THE LAST SALE: the "Last sale" row sits under the entry bar and has an "Und
 FIX AN OLDER PICK: open the gear Menu, then "Pick log (undo / edit)". Every pick there has an editable price box and a team dropdown, and both save the moment you change them. The x button on a row deletes that pick. Price edits are clamped so a team cannot be pushed past $0.
 NOMINATION QUEUE (gear Menu): type a name and press +. Click a queued name to load it into the entry bar. The x removes it. Only the operator sees this.
 BEST AVAILABLE: four buttons under the entry bar showing the top remaining QB, RB, WR and TE with an inflation-adjusted price. Tapping one loads that player.
-THE MONEY PILE: every team's remaining budget, sorted, at the bottom of the operator page.
+THE MONEY PILE: every team's remaining budget, sorted — on the Fantasy Draft Dashboard's summary strip.
 GEAR MENU also holds: Setup, "Start <n>s timer", "Advance nomination", "Projector shows" (Draft Board / Rosters / What's Left / Report Card), Recap, Export CSV, and Reset draft.
 RESET DRAFT is deliberately two clicks: the first turns it into "Click again to RESET ALL", and it disarms itself after about 4 seconds.
 SETUP holds: Budget $, Roster spots, Values (Half PPR / Full PPR / Superflex), Timer secs, My team, Voice announcer, Snark mode, and Announcer voice.
 EXPORT CSV columns: pick, player, pos, team, owner, price, etr_value, keeper.
 ON THE CLOCK is shown in the page header. "Advance nomination" moves it to the next team. Undoing a non-keeper pick steps it back one.
-OTHER PAGES: Big Board is the projector view — it is deliberately not in the nav, open it by URL on the projector machine, and what it displays is set from "Projector shows". LIVE DRAFT in the nav is the read-only board for everyone else. Draft Data Viz, Report Card, Cheat Sheet and Master Data are read-only views of the same draft.
+OTHER PAGES: Big Board is the projector view — it is deliberately not in the nav, open it by URL on the projector machine, and what it displays is set from "Projector shows". The read-only board for everyone else is the Fantasy Draft Dashboard → Live tab; board.html?view=live opens that same view directly. There is no LIVE DRAFT item in the nav — it was retired 8/1. Draft Data Viz, Report Card, Cheat Sheet and Master Data are read-only views of the same draft.
 STATE: everything saves in the browser on that device. A different device shows a different draft unless the live mirror is switched on. Pages are cached for offline so the draft survives losing wifi — but Toto itself needs the network, so say so if someone asks for help while offline.`;
 
 /* The manual above is the draft rig, because that is where how-to questions used to
@@ -1595,8 +1600,9 @@ strategy.html — the 2026 draft thesis, a dated snapshot of one analyst's argum
 nfl.html — the NFL hub. stats.html — the EPA explorer. nfelo.html — nfelo power ratings and their backtest. calculators.html — ten deterministic calculators, nothing stored.
 cfb.html — the College Football lab: 2025 results, one retrodictive Elo, a matchup calculator. Its build roadmap is at cfb.html#roadmap and is our own planning surface, not a public destination.
 markets.html — the prediction-markets section, its own top-level group labelled Markets. ai.html — the A.I. Model Board, its own top-level group. Both are deliberately near-empty and say so above the fold; do not imply either has tools yet.
-data.html — the Library: every machine-readable file, shelved by the surface that owns it. connect.html — point your own AI at the site over MCP.
+data.html — the Library: every machine-readable file, shelved by the surface that owns it. connect.html — forwards to the connector card on signon.html#connect, which is where you point your own AI (Claude, ChatGPT, Gemini or any MCP client) at the site.
 signon.html — sign in, sign up, recover an account; every other page's sign-in chip lands here. dawgs.html — the Dawg Pound: Rollo, the OG Data Dawg, and the DDCC profile. swoledawg.html — body and training. fantasy-warroom.html — the fantasy league war room.
+rankings.html — the Dog Track: ranking services graded against actual finishes. draft-leagues.html — create or join a draft league, and import a Sleeper league (Yahoo and ESPN are manual). cfb-power.html — CFB conference power curves. radar.html — the radar view.
 Machine surfaces: /data/index.json lists every file with its as_of and hash; /llms.txt is the curated index; /data/surfaces.json maps pages to files and MCP tools.
 NAVIGATION: the banner is Sign in/account, then exactly seven groups — Arena, Markets, A.I., NFL, CFB, Data, Dawgs — then the theme button. The wordmark is Home. There is no top-level Sports group and no top-level Receipts group: NFL and CFB are separate groups, and receipts.html is an item under Data.
 TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a standard declared in advance. DawgHouse = stopped, with the blocker still attached.`;
@@ -2029,6 +2035,15 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 @media (max-width:760px){#ddbDock{right:0;left:0;bottom:0;width:100vw;border-radius:14px 14px 0 0;max-height:74vh}
   #ddbLaunch{right:12px;bottom:12px;font-size:15px;padding:7px 18px 7px 7px}
   #ddbLaunch .dg{width:36px;height:36px} #ddbLaunch .dg img{width:23px;height:29px}}
+/* iOS Safari zooms the viewport when a focused control is under 16px, and the page
+   never zooms back. Everything typed into on a phone — the Toto composer, the draft
+   entry bar, board search, a Bozo leg — has to clear 16px. The id-based page rules it
+   overrides are all more specific, so this is one of the few places !important is the
+   correct tool rather than a shortcut. */
+@media (max-width:600px){
+  input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=color]),
+  select,textarea{font-size:16px!important}
+}
 @media print{#ddbLaunch,#ddbDock{display:none!important}}`;
     document.head.appendChild(s);
   }

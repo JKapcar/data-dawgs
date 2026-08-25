@@ -83,14 +83,29 @@
       .replace(/\b(jr|sr|ii|iii|iv)\.?$/g,"").replace(/[^a-z0-9]+/g," ").trim();
   }
 
+  // Sleeper says DEF, the pool says DST, and older pool rows said D. One helper, both
+  // sides: the previous `.replace("D","DST")` turned "DEF" into "DSTEF", so no defense
+  // ever matched and every DST pick imported unresolved with a $0 value.
+  function normPos(value){
+    const v=clean(value).toUpperCase();
+    return (v==="DEF"||v==="D"||v==="DST") ? "DST" : v;
+  }
+
   function mapPlayer(meta,playerId,pool){
     const name=clean(`${meta.first_name||""} ${meta.last_name||""}`)||clean(meta.player_name||meta.name);
-    const pos=clean(meta.position).toUpperCase().replace("DEF","DST");
+    const pos=normPos(meta.position);
     const team=clean(meta.team).toUpperCase();
     const candidates=Array.isArray(pool)?pool:[];
     const known=candidates.find(p=>String(p.sleeperId||p.providerId||"")===String(playerId));
     if(known) return {status:"mapped",strategy:"provider-id",player:known,name,pos,team};
-    const sameName=candidates.filter(p=>normalizeName(p.name)===normalizeName(name) && String(p.pos||"").toUpperCase().replace("D","DST")===pos);
+    const samePos=candidates.filter(p=>normPos(p.pos)===pos);
+    // a defense is a team, not a person: "Philadelphia Eagles", "Philadelphia Eagles DST"
+    // and "PHI DST" are all the same unit, so match those on the NFL team instead
+    if(pos==="DST"){
+      const byTeam=samePos.find(p=>String(p.team||"").toUpperCase()===team);
+      if(byTeam) return {status:"mapped",strategy:"team-defense",player:byTeam,name,pos,team};
+    }
+    const sameName=samePos.filter(p=>normalizeName(p.name)===normalizeName(name));
     const exact=sameName.find(p=>String(p.team||"").toUpperCase()===team);
     if(exact) return {status:"mapped",strategy:"name-position-team",player:exact,name,pos,team};
     if(sameName.length===1) return {status:"mapped",strategy:"name-position",player:sameName[0],name,pos,team};

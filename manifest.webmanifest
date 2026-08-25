@@ -1,0 +1,68 @@
+{
+  "id": "/",
+  "name": "Data Dawgs",
+  "short_name": "Data Dawgs",
+  "description": "Forecasting, fantasy football, betting markets and EPA with receipts.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#161009",
+  "background_color": "#161009",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "/assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Fantasy Draft Dashboard",
+      "short_name": "Draft",
+      "url": "/dashboard.html",
+      "icons": [
+        {
+          "src": "/assets/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Live draft board",
+      "short_name": "Live board",
+      "url": "/board.html?view=live",
+      "icons": [
+        {
+          "src": "/assets/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Bozo",
+      "short_name": "Bozo",
+      "url": "/bozo.html",
+      "icons": [
+        {
+          "src": "/assets/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}

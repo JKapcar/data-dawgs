@@ -1,7 +1,11 @@
 // Data Dawgs service worker — draft-night insurance.
+// VERSION = md5 of every *.html and *.js in the repo root (sw.js itself excluded),
+// concatenated in sorted order, first 10 hex. It covers the scripts as well as the
+// pages because the draft rig's behaviour lives in draft-*.js: hashing only the HTML
+// meant a JS-only fix never invalidated a phone's cache.
 // HTML is network-first (so deploys land immediately) with a cache fallback,
 // so a dead venue wifi can't take the draft down mid-auction.
-const VERSION = "6d968a9f1f";
+const VERSION = "eb0af814b7";
 const CACHE = "dd-" + VERSION;
 
 // the pages that must survive a network drop (stats.html is 2MB — cached on first visit instead)
@@ -14,7 +18,11 @@ const CORE = [
   // The challenge board is worth having offline: the schedule and the model lines still
   // render from cache, and a save that cannot reach the Worker fails visibly rather than
   // looking like it worked.
-  "/challenge.html"
+  "/challenge.html",
+  // the weekly game and the sign-on helper are opened on phones like everything else
+  "/bozo.html", "/dawg-slate.js",
+  // installed to a home screen, these are what the launcher asks for
+  "/manifest.webmanifest", "/assets/icon-192.png", "/assets/icon-512.png", "/assets/icon-180.png"
 ];
 // the horn is precached, not left to cache-first on first play: draft night is the
 // first time it ever fires, and a venue wifi hiccup at that exact moment would eat it
@@ -31,8 +39,13 @@ self.addEventListener("install", e=>{
   e.waitUntil((async()=>{
     const c = await caches.open(CACHE);
     // core pages must all land; media is best-effort (cross-origin, opaque)
-    await c.addAll(CORE).catch(()=>{});
-    await c.addAll(CORE_MEDIA).catch(()=>{});
+    // addAll is atomic — one bad entry throws away the entire precache with no signal.
+    // Per-URL adds mean a typo costs one page instead of the whole offline story.
+    const misses = [];
+    await Promise.all(CORE.concat(CORE_MEDIA).map(u =>
+      c.add(u).catch(()=>{ misses.push(u); })
+    ));
+    if(misses.length) console.warn("[dd-sw] precache missed:", misses);
     await Promise.all(MEDIA.map(u =>
       fetch(u, {mode:"no-cors"}).then(r=>c.put(u, r)).catch(()=>{})
     ));
@@ -98,7 +111,9 @@ self.addEventListener("fetch", e=>{
           new Promise((_,rej)=>setTimeout(()=>rej(new Error("slow")), 4000))
         ]);
         const c = await caches.open(CACHE);
-        c.put(new Request(url.pathname), net.clone()).catch(()=>{});
+        // only a good response earns a place in the cache — a 404 or a 502 caught during a
+        // deploy would otherwise become this page's offline copy until the next version bump
+        if(net && net.ok) c.put(new Request(url.pathname), net.clone()).catch(()=>{});
         return net;
       }catch(err){
         const c = await caches.open(CACHE);
@@ -108,6 +123,24 @@ self.addEventListener("fetch", e=>{
             || new Response("<h1>Offline</h1><p>This page hasn't been cached yet.</p>",
                             {headers:{"Content-Type":"text/html"}});
       }
+    })());
+    return;
+  }
+
+  // The draft scripts carry the rig's behaviour and VERSION is computed over the HTML,
+  // so a JS-only fix would otherwise sit behind a cache-first hit forever. Network-first
+  // with a cache fallback keeps offline working and still lets a fix land.
+  if(/^\/(draft-[a-z-]+|dawg-slate)\.js$/.test(url.pathname)){
+    e.respondWith((async()=>{
+      const c = await caches.open(CACHE);
+      try{
+        const net = await Promise.race([
+          fetch(req),
+          new Promise((_,rej)=>setTimeout(()=>rej(new Error("slow")), 4000))
+        ]);
+        if(net && net.ok) c.put(req, net.clone()).catch(()=>{});
+        return net;
+      }catch(err){ return (await c.match(req)) || Response.error(); }
     })());
     return;
   }

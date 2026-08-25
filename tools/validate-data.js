@@ -905,6 +905,36 @@ console.log('\ntier_meaning matches its source of truth');
   }
 }
 
+// ---------------------------------------------------------------------------
+// Defenses: one row per team, and never the DEF spelling.
+// The 2026-08-24 workbook shipped every defense three times — "Philadelphia Eagles DST"
+// (pos DEF, $2.10), "Philadelphia Eagles" (pos DST, $1.50) and "PHI DST" (pos DST, bye 0,
+// $0.80). The operator recorded the top-ranked one as pos DEF, which fills no DST slot, so
+// the unit was drafted and then benched. Three prices for one unit is also three answers
+// to "what is the Eagles defense worth". This check is what keeps that from coming back.
+// ---------------------------------------------------------------------------
+console.log('\nplayer pool: one defense per team');
+{
+  const poolPath = path.join(DATA, 'pool.json');
+  if (!fs.existsSync(poolPath)) fail('pool.json missing');
+  else {
+    const pool = JSON.parse(fs.readFileSync(poolPath, 'utf8'));
+    const rows = Array.isArray(pool.data) ? pool.data : [];
+    const defs = rows.filter(r => ['DEF', 'DST', 'D'].includes(String(r.pos || '').toUpperCase()));
+    const wrongPos = defs.filter(r => r.pos !== 'DST');
+    const byTeam = new Map();
+    for (const r of defs) byTeam.set(r.team, (byTeam.get(r.team) || 0) + 1);
+    const dupes = [...byTeam].filter(([, n]) => n > 1);
+    const noBye = defs.filter(r => !(r.bye > 0));
+    if (wrongPos.length) fail(`pool.json: ${wrongPos.length} defense row(s) are not pos "DST" (${wrongPos.slice(0, 3).map(r => `${r.name}=${r.pos}`).join(', ')})`);
+    if (dupes.length) fail(`pool.json: ${dupes.length} team(s) have more than one defense row (${dupes.slice(0, 3).map(([t, n]) => `${t}x${n}`).join(', ')})`);
+    if (noBye.length) fail(`pool.json: ${noBye.length} defense row(s) carry no bye week (${noBye.slice(0, 3).map(r => r.name).join(', ')})`);
+    if (byTeam.size !== 32) fail(`pool.json: ${byTeam.size} teams have a defense row, expected 32`);
+    if (!wrongPos.length && !dupes.length && !noBye.length && byTeam.size === 32)
+      ok(`${defs.length} defense rows, one per team, all pos DST with a real bye`);
+  }
+}
+
 console.log('\nGitHub Pages serving');
 if (!fs.existsSync(path.join(ROOT, '.nojekyll')))
   fail('.nojekyll missing — Jekyll will drop dot-directories such as /.well-known/');

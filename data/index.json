@@ -9,9 +9,9 @@
    {
     "path": "/data/pool.json",
     "url": "https://datadawgs216.com/data/pool.json",
-    "bytes": 161891,
+    "bytes": 147064,
     "as_of": "2026-08-24",
-    "sha256": "3e17cfa176b899d72c055849ad5d00a58a8f109a2528fc0720a6363023531d9c",
+    "sha256": "3cbe467ab7e6f016a2519dae97fcf8353d36ae9ee53626c5b17c2e92194b84d7",
     "note": "MV is an auction-dollar value, NOT a points projection. The source workbook contained 705 rows; 28 duplicate aliases were resolved to the best-ranked row, leaving 677 published players. Always state the selected league format and the 2026-08-24 capture date when quoting a value."
    },
    {
@@ -19,7 +19,7 @@
     "url": "https://datadawgs216.com/data/receipts.json",
     "bytes": 42989,
     "as_of": "2026-08-06",
-    "sha256": "a39f7772529e7c2b7d5eaea424dd033a085449b1d9750d568e7f27b890fc4676",
+    "sha256": "4bcc17860a21e3bfd380688530ecec26e300c44638c149093d8972304db9cb0e",
     "note": "These are PRE-REGISTERED calls: written down before the season and locked with a SHA-256 hash. n=272 games, 51 of them carrying a devigged closing-line benchmark. None are graded yet — the 2026 season has not started. Anything claiming a hit rate for these is wrong."
    },
    {
@@ -27,7 +27,7 @@
     "url": "https://datadawgs216.com/data/nfelo.json",
     "bytes": 9992,
     "as_of": "2026-08-06",
-    "sha256": "e2d5268d221b66edce2f92aca8d80efb15662d9ce3c94b5d45492f86174dbe0d",
+    "sha256": "6b022543a30ea09fdad01a5fefdd2847845a1cfeaf884dc432b475096d8f4bf5",
     "note": "Backtest figures span 2009-2025 and OVERLAP the model's own optimisation window, so they are in-sample-ish and should not be read as out-of-sample skill. nfelo straight-up 0.6674 vs market 0.6677 over n=4053 is a difference well inside noise (SE 0.20 pp)."
    },
    {
@@ -35,7 +35,7 @@
     "url": "https://datadawgs216.com/data/models.json",
     "bytes": 2794,
     "as_of": "2026-08-06",
-    "sha256": "1f36571df701fce74534c25cc226f45a45040b5f389cc0e75582a3403eaf6c01",
+    "sha256": "2ce630c40cca5fd890efc94c1bb65bcbc3ac9878f31129ae5b4889e4e43678c1",
     "note": "These are the exact parameters the site uses. Return them alongside any number you derive from them. The margin model is a linear Elo-to-points map with a normal residual — it is deliberately simple and its residual SD (13.18) is larger than most people intuit, which is the whole point."
    },
    {
@@ -43,7 +43,7 @@
     "url": "https://datadawgs216.com/data/survivor.json",
     "bytes": 52900,
     "as_of": "2026-08-06",
-    "sha256": "bcb6c21ab6125f2c23c1a6d570215f590bcf524e0cbf2e0fda2d0a690b2c3f62",
+    "sha256": "08c1f34f5eb2bc94cfbff001187b7fcbbb18a7dbb90e090038f65108b1f15dc3",
     "note": "Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: \"market\" = derived from a real line, \"model\" = Elo-only. Ownership is modelled, not observed."
    },
    {
@@ -51,7 +51,7 @@
     "url": "https://datadawgs216.com/data/epa-teams.json",
     "bytes": 85221,
     "as_of": "2026-07-29",
-    "sha256": "e5ab1f25df52fab03ffe13af48329b4588900066d7ff7bd23da53638eb21fbf9",
+    "sha256": "ca77443f685eaf6c1164622195dd60c8e1256535e89146b6db6647a22b96fa5a",
     "note": "Regular season only, plays with a down (excludes kickoffs/XPs/etc). Per-season tables use a 200-dropback minimum for QBs; the pooled table uses 500. These are descriptive aggregates, not projections — team EPA is famously unstable year to year, so do not read 2025 as 2026."
    },
    {
@@ -59,7 +59,7 @@
     "url": "https://datadawgs216.com/data/league.json",
     "bytes": 1992,
     "as_of": "2026-08-06",
-    "sha256": "b527b4a88eff27ee88f822f58bb529c0d2bf9312cab16873855d2fb23ce7c799",
+    "sha256": "b547263828c6d591898b1bc5e36ba0eeb0a9ff2cfd3cc4d77b2925f4b6d2a2a8",
     "note": "Public configuration only. No rosters, no tokens, nothing league-private lives in this repo."
    },
    {
@@ -67,7 +67,7 @@
     "url": "https://datadawgs216.com/data/bozo-rules.json",
     "bytes": 7699,
     "as_of": "2026-08-06",
-    "sha256": "9861573c004e6c8810c476f30ad94d776be49e17807ab4ba22d87b623697a357",
+    "sha256": "40adcd0750b7420d9ec02e03c73d9800c5eaa4e465af179010d43b6c45c0d356",
     "note": "The board is fully open by design — every leg, price and timestamp is visible to everyone and to everyone's bots before they place. That was a decision, not an oversight."
    },
    {
@@ -75,7 +75,7 @@
     "url": "https://datadawgs216.com/data/upstream-models.json",
     "bytes": 7874,
     "as_of": "2026-08-08",
-    "sha256": "095d0b58d78284e92e2022e8106c06a303bf1990883c8e990707b0338567d9b8",
+    "sha256": "cc563b002cf534b83454f8cad1e720e153b16121600b5749c8685dfabf1e6d7c",
     "note": "License status is an implementation gate, not legal advice. Public code without a verified reusable license is not copied or repackaged, and a reference-only source is not republished in any form."
    },
    {
@@ -83,7 +83,7 @@
     "url": "https://datadawgs216.com/data/model-contracts.json",
     "bytes": 14355,
     "as_of": "2026-08-10",
-    "sha256": "d65dc47b2d78af99c47f780a376eb71b6287859387e980fa184963632a47ae35",
+    "sha256": "6f35380facf7c4a267b255acbd060e3de00915d840fc5cd4a34973fc53fdd188",
     "note": "A contract is not a forecast. It prevents incompatible models and missing values from being silently normalized into false agreement."
    },
    {
@@ -91,7 +91,7 @@
     "url": "https://datadawgs216.com/data/pound-tools.json",
     "bytes": 132102,
     "as_of": "2026-08-08",
-    "sha256": "d0300ebfb9c7bdc12b4de94d782005170446bff5deb96181570b05871f9f2b83",
+    "sha256": "6b3c76050511331c4930cc45be1b916346eaa8cff0432bbe14a1cb0808889fb3",
     "note": "Two kinds of entry share this inventory. kind \"tool\" (NFL) carries delivery status. kind \"roadmap-idea\" (College Football) carries recommendation plus evidence-backed lifecycle and implementation state. A CFB artifact may be implemented without any MCP tool; candidate_mcp_tools are reservations and remain non-callable unless the independent Worker registry proves otherwise."
    },
    {
@@ -99,15 +99,15 @@
     "url": "https://datadawgs216.com/data/tier-audit.json",
     "bytes": 7291,
     "as_of": "2026-08-07",
-    "sha256": "6f482ef2483b62c113bce92750d1520f2a660cb7677e8aadf28a69905799ff68",
+    "sha256": "ab0b0e1820cbcd1d4dc9b703b7e895d6ae7796b09e8e1ae9074e0debecdfefd1",
     "note": "ONE REVIEWER, ONE DAY, reasoning from the code and the published data. This is a judgment, not a measurement — which is the gate’s known weakness and the reason the audit is published rather than held. Result: NO promotions, NO demotions. That is a suspiciously comfortable outcome and is flagged as such; it survives only because every collar came back with a condition attached. Treat these verdicts as falsifiable."
    },
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
     "bytes": 33605,
-    "as_of": "2026-08-24",
-    "sha256": "984f14da69eef6591f530e716d7ce480914c0856adeb323cdb032f442dc73831",
+    "as_of": "2026-08-25",
+    "sha256": "124420ccaaa72d86a0c5ab298de80be01de436f10fe485be20fa5f3cb09a0d31",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -251,15 +251,15 @@
     "url": "https://datadawgs216.com/data/epa-players.json",
     "bytes": 151018,
     "as_of": "2026-07-29",
-    "sha256": "bfce8119e45a8781f6c3567c687a61f8e2437632698e8d0a44a7441e2c2b4d7e",
+    "sha256": "f93eea51b2c940f1943c599d757e99c5177efe5485d375070bc8ed64ccb3c874",
     "note": "Aggregated by the PRIMARY BALL HANDLER: the passer on a dropback, the ball carrier on a rush. There is no receiving EPA here and there cannot be — the play-by-play snapshot carries one name per play, so the whole value of a completed pass is credited to the quarterback and a receiver appears only for his own carries. Regular season only, plays with a down. Descriptive aggregates, not projections: do not read 2025 as 2026."
    },
    {
     "path": "/data/receipts-inventory.json",
     "url": "https://datadawgs216.com/data/receipts-inventory.json",
     "bytes": 3415,
-    "as_of": "2026-08-24",
-    "sha256": "3263523613762a721046cdecb4bfe95eb3c999d8063a4c9fdad2f16ef6765015",
+    "as_of": "2026-08-25",
+    "sha256": "13275997f212819a7d6c35a3ae132471c298f6620b05883c65a190ece8d7106e",
     "note": "An INVENTORY, not a scoreboard. There is no honest Brier across domains, so this file counts what has been registered and settled and never scores it. The ledgers OVERLAP: receipts.json and the nfelo half of model-receipts.json are the same forecasts, as are 538-classic.json and its half. aggregate is therefore computed from aggregate.counted_from alone; aggregate.naive_sum is what summing the registered column would wrongly give, published so it can be named and corrected rather than quietly reproduced."
    },
    {
@@ -274,8 +274,8 @@
     "path": "/data/model-board.json",
     "url": "https://datadawgs216.com/data/model-board.json",
     "bytes": 14489,
-    "as_of": "2026-08-24",
-    "sha256": "ef990ed1d0206fa8bdb3907ed4136a476819377f98bc2de7ce41eb43c2605ce6",
+    "as_of": "2026-08-25",
+    "sha256": "35348c71dc18344976c33169946a7d1a1dc84e9aacbefeaf95bbe3e6371636aa",
     "note": "The per-model board behind receipts.html#models. Rows and columns are DERIVED from the ledger's distinct model_id values, so registering a new model puts it on the board with no page edit. Per-game spread statistics are computed over the independent lines only -- an ensemble of two models averaged back in with them counts the same two beliefs twice. ddpr-nfl-linear is registered and carries displayed:false; it is published here for completeness and must not be rendered."
    },
    {

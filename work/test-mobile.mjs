@@ -20,6 +20,7 @@ let pass = 0, fail = 0;
 const ok = (n, c, x) => { c ? (pass++, console.log("  ok   " + n)) : (fail++, console.log("  FAIL " + n + (x ? "  — " + x : ""))); };
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const POOL_N = JSON.parse(fs.readFileSync(path.join(ROOT, "data/pool.json"), "utf8")).data.length;
 const EXECUTABLE = chromiumExecutable(chromium);
 const SHOTS = process.env.DD_TEST_ARTIFACTS || path.join(ROOT, "work");
 fs.mkdirSync(SHOTS, {recursive:true});
@@ -84,7 +85,10 @@ for (const W of [390, 360]) {
     sameLine(m.cells.act, m.cells.half), `act ${m.cells.act.top} vs half ${m.cells.half.top}`);
   ok(`${W}: full, SF and the note are hidden until asked for`,
     !m.cells.full.vis && !m.cells.sf.vis && !m.cells.note.vis);
-  ok(`${W}: all 459 players are still rendered`, m.nRows === 459, String(m.nRows));
+  // read the expected count from the published pool instead of a literal: the pool is
+  // re-captured during the season and a hard-coded number turns every refresh into a
+  // failing test that says nothing (2026-08-25: 459 -> 613 when defenses were deduped)
+  ok(`${W}: all ${POOL_N} players are still rendered`, m.nRows === POOL_N, String(m.nRows));
 
   console.log(`\nthe chevron at ${W}px`);
   const before = await p.evaluate(() => document.querySelector("#board tbody tr").getBoundingClientRect().height);

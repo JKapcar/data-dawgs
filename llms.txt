@@ -46,7 +46,7 @@ the sources we read and do not republish. Owns no data file either.
 
 ## Draft
 
-- [Player pool + Market Value](/data/pool.json): 459 players; three auction formats; `as_of 2026-07-29`. MV is not projected points.
+- [Player pool + Market Value](/data/pool.json): 613 players; six auction formats; `as_of 2026-08-24`. MV is not projected points.
 - [Dynasty ranks](/data/dynasty-ranks.json): 334 players/picks; independent 1QB and SF/TE-premium ranks and auction values, not observed prices.
 - [League](/data/league.json): 14 teams, $200, 15 spots, half PPR, no kicker.
 - [2026 strategy](/data/strategy.md): positional curves and format playbooks; testable structure kept apart from analyst priors.
@@ -60,7 +60,7 @@ the sources we read and do not republish. Owns no data file either.
 
 ## Receipts and method
 
-- [Pre-registered forecasts](/data/receipts.json): 272 calls locked 2026-08-06; the hash is in index.json.
+- [Pre-registered forecasts](/data/receipts.json): 272 calls locked 2026-08-06; the lock is `integrity.sha256`.
 - [Survivor receipts](/data/survivor-receipts.json): pre-kickoff top pick, graded after.
 - [Rankings report card](/data/rankings-grades.json): ranking services graded vs actual PPR finishes; pre-registered, derived scores only, ungraded until W1.
 - [Receipt method](/data/receipts-method.md): hypotheses, grading, hash reproduction, tier collar.

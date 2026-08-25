@@ -22,7 +22,10 @@ repo holds flattened, self-contained HTML — those files *are* the source. `sit
    `glob("*.html")` with `assert s.count(old) == 1` per file — the assert catches a page
    that has drifted.
 3. **Any page change ships with a `sw.js` version bump.** `VERSION` is a cache key; it only
-   has to change. Convention: md5 of all `*.html` concatenated in sorted order, first 10 hex.
+   has to change. Convention: md5 of all `*.html` **and `*.js`** (sw.js itself excluded)
+   concatenated in sorted order, first 10 hex. The scripts were added on 2026-08-25: the draft
+   rig's behaviour lives in `draft-*.js`, they are served cache-first, and an HTML-only hash
+   meant a JS-only fix never reached a phone that had already visited.
 4. **No secrets in this repo, ever. It is public.** Keys, tokens and league-private data live
    only in the Cloudflare Worker.
 5. **Verify a deploy landed before running `git reset --hard origin/main`,** and keep the
