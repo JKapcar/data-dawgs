@@ -787,6 +787,265 @@ function sleeperSlimFromRaw(raw) {
   return { players, count };
 }
 
+/* ======================= ESPN fantasy league adapter ====================== */
+/* Why this is server-side at all: ESPN's fantasy read API does not send permissive
+   CORS headers, and a private league needs the espn_s2 / SWID cookies, which belong
+   to espn.com and can never be attached by a page on datadawgs216.com. So the fetch
+   has to happen here. A PUBLIC league needs no cookies at all — /espn/connect tries
+   without them first and only asks for credentials if ESPN refuses.
+
+   ⚠️ espn_s2 and SWID are ACCOUNT-level ESPN session cookies, not league-scoped.
+   Anyone holding them can act as that ESPN user. They are therefore:
+     - never logged, never echoed back in any response, never put in a URL,
+     - encrypted with AES-GCM under a key derived from BOZO_PEPPER + the caller's uid,
+     - stored per uid, and readable only by a request carrying that uid's session,
+     - deletable by the owner via DELETE /espn/connect.
+   The uid, not the display name, is the key: a name is chosen by the user and two
+   accounts may share one. */
+
+const ESPN_READ = "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl";
+const ESPN_KV_PREFIX = "espn:cred:";
+const ESPN_CRED_TTL = 60 * 60 * 24 * 120;   // 120 days; ESPN cookies outlive a season
+
+function espnKvKey(uid) { return ESPN_KV_PREFIX + uid; }
+
+async function espnKey(env, uid) {
+  const base = new TextEncoder().encode(String(env.BOZO_PEPPER || "") + "|espn|" + uid);
+  const material = await crypto.subtle.importKey("raw", base, "HKDF", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    { name: "HKDF", hash: "SHA-256", salt: new TextEncoder().encode("dd-espn-v1"), info: new Uint8Array() },
+    material, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+}
+
+async function espnSeal(env, uid, obj) {
+  const key = await espnKey(env, uid);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv },
+    key, new TextEncoder().encode(JSON.stringify(obj)));
+  return JSON.stringify({ v: 1, iv: [...iv], ct: [...new Uint8Array(ct)] });
+}
+
+async function espnOpen(env, uid, blob) {
+  try {
+    const rec = JSON.parse(blob);
+    if (!rec || rec.v !== 1) return null;
+    const key = await espnKey(env, uid);
+    const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: new Uint8Array(rec.iv) },
+      key, new Uint8Array(rec.ct));
+    return JSON.parse(new TextDecoder().decode(pt));
+  } catch { return null; }
+}
+
+/* One place that talks to ESPN, so the cookie header is built in exactly one place
+   and a caller can never accidentally pass credentials somewhere else. */
+async function espnFetch(leagueId, season, views, cred) {
+  const qs = (views || []).map(v => "view=" + encodeURIComponent(v)).join("&");
+  const url = `${ESPN_READ}/seasons/${encodeURIComponent(season)}/segments/0/leagues/${encodeURIComponent(leagueId)}${qs ? "?" + qs : ""}`;
+  const headers = { Accept: "application/json" };
+  if (cred && cred.s2 && cred.swid) {
+    const swid = String(cred.swid).startsWith("{") ? cred.swid : `{${cred.swid}}`;
+    headers.Cookie = `espn_s2=${cred.s2}; SWID=${swid}`;
+  }
+  let res;
+  try { res = await fetch(url, { headers }); }
+  catch (e) { return { ok: false, status: 0, reason: "ESPN could not be reached from the Worker." }; }
+  if (res.status === 401 || res.status === 403) {
+    return { ok: false, status: res.status, reason: cred
+      ? "ESPN rejected the stored credentials. They usually expire when you sign out of ESPN or change your password — reconnect to refresh them."
+      : "This league is private, so it needs your ESPN credentials. Connect them below." };
+  }
+  if (res.status === 404) return { ok: false, status: 404, reason: "ESPN has no league with that id for that season. Check the league id and the season." };
+  if (!res.ok) return { ok: false, status: res.status, reason: `ESPN answered ${res.status}.` };
+  let body;
+  try { body = await res.json(); } catch { return { ok: false, status: res.status, reason: "ESPN's answer was not JSON." }; }
+  return { ok: true, status: res.status, body };
+}
+
+/* ---- normalisation: ESPN's shapes -> the site's league contract ---------- */
+const ESPN_SLOT = { 0:"QB",2:"RB",4:"WR",6:"TE",16:"DST",17:"K",23:"FLEX",20:"BE",21:"IR",7:"OP" };
+const ESPN_POS  = { 1:"QB",2:"RB",3:"WR",4:"TE",5:"K",16:"DST" };
+
+function espnRosterSlots(settings) {
+  const counts = (settings && settings.rosterSettings && settings.rosterSettings.lineupSlotCounts) || {};
+  const order = [];
+  for (const [id, n] of Object.entries(counts)) {
+    const count = Number(n) || 0;
+    if (!count) continue;
+    const slot = ESPN_SLOT[Number(id)];
+    if (!slot || slot === "IR") continue;          // IR is not drafted
+    order.push({ slot: slot === "OP" ? "SUPERFLEX" : slot === "BE" ? "BENCH" : slot, count });
+  }
+  return order;
+}
+
+function espnScoring(settings) {
+  // Reception points decide half vs full; a superflex/OP slot decides sf.
+  const items = (settings && settings.scoringSettings && settings.scoringSettings.scoringItems) || [];
+  const rec = items.find(i => Number(i.statId) === 53);
+  const ppr = rec ? Number(rec.points) : 0;
+  const counts = (settings && settings.rosterSettings && settings.rosterSettings.lineupSlotCounts) || {};
+  const superflex = Number(counts[7] || 0) > 0;
+  let mode = "custom";
+  if (superflex && [0, 0.5, 1].includes(ppr)) mode = "sf";
+  else if (ppr === 1) mode = "full";
+  else if (ppr === 0.5) mode = "half";
+  else if (ppr === 0) mode = "std";
+  return { mode, ppr: Number.isFinite(ppr) ? ppr : null, superflex };
+}
+
+function espnNormalizeLeague(body) {
+  const s = body && body.settings || {};
+  const draft = s.draftSettings || {};
+  const isAuction = String(draft.type || "").toUpperCase() === "AUCTION";
+  const teams = (body.teams || []).map((t, i) => ({
+    providerId: String(t.id),
+    name: [t.location, t.nickname].filter(Boolean).join(" ").trim() || t.name || `Team ${i + 1}`,
+    owner: (t.owners && t.owners[0]) || "",
+    draftSlot: t.draftDayProjectedRank || null,
+  }));
+  return {
+    provider: "espn",
+    leagueId: String(body.id || ""),
+    season: Number(body.seasonId) || null,
+    name: s.name || "ESPN league",
+    teamCount: Number(s.size) || teams.length || null,
+    draftType: isAuction ? "auction" : "snake",
+    budget: isAuction ? (Number(draft.auctionBudget) || 200) : null,
+    scoring: espnScoring(s),
+    rosterSlots: espnRosterSlots(s),
+    teams,
+  };
+}
+
+/* Picks. ESPN gives playerId only on the pick; names arrive with the roster views,
+   so build the map from whatever the same response already carried rather than
+   pulling the whole player universe on every poll. */
+function espnPlayerNames(body) {
+  const map = new Map();
+  for (const t of body.teams || []) {
+    for (const e of (t.roster && t.roster.entries) || []) {
+      const p = e.playerPoolEntry && e.playerPoolEntry.player;
+      if (p && p.id != null) map.set(String(p.id), {
+        name: p.fullName || "",
+        pos: ESPN_POS[Number(p.defaultPositionId)] || "",
+        team: p.proTeamId != null ? String(p.proTeamId) : "",
+      });
+    }
+  }
+  return map;
+}
+
+function espnNormalizePicks(body) {
+  const names = espnPlayerNames(body);
+  const byTeam = new Map((body.teams || []).map((t, i) => [String(t.id), i]));
+  const picks = ((body.draftDetail && body.draftDetail.picks) || []).map(p => {
+    const meta = names.get(String(p.playerId)) || {};
+    return {
+      providerPickId: String(p.id != null ? p.id : `${p.roundId}-${p.roundPickNumber}`),
+      overall: Number(p.overallPickNumber) || null,
+      round: Number(p.roundId) || null,
+      ti: byTeam.has(String(p.teamId)) ? byTeam.get(String(p.teamId)) : null,
+      providerTeamId: String(p.teamId),
+      playerId: String(p.playerId),
+      player: meta.name || "",
+      pos: meta.pos || "",
+      nfl: meta.team || "",
+      price: p.bidAmount != null ? Number(p.bidAmount) : null,
+      keeper: !!p.keeper,
+    };
+  });
+  const unresolved = picks.filter(p => !p.player).length;
+  return {
+    complete: !!(body.draftDetail && body.draftDetail.drafted),
+    inProgress: !!(body.draftDetail && body.draftDetail.inProgress),
+    picks,
+    diagnostics: { total: picks.length, unnamed: unresolved,
+      note: unresolved ? "Some picks have no name yet: ESPN publishes the roster entry a moment after the pick. They resolve on the next poll." : "" },
+  };
+}
+
+/* ---- routes -------------------------------------------------------------- */
+async function handleEspn(request, url, env, cors) {
+  const kv = env.RL || null;
+  if (!kv) return json({ error: "credential storage is unavailable" }, 503, cors);
+
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 401, cors);
+  // uid, never the display name: names are self-chosen and may repeat.
+  const uid = auth.uid || (auth.user && auth.user.uid) || null;
+  if (!uid) return json({ error: "This account predates per-user ids. Sign in again to connect ESPN." }, 409, cors);
+
+  const path = url.pathname.replace(/^\/espn\/?/, "");
+  const stored = async () => {
+    let blob = null;
+    try { blob = await kv.get(espnKvKey(uid)); } catch { blob = null; }
+    return blob ? espnOpen(env, uid, blob) : null;
+  };
+
+  if (path === "connect" && request.method === "DELETE") {
+    try { await kv.delete(espnKvKey(uid)); } catch {}
+    return json({ ok: true, connected: false }, 200, cors);
+  }
+
+  if (path === "connect" && request.method === "GET") {
+    const cred = await stored();
+    // status only — never the credential
+    return json({ ok: true, connected: !!cred,
+      leagueId: cred ? cred.leagueId : null, season: cred ? cred.season : null,
+      connectedAt: cred ? cred.at : null }, 200, cors);
+  }
+
+  if (path === "connect" && request.method === "POST") {
+    let body = {};
+    try { body = await request.json(); } catch { return json({ error: "Send JSON." }, 400, cors); }
+    const leagueId = String(body.leagueId || "").trim();
+    const season = String(body.season || "").trim();
+    if (!/^\d{1,12}$/.test(leagueId)) return json({ error: "That does not look like an ESPN league id." }, 400, cors);
+    if (!/^\d{4}$/.test(season)) return json({ error: "Season must be a four-digit year." }, 400, cors);
+    const s2 = body.s2 == null ? "" : String(body.s2).trim();
+    const swid = body.swid == null ? "" : String(body.swid).trim();
+    if ((s2 && !swid) || (swid && !s2)) return json({ error: "ESPN needs both espn_s2 and SWID, or neither." }, 400, cors);
+    if (s2.length > 4096 || swid.length > 256) return json({ error: "Those values are longer than ESPN's." }, 400, cors);
+
+    // Public first: if the league reads without credentials, store none.
+    let cred = null;
+    let probe = await espnFetch(leagueId, season, ["mSettings"], null);
+    if (!probe.ok && (probe.status === 401 || probe.status === 403)) {
+      if (!s2) return json({ error: probe.reason, needsCredentials: true }, 401, cors);
+      cred = { s2, swid };
+      probe = await espnFetch(leagueId, season, ["mSettings"], cred);
+    }
+    if (!probe.ok) return json({ error: probe.reason, needsCredentials: probe.status === 401 || probe.status === 403 }, 400, cors);
+
+    const record = { leagueId, season: Number(season), at: new Date().toISOString(),
+      s2: cred ? cred.s2 : "", swid: cred ? cred.swid : "" };
+    try { await kv.put(espnKvKey(uid), await espnSeal(env, uid, record), { expirationTtl: ESPN_CRED_TTL }); }
+    catch { return json({ error: "Could not save the connection." }, 500, cors); }
+    const league = espnNormalizeLeague(probe.body);
+    return json({ ok: true, connected: true, private: !!cred, league }, 200, cors);
+  }
+
+  if (path === "league" && request.method === "GET") {
+    const cred = await stored();
+    if (!cred) return json({ error: "No ESPN league connected for this account." }, 404, cors);
+    const r = await espnFetch(cred.leagueId, cred.season,
+      ["mSettings", "mTeam", "mRoster", "mDraftDetail"], cred.s2 ? cred : null);
+    if (!r.ok) return json({ error: r.reason, needsCredentials: r.status === 401 || r.status === 403 }, 400, cors);
+    return json({ ok: true, league: espnNormalizeLeague(r.body), draft: espnNormalizePicks(r.body) }, 200, cors);
+  }
+
+  if (path === "picks" && request.method === "GET") {
+    const cred = await stored();
+    if (!cred) return json({ error: "No ESPN league connected for this account." }, 404, cors);
+    const r = await espnFetch(cred.leagueId, cred.season,
+      ["mDraftDetail", "mTeam", "mRoster"], cred.s2 ? cred : null);
+    if (!r.ok) return json({ error: r.reason, needsCredentials: r.status === 401 || r.status === 403 }, 400, cors);
+    return json({ ok: true, ...espnNormalizePicks(r.body) }, 200, cors);
+  }
+
+  return json({ error: "Unknown ESPN route." }, 404, cors);
+}
+
 async function handleSleeperPlayersSlim(request, env, cors) {
   if (request.method !== "GET") return json({ error: "GET only" }, 405, cors);
   // Names RL explicitly — see the survivorKV note.
@@ -895,6 +1154,7 @@ export default {
     if (url.pathname.startsWith("/api/swoledawg")) return handleSwole(request, url, env, cors);
     // DD-RANKINGS-ROUTE — The Dog Track capture half; see the DD-RANKINGS-BLOCK below.
     if (url.pathname.startsWith("/rankings/")) return handleRankings(request, url, env, cors);
+    if (url.pathname === "/espn" || url.pathname.startsWith("/espn/")) return handleEspn(request, url, env, cors);
 
     // ⚠️ Identity is SITE-WIDE, not Bozo's. /auth/* is canonical; the /bozo/* spellings
     // are permanent aliases because bozo.html in the wild (and any phone with a cached

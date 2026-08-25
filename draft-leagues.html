@@ -115,6 +115,29 @@
     </section>
 
     <section class="card">
+      <h2>Connect ESPN</h2>
+      <form id="espnForm">
+        <div class="form-grid">
+          <div><label for="espnLeagueId">ESPN league id</label><input id="espnLeagueId" inputmode="numeric" placeholder="123456" required></div>
+          <div><label for="espnSeason">Season</label><input id="espnSeason" inputmode="numeric" placeholder="2026" value="2026" required></div>
+        </div>
+        <p class="notice">The league id is the <code>leagueId=</code> number in your ESPN league URL. If the league is public that is all this needs — leave the two boxes below empty and press Connect.</p>
+        <details id="espnPrivate">
+          <summary>My league is private</summary>
+          <p class="notice">A private league is only readable with your ESPN sign-in cookies. In a browser signed in to ESPN, open DevTools → Application → Cookies → espn.com and copy these two values.</p>
+          <div class="form-grid">
+            <div style="grid-column:span 2"><label for="espnS2">espn_s2</label><input id="espnS2" autocomplete="off" spellcheck="false" placeholder="AEB..."></div>
+            <div style="grid-column:span 2"><label for="espnSwid">SWID</label><input id="espnSwid" autocomplete="off" spellcheck="false" placeholder="{XXXXXXXX-XXXX-...}"></div>
+          </div>
+          <p class="notice err"><b>Know what these are.</b> They are your ESPN <i>account</i> session, not a league key: anyone holding them can act as you on ESPN, in every league. They are sent once to the Data Dawgs Worker, encrypted there under your account, never written to this page and never shown back to you. Disconnect below removes them, and signing out of ESPN invalidates them.</p>
+        </details>
+        <p><button class="primary" type="submit">Connect ESPN</button>
+           <button type="button" id="espnDisconnect" hidden>Disconnect</button></p>
+        <div class="notice" id="espnMsg" aria-live="polite">ESPN is connected to your Data Dawgs account, not to this device, so sign in first.</div>
+      </form>
+    </section>
+
+    <section class="card">
       <h2>Connect League</h2>
       <form id="connectForm">
         <label for="providerUrl">Paste your fantasy league URL</label>
@@ -416,6 +439,64 @@
       button.disabled=false;
     }
   });
+
+
+  /* ---- ESPN ---------------------------------------------------------------
+     The credentials the human types go straight to the Worker and are not kept
+     here: no variable outlives the submit handler and nothing touches localStorage. */
+  const espnMsg=(text,kind)=>{ const el=$("espnMsg"); el.className="notice"+(kind?" "+kind:""); el.textContent=text; };
+
+  async function espnRefreshStatus(){
+    if(!(window.DDProviders&&DDProviders.espn&&DDProviders.espn.status)) return;
+    try{
+      const st=await DDProviders.espn.status();
+      if(st.connected){
+        $("espnDisconnect").hidden=false;
+        $("espnLeagueId").value=st.leagueId||"";
+        if(st.season) $("espnSeason").value=String(st.season);
+        espnMsg(`Connected to ESPN league ${st.leagueId} (${st.season}). Press Connect ESPN to import it again, or Disconnect to remove the stored credentials.`,"ok");
+      }else{
+        $("espnDisconnect").hidden=true;
+      }
+    }catch(e){ /* signed out is the ordinary case here, and the default copy already says so */ }
+  }
+
+  $("espnForm").addEventListener("submit",async event=>{
+    event.preventDefault();
+    const button=event.submitter; button.disabled=true;
+    espnMsg("Asking ESPN for the league…");
+    try{
+      const payload=await DDProviders.espn.connect({
+        leagueId:$("espnLeagueId").value, season:$("espnSeason").value,
+        s2:$("espnS2").value, swid:$("espnSwid").value
+      });
+      // the boxes are cleared the moment the Worker has them
+      $("espnS2").value=""; $("espnSwid").value="";
+      const full=await DDProviders.espn.fetchLeague();
+      const imported=DDProviders.espn.importLeague(full);
+      const league=DDLeague.save(imported);
+      const state=DDLeague.stateFromLeague(league);
+      DDLeague.saveState(league.id,state);
+      DDLeague.publishLeague(league,state);
+      const picks=(full.draft&&full.draft.picks||[]).length;
+      espnMsg(`Imported ${league.name}: ${imported.config.teams.length} teams, ${imported.config.draftType} draft${picks?`, ${picks} picks already made`:""}. Opening the rig…`,"ok");
+      $("espnDisconnect").hidden=false;
+      location.href=DDLeague.leagueURL("dashboard.html",league.id);
+    }catch(error){
+      const msg=error&&error.message?error.message:"ESPN is unavailable right now. Nothing local was changed.";
+      espnMsg(msg,"err");
+      if(error&&error.needsCredentials){ const d=$("espnPrivate"); if(d) d.open=true; }
+      button.disabled=false;
+    }
+  });
+
+  $("espnDisconnect").addEventListener("click",async()=>{
+    try{ await DDProviders.espn.disconnect(); $("espnDisconnect").hidden=true;
+      espnMsg("Disconnected. The stored ESPN credentials were deleted.","ok"); }
+    catch(e){ espnMsg(e&&e.message?e.message:"Could not disconnect.","err"); }
+  });
+
+  espnRefreshStatus();
 
   window.addEventListener("ddleaguechange",renderList);
   renderTeams(); renderList();

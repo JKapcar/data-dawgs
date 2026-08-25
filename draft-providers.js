@@ -207,12 +207,91 @@
     return getJSON((options&&options.fetch)||root.fetch,`/draft/${encodeURIComponent(id)}/picks`);
   }
 
+
+  /* ---------------- ESPN ------------------------------------------------
+     ESPN is read through the Data Dawgs Worker, never from the page. Two reasons:
+     ESPN's fantasy read API sends no CORS headers for this origin, and a private
+     league needs the espn_s2 / SWID cookies, which belong to espn.com and cannot be
+     attached by a page on datadawgs216.com. The Worker holds the credentials for the
+     signed-in account, encrypted, and this file never sees them: connectEspn() posts
+     what the human typed and keeps nothing. */
+  const ESPN_WORKER = "https://toto.jkapcar4.workers.dev";
+  const ESPN_SESSION_KEY = "dd-bozo-sess";
+
+  function espnSession(){
+    try{ return root.localStorage ? (root.localStorage.getItem(ESPN_SESSION_KEY)||"") : ""; }
+    catch(e){ return ""; }
+  }
+
+  async function espnCall(path, init){
+    const fetchImpl = (init&&init.fetch) || root.fetch;
+    if(typeof fetchImpl!=="function") throw new Error("Fetch is unavailable.");
+    const token = espnSession();
+    if(!token) throw new Error("Sign in first — ESPN is connected to your account, not to this device.");
+    const res = await fetchImpl(ESPN_WORKER+path, {
+      method:(init&&init.method)||"GET",
+      headers:Object.assign({"X-Bozo-Session":token},
+        (init&&init.body)?{"Content-Type":"application/json"}:{}),
+      body:(init&&init.body)?JSON.stringify(init.body):undefined
+    });
+    let data={};
+    try{ data=await res.json(); }catch(e){ data={}; }
+    if(!res.ok){
+      const err=new Error(data.error||`ESPN request failed (${res.status}).`);
+      err.needsCredentials=!!data.needsCredentials;
+      err.status=res.status;
+      throw err;
+    }
+    return data;
+  }
+
+  /* leagueId/season identify the league; s2/swid are optional and are forwarded once,
+     for the Worker to verify and store. Nothing is retained here. */
+  function connectEspn(input, options){
+    const leagueId=clean(input&&input.leagueId), season=clean(input&&input.season);
+    if(!/^\d{1,12}$/.test(leagueId)) return Promise.reject(new Error("That does not look like an ESPN league id."));
+    if(!/^\d{4}$/.test(season)) return Promise.reject(new Error("Season must be a four-digit year."));
+    const body={leagueId,season};
+    const s2=clean(input&&input.s2), swid=clean(input&&input.swid);
+    if(s2||swid){ body.s2=s2; body.swid=swid; }
+    return espnCall("/espn/connect",{method:"POST",body,fetch:options&&options.fetch});
+  }
+  function espnStatus(options){ return espnCall("/espn/connect",{fetch:options&&options.fetch}); }
+  function disconnectEspn(options){ return espnCall("/espn/connect",{method:"DELETE",fetch:options&&options.fetch}); }
+  function fetchEspnLeague(options){ return espnCall("/espn/league",{fetch:options&&options.fetch}); }
+  function fetchEspnPicks(options){ return espnCall("/espn/picks",{fetch:options&&options.fetch}); }
+
+  /* The Worker already returns the site's league shape, so importing is a rename
+     into the envelope the rest of the rig expects rather than a second parse. */
+  function importEspn(payload){
+    const L=payload&&payload.league;
+    if(!L) throw new Error("ESPN returned no league.");
+    return {
+      provider:{name:"espn",leagueId:L.leagueId,draftId:null,sourceUrl:null,
+        syncMode:"live-read",status:payload.draft&&payload.draft.inProgress?"drafting":"ready"},
+      id:null,
+      name:L.name,
+      season:L.season,
+      config:{
+        teams:(L.teams||[]).map((t,i)=>({name:t.name,owner:t.owner||"",providerId:t.providerId,slot:i+1})),
+        budget:L.budget,
+        draftType:L.draftType,
+        rosterSlots:(L.rosterSlots||[]).filter(s=>s.slot!=="BENCH"&&s.slot!=="IR"),
+        benchSlots:((L.rosterSlots||[]).find(s=>s.slot==="BENCH")||{}).count||0,
+        scoring:L.scoring
+      },
+      diagnostics:{warnings:(L.scoring&&L.scoring.mode==="custom")
+        ? ["ESPN reports a reception value this rig has no column for, so Market Value is shown in half-PPR dollars. Check the format before you trust a price."] : []}
+    };
+  }
+
   const providers={
     parse:parseProvider,
     sleeper:{detect:input=>!!parseSleeper(input),parse:parseSleeper,importLeague:importSleeper,fetchDraft:fetchSleeperDraft,fetchPicks:fetchSleeperPicks,normalize:normalizeImport,mapPlayer,normalizePick,rosterSlots,scoringConfig},
     yahoo:{detect:input=>!!parseYahoo(input),parse:parseYahoo},
-    espn:{detect:input=>!!parseEspn(input),parse:parseEspn}
+    espn:{detect:input=>!!parseEspn(input),parse:parseEspn,connect:connectEspn,status:espnStatus,
+      disconnect:disconnectEspn,fetchLeague:fetchEspnLeague,fetchPicks:fetchEspnPicks,importLeague:importEspn}
   };
   root.DDProviders=providers;
-  if(typeof module!=="undefined"&&module.exports) module.exports={parseProvider,parseSleeper,parseYahoo,parseEspn,rosterSlots,scoringConfig,mapPlayer,normalizePick,normalizeImport,chooseDraft};
+  if(typeof module!=="undefined"&&module.exports) module.exports={parseProvider,parseSleeper,parseYahoo,parseEspn,importEspn,rosterSlots,scoringConfig,mapPlayer,normalizePick,normalizeImport,chooseDraft};
 })(typeof window!=="undefined"?window:globalThis);

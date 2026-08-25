@@ -310,8 +310,15 @@
     const startupParams=new URLSearchParams(location.search);
     const startupPage=location.pathname.split("/").pop();
     const rigPages=new Set(["dashboard.html","auction.html","board.html","bigboard.html","dataviz.html","report.html"]);
+    /* The picker is only worth showing to someone who has leagues to pick between.
+       A phone that has never opened the rig has an EMPTY directory, so bouncing it here
+       replaces the board with a create-a-league form — which is what a leaguemate opening
+       the live board link on draft night would have got. Let that device through instead:
+       seedLegacyLeague() below pulls the canonical league from data/leagues/, which is
+       exactly the room they were trying to reach.
+       The operator's own machine never hit this, because it has dd-auction-v1 already. */
     if(rigPages.has(startupPage) && !startupParams.has("league") && !startupParams.has("sync") &&
-       startupParams.get("embed")!=="1" && !getJSON("dd-auction-v1",null)){
+       startupParams.get("embed")!=="1" && !getJSON("dd-auction-v1",null) && list().length){
       const back=location.pathname+location.hash;
       location.replace("draft-leagues.html?return="+encodeURIComponent(back));
     }

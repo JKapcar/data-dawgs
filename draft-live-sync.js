@@ -24,7 +24,17 @@
   let timer=null,failures=0,running=false,started=false,lastOK=0,lastError="",draftComplete=false;
 
   function league(){ return root.DDLeague&&DDLeague.current; }
-  function enabled(){ const L=league(); return !!(L&&L.provider.name==="sleeper"&&L.provider.draftId&&L.provider.syncMode==="live-read"); }
+  /* ESPN joins on the same terms as Sleeper: a live-read league whose picks this
+     device may poll. ESPN has no separate draftId — the league id is the draft. */
+  function providerOf(){ const L=league(); return L&&L.provider&&L.provider.name||""; }
+  function enabled(){
+    const L=league();
+    if(!L||L.provider.syncMode!=="live-read") return false;
+    if(L.provider.name==="sleeper") return !!L.provider.draftId;
+    if(L.provider.name==="espn") return !!L.provider.leagueId;
+    return false;
+  }
+  function providerLabel(){ return providerOf()==="espn" ? "ESPN" : "Sleeper"; }
   function stateKey(){ return DDLeague.storageKey("dd-auction-v1"); }
   function readState(){ try{return JSON.parse(localStorage.getItem(stateKey())||"null");}catch(e){return null;} }
 
@@ -46,10 +56,10 @@
   function renderStatus(){
     const panel=document.getElementById("ddExternalSync"); if(!panel) return;
     const L=league(),unresolved=L&&L.provider.diagnostics&&L.provider.diagnostics.unresolvedMappings||[];
-    let message="Sleeper live read-sync";
-    if(!enabled()) message="Sleeper sync stopped — manual control";
-    else if(running) message="Syncing Sleeper…";
-    else if(lastError) message=`Sleeper unavailable — using local draft state (${lastError})`;
+    let message=providerLabel()+" live read-sync";
+    if(!enabled()) message=providerLabel()+" sync stopped — manual control";
+    else if(running) message="Syncing "+providerLabel()+"…";
+    else if(lastError) message=providerLabel()+` unavailable — using local draft state (${lastError})`;
     else if(lastOK) message=`Last synced ${Math.max(0,Math.floor((Date.now()-lastOK)/1000))} sec ago${draftComplete?" · draft complete":""}`;
     if(unresolved.length) message+=` · ${unresolved.length} unmapped`;
     panel.classList.toggle("err",!!lastError);
@@ -70,12 +80,29 @@
     running=true;lastError="";mount();
     const L=league();
     try{
-      const [draft,rawPicks]=await Promise.all([DDProviders.sleeper.fetchDraft(L),DDProviders.sleeper.fetchPicks(L)]);
+      let draft, incoming, unresolvedRows;
+      if(providerOf()==="espn"){
+        /* The Worker has already normalised these, including the team-index mapping,
+           so there is no per-pick player lookup to do here. A pick whose name has not
+           landed yet is held back rather than written as a blank row: ESPN publishes
+           the roster entry a moment after the pick and the next poll resolves it. */
+        const res=await DDProviders.espn.fetchPicks();
+        draft={status:res.complete?"complete":res.inProgress?"drafting":"ready"};
+        incoming=(res.picks||[]).filter(p=>p.player&&Number.isInteger(p.ti)).map(p=>({
+          providerPickId:p.providerPickId, player:p.player, pos:p.pos, ti:p.ti,
+          price:p.price==null?0:p.price, nfl:p.nfl, keeper:!!p.keeper, mapping:"mapped"
+        }));
+        unresolvedRows=(res.picks||[]).filter(p=>!p.player).map(p=>({
+          providerPickId:p.providerPickId, playerName:"", position:p.pos||"", nflTeam:p.nfl||""}));
+      }else{
+      const [d,rawPicks]=await Promise.all([DDProviders.sleeper.fetchDraft(L),DDProviders.sleeper.fetchPicks(L)]);
+      draft=d;
       const ctx=contextFor(L);
-      const incoming=(rawPicks||[]).map(p=>DDProviders.sleeper.normalizePick(p,ctx)).filter(p=>p.player&&Number.isInteger(p.ti));
+      incoming=(rawPicks||[]).map(p=>DDProviders.sleeper.normalizePick(p,ctx)).filter(p=>p.player&&Number.isInteger(p.ti));
+      }
       const current=readState()||DDLeague.stateFromLeague(L);
       const next=Object.assign({},current,{picks:reconcilePicks(current.picks,incoming),ts:Date.now()});
-      const unresolved=incoming.filter(p=>p.mapping!=="mapped").map(p=>({providerPickId:p.providerPickId,playerName:p.playerName,position:p.position,nflTeam:p.nflTeam}));
+      const unresolved=unresolvedRows||incoming.filter(p=>p.mapping!=="mapped").map(p=>({providerPickId:p.providerPickId,playerName:p.playerName,position:p.position,nflTeam:p.nflTeam}));
       L.provider.lastSyncedAt=Date.now();L.provider.lastError=null;L.provider.status=draft.status||"ready";
       L.provider.diagnostics=L.provider.diagnostics||{};L.provider.diagnostics.unresolvedMappings=unresolved;
       DDLeague.save(L);
@@ -106,7 +133,7 @@
     root.dispatchEvent(new CustomEvent("ddexternaltakeover"));
   }
 
-  root.DDExternalSync={get isAuthoritative(){return enabled();},poll,takeOver,warnManual(){mount();const panel=document.getElementById("ddExternalSync");if(panel){panel.classList.add("err");panel.querySelector(".ddes-msg").textContent="Sleeper is authoritative. Use Take Over Manually before recording Data Dawgs picks.";}}};
+  root.DDExternalSync={get isAuthoritative(){return enabled();},poll,takeOver,warnManual(){mount();const panel=document.getElementById("ddExternalSync");if(panel){panel.classList.add("err");panel.querySelector(".ddes-msg").textContent=providerLabel()+" is authoritative. Use Take Over Manually before recording Data Dawgs picks.";}}};
   const start=()=>{started=true;mount();if(enabled())poll();};
   if(document.readyState==="complete") start(); else addEventListener("load",start,{once:true});
   addEventListener("ddleaguechange",()=>{mount();if(started&&enabled()&&!timer&&!running)poll();});

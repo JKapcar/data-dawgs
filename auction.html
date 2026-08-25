@@ -3282,7 +3282,7 @@ function bindOp(d){
   function add(){
     if(window.DDLeague&&DDLeague.current&&DDLeague.current.provider.syncMode==="live-read"){
       if(window.DDExternalSync) DDExternalSync.warnManual();
-      else alert("Sleeper is authoritative for this league. Take over manually before recording a Data Dawgs pick.");
+      else alert(((window.DDLeague&&DDLeague.current&&DDLeague.current.provider.name==="espn")?"ESPN":"Sleeper")+" is authoritative for this league. Take over manually before recording a Data Dawgs pick.");
       return;
     }
     const name=pin.value.trim();
