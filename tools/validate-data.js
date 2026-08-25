@@ -77,7 +77,31 @@ for (const f of jsons) {
   else if (e.as_of !== seen[f].as_of) fail(`${f}: index.json as_of does not match`);
   else ok(`${f} matches manifest`);
 }
-for (const name of listed.keys()) if (!jsons.includes(name)) fail(`${name}: listed in index.json but missing on disk`);
+for (const entry of (idx.data.files || [])) {
+  if (entry.path.startsWith('/data/leagues/')) continue;
+  const name=path.basename(entry.path);
+  if (!jsons.includes(name)) fail(`${name}: listed in index.json but missing on disk`);
+}
+
+console.log('\ncanonical league records');
+{
+  const leagueDir=path.join(DATA,'leagues');
+  const leagueFiles=fs.existsSync(leagueDir)?fs.readdirSync(leagueDir).filter(f=>f.endsWith('.json')).sort():[];
+  for(const f of leagueFiles){
+    const rel=`/data/leagues/${f}`, p=path.join(leagueDir,f), txt=fs.readFileSync(p,'utf8');
+    let L; try{L=JSON.parse(txt)}catch(e){fail(`${rel}: unparseable — ${e.message}`);continue}
+    const manifest=(idx.data.files||[]).find(e=>e.path===rel);
+    if(!manifest) fail(`${rel}: absent from index.json`);
+    else if(manifest.sha256!==crypto.createHash('sha256').update(txt).digest('hex')) fail(`${rel}: manifest hash mismatch`);
+    if(L.canon_version!==1) fail(`${rel}: canon_version must be 1`);
+    for(const k of ['provider','provider_league_id','dd_id','season','name','source','settings','teams','rosters','draft','diagnostics'])
+      if(!(k in L)) fail(`${rel}: missing ${k}`);
+    if(!L.source||!L.source.url||!L.source.captured_at||typeof L.source.official!=='boolean') fail(`${rel}: incomplete source evidence`);
+    if(!Array.isArray(L.teams)||L.teams.length!==L.settings.team_count) fail(`${rel}: team placeholders disagree with team_count`);
+    if(!L.diagnostics||!Array.isArray(L.diagnostics.missing_inputs)) fail(`${rel}: missing diagnostics.missing_inputs`);
+    else ok(`${rel} matches docs/league-schema.md and its manifest receipt`);
+  }
+}
 
 console.log('\nmarkdown mirrors');
 {

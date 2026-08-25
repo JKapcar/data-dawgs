@@ -2699,6 +2699,7 @@ svg{display:block;max-width:100%;height:auto}
       </form>
       <p class="wr-status" id="connectionStatus">Sleeper leagues connect without a Sleeper login.</p>
     </div>
+    <div class="wr-saved" id="seededLeague"></div>
     <div class="wr-saved" id="savedList"></div>
   </div>
 
@@ -3929,6 +3930,13 @@ function paintShelf(){
       <button class="wr-mini" data-forget="${esc(x.leagueId)}" data-provider="${esc(x.provider)}">Remove</button></div></div>`;
   }).join(''):'<div class="wr-empty-shelf"><b>No leagues saved yet.</b><br>Paste your first Sleeper league URL or ID above. It will stay here for one-tap access.</div>';
 }
+
+fetch('data/leagues/pepperoninipples.json').then(r=>r.ok?r.json():null).then(x=>{
+  if(!x||!$('seededLeague'))return;
+  $('seededLeague').innerHTML=`<div class="wr-row"><div class="wr-grow"><b>${esc(x.name)}</b>
+    <small>Yahoo · ${esc(x.provider_league_id)} · settings captured 8/25 · rosters: not connected</small></div>
+    <div class="wr-league-actions"><a class="wr-mini" href="dashboard.html?league=${encodeURIComponent(x.dd_id)}#live">Open draft rig</a></div></div>`;
+}).catch(()=>{});
 
 /* ------------------------------------------------------- connection ------- */
 /* One card, every team in the league, one tap. Painted only while the team is

@@ -18,6 +18,15 @@ function servedText(text) {
   return text.replace(/\r\n/g, '\n');
 }
 
+function nestedJson(dir, prefix = "") {
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+    const rel = path.posix.join(prefix, entry.name);
+    return entry.isDirectory() ? nestedJson(path.join(dir, entry.name), rel)
+      : (entry.name.endsWith(".json") ? [rel] : []);
+  });
+}
+
 function writeDataManifest({ built = new Date().toISOString().slice(0, 10) } = {}) {
   let previous = { data: { files: [], markdown: [] } };
   try { previous = JSON.parse(fs.readFileSync(path.join(DATA, 'index.json'), 'utf8')); } catch (_) {}
@@ -43,6 +52,17 @@ function writeDataManifest({ built = new Date().toISOString().slice(0, 10) } = {
       note: payload.note,
     };
   });
+  for (const rel of nestedJson(path.join(DATA, "leagues"), "leagues").sort()) {
+    const text = fs.readFileSync(path.join(DATA, ...rel.split("/")), "utf8");
+    const payload = JSON.parse(text);
+    if (payload.canon_version !== 1 || !payload.source || !payload.source.captured_at)
+      throw new Error(`${rel}: invalid canonical league record`);
+    files.push({
+      path: "/data/" + rel, url: "https://datadawgs216.com/data/" + rel,
+      bytes: Buffer.byteLength(text), as_of: payload.source.captured_at.slice(0, 10),
+      sha256: digest(text), note: `Seeded ${payload.provider} league settings; see diagnostics.missing_inputs.`
+    });
+  }
   const markdown = orderedNames(
     fs.readdirSync(DATA).filter(name => name.endsWith('.md')),
     previous.data.markdown || []

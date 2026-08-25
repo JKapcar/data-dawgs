@@ -169,14 +169,14 @@ const json = (obj, status, cors) =>
 // Shared inside the Worker by draft-state validation and every universal draft-league
 // create path. Browser minting carries the same source string in draft-league.js, and
 // the contract suite asserts they stay identical.
-const DRAFT_LEAGUE_ID_PATTERN = "^dd_[A-Za-z0-9_-]{22,64}$";
+const DRAFT_LEAGUE_ID_PATTERN = "^(dd_[A-Za-z0-9_-]{22,64}|pepperoninipples)$";
 const DRAFT_LEAGUE_ID_RE = new RegExp(DRAFT_LEAGUE_ID_PATTERN);
 const DRAFT_STATE_MAX_BYTES = 65_536;
 const DRAFT_PLAYER_ID_RE = /^[a-z0-9][a-z0-9._:-]{0,63}$/;
 const DRAFT_POSITIONS = ["ALL", "QB", "RB", "WR", "TE", "DST", "K"];
 // Keep this in step with board.html's actual sortable columns. The test reads both
 // declarations so a post-refresh column rename cannot silently strand saved filters.
-const DRAFT_SORT_KEYS = ["rank", "name", "pos", "team", "full", "half", "sf", "silva"];
+const DRAFT_SORT_KEYS = ["rank", "name", "pos", "team", "half14", "full", "half", "sfhalf12", "sf", "silva"];
 const DRAFT_SORT_DIRECTIONS = ["asc", "desc"];
 const DRAFT_MARKS = ["target", "taken"];
 const DRAFT_EMPTY_STATE = Object.freeze({

@@ -256,7 +256,7 @@ console.log("\nthe desktop table is unchanged");
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const p = await ctx.newPage();
   p.on("pageerror", e => errors.push("desktop: " + e.message));
-  await p.goto(U + "board.html", { waitUntil: "networkidle" }).catch(() => {});
+  await p.goto(U + "board.html?embed=1", { waitUntil: "networkidle" }).catch(() => {});
   await p.waitForTimeout(1200);
   const d = await p.evaluate(() => {
     const rows = [...document.querySelectorAll("#board tbody tr")];
@@ -320,7 +320,7 @@ console.log("\ninside the dashboard on a phone");
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const p = await ctx.newPage();
   p.on("pageerror", e => errors.push("dash: " + e.message));
-  await p.goto(U + "dashboard.html", { waitUntil: "networkidle" }).catch(() => {});
+  await p.goto(U + "dashboard.html?embed=1", { waitUntil: "networkidle" }).catch(() => {});
   await p.waitForTimeout(3000);
   // ⚠️ "dashboard.html" CONTAINS "board.html". Matching the url on /board\.html/ picks
   // the parent frame and every assertion below silently passes against the wrong document.

@@ -193,9 +193,9 @@ const personal = {
   const personalSource = fs.readFileSync(new URL("../draft-personal-sync.js", import.meta.url), "utf8");
   const workerSource = fs.readFileSync(new URL("../dawg-bot-worker.js", import.meta.url), "utf8");
   const pattern = draftLeague.LEAGUE_ID_PATTERN;
-  assert.equal(pattern, "^dd_[A-Za-z0-9_-]{22,64}$");
+  assert.equal(pattern, "^(dd_[A-Za-z0-9_-]{22,64}|pepperoninipples)$");
   assert.match(workerSource, new RegExp(`DRAFT_LEAGUE_ID_PATTERN = ${JSON.stringify(pattern).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
-  assert.match(rigSource, /const LEAGUE_ID_PATTERN = "\^dd_\[A-Za-z0-9_-\]\{22,64\}\$"/);
+  assert.match(rigSource, /const LEAGUE_ID_PATTERN = "\^\(dd_\[A-Za-z0-9_-\]\{22,64\}\|pepperoninipples\)\$"/);
   for (let i = 0; i < 50; i++) assert.match(draftLeague.generateId(crypto), new RegExp(pattern));
   const sortable = [...boardSource.matchAll(/\{key:"([^"]+)",label:"[^"]+"[^}]*sortable:true\}/g)].map(match => match[1]);
   const workerSortKeys = JSON.parse(workerSource.match(/const DRAFT_SORT_KEYS = (\[[^;]+\]);/)[1]);

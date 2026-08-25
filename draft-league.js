@@ -9,7 +9,7 @@
   // Generation and every draft-league route share this bounded contract. The Worker
   // contract test compares this source string with DRAFT_LEAGUE_ID_PATTERN so neither
   // side can widen or narrow it alone.
-  const LEAGUE_ID_PATTERN = "^dd_[A-Za-z0-9_-]{22,64}$";
+  const LEAGUE_ID_PATTERN = "^(dd_[A-Za-z0-9_-]{22,64}|pepperoninipples)$";
   const LEAGUE_RE = new RegExp(LEAGUE_ID_PATTERN);
 
   const hasWindow = typeof window !== "undefined" && root === window;
@@ -117,6 +117,33 @@
     };
   }
 
+  function leagueFromCanonical(record){
+    if(!record || record.canon_version!==1 || record.dd_id!==LEGACY_ROOM) throw new Error("Invalid seeded league record.");
+    const slots=record.settings&&record.settings.roster_slots||{};
+    return normalizeLeague({
+      id:record.dd_id,name:record.name,season:record.season,
+      provider:{name:record.provider,leagueId:record.provider_league_id,sourceUrl:record.source&&record.source.url,
+        syncMode:"config-only",status:"settings-only",lastSyncedAt:record.source&&record.source.captured_at,
+        diagnostics:{unresolvedMappings:[],warnings:(record.diagnostics&&record.diagnostics.missing_inputs)||[]}},
+      config:{draftType:record.settings&&record.settings.draft_type,teamCount:record.settings&&record.settings.team_count,
+        budget:record.settings&&record.settings.budget,
+        rosterSlots:Object.entries(slots).map(([slot,count])=>({slot,count})),
+        scoring:{mode:record.settings&&record.settings.scoring&&record.settings.scoring.mode,
+          ppr:record.settings&&record.settings.scoring&&record.settings.scoring.ppr,
+          raw:record.settings&&record.settings.scoring&&record.settings.scoring.raw||{}},
+        teams:(record.teams||[]).map(t=>({id:t.team_id,name:t.name||`Team ${t.team_id}`,owner:t.owner||"",providerId:t.team_id}))},
+      raw:{canonical:record}
+    });
+  }
+
+  function seedLegacyLeague(){
+    const existing=loadLeague(LEGACY_ROOM);
+    if(existing) return Promise.resolve(existing);
+    if(!hasWindow || typeof fetch!=="function") return Promise.resolve(null);
+    return fetch("data/leagues/pepperoninipples.json").then(r=>r.ok?r.json():Promise.reject(new Error(String(r.status))))
+      .then(record=>saveLeague(leagueFromCanonical(record))).catch(()=>null);
+  }
+
   function stateFromLeague(league){
     const L = normalizeLeague(league);
     const scoring = L.config.scoring.mode === "custom" ? "half" : L.config.scoring.mode;
@@ -191,9 +218,6 @@
   function mountIndicator(){
     if(!hasWindow || new URLSearchParams(location.search).get("embed") === "1") return;
     const league=DDLeague.current;
-    if(!league) return;
-    document.documentElement.style.setProperty("--dd-team-count",league.config.teamCount);
-    document.documentElement.style.setProperty("--dd-matrix-min",`${30+league.config.teamCount*89}px`);
     let bar=document.getElementById("ddLeagueIndicator");
     if(!bar){
       const style=document.createElement("style");
@@ -201,6 +225,12 @@
       document.head.appendChild(style);
       bar=document.createElement("aside"); bar.id="ddLeagueIndicator"; document.body.appendChild(bar);
     }
+    if(!league){
+      bar.innerHTML='<span class="ddli-name">No league selected</span><a href="draft-leagues.html">Choose league</a>';
+      return;
+    }
+    document.documentElement.style.setProperty("--dd-team-count",league.config.teamCount);
+    document.documentElement.style.setProperty("--dd-matrix-min",`${30+league.config.teamCount*89}px`);
     const custom=league.config.scoring.mode==="custom" ? " · Custom scoring — verify settings" : "";
     const unresolved=league.provider.diagnostics&&league.provider.diagnostics.unresolvedMappings||[];
     const mapping=unresolved.length ? ` · ${unresolved.length} player${unresolved.length===1?"":"s"} could not be mapped` : "";
@@ -264,17 +294,28 @@
   const DDLeague = {
     FIREBASE_URL, LEGACY_ROOM, LEAGUE_RE,
     get id(){ return activeLeagueId(); },
-    get current(){ const id=activeLeagueId(); return id ? loadLeague(id) : null; },
+    get current(){ const id=activeLeagueId(); return loadLeague(id || LEGACY_ROOM); },
     get isInstance(){ return !!activeLeagueId(); },
     activeLeagueId, generateId, normalize:normalizeLeague, normalizeDraftState, stateFromLeague,
     storageKey, list, remember, save:saveLeague, load:loadLeague, removeLocal,
-    createManual, saveState, leagueURL, remoteEndpoint, publishLeague, hydrateEnvelope, mountIndicator, decorateDraftLinks
+    createManual, saveState, leagueURL, remoteEndpoint, publishLeague, hydrateEnvelope, mountIndicator, decorateDraftLinks,
+    leagueFromCanonical, seedLegacyLeague
   };
 
   root.DDLeague = DDLeague;
 
   if(hasWindow){
     let cachedCfg = null, pushTimer = null, lastState = "";
+
+    const startupParams=new URLSearchParams(location.search);
+    const startupPage=location.pathname.split("/").pop();
+    const rigPages=new Set(["dashboard.html","auction.html","board.html","bigboard.html","dataviz.html","report.html"]);
+    if(rigPages.has(startupPage) && !startupParams.has("league") && !startupParams.has("sync") &&
+       startupParams.get("embed")!=="1" && !getJSON("dd-auction-v1",null)){
+      const back=location.pathname+location.hash;
+      location.replace("draft-leagues.html?return="+encodeURIComponent(back));
+    }
+    seedLegacyLeague();
 
     function decodeLegacyToken(token){
       try{
@@ -396,6 +437,6 @@
   }
 
   if(typeof module !== "undefined" && module.exports){
-    module.exports={activeLeagueId,generateId,normalizeLeague,normalizeDraftState,stateFromLeague,storageKey,LEAGUE_RE,LEAGUE_ID_PATTERN};
+    module.exports={activeLeagueId,generateId,normalizeLeague,normalizeDraftState,stateFromLeague,storageKey,LEAGUE_RE,LEAGUE_ID_PATTERN,leagueFromCanonical};
   }
 })(typeof window !== "undefined" ? window : globalThis);

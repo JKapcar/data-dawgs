@@ -2,12 +2,20 @@ const assert=require("assert");
 const core=require("../draft-league.js");
 
 assert.strictEqual(core.activeLeagueId("?league=dd_"+"a".repeat(32)),"dd_"+"a".repeat(32));
+assert.strictEqual(core.activeLeagueId("?league=pepperoninipples"),"pepperoninipples");
 assert.strictEqual(core.activeLeagueId("?league=short"),null);
 assert.strictEqual(core.activeLeagueId("?sync=legacy-token"),null);
 
 const ids=["dd_"+"a".repeat(32),"dd_"+"b".repeat(32)];
 assert.notStrictEqual(core.storageKey("dd-auction-v1",ids[0]),core.storageKey("dd-auction-v1",ids[1]));
 assert.strictEqual(core.storageKey("dd-auction-v1",null),"dd-auction-v1");
+
+const seeded=core.leagueFromCanonical(require("../data/leagues/pepperoninipples.json"));
+assert.strictEqual(seeded.id,"pepperoninipples");
+assert.strictEqual(seeded.name,"JohnMaddenPepperoniNipplesXV");
+assert.strictEqual(seeded.config.teamCount,14);
+assert.strictEqual(seeded.config.teams.length,14);
+assert.strictEqual(seeded.provider.name,"yahoo");
 
 for(const teamCount of [10,12,14,16]){
   const league=core.normalizeLeague({

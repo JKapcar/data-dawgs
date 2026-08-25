@@ -1,0 +1,63 @@
+{
+ "canon_version": 1,
+ "provider": "yahoo",
+ "provider_league_id": "773763",
+ "dd_id": "pepperoninipples",
+ "season": 2026,
+ "name": "JohnMaddenPepperoniNipplesXV",
+ "source": {
+  "url": "https://football.fantasysports.yahoo.com/league/pepperoninipples",
+  "captured_at": "2026-08-25T15:04:53-04:00",
+  "auth": "none",
+  "official": true
+ },
+ "settings": {
+  "team_count": 14,
+  "draft_type": "auction",
+  "budget": 200,
+  "keepers": true,
+  "keeper_deadline": "2026-09-08T03:00:00-04:00",
+  "roster_slots": {"QB":1,"WR":2,"RB":2,"TE":1,"FLEX":2,"DST":1,"BN":6,"IR":2},
+  "scoring": {"mode":"half","ppr":0.5,"fractional":false,"negative_points":true,"raw":null},
+  "playoff_teams": 6,
+  "playoff_start_week": 15,
+  "playoff_end_week": 17,
+  "playoff_tiebreak": "higher_seed",
+  "playoff_reseed": false,
+  "divisions": false,
+  "waiver_type": "faab",
+  "waiver_days": 2,
+  "waiver_tiebreak": "reverse_standings",
+  "waiver_process": "tuesday",
+  "trade_review": "commissioner",
+  "trade_reject_days": 1,
+  "trade_deadline": "2026-11-28",
+  "draft_pick_trades": false,
+  "acquisition_limits": null,
+  "lock_benched": false,
+  "public": true
+ },
+ "teams": [
+  {"team_id":"1","name":null,"owner":null,"is_me":null},
+  {"team_id":"2","name":null,"owner":null,"is_me":null},
+  {"team_id":"3","name":null,"owner":null,"is_me":null},
+  {"team_id":"4","name":null,"owner":null,"is_me":null},
+  {"team_id":"5","name":null,"owner":null,"is_me":null},
+  {"team_id":"6","name":null,"owner":null,"is_me":null},
+  {"team_id":"7","name":null,"owner":null,"is_me":null},
+  {"team_id":"8","name":null,"owner":null,"is_me":null},
+  {"team_id":"9","name":null,"owner":null,"is_me":null},
+  {"team_id":"10","name":null,"owner":null,"is_me":null},
+  {"team_id":"11","name":null,"owner":null,"is_me":null},
+  {"team_id":"12","name":null,"owner":null,"is_me":null},
+  {"team_id":"13","name":null,"owner":null,"is_me":null},
+  {"team_id":"14","name":null,"owner":null,"is_me":null}
+ ],
+ "rosters": [],
+ "draft": {"status":"pre","picks":[]},
+ "diagnostics": {
+  "warnings": [],
+  "unmapped_players": [],
+  "missing_inputs": ["scoring stat table", "$200 auction budget inherited from data/league.json — confirm with owner"]
+ }
+}

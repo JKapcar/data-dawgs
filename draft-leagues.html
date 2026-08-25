@@ -342,7 +342,17 @@
 
   function renderList(){
     const rows=DDLeague.list();
-    $("leagueList").innerHTML=rows.length?rows.map(row=>`<div class="league" data-id="${esc(row.id)}"><div class="league-main"><div class="league-name">${esc(row.name)}</div><div class="meta">${esc(row.season)} · ${esc(row.provider||"manual")}</div></div><div class="actions"><a class="button" href="${esc(DDLeague.leagueURL("dashboard.html",row.id))}">Open</a><button data-copy>Copy league link</button><button class="danger ghost" data-remove>Remove from this device</button></div></div>`).join(""):'<div class="empty">No league instances have been opened on this browser yet.</div>';
+    const allowed=new Set(["dashboard.html","auction.html","board.html","bigboard.html","dataviz.html","report.html"]);
+    const requested=new URLSearchParams(location.search).get("return")||"";
+    const returnHref=id=>{
+      let target;
+      try{ target=new URL(requested,location.origin); }catch(e){ target=null; }
+      if(!target||target.origin!==location.origin||!allowed.has(target.pathname.split("/").pop()))
+        target=new URL("dashboard.html#live",location.origin+"/");
+      target.searchParams.set("league",id);
+      return target.pathname+target.search+target.hash;
+    };
+    $("leagueList").innerHTML=rows.length?rows.map(row=>`<div class="league" data-id="${esc(row.id)}"><div class="league-main"><div class="league-name">${esc(row.name)}</div><div class="meta">${esc(row.season)} · ${esc(row.provider||"manual")}</div></div><div class="actions"><a class="button" href="${esc(returnHref(row.id))}">Open</a><button data-copy>Copy league link</button><button class="danger ghost" data-remove>Remove from this device</button></div></div>`).join(""):'<div class="empty">No league instances have been opened on this browser yet.</div>';
   }
 
   $("teamCount").addEventListener("change",renderTeams);
@@ -407,6 +417,7 @@
     }
   });
 
+  window.addEventListener("ddleaguechange",renderList);
   renderTeams(); renderList();
 })();
 </script>

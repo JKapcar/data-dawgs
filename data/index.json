@@ -317,6 +317,14 @@
     "as_of": "2026-08-24",
     "sha256": "55a17ce664ae6293788ae347def12e5828847fee88f3e8fbf7d509f40d3d16e2",
     "note": "No weeks graded yet. The season opens with NFL Week 1 (~Sep 10, 2026); the first grade run is the following Tuesday. `graded` flips to true when Week 1 rows exist. The live document is served by the Worker at GET /rankings/grades and mirrored here at each grade run. This file contains no player-level data of any kind, by design."
+   },
+   {
+    "path": "/data/leagues/pepperoninipples.json",
+    "url": "https://datadawgs216.com/data/leagues/pepperoninipples.json",
+    "bytes": 2205,
+    "as_of": "2026-08-25",
+    "sha256": "25223f7d320e91cd2b75ce59f2cba89ee3bf7bc94b9e0a57b22e67dd8b36bfe8",
+    "note": "Seeded yahoo league settings; see diagnostics.missing_inputs."
    }
   ],
   "markdown": [
