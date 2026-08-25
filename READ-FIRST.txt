@@ -1,0 +1,23 @@
+DRAFT NIGHT v5 — USE THIS INSTEAD OF THE v4 ZIP I SENT A FEW MINUTES AGO.
+v4 had 2 files; this has those plus the pick-name fix. Unzip to a NEW empty folder.
+
+FOUR files, paths as shown:
+  dawg-bot-worker.js   -> /dawg-bot-worker.js
+  fantasy-warroom.html -> /fantasy-warroom.html
+  sw.js                -> /sw.js
+  work/test-espn.mjs   -> /work/test-espn.mjs     (keep the work/ folder)
+
+Do NOT upload this .txt file.
+
+Commit message:
+  ESPN: resolve pick names from the player index; provider-aware reopen
+
+  Two draft-night fixes. (1) Every ESPN pick carries only a playerId and the
+  names were read from the roster views, which are empty before a draft and lag
+  during one -- 204 of 204 picks arrived nameless and none could be mapped.
+  Picks now fall back to the kona_player_info index, fetched only when a poll
+  has unnamed picks and cached five minutes per league. (2) Reopening a saved
+  ESPN league (deep link or last-opened) sent a bare numeric id through the
+  Sleeper path and 404'd; the provider now travels with the id.
+
+AFTER THE PUSH the Worker must be deployed again (the pick fix is in the Worker).

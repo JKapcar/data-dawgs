@@ -4122,7 +4122,11 @@ async function connect(input){
   rememberLeague(ref,state.league.name);
   setLoaded(true);
   render();
-  try{const u=new URL(location.href);u.searchParams.set('league',ref.id);history.replaceState(null,'',u.pathname+u.search+location.hash)}catch(e){}
+  try{const u=new URL(location.href);u.searchParams.set('league',ref.id);
+    /* A bare ?league= id reads as Sleeper on the next load, so a non-Sleeper league must
+       say which provider it came from or the deep link 404s against Sleeper's API. */
+    if(ref.provider&&ref.provider!=='sleeper')u.searchParams.set('provider',ref.provider);else u.searchParams.delete('provider');
+    history.replaceState(null,'',u.pathname+u.search+location.hash)}catch(e){}
 }
 
 /* Restore a league already parsed this session. No network call, so switching back and
@@ -4141,7 +4145,9 @@ function restore(key){
   render();
   if(sim){const me=state.teams[+$('teamPicker').value||0];$('odds').classList.remove('is-empty');$('odds').innerHTML=Math.round(sim.odds[me.id]*100)+'<small>%</small>';
     $('oddsNote').textContent='Chance '+me.name+' makes the playoffs across 20,000 deterministic seasons.'}
-  try{const u=new URL(location.href);u.searchParams.set('league',state.ref.id);history.replaceState(null,'',u.pathname+u.search+location.hash)}catch(e){}
+  try{const u=new URL(location.href);u.searchParams.set('league',state.ref.id);
+    if(state.ref.provider&&state.ref.provider!=='sleeper')u.searchParams.set('provider',state.ref.provider);else u.searchParams.delete('provider');
+    history.replaceState(null,'',u.pathname+u.search+location.hash)}catch(e){}
   writeLast(state.ref.provider,state.ref.id);
   return true;
 }
@@ -4149,8 +4155,16 @@ let quietOpen=false;
 async function openLeague(provider,id,opts){
   if(restore(keyOf(provider,id)))return;
   quietOpen=!!(opts&&opts.quiet);
-  $('leagueInput').value=id;
+  /* ⚠️ connect() routes on what it can parse out of this one string, so a bare numeric id
+     always reads as a Sleeper league id — which is how reopening a saved ESPN league
+     ended up asking Sleeper for league 110404 and getting a 404. Hand each provider back
+     the URL shape it recognises. */
+  $('leagueInput').value=providerInput(provider,id);
   $('connectForm').requestSubmit();
+}
+function providerInput(provider,id){
+  if(provider==='espn')return 'https://fantasy.espn.com/football/league?leagueId='+id;
+  return String(id);
 }
 
 /* ----------------------------------------------------------- rendering ---- */
@@ -4535,8 +4549,16 @@ function writeLast(provider,leagueId){
   try{localStorage.setItem(LAST_KEY,JSON.stringify({provider:String(provider),leagueId:String(leagueId)}))}catch(e){}
 }
 (function boot(){
-  let deep=null;try{deep=new URLSearchParams(location.search).get('league')}catch(e){}
-  if(deep){$('leagueInput').value=deep;$('connectForm').requestSubmit();return}
+  let deep=null,deepProv=null;
+  try{const q=new URLSearchParams(location.search);deep=q.get('league');deepProv=q.get('provider')}catch(e){}
+  if(deep){
+    /* Recover the provider: from the URL if it says, otherwise from the saved shelf row.
+       Without this a saved ESPN league opens through the Sleeper path and 404s. */
+    const row=readShelf().find(x=>String(x.leagueId)===String(deep));
+    const prov=deepProv||(row&&row.provider)||'sleeper';
+    if(SHEETS.current==='leagues')SHEETS.show('report');
+    openLeague(prov,deep,{quiet:true});
+    return}
   const shelf=readShelf();
   if(!shelf.length){SHEETS.show('leagues');return}
   const last=readLast();

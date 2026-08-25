@@ -917,9 +917,13 @@ function espnNormalizeLeague(body) {
   };
 }
 
-/* Picks. ESPN gives playerId only on the pick; names arrive with the roster views,
-   so build the map from whatever the same response already carried rather than
-   pulling the whole player universe on every poll. */
+/* Picks. ESPN gives playerId only on the pick.
+   ⚠️ This used to rely ENTIRELY on the roster views for names, on the theory that a pick
+   shows up on the roster a moment later. That is false in the two cases that matter:
+   before a draft mRoster is EMPTY, so keeper picks resolve to nothing, and during a live
+   auction the roster entry lags the draft-detail row by longer than one poll. The result
+   was 204 of 204 picks arriving nameless and every one of them failing to map. The roster
+   map stays as the fast path; espnPlayerIndex() below is the fallback that fills the gaps. */
 function espnPlayerNames(body) {
   const map = new Map();
   for (const t of body.teams || []) {
@@ -935,8 +939,9 @@ function espnPlayerNames(body) {
   return map;
 }
 
-function espnNormalizePicks(body) {
+function espnNormalizePicks(body, fallbackNames) {
   const names = espnPlayerNames(body);
+  if (fallbackNames) for (const [id, meta] of fallbackNames) if (!names.has(id)) names.set(id, meta);
   const byTeam = new Map((body.teams || []).map((t, i) => [String(t.id), i]));
   const picks = ((body.draftDetail && body.draftDetail.picks) || []).map(p => {
     const meta = names.get(String(p.playerId)) || {};
@@ -1003,6 +1008,54 @@ function espnPlayerRow(player) {
     team: player.proTeamId != null ? String(player.proTeamId) : "",
     p: Math.round(espnProjection(player) * 100) / 100,
   };
+}
+
+/* The name index: every pick carries a playerId, and this is the only view that turns
+   an arbitrary playerId into a name without the player being on someone's roster yet.
+   It is one extra request, so it is fetched only when a poll actually has unnamed picks
+   and is cached per league for a few minutes — the index does not change during a draft. */
+const ESPN_NAME_TTL_MS = 5 * 60 * 1000;
+const espnNameCache = new Map();
+
+async function espnPlayerIndex(cred) {
+  const key = `${cred.leagueId}:${cred.season}`;
+  const hit = espnNameCache.get(key);
+  if (hit && (Date.now() - hit.at) < ESPN_NAME_TTL_MS) return hit.map;
+
+  const url = `${ESPN_READ}/seasons/${encodeURIComponent(cred.season)}/segments/0/leagues/${encodeURIComponent(cred.leagueId)}?view=kona_player_info`;
+  const headers = { Accept: "application/json",
+    "X-Fantasy-Filter": JSON.stringify({ players: { limit: 1200,
+      sortPercOwned: { sortAsc: false, sortPriority: 1 } } }) };
+  if (cred.s2 && cred.swid) {
+    const swid = String(cred.swid).startsWith("{") ? cred.swid : `{${cred.swid}}`;
+    headers.Cookie = `espn_s2=${cred.s2}; SWID=${swid}`;
+  }
+  const map = new Map();
+  try {
+    const res = await fetch(url, { headers });
+    if (res.ok) {
+      const pj = await res.json();
+      for (const e of (pj && pj.players) || []) {
+        const p = e.player;
+        if (p && p.id != null) map.set(String(p.id), {
+          name: p.fullName || "",
+          pos: ESPN_POS[Number(p.defaultPositionId)] || "",
+          team: p.proTeamId != null ? String(p.proTeamId) : "",
+        });
+      }
+    }
+  } catch { /* leave the map empty; the caller keeps the roster-only result */ }
+  // Only cache a real answer, so one failed fetch does not blank names for five minutes.
+  if (map.size) espnNameCache.set(key, { at: Date.now(), map });
+  return map;
+}
+
+async function espnPicksWithNames(cred, body) {
+  const first = espnNormalizePicks(body);
+  if (!first.diagnostics.unnamed) return first;
+  const index = await espnPlayerIndex(cred);
+  if (!index.size) return first;
+  return espnNormalizePicks(body, index);
 }
 
 async function espnWarroomFeed(cred) {
@@ -1156,7 +1209,7 @@ async function handleEspn(request, url, env, cors) {
     const r = await espnFetch(cred.leagueId, cred.season,
       ["mSettings", "mTeam", "mRoster", "mDraftDetail"], cred.s2 ? cred : null);
     if (!r.ok) return json({ error: r.reason, needsCredentials: r.status === 401 || r.status === 403 }, 400, cors);
-    return json({ ok: true, league: espnNormalizeLeague(r.body), draft: espnNormalizePicks(r.body) }, 200, cors);
+    return json({ ok: true, league: espnNormalizeLeague(r.body), draft: await espnPicksWithNames(cred, r.body) }, 200, cors);
   }
 
   if (path === "warroom" && request.method === "GET") {
@@ -1173,7 +1226,7 @@ async function handleEspn(request, url, env, cors) {
     const r = await espnFetch(cred.leagueId, cred.season,
       ["mDraftDetail", "mTeam", "mRoster"], cred.s2 ? cred : null);
     if (!r.ok) return json({ error: r.reason, needsCredentials: r.status === 401 || r.status === 403 }, 400, cors);
-    return json({ ok: true, ...espnNormalizePicks(r.body) }, 200, cors);
+    return json({ ok: true, ...(await espnPicksWithNames(cred, r.body)) }, 200, cors);
   }
 
   return json({ error: "Unknown ESPN route." }, 404, cors);

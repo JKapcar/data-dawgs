@@ -135,5 +135,43 @@ console.log("\nWar Room feed: projections and player rows");
   ok("a league with only weekly projections still yields a number", weeklyOnly === 12.5, String(weeklyOnly));
 }
 
+console.log("\nPick names when the roster views are empty");
+{
+  /* The regression: before a draft mRoster is empty, so keeper picks that carry only a
+     playerId used to normalise to player:"" and fail every downstream name match. */
+  const body = {
+    teams: [{ id: 1, roster: { entries: [] } }, { id: 3, roster: { entries: [] } }],
+    draftDetail: { drafted: false, inProgress: true, picks: [
+      { id: 1, playerId: 4361579, teamId: 1, roundId: 1, roundPickNumber: 1, overallPickNumber: 1, bidAmount: 8,  keeper: true },
+      { id: 2, playerId: 4429795, teamId: 3, roundId: 1, roundPickNumber: 2, overallPickNumber: 2, bidAmount: 47, keeper: true },
+    ] } };
+  const bare = mod.espnNormalizePicks(body);
+  ok("an empty roster view leaves every pick unnamed", bare.diagnostics.unnamed === 2, JSON.stringify(bare.diagnostics));
+
+  const index = new Map([
+    ["4361579", { name: "Javonte Williams", pos: "RB", team: "8" }],
+    ["4429795", { name: "Jahmyr Gibbs",     pos: "RB", team: "8" }]]);
+  const fixed = mod.espnNormalizePicks(body, index);
+  ok("the player index resolves picks the roster view cannot", fixed.diagnostics.unnamed === 0, JSON.stringify(fixed.diagnostics));
+  ok("the resolved pick carries name, position and pro team",
+     fixed.picks[0].player === "Javonte Williams" && fixed.picks[0].pos === "RB" && fixed.picks[0].nfl === "8",
+     JSON.stringify(fixed.picks[0]));
+  ok("prices and keeper flags survive the second pass",
+     fixed.picks[1].price === 47 && fixed.picks[1].keeper === true);
+
+  /* The roster view must still win: it is the same-response, always-current answer. */
+  const withRoster = { ...body, teams: [
+    { id: 1, roster: { entries: [{ playerPoolEntry: { player: { id: 4361579, fullName: "Roster Name", defaultPositionId: 2, proTeamId: 9 } } }] } },
+    { id: 3, roster: { entries: [] } }] };
+  const merged = mod.espnNormalizePicks(withRoster, index);
+  ok("the roster view still wins over the index", merged.picks[0].player === "Roster Name", merged.picks[0].player);
+
+  /* Empty slots are not pending picks. */
+  const empty = mod.espnNormalizePicks({ teams: [], draftDetail: { picks: [
+    { id: 9, playerId: -1, teamId: 0, roundId: 1, roundPickNumber: 1, overallPickNumber: 1 }] } });
+  ok("an empty draft slot is not counted as an unnamed pick",
+     empty.diagnostics.unnamed === 0 && empty.diagnostics.made === 0, JSON.stringify(empty.diagnostics));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
