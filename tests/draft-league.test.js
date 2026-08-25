@@ -20,6 +20,13 @@ for(const teamCount of [10,12,14,16]){
   assert.strictEqual(state.settings.spots,8);
 }
 
+for(const mode of ["half14","sfhalf12"]){
+  const league=core.normalizeLeague({id:"dd_"+mode.padEnd(32,"0"),name:mode,season:2026,
+    config:{draftType:"auction",teamCount:12,budget:200,rosterSlots:[{slot:"QB",count:1}],scoring:{mode},teams:[]}});
+  assert.strictEqual(league.config.scoring.mode,mode,`${mode} survives league normalization`);
+  assert.strictEqual(core.stateFromLeague(league).settings.scoring,mode,`${mode} reaches the draft state`);
+}
+
 const custom=core.stateFromLeague(core.normalizeLeague({
   id:"dd_"+"c".repeat(32),name:"Custom Scoring",season:2026,
   config:{draftType:"auction",teamCount:10,budget:200,rosterSlots:[{slot:"QB",count:1}],

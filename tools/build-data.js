@@ -310,14 +310,16 @@ write('pool.json', {
   as_of: '2026-08-24',
   source: 'Public Market Value (MV) master auction-dollar snapshot supplied by the site owner, captured 2026-08-24.',
   note:
-    'MV is an auction-dollar value, NOT a points projection. The source workbook contained 705 rows; ' +
-    '28 duplicate aliases were resolved to the best-ranked row, leaving 677 published players. ' +
-    'Always state the selected league format and the 2026-08-24 capture date when quoting a value.',
+    'MV is an auction-dollar value, NOT a points projection. half14 and sfhalf12 are derived formats; ' +
+    'the captured source columns remain unchanged. Always state the selected league format and the ' +
+    '2026-08-24 capture date when quoting a value.',
   scoring_keys: {
     full: '12-team PPR auction dollars',
-    half: '12-team Half PPR auction dollars (site default)',
+    half: '12-team Half PPR auction dollars',
+    half14: '14-team Half PPR auction dollars — DERIVED, not captured: the 12-team half column re-normalised so the top 210 rostered players sum to the $2,800 in a 14-team, $200, 15-spot room. half14 = 1 + 0.906958 × (half − 1), floored at 0. Ranks are unchanged.',
     std: '12-team Standard auction dollars',
     sf: '12-team Superflex PPR auction dollars',
+    sfhalf12: '12-team Superflex Half PPR auction dollars — HYBRID: quarterbacks use the owner-supplied Superflex Half export captured 2026-08-25; other positions are derived by applying each player’s captured half/full ratio to the captured Superflex PPR value.',
     ppr10: '10-team PPR auction dollars',
     ppr14: '14-team PPR auction dollars',
   },
@@ -531,8 +533,8 @@ write('league.json', {
     budget: 200,
     roster_spots: 15,
     starting_lineup: 'QB, 2 RB, 2 WR, TE, 2 FLEX (W/R/T), DEF, rest bench. No kicker.',
-    scoring_default: 'half PPR',
-    scoring_supported: ['half', 'full', 'sf'],
+    scoring_default: 'half14',
+    scoring_supported: ['half14', 'half', 'full', 'sf', 'sfhalf12'],
     bid_rule: '$0 bids are legal, so a team\'s max bid equals its dollars remaining.',
     teams: TEAMS.map(([name, owner]) => ({ name, owner })),
     live_draft_state: {

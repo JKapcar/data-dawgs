@@ -12979,7 +12979,7 @@ const MCP_TOOLS = [
     title: "Live auction board",
     catalog: "core",
     readOnlyHint: true,
-    description: "Live auction draft state from the league's Firebase mirror: budgets, open roster spots, each team's TRUE max bid (dollars left minus $1 reserved per unfilled slot — reporting raw remaining is the classic auction blunder), who is on the clock, what is on the block, and recent sales. The payload always carries a `simulated` flag: when it is true the rows are test picks entered to exercise the rig, not completed sales.",
+    description: "Live auction draft state from the league's Firebase mirror: budgets, open roster spots, and each team's max bid. Max bid equals dollars remaining because this league allows $0 bids; data/league.json `bid_rule` is the source of that rule. Also returns who is on the clock, what is on the block, and recent sales. The payload always carries a `simulated` flag: when it is true the rows are test picks entered to exercise the rig, not completed sales.",
     inputSchema: { type: "object", properties: { room: { type: "string", description: "Draft room (default: the league room)" } }, additionalProperties: false },
     async run(args, env) {
       const room = String(args.room || "pepperoninipples").replace(/[.#$\[\]\/]/g, "-");
@@ -12998,8 +12998,8 @@ const MCP_TOOLS = [
       for (const t of teams) {
         t.left = budget - t.spent;
         t.openSpots = spots - t.count;
-        // $1 must stay reserved for every unfilled slot beyond this one.
-        t.maxBid = t.openSpots > 0 ? Math.max(0, t.left - (t.openSpots - 1)) : 0;
+        // League rule: $0 bids are legal, so no $1-per-open-slot reserve applies.
+        t.maxBid = t.left;
       }
       const recent = picks.slice(-10).map(pk => ({
         player: pk.player, pos: pk.pos, price: pk.price,

@@ -822,8 +822,8 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
   const d = text(j);
   const a = d.teams.find(t => t.name === "Team A"), b = d.teams.find(t => t.name === "Team B");
   ok(a.spent === 73 && a.left === 127 && a.openSpots === 14, "team A spent/left/open");
-  ok(a.maxBid === 127 - 13, "maxBid = left − (openSpots − 1) — $1 reserved per unfilled slot");
-  ok(b.maxBid === 200 - 14, "untouched team maxBid = budget − (spots − 1)");
+  ok(a.maxBid === a.left, "maxBid equals dollars remaining when $0 bids are legal");
+  ok(b.left === 200 && b.openSpots === 15 && b.maxBid === 200, "untouched team reports left 200, 15 open spots, and maxBid 200");
   ok(d.onTheClock === "Team B" && d.onBlock === "Bijan Robinson", "clock + block");
 }
 // dd_draft_board: C6 — a test pick must never read as a completed sale

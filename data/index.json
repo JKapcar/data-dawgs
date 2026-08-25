@@ -9,10 +9,10 @@
    {
     "path": "/data/pool.json",
     "url": "https://datadawgs216.com/data/pool.json",
-    "bytes": 147064,
+    "bytes": 169476,
     "as_of": "2026-08-24",
-    "sha256": "3cbe467ab7e6f016a2519dae97fcf8353d36ae9ee53626c5b17c2e92194b84d7",
-    "note": "MV is an auction-dollar value, NOT a points projection. The source workbook contained 705 rows; 28 duplicate aliases were resolved to the best-ranked row, leaving 677 published players. Always state the selected league format and the 2026-08-24 capture date when quoting a value."
+    "sha256": "3f6aefb8aa5b74f8451d7f1ea6a5309cde2c650eecd3fdfd57619de4d886b06a",
+    "note": "MV is an auction-dollar value, NOT a points projection. half14 and sfhalf12 are derived formats; the captured source columns remain unchanged. Always state the selected league format and the 2026-08-24 capture date when quoting a value."
    },
    {
     "path": "/data/receipts.json",
@@ -57,9 +57,9 @@
    {
     "path": "/data/league.json",
     "url": "https://datadawgs216.com/data/league.json",
-    "bytes": 1992,
+    "bytes": 2018,
     "as_of": "2026-08-06",
-    "sha256": "b547263828c6d591898b1bc5e36ba0eeb0a9ff2cfd3cc4d77b2925f4b6d2a2a8",
+    "sha256": "6138da1ec5ecaf55a33a2d91629d49c7ad4c2a8f67fd0ac41775e4932903af22",
     "note": "Public configuration only. No rosters, no tokens, nothing league-private lives in this repo."
    },
    {

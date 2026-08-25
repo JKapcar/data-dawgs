@@ -61,7 +61,7 @@ for (const W of [390, 360]) {
       // ⚠️ every row the same height is the whole point — ragged heights were the symptom
       heights: [...new Set(rows.slice(0, 60).map(r => Math.round(r.getBoundingClientRect().height)))],
       theadShown: getComputedStyle(document.querySelector("#board thead")).display !== "none",
-      cells: Object.fromEntries(["rk", "name", "pos", "team", "half", "silva", "tags", "act", "full", "sf", "note"].map(c => [c, cell(c)])),
+      cells: Object.fromEntries(["rk", "name", "pos", "team", "half14", "half", "silva", "tags", "act", "full", "sfhalf12", "sf", "note"].map(c => [c, cell(c)])),
       nRows: rows.length,
     };
   });
@@ -83,8 +83,8 @@ for (const W of [390, 360]) {
     below(m.cells.half, m.cells.rk) && sameLine(m.cells.silva, m.cells.half));
   ok(`${W}: Taken/Target stayed on line two rather than wrapping to a third`,
     sameLine(m.cells.act, m.cells.half), `act ${m.cells.act.top} vs half ${m.cells.half.top}`);
-  ok(`${W}: full, SF and the note are hidden until asked for`,
-    !m.cells.full.vis && !m.cells.sf.vis && !m.cells.note.vis);
+  ok(`${W}: the other formats and note are hidden until asked for`,
+    !m.cells.half14.vis && !m.cells.full.vis && !m.cells.sfhalf12.vis && !m.cells.sf.vis && !m.cells.note.vis);
   // read the expected count from the published pool instead of a literal: the pool is
   // re-captured during the season and a hard-coded number turns every refresh into a
   // failing test that says nothing (2026-08-25: 459 -> 613 when defenses were deduped)
@@ -98,11 +98,11 @@ for (const W of [390, 360]) {
     const tr = document.querySelector("#board tbody tr");
     const t = c => { const b = tr.querySelector(`td[data-c=${c}]`).getBoundingClientRect(); return b.width > 0 || b.height > 0; };
     return { h: tr.getBoundingClientRect().height, open: tr.classList.contains("open"),
-             full: t("full"), sf: t("sf"), note: t("note"),
+             half: t("half"), full: t("full"), sfhalf12: t("sfhalf12"), sf: t("sf"), note: t("note"),
              label: tr.querySelector(".rowexp").textContent };
   });
   ok(`${W}: tapping it opens the row`, after.open && after.h > before);
-  ok(`${W}: and reveals the other two prices and the note`, after.full && after.sf && after.note);
+  ok(`${W}: and reveals every other price and the note`, after.half && after.full && after.sfhalf12 && after.sf && after.note);
   ok(`${W}: the chevron flips`, after.label === "▴");
   // ⚠️ the row must NOT re-render — a render() here would drop the open state and, during
   // a live draft, fight the sync repaint
@@ -161,7 +161,7 @@ for (const W of [390, 360]) {
 
 /* ---------------------------------------------- the price follows the league */
 console.log("\nthe phone price is the LEAGUE's price, not a hardcoded column");
-for (const [scoring, label, col, width=390] of [["half", "half", "half"], ["full", "full", "full"], ["sf", "SF", "sf"], ["ppr", "half", "half"], ["custom", "half\\*", "half", 360]]) {
+for (const [scoring, label, col, width=390] of [["half14", "14t", "half14"], ["half", "half", "half"], ["full", "full", "full"], ["sfhalf12", "SF½", "sfhalf12"], ["sf", "SF", "sf"], ["ppr", "half", "half"], ["custom", "half\\*", "half", 360]]) {
   const ctx = await browser.newContext({ viewport: { width, height: 900 }, isMobile: true, hasTouch: true });
   const leagueId = "dd_" + ("test" + scoring).padEnd(32, "0").slice(0, 32);
   await ctx.addInitScript(({id,sc})=>{
@@ -171,7 +171,7 @@ for (const [scoring, label, col, width=390] of [["half", "half", "half"], ["full
       v:1,id,name:"Mobile scoring test",season:2026,
       provider:{name:"manual",syncMode:"manual",status:"ready",diagnostics:{}},
       config:{draftType:"auction",teamCount:1,budget:200,rosterSlots:[{slot:"QB",count:1}],
-        scoring:{mode:["half","full","sf","custom"].includes(sc)?sc:"half"},teams:[{name:"Data Dawgs"}]}
+        scoring:{mode:["half14","half","full","sfhalf12","sf","custom"].includes(sc)?sc:"half"},teams:[{name:"Data Dawgs"}]}
     }));
     localStorage.setItem("dd-auction-v1:"+id,JSON.stringify({settings,picks:[]}));
   },{id:leagueId,sc:scoring});
@@ -182,7 +182,7 @@ for (const [scoring, label, col, width=390] of [["half", "half", "half"], ["full
   const r = await p.evaluate(() => {
     const tr = document.querySelector("#board tbody tr");
     const lg = tr.querySelector("td.lgprice");
-    const shown = [...tr.querySelectorAll("td[data-c=half],td[data-c=full],td[data-c=sf]")]
+    const shown = [...tr.querySelectorAll("td[data-c=half14],td[data-c=half],td[data-c=full],td[data-c=sfhalf12],td[data-c=sf]")]
       .filter(td => td.getBoundingClientRect().width > 0).map(td => td.dataset.c);
     return {
       lgCol: lg ? lg.dataset.c : null,
@@ -210,16 +210,16 @@ for (const [scoring, label, col, width=390] of [["half", "half", "half"], ["full
     ok('scoring="custom": the 360px card remains a two-line 68px row', r.rowHeight <= 70 && Math.abs(r.actionTop-r.priceTop) < 12, String(r.rowHeight));
     ok('scoring="custom": the board carries the honest fallback note once', r.customNoteVisible && /custom; these are half-PPR market values/.test(r.customNote), r.customNote);
   }
-  // the other two are one tap away, not gone
+  // every other format is one tap away, not gone
   await p.evaluate(() => document.querySelector("#board tbody tr .rowexp").click());
   await p.waitForTimeout(150);
   /* ⚠️ Scope to the ROW that was opened. Querying the document picks up every other
      row's league price too, so the list came back with 459 entries and the assertion
      failed against perfectly correct markup. */
   const open = await p.evaluate(() => [...document.querySelector("#board tbody tr")
-    .querySelectorAll("td[data-c=half],td[data-c=full],td[data-c=sf]")]
+    .querySelectorAll("td[data-c=half14],td[data-c=half],td[data-c=full],td[data-c=sfhalf12],td[data-c=sf]")]
     .filter(td => td.getBoundingClientRect().width > 0).map(td => td.dataset.c));
-  ok(`scoring="${scoring}": expanding reveals the other two prices`, open.length === 3, open.join(","));
+  ok(`scoring="${scoring}": expanding reveals every price`, open.length === 5, open.join(","));
   if(scoring === "custom"){
     const expandedNote = await p.evaluate(() => document.querySelector("#board tbody tr td[data-c=note]").textContent);
     ok('scoring="custom": the expanded row explains the fallback', /custom; these are half-PPR market values/.test(expandedNote), expandedNote);
@@ -271,7 +271,7 @@ console.log("\nthe desktop table is unchanged");
     };
   });
   ok("the header row is still a table header", d.thead === "table-header-group");
-  ok("all eleven columns are present", d.nCols === 11, String(d.nCols));
+  ok("all thirteen columns are present", d.nCols === 13, String(d.nCols));
   ok("and all on one line", d.allOneLine);
   ok("the phone chevron is hidden", d.chev === "none");
   ok("the phone sort control is hidden", d.msort === "none");

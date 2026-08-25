@@ -4,12 +4,14 @@
  "graded": false,
  "as_of": "2026-08-24",
  "source": "Public Market Value (MV) master auction-dollar snapshot supplied by the site owner, captured 2026-08-24.",
- "note": "MV is an auction-dollar value, NOT a points projection. The source workbook contained 705 rows; 28 duplicate aliases were resolved to the best-ranked row, leaving 677 published players. Always state the selected league format and the 2026-08-24 capture date when quoting a value.",
+ "note": "MV is an auction-dollar value, NOT a points projection. half14 and sfhalf12 are derived formats; the captured source columns remain unchanged. Always state the selected league format and the 2026-08-24 capture date when quoting a value.",
  "scoring_keys": {
   "full": "12-team PPR auction dollars",
-  "half": "12-team Half PPR auction dollars (site default)",
+  "half": "12-team Half PPR auction dollars",
+  "half14": "14-team Half PPR auction dollars — DERIVED, not captured: the 12-team half column re-normalised so the top 210 rostered players sum to the $2,800 in a 14-team, $200, 15-spot room. half14 = 1 + 0.906958 × (half − 1), floored at 0. Ranks are unchanged.",
   "std": "12-team Standard auction dollars",
   "sf": "12-team Superflex PPR auction dollars",
+  "sfhalf12": "12-team Superflex Half PPR auction dollars — HYBRID: quarterbacks use the owner-supplied Superflex Half export captured 2026-08-25; other positions are derived by applying each player’s captured half/full ratio to the captured Superflex PPR value.",
   "ppr10": "10-team PPR auction dollars",
   "ppr14": "14-team PPR auction dollars"
  },
@@ -38,7 +40,9 @@
    "tags": [
     "buy"
    ],
-   "note": "Silva's clear #1: 38 TDs in 2 yrs, Montgomery gone, softest schedule."
+   "note": "Silva's clear #1: 38 TDs in 2 yrs, Montgomery gone, softest schedule.",
+   "half14": 69.4,
+   "sfhalf12": 55.7
   },
   {
    "name": "Bijan Robinson",
@@ -54,7 +58,9 @@
    "rank": 2,
    "silva": "2",
    "tags": [],
-   "note": "Clear top-2 with Gibbs."
+   "note": "Clear top-2 with Gibbs.",
+   "half14": 67,
+   "sfhalf12": 52.6
   },
   {
    "name": "Ja'Marr Chase",
@@ -70,7 +76,9 @@
    "rank": 3,
    "silva": "~5",
    "tags": [],
-   "note": "WR tier 1. Bengals = scoring-leader favorites."
+   "note": "WR tier 1. Bengals = scoring-leader favorites.",
+   "half14": 63.8,
+   "sfhalf12": 48.4
   },
   {
    "name": "Puka Nacua",
@@ -86,7 +94,9 @@
    "rank": 4,
    "silva": "~3",
    "tags": [],
-   "note": "WR tier 1."
+   "note": "WR tier 1.",
+   "half14": 62.4,
+   "sfhalf12": 48.5
   },
   {
    "name": "Jaxon Smith-Njigba",
@@ -102,7 +112,9 @@
    "rank": 5,
    "silva": "~7",
    "tags": [],
-   "note": "WR tier 1."
+   "note": "WR tier 1.",
+   "half14": 60.1,
+   "sfhalf12": 47.4
   },
   {
    "name": "Christian McCaffrey",
@@ -118,7 +130,9 @@
    "rank": 6,
    "silva": "~4",
    "tags": [],
-   "note": "Next RB group after top two."
+   "note": "Next RB group after top two.",
+   "half14": 57,
+   "sfhalf12": 44.3
   },
   {
    "name": "Justin Jefferson",
@@ -134,7 +148,9 @@
    "rank": 7,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 53.6,
+   "sfhalf12": 40.2
   },
   {
    "name": "Amon-Ra St Brown",
@@ -150,7 +166,9 @@
    "rank": 8,
    "silva": "~9",
    "tags": [],
-   "note": "WR tier 1."
+   "note": "WR tier 1.",
+   "half14": 52.9,
+   "sfhalf12": 38.2
   },
   {
    "name": "Jonathan Taylor",
@@ -166,7 +184,9 @@
    "rank": 9,
    "silva": "~6",
    "tags": [],
-   "note": "IND pace up under Steichen."
+   "note": "IND pace up under Steichen.",
+   "half14": 50.4,
+   "sfhalf12": 37.1
   },
   {
    "name": "CeeDee Lamb",
@@ -182,7 +202,9 @@
    "rank": 10,
    "silva": "~11",
    "tags": [],
-   "note": "DAL pace up (Dak constant)."
+   "note": "DAL pace up (Dak constant).",
+   "half14": 48.7,
+   "sfhalf12": 36.1
   },
   {
    "name": "James Cook",
@@ -198,7 +220,9 @@
    "rank": 11,
    "silva": "~8",
    "tags": [],
-   "note": "BUF slogger pace."
+   "note": "BUF slogger pace.",
+   "half14": 41.5,
+   "sfhalf12": 29.9
   },
   {
    "name": "De'Von Achane",
@@ -216,7 +240,9 @@
    "tags": [
     "fade"
    ],
-   "note": "Biggest fade: McDaniel gone, Willis at QB craters receptions; 2nd-toughest schedule."
+   "note": "Biggest fade: McDaniel gone, Willis at QB craters receptions; 2nd-toughest schedule.",
+   "half14": 40.8,
+   "sfhalf12": 26.8
   },
   {
    "name": "Chase Brown",
@@ -232,7 +258,9 @@
    "rank": 13,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 40.6,
+   "sfhalf12": 28.9
   },
   {
    "name": "Saquon Barkley",
@@ -248,7 +276,9 @@
    "rank": 14,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 39.1,
+   "sfhalf12": 30.9
   },
   {
    "name": "Ashton Jeanty",
@@ -266,7 +296,9 @@
    "tags": [
     "fade"
    ],
-   "note": "Modest fade at cost: Silva 15 vs ADP ~11. LV slogger pace."
+   "note": "Modest fade at cost: Silva 15 vs ADP ~11. LV slogger pace.",
+   "half14": 38.6,
+   "sfhalf12": 25.8
   },
   {
    "name": "Drake London",
@@ -282,7 +314,9 @@
    "rank": 16,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 38.4,
+   "sfhalf12": 25.8
   },
   {
    "name": "Omarion Hampton",
@@ -298,7 +332,9 @@
    "rank": 17,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 38.4,
+   "sfhalf12": 27.9
   },
   {
    "name": "Kenneth Walker",
@@ -316,7 +352,9 @@
    "tags": [
     "buy"
    ],
-   "note": "Now in KC, got paid; Chiefs went RB-centric. Silva 10 vs July ADP ~21."
+   "note": "Now in KC, got paid; Chiefs went RB-centric. Silva 10 vs July ADP ~21.",
+   "half14": 38.2,
+   "sfhalf12": 27.9
   },
   {
    "name": "AJ Brown",
@@ -332,7 +370,9 @@
    "rank": 19,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 36.6,
+   "sfhalf12": 24.7
   },
   {
    "name": "Derrick Henry",
@@ -348,7 +388,9 @@
    "rank": 20,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 35.3,
+   "sfhalf12": 26.8
   },
   {
    "name": "Nico Collins",
@@ -364,7 +406,9 @@
    "rank": 21,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 34.7,
+   "sfhalf12": 23.7
   },
   {
    "name": "Brock Bowers",
@@ -380,7 +424,9 @@
    "rank": 22,
    "silva": "",
    "tags": [],
-   "note": "Consensus TE1: big QB + play-caller upgrades."
+   "note": "Consensus TE1: big QB + play-caller upgrades.",
+   "half14": 34,
+   "sfhalf12": 25.8
   },
   {
    "name": "Chris Olave",
@@ -398,7 +444,9 @@
    "tags": [
     "buy"
    ],
-   "note": "Saints fastest pace, indoor, Shough breakout profile."
+   "note": "Saints fastest pace, indoor, Shough breakout profile.",
+   "half14": 32.6,
+   "sfhalf12": 24.8
   },
   {
    "name": "Trey McBride",
@@ -416,7 +464,9 @@
    "tags": [
     "fade"
    ],
-   "note": "Volume monster but Carson Beck / offense-transition risk; fade at TE1 cost."
+   "note": "Volume monster but Carson Beck / offense-transition risk; fade at TE1 cost.",
+   "half14": 32.5,
+   "sfhalf12": 23.7
   },
   {
    "name": "George Pickens",
@@ -432,7 +482,9 @@
    "rank": 25,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 31.5,
+   "sfhalf12": 22.7
   },
   {
    "name": "Malik Nabers",
@@ -448,7 +500,9 @@
    "rank": 26,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 31.3,
+   "sfhalf12": 22.7
   },
   {
    "name": "Jeremiyah Love",
@@ -466,7 +520,9 @@
    "tags": [
     "fade"
    ],
-   "note": "ARI committee, bad team."
+   "note": "ARI committee, bad team.",
+   "half14": 30.8,
+   "sfhalf12": 22.7
   },
   {
    "name": "Rashee Rice",
@@ -482,7 +538,9 @@
    "rank": 28,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 30.7,
+   "sfhalf12": 22.7
   },
   {
    "name": "Kyren Williams",
@@ -498,7 +556,9 @@
    "rank": 29,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 30.7,
+   "sfhalf12": 21.6
   },
   {
    "name": "Breece Hall",
@@ -516,7 +576,9 @@
    "tags": [
     "buy"
    ],
-   "note": "Silva 18 vs July ADP ~33."
+   "note": "Silva 18 vs July ADP ~33.",
+   "half14": 30.2,
+   "sfhalf12": 22.7
   },
   {
    "name": "Garrett Wilson",
@@ -532,7 +594,9 @@
    "rank": 31,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 29.6,
+   "sfhalf12": 20.6
   },
   {
    "name": "Josh Jacobs",
@@ -548,7 +612,9 @@
    "rank": 32,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 28.8,
+   "sfhalf12": 19.6
   },
   {
    "name": "Ladd McConkey",
@@ -566,7 +632,9 @@
    "tags": [
     "buy"
    ],
-   "note": "Silva 29 vs July ADP ~45."
+   "note": "Silva 29 vs July ADP ~45.",
+   "half14": 28.6,
+   "sfhalf12": 18.6
   },
   {
    "name": "Zay Flowers",
@@ -582,7 +650,9 @@
    "rank": 34,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 27.1,
+   "sfhalf12": 17.5
   },
   {
    "name": "Josh Allen",
@@ -598,7 +668,9 @@
    "rank": 35,
    "silva": "",
    "tags": [],
-   "note": "Pay up only in small/casual leagues; structural QB edge is best-ball-only."
+   "note": "Pay up only in small/casual leagues; structural QB edge is best-ball-only.",
+   "half14": 27,
+   "sfhalf12": 52
   },
   {
    "name": "Devonta Smith",
@@ -614,7 +686,9 @@
    "rank": 36,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 27,
+   "sfhalf12": 19.9
   },
   {
    "name": "Javonte Williams",
@@ -630,7 +704,9 @@
    "rank": 37,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 26.8,
+   "sfhalf12": 19.6
   },
   {
    "name": "Travis Etienne",
@@ -646,7 +722,9 @@
    "rank": 38,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 26.1,
+   "sfhalf12": 20.6
   },
   {
    "name": "Emeka Egbuka",
@@ -662,7 +740,9 @@
    "rank": 39,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 26,
+   "sfhalf12": 17.6
   },
   {
    "name": "Tee Higgins",
@@ -678,7 +758,9 @@
    "rank": 40,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 25.5,
+   "sfhalf12": 16.5
   },
   {
    "name": "Jaylen Waddle",
@@ -694,7 +776,9 @@
    "rank": 41,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 24.9,
+   "sfhalf12": 17.5
   },
   {
    "name": "Tetairoa McMillan",
@@ -712,7 +796,9 @@
    "tags": [
     "fade"
    ],
-   "note": "Bryce caps the ceiling."
+   "note": "Bryce caps the ceiling.",
+   "half14": 24.5,
+   "sfhalf12": 15.5
   },
   {
    "name": "Colston Loveland",
@@ -728,7 +814,9 @@
    "rank": 43,
    "silva": "",
    "tags": [],
-   "note": "Ascending; Caleb's alpha target."
+   "note": "Ascending; Caleb's alpha target.",
+   "half14": 23.2,
+   "sfhalf12": 16.5
   },
   {
    "name": "D'Andre Swift",
@@ -744,7 +832,9 @@
    "rank": 44,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 23.2,
+   "sfhalf12": 16.5
   },
   {
    "name": "Davante Adams",
@@ -760,7 +850,9 @@
    "rank": 45,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 22.9,
+   "sfhalf12": 15.5
   },
   {
    "name": "Luther Burden",
@@ -778,7 +870,9 @@
    "tags": [
     "buy"
    ],
-   "note": "Silva 38 vs July ADP ~49."
+   "note": "Silva 38 vs July ADP ~49.",
+   "half14": 22.1,
+   "sfhalf12": 13.4
   },
   {
    "name": "Bucky Irving",
@@ -794,7 +888,9 @@
    "rank": 47,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 22,
+   "sfhalf12": 13.4
   },
   {
    "name": "Terry McLaurin",
@@ -812,7 +908,9 @@
    "tags": [
     "buy"
    ],
-   "note": "Silva 33 vs July ADP ~55."
+   "note": "Silva 33 vs July ADP ~55.",
+   "half14": 21,
+   "sfhalf12": 12.4
   },
   {
    "name": "Cam Skattebo",
@@ -828,7 +926,9 @@
    "rank": 49,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 20.8,
+   "sfhalf12": 13.4
   },
   {
    "name": "Jameson Williams",
@@ -844,7 +944,9 @@
    "rank": 50,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 20.7,
+   "sfhalf12": 12.4
   },
   {
    "name": "DJ Moore",
@@ -860,7 +962,9 @@
    "rank": 52,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 19.1,
+   "sfhalf12": 10.3
   },
   {
    "name": "Lamar Jackson",
@@ -876,7 +980,9 @@
    "rank": 53,
    "silva": "",
    "tags": [],
-   "note": "Same logic as Allen."
+   "note": "Same logic as Allen.",
+   "half14": 18.6,
+   "sfhalf12": 45
   },
   {
    "name": "Mike Evans",
@@ -894,7 +1000,9 @@
    "tags": [
     "buy"
    ],
-   "note": "Silva 34 vs July ADP ~61."
+   "note": "Silva 34 vs July ADP ~61.",
+   "half14": 17.9,
+   "sfhalf12": 9.3
   },
   {
    "name": "Quinshon Judkins",
@@ -910,7 +1018,9 @@
    "rank": 55,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 17.6,
+   "sfhalf12": 9.3
   },
   {
    "name": "David Montgomery",
@@ -926,7 +1036,9 @@
    "rank": 56,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 17.3,
+   "sfhalf12": 10.3
   },
   {
    "name": "Jayden Daniels",
@@ -942,7 +1054,9 @@
    "rank": 57,
    "silva": "",
    "tags": [],
-   "note": "Same tier of decision."
+   "note": "Same tier of decision.",
+   "half14": 17.1,
+   "sfhalf12": 43
   },
   {
    "name": "Parker Washington",
@@ -958,7 +1072,9 @@
    "rank": 58,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 16.3,
+   "sfhalf12": 8.2
   },
   {
    "name": "Tyler Warren",
@@ -974,7 +1090,9 @@
    "rank": 59,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 16.3,
+   "sfhalf12": 9.3
   },
   {
    "name": "Rhamondre Stevenson",
@@ -990,7 +1108,9 @@
    "rank": 60,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 16.1,
+   "sfhalf12": 10.3
   },
   {
    "name": "Bhayshul Tuten",
@@ -1006,7 +1126,9 @@
    "rank": 61,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 16.1,
+   "sfhalf12": 10.3
   },
   {
    "name": "TreVeyon Henderson",
@@ -1022,7 +1144,9 @@
    "rank": 62,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 15.9,
+   "sfhalf12": 9.3
   },
   {
    "name": "Jalen Hurts",
@@ -1038,7 +1162,9 @@
    "rank": 63,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 15.8,
+   "sfhalf12": 41
   },
   {
    "name": "Joe Burrow",
@@ -1054,7 +1180,9 @@
    "rank": 64,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 15.6,
+   "sfhalf12": 41
   },
   {
    "name": "Jaylen Warren",
@@ -1070,7 +1198,9 @@
    "rank": 65,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 15.1,
+   "sfhalf12": 9.3
   },
   {
    "name": "Drake Maye",
@@ -1086,7 +1216,9 @@
    "rank": 66,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 15.1,
+   "sfhalf12": 39
   },
   {
    "name": "DK Metcalf",
@@ -1102,7 +1234,9 @@
    "rank": 67,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 15.1,
+   "sfhalf12": 7.2
   },
   {
    "name": "Christian Watson",
@@ -1118,7 +1252,9 @@
    "rank": 68,
    "silva": "",
    "tags": [],
-   "note": "Spike-week specialist — worse in redraft."
+   "note": "Spike-week specialist — worse in redraft.",
+   "half14": 14.9,
+   "sfhalf12": 6.2
   },
   {
    "name": "Brian Thomas",
@@ -1134,7 +1270,9 @@
    "rank": 69,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 14.2,
+   "sfhalf12": 5.2
   },
   {
    "name": "Harold Fannin",
@@ -1150,7 +1288,9 @@
    "rank": 70,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 14.1,
+   "sfhalf12": 10.3
   },
   {
    "name": "Carnell Tate",
@@ -1166,7 +1306,9 @@
    "rank": 71,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 14,
+   "sfhalf12": 6.2
   },
   {
    "name": "Jadarian Price",
@@ -1182,7 +1324,9 @@
    "rank": 72,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 13.8,
+   "sfhalf12": 9.3
   },
   {
    "name": "Rome Odunze",
@@ -1198,7 +1342,9 @@
    "rank": 73,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 13.3,
+   "sfhalf12": 4.1
   },
   {
    "name": "Rico Dowdle",
@@ -1216,7 +1362,9 @@
    "tags": [
     "zrb"
    ],
-   "note": "Zero-RB target list."
+   "note": "Zero-RB target list.",
+   "half14": 13.2,
+   "sfhalf12": 7.2
   },
   {
    "name": "Tony Pollard",
@@ -1232,7 +1380,9 @@
    "rank": 75,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 12.9,
+   "sfhalf12": 6.2
   },
   {
    "name": "Marvin Harrison",
@@ -1248,7 +1398,9 @@
    "rank": 76,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 11.8,
+   "sfhalf12": 5.2
   },
   {
    "name": "Justin Herbert",
@@ -1264,7 +1416,9 @@
    "rank": 77,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 11.3,
+   "sfhalf12": 38
   },
   {
    "name": "RJ Harvey",
@@ -1280,7 +1434,9 @@
    "rank": 78,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 10.5,
+   "sfhalf12": 6.2
   },
   {
    "name": "Tucker Kraft",
@@ -1296,7 +1452,9 @@
    "rank": 79,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 10.3,
+   "sfhalf12": 3.1
   },
   {
    "name": "James Conner",
@@ -1312,7 +1470,9 @@
    "rank": 80,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 10.2,
+   "sfhalf12": 7.4
   },
   {
    "name": "Jonathon Brooks",
@@ -1330,7 +1490,9 @@
    "tags": [
     "zrb"
    ],
-   "note": "Zero-RB target list."
+   "note": "Zero-RB target list.",
+   "half14": 10,
+   "sfhalf12": 5.1
   },
   {
    "name": "Trevor Lawrence",
@@ -1346,7 +1508,9 @@
    "rank": 82,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 9.6,
+   "sfhalf12": 35
   },
   {
    "name": "Jayden Reed",
@@ -1362,7 +1526,9 @@
    "rank": 83,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 9.4,
+   "sfhalf12": 3.1
   },
   {
    "name": "Chig Okonkwo",
@@ -1378,7 +1544,9 @@
    "rank": 84,
    "silva": "",
    "tags": [],
-   "note": "Better in redraft."
+   "note": "Better in redraft.",
+   "half14": 9.4,
+   "sfhalf12": 6.9
   },
   {
    "name": "Caleb Williams",
@@ -1394,7 +1562,9 @@
    "rank": 85,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 9.3,
+   "sfhalf12": 37
   },
   {
    "name": "Travis Hunter",
@@ -1410,7 +1580,9 @@
    "rank": 86,
    "silva": "",
    "tags": [],
-   "note": "Better in redraft (contingent upside)."
+   "note": "Better in redraft (contingent upside).",
+   "half14": 9.3,
+   "sfhalf12": 6.8
   },
   {
    "name": "Dak Prescott",
@@ -1426,7 +1598,9 @@
    "rank": 87,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 9.2,
+   "sfhalf12": 37
   },
   {
    "name": "Kenny Gainwell",
@@ -1442,7 +1616,9 @@
    "rank": 88,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 9,
+   "sfhalf12": 6.6
   },
   {
    "name": "Josh Downs",
@@ -1458,7 +1634,9 @@
    "rank": 89,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 8.7,
+   "sfhalf12": 2.1
   },
   {
    "name": "Brock Purdy",
@@ -1476,7 +1654,9 @@
    "tags": [
     "buy"
    ],
-   "note": "QB2-tier efficiency out — the wait-at-QB plan."
+   "note": "QB2-tier efficiency out — the wait-at-QB plan.",
+   "half14": 8.7,
+   "sfhalf12": 34
   },
   {
    "name": "Chuba Hubbard",
@@ -1492,7 +1672,9 @@
    "rank": 91,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 8.6,
+   "sfhalf12": 3.1
   },
   {
    "name": "Sam LaPorta",
@@ -1508,7 +1690,9 @@
    "rank": 92,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 8.4,
+   "sfhalf12": 2.1
   },
   {
    "name": "Kyle Pitts",
@@ -1524,7 +1708,9 @@
    "rank": 93,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 8.2,
+   "sfhalf12": 2.1
   },
   {
    "name": "Patrick Mahomes",
@@ -1540,7 +1726,9 @@
    "rank": 94,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 8.2,
+   "sfhalf12": 35
   },
   {
    "name": "Quentin Johnston",
@@ -1556,7 +1744,9 @@
    "rank": 95,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 7.9,
+   "sfhalf12": 2.1
   },
   {
    "name": "Michael Pittman",
@@ -1572,7 +1762,9 @@
    "rank": 96,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 7.8,
+   "sfhalf12": 2.1
   },
   {
    "name": "Michael Wilson",
@@ -1588,7 +1780,9 @@
    "rank": 97,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 7.3,
+   "sfhalf12": 2.1
   },
   {
    "name": "George Kittle",
@@ -1604,7 +1798,9 @@
    "rank": 98,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 7.3,
+   "sfhalf12": 1
   },
   {
    "name": "Chris Godwin",
@@ -1620,7 +1816,9 @@
    "rank": 99,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 7.2,
+   "sfhalf12": 2.1
   },
   {
    "name": "Jaxson Dart",
@@ -1638,7 +1836,9 @@
    "tags": [
     "buy"
    ],
-   "note": "8.5 rush PPG — QB2 tier with rushing juice."
+   "note": "8.5 rush PPG — QB2 tier with rushing juice.",
+   "half14": 7.2,
+   "sfhalf12": 35
   },
   {
    "name": "TJ Hockenson",
@@ -1654,7 +1854,9 @@
    "rank": 101,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 7.1,
+   "sfhalf12": 5.1
   },
   {
    "name": "Matthew Stafford",
@@ -1672,7 +1874,9 @@
    "tags": [
     "buy"
    ],
-   "note": "QB2-tier efficiency out."
+   "note": "QB2-tier efficiency out.",
+   "half14": 7,
+   "sfhalf12": 35
   },
   {
    "name": "Blake Corum",
@@ -1690,7 +1894,9 @@
    "tags": [
     "zrb"
    ],
-   "note": "Zero-RB target list."
+   "note": "Zero-RB target list.",
+   "half14": 6.9,
+   "sfhalf12": 2.1
   },
   {
    "name": "Courtland Sutton",
@@ -1706,7 +1912,9 @@
    "rank": 104,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 6.8,
+   "sfhalf12": 2.1
   },
   {
    "name": "Kyler Murray",
@@ -1724,7 +1932,9 @@
    "tags": [
     "buy"
    ],
-   "note": "~4.7 rush PPG; Vikings revival bet."
+   "note": "~4.7 rush PPG; Vikings revival bet.",
+   "half14": 6.6,
+   "sfhalf12": 34
   },
   {
    "name": "Stefon Diggs",
@@ -1740,7 +1950,9 @@
    "rank": 106,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 6.4,
+   "sfhalf12": 2.1
   },
   {
    "name": "Xavier Worthy",
@@ -1756,7 +1968,9 @@
    "rank": 107,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 6.4,
+   "sfhalf12": 2.1
   },
   {
    "name": "JK Dobbins",
@@ -1774,7 +1988,9 @@
    "tags": [
     "zrb"
    ],
-   "note": "Zero-RB target list."
+   "note": "Zero-RB target list.",
+   "half14": 6.3,
+   "sfhalf12": 2.1
   },
   {
    "name": "Isaiah Likely",
@@ -1790,7 +2006,9 @@
    "rank": 109,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 6.1,
+   "sfhalf12": 4.4
   },
   {
    "name": "Bo Nix",
@@ -1806,7 +2024,9 @@
    "rank": 110,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 6.1,
+   "sfhalf12": 33
   },
   {
    "name": "Alec Pierce",
@@ -1822,7 +2042,9 @@
    "rank": 111,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 5.9,
+   "sfhalf12": 1
   },
   {
    "name": "Jordyn Tyson",
@@ -1838,7 +2060,9 @@
    "rank": 112,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 5.7,
+   "sfhalf12": 4.1
   },
   {
    "name": "Kenyon Sadiq",
@@ -1854,7 +2078,9 @@
    "rank": 113,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 5.7,
+   "sfhalf12": 4.1
   },
   {
    "name": "Kenneth Gainwell",
@@ -1870,7 +2096,9 @@
    "rank": 114,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 5.7,
+   "sfhalf12": 4.1
   },
   {
    "name": "Tyrone Tracy",
@@ -1888,7 +2116,9 @@
    "tags": [
     "zrb"
    ],
-   "note": "Zero-RB target list."
+   "note": "Zero-RB target list.",
+   "half14": 5.7,
+   "sfhalf12": 4.1
   },
   {
    "name": "Kaleb Johnson",
@@ -1904,7 +2134,9 @@
    "rank": 116,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 5.7,
+   "sfhalf12": 4.1
   },
   {
    "name": "Jauan Jennings",
@@ -1920,7 +2152,9 @@
    "rank": 117,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 5.7,
+   "sfhalf12": 4.1
   },
   {
    "name": "Greg Dulcich",
@@ -1936,7 +2170,9 @@
    "rank": 118,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 5.7,
+   "sfhalf12": 4.1
   },
   {
    "name": "Jordan Addison",
@@ -1952,7 +2188,9 @@
    "rank": 119,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 5.6,
+   "sfhalf12": 2.1
   },
   {
    "name": "Jordan Mason",
@@ -1970,7 +2208,9 @@
    "tags": [
     "zrb"
    ],
-   "note": "Zero-RB target list."
+   "note": "Zero-RB target list.",
+   "half14": 5.5,
+   "sfhalf12": 2.1
   },
   {
    "name": "Jordan Love",
@@ -1986,7 +2226,9 @@
    "rank": 121,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 5.4,
+   "sfhalf12": 34
   },
   {
    "name": "Zach Charbonnet",
@@ -2002,7 +2244,9 @@
    "rank": 122,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 5.4,
+   "sfhalf12": 3.9
   },
   {
    "name": "Makai Lemon",
@@ -2018,7 +2262,9 @@
    "rank": 123,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 5.4,
+   "sfhalf12": 2.1
   },
   {
    "name": "Jacory Croskey-Merritt",
@@ -2034,7 +2280,9 @@
    "rank": 124,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 5.4,
+   "sfhalf12": 2.1
   },
   {
    "name": "Alvin Kamara",
@@ -2050,7 +2298,9 @@
    "rank": 125,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 5.4,
+   "sfhalf12": 3.9
   },
   {
    "name": "Travis Kelce",
@@ -2066,7 +2316,9 @@
    "rank": 126,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 5.3,
+   "sfhalf12": 1
   },
   {
    "name": "Cooper Kupp",
@@ -2082,7 +2334,9 @@
    "rank": 127,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 5.3,
+   "sfhalf12": 3.8
   },
   {
    "name": "Mike Washington",
@@ -2098,7 +2352,9 @@
    "rank": 129,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 4.8,
+   "sfhalf12": 3.5
   },
   {
    "name": "AJ Barner",
@@ -2114,7 +2370,9 @@
    "rank": 130,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 4.8,
+   "sfhalf12": 3.5
   },
   {
    "name": "Mark Andrews",
@@ -2130,7 +2388,9 @@
    "rank": 131,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 4.7,
+   "sfhalf12": 3.4
   },
   {
    "name": "Aaron Jones",
@@ -2146,7 +2406,9 @@
    "rank": 132,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 4.7,
+   "sfhalf12": 1
   },
   {
    "name": "Wan'Dale Robinson",
@@ -2162,7 +2424,9 @@
    "rank": 133,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 4.7,
+   "sfhalf12": 1
   },
   {
    "name": "Isiah Pacheco",
@@ -2178,7 +2442,9 @@
    "rank": 134,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 4.6,
+   "sfhalf12": 3.3
   },
   {
    "name": "Evan Engram",
@@ -2194,7 +2460,9 @@
    "rank": 135,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 4.6,
+   "sfhalf12": 3.3
   },
   {
    "name": "Keon Coleman",
@@ -2210,7 +2478,9 @@
    "rank": 136,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 4.6,
+   "sfhalf12": 3.3
   },
   {
    "name": "Dalton Kincaid",
@@ -2226,7 +2496,9 @@
    "rank": 137,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 4.4,
+   "sfhalf12": 1
   },
   {
    "name": "Kyle Monangai",
@@ -2244,7 +2516,9 @@
    "tags": [
     "zrb"
    ],
-   "note": "Zero-RB target list."
+   "note": "Zero-RB target list.",
+   "half14": 4.4,
+   "sfhalf12": 1
   },
   {
    "name": "Rachaad White",
@@ -2262,7 +2536,9 @@
    "tags": [
     "zrb"
    ],
-   "note": "Zero-RB target list."
+   "note": "Zero-RB target list.",
+   "half14": 4.2,
+   "sfhalf12": 2
   },
   {
    "name": "Jared Goff",
@@ -2278,7 +2554,9 @@
    "rank": 140,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 4.2,
+   "sfhalf12": 32
   },
   {
    "name": "Jakobi Meyers",
@@ -2294,7 +2572,9 @@
    "rank": 141,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 4,
+   "sfhalf12": 1
   },
   {
    "name": "Omar Cooper",
@@ -2310,7 +2590,9 @@
    "rank": 142,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 3.8,
+   "sfhalf12": 2.8
   },
   {
    "name": "David Njoku",
@@ -2326,7 +2608,9 @@
    "rank": 143,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 3.8,
+   "sfhalf12": 2.8
   },
   {
    "name": "Dallas Goedert",
@@ -2342,7 +2626,9 @@
    "rank": 144,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 3.8,
+   "sfhalf12": 1
   },
   {
    "name": "George Holani",
@@ -2358,7 +2644,9 @@
    "rank": 145,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 3.8,
+   "sfhalf12": 2.8
   },
   {
    "name": "Kaytron Allen",
@@ -2374,7 +2662,9 @@
    "rank": 146,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 3.8,
+   "sfhalf12": 2.8
   },
   {
    "name": "Terrance Ferguson",
@@ -2390,7 +2680,9 @@
    "rank": 147,
    "silva": "",
    "tags": [],
-   "note": "Better in redraft."
+   "note": "Better in redraft.",
+   "half14": 3.8,
+   "sfhalf12": 2.8
   },
   {
    "name": "Jaydon Blue",
@@ -2408,7 +2700,9 @@
    "tags": [
     "zrb"
    ],
-   "note": "Zero-RB target list."
+   "note": "Zero-RB target list.",
+   "half14": 3.8,
+   "sfhalf12": 2.8
   },
   {
    "name": "Ryan Flournoy",
@@ -2424,7 +2718,9 @@
    "rank": 149,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 3.8,
+   "sfhalf12": 2.8
   },
   {
    "name": "Tre' Harris",
@@ -2440,7 +2736,9 @@
    "rank": 150,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 3.8,
+   "sfhalf12": 2.8
   },
   {
    "name": "Jake Ferguson",
@@ -2456,7 +2754,9 @@
    "rank": 151,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 3.8,
+   "sfhalf12": 2.8
   },
   {
    "name": "Trey Benson",
@@ -2472,7 +2772,9 @@
    "rank": 152,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 3.6,
+   "sfhalf12": 2.6
   },
   {
    "name": "Ray Davis",
@@ -2488,7 +2790,9 @@
    "rank": 153,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 3.6,
+   "sfhalf12": 2.6
   },
   {
    "name": "Baker Mayfield",
@@ -2504,7 +2808,9 @@
    "rank": 154,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 3.6,
+   "sfhalf12": 30
   },
   {
    "name": "Matthew Golden",
@@ -2520,7 +2826,9 @@
    "rank": 155,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 3.4,
+   "sfhalf12": 1
   },
   {
    "name": "KC Concepcion",
@@ -2536,7 +2844,9 @@
    "rank": 156,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 3.4,
+   "sfhalf12": 1
   },
   {
    "name": "Jayden Higgins",
@@ -2552,7 +2862,9 @@
    "rank": 157,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 3.4,
+   "sfhalf12": 2.4
   },
   {
    "name": "Malik Willis",
@@ -2570,7 +2882,9 @@
    "tags": [
     "buy"
    ],
-   "note": "6.0 rush PPG; late-round rushing floor."
+   "note": "6.0 rush PPG; late-round rushing floor.",
+   "half14": 3.4,
+   "sfhalf12": 28
   },
   {
    "name": "Deebo Samuel",
@@ -2586,7 +2900,9 @@
    "rank": 159,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 3.3,
+   "sfhalf12": 2.4
   },
   {
    "name": "Brian Robinson",
@@ -2604,7 +2920,9 @@
    "tags": [
     "zrb"
    ],
-   "note": "Zero-RB target list."
+   "note": "Zero-RB target list.",
+   "half14": 3.1,
+   "sfhalf12": 2.2
   },
   {
    "name": "Rashid Shaheed",
@@ -2620,7 +2938,9 @@
    "rank": 161,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 3.1,
+   "sfhalf12": 1
   },
   {
    "name": "Ollie Gordon",
@@ -2636,7 +2956,9 @@
    "rank": 162,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 3.1,
+   "sfhalf12": 2.2
   },
   {
    "name": "Calvin Ridley",
@@ -2652,7 +2974,9 @@
    "rank": 163,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 3.1,
+   "sfhalf12": 2.2
   },
   {
    "name": "Dylan Sampson",
@@ -2670,7 +2994,9 @@
    "tags": [
     "zrb"
    ],
-   "note": "Zero-RB target list."
+   "note": "Zero-RB target list.",
+   "half14": 3.1,
+   "sfhalf12": 1
   },
   {
    "name": "Tyler Allgeier",
@@ -2688,7 +3014,9 @@
    "tags": [
     "zrb"
    ],
-   "note": "Zero-RB target list."
+   "note": "Zero-RB target list.",
+   "half14": 3,
+   "sfhalf12": 1
   },
   {
    "name": "Hunter Henry",
@@ -2704,7 +3032,9 @@
    "rank": 166,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2.9,
+   "sfhalf12": 2.1
   },
   {
    "name": "Marvin Mims",
@@ -2720,7 +3050,9 @@
    "rank": 167,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2.9,
+   "sfhalf12": 2.1
   },
   {
    "name": "Juwan Johnson",
@@ -2736,7 +3068,9 @@
    "rank": 168,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2.9,
+   "sfhalf12": 2.1
   },
   {
    "name": "Brenton Strange",
@@ -2752,7 +3086,9 @@
    "rank": 169,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2.9,
+   "sfhalf12": 2.1
   },
   {
    "name": "Justin Fields",
@@ -2768,7 +3104,9 @@
    "rank": 170,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2.9,
+   "sfhalf12": 9
   },
   {
    "name": "Ted Hurst",
@@ -2784,7 +3122,9 @@
    "rank": 171,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2.9,
+   "sfhalf12": 2.1
   },
   {
    "name": "Woody Marks",
@@ -2800,7 +3140,9 @@
    "rank": 173,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2.9,
+   "sfhalf12": 1
   },
   {
    "name": "Keaton Mitchell",
@@ -2818,7 +3160,9 @@
    "tags": [
     "zrb"
    ],
-   "note": "Zero-RB list; better in redraft (cuttable)."
+   "note": "Zero-RB list; better in redraft (cuttable).",
+   "half14": 2.9,
+   "sfhalf12": 1
   },
   {
    "name": "Kaelon Black",
@@ -2834,7 +3178,9 @@
    "rank": 175,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2.9,
+   "sfhalf12": 2.1
   },
   {
    "name": "Chris Rodriguez",
@@ -2850,7 +3196,9 @@
    "rank": 176,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2.9,
+   "sfhalf12": 2.1
   },
   {
    "name": "Darnell Mooney",
@@ -2866,7 +3214,9 @@
    "rank": 177,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2.7,
+   "sfhalf12": 2
   },
   {
    "name": "Tyjae Spears",
@@ -2882,7 +3232,9 @@
    "rank": 178,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2.7,
+   "sfhalf12": 1
   },
   {
    "name": "Tank Bigsby",
@@ -2900,7 +3252,9 @@
    "tags": [
     "zrb"
    ],
-   "note": "Zero-RB target list."
+   "note": "Zero-RB target list.",
+   "half14": 2.5,
+   "sfhalf12": 1
   },
   {
    "name": "Khalil Shakir",
@@ -2916,7 +3270,9 @@
    "rank": 180,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2.5,
+   "sfhalf12": 1
   },
   {
    "name": "Justice Hill",
@@ -2932,7 +3288,9 @@
    "rank": 181,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2.4,
+   "sfhalf12": 1.7
   },
   {
    "name": "Denzel Boston",
@@ -2948,7 +3306,9 @@
    "rank": 182,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2.4,
+   "sfhalf12": 1
   },
   {
    "name": "Tyler Shough",
@@ -2964,7 +3324,9 @@
    "rank": 183,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2.4,
+   "sfhalf12": 25
   },
   {
    "name": "Romeo Doubs",
@@ -2980,7 +3342,9 @@
    "rank": 184,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2.2,
+   "sfhalf12": 1
   },
   {
    "name": "Cedric Tillman",
@@ -2996,7 +3360,9 @@
    "rank": 185,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2.2,
+   "sfhalf12": 1.6
   },
   {
    "name": "Dalton Schultz",
@@ -3012,7 +3378,9 @@
    "rank": 186,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2.2,
+   "sfhalf12": 1.6
   },
   {
    "name": "Marquise Brown",
@@ -3028,7 +3396,9 @@
    "rank": 187,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2.2,
+   "sfhalf12": 1.6
   },
   {
    "name": "Najee Harris",
@@ -3044,7 +3414,9 @@
    "rank": 188,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2.2,
+   "sfhalf12": 1.6
   },
   {
    "name": "CJ Stroud",
@@ -3060,7 +3432,9 @@
    "rank": 189,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2.1,
+   "sfhalf12": 25
   },
   {
    "name": "Jalen Coker",
@@ -3076,7 +3450,9 @@
    "rank": 190,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2.1,
+   "sfhalf12": 1
   },
   {
    "name": "Adonai Mitchell",
@@ -3092,7 +3468,9 @@
    "rank": 191,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2,
+   "sfhalf12": 1.4
   },
   {
    "name": "Jalen Nailor",
@@ -3108,7 +3486,9 @@
    "rank": 192,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2,
+   "sfhalf12": 1.4
   },
   {
    "name": "Jalen McMillan",
@@ -3124,7 +3504,9 @@
    "rank": 193,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2,
+   "sfhalf12": 1.4
   },
   {
    "name": "Rashod Bateman",
@@ -3140,7 +3522,9 @@
    "rank": 194,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2,
+   "sfhalf12": 1.4
   },
   {
    "name": "Philadelphia Eagles DST",
@@ -3156,7 +3540,9 @@
    "rank": 195,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2,
+   "sfhalf12": 1.4
   },
   {
    "name": "Denver Broncos DST",
@@ -3172,7 +3558,9 @@
    "rank": 196,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2,
+   "sfhalf12": 1.4
   },
   {
    "name": "Seattle Seahawks DST",
@@ -3188,7 +3576,9 @@
    "rank": 197,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2,
+   "sfhalf12": 1.4
   },
   {
    "name": "Baltimore Ravens DST",
@@ -3204,7 +3594,9 @@
    "rank": 198,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2,
+   "sfhalf12": 1.4
   },
   {
    "name": "Pittsburgh Steelers DST",
@@ -3220,7 +3612,9 @@
    "rank": 199,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2,
+   "sfhalf12": 1.4
   },
   {
    "name": "Jerry Jeudy",
@@ -3236,7 +3630,9 @@
    "rank": 200,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2,
+   "sfhalf12": 1.4
   },
   {
    "name": "Jahan Dotson",
@@ -3252,7 +3648,9 @@
    "rank": 201,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2,
+   "sfhalf12": 1.4
   },
   {
    "name": "Caleb Douglas",
@@ -3268,7 +3666,9 @@
    "rank": 202,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2,
+   "sfhalf12": 1.4
   },
   {
    "name": "Braelon Allen",
@@ -3284,7 +3684,9 @@
    "rank": 203,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2,
+   "sfhalf12": 1.4
   },
   {
    "name": "Tre Tucker",
@@ -3300,7 +3702,9 @@
    "rank": 204,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2,
+   "sfhalf12": 1.4
   },
   {
    "name": "Sam Darnold",
@@ -3316,7 +3720,9 @@
    "rank": 205,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2,
+   "sfhalf12": 25
   },
   {
    "name": "Jordan James",
@@ -3334,7 +3740,9 @@
    "tags": [
     "zrb"
    ],
-   "note": "Zero-RB list; contingent upside, better in redraft."
+   "note": "Zero-RB list; contingent upside, better in redraft.",
+   "half14": 2,
+   "sfhalf12": 1.4
   },
   {
    "name": "Los Angeles Rams DST",
@@ -3350,7 +3758,9 @@
    "rank": 207,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2,
+   "sfhalf12": 1.4
   },
   {
    "name": "Houston Texans DST",
@@ -3366,7 +3776,9 @@
    "rank": 208,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 2,
+   "sfhalf12": 1.4
   },
   {
    "name": "Brandon Aubrey",
@@ -3382,7 +3794,9 @@
    "rank": 209,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1.9,
+   "sfhalf12": 2.1
   },
   {
    "name": "De'Zhaun Stribling",
@@ -3398,7 +3812,9 @@
    "rank": 210,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1.8,
+   "sfhalf12": 1.1
   },
   {
    "name": "Tahj Brooks",
@@ -3414,7 +3830,9 @@
    "rank": 211,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1.8,
+   "sfhalf12": 1.3
   },
   {
    "name": "Sean Tucker",
@@ -3430,7 +3848,9 @@
    "rank": 212,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1.8,
+   "sfhalf12": 1.3
   },
   {
    "name": "Isaac TeSlaa",
@@ -3446,7 +3866,9 @@
    "rank": 213,
    "silva": "",
    "tags": [],
-   "note": "Spike-week specialist — worse in redraft."
+   "note": "Spike-week specialist — worse in redraft.",
+   "half14": 1.8,
+   "sfhalf12": 1.3
   },
   {
    "name": "MarShawn Lloyd",
@@ -3462,7 +3884,9 @@
    "rank": 214,
    "silva": "",
    "tags": [],
-   "note": "Better in redraft (cuttable lottery ticket)."
+   "note": "Better in redraft (cuttable lottery ticket).",
+   "half14": 1.8,
+   "sfhalf12": 1.3
   },
   {
    "name": "Pat Freiermuth",
@@ -3478,7 +3902,9 @@
    "rank": 215,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1.8,
+   "sfhalf12": 1.3
   },
   {
    "name": "Xavier Legette",
@@ -3494,7 +3920,9 @@
    "rank": 216,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1.8,
+   "sfhalf12": 1.3
   },
   {
    "name": "Joshua Palmer",
@@ -3510,7 +3938,9 @@
    "rank": 217,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1.8,
+   "sfhalf12": 1.3
   },
   {
    "name": "AJ Dillon",
@@ -3526,7 +3956,9 @@
    "rank": 219,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1.5,
+   "sfhalf12": 1
   },
   {
    "name": "JJ McCarthy",
@@ -3542,7 +3974,9 @@
    "rank": 220,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1.5,
+   "sfhalf12": 0
   },
   {
    "name": "Efton Chism III",
@@ -3558,7 +3992,9 @@
    "rank": 222,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1.5,
+   "sfhalf12": 1
   },
   {
    "name": "Jonah Coleman",
@@ -3574,7 +4010,9 @@
    "rank": 223,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1.5,
+   "sfhalf12": 1
   },
   {
    "name": "Will Shipley",
@@ -3590,7 +4028,9 @@
    "rank": 224,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1.5,
+   "sfhalf12": 1
   },
   {
    "name": "Daniel Jones",
@@ -3606,7 +4046,9 @@
    "rank": 225,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1.5,
+   "sfhalf12": 25
   },
   {
    "name": "Dontayvion Wicks",
@@ -3622,7 +4064,9 @@
    "rank": 226,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1.5,
+   "sfhalf12": 1
   },
   {
    "name": "Brashard Smith",
@@ -3638,7 +4082,9 @@
    "rank": 227,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1.5,
+   "sfhalf12": 1
   },
   {
    "name": "Demario Douglas",
@@ -3654,7 +4100,9 @@
    "rank": 228,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1.5,
+   "sfhalf12": 1
   },
   {
    "name": "Minnesota Vikings DST",
@@ -3670,7 +4118,9 @@
    "rank": 229,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1.5,
+   "sfhalf12": 1
   },
   {
    "name": "Kyle Williams",
@@ -3686,7 +4136,9 @@
    "rank": 230,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1.5,
+   "sfhalf12": 1
   },
   {
    "name": "Jaylin Noel",
@@ -3702,7 +4154,9 @@
    "rank": 231,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1.2,
+   "sfhalf12": 0.8
   },
   {
    "name": "Malik Washington",
@@ -3718,7 +4172,9 @@
    "rank": 232,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1.2,
+   "sfhalf12": 0.8
   },
   {
    "name": "Cameron Dicker",
@@ -3734,7 +4190,9 @@
    "rank": 233,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1.2,
+   "sfhalf12": 1
   },
   {
    "name": "Cleveland Browns DST",
@@ -3750,7 +4208,9 @@
    "rank": 234,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Atlanta Falcons DST",
@@ -3766,7 +4226,9 @@
    "rank": 235,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Kansas City Chiefs DST",
@@ -3782,7 +4244,9 @@
    "rank": 236,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "San Francisco 49ers DST",
@@ -3798,7 +4262,9 @@
    "rank": 238,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Tampa Bay Buccaneers DST",
@@ -3814,7 +4280,9 @@
    "rank": 239,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Buffalo Bills DST",
@@ -3830,7 +4298,9 @@
    "rank": 240,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Detroit Lions DST",
@@ -3846,7 +4316,9 @@
    "rank": 241,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Cade Otton",
@@ -3862,7 +4334,9 @@
    "rank": 243,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Jacoby Brissett",
@@ -3878,7 +4352,9 @@
    "rank": 244,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0
   },
   {
    "name": "Gunnar Helm",
@@ -3894,7 +4370,9 @@
    "rank": 245,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Cairo Santos",
@@ -3910,7 +4388,9 @@
    "rank": 246,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Hollywood Brown",
@@ -3926,7 +4406,9 @@
    "rank": 247,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Dylan Laube",
@@ -3942,7 +4424,9 @@
    "rank": 248,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "LeQuint Allen",
@@ -3958,7 +4442,9 @@
    "rank": 249,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Harrison Mevis",
@@ -3974,7 +4460,9 @@
    "rank": 250,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Nicholas Singleton",
@@ -3990,7 +4478,9 @@
    "rank": 251,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Troy Franklin",
@@ -4006,7 +4496,9 @@
    "rank": 252,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Aaron Rodgers",
@@ -4022,7 +4514,9 @@
    "rank": 253,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 14
   },
   {
    "name": "Jalen Tolbert",
@@ -4038,7 +4532,9 @@
    "rank": 254,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Jack Bech",
@@ -4054,7 +4550,9 @@
    "rank": 255,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Evan McPherson",
@@ -4070,7 +4568,9 @@
    "rank": 256,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Mike Gesicki",
@@ -4086,7 +4586,9 @@
    "rank": 257,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Chris Brooks",
@@ -4102,7 +4604,9 @@
    "rank": 258,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Olamide Zaccheaus",
@@ -4118,7 +4622,9 @@
    "rank": 259,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Elijah Arroyo",
@@ -4134,7 +4640,9 @@
    "rank": 260,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Ty Johnson",
@@ -4150,7 +4658,9 @@
    "rank": 261,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Geno Smith",
@@ -4166,7 +4676,9 @@
    "rank": 262,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 4
   },
   {
    "name": "Colby Parkinson",
@@ -4182,7 +4694,9 @@
    "rank": 263,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Antonio Williams",
@@ -4198,7 +4712,9 @@
    "rank": 264,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Sione Vaki",
@@ -4214,7 +4730,9 @@
    "rank": 265,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Ja'Kobi Lane",
@@ -4230,7 +4748,9 @@
    "rank": 266,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Nick Folk",
@@ -4246,7 +4766,9 @@
    "rank": 267,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Wil Lutz",
@@ -4262,7 +4784,9 @@
    "rank": 268,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Devontez Walker",
@@ -4278,7 +4802,9 @@
    "rank": 269,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Jake Elliott",
@@ -4294,7 +4820,9 @@
    "rank": 270,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Shedeur Sanders",
@@ -4310,7 +4838,9 @@
    "rank": 271,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0
   },
   {
    "name": "Oronde Gadsden",
@@ -4326,7 +4856,9 @@
    "rank": 272,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Cyrus Allen",
@@ -4342,7 +4874,9 @@
    "rank": 273,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Chris Bell",
@@ -4358,7 +4892,9 @@
    "rank": 274,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Demond Claiborne",
@@ -4376,7 +4912,9 @@
    "tags": [
     "zrb"
    ],
-   "note": "Zero-RB target list."
+   "note": "Zero-RB target list.",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Fernando Mendoza",
@@ -4392,7 +4930,9 @@
    "rank": 276,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 12
   },
   {
    "name": "DJ Giddens",
@@ -4408,7 +4948,9 @@
    "rank": 277,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Kayshon Boutte",
@@ -4424,7 +4966,9 @@
    "rank": 278,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Zachariah Branch",
@@ -4440,7 +4984,9 @@
    "rank": 279,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Samaje Perine",
@@ -4456,7 +5002,9 @@
    "rank": 280,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Devaughn Vele",
@@ -4472,7 +5020,9 @@
    "rank": 281,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Darius Slayton",
@@ -4488,7 +5038,9 @@
    "rank": 282,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Andy Borregales",
@@ -4504,7 +5056,9 @@
    "rank": 283,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Tyler Bass",
@@ -4520,7 +5074,9 @@
    "rank": 284,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Tank Dell",
@@ -4536,7 +5092,9 @@
    "rank": 285,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Kimani Vidal",
@@ -4552,7 +5110,9 @@
    "rank": 286,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Michael Mayer",
@@ -4568,7 +5128,9 @@
    "rank": 287,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Tyquan Thornton",
@@ -4584,7 +5146,9 @@
    "rank": 288,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Pat Bryant",
@@ -4600,7 +5164,9 @@
    "rank": 289,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Bryce Young",
@@ -4616,7 +5182,9 @@
    "rank": 290,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 18
   },
   {
    "name": "Germie Bernard",
@@ -4632,7 +5200,9 @@
    "rank": 291,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Christian Kirk",
@@ -4648,7 +5218,9 @@
    "rank": 292,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Jaylen Wright",
@@ -4664,7 +5236,9 @@
    "rank": 293,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Emmett Johnson",
@@ -4680,7 +5254,9 @@
    "rank": 294,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Emari Demercado",
@@ -4696,7 +5272,9 @@
    "rank": 295,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Jason Myers",
@@ -4712,7 +5290,9 @@
    "rank": 296,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 1
   },
   {
    "name": "Chase McLaughlin",
@@ -4728,7 +5308,9 @@
    "rank": 297,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 1
   },
   {
    "name": "Keenan Allen",
@@ -4744,7 +5326,9 @@
    "rank": 298,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Eddy Pineiro",
@@ -4760,7 +5344,9 @@
    "rank": 299,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 1
   },
   {
    "name": "Tyler Loop",
@@ -4776,7 +5362,9 @@
    "rank": 300,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 1
   },
   {
    "name": "Tory Horton",
@@ -4792,7 +5380,9 @@
    "rank": 301,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Ka'imi Fairbairn",
@@ -4808,7 +5398,9 @@
    "rank": 302,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 1
   },
   {
    "name": "Chris Boswell",
@@ -4824,7 +5416,9 @@
    "rank": 303,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 1
   },
   {
    "name": "Jake Bates",
@@ -4840,7 +5434,9 @@
    "rank": 304,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 1
   },
   {
    "name": "Will Reichard",
@@ -4856,7 +5452,9 @@
    "rank": 305,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 1
   },
   {
    "name": "Harrison Butker",
@@ -4872,7 +5470,9 @@
    "rank": 306,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 1
   },
   {
    "name": "Darnell Washington",
@@ -4888,7 +5488,9 @@
    "rank": 307,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Tua Tagovailoa",
@@ -4904,7 +5506,9 @@
    "rank": 308,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0
   },
   {
    "name": "Malik Davis",
@@ -4920,7 +5524,9 @@
    "rank": 309,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Roman Wilson",
@@ -4936,7 +5542,9 @@
    "rank": 310,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Kendre Miller",
@@ -4952,7 +5560,9 @@
    "rank": 311,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Cam Little",
@@ -4968,7 +5578,9 @@
    "rank": 312,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 1
   },
   {
    "name": "Andrei Iosivas",
@@ -4984,7 +5596,9 @@
    "rank": 313,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Seth McGowan",
@@ -5000,7 +5614,9 @@
    "rank": 314,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Kendrick Bourne",
@@ -5016,7 +5632,9 @@
    "rank": 315,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Adam Randall",
@@ -5032,7 +5650,9 @@
    "rank": 316,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "New England Patriots DST",
@@ -5048,7 +5668,9 @@
    "rank": 317,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Los Angeles Chargers DST",
@@ -5064,7 +5686,9 @@
    "rank": 318,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Jacksonville Jaguars DST",
@@ -5080,7 +5704,9 @@
    "rank": 319,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Chicago Bears DST",
@@ -5096,7 +5722,9 @@
    "rank": 320,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Cam Ward",
@@ -5112,7 +5740,9 @@
    "rank": 321,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 2.9
   },
   {
    "name": "Green Bay Packers DST",
@@ -5128,7 +5758,9 @@
    "rank": 322,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.7
   },
   {
    "name": "Jalen Royals",
@@ -5144,7 +5776,9 @@
    "rank": 323,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Isaiah Bond",
@@ -5160,7 +5794,9 @@
    "rank": 324,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Calvin Austin",
@@ -5176,7 +5812,9 @@
    "rank": 325,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Tez Johnson",
@@ -5192,7 +5830,9 @@
    "rank": 326,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Noah Gray",
@@ -5208,7 +5848,9 @@
    "rank": 327,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Tutu Atwell",
@@ -5224,7 +5866,9 @@
    "rank": 328,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Jaleel McLaughlin",
@@ -5240,7 +5884,9 @@
    "rank": 330,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Nick Westbrook-Ikhine",
@@ -5256,7 +5902,9 @@
    "rank": 331,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Jarquez Hunter",
@@ -5272,7 +5920,9 @@
    "rank": 333,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Elic Ayomanor",
@@ -5288,7 +5938,9 @@
    "rank": 334,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Mason Taylor",
@@ -5304,7 +5956,9 @@
    "rank": 336,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Michael Penix",
@@ -5320,7 +5974,9 @@
    "rank": 338,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0
   },
   {
    "name": "Elijah Moore",
@@ -5336,7 +5992,9 @@
    "rank": 340,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Isaac Guerendo",
@@ -5352,7 +6010,9 @@
    "rank": 344,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Darren Waller",
@@ -5368,7 +6028,9 @@
    "rank": 350,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Audric Estime",
@@ -5384,7 +6046,9 @@
    "rank": 351,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Dyami Brown",
@@ -5400,7 +6064,9 @@
    "rank": 356,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Keandre Lambert-Smith",
@@ -5416,7 +6082,9 @@
    "rank": 359,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Theo Johnson",
@@ -5432,7 +6100,9 @@
    "rank": 364,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Trevor Etienne",
@@ -5448,7 +6118,9 @@
    "rank": 365,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Jaylin Lane",
@@ -5464,7 +6136,9 @@
    "rank": 367,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Devin Singletary",
@@ -5480,7 +6154,9 @@
    "rank": 368,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Roschon Johnson",
@@ -5496,7 +6172,9 @@
    "rank": 369,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Devin Neal",
@@ -5512,7 +6190,9 @@
    "rank": 370,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Savion Williams",
@@ -5528,7 +6208,9 @@
    "rank": 371,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Blake Grupe",
@@ -5544,7 +6226,9 @@
    "rank": 373,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Chigoziem Okonkwo",
@@ -5560,7 +6244,9 @@
    "rank": 374,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Dont'e Thornton",
@@ -5576,7 +6262,9 @@
    "rank": 375,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Emanuel Wilson",
@@ -5592,7 +6280,9 @@
    "rank": 376,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 0.5
   },
   {
    "name": "Anthony Richardson",
@@ -5608,7 +6298,9 @@
    "rank": 378,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 2.3
   },
   {
    "name": "Tennessee Titans DST",
@@ -5624,7 +6316,9 @@
    "rank": 380,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 1
   },
   {
    "name": "Dallas Cowboys DST",
@@ -5640,7 +6334,9 @@
    "rank": 381,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 1,
+   "sfhalf12": 1
   },
   {
    "name": "Anthony Gould",
@@ -5656,7 +6352,9 @@
    "rank": 382,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Zavier Scott",
@@ -5672,7 +6370,9 @@
    "rank": 383,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "David Moore",
@@ -5688,7 +6388,9 @@
    "rank": 384,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Dylan Drummond",
@@ -5704,7 +6406,9 @@
    "rank": 385,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Joe Flacco",
@@ -5720,7 +6424,9 @@
    "rank": 386,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Tyler Badie",
@@ -5736,7 +6442,9 @@
    "rank": 387,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Bo Melton",
@@ -5752,7 +6460,9 @@
    "rank": 388,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "J'Mari Taylor",
@@ -5768,7 +6478,9 @@
    "rank": 389,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "John Metchie",
@@ -5784,7 +6496,9 @@
    "rank": 390,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jameis Winston",
@@ -5800,7 +6514,9 @@
    "rank": 391,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Nathan Carter",
@@ -5816,7 +6532,9 @@
    "rank": 392,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Arizona Cardinals DST",
@@ -5832,7 +6550,9 @@
    "rank": 393,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "LaJohntay Wester",
@@ -5848,7 +6568,9 @@
    "rank": 394,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Darius Cooper",
@@ -5864,7 +6586,9 @@
    "rank": 395,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Las Vegas Raiders DST",
@@ -5880,7 +6604,9 @@
    "rank": 396,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jonathan Mingo",
@@ -5896,7 +6622,9 @@
    "rank": 397,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Indianapolis Colts DST",
@@ -5912,7 +6640,9 @@
    "rank": 398,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Cole Kmet",
@@ -5928,7 +6658,9 @@
    "rank": 399,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jawhar Jordan",
@@ -5944,7 +6676,9 @@
    "rank": 400,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Raheim Sanders",
@@ -5960,7 +6694,9 @@
    "rank": 401,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Dominic Zvada",
@@ -5976,7 +6712,9 @@
    "rank": 402,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Kendall Milton",
@@ -5992,7 +6730,9 @@
    "rank": 403,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Tyler Goodson",
@@ -6008,7 +6748,9 @@
    "rank": 404,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "New Orleans Saints DST",
@@ -6024,7 +6766,9 @@
    "rank": 405,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Ronnie Rivers",
@@ -6040,7 +6784,9 @@
    "rank": 406,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jerome Ford",
@@ -6056,7 +6802,9 @@
    "rank": 408,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Erick All",
@@ -6072,7 +6820,9 @@
    "rank": 409,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Cincinnati Bengals DST",
@@ -6088,7 +6838,9 @@
    "rank": 411,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Mitch Tinsley",
@@ -6104,7 +6856,9 @@
    "rank": 412,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Carolina Panthers DST",
@@ -6120,7 +6874,9 @@
    "rank": 413,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "New York Giants DST",
@@ -6136,7 +6892,9 @@
    "rank": 414,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Brycen Tremayne",
@@ -6152,7 +6910,9 @@
    "rank": 415,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Josh Williams",
@@ -6168,7 +6928,9 @@
    "rank": 416,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Tyson Bagent",
@@ -6184,7 +6946,9 @@
    "rank": 417,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Dominic Lovett",
@@ -6200,7 +6964,9 @@
    "rank": 418,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Trey Lance",
@@ -6216,7 +6982,9 @@
    "rank": 419,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "CJ Daniels",
@@ -6232,7 +7000,9 @@
    "rank": 420,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Miami Dolphins DST",
@@ -6248,7 +7018,9 @@
    "rank": 421,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Frank Gore Jr.",
@@ -6264,7 +7036,9 @@
    "rank": 422,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Davis Mills",
@@ -6280,7 +7054,9 @@
    "rank": 423,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Van Jefferson",
@@ -6296,7 +7072,9 @@
    "rank": 424,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Tyler Huntley",
@@ -6312,7 +7090,9 @@
    "rank": 425,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Kene Nwangwu",
@@ -6328,7 +7108,9 @@
    "rank": 426,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Odell Beckham",
@@ -6344,7 +7126,9 @@
    "rank": 427,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Eric Gray",
@@ -6360,7 +7144,9 @@
    "rank": 428,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Washington Commanders DST",
@@ -6376,7 +7162,9 @@
    "rank": 429,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Bam Knight",
@@ -6392,7 +7180,9 @@
    "rank": 430,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jake Bobo",
@@ -6408,7 +7198,9 @@
    "rank": 431,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Pierre Strong",
@@ -6424,7 +7216,9 @@
    "rank": 432,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Ben Sinnott",
@@ -6440,7 +7234,9 @@
    "rank": 433,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Spencer Shrader",
@@ -6456,7 +7252,9 @@
    "rank": 434,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Dameon Pierce",
@@ -6472,7 +7270,9 @@
    "rank": 437,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Cade Klubnik",
@@ -6488,7 +7288,9 @@
    "rank": 438,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "John Bates",
@@ -6504,7 +7306,9 @@
    "rank": 439,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jordan Watkins",
@@ -6520,7 +7324,9 @@
    "rank": 440,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "KaVontae Turpin",
@@ -6536,7 +7342,9 @@
    "rank": 441,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Ryan Fitzgerald",
@@ -6552,7 +7360,9 @@
    "rank": 442,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Brenen Thompson",
@@ -6568,7 +7378,9 @@
    "rank": 443,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Nick Mullens",
@@ -6584,7 +7396,9 @@
    "rank": 444,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Greg Dortch",
@@ -6600,7 +7414,9 @@
    "rank": 445,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Phil Mafah",
@@ -6616,7 +7432,9 @@
    "rank": 446,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Justin Joly",
@@ -6632,7 +7450,9 @@
    "rank": 447,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Rasheen Ali",
@@ -6648,7 +7468,9 @@
    "rank": 448,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jake Moody",
@@ -6664,7 +7486,9 @@
    "rank": 449,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Tai Felton",
@@ -6680,7 +7504,9 @@
    "rank": 450,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Eli Stowers",
@@ -6696,7 +7522,9 @@
    "rank": 451,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jordan Whittington",
@@ -6712,7 +7540,9 @@
    "rank": 452,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Mitchell Evans",
@@ -6728,7 +7558,9 @@
    "rank": 453,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Konata Mumpfield",
@@ -6744,7 +7576,9 @@
    "rank": 454,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Xavier Hutchinson",
@@ -6760,7 +7594,9 @@
    "rank": 455,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Chris Brazzell",
@@ -6776,7 +7612,9 @@
    "rank": 463,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Joe Mixon",
@@ -6792,7 +7630,9 @@
    "rank": 464,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "New York Jets DST",
@@ -6808,7 +7648,9 @@
    "rank": 466,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Brandon McManus",
@@ -6824,7 +7666,9 @@
    "rank": 468,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Ben Sauls",
@@ -6840,7 +7684,9 @@
    "rank": 469,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Austin Ekeler",
@@ -6856,7 +7702,9 @@
    "rank": 470,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Daniel Carlson",
@@ -6872,7 +7720,9 @@
    "rank": 471,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Nick Chubb",
@@ -6888,7 +7738,9 @@
    "rank": 475,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jalen Brooks",
@@ -6904,7 +7756,9 @@
    "rank": 476,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Kareem Hunt",
@@ -6920,7 +7774,9 @@
    "rank": 477,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Teddy Bridgewater",
@@ -6936,7 +7792,9 @@
    "rank": 478,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Ben Skowronek",
@@ -6952,7 +7810,9 @@
    "rank": 479,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Drew Lock",
@@ -6968,7 +7828,9 @@
    "rank": 480,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Josh Whyle",
@@ -6984,7 +7846,9 @@
    "rank": 481,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Joe Milton III",
@@ -7000,7 +7864,9 @@
    "rank": 482,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "JuJu Smith-Schuster",
@@ -7016,7 +7882,9 @@
    "rank": 483,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Isaiah Williams",
@@ -7032,7 +7900,9 @@
    "rank": 488,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jacob Saylors",
@@ -7048,7 +7918,9 @@
    "rank": 489,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Myles Price",
@@ -7064,7 +7936,9 @@
    "rank": 490,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Michael Carter",
@@ -7080,7 +7954,9 @@
    "rank": 492,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Johnny Wilson",
@@ -7096,7 +7972,9 @@
    "rank": 493,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jarrett Stidham",
@@ -7112,7 +7990,9 @@
    "rank": 494,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jacob Cowing",
@@ -7128,7 +8008,9 @@
    "rank": 495,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Terrell Jennings",
@@ -7144,7 +8026,9 @@
    "rank": 496,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Emmanuel Henderson",
@@ -7160,7 +8044,9 @@
    "rank": 497,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Will Howard",
@@ -7176,7 +8062,9 @@
    "rank": 498,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Laquon Treadwell",
@@ -7192,7 +8080,9 @@
    "rank": 499,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Matt Gay",
@@ -7208,7 +8098,9 @@
    "rank": 500,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Reggie Virgil",
@@ -7224,7 +8116,9 @@
    "rank": 501,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Daniel Bellinger",
@@ -7240,7 +8134,9 @@
    "rank": 502,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "JaMycal Hasty",
@@ -7256,7 +8152,9 @@
    "rank": 503,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Brandon Aiyuk",
@@ -7272,7 +8170,9 @@
    "rank": 504,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jackson Hawes",
@@ -7288,7 +8188,9 @@
    "rank": 505,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jeremy McNichols",
@@ -7304,7 +8206,9 @@
    "rank": 506,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Josh Cameron",
@@ -7320,7 +8224,9 @@
    "rank": 507,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Zane Gonzalez",
@@ -7336,7 +8242,9 @@
    "rank": 508,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Max Klare",
@@ -7352,7 +8260,9 @@
    "rank": 509,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Xavier Restrepo",
@@ -7368,7 +8278,9 @@
    "rank": 510,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "David Sills V",
@@ -7384,7 +8296,9 @@
    "rank": 511,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Tommy DeVito",
@@ -7400,7 +8314,9 @@
    "rank": 512,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Arian Smith",
@@ -7416,7 +8332,9 @@
    "rank": 513,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "DeeJay Dallas",
@@ -7432,7 +8350,9 @@
    "rank": 514,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Tyrell Shavers",
@@ -7448,7 +8368,9 @@
    "rank": 515,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jake Browning",
@@ -7464,7 +8386,9 @@
    "rank": 516,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Tanner McKee",
@@ -7480,7 +8404,9 @@
    "rank": 517,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Spencer Rattler",
@@ -7496,7 +8422,9 @@
    "rank": 518,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Dillon Bell",
@@ -7512,7 +8440,9 @@
    "rank": 519,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Kyle Allen",
@@ -7528,7 +8458,9 @@
    "rank": 520,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Malik Benson",
@@ -7544,7 +8476,9 @@
    "rank": 521,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Luke McCaffrey",
@@ -7560,7 +8494,9 @@
    "rank": 522,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Josh Oliver",
@@ -7576,7 +8512,9 @@
    "rank": 523,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Adam Trautman",
@@ -7592,7 +8530,9 @@
    "rank": 524,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Zach Ertz",
@@ -7608,7 +8548,9 @@
    "rank": 525,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Luke Musgrave",
@@ -7624,7 +8566,9 @@
    "rank": 526,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Charlie Kolar",
@@ -7640,7 +8584,9 @@
    "rank": 527,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Marlin Klein",
@@ -7656,7 +8602,9 @@
    "rank": 528,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Marquez Valdes-Scantling",
@@ -7672,7 +8620,9 @@
    "rank": 529,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jabari Small",
@@ -7688,7 +8638,9 @@
    "rank": 530,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Noah Whittington",
@@ -7704,7 +8656,9 @@
    "rank": 531,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Ty Simpson",
@@ -7720,7 +8674,9 @@
    "rank": 532,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Riley Leonard",
@@ -7736,7 +8692,9 @@
    "rank": 534,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Damien Martinez",
@@ -7752,7 +8710,9 @@
    "rank": 535,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Tommy Myers",
@@ -7768,7 +8728,9 @@
    "rank": 536,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Robert Henry Jr.",
@@ -7784,7 +8746,9 @@
    "rank": 537,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "DeAndre Hopkins",
@@ -7800,7 +8764,9 @@
    "rank": 538,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Juice Wells Jr.",
@@ -7816,7 +8782,9 @@
    "rank": 539,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Theo Wease Jr.",
@@ -7832,7 +8800,9 @@
    "rank": 540,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Matt Hibner",
@@ -7848,7 +8818,9 @@
    "rank": 541,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Donovan Edwards",
@@ -7864,7 +8836,9 @@
    "rank": 542,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Roman Hemby",
@@ -7880,7 +8854,9 @@
    "rank": 543,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jonnu Smith",
@@ -7896,7 +8872,9 @@
    "rank": 544,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Will Kacmarek",
@@ -7912,7 +8890,9 @@
    "rank": 545,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jahdae Walker",
@@ -7928,7 +8908,9 @@
    "rank": 546,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Tyler Higbee",
@@ -7944,7 +8926,9 @@
    "rank": 547,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Andre Szmyt",
@@ -7960,7 +8944,9 @@
    "rank": 548,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Demarcus Robinson",
@@ -7976,7 +8962,9 @@
    "rank": 549,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Barion Brown",
@@ -7992,7 +8980,9 @@
    "rank": 550,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Kaden Wetjen",
@@ -8008,7 +8998,9 @@
    "rank": 551,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Noah Fant",
@@ -8024,7 +9016,9 @@
    "rank": 552,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Hunter Luepke",
@@ -8040,7 +9034,9 @@
    "rank": 553,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "CJ Williams",
@@ -8056,7 +9052,9 @@
    "rank": 554,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Elijah Higgins",
@@ -8072,7 +9070,9 @@
    "rank": 555,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Austin Hooper",
@@ -8088,7 +9088,9 @@
    "rank": 556,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Oscar Delp",
@@ -8104,7 +9106,9 @@
    "rank": 557,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Devin Duvernay",
@@ -8120,7 +9124,9 @@
    "rank": 558,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Chad Ryland",
@@ -8136,7 +9142,9 @@
    "rank": 559,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Tim Patrick",
@@ -8152,7 +9160,9 @@
    "rank": 560,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Tanner Koziol",
@@ -8168,7 +9178,9 @@
    "rank": 561,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Eli Raridon",
@@ -8184,7 +9196,9 @@
    "rank": 562,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Ja'Tavion Sanders",
@@ -8200,7 +9214,9 @@
    "rank": 563,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Derius Davis",
@@ -8216,7 +9232,9 @@
    "rank": 564,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Deion Burks",
@@ -8232,7 +9250,9 @@
    "rank": 565,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Kyle Juszczyk",
@@ -8248,7 +9268,9 @@
    "rank": 566,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Cade York",
@@ -8264,7 +9286,9 @@
    "rank": 567,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Brandon Smith",
@@ -8280,7 +9304,9 @@
    "rank": 568,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Andy Dalton",
@@ -8296,7 +9322,9 @@
    "rank": 569,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Andres Borregales",
@@ -8312,7 +9340,9 @@
    "rank": 570,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Ameer Abdullah",
@@ -8328,7 +9358,9 @@
    "rank": 571,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Amar Johnson",
@@ -8344,7 +9376,9 @@
    "rank": 572,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Michael Trigg",
@@ -8360,7 +9394,9 @@
    "rank": 573,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Tylan Wallace",
@@ -8376,7 +9412,9 @@
    "rank": 574,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Colbie Young",
@@ -8392,7 +9430,9 @@
    "rank": 575,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Ty Chandler",
@@ -8408,7 +9448,9 @@
    "rank": 576,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Khalil Herbert",
@@ -8424,7 +9466,9 @@
    "rank": 577,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Cash Jones",
@@ -8440,7 +9484,9 @@
    "rank": 578,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Tyreek Hill",
@@ -8456,7 +9502,9 @@
    "rank": 579,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Tom Kennedy",
@@ -8472,7 +9520,9 @@
    "rank": 580,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Stetson Bennett",
@@ -8488,7 +9538,9 @@
    "rank": 581,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Skyy Moore",
@@ -8504,7 +9556,9 @@
    "rank": 582,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Simi Fehoko",
@@ -8520,7 +9574,9 @@
    "rank": 583,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Riley Patterson",
@@ -8536,7 +9592,9 @@
    "rank": 584,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Nate Carter",
@@ -8552,7 +9610,9 @@
    "rank": 585,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Mitch Trubisky",
@@ -8568,7 +9628,9 @@
    "rank": 586,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Mason Rudolph",
@@ -8584,7 +9646,9 @@
    "rank": 587,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Malik McClain",
@@ -8600,7 +9664,9 @@
    "rank": 588,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Lew Nichols",
@@ -8616,7 +9682,9 @@
    "rank": 589,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Charlie Smyth",
@@ -8632,7 +9700,9 @@
    "rank": 590,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Antonio Gibson",
@@ -8648,7 +9718,9 @@
    "rank": 591,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Tyrod Taylor",
@@ -8664,7 +9736,9 @@
    "rank": 592,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jaydn Ott",
@@ -8680,7 +9754,9 @@
    "rank": 593,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Tyler Lockett",
@@ -8696,7 +9772,9 @@
    "rank": 594,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Brandin Cooks",
@@ -8712,7 +9790,9 @@
    "rank": 595,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Elijah Mitchell",
@@ -8728,7 +9808,9 @@
    "rank": 596,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Miles Sanders",
@@ -8744,7 +9826,9 @@
    "rank": 597,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Quinn Ewers",
@@ -8760,7 +9844,9 @@
    "rank": 598,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Miles Davis",
@@ -8776,7 +9862,9 @@
    "rank": 599,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Justin Watson",
@@ -8792,7 +9880,9 @@
    "rank": 600,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Camden Brown",
@@ -8808,7 +9898,9 @@
    "rank": 601,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jermaine Burton",
@@ -8824,7 +9916,9 @@
    "rank": 602,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Myles Montgomery",
@@ -8840,7 +9934,9 @@
    "rank": 603,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jalen Milroe",
@@ -8856,7 +9952,9 @@
    "rank": 604,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Michael Woods II",
@@ -8872,7 +9970,9 @@
    "rank": 605,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Reggie Gilliam",
@@ -8888,7 +9988,9 @@
    "rank": 606,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Taysom Hill",
@@ -8904,7 +10006,9 @@
    "rank": 607,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Israel Abanikanda",
@@ -8920,7 +10024,9 @@
    "rank": 608,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Gardner Minshew",
@@ -8936,7 +10042,9 @@
    "rank": 609,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Drew Stevens",
@@ -8952,7 +10060,9 @@
    "rank": 610,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Cody White",
@@ -8968,7 +10078,9 @@
    "rank": 611,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Cedrick Wilson",
@@ -8984,7 +10096,9 @@
    "rank": 612,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jimmy Horn",
@@ -9000,7 +10114,9 @@
    "rank": 613,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jake Tonges",
@@ -9016,7 +10132,9 @@
    "rank": 614,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jam Miller",
@@ -9032,7 +10150,9 @@
    "rank": 615,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Mack Hollins",
@@ -9048,7 +10168,9 @@
    "rank": 616,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Xavier Smith",
@@ -9064,7 +10186,9 @@
    "rank": 617,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Trey Smack",
@@ -9080,7 +10204,9 @@
    "rank": 618,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Eli Heidenreich",
@@ -9096,7 +10222,9 @@
    "rank": 619,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Kevin Coleman",
@@ -9112,7 +10240,9 @@
    "rank": 620,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Durham Smythe",
@@ -9128,7 +10258,9 @@
    "rank": 624,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jeshaun Jones",
@@ -9144,7 +10276,9 @@
    "rank": 625,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jaren Kanak",
@@ -9160,7 +10294,9 @@
    "rank": 626,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jalen Reagor",
@@ -9176,7 +10312,9 @@
    "rank": 627,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Matthew Hibner",
@@ -9192,7 +10330,9 @@
    "rank": 629,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Lil'Jordan Humphrey",
@@ -9208,7 +10348,9 @@
    "rank": 632,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Lewis Bond",
@@ -9224,7 +10366,9 @@
    "rank": 633,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Joe Royer",
@@ -9240,7 +10384,9 @@
    "rank": 636,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Mac Jones",
@@ -9256,7 +10402,9 @@
    "rank": 637,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Marcus Mariota",
@@ -9272,7 +10420,9 @@
    "rank": 640,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Lan Larison",
@@ -9288,7 +10438,9 @@
    "rank": 641,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Kenny Pickett",
@@ -9304,7 +10456,9 @@
    "rank": 642,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Malachi Fields",
@@ -9320,7 +10474,9 @@
    "rank": 643,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Deshaun Watson",
@@ -9336,7 +10492,9 @@
    "rank": 644,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Kalif Raymond",
@@ -9352,7 +10510,9 @@
    "rank": 645,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Ashton Dulin",
@@ -9368,7 +10528,9 @@
    "rank": 646,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Bryce Lance",
@@ -9384,7 +10546,9 @@
    "rank": 647,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Zavion Thomas",
@@ -9400,7 +10564,9 @@
    "rank": 648,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Kirk Cousins",
@@ -9416,7 +10582,9 @@
    "rank": 649,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Elijah Sarratt",
@@ -9432,7 +10600,9 @@
    "rank": 650,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Tommy Tremble",
@@ -9448,7 +10618,9 @@
    "rank": 651,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Treylon Burks",
@@ -9464,7 +10636,9 @@
    "rank": 652,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Joey Slye",
@@ -9480,7 +10654,9 @@
    "rank": 653,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Isaiah Davis",
@@ -9496,7 +10672,9 @@
    "rank": 654,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Skyler Bell",
@@ -9512,7 +10690,9 @@
    "rank": 655,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Chimere Dike",
@@ -9528,7 +10708,9 @@
    "rank": 656,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Carson Beck",
@@ -9544,7 +10726,9 @@
    "rank": 657,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Dawson Knox",
@@ -9560,7 +10744,9 @@
    "rank": 658,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Brock Wright",
@@ -9576,7 +10762,9 @@
    "rank": 664,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Blake Whiteheart",
@@ -9592,7 +10780,9 @@
    "rank": 665,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Bauer Sharp",
@@ -9608,7 +10798,9 @@
    "rank": 666,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Dillon Gabriel",
@@ -9624,7 +10816,9 @@
    "rank": 668,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Devin Culp",
@@ -9640,7 +10834,9 @@
    "rank": 669,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Carsen Ryan",
@@ -9656,7 +10852,9 @@
    "rank": 672,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Cameron Ward",
@@ -9672,7 +10870,9 @@
    "rank": 673,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 17
   },
   {
    "name": "Foster Moreau",
@@ -9688,7 +10888,9 @@
    "rank": 678,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Dare Ogunbowale",
@@ -9704,7 +10906,9 @@
    "rank": 682,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Mitchell Tinsley",
@@ -9720,7 +10924,9 @@
    "rank": 688,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Tip Reiman",
@@ -9736,7 +10942,9 @@
    "rank": 689,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Taylen Green",
@@ -9752,7 +10960,9 @@
    "rank": 691,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Tanner Hudson",
@@ -9768,7 +10978,9 @@
    "rank": 692,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Cade Stover",
@@ -9784,7 +10996,9 @@
    "rank": 693,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Sam Roush",
@@ -9800,7 +11014,9 @@
    "rank": 695,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Salvon Ahmed",
@@ -9816,7 +11032,9 @@
    "rank": 696,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Jason Sanders",
@@ -9832,7 +11050,9 @@
    "rank": 700,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Drew Sample",
@@ -9848,7 +11068,9 @@
    "rank": 701,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Luke Schoonmaker",
@@ -9864,7 +11086,9 @@
    "rank": 702,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Mo Alie-Cox",
@@ -9880,7 +11104,9 @@
    "rank": 703,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   },
   {
    "name": "Nate Boerkircher",
@@ -9896,7 +11122,9 @@
    "rank": 704,
    "silva": "",
    "tags": [],
-   "note": ""
+   "note": "",
+   "half14": 0,
+   "sfhalf12": 0
   }
  ],
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",

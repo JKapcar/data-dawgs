@@ -1695,7 +1695,7 @@ BEST AVAILABLE: four buttons under the entry bar showing the top remaining QB, R
 THE MONEY PILE: every team's remaining budget, sorted — on the Fantasy Draft Dashboard's summary strip.
 GEAR MENU also holds: Setup, "Start <n>s timer", "Advance nomination", "Projector shows" (Draft Board / Rosters / What's Left / Report Card), Recap, Export CSV, and Reset draft.
 RESET DRAFT is deliberately two clicks: the first turns it into "Click again to RESET ALL", and it disarms itself after about 4 seconds.
-SETUP holds: Budget $, Roster spots, Values (Half PPR / Full PPR / Superflex), Timer secs, My team, Voice announcer, Snark mode, and Announcer voice.
+SETUP holds: Budget $, Roster spots, Values (14-team Half / 12-team Half / Full / Superflex PPR / Superflex Half), Timer secs, My team, Voice announcer, Snark mode, and Announcer voice.
 EXPORT CSV columns: pick, player, pos, team, owner, price, etr_value, keeper.
 ON THE CLOCK is shown in the page header. "Advance nomination" moves it to the next team. Undoing a non-keeper pick steps it back one.
 OTHER PAGES: Big Board is the projector view — it is deliberately not in the nav, open it by URL on the projector machine, and what it displays is set from "Projector shows". The read-only board for everyone else is the Fantasy Draft Dashboard → Live tab; board.html?view=live opens that same view directly. There is no LIVE DRAFT item in the nav — it was retired 8/1. Draft Data Viz, Report Card, Cheat Sheet and Master Data are read-only views of the same draft.
@@ -1951,7 +1951,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     const infl = remValue>0 ? remDollars/remValue : 1;
 
     const L=[];
-    L.push(`LEAGUE: 14-team offline auction, $${st.budget} budget, ${st.spots} roster spots each (QB, 2 RB, 2 WR, TE, 2 FLEX W/R/T, DEF, rest bench; no kicker). Scoring: ${{half:"Half PPR",full:"Full PPR",sf:"Superflex"}[scoring]||scoring}. $0 bids are legal, so a team's max bid = its dollars left.`);
+    L.push(`LEAGUE: 14-team offline auction, $${st.budget} budget, ${st.spots} roster spots each (QB, 2 RB, 2 WR, TE, 2 FLEX W/R/T, DEF, rest bench; no kicker). Scoring: ${{half14:"14-team Half PPR · derived",half:"12-team Half PPR",full:"12-team Full PPR",sf:"12-team Superflex PPR",sfhalf12:"12-team Superflex Half PPR · hybrid"}[scoring]||scoring}. $0 bids are legal, so a team's max bid = its dollars left.`);
     L.push(`MV = Market Value, a public auction-dollar snapshot dated 2026-08-24. It is not a points projection. Available formats are 10-team PPR; 12-team PPR, Half PPR, Standard, and Superflex PPR; and 14-team PPR.`);
     L.push(`STATE: ${picks.length} sold. Inflation ${infl.toFixed(2)}x — $${remDollars} chasing $${Math.round(remValue)} of MV still on the board.`);
     L.push(`TEAMS (name | $ left = max bid | spots open | QB/RB/WR/TE/DST drafted):`);

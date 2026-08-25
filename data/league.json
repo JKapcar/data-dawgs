@@ -10,11 +10,13 @@
   "budget": 200,
   "roster_spots": 15,
   "starting_lineup": "QB, 2 RB, 2 WR, TE, 2 FLEX (W/R/T), DEF, rest bench. No kicker.",
-  "scoring_default": "half PPR",
+  "scoring_default": "half14",
   "scoring_supported": [
+   "half14",
    "half",
    "full",
-   "sf"
+   "sf",
+   "sfhalf12"
   ],
   "bid_rule": "$0 bids are legal, so a team's max bid equals its dollars remaining.",
   "teams": [

@@ -46,9 +46,9 @@ the sources we read and do not republish. Owns no data file either.
 
 ## Draft
 
-- [Player pool + Market Value](/data/pool.json): 613 players; six auction formats; `as_of 2026-08-24`. MV is not projected points.
+- [Player pool + MV](/data/pool.json): 613 players; 8 formats; `half14` derived, SF Half hybrid; `2026-08-24`.
 - [Dynasty ranks](/data/dynasty-ranks.json): 334 players/picks; independent 1QB and SF/TE-premium ranks and auction values, not observed prices.
-- [League](/data/league.json): 14 teams, $200, 15 spots, half PPR, no kicker.
+- [League](/data/league.json): 14 teams, $200, 15 spots, derived `half14`, no kicker.
 - [2026 strategy](/data/strategy.md): positional curves and format playbooks; testable structure kept apart from analyst priors.
 
 ## Models and data

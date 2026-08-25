@@ -97,7 +97,7 @@
           {slot:"TE",count:1},{slot:"FLEX",count:2},{slot:"DST",count:1},{slot:"BN",count:6}
         ],
         scoring: {
-          mode: ["half","full","sf","custom"].includes(scoring.mode) ? scoring.mode : "custom",
+          mode: ["half14","half","full","sf","sfhalf12","custom"].includes(scoring.mode) ? scoring.mode : "custom",
           ppr: Number.isFinite(Number(scoring.ppr)) ? Number(scoring.ppr) : null,
           superflex: !!scoring.superflex,
           raw: scoring.raw && typeof scoring.raw === "object" ? clone(scoring.raw) : {}
