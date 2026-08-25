@@ -2694,10 +2694,10 @@ svg{display:block;max-width:100%;height:auto}
     </div>
     <div class="wr-connect">
       <form id="connectForm">
-        <input id="leagueInput" inputmode="url" autocomplete="url" placeholder="Paste a Sleeper league URL or ID" aria-label="League URL or Sleeper ID">
+        <input id="leagueInput" inputmode="url" autocomplete="url" placeholder="Sleeper league URL or ID, or an ESPN league URL" aria-label="League URL or Sleeper ID">
         <button class="wr-btn">Add league</button>
       </form>
-      <p class="wr-status" id="connectionStatus">Sleeper leagues connect without a Sleeper login.</p>
+      <p class="wr-status" id="connectionStatus">Sleeper leagues connect without a Sleeper login. ESPN reads the league you already connected in the <a href="draft-league.html">draft room</a>.</p>
     </div>
     <div class="wr-saved" id="seededLeague"></div>
     <div class="wr-saved" id="savedList"></div>
@@ -3508,7 +3508,9 @@ function renderMoney(){
   $('mnTiles').innerHTML=[
     ['Your roster',fmt$(mine.total),'across '+mine.n+' players'],
     ['League average',fmt$(avgTotal),(mine.total>=avgTotal?'+':'−')+fmt$(Math.abs(mine.total-avgTotal))+' for you'],
-    ['Your rank',rank+' of '+M.length,(mine.total/leagueTotal*100).toFixed(1)+'% of all money'],
+    /* Before a draft every roster is empty, so leagueTotal is 0 and the share is 0/0.
+       Say "no priced players yet" rather than printing NaN%. */
+    ['Your rank',rank+' of '+M.length,leagueTotal>0?(mine.total/leagueTotal*100).toFixed(1)+'% of all money':'no priced players yet'],
     ['Starting / bench',fmt$(mine.st)+' / '+fmt$(mine.bn),Math.round(mine.st/(mine.total||1)*100)+'% of it starts'],
     ['Richest roster','<span class="tname">'+esc(richest.t.name)+'</span>',fmt$(richest.total)],
     ['Leanest roster','<span class="tname">'+esc(leanest.t.name)+'</span>',fmt$(leanest.total)],
@@ -3828,9 +3830,13 @@ function cleanShelf(raw){
     const hzOk=v=>v==='season'||v==='dynasty'?v:undefined;
     const h=x.horizon&&typeof x.horizon==='object'?{report:hzOk(x.horizon.report),money:hzOk(x.horizon.money),trades:hzOk(x.horizon.trades)}:null;
     const horizon=h&&(h.report||h.money||h.trades)?h:null;
-    const row={provider:'sleeper',leagueId:String(x.leagueId),name:String(x.name||x.leagueId),
+    /* provider used to be hardcoded to sleeper, which silently rewrote every ESPN
+       row into a Sleeper one. Rows saved before this default to sleeper, and the
+       key is provider+id: the same number can be a league on both services. */
+    const prov=x.provider==='espn'?'espn':'sleeper';
+    const row={provider:prov,leagueId:String(x.leagueId),name:String(x.name||x.leagueId),
       focusRosterId:Number.isFinite(focus)?focus:null,horizon,savedAt:Number(x.savedAt)||0};
-    const hit=out.find(y=>y.leagueId===row.leagueId);
+    const hit=out.find(y=>y.leagueId===row.leagueId&&y.provider===row.provider);
     if(hit)Object.assign(hit,{name:hit.name===hit.leagueId?row.name:hit.name,
       focusRosterId:hit.focusRosterId==null?row.focusRosterId:hit.focusRosterId,
       horizon:hit.horizon||row.horizon,savedAt:Math.max(hit.savedAt,row.savedAt)});
@@ -3845,7 +3851,9 @@ function writeShelf(list){
   const clean=cleanShelf(list);
   try{
     localStorage.setItem(SHELF,JSON.stringify(clean));
-    localStorage.setItem(SHARED_SHELF,JSON.stringify(clean.map(x=>({leagueId:x.leagueId,focusRosterId:x.focusRosterId,name:x.name}))));
+    // SHARED_SHELF is the guillotine page's, and it only speaks Sleeper
+    localStorage.setItem(SHARED_SHELF,JSON.stringify(clean.filter(x=>x.provider==='sleeper')
+      .map(x=>({leagueId:x.leagueId,focusRosterId:x.focusRosterId,name:x.name}))));
   }catch(e){}
   return clean;
 }
@@ -3925,7 +3933,7 @@ function paintShelf(){
   $('savedList').innerHTML=list.length?list.map(x=>{
     const on=state&&state.ref.provider===x.provider&&String(state.ref.id)===String(x.leagueId);
     return `<div class="wr-row${on?' on':''}"><div class="wr-grow"><b>${esc(x.name)}</b>
-      <small>Sleeper · ${esc(x.leagueId)}${on?' · open now':''}</small></div><div class="wr-league-actions">
+      <small>${x.provider==='espn'?'ESPN':'Sleeper'} · ${esc(x.leagueId)}${on?' · open now':''}</small></div><div class="wr-league-actions">
       <button class="wr-mini" data-load="${esc(x.leagueId)}" data-provider="${esc(x.provider)}">${on?'Refresh':'Open league'}</button>
       <button class="wr-mini" data-forget="${esc(x.leagueId)}" data-provider="${esc(x.provider)}">Remove</button></div></div>`;
   }).join(''):'<div class="wr-empty-shelf"><b>No leagues saved yet.</b><br>Paste your first Sleeper league URL or ID above. It will stay here for one-tap access.</div>';
@@ -4054,12 +4062,52 @@ async function fetchLeague(id){
   st.defaults=JSON.stringify(st.settings);
   return st;
 }
+/* ESPN, assembled by the Worker into the shape fetchLeague() returns for Sleeper.
+   Everything downstream — replacement level, VOR, the schedule sim, trades — reads
+   that shape and is untouched. The Worker holds the credentials; this never sees them. */
+async function fetchLeagueEspn(id){
+  const ref={provider:'espn',id:String(id)};
+  if(!(window.DDProviders&&DDProviders.espn&&DDProviders.espn.warroom))
+    throw Error('This build has no ESPN War Room adapter.');
+  const feed=await DDProviders.espn.warroom();
+  const L=feed.league||{};
+  const pool=(feed.pool||[]).map(p=>({id:String(p.id),name:p.name,pos:p.pos,p:Number(p.p)||0,team:p.team}));
+  const byId=Object.fromEntries(pool.map(p=>[p.id,p]));
+  const teams=(feed.teams||[]).map(t=>({
+    id:String(t.id), ownerId:String(t.owner||''), name:t.name,
+    players:(t.players||[]).map(pid=>byId[String(pid)]).filter(Boolean),
+    starters:new Set((t.starters||[]).map(String))
+  }));
+  /* slots() expects Sleeper's roster_positions array, so expand the counts back
+     into one entry per slot rather than teaching every caller a second shape. */
+  const positions=[];
+  (L.slots||[]).forEach(x=>{ for(let i=0;i<x.count;i++) positions.push(x.slot==='BENCH'?'BN':x.slot); });
+  const league={
+    name:L.name||'ESPN league', league_id:String(L.id||id), season:L.season,
+    roster_positions:positions, scoring_settings:{},
+    settings:{ type:0, playoff_teams:L.playoffTeams, playoff_week_start:L.playoffStart }
+  };
+  const st={ref,league,users:[],slots:slots(positions),pool,teams,schedule:feed.schedule||[],
+    horizon:(()=>{
+      const saved=(readShelf().find(x=>x.provider==='espn'&&x.leagueId===String(id))||{}).horizon||{};
+      const ok=v=>v==='season'?v:'season';   // no ESPN dynasty board yet
+      return {report:ok(saved.report),money:ok(saved.money),trades:ok(saved.trades)};
+    })(),
+    settings:{playoffSpots:Number(L.playoffTeams)||Math.max(2,Math.round(teams.length/3)),
+      playoffStart:Number(L.playoffStart)||15,sigma:20},
+    defaults:null, diagnostics:feed.diagnostics||null};
+  st.defaults=JSON.stringify(st.settings);
+  return st;
+}
+
 async function connect(input){
   const ref=window.DDProviders?.parse(input);
   if(!ref)throw Error('Paste a Sleeper ID or a Sleeper, ESPN, or Yahoo league URL.');
-  if(ref.provider!=='sleeper')throw Error(ref.provider.toUpperCase()+' was recognized (league '+ref.id+'), but its authenticated adapter is not connected yet. Sleeper is live now.');
-  $('connectionStatus').className='wr-status';$('connectionStatus').textContent='Reading Sleeper league '+ref.id+'…';
-  state=await fetchLeague(ref.id);
+  if(ref.provider==='yahoo')throw Error('Yahoo was recognized (league '+ref.id+'), but it has no read API we can use. Sleeper and ESPN are live.');
+  if(ref.provider!=='sleeper'&&ref.provider!=='espn')throw Error(ref.provider.toUpperCase()+' is not connected yet.');
+  const svc=ref.provider==='espn'?'ESPN':'Sleeper';
+  $('connectionStatus').className='wr-status';$('connectionStatus').textContent='Reading '+svc+' league '+ref.id+'…';
+  state=ref.provider==='espn'?await fetchLeagueEspn(ref.id):await fetchLeague(ref.id);
   state.defaults=JSON.stringify(state.settings);
   sim=null;tradeFilter=null;
   $('playoffSpots').value=state.settings.playoffSpots;

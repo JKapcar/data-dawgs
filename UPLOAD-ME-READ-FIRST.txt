@@ -1,0 +1,29 @@
+WAR ROOM + ESPN  —  round 3 upload  (2026-08-25)
+
+Unzip this into a NEW EMPTY folder. Do not reuse the folder from the
+earlier rounds — the filenames repeat and that is how the bench fix got
+lost last time.
+
+Five files go to the repo root of JKapcar/data-dawgs (branch main), keeping
+the paths exactly as they appear here:
+
+  dawg-bot-worker.js        -> /dawg-bot-worker.js
+  draft-providers.js        -> /draft-providers.js
+  fantasy-warroom.html      -> /fantasy-warroom.html
+  sw.js                     -> /sw.js
+  work/test-espn.mjs        -> /work/test-espn.mjs      (note the work/ folder)
+
+Suggested commit message:
+
+  War Room: read ESPN leagues
+
+  Adds GET /espn/warroom to the Worker (rosters, weekly schedule, and a
+  500-player projection pool that sets replacement level) and teaches
+  fantasy-warroom.html to build its state from an ESPN league the same
+  way it does from Sleeper. Also guards the Money tile's share-of-league
+  figure so an undrafted league reads "no priced players yet" instead of
+  NaN%. sw.js VERSION bumped per AGENTS.md rule 3.
+
+After the push: the Worker still has to be deployed (Actions ->
+worker-deploy -> Run workflow, promote checked) before the War Room can
+read ESPN. The site half works the moment Pages rebuilds.

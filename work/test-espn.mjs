@@ -106,5 +106,34 @@ console.log("\nempty and hostile shapes");
   ok("no reception item means standard, and says ppr 0", noRec.scoring.mode === "std" && noRec.scoring.ppr === 0);
 }
 
+
+/* ---- War Room feed ------------------------------------------------------ */
+const wrConsts = consts + `
+const ESPN_PROJ_SOURCE = 1;
+const ESPN_SEASON_SPLIT = 0;`;
+const wr = new Function(`${wrConsts}
+${lift("espnProjection")}
+${lift("espnPlayerRow")}
+${lift("espnRosterSlots")}
+${lift("espnScoring")}
+return {espnProjection,espnPlayerRow};`)();
+
+console.log("\nWar Room feed: projections and player rows");
+{
+  const seasonProj = { id: 4262921, fullName:"Jahmyr Gibbs", defaultPositionId:2, proTeamId:8,
+    stats:[{statSourceId:0,scoringPeriodId:0,appliedTotal:0},{statSourceId:1,scoringPeriodId:0,appliedTotal:255}] };
+  const row = wr.espnPlayerRow(seasonProj);
+  ok("a season projection becomes a per-week number", row.p === 15, String(row.p));
+  ok("the row carries id, name, pos and pro team", row.id==="4262921" && row.pos==="RB" && row.team==="8", JSON.stringify(row));
+  ok("actuals are never mistaken for projections",
+     wr.espnProjection({stats:[{statSourceId:0,scoringPeriodId:0,appliedTotal:999}]}) === 0);
+  ok("a player with no stats scores zero rather than NaN",
+     wr.espnPlayerRow({id:1,fullName:"X",defaultPositionId:2}).p === 0);
+  ok("a player with no usable position is dropped",
+     wr.espnPlayerRow({id:2,fullName:"Punter",defaultPositionId:99}) === null);
+  const weeklyOnly = wr.espnProjection({stats:[{statSourceId:1,scoringPeriodId:3,appliedTotal:12.5}]});
+  ok("a league with only weekly projections still yields a number", weeklyOnly === 12.5, String(weeklyOnly));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

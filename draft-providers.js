@@ -260,6 +260,9 @@
   function disconnectEspn(options){ return espnCall("/espn/connect",{method:"DELETE",fetch:options&&options.fetch}); }
   function fetchEspnLeague(options){ return espnCall("/espn/league",{fetch:options&&options.fetch}); }
   function fetchEspnPicks(options){ return espnCall("/espn/picks",{fetch:options&&options.fetch}); }
+  // the War Room needs projections and the weekly schedule as well as rosters;
+  // the Worker assembles all three so the page keeps one shape for both services
+  function fetchEspnWarroom(options){ return espnCall("/espn/warroom",{fetch:options&&options.fetch}); }
 
   /* The Worker already returns the site's league shape, so importing is a rename
      into the envelope the rest of the rig expects rather than a second parse. */
@@ -312,7 +315,7 @@
     sleeper:{detect:input=>!!parseSleeper(input),parse:parseSleeper,importLeague:importSleeper,fetchDraft:fetchSleeperDraft,fetchPicks:fetchSleeperPicks,normalize:normalizeImport,mapPlayer,normalizePick,rosterSlots,scoringConfig},
     yahoo:{detect:input=>!!parseYahoo(input),parse:parseYahoo},
     espn:{detect:input=>!!parseEspn(input),parse:parseEspn,connect:connectEspn,status:espnStatus,
-      disconnect:disconnectEspn,fetchLeague:fetchEspnLeague,fetchPicks:fetchEspnPicks,importLeague:importEspn}
+      disconnect:disconnectEspn,fetchLeague:fetchEspnLeague,fetchPicks:fetchEspnPicks,warroom:fetchEspnWarroom,importLeague:importEspn}
   };
   root.DDProviders=providers;
   if(typeof module!=="undefined"&&module.exports) module.exports={parseProvider,parseSleeper,parseYahoo,parseEspn,importEspn,espnScoringKey,rosterSlots,scoringConfig,mapPlayer,normalizePick,normalizeImport,chooseDraft};

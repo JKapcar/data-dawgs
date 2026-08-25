@@ -970,6 +970,125 @@ function espnNormalizePicks(body) {
   };
 }
 
+/* ---- War Room feed -------------------------------------------------------
+   The War Room needs four things Sleeper hands over in five calls: a player pool
+   WITH projections, rosters, the weekly schedule, and lineup slots. ESPN carries
+   all of it but spread across views, and the projection lives inside each player's
+   stats array rather than in a projections endpoint. Assembling it here keeps the
+   page's own shape untouched — fantasy-warroom.html gets the same object it builds
+   from Sleeper, so every sheet downstream is unchanged. */
+const ESPN_PROJ_SOURCE = 1;      // statSourceId 1 = projected (0 = actual)
+const ESPN_SEASON_SPLIT = 0;     // scoringPeriodId 0 = full season
+
+function espnProjection(player) {
+  const stats = (player && player.stats) || [];
+  const season = stats.find(s => Number(s.statSourceId) === ESPN_PROJ_SOURCE &&
+                                 Number(s.scoringPeriodId) === ESPN_SEASON_SPLIT);
+  if (season && Number.isFinite(Number(season.appliedTotal))) return Number(season.appliedTotal) / 17;
+  // some leagues only carry a weekly projection; take the highest scoring period we can see
+  const weekly = stats.filter(s => Number(s.statSourceId) === ESPN_PROJ_SOURCE &&
+                                   Number.isFinite(Number(s.appliedTotal)));
+  if (!weekly.length) return 0;
+  return Number(weekly[weekly.length - 1].appliedTotal) || 0;
+}
+
+function espnPlayerRow(player) {
+  if (!player || player.id == null) return null;
+  const pos = ESPN_POS[Number(player.defaultPositionId)] || "";
+  if (!pos) return null;
+  return {
+    id: String(player.id),
+    name: player.fullName || [player.firstName, player.lastName].filter(Boolean).join(" "),
+    pos,
+    team: player.proTeamId != null ? String(player.proTeamId) : "",
+    p: Math.round(espnProjection(player) * 100) / 100,
+  };
+}
+
+async function espnWarroomFeed(cred) {
+  const base = await espnFetch(cred.leagueId, cred.season,
+    ["mSettings", "mTeam", "mRoster", "mSchedule"], cred.s2 ? cred : null);
+  if (!base.ok) return base;
+  const body = base.body;
+  const s = body.settings || {};
+
+  /* The free-agent pool is what sets replacement level, so rostered players alone
+     are not enough. kona_player_info takes its bounds from a filter header. */
+  const url = `${ESPN_READ}/seasons/${encodeURIComponent(cred.season)}/segments/0/leagues/${encodeURIComponent(cred.leagueId)}?view=kona_player_info`;
+  const headers = { Accept: "application/json",
+    "X-Fantasy-Filter": JSON.stringify({ players: { limit: 500,
+      sortPercOwned: { sortAsc: false, sortPriority: 1 } } }) };
+  if (cred.s2 && cred.swid) {
+    const swid = String(cred.swid).startsWith("{") ? cred.swid : `{${cred.swid}}`;
+    headers.Cookie = `espn_s2=${cred.s2}; SWID=${swid}`;
+  }
+  let poolRows = [];
+  try {
+    const res = await fetch(url, { headers });
+    if (res.ok) {
+      const pj = await res.json();
+      poolRows = ((pj && pj.players) || []).map(e => espnPlayerRow(e.player)).filter(Boolean);
+    }
+  } catch { poolRows = []; }
+
+  // rostered players are authoritative for the roster view and backfill the pool
+  const rostered = new Map();
+  const teams = (body.teams || []).map((t, i) => {
+    const entries = (t.roster && t.roster.entries) || [];
+    const players = [];
+    const starters = [];
+    for (const e of entries) {
+      const row = espnPlayerRow(e.playerPoolEntry && e.playerPoolEntry.player);
+      if (!row) continue;
+      rostered.set(row.id, row);
+      players.push(row.id);
+      // lineupSlotId 20 = bench, 21 = IR; anything else is a starting slot
+      const slot = Number(e.lineupSlotId);
+      if (slot !== 20 && slot !== 21) starters.push(row.id);
+    }
+    return {
+      id: String(t.id),
+      name: [t.location, t.nickname].filter(Boolean).join(" ").trim() || t.name || `Team ${i + 1}`,
+      owner: (t.owners && t.owners[0]) || "",
+      players, starters,
+    };
+  });
+  const poolById = new Map(poolRows.map(p => [p.id, p]));
+  for (const [id, row] of rostered) if (!poolById.has(id)) poolById.set(id, row);
+
+  /* ESPN's schedule is one row per matchup with home/away team ids, keyed by
+     matchupPeriodId. The War Room wants an array of weeks, each a list of pairs. */
+  const byWeek = new Map();
+  for (const g of (body.schedule || [])) {
+    const wk = Number(g.matchupPeriodId);
+    const home = g.home && g.home.teamId, away = g.away && g.away.teamId;
+    if (!wk || home == null || away == null) continue;   // byes carry no away side
+    if (!byWeek.has(wk)) byWeek.set(wk, []);
+    byWeek.get(wk).push([String(home), String(away)]);
+  }
+  const weeks = [...byWeek.keys()].sort((a, b) => a - b);
+  const schedule = weeks.map(w => byWeek.get(w));
+
+  const sched = s.scheduleSettings || {};
+  return { ok: true, body: {
+    league: {
+      id: String(body.id || ""), name: s.name || "ESPN league",
+      season: Number(body.seasonId) || null, size: Number(s.size) || teams.length,
+      dynasty: false,
+      playoffTeams: Number(sched.playoffTeamCount) || Math.max(2, Math.round(teams.length / 3)),
+      playoffStart: Number(sched.matchupPeriodCount) ? Number(sched.matchupPeriodCount) + 1 : 15,
+      scoring: espnScoring(s),
+      slots: espnRosterSlots(s),
+    },
+    teams, pool: [...poolById.values()], schedule,
+    diagnostics: {
+      poolSize: poolById.size, fromPlayerIndex: poolRows.length, rostered: rostered.size,
+      weeks: schedule.length,
+      note: poolRows.length ? "" : "ESPN's player index did not answer, so replacement level is computed from rostered players only and will read high.",
+    },
+  } };
+}
+
 /* ---- routes -------------------------------------------------------------- */
 async function handleEspn(request, url, env, cors) {
   const kv = env.RL || null;
@@ -1038,6 +1157,14 @@ async function handleEspn(request, url, env, cors) {
       ["mSettings", "mTeam", "mRoster", "mDraftDetail"], cred.s2 ? cred : null);
     if (!r.ok) return json({ error: r.reason, needsCredentials: r.status === 401 || r.status === 403 }, 400, cors);
     return json({ ok: true, league: espnNormalizeLeague(r.body), draft: espnNormalizePicks(r.body) }, 200, cors);
+  }
+
+  if (path === "warroom" && request.method === "GET") {
+    const cred = await stored();
+    if (!cred) return json({ error: "No ESPN league connected for this account." }, 404, cors);
+    const r = await espnWarroomFeed(cred);
+    if (!r.ok) return json({ error: r.reason, needsCredentials: r.status === 401 || r.status === 403 }, 400, cors);
+    return json({ ok: true, ...r.body }, 200, cors);
   }
 
   if (path === "picks" && request.method === "GET") {
