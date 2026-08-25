@@ -506,6 +506,7 @@ footer a{color:var(--accent)}
 .dp-tab{position:absolute;z-index:4;appearance:none;border:0;background:transparent;color:transparent;padding:0;cursor:pointer;font:inherit;scroll-snap-align:center;-webkit-tap-highlight-color:transparent}
 #rolloTab{left:29.55%;top:0;width:11.85%;height:100%;clip-path:polygon(28% 0,74% 0,91% 21%,80% 52%,100% 68%,94% 100%,17% 100%,10% 66%,27% 47%,15% 25%)}
 #ddccTab{left:41.75%;top:5%;width:11.9%;height:93%;clip-path:polygon(28% 0,74% 0,92% 23%,82% 54%,100% 68%,94% 100%,10% 100%,3% 67%,25% 51%,14% 25%)}
+#swoleTab{left:53.8%;top:1%;width:11.9%;height:97%;clip-path:polygon(28% 0,74% 0,92% 23%,82% 54%,100% 68%,94% 100%,10% 100%,3% 67%,25% 51%,14% 25%)}
 .dp-tab[aria-selected="false"]{background:rgba(12,7,3,.24)}
 .dp-tab[aria-selected="true"]{background:rgba(239,96,20,.08);filter:drop-shadow(0 0 7px rgba(255,111,28,.9));transform:translateY(2px)}
 .dp-tab:focus-visible{outline:4px solid #ff8a36;outline-offset:-5px}
@@ -524,6 +525,7 @@ footer a{color:var(--accent)}
 .ddcc-titleline{display:flex;justify-content:space-between;gap:20px;align-items:end}.ddcc-titleline .ddcc-tag{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
 .ddcc-intro{display:grid;grid-template-columns:1.25fr .75fr;gap:16px;margin-bottom:16px}.ddcc-card h3{margin:0 0 8px;font-size:20px}.ddcc-card p{color:var(--ink-2);line-height:1.55}.ddcc-card ul{padding-left:18px;color:var(--ink-2);line-height:1.55}
 .ddcc-action{appearance:none;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);padding:11px 16px;font:750 14px inherit;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}.ddcc-action:hover{filter:brightness(1.05)}.ddcc-action:disabled{opacity:.48;cursor:not-allowed}.ddcc-action.secondary{background:transparent;color:var(--ink-1);border:1px solid var(--border)}
+.swole-pound{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr);gap:18px;align-items:stretch}.swole-pound-card{border:1px solid var(--border);border-radius:16px;background:linear-gradient(145deg,var(--surface-1),var(--surface-0));padding:clamp(20px,3vw,32px)}.swole-pound-card h3{margin:0 0 10px;font-size:clamp(22px,3vw,30px)}.swole-pound-card p{color:var(--ink-2);line-height:1.6;max-width:62ch}.swole-pound-route{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0}.swole-pound-route span{padding:7px 10px;border:1px solid color-mix(in srgb,var(--accent) 45%,var(--border));border-radius:999px;color:var(--ink-2);font:800 10px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.1em}.swole-pound-plate{display:grid;place-items:center;min-height:230px;border:1px solid #5d5045;border-radius:16px;background:radial-gradient(circle at 50% 30%,#49443f 0,#282522 42%,#171513 100%);box-shadow:inset 0 0 0 7px #211d1a,inset 0 0 0 8px #665c52;color:#fff7e8;text-align:center;padding:24px}.swole-pound-plate strong{display:block;font-size:clamp(28px,5vw,48px);letter-spacing:.04em}.swole-pound-plate small{display:block;margin-top:7px;color:#ff9b51;font:800 11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.16em}.swole-pound-plate::before{content:"";display:block;width:58px;height:58px;margin:0 auto 18px;border:8px solid #ff6a02;border-radius:50%;box-shadow:0 0 0 5px #24201d,0 8px 18px rgba(0,0,0,.4)}
 .ddcc-demo output,.prob-output{display:block;font-size:30px;font-weight:850;font-variant-numeric:tabular-nums;margin:8px 0 4px}.ddcc-slider{width:100%;accent-color:var(--accent);height:34px;cursor:pointer}.scale-anchors{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;color:var(--ink-3);font-size:11px}.scale-anchors span:nth-child(2){text-align:center}.scale-anchors span:last-child{text-align:right}
 .milestone-track{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:16px}.mile{border-top:3px solid var(--border);padding-top:8px;color:var(--ink-3);font-size:11px}.mile.reached{border-color:var(--accent);color:var(--ink-1)}.mile b{display:block;font-size:15px;color:inherit}
 .ddcc-loading,.ddcc-error,.ddcc-empty{border:1px dashed var(--border);border-radius:14px;padding:24px;color:var(--ink-3)}.ddcc-error{border-color:color-mix(in srgb,#d83d3d 55%,var(--border));color:#c74747}
@@ -606,7 +608,7 @@ footer a{color:var(--accent)}
 .credit{color:var(--ink-3);font-size:12px;margin:10px 0 0}
 .credit a{color:var(--ink-2)}
 #ytwrap{position:fixed;left:-9999px;top:0;width:320px;height:180px;pointer-events:none;opacity:.01}
-@media(max-width:820px){.rollo-grid,.ddcc-intro,.ddcc-profile-grid{grid-template-columns:1fr}.rollo-more{grid-template-columns:1fr}.summary-grid{grid-template-columns:repeat(2,1fr)}.summary-grid .metric:first-child{grid-column:1/-1}}
+@media(max-width:820px){.rollo-grid,.ddcc-intro,.ddcc-profile-grid,.swole-pound{grid-template-columns:1fr}.rollo-more{grid-template-columns:1fr}.summary-grid{grid-template-columns:repeat(2,1fr)}.summary-grid .metric:first-child{grid-column:1/-1}}
 @media(max-width:620px){
   .dp-hero-scroll{height:286px;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:none}
   .dp-hero-scroll::-webkit-scrollbar{display:none}
@@ -622,6 +624,7 @@ footer a{color:var(--accent)}
   .dp-project-preview,.dp-rack[data-preview-open="true"] .dp-project-preview{left:16px;right:16px;top:190px;bottom:auto;width:auto;max-width:none;opacity:1;visibility:visible;transform:none}
   .dp-project-preview h3{font-size:18px}.dp-project-preview p{font-size:12px}
   .dp-sheet{left:50%;width:calc(100vw - 24px);margin:-8px 0 0;padding-bottom:44px}
+  .swole-pound-card{padding:20px 17px}.swole-pound-card .ddcc-action{width:100%;min-height:48px}.swole-pound-plate{min-height:190px}.swole-pound-route span{padding:8px 10px}
   .stage{height:min(64vh,540px)}.playbtn{width:84px;height:84px}.bar{opacity:1}.quiz-claim{margin:26px auto}.quiz-actions{flex-direction:column-reverse}.quiz-actions .ddcc-action{width:100%}.milestone-track{grid-template-columns:repeat(2,1fr)}.summary-grid{grid-template-columns:1fr 1fr}.metric b{font-size:17px}.ddcc-titleline{display:block}
 }
 @media(prefers-reduced-motion:reduce){.sp.on.kb{animation:none}.curtain,.playbtn,.dp-tab,.dp-pan-hint{transition:none}}
@@ -2205,15 +2208,15 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <section class="dp-hero" aria-labelledby="poundTitle" data-dp-hero-composition="rollo-camera-cleveland-lab">
     <div class="dp-hero-scroll" id="dpHeroScroll" tabindex="0" aria-describedby="dpHeroHint">
       <img class="dp-hero-art" src="assets/dawg-pound/hero-cleveland.webp" width="1725" height="448" alt="Illustrated Dawg Pound yard where Rollo operates a vintage movie camera, several dogs run an active laboratory beneath the Cleveland skyline, a smaller dog works at a probability board, and a bulldog carries a receipt beside an orange doghouse">
-      <div class="dp-welcome"><p class="dp-eyebrow">Welcome to the</p><h1 id="poundTitle">Dawg Pound</h1><p class="lede"><strong>Good ideas need room to run.</strong>A home for stories, experiments, and whatever we build next.</p><span class="dp-count"><span id="dpProjectCount">2</span>&nbsp; projects at play</span></div>
+      <div class="dp-welcome"><p class="dp-eyebrow">Welcome to the</p><h1 id="poundTitle">Dawg Pound</h1><p class="lede"><strong>Good ideas need room to run.</strong>A home for stories, experiments, and whatever we build next.</p><span class="dp-count"><span id="dpProjectCount">3</span>&nbsp; projects at play</span></div>
     </div><p id="dpHeroHint" class="dp-pan-hint">Swipe to explore &rarr;</p>
   </section>
   <section class="dp-rack" aria-labelledby="dpRackTitle" data-rack-asset="approved-physical-collar-rack">
    <div class="dp-rack-viewport" id="dpRackTrack" role="tablist" aria-label="Projects in the Dawg Pound">
     <div class="dp-rack-stage">
-     <img class="dp-rack-art" src="assets/dawg-pound/rack-wood-hooks.webp" width="1725" height="224" alt="" aria-hidden="true">
+     <img class="dp-rack-art" src="assets/dawg-pound/rack-wood-hooks-swoledawg.webp" width="1725" height="224" alt="" aria-hidden="true">
      <header class="dp-rack-head"><div><h2 id="dpRackTitle">The Collar Rack</h2><p class="dp-rack-helper">Hover or focus a collar for details. Select it to open.</p></div></header>
-     <span class="dp-position" id="dpPosition">01 / 02</span>
+     <span class="dp-position" id="dpPosition">01 / 03</span>
      <button class="dp-rack-arrow" id="dpPrev" type="button" aria-label="Previous project">&larr;</button>
      <div class="dp-tabs">
       <button class="dp-tab" id="rolloTab" role="tab" aria-selected="true" aria-controls="rolloSheet" tabindex="0" data-sheet="rollo" data-collar-asset="orange-leather-rollo">
@@ -2221,6 +2224,9 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       </button>
       <button class="dp-tab" id="ddccTab" role="tab" aria-selected="false" aria-controls="ddccSheet" tabindex="-1" data-sheet="ddcc" data-collar-asset="dark-leather-ddcc">
        <small>Experiment</small><strong>DDCC Profile</strong><span>Experiment</span>
+      </button>
+      <button class="dp-tab" id="swoleTab" role="tab" aria-selected="false" aria-controls="swoleSheet" tabindex="-1" data-sheet="swole" data-collar-asset="charcoal-leather-swoledawg">
+       <small>Body &amp; training</small><strong>SwoleDawg</strong><span>Training log</span>
       </button>
       <div class="dp-future" aria-hidden="true">Future projects</div>
      </div>
@@ -2306,6 +2312,24 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     </div>
     <div id="ddccApp" aria-live="polite"><div class="ddcc-loading">Checking your DDCC profile…</div></div>
   </section>
+
+  <section class="dp-sheet" id="swoleSheet" role="tabpanel" aria-labelledby="swoleTab" hidden>
+    <button class="dp-sheet-close" type="button" aria-label="Collapse SwoleDawg project">&times;</button>
+    <header class="sheet-head">
+      <p class="dp-eyebrow">Body &amp; training</p>
+      <h2>SwoleDawg</h2>
+      <p>Train. Recover. Measure. Keep the receipt.</p>
+    </header>
+    <div class="swole-pound">
+      <article class="swole-pound-card">
+        <h3>The training log that remembers the work.</h3>
+        <p>SwoleDawg keeps workouts, recovery, nutrition, and body measurements in one honest record. It is built to log what happened, show the trend, and leave the mythology at the door.</p>
+        <div class="swole-pound-route" aria-label="SwoleDawg areas"><span>TRAIN</span><span>RECOVER</span><span>MEASURE</span><span>NUTRITION</span></div>
+        <a class="ddcc-action" href="swoledawg.html">Open SwoleDawg</a>
+      </article>
+      <aside class="swole-pound-plate" aria-label="SwoleDawg collar identity plate"><div><strong>SWOLEDAWG</strong><small>BODY &amp; TRAINING</small></div></aside>
+    </div>
+  </section>
 </div>
 <div id="ytwrap"><div id="ytplayer"></div></div>
 
@@ -2335,7 +2359,7 @@ document.querySelectorAll("[data-rollo-copy]").forEach(el => {
 
 (function () {
   const tabs = [...document.querySelectorAll(".dp-tab")];
-  const sheets = { rollo: document.getElementById("rolloSheet"), ddcc: document.getElementById("ddccSheet") };
+  const sheets = { rollo: document.getElementById("rolloSheet"), ddcc: document.getElementById("ddccSheet"), swole: document.getElementById("swoleSheet") };
   const rack = document.querySelector(".dp-rack");
   const rackTrack = document.getElementById("dpRackTrack");
   const medallion = document.querySelector(".dp-medallion");
@@ -2343,7 +2367,8 @@ document.querySelectorAll("[data-rollo-copy]").forEach(el => {
   const touchRack = matchMedia("(hover: none), (pointer: coarse)");
   const registry = Object.freeze({
     rollo:{status:"STORY · LIVE",title:"Rollo",description:"Meet the OG Data Dawg through his music-synced photo tribute and evolving story."},
-    ddcc:{status:"EXPERIMENT · LIVE",title:"DDCC Profile",description:"Put probabilities on 40 claims and build a permanent calibration profile. Sign-in is required to take the challenge."}
+    ddcc:{status:"EXPERIMENT · LIVE",title:"DDCC Profile",description:"Put probabilities on 40 claims and build a permanent calibration profile. Sign-in is required to take the challenge."},
+    swole:{status:"BODY & TRAINING · LIVE",title:"SwoleDawg",description:"Log training, recovery, nutrition, and body measurements—then follow the trend into the full SwoleDawg workspace."}
   });
   const preview = sheet => { const p=registry[sheet]; document.getElementById("dpPreviewStatus").textContent=p.status; document.getElementById("dpPreviewTitle").textContent=p.title; document.getElementById("dpPreviewDescription").textContent=p.description; document.getElementById("dpPosition").textContent=String(tabs.findIndex(t=>t.dataset.sheet===sheet)+1).padStart(2,"0")+" / "+String(tabs.length).padStart(2,"0"); };
   let previewTimer;
@@ -2366,6 +2391,7 @@ document.querySelectorAll("[data-rollo-copy]").forEach(el => {
     const hash=location.hash.toLowerCase();
     if (!hash || hash==="#rollo") return "rollo";
     if (hash==="#ddcc") return "ddcc";
+    if (hash==="#swole") return "swole";
     history.replaceState(null,"",location.pathname+location.search+"#rollo");
     return "rollo";
   }
@@ -2380,7 +2406,7 @@ document.querySelectorAll("[data-rollo-copy]").forEach(el => {
     });
     preview(sheet);
     requestAnimationFrame(()=>{ centerTab(tabs.find(tab=>tab.dataset.sheet===sheet)); syncMedallion(); });
-    document.title = (sheet === "ddcc" ? "DDCC Profile" : "The Dawg Pound") + " — Data Dawgs";
+    document.title = ({ddcc:"DDCC Profile",swole:"SwoleDawg"}[sheet] || "The Dawg Pound") + " — Data Dawgs";
     if (sheet === "ddcc" && window.DDRolloPause) window.DDRolloPause();
   }
   tabs.forEach((tab, i) => {
@@ -2411,7 +2437,8 @@ document.querySelectorAll("[data-rollo-copy]").forEach(el => {
   const move = delta => { const current=tabs.findIndex(t=>t.getAttribute("aria-selected")==="true"), next=(current+delta+tabs.length)%tabs.length; const tab=tabs[next]; rackTrack.scrollTo({left:Math.max(0,tab.offsetLeft+tab.offsetWidth/2-rackTrack.clientWidth/2),behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"}); const hash="#"+tab.dataset.sheet; if(location.hash===hash) activate(tab.dataset.sheet,true); else location.hash=hash; };
   document.getElementById("dpPrev").addEventListener("click",()=>move(-1)); document.getElementById("dpNext").addEventListener("click",()=>move(1));
   let rackTimer; rackTrack.addEventListener("scroll",()=>{ syncMedallion(); clearTimeout(rackTimer); rackTimer=setTimeout(()=>{ const center=rackTrack.getBoundingClientRect().left+rackTrack.clientWidth/2; const nearest=tabs.reduce((a,b)=>Math.abs(b.getBoundingClientRect().left+b.offsetWidth/2-center)<Math.abs(a.getBoundingClientRect().left+a.offsetWidth/2-center)?b:a); preview(nearest.dataset.sheet); },100); },{passive:true});
-  addEventListener("resize",syncMedallion,{passive:true});
+  addEventListener("resize",()=>{ centerTab(tabs.find(tab=>tab.dataset.sheet===selectedSheet())); syncMedallion(); },{passive:true});
+  addEventListener("load",()=>setTimeout(()=>centerTab(tabs.find(tab=>tab.dataset.sheet===selectedSheet())),800),{once:true});
   try {
     if (sessionStorage.getItem("dd-dawgs-return") === "ddcc") {
       sessionStorage.removeItem("dd-dawgs-return");
@@ -2884,11 +2911,12 @@ window.DD_BOTCTX = {
     ['Why is there no sound?','No sound?'],
     ['What does DDCC measure?','What is DDCC?'],
     ['How do the receipts work?','DDCC receipts']]},
-  sys: `RIGHT NOW you are in the Dawg Pound, which has two project sheets: Rollo and DDCC Profile.
+  sys: `RIGHT NOW you are in the Dawg Pound, which has three project sheets: Rollo, DDCC Profile and SwoleDawg.
 - Rollo is a memorial slideshow for Kap's dog, "the OG Data Dawg. Ride or Die." Keep questions about Rollo short, warm and plain.
 - DDCC is a probability calibration experiment, not an intelligence test, personality test, rating or leaderboard. Explain only the published V1 metrics and do not infer traits from a score.
+- SwoleDawg is the body and training workspace for logging workouts, recovery, nutrition and body measurements. The Dawg Pound sheet introduces it; the full workspace lives at swoledawg.html.
 - Never reveal or guess an active question's answer. Results and sources remain sealed until all 40 claims are complete.`,
-  ctx: () => `The selected sheet is ${location.hash==="#ddcc"?"DDCC Profile":"Rollo"}.
+  ctx: () => `The selected sheet is ${{"#ddcc":"DDCC Profile","#swole":"SwoleDawg"}[location.hash]||"Rollo"}.
 Rollo is a music-synced photo tribute played against a song's clock in three phases.
 - Roughly 250 photos. 44 in the slow chronological opening (long crossfades, slow push into the subject), then a burst of 203 more, then one held final photo and a fade to black.
 - The music is HUSKY by RiFF RAFF, streamed from YouTube — it is not hosted on the site.
