@@ -307,21 +307,23 @@ write('pool.json', {
   source_page: '/master.html',
   tier: tierOf('master.html'),
   graded: false,
-  as_of: '2026-08-14',
-  source: 'Market Value (MV) auction-dollar snapshot, captured 2026-08-14.',
+  as_of: '2026-08-24',
+  source: 'Public Market Value (MV) master auction-dollar snapshot supplied by the site owner, captured 2026-08-24.',
   note:
-    'MV is a market-consensus auction-dollar value, NOT a points projection. ' +
-    'STALENESS WARNING: this snapshot is ' +
-    Math.round((Date.parse(BUILT) - Date.parse('2026-08-14')) / 86400000) +
-    ' days old as of the build date and the underlying market moves through August. ' +
-    'Do not quote these dollars as current without saying the date out loud.',
+    'MV is an auction-dollar value, NOT a points projection. The source workbook contained 705 rows; ' +
+    '28 duplicate aliases were resolved to the best-ranked row, leaving 677 published players. ' +
+    'Always state the selected league format and the 2026-08-24 capture date when quoting a value.',
   scoring_keys: {
-    full: 'Full PPR auction dollars',
-    half: 'Half PPR auction dollars (league default)',
-    sf: 'Superflex auction dollars',
+    full: '12-team PPR auction dollars',
+    half: '12-team Half PPR auction dollars (site default)',
+    std: '12-team Standard auction dollars',
+    sf: '12-team Superflex PPR auction dollars',
+    ppr10: '10-team PPR auction dollars',
+    ppr14: '14-team PPR auction dollars',
   },
   field_notes: {
     rank: 'overall rank within this snapshot',
+    bye: 'scheduled bye week from the supplied master sheet',
     silva: 'source-analyst positional rank string, kept under its original field name',
     tags: 'site editorial tags: buy | fade | zrb (zero-RB)',
     note: 'one-line editorial comment; opinion, not data',
