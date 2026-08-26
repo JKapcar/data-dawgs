@@ -1037,29 +1037,54 @@ function espnNormalizePicks(body, fallbackNames) {
    from Sleeper, so every sheet downstream is unchanged. */
 const ESPN_PROJ_SOURCE = 1;      // statSourceId 1 = projected (0 = actual)
 const ESPN_SEASON_SPLIT = 0;     // scoringPeriodId 0 = full season
+const ESPN_SEASON_SPLIT_TYPE = 0; // statSplitTypeId 0 = the season total, not a per-game split
 
-function espnProjection(player) {
+/* ⚠️ THIS READ LAST SEASON'S PROJECTION FOR MONTHS. `player.stats[]` carries one entry per
+   season (ids like 102025 and 102026), and this used to `find` the first projected
+   full-season split with NO seasonId filter — so a player whose 2025 row serialised first
+   got his PRIOR season's number. For a rookie backup that is roughly the replacement line,
+   which is why a $34 superflex QB plotted at VOR ≈ 0 and read as a bad buy.
+   Three more things were wrong in the same eight lines:
+   • `/ 17` is not every league's regular season. Divide by the league's own week count.
+   • the fallback comment claimed "the highest scoring period we can see" and the code took
+     `weekly[weekly.length-1]` — the last ARRAY element, i.e. whatever order ESPN sent.
+   • a missing projection returned 0, and a 0 is a data point: it dragged replacement level
+     down for everyone else. Absent is null, and the caller counts it. */
+function espnProjection(player, season, weeks) {
   const stats = (player && player.stats) || [];
-  const season = stats.find(s => Number(s.statSourceId) === ESPN_PROJ_SOURCE &&
-                                 Number(s.scoringPeriodId) === ESPN_SEASON_SPLIT);
-  if (season && Number.isFinite(Number(season.appliedTotal))) return Number(season.appliedTotal) / 17;
-  // some leagues only carry a weekly projection; take the highest scoring period we can see
-  const weekly = stats.filter(s => Number(s.statSourceId) === ESPN_PROJ_SOURCE &&
-                                   Number.isFinite(Number(s.appliedTotal)));
-  if (!weekly.length) return 0;
-  return Number(weekly[weekly.length - 1].appliedTotal) || 0;
+  const wk = Number(weeks) > 0 ? Number(weeks) : 17;
+  const isProj = s => Number(s.statSourceId) === ESPN_PROJ_SOURCE;
+  const thisSeason = s => Number(s.seasonId) === Number(season);
+  const full = stats.find(s => isProj(s) && thisSeason(s) &&
+                               Number(s.scoringPeriodId) === ESPN_SEASON_SPLIT &&
+                               Number(s.statSplitTypeId) === ESPN_SEASON_SPLIT_TYPE);
+  if (full && Number.isFinite(Number(full.appliedTotal))) return Number(full.appliedTotal) / wk;
+  // some leagues only carry weekly projections: take THIS week's, not the last row in the array
+  const current = stats.filter(s => isProj(s) && thisSeason(s) &&
+                                    Number.isFinite(Number(s.appliedTotal)) &&
+                                    Number(s.scoringPeriodId) > 0)
+                       .sort((a, b) => Number(b.scoringPeriodId) - Number(a.scoringPeriodId))[0];
+  if (current) return Number(current.appliedTotal);
+  return null;                                   // ⚠️ null, never 0 — see the note above
 }
 
-function espnPlayerRow(player) {
+function espnPlayerRow(player, season, weeks, paidBy) {
   if (!player || player.id == null) return null;
   const pos = ESPN_POS[Number(player.defaultPositionId)] || "";
   if (!pos) return null;
+  const proj = espnProjection(player, season, weeks);
+  const id = String(player.id);
   return {
-    id: String(player.id),
+    id,
     name: player.fullName || [player.firstName, player.lastName].filter(Boolean).join(" "),
     pos,
     team: player.proTeamId != null ? String(player.proTeamId) : "",
-    p: Math.round(espnProjection(player) * 100) / 100,
+    /* ⚠️ null must SURVIVE as null. Math.round(null * 100) / 100 is 0, which would quietly
+       restore the exact bug the null exists to prevent. */
+    p: proj == null ? null : Math.round(proj * 100) / 100,
+    /* what this player actually cost at THIS league's auction — the input the war room has
+       never had, and the one every surplus number needs */
+    paid: paidBy && paidBy.has(id) ? paidBy.get(id) : null,
   };
 }
 
@@ -1119,10 +1144,21 @@ const ownerName = v => { const s = String(v == null ? "" : v).trim(); return !s 
 
 async function espnWarroomFeed(cred) {
   const base = await espnFetch(cred.leagueId, cred.season,
-    ["mSettings", "mTeam", "mRoster", "mSchedule"], cred.s2 ? cred : null);
+    ["mSettings", "mTeam", "mRoster", "mSchedule", "mDraftDetail"], cred.s2 ? cred : null);
   if (!base.ok) return base;
   const body = base.body;
   const s = body.settings || {};
+  /* the league's own regular season, not a constant: a 14-week league divided by 17 reads
+     every projection ~18% light */
+  const seasonWeeks = Number((s.scheduleSettings || {}).matchupPeriodCount) || 17;
+  /* auction price per player, from the draft ESPN already returned in this same call */
+  const paidBy = new Map();
+  for (const pk of ((body.draftDetail && body.draftDetail.picks) || [])) {
+    const pid = pk && pk.playerId != null ? String(pk.playerId) : null;
+    if (!pid || pid === "-1") continue;
+    const bid = Number(pk.bidAmount);
+    if (Number.isFinite(bid)) paidBy.set(pid, bid);
+  }
 
   /* The free-agent pool is what sets replacement level, so rostered players alone
      are not enough. kona_player_info takes its bounds from a filter header. */
@@ -1139,7 +1175,7 @@ async function espnWarroomFeed(cred) {
     const res = await fetch(url, { headers });
     if (res.ok) {
       const pj = await res.json();
-      poolRows = ((pj && pj.players) || []).map(e => espnPlayerRow(e.player)).filter(Boolean);
+      poolRows = ((pj && pj.players) || []).map(e => espnPlayerRow(e.player, cred.season, seasonWeeks, paidBy)).filter(Boolean);
     }
   } catch { poolRows = []; }
 
@@ -1150,7 +1186,7 @@ async function espnWarroomFeed(cred) {
     const players = [];
     const starters = [];
     for (const e of entries) {
-      const row = espnPlayerRow(e.playerPoolEntry && e.playerPoolEntry.player);
+      const row = espnPlayerRow(e.playerPoolEntry && e.playerPoolEntry.player, cred.season, seasonWeeks, paidBy);
       if (!row) continue;
       rostered.set(row.id, row);
       players.push(row.id);
@@ -1215,6 +1251,11 @@ async function espnWarroomFeed(cred) {
     teams, pool: [...poolById.values()], schedule,
     diagnostics: {
       poolSize: poolById.size, fromPlayerIndex: poolRows.length, rostered: rostered.size,
+      /* ⚠️ Report this. An unprojected player used to arrive as a 0 and pull replacement
+         level down; now he arrives as null and the page must exclude him and say how many. */
+      unprojected: [...poolById.values()].filter(r => r.p == null).length,
+      priced: [...poolById.values()].filter(r => r.paid != null).length,
+      regularSeasonWeeks: seasonWeeks,
       weeks: schedule.length,
       /* ⚠️ `weeks: 0` used to be the whole story, and it has three different causes with
          three different fixes: ESPN never published a schedule, ESPN published one this

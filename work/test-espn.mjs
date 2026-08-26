@@ -20,6 +20,7 @@ ${lift("espnRosterSlots")}
 ${lift("espnScoring")}
 ${lift("espnNormalizeLeague")}
 ${lift("espnPlayerNames")}
+
 ${lift("espnNormalizePicks")}
 return {espnRosterSlots,espnScoring,espnNormalizeLeague,espnNormalizePicks};`)();
 
@@ -110,7 +111,8 @@ console.log("\nempty and hostile shapes");
 /* ---- War Room feed ------------------------------------------------------ */
 const wrConsts = consts + `
 const ESPN_PROJ_SOURCE = 1;
-const ESPN_SEASON_SPLIT = 0;`;
+const ESPN_SEASON_SPLIT = 0;
+const ESPN_SEASON_SPLIT_TYPE = 0;`;
 const wr = new Function(`${wrConsts}
 ${lift("espnProjection")}
 ${lift("espnPlayerRow")}
@@ -120,18 +122,24 @@ return {espnProjection,espnPlayerRow};`)();
 
 console.log("\nWar Room feed: projections and player rows");
 {
+  /* ⚠️ These fixtures gained a seasonId and these calls gained a season, because a
+     projection with no season attached is exactly what could not be trusted before. */
   const seasonProj = { id: 4262921, fullName:"Jahmyr Gibbs", defaultPositionId:2, proTeamId:8,
-    stats:[{statSourceId:0,scoringPeriodId:0,appliedTotal:0},{statSourceId:1,scoringPeriodId:0,appliedTotal:255}] };
-  const row = wr.espnPlayerRow(seasonProj);
+    stats:[{statSourceId:0,seasonId:2026,scoringPeriodId:0,statSplitTypeId:0,appliedTotal:0},
+           {statSourceId:1,seasonId:2026,scoringPeriodId:0,statSplitTypeId:0,appliedTotal:255}] };
+  const row = wr.espnPlayerRow(seasonProj, 2026, 17);
   ok("a season projection becomes a per-week number", row.p === 15, String(row.p));
   ok("the row carries id, name, pos and pro team", row.id==="4262921" && row.pos==="RB" && row.team==="8", JSON.stringify(row));
   ok("actuals are never mistaken for projections",
-     wr.espnProjection({stats:[{statSourceId:0,scoringPeriodId:0,appliedTotal:999}]}) === 0);
-  ok("a player with no stats scores zero rather than NaN",
-     wr.espnPlayerRow({id:1,fullName:"X",defaultPositionId:2}).p === 0);
+     wr.espnProjection({stats:[{statSourceId:0,seasonId:2026,scoringPeriodId:0,statSplitTypeId:0,appliedTotal:999}]}, 2026, 17) === null);
+  /* ⚠️ THIS ASSERTION WAS INVERTED ON PURPOSE. It used to demand 0 for a player with no
+     projection, and that 0 was a real data point: it sat in the pool, got ranked, and
+     pulled replacement level down for everyone. Absent must read as absent. */
+  ok("a player with no stats has NO projection — null, not zero",
+     wr.espnPlayerRow({id:1,fullName:"X",defaultPositionId:2}, 2026, 17).p === null);
   ok("a player with no usable position is dropped",
      wr.espnPlayerRow({id:2,fullName:"Punter",defaultPositionId:99}) === null);
-  const weeklyOnly = wr.espnProjection({stats:[{statSourceId:1,scoringPeriodId:3,appliedTotal:12.5}]});
+  const weeklyOnly = wr.espnProjection({stats:[{statSourceId:1,seasonId:2026,scoringPeriodId:3,statSplitTypeId:0,appliedTotal:12.5}]}, 2026, 17);
   ok("a league with only weekly projections still yields a number", weeklyOnly === 12.5, String(weeklyOnly));
 }
 
@@ -216,6 +224,38 @@ console.log("\nPick names when the roster views are empty");
      /owner: ownerName\(team\.owner\)/.test(rig) && /const OPAQUE_ID =/.test(rig));
 }
 
+
+
+/* ---- the projection season filter ----------------------------------------
+   This read the PRIOR season's projection for months: no seasonId filter meant `find`
+   returned whichever split ESPN serialised first. A rookie backup's 2025 number sits at
+   about the replacement line, so a $34 superflex QB plotted at VOR 0 and read as a bust. */
+{
+  const P = wr.espnProjection;
+  const stats = (rows) => ({ stats: rows });
+  const proj = (seasonId, total) => ({ statSourceId: 1, seasonId, scoringPeriodId: 0, statSplitTypeId: 0, appliedTotal: total });
+
+  // prior season FIRST in the array — the exact shape that produced the bug
+  ok("last season's split is ignored when this season's exists",
+     P(stats([proj(2025, 34), proj(2026, 340)]), 2026, 17) === 20);
+  ok("…and order does not matter",
+     P(stats([proj(2026, 340), proj(2025, 34)]), 2026, 17) === 20);
+  ok("no split for this season is null, NEVER 0",
+     P(stats([proj(2025, 340)]), 2026, 17) === null);
+  ok("a league's own week count divides, not a hard-coded 17",
+     P(stats([proj(2026, 280)]), 2026, 14) === 20);
+  ok("a per-game split is not mistaken for a season total",
+     P(stats([{ statSourceId: 1, seasonId: 2026, scoringPeriodId: 0, statSplitTypeId: 1, appliedTotal: 999 }]), 2026, 17) === null);
+  ok("actuals are never read as a projection",
+     P(stats([{ statSourceId: 0, seasonId: 2026, scoringPeriodId: 0, statSplitTypeId: 0, appliedTotal: 999 }]), 2026, 17) === null);
+
+  // weekly fallback: the CURRENT week, not the last row in the array
+  const wk = (scoringPeriodId, total) => ({ statSourceId: 1, seasonId: 2026, scoringPeriodId, statSplitTypeId: 0, appliedTotal: total });
+  ok("the weekly fallback takes the highest scoring period, not the last array entry",
+     P(stats([wk(3, 9), wk(1, 1)]), 2026, 17) === 9);
+  ok("…and stays within this season",
+     P(stats([{ statSourceId: 1, seasonId: 2025, scoringPeriodId: 9, statSplitTypeId: 0, appliedTotal: 99 }]), 2026, 17) === null);
+}
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

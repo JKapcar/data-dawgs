@@ -2876,6 +2876,13 @@ body.wr-shared #youLab{display:none!important}
         <div style="overflow-x:auto"><table class="wr-money" id="mnHorizon"></table></div>
       </article>
 
+      <article class="wr-card wr-full wr-hide" id="mnPaidCard">
+        <h3>What you paid vs what the market says now</h3>
+        <p class="wr-note" id="mnPaidNote"></p>
+        <div id="mnPaid"></div>
+        <div class="wr-legend" id="mnLegend3"></div>
+      </article>
+
       <article class="wr-card wr-full">
         <h3>Where the money is</h3>
         <p class="wr-note">Roster dollars by position, with the bench pooled as one segment. Dashed = league average.</p>
@@ -2884,7 +2891,7 @@ body.wr-shared #youLab{display:none!important}
       </article>
 
       <article class="wr-card wr-full">
-        <h3>Every rostered player: price against production</h3>
+        <h3>Where the projection disagrees with the market</h3>
         <p class="wr-note" id="mnScatterNote"></p>
         <div class="wr-filter"><select class="wr-mini" id="mnTeamSel" aria-label="Filter by team"></select></div>
         <div id="mnScatter"></div>
@@ -3207,7 +3214,9 @@ function starterValues(players,s,rep){const available=players.slice(),result={};
 function replacement(pool,s){
   const teams=state.teams.length, POS=['QB','RB','WR','TE','K','DST'];
   const byPos={},used={};
-  POS.forEach(p=>{byPos[p]=pool.filter(x=>x.pos===p).sort((a,b)=>b.p-a.p);used[p]=Math.min((s[p]||0)*teams,byPos[p].length)});
+  /* a player with no projection cannot be ranked: he would sort as NaN and land wherever
+     the sort left him, then be read off as a replacement-level baseline */
+  POS.forEach(p=>{byPos[p]=pool.filter(x=>x.pos===p&&x.p!=null).sort((a,b)=>b.p-a.p);used[p]=Math.min((s[p]||0)*teams,byPos[p].length)});
   const fill=(eligible,n)=>{for(let i=0;i<n;i++){let best=null,bp=null;
     for(const p of eligible){const c=byPos[p][used[p]];if(c&&(!best||c.p>best.p)){best=c;bp=p}}
     if(!bp)return;used[bp]++}};
@@ -3517,6 +3526,45 @@ function mnStackedBars(M){
 }
 
 const LABEL_CAP=26;   /* one roster labels cleanly; a whole league does not */
+/* ⚠️ THIS ANSWERS A DIFFERENT QUESTION FROM THE SCATTER BELOW IT, AND THAT IS THE POINT.
+   x = what the player actually cost at this league's auction. y = what the market says he
+   is worth today, in this league's own column. The reference line is y = x, so distance
+   from it is surplus in dollars — the trade-market read.
+   The other chart plots market value against a WEEK-ONE PROJECTION over replacement, which
+   measures whether ESPN agrees with the market. That is a useful signal and a bad headline:
+   a cheap quarterback ESPN is low on reads as a bad buy there, and reads as exactly what it
+   is here. Bench status is deliberately ignored — a trade asset is a trade asset. */
+function mnPaidSvg(pts){
+  const W=NARROW()?340:560,H=NARROW()?280:340,l=NARROW()?42:52,b=38,t=12,rr=W-14;
+  const hi=Math.max(10,...pts.map(p=>Math.max(p.x,p.y)));
+  const X=v=>l+(v/hi)*(rr-l), Y=v=>H-b-(v/hi)*(H-b-t);
+  const ticks=[0,.25,.5,.75,1].map(f=>Math.round(hi*f));
+  let g='';
+  ticks.forEach(v=>{
+    g+='<line x1="'+l+'" x2="'+rr+'" y1="'+Y(v)+'" y2="'+Y(v)+'" style="stroke:var(--grid)" opacity=".5"/>'
+      +'<text x="'+(l-6)+'" y="'+(Y(v)+3.5)+'" text-anchor="end" style="font:600 9.5px ui-monospace,monospace;fill:var(--ink-3)">$'+v+'</text>'
+      +'<text x="'+X(v)+'" y="'+(H-b+14)+'" text-anchor="middle" style="font:600 9.5px ui-monospace,monospace;fill:var(--ink-3)">$'+v+'</text>';
+  });
+  /* the line is the whole argument, so it is drawn and named */
+  g+='<line x1="'+X(0)+'" y1="'+Y(0)+'" x2="'+X(hi)+'" y2="'+Y(hi)+'" style="stroke:var(--ink-3);stroke-dasharray:6 4;stroke-width:1.5"/>'
+    +'<text x="'+(X(hi)-4)+'" y="'+(Y(hi)+13)+'" text-anchor="end" style="font:600 9.5px system-ui;fill:var(--ink-3)">paid = market value</text>';
+  pts.forEach(p=>{
+    g+='<circle cx="'+X(p.x)+'" cy="'+Y(p.y)+'" r="4.5" style="fill:'+POS_COLOR[p.pos]+';opacity:.85"><title>'
+      +esc(p.name)+' ('+p.pos+') \u00b7 '+esc(p.team)+'\npaid '+fmt$(p.x)+' \u00b7 worth '+fmt$(p.y)
+      +' \u00b7 '+(p.d>=0?'+':'')+fmt$(p.d)+'</title></circle>';
+  });
+  if(pts.length<=LABEL_CAP){
+    const surname=nm=>{const w=String(nm).replace(/\s+(Jr\.?|Sr\.?|I{2,}|IV|V)$/i,'').trim().split(/\s+/);return w[w.length-1]||nm};
+    pts.forEach(p=>{
+      const x=X(p.x),y=Y(p.y),right=x>W-70;
+      g+='<text x="'+(right?x-7:x+7)+'" y="'+(y+3.5)+'" text-anchor="'+(right?'end':'start')+'" '
+        +'style="font:600 9.5px system-ui;paint-order:stroke;stroke:var(--paper);stroke-width:3px;'
+        +'stroke-linejoin:round;fill:var(--ink-2)">'+esc(surname(p.name))+'</text>';
+    });
+  }
+  g+='<text x="'+((l+rr)/2)+'" y="'+(H-4)+'" text-anchor="middle" style="font:600 10px system-ui;fill:var(--ink-3)">Price paid at the auction</text>';
+  return '<svg viewBox="0 0 '+W+' '+H+'" class="wr-svg wr-svg-wide" role="img" aria-label="Price paid against current market value, with a break-even line">'+g+'</svg>';
+}
 function mnScatterSvg(pts,fit){
   const W=NARROW()?340:560,H=NARROW()?260:300,l=NARROW()?38:46,b=34;
   const xm=Math.max(1,...pts.map(p=>p.x)),ym=Math.max(...pts.map(p=>p.y)),yn=Math.min(0,...pts.map(p=>p.y));
@@ -3618,6 +3666,29 @@ function renderMoney(){
   /* the scatter drops kickers and defenses, so its legend must not claim them */
   $('mnLegend2').innerHTML=POS_ORDER.filter(P=>!['K','DST'].includes(P)).map(P=>swatch(POS_COLOR[P],P)).join('');
 
+  /* ---- what you paid against what it is worth now (the headline) ---- */
+  const paidPts=[];
+  let unpriced=0;
+  state.teams.forEach((t,ti)=>t.players.forEach(p=>{
+    const v=mvOf(p,mnH);
+    if(v==null)return;
+    if(p.paid==null){unpriced++;return}        // counted, never plotted as $0
+    paidPts.push({name:p.name,pos:p.pos,team:t.name,ti,x:p.paid,y:v,d:v-p.paid});
+  }));
+  const paidShown=mnTeam==='ALL'?paidPts:paidPts.filter(p=>String(p.ti)===String(mnTeam));
+  $('mnPaidCard').classList.toggle('wr-hide',!paidShown.length);
+  if(paidShown.length){
+    $('mnPaid').innerHTML=mnPaidSvg(paidShown);
+    $('mnLegend3').innerHTML=POS_ORDER.map(P=>swatch(POS_COLOR[P],P==='DST'?'D/ST':P)).join('');
+    const up=paidShown.filter(p=>p.d>0).length;
+    $('mnPaidNote').innerHTML='Above the dashed line is a player worth more than he cost. <b>'+paidShown.length
+      +'</b> priced player'+(paidShown.length===1?'':'s')+' \u00b7 '+up+' above the line \u00b7 '
+      +'net '+((paidShown.reduce((a,p)=>a+p.d,0))>=0?'+':'')+fmt$(paidShown.reduce((a,p)=>a+p.d,0))+' against what was spent. '
+      +'Values are '+esc(valueLabel('money').toLowerCase())+'; the price is what this league actually paid.'
+      +(unpriced?' <b>'+unpriced+'</b> rostered player'+(unpriced===1?' has':'s have')+' no auction price (keeper, waiver or free agent) and '+(unpriced===1?'is':'are')+' left out rather than drawn at $0.':'')
+      +(paidShown.length>LABEL_CAP?' Names are hidden at this count \u2014 pick one team to label every dot.':'');
+  }
+
   /* ---- price against production, with a least-squares fit ---- */
   /* ⚠️ Skill positions only. Kickers and defenses all cost about a dollar and their value
      over replacement is compressed into almost nothing, so against a league-wide fit every
@@ -3626,7 +3697,8 @@ function renderMoney(){
      where a dollar is a dollar; they are out of the residual analysis. */
   const all=[];
   state.teams.forEach((t,ti)=>t.players.forEach(p=>{const v=mvOf(p,mnH);
-    if(v!=null&&!['K','DST'].includes(p.pos))all.push({name:p.name,pos:p.pos,team:t.name,ti,x:v,y:assetValue(p)})}));
+    const av=assetValue(p);
+    if(v!=null&&av!=null&&!['K','DST'].includes(p.pos))all.push({name:p.name,pos:p.pos,team:t.name,ti,x:v,y:av})}));
   const n=all.length||1,sx=all.reduce((a,p)=>a+p.x,0),sy=all.reduce((a,p)=>a+p.y,0),
         sxx=all.reduce((a,p)=>a+p.x*p.x,0),sxy=all.reduce((a,p)=>a+p.x*p.y,0);
   const den=n*sxx-sx*sx, b=Math.abs(den)<1e-9?0:(n*sxy-sx*sy)/den, a=(sy-b*sx)/n;
@@ -3637,7 +3709,7 @@ function renderMoney(){
     +'below it, the value source prices something a week-1 projection cannot see. <b>'+shown.length
     +'</b> priced player'+(shown.length===1?'':'s')+' shown · '+above+' above the line. '
     +'Kickers and defenses are left out: they all cost about a dollar, so every one of them clears a league-wide fit '
-    +'and they would crowd out everything worth looking at.'
+    +'and they would crowd out everything worth looking at. This panel answers whether the projection agrees with the market \u2014 not whether a pick was good, which is the chart above.'
     +(shown.length>LABEL_CAP?' Names are hidden at this count because they would overlap \u2014 pick one team to label every dot.':'');
   $('mnTeamSel').innerHTML='<option value="ALL"'+(mnTeam==='ALL'?' selected':'')+'>All teams</option>'
     +state.teams.map((t,i)=>'<option value="'+i+'"'+(String(mnTeam)===String(i)?' selected':'')+'>'+esc(t.name)+'</option>').join('');
@@ -4191,7 +4263,13 @@ async function fetchLeagueEspn(id,share){
   const feed=await DDProviders.espn.warroom(share?{share:share}:undefined);
   const L=feed.league||{};
   const ref={provider:'espn',id:String(id!=null?id:(L.id||''))};
-  const pool=(feed.pool||[]).map(p=>({id:String(p.id),name:p.name,pos:p.pos,p:Number(p.p)||0,team:p.team}));
+  /* ⚠️ `Number(p.p)||0` turned a MISSING projection into a real 0 — the same bug the Worker
+     was just fixed for, one layer down. A 0 is a data point and it drags replacement level
+     down for everyone; absent has to stay absent. `paid` is the auction price from ESPN's
+     own draft detail, and it is what every surplus number on this page needs. */
+  const pool=(feed.pool||[]).map(p=>({id:String(p.id),name:p.name,pos:p.pos,
+    p:(p.p==null||!isFinite(p.p))?null:Number(p.p),
+    paid:(p.paid==null||!isFinite(p.paid))?null:Number(p.paid),team:p.team}));
   const byId=Object.fromEntries(pool.map(p=>[p.id,p]));
   const teams=(feed.teams||[]).map(t=>({
     id:String(t.id), ownerId:String(t.owner||''), name:t.name,
@@ -4399,7 +4477,7 @@ function render(){
    fallback when a player has no published price. */
 const MV_FLOOR=4, MV_SHARE=0.35;      /* auction dollars */
 const VOR_FLOOR=1.0, VOR_SHARE=0.35;  /* points over replacement per week */
-function assetValue(p){return p.p-(state.rep[p.pos]?.pts??0)}
+function assetValue(p){return p.p==null?null:p.p-(state.rep[p.pos]?.pts??0)}
 function lineupTotal(players){
   return Object.values(starterValues(players,state.slots,state.rep)).reduce((a,b)=>a+b,0);
 }
