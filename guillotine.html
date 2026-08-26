@@ -779,6 +779,15 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
   .pt-back>summary,.pt-backbody{padding-left:14px;padding-right:14px}
   /* the state chip wrapped mid-phrase and clipped at the panel edge */
   .gx-stage h2.pt-title .samp{display:block;margin:8px 0 0;width:fit-content;max-width:100%}
+/* ------------------------- The Long Game (season MC) --------------------- */
+#gxSeasonChart{margin:16px 0 6px}
+#gxSeasonChart svg{display:block;width:100%;height:auto}
+#gxSeasonTab td,#gxSeasonTab th{white-space:nowrap;font-variant-numeric:tabular-nums}
+#gxSeasonTab tbody tr{cursor:pointer}
+#gxSeasonTab tbody tr:hover td{background:color-mix(in srgb,var(--accent) 7%,transparent)}
+#gxSeasonTab td.me{font-weight:800;color:var(--accent)}
+#gxSeasonTab td.hm{color:var(--ink-1)}
+@media(max-width:640px){#gxSeasonTab td,#gxSeasonTab th{padding:6px 6px;font-size:11px}}
 }.gx-private{font-size:10px;color:var(--ink-3);font-weight:700}.gx-danger td:first-child{font-weight:750}.gx-riskbar{height:6px;background:var(--grid);border-radius:99px;overflow:hidden;min-width:70px}.gx-riskbar i{display:block;height:100%;background:linear-gradient(90deg,var(--warn),var(--bad))}
 @media(max-width:760px){.gx-stage{padding:14px 11px}.gx-stage-grid{grid-template-columns:1fr}.gx-wheelbox canvas{max-width:360px}.gx-wheel-controls .btn{flex:1 1 120px}.gx-predict .controls{display:grid;grid-template-columns:1fr}.gx-predict select,.gx-predict input[type=range]{width:100%;max-width:none}.dtab{font-size:11.5px}.dtab th,.dtab td{padding:7px 6px}}
 @media(max-width:390px){.gx-stage{margin-left:-2px;margin-right:-2px}.gx-wheelbox canvas{max-width:calc(100vw - 54px)}.gx-tabs{margin-right:-8px}.hero-card{padding:15px 12px}.statrow{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -2553,7 +2562,12 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   </section>
 
   <section class="gx-sheet" id="gxSheetSeason" data-gx-panel="season" hidden>
-    <div class="hero-card"><h2>The Long Game <span class="samp">Shareable framework</span></h2><div id="gxSeasonOutlook" class="statrow"></div><p class="legend">Weekly survival compounds, but a full season championship Monte Carlo is <span class="gx-planned">Planned</span>. This sheet does not pretend the current weekly baseline is a championship forecast.</p></div>
+    <div class="hero-card"><h2>The Long Game <span class="samp">Season Monte Carlo &middot; modeled</span></h2>
+      <div class="statrow" id="gxSeasonCard"></div>
+      <div id="gxSeasonChart"></div>
+      <div class="tscroll"><table class="dtab" id="gxSeasonTab"></table></div>
+      <p class="legend" id="gxSeasonNote">Turns on once two completed weeks exist &mdash; the same gate as the weekly odds.</p>
+    </div>
   </section>
 
   <section class="gx-sheet" id="gxSheetFragility" data-gx-panel="fragility" hidden>
@@ -2585,7 +2599,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
   <div class="honesty" style="margin-bottom:0">
     <h3>What this can't do</h3>
-    <p>Survival odds are a simulation from completed-score history and its variance &mdash; they assume the next week plays like a typical past week. They cannot see live Sunday scores, an inactive, or a garbage-time spike. Prediction receipts are local-device only and are not immutable, server-persisted, cross-device or graded. Projection-driven FAAB bid recommendations, full conditional waiver optimization, season championship Monte Carlo, Universal Data Vault, and injury, bye-week, positional-depth and player-concentration fragility components are all <span class="gx-planned">Planned</span>. The observed FAAB module encodes a framework about dollar appreciation, not a guarantee. The Draft War Room polls Sleeper every few seconds &mdash; near-live, not instant &mdash; and never writes to Sleeper; its pick matching is a name-and-position heuristic that can miss an unusual name, which a tap on the row fixes. The Guillotine Board&rsquo;s ranks, tiers and flags are editorial opinion built 2026-08-26 over the 2026-08-24 MV snapshot, not projections, and the FAAB War Plan is a dated editorial framework, not a bid engine.</p>
+    <p>Survival odds are a simulation from completed-score history and its variance &mdash; they assume the next week plays like a typical past week. They cannot see live Sunday scores, an inactive, or a garbage-time spike. Prediction receipts are local-device only and are not immutable, server-persisted, cross-device or graded. Projection-driven FAAB bid recommendations, full conditional waiver optimization, Universal Data Vault, and injury, bye-week, positional-depth and player-concentration fragility components are all <span class="gx-planned">Planned</span>. The Long Game&rsquo;s season Monte Carlo rolls the weekly model forward with rosters frozen at their current mean and spread &mdash; it cannot see waivers, injuries, byes, or the talent redistribution every chop causes, those omissions compound with every simulated week, and its finishing places cover the simulated teams only. The observed FAAB module encodes a framework about dollar appreciation, not a guarantee. The Draft War Room polls Sleeper every few seconds &mdash; near-live, not instant &mdash; and never writes to Sleeper; its pick matching is a name-and-position heuristic that can miss an unusual name, which a tap on the row fixes. The Guillotine Board&rsquo;s ranks, tiers and flags are editorial opinion built 2026-08-26 over the 2026-08-24 MV snapshot, not projections, and the FAAB War Plan is a dated editorial framework, not a bid engine.</p>
   </div>
 
     </div>
@@ -3159,10 +3173,105 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     if(who)who.textContent=G.league?G.league:"Not connected";
     if(setup&&G.leagueId)setup.open=false;
   }
+  function ord(n){var v=n%100,sfx=(v>=11&&v<=13)?"th":({1:"st",2:"nd",3:"rd"}[n%10]||"th");return n+sfx;}
+  /* ---------------------- The Long Game: season Monte Carlo ---------------
+     The weekly model, rolled forward. Each simulated season: draw every live
+     team's week from Normal(mean, sd), chop the lowest, repeat until one
+     remains or the week-17 cap. Nothing else is modeled — rosters are FROZEN,
+     so no waivers, injuries, byes, or chopped-roster talent redistribution,
+     and every weekly assumption compounds with each simulated week. That is
+     why the sheet says "modeled illustration", not "forecast". */
+  var SEASON_SIMS=5000;
+  function simulateSeason(G){
+    var src=(G.teams||[]).filter(function(t){return t.sd>0;}),n=src.length;
+    if(n<2)return null;
+    var rem=Math.max(1,Math.min(17-G.done,n-1));
+    var elim=[],winN=new Array(n).fill(0),i,k;
+    for(i=0;i<n;i++)elim.push(new Array(rem).fill(0));
+    var sp=null;
+    function g(){if(sp!==null){var v=sp;sp=null;return v;}var u,w,q;do{u=Math.random()*2-1;w=Math.random()*2-1;q=u*u+w*w;}while(q>=1||q===0);var m=Math.sqrt(-2*Math.log(q)/q);sp=w*m;return u*m;}
+    for(var s2=0;s2<SEASON_SIMS;s2++){
+      var alive=[];for(i=0;i<n;i++)alive.push(i);
+      for(var w2=0;w2<rem&&alive.length>1;w2++){
+        var lo=Infinity,li=0;
+        for(var a=0;a<alive.length;a++){var t=src[alive[a]],x=t.mean+g()*t.sd;if(x<lo){lo=x;li=a;}}
+        elim[alive[li]][w2]++;alive.splice(li,1);
+      }
+      for(var a2=0;a2<alive.length;a2++)winN[alive[a2]]++;
+    }
+    var weeks=[];for(k=0;k<rem;k++)weeks.push(G.done+1+k);
+    var rows=src.map(function(t,ix){
+      var curve=[],aliveCt=SEASON_SIMS;
+      for(k=0;k<rem;k++){aliveCt-=elim[ix][k];curve.push(aliveCt/SEASON_SIMS);}
+      var half=SEASON_SIMS/2,acc=0,med=1,found=false;
+      for(k=0;k<rem;k++){acc+=elim[ix][k];if(acc>=half){med=n-k;found=true;break;}}
+      if(!found)med=1;
+      return {rid:t.rid,name:t.name,win:winN[ix]/SEASON_SIMS,curve:curve,med:med};
+    });
+    rows.sort(function(a,b){return b.win-a.win;});
+    return {sims:SEASON_SIMS,weeks:weeks,rows:rows,teams:n,
+            excluded:(G.teams||[]).length-n,chopped:G.chopped||0,capped:rem<n-1};
+  }
+  function heatBg(v){return v>=2/3?"rgba(63,163,125,.16)":v>=1/3?"rgba(233,161,61,.20)":"rgba(255,86,86,.24)";}
+  function seasonPaint(G){
+    var S=G.mc,card=document.getElementById("gxSeasonCard"),chart=document.getElementById("gxSeasonChart"),
+        tabEl=document.getElementById("gxSeasonTab"),note=document.getElementById("gxSeasonNote");
+    if(!card||!S)return;
+    var meRid=G.me&&G.me.rid,rem=S.weeks.length;
+    var mine=null;for(var i=0;i<S.rows.length;i++)if(S.rows[i].rid===meRid)mine=S.rows[i];
+    card.innerHTML=(mine
+      ? tile(Math.round(mine.win*100)+"%","Modeled odds "+esc(mine.name)+" wins it all")
+        +tile(ord(mine.med),"Their median simulated finish")
+      : tile("Pick a focus team","Tap any row below"))
+      +tile(rem,"Chop weeks simulated")+tile(S.sims.toLocaleString(),"Simulated seasons");
+    /* chart: every team's survival curve; the field in faint ink, focus in accent */
+    var W=560,H=210,x0=42,x1=552,y0=14,y1=182;
+    function X(k){return x0+(x1-x0)*k/rem;}          // k=0 is now
+    function Y(p){return y0+(1-p)*(y1-y0);}
+    function pts(r){var out=[X(0)+","+Y(1)];for(var k=0;k<rem;k++)out.push(X(k+1)+","+Y(r.curve[k]));return out.join(" ");}
+    var svg=['<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Modeled survival probability by week for every simulated team">'];
+    [[1,"100%"],[.5,"50%"],[0,"0%"]].forEach(function(gset){
+      svg.push('<line x1="'+x0+'" y1="'+Y(gset[0])+'" x2="'+x1+'" y2="'+Y(gset[0])+'" stroke="var(--grid)" stroke-width="1"'+(gset[0]===0.5?' stroke-dasharray="3 4"':'')+'/>');
+      svg.push('<text x="'+(x0-6)+'" y="'+(Y(gset[0])+3)+'" text-anchor="end" font-size="9" fill="var(--ink-3)">'+gset[1]+'</text>');
+    });
+    svg.push('<text x="'+x0+'" y="'+(H-4)+'" font-size="9" fill="var(--ink-3)">now</text>');
+    svg.push('<text x="'+X(rem)+'" y="'+(H-4)+'" text-anchor="end" font-size="9" fill="var(--ink-3)">wk '+S.weeks[rem-1]+'</text>');
+    if(rem>3)svg.push('<text x="'+X(Math.ceil(rem/2))+'" y="'+(H-4)+'" text-anchor="middle" font-size="9" fill="var(--ink-3)">wk '+S.weeks[Math.ceil(rem/2)-1]+'</text>');
+    S.rows.forEach(function(r){if(r.rid!==meRid)svg.push('<polyline points="'+pts(r)+'" fill="none" stroke="var(--ink-3)" stroke-opacity=".33" stroke-width="1.5" stroke-linejoin="round"/>');});
+    if(mine){
+      svg.push('<polyline points="'+pts(mine)+'" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>');
+      svg.push('<circle cx="'+X(rem)+'" cy="'+Y(mine.curve[rem-1])+'" r="3.5" fill="var(--accent)"/>');
+      svg.push('<text x="'+(X(rem)-6)+'" y="'+Math.max(10,Y(mine.curve[rem-1])-8)+'" text-anchor="end" font-size="10" font-weight="800" fill="var(--accent)">'+esc(mine.name)+" "+Math.round(mine.curve[rem-1]*100)+'%</text>');
+    }
+    svg.push('</svg>');
+    chart.innerHTML=svg.join("");
+    /* matrix: the decay, week by week, for everyone */
+    var head='<thead><tr><th>Team</th><th>Wins it all</th><th>Median finish</th>'
+      +S.weeks.map(function(w){return '<th>Wk '+w+'</th>';}).join("")+'</tr></thead>';
+    var body=S.rows.map(function(r){
+      var me=r.rid===meRid;
+      return '<tr data-rid="'+r.rid+'"><td class="'+(me?'me':'')+'">'+esc(r.name)+'</td>'
+        +'<td>'+Math.round(r.win*100)+'%</td><td>'+ord(r.med)+'</td>'
+        +r.curve.map(function(v){return '<td class="hm" style="background:'+heatBg(v)+'">'+Math.round(v*100)+'%</td>';}).join("")
+        +'</tr>';
+    }).join("");
+    tabEl.innerHTML=head+'<tbody>'+body+'</tbody>';
+    Array.prototype.forEach.call(tabEl.querySelectorAll("tbody tr"),function(tr){
+      tr.onclick=function(){focus(Number(tr.getAttribute("data-rid")));};});
+    note.innerHTML="Each cell is the modeled chance that team is still alive after that week&rsquo;s chop, from "
+      +S.sims.toLocaleString()+" simulated seasons of the same weekly model. ⚠️ Rosters are frozen at today&rsquo;s scoring form &mdash; "
+      +"no waivers, injuries, byes, or the talent redistribution every chop causes &mdash; and those omissions compound each week, "
+      +"so treat this as a modeled illustration, not a forecast. Finishing places are among the "+S.teams+" simulated teams"
+      +(S.chopped?"; "+S.chopped+" chopped team(s) already hold the bottom places":"")
+      +(S.excluded?"; "+S.excluded+" team(s) with under 2 weeks of scores are not simulated":"")
+      +(S.capped?"; the season ends at week 17 with more than one dawg standing, so &ldquo;wins&rdquo; means alive at the end":"")+". Tap a row to make that team your focus.";
+  }
   function paint(G){ladder(G);if(!G||!G.teams||!G.teams.length)return;teams=G.teams.slice();draw();document.getElementById("gxSpinOne").disabled=false;document.getElementById("gxSpinTen").disabled=false;document.getElementById("gxTally").textContent=spins?document.getElementById("gxTally").textContent:"Ready · 0 session spins";document.getElementById("gxPredict").hidden=false;var me=G.me,card=document.getElementById("gxSurvivalCard");card.innerHTML=me?tile(esc(me.name),"Focus team")+tile(Math.round(me.surv*100)+"%","Modeled weekly survival")+tile((me.mean-G.chop>=0?"+":"")+(me.mean-G.chop).toFixed(1),"Avg vs modeled chop")+tile(G.done,"Observed weeks"):tile("Not selected","Focus team")+tile(G.done,"Observed weeks");
     var d=document.getElementById("gxDangerTab");d.innerHTML='<thead><tr><th>Team</th><th>Modeled chop risk</th><th>Risk</th><th>Observed avg</th><th>Observed low</th></tr></thead><tbody>'+teams.slice().sort(function(a,b){return a.surv-b.surv;}).map(function(t){var r=Math.round((1-t.surv)*100);return '<tr data-rid="'+t.rid+'"><td class="'+(me&&me.rid===t.rid?'me':'')+'">'+esc(t.name)+'</td><td class="neg">'+r+'%</td><td><div class="gx-riskbar"><i style="width:'+r+'%"></i></div></td><td>'+t.mean.toFixed(1)+'</td><td>'+t.low.toFixed(1)+'</td></tr>';}).join("")+'</tbody>';d.querySelectorAll("tbody tr").forEach(function(tr){tr.style.cursor="pointer";tr.onclick=function(){focus(Number(tr.dataset.rid));};});
     var f=document.getElementById("gxFragilityTab");f.innerHTML='<thead><tr><th>Team</th><th>Observed volatility</th><th>Observed floor</th><th>V1 flag</th></tr></thead><tbody>'+teams.slice().sort(function(a,b){return (b.sd+b.mean-b.low)-(a.sd+a.mean-a.low);}).map(function(t){var x=t.sd+t.mean-t.low;return '<tr><td>'+esc(t.name)+'</td><td>'+t.sd.toFixed(1)+'</td><td>'+t.low.toFixed(1)+'</td><td>'+(x>35?'High':x>22?'Watch':'Lower')+'</td></tr>';}).join("")+'</tbody>';
-    var left=Math.max(1,Math.min(17-G.done,teams.length-1)),out=document.getElementById("gxSeasonOutlook");out.innerHTML=(me?tile(Math.round(Math.pow(me.surv,left)*100)+"%","Repeated-week illustration"):tile("Pick a focus team","Personal illustration"))+tile(left,"Remaining eliminations")+tile("Planned","Championship Monte Carlo");var sel=document.getElementById("gxPredTeam"),old=sel.value;sel.innerHTML=teams.map(function(t){return '<option value="'+t.rid+'">'+esc(t.name)+'</option>';}).join("");if(old)sel.value=old;document.getElementById("gxState").textContent=locked()?"Sunday room · predictions locked":"Modeled week · not live scores";receipt();addLeague(G.leagueId,G.me&&G.me.rid);}
+    /* season MC is cached on the stash: focus taps repaint without re-simulating */
+    if(!G.mc)G.mc=simulateSeason(G);
+    seasonPaint(G);var sel=document.getElementById("gxPredTeam"),old=sel.value;sel.innerHTML=teams.map(function(t){return '<option value="'+t.rid+'">'+esc(t.name)+'</option>';}).join("");if(old)sel.value=old;document.getElementById("gxState").textContent=locked()?"Sunday room · predictions locked":"Modeled week · not live scores";receipt();addLeague(G.leagueId,G.me&&G.me.rid);}
   var conf=document.getElementById("gxConfidence");conf.oninput=function(){document.getElementById("gxConfOut").textContent=conf.value+"%";};
   function receipt(){var r=read(PRED,null),box=document.getElementById("gxReceipt"),week=window.__GX?Number(window.__GX.done||0)+1:null,save=document.getElementById("gxPredSave");save.disabled=locked();box.textContent=r&&window.__GX&&r.leagueId===window.__GX.leagueId&&r.week===week?"DEVICE RECEIPT · week "+r.week+" · "+r.team+" · "+r.confidence+"% · saved "+new Date(r.savedAt).toLocaleString()+" · local only":"No prediction saved for this league and week on this device.";}
   document.getElementById("gxPredSave").onclick=function(){if(locked())return;var s=document.getElementById("gxPredTeam"),t=teams.find(function(x){return String(x.rid)===s.value;});if(!t)return;write(PRED,{leagueId:window.__GX.leagueId,week:Number(window.__GX.done||0)+1,team:t.name,rosterId:t.rid,confidence:Number(conf.value),savedAt:Date.now(),storage:"local-device"});receipt();};
@@ -3353,7 +3462,8 @@ window.DD_BOTCTX = {
 - The waiver board is OBSERVED points in this league's own scoring for players on no current roster. A player only has data for weeks a roster held them; never-rostered players are invisible. It does not know waiver order, and it is not a projection.
 - A team missing from the table has fewer than 2 completed weeks, a zero standard deviation, or an EMPTY roster — empty mid-season means chopped. That is the answer to "why am I not listed", not a bug.
 - The DRAFT WAR ROOM sheet reads a Sleeper draft read-only (picks, slots, on-the-clock) and strikes its Guillotine Board as picks land. Board rank, tiers and flags are EDITORIAL opinion built 2026-08-26 over the site's 2026-08-24 MV snapshot (12-team Half-PPR auction dollars — relative worth, never a snake price, never a projection). Say "the board" or "the editorial re-rank" when you cite it, never "the model" or "projections". Pick matching is a name+position heuristic and can miss; the user taps a row to fix it.
-- The FAAB WAR PLAN card is a dated editorial framework calibrated to ONE room's observed 2025 winning bids plus published case studies. Quote its ranges as opinion with the date. The standing rule holds: never dress a specific bid recommendation up as maths.`,
+- The FAAB WAR PLAN card is a dated editorial framework calibrated to ONE room's observed 2025 winning bids plus published case studies. Quote its ranges as opinion with the date. The standing rule holds: never dress a specific bid recommendation up as maths.
+- THE LONG GAME sheet is a SEASON Monte Carlo: thousands of simulated seasons rolling the same weekly model forward, chopping the lowest each week. ⚠️ Rosters are FROZEN at today's mean and spread — no waivers, no injuries, no byes, and no chopped-roster talent redistribution, which is the defining dynamic of this format — and every weekly assumption COMPOUNDS with each simulated week. Quote win odds and survival curves as a modeled illustration, never as a forecast. Finishing places are among the simulated teams only.`,
   ctx: () => {
     const D = window.__GXD, dl = [];
     if(D){
@@ -3398,6 +3508,12 @@ window.DD_BOTCTX = {
       L.push(`WAIVER BOARD (observed points in THIS league's scoring; players on no current roster; a player only has data for weeks a roster held them):`);
       L.push('player | pos | nfl team | avg | high | last | weeks of data');
       G.waiver.forEach(w=>L.push(`${w.name} | ${w.pos||'?'} | ${w.team||'FA'} | ${w.avg} | ${w.high} | ${w.last} | ${w.weeks}`));
+    }
+    if(G.mc && G.mc.weeks){
+      const S = G.mc;
+      L.push(`SEASON MONTE CARLO (modeled; ${S.sims} simulated seasons; rosters FROZEN at current form — no waivers/injuries/byes/redistribution; finishes among the ${S.teams} simulated teams):`);
+      L.push('team | win% | median finish | alive through wk ' + S.weeks[S.weeks.length-1]);
+      S.rows.forEach(r => L.push(`${r.name} | ${Math.round(r.win*100)}% | ${r.med} | ${Math.round(r.curve[r.curve.length-1]*100)}%`));
     }
     if(G.done < 4) L.push(`⚠️ ONLY ${G.done} COMPLETED WEEK(S). The standard deviations are barely estimated and these probabilities are soft. Lead with that if anyone leans on a number.`);
     if(G.chopped) L.push(`${G.chopped} team(s) have been chopped (empty roster) and are excluded from the simulation and the FAAB pool.`);
