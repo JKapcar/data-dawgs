@@ -2879,6 +2879,13 @@ body.wr-shared #youLab{display:none!important}
       <article class="wr-card wr-full wr-hide" id="mnPaidCard">
         <h3>What you paid vs what the market says now</h3>
         <p class="wr-note" id="mnPaidNote"></p>
+        <div class="wr-filter">
+          <select class="wr-mini" id="mnPaidTeam" aria-label="Filter by team"></select>
+          <span class="wr-hz on" id="mnPaidPos" role="group" aria-label="Show positions"></span>
+          <span class="wr-hz on" id="mnPaidLab" role="group" aria-label="Dot labels">
+            <button type="button" data-l="top">Label extremes</button><button type="button" data-l="all">Label all</button><button type="button" data-l="off">No labels</button>
+          </span>
+        </div>
         <div id="mnPaid"></div>
         <div class="wr-legend" id="mnLegend3"></div>
       </article>
@@ -3486,6 +3493,12 @@ const POS_COLOR={QB:'#d13a00',RB:'#087532',WR:'#2f6fb0',TE:'#8a4fbf',K:'#a86e00'
    purpose — it is the part of the bar that is NOT in the lineup, and it should read that way. */
 const BENCH_COLOR='#9a8f7f';
 let mnSort={key:'total',dir:-1},mnTeam='ALL';
+/* ⚠️ 192 dots with no controls is a picture, not a chart. Positions filter, and labels have
+   THREE states rather than the all-or-nothing cap the other scatters use: at this count
+   "all" is mush and "none" is unreadable, so the default labels only the extremes — the
+   dots anyone is actually looking for. */
+let mnPaidPos=new Set(['QB','RB','WR','TE','K','DST']), mnPaidLab='top';
+const MN_LABEL_TOP=10;
 
 function teamMoney(t,horizon){
   const {starters,bench}=chooseStarters(t.players,state.slots);
@@ -3553,10 +3566,21 @@ function mnPaidSvg(pts){
       +esc(p.name)+' ('+p.pos+') \u00b7 '+esc(p.team)+'\npaid '+fmt$(p.x)+' \u00b7 worth '+fmt$(p.y)
       +' \u00b7 '+(p.d>=0?'+':'')+fmt$(p.d)+'</title></circle>';
   });
-  if(pts.length<=LABEL_CAP){
+  /* which dots get a name: the extremes by surplus, everything, or nothing */
+  let labelSet=[];
+  if(mnPaidLab==='all') labelSet=pts.slice();
+  else if(mnPaidLab==='top')
+    labelSet=pts.slice().sort((a,c)=>Math.abs(c.d)-Math.abs(a.d)).slice(0,MN_LABEL_TOP);
+  if(labelSet.length){
     const surname=nm=>{const w=String(nm).replace(/\s+(Jr\.?|Sr\.?|I{2,}|IV|V)$/i,'').trim().split(/\s+/);return w[w.length-1]||nm};
-    pts.forEach(p=>{
+    /* ⚠️ Greedy collision drop, same idea as the dynasty map. Without it "Label all" writes
+       every name on top of the next one and the chart is less readable WITH labels than
+       without — which is how a label control ends up never being used. */
+    const placed=[];
+    labelSet.forEach(p=>{
       const x=X(p.x),y=Y(p.y),right=x>W-70;
+      if(placed.some(q=>Math.abs(q.x-x)<30&&Math.abs(q.y-y)<10))return;
+      placed.push({x,y});
       g+='<text x="'+(right?x-7:x+7)+'" y="'+(y+3.5)+'" text-anchor="'+(right?'end':'start')+'" '
         +'style="font:600 9.5px system-ui;paint-order:stroke;stroke:var(--paper);stroke-width:3px;'
         +'stroke-linejoin:round;fill:var(--ink-2)">'+esc(surname(p.name))+'</text>';
@@ -3675,7 +3699,18 @@ function renderMoney(){
     if(p.paid==null){unpriced++;return}        // counted, never plotted as $0
     paidPts.push({name:p.name,pos:p.pos,team:t.name,ti,x:p.paid,y:v,d:v-p.paid});
   }));
-  const paidShown=mnTeam==='ALL'?paidPts:paidPts.filter(p=>String(p.ti)===String(mnTeam));
+  const paidTeamed=mnTeam==='ALL'?paidPts:paidPts.filter(p=>String(p.ti)===String(mnTeam));
+  const paidShown=paidTeamed.filter(p=>mnPaidPos.has(p.pos));
+  /* the controls are painted from the data, so a league with no kickers has no K button */
+  const posHere=POS_ORDER.filter(P=>paidTeamed.some(p=>p.pos===P));
+  $('mnPaidPos').innerHTML=posHere.map(P=>'<button type="button" data-p="'+P+'" class="'+(mnPaidPos.has(P)?'on':'')
+    +'" aria-pressed="'+mnPaidPos.has(P)+'">'+(P==='DST'?'D/ST':P)+'</button>').join('');
+  $('mnPaidLab').querySelectorAll('button').forEach(b=>{
+    const on=b.dataset.l===mnPaidLab; b.classList.toggle('on',on); b.setAttribute('aria-pressed',String(on));
+  });
+  $('mnPaidTeam').innerHTML='<option value="ALL"'+(mnTeam==='ALL'?' selected':'')+'>All teams</option>'
+    +state.teams.map((t,i)=>'<option value="'+i+'"'+(String(mnTeam)===String(i)?' selected':'')+'>'+esc(t.name)+'</option>').join('');
+  $('mnPaidTeam').onchange=e=>{mnTeam=e.target.value;renderMoney()};
   $('mnPaidCard').classList.toggle('wr-hide',!paidShown.length);
   if(paidShown.length){
     $('mnPaid').innerHTML=mnPaidSvg(paidShown);
@@ -3686,7 +3721,8 @@ function renderMoney(){
       +'net '+((paidShown.reduce((a,p)=>a+p.d,0))>=0?'+':'')+fmt$(paidShown.reduce((a,p)=>a+p.d,0))+' against what was spent. '
       +'Values are '+esc(valueLabel('money').toLowerCase())+'; the price is what this league actually paid.'
       +(unpriced?' <b>'+unpriced+'</b> rostered player'+(unpriced===1?' has':'s have')+' no auction price (keeper, waiver or free agent) and '+(unpriced===1?'is':'are')+' left out rather than drawn at $0.':'')
-      +(paidShown.length>LABEL_CAP?' Names are hidden at this count \u2014 pick one team to label every dot.':'');
+      +(mnPaidPos.size<posHere.length?' Showing '+[...mnPaidPos].filter(P=>posHere.includes(P)).join(', ')+' only.':'')
+      +(mnPaidLab==='top'?' The '+MN_LABEL_TOP+' biggest gaps are labelled \u2014 switch to Label all for the rest.':'');
   }
 
   /* ---- price against production, with a least-squares fit ---- */
@@ -4142,6 +4178,20 @@ document.addEventListener('click',async ev=>{
   }
 });
 
+/* position chips and the label mode both just re-render the sheet: the chart is a pure
+   function of the filter state, so there is nothing to keep in sync by hand */
+document.addEventListener('click',ev=>{
+  const pos=ev.target.closest&&ev.target.closest('#mnPaidPos button[data-p]');
+  if(pos){
+    const P=pos.dataset.p;
+    if(mnPaidPos.has(P)){ if(mnPaidPos.size>1) mnPaidPos.delete(P); }   // never filter to nothing
+    else mnPaidPos.add(P);
+    renderMoney(); return;
+  }
+  const lab=ev.target.closest&&ev.target.closest('#mnPaidLab button[data-l]');
+  if(lab){ mnPaidLab=lab.dataset.l; renderMoney(); }
+});
+
 function paintShelf(){
   const list=readShelf();
   $('savedList').innerHTML=list.length?list.map(x=>{
@@ -4188,9 +4238,13 @@ function paintTeamGate(){
 }
 
 /* The horizon control renders only where a horizon is a real choice. */
+/* ⚠️ SCOPED TO [data-hz]. This used to select EVERY .wr-hz on the page and strip `on` from
+   all of them whenever the league was not dynasty — so any other control borrowing the
+   segmented-button style silently vanished on a redraw. The horizon controls are the ones
+   carrying data-hz; nothing else here is this function's business. */
 function paintHz(on){
   const live=!!on&&!!state&&isDynastyLeague();
-  document.querySelectorAll('.wr-hz').forEach(el=>{
+  document.querySelectorAll('.wr-hz[data-hz]').forEach(el=>{
     el.classList.toggle('on',live);
     if(!live)return;
     const h=hz(el.dataset.hz);
