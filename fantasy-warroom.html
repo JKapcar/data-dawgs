@@ -3554,7 +3554,6 @@ function mnStackedBars(M){
   return '<svg viewBox="0 0 '+W+' '+H+'" class="wr-svg wr-svg-bars" role="img" aria-label="Roster market value by position with bench pooled, by team">'+g+'</svg>';
 }
 
-const LABEL_CAP=26;   /* one roster labels cleanly; a whole league does not */
 /* ⚠️ THIS ANSWERS A DIFFERENT QUESTION FROM THE SCATTER BELOW IT, AND THAT IS THE POINT.
    x = what the player actually cost at this league's auction. y = what the market says he
    is worth today, in this league's own column. The reference line is y = x, so distance
@@ -3563,7 +3562,10 @@ const LABEL_CAP=26;   /* one roster labels cleanly; a whole league does not */
    measures whether ESPN agrees with the market. That is a useful signal and a bad headline:
    a cheap quarterback ESPN is low on reads as a bad buy there, and reads as exactly what it
    is here. Bench status is deliberately ignored — a trade asset is a trade asset. */
-function mnPaidSvg(pts){
+function mnDollarSvg(pts,opts){
+  const o=opts||{}, xlab=o.xlab||'Price paid at the auction', xname=o.xname||'paid',
+        yname=o.yname||'worth', lineLab=o.line||'paid = market value',
+        mode=o.mode||mnPaidLab, topN=o.topN||MN_LABEL_TOP;
   const W=NARROW()?340:560,H=NARROW()?280:340,l=NARROW()?42:52,b=38,t=12,rr=W-14;
   const hi=Math.max(10,...pts.map(p=>Math.max(p.x,p.y)));
   const X=v=>l+(v/hi)*(rr-l), Y=v=>H-b-(v/hi)*(H-b-t);
@@ -3576,17 +3578,17 @@ function mnPaidSvg(pts){
   });
   /* the line is the whole argument, so it is drawn and named */
   g+='<line x1="'+X(0)+'" y1="'+Y(0)+'" x2="'+X(hi)+'" y2="'+Y(hi)+'" style="stroke:var(--ink-3);stroke-dasharray:6 4;stroke-width:1.5"/>'
-    +'<text x="'+(X(hi)-4)+'" y="'+(Y(hi)+13)+'" text-anchor="end" style="font:600 9.5px system-ui;fill:var(--ink-3)">paid = market value</text>';
+    +'<text x="'+(X(hi)-4)+'" y="'+(Y(hi)+13)+'" text-anchor="end" style="font:600 9.5px system-ui;fill:var(--ink-3)">'+esc(lineLab)+'</text>';
   pts.forEach(p=>{
     g+='<circle cx="'+X(p.x)+'" cy="'+Y(p.y)+'" r="4.5" style="fill:'+POS_COLOR[p.pos]+';opacity:.85"><title>'
-      +esc(p.name)+' ('+p.pos+') \u00b7 '+esc(p.team)+'\npaid '+fmt$(p.x)+' \u00b7 worth '+fmt$(p.y)
+      +esc(p.name)+' ('+p.pos+') \u00b7 '+esc(p.team)+'\n'+xname+' '+fmt$(p.x)+' \u00b7 '+yname+' '+fmt$(p.y)
       +' \u00b7 '+(p.d>=0?'+':'')+fmt$(p.d)+'</title></circle>';
   });
   /* which dots get a name: the extremes by surplus, everything, or nothing */
   let labelSet=[];
-  if(mnPaidLab==='all') labelSet=pts.slice();
-  else if(mnPaidLab==='top')
-    labelSet=pts.slice().sort((a,c)=>Math.abs(c.d)-Math.abs(a.d)).slice(0,MN_LABEL_TOP);
+  if(mode==='all') labelSet=pts.slice();
+  else if(mode==='top')
+    labelSet=pts.slice().sort((a,c)=>Math.abs(c.d)-Math.abs(a.d)).slice(0,topN);
   if(labelSet.length){
     const surname=nm=>{const w=String(nm).replace(/\s+(Jr\.?|Sr\.?|I{2,}|IV|V)$/i,'').trim().split(/\s+/);return w[w.length-1]||nm};
     /* ⚠️ Greedy collision drop, same idea as the dynasty map. Without it "Label all" writes
@@ -3602,40 +3604,8 @@ function mnPaidSvg(pts){
         +'stroke-linejoin:round;fill:var(--ink-2)">'+esc(surname(p.name))+'</text>';
     });
   }
-  g+='<text x="'+((l+rr)/2)+'" y="'+(H-4)+'" text-anchor="middle" style="font:600 10px system-ui;fill:var(--ink-3)">Price paid at the auction</text>';
-  return '<svg viewBox="0 0 '+W+' '+H+'" class="wr-svg wr-svg-wide" role="img" aria-label="Price paid against current market value, with a break-even line">'+g+'</svg>';
-}
-function mnScatterSvg(pts,fit){
-  const W=NARROW()?340:560,H=NARROW()?260:300,l=NARROW()?38:46,b=34;
-  const xm=Math.max(1,...pts.map(p=>p.x)),ym=Math.max(...pts.map(p=>p.y)),yn=Math.min(0,...pts.map(p=>p.y));
-  const X=v=>l+v/xm*(W-l-14),Y=v=>H-b-(v-yn)/((ym-yn)||1)*(H-b-14);
-  let g='<line x1="'+l+'" y1="'+(H-b)+'" x2="'+(W-8)+'" y2="'+(H-b)+'" style="stroke:var(--grid)"/>'
-       +'<line x1="'+l+'" y1="10" x2="'+l+'" y2="'+(H-b)+'" style="stroke:var(--grid)"/>';
-  [0,.25,.5,.75,1].forEach(f=>{const v=f*xm;g+='<text x="'+X(v)+'" y="'+(H-b+15)+'" text-anchor="middle" style="fill:var(--ink-3);font:600 10px system-ui">$'+Math.round(v)+'</text>'});
-  g+='<text x="'+(l+(W-l)/2)+'" y="'+(H-4)+'" text-anchor="middle" style="fill:var(--ink-3);font:700 11px system-ui">Market value</text>';
-  g+='<text x="12" y="'+(H/2)+'" transform="rotate(-90 12 '+(H/2)+')" text-anchor="middle" style="fill:var(--ink-3);font:700 11px system-ui">Projected VOR / wk</text>';
-  g+='<line x1="'+X(0)+'" y1="'+Y(fit.a)+'" x2="'+X(xm)+'" y2="'+Y(fit.a+fit.b*xm)+'" style="stroke:var(--ink-3);stroke-dasharray:6 4;stroke-width:1.5"/>';
-  pts.forEach(p=>{g+='<circle cx="'+X(p.x)+'" cy="'+Y(p.y)+'" r="4" style="fill:'+POS_COLOR[p.pos]+';opacity:.85"><title>'+
-    esc(p.name)+' ('+p.pos+') · '+esc(p.team)+'\n'+fmt$(p.x)+' · '+p.y.toFixed(1)+'/wk · '+(p.r>=0?'+':'')+p.r.toFixed(1)+' against the fit</title></circle>'});
-  /* ⚠️ A hover title is not a label: on a phone there is no hover, and even on a desktop a
-     chart you have to interrogate dot by dot is not readable. Draw real labels whenever the
-     count is small enough to stay legible — one team's roster always is. Above that the
-     labels would overlap into mush, so the whole-league view keeps the tooltips only and
-     the note below the chart says so. Surname only, because first names cost width and
-     carry no information at this size. */
-  if(pts.length<=LABEL_CAP){
-    const surname=nm=>{const w=String(nm).replace(/\s+(Jr\.?|Sr\.?|I{2,}|IV|V)$/i,'').trim().split(/\s+/);return w[w.length-1]||nm};
-    pts.forEach(p=>{
-      const x=X(p.x),y=Y(p.y);
-      /* flip the label inboard near the right edge so it never clips the frame */
-      const right=x>W-70, tx=right?x-7:x+7, anchor=right?'end':'start';
-      const t=esc(surname(p.name));
-      g+='<text x="'+tx+'" y="'+(y+3.5)+'" text-anchor="'+anchor+'" '
-        +'style="font:600 9.5px system-ui;paint-order:stroke;stroke:var(--paper);stroke-width:3px;'
-        +'stroke-linejoin:round;fill:var(--ink-2)">'+t+'</text>';
-    });
-  }
-  return '<svg viewBox="0 0 '+W+' '+H+'" class="wr-svg wr-svg-wide" role="img" aria-label="Market value against projected value over replacement">'+g+'</svg>';
+  g+='<text x="'+((l+rr)/2)+'" y="'+(H-4)+'" text-anchor="middle" style="font:600 10px system-ui;fill:var(--ink-3)">'+esc(xlab)+'</text>';
+  return '<svg viewBox="0 0 '+W+' '+H+'" class="wr-svg wr-svg-wide" role="img" aria-label="'+esc(xlab)+' against '+esc(yname)+', with a break-even line">'+g+'</svg>';
 }
 function mnMe(){return state.teams[+$('teamPicker').value||0]}
 
@@ -3729,7 +3699,7 @@ function renderMoney(){
   $('mnPaidTeam').onchange=e=>{mnTeam=e.target.value;renderMoney()};
   $('mnPaidCard').classList.toggle('wr-hide',!paidShown.length);
   if(paidShown.length){
-    $('mnPaid').innerHTML=mnPaidSvg(paidShown);
+    $('mnPaid').innerHTML=mnDollarSvg(paidShown);
     $('mnLegend3').innerHTML=POS_ORDER.map(P=>swatch(POS_COLOR[P],P==='DST'?'D/ST':P)).join('');
     const up=paidShown.filter(p=>p.d>0).length;
     $('mnPaidNote').innerHTML='Above the dashed line is a player worth more than he cost. <b>'+paidShown.length
@@ -3741,32 +3711,59 @@ function renderMoney(){
       +(mnPaidLab==='top'?' The '+MN_LABEL_TOP+' biggest gaps are labelled \u2014 switch to Label all for the rest.':'');
   }
 
-  /* ---- price against production, with a least-squares fit ---- */
-  /* ⚠️ Skill positions only. Kickers and defenses all cost about a dollar and their value
-     over replacement is compressed into almost nothing, so against a league-wide fit every
-     one of them lands far above the line and the "best value" list fills up with defenses.
-     That is an artifact of a flat market, not a finding. They stay in the totals above,
-     where a dollar is a dollar; they are out of the residual analysis. */
-  const all=[];
-  state.teams.forEach((t,ti)=>t.players.forEach(p=>{const v=mvOf(p,mnH);
-    const av=assetValue(p);
-    if(v!=null&&av!=null&&!['K','DST'].includes(p.pos))all.push({name:p.name,pos:p.pos,team:t.name,ti,x:v,y:av})}));
-  const n=all.length||1,sx=all.reduce((a,p)=>a+p.x,0),sy=all.reduce((a,p)=>a+p.y,0),
-        sxx=all.reduce((a,p)=>a+p.x*p.x,0),sxy=all.reduce((a,p)=>a+p.x*p.y,0);
-  const den=n*sxx-sx*sx, b=Math.abs(den)<1e-9?0:(n*sxy-sx*sy)/den, a=(sy-b*sx)/n;
-  all.forEach(p=>p.r=p.y-(a+b*p.x));
+  /* ---- what the projection implies a player should cost, against the market ----
+     ⚠️ THIS USED TO PLOT DOLLARS AGAINST POINTS AND RELATE THEM WITH A LEAST-SQUARES FIT.
+     Two currencies on two axes can only be joined by a fitted line, and "above the fit"
+     is then a position relative to this league's own regression — an arbitrary baseline
+     that MOVED whenever the team filter changed. Readers took it for a value chart twice
+     and were right to: it looked like one and could not answer like one.
+     Both axes are dollars now. The projection is converted at a rate the league sets
+     itself — every dollar actually spent, divided by all the value over replacement those
+     dollars bought — so total implied dollars equal total dollars spent by construction and
+     the reference line is a real break-even, y = x, the same line as the chart above.
+     The rate is computed LEAGUE-WIDE and once, so filtering to one team no longer slides
+     the baseline under the reader. */
+  /* Skill positions only. Kickers and defenses all cost about a dollar with almost no value
+     over replacement, so the conversion rate they imply is meaningless and they would sit in
+     a heap on the axis. They stay in every dollar total above, where a dollar is a dollar. */
+  const skill=[];
+  state.teams.forEach((t,ti)=>t.players.forEach(p=>{
+    const v=mvOf(p,mnH), av=assetValue(p);
+    if(v==null||av==null||['K','DST'].includes(p.pos))return;
+    skill.push({name:p.name,pos:p.pos,team:t.name,ti,mv:v,vor:av,paid:p.paid});
+  }));
+  /* ⚠ NORMALISE TO MARKET VALUE, NOT TO DOLLARS SPENT. Converting at "dollars actually
+     spent per point" looks right and is not: this room spent $2,386 on a pool the market
+     prices near $2,541, so every dot would have slid about 7% below the line and the chart
+     would have read "the projection is bearish on everybody" when that is just a different
+     total. Scaling both sides to the SAME total makes the line mean what it says — the two
+     valuations are arguing about SHARE, which is the only disagreement there is. It also
+     means this panel needs no auction price, so it works on a Sleeper league too. */
+  const rateRows=skill.filter(p=>p.vor>0);
+  const mvSum=rateRows.reduce((a,p)=>a+p.mv,0), vorSum=rateRows.reduce((a,p)=>a+p.vor,0);
+  const rate=vorSum>0?mvSum/vorSum:null;
+  const all=rate==null?[]:skill.map(p=>{
+    const implied=Math.max(0,p.vor*rate);
+    return {name:p.name,pos:p.pos,team:p.team,ti:p.ti,x:p.mv,y:implied,d:implied-p.mv};
+  });
   const shown=mnTeam==='ALL'?all:all.filter(p=>String(p.ti)===String(mnTeam));
-  const above=shown.filter(p=>p.r>0).length;
-  $('mnScatterNote').innerHTML='Dots above the dashed fit produce more per dollar than the '+esc(valueLabel('money').toLowerCase())+' implies; '
-    +'below it, the value source prices something a week-1 projection cannot see. <b>'+shown.length
-    +'</b> priced player'+(shown.length===1?'':'s')+' shown · '+above+' above the line. '
-    +'Kickers and defenses are left out: they all cost about a dollar, so every one of them clears a league-wide fit '
-    +'and they would crowd out everything worth looking at. This panel answers whether the projection agrees with the market \u2014 not whether a pick was good, which is the chart above.'
-    +(shown.length>LABEL_CAP?' Names are hidden at this count because they would overlap \u2014 pick one team to label every dot.':'');
+  const rich=shown.filter(p=>p.d>0).length;
+  $('mnScatterNote').innerHTML=rate==null
+    ? 'No player here projects above replacement, so the projection cannot be put in dollars.'
+    : 'Both axes are dollars. <b>Above the line</b> the projection wants a bigger share of the money than the market gives him; below it, the market sees something a week-one projection cannot. '
+      +'The projection is converted at this league’s own rate: the <b>'+fmt$(mvSum)+'</b> the market puts on these '
+      +rateRows.length+' players, spread over the '+vorSum.toFixed(1)+' points a week they project above replacement — about <b>'
+      +fmt$(rate)+'</b> a point. <b>Both sides total the same</b>, so this is a disagreement about share, not about how much money exists. '
+      +'<b>'+shown.length+'</b> player'+(shown.length===1?'':'s')+' shown · '+rich+' the projection rates above the market. '
+      +'Kickers and defenses are out: a dollar of kicker implies a rate that means nothing. '
+      +'This is about the projection — whether a pick was good is the chart above, which uses what was actually paid.';
   $('mnTeamSel').innerHTML='<option value="ALL"'+(mnTeam==='ALL'?' selected':'')+'>All teams</option>'
     +state.teams.map((t,i)=>'<option value="'+i+'"'+(String(mnTeam)===String(i)?' selected':'')+'>'+esc(t.name)+'</option>').join('');
   $('mnTeamSel').onchange=e=>{mnTeam=e.target.value;renderMoney()};
-  $('mnScatter').innerHTML=shown.length?mnScatterSvg(shown,{a,b}):'<p class="wr-note">No priced players for that filter.</p>';
+  $('mnScatter').innerHTML=shown.length
+    ? mnDollarSvg(shown,{xlab:'Market value',xname:'market',yname:'projection implies',
+                         line:'projection = market'})
+    : '<p class="wr-note">No priced players for that filter.</p>';
 
   /* ⚠️ THESE RANKED BY THE REGRESSION RESIDUAL AND PRINTED MARKET VALUE WHERE A PRICE GOES.
      Both halves were wrong for the question the cards are asking. A $1 running back worth
