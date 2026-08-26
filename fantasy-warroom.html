@@ -2899,13 +2899,13 @@ body.wr-shared #youLab{display:none!important}
       </article>
 
       <article class="wr-card">
-        <h3>Best value on the board</h3>
-        <p class="wr-note">Most production per dollar relative to the league-wide fit.</p>
+        <h3>Best buys</h3>
+        <p class="wr-note" id="mnBestNote">Worth the most above what was paid for them.</p>
         <div class="wr-srlist" id="mnBest"></div>
       </article>
       <article class="wr-card">
-        <h3>Priciest relative to production</h3>
-        <p class="wr-note">Highest price relative to projected production.</p>
+        <h3>Biggest overpays</h3>
+        <p class="wr-note" id="mnWorstNote">Cost the most above what they are worth.</p>
         <div class="wr-srlist" id="mnWorst"></div>
       </article>
 
@@ -3716,13 +3716,39 @@ function renderMoney(){
   $('mnTeamSel').onchange=e=>{mnTeam=e.target.value;renderMoney()};
   $('mnScatter').innerHTML=shown.length?mnScatterSvg(shown,{a,b}):'<p class="wr-note">No priced players for that filter.</p>';
 
-  const byRes=all.slice().sort((x,y)=>y.r-x.r);
-  const list=arr=>arr.map(p=>'<div class="sr"><span class="p">'+esc(p.name)+'</span>'
-    +'<span class="t">'+esc(p.team)+' · '+fmt$(p.x)+'</span>'
-    +'<span class="'+(p.r>=0?'wr-up':'wr-down')+'">'+(p.r>=0?'+':'')+p.r.toFixed(1)+'/wk</span></div>').join('')
-    ||'<p class="wr-note">No priced players.</p>';
-  $('mnBest').innerHTML=list(byRes.slice(0,10));
-  $('mnWorst').innerHTML=list(byRes.slice(-10).reverse());
+  /* ⚠️ THESE RANKED BY THE REGRESSION RESIDUAL AND PRINTED MARKET VALUE WHERE A PRICE GOES.
+     Both halves were wrong for the question the cards are asking. A $1 running back worth
+     $7.40 appeared under "priciest" reading "$7 · -9.8/wk" — the $7 was his VALUE, not what
+     anyone paid, and he was one of the best buys in the draft. Ranking by distance from a
+     league-wide fit measures whether the projection agrees with the market; it says nothing
+     about whether a manager bought well. Surplus does: worth minus paid, in dollars.
+     The fit-based lists survive only where no auction price exists (a Sleeper league today),
+     and when that happens the note says which basis is on screen — the two are not
+     interchangeable and must never be presented as though they were. */
+  const dollars=v=>(v>=0?'+':'\u2212')+fmt$(Math.abs(v));
+  if(paidShown.length){
+    const bySurplus=paidShown.slice().sort((x,y)=>y.d-x.d);
+    const list=arr=>arr.map(p=>'<div class="sr"><span class="p">'+esc(p.name)+'</span>'
+      +'<span class="t">'+esc(p.team)+' · paid '+fmt$(p.x)+' \u00b7 worth '+fmt$(p.y)+'</span>'
+      +'<span class="'+(p.d>=0?'wr-up':'wr-down')+'">'+dollars(p.d)+'</span></div>').join('');
+    $('mnBest').innerHTML=list(bySurplus.slice(0,10));
+    $('mnWorst').innerHTML=list(bySurplus.slice(-10).reverse());
+    $('mnBestNote').textContent='Worth the most above what was paid. Surplus = '
+      +valueLabel('money').toLowerCase()+' minus the auction price.';
+    $('mnWorstNote').textContent='Cost the most above what they are worth, same basis.';
+  } else {
+    const byRes=all.slice().sort((x,y)=>y.r-x.r);
+    const list=arr=>arr.map(p=>'<div class="sr"><span class="p">'+esc(p.name)+'</span>'
+      +'<span class="t">'+esc(p.team)+' \u00b7 worth '+fmt$(p.x)+'</span>'
+      +'<span class="'+(p.r>=0?'wr-up':'wr-down')+'">'+(p.r>=0?'+':'')+p.r.toFixed(1)+'/wk</span></div>').join('')
+      ||'<p class="wr-note">No priced players.</p>';
+    $('mnBest').innerHTML=list(byRes.slice(0,10));
+    $('mnWorst').innerHTML=list(byRes.slice(-10).reverse());
+    const why='No auction prices came through for this league, so these fall back to '
+      +'production per dollar against a league-wide fit \u2014 which measures the projection, not the buy.';
+    $('mnBestNote').textContent=why;
+    $('mnWorstNote').textContent=why;
+  }
 
   /* ---- small-multiple radars, one per team ---- */
   const axes=POS_ORDER.filter(P=>state.slots[P]);
