@@ -24,10 +24,23 @@ const escapeHtml = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;")
 function makeEl(id) {
   return {
     id, innerHTML: "", style: {}, value: "",
-    _text: "",
+    _text: "", _cls: "",
     set textContent(v) { this._text = String(v); this.innerHTML = escapeHtml(v); },
     get textContent() { return this._text; },
-    classList: { _s: new Set(), add(c) { this._s.add(c); }, remove(c) { this._s.delete(c); }, contains(c) { return this._s.has(c); } },
+    // ⚠️ className and classList are the same state in a browser. The stub used to
+    // keep them separate, so `el.className = "a b"` left classList.contains() false
+    // and a passing page looked broken to the test.
+    set className(v) {
+      this._cls = String(v);
+      this.classList._s = new Set(this._cls.split(/\s+/).filter(Boolean));
+    },
+    get className() { return this._cls; },
+    classList: {
+      _s: new Set(),
+      add(c) { this._s.add(c); }, remove(c) { this._s.delete(c); },
+      toggle(c, on) { if (on === undefined) on = !this._s.has(c); on ? this._s.add(c) : this._s.delete(c); return on; },
+      contains(c) { return this._s.has(c); },
+    },
     handlers: {},
     addEventListener(ev, fn) { (this.handlers[ev] = this.handlers[ev] || []).push(fn); },
     querySelectorAll() { return []; },
@@ -269,7 +282,8 @@ await new Promise(r => setTimeout(r, 20));
 const lad0 = byId("gxLadder").innerHTML;
 ok("preseason ladder names every team rather than rendering blank",
   lad0.includes("Team 1") && lad0.includes("Chopped Six"), lad0.slice(0, 90));
-ok("preseason bars are flat, not risk-scaled", (lad0.match(/height:96px/g) || []).length === 3);
+ok("preseason bars are flat, not risk-scaled", (lad0.match(/--h:96px/g) || []).length === 3);
+ok("preseason ladder is tagged flat for the phone layout", byId("gxLadder").classList.contains("is-flat"));
 ok("preseason cut line says it is not drawn yet",
   byId("gxCutLab").textContent.includes("once scores exist"));
 ok("preseason copy reads not-started, not broken",
@@ -288,7 +302,10 @@ const lad1 = byId("gxLadder").innerHTML;
 ok("live ladder prints modeled chop risk per team", lad1.includes("45%") && lad1.includes("10%"));
 ok("live ladder flags the focus team", lad1.includes("pt-lane me"));
 ok("riskiest team gets the tallest bar",
-  (lad1.indexOf("height:130px") > -1) && lad1.indexOf("height:130px") < lad1.indexOf("Team 2"));
+  (lad1.indexOf("--h:130px") > -1) && lad1.indexOf("--h:130px") < lad1.indexOf("Team 2"));
+// ⚠️ --p is what the phone layout reads; a bar with only --h is invisible under 640px.
+ok("every live bar carries the phone width too", (lad1.match(/--p:\d+%/g) || []).length === 2);
+ok("live ladder is tagged live for the phone layout", byId("gxLadder").classList.contains("is-live"));
 ok("hero stats carry alive / chopped / cut line",
   byId("gxHeroStats").innerHTML.includes("96.4") && byId("gxHeroStats").innerHTML.includes("Chopped"));
 
@@ -307,6 +324,14 @@ ok("stage table ink is stated explicitly, not inherited from a light-theme token
   html.includes(".gx-stage .dtab td,.gx-stage .dtab th{color:"));
 ok("wheel labels are radial, the fix for 18 colliding names",
   html.includes("Labels are RADIAL on purpose"));
+/* the machine room lives behind a door, not in the middle of the page */
+ok("setup is a drawer, not a permanent block", html.includes('<details class="pt-setup"'));
+ok("modules and the honesty card sit inside the back card",
+  html.indexOf('<details class="pt-back"') < html.indexOf('<h2 class="secn">Modules</h2>') &&
+  html.indexOf('<h2 class="secn">Modules</h2>') < html.indexOf("What this can't do"));
+ok("the honesty card is still reachable, only collapsed",
+  html.includes("What this can't do") && html.includes('class="honesty"'));
+ok("the phone ladder has a row layout to switch into", html.includes(".pt-ladder.is-live .pt-lane{display:grid"));
 
 /* ----------------------- Last Dawg Standing V1 contract ------------------ */
 ok("locked product name and descriptor ship together",
