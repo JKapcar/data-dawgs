@@ -2930,8 +2930,8 @@ body.wr-shared #youLab{display:none!important}
              question (does the projection agree with the market), so it stays, shut, and its
              summary says what it is before anyone opens it. -->
         <details class="wr-details" id="mnScatterWrap">
-          <summary><b>Where the projection disagrees with the market</b>
-            <span class="wr-note">Optional. Market value against projected points over replacement — <b>no price on this chart</b>, so a bargain does not show up here. For what a pick was worth, use the two cards above.</span>
+          <summary><b>Where <span id="mnProvName">the provider</span> and Data Dawgs ranks disagree</b>
+            <span class="wr-note">Optional. Data Dawgs ranks against the provider's own projected points over replacement — <b>no price on this chart</b>, so a bargain does not show up here. For what a pick was worth, use the two cards above.</span>
           </summary>
           <p class="wr-note" id="mnScatterNote"></p>
           <div class="wr-filter"><select class="wr-mini" id="mnTeamSel" aria-label="Filter by team"></select></div>
@@ -3076,7 +3076,7 @@ body.wr-shared #youLab{display:none!important}
         <dt>Inputs</dt>
         <dd>Rosters, scoring and schedule come from your league provider at the moment you connect, and are frozen
         there. Projections are Sleeper's, third-party and unaudited; this page produces none of its own.
-        <b>⚠️ Every simulated week uses the same week-1 projection.</b> No opponent adjustment, no bye, no
+        <b>⚠️ Every simulated week uses the same season-average projection.</b> No opponent adjustment, no bye, no
         rest-of-season curve — a season is modelled as fourteen copies of week 1 plus noise. That is the single
         largest gap between what the odds look like and what they are worth.</dd>
         <dt>Replacement level</dt>
@@ -3219,6 +3219,17 @@ window.DDSheets = function(cfg){
 <script>
 'use strict';
 const API='https://api.sleeper.app/v1',PROJ='https://api.sleeper.app/projections/nfl/2026';
+/* ⚠ SEASON, NOT WEEK 1. This used to read PROJ+'/1' and hand one week's projection to
+   replacement level, VOR, the trade gate and the schedule sim. ESPN's adapter in the
+   Worker has always resolved the full-season split and divided by the league's own week
+   count, so the two providers were feeding different things into identical math.
+   The season endpoint takes no /<week> segment and returns nothing at all unless every
+   position is named explicitly -- position[] is not optional here, and order_by must
+   accompany it. Verified 2026-08-26: 3,303 rows, same stats keys as the weekly payload,
+   so points() scores it unchanged. It carries no full_name; the first+last fallback in
+   the pool map already covers that, and DEF arrives as e.g. LAR / "Los Angeles Rams". */
+const PROJ_SEASON=PROJ+'?season_type=regular&order_by=pts_half_ppr'
+  +['QB','RB','WR','TE','K','DEF'].map(p=>'&position[]='+p).join('');
 const SHELF='dd-warroom-leagues-v1',SHARED_SHELF='dd-guillotine-leagues-v1';
 const SHELF_API='https://toto.jkapcar4.workers.dev/auth/guillotine-state';
 const ME_KEY='dd-warroom-me-v1';
@@ -3309,6 +3320,10 @@ function usesDynasty(mod){return hz(mod)==='dynasty'}
 function labelFor(h){return h==='dynasty'?'Overall dynasty value':'Public Market Value'}
 function asOfFor(h){return (h==='dynasty'?DYNASTY_MV:MV)?.asOf||null}
 function valueLabel(mod){return labelFor(hz(mod))}
+/* Whose projection sits on the far side of the disagreement panel. The board it is
+   measured against is OURS, so the provider has to be named or the chart reads as a
+   verdict on the player instead of a disagreement between two sources. */
+function provName(){return state&&state.ref&&state.ref.provider==='espn'?'ESPN':'Sleeper'}
 function valueAsOf(mod){return asOfFor(hz(mod))}
 /* Which auction column this league actually drafts in. */
 function mvColumn(){
@@ -3501,7 +3516,7 @@ function renderReport(){
       rev:'Running it. The seed is fixed, so the same inputs give the same number every time.'});
   }
   recs.push({cls:'hold',h:'What none of this can see',
-    why:'Every simulated week reuses the same week-1 projection. No byes, no opponent adjustment, no injuries, no waivers.',
+    why:'Every simulated week reuses the same season-average projection — the season total spread evenly over the league’s regular season. No byes, no opponent adjustment, no injuries, no waivers.',
     alt:'Treat the grade as a snapshot of roster construction, not a forecast of results.',
     rev:'Three completed weeks would let the weekly spread come from your league instead of a stated assumption.'});
 
@@ -3577,7 +3592,7 @@ function mnStackedBars(M){
    x = what the player actually cost at this league's auction. y = what the market says he
    is worth today, in this league's own column. The reference line is y = x, so distance
    from it is surplus in dollars — the trade-market read.
-   The other chart plots market value against a WEEK-ONE PROJECTION over replacement, which
+   The other chart plots market value against a SEASON PROJECTION over replacement, which
    measures whether ESPN agrees with the market. That is a useful signal and a bad headline:
    a cheap quarterback ESPN is low on reads as a bad buy there, and reads as exactly what it
    is here. Bench status is deliberately ignored — a trade asset is a trade asset. */
@@ -3605,8 +3620,8 @@ function mnGapBars(rows){
       +'style="font:700 11px ui-monospace,monospace;fill:'+(r.d>=0?'var(--good,#1f7a3f)':'var(--bad,#c8462f)')+'">'
       +(r.d>=0?'+':'\u2212')+fmt$(Math.abs(r.d))+'</text>';
   });
-  g+='<text x="'+(mid-6)+'" y="'+(H-8)+'" text-anchor="end" style="font:600 10px system-ui;fill:var(--ink-3)">market rates him higher</text>'
-    +'<text x="'+(mid+6)+'" y="'+(H-8)+'" style="font:600 10px system-ui;fill:var(--ink-3)">projection rates him higher</text>';
+  g+='<text x="'+(mid-6)+'" y="'+(H-8)+'" text-anchor="end" style="font:600 10px system-ui;fill:var(--ink-3)">Data Dawgs rate him higher</text>'
+    +'<text x="'+(mid+6)+'" y="'+(H-8)+'" style="font:600 10px system-ui;fill:var(--ink-3)">'+esc(provName())+' rates him higher</text>';
   return '<svg viewBox="0 0 '+W+' '+H+'" class="wr-svg wr-svg-wide" role="img" aria-label="Players ranked by how far the projection and the market disagree, in dollars">'+g+'</svg>';
 }
 
@@ -3800,15 +3815,16 @@ function renderMoney(){
      $1 bench bodies — the wall of zeros the scatter drew, now sorted. */
   const gaps=shown.filter(p=>p.y>0).sort((x,y)=>Math.abs(y.d)-Math.abs(x.d)).slice(0,14);
   const rich=shown.filter(p=>p.d>0).length;
+  if($('mnProvName'))$('mnProvName').textContent=provName();
   $('mnScatterNote').innerHTML=rate==null
-    ? 'No player here projects above replacement, so the projection cannot be put in dollars.'
-    : 'How far apart the two valuations are, in dollars, biggest gap first. The projection is converted at the league-wide rate \u2014 the '
-      +fmt$(mvSum)+' the market puts on '+rateRows.length+' players above replacement, over the '+vorSum.toFixed(1)
+    ? 'No player here projects above replacement, so '+esc(provName())+'\u2019s projection cannot be put in dollars.'
+    : 'How far apart the two valuations are, in dollars, biggest gap first. '+esc(provName())+'\u2019s projection is converted at the league-wide rate \u2014 the '
+      +fmt$(mvSum)+' Data Dawgs put on '+rateRows.length+' players above replacement, over the '+vorSum.toFixed(1)
       +' points a week they project, so about <b>'+fmt$(rate)+' a point</b>. Across the whole league the two sides total the same, '
       +'so this is an argument about share'+(mnTeam==='ALL'?'.':' \u2014 though one roster is a slice of that, so it can lean.')
-      +' <b>'+gaps.length+'</b> shown of '+shown.filter(p=>p.y>0).length+' above replacement \u00b7 '+rich+' the projection rates higher. '
+      +' <b>'+gaps.length+'</b> shown of '+shown.filter(p=>p.y>0).length+' above replacement \u00b7 '+rich+' '+esc(provName())+' rates higher. '
       +'Kickers and defenses are out: a dollar of kicker implies a rate that means nothing. '
-      +'This is about the projection \u2014 whether a pick was good is the chart above, which uses what was actually paid.';
+      +'This is a disagreement between two sources, not a judgement on a buy \u2014 whether a pick was good is the chart above, which uses what was actually paid.';
   $('mnTeamSel').innerHTML='<option value="ALL"'+(mnTeam==='ALL'?' selected':'')+'>All teams</option>'
     +state.teams.map((t,i)=>'<option value="'+i+'"'+(String(mnTeam)===String(i)?' selected':'')+'>'+esc(t.name)+'</option>').join('');
   $('mnTeamSel').onchange=e=>{mnTeam=e.target.value;renderMoney()};
@@ -4393,8 +4409,13 @@ async function fetchLeague(id){
   const [league,users,rosters]=await Promise.all([fetchJson(API+'/league/'+ref.id),fetchJson(API+'/league/'+ref.id+'/users'),fetchJson(API+'/league/'+ref.id+'/rosters')]);
   if(!league?.league_id)throw Error('Sleeper did not return a league for that ID.');
   const playoffStart=Number(league.settings?.playoff_week_start)||15;
-  const [players,weeklyMatchups]=await Promise.all([fetchJson(PROJ+'/1?season_type=regular'),Promise.all(Array.from({length:playoffStart-1},(_,i)=>fetchJson(API+'/league/'+ref.id+'/matchups/'+(i+1)).catch(()=>[])))]);
-  const pool=players.filter(p=>p.player&&['QB','RB','WR','TE','K','DEF'].includes(p.player.position)).map(p=>({id:String(p.player_id),name:p.player.full_name||p.player.first_name+' '+p.player.last_name,pos:p.player.position==='DEF'?'DST':p.player.position,p:points(p,league.scoring_settings),team:p.team}));
+  const [players,weeklyMatchups]=await Promise.all([fetchJson(PROJ_SEASON),Promise.all(Array.from({length:playoffStart-1},(_,i)=>fetchJson(API+'/league/'+ref.id+'/matchups/'+(i+1)).catch(()=>[])))]);
+  /* Mirrors espnProjection()'s `appliedTotal / wk`: the league's own regular season, not a
+     flat 17. Keeping p in points-per-week is what lets replacement(), starterValues(),
+     VOR_FLOOR and sigma stay exactly as they were -- the divisor is constant across every
+     player, so it cannot reorder anyone or change a single VOR ratio. */
+  const REG_WEEKS=Math.max(1,playoffStart-1);
+  const pool=players.filter(p=>p.player&&['QB','RB','WR','TE','K','DEF'].includes(p.player.position)).map(p=>({id:String(p.player_id),name:p.player.full_name||p.player.first_name+' '+p.player.last_name,pos:p.player.position==='DEF'?'DST':p.player.position,p:points(p,league.scoring_settings)/REG_WEEKS,team:p.team}));
   const byId=Object.fromEntries(pool.map(p=>[p.id,p])),user=Object.fromEntries(users.map(u=>[u.user_id,u]));
   const teams=rosters.map(r=>({id:String(r.roster_id),ownerId:String(r.owner_id||''),name:user[r.owner_id]?.metadata?.team_name||user[r.owner_id]?.display_name||'Roster '+r.roster_id,players:(r.players||[]).map(id=>byId[id]).filter(Boolean),starters:new Set(r.starters||[])}));
   const schedule=weeklyMatchups.map(rows=>{const groups={};(rows||[]).forEach(x=>{if(x.matchup_id!=null)(groups[x.matchup_id]=groups[x.matchup_id]||[]).push(String(x.roster_id))});return Object.values(groups).filter(g=>g.length===2)});
@@ -4602,7 +4623,7 @@ function render(){
   const changed=JSON.stringify(state.settings)!==state.defaults;
   $('overrideStatus').className='wr-status'+(changed?' bad':'');
   $('overrideStatus').textContent=changed?'What-if: these are your overrides, not the settings this league actually uses.':'Reading this league exactly as the provider reports it. No overrides in effect.';
-  $('provenance').textContent='Rosters and settings: '+state.ref.provider+' · Projections: Sleeper, Week 1 2026 · Seed: '+(sim?.seed??'not run')+' · σ: '+state.settings.sigma+' (generic preseason assumption) · injuries not modeled.';
+  $('provenance').textContent='Rosters and settings: '+state.ref.provider+' · Projections: '+(state.ref.provider==='espn'?'ESPN season total':'Sleeper season total')+', 2026, spread over the league’s regular season · Seed: '+(sim?.seed??'not run')+' · σ: '+state.settings.sigma+' (generic preseason assumption) · injuries not modeled.';
 }
 
 /* ⚠️ REWRITTEN TWICE. Read both notes before changing this.
@@ -5064,7 +5085,7 @@ window.DD_BOTCTX = {
   sys: `RIGHT NOW you are on the Fantasy League War Room — a calculator that prices one connected fantasy league against its own replacement level and simulates its schedule.
 - IT IS A CALCULATOR, NOT A FORECASTER. Nothing on this page is logged before kickoff, so nothing here is a receipt and none of it appears on the model scoreboard. Never describe an odds number here as a graded or tracked forecast.
 - ⚠️ IF NO LEAGUE IS CONNECTED THERE ARE NO NUMBERS AT ALL. The sheets show empty states that explain the method. Do not invent standings, odds or trades for a league that is not loaded, and do not fall back to generic 12-team defaults.
-- INPUTS ARE THIRD-PARTY AND FROZEN. Rosters, scoring and schedule come from the provider at the moment of connection. Projections are Sleeper's own week-1 numbers, unaudited, and this page produces none of its own. ⚠️ EVERY SIMULATED WEEK REUSES THAT ONE WEEK-1 PROJECTION — no byes, no opponent adjustment, no rest-of-season curve. Say so whenever anyone asks how much the playoff odds are worth.
+- INPUTS ARE THIRD-PARTY AND FROZEN. Rosters, scoring and schedule come from the provider at the moment of connection. Projections are the provider's own full-season numbers — ESPN's season split, or Sleeper's season projection — unaudited, spread evenly over the league's regular season, and this page produces none of its own. ⚠️ EVERY SIMULATED WEEK REUSES THAT ONE SEASON AVERAGE — no byes, no opponent adjustment, no rest-of-season curve. Say so whenever anyone asks how much the playoff odds are worth.
 - NOT MODELED: injuries, byes, trades, waivers, lineup decisions, in-season projection updates, and correlation between the two teams in a matchup. Before three completed weeks, σ is a stated generic assumption rather than an estimate from the league.
 - NOT BUILT: ESPN and Yahoo authenticated reads, the man-games baseline, multi-player trades, and Stage 2 playoff re-simulation. Say so plainly rather than describing how to use them.
 - AN EDITED SETTING IS A WHAT-IF and is marked pool_eligible false. Do not present an overridden run as the league's own number.
