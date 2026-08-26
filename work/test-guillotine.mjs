@@ -91,6 +91,20 @@ const PLAYERS_SLIM = {
   data: { players: { p9: ["Waiver Wonder", "RB", "CLE"], p6x1: ["Chopped One", "WR", "PIT"], p6x2: ["Chopped Two", "TE", null] } },
 };
 
+/* Draft War Room fixtures: 6-team, 3-round snake tied to league 12345. Pick 3's
+   name matches nothing on the board on purpose — an unmatched name must not strike
+   anything. */
+const DRAFT = {
+  draft_id: "d1", league_id: "12345", status: "drafting", type: "snake", start_time: 1,
+  settings: { teams: 6, rounds: 3, reversal_round: 0 },
+  draft_order: { u1: 1, u2: 2, u3: 3, u4: 4, u5: 5, u6: 6 },
+};
+const DRAFT_PICKS = [
+  { round: 1, pick_no: 1, draft_slot: 1, picked_by: "u1", metadata: { first_name: "Jahmyr", last_name: "Gibbs", position: "RB", team: "DET" } },
+  { round: 1, pick_no: 2, draft_slot: 2, picked_by: "u2", metadata: { first_name: "Bijan", last_name: "Robinson", position: "RB", team: "ATL" } },
+  { round: 1, pick_no: 3, draft_slot: 3, picked_by: "u3", metadata: { first_name: "Zzz", last_name: "Nobody", position: "RB", team: "FA" } },
+];
+
 let slimMode = "up"; // "up" | "down"
 globalThis.fetch = async (u) => {
   const url = String(u);
@@ -98,6 +112,9 @@ globalThis.fetch = async (u) => {
   if (url.includes("/sleeper/players-slim"))
     return slimMode === "up" ? j(PLAYERS_SLIM) : new Response("nope", { status: 404 });
   if (url.includes("/state/nfl")) return j({ week: WEEKS_DONE + 1, display_week: WEEKS_DONE + 1, season_type: "regular" });
+  if (url.endsWith("/league/12345/drafts")) return j([{ draft_id: "d1", start_time: 1, status: "drafting" }]);
+  if (url.endsWith("/draft/d1/picks")) return j(DRAFT_PICKS);
+  if (url.endsWith("/draft/d1")) return j(DRAFT);
   if (url.endsWith("/league/12345")) return j(league);
   if (url.includes("/users")) return j(users);
   if (url.includes("/rosters")) return j(rosters);
@@ -208,13 +225,42 @@ const ctx0 = globalThis.DD_BOTCTX.ctx();
 ok("pre-season ctx says the maths is off, with FAAB", ctx0.includes("not on yet") && ctx0.includes("FAAB"));
 globalThis.fetch = realFetch;
 
+/* ----------------------------- Draft War Room ---------------------------- */
+els.clear();
+const draftBlock = blocks.find(b => b.includes('"dd-guillotine-draft-v1"'));
+ok("page has the draft war-room script block", !!draftBlock);
+// A saved draft + claimed slot reconnects on its own, exactly like the league shelf.
+store.set("dd-guillotine-draft-v1", JSON.stringify({ draftId: "d1", slots: { d1: 2 } }));
+await new AsyncFunction(draftBlock)();
+await new Promise(r => setTimeout(r, 80));
+const D = globalThis.__GXD;
+ok("__GXD stashed after draft load", !!D);
+ok("draft status and shape read", D && D.status === "drafting" && D.teams === 6 && D.rounds === 3);
+ok("next pick is #4, slot 4", D && D.nextNo === 4 && D.nextSlot === 4, D && (D.nextNo + "/" + D.nextSlot));
+ok("snake math: slot 2's next pick is 7 away (#11)", D && D.untilMe === 7, "until=" + (D && D.untilMe));
+ok("my picks follow the claimed slot", D && D.myPicks.length === 1 && D.myPicks[0].name.includes("Bijan"));
+ok("best available skips drafted board players", D && D.best.ALL === "Ja'Marr Chase", D && String(D.best.ALL));
+ok("an unmatched pick name strikes nothing", D && D.drafted === 2, "drafted=" + (D && D.drafted));
+ok("board labels are editorial with dates", D && D.boardBuilt === "2026-08-26" && D.mvAsOf === "2026-08-24");
+const bd = byId("gxDBoard").innerHTML;
+ok("board renders tier rows and strikes the drafted", bd.includes("gxd-tier") && bd.includes("gxd-gone"));
+ok("the user's own pick is highlighted", bd.includes("gxd-mine"));
+ok("on-the-clock team is named from draft order + users", D && D.onClock === "Team 4", D && String(D.onClock));
+const SN = globalThis.__GXDT;
+ok("snake: round 2 reverses", SN && SN.slotFor(7, 6, 0).slot === 6);
+ok("snake: third-round reversal repeats the direction, then resumes",
+  SN && SN.slotFor(13, 6, 3).slot === 6 && SN.slotFor(19, 6, 3).slot === 1);
+const dctx = globalThis.DD_BOTCTX && globalThis.DD_BOTCTX.ctx();
+ok("Toto ctx carries the draft room when a draft is live",
+  dctx && dctx.includes("DRAFT WAR ROOM") && dctx.includes("EDITORIAL"));
+
 /* ----------------------- Last Dawg Standing V1 contract ------------------ */
 ok("locked product name and descriptor ship together",
   html.includes("Last Dawg Standing") && html.includes("The Guillotine League Companion"));
 ok("Chop Chamber has weighted-wheel and repeat-spin controls",
   html.includes('id="gxWheel"') && html.includes('id="gxSpinOne"') && html.includes('id="gxSpinTen"'));
-ok("all five lower sheets are present",
-  ["survival", "waivers", "danger", "season", "fragility"].every(k => html.includes(`data-gx-panel="${k}"`)));
+ok("all six lower sheets are present",
+  ["survival", "draft", "waivers", "danger", "season", "fragility"].every(k => html.includes(`data-gx-panel="${k}"`)));
 ok("prediction receipt is explicitly local-device V1",
   html.includes("DEVICE RECEIPT") && html.includes("local only") && html.includes("not server-persisted"));
 ok("Sunday model cannot be presented as live scoring",
