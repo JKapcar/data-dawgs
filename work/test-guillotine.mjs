@@ -74,6 +74,7 @@ const WEEKS_DONE = 3;
 const league = {
   name: "Test Guillotine", season: "2026",
   settings: { waiver_budget: 100 },
+  roster_positions: ["QB", "RB", "WR", "TE", "FLEX", "BN"],
 };
 const users = [1, 2, 3, 4, 5, 6].map(i => ({
   user_id: "u" + i, display_name: "Mgr" + i, metadata: { team_name: "Team " + i },
@@ -121,11 +122,20 @@ const DRAFT_PICKS = [
 ];
 
 let slimMode = "up"; // "up" | "down"
+let projMode = "down"; // Sleeper projections endpoint: "up" | "down" (default down so
+                       // the fallback-to-empty-state path keeps its own coverage)
+/* Season projections: per-game means — p1 QB 18, p2 RB 15, p3 RB 17, p4 WR 16,
+   p5 TE 12, p6 WR 13. Best lineups: Team 1 = 18+15 = 33; Teams 2-5 single players. */
+const PROJ_ROWS = [
+  ["p1", "QB", 306], ["p2", "RB", 255], ["p3", "RB", 289],
+  ["p4", "WR", 272], ["p5", "TE", 204], ["p6", "WR", 221],
+].map(([id, pos, pts]) => ({ player_id: id, player: { position: pos }, stats: { pts_half_ppr: pts, gp: 17 } }));
 globalThis.fetch = async (u) => {
   const url = String(u);
   const j = (o) => new Response(JSON.stringify(o), { status: 200, headers: { "Content-Type": "application/json" } });
   if (url.includes("/sleeper/players-slim"))
     return slimMode === "up" ? j(PLAYERS_SLIM) : new Response("nope", { status: 404 });
+  if (url.includes("/projections/nfl/")) return projMode === "up" ? j(PROJ_ROWS) : new Response("x", { status: 500 });
   if (url.includes("/state/nfl")) return j({ week: WEEKS_DONE + 1, display_week: WEEKS_DONE + 1, season_type: "regular" });
   if (url.endsWith("/league/12345/drafts")) return j([{ draft_id: "d1", start_time: 1, status: "drafting" }]);
   if (url.endsWith("/draft/d1/picks")) return j(DRAFT_PICKS);
@@ -372,6 +382,9 @@ ok("heat cells are painted", seasHtml.includes('class="hm"') && seasHtml.include
 ok("focus team is flagged in the matrix", /class="me">Beta/.test(seasHtml));
 ok("survival chart drawn with the focus curve on top", byId("gxSeasonChart").innerHTML.includes("<svg") &&
   byId("gxSeasonChart").innerHTML.includes("Beta"));
+ok("compare chips render one per team",
+  ["Alpha", "Beta", "Gamma", "Delta"].every(n => byId("gxCmp").innerHTML.includes(n)));
+ok("the focus team's chip is marked and locked", byId("gxCmp").innerHTML.includes('class="me"'));
 ok("season note says frozen rosters, illustration not forecast",
   /frozen/i.test(byId("gxSeasonNote").innerHTML) && /not a forecast/.test(byId("gxSeasonNote").innerHTML));
 const mcCtx = globalThis.DD_BOTCTX.ctx();
@@ -379,6 +392,40 @@ ok("Toto ctx carries the season table with its caveats",
   mcCtx.includes("SEASON MONTE CARLO") && mcCtx.includes("FROZEN") && mcCtx.includes("Alpha"));
 ok("honesty card no longer lists the season MC as Planned",
   !html.includes("season championship Monte Carlo, Universal") && html.includes("compound with every simulated week"));
+
+/* ------------------ projection mode: no gate before two weeks ------------ */
+els.clear(); globalThis.__GX = null;
+projMode = "up";
+globalThis.fetch = async (u) => {
+  const url = String(u);
+  if (url.includes("/state/nfl"))
+    return new Response(JSON.stringify({ week: 0, display_week: 0, season_type: "pre" }), { status: 200 });
+  return realFetch(u);
+};
+store.set("dd-guillotine-v1", JSON.stringify({ id: "12345", me: 2 }));
+await new AsyncFunction(syncBlock)();
+await new Promise(r => setTimeout(r, 60));
+new Function(ldsBlock)();          // paint runs -> ladder, season MC, chips
+await new Promise(r => setTimeout(r, 30));
+const GP = globalThis.__GX;
+ok("no gate: preseason runs on projections", !!GP && GP.mode === "projected" && GP.teams.length === 5,
+  GP && (GP.mode + "/" + GP.teams.length));
+const tp1 = GP && GP.teams.filter(t => t.name === "Team 1")[0];
+ok("projected mean is the best lineup (QB 18 + RB 15 = 33)", tp1 && Math.abs(tp1.mean - 33) < 0.15,
+  tp1 && String(tp1.mean));
+ok("every projected team carries the assumed ±21 spread", GP && GP.teams.every(t => t.sd === 21));
+// ⚠️ nothing observed may be fabricated in projection mode
+ok("low/last stay null — no invented observations", GP && GP.teams.every(t => t.low === null && t.last === null));
+ok("an empty roster is not projected", GP && !GP.teams.some(t => t.name === "Team 6"));
+ok("weekly table is labelled projected, nulls as dashes",
+  byId("gxTab").innerHTML.includes("Proj avg") && byId("gxTab").innerHTML.includes("—"));
+ok("state chip says projected", byId("gxState").textContent.indexOf("Projected") === 0,
+  byId("gxState").textContent);
+ok("season Monte Carlo runs on projections too", !!GP.mc && GP.mc.rows.length === 5);
+const ctxProj = globalThis.DD_BOTCTX.ctx();
+ok("Toto leads with projection mode and drops the thin-history warning",
+  ctxProj.includes("PROJECTION MODE") && !ctxProj.includes("ONLY 0 COMPLETED"));
+globalThis.fetch = realFetch; projMode = "down";
 
 /* ----------------------- Last Dawg Standing V1 contract ------------------ */
 ok("locked product name and descriptor ship together",
