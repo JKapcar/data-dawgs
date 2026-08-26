@@ -726,7 +726,60 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 .gx-tabs button:hover{color:var(--ink-1)}
 .gx-tabs button.on{background:transparent;color:var(--accent);border-bottom-color:var(--accent)}
 @media(max-width:760px){.pt-wheelgrid{grid-template-columns:1fr}.pt-status{margin-left:0;width:100%}
-  .pt-nm{height:70px;font-size:10.5px}.pt-stat{flex:1 1 90px;min-width:0}}.gx-private{font-size:10px;color:var(--ink-3);font-weight:700}.gx-danger td:first-child{font-weight:750}.gx-riskbar{height:6px;background:var(--grid);border-radius:99px;overflow:hidden;min-width:70px}.gx-riskbar i{display:block;height:100%;background:linear-gradient(90deg,var(--warn),var(--bad))}
+  .pt-nm{height:70px;font-size:10.5px}.pt-stat{flex:1 1 90px;min-width:0}}
+/* ------------- setup drawer + back card: the machine room ---------------- */
+.pt-setup{margin-top:16px;border-top:1px solid #3A2E24;padding-top:4px}
+.pt-setup>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:9px;
+  padding:11px 2px;font:800 12px/1 inherit;letter-spacing:.08em;text-transform:uppercase;color:#B6A899}
+.pt-setup>summary::-webkit-details-marker{display:none}
+.pt-setup>summary::after{content:"▾";margin-left:auto;font-size:13px;color:#8E8073;transition:transform .18s ease}
+.pt-setup[open]>summary::after{transform:rotate(180deg)}
+.pt-setup>summary:hover{color:#ff8a3d}
+.pt-setupwho{font-weight:600;letter-spacing:0;text-transform:none;color:#8E8073;font-size:12.5px}
+.pt-back{border:1px solid var(--grid);border-radius:13px;background:var(--surface-1);margin:26px 0}
+.pt-back>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:16px 18px;
+  font:800 13px/1.35 inherit;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-2)}
+.pt-back>summary::-webkit-details-marker{display:none}
+.pt-back>summary::after{content:"▾";margin-left:auto;color:var(--ink-3);transition:transform .18s ease}
+.pt-back[open]>summary::after{transform:rotate(180deg)}
+.pt-back>summary:hover{color:var(--accent)}
+.pt-backsub{display:block;font:400 12.5px/1.45 inherit;letter-spacing:0;text-transform:none;color:var(--ink-3);margin-top:4px}
+.pt-backbody{padding:0 18px 6px;border-top:1px solid var(--grid)}
+.pt-backbody .secn{margin-top:22px}
+/* ------------------------------ phone ladder ----------------------------- */
+.pt-col{height:var(--h,20px)}
+@media(max-width:640px){
+  .pt-ladderwrap{overflow:visible}
+  .pt-ladder{min-width:0}
+  /* live: one row per team — name, bar, risk. No hidden sideways scroll. */
+  .pt-ladder.is-live{flex-direction:column;align-items:stretch;gap:3px}
+  /* ⚠️ DOM order is val, bar, name — assign columns explicitly or the grid lays
+     them out in source order and the team name gets the 40px cell. */
+  .pt-ladder.is-live .pt-lane{display:grid;grid-template-columns:1fr 96px 42px;align-items:center;
+    gap:10px;min-width:0;padding:3px 0}
+  /* grid-row is not optional here: with only a column assigned, auto-placement
+     refuses to move backwards past an earlier DOM item and starts a new row —
+     which stacked the three cells into a 74px-tall row. */
+  .pt-ladder.is-live .pt-nm{grid-column:1;grid-row:1}
+  .pt-ladder.is-live .pt-col{grid-column:2;grid-row:1}
+  .pt-ladder.is-live .pt-val{grid-column:3;grid-row:1}
+  .pt-ladder.is-live .pt-nm{writing-mode:horizontal-tb;transform:none;height:auto;font-size:12.5px;
+    text-align:left;letter-spacing:.01em;text-transform:none;font-weight:700;color:#D9CFC4;min-width:0}
+  .pt-ladder.is-live .pt-lane.me .pt-nm{color:#ff8a3d}
+  .pt-ladder.is-live .pt-col{height:13px!important;width:var(--p,10%);border-radius:99px;justify-self:start}
+  .pt-ladder.is-live .pt-lane:hover .pt-col{transform:none}
+  .pt-ladder.is-live .pt-val{font-size:12.5px;text-align:right}
+  /* preseason: it carries no information, so it stays a thin texture strip
+     rather than 18 identical hatched rows. */
+  .pt-ladder.is-flat .pt-nm,.pt-ladder.is-flat .pt-val{display:none}
+  .pt-ladder.is-flat .pt-lane{min-width:0}
+  .pt-ladder.is-flat .pt-col{height:44px!important}
+  .pt-status{margin-left:0;width:100%}
+  .pt-stat{flex:1 1 0;min-width:0;padding:9px 10px}
+  .pt-back>summary,.pt-backbody{padding-left:14px;padding-right:14px}
+  /* the state chip wrapped mid-phrase and clipped at the panel edge */
+  .gx-stage h2.pt-title .samp{display:block;margin:8px 0 0;width:fit-content;max-width:100%}
+}.gx-private{font-size:10px;color:var(--ink-3);font-weight:700}.gx-danger td:first-child{font-weight:750}.gx-riskbar{height:6px;background:var(--grid);border-radius:99px;overflow:hidden;min-width:70px}.gx-riskbar i{display:block;height:100%;background:linear-gradient(90deg,var(--warn),var(--bad))}
 @media(max-width:760px){.gx-stage{padding:14px 11px}.gx-stage-grid{grid-template-columns:1fr}.gx-wheelbox canvas{max-width:360px}.gx-wheel-controls .btn{flex:1 1 120px}.gx-predict .controls{display:grid;grid-template-columns:1fr}.gx-predict select,.gx-predict input[type=range]{width:100%;max-width:none}.dtab{font-size:11.5px}.dtab th,.dtab td{padding:7px 6px}}
 @media(max-width:390px){.gx-stage{margin-left:-2px;margin-right:-2px}.gx-wheelbox canvas{max-width:calc(100vw - 54px)}.gx-tabs{margin-right:-8px}.hero-card{padding:15px 12px}.statrow{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .nav-section{padding:9px 13px 3px;color:var(--accent);font:800 10px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase}.nav-section:not(:first-child){margin-top:5px;border-top:1px solid var(--grid);padding-top:10px}.grpmenu a[class*="kennel-"]{font-family:ui-rounded,"Trebuchet MS",system-ui,sans-serif;font-weight:800;letter-spacing:.01em}.grpmenu a.kennel-scoreboard{color:#8ed6ff}.grpmenu a.kennel-nfeloml{color:#c9b3ff}.grpmenu a.kennel-qb{color:#ffc06a}.grpmenu a.kennel-wepa{color:#7ce7b0}.grpmenu a.kennel-srs{color:#ff9bb4}.grpmenu a.kennel-hfa{color:#ffe082}.grpmenu a.kennel-units{color:#8ee8e3}.grpmenu a.kennel-receipts{color:#f2c4ff}.grpmenu a.kennel-regimes{color:#a8d88c}</style>
@@ -2335,7 +2388,9 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <div class="pt-cut"><span class="pt-cutlab" id="gxCutLab">Cut line &middot; drawn once scores exist</span></div>
     <p class="pt-flat" id="gxFlat">Connect a league below and the ladder fills in.</p>
 
-    <div id="gxConnect" class="pt-connect">
+    <details class="pt-setup" id="gxSetup" open>
+      <summary>League setup <span class="pt-setupwho" id="gxSetupWho">Not connected</span></summary>
+    <div id="gxConnect">
       <p style="margin:0 0 12px;font-size:13.5px;line-height:1.65;color:var(--ink-2)">
         Paste a Sleeper league ID. The API is read-only and needs no login, so there is nothing to
         authorize and nothing here can change your league. The ID is the long number in your league
@@ -2352,6 +2407,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
         <div class="gx-shelf-list" id="gxShelfList"></div>
       </div>
     </div>
+    </details>
 
   </div>
 
@@ -2504,7 +2560,13 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <div class="hero-card"><h2>Weak Spots <span class="samp">V1 &middot; volatility + floor</span></h2><div class="tscroll"><table class="dtab" id="gxFragilityTab"></table></div><p class="legend">V1 uses observed team-score volatility and observed low-week floor. Injury, bye-week, positional-depth and player-concentration components are <span class="gx-planned">Planned</span>.</p></div>
   </section>
 
-  <div class="hero-card">
+  <details class="pt-back" id="gxBack">
+    <summary>How this works
+      <span class="pt-backsub">The seven modules, the maths behind the ladder, and an honest list of what this tool cannot do.</span>
+    </summary>
+    <div class="pt-backbody">
+
+  <div class="hero-card" style="margin-top:18px">
     <h2>How survival compounds <span class="samp">Illustration &mdash; not your league</span></h2>
     <p class="legend" style="margin:0 0 6px">Six weeks of 90% survival is not 90%. It is 53%. That
       compounding is the whole reason a weekly &ldquo;On the Block&rdquo; flag is not enough.</p>
@@ -2521,10 +2583,13 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <div class="mod"><div class="n">07</div><h3>Draft War Room <span class="mstat on">Observed picks</span></h3><p>Reads a Sleeper draft read-only and strikes the Guillotine Board as picks land. Set your slot and the snake math counts picks until you&rsquo;re up. The board itself is a dated editorial re-rank over the site&rsquo;s MV snapshot &mdash; opinion, not projection.</p></div>
   </div>
 
-  <div class="honesty">
+  <div class="honesty" style="margin-bottom:0">
     <h3>What this can't do</h3>
     <p>Survival odds are a simulation from completed-score history and its variance &mdash; they assume the next week plays like a typical past week. They cannot see live Sunday scores, an inactive, or a garbage-time spike. Prediction receipts are local-device only and are not immutable, server-persisted, cross-device or graded. Projection-driven FAAB bid recommendations, full conditional waiver optimization, season championship Monte Carlo, Universal Data Vault, and injury, bye-week, positional-depth and player-concentration fragility components are all <span class="gx-planned">Planned</span>. The observed FAAB module encodes a framework about dollar appreciation, not a guarantee. The Draft War Room polls Sleeper every few seconds &mdash; near-live, not instant &mdash; and never writes to Sleeper; its pick matching is a name-and-position heuristic that can miss an unusual name, which a tap on the row fixes. The Guillotine Board&rsquo;s ranks, tiers and flags are editorial opinion built 2026-08-26 over the 2026-08-24 MV snapshot, not projections, and the FAAB War Plan is a dated editorial framework, not a bid engine.</p>
   </div>
+
+    </div>
+  </details>
 
   <footer>
     Data Dawgs · Play-by-play data from <a href="https://github.com/nflverse" target="_blank" rel="noopener">nflverse</a> · Strategy synthesized from Establish The Run's 2026 Draft Kit (subscriber content, personal use) · Stats format inspired by <a href="https://rbsdm.com/stats/stats/" target="_blank" rel="noopener">rbsdm.com</a><br><a class="udmach" href="/llms.txt">🤖 For machines</a> · This site is mirrored for machines. 🙃 shows you the other side.
@@ -3047,6 +3112,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
         chopped=G.chopped||0,alive=(G.teamCount||rows.length)-chopped;
     if(!rows.length){box.innerHTML="";if(stats)stats.innerHTML="";return;}
     var mine=G.me&&G.me.rid;
+    box.className="pt-ladder "+(live?"is-live":"is-flat");
     if(live){
       var max=Math.max.apply(null,rows.map(function(t){return 1-t.surv;}))||1;
       box.innerHTML=rows.map(function(t){
@@ -3054,10 +3120,11 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
         var col=risk>=max*0.72?"linear-gradient(180deg,#FF5656,#8E1F1F)"
                :risk>=max*0.38?"linear-gradient(180deg,#E9A13D,#8A5510)"
                :"linear-gradient(180deg,#3FA37D,#17553F)";
+        /* --h drives the desktop column, --p the phone row. One render, two layouts. */
         return '<button type="button" class="pt-lane'+(t.rid===mine?" me":"")+'" data-rid="'+t.rid+'" '
           +'title="'+esc(t.name)+' — '+pct+'% modeled chop risk">'
           +'<span class="pt-val">'+pct+'%</span>'
-          +'<span class="pt-col" style="height:'+h+'px;background:'+col+'"></span>'
+          +'<span class="pt-col" style="--h:'+h+'px;--p:'+Math.max(8,Math.round(risk/max*100))+'%;background:'+col+'"></span>'
           +'<span class="pt-nm">'+esc(t.name)+'</span></button>';
       }).join("");
       if(cut)cut.textContent="Projected cut · median simulated low";
@@ -3070,7 +3137,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       box.innerHTML=rows.map(function(t){
         return '<button type="button" class="pt-lane'+(t.rid===mine?" me":"")+'" data-rid="'+t.rid+'" '
           +'title="'+esc(t.name)+'"><span class="pt-val">&mdash;</span>'
-          +'<span class="pt-col" style="height:96px;background:'+(t.rid===mine?mineg:ghost)+'"></span>'
+          +'<span class="pt-col" style="--h:96px;--p:100%;background:'+(t.rid===mine?mineg:ghost)+'"></span>'
           +'<span class="pt-nm">'+esc(t.name)+'</span></button>';
       }).join("");
       if(cut)cut.textContent="Cut line · drawn once scores exist";
@@ -3086,6 +3153,11 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       +'</div><div class="l">Cut line</div></div>';
     Array.prototype.forEach.call(box.querySelectorAll(".pt-lane"),function(b){
       b.onclick=function(){focus(Number(b.getAttribute("data-rid")));};});
+    /* Setup is a once-per-device chore: shut the drawer as soon as a league is in,
+       and let its summary carry the league name so nothing is hidden. */
+    var setup=document.getElementById("gxSetup"),who=document.getElementById("gxSetupWho");
+    if(who)who.textContent=G.league?G.league:"Not connected";
+    if(setup&&G.leagueId)setup.open=false;
   }
   function paint(G){ladder(G);if(!G||!G.teams||!G.teams.length)return;teams=G.teams.slice();draw();document.getElementById("gxSpinOne").disabled=false;document.getElementById("gxSpinTen").disabled=false;document.getElementById("gxTally").textContent=spins?document.getElementById("gxTally").textContent:"Ready · 0 session spins";document.getElementById("gxPredict").hidden=false;var me=G.me,card=document.getElementById("gxSurvivalCard");card.innerHTML=me?tile(esc(me.name),"Focus team")+tile(Math.round(me.surv*100)+"%","Modeled weekly survival")+tile((me.mean-G.chop>=0?"+":"")+(me.mean-G.chop).toFixed(1),"Avg vs modeled chop")+tile(G.done,"Observed weeks"):tile("Not selected","Focus team")+tile(G.done,"Observed weeks");
     var d=document.getElementById("gxDangerTab");d.innerHTML='<thead><tr><th>Team</th><th>Modeled chop risk</th><th>Risk</th><th>Observed avg</th><th>Observed low</th></tr></thead><tbody>'+teams.slice().sort(function(a,b){return a.surv-b.surv;}).map(function(t){var r=Math.round((1-t.surv)*100);return '<tr data-rid="'+t.rid+'"><td class="'+(me&&me.rid===t.rid?'me':'')+'">'+esc(t.name)+'</td><td class="neg">'+r+'%</td><td><div class="gx-riskbar"><i style="width:'+r+'%"></i></div></td><td>'+t.mean.toFixed(1)+'</td><td>'+t.low.toFixed(1)+'</td></tr>';}).join("")+'</tbody>';d.querySelectorAll("tbody tr").forEach(function(tr){tr.style.cursor="pointer";tr.onclick=function(){focus(Number(tr.dataset.rid));};});
