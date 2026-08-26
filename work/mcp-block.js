@@ -2824,7 +2824,16 @@ const MCP_TOOLS = [
          than invent a number that looks authoritative. */
       const spots = Number.isFinite(set.spots) ? set.spots : null;
 
-      const teams = (set.teams || []).map(t => ({ name: t.name, owner: t.owner || null, spent: 0, count: 0 }));
+      /* ⚠️ The mirror already holds ESPN account GUIDs in `owner` for rooms written before
+         the rig stopped storing them. Strip them on the way out too: this payload is read by
+         assistants, and a GUID identifies a real person's ESPN account. A Sleeper display
+         name is a name and passes through. */
+      const opaqueId = /^\{?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\}?$/i;
+      const teams = (set.teams || []).map(t => ({
+        name: t.name,
+        owner: t.owner && !opaqueId.test(String(t.owner).trim()) ? t.owner : null,
+        spent: 0, count: 0,
+      }));
       const picks = st.picks || [];
       for (const pk of picks) { const t = teams[pk.ti]; if (t) { t.spent += pk.price || 0; t.count++; } }
       for (const t of teams) {

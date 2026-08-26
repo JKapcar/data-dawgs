@@ -262,7 +262,27 @@
   function fetchEspnPicks(options){ return espnCall("/espn/picks",{fetch:options&&options.fetch}); }
   // the War Room needs projections and the weekly schedule as well as rosters;
   // the Worker assembles all three so the page keeps one shape for both services
-  function fetchEspnWarroom(options){ return espnCall("/espn/warroom",{fetch:options&&options.fetch}); }
+  /* ⚠️ A share token is a PUBLIC read and must NOT carry the session header. The whole
+     point is that a manager with no Data Dawgs account and no ESPN cookie can open the
+     link; sending a token we happen to have would make it work for the owner and fail
+     for everyone else, which is the bug that hides until you hand the link out. */
+  async function espnPublicCall(path, init){
+    const fetchImpl=(init&&init.fetch)||root.fetch;
+    if(typeof fetchImpl!=="function") throw new Error("Fetch is unavailable.");
+    const res=await fetchImpl(ESPN_WORKER+path,{method:"GET"});
+    let data={};
+    try{ data=await res.json(); }catch(e){ data={}; }
+    if(!res.ok){ const err=new Error(data.error||`Shared league request failed (${res.status}).`); err.status=res.status; throw err; }
+    return data;
+  }
+  function fetchEspnWarroom(options){
+    const share=options&&options.share;
+    if(share) return espnPublicCall("/espn/share/"+encodeURIComponent(share),{fetch:options&&options.fetch});
+    return espnCall("/espn/warroom",{fetch:options&&options.fetch});
+  }
+  function espnShareStatus(options){ return espnCall("/espn/share",{fetch:options&&options.fetch}); }
+  function espnShareCreate(options){ return espnCall("/espn/share",{method:"POST",body:{},fetch:options&&options.fetch}); }
+  function espnShareRevoke(options){ return espnCall("/espn/share",{method:"DELETE",fetch:options&&options.fetch}); }
 
   /* The Worker already returns the site's league shape, so importing is a rename
      into the envelope the rest of the rig expects rather than a second parse. */
@@ -315,7 +335,8 @@
     sleeper:{detect:input=>!!parseSleeper(input),parse:parseSleeper,importLeague:importSleeper,fetchDraft:fetchSleeperDraft,fetchPicks:fetchSleeperPicks,normalize:normalizeImport,mapPlayer,normalizePick,rosterSlots,scoringConfig},
     yahoo:{detect:input=>!!parseYahoo(input),parse:parseYahoo},
     espn:{detect:input=>!!parseEspn(input),parse:parseEspn,connect:connectEspn,status:espnStatus,
-      disconnect:disconnectEspn,fetchLeague:fetchEspnLeague,fetchPicks:fetchEspnPicks,warroom:fetchEspnWarroom,importLeague:importEspn}
+      disconnect:disconnectEspn,fetchLeague:fetchEspnLeague,fetchPicks:fetchEspnPicks,warroom:fetchEspnWarroom,importLeague:importEspn,
+      shareStatus:espnShareStatus,shareCreate:espnShareCreate,shareRevoke:espnShareRevoke}
   };
   root.DDProviders=providers;
   if(typeof module!=="undefined"&&module.exports) module.exports={parseProvider,parseSleeper,parseYahoo,parseEspn,importEspn,espnScoringKey,rosterSlots,scoringConfig,mapPlayer,normalizePick,normalizeImport,chooseDraft};

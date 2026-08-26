@@ -173,5 +173,49 @@ console.log("\nPick names when the roster views are empty");
      empty.diagnostics.unnamed === 0 && empty.diagnostics.made === 0, JSON.stringify(empty.diagnostics));
 }
 
+
+/* ---- shared league links --------------------------------------------------
+   The route itself needs KV and a sealed credential, so what is checked here is the
+   part that can silently become dangerous: the token, the owner-id scrub, and the two
+   source-level facts that make the route safe to expose at all. */
+{
+  const shareTok = new Function(src.slice(src.indexOf("function espnShareToken()"),
+    src.indexOf("}", src.indexOf("return t;"))) + "}\nreturn espnShareToken;")();
+  const t = shareTok();
+  ok("share token is 28 chars of unambiguous alphabet", /^[A-HJKM-NP-Za-km-np-z2-9]{28}$/.test(t), t);
+  const many = new Set(Array.from({ length: 200 }, () => shareTok()));
+  ok("200 tokens are all distinct", many.size === 200, String(many.size));
+
+  const owner = new Function(src.slice(src.indexOf("const OPAQUE_OWNER_ID"),
+    src.indexOf("\n", src.indexOf("const ownerName ="))) + "\nreturn ownerName;")();
+  ok("an ESPN account GUID never survives as an owner",
+     owner("{1CBEB244-0BFD-4259-AF54-4D364717C1EA}") === null);
+  ok("…braceless and lowercase too",
+     owner("1cbeb244-0bfd-4259-af54-4d364717c1ea") === null);
+  ok("a real display name passes through", owner("Kap") === "Kap");
+  ok("an empty owner reads null, not an empty string", owner("") === null);
+
+  /* the public read must be matched BEFORE the session-gated handler, or the link
+     only ever works for the one person who does not need it */
+  const pub = src.indexOf('url.pathname.startsWith("/espn/share/")');
+  const gated = src.indexOf('return handleEspn(request, url, env, cors)');
+  ok("the public share route is matched before handleEspn's session gate",
+     pub > 0 && gated > 0 && pub < gated);
+
+  /* nothing from the sealed credential may ride out on the shared payload */
+  const body = lift("handleEspnShareRead", "async function");
+  ok("the shared response never spreads the credential", !/\.\.\.cred\b/.test(body));
+  ok("…and names no cookie field", !/\bs2\b\s*:/.test(body) && !/\bswid\b\s*:/i.test(body));
+  ok("…and is pinned to one league", /cred\.leagueId\) !== String\(rec\.leagueId\)/.test(body));
+}
+
+/* the rig must not write ESPN account GUIDs into the anonymously-readable mirror */
+{
+  const rig = fs.readFileSync(path.join(ROOT, "draft-league.js"), "utf8");
+  ok("draft-league.js sanitises owner at the normalizer",
+     /owner: ownerName\(team\.owner\)/.test(rig) && /const OPAQUE_ID =/.test(rig));
+}
+
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -107,7 +107,7 @@
           return {
             id: team.id || `team_${i+1}`,
             name: String(team.name || `Team ${i+1}`).trim().slice(0,80) || `Team ${i+1}`,
-            owner: String(team.owner || "").trim().slice(0,80),
+            owner: ownerName(team.owner),
             providerId: team.providerId == null ? null : String(team.providerId),
             draftSlot: team.draftSlot == null ? null : Number(team.draftSlot)
           };
@@ -115,6 +115,19 @@
       },
       raw: source.raw && typeof source.raw === "object" ? clone(source.raw) : undefined
     };
+  }
+
+  /* ⚠️ `owner` is a HUMAN-READABLE NAME and nothing else. Sleeper sends a display name,
+     but ESPN sends an account GUID — "{1CBEB244-0BFD-4259-AF54-4D364717C1EA}" — and that
+     GUID was being written straight into the Firebase mirror, which is anonymously
+     readable, and printed next to team names in the rig. It is not a name or an email,
+     but it identifies a real person's ESPN account and nothing on our side needs it.
+     Drop it at the normalizer so it never reaches storage, the mirror or a payload;
+     `providerId` is what the UI actually joins on. */
+  const OPAQUE_ID = /^\{?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\}?$/i;
+  function ownerName(value){
+    const v = String(value == null ? "" : value).trim();
+    return OPAQUE_ID.test(v) ? "" : v.slice(0,80);
   }
 
   function leagueFromCanonical(record){

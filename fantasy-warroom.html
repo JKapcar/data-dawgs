@@ -2563,6 +2563,25 @@ table.wr-money tr.avg td{border-top:2px solid var(--grid);color:var(--ink-3);fon
   border-radius:0 9px 9px 0;padding:12px 15px;margin-bottom:16px;font-size:14px}
 .wr-rec .lab{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-right:6px}
 svg{display:block;max-width:100%;height:auto}
+/* ⚠️ SHARED READ-ONLY MODE. A shared link has no account behind it, so every surface that
+   writes — adding a league, the saved shelf, the team gate that confirms "you" — is hidden
+   rather than left to fail on click. The analysis sheets are untouched: the whole point is
+   that the reader sees the same numbers the owner does. */
+body.wr-shared [data-sheet="leagues"],
+body.wr-shared #sheetLeagues,
+body.wr-shared #teamGate,
+body.wr-shared #youLab{display:none!important}
+.wr-sharebar{margin:0 0 14px;padding:10px 13px;border-radius:10px;
+  border:1px dashed color-mix(in srgb,var(--accent) 55%,var(--line));
+  background:color-mix(in srgb,var(--accent) 8%,transparent);
+  font:600 12.5px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--ink-2)}
+.wr-sharebar b{color:var(--accent)}
+.wr-share{margin-top:14px;padding:12px 14px;border:1px solid var(--line);border-radius:12px}
+.wr-share h3{margin:0 0 4px;font-size:14px}
+.wr-share-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.wr-share-url{display:block;margin-top:8px;padding:8px 10px;border-radius:8px;background:var(--wash);
+  font:600 11.5px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;word-break:break-all}
+.wr-sharebar.bad{border-color:color-mix(in srgb,#c8462f 60%,var(--line));background:color-mix(in srgb,#c8462f 8%,transparent)}
 
 .wr-connect form{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
 .wr-connect input{min-width:min(100%,460px);flex:1;padding:11px 13px;border:1px solid var(--grid);
@@ -2699,8 +2718,19 @@ svg{display:block;max-width:100%;height:auto}
       </form>
       <p class="wr-status" id="connectionStatus">Sleeper leagues connect without a Sleeper login. ESPN reads the league you already connected in the <a href="draft-league.html">draft room</a>.</p>
     </div>
-    <div class="wr-saved" id="seededLeague"></div>
     <div class="wr-saved" id="savedList"></div>
+    <div class="wr-share" id="shareBox" hidden>
+      <h3>Share this league</h3>
+      <p class="wr-note" id="shareNote">One link, no sign-in, read-only. Everyone in the league
+        sees every team\u2019s grade and roster \u2014 the same numbers you see, because the link reads
+        through your connection rather than recomputing them another way.</p>
+      <div class="wr-share-actions">
+        <button type="button" class="wr-btn" id="shareMake">Create share link</button>
+        <button type="button" class="wr-mini" id="shareCopy" hidden>Copy link</button>
+        <button type="button" class="wr-mini" id="shareKill" hidden>Revoke</button>
+      </div>
+      <code id="shareUrl" class="wr-share-url" hidden></code>
+    </div>
   </div>
 
   <!-- No league: this sheet carries the "what is this room" job, so the page still explains
@@ -3976,6 +4006,44 @@ function paintSwitch(){
   });
   paintTeamMenu();
 }
+/* ⚠️ Sharing is ESPN-only and owner-only. The link reads through the owner's sealed ESPN
+   credential, so there is nothing to share for a Sleeper league (its API is already public)
+   and nothing to share from inside a shared view. */
+async function paintShare(){
+  const box=$('shareBox');
+  if(!box)return;
+  const eligible=!SHARED&&state&&state.ref.provider==='espn'&&window.DDProviders?.espn?.shareStatus;
+  box.hidden=!eligible;
+  if(!eligible)return;
+  let st=null;
+  try{ st=await DDProviders.espn.shareStatus(); }catch(e){ return }
+  paintShareUrl(st&&st.url?st.url:null);
+}
+function paintShareUrl(url){
+  const u=$('shareUrl'),copy=$('shareCopy'),kill=$('shareKill'),make=$('shareMake');
+  if(!u)return;
+  u.hidden=!url; copy.hidden=!url; kill.hidden=!url; make.hidden=!!url;
+  u.textContent=url||'';
+}
+document.addEventListener('click',async ev=>{
+  const t=ev.target;
+  if(t&&t.id==='shareMake'){
+    t.disabled=true;
+    try{ const r=await DDProviders.espn.shareCreate(); paintShareUrl(r.url); }
+    catch(e){ $('shareNote').textContent='Could not create the link: '+(e.message||e); }
+    t.disabled=false;
+  }
+  if(t&&t.id==='shareCopy'){
+    try{ await navigator.clipboard.writeText($('shareUrl').textContent||''); t.textContent='Copied'; setTimeout(()=>t.textContent='Copy link',1400); }catch(e){}
+  }
+  if(t&&t.id==='shareKill'){
+    /* revoking is immediate and total: every link already handed out stops resolving */
+    if(!confirm('Revoke the share link? Anyone holding it loses access immediately.'))return;
+    try{ await DDProviders.espn.shareRevoke(); paintShareUrl(null); }
+    catch(e){ $('shareNote').textContent='Could not revoke: '+(e.message||e); }
+  }
+});
+
 function paintShelf(){
   const list=readShelf();
   $('savedList').innerHTML=list.length?list.map(x=>{
@@ -3987,12 +4055,14 @@ function paintShelf(){
   }).join(''):'<div class="wr-empty-shelf"><b>No leagues saved yet.</b><br>Paste your first Sleeper league URL or ID above. It will stay here for one-tap access.</div>';
 }
 
-fetch('data/leagues/pepperoninipples.json').then(r=>r.ok?r.json():null).then(x=>{
-  if(!x||!$('seededLeague'))return;
-  $('seededLeague').innerHTML=`<div class="wr-row"><div class="wr-grow"><b>${esc(x.name)}</b>
-    <small>Yahoo · ${esc(x.provider_league_id)} · settings captured 8/25 · rosters: not connected</small></div>
-    <div class="wr-league-actions"><a class="wr-mini" href="dashboard.html?league=${encodeURIComponent(x.dd_id)}#live">Open draft rig</a></div></div>`;
-}).catch(()=>{});
+/* ⚠️ THE YAHOO ROW IS DELIBERATELY GONE. It rendered the seeded league as
+   "settings captured 8/25 · rosters: not connected" beside four working Sleeper leagues and
+   a working ESPN one, next to controls that lead nowhere — Yahoo has no read API we can use,
+   so it can never produce a roster, a grade or odds. A row that cannot do the thing the page
+   is for reads as broken rather than unsupported, so it is not shown at all.
+   The league itself is untouched: data/leagues/pepperoninipples.json still exists and
+   dashboard.html?league=<dd_id> still opens the rig for anyone holding the link. If Yahoo
+   ever gains a read path, restore the row rather than reviving this placeholder. */
 
 /* ------------------------------------------------------- connection ------- */
 /* One card, every team in the league, one tap. Painted only while the team is
@@ -4059,7 +4129,7 @@ function setLoaded(on){
   if(ready)$('teamBtn').textContent=state.teams[+$('teamPicker').value||0].name;
   paintHz(on);
   $('flowDynasty').classList.toggle('wr-hide',on&&!isDynastyLeague());
-  paintTeamGate();paintStations();paintShelf();paintSwitch();
+  paintTeamGate();paintStations();paintShelf();paintSwitch();paintShare();
 }
 
 function pickMyTeam(teams,ref,users){
@@ -4113,12 +4183,14 @@ async function fetchLeague(id){
 /* ESPN, assembled by the Worker into the shape fetchLeague() returns for Sleeper.
    Everything downstream — replacement level, VOR, the schedule sim, trades — reads
    that shape and is untouched. The Worker holds the credentials; this never sees them. */
-async function fetchLeagueEspn(id){
-  const ref={provider:'espn',id:String(id)};
+async function fetchLeagueEspn(id,share){
   if(!(window.DDProviders&&DDProviders.espn&&DDProviders.espn.warroom))
     throw Error('This build has no ESPN War Room adapter.');
-  const feed=await DDProviders.espn.warroom();
+  /* A shared link does not know its league id until the feed answers — the token is the
+     only thing the reader holds — so the ref is built from what comes back. */
+  const feed=await DDProviders.espn.warroom(share?{share:share}:undefined);
   const L=feed.league||{};
+  const ref={provider:'espn',id:String(id!=null?id:(L.id||''))};
   const pool=(feed.pool||[]).map(p=>({id:String(p.id),name:p.name,pos:p.pos,p:Number(p.p)||0,team:p.team}));
   const byId=Object.fromEntries(pool.map(p=>[p.id,p]));
   const teams=(feed.teams||[]).map(t=>({
@@ -4200,6 +4272,61 @@ function restore(key){
   return true;
 }
 let quietOpen=false;
+/* ⚠️ THIS RENDERS THROUGH THE OWNER'S OWN GRADE MATH, ON PURPOSE. A separate shared page
+   would be a second implementation of replacement level, VOR and the odds, and two managers
+   comparing grades computed on drifting bases is exactly the confusion this site exists to
+   avoid. So the shared view IS this page, with the writing surfaces switched off.
+   Nothing here persists: no shelf row, no last-opened, no ?league= rewrite. */
+let SHARED=null;
+function shareBar(html,bad){
+  let el=document.getElementById('wrShareBar');
+  if(!el){ el=document.createElement('div'); el.id='wrShareBar'; el.className='wr-sharebar';
+    const m=document.querySelector('main'); m.insertBefore(el,m.firstChild); }
+  el.className='wr-sharebar'+(bad?' bad':'');
+  el.innerHTML=html;
+}
+async function openShared(token){
+  SHARED=token;
+  document.body.classList.add('wr-shared');
+  shareBar('<b>Shared league \u00b7 read-only.</b> Opening\u2026');
+  try{
+    state=await fetchLeagueEspn(null,token);
+  }catch(e){
+    document.body.classList.remove('wr-shared');
+    shareBar('<b>This shared link did not open.</b> '+esc(e.message||String(e)),true);
+    SHEETS.show('leagues');
+    return;
+  }
+  state.defaults=JSON.stringify(state.settings);
+  sim=null;tradeFilter=null;
+  $('playoffSpots').value=state.settings.playoffSpots;
+  $('playoffStart').value=state.settings.playoffStart;
+  $('sigma').value=state.settings.sigma;
+  $('teamPicker').innerHTML=state.teams.map((t,i)=>'<option value="'+i+'">'+esc(t.name)+'</option>').join('');
+  /* ⚠️ NEVER GUESS WHOSE TEAM THIS IS on a shared link. There is no account and no shelf to
+     read it from, and a grade shown under the wrong name is worse than no grade. Take it
+     from &team= if the link carries one; otherwise the reader picks. */
+  let want=0,named=false;
+  try{
+    const t=new URLSearchParams(location.search).get('team');
+    if(t!=null&&t!==''){
+      const i=state.teams.findIndex(x=>String(x.id)===String(t)
+        ||String(x.name).trim().toLowerCase()===String(t).trim().toLowerCase());
+      if(i>=0){want=i;named=true}
+    }
+  }catch(e){}
+  $('teamPicker').value=String(want);
+  state.focusGuessed=false;
+  LOADED.set(keyOf('espn',state.ref.id),{state,sim:null});
+  await loadMV();if(isDynastyLeague())await loadDynastyMV();
+  setLoaded(true);
+  shareBar('<b>Shared league \u00b7 read-only.</b> '+esc(state.league.name||'ESPN league')
+    +' \u2014 every team\u2019s grade and roster, computed from the league owner\u2019s connection. '
+    +(named?'Showing <b>'+esc(state.teams[want].name)+'</b>. ':'')
+    +'Use the team picker to look at anyone else. Nothing you do here is saved.');
+  render();
+}
+
 async function openLeague(provider,id,opts){
   if(restore(keyOf(provider,id)))return;
   quietOpen=!!(opts&&opts.quiet);
@@ -4628,8 +4755,12 @@ function writeLast(provider,leagueId){
   try{localStorage.setItem(LAST_KEY,JSON.stringify({provider:String(provider),leagueId:String(leagueId)}))}catch(e){}
 }
 (function boot(){
-  let deep=null,deepProv=null;
-  try{const q=new URLSearchParams(location.search);deep=q.get('league');deepProv=q.get('provider')}catch(e){}
+  let deep=null,deepProv=null,share=null;
+  try{const q=new URLSearchParams(location.search);deep=q.get('league');deepProv=q.get('provider');share=q.get('share')}catch(e){}
+  /* ⚠️ Checked FIRST and returns unconditionally. A shared reader has no shelf and no
+     account: falling through to "open your last league" would hand them the empty state
+     of a page that was supposed to show them their draft grade. */
+  if(share){ if(SHEETS.current==='leagues')SHEETS.show('report'); openShared(share); return }
   if(deep){
     /* Recover the provider: from the URL if it says, otherwise from the saved shelf row.
        Without this a saved ESPN league opens through the Sleeper path and 404s. */

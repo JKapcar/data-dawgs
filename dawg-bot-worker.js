@@ -809,6 +809,59 @@ const ESPN_CRED_TTL = 60 * 60 * 24 * 120;   // 120 days; ESPN cookies outlive a 
 
 function espnKvKey(uid) { return ESPN_KV_PREFIX + uid; }
 
+/* ---- shared league links ----------------------------------------------------
+ * Eleven managers in a twelve-team league have no ESPN cookie in this Worker, and
+ * asking each of them to paste one is not a product. The owner mints one link; it
+ * reads THEIR league through THEIR sealed credential and returns the same feed the
+ * owner's own War Room renders, so the grades are identical by construction rather
+ * than by two implementations agreeing.
+ * ⚠️ THE TOKEN IS THE ONLY SECRET, SO IT IS THE ONLY THING THAT MAY GRANT ACCESS.
+ * It maps to a uid AND a leagueId: if the owner reconnects to a different league the
+ * old link must stop resolving rather than quietly start serving a different set of
+ * rosters. The share can never outlive the credential it reads through. */
+const ESPN_SHARE_PREFIX = "espn:share:";
+const ESPN_SHARE_OF_PREFIX = "espn:shareof:";
+
+function espnShareToken() {
+  const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+  const r = new Uint8Array(28);
+  crypto.getRandomValues(r);
+  let t = "";
+  for (const x of r) t += alphabet[x % alphabet.length];
+  return t;
+}
+
+/* ⚠️ THE ONLY UNAUTHENTICATED ESPN ROUTE IN THIS WORKER. Everything it returns comes
+   from espnWarroomFeed, whose body is league / teams / pool / schedule / diagnostics —
+   no cookie, no SWID, no session, no uid, and owner GUIDs already stripped at the feed.
+   Do not spread `cred` into this response, and do not add a field here without checking
+   it against that list first. */
+async function handleEspnShareRead(request, url, env, cors) {
+  const kv = env.RL || null;
+  if (!kv) return json({ error: "share storage is unavailable" }, 503, cors);
+
+  const token = url.pathname.replace(/^\/espn\/share\//, "").replace(/\/+$/, "");
+  if (!/^[A-Za-z0-9]{16,64}$/.test(token))
+    return json({ error: "That is not a share link." }, 404, cors);
+
+  let rec = null;
+  try { rec = JSON.parse((await kv.get(ESPN_SHARE_PREFIX + token)) || "null"); } catch { rec = null; }
+  if (!rec || !rec.uid)
+    return json({ error: "That share link is not valid, or the league owner revoked it." }, 404, cors);
+
+  let blob = null;
+  try { blob = await kv.get(espnKvKey(rec.uid)); } catch { blob = null; }
+  const cred = blob ? await espnOpen(env, rec.uid, blob) : null;
+  if (!cred)
+    return json({ error: "The league owner's ESPN connection has expired, so this shared view cannot refresh. Ask them to reconnect." }, 409, cors);
+  if (String(cred.leagueId) !== String(rec.leagueId))
+    return json({ error: "The league owner is no longer connected to this league, so this link no longer resolves." }, 409, cors);
+
+  const r = await espnWarroomFeed(cred);
+  if (!r.ok) return json({ error: r.reason }, 502, cors);
+  return json({ ok: true, shared: true, readOnly: true, sharedAt: rec.at || null, ...r.body }, 200, cors);
+}
+
 async function espnKey(env, uid) {
   const base = new TextEncoder().encode(String(env.BOZO_PEPPER || "") + "|espn|" + uid);
   const material = await crypto.subtle.importKey("raw", base, "HKDF", false, ["deriveKey"]);
@@ -1058,6 +1111,12 @@ async function espnPicksWithNames(cred, body) {
   return espnNormalizePicks(body, index);
 }
 
+/* ⚠️ An ESPN "owner" is an account GUID, not a name. It identifies a real person's ESPN
+   account, nothing here needs it, and this payload is read by assistants and mirrored into
+   an anonymously-readable database. Names pass; opaque ids do not. */
+const OPAQUE_OWNER_ID = /^\{?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\}?$/i;
+const ownerName = v => { const s = String(v == null ? "" : v).trim(); return !s || OPAQUE_OWNER_ID.test(s) ? null : s; };
+
 async function espnWarroomFeed(cred) {
   const base = await espnFetch(cred.leagueId, cred.season,
     ["mSettings", "mTeam", "mRoster", "mSchedule"], cred.s2 ? cred : null);
@@ -1102,7 +1161,7 @@ async function espnWarroomFeed(cred) {
     return {
       id: String(t.id),
       name: [t.location, t.nickname].filter(Boolean).join(" ").trim() || t.name || `Team ${i + 1}`,
-      owner: (t.owners && t.owners[0]) || "",
+      owner: ownerName((t.owners && t.owners[0]) || ""),
       players, starters,
     };
   });
@@ -1190,6 +1249,13 @@ async function handleEspn(request, url, env, cors) {
 
   if (path === "connect" && request.method === "DELETE") {
     try { await kv.delete(espnKvKey(uid)); } catch {}
+    /* a share reads through the credential, so disconnecting must revoke it too —
+       otherwise a link the owner believes is dead sits there returning 409s forever */
+    try {
+      const tok = await kv.get(ESPN_SHARE_OF_PREFIX + uid);
+      if (tok) await kv.delete(ESPN_SHARE_PREFIX + tok);
+      await kv.delete(ESPN_SHARE_OF_PREFIX + uid);
+    } catch {}
     return json({ ok: true, connected: false }, 200, cors);
   }
 
@@ -1246,6 +1312,34 @@ async function handleEspn(request, url, env, cors) {
     const r = await espnWarroomFeed(cred);
     if (!r.ok) return json({ error: r.reason, needsCredentials: r.status === 401 || r.status === 403 }, 400, cors);
     return json({ ok: true, ...r.body }, 200, cors);
+  }
+
+  if (path === "share" && request.method === "GET") {
+    let tok = null;
+    try { tok = await kv.get(ESPN_SHARE_OF_PREFIX + uid); } catch { tok = null; }
+    return json({ ok: true, shared: !!tok, url: tok ? `${SITE}/fantasy-warroom.html?share=${tok}` : null }, 200, cors);
+  }
+
+  if (path === "share" && request.method === "POST") {
+    const cred = await stored();
+    if (!cred) return json({ error: "Connect an ESPN league before sharing it." }, 404, cors);
+    let tok = null;
+    try { tok = await kv.get(ESPN_SHARE_OF_PREFIX + uid); } catch { tok = null; }
+    if (!tok) {
+      tok = espnShareToken();
+      const rec = { uid, leagueId: String(cred.leagueId), season: cred.season, at: Date.now() };
+      await kv.put(ESPN_SHARE_PREFIX + tok, JSON.stringify(rec), { expirationTtl: ESPN_CRED_TTL });
+      await kv.put(ESPN_SHARE_OF_PREFIX + uid, tok, { expirationTtl: ESPN_CRED_TTL });
+    }
+    return json({ ok: true, url: `${SITE}/fantasy-warroom.html?share=${tok}` }, 200, cors);
+  }
+
+  if (path === "share" && request.method === "DELETE") {
+    let tok = null;
+    try { tok = await kv.get(ESPN_SHARE_OF_PREFIX + uid); } catch { tok = null; }
+    if (tok) { try { await kv.delete(ESPN_SHARE_PREFIX + tok); } catch {} }
+    try { await kv.delete(ESPN_SHARE_OF_PREFIX + uid); } catch {}
+    return json({ ok: true, shared: false }, 200, cors);
   }
 
   if (path === "picks" && request.method === "GET") {
@@ -1368,6 +1462,9 @@ export default {
     if (url.pathname.startsWith("/api/swoledawg")) return handleSwole(request, url, env, cors);
     // DD-RANKINGS-ROUTE — The Dog Track capture half; see the DD-RANKINGS-BLOCK below.
     if (url.pathname.startsWith("/rankings/")) return handleRankings(request, url, env, cors);
+    // the shared read is public by design and must not reach handleEspn's session gate
+    if (url.pathname.startsWith("/espn/share/") && request.method === "GET")
+      return handleEspnShareRead(request, url, env, cors);
     if (url.pathname === "/espn" || url.pathname.startsWith("/espn/")) return handleEspn(request, url, env, cors);
 
     // ⚠️ Identity is SITE-WIDE, not Bozo's. /auth/* is canonical; the /bozo/* spellings
@@ -13524,7 +13621,16 @@ const MCP_TOOLS = [
          than invent a number that looks authoritative. */
       const spots = Number.isFinite(set.spots) ? set.spots : null;
 
-      const teams = (set.teams || []).map(t => ({ name: t.name, owner: t.owner || null, spent: 0, count: 0 }));
+      /* ⚠️ The mirror already holds ESPN account GUIDs in `owner` for rooms written before
+         the rig stopped storing them. Strip them on the way out too: this payload is read by
+         assistants, and a GUID identifies a real person's ESPN account. A Sleeper display
+         name is a name and passes through. */
+      const opaqueId = /^\{?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\}?$/i;
+      const teams = (set.teams || []).map(t => ({
+        name: t.name,
+        owner: t.owner && !opaqueId.test(String(t.owner).trim()) ? t.owner : null,
+        spent: 0, count: 0,
+      }));
       const picks = st.picks || [];
       for (const pk of picks) { const t = teams[pk.ti]; if (t) { t.spent += pk.price || 0; t.count++; } }
       for (const t of teams) {
