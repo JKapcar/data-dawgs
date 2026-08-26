@@ -3525,7 +3525,7 @@ function teamMoney(t,horizon){
   const bn=bench.reduce((a,p)=>{const v=mvOf(p,horizon);if(v==null)unpriced++;return a+(v||0)},0);
   return {t,byPos,st,bn,total:st+bn,unpriced,n:t.players.length};
 }
-function fmt$(n){return '$'+Math.round(n)}
+function fmt$(n){return '$'+Math.round(n).toLocaleString('en-US')}
 
 function mnStackedBars(M){
   /* ⚠️ This charted STARTERS only, which quietly hid a third of every roster: two teams with
@@ -3562,6 +3562,35 @@ function mnStackedBars(M){
    measures whether ESPN agrees with the market. That is a useful signal and a bad headline:
    a cheap quarterback ESPN is low on reads as a bad buy there, and reads as exactly what it
    is here. Bench status is deliberately ignored — a trade asset is a trade asset. */
+/* ⚠️ RANKED BARS, NOT A SCATTER, AND THE REASON IS STRUCTURAL. Value against value put
+   two thirds of every roster on the x axis in a smear: most rostered players project BELOW
+   replacement, so their implied worth clamps to zero and they pile up at the bottom while
+   one star stretches the axis. That is not an axis problem, it is what the data looks like,
+   and no scatter survives it.
+   The question this panel asks is "who does the projection disagree about", and the answer
+   to a "who" is a ranked list. Rows are always legible, the name is always attached, the
+   scale is the disagreement itself, and players the projection puts at replacement are
+   simply absent instead of being drawn as a wall of zeros. */
+function mnGapBars(rows){
+  const W=NARROW()?340:560, rh=24, pad=NARROW()?96:132, H=rows.length*rh+30;
+  const max=Math.max(1,...rows.map(r=>Math.abs(r.d)));
+  const mid=pad+(W-pad-56)/2, half=(W-pad-56)/2;
+  let g='<line x1="'+mid+'" y1="6" x2="'+mid+'" y2="'+(H-24)+'" style="stroke:var(--ink-3)" opacity=".7"/>';
+  rows.forEach((r,i)=>{
+    const y=i*rh+8, w=Math.abs(r.d)/max*half, x=r.d>=0?mid:mid-w;
+    g+='<text x="0" y="'+(y+12)+'" style="fill:var(--ink-2);font:600 11.5px system-ui">'+esc(r.name)+'</text>'
+      +'<rect x="'+x+'" y="'+y+'" width="'+w+'" height="15" rx="2" style="fill:'+POS_COLOR[r.pos]+';opacity:.85">'
+      +'<title>'+esc(r.name)+' ('+r.pos+') \u00b7 '+esc(r.team)+'\nmarket '+fmt$(r.x)
+      +' \u00b7 projection implies '+fmt$(r.y)+'</title></rect>'
+      +'<text x="'+(r.d>=0?mid+w+6:mid-w-6)+'" y="'+(y+12)+'" text-anchor="'+(r.d>=0?'start':'end')+'" '
+      +'style="font:700 11px ui-monospace,monospace;fill:'+(r.d>=0?'var(--good,#1f7a3f)':'var(--bad,#c8462f)')+'">'
+      +(r.d>=0?'+':'\u2212')+fmt$(Math.abs(r.d))+'</text>';
+  });
+  g+='<text x="'+(mid-6)+'" y="'+(H-8)+'" text-anchor="end" style="font:600 10px system-ui;fill:var(--ink-3)">market rates him higher</text>'
+    +'<text x="'+(mid+6)+'" y="'+(H-8)+'" style="font:600 10px system-ui;fill:var(--ink-3)">projection rates him higher</text>';
+  return '<svg viewBox="0 0 '+W+' '+H+'" class="wr-svg wr-svg-wide" role="img" aria-label="Players ranked by how far the projection and the market disagree, in dollars">'+g+'</svg>';
+}
+
 function mnDollarSvg(pts,opts){
   const o=opts||{}, xlab=o.xlab||'Price paid at the auction', xname=o.xname||'paid',
         yname=o.yname||'worth', lineLab=o.line||'paid = market value',
@@ -3747,23 +3776,25 @@ function renderMoney(){
     return {name:p.name,pos:p.pos,team:p.team,ti:p.ti,x:p.mv,y:implied,d:implied-p.mv};
   });
   const shown=mnTeam==='ALL'?all:all.filter(p=>String(p.ti)===String(mnTeam));
+  /* ⚠️ Only players the projection puts ABOVE replacement. Below it the implied value is
+     zero for everyone, so the "gap" is just market value again and the list fills with
+     $1 bench bodies — the wall of zeros the scatter drew, now sorted. */
+  const gaps=shown.filter(p=>p.y>0).sort((x,y)=>Math.abs(y.d)-Math.abs(x.d)).slice(0,14);
   const rich=shown.filter(p=>p.d>0).length;
   $('mnScatterNote').innerHTML=rate==null
     ? 'No player here projects above replacement, so the projection cannot be put in dollars.'
-    : 'Both axes are dollars. <b>Above the line</b> the projection wants a bigger share of the money than the market gives him; below it, the market sees something a week-one projection cannot. '
-      +'The projection is converted at this league’s own rate: the <b>'+fmt$(mvSum)+'</b> the market puts on these '
-      +rateRows.length+' players, spread over the '+vorSum.toFixed(1)+' points a week they project above replacement — about <b>'
-      +fmt$(rate)+'</b> a point. <b>Both sides total the same</b>, so this is a disagreement about share, not about how much money exists. '
-      +'<b>'+shown.length+'</b> player'+(shown.length===1?'':'s')+' shown · '+rich+' the projection rates above the market. '
+    : 'How far apart the two valuations are, in dollars, biggest gap first. The projection is converted at the league-wide rate \u2014 the '
+      +fmt$(mvSum)+' the market puts on '+rateRows.length+' players above replacement, over the '+vorSum.toFixed(1)
+      +' points a week they project, so about <b>'+fmt$(rate)+' a point</b>. Across the whole league the two sides total the same, '
+      +'so this is an argument about share'+(mnTeam==='ALL'?'.':' \u2014 though one roster is a slice of that, so it can lean.')
+      +' <b>'+gaps.length+'</b> shown of '+shown.filter(p=>p.y>0).length+' above replacement \u00b7 '+rich+' the projection rates higher. '
       +'Kickers and defenses are out: a dollar of kicker implies a rate that means nothing. '
-      +'This is about the projection — whether a pick was good is the chart above, which uses what was actually paid.';
+      +'This is about the projection \u2014 whether a pick was good is the chart above, which uses what was actually paid.';
   $('mnTeamSel').innerHTML='<option value="ALL"'+(mnTeam==='ALL'?' selected':'')+'>All teams</option>'
     +state.teams.map((t,i)=>'<option value="'+i+'"'+(String(mnTeam)===String(i)?' selected':'')+'>'+esc(t.name)+'</option>').join('');
   $('mnTeamSel').onchange=e=>{mnTeam=e.target.value;renderMoney()};
-  $('mnScatter').innerHTML=shown.length
-    ? mnDollarSvg(shown,{xlab:'Market value',xname:'market',yname:'projection implies',
-                         line:'projection = market'})
-    : '<p class="wr-note">No priced players for that filter.</p>';
+  $('mnScatter').innerHTML=gaps.length?mnGapBars(gaps)
+    :'<p class="wr-note">Nobody here projects above replacement, so there is no disagreement to show.</p>';
 
   /* ⚠️ THESE RANKED BY THE REGRESSION RESIDUAL AND PRINTED MARKET VALUE WHERE A PRICE GOES.
      Both halves were wrong for the question the cards are asking. A $1 running back worth
