@@ -788,6 +788,11 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 #gxSeasonTab td.me{font-weight:800;color:var(--accent)}
 #gxSeasonTab td.hm{color:var(--ink-1)}
 @media(max-width:640px){#gxSeasonTab td,#gxSeasonTab th{padding:6px 6px;font-size:11px}}
+.gx-cmp{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 2px}
+.gx-cmp button{border:1px solid var(--grid);background:var(--surface-1);color:var(--ink-2);
+  border-radius:999px;padding:5px 11px;font:700 11px/1.2 inherit;cursor:pointer}
+.gx-cmp button.on{border-color:currentColor}
+.gx-cmp button.me{color:var(--accent);border-color:var(--accent);font-weight:800;cursor:default}
 }.gx-private{font-size:10px;color:var(--ink-3);font-weight:700}.gx-danger td:first-child{font-weight:750}.gx-riskbar{height:6px;background:var(--grid);border-radius:99px;overflow:hidden;min-width:70px}.gx-riskbar i{display:block;height:100%;background:linear-gradient(90deg,var(--warn),var(--bad))}
 @media(max-width:760px){.gx-stage{padding:14px 11px}.gx-stage-grid{grid-template-columns:1fr}.gx-wheelbox canvas{max-width:360px}.gx-wheel-controls .btn{flex:1 1 120px}.gx-predict .controls{display:grid;grid-template-columns:1fr}.gx-predict select,.gx-predict input[type=range]{width:100%;max-width:none}.dtab{font-size:11.5px}.dtab th,.dtab td{padding:7px 6px}}
 @media(max-width:390px){.gx-stage{margin-left:-2px;margin-right:-2px}.gx-wheelbox canvas{max-width:calc(100vw - 54px)}.gx-tabs{margin-right:-8px}.hero-card{padding:15px 12px}.statrow{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -2383,7 +2388,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <h1 style="margin:10px 0 0;font-size:27px;font-weight:800;letter-spacing:-.01em">Last Dawg Standing</h1>
   <p class="lab-sub" style="margin-top:4px;font-weight:750;color:var(--accent)">The Guillotine League Companion</p>
   <p class="lab-sub">Every week the lowest-scoring team is eliminated and its roster hits waivers. You do not need the best team &mdash; you need to not be last. That is a different problem, and it needs a different tool.</p>
-  <div class="notbuilt"><b>Observed history + modeled next week.</b> Sleeper sync, completed scores, rosters, FAAB, waiver and live-draft observations come from your league. The weekly odds and Chop Wheel are simulations from completed history&mdash;not live in-game scores or ownership verification. Nothing here writes to Sleeper.</div>
+  <div class="notbuilt"><b>Observed history + modeled next week.</b> Sleeper sync, completed scores, rosters, FAAB, waiver and live-draft observations come from your league. The weekly odds and Chop Wheel are simulations &mdash; from completed history once two weeks exist, from Sleeper player projections before that &mdash; not live in-game scores or ownership verification. Nothing here writes to Sleeper.</div>
 
   <div class="gx-stage">
     <div class="pt-lower">
@@ -2564,6 +2569,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <section class="gx-sheet" id="gxSheetSeason" data-gx-panel="season" hidden>
     <div class="hero-card"><h2>The Long Game <span class="samp">Season Monte Carlo &middot; modeled</span></h2>
       <div class="statrow" id="gxSeasonCard"></div>
+      <div class="gx-cmp" id="gxCmp"></div>
       <div id="gxSeasonChart"></div>
       <div class="tscroll"><table class="dtab" id="gxSeasonTab"></table></div>
       <p class="legend" id="gxSeasonNote">Turns on once two completed weeks exist &mdash; the same gate as the weekly odds.</p>
@@ -2599,7 +2605,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
   <div class="honesty" style="margin-bottom:0">
     <h3>What this can't do</h3>
-    <p>Survival odds are a simulation from completed-score history and its variance &mdash; they assume the next week plays like a typical past week. They cannot see live Sunday scores, an inactive, or a garbage-time spike. Prediction receipts are local-device only and are not immutable, server-persisted, cross-device or graded. Projection-driven FAAB bid recommendations, full conditional waiver optimization, Universal Data Vault, and injury, bye-week, positional-depth and player-concentration fragility components are all <span class="gx-planned">Planned</span>. The Long Game&rsquo;s season Monte Carlo rolls the weekly model forward with rosters frozen at their current mean and spread &mdash; it cannot see waivers, injuries, byes, or the talent redistribution every chop causes, those omissions compound with every simulated week, and its finishing places cover the simulated teams only. The observed FAAB module encodes a framework about dollar appreciation, not a guarantee. The Draft War Room polls Sleeper every few seconds &mdash; near-live, not instant &mdash; and never writes to Sleeper; its pick matching is a name-and-position heuristic that can miss an unusual name, which a tap on the row fixes. The Guillotine Board&rsquo;s ranks, tiers and flags are editorial opinion built 2026-08-26 over the 2026-08-24 MV snapshot, not projections, and the FAAB War Plan is a dated editorial framework, not a bid engine.</p>
+    <p>Survival odds are a simulation from completed-score history and its variance &mdash; they assume the next week plays like a typical past week. Before two completed weeks exist the page runs in projection mode instead: Sleeper season player projections build each roster&rsquo;s best projected lineup and every team carries an assumed ±21-point spread &mdash; byes, injuries and schedule are not modeled there, and nothing in that mode is observed. They cannot see live Sunday scores, an inactive, or a garbage-time spike. Prediction receipts are local-device only and are not immutable, server-persisted, cross-device or graded. Projection-driven FAAB bid recommendations, full conditional waiver optimization, Universal Data Vault, and injury, bye-week, positional-depth and player-concentration fragility components are all <span class="gx-planned">Planned</span>. The Long Game&rsquo;s season Monte Carlo rolls the weekly model forward with rosters frozen at their current mean and spread &mdash; it cannot see waivers, injuries, byes, or the talent redistribution every chop causes, those omissions compound with every simulated week, and its finishing places cover the simulated teams only. The observed FAAB module encodes a framework about dollar appreciation, not a guarantee. The Draft War Room polls Sleeper every few seconds &mdash; near-live, not instant &mdash; and never writes to Sleeper; its pick matching is a name-and-position heuristic that can miss an unusual name, which a tap on the row fixes. The Guillotine Board&rsquo;s ranks, tiers and flags are editorial opinion built 2026-08-26 over the 2026-08-24 MV snapshot, not projections, and the FAAB War Plan is a dated editorial framework, not a bid engine.</p>
   </div>
 
     </div>
@@ -2840,6 +2846,66 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       return {name:p?p[0]:("id "+c.pid), pos:p?p[1]:null, team:(p&&p[2])||null, avg:+c.mean.toFixed(1), high:c.high, last:c.last, weeks:c.n}; });
   }
 
+  /* ------------------------- projection mode -------------------------------
+     NO GATE. When observed history cannot carry the maths (< 2 completed
+     weeks), team strength comes from Sleeper's season player projections:
+     one public fetch, each roster's best projected lineup under this
+     league's own slot list, per-game points = season points / projected gp.
+     ⚠️ The spread is ASSUMED — a flat ±21 for every team, a typical weekly
+     half-PPR swing — because projections carry no variance. Byes, injuries
+     and schedule are not modeled. Every surface in this mode says
+     "projected"; observed scoring takes over by itself at two weeks. */
+  var PROJ_SD = 21;
+  function lineupSlots(positions){
+    var sl={QB:0,RB:0,WR:0,TE:0,FLEX:0,SFLX:0};
+    (positions||[]).forEach(function(p){
+      if(p==="QB")sl.QB++; else if(p==="RB")sl.RB++; else if(p==="WR")sl.WR++; else if(p==="TE")sl.TE++;
+      else if(p==="FLEX"||p==="W/R/T"||p==="WRRB_FLEX"||p==="REC_FLEX")sl.FLEX++;
+      else if(p==="SUPER_FLEX")sl.SFLX++;
+    });
+    return sl;
+  }
+  async function projectTeams(league, rosters, aliveTeams){
+    var r = await fetch("https://api.sleeper.app/projections/nfl/"+league.season
+      +"?season_type=regular&position[]=QB&position[]=RB&position[]=WR&position[]=TE");
+    if(!r.ok) throw new Error("projections http "+r.status);
+    var rows = await r.json();
+    var rec = (league.scoring_settings && typeof league.scoring_settings.rec==="number") ? league.scoring_settings.rec : 0.5;
+    var key = rec>=1 ? "pts_ppr" : rec>0 ? "pts_half_ppr" : "pts_std";
+    var pg={}, ppos={};
+    (rows||[]).forEach(function(row){
+      var st=row&&row.stats; if(!st||typeof st[key]!=="number")return;
+      var games=(typeof st.gp==="number"&&st.gp>0)?st.gp:17;
+      pg[row.player_id]=st[key]/games;
+      ppos[row.player_id]=(row.player&&row.player.position)||"";
+    });
+    var slots=lineupSlots(league.roster_positions);
+    var byR={}; (rosters||[]).forEach(function(row){ byR[row.roster_id]=row.players||[]; });
+    var out=[];
+    aliveTeams.forEach(function(t){
+      var ps=(byR[t.rid]||[]).map(function(p){ return {pos:ppos[p]||"", pg:pg[p]||0}; })
+                             .filter(function(p){ return p.pg>0; });
+      if(!ps.length) return;
+      var by={QB:[],RB:[],WR:[],TE:[]};
+      ps.forEach(function(p){ if(by[p.pos]) by[p.pos].push(p.pg); });
+      for(var k in by) by[k].sort(function(a,b){ return b-a; });
+      var mean=0, flexPool=[];
+      ["QB","RB","WR","TE"].forEach(function(k2){
+        var take=slots[k2]||0;
+        by[k2].forEach(function(v,ix){
+          if(ix<take) mean+=v;
+          else if(k2!=="QB"||slots.SFLX>0) flexPool.push(v);
+        });
+      });
+      flexPool.sort(function(a,b){ return b-a; });
+      for(var f=0; f<slots.FLEX+slots.SFLX && f<flexPool.length; f++) mean+=flexPool[f];
+      // ⚠️ low/last stay null in projection mode — nothing has been observed,
+      // and fabricating an "observed low" would be lying with a number.
+      t.mean=mean; t.sd=PROJ_SD; t.n=0; t.low=null; t.last=null; t.proj=true;
+      out.push(t);
+    });
+    return out;
+  }
   async function sync(id){
     msg("Loading…");
     var state, league, users, rosters;
@@ -2918,7 +2984,12 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
     var live = alive.filter(function(t){ return t.n >= 2 && t.sd > 0; });
 
+    var MODE = "observed";
     if(live.length < 2){
+      var projected = null;
+      try{ projected = await projectTeams(league, rosters, alive); }catch(e){ projected = null; }
+      if(projected && projected.length >= 2){ MODE = "projected"; live = projected; }
+      else {
       paintEmpty(league, teams, done,
         done===0 ? "The season hasn't started — Sleeper reports week 0 of "+esc(league.season)+"."
                  : "Only "+done+" completed week"+(done===1?"":"s")+" of scores so far.");
@@ -2930,8 +3001,9 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
                       all: teams.map(function(t){ return {rid:t.rid, name:t.name, owner:t.owner, dead:!!t.dead}; }) };
       try{ window.dispatchEvent(new CustomEvent("gx-ready", {detail:window.__GX})); }catch(e){}
       elWvCard.style.display="none";
-      msg("Connected to <b>"+esc(league.name)+"</b> — "+teams.length+" teams.");
+      msg("Connected to <b>"+esc(league.name)+"</b> — "+teams.length+" teams. Projections attach as soon as rosters exist.");
       return;
+      }
     }
 
     var res = simulate(live);
@@ -2952,7 +3024,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
        labelled apart in the context builder — do not collapse them here. */
     window.__GX = {
       leagueId: id, league: league.name, season: league.season, teamCount: teams.length,
-      done: done, chop: res.chop, chopLo: res.chopLo, chopHi: res.chopHi,
+      done: done, mode: MODE, chop: res.chop, chopLo: res.chopLo, chopHi: res.chopHi,
       chopped: teams.length - alive.length,
       excluded: alive.length - live.length,
       faab: faab,
@@ -2970,17 +3042,19 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     }).catch(function(){});
 
     elLive.style.display="";
-    elState.textContent = me ? "Modeled week · focus selected" : "Modeled week · pick a focus team";
+    elState.textContent = (MODE==="projected" ? "Projected · " : "Modeled week · ") + (me ? "focus selected" : "pick a focus team");
     if(me){
       elPct.textContent = Math.round(me.surv*100) + "%";
       elPctL.innerHTML = "chance <b>"+esc(me.name)+"</b> survives week "+(done+1)
-        + " — the probability of not being the lowest scorer, from "+done+" weeks of this league's own scoring.";
+        + (MODE==="projected"
+          ? " — modeled from Sleeper player projections with an assumed ±"+PROJ_SD+"-point spread. Nothing observed yet."
+          : " — the probability of not being the lowest scorer, from "+done+" weeks of this league's own scoring.");
       elGauge.innerHTML = gauge(res.chop, me.mean);
       elStats.innerHTML = tile(me.mean.toFixed(1),"Your average")
         + tile(res.chop.toFixed(1),"Projected chop line")
         + tile(res.chopLo.toFixed(0)+"–"+res.chopHi.toFixed(0),"Chop 80% band")
         + tile((me.mean-res.chop>=0?"+":"")+(me.mean-res.chop).toFixed(1),"Margin")
-        + tile(live.length,"Teams simulated") + tile(done,"Weeks of history");
+        + tile(live.length,"Teams simulated") + (MODE==="projected"?tile("Sleeper","Projection source"):tile(done,"Weeks of history"));
     } else {
       elPct.innerHTML = "&mdash;";
       elPctL.innerHTML = "Click your team in the table below and this becomes your survival odds. "
@@ -2988,19 +3062,20 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       elGauge.innerHTML = "";
       elStats.innerHTML = tile(res.chop.toFixed(1),"Projected chop line")
         + tile(res.chopLo.toFixed(0)+"–"+res.chopHi.toFixed(0),"Chop 80% band")
-        + tile(live.length,"Teams simulated") + tile(done,"Weeks of history");
+        + tile(live.length,"Teams simulated") + (MODE==="projected"?tile("Sleeper","Projection source"):tile(done,"Weeks of history"));
     }
 
-    elTab.innerHTML = "<thead><tr><th>Team</th><th>Avg</th><th>Std dev</th><th>Low</th><th>Last</th><th>Survive</th></tr></thead><tbody>"
+    elTab.innerHTML = "<thead><tr><th>Team</th><th>"+(MODE==="projected"?"Proj avg":"Avg")+"</th><th>"+(MODE==="projected"?"Assumed spread":"Std dev")+"</th><th>Low</th><th>Last</th><th>Survive</th></tr></thead><tbody>"
       + live.map(function(t){
           return '<tr class="'+(t.surv<0.75?"risk":"")+'"><td class="'+(me&&t.rid===me.rid?"me":"")+'">'+esc(t.name)+"</td>"
-            + "<td>"+t.mean.toFixed(1)+"</td><td>"+t.sd.toFixed(1)+"</td><td>"+t.low.toFixed(1)+"</td>"
-            + "<td>"+t.last.toFixed(1)+"</td><td class='"+(t.surv<0.75?"neg":"pos")+"'>"+Math.round(t.surv*100)+"%</td></tr>";
+            + "<td>"+t.mean.toFixed(1)+"</td><td>"+t.sd.toFixed(1)+"</td><td>"+(t.low==null?"—":t.low.toFixed(1))+"</td>"
+            + "<td>"+(t.last==null?"—":t.last.toFixed(1))+"</td><td class='"+(t.surv<0.75?"neg":"pos")+"'>"+Math.round(t.surv*100)+"%</td></tr>";
         }).join("") + "</tbody>";
 
     var choppedN = teams.length - alive.length, thinN = alive.length - live.length;
-    elNote.innerHTML = "⚠️ "+SIMS.toLocaleString()+" simulated weeks from each team's own mean and spread over "
-      + done + " completed week" + (done===1?"":"s") + "."
+    elNote.innerHTML = "⚠️ "+SIMS.toLocaleString()+(MODE==="projected"
+      ? " simulated weeks from Sleeper season player projections — best projected lineup per roster, an assumed ±"+PROJ_SD+"-point spread for every team; byes, injuries and schedule are not modeled. Your league's own observed scoring takes over at two completed weeks."
+      : " simulated weeks from each team's own mean and spread over "+done+" completed week"+(done===1?"":"s")+".")
       + (choppedN ? " "+choppedN+" chopped team"+(choppedN===1?"":"s")+" (empty roster) sit"+(choppedN===1?"s":"")+" out." : "")
       + (thinN ? " "+thinN+" team"+(thinN===1?"":"s")+" with fewer than two scores sit"+(thinN===1?"s":"")+" out." : "")
       + " Click a row's team to set which one is yours.";
@@ -3009,7 +3084,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       tr.style.cursor="pointer";
       tr.addEventListener("click", function(){ var c=cfg(); c.me=live[i].rid; setCfg(c); sync(id); });
     });
-    msg("Connected to <b>"+esc(league.name)+"</b> — "+teams.length+" teams, "+done+" completed weeks.");
+    msg("Connected to <b>"+esc(league.name)+"</b> — "+teams.length+" teams, "+(MODE==="projected"?"projection mode (no scores yet)":done+" completed weeks")+".");
   }
 
   elGo.addEventListener("click", function(){
@@ -3143,8 +3218,10 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       }).join("");
       if(cut)cut.textContent="Projected cut · median simulated low";
       if(tag)tag.textContent="Every bar is a team. The taller the bar, the likelier the chop.";
-      if(flat)flat.innerHTML="Modeled from "+G.done+" completed week"+(G.done===1?"":"s")
-        +" — a simulation, not live scores. Tap a bar to make that team your focus.";
+      if(flat)flat.innerHTML=(G.mode==="projected"
+        ? "Modeled from Sleeper player projections — assumed ±21 spread, byes and injuries not modeled; observed scoring takes over at two completed weeks."
+        : "Modeled from "+G.done+" completed week"+(G.done===1?"":"s")+" — a simulation, not live scores.")
+        +" Tap a bar to make that team your focus.";
     }else{
       var ghost="repeating-linear-gradient(135deg,#3A2E24 0 7px,#2A211A 7px 14px)",
           mineg="repeating-linear-gradient(135deg,#FF8A3D 0 7px,#C4600F 7px 14px)";
@@ -3212,6 +3289,11 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     return {sims:SEASON_SIMS,weeks:weeks,rows:rows,teams:n,
             excluded:(G.teams||[]).length-n,chopped:G.chopped||0,capped:rem<n-1};
   }
+  var CMPKEY="dd-guillotine-cmp-v1",
+      CMPPAL=["#4FA3E3","#2FD4A6","#8E7BE0","#E4386B","#F2B33D","#3F9E86"];
+  function cmpList(lg){try{var m=JSON.parse(localStorage.getItem(CMPKEY)||"{}");return (m[lg]||[]).slice(0,8);}catch(e){return [];}}
+  function cmpToggle(lg,rid){try{var m=JSON.parse(localStorage.getItem(CMPKEY)||"{}");var a=m[lg]||[],ix=a.indexOf(rid);
+    if(ix>-1)a.splice(ix,1);else a.push(rid);m[lg]=a.slice(-8);localStorage.setItem(CMPKEY,JSON.stringify(m));}catch(e){}}
   function heatBg(v){return v>=2/3?"rgba(63,163,125,.16)":v>=1/3?"rgba(233,161,61,.20)":"rgba(255,86,86,.24)";}
   function seasonPaint(G){
     var S=G.mc,card=document.getElementById("gxSeasonCard"),chart=document.getElementById("gxSeasonChart"),
@@ -3237,14 +3319,42 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     svg.push('<text x="'+x0+'" y="'+(H-4)+'" font-size="9" fill="var(--ink-3)">now</text>');
     svg.push('<text x="'+X(rem)+'" y="'+(H-4)+'" text-anchor="end" font-size="9" fill="var(--ink-3)">wk '+S.weeks[rem-1]+'</text>');
     if(rem>3)svg.push('<text x="'+X(Math.ceil(rem/2))+'" y="'+(H-4)+'" text-anchor="middle" font-size="9" fill="var(--ink-3)">wk '+S.weeks[Math.ceil(rem/2)-1]+'</text>');
-    S.rows.forEach(function(r){if(r.rid!==meRid)svg.push('<polyline points="'+pts(r)+'" fill="none" stroke="var(--ink-3)" stroke-opacity=".33" stroke-width="1.5" stroke-linejoin="round"/>');});
+    /* compare overlays: field faint, chosen teams in their chip colour, focus on top */
+    var cmp=cmpList(G.leagueId),colorOf={};
+    cmp.forEach(function(rid,ix){ colorOf[rid]=CMPPAL[ix%CMPPAL.length]; });
+    var labels=[];
+    S.rows.forEach(function(r){if(r.rid!==meRid&&colorOf[r.rid]===undefined)svg.push('<polyline points="'+pts(r)+'" fill="none" stroke="var(--ink-3)" stroke-opacity=".33" stroke-width="1.5" stroke-linejoin="round"/>');});
+    S.rows.forEach(function(r){var c=colorOf[r.rid];if(c===undefined||r.rid===meRid)return;
+      svg.push('<polyline points="'+pts(r)+'" fill="none" stroke="'+c+'" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>');
+      svg.push('<circle cx="'+X(rem)+'" cy="'+Y(r.curve[rem-1])+'" r="3" fill="'+c+'"/>');
+      labels.push({y:Y(r.curve[rem-1]),text:r.name+" "+Math.round(r.curve[rem-1]*100)+"%",color:c,w:600});});
     if(mine){
       svg.push('<polyline points="'+pts(mine)+'" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>');
       svg.push('<circle cx="'+X(rem)+'" cy="'+Y(mine.curve[rem-1])+'" r="3.5" fill="var(--accent)"/>');
-      svg.push('<text x="'+(X(rem)-6)+'" y="'+Math.max(10,Y(mine.curve[rem-1])-8)+'" text-anchor="end" font-size="10" font-weight="800" fill="var(--accent)">'+esc(mine.name)+" "+Math.round(mine.curve[rem-1]*100)+'%</text>');
+      labels.push({y:Y(mine.curve[rem-1]),text:mine.name+" "+Math.round(mine.curve[rem-1]*100)+"%",color:"var(--accent)",w:800});
+    }
+    /* end labels collide when curves converge — nudge them 12px apart, top-down */
+    labels.sort(function(a,b){return a.y-b.y;});
+    for(var li=0;li<labels.length;li++){
+      if(li>0&&labels[li].y-labels[li-1].y<12)labels[li].y=labels[li-1].y+12;
+      var lb=labels[li];
+      svg.push('<text x="'+(X(rem)-7)+'" y="'+Math.max(10,lb.y-6)+'" text-anchor="end" font-size="10" font-weight="'+lb.w+'" fill="'+lb.color+'">'+esc(lb.text)+'</text>');
     }
     svg.push('</svg>');
     chart.innerHTML=svg.join("");
+    /* the chips: tap to overlay a team's curve; the focus team is always drawn */
+    var chipsEl=document.getElementById("gxCmp");
+    if(chipsEl){
+      chipsEl.innerHTML=S.rows.map(function(r){
+        var isMe=r.rid===meRid,on=colorOf[r.rid]!==undefined;
+        return '<button type="button" data-rid="'+r.rid+'" class="'+(isMe?"me":(on?"on":""))+'"'
+          +(on&&!isMe?' style="color:'+colorOf[r.rid]+'"':'')+'>'+esc(r.name)+'</button>';
+      }).join("");
+      Array.prototype.forEach.call(chipsEl.querySelectorAll("button"),function(b){
+        b.onclick=function(){var rid=Number(b.getAttribute("data-rid"));if(rid===meRid)return;
+          cmpToggle(G.leagueId,rid);seasonPaint(G);};
+      });
+    }
     /* matrix: the decay, week by week, for everyone */
     var head='<thead><tr><th>Team</th><th>Wins it all</th><th>Median finish</th>'
       +S.weeks.map(function(w){return '<th>Wk '+w+'</th>';}).join("")+'</tr></thead>';
@@ -3264,14 +3374,18 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       +"so treat this as a modeled illustration, not a forecast. Finishing places are among the "+S.teams+" simulated teams"
       +(S.chopped?"; "+S.chopped+" chopped team(s) already hold the bottom places":"")
       +(S.excluded?"; "+S.excluded+" team(s) with under 2 weeks of scores are not simulated":"")
-      +(S.capped?"; the season ends at week 17 with more than one dawg standing, so &ldquo;wins&rdquo; means alive at the end":"")+". Tap a row to make that team your focus.";
+      +(S.capped?"; the season ends at week 17 with more than one dawg standing, so &ldquo;wins&rdquo; means alive at the end":"")+(G.mode==="projected"?". ⚠️ Projection mode: team strength is Sleeper season projections with an assumed ±21 spread — nothing observed yet":"")+". Tap a team name above the chart to overlay its curve and compare decay side by side; tap a row to make that team your focus.";
   }
-  function paint(G){ladder(G);if(!G||!G.teams||!G.teams.length)return;teams=G.teams.slice();draw();document.getElementById("gxSpinOne").disabled=false;document.getElementById("gxSpinTen").disabled=false;document.getElementById("gxTally").textContent=spins?document.getElementById("gxTally").textContent:"Ready · 0 session spins";document.getElementById("gxPredict").hidden=false;var me=G.me,card=document.getElementById("gxSurvivalCard");card.innerHTML=me?tile(esc(me.name),"Focus team")+tile(Math.round(me.surv*100)+"%","Modeled weekly survival")+tile((me.mean-G.chop>=0?"+":"")+(me.mean-G.chop).toFixed(1),"Avg vs modeled chop")+tile(G.done,"Observed weeks"):tile("Not selected","Focus team")+tile(G.done,"Observed weeks");
-    var d=document.getElementById("gxDangerTab");d.innerHTML='<thead><tr><th>Team</th><th>Modeled chop risk</th><th>Risk</th><th>Observed avg</th><th>Observed low</th></tr></thead><tbody>'+teams.slice().sort(function(a,b){return a.surv-b.surv;}).map(function(t){var r=Math.round((1-t.surv)*100);return '<tr data-rid="'+t.rid+'"><td class="'+(me&&me.rid===t.rid?'me':'')+'">'+esc(t.name)+'</td><td class="neg">'+r+'%</td><td><div class="gx-riskbar"><i style="width:'+r+'%"></i></div></td><td>'+t.mean.toFixed(1)+'</td><td>'+t.low.toFixed(1)+'</td></tr>';}).join("")+'</tbody>';d.querySelectorAll("tbody tr").forEach(function(tr){tr.style.cursor="pointer";tr.onclick=function(){focus(Number(tr.dataset.rid));};});
-    var f=document.getElementById("gxFragilityTab");f.innerHTML='<thead><tr><th>Team</th><th>Observed volatility</th><th>Observed floor</th><th>V1 flag</th></tr></thead><tbody>'+teams.slice().sort(function(a,b){return (b.sd+b.mean-b.low)-(a.sd+a.mean-a.low);}).map(function(t){var x=t.sd+t.mean-t.low;return '<tr><td>'+esc(t.name)+'</td><td>'+t.sd.toFixed(1)+'</td><td>'+t.low.toFixed(1)+'</td><td>'+(x>35?'High':x>22?'Watch':'Lower')+'</td></tr>';}).join("")+'</tbody>';
+  function paint(G){ladder(G);if(!G||!G.teams||!G.teams.length)return;teams=G.teams.slice();draw();document.getElementById("gxSpinOne").disabled=false;document.getElementById("gxSpinTen").disabled=false;document.getElementById("gxTally").textContent=spins?document.getElementById("gxTally").textContent:"Ready · 0 session spins";document.getElementById("gxPredict").hidden=false;var me=G.me,card=document.getElementById("gxSurvivalCard");card.innerHTML=me?tile(esc(me.name),"Focus team")+tile(Math.round(me.surv*100)+"%",G.mode==="projected"?"Projected weekly survival":"Modeled weekly survival")+tile((me.mean-G.chop>=0?"+":"")+(me.mean-G.chop).toFixed(1),G.mode==="projected"?"Proj avg vs chop":"Avg vs modeled chop")+(G.mode==="projected"?tile("Projections","Running on"):tile(G.done,"Observed weeks")):tile("Not selected","Focus team")+(G.mode==="projected"?tile("Projections","Running on"):tile(G.done,"Observed weeks"));
+    var d=document.getElementById("gxDangerTab");d.innerHTML='<thead><tr><th>Team</th><th>Modeled chop risk</th><th>Risk</th><th>'+(G.mode==="projected"?"Projected avg":"Observed avg")+'</th><th>Observed low</th></tr></thead><tbody>'+teams.slice().sort(function(a,b){return a.surv-b.surv;}).map(function(t){var r=Math.round((1-t.surv)*100);return '<tr data-rid="'+t.rid+'"><td class="'+(me&&me.rid===t.rid?'me':'')+'">'+esc(t.name)+'</td><td class="neg">'+r+'%</td><td><div class="gx-riskbar"><i style="width:'+r+'%"></i></div></td><td>'+t.mean.toFixed(1)+'</td><td>'+(t.low==null?"—":t.low.toFixed(1))+'</td></tr>';}).join("")+'</tbody>';d.querySelectorAll("tbody tr").forEach(function(tr){tr.style.cursor="pointer";tr.onclick=function(){focus(Number(tr.dataset.rid));};});
+    var f=document.getElementById("gxFragilityTab");
+    /* fragility is an OBSERVED instrument — in projection mode every team carries
+       the same assumed spread, so there is no volatility to measure yet. */
+    if(G.mode==="projected"){f.innerHTML='<tbody><tr><td style="text-align:left">Weak Spots needs observed weeks. In projection mode every team carries the same assumed ±21 spread, so volatility and floor cannot be measured — this fills in on its own once games are played.</td></tr></tbody>';}
+    else f.innerHTML='<thead><tr><th>Team</th><th>Observed volatility</th><th>Observed floor</th><th>V1 flag</th></tr></thead><tbody>'+teams.slice().sort(function(a,b){return (b.sd+b.mean-b.low)-(a.sd+a.mean-a.low);}).map(function(t){var x=t.sd+t.mean-t.low;return '<tr><td>'+esc(t.name)+'</td><td>'+t.sd.toFixed(1)+'</td><td>'+t.low.toFixed(1)+'</td><td>'+(x>35?'High':x>22?'Watch':'Lower')+'</td></tr>';}).join("")+'</tbody>';
     /* season MC is cached on the stash: focus taps repaint without re-simulating */
     if(!G.mc)G.mc=simulateSeason(G);
-    seasonPaint(G);var sel=document.getElementById("gxPredTeam"),old=sel.value;sel.innerHTML=teams.map(function(t){return '<option value="'+t.rid+'">'+esc(t.name)+'</option>';}).join("");if(old)sel.value=old;document.getElementById("gxState").textContent=locked()?"Sunday room · predictions locked":"Modeled week · not live scores";receipt();addLeague(G.leagueId,G.me&&G.me.rid);}
+    seasonPaint(G);var sel=document.getElementById("gxPredTeam"),old=sel.value;sel.innerHTML=teams.map(function(t){return '<option value="'+t.rid+'">'+esc(t.name)+'</option>';}).join("");if(old)sel.value=old;document.getElementById("gxState").textContent=locked()?"Sunday room · predictions locked":(G.mode==="projected"?"Projected · not live scores":"Modeled week · not live scores");receipt();addLeague(G.leagueId,G.me&&G.me.rid);}
   var conf=document.getElementById("gxConfidence");conf.oninput=function(){document.getElementById("gxConfOut").textContent=conf.value+"%";};
   function receipt(){var r=read(PRED,null),box=document.getElementById("gxReceipt"),week=window.__GX?Number(window.__GX.done||0)+1:null,save=document.getElementById("gxPredSave");save.disabled=locked();box.textContent=r&&window.__GX&&r.leagueId===window.__GX.leagueId&&r.week===week?"DEVICE RECEIPT · week "+r.week+" · "+r.team+" · "+r.confidence+"% · saved "+new Date(r.savedAt).toLocaleString()+" · local only":"No prediction saved for this league and week on this device.";}
   document.getElementById("gxPredSave").onclick=function(){if(locked())return;var s=document.getElementById("gxPredTeam"),t=teams.find(function(x){return String(x.rid)===s.value;});if(!t)return;write(PRED,{leagueId:window.__GX.leagueId,week:Number(window.__GX.done||0)+1,team:t.name,rosterId:t.rid,confidence:Number(conf.value),savedAt:Date.now(),storage:"local-device"});receipt();};
@@ -3463,7 +3577,8 @@ window.DD_BOTCTX = {
 - A team missing from the table has fewer than 2 completed weeks, a zero standard deviation, or an EMPTY roster — empty mid-season means chopped. That is the answer to "why am I not listed", not a bug.
 - The DRAFT WAR ROOM sheet reads a Sleeper draft read-only (picks, slots, on-the-clock) and strikes its Guillotine Board as picks land. Board rank, tiers and flags are EDITORIAL opinion built 2026-08-26 over the site's 2026-08-24 MV snapshot (12-team Half-PPR auction dollars — relative worth, never a snake price, never a projection). Say "the board" or "the editorial re-rank" when you cite it, never "the model" or "projections". Pick matching is a name+position heuristic and can miss; the user taps a row to fix it.
 - The FAAB WAR PLAN card is a dated editorial framework calibrated to ONE room's observed 2025 winning bids plus published case studies. Quote its ranges as opinion with the date. The standing rule holds: never dress a specific bid recommendation up as maths.
-- THE LONG GAME sheet is a SEASON Monte Carlo: thousands of simulated seasons rolling the same weekly model forward, chopping the lowest each week. ⚠️ Rosters are FROZEN at today's mean and spread — no waivers, no injuries, no byes, and no chopped-roster talent redistribution, which is the defining dynamic of this format — and every weekly assumption COMPOUNDS with each simulated week. Quote win odds and survival curves as a modeled illustration, never as a forecast. Finishing places are among the simulated teams only.`,
+- THE LONG GAME sheet is a SEASON Monte Carlo: thousands of simulated seasons rolling the same weekly model forward, chopping the lowest each week. ⚠️ Rosters are FROZEN at today's mean and spread — no waivers, no injuries, no byes, and no chopped-roster talent redistribution, which is the defining dynamic of this format — and every weekly assumption COMPOUNDS with each simulated week. Quote win odds and survival curves as a modeled illustration, never as a forecast. Finishing places are among the simulated teams only.
+- PROJECTION MODE: before two completed weeks exist, team means come from SLEEPER SEASON PLAYER PROJECTIONS — the best projected lineup per roster under this league's slot list — and every team carries an ASSUMED ±21-point weekly spread; byes, injuries and schedule are NOT modeled. Call every number in this mode "projected", never "observed". The page switches to the league's own scoring by itself at two completed weeks.`,
   ctx: () => {
     const D = window.__GXD, dl = [];
     if(D){
@@ -3495,6 +3610,8 @@ window.DD_BOTCTX = {
     const L=[];
     if(dl.length){ dl.forEach(x => L.push(x)); L.push(''); }
     L.push(`LEAGUE: ${G.league} (${G.season}). ${G.teamCount} teams, ${G.done} completed week(s) of scoring history. Next week is week ${G.done+1}.`);
+    if(G.mode === "projected")
+      L.push(`⚠️ PROJECTION MODE — no observed scoring yet. Every team mean below is Sleeper season player projections (best projected lineup per roster); every team carries an ASSUMED ±21-point spread; byes, injuries and schedule are not modeled. Quote all of it as projected.`);
     L.push(G.me
       ? `THE USER'S TEAM: ${G.me.name} — simulated ${Math.round(G.me.surv*100)}% to survive week ${G.done+1}. Average ${G.me.mean.toFixed(1)}, margin over the projected chop line ${(G.me.mean-G.chop>=0?'+':'')+(G.me.mean-G.chop).toFixed(1)}.`
       : `THE USER HAS NOT PICKED THEIR TEAM YET — they click their row in the table. Until then you do not know which team is theirs, so do not assume one.`);
@@ -3502,7 +3619,7 @@ window.DD_BOTCTX = {
       + (G.chopLo != null ? ` 80% band: ${G.chopLo.toFixed(1)} to ${G.chopHi.toFixed(1)}.` : ''));
     L.push(`TEAMS, most at risk first (survive% is simulated; avg/sd/low/last are observed):`);
     L.push('team | owner | survive% | avg | sd | low | last');
-    G.teams.forEach(t=>L.push(`${t.name} | ${t.owner} | ${Math.round(t.surv*100)}% | ${t.mean.toFixed(1)} | ${t.sd.toFixed(1)} | ${t.low.toFixed(1)} | ${t.last.toFixed(1)}`));
+    G.teams.forEach(t=>L.push(`${t.name} | ${t.owner} | ${Math.round(t.surv*100)}% | ${t.mean.toFixed(1)} | ${t.sd.toFixed(1)} | ${t.low==null?'—':t.low.toFixed(1)} | ${t.last==null?'—':t.last.toFixed(1)}`));
     faabLines(L);
     if(G.waiver && G.waiver.length){
       L.push(`WAIVER BOARD (observed points in THIS league's scoring; players on no current roster; a player only has data for weeks a roster held them):`);
@@ -3515,7 +3632,7 @@ window.DD_BOTCTX = {
       L.push('team | win% | median finish | alive through wk ' + S.weeks[S.weeks.length-1]);
       S.rows.forEach(r => L.push(`${r.name} | ${Math.round(r.win*100)}% | ${r.med} | ${Math.round(r.curve[r.curve.length-1]*100)}%`));
     }
-    if(G.done < 4) L.push(`⚠️ ONLY ${G.done} COMPLETED WEEK(S). The standard deviations are barely estimated and these probabilities are soft. Lead with that if anyone leans on a number.`);
+    if(G.mode !== "projected" && G.done < 4) L.push(`⚠️ ONLY ${G.done} COMPLETED WEEK(S). The standard deviations are barely estimated and these probabilities are soft. Lead with that if anyone leans on a number.`);
     if(G.chopped) L.push(`${G.chopped} team(s) have been chopped (empty roster) and are excluded from the simulation and the FAAB pool.`);
     if(G.excluded) L.push(`${G.excluded} surviving team(s) are excluded from the simulation for having under 2 weeks of scores or a zero standard deviation.`);
     return L.join('\n');
