@@ -333,6 +333,53 @@ ok("the honesty card is still reachable, only collapsed",
   html.includes("What this can't do") && html.includes('class="honesty"'));
 ok("the phone ladder has a row layout to switch into", html.includes(".pt-ladder.is-live .pt-lane{display:grid"));
 
+/* -------------------- The Long Game: season Monte Carlo ------------------ */
+els.clear();
+const MC4 = [
+  { rid: 1, name: "Alpha", owner: "a", surv: .99, mean: 125, sd: 8, low: 110, last: 126 },
+  { rid: 2, name: "Beta",  owner: "b", surv: .90, mean: 112, sd: 8, low: 100, last: 113 },
+  { rid: 3, name: "Gamma", owner: "c", surv: .70, mean: 101, sd: 8, low: 90,  last: 100 },
+  { rid: 4, name: "Delta", owner: "d", surv: .40, mean: 90,  sd: 8, low: 78,  last: 88 },
+];
+globalThis.__GX = { leagueId: "12345", league: "T", season: "2026", teamCount: 4, done: 3,
+  chop: 92, chopped: 0, me: { rid: 2, name: "Beta", surv: .9, mean: 112 },
+  all: MC4.map(t => ({ rid: t.rid, name: t.name })), teams: MC4 };
+new Function(ldsBlock)();
+await new Promise(r => setTimeout(r, 30));
+const MC = globalThis.__GX.mc;
+ok("season Monte Carlo stashed under G.mc", !!MC && Array.isArray(MC.rows));
+// ⚠️ regression: __GX.season is the NFL season STRING ("2026") — the cache must
+// never live there, or `if(G.season)` is always true and Toto's ctx crashes.
+ok("the season string survives untouched", globalThis.__GX.season === "2026");
+ok("simulates min(alive-1, 17-done) chop weeks", MC && MC.weeks.length === 3 && MC.weeks[0] === 4);
+ok("win odds sum to one across the field",
+  MC && Math.abs(MC.rows.reduce((a, r) => a + r.win, 0) - 1) < 0.02,
+  MC && String(MC.rows.reduce((a, r) => a + r.win, 0)));
+ok("the strongest scorer has the best win odds", MC && MC.rows[0].name === "Alpha");
+ok("the weakest scorer wins least",
+  MC && MC.rows[MC.rows.length - 1].name === "Delta" && MC.rows[MC.rows.length - 1].win < MC.rows[0].win);
+ok("every survival curve decays monotonically",
+  MC && MC.rows.every(r => r.curve.every((v, i) => i === 0 || v <= r.curve[i - 1] + 1e-9)));
+ok("curve end equals win odds when the field plays to one dawg",
+  MC && MC.rows.every(r => Math.abs(r.curve[r.curve.length - 1] - r.win) < 1e-9));
+ok("median finishes stay inside 1..teams",
+  MC && MC.rows.every(r => r.med >= 1 && r.med <= 4));
+const seasHtml = byId("gxSeasonTab").innerHTML;
+ok("matrix renders one column per remaining week + win/finish",
+  seasHtml.includes("Wk 4") && seasHtml.includes("Wk 6") && seasHtml.includes("Wins it all") && seasHtml.includes("Median finish"));
+ok("matrix rows carry every simulated team", ["Alpha", "Beta", "Gamma", "Delta"].every(n => seasHtml.includes(n)));
+ok("heat cells are painted", seasHtml.includes('class="hm"') && seasHtml.includes("rgba("));
+ok("focus team is flagged in the matrix", /class="me">Beta/.test(seasHtml));
+ok("survival chart drawn with the focus curve on top", byId("gxSeasonChart").innerHTML.includes("<svg") &&
+  byId("gxSeasonChart").innerHTML.includes("Beta"));
+ok("season note says frozen rosters, illustration not forecast",
+  /frozen/i.test(byId("gxSeasonNote").innerHTML) && /not a forecast/.test(byId("gxSeasonNote").innerHTML));
+const mcCtx = globalThis.DD_BOTCTX.ctx();
+ok("Toto ctx carries the season table with its caveats",
+  mcCtx.includes("SEASON MONTE CARLO") && mcCtx.includes("FROZEN") && mcCtx.includes("Alpha"));
+ok("honesty card no longer lists the season MC as Planned",
+  !html.includes("season championship Monte Carlo, Universal") && html.includes("compound with every simulated week"));
+
 /* ----------------------- Last Dawg Standing V1 contract ------------------ */
 ok("locked product name and descriptor ship together",
   html.includes("Last Dawg Standing") && html.includes("The Guillotine League Companion"));
