@@ -31,6 +31,7 @@ function makeEl(id) {
     handlers: {},
     addEventListener(ev, fn) { (this.handlers[ev] = this.handlers[ev] || []).push(fn); },
     querySelectorAll() { return []; },
+    getContext() { return null; },   // canvas: no 2d ctx headless, so the wheel no-ops
     click() { (this.handlers.click || []).forEach(f => f({})); },
   };
 }
@@ -46,6 +47,7 @@ globalThis.localStorage = {
 globalThis.document = {
   getElementById: byId,
   createElement: () => makeEl(null),
+  querySelectorAll: () => [],
 };
 globalThis.window = globalThis;
 globalThis.addEventListener = () => {};
@@ -253,6 +255,58 @@ ok("snake: third-round reversal repeats the direction, then resumes",
 const dctx = globalThis.DD_BOTCTX && globalThis.DD_BOTCTX.ctx();
 ok("Toto ctx carries the draft room when a draft is live",
   dctx && dctx.includes("DRAFT WAR ROOM") && dctx.includes("EDITORIAL"));
+
+/* ------------------- Prime Time hero: the danger ladder ------------------ */
+const ldsBlock = blocks.find(b => b.includes('"dd-guillotine-leagues-v1"'));
+ok("page has the Last Dawg Standing view block", !!ldsBlock);
+
+const ALL6 = [{ rid: 1, name: "Team 1" }, { rid: 2, name: "Team 2" }, { rid: 6, name: "Chopped Six" }];
+
+els.clear();
+globalThis.__GX = { leagueId: "12345", league: "T", season: "2026", teamCount: 3, done: 0, teams: [], all: ALL6 };
+new Function(ldsBlock)();
+await new Promise(r => setTimeout(r, 20));
+const lad0 = byId("gxLadder").innerHTML;
+ok("preseason ladder names every team rather than rendering blank",
+  lad0.includes("Team 1") && lad0.includes("Chopped Six"), lad0.slice(0, 90));
+ok("preseason bars are flat, not risk-scaled", (lad0.match(/height:96px/g) || []).length === 3);
+ok("preseason cut line says it is not drawn yet",
+  byId("gxCutLab").textContent.includes("once scores exist"));
+ok("preseason copy reads not-started, not broken",
+  /No games played/.test(byId("gxFlat").textContent), byId("gxFlat").textContent);
+
+els.clear();
+globalThis.__GX = {
+  leagueId: "12345", league: "T", season: "2026", teamCount: 3, done: 3,
+  chop: 96.42, chopped: 1, me: { rid: 2, name: "Team 2", surv: .9, mean: 110 }, all: ALL6,
+  teams: [{ rid: 6, name: "Team 6", surv: .55, mean: 90, sd: 8, low: 80, last: 88 },
+          { rid: 2, name: "Team 2", surv: .9, mean: 110, sd: 6, low: 100, last: 112 }],
+};
+new Function(ldsBlock)();
+await new Promise(r => setTimeout(r, 20));
+const lad1 = byId("gxLadder").innerHTML;
+ok("live ladder prints modeled chop risk per team", lad1.includes("45%") && lad1.includes("10%"));
+ok("live ladder flags the focus team", lad1.includes("pt-lane me"));
+ok("riskiest team gets the tallest bar",
+  (lad1.indexOf("height:130px") > -1) && lad1.indexOf("height:130px") < lad1.indexOf("Team 2"));
+ok("hero stats carry alive / chopped / cut line",
+  byId("gxHeroStats").innerHTML.includes("96.4") && byId("gxHeroStats").innerHTML.includes("Chopped"));
+
+/* structure + the dark-panel legibility fix */
+ok("the wheel moved to its own sheet", html.includes('data-gx-panel="wheel"'));
+ok("the ladder is the hero — above the tab strip",
+  html.indexOf('id="gxLadder"') < html.indexOf('data-gx-sheet="survival"'));
+ok("tab labels are plain English",
+  ["Am I Safe?", "Draft Room", "Full Board", "The Money", "Chop Wheel", "The Long Game", "Weak Spots"]
+    .every(t => html.includes(">" + t + "</button>")));
+ok("no internal jargon left on the tab strip",
+  !html.includes(">Roster Fragility</button>") && !html.includes(">League Danger Board</button>"));
+// ⚠️ Regression guard for a live bug: .dtab inherits var(--ink-1), a DARK ink, so
+// inside the dark .gx-stage the team table rendered as blank rows.
+ok("stage table ink is stated explicitly, not inherited from a light-theme token",
+  html.includes(".gx-stage .dtab td,.gx-stage .dtab th{color:"));
+ok("wheel labels are radial, the fix for 18 colliding names",
+  html.includes("Labels are RADIAL on purpose"));
 
 /* ----------------------- Last Dawg Standing V1 contract ------------------ */
 ok("locked product name and descriptor ship together",
