@@ -2581,6 +2581,12 @@ body.wr-shared #youLab{display:none!important}
 .wr-share-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .wr-share-url{display:block;margin-top:8px;padding:8px 10px;border-radius:8px;background:var(--wash);
   font:600 11.5px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;word-break:break-all}
+.wr-details>summary{cursor:pointer;list-style:none;padding:2px 0}
+.wr-details>summary::-webkit-details-marker{display:none}
+.wr-details>summary b{font-size:15px;color:var(--ink-1)}
+.wr-details>summary::before{content:"\25b8 ";color:var(--ink-3)}
+.wr-details[open]>summary::before{content:"\25be "}
+.wr-details>summary .wr-note{margin:3px 0 0}
 .wr-sharebar.bad{border-color:color-mix(in srgb,#c8462f 60%,var(--line));background:color-mix(in srgb,#c8462f 8%,transparent)}
 
 .wr-connect form{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
@@ -2898,11 +2904,21 @@ body.wr-shared #youLab{display:none!important}
       </article>
 
       <article class="wr-card wr-full">
-        <h3>Where the projection disagrees with the market</h3>
-        <p class="wr-note" id="mnScatterNote"></p>
-        <div class="wr-filter"><select class="wr-mini" id="mnTeamSel" aria-label="Filter by team"></select></div>
-        <div id="mnScatter"></div>
-        <div class="wr-legend" id="mnLegend2"></div>
+        <!-- ⚠️ COLLAPSED ON PURPOSE, AND IT SAT OPEN BETWEEN THE TWO MOST USED CARDS FOR TOO
+             LONG. This plots market value against a projection over replacement. PRICE IS NOT
+             AN AXIS ON IT, so a player bought at half market value does not move — which is
+             exactly what readers expect it to show, twice over. It answers a real but narrow
+             question (does the projection agree with the market), so it stays, shut, and its
+             summary says what it is before anyone opens it. -->
+        <details class="wr-details" id="mnScatterWrap">
+          <summary><b>Where the projection disagrees with the market</b>
+            <span class="wr-note">Optional. Market value against projected points over replacement — <b>no price on this chart</b>, so a bargain does not show up here. For what a pick was worth, use the two cards above.</span>
+          </summary>
+          <p class="wr-note" id="mnScatterNote"></p>
+          <div class="wr-filter"><select class="wr-mini" id="mnTeamSel" aria-label="Filter by team"></select></div>
+          <div id="mnScatter"></div>
+          <div class="wr-legend" id="mnLegend2"></div>
+        </details>
       </article>
 
       <article class="wr-card">
@@ -3763,15 +3779,28 @@ function renderMoney(){
      interchangeable and must never be presented as though they were. */
   const dollars=v=>(v>=0?'+':'\u2212')+fmt$(Math.abs(v));
   if(paidShown.length){
-    const bySurplus=paidShown.slice().sort((x,y)=>y.d-x.d);
+    /* ⚠️ AN OVERPAY IS A NEGATIVE SURPLUS. Taking the bottom ten of a sorted list is not the
+       same thing: on a roster with no bad buys it printed the SMALLEST GAINS under a heading
+       that said they cost more than they are worth — "+$3" filed as an overpay. It also
+       double-listed anyone caught by both slices, which on a 17-man roster was three players.
+       Split on the sign, never on position in a list, and when a side is empty say so. */
     const list=arr=>arr.map(p=>'<div class="sr"><span class="p">'+esc(p.name)+'</span>'
       +'<span class="t">'+esc(p.team)+' · paid '+fmt$(p.x)+' \u00b7 worth '+fmt$(p.y)+'</span>'
       +'<span class="'+(p.d>=0?'wr-up':'wr-down')+'">'+dollars(p.d)+'</span></div>').join('');
-    $('mnBest').innerHTML=list(bySurplus.slice(0,10));
-    $('mnWorst').innerHTML=list(bySurplus.slice(-10).reverse());
-    $('mnBestNote').textContent='Worth the most above what was paid. Surplus = '
-      +valueLabel('money').toLowerCase()+' minus the auction price.';
-    $('mnWorstNote').textContent='Cost the most above what they are worth, same basis.';
+    const gains=paidShown.filter(p=>p.d>0).sort((x,y)=>y.d-x.d);
+    const losses=paidShown.filter(p=>p.d<0).sort((x,y)=>x.d-y.d);
+    const who=mnTeam==='ALL'?'in the draft':'on this roster';
+    $('mnBest').innerHTML=gains.length?list(gains.slice(0,10))
+      :'<p class="wr-note">Nothing came in under market '+who+'.</p>';
+    $('mnWorst').innerHTML=losses.length?list(losses.slice(0,10))
+      :'<p class="wr-note">No overpays '+who+' \u2014 every pick came in at or below '
+        +valueLabel('money').toLowerCase()+'.</p>';
+    $('mnBestNote').textContent='Worth more than they cost. Surplus = '
+      +valueLabel('money').toLowerCase()+' minus the auction price'
+      +(gains.length>10?', top 10 of '+gains.length+'.':'.');
+    $('mnWorstNote').textContent=losses.length
+      ? 'Cost more than they are worth, same basis'+(losses.length>10?', worst 10 of '+losses.length+'.':'.')
+      : 'Same basis as the card on the left.';
   } else {
     const byRes=all.slice().sort((x,y)=>y.r-x.r);
     const list=arr=>arr.map(p=>'<div class="sr"><span class="p">'+esc(p.name)+'</span>'
