@@ -2,7 +2,15 @@
   "use strict";
 
   function reconcilePicks(existing,incoming){
-    const manual=(Array.isArray(existing)?existing:[]).filter(p=>p&&p.source!=="sleeper");
+    /* ⚠️ This used to keep every existing row whose source !== "sleeper", on the
+       assumption that the only synced rows were Sleeper's. ESPN rows carry a
+       providerPickId but NO source field, so every ESPN pick already in state read
+       as "manual", was preserved, and then the same picks were concatenated again
+       from the fresh poll — 24 more rows every 4 seconds, unbounded. A live board
+       reached 3,984 picks and every team's max bid went five figures negative.
+       A manual entry is one with no providerPickId. That is provider-agnostic, and
+       it drops the duplicated rows on the first poll after this ships. */
+    const manual=(Array.isArray(existing)?existing:[]).filter(p=>p&&!p.providerPickId);
     const unique=new Map();
     (Array.isArray(incoming)?incoming:[]).forEach(p=>{
       if(p&&p.providerPickId&&!unique.has(p.providerPickId)) unique.set(p.providerPickId,p);

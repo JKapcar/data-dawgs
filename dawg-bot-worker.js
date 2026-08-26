@@ -1112,15 +1112,35 @@ async function espnWarroomFeed(cred) {
   /* ESPN's schedule is one row per matchup with home/away team ids, keyed by
      matchupPeriodId. The War Room wants an array of weeks, each a list of pairs. */
   const byWeek = new Map();
-  for (const g of (body.schedule || [])) {
+  const rawSchedule = body.schedule;
+  let schedRows = 0, noWeek = 0, noHome = 0, noAway = 0;
+  for (const g of (Array.isArray(rawSchedule) ? rawSchedule : [])) {
+    schedRows++;
     const wk = Number(g.matchupPeriodId);
     const home = g.home && g.home.teamId, away = g.away && g.away.teamId;
-    if (!wk || home == null || away == null) continue;   // byes carry no away side
+    if (!wk) { noWeek++; continue; }
+    if (home == null) { noHome++; continue; }
+    if (away == null) { noAway++; continue; }            // byes carry no away side
     if (!byWeek.has(wk)) byWeek.set(wk, []);
     byWeek.get(wk).push([String(home), String(away)]);
   }
   const weeks = [...byWeek.keys()].sort((a, b) => a - b);
   const schedule = weeks.map(w => byWeek.get(w));
+
+  const scheduleState =
+    rawSchedule == null ? "absent" :
+    !Array.isArray(rawSchedule) ? "unexpected-type" :
+    schedRows === 0 ? "empty" :
+    schedule.length === 0 ? "unparseable" : "ok";
+  const scheduleNote = {
+    "absent": "ESPN's mSchedule view came back with no `schedule` key at all for this league, so no matchups could be read. That is a view or credential problem, not an empty schedule.",
+    "unexpected-type": "ESPN returned a `schedule` value that is not an array, so no matchups could be read. The shape of this view has changed.",
+    "empty": "ESPN has not published a matchup schedule for this league this season yet, so playoff odds cannot be simulated. Nothing is broken here — the odds fill in once ESPN posts the schedule.",
+    "unparseable": "ESPN returned " + schedRows + " schedule rows and none could be read as a matchup (" +
+      noWeek + " with no matchupPeriodId, " + noHome + " with no home team, " + noAway +
+      " with no away team). The schedule exists and this parse cannot read it — that is a bug on our side.",
+    "ok": "",
+  }[scheduleState];
 
   const sched = s.scheduleSettings || {};
   return { ok: true, body: {
@@ -1137,6 +1157,14 @@ async function espnWarroomFeed(cred) {
     diagnostics: {
       poolSize: poolById.size, fromPlayerIndex: poolRows.length, rostered: rostered.size,
       weeks: schedule.length,
+      /* ⚠️ `weeks: 0` used to be the whole story, and it has three different causes with
+         three different fixes: ESPN never published a schedule, ESPN published one this
+         parse cannot read, or the view came back without the key at all. Reporting them
+         as one number is what made this undiagnosable from the outside. Do not fold these
+         back into a single flag. */
+      scheduleState, scheduleRows: schedRows,
+      scheduleSkipped: { noMatchupPeriodId: noWeek, noHomeTeam: noHome, noAwayTeam: noAway },
+      scheduleNote,
       note: poolRows.length ? "" : "ESPN's player index did not answer, so replacement level is computed from rostered players only and will read high.",
     },
   } };
@@ -13426,9 +13454,61 @@ const MCP_TOOLS = [
     catalog: "core",
     readOnlyHint: true,
     description: "Live auction draft state from the league's Firebase mirror: budgets, open roster spots, and each team's max bid. Max bid equals dollars remaining because this league allows $0 bids; data/league.json `bid_rule` is the source of that rule. Also returns who is on the clock, what is on the block, and recent sales. The payload always carries a `simulated` flag: when it is true the rows are test picks entered to exercise the rig, not completed sales.",
-    inputSchema: { type: "object", properties: { room: { type: "string", description: "Draft room (default: the league room)" } }, additionalProperties: false },
+    inputSchema: { type: "object", properties: { room: { type: "string", description: "Draft room id, which IS the site league id (the `league` parameter in the auction URL, e.g. dd_b689f18c46a2534bb10b8ba4f62e5bd0) — not the league's display name. `pepperoninipples` is the pre-league-system legacy room and is almost never the league being asked about. Omit this and the tool resolves the room when there is only one, or lists the rooms and refuses to guess." } }, additionalProperties: false },
     async run(args, env) {
-      const room = String(args.room || "pepperoninipples").replace(/[.#$\[\]\/]/g, "-");
+      /* ⚠️ THIS DEFAULTED TO `pepperoninipples`, AND THAT COST AN AGENT AN HOUR.
+         readSyncConfig() (draft-league.js) has keyed the room to the league id since the
+         league system shipped, so the legacy default sent every no-argument caller to a
+         stale 14-team, zero-pick shell — during a live draft in a different room. The
+         caller cannot tell a wrong room from an empty league, so it reported the league
+         as empty and was right to refuse to go on.
+         A confidently wrong room is worse than no answer. When the room is not named and
+         cannot be resolved to exactly one, this LISTS the rooms and reads nothing. Do not
+         reintroduce a default here — "most recently updated" is a guess too, and a guess
+         is what this is here to stop. */
+      let room = args.room ? String(args.room).replace(/[.#$\[\]\/]/g, "-") : null;
+      let resolvedBy = null;
+      if (!room) {
+        let keys = [];
+        try {
+          const r = await fetch(`${DB}/drafts.json?shallow=true`);
+          if (!r.ok) return toolErr("Draft mirror unavailable: HTTP " + r.status);
+          keys = Object.keys((await r.json()) || {});
+        } catch (e) { return toolErr("Draft mirror unavailable: " + e.message); }
+        if (!keys.length) return toolErr("There are no draft rooms in the mirror.");
+        if (keys.length === 1) { room = keys[0]; resolvedBy = "the only room in the mirror"; }
+        else {
+          /* One cheap read per room — enough to tell them apart, never the picks. */
+          const cards = await Promise.all(keys.slice(0, 12).map(async k => {
+            const card = { room: k, legacy: k === "pepperoninipples" };
+            try {
+              const [tsR, setR] = await Promise.all([
+                fetch(`${DB}/drafts/${encodeURIComponent(k)}/ts.json`),
+                fetch(`${DB}/drafts/${encodeURIComponent(k)}/state/settings.json`),
+              ]);
+              card.updated_at = tsR.ok ? await tsR.json() : null;
+              const st = setR.ok ? await setR.json() : null;
+              if (st) {
+                card.teams = (st.teams || []).length;
+                card.rosterSpots = Number.isFinite(st.spots) ? st.spots : null;
+                card.scoring = st.scoring || null;
+                card.draftType = st.draftType || null;
+              }
+            } catch { /* a room that will not describe itself still gets listed */ }
+            return card;
+          }));
+          cards.sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0));
+          return toolText({
+            status: "room_required",
+            rooms: cards,
+            truncated: keys.length > 12 ? keys.length - 12 : 0,
+            note: "NOTHING WAS READ. More than one draft room exists and this connection cannot tell which one belongs to the person asking. " +
+                  "The room id is the site league id — the `league` parameter in that league's auction URL. Ask the user which league they mean, then call this tool again with `room`. " +
+                  "Rooms are listed most-recently-updated first, but recency is not ownership: do not pick one on their behalf. " +
+                  "`legacy: true` marks `pepperoninipples`, the pre-league-system room, which is almost certainly not the league being asked about.",
+          });
+        }
+      }
       let rec;
       try {
         const r = await fetch(`${DB}/drafts/${room}.json`);
@@ -13437,13 +13517,19 @@ const MCP_TOOLS = [
       } catch (e) { return toolErr("Draft mirror unavailable: " + e.message); }
       if (!rec || !rec.state) return toolErr("The draft room is empty.");
       const st = rec.state, set = st.settings || {};
-      const budget = set.budget || 200, spots = set.spots || 15;
+      const budget = set.budget || 200;
+      /* ⚠️ NEVER HARDCODE THE ROSTER SIZE. This read `set.spots || 15`, which reported a
+         17-spot league as 15 and made every openSpots count wrong by two. The room's own
+         settings are the only source of truth; when they do not carry it, say null rather
+         than invent a number that looks authoritative. */
+      const spots = Number.isFinite(set.spots) ? set.spots : null;
+
       const teams = (set.teams || []).map(t => ({ name: t.name, owner: t.owner || null, spent: 0, count: 0 }));
       const picks = st.picks || [];
       for (const pk of picks) { const t = teams[pk.ti]; if (t) { t.spent += pk.price || 0; t.count++; } }
       for (const t of teams) {
         t.left = budget - t.spent;
-        t.openSpots = spots - t.count;
+        t.openSpots = spots == null ? null : spots - t.count;
         // League rule: $0 bids are legal, so no $1-per-open-slot reserve applies.
         t.maxBid = t.left;
       }
@@ -13459,9 +13545,13 @@ const MCP_TOOLS = [
       // before anyone is handed a connector URL.
       const simulated = rec.simulated === true || set.simulated === true;
       return toolText({
-        room, as_of: rec.ts || null, scoring: set.scoring || "half",
+        room, resolvedBy, as_of: rec.ts || null, scoring: set.scoring || "half",
         simulated,
         budget, rosterSpots: spots,
+        rosterSpotsNote: spots == null
+          ? "This room's settings carry no roster size, so openSpots is null. Do not assume a default — ask, or read the league page."
+          : undefined,
+
         onTheClock: (teams[st.nomIdx] || {}).name || null,
         onBlock: st.onBlock || null,
         teams, picksMade: picks.length, recentSales: recent,

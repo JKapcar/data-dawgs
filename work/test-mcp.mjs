@@ -493,7 +493,7 @@ const cfbModelCardsJson = {
   },
 };
 
-let netMode = "normal"; // normal | dbdown | emptyRoom | espnDown | simulatedRoom | simulatedSettings
+let netMode = "normal"; // normal | dbdown | emptyRoom | espnDown | simulatedRoom | simulatedSettings | manyRooms | noSpots
 /* ⚠️ THE WRITE GATE. `livePicks` is null for the entire suite except inside the
    dd_submit_bozo_leg group, so the historical invariant — no read tool ever issues a
    non-GET — still hard-fails for all 42 read tools. When armed, exactly one URL may be
@@ -520,8 +520,22 @@ globalThis.fetch = async (input, init) => {
   }
   if (u.startsWith(FB + "/users.json")) return J(USERS);
   if (u.includes("/bozo/leagues/main/ledger")) return J(leagueRec.ledger || null);
+  /* ⚠️ dd_draft_board resolves the room from this listing when the caller names none.
+     One room means resolve it; more than one means it must refuse and list them, because
+     the legacy default silently answered from the wrong room for months. */
+  if (u.startsWith(FB + "/drafts.json")) {
+    if (netMode === "dbdown") throw new Error("connect refused");
+    return J(netMode === "manyRooms" ? { dd_aaaa: true, pepperoninipples: true } : { dd_aaaa: true });
+  }
+  // the per-room cards the disambiguation listing is built from
+  if (u.startsWith(FB + "/drafts/") && u.includes("/ts.json")) return J(draftRec.ts);
+  if (u.startsWith(FB + "/drafts/") && u.includes("/state/settings.json")) return J(draftRec.state.settings);
   if (u.startsWith(FB + "/drafts/")) {
     if (netMode === "emptyRoom") return J(null);
+    if (netMode === "noSpots") {
+      const { spots, ...rest } = draftRec.state.settings;
+      return J({ ...draftRec, state: { ...draftRec.state, settings: rest } });
+    }
     // C6 — the flag lives at the top level of the room node, out of the draft app's
     // write path. `simulatedSettings` covers the other place it might be written.
     if (netMode === "simulatedRoom") return J({ ...draftRec, simulated: true });
@@ -848,6 +862,43 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
   netMode = "simulatedSettings";
   const j = await (await req(call("dd_draft_board"))).json();
   ok(text(j).simulated === true, "settings-level flag also counts (draft app may rewrite state)");
+  netMode = "normal";
+}
+/* dd_draft_board: the room must never be guessed. The old default was `pepperoninipples`,
+   which answered confidently from a stale 14-team shell while a real draft ran elsewhere. */
+{
+  netMode = "manyRooms";
+  const j = await (await req(call("dd_draft_board"))).json();
+  const d = text(j);
+  ok(d.status === "room_required" && d.teams === undefined,
+     "several rooms and no `room` argument → a disambiguation, NOT a board");
+  ok(d.rooms.length === 2 && d.rooms.some(r => r.legacy === true),
+     "…listing every room and marking the legacy one");
+  ok(/NOTHING WAS READ/.test(d.note), "…and saying in words that nothing was read");
+  netMode = "normal";
+}
+{
+  netMode = "manyRooms";
+  const j = await (await req(call("dd_draft_board", { room: "dd_aaaa" }))).json();
+  const d = text(j);
+  ok(d.room === "dd_aaaa" && d.picksMade === 1, "a named room is read even when several exist");
+  netMode = "normal";
+}
+{
+  const j = await (await req(call("dd_draft_board"))).json();
+  const d = text(j);
+  ok(d.rosterSpots === 15 && d.resolvedBy === "the only room in the mirror",
+     "one room resolves silently, and rosterSpots comes from that room's settings");
+}
+// dd_draft_board: a room with no roster size says null — it does not invent 15
+{
+  netMode = "noSpots";
+  const j = await (await req(call("dd_draft_board"))).json();
+  const d = text(j);
+  ok(d.rosterSpots === null && d.teams[0].openSpots === null,
+     "missing roster size reports null rather than a hardcoded default");
+  ok(typeof d.rosterSpotsNote === "string" && /Do not assume a default/.test(d.rosterSpotsNote),
+     "…and says so in prose, since a null is easy to read past");
   netMode = "normal";
 }
 // dd_draft_board: empty room is a tool error, not a protocol error
