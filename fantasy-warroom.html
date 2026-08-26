@@ -2950,6 +2950,16 @@ body.wr-shared #youLab{display:none!important}
         <p class="wr-note" id="mnWorstNote">Cost the most above what they are worth.</p>
         <div class="wr-srlist" id="mnWorst"></div>
       </article>
+      <article class="wr-card">
+        <h3>Sell high</h3>
+        <p class="wr-note" id="mnSellNote"></p>
+        <div class="wr-srlist" id="mnSell"></div>
+      </article>
+      <article class="wr-card">
+        <h3>Buy low</h3>
+        <p class="wr-note" id="mnBuyNote"></p>
+        <div class="wr-srlist" id="mnBuy"></div>
+      </article>
 
       <article class="wr-card wr-full">
         <h3>Shape of every roster</h3>
@@ -3814,6 +3824,50 @@ function renderMoney(){
      zero for everyone, so the "gap" is just market value again and the list fills with
      $1 bench bodies — the wall of zeros the scatter drew, now sorted. */
   const gaps=shown.filter(p=>p.y>0).sort((x,y)=>Math.abs(y.d)-Math.abs(x.d)).slice(0,14);
+  /* ---- arbitrage against a room that prices off the provider ------------------
+     The gap above is descriptive. This is the same number read as a trade edge, and it
+     only means anything if the league actually prices off the provider -- an ASSUMPTION
+     about the humans, not something the data shows. It is stated on the cards rather
+     than buried here.
+     Scope is deliberately inverted: sell from YOUR roster, buy from everyone else's.
+     A buy target on your own bench is not a trade.
+     y>0 ON BOTH SIDES. A player the provider puts at or below replacement clamps to $0
+     implied, so his d is just -mv and he would top the buy list without the provider
+     having formed any opinion about him at all. That is a coverage hole in the
+     conversion, not a bargain, and it would make the best-looking targets the ones we
+     know least about.
+     Reads `all`, not `shown`: the filter above scopes the chart, but an edge that exists
+     on only one roster is not an edge.
+     Does NOT call dollars(): that helper is a `const` declared LATER in this same
+     function, so calling it from here is a temporal-dead-zone ReferenceError that takes
+     the whole Money sheet down. fmt$ is a hoisted function declaration and is safe.
+     Wrapped for the same reason -- these cards are additive and must never be able to
+     break the sheet they sit on. */
+  try{
+    const myTi=+$('teamPicker').value||0;
+    const arbRow=(p,own)=>'<div class="sr"><span class="p">'+esc(p.name)+'</span>'
+      +'<span class="t">'+(own?esc(p.pos):esc(p.team)+' · '+esc(p.pos))+' · '
+      +esc(provName())+' '+fmt$(p.y)+' · Data Dawgs '+fmt$(p.x)+'</span>'
+      +'<span class="'+(p.d>=0?'wr-up':'wr-down')+'">'+(p.d>=0?'+':'−')+fmt$(Math.abs(p.d))+'</span></div>';
+    const sell=all.filter(p=>p.y>0&&p.d>0&&p.ti===myTi).sort((a,b)=>b.d-a.d);
+    const buy=all.filter(p=>p.y>0&&p.d<0&&p.ti!==myTi).sort((a,b)=>a.d-b.d);
+    $('mnSell').innerHTML=sell.length?sell.slice(0,10).map(p=>arbRow(p,true)).join('')
+      :'<p class="wr-note">'+esc(provName())+' is not high on anyone you own, so there is nothing to sell into.</p>';
+    $('mnBuy').innerHTML=buy.length?buy.slice(0,10).map(p=>arbRow(p,false)).join('')
+      :'<p class="wr-note">'+esc(provName())+' is not low on anyone worth targeting.</p>';
+    $('mnSellNote').textContent='Your players '+provName()+' rates ABOVE the board. If the room prices off '
+      +provName()+', these are the ones it will overpay for — which assumes it does.'
+      +(sell.length>10?' Top 10 of '+sell.length+'.':'');
+    $('mnBuyNote').textContent='Players on OTHER rosters that '+provName()+' rates below the board, owner shown. '
+      +'League-wide — the team filter above does not apply here.'
+      +(buy.length>10?' Top 10 of '+buy.length+'.':'');
+  }catch(err){
+    console.error('arbitrage cards:',err);
+    const oops='<p class="wr-note">These could not be built for this league.</p>';
+    if($('mnSell'))$('mnSell').innerHTML=oops;
+    if($('mnBuy'))$('mnBuy').innerHTML=oops;
+  }
+
   const rich=shown.filter(p=>p.d>0).length;
   if($('mnProvName'))$('mnProvName').textContent=provName();
   $('mnScatterNote').innerHTML=rate==null
