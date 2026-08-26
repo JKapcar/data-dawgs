@@ -2848,7 +2848,7 @@ svg{display:block;max-width:100%;height:auto}
 
       <article class="wr-card wr-full">
         <h3>Where the money is</h3>
-        <p class="wr-note">Starting-lineup dollars by position. Dashed = league average.</p>
+        <p class="wr-note">Roster dollars by position, with the bench pooled as one segment. Dashed = league average.</p>
         <div id="mnBars"></div>
         <div class="wr-legend" id="mnLegend"></div>
       </article>
@@ -3443,6 +3443,9 @@ function renderReport(){
    so nothing here claims anyone bought well; it prices what is held. */
 const POS_ORDER=['QB','RB','WR','TE','K','DST'];
 const POS_COLOR={QB:'#d13a00',RB:'#087532',WR:'#2f6fb0',TE:'#8a4fbf',K:'#a86e00',DST:'#5b4a37'};
+/* Bench is a category, not a position: it pools every reserve whatever they play. Muted on
+   purpose — it is the part of the bar that is NOT in the lineup, and it should read that way. */
+const BENCH_COLOR='#9a8f7f';
 let mnSort={key:'total',dir:-1},mnTeam='ALL';
 
 function teamMoney(t,horizon){
@@ -3457,24 +3460,33 @@ function teamMoney(t,horizon){
 function fmt$(n){return '$'+Math.round(n)}
 
 function mnStackedBars(M){
-  const rows=M.slice().sort((a,b)=>b.st-a.st);
-  const W=NARROW()?340:560,rh=26,pad=NARROW()?92:120,barW=W-pad-58,H=rows.length*rh+26;
-  const max=Math.max(1,...rows.map(r=>r.st));
-  const avg=rows.reduce((a,r)=>a+r.st,0)/rows.length;
+  /* ⚠️ This charted STARTERS only, which quietly hid a third of every roster: two teams with
+     identical lineups but $10 and $60 of bench read as the same bar. Bench now rides on the end
+     as its own pooled segment, and the scale, the sort and the average line all move to the
+     full roster so the bars stay comparable. */
+  const tot=r=>r.st+r.bn;
+  const rows=M.slice().sort((a,b)=>tot(b)-tot(a));
+  const W=NARROW()?340:560,rh=26,pad=NARROW()?92:120,barW=W-pad-72,H=rows.length*rh+26;
+  const max=Math.max(1,...rows.map(tot));
+  const avg=rows.reduce((a,r)=>a+tot(r),0)/rows.length;
   let g='';
   rows.forEach((r,i)=>{
     const y=i*rh+8;let x=pad;
     g+='<text x="0" y="'+(y+13)+'"'+(r.t.name.length>15?' textLength="'+(pad-8)+'" lengthAdjust="spacingAndGlyphs"':'')+' style="fill:var(--ink-2);font:'+(r.t===mnMe()?'800':'600')+' '+(r.t.name.length>15?11:12)+'px system-ui">'+esc(r.t.name)+'</text>';
     POS_ORDER.forEach(P=>{const v=r.byPos[P]||0;if(v<=0)return;const w=v/max*barW;
-      g+='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="17" style="fill:'+POS_COLOR[P]+'"><title>'+esc(r.t.name)+' · '+P+' '+fmt$(v)+'</title></rect>';x+=w});
-    g+='<text x="'+(x+6)+'" y="'+(y+13)+'" style="fill:var(--ink-3);font:600 11px system-ui">'+fmt$(r.st)+'</text>';
+      g+='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="17" style="fill:'+POS_COLOR[P]+'"><title>'+esc(r.t.name)+' \u00b7 starting '+P+' '+fmt$(v)+'</title></rect>';x+=w});
+    if(r.bn>0){const w=r.bn/max*barW;
+      g+='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="17" style="fill:'+BENCH_COLOR+'"><title>'
+        +esc(r.t.name)+' \u00b7 bench '+fmt$(r.bn)+'</title></rect>';x+=w}
+    g+='<text x="'+(x+6)+'" y="'+(y+13)+'" style="fill:var(--ink-3);font:600 11px system-ui">'+fmt$(tot(r))+'</text>';
   });
   const ax=pad+avg/max*barW;
   g+='<line x1="'+ax+'" y1="2" x2="'+ax+'" y2="'+(H-16)+'" style="stroke:var(--ink-3);stroke-dasharray:5 4"/>'
     +'<text x="'+(ax+4)+'" y="'+(H-4)+'" style="fill:var(--ink-3);font:600 10px system-ui">league avg '+fmt$(avg)+'</text>';
-  return '<svg viewBox="0 0 '+W+' '+H+'" class="wr-svg wr-svg-bars" role="img" aria-label="Starting-lineup market value by position, by team">'+g+'</svg>';
+  return '<svg viewBox="0 0 '+W+' '+H+'" class="wr-svg wr-svg-bars" role="img" aria-label="Roster market value by position with bench pooled, by team">'+g+'</svg>';
 }
 
+const LABEL_CAP=26;   /* one roster labels cleanly; a whole league does not */
 function mnScatterSvg(pts,fit){
   const W=NARROW()?340:560,H=NARROW()?260:300,l=NARROW()?38:46,b=34;
   const xm=Math.max(1,...pts.map(p=>p.x)),ym=Math.max(...pts.map(p=>p.y)),yn=Math.min(0,...pts.map(p=>p.y));
@@ -3487,6 +3499,24 @@ function mnScatterSvg(pts,fit){
   g+='<line x1="'+X(0)+'" y1="'+Y(fit.a)+'" x2="'+X(xm)+'" y2="'+Y(fit.a+fit.b*xm)+'" style="stroke:var(--ink-3);stroke-dasharray:6 4;stroke-width:1.5"/>';
   pts.forEach(p=>{g+='<circle cx="'+X(p.x)+'" cy="'+Y(p.y)+'" r="4" style="fill:'+POS_COLOR[p.pos]+';opacity:.85"><title>'+
     esc(p.name)+' ('+p.pos+') · '+esc(p.team)+'\n'+fmt$(p.x)+' · '+p.y.toFixed(1)+'/wk · '+(p.r>=0?'+':'')+p.r.toFixed(1)+' against the fit</title></circle>'});
+  /* ⚠️ A hover title is not a label: on a phone there is no hover, and even on a desktop a
+     chart you have to interrogate dot by dot is not readable. Draw real labels whenever the
+     count is small enough to stay legible — one team's roster always is. Above that the
+     labels would overlap into mush, so the whole-league view keeps the tooltips only and
+     the note below the chart says so. Surname only, because first names cost width and
+     carry no information at this size. */
+  if(pts.length<=LABEL_CAP){
+    const surname=nm=>{const w=String(nm).replace(/\s+(Jr\.?|Sr\.?|I{2,}|IV|V)$/i,'').trim().split(/\s+/);return w[w.length-1]||nm};
+    pts.forEach(p=>{
+      const x=X(p.x),y=Y(p.y);
+      /* flip the label inboard near the right edge so it never clips the frame */
+      const right=x>W-70, tx=right?x-7:x+7, anchor=right?'end':'start';
+      const t=esc(surname(p.name));
+      g+='<text x="'+tx+'" y="'+(y+3.5)+'" text-anchor="'+anchor+'" '
+        +'style="font:600 9.5px system-ui;paint-order:stroke;stroke:var(--paper);stroke-width:3px;'
+        +'stroke-linejoin:round;fill:var(--ink-2)">'+t+'</text>';
+    });
+  }
   return '<svg viewBox="0 0 '+W+' '+H+'" class="wr-svg wr-svg-wide" role="img" aria-label="Market value against projected value over replacement">'+g+'</svg>';
 }
 function mnMe(){return state.teams[+$('teamPicker').value||0]}
@@ -3553,7 +3583,10 @@ function renderMoney(){
   });
 
   $('mnBars').innerHTML=mnStackedBars(M);
-  $('mnLegend').innerHTML=$('mnLegend2').innerHTML=POS_ORDER.map(P=>'<span><span class="sw" style="background:'+POS_COLOR[P]+'"></span>'+(P==='DST'?'D/ST':P)+'</span>').join('');
+  const swatch=(c,l)=>'<span><span class="sw" style="background:'+c+'"></span>'+l+'</span>';
+  $('mnLegend').innerHTML=POS_ORDER.map(P=>swatch(POS_COLOR[P],P==='DST'?'D/ST':P)).join('')+swatch(BENCH_COLOR,'Bench');
+  /* the scatter drops kickers and defenses, so its legend must not claim them */
+  $('mnLegend2').innerHTML=POS_ORDER.filter(P=>!['K','DST'].includes(P)).map(P=>swatch(POS_COLOR[P],P)).join('');
 
   /* ---- price against production, with a least-squares fit ---- */
   /* ⚠️ Skill positions only. Kickers and defenses all cost about a dollar and their value
@@ -3574,7 +3607,8 @@ function renderMoney(){
     +'below it, the value source prices something a week-1 projection cannot see. <b>'+shown.length
     +'</b> priced player'+(shown.length===1?'':'s')+' shown · '+above+' above the line. '
     +'Kickers and defenses are left out: they all cost about a dollar, so every one of them clears a league-wide fit '
-    +'and they would crowd out everything worth looking at.';
+    +'and they would crowd out everything worth looking at.'
+    +(shown.length>LABEL_CAP?' Names are hidden at this count because they would overlap \u2014 pick one team to label every dot.':'');
   $('mnTeamSel').innerHTML='<option value="ALL"'+(mnTeam==='ALL'?' selected':'')+'>All teams</option>'
     +state.teams.map((t,i)=>'<option value="'+i+'"'+(String(mnTeam)===String(i)?' selected':'')+'>'+esc(t.name)+'</option>').join('');
   $('mnTeamSel').onchange=e=>{mnTeam=e.target.value;renderMoney()};
@@ -4344,23 +4378,46 @@ function trades(me){
 }
 
 /* ---------------------------------------------------------- simulation ---- */
-function runSim(){
-  if(!state.schedule.length||state.schedule.some((g,i)=>i<state.settings.playoffStart-1&&!g.length)){
-    /* ⚠️ This blamed Sleeper by name whatever provider was connected, and said nothing
-       about WHY — "ESPN has not posted a schedule yet" and "our parse is broken" produced
-       the identical sentence, which is why the blank odds panel sat undiagnosed. The feed
-       now separates those cases; quote its note when there is one. */
-    const d=state.diagnostics||{},
-      who=((state.ref&&state.ref.provider)||'sleeper')==='espn'?'ESPN':'Sleeper';
-    throw Error(d.scheduleNote||(who+' did not provide a complete regular-season schedule for this league, so no simulation was run.'));
+/* A balanced round-robin by the circle method: fix one team, rotate the rest.
+   With an odd count a null seat rides along and whoever draws it sits that week. */
+function roundRobin(ids,weeks){
+  const seats=ids.slice();
+  if(seats.length%2)seats.push(null);
+  const n=seats.length,half=n/2,out=[];
+  let arr=seats.slice();
+  for(let w=0;w<weeks;w++){
+    const pairs=[];
+    for(let i=0;i<half;i++){const a=arr[i],b=arr[n-1-i];if(a&&b)pairs.push([a,b])}
+    out.push(pairs);
+    arr=[arr[0],arr[n-1],...arr.slice(1,n-1)];
   }
+  return out;
+}
+/* ⚠️ ESPN does not publish a matchup schedule until it finalises the season, so a league
+   drafted early returns settings (14 matchup periods, 6 playoff teams) with NO schedule key
+   at all — verified against ESPN's own API for league 110404. Refusing to simulate left the
+   whole Standings sheet dead for weeks. A balanced round-robin is the honest stand-in: every
+   team plays every other as evenly as the week count allows, which is what the real schedule
+   will approximate anyway. It is LABELLED as synthetic everywhere the odds appear, because
+   playoff odds against an invented schedule are a different claim from odds against the real one. */
+function scheduleForSim(){
+  const need=Math.max(1,(state.settings.playoffStart||15)-1);
+  const have=state.schedule||[];
+  const complete=have.length>=need&&have.slice(0,need).every(g=>g&&g.length);
+  if(complete)return {games:have,synthetic:false};
+  return {games:roundRobin(state.teams.map(t=>t.id),need),synthetic:true};
+}
+function runSim(){
+  const {games:simSchedule,synthetic}=scheduleForSim();
+  if(!simSchedule.length||simSchedule.some(g=>!g.length))
+    throw Error('This league has no usable schedule and too few teams to build one, so no simulation was run.');
   const n=20000,seed=fnv(JSON.stringify(state.settings)+state.ref.id+'-'+state.settings.playoffStart),
     rng=(()=>{let a=seed;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}})(),
     gauss=()=>{let u=0,v=0;while(!u)u=rng();while(!v)v=rng();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)};
   const wins=Object.fromEntries(state.teams.map(t=>[t.id,0])),berths=Object.fromEntries(state.teams.map(t=>[t.id,0]));
   for(let r=0;r<n;r++){
     for(const t of state.teams)wins[t.id]=0;
-    for(const games of state.schedule){
+    for(const games of simSchedule){
       const scores=Object.fromEntries(state.teams.map(t=>[t.id,t.total+gauss()*state.settings.sigma]));
       for(const[a,b]of games){if(scores[a]>scores[b])wins[a]++;else if(scores[b]>scores[a])wins[b]++;}
     }
@@ -4368,11 +4425,12 @@ function runSim(){
   }
   const sum=Object.values(berths).reduce((a,b)=>a+b,0)/n;
   if(Math.abs(sum-state.settings.playoffSpots)>1e-9)throw Error('Simulation sanity check failed: playoff berths do not sum to playoff spots.');
-  sim={seed,odds:Object.fromEntries(state.teams.map(t=>[t.id,berths[t.id]/n]))};
+  sim={seed,synthetic,odds:Object.fromEntries(state.teams.map(t=>[t.id,berths[t.id]/n]))};
   const entry=LOADED.get(keyOf(state.ref.provider,state.ref.id));if(entry)entry.sim=sim;
   const me=state.teams[+$('teamPicker').value||0];
   $('odds').classList.remove('is-empty');$('odds').innerHTML=Math.round(sim.odds[me.id]*100)+'<small>%</small>';
-  $('oddsNote').textContent='Chance '+me.name+' makes the playoffs across 20,000 deterministic seasons.';
+  $('oddsNote').textContent='Chance '+me.name+' makes the playoffs across 20,000 deterministic seasons.'
+    +(synthetic?' \u26a0 '+(state.ref.provider==='espn'?'ESPN':'The provider')+' has not published this league\u2019s schedule yet, so these run against a balanced round-robin, not the real one.':'');
   render();
 }
 
