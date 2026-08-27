@@ -738,7 +738,7 @@ select.dbpresent[hidden]{display:none}
 <div class="dbwrap">
   <div class="dbhead">
     <h1>Fantasy Draft Dashboard <a class="tierchip tierchip-collar" data-tier="dawg" href="index.html#tiers" title="Working Dawg — earned its collar. Criteria: /data/receipts-method.md"><span class="collar" role="img" aria-label="Working Dawg — earned its collar"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false"><ellipse cx="12" cy="9.5" rx="7.4" ry="5.4" fill="none" stroke="currentColor" stroke-width="2.4"></ellipse><circle cx="12" cy="17.6" r="3.1" fill="currentColor"></circle></svg></span></a></h1>
-    <a class="dbsetup" href="draft-leagues.html">League setup &rarr;</a>
+    <a class="dbsetup" href="draft-leagues.html">Switch league &rarr;</a>
     <span class="who" id="dbWho"></span>
   </div>
 
@@ -2367,7 +2367,22 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
        runs draft night on the operator machine, and it is the only thing that has. */
     auctioneer:{src:"auction.html?embed=1",        label:"Auctioneer Controls", op:true}
   };
-  if(window.DDLeague && DDLeague.id) Object.values(VIEWS).forEach(v=>{ const u=new URL(v.src,location.href); u.searchParams.set("league",DDLeague.id); v.src=u.pathname.slice(1)+u.search; });
+  /* ⚠ ONE DOOR. DDLeague.id is URL-only, but the live sync falls back to a default room
+     — so bare dashboard.html used to connect the live view to the league while every
+     embedded view rendered league-blind. Whatever identity the live view will use, the
+     frames get too, and the address bar is canonicalized so refreshes and bookmarks all
+     land on the same URL. LEAGUE_RE guards the fallback: a room name that is not a valid
+     league id must not become a bogus param. */
+  const LEAGUE_ID = (window.DDLeague && DDLeague.id)
+    || (window.DDSync && DDLeague && DDLeague.LEAGUE_RE
+        && DDLeague.LEAGUE_RE.test((DDSync.config||{}).room||"") ? DDSync.config.room : null);
+  if(LEAGUE_ID){
+    Object.values(VIEWS).forEach(v=>{ const u=new URL(v.src,location.href); u.searchParams.set("league",LEAGUE_ID); v.src=u.pathname.slice(1)+u.search; });
+    if(!new URLSearchParams(location.search).get("league")){
+      const canon=new URL(location.href); canon.searchParams.set("league",LEAGUE_ID);
+      try{ history.replaceState(null,"",canon); }catch(e){}
+    }
+  }
   const LS_STATE = window.DDLeague ? DDLeague.storageKey("dd-auction-v1") : "dd-auction-v1";
   const view = document.getElementById("dbView");
   const tabs = document.getElementById("dbTabs");
