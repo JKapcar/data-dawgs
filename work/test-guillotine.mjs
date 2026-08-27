@@ -514,6 +514,21 @@ ok("spin ten survives as a secondary control", html.includes('id="gxSpinTen"'));
 ok("the confidence slider is gone", !html.includes('id="gxConfidence"'));
 ok("and the receipt no longer stores a confidence", !/confidence:\s*Number/.test(html));
 
+/* ⚠ REGRESSION GUARD. A selected chip painted itself background:currentColor while the
+   renderer set an INLINE style="color:<team>". Inline colour outranks the stylesheet, so
+   the label rendered in the fill colour and the name vanished inside a solid lozenge. The
+   colour has to travel as a custom property, which is inert to inheritance. */
+ok("the chip colour rides a custom property, not an inline color",
+  html.includes('style="--c:') && !html.includes(`style="color:'+colorOf`));
+ok("a selected chip fills from --c and keeps a readable label",
+  /\.gx-cmp button\.on\{[^}]*background:var\(--c/.test(html)
+  && /\.gx-cmp button\.on\{[^}]*color:#fff/.test(html));
+// ⚠️ 18 long names wrapped into nine rows on a phone and pushed the chart off screen.
+ok("the selector is one scrolling row, never a wrap",
+  /\.gx-cmp\{[^}]*flex-wrap:nowrap/.test(html) && !/\.gx-cmp\{flex-wrap:wrap/.test(html));
+ok("a long team name is capped rather than setting the row width",
+  /\.gx-cmp button\{[^}]*text-overflow:ellipsis/.test(html));
+
 // one sampled season, drawn from the same model as the curves.
 // ⚠️ Do NOT els.clear() here: the harness caches element stubs, so clearing hands
 // back a fresh object with none of the wiring paint() just attached.
