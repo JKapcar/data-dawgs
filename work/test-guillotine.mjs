@@ -250,35 +250,6 @@ const ctx0 = globalThis.DD_BOTCTX.ctx();
 ok("pre-season ctx says the maths is off, with FAAB", ctx0.includes("not on yet") && ctx0.includes("FAAB"));
 globalThis.fetch = realFetch;
 
-/* ----------------------------- Draft War Room ---------------------------- */
-els.clear();
-const draftBlock = blocks.find(b => b.includes('"dd-guillotine-draft-v1"'));
-ok("page has the draft war-room script block", !!draftBlock);
-// A saved draft + claimed slot reconnects on its own, exactly like the league shelf.
-store.set("dd-guillotine-draft-v1", JSON.stringify({ draftId: "d1", slots: { d1: 2 } }));
-await new AsyncFunction(draftBlock)();
-await new Promise(r => setTimeout(r, 80));
-const D = globalThis.__GXD;
-ok("__GXD stashed after draft load", !!D);
-ok("draft status and shape read", D && D.status === "drafting" && D.teams === 6 && D.rounds === 3);
-ok("next pick is #4, slot 4", D && D.nextNo === 4 && D.nextSlot === 4, D && (D.nextNo + "/" + D.nextSlot));
-ok("snake math: slot 2's next pick is 7 away (#11)", D && D.untilMe === 7, "until=" + (D && D.untilMe));
-ok("my picks follow the claimed slot", D && D.myPicks.length === 1 && D.myPicks[0].name.includes("Bijan"));
-ok("best available skips drafted board players", D && D.best.ALL === "Ja'Marr Chase", D && String(D.best.ALL));
-ok("an unmatched pick name strikes nothing", D && D.drafted === 2, "drafted=" + (D && D.drafted));
-ok("board labels are editorial with dates", D && D.boardBuilt === "2026-08-26" && D.mvAsOf === "2026-08-24");
-const bd = byId("gxDBoard").innerHTML;
-ok("board renders tier rows and strikes the drafted", bd.includes("gxd-tier") && bd.includes("gxd-gone"));
-ok("the user's own pick is highlighted", bd.includes("gxd-mine"));
-ok("on-the-clock team is named from draft order + users", D && D.onClock === "Team 4", D && String(D.onClock));
-const SN = globalThis.__GXDT;
-ok("snake: round 2 reverses", SN && SN.slotFor(7, 6, 0).slot === 6);
-ok("snake: third-round reversal repeats the direction, then resumes",
-  SN && SN.slotFor(13, 6, 3).slot === 6 && SN.slotFor(19, 6, 3).slot === 1);
-const dctx = globalThis.DD_BOTCTX && globalThis.DD_BOTCTX.ctx();
-ok("Toto ctx carries the draft room when a draft is live",
-  dctx && dctx.includes("DRAFT WAR ROOM") && dctx.includes("EDITORIAL"));
-
 /* ------------------- Prime Time hero: the danger ladder ------------------ */
 const ldsBlock = blocks.find(b => b.includes('"dd-guillotine-leagues-v1"'));
 ok("page has the Last Dawg Standing view block", !!ldsBlock);
@@ -320,12 +291,28 @@ ok("hero stats carry alive / chopped / cut line",
   byId("gxHeroStats").innerHTML.includes("96.4") && byId("gxHeroStats").innerHTML.includes("Chopped"));
 
 /* structure + the dark-panel legibility fix */
-ok("the wheel moved to its own sheet", html.includes('data-gx-panel="wheel"'));
+/* ⚠ The wheel USED to be its own sheet. It and the decay curve now live inside
+   Am I Safe, which is the whole point of the consolidation -- assert the fold,
+   not just that the markup exists somewhere on the page. */
+ok("the wheel and the decay curve live inside Am I Safe",
+  html.indexOf('id="gxSheetSurvival"') < html.indexOf('id="gxWheel"')
+  && html.indexOf('id="gxWheel"') < html.indexOf('id="gxSeasonChart"')
+  && html.indexOf('id="gxSeasonChart"')
+     < html.indexOf('</section>', html.indexOf('id="gxSheetSurvival"')));
+ok("the wheel and the season sheets no longer exist on their own",
+  !html.includes('data-gx-panel="wheel"') && !html.includes('data-gx-panel="season"'));
 ok("the ladder is the hero — above the tab strip",
   html.indexOf('id="gxLadder"') < html.indexOf('data-gx-sheet="survival"'));
 ok("tab labels are plain English",
-  ["Am I Safe?", "Draft Room", "Full Board", "The Money", "Chop Wheel", "The Long Game", "Weak Spots"]
+  ["Am I Safe?", "Full Board", "The Money", "Weak Spots"]
     .every(t => html.includes(">" + t + "</button>")));
+ok("the folded and removed tabs are gone from the strip",
+  ["Draft Room", "Chop Wheel", "The Long Game"]
+    .every(t => !html.includes(">" + t + "</button>")));
+/* ⚠ These read as DISABLED text before: var(--ink-3) uppercase on cream, which is
+   why the sheets went unused. The strip is a segmented control now. */
+ok("the tab strip is not painted in the disabled-text ink",
+  !/\.gx-tabs button\{[^}]*color:var\(--ink-3\)/.test(html));
 ok("no internal jargon left on the tab strip",
   !html.includes(">Roster Fragility</button>") && !html.includes(">League Danger Board</button>"));
 // ⚠️ Regression guard for a live bug: .dtab inherits var(--ink-1), a DARK ink, so
@@ -432,8 +419,11 @@ ok("locked product name and descriptor ship together",
   html.includes("Last Dawg Standing") && html.includes("The Guillotine League Companion"));
 ok("Chop Chamber has weighted-wheel and repeat-spin controls",
   html.includes('id="gxWheel"') && html.includes('id="gxSpinOne"') && html.includes('id="gxSpinTen"'));
-ok("all six lower sheets are present",
-  ["survival", "draft", "waivers", "danger", "season", "fragility"].every(k => html.includes(`data-gx-panel="${k}"`)));
+ok("all four lower sheets are present",
+  ["survival", "waivers", "danger", "fragility"].every(k => html.includes(`data-gx-panel="${k}"`)));
+ok("the draft room is gone in full — sheet, script and Toto surface",
+  !html.includes('data-gx-panel="draft"') && !html.includes("dd-guillotine-draft-v1")
+  && !html.includes("__GXD") && !html.includes("DRAFT WAR ROOM"));
 ok("prediction receipt is explicitly local-device V1",
   html.includes("DEVICE RECEIPT") && html.includes("local only") && html.includes("not server-persisted"));
 ok("Sunday model cannot be presented as live scoring",

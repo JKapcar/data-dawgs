@@ -620,22 +620,6 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 .gx-shelf{border:1px solid var(--grid);border-radius:11px;padding:11px 12px;margin:12px 0;background:var(--page)}.gx-shelf-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.gx-shelf h3{font-size:12px;margin:0}.gx-shelf-list{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}.gx-league-chip{border:1px solid var(--grid);background:var(--surface-1);color:var(--ink-1);border-radius:999px;padding:6px 10px;cursor:pointer;font:700 11px/1.2 inherit}.gx-league-chip.on{border-color:var(--accent);color:var(--accent)}
 .gx-tabs{display:flex;gap:7px;overflow-x:auto;padding:2px 0 10px;margin:0 0 12px;scrollbar-width:thin}.gx-tabs button{white-space:nowrap;min-height:44px;border:1px solid var(--grid);background:var(--surface-1);color:var(--ink-2);border-radius:999px;padding:8px 12px;font:750 12px/1 inherit;cursor:pointer}.gx-tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}.gx-sheet[hidden]{display:none!important}.gx-sheet>.hero-card:last-child{margin-bottom:26px}
 .gx-planned{display:inline-block;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 45%,transparent);border-radius:4px;padding:2px 6px}
-.gxd-flag{display:inline-block;font-size:8.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;border:1px solid var(--grid);border-radius:4px;padding:1px 5px;margin-left:4px;vertical-align:1px}
-.gxd-good{color:var(--good);border-color:color-mix(in srgb,var(--good) 45%,transparent)}
-.gxd-warn{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 45%,transparent)}
-.gxd-bad{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,transparent)}
-.gxd-pos{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 45%,transparent)}
-#gxDBoard tr{cursor:pointer}
-#gxDBoard td:first-child{color:var(--ink-3)}
-#gxDBoard td.gxd-name{font-weight:750;white-space:nowrap}
-#gxDBoard tr.gxd-tier td{text-align:left;font-weight:800;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);background:color-mix(in srgb,var(--surface-1) 72%,transparent);cursor:default}
-#gxDBoard tr.gxd-tier td span{color:var(--ink-3);font-weight:650;text-transform:none;letter-spacing:0;margin-left:8px}
-#gxDBoard tr.gxd-gone td{opacity:.4}
-#gxDBoard tr.gxd-gone td.gxd-name{text-decoration:line-through}
-#gxDBoard tr.gxd-mine td{opacity:1}
-#gxDBoard tr.gxd-mine td.gxd-name,#gxDBoard td.gxd-mypick{color:var(--accent);font-weight:800;text-decoration:none}
-#gxDFilters .btn.on,#gxSheetDraft .btn.on{border-color:var(--accent);color:var(--accent)}
-.gxd-onclock .sv{color:var(--good)}
 /* ===================== PRIME TIME · broadcast hero ======================
    ⚠️ Every colour in here is explicit. .dtab and .legend resolve to var(--ink-*),
    which are dark inks — inside this dark stage that rendered the team table as
@@ -720,11 +704,17 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 .pt-felt .btn.pt-spin:active{transform:translateY(3px);box-shadow:0 1px 0 #6F5119}
 .pt-felt .btn.pt-spin:disabled{background:#3A3226;color:#8A7F6B;box-shadow:none}
 /* ------------------------------ tab strip -------------------------------- */
-.gx-tabs{gap:0;border-bottom:1px solid var(--grid);padding:0;margin:18px 0 16px}
-.gx-tabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:transparent;
-  padding:12px 15px;font:800 12.5px/1 inherit;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3)}
-.gx-tabs button:hover{color:var(--ink-1)}
-.gx-tabs button.on{background:transparent;color:var(--accent);border-bottom-color:var(--accent)}
+/* ⚠ These were var(--ink-3) uppercase labels on a hairline underline. On the cream
+   background that is the same grey the page uses for DISABLED text, so the sheets read
+   as unavailable and went unused -- the reason this rework exists. It is a segmented
+   control now: a real container, ink-1 labels, and a filled pill for the active sheet. */
+.gx-tabs{gap:6px;border-bottom:0;padding:5px;margin:18px 0 18px;background:var(--surface-1);
+  border:1px solid var(--grid);border-radius:999px;overflow-x:auto}
+.gx-tabs button{border:1px solid transparent;border-bottom:0;border-radius:999px;background:transparent;
+  padding:11px 17px;font:800 12.5px/1 inherit;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-1)}
+.gx-tabs button:hover{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 38%,transparent)}
+.gx-tabs button.on{background:var(--accent);color:#fff;border-color:var(--accent);
+  box-shadow:0 2px 12px color-mix(in srgb,var(--accent) 38%,transparent)}
 @media(max-width:760px){.pt-wheelgrid{grid-template-columns:1fr}.pt-status{margin-left:0;width:100%}
   .pt-nm{height:70px;font-size:10.5px}.pt-stat{flex:1 1 90px;min-width:0}}
 /* ------------- setup drawer + back card: the machine room ---------------- */
@@ -795,6 +785,9 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 .gx-cmp button.me{color:var(--accent);border-color:var(--accent);font-weight:800;cursor:default}
 }.gx-private{font-size:10px;color:var(--ink-3);font-weight:700}.gx-danger td:first-child{font-weight:750}.gx-riskbar{height:6px;background:var(--grid);border-radius:99px;overflow:hidden;min-width:70px}.gx-riskbar i{display:block;height:100%;background:linear-gradient(90deg,var(--warn),var(--bad))}
 @media(max-width:760px){.gx-stage{padding:14px 11px}.gx-stage-grid{grid-template-columns:1fr}.gx-wheelbox canvas{max-width:360px}.gx-wheel-controls .btn{flex:1 1 120px}.gx-predict .controls{display:grid;grid-template-columns:1fr}.gx-predict select,.gx-predict input[type=range]{width:100%;max-width:none}.dtab{font-size:11.5px}.dtab th,.dtab td{padding:7px 6px}}
+@media(max-width:460px){
+  .gx-tabs{flex-wrap:wrap;overflow-x:visible;border-radius:18px}
+  .gx-tabs button{flex:1 1 calc(50% - 6px);padding:11px 8px;font-size:11.5px;letter-spacing:.03em}}
 @media(max-width:390px){.gx-stage{margin-left:-2px;margin-right:-2px}.gx-wheelbox canvas{max-width:calc(100vw - 54px)}.gx-tabs{margin-right:-8px}.hero-card{padding:15px 12px}.statrow{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .nav-section{padding:9px 13px 3px;color:var(--accent);font:800 10px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase}.nav-section:not(:first-child){margin-top:5px;border-top:1px solid var(--grid);padding-top:10px}.grpmenu a[class*="kennel-"]{font-family:ui-rounded,"Trebuchet MS",system-ui,sans-serif;font-weight:800;letter-spacing:.01em}.grpmenu a.kennel-scoreboard{color:#8ed6ff}.grpmenu a.kennel-nfeloml{color:#c9b3ff}.grpmenu a.kennel-qb{color:#ffc06a}.grpmenu a.kennel-wepa{color:#7ce7b0}.grpmenu a.kennel-srs{color:#ff9bb4}.grpmenu a.kennel-hfa{color:#ffe082}.grpmenu a.kennel-units{color:#8ee8e3}.grpmenu a.kennel-receipts{color:#f2c4ff}.grpmenu a.kennel-regimes{color:#a8d88c}</style>
 </head>
@@ -2427,11 +2420,8 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
   <div class="gx-tabs" role="tablist" aria-label="Last Dawg Standing sheets">
     <button class="on" role="tab" aria-selected="true" data-gx-sheet="survival">Am I Safe?</button>
-    <button role="tab" aria-selected="false" data-gx-sheet="draft">Draft Room</button>
     <button role="tab" aria-selected="false" data-gx-sheet="danger">Full Board</button>
     <button role="tab" aria-selected="false" data-gx-sheet="waivers">The Money</button>
-    <button role="tab" aria-selected="false" data-gx-sheet="wheel">Chop Wheel</button>
-    <button role="tab" aria-selected="false" data-gx-sheet="season">The Long Game</button>
     <button role="tab" aria-selected="false" data-gx-sheet="fragility">Weak Spots</button>
   </div>
 
@@ -2447,9 +2437,6 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       <div class="tscroll" style="margin-top:20px"><table class="dtab" id="gxTab"></table></div>
       <p class="legend" id="gxNote"></p>
     </div>
-  </section>
-
-  <section class="gx-sheet" id="gxSheetWheel" data-gx-panel="wheel" hidden>
     <div class="hero-card">
       <h2>The Chop Wheel <span class="samp">Simulation &middot; not live scores</span></h2>
       <p class="legend" style="margin:0 0 14px">Each slice is a team, sized by that team&rsquo;s modeled chop risk for the coming week. Spinning draws from that distribution &mdash; it is a way to feel the odds, not a second opinion about them.</p>
@@ -2481,49 +2468,16 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
         </div>
       </div>
     </div>
-  </section>
-
-  <section class="gx-sheet" id="gxSheetDraft" data-gx-panel="draft" hidden>
-    <div class="hero-card">
-      <h2>Draft War Room <span class="samp" id="gxDState">Not connected</span></h2>
-      <p class="legend" style="margin:0 0 10px">Reads a Sleeper draft the same way the league sync works &mdash; read-only, no login, and nothing here writes to Sleeper. Connect a league above and Load finds its draft on its own, or paste a draft URL or ID.</p>
-      <div class="controls" style="margin-bottom:6px">
-        <input type="text" id="gxDId" placeholder="Sleeper draft URL or ID (optional with a league connected)" style="width:min(100%,360px)" inputmode="url">
-        <button class="btn" id="gxDGo" type="button">Load draft</button>
-        <label class="gx-sound"><input type="checkbox" id="gxDAuto" checked> Auto-refresh</label>
-      </div>
-      <p class="legend" id="gxDMsg" style="margin-top:4px"></p>
-      <div class="statrow" id="gxDStats" style="margin-top:10px"></div>
-      <p class="legend" id="gxDTicker" style="margin-top:6px"></p>
-      <div class="controls" style="margin-top:8px">
-        <label class="gx-sound" for="gxDSlot">My draft slot</label>
-        <select id="gxDSlot" aria-label="My draft slot"><option value="">&mdash;</option></select>
-        <span class="legend" id="gxDSlotNote" style="margin:0"></span>
-      </div>
-    </div>
-
-    <div class="hero-card">
-      <h2>My Dawgs <span class="gx-private">Picks from your slot</span></h2>
-      <div class="statrow" id="gxDShape"></div>
-      <p class="legend" id="gxDMine" style="margin-top:8px">Set your slot above and your picks collect here.</p>
-    </div>
-
-    <div class="hero-card">
-      <h2>Guillotine Board <span class="samp">Editorial &middot; built 2026-08-26</span></h2>
-      <p class="legend" style="margin:0 0 8px">A guillotine re-rank for survival formats: floor and proven volume boosted, volatility and September availability risk faded. MV is the site&rsquo;s Market Value snapshot &mdash; 12-team Half-PPR auction dollars captured 2026-08-24 &mdash; shown as relative worth, not a snake-draft price and not a projection. Ranks, tiers and flags are dated editorial opinion. A live draft strikes rows automatically; tap a row to strike or restore it yourself.</p>
-      <div class="controls" style="margin-bottom:8px">
-        <button class="btn" id="gxDFALL" type="button">All</button>
-        <button class="btn" id="gxDFRB" type="button">RB</button>
-        <button class="btn" id="gxDFWR" type="button">WR</button>
-        <button class="btn" id="gxDFTE" type="button">TE</button>
-        <button class="btn" id="gxDFQB" type="button">QB</button>
-        <label class="gx-sound"><input type="checkbox" id="gxDHide"> Hide drafted</label>
-      </div>
-      <div class="statrow" id="gxDBest"></div>
-      <div class="tscroll" style="margin-top:10px"><table class="dtab" id="gxDBoard"></table></div>
-      <p class="legend">Flags: <b>FLOOR</b> proven weekly volume &middot; <b>BUY</b> market underprices vs. the re-rank &middot; <b>SEPT+</b>/<b>SEPT&minus;</b> September schedule lean &middot; <b>ROOKIE</b> unproven role &middot; <b>RISK</b>/<b>FADE</b> availability or volatility fade &middot; <b>QB</b>/<b>TE</b> positional window. Struck rows persist on this device, per draft.</p>
+    <div class="hero-card"><h2>The Long Game <span class="samp">Season Monte Carlo &middot; modeled</span></h2>
+      <div class="statrow" id="gxSeasonCard"></div>
+      <div class="gx-cmp" id="gxCmp"></div>
+      <div id="gxSeasonChart"></div>
+      <div class="tscroll"><table class="dtab" id="gxSeasonTab"></table></div>
+      <p class="legend" id="gxSeasonNote">Turns on once two completed weeks exist &mdash; the same gate as the weekly odds.</p>
     </div>
   </section>
+
+
 
   <section class="gx-sheet" id="gxSheetWaivers" data-gx-panel="waivers" hidden>
 
@@ -2566,15 +2520,6 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <div class="hero-card"><h2>Full Board <span class="samp">Shareable league view</span></h2><div class="tscroll"><table class="dtab gx-danger" id="gxDangerTab"></table></div><p class="legend">Modeled from completed weekly team scores. This is not a live Sunday leaderboard.</p></div>
   </section>
 
-  <section class="gx-sheet" id="gxSheetSeason" data-gx-panel="season" hidden>
-    <div class="hero-card"><h2>The Long Game <span class="samp">Season Monte Carlo &middot; modeled</span></h2>
-      <div class="statrow" id="gxSeasonCard"></div>
-      <div class="gx-cmp" id="gxCmp"></div>
-      <div id="gxSeasonChart"></div>
-      <div class="tscroll"><table class="dtab" id="gxSeasonTab"></table></div>
-      <p class="legend" id="gxSeasonNote">Turns on once two completed weeks exist &mdash; the same gate as the weekly odds.</p>
-    </div>
-  </section>
 
   <section class="gx-sheet" id="gxSheetFragility" data-gx-panel="fragility" hidden>
     <div class="hero-card"><h2>Weak Spots <span class="samp">V1 &middot; volatility + floor</span></h2><div class="tscroll"><table class="dtab" id="gxFragilityTab"></table></div><p class="legend">V1 uses observed team-score volatility and observed low-week floor. Injury, bye-week, positional-depth and player-concentration components are <span class="gx-planned">Planned</span>.</p></div>
@@ -2605,7 +2550,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
   <div class="honesty" style="margin-bottom:0">
     <h3>What this can't do</h3>
-    <p>Survival odds are a simulation from completed-score history and its variance &mdash; they assume the next week plays like a typical past week. Before two completed weeks exist the page runs in projection mode instead: Sleeper season player projections build each roster&rsquo;s best projected lineup and every team carries an assumed ±21-point spread &mdash; byes, injuries and schedule are not modeled there, and nothing in that mode is observed. They cannot see live Sunday scores, an inactive, or a garbage-time spike. Prediction receipts are local-device only and are not immutable, server-persisted, cross-device or graded. Projection-driven FAAB bid recommendations, full conditional waiver optimization, Universal Data Vault, and injury, bye-week, positional-depth and player-concentration fragility components are all <span class="gx-planned">Planned</span>. The Long Game&rsquo;s season Monte Carlo rolls the weekly model forward with rosters frozen at their current mean and spread &mdash; it cannot see waivers, injuries, byes, or the talent redistribution every chop causes, those omissions compound with every simulated week, and its finishing places cover the simulated teams only. The observed FAAB module encodes a framework about dollar appreciation, not a guarantee. The Draft War Room polls Sleeper every few seconds &mdash; near-live, not instant &mdash; and never writes to Sleeper; its pick matching is a name-and-position heuristic that can miss an unusual name, which a tap on the row fixes. The Guillotine Board&rsquo;s ranks, tiers and flags are editorial opinion built 2026-08-26 over the 2026-08-24 MV snapshot, not projections, and the FAAB War Plan is a dated editorial framework, not a bid engine.</p>
+    <p>Survival odds are a simulation from completed-score history and its variance &mdash; they assume the next week plays like a typical past week. Before two completed weeks exist the page runs in projection mode instead: Sleeper season player projections build each roster&rsquo;s best projected lineup and every team carries an assumed ±21-point spread &mdash; byes, injuries and schedule are not modeled there, and nothing in that mode is observed. They cannot see live Sunday scores, an inactive, or a garbage-time spike. Prediction receipts are local-device only and are not immutable, server-persisted, cross-device or graded. Projection-driven FAAB bid recommendations, full conditional waiver optimization, Universal Data Vault, and injury, bye-week, positional-depth and player-concentration fragility components are all <span class="gx-planned">Planned</span>. The Long Game&rsquo;s season Monte Carlo rolls the weekly model forward with rosters frozen at their current mean and spread &mdash; it cannot see waivers, injuries, byes, or the talent redistribution every chop causes, those omissions compound with every simulated week, and its finishing places cover the simulated teams only. The observed FAAB module encodes a framework about dollar appreciation, not a guarantee. The FAAB War Plan is a dated editorial framework, not a bid engine.</p>
   </div>
 
     </div>
@@ -3398,159 +3343,6 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 })();
 </script>
 <script>
-/* ==================== LAST DAWG STANDING — DRAFT WAR ROOM ====================
-   Reads a Sleeper draft read-only and strikes the Guillotine Board as picks land.
-   Storage "dd-guillotine-draft-v1" holds only a draft ID, a claimed slot and manual
-   strikes — nothing here writes to Sleeper. The board data below is the site's own
-   MV snapshot (2026-08-24, 12-team Half-PPR auction dollars) joined to an editorial
-   guillotine re-rank built 2026-08-26. Opinion with a date, not a projection.
-   ⚠️ Pick names come from each pick's own metadata (first_name/last_name/position),
-   so /players/nfl stays un-fetched, same as the rest of the page. */
-window.DD_GXBOARD={mv_as_of:"2026-08-24",mv_scale:"12-team Half-PPR auction dollars",board_built:"2026-08-26",players:[["Jahmyr Gibbs","RB","DET",6,76.4,1,[]],["Bijan Robinson","RB","ATL",11,73.8,1,[]],["Ja'Marr Chase","WR","CIN",6,70.2,1,[]],["Puka Nacua","WR","LA",11,68.7,1,[]],["Jaxon Smith-Njigba","WR","SEA",11,66.2,1,[]],["Jonathan Taylor","RB","IND",13,55.5,1,["FLOOR"]],["Justin Jefferson","WR","MIN",6,59,1,[]],["Christian McCaffrey","RB","SF",8,62.7,1,["RISK"]],["Amon-Ra St Brown","WR","DET",6,58.2,1,["FLOOR"]],["CeeDee Lamb","WR","DAL",14,53.6,1,[]],["James Cook","RB","BUF",7,45.6,2,["FLOOR"]],["Derrick Henry","RB","BAL",13,38.8,2,["FLOOR"]],["Saquon Barkley","RB","PHI",10,43,2,[]],["Kenneth Walker","RB","KC",5,42,2,["BUY"]],["Chase Brown","RB","CIN",6,44.7,2,[]],["Omarion Hampton","RB","LAC",7,42.2,2,[]],["AJ Brown","WR","NE",11,40.3,3,[]],["Nico Collins","WR","HOU",8,38.2,3,["FLOOR"]],["Drake London","WR","ATL",11,42.2,3,[]],["Ashton Jeanty","RB","LV",13,42.5,3,[]],["Brock Bowers","TE","LV",13,37.4,3,["TE"]],["Chris Olave","WR","NO",8,35.8,3,["BUY"]],["George Pickens","WR","DAL",14,34.6,3,[]],["De'Von Achane","RB","MIA",6,44.9,3,["FADE"]],["Malik Nabers","WR","NYG",8,34.4,3,[]],["Kyren Williams","RB","LA",11,33.7,3,[]],["Breece Hall","RB","NYJ",13,33.2,3,["BUY"]],["Garrett Wilson","WR","NYJ",13,32.5,3,[]],["Trey McBride","TE","ARI",14,35.7,3,["SEPT-"]],["Travis Etienne","RB","NO",8,28.7,4,[]],["Josh Jacobs","RB","GB",11,31.6,4,["FLOOR"]],["Javonte Williams","RB","DAL",14,29.5,4,[]],["Devonta Smith","WR","PHI",10,29.7,4,[]],["Ladd McConkey","WR","LAC",7,31.4,4,[]],["Zay Flowers","WR","BAL",13,29.8,4,[]],["Josh Allen","QB","BUF",7,29.7,4,["QB"]],["Tee Higgins","WR","CIN",6,28,4,[]],["Emeka Egbuka","WR","TB",10,28.6,4,[]],["Jaylen Waddle","WR","DEN",10,27.4,4,[]],["D'Andre Swift","RB","CHI",10,25.5,4,["FLOOR"]],["Davante Adams","WR","LA",11,25.2,4,[]],["Colston Loveland","TE","CHI",10,25.5,4,["TE"]],["Jeremiyah Love","RB","ARI",14,33.9,4,["FADE","ROOKIE","SEPT-"]],["Rashee Rice","WR","KC",5,33.8,4,["RISK"]],["Tetairoa McMillan","WR","CAR",5,26.9,4,[]],["Luther Burden","WR","CHI",10,24.3,5,[]],["Jameson Williams","WR","DET",6,22.7,5,[]],["Bucky Irving","RB","TB",10,24.2,5,[]],["Terry McLaurin","WR","WAS",7,23.1,5,["FLOOR"]],["Cam Skattebo","RB","NYG",8,22.8,5,[]],["DJ Moore","WR","BUF",7,21,5,[]],["Mike Evans","WR","SF",8,19.6,5,["FLOOR"]],["David Montgomery","RB","HOU",8,19,5,["FLOOR"]],["Lamar Jackson","QB","BAL",13,20.4,5,["QB"]],["Jadarian Price","RB","SEA",11,15.1,5,["ROOKIE"]],["Bhayshul Tuten","RB","JAX",7,17.7,5,["SEPT-"]],["Rhamondre Stevenson","RB","NE",11,17.7,5,[]],["Jayden Daniels","QB","WAS",7,18.8,5,["QB"]],["Tyler Warren","TE","IND",13,17.9,5,["TE"]],["Quinshon Judkins","RB","CLE",11,19.3,5,[]],["Parker Washington","WR","JAX",7,17.9,5,["SEPT-"]],["Christian Watson","WR","GB",11,16.3,5,[]],["DK Metcalf","WR","PIT",9,16.5,5,[]],["Jalen Hurts","QB","PHI",10,17.3,5,["QB"]],["TreVeyon Henderson","RB","NE",11,17.4,5,[]],["Joe Burrow","QB","CIN",6,17.1,5,["QB"]],["Jaylen Warren","RB","PIT",9,16.5,6,[]],["Brian Thomas","WR","JAX",7,15.5,6,["SEPT-"]],["Rome Odunze","WR","CHI",10,14.6,6,[]],["Marvin Harrison","WR","ARI",14,12.9,6,["SEPT-"]],["Rico Dowdle","RB","PIT",9,14.4,6,["BUY"]],["Tony Pollard","RB","TEN",9,14.1,6,[]],["Drake Maye","QB","NE",11,16.5,6,["QB"]],["Tucker Kraft","TE","GB",11,11.3,6,["TE"]],["Carnell Tate","WR","TEN",9,15.3,6,["ROOKIE"]],["Justin Herbert","QB","LAC",7,12.4,6,["QB"]],["Jayden Reed","WR","GB",11,10.3,6,[]],["Jonathon Brooks","RB","CAR",5,10.9,6,["FADE"]],["Blake Corum","RB","LA",11,7.5,6,[]],["Dak Prescott","QB","DAL",14,10,6,["QB"]],["Caleb Williams","QB","CHI",10,10.2,6,["QB"]],["RJ Harvey","RB","DEN",10,11.5,6,[]],["Jordan Addison","WR","MIN",6,6.1,6,[]],["Sam LaPorta","TE","DET",6,9.2,6,["TE"]],["Quentin Johnston","WR","LAC",7,8.6,6,[]],["Courtland Sutton","WR","DEN",10,7.4,7,[]],["Chris Godwin","WR","TB",10,7.8,7,["FLOOR"]],["Jacory Croskey-Merritt","RB","WAS",7,5.8,7,[]],["JK Dobbins","RB","DEN",10,6.8,7,[]],["Chuba Hubbard","RB","CAR",5,9.4,7,[]],["Josh Downs","WR","IND",13,9.5,7,[]],["Patrick Mahomes","QB","KC",5,8.9,7,["QB"]],["Trevor Lawrence","QB","JAX",7,10.5,7,["QB","SEPT-"]],["Kenneth Gainwell","RB","TB",10,6.2,7,["FLOOR"]],["Michael Pittman","WR","PIT",9,8.5,7,[]],["Michael Wilson","WR","ARI",14,8,7,[]],["Harold Fannin","TE","CLE",11,15.4,7,["TE"]],["Kyle Pitts","TE","ATL",11,8.9,7,[]],["Jordan Mason","RB","MIN",6,6,7,[]],["Kyle Monangai","RB","CHI",10,4.8,7,[]],["Xavier Worthy","WR","KC",5,6.9,7,[]],["Matthew Stafford","QB","LA",11,7.6,7,["QB"]],["Jared Goff","QB","DET",6,4.5,7,["QB","SEPT+"]],["Stefon Diggs","WR","WAS",7,7,7,[]],["Travis Kelce","TE","KC",5,5.7,7,["RISK"]],["George Kittle","TE","SF",8,7.9,7,["RISK"]]]};
-(function(){
-  "use strict";
-  var API="https://api.sleeper.app/v1", KEY="dd-guillotine-draft-v1";
-  var TIERS={1:["Tier 1 · The top shelf","gone early — only matters if one slides"],
-             2:["Tier 2 · Anchors","two of these by the second turn is the goal"],
-             3:["Tier 3 · Turn targets","second anchor territory"],
-             4:["Tier 4 · Wheel survivors","rounds 3–4"],
-             5:["Tier 5 · Starter floor","rounds 5–6 — QB/TE windows open"],
-             6:["Tier 6 · Last real roles","rounds 7–8"],
-             7:["Tier 7 · Floor vets & Sept plays","rounds 9–10; after this, placeholders"]};
-  var FLAGC={FLOOR:"gxd-good",BUY:"gxd-good","SEPT+":"gxd-good","SEPT-":"gxd-warn",ROOKIE:"gxd-warn",RISK:"gxd-bad",FADE:"gxd-bad",QB:"gxd-pos",TE:"gxd-pos"};
-  var $=function(id){return document.getElementById(id);};
-  var elState=$("gxDState"),elId=$("gxDId"),elGo=$("gxDGo"),elAuto=$("gxDAuto"),elMsg=$("gxDMsg"),
-      elStats=$("gxDStats"),elTicker=$("gxDTicker"),elSlot=$("gxDSlot"),elSlotNote=$("gxDSlotNote"),
-      elShape=$("gxDShape"),elMine=$("gxDMine"),elBest=$("gxDBest"),elBoard=$("gxDBoard");
-  if(!elBoard) return;
-  function read(){try{return JSON.parse(localStorage.getItem(KEY)||"")||{};}catch(e){return {};}}
-  function save(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){}}
-  function esc(s){return String(s==null?"":s).replace(/[&<>\"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
-  function tile(v,l,cls){return '<div class="s'+(cls?' '+cls:'')+'"><div class="sv">'+v+'</div><div class="sl">'+l+'</div></div>';}
-  function norm(s){return String(s||"").toLowerCase().replace(/[^a-z]/g,"");}
-  /* Snake math. Sleeper's reversal_round (3rd-round-reversal) flips direction from
-     that round on; 0 means a plain snake. draft_slot on each landed pick is the
-     ground truth — this is only for picks that have not happened yet. */
-  function slotFor(no,T,rev){var r=Math.ceil(no/T),k=no-(r-1)*T,e=(rev>=2&&r>=rev)?r+1:r;return {round:r,inRound:k,slot:(e%2===1)?k:(T-k+1)};}
-  function nextFor(fromNo,T,R,rev,slot){for(var n=fromNo;n<=T*R;n++){if(slotFor(n,T,rev).slot===slot)return n;}return null;}
-  window.__GXDT={norm:norm,slotFor:slotFor,nextFor:nextFor};
-  var BOARD=(window.DD_GXBOARD&&window.DD_GXBOARD.players)||[];
-  var byKey={},byName={};
-  BOARD.forEach(function(p,i){var n=norm(p[0]);byKey[n+"|"+p[1]]=i;if(byName[n]===undefined)byName[n]=i;else byName[n]=-1;});
-  var S={draft:null,picks:[],order:{},users:{},slot:null,filter:"ALL",hide:false,taken:{},timer:null,leagueUsersFor:null};
-  async function jget(p){var r=await fetch(API+p);if(r.status===404)throw new Error("not-found");if(!r.ok)throw new Error("http "+r.status);var j=await r.json();if(j===null)throw new Error("empty");return j;}
-  function parseDraftId(v){v=String(v||"").trim();if(/^\d{6,30}$/.test(v))return v;var m=v.match(/draft\/(?:nfl\/)?(\d{6,30})/);return m?m[1]:null;}
-  function leagueId(){try{var c=JSON.parse(localStorage.getItem("dd-guillotine-v1")||"");if(c&&c.id)return String(c.id);}catch(e){}return window.__GX&&window.__GX.leagueId?String(window.__GX.leagueId):null;}
-  function msg(t,bad){if(!elMsg)return;elMsg.innerHTML=t;elMsg.style.color=bad?"var(--bad)":"";}
-  function fmtStart(ms){try{return new Intl.DateTimeFormat("en-US",{timeZone:"America/New_York",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}).format(new Date(ms))+" ET";}catch(e){return "";}}
-  function slotUser(slot){var uid=null,k;for(k in S.order){if(S.order[k]===slot){uid=k;break;}}
-    var u=uid&&S.users[uid];return u?((u.metadata&&u.metadata.team_name)||u.display_name||("Slot "+slot)):("Slot "+slot);}
-  function markTaken(){S.taken={};S.picks.forEach(function(p){var m=p.metadata||{};var n=norm((m.first_name||"")+(m.last_name||""));if(!n)return;
-    var i=byKey[n+"|"+(m.position||"")];if(i===undefined){var j=byName[n];if(j!==undefined&&j!==-1)i=j;}
-    if(i!==undefined&&i>=0)S.taken[i]={no:p.pick_no,round:p.round,inRound:p.pick_no-(p.round-1)*(S.draft.settings.teams||1),slot:p.draft_slot,mine:S.slot&&p.draft_slot===S.slot};});}
-  function manual(){var c=read();return (c.manual&&c.manual[S.draft?S.draft.draft_id:"none"])||{};}
-  function render(){
-    if(!S.draft)return;
-    var st=S.draft.settings||{},T=st.teams||0,R=st.rounds||0,rev=st.reversal_round||0,status=S.draft.status||"?";
-    var nextNo=S.picks.length+1,total=T*R,liveDone=status==="complete"||nextNo>total;
-    var nx=liveDone?null:slotFor(nextNo,T,rev);
-    var mineNext=(S.slot&&!liveDone)?nextFor(nextNo,T,R,rev,S.slot):null;
-    var until=mineNext===null?null:mineNext-nextNo;
-    elState.textContent=status==="drafting"?"Live · polling":status==="complete"?"Draft complete":status==="pre_draft"?"Pre-draft":String(status);
-    var tiles=tile(esc(status==="pre_draft"?("Starts "+fmtStart(S.draft.start_time)):status),"Draft status")
-      +tile(liveDone?"Done":nx.round+"."+String(nx.inRound).padStart(2,"0"),liveDone?("All "+total+" picks in"):("Next pick · #"+nextNo+" overall"))
-      +(liveDone?"":tile(esc(slotUser(nx.slot)),"On the clock"));
-    if(S.slot&&!liveDone)tiles+=until===0?tile("ON THE CLOCK","Your pick — go","gxd-onclock"):tile("#"+mineNext+" · in "+until,"Your next pick");
-    elStats.innerHTML=tiles;
-    var last=S.picks.slice(-3).reverse().map(function(p){var m=p.metadata||{};
-      return p.round+"."+String(p.pick_no-(p.round-1)*T).padStart(2,"0")+" "+esc(slotUser(p.draft_slot))+" — "+esc((m.first_name||"")+" "+(m.last_name||""))+" ("+esc(m.position||"?")+")";});
-    elTicker.innerHTML=last.length?("Last: "+last.join(" · ")):"";
-    // my dawgs
-    var mine=S.slot?S.picks.filter(function(p){return p.draft_slot===S.slot;}):[];
-    var counts={QB:0,RB:0,WR:0,TE:0};mine.forEach(function(p){var q=(p.metadata||{}).position;if(counts[q]!==undefined)counts[q]++;});
-    elShape.innerHTML=S.slot?(tile(mine.length+" / "+R,"Picks made")+tile(counts.RB+" RB · "+counts.WR+" WR","Needs 2RB · 2WR + 2 flex")+tile(counts.QB+" QB · "+counts.TE+" TE","Needs 1 QB · 1 TE")):"";
-    elMine.innerHTML=mine.length?mine.map(function(p){var m=p.metadata||{};
-      return p.round+"."+String(p.pick_no-(p.round-1)*T).padStart(2,"0")+" <b>"+esc((m.first_name||"")+" "+(m.last_name||""))+"</b> ("+esc(m.position||"?")+(m.team?" · "+esc(m.team):"")+")";}).join(" &nbsp;·&nbsp; ")
-      :(S.slot?"No picks from slot "+S.slot+" yet.":"Set your slot above and your picks collect here.");
-    markTaken();
-    var man=manual();
-    function gone(i){return S.taken[i]||man[norm(BOARD[i][0])];}
-    // best available
-    var best={ALL:null,RB:null,WR:null,TE:null,QB:null};
-    BOARD.forEach(function(p,i){if(gone(i))return;if(!best.ALL)best.ALL=p[0];if(best[p[1]]===null)best[p[1]]=p[0];});
-    elBest.innerHTML=tile(esc(best.ALL||"—"),"Best available")+tile(esc(best.RB||"—"),"Best RB")+tile(esc(best.WR||"—"),"Best WR")+tile(esc(best.TE||"—"),"Best TE")+tile(esc(best.QB||"—"),"Best QB");
-    // board
-    var rows=['<thead><tr><th>#</th><th>Player</th><th>Pos · Tm</th><th>Bye</th><th>MV</th><th>Flags</th><th>Pick</th></tr></thead><tbody>'],lastTier=0;
-    BOARD.forEach(function(p,i){
-      if(S.filter!=="ALL"&&p[1]!==S.filter)return;
-      var tk=S.taken[i],mn=man[norm(p[0])],isGone=!!(tk||mn);
-      if(S.hide&&isGone)return;
-      if(S.filter==="ALL"&&p[5]!==lastTier){var t=TIERS[p[5]]||["Tier "+p[5],""];rows.push('<tr class="gxd-tier"><td colspan="7">'+t[0]+'<span>'+t[1]+'</span></td></tr>');lastTier=p[5];}
-      var flags=(p[6]||[]).map(function(f){return '<span class="gxd-flag '+(FLAGC[f]||"")+'">'+esc(f)+'</span>';}).join("");
-      var pick=tk?(tk.round+"."+String(tk.inRound).padStart(2,"0")+(tk.mine?" · YOU":"")):(mn?"struck":"—");
-      rows.push('<tr data-i="'+i+'" class="'+(isGone?"gxd-gone":"")+(tk&&tk.mine?" gxd-mine":"")+'">'
-        +'<td>'+(i+1)+'</td><td class="gxd-name">'+esc(p[0])+'</td><td>'+esc(p[1]+" · "+p[2])+'</td><td>'+(p[3]==null?"—":esc(p[3]))+'</td><td>$'+(p[4]==null?"—":esc(p[4]))+'</td><td>'+flags+'</td><td'+(tk&&tk.mine?' class="gxd-mypick"':'')+'>'+esc(pick)+'</td></tr>');
-    });
-    elBoard.innerHTML=rows.join("")+"</tbody>";
-    // Toto's window onto the draft
-    window.__GXD={draftId:S.draft.draft_id,status:status,teams:T,rounds:R,
-      nextNo:liveDone?null:nextNo,nextRound:nx?nx.round:null,nextSlot:nx?nx.slot:null,
-      onClock:nx?slotUser(nx.slot):null,mySlot:S.slot||null,untilMe:until,
-      myPicks:mine.map(function(p){var m=p.metadata||{};return {name:(m.first_name||"")+" "+(m.last_name||""),pos:m.position||"?",round:p.round,inRound:p.pick_no-(p.round-1)*T};}),
-      best:best,drafted:Object.keys(S.taken).length,boardSize:BOARD.length,
-      boardBuilt:window.DD_GXBOARD.board_built,mvAsOf:window.DD_GXBOARD.mv_as_of};
-  }
-  function schedule(){if(S.timer){clearTimeout(S.timer);S.timer=null;}
-    if(!S.draft||S.draft.status==="complete")return;
-    if(!(elAuto&&elAuto.checked))return;
-    S.timer=setTimeout(function(){load(S.draft.draft_id,true);},S.draft.status==="drafting"?5000:20000);}
-  async function load(id,quiet){
-    try{
-      if(!id){var v=parseDraftId(elId?elId.value:"");
-        if(v)id=v;
-        else{var lg=leagueId();if(!lg){msg("Paste a draft URL or ID, or connect a league above first.",true);return;}
-          if(!quiet)msg("Finding this league's draft…");
-          var ds=await jget("/league/"+lg+"/drafts");
-          if(!ds||!ds.length){msg("Sleeper lists no draft for that league.",true);return;}
-          ds.sort(function(a,b){return (b.start_time||0)-(a.start_time||0);});id=ds[0].draft_id;}}
-      var d=await jget("/draft/"+id);
-      var picks=await jget("/draft/"+id+"/picks");
-      S.draft=d;S.picks=picks||[];S.order=d.draft_order||{};
-      if(d.league_id&&S.leagueUsersFor!==d.league_id){
-        try{var us=await jget("/league/"+d.league_id+"/users");S.users={};(us||[]).forEach(function(u){S.users[u.user_id]=u;});S.leagueUsersFor=d.league_id;}catch(e){}}
-      var c=read();c.draftId=String(id);
-      S.slot=(c.slots&&c.slots[String(id)])||S.slot||null;save(c);
-      if(elId&&!elId.value)elId.value=String(id);
-      if(elSlot){var T=(d.settings&&d.settings.teams)||0,opts='<option value="">—</option>',i;
-        for(i=1;i<=T;i++)opts+='<option value="'+i+'"'+(S.slot===i?" selected":"")+'>'+i+'</option>';
-        elSlot.innerHTML=opts;if(S.slot)elSlot.value=String(S.slot);}
-      if(!quiet)msg("Connected to draft <b>"+esc(String(id))+"</b> — "+((d.settings&&d.settings.teams)||"?")+" teams, "+((d.settings&&d.settings.rounds)||"?")+" rounds, "+esc(d.status||"?")+".");
-      render();schedule();
-    }catch(e){
-      if(!quiet)msg(String(e).indexOf("not-found")>-1?"No draft with that ID.":"Couldn't reach Sleeper ("+esc(String(e.message||e))+"). Nothing was changed.",true);
-      schedule();
-    }
-  }
-  if(elGo)elGo.addEventListener("click",function(){load(null,false);});
-  if(elAuto)elAuto.addEventListener("change",function(){schedule();});
-  if(elSlot)elSlot.addEventListener("change",function(){var v=Number(elSlot.value)||null;S.slot=v;
-    var c=read();c.slots=c.slots||{};if(S.draft)c.slots[String(S.draft.draft_id)]=v;save(c);
-    if(elSlotNote)elSlotNote.textContent=v?"Slot "+v+" saved on this device.":"";render();});
-  ["ALL","RB","WR","TE","QB"].forEach(function(f){var b=$("gxDF"+f);if(!b)return;
-    b.addEventListener("click",function(){S.filter=f;["ALL","RB","WR","TE","QB"].forEach(function(g){var x=$("gxDF"+g);if(x&&x.classList)x.classList[g===f?"add":"remove"]("on");});render();});});
-  var hb=$("gxDHide");if(hb)hb.addEventListener("change",function(){S.hide=!!hb.checked;render();});
-  if(elBoard)elBoard.addEventListener("click",function(e){
-    var tr=e&&e.target&&e.target.closest?e.target.closest("tr[data-i]"):null;if(!tr)return;
-    var i=Number(tr.getAttribute("data-i"));if(!(i>=0)||S.taken[i])return; // live picks win; manual only toggles the rest
-    var c=read(),k=S.draft?String(S.draft.draft_id):"none";c.manual=c.manual||{};c.manual[k]=c.manual[k]||{};
-    var n=norm(BOARD[i][0]);if(c.manual[k][n])delete c.manual[k][n];else c.manual[k][n]=1;save(c);render();});
-  var b0=$("gxDFALL");if(b0&&b0.classList)b0.classList.add("on");
-  // A saved draft on this device reconnects on its own; otherwise wait for the human.
-  var c0=read();if(c0.draftId){if(c0.slots&&c0.slots[String(c0.draftId)])S.slot=c0.slots[String(c0.draftId)];load(String(c0.draftId),true);}
-  addEventListener("gx-ready",function(){if(!S.draft&&!(elId&&elId.value))msg("League connected — hit Load draft and this finds tonight's draft on its own.");});
-})();
-</script>
-<script>
 /* ---------------- Toto's surface: the Guillotine companion ----------------
    The page's own sim state lives inside an IIFE and escapes only into the DOM, so
    sync() stashes what matters on window.__GX. If nobody has connected a league there
@@ -3575,22 +3367,11 @@ window.DD_BOTCTX = {
 - FAAB numbers (budgets, spend, pool) are OBSERVED league facts read from Sleeper. The only framework claim is that dollars appreciate as teams die; never turn that into a specific bid recommendation dressed as maths.
 - The waiver board is OBSERVED points in this league's own scoring for players on no current roster. A player only has data for weeks a roster held them; never-rostered players are invisible. It does not know waiver order, and it is not a projection.
 - A team missing from the table has fewer than 2 completed weeks, a zero standard deviation, or an EMPTY roster — empty mid-season means chopped. That is the answer to "why am I not listed", not a bug.
-- The DRAFT WAR ROOM sheet reads a Sleeper draft read-only (picks, slots, on-the-clock) and strikes its Guillotine Board as picks land. Board rank, tiers and flags are EDITORIAL opinion built 2026-08-26 over the site's 2026-08-24 MV snapshot (12-team Half-PPR auction dollars — relative worth, never a snake price, never a projection). Say "the board" or "the editorial re-rank" when you cite it, never "the model" or "projections". Pick matching is a name+position heuristic and can miss; the user taps a row to fix it.
 - The FAAB WAR PLAN card is a dated editorial framework calibrated to ONE room's observed 2025 winning bids plus published case studies. Quote its ranges as opinion with the date. The standing rule holds: never dress a specific bid recommendation up as maths.
 - THE LONG GAME sheet is a SEASON Monte Carlo: thousands of simulated seasons rolling the same weekly model forward, chopping the lowest each week. ⚠️ Rosters are FROZEN at today's mean and spread — no waivers, no injuries, no byes, and no chopped-roster talent redistribution, which is the defining dynamic of this format — and every weekly assumption COMPOUNDS with each simulated week. Quote win odds and survival curves as a modeled illustration, never as a forecast. Finishing places are among the simulated teams only.
 - PROJECTION MODE: before two completed weeks exist, team means come from SLEEPER SEASON PLAYER PROJECTIONS — the best projected lineup per roster under this league's slot list — and every team carries an ASSUMED ±21-point weekly spread; byes, injuries and schedule are NOT modeled. Call every number in this mode "projected", never "observed". The page switches to the league's own scoring by itself at two completed weeks.`,
   ctx: () => {
-    const D = window.__GXD, dl = [];
-    if(D){
-      dl.push(`DRAFT WAR ROOM (observed via Sleeper read-only; board is EDITORIAL, built ${D.boardBuilt}): draft ${D.draftId} — ${D.status}, ${D.teams} teams × ${D.rounds} rounds, ${D.drafted} of the ${D.boardSize} board players gone.`);
-      if(D.nextNo) dl.push(`Next pick: round ${D.nextRound}, draft slot ${D.nextSlot} — #${D.nextNo} overall${D.onClock ? `, ${D.onClock} on the clock` : ''}.`);
-      dl.push(D.mySlot
-        ? `THE USER drafts from slot ${D.mySlot}. ${D.untilMe === 0 ? 'THEY ARE ON THE CLOCK RIGHT NOW.' : (D.untilMe != null ? `${D.untilMe} pick(s) until they are up.` : 'They have no picks left.')}`
-        : 'The user has not claimed a draft slot on the page, so you do not know which picks are theirs.');
-      if(D.myPicks && D.myPicks.length) dl.push('Their picks so far: ' + D.myPicks.map(p => `${p.round}.${p.inRound} ${p.name} (${p.pos})`).join(', ') + '.');
-      if(D.best) dl.push(`Best available by the editorial board — overall: ${D.best.ALL || '—'}; RB: ${D.best.RB || '—'}; WR: ${D.best.WR || '—'}; TE: ${D.best.TE || '—'}; QB: ${D.best.QB || '—'}.`);
-      dl.push(`MV dollars on the board are the site's ${D.mvAsOf} snapshot on a 12-team Half-PPR auction scale — relative worth, not a snake price and not a projection.`);
-    }
+    const dl = [];
     const G = window.__GX;
     if(!G)
       return (dl.length ? dl.join('\n') + '\n\n' : '') + 'No league is connected on this device yet. The user pastes a Sleeper league ID into the connect box and the page pulls their league read-only. Until then there is nothing to read — say so.';
