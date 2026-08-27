@@ -2525,7 +2525,16 @@ if(LGP){
     +'sack-prone QBs. Net effect of this sheet: volume RB/WR gain (first downs), QBs cost <i>less</i> than '
     +'generic boards say (−2.5 INT and incompletions outweigh the passing-yard boost).';
 }
-if(window.DDDraftPersonal) DDDraftPersonal.assertSortKeys(COLS.filter(c=>c.sortable).map(c=>c.key));
+/* ⚠️ Loud in the console, SOFT in the UX. This assert throwing at top level killed the
+   entire rig on 2026-08-27 — draft night — when a still-active old service worker paired
+   fresh network-first HTML with a cache-first stale draft-personal-sync.js for the ten
+   minutes it takes the SW to update. Contract drift must disable the personal SYNC, not
+   the draft board it syncs. The source-level contract is still enforced hard by
+   test-draft-state.mjs. */
+if(window.DDDraftPersonal){
+  try{ DDDraftPersonal.assertSortKeys(COLS.filter(c=>c.sortable).map(c=>c.key)); }
+  catch(e){ console.error("personal sync disabled — sort-key contract skew (stale cached js?):", e); window.DDDraftPersonal=null; }
+}
 function sortVal(r,k){
   if(k==="silva"){ const v=parseFloat(String(r[k]).replace("~","")); return isNaN(v)?Infinity:v; }
   if(k==="rank"||MONEY_KEYS.includes(k)) return +r[k]||0;

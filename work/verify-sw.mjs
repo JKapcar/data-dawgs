@@ -16,12 +16,17 @@ function git(args){
    worse than no gate: a gate nobody can get green stops being read.
    The pages the service worker caches are the root pages. Keep both sides on
    that set — if you widen one, widen the other in the same commit. */
-const files=git(["ls-files","*.html"]).toString().trim().split(/\r?\n/)
+/* 2026-08-27: root *.js joins the hash (sw.js excluded) — sw.js's header claimed this
+   set all along, and the html-only gap paired stale cache-first js with fresh
+   network-first html on draft night. Mirrors stamp-sw-version.py exactly:
+   sorted *.html then sorted *.js, one concatenated stream. */
+const rootOnly=p=>git(["ls-files",p]).toString().trim().split(/\r?\n/)
   .filter(Boolean).filter(f=>!f.includes("/")).sort();
+const files=[...rootOnly("*.html"),...rootOnly("*.js").filter(f=>f!=="sw.js")];
 const hash=createHash("md5");
 for(const file of files) hash.update(git(["show",":"+file]));
 const expected=hash.digest("hex").slice(0,10);
 const sw=git(["show",":sw.js"]).toString();
 const actual=(sw.match(/const VERSION = ["']([^"']+)["']/)||[])[1];
-if(actual!==expected) throw new Error(`staged sw VERSION ${actual||"missing"} != staged HTML ${expected}`);
+if(actual!==expected) throw new Error(`staged sw VERSION ${actual||"missing"} != staged HTML+JS ${expected}`);
 console.log(`staged sw VERSION verified: ${actual} across ${files.length} root HTML files`);

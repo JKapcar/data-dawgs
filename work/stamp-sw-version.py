@@ -17,7 +17,13 @@ import pathlib
 REPO = pathlib.Path(__file__).resolve().parent.parent
 
 h = hashlib.md5()
-for f in sorted(REPO.glob("*.html")):
+# ⚠️ *.html AND root *.js (sw.js excluded) — sw.js's own header has claimed this set all
+# along, but only the HTML was ever hashed. The gap bit on draft night 2026-08-27: a JS
+# contract change re-keyed nothing, an old SW served stale cache-first js against fresh
+# network-first html, and the pair mismatch killed the rig. verify-sw.mjs mirrors this
+# set exactly — if you widen one side, widen the other in the same commit.
+files = sorted(REPO.glob("*.html")) + sorted(p for p in REPO.glob("*.js") if p.name != "sw.js")
+for f in files:
     h.update(f.read_bytes())
 new = h.hexdigest()[:10]
 
