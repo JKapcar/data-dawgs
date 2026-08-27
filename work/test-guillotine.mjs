@@ -543,8 +543,28 @@ ok("the finish table says who was chopped and when",
 ok("the single draw is labelled a sample, never a forecast",
   byId("gxOneNote").innerHTML.includes("SAMPLE") && html.includes("not a forecast"));
 
-ok("prediction receipt is explicitly local-device V1",
-  html.includes("DEVICE RECEIPT") && html.includes("local only") && html.includes("not server-persisted"));
+ok("the vote is still explicitly device-local",
+  html.includes("this device only") && html.includes("not server-persisted")
+  && html.includes("clearing site data clears the record"));
+/* ⚠ The panel may only claim grading because grading exists. If the derivation is
+   ever removed, this pair must fail together rather than leaving the claim standing. */
+ok("it says it is graded, and says what graded means here",
+  html.includes("Graded against the result") && html.includes("graded on this device"));
+ok("the vote question is the heading, not jargon",
+  html.includes("who gets chopped this week") && !html.includes("Weekly chopped-team prediction"));
+/* the derived result a vote is graded against */
+const CH = (G || {}).chopHistory || [];
+ok("the actual chop is derived per week from observed scores", CH.length >= 1, String(CH.length));
+ok("the lowest scorer is the one named", CH[0] && String(CH[0].rid) === "6",
+  CH[0] && String(CH[0].rid));
+// ⚠️ Sleeper keeps reporting an emptied roster for a week or two; without a gone-set the
+// same team gets named chopped twice and every later week is wrong.
+ok("nobody is chopped twice", new Set(CH.map(c => c.rid)).size === CH.length,
+  CH.map(c => c.week + ":" + c.rid).join(" "));
+ok("weeks come back in order", CH.every((c, i) => i === 0 || c.week > CH[i - 1].week));
+ok("votes are stored per week, not one row that each week overwrites",
+  html.includes("byWeek") && html.includes('predKey()'));
+
 ok("Sunday model cannot be presented as live scoring",
   html.includes("THIS IS NOT A LIVE SUNDAY SCORE TRACKER") && html.includes("not live scores"));
 
