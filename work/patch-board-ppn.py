@@ -53,15 +53,7 @@ if(LGP){
     so.insertBefore(o, so.children[1]||null);
   }
   const intro=document.querySelector(".bd-intro");
-  if(intro) intro.innerHTML='Priced for <b>this league</b> — 14-team Half PPR, custom scoring '
-    +'(+.25/completion, −.5/incompletion, 20 pass yds/pt, −2.5 INT, +.25 per rushing and receiving first down, '
-    +'+1 per 40-yard catch), lineup QB/2RB/2WR/TE/2FLEX/DEF. <b>No kicker slot — kickers are $0 here.</b> '
-    +'<b>$ PPN</b> = the Aug 24, 2026 MV snapshot re-priced by each player&rsquo;s value-over-replacement ratio '
-    +'under this scoring versus the generic half-PPR the market priced, from Sleeper season projections '
-    +'captured Aug 27, 2026, total budget conserved. Not modeled: sacks taken, 40-yard runs and completions, '
-    +'return yards, and Yahoo&rsquo;s whole-point rounding — all small, and the sack hole slightly flatters '
-    +'sack-prone QBs. Net effect of this sheet: volume RB/WR gain (first downs), QBs cost <i>less</i> than '
-    +'generic boards say (−2.5 INT and incompletions outweigh the passing-yard boost).';
+  if(intro) intro.innerHTML='Priced for <b>this league</b> — 14-team Half PPR, custom scoring (+.25/completion, −.5/incompletion, 20 pass yds/pt, −2.5 INT, −1/sack, +.25 per rushing and receiving first down, 40-yard play bonuses), lineup QB/2RB/2WR/TE/2FLEX/DEF. <b>No kicker slot — kickers are $0 here.</b> <b>$ PPN</b> = the personal board (updated Aug 27, 2026) converted to this room: each price is its premium over the $1 floor plus the shift in value-over-replacement between the board&rsquo;s generic 12-team room and this one, from Sleeper season projections captured Aug 27, with sacks from per-QB 2025 rates (nflverse) shrunk to the position median and 40-yard run/completion bonuses at position means. Every priced player holds a $1 floor and only the cash above the reserve is distributed, so the top of the board is compressed on purpose. Prices were stress-tested at half and 1.5x the scoring adjustment and cross-checked against an independent build — top-20 agreement within $2. Still not modeled: return yards, pick-sixes thrown, Yahoo&rsquo;s whole-point rounding. Net effect: volume RB/WR gain (first downs), and elite QBs hold value while replacement QBs crater — the sack and INT penalties punish bad quarterbacking hardest, so the middle QB tier is where the discount lives.';
 }'''
 assert s.count(old) == 1, "money keys"
 s = s.replace(old, new, 1)
