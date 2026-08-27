@@ -141,6 +141,9 @@ const schedRes = () => new Response(JSON.stringify(SCHED),
 const PROJ_ROWS = [
   ["p1", "QB", 306], ["p2", "RB", 255], ["p3", "RB", 289],
   ["p4", "WR", 272], ["p5", "TE", 204], ["p6", "WR", 221],
+  // p7 is on NO roster: the derived free-agent pool is projections minus every
+  // rostered id, so without an unrostered player the plan has nothing to plan with.
+  ["p7", "WR", 340],
 ].map(([id, pos, pts]) => ({ player_id: id,
   player: { position: pos, team: PROJ_TEAM[id] || "KC", injury_status: PROJ_INJ[id] || "" },
   stats: { pts_half_ppr: pts, gp: 17 } }));
@@ -201,6 +204,8 @@ ok("your share is dollars/pool", F && F.mine && Math.abs(F.mine.share - 18.5) < 
    projections at all. V2 needs them, so the honest assertion here is that it degrades to
    nothing rather than to a sturdy-looking zero. The components are proved in the
    projection-mode block below, where the endpoint is up. */
+ok("no waiver plan either when projections are unavailable",
+  (G || {}).plan === null || (G || {}).plan === undefined);
 ok("weak spots reports nothing when projections are unavailable, not a false zero",
   (G || {}).ws === null || (G || {}).ws === undefined);
 
@@ -455,6 +460,23 @@ ok("the sheet renders the four component columns",
 ok("Weak Spots no longer advertises the components as Planned",
   !/injury, bye-week, positional-depth and player-concentration fragility/.test(html));
 ok("the page says what these measures cannot see", html.includes("snap share"));
+
+/* ---------------------------- The Waiver Plan --------------------------- */
+const PL = (GP || {}).plan;
+ok("waiver plan is built for the focus team", !!PL && PL.steps.length === 1,
+  PL && String(PL.steps.length));
+ok("the target is the unrostered player, not someone already owned",
+  PL && PL.steps[0].id === "p7", PL && PL.steps[0].id);
+// ⚠️ The number is the LINEUP delta, not the player's projection: he fills an empty WR slot.
+ok("gain is the lineup delta, not the projection",
+  PL && Math.abs(PL.steps[0].gain - 20) < 0.05, PL && String(PL.steps[0].gain));
+ok("bid is a RANGE, never a single figure",
+  PL && PL.steps[0].lo === 32 && PL.steps[0].hi === 53,
+  PL && (PL.steps[0].lo + "-" + PL.steps[0].hi));
+ok("the plan holds a reserve back rather than going all-in",
+  PL && PL.reserve === 18 && PL.left === 60, PL && (PL.reserve + "/" + PL.left));
+ok("the card refuses to call the ranges prices", html.includes("ranges, not prices"));
+ok("the card says what a bid model cannot see", html.includes("run on a position"));
 
 ok("season Monte Carlo runs on projections too", !!GP.mc && GP.mc.rows.length === 5);
 const ctxProj = globalThis.DD_BOTCTX.ctx();

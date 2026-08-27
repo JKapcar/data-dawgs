@@ -2488,6 +2488,12 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <p class="legend" id="gxFaabNote"></p>
   </div>
 
+  <div class="hero-card" id="gxPlanCard">
+    <h2>The Waiver Plan <span class="samp">Modelled &middot; ranges, not prices</span></h2>
+    <p class="wr-note" id="gxPlanLead"></p>
+    <div class="tscroll"><table class="dtab" id="gxPlanTab"></table></div>
+    <p class="legend" id="gxPlanNote"></p>
+  </div>
   <div class="hero-card" id="gxWvCard" style="display:none">
     <h2>Waiver value <span class="samp" id="gxWvState">Observed &middot; Sleeper</span></h2>
     <p class="legend" style="margin:0 0 6px" id="gxWvLead"></p>
@@ -2550,7 +2556,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
   <div class="honesty" style="margin-bottom:0">
     <h3>What this can't do</h3>
-    <p>Survival odds are a simulation from completed-score history and its variance &mdash; they assume the next week plays like a typical past week. Before two completed weeks exist the page runs in projection mode instead: Sleeper season player projections build each roster&rsquo;s best projected lineup and every team carries an assumed ±21-point spread &mdash; byes, injuries and schedule are not modeled there, and nothing in that mode is observed. They cannot see live Sunday scores, an inactive, or a garbage-time spike. Prediction receipts are local-device only and are not immutable, server-persisted, cross-device or graded. Projection-driven FAAB bid recommendations, full conditional waiver optimization, Universal Data Vault are <span class="gx-planned">Planned</span>. Weak Spots reads injury designations and byes from Sleeper&rsquo;s season projections and the site&rsquo;s own schedule, and measures depth and star reliance off projected lineups &mdash; it cannot see depth-chart roles, snap share or a coach&rsquo;s intent, and none of it is a prediction. The Long Game&rsquo;s season Monte Carlo rolls the weekly model forward with rosters frozen at their current mean and spread &mdash; it cannot see waivers, injuries, byes, or the talent redistribution every chop causes, those omissions compound with every simulated week, and its finishing places cover the simulated teams only. The observed FAAB module encodes a framework about dollar appreciation, not a guarantee. The FAAB War Plan is a dated editorial framework, not a bid engine.</p>
+    <p>Survival odds are a simulation from completed-score history and its variance &mdash; they assume the next week plays like a typical past week. Before two completed weeks exist the page runs in projection mode instead: Sleeper season player projections build each roster&rsquo;s best projected lineup and every team carries an assumed ±21-point spread &mdash; byes, injuries and schedule are not modeled there, and nothing in that mode is observed. They cannot see live Sunday scores, an inactive, or a garbage-time spike. Prediction receipts are local-device only and are not immutable, server-persisted, cross-device or graded. Universal Data Vault are <span class="gx-planned">Planned</span>. Weak Spots reads injury designations and byes from Sleeper&rsquo;s season projections and the site&rsquo;s own schedule, and measures depth and star reliance off projected lineups &mdash; it cannot see depth-chart roles, snap share or a coach&rsquo;s intent, and none of it is a prediction. The Long Game&rsquo;s season Monte Carlo rolls the weekly model forward with rosters frozen at their current mean and spread &mdash; it cannot see waivers, injuries, byes, or the talent redistribution every chop causes, those omissions compound with every simulated week, and its finishing places cover the simulated teams only. The observed FAAB module encodes a framework about dollar appreciation, not a guarantee. The Waiver Plan sequences targets and prices them as ranges: each step assumes the steps above it were won, so the ordering carries more information than the dollars, and the dollars are modelled and ungraded rather than a bid engine. The FAAB War Plan is a dated editorial framework, not a bid engine.</p>
   </div>
 
     </div>
@@ -2878,19 +2884,91 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     return {start:start, bench:bench, total:start.reduce(function(a,p){return a+p.pg;},0)};
   }
 
-  async function weakSpots(league, rosters, teamList, done){
-    var rows, bye;
-    try{ rows = await projRows(league.season); bye = await byeWeeks(); }
-    catch(e){ return null; }
+  /* Shared player map: id -> per-game points, position, injury, nfl team. Built once from
+     the same projection rows Weak Spots uses, so the two features cannot disagree about
+     what a player is worth. */
+  function playerMap(league, rows){
     var rec=(league.scoring_settings && typeof league.scoring_settings.rec==="number")?league.scoring_settings.rec:0.5;
     var key = rec>=1 ? "pts_ppr" : rec>0 ? "pts_half_ppr" : "pts_std";
     var P={};
     (rows||[]).forEach(function(row){
       var st=row&&row.stats; if(!st||typeof st[key]!=="number")return;
       var g=(typeof st.gp==="number"&&st.gp>0)?st.gp:17;
-      P[row.player_id]={pg:st[key]/g, pos:(row.player&&row.player.position)||"",
+      P[row.player_id]={id:String(row.player_id), pg:st[key]/g,
+                        name:(row.player&&(row.player.full_name||((row.player.first_name||"")+" "+(row.player.last_name||"")).trim()))||String(row.player_id),
+                        pos:(row.player&&row.player.position)||"",
                         inj:(row.player&&row.player.injury_status)||"", tm:ab(row.player&&row.player.team)};
     });
+    return P;
+  }
+
+  /* How much a single free agent would add to THIS lineup, in points per week. Not his
+     projection -- the lineup delta, which is zero for a player who would not start. */
+  function lineupGain(mine, cand, slots, base){
+    var sh=lineupShape(mine.concat([cand]), slots);
+    return sh ? (sh.total - base) : 0;
+  }
+
+  var PLAN_STEPS = 4, PLAN_SPEND = 0.70, PLAN_BAND = 0.25;
+  async function waiverPlan(league, rosters, meRid, done){
+    if(meRid==null) return null;
+    var rows; try{ rows = await projRows(league.season); }catch(e){ return null; }
+    var P=playerMap(league, rows), slots=lineupSlots(league.roster_positions);
+    var taken={}, myIds=null, myUsed=0;
+    (rosters||[]).forEach(function(r){
+      (r.players||[]).forEach(function(id){ taken[id]=1; });
+      if(String(r.roster_id)===String(meRid)){
+        myIds=(r.players||[]).slice();
+        myUsed=(r.settings && r.settings.waiver_budget_used) || 0;
+      }
+    });
+    if(!myIds) return null;
+    var mine=myIds.map(function(id){ return P[id]; }).filter(function(p){ return p && p.pg>0; });
+    var pool=Object.keys(P).filter(function(id){ return !taken[id] && P[id].pg>0; })
+                           .map(function(id){ return P[id]; });
+    if(!mine.length || !pool.length) return null;
+    var budget=(league.settings && league.settings.waiver_budget) || 0;
+    var left=Math.max(0, budget-myUsed);
+    var sh=lineupShape(mine, slots);
+    if(!sh) return null;
+    var base=sh.total, steps=[], used={};
+    for(var k=0;k<PLAN_STEPS;k++){
+      var best=null, second=null;
+      pool.forEach(function(c){
+        if(used[c.id]) return;
+        var g=lineupGain(mine, c, slots, base);
+        if(!best || g>best.g){ second=best; best={c:c, g:g}; }
+        else if(!second || g>second.g){ second={c:c, g:g}; }
+      });
+      /* Below a quarter point a week it is noise, and printing it would dress rounding
+         error up as a recommendation. */
+      if(!best || best.g < 0.25) break;
+      steps.push({id:best.c.id, name:best.c.name, pos:best.c.pos, tm:best.c.tm,
+                  gain:best.g, inj:best.c.inj,
+                  alt: second && second.g>=0.25 ? {name:second.c.name, pos:second.c.pos, gain:second.g} : null});
+      used[best.c.id]=1;
+      mine=mine.concat([best.c]);
+      base=lineupShape(mine, slots).total;
+    }
+    if(!steps.length) return null;
+    var tot=steps.reduce(function(a,x){ return a+x.gain; },0) || 1;
+    steps.forEach(function(x){
+      var alloc = left * PLAN_SPEND * (x.gain/tot);
+      x.lo = Math.max(1, Math.round(alloc*(1-PLAN_BAND)));
+      x.hi = Math.max(x.lo+1, Math.round(alloc*(1+PLAN_BAND)));
+      if(x.hi>left) x.hi=Math.max(1,left);
+      if(x.lo>x.hi) x.lo=x.hi;
+      x.pct = left>0 ? (alloc/left) : 0;
+    });
+    return {steps:steps, left:left, budget:budget, spend:PLAN_SPEND, band:PLAN_BAND,
+            reserve:Math.max(0, Math.round(left*(1-PLAN_SPEND)))};
+  }
+
+  async function weakSpots(league, rosters, teamList, done){
+    var rows, bye;
+    try{ rows = await projRows(league.season); bye = await byeWeeks(); }
+    catch(e){ return null; }
+    var P=playerMap(league, rows);
     var slots=lineupSlots(league.roster_positions);
     var byR={}; (rosters||[]).forEach(function(r){ byR[r.roster_id]=r.players||[]; });
     /* Four weeks, not one: a bye you can see coming is the one worth planning for, and in
@@ -3051,6 +3129,11 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     /* Runs in BOTH modes on purpose -- see the note on projRows. */
     var WS = null;
     try{ WS = await weakSpots(league, rosters, alive, done); }catch(e){ WS = null; }
+    var WP = null;
+    /* cfg(), not `saved`: that var is declared further down this same function, so at
+       this point hoisting has it as undefined and .me would throw straight into the
+       catch, silently yielding no plan at all. */
+    try{ WP = await waiverPlan(league, rosters, cfg().me, done); }catch(e){ WP = null; }
 
     var MODE = "observed";
     if(live.length < 2){
@@ -3092,7 +3175,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
        labelled apart in the context builder — do not collapse them here. */
     window.__GX = {
       leagueId: id, league: league.name, season: league.season, teamCount: teams.length,
-      done: done, mode: MODE, ws: WS, chop: res.chop, chopLo: res.chopLo, chopHi: res.chopHi,
+      done: done, mode: MODE, ws: WS, plan: WP, chop: res.chop, chopLo: res.chopLo, chopHi: res.chopHi,
       chopped: teams.length - alive.length,
       excluded: alive.length - live.length,
       faab: faab,
@@ -3446,6 +3529,39 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   }
   function paint(G){ladder(G);if(!G||!G.teams||!G.teams.length)return;teams=G.teams.slice();draw();document.getElementById("gxSpinOne").disabled=false;document.getElementById("gxSpinTen").disabled=false;document.getElementById("gxTally").textContent=spins?document.getElementById("gxTally").textContent:"Ready · 0 session spins";document.getElementById("gxPredict").hidden=false;var me=G.me,card=document.getElementById("gxSurvivalCard");card.innerHTML=me?tile(esc(me.name),"Focus team")+tile(Math.round(me.surv*100)+"%",G.mode==="projected"?"Projected weekly survival":"Modeled weekly survival")+tile((me.mean-G.chop>=0?"+":"")+(me.mean-G.chop).toFixed(1),G.mode==="projected"?"Proj avg vs chop":"Avg vs modeled chop")+(G.mode==="projected"?tile("Projections","Running on"):tile(G.done,"Observed weeks")):tile("Not selected","Focus team")+(G.mode==="projected"?tile("Projections","Running on"):tile(G.done,"Observed weeks"));
     var d=document.getElementById("gxDangerTab");d.innerHTML='<thead><tr><th>Team</th><th>Modeled chop risk</th><th>Risk</th><th>'+(G.mode==="projected"?"Projected avg":"Observed avg")+'</th><th>Observed low</th></tr></thead><tbody>'+teams.slice().sort(function(a,b){return a.surv-b.surv;}).map(function(t){var r=Math.round((1-t.surv)*100);return '<tr data-rid="'+t.rid+'"><td class="'+(me&&me.rid===t.rid?'me':'')+'">'+esc(t.name)+'</td><td class="neg">'+r+'%</td><td><div class="gx-riskbar"><i style="width:'+r+'%"></i></div></td><td>'+t.mean.toFixed(1)+'</td><td>'+(t.low==null?"—":t.low.toFixed(1))+'</td></tr>';}).join("")+'</tbody>';d.querySelectorAll("tbody tr").forEach(function(tr){tr.style.cursor="pointer";tr.onclick=function(){focus(Number(tr.dataset.rid));};});
+    (function(){
+      var P=(G&&G.plan)||null, t=document.getElementById("gxPlanTab"),
+          lead=document.getElementById("gxPlanLead"), note=document.getElementById("gxPlanNote");
+      if(!t) return;
+      if(!P){
+        t.innerHTML='<tbody><tr><td style="text-align:left">No plan yet — this needs a focus team, a connected league and Sleeper projections. Pick your team from the ladder above.</td></tr></tbody>';
+        if(lead) lead.textContent="";
+        if(note) note.textContent="";
+        return;
+      }
+      /* Order matters and is the feature: step 2 is priced on the assumption that step 1
+         was WON. Presenting these as an unordered shopping list would misprice every row
+         after the first. */
+      t.innerHTML='<thead><tr><th>#</th><th>Target</th><th>Adds /wk</th><th>Bid range</th><th>If you miss him</th></tr></thead><tbody>'
+        +P.steps.map(function(x,i){
+          return '<tr><td>'+(i+1)+'</td><td>'+esc(x.name)+' <span class="samp">'+esc(x.pos)+(x.tm?' '+esc(x.tm):'')
+            +(x.inj?' · '+esc(x.inj):'')+'</span></td>'
+            +'<td>+'+x.gain.toFixed(1)+'</td>'
+            +'<td>$'+x.lo+'–$'+x.hi+' <span class="samp">'+Math.round(x.pct*100)+'% of left</span></td>'
+            +'<td>'+(x.alt?esc(x.alt.name)+' <span class="samp">+'+x.alt.gain.toFixed(1)+'</span>':'—')+'</td></tr>';
+        }).join("")+'</tbody>';
+      if(lead) lead.innerHTML='<b>$'+P.left+'</b> of your FAAB is unspent. This plan commits at most '
+        +Math.round(P.spend*100)+'% of it and keeps <b>$'+P.reserve+'</b> back.';
+      if(note) note.innerHTML='Each step is priced ASSUMING the steps above it were won — that is what makes it a plan '
+        +'rather than a shopping list, and it is why step 2 is worth less here than it would be on its own. '
+        +'“Adds /wk” is the change to your best starting lineup, not the player’s projection: a player who would not '
+        +'start adds nothing. Ranges are a share of what you have left, proportional to each step’s share of the '
+        +'modelled gain, ±'+Math.round(P.band*100)+'%. '
+        +'⚠️ These are modelled ranges, not prices and not a bid engine. They cannot see what anyone else intends to '
+        +'bid, roster need around the league, or a run on a position — the three things that actually set a winning '
+        +'bid. Nothing here is graded. Treat the ordering as the useful part and the dollars as a starting point.';
+    })();
+
     var f=document.getElementById("gxFragilityTab");
     /* fragility is an OBSERVED instrument — in projection mode every team carries
        the same assumed spread, so there is no volatility to measure yet. */
@@ -3526,7 +3642,7 @@ window.DD_BOTCTX = {
 - FAAB numbers (budgets, spend, pool) are OBSERVED league facts read from Sleeper. The only framework claim is that dollars appreciate as teams die; never turn that into a specific bid recommendation dressed as maths.
 - The waiver board is OBSERVED points in this league's own scoring for players on no current roster. A player only has data for weeks a roster held them; never-rostered players are invisible. It does not know waiver order, and it is not a projection.
 - A team missing from the table has fewer than 2 completed weeks, a zero standard deviation, or an EMPTY roster — empty mid-season means chopped. That is the answer to "why am I not listed", not a bug.
-- The FAAB WAR PLAN card is a dated editorial framework calibrated to ONE room's observed 2025 winning bids plus published case studies. Quote its ranges as opinion with the date. The standing rule holds: never dress a specific bid recommendation up as maths.
+- The FAAB WAR PLAN card is a dated editorial framework calibrated to ONE room's observed 2025 winning bids plus published case studies. Quote its ranges as opinion with the date. The standing rule is AMENDED as of 2026-08-27, and this is the amended form: never give a single-figure bid. The Waiver Plan gives RANGES with the allocation policy stated on the card — a share of remaining budget proportional to each step's modelled lineup gain, capped so a reserve is kept back. Quote them as modelled ranges, never as prices, and never as what a player will actually cost: the model cannot see what anyone else intends to bid, roster need around the league, or a run on a position.
 - THE LONG GAME sheet is a SEASON Monte Carlo: thousands of simulated seasons rolling the same weekly model forward, chopping the lowest each week. ⚠️ Rosters are FROZEN at today's mean and spread — no waivers, no injuries, no byes, and no chopped-roster talent redistribution, which is the defining dynamic of this format — and every weekly assumption COMPOUNDS with each simulated week. Quote win odds and survival curves as a modeled illustration, never as a forecast. Finishing places are among the simulated teams only.
 - WEAK SPOTS is V2. Four ROSTER-DERIVED components, each a share where higher means more fragile: injury (share of projected starter points carrying a designation, severity-weighted), bye risk (worst single week of the next four), depth drop (fall from each starter to his best same-slot replacement; an empty bench scores maximum), and star reliance (top two starters' share, normalised to this league's slot count). They render before the season because they need rosters, not scores. Observed volatility and floor still need two completed weeks. Describe them as descriptive measures of roster shape, never as predictions or as injury forecasts.
 - PROJECTION MODE: before two completed weeks exist, team means come from SLEEPER SEASON PLAYER PROJECTIONS — the best projected lineup per roster under this league's slot list — and every team carries an ASSUMED ±21-point weekly spread; byes, injuries and schedule are NOT modeled. Call every number in this mode "projected", never "observed". The page switches to the league's own scoring by itself at two completed weeks.`,
