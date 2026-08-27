@@ -738,6 +738,44 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 .pt-backbody .secn{margin-top:22px}
 /* ------------------------------ phone ladder ----------------------------- */
 .pt-col{height:var(--h,20px)}
+/* ⚠ This was a bare wrap of 11px pills and it read as debug output rather than a
+   control. A selected chip changed only its border colour, which is invisible at that
+   size. It is a real track now, the selected state FILLS, and the hit target clears the
+   44px guidance. */
+.gx-cmp{display:flex;gap:7px;margin:16px 0 6px;padding:7px;background:var(--surface-1);
+  border:1px solid var(--grid);border-radius:16px;overflow-x:auto;scrollbar-width:thin;
+  -webkit-overflow-scrolling:touch}
+.gx-cmp button{flex:0 0 auto;border:1px solid transparent;background:transparent;color:var(--ink-1);
+  border-radius:999px;padding:9px 14px;min-height:38px;font:700 12px/1.2 inherit;cursor:pointer;
+  white-space:nowrap;transition:background .15s,color .15s,border-color .15s}
+.gx-cmp button:hover{background:color-mix(in srgb,var(--ink-1) 7%,transparent)}
+.gx-cmp button.on{color:#fff;background:currentColor;box-shadow:inset 0 0 0 999px currentColor}
+.gx-cmp button.me{color:var(--accent);border-color:var(--accent);font-weight:800;cursor:default;
+  background:color-mix(in srgb,var(--accent) 12%,transparent);box-shadow:none}
+@media(max-width:520px){.gx-cmp{flex-wrap:wrap;overflow-x:visible}}
+
+/* The hub was decoration and the control was a grey button underneath it. Sized off the
+   canvas HUB radius (78/760) so it sits on the hub at any width. */
+/* ⚠ NOT position:absolute against .gx-wheelbox -- that box also holds the controls and
+   the tally, so its centre sits ~226px BELOW the canvas centre and the hub landed on the
+   felt under the wheel. Sharing grid cell 1/1 with the canvas centres it on the WHEEL,
+   and makes the % width resolve against the canvas rather than the whole column. */
+.gx-wheelbox canvas{grid-area:1/1}
+.gx-hubspin{grid-area:1/1;place-self:center;position:relative;
+  /* the canvas is width:min(100%,430px) and draws its hub at 156/760 of that, so the
+     button matches at both ends: 20.5% while the wheel is fluid, capped at 88px once
+     the canvas stops growing. A bare 20.5% resolves against the GRID CELL, which is
+     wider than the wheel on a desktop, and the button overhung the slices. */
+  width:min(20.5%,88px);aspect-ratio:1;border-radius:50%;cursor:pointer;z-index:2;
+  border:3px solid #E0A93B;background:radial-gradient(circle at 42% 38%,#4A3B22,#0C0A07 72%);
+  color:#F2C260;display:grid;place-content:center;gap:1px;text-align:center;
+  box-shadow:0 6px 18px rgba(0,0,0,.55);transition:transform .12s,box-shadow .12s}
+.gx-hubspin span{font:800 clamp(10px,2.1vw,15px)/1 inherit;letter-spacing:.10em}
+.gx-hubspin small{font:700 clamp(7px,1.3vw,9px)/1 inherit;color:#C8A96B}
+.gx-hubspin:hover:not(:disabled){transform:scale(1.045);box-shadow:0 8px 24px rgba(0,0,0,.6)}
+.gx-hubspin:active:not(:disabled){transform:scale(.97)}
+.gx-hubspin:disabled{cursor:default;opacity:.55}
+.gx-secondary{background:transparent;border:1px solid #6b5a41;color:#d9cbb4}
 @media(max-width:640px){
   .pt-ladderwrap{overflow:visible}
   .pt-ladder{min-width:0}
@@ -778,11 +816,7 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 #gxSeasonTab td.me{font-weight:800;color:var(--accent)}
 #gxSeasonTab td.hm{color:var(--ink-1)}
 @media(max-width:640px){#gxSeasonTab td,#gxSeasonTab th{padding:6px 6px;font-size:11px}}
-.gx-cmp{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 2px}
-.gx-cmp button{border:1px solid var(--grid);background:var(--surface-1);color:var(--ink-2);
-  border-radius:999px;padding:5px 11px;font:700 11px/1.2 inherit;cursor:pointer}
-.gx-cmp button.on{border-color:currentColor}
-.gx-cmp button.me{color:var(--accent);border-color:var(--accent);font-weight:800;cursor:default}
+
 }.gx-private{font-size:10px;color:var(--ink-3);font-weight:700}.gx-danger td:first-child{font-weight:750}.gx-riskbar{height:6px;background:var(--grid);border-radius:99px;overflow:hidden;min-width:70px}.gx-riskbar i{display:block;height:100%;background:linear-gradient(90deg,var(--warn),var(--bad))}
 @media(max-width:760px){.gx-stage{padding:14px 11px}.gx-stage-grid{grid-template-columns:1fr}.gx-wheelbox canvas{max-width:360px}.gx-wheel-controls .btn{flex:1 1 120px}.gx-predict .controls{display:grid;grid-template-columns:1fr}.gx-predict select,.gx-predict input[type=range]{width:100%;max-width:none}.dtab{font-size:11.5px}.dtab th,.dtab td{padding:7px 6px}}
 @media(max-width:460px){
@@ -2426,6 +2460,36 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   </div>
 
   <section class="gx-sheet" id="gxSheetSurvival" data-gx-panel="survival">
+
+    <div class="hero-card">
+      <h2>The Chop Wheel <span class="samp">Simulation &middot; not live scores</span></h2>
+      <p class="legend" style="margin:0 0 14px">Each slice is a team, sized by that team&rsquo;s modeled chop risk for the coming week. Spinning draws from that distribution &mdash; it is a way to feel the odds, not a second opinion about them.</p>
+      <div class="pt-wheelgrid">
+        <div class="pt-felt">
+          <div class="gx-wheelbox">
+            <div class="gx-pointer" aria-hidden="true"></div>
+            <canvas id="gxWheel" width="760" height="760" role="img" aria-label="Probability-weighted simulated chop wheel"></canvas>
+            <button class="gx-hubspin" id="gxSpinOne" type="button" disabled aria-label="Spin one week"><span>SPIN</span><small>one week</small></button>
+            <div class="gx-wheel-controls">
+              <button class="btn gx-secondary" id="gxSpinTen" type="button" disabled>Spin 10 weeks</button>
+              <label class="gx-sound"><input type="checkbox" id="gxSound"> Sound</label>
+            </div>
+            <div class="gx-tally" id="gxTally">Connect a league to load the wheel.</div>
+          </div>
+        </div>
+        <div class="pt-wheelside">
+          <div class="gx-predict" id="gxPredict" hidden style="margin-top:0">
+            <h3>Weekly chopped-team prediction</h3>
+            <div class="controls">
+              <select id="gxPredTeam" aria-label="Predicted chopped team"></select>
+              <button class="btn" id="gxPredSave" type="button">Save device receipt</button>
+            </div>
+            <p class="legend" id="gxDeadline" style="margin-top:8px">Deadline: Sunday at 1:00 PM Eastern.</p>
+            <div class="gx-receipt" id="gxReceipt"></div>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="hero-card"><h2>Am I Safe? <span class="gx-private">Private focus team</span></h2><div class="statrow" id="gxSurvivalCard"></div><p class="legend">Your focus team is a private preference, not verified Sleeper roster ownership. Pick any team from the ladder above or the Full Board.</p></div>
     <div class="hero-card" id="gxLive" style="display:none">
       <div class="bigstat">
@@ -2437,43 +2501,23 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       <div class="tscroll" style="margin-top:20px"><table class="dtab" id="gxTab"></table></div>
       <p class="legend" id="gxNote"></p>
     </div>
-    <div class="hero-card">
-      <h2>The Chop Wheel <span class="samp">Simulation &middot; not live scores</span></h2>
-      <p class="legend" style="margin:0 0 14px">Each slice is a team, sized by that team&rsquo;s modeled chop risk for the coming week. Spinning draws from that distribution &mdash; it is a way to feel the odds, not a second opinion about them.</p>
-      <div class="pt-wheelgrid">
-        <div class="pt-felt">
-          <div class="gx-wheelbox">
-            <div class="gx-pointer" aria-hidden="true"></div>
-            <canvas id="gxWheel" width="760" height="760" role="img" aria-label="Probability-weighted simulated chop wheel"></canvas>
-            <div class="gx-wheel-controls">
-              <button class="btn pt-spin" id="gxSpinOne" type="button" disabled>Spin one week</button>
-              <button class="btn" id="gxSpinTen" type="button" disabled>Spin 10 weeks</button>
-              <label class="gx-sound"><input type="checkbox" id="gxSound"> Sound</label>
-            </div>
-            <div class="gx-tally" id="gxTally">Connect a league to load the wheel.</div>
-          </div>
-        </div>
-        <div class="pt-wheelside">
-          <div class="gx-predict" id="gxPredict" hidden style="margin-top:0">
-            <h3>Weekly chopped-team prediction</h3>
-            <div class="controls">
-              <select id="gxPredTeam" aria-label="Predicted chopped team"></select>
-              <label class="gx-sound" for="gxConfidence">Confidence <b id="gxConfOut">60%</b></label>
-              <input id="gxConfidence" type="range" min="50" max="99" value="60">
-              <button class="btn" id="gxPredSave" type="button">Save device receipt</button>
-            </div>
-            <p class="legend" id="gxDeadline" style="margin-top:8px">Deadline: Sunday at 1:00 PM Eastern.</p>
-            <div class="gx-receipt" id="gxReceipt"></div>
-          </div>
-        </div>
-      </div>
-    </div>
     <div class="hero-card"><h2>The Long Game <span class="samp">Season Monte Carlo &middot; modeled</span></h2>
       <div class="statrow" id="gxSeasonCard"></div>
       <div class="gx-cmp" id="gxCmp"></div>
       <div id="gxSeasonChart"></div>
+      <p class="legend">Each line is one team&rsquo;s modeled chance of still being alive, week by week. Tap a name above to overlay it.</p>
+    </div>
+
+    <div class="hero-card"><h2>Week-by-week decay <span class="samp">Same model, per team</span></h2>
       <div class="tscroll"><table class="dtab" id="gxSeasonTab"></table></div>
       <p class="legend" id="gxSeasonNote">Turns on once two completed weeks exist &mdash; the same gate as the weekly odds.</p>
+    </div>
+
+    <div class="hero-card"><h2>One simulated season <span class="samp">A single draw &middot; not a forecast</span></h2>
+      <p class="legend" style="margin:0 0 12px">Everything above averages thousands of seasons. This runs <b>one</b> and prints how it finished &mdash; press it again and it will differ, which is the point.</p>
+      <button class="btn" id="gxOneRun" type="button" disabled>Run one season</button>
+      <div class="tscroll" style="margin-top:12px"><table class="dtab" id="gxOneTab"></table></div>
+      <p class="legend" id="gxOneNote"></p>
     </div>
   </section>
 
@@ -3440,6 +3484,39 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     return {sims:SEASON_SIMS,weeks:weeks,rows:rows,teams:n,
             excluded:(G.teams||[]).length-n,chopped:G.chopped||0,capped:rem<n-1};
   }
+  /* ONE season off the same maths as simulateSeason: same means, same spreads, same
+     lowest-score-goes rule. Deliberately its own function rather than a flag on the big
+     simulator -- that one accumulates 5,000 runs into counters and has no notion of a
+     single path, and bolting one on would have meant threading sample state through the
+     hot loop for the sake of a display. */
+  function simulateOne(G){
+    var src=(G.teams||[]).filter(function(t){return t.sd>0;}), n=src.length;
+    if(n<2) return null;
+    var rem=Math.max(1,Math.min(17-G.done,n-1)), sp=null;
+    function g(){
+      if(sp!==null){var v=sp;sp=null;return v;}
+      var u,w,q;do{u=Math.random()*2-1;w=Math.random()*2-1;q=u*u+w*w;}while(q>=1||q===0);
+      var m=Math.sqrt(-2*Math.log(q)/q);sp=w*m;return u*m;
+    }
+    var alive=[],out=[],i;
+    for(i=0;i<n;i++)alive.push(i);
+    for(var wk=0; wk<rem && alive.length>1; wk++){
+      var lo=Infinity, li=0, sc=[];
+      for(var a=0;a<alive.length;a++){
+        var t=src[alive[a]], x=t.mean+g()*t.sd;
+        sc.push(x);
+        if(x<lo){lo=x;li=a;}
+      }
+      out.push({rid:src[alive[li]].rid, name:src[alive[li]].name, week:G.done+1+wk, score:lo});
+      alive.splice(li,1);
+    }
+    var left=alive.map(function(ix){ return {rid:src[ix].rid, name:src[ix].name, week:null, score:null}; });
+    /* Finish order: whoever is still standing takes the top places, then the chopped in
+       reverse -- the last one cut finished higher than the first. */
+    var order=left.concat(out.slice().reverse());
+    return {order:order, weeks:rem, survivors:left.length, capped:rem < n-1};
+  }
+
   var CMPKEY="dd-guillotine-cmp-v1",
       CMPPAL=["#4FA3E3","#2FD4A6","#8E7BE0","#E4386B","#F2B33D","#3F9E86"];
   function cmpList(lg){try{var m=JSON.parse(localStorage.getItem(CMPKEY)||"{}");return (m[lg]||[]).slice(0,8);}catch(e){return [];}}
@@ -3605,10 +3682,34 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     })();
     /* season MC is cached on the stash: focus taps repaint without re-simulating */
     if(!G.mc)G.mc=simulateSeason(G);
-    seasonPaint(G);var sel=document.getElementById("gxPredTeam"),old=sel.value;sel.innerHTML=teams.map(function(t){return '<option value="'+t.rid+'">'+esc(t.name)+'</option>';}).join("");if(old)sel.value=old;document.getElementById("gxState").textContent=locked()?"Sunday room · predictions locked":(G.mode==="projected"?"Projected · not live scores":"Modeled week · not live scores");receipt();addLeague(G.leagueId,G.me&&G.me.rid);}
-  var conf=document.getElementById("gxConfidence");conf.oninput=function(){document.getElementById("gxConfOut").textContent=conf.value+"%";};
-  function receipt(){var r=read(PRED,null),box=document.getElementById("gxReceipt"),week=window.__GX?Number(window.__GX.done||0)+1:null,save=document.getElementById("gxPredSave");save.disabled=locked();box.textContent=r&&window.__GX&&r.leagueId===window.__GX.leagueId&&r.week===week?"DEVICE RECEIPT · week "+r.week+" · "+r.team+" · "+r.confidence+"% · saved "+new Date(r.savedAt).toLocaleString()+" · local only":"No prediction saved for this league and week on this device.";}
-  document.getElementById("gxPredSave").onclick=function(){if(locked())return;var s=document.getElementById("gxPredTeam"),t=teams.find(function(x){return String(x.rid)===s.value;});if(!t)return;write(PRED,{leagueId:window.__GX.leagueId,week:Number(window.__GX.done||0)+1,team:t.name,rosterId:t.rid,confidence:Number(conf.value),savedAt:Date.now(),storage:"local-device"});receipt();};
+    seasonPaint(G);onePaint(G);var sel=document.getElementById("gxPredTeam"),old=sel.value;sel.innerHTML=teams.map(function(t){return '<option value="'+t.rid+'">'+esc(t.name)+'</option>';}).join("");if(old)sel.value=old;document.getElementById("gxState").textContent=locked()?"Sunday room · predictions locked":(G.mode==="projected"?"Projected · not live scores":"Modeled week · not live scores");receipt();addLeague(G.leagueId,G.me&&G.me.rid);}
+
+  function onePaint(G){
+    var btn=document.getElementById("gxOneRun"), tab=document.getElementById("gxOneTab"),
+        note=document.getElementById("gxOneNote");
+    if(!btn||!tab) return;
+    var ok=!!(G&&G.teams&&G.teams.length>1);
+    btn.disabled=!ok;
+    if(!ok){ tab.innerHTML=""; if(note) note.textContent="Needs a connected league with at least two teams still alive."; return; }
+    btn.onclick=function(){
+      var R=simulateOne(G);
+      if(!R){ tab.innerHTML=""; return; }
+      tab.innerHTML='<thead><tr><th>Finish</th><th>Team</th><th>Chopped</th></tr></thead><tbody>'
+        +R.order.map(function(x,i){
+          var me=G.me&&x.rid===G.me.rid;
+          return '<tr'+(me?' class="gx-danger"':'')+'><td>'+ord(i+1)+'</td>'
+            +'<td'+(me?' style="color:var(--accent);font-weight:800"':'')+'>'+esc(x.name)+'</td>'
+            +'<td>'+(x.week==null?'<span class="samp">still standing</span>':'week '+x.week)+'</td></tr>';
+        }).join("")+'</tbody>';
+      if(note) note.innerHTML='One draw from the same model the curves above are built from &mdash; '
+        +R.weeks+' chop week(s) simulated'
+        +(R.survivors>1?', '+R.survivors+' still standing when the season ran out':'')
+        +'. ⚠️ It is a SAMPLE, not a prediction: run it again and the order changes. Nothing here is graded.';
+    };
+  }
+
+  function receipt(){var r=read(PRED,null),box=document.getElementById("gxReceipt"),week=window.__GX?Number(window.__GX.done||0)+1:null,save=document.getElementById("gxPredSave");save.disabled=locked();box.textContent=r&&window.__GX&&r.leagueId===window.__GX.leagueId&&r.week===week?"DEVICE RECEIPT · week "+r.week+" · "+r.team+" · saved "+new Date(r.savedAt).toLocaleString()+" · local only":"No prediction saved for this league and week on this device.";}
+  document.getElementById("gxPredSave").onclick=function(){if(locked())return;var s=document.getElementById("gxPredTeam"),t=teams.find(function(x){return String(x.rid)===s.value;});if(!t)return;write(PRED,{leagueId:window.__GX.leagueId,week:Number(window.__GX.done||0)+1,team:t.name,rosterId:t.rid,savedAt:Date.now(),storage:"local-device"});receipt();};
   var busy=false,last="";function shelf(){return read(SHELF,[]).filter(function(x){return x&&/^\d{6,24}$/.test(String(x.leagueId));}).slice(0,24);}
   function paintShelf(list){var h=document.getElementById("gxShelfList");h.innerHTML=list.length?list.map(function(x){var on=window.__GX&&String(window.__GX.leagueId)===String(x.leagueId);return '<button class="gx-league-chip '+(on?'on':'')+'" data-id="'+x.leagueId+'">'+esc(x.name||x.leagueId)+'</button>';}).join(""):'<span class="legend" style="margin:0">Connect a league to save it here.</span>';h.querySelectorAll("button").forEach(function(b){b.onclick=function(){var x=list.find(function(y){return String(y.leagueId)===b.dataset.id;});write(CFG,{id:b.dataset.id,me:x&&x.focusRosterId||null});document.getElementById("gxId").value=b.dataset.id;document.getElementById("gxGo").click();};});}
   function addLeague(id,me){if(!id)return;var l=shelf(),x=l.find(function(y){return String(y.leagueId)===String(id);});if(!x){x={leagueId:String(id),focusRosterId:me||null,name:window.__GX&&window.__GX.league||String(id)};l.push(x);}else{x.focusRosterId=me||x.focusRosterId||null;x.name=window.__GX&&window.__GX.league||x.name;}write(SHELF,l);paintShelf(l);saveShelf();}
