@@ -176,7 +176,9 @@ const DRAFT_PLAYER_ID_RE = /^[a-z0-9][a-z0-9._:-]{0,63}$/;
 const DRAFT_POSITIONS = ["ALL", "QB", "RB", "WR", "TE", "DST", "K"];
 // Keep this in step with board.html's actual sortable columns. The test reads both
 // declarations so a post-refresh column rename cannot silently strand saved filters.
-const DRAFT_SORT_KEYS = ["rank", "name", "pos", "team", "half14", "full", "half", "sfhalf12", "sf", "silva"];
+// "lg" is the pepperoninipples league-adjusted value column (board.html's league
+// profile); a saved sort on it must survive the round trip like any other column.
+const DRAFT_SORT_KEYS = ["rank", "name", "pos", "team", "half14", "full", "half", "sfhalf12", "sf", "silva", "lg"];
 const DRAFT_SORT_DIRECTIONS = ["asc", "desc"];
 const DRAFT_MARKS = ["target", "taken"];
 const DRAFT_EMPTY_STATE = Object.freeze({

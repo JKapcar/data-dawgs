@@ -9,7 +9,9 @@
   const MARK_TO_WIRE = Object.freeze({ mine:"target", taken:"taken" });
   const WIRE_TO_MARK = Object.freeze({ target:"mine", taken:"taken" });
   const PLAYER_ID_RE=/^[a-z0-9][a-z0-9._:-]{0,63}$/;
-  const SORT_KEYS=Object.freeze(["rank","name","pos","team","half14","full","half","sfhalf12","sf","silva"]);
+  // "lg" is the pepperoninipples league-adjusted column; test-draft-state pins this
+  // list to the Worker's DRAFT_SORT_KEYS and the board's sortable COLS — all three move together.
+  const SORT_KEYS=Object.freeze(["rank","name","pos","team","half14","full","half","sfhalf12","sf","silva","lg"]);
 
   function assertMarkMapping(values){
     const actual = values || LOCAL_MARK_VALUES;
