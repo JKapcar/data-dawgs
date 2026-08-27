@@ -126,16 +126,32 @@ let projMode = "down"; // Sleeper projections endpoint: "up" | "down" (default d
                        // the fallback-to-empty-state path keeps its own coverage)
 /* Season projections: per-game means — p1 QB 18, p2 RB 15, p3 RB 17, p4 WR 16,
    p5 TE 12, p6 WR 13. Best lineups: Team 1 = 18+15 = 33; Teams 2-5 single players. */
+let schedMode = "up";
+/* p2 sits on the one team with a bye inside the four-week horizon; p1 carries a
+   designation that is NOT an absence, so severity weighting has something to prove. */
+const PROJ_TEAM = { p1: "KC", p2: "BUF", p3: "KC", p4: "KC", p5: "KC", p6: "KC" };
+const PROJ_INJ  = { p1: "Questionable" };
+/* Weeks 1-4. BUF is absent in week 2, so byeWeeks() derives BUF -> 2 and gives KC
+   no bye at all -- the same derivation it runs on the real 272-game schedule. */
+const SCHED = { data: { games: [1, 2, 3, 4].flatMap(w =>
+  [{ week: w, season_type: "REG", away_team: "KC", home_team: "SEA" }]
+    .concat(w === 2 ? [] : [{ week: w, season_type: "REG", away_team: "BUF", home_team: "MIA" }])) } };
+const schedRes = () => new Response(JSON.stringify(SCHED),
+  { status: 200, headers: { "Content-Type": "application/json" } });
 const PROJ_ROWS = [
   ["p1", "QB", 306], ["p2", "RB", 255], ["p3", "RB", 289],
   ["p4", "WR", 272], ["p5", "TE", 204], ["p6", "WR", 221],
-].map(([id, pos, pts]) => ({ player_id: id, player: { position: pos }, stats: { pts_half_ppr: pts, gp: 17 } }));
+].map(([id, pos, pts]) => ({ player_id: id,
+  player: { position: pos, team: PROJ_TEAM[id] || "KC", injury_status: PROJ_INJ[id] || "" },
+  stats: { pts_half_ppr: pts, gp: 17 } }));
 globalThis.fetch = async (u) => {
   const url = String(u);
   const j = (o) => new Response(JSON.stringify(o), { status: 200, headers: { "Content-Type": "application/json" } });
   if (url.includes("/sleeper/players-slim"))
     return slimMode === "up" ? j(PLAYERS_SLIM) : new Response("nope", { status: 404 });
   if (url.includes("/projections/nfl/")) return projMode === "up" ? j(PROJ_ROWS) : new Response("x", { status: 500 });
+  if (url.includes("/data/nfl-schedule.json"))
+    return schedMode === "up" ? schedRes() : new Response("x", { status: 500 });
   if (url.includes("/state/nfl")) return j({ week: WEEKS_DONE + 1, display_week: WEEKS_DONE + 1, season_type: "regular" });
   if (url.endsWith("/league/12345/drafts")) return j([{ draft_id: "d1", start_time: 1, status: "drafting" }]);
   if (url.endsWith("/draft/d1/picks")) return j(DRAFT_PICKS);
@@ -180,6 +196,13 @@ ok("FAAB per-team average is pool/alive", F && F.perTeam === 65, "perTeam=" + (F
 ok("your dollars follow the saved team (roster 2: $60)", F && F.mine && F.mine.left === 60,
   "mine=" + JSON.stringify(F && F.mine));
 ok("your share is dollars/pool", F && F.mine && Math.abs(F.mine.share - 18.5) < 0.11, "share=" + (F && F.mine && F.mine.share));
+
+/* ⚠ projMode is "down" through this block on purpose -- the page must work with no
+   projections at all. V2 needs them, so the honest assertion here is that it degrades to
+   nothing rather than to a sturdy-looking zero. The components are proved in the
+   projection-mode block below, where the endpoint is up. */
+ok("weak spots reports nothing when projections are unavailable, not a false zero",
+  (G || {}).ws === null || (G || {}).ws === undefined);
 
 const faabHtml = byId("gxFaabTab").innerHTML;
 ok("FAAB table renders every surviving team", faabHtml.split("<tr>").length - 1 >= 5);
@@ -237,6 +260,7 @@ globalThis.fetch = async (u) => {
   const url = String(u);
   if (url.includes("/state/nfl"))
     return new Response(JSON.stringify({ week: 0, display_week: 0, season_type: "pre" }), { status: 200 });
+  if (url.includes("/data/nfl-schedule.json")) return schedRes();
   return realFetch(u);
 };
 store.set("dd-guillotine-v1", JSON.stringify({ id: "12345", me: 2 }));
@@ -387,6 +411,7 @@ globalThis.fetch = async (u) => {
   const url = String(u);
   if (url.includes("/state/nfl"))
     return new Response(JSON.stringify({ week: 0, display_week: 0, season_type: "pre" }), { status: 200 });
+  if (url.includes("/data/nfl-schedule.json")) return schedRes();
   return realFetch(u);
 };
 store.set("dd-guillotine-v1", JSON.stringify({ id: "12345", me: 2 }));
@@ -408,6 +433,29 @@ ok("weekly table is labelled projected, nulls as dashes",
   byId("gxTab").innerHTML.includes("Proj avg") && byId("gxTab").innerHTML.includes("—"));
 ok("state chip says projected", byId("gxState").textContent.indexOf("Projected") === 0,
   byId("gxState").textContent);
+/* --------------------------- Weak Spots V2 ---------------------------- */
+/* Roster 1 is QB p1 (306/17 = 18.0) + RB p2 (255/17 = 15.0), empty bench, QB/RB/WR/TE/FLEX.
+   done = 0 here, so the bye horizon is weeks 1-4 and BUF's week-2 bye lands inside it. */
+const WS = (GP || {}).ws || {}, w1 = WS[1];
+ok("weak spots computes once projections are available", !!w1);
+ok("injury is severity-weighted, not a binary absence",
+  w1 && Math.abs(w1.inj - (18 * 0.4) / 33) < 0.01, w1 && String(w1.inj));
+ok("bye risk finds the week inside the horizon and names it",
+  w1 && Math.abs(w1.bye - 15 / 33) < 0.01 && w1.byeWk === 2, w1 && (w1.bye + " wk" + w1.byeWk));
+// An empty bench IS the fragility; skipping the row would score it as sturdy.
+ok("an empty bench scores the maximum depth drop",
+  w1 && Math.abs(w1.depth - 1) < 0.001, w1 && String(w1.depth));
+// With two starters the "top two" is the whole lineup - a raw share would say 100%.
+ok("star reliance is normalised, so a two-man lineup is not 100% concentrated",
+  w1 && w1.conc === 0, w1 && String(w1.conc));
+ok("a roster with no projectable players reports nothing, not a sturdy zero",
+  WS[6] === null || WS[6] === undefined);
+ok("the sheet renders the four component columns",
+  byId("gxFragilityTab").innerHTML.includes("Star reliance"));
+ok("Weak Spots no longer advertises the components as Planned",
+  !/injury, bye-week, positional-depth and player-concentration fragility/.test(html));
+ok("the page says what these measures cannot see", html.includes("snap share"));
+
 ok("season Monte Carlo runs on projections too", !!GP.mc && GP.mc.rows.length === 5);
 const ctxProj = globalThis.DD_BOTCTX.ctx();
 ok("Toto leads with projection mode and drops the thin-history warning",

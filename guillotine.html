@@ -2522,7 +2522,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
 
   <section class="gx-sheet" id="gxSheetFragility" data-gx-panel="fragility" hidden>
-    <div class="hero-card"><h2>Weak Spots <span class="samp">V1 &middot; volatility + floor</span></h2><div class="tscroll"><table class="dtab" id="gxFragilityTab"></table></div><p class="legend">V1 uses observed team-score volatility and observed low-week floor. Injury, bye-week, positional-depth and player-concentration components are <span class="gx-planned">Planned</span>.</p></div>
+    <div class="hero-card"><h2>Weak Spots <span class="samp">V2 &middot; roster shape + observed swing</span></h2><div class="tscroll"><table class="dtab" id="gxFragilityTab"></table></div><p class="legend" id="gxFragilityNote">Injury, bye, positional-depth and star-reliance components are roster-derived and work before the season starts. Observed volatility and floor need two completed weeks.</p></div>
   </section>
 
   <details class="pt-back" id="gxBack">
@@ -2550,7 +2550,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
   <div class="honesty" style="margin-bottom:0">
     <h3>What this can't do</h3>
-    <p>Survival odds are a simulation from completed-score history and its variance &mdash; they assume the next week plays like a typical past week. Before two completed weeks exist the page runs in projection mode instead: Sleeper season player projections build each roster&rsquo;s best projected lineup and every team carries an assumed ±21-point spread &mdash; byes, injuries and schedule are not modeled there, and nothing in that mode is observed. They cannot see live Sunday scores, an inactive, or a garbage-time spike. Prediction receipts are local-device only and are not immutable, server-persisted, cross-device or graded. Projection-driven FAAB bid recommendations, full conditional waiver optimization, Universal Data Vault, and injury, bye-week, positional-depth and player-concentration fragility components are all <span class="gx-planned">Planned</span>. The Long Game&rsquo;s season Monte Carlo rolls the weekly model forward with rosters frozen at their current mean and spread &mdash; it cannot see waivers, injuries, byes, or the talent redistribution every chop causes, those omissions compound with every simulated week, and its finishing places cover the simulated teams only. The observed FAAB module encodes a framework about dollar appreciation, not a guarantee. The FAAB War Plan is a dated editorial framework, not a bid engine.</p>
+    <p>Survival odds are a simulation from completed-score history and its variance &mdash; they assume the next week plays like a typical past week. Before two completed weeks exist the page runs in projection mode instead: Sleeper season player projections build each roster&rsquo;s best projected lineup and every team carries an assumed ±21-point spread &mdash; byes, injuries and schedule are not modeled there, and nothing in that mode is observed. They cannot see live Sunday scores, an inactive, or a garbage-time spike. Prediction receipts are local-device only and are not immutable, server-persisted, cross-device or graded. Projection-driven FAAB bid recommendations, full conditional waiver optimization, Universal Data Vault are <span class="gx-planned">Planned</span>. Weak Spots reads injury designations and byes from Sleeper&rsquo;s season projections and the site&rsquo;s own schedule, and measures depth and star reliance off projected lineups &mdash; it cannot see depth-chart roles, snap share or a coach&rsquo;s intent, and none of it is a prediction. The Long Game&rsquo;s season Monte Carlo rolls the weekly model forward with rosters frozen at their current mean and spread &mdash; it cannot see waivers, injuries, byes, or the talent redistribution every chop causes, those omissions compound with every simulated week, and its finishing places cover the simulated teams only. The observed FAAB module encodes a framework about dollar appreciation, not a guarantee. The FAAB War Plan is a dated editorial framework, not a bid engine.</p>
   </div>
 
     </div>
@@ -2810,11 +2810,130 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     });
     return sl;
   }
+  /* One projections request per page load, shared by projection mode and Weak Spots.
+     A promise, not a result, so two callers racing still make one request. */
+  var PROJ_P = null;
+  function projRows(season){
+    if(!PROJ_P) PROJ_P = fetch("https://api.sleeper.app/projections/nfl/"+season
+        +"?season_type=regular&position[]=QB&position[]=RB&position[]=WR&position[]=TE")
+      .then(function(r){ if(!r.ok) throw new Error("projections http "+r.status); return r.json(); });
+    return PROJ_P;
+  }
+
+  /* Byes come from the site's own canonical schedule, not from Sleeper: a team's bye is
+     the week it does not appear across 272 games. Abbreviations differ between the two
+     sources in a few places, so they are aliased rather than silently missed. */
+  var BYE_P = null, TEAM_ALIAS = {LA:"LAR", STL:"LAR", WSH:"WAS", JAC:"JAX", OAK:"LV", SD:"LAC"};
+  function ab(t){ t=String(t||"").toUpperCase(); return TEAM_ALIAS[t]||t; }
+  function byeWeeks(){
+    if(!BYE_P) BYE_P = fetch("/data/nfl-schedule.json", {cache:"no-cache"})
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        var games=(j&&j.data&&j.data.games)||[], seen={}, weeks={};
+        games.forEach(function(g){
+          if(String(g.season_type||"REG")!=="REG") return;
+          weeks[g.week]=1;
+          [g.away_team,g.home_team].forEach(function(t){ (seen[ab(t)]=seen[ab(t)]||{})[g.week]=1; });
+        });
+        var all=Object.keys(weeks).map(Number).sort(function(a,b){return a-b;}), bye={};
+        Object.keys(seen).forEach(function(t){
+          for(var i=0;i<all.length;i++) if(!seen[t][all[i]]){ bye[t]=all[i]; break; }
+        });
+        return bye;
+      }).catch(function(){
+        /* ⚠ Do NOT keep a failed lookup. Caching the rejection would mean one network
+           blip silently pins every bye risk at 0% for the rest of the session, with no
+           retry and nothing on screen saying the number is missing rather than zero. */
+        BYE_P = null; return {};
+      });
+    return BYE_P;
+  }
+
+  /* Severity, not a binary. A Questionable starter is not an absent one, and treating him
+     as absent would make every roster in September look broken. */
+  var INJ_W = {OUT:1, IR:1, PUP:1, NA:1, SUS:1, DOUBTFUL:.75, QUESTIONABLE:.4, PROBABLE:.15};
+  function injW(x){ return INJ_W[String(x||"").toUpperCase()] || 0; }
+
+  /* Fills the league's own starting slots greedily, then reports what the lineup is made
+     of. Returns null when a roster has no projectable players at all -- a zero there would
+     read as "perfectly sturdy", which is the opposite of what it means. */
+  function lineupShape(players, slots){
+    var pool=players.slice().sort(function(a,b){ return b.pg-a.pg; }), used={}, start=[], bench=[];
+    function take(ok, n){
+      for(var i=0;i<n;i++){
+        var pick=-1;
+        for(var j=0;j<pool.length;j++) if(!used[j] && ok(pool[j].pos)){ pick=j; break; }
+        if(pick<0) continue;
+        used[pick]=1; start.push(pool[pick]);
+      }
+    }
+    take(function(p){return p==="QB";}, slots.QB||0);
+    take(function(p){return p==="RB";}, slots.RB||0);
+    take(function(p){return p==="WR";}, slots.WR||0);
+    take(function(p){return p==="TE";}, slots.TE||0);
+    take(function(p){return p==="RB"||p==="WR"||p==="TE";}, slots.FLEX||0);
+    take(function(p){return p==="QB"||p==="RB"||p==="WR"||p==="TE";}, slots.SFLX||0);
+    for(var j2=0;j2<pool.length;j2++) if(!used[j2]) bench.push(pool[j2]);
+    if(!start.length) return null;
+    return {start:start, bench:bench, total:start.reduce(function(a,p){return a+p.pg;},0)};
+  }
+
+  async function weakSpots(league, rosters, teamList, done){
+    var rows, bye;
+    try{ rows = await projRows(league.season); bye = await byeWeeks(); }
+    catch(e){ return null; }
+    var rec=(league.scoring_settings && typeof league.scoring_settings.rec==="number")?league.scoring_settings.rec:0.5;
+    var key = rec>=1 ? "pts_ppr" : rec>0 ? "pts_half_ppr" : "pts_std";
+    var P={};
+    (rows||[]).forEach(function(row){
+      var st=row&&row.stats; if(!st||typeof st[key]!=="number")return;
+      var g=(typeof st.gp==="number"&&st.gp>0)?st.gp:17;
+      P[row.player_id]={pg:st[key]/g, pos:(row.player&&row.player.position)||"",
+                        inj:(row.player&&row.player.injury_status)||"", tm:ab(row.player&&row.player.team)};
+    });
+    var slots=lineupSlots(league.roster_positions);
+    var byR={}; (rosters||[]).forEach(function(r){ byR[r.roster_id]=r.players||[]; });
+    /* Four weeks, not one: a bye you can see coming is the one worth planning for, and in
+       this format one bad week ends you. */
+    var wk=Math.max(1, Number(done||0)+1), horizon=[wk,wk+1,wk+2,wk+3];
+    var out={};
+    (teamList||[]).forEach(function(t){
+      var ps=(byR[t.rid]||[]).map(function(id){ return P[id]; })
+                             .filter(function(p){ return p && p.pg>0; });
+      var sh=ps.length?lineupShape(ps, slots):null;
+      if(!sh || !sh.total){ out[t.rid]=null; return; }
+      var tot=sh.total;
+      var inj=sh.start.reduce(function(a,p){ return a+p.pg*injW(p.inj); },0)/tot;
+      var worst=0, worstWk=null;
+      horizon.forEach(function(w){
+        var share=sh.start.reduce(function(a,p){ return a+(bye[p.tm]===w?p.pg:0); },0)/tot;
+        if(share>worst){ worst=share; worstWk=w; }
+      });
+      /* Depth is the drop to the best SAME-SLOT replacement. No replacement at all is the
+         maximum drop, not a skipped row -- an empty bench IS the fragility. */
+      var dsum=0;
+      sh.start.forEach(function(p){
+        var rep=0;
+        sh.bench.forEach(function(b){ if(b.pos===p.pos && b.pg>rep) rep=b.pg; });
+        dsum += p.pg * (p.pg>0 ? Math.max(0,(p.pg-rep)/p.pg) : 0);
+      });
+      var depth=dsum/tot;
+      var top2=sh.start.slice().sort(function(a,b){return b.pg-a.pg;}).slice(0,2)
+                 .reduce(function(a,p){return a+p.pg;},0)/tot;
+      /* Normalised against an evenly-shared lineup, so "concentrated" means concentrated
+         relative to this league's own slot count rather than to an arbitrary constant. */
+      var floor=Math.min(1, 2/Math.max(1,sh.start.length));
+      var conc=Math.max(0,(top2-floor)/Math.max(1e-6,1-floor));
+      var score=inj*.30 + worst*.25 + depth*.25 + conc*.20;
+      out[t.rid]={inj:inj, bye:worst, byeWk:worstWk, depth:depth, conc:conc, score:score,
+                  n:sh.start.length,
+                  flag: score>=.55?"Brittle" : score>=.38?"Exposed" : "Sturdy"};
+    });
+    return out;
+  }
+
   async function projectTeams(league, rosters, aliveTeams){
-    var r = await fetch("https://api.sleeper.app/projections/nfl/"+league.season
-      +"?season_type=regular&position[]=QB&position[]=RB&position[]=WR&position[]=TE");
-    if(!r.ok) throw new Error("projections http "+r.status);
-    var rows = await r.json();
+    var rows = await projRows(league.season);
     var rec = (league.scoring_settings && typeof league.scoring_settings.rec==="number") ? league.scoring_settings.rec : 0.5;
     var key = rec>=1 ? "pts_ppr" : rec>0 ? "pts_half_ppr" : "pts_std";
     var pg={}, ppos={};
@@ -2929,6 +3048,10 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
     var live = alive.filter(function(t){ return t.n >= 2 && t.sd > 0; });
 
+    /* Runs in BOTH modes on purpose -- see the note on projRows. */
+    var WS = null;
+    try{ WS = await weakSpots(league, rosters, alive, done); }catch(e){ WS = null; }
+
     var MODE = "observed";
     if(live.length < 2){
       var projected = null;
@@ -2969,7 +3092,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
        labelled apart in the context builder — do not collapse them here. */
     window.__GX = {
       leagueId: id, league: league.name, season: league.season, teamCount: teams.length,
-      done: done, mode: MODE, chop: res.chop, chopLo: res.chopLo, chopHi: res.chopHi,
+      done: done, mode: MODE, ws: WS, chop: res.chop, chopLo: res.chopLo, chopHi: res.chopHi,
       chopped: teams.length - alive.length,
       excluded: alive.length - live.length,
       faab: faab,
@@ -3326,8 +3449,44 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     var f=document.getElementById("gxFragilityTab");
     /* fragility is an OBSERVED instrument — in projection mode every team carries
        the same assumed spread, so there is no volatility to measure yet. */
-    if(G.mode==="projected"){f.innerHTML='<tbody><tr><td style="text-align:left">Weak Spots needs observed weeks. In projection mode every team carries the same assumed ±21 spread, so volatility and floor cannot be measured — this fills in on its own once games are played.</td></tr></tbody>';}
-    else f.innerHTML='<thead><tr><th>Team</th><th>Observed volatility</th><th>Observed floor</th><th>V1 flag</th></tr></thead><tbody>'+teams.slice().sort(function(a,b){return (b.sd+b.mean-b.low)-(a.sd+a.mean-a.low);}).map(function(t){var x=t.sd+t.mean-t.low;return '<tr><td>'+esc(t.name)+'</td><td>'+t.sd.toFixed(1)+'</td><td>'+t.low.toFixed(1)+'</td><td>'+(x>35?'High':x>22?'Watch':'Lower')+'</td></tr>';}).join("")+'</tbody>';
+    /* ⚠ V1 is an OBSERVED instrument and stays that way: volatility and floor cannot
+       exist before games are played, and inventing them would be lying with a number.
+       V2's four components are ROSTER-derived, so they render in both modes -- which is
+       the point, because the preseason is when you can still fix a weak spot. */
+    (function(){
+      var WS=(G&&G.ws)||{}, obs=(G.mode!=="projected");
+      var pc=function(v){ return (v==null||isNaN(v))?"—":Math.round(v*100)+"%"; };
+      var head='<thead><tr><th>Team</th>'
+        +(obs?'<th>Observed volatility</th><th>Observed floor</th>':'')
+        +'<th>Injury</th><th>Bye risk</th><th>Depth drop</th><th>Star reliance</th><th>V2 flag</th></tr></thead>';
+      var rows=teams.slice().map(function(t){ return {t:t, w:WS[t.rid]||null}; });
+      /* Sort by the V2 score so the sheet answers "who is most fragile" on open. Teams with
+         no projectable roster sort last rather than to the top on a zero. */
+      rows.sort(function(a,b){ return ((b.w&&b.w.score)||-1)-((a.w&&a.w.score)||-1); });
+      var body=rows.map(function(r){
+        var t=r.t, w=r.w, x=obs?(t.sd+t.mean-t.low):null;
+        if(!w) return '<tr><td>'+esc(t.name)+'</td>'
+          +(obs?'<td>'+t.sd.toFixed(1)+'</td><td>'+t.low.toFixed(1)+'</td>':'')
+          +'<td colspan="5" style="text-align:left;color:var(--ink-3)">No projectable roster — nothing to measure</td></tr>';
+        return '<tr><td>'+esc(t.name)+'</td>'
+          +(obs?'<td>'+t.sd.toFixed(1)+'</td><td>'+t.low.toFixed(1)+'</td>':'')
+          +'<td>'+pc(w.inj)+'</td>'
+          +'<td>'+pc(w.bye)+(w.bye>0&&w.byeWk?' <span class="samp">wk '+w.byeWk+'</span>':'')+'</td>'
+          +'<td>'+pc(w.depth)+'</td><td>'+pc(w.conc)+'</td>'
+          +'<td>'+w.flag+(obs&&x!=null?' <span class="samp">V1 '+(x>35?'High':x>22?'Watch':'Lower')+'</span>':'')+'</td></tr>';
+      }).join("");
+      f.innerHTML=head+'<tbody>'+body+'</tbody>';
+      var note=document.getElementById("gxFragilityNote");
+      if(note) note.innerHTML='Four roster-derived measures, each a share where higher means more fragile. '
+        +'<b>Injury</b> is the share of projected starter points carrying an injury designation, weighted by severity '
+        +'(out 100%, doubtful 75%, questionable 40%). <b>Bye risk</b> is the worst single week in the next four. '
+        +'<b>Depth drop</b> is how far each starter falls to his best same-slot replacement — an empty bench scores the maximum. '
+        +'<b>Star reliance</b> is the top two starters’ share, normalised against an evenly-shared lineup of this league’s size. '
+        +'These describe a roster’s shape from Sleeper season projections and the site’s own schedule; they are not predictions, '
+        +'and they cannot see depth-chart roles, snap share or a coach’s intent. '
+        +(obs?'Observed volatility and floor are this league’s own completed scores.'
+             :'Observed volatility and floor need two completed weeks and are not shown yet.');
+    })();
     /* season MC is cached on the stash: focus taps repaint without re-simulating */
     if(!G.mc)G.mc=simulateSeason(G);
     seasonPaint(G);var sel=document.getElementById("gxPredTeam"),old=sel.value;sel.innerHTML=teams.map(function(t){return '<option value="'+t.rid+'">'+esc(t.name)+'</option>';}).join("");if(old)sel.value=old;document.getElementById("gxState").textContent=locked()?"Sunday room · predictions locked":(G.mode==="projected"?"Projected · not live scores":"Modeled week · not live scores");receipt();addLeague(G.leagueId,G.me&&G.me.rid);}
@@ -3369,6 +3528,7 @@ window.DD_BOTCTX = {
 - A team missing from the table has fewer than 2 completed weeks, a zero standard deviation, or an EMPTY roster — empty mid-season means chopped. That is the answer to "why am I not listed", not a bug.
 - The FAAB WAR PLAN card is a dated editorial framework calibrated to ONE room's observed 2025 winning bids plus published case studies. Quote its ranges as opinion with the date. The standing rule holds: never dress a specific bid recommendation up as maths.
 - THE LONG GAME sheet is a SEASON Monte Carlo: thousands of simulated seasons rolling the same weekly model forward, chopping the lowest each week. ⚠️ Rosters are FROZEN at today's mean and spread — no waivers, no injuries, no byes, and no chopped-roster talent redistribution, which is the defining dynamic of this format — and every weekly assumption COMPOUNDS with each simulated week. Quote win odds and survival curves as a modeled illustration, never as a forecast. Finishing places are among the simulated teams only.
+- WEAK SPOTS is V2. Four ROSTER-DERIVED components, each a share where higher means more fragile: injury (share of projected starter points carrying a designation, severity-weighted), bye risk (worst single week of the next four), depth drop (fall from each starter to his best same-slot replacement; an empty bench scores maximum), and star reliance (top two starters' share, normalised to this league's slot count). They render before the season because they need rosters, not scores. Observed volatility and floor still need two completed weeks. Describe them as descriptive measures of roster shape, never as predictions or as injury forecasts.
 - PROJECTION MODE: before two completed weeks exist, team means come from SLEEPER SEASON PLAYER PROJECTIONS — the best projected lineup per roster under this league's slot list — and every team carries an ASSUMED ±21-point weekly spread; byes, injuries and schedule are NOT modeled. Call every number in this mode "projected", never "observed". The page switches to the league's own scoring by itself at two completed weeks.`,
   ctx: () => {
     const dl = [];
