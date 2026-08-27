@@ -2586,6 +2586,12 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
   addEventListener("message", e=>{
     if(e.origin !== location.origin || !e.data || e.data.dd !== "height") return;
+    // ⚠️ A height posted while we are PINNED describes the screen, not the content: the
+    // board fills 100vh in full screen and posts ~1100px. Storing that made dataset.h the
+    // screen height, and exiting restored it — a screen-tall frame around a short board,
+    // which is the black block. Ignore posts while pinned; the board re-posts its true
+    // height as soon as it is unpinned.
+    if(document.fullscreenElement) return;
     for(const k in frames){
       if(frames[k].contentWindow === e.source){
         frames[k].dataset.h = Math.max(320, e.data.h);
@@ -2613,7 +2619,9 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   document.addEventListener("fullscreenchange", ()=>{
     const f = frames[active]; if(!f) return;
     const pinned = !!document.fullscreenElement;
-    f.style.height = pinned ? "100vh" : (f.dataset.h || 420)+"px";
+    // On the way out, do not trust the remembered height either — it may predate the
+    // full-screen round trip. Collapse to the floor and let the board's own post size it.
+    f.style.height = pinned ? "100vh" : "320px";
     // tell the board which mode it is in: pinned means its 100vh is the real screen, so
     // the projector fill is safe. Unpinned it would be measuring its own posted height.
     try{ f.contentWindow.postMessage({dd:"pinned", on:pinned}, location.origin); }catch(err){}

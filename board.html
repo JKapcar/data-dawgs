@@ -2947,6 +2947,11 @@ initDraftPersonalSync();
     + ".dd-embed body.livefull.dd-pinned .bmx{height:calc(100vh - 108px);min-height:0}";
   document.head.appendChild(css);
   const post = () => {
+    /* ⚠ A pinned board is filling the SCREEN, so its scrollHeight describes the screen and
+       not the content. Posting it made the shell remember a screen-sized height, and
+       leaving full screen restored that around a short board -- a black expanse under the
+       grid. Stay quiet while pinned; the unpin message triggers a fresh, honest post. */
+    if(document.body.classList.contains("dd-pinned")) return;
     const h = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
     parent.postMessage({dd:"height", h}, location.origin);
   };
