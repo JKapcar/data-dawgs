@@ -2935,8 +2935,16 @@ initDraftPersonalSync();
        the shell pins the iframe to 100vh, so 100vh-108px is the real screen again and
        the board stretches into it. The two rules do not fight — chrome above the grid
        (~90px) is smaller than the 108px subtracted, so the loop converges downward to
-       the content height instead of ratcheting. */
-    + ".dd-embed body.livefull .bmx{height:auto;min-height:calc(100vh - 108px)}";
+       the content height instead of ratcheting.
+
+       ⚠ 2026-08-27: the min-height above USED TO BE calc(100vh - 108px) here, and that
+       is the ratchet. In auto-height mode 100vh is the height we ourselves posted, so the
+       rule measures its own output. Desktop chrome (~90px) is under the 108px subtracted
+       so it crept downward and looked fine; phone chrome is ~175px, the sign flips, and
+       the board grew 67px every tick without limit. The vh fill is now armed only by
+       .dd-pinned, which the shell sets when it has really pinned the frame to the screen. */
+    + ".dd-embed body.livefull .bmx{height:auto;min-height:0}"
+    + ".dd-embed body.livefull.dd-pinned .bmx{height:calc(100vh - 108px);min-height:0}";
   document.head.appendChild(css);
   const post = () => {
     const h = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
@@ -2947,7 +2955,11 @@ initDraftPersonalSync();
   if(window.ResizeObserver) new ResizeObserver(post).observe(document.body);
   setInterval(post, 900);                       // charts redraw async; cheap insurance
   addEventListener("message", e=>{
-    if(e.origin!==location.origin || !e.data || e.data.dd!=="theme") return;
+    if(e.origin!==location.origin || !e.data) return;
+    /* Only the shell knows whether our 100vh is the real screen or just the height we
+       last posted. Never infer it in here -- inferring it is what ratcheted. */
+    if(e.data.dd==="pinned"){ document.body.classList.toggle("dd-pinned", !!e.data.on); setTimeout(post,60); return; }
+    if(e.data.dd!=="theme") return;
     document.documentElement.setAttribute("data-theme", e.data.theme);
     if(window.DDTheme && DDTheme.apply) DDTheme.apply();
     setTimeout(post, 60);
