@@ -31,7 +31,20 @@ assert.match(leagues, /event\.data\.dd!=="theme"/,
 assert.match(leagues, /:root\[data-theme="light"\]/,
   "league settings has no light-theme palette");
 
-assert.match(shared, /#ddLeagueIndicator,#ddbLaunch,#ddmeChip,\.udfoot\{display:none!important\}/);
+/* The rig cleanup removes the league bar and the footer utility strip, both of which the
+   Settings tab and the rig's own controls replace.
+
+   ⚠️ It must NOT also hide #ddbLaunch or #ddmeChip, which this assertion originally
+   required. Neither is duplicated anywhere in the rig: #ddbLaunch is the only way to open
+   Toto on six of the seven pages, and Toto's own no-identity reply is "Tap the 'Who are
+   you?' chip at the bottom-left", so hiding the chip left him giving an instruction that
+   could not be followed. Hiding a control is only cleanup when the thing it does is
+   reachable somewhere else on the same page. */
+assert.match(shared, /#ddLeagueIndicator,\.udfoot\{display:none!important\}/);
+assert.doesNotMatch(shared, /clean\.textContent\s*=\s*"[^"]*#ddbLaunch/,
+  "the rig cleanup hides Toto's launcher, which is the only way to open him");
+assert.doesNotMatch(shared, /clean\.textContent\s*=\s*"[^"]*#ddmeChip/,
+  "the rig cleanup hides the identity chip Toto tells the reader to tap");
 assert.doesNotMatch(shared, /bar\.innerHTML=`<span class="ddli-name"/);
 
 console.log("ok  league settings replaces draft-rig floating controls");
