@@ -365,7 +365,11 @@
         config = decodeLegacyToken(token);
         if(config && config.url) setJSON(LEGACY_SYNC_KEY, config);
       }
-      if(!config) config = getJSON(LEGACY_SYNC_KEY, null);
+      // The production draft rig has one canonical legacy room. A stale dd-sync-v1
+      // value from setup/testing must never silently send the auctioneer to another
+      // room while the projector reads pepperoninipples. An explicit capability token
+      // still wins; local overrides remain available off the production hostname.
+      if(!config && location.hostname !== "datadawgs216.com") config = getJSON(LEGACY_SYNC_KEY, null);
       if(!config || !config.url) config = {url:FIREBASE_URL,room:LEGACY_ROOM};
       config.url = String(config.url || "").replace(/\/+$/,"");
       config.room = String(config.room || LEGACY_ROOM).replace(/[.#$\[\]\/]/g,"-");
