@@ -732,7 +732,7 @@ test('the flipped nav is identical on every page and carries the locked order', 
   assert.equal(blocks.size, 1, 'the NAV array is not identical across pages');
 });
 
-test('the draft hub owns league setup now that the menu does not', () => {
+test('the draft dashboard owns league settings without floating controls', () => {
   /* ⚠️ Removing a nav item can orphan a page, and nothing at runtime notices: the file
      still exists, still renders, and is simply unreachable. draft-leagues.html carries no
      nav of its own, so it cannot even offer a way back. This asserts the two doors that
@@ -743,10 +743,14 @@ test('the draft hub owns league setup now that the menu does not', () => {
     const i = h.indexOf('<div class="dbwrap">');
     return i < 0 ? h.slice(h.indexOf('</head>')) : h.slice(i);
   };
-  assert.equal((body('dashboard.html').match(/href="draft-leagues\.html"/g) || []).length, 1,
-    'the draft hub does not link league setup exactly once');
-  assert.match(body('dashboard.html'), /class="dbsetup" href="draft-leagues\.html">League setup/,
-    'the draft hub link is not the styled header action');
+  assert.doesNotMatch(body('dashboard.html'), /class="dbsetup"[^>]*>Switch league/i,
+    'the removed header-level league switch returned');
+  assert.match(body('dashboard.html'), /data-v="settings">League Settings/,
+    'the dashboard has no League Settings tab');
+  assert.match(body('dashboard.html'), /settings:\s*\{src:"draft-leagues\.html\?embed=1"/,
+    'the League Settings tab does not open the league editor');
+  assert.match(fs.readFileSync('draft-league.js','utf8'), /#ddLeagueIndicator,#ddbLaunch,#ddmeChip,\.udfoot\{display:none!important\}/,
+    'draft-rig bottom overlays are not suppressed');
   assert.ok((body('arena.html').match(/href="draft-leagues\.html"/g) || []).length >= 1,
     'arena.html stopped linking league setup');
   // and the page it points at is really there
@@ -1104,8 +1108,8 @@ test('tier is DATA, not chip text — a collar cannot demote a Working Dawg', ()
     assert.match(tag[0], /data-tier="(labs|dawg|pound)"/, f + ' has a tier chip with no data-tier');
   }
 
-  // 2. the three collared pages carry NO word in the chip, and still derive as dawg
-  for (const f of ['dashboard.html', 'nfelo.html', 'stats.html']) {
+  // 2. the remaining collared pages carry NO word in the chip, and still derive as dawg
+  for (const f of ['nfelo.html', 'stats.html']) {
     const html = fs.readFileSync(f, 'utf8');
     assert.doesNotMatch(html, /class="tierchip[^"]*"[^>]*>Dawg</,
       f + ' put the word back — the glyph is the collar');
@@ -1113,6 +1117,10 @@ test('tier is DATA, not chip text — a collar cannot demote a Working Dawg', ()
       f + ' has no accessible name on its collar glyph');
     assert.equal(derive(f), 'dawg', f + ' DEMOTED — data-tier is missing or wrong');
   }
+  // The draft dashboard deliberately removed the visible collar control. It retains
+  // hidden tier metadata so the machine-readable surface is not silently demoted.
+  assert.match(fs.readFileSync('dashboard.html','utf8'), /class="tierchip" data-tier="dawg" hidden/);
+  assert.equal(derive('dashboard.html'), 'dawg', 'dashboard DEMOTED after its visible collar was removed');
 
   // 3. the re-derived tier agrees with what is COMMITTED in surfaces.json.
   //    This is the assertion that turns red if data-tier is stripped from a page.

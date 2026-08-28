@@ -10,8 +10,15 @@
 <meta name="theme-color" content="#f2ecdf" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#161009">
   <title>Draft Leagues · Data Dawgs</title>
+  <script>
+    /* The dashboard embeds this page. Resolve the shared theme before first paint so a
+       light dashboard never flashes a dark rectangle while the frame is loading. */
+    try{document.documentElement.setAttribute("data-theme",localStorage.getItem("dd-theme2")||"dark");}catch(e){}
+  </script>
   <style>
-    :root{--ink:#f6f1e7;--muted:#aaa397;--paper:#161009;--card:#241f19;--line:#36332d;--orange:#f26200;--green:#55c693;--red:#eb7777}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}a{color:inherit}.shell{width:min(1080px,calc(100% - 32px));margin:0 auto;padding:28px 0 72px}.top{display:flex;align-items:center;gap:14px;margin-bottom:28px}.brand{font-weight:900;letter-spacing:.08em;text-decoration:none}.brand b{color:var(--orange)}h1{font-size:clamp(30px,6vw,58px);line-height:1;margin:0 0 10px}h2{font-size:20px;margin:0 0 16px}.lead,.muted{color:var(--muted)}.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:26px}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}.wide{grid-column:1/-1}.league{display:flex;align-items:center;gap:14px;padding:14px 0;border-top:1px solid var(--line)}.league:first-child{border-top:0}.league-main{min-width:0;flex:1}.league-name{font-weight:800;font-size:17px}.meta{color:var(--muted);font-size:13px;text-transform:capitalize}.actions{display:flex;gap:8px;flex-wrap:wrap}button,.button,input,select{font:inherit}button,.button{border:1px solid var(--line);background:#27241f;color:var(--ink);padding:9px 12px;border-radius:8px;cursor:pointer;text-decoration:none;font-weight:750}button.primary{background:var(--orange);border-color:var(--orange);color:#111}button.ghost{background:transparent}button.danger{color:var(--red)}label{display:block;font-weight:750;margin:12px 0 5px}input,select{width:100%;border:1px solid var(--line);background:#0d0d0c;color:var(--ink);padding:10px 11px;border-radius:8px}input:focus,select:focus{outline:2px solid var(--orange);outline-offset:1px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.teams{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;max-height:330px;overflow:auto;padding-right:4px}.teamrow{display:grid;grid-template-columns:1fr 1fr;gap:7px}.teamrow input{padding:8px}
+    :root{--ink:#f6f1e7;--muted:#aaa397;--paper:#161009;--card:#241f19;--line:#36332d;--input:#0d0d0c;--button:#27241f;--orange:#f26200;--green:#55c693;--red:#eb7777;color-scheme:dark}
+    :root[data-theme="light"]{--ink:#2a2118;--muted:#756b5e;--paper:#f2ecdf;--card:#fffdf7;--line:#d8cdbb;--input:#fffdf7;--button:#f4ecde;--orange:#d13a00;--green:#087848;--red:#b82f2f;color-scheme:light}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}a{color:inherit}.shell{width:min(1080px,calc(100% - 32px));margin:0 auto;padding:28px 0 72px}.top{display:flex;align-items:center;gap:14px;margin-bottom:28px}.brand{font-weight:900;letter-spacing:.08em;text-decoration:none}.brand b{color:var(--orange)}h1{font-size:clamp(30px,6vw,58px);line-height:1;margin:0 0 10px}h2{font-size:20px;margin:0 0 16px}.lead,.muted{color:var(--muted)}.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:26px}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}.wide{grid-column:1/-1}.league{display:flex;align-items:center;gap:14px;padding:14px 0;border-top:1px solid var(--line)}.league:first-child{border-top:0}.league-main{min-width:0;flex:1}.league-name{font-weight:800;font-size:17px}.meta{color:var(--muted);font-size:13px;text-transform:capitalize}.actions{display:flex;gap:8px;flex-wrap:wrap}button,.button,input,select{font:inherit}button,.button{border:1px solid var(--line);background:var(--button);color:var(--ink);padding:9px 12px;border-radius:8px;cursor:pointer;text-decoration:none;font-weight:750}button.primary{background:var(--orange);border-color:var(--orange);color:#fff}button.ghost{background:transparent}button.danger{color:var(--red)}label{display:block;font-weight:750;margin:12px 0 5px}input,select{width:100%;border:1px solid var(--line);background:var(--input);color:var(--ink);padding:10px 11px;border-radius:8px}input:focus,select:focus{outline:2px solid var(--orange);outline-offset:1px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.teams{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;max-height:330px;overflow:auto;padding-right:4px}.teamrow{display:grid;grid-template-columns:1fr 1fr;gap:7px}.teamrow input{padding:8px}
 /* This page carries its own CSS and no site nav, so the sitewide phone rule in nav.js
    never reaches it. iOS Safari zooms on focus below 16px and does not zoom back. */
 @media (max-width:600px){
@@ -75,16 +82,48 @@
 .top .navauth{margin-left:auto}
 @media(max-width:420px){.top{gap:8px}.top>.muted{display:none}
   .top .navauth .authbtn{max-width:110px;padding:4px 9px}}
+.orderrow{display:grid;grid-template-columns:64px 1fr 1fr;gap:7px;align-items:end}
+.orderrow label{margin:0;font-size:11px;color:var(--muted)}
+body.embed{background:transparent}
+body.embed .shell{width:100%;padding:8px 0 28px}
+body.embed .top,body.embed .backlink,body.embed>main>h1,body.embed>main>.lead{display:none}
+body.embed .grid{margin-top:0}
+body.embed .grid>section:not(#settingsCard){display:none}
+@media(max-width:600px){.orderrow{grid-template-columns:54px 1fr}.orderrow .owner{grid-column:2}}
   </style>
 </head>
 <body>
 <main class="shell">
   <div class="top"><a class="brand" href="index.html">DATA <b>DAWGS</b></a><span class="muted">Draft league hub</span></div>
-  <p style="margin:0 0 10px"><a href="dashboard.html" style="color:var(--orange);text-decoration:none;font-weight:700">&larr; Back to the Draft Dashboard</a></p>
+  <p class="backlink" style="margin:0 0 10px"><a href="dashboard.html" style="color:var(--orange);text-decoration:none;font-weight:700">&larr; Back to the Draft Dashboard</a></p>
   <h1>Your draft. Your league.</h1>
   <p class="lead">Create isolated draft rooms for different groups. League links are capability links: anyone with the link can open the room, and no Data Dawgs account is required.</p>
 
   <div class="grid">
+    <section class="card wide" id="settingsCard" hidden>
+      <h2>League Settings</h2>
+      <form id="settingsForm">
+        <div class="row">
+          <div><label for="settingsName">League name</label><input id="settingsName" required maxlength="100"></div>
+          <div><label for="settingsSeason">Season</label><input id="settingsSeason" type="number" min="2000" max="2100" required></div>
+        </div>
+        <div class="row">
+          <div><label for="settingsDraftType">Draft type</label><select id="settingsDraftType"><option value="auction">Auction</option><option value="snake">Snake</option></select></div>
+          <div id="settingsBudgetWrap"><label for="settingsBudget">Auction budget</label><input id="settingsBudget" type="number" min="1"></div>
+        </div>
+        <label>Roster configuration</label><div class="slots" id="settingsSlots"></div>
+        <div class="row">
+          <div><label for="settingsScoring">Scoring</label><select id="settingsScoring"><option value="half14">14-team Half PPR · derived</option><option value="half">12-team Half PPR</option><option value="full">12-team Full PPR</option><option value="sf">12-team Superflex PPR</option><option value="sfhalf12">12-team Superflex Half PPR · derived</option><option value="custom">Custom / verify</option></select></div>
+          <div><label for="settingsPpr">Points per reception</label><input id="settingsPpr" type="number" min="0" max="2" step="0.25"></div>
+        </div>
+        <label>Draft order, team names and owners</label>
+        <p class="notice">Use the order numbers to set the nomination or snake-draft order. Existing picks stay attached to the correct team.</p>
+        <div class="teams" id="settingsTeams"></div>
+        <p><button class="primary" type="submit">Save League Settings</button></p>
+        <div id="settingsMsg" aria-live="polite"></div>
+      </form>
+    </section>
+
     <section class="card wide">
       <h2>Your Leagues</h2>
       <div id="leagueList"></div>
@@ -354,6 +393,25 @@
   const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const slotNames=["QB","RB","WR","TE","FLEX","SUPERFLEX","DST","K","BN"];
   const slotDefaults={QB:1,RB:2,WR:2,TE:1,FLEX:2,SUPERFLEX:0,DST:1,K:0,BN:6};
+  const params=new URLSearchParams(location.search);
+  const activeId=params.get("league");
+  const embedded=params.get("embed")==="1";
+  if(embedded) document.body.classList.add("embed");
+  addEventListener("message",event=>{
+    if(event.origin!==location.origin||!event.data||event.data.dd!=="theme") return;
+    const theme=event.data.theme==="light"?"light":"dark";
+    document.documentElement.setAttribute("data-theme",theme);
+  });
+  if(embedded){
+    let heightFrame=0;
+    const postHeight=()=>{
+      cancelAnimationFrame(heightFrame);
+      heightFrame=requestAnimationFrame(()=>parent.postMessage({dd:"height",h:Math.ceil(document.documentElement.scrollHeight)},location.origin));
+    };
+    addEventListener("load",postHeight);
+    if(window.ResizeObserver) new ResizeObserver(postHeight).observe(document.body);
+    setTimeout(postHeight,50);
+  }
   $("season").value=new Date().getFullYear();
   $("teamCount").innerHTML=[8,10,12,14,16].map(n=>`<option${n===12?' selected':''}>${n}</option>`).join("");
   $("slots").innerHTML=slotNames.map(s=>`<label>${s}<input type="number" min="0" max="30" value="${slotDefaults[s]}" data-slot="${s}"></label>`).join("");
@@ -378,6 +436,79 @@
     };
     $("leagueList").innerHTML=rows.length?rows.map(row=>`<div class="league" data-id="${esc(row.id)}"><div class="league-main"><div class="league-name">${esc(row.name)}</div><div class="meta">${esc(row.season)} · ${esc(row.provider||"manual")}</div></div><div class="actions"><a class="button" href="${esc(returnHref(row.id))}">Open</a><button data-copy>Copy league link</button><button class="danger ghost" data-remove>Remove from this device</button></div></div>`).join(""):'<div class="empty">No league instances have been opened on this browser yet.</div>';
   }
+
+  function activeState(){
+    if(!activeId) return null;
+    try{return JSON.parse(localStorage.getItem(DDLeague.storageKey("dd-auction-v1",activeId))||"null");}
+    catch(e){return null;}
+  }
+
+  function effectiveTeams(league,state){
+    const live=state&&state.settings&&Array.isArray(state.settings.teams)&&state.settings.teams.length ? state.settings.teams : null;
+    const source=live||league.config.teams;
+    return source.map((team,index)=>{
+      const durable=league.config.teams[index]||{};
+      return Object.assign({},durable,team,{id:team.id||durable.id||`team_${index+1}`});
+    });
+  }
+
+  function loadSettings(){
+    const league=activeId&&DDLeague.load(activeId);
+    if(!league) return;
+    /* The live board runs from draft state. The league record is its durable definition,
+       but older rooms can still carry Team 1/Team 2 placeholders there. Settings must
+       show what Live actually shows, then a save reconciles both records. */
+    const state=activeState();
+    const live=state&&state.settings||{};
+    const teams=effectiveTeams(league,state);
+    const rosterSlots=Array.isArray(live.rosterSlots)&&live.rosterSlots.length ? live.rosterSlots : league.config.rosterSlots;
+    const scoring=live.scoringConfig&&typeof live.scoringConfig==="object" ? live.scoringConfig : league.config.scoring;
+    const draftType=live.draftType||league.config.draftType;
+    $("settingsCard").hidden=false;
+    $("settingsName").value=league.name;
+    $("settingsSeason").value=league.season;
+    $("settingsDraftType").value=draftType;
+    $("settingsBudget").value=live.budget||league.config.budget||200;
+    $("settingsBudgetWrap").hidden=draftType==="snake";
+    $("settingsScoring").value=scoring.mode||league.config.scoring.mode;
+    $("settingsPpr").value=scoring.ppr==null?0.5:scoring.ppr;
+    const counts=Object.fromEntries(rosterSlots.map(s=>[s.slot,s.count]));
+    $("settingsSlots").innerHTML=slotNames.map(s=>`<label>${s}<input type="number" min="0" max="30" value="${counts[s]||0}" data-settings-slot="${s}"></label>`).join("");
+    const ordered=teams.map((team,index)=>({team,index,order:Number(team.draftSlot)||index+1})).sort((a,b)=>a.order-b.order);
+    $("settingsTeams").innerHTML=ordered.map((row,i)=>`<div class="orderrow" data-team-id="${esc(row.team.id)}"><label>Order<input type="number" min="1" max="${ordered.length}" required value="${i+1}" data-order></label><label>Team<input required maxlength="80" value="${esc(row.team.name)}" data-team-name></label><label class="owner">Owner<input maxlength="80" value="${esc(row.team.owner||"")}" data-team-owner></label></div>`).join("");
+  }
+
+  $("settingsDraftType").addEventListener("change",()=>{$("settingsBudgetWrap").hidden=$("settingsDraftType").value==="snake";});
+  $("settingsForm").addEventListener("submit",event=>{
+    event.preventDefault();
+    const old=activeId&&DDLeague.load(activeId); if(!old) return;
+    const state=activeState();
+    const previousTeams=effectiveTeams(old,state);
+    const rows=[...$("settingsTeams").querySelectorAll(".orderrow")].map(row=>({
+      id:row.dataset.teamId,name:row.querySelector("[data-team-name]").value,
+      owner:row.querySelector("[data-team-owner]").value,order:Number(row.querySelector("[data-order]").value)
+    }));
+    if(new Set(rows.map(r=>r.order)).size!==rows.length){ $("settingsMsg").className="notice err"; $("settingsMsg").textContent="Every draft-order number must be unique."; return; }
+    rows.sort((a,b)=>a.order-b.order);
+    const oldById=new Map(old.config.teams.concat(previousTeams).map(t=>[t.id,t]));
+    const teams=rows.map((r,i)=>Object.assign({},oldById.get(r.id)||{id:r.id},{name:r.name,owner:r.owner,draftSlot:i+1}));
+    const rosterSlots=[...document.querySelectorAll("[data-settings-slot]")].map(input=>({slot:input.dataset.settingsSlot,count:Number(input.value)})).filter(s=>s.count>0);
+    const updated=DDLeague.save(Object.assign({},old,{name:$("settingsName").value,season:Number($("settingsSeason").value),config:Object.assign({},old.config,{
+      draftType:$("settingsDraftType").value,budget:$("settingsDraftType").value==="snake"?null:Number($("settingsBudget").value),
+      teamCount:teams.length,rosterSlots,scoring:Object.assign({},old.config.scoring,{mode:$("settingsScoring").value,ppr:Number($("settingsPpr").value),superflex:["sf","sfhalf12"].includes($("settingsScoring").value)}),teams
+    })}));
+    if(state&&state.settings){
+      const newIndex=new Map(teams.map((t,i)=>[t.id,i]));
+      const remap=i=>{ const id=(previousTeams[i]||{}).id; return newIndex.has(id)?newIndex.get(id):i; };
+      (state.picks||[]).forEach(p=>{p.ti=remap(p.ti);});
+      state.nomIdx=remap(state.nomIdx||0); state.settings.myTeam=remap(state.settings.myTeam||0);
+      Object.assign(state.settings,{budget:updated.config.budget==null?200:updated.config.budget,spots:rosterSlots.reduce((n,s)=>n+s.count,0),scoring:updated.config.scoring.mode,scoringConfig:updated.config.scoring,draftType:updated.config.draftType,rosterSlots,teams});
+      state.ts=Date.now(); DDLeague.saveState(activeId,state);
+    }
+    DDLeague.publishLeague(updated,state||DDLeague.stateFromLeague(updated));
+    $("settingsMsg").className="notice ok"; $("settingsMsg").textContent="League settings saved.";
+    loadSettings(); renderList();
+  });
 
   $("teamCount").addEventListener("change",renderTeams);
   $("draftType").addEventListener("change",()=>{
@@ -507,7 +638,7 @@
   espnRefreshStatus();
 
   window.addEventListener("ddleaguechange",renderList);
-  renderTeams(); renderList();
+  renderTeams(); renderList(); loadSettings();
 })();
 </script>
 </body>

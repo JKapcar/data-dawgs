@@ -737,8 +737,7 @@ select.dbpresent[hidden]{display:none}
 
 <div class="dbwrap">
   <div class="dbhead">
-    <h1>Fantasy Draft Dashboard <a class="tierchip tierchip-collar" data-tier="dawg" href="index.html#tiers" title="Working Dawg — earned its collar. Criteria: /data/receipts-method.md"><span class="collar" role="img" aria-label="Working Dawg — earned its collar"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false"><ellipse cx="12" cy="9.5" rx="7.4" ry="5.4" fill="none" stroke="currentColor" stroke-width="2.4"></ellipse><circle cx="12" cy="17.6" r="3.1" fill="currentColor"></circle></svg></span></a></h1>
-    <a class="dbsetup" href="draft-leagues.html">Switch league &rarr;</a>
+    <h1>Fantasy Draft Dashboard <span class="tierchip" data-tier="dawg" hidden aria-hidden="true"></span></h1>
     <span class="who" id="dbWho"></span>
   </div>
 
@@ -750,6 +749,7 @@ select.dbpresent[hidden]{display:none}
     <button data-v="analysis" >Analysis<span class="kbd">3</span></button>
     <button data-v="grades"   >Grades<span class="kbd">4</span></button>
     <button data-v="auctioneer" class="op">Auctioneer<span class="kbd">5</span></button>
+    <button data-v="settings">League Settings<span class="kbd">6</span></button>
     <span class="grow"></span>
     <button class="dbpresent" id="dbAnn" title="Auctioneer voice + Browns horn on this device (shift-click to test the horn)">🔊 Sound</button>
     <button class="dbpresent" id="dbPresent" title="Full-screen the live board for the projector">⤢ Full screen</button>
@@ -2400,7 +2400,8 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
        read-only views of the draft, this one writes to it. Hence the acknowledgement
        gate below. The standalone page stays live at /auction.html — that is still what
        runs draft night on the operator machine, and it is the only thing that has. */
-    auctioneer:{src:"auction.html?embed=1",        label:"Auctioneer Controls", op:true}
+    auctioneer:{src:"auction.html?embed=1",        label:"Auctioneer Controls", op:true},
+    settings:  {src:"draft-leagues.html?embed=1",  label:"League Settings"}
   };
   /* ⚠ ONE DOOR. DDLeague.id is URL-only, but the live sync falls back to a default room
      — so bare dashboard.html used to connect the live view to the league while every
@@ -2683,7 +2684,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   });
   addEventListener("keydown", e=>{
     if(/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName)) return;
-    const map = {"1":"live","2":"sheet","3":"analysis","4":"grades","5":"auctioneer"};
+    const map = {"1":"live","2":"sheet","3":"analysis","4":"grades","5":"auctioneer","6":"settings"};
     if(map[e.key]) show(map[e.key]);
   });
   addEventListener("hashchange", ()=> show(location.hash.slice(1)||"sheet", false));

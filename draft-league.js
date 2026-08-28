@@ -230,26 +230,24 @@
 
   function mountIndicator(){
     if(!hasWindow || new URLSearchParams(location.search).get("embed") === "1") return;
+    const page=location.pathname.split("/").pop();
+    const rigPages=new Set(["dashboard.html","auction.html","board.html","bigboard.html","dataviz.html","report.html","master.html"]);
+    if(!rigPages.has(page)) return;
+    /* The draft rig is a working surface, not a sitewide landing page. Fixed league,
+       Toto, identity and footer utility controls covered the board on phones and
+       duplicated controls already present in the rig. League administration now lives
+       in the dashboard's Settings tab. */
+    let clean=document.getElementById("ddDraftClean");
+    if(!clean){
+      clean=document.createElement("style"); clean.id="ddDraftClean";
+      clean.textContent="#ddLeagueIndicator,#ddbLaunch,#ddmeChip,.udfoot{display:none!important}";
+      document.head.appendChild(clean);
+    }
+    const old=document.getElementById("ddLeagueIndicator"); if(old) old.remove();
     const league=DDLeague.current;
-    let bar=document.getElementById("ddLeagueIndicator");
-    if(!bar){
-      const style=document.createElement("style");
-      style.textContent="#ddLeagueIndicator{position:fixed;z-index:57;right:12px;bottom:12px;display:flex;align-items:center;gap:10px;max-width:calc(100vw - 24px);padding:8px 10px;border:1px solid rgba(255,255,255,.18);border-radius:10px;background:rgba(20,19,17,.94);color:#f6f1e7;box-shadow:0 5px 24px rgba(0,0,0,.28);font:700 12px/1.25 system-ui,sans-serif}#ddLeagueIndicator .ddli-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#ddLeagueIndicator .ddli-meta{color:#aaa397;font-weight:600;text-transform:capitalize}#ddLeagueIndicator a{color:#ff8a33;text-decoration:none;white-space:nowrap}@media(max-width:600px){#ddLeagueIndicator .ddli-meta{display:none}}/* The bar owns the bottom strip, so lift the two chips that also live there. `body #id` out-specifies the mobile rule in the page's own #ddbCSS block, which is injected separately and in no guaranteed order relative to this one. */body #ddbLaunch,body #ddmeChip{bottom:58px}@media print{#ddLeagueIndicator{display:none!important}}";
-      document.head.appendChild(style);
-      bar=document.createElement("aside"); bar.id="ddLeagueIndicator"; document.body.appendChild(bar);
-    }
-    if(!league){
-      bar.innerHTML='<span class="ddli-name">No league selected</span><a href="draft-leagues.html">Choose league</a>';
-      return;
-    }
+    if(!league) return;
     document.documentElement.style.setProperty("--dd-team-count",league.config.teamCount);
     document.documentElement.style.setProperty("--dd-matrix-min",`${30+league.config.teamCount*89}px`);
-    const custom=league.config.scoring.mode==="custom" ? " · Custom scoring — verify settings" : "";
-    const unresolved=league.provider.diagnostics&&league.provider.diagnostics.unresolvedMappings||[];
-    const mapping=unresolved.length ? ` · ${unresolved.length} player${unresolved.length===1?"":"s"} could not be mapped` : "";
-    bar.innerHTML=`<span class="ddli-name"></span><span class="ddli-meta"></span><a href="draft-leagues.html">Switch League</a>`;
-    bar.querySelector(".ddli-name").textContent=league.name;
-    bar.querySelector(".ddli-meta").textContent=`${league.config.teamCount} teams · ${league.provider.name}${custom}${mapping}`;
   }
 
   function decorateDraftLinks(){
