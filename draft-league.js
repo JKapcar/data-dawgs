@@ -254,7 +254,12 @@
 
   function decorateDraftLinks(){
     if(!hasWindow || !DDLeague.id) return;
-    const pages=new Set(["dashboard.html","auction.html","board.html","bigboard.html","dataviz.html","report.html"]);
+    /* ⚠️ master.html BELONGS HERE and did not used to. It sets window.DD_POOL, so Toto and
+       the "Who are you?" chip take the DRAFT surface there — and with no ?league= on the
+       link they resolved against the legacy unscoped keys, which for a league instance is
+       an empty team list and an assistant that refuses to answer. It stays out of the
+       rigPages picker redirect above: the player pool is worth reading league-free. */
+    const pages=new Set(["dashboard.html","auction.html","board.html","bigboard.html","dataviz.html","report.html","master.html"]);
     document.querySelectorAll("a[href]").forEach(anchor=>{
       let url; try{ url=new URL(anchor.getAttribute("href"),location.href); }catch(e){ return; }
       const page=url.pathname.split("/").pop();
