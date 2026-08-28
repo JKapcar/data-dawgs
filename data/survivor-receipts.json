@@ -2,7 +2,7 @@
  "source_page": "/survivor.html",
  "tier": "labs",
  "graded": false,
- "as_of": "2026-08-23",
+ "as_of": "2026-08-28",
  "source": "Captured by work/survivor-receipt.mjs from survivor.html's own engine, before each week's earliest kickoff.",
  "note": "PROSPECTIVE RECEIPTS. Every row was written before the week it forecasts kicked off — captured_at < kickoff_at is enforced at capture, not flagged afterwards, and a row is never edited once written. What is graded is CALIBRATION of the stated win probabilities (Brier) and whether the pick survived. This is NOT a claim that the tool beats a pool: whether an entry would have won depends on the rest of the field, which is not ours to score. `n` is small and stays small — 18 weeks is at most 18 scored predictions per entry — so read every figure next to its n and do not draw a calibration curve on a season.",
  "field_notes": {
@@ -14,18 +14,72 @@
   "supersedes": "receipt_id this row replaces, when lines moved before kickoff; both rows stay"
  },
  "counts": {
-  "registered": 0,
+  "registered": 1,
   "resolved": 0,
-  "prospective": 0,
+  "prospective": 1,
   "survived": 0,
   "brier_n": 0,
   "brier_mean": null
  },
  "integrity": {
-  "rows": 0
+  "rows": 1
  },
- "data": [],
+ "data": [
+  {
+   "receipt_id": "survivor-2026-w01-default",
+   "season": 2026,
+   "week": 1,
+   "entry_id": "default",
+   "entry_label": "Public default — 200 entries, single life, no reuse, winnings objective",
+   "recommended": [
+    "LAC"
+   ],
+   "stated_win_probability": [
+    0.78491
+   ],
+   "stated_leg_source": [
+    "market"
+   ],
+   "stated_equity_index": 100,
+   "stated_run_the_table": 0.002184732,
+   "alternatives": [
+    {
+     "team": "JAX",
+     "win_probability": 0.741094,
+     "equity_index": 94.4,
+     "run_the_table": 0.00190062
+    },
+    {
+     "team": "DET",
+     "win_probability": 0.717003,
+     "equity_index": 91.5,
+     "run_the_table": 0.00192508
+    }
+   ],
+   "objective": "winnings",
+   "ownership_source": "modelled",
+   "ownership_adjustment": "alive-count projection; pick mix assumed independent of survival",
+   "config": {
+    "entries": 200,
+    "lives": 1,
+    "reuse": false,
+    "double_pick_weeks": [],
+    "week18_mode": "normal",
+    "blend_market": 0.75,
+    "chalk": 2.4,
+    "used_teams": []
+   },
+   "input_snapshot_id": "sha256:08c1f34f5eb2bc94cfbff001187b7fcbbb18a7dbb90e090038f65108b1f15dc3",
+   "input_as_of": "2026-08-06",
+   "engine_version": "survivor.html@94a54e9adfc3",
+   "captured_at": "2026-08-28T00:12:07.878Z",
+   "kickoff_at": "2026-09-13T20:25:00Z",
+   "forecast_status": "prospective",
+   "supersedes": null,
+   "resolved": null
+  }
+ ],
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-08-23",
+ "built": "2026-08-28",
  "canonical_url": "https://datadawgs216.com/data/survivor-receipts.json"
 }

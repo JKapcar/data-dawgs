@@ -50,9 +50,12 @@ ok("kicker rows are filtered only under the profile", s.includes('LGP && r.pos==
 ok("the bold column follows the profile", s.includes('LGP ? "lg" :'));
 ok("card CSS knows the lg column", s.includes("td[data-c=lg]") && s.includes('content:" PPN"'));
 ok("the intro names the method without naming a vendor",
-  s.includes("value-over-replacement ratio") && !/ETR/i.test(
-    s.slice(s.indexOf("Priced for <b>this league</b>"), s.indexOf("Priced for <b>this league</b>") + 1400)));
-ok("the intro admits the holes", s.includes("sacks taken") && s.includes("kickers are $0"));
+  s.includes("value-over-replacement") && !/ETR/i.test(   // v2 is additive: premium + VOR shift, not a ratio
+    s.slice(s.indexOf("Priced for <b>this league</b>"), s.indexOf("Priced for <b>this league</b>") + 2000)));
+ok("the intro admits the holes and claims only what v2 does",
+  s.includes("return yards") && s.includes("kickers are $0")
+  // v2 MODELS sacks (shrunk 2025 rates); the intro must say so, not disclaim them
+  && s.includes("shrunk to the position median") && !s.includes("Not modeled: sacks taken"));
 
 console.log(`\nppn-values: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
