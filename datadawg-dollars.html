@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PPN Auction Board — DataDawgs</title>
+<title>DataDawg$ Auction Board — DataDawgs</title>
 <style>
   :root{--bg:#0f1214;--panel:#171b1f;--line:#262c31;--ink:#e8e4d9;--mute:#8b9199;
     --tgt:#f2c14e;--band:#3f6ea5;--pos:#8fd18f;--neg:#ff8a7a;
@@ -37,7 +37,7 @@
 </head>
 <body>
 <header>
-  <h1>PPN Auction Board <span>Target $</span></h1>
+  <h1>DataDawg$ <span>Target $ — our conversion, not the market's</span></h1>
   <div class="meta" id="meta">loading…</div>
 </header>
 <div class="disclaimer" id="disc">Low/High is conversion-assumption sensitivity — <b>not</b> a player-outcome confidence interval and <b>not</b> a bid ceiling.</div>
@@ -67,7 +67,7 @@
 <div class="foot" id="foot"></div>
 <script>
 (async function(){
-  const URL='data/ppn-auction-values.json';
+  const URL='data/datadawg-dollars-values.json';
   let rows=[],sortK='rank',asc=true,draft=false,hideGone=false,hideZero=true,gone=new Set();
   try{const s=localStorage.getItem('ppn_gone');if(s)gone=new Set(JSON.parse(s));}catch(e){}
   const save=()=>{try{localStorage.setItem('ppn_gone',JSON.stringify([...gone]))}catch(e){}};
@@ -99,7 +99,7 @@
     const j=(await(await fetch(URL)).json()).data;  // /data/ payloads are enveloped
     rows=j.players;
     $('meta').textContent=`${j.league} · ${j.model_id} · as of ${j.as_of} · ${j.epistemic_status}`;
-    $('foot').textContent=`Source: data/ppn-auction-values.json · ETR snapshot sha256 ${j.source_snapshot_sha256.slice(0,16)}… · ${j.validation.rows} rows · ${j.validation.positive_prices} priced · $${j.validation.target_sum} total. Reproducible and red-teamed — not bulletproof, not outcome-validated.`;
+    $('foot').textContent=`Source: data/datadawg-dollars-values.json · ETR snapshot sha256 ${j.source_snapshot_sha256.slice(0,16)}… · ${j.validation.rows} rows · ${j.validation.positive_prices} priced · $${j.validation.target_sum} total. Reproducible and red-teamed — not bulletproof, not outcome-validated.`;
   }catch(e){$('meta').textContent='Could not load data/ppn-auction-values.json.';}
   document.querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(sortK===k)asc=!asc;else{sortK=k;asc=(k==='rank'||k==='player'||k==='pos');}render();});
   $('q').oninput=render;$('pos').onchange=render;

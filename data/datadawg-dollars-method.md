@@ -1,10 +1,10 @@
-<!-- mirror of https://datadawgs216.com/data/ppn-auction-method.json -->
+<!-- mirror of https://datadawgs216.com/data/datadawg-dollars-method.json -->
 ---
-title: PPN auction conversion — method contract
+title: DataDawg$ — auction conversion method contract
 as_of: 2026-08-28
-source: Establish The Run half-PPR auction values (private subscriber snapshot, identified publicly only by SHA-256), converted to the JohnMaddenPepperoniNipplesXV room (Yahoo 773763; 14 teams, $200, no kicker, 2 flex, $0 bids legal) by the VOR-based conversion documented in /data/ppn-auction-method.md. Reproducible and red-teamed; not outcome-validated.
+source: Establish The Run half-PPR auction values (private subscriber snapshot, identified publicly only by SHA-256), converted to the JohnMaddenPepperoniNipplesXV room (Yahoo 773763; 14 teams, $200, no kicker, 2 flex, $0 bids legal) by the VOR-based conversion documented in /data/datadawg-dollars-method.md. Reproducible and red-teamed; not outcome-validated.
 staleness: A dated conversion of a dated ETR snapshot. Keeper inflation is not modelled and the Sep 8 keeper deadline will move real prices.
-canonical_url: https://datadawgs216.com/data/ppn-auction-method.md
+canonical_url: https://datadawgs216.com/data/datadawg-dollars-method.md
 ---
 # datadawgs-ppn-auction-2026-v3 — method contract
 

@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 34572,
+    "bytes": 34658,
     "as_of": "2026-08-28",
-    "sha256": "9dfe73715f3b30cfb9680890c09ac186476ed0b4ac43e83dbafa1fec403ccf6c",
+    "sha256": "d4ad44562f46392d9eb6a2995f4acd0615586fd2a836690699cca8be7c2cc4d5",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -319,19 +319,19 @@
     "note": "No weeks graded yet. The season opens with NFL Week 1 (~Sep 10, 2026); the first grade run is the following Tuesday. `graded` flips to true when Week 1 rows exist. The live document is served by the Worker at GET /rankings/grades and mirrored here at each grade run. This file contains no player-level data of any kind, by design."
    },
    {
-    "path": "/data/ppn-auction-method.json",
-    "url": "https://datadawgs216.com/data/ppn-auction-method.json",
-    "bytes": 5509,
+    "path": "/data/datadawg-dollars-method.json",
+    "url": "https://datadawgs216.com/data/datadawg-dollars-method.json",
+    "bytes": 5519,
     "as_of": "2026-08-28",
-    "sha256": "c3e8dd574f12bd8a436333e62c8231bceead42ea7d4e4ba27fd2a6c437171645",
+    "sha256": "9dcc27c88cdc4adbdab012d398ae7df05cc8d543ec3472e40c4203b0d80cdc0f",
     "note": "Dated snapshot. low/high are conversion-assumption sensitivity bounds, NOT bid ceilings and NOT player-outcome intervals. Keeper inflation (Sep 8 deadline) and out-of-sample validation are open items, deliberately not modelled here."
    },
    {
-    "path": "/data/ppn-auction-values.json",
-    "url": "https://datadawgs216.com/data/ppn-auction-values.json",
-    "bytes": 106453,
+    "path": "/data/datadawg-dollars-values.json",
+    "url": "https://datadawgs216.com/data/datadawg-dollars-values.json",
+    "bytes": 106463,
     "as_of": "2026-08-28",
-    "sha256": "de03d247f34de16f47a9b42377408911540326c918b72e73b0fd42a3adec44a6",
+    "sha256": "71da588f4641268605cc8599829f4402cdf2ffe81faacfb4398f088c41a70ad3",
     "note": "Dated snapshot. low/high are conversion-assumption sensitivity bounds, NOT bid ceilings and NOT player-outcome intervals. Keeper inflation (Sep 8 deadline) and out-of-sample validation are open items, deliberately not modelled here."
    },
    {
@@ -415,10 +415,10 @@
     "as_of": "2026-08-12"
    },
    {
-    "path": "/data/ppn-auction-method.md",
-    "url": "https://datadawgs216.com/data/ppn-auction-method.md",
-    "bytes": 5087,
-    "sha256": "ace2122aa92d2111a702175da752002388dd5c580611586c76d5b41824e9b8e4",
+    "path": "/data/datadawg-dollars-method.md",
+    "url": "https://datadawgs216.com/data/datadawg-dollars-method.md",
+    "bytes": 5108,
+    "sha256": "a1b98cddf1828de998b320c4d756c4cd9bbb4dcd19539451028072239a94baf9",
     "as_of": "2026-08-28"
    }
   ]

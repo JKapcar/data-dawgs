@@ -1,10 +1,16 @@
-/* Handoff §3 — build-blocking tests. Any failure blocks the deploy. */
+/* DataDawg$ — handoff §3 build-blocking tests. Any failure blocks the deploy.
+ *
+ * Published as DataDawg$ (the site's own converted dollars) rather than "PPN": that is a
+ * league abbreviation and this conversion is method-general. The SEALED payload keeps its
+ * own model_id (datadawgs-ppn-auction-2026-v3) — that is the receipt for the computation
+ * and is what work/ppn-auction-src/ is diffed against, so it is not cosmetic to rename.
+ */
 import fs from "node:fs";
 import { createHash } from "node:crypto";
 
 /* Handoff §3 gates, run against the DEPLOYED envelope — not the staged artifact — so this
    also proves the envelope wrapper did not disturb a single value. */
-const ENV = JSON.parse(fs.readFileSync(new URL("../data/ppn-auction-values.json", import.meta.url), "utf8"));
+const ENV = JSON.parse(fs.readFileSync(new URL("../data/datadawg-dollars-values.json", import.meta.url), "utf8"));
 const SRC = fs.readFileSync(new URL("./ppn-auction-src/ppn-auction-values.json", import.meta.url), "utf8");
 const V = ENV.data;
 const P = V.players;
@@ -74,8 +80,12 @@ t("envelope data is the source artifact verbatim",
 t("envelope carries the /data/ contract fields",
   !!(ENV.as_of && ENV.source && ENV.tier && typeof ENV.graded === "boolean" && ENV.tier_meaning),
   "missing one of as_of/source/tier/graded/tier_meaning");
-const board = fs.readFileSync(new URL("../ppn-auction-board.html", import.meta.url), "utf8");
+const board = fs.readFileSync(new URL("../datadawg-dollars.html", import.meta.url), "utf8");
 t("board unwraps the envelope once", board.includes(").json()).data;"), "accessor not patched");
+t("board reads the renamed payload", board.includes("data/datadawg-dollars-values.json"), "board still points at the old path");
+t("board carries the product name", /<h1>DataDawg\$/.test(board), "h1 not renamed");
+t("sealed payload keeps its provenance model_id",
+  V.model_id === "datadawgs-ppn-auction-2026-v3", V.model_id);
 
 console.log(`\n${pass} passed, ${fails.length} failed`);
 if(fails.length){ console.log("BLOCKING:\n - " + fails.join("\n - ")); process.exit(1); }

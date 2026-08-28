@@ -235,32 +235,32 @@
    "tier": "labs"
   },
   {
-   "id": "ppn-auction",
+   "id": "datadawg-dollars",
    "domain": "data",
-   "name": "PPN league auction board — target $ and conversion bands",
-   "page": "/ppn-auction-board.html",
+   "name": "DataDawg$ — our converted auction dollars",
+   "page": "/datadawg-dollars.html",
    "machine": [
     {
      "kind": "json",
-     "url": "/data/ppn-auction-values.json",
+     "url": "/data/datadawg-dollars-values.json",
      "status": "live"
     },
     {
      "kind": "json",
-     "url": "/data/ppn-auction-method.json",
+     "url": "/data/datadawg-dollars-method.json",
      "status": "live"
     },
     {
      "kind": "markdown",
-     "url": "/data/ppn-auction-method.md",
+     "url": "/data/datadawg-dollars-method.md",
      "status": "live"
     }
    ],
    "reading": [
     {
-     "url": "/ppn-auction-board.html",
-     "title": "PPN league auction board",
-     "covers": "Target auction dollars for the PPN room (14 teams, $200, no kicker, 2 flex), converted from a dated ETR half-PPR snapshot by a VOR-based pass-through and Hamilton-rounded to $2,800. Carries conversion-sensitivity bands and the delta against the ETR price. Reproducible and red-teamed, not outcome-validated."
+     "url": "/datadawg-dollars.html",
+     "title": "DataDawg$ auction board",
+     "covers": "Our own target auction dollars, converted from a dated ETR half-PPR snapshot into one league room (14 teams, $200, no kicker, 2 flex) by a VOR-based pass-through and Hamilton-rounded to $2,800. Not MV: MV is the market snapshot, this is the site's conversion of it. Carries conversion-sensitivity bands and the delta against the ETR price. Reproducible and red-teamed, not outcome-validated."
     }
    ],
    "planned": [],

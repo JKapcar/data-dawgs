@@ -15698,12 +15698,12 @@ const MCP_TOOLS = [
         machine: {
           index: "/llms.txt",
           surfaces: "/data/surfaces.json — every human page, its machine equivalent, and an honest live|planned|none status. Check it before claiming a route exists.",
-          data: ["/data/pool.json", "/data/receipts.json", "/data/models.json", "/data/epa-teams.json", "/data/nfelo.json", "/data/league.json", "/data/bozo-rules.json", "/data/survivor.json", "/data/pound-tools.json", "/data/model-contracts.json", "/data/upstream-models.json", "/data/nfl-schedule.json", "/data/538-classic.json", "/data/model-receipts.json", "/data/cfb-schedule.json", "/data/cfb-games-latest.json", "/data/cfb-team-game.json", "/data/cfb-team-week.json", "/data/cfb-team-week-latest.json", "/data/cfb-teams.json", "/data/cfb-record-divergence.json", "/data/cfb-record-divergence-validation.json", "/data/cfb-market.json", "/data/cfb-elo.json", "/data/cfb-ratings.json", "/data/cfb-model-cards.json", "/data/cfb-model-receipts.json", "/data/cfb-disagreement.json", "/data/ppn-auction-values.json", "/data/ppn-auction-method.json", "/data/ppn-auction-method.md", "/data/index.json"],
+          data: ["/data/pool.json", "/data/receipts.json", "/data/models.json", "/data/epa-teams.json", "/data/nfelo.json", "/data/league.json", "/data/bozo-rules.json", "/data/survivor.json", "/data/pound-tools.json", "/data/model-contracts.json", "/data/upstream-models.json", "/data/nfl-schedule.json", "/data/538-classic.json", "/data/model-receipts.json", "/data/cfb-schedule.json", "/data/cfb-games-latest.json", "/data/cfb-team-game.json", "/data/cfb-team-week.json", "/data/cfb-team-week-latest.json", "/data/cfb-teams.json", "/data/cfb-record-divergence.json", "/data/cfb-record-divergence-validation.json", "/data/cfb-market.json", "/data/cfb-elo.json", "/data/cfb-ratings.json", "/data/cfb-model-cards.json", "/data/cfb-model-receipts.json", "/data/cfb-disagreement.json", "/data/datadawg-dollars-values.json", "/data/datadawg-dollars-method.json", "/data/datadawg-dollars-method.md", "/data/index.json"],
         },
         pages: {
           "index.html": "Home — what Data Dawgs is and the working-dawg taxonomy (Pup / Dawgs / The DawgHouse).",
           "bigboard.html": "Draft big board over the MV pool.",
-          "ppn-auction-board.html": "PPN league auction board — Target $, conversion-sensitivity bands, ETR delta.",
+          "datadawg-dollars.html": "DataDawg$ — our own converted auction dollars for one league room: Target $, conversion-sensitivity bands, ETR delta. Not MV; MV is the market snapshot this converts.",
           "auction.html": "Auction draft operator (league passphrase gate).",
           "board.html": "Live draft board — mirrors the auction via Firebase.",
           "strategy.html": "Draft strategy digest (dated).",

@@ -1,12 +1,12 @@
 {
  "as_of": "2026-08-28",
- "source": "Establish The Run half-PPR auction values (private subscriber snapshot, identified publicly only by SHA-256), converted to the JohnMaddenPepperoniNipplesXV room (Yahoo 773763; 14 teams, $200, no kicker, 2 flex, $0 bids legal) by the VOR-based conversion documented in /data/ppn-auction-method.md. Reproducible and red-teamed; not outcome-validated.",
+ "source": "Establish The Run half-PPR auction values (private subscriber snapshot, identified publicly only by SHA-256), converted to the JohnMaddenPepperoniNipplesXV room (Yahoo 773763; 14 teams, $200, no kicker, 2 flex, $0 bids legal) by the VOR-based conversion documented in /data/datadawg-dollars-method.md. Reproducible and red-teamed; not outcome-validated.",
  "note": "Dated snapshot. low/high are conversion-assumption sensitivity bounds, NOT bid ceilings and NOT player-outcome intervals. Keeper inflation (Sep 8 deadline) and out-of-sample validation are open items, deliberately not modelled here.",
  "tier": "labs",
  "graded": false,
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
  "built": "2026-08-28",
- "canonical_url": "https://datadawgs216.com/data/ppn-auction-method.json",
+ "canonical_url": "https://datadawgs216.com/data/datadawg-dollars-method.json",
  "data": {
   "schema_version": "1.0.0",
   "model_id": "datadawgs-ppn-auction-2026-v3",
