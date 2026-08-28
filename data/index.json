@@ -1,9 +1,9 @@
 {
- "as_of": "2026-08-25",
+ "as_of": "2026-08-28",
  "source": "Generated manifest of every machine-readable surface on datadawgs216.com.",
  "note": "Start here. Each entry carries its own as_of — check it before quoting anything. The sha256 is of the file as served; recompute it if you care.",
  "site": "https://datadawgs216.com",
- "built": "2026-08-25",
+ "built": "2026-08-28",
  "data": {
   "files": [
    {
@@ -305,9 +305,9 @@
    {
     "path": "/data/survivor-receipts.json",
     "url": "https://datadawgs216.com/data/survivor-receipts.json",
-    "bytes": 1806,
-    "as_of": "2026-08-23",
-    "sha256": "c1091b8b348167dd7689c92fcd199efe316830d8b68ec4a7fdf9287ce94718d9",
+    "bytes": 3204,
+    "as_of": "2026-08-28",
+    "sha256": "727edc866620ad5e23c9a0c1f1d71252ffad87be79b865fde780c7ad42b7fc29",
     "note": "PROSPECTIVE RECEIPTS. Every row was written before the week it forecasts kicked off — captured_at < kickoff_at is enforced at capture, not flagged afterwards, and a row is never edited once written. What is graded is CALIBRATION of the stated win probabilities (Brier) and whether the pick survived. This is NOT a claim that the tool beats a pool: whether an entry would have won depends on the rest of the field, which is not ours to score. `n` is small and stays small — 18 weeks is at most 18 scored predictions per entry — so read every figure next to its n and do not draw a calibration curve on a season."
    },
    {
