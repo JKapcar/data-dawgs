@@ -112,8 +112,15 @@ ok(rig.includes("const pickVal = pk => scoring === \"dd\""),
      price, so the page must say what these numbers are before it shows them. */
   ok(/one price curve/.test(board) && /not that vendor&rsquo;s own bid/.test(board),
     "the intro says the columns share one curve and are not vendor bids");
-  ok(/under-adjusted/.test(board),
-    "the intro carries the PFF league-synced caveat rather than inheriting it silently");
+  /* The intent is unchanged: the page must state where each source's adjustment comes
+     from rather than leaving it implicit. Only the answer moved — PFF's synced status
+     was a recollection when this shipped and is now confirmed, so the hedge is gone and
+     the claim is asserted. A hedge kept past the question being settled reads as live
+     doubt and quietly discounts a column that should carry full weight. */
+  ok(/its export is synced to the\s+league, confirmed by the commissioner/.test(board),
+    "the intro states PFF needs no format adjustment, and why");
+  ok(/format-delta adjustment into this room/.test(board),
+    "the intro still says ESPN and FantasyPros are the ones carrying a format delta");
 }
 
 /* ---- 5. the manual knows leagues exist ----------------------------------- */
