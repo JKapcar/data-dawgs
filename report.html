@@ -1532,7 +1532,7 @@ survivor.html — survivor pool: this week's board, pick popularity, an optimal 
 guillotine.html — guillotine league companion. dfs.html — DFS solver, contest simulator, exposure, bankroll. The projections there are the USER'S OWN.
 teamdraft.html — the 32-team wins pool: spin wheel, board, eight rosters, Monte Carlo season sim.
 The draft rig: dashboard.html (a drafter's view), auction.html (the operator), board.html (read-only room view), bigboard.html (the projector), dataviz.html and report.html (afterwards), master.html (the player pool and scouting).
-datadawg-dollars.html — DataDawg$: our OWN converted auction dollars for one league room (Target $, conversion-sensitivity bands, delta vs the source price). It is NOT MV: MV is the dated market snapshot, DataDawg$ is this site's conversion of it, and the two are different numbers. Separate again from the $ PPN column on board.html, which re-prices a personal board for one league. Machine surfaces: /data/datadawg-dollars-values.json, /data/datadawg-dollars-method.json, /data/datadawg-dollars-method.md.
+datadawg-dollars.html — DataDawg$: our OWN converted auction dollars for one league room (Target $, conversion-sensitivity bands, delta vs the source price). It is NOT MV: MV is the dated market snapshot, DataDawg$ is this site's conversion of it. The league cheat sheet on board.html shows the same DataDawg$ alongside ESPN and PFF, all renormalized to that room's $2,800 — but ESPN and PFF are budget-only, with no custom-scoring shift, so they are not equivalent columns. Machine surfaces: /data/datadawg-dollars-values.json, /data/datadawg-dollars-method.json, /data/datadawg-dollars-method.md.
 strategy.html — the 2026 draft thesis, a dated snapshot of one analyst's argument.
 nfl.html — the NFL hub. stats.html — the EPA explorer. nfelo.html — nfelo power ratings and their backtest. calculators.html — ten deterministic calculators, nothing stored.
 cfb.html — the College Football lab: 2025 results, one retrodictive Elo, a matchup calculator. Its build roadmap is at cfb.html#roadmap and is our own planning surface, not a public destination.
@@ -1757,24 +1757,24 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
        instead, and say out loud that the money language does not apply. */
     const draftType = st.draftType === "snake" ? "snake" : "auction";
     const auction = draftType === "auction";
-    /* ⚠️ THE PPN ROOM RENDERS ONE MONEY COLUMN. board.html?league=pepperoninipples drops
-       every generic MV column and shows `lg` — the Aug 24 snapshot re-priced for that
-       league — on its own. Pricing from `half` there had Toto naming dollar figures that
-       appear nowhere on the reader's screen. Follow the column the board is showing. */
+    /* ⚠️ THIS ROOM RENDERS THREE MONEY COLUMNS, NOT THE GENERIC ONES. board.html?league=
+       pepperoninipples drops every generic MV column and shows DataDawg$, ESPN and PFF —
+       all renormalized to this room's $2,800. Price from DataDawg$, the one this site
+       actually built, and never quote a generic format the room does not display. */
     const lgRoom = (window.DDLeague && DDLeague.id === "pepperoninipples")
       || new URLSearchParams(location.search).get("league") === "pepperoninipples";
-    const scoring = (lgRoom && POOL.some(p => p.lg !== undefined)) ? "lg" : (st.scoring || "half");
-    const MV = scoring === "lg" ? "$ PPN" : "MV";
+    const scoring = (lgRoom && POOL.some(p => p.dd !== undefined)) ? "dd" : (st.scoring || "half");
+    const MV = scoring === "dd" ? "DataDawg$" : "MV";
     const val = p => +p[scoring] || 0;
     const norm = p => p==="D" ? "DST" : p;
     const teams = st.teams || [];
     const sold = new Set(picks.map(p=>p.player));
 
     /* A pick stores `etr`, the value the OPERATOR's page held at the moment of the sale —
-       and the operator page has no `lg` column. In the PPN room that would mix a generic
-       MV into a sheet of $ PPN prices, so re-read the value from the pool this page has. */
+       and the operator page has no DataDawg$ column. That would mix a generic MV into a
+       sheet of DataDawg$ prices, so re-read the value from the pool this page has. */
     const byName = {}; POOL.forEach(p=>{ byName[p.name]=p; });
-    const pickVal = pk => scoring === "lg"
+    const pickVal = pk => scoring === "dd"
       ? (byName[pk.player] ? val(byName[pk.player]) : 0) : (+pk.etr || 0);
 
     const T = teams.map((t,i)=>({name:t.name, ti:i, spent:0, n:0,
@@ -1791,8 +1791,8 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     const L=[];
     const roster=(st.rosterSlots||[]).map(s=>`${s.count} ${s.slot}`).join(", ")||`${st.spots} roster spots`;
     L.push(`LEAGUE: ${T.length}-team ${draftType} draft, ${roster}. Scoring: ${{half14:"14-team Half PPR · derived",half:"12-team Half PPR",full:"12-team Full PPR",sf:"12-team Superflex PPR",sfhalf12:"12-team Superflex Half PPR · hybrid"}[st.scoring]||st.scoring||"half"}.${auction?` $${st.budget} budget; $0 bids are legal, so a team's max bid = its dollars left.`:` A snake draft has no budget and no bidding — teams pick in turn order. NEVER quote dollars left, a max bid, a price paid or inflation on this league; the dollar figures below are value estimates for ranking players, not money anybody spends.`}`);
-    L.push(scoring === "lg"
-      ? `$ PPN = this room's own price: the Aug 24, 2026 Market Value snapshot re-priced for the pepperoninipples league by value over replacement. IT IS THE ONLY MONEY COLUMN THIS ROOM SHOWS — every dollar figure below is a $ PPN figure. Call it "$ PPN", never a generic market value, and never quote a number from a format this room does not display.`
+    L.push(scoring === "dd"
+      ? `DataDawg$ = this site's own price for this room: an ETR board converted for both the league's budget and its custom scoring, summing to $2,800. The cheat sheet shows ESPN, PFF and FantasyPros beside it. ⚠️ THOSE THREE ARE NOT VENDOR BIDS. Every column is the SAME 424-player $2,800 price curve; a source only changes which player receives which price, so an ESPN/PFF/FantasyPros dollar is the bid-equivalent of that source's league-adjusted RANK on the DataDawg$ curve. A gap between columns is a ranking disagreement, not a price disagreement. DataDawg$ is the target; the other three are triangulation, never a vote that overrules it, and never to be averaged. PFF is taken as already league-synced on the commissioner's recollection — if that is wrong its column is under-adjusted, so do not treat it as the most authoritative when it disagrees.`
       : `MV = Market Value, a public auction-dollar snapshot dated 2026-08-24. It is not a points projection. Available formats are 10-team PPR; 12-team PPR, Half PPR, Standard, and Superflex PPR; and 14-team PPR.`);
     L.push(auction
       ? `STATE: ${picks.length} sold. Inflation ${infl.toFixed(2)}x — $${remDollars} chasing $${Math.round(remValue)} of ${MV} still on the board.`
