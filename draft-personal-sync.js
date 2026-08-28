@@ -11,7 +11,7 @@
   const PLAYER_ID_RE=/^[a-z0-9][a-z0-9._:-]{0,63}$/;
   // "lg" is the pepperoninipples league-adjusted column; test-draft-state pins this
   // list to the Worker's DRAFT_SORT_KEYS and the board's sortable COLS — all three move together.
-  const SORT_KEYS=Object.freeze(["rank","name","pos","team","half14","full","half","sfhalf12","sf","silva","lg"]);
+  const SORT_KEYS=Object.freeze(["rank", "name", "pos", "team", "half14", "half", "full", "sfhalf12", "sf", "silva", "dd", "espn", "pff", "fp"]);
 
   function assertMarkMapping(values){
     const actual = values || LOCAL_MARK_VALUES;
