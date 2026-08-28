@@ -190,6 +190,22 @@ ok(!/\n` \+ \(window\.DDBotScan/.test(wr),
     "dashboard.html strip prices in DataDawg$ in the room");
 }
 
+/* ---- 6d. every money column on the phone card carries its own label ------- */
+/* The bug this catches: the card hides money cells by default and gives each one an
+   ::after suffix naming its currency. The four-source columns were added to MONEY_KEYS
+   but to neither rule, so three prices fell through as visible with no label — "$85 $90
+   $90" on a phone, nothing saying which board each came from. A number that does not
+   say what it is, is worse on a cheat sheet than no number. */
+{
+  const board = read("board.html");
+  const keys = /MONEY_KEYS.push\(([^)]*)\)/.exec(board);
+  ok(keys, "board.html declares the league's money keys");
+  for(const k of keys[1].split(",").map(s => s.trim().replace(/"/g, ""))){
+    ok(new RegExp(`#board td\\[data-c=${k}\\]::after\\{content:`).test(board),
+      `phone card labels the ${k} column — an unlabelled price is worse than no price`);
+  }
+}
+
 /* ---- 7. the service worker was re-keyed --------------------------------- */
 const files = [...fs.readdirSync(ROOT).filter(f => f.endsWith(".html")).sort(),
                ...fs.readdirSync(ROOT).filter(f => f.endsWith(".js") && f !== "sw.js").sort()];

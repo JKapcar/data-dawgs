@@ -613,8 +613,16 @@ th.sortable:hover{color:var(--ink-1)}
      screen always says which currency it is.
      ⚠️ .lgprice must be declared AFTER the [data-c=…] rule: the two have identical
      specificity (1,1,1) and source order is the only thing separating them. */
-  #board td[data-c=half14],#board td[data-c=half],#board td[data-c=full],#board td[data-c=sfhalf12],#board td[data-c=sf],#board td[data-c=lg]{order:11;display:none}
-  #board td.lgprice{order:7;display:block;margin-left:33px;
+  #board td[data-c=half14],#board td[data-c=half],#board td[data-c=full],#board td[data-c=sfhalf12],#board td[data-c=sf]{order:11;display:none}
+  /* ⚠️ THE FOUR-SOURCE PRICES ARE SHOWN, NOT HIDDEN. Comparing sources is the whole
+     point of this sheet, and the phone is where it gets read at the draft. They sit
+     on line two after DataDawg$, each carrying its own suffix — three bare numbers
+     with no label is worse than not showing them at all. */
+  #board td[data-c=dd],#board td[data-c=espn],#board td[data-c=pff],#board td[data-c=fp]{
+    order:7;display:inline-block;font-size:12px;font-weight:650;color:var(--ink-2);
+    margin-right:7px}
+  #board td[data-c=dd]{margin-left:33px}
+  #board td.lgprice{order:7;display:inline-block;margin-left:33px;
     font-weight:750;color:var(--accent);font-size:13.5px}
   #board td.lgprice::after{font-weight:500;font-size:11px}
   #board td[data-c=silva]{order:8;font-size:12px;color:var(--ink-3)}
@@ -638,7 +646,11 @@ th.sortable:hover{color:var(--ink-1)}
   #board td[data-c=full]::after{content:" full";color:var(--ink-3)}
   #board td[data-c=sfhalf12]::after{content:" SF½";color:var(--ink-3)}
   #board td[data-c=sf]::after{content:" SF";color:var(--ink-3)}
-  #board td[data-c=lg]::after{content:" PPN";color:var(--ink-3)}
+  /* One source for each label — the number always says which board it came from. */
+  #board td[data-c=dd]::after{content:" DD$";color:var(--ink-3);font-weight:500}
+  #board td[data-c=espn]::after{content:" ESPN";color:var(--ink-3);font-weight:500}
+  #board td[data-c=pff]::after{content:" PFF";color:var(--ink-3);font-weight:500}
+  #board td[data-c=fp]::after{content:" FP";color:var(--ink-3);font-weight:500}
   #board.custom-scoring td.lgprice::after{content:" half*"}
   #board td .note{white-space:normal;max-width:none;font-size:12px;line-height:1.45}
 

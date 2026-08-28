@@ -2663,9 +2663,16 @@ function cliffChart(container, players, sold, infl){
      never overflowed. Only the phone reading was wrong.) */
   const cw=container.clientWidth||1100;
   const m={t:18,r:14,b:44,l:40}, H=330;
-  const fit = cw < 620;
-  const GAP = fit ? 0 : 3;                               // no gutter: 155 gutters IS the chart
-  const BW  = fit ? Math.max(1, (cw - m.l - m.r) / n) : 14;
+  const narrow = cw < 620;
+  /* ⚠️ ON A PHONE THE DEFAULT IS ZOOMED, NOT FITTED. Squeezing ~450 bars into 300px shows
+     the cliff's SHAPE, which is the right answer before the draft and the wrong one
+     during it: mid-draft the question is "who is left in this tier and what do they
+     cost", and a 0.7px bar cannot answer it. The shape reading is kept one tap away on
+     the Zoom/Fit toggle rather than deleted. Desktop never had the problem and is
+     unchanged. */
+  const fit = narrow && cliffFit;
+  const GAP = fit ? 0 : (narrow ? 2 : 3);                // no gutter when fitting: 155 gutters IS the chart
+  const BW  = fit ? Math.max(1, (cw - m.l - m.r) / n) : (narrow ? 11 : 14);
   const step = BW + GAP;
   const W=Math.max(cw, m.l+m.r+n*step);
   const ih=H-m.t-m.b;
@@ -2688,8 +2695,9 @@ function cliffChart(container, players, sold, infl){
       fill:color, rx:BW<4?0:2.5, opacity: pk?0.35:1});   // a 2px radius on a 2px bar is a dot
     svg.appendChild(bar);
     bars.push(bar);
-    // last-name label under every bar, rotated — wide screens only
-    if(!fit){
+    /* last-name label under every bar, rotated. Gated on WIDTH, not on screen size:
+       at 11px a name reads, at 1.7px it is ink. */
+    if(BW >= 7){
       const nm=svgEl("text",{x:X(i)+BW/2, y:H-30, "font-size":9, fill:pk?ink3:ink2,
         "text-anchor":"end", transform:`rotate(-42 ${X(i)+BW/2} ${H-30})`, opacity:pk?.55:1});
       nm.textContent=p.name.includes(" DST")?p.name.replace(" DST"," D"):p.name.split(" ").slice(-1)[0];
@@ -2757,7 +2765,7 @@ function cliffChart(container, players, sold, infl){
   container.appendChild(sc);
   const hint=document.createElement("div");
   hint.className="note"; hint.style.marginTop="4px";
-  if(W>cw+1) hint.textContent="Scroll right for the rest of the board →";
+  if(W>cw+1) hint.textContent=`Scroll right for the rest of the board → (${n} players${narrow?" · tap Fit all for the whole shape":""})`;
   // ⚠️ Say so when the labels are gone, or the phone chart reads as a rendering failure.
   else if(fit) hint.textContent=`All ${n} players, most valuable first — tap any bar for the name and price.`;
   if(hint.textContent) container.appendChild(hint);
@@ -2767,6 +2775,8 @@ function cliffChart(container, players, sold, infl){
 let cliffPos="ALL", pvTeam="ALL", pvPos="ALL";
 let pvColor="pos";        // "pos" | "team" — how the scatter dots are coloured
 let cliffHide=false;      // true = drop drafted players so the chart shrinks to what's left
+let cliffFit=false;       // phones only: true = squeeze every bar in to read the SHAPE,
+                          // false (default) = 11px bars you can actually plan against
 // Every display owns its own scope now — there is no page-level control. The tiles are
 // the exception only in that they're a *dashboard*: one toggle for the whole strip.
 let tileScope   = -1;   // -1 = whole league
@@ -2912,6 +2922,10 @@ function render(){
           <button type="button" data-v="0"${cliffHide?"":' class="on"'}>All players</button>
           <button type="button" data-v="1"${cliffHide?' class="on"':""}>Hide drafted</button>
         </span>
+        <span class="vtog" id="cliffZoom" style="display:none">
+          <button type="button" data-v="0"${cliffFit?"":' class="on"'}>Zoom</button>
+          <button type="button" data-v="1"${cliffFit?' class="on"':""}>Fit all</button>
+        </span>
       </span></h2>
     <p class="note">${cliffHide
       ? `Only players still on the board, ranked by ${MONEY_LABEL}${pos==="ALL"?" (color = position)":""}. The chart shrinks as the draft goes — when it gets short at the left, the run is over.`
@@ -3007,6 +3021,19 @@ function render(){
     const b=e.target.closest("button"); if(!b) return;
     cliffHide = b.dataset.v==="1"; render();
   });
+  /* The zoom control is meaningless on a wide screen — the bars are already 14px — so it
+     is only shown where it does something. */
+  {
+    const z=document.getElementById("cliffZoom");
+    const cc=document.getElementById("chartCliff");
+    if(z && cc && (cc.clientWidth||1100) < 620){
+      z.style.display="";
+      z.addEventListener("click",e=>{
+        const b=e.target.closest("button"); if(!b) return;
+        cliffFit = b.dataset.v==="1"; render();
+      });
+    }
+  }
 
   // paid vs value
   priceValueChart(document.getElementById("chartPV"), pvPicks, pvColor);
