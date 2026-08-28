@@ -102,13 +102,18 @@ ok(rig.includes("const pickVal = pk => scoring === \"dd\""),
   const board = read("board.html");
   ok(board.includes('{key:"dd",label:"DataDawg$",sortable:true}')
      && board.includes('{key:"espn",label:"ESPN",sortable:true}')
-     && board.includes('{key:"pff",label:"PFF",sortable:true}'),
-    "board.html renders DataDawg$, ESPN and PFF");
+     && board.includes('{key:"pff",label:"PFF",sortable:true}')
+     && board.includes('{key:"fp",label:"FantasyPros",sortable:true}'),
+    "board.html renders all four sources");
   ok(!board.includes('label:"$ PPN'), "the $ PPN column is gone");
   ok(board.includes('const dollar = v => [(+v ? "$"+(+v) : "\u2014"), false, true];'),
     "an unpriced player renders a dash, not $0");
-  ok(/budget-normalized only/.test(board),
-    "the intro says ESPN and PFF are budget-only, so three columns cannot read as equal treatment");
+  /* A column of dollars that is really a ranking is exactly what a reader will quote as a
+     price, so the page must say what these numbers are before it shows them. */
+  ok(/one price curve/.test(board) && /not that vendor&rsquo;s own bid/.test(board),
+    "the intro says the columns share one curve and are not vendor bids");
+  ok(/under-adjusted/.test(board),
+    "the intro carries the PFF league-synced caveat rather than inheriting it silently");
 }
 
 /* ---- 5. the manual knows leagues exist ----------------------------------- */
