@@ -1297,6 +1297,17 @@ const SURFACES = [
     reading: [{ url: '/master.html', title: 'Player pool: this season + overall dynasty',
                 covers: 'A toggled player table: dated this-season Market Value plus independent overall dynasty ranks and auction values for 1QB and Superflex / TE-premium formats. Each view states its source and limitations.' }],
     planned: ['rest:/api/pool'] },
+  /* PPN v3 — the league's own auction board, converted from a private ETR snapshot.
+     Separate from draft-pool: that is the public MV big board, this is one league's
+     converted target dollars and is deliberately not merged into it. */
+  { id: 'ppn-auction', domain: 'data', name: 'PPN league auction board — target $ and conversion bands',
+    page: '/ppn-auction-board.html',
+    machine: [{ kind: 'json', url: '/data/ppn-auction-values.json', status: 'live' },
+              { kind: 'json', url: '/data/ppn-auction-method.json', status: 'live' },
+              { kind: 'markdown', url: '/data/ppn-auction-method.md', status: 'live' }],
+    reading: [{ url: '/ppn-auction-board.html', title: 'PPN league auction board',
+                covers: 'Target auction dollars for the PPN room (14 teams, $200, no kicker, 2 flex), converted from a dated ETR half-PPR snapshot by a VOR-based pass-through and Hamilton-rounded to $2,800. Carries conversion-sensitivity bands and the delta against the ETR price. Reproducible and red-teamed, not outcome-validated.' }],
+    planned: [] },
   { id: 'draft-strategy', domain: 'data', name: '2026 draft strategy', page: '/strategy.html',
     machine: [{ kind: 'markdown', url: '/data/strategy.md', status: 'live' }],
     reading: [{ url: '/strategy.html', title: '2026 draft strategy',

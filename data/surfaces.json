@@ -1,5 +1,5 @@
 {
- "as_of": "2026-08-25",
+ "as_of": "2026-08-28",
  "source": "Generated from the site itself. Tier is read from each page's live chip.",
  "tier": "labs",
  "graded": false,
@@ -190,8 +190,8 @@
   }
  },
  "counts": {
-  "surfaces": 20,
-  "with_live_machine_access": 16,
+  "surfaces": 21,
+  "with_live_machine_access": 17,
   "with_no_machine_access": 4,
   "mcp_tools_registered": 43,
   "mcp_tools_live": 43,
@@ -232,6 +232,38 @@
    "planned": [
     "rest:/api/pool"
    ],
+   "tier": "labs"
+  },
+  {
+   "id": "ppn-auction",
+   "domain": "data",
+   "name": "PPN league auction board — target $ and conversion bands",
+   "page": "/ppn-auction-board.html",
+   "machine": [
+    {
+     "kind": "json",
+     "url": "/data/ppn-auction-values.json",
+     "status": "live"
+    },
+    {
+     "kind": "json",
+     "url": "/data/ppn-auction-method.json",
+     "status": "live"
+    },
+    {
+     "kind": "markdown",
+     "url": "/data/ppn-auction-method.md",
+     "status": "live"
+    }
+   ],
+   "reading": [
+    {
+     "url": "/ppn-auction-board.html",
+     "title": "PPN league auction board",
+     "covers": "Target auction dollars for the PPN room (14 teams, $200, no kicker, 2 flex), converted from a dated ETR half-PPR snapshot by a VOR-based pass-through and Hamilton-rounded to $2,800. Carries conversion-sensitivity bands and the delta against the ETR price. Reproducible and red-teamed, not outcome-validated."
+    }
+   ],
+   "planned": [],
    "tier": "labs"
   },
   {
@@ -951,6 +983,6 @@
   }
  ],
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-08-25",
+ "built": "2026-08-28",
  "canonical_url": "https://datadawgs216.com/data/surfaces.json"
 }

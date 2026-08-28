@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PPN Auction Board — DataDawgs</title>
+<style>
+  :root{--bg:#0f1214;--panel:#171b1f;--line:#262c31;--ink:#e8e4d9;--mute:#8b9199;
+    --tgt:#f2c14e;--band:#3f6ea5;--pos:#8fd18f;--neg:#ff8a7a;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --sans:"Inter",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 var(--sans)}
+  header{padding:18px 20px 8px;border-bottom:1px solid var(--line)}
+  h1{margin:0;font:600 22px/1 var(--mono)} h1 span{color:var(--tgt)}
+  .meta{color:var(--mute);font:12px var(--mono);margin-top:6px}
+  .disclaimer{color:var(--mute);font:12px var(--sans);padding:6px 20px 10px;border-bottom:1px solid var(--line)}
+  .controls{display:flex;flex-wrap:wrap;gap:8px;padding:10px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:2}
+  .controls input,.controls select,.controls button{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font:13px var(--sans)}
+  .controls button.on{border-color:var(--tgt);color:var(--tgt)}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{position:sticky;top:53px;background:var(--panel);color:var(--mute);font:600 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.08em;cursor:pointer;text-align:left;user-select:none}
+  th.num,td.num{text-align:right;font-family:var(--mono)}
+  td.tgt{color:var(--tgt);font-weight:700;font-size:16px}
+  td.pos{color:var(--mute);font-family:var(--mono);font-size:12px}
+  td.dpos{color:var(--pos);font-family:var(--mono)} td.dneg{color:var(--neg);font-family:var(--mono)}
+  tr.gone td{opacity:.28;text-decoration:line-through}
+  tr:hover td{background:#1b2025}
+  .strip{position:relative;height:14px;min-width:240px;width:100%}
+  .strip .band{position:absolute;top:5px;height:4px;background:var(--band);border-radius:2px;opacity:.85}
+  .strip .tgt{position:absolute;top:1px;width:3px;height:12px;background:var(--tgt);border-radius:1px}
+  .strip .etr{position:absolute;top:3px;width:2px;height:8px;background:#cfd4da;opacity:.7}
+  .foot{padding:14px 20px;color:var(--mute);font:12px var(--mono)}
+  @media(max-width:700px){.hide-m{display:none} th{top:96px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>PPN Auction Board <span>Target $</span></h1>
+  <div class="meta" id="meta">loading…</div>
+</header>
+<div class="disclaimer" id="disc">Low/High is conversion-assumption sensitivity — <b>not</b> a player-outcome confidence interval and <b>not</b> a bid ceiling.</div>
+<div class="controls">
+  <input id="q" placeholder="Search player / team" autocomplete="off">
+  <select id="pos"><option value="">All positions</option><option>QB</option><option>RB</option><option>WR</option><option>TE</option><option>DST</option></select>
+  <button id="hidezero" class="on">Hide $0</button>
+  <button id="draftmode" title="Tap a row to mark it drafted">Draft mode</button>
+  <button id="hidegone">Hide drafted</button>
+  <button id="reset">Reset drafted</button>
+  <span class="meta" id="count"></span>
+</div>
+<table>
+  <thead><tr>
+    <th data-k="rank" class="num">#</th>
+    <th data-k="player">Player</th>
+    <th data-k="pos">Pos</th>
+    <th data-k="target" class="num">Target $</th>
+    <th data-k="low" class="num hide-m">Low</th>
+    <th data-k="high" class="num hide-m">High</th>
+    <th>Low → High (│ target, ┆ ETR)</th>
+    <th data-k="etr_half" class="num hide-m">ETR</th>
+    <th data-k="delta_vs_etr" class="num">Δ ETR</th>
+  </tr></thead>
+  <tbody id="tb"></tbody>
+</table>
+<div class="foot" id="foot"></div>
+<script>
+(async function(){
+  const URL='data/ppn-auction-values.json';
+  let rows=[],sortK='rank',asc=true,draft=false,hideGone=false,hideZero=true,gone=new Set();
+  try{const s=localStorage.getItem('ppn_gone');if(s)gone=new Set(JSON.parse(s));}catch(e){}
+  const save=()=>{try{localStorage.setItem('ppn_gone',JSON.stringify([...gone]))}catch(e){}};
+  const $=i=>document.getElementById(i);
+  const MAX=105,pct=v=>Math.max(0,Math.min(100,v/MAX*100)).toFixed(1)+'%';
+  function strip(r){
+    if(r.high<=0)return'';
+    return `<div class="strip"><div class="band" style="left:${pct(r.low)};width:${pct(Math.max(r.high-r.low,0.7))}"></div><div class="etr" style="left:${pct(r.etr_half)}" title="ETR $${r.etr_half}"></div><div class="tgt" style="left:${pct(r.target)}" title="Target $${r.target}"></div></div>`;
+  }
+  function render(){
+    const q=$('q').value.trim().toLowerCase(),p=$('pos').value;
+    let v=rows.filter(r=>(!p||r.pos===p)&&(!q||(r.player+' '+r.team).toLowerCase().includes(q))&&(!hideZero||r.target>0||r.high>0)&&(!hideGone||!gone.has(r.id)));
+    v.sort((a,b)=>{const x=a[sortK],y=b[sortK];return (typeof x==='string'?x.localeCompare(y):x-y)*(asc?1:-1);});
+    $('tb').innerHTML=v.map(r=>`<tr data-id="${r.id}" class="${gone.has(r.id)?'gone':''}">
+      <td class="num">${r.rank}</td>
+      <td>${r.player} <span class="pos">${r.team}</span>${r.override?' <span class="pos" title="'+r.override+'">⚑</span>':''}</td>
+      <td class="pos">${r.pos}</td>
+      <td class="num tgt">$${r.target}</td>
+      <td class="num hide-m">${r.low}</td>
+      <td class="num hide-m">${r.high}</td>
+      <td>${strip(r)}</td>
+      <td class="num hide-m">${r.etr_half}</td>
+      <td class="num ${r.delta_vs_etr>0?'dpos':(r.delta_vs_etr<0?'dneg':'pos')}">${r.delta_vs_etr>0?'+':''}${r.delta_vs_etr}</td>
+    </tr>`).join('');
+    const left=rows.filter(r=>!gone.has(r.id)).reduce((s,r)=>s+r.target,0);
+    $('count').textContent=`${v.length} shown · ${gone.size} drafted · $${left} of target value on board`;
+  }
+  try{
+    const j=await(await fetch(URL)).json();
+    rows=j.players;
+    $('meta').textContent=`${j.league} · ${j.model_id} · as of ${j.as_of} · ${j.epistemic_status}`;
+    $('foot').textContent=`Source: data/ppn-auction-values.json · ETR snapshot sha256 ${j.source_snapshot_sha256.slice(0,16)}… · ${j.validation.rows} rows · ${j.validation.positive_prices} priced · $${j.validation.target_sum} total. Reproducible and red-teamed — not bulletproof, not outcome-validated.`;
+  }catch(e){$('meta').textContent='Could not load data/ppn-auction-values.json.';}
+  document.querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(sortK===k)asc=!asc;else{sortK=k;asc=(k==='rank'||k==='player'||k==='pos');}render();});
+  $('q').oninput=render;$('pos').onchange=render;
+  $('hidezero').onclick=e=>{hideZero=!hideZero;e.target.classList.toggle('on',hideZero);render();};
+  $('draftmode').onclick=e=>{draft=!draft;e.target.classList.toggle('on',draft)};
+  $('hidegone').onclick=e=>{hideGone=!hideGone;e.target.classList.toggle('on',hideGone);render()};
+  $('reset').onclick=()=>{gone.clear();save();render()};
+  $('tb').onclick=e=>{if(!draft)return;const tr=e.target.closest('tr');if(!tr)return;const id=tr.dataset.id;gone.has(id)?gone.delete(id):gone.add(id);save();render();};
+  render();
+})();
+</script>
+</body>
+</html>
