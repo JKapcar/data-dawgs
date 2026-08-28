@@ -233,14 +233,22 @@
     const page=location.pathname.split("/").pop();
     const rigPages=new Set(["dashboard.html","auction.html","board.html","bigboard.html","dataviz.html","report.html","master.html"]);
     if(!rigPages.has(page)) return;
-    /* The draft rig is a working surface, not a sitewide landing page. Fixed league,
-       Toto, identity and footer utility controls covered the board on phones and
-       duplicated controls already present in the rig. League administration now lives
-       in the dashboard's Settings tab. */
+    /* The draft rig is a working surface, not a sitewide landing page. The fixed league
+       bar and the footer utility strip covered the board on phones and duplicated
+       controls the rig already has, so they go: league administration now lives in the
+       dashboard's Settings tab.
+
+       ⚠️ TOTO'S LAUNCHER AND THE IDENTITY CHIP STAY. They were briefly hidden here too,
+       and neither is duplicated anywhere in the rig — #ddbLaunch is the ONLY way to open
+       the assistant, so hiding it made him unreachable on the seven pages he has the most
+       to say about. #ddmeChip is worse than unreachable: Toto's own no-identity reply is
+       "Tap the 'Who are you?' chip at the bottom-left, then ask again", so hiding it left
+       him giving an instruction that could not be followed. Anything hidden here must be
+       reachable somewhere else on the same page — that is the whole test. */
     let clean=document.getElementById("ddDraftClean");
     if(!clean){
       clean=document.createElement("style"); clean.id="ddDraftClean";
-      clean.textContent="#ddLeagueIndicator,#ddbLaunch,#ddmeChip,.udfoot{display:none!important}";
+      clean.textContent="#ddLeagueIndicator,.udfoot{display:none!important}";
       document.head.appendChild(clean);
     }
     const old=document.getElementById("ddLeagueIndicator"); if(old) old.remove();

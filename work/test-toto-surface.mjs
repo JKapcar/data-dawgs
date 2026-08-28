@@ -155,17 +155,47 @@ ok(!/\n` \+ \(window\.DDBotScan/.test(wr),
   "fantasy-warroom.html no longer concatenates the reader onto sys");
 
 /* ---- 6b. the assistant must be REACHABLE, not just wired ----------------- */
-/* Reported from a phone: #ddLeagueIndicator (right/bottom 12px, up to full width on a
-   long league name) sat at z-index 9998 over #ddbLaunch and #ddmeChip at 58, so in a
-   league, on a phone, Toto and the team picker could not be tapped at all. Auditing that
-   he is wired in says nothing about whether anyone can reach him. */
+/* This guard has now caught the same class of bug twice, by two different mechanisms, so
+   it asserts the OUTCOME rather than either mechanism.
+   First: #ddLeagueIndicator (right/bottom 12px, up to full width on a long league name)
+   sat at z-index 9998 over #ddbLaunch and #ddmeChip at 58 — in a league, on a phone,
+   Toto and the team picker could not be tapped.
+   Then the league bar was retired and the rig cleanup that replaced it hid #ddbLaunch and
+   #ddmeChip outright, which is the same outcome by a shorter route: #ddbLaunch is the only
+   way to open the assistant on those seven pages, and Toto's own no-identity reply tells
+   the reader to "tap the Who are you? chip", which was no longer there to tap.
+   Auditing that he is WIRED IN says nothing about whether anyone can REACH him. */
 {
+  /* Whatever the rig hides, it must not hide the two controls that ARE the assistant. */
+  const clean = (lib.match(/clean\.textContent\s*=\s*"([^"]*)"/) || [])[1];
+  ok(clean !== undefined, "draft-league.js still declares the rig's cleanup stylesheet");
+  for(const id of ["#ddbLaunch", "#ddmeChip"]){
+    ok(!clean.includes(id),
+      `the rig cleanup hides ${id} — it is not duplicated anywhere in the rig, so hiding it ` +
+      `is the same bug as covering it: the assistant is wired in and unreachable`);
+  }
+  /* Every rig page needs a reachable way IN. Six mount the shared #ddbLaunch; auction.html
+     deliberately does not, because the launcher stands down when a page has its own button
+     (`if(document.getElementById("aiBtn")) return;`). That early return is only safe while
+     the button actually exists, so it is asserted rather than assumed. */
+  const RIGPAGES = ["board.html","dashboard.html","dataviz.html","report.html",
+                    "bigboard.html","auction.html","master.html"];
+  for(const f of RIGPAGES){
+    const html = read(f);
+    ok(html.includes('id="aiBtn"') || /b\.id="ddbLaunch"/.test(html),
+      `${f}: no way to open Toto — it neither mounts #ddbLaunch nor carries its own #aiBtn`);
+  }
+
+  /* And if a league bar is ever reintroduced, it must sit UNDER them rather than over. */
   const css = (lib.match(/#ddLeagueIndicator\{[^}]*\}/) || [""])[0];
   const z = (css.match(/z-index:(\d+)/) || [])[1];
-  ok(z && Number(z) < 58,
+  ok(!css || (z && Number(z) < 58),
     `league bar z-index is ${z} — it must sit under #ddbLaunch/#ddmeChip (58), the team panel (59) and the dock (60)`);
-  ok(/body #ddbLaunch,body #ddmeChip\{bottom:\d+px\}/.test(lib),
-    "the chips lift clear of the league bar's strip, and do it with `body #id` so page-injected mobile rules cannot win on document order");
+  /* The chips used to need a bottom lift to clear the league bar's strip. With the bar
+     retired they sit at their natural bottom:18px, so the lift is not asserted — but if a
+     bar comes back, it has to bring the lift back with it or it will cover them again. */
+  ok(!css || /body #ddbLaunch,body #ddmeChip\{bottom:\d+px\}/.test(lib),
+    "a league bar is declared again without lifting the chips clear of its strip — use `body #id` so page-injected mobile rules cannot win on document order");
 }
 
 /* ---- 6c. every draft surface prices in the same currency ----------------- */
