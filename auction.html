@@ -2476,23 +2476,54 @@ function save(){
 }
 load();
 
-/* Draft-night recovery: an explicit ?forceSync=1 capability link publishes the
-   complete local operator state after first proving it is not behind the cloud.
-   This is deliberately opt-in; ordinary page loads must never let a stale browser
-   replace the active room. */
+/* Draft-night recovery. ?forceSync=1 publishes a complete local state when it
+   is current. ?mergeSync=1 safely combines a shorter, newer local continuation with
+   the established cloud history. A conflicting duplicate player always stops. */
 if(!IS_PROJ && new URLSearchParams(location.search).get("forceSync")==="1"){
   setTimeout(async()=>{
-    const localCount=Array.isArray(S.picks)?S.picks.length:0;
     try{
+      const params=new URLSearchParams(location.search);
       const response=await fetch(DDSync.endpoint(),{cache:"no-store"});
       if(!response.ok) throw new Error("cloud read "+response.status);
       const envelope=await response.json();
-      const remoteCount=envelope&&envelope.state&&Array.isArray(envelope.state.picks)
-        ? envelope.state.picks.length : 0;
-      if(localCount<remoteCount){
-        alert("SYNC STOPPED: this browser has "+localCount+" picks but the shared room has "+remoteCount+". Nothing was overwritten.");
-        return;
+      const remoteState=envelope&&envelope.state&&typeof envelope.state==="object"
+        ? envelope.state : freshState();
+      const localPicks=Array.isArray(S.picks)?S.picks:[];
+      const remotePicks=Array.isArray(remoteState.picks)?remoteState.picks:[];
+      let publishState=S;
+
+      if(localPicks.length<remotePicks.length){
+        if(params.get("mergeSync")!=="1"){
+          alert("SYNC STOPPED: this browser has "+localPicks.length+" picks but the shared room has "+remotePicks.length+". Nothing was overwritten.");
+          return;
+        }
+        const byPlayer=new Map(remotePicks.map(p=>[String(p.player||"").trim().toLowerCase(),p]));
+        const additions=[];
+        const conflicts=[];
+        localPicks.forEach(p=>{
+          const key=String(p.player||"").trim().toLowerCase();
+          const existing=byPlayer.get(key);
+          if(!existing){ additions.push(p); return; }
+          if(+existing.price!==+p.price || +existing.ti!==+p.ti) conflicts.push(p.player);
+        });
+        if(conflicts.length){
+          alert("MERGE STOPPED: conflicting duplicate sale"+(conflicts.length>1?"s":"")+" for "+conflicts.join(", ")+". Nothing was overwritten.");
+          return;
+        }
+        const mergedPicks=remotePicks.concat(additions);
+        publishState=Object.assign({},remoteState,{
+          picks:mergedPicks,
+          nomIdx:mergedPicks.length%((remoteState.settings&&remoteState.settings.teams||[]).length||14),
+          onBlock:S.onBlock||null,
+          timerEnd:0,
+          ts:Date.now()
+        });
+        S=publishState;
+        try{localStorage.setItem(LS_STATE,JSON.stringify(S));}catch(e){}
+        renderOp();
       }
+
+      const publishCount=Array.isArray(publishState.picks)?publishState.picks.length:0;
       const result=new Promise((resolve,reject)=>{
         const timeout=setTimeout(()=>reject(new Error("write timed out")),7000);
         const handler=event=>{
@@ -2503,9 +2534,9 @@ if(!IS_PROJ && new URLSearchParams(location.search).get("forceSync")==="1"){
         };
         addEventListener("ddsync",handler);
       });
-      DDSync.push(S);
+      DDSync.push(publishState);
       await result;
-      alert("LIVE SYNC COMPLETE: "+localCount+" picks published to the league.");
+      alert("LIVE SYNC COMPLETE: "+publishCount+" picks published to the league.");
     }catch(error){
       alert("LIVE SYNC FAILED: "+(error&&error.message?error.message:"unknown error"));
     }
