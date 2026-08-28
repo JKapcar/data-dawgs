@@ -1297,6 +1297,18 @@ const SURFACES = [
     reading: [{ url: '/master.html', title: 'Player pool: this season + overall dynasty',
                 covers: 'A toggled player table: dated this-season Market Value plus independent overall dynasty ranks and auction values for 1QB and Superflex / TE-premium formats. Each view states its source and limitations.' }],
     planned: ['rest:/api/pool'] },
+  /* DataDawg$ — the site's OWN converted auction dollars, as against MV, which is the
+     market's. Separate from draft-pool: that is the public MV big board and is not merged
+     into this. Deliberately not named "PPN": that is a league abbreviation, and this
+     conversion is method-general, pointed at one league first. */
+  { id: 'datadawg-dollars', domain: 'data', name: 'DataDawg$ — our converted auction dollars',
+    page: '/datadawg-dollars.html',
+    machine: [{ kind: 'json', url: '/data/datadawg-dollars-values.json', status: 'live' },
+              { kind: 'json', url: '/data/datadawg-dollars-method.json', status: 'live' },
+              { kind: 'markdown', url: '/data/datadawg-dollars-method.md', status: 'live' }],
+    reading: [{ url: '/datadawg-dollars.html', title: 'DataDawg$ auction board',
+                covers: 'Our own target auction dollars, converted from a dated ETR half-PPR snapshot into one league room (14 teams, $200, no kicker, 2 flex) by a VOR-based pass-through and Hamilton-rounded to $2,800. Not MV: MV is the market snapshot, this is the site\'s conversion of it. Carries conversion-sensitivity bands and the delta against the ETR price. Reproducible and red-teamed, not outcome-validated.' }],
+    planned: [] },
   { id: 'draft-strategy', domain: 'data', name: '2026 draft strategy', page: '/strategy.html',
     machine: [{ kind: 'markdown', url: '/data/strategy.md', status: 'live' }],
     reading: [{ url: '/strategy.html', title: '2026 draft strategy',

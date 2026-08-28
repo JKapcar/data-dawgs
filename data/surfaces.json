@@ -1,5 +1,5 @@
 {
- "as_of": "2026-08-25",
+ "as_of": "2026-08-28",
  "source": "Generated from the site itself. Tier is read from each page's live chip.",
  "tier": "labs",
  "graded": false,
@@ -190,8 +190,8 @@
   }
  },
  "counts": {
-  "surfaces": 20,
-  "with_live_machine_access": 16,
+  "surfaces": 21,
+  "with_live_machine_access": 17,
   "with_no_machine_access": 4,
   "mcp_tools_registered": 43,
   "mcp_tools_live": 43,
@@ -232,6 +232,38 @@
    "planned": [
     "rest:/api/pool"
    ],
+   "tier": "labs"
+  },
+  {
+   "id": "datadawg-dollars",
+   "domain": "data",
+   "name": "DataDawg$ — our converted auction dollars",
+   "page": "/datadawg-dollars.html",
+   "machine": [
+    {
+     "kind": "json",
+     "url": "/data/datadawg-dollars-values.json",
+     "status": "live"
+    },
+    {
+     "kind": "json",
+     "url": "/data/datadawg-dollars-method.json",
+     "status": "live"
+    },
+    {
+     "kind": "markdown",
+     "url": "/data/datadawg-dollars-method.md",
+     "status": "live"
+    }
+   ],
+   "reading": [
+    {
+     "url": "/datadawg-dollars.html",
+     "title": "DataDawg$ auction board",
+     "covers": "Our own target auction dollars, converted from a dated ETR half-PPR snapshot into one league room (14 teams, $200, no kicker, 2 flex) by a VOR-based pass-through and Hamilton-rounded to $2,800. Not MV: MV is the market snapshot, this is the site's conversion of it. Carries conversion-sensitivity bands and the delta against the ETR price. Reproducible and red-teamed, not outcome-validated."
+    }
+   ],
+   "planned": [],
    "tier": "labs"
   },
   {
@@ -951,6 +983,6 @@
   }
  ],
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-08-25",
+ "built": "2026-08-28",
  "canonical_url": "https://datadawgs216.com/data/surfaces.json"
 }
