@@ -2475,6 +2475,42 @@ function save(){
   if(!IS_PROJ && window.DDSync && window.DDSync.on) window.DDSync.push(S);
 }
 load();
+
+/* Draft-night recovery: an explicit ?forceSync=1 capability link publishes the
+   complete local operator state after first proving it is not behind the cloud.
+   This is deliberately opt-in; ordinary page loads must never let a stale browser
+   replace the active room. */
+if(!IS_PROJ && new URLSearchParams(location.search).get("forceSync")==="1"){
+  setTimeout(async()=>{
+    const localCount=Array.isArray(S.picks)?S.picks.length:0;
+    try{
+      const response=await fetch(DDSync.endpoint(),{cache:"no-store"});
+      if(!response.ok) throw new Error("cloud read "+response.status);
+      const envelope=await response.json();
+      const remoteCount=envelope&&envelope.state&&Array.isArray(envelope.state.picks)
+        ? envelope.state.picks.length : 0;
+      if(localCount<remoteCount){
+        alert("SYNC STOPPED: this browser has "+localCount+" picks but the shared room has "+remoteCount+". Nothing was overwritten.");
+        return;
+      }
+      const result=new Promise((resolve,reject)=>{
+        const timeout=setTimeout(()=>reject(new Error("write timed out")),7000);
+        const handler=event=>{
+          if(!event.detail||event.detail.dir!=="up") return;
+          removeEventListener("ddsync",handler);
+          clearTimeout(timeout);
+          event.detail.ok?resolve():reject(new Error("cloud rejected the write"));
+        };
+        addEventListener("ddsync",handler);
+      });
+      DDSync.push(S);
+      await result;
+      alert("LIVE SYNC COMPLETE: "+localCount+" picks published to the league.");
+    }catch(error){
+      alert("LIVE SYNC FAILED: "+(error&&error.message?error.message:"unknown error"));
+    }
+  },250);
+}
 window.DDApplyExternalState=next=>{ if(!next||!next.settings||!Array.isArray(next.picks)) return; S=next; renderOp(); };
 
 const byName={}; POOL.forEach(p=>byName[p.name]=p);
