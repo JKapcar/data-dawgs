@@ -62,16 +62,8 @@ function convert(src) {
 
 /* ---------- ESPN: 2026 ESPN Fantasy Football Draft Kit, PPR cheat sheet ----------
    Its own footer: "10 teams/$200", "1 QB, 2 RB, 2 WR, 1 TE, 1 Flex, 1 K, 1 D/ST, 7 bench",
-   "1 PPR", updated 2026-08-19. Rows read "12. (21) Kenneth Walker III, KC $34 5". */
-function parseEspn(txt) {
-  const rx = /(\d+)\.\s*\((\d+)\)\s*([^,]+?),\s*([A-Z]{2,3})\s*\$(\d+)\s*(\d+)/g;
-  const seen = new Map();
-  for (let m; (m = rx.exec(txt)); ) {
-    const name = m[3].trim();
-    seen.set(norm(name), { key: norm(name), name, team: m[4], price: +m[5], overall: +m[2] });
-  }
-  return [...seen.values()];
-}
+   "1 PPR", updated 2026-08-19. Parsed by POSITION, not by regex over the flat text —
+   see work/parse-espn-pdf.mjs for why that distinction cost eight quarterbacks. */
 
 /* ---------- the CSV board ---------- */
 function parseCsv(txt) {
@@ -99,15 +91,20 @@ function parseCsv(txt) {
   return out;
 }
 
-const espnTxt = fs.readFileSync(process.argv[2], "utf8");
-const csvTxt  = fs.readFileSync(process.argv[3], "utf8");
+import { parseEspnPdf } from "./parse-espn-pdf.mjs";
+const { rows: espnRows } = await parseEspnPdf(process.argv[2]);
+const csvTxt = fs.readFileSync(process.argv[3], "utf8");
 
-/* ESPN's text gives no position column; take it from the DataDawg$ pool, which is the
-   join target anyway. Anything unmatched is reported, never silently priced. */
+/* ⚠️ THE JOIN TARGET IS THE BOARD'S OWN POOL (613 players), not the DataDawg$ payload
+   (424). The cheat sheet renders a row per pool player; each vendor covers a different
+   depth, so blanks where a vendor did not price someone are correct and expected. Using
+   the smaller set as the spine would have quietly deleted rows the board already shows. */
+const pool = JSON.parse(fs.readFileSync(path.join(ROOT, "data/pool.json"), "utf8")).data;
+const posByKey = new Map(pool.map(p => [norm(p.name), p.pos]));
 const dd = JSON.parse(fs.readFileSync(path.join(ROOT, "data/datadawg-dollars-values.json"), "utf8")).data.players;
-const posByKey = new Map(dd.map(p => [norm(p.player), p.pos]));
 
-const espnRaw = parseEspn(espnTxt).map(r => ({ ...r, pos: posByKey.get(r.key) || "UNK" }));
+const espnRaw = espnRows.map(r => ({ key: norm(r.name), name: r.name, team: r.team,
+                                     price: r.price, pos: posByKey.get(norm(r.name)) || "UNK" }));
 const csvRaw  = parseCsv(csvTxt);
 
 const espn = convert(espnRaw.filter(r => r.pos !== "UNK"));
@@ -121,16 +118,17 @@ const report = (label, raw, conv) => {
     .map(r => `${r.name} $${r.target}`).join(", "));
 };
 report("ESPN", espnRaw, espn);
-report("CSV ", csvRaw, pff);
+report("PFF ", csvRaw, pff);
 
-const unmatchedEspn = espnRaw.filter(r => r.pos === "UNK");
-console.log(`\nESPN rows with no match in the DataDawg$ pool: ${unmatchedEspn.length}`);
-if (unmatchedEspn.length) console.log("   " + unmatchedEspn.slice(0, 12).map(r => r.name).join(", "));
-
+const poolKeys = new Set(pool.map(p => norm(p.name)));
+for (const [label, raw] of [["ESPN", espnRaw], ["PFF", csvRaw]]) {
+  const miss = raw.filter(r => r.price > 0 && !poolKeys.has(r.key));
+  console.log(`${label} priced rows absent from the board pool: ${miss.length}`
+    + (miss.length ? " — " + miss.slice(0, 10).map(r => r.name).join(", ") : ""));
+}
 const ddKeys = new Set(dd.map(p => norm(p.player)));
-const csvMiss = pff.filter(r => r.target > 0 && !ddKeys.has(r.key));
-console.log(`CSV priced rows with no match in the DataDawg$ pool: ${csvMiss.length}`);
-if (csvMiss.length) console.log("   " + csvMiss.slice(0, 12).map(r => r.name).join(", "));
+console.log(`DataDawg$ covers ${ddKeys.size} of ${poolKeys.size} pool players; `
+  + `ESPN ${espn.filter(r => r.target > 0).length}, PFF ${pff.filter(r => r.target > 0).length} priced.`);
 
 fs.writeFileSync(path.join(ROOT, "work/vendor-dollars.json"),
   JSON.stringify({ espn: espn.map(r => ({ key: r.key, name: r.name, pos: r.pos, target: r.target })),

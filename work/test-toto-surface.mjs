@@ -89,14 +89,27 @@ ok(/SNAKE LEAGUES HAVE NO MONEY/.test(rig),
   "the draft system block carries the snake caveat — a limit stated only in the state is a limit he is talked past");
 
 /* ---- 4. the PPN room is priced in the column it shows -------------------- */
-ok(rig.includes('const scoring = (lgRoom && POOL.some(p => p.lg !== undefined)) ? "lg" : (st.scoring || "half");'),
-  "ctx() prices from `lg` in the room that renders only the `lg` column");
-ok(rig.includes('const MV = scoring === "lg" ? "$ PPN" : "MV";'),
-  "the money column is named for the model, so it cannot call a $ PPN figure a market value");
-ok(rig.includes("const pickVal = pk => scoring === \"lg\""),
+ok(rig.includes('const scoring = (lgRoom && POOL.some(p => p.dd !== undefined)) ? "dd" : (st.scoring || "half");'),
+  "ctx() prices from DataDawg$ in the room that renders DataDawg$/ESPN/PFF");
+ok(rig.includes('const MV = scoring === "dd" ? "DataDawg$" : "MV";'),
+  "the money column is named for the model, so it cannot call a DataDawg$ figure a market value");
+ok(rig.includes("const pickVal = pk => scoring === \"dd\""),
   "a sold pick's value is re-read from this page's pool — pick.etr comes from the operator's generic column");
-const boardShowsLg = read("board.html").includes('COLS.splice(4,0,{key:"lg",label:"$ PPN 14t",sortable:true});');
-ok(boardShowsLg, "board.html still renders the $ PPN column this branch exists for");
+/* The three-column cheat sheet the branch above exists for, plus the guarantee that a
+   board which simply did not price a player renders a dash rather than "$0" — "$0" is a
+   claim that he is worthless, a dash is the truth, which is that the board is silent. */
+{
+  const board = read("board.html");
+  ok(board.includes('{key:"dd",label:"DataDawg$",sortable:true}')
+     && board.includes('{key:"espn",label:"ESPN",sortable:true}')
+     && board.includes('{key:"pff",label:"PFF",sortable:true}'),
+    "board.html renders DataDawg$, ESPN and PFF");
+  ok(!board.includes('label:"$ PPN'), "the $ PPN column is gone");
+  ok(board.includes('const dollar = v => [(+v ? "$"+(+v) : "\u2014"), false, true];'),
+    "an unpriced player renders a dash, not $0");
+  ok(/budget-normalized only/.test(board),
+    "the intro says ESPN and PFF are budget-only, so three columns cannot read as equal treatment");
+}
 
 /* ---- 5. the manual knows leagues exist ----------------------------------- */
 for(const f of totos.keys()){
