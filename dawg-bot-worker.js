@@ -178,7 +178,11 @@ const DRAFT_POSITIONS = ["ALL", "QB", "RB", "WR", "TE", "DST", "K"];
 // declarations so a post-refresh column rename cannot silently strand saved filters.
 // "lg" is the pepperoninipples league-adjusted value column (board.html's league
 // profile); a saved sort on it must survive the round trip like any other column.
-const DRAFT_SORT_KEYS = ["rank", "name", "pos", "team", "half14", "full", "half", "sfhalf12", "sf", "silva", "lg"];
+/* ⚠️ MIRRORS THE RIG'S sortable:true COLUMNS IN board.html, and work/test-draft-state.mjs
+   asserts the two sets are equal. The four-source cheat sheet added dd/espn/pff/fp and
+   retired lg; this list was not updated with it, so the contract test broke on main.
+   Change both sides in the same commit or the Worker rejects a sort the page offers. */
+const DRAFT_SORT_KEYS = ["rank", "name", "pos", "team", "half14", "half", "full", "sfhalf12", "sf", "silva", "dd", "espn", "pff", "fp"];
 const DRAFT_SORT_DIRECTIONS = ["asc", "desc"];
 const DRAFT_MARKS = ["target", "taken"];
 const DRAFT_EMPTY_STATE = Object.freeze({
