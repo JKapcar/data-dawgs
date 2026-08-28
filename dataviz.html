@@ -1449,9 +1449,9 @@ How-to questions about the site are also yours to answer, from the SITE MANUAL s
 
   // The auction surface — what SYS used to assert unconditionally.
   const SYS_DRAFT = `RIGHT NOW you are the live draft assistant, advising whoever is asking, mid-draft, in a fantasy football draft.
-- MV is a dated market-consensus value snapshot, not a points projection. Surplus vs MV measures buying below consensus, not winning.
-- Reason from: dollars left, open starting slots, positional scarcity on the board, inflation, and each rival's max bid. $1-3 endgame fills are a real plan, not a failure.
-- When asked to decide, name the player(s) and the price you would pay.
+- The money column is named at the top of the state block and it is the ONLY one you may quote. "MV" is the dated public market-consensus snapshot; "$ PPN" is that snapshot re-priced for one league, and is the only column that league's room displays. Use whichever name the state uses, and never convert between them or quote a format the room does not show. Either way it is a value estimate, not a points projection: surplus against it measures buying below consensus, not winning.
+- AUCTION LEAGUES ONLY: reason from dollars left, open starting slots, positional scarcity on the board, inflation, and each rival's max bid. $1-3 endgame fills are a real plan, not a failure. When asked to decide, name the player(s) and the price you would pay.
+- SNAKE LEAGUES HAVE NO MONEY. If the state says the draft type is snake there is no budget, no bid, no price paid and no inflation — the dollar figures are value estimates used to rank players. Never quote dollars left or a max bid there, and never invent a budget the state does not give you. Decide by naming the player you would take and who you would take over.
 - If the state shows no picks yet, say so and talk strategy rather than pretending to see a board.`;
 
   /* ⚠️ This used to say "you are on a page that exposes no live game state to you"
@@ -1498,14 +1498,20 @@ UNDO THE LAST SALE: the "Last sale" row sits under the entry bar and has an "Und
 FIX AN OLDER PICK: open the gear Menu, then "Pick log (undo / edit)". Every pick there has an editable price box and a team dropdown, and both save the moment you change them. The x button on a row deletes that pick. Price edits are clamped so a team cannot be pushed past $0.
 NOMINATION QUEUE (gear Menu): type a name and press +. Click a queued name to load it into the entry bar. The x removes it. Only the operator sees this.
 BEST AVAILABLE: four buttons under the entry bar showing the top remaining QB, RB, WR and TE with an inflation-adjusted price. Tapping one loads that player.
-THE MONEY PILE: every team's remaining budget, sorted — on the Fantasy Draft Dashboard's summary strip.
+THE MONEY PILE: every team's remaining budget, sorted — on the Fantasy Draft Dashboard's summary strip. It is not on the operator page.
+VOICE BOARD: radio-style dials at the bottom of the operator page that set the league announcer's model, stability, style, likeness, speed and speaker boost.
 GEAR MENU also holds: Setup, "Start <n>s timer", "Advance nomination", "Projector shows" (Draft Board / Rosters / What's Left / Report Card), Recap, Export CSV, and Reset draft.
 RESET DRAFT is deliberately two clicks: the first turns it into "Click again to RESET ALL", and it disarms itself after about 4 seconds.
 SETUP holds: Budget $, Roster spots, Values (14-team Half / 12-team Half / Full / Superflex PPR / Superflex Half), Timer secs, My team, Voice announcer, Snark mode, and Announcer voice.
 EXPORT CSV columns: pick, player, pos, team, owner, price, etr_value, keeper.
 ON THE CLOCK is shown in the page header. "Advance nomination" moves it to the next team. Undoing a non-keeper pick steps it back one.
+LEAGUES (draft-leagues.html) — the front door. Every room is one league, and the league id travels in the URL as ?league=<id>; a page opened without it falls back to the legacy room.
+YOUR LEAGUES: the shelf at the top lists the leagues opened on this browser. Each row has Open, "Copy league link" and "Remove from this device". The link is a capability link — anyone holding it can open that room and no Data Dawgs account is needed — and removing a league only forgets it on that device.
+CREATE LEAGUE: name, season, teams, draft type (Auction or Snake), auction budget, roster configuration, scoring, points per reception, and a team/owner list. A snake league has no budget and no bidding.
+CONNECT LEAGUE: paste a Sleeper league URL and press "Recognize League" to import teams and settings. Yahoo and ESPN are not imported this way and are set up by hand. There is a separate "Connect ESPN" form taking an ESPN league id, season and the espn_s2 / SWID cookies.
+OPENING A RIG PAGE with leagues on the shelf but no draft on the device sends you here to pick one first — that is the picker, not an error.
 OTHER PAGES: Big Board is the projector view — it is deliberately not in the nav, open it by URL on the projector machine, and what it displays is set from "Projector shows". The read-only board for everyone else is the Fantasy Draft Dashboard → Live tab; board.html?view=live opens that same view directly. There is no LIVE DRAFT item in the nav — it was retired 8/1. Draft Data Viz, Report Card, Cheat Sheet and Master Data are read-only views of the same draft.
-STATE: everything saves in the browser on that device. A different device shows a different draft unless the live mirror is switched on. Pages are cached for offline so the draft survives losing wifi — but Toto itself needs the network, so say so if someone asks for help while offline.`;
+STATE: everything saves in the browser on that device, under its own key per league — so two leagues on one browser never see each other, and a different device shows a different draft unless it opens the same league link or the live mirror is switched on. Pages are cached for offline so the draft survives losing wifi — but Toto itself needs the network, so say so if someone asks for help while offline.`;
 
 /* The manual above is the draft rig, because that is where how-to questions used to
    come from. This is the rest of the site in one screen: enough for Toto to route a
@@ -1522,6 +1528,7 @@ survivor.html — survivor pool: this week's board, pick popularity, an optimal 
 guillotine.html — guillotine league companion. dfs.html — DFS solver, contest simulator, exposure, bankroll. The projections there are the USER'S OWN.
 teamdraft.html — the 32-team wins pool: spin wheel, board, eight rosters, Monte Carlo season sim.
 The draft rig: dashboard.html (a drafter's view), auction.html (the operator), board.html (read-only room view), bigboard.html (the projector), dataviz.html and report.html (afterwards), master.html (the player pool and scouting).
+datadawg-dollars.html — DataDawg$: our OWN converted auction dollars for one league room (Target $, conversion-sensitivity bands, delta vs the source price). It is NOT MV: MV is the dated market snapshot, DataDawg$ is this site's conversion of it, and the two are different numbers. Separate again from the $ PPN column on board.html, which re-prices a personal board for one league. Machine surfaces: /data/datadawg-dollars-values.json, /data/datadawg-dollars-method.json, /data/datadawg-dollars-method.md.
 strategy.html — the 2026 draft thesis, a dated snapshot of one analyst's argument.
 nfl.html — the NFL hub. stats.html — the EPA explorer. nfelo.html — nfelo power ratings and their backtest. calculators.html — ten deterministic calculators, nothing stored.
 cfb.html — the College Football lab: 2025 results, one retrodictive Elo, a matchup calculator. Its build roadmap is at cfb.html#roadmap and is our own planning surface, not a public destination.
@@ -1739,50 +1746,76 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     const S = state();
     if(!S || !S.settings) return "No draft state on this device yet.";
     const st = S.settings, picks = S.picks || [];
-    const scoring = st.scoring || "half";
+    /* ⚠️ A SNAKE LEAGUE HAS NO BUDGET. draft-leagues.html writes budget:null for one, and
+       `st.budget||200` turned that into a $200 auction that does not exist — Toto quoting
+       dollars left, max bids and inflation at a snake drafter is invented state, which is
+       the one thing this assistant is not allowed to produce. Branch on the draft type
+       instead, and say out loud that the money language does not apply. */
+    const draftType = st.draftType === "snake" ? "snake" : "auction";
+    const auction = draftType === "auction";
+    /* ⚠️ THE PPN ROOM RENDERS ONE MONEY COLUMN. board.html?league=pepperoninipples drops
+       every generic MV column and shows `lg` — the Aug 24 snapshot re-priced for that
+       league — on its own. Pricing from `half` there had Toto naming dollar figures that
+       appear nowhere on the reader's screen. Follow the column the board is showing. */
+    const lgRoom = (window.DDLeague && DDLeague.id === "pepperoninipples")
+      || new URLSearchParams(location.search).get("league") === "pepperoninipples";
+    const scoring = (lgRoom && POOL.some(p => p.lg !== undefined)) ? "lg" : (st.scoring || "half");
+    const MV = scoring === "lg" ? "$ PPN" : "MV";
     const val = p => +p[scoring] || 0;
     const norm = p => p==="D" ? "DST" : p;
     const teams = st.teams || [];
     const sold = new Set(picks.map(p=>p.player));
 
+    /* A pick stores `etr`, the value the OPERATOR's page held at the moment of the sale —
+       and the operator page has no `lg` column. In the PPN room that would mix a generic
+       MV into a sheet of $ PPN prices, so re-read the value from the pool this page has. */
+    const byName = {}; POOL.forEach(p=>{ byName[p.name]=p; });
+    const pickVal = pk => scoring === "lg"
+      ? (byName[pk.player] ? val(byName[pk.player]) : 0) : (+pk.etr || 0);
+
     const T = teams.map((t,i)=>({name:t.name, ti:i, spent:0, n:0,
       pos:{QB:0,RB:0,WR:0,TE:0,DST:0}}));
     picks.forEach(pk=>{ const t=T[pk.ti]; if(!t) return;
       t.spent+=pk.price; t.n++; const P=norm(pk.pos); if(t.pos[P]!==undefined) t.pos[P]++; });
-    T.forEach(t=>{ t.left=(st.budget||200)-t.spent; t.open=(st.spots||15)-t.n; });
+    T.forEach(t=>{ t.left = auction ? (+st.budget||200)-t.spent : null; t.open=(st.spots||15)-t.n; });
 
     let remValue=0;
     POOL.forEach(p=>{ if(!sold.has(p.name) && val(p)>=1) remValue+=val(p); });
-    const remDollars=T.reduce((a,t)=>a+Math.max(0,t.left),0);
-    const infl = remValue>0 ? remDollars/remValue : 1;
+    const remDollars = auction ? T.reduce((a,t)=>a+Math.max(0,t.left),0) : 0;
+    const infl = (auction && remValue>0) ? remDollars/remValue : 1;
 
     const L=[];
     const roster=(st.rosterSlots||[]).map(s=>`${s.count} ${s.slot}`).join(", ")||`${st.spots} roster spots`;
-    const draftType=st.draftType||"auction";
-    L.push(`LEAGUE: ${T.length}-team ${draftType} draft, ${roster}. Scoring: ${{half14:"14-team Half PPR · derived",half:"12-team Half PPR",full:"12-team Full PPR",sf:"12-team Superflex PPR",sfhalf12:"12-team Superflex Half PPR · hybrid"}[scoring]||scoring}.${draftType==="auction"?` $${st.budget} budget; $0 bids are legal, so a team's max bid = its dollars left.`:""}`);
-    L.push(`MV = Market Value, a public auction-dollar snapshot dated 2026-08-24. It is not a points projection. Available formats are 10-team PPR; 12-team PPR, Half PPR, Standard, and Superflex PPR; and 14-team PPR.`);
-    L.push(`STATE: ${picks.length} sold. Inflation ${infl.toFixed(2)}x — $${remDollars} chasing $${Math.round(remValue)} of MV still on the board.`);
-    L.push(`TEAMS (name | $ left = max bid | spots open | QB/RB/WR/TE/DST drafted):`);
+    L.push(`LEAGUE: ${T.length}-team ${draftType} draft, ${roster}. Scoring: ${{half14:"14-team Half PPR · derived",half:"12-team Half PPR",full:"12-team Full PPR",sf:"12-team Superflex PPR",sfhalf12:"12-team Superflex Half PPR · hybrid"}[st.scoring]||st.scoring||"half"}.${auction?` $${st.budget} budget; $0 bids are legal, so a team's max bid = its dollars left.`:` A snake draft has no budget and no bidding — teams pick in turn order. NEVER quote dollars left, a max bid, a price paid or inflation on this league; the dollar figures below are value estimates for ranking players, not money anybody spends.`}`);
+    L.push(scoring === "lg"
+      ? `$ PPN = this room's own price: the Aug 24, 2026 Market Value snapshot re-priced for the pepperoninipples league by value over replacement. IT IS THE ONLY MONEY COLUMN THIS ROOM SHOWS — every dollar figure below is a $ PPN figure. Call it "$ PPN", never a generic market value, and never quote a number from a format this room does not display.`
+      : `MV = Market Value, a public auction-dollar snapshot dated 2026-08-24. It is not a points projection. Available formats are 10-team PPR; 12-team PPR, Half PPR, Standard, and Superflex PPR; and 14-team PPR.`);
+    L.push(auction
+      ? `STATE: ${picks.length} sold. Inflation ${infl.toFixed(2)}x — $${remDollars} chasing $${Math.round(remValue)} of ${MV} still on the board.`
+      : `STATE: ${picks.length} of ${T.length*(st.spots||15)} picks made.`);
+    L.push(auction
+      ? `TEAMS (name | $ left = max bid | spots open | QB/RB/WR/TE/DST drafted):`
+      : `TEAMS (name | spots open | QB/RB/WR/TE/DST drafted):`);
     // whoever is looking at this device — falls back to the operator's team if unset
     const me = (window.DDMe && window.DDMe.idx(teams));
     const my = (me==null ? st.myTeam : me);
-    T.forEach((t,i)=>L.push(`${i===my?"*":"-"} ${t.name} | $${t.left} | ${t.open} | ${t.pos.QB}/${t.pos.RB}/${t.pos.WR}/${t.pos.TE}/${t.pos.DST}${i===my?"  <-- THE TEAM I AM ASKING ABOUT (mine)":""}`));
+    T.forEach((t,i)=>L.push(`${i===my?"*":"-"} ${t.name} | ${auction?`$${t.left} | `:""}${t.open} | ${t.pos.QB}/${t.pos.RB}/${t.pos.WR}/${t.pos.TE}/${t.pos.DST}${i===my?"  <-- THE TEAM I AM ASKING ABOUT (mine)":""}`));
 
     if(T[my]){
       const mine=picks.filter(p=>p.ti===my);
       L.push(`MY ROSTER${mine.length?"":" (no picks yet)"}:`);
-      mine.forEach(p=>L.push(`- ${p.player} (${norm(p.pos)}) paid $${p.price}, MV $${p.etr||0}`));
+      mine.forEach(p=>L.push(`- ${p.player} (${norm(p.pos)})${auction?` paid $${p.price},`:""} ${MV} $${pickVal(p)}`));
       const c=T[my].pos, flexUsed=Math.max(0,c.RB-2)+Math.max(0,c.WR-2)+Math.max(0,c.TE-1), holes=[];
       if(c.QB<1)holes.push("QB"); if(c.RB<2)holes.push((2-c.RB)+" RB"); if(c.WR<2)holes.push((2-c.WR)+" WR");
       if(c.TE<1)holes.push("TE"); const fl=Math.max(0,2-flexUsed); if(fl)holes.push(fl+" FLEX"); if(c.DST<1)holes.push("DEF");
-      L.push(`MY OPEN STARTING SLOTS: ${holes.length?holes.join(", "):"none — starters filled, bench only"}. I have $${T[my].left} for ${T[my].open} open spots.`);
+      L.push(`MY OPEN STARTING SLOTS: ${holes.length?holes.join(", "):"none — starters filled, bench only"}. I have ${auction?`$${T[my].left} for `:""}${T[my].open} open spots.`);
     }
 
-    L.push(`BEST AVAILABLE by position (MV, inflation-adjusted in parens):`);
+    L.push(`BEST AVAILABLE by position (${MV}${auction?", inflation-adjusted in parens":""}):`);
     ["QB","RB","WR","TE"].forEach(P=>{
       const av=POOL.filter(p=>p.pos===P && !sold.has(p.name) && val(p)>=1)
                    .sort((a,b)=>val(b)-val(a)).slice(0,8);
-      L.push(P+": "+(av.map(p=>`${p.name} $${val(p)} (adj $${Math.max(1,Math.round(val(p)*infl))}${p.tags&&p.tags.length?", "+p.tags.join("/"):""})`).join("; ")||"none left worth $1+"));
+      L.push(P+": "+(av.map(p=>`${p.name} $${val(p)}${auction?` (adj $${Math.max(1,Math.round(val(p)*infl))}${p.tags&&p.tags.length?", "+p.tags.join("/"):""})`:`${p.tags&&p.tags.length?" ("+p.tags.join("/")+")":""}`}`).join("; ")||"none left worth $1+"));
     });
     // master-data layer: tags + commentary, so Toto can say WHY a player is a target or a fade
     const tagged=POOL.filter(p=>!sold.has(p.name) && val(p)>=1 && ((p.tags||[]).length || p.note))
@@ -1796,13 +1829,15 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     }
     const lastPick = picks.length ? picks[picks.length-1] : null;
     if(lastPick){
-      const lp = POOL.find(x=>x.name===lastPick.player);
+      const lp = byName[lastPick.player];
       const own=(teams[lastPick.ti]||{}).name||"?";
-      const d=(lastPick.etr||0)-lastPick.price;
-      L.push(`MOST RECENT SALE: ${lastPick.player} to ${own} for $${lastPick.price} (MV $${lastPick.etr||0}, ${d>=0?"under":"over"} by $${Math.abs(d)})${lp&&lp.note?" — scouting: "+lp.note:""}`);
+      const d=pickVal(lastPick)-lastPick.price;
+      L.push(auction
+        ? `MOST RECENT SALE: ${lastPick.player} to ${own} for $${lastPick.price} (${MV} $${pickVal(lastPick)}, ${d>=0?"under":"over"} by $${Math.abs(d)})${lp&&lp.note?" — scouting: "+lp.note:""}`
+        : `MOST RECENT PICK: ${lastPick.player} to ${own} (${MV} $${pickVal(lastPick)})${lp&&lp.note?" — scouting: "+lp.note:""}`);
     }
     const rec=picks.slice(-6).reverse();
-    if(rec.length){ L.push(`LAST ${rec.length} SALES:`); rec.forEach(p=>L.push(`- ${p.player} (${norm(p.pos)}) $${p.price} to ${(teams[p.ti]||{}).name||"?"} (MV $${p.etr||0})`)); }
+    if(rec.length){ L.push(`LAST ${rec.length} ${auction?"SALES":"PICKS"}:`); rec.forEach(p=>L.push(`- ${p.player} (${norm(p.pos)})${auction?` $${p.price}`:""} to ${(teams[p.ti]||{}).name||"?"} (${MV} $${pickVal(p)})`)); }
     return L.join("\n");
   }
 
