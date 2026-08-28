@@ -2,6 +2,7 @@ const assert = require("assert");
 const fs = require("fs");
 
 const dashboard = fs.readFileSync("dashboard.html", "utf8");
+const board = fs.readFileSync("board.html", "utf8");
 const leagues = fs.readFileSync("draft-leagues.html", "utf8");
 const shared = fs.readFileSync("draft-league.js", "utf8");
 
@@ -28,6 +29,14 @@ assert.match(leagues, /parent\.postMessage\(\{dd:"height",h:Math\.ceil\(document
   "embedded settings never reports its full height to the dashboard");
 assert.match(leagues, /event\.data\.dd!=="theme"/,
   "embedded settings does not accept the dashboard theme");
+assert.match(dashboard, /src\.searchParams\.set\("theme", theme\(\)\)/,
+  "dashboard does not seed embedded views with its theme before first paint");
+assert.match(dashboard, /new MutationObserver\(syncTheme\)/,
+  "dashboard does not mirror live theme changes into embedded views");
+assert.match(board, /localStorage\.setItem\("dd-theme3-live",t\)/,
+  "live board lets its saved theme overwrite the dashboard theme message");
+assert.doesNotMatch(board, /DD_THEME_DEFAULT="dark"/,
+  "live board is still hard-coded to dark mode");
 assert.match(leagues, /:root\[data-theme="light"\]/,
   "league settings has no light-theme palette");
 

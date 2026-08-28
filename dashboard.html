@@ -2430,8 +2430,8 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   const theme = () => document.documentElement.getAttribute("data-theme") || "dark";
   /* Frames resolve their own theme from localStorage before we can message them, so
      write the shell's choice into each view's key first — otherwise the first paint
-     flashes the wrong theme (and board.html?view=live forces dark on its own). */
-  const THEME_KEYS = ["dd-theme2","dd-theme2-board","dd-theme2-live","dd-theme2-dataviz","dd-theme2-report","dd-theme2-auction"];
+     flashes the wrong theme. The query parameter below covers first paint too. */
+  const THEME_KEYS = ["dd-theme3","dd-theme3-board","dd-theme3-live","dd-theme3-dataviz","dd-theme3-report","dd-theme3-auction"];
   function syncTheme(){
     const t = theme();
     try { THEME_KEYS.forEach(k=>localStorage.setItem(k,t)); } catch(e){}
@@ -2580,7 +2580,9 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     if(frames[name]) return frames[name];
     syncTheme();
     const f = document.createElement("iframe");
-    f.src = VIEWS[name].src;
+    const src = new URL(VIEWS[name].src, location.href);
+    src.searchParams.set("theme", theme());
+    f.src = src.pathname.slice(1)+src.search;
     f.title = VIEWS[name].label;
     f.setAttribute("scrolling","no");
     f.style.height = "420px";
