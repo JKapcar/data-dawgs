@@ -84,6 +84,13 @@ const board = fs.readFileSync(new URL("../datadawg-dollars.html", import.meta.ur
 t("board unwraps the envelope once", board.includes(").json()).data;"), "accessor not patched");
 t("board reads the renamed payload", board.includes("data/datadawg-dollars-values.json"), "board still points at the old path");
 t("board carries the product name", /<h1>DataDawg\$/.test(board), "h1 not renamed");
+/* th/td are white-space:nowrap, so the table lays out ~696px. Without its own scroller the
+   PAGE scrolls sideways at 390px and drags the header and disclaimer off with it. Measured
+   in Chromium: scrollWidth 696 vs clientWidth 390 before, 390/390 after. */
+t("wide table scrolls inside its own container, not the page",
+  board.includes('<div class="twrap"><table>') && board.includes("</table></div>")
+  && /\.twrap\{overflow-x:auto/.test(board),
+  "table is not wrapped in an overflow-x scroller");
 t("sealed payload keeps its provenance model_id",
   V.model_id === "datadawgs-ppn-auction-2026-v3", V.model_id);
 
