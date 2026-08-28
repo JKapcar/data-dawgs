@@ -2480,8 +2480,13 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       note.textContent=last?`Latest: #${last.pickNo} ${last.player} to ${(teams[last.ti]||{}).name||"Unknown team"}.`:'Waiting for the first Sleeper pick.';
       return;
     }
-    const scoring = st.scoring || "half";
+    /* ⚠️ DataDawg$, not the generic column — see work/patch-rig-datadawg-dollars.py.
+       Decided once for the pool, never per player. */
     const POOL = window.DD_POOL || [];
+    const ddRoom = ((window.DDLeague && DDLeague.id === "pepperoninipples")
+      || new URLSearchParams(location.search).get("league") === "pepperoninipples")
+      && POOL.some(p => p.dd !== undefined);
+    const scoring = ddRoom ? "dd" : (st.scoring || "half");
     const val = p => +p[scoring] || 0;
     const norm = p => p === "D" ? "DST" : p;
     const sold = new Set(picks.map(p=>p.player));

@@ -161,6 +161,35 @@ ok(!/\n` \+ \(window\.DDBotScan/.test(wr),
     "the chips lift clear of the league bar's strip, and do it with `body #id` so page-injected mobile rules cannot win on document order");
 }
 
+/* ---- 6c. every draft surface prices in the same currency ----------------- */
+/* The cheat sheet moved to DataDawg$ and nothing else did: five rig files carried 613
+   pool rows and ZERO `dd` values, and charted p[S.settings.scoring] — the generic
+   12-team column. Gibbs read $76.4 on the charts and $90 on the sheet, same room, same
+   moment. The operator's inflation was computed against a $2,400 price list in a $2,800
+   room. Two surfaces disagreeing about what a dollar is, is the bug. */
+{
+  const RIG = ["board.html","dashboard.html","dataviz.html","report.html","bigboard.html",
+               "auction.html","master.html"];
+  for(const f of RIG){
+    const html = read(f);
+    const m = /(SEED|POOL|window\.DD_POOL) ?= ?\[\{"name"/.exec(html);
+    ok(m, `${f}: has an inline player pool`);
+    const arr = JSON.parse(html.slice(html.indexOf('[{"name"', m.index)).match(/^\[[\s\S]*?\}\]/)[0]);
+    const priced = arr.filter(r => r.dd !== undefined).length;
+    ok(priced === 121,
+      `${f}: pool carries the DataDawg$ column (${priced} priced, expected 121) — without it the page cannot chart what the sheet shows`);
+  }
+  for(const f of ["dataviz.html","bigboard.html","auction.html","report.html"]){
+    const html = read(f);
+    ok(html.includes("const MONEYK = () => DD_ROOM ?"),
+      `${f}: resolves the money key from the room, not from settings.scoring`);
+    ok(!/\+p\[S\.settings\.scoring\]/.test(html),
+      `${f}: no accessor still reads the generic column directly`);
+  }
+  ok(read("dashboard.html").includes('const scoring = ddRoom ? "dd" : (st.scoring || "half");'),
+    "dashboard.html strip prices in DataDawg$ in the room");
+}
+
 /* ---- 7. the service worker was re-keyed --------------------------------- */
 const files = [...fs.readdirSync(ROOT).filter(f => f.endsWith(".html")).sort(),
                ...fs.readdirSync(ROOT).filter(f => f.endsWith(".js") && f !== "sw.js").sort()];
