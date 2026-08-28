@@ -18,6 +18,11 @@
   --grid:#2b251d; --axis:#3b3428; --border:rgba(255,255,255,0.10);
   --accent:#ff6a02; --accent-ink:#140a02;
   --good:#2fbf3f; --bad:#ff6b6b; --warn:#eda100;
+  /* Position colours. Hue is the whole signal, so they must stay distinguishable
+     from each other AND from --accent (#ff6a02), which is what a price is printed
+     in — a position that reads as a dollar figure is worse than no colour. */
+  --pos-qb:#e2607a; --pos-rb:#4fbf6a; --pos-wr:#5aa8f0;
+  --pos-te:#d9a441; --pos-k:#a98cf0;  --pos-dst:#8f897d;
 }
 :root[data-theme="light"]{
   color-scheme: light;
@@ -27,6 +32,9 @@
   --accent:#d13a00; --accent-ink:#ffffff;
   --good:#006300; --bad:#c73030; --warn:#a86e00;
   --navbar:#2a1a06; --navink:#ecdfc9; --navink2:#b7a488;
+  /* Darkened for the paper field — the dark theme's values are ~2:1 on #fffdf7. */
+  --pos-qb:#b4304c; --pos-rb:#1f7a34; --pos-wr:#1f5fa8;
+  --pos-te:#8a5a00; --pos-k:#5b3fa8;  --pos-dst:#6b6355;
 }
 /* light theme: paper texture (Browns-style: warm paper field, seal-brown nav) */
 :root[data-theme="light"] body{
@@ -572,6 +580,20 @@ th.sortable:hover{color:var(--ink-1)}
    Layout is flex-wrap with an ::after that forces the line break, NOT grid-template-
    areas: pos and team are two separate <td>s and would have had to share one grid area,
    which stacks them on top of each other. */
+/* One property, set from the player's own position, read by both layouts. An
+   unrecognised position falls back to the ordinary ink instead of picking a
+   colour that means something else. */
+#board tr[data-pos=QB]{--posc:var(--pos-qb)}
+#board tr[data-pos=RB]{--posc:var(--pos-rb)}
+#board tr[data-pos=WR]{--posc:var(--pos-wr)}
+#board tr[data-pos=TE]{--posc:var(--pos-te)}
+#board tr[data-pos=K]{--posc:var(--pos-k)}
+#board tr[data-pos=DST]{--posc:var(--pos-dst)}
+#board td[data-c=pos]{color:var(--posc,var(--ink-2));font-weight:700}
+/* A drafted row is struck through and dimmed on purpose; a bright position chip
+   would undo that and pull the eye to exactly the players you can no longer buy. */
+#board tr.taken td[data-c=pos]{color:var(--ink-3)}
+
 @media(max-width:620px){
   /* ⚠️ Buy back the gutters before touching type size. Measured at 360px: the row had
      278px of usable width out of 360 — 82px was page padding plus card padding, and
@@ -586,7 +608,15 @@ th.sortable:hover{color:var(--ink-1)}
   #board thead{display:none}          /* sorting moves to the control row below */
   #board tr{
     display:flex;flex-wrap:wrap;align-items:baseline;gap:0 6px;
-    padding:9px 4px;border-bottom:1px solid var(--grid);white-space:nowrap}
+    padding:9px 4px 9px 1px;border-bottom:1px solid var(--grid);white-space:nowrap;
+    /* The scan aid. A bar down the full height of the card is the only mark on this
+       page shaped like this, which is exactly why it is used: the tinted pill it
+       replaced was indistinguishable from the buy/fade tag in the next cell.
+       Transparent, not absent, so an unknown position still lines the rows up. */
+    border-left:3px solid var(--posc,transparent)}
+  /* Drafted rows are struck through and dimmed on purpose; a live colour bar would
+     pull the eye straight to the players nobody can buy any more. */
+  #board tr.taken{border-left-color:var(--grid)}
   #board td{border:0;padding:0;text-align:left;font-size:13px;white-space:nowrap}
   #board tr::after{content:"";order:6;flex-basis:100%;height:0}   /* the line break */
 
@@ -602,7 +632,7 @@ th.sortable:hover{color:var(--ink-1)}
     overflow:hidden;text-overflow:ellipsis}
   #board td[data-c=tags]{order:3;flex:0 0 auto}
   #board td[data-c=pos]{order:4;flex:0 0 auto;font-size:11px;font-weight:700;
-    letter-spacing:.04em;color:var(--ink-2)}
+    letter-spacing:.04em;color:var(--posc,var(--ink-2))}
   #board td[data-c=team]{order:5;flex:0 0 auto;font-size:11px;color:var(--ink-3)}
   #board td[data-c=pos]::after{content:"·";margin-left:6px;color:var(--ink-3);font-weight:400}
 
@@ -2842,6 +2872,8 @@ function render(){
     const soldToMe = !!pk && meTi!=null && pk.ti===meTi;
     const isMine  = soldToMe || (!pk && m==="mine");
     const isTaken = (!!pk && !soldToMe) || (!pk && m==="taken");
+    // The colour lives in CSS; the row only says which position it is.
+    tr.dataset.pos = r.pos || "";
     if(isTaken) tr.classList.add("taken");
     if(isMine)  tr.classList.add("mine");
     const cells=[

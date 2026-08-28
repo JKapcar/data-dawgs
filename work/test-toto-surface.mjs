@@ -213,6 +213,32 @@ ok(!/\n` \+ \(window\.DDBotScan/.test(wr),
   }
 }
 
+/* ---- 6e. every position in the pool has a colour, in both themes --------- */
+/* The bug this catches: the colour is the only thing telling RB from WR at a glance in
+   the All view, and it is keyed off the player's own pos string. A position that exists
+   in the pool but has no rule falls back to plain ink — indistinguishable from every
+   other uncoloured row, so the reader learns to trust a signal that is quietly absent
+   for one position. Both palettes are checked because the light one is a separate set
+   of values: shipping only the dark set leaves the light theme uncoloured. */
+{
+  const board = read("board.html");
+  const seed = board.slice(board.indexOf("const SEED = ["));
+  const pool = JSON.parse(seed.slice(12, seed.indexOf("];") + 1));
+  const positions = [...new Set(pool.map(p => p.pos))].sort();
+  ok(positions.length >= 5, "board.html pool carries the positions to colour");
+  for(const pos of positions){
+    ok(new RegExp(`#board tr\\[data-pos=${pos}\\]\\{--posc:var\\(--pos-`).test(board),
+      `${pos} rows get a colour — an uncoloured position is a signal the reader cannot see is missing`);
+    const tok = `--pos-${pos.toLowerCase()}:`;
+    ok(board.split(tok).length - 1 === 2,
+      `--pos-${pos.toLowerCase()} is defined in BOTH themes, not just the dark one`);
+  }
+  ok(/tr\.dataset\.pos = r\.pos/.test(board),
+    "the row carries its position, or every --posc rule matches nothing");
+  ok(/#board tr\{[^}]*border-left:3px solid var\(--posc/.test(board),
+    "the phone card's edge bar reads --posc — the bar IS the scan aid, not the text colour");
+}
+
 /* ---- 7. the service worker was re-keyed --------------------------------- */
 const files = [...fs.readdirSync(ROOT).filter(f => f.endsWith(".html")).sort(),
                ...fs.readdirSync(ROOT).filter(f => f.endsWith(".js") && f !== "sw.js").sort()];
