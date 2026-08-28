@@ -20,3 +20,8 @@ tmp/
 _to_delete/
 _deferred/
 work/artifacts/
+
+# Intermediate output of work/build-vendor-dollars.mjs. Regenerate it from the source
+# sheets rather than committing it: it is derived, and a stale copy in the tree is a
+# board full of prices nobody can trace back to a run.
+work/vendor-dollars.json
