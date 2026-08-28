@@ -18,6 +18,12 @@ assert.match(leagues, /data-order/);
 assert.match(leagues, /Existing picks stay attached to the correct team/);
 assert.match(leagues, /\(state\.picks\|\|\[\]\)\.forEach\(p=>\{p\.ti=remap\(p\.ti\);\}\)/);
 assert.match(leagues, /DDLeague\.publishLeague\(updated,state\|\|DDLeague\.stateFromLeague\(updated\)\)/);
+assert.match(leagues, /const teams=effectiveTeams\(league,state\)/,
+  "settings does not mirror the active draft team's names");
+assert.match(leagues, /old\.config\.teams\.concat\(previousTeams\)/,
+  "saving does not reconcile live team data back into the league definition");
+assert.match(leagues, /id:team\.id\|\|durable\.id\|\|`team_\$\{index\+1\}`/,
+  "legacy live teams without IDs do not receive stable league IDs");
 assert.match(leagues, /parent\.postMessage\(\{dd:"height",h:Math\.ceil\(document\.documentElement\.scrollHeight\)\}/,
   "embedded settings never reports its full height to the dashboard");
 assert.match(leagues, /event\.data\.dd!=="theme"/,

@@ -437,20 +437,44 @@ body.embed .grid>section:not(#settingsCard){display:none}
     $("leagueList").innerHTML=rows.length?rows.map(row=>`<div class="league" data-id="${esc(row.id)}"><div class="league-main"><div class="league-name">${esc(row.name)}</div><div class="meta">${esc(row.season)} · ${esc(row.provider||"manual")}</div></div><div class="actions"><a class="button" href="${esc(returnHref(row.id))}">Open</a><button data-copy>Copy league link</button><button class="danger ghost" data-remove>Remove from this device</button></div></div>`).join(""):'<div class="empty">No league instances have been opened on this browser yet.</div>';
   }
 
+  function activeState(){
+    if(!activeId) return null;
+    try{return JSON.parse(localStorage.getItem(DDLeague.storageKey("dd-auction-v1",activeId))||"null");}
+    catch(e){return null;}
+  }
+
+  function effectiveTeams(league,state){
+    const live=state&&state.settings&&Array.isArray(state.settings.teams)&&state.settings.teams.length ? state.settings.teams : null;
+    const source=live||league.config.teams;
+    return source.map((team,index)=>{
+      const durable=league.config.teams[index]||{};
+      return Object.assign({},durable,team,{id:team.id||durable.id||`team_${index+1}`});
+    });
+  }
+
   function loadSettings(){
     const league=activeId&&DDLeague.load(activeId);
     if(!league) return;
+    /* The live board runs from draft state. The league record is its durable definition,
+       but older rooms can still carry Team 1/Team 2 placeholders there. Settings must
+       show what Live actually shows, then a save reconciles both records. */
+    const state=activeState();
+    const live=state&&state.settings||{};
+    const teams=effectiveTeams(league,state);
+    const rosterSlots=Array.isArray(live.rosterSlots)&&live.rosterSlots.length ? live.rosterSlots : league.config.rosterSlots;
+    const scoring=live.scoringConfig&&typeof live.scoringConfig==="object" ? live.scoringConfig : league.config.scoring;
+    const draftType=live.draftType||league.config.draftType;
     $("settingsCard").hidden=false;
     $("settingsName").value=league.name;
     $("settingsSeason").value=league.season;
-    $("settingsDraftType").value=league.config.draftType;
-    $("settingsBudget").value=league.config.budget||200;
-    $("settingsBudgetWrap").hidden=league.config.draftType==="snake";
-    $("settingsScoring").value=league.config.scoring.mode;
-    $("settingsPpr").value=league.config.scoring.ppr==null?0.5:league.config.scoring.ppr;
-    const counts=Object.fromEntries(league.config.rosterSlots.map(s=>[s.slot,s.count]));
+    $("settingsDraftType").value=draftType;
+    $("settingsBudget").value=live.budget||league.config.budget||200;
+    $("settingsBudgetWrap").hidden=draftType==="snake";
+    $("settingsScoring").value=scoring.mode||league.config.scoring.mode;
+    $("settingsPpr").value=scoring.ppr==null?0.5:scoring.ppr;
+    const counts=Object.fromEntries(rosterSlots.map(s=>[s.slot,s.count]));
     $("settingsSlots").innerHTML=slotNames.map(s=>`<label>${s}<input type="number" min="0" max="30" value="${counts[s]||0}" data-settings-slot="${s}"></label>`).join("");
-    const ordered=league.config.teams.map((team,index)=>({team,index,order:Number(team.draftSlot)||index+1})).sort((a,b)=>a.order-b.order);
+    const ordered=teams.map((team,index)=>({team,index,order:Number(team.draftSlot)||index+1})).sort((a,b)=>a.order-b.order);
     $("settingsTeams").innerHTML=ordered.map((row,i)=>`<div class="orderrow" data-team-id="${esc(row.team.id)}"><label>Order<input type="number" min="1" max="${ordered.length}" required value="${i+1}" data-order></label><label>Team<input required maxlength="80" value="${esc(row.team.name)}" data-team-name></label><label class="owner">Owner<input maxlength="80" value="${esc(row.team.owner||"")}" data-team-owner></label></div>`).join("");
   }
 
@@ -458,24 +482,24 @@ body.embed .grid>section:not(#settingsCard){display:none}
   $("settingsForm").addEventListener("submit",event=>{
     event.preventDefault();
     const old=activeId&&DDLeague.load(activeId); if(!old) return;
+    const state=activeState();
+    const previousTeams=effectiveTeams(old,state);
     const rows=[...$("settingsTeams").querySelectorAll(".orderrow")].map(row=>({
       id:row.dataset.teamId,name:row.querySelector("[data-team-name]").value,
       owner:row.querySelector("[data-team-owner]").value,order:Number(row.querySelector("[data-order]").value)
     }));
     if(new Set(rows.map(r=>r.order)).size!==rows.length){ $("settingsMsg").className="notice err"; $("settingsMsg").textContent="Every draft-order number must be unique."; return; }
     rows.sort((a,b)=>a.order-b.order);
-    const oldById=new Map(old.config.teams.map(t=>[t.id,t]));
+    const oldById=new Map(old.config.teams.concat(previousTeams).map(t=>[t.id,t]));
     const teams=rows.map((r,i)=>Object.assign({},oldById.get(r.id)||{id:r.id},{name:r.name,owner:r.owner,draftSlot:i+1}));
     const rosterSlots=[...document.querySelectorAll("[data-settings-slot]")].map(input=>({slot:input.dataset.settingsSlot,count:Number(input.value)})).filter(s=>s.count>0);
     const updated=DDLeague.save(Object.assign({},old,{name:$("settingsName").value,season:Number($("settingsSeason").value),config:Object.assign({},old.config,{
       draftType:$("settingsDraftType").value,budget:$("settingsDraftType").value==="snake"?null:Number($("settingsBudget").value),
       teamCount:teams.length,rosterSlots,scoring:Object.assign({},old.config.scoring,{mode:$("settingsScoring").value,ppr:Number($("settingsPpr").value),superflex:["sf","sfhalf12"].includes($("settingsScoring").value)}),teams
     })}));
-    let state=null; try{ state=JSON.parse(localStorage.getItem(DDLeague.storageKey("dd-auction-v1",activeId))||"null"); }catch(e){}
     if(state&&state.settings){
       const newIndex=new Map(teams.map((t,i)=>[t.id,i]));
-      const oldTeams=state.settings.teams||old.config.teams;
-      const remap=i=>{ const id=(oldTeams[i]||{}).id; return newIndex.has(id)?newIndex.get(id):i; };
+      const remap=i=>{ const id=(previousTeams[i]||{}).id; return newIndex.has(id)?newIndex.get(id):i; };
       (state.picks||[]).forEach(p=>{p.ti=remap(p.ti);});
       state.nomIdx=remap(state.nomIdx||0); state.settings.myTeam=remap(state.settings.myTeam||0);
       Object.assign(state.settings,{budget:updated.config.budget==null?200:updated.config.budget,spots:rosterSlots.reduce((n,s)=>n+s.count,0),scoring:updated.config.scoring.mode,scoringConfig:updated.config.scoring,draftType:updated.config.draftType,rosterSlots,teams});
