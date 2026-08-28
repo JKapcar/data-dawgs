@@ -329,7 +329,7 @@
   root.DDLeague = DDLeague;
 
   if(hasWindow){
-    let cachedCfg = null, pushTimer = null, lastState = "";
+    let cachedCfg = null, pushTimer = null, lastState = "", pushSequence = 0;
 
     const startupParams=new URLSearchParams(location.search);
     const startupPage=location.pathname.split("/").pop();
@@ -396,6 +396,23 @@
       push(state){
         const endpoint=this.endpoint(); if(!endpoint) return;
         clearTimeout(pushTimer);
+        const sequence=++pushSequence;
+        const attempt=(number,body)=>{
+          if(sequence!==pushSequence) return;
+          fetch(endpoint,{method:"PUT",body,headers:{"Content-Type":"application/json"}})
+            .then(r=>{ if(!r.ok) throw new Error(String(r.status));
+              if(sequence!==pushSequence) return;
+              lastState=body;
+              window.dispatchEvent(new CustomEvent("ddsync",{detail:{ok:true,dir:"up",attempt:number}}));
+            })
+            .catch(()=>{
+              if(sequence!==pushSequence) return;
+              window.dispatchEvent(new CustomEvent("ddsync",{detail:{ok:false,dir:"up",attempt:number}}));
+              // Keep the newest complete draft queued across venue Wi-Fi drops.
+              // A later SOLD supersedes this sequence and starts its own retry clock.
+              if(number<8) pushTimer=setTimeout(()=>attempt(number+1,body),Math.min(30000,1000*Math.pow(2,number)));
+            });
+        };
         pushTimer=setTimeout(()=>{
           let body;
           try{
@@ -403,10 +420,7 @@
             body=JSON.stringify(league ? {ts:now(),league,state} : {ts:now(),state});
           }catch(e){ return; }
           if(body===lastState) return;
-          lastState=body;
-          fetch(endpoint,{method:"PUT",body,headers:{"Content-Type":"application/json"}})
-            .then(r=>{ if(!r.ok) throw new Error(String(r.status)); window.dispatchEvent(new CustomEvent("ddsync",{detail:{ok:true,dir:"up"}})); })
-            .catch(()=>window.dispatchEvent(new CustomEvent("ddsync",{detail:{ok:false,dir:"up"}})));
+          attempt(0,body);
         },500);
       },
       get connected(){
