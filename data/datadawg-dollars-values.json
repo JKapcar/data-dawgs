@@ -1,7 +1,7 @@
 {
  "as_of": "2026-08-28",
  "source": "Establish The Run half-PPR auction values (private subscriber snapshot, identified publicly only by SHA-256), converted to the JohnMaddenPepperoniNipplesXV room (Yahoo 773763; 14 teams, $200, no kicker, 2 flex, $0 bids legal) by the VOR-based conversion documented in /data/datadawg-dollars-method.md. Reproducible and red-teamed; not outcome-validated.",
- "note": "Dated snapshot. low/high are conversion-assumption sensitivity bounds, NOT bid ceilings and NOT player-outcome intervals. Keeper inflation (Sep 8 deadline) and out-of-sample validation are open items, deliberately not modelled here.",
+ "note": "Dated snapshot. low/high are v3 conversion-assumption sensitivity bounds carried forward unscaled, NOT bid ceilings and NOT player-outcome intervals. Keeper inflation (Sep 8 deadline) and out-of-sample validation are open items, deliberately not modelled here.",
  "tier": "labs",
  "graded": false,
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
@@ -9,22 +9,30 @@
  "canonical_url": "https://datadawgs216.com/data/datadawg-dollars-values.json",
  "data": {
   "schema_version": "1.0.0",
-  "model_id": "datadawgs-ppn-auction-2026-v3",
+  "model_id": "datadawgs-datadawg-dollars-2026-v4",
   "as_of": "2026-08-28",
   "league": "JohnMaddenPepperoniNipplesXV (Yahoo 773763)",
   "tier": "labs",
   "graded": false,
-  "epistemic_status": "reproducible conversion; not outcome-validated",
+  "epistemic_status": "reproducible conversion of a sealed v3 prior; not outcome-validated",
   "interval_meaning": "model_low/model_high are conversion-assumption sensitivity bounds, not player-outcome confidence intervals and not bid ceilings.",
   "source_snapshot_sha256": "1d772b1db0b5e79a06835b89d0589c5cc469930910798fef86d0975c3b511b8c",
   "validation": {
-   "rows": 424,
-   "positive_prices": 121,
+   "rows": 425,
+   "auction_pool": 210,
+   "pool_by_pos": {
+    "QB": 26,
+    "RB": 68,
+    "WR": 78,
+    "TE": 24,
+    "DST": 14
+   },
+   "positive_prices": 210,
    "target_sum": 2800,
    "duplicate_ids": 0,
    "negative_prices": 0,
    "kickers": 0,
-   "note": "Jayden Higgins (00-0038130) is NOT a row in this payload: he is absent from the 456-row ETR source snapshot. The manual override in the method contract is therefore vacuous; the practical effect (price $0 / undraftable) holds."
+   "note": "v4 redistributes $157.50 from the premium tier across the 210 auctioned slots. The $0.75 per slot is a behavioural reserve, NOT a minimum bid: $0 bids stay legal and 215 rows still publish at $0. Jayden Higgins (00-0038130) is present as an explicit row at $0 under a season-ending ACL override, so the count is 425 rather than v3's 424; he is excluded from the 210-slot pool because a player who cannot be rostered does not occupy a slot the reserve is spread across."
   },
   "players": [
    {
@@ -33,12 +41,13 @@
     "pos": "RB",
     "team": "DET",
     "rank": 1,
-    "target": 90,
-    "exact": 90.3732,
+    "target": 86,
+    "exact": 86.0397,
     "low": 82,
     "high": 103,
     "etr_half": 83,
     "delta_vs_etr": 7,
+    "v3_target": 90,
     "override": null
    },
    {
@@ -47,12 +56,13 @@
     "pos": "RB",
     "team": "ATL",
     "rank": 2,
-    "target": 85,
-    "exact": 85.341,
+    "target": 81,
+    "exact": 81.2906,
     "low": 77,
     "high": 97,
     "etr_half": 78,
     "delta_vs_etr": 7,
+    "v3_target": 85,
     "override": null
    },
    {
@@ -61,12 +71,13 @@
     "pos": "WR",
     "team": "SEA",
     "rank": 3,
-    "target": 77,
-    "exact": 77.2052,
+    "target": 73,
+    "exact": 73.6124,
     "low": 70,
     "high": 87,
     "etr_half": 70,
     "delta_vs_etr": 7,
+    "v3_target": 77,
     "override": null
    },
    {
@@ -75,12 +86,13 @@
     "pos": "WR",
     "team": "CIN",
     "rank": 4,
-    "target": 77,
-    "exact": 77.0201,
+    "target": 73,
+    "exact": 73.4377,
     "low": 70,
     "high": 87,
     "etr_half": 70,
     "delta_vs_etr": 7,
+    "v3_target": 77,
     "override": null
    },
    {
@@ -89,12 +101,13 @@
     "pos": "WR",
     "team": "LA",
     "rank": 5,
-    "target": 76,
-    "exact": 76.5041,
+    "target": 73,
+    "exact": 72.9507,
     "low": 69,
     "high": 87,
     "etr_half": 70,
     "delta_vs_etr": 6,
+    "v3_target": 76,
     "override": null
    },
    {
@@ -103,12 +116,13 @@
     "pos": "RB",
     "team": "SF",
     "rank": 6,
-    "target": 70,
-    "exact": 70.2649,
+    "target": 67,
+    "exact": 67.0625,
     "low": 65,
     "high": 78,
     "etr_half": 63,
     "delta_vs_etr": 7,
+    "v3_target": 70,
     "override": null
    },
    {
@@ -117,12 +131,13 @@
     "pos": "RB",
     "team": "IND",
     "rank": 7,
-    "target": 66,
-    "exact": 65.8826,
+    "target": 63,
+    "exact": 62.9267,
     "low": 61,
     "high": 73,
     "etr_half": 59,
     "delta_vs_etr": 7,
+    "v3_target": 66,
     "override": null
    },
    {
@@ -131,12 +146,13 @@
     "pos": "WR",
     "team": "MIN",
     "rank": 8,
-    "target": 64,
-    "exact": 64.3824,
+    "target": 61,
+    "exact": 61.5109,
     "low": 59,
     "high": 72,
     "etr_half": 58,
     "delta_vs_etr": 6,
+    "v3_target": 64,
     "override": null
    },
    {
@@ -145,12 +161,13 @@
     "pos": "WR",
     "team": "DET",
     "rank": 9,
-    "target": 62,
-    "exact": 62.0491,
+    "target": 59,
+    "exact": 59.3088,
     "low": 58,
     "high": 68,
     "etr_half": 55,
     "delta_vs_etr": 7,
+    "v3_target": 62,
     "override": null
    },
    {
@@ -159,12 +176,13 @@
     "pos": "WR",
     "team": "DAL",
     "rank": 10,
-    "target": 58,
-    "exact": 58.2127,
+    "target": 56,
+    "exact": 55.6882,
     "low": 54,
     "high": 65,
     "etr_half": 52,
     "delta_vs_etr": 6,
+    "v3_target": 58,
     "override": null
    },
    {
@@ -173,12 +191,13 @@
     "pos": "RB",
     "team": "BUF",
     "rank": 11,
-    "target": 56,
-    "exact": 55.7609,
+    "target": 53,
+    "exact": 53.3743,
     "low": 51,
     "high": 62,
     "etr_half": 50,
     "delta_vs_etr": 6,
+    "v3_target": 56,
     "override": null
    },
    {
@@ -187,12 +206,13 @@
     "pos": "RB",
     "team": "BAL",
     "rank": 12,
-    "target": 55,
-    "exact": 54.7702,
+    "target": 52,
+    "exact": 52.4394,
     "low": 51,
     "high": 59,
     "etr_half": 48,
     "delta_vs_etr": 7,
+    "v3_target": 55,
     "override": null
    },
    {
@@ -201,12 +221,13 @@
     "pos": "RB",
     "team": "PHI",
     "rank": 13,
-    "target": 54,
-    "exact": 53.5836,
+    "target": 51,
+    "exact": 51.3195,
     "low": 50,
     "high": 59,
     "etr_half": 48,
     "delta_vs_etr": 6,
+    "v3_target": 54,
     "override": null
    },
    {
@@ -215,12 +236,13 @@
     "pos": "RB",
     "team": "KC",
     "rank": 14,
-    "target": 49,
-    "exact": 48.6361,
+    "target": 47,
+    "exact": 46.6503,
     "low": 45,
     "high": 53,
     "etr_half": 43,
     "delta_vs_etr": 6,
+    "v3_target": 49,
     "override": null
    },
    {
@@ -229,12 +251,13 @@
     "pos": "RB",
     "team": "LAC",
     "rank": 15,
-    "target": 48,
-    "exact": 48.1123,
+    "target": 46,
+    "exact": 46.156,
     "low": 45,
     "high": 52,
     "etr_half": 42,
     "delta_vs_etr": 6,
+    "v3_target": 48,
     "override": null
    },
    {
@@ -243,12 +266,13 @@
     "pos": "RB",
     "team": "CIN",
     "rank": 16,
-    "target": 47,
-    "exact": 47.4219,
+    "target": 45,
+    "exact": 45.5044,
     "low": 44,
     "high": 52,
     "etr_half": 42,
     "delta_vs_etr": 5,
+    "v3_target": 47,
     "override": null
    },
    {
@@ -257,12 +281,13 @@
     "pos": "WR",
     "team": "ATL",
     "rank": 17,
-    "target": 45,
-    "exact": 45.1386,
+    "target": 43,
+    "exact": 43.3496,
     "low": 43,
     "high": 47,
     "etr_half": 38,
     "delta_vs_etr": 7,
+    "v3_target": 45,
     "override": null
    },
    {
@@ -271,12 +296,13 @@
     "pos": "WR",
     "team": "NE",
     "rank": 18,
-    "target": 44,
-    "exact": 44.08,
+    "target": 42,
+    "exact": 42.3505,
     "low": 42,
     "high": 47,
     "etr_half": 38,
     "delta_vs_etr": 6,
+    "v3_target": 44,
     "override": null
    },
    {
@@ -285,12 +311,13 @@
     "pos": "RB",
     "team": "MIA",
     "rank": 19,
-    "target": 44,
-    "exact": 43.9341,
+    "target": 42,
+    "exact": 42.2128,
     "low": 42,
     "high": 47,
     "etr_half": 38,
     "delta_vs_etr": 6,
+    "v3_target": 44,
     "override": null
    },
    {
@@ -299,12 +326,13 @@
     "pos": "WR",
     "team": "HOU",
     "rank": 20,
-    "target": 43,
-    "exact": 43.3175,
+    "target": 41,
+    "exact": 41.6309,
     "low": 42,
     "high": 46,
     "etr_half": 37,
     "delta_vs_etr": 6,
+    "v3_target": 43,
     "override": null
    },
    {
@@ -313,12 +341,13 @@
     "pos": "RB",
     "team": "LV",
     "rank": 21,
-    "target": 42,
-    "exact": 42.3904,
+    "target": 41,
+    "exact": 40.7559,
     "low": 40,
     "high": 46,
     "etr_half": 37,
     "delta_vs_etr": 5,
+    "v3_target": 42,
     "override": null
    },
    {
@@ -327,12 +356,13 @@
     "pos": "WR",
     "team": "NO",
     "rank": 22,
-    "target": 42,
-    "exact": 41.5819,
+    "target": 40,
+    "exact": 39.9929,
     "low": 40,
     "high": 43,
     "etr_half": 35,
     "delta_vs_etr": 7,
+    "v3_target": 42,
     "override": null
    },
    {
@@ -341,12 +371,13 @@
     "pos": "WR",
     "team": "DAL",
     "rank": 23,
-    "target": 41,
-    "exact": 41.2506,
+    "target": 40,
+    "exact": 39.6803,
     "low": 40,
     "high": 43,
     "etr_half": 35,
     "delta_vs_etr": 6,
+    "v3_target": 41,
     "override": null
    },
    {
@@ -355,12 +386,13 @@
     "pos": "RB",
     "team": "ARI",
     "rank": 24,
-    "target": 40,
-    "exact": 39.8373,
+    "target": 38,
+    "exact": 38.3465,
     "low": 38,
     "high": 42,
     "etr_half": 34,
     "delta_vs_etr": 6,
+    "v3_target": 40,
     "override": null
    },
    {
@@ -369,12 +401,13 @@
     "pos": "WR",
     "team": "NYG",
     "rank": 25,
-    "target": 39,
-    "exact": 39.0563,
+    "target": 37,
+    "exact": 37.6094,
     "low": 38,
     "high": 41,
     "etr_half": 33,
     "delta_vs_etr": 6,
+    "v3_target": 39,
     "override": null
    },
    {
@@ -383,12 +416,13 @@
     "pos": "RB",
     "team": "LA",
     "rank": 26,
-    "target": 39,
-    "exact": 38.7024,
+    "target": 37,
+    "exact": 37.2754,
     "low": 37,
     "high": 41,
     "etr_half": 33,
     "delta_vs_etr": 6,
+    "v3_target": 39,
     "override": null
    },
    {
@@ -397,12 +431,13 @@
     "pos": "TE",
     "team": "LV",
     "rank": 27,
-    "target": 38,
-    "exact": 38.2731,
+    "target": 37,
+    "exact": 36.8702,
     "low": 33,
     "high": 46,
     "etr_half": 37,
     "delta_vs_etr": 1,
+    "v3_target": 38,
     "override": null
    },
    {
@@ -411,12 +446,13 @@
     "pos": "RB",
     "team": "NYJ",
     "rank": 28,
-    "target": 38,
-    "exact": 37.9013,
+    "target": 36,
+    "exact": 36.5194,
     "low": 37,
     "high": 39,
     "etr_half": 32,
     "delta_vs_etr": 6,
+    "v3_target": 38,
     "override": null
    },
    {
@@ -425,12 +461,13 @@
     "pos": "RB",
     "team": "NO",
     "rank": 29,
-    "target": 36,
-    "exact": 36.4365,
+    "target": 35,
+    "exact": 35.1369,
     "low": 35,
     "high": 38,
     "etr_half": 31,
     "delta_vs_etr": 5,
+    "v3_target": 36,
     "override": null
    },
    {
@@ -439,12 +476,13 @@
     "pos": "RB",
     "team": "DAL",
     "rank": 30,
-    "target": 36,
-    "exact": 36.4311,
+    "target": 35,
+    "exact": 35.1319,
     "low": 35,
     "high": 38,
     "etr_half": 31,
     "delta_vs_etr": 5,
+    "v3_target": 36,
     "override": null
    },
    {
@@ -453,12 +491,13 @@
     "pos": "WR",
     "team": "KC",
     "rank": 31,
-    "target": 36,
-    "exact": 36.4274,
+    "target": 35,
+    "exact": 35.1284,
     "low": 35,
     "high": 37,
     "etr_half": 30,
     "delta_vs_etr": 6,
+    "v3_target": 36,
     "override": null
    },
    {
@@ -467,12 +506,13 @@
     "pos": "WR",
     "team": "NYJ",
     "rank": 32,
-    "target": 34,
-    "exact": 34.5264,
+    "target": 33,
+    "exact": 33.3343,
     "low": 33,
     "high": 35,
     "etr_half": 28,
     "delta_vs_etr": 6,
+    "v3_target": 34,
     "override": null
    },
    {
@@ -481,12 +521,13 @@
     "pos": "WR",
     "team": "PHI",
     "rank": 33,
-    "target": 34,
-    "exact": 34.1788,
+    "target": 33,
+    "exact": 33.0062,
     "low": 33,
     "high": 35,
     "etr_half": 28,
     "delta_vs_etr": 6,
+    "v3_target": 34,
     "override": null
    },
    {
@@ -495,12 +536,13 @@
     "pos": "WR",
     "team": "LAC",
     "rank": 34,
-    "target": 34,
-    "exact": 33.601,
+    "target": 32,
+    "exact": 32.4609,
     "low": 33,
     "high": 34,
     "etr_half": 28,
     "delta_vs_etr": 6,
+    "v3_target": 34,
     "override": null
    },
    {
@@ -509,12 +551,13 @@
     "pos": "WR",
     "team": "CIN",
     "rank": 35,
-    "target": 33,
-    "exact": 33.5264,
+    "target": 32,
+    "exact": 32.3905,
     "low": 33,
     "high": 34,
     "etr_half": 28,
     "delta_vs_etr": 5,
+    "v3_target": 33,
     "override": null
    },
    {
@@ -523,12 +566,13 @@
     "pos": "TE",
     "team": "ARI",
     "rank": 36,
-    "target": 33,
-    "exact": 33.0903,
+    "target": 32,
+    "exact": 31.979,
     "low": 29,
     "high": 39,
     "etr_half": 32,
     "delta_vs_etr": 1,
+    "v3_target": 33,
     "override": null
    },
    {
@@ -537,12 +581,13 @@
     "pos": "WR",
     "team": "TB",
     "rank": 37,
-    "target": 33,
-    "exact": 32.8267,
+    "target": 32,
+    "exact": 31.7302,
     "low": 32,
     "high": 34,
     "etr_half": 27,
     "delta_vs_etr": 6,
+    "v3_target": 33,
     "override": null
    },
    {
@@ -551,12 +596,13 @@
     "pos": "WR",
     "team": "BAL",
     "rank": 38,
-    "target": 33,
-    "exact": 32.8151,
+    "target": 32,
+    "exact": 31.7193,
     "low": 32,
     "high": 34,
     "etr_half": 28,
     "delta_vs_etr": 5,
+    "v3_target": 33,
     "override": null
    },
    {
@@ -565,12 +611,13 @@
     "pos": "QB",
     "team": "BUF",
     "rank": 39,
-    "target": 33,
-    "exact": 32.6662,
+    "target": 31,
+    "exact": 31.5787,
     "low": 28,
     "high": 34,
     "etr_half": 28,
     "delta_vs_etr": 5,
+    "v3_target": 33,
     "override": null
    },
    {
@@ -579,12 +626,13 @@
     "pos": "WR",
     "team": "DEN",
     "rank": 40,
-    "target": 32,
-    "exact": 32.0078,
+    "target": 31,
+    "exact": 30.9574,
     "low": 31,
     "high": 33,
     "etr_half": 26,
     "delta_vs_etr": 6,
+    "v3_target": 32,
     "override": null
    },
    {
@@ -593,12 +641,13 @@
     "pos": "RB",
     "team": "CHI",
     "rank": 41,
-    "target": 32,
-    "exact": 31.5597,
+    "target": 30,
+    "exact": 30.5345,
     "low": 31,
     "high": 33,
     "etr_half": 26,
     "delta_vs_etr": 6,
+    "v3_target": 32,
     "override": null
    },
    {
@@ -607,12 +656,13 @@
     "pos": "WR",
     "team": "LA",
     "rank": 42,
-    "target": 31,
-    "exact": 30.9347,
+    "target": 30,
+    "exact": 29.9446,
     "low": 30,
     "high": 32,
     "etr_half": 25,
     "delta_vs_etr": 6,
+    "v3_target": 31,
     "override": null
    },
    {
@@ -621,12 +671,13 @@
     "pos": "WR",
     "team": "CAR",
     "rank": 43,
-    "target": 30,
-    "exact": 30.3909,
+    "target": 29,
+    "exact": 29.4314,
     "low": 28,
     "high": 32,
     "etr_half": 24,
     "delta_vs_etr": 6,
+    "v3_target": 30,
     "override": null
    },
    {
@@ -635,12 +686,13 @@
     "pos": "RB",
     "team": "TB",
     "rank": 44,
-    "target": 28,
-    "exact": 27.7463,
+    "target": 27,
+    "exact": 26.9356,
     "low": 27,
     "high": 30,
     "etr_half": 23,
     "delta_vs_etr": 5,
+    "v3_target": 28,
     "override": null
    },
    {
@@ -649,12 +701,13 @@
     "pos": "WR",
     "team": "DET",
     "rank": 45,
-    "target": 27,
-    "exact": 27.0553,
+    "target": 26,
+    "exact": 26.2834,
     "low": 26,
     "high": 29,
     "etr_half": 22,
     "delta_vs_etr": 5,
+    "v3_target": 27,
     "override": null
    },
    {
@@ -663,12 +716,13 @@
     "pos": "WR",
     "team": "CHI",
     "rank": 46,
-    "target": 27,
-    "exact": 26.5812,
+    "target": 26,
+    "exact": 25.836,
     "low": 25,
     "high": 28,
     "etr_half": 21,
     "delta_vs_etr": 6,
+    "v3_target": 27,
     "override": null
    },
    {
@@ -677,12 +731,13 @@
     "pos": "WR",
     "team": "WAS",
     "rank": 47,
-    "target": 26,
-    "exact": 25.8281,
+    "target": 25,
+    "exact": 25.1253,
     "low": 23,
     "high": 28,
     "etr_half": 20,
     "delta_vs_etr": 6,
+    "v3_target": 26,
     "override": null
    },
    {
@@ -692,11 +747,12 @@
     "team": "CHI",
     "rank": 48,
     "target": 25,
-    "exact": 25.4343,
+    "exact": 24.7536,
     "low": 22,
     "high": 31,
     "etr_half": 25,
     "delta_vs_etr": 0,
+    "v3_target": 25,
     "override": null
    },
    {
@@ -705,12 +761,13 @@
     "pos": "RB",
     "team": "NYG",
     "rank": 49,
-    "target": 24,
-    "exact": 24.0472,
+    "target": 23,
+    "exact": 23.4445,
     "low": 21,
     "high": 26,
     "etr_half": 18,
     "delta_vs_etr": 6,
+    "v3_target": 24,
     "override": null
    },
    {
@@ -719,12 +776,13 @@
     "pos": "WR",
     "team": "SF",
     "rank": 50,
-    "target": 24,
-    "exact": 23.6911,
+    "target": 23,
+    "exact": 23.1085,
     "low": 21,
     "high": 26,
     "etr_half": 18,
     "delta_vs_etr": 6,
+    "v3_target": 24,
     "override": null
    },
    {
@@ -733,12 +791,13 @@
     "pos": "RB",
     "team": "HOU",
     "rank": 51,
-    "target": 23,
-    "exact": 23.1546,
+    "target": 22,
+    "exact": 22.6022,
     "low": 21,
     "high": 26,
     "etr_half": 18,
     "delta_vs_etr": 5,
+    "v3_target": 23,
     "override": null
    },
    {
@@ -747,12 +806,13 @@
     "pos": "RB",
     "team": "JAX",
     "rank": 52,
-    "target": 23,
-    "exact": 22.5441,
+    "target": 22,
+    "exact": 22.026,
     "low": 17,
     "high": 26,
     "etr_half": 15,
     "delta_vs_etr": 8,
+    "v3_target": 23,
     "override": null
    },
    {
@@ -761,12 +821,13 @@
     "pos": "WR",
     "team": "BUF",
     "rank": 53,
-    "target": 22,
-    "exact": 21.8482,
+    "target": 21,
+    "exact": 21.3692,
     "low": 20,
     "high": 24,
     "etr_half": 17,
     "delta_vs_etr": 5,
+    "v3_target": 22,
     "override": null
    },
    {
@@ -776,11 +837,12 @@
     "team": "SEA",
     "rank": 54,
     "target": 21,
-    "exact": 21.4611,
+    "exact": 21.0039,
     "low": 20,
     "high": 24,
     "etr_half": 17,
     "delta_vs_etr": 4,
+    "v3_target": 21,
     "override": null
    },
    {
@@ -789,12 +851,13 @@
     "pos": "RB",
     "team": "CLE",
     "rank": 55,
-    "target": 21,
-    "exact": 20.6357,
+    "target": 20,
+    "exact": 20.2249,
     "low": 17,
     "high": 23,
     "etr_half": 15,
     "delta_vs_etr": 6,
+    "v3_target": 21,
     "override": null
    },
    {
@@ -803,12 +866,13 @@
     "pos": "RB",
     "team": "GB",
     "rank": 56,
-    "target": 20,
-    "exact": 19.822,
+    "target": 19,
+    "exact": 19.457,
     "low": 16,
     "high": 23,
     "etr_half": 14,
     "delta_vs_etr": 6,
+    "v3_target": 20,
     "override": null
    },
    {
@@ -818,11 +882,12 @@
     "team": "NE",
     "rank": 57,
     "target": 19,
-    "exact": 19.2218,
+    "exact": 18.8906,
     "low": 17,
     "high": 22,
     "etr_half": 15,
     "delta_vs_etr": 4,
+    "v3_target": 19,
     "override": null
    },
    {
@@ -832,11 +897,12 @@
     "team": "JAX",
     "rank": 58,
     "target": 19,
-    "exact": 18.9504,
+    "exact": 18.6344,
     "low": 16,
     "high": 21,
     "etr_half": 14,
     "delta_vs_etr": 5,
+    "v3_target": 19,
     "override": null
    },
    {
@@ -845,12 +911,13 @@
     "pos": "WR",
     "team": "GB",
     "rank": 59,
-    "target": 19,
-    "exact": 18.7452,
+    "target": 18,
+    "exact": 18.4408,
     "low": 15,
     "high": 22,
     "etr_half": 13,
     "delta_vs_etr": 6,
+    "v3_target": 19,
     "override": null
    },
    {
@@ -860,11 +927,12 @@
     "team": "NE",
     "rank": 60,
     "target": 18,
-    "exact": 18.1046,
+    "exact": 17.8362,
     "low": 15,
     "high": 21,
     "etr_half": 13,
     "delta_vs_etr": 5,
+    "v3_target": 18,
     "override": null
    },
    {
@@ -873,12 +941,13 @@
     "pos": "WR",
     "team": "PIT",
     "rank": 61,
-    "target": 18,
-    "exact": 17.544,
+    "target": 17,
+    "exact": 17.3072,
     "low": 13,
     "high": 21,
     "etr_half": 12,
     "delta_vs_etr": 6,
+    "v3_target": 18,
     "override": null
    },
    {
@@ -888,11 +957,12 @@
     "team": "PIT",
     "rank": 62,
     "target": 15,
-    "exact": 15.5006,
+    "exact": 15.3787,
     "low": 11,
     "high": 19,
     "etr_half": 10,
     "delta_vs_etr": 5,
+    "v3_target": 15,
     "override": null
    },
    {
@@ -902,11 +972,12 @@
     "team": "TEN",
     "rank": 63,
     "target": 15,
-    "exact": 15.3011,
+    "exact": 15.1904,
     "low": 11,
     "high": 18,
     "etr_half": 10,
     "delta_vs_etr": 5,
+    "v3_target": 15,
     "override": null
    },
    {
@@ -916,11 +987,12 @@
     "team": "WAS",
     "rank": 64,
     "target": 15,
-    "exact": 14.982,
+    "exact": 14.8893,
     "low": 13,
     "high": 17,
     "etr_half": 14,
     "delta_vs_etr": 1,
+    "v3_target": 15,
     "override": null
    },
    {
@@ -929,12 +1001,13 @@
     "pos": "QB",
     "team": "BAL",
     "rank": 65,
-    "target": 15,
-    "exact": 14.5874,
+    "target": 14,
+    "exact": 14.5169,
     "low": 11,
     "high": 19,
     "etr_half": 16,
     "delta_vs_etr": -1,
+    "v3_target": 15,
     "override": null
    },
    {
@@ -943,12 +1016,13 @@
     "pos": "WR",
     "team": "CHI",
     "rank": 66,
-    "target": 15,
-    "exact": 14.5671,
+    "target": 14,
+    "exact": 14.4977,
     "low": 10,
     "high": 18,
     "etr_half": 9,
     "delta_vs_etr": 6,
+    "v3_target": 15,
     "override": null
    },
    {
@@ -957,12 +1031,13 @@
     "pos": "RB",
     "team": "PIT",
     "rank": 67,
-    "target": 15,
-    "exact": 14.5394,
+    "target": 14,
+    "exact": 14.4716,
     "low": 11,
     "high": 18,
     "etr_half": 10,
     "delta_vs_etr": 5,
+    "v3_target": 15,
     "override": null
    },
    {
@@ -972,11 +1047,12 @@
     "team": "ARI",
     "rank": 68,
     "target": 14,
-    "exact": 14.5193,
+    "exact": 14.4526,
     "low": 10,
     "high": 18,
     "etr_half": 9,
     "delta_vs_etr": 5,
+    "v3_target": 14,
     "override": null
    },
    {
@@ -986,11 +1062,12 @@
     "team": "TEN",
     "rank": 69,
     "target": 14,
-    "exact": 13.7774,
+    "exact": 13.7524,
     "low": 10,
     "high": 17,
     "etr_half": 9,
     "delta_vs_etr": 5,
+    "v3_target": 14,
     "override": null
    },
    {
@@ -1000,11 +1077,12 @@
     "team": "CIN",
     "rank": 70,
     "target": 14,
-    "exact": 13.7379,
+    "exact": 13.7151,
     "low": 12,
     "high": 15,
     "etr_half": 11,
     "delta_vs_etr": 3,
+    "v3_target": 14,
     "override": null
    },
    {
@@ -1014,11 +1092,12 @@
     "team": "IND",
     "rank": 71,
     "target": 13,
-    "exact": 13.5125,
+    "exact": 13.5024,
     "low": 12,
     "high": 16,
     "etr_half": 13,
     "delta_vs_etr": 0,
+    "v3_target": 13,
     "override": null
    },
    {
@@ -1028,11 +1107,12 @@
     "team": "PHI",
     "rank": 72,
     "target": 13,
-    "exact": 13.0807,
+    "exact": 13.0949,
     "low": 11,
     "high": 15,
     "etr_half": 11,
     "delta_vs_etr": 2,
+    "v3_target": 13,
     "override": null
    },
    {
@@ -1042,11 +1122,12 @@
     "team": "NE",
     "rank": 73,
     "target": 12,
-    "exact": 12.4027,
+    "exact": 12.455,
     "low": 8,
     "high": 15,
     "etr_half": 8,
     "delta_vs_etr": 4,
+    "v3_target": 12,
     "override": null
    },
    {
@@ -1056,11 +1137,12 @@
     "team": "JAX",
     "rank": 74,
     "target": 12,
-    "exact": 12.3837,
+    "exact": 12.4371,
     "low": 11,
     "high": 14,
     "etr_half": 10,
     "delta_vs_etr": 2,
+    "v3_target": 12,
     "override": null
    },
    {
@@ -1069,12 +1151,13 @@
     "pos": "WR",
     "team": "DEN",
     "rank": 75,
-    "target": 9,
-    "exact": 9.418,
+    "target": 10,
+    "exact": 9.6382,
     "low": 3,
     "high": 14,
     "etr_half": 4,
     "delta_vs_etr": 5,
+    "v3_target": 9,
     "override": null
    },
    {
@@ -1084,11 +1167,12 @@
     "team": "DAL",
     "rank": 76,
     "target": 9,
-    "exact": 8.8339,
+    "exact": 9.087,
     "low": 5,
     "high": 12,
     "etr_half": 5,
     "delta_vs_etr": 4,
+    "v3_target": 9,
     "override": null
    },
    {
@@ -1098,11 +1182,12 @@
     "team": "CAR",
     "rank": 77,
     "target": 8,
-    "exact": 8.1128,
+    "exact": 8.4065,
     "low": 2,
     "high": 13,
     "etr_half": 3,
     "delta_vs_etr": 5,
+    "v3_target": 8,
     "override": null
    },
    {
@@ -1112,11 +1197,12 @@
     "team": "GB",
     "rank": 78,
     "target": 8,
-    "exact": 8.0305,
+    "exact": 8.3288,
     "low": 3,
     "high": 12,
     "etr_half": 4,
     "delta_vs_etr": 4,
+    "v3_target": 8,
     "override": null
    },
    {
@@ -1126,11 +1212,12 @@
     "team": "IND",
     "rank": 79,
     "target": 8,
-    "exact": 7.793,
+    "exact": 8.1046,
     "low": 1,
     "high": 13,
     "etr_half": 2,
     "delta_vs_etr": 6,
+    "v3_target": 8,
     "override": null
    },
    {
@@ -1140,11 +1227,12 @@
     "team": "PIT",
     "rank": 80,
     "target": 8,
-    "exact": 7.5977,
+    "exact": 7.9203,
     "low": 1,
     "high": 12,
     "etr_half": 2,
     "delta_vs_etr": 6,
+    "v3_target": 8,
     "override": null
    },
    {
@@ -1154,11 +1242,12 @@
     "team": "DEN",
     "rank": 81,
     "target": 8,
-    "exact": 7.5293,
+    "exact": 7.8558,
     "low": 2,
     "high": 12,
     "etr_half": 3,
     "delta_vs_etr": 5,
+    "v3_target": 8,
     "override": null
    },
    {
@@ -1168,11 +1257,12 @@
     "team": "GB",
     "rank": 82,
     "target": 7,
-    "exact": 6.9823,
+    "exact": 7.3395,
     "low": 6,
     "high": 8,
     "etr_half": 7,
     "delta_vs_etr": 0,
+    "v3_target": 7,
     "override": null
    },
    {
@@ -1182,11 +1272,12 @@
     "team": "SF",
     "rank": 83,
     "target": 7,
-    "exact": 6.7493,
+    "exact": 7.1197,
     "low": 0,
     "high": 12,
     "etr_half": 1,
     "delta_vs_etr": 6,
+    "v3_target": 7,
     "override": null
    },
    {
@@ -1196,11 +1287,12 @@
     "team": "TB",
     "rank": 84,
     "target": 7,
-    "exact": 6.5884,
+    "exact": 6.9678,
     "low": 2,
     "high": 10,
     "etr_half": 3,
     "delta_vs_etr": 4,
+    "v3_target": 7,
     "override": null
    },
    {
@@ -1209,12 +1301,13 @@
     "pos": "WR",
     "team": "MIN",
     "rank": 85,
-    "target": 6,
-    "exact": 6.2574,
+    "target": 7,
+    "exact": 6.6554,
     "low": 5,
     "high": 8,
     "etr_half": 5,
     "delta_vs_etr": 1,
+    "v3_target": 6,
     "override": null
    },
    {
@@ -1224,11 +1317,12 @@
     "team": "CAR",
     "rank": 86,
     "target": 6,
-    "exact": 6.1685,
+    "exact": 6.5715,
     "low": 5,
     "high": 8,
     "etr_half": 7,
     "delta_vs_etr": -1,
+    "v3_target": 6,
     "override": null
    },
    {
@@ -1238,11 +1332,12 @@
     "team": "LA",
     "rank": 87,
     "target": 6,
-    "exact": 5.6888,
+    "exact": 6.1188,
     "low": 1,
     "high": 9,
     "etr_half": 2,
     "delta_vs_etr": 4,
+    "v3_target": 6,
     "override": null
    },
    {
@@ -1252,11 +1347,12 @@
     "team": "LA",
     "rank": 88,
     "target": 5,
-    "exact": 4.9853,
+    "exact": 5.4549,
     "low": 4,
     "high": 7,
     "etr_half": 6,
     "delta_vs_etr": -1,
+    "v3_target": 5,
     "override": null
    },
    {
@@ -1266,11 +1362,12 @@
     "team": "CHI",
     "rank": 89,
     "target": 5,
-    "exact": 4.8644,
+    "exact": 5.3408,
     "low": 3,
     "high": 6,
     "etr_half": 4,
     "delta_vs_etr": 1,
+    "v3_target": 5,
     "override": null
    },
    {
@@ -1280,11 +1377,12 @@
     "team": "ARI",
     "rank": 90,
     "target": 5,
-    "exact": 4.8607,
+    "exact": 5.3373,
     "low": 1,
     "high": 8,
     "etr_half": 2,
     "delta_vs_etr": 3,
+    "v3_target": 5,
     "override": null
    },
    {
@@ -1294,11 +1392,12 @@
     "team": "LAC",
     "rank": 91,
     "target": 5,
-    "exact": 4.6518,
+    "exact": 5.1401,
     "low": 3,
     "high": 7,
     "etr_half": 6,
     "delta_vs_etr": -1,
+    "v3_target": 5,
     "override": null
    },
    {
@@ -1307,12 +1406,13 @@
     "pos": "WR",
     "team": "JAX",
     "rank": 92,
-    "target": 4,
-    "exact": 4.4676,
+    "target": 5,
+    "exact": 4.9663,
     "low": 0,
     "high": 8,
     "etr_half": 1,
     "delta_vs_etr": 3,
+    "v3_target": 4,
     "override": null
    },
    {
@@ -1322,11 +1422,12 @@
     "team": "DEN",
     "rank": 93,
     "target": 4,
-    "exact": 4.1066,
+    "exact": 4.6256,
     "low": 0,
     "high": 7,
     "etr_half": 1,
     "delta_vs_etr": 3,
+    "v3_target": 4,
     "override": null
    },
    {
@@ -1336,11 +1437,12 @@
     "team": "WAS",
     "rank": 94,
     "target": 4,
-    "exact": 4.0806,
+    "exact": 4.6011,
     "low": 0,
     "high": 8,
     "etr_half": 1,
     "delta_vs_etr": 3,
+    "v3_target": 4,
     "override": null
    },
    {
@@ -1350,11 +1452,12 @@
     "team": "DEN",
     "rank": 95,
     "target": 4,
-    "exact": 3.9882,
+    "exact": 4.5139,
     "low": 3,
     "high": 6,
     "etr_half": 5,
     "delta_vs_etr": -1,
+    "v3_target": 4,
     "override": null
    },
    {
@@ -1364,11 +1467,12 @@
     "team": "LAC",
     "rank": 96,
     "target": 4,
-    "exact": 3.9638,
+    "exact": 4.4908,
     "low": 3,
     "high": 5,
     "etr_half": 4,
     "delta_vs_etr": 0,
+    "v3_target": 4,
     "override": null
    },
    {
@@ -1378,11 +1482,12 @@
     "team": "DET",
     "rank": 97,
     "target": 4,
-    "exact": 3.9365,
+    "exact": 4.4651,
     "low": 3,
     "high": 5,
     "etr_half": 4,
     "delta_vs_etr": 0,
+    "v3_target": 4,
     "override": null
    },
    {
@@ -1392,11 +1497,12 @@
     "team": "DET",
     "rank": 98,
     "target": 4,
-    "exact": 3.5356,
+    "exact": 4.0867,
     "low": 0,
     "high": 6,
     "etr_half": 1,
     "delta_vs_etr": 3,
+    "v3_target": 4,
     "override": null
    },
    {
@@ -1405,12 +1511,13 @@
     "pos": "WR",
     "team": "KC",
     "rank": 99,
-    "target": 3,
-    "exact": 3.0869,
+    "target": 4,
+    "exact": 3.6633,
     "low": 1,
     "high": 6,
     "etr_half": 2,
     "delta_vs_etr": 1,
+    "v3_target": 3,
     "override": null
    },
    {
@@ -1420,11 +1527,12 @@
     "team": "WAS",
     "rank": 100,
     "target": 3,
-    "exact": 2.9946,
+    "exact": 3.5762,
     "low": 0,
     "high": 5,
     "etr_half": 1,
     "delta_vs_etr": 2,
+    "v3_target": 3,
     "override": null
    },
    {
@@ -1434,11 +1542,12 @@
     "team": "TEN",
     "rank": 101,
     "target": 3,
-    "exact": 2.9266,
+    "exact": 3.512,
     "low": 0,
     "high": 5,
     "etr_half": 1,
     "delta_vs_etr": 2,
+    "v3_target": 3,
     "override": null
    },
    {
@@ -1448,11 +1557,12 @@
     "team": "WAS",
     "rank": 102,
     "target": 3,
-    "exact": 2.906,
+    "exact": 3.4925,
     "low": 2,
     "high": 4,
     "etr_half": 3,
     "delta_vs_etr": 0,
+    "v3_target": 3,
     "override": null
    },
    {
@@ -1462,11 +1572,12 @@
     "team": "IND",
     "rank": 103,
     "target": 3,
-    "exact": 2.8167,
+    "exact": 3.4083,
     "low": 2,
     "high": 4,
     "etr_half": 3,
     "delta_vs_etr": 0,
+    "v3_target": 3,
     "override": null
    },
    {
@@ -1476,11 +1587,12 @@
     "team": "BUF",
     "rank": 104,
     "target": 3,
-    "exact": 2.7894,
+    "exact": 3.3825,
     "low": 0,
     "high": 5,
     "etr_half": 1,
     "delta_vs_etr": 2,
+    "v3_target": 3,
     "override": null
    },
    {
@@ -1490,11 +1602,12 @@
     "team": "NE",
     "rank": 105,
     "target": 3,
-    "exact": 2.5271,
+    "exact": 3.135,
     "low": 0,
     "high": 5,
     "etr_half": 1,
     "delta_vs_etr": 2,
+    "v3_target": 3,
     "override": null
    },
    {
@@ -1503,12 +1616,13 @@
     "pos": "TE",
     "team": "ATL",
     "rank": 106,
-    "target": 2,
-    "exact": 2.4579,
+    "target": 3,
+    "exact": 3.0696,
     "low": 1,
     "high": 4,
     "etr_half": 2,
     "delta_vs_etr": 0,
+    "v3_target": 2,
     "override": null
    },
    {
@@ -1517,12 +1631,13 @@
     "pos": "TE",
     "team": "CLE",
     "rank": 107,
-    "target": 2,
-    "exact": 2.1179,
+    "target": 3,
+    "exact": 2.7488,
     "low": 1,
     "high": 3,
     "etr_half": 2,
     "delta_vs_etr": 0,
+    "v3_target": 2,
     "override": null
    },
    {
@@ -1532,11 +1647,12 @@
     "team": "KC",
     "rank": 108,
     "target": 2,
-    "exact": 1.9941,
+    "exact": 2.6319,
     "low": 1,
     "high": 3,
     "etr_half": 3,
     "delta_vs_etr": -1,
+    "v3_target": 2,
     "override": null
    },
    {
@@ -1545,12 +1661,13 @@
     "pos": "TE",
     "team": "KC",
     "rank": 109,
-    "target": 1,
-    "exact": 1.4897,
+    "target": 2,
+    "exact": 2.1559,
     "low": 0,
     "high": 3,
     "etr_half": 1,
     "delta_vs_etr": 0,
+    "v3_target": 1,
     "override": null
    },
    {
@@ -1559,12 +1676,13 @@
     "pos": "QB",
     "team": "TB",
     "rank": 110,
-    "target": 1,
-    "exact": 0.9971,
+    "target": 2,
+    "exact": 1.691,
     "low": 0,
     "high": 2,
     "etr_half": 2,
     "delta_vs_etr": -1,
+    "v3_target": 1,
     "override": null
    },
    {
@@ -1573,12 +1691,13 @@
     "pos": "RB",
     "team": "MIN",
     "rank": 111,
-    "target": 1,
-    "exact": 0.9971,
+    "target": 2,
+    "exact": 1.691,
     "low": 0,
     "high": 2,
     "etr_half": 2,
     "delta_vs_etr": -1,
+    "v3_target": 1,
     "override": null
    },
    {
@@ -1587,12 +1706,13 @@
     "pos": "WR",
     "team": "CLE",
     "rank": 112,
-    "target": 1,
-    "exact": 0.9971,
+    "target": 2,
+    "exact": 1.691,
     "low": 0,
     "high": 2,
     "etr_half": 2,
     "delta_vs_etr": -1,
+    "v3_target": 1,
     "override": null
    },
    {
@@ -1601,12 +1721,13 @@
     "pos": "RB",
     "team": "TB",
     "rank": 113,
-    "target": 1,
-    "exact": 0.9971,
+    "target": 2,
+    "exact": 1.691,
     "low": 0,
     "high": 4,
     "etr_half": 2,
     "delta_vs_etr": -1,
+    "v3_target": 1,
     "override": null
    },
    {
@@ -1615,12 +1736,13 @@
     "pos": "RB",
     "team": "CHI",
     "rank": 114,
-    "target": 1,
-    "exact": 0.9971,
+    "target": 2,
+    "exact": 1.691,
     "low": 0,
     "high": 2,
     "etr_half": 2,
     "delta_vs_etr": -1,
+    "v3_target": 1,
     "override": null
    },
    {
@@ -1629,12 +1751,13 @@
     "pos": "QB",
     "team": "MIA",
     "rank": 115,
-    "target": 1,
-    "exact": 0.9971,
+    "target": 2,
+    "exact": 1.691,
     "low": 0,
     "high": 2,
     "etr_half": 2,
     "delta_vs_etr": -1,
+    "v3_target": 1,
     "override": null
    },
    {
@@ -1643,12 +1766,13 @@
     "pos": "RB",
     "team": "GB",
     "rank": 116,
-    "target": 1,
-    "exact": 0.9971,
+    "target": 2,
+    "exact": 1.691,
     "low": 0,
     "high": 2,
     "etr_half": 2,
     "delta_vs_etr": -1,
+    "v3_target": 1,
     "override": null
    },
    {
@@ -1658,11 +1782,12 @@
     "team": "JAX",
     "rank": 117,
     "target": 1,
-    "exact": 0.8898,
+    "exact": 1.5897,
     "low": 0,
     "high": 2,
     "etr_half": 2,
     "delta_vs_etr": -1,
+    "v3_target": 1,
     "override": null
    },
    {
@@ -1672,11 +1797,12 @@
     "team": "SF",
     "rank": 118,
     "target": 1,
-    "exact": 0.88,
+    "exact": 1.5805,
     "low": 0,
     "high": 2,
     "etr_half": 1,
     "delta_vs_etr": 0,
+    "v3_target": 1,
     "override": null
    },
    {
@@ -1686,11 +1812,12 @@
     "team": "PHI",
     "rank": 119,
     "target": 1,
-    "exact": 0.7546,
+    "exact": 1.4622,
     "low": 0,
     "high": 2,
     "etr_half": 1,
     "delta_vs_etr": 0,
+    "v3_target": 1,
     "override": null
    },
    {
@@ -1700,11 +1827,12 @@
     "team": "BAL",
     "rank": 120,
     "target": 1,
-    "exact": 0.7509,
+    "exact": 1.4587,
     "low": 0,
     "high": 2,
     "etr_half": 1,
     "delta_vs_etr": 0,
+    "v3_target": 1,
     "override": null
    },
    {
@@ -1714,11 +1842,12 @@
     "team": "DAL",
     "rank": 121,
     "target": 1,
-    "exact": 0.6968,
+    "exact": 1.4076,
     "low": 0,
     "high": 2,
     "etr_half": 0,
     "delta_vs_etr": 1,
+    "v3_target": 1,
     "override": null
    },
    {
@@ -1727,12 +1856,13 @@
     "pos": "TE",
     "team": "BUF",
     "rank": 122,
-    "target": 0,
-    "exact": 0.0413,
+    "target": 1,
+    "exact": 0.789,
     "low": 0,
     "high": 1,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -1741,12 +1871,13 @@
     "pos": "RB",
     "team": "MIN",
     "rank": 123,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -1761,6 +1892,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -1775,6 +1907,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -1789,6 +1922,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -1797,12 +1931,13 @@
     "pos": "WR",
     "team": "NYJ",
     "rank": 127,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -1811,12 +1946,13 @@
     "pos": "TE",
     "team": "SEA",
     "rank": 128,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -1825,12 +1961,13 @@
     "pos": "RB",
     "team": "NO",
     "rank": 129,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -1845,6 +1982,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -1859,6 +1997,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -1873,6 +2012,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -1887,6 +2027,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -1895,12 +2036,13 @@
     "pos": "DST",
     "team": "ATL",
     "rank": 134,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -1915,6 +2057,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -1923,12 +2066,13 @@
     "pos": "DST",
     "team": "BAL",
     "rank": 136,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -1943,6 +2087,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -1957,6 +2102,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -1971,6 +2117,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -1979,12 +2126,13 @@
     "pos": "RB",
     "team": "NYJ",
     "rank": 140,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -1999,6 +2147,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2013,6 +2162,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2027,6 +2177,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2041,6 +2192,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2049,12 +2201,13 @@
     "pos": "RB",
     "team": "ATL",
     "rank": 145,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2069,6 +2222,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2083,6 +2237,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2097,6 +2252,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2105,12 +2261,13 @@
     "pos": "DST",
     "team": "BUF",
     "rank": 149,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2125,6 +2282,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2139,6 +2297,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2147,12 +2306,13 @@
     "pos": "WR",
     "team": "MIA",
     "rank": 152,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2161,12 +2321,13 @@
     "pos": "WR",
     "team": "TEN",
     "rank": 153,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2181,6 +2342,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2195,6 +2357,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2209,6 +2372,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2223,6 +2387,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2237,6 +2402,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2251,6 +2417,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2265,6 +2432,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2273,12 +2441,13 @@
     "pos": "TE",
     "team": "WAS",
     "rank": 161,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2293,6 +2462,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2307,6 +2477,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2321,6 +2492,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2329,12 +2501,13 @@
     "pos": "RB",
     "team": "JAX",
     "rank": 165,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2349,6 +2522,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2363,6 +2537,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2371,12 +2546,13 @@
     "pos": "QB",
     "team": "HOU",
     "rank": 168,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2391,6 +2567,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2399,12 +2576,13 @@
     "pos": "DST",
     "team": "CLE",
     "rank": 170,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2419,6 +2597,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2433,6 +2612,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2447,6 +2627,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2455,12 +2636,13 @@
     "pos": "WR",
     "team": "SEA",
     "rank": 174,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2475,6 +2657,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2489,6 +2672,7 @@
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2503,6 +2687,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2517,6 +2702,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2525,12 +2711,13 @@
     "pos": "QB",
     "team": "IND",
     "rank": 179,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2545,6 +2732,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2559,6 +2747,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2567,12 +2756,13 @@
     "pos": "WR",
     "team": "NYG",
     "rank": 182,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2587,6 +2777,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2601,6 +2792,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2609,12 +2801,13 @@
     "pos": "TE",
     "team": "LAC",
     "rank": 185,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2629,6 +2822,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2637,12 +2831,13 @@
     "pos": "WR",
     "team": "SF",
     "rank": 187,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2651,12 +2846,13 @@
     "pos": "WR",
     "team": "SF",
     "rank": 188,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2671,6 +2867,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2685,6 +2882,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2699,6 +2897,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2713,6 +2912,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2721,12 +2921,13 @@
     "pos": "DST",
     "team": "DEN",
     "rank": 193,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2735,12 +2936,13 @@
     "pos": "WR",
     "team": "CLE",
     "rank": 194,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2755,6 +2957,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2769,6 +2972,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2783,6 +2987,7 @@
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2797,6 +3002,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2811,6 +3017,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2825,6 +3032,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2839,6 +3047,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2853,6 +3062,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2867,6 +3077,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2881,6 +3092,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2895,6 +3107,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2909,6 +3122,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2923,6 +3137,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2937,6 +3152,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2951,6 +3167,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2959,12 +3176,13 @@
     "pos": "RB",
     "team": "CLE",
     "rank": 210,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2979,6 +3197,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -2993,6 +3212,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3007,6 +3227,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3021,6 +3242,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3035,6 +3257,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3049,6 +3272,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3063,6 +3287,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3077,6 +3302,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3091,6 +3317,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3105,6 +3332,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3119,6 +3347,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3133,6 +3362,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3147,6 +3377,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3155,12 +3386,13 @@
     "pos": "TE",
     "team": "DEN",
     "rank": 224,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3175,6 +3407,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3189,6 +3422,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3203,6 +3437,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3217,6 +3452,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3225,12 +3461,13 @@
     "pos": "RB",
     "team": "SEA",
     "rank": 229,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3245,6 +3482,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3259,6 +3497,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3267,12 +3506,13 @@
     "pos": "TE",
     "team": "MIA",
     "rank": 232,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3287,6 +3527,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3295,12 +3536,13 @@
     "pos": "DST",
     "team": "HOU",
     "rank": 234,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3309,12 +3551,13 @@
     "pos": "TE",
     "team": "NE",
     "rank": 235,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3329,6 +3572,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3343,6 +3587,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3357,6 +3602,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3371,6 +3617,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3385,6 +3632,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3399,6 +3647,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3407,12 +3656,13 @@
     "pos": "TE",
     "team": "NYG",
     "rank": 242,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3427,6 +3677,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3435,12 +3686,13 @@
     "pos": "RB",
     "team": "DET",
     "rank": 244,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3455,6 +3707,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3469,6 +3722,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3483,6 +3737,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3497,6 +3752,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3505,12 +3761,13 @@
     "pos": "QB",
     "team": "ARI",
     "rank": 249,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3519,12 +3776,13 @@
     "pos": "WR",
     "team": "ATL",
     "rank": 250,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3539,6 +3797,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3553,6 +3812,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3561,12 +3821,13 @@
     "pos": "WR",
     "team": "CAR",
     "rank": 253,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3575,12 +3836,13 @@
     "pos": "WR",
     "team": "TB",
     "rank": 254,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3589,12 +3851,13 @@
     "pos": "WR",
     "team": "LV",
     "rank": 255,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3609,6 +3872,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3623,6 +3887,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3637,6 +3902,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3645,12 +3911,13 @@
     "pos": "RB",
     "team": "ARI",
     "rank": 259,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3665,6 +3932,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3679,6 +3947,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3687,12 +3956,13 @@
     "pos": "WR",
     "team": "MIN",
     "rank": 262,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3707,6 +3977,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3721,6 +3992,7 @@
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3729,12 +4001,13 @@
     "pos": "QB",
     "team": "NYG",
     "rank": 265,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 2,
     "etr_half": 2,
     "delta_vs_etr": -2,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3743,12 +4016,13 @@
     "pos": "RB",
     "team": "DAL",
     "rank": 266,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3763,6 +4037,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3777,6 +4052,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3791,6 +4067,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3799,12 +4076,13 @@
     "pos": "WR",
     "team": "CLE",
     "rank": 270,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3819,6 +4097,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3827,12 +4106,13 @@
     "pos": "QB",
     "team": "MIN",
     "rank": 272,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3847,6 +4127,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3861,6 +4142,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3875,6 +4157,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3889,6 +4172,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3897,12 +4181,13 @@
     "pos": "RB",
     "team": "SF",
     "rank": 277,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3911,12 +4196,13 @@
     "pos": "QB",
     "team": "GB",
     "rank": 278,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3931,6 +4217,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3939,12 +4226,13 @@
     "pos": "WR",
     "team": "NO",
     "rank": 280,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3959,6 +4247,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3973,6 +4262,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -3987,6 +4277,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4001,6 +4292,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4009,12 +4301,13 @@
     "pos": "RB",
     "team": "BAL",
     "rank": 285,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4029,6 +4322,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4043,6 +4337,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4057,6 +4352,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4065,12 +4361,13 @@
     "pos": "RB",
     "team": "SF",
     "rank": 289,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4079,12 +4376,13 @@
     "pos": "RB",
     "team": "PIT",
     "rank": 290,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4099,6 +4397,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4113,6 +4412,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4127,6 +4427,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4135,12 +4436,13 @@
     "pos": "RB",
     "team": "WAS",
     "rank": 294,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4149,12 +4451,13 @@
     "pos": "DST",
     "team": "KC",
     "rank": 295,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4169,6 +4472,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4177,12 +4481,13 @@
     "pos": "RB",
     "team": "LAC",
     "rank": 297,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4197,6 +4502,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4211,6 +4517,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4225,6 +4532,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4233,12 +4541,13 @@
     "pos": "TE",
     "team": "NYJ",
     "rank": 301,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4247,12 +4556,13 @@
     "pos": "WR",
     "team": "BUF",
     "rank": 302,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4267,6 +4577,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4281,6 +4592,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4295,6 +4607,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4309,6 +4622,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4323,6 +4637,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4337,6 +4652,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4345,12 +4661,13 @@
     "pos": "QB",
     "team": "MIN",
     "rank": 309,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4359,12 +4676,13 @@
     "pos": "DST",
     "team": "LA",
     "rank": 310,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4379,6 +4697,7 @@
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4393,6 +4712,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4407,6 +4727,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4421,6 +4742,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4435,6 +4757,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4449,6 +4772,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4463,6 +4787,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4477,6 +4802,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4485,12 +4811,13 @@
     "pos": "WR",
     "team": "PHI",
     "rank": 319,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4505,6 +4832,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4519,6 +4847,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4533,6 +4862,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4547,6 +4877,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4561,6 +4892,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4575,6 +4907,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4583,12 +4916,13 @@
     "pos": "WR",
     "team": "PHI",
     "rank": 326,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4597,12 +4931,13 @@
     "pos": "WR",
     "team": "DEN",
     "rank": 327,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4617,6 +4952,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4625,12 +4961,13 @@
     "pos": "WR",
     "team": "GB",
     "rank": 329,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4645,6 +4982,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4659,6 +4997,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4673,6 +5012,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4687,6 +5027,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4701,6 +5042,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4715,6 +5057,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4723,12 +5066,13 @@
     "pos": "RB",
     "team": "LV",
     "rank": 336,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4737,12 +5081,13 @@
     "pos": "DST",
     "team": "MIN",
     "rank": 337,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4757,6 +5102,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4771,6 +5117,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4779,12 +5126,13 @@
     "pos": "RB",
     "team": "NYG",
     "rank": 340,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4799,6 +5147,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4813,6 +5162,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4827,6 +5177,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4841,6 +5192,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4855,6 +5207,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4869,6 +5222,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4883,6 +5237,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4897,6 +5252,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4911,6 +5267,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4925,6 +5282,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4933,12 +5291,13 @@
     "pos": "RB",
     "team": "MIA",
     "rank": 351,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4947,12 +5306,13 @@
     "pos": "WR",
     "team": "NYJ",
     "rank": 352,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4967,6 +5327,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4981,6 +5342,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -4995,6 +5357,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5009,6 +5372,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5017,12 +5381,13 @@
     "pos": "DST",
     "team": "PHI",
     "rank": 357,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5037,6 +5402,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5051,6 +5417,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5059,12 +5426,13 @@
     "pos": "DST",
     "team": "PIT",
     "rank": 360,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5079,6 +5447,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5087,12 +5456,13 @@
     "pos": "WR",
     "team": "SEA",
     "rank": 362,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 2,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5101,12 +5471,13 @@
     "pos": "WR",
     "team": "BAL",
     "rank": 363,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5115,12 +5486,13 @@
     "pos": "RB",
     "team": "BUF",
     "rank": 364,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5135,6 +5507,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5149,6 +5522,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5163,6 +5537,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5171,12 +5546,13 @@
     "pos": "WR",
     "team": "DAL",
     "rank": 368,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5191,6 +5567,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5199,12 +5576,13 @@
     "pos": "QB",
     "team": "SEA",
     "rank": 370,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5219,6 +5597,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5233,6 +5612,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5247,6 +5627,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5255,12 +5636,13 @@
     "pos": "DST",
     "team": "SEA",
     "rank": 374,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5275,6 +5657,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5289,6 +5672,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5297,12 +5681,13 @@
     "pos": "DST",
     "team": "SF",
     "rank": 377,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5317,6 +5702,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5331,6 +5717,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5345,6 +5732,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5353,12 +5741,13 @@
     "pos": "RB",
     "team": "CIN",
     "rank": 381,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5373,6 +5762,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5381,12 +5771,13 @@
     "pos": "RB",
     "team": "PHI",
     "rank": 383,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5401,6 +5792,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5415,6 +5807,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5429,6 +5822,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5443,6 +5837,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5451,12 +5846,13 @@
     "pos": "DST",
     "team": "TB",
     "rank": 388,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5465,12 +5861,13 @@
     "pos": "WR",
     "team": "TB",
     "rank": 389,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5485,6 +5882,7 @@
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5493,12 +5891,13 @@
     "pos": "TE",
     "team": "LA",
     "rank": 391,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5513,6 +5912,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5527,6 +5927,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5541,6 +5942,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5555,6 +5957,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5563,12 +5966,13 @@
     "pos": "TE",
     "team": "MIN",
     "rank": 396,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5583,6 +5987,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5597,6 +6002,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5605,12 +6011,13 @@
     "pos": "WR",
     "team": "JAX",
     "rank": 399,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5619,12 +6026,13 @@
     "pos": "WR",
     "team": "LV",
     "rank": 400,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5633,12 +6041,13 @@
     "pos": "WR",
     "team": "LAC",
     "rank": 401,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5653,6 +6062,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5667,6 +6077,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5681,6 +6092,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5695,6 +6107,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5709,6 +6122,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5723,6 +6137,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5731,12 +6146,13 @@
     "pos": "RB",
     "team": "TEN",
     "rank": 408,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5745,12 +6161,13 @@
     "pos": "RB",
     "team": "ARI",
     "rank": 409,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5765,6 +6182,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5773,12 +6191,13 @@
     "pos": "QB",
     "team": "NO",
     "rank": 411,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5793,6 +6212,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5801,12 +6221,13 @@
     "pos": "RB",
     "team": "NYG",
     "rank": 413,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5821,6 +6242,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5835,6 +6257,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5849,6 +6272,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5857,12 +6281,13 @@
     "pos": "RB",
     "team": "HOU",
     "rank": 417,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 1,
     "delta_vs_etr": -1,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5877,6 +6302,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5891,6 +6317,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5905,6 +6332,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5913,12 +6341,13 @@
     "pos": "RB",
     "team": "SEA",
     "rank": 421,
-    "target": 0,
-    "exact": 0,
+    "target": 1,
+    "exact": 0.75,
     "low": 0,
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5933,6 +6362,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5947,6 +6377,7 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
    },
    {
@@ -5961,8 +6392,29 @@
     "high": 0,
     "etr_half": 0,
     "delta_vs_etr": 0,
+    "v3_target": 0,
     "override": null
+   },
+   {
+    "id": "00-0038130",
+    "player": "Jayden Higgins",
+    "pos": "WR",
+    "team": "HOU",
+    "rank": 425,
+    "target": 0,
+    "exact": 0,
+    "low": 0,
+    "high": 0,
+    "etr_half": null,
+    "delta_vs_etr": null,
+    "v3_target": 0,
+    "override": {
+     "status": "injury override",
+     "reason": "season-ending ACL"
+    }
    }
-  ]
+  ],
+  "prior_model_id": "datadawgs-ppn-auction-2026-v3",
+  "interpretation": "DataDawg$ is an opening-state auction target built from ETR player values, translated to this league’s scoring, roster depth, $2,800 budget, and expected auction spending across 210 roster spots. It is a planning value, not a guaranteed clearing price or an automatic maximum bid. Reassess after major purchases based on remaining budget and roster needs."
  }
 }

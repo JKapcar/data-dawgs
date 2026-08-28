@@ -152,3 +152,45 @@ Translate ETR 12-team half-PPR auction values into the PPN league without replac
 - Recompute after keeper names/costs are known.
 - Track actual clearing prices and season outcomes; estimate pass-through and tail concentration next season.
 - A source hash, row count, total-budget or duplicate-ID failure blocks publication.
+
+## v4 — the practical auction curve
+
+v3 allocated the whole $2800 by value over replacement, which concentrates it on the
+~121 players who clear the replacement line and gives $0 to everyone else. That is a correct
+valuation and a poor bid sheet: 210 roster spots get bought on draft night, and a
+$0-minimum room still spends real money on mandatory starters, D/ST and late nominations.
+
+v4 takes a **soft behavioural reserve of $0.75 per auctioned slot** off the premium
+pool and hands it back across the 210 slots:
+
+    soft_reserve_total     = 210 x 0.75 = 157.5
+    remaining_premium_pool = 2800 - 157.5 = 2642.5
+    premium_scale          = 2642.5 / 2800 = 0.94375
+
+    new_exact = 0.75 + 0.94375 * v3_exact   (inside the 210-slot pool)
+    new_exact = 0                                (outside it)
+
+Integers come from Hamilton/largest-remainder to exactly $2800, tie-broken on the exact
+value and then the ETR rank.
+
+**The $0.75 is not a minimum bid.** $0 bids stay legal, no $1 floor is imposed, and
+every published integer falls out of the rounding. It models where a real room's money goes in
+aggregate, not what any single player must cost.
+
+**This is a dollar-allocation patch, not a ranking.** ETR still decides who is better than whom.
+The transform is monotone in the v3 exact value, so ETR order is preserved exactly; only
+integer-dollar ties move.
+
+**The 210-slot pool** is 26 QB, 68 RB, 78 WR, 24 TE, 14 DST.
+ETR leads where ETR speaks: every player it valued above zero is in the pool, in its order. Below
+roughly player 122 the ETR snapshot carries etr_half 0 for everyone and the rows sit in
+*alphabetical* order, so selecting on that rank would seat James Conner and CJ Stroud and bench
+Najee Harris and Geno Smith purely on spelling. The remaining slots are therefore filled by the
+site's own board rank, which is projection-driven and continuous. No outside vendor, ADP or
+consensus is consulted — board rank only orders players ETR itself declined to separate.
+
+**Jayden Higgins** is an explicit row at $0 under a season-ending ACL override, taking the payload
+from v3's 424 rows to 425. He is excluded from the pool: a player who cannot be rostered does not
+occupy one of the 210 slots the reserve is spread across.
+
+> DataDawg$ is an opening-state auction target built from ETR player values, translated to this league’s scoring, roster depth, $2,800 budget, and expected auction spending across 210 roster spots. It is a planning value, not a guaranteed clearing price or an automatic maximum bid. Reassess after major purchases based on remaining budget and roster needs.

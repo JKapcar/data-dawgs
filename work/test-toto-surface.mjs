@@ -182,9 +182,20 @@ ok(!/\n` \+ \(window\.DDBotScan/.test(wr),
     const m = /(SEED|POOL|window\.DD_POOL) ?= ?\[\{"name"/.exec(html);
     ok(m, `${f}: has an inline player pool`);
     const arr = JSON.parse(html.slice(html.indexOf('[{"name"', m.index)).match(/^\[[\s\S]*?\}\]/)[0]);
-    const priced = arr.filter(r => r.dd !== undefined).length;
-    ok(priced === 121,
-      `${f}: pool carries the DataDawg$ column (${priced} priced, expected 121) — without it the page cannot chart what the sheet shows`);
+    /* v4 carries the column on all 425 rows of the ETR universe, not just the ones with a
+       price: an explicit $0 says "the curve looked at him and said nothing", which is a
+       different claim from a missing key, and the pages render both as a dash either way.
+       What must match across surfaces is the number of PRICED rows — 210, one per auctioned
+       roster spot — because that is the figure the inflation maths divides by. */
+    const carried = arr.filter(r => r.dd !== undefined).length;
+    const priced = arr.filter(r => (r.dd || 0) > 0).length;
+    ok(carried >= 400,
+      `${f}: pool carries the DataDawg$ column (${carried} rows) — without it the page cannot chart what the sheet shows`);
+    ok(priced === 210,
+      `${f}: ${priced} priced, expected 210 — one per auctioned roster spot, or two surfaces disagree about what a dollar is`);
+    const sum = arr.reduce((a, r) => a + (r.dd || 0), 0);
+    ok(sum === 2800,
+      `${f}: DataDawg$ sums to $${sum}, not $2,800 — inflation would not start at 1.00x`);
   }
   for(const f of ["dataviz.html","bigboard.html","auction.html","report.html"]){
     const html = read(f);
