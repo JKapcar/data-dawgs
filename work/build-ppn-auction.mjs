@@ -117,6 +117,15 @@ for (const [from, to] of [
    "<h1>DataDawg$ <span>Target $ — our conversion, not the market's</span></h1>"],
   ["const URL='data/ppn-auction-values.json';", "const URL='data/datadawg-dollars-values.json';"],
   ["Source: data/ppn-auction-values.json", "Source: data/datadawg-dollars-values.json"],
+  /* ⚠️ THE PAGE BODY MUST NOT SCROLL SIDEWAYS. th/td are white-space:nowrap, so at 390px the
+     table lays out 696px wide and drags the header, the disclaimer and the controls off-screen
+     with it — the whole page slides, not just the grid. Give the table its own scroller so the
+     wide thing scrolls and the page around it stays put. Measured in Chromium at 390x844:
+     scrollWidth 696 vs clientWidth 390 before, equal after. */
+  ["<table>", '<div class="twrap"><table>'],
+  ["</table>", "</table></div>"],
+  ["  table{width:100%;border-collapse:collapse}",
+   "  table{width:100%;border-collapse:collapse}\n  .twrap{overflow-x:auto;-webkit-overflow-scrolling:touch}"],
   /* The private localStorage key ('ppn_gone') is deliberately NOT renamed: it has a read and
      a write site, and renaming one of a pair splits the drafted-players set in half. It is
      invisible to the reader and carries no product name. */

@@ -129,6 +129,20 @@ ok(/ctx\(\)\{\n\s+return window\.DDBotScan/.test(wr),
 ok(!/\n` \+ \(window\.DDBotScan/.test(wr),
   "fantasy-warroom.html no longer concatenates the reader onto sys");
 
+/* ---- 6b. the assistant must be REACHABLE, not just wired ----------------- */
+/* Reported from a phone: #ddLeagueIndicator (right/bottom 12px, up to full width on a
+   long league name) sat at z-index 9998 over #ddbLaunch and #ddmeChip at 58, so in a
+   league, on a phone, Toto and the team picker could not be tapped at all. Auditing that
+   he is wired in says nothing about whether anyone can reach him. */
+{
+  const css = (lib.match(/#ddLeagueIndicator\{[^}]*\}/) || [""])[0];
+  const z = (css.match(/z-index:(\d+)/) || [])[1];
+  ok(z && Number(z) < 58,
+    `league bar z-index is ${z} — it must sit under #ddbLaunch/#ddmeChip (58), the team panel (59) and the dock (60)`);
+  ok(/body #ddbLaunch,body #ddmeChip\{bottom:\d+px\}/.test(lib),
+    "the chips lift clear of the league bar's strip, and do it with `body #id` so page-injected mobile rules cannot win on document order");
+}
+
 /* ---- 7. the service worker was re-keyed --------------------------------- */
 const files = [...fs.readdirSync(ROOT).filter(f => f.endsWith(".html")).sort(),
                ...fs.readdirSync(ROOT).filter(f => f.endsWith(".js") && f !== "sw.js").sort()];

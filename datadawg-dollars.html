@@ -19,6 +19,7 @@
   .controls input,.controls select,.controls button{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font:13px var(--sans)}
   .controls button.on{border-color:var(--tgt);color:var(--tgt)}
   table{width:100%;border-collapse:collapse}
+  .twrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
   th,td{padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
   th{position:sticky;top:53px;background:var(--panel);color:var(--mute);font:600 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.08em;cursor:pointer;text-align:left;user-select:none}
   th.num,td.num{text-align:right;font-family:var(--mono)}
@@ -50,7 +51,7 @@
   <button id="reset">Reset drafted</button>
   <span class="meta" id="count"></span>
 </div>
-<table>
+<div class="twrap"><table>
   <thead><tr>
     <th data-k="rank" class="num">#</th>
     <th data-k="player">Player</th>
@@ -63,7 +64,7 @@
     <th data-k="delta_vs_etr" class="num">Δ ETR</th>
   </tr></thead>
   <tbody id="tb"></tbody>
-</table>
+</table></div>
 <div class="foot" id="foot"></div>
 <script>
 (async function(){
