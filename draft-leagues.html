@@ -10,8 +10,15 @@
 <meta name="theme-color" content="#f2ecdf" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#161009">
   <title>Draft Leagues · Data Dawgs</title>
+  <script>
+    /* The dashboard embeds this page. Resolve the shared theme before first paint so a
+       light dashboard never flashes a dark rectangle while the frame is loading. */
+    try{document.documentElement.setAttribute("data-theme",localStorage.getItem("dd-theme2")||"dark");}catch(e){}
+  </script>
   <style>
-    :root{--ink:#f6f1e7;--muted:#aaa397;--paper:#161009;--card:#241f19;--line:#36332d;--orange:#f26200;--green:#55c693;--red:#eb7777}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}a{color:inherit}.shell{width:min(1080px,calc(100% - 32px));margin:0 auto;padding:28px 0 72px}.top{display:flex;align-items:center;gap:14px;margin-bottom:28px}.brand{font-weight:900;letter-spacing:.08em;text-decoration:none}.brand b{color:var(--orange)}h1{font-size:clamp(30px,6vw,58px);line-height:1;margin:0 0 10px}h2{font-size:20px;margin:0 0 16px}.lead,.muted{color:var(--muted)}.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:26px}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}.wide{grid-column:1/-1}.league{display:flex;align-items:center;gap:14px;padding:14px 0;border-top:1px solid var(--line)}.league:first-child{border-top:0}.league-main{min-width:0;flex:1}.league-name{font-weight:800;font-size:17px}.meta{color:var(--muted);font-size:13px;text-transform:capitalize}.actions{display:flex;gap:8px;flex-wrap:wrap}button,.button,input,select{font:inherit}button,.button{border:1px solid var(--line);background:#27241f;color:var(--ink);padding:9px 12px;border-radius:8px;cursor:pointer;text-decoration:none;font-weight:750}button.primary{background:var(--orange);border-color:var(--orange);color:#111}button.ghost{background:transparent}button.danger{color:var(--red)}label{display:block;font-weight:750;margin:12px 0 5px}input,select{width:100%;border:1px solid var(--line);background:#0d0d0c;color:var(--ink);padding:10px 11px;border-radius:8px}input:focus,select:focus{outline:2px solid var(--orange);outline-offset:1px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.teams{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;max-height:330px;overflow:auto;padding-right:4px}.teamrow{display:grid;grid-template-columns:1fr 1fr;gap:7px}.teamrow input{padding:8px}
+    :root{--ink:#f6f1e7;--muted:#aaa397;--paper:#161009;--card:#241f19;--line:#36332d;--input:#0d0d0c;--button:#27241f;--orange:#f26200;--green:#55c693;--red:#eb7777;color-scheme:dark}
+    :root[data-theme="light"]{--ink:#2a2118;--muted:#756b5e;--paper:#f2ecdf;--card:#fffdf7;--line:#d8cdbb;--input:#fffdf7;--button:#f4ecde;--orange:#d13a00;--green:#087848;--red:#b82f2f;color-scheme:light}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}a{color:inherit}.shell{width:min(1080px,calc(100% - 32px));margin:0 auto;padding:28px 0 72px}.top{display:flex;align-items:center;gap:14px;margin-bottom:28px}.brand{font-weight:900;letter-spacing:.08em;text-decoration:none}.brand b{color:var(--orange)}h1{font-size:clamp(30px,6vw,58px);line-height:1;margin:0 0 10px}h2{font-size:20px;margin:0 0 16px}.lead,.muted{color:var(--muted)}.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:26px}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}.wide{grid-column:1/-1}.league{display:flex;align-items:center;gap:14px;padding:14px 0;border-top:1px solid var(--line)}.league:first-child{border-top:0}.league-main{min-width:0;flex:1}.league-name{font-weight:800;font-size:17px}.meta{color:var(--muted);font-size:13px;text-transform:capitalize}.actions{display:flex;gap:8px;flex-wrap:wrap}button,.button,input,select{font:inherit}button,.button{border:1px solid var(--line);background:var(--button);color:var(--ink);padding:9px 12px;border-radius:8px;cursor:pointer;text-decoration:none;font-weight:750}button.primary{background:var(--orange);border-color:var(--orange);color:#fff}button.ghost{background:transparent}button.danger{color:var(--red)}label{display:block;font-weight:750;margin:12px 0 5px}input,select{width:100%;border:1px solid var(--line);background:var(--input);color:var(--ink);padding:10px 11px;border-radius:8px}input:focus,select:focus{outline:2px solid var(--orange);outline-offset:1px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.teams{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;max-height:330px;overflow:auto;padding-right:4px}.teamrow{display:grid;grid-template-columns:1fr 1fr;gap:7px}.teamrow input{padding:8px}
 /* This page carries its own CSS and no site nav, so the sitewide phone rule in nav.js
    never reaches it. iOS Safari zooms on focus below 16px and does not zoom back. */
 @media (max-width:600px){
@@ -77,6 +84,7 @@
   .top .navauth .authbtn{max-width:110px;padding:4px 9px}}
 .orderrow{display:grid;grid-template-columns:64px 1fr 1fr;gap:7px;align-items:end}
 .orderrow label{margin:0;font-size:11px;color:var(--muted)}
+body.embed{background:transparent}
 body.embed .shell{width:100%;padding:8px 0 28px}
 body.embed .top,body.embed .backlink,body.embed>main>h1,body.embed>main>.lead{display:none}
 body.embed .grid{margin-top:0}
@@ -387,7 +395,23 @@ body.embed .grid>section:not(#settingsCard){display:none}
   const slotDefaults={QB:1,RB:2,WR:2,TE:1,FLEX:2,SUPERFLEX:0,DST:1,K:0,BN:6};
   const params=new URLSearchParams(location.search);
   const activeId=params.get("league");
-  if(params.get("embed")==="1") document.body.classList.add("embed");
+  const embedded=params.get("embed")==="1";
+  if(embedded) document.body.classList.add("embed");
+  addEventListener("message",event=>{
+    if(event.origin!==location.origin||!event.data||event.data.dd!=="theme") return;
+    const theme=event.data.theme==="light"?"light":"dark";
+    document.documentElement.setAttribute("data-theme",theme);
+  });
+  if(embedded){
+    let heightFrame=0;
+    const postHeight=()=>{
+      cancelAnimationFrame(heightFrame);
+      heightFrame=requestAnimationFrame(()=>parent.postMessage({dd:"height",h:Math.ceil(document.documentElement.scrollHeight)},location.origin));
+    };
+    addEventListener("load",postHeight);
+    if(window.ResizeObserver) new ResizeObserver(postHeight).observe(document.body);
+    setTimeout(postHeight,50);
+  }
   $("season").value=new Date().getFullYear();
   $("teamCount").innerHTML=[8,10,12,14,16].map(n=>`<option${n===12?' selected':''}>${n}</option>`).join("");
   $("slots").innerHTML=slotNames.map(s=>`<label>${s}<input type="number" min="0" max="30" value="${slotDefaults[s]}" data-slot="${s}"></label>`).join("");

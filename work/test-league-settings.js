@@ -18,6 +18,12 @@ assert.match(leagues, /data-order/);
 assert.match(leagues, /Existing picks stay attached to the correct team/);
 assert.match(leagues, /\(state\.picks\|\|\[\]\)\.forEach\(p=>\{p\.ti=remap\(p\.ti\);\}\)/);
 assert.match(leagues, /DDLeague\.publishLeague\(updated,state\|\|DDLeague\.stateFromLeague\(updated\)\)/);
+assert.match(leagues, /parent\.postMessage\(\{dd:"height",h:Math\.ceil\(document\.documentElement\.scrollHeight\)\}/,
+  "embedded settings never reports its full height to the dashboard");
+assert.match(leagues, /event\.data\.dd!=="theme"/,
+  "embedded settings does not accept the dashboard theme");
+assert.match(leagues, /:root\[data-theme="light"\]/,
+  "league settings has no light-theme palette");
 
 assert.match(shared, /#ddLeagueIndicator,#ddbLaunch,#ddmeChip,\.udfoot\{display:none!important\}/);
 assert.doesNotMatch(shared, /bar\.innerHTML=`<span class="ddli-name"/);
