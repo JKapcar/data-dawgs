@@ -1,5 +1,5 @@
 {
- "as_of": "2026-08-28",
+ "as_of": "2026-08-29",
  "source": "Generated from the site itself. Tier is read from each page's live chip.",
  "tier": "labs",
  "graded": false,
@@ -661,7 +661,7 @@
   {
    "id": "cfb",
    "domain": "cfb",
-   "name": "College Football Lab — 2025 results, retrodictive Elo and the build roadmap",
+   "name": "College Football Lab — cfbfastR efficiency, 2025 results, retrodictive Elo and the build roadmap",
    "page": "/cfb.html",
    "machine": [
     {
@@ -699,6 +699,12 @@
      "url": "/data/cfb-team-week-latest.json",
      "status": "live",
      "covers": "230 compact latest team-period rows with overall and non-authoritative conference records selected exactly from the results-only team-week snapshot; no current-2026 or predictive claim"
+    },
+    {
+     "kind": "json",
+     "url": "/data/cfb-efficiency.json",
+     "status": "live",
+     "covers": "136 FBS team rows from the latest complete cfbfastR 3.0 team-summary release: opponent-adjusted and raw EPA/play, success rates, ranks, games and plays; upstream modelled/descriptive and ungraded here, not a forecast or Data Dawgs power rating"
     },
     {
      "kind": "json",
@@ -983,6 +989,6 @@
   }
  ],
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-08-28",
+ "built": "2026-08-29",
  "canonical_url": "https://datadawgs216.com/data/surfaces.json"
 }

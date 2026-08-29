@@ -1,9 +1,9 @@
 {
- "as_of": "2026-08-28",
+ "as_of": "2026-08-29",
  "source": "Generated manifest of every machine-readable surface on datadawgs216.com.",
  "note": "Start here. Each entry carries its own as_of — check it before quoting anything. The sha256 is of the file as served; recompute it if you care.",
  "site": "https://datadawgs216.com",
- "built": "2026-08-28",
+ "built": "2026-08-29",
  "data": {
   "files": [
    {
@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 34658,
-    "as_of": "2026-08-28",
-    "sha256": "d4ad44562f46392d9eb6a2995f4acd0615586fd2a836690699cca8be7c2cc4d5",
+    "bytes": 35038,
+    "as_of": "2026-08-29",
+    "sha256": "3360a27feae2622437f477f2d8f10f4291e60f89540409aa41884a264dd196c0",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -333,6 +333,14 @@
     "as_of": "2026-08-28",
     "sha256": "48d4cc82b9220171f3533ffb4cefcdeae8bfb55d3ce4f0f5efedd91a776cae4c",
     "note": "Dated snapshot. low/high are v3 conversion-assumption sensitivity bounds carried forward unscaled, NOT bid ceilings and NOT player-outcome intervals. Keeper inflation (Sep 8 deadline) and out-of-sample validation are open items, deliberately not modelled here."
+   },
+   {
+    "path": "/data/cfb-efficiency.json",
+    "url": "https://datadawgs216.com/data/cfb-efficiency.json",
+    "bytes": 70526,
+    "as_of": "2026-08-06",
+    "sha256": "208adda93d0a0b06c56d8683de837b975d7dc741a478307434511b6893e3b24f",
+    "note": "MODELLED, DESCRIPTIVE SEASON SNAPSHOT. EPA/WPA play values and opponent adjustments are produced upstream by cfbfastR/SportsDataverse. Data Dawgs selects and labels fields but does not refit or independently validate those models here. This is not a forecast, betting line, poll or Data Dawgs power rating. Early-season samples can be very small; use games and plays with every comparison."
    },
    {
     "path": "/data/leagues/pepperoninipples.json",

@@ -1,0 +1,92 @@
+name: CFB efficiency backbone
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/cfb-data.yml"
+      - "data/cfb-efficiency.json"
+      - "scripts/cfb_efficiency_backbone.py"
+      - "tests/test_cfb_efficiency_backbone.py"
+      - "tools/data-manifest.js"
+      - "tools/validate-data.js"
+  schedule:
+    - cron: "41 11 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cfb-data-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'refresh' }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - name: Validate CFB efficiency surface
+        run: |
+          python -m unittest tests.test_cfb_efficiency_backbone
+          python scripts/cfb_efficiency_backbone.py validate
+          node tools/validate-data.js
+
+  refresh:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - name: Refresh and validate
+        run: |
+          python scripts/cfb_efficiency_backbone.py refresh --season 2026
+          if git diff --quiet -- data/cfb-efficiency.json; then
+            echo "The latest published cfbfastR efficiency snapshot is unchanged."
+            exit 0
+          fi
+          node tools/data-manifest.js
+          python -m unittest tests.test_cfb_efficiency_backbone
+          python scripts/cfb_efficiency_backbone.py validate
+          node tools/validate-data.js
+      - name: Open or update a review PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REFRESH_BRANCH: automation/cfb-efficiency-refresh
+        run: |
+          if git diff --quiet -- data/cfb-efficiency.json data/index.json; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin "refs/heads/$REFRESH_BRANCH:refs/remotes/origin/$REFRESH_BRANCH" || true
+          git switch -C "$REFRESH_BRANCH"
+          git add data/cfb-efficiency.json data/index.json
+          git commit -m "Refresh CFB efficiency data"
+          git push --force-with-lease origin "HEAD:refs/heads/$REFRESH_BRANCH"
+          if [ "$(gh pr list --state open --head "$REFRESH_BRANCH" --json number --jq 'length')" = "0" ]; then
+            gh pr create \
+              --base main \
+              --head "$REFRESH_BRANCH" \
+              --title "Refresh CFB efficiency data" \
+              --body "Automated cfbfastR 3.0 team-efficiency refresh. The job failed closed on schema, FBS row count, identity uniqueness, season consistency, snapshot integrity and the full Data Dawgs data contract before opening this review PR. It never writes directly to production."
+          fi

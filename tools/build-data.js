@@ -1427,7 +1427,7 @@ const SURFACES = [
     machine: [{ kind: 'json', url: '/data/pound-tools.json', status: 'live', covers: 'complete NFL tool inventory (delivery status, blockers) — the College Football roadmap in the same file is listed on the cfb surface, where it renders' }],
     planned: [],
     gap: 'The model scoreboard and provenance render on /receipts.html, the deterministic calculators on /calculators.html, and the College Football roadmap on /cfb.html since 2026-08-09; each surface lists its own files and Worker tools.' },
-  { id: 'cfb', domain: 'cfb', name: 'College Football Lab — 2025 results, retrodictive Elo and the build roadmap', page: '/cfb.html',
+  { id: 'cfb', domain: 'cfb', name: 'College Football Lab — cfbfastR efficiency, 2025 results, retrodictive Elo and the build roadmap', page: '/cfb.html',
     /* CEP-5A Stage 3: the roadmap renders on /cfb.html now, so the CFB files and the
        sixteen CFB Worker tools are this surface's claims, not the DawgHouse's. */
     machine: [{ kind: 'json', url: '/data/pound-tools.json', status: 'live', covers: 'the 44-idea College Football roadmap under cfb_roadmap and kind:"roadmap-idea" entries — the same file also carries the NFL inventory listed on the DawgHouse surface' },
@@ -1436,6 +1436,7 @@ const SURFACES = [
               { kind: 'json', url: '/data/cfb-team-game.json', status: 'live', covers: '1,868 mirrored team-game result rows derived exactly from the canonical schedule; advanced play metrics are unavailable' },
               { kind: 'json', url: '/data/cfb-team-week.json', status: 'live', covers: 'results-only team-period records, scoring, venue, opponents and non-authoritative regular-season conference records; EPA, opponent adjustment and market performance are unavailable' },
               { kind: 'json', url: '/data/cfb-team-week-latest.json', status: 'live', covers: '230 compact latest team-period rows with overall and non-authoritative conference records selected exactly from the results-only team-week snapshot; no current-2026 or predictive claim' },
+              { kind: 'json', url: '/data/cfb-efficiency.json', status: 'live', covers: '136 FBS team rows from the latest complete cfbfastR 3.0 team-summary release: opponent-adjusted and raw EPA/play, success rates, ranks, games and plays; upstream modelled/descriptive and ungraded here, not a forecast or Data Dawgs power rating' },
               { kind: 'json', url: '/data/cfb-teams.json', status: 'live', covers: '136 compact team profiles separating observed 2025 results from one retrodictive, ungraded Elo rating' },
               { kind: 'json', url: '/data/cfb-record-divergence.json', status: 'live', covers: 'descriptive record-versus-scoring rank gaps and one-score records; no predictive or overrated/underrated labels' },
               { kind: 'json', url: '/data/cfb-record-divergence-validation.json', status: 'live', covers: 'aggregate-only chronological holdout test of record-versus-scoring divergence beyond Elo; retrodictive, not market-adjusted and no team labels' },
@@ -1541,7 +1542,7 @@ write('surfaces.json', {
 // These are produced by the independent scheduled backbone rather than extracted from
 // a page. Keep them in the same generated manifest without letting this build rewrite them.
 for (const name of ['nfl-schedule.json', 'model-receipts.json', '538-classic.json',
-  'cfb-schedule.json', 'cfb-games-latest.json', 'cfb-team-game.json', 'cfb-team-week.json', 'cfb-team-week-latest.json', 'cfb-teams.json', 'cfb-record-divergence.json', 'cfb-market.json', 'cfb-elo.json', 'cfb-model-cards.json',
+  'cfb-schedule.json', 'cfb-games-latest.json', 'cfb-team-game.json', 'cfb-team-week.json', 'cfb-team-week-latest.json', 'cfb-efficiency.json', 'cfb-teams.json', 'cfb-record-divergence.json', 'cfb-market.json', 'cfb-elo.json', 'cfb-model-cards.json',
   'cfb-disagreement.json', 'cfb-ratings.json', 'cfb-model-receipts.json']) {
   const p = path.join(OUT, name);
   const txt = fs.readFileSync(p, 'utf8');

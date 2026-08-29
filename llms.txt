@@ -36,18 +36,18 @@ the sources we read and do not republish. Owns no data file either.
 
 ## College football
 
-- [CFB Lab](/cfb.html): explorer, matchup calculator, Elo backtest, divergence, 44-idea roadmap.
+- [CFB Lab](/cfb.html): efficiency, results, Elo, matchup, divergence, roadmap.
+- [Efficiency](/data/cfb-efficiency.json): 2025 cfbfastR 3.0 FBS summary; modelled, ungraded, not a forecast/DD rating.
 - [2025 results](/data/cfb-schedule.json), [latest games](/data/cfb-games-latest.json), [latest periods](/data/cfb-team-week-latest.json), [ratings](/data/cfb-teams.json).
 - [Book market](/data/cfb-market.json): timestamp unknown; not closing lines, so no CLV.
 - [CFB Elo](/data/cfb-elo.json), [registry](/data/cfb-ratings.json) and [card](/data/cfb-model-cards.json): end-2025; retrodictive, modelled, ungraded, not consensus/forecast.
 - [Fraud test](/data/cfb-record-divergence-validation.json): held-out aggregate only. [Disagreement](/data/cfb-disagreement.json): blocked on timestamped prices.
 - [Prospective receipts](/data/cfb-model-receipts.json): append-only, zero rows; no CFB forecast frozen before kickoff.
-- The 24-25h CFB market collector is staged; endpoint not live yet.
 
 ## Draft
 
 - [Player pool + MV](/data/pool.json): 613 players; 8 formats; `half14` derived, SF Half hybrid; `2026-08-24`.
-- [Dynasty ranks](/data/dynasty-ranks.json): 334 players/picks; independent 1QB and SF/TE-premium ranks and auction values, not observed prices.
+- [Dynasty ranks](/data/dynasty-ranks.json): 334 players/picks; 1QB and SF/TE-premium ranks and values, not observed prices.
 - [League](/data/league.json): 14 teams, $200, 15 spots, derived `half14`, no kicker.
 - [2026 strategy](/data/strategy.md): positional curves and format playbooks; testable structure kept apart from analyst priors.
 

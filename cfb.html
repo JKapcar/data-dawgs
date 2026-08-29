@@ -600,6 +600,13 @@ table.cfbt td.cf{color:var(--ink-3)}
 .cfbtip.on{opacity:1}
 .cfbtip b{color:var(--ink-1);display:block;font-size:12.5px;margin-bottom:3px}
 .cfbtip span{font-variant-numeric:tabular-nums}
+.cfbef-legend{display:flex;gap:14px;flex-wrap:wrap;margin:8px 0 0;font-size:11.5px;color:var(--ink-3)}
+.cfbef-legend span{display:inline-flex;align-items:center;gap:6px}
+.cfbef-legend i{width:9px;height:9px;border-radius:50%;background:var(--accent);display:inline-block}
+.cfbef-legend i.all{background:var(--ink-3);opacity:.5}
+#cfbEffPlot circle{transition:r .12s,opacity .12s;cursor:pointer}
+#cfbEffPlot circle:hover,#cfbEffPlot circle:focus{r:7;opacity:1}
+#cfbEffTbl{min-width:980px}
 .cfbcap{font-size:12px;color:var(--ink-3);line-height:1.6;margin:9px 0 0}
 .cfbsrc{font-size:11.5px;color:var(--ink-3);line-height:1.6;margin:11px 0 0;overflow-wrap:anywhere}
 .cfbsrc code{font-size:11px;overflow-wrap:anywhere}
@@ -2291,18 +2298,76 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
   <div class="lab-hd"><span class="lab-chip">Labs</span></div>
   <h1 style="margin:10px 0 0;font-size:27px;font-weight:800;letter-spacing:-.01em">College Football Lab</h1>
-  <p class="lab-sub">One hundred and thirty-six FBS teams, their 2025 results, and one deliberately
-  simple Elo rating built from game results and margin alone. The rating is retrodictive and
-  ungraded &mdash; it has never forecast a game before kickoff. Everything on this page is the
-  same data the CFB tools serve to machines, drawn for people. The build roadmap moved here
-  from <a href="dawghouse.html">The DawgHouse</a> on 2026-08-09.</p>
+  <p class="lab-sub">One hundred and thirty-six FBS teams, their 2025 results, a deliberately
+  simple Elo baseline, and opponent-adjusted team efficiency from cfbfastR 3.0. Results, Elo and
+  efficiency stay separate because they answer different questions. Everything on this page is
+  drawn from the same dated files Data Dawgs serves to machines.</p>
 
-  <div class="banner" style="margin-top:14px"><b>2025 only.</b> There is no 2026 schedule in this
-  data, so nothing here is a projection of a coming season, a ranking, or a bet. The one thing you
-  can compute is a hypothetical: what this rating would have said about two teams meeting during
-  the 2025 rating period.</div>
+  <div class="banner" style="margin-top:14px"><b>Different clocks, no prediction hidden between them.</b>
+  The results and Elo sheets remain a frozen 2025 baseline. The Efficiency sheet reads the latest
+  complete cfbfastR team-summary release and labels its season, games and plays. It is descriptive
+  model output, not a 2026 forecast, poll, betting line or Data Dawgs power rating.</div>
 
   <div id="sheets"></div>
+
+  <div id="sheetEfficiency">
+    <div class="card" id="efficiency">
+      <h3>Team efficiency <span class="rt" id="cfbEffAsOf">Loading cfbfastR 3.0&hellip;</span></h3>
+      <p class="sub">Opponent-adjusted EPA/play is the clean first gain from the cfbfastR 3.0
+      release. Better offenses move right; better defenses move up because the vertical scale is
+      EPA <em>allowed</em> and lower is better. Use the sample columns before trusting an early-season dot.</p>
+      <div class="cfbkpis" id="cfbEffKpis">
+        <div class="cfbkpi"><div class="k">Season</div><div class="v">&mdash;</div><div class="r">latest complete published summary</div></div>
+        <div class="cfbkpi"><div class="k">FBS teams</div><div class="v">&mdash;</div><div class="r">schema-checked rows</div></div>
+        <div class="cfbkpi"><div class="k">Source</div><div class="v" style="font-size:18px">cfbfastR 3.0</div><div class="r">SportsDataverse model output</div></div>
+      </div>
+      <div class="cfbfilt" style="margin-top:14px">
+        <label class="fld"><span>Conference</span>
+          <select class="fi" id="cfbEffConf"><option value="">All conferences</option></select></label>
+        <label class="fld"><span>Team <span class="hint">&mdash; name contains</span></span>
+          <input class="fi" id="cfbEffQ" type="search" placeholder="e.g. Ohio" autocomplete="off"></label>
+      </div>
+      <p class="cfbcount" id="cfbEffCount">Loading&hellip;</p>
+      <div class="cfbfig">
+        <div class="cfbtip" id="cfbEffTip" role="status" aria-live="polite"></div>
+        <svg id="cfbEffPlot" viewBox="0 0 680 430" role="img" tabindex="0"
+          aria-label="Scatter chart of opponent-adjusted offensive EPA per play against opponent-adjusted defensive EPA allowed per play for FBS teams."></svg>
+      </div>
+      <div class="cfbef-legend"><span><i></i>Current filter</span><span><i class="all"></i>Other FBS teams</span></div>
+      <p class="cfbcap">Quadrants are split at the FBS medians, not at zero. Upper right means
+      above-median adjusted offense and above-median adjusted defense for this snapshot. This is a
+      season description; it does not estimate what happens next.</p>
+    </div>
+
+    <div class="card">
+      <h3>Efficiency table</h3>
+      <p class="sub">Click a column to sort. Defensive values are EPA or success rate
+      <b>allowed</b>, so lower is better. Rank 1 is best in every adjusted-rank column.</p>
+      <div class="cfbwrap">
+        <table class="cfbt" id="cfbEffTbl">
+          <thead>
+            <tr class="cfbgrp"><th class="obs" colspan="5">Sample</th><th class="mod cfbsep" colspan="6">cfbfastR modelled efficiency</th></tr>
+            <tr class="cfbhd">
+              <th data-k="team" data-t="s" scope="col">Team</th>
+              <th data-k="conference" data-t="s" scope="col">Conference</th>
+              <th data-k="games" data-t="n" scope="col">Games</th>
+              <th data-k="plays" data-t="n" scope="col">Plays</th>
+              <th data-k="netRank" data-t="n" scope="col">Net rank</th>
+              <th data-k="net" data-t="n" class="cfbsep" scope="col">Adj net</th>
+              <th data-k="off" data-t="n" scope="col">Adj off</th>
+              <th data-k="def" data-t="n" scope="col">Adj def allowed</th>
+              <th data-k="rawOff" data-t="n" scope="col">Raw off</th>
+              <th data-k="rawDef" data-t="n" scope="col">Raw def allowed</th>
+              <th data-k="sr" data-t="n" scope="col">Success diff</th>
+            </tr>
+          </thead>
+          <tbody id="cfbEffBody"><tr><td colspan="11" style="color:var(--ink-3)">Loading&hellip;</td></tr></tbody>
+        </table>
+      </div>
+      <div class="cfbmore"><button class="btn ghost sm" id="cfbEffMore" type="button" hidden></button></div>
+      <p class="cfbsrc" id="cfbEffSrc"></p>
+    </div>
+  </div>
 
   <div id="sheetMatchup">
   <!-- ================= matchup calculator ================= -->
@@ -2526,10 +2591,14 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     injuries, weather, travel, play-by-play efficiency, opponent adjustment and coaching. It knows who
     won, by how much, and where. That is the entire feature set, on purpose &mdash; it is the floor a
     better CFB model has to clear.</p>
+    <p style="margin-top:10px"><b>The efficiency sheet is a different object.</b> It uses cfbfastR&rsquo;s
+    play-level EPA model and upstream opponent adjustment, but Data Dawgs has not refit or independently
+    validated either. It describes the published season sample. It does not turn the Elo into an EPA model,
+    and it does not turn an efficiency rank into a forecast.</p>
   </div>
 
   <footer>
-    College football source: SportsDataverse <a href="https://github.com/sportsdataverse/cfbfastR-data" target="_blank" rel="noopener">cfbfastR-data</a> schedules, canonicalized to <code>/data/cfb-schedule.json</code>; the Elo is Data Dawgs&rsquo; own and is retrodictive and ungraded. Upstream licence not independently verified.<br><a class="udmach" href="/data/cfb-teams.json">🤖 For machines</a> · This site is mirrored for machines. 🙃 shows you the other side.
+    College football sources: SportsDataverse <a href="https://github.com/sportsdataverse/cfbfastR-data" target="_blank" rel="noopener">cfbfastR-data</a> schedules and <a href="https://cfbfastr.sportsdataverse.org/" target="_blank" rel="noopener">cfbfastR 3.0</a> team summaries. The Elo is Data Dawgs&rsquo; own and is retrodictive and ungraded; the efficiency model output is upstream and ungraded here. Upstream data licence not independently verified.<br><a class="udmach" href="/data/cfb-efficiency.json">🤖 Efficiency for machines</a> · This site is mirrored for machines. 🙃 shows you the other side.
   </footer>
 </div>
 
@@ -3090,6 +3159,51 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 })();
 </script>
 <script>
+/* ---------------- cfbfastR 3.0 efficiency sheet ---------------- */
+(function(){
+  "use strict";
+  var $=function(id){return document.getElementById(id)};
+  var esc=function(s){return String(s==null?"":s).replace(/[<>&"]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c]})};
+  var rows=[],env=null,open=false,sort={k:"netRank",dir:1},filter={conference:"",q:""},PAGE=30;
+  var val=function(o,path){return path.split(".").reduce(function(v,k){return v==null?null:v[k]},o)};
+  var num=function(v,d){return v==null?"—":Number(v).toFixed(d==null?3:d)};
+  var pct=function(v){return v==null?"—":(Number(v)*100).toFixed(1)+"%"};
+  var median=function(a){var s=a.filter(Number.isFinite).slice().sort(function(x,y){return x-y}),m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2};
+  function flat(r){return {team:r.team,conference:r.conference,games:r.games,plays:r.plays,
+    netRank:r.adjusted.net_rank,net:r.adjusted.net_epa_play,off:r.adjusted.off_epa_play,
+    def:r.adjusted.def_epa_play_allowed,rawOff:r.raw.off_epa_play,rawDef:r.raw.def_epa_play_allowed,
+    offSr:r.raw.off_success_rate,defSr:r.raw.def_success_rate_allowed,
+    sr:(r.raw.off_success_rate==null||r.raw.def_success_rate_allowed==null)?null:r.raw.off_success_rate-r.raw.def_success_rate_allowed};}
+  function selected(){var q=filter.q.toLowerCase();return rows.filter(function(r){return (!filter.conference||r.conference===filter.conference)&&(!q||r.team.toLowerCase().includes(q))})}
+  function compare(a,b){var x=a[sort.k],y=b[sort.k];if(typeof x==="string"||typeof y==="string")return String(x||"").localeCompare(String(y||""))*sort.dir;if(x==null)return 1;if(y==null)return -1;return (x-y)*sort.dir}
+  function markSort(){document.querySelectorAll("#cfbEffTbl thead tr.cfbhd th").forEach(function(th){var on=th.dataset.k===sort.k;th.setAttribute("aria-sort",on?(sort.dir===1?"ascending":"descending"):"none")})}
+  function drawTable(){var all=selected().slice().sort(compare),show=open?all:all.slice(0,PAGE);$("cfbEffCount").textContent=all.length+" of "+rows.length+" FBS teams shown";
+    $("cfbEffBody").innerHTML=show.map(function(r){return '<tr><td class="tm">'+esc(r.team)+'</td><td class="cf">'+esc(r.conference)+'</td><td>'+r.games+'</td><td>'+r.plays+'</td><td>'+r.netRank+'</td><td class="cfbsep">'+num(r.net)+'</td><td>'+num(r.off)+'</td><td>'+num(r.def)+'</td><td>'+num(r.rawOff)+'</td><td>'+num(r.rawDef)+'</td><td>'+(r.sr==null?'—':(r.sr*100).toFixed(1)+' pp')+'</td></tr>'}).join("")||'<tr><td colspan="11" style="color:var(--ink-3)">No team matches this filter.</td></tr>';
+    var b=$("cfbEffMore");b.hidden=all.length<=PAGE;if(!b.hidden)b.textContent=open?"Show the first "+PAGE:"Show all "+all.length+" teams";markSort();drawPlot();
+    window.__CFBEFF={season:env&&env.data.season,as_of:env&&env.as_of,filter:(filter.conference||filter.q)?[filter.conference,filter.q].filter(Boolean).join(" · "):"none",teams:all};
+  }
+  function drawPlot(){var svg=$("cfbEffPlot"),tip=$("cfbEffTip"),picked=new Set(selected().map(function(r){return r.team}));if(!rows.length)return;
+    var W=680,H=430,L=62,R=22,T=28,B=50,xv=rows.map(function(r){return r.off}).filter(Number.isFinite),yv=rows.map(function(r){return r.def}).filter(Number.isFinite);
+    var xmin=Math.min.apply(null,xv),xmax=Math.max.apply(null,xv),ymin=Math.min.apply(null,yv),ymax=Math.max.apply(null,yv),xm=median(xv),ym=median(yv),padX=(xmax-xmin)*.06||.01,padY=(ymax-ymin)*.06||.01;xmin-=padX;xmax+=padX;ymin-=padY;ymax+=padY;
+    var X=function(v){return L+(v-xmin)/(xmax-xmin)*(W-L-R)},Y=function(v){return T+(v-ymin)/(ymax-ymin)*(H-T-B)};
+    var out=['<rect x="'+L+'" y="'+T+'" width="'+(W-L-R)+'" height="'+(H-T-B)+'" fill="none" stroke="var(--grid)"/>',
+      '<line x1="'+X(xm)+'" y1="'+T+'" x2="'+X(xm)+'" y2="'+(H-B)+'" stroke="var(--axis)" stroke-dasharray="5 5"/>',
+      '<line x1="'+L+'" y1="'+Y(ym)+'" x2="'+(W-R)+'" y2="'+Y(ym)+'" stroke="var(--axis)" stroke-dasharray="5 5"/>',
+      '<text x="'+((L+W-R)/2)+'" y="416" text-anchor="middle" fill="var(--ink-3)" font-size="11">Adjusted offensive EPA/play → better</text>',
+      '<text x="15" y="'+((T+H-B)/2)+'" text-anchor="middle" transform="rotate(-90 15 '+((T+H-B)/2)+')" fill="var(--ink-3)" font-size="11">Better defense ← adjusted EPA/play allowed</text>',
+      '<text x="'+(W-R-6)+'" y="'+(T+15)+'" text-anchor="end" fill="var(--ink-3)" font-size="10">better both</text>'];
+    rows.slice().sort(function(a,b){return Number(picked.has(a.team))-Number(picked.has(b.team))}).forEach(function(r,i){var on=picked.has(r.team);out.push('<circle data-i="'+rows.indexOf(r)+'" cx="'+X(r.off).toFixed(1)+'" cy="'+Y(r.def).toFixed(1)+'" r="'+(on?4.5:3)+'" fill="'+(on?'var(--accent)':'var(--ink-3)')+'" opacity="'+(on?.82:.28)+'" tabindex="0" aria-label="'+esc(r.team)+': adjusted offense '+num(r.off)+', adjusted defense allowed '+num(r.def)+'"></circle>')});svg.innerHTML=out.join("");
+    function show(node,r){var box=svg.getBoundingClientRect(),cx=Number(node.getAttribute("cx"))/W*box.width,cy=Number(node.getAttribute("cy"))/H*box.height;tip.innerHTML='<b>'+esc(r.team)+'</b><span>#'+r.netRank+' net · '+r.games+' games · '+r.plays+' plays<br>Adj off '+num(r.off)+' · Adj def allowed '+num(r.def)+'<br>Net '+num(r.net)+' · Success diff '+pct(r.sr)+'</span>';tip.style.left=Math.max(4,Math.min(box.width-235,cx+10))+"px";tip.style.top=Math.max(4,cy-68)+"px";tip.classList.add("on")}
+    svg.querySelectorAll("circle").forEach(function(node){var r=rows[Number(node.dataset.i)];node.addEventListener("pointerenter",function(){show(node,r)});node.addEventListener("focus",function(){show(node,r)});node.addEventListener("pointerleave",function(){tip.classList.remove("on")});node.addEventListener("blur",function(){tip.classList.remove("on")})});
+  }
+  document.querySelectorAll("#cfbEffTbl thead tr.cfbhd th").forEach(function(th){th.addEventListener("click",function(){var k=th.dataset.k;if(sort.k===k)sort.dir*=-1;else{sort.k=k;sort.dir=(k==="team"||k==="conference")?1:(k==="netRank"?1:-1)}open=false;drawTable()})});
+  $("cfbEffMore").addEventListener("click",function(){open=!open;drawTable()});
+  $("cfbEffConf").addEventListener("change",function(){filter.conference=this.value;open=false;drawTable()});
+  $("cfbEffQ").addEventListener("input",function(){filter.q=this.value.trim();open=false;drawTable()});
+  fetch("/data/cfb-efficiency.json").then(function(r){if(!r.ok)throw new Error("efficiency data returned "+r.status);return r.json()}).then(function(payload){env=payload;rows=payload.data.teams.map(flat);var confs=[...new Set(rows.map(function(r){return r.conference}))].sort();confs.forEach(function(c){var o=document.createElement("option");o.value=c;o.textContent=c;$("cfbEffConf").appendChild(o)});$("cfbEffAsOf").textContent="season "+payload.data.season+" · source updated "+payload.as_of;$("cfbEffKpis").innerHTML='<div class="cfbkpi"><div class="k">Season</div><div class="v">'+payload.data.season+'</div><div class="r">latest complete published summary</div></div><div class="cfbkpi"><div class="k">FBS teams</div><div class="v">'+rows.length+'</div><div class="r">schema-checked rows</div></div><div class="cfbkpi"><div class="k">Source</div><div class="v" style="font-size:18px">cfbfastR 3.0</div><div class="r">SportsDataverse model output</div></div>';$("cfbEffSrc").innerHTML='Source: <a href="'+esc(payload.provenance.source_url)+'" target="_blank" rel="noopener">SportsDataverse published team summaries</a> · snapshot <code>'+esc(payload.integrity.snapshot_id)+'</code>. '+esc(payload.note);drawTable()}).catch(function(err){$("cfbEffBody").innerHTML='<tr><td colspan="11" style="color:var(--warn)">Could not load the published efficiency snapshot: '+esc(err.message)+'</td></tr>';$("cfbEffCount").textContent="Efficiency data unavailable";$("cfbEffAsOf").textContent="load failed"});
+})();
+</script>
+<script>
 /* ============================================================================
    DDSheets — the page-family component.
 
@@ -3329,6 +3443,7 @@ window.DDSheets = function(cfg){
   addEventListener("hashchange", fwdHash);
   DDSheets({key:"cfb",mount:"#sheets",sheets:[
     {id:"matchup",label:"Matchup",panel:"#sheetMatchup"},
+    {id:"efficiency",label:"Efficiency",hint:"new",panel:"#sheetEfficiency"},
     {id:"teams",label:"Teams",panel:"#sheetTeams"},
     {id:"elo",label:"Elo",panel:"#sheetElo"},
     {id:"divergence",label:"Divergence",panel:"#sheetDiv"},
@@ -3348,19 +3463,20 @@ window.DD_BOTCTX = {
   label: 'CURRENT COLLEGE FOOTBALL LAB STATE',
   title: 'Ask Toto — he reads this page',
   chrome: {sub:'reads the CFB lab', ph:'Ask Toto about the CFB data…', chips:[
+    ['What does the new efficiency sheet show?','Efficiency'],
     ['What does the Elo actually know, and what can it not see?','What it knows'],
     ['Which teams did this rating get most wrong in 2025, and what does that mean?','Biggest misses'],
-    ['Is this rating any good compared to the market?','Any good?'],
-    ['Why is there no 2026 forecast on this page?','No 2026?']]},
-  sys: `RIGHT NOW you are on the College Football Lab. It shows 136 FBS teams' OBSERVED 2025 results beside ONE modelled Elo rating, plus a matchup calculator, an expected-versus-observed chart and a descriptive record-versus-scoring-margin table.
-- ⚠️ THE SEASON IS 2025 AND ONLY 2025. There is no 2026 schedule in this data. Never produce a 2026 prediction, ranking, or game pick. If asked for one, say plainly that the data does not support it and what would be needed.
+    ['Is this rating any good compared to the market?','Any good?']]},
+  sys: `RIGHT NOW you are on the College Football Lab. It shows 136 FBS teams' OBSERVED 2025 results beside ONE modelled Elo rating, plus a cfbfastR 3.0 team-efficiency sheet, a matchup calculator, an expected-versus-observed chart and a descriptive record-versus-scoring-margin table.
+- ⚠️ THE RESULTS AND ELO SEASON IS 2025. The efficiency file carries its own season and source-update date; read those from the live page state before quoting it. No sheet is a 2026 forecast, ranking, or game pick. If asked for one, say plainly that this data does not support it and what would be needed.
+- ⚠️ THE EFFICIENCY SHEET IS UPSTREAM MODEL OUTPUT, NOT DATA DAWGS' MODEL. cfbfastR/SportsDataverse produces the EPA values and opponent adjustment. Data Dawgs selects, labels and publishes a compact snapshot but has not refit or independently validated those models. It is descriptive, ungraded and not a betting line, poll, forecast or Data Dawgs power rating. Defensive EPA and success are ALLOWED: lower is better. Always carry games and plays with an early-season comparison.
 - ⚠️ THE ELO IS RETRODICTIVE AND UNGRADED. The 2025 season was already over when the backtest ran. It has never issued a forecast before a kickoff. The prospective receipt ledger is EMPTY BY DESIGN. Never call it graded, proven, or a track record.
 - ⚠️ IT IS ONE SYSTEM, NOT A CONSENSUS, AND ELO RANK IS NOT A POWER RANKING. It has no blend weights because there is nothing to blend with.
 - ⚠️ EXPECTED WINS IS MODEL RESIDUAL, NOT LUCK. "Actual minus expected" describes where this rating was wrong. It is not a luck estimate, not a true-talent estimate, and not a forecast. Say so whenever you quote one.
 - ⚠️ NO MARKET PRICES ARE ON THIS PAGE. The historical CFB market file has NO observation timestamp, so those are not closing lines and no closing-line value can be computed. The one market number quoted here is an aggregate Brier score on the same games, and even that flatters the market for the same reason.
 - ⚠️ THE MATCHUP CALCULATOR IS A HYPOTHETICAL. It applies the published end-of-2025 transform to two frozen ratings. It is not a scheduled-game forecast and it produces no spread or total.
 - ⚠️ THE DIVERGENCE TABLE IS DESCRIPTIVE. Every predictive label in the source file is null. Never call a team overrated, underrated, or a fraud.
-- The rating sees game results, margin and site. It does NOT see recruiting, the portal, rosters, injuries, weather, travel, play-by-play efficiency or opponent strength adjustment.
+- The ELO sees game results, margin and site. It does NOT see recruiting, the portal, rosters, injuries, weather, travel, play-by-play efficiency or opponent strength adjustment. The separate efficiency sheet DOES use cfbfastR play-level model output and opponent adjustment; never claim the Elo does.
 - ⚠️ THE ROADMAP SHEET IS A PLAN, NOT A CAPABILITY LIST. Its cards are ideas; a candidate tool name is a reservation unless the live roster in /data/surfaces.json says it is callable. Never promise a roadmap feature exists.`,
   ctx(){
     var L = [];
@@ -3381,8 +3497,14 @@ window.DD_BOTCTX = {
     L.push('THE FIVE IT OVER-EXPECTED MOST:');
     byd.slice(-5).reverse().forEach(function(t){ L.push(t.team + ' | ' + t.record + ' | expected ' + t.exp.toFixed(2) + ' | observed ' + t.obs + ' | ' + t.dw.toFixed(2)); });
     if(w.backtest) L.push('PUBLISHED 2025 BACKTEST (retrodictive): ' + w.backtest);
+    var e=window.__CFBEFF||null;
+    if(e&&e.teams&&e.teams.length){
+      L.push('CFBFASTR EFFICIENCY: season '+e.season+', source updated '+e.as_of+', filter '+e.filter+'. Upstream modelled/descriptive, ungraded; NOT Data Dawgs\' model or a forecast. Defensive values are allowed, so lower is better.');
+      L.push('TOP 10 IN THE CURRENT EFFICIENCY FILTER BY OPPONENT-ADJUSTED NET EPA/PLAY:');
+      e.teams.slice().sort(function(a,b){return (a.netRank||999)-(b.netRank||999)}).slice(0,10).forEach(function(t){L.push(t.netRank+' | '+t.team+' | '+t.conference+' | '+t.games+' games | '+t.plays+' plays | adj net '+t.net.toFixed(3)+' | adj off '+t.off.toFixed(3)+' | adj def allowed '+t.def.toFixed(3));});
+    }
     if(window.__CFBRM) L.push('ROADMAP SHEET: ' + window.__CFBRM.ideas + ' build ideas; ' + window.__CFBRM.live + ' candidate tools callable now per the live roster. Ideas are plans, not capabilities.');
-    L.push('⚠️ Nothing above is a 2026 claim. No forecast in this data was issued before a kickoff.');
+    L.push('⚠️ Nothing above is a prospective game claim. No Data Dawgs CFB forecast in this data was issued before a kickoff.');
     return L.join('\n');
   }
 };

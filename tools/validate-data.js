@@ -506,6 +506,30 @@ console.log('\nCFB results layers — exact schedule-derived team facts');
   else ok(`${latestRows.length} compact latest-team rows lock the exact team-week snapshot`);
 }
 
+console.log('\nCFB efficiency — cfbfastR model output stays descriptive and directional');
+{
+  const eff = JSON.parse(fs.readFileSync(path.join(DATA, 'cfb-efficiency.json'), 'utf8'));
+  const rows = eff.data && eff.data.teams;
+  const season = eff.data && eff.data.season;
+  if (!Array.isArray(rows) || rows.length < 100)
+    fail('cfb-efficiency.json: expected a complete FBS team-summary snapshot');
+  else if (eff.graded !== false || eff.tier !== 'labs' || !/not a forecast/i.test(eff.note || ''))
+    fail('cfb-efficiency.json: ungraded descriptive evidence boundary is missing');
+  else if (!/cfbfastR 3\.0/i.test(eff.source || '') || eff.provenance.source_package !== 'cfbfastR 3.0')
+    fail('cfb-efficiency.json: cfbfastR 3.0 source provenance is missing');
+  else if (new Set(rows.map(row => row.team_id)).size !== rows.length || rows.some(row =>
+    row.season !== season || !row.team || !row.conference || !Number.isInteger(row.games) ||
+    !Number.isInteger(row.plays) || !row.adjusted || !row.raw ||
+    !Number.isFinite(row.adjusted.off_epa_play) ||
+    !Number.isFinite(row.adjusted.def_epa_play_allowed) ||
+    !Number.isFinite(row.adjusted.net_epa_play) ||
+    Math.abs((row.adjusted.off_epa_play - row.adjusted.def_epa_play_allowed) - row.adjusted.net_epa_play) > 0.00001))
+    fail('cfb-efficiency.json: identity, season, sample or adjusted-EPA arithmetic drifted');
+  else if (eff.integrity.snapshot_id !== 'sha256:' + crypto.createHash('sha256').update(canonicalJson(eff.data)).digest('hex'))
+    fail('cfb-efficiency.json: snapshot hash mismatch');
+  else ok(`${rows.length} season-${season} FBS efficiency rows preserve source, sample and metric direction`);
+}
+
 console.log('\nCFB compact team profiles — facts and modelled rating stay separate');
 {
   const week = JSON.parse(fs.readFileSync(path.join(DATA, 'cfb-team-week.json'), 'utf8'));
