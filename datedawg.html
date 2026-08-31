@@ -236,6 +236,8 @@ button{font:inherit;cursor:pointer}
 .chart .rateline{fill:none;stroke:var(--rate);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
 .chart .ratedot{fill:var(--rate);stroke:var(--surface-1);stroke-width:2}
 .chart .pointlabel{font-weight:900;fill:var(--rate);paint-order:stroke;stroke:var(--surface-1);stroke-width:4px}
+.chart .barlabel{font-weight:900;fill:var(--likes);paint-order:stroke;stroke:var(--surface-1);stroke-width:4px}
+.chart .matchlabel{font-weight:900;fill:var(--matches);paint-order:stroke;stroke:var(--surface-1);stroke-width:4px}
 .chart .benchmarkline{fill:none;stroke:var(--ink-3);stroke-width:1.5;stroke-dasharray:7 6;opacity:.72}
 .chart .benchmarkline.median{stroke:var(--ink-1);stroke-width:2;opacity:.88}
 .chart .benchmarkband{fill:color-mix(in srgb,var(--ink-3) 9%,transparent);stroke:none}
@@ -848,7 +850,8 @@ var DD = (function(){
      is invalidated the moment the boundary changes. A toggle you can flip after
      exploring is not a declaration, so there is no toggle. */
   var R=null,CUT=null,MOVES=0,DECL=null,SUBJ=null,VFROM=null,VTO=null,GRAIN="month",RANGE="all",
-      VIEW="overview",SHOW_LIKES=true,SHOW_MATCHES=true,SHOW_BENCHMARKS=true,SHOW_VALUES=true;
+      VIEW="overview",SHOW_LIKES=true,SHOW_MATCHES=true,SHOW_BENCHMARKS=true,SHOW_VALUES=true,
+      ACTIVITY_SCALE="sqrt";
   /* DECL is captured BEFORE parse and can only ever be invalidated, never created later.
      prospective:true means it was recorded before any result was rendered. */
   function declValid(){ return DECL && DECL.cut===CUT && !MOVES; }
@@ -964,35 +967,40 @@ var DD = (function(){
     var y0=new Date(R.minT).getUTCFullYear(),y1=new Date(R.maxT).getUTCFullYear(),opts='<option value="">Jump to year…</option>';
     for(var y=y0;y<=y1;y++)opts+='<option value="'+y+'" '+(RANGE==='year-'+y?'selected':'')+'>'+y+'</option>';
     function rb(id,label){return '<button data-range="'+id+'" class="'+(RANGE===id?'on':'')+'">'+label+'</button>';}
-    var layers=kind==='activity'?'<div class="toolgroup"><span>Show</span><button data-series="likes" class="'+(SHOW_LIKES?'on':'')+'">Likes</button><button data-series="matches" class="'+(SHOW_MATCHES?'on':'')+'">Matches</button><button data-layer="benchmarks" class="'+(SHOW_BENCHMARKS?'on':'')+'">Median + band</button></div>':
+    var layers=(kind==='activity'||kind==='momentum')?'<div class="toolgroup"><span>Show</span><button data-series="likes" class="'+(SHOW_LIKES?'on':'')+'">Likes</button><button data-series="matches" class="'+(SHOW_MATCHES?'on':'')+'">Matches</button><button data-layer="benchmarks" class="'+(SHOW_BENCHMARKS?'on':'')+'">Median + band</button></div>':
       '<div class="toolgroup"><span>Show</span><button data-layer="benchmarks" class="'+(SHOW_BENCHMARKS?'on':'')+'">Median + band</button><button data-layer="labels" class="'+(SHOW_VALUES?'on':'')+'">Point values</button></div>';
-    return '<div class="charttools" aria-label="Chart filters"><div class="toolgroup"><span>Window</span>'+rb('all','All')+rb('1y','1 year')+rb('90d','90 days')+rb('ytd','YTD')+'<select data-chart-year aria-label="Jump to a calendar year">'+opts+'</select></div><div class="toolgroup"><span>Detail</span><button data-grain="month" class="'+(GRAIN==='month'?'on':'')+'">Monthly</button><button data-grain="week" class="'+(GRAIN==='week'?'on':'')+'">Weekly</button></div>'+layers+'</div>'; }
+    var scale=kind==='activity'?'<div class="toolgroup"><span>Scale</span><button data-activity-scale="sqrt" class="'+(ACTIVITY_SCALE==='sqrt'?'on':'')+'" title="Spreads smaller months apart while preserving zero and the order of every value">Readable</button><button data-activity-scale="linear" class="'+(ACTIVITY_SCALE==='linear'?'on':'')+'" title="Shows equal numeric distances on the vertical axes">Full scale</button></div>':'';
+    return '<div class="charttools" aria-label="Chart filters"><div class="toolgroup"><span>Window</span>'+rb('all','All')+rb('1y','1 year')+rb('90d','90 days')+rb('ytd','YTD')+'<select data-chart-year aria-label="Jump to a calendar year">'+opts+'</select></div><div class="toolgroup"><span>Detail</span><button data-grain="month" class="'+(GRAIN==='month'?'on':'')+'">Monthly</button><button data-grain="week" class="'+(GRAIN==='week'?'on':'')+'">Weekly</button></div>'+scale+layers+'</div>'; }
   function scrollHint(){return '<p class="scrollhint"><span>← Swipe or scroll through time →</span><span>Hover or tap a point for its numbers</span></p>';}
   function activityChart(S){
-    var B=S.bins,W=Math.max(1040,B.length*(S.grain==="week"?34:58)+120),H=390,L=62,RR=62,T=34,BT=58,PW=W-L-RR,PH=H-T-BT,
+    var B=S.bins,W=Math.max(1040,B.length*(S.grain==="week"?34:58)+120),H=410,L=62,RR=62,T=52,BT=58,PW=W-L-RR,PH=H-T-BT,
         maxLikes=Math.max.apply(null,[1].concat(B.map(function(b){return b.likes;}))),
         maxMatches=Math.max.apply(null,[1].concat(B.map(function(b){return Math.max(b.matches,SHOW_BENCHMARKS?b.likes*maleRef(80).rate:0);}))),
         bw=Math.max(7,Math.min(34,PW/Math.max(1,B.length)*.58)),step=PW/Math.max(1,B.length),g=[];
+    function spread(v,max){var r=Math.max(0,Math.min(1,v/max));return ACTIVITY_SCALE==="sqrt"?Math.sqrt(r):r;}
+    function ypos(v,max){return T+PH-PH*spread(v,max);}
+    function tick(max,q){var r=q/4;return max*(ACTIVITY_SCALE==="sqrt"?r*r:r);}
     for(var q=0;q<=4;q++){
       var y=T+PH-PH*q/4;
       g.push('<line class="gridline" x1="'+L+'" y1="'+y+'" x2="'+(W-RR)+'" y2="'+y+'"/>'+
-        '<text x="'+(L-8)+'" y="'+(y+4)+'" text-anchor="end">'+shortNum(maxLikes*q/4)+'</text>'+
-        '<text x="'+(W-RR+8)+'" y="'+(y+4)+'">'+shortNum(maxMatches*q/4)+'</text>'); }
-    var bars=[],pts=[],med=[],upper=[],lower=[];
+        '<text x="'+(L-8)+'" y="'+(y+4)+'" text-anchor="end">'+shortNum(tick(maxLikes,q))+'</text>'+
+        '<text x="'+(W-RR+8)+'" y="'+(y+4)+'">'+shortNum(tick(maxMatches,q))+'</text>'); }
+    var bars=[],pts=[],med=[],upper=[],lower=[],valueLabels=[];
     B.forEach(function(b,i){
-      var x=L+step*(i+.5),bh=PH*b.likes/maxLikes,y=T+PH-bh,
-          my=T+PH-PH*b.matches/maxMatches;
+      var x=L+step*(i+.5),y=ypos(b.likes,maxLikes),bh=T+PH-y,my=ypos(b.matches,maxMatches);
       if(SHOW_LIKES) bars.push('<rect class="likebar" x="'+(x-bw/2)+'" y="'+y+'" width="'+bw+'" height="'+bh+'" rx="3"><title>'+esc(b.label)+': '+num(b.likes)+' likes sent</title></rect>');
       if(SHOW_MATCHES) pts.push(x+','+my);
-      if(SHOW_BENCHMARKS){med.push(x+','+(T+PH-PH*(b.likes*maleRef(50).rate)/maxMatches));upper.push(x+','+(T+PH-PH*(b.likes*maleRef(80).rate)/maxMatches));lower.push(x+','+(T+PH-PH*(b.likes*maleRef(20).rate)/maxMatches));}
+      if(SHOW_BENCHMARKS){med.push(x+','+ypos(b.likes*maleRef(50).rate,maxMatches));upper.push(x+','+ypos(b.likes*maleRef(80).rate,maxMatches));lower.push(x+','+ypos(b.likes*maleRef(20).rate,maxMatches));}
+      if(SHOW_LIKES&&b.likes>=maxLikes*.35&&b.likes>0)valueLabels.push('<text class="barlabel" x="'+x+'" y="'+Math.max(18,y-9)+'" text-anchor="middle">'+num(b.likes)+' likes</text>');
+      if(SHOW_MATCHES&&b.matches>=maxMatches*.35&&b.matches>0)valueLabels.push('<text class="matchlabel" x="'+x+'" y="'+Math.min(T+PH-8,my+18)+'" text-anchor="middle">'+num(b.matches)+' matches</text>');
       if(i%Math.max(1,Math.ceil(B.length/14))===0||i===B.length-1)
         bars.push('<text x="'+x+'" y="'+(H-15)+'" text-anchor="middle">'+esc(b.label)+'</text>'); });
-    var dots=SHOW_MATCHES?B.map(function(b,i){var x=L+step*(i+.5),y=T+PH-PH*b.matches/maxMatches;
+    var dots=SHOW_MATCHES?B.map(function(b,i){var x=L+step*(i+.5),y=ypos(b.matches,maxMatches);
       return '<circle class="matchdot" cx="'+x+'" cy="'+y+'" r="4"><title>'+esc(b.label)+': '+num(b.matches)+' matched likes</title></circle>';}).join(""):"";
     var band=SHOW_BENCHMARKS&&upper.length?'<polygon class="benchmarkband" points="'+upper.concat(lower.slice().reverse()).join(' ')+'"><title>Expected matches for 20th–80th percentile men at your like volume</title></polygon><polyline class="benchmarkline median" points="'+med.join(' ')+'"><title>Expected matches for the median man at your like volume</title></polyline>':'';
-    return '<svg class="chart" style="width:'+W+'px" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Your likes sent and the likes that became matches over time">'+
+    return '<svg class="chart" data-scale-mode="'+ACTIVITY_SCALE+'" style="width:'+W+'px" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Your likes sent and the likes that became matches over time">'+
       '<text x="'+L+'" y="11">LIKES</text><text x="'+(W-RR)+'" y="11" text-anchor="end">MATCHES</text>'+g.join("")+band+bars.join("")+
-      (SHOW_MATCHES?'<polyline class="matchline" points="'+pts.join(" ")+'"/>':'')+dots+'</svg>'; }
+      (SHOW_MATCHES?'<polyline class="matchline" points="'+pts.join(" ")+'"/>':'')+dots+valueLabels.join("")+'</svg>'; }
   function rateChart(S){
     var B=S.bins,W=Math.max(1040,B.length*(S.grain==="week"?34:72)+120),H=430,L=68,RR=35,T=42,BT=62,PW=W-L-RR,PH=H-T-BT,
         vals=B.filter(function(b){return b.rate!=null;}).map(function(b){return b.rate;}),
@@ -1057,7 +1065,7 @@ var DD = (function(){
         '<div class="chartcard"><h3>Do comments appear to help?</h3><p>Your observed results for likes with a comment versus likes without one. This is association, not proof that comments caused the difference.</p><div class="insightgrid" style="margin-top:18px;grid-template-columns:1fr 1fr"><div class="insight"><span class="ey">Your likes with a comment</span><div class="big">'+(cw.n?pct(cw.k/cw.n):'—')+'</div><p>'+cw.k+' matches from '+cw.n+' matured likes</p></div><div class="insight"><span class="ey">Your likes without a comment</span><div class="big">'+(bare.n?pct(bare.k/bare.n):'—')+'</div><p>'+bare.k+' matches from '+bare.n+' matured likes</p></div></div></div></div>'+
         '<div class="insightgrid" style="margin-top:14px"><div class="insight"><span class="ey">Your likes per active day</span><div class="big">'+(S.activeDays?(S.likes/S.activeDays).toFixed(1):'—')+'</div><p>Your average on days when you sent at least one like.</p></div><div class="insight"><span class="ey">Likes you reviewed</span><div class="big">'+num(S.inbound.n)+'</div><p>Incoming likes you processed in this range; processing time is not arrival time.</p></div><div class="insight"><span class="ey">Incoming likes you accepted</span><div class="big">'+num(S.inbound.accepted)+'</div><p>A count, not the rate at which people saw and liked you.</p></div></div>';
     }
-    if(VIEW==="momentum") return '<div class="chartcard feature"><div class="charttop"><div><h3>Your cumulative likes and matches</h3><p>How your likes sent and eventual matches accumulated across the selected range.</p></div><div class="legend"><span><i style="background:var(--likes)"></i>Your likes</span><span><i style="background:var(--matches)"></i>Your matches</span></div></div>'+chartTools('activity')+'<div class="chart-scroll" tabindex="0" aria-label="Scrollable cumulative chart">'+cumulativeChart(S)+'</div>'+scrollHint()+(SHOW_BENCHMARKS?benchmarkKey(true):'')+'</div>'+insightCards(S);
+    if(VIEW==="momentum") return '<div class="chartcard feature"><div class="charttop"><div><h3>Your cumulative likes and matches</h3><p>How your likes sent and eventual matches accumulated across the selected range.</p></div><div class="legend"><span><i style="background:var(--likes)"></i>Your likes</span><span><i style="background:var(--matches)"></i>Your matches</span></div></div>'+chartTools('momentum')+'<div class="chart-scroll" tabindex="0" aria-label="Scrollable cumulative chart">'+cumulativeChart(S)+'</div>'+scrollHint()+(SHOW_BENCHMARKS?benchmarkKey(true):'')+'</div>'+insightCards(S);
     if(VIEW==="compare"){
       var P=DD.timeSeries(R,R.minT,R.maxT,S.grain),same=S.from===P.from&&S.to===P.to,
           delta=S.rate&&P.rate?(S.rate.p-P.rate.p)*100:null;
@@ -1066,7 +1074,7 @@ var DD = (function(){
         (same?'<p class="chartnote"><b>Your snapshot currently is your full history.</b> Choose a year, preset, or custom dates above to make a narrower snapshot.</p>':'<p class="chartnote">Snapshot acceptance is <b>'+(delta==null?'unavailable':(delta>=0?'+':'')+delta.toFixed(2)+' percentage points')+'</b> versus your overall history. Counts cover different lengths of time, so compare their rates—not their raw totals.</p>')+
         chartTools('rate')+'<div class="chart-scroll" tabindex="0" aria-label="Scrollable comparison chart">'+compareRateChart(P,S)+'</div>'+scrollHint()+(SHOW_BENCHMARKS?benchmarkKey(false):'')+'</div>'+insightCards(S);
     }
-    return '<div class="chartgrid"><div class="chartcard feature"><div class="charttop"><div><h3>Likes you sent and likes that became matches</h3><p>Blue bars are likes you sent. Pink shows how many eventually became matches, dated to when you sent each like.</p></div></div>'+chartTools('activity')+'<div class="chart-scroll" tabindex="0" aria-label="Scrollable likes and matches chart">'+activityChart(S)+'</div>'+scrollHint()+(SHOW_BENCHMARKS?benchmarkKey(true):'')+'</div>'+
+    return '<div class="chartgrid"><div class="chartcard feature"><div class="charttop"><div><h3>Likes you sent and likes that became matches</h3><p>Blue bars are likes you sent. Pink shows how many eventually became matches, dated to when you sent each like.</p></div></div>'+chartTools('activity')+'<div class="chart-scroll" tabindex="0" aria-label="Scrollable likes and matches chart">'+activityChart(S)+'</div>'+scrollHint()+'<p class="chartnote">Readable scale spreads smaller months apart so the activity pattern stays visible; Full scale restores equal numeric spacing. Every axis label and peak label is the actual count.</p>'+(SHOW_BENCHMARKS?benchmarkKey(true):'')+'</div>'+
       '<div class="chartcard feature"><div class="charttop"><div><h3>Your match-back rate over time</h3><p>Of the matured likes you sent in each '+S.grain+', the percentage that became matches. Use the controls below or swipe through time at full size.</p></div><div class="legend"><span><i style="background:var(--rate)"></i>Your match-back rate</span></div></div>'+chartTools('rate')+'<div class="chart-scroll" tabindex="0" aria-label="Scrollable match-back-rate chart">'+rateChart(S)+'</div>'+scrollHint()+(SHOW_BENCHMARKS?benchmarkKey(false):'')+'<p class="chartnote">Likes after '+iso(S.resolveBefore)+' are too recent to score. Empty periods are gaps, not zeroes.</p></div>'+insightCards(S)+'</div>'; }
   function timelinePanel(S){
     var rw=S.rate,preset=function(id,label){return '<button data-range="'+id+'" class="'+(RANGE===id?'on':'')+'" aria-pressed="'+(RANGE===id)+'">'+label+'</button>';},
@@ -1299,13 +1307,15 @@ var DD = (function(){
       if(!SHOW_LIKES&&!SHOW_MATCHES){if(s==="likes")SHOW_MATCHES=true;else SHOW_LIKES=true;}paint();};});
     Array.prototype.forEach.call(document.querySelectorAll("[data-layer]"),function(b){b.onclick=function(){
       var s=b.getAttribute("data-layer");if(s==="benchmarks")SHOW_BENCHMARKS=!SHOW_BENCHMARKS;else if(s==="labels")SHOW_VALUES=!SHOW_VALUES;paint();};});
+    Array.prototype.forEach.call(document.querySelectorAll("[data-activity-scale]"),function(b){b.onclick=function(){
+      ACTIVITY_SCALE=b.getAttribute("data-activity-scale");paint();};});
     Array.prototype.forEach.call(document.querySelectorAll("[data-chart-year]"),function(s){s.onchange=function(){
       if(!s.value)return;var b=document.querySelector('[data-range="year-'+s.value+'"]');if(b)b.click();};});
     $("#applyRange").onclick=function(){var a=$("#viewFrom").value,z=$("#viewTo").value;if(a&&z){
       VFROM=new Date(a+"T00:00:00Z").getTime();VTO=new Date(z+"T00:00:00Z").getTime()+864e5-1;RANGE="custom";paint();}};
     $("#snap").onclick=function(){var data=DD.snapshot(R,M,{subject:SUBJ&&SUBJ.subject||null,consent:SUBJ&&SUBJ.consent||null,consentAt:SUBJ&&SUBJ.at||null,declaration:declValid()?DECL:null,boundaryMoves:0});
       data.dashboard_range={from:iso(S.from),to:iso(S.to),grain:S.grain};var b=new Blob([JSON.stringify(data,null,1)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="datedawg-snapshot.json";a.click();setTimeout(function(){URL.revokeObjectURL(a.href);},1000);};
-    $("#again").onclick=function(){R=null;VFROM=VTO=null;RANGE="all";GRAIN="month";VIEW="overview";SHOW_LIKES=SHOW_MATCHES=SHOW_BENCHMARKS=SHOW_VALUES=true;$("#out").className="hide";$("#out").innerHTML="";if($("#drop").scrollIntoView)$("#drop").scrollIntoView({behavior:"smooth"});};
+    $("#again").onclick=function(){R=null;VFROM=VTO=null;RANGE="all";GRAIN="month";VIEW="overview";SHOW_LIKES=SHOW_MATCHES=SHOW_BENCHMARKS=SHOW_VALUES=true;ACTIVITY_SCALE="sqrt";$("#out").className="hide";$("#out").innerHTML="";if($("#drop").scrollIntoView)$("#drop").scrollIntoView({behavior:"smooth"});};
   }
 
   function capturePre(){
