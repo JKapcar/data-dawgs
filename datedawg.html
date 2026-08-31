@@ -58,6 +58,7 @@ button{font:inherit;cursor:pointer}
 /* The first post-import screen: a visual answer before the workings. */
 .verdict{position:relative;left:50%;width:100vw;translate:-50% 0;background:#0a0806;color:#f7f3ea;
   overflow:hidden;min-height:min(82vh,700px);display:flex;flex-direction:column;margin:0 0 34px}
+.verdict.insufficient{min-height:360px;justify-content:flex-start}
 .verdict .vtop{padding:20px 26px 0;font:700 9.5px var(--mono);letter-spacing:.2em;color:#6f665a}
 .verdict .vtop b{color:#ff6a02}.verdict .vcore{padding:28px 26px 0;text-align:center}
 .verdict .vlede{font:700 10.5px var(--mono);letter-spacing:.22em;color:#8c8173;margin-bottom:20px}
@@ -925,26 +926,33 @@ var DD = (function(){
       (w.n<DD.MIN_N?'<div class="warn">Only '+w.n+' likes here. Read the range, not the number.</div>':'')+
       (caveat?'<div class="warn">'+esc(caveat)+'</div>':'')+'</div>'; }
 
-  function verdict(M,R){
-    var primary=M.rankStd||M.rankAdj;if(!primary)return "";
+  function verdict(M,R,W){
+    var period={all:"OVERALL", "1y":"1 YEAR", "6m":"6 MONTHS", "1m":"1 MONTH"}[W.id]||W.id,
+        primary=W.S.matureLikes>=DD.MIN_N&&(M.rankStd||M.rankAdj),
+        method=M.rankStd?"VOLUME-STANDARDIZED":"OBSERVED";
+    if(!primary)return '<section class="verdict insufficient" id="verdict"><div class="vtop">READ '+num(R.records)+
+      ' CONNECTIONS · '+iso(R.minT).slice(0,4)+'–'+iso(R.maxT).slice(0,4)+
+      ' · <b>NOTHING LEFT THIS PAGE</b></div><div class="vcore"><div class="vlede">'+esc(period)+
+      ' · '+iso(W.from)+' → '+iso(W.to)+'</div><div class="vnum">—</div><div class="vsub">NOT ENOUGH RESOLVED LIKES TO RANK THIS PERIOD</div></div><div class="vchips"><span class="vchip">PERIOD <b>'+esc(period)+
+      '</b></span><span class="vchip">MATURE LIKES <b>'+num(W.S.matureLikes)+'</b></span></div><div class="vcue" id="vcue">↓ TRY A LONGER PERIOD BELOW</div></section>';
     var head=primary.band||primary.all,anchors=primary.band?primary.anchorsBand:primary.anchors,
-        W=1000,H=200,rp=DD.ridgePath(anchors,W,H),xPct=Math.max(1,Math.min(99,
-          (Math.log(primary.rate)-rp.lo)/rp.span*100)),span=Math.max(1,Math.round((R.maxT-M.cut)/864e5));
+        svgW=1000,svgH=200,rp=DD.ridgePath(anchors,svgW,svgH),xPct=Math.max(1,Math.min(99,
+          (Math.log(primary.rate)-rp.lo)/rp.span*100));
     function ax(p){var a=anchors.filter(function(x){return x[0]===p;})[0];return a?pct(a[1]):"—";}
     return '<section class="verdict play" id="verdict"><div class="vtop">READ '+num(R.records)+
       ' CONNECTIONS · '+iso(R.minT).slice(0,4)+'–'+iso(R.maxT).slice(0,4)+
       ' · <b>NOTHING LEFT THIS PAGE</b></div><div class="vcore"><div class="vlede">'+
       (primary.band?'AMONG MEN '+esc(primary.bandLabel):'AMONG ALL MEN')+', YOUR SWIPESTATS REFERENCE IS</div>'+
       '<div class="vnum">'+Math.round(head.p)+'<i>th</i></div><div class="vsub">PERCENTILE · <em>'+
-      pct(primary.rate)+'</em> RECIPROCAL ACCEPTANCE</div></div><div class="vridge">'+
-      '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" aria-label="Published male match-rate distribution"><defs><linearGradient id="vrg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2118"/><stop offset="1" stop-color="#12100c"/></linearGradient></defs><path d="'+rp.d+'" fill="url(#vrg)" stroke="#3a3026" stroke-width="1.5"/></svg><div class="vpin" style="left:'+xPct.toFixed(1)+'%;height:46%"><b>YOU</b></div></div>'+
+      pct(primary.rate)+'</em> '+method+' RECIPROCAL ACCEPTANCE</div></div><div class="vridge">'+
+      '<svg viewBox="0 0 '+svgW+' '+svgH+'" preserveAspectRatio="none" aria-label="Published male match-rate distribution"><defs><linearGradient id="vrg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2118"/><stop offset="1" stop-color="#12100c"/></linearGradient></defs><path d="'+rp.d+'" fill="url(#vrg)" stroke="#3a3026" stroke-width="1.5"/></svg><div class="vpin" style="left:'+xPct.toFixed(1)+'%;height:46%"><b>YOU</b></div></div>'+
       '<div class="vaxl"><span>p5 · '+ax(5)+'</span><span>MEDIAN · '+ax(50)+'</span><span>p90 · '+ax(90)+'</span><span>p99 · '+ax(99)+'</span></div><div class="vchips">'+
       (primary.band?'<span class="vchip">ALL MEN <b>p'+Math.round(primary.all.p)+'</b></span>':'')+
       (M.rankHeavy&&M.heavyAfter&&M.heavyAfter.n>=DD.MIN_N?'<span class="vchip">HEAVY-DAY CHECK <b>p'+
         Math.round((M.rankHeavy.band||M.rankHeavy.all).p)+'</b></span>':'')+
       (M.std.valid&&M.std.lift!=null?'<span class="vchip">VS PRIOR <b>'+(M.std.lift>0?'+':'')+
         (100*M.std.lift).toFixed(0)+'%</b></span>':'')+
-      '<span class="vchip">WINDOW <b>'+num(span)+'d</b></span><span class="vchip">n <b>6,233</b> · SWIPESTATS</span></div><div class="vcue" id="vcue">↓ THE WORKINGS</div></section>';}
+      '<span class="vchip">PERIOD <b>'+esc(period)+'</b></span><span class="vchip">'+iso(W.from)+' → '+iso(W.to)+'</span><span class="vchip">n <b>6,233</b> · SWIPESTATS</span></div><div class="vcue" id="vcue">↓ THE WORKINGS</div></section>';}
 
   function rankWindow(){
     var DAY=864e5,to=Math.max(R.minT,R.maxT-DD.RESOLVE_DAYS*DAY),from=R.minT;
@@ -1371,7 +1379,7 @@ var DD = (function(){
 
   function paint(){
     var S=DD.timeSeries(R,VFROM,VTO,GRAIN),M=DD.metrics(R,CUT),RW=rankWindow(),h=[];
-    h.push(verdict(M,R));
+    h.push(verdict(RW.M,R,RW));
     h.push('<div id="workings"><details class="receipt"><summary>Import details & privacy receipt</summary>'+receipt()+'</details>');
     h.push('<div class="sec"><h2>Where your result sits</h2><p class="sub">Your reciprocal-acceptance rate placed directly on SwipeStats’ published male Tinder percentile table. Choose a ranking period below; likes too recent to have resolved are excluded.</p>'+rankPanel(RW)+'</div>');
     h.push(timelinePanel(S));
@@ -1484,7 +1492,7 @@ window.DD_BOTCTX = {
 - Its primary observable is reciprocal acceptance: of the women the subject liked, how many liked the subject back. Direction is inferred because the export does not state it explicitly.
 - Likes newer than 30 days are immature and excluded from every censoring-adjusted current result, including volume standardization and the displayed z-test.
 - Dashboard date filters control every visible summary, chart, Dating App MV / Market Value reference, and selected snapshot. They never alter or reinstate a declared before/after test. Timeline matches are grouped by the date the subject sent the like; the trend rate uses matured likes only.
-- The ranking panel has its own Overall, 1 year, 6 months, and 1 month windows. Those windows end on the latest scoreable date, 30 days before the newest export event, and do not change the dashboard range or the declared before/after test.
+- The full-width Verdict and the detailed ranking panel always use the same selected Overall, 1 year, 6 months, or 1 month ranking window and the same primary ranking method. Those windows end on the latest scoreable date, 30 days before the newest export event, and do not change the dashboard range or the declared before/after test. Never quote the Verdict and detailed panel as different scopes.
 - Compare uses one export at two scopes: fixed overall history versus the date-filtered snapshot. Raw totals cover different spans, so compare acceptance rates rather than totals.
 - Percentiles come from direct log-linear interpolation of SwipeStats' published Tinder male percentile table (6,233 complete male profiles), not from a fitted model and not from an observed Hinge cohort. No cohort of real Hinge men exists here.
 - If the export includes the subject's age, the age-band reference rescales the published all-men curve by that band's published mean. It assumes the distribution shape is constant across age bands; SwipeStats does not publish age-specific shapes.
