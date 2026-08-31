@@ -52,4 +52,29 @@ assert.strictEqual(firebaseEmpty.settings.scoringConfig.mode,"custom","normaliza
 const drafted=core.normalizeDraftState({settings:{scoring:"full"},picks:[{id:"p1"}]});
 assert.deepStrictEqual(drafted.picks,[{id:"p1"}],"existing picks are preserved");
 
+/* The 2026 auction is committed to the canonical record, so every leaguemate can rebuild
+   the board from the repo instead of from whatever the Firebase room happens to hold. */
+const canonical=require("../data/leagues/pepperoninipples.json");
+assert.strictEqual(canonical.draft.status,"complete");
+assert.strictEqual(canonical.draft.picks.length,canonical.draft.pick_count);
+
+const final=core.stateFromCanonical(canonical);
+assert.strictEqual(final.picks.length,157,"every recorded sale reaches the draft state");
+assert.ok(final.ts>0 && final.ts===Date.parse(canonical.draft.completed_at),
+  "the state is stamped at the final sale, so a later live push always wins");
+assert.strictEqual(final.settings.teams.length,14);
+assert.deepStrictEqual(final.settings.teams.map(t=>t.name).slice(0,3),
+  ["Data Dawgs","Dirty Mike","Butts"]);
+
+const spend=new Array(14).fill(0);
+for(const pick of final.picks){
+  assert.ok(Number.isInteger(pick.ti) && pick.ti>=0 && pick.ti<14,`${pick.player} lands on a real team`);
+  assert.ok(pick.player && pick.pos,`${pick.player} carries a name and a position`);
+  spend[pick.ti]+=pick.price;
+}
+for(const [i,total] of spend.entries())
+  assert.ok(total<=final.settings.budget,`${final.settings.teams[i].name} spent $${total} of $${final.settings.budget}`);
+assert.strictEqual(spend.reduce((a,b)=>a+b,0),2786,"the board's own money total");
+assert.strictEqual(new Set(final.picks.map(p=>p.player)).size,157,"nobody was sold twice");
+
 console.log("draft league tests: ok");

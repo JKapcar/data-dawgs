@@ -149,12 +149,102 @@
     });
   }
 
+  let canonicalRequest=null;
+  function fetchCanonical(){
+    if(canonicalRequest) return canonicalRequest;
+    if(!hasWindow || typeof fetch!=="function") return (canonicalRequest=Promise.resolve(null));
+    return (canonicalRequest=fetch("data/leagues/pepperoninipples.json")
+      .then(r=>r.ok?r.json():Promise.reject(new Error(String(r.status)))).catch(()=>null));
+  }
+
   function seedLegacyLeague(){
     const existing=loadLeague(LEGACY_ROOM);
     if(existing) return Promise.resolve(existing);
-    if(!hasWindow || typeof fetch!=="function") return Promise.resolve(null);
-    return fetch("data/leagues/pepperoninipples.json").then(r=>r.ok?r.json():Promise.reject(new Error(String(r.status))))
-      .then(record=>saveLeague(leagueFromCanonical(record))).catch(()=>null);
+    return fetchCanonical().then(record=>record?saveLeague(leagueFromCanonical(record)):null).catch(()=>null);
+  }
+
+  /* A FINISHED DRAFT IS NOT ALLOWED TO LIVE ONLY IN THE FIREBASE ROOM. The mirror is
+     write-through and unauthenticated: it is one PUT away from being empty, and a phone
+     that never had the room open has nothing local either. So the completed auction is
+     committed to data/leagues/ as canon, and any rig page can rebuild the whole board
+     from it. That is what makes the results readable by every leaguemate rather than by
+     whoever happens to still have draft night in localStorage.
+
+     `etr` stays 0 on every rebuilt pick. It means "the value the OPERATOR's page held at
+     the moment of the sale", which nobody recorded — and in this room the surfaces read
+     DataDawg$ out of the pool by name anyway (see pickVal on the board and the sheet).
+     Backfilling today's number into a field that claims to be a sale-time number would
+     be inventing evidence. */
+  function stateFromCanonical(record){
+    const league=leagueFromCanonical(record);
+    const state=stateFromLeague(league);
+    const draft=(record&&record.draft)||{};
+    const at=Date.parse(draft.completed_at||"")||0;
+    const slot={};
+    league.config.teams.forEach((team,index)=>{ if(team.providerId!=null) slot[team.providerId]=index; });
+    state.picks=(Array.isArray(draft.picks)?draft.picks:[])
+      .filter(pick=>pick && slot[String(pick.team_id)]!==undefined)
+      .map(pick=>({player:String(pick.player||""), pos:String(pick.pos||""), ti:slot[String(pick.team_id)],
+        price:Math.max(0,Math.round(Number(pick.price)||0)), keeper:!!pick.keeper,
+        etr:0, nfl:pick.nfl||"", ts:at}));
+    state.ts=at;
+    return state;
+  }
+
+  /* What this device held BEFORE any page script ran. draft-league.js loads ahead of the
+     page's own code, and that code is local-first: auction.html, finding nothing, builds a
+     fresh empty board and saves it stamped now — which is indistinguishable, by timestamp
+     alone, from a board somebody deliberately reset. The snapshot keeps the two apart. */
+  const stateAtLoad={};
+  function snapshotState(){
+    if(!hasWindow) return;
+    [storageKey("dd-auction-v1", activeLeagueId()), storageKey("dd-auction-v1", LEGACY_ROOM)]
+      .forEach(key=>{ if(!(key in stateAtLoad)) stateAtLoad[key]=getJSON(key,null); });
+  }
+
+  /* Install the committed results on this device unless the device already holds
+     something better. "Better" is deliberately narrow: a state stamped at or after the
+     final sale, or one carrying at least as many picks. Both guards matter — the first
+     keeps next season's fresh, empty board from being refilled with this year's draft,
+     the second keeps a live operator from having their board shrunk mid-sale. */
+  function seedPublishedDraft(){
+    const id=activeLeagueId();
+    if(id && id!==LEGACY_ROOM) return Promise.resolve(null);
+    return fetchCanonical().then(record=>{
+      if(!record || !record.draft || record.draft.status!=="complete") return null;
+      const published=stateFromCanonical(record);
+      if(!published.picks.length || !published.ts) return null;
+      /* Two keys, one room. The legacy room predates ?league= and still answers on the
+         unscoped key, and the dashboard rewrites its own URL to the scoped one mid-load —
+         so a page can read whichever of the two the seed did not write. Fill both. */
+      const keys=[storageKey("dd-auction-v1", id), storageKey("dd-auction-v1", LEGACY_ROOM)]
+        .filter((key,index,all)=>all.indexOf(key)===index);
+      let seeded=null, needsReload=false;
+      for(const key of keys){
+        const local=getJSON(key,null), atLoad=(key in stateAtLoad) ? stateAtLoad[key] : local;
+        if(atLoad && (Number(atLoad.ts)||0) >= published.ts) continue;
+        if(local && Array.isArray(local.picks) && local.picks.length >= published.picks.length) continue;
+        if(!setJSON(key,published)) continue;
+        seeded=published;
+        // The page already rendered the empty board it just built for itself; a repaint
+        // hook is not enough, it has to read the state again from the top.
+        if(!atLoad && local && Array.isArray(local.picks) && !local.picks.length) needsReload=true;
+        /* Every rig page already repaints on a storage event for this key — that is how the
+           embedded views hear the operator. Fire one here so a page that seeded itself
+           repaints too: a same-document write raises no storage event on its own. */
+        try{ window.dispatchEvent(new StorageEvent("storage",{key,newValue:JSON.stringify(published)})); }catch(e){}
+      }
+      if(!seeded) return null;
+      if(typeof window.DDApplyExternalState==="function"){ try{ window.DDApplyExternalState(published); }catch(e){} }
+      window.dispatchEvent(new CustomEvent("ddleagueseed",{detail:{state:published}}));
+      // Once, ever, per tab: a reload that somehow finds nothing seeded must not loop.
+      if(needsReload && hasWindow){
+        let already=false;
+        try{ already=!!sessionStorage.getItem("dd-seed-reload"); sessionStorage.setItem("dd-seed-reload","1"); }catch(e){ already=true; }
+        if(!already) location.reload();
+      }
+      return seeded;
+    }).catch(()=>null);
   }
 
   function stateFromLeague(league){
@@ -311,7 +401,16 @@
     let league = null;
     const state = normalizeDraftState(envelope.state || null);
     if(envelope.league) league = saveLeague(envelope.league);
-    if(state && activeLeagueId()) setJSON(storageKey("dd-auction-v1"), state);
+    /* Never let an older envelope overwrite a newer local copy. The subscribers have
+       applied this rule for a while (the mirror round-trips ~1s behind the operator);
+       first-load hydration did not, so a room left holding a half-finished draft — or
+       cleared — could wipe the committed results a device had just seeded. */
+    if(state && activeLeagueId()){
+      const key = storageKey("dd-auction-v1");
+      const local = getJSON(key, null);
+      const incoming = Number(envelope.ts) || Number(state.ts) || 0;
+      if(!(local && (Number(local.ts)||0) > incoming)) setJSON(key, state);
+    }
     return {league,state,ts:envelope.ts || 0};
   }
 
@@ -320,10 +419,10 @@
     get id(){ return activeLeagueId(); },
     get current(){ const id=activeLeagueId(); return loadLeague(id || LEGACY_ROOM); },
     get isInstance(){ return !!activeLeagueId(); },
-    activeLeagueId, generateId, normalize:normalizeLeague, normalizeDraftState, stateFromLeague,
+    activeLeagueId, generateId, normalize:normalizeLeague, normalizeDraftState, stateFromLeague, stateFromCanonical,
     storageKey, list, remember, save:saveLeague, load:loadLeague, removeLocal,
     createManual, saveState, leagueURL, remoteEndpoint, publishLeague, hydrateEnvelope, mountIndicator, decorateDraftLinks,
-    leagueFromCanonical, seedLegacyLeague
+    leagueFromCanonical, seedLegacyLeague, seedPublishedDraft
   };
 
   root.DDLeague = DDLeague;
@@ -346,7 +445,9 @@
       const back=location.pathname+location.hash;
       location.replace("draft-leagues.html?return="+encodeURIComponent(back));
     }
+    snapshotState();
     seedLegacyLeague();
+    if(rigPages.has(startupPage) || startupPage==="master.html") seedPublishedDraft();
 
     function decodeLegacyToken(token){
       try{
@@ -486,6 +587,6 @@
   }
 
   if(typeof module !== "undefined" && module.exports){
-    module.exports={activeLeagueId,generateId,normalizeLeague,normalizeDraftState,stateFromLeague,storageKey,LEAGUE_RE,LEAGUE_ID_PATTERN,leagueFromCanonical};
+    module.exports={activeLeagueId,generateId,normalizeLeague,normalizeDraftState,stateFromLeague,stateFromCanonical,storageKey,LEAGUE_RE,LEAGUE_ID_PATTERN,leagueFromCanonical};
   }
 })(typeof window !== "undefined" ? window : globalThis);
