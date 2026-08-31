@@ -1,0 +1,162 @@
+// Data Dawgs service worker — draft-night insurance.
+// VERSION = md5 of every *.html and *.js in the repo root (sw.js itself excluded),
+// concatenated in sorted order, first 10 hex. It covers the scripts as well as the
+// pages because the draft rig's behaviour lives in draft-*.js: hashing only the HTML
+// meant a JS-only fix never invalidated a phone's cache.
+// HTML is network-first (so deploys land immediately) with a cache fallback,
+// so a dead venue wifi can't take the draft down mid-auction.
+const VERSION = "574162df24";
+const CACHE = "dd-" + VERSION;
+
+// the pages that must survive a network drop (stats.html is 2MB — cached on first visit instead)
+const CORE = [
+  "/", "/index.html", "/draft-leagues.html", "/draft-league.js", "/draft-personal-sync.js", "/draft-providers.js", "/draft-live-sync.js", "/dashboard.html", "/board.html", "/auction.html",
+  "/bigboard.html", "/dataviz.html", "/report.html", "/master.html", "/strategy.html",
+  // Lab landing pages — small, static, and the nav now points at them
+  "/dfs.html", "/signon.html", "/connect.html", "/guillotine.html", "/receipts.html", "/nfelo.html", "/survivor.html", "/survivor-settings.html", "/pound.html", "/dawghouse.html",
+  "/cfb.html", "/cfb-power.html", "/calculators.html", "/arena.html", "/fantasy-warroom.html", "/teamdraft.html", "/data.html", "/nfl.html",
+  "/dawgs.html", "/swoledawg.html", "/datedawg.html",
+  // The challenge board is worth having offline: the schedule and the model lines still
+  // render from cache, and a save that cannot reach the Worker fails visibly rather than
+  // looking like it worked.
+  "/challenge.html",
+  // the weekly game and the sign-on helper are opened on phones like everything else
+  "/bozo.html", "/dawg-slate.js",
+  // installed to a home screen, these are what the launcher asks for
+  "/manifest.webmanifest", "/assets/icon-192.png", "/assets/icon-512.png", "/assets/icon-180.png"
+];
+// the horn is precached, not left to cache-first on first play: draft night is the
+// first time it ever fires, and a venue wifi hiccup at that exact moment would eat it
+const CORE_MEDIA = ["/superbowlsuperbrowns.m4a"];
+// celebration photos, so SUPER BOWL SUPER BROWNS still fires offline
+const MEDIA = [
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Cleveland%2C_Ohio_Skyline_at_Sunrise_at_Edgewater_Park_%288669269938%29.jpg/960px-Cleveland%2C_Ohio_Skyline_at_Sunrise_at_Edgewater_Park_%288669269938%29.jpg",
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Cleveland_Browns_Stadium_2012.jpg/960px-Cleveland_Browns_Stadium_2012.jpg",
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Terminal_Tower_from_Cuyahoga_River_Cropped.jpg/960px-Terminal_Tower_from_Cuyahoga_River_Cropped.jpg",
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Cleveland_Sign_at_Edgewater_Park_%2827624106630%29.jpg/960px-Cleveland_Sign_at_Edgewater_Park_%2827624106630%29.jpg"
+];
+
+self.addEventListener("install", e=>{
+  e.waitUntil((async()=>{
+    const c = await caches.open(CACHE);
+    // core pages must all land; media is best-effort (cross-origin, opaque)
+    // addAll is atomic — one bad entry throws away the entire precache with no signal.
+    // Per-URL adds mean a typo costs one page instead of the whole offline story.
+    const misses = [];
+    await Promise.all(CORE.concat(CORE_MEDIA).map(u =>
+      c.add(u).catch(()=>{ misses.push(u); })
+    ));
+    if(misses.length) console.warn("[dd-sw] precache missed:", misses);
+    await Promise.all(MEDIA.map(u =>
+      fetch(u, {mode:"no-cors"}).then(r=>c.put(u, r)).catch(()=>{})
+    ));
+    self.skipWaiting();
+  })());
+});
+
+self.addEventListener("activate", e=>{
+  e.waitUntil((async()=>{
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(k=>k.startsWith("dd-") && k!==CACHE).map(k=>caches.delete(k)));
+    await self.clients.claim();
+  })());
+});
+
+const isHTML = req =>
+  req.mode === "navigate" ||
+  (req.headers.get("accept")||"").includes("text/html");
+
+self.addEventListener("fetch", e=>{
+  const req = e.request;
+  if(req.method !== "GET") return;
+  const url = new URL(req.url);
+
+  // never cache the live-sync stream or any firebase traffic
+  if(/firebaseio\.com$/.test(url.hostname) || url.hostname.endsWith("firebasedatabase.app")) return;
+  // Sleeper is a live upstream source. Config and picks belong in DD's local/Firebase
+  // state after normalization, never in the service-worker response cache.
+  if(url.hostname === "api.sleeper.app") return;
+  // ⚠️ Never touch the Worker. POSTs already bypass (the handler ignores non-GET), but
+  // GET /tts/voices is an AUTHENTICATED request — the cache-first branch below would
+  // store its response under a key with no notion of the passphrase, and keep serving
+  // a stale voice list after Kap clones a new voice. Caught 8/4 when the list came back
+  // empty on the operator page: the request was being answered by the SW, not the net.
+  if(url.hostname === "toto.jkapcar4.workers.dev") return;
+  // leave YouTube alone entirely — the player API and its media segments are versioned and
+  // range-requested; a cache-first SW in front of them breaks playback in confusing ways.
+  if(/(^|\.)(youtube\.com|youtube-nocookie\.com|ytimg\.com|googlevideo\.com)$/.test(url.hostname)) return;
+  // video is range-requested; a cached full-body response breaks seeking — let it through
+  if(url.pathname.endsWith(".mp4") || url.pathname.endsWith(".webm")) return;
+  // ⚠️ /data/ is the machine-readable mirror and llms.txt is its index. The catch-all below
+  // is cache-first, which would pin a dated snapshot in the browser forever and serve a
+  // stale as_of long after the file was rebuilt. Freshness is the whole point of these
+  // files — let them go straight to the network. No VERSION bump needed: this path was
+  // never cached, so there is nothing stale to evict.
+  if(url.pathname.startsWith("/data/") || url.pathname === "/llms.txt") return;
+  // ⚠️ The Markets and A.I. tools fetch cross-origin JSON live in the browser — GETs that are
+  // NOT HTML, so without this they fall to the cache-first catch-all at the bottom and a
+  // visitor's FIRST set of prices or model rows would be pinned forever, on pages whose whole
+  // claim is "fetched live in your browser right now". Same trap already documented for /data/,
+  // one origin out. Any future live upstream goes in this list.
+  if(url.hostname === "openrouter.ai" ||
+     url.hostname === "gamma-api.polymarket.com" ||
+     url.hostname === "clob.polymarket.com" ||
+     url.hostname === "data-api.polymarket.com") return;
+
+  if(isHTML(req)){
+    // network-first, 4s budget, fall back to whatever we cached
+    e.respondWith((async()=>{
+      try{
+        const net = await Promise.race([
+          fetch(req),
+          new Promise((_,rej)=>setTimeout(()=>rej(new Error("slow")), 4000))
+        ]);
+        const c = await caches.open(CACHE);
+        // only a good response earns a place in the cache — a 404 or a 502 caught during a
+        // deploy would otherwise become this page's offline copy until the next version bump
+        if(net && net.ok) c.put(new Request(url.pathname), net.clone()).catch(()=>{});
+        return net;
+      }catch(err){
+        const c = await caches.open(CACHE);
+        return (await c.match(new Request(url.pathname)))
+            || (await c.match(url.pathname))
+            || (await c.match("/index.html"))
+            || new Response("<h1>Offline</h1><p>This page hasn't been cached yet.</p>",
+                            {headers:{"Content-Type":"text/html"}});
+      }
+    })());
+    return;
+  }
+
+  // The draft scripts carry the rig's behaviour and VERSION is computed over the HTML,
+  // so a JS-only fix would otherwise sit behind a cache-first hit forever. Network-first
+  // with a cache fallback keeps offline working and still lets a fix land.
+  if(/^\/(draft-[a-z-]+|dawg-slate)\.js$/.test(url.pathname)){
+    e.respondWith((async()=>{
+      const c = await caches.open(CACHE);
+      try{
+        const net = await Promise.race([
+          fetch(req),
+          new Promise((_,rej)=>setTimeout(()=>rej(new Error("slow")), 4000))
+        ]);
+        if(net && net.ok) c.put(req, net.clone()).catch(()=>{});
+        return net;
+      }catch(err){ return (await c.match(req)) || Response.error(); }
+    })());
+    return;
+  }
+
+  // images / fonts / everything else: cache-first, fill the cache in the background
+  e.respondWith((async()=>{
+    const c = await caches.open(CACHE);
+    const hit = await c.match(req);
+    if(hit) return hit;
+    try{
+      const net = await fetch(req);
+      if(net && (net.ok || net.type === "opaque")) c.put(req, net.clone()).catch(()=>{});
+      return net;
+    }catch(err){
+      return hit || Response.error();
+    }
+  })());
+});

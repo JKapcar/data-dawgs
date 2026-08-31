@@ -12,6 +12,7 @@
   --ink-1:#f5f1ea; --ink-2:#c8c1b4; --ink-3:#8f897d;
   --border:rgba(255,255,255,0.10);
   --accent:#ff6a02; --accent-ink:#140a02;
+  --likes:#2188ff; --matches:#ff375f; --rate:#7c4dff;
   --good:#2fbf3f; --bad:#ff6b6b; --warn:#eda100;
   --slip-stock:#f7f2e4; --slip-ink:#1b1209; --slip-ink2:#5b4a37; --slip-rule:#cfc3a8;
 }
@@ -21,6 +22,7 @@
   --ink-1:#2b1c0e; --ink-2:#5b4a37; --ink-3:#8c7b66;
   --border:rgba(49,29,0,0.15);
   --accent:#d13a00; --accent-ink:#ffffff;
+  --likes:#006ee6; --matches:#d91f4e; --rate:#6541d8;
   --good:#006300; --bad:#c73030; --warn:#a86e00;
 }
 :root{ --display:"Arial Black","Arial Bold",Impact,system-ui,sans-serif;
@@ -167,6 +169,10 @@ button{font:inherit;cursor:pointer}
   color:var(--ink-3)}
 .rangebar .range-readout{font:700 12px var(--mono);color:var(--ink-2)}
 .controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.yearstrip{display:flex;gap:5px;overflow-x:auto;padding:2px 0;scrollbar-width:thin}
+.yearstrip button{border:1px solid var(--border);background:var(--page);color:var(--ink-2);
+  border-radius:999px;padding:6px 10px;font:800 10px var(--mono);white-space:nowrap}
+.yearstrip button.on{background:var(--ink-1);color:var(--page)}
 .seg{display:flex;gap:3px;padding:3px;border:1px solid var(--border);border-radius:10px;
   background:var(--page)}
 .seg button{border:0;background:transparent;color:var(--ink-2);border-radius:7px;
@@ -185,27 +191,96 @@ button{font:inherit;cursor:pointer}
 .kpi .label{display:block;font:800 9.5px var(--mono);letter-spacing:.12em;
   text-transform:uppercase;color:var(--ink-3)}
 .kpi .detail{display:block;margin-top:6px;font-size:11.5px;color:var(--ink-2)}
-.chartgrid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(340px,.65fr);gap:14px}
+.viewtabs{display:flex;gap:4px;margin:18px 0 12px;padding:4px;border:1px solid var(--border);
+  border-radius:14px;background:color-mix(in srgb,var(--surface-1) 80%,transparent);width:max-content;
+  max-width:100%;overflow-x:auto}
+.viewtabs button{border:0;background:transparent;color:var(--ink-2);border-radius:10px;padding:9px 14px;
+  font:800 11px var(--mono);white-space:nowrap}
+.viewtabs button.on{background:var(--surface-1);color:var(--ink-1);box-shadow:0 3px 12px rgba(20,12,4,.12)}
+.chartgrid{display:grid;grid-template-columns:1fr;gap:14px}
+.chartpair{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .chartcard{background:var(--surface-1);border:1px solid var(--border);border-radius:18px;
-  padding:18px;min-width:0;box-shadow:0 12px 30px rgba(20,12,4,.06)}
+  padding:22px;min-width:0;box-shadow:0 14px 36px rgba(20,12,4,.07)}
+.chartcard.feature{padding:24px}
 .chartcard .charttop{display:flex;justify-content:space-between;align-items:flex-start;
   gap:12px;margin-bottom:14px}
-.chartcard h3{font:400 18px/1.2 var(--display);margin-bottom:4px}
+.chartcard h3{font:400 20px/1.2 var(--display);margin-bottom:5px}
 .chartcard p{font-size:12px;line-height:1.45;color:var(--ink-3);margin:0;max-width:58ch}
 .legend{display:flex;gap:12px;flex-wrap:wrap;font:700 10px var(--mono);color:var(--ink-2)}
 .legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
-.chart-scroll{overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}
-.chart{display:block;width:100%;min-width:620px;height:auto;overflow:visible}
-.chart.ratechart{min-width:380px}
-.chart text{font-family:var(--mono);font-size:10px;fill:var(--ink-3)}
+.charttools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:11px 12px;margin:0 0 12px;
+  border:1px solid var(--border);border-radius:13px;background:var(--page)}
+.toolgroup{display:flex;gap:4px;align-items:center;flex-wrap:wrap}.toolgroup+.toolgroup{padding-left:8px;
+  border-left:1px solid var(--border)}.toolgroup>span{font:800 9px var(--mono);letter-spacing:.11em;
+  text-transform:uppercase;color:var(--ink-3);margin-right:2px}
+.charttools button,.charttools select{border:1px solid var(--border);background:var(--surface-1);color:var(--ink-2);
+  border-radius:999px;padding:7px 10px;font:800 10px var(--mono)}
+.charttools button.on{background:var(--ink-1);border-color:var(--ink-1);color:var(--surface-1)}
+.charttools button.on[data-series="likes"]{background:var(--likes);border-color:var(--likes);color:#fff}
+.charttools button.on[data-series="matches"]{background:var(--matches);border-color:var(--matches);color:#fff}
+.charttools button.on[data-layer="benchmarks"]{background:var(--ink-2);border-color:var(--ink-2);color:var(--surface-1)}
+.chart-scroll{overflow-x:auto;overflow-y:hidden;scrollbar-width:auto;overscroll-behavior-inline:contain;
+  touch-action:pan-x pan-y;cursor:grab;border:1px solid var(--border);border-radius:13px;background:var(--surface-1)}
+.chart-scroll:active{cursor:grabbing}.chart-scroll::-webkit-scrollbar{height:12px}
+.chart-scroll::-webkit-scrollbar-thumb{background:var(--ink-3);border:3px solid var(--surface-1);border-radius:999px}
+.chart-scroll::-webkit-scrollbar-track{background:var(--page);border-radius:999px}
+.scrollhint{display:flex;justify-content:space-between;gap:10px;margin:8px 2px 0!important;
+  font:800 9px var(--mono)!important;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)!important}
+.chart{display:block;width:auto;max-width:none;min-width:720px;height:auto;overflow:visible}
+.chart.ratechart{min-width:720px}
+.chart text{font-family:var(--mono);font-size:12px;fill:var(--ink-2)}
 .chart .gridline{stroke:var(--border);stroke-width:1}.chart .axis{stroke:var(--ink-3);stroke-width:1}
-.chart .likebar{fill:color-mix(in srgb,var(--accent) 68%,transparent)}
-.chart .matchline{fill:none;stroke:#d93757;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
-.chart .matchdot{fill:#d93757;stroke:var(--surface-1);stroke-width:2}
-.chart .rateline{fill:none;stroke:#159b8c;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
-.chart .ratedot{fill:#159b8c;stroke:var(--surface-1);stroke-width:2}
+.chart .likebar{fill:var(--likes)}
+.chart .matchline{fill:none;stroke:var(--matches);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+.chart .matchdot{fill:var(--matches);stroke:var(--surface-1);stroke-width:2}
+.chart .rateline{fill:none;stroke:var(--rate);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+.chart .ratedot{fill:var(--rate);stroke:var(--surface-1);stroke-width:2}
+.chart .pointlabel{font-weight:900;fill:var(--rate);paint-order:stroke;stroke:var(--surface-1);stroke-width:4px}
+.chart .benchmarkline{fill:none;stroke:var(--ink-3);stroke-width:1.5;stroke-dasharray:7 6;opacity:.72}
+.chart .benchmarkline.median{stroke:var(--ink-1);stroke-width:2;opacity:.88}
+.chart .benchmarkband{fill:color-mix(in srgb,var(--ink-3) 9%,transparent);stroke:none}
+.chart .benchmarkedge{fill:none;stroke:var(--ink-3);stroke-width:1;stroke-dasharray:3 7;opacity:.42}
+.chart .benchmarklabel{font-size:10px;font-weight:900;paint-order:stroke;stroke:var(--surface-1);stroke-width:4px}
+.chart .compareline{stroke:var(--border);stroke-width:5;stroke-linecap:round}
+.chart .comparepoint{fill:var(--rate);stroke:var(--surface-1);stroke-width:3}
+.chart .comparepoint.overall{fill:var(--ink-3)}
 .chart .immature{fill:color-mix(in srgb,var(--warn) 10%,transparent)}
 .chartnote{margin-top:10px!important;padding-top:10px;border-top:1px solid var(--border)}
+.benchmark-key{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:10px;
+  color:var(--ink-2);font:800 10px var(--mono)}
+.benchmark-key span{display:inline-flex;gap:6px;align-items:center}.benchmark-key i{width:22px;height:0;
+  border-top:2px dotted var(--ink-3)}.benchmark-key .median i{border-color:var(--ink-1)}
+.benchmark-key .range i{height:8px;border:1px dotted var(--ink-3);background:color-mix(in srgb,var(--ink-3) 9%,transparent)}
+.benchmark-note{font-size:11px!important;line-height:1.45!important;color:var(--ink-3)!important}
+.seriesbuttons{display:flex;gap:5px;flex-wrap:wrap}
+.seriesbuttons button{border:1px solid var(--border);background:var(--page);color:var(--ink-2);
+  border-radius:999px;padding:6px 10px;font:800 10px var(--mono)}
+.seriesbuttons button.on[data-series="likes"]{background:var(--likes);border-color:var(--likes);color:#fff}
+.seriesbuttons button.on[data-series="matches"]{background:var(--matches);border-color:var(--matches);color:#fff}
+.insightgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.insight{background:var(--surface-1);border:1px solid var(--border);border-radius:18px;padding:20px}
+.insight .big{font:400 30px/1 var(--display);margin:8px 0;color:var(--ink-1)}
+.insight .big.rankvalue{font-size:clamp(22px,2.7vw,30px);line-height:1.05}
+.insight .ey{font:800 9px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.insight p{margin:0;color:var(--ink-2);font-size:12px}
+.barlist{display:grid;gap:13px;margin-top:18px}.barrow{display:grid;grid-template-columns:52px 1fr 88px;
+  gap:10px;align-items:center;font:800 11px var(--mono)}
+.bartrack{height:12px;border-radius:999px;background:var(--page);overflow:hidden}
+.bartrack.ratebench{position:relative;overflow:visible}.benchmark{position:absolute;top:-3px;bottom:-3px;
+  border-left:2px dotted var(--ink-1);z-index:3}.benchmark-range{position:absolute;top:-2px;bottom:-2px;
+  background:color-mix(in srgb,var(--ink-3) 10%,transparent);border-left:1px dotted var(--ink-3);
+  border-right:1px dotted var(--ink-3);z-index:2}
+.barfill{height:100%;border-radius:999px;background:var(--likes)}
+.barfill.ratefill{background:var(--rate)}.barvalue{text-align:right;color:var(--ink-2)}
+.comparegrid{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:stretch}
+.periodcard{border:1px solid var(--border);border-radius:16px;padding:20px;background:var(--page)}
+.periodcard.current{border-color:color-mix(in srgb,var(--likes) 55%,var(--border))}
+.periodcard h4{margin:0 0 16px;font:800 10px var(--mono);letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3)}
+.periodstats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.periodstats b{display:block;font:400 24px/1 var(--display)}
+.periodstats span{display:block;margin-top:6px;font:800 8px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.vs{align-self:center;font:400 18px var(--display);color:var(--ink-3)}
+.advanced{margin-top:20px}.advanced>summary{cursor:pointer;font:800 10px var(--mono);letter-spacing:.12em;
+  text-transform:uppercase;color:var(--ink-3)}
 .receipt{margin:14px 0 0}.receipt>summary{cursor:pointer;list-style:none;display:flex;
   justify-content:space-between;align-items:center;background:var(--surface-1);border:1px solid var(--border);
   border-radius:12px;padding:12px 15px;font:800 10px var(--mono);letter-spacing:.13em;
@@ -246,13 +321,15 @@ input[type=file]{display:none}
 footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--border);
   font-size:12.5px;color:var(--ink-3);line-height:1.6}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-@media(max-width:900px){.chartgrid{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}
+@media(max-width:900px){.chartgrid,.chartpair{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}
+  .insightgrid{grid-template-columns:1fr 1fr}.comparegrid{grid-template-columns:1fr}.vs{text-align:center}
   .datefields{margin-left:0}.controls{align-items:flex-start}.chartcard{padding:15px}}
 @media(max-width:600px){.wrap{padding:0 14px 60px}.hero{padding-top:34px}.split{grid-template-columns:1fr}
   .dashhead{align-items:flex-start;flex-direction:column}.rangebar .topline{align-items:flex-start;flex-direction:column}
   .kpis{grid-template-columns:1fr 1fr;gap:8px}.kpi{padding:14px}.datefields{width:100%;flex-wrap:wrap}
   .datefields input{flex:1;min-width:125px}.seg{max-width:100%;overflow-x:auto}
-  .chart{min-width:580px}.scen th:nth-child(2),.scen td:nth-child(2){display:none}}
+  .charttools{padding:9px}.toolgroup+.toolgroup{padding-left:0;border-left:0}.chart,.chart.ratechart{min-width:640px}.insightgrid{grid-template-columns:1fr}.barrow{grid-template-columns:44px 1fr 78px}
+  .periodstats{grid-template-columns:repeat(3,1fr)}.scen th:nth-child(2),.scen td:nth-child(2){display:none}}
 </style>
 </head>
 <body>
@@ -288,11 +365,12 @@ opened, and your email, phone, device IPs and photo links are discarded as the f
   <input type="file" id="file" multiple accept=".json,application/json">
 
   <details class="pre" id="preBox">
-    <summary>Before you look — declare a boundary, name the subject <span>(optional)</span></summary>
-    <p class="prenote">A boundary declared <b>after</b> a dashboard is on screen is a boundary you
-    chose knowing the answer. That is a search result, not a finding, and this page will refuse to
-    put a p-value on it. If a real-world date matters — you changed your photos, moved city, lost
-    weight — enter it <b>now</b>, before anything is parsed. There is no way to declare one later.</p>
+    <summary>Optional advanced test — declare a change date before loading <span>(and label the subject)</span></summary>
+    <p class="prenote">Only use this if one real-world date already matters — for example, new photos
+    went live or you moved city. A date chosen <b>after</b> a dashboard is on screen is a date you
+    chose knowing the answer. That is a search result, not a finding, so DateDawg will not put a
+    p-value on it. Otherwise, leave this closed and use the dashboard's date filters. There is no
+    way to declare a test after loading the export.</p>
     <div class="prerow">
       <label for="preDate">Boundary date</label>
       <input type="date" id="preDate">
@@ -326,11 +404,29 @@ opened, and your email, phone, device IPs and photo links are discarded as the f
 <script>
 /*<<<PARSER_START>>>*/
 var DD = (function(){
-  var PARSER_VERSION="1.2.0", MIN_N=30, RESOLVE_DAYS=30, HEAVY_DAY=21;
+  var PARSER_VERSION="1.3.0", MIN_N=30, RESOLVE_DAYS=30, HEAVY_DAY=21;
   var KNOWN=["matches.json","user.json","prompts.json","media.json","prompt_feedback.json",
              "convo_starters.json","subscriptions.json","fresh_starts.json","match_notes.json"];
   var REFUSED=["selfie_verification.json"];
   var USER_DROP=["identity","devices","installs","location"];
+  /* SwipeStats' published Tinder male match-rate distribution. P20 and P80 are
+     log-interpolated between the nearest published anchors; they are not direct rows. */
+  var MALE_QUANTILES=[
+    {p:5,rate:.0014},{p:10,rate:.0030},{p:25,rate:.0076},{p:50,rate:.0204},
+    {p:75,rate:.0539},{p:90,rate:.1250},{p:95,rate:.2037},{p:99,rate:.4515}
+  ];
+  function maleRateAt(p){
+    for(var i=0;i<MALE_QUANTILES.length;i++) if(MALE_QUANTILES[i].p===p) return MALE_QUANTILES[i].rate;
+    for(var j=1;j<MALE_QUANTILES.length;j++) if(p<MALE_QUANTILES[j].p){
+      var a=MALE_QUANTILES[j-1],b=MALE_QUANTILES[j],w=(p-a.p)/(b.p-a.p);
+      return Math.exp(Math.log(a.rate)+w*(Math.log(b.rate)-Math.log(a.rate))); }
+    return null;
+  }
+  var MALE_REFERENCES=[
+    {p:20,label:"20th percentile man",short:"P20 man",rate:maleRateAt(20),interpolated:true},
+    {p:50,label:"Median man",short:"Median man",rate:maleRateAt(50),interpolated:false},
+    {p:80,label:"80th percentile man",short:"P80 man",rate:maleRateAt(80),interpolated:true}
+  ];
 
   function A(x){ return Array.isArray(x)?x:(x?[x]:[]); }
   function ts(s){ if(typeof s!=="string") return null;
@@ -649,13 +745,34 @@ var DD = (function(){
       b.rate=b.matureLikes?b.matureMatches/b.matureLikes:null;
       b.interval=b.matureLikes?wilson(b.matureMatches,b.matureLikes):null; });
     var selected=R.outs.filter(function(o){return o.t>=from&&o.t<=to;}),
-        matured=selected.filter(function(o){return o.t<=resolveBefore;}),days={};
-    selected.forEach(function(o){if(o.d)days[o.d]=1;});
+        matured=selected.filter(function(o){return o.t<=resolveBefore;}),days={},
+        weekday=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(function(label){
+          return {label:label,likes:0,matches:0,matureLikes:0,matureMatches:0}; });
+    selected.forEach(function(o){
+      if(o.d)days[o.d]=1;
+      var dow=(new Date(o.t).getUTCDay()+6)%7,w=weekday[dow];
+      w.likes++;w.matches+=o.matched;
+      if(o.t<=resolveBefore){w.matureLikes++;w.matureMatches+=o.matched;} });
+    weekday.forEach(function(w){w.rate=w.matureLikes?w.matureMatches/w.matureLikes:null;});
+    var dayRows=Object.keys(days).map(function(d){
+      var rows=selected.filter(function(o){return o.d===d;}),m=rows.filter(function(o){return o.t<=resolveBefore;});
+      return {day:d,likes:rows.length,matureLikes:m.length,
+        matureMatches:m.reduce(function(a,o){return a+o.matched;},0)}; });
+    var volume=[[1,3],[4,8],[9,20],[21,1e9]].map(function(rg){
+      var rows=dayRows.filter(function(d){return d.likes>=rg[0]&&d.likes<=rg[1];}),n=0,k=0;
+      rows.forEach(function(d){n+=d.matureLikes;k+=d.matureMatches;});
+      return {label:rg[0]+"–"+(rg[1]>1e8?"+":rg[1]),days:rows.length,likes:n,matches:k,
+        rate:n?k/n:null}; });
+    var inbound=R.ins.filter(function(i){return i.t>=from&&i.t<=to;}),
+        comments={with:{n:0,k:0},bare:{n:0,k:0}};
+    matured.forEach(function(o){var c=o.com?comments.with:comments.bare;c.n++;c.k+=o.matched;});
     var mk=matured.reduce(function(a,o){return a+o.matched;},0);
     return {from:from,to:to,grain:grain,resolveBefore:resolveBefore,bins:bins,
       likes:selected.length,matches:selected.reduce(function(a,o){return a+o.matched;},0),
       matureLikes:matured.length,matureMatches:mk,activeDays:Object.keys(days).length,
-      rate:matured.length?wilson(mk,matured.length):null}; }
+      rate:matured.length?wilson(mk,matured.length):null,weekday:weekday,volume:volume,
+      inbound:{n:inbound.length,accepted:inbound.reduce(function(a,i){return a+i.acc;},0)},
+      comments:comments}; }
 
   function snapshot(R,M,opts){
     var w=function(x){ return x?{k:x.k,n:x.n}:null; };
@@ -709,6 +826,7 @@ var DD = (function(){
       R.fingerprint="sha256-"+h; return R.fingerprint; }); }
 
   return {parse:parse,metrics:metrics,timeSeries:timeSeries,snapshot:snapshot,rank:rank,wilson:wilson,ztest:ztest,
+    MALE_QUANTILES:MALE_QUANTILES,MALE_REFERENCES:MALE_REFERENCES,maleRateAt:maleRateAt,
     fingerprint:fingerprint,
     sigmaFromGini:sigmaFromGini,Phi:Phi,Phinv:Phinv,likeHasComment:likeHasComment,
     classify:classify,BENCHMARKS:BENCHMARKS,fitFromQuantiles:fitFromQuantiles,MIN_N:MIN_N,RESOLVE_DAYS:RESOLVE_DAYS,
@@ -724,11 +842,13 @@ var DD = (function(){
   var pct=function(x){return (100*x).toFixed(2)+"%";};
   var num=function(n){return (n==null?"—":n.toLocaleString());};
   var iso=function(t){return new Date(t).toISOString().slice(0,10);};
+  var ordinal=function(n){n=Math.round(n);var m=n%100,v=n%10,s=(m>=11&&m<=13)?"th":v===1?"st":v===2?"nd":v===3?"rd":"th";return n+s;};
   /* A declaration is a dated commitment made BEFORE looking at the result for that
      boundary. It is captured with the number of exploratory moves that preceded it and
      is invalidated the moment the boundary changes. A toggle you can flip after
      exploring is not a declaration, so there is no toggle. */
-  var R=null,CUT=null,MOVES=0,DECL=null,SUBJ=null,VFROM=null,VTO=null,GRAIN="month",RANGE="all";
+  var R=null,CUT=null,MOVES=0,DECL=null,SUBJ=null,VFROM=null,VTO=null,GRAIN="month",RANGE="all",
+      VIEW="overview",SHOW_LIKES=true,SHOW_MATCHES=true,SHOW_BENCHMARKS=true,SHOW_VALUES=true;
   /* DECL is captured BEFORE parse and can only ever be invalidated, never created later.
      prospective:true means it was recorded before any result was rendered. */
   function declValid(){ return DECL && DECL.cut===CUT && !MOVES; }
@@ -827,68 +947,147 @@ var DD = (function(){
     if(n>=1000000)return (n/1000000).toFixed(n>=10000000?0:1)+"m";
     if(n>=1000)return (n/1000).toFixed(n>=10000?0:1)+"k";
     return String(Math.round(n)); }
+  function maleRef(p){return DD.MALE_REFERENCES.filter(function(r){return r.p===p;})[0];}
+  function benchmarkKey(volume){
+    var lo=maleRef(20),md=maleRef(50),hi=maleRef(80);
+    return '<div class="benchmark-key" aria-label="Tinder male reference rates"><span class="median"><i></i>Median man · '+pct(md.rate)+'</span><span class="range"><i></i>20th–80th percentile benchmark · '+pct(lo.rate)+'–'+pct(hi.rate)+'</span></div>'+
+      '<p class="benchmark-note">'+(volume?'The dotted line shows how many matches the median Tinder man would expect at your like volume; the shaded band spans the 20th–80th percentile rates. ':'')+'External Tinder reference · SwipeStats, 6,233 complete male profiles, 2020–2025. P20 and P80 are log-interpolated between published anchors. Hinge and Tinder are not identical markets.</p>'; }
+  function horizontalBenchmarkBand(L,RX,T,BY,top,labels){
+    if(!SHOW_BENCHMARKS)return '';
+    var lo=maleRef(20),md=maleRef(50),hi=maleRef(80),yLo=T+(BY-T)*(1-lo.rate/top),
+        yMd=T+(BY-T)*(1-md.rate/top),yHi=T+(BY-T)*(1-hi.rate/top);
+    return '<rect class="benchmarkband" x="'+L+'" y="'+yHi+'" width="'+(RX-L)+'" height="'+(yLo-yHi)+'"><title>20th–80th percentile men: '+pct(lo.rate)+'–'+pct(hi.rate)+'</title></rect>'+
+      '<line class="benchmarkedge" x1="'+L+'" y1="'+yHi+'" x2="'+RX+'" y2="'+yHi+'"/><line class="benchmarkedge" x1="'+L+'" y1="'+yLo+'" x2="'+RX+'" y2="'+yLo+'"/>'+
+      '<line class="benchmarkline median" x1="'+L+'" y1="'+yMd+'" x2="'+RX+'" y2="'+yMd+'"><title>Median man: '+pct(md.rate)+'</title></line>'+
+      (labels?'<text class="benchmarklabel" x="'+(RX-5)+'" y="'+Math.max(T+11,yMd-6)+'" text-anchor="end">MEDIAN MAN · '+pct(md.rate)+'</text><text class="benchmarklabel" x="'+(RX-5)+'" y="'+Math.max(T+11,yHi+12)+'" text-anchor="end">20TH–80TH BENCHMARK</text>':''); }
+  function chartTools(kind){
+    var y0=new Date(R.minT).getUTCFullYear(),y1=new Date(R.maxT).getUTCFullYear(),opts='<option value="">Jump to year…</option>';
+    for(var y=y0;y<=y1;y++)opts+='<option value="'+y+'" '+(RANGE==='year-'+y?'selected':'')+'>'+y+'</option>';
+    function rb(id,label){return '<button data-range="'+id+'" class="'+(RANGE===id?'on':'')+'">'+label+'</button>';}
+    var layers=kind==='activity'?'<div class="toolgroup"><span>Show</span><button data-series="likes" class="'+(SHOW_LIKES?'on':'')+'">Likes</button><button data-series="matches" class="'+(SHOW_MATCHES?'on':'')+'">Matches</button><button data-layer="benchmarks" class="'+(SHOW_BENCHMARKS?'on':'')+'">Median + band</button></div>':
+      '<div class="toolgroup"><span>Show</span><button data-layer="benchmarks" class="'+(SHOW_BENCHMARKS?'on':'')+'">Median + band</button><button data-layer="labels" class="'+(SHOW_VALUES?'on':'')+'">Point values</button></div>';
+    return '<div class="charttools" aria-label="Chart filters"><div class="toolgroup"><span>Window</span>'+rb('all','All')+rb('1y','1 year')+rb('90d','90 days')+rb('ytd','YTD')+'<select data-chart-year aria-label="Jump to a calendar year">'+opts+'</select></div><div class="toolgroup"><span>Detail</span><button data-grain="month" class="'+(GRAIN==='month'?'on':'')+'">Monthly</button><button data-grain="week" class="'+(GRAIN==='week'?'on':'')+'">Weekly</button></div>'+layers+'</div>'; }
+  function scrollHint(){return '<p class="scrollhint"><span>← Swipe or scroll through time →</span><span>Hover or tap a point for its numbers</span></p>';}
   function activityChart(S){
-    var B=S.bins,W=Math.max(960,B.length*12+96),H=300,L=48,RR=48,T=18,BT=43,PW=W-L-RR,PH=H-T-BT,
+    var B=S.bins,W=Math.max(1040,B.length*(S.grain==="week"?34:58)+120),H=390,L=62,RR=62,T=34,BT=58,PW=W-L-RR,PH=H-T-BT,
         maxLikes=Math.max.apply(null,[1].concat(B.map(function(b){return b.likes;}))),
-        maxMatches=Math.max.apply(null,[1].concat(B.map(function(b){return b.matches;}))),
-        bw=Math.max(3,Math.min(28,PW/Math.max(1,B.length)*.64)),step=PW/Math.max(1,B.length),g=[];
+        maxMatches=Math.max.apply(null,[1].concat(B.map(function(b){return Math.max(b.matches,SHOW_BENCHMARKS?b.likes*maleRef(80).rate:0);}))),
+        bw=Math.max(7,Math.min(34,PW/Math.max(1,B.length)*.58)),step=PW/Math.max(1,B.length),g=[];
     for(var q=0;q<=4;q++){
       var y=T+PH-PH*q/4;
       g.push('<line class="gridline" x1="'+L+'" y1="'+y+'" x2="'+(W-RR)+'" y2="'+y+'"/>'+
         '<text x="'+(L-8)+'" y="'+(y+4)+'" text-anchor="end">'+shortNum(maxLikes*q/4)+'</text>'+
         '<text x="'+(W-RR+8)+'" y="'+(y+4)+'">'+shortNum(maxMatches*q/4)+'</text>'); }
-    var bars=[],pts=[];
+    var bars=[],pts=[],med=[],upper=[],lower=[];
     B.forEach(function(b,i){
       var x=L+step*(i+.5),bh=PH*b.likes/maxLikes,y=T+PH-bh,
           my=T+PH-PH*b.matches/maxMatches;
-      bars.push('<rect class="likebar" x="'+(x-bw/2)+'" y="'+y+'" width="'+bw+'" height="'+bh+'" rx="2"><title>'+esc(b.label)+': '+num(b.likes)+' likes sent · '+num(b.matches)+' matched likes</title></rect>');
-      pts.push(x+','+my);
-      if(i%Math.max(1,Math.ceil(B.length/8))===0||i===B.length-1)
+      if(SHOW_LIKES) bars.push('<rect class="likebar" x="'+(x-bw/2)+'" y="'+y+'" width="'+bw+'" height="'+bh+'" rx="3"><title>'+esc(b.label)+': '+num(b.likes)+' likes sent</title></rect>');
+      if(SHOW_MATCHES) pts.push(x+','+my);
+      if(SHOW_BENCHMARKS){med.push(x+','+(T+PH-PH*(b.likes*maleRef(50).rate)/maxMatches));upper.push(x+','+(T+PH-PH*(b.likes*maleRef(80).rate)/maxMatches));lower.push(x+','+(T+PH-PH*(b.likes*maleRef(20).rate)/maxMatches));}
+      if(i%Math.max(1,Math.ceil(B.length/14))===0||i===B.length-1)
         bars.push('<text x="'+x+'" y="'+(H-15)+'" text-anchor="middle">'+esc(b.label)+'</text>'); });
-    var dots=B.map(function(b,i){var x=L+step*(i+.5),y=T+PH-PH*b.matches/maxMatches;
-      return '<circle class="matchdot" cx="'+x+'" cy="'+y+'" r="3.5"><title>'+esc(b.label)+': '+num(b.matches)+' matched likes</title></circle>';}).join("");
-    return '<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Likes sent and matched likes over time">'+
-      '<text x="'+L+'" y="11">LIKES</text><text x="'+(W-RR)+'" y="11" text-anchor="end">MATCHES</text>'+g.join("")+bars.join("")+
-      '<polyline class="matchline" points="'+pts.join(" ")+'"/>'+dots+'</svg>'; }
+    var dots=SHOW_MATCHES?B.map(function(b,i){var x=L+step*(i+.5),y=T+PH-PH*b.matches/maxMatches;
+      return '<circle class="matchdot" cx="'+x+'" cy="'+y+'" r="4"><title>'+esc(b.label)+': '+num(b.matches)+' matched likes</title></circle>';}).join(""):"";
+    var band=SHOW_BENCHMARKS&&upper.length?'<polygon class="benchmarkband" points="'+upper.concat(lower.slice().reverse()).join(' ')+'"><title>Expected matches for 20th–80th percentile men at your like volume</title></polygon><polyline class="benchmarkline median" points="'+med.join(' ')+'"><title>Expected matches for the median man at your like volume</title></polyline>':'';
+    return '<svg class="chart" style="width:'+W+'px" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Your likes sent and the likes that became matches over time">'+
+      '<text x="'+L+'" y="11">LIKES</text><text x="'+(W-RR)+'" y="11" text-anchor="end">MATCHES</text>'+g.join("")+band+bars.join("")+
+      (SHOW_MATCHES?'<polyline class="matchline" points="'+pts.join(" ")+'"/>':'')+dots+'</svg>'; }
   function rateChart(S){
-    var B=S.bins,W=Math.max(620,B.length*12+65),H=300,L=49,RR=16,T=18,BT=43,PW=W-L-RR,PH=H-T-BT,
+    var B=S.bins,W=Math.max(1040,B.length*(S.grain==="week"?34:72)+120),H=430,L=68,RR=35,T=42,BT=62,PW=W-L-RR,PH=H-T-BT,
         vals=B.filter(function(b){return b.rate!=null;}).map(function(b){return b.rate;}),
         top=Math.max(.10,Math.ceil(Math.max.apply(null,[0].concat(vals))*20)/20),
         step=PW/Math.max(1,B.length),g=[];
     for(var q=0;q<=4;q++){var y=T+PH-PH*q/4;
       g.push('<line class="gridline" x1="'+L+'" y1="'+y+'" x2="'+(W-RR)+'" y2="'+y+'"/>'+
         '<text x="'+(L-8)+'" y="'+(y+4)+'" text-anchor="end">'+Math.round(top*q/4*100)+'%</text>');}
-    var path=[],dots=[],open=false,labels=[];
+    var path=[],dots=[],open=false,labels=[],showValues=SHOW_VALUES&&B.length<=36;
     B.forEach(function(b,i){var x=L+step*(i+.5);
       if(b.rate==null){open=false;}else{var y=T+PH-PH*b.rate/top;
         path.push((open?'L':'M')+x+' '+y);open=true;
-        dots.push('<circle class="ratedot" cx="'+x+'" cy="'+y+'" r="4"><title>'+esc(b.label)+': '+pct(b.rate)+' · '+b.matureMatches+' of '+b.matureLikes+' matured likes</title></circle>');}
-      if(i%Math.max(1,Math.ceil(B.length/6))===0||i===B.length-1)
+        dots.push('<circle class="ratedot" cx="'+x+'" cy="'+y+'" r="5"><title>'+esc(b.label)+': '+pct(b.rate)+' · '+b.matureMatches+' of '+b.matureLikes+' matured likes</title></circle>'+
+          (showValues?'<text class="pointlabel" x="'+x+'" y="'+Math.max(15,y-11)+'" text-anchor="middle">'+(b.rate*100).toFixed(1)+'%</text>':''));}
+      if(i%Math.max(1,Math.ceil(B.length/14))===0||i===B.length-1)
         labels.push('<text x="'+x+'" y="'+(H-15)+'" text-anchor="middle">'+esc(b.label)+'</text>');});
-    return '<svg class="chart ratechart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Reciprocal acceptance rate over time">'+
-      g.join("")+'<path class="rateline" d="'+path.join(" ")+'"/>'+dots.join("")+labels.join("")+'</svg>'; }
-  function timelinePanel(){
-    var S=DD.timeSeries(R,VFROM,VTO,GRAIN),rw=S.rate,
-        preset=function(id,label){return '<button data-range="'+id+'" class="'+(RANGE===id?'on':'')+'" aria-pressed="'+(RANGE===id)+'">'+label+'</button>';};
-    return '<div class="dashhead"><div><h2>Your activity, over time</h2><p>Filter the dashboard without changing the before/after research boundary below.</p></div>'+
+    return '<svg class="chart ratechart" style="width:'+W+'px" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Your match-back rate over time">'+
+      g.join("")+horizontalBenchmarkBand(L,W-RR,T,T+PH,top,true)+'<path class="rateline" d="'+path.join(" ")+'"/>'+dots.join("")+labels.join("")+'</svg>'; }
+
+  function cumulativeChart(S){
+    var B=S.bins,W=Math.max(1040,B.length*(S.grain==="week"?34:62)+120),H=390,L=68,RR=62,T=34,BT=58,
+        PW=W-L-RR,PH=H-T-BT,likes=0,matches=0,lp=[],mp=[],med=[],upper=[],lower=[],maxL=Math.max(1,S.likes),
+        maxM=Math.max(1,S.matches,SHOW_BENCHMARKS?S.likes*maleRef(80).rate:0),labels=[];
+    B.forEach(function(b,i){likes+=b.likes;matches+=b.matches;var x=L+PW*(i/Math.max(1,B.length-1));
+      lp.push(x+','+(T+PH-PH*likes/maxL));mp.push(x+','+(T+PH-PH*matches/maxM));
+      if(SHOW_BENCHMARKS){med.push(x+','+(T+PH-PH*(likes*maleRef(50).rate)/maxM));upper.push(x+','+(T+PH-PH*(likes*maleRef(80).rate)/maxM));lower.push(x+','+(T+PH-PH*(likes*maleRef(20).rate)/maxM));}
+      if(i%Math.max(1,Math.ceil(B.length/14))===0||i===B.length-1)labels.push('<text x="'+x+'" y="'+(H-15)+'" text-anchor="middle">'+esc(b.label)+'</text>');});
+    var grid=[];for(var q=0;q<=4;q++){var y=T+PH-PH*q/4;grid.push('<line class="gridline" x1="'+L+'" y1="'+y+'" x2="'+(W-RR)+'" y2="'+y+'"/><text x="'+(L-9)+'" y="'+(y+4)+'" text-anchor="end">'+shortNum(maxL*q/4)+'</text><text x="'+(W-RR+9)+'" y="'+(y+4)+'">'+shortNum(maxM*q/4)+'</text>');}
+    var band=SHOW_BENCHMARKS&&upper.length?'<polygon class="benchmarkband" points="'+upper.concat(lower.slice().reverse()).join(' ')+'"><title>Cumulative expected matches for 20th–80th percentile men at your like volume</title></polygon><polyline class="benchmarkline median" points="'+med.join(' ')+'"><title>Cumulative expected matches for the median man at your like volume</title></polyline>':'';
+    return '<svg class="chart" style="width:'+W+'px" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Cumulative likes and matches"><text x="'+L+'" y="13">LIKES</text><text x="'+(W-RR)+'" y="13" text-anchor="end">MATCHES</text>'+grid.join("")+band+
+      '<polyline points="'+lp.join(' ')+'" fill="none" stroke="var(--likes)" stroke-width="4"/>'+
+      '<polyline points="'+mp.join(' ')+'" fill="none" stroke="var(--matches)" stroke-width="4"/>'+labels.join("")+'</svg>'; }
+  function barRows(rows,metric,colorClass){
+    var vals=rows.map(function(r){return metric==="rate"?(r.rate||0):r.likes;}),
+        max=metric==="rate"?Math.max(.10,Math.max.apply(null,[0].concat(vals))*1.08):Math.max.apply(null,[1].concat(vals)),
+        lo=maleRef(20),md=maleRef(50),hi=maleRef(80),marks=metric==="rate"&&SHOW_BENCHMARKS?'<i class="benchmark-range" style="left:'+Math.min(100,lo.rate/max*100)+'%;width:'+Math.max(0,(hi.rate-lo.rate)/max*100)+'%"><title>20th–80th percentile benchmark: '+pct(lo.rate)+'–'+pct(hi.rate)+'</title></i><i class="benchmark" style="left:'+Math.min(100,md.rate/max*100)+'%"><title>Median man: '+pct(md.rate)+'</title></i>':'';
+    return '<div class="barlist">'+rows.map(function(r){var v=metric==="rate"?r.rate:r.likes;
+      return '<div class="barrow"><span>'+esc(r.label)+'</span><div class="bartrack '+(metric==="rate"?'ratebench':'')+'"><div class="barfill '+(colorClass||'')+'" style="width:'+((v||0)/max*100)+'%"></div>'+marks+'</div><span class="barvalue">'+(metric==="rate"?(v==null?'—':(v*100).toFixed(1)+'%'):num(v))+'</span></div>';}).join('')+'</div>'; }
+  function compareRateChart(overall,snapshot){
+    var W=960,H=240,L=170,RR=32,T=45,BY=185,PW=W-L-RR,
+        rates=[overall.rate&&overall.rate.p,snapshot.rate&&snapshot.rate.p].filter(function(x){return x!=null;}),
+        top=Math.max(.10,Math.ceil(Math.max.apply(null,[0].concat(rates,DD.MALE_REFERENCES.map(function(r){return r.rate;})))*20)/20),g=[];
+    for(var q=0;q<=5;q++){var x=L+PW*q/5;g.push('<line class="gridline" x1="'+x+'" y1="'+T+'" x2="'+x+'" y2="'+BY+'"/><text x="'+x+'" y="'+(H-18)+'" text-anchor="middle">'+Math.round(top*q/5*100)+'%</text>');}
+    var lo=maleRef(20),md=maleRef(50),hi=maleRef(80),xLo=L+PW*lo.rate/top,xMd=L+PW*md.rate/top,xHi=L+PW*hi.rate/top,
+        refs=SHOW_BENCHMARKS?'<rect class="benchmarkband" x="'+xLo+'" y="28" width="'+(xHi-xLo)+'" height="'+(BY-28)+'"><title>20th–80th percentile benchmark: '+pct(lo.rate)+'–'+pct(hi.rate)+'</title></rect><line class="benchmarkedge" x1="'+xLo+'" y1="28" x2="'+xLo+'" y2="'+BY+'"/><line class="benchmarkedge" x1="'+xHi+'" y1="28" x2="'+xHi+'" y2="'+BY+'"/><line class="benchmarkline median" x1="'+xMd+'" y1="28" x2="'+xMd+'" y2="'+BY+'"><title>Median man: '+pct(md.rate)+'</title></line><text class="benchmarklabel" x="'+xMd+'" y="18" text-anchor="middle">MEDIAN MAN</text>':'';
+    function row(x,label,y,cls){var rate=x.rate&&x.rate.p,px=rate==null?L:L+PW*Math.min(rate,top)/top,
+        nearEdge=px>W-RR-72,tx=nearEdge?px-14:px+14;
+      return '<text x="'+(L-12)+'" y="'+(y+4)+'" text-anchor="end">'+esc(label)+'</text><line class="compareline" x1="'+L+'" y1="'+y+'" x2="'+px+'" y2="'+y+'"/><circle class="comparepoint '+cls+'" cx="'+px+'" cy="'+y+'" r="8"><title>'+esc(label)+': '+(rate==null?'unavailable':pct(rate))+'</title></circle><text class="pointlabel" x="'+tx+'" y="'+(y+4)+'" text-anchor="'+(nearEdge?'end':'start')+'">'+(rate==null?'—':pct(rate))+'</text>';}
+    return '<svg class="chart ratechart" style="width:'+W+'px" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Overall history and selected snapshot acceptance rates against male Tinder references">'+g.join('')+refs+row(overall,'Overall history',82,'overall')+row(snapshot,'Selected snapshot',145,'snapshot')+'</svg>'; }
+  function insightCards(S){
+    var rk=S.rate&&S.rate.n>=DD.MIN_N?DD.rank(S.rate.p):null,unmatched=Math.max(0,S.matureLikes-S.matureMatches),
+        best=S.bins.filter(function(b){return b.matureLikes>=DD.MIN_N&&b.rate!=null;}).sort(function(a,b){return b.rate-a.rate;})[0];
+    return '<div class="insightgrid"><div class="insight"><span class="ey">Dating App MV / Market Value</span><div class="big rankvalue">'+(rk?ordinal(rk.lo)+'–'+ordinal(rk.hi)+' percentile':'—')+'</div><p>'+(rk?'Your estimated match-rate standing for this date range. Based on Hinge scenarios—not a measured Hinge population.':'At least '+DD.MIN_N+' matured likes are needed to estimate your standing.')+'</p></div>'+
+      '<div class="insight"><span class="ey">Your matched-like results</span><div class="big">'+num(S.matureMatches)+' of '+num(S.matureLikes)+'</div><p>'+num(unmatched)+' matured likes did not become matches.</p></div>'+
+      '<div class="insight"><span class="ey">Your best '+S.grain+'</span><div class="big">'+(best?pct(best.rate):'—')+'</div><p>'+(best?esc(best.label)+' · '+best.matureMatches+' matches from '+best.matureLikes+' matured likes':'No period has '+DD.MIN_N+' matured likes yet.')+'</p></div></div>'; }
+  function viewPanel(S){
+    if(VIEW==="patterns"){
+      var cw=S.comments.with,bare=S.comments.bare;
+      return '<div class="chartpair"><div class="chartcard"><h3>When you send likes</h3><p>Outbound likes by weekday in the selected range.</p>'+barRows(S.weekday,'likes','')+'</div>'+
+        '<div class="chartcard"><h3>Your match-back rate by weekday</h3><p>Of your matured likes sent on each weekday, the share that became matches. Read thin days cautiously.</p>'+barRows(S.weekday,'rate','ratefill')+(SHOW_BENCHMARKS?benchmarkKey(false):'')+'</div></div>'+
+        '<div class="chartpair" style="margin-top:14px"><div class="chartcard"><h3>How daily activity relates to your results</h3><p>Your match-back rate on light and heavy liking days.</p>'+barRows(S.volume,'rate','ratefill')+(SHOW_BENCHMARKS?benchmarkKey(false):'')+'</div>'+
+        '<div class="chartcard"><h3>Do comments appear to help?</h3><p>Your observed results for likes with a comment versus likes without one. This is association, not proof that comments caused the difference.</p><div class="insightgrid" style="margin-top:18px;grid-template-columns:1fr 1fr"><div class="insight"><span class="ey">Your likes with a comment</span><div class="big">'+(cw.n?pct(cw.k/cw.n):'—')+'</div><p>'+cw.k+' matches from '+cw.n+' matured likes</p></div><div class="insight"><span class="ey">Your likes without a comment</span><div class="big">'+(bare.n?pct(bare.k/bare.n):'—')+'</div><p>'+bare.k+' matches from '+bare.n+' matured likes</p></div></div></div></div>'+
+        '<div class="insightgrid" style="margin-top:14px"><div class="insight"><span class="ey">Your likes per active day</span><div class="big">'+(S.activeDays?(S.likes/S.activeDays).toFixed(1):'—')+'</div><p>Your average on days when you sent at least one like.</p></div><div class="insight"><span class="ey">Likes you reviewed</span><div class="big">'+num(S.inbound.n)+'</div><p>Incoming likes you processed in this range; processing time is not arrival time.</p></div><div class="insight"><span class="ey">Incoming likes you accepted</span><div class="big">'+num(S.inbound.accepted)+'</div><p>A count, not the rate at which people saw and liked you.</p></div></div>';
+    }
+    if(VIEW==="momentum") return '<div class="chartcard feature"><div class="charttop"><div><h3>Your cumulative likes and matches</h3><p>How your likes sent and eventual matches accumulated across the selected range.</p></div><div class="legend"><span><i style="background:var(--likes)"></i>Your likes</span><span><i style="background:var(--matches)"></i>Your matches</span></div></div>'+chartTools('activity')+'<div class="chart-scroll" tabindex="0" aria-label="Scrollable cumulative chart">'+cumulativeChart(S)+'</div>'+scrollHint()+(SHOW_BENCHMARKS?benchmarkKey(true):'')+'</div>'+insightCards(S);
+    if(VIEW==="compare"){
+      var P=DD.timeSeries(R,R.minT,R.maxT,S.grain),same=S.from===P.from&&S.to===P.to,
+          delta=S.rate&&P.rate?(S.rate.p-P.rate.p)*100:null;
+      function pc(x,title,cls){return '<div class="periodcard '+cls+'"><h4>'+title+' · '+iso(x.from)+' → '+iso(x.to)+'</h4><div class="periodstats"><div><b>'+num(x.likes)+'</b><span>Likes you sent</span></div><div><b>'+num(x.matches)+'</b><span>Became matches</span></div><div><b>'+(x.rate?pct(x.rate.p):'—')+'</b><span>Match-back rate</span></div></div></div>';}
+      return '<div class="chartcard feature"><div class="charttop"><div><h3>Your overall history versus your selected snapshot</h3><p>One uploaded export, shown at two scopes. Change the snapshot with the date controls above; your overall history stays fixed.</p></div></div><div class="comparegrid">'+pc(P,'Overall history','')+'<div class="vs">VS</div>'+pc(S,'Selected snapshot','current')+'</div>'+
+        (same?'<p class="chartnote"><b>Your snapshot currently is your full history.</b> Choose a year, preset, or custom dates above to make a narrower snapshot.</p>':'<p class="chartnote">Snapshot acceptance is <b>'+(delta==null?'unavailable':(delta>=0?'+':'')+delta.toFixed(2)+' percentage points')+'</b> versus your overall history. Counts cover different lengths of time, so compare their rates—not their raw totals.</p>')+
+        chartTools('rate')+'<div class="chart-scroll" tabindex="0" aria-label="Scrollable comparison chart">'+compareRateChart(P,S)+'</div>'+scrollHint()+(SHOW_BENCHMARKS?benchmarkKey(false):'')+'</div>'+insightCards(S);
+    }
+    return '<div class="chartgrid"><div class="chartcard feature"><div class="charttop"><div><h3>Likes you sent and likes that became matches</h3><p>Blue bars are likes you sent. Pink shows how many eventually became matches, dated to when you sent each like.</p></div></div>'+chartTools('activity')+'<div class="chart-scroll" tabindex="0" aria-label="Scrollable likes and matches chart">'+activityChart(S)+'</div>'+scrollHint()+(SHOW_BENCHMARKS?benchmarkKey(true):'')+'</div>'+
+      '<div class="chartcard feature"><div class="charttop"><div><h3>Your match-back rate over time</h3><p>Of the matured likes you sent in each '+S.grain+', the percentage that became matches. Use the controls below or swipe through time at full size.</p></div><div class="legend"><span><i style="background:var(--rate)"></i>Your match-back rate</span></div></div>'+chartTools('rate')+'<div class="chart-scroll" tabindex="0" aria-label="Scrollable match-back-rate chart">'+rateChart(S)+'</div>'+scrollHint()+(SHOW_BENCHMARKS?benchmarkKey(false):'')+'<p class="chartnote">Likes after '+iso(S.resolveBefore)+' are too recent to score. Empty periods are gaps, not zeroes.</p></div>'+insightCards(S)+'</div>'; }
+  function timelinePanel(S){
+    var rw=S.rate,preset=function(id,label){return '<button data-range="'+id+'" class="'+(RANGE===id?'on':'')+'" aria-pressed="'+(RANGE===id)+'">'+label+'</button>';},
+        y0=new Date(R.minT).getUTCFullYear(),y1=new Date(R.maxT).getUTCFullYear(),years=[];
+    for(var y=y0;y<=y1;y++)years.push(preset('year-'+y,String(y)));
+    return '<div class="dashhead"><div><h2>Your dating dashboard</h2><p>Choose a range once. Every card, chart, and comparison below follows it.</p></div>'+
       '<span class="tag">UTC · local only</span></div>'+
       '<div class="rangebar"><div class="topline"><span class="range-title">Analysis range</span>'+
       '<span class="range-readout">'+iso(S.from)+' → '+iso(S.to)+'</span></div><div class="controls">'+
       '<div class="seg" role="group" aria-label="Date range">'+preset('all','All')+preset('90d','90 days')+preset('1y','1 year')+preset('ytd','YTD')+'</div>'+
       '<div class="seg" role="group" aria-label="Chart grouping"><button data-grain="month" aria-pressed="'+(GRAIN==='month')+'" class="'+(GRAIN==='month'?'on':'')+'">Monthly</button><button data-grain="week" aria-pressed="'+(GRAIN==='week')+'" class="'+(GRAIN==='week'?'on':'')+'">Weekly</button></div>'+
       '<div class="datefields"><input type="date" id="viewFrom" value="'+iso(S.from)+'" min="'+iso(R.minT)+'" max="'+iso(R.maxT)+'" aria-label="Range start"><span>to</span>'+
-      '<input type="date" id="viewTo" value="'+iso(S.to)+'" min="'+iso(R.minT)+'" max="'+iso(R.maxT)+'" aria-label="Range end"><button class="apply" id="applyRange">Apply</button></div></div></div>'+
-      '<div class="kpis"><div class="kpi"><span class="value">'+num(S.likes)+'</span><span class="label">Likes sent</span><span class="detail">in selected range</span></div>'+
-      '<div class="kpi"><span class="value">'+num(S.matches)+'</span><span class="label">Matched likes</span><span class="detail">grouped by sent-like date</span></div>'+
-      '<div class="kpi"><span class="value">'+(rw?pct(rw.p):'—')+'</span><span class="label">Reciprocal acceptance</span><span class="detail">'+(rw?num(rw.k)+' of '+num(rw.n)+' matured likes':'no matured likes')+'</span></div>'+
-      '<div class="kpi"><span class="value">'+num(S.activeDays)+'</span><span class="label">Active days</span><span class="detail">days with an outbound like</span></div></div>'+
-      '<div class="chartgrid"><div class="chartcard"><div class="charttop"><div><h3>Likes and matches</h3><p>Matches are attributed to when you sent the like. Separate axes keep both series legible.</p></div><div class="legend"><span><i style="background:var(--accent)"></i>Likes</span><span><i style="background:#d93757"></i>Matches</span></div></div>'+
-      '<div class="chart-scroll">'+activityChart(S)+'</div></div>'+
-      '<div class="chartcard"><div class="charttop"><div><h3>Acceptance trend</h3><p>Matched likes ÷ matured likes in each '+S.grain+'.</p></div><div class="legend"><span><i style="background:#159b8c"></i>Rate</span></div></div>'+
-      '<div class="chart-scroll">'+rateChart(S)+'</div><p class="chartnote">Likes after '+iso(S.resolveBefore)+' are too recent to score. Empty periods are gaps, not zeroes.</p></div></div>'+
+      '<input type="date" id="viewTo" value="'+iso(S.to)+'" min="'+iso(R.minT)+'" max="'+iso(R.maxT)+'" aria-label="Range end"><button class="apply" id="applyRange">Apply</button></div></div><div class="yearstrip" aria-label="Choose a year">'+years.join('')+'</div></div>'+
+      '<div class="kpis"><div class="kpi"><span class="value">'+num(S.likes)+'</span><span class="label">Likes you sent</span><span class="detail">in your selected date range</span></div>'+
+      '<div class="kpi"><span class="value">'+num(S.matches)+'</span><span class="label">Your likes that became matches</span><span class="detail">grouped by the date you sent each like</span></div>'+
+      '<div class="kpi"><span class="value">'+(rw?pct(rw.p):'—')+'</span><span class="label">Your match-back rate</span><span class="detail">'+(rw?num(rw.k)+' matches from '+num(rw.n)+' matured likes':'no matured likes')+'</span></div>'+
+      '<div class="kpi"><span class="value">'+num(S.activeDays)+'</span><span class="label">Days you were active</span><span class="detail">days when you sent at least one like</span></div></div>'+
+      '<div class="viewtabs" role="tablist" aria-label="Dashboard view">'+[['overview','Overview'],['patterns','Patterns'],['momentum','Momentum'],['compare','Compare']].map(function(v){return '<button data-view="'+v[0]+'" class="'+(VIEW===v[0]?'on':'')+'" aria-selected="'+(VIEW===v[0])+'">'+v[1]+'</button>';}).join('')+'</div>'+viewPanel(S)+
       '<details class="receipt"><summary>Import details & privacy receipt</summary>'+receipt()+'</details>'; }
 
-  function paint(){
+  function paintLegacy(){
     var M=DD.metrics(R,CUT),h=[];
     h.push(timelinePanel());
 
@@ -1024,8 +1223,8 @@ var DD = (function(){
         "Impressions are not exported, so the cold rate has no denominator."],
        ["How selective you are","Profiles you passed without acting are never recorded."],
        ["Your best photo or prompt","Nothing links an individual asset to an individual outcome."],
-       ["A precise percentile","The Hinge male median exists only as a published range. The band "+
-        "is the honest answer."]]
+       ["A precise Hinge percentile","The Hinge male median exists only as a published range. "+
+        "Dotted P20, median, and P80 lines are external Tinder references; P20 and P80 are interpolated."]]
       .map(function(r){return '<tr><td><b>'+esc(r[0])+'</b></td><td>'+esc(r[1])+'</td></tr>';}).join("")+
       '</tbody></table></div></div>');
 
@@ -1067,6 +1266,46 @@ var DD = (function(){
       setTimeout(function(){URL.revokeObjectURL(a.href);},1000); };
     $("#again").onclick=function(){ R=null; VFROM=VTO=null;RANGE="all";GRAIN="month";$("#out").className="hide";
       $("#out").innerHTML=""; if($("#drop").scrollIntoView) $("#drop").scrollIntoView({behavior:"smooth"}); };
+  }
+
+  function paint(){
+    var S=DD.timeSeries(R,VFROM,VTO,GRAIN),M=DD.metrics(R,CUT),h=[];
+    h.push(timelinePanel(S));
+    if(declValid()) h.push('<details class="advanced"><summary>Declared before/after test · '+
+      iso(DECL.cut)+' · '+esc(DECL.reason)+'</summary><div class="chartcard" style="margin-top:12px">'+
+      '<div class="charttop"><div><h3>Your declared comparison</h3><p>This date was recorded before the export was read. It is fixed; dashboard filters do not alter it.</p></div><span class="tag ok">DECLARED PRE-PARSE</span></div>'+
+      '<div class="comparegrid"><div class="periodcard current"><h4>Since '+iso(DECL.cut)+'</h4><div class="periodstats"><div><b>'+(M.afterAdj?pct(M.afterAdj.p):'—')+'</b><span>Acceptance</span></div><div><b>'+(M.afterAdj?num(M.afterAdj.k):'—')+'</b><span>Matches</span></div><div><b>'+(M.afterAdj?num(M.afterAdj.n):'—')+'</b><span>Mature likes</span></div></div></div><div class="vs">VS</div>'+
+      '<div class="periodcard"><h4>Before '+iso(DECL.cut)+'</h4><div class="periodstats"><div><b>'+(M.beforeAdj?pct(M.beforeAdj.p):'—')+'</b><span>Acceptance</span></div><div><b>'+(M.beforeAdj?num(M.beforeAdj.k):'—')+'</b><span>Matches</span></div><div><b>'+(M.beforeAdj?num(M.beforeAdj.n):'—')+'</b><span>Mature likes</span></div></div></div></div>'+
+      (M.z?'<div class="zline">lift <em>'+(M.z.lift==null?'—':(100*M.z.lift).toFixed(1)+'%')+'</em> · z = <em>'+M.z.z.toFixed(2)+'</em>'+(Math.abs(M.z.z)<2?' — inside noise':'')+'</div>':'')+'</div></details>');
+    h.push('<div class="sec"><h2>What this cannot tell you</h2><div class="card"><table class="t"><tbody>'+[
+      ["Who liked you","Inbound records carry a timestamp and nothing else — no age, no attributes."],
+      ["Your odds in cold discover","Your rate is measured in her likes queue. Impressions are not exported, so the cold rate has no denominator."],
+      ["How selective you are","Profiles you passed without acting are never recorded."],
+      ["Your best photo or prompt","Nothing links an individual asset to an individual outcome."],
+      ["A precise Hinge percentile","The Hinge male median exists only as a published range. Dotted P20, median, and P80 lines are external Tinder references; P20 and P80 are interpolated."]
+      ].map(function(r){return '<tr><td><b>'+esc(r[0])+'</b></td><td>'+esc(r[1])+'</td></tr>';}).join('')+'</tbody></table></div></div>');
+    h.push('<div class="sec"><h2>Save this view</h2><p class="sub">Counts and lineage only. The selected dashboard range is included.</p><button class="btn ghost" id="snap">Download snapshot</button> <button class="btn ghost" id="again">Read a different export</button></div>');
+    $("#out").className="";$("#out").innerHTML=h.join("");
+
+    Array.prototype.forEach.call(document.querySelectorAll("[data-range]"),function(b){b.onclick=function(){
+      var DAY=864e5,id=b.getAttribute("data-range"),y=new Date(R.maxT).getUTCFullYear();RANGE=id;VTO=R.maxT;
+      if(id.indexOf("year-")===0){y=+id.slice(5);GRAIN="month";VFROM=Math.max(R.minT,Date.UTC(y,0,1));VTO=Math.min(R.maxT,Date.UTC(y+1,0,1)-1);}
+      else VFROM=id==="90d"?Math.max(R.minT,R.maxT-89*DAY):id==="1y"?Math.max(R.minT,R.maxT-364*DAY):id==="ytd"?Math.max(R.minT,Date.UTC(y,0,1)):R.minT;
+      paint();};});
+    Array.prototype.forEach.call(document.querySelectorAll("[data-grain]"),function(b){b.onclick=function(){GRAIN=b.getAttribute("data-grain");paint();};});
+    Array.prototype.forEach.call(document.querySelectorAll("[data-view]"),function(b){b.onclick=function(){VIEW=b.getAttribute("data-view");paint();};});
+    Array.prototype.forEach.call(document.querySelectorAll("[data-series]"),function(b){b.onclick=function(){
+      var s=b.getAttribute("data-series");if(s==="likes")SHOW_LIKES=!SHOW_LIKES;else SHOW_MATCHES=!SHOW_MATCHES;
+      if(!SHOW_LIKES&&!SHOW_MATCHES){if(s==="likes")SHOW_MATCHES=true;else SHOW_LIKES=true;}paint();};});
+    Array.prototype.forEach.call(document.querySelectorAll("[data-layer]"),function(b){b.onclick=function(){
+      var s=b.getAttribute("data-layer");if(s==="benchmarks")SHOW_BENCHMARKS=!SHOW_BENCHMARKS;else if(s==="labels")SHOW_VALUES=!SHOW_VALUES;paint();};});
+    Array.prototype.forEach.call(document.querySelectorAll("[data-chart-year]"),function(s){s.onchange=function(){
+      if(!s.value)return;var b=document.querySelector('[data-range="year-'+s.value+'"]');if(b)b.click();};});
+    $("#applyRange").onclick=function(){var a=$("#viewFrom").value,z=$("#viewTo").value;if(a&&z){
+      VFROM=new Date(a+"T00:00:00Z").getTime();VTO=new Date(z+"T00:00:00Z").getTime()+864e5-1;RANGE="custom";paint();}};
+    $("#snap").onclick=function(){var data=DD.snapshot(R,M,{subject:SUBJ&&SUBJ.subject||null,consent:SUBJ&&SUBJ.consent||null,consentAt:SUBJ&&SUBJ.at||null,declaration:declValid()?DECL:null,boundaryMoves:0});
+      data.dashboard_range={from:iso(S.from),to:iso(S.to),grain:S.grain};var b=new Blob([JSON.stringify(data,null,1)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="datedawg-snapshot.json";a.click();setTimeout(function(){URL.revokeObjectURL(a.href);},1000);};
+    $("#again").onclick=function(){R=null;VFROM=VTO=null;RANGE="all";GRAIN="month";VIEW="overview";SHOW_LIKES=SHOW_MATCHES=SHOW_BENCHMARKS=SHOW_VALUES=true;$("#out").className="hide";$("#out").innerHTML="";if($("#drop").scrollIntoView)$("#drop").scrollIntoView({behavior:"smooth"});};
   }
 
   function capturePre(){
@@ -1128,7 +1367,7 @@ window.DD_BOTCTX = {
   label: "DATEDAWG METHODOLOGY",
   title: "DateDawg",
   chrome: {
-    sub: "Reciprocal acceptance, locally analyzed",
+    sub: "Your match-back rate, locally analyzed",
     ph: "Ask about the method or caveats…",
     chips: ["What does DateDawg measure?", "Why exclude recent likes?", "How are ranks estimated?"]
   },
@@ -1136,13 +1375,15 @@ window.DD_BOTCTX = {
 - Never claim DateDawg measures cold-discover attractiveness, complete dating-market value, verified date conversion, reply rate, ghosting, or the best photo or prompt.
 - Its primary observable is reciprocal acceptance: of the women the subject liked, how many liked the subject back. Direction is inferred because the export does not state it explicitly.
 - Likes newer than 30 days are immature and excluded from every censoring-adjusted current result, including volume standardization and the displayed z-test.
-- Dashboard date filters are descriptive and never change the separate before/after research boundary. Timeline matches are grouped by the date the subject sent the like; the trend rate uses matured likes only.
-- Hinge percentile rows are assumptions, not an observed Hinge cohort. Tinder is an external anchor and is not part of the Hinge scenario band.
+- Dashboard date filters control every visible summary, chart, Dating App MV / Market Value estimate, and selected snapshot. The MV range is an estimated match-rate standing from Hinge scenarios, not a measured Hinge population percentile. Timeline matches are grouped by the date the subject sent the like; the trend rate uses matured likes only.
+- Compare uses one export at two scopes: fixed overall history versus the date-filtered snapshot. Raw totals cover different spans, so compare acceptance rates rather than totals.
+- The subtle dotted median and shaded 20th–80th benchmark band are external Tinder male references from SwipeStats, not Hinge cohort measurements. On count and cumulative charts they are converted to expected matches at the subject's actual like volume; on rate charts they remain rates. The 2.04% median is published directly; P20 and P80 are log-interpolated between published anchors. Users can hide the benchmark layer.
 - The page does not upload, store, log, or transmit the export. Do not ask for raw exports, messages, identity data, or verification media.
-- A p-value is shown only for a boundary declared before parsing. Moving the boundary permanently makes the session exploratory.`,
+- A p-value is shown only for an advanced change date declared before parsing. That date is fixed and cannot be moved in the rendered dashboard; ordinary filters remain descriptive.`,
   ctx: () => `DateDawg parser/schema version: ${DD.PARSER_VERSION}.
 Analysis runs entirely in this browser under a connect-src 'none' content-security policy.
 Volume strata are 1–3, 4–8, 9–20 and 21+ outbound likes per day; both eras are standardized to pooled common-support weights. Missing support is disclosed and can suppress standardization.
+Overview, Patterns, Momentum and Compare are alternate views of the same selected date range. Each main chart also exposes window, year, monthly/weekly, layer and label controls; its full-density timeline is horizontally swipeable. Compare holds overall export history fixed against the selected snapshot.
 The import receipt reports the maturity anchor and a SHA-256 fingerprint over canonical sanitized events when Web Crypto is available.
 Snapshots contain counts and lineage only. They are downloaded by the user and are not automatic cross-session memory.`
 };
