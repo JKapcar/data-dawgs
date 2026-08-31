@@ -27,6 +27,13 @@ ok('machine inventory registers DateDawg',!!surface&&surface.page==='/datedawg.h
 ok('machine inventory keeps private memory disabled',Array.isArray(surface?.machine)&&surface.machine.length===0&&/subject-isolated storage/.test(surface.gap));
 ok('page retains a zero-connect CSP',/default-src 'self'/.test(date)&&/connect-src 'none'/.test(date));
 ok('page source has no network API call',!/(?:fetch|XMLHttpRequest|WebSocket|sendBeacon)\s*\(/.test(date));
+ok('Toto is told the metric is reciprocal acceptance, not cold discovery',/primary observable is reciprocal acceptance/.test(date)&&/cold-discover/.test(date));
+ok('Toto is told the benchmark is empirical Tinder data, not a Hinge cohort',/published Tinder male percentile table/.test(date)&&/not from an observed Hinge cohort/.test(date));
+ok('Toto is told the age-band shape assumption',/assumes the distribution shape is constant across age bands/.test(date));
+ok('Toto is told benchmark selection bias has unknown direction',/direction of that bias is unknown/.test(date));
+ok('Toto is told pending inbound queues undercount',/inbound counts undercount when a queue is pending/.test(date));
+ok('Toto is told reply rate and ghosting are not computable',/Reply rate and true ghosting are not computable/.test(date));
+ok('Toto is told conversion pipes are deliberately not surfaced',/conversion pipes are retained only in the sanitized snapshot/.test(date));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail?1:0);

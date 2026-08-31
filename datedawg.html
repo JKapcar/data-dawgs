@@ -28,7 +28,7 @@
 :root{ --display:"Arial Black","Arial Bold",Impact,system-ui,sans-serif;
        --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
 *{box-sizing:border-box}
-body{margin:0;background:var(--page);color:var(--ink-1);
+body{margin:0;background:var(--page);color:var(--ink-1);overflow-x:clip;
   font:400 15px/1.55 ui-rounded,"Trebuchet MS",system-ui,sans-serif}
 .wrap{max-width:1180px;margin:0 auto;padding:0 24px 80px}
 h1,h2,h3{margin:0}
@@ -52,6 +52,27 @@ button{font:inherit;cursor:pointer}
   color:var(--accent);margin-bottom:12px}
 .hero h1{font:400 clamp(25px,5.4vw,38px)/1.08 var(--display);margin-bottom:14px}
 .lead{color:var(--ink-2);font-size:16px;line-height:1.6;margin:0}
+
+/* The first post-import screen: a visual answer before the workings. */
+.verdict{position:relative;left:50%;width:100vw;translate:-50% 0;background:#0a0806;color:#f7f3ea;
+  overflow:hidden;min-height:min(82vh,700px);display:flex;flex-direction:column;margin:0 0 34px}
+.verdict .vtop{padding:20px 26px 0;font:700 9.5px var(--mono);letter-spacing:.2em;color:#6f665a}
+.verdict .vtop b{color:#ff6a02}.verdict .vcore{padding:28px 26px 0;text-align:center}
+.verdict .vlede{font:700 10.5px var(--mono);letter-spacing:.22em;color:#8c8173;margin-bottom:20px}
+.verdict .vnum{font:400 clamp(76px,15vw,168px)/.82 var(--display);letter-spacing:-.03em;color:#fff}
+.verdict .vnum i{font-style:normal;font-size:.24em;color:#ff6a02;vertical-align:.9em;margin-left:4px}
+.verdict .vsub{font:700 11.5px var(--mono);letter-spacing:.15em;color:#b8ae9e;margin-top:14px}
+.verdict .vsub em{font-style:normal;color:#fff}.verdict .vridge{position:relative;flex:1 1 auto;min-height:180px;margin-top:22px}
+.verdict .vridge svg{position:absolute;inset:0;width:100%;height:100%}.verdict .vpin{position:absolute;bottom:38px;width:2px;background:#ff6a02;box-shadow:0 0 18px rgba(255,106,2,.85)}
+.verdict .vpin b{position:absolute;left:50%;bottom:100%;translate:-50% -8px;white-space:nowrap;font:400 12px var(--display);color:#140a02;background:#ff6a02;padding:4px 10px;border-radius:5px}
+.verdict .vpin:after{content:"";position:absolute;left:50%;bottom:-5px;translate:-50% 0;width:11px;height:11px;border-radius:50%;background:#ff6a02;box-shadow:0 0 16px rgba(255,106,2,.9)}
+.verdict.play .vpin{animation:vdrop .9s cubic-bezier(.34,1.28,.4,1) both}@keyframes vdrop{0%{bottom:78%;opacity:0}35%{opacity:1}72%{bottom:28px}100%{bottom:38px}}
+.verdict.play .vnum{animation:vpop .5s cubic-bezier(.2,1.4,.35,1) .6s both}@keyframes vpop{from{opacity:0;scale:.86}to{opacity:1;scale:1}}
+.verdict.play .vsub,.verdict.play .vchips{animation:vfade .5s ease .95s both}@keyframes vfade{from{opacity:0;translate:0 8px}to{opacity:1;translate:0}}
+.verdict .vaxl{display:flex;justify-content:space-between;padding:0 26px;font:700 9px var(--mono);color:#756b5e;letter-spacing:.08em}
+.verdict .vchips{padding:18px 26px 0;display:flex;gap:9px;justify-content:center;flex-wrap:wrap}
+.verdict .vchip{font:700 9.5px var(--mono);letter-spacing:.1em;color:#b8ae9e;border:1px solid #2a241d;border-radius:999px;padding:7px 12px}.verdict .vchip b{color:#fff}
+.verdict .vcue{text-align:center;padding:20px 0 22px;font:700 9.5px var(--mono);letter-spacing:.2em;color:#756b5e;cursor:pointer}.verdict .vcue:hover{color:#ff6a02}
 
 .slip{background:var(--slip-stock);color:var(--slip-ink);border-radius:3px;
   padding:16px 18px;margin:0 0 16px;position:relative;
@@ -79,6 +100,11 @@ button{font:inherit;cursor:pointer}
 .scale{position:relative;height:42px;margin:26px 0 22px;border-radius:4px;
   background:linear-gradient(90deg,#cfc3a8 0%,#e0d3b4 55%,#f0b27a 82%,#e8792f 96%,#d13a00 100%);
   border:1px solid var(--slip-rule)}
+.scale .pin{position:absolute;top:-6px;bottom:-6px;width:3px;background:var(--slip-ink);border-radius:2px}
+.scale .pin.lo{background:none;border-left:3px dashed var(--slip-ink);width:0;opacity:.75}
+.scale .pin b{position:absolute;left:50%;top:-19px;translate:-50% 0;white-space:nowrap;font:800 10px var(--mono);color:var(--slip-ink)}
+.scale .pin.lo b{top:auto;bottom:-19px}.scen tr.hit td{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.scen tr.you td{border-top:2px solid var(--slip-ink);font-weight:700;color:var(--slip-ink)}
 .scale .band{position:absolute;border-radius:4px;background:rgba(27,18,9,.14);
   border:2px solid var(--slip-ink)}
 .scale .band.hi{top:-4px;height:22px}
@@ -327,6 +353,7 @@ footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--border);
   .insightgrid{grid-template-columns:1fr 1fr}.comparegrid{grid-template-columns:1fr}.vs{text-align:center}
   .datefields{margin-left:0}.controls{align-items:flex-start}.chartcard{padding:15px}}
 @media(max-width:600px){.wrap{padding:0 14px 60px}.hero{padding-top:34px}.split{grid-template-columns:1fr}
+  .verdict{left:auto;width:auto;translate:none;margin-left:-14px;margin-right:-14px}
   .dashhead{align-items:flex-start;flex-direction:column}.rangebar .topline{align-items:flex-start;flex-direction:column}
   .kpis{grid-template-columns:1fr 1fr;gap:8px}.kpi{padding:14px}.datefields{width:100%;flex-wrap:wrap}
   .datefields input{flex:1;min-width:125px}.seg{max-width:100%;overflow-x:auto}
@@ -397,26 +424,35 @@ opened, and your email, phone, device IPs and photo links are discarded as the f
 
 <footer>
   DateDawg is part of the Dawgs section of datadawgs216.com. Every figure shows its numerator and
-  denominator. Rankings are derived from published distribution parameters and shown as a spread
-  across assumptions rather than a single number, with the assumptions printed so you can argue
-  with them. Timestamps are read as UTC.
+  denominator. Reference percentiles are interpolated directly from SwipeStats' published male
+  Tinder table; age-band scaling and the Tinder-versus-Hinge mismatch are printed beside the
+  result. Timestamps are read as UTC.
 </footer>
 </div>
 
 <script>
 /*<<<PARSER_START>>>*/
 var DD = (function(){
-  var PARSER_VERSION="1.3.0", MIN_N=30, RESOLVE_DAYS=30, HEAVY_DAY=21;
+  var PARSER_VERSION="1.4.0", MIN_N=30, RESOLVE_DAYS=30, HEAVY_DAY=21;
   var KNOWN=["matches.json","user.json","prompts.json","media.json","prompt_feedback.json",
              "convo_starters.json","subscriptions.json","fresh_starts.json","match_notes.json"];
   var REFUSED=["selfie_verification.json"];
   var USER_DROP=["identity","devices","installs","location"];
-  /* SwipeStats' published Tinder male match-rate distribution. P20 and P80 are
-     log-interpolated between the nearest published anchors; they are not direct rows. */
+  /* Published SwipeStats Tinder male match-rate distribution (n=6,233).
+     Ranking reads this observed table directly; no distribution is fitted. */
   var MALE_QUANTILES=[
     {p:5,rate:.0014},{p:10,rate:.0030},{p:25,rate:.0076},{p:50,rate:.0204},
     {p:75,rate:.0539},{p:90,rate:.1250},{p:95,rate:.2037},{p:99,rate:.4515}
-  ];
+  ], MALE_AVG=.0526,
+  AGE_BANDS=[{lo:18,hi:21,rate:.0754},{lo:22,hi:25,rate:.0549},
+    {lo:26,hi:29,rate:.0529},{lo:30,hi:34,rate:.0417},{lo:35,hi:39,rate:.0378},
+    {lo:40,hi:44,rate:.0387},{lo:45,hi:200,rate:.0468}],
+  BENCH_SOURCE={publisher:"SwipeStats.io",work:"Tinder Statistics 2020–2025",
+    sample:"6,233 complete male Tinder profiles of 7,079 uploads",
+    url:"https://www.swipestats.io/blog/tinder-statistics",retrieved:"2026-08-31",
+    platform:"Tinder",measure:"matches divided by right swipes — outbound-conditional, like DateDawg",
+    verified:"full male percentile and age-band tables published directly; interpolated, not fitted",
+    bias:"self-selected uploaders; gender self-reported; the direction of selection bias is unknown"};
   function maleRateAt(p){
     for(var i=0;i<MALE_QUANTILES.length;i++) if(MALE_QUANTILES[i].p===p) return MALE_QUANTILES[i].rate;
     for(var j=1;j<MALE_QUANTILES.length;j++) if(p<MALE_QUANTILES[j].p){
@@ -429,6 +465,33 @@ var DD = (function(){
     {p:50,label:"Median man",short:"Median man",rate:maleRateAt(50),interpolated:false},
     {p:80,label:"80th percentile man",short:"P80 man",rate:maleRateAt(80),interpolated:true}
   ];
+  function bandFor(age){if(age==null)return null;for(var i=0;i<AGE_BANDS.length;i++)
+    if(age>=AGE_BANDS[i].lo&&age<=AGE_BANDS[i].hi)return AGE_BANDS[i];return null;}
+  function anchorsArray(rows){return rows.map(function(a){return [a.p,a.rate];});}
+  function pctOn(rate,anchors){
+    if(!rate||rate<=0)return null;
+    var lo=anchors[0],hi=anchors[anchors.length-1];
+    if(rate<lo[1]||rate>hi[1]){
+      var sig=Math.log(.125/.0204)/Phinv(.90),p=100*Phi(Math.log(rate/.0204)/sig);
+      return {p:Math.max(0,Math.min(100,p)),extrapolated:true};}
+    for(var i=0;i<anchors.length-1;i++){var a=anchors[i],b=anchors[i+1];
+      if(rate>=a[1]&&rate<=b[1])return {p:a[0]+(b[0]-a[0])*
+        (Math.log(rate/a[1])/Math.log(b[1]/a[1])),extrapolated:false,between:[a[0],b[0]]};}
+    return null;}
+  function scaleCdf(f){return anchorsArray(MALE_QUANTILES).map(function(a){return [a[0],a[1]*f];});}
+  function density(anchors){var pts=[],max=0;for(var i=0;i<anchors.length-1;i++){
+    var a=anchors[i],b=anchors[i+1],d=(b[0]-a[0])/(Math.log(b[1])-Math.log(a[1]));
+    pts.push({x0:Math.log(a[1]),x1:Math.log(b[1]),d:d});if(d>max)max=d;}
+    return {bins:pts,max:max,lo:Math.log(anchors[0][1]),hi:Math.log(anchors[anchors.length-1][1])};}
+  function ridgePath(anchors,w,h){var D=density(anchors),span=D.hi-D.lo,N=140,raw=[],pts=[];
+    for(var i=0;i<=N;i++){var lx=D.lo+span*i/N,d=0;for(var j=0;j<D.bins.length;j++)
+      if(lx>=D.bins[j].x0&&lx<=D.bins[j].x1){d=D.bins[j].d;break;}raw.push(d);}
+    var sm=raw.map(function(_,i){var a=0,n=0;for(var k=-9;k<=9;k++){var j=i+k;
+      if(j>=0&&j<raw.length){a+=raw[j];n++;}}return a/n;}),mx=Math.max.apply(null,sm)||1;
+    for(var q=0;q<=N;q++)pts.push([(Math.log(anchors[0][1])+span*q/N-D.lo)/span*w,
+      h-(sm[q]/mx)*(h-6)]);
+    return {d:"M0,"+h+" L"+pts.map(function(p){return p[0].toFixed(1)+","+p[1].toFixed(1);}).join(" L")+
+      " L"+w+","+h+" Z",lo:D.lo,hi:D.hi,span:span};}
 
   function A(x){ return Array.isArray(x)?x:(x?[x]:[]); }
   function ts(s){ if(typeof s!=="string") return null;
@@ -468,88 +531,13 @@ var DD = (function(){
     if(Phi(m)<p) lo=m; else hi=m; } return (lo+hi)/2; }
   function sigmaFromGini(g){ return Math.SQRT2*Phinv((g+1)/2); }
 
-  /* ---- BENCHMARK ENGINE -------------------------------------------------
-     Fit a lognormal to the SAME variable being measured — the distribution of
-     outbound match rates across men — using two published quantiles of that
-     variable. Do NOT borrow a Gini from a different variable (likes received);
-     that was the error in v1.1.
-       median m, quantile q at level L  ->  sigma = ln(q/m) / Phinv(L)
-     Each benchmark carries its provenance and a confidence grade. ------------ */
-  function fitFromQuantiles(median,q,level){
-    return {median:median, sigma:Math.log(q/median)/Phinv(level)}; }
-
-  var BENCHMARKS=[
-    {id:"tinder-2q", name:"Tinder, two-quantile fit", grade:"A",
-     median:0.0204, q:0.125, level:0.90,
-     src:"male median 2.04%, p90 12.5% (same published distribution)",
-     source:{publisher:"SwipeStats.io", work:"Tinder Statistics",
-       sample:"6,233 complete male Tinder profiles (of 7,079 mixed-gender uploads), 2020-2025",
-       url:"https://www.swipestats.io/blog/tinder-statistics",
-       retrieved:"2026-08-30", platform:"Tinder", measure:"outbound match rate, men",
-       verified:"source directly reports the male median, p75, p90 and p95; the fit uses "+
-                "median + p90 and then reproduces p75 and p95 as an out-of-sample shape check",
-       bias:"self-selected uploaders; gender self-reported. The DIRECTION of the selection "+
-            "bias is unknown — frustrated men and high-performing men both have reasons to "+
-            "upload, so this may push the median either way"},
-     check:"fitted on median+p90; then reproduces p75 5.30% (vs 5.39%) and p95 20.90% (vs 20.37%)"},
-    {id:"hinge-lo-wide", name:"ASSUMPTION — Hinge, median 3.0%, wide", grade:"C",
-     median:0.030, sigma:1.4145, src:"Hinge male band low end, Tinder spread",
-     source:{publisher:"multiple secondary sources", work:"Hinge male match-rate band",
-       sample:"unstated", url:null, retrieved:"2026-08-30", platform:"Hinge",
-       measure:"outbound match rate, men",
-       verified:"NO measured Hinge male median has ever been published. The 2-5% band is a "+
-                "range quoted by consumer analytics sites without a stated sample or method. "+
-                "Spread is BORROWED from the Tinder fit, not measured on Hinge.",
-       bias:"range not a measurement; platform mechanics differ (Hinge caps free likes at 8/day "+
-            "vs Tinder 100), so a Hinge like is scarcer and should convert better"}},
-    {id:"hinge-lo-tight", name:"ASSUMPTION — Hinge, median 3.0%, tight", grade:"C",
-     median:0.030, sigma:1.000, src:"Hinge male band low end, narrower spread",
-     source:{publisher:"multiple secondary sources", work:"Hinge male match-rate band",
-       sample:"unstated", url:null, retrieved:"2026-08-30", platform:"Hinge",
-       measure:"outbound match rate, men",
-       verified:"NO measured Hinge male median has ever been published. The 2-5% band is a "+
-                "range quoted by consumer analytics sites without a stated sample or method. "+
-                "Spread is BORROWED from the Tinder fit, not measured on Hinge.",
-       bias:"range not a measurement; platform mechanics differ (Hinge caps free likes at 8/day "+
-            "vs Tinder 100), so a Hinge like is scarcer and should convert better"}},
-    {id:"hinge-hi-wide", name:"ASSUMPTION — Hinge, median 4.0%, wide", grade:"C",
-     median:0.040, sigma:1.4145, src:"Hinge male band high end, Tinder spread",
-     source:{publisher:"multiple secondary sources", work:"Hinge male match-rate band",
-       sample:"unstated", url:null, retrieved:"2026-08-30", platform:"Hinge",
-       measure:"outbound match rate, men",
-       verified:"NO measured Hinge male median has ever been published. The 2-5% band is a "+
-                "range quoted by consumer analytics sites without a stated sample or method. "+
-                "Spread is BORROWED from the Tinder fit, not measured on Hinge.",
-       bias:"range not a measurement; platform mechanics differ (Hinge caps free likes at 8/day "+
-            "vs Tinder 100), so a Hinge like is scarcer and should convert better"}},
-    {id:"hinge-hi-tight", name:"ASSUMPTION — Hinge, median 4.0%, tight", grade:"C",
-     median:0.040, sigma:1.000, src:"Hinge male band high end, narrower spread",
-     source:{publisher:"multiple secondary sources", work:"Hinge male match-rate band",
-       sample:"unstated", url:null, retrieved:"2026-08-30", platform:"Hinge",
-       measure:"outbound match rate, men",
-       verified:"NO measured Hinge male median has ever been published. The 2-5% band is a "+
-                "range quoted by consumer analytics sites without a stated sample or method. "+
-                "Spread is BORROWED from the Tinder fit, not measured on Hinge.",
-       bias:"range not a measurement; platform mechanics differ (Hinge caps free likes at 8/day "+
-            "vs Tinder 100), so a Hinge like is scarcer and should convert better"}}
-  ].map(function(b){
-    if(b.sigma==null){ var f=fitFromQuantiles(b.median,b.q,b.level); b.sigma=f.sigma; }
-    return b; });
-
-  function rank(rate,ids){
-    if(!rate||rate<=0) return null;
-    var pool=BENCHMARKS.filter(function(b){ return !ids||ids.indexOf(b.id)>=0; });
-    var rows=pool.map(function(b){
-      return {id:b.id,name:b.name,src:b.src,grade:b.grade,sigma:b.sigma,check:b.check,
-        source:b.source,
-        pct:100*Phi(Math.log(rate/b.median)/b.sigma),
-        p90:b.median*Math.exp(Phinv(0.90)*b.sigma),
-        p95:b.median*Math.exp(Phinv(0.95)*b.sigma)}; });
-    var hinge=rows.filter(function(r){ return r.id.indexOf("hinge")===0; });
-    var use=hinge.length?hinge:rows, ps=use.map(function(r){return r.pct;});
-    return {rows:rows, lo:Math.min.apply(null,ps), hi:Math.max.apply(null,ps),
-      mid:ps.reduce(function(a,b){return a+b;},0)/ps.length,
-      tinder:(rows.filter(function(r){return r.id==="tinder-2q";})[0]||{}).pct}; }
+  function rank(rate,age){if(!rate||rate<=0)return null;var anchors=anchorsArray(MALE_QUANTILES),
+    all=pctOn(rate,anchors),band=bandFor(age),f=band?band.rate/MALE_AVG:null,
+    bandAnchors=band?scaleCdf(f):null,within=band?pctOn(rate,bandAnchors):null;
+    return {rate:rate,all:all,band:within,ageBand:band,
+      bandLabel:band?(band.hi>150?band.lo+"+":band.lo+"–"+band.hi):null,
+      bandRate:band?band.rate:null,bandScale:f,source:BENCH_SOURCE,
+      anchors:anchors,anchorsBand:bandAnchors};}
 
   function stripUser(u){
     if(!u||typeof u!=="object") return {kept:null,dropped:[]};
@@ -635,12 +623,13 @@ var DD = (function(){
       weMetConnections:weMetConnections,weMet:weMet,
       conversionPipes:{connectionsWithSentMessage:conv.withSentMessage,
         messagesSent:conv.messagesSent,threadLengths:conv.threads,
-        note:"computed for a later phase; deliberately not surfaced in v1.2"},
+        note:"computed for a later phase; deliberately not surfaced in v1.4"},
       days:(minT&&maxT)?Math.max(1,Math.round((maxT-minT)/864e5)):0};
 
     if(seen["user.json"]){
       var s=stripUser(seen["user.json"]); R.userDropped=s.dropped;
-      var pr=(s.kept&&s.kept.preferences)||{};
+      var pr=(s.kept&&s.kept.preferences)||{},pf=(s.kept&&s.kept.profile)||{};
+      R.profile={age:pf.age||null,gender:pf.gender||null};
       R.filters={ageMin:pr.age_min,ageMax:pr.age_max,
         ageDealbreaker:pr.age_dealbreaker,distance:pr.distance_miles_max}; }
     if(Array.isArray(seen["media.json"])) R.photoLinks=seen["media.json"].length;
@@ -695,6 +684,7 @@ var DD = (function(){
     if(std.wsum){ std.afterRate=std.after/std.wsum; std.beforeRate=std.before/std.wsum;
       std.lift=std.beforeRate?std.afterRate/std.beforeRate-1:null; }
 
+    var age=(R.profile&&R.profile.age)||null;
     return {cut:cut,std:std,
       after:wilson(A_.k,A_.n),before:wilson(B_.k,B_.n),afterAdj:wilson(Aadj.k,Aadj.n),
       heavyAfter:wilson(Ah.k,Ah.n),heavyBefore:wilson(Bh.k,Bh.n),
@@ -709,9 +699,9 @@ var DD = (function(){
       selAfter:sel(cut,Infinity),selBefore:sel(-Infinity,cut),
       inbound:{n:inWin.length,acc:inWin.reduce(function(a,i){return a+i.acc;},0),
         days:winDays,perDay:inWin.length/winDays},
-      rankAdj:Aadj.n?rank(Aadj.k/Aadj.n):null,
-      rankHeavy:Ah.n?rank(Ah.k/Ah.n):null,
-      rankStd:(std.valid&&std.afterRate)?rank(std.afterRate):null}; }
+      rankAdj:Aadj.n?rank(Aadj.k/Aadj.n,age):null,
+      rankHeavy:Ah.n?rank(Ah.k/Ah.n,age):null,
+      rankStd:(std.valid&&std.afterRate)?rank(std.afterRate,age):null}; }
 
   /* Descriptive timeline for the dashboard. Outcomes are attributed to the date the
      outbound like was sent because Hinge does not provide a reliable match-event date
@@ -807,8 +797,11 @@ var DD = (function(){
       standardized:M.std.valid?{after:M.std.afterRate,before:M.std.beforeRate,
         lift:M.std.lift,weight:M.std.wsum,strataUsed:M.std.strataUsed,
         strataTotal:M.std.strataTotal,thinStrata:M.std.thin,droppedStrata:M.std.dropped}:null,
-      rank_standardized:M.rankStd?{lo:M.rankStd.lo,hi:M.rankStd.hi,mid:M.rankStd.mid}:null,
-      rank:M.rankAdj?{lo:M.rankAdj.lo,hi:M.rankAdj.hi,mid:M.rankAdj.mid}:null,
+      rank_standardized:M.rankStd?{rate:M.rankStd.rate,all_men:M.rankStd.all.p,
+        age_band:M.rankStd.bandLabel,within_age_band:M.rankStd.band&&M.rankStd.band.p,
+        source:M.rankStd.source}:null,
+      rank:M.rankAdj?{rate:M.rankAdj.rate,all_men:M.rankAdj.all.p,
+        age_band:M.rankAdj.bandLabel,within_age_band:M.rankAdj.band&&M.rankAdj.band.p}:null,
       conversion_pipes:{connectionsWithSentMessage:R.conversionPipes.connectionsWithSentMessage,
         messagesSent:R.conversionPipes.messagesSent,
         weMetConnections:R.weMetConnections,weMet:R.weMet,
@@ -828,10 +821,12 @@ var DD = (function(){
       R.fingerprint="sha256-"+h; return R.fingerprint; }); }
 
   return {parse:parse,metrics:metrics,timeSeries:timeSeries,snapshot:snapshot,rank:rank,wilson:wilson,ztest:ztest,
-    MALE_QUANTILES:MALE_QUANTILES,MALE_REFERENCES:MALE_REFERENCES,maleRateAt:maleRateAt,
+    MALE_QUANTILES:MALE_QUANTILES,MALE_REFERENCES:MALE_REFERENCES,MALE_AVG:MALE_AVG,
+    AGE_BANDS:AGE_BANDS,BENCH_SOURCE:BENCH_SOURCE,maleRateAt:maleRateAt,bandFor:bandFor,
+    pctOn:pctOn,density:density,ridgePath:ridgePath,
     fingerprint:fingerprint,
     sigmaFromGini:sigmaFromGini,Phi:Phi,Phinv:Phinv,likeHasComment:likeHasComment,
-    classify:classify,BENCHMARKS:BENCHMARKS,fitFromQuantiles:fitFromQuantiles,MIN_N:MIN_N,RESOLVE_DAYS:RESOLVE_DAYS,
+    classify:classify,MIN_N:MIN_N,RESOLVE_DAYS:RESOLVE_DAYS,
     HEAVY_DAY:HEAVY_DAY,PARSER_VERSION:PARSER_VERSION};
 })();
 /*<<<PARSER_END>>>*/
@@ -877,49 +872,47 @@ var DD = (function(){
       (w.n<DD.MIN_N?'<div class="warn">Only '+w.n+' likes here. Read the range, not the number.</div>':'')+
       (caveat?'<div class="warn">'+esc(caveat)+'</div>':'')+'</div>'; }
 
+  function verdict(M,R){
+    var primary=M.rankStd||M.rankAdj;if(!primary)return "";
+    var head=primary.band||primary.all,anchors=primary.band?primary.anchorsBand:primary.anchors,
+        W=1000,H=200,rp=DD.ridgePath(anchors,W,H),xPct=Math.max(1,Math.min(99,
+          (Math.log(primary.rate)-rp.lo)/rp.span*100)),span=Math.max(1,Math.round((R.maxT-M.cut)/864e5));
+    function ax(p){var a=anchors.filter(function(x){return x[0]===p;})[0];return a?pct(a[1]):"—";}
+    return '<section class="verdict play" id="verdict"><div class="vtop">READ '+num(R.records)+
+      ' CONNECTIONS · '+iso(R.minT).slice(0,4)+'–'+iso(R.maxT).slice(0,4)+
+      ' · <b>NOTHING LEFT THIS PAGE</b></div><div class="vcore"><div class="vlede">'+
+      (primary.band?'AMONG MEN '+esc(primary.bandLabel):'AMONG ALL MEN')+', YOUR SWIPESTATS REFERENCE IS</div>'+
+      '<div class="vnum">'+Math.round(head.p)+'<i>th</i></div><div class="vsub">PERCENTILE · <em>'+
+      pct(primary.rate)+'</em> RECIPROCAL ACCEPTANCE</div></div><div class="vridge">'+
+      '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" aria-label="Published male match-rate distribution"><defs><linearGradient id="vrg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2118"/><stop offset="1" stop-color="#12100c"/></linearGradient></defs><path d="'+rp.d+'" fill="url(#vrg)" stroke="#3a3026" stroke-width="1.5"/></svg><div class="vpin" style="left:'+xPct.toFixed(1)+'%;height:46%"><b>YOU</b></div></div>'+
+      '<div class="vaxl"><span>p5 · '+ax(5)+'</span><span>MEDIAN · '+ax(50)+'</span><span>p90 · '+ax(90)+'</span><span>p99 · '+ax(99)+'</span></div><div class="vchips">'+
+      (primary.band?'<span class="vchip">ALL MEN <b>p'+Math.round(primary.all.p)+'</b></span>':'')+
+      (M.rankHeavy&&M.heavyAfter&&M.heavyAfter.n>=DD.MIN_N?'<span class="vchip">HEAVY-DAY CHECK <b>p'+
+        Math.round((M.rankHeavy.band||M.rankHeavy.all).p)+'</b></span>':'')+
+      (M.std.valid&&M.std.lift!=null?'<span class="vchip">VS PRIOR <b>'+(M.std.lift>0?'+':'')+
+        (100*M.std.lift).toFixed(0)+'%</b></span>':'')+
+      '<span class="vchip">WINDOW <b>'+num(span)+'d</b></span><span class="vchip">n <b>6,233</b> · SWIPESTATS</span></div><div class="vcue" id="vcue">↓ THE WORKINGS</div></section>';}
+
   function rankPanel(M){
-    var primary = M.rankStd || M.rankAdj;
-    var rate    = M.rankStd ? M.std.afterRate : (M.afterAdj&&M.afterAdj.p);
-    var label   = M.rankStd ? "volume-standardized match rate" : "adjusted match rate";
-    if(!primary) return '<div class="slip"><h3>Where you rank</h3><small>Not enough resolved '+
-      'likes in this window to place you. Widen the boundary.</small></div>';
-    var second  = (M.heavyAfter&&M.heavyAfter.n>=DD.MIN_N)?M.rankHeavy:null;
-    var ticks=[50,75,90,95].map(function(p){
-      return '<span class="tick" style="left:'+p+'%"><s>p'+p+'</s></span>'; }).join("");
-    function band(r,cls,lbl){ return '<span class="band '+cls+'" style="left:'+r.lo+'%;width:'+
-      Math.max(1.5,r.hi-r.lo)+'%"><b>'+lbl+'p'+Math.round(r.lo)+'–p'+Math.round(r.hi)+'</b></span>'; }
-    return '<div class="slip"><h3>Where you rank — men, match rate on likes sent</h3>'+
-      '<div class="rank"><div class="big">'+Math.round(primary.mid)+'<i>th</i></div>'+
-      '<div class="cap">'+esc(label)+' · Hinge scenarios</div></div>'+
-      '<div class="scale">'+ticks+band(primary,"hi","")+(second?band(second,"lo",""):"")+'</div>'+
-      '<div class="twoband">'+
-        '<span><b>p'+Math.round(primary.lo)+'–p'+Math.round(primary.hi)+'</b> '+esc(label)+
-        ' — the main selectivity-adjusted result</span>'+
-        (second?'<span><b>p'+Math.round(second.lo)+'–p'+Math.round(second.hi)+
-          '</b> conservative diagnostic — heavy-volume days only</span>':'')+
-        (M.rankAdj?'<span><b>p'+Math.round(M.rankAdj.lo)+'–p'+Math.round(M.rankAdj.hi)+
-          '</b> unadjusted, for reference — inflated by any rise in selectivity</span>':'')+
-      '</div>'+
-      '<table class="scen"><thead><tr><th>Reference distribution</th><th>Grade</th>'+
-      '<th style="text-align:right">You</th><th style="text-align:right">p90 at</th></tr></thead><tbody>'+
-      primary.rows.map(function(r){
-        var so=r.source||{};
-        return '<tr><td><b>'+esc(r.name)+'</b><br><span class="prov">'+esc(so.publisher||"—")+
-          (so.work?' · '+esc(so.work):'')+(so.sample?' · '+esc(so.sample):'')+
-          (so.url?'<br><span class="url">'+esc(so.url)+'</span>':'')+
-          '<br><i>'+esc(so.verified||"provenance not recorded")+'</i>'+
-          (so.bias?'<br>bias: '+esc(so.bias):'')+'</span></td>'+
-          '<td>'+esc(r.grade)+'</td><td class="n">p'+Math.round(r.pct)+'</td>'+
-          '<td class="n">'+(100*r.p90).toFixed(1)+'%</td></tr>';}).join("")+'</tbody></table>'+
-      '<small>From your <b>'+esc(label)+'</b> of <b>'+pct(rate)+'</b>. Each row fits a lognormal '+
-      'to the distribution of <i>outbound match rates across men</i> — the same quantity being '+
-      'measured, not a Gini borrowed from a different variable. The grade-A row is fitted from '+
-      'two published quantiles and then reproduces two more it was not fitted to. The grade-C '+
-      'rows substitute a Hinge median that has never been measured and borrow the Tinder spread; '+
-      '<b>their disagreement is the error bar</b>. These are <b>derived reference percentiles, '+
-      'not observed Hinge cohort percentiles</b> — no cohort of real Hinge men exists anywhere. '+
-      'Your rate is also measured in her likes queue, where matching is free, not in cold '+
-      'discover.</small></div>'; }
+    var primary=M.rankStd||M.rankAdj,label=M.rankStd?"volume-standardized match rate":"adjusted match rate";
+    if(!primary)return '<div class="slip"><h3>Where you rank</h3><small>Not enough resolved likes in this window to place you.</small></div>';
+    var second=(M.heavyAfter&&M.heavyAfter.n>=DD.MIN_N)?M.rankHeavy:null,
+        head=primary.band||primary.all,hasBand=!!primary.band,src=primary.source;
+    function mark(r,cls,lbl){return r?'<span class="pin '+cls+'" style="left:'+Math.min(99.4,r.p)+'%"><b>'+lbl+'p'+Math.round(r.p)+'</b></span>':"";}
+    var ticks=[25,50,75,90].map(function(p){return '<span class="tick" style="left:'+p+'%"><s>p'+p+'</s></span>';}).join("");
+    return '<div class="slip"><h3>SwipeStats reference — men, match rate on likes sent</h3><div class="rank"><div class="big">'+Math.round(head.p)+'<i>th</i></div><div class="cap">'+
+      (hasBand?'among men '+esc(primary.bandLabel):'among all men')+' · '+esc(label)+'</div></div><div class="scale">'+ticks+
+      mark(head,"hi","")+(second?mark(second.band||second.all,"lo",""):"")+'</div><div class="twoband"><span><b>p'+Math.round(head.p)+'</b> your main volume-adjusted result</span>'+
+      (second?'<span><b>p'+Math.round((second.band||second.all).p)+'</b> heavy-volume-day check</span>':'')+
+      (hasBand?'<span><b>p'+Math.round(primary.all.p)+'</b> the same rate against all men, every age</span>':'')+
+      '</div><table class="scen"><thead><tr><th>Published percentile</th><th style="text-align:right">All men</th>'+
+      (hasBand?'<th style="text-align:right">Men '+esc(primary.bandLabel)+'</th>':'')+'</tr></thead><tbody>'+primary.anchors.map(function(a,i){
+        var hit=head.between&&(a[0]===head.between[0]||a[0]===head.between[1]);return '<tr'+(hit?' class="hit"':'')+'><td>p'+a[0]+(a[0]===50?' <span class="prov">median</span>':'')+'</td><td class="n">'+(100*a[1]).toFixed(2)+'%</td>'+
+          (hasBand?'<td class="n">'+(100*primary.anchorsBand[i][1]).toFixed(2)+'%</td>':'')+'</tr>';}).join("")+
+      '<tr class="you"><td><b>you</b></td><td class="n">'+pct(primary.rate)+'</td>'+(hasBand?'<td class="n">'+pct(primary.rate)+'</td>':'')+'</tr></tbody></table><small><b>Published empirical table, not a fitted model.</b> '+
+      esc(src.publisher)+' · '+esc(src.work)+' · '+esc(src.sample)+'<br><span class="url">'+esc(src.url)+'</span> · retrieved '+esc(src.retrieved)+'. DateDawg interpolates between the published points immediately around your rate.'+
+      (hasBand?'<br><br><b>Age adjustment:</b> men '+esc(primary.bandLabel)+' average '+pct(primary.bandRate)+' versus '+pct(DD.MALE_AVG)+' for all men. The curve is rescaled by '+primary.bandScale.toFixed(3)+', which assumes its shape is constant by age; SwipeStats does not publish age-specific shapes.':'')+
+      '<br><br><b>Limits:</b> this is Tinder, not Hinge. Hinge likes are scarcer, the benchmark uploaders self-selected, and '+esc(src.bias)+'. This is a reference percentile, not an observed Hinge cohort.</small></div>';}
 
   function receipt(){
     function kv(k,v){ return '<div class="kv"><span>'+esc(k)+'</span><span class="d"></span><b>'+
@@ -935,6 +928,7 @@ var DD = (function(){
       (R.userDropped&&R.userDropped.length?kv("Dropped at read",R.userDropped.join(", ")):"")+
       (R.photoLinks?kv("Photo links discarded",num(R.photoLinks)):"")+
       kv("Export fingerprint",R.fingerprint||"unavailable (no Web Crypto in this context)")+
+      (R.profile&&R.profile.age?kv("Your age",R.profile.age+" (used for the age-band reference)"):"")+
       (f.ageMin!=null?kv("Your age filter",f.ageMin+"–"+f.ageMax+
         (f.ageDealbreaker?" (dealbreaker)":" (not a dealbreaker)")):"")+
       (f.distance!=null?kv("Your distance filter",f.distance+" mi"):"")+
@@ -1051,9 +1045,10 @@ var DD = (function(){
       return '<text x="'+(L-12)+'" y="'+(y+4)+'" text-anchor="end">'+esc(label)+'</text><line class="compareline" x1="'+L+'" y1="'+y+'" x2="'+px+'" y2="'+y+'"/><circle class="comparepoint '+cls+'" cx="'+px+'" cy="'+y+'" r="8"><title>'+esc(label)+': '+(rate==null?'unavailable':pct(rate))+'</title></circle><text class="pointlabel" x="'+tx+'" y="'+(y+4)+'" text-anchor="'+(nearEdge?'end':'start')+'">'+(rate==null?'—':pct(rate))+'</text>';}
     return '<svg class="chart ratechart" style="width:'+W+'px" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Overall history and selected snapshot acceptance rates against male Tinder references">'+g.join('')+refs+row(overall,'Overall history',82,'overall')+row(snapshot,'Selected snapshot',145,'snapshot')+'</svg>'; }
   function insightCards(S){
-    var rk=S.rate&&S.rate.n>=DD.MIN_N?DD.rank(S.rate.p):null,unmatched=Math.max(0,S.matureLikes-S.matureMatches),
+    var rk=S.rate&&S.rate.n>=DD.MIN_N?DD.rank(S.rate.p,R.profile&&R.profile.age):null,
+        head=rk&&(rk.band||rk.all),unmatched=Math.max(0,S.matureLikes-S.matureMatches),
         best=S.bins.filter(function(b){return b.matureLikes>=DD.MIN_N&&b.rate!=null;}).sort(function(a,b){return b.rate-a.rate;})[0];
-    return '<div class="insightgrid"><div class="insight"><span class="ey">Dating App MV / Market Value</span><div class="big rankvalue">'+(rk?ordinal(rk.lo)+'–'+ordinal(rk.hi)+' percentile':'—')+'</div><p>'+(rk?'Your estimated match-rate standing for this date range. Based on Hinge scenarios—not a measured Hinge population.':'At least '+DD.MIN_N+' matured likes are needed to estimate your standing.')+'</p></div>'+
+    return '<div class="insightgrid"><div class="insight"><span class="ey">Dating App MV / Market Value</span><div class="big rankvalue">'+(head?ordinal(head.p)+' percentile':'—')+'</div><p>'+(head?'Your SwipeStats male Tinder reference for this date range'+(rk.band?' among men '+esc(rk.bandLabel):'')+'. It is not a measured Hinge population.':'At least '+DD.MIN_N+' matured likes are needed to estimate your standing.')+'</p></div>'+
       '<div class="insight"><span class="ey">Your matched-like results</span><div class="big">'+num(S.matureMatches)+' of '+num(S.matureLikes)+'</div><p>'+num(unmatched)+' matured likes did not become matches.</p></div>'+
       '<div class="insight"><span class="ey">Your best '+S.grain+'</span><div class="big">'+(best?pct(best.rate):'—')+'</div><p>'+(best?esc(best.label)+' · '+best.matureMatches+' matches from '+best.matureLikes+' matured likes':'No period has '+DD.MIN_N+' matured likes yet.')+'</p></div></div>'; }
   function viewPanel(S){
@@ -1092,8 +1087,7 @@ var DD = (function(){
       '<div class="kpi"><span class="value">'+num(S.matches)+'</span><span class="label">Your likes that became matches</span><span class="detail">grouped by the date you sent each like</span></div>'+
       '<div class="kpi"><span class="value">'+(rw?pct(rw.p):'—')+'</span><span class="label">Your match-back rate</span><span class="detail">'+(rw?num(rw.k)+' matches from '+num(rw.n)+' matured likes':'no matured likes')+'</span></div>'+
       '<div class="kpi"><span class="value">'+num(S.activeDays)+'</span><span class="label">Days you were active</span><span class="detail">days when you sent at least one like</span></div></div>'+
-      '<div class="viewtabs" role="tablist" aria-label="Dashboard view">'+[['overview','Overview'],['patterns','Patterns'],['momentum','Momentum'],['compare','Compare']].map(function(v){return '<button data-view="'+v[0]+'" class="'+(VIEW===v[0]?'on':'')+'" aria-selected="'+(VIEW===v[0])+'">'+v[1]+'</button>';}).join('')+'</div>'+viewPanel(S)+
-      '<details class="receipt"><summary>Import details & privacy receipt</summary>'+receipt()+'</details>'; }
+      '<div class="viewtabs" role="tablist" aria-label="Dashboard view">'+[['overview','Overview'],['patterns','Patterns'],['momentum','Momentum'],['compare','Compare']].map(function(v){return '<button data-view="'+v[0]+'" class="'+(VIEW===v[0]?'on':'')+'" aria-selected="'+(VIEW===v[0])+'">'+v[1]+'</button>';}).join('')+'</div>'+viewPanel(S); }
 
   function paintLegacy(){
     var M=DD.metrics(R,CUT),h=[];
@@ -1278,6 +1272,9 @@ var DD = (function(){
 
   function paint(){
     var S=DD.timeSeries(R,VFROM,VTO,GRAIN),M=DD.metrics(R,CUT),h=[];
+    h.push(verdict(M,R));
+    h.push('<div id="workings"><details class="receipt"><summary>Import details & privacy receipt</summary>'+receipt()+'</details>');
+    h.push('<div class="sec"><h2>Where your result sits</h2><p class="sub">Your reciprocal-acceptance rate placed directly on SwipeStats’ published male Tinder percentile table. Likes too recent to have resolved are excluded.</p>'+rankPanel(M)+'</div>');
     h.push(timelinePanel(S));
     if(declValid()) h.push('<details class="advanced"><summary>Declared before/after test · '+
       iso(DECL.cut)+' · '+esc(DECL.reason)+'</summary><div class="chartcard" style="margin-top:12px">'+
@@ -1292,7 +1289,7 @@ var DD = (function(){
       ["Your best photo or prompt","Nothing links an individual asset to an individual outcome."],
       ["A precise Hinge percentile","The Hinge male median exists only as a published range. Dotted P20, median, and P80 lines are external Tinder references; P20 and P80 are interpolated."]
       ].map(function(r){return '<tr><td><b>'+esc(r[0])+'</b></td><td>'+esc(r[1])+'</td></tr>';}).join('')+'</tbody></table></div></div>');
-    h.push('<div class="sec"><h2>Save this view</h2><p class="sub">Counts and lineage only. The selected dashboard range is included.</p><button class="btn ghost" id="snap">Download snapshot</button> <button class="btn ghost" id="again">Read a different export</button></div>');
+    h.push('<div class="sec"><h2>Save this view</h2><p class="sub">Counts and lineage only. The selected dashboard range is included.</p><button class="btn ghost" id="snap">Download snapshot</button> <button class="btn ghost" id="again">Read a different export</button></div></div>');
     $("#out").className="";$("#out").innerHTML=h.join("");
 
     Array.prototype.forEach.call(document.querySelectorAll("[data-range]"),function(b){b.onclick=function(){
@@ -1311,6 +1308,7 @@ var DD = (function(){
       ACTIVITY_SCALE=b.getAttribute("data-activity-scale");paint();};});
     Array.prototype.forEach.call(document.querySelectorAll("[data-chart-year]"),function(s){s.onchange=function(){
       if(!s.value)return;var b=document.querySelector('[data-range="year-'+s.value+'"]');if(b)b.click();};});
+    if($("#vcue"))$("#vcue").onclick=function(){if($("#workings").scrollIntoView)$("#workings").scrollIntoView({behavior:"smooth",block:"start"});};
     $("#applyRange").onclick=function(){var a=$("#viewFrom").value,z=$("#viewTo").value;if(a&&z){
       VFROM=new Date(a+"T00:00:00Z").getTime();VTO=new Date(z+"T00:00:00Z").getTime()+864e5-1;RANGE="custom";paint();}};
     $("#snap").onclick=function(){var data=DD.snapshot(R,M,{subject:SUBJ&&SUBJ.subject||null,consent:SUBJ&&SUBJ.consent||null,consentAt:SUBJ&&SUBJ.at||null,declaration:declValid()?DECL:null,boundaryMoves:0});
@@ -1385,11 +1383,17 @@ window.DD_BOTCTX = {
 - Never claim DateDawg measures cold-discover attractiveness, complete dating-market value, verified date conversion, reply rate, ghosting, or the best photo or prompt.
 - Its primary observable is reciprocal acceptance: of the women the subject liked, how many liked the subject back. Direction is inferred because the export does not state it explicitly.
 - Likes newer than 30 days are immature and excluded from every censoring-adjusted current result, including volume standardization and the displayed z-test.
-- Dashboard date filters control every visible summary, chart, Dating App MV / Market Value estimate, and selected snapshot. The MV range is an estimated match-rate standing from Hinge scenarios, not a measured Hinge population percentile. Timeline matches are grouped by the date the subject sent the like; the trend rate uses matured likes only.
+- Dashboard date filters control every visible summary, chart, Dating App MV / Market Value reference, and selected snapshot. They never alter or reinstate a declared before/after test. Timeline matches are grouped by the date the subject sent the like; the trend rate uses matured likes only.
 - Compare uses one export at two scopes: fixed overall history versus the date-filtered snapshot. Raw totals cover different spans, so compare acceptance rates rather than totals.
-- The subtle dotted median and shaded 20th–80th benchmark band are external Tinder male references from SwipeStats, not Hinge cohort measurements. On count and cumulative charts they are converted to expected matches at the subject's actual like volume; on rate charts they remain rates. The 2.04% median is published directly; P20 and P80 are log-interpolated between published anchors. Users can hide the benchmark layer.
+- Percentiles come from direct log-linear interpolation of SwipeStats' published Tinder male percentile table (6,233 complete male profiles), not from a fitted model and not from an observed Hinge cohort. No cohort of real Hinge men exists here.
+- If the export includes the subject's age, the age-band reference rescales the published all-men curve by that band's published mean. It assumes the distribution shape is constant across age bands; SwipeStats does not publish age-specific shapes.
+- Hinge caps free likes at 8/day versus Tinder's much larger allowance, so platform mechanics differ and a Hinge like is scarcer. Benchmark uploaders also self-selected; the direction of that bias is unknown.
+- The subtle dotted median and shaded 20th–80th benchmark band are external Tinder male references from SwipeStats. On count and cumulative charts they are converted to expected matches at the subject's actual like volume; on rate charts they remain rates. The 2.04% median is published directly; P20 and P80 are log-interpolated between published anchors. Users can hide the benchmark layer.
 - The page does not upload, store, log, or transmit the export. Do not ask for raw exports, messages, identity data, or verification media.
-- A p-value is shown only for an advanced change date declared before parsing. That date is fixed and cannot be moved in the rendered dashboard; ordinary filters remain descriptive.`,
+- The export does not identify who liked the subject, their attributes, profiles passed without action, or received-message outcomes. Reply rate and true ghosting are not computable.
+- Unprocessed incoming likes do not appear: Hinge records the subject's decision, not the arrival, so inbound counts undercount when a queue is pending.
+- Message/date/we_met conversion pipes are retained only in the sanitized snapshot for later work and are deliberately not shown as results.
+- A z-score is shown only for an advanced change date declared before parsing. That date is fixed and cannot be moved in the rendered dashboard; ordinary filters remain descriptive.`,
   ctx: () => `DateDawg parser/schema version: ${DD.PARSER_VERSION}.
 Analysis runs entirely in this browser under a connect-src 'none' content-security policy.
 Volume strata are 1–3, 4–8, 9–20 and 21+ outbound likes per day; both eras are standardized to pooled common-support weights. Missing support is disclosed and can suppress standardization.
