@@ -1,5 +1,5 @@
 {
- "as_of": "2026-08-29",
+ "as_of": "2026-08-31",
  "source": "Generated from the site itself. Tier is read from each page's live chip.",
  "tier": "labs",
  "graded": false,
@@ -190,9 +190,9 @@
   }
  },
  "counts": {
-  "surfaces": 21,
+  "surfaces": 22,
   "with_live_machine_access": 17,
-  "with_no_machine_access": 4,
+  "with_no_machine_access": 5,
   "mcp_tools_registered": 43,
   "mcp_tools_live": 43,
   "mcp_tools_staged": 0,
@@ -948,6 +948,23 @@
    "tier": "labs"
   },
   {
+   "id": "datedawg",
+   "domain": "dawgs",
+   "name": "DateDawg — reciprocal-acceptance analyzer",
+   "page": "/datedawg.html",
+   "tier": "labs",
+   "machine": [],
+   "reading": [
+    {
+     "url": "/datedawg.html",
+     "title": "DateDawg — local Hinge export analysis",
+     "covers": "A zero-upload browser analyzer for reciprocal acceptance, 30-day maturity adjustment, common-support daily-volume standardization, assumption-labelled ranking bands, and counts-only lineage snapshots."
+    }
+   ],
+   "planned": [],
+   "gap": "Intentionally no backend or subject-level machine surface. The export stays in the browser under connect-src none; automatic cross-session AI retrieval remains blocked until private, subject-isolated storage and withdrawal traversal are verified."
+  },
+  {
    "id": "markets-board",
    "domain": "markets",
    "name": "Open prediction-market board",
@@ -989,6 +1006,6 @@
   }
  ],
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-08-29",
+ "built": "2026-08-31",
  "canonical_url": "https://datadawgs216.com/data/surfaces.json"
 }

@@ -1,0 +1,12 @@
+{
+  "name": "datedawg-tests",
+  "private": true,
+  "type": "module",
+  "description": "Test harness for datedawg.html. The page itself has zero dependencies.",
+  "scripts": {
+    "fixture": "node make-fixture.mjs",
+    "test": "node make-fixture.mjs && node test-datedawg.mjs && node test-dom.mjs && node test-integration.mjs"
+  },
+  "devDependencies": { "jsdom": "^30.0.1" },
+  "engines": { "node": ">=20" }
+}

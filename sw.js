@@ -5,7 +5,7 @@
 // meant a JS-only fix never invalidated a phone's cache.
 // HTML is network-first (so deploys land immediately) with a cache fallback,
 // so a dead venue wifi can't take the draft down mid-auction.
-const VERSION = "adaa659e13";
+const VERSION = "4a8bcdfb7a";
 const CACHE = "dd-" + VERSION;
 
 // the pages that must survive a network drop (stats.html is 2MB — cached on first visit instead)
@@ -15,6 +15,7 @@ const CORE = [
   // Lab landing pages — small, static, and the nav now points at them
   "/dfs.html", "/signon.html", "/connect.html", "/guillotine.html", "/receipts.html", "/nfelo.html", "/survivor.html", "/survivor-settings.html", "/pound.html", "/dawghouse.html",
   "/cfb.html", "/cfb-power.html", "/calculators.html", "/arena.html", "/fantasy-warroom.html", "/teamdraft.html", "/data.html", "/nfl.html",
+  "/dawgs.html", "/swoledawg.html", "/datedawg.html",
   // The challenge board is worth having offline: the schedule and the model lines still
   // render from cache, and a save that cannot reach the Worker fails visibly rather than
   // looking like it worked.

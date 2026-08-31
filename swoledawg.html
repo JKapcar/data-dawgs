@@ -1286,6 +1286,7 @@ html,body{overflow-x:clip}
       ["dawgs.html","The Dawg Pound","dawgs"],
       ["dawgs.html#rollo","Rollo · OG Data Dawg","dawgs-rollo"],
       ["dawgs.html#ddcc","DDCC Profile","dawgs-ddcc"],
+      ["datedawg.html","DateDawg · Match Analysis","datedawg"],
       ["swoledawg.html","SwoleDawg · Body & Training","swoledawg"],
       ["dawghouse.html","The DawgHouse","pound"],
     ]},
@@ -1987,7 +1988,8 @@ CREATE LEAGUE: name, season, teams, draft type (Auction or Snake), auction budge
 CONNECT LEAGUE: paste a Sleeper league URL and press "Recognize League" to import teams and settings. Yahoo and ESPN are not imported this way and are set up by hand. There is a separate "Connect ESPN" form taking an ESPN league id, season and the espn_s2 / SWID cookies.
 OPENING A RIG PAGE with leagues on the shelf but no draft on the device sends you here to pick one first — that is the picker, not an error.
 OTHER PAGES: Big Board is the projector view — it is deliberately not in the nav, open it by URL on the projector machine, and what it displays is set from "Projector shows". The read-only board for everyone else is the Fantasy Draft Dashboard → Live tab; board.html?view=live opens that same view directly. There is no LIVE DRAFT item in the nav — it was retired 8/1. Draft Data Viz, Report Card, Cheat Sheet and Master Data are read-only views of the same draft.
-STATE: everything saves in the browser on that device, under its own key per league — so two leagues on one browser never see each other, and a different device shows a different draft unless it opens the same league link or the live mirror is switched on. Pages are cached for offline so the draft survives losing wifi — but Toto itself needs the network, so say so if someone asks for help while offline.`;
+STATE: everything saves in the browser on that device, under its own key per league — so two leagues on one browser never see each other, and a different device shows a different draft unless it opens the same league link or the live mirror is switched on. Pages are cached for offline so the draft survives losing wifi — but Toto itself needs the network, so say so if someone asks for help while offline.
+DATEDAWG (datedawg.html): a local-only Hinge export analyzer in the Dawgs section. It measures reciprocal acceptance, excludes immature likes from adjusted analysis, labels Hinge ranks as assumptions, and never uploads the export.`;
 
 /* The manual above is the draft rig, because that is where how-to questions used to
    come from. This is the rest of the site in one screen: enough for Toto to route a
@@ -2010,7 +2012,7 @@ nfl.html — the NFL hub. stats.html — the EPA explorer. nfelo.html — nfelo 
 cfb.html — the College Football lab: 2025 results, one retrodictive Elo, a matchup calculator. Its build roadmap is at cfb.html#roadmap and is our own planning surface, not a public destination.
 markets.html — the prediction-markets section, its own top-level group labelled Markets. ai.html — the A.I. Model Board, its own top-level group. Both are deliberately near-empty and say so above the fold; do not imply either has tools yet.
 data.html — the Library: every machine-readable file, shelved by the surface that owns it. connect.html — forwards to the connector card on signon.html#connect, which is where you point your own AI (Claude, ChatGPT, Gemini or any MCP client) at the site.
-signon.html — sign in, sign up, recover an account; every other page's sign-in chip lands here. dawgs.html — the Dawg Pound: Rollo, the OG Data Dawg, and the DDCC profile. swoledawg.html — body and training. fantasy-warroom.html — the fantasy league war room.
+signon.html — sign in, sign up, recover an account; every other page's sign-in chip lands here. dawgs.html — the Dawg Pound: Rollo, the OG Data Dawg, DDCC Profile, SwoleDawg and DateDawg. swoledawg.html — body and training. datedawg.html — local-only reciprocal-acceptance analysis of a Hinge export; no upload or backend memory. fantasy-warroom.html — the fantasy league war room.
 rankings.html — the Dog Track: ranking services graded against actual finishes. draft-leagues.html — create or join a draft league, and import a Sleeper league (Yahoo and ESPN are manual). cfb-power.html — CFB conference power curves. radar.html — the radar view.
 Machine surfaces: /data/index.json lists every file with its as_of and hash; /llms.txt is the curated index; /data/surfaces.json maps pages to files and MCP tools.
 NAVIGATION: the banner is Sign in/account, then exactly seven groups — Arena, Markets, A.I., NFL, CFB, Data, Dawgs — then the theme button. The wordmark is Home. There is no top-level Sports group and no top-level Receipts group: NFL and CFB are separate groups, and receipts.html is an item under Data.

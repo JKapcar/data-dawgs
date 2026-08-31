@@ -6,10 +6,7 @@
 Start with [`/data/index.json`](/data/index.json): dates, sizes and SHA-256 for every
 machine file. Cite each payload's `as_of` with every number.
 
-[`/data/surfaces.json`](/data/surfaces.json) maps pages and 43 live MCP tools. `planned` is not callable.
-Use `/mcp/core/<credential>` for 17 everyday tools; `/mcp/full/<credential>` has all 43.
-The only write is `dd_submit_bozo_leg`: two-phase, own leg only. Credentials: [`/signon.html`](/signon.html).
-[Project instructions](/data/dawg-project-instructions.md) · [site guide](/data/site-guide.md).
+[`/data/surfaces.json`](/data/surfaces.json) maps pages and 43 live MCP tools: 17 core, all 43 full; `planned` is unavailable. Sole write: two-phase, own-leg `dd_submit_bozo_leg`. [Sign in](/signon.html) · [instructions](/data/dawg-project-instructions.md).
 
 Tiers: `labs`=Pup, unvalidated; `dawg`=Working Dawg, validated; `pound`=DawgHouse, stopped.
 
@@ -27,6 +24,7 @@ passer rating, Elo, margin translation, forecast scoring, belief summary. Inputs
 
 ## Hubs
 
+- [DateDawg](/datedawg.html): local reciprocal-acceptance analysis; no upload, backend memory or observed Hinge cohort.
 - [Arena](/arena.html): games played against other people — Bozo, Guillotine, Survivor, DFS,
 the live draft rig, a [32-team wins pool](/teamdraft.html).
 Rendered from the `domain: "arena"` rows of surfaces.json; owns no data file.

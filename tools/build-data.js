@@ -1463,6 +1463,13 @@ const SURFACES = [
               { kind: 'markdown', url: '/data/toto-philosophy.md', status: 'live' }],
     planned: ['mcp:prompts'] },
 
+  { id: 'datedawg', domain: 'dawgs', name: 'DateDawg — reciprocal-acceptance analyzer',
+    page: '/datedawg.html', tier: 'labs', machine: [],
+    reading: [{ url: '/datedawg.html', title: 'DateDawg — local Hinge export analysis',
+                covers: 'A zero-upload browser analyzer for reciprocal acceptance, 30-day maturity adjustment, common-support daily-volume standardization, assumption-labelled ranking bands, and counts-only lineage snapshots.' }],
+    planned: [],
+    gap: 'Intentionally no backend or subject-level machine surface. The export stays in the browser under connect-src none; automatic cross-session AI retrieval remains blocked until private, subject-isolated storage and withdrawal traversal are verified.' },
+
   /* ⚠️ THE FOUR SECTION TOOLS HAVE NO MACHINE SURFACE, ON PURPOSE. They compute in the
      visitor's browser from a third party's public API (Polymarket, OpenRouter); there is no
      /data/ mirror behind them, so `machine: []`. Empty `machine` reads as "with_no_machine_access"
