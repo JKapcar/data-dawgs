@@ -112,6 +112,14 @@ button{font:inherit;cursor:pointer}
 .scale .band.lo b{top:auto;bottom:-19px}
 .twoband{display:grid;gap:6px;margin:26px 0 14px;font-size:11.5px;color:var(--slip-ink2)}
 .twoband b{color:var(--slip-ink)}
+.rankwindow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  margin:0 0 22px;padding:10px 12px;border:1px solid var(--slip-line);border-radius:10px}
+.rankwindow .label{font:900 9px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--slip-ink2)}
+.rankwindow .choices{display:flex;gap:5px;flex-wrap:wrap}
+.rankwindow button{border:1px solid var(--slip-line);background:transparent;color:var(--slip-ink);
+  border-radius:999px;padding:7px 11px;font:900 10px var(--mono);cursor:pointer}
+.rankwindow button.on{background:var(--slip-ink);border-color:var(--slip-ink);color:var(--slip-bg)}
+.rankwindow .dates{flex-basis:100%;font:800 10px var(--mono);color:var(--slip-ink2)}
 .scale .band b{position:absolute;left:50%;top:-21px;translate:-50% 0;white-space:nowrap;
   font:800 10px var(--mono);letter-spacing:.08em;color:var(--slip-ink)}
 .scale .tick{position:absolute;top:0;bottom:0;width:1px;background:rgba(27,18,9,.32)}
@@ -846,7 +854,7 @@ var DD = (function(){
      boundary. It is captured with the number of exploratory moves that preceded it and
      is invalidated the moment the boundary changes. A toggle you can flip after
      exploring is not a declaration, so there is no toggle. */
-  var R=null,CUT=null,MOVES=0,DECL=null,SUBJ=null,VFROM=null,VTO=null,GRAIN="month",RANGE="all",
+  var R=null,CUT=null,MOVES=0,DECL=null,SUBJ=null,VFROM=null,VTO=null,GRAIN="month",RANGE="all",RANK_RANGE="1y",
       VIEW="overview",SHOW_LIKES=true,SHOW_MATCHES=true,SHOW_BENCHMARKS=true,SHOW_VALUES=true,
       ACTIVITY_SCALE="sqrt";
   /* DECL is captured BEFORE parse and can only ever be invalidated, never created later.
@@ -895,16 +903,27 @@ var DD = (function(){
         (100*M.std.lift).toFixed(0)+'%</b></span>':'')+
       '<span class="vchip">WINDOW <b>'+num(span)+'d</b></span><span class="vchip">n <b>6,233</b> · SWIPESTATS</span></div><div class="vcue" id="vcue">↓ THE WORKINGS</div></section>';}
 
-  function rankPanel(M){
-    var primary=M.rankStd||M.rankAdj,label=M.rankStd?"volume-standardized match rate":"adjusted match rate";
-    if(!primary)return '<div class="slip"><h3>Where you rank</h3><small>Not enough resolved likes in this window to place you.</small></div>';
+  function rankWindow(){
+    var DAY=864e5,to=Math.max(R.minT,R.maxT-DD.RESOLVE_DAYS*DAY),from=R.minT;
+    if(RANK_RANGE==="1y")from=Math.max(R.minT,to-364*DAY);
+    else if(RANK_RANGE==="6m")from=Math.max(R.minT,to-182*DAY);
+    else if(RANK_RANGE==="1m")from=Math.max(R.minT,to-29*DAY);
+    return {id:RANK_RANGE,from:from,to:to,M:DD.metrics(R,from),S:DD.timeSeries(R,from,to,"month")};
+  }
+  function rankPanel(W){
+    var M=W.M,S=W.S,
+        controls='<div class="rankwindow" aria-label="Ranking time period"><span class="label">Rank this period</span><div class="choices">'+
+          [['all','Overall'],['1y','1 year'],['6m','6 months'],['1m','1 month']].map(function(x){return '<button data-rank-range="'+x[0]+'" class="'+(W.id===x[0]?'on':'')+'" aria-pressed="'+(W.id===x[0])+'">'+x[1]+'</button>';}).join('')+
+          '</div><div class="dates">'+iso(W.from)+' → '+iso(W.to)+' · through the latest scoreable date · '+num(S.matureMatches)+' matches from '+num(S.matureLikes)+' matured likes</div></div>',
+        primary=M.rankStd||M.rankAdj,label=M.rankStd?"volume-standardized match rate":"observed match-back rate";
+    if(!primary||S.matureLikes<DD.MIN_N)return '<div class="slip"><h3>SwipeStats reference — men, match rate on likes sent</h3>'+controls+'<small>Not enough resolved likes in this period to place you reliably. Try a longer window.</small></div>';
     var second=(M.heavyAfter&&M.heavyAfter.n>=DD.MIN_N)?M.rankHeavy:null,
         head=primary.band||primary.all,hasBand=!!primary.band,src=primary.source;
     function mark(r,cls,lbl){return r?'<span class="pin '+cls+'" style="left:'+Math.min(99.4,r.p)+'%"><b>'+lbl+'p'+Math.round(r.p)+'</b></span>':"";}
     var ticks=[25,50,75,90].map(function(p){return '<span class="tick" style="left:'+p+'%"><s>p'+p+'</s></span>';}).join("");
-    return '<div class="slip"><h3>SwipeStats reference — men, match rate on likes sent</h3><div class="rank"><div class="big">'+Math.round(head.p)+'<i>th</i></div><div class="cap">'+
+    return '<div class="slip"><h3>SwipeStats reference — men, match rate on likes sent</h3>'+controls+'<div class="rank"><div class="big">'+Math.round(head.p)+'<i>th</i></div><div class="cap">'+
       (hasBand?'among men '+esc(primary.bandLabel):'among all men')+' · '+esc(label)+'</div></div><div class="scale">'+ticks+
-      mark(head,"hi","")+(second?mark(second.band||second.all,"lo",""):"")+'</div><div class="twoband"><span><b>p'+Math.round(head.p)+'</b> your main volume-adjusted result</span>'+
+      mark(head,"hi","")+(second?mark(second.band||second.all,"lo",""):"")+'</div><div class="twoband"><span><b>p'+Math.round(head.p)+'</b> your '+esc(label)+' for this period</span>'+
       (second?'<span><b>p'+Math.round((second.band||second.all).p)+'</b> heavy-volume-day check</span>':'')+
       (hasBand?'<span><b>p'+Math.round(primary.all.p)+'</b> the same rate against all men, every age</span>':'')+
       '</div><table class="scen"><thead><tr><th>Published percentile</th><th style="text-align:right">All men</th>'+
@@ -1104,7 +1123,7 @@ var DD = (function(){
     h.push('<div class="sec"><h2>Where you rank</h2>'+
       '<p class="sub">Your match rate on likes you sent, placed on a distribution built from '+
       'published parameters. Likes too recent to have resolved are excluded.</p>'+
-      rankPanel(M));
+      rankPanel(rankWindow()));
     if(M.rankHeavy&&M.heavyAfter&&M.heavyAfter.n>=DD.MIN_N)
       h.push('<div class="note"><b>The conservative band uses your heavy days ('+DD.HEAVY_DAY+
         '+ likes) only.</b> It <i>partially</i> holds liking behaviour constant and gives a '+
@@ -1279,10 +1298,10 @@ var DD = (function(){
   }
 
   function paint(){
-    var S=DD.timeSeries(R,VFROM,VTO,GRAIN),M=DD.metrics(R,CUT),h=[];
+    var S=DD.timeSeries(R,VFROM,VTO,GRAIN),M=DD.metrics(R,CUT),RW=rankWindow(),h=[];
     h.push(verdict(M,R));
     h.push('<div id="workings"><details class="receipt"><summary>Import details & privacy receipt</summary>'+receipt()+'</details>');
-    h.push('<div class="sec"><h2>Where your result sits</h2><p class="sub">Your reciprocal-acceptance rate placed directly on SwipeStats’ published male Tinder percentile table. Likes too recent to have resolved are excluded.</p>'+rankPanel(M)+'</div>');
+    h.push('<div class="sec"><h2>Where your result sits</h2><p class="sub">Your reciprocal-acceptance rate placed directly on SwipeStats’ published male Tinder percentile table. Choose a ranking period below; likes too recent to have resolved are excluded.</p>'+rankPanel(RW)+'</div>');
     h.push(timelinePanel(S));
     if(declValid()) h.push('<details class="advanced"><summary>Declared before/after test · '+
       iso(DECL.cut)+' · '+esc(DECL.reason)+'</summary><div class="chartcard" style="margin-top:12px">'+
@@ -1307,6 +1326,7 @@ var DD = (function(){
       paint();};});
     Array.prototype.forEach.call(document.querySelectorAll("[data-grain]"),function(b){b.onclick=function(){GRAIN=b.getAttribute("data-grain");paint();};});
     Array.prototype.forEach.call(document.querySelectorAll("[data-view]"),function(b){b.onclick=function(){VIEW=b.getAttribute("data-view");paint();};});
+    Array.prototype.forEach.call(document.querySelectorAll("[data-rank-range]"),function(b){b.onclick=function(){RANK_RANGE=b.getAttribute("data-rank-range");paint();};});
     Array.prototype.forEach.call(document.querySelectorAll("[data-series]"),function(b){b.onclick=function(){
       var s=b.getAttribute("data-series");if(s==="likes")SHOW_LIKES=!SHOW_LIKES;else SHOW_MATCHES=!SHOW_MATCHES;
       if(!SHOW_LIKES&&!SHOW_MATCHES){if(s==="likes")SHOW_MATCHES=true;else SHOW_LIKES=true;}paint();};});
@@ -1320,8 +1340,8 @@ var DD = (function(){
     $("#applyRange").onclick=function(){var a=$("#viewFrom").value,z=$("#viewTo").value;if(a&&z){
       VFROM=new Date(a+"T00:00:00Z").getTime();VTO=new Date(z+"T00:00:00Z").getTime()+864e5-1;RANGE="custom";paint();}};
     $("#snap").onclick=function(){var data=DD.snapshot(R,M,{subject:SUBJ&&SUBJ.subject||null,consent:SUBJ&&SUBJ.consent||null,consentAt:SUBJ&&SUBJ.at||null,declaration:declValid()?DECL:null,boundaryMoves:0});
-      data.dashboard_range={from:iso(S.from),to:iso(S.to),grain:S.grain};var b=new Blob([JSON.stringify(data,null,1)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="datedawg-snapshot.json";a.click();setTimeout(function(){URL.revokeObjectURL(a.href);},1000);};
-    $("#again").onclick=function(){R=null;VFROM=VTO=null;RANGE="all";GRAIN="month";VIEW="overview";SHOW_LIKES=SHOW_MATCHES=SHOW_BENCHMARKS=SHOW_VALUES=true;ACTIVITY_SCALE="sqrt";$("#out").className="hide";$("#out").innerHTML="";if($("#drop").scrollIntoView)$("#drop").scrollIntoView({behavior:"smooth"});};
+      data.dashboard_range={from:iso(S.from),to:iso(S.to),grain:S.grain};data.rank_window={id:RW.id,from:iso(RW.from),to:iso(RW.to)};var b=new Blob([JSON.stringify(data,null,1)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="datedawg-snapshot.json";a.click();setTimeout(function(){URL.revokeObjectURL(a.href);},1000);};
+    $("#again").onclick=function(){R=null;VFROM=VTO=null;RANGE="all";RANK_RANGE="1y";GRAIN="month";VIEW="overview";SHOW_LIKES=SHOW_MATCHES=SHOW_BENCHMARKS=SHOW_VALUES=true;ACTIVITY_SCALE="sqrt";$("#out").className="hide";$("#out").innerHTML="";if($("#drop").scrollIntoView)$("#drop").scrollIntoView({behavior:"smooth"});};
   }
 
   function capturePre(){
@@ -1355,7 +1375,7 @@ var DD = (function(){
       $("#out").innerHTML='<div class="note stop">'+esc(res.error)+'</div>'; return; }
     R=res;
     if(bad.length) R.filesMissing=R.filesMissing.concat(bad.map(function(b){return b+" (unreadable)";}));
-    VFROM=R.minT;VTO=R.maxT;RANGE="all";GRAIN="month";
+    VFROM=R.minT;VTO=R.maxT;RANGE="all";RANK_RANGE="1y";GRAIN="month";
     var yr=R.maxT-365*864e5;
     CUT = yr>R.minT ? yr : Math.round((R.minT+R.maxT)/2);
     if(DECL){
@@ -1392,6 +1412,7 @@ window.DD_BOTCTX = {
 - Its primary observable is reciprocal acceptance: of the women the subject liked, how many liked the subject back. Direction is inferred because the export does not state it explicitly.
 - Likes newer than 30 days are immature and excluded from every censoring-adjusted current result, including volume standardization and the displayed z-test.
 - Dashboard date filters control every visible summary, chart, Dating App MV / Market Value reference, and selected snapshot. They never alter or reinstate a declared before/after test. Timeline matches are grouped by the date the subject sent the like; the trend rate uses matured likes only.
+- The ranking panel has its own Overall, 1 year, 6 months, and 1 month windows. Those windows end on the latest scoreable date, 30 days before the newest export event, and do not change the dashboard range or the declared before/after test.
 - Compare uses one export at two scopes: fixed overall history versus the date-filtered snapshot. Raw totals cover different spans, so compare acceptance rates rather than totals.
 - Percentiles come from direct log-linear interpolation of SwipeStats' published Tinder male percentile table (6,233 complete male profiles), not from a fitted model and not from an observed Hinge cohort. No cohort of real Hinge men exists here.
 - If the export includes the subject's age, the age-band reference rescales the published all-men curve by that band's published mean. It assumes the distribution shape is constant across age bands; SwipeStats does not publish age-specific shapes.

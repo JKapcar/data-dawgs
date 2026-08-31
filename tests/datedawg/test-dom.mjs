@@ -90,6 +90,17 @@ ok('market value is scoped to selected range',/Dating App MV \/ Market Value/i.t
 ok('market value uses a human-readable ordinal percentile',/\d+(?:st|nd|rd|th) percentile/i.test(text));
 ok('market value leads with one exact all-men percentile',/Against all men in the published SwipeStats Tinder table/i.test(text));
 ok('age reference is separate rather than blended into a range',/age comparison shown separately, never blended into a range/i.test(text));
+ok('ranking panel has four independent time windows',out.querySelectorAll('[data-rank-range]').length===4);
+ok('ranking panel defaults to one year',out.querySelector('[data-rank-range="1y"]').classList.contains('on'));
+const dashboardRangeBeforeRank=out.querySelector('.range-readout').textContent;
+const oneYearRankDates=out.querySelector('.rankwindow .dates').textContent;
+out.querySelector('[data-rank-range="6m"]').click();
+await new Promise(r=>setTimeout(r,50));
+ok('six-month ranking recomputes its own dates',out.querySelector('[data-rank-range="6m"]').classList.contains('on')&&out.querySelector('.rankwindow .dates').textContent!==oneYearRankDates);
+ok('ranking window does not change dashboard range',out.querySelector('.range-readout').textContent===dashboardRangeBeforeRank);
+out.querySelector('[data-rank-range="1m"]').click();
+await new Promise(r=>setTimeout(r,50));
+ok('one-month ranking ends on latest scoreable date',out.querySelector('[data-rank-range="1m"]').classList.contains('on')&&/through the latest scoreable date/i.test(out.querySelector('.rankwindow .dates').textContent));
 ok('empirical percentile table is rendered',/Published percentile/.test(text)&&/Published empirical table/.test(text));
 ok('age-band reference is rendered',/Men 40–44/.test(text));
 ok('pre-parse declaration honoured',/DECLARED PRE-PARSE/.test(text));
