@@ -1,9 +1,9 @@
 {
- "as_of": "2026-08-29",
+ "as_of": "2026-08-31",
  "source": "Generated manifest of every machine-readable surface on datadawgs216.com.",
  "note": "Start here. Each entry carries its own as_of — check it before quoting anything. The sha256 is of the file as served; recompute it if you care.",
  "site": "https://datadawgs216.com",
- "built": "2026-08-29",
+ "built": "2026-08-31",
  "data": {
   "files": [
    {
@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 35038,
-    "as_of": "2026-08-29",
-    "sha256": "3360a27feae2622437f477f2d8f10f4291e60f89540409aa41884a264dd196c0",
+    "bytes": 35831,
+    "as_of": "2026-08-31",
+    "sha256": "e92abacfb7a1ac2ec1a72493f64f3c6a49da4440318db0e9460a501405f3ee2d",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
