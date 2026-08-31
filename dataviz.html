@@ -2248,6 +2248,12 @@ const DD_ROOM = ((window.DDLeague && DDLeague.id === "pepperoninipples")
 const MONEYK = () => DD_ROOM ? "dd" : S.settings.scoring;
 const MONEY_LABEL = DD_ROOM ? "DataDawg$" : "MV";
 const val=p=>+p[MONEYK()]||0;
+const poolByName={}; POOL.forEach(p=>poolByName[p.name]=p);
+/* Sold picks retain the operator page's value at the moment of sale. In this room that
+   field is the old generic MV, not DataDawg$, so it must never win the comparison. */
+const pickVal=pk=>DD_ROOM
+  ? (poolByName[pk.player] ? val(poolByName[pk.player]) : 0)
+  : (pk.etr!=null ? +pk.etr : (poolByName[pk.player] ? val(poolByName[pk.player]) : 0));
 
 /* ⚠️ The money glossary below the charts is static HTML written for MV. This room draws
    DataDawg$ on a 14-team, $2,800 basis, so an MV definition under it describes the
@@ -2357,13 +2363,13 @@ const esc=s=>{const d=document.createElement("span");d.textContent=s==null?"":St
 const shortName=n=>{const p=String(n).split(" ");return (n.length<=15||p.length<2)?n:p[0][0]+". "+p.slice(1).join(" ");};
 
 function derive(){
-  const byName={}; POOL.forEach(p=>byName[p.name]=p);
+  const byName=poolByName;
   const sold={}; // name -> pick
   const T=S.settings.teams.map((t,ti)=>({...t,ti,spent:0,count:0,value:0,pos:{QB:0,RB:0,WR:0,TE:0,DST:0},posSpend:{QB:0,RB:0,WR:0,TE:0,DST:0},picks:[]}));
   (S.picks||[]).forEach(pk=>{
     const t=T[pk.ti]; if(!t) return;
     const P=norm(pk.pos);
-    t.spent+=pk.price; t.count++; t.value+=(pk.etr||0);
+    t.spent+=pk.price; t.count++; t.value+=pickVal(pk);
     if(t.pos[P]!==undefined){t.pos[P]++; t.posSpend[P]+=pk.price;}
     t.picks.push(pk);
     sold[pk.player]=pk;
@@ -2490,7 +2496,7 @@ function priceValueChart(container, picks, colorMode){
     if(occupiedBy(ly)) ly+=17;
     if(!occupiedBy(ly)){
       dl=svgEl("text",{x:X(maxV)-6,y:ly,"text-anchor":"end","font-size":10.5,fill:ink3});
-      dl.textContent="paid = market value"; svg.appendChild(dl);
+      dl.textContent="paid = "+MONEY_LABEL; svg.appendChild(dl);
       dlBox={x:X(maxV)-104,y:ly-12,w:100,h:16};
     }
   }
@@ -2531,7 +2537,7 @@ function priceValueChart(container, picks, colorMode){
     });
   }
   const xt=svgEl("text",{x:m.l+iw/2,y:H-24,"text-anchor":"middle","font-size":11,fill:ink2,"font-weight":600});
-  xt.textContent="market value →"; svg.appendChild(xt);
+  xt.textContent=MONEY_LABEL+" →"; svg.appendChild(xt);
   const yt=svgEl("text",{x:13,y:m.t+ih/2,"text-anchor":"middle","font-size":11,fill:ink2,"font-weight":600,
     transform:`rotate(-90 13 ${m.t+ih/2})`});
   yt.textContent="price paid →"; svg.appendChild(yt);
@@ -2565,7 +2571,7 @@ function priceValueChart(container, picks, colorMode){
     }
     const p=best.p, P=norm(p.pos), diff=p.v-p.price;
     const rows=[["Team",p.team],["Pos",P==="DST"?"D/ST":P],["Paid","$"+p.price],
-      ["Market value","$"+Math.round(p.v)],
+      [MONEY_LABEL,"$"+Math.round(p.v)],
       [diff>=0?"Value gained":"Overpaid by","$"+Math.abs(Math.round(diff))]];
     // Cheap picks pile up on the same coordinate — say so instead of silently showing one.
     const stacked=pts.filter(q=>q!==best && Math.abs(q.x-best.x)<R*1.1 && Math.abs(q.y-best.y)<R*1.1);
@@ -2703,7 +2709,7 @@ function cliffChart(container, players, sold, infl){
       nm.textContent=p.name.includes(" DST")?p.name.replace(" DST"," D"):p.name.split(" ").slice(-1)[0];
       svg.appendChild(nm);
     }
-    const rows=[["Position",p.pos==="DST"?"D/ST":p.pos],["Market value",fmt$(v)],["Adj value",fmt$(Math.round(v*infl))]];
+    const rows=[["Position",p.pos==="DST"?"D/ST":p.pos],[MONEY_LABEL,fmt$(v)],["Adj value",fmt$(Math.round(v*infl))]];
     if(pk){rows.push(["Sold for","$"+pk.price]); rows.push(["To", (S.settings.teams[pk.ti]||{}).name||"?"]);}
     else rows.push(["Status","AVAILABLE"]);
     tips.push(rows);
@@ -2834,7 +2840,7 @@ function render(){
       ["League money", `${fmtK(d.remDollars)} <span class="tsub">left of ${fmtK(totalBudget)}</span>`,
         `${fmtK(spent)} spent across ${(S.picks||[]).length} picks`,
         depleteBar(d.remDollars, totalBudget, GREEN)],
-      ["Value on the board", `${fmtK(d.remValue)} <span class="tsub">of ${fmtK(d.poolValue)} MV</span>`,
+      ["Value on the board", `${fmtK(d.remValue)} <span class="tsub">of ${fmtK(d.poolValue)} ${MONEY_LABEL}</span>`,
         `${d.remCount} players still worth $1+`,
         depleteBar(d.remValue, d.poolValue, ORANGE)],
       ["Inflation", d.infl.toFixed(2)+"×",
@@ -2874,7 +2880,7 @@ function render(){
         depleteBar(TL.left, S.settings.budget, GREEN)],
       ["Surplus", (TL.surplus>=0?"+":"−")+"$"+Math.abs(Math.round(TL.surplus)),
         TL.surplus>=0?"bought under market":"paid over market",
-        twinBar([["paid",TL.spent,"var(--ink-3)"],["MV",TL.value,"var(--accent)"]])],
+        twinBar([["paid",TL.spent,"var(--ink-3)"],[MONEY_LABEL,TL.value,"var(--accent)"]])],
       ["Buying power", openSlots?power.toFixed(2)+"×":"—",
         openSlots?`${fmt$(perSlot)} per open slot vs ${fmt$(lgPerSlot)} league average`:"roster full",
         openSlots?gauge(power,{lo:0.4,hi:2.0,mid:1,cls:"pow",labels:["thin","parity","deep"]}):""],
@@ -2936,7 +2942,7 @@ function render(){
   const pvAll=[];
   d.T.forEach(t=>t.picks.forEach(pk=>pvAll.push({
     player:pk.player, team:t.name, ti:t.ti, pos:norm(pk.pos), price:pk.price,
-    v: pk.etr!=null ? pk.etr : (d.byName[pk.player] ? val(d.byName[pk.player]) : 0)
+    v: pickVal(pk)
   })));
   if(pvTeam!=="ALL" && !d.T[+pvTeam]) pvTeam="ALL";
   const pvPicks=pvAll.filter(p=>(pvTeam==="ALL"||p.ti===+pvTeam) && (pvPos==="ALL"||p.pos===pvPos));
@@ -2958,7 +2964,7 @@ function render(){
           <button type="button" data-v="team"${pvColor==="team"?' class="on"':""}>Color: team</button>
         </span>
       </span></h2>
-    <p class="note">Dots under the dashed line were bought below market value; dots above it went for a premium. Distance from the line is the surplus.
+    <p class="note">Dots under the dashed line were bought below ${MONEY_LABEL}; dots above it went for a premium. Distance from the line is the surplus.
       ${pvPicks.length?`<b>${pvPicks.length} pick${pvPicks.length===1?"":"s"}</b> shown · ${pvUnder} under the line · net ${pvSurplus>=0?"+":"−"}$${Math.abs(Math.round(pvSurplus))} of value.`:""}
       ${pvPicks.length>PV_LABEL_MAX(innerWidth<620)?`<span style="color:var(--ink-2)">Filter to a team or a position to label the dots.</span>`:""}
       <span style="color:var(--ink-2)">Hover${matchMedia("(pointer:coarse)").matches?" or tap":""} near a dot for the player.</span></p>
@@ -2981,10 +2987,10 @@ function render(){
           ${teams.map((t,i)=>`<option value="${i}"${rosterScope===i?" selected":""}>${esc(t.name)}</option>`).join("")}
         </select>
       </span></h2>
-    <div style="overflow-x:auto"><table class="rostab"><thead><tr><th class="tl">Player</th><th>Pos</th><th>$</th><th>MV</th><th>±</th></tr></thead><tbody>
-    ${RT.picks.map(pk=>{const dv=pk.etr?pk.price-pk.etr:null;
-      return `<tr><td class="tl" style="font-weight:600">${esc(pk.player)}</td><td>${esc(norm(pk.pos))}</td><td>$${pk.price}</td><td>${pk.etr?"$"+pk.etr:"–"}</td>
-      <td style="font-weight:700;color:${dv==null?"var(--ink-3)":dv>0?"var(--bad)":"var(--good)"}">${dv==null?"–":(dv>0?"+":"")+"$"+dv}</td></tr>`;}).join("")||'<tr><td class="tl muted">No picks yet</td></tr>'}
+    <div style="overflow-x:auto"><table class="rostab"><thead><tr><th class="tl">Player</th><th>Pos</th><th>Paid</th><th>${MONEY_LABEL}</th><th>±</th></tr></thead><tbody>
+    ${RT.picks.map(pk=>{const pv=pickVal(pk), dv=pk.price-pv;
+      return `<tr><td class="tl" style="font-weight:600">${esc(pk.player)}</td><td>${esc(norm(pk.pos))}</td><td>$${pk.price}</td><td>$${pv}</td>
+      <td style="font-weight:700;color:${dv>0?"var(--bad)":"var(--good)"}">${dv>0?"+":""}$${dv}</td></tr>`;}).join("")||'<tr><td class="tl muted">No picks yet</td></tr>'}
     </tbody></table></div></div>`;
   viz.innerHTML=html;
 

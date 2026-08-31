@@ -2263,8 +2263,9 @@ if (DD_ROOM) {
 }
 
 function etrOf(pk){
-  if(pk.etr!=null && pk.etr>0) return pk.etr;
   const p=byName[pk.player];
+  if(DD_ROOM) return p ? (+p[MONEYK()]||0) : 0;
+  if(pk.etr!=null && pk.etr>0) return pk.etr;
   return p ? (+p[MONEYK()]||0) : 0;
 }
 function shortName(n){
@@ -2515,7 +2516,7 @@ function priceValueChart(container, picks, colorMode){
       "fill-opacity":.82, stroke:css("--surface-1"),"stroke-width":1});
     const d=v-p.price;
     c.addEventListener("pointermove",e=>showTT(e.clientX,e.clientY,p.player,
-      [["Team",p.team],["Paid","$"+p.price],["Market value","$"+Math.round(v)],
+      [["Team",p.team],["Paid","$"+p.price],[MONEY_LABEL,"$"+Math.round(v)],
        [d>=0?"Value gained":"Overpaid by", "$"+Math.abs(Math.round(d))]]));
     c.addEventListener("pointerleave",hideTT);
     svg.appendChild(c);
@@ -2599,7 +2600,7 @@ function render(){
   <div class="vizgrid">
     <div class="vcard">
       <h2>Where the strength is</h2>
-      <p class="note">Market value of each team's <b>starting lineup only</b>, split by position. Bench depth is excluded on purpose — it doesn't score points.</p>
+      <p class="note">${MONEY_LABEL} of each team's <b>starting lineup only</b>, split by position. Bench depth is excluded on purpose — it doesn't score points.</p>
       <div id="chartPos"></div>
       <div class="legend2">${POS_ORDER.map(p=>`<span><span class="sw" style="background:${POS_COLOR[p]}"></span>${p==="DST"?"D/ST":p}</span>`).join("")}</div>
     </div>
@@ -2619,7 +2620,7 @@ function render(){
             <button type="button" data-v="team"${pvColor==="team"?' class="on"':""}>Color: team</button>
           </span>
         </span></h2>
-      <p class="note">Dots under the dashed line were bought below market value; dots above it went for a premium. Distance from the line is the surplus.
+      <p class="note">Dots under the dashed line were bought below ${MONEY_LABEL}; dots above it went for a premium. Distance from the line is the surplus.
         ${pvPicks.length?`<b>${pvPicks.length} pick${pvPicks.length===1?"":"s"}</b> shown · ${pvUnder} under the line · net ${pvSurplus>=0?"+":"−"}$${Math.abs(Math.round(pvSurplus))} of value.`:""}</p>
       <div id="chartPV"></div>
       <div class="legend2">${
@@ -2634,7 +2635,7 @@ function render(){
   <div class="vizgrid">
     <div class="vcard">
       <h2>Ten best buys</h2>
-      <p class="note">Largest gap between market value and what was actually paid.</p>
+      <p class="note">Largest gap between ${MONEY_LABEL} and what was actually paid.</p>
       <div class="srlist">${steals.slice(0,10).map(p=>`<div class="sr">
         <span class="p">${esc(shortName(p.player))}</span>
         <span class="t">${esc(p.team)} · ${fmt$(p.price)}</span>
@@ -2642,7 +2643,7 @@ function render(){
     </div>
     <div class="vcard">
       <h2>Ten biggest overpays</h2>
-      <p class="note">Paid the most above market value. Sometimes that's a reach; sometimes it's a player you had ranked higher than the market did.</p>
+      <p class="note">Paid the most above ${MONEY_LABEL}. Sometimes that's a reach; sometimes it's a player you had ranked higher than the value did.</p>
       <div class="srlist">${reaches.slice(0,10).map(p=>`<div class="sr">
         <span class="p">${esc(shortName(p.player))}</span>
         <span class="t">${esc(p.team)} · ${fmt$(p.price)}</span>
@@ -2664,8 +2665,10 @@ function render(){
 
   <div class="vcard">
     <h2>How these grades work — and what they can't tell you</h2>
-    <p style="font-size:13.5px;margin:6px 0">Every number here is built on <b>Market Value (MV)</b> — a market-consensus estimate of what a player <em>should cost</em> in a 12-team, $200 league. That makes them a good yardstick for one specific question — did you buy below the going rate — and a poor one for another: whether this roster will actually score more points than that one.</p>
-    <p style="font-size:13.5px;margin:6px 0">So there are two grades. <b>Value</b> is surplus: market value acquired minus dollars spent. It rewards discipline and punishes bidding wars. <b>Roster</b> ignores price entirely and adds up the market value of your best legal starting lineup — QB, two RB, two WR, TE, two flex, D/ST. A team can ace one and flunk the other, and that gap is usually the most interesting thing on this page: buying cheap talent you can't start is not the same as building a good team.</p>
+    ${DD_ROOM
+      ? `<p style="font-size:13.5px;margin:6px 0">Every number here is built on <b>DataDawg$</b> — this site's opening-state target for this 14-team, $200 room. That makes it useful for one specific question — did you pay below the target — and a poor one for another: whether this roster will actually score more points than that one.</p>`
+      : `<p style="font-size:13.5px;margin:6px 0">Every number here is built on <b>Market Value (MV)</b> — a market estimate of what a player <em>should cost</em> in a 12-team, $200 league. That makes it a good yardstick for one specific question — did you buy below the going rate — and a poor one for another: whether this roster will actually score more points than that one.</p>`}
+    <p style="font-size:13.5px;margin:6px 0">So there are two grades. <b>Value</b> is surplus: ${MONEY_LABEL} acquired minus dollars spent. It rewards discipline and punishes bidding wars. <b>Roster</b> ignores price entirely and adds up the ${MONEY_LABEL} of your best legal starting lineup — QB, two RB, two WR, TE, two flex, D/ST. A team can ace one and flunk the other, and that gap is usually the most interesting thing on this page: buying cheap talent you can't start is not the same as building a good team.</p>
     <p style="font-size:13.5px;margin:6px 0">Both letters come from z-scores against this league, not a forced curve — if everyone drafts about the same, everyone gets Bs, which is the honest answer. Values are a dated snapshot (8/14/26); a grade computed next week would differ. And this is one draft: nothing here has been validated against actual points scored, so treat it as a description of the auction, not a prediction of the season. What would change my mind about any of it: end-of-season points by team, which we'd need to go collect.</p>
   </div>`;
   app.innerHTML=html;
@@ -2732,7 +2735,7 @@ function teamCard(t, myTi){
     <div class="lineup">${t.slots.map(s=>`<div class="lr">
       <span class="sl" style="color:${SLOT_COLOR[s.slot]}">${s.slot}</span>
       ${s.pk?`<span class="pn">${esc(shortName(s.pk.player))}</span>
-              <span class="pv">${fmt$(s.pk.price)} · MV ${fmt$(etrOf(s.pk))}</span>`
+              <span class="pv">${fmt$(s.pk.price)} · ${MONEY_LABEL} ${fmt$(etrOf(s.pk))}</span>`
             :`<span class="pn empty">— empty —</span><span class="pv"></span>`}
     </div>`).join("")}</div>
     <div class="tc-note">
@@ -2754,7 +2757,7 @@ const COLS=[
   {k:"gValue",t:"Value",    f:t=>`<span class="gr ${gClass(t.gValue)}">${t.gValue}</span>`, s:t=>t.zValue},
   {k:"gRoster",t:"Roster",  f:t=>`<span class="gr ${gClass(t.gRoster)}">${t.gRoster}</span>`, s:t=>t.zRoster},
   {k:"spent", t:"Spent",    f:t=>fmt$(t.spent)},
-  {k:"value", t:"MV",f:t=>fmt$(t.value)},
+  {k:"value", t:MONEY_LABEL,f:t=>fmt$(t.value)},
   {k:"surplus",t:"Surplus", f:t=>`<span class="${t.surplus>=0?"pos":"neg"}">${t.surplus>=0?"+":""}${fmt$(t.surplus)}</span>`},
   {k:"startValue",t:"Starters",f:t=>fmt$(t.startValue)},
   {k:"n",     t:"Picks",    f:t=>t.n+"/"+S.settings.spots},
