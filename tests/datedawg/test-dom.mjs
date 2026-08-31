@@ -139,6 +139,8 @@ ok('likes and matches have distinct color tokens',/--likes:#006ee6/.test(html)&&
 
 console.log('\n=== dashboard filters ===');
 const allReadout=out.querySelector('.range-readout').textContent;
+ok('dashboard exposes last-year, last-six-month, and last-month slices',
+  !!out.querySelector('.rangebar [data-range="1y"]')&&!!out.querySelector('.rangebar [data-range="6m"]')&&!!out.querySelector('.rangebar [data-range="1m"]'));
 out.querySelector('[data-range="90d"]').click();
 await new Promise(r=>setTimeout(r,50));
 ok('90-day preset changes displayed range',out.querySelector('.range-readout').textContent!==allReadout);
@@ -151,6 +153,7 @@ ok('year shortcut isolates that calendar year',/2025-01-01 → 2025-12-20/.test(
 ok('year view labels acceptance points',out.querySelectorAll('.pointlabel').length>0);
 ok('rate chart labels the weighted selected-period result',!!out.querySelector('.selectedline')&&/SELECTED PERIOD/.test(out.querySelector('.selectedlabel').textContent)&&/PERCENTILE ALL MEN/.test(out.querySelector('.selectedlabel').textContent));
 ok('both main charts have their own filters',out.querySelectorAll('.charttools').length===2&&out.querySelectorAll('[data-chart-year]').length===2);
+ok('both main charts expose six-month and one-month slices',out.querySelectorAll('.charttools [data-range="6m"]').length===2&&out.querySelectorAll('.charttools [data-range="1m"]').length===2);
 let chartYear=out.querySelector('[data-chart-year]');chartYear.value='2024';chartYear.dispatchEvent(new w.Event('change'));
 await new Promise(r=>setTimeout(r,50));
 ok('chart-local year filter changes the shared view',/2024-01-10 → 2024-12-31/.test(out.querySelector('.range-readout').textContent));
@@ -176,6 +179,11 @@ await new Promise(r=>setTimeout(r,50));
 out.querySelector('[data-view="patterns"]').click();
 await new Promise(r=>setTimeout(r,50));
 ok('patterns view tells an ecosystem and activity story',/Where you live in the dating ecosystem/.test(out.textContent)&&/Your week has a shape/.test(out.textContent)&&/The activity terrain/.test(out.textContent));
+ok('patterns has one story-wide period switch',out.querySelectorAll('.patternfilters').length===1&&out.querySelectorAll('.patternfilters [data-range]').length===4);
+const patternDatesBefore=out.querySelector('.patternfilters .slice-readout').textContent;
+out.querySelector('.patternfilters [data-range="6m"]').click();
+await new Promise(r=>setTimeout(r,50));
+ok('six-month story slice recomputes the whole Patterns view',out.querySelector('.patternfilters [data-range="6m"]').classList.contains('on')&&out.querySelector('.patternfilters .slice-readout').textContent!==patternDatesBefore&&out.querySelector('.range-readout').textContent.trim()===out.querySelector('.patternfilters .slice-readout').textContent.replace(/^Showing\s+/i,'').trim());
 ok('patterns view explains reviewed incoming likes',/Likes you reviewed/.test(out.textContent));
 ok('ecosystem pictures a population of 100 reference men',out.querySelectorAll('.ecosystem .eco-person').length===100&&!!out.querySelector('.ecosystem .eco-you'));
 ok('weekly orbit renders all seven days as visual nodes',out.querySelectorAll('.orbit-node').length===7);

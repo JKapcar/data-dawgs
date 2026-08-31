@@ -256,6 +256,9 @@ button{font:inherit;cursor:pointer}
 .charttools button.on[data-series="likes"]{background:var(--likes);border-color:var(--likes);color:#fff}
 .charttools button.on[data-series="matches"]{background:var(--matches);border-color:var(--matches);color:#fff}
 .charttools button.on[data-layer="benchmarks"]{background:var(--ink-2);border-color:var(--ink-2);color:var(--surface-1)}
+.patternfilters{justify-content:space-between;padding:13px 14px;margin-bottom:14px;background:var(--surface-1);
+  box-shadow:0 12px 30px rgba(20,12,4,.06)}
+.patternfilters .slice-readout{font:800 9px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
 .chart-scroll{overflow-x:auto;overflow-y:hidden;scrollbar-width:auto;overscroll-behavior-inline:contain;
   touch-action:pan-x pan-y;cursor:grab;border:1px solid var(--border);border-radius:13px;background:var(--surface-1)}
 .chart-scroll:active{cursor:grabbing}.chart-scroll::-webkit-scrollbar{height:12px}
@@ -1036,7 +1039,10 @@ var DD = (function(){
     var layers=(kind==='activity'||kind==='momentum')?'<div class="toolgroup"><span>Show</span><button data-series="likes" class="'+(SHOW_LIKES?'on':'')+'">Likes</button><button data-series="matches" class="'+(SHOW_MATCHES?'on':'')+'">Matches</button><button data-layer="benchmarks" class="'+(SHOW_BENCHMARKS?'on':'')+'">Median + band</button></div>':
       '<div class="toolgroup"><span>Show</span><button data-layer="benchmarks" class="'+(SHOW_BENCHMARKS?'on':'')+'">Median + band</button><button data-layer="labels" class="'+(SHOW_VALUES?'on':'')+'">Point values</button></div>';
     var scale=kind==='activity'?'<div class="toolgroup"><span>Scale</span><button data-activity-scale="sqrt" class="'+(ACTIVITY_SCALE==='sqrt'?'on':'')+'" title="Spreads smaller months apart while preserving zero and the order of every value">Readable</button><button data-activity-scale="linear" class="'+(ACTIVITY_SCALE==='linear'?'on':'')+'" title="Shows equal numeric distances on the vertical axes">Full scale</button></div>':'';
-    return '<div class="charttools" aria-label="Chart filters"><div class="toolgroup"><span>Window</span>'+rb('all','All')+rb('1y','1 year')+rb('90d','90 days')+rb('ytd','YTD')+'<select data-chart-year aria-label="Jump to a calendar year">'+opts+'</select></div><div class="toolgroup"><span>Detail</span><button data-grain="month" class="'+(GRAIN==='month'?'on':'')+'">Monthly</button><button data-grain="week" class="'+(GRAIN==='week'?'on':'')+'">Weekly</button></div>'+scale+layers+'</div>'; }
+    return '<div class="charttools" aria-label="Chart filters"><div class="toolgroup"><span>Window</span>'+rb('all','All')+rb('1y','1 year')+rb('6m','6 months')+rb('1m','1 month')+rb('90d','90 days')+rb('ytd','YTD')+'<select data-chart-year aria-label="Jump to a calendar year">'+opts+'</select></div><div class="toolgroup"><span>Detail</span><button data-grain="month" class="'+(GRAIN==='month'?'on':'')+'">Monthly</button><button data-grain="week" class="'+(GRAIN==='week'?'on':'')+'">Weekly</button></div>'+scale+layers+'</div>'; }
+  function patternTools(S){
+    function rb(id,label){return '<button data-range="'+id+'" class="'+(RANGE===id?'on':'')+'" aria-pressed="'+(RANGE===id)+'">'+label+'</button>';}
+    return '<div class="charttools patternfilters" aria-label="Patterns date window"><div class="toolgroup"><span>Story window</span>'+rb('all','Overall')+rb('1y','Last year')+rb('6m','Last 6 months')+rb('1m','Last month')+'</div><span class="slice-readout">Showing '+iso(S.from)+' → '+iso(S.to)+'</span></div>'; }
   function scrollHint(){return '<p class="scrollhint"><span>← Swipe or scroll through time →</span><span>Hover or tap a point for its numbers</span></p>';}
   function activityChart(S){
     var B=S.bins,W=Math.max(1040,B.length*(S.grain==="week"?34:58)+120),H=410,L=62,RR=62,T=52,BT=58,PW=W-L-RR,PH=H-T-BT,
@@ -1162,7 +1168,7 @@ var DD = (function(){
   function viewPanel(S){
     if(VIEW==="patterns"){
       var cw=S.comments.with,bare=S.comments.bare;
-      return ecosystemScene(S)+'<div class="pattern-story-grid"><section class="story-art"><h3>Your week has a shape</h3><p>Distance from the center is how many likes you sent. Circle size is activity; color intensity is match-back rate. Every day carries its exact count.</p>'+weekdayOrbit(S.weekday)+'<p class="story-caption">The largest orbit is not automatically the best day. Hover or tap a day to see its resolved numerator and denominator.</p></section>'+
+      return patternTools(S)+ecosystemScene(S)+'<div class="pattern-story-grid"><section class="story-art"><h3>Your week has a shape</h3><p>Distance from the center is how many likes you sent. Circle size is activity; color intensity is match-back rate. Every day carries its exact count.</p>'+weekdayOrbit(S.weekday)+'<p class="story-caption">The largest orbit is not automatically the best day. Hover or tap a day to see its resolved numerator and denominator.</p></section>'+
         '<section class="story-art"><h3>The activity terrain</h3><p>Each hill is a daily like-volume habitat. The flag marks your match-back rate; the dotted trail shows how the outcome changed as volume rose.</p>'+volumeTerrain(S.volume)+'<p class="story-caption">The shaded elevation is the external 20th–80th percentile Tinder reference; the horizontal dotted line is the 2.04% median.</p></section>'+
         '<section class="story-art wide"><h3>The comment experiment, pictured</h3><p>Two observed pools from the same export. Bigger percentages are not proof of causation—who received a comment may already have been different.</p>'+commentScene(cw,bare)+'<p class="story-caption">Association only. DateDawg cannot isolate the comment from profile choice, timing, recipient, or algorithmic exposure.</p></section></div>'+
         '<div class="insightgrid" style="margin-top:14px"><div class="insight"><span class="ey">Your likes per active day</span><div class="big">'+(S.activeDays?(S.likes/S.activeDays).toFixed(1):'—')+'</div><p>Your average on days when you sent at least one like.</p></div><div class="insight"><span class="ey">Likes you reviewed</span><div class="big">'+num(S.inbound.n)+'</div><p>Incoming likes you processed in this range; processing time is not arrival time.</p></div><div class="insight"><span class="ey">Incoming likes you accepted</span><div class="big">'+num(S.inbound.accepted)+'</div><p>A count, not the rate at which people saw and liked you.</p></div></div>';
@@ -1186,7 +1192,7 @@ var DD = (function(){
       '<span class="tag">UTC · local only</span></div>'+
       '<div class="rangebar"><div class="topline"><span class="range-title">Analysis range</span>'+
       '<span class="range-readout">'+iso(S.from)+' → '+iso(S.to)+'</span></div><div class="controls">'+
-      '<div class="seg" role="group" aria-label="Date range">'+preset('all','All')+preset('90d','90 days')+preset('1y','1 year')+preset('ytd','YTD')+'</div>'+
+      '<div class="seg" role="group" aria-label="Date range">'+preset('all','All')+preset('1y','Last year')+preset('6m','Last 6 months')+preset('1m','Last month')+preset('90d','90 days')+preset('ytd','YTD')+'</div>'+
       '<div class="seg" role="group" aria-label="Chart grouping"><button data-grain="month" aria-pressed="'+(GRAIN==='month')+'" class="'+(GRAIN==='month'?'on':'')+'">Monthly</button><button data-grain="week" aria-pressed="'+(GRAIN==='week')+'" class="'+(GRAIN==='week'?'on':'')+'">Weekly</button></div>'+
       '<div class="datefields"><input type="date" id="viewFrom" value="'+iso(S.from)+'" min="'+iso(R.minT)+'" max="'+iso(R.maxT)+'" aria-label="Range start"><span>to</span>'+
       '<input type="date" id="viewTo" value="'+iso(S.to)+'" min="'+iso(R.minT)+'" max="'+iso(R.maxT)+'" aria-label="Range end"><button class="apply" id="applyRange">Apply</button></div></div><div class="yearstrip" aria-label="Choose a year">'+years.join('')+'</div></div>'+
@@ -1349,6 +1355,8 @@ var DD = (function(){
         var DAY=864e5,id=b.getAttribute("data-range"),y=new Date(R.maxT).getUTCFullYear();
         RANGE=id;VTO=R.maxT;
         VFROM=id==="90d"?Math.max(R.minT,R.maxT-89*DAY):
+          id==="1m"?Math.max(R.minT,R.maxT-29*DAY):
+          id==="6m"?Math.max(R.minT,R.maxT-182*DAY):
           id==="1y"?Math.max(R.minT,R.maxT-364*DAY):
           id==="ytd"?Math.max(R.minT,Date.UTC(y,0,1)):R.minT;
         paint(); }; });
@@ -1402,7 +1410,7 @@ var DD = (function(){
     Array.prototype.forEach.call(document.querySelectorAll("[data-range]"),function(b){b.onclick=function(){
       var DAY=864e5,id=b.getAttribute("data-range"),y=new Date(R.maxT).getUTCFullYear();RANGE=id;VTO=R.maxT;
       if(id.indexOf("year-")===0){y=+id.slice(5);GRAIN="month";VFROM=Math.max(R.minT,Date.UTC(y,0,1));VTO=Math.min(R.maxT,Date.UTC(y+1,0,1)-1);}
-      else VFROM=id==="90d"?Math.max(R.minT,R.maxT-89*DAY):id==="1y"?Math.max(R.minT,R.maxT-364*DAY):id==="ytd"?Math.max(R.minT,Date.UTC(y,0,1)):R.minT;
+      else VFROM=id==="90d"?Math.max(R.minT,R.maxT-89*DAY):id==="1m"?Math.max(R.minT,R.maxT-29*DAY):id==="6m"?Math.max(R.minT,R.maxT-182*DAY):id==="1y"?Math.max(R.minT,R.maxT-364*DAY):id==="ytd"?Math.max(R.minT,Date.UTC(y,0,1)):R.minT;
       paint();};});
     Array.prototype.forEach.call(document.querySelectorAll("[data-grain]"),function(b){b.onclick=function(){GRAIN=b.getAttribute("data-grain");paint();};});
     Array.prototype.forEach.call(document.querySelectorAll("[data-view]"),function(b){b.onclick=function(){VIEW=b.getAttribute("data-view");paint();};});
@@ -1507,7 +1515,7 @@ window.DD_BOTCTX = {
 Analysis runs entirely in this browser under a connect-src 'none' content-security policy.
 Volume strata are 1–3, 4–8, 9–20 and 21+ outbound likes per day; both eras are standardized to pooled common-support weights. Missing support is disclosed and can suppress standardization.
 Overview, Patterns, Momentum and Compare are alternate views of the same selected date range. Each main chart also exposes window, year, monthly/weekly, layer and label controls; its full-density timeline is horizontally swipeable. Compare holds overall export history fixed against the selected snapshot.
-Patterns is an illustrated story: the 100-person ecosystem shows the selected-range percentile, the weekly orbit encodes like volume by distance and circle size while printing match-back rate, and the activity terrain shows rates across daily like-volume habitats. These remain descriptive views of the same filtered export.
+Patterns is an illustrated story: the 100-person ecosystem shows the selected-range percentile, the weekly orbit encodes like volume by distance and circle size while printing match-back rate, and the activity terrain shows rates across daily like-volume habitats. Overall, Last year, Last 6 months, and Last month switch the entire illustrated story together. These remain descriptive views of the same filtered export.
 The import receipt reports the maturity anchor and a SHA-256 fingerprint over canonical sanitized events when Web Crypto is available.
 Snapshots contain counts and lineage only. They are downloaded by the user and are not automatic cross-session memory.`
 };
