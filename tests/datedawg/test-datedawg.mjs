@@ -120,7 +120,7 @@ ok('conversion note says v1.2',/v1\.2/.test(R.conversionPipes.note));
 ok('grade-A carries a url',!!DD.BENCHMARKS.find(b=>b.grade==='A').source.url);
 ok('grade-C rows admit no measured median',DD.BENCHMARKS.filter(b=>b.grade==='C')
    .every(b=>/never been published|NO measured/i.test(b.source.verified)));
-ok('parser version is 1.2',DD.PARSER_VERSION==='1.2.0');
+ok('parser version is 1.3',DD.PARSER_VERSION==='1.3.0');
 const rk=DD.rank(0.099);
 t('5 reference distributions',rk.rows.length,5);
 ok('band spans a real range',rk.hi-rk.lo>3);
@@ -129,6 +129,11 @@ ok('higher rate ranks higher',DD.rank(0.15).mid>DD.rank(0.05).mid);
 ok('grade-A p90 lands on its anchor',Math.abs(rk.rows[0].p90*100-12.5)<0.05);
 ok('band drawn from Hinge rows only',rk.hi<=Math.max(...rk.rows.filter(r=>r.id.startsWith('hinge')).map(r=>r.pct))+0.01);
 t('rank(0) is null',DD.rank(0),null);
+t('published male median reference',DD.maleRateAt(50),0.0204);
+ok('P20 is log-interpolated between published P10 and P25',DD.maleRateAt(20)>0.003&&DD.maleRateAt(20)<0.0076);
+ok('P80 is log-interpolated between published P75 and P90',DD.maleRateAt(80)>0.0539&&DD.maleRateAt(80)<0.125);
+t('three visible male reference levels',DD.MALE_REFERENCES.map(r=>r.p).join(','),'20,50,80');
+ok('interpolation is disclosed in source',/P20 and P80 are[\s\S]*log-interpolated/i.test(html));
 
 console.log('\n=== intervals behave ===');
 const wide=DD.wilson(1,2),tight=DD.wilson(599,9839);
