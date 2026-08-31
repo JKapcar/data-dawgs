@@ -269,6 +269,8 @@ button{font:inherit;cursor:pointer}
 .chart .benchmarkband{fill:color-mix(in srgb,var(--ink-3) 9%,transparent);stroke:none}
 .chart .benchmarkedge{fill:none;stroke:var(--ink-3);stroke-width:1;stroke-dasharray:3 7;opacity:.42}
 .chart .benchmarklabel{font-size:10px;font-weight:900;paint-order:stroke;stroke:var(--surface-1);stroke-width:4px}
+.chart .selectedline{stroke:var(--rate);stroke-width:2.5;stroke-dasharray:12 6;opacity:.9}
+.chart .selectedlabel{font-size:11px;font-weight:950;fill:var(--rate);paint-order:stroke;stroke:var(--surface-1);stroke-width:5px}
 .chart .compareline{stroke:var(--border);stroke-width:5;stroke-linecap:round}
 .chart .comparepoint{fill:var(--rate);stroke:var(--surface-1);stroke-width:3}
 .chart .comparepoint.overall{fill:var(--ink-3)}
@@ -998,7 +1000,9 @@ var DD = (function(){
   function rateChart(S){
     var B=S.bins,W=Math.max(1040,B.length*(S.grain==="week"?34:72)+120),H=430,L=68,RR=35,T=42,BT=62,PW=W-L-RR,PH=H-T-BT,
         vals=B.filter(function(b){return b.rate!=null;}).map(function(b){return b.rate;}),
-        top=Math.max(.10,Math.ceil(Math.max.apply(null,[0].concat(vals))*20)/20),
+        selected=S.rate&&S.rate.p!=null?S.rate.p:null,
+        selectedRank=selected?DD.rank(selected,null):null,
+        top=Math.max(.10,Math.ceil(Math.max.apply(null,[0].concat(vals,selected==null?[]:[selected]))*20)/20),
         step=PW/Math.max(1,B.length),g=[];
     for(var q=0;q<=4;q++){var y=T+PH-PH*q/4;
       g.push('<line class="gridline" x1="'+L+'" y1="'+y+'" x2="'+(W-RR)+'" y2="'+y+'"/>'+
@@ -1011,8 +1015,12 @@ var DD = (function(){
           (showValues?'<text class="pointlabel" x="'+x+'" y="'+Math.max(15,y-11)+'" text-anchor="middle">'+(b.rate*100).toFixed(1)+'%</text>':''));}
       if(i%Math.max(1,Math.ceil(B.length/14))===0||i===B.length-1)
         labels.push('<text x="'+x+'" y="'+(H-15)+'" text-anchor="middle">'+esc(b.label)+'</text>');});
-    return '<svg class="chart ratechart" style="width:'+W+'px" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Your match-back rate over time">'+
-      g.join("")+horizontalBenchmarkBand(L,W-RR,T,T+PH,top,true)+'<path class="rateline" d="'+path.join(" ")+'"/>'+dots.join("")+labels.join("")+'</svg>'; }
+    var selectedLayer='';if(selected!=null){var sy=T+PH-PH*selected/top,
+      sl='SELECTED PERIOD · '+pct(selected)+' · '+num(S.matureMatches)+' OF '+num(S.matureLikes)+
+        ' · '+(selectedRank?ordinal(selectedRank.all.p).toUpperCase()+' PERCENTILE ALL MEN':'');
+      selectedLayer='<line class="selectedline" x1="'+L+'" y1="'+sy+'" x2="'+(W-RR)+'" y2="'+sy+'"><title>Weighted selected-period result: '+pct(selected)+' from '+num(S.matureMatches)+' of '+num(S.matureLikes)+' matured likes</title></line><text class="selectedlabel" x="'+(W-RR-5)+'" y="'+Math.max(T+12,sy-8)+'" text-anchor="end">'+sl+'</text>';}
+    return '<svg class="chart ratechart" style="width:'+W+'px" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Your match-back rate over time, including the weighted selected-period result">'+
+      g.join("")+horizontalBenchmarkBand(L,W-RR,T,T+PH,top,true)+selectedLayer+'<path class="rateline" d="'+path.join(" ")+'"/>'+dots.join("")+labels.join("")+'</svg>'; }
 
   function cumulativeChart(S){
     var B=S.bins,W=Math.max(1040,B.length*(S.grain==="week"?34:62)+120),H=390,L=68,RR=62,T=34,BT=58,
@@ -1046,9 +1054,9 @@ var DD = (function(){
     return '<svg class="chart ratechart" style="width:'+W+'px" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Overall history and selected snapshot acceptance rates against male Tinder references">'+g.join('')+refs+row(overall,'Overall history',82,'overall')+row(snapshot,'Selected snapshot',145,'snapshot')+'</svg>'; }
   function insightCards(S){
     var rk=S.rate&&S.rate.n>=DD.MIN_N?DD.rank(S.rate.p,R.profile&&R.profile.age):null,
-        head=rk&&(rk.band||rk.all),unmatched=Math.max(0,S.matureLikes-S.matureMatches),
+        unmatched=Math.max(0,S.matureLikes-S.matureMatches),
         best=S.bins.filter(function(b){return b.matureLikes>=DD.MIN_N&&b.rate!=null;}).sort(function(a,b){return b.rate-a.rate;})[0];
-    return '<div class="insightgrid"><div class="insight"><span class="ey">Dating App MV / Market Value</span><div class="big rankvalue">'+(head?ordinal(head.p)+' percentile':'—')+'</div><p>'+(head?'Your SwipeStats male Tinder reference for this date range'+(rk.band?' among men '+esc(rk.bandLabel):'')+'. It is not a measured Hinge population.':'At least '+DD.MIN_N+' matured likes are needed to estimate your standing.')+'</p></div>'+
+    return '<div class="insightgrid"><div class="insight"><span class="ey">Dating App MV / Market Value</span><div class="big rankvalue">'+(rk?ordinal(rk.all.p)+' percentile':'—')+'</div><p>'+(rk?'Against all men in the published SwipeStats Tinder table · '+pct(S.rate.p)+' from '+num(S.matureMatches)+' of '+num(S.matureLikes)+' matured likes.'+(rk.band?'<br><b>Men '+esc(rk.bandLabel)+': '+ordinal(rk.band.p)+' percentile</b> (age comparison shown separately, never blended into a range).':''):'At least '+DD.MIN_N+' matured likes are needed to estimate your standing.')+'</p></div>'+
       '<div class="insight"><span class="ey">Your matched-like results</span><div class="big">'+num(S.matureMatches)+' of '+num(S.matureLikes)+'</div><p>'+num(unmatched)+' matured likes did not become matches.</p></div>'+
       '<div class="insight"><span class="ey">Your best '+S.grain+'</span><div class="big">'+(best?pct(best.rate):'—')+'</div><p>'+(best?esc(best.label)+' · '+best.matureMatches+' matches from '+best.matureLikes+' matured likes':'No period has '+DD.MIN_N+' matured likes yet.')+'</p></div></div>'; }
   function viewPanel(S){
@@ -1070,7 +1078,7 @@ var DD = (function(){
         chartTools('rate')+'<div class="chart-scroll" tabindex="0" aria-label="Scrollable comparison chart">'+compareRateChart(P,S)+'</div>'+scrollHint()+(SHOW_BENCHMARKS?benchmarkKey(false):'')+'</div>'+insightCards(S);
     }
     return '<div class="chartgrid"><div class="chartcard feature"><div class="charttop"><div><h3>Likes you sent and likes that became matches</h3><p>Blue bars are likes you sent. Pink shows how many eventually became matches, dated to when you sent each like.</p></div></div>'+chartTools('activity')+'<div class="chart-scroll" tabindex="0" aria-label="Scrollable likes and matches chart">'+activityChart(S)+'</div>'+scrollHint()+'<p class="chartnote">Readable scale spreads smaller months apart so the activity pattern stays visible; Full scale restores equal numeric spacing. Every axis label and peak label is the actual count.</p>'+(SHOW_BENCHMARKS?benchmarkKey(true):'')+'</div>'+
-      '<div class="chartcard feature"><div class="charttop"><div><h3>Your match-back rate over time</h3><p>Of the matured likes you sent in each '+S.grain+', the percentage that became matches. Use the controls below or swipe through time at full size.</p></div><div class="legend"><span><i style="background:var(--rate)"></i>Your match-back rate</span></div></div>'+chartTools('rate')+'<div class="chart-scroll" tabindex="0" aria-label="Scrollable match-back-rate chart">'+rateChart(S)+'</div>'+scrollHint()+(SHOW_BENCHMARKS?benchmarkKey(false):'')+'<p class="chartnote">Likes after '+iso(S.resolveBefore)+' are too recent to score. Empty periods are gaps, not zeroes.</p></div>'+insightCards(S)+'</div>'; }
+      '<div class="chartcard feature"><div class="charttop"><div><h3>Your match-back rate over time</h3><p>Of the matured likes you sent in each '+S.grain+', the percentage that became matches. The dashed purple line is the weighted result for the entire selected window.</p></div><div class="legend"><span><i style="background:var(--rate)"></i>Your match-back rate</span></div></div>'+chartTools('rate')+'<div class="chart-scroll" tabindex="0" aria-label="Scrollable match-back-rate chart">'+rateChart(S)+'</div>'+scrollHint()+(SHOW_BENCHMARKS?benchmarkKey(false):'')+'<p class="chartnote"><b>Read the dashed selected-period line for your Market Value percentile.</b> Monthly dots have different sample sizes, so averaging their heights gives the wrong answer. Likes after '+iso(S.resolveBefore)+' are too recent to score. Empty periods are gaps, not zeroes.</p></div>'+insightCards(S)+'</div>'; }
   function timelinePanel(S){
     var rw=S.rate,preset=function(id,label){return '<button data-range="'+id+'" class="'+(RANGE===id?'on':'')+'" aria-pressed="'+(RANGE===id)+'">'+label+'</button>';},
         y0=new Date(R.minT).getUTCFullYear(),y1=new Date(R.maxT).getUTCFullYear(),years=[];

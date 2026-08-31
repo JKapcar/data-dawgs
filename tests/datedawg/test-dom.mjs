@@ -88,6 +88,8 @@ ok('four dashboard views rendered',out.querySelectorAll('[data-view]').length===
 ok('year shortcuts rendered',!!out.querySelector('[data-range="year-2025"]'));
 ok('market value is scoped to selected range',/Dating App MV \/ Market Value/i.test(text));
 ok('market value uses a human-readable ordinal percentile',/\d+(?:st|nd|rd|th) percentile/i.test(text));
+ok('market value leads with one exact all-men percentile',/Against all men in the published SwipeStats Tinder table/i.test(text));
+ok('age reference is separate rather than blended into a range',/age comparison shown separately, never blended into a range/i.test(text));
 ok('empirical percentile table is rendered',/Published percentile/.test(text)&&/Published empirical table/.test(text));
 ok('age-band reference is rendered',/Men 40–44/.test(text));
 ok('pre-parse declaration honoured',/DECLARED PRE-PARSE/.test(text));
@@ -107,6 +109,7 @@ ok('both time-series charts rendered',out.querySelectorAll('svg.chart').length==
 ok('import receipt is collapsed by default',!!out.querySelector('details.receipt')&&!out.querySelector('details.receipt').open);
 ok('chart copy explains matches are dated to the sent like',/grouped by the date you sent each like/i.test(text));
 ok('maturity note appears beside trend',/too recent to score/i.test(text));
+ok('trend explains why monthly dots cannot be averaged',/Monthly dots have different sample sizes/i.test(text));
 ok('likes and matches have distinct color tokens',/--likes:#006ee6/.test(html)&&/--matches:#d91f4e/.test(html));
 
 console.log('\n=== dashboard filters ===');
@@ -121,6 +124,7 @@ out.querySelector('[data-range="year-2025"]').click();
 await new Promise(r=>setTimeout(r,50));
 ok('year shortcut isolates that calendar year',/2025-01-01 → 2025-12-20/.test(out.querySelector('.range-readout').textContent));
 ok('year view labels acceptance points',out.querySelectorAll('.pointlabel').length>0);
+ok('rate chart labels the weighted selected-period result',!!out.querySelector('.selectedline')&&/SELECTED PERIOD/.test(out.querySelector('.selectedlabel').textContent)&&/PERCENTILE ALL MEN/.test(out.querySelector('.selectedlabel').textContent));
 ok('both main charts have their own filters',out.querySelectorAll('.charttools').length===2&&out.querySelectorAll('[data-chart-year]').length===2);
 let chartYear=out.querySelector('[data-chart-year]');chartYear.value='2024';chartYear.dispatchEvent(new w.Event('change'));
 await new Promise(r=>setTimeout(r,50));
