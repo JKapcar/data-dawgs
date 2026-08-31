@@ -15,9 +15,10 @@
  "settings": {
   "team_count": 14,
   "draft_type": "auction",
+  "draft_method": "offline",
   "budget": 200,
   "keepers": true,
-  "keeper_deadline": "2026-09-08T03:00:00-04:00",
+  "keeper_deadline": "2026-08-31T03:00:00-04:00",
   "roster_slots": {"QB":1,"WR":2,"RB":2,"TE":1,"FLEX":2,"DST":1,"BN":6,"IR":2},
   "scoring": {"mode":"half","ppr":0.5,"fractional":false,"negative_points":true,"raw":null},
   "playoff_teams": 6,
@@ -61,7 +62,7 @@
   "completed_at": "2026-08-31T01:20:00-04:00",
   "pick_count": 157,
   "source": "Transcribed from the operator's live board (dashboard.html Live tab) after the last sale on 2026-08-31. Checked two ways: every team's spend reconciles to the money the board showed it had left, and the 157 rows reconcile to the board's own pick count.",
-  "note": "Team, player, position and price are official. PICK ORDER IS NOT — only the six numbers legible in the board ticker are recorded; every other row carries pick: null and is listed in roster-display order, not the order it was sold. No row is flagged keeper: the board did not mark them and the keeper deadline (2026-09-08) falls after the auction.",
+  "note": "Team, player, position and price are official. PICK ORDER IS NOT — only the six numbers legible in the board ticker are recorded; every other row carries pick: null and is listed in roster-display order, not the order it was sold. No row is flagged keeper: the board did not mark them, and Yahoo's keeper deadline (Mon 2026-08-31 3:00am EDT) fell an hour and a half AFTER the last sale, so which of these 157 buys are keepers is not established here.",
   "picks": [
    {"pick":null,"team_id":"1","player":"Matthew Stafford","pos":"QB","nfl":"LA","price":6,"keeper":false},
    {"pick":null,"team_id":"1","player":"James Cook","pos":"RB","nfl":"BUF","price":55,"keeper":false},
