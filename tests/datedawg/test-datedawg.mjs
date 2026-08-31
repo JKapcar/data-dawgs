@@ -39,7 +39,7 @@ ok('no flip-to-reveal mode toggle',!/id="mDecl"/.test(html)&&!/id="mExp"/.test(h
 ok('declaration is captured BEFORE parse',/preDate/.test(html)&&/preReason/.test(html));
 ok('no in-dashboard declare control',!/id="dGo"/.test(html)&&!/id="dReason"/.test(html));
 ok('declaration requires both date and reason',/when&&why/.test(html));
-ok('page states a later declaration is impossible',/no way to declare one later/i.test(html));
+ok('page states a later declaration is impossible',/no\s+way to declare a test after loading/i.test(html));
 ok('subject and consent captured pre-parse',/preSubject/.test(html)&&/preConsent/.test(html));
 ok('declaration voids on boundary change',/was voided when you moved/.test(html));
 ok('significance withheld while exploring',/significance withheld/.test(html));
@@ -90,6 +90,15 @@ const weeklySeries=DD.timeSeries(R,R.minT,R.maxT,'week');
 ok('weekly view has more buckets than monthly',weeklySeries.bins.length>allSeries.bins.length);
 const reversed=DD.timeSeries(R,R.maxT,R.minT,'month');
 t('reversed custom dates are normalized',reversed.likes,allSeries.likes);
+ok('weekday likes reconcile to selected total',
+   allSeries.weekday.reduce((a,w)=>a+w.likes,0)===allSeries.likes);
+ok('weekday matured likes reconcile',
+   allSeries.weekday.reduce((a,w)=>a+w.matureLikes,0)===allSeries.matureLikes);
+ok('volume buckets account for active days',
+   allSeries.volume.reduce((a,v)=>a+v.days,0)===allSeries.activeDays);
+ok('comment split reconciles to matured likes',
+   allSeries.comments.with.n+allSeries.comments.bare.n===allSeries.matureLikes);
+ok('filtered inbound decisions are exposed',allSeries.inbound.n===R.ins.length);
 
 console.log('\n=== ranking math ===');
 const fit=DD.fitFromQuantiles(0.0204,0.125,0.90);
