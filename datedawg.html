@@ -28,7 +28,7 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--page);color:var(--ink-1);
   font:400 15px/1.55 ui-rounded,"Trebuchet MS",system-ui,sans-serif}
-.wrap{max-width:900px;margin:0 auto;padding:0 20px 80px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px 80px}
 h1,h2,h3{margin:0}
 button{font:inherit;cursor:pointer}
 :focus-visible{outline:3px solid var(--accent);outline-offset:2px}
@@ -45,7 +45,7 @@ button{font:inherit;cursor:pointer}
   font:700 12px var(--mono);color:var(--ink-3)}
 .modepill button.on{background:var(--accent);color:var(--accent-ink)}
 
-.hero{padding:34px 0 10px;max-width:640px}
+.hero{padding:48px 0 18px;max-width:790px}
 .eyebrow{font:800 10.5px var(--mono);letter-spacing:.18em;text-transform:uppercase;
   color:var(--accent);margin-bottom:12px}
 .hero h1{font:400 clamp(25px,5.4vw,38px)/1.08 var(--display);margin-bottom:14px}
@@ -155,6 +155,63 @@ button{font:inherit;cursor:pointer}
 
 .card{background:var(--surface-1);border:1px solid var(--border);border-radius:14px;
   padding:18px;margin:0 0 16px}
+.dashhead{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;
+  margin:34px 0 18px}
+.dashhead h2{font:400 clamp(24px,4vw,34px)/1.08 var(--display);margin-bottom:5px}
+.dashhead p{margin:0;color:var(--ink-2);font-size:13.5px}
+.rangebar{background:var(--surface-1);border:1px solid var(--border);border-radius:18px;
+  padding:16px;margin-bottom:14px;box-shadow:0 12px 30px rgba(20,12,4,.08)}
+.rangebar .topline{display:flex;align-items:center;justify-content:space-between;gap:14px;
+  margin-bottom:13px}
+.rangebar .range-title{font:800 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3)}
+.rangebar .range-readout{font:700 12px var(--mono);color:var(--ink-2)}
+.controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.seg{display:flex;gap:3px;padding:3px;border:1px solid var(--border);border-radius:10px;
+  background:var(--page)}
+.seg button{border:0;background:transparent;color:var(--ink-2);border-radius:7px;
+  padding:7px 10px;font:700 11px var(--mono);white-space:nowrap}
+.seg button.on{background:var(--ink-1);color:var(--page)}
+.datefields{display:flex;align-items:center;gap:7px;margin-left:auto}
+.datefields input{width:138px;border:1px solid var(--border);border-radius:8px;padding:7px 9px;
+  background:var(--page);color:var(--ink-1);font:700 11px var(--mono)}
+.datefields span{color:var(--ink-3);font:700 10px var(--mono)}
+.apply{border:1px solid var(--border);border-radius:8px;padding:7px 11px;background:var(--surface-1);
+  color:var(--ink-1);font:700 11px var(--mono)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.kpi{background:var(--surface-1);border:1px solid var(--border);border-radius:16px;
+  padding:17px 18px;min-width:0}
+.kpi .value{display:block;font:400 clamp(24px,3vw,34px)/1 var(--display);margin-bottom:7px}
+.kpi .label{display:block;font:800 9.5px var(--mono);letter-spacing:.12em;
+  text-transform:uppercase;color:var(--ink-3)}
+.kpi .detail{display:block;margin-top:6px;font-size:11.5px;color:var(--ink-2)}
+.chartgrid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(340px,.65fr);gap:14px}
+.chartcard{background:var(--surface-1);border:1px solid var(--border);border-radius:18px;
+  padding:18px;min-width:0;box-shadow:0 12px 30px rgba(20,12,4,.06)}
+.chartcard .charttop{display:flex;justify-content:space-between;align-items:flex-start;
+  gap:12px;margin-bottom:14px}
+.chartcard h3{font:400 18px/1.2 var(--display);margin-bottom:4px}
+.chartcard p{font-size:12px;line-height:1.45;color:var(--ink-3);margin:0;max-width:58ch}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font:700 10px var(--mono);color:var(--ink-2)}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
+.chart-scroll{overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}
+.chart{display:block;width:100%;min-width:620px;height:auto;overflow:visible}
+.chart.ratechart{min-width:380px}
+.chart text{font-family:var(--mono);font-size:10px;fill:var(--ink-3)}
+.chart .gridline{stroke:var(--border);stroke-width:1}.chart .axis{stroke:var(--ink-3);stroke-width:1}
+.chart .likebar{fill:color-mix(in srgb,var(--accent) 68%,transparent)}
+.chart .matchline{fill:none;stroke:#d93757;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.chart .matchdot{fill:#d93757;stroke:var(--surface-1);stroke-width:2}
+.chart .rateline{fill:none;stroke:#159b8c;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.chart .ratedot{fill:#159b8c;stroke:var(--surface-1);stroke-width:2}
+.chart .immature{fill:color-mix(in srgb,var(--warn) 10%,transparent)}
+.chartnote{margin-top:10px!important;padding-top:10px;border-top:1px solid var(--border)}
+.receipt{margin:14px 0 0}.receipt>summary{cursor:pointer;list-style:none;display:flex;
+  justify-content:space-between;align-items:center;background:var(--surface-1);border:1px solid var(--border);
+  border-radius:12px;padding:12px 15px;font:800 10px var(--mono);letter-spacing:.13em;
+  text-transform:uppercase;color:var(--ink-3)}
+.receipt>summary::-webkit-details-marker{display:none}.receipt>summary:after{content:"＋";font-size:16px}
+.receipt[open]>summary:after{content:"−"}.receipt .slip{margin-top:12px}
 .sec{margin:38px 0 0}
 .sec>h2{font:400 20px/1.2 var(--display);margin-bottom:6px}
 .sec>p.sub{color:var(--ink-2);font-size:13.5px;margin:0 0 14px;max-width:64ch}
@@ -189,8 +246,13 @@ input[type=file]{display:none}
 footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--border);
   font-size:12.5px;color:var(--ink-3);line-height:1.6}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-@media(max-width:600px){.wrap{padding:0 14px 60px}.split{grid-template-columns:1fr}
-  .scen th:nth-child(2),.scen td:nth-child(2){display:none}}
+@media(max-width:900px){.chartgrid{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}
+  .datefields{margin-left:0}.controls{align-items:flex-start}.chartcard{padding:15px}}
+@media(max-width:600px){.wrap{padding:0 14px 60px}.hero{padding-top:34px}.split{grid-template-columns:1fr}
+  .dashhead{align-items:flex-start;flex-direction:column}.rangebar .topline{align-items:flex-start;flex-direction:column}
+  .kpis{grid-template-columns:1fr 1fr;gap:8px}.kpi{padding:14px}.datefields{width:100%;flex-wrap:wrap}
+  .datefields input{flex:1;min-width:125px}.seg{max-width:100%;overflow-x:auto}
+  .chart{min-width:580px}.scen th:nth-child(2),.scen td:nth-child(2){display:none}}
 </style>
 </head>
 <body>
@@ -553,6 +615,48 @@ var DD = (function(){
       rankHeavy:Ah.n?rank(Ah.k/Ah.n):null,
       rankStd:(std.valid&&std.afterRate)?rank(std.afterRate):null}; }
 
+  /* Descriptive timeline for the dashboard. Outcomes are attributed to the date the
+     outbound like was sent because Hinge does not provide a reliable match-event date
+     for this question. The rate series uses matured likes only. */
+  function timeSeries(R,from,to,grain){
+    var DAY=864e5, resolveBefore=R.maxT-RESOLVE_DAYS*DAY;
+    from=Math.max(R.minT,+from||R.minT); to=Math.min(R.maxT,+to||R.maxT);
+    if(from>to){ var swap=from;from=to;to=swap; }
+    grain=grain==="week"?"week":"month";
+    function start(t){
+      var d=new Date(t);
+      if(grain==="month") return Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),1);
+      var x=Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()),
+          dow=new Date(x).getUTCDay();
+      return x-((dow+6)%7)*DAY; }
+    function next(t){
+      if(grain==="week") return t+7*DAY;
+      var d=new Date(t); return Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,1); }
+    function label(t){
+      var d=new Date(t);
+      return grain==="week"?d.toISOString().slice(0,10):
+        d.toLocaleDateString("en-US",{timeZone:"UTC",month:"short",year:"numeric"}); }
+    var bins=[],by={},t=start(from),end=start(to);
+    while(t<=end){ var b={t:t,label:label(t),likes:0,matches:0,matureLikes:0,
+        matureMatches:0,active:{}}; bins.push(b);by[t]=b;t=next(t); }
+    R.outs.forEach(function(o){
+      if(o.t<from||o.t>to) return;
+      var b=by[start(o.t)]; if(!b) return;
+      b.likes++;b.matches+=o.matched;b.active[o.d||String(o.t)]=1;
+      if(o.t<=resolveBefore){b.matureLikes++;b.matureMatches+=o.matched;} });
+    bins.forEach(function(b){
+      b.activeDays=Object.keys(b.active).length;delete b.active;
+      b.rate=b.matureLikes?b.matureMatches/b.matureLikes:null;
+      b.interval=b.matureLikes?wilson(b.matureMatches,b.matureLikes):null; });
+    var selected=R.outs.filter(function(o){return o.t>=from&&o.t<=to;}),
+        matured=selected.filter(function(o){return o.t<=resolveBefore;}),days={};
+    selected.forEach(function(o){if(o.d)days[o.d]=1;});
+    var mk=matured.reduce(function(a,o){return a+o.matched;},0);
+    return {from:from,to:to,grain:grain,resolveBefore:resolveBefore,bins:bins,
+      likes:selected.length,matches:selected.reduce(function(a,o){return a+o.matched;},0),
+      matureLikes:matured.length,matureMatches:mk,activeDays:Object.keys(days).length,
+      rate:matured.length?wilson(mk,matured.length):null}; }
+
   function snapshot(R,M,opts){
     var w=function(x){ return x?{k:x.k,n:x.n}:null; };
     return {datedawg_snapshot:3,parser:PARSER_VERSION,
@@ -604,7 +708,7 @@ var DD = (function(){
         return ("0"+b.toString(16)).slice(-2); }).join("");
       R.fingerprint="sha256-"+h; return R.fingerprint; }); }
 
-  return {parse:parse,metrics:metrics,snapshot:snapshot,rank:rank,wilson:wilson,ztest:ztest,
+  return {parse:parse,metrics:metrics,timeSeries:timeSeries,snapshot:snapshot,rank:rank,wilson:wilson,ztest:ztest,
     fingerprint:fingerprint,
     sigmaFromGini:sigmaFromGini,Phi:Phi,Phinv:Phinv,likeHasComment:likeHasComment,
     classify:classify,BENCHMARKS:BENCHMARKS,fitFromQuantiles:fitFromQuantiles,MIN_N:MIN_N,RESOLVE_DAYS:RESOLVE_DAYS,
@@ -624,7 +728,7 @@ var DD = (function(){
      boundary. It is captured with the number of exploratory moves that preceded it and
      is invalidated the moment the boundary changes. A toggle you can flip after
      exploring is not a declaration, so there is no toggle. */
-  var R=null,CUT=null,MOVES=0,DECL=null,SUBJ=null;
+  var R=null,CUT=null,MOVES=0,DECL=null,SUBJ=null,VFROM=null,VTO=null,GRAIN="month",RANGE="all";
   /* DECL is captured BEFORE parse and can only ever be invalidated, never created later.
      prospective:true means it was recorded before any result was rendered. */
   function declValid(){ return DECL && DECL.cut===CUT && !MOVES; }
@@ -719,9 +823,74 @@ var DD = (function(){
       'arrival. If you are sitting on an unprocessed queue, the inbound figures below are '+
       'undercounts.</small></div>'; }
 
+  function shortNum(n){
+    if(n>=1000000)return (n/1000000).toFixed(n>=10000000?0:1)+"m";
+    if(n>=1000)return (n/1000).toFixed(n>=10000?0:1)+"k";
+    return String(Math.round(n)); }
+  function activityChart(S){
+    var B=S.bins,W=Math.max(960,B.length*12+96),H=300,L=48,RR=48,T=18,BT=43,PW=W-L-RR,PH=H-T-BT,
+        maxLikes=Math.max.apply(null,[1].concat(B.map(function(b){return b.likes;}))),
+        maxMatches=Math.max.apply(null,[1].concat(B.map(function(b){return b.matches;}))),
+        bw=Math.max(3,Math.min(28,PW/Math.max(1,B.length)*.64)),step=PW/Math.max(1,B.length),g=[];
+    for(var q=0;q<=4;q++){
+      var y=T+PH-PH*q/4;
+      g.push('<line class="gridline" x1="'+L+'" y1="'+y+'" x2="'+(W-RR)+'" y2="'+y+'"/>'+
+        '<text x="'+(L-8)+'" y="'+(y+4)+'" text-anchor="end">'+shortNum(maxLikes*q/4)+'</text>'+
+        '<text x="'+(W-RR+8)+'" y="'+(y+4)+'">'+shortNum(maxMatches*q/4)+'</text>'); }
+    var bars=[],pts=[];
+    B.forEach(function(b,i){
+      var x=L+step*(i+.5),bh=PH*b.likes/maxLikes,y=T+PH-bh,
+          my=T+PH-PH*b.matches/maxMatches;
+      bars.push('<rect class="likebar" x="'+(x-bw/2)+'" y="'+y+'" width="'+bw+'" height="'+bh+'" rx="2"><title>'+esc(b.label)+': '+num(b.likes)+' likes sent · '+num(b.matches)+' matched likes</title></rect>');
+      pts.push(x+','+my);
+      if(i%Math.max(1,Math.ceil(B.length/8))===0||i===B.length-1)
+        bars.push('<text x="'+x+'" y="'+(H-15)+'" text-anchor="middle">'+esc(b.label)+'</text>'); });
+    var dots=B.map(function(b,i){var x=L+step*(i+.5),y=T+PH-PH*b.matches/maxMatches;
+      return '<circle class="matchdot" cx="'+x+'" cy="'+y+'" r="3.5"><title>'+esc(b.label)+': '+num(b.matches)+' matched likes</title></circle>';}).join("");
+    return '<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Likes sent and matched likes over time">'+
+      '<text x="'+L+'" y="11">LIKES</text><text x="'+(W-RR)+'" y="11" text-anchor="end">MATCHES</text>'+g.join("")+bars.join("")+
+      '<polyline class="matchline" points="'+pts.join(" ")+'"/>'+dots+'</svg>'; }
+  function rateChart(S){
+    var B=S.bins,W=Math.max(620,B.length*12+65),H=300,L=49,RR=16,T=18,BT=43,PW=W-L-RR,PH=H-T-BT,
+        vals=B.filter(function(b){return b.rate!=null;}).map(function(b){return b.rate;}),
+        top=Math.max(.10,Math.ceil(Math.max.apply(null,[0].concat(vals))*20)/20),
+        step=PW/Math.max(1,B.length),g=[];
+    for(var q=0;q<=4;q++){var y=T+PH-PH*q/4;
+      g.push('<line class="gridline" x1="'+L+'" y1="'+y+'" x2="'+(W-RR)+'" y2="'+y+'"/>'+
+        '<text x="'+(L-8)+'" y="'+(y+4)+'" text-anchor="end">'+Math.round(top*q/4*100)+'%</text>');}
+    var path=[],dots=[],open=false,labels=[];
+    B.forEach(function(b,i){var x=L+step*(i+.5);
+      if(b.rate==null){open=false;}else{var y=T+PH-PH*b.rate/top;
+        path.push((open?'L':'M')+x+' '+y);open=true;
+        dots.push('<circle class="ratedot" cx="'+x+'" cy="'+y+'" r="4"><title>'+esc(b.label)+': '+pct(b.rate)+' · '+b.matureMatches+' of '+b.matureLikes+' matured likes</title></circle>');}
+      if(i%Math.max(1,Math.ceil(B.length/6))===0||i===B.length-1)
+        labels.push('<text x="'+x+'" y="'+(H-15)+'" text-anchor="middle">'+esc(b.label)+'</text>');});
+    return '<svg class="chart ratechart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Reciprocal acceptance rate over time">'+
+      g.join("")+'<path class="rateline" d="'+path.join(" ")+'"/>'+dots.join("")+labels.join("")+'</svg>'; }
+  function timelinePanel(){
+    var S=DD.timeSeries(R,VFROM,VTO,GRAIN),rw=S.rate,
+        preset=function(id,label){return '<button data-range="'+id+'" class="'+(RANGE===id?'on':'')+'" aria-pressed="'+(RANGE===id)+'">'+label+'</button>';};
+    return '<div class="dashhead"><div><h2>Your activity, over time</h2><p>Filter the dashboard without changing the before/after research boundary below.</p></div>'+
+      '<span class="tag">UTC · local only</span></div>'+
+      '<div class="rangebar"><div class="topline"><span class="range-title">Analysis range</span>'+
+      '<span class="range-readout">'+iso(S.from)+' → '+iso(S.to)+'</span></div><div class="controls">'+
+      '<div class="seg" role="group" aria-label="Date range">'+preset('all','All')+preset('90d','90 days')+preset('1y','1 year')+preset('ytd','YTD')+'</div>'+
+      '<div class="seg" role="group" aria-label="Chart grouping"><button data-grain="month" aria-pressed="'+(GRAIN==='month')+'" class="'+(GRAIN==='month'?'on':'')+'">Monthly</button><button data-grain="week" aria-pressed="'+(GRAIN==='week')+'" class="'+(GRAIN==='week'?'on':'')+'">Weekly</button></div>'+
+      '<div class="datefields"><input type="date" id="viewFrom" value="'+iso(S.from)+'" min="'+iso(R.minT)+'" max="'+iso(R.maxT)+'" aria-label="Range start"><span>to</span>'+
+      '<input type="date" id="viewTo" value="'+iso(S.to)+'" min="'+iso(R.minT)+'" max="'+iso(R.maxT)+'" aria-label="Range end"><button class="apply" id="applyRange">Apply</button></div></div></div>'+
+      '<div class="kpis"><div class="kpi"><span class="value">'+num(S.likes)+'</span><span class="label">Likes sent</span><span class="detail">in selected range</span></div>'+
+      '<div class="kpi"><span class="value">'+num(S.matches)+'</span><span class="label">Matched likes</span><span class="detail">grouped by sent-like date</span></div>'+
+      '<div class="kpi"><span class="value">'+(rw?pct(rw.p):'—')+'</span><span class="label">Reciprocal acceptance</span><span class="detail">'+(rw?num(rw.k)+' of '+num(rw.n)+' matured likes':'no matured likes')+'</span></div>'+
+      '<div class="kpi"><span class="value">'+num(S.activeDays)+'</span><span class="label">Active days</span><span class="detail">days with an outbound like</span></div></div>'+
+      '<div class="chartgrid"><div class="chartcard"><div class="charttop"><div><h3>Likes and matches</h3><p>Matches are attributed to when you sent the like. Separate axes keep both series legible.</p></div><div class="legend"><span><i style="background:var(--accent)"></i>Likes</span><span><i style="background:#d93757"></i>Matches</span></div></div>'+
+      '<div class="chart-scroll">'+activityChart(S)+'</div></div>'+
+      '<div class="chartcard"><div class="charttop"><div><h3>Acceptance trend</h3><p>Matched likes ÷ matured likes in each '+S.grain+'.</p></div><div class="legend"><span><i style="background:#159b8c"></i>Rate</span></div></div>'+
+      '<div class="chart-scroll">'+rateChart(S)+'</div><p class="chartnote">Likes after '+iso(S.resolveBefore)+' are too recent to score. Empty periods are gaps, not zeroes.</p></div></div>'+
+      '<details class="receipt"><summary>Import details & privacy receipt</summary>'+receipt()+'</details>'; }
+
   function paint(){
     var M=DD.metrics(R,CUT),h=[];
-    h.push(receipt());
+    h.push(timelinePanel());
 
     h.push('<div class="sec"><h2>Where you rank</h2>'+
       '<p class="sub">Your match rate on likes you sent, placed on a distribution built from '+
@@ -867,6 +1036,21 @@ var DD = (function(){
 
     $("#out").className=""; $("#out").innerHTML=h.join("");
 
+    Array.prototype.forEach.call(document.querySelectorAll("[data-range]"),function(b){
+      b.onclick=function(){
+        var DAY=864e5,id=b.getAttribute("data-range"),y=new Date(R.maxT).getUTCFullYear();
+        RANGE=id;VTO=R.maxT;
+        VFROM=id==="90d"?Math.max(R.minT,R.maxT-89*DAY):
+          id==="1y"?Math.max(R.minT,R.maxT-364*DAY):
+          id==="ytd"?Math.max(R.minT,Date.UTC(y,0,1)):R.minT;
+        paint(); }; });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-grain]"),function(b){
+      b.onclick=function(){GRAIN=b.getAttribute("data-grain");paint();}; });
+    $("#applyRange").onclick=function(){
+      var a=$("#viewFrom").value,z=$("#viewTo").value;
+      if(a&&z){VFROM=new Date(a+"T00:00:00Z").getTime();
+        VTO=new Date(z+"T00:00:00Z").getTime()+864e5-1;RANGE="custom";paint();} };
+
     var sl=$("#cut");
     sl.addEventListener("input",function(){ $("#cutLabel").textContent=iso(+sl.value); });
     sl.addEventListener("change",function(){
@@ -881,7 +1065,7 @@ var DD = (function(){
         {type:"application/json"}),a=document.createElement("a");
       a.href=URL.createObjectURL(b); a.download="datedawg-snapshot.json"; a.click();
       setTimeout(function(){URL.revokeObjectURL(a.href);},1000); };
-    $("#again").onclick=function(){ R=null; $("#out").className="hide";
+    $("#again").onclick=function(){ R=null; VFROM=VTO=null;RANGE="all";GRAIN="month";$("#out").className="hide";
       $("#out").innerHTML=""; if($("#drop").scrollIntoView) $("#drop").scrollIntoView({behavior:"smooth"}); };
   }
 
@@ -916,6 +1100,7 @@ var DD = (function(){
       $("#out").innerHTML='<div class="note stop">'+esc(res.error)+'</div>'; return; }
     R=res;
     if(bad.length) R.filesMissing=R.filesMissing.concat(bad.map(function(b){return b+" (unreadable)";}));
+    VFROM=R.minT;VTO=R.maxT;RANGE="all";GRAIN="month";
     var yr=R.maxT-365*864e5;
     CUT = yr>R.minT ? yr : Math.round((R.minT+R.maxT)/2);
     if(DECL){
@@ -951,6 +1136,7 @@ window.DD_BOTCTX = {
 - Never claim DateDawg measures cold-discover attractiveness, complete dating-market value, verified date conversion, reply rate, ghosting, or the best photo or prompt.
 - Its primary observable is reciprocal acceptance: of the women the subject liked, how many liked the subject back. Direction is inferred because the export does not state it explicitly.
 - Likes newer than 30 days are immature and excluded from every censoring-adjusted current result, including volume standardization and the displayed z-test.
+- Dashboard date filters are descriptive and never change the separate before/after research boundary. Timeline matches are grouped by the date the subject sent the like; the trend rate uses matured likes only.
 - Hinge percentile rows are assumptions, not an observed Hinge cohort. Tinder is an external anchor and is not part of the Hinge scenario band.
 - The page does not upload, store, log, or transmit the export. Do not ask for raw exports, messages, identity data, or verification media.
 - A p-value is shown only for a boundary declared before parsing. Moving the boundary permanently makes the session exploratory.`,

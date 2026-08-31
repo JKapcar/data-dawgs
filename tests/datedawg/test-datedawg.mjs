@@ -75,6 +75,22 @@ ok('rankStd exists',!!M.rankStd);
 ok('comment split by era',M.comBefore.n>0&&M.comAfter.n>=0);
 ok('inbound per-day computed',M.inbound.perDay>0);
 
+console.log('\n=== time-series dashboard ===');
+const allSeries=DD.timeSeries(R,R.minT,R.maxT,'month');
+t('all-range likes equal parsed outbound',allSeries.likes,R.outs.length);
+t('all-range matches preserve outcomes',allSeries.matches,R.outs.reduce((a,o)=>a+o.matched,0));
+ok('maturity removes recent likes',allSeries.matureLikes<=allSeries.likes);
+ok('monthly series fills the full range',allSeries.bins.length>12);
+ok('bin counts reconcile to selected total',allSeries.bins.reduce((a,b)=>a+b.likes,0)===allSeries.likes);
+ok('rate denominator reconciles to matured likes',
+   allSeries.bins.reduce((a,b)=>a+b.matureLikes,0)===allSeries.matureLikes);
+const recentSeries=DD.timeSeries(R,R.maxT-89*864e5,R.maxT,'month');
+ok('date range filters activity',recentSeries.likes<allSeries.likes);
+const weeklySeries=DD.timeSeries(R,R.minT,R.maxT,'week');
+ok('weekly view has more buckets than monthly',weeklySeries.bins.length>allSeries.bins.length);
+const reversed=DD.timeSeries(R,R.maxT,R.minT,'month');
+t('reversed custom dates are normalized',reversed.likes,allSeries.likes);
+
 console.log('\n=== ranking math ===');
 const fit=DD.fitFromQuantiles(0.0204,0.125,0.90);
 t('two-quantile sigma',fit.sigma.toFixed(4),'1.4145');

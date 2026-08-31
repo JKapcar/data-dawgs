@@ -86,6 +86,24 @@ const fpv=await w.eval('DD.fingerprint(window.__R)');
 ok('fingerprint is sha256',/^sha256-[0-9a-f]{64}$/.test(String(fpv)));
 ok('fingerprint rendered on receipt',/sha256-/.test(w.document.getElementById('out').textContent));
 ok('censoring applied to standardization',M.std.matured===true);
+ok('dashboard date inputs rendered',!!w.document.getElementById('viewFrom')&&!!w.document.getElementById('viewTo'));
+ok('both time-series charts rendered',out.querySelectorAll('svg.chart').length===2);
+ok('import receipt is collapsed by default',!!out.querySelector('details.receipt')&&!out.querySelector('details.receipt').open);
+ok('chart copy explains sent-like dating',/grouped by sent-like date/i.test(text));
+ok('maturity note appears beside trend',/too recent to score/i.test(text));
+
+console.log('\n=== dashboard filters ===');
+const allReadout=out.querySelector('.range-readout').textContent;
+out.querySelector('[data-range="90d"]').click();
+await new Promise(r=>setTimeout(r,50));
+ok('90-day preset changes displayed range',out.querySelector('.range-readout').textContent!==allReadout);
+out.querySelector('[data-grain="week"]').click();
+await new Promise(r=>setTimeout(r,50));
+ok('weekly grouping becomes active',out.querySelector('[data-grain="week"]').classList.contains('on'));
+const vf=w.document.getElementById('viewFrom'),vt=w.document.getElementById('viewTo');
+vf.value='2025-01-01';vt.value='2025-03-31';w.document.getElementById('applyRange').click();
+await new Promise(r=>setTimeout(r,50));
+ok('custom date range is applied',/2025-01-01 → 2025-03-31/.test(out.querySelector('.range-readout').textContent));
 
 console.log('\n=== declaration mechanics ===');
 const sl=w.document.getElementById('cut');
