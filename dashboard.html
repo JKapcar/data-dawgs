@@ -2488,7 +2488,12 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       || new URLSearchParams(location.search).get("league") === "pepperoninipples")
       && POOL.some(p => p.dd !== undefined);
     const scoring = ddRoom ? "dd" : (st.scoring || "half");
+    const moneyLabel = ddRoom ? "DataDawg$" : "MV";
     const val = p => +p[scoring] || 0;
+    const byName = {}; POOL.forEach(p=>byName[p.name]=p);
+    const pickVal = p => ddRoom
+      ? (byName[p.player] ? val(byName[p.player]) : 0)
+      : (+p.etr || (byName[p.player] ? val(byName[p.player]) : 0));
     const norm = p => p === "D" ? "DST" : p;
     const sold = new Set(picks.map(p=>p.player));
     const spent = picks.reduce((a,p)=>a+(+p.price||0),0);
@@ -2511,9 +2516,10 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     /* last sale + rolling heat: the market right now, not the whole night averaged */
     const lp = picks[picks.length-1];
     const lpT = lp && teams[lp.ti] ? teams[lp.ti].name : "";
-    const lpD = lp && lp.etr>0 ? lp.price - lp.etr : null;
-    const recent = picks.filter(p=>p.etr>0).slice(-5);
-    const heat = recent.length ? recent.reduce((a,p)=>a+(p.price-p.etr),0)/recent.length : null;
+    const lpV = lp ? pickVal(lp) : 0;
+    const lpD = lp && lpV>0 ? lp.price - lpV : null;
+    const recent = picks.filter(p=>pickVal(p)>0).slice(-5);
+    const heat = recent.length ? recent.reduce((a,p)=>a+(p.price-pickVal(p)),0)/recent.length : null;
 
     /* personalised tile when this device knows whose it is */
     const me = (window.DDMe && teams.length) ? window.DDMe.idx(teams) : null;
@@ -2534,7 +2540,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     const bars = '<div class="posbars">' + POSL.map(P=>{
       const pct = tot[P]>0 ? rem[P]/tot[P]*100 : 0;
       const th = Math.max(6, Math.round(tot[P]/maxTot*TH));
-      return '<div class="pb" title="'+P+': '+fmt$(rem[P])+' of '+fmt$(tot[P])+' MV left ('+pct.toFixed(0)+'%)">'
+      return '<div class="pb" title="'+P+': '+fmt$(rem[P])+' of '+fmt$(tot[P])+' '+moneyLabel+' left ('+pct.toFixed(0)+'%)">'
         + '<span class="pbv">$'+Math.round(rem[P])+'</span>'
         + '<span class="pbt" style="height:'+th+'px"><span class="pbf" style="height:'+pct.toFixed(1)+'%;background:'+POS_COLOR[P]+'"></span></span>'
         + '<span class="pbl">'+(P==="DST"?"D":P)+'<br><span class="pct">'+pct.toFixed(0)+'%</span></span></div>';
@@ -2558,12 +2564,12 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       ["Last sale",
         lp ? esc(lp.player.split(" ").slice(-1)[0]) + " <span class=\"tsub\">$" + lp.price + "</span>" : "—",
         lp ? (norm(lp.pos)==="DST"?"D/ST":norm(lp.pos)) + " → " + esc(lpT)
-             + (lpD==null ? "" : " · MV $" + Math.round(lp.etr) + " (" + (lpD>0?"+$"+lpD:lpD<0?"−$"+(-lpD):"even") + ")")
+             + (lpD==null ? "" : " · " + moneyLabel + " $" + Math.round(lpV) + " (" + (lpD>0?"+$"+lpD:lpD<0?"−$"+(-lpD):"even") + ")")
            : "waiting on the first nomination", ""],
       mine,
       ["Inflation", infl.toFixed(2)+"×",
         heat==null ? (infl>1.05?"prices running hot":infl<0.95?"value out there":"in balance")
-          : "last " + recent.length + " sales " + (heat>=0?"+":"−") + "$" + Math.abs(heat).toFixed(0) + " vs MV avg",
+          : "last " + recent.length + " sales " + (heat>=0?"+":"−") + "$" + Math.abs(heat).toFixed(0) + " vs " + moneyLabel + " avg",
         infl>1.05?"hot":infl<0.95?"good":""],
       ["Value left by position", bars, "", "wide"]
     ].filter(Boolean);
