@@ -240,6 +240,7 @@ button{font:inherit;cursor:pointer}
 .insightgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .insight{background:var(--surface-1);border:1px solid var(--border);border-radius:18px;padding:20px}
 .insight .big{font:400 30px/1 var(--display);margin:8px 0;color:var(--ink-1)}
+.insight .big.rankvalue{font-size:clamp(22px,2.7vw,30px);line-height:1.05}
 .insight .ey{font:800 9px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
 .insight p{margin:0;color:var(--ink-2);font-size:12px}
 .barlist{display:grid;gap:13px;margin-top:18px}.barrow{display:grid;grid-template-columns:52px 1fr 88px;
@@ -819,6 +820,7 @@ var DD = (function(){
   var pct=function(x){return (100*x).toFixed(2)+"%";};
   var num=function(n){return (n==null?"—":n.toLocaleString());};
   var iso=function(t){return new Date(t).toISOString().slice(0,10);};
+  var ordinal=function(n){n=Math.round(n);var m=n%100,v=n%10,s=(m>=11&&m<=13)?"th":v===1?"st":v===2?"nd":v===3?"rd":"th";return n+s;};
   /* A declaration is a dated commitment made BEFORE looking at the result for that
      boundary. It is captured with the number of exploratory moves that preceded it and
      is invalidated the moment the boundary changes. A toggle you can flip after
@@ -925,7 +927,7 @@ var DD = (function(){
     return String(Math.round(n)); }
   function benchmarkKey(){
     return '<div class="benchmark-key" aria-label="Tinder male reference rates">'+DD.MALE_REFERENCES.map(function(r){
-      return '<span class="'+(r.p===50?'median':'')+'"><i></i>'+esc(r.short)+' · '+pct(r.rate)+'</span>';}).join('')+'</div>'+
+      return '<span class="'+(r.p===50?'median':'')+'"><i></i>'+esc(r.label)+' · '+pct(r.rate)+'</span>';}).join('')+'</div>'+
       '<p class="benchmark-note">External Tinder reference · SwipeStats, 6,233 complete male profiles, 2020–2025. P20 and P80 are log-interpolated between published anchors; the median is published directly. Hinge and Tinder are not identical markets.</p>'; }
   function svgBenchmarkLines(L,RX,T,BY,top,labels){
     return DD.MALE_REFERENCES.map(function(r){var y=T+(BY-T)*(1-r.rate/top);
@@ -951,7 +953,7 @@ var DD = (function(){
         bars.push('<text x="'+x+'" y="'+(H-15)+'" text-anchor="middle">'+esc(b.label)+'</text>'); });
     var dots=SHOW_MATCHES?B.map(function(b,i){var x=L+step*(i+.5),y=T+PH-PH*b.matches/maxMatches;
       return '<circle class="matchdot" cx="'+x+'" cy="'+y+'" r="4"><title>'+esc(b.label)+': '+num(b.matches)+' matched likes</title></circle>';}).join(""):"";
-    return '<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Likes sent and matched likes over time">'+
+    return '<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Your likes sent and the likes that became matches over time">'+
       '<text x="'+L+'" y="11">LIKES</text><text x="'+(W-RR)+'" y="11" text-anchor="end">MATCHES</text>'+g.join("")+bars.join("")+
       (SHOW_MATCHES?'<polyline class="matchline" points="'+pts.join(" ")+'"/>':'')+dots+'</svg>'; }
   function rateChart(S){
@@ -970,7 +972,7 @@ var DD = (function(){
           (showValues?'<text class="pointlabel" x="'+x+'" y="'+Math.max(15,y-11)+'" text-anchor="middle">'+(b.rate*100).toFixed(1)+'%</text>':''));}
       if(i%Math.max(1,Math.ceil(B.length/6))===0||i===B.length-1)
         labels.push('<text x="'+x+'" y="'+(H-15)+'" text-anchor="middle">'+esc(b.label)+'</text>');});
-    return '<svg class="chart ratechart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Reciprocal acceptance rate over time">'+
+    return '<svg class="chart ratechart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Your match-back rate over time">'+
       g.join("")+svgBenchmarkLines(L,W-RR,T,T+PH,top,true)+'<path class="rateline" d="'+path.join(" ")+'"/>'+dots.join("")+labels.join("")+'</svg>'; }
 
   function cumulativeChart(S){
@@ -1003,29 +1005,29 @@ var DD = (function(){
   function insightCards(S){
     var rk=S.rate&&S.rate.n>=DD.MIN_N?DD.rank(S.rate.p):null,unmatched=Math.max(0,S.matureLikes-S.matureMatches),
         best=S.bins.filter(function(b){return b.matureLikes>=DD.MIN_N&&b.rate!=null;}).sort(function(a,b){return b.rate-a.rate;})[0];
-    return '<div class="insightgrid"><div class="insight"><span class="ey">Range rank</span><div class="big">'+(rk?'p'+Math.round(rk.lo)+'–p'+Math.round(rk.hi):'—')+'</div><p>'+(rk?'Estimated Hinge scenario band for this selected range.':'At least '+DD.MIN_N+' matured likes are needed.')+'</p></div>'+
-      '<div class="insight"><span class="ey">Outcome mix</span><div class="big">'+num(S.matureMatches)+' / '+num(S.matureLikes)+'</div><p>'+num(unmatched)+' matured likes did not become matches.</p></div>'+
-      '<div class="insight"><span class="ey">Best '+S.grain+'</span><div class="big">'+(best?pct(best.rate):'—')+'</div><p>'+(best?esc(best.label)+' · '+best.matureMatches+' of '+best.matureLikes:'No period has '+DD.MIN_N+' matured likes yet.')+'</p></div></div>'; }
+    return '<div class="insightgrid"><div class="insight"><span class="ey">Dating App MV / Market Value</span><div class="big rankvalue">'+(rk?ordinal(rk.lo)+'–'+ordinal(rk.hi)+' percentile':'—')+'</div><p>'+(rk?'Your estimated match-rate standing for this date range. Based on Hinge scenarios—not a measured Hinge population.':'At least '+DD.MIN_N+' matured likes are needed to estimate your standing.')+'</p></div>'+
+      '<div class="insight"><span class="ey">Your matched-like results</span><div class="big">'+num(S.matureMatches)+' of '+num(S.matureLikes)+'</div><p>'+num(unmatched)+' matured likes did not become matches.</p></div>'+
+      '<div class="insight"><span class="ey">Your best '+S.grain+'</span><div class="big">'+(best?pct(best.rate):'—')+'</div><p>'+(best?esc(best.label)+' · '+best.matureMatches+' matches from '+best.matureLikes+' matured likes':'No period has '+DD.MIN_N+' matured likes yet.')+'</p></div></div>'; }
   function viewPanel(S){
     if(VIEW==="patterns"){
       var cw=S.comments.with,bare=S.comments.bare;
       return '<div class="chartpair"><div class="chartcard"><h3>When you send likes</h3><p>Outbound likes by weekday in the selected range.</p>'+barRows(S.weekday,'likes','')+'</div>'+
-        '<div class="chartcard"><h3>Acceptance by weekday</h3><p>Matured matched likes ÷ matured likes. Read thin days cautiously.</p>'+barRows(S.weekday,'rate','ratefill')+benchmarkKey()+'</div></div>'+
-        '<div class="chartpair" style="margin-top:14px"><div class="chartcard"><h3>Daily volume</h3><p>What happens on light and heavy swiping days.</p>'+barRows(S.volume,'rate','ratefill')+benchmarkKey()+'</div>'+
-        '<div class="chartcard"><h3>Comment versus bare like</h3><p>Observed association only; the people you choose to write to differ.</p><div class="insightgrid" style="margin-top:18px;grid-template-columns:1fr 1fr"><div class="insight"><span class="ey">With comment</span><div class="big">'+(cw.n?pct(cw.k/cw.n):'—')+'</div><p>'+cw.k+' of '+cw.n+' matured likes</p></div><div class="insight"><span class="ey">Bare like</span><div class="big">'+(bare.n?pct(bare.k/bare.n):'—')+'</div><p>'+bare.k+' of '+bare.n+' matured likes</p></div></div></div></div>'+
-        '<div class="insightgrid" style="margin-top:14px"><div class="insight"><span class="ey">Likes per active day</span><div class="big">'+(S.activeDays?(S.likes/S.activeDays).toFixed(1):'—')+'</div><p>Average on days when you sent at least one.</p></div><div class="insight"><span class="ey">Inbound decisions</span><div class="big">'+num(S.inbound.n)+'</div><p>Processed in this range; processing time is not arrival time.</p></div><div class="insight"><span class="ey">Inbound accepted</span><div class="big">'+num(S.inbound.accepted)+'</div><p>A count, not a discover exposure rate.</p></div></div>';
+        '<div class="chartcard"><h3>Your match-back rate by weekday</h3><p>Of your matured likes sent on each weekday, the share that became matches. Read thin days cautiously.</p>'+barRows(S.weekday,'rate','ratefill')+benchmarkKey()+'</div></div>'+
+        '<div class="chartpair" style="margin-top:14px"><div class="chartcard"><h3>How daily activity relates to your results</h3><p>Your match-back rate on light and heavy liking days.</p>'+barRows(S.volume,'rate','ratefill')+benchmarkKey()+'</div>'+
+        '<div class="chartcard"><h3>Do comments appear to help?</h3><p>Your observed results for likes with a comment versus likes without one. This is association, not proof that comments caused the difference.</p><div class="insightgrid" style="margin-top:18px;grid-template-columns:1fr 1fr"><div class="insight"><span class="ey">Your likes with a comment</span><div class="big">'+(cw.n?pct(cw.k/cw.n):'—')+'</div><p>'+cw.k+' matches from '+cw.n+' matured likes</p></div><div class="insight"><span class="ey">Your likes without a comment</span><div class="big">'+(bare.n?pct(bare.k/bare.n):'—')+'</div><p>'+bare.k+' matches from '+bare.n+' matured likes</p></div></div></div></div>'+
+        '<div class="insightgrid" style="margin-top:14px"><div class="insight"><span class="ey">Your likes per active day</span><div class="big">'+(S.activeDays?(S.likes/S.activeDays).toFixed(1):'—')+'</div><p>Your average on days when you sent at least one like.</p></div><div class="insight"><span class="ey">Likes you reviewed</span><div class="big">'+num(S.inbound.n)+'</div><p>Incoming likes you processed in this range; processing time is not arrival time.</p></div><div class="insight"><span class="ey">Incoming likes you accepted</span><div class="big">'+num(S.inbound.accepted)+'</div><p>A count, not the rate at which people saw and liked you.</p></div></div>';
     }
     if(VIEW==="momentum") return '<div class="chartcard feature"><div class="charttop"><div><h3>Cumulative momentum</h3><p>How likes sent and eventual matches accumulated across the selected range.</p></div><div class="legend"><span><i style="background:var(--likes)"></i>Likes</span><span><i style="background:var(--matches)"></i>Matches</span></div></div><div class="chart-scroll">'+cumulativeChart(S)+'</div></div>'+insightCards(S);
     if(VIEW==="compare"){
       var P=DD.timeSeries(R,R.minT,R.maxT,S.grain),same=S.from===P.from&&S.to===P.to,
           delta=S.rate&&P.rate?(S.rate.p-P.rate.p)*100:null;
-      function pc(x,title,cls){return '<div class="periodcard '+cls+'"><h4>'+title+' · '+iso(x.from)+' → '+iso(x.to)+'</h4><div class="periodstats"><div><b>'+num(x.likes)+'</b><span>Likes</span></div><div><b>'+num(x.matches)+'</b><span>Matches</span></div><div><b>'+(x.rate?pct(x.rate.p):'—')+'</b><span>Acceptance</span></div></div></div>';}
+      function pc(x,title,cls){return '<div class="periodcard '+cls+'"><h4>'+title+' · '+iso(x.from)+' → '+iso(x.to)+'</h4><div class="periodstats"><div><b>'+num(x.likes)+'</b><span>Likes you sent</span></div><div><b>'+num(x.matches)+'</b><span>Became matches</span></div><div><b>'+(x.rate?pct(x.rate.p):'—')+'</b><span>Match-back rate</span></div></div></div>';}
       return '<div class="chartcard feature"><div class="charttop"><div><h3>Your overall history versus your selected snapshot</h3><p>One uploaded export, shown at two scopes. Change the snapshot with the date controls above; your overall history stays fixed.</p></div></div><div class="comparegrid">'+pc(P,'Overall history','')+'<div class="vs">VS</div>'+pc(S,'Selected snapshot','current')+'</div>'+
         (same?'<p class="chartnote"><b>Your snapshot currently is your full history.</b> Choose a year, preset, or custom dates above to make a narrower snapshot.</p>':'<p class="chartnote">Snapshot acceptance is <b>'+(delta==null?'unavailable':(delta>=0?'+':'')+delta.toFixed(2)+' percentage points')+'</b> versus your overall history. Counts cover different lengths of time, so compare their rates—not their raw totals.</p>')+
         '<div class="chart-scroll">'+compareRateChart(P,S)+'</div>'+benchmarkKey()+'</div>'+insightCards(S);
     }
-    return '<div class="chartgrid"><div class="chartcard feature"><div class="charttop"><div><h3>Likes and matches</h3><p>Blue bars are likes sent. Pink is the eventual matched-like count, dated to when you sent the like.</p></div><div class="seriesbuttons"><button data-series="likes" class="'+(SHOW_LIKES?'on':'')+'">Likes</button><button data-series="matches" class="'+(SHOW_MATCHES?'on':'')+'">Matches</button></div></div><div class="chart-scroll">'+activityChart(S)+'</div></div>'+
-      '<div class="chartcard feature"><div class="charttop"><div><h3>Acceptance trend</h3><p>Matched likes ÷ matured likes in each '+S.grain+'. Select a year to make every point readable.</p></div><div class="legend"><span><i style="background:var(--rate)"></i>Your acceptance</span></div></div><div class="chart-scroll">'+rateChart(S)+'</div>'+benchmarkKey()+'<p class="chartnote">Likes after '+iso(S.resolveBefore)+' are too recent to score. Empty periods are gaps, not zeroes.</p></div>'+insightCards(S)+'</div>'; }
+    return '<div class="chartgrid"><div class="chartcard feature"><div class="charttop"><div><h3>Likes you sent and likes that became matches</h3><p>Blue bars are likes you sent. Pink shows how many eventually became matches, dated to when you sent each like.</p></div><div class="seriesbuttons"><button data-series="likes" class="'+(SHOW_LIKES?'on':'')+'">Your likes sent</button><button data-series="matches" class="'+(SHOW_MATCHES?'on':'')+'">Your matches</button></div></div><div class="chart-scroll">'+activityChart(S)+'</div></div>'+
+      '<div class="chartcard feature"><div class="charttop"><div><h3>Your match-back rate over time</h3><p>Of the matured likes you sent in each '+S.grain+', the percentage that became matches. Select a year to make every point readable.</p></div><div class="legend"><span><i style="background:var(--rate)"></i>Your match-back rate</span></div></div><div class="chart-scroll">'+rateChart(S)+'</div>'+benchmarkKey()+'<p class="chartnote">Likes after '+iso(S.resolveBefore)+' are too recent to score. Empty periods are gaps, not zeroes.</p></div>'+insightCards(S)+'</div>'; }
   function timelinePanel(S){
     var rw=S.rate,preset=function(id,label){return '<button data-range="'+id+'" class="'+(RANGE===id?'on':'')+'" aria-pressed="'+(RANGE===id)+'">'+label+'</button>';},
         y0=new Date(R.minT).getUTCFullYear(),y1=new Date(R.maxT).getUTCFullYear(),years=[];
@@ -1038,10 +1040,10 @@ var DD = (function(){
       '<div class="seg" role="group" aria-label="Chart grouping"><button data-grain="month" aria-pressed="'+(GRAIN==='month')+'" class="'+(GRAIN==='month'?'on':'')+'">Monthly</button><button data-grain="week" aria-pressed="'+(GRAIN==='week')+'" class="'+(GRAIN==='week'?'on':'')+'">Weekly</button></div>'+
       '<div class="datefields"><input type="date" id="viewFrom" value="'+iso(S.from)+'" min="'+iso(R.minT)+'" max="'+iso(R.maxT)+'" aria-label="Range start"><span>to</span>'+
       '<input type="date" id="viewTo" value="'+iso(S.to)+'" min="'+iso(R.minT)+'" max="'+iso(R.maxT)+'" aria-label="Range end"><button class="apply" id="applyRange">Apply</button></div></div><div class="yearstrip" aria-label="Choose a year">'+years.join('')+'</div></div>'+
-      '<div class="kpis"><div class="kpi"><span class="value">'+num(S.likes)+'</span><span class="label">Likes sent</span><span class="detail">in selected range</span></div>'+
-      '<div class="kpi"><span class="value">'+num(S.matches)+'</span><span class="label">Matched likes</span><span class="detail">grouped by sent-like date</span></div>'+
-      '<div class="kpi"><span class="value">'+(rw?pct(rw.p):'—')+'</span><span class="label">Reciprocal acceptance</span><span class="detail">'+(rw?num(rw.k)+' of '+num(rw.n)+' matured likes':'no matured likes')+'</span></div>'+
-      '<div class="kpi"><span class="value">'+num(S.activeDays)+'</span><span class="label">Active days</span><span class="detail">days with an outbound like</span></div></div>'+
+      '<div class="kpis"><div class="kpi"><span class="value">'+num(S.likes)+'</span><span class="label">Likes you sent</span><span class="detail">in your selected date range</span></div>'+
+      '<div class="kpi"><span class="value">'+num(S.matches)+'</span><span class="label">Your likes that became matches</span><span class="detail">grouped by the date you sent each like</span></div>'+
+      '<div class="kpi"><span class="value">'+(rw?pct(rw.p):'—')+'</span><span class="label">Your match-back rate</span><span class="detail">'+(rw?num(rw.k)+' matches from '+num(rw.n)+' matured likes':'no matured likes')+'</span></div>'+
+      '<div class="kpi"><span class="value">'+num(S.activeDays)+'</span><span class="label">Days you were active</span><span class="detail">days when you sent at least one like</span></div></div>'+
       '<div class="viewtabs" role="tablist" aria-label="Dashboard view">'+[['overview','Overview'],['patterns','Patterns'],['momentum','Momentum'],['compare','Compare']].map(function(v){return '<button data-view="'+v[0]+'" class="'+(VIEW===v[0]?'on':'')+'" aria-selected="'+(VIEW===v[0])+'">'+v[1]+'</button>';}).join('')+'</div>'+viewPanel(S)+
       '<details class="receipt"><summary>Import details & privacy receipt</summary>'+receipt()+'</details>'; }
 
@@ -1321,7 +1323,7 @@ window.DD_BOTCTX = {
   label: "DATEDAWG METHODOLOGY",
   title: "DateDawg",
   chrome: {
-    sub: "Reciprocal acceptance, locally analyzed",
+    sub: "Your match-back rate, locally analyzed",
     ph: "Ask about the method or caveats…",
     chips: ["What does DateDawg measure?", "Why exclude recent likes?", "How are ranks estimated?"]
   },
@@ -1329,7 +1331,7 @@ window.DD_BOTCTX = {
 - Never claim DateDawg measures cold-discover attractiveness, complete dating-market value, verified date conversion, reply rate, ghosting, or the best photo or prompt.
 - Its primary observable is reciprocal acceptance: of the women the subject liked, how many liked the subject back. Direction is inferred because the export does not state it explicitly.
 - Likes newer than 30 days are immature and excluded from every censoring-adjusted current result, including volume standardization and the displayed z-test.
-- Dashboard date filters control every visible summary, chart, range rank, and selected snapshot. Timeline matches are grouped by the date the subject sent the like; the trend rate uses matured likes only.
+- Dashboard date filters control every visible summary, chart, Dating App MV / Market Value estimate, and selected snapshot. The MV range is an estimated match-rate standing from Hinge scenarios, not a measured Hinge population percentile. Timeline matches are grouped by the date the subject sent the like; the trend rate uses matured likes only.
 - Compare uses one export at two scopes: fixed overall history versus the date-filtered snapshot. Raw totals cover different spans, so compare acceptance rates rather than totals.
 - Dotted P20, median, and P80 lines are external Tinder male references from SwipeStats, not Hinge cohort measurements. The 2.04% median is published directly; P20 and P80 are log-interpolated between published anchors. Hinge percentile rows remain assumptions and are not an observed Hinge cohort.
 - The page does not upload, store, log, or transmit the export. Do not ask for raw exports, messages, identity data, or verification media.
