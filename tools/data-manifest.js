@@ -60,7 +60,10 @@ function writeDataManifest({ built = new Date().toISOString().slice(0, 10) } = {
     files.push({
       path: "/data/" + rel, url: "https://datadawgs216.com/data/" + rel,
       bytes: Buffer.byteLength(text), as_of: payload.source.captured_at.slice(0, 10),
-      sha256: digest(text), note: `Seeded ${payload.provider} league settings; see diagnostics.missing_inputs.`
+      sha256: digest(text),
+      note: `Seeded ${payload.provider} league settings; draft ${(payload.draft||{}).status||"unknown"}`
+        + ((payload.draft||{}).pick_count ? ` (${payload.draft.pick_count} picks — team, player and price are official, order is not)` : "")
+        + `. See diagnostics.missing_inputs.`
     });
   }
   const markdown = orderedNames(

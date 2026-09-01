@@ -33,8 +33,13 @@ repo holds flattened, self-contained HTML — those files *are* the source. `sit
    of the result.
 6. **Do not add auth to the draft rig.** A public board is a feature, and draft night is the
    worst possible time to find an auth bug.
-7. **Do not clear room `pepperoninipples`.** Those ~46 picks are simulated, deliberately, for
-   league testing.
+7. **Do not clear room `pepperoninipples`.** It carried the simulated picks used for league
+   testing, and then the real thing. The 2026 auction is finished and is committed to
+   `data/leagues/pepperoninipples.json` (`draft.status: "complete"`, 157 picks) — the rig
+   rebuilds the whole board from that file, so the results survive an empty room. Clearing
+   the room still costs the live pick order, and an emptied room must never be allowed to
+   overwrite the committed board: `hydrateEnvelope` drops an envelope older than the local
+   copy, and `seedPublishedDraft` refuses to shrink a board. Keep both.
 
 ## Layout
 
