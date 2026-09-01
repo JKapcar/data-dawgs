@@ -1,4 +1,9 @@
-{
+-- SwoleDawg Block 2 seed. Remote state checked 2026-08-31: active row was version 3.
+-- Idempotent for version 4: keeps all prior versions and only flips the active pointer.
+-- D1 remote imports reject explicit BEGIN/COMMIT. The activation is guarded on the
+-- inserted row existing, so a failed insert cannot deactivate the current program.
+INSERT INTO program (uid, version, doc, active, created_at, note)
+SELECT 'u_y9Pgnfml5AlhtotzlailibDR', 4, '{
   "schema_version": "3.0",
   "program_name": "Kap — Block 2",
   "athlete": "Kap",
@@ -29,9 +34,9 @@
     "never_to_failure": "No failure on dumbbell bench without a spotter. Failure is permitted on the last set of curls and rear-delt work only.",
     "log_both_rest_values": "Store rest_prescribed_s and rest_taken_s separately. A stalled lift is usually collapsed rest, not insufficient volume.",
     "loading_heavy_dumbbells": "Sit with the bells on your thighs, kick one knee up at a time as you lie back. Reverse to get out.",
-    "specialization": "Block 2 is a chest + arms specialization. Back (6 sets), rear delts (4) and legs (4) are explicit maintenance and are not expected to grow. Cut from the BOTTOM of a day's order if time runs out, never the top.",
+    "specialization": "Block 2 is a chest + arms specialization. Back (6 sets), rear delts (4) and legs (4) are explicit maintenance and are not expected to grow. Cut from the BOTTOM of a day''s order if time runs out, never the top.",
     "regional_split": "Monday biases the sternal head (flat), Thursday the clavicular head (30° incline). Peak clavicular activation sits near 30° and falls off above 45° as the front delt takes over.",
-    "per_hand_convention": "Every weight_lb value is PER HAND. Overhead extension uses two dumbbells for this reason — a single bell held in both hands breaks the convention and silently halves that lift's contribution to SUM(weight_lb * reps)."
+    "per_hand_convention": "Every weight_lb value is PER HAND. Overhead extension uses two dumbbells for this reason — a single bell held in both hands breaks the convention and silently halves that lift''s contribution to SUM(weight_lb * reps)."
   },
   "effort_schedule": [
     {
@@ -100,7 +105,7 @@
           "step": 2.5,
           "rest_between_sets": 90,
           "rest_after_exercise": 120,
-          "cue": "Sternal bias. Slight elbow bend held fixed, wide arc, deep stretch at the bottom. Don't chase load."
+          "cue": "Sternal bias. Slight elbow bend held fixed, wide arc, deep stretch at the bottom. Don''t chase load."
         },
         {
           "id": "mon_3",
@@ -295,7 +300,7 @@
           "step": 2.5,
           "rest_between_sets": 90,
           "rest_after_exercise": 90,
-          "cue": "Bells pressed together, elbows tracking close. Lateral and medial head bias — different tendon stress from Monday's skullcrusher."
+          "cue": "Bells pressed together, elbows tracking close. Lateral and medial head bias — different tendon stress from Monday''s skullcrusher."
         },
         {
           "id": "thu_5",
@@ -431,4 +436,8 @@
     "weights": "per hand for every dumbbell exercise, including overhead extensions with two dumbbells",
     "simulation": false
   }
-}
+}', 0, datetime('now'), 'Block 2 research-revised prescription; chest 15, biceps 13, triceps 11; weeks 1-3 RIR 3 with 4-set lifts trimmed to 3; two-bell overhead extensions.'
+WHERE NOT EXISTS (SELECT 1 FROM program WHERE uid='u_y9Pgnfml5AlhtotzlailibDR' AND version=4);
+UPDATE program SET active=CASE WHEN version=4 THEN 1 ELSE 0 END
+WHERE uid='u_y9Pgnfml5AlhtotzlailibDR'
+  AND EXISTS (SELECT 1 FROM program WHERE uid='u_y9Pgnfml5AlhtotzlailibDR' AND version=4);

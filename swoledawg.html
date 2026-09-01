@@ -7371,6 +7371,37 @@ function targets(){
 
 const LIB_BY_KEY={};
 
+/* API-mode attribution is pinned to the program version + exercise id, never to the
+   display name. Block 1 reused slot ids for different movements, so the block is part
+   of the key: `mon_2` alone is not stable across program rewrites. Secondary muscles
+   remain documented here for future analysis, while the weekly target bars count the
+   direct (primary) sets the program prescribes. */
+const PROGRAM_MUSCLES={
+  2:{
+    mon_1:{pri:['chest'],sec:['triceps','front_delts']},
+    mon_2:{pri:['chest'],sec:[]},
+    mon_3:{pri:['triceps'],sec:[]},
+    mon_4:{pri:['triceps'],sec:[]},
+    mon_5:{pri:['quads'],sec:[]},
+    mon_6:{pri:['hamstrings'],sec:[]},
+    tue_1:{pri:['biceps'],sec:[]},
+    tue_2:{pri:['biceps'],sec:['forearms']},
+    tue_3:{pri:['back'],sec:['biceps','rear_delts']},
+    tue_4:{pri:['rear_delts'],sec:[]},
+    tue_5:{pri:['side_delts'],sec:[]},
+    thu_1:{pri:['chest'],sec:['triceps','front_delts']},
+    thu_2:{pri:['chest'],sec:[]},
+    thu_3:{pri:['triceps'],sec:[]},
+    thu_4:{pri:['triceps'],sec:['chest']},
+    thu_5:{pri:['side_delts'],sec:[]},
+    fri_1:{pri:['biceps'],sec:[]},
+    fri_2:{pri:['biceps'],sec:[]},
+    fri_3:{pri:['front_delts'],sec:['triceps','side_delts']},
+    fri_4:{pri:['back'],sec:['biceps','rear_delts']},
+    fri_5:{pri:['rear_delts'],sec:[]}
+  }
+};
+
 /* ---- Exercise art: cartoon form guides ----
    One inline SVG per movement pattern, matched to the exercise NAME by the ordered
    keyword rules below — first hit wins, so specific patterns sit above generic ones
@@ -7446,7 +7477,12 @@ function daySets(d){
   w.exercises.forEach(ex=>{
     const n=(ex.sets||[]).length;hard+=n;
     const lib=LIB_BY_KEY[normKey(ex.name)];
-    if(lib){add(lib.pri,n,true);(lib.sec||[]).forEach(m=>add(m,n,(lib.secFull||[]).includes(m)));}
+    /* A hydrated program row carries an exercise_id plus its pinned primary bucket.
+       Prefer that stable identity even when the name happens to resolve in LIB; name
+       matching is only the signed-out planner fallback. */
+    if(ex.exercise_id&&(ex.muscle_groups||[]).length)
+      (ex.muscle_groups||[]).forEach(m=>add(m,n,true));
+    else if(lib){add(lib.pri,n,true);(lib.sec||[]).forEach(m=>add(m,n,(lib.secFull||[]).includes(m)));}
     else{unmatched.push(ex.name);(ex.muscle_groups||[]).forEach((raw,i)=>add(raw,n,i===0));}
   });
   return{b:out,hard,unmatched};
@@ -8247,8 +8283,12 @@ async function sdHydrateDays(){
     catch(e){ continue; }
     const byEx = new Map();
     for(const row of (detail.sets || [])){
+      const block = Number(detail.session && detail.session.block);
+      const muscles = (PROGRAM_MUSCLES[block] || {})[row.exercise_id] || null;
       if(!byEx.has(row.exercise_id))
-        byEx.set(row.exercise_id, {name:row.exercise_name, muscle_groups:[], sets:[]});
+        byEx.set(row.exercise_id, {exercise_id:row.exercise_id,name:row.exercise_name,
+          muscle_groups:muscles?muscles.pri.slice():[],
+          secondary_muscle_groups:muscles?muscles.sec.slice():[],sets:[]});
       byEx.get(row.exercise_id).sets.push({
         reps: row.reps,
         /* the page's internal model is metric; the ledger is imperial. Convert on the
@@ -8482,7 +8522,7 @@ function trainingProgram(){
   const dayKey = sdDayKey(PLAN_DAY);
   const day    = sdDayOf(PROG, dayKey);
   const date   = new Date(PLAN_DAY + 'T12:00:00');
-  const rirTxt = effort && effort.reps_in_reserve != null ? effort.reps_in_reserve + ' RIR' : 'see effort_schedule';
+  const rirTxt = effort && effort.reps_in_reserve != null ? effort.reps_in_reserve + ' RIR' : 'exercise-specific RIR';
 
   const logged = (DATA.days || []).find(x => x.date === PLAN_DAY);
   const doneBy = new Map();
@@ -8511,6 +8551,8 @@ function trainingProgram(){
 
   document.getElementById('planBody').innerHTML = exs.map((ex,n)=>{
     const nSets = sdSetsFor(ex, effort);
+    const effectiveRir = effort && effort.reps_in_reserve != null
+      ? effort.reps_in_reserve : ex.rir;
     const done  = doneBy.get(normKey(ex.name));
     const nDone = done ? (done.sets || []).length : 0;
     const start = ex.start_weight_lb_per_hand;
@@ -8548,7 +8590,7 @@ function trainingProgram(){
           <button class="extimer" type="button" data-rest="${typeof ex.rest_between_sets==='number'?ex.rest_between_sets:120}"
             aria-label="Start rest timer"><span class="xt-fill" aria-hidden="true"></span><span class="xt-ic">${XT_EGG}</span><span class="xt-t">REST ${esc(sdRest(ex.rest_between_sets))}</span></button>
           <button class="btn sm primary" data-sdsave="${esc(ex.id)}">Save sets</button></div>`}
-        <div class="cue">Target ${esc(String(ex.rep_min))}–${esc(String(ex.rep_max))} reps, leave ${esc(String(effort && effort.reps_in_reserve != null ? effort.reps_in_reserve : '—'))} in reserve ·
+        <div class="cue">Target ${esc(String(ex.rep_min))}–${esc(String(ex.rep_max))} reps, leave ${esc(String(effectiveRir != null ? effectiveRir : '—'))} in reserve ·
           rest ${esc(sdRest(ex.rest_between_sets))} between sets${ex.load_rule?' · '+esc(ex.load_rule):''}
           ${ex.cue?'<br>'+esc(ex.cue):''}
           ${ex.rationale?'<br><i>'+esc(ex.rationale)+'</i>':''}</div>
