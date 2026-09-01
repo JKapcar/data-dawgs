@@ -409,6 +409,42 @@ console.log("\nan empty account gets the example week, and only an empty one");
      (page.match(/"device": \{"sleep_total_min"/g) || []).length >= 20);
 }
 
+console.log("\nBlock 2 keeps its ramp and volume attribution honest");
+{
+  const page = fs.readFileSync(resolve(WORK, "..", "swoledawg.html"), "utf8");
+  const program = JSON.parse(fs.readFileSync(resolve(WORK, "..", "docs", "swoledawg", "program.json"), "utf8"));
+  const mapMatch = page.match(/const PROGRAM_MUSCLES=(\{[\s\S]*?\n\});\n/);
+  const muscleMap = mapMatch ? Function("return " + mapMatch[1])() : null;
+
+  ok("the checked-in program is Block 2 and starts on its first Monday",
+     program.block === 2 && program.block_start_date === "2026-08-31");
+  ok("weeks 1-3 hold RIR 3 and trim only the 4-set exercises",
+     [1,2,3].every(w => {
+       const e = program.effort_schedule.find(x => x.week === w);
+       return e && e.reps_in_reserve === 3 && e.sets_override === 3;
+     }));
+  ok("week 4 returns to each exercise's written RIR",
+     program.effort_schedule.some(e => e.week === "4+" && e.reps_in_reserve === null)
+     && program.days.flatMap(d => d.exercises).every(e => e.rir != null));
+
+  const exercises = program.days.flatMap(d => d.exercises);
+  ok("all 21 Block 2 exercises have a block-scoped id attribution",
+     muscleMap && exercises.length === 21 && exercises.every(e => muscleMap[2][e.id]));
+  const direct = {};
+  for(const e of exercises) for(const m of muscleMap[2][e.id].pri)
+    direct[m] = (direct[m] || 0) + e.sets;
+  ok("the direct weekly bars land on chest 15 / biceps 13 / triceps 11",
+     direct.chest === 15 && direct.biceps === 13 && direct.triceps === 11);
+  ok("hydration keys attribution by session block + exercise id before LIB names",
+     page.includes("(PROGRAM_MUSCLES[block] || {})[row.exercise_id]")
+     && /if\(ex\.exercise_id&&\(ex\.muscle_groups\|\|\[\]\)\.length\)/.test(page));
+
+  const overhead = exercises.filter(e => /overhead DB extension/.test(e.name));
+  ok("both overhead extensions are two-bell, per-hand prescriptions",
+     overhead.length === 2 && overhead.every(e => e.start_weight_lb_per_hand === 15
+       && e.start_weight_lb_total == null && /two bells/i.test(e.name)));
+}
+
 console.log("\nannotations match what these tools actually do");
 {
   const sd = W.MCP_TOOLS.filter(t => t.name.startsWith("sd_"));

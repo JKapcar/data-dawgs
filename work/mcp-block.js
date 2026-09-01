@@ -4929,7 +4929,7 @@ const MCP_TOOLS = [
     title: "SwoleDawg — the program",
     catalog: "core",
     readOnlyHint: true,
-    description: "The athlete's current training program, or one day of it, with rest values and rep ranges. Sets shown already have the current week's sets_override applied — do not re-apply it.",
+    description: "The athlete's current training program, or one day of it, with rest values, rep ranges and effective RIR. Sets shown already have the current week's sets_override applied — do not re-apply it.",
     inputSchema: { type: "object", properties: { day: { type: "string", description: "monday|tuesday|… (omit for the whole program)" } }, additionalProperties: false },
     async run(args, env, caller) {
       if (!caller || caller.kind !== "user") return toolErr(SWOLE_NEEDS_USER);
@@ -4939,11 +4939,14 @@ const MCP_TOOLS = [
       const today = new Date().toISOString().slice(0, 10);
       const week = swoleWeekOf(prog.doc, today);
       const effort = swoleEffortFor(prog.doc, week);
+      const rirFor = e => effort && effort.reps_in_reserve != null
+        ? effort.reps_in_reserve : (e.rir == null ? null : e.rir);
       const shape = d => ({
         day: d.day, name: d.name,
         exercises: (d.exercises || []).map(e => ({
           id: e.id, name: e.name, sets: swoleSetsFor(e, effort),
           reps: e.rep_min + "-" + e.rep_max,
+          reps_in_reserve: rirFor(e),
           start_weight_lb_per_hand: e.start_weight_lb_per_hand,
           rest_between_sets_s: e.rest_between_sets, rest_after_exercise_s: e.rest_after_exercise,
           cue: e.cue || null,
