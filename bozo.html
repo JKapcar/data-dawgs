@@ -917,7 +917,7 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
    from --ink-*, which in light theme are dark-on-dark. */
 .bz-carnival{
   /* the cabinet's own metals — brown-and-gold, unchanged */
-  --bulb:#ffd98a; --bulb-off:#5d4826; --brass:#c9a24a; --brass-hi:#f2dda6; --brass-lo:#6d5220;
+  --brass:#c9a24a; --brass-hi:#f2dda6; --brass-lo:#6d5220;
   --nose:#e33b26; --cream:#fff8ea;
   /* the midway palette: tent red, gold, grape signs, turquoise booth */
   --candy:#e03131; --gold:#f0b429; --gold-hi:#ffe9a8; --gold-lo:#8a6212;
@@ -1427,6 +1427,10 @@ table.survtbl td:first-child{text-align:left;font-weight:650}
   --pb-display:"Arial Black","Helvetica Neue",Helvetica,Arial,sans-serif;
   --pb-serif:Georgia,"Times New Roman",ui-serif,serif;
   --pb-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  /* the cabinet and the closed midway share one bulb system */
+  --bulb:#ffd98a; --bulb-off:#5d4826; --bulbrun:paused;
+  --pb-night-ornaments:1; --pb-fog-alpha:.08;
+  --pb-dead-bulb-rail:radial-gradient(circle at 13px 8px,var(--bulb-off) 0 3.4px,transparent 4.2px) 0 0/26px 16px repeat-x;
   /* dark = the bill printed on dark stock */
   --pb-stock:#0d100c; --pb-ink:#cfd3bd; --pb-ink2:#8b9179; --pb-ink3:#5d6251;
   --pb-red:#b6421a; --pb-rule:rgba(207,211,189,.10); --pb-edge:#241a0d;
@@ -1439,18 +1443,39 @@ table.survtbl td:first-child{text-align:left;font-weight:650}
   --pb-stock:#fdf8ec; --pb-ink:#1e1209; --pb-ink2:#5b4a37; --pb-ink3:#8c7b66;
   --pb-red:#c1290a; --pb-rule:#dccfb2; --pb-edge:#241a0d;
   --pb-shadow:rgba(49,29,0,.14);
+  --pb-night-ornaments:0; --pb-fog-alpha:0;
   --slip-stock:#fffdf6; --slip-ink:#1a1208; --slip-ink2:#6b5c45; --slip-rule:#d9cdb4;
   --slip-red:#b32d0c;
 }
 /* ---- the bill itself: #hubCard stops being a card and becomes stock ---- */
 #hubCard.pb-bill{
-  background:var(--pb-stock); color:var(--pb-ink);
+  background:var(--pb-stock); color:var(--pb-ink); position:relative;
   border:1px solid var(--pb-edge); border-radius:3px;
   padding:0; overflow:hidden;
   box-shadow:0 1px 0 var(--pb-edge), 0 10px 30px var(--pb-shadow);
 }
+/* One shared dead rail, top and bottom. The larger radial layers are glow only;
+   the final layer is the same off-bulb repeat on both edges. Static by design. */
+#hubCard.pb-bill::before,#hubCard.pb-bill::after{content:"";position:absolute;left:0;right:0;
+  height:16px;z-index:2;pointer-events:none;opacity:var(--pb-night-ornaments);animation:none;
+  background:
+    radial-gradient(circle at 13% 8px,rgba(255,233,168,.40) 0 5px,rgba(255,233,168,.10) 8px,transparent 22px),
+    radial-gradient(circle at 51% 8px,rgba(255,233,168,.40) 0 5px,rgba(255,233,168,.10) 8px,transparent 22px),
+    radial-gradient(circle at 91% 8px,rgba(255,233,168,.40) 0 5px,rgba(255,233,168,.10) 8px,transparent 22px),
+    radial-gradient(circle at 13% 8px,var(--bulb) 0 3.4px,transparent 4.2px),
+    radial-gradient(circle at 51% 8px,var(--bulb) 0 3.4px,transparent 4.2px),
+    radial-gradient(circle at 91% 8px,var(--bulb) 0 3.4px,transparent 4.2px),
+    var(--pb-dead-bulb-rail)}
+#hubCard.pb-bill::before{top:0}
+#hubCard.pb-bill::after{bottom:0;transform:rotate(180deg)}
+/* The closed midway hangs low over the page; the light theme resolves both alpha
+   variables to zero, so its rendering remains unchanged. */
+body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:min(42vh,420px);
+  z-index:39;pointer-events:none;background:
+    radial-gradient(ellipse 72% 68% at bottom left,rgb(139 145 121 / var(--pb-fog-alpha)) 0,transparent 68%),
+    radial-gradient(ellipse 72% 68% at bottom right,rgb(139 145 121 / var(--pb-fog-alpha)) 0,transparent 68%)}
 /* the printed area sits inside a hairline frame, like a real broadside's plate */
-.pb-bill .pb-plate{border:1px solid var(--pb-rule);margin:clamp(9px,1.6vw,15px);
+.pb-bill .pb-plate{position:relative;z-index:1;border:1px solid var(--pb-rule);margin:clamp(9px,1.6vw,15px);
   padding:clamp(16px,3.4vw,38px) clamp(14px,3.6vw,44px)}
 .pb-bill hr{border:0;margin:0}
 .pb-bill .pb-rule{border-top:1px solid var(--pb-ink);opacity:.85}
