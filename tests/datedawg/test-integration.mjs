@@ -47,6 +47,7 @@ ok('Toto knows companion memory is inactive and context is sanitized',/chart com
 ok('Toto knows Compare is a normalized multi-story playground',/Compare is a linked visual playground[\s\S]*30-day-normalized recorded activity pace[\s\S]*comment\/no-comment associations/.test(date));
 ok('Toto names inbound as reviewed decisions rather than arrivals',/Overview includes incoming likes reviewed and accepted over time[\s\S]*not arrivals, impressions, profile views/.test(date));
 ok('Toto distinguishes the rate chart story from its analyst uncertainty view',/scoreable match-back-rate timeline defaults to Story view[\s\S]*Analyst view adds Wilson uncertainty whiskers[\s\S]*not an average of monthly or weekly point heights/.test(date));
+ok('Toto knows the Market slider guardrails and their limit',/Market’s comparison control divides matured likes into Before and After[\s\S]*preserve at least 30 matured likes on both sides[\s\S]*do not create significance, common volume support, or causality/.test(date));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail?1:0);

@@ -88,6 +88,15 @@ const recentSeries=DD.timeSeries(R,R.maxT-89*864e5,R.maxT,'month');
 ok('date range filters activity',recentSeries.likes<allSeries.likes);
 const weeklySeries=DD.timeSeries(R,R.minT,R.maxT,'week');
 ok('weekly view has more buckets than monthly',weeklySeries.bins.length>allSeries.bins.length);
+const quarterlySeries=DD.timeSeries(R,R.minT,R.maxT,'quarter');
+const yearlySeries=DD.timeSeries(R,R.minT,R.maxT,'year');
+ok('quarterly view has fewer buckets than monthly',quarterlySeries.bins.length<allSeries.bins.length);
+ok('yearly view has fewer buckets than quarterly',yearlySeries.bins.length<quarterlySeries.bins.length);
+ok('quarterly labels are human-readable',quarterlySeries.bins.every(b=>/^Q[1-4] \d{4}$/.test(b.label)));
+ok('yearly labels are human-readable',yearlySeries.bins.every(b=>/^\d{4}$/.test(b.label)));
+ok('quarterly and yearly counts reconcile',
+   quarterlySeries.bins.reduce((a,b)=>a+b.likes,0)===allSeries.likes&&
+   yearlySeries.bins.reduce((a,b)=>a+b.likes,0)===allSeries.likes);
 const reversed=DD.timeSeries(R,R.maxT,R.minT,'month');
 t('reversed custom dates are normalized',reversed.likes,allSeries.likes);
 ok('weekday likes reconcile to selected total',
