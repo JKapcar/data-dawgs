@@ -525,6 +525,19 @@ footer a{color:var(--accent)}
 .playbill .league .adm{font:700 9.5px/1 ui-monospace,monospace;letter-spacing:1.3px;
   text-transform:uppercase;color:var(--accent)}
 .playbill .league .backlink{margin:0 0 0 auto;font-size:12.5px}
+/* The league picker and the four page sheets are one navigation decision. Keeping
+   them in one rail means changing leagues never requires returning to the directory. */
+.playbill .page-tabs{display:grid;grid-template-columns:minmax(190px,auto) minmax(0,1fr);
+  align-items:stretch;margin-top:12px;border-top:1px solid var(--grid);border-bottom:1px solid var(--grid)}
+.playbill .page-tabs .league{padding:9px 14px 9px 2px;border-right:1px solid var(--grid);flex-wrap:nowrap}
+.playbill .page-tabs .league select{max-width:220px;font-weight:850}
+.playbill .page-tabs .snav{margin:0;border-top:0;align-self:stretch}
+.playbill .page-tabs .snav button{display:flex;align-items:center;justify-content:center}
+@media(max-width:720px){
+  .playbill .page-tabs{grid-template-columns:1fr}
+  .playbill .page-tabs .league{border-right:0;border-bottom:1px solid var(--grid);padding:9px 2px}
+  .playbill .page-tabs .league select{max-width:min(65vw,260px)}
+}
 /* ---- the cast strip: board / one cell per player / league ----
    ⚠️ ONE row that scrolls, not a wrapping cloud of pills. Ten pills wrapped to three
    rows at 390px and pushed the board under the fold, which is the whole reason this
@@ -3472,17 +3485,18 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <!-- and #lgSize prints the COUNT only now — the week used to be printed twice. -->
     <span class="sz" id="lgSize"></span>
   </div>
-  <div class="league" id="lgbar" style="display:none">
-    <label class="lil" for="lgPick">League</label>
-    <select id="lgPick"></select>
-    <span class="lgname" id="lgName"></span>
-    <span class="lil" id="lgChange" style="display:none">change ↓</span>
-    <span class="demo" id="lgDemo" style="display:none">Demo</span>
-    <span class="adm" id="adminBadge"></span>
-    <a class="backlink" id="backHub" href="bozo.html" style="display:none">← All leagues</a>
+  <div class="page-tabs">
+    <div class="league" id="lgbar" style="display:none">
+      <label class="lil" for="lgPick">League</label>
+      <select id="lgPick"></select>
+      <span class="lgname" id="lgName"></span>
+      <span class="lil" id="lgChange" style="display:none">change ↓</span>
+      <span class="demo" id="lgDemo" style="display:none">Demo</span>
+      <span class="adm" id="adminBadge"></span>
+      <a class="backlink" id="backHub" href="bozo.html" style="display:none">← All leagues</a>
+    </div>
+    <div class="snav" id="snav"></div>
   </div>
-  <!-- ---------- cast strip: the board, one cell per player, the league ---------- -->
-  <div class="snav" id="snav"></div>
   <div class="sheetbar" id="sheetBar" style="display:none"></div>
 </header>
 
@@ -4067,7 +4081,11 @@ function clearSession(){
 const bust = () => 'cb=' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
 
 async function wGet(path){
-  const r = await fetch(WORKER + path + (path.includes('?')?'&':'?') + bust());
+  const h = {};
+  // Directory visibility is session-aware. GETs use the same advertised header as
+  // writes, so /league/list can return public leagues plus only this member's leagues.
+  if(ME) h['X-Bozo-Session'] = ME.session;
+  const r = await fetch(WORKER + path + (path.includes('?')?'&':'?') + bust(), {headers:h});
   const j = await r.json().catch(()=>({error:'bad response'}));
   if(!r.ok) throw new Error(j.error || ('HTTP '+r.status));
   return j;
@@ -4683,8 +4701,8 @@ function paintHub(){
 
   document.getElementById('hubNote').textContent = ME
     ? (isAdmin() ? 'You can rename any league here, or open one to manage its roster and rules.'
-                 : 'Open a league to see its board.')
-    : 'Sign in to submit a leg. The boards are public either way.';
+                 : 'Public leagues plus the leagues you belong to are shown here.')
+    : 'The two public Bozo rooms are shown here. Sign in to see your own leagues.';
 
   // The bill's live surfaces. Both are cheap and idempotent; paintHub runs on every
   // poll, so neither may do anything that accumulates.
@@ -6423,6 +6441,7 @@ function paintTicker(players, t, mx, holder){
    WITH the numbers rather than sitting in a footnote he can ignore. */
 const BOZO_SYS = `RIGHT NOW you are on Bozo, a weekly group betting game inside the Data Dawgs site.
 THE GAME: each member submits ONE leg. Every leg goes on ONE real parlay at DraftKings, funded by last week's bozo. Whoever busts it worst wears it and funds the next ticket.
+- LEAGUE VISIBILITY: Bozo Boyz and the public Royale demo are listed for everyone. A signed-in person additionally sees only leagues they belong to or manage. The league picker beside the four page tabs uses that same filtered list.
 - Favorites only, inside the league's price band. No exact duplicate legs. The ticket LOCKS the moment the last leg lands; that moment is the close.
 - Only legs that LOST are eligible to be the bozo. Nobody who cashed can wear it, no matter how bad the price was.
 - Each week the tiebreaker hierarchy is a FRESH RANDOM PERMUTATION of the league's live levers, drawn on the server and written once. It is not a weighted score and not a fixed cascade. Walk the drawn order; the first lever that isolates one person names the bozo; ties fall to the next lever down.

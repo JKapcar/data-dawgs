@@ -25,7 +25,7 @@
  * picks and ledger, at /bozo/leagues/<id> (under /bozo, so it inherits the public-read
  * rule — no rules change). Every Bozo route takes an optional {league}; absent means
  * "main", so pre-league callers keep working.
- *   GET  /league/list    — public directory: id, name, manager, size, week, status
+ *   GET  /league/list    — public leagues + signed-in member/manager leagues
  *   POST /league/create  — SITE ADMIN only: {id, name, manager}
  *   POST /league/member  — manager: {league, player, action:"add"|"remove"}  ← the size dial
  *   POST /league/invite  — manager: mints a join link, CREATES the account if new
@@ -1538,7 +1538,7 @@ export default {
     if (url.pathname === "/auth/guillotine-state") return authGuillotineState(request, env, cors);
     if (url.pathname === "/league/mine")   return universalLeagueMine(request, env, cors);
     if (url.pathname === "/league/gate")   return universalLeagueGate(request, env, cors);
-    if (url.pathname === "/league/list")   return leagueList(env, cors);
+    if (url.pathname === "/league/list")   return leagueList(request, env, cors);
     if (url.pathname === "/league/create") return leagueCreateDispatch(request, env, cors);
     if (url.pathname === "/league/delete") return leagueDelete(request, env, cors);
     if (url.pathname === "/league/import") return leagueImport(request, env, cors);
@@ -4168,13 +4168,31 @@ async function requireMember(request, env, lid) {
   return { ...auth, league: lg, lid, siteAdmin };
 }
 
-// GET /league/list — public. The board is public, so the league directory is too.
-// Deliberately thin: no picks, no ledger, just enough to draw a switcher.
-async function leagueList(env, cors) {
+// GET /league/list — two named public rooms plus the signed-in person's rooms.
+//
+// ⚠️ THIS FILTER LIVES HERE, BEFORE SERIALISATION. Hiding cards in bozo.html would
+// still hand every private league and every roster name to an unsigned browser. A
+// missing, expired or forged session simply receives the public catalog; it never
+// turns a read-only directory request into an auth error.
+//
+// `demo-royale` remains visibly labelled DEMO · SIMULATED by its stored settings and
+// the page. It is the public Royale surface until a live Bozo Boyz Royale replaces it.
+const PUBLIC_BOZO_LEAGUES = new Set([DEFAULT_LEAGUE, "demo-royale"]);
+async function leagueList(request, env, cors) {
   let leagues;
   try { leagues = await loadLeagues(env); }
   catch (e) { return json({ error: e.message }, 502, cors); }
-  const out = Object.entries(leagues).map(([id, lg]) => ({
+
+  let viewer = null;
+  const hasSession = request.headers.has("X-Dawg-Session") || request.headers.has("X-Bozo-Session");
+  if (hasSession) {
+    const auth = await sessionAuth(request, env);
+    if (!auth.err) viewer = auth.name;
+  }
+
+  const visible = ([id, lg]) => PUBLIC_BOZO_LEAGUES.has(id)
+    || (!!viewer && (lg.manager === viewer || isMember(lg, viewer)));
+  const out = Object.entries(leagues).filter(visible).map(([id, lg]) => ({
     id, name: lg.name || id, manager: lg.manager || null,
     size: memberNames(lg).length,
     members: memberNames(lg),
@@ -4182,7 +4200,7 @@ async function leagueList(env, cors) {
     settings: settingsOf(lg),
     week: lg.week || 1, status: lg.status || "open",
   })).sort((a, b) => a.id === DEFAULT_LEAGUE ? -1 : b.id === DEFAULT_LEAGUE ? 1 : a.name.localeCompare(b.name));
-  return json({ leagues: out, defaultLeague: DEFAULT_LEAGUE }, 200, cors);
+  return json({ leagues: out, defaultLeague: DEFAULT_LEAGUE, signedIn: !!viewer }, 200, cors);
 }
 
 // POST /league/create {id, name, manager} — SITE ADMIN only. Kap makes leagues and
