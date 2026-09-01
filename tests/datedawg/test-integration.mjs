@@ -37,6 +37,7 @@ ok('Toto is told dashboard filters rank the exact visible dashboard rate',/autom
 ok('Toto is told the Verdict and detail use one scope and method',/Verdict and detailed ranking panel always use the same active scope and primary method/.test(date));
 ok('Toto is told Patterns period switches update the whole story',/Overall, Last year, Last 6 months, and Last month switch the entire illustrated story together/.test(date));
 ok('Toto is told benchmark selection bias has unknown direction',/direction of that bias is unknown/.test(date));
+ok('Toto is told charts default to cohort with an all-men toggle',/default to the subject’s age cohort[\s\S]*“All men” is an explicit comparison toggle/.test(date));
 ok('Toto is told pending inbound queues undercount',/inbound counts undercount when a queue is pending/.test(date));
 ok('Toto is told reply rate and ghosting are not computable',/Reply rate and true ghosting are not computable/.test(date));
 ok('Toto is told conversion pipes are deliberately not surfaced',/conversion pipes are retained only in the sanitized snapshot/.test(date));

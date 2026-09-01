@@ -181,7 +181,7 @@ ok('clicking a selected endpoint shrinks the multi-year range',
   !out.querySelector('[data-range="year-2024"]').classList.contains('on')&&
   out.querySelector('[data-range="year-2025"]').classList.contains('on'));
 ok('year view labels acceptance points',out.querySelectorAll('.pointlabel').length>0);
-ok('rate chart labels the weighted selected-period result',!!out.querySelector('.selectedline')&&/SELECTED PERIOD/.test(out.querySelector('.selectedlabel').textContent)&&/PERCENTILE ALL MEN/.test(out.querySelector('.selectedlabel').textContent));
+ok('rate chart labels the weighted selected-period result against the default cohort',!!out.querySelector('.selectedline')&&/SELECTED PERIOD/.test(out.querySelector('.selectedlabel').textContent)&&/PERCENTILE MEN 40–44/.test(out.querySelector('.selectedlabel').textContent));
 ok('both main charts have their own filters',out.querySelectorAll('.charttools').length===2&&out.querySelectorAll('[data-chart-year]').length===2);
 ok('both main charts expose six-month and one-month slices',out.querySelectorAll('.charttools [data-range="6m"]').length===2&&out.querySelectorAll('.charttools [data-range="1m"]').length===2);
 let chartYear=out.querySelector('[data-chart-year]');chartYear.value='2024';chartYear.dispatchEvent(new w.Event('change'));
@@ -189,7 +189,18 @@ await new Promise(r=>setTimeout(r,50));
 ok('chart-local year filter changes the shared view',/2024-01-10 → 2024-12-31/.test(out.querySelector('.range-readout').textContent));
 out.querySelector('[data-range="year-2025"]').click();
 await new Promise(r=>setTimeout(r,50));
-ok('main charts render a median line and 20th–80th band',out.querySelectorAll('svg .benchmarkline.median').length===2&&out.querySelectorAll('svg .benchmarkband').length===2&&/20th–80th percentile benchmark/.test(out.textContent));
+ok('main charts default to the age-cohort median and 20th–80th band',
+  out.querySelectorAll('svg .benchmarkline.median').length===2&&out.querySelectorAll('svg .benchmarkband').length===2&&
+  /Men 40–44 median · 1\.50%/.test(out.textContent)&&/Men 40–44 20th–80th percentile/.test(out.textContent)&&
+  Array.from(out.querySelectorAll('[data-benchmark-scope="cohort"]')).every(x=>x.classList.contains('on')));
+out.querySelector('[data-benchmark-scope="all"]').click();
+await new Promise(r=>setTimeout(r,50));
+ok('all-men benchmark is an explicit chart toggle',
+  /All men median · 2\.04%/.test(out.textContent)&&
+  Array.from(out.querySelectorAll('[data-benchmark-scope="all"]')).every(x=>x.classList.contains('on'))&&
+  /percentile among all men/i.test(out.querySelectorAll('.kpi')[2].textContent));
+out.querySelector('[data-benchmark-scope="cohort"]').click();
+await new Promise(r=>setTimeout(r,50));
 ok('main charts render at a scrollable readable width',Array.from(out.querySelectorAll('svg.chart')).every(x=>parseInt(x.style.width,10)>=1040));
 ok('activity chart defaults to a readable spread scale',out.querySelector('[data-activity-scale="sqrt"]').classList.contains('on')&&out.querySelector('svg[data-scale-mode="sqrt"]'));
 ok('activity chart labels its largest real counts',out.querySelectorAll('svg[data-scale-mode] .barlabel').length>0&&out.querySelectorAll('svg[data-scale-mode] .matchlabel').length>0);
@@ -209,6 +220,7 @@ await new Promise(r=>setTimeout(r,50));
 out.querySelector('[data-view="patterns"]').click();
 await new Promise(r=>setTimeout(r,50));
 ok('patterns view tells an ecosystem and activity story',/Where you live in the dating ecosystem/.test(out.textContent)&&/Your week has a shape/.test(out.textContent)&&/The activity terrain/.test(out.textContent));
+ok('patterns story defaults to the age-cohort ecosystem',out.querySelector('[data-benchmark-scope="cohort"]').classList.contains('on')&&/Men 40–44 20th–80th percentile Tinder reference/.test(out.textContent));
 ok('patterns has one story-wide period switch',out.querySelectorAll('.patternfilters').length===1&&out.querySelectorAll('.patternfilters [data-range]').length===4);
 const patternDatesBefore=out.querySelector('.patternfilters .slice-readout').textContent;
 out.querySelector('.patternfilters [data-range="6m"]').click();
@@ -224,12 +236,14 @@ await new Promise(r=>setTimeout(r,50));
 ok('momentum view shows a filterable cumulative chart',/Your cumulative likes and observed matches/.test(out.textContent)&&out.querySelectorAll('svg.chart').length===1&&out.querySelectorAll('.charttools').length===1);
 ok('momentum total agrees with the shared observed-match KPI',out.querySelector('svg[data-observed-matches]').getAttribute('data-observed-matches')===out.querySelector('.match-kpi .value').textContent.replace(/,/g,''));
 ok('momentum includes volume-normalized median and benchmark band',out.querySelectorAll('svg .benchmarkline.median').length===1&&out.querySelectorAll('svg .benchmarkband').length===1);
+ok('momentum benchmark remains cohort-scoped',/Men 40–44 median · 1\.50%/.test(out.textContent));
 out.querySelector('[data-view="compare"]').click();
 await new Promise(r=>setTimeout(r,50));
 ok('compare view explains one export and two scopes',/overall history versus your selected snapshot/i.test(out.textContent)&&/One uploaded export, shown at two scopes/i.test(out.textContent));
 ok('compare view fixes overall history against selected snapshot',/Overall history/.test(out.textContent)&&/Selected snapshot/.test(out.textContent));
 ok('compare distinguishes observed totals from scoreable rates',/Observed matches/.test(out.textContent)&&/Scoreable match-back rate/.test(out.textContent));
 ok('compare chart includes median and 20th–80th benchmark band',out.querySelectorAll('svg .benchmarkline.median').length===1&&out.querySelectorAll('svg .benchmarkband').length===1);
+ok('compare benchmark remains cohort-scoped',/Men 40–44 median · 1\.50%/.test(out.textContent));
 ok('compare warns that unequal-window counts are not comparable',/compare their rates.not their raw totals/i.test(out.textContent));
 out.querySelector('[data-view="overview"]').click();
 await new Promise(r=>setTimeout(r,50));
