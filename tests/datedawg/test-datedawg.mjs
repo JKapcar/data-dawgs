@@ -194,6 +194,17 @@ t('missing matches.json errors',!!DD.parse({}).error,true);
 t('empty list parses',DD.parse({'matches.json':[]}).records,0);
 ok('Windows upload paths normalize to a base filename',html.includes('f.name.split(/[\\\\/]/).pop()'));
 ok('receipt values wrap on narrow screens',/\.slip \.kv b\{[^}]*overflow-wrap:anywhere/.test(html));
+ok('ZIP is the primary import surface',/Drop the ZIP Hinge sent you/.test(html)&&/accept="\.zip,application\/zip"/.test(html));
+ok('individual JSON remains an advanced fallback',/Advanced: choose individual JSON files/.test(html));
+ok('ZIP copy accurately says selfie is detected but never extracted',/detected but never extracted or parsed/.test(html));
+ok('ZIP rejects traversal and absolute paths',/Unsafe path in archive/.test(html)&&/n\[0\]==='\/'/.test(html));
+ok('ZIP rejects duplicate canonical basenames',/Duplicate filename in archive/.test(html));
+ok('ZIP has entry, size and ratio limits',/maximum 200/.test(html)&&/45 MB safety limit/.test(html)&&/Implausible compression ratio/.test(html));
+ok('selfie refusal occurs before decompression',html.indexOf("en.base==='selfie_verification.json'")<html.indexOf('inflateZip(bytes,en)'));
+ok('unknown ZIP entries are not extracted',/unknown\.push\(en\.path\);continue/.test(html));
+ok('Combine, Market, Analysis Floor and Scout Report ship together',/THE COMBINE/.test(html)&&/The Market · change story/.test(html)&&/The Analysis Floor/.test(html)&&/The Scout Report/.test(html));
+ok('companion context is aggregate-only and memory is inactive',/window\.DD_VIEW_CONTEXT=ctx/.test(html)&&/LOCAL · NO MEMORY/.test(html)&&/approved_memory_ids:\[\]/.test(html));
+ok('Scout Report explicitly excludes raw private content',/No raw messages, comments, media, identity, or third-party details are included/.test(html));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail?1:0);

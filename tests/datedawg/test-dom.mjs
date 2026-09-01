@@ -123,7 +123,7 @@ ok('z shown for a pre-parse declaration',/z = /.test(text));
 ok('declaration reason rendered',/lost 90 lbs/.test(text));
 ok('declared test is fixed and filter-independent',/fixed; dashboard filters do not alter it/i.test(text));
 ok('no in-dashboard declare button',!w.document.getElementById('dGo'));
-ok('exploratory boundary slider is not rendered',!w.document.getElementById('cut'));
+ok('Market offers an explicitly labelled comparison-date slider',!!w.document.getElementById('cut')&&/Moving it permanently makes this session exploratory/.test(out.querySelector('#market-story').textContent));
 ok('old pick-your-window panel is not rendered',!/Pick your window/i.test(text));
 ok('selfie refused shown on receipt',/Refused, never opened/.test(text));
 const fpv=await w.eval('DD.fingerprint(window.__R)');
@@ -145,6 +145,11 @@ ok('chart copy explains observed matches are dated to the sent like',/known matc
 ok('maturity note appears beside trend',/too recent to score/i.test(text));
 ok('trend explains why monthly dots cannot be averaged',/Monthly dots have different sample sizes/i.test(text));
 ok('likes and matches have distinct color tokens',/--likes:#006ee6/.test(html)&&/--matches:#d91f4e/.test(html));
+ok('Combine is compact and carries the five-second answer',!!out.querySelector('#verdict .vtier')&&out.querySelectorAll('#verdict .vmetric').length===3&&/outperform about/i.test(out.querySelector('#verdict').textContent));
+ok('Market change story follows the Combine',out.children[1]&&out.children[1].id==='market-story'&&/Volume-standardized change/.test(out.children[1].textContent));
+ok('Analysis Floor identifies the feature-detected chart registry',/The Analysis Floor/.test(out.textContent)&&/11 AVAILABLE · 34 CATALOGUED/.test(out.textContent));
+ok('local companion exposes no active memory claim',!!out.querySelector('#companion')&&/LOCAL · NO MEMORY/.test(out.querySelector('#companion').textContent));
+ok('Scout Report is aggregate-only',!!out.querySelector('#scout-report')&&/AGGREGATES ONLY · LOCAL/.test(out.querySelector('#scout-report').textContent));
 
 console.log('\n=== dashboard filters ===');
 const allReadout=out.querySelector('.range-readout').textContent;
@@ -258,7 +263,13 @@ ok('custom date range is applied',/2025-01-01 → 2025-03-31/.test(out.querySele
 console.log('\n=== declaration mechanics ===');
 let t3=w.document.getElementById('out').textContent;
 ok('declared comparison survives dashboard filtering',/Your declared comparison/.test(t3)&&/lost 90 lbs/.test(t3));
-ok('no exploratory slider can mutate declaration',!w.document.getElementById('cut'));
+let cut=w.document.getElementById('cut'),declaredCut=cut.value;
+cut.value=String(+declaredCut+86400000);cut.dispatchEvent(new w.Event('change'));
+await new Promise(r=>setTimeout(r,50));
+ok('moving the comparison date permanently invalidates declaration',/EXPLORATORY · 1 MOVE/.test(out.querySelector('#market-story').textContent)&&!/Your declared comparison/.test(out.textContent));
+cut=w.document.getElementById('cut');cut.value=declaredCut;cut.dispatchEvent(new w.Event('change'));
+await new Promise(r=>setTimeout(r,50));
+ok('returning to the declared date does not restore significance',/EXPLORATORY · 2 MOVES/.test(out.querySelector('#market-story').textContent)&&!/Your declared comparison/.test(out.textContent));
 ok('no way to declare after seeing results',!w.document.getElementById('dGo'));
 const fp2=await w.eval('DD.fingerprint(window.__R)');
 ok('page fingerprint stable across calls',/^sha256-[0-9a-f]{64}$/.test(String(fp2)));
