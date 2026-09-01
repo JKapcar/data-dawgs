@@ -131,7 +131,9 @@ ok('fingerprint is sha256',/^sha256-[0-9a-f]{64}$/.test(String(fpv)));
 ok('fingerprint rendered on receipt',/sha256-/.test(w.document.getElementById('out').textContent));
 ok('censoring applied to standardization',M.std.matured===true);
 ok('dashboard date inputs rendered',!!w.document.getElementById('viewFrom')&&!!w.document.getElementById('viewTo'));
-ok('both time-series charts rendered',out.querySelectorAll('svg.chart').length===2);
+ok('three overview time-series charts rendered',out.querySelectorAll('svg.chart').length===3);
+ok('overview promotes incoming likes reviewed',/Incoming likes reviewed/i.test(out.querySelector('.kpis').textContent)&&!!out.querySelector('svg.inbound-chart'));
+ok('overview inbound totals reconcile',out.querySelector('.inbound-kpi .value').textContent.trim()===String(R.ins.length)&&out.querySelector('svg.inbound-chart').getAttribute('aria-label').includes('Incoming likes reviewed'));
 const initialSeries=w.DD.timeSeries(R,R.minT,R.maxT,'month');
 ok('observed match totals agree across KPI, insight, and activity chart',
   parseInt(out.querySelector('.match-kpi .value').textContent.replace(/,/g,''),10)===initialSeries.matches&&
@@ -187,8 +189,9 @@ ok('clicking a selected endpoint shrinks the multi-year range',
   out.querySelector('[data-range="year-2025"]').classList.contains('on'));
 ok('year view labels acceptance points',out.querySelectorAll('.pointlabel').length>0);
 ok('rate chart labels the weighted selected-period result against the default cohort',!!out.querySelector('.selectedline')&&/SELECTED PERIOD/.test(out.querySelector('.selectedlabel').textContent)&&/PERCENTILE MEN 40–44/.test(out.querySelector('.selectedlabel').textContent));
-ok('both main charts have their own filters',out.querySelectorAll('.charttools').length===2&&out.querySelectorAll('[data-chart-year]').length===2);
-ok('both main charts expose six-month and one-month slices',out.querySelectorAll('.charttools [data-range="6m"]').length===2&&out.querySelectorAll('.charttools [data-range="1m"]').length===2);
+ok('all three overview charts have their own filters',out.querySelectorAll('.charttools').length===3&&out.querySelectorAll('[data-chart-year]').length===3);
+ok('all three overview charts expose six-month and one-month slices',out.querySelectorAll('.charttools [data-range="6m"]').length===3&&out.querySelectorAll('.charttools [data-range="1m"]').length===3);
+ok('inbound chart does not invent an external cohort benchmark',out.querySelector('.inbound-chart').closest('.chartcard').querySelectorAll('[data-benchmark-scope]').length===0);
 let chartYear=out.querySelector('[data-chart-year]');chartYear.value='2024';chartYear.dispatchEvent(new w.Event('change'));
 await new Promise(r=>setTimeout(r,50));
 ok('chart-local year filter changes the shared view',/2024-01-10 → 2024-12-31/.test(out.querySelector('.range-readout').textContent));
@@ -246,6 +249,10 @@ out.querySelector('[data-view="compare"]').click();
 await new Promise(r=>setTimeout(r,50));
 ok('compare view explains one export and two scopes',/overall history versus your selected snapshot/i.test(out.textContent)&&/One uploaded export, shown at two scopes/i.test(out.textContent));
 ok('compare view fixes overall history against selected snapshot',/Overall history/.test(out.textContent)&&/Selected snapshot/.test(out.textContent));
+ok('compare is a multi-story playground',/Your pace changed/.test(out.textContent)&&/Incoming likes you reviewed/.test(out.textContent)&&/Where your week moved/.test(out.textContent)&&/Your activity mix shifted/.test(out.textContent)&&/Comment versus no-comment/.test(out.textContent));
+ok('compare normalizes count pace to 30 days',out.querySelectorAll('.compare-bar-row').length===4&&/per 30 calendar days/i.test(out.textContent));
+ok('compare exposes inbound composition without calling it arrival',!!out.querySelector('.inbound-flow')&&/decision timestamps/i.test(out.textContent)&&/Unprocessed incoming likes are absent/i.test(out.textContent));
+ok('compare uses one story-wide period switch',out.querySelectorAll('.patternfilters').length===1&&out.querySelectorAll('.compare-story-grid').length===1);
 ok('compare distinguishes observed totals from scoreable rates',/Observed matches/.test(out.textContent)&&/Scoreable match-back rate/.test(out.textContent));
 ok('compare chart includes median and 20th–80th benchmark band',out.querySelectorAll('svg .benchmarkline.median').length===1&&out.querySelectorAll('svg .benchmarkband').length===1);
 ok('compare benchmark remains cohort-scoped',/Men 40–44 median · 1\.50%/.test(out.textContent));

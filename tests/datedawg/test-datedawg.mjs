@@ -99,6 +99,10 @@ ok('volume buckets account for active days',
 ok('comment split reconciles to matured likes',
    allSeries.comments.with.n+allSeries.comments.bare.n===allSeries.matureLikes);
 ok('filtered inbound decisions are exposed',allSeries.inbound.n===R.ins.length);
+ok('inbound timeline bins reconcile to reviewed total',allSeries.bins.reduce((a,b)=>a+b.inboundProcessed,0)===allSeries.inbound.n);
+ok('inbound timeline bins reconcile to accepted total',allSeries.bins.reduce((a,b)=>a+b.inboundAccepted,0)===allSeries.inbound.accepted);
+ok('inbound accepted and declined composition reconciles',allSeries.inbound.accepted+allSeries.inbound.declined===allSeries.inbound.n);
+ok('series exposes calendar-day span for fair pace comparison',allSeries.days===Math.floor((allSeries.to-allSeries.from)/864e5)+1);
 
 console.log('\n=== ranking math ===');
 ok('parser version is 1.4',DD.PARSER_VERSION==='1.4.0');
