@@ -4612,6 +4612,7 @@ async function leagueDelete(request, env, cors) {
     try {
       const rec = JSON.parse((await kv.get(JOIN_LG(lid))) || "null");
       if (rec && rec.code) await kv.delete(JOIN_CODE(rec.code));
+      if (rec && rec.passHash) await kv.delete(JOIN_PASS(rec.passHash));
       await kv.delete(JOIN_LG(lid));
     } catch (e) { /* a stale code resolves to "no such league" below; not worth failing on */ }
   }
@@ -4957,7 +4958,8 @@ async function leagueSlip(request, env, cors) {
 }
 
 /* ============================== league join links ==========================
-   A reusable per-league join code, handed out as a link:
+   A reusable per-league join secret, handed out either as a link or as a short
+   manager-chosen code:
    https://datadawgs216.com/signon.html?league=<code>
 
    ⚠️ THE CODE LIVES IN KV, NEVER IN FIREBASE. /bozo is world-readable — anything
@@ -4965,9 +4967,10 @@ async function leagueSlip(request, env, cors) {
    stored there would be a public invitation to every league at once. KV is only
    reachable from inside this Worker, which is the whole security model here.
 
-   Two keys per league, both KV:
-     joinlink:lg:<lid>     {code, cap, createdTs, createdBy}   — manager's view
-     joinlink:code:<code>  "<lid>"                             — redemption lookup
+   Three key shapes, all in KV:
+     joinlink:lg:<lid>       {code, passHash, cap, ...} — manager controls (NO raw pass)
+     joinlink:code:<code>    "<lid>"                    — long-link redemption lookup
+     joinpass:code:<hmac>    "<lid>"                    — typed-code redemption lookup
 
    Rotation deletes the old code key, so a leaked link dies the moment the manager
    presses rotate. That is a property a signed token cannot have without a
@@ -4988,6 +4991,7 @@ async function leagueSlip(request, env, cors) {
 const JOIN_KV = (env) => env.RL || null;
 const JOIN_LG = (lid) => "joinlink:lg:" + lid;
 const JOIN_CODE = (code) => "joinlink:code:" + code;
+const JOIN_PASS = (hash) => "joinpass:code:" + hash;
 const JOIN_CAP_DEFAULT = 20;
 const JOIN_CAP_MIN = 2;
 const JOIN_CAP_MAX = 64;
@@ -4995,6 +4999,14 @@ const JOIN_REDEEM_PER_DAY = 20;
 // base64url of 16 random bytes: 22 chars, ~128 bits. Not guessable, and short
 // enough to survive a text message without wrapping.
 const validJoinCode = (c) => typeof c === "string" && /^[A-Za-z0-9_-]{22}$/.test(c);
+
+// Human-entered league codes are case-insensitive and deliberately boring enough to
+// say or type without ambiguity. KV never receives the raw code. Its lookup key is an
+// HMAC under BOZO_PEPPER, so a KV export alone cannot be used to brute-force short codes.
+const normJoinPass = (c) => String(c || "").trim().toUpperCase();
+const validJoinPass = (c) => /^[A-Z0-9][A-Z0-9-]{5,31}$/.test(normJoinPass(c));
+const joinPassHash = (env, c) =>
+  hmac(env.BOZO_PEPPER, "bozo-league-code" + String.fromCharCode(0) + normJoinPass(c));
 
 function newJoinCode() {
   const raw = crypto.getRandomValues(new Uint8Array(16));
@@ -5035,9 +5047,9 @@ async function leagueJoinPreview(request, url, env, cors) {
   }, 200, cors);
 }
 
-// POST /league/join {code} — redeem. A SESSION IS REQUIRED: the code says which
-// league, the session says who. There is no path here that creates an account, so a
-// leaked link cannot be used by anyone who has not already signed up under a name.
+// POST /league/join {code} or {leagueCode} — redeem. A SESSION IS REQUIRED: the
+// shared secret says which league, the session says who. There is no path here that
+// creates an account, so a leaked code cannot be used without a signed-in identity.
 async function leagueJoin(request, env, cors) {
   if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
   const kv = JOIN_KV(env);
@@ -5050,10 +5062,15 @@ async function leagueJoin(request, env, cors) {
   try { body = await readBody(request); }
   catch { return json({ error: "Bad JSON." }, 400, cors); }
   const code = String(body.code || "");
-  if (!validJoinCode(code)) return json({ error: "That is not a join link." }, 400, cors);
+  const pass = normJoinPass(body.leagueCode);
+  const byLink = validJoinCode(code);
+  const byPass = validJoinPass(pass);
+  if (!byLink && !byPass)
+    return json({ error: "League codes are 6–32 letters, numbers or hyphens." }, 400, cors);
 
-  // Per-IP daily cap on redemption attempts. A valid code is not brute-forceable at
-  // 128 bits; this is here so a script cannot use the endpoint as a league prober.
+  // Per-IP daily cap on redemption attempts. The long link has 128 bits of entropy;
+  // the human-entered code does not, so this is its online-guessing boundary as well
+  // as protection against using either form as a league-probing endpoint.
   let rlKey = null, used = 0;
   if (env.RL) {
     const day = new Date().toISOString().slice(0, 10);
@@ -5065,9 +5082,15 @@ async function leagueJoin(request, env, cors) {
   }
 
   let lid = null;
-  try { lid = await kv.get(JOIN_CODE(code)); }
+  try {
+    lid = byLink
+      ? await kv.get(JOIN_CODE(code))
+      : await kv.get(JOIN_PASS(await joinPassHash(env, pass)));
+  }
   catch { return json({ error: "Join lookup failed." }, 502, cors); }
-  if (!lid) return json({ error: "That join link is no longer good — ask the manager for a new one." }, 404, cors);
+  if (!lid) return json({ error: byLink
+    ? "That join link is no longer good — ask the manager for a new one."
+    : "That league code is not valid." }, 404, cors);
 
   let lg, rec = null;
   try {
@@ -5101,7 +5124,10 @@ async function leagueJoin(request, env, cors) {
 //   action "get"    (default) mint on first use, otherwise return the current code
 //   action "rotate"           new code, old one dead immediately
 //   action "cap"    {cap}     change the member cap
-//   action "off"              delete the link entirely; no code works until re-minted
+//   action "off"              disable the long join link
+//   action "league-code" {leagueCode} — set/replace the shared typed code
+//   action "league-code-off"  — disable the shared typed code
+//   action "status"           — manager-only state, never returns the typed code
 async function leagueJoinCode(request, env, cors) {
   if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
   const kv = JOIN_KV(env);
@@ -5117,7 +5143,7 @@ async function leagueJoinCode(request, env, cors) {
   if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
 
   const action = String(body.action || "get");
-  if (!["get", "rotate", "cap", "off"].includes(action))
+  if (!["get", "rotate", "cap", "off", "league-code", "league-code-off", "status"].includes(action))
     return json({ error: "Unknown action." }, 400, cors);
 
   let rec = null;
@@ -5127,15 +5153,61 @@ async function leagueJoinCode(request, env, cors) {
   const size = memberNames(auth.league).length;
   const reply = (r) => json({
     ok: true, league: lid, name: auth.league.name || lid,
-    code: r ? r.code : null,
-    link: r ? "https://datadawgs216.com/signon.html?league=" + r.code : null,
+    code: r && r.code ? r.code : null,
+    link: r && r.code ? "https://datadawgs216.com/signon.html?league=" + r.code : null,
+    leagueCodeEnabled: !!(r && r.passHash),
     cap: joinCapOf(r), size, full: r ? size >= joinCapOf(r) : false,
     createdTs: r ? r.createdTs : null, createdBy: r ? r.createdBy : null,
   }, 200, cors);
 
+  if (action === "status") return reply(rec);
+
+  if (action === "league-code") {
+    const pass = normJoinPass(body.leagueCode);
+    if (!validJoinPass(pass))
+      return json({ error: "Use 6–32 letters, numbers or hyphens." }, 400, cors);
+    const passHash = await joinPassHash(env, pass);
+    let occupied = null;
+    try { occupied = await kv.get(JOIN_PASS(passHash)); }
+    catch { return json({ error: "League code lookup failed." }, 502, cors); }
+    if (occupied && occupied !== lid)
+      return json({ error: "That league code is already in use. Pick another." }, 409, cors);
+
+    const next = {
+      ...(rec || { cap: JOIN_CAP_DEFAULT, createdTs: Date.now(), createdBy: auth.name }),
+      passHash, passChangedTs: Date.now(), passChangedBy: auth.name,
+    };
+    try {
+      // Revoke the previous lookup first. A partial failure therefore closes the door
+      // instead of leaving a forgotten code active.
+      if (rec && rec.passHash && rec.passHash !== passHash)
+        await kv.delete(JOIN_PASS(rec.passHash));
+      await kv.put(JOIN_LG(lid), JSON.stringify(next));
+      await kv.put(JOIN_PASS(passHash), lid);
+    } catch (e) { return json({ error: "League code write failed: " + e.message }, 502, cors); }
+    return reply(next);
+  }
+
+  if (action === "league-code-off") {
+    if (!rec || !rec.passHash) return reply(rec);
+    const next = { ...rec };
+    delete next.passHash; delete next.passChangedTs; delete next.passChangedBy;
+    try {
+      await kv.delete(JOIN_PASS(rec.passHash));
+      if (next.code) await kv.put(JOIN_LG(lid), JSON.stringify(next));
+      else await kv.delete(JOIN_LG(lid));
+    } catch (e) { return json({ error: "League code write failed: " + e.message }, 502, cors); }
+    return reply(next.code ? next : null);
+  }
+
   if (action === "off") {
     try {
       if (rec && rec.code) await kv.delete(JOIN_CODE(rec.code));
+      if (rec && rec.passHash) {
+        const next = { ...rec }; delete next.code;
+        await kv.put(JOIN_LG(lid), JSON.stringify(next));
+        return reply(next);
+      }
       await kv.delete(JOIN_LG(lid));
     } catch (e) { return json({ error: "Join link write failed: " + e.message }, 502, cors); }
     return reply(null);
@@ -5149,7 +5221,7 @@ async function leagueJoinCode(request, env, cors) {
     // closes the door: existing members stay, nobody new gets in until it is raised.
     const next = { ...(rec || { code: newJoinCode(), createdTs: Date.now(), createdBy: auth.name }), cap };
     try {
-      await kv.put(JOIN_CODE(next.code), lid);
+      if (next.code) await kv.put(JOIN_CODE(next.code), lid);
       await kv.put(JOIN_LG(lid), JSON.stringify(next));
     } catch (e) { return json({ error: "Join link write failed: " + e.message }, 502, cors); }
     return reply(next);
@@ -5158,6 +5230,7 @@ async function leagueJoinCode(request, env, cors) {
   if (action === "get" && rec && rec.code) return reply(rec);
 
   const next = {
+    ...(rec || {}),
     code: newJoinCode(),
     cap: joinCapOf(rec),
     createdTs: Date.now(),
@@ -15731,7 +15804,7 @@ const MCP_TOOLS = [
           "strategy.html": "Draft strategy digest (dated).",
           "stats.html": "NFL EPA stats explorer.",
           "dataviz.html": "Data visualisations.",
-          "bozo.html": "The Bozo weekly parlay game.",
+          "bozo.html": "The Bozo weekly parlay game; signed-in members join with one manager-controlled shared league code under Your Dawgs.",
           "survivor.html": "Survivor pool EV tools.",
           "receipts.html": "272 pre-registered 2026 forecasts, SHA-256 locked.",
           "dfs.html": "DFS lineup lab; the exact lineup solver is also callable through dd_solve_dfs_lineup with a bounded caller-supplied slate.",

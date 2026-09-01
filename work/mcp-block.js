@@ -4869,7 +4869,7 @@ const MCP_TOOLS = [
           "strategy.html": "Draft strategy digest (dated).",
           "stats.html": "NFL EPA stats explorer.",
           "dataviz.html": "Data visualisations.",
-          "bozo.html": "The Bozo weekly parlay game.",
+          "bozo.html": "The Bozo weekly parlay game; signed-in members join with one manager-controlled shared league code under Your Dawgs.",
           "survivor.html": "Survivor pool EV tools.",
           "receipts.html": "272 pre-registered 2026 forecasts, SHA-256 locked.",
           "dfs.html": "DFS lineup lab; the exact lineup solver is also callable through dd_solve_dfs_lineup with a bounded caller-supplied slate.",
