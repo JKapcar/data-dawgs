@@ -1,0 +1,654 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bozo night mode — visual reference (Midnight Midway)</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rye&display=swap">
+<style>
+
+    body{margin:0;background:#070a08;color:#cfd3bd;font-family:Georgia,"Times New Roman",ui-serif,serif;-webkit-font-smoothing:antialiased}
+    a{color:#b6421a;text-decoration:none}a:hover{color:#cfd3bd}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    .disp{font-family:"Rye","Rockwell",Georgia,serif}
+    .k{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:#565b4b}
+    .rust{background:#0d100c;border:1px solid rgba(207,211,189,.10);box-shadow:inset 0 0 70px rgba(0,0,0,.7)}
+    .deadbulbs{height:16px;background:radial-gradient(circle at 13px 8px,rgba(120,124,100,.55) 0 3.4px,transparent 4.2px) 0 0/26px 16px repeat-x}
+    .livebulb{position:absolute;width:7px;height:7px;border-radius:999px;background:#ffe9a8;
+      box-shadow:0 0 12px 5px rgba(255,233,168,.40),0 0 46px 16px rgba(255,233,168,.10)}
+    .fog{position:absolute;inset:0;pointer-events:none;background:
+      radial-gradient(70% 44% at 18% 98%,rgba(139,145,121,.085),transparent 70%),
+      radial-gradient(58% 38% at 84% 100%,rgba(139,145,121,.065),transparent 72%)}
+    
+  
+/* ---- reference chrome. NOT part of the spec: do not copy anything below this line. ---- */
+  html{background:#050706}
+  body{padding:0 0 80px}
+  .ref-top{max-width:900px;margin:0 auto;padding:48px 24px 8px;font-family:Georgia,serif}
+  .ref-top h1{font-family:{DISPQ};font-size:34px;color:#cfd3bd;margin:0 0 10px}
+  .ref-top p{color:#8b9179;font-size:15px;line-height:1.65;margin:0 0 12px;max-width:70ch}
+  .ref-top code{font-family:ui-monospace,monospace;font-size:.88em;color:#cfd3bd}
+  .ref-top .warn{border-left:3px solid #b6421a;background:rgba(182,66,26,.09);padding:12px 14px;color:#cfd3bd}
+  section{max-width:1560px;margin:0 auto;padding:34px 24px 0}
+  .ref-hd{font-family:Georgia,serif;margin:0 0 14px}
+  .ref-hd h2{font-family:ui-monospace,monospace;font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:#b6421a;margin:0 0 6px}
+  .ref-hd p{color:#8b9179;font-size:14px;line-height:1.6;margin:0;max-width:80ch}
+  .ref-frame{max-width:100%;overflow:auto;border:1px solid rgba(207,211,189,.16);position:relative}
+  .ref-frame > div{position:relative}
+</style>
+</head>
+<body>
+
+<div class="ref-top">
+  <h1>Bozo night mode — Midnight Midway</h1>
+  <p>This file is the <b>visual spec</b> for the Bozo night mode. It is production-shaped CSS:
+     open it in a browser, then lift values and the two ornaments out of it. Where this file and
+     any prose description disagree, <b>this file wins</b>.</p>
+  <div class="warn">
+    <p style="margin:0;color:#cfd3bd"><b>Three things this file gets deliberately wrong about the repo</b>, because it is a
+    standalone mockup and not the page:</p>
+    <p style="margin:8px 0 0;color:#8b9179">1. It hard-codes hex values inline. In <code>bozo.html</code> these are the
+    <b>base <code>:root</code></b> playbill tokens — the site is dark-first, with
+    <code>:root[data-theme="light"]</code> as the override. There is no <code>[data-theme="dark"]</code>
+    selector on this site and there must not be one.</p>
+    <p style="margin:6px 0 0;color:#8b9179">2. It paints the house-ticket slip dark. The repo deliberately keeps
+    <code>--slip-*</code> paper in <b>both</b> themes ("a real receipt on a dark table"). Keep the repo's
+    call: a lit paper ticket in a dark closed fairground is the stronger image anyway. Only the
+    bill around it goes dark.</p>
+    <p style="margin:6px 0 0;color:#8b9179">3. It draws its own bulb strip. <code>bozo.html</code> already has one —
+    <code>.machine::before</code>, four repeating radial layers, driven by <code>--bulb</code>,
+    <code>--bulb-off</code>, <code>--bulbo</code>, <code>--bulbspeed</code>. Reuse that system; do not add a
+    second bulb implementation.</p>
+  </div>
+</div>
+
+<section>
+  <div class="ref-hd">
+    <h2>Desktop &mdash; 1440</h2>
+    <p>Full page. Marquee with mostly-dead bulbs and three still lit, the house ticket with IF IT BUSTED TONIGHT, the four levers, the small print. Ground fog is a fixed two-gradient overlay.</p>
+  </div>
+  <div class="ref-frame" style="width:1440px"><div style="width:1440px;height:1730px;position:relative;overflow:hidden;background:#070a08">
+  <div style="display:flex;align-items:center;gap:22px;height:46px;padding:0 26px;background:#050706;border-bottom:2px solid #b6421a">
+    <div style="display:flex;align-items:baseline;gap:8px">
+      <span class="disp" style="font-size:15px;color:#cfd3bd">DATA <span style="color:#b6421a">DAWGS</span></span>
+      <span class="mono" style="font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:#565b4b">The midway is closed</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:18px;margin-left:auto;font-family:system-ui,-apple-system,sans-serif;font-size:12.5px;color:#8b9179">
+      <span style="color:#b6421a">Arena</span><span>Markets</span><span>A.I.</span><span>NFL</span><span>CFB</span><span>Data</span><span>Dawgs</span>
+      <span style="border:1px solid rgba(207,211,189,.16);border-radius:999px;padding:4px 11px;color:#cfd3bd">Kap</span>
+      <span style="border:1px solid #b6421a;color:#b6421a;border-radius:999px;padding:4px 11px">Day mode</span>
+    </div>
+  </div>
+
+
+  <!-- MARQUEE -->
+  <div class="rust" style="width:1260px;margin:22px auto 0;position:relative;overflow:hidden">
+    <div class="deadbulbs"></div>
+    <span class="livebulb" style="left:118px;top:4px"></span>
+    <span class="livebulb" style="left:404px;top:4px;opacity:.5"></span>
+    <span class="livebulb" style="right:186px;top:4px"></span>
+    <div style="padding:30px 44px 34px;text-align:center;position:relative">
+      <p class="mono" style="font-size:9.5px;letter-spacing:.36em;text-transform:uppercase;color:#565b4b;margin:0 0 20px">The tents are still up <span style="color:#3f4437">&middot;</span> nobody took the sign down <span style="color:#3f4437">&middot;</span> week 1</p>
+      <h1 class="disp" style="font-size:112px;line-height:.94;color:#8b9179;margin:0;letter-spacing:.02em;text-shadow:3px 3px 0 rgba(182,66,26,.55),0 0 60px rgba(0,0,0,.9)">BOZO</h1>
+      <p class="mono" style="font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:#565b4b;margin:18px 0 0">Eight souls <span style="color:#3f4437">&#10022;</span> one ticket <span style="color:#3f4437">&#10022;</span> real money <span style="color:#b6421a">&#10022; no escape but winning</span></p>
+      <p style="font-size:17px;line-height:1.5;color:#8b9179;margin:20px auto 0;max-width:60ch">The ride still runs on a timer. It does not care that the lights went out, and at the end of the week it still picks somebody.</p>
+      <div style="display:flex;gap:12px;justify-content:center;margin:24px 0 0">
+        <a href="#" class="disp" style="font-size:17px;letter-spacing:.04em;color:#0d100c;background:#b6421a;padding:15px 26px;box-shadow:0 0 34px rgba(182,66,26,.35)">File my leg</a>
+        <a href="#" class="disp" style="font-size:17px;letter-spacing:.04em;color:#cfd3bd;border:1px solid rgba(207,211,189,.16);padding:15px 26px">How the bozo is named</a>
+      </div>
+    </div>
+    <div class="deadbulbs" style="transform:rotate(180deg)"></div>
+  </div>
+
+  <div style="width:1260px;margin:24px auto 0;display:grid;grid-template-columns:minmax(0,1fr) 358px;gap:24px;align-items:start">
+
+    <!-- TICKET -->
+    <div class="rust" style="padding:22px 26px 24px">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:18px;padding-bottom:14px;border-bottom:1px solid rgba(207,211,189,.10)">
+        <div>
+          <p class="mono" style="font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;color:#b6421a;margin:0 0 5px">Tonight on the boards</p>
+          <h2 class="disp" style="font-size:30px;line-height:1;margin:0;color:#cfd3bd">The house ticket</h2>
+        </div>
+        <span class="mono" style="font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:#b6421a;border:1px solid currentColor;padding:4px 9px">3 of 8 filed &middot; open</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:14px 0 6px">
+        <div><div class="k">Stake</div><div class="mono" style="font-size:23px;font-weight:700;line-height:1.15;color:#cfd3bd;margin-top:3px">$16</div></div>
+        <div><div class="k">Price band</div><div class="mono" style="font-size:23px;font-weight:700;line-height:1.15;color:#cfd3bd;margin-top:3px">-100 / -500</div></div>
+        <div><div class="k">Price so far</div><div class="mono" style="font-size:23px;font-weight:700;line-height:1.15;color:#cfd3bd;margin-top:3px">+412</div></div>
+        <div><div class="k">Legs to file</div><div class="mono" style="font-size:23px;font-weight:700;line-height:1.15;color:#b6421a;margin-top:3px">5</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:22px 128px minmax(0,1fr) 96px 116px;gap:12px;align-items:center;padding:11px 0;border-top:1px solid rgba(207,211,189,.10)">
+        <span class="mono" style="font-size:11px;color:#565b4b">1</span>
+        <span class="mono" style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8b9179">Kap</span>
+        <span class="disp" style="font-size:16px;color:#cfd3bd;letter-spacing:.01em">Tennessee ML<span class="mono" style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#b6421a;border:1px solid currentColor;padding:1px 5px;margin-left:9px;vertical-align:2px">chalkiest</span></span>
+        <span class="mono" style="font-size:16px;font-weight:700;color:#cfd3bd;text-align:right">-245</span>
+        <span class="mono" style="font-size:11px;color:#565b4b;text-align:right">Thu 6:54 PM</span>
+      </div>
+      <div style="display:grid;grid-template-columns:22px 128px minmax(0,1fr) 96px 116px;gap:12px;align-items:center;padding:11px 0;border-top:1px solid rgba(207,211,189,.10)">
+        <span class="mono" style="font-size:11px;color:#565b4b">2</span>
+        <span class="mono" style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8b9179">Butts</span>
+        <span class="disp" style="font-size:16px;color:#cfd3bd;letter-spacing:.01em">Ravens −6.5</span>
+        <span class="mono" style="font-size:16px;font-weight:700;color:#cfd3bd;text-align:right">-118</span>
+        <span class="mono" style="font-size:11px;color:#565b4b;text-align:right">Thu 7:02 PM</span>
+      </div>
+      <div style="display:grid;grid-template-columns:22px 128px minmax(0,1fr) 96px 116px;gap:12px;align-items:center;padding:11px 0;border-top:1px solid rgba(207,211,189,.10)">
+        <span class="mono" style="font-size:11px;color:#565b4b">3</span>
+        <span class="mono" style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8b9179">JWhite</span>
+        <span class="disp" style="font-size:16px;color:#cfd3bd;letter-spacing:.01em">Georgia −13.5<span class="mono" style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#b6421a;border:1px solid currentColor;padding:1px 5px;margin-left:9px;vertical-align:2px">last in</span></span>
+        <span class="mono" style="font-size:16px;font-weight:700;color:#cfd3bd;text-align:right">-135</span>
+        <span class="mono" style="font-size:11px;color:#565b4b;text-align:right">Thu 7:15 PM</span>
+      </div>
+      <div style="display:grid;grid-template-columns:22px 128px minmax(0,1fr) 96px 116px;gap:12px;align-items:center;padding:11px 0;border-top:1px solid rgba(207,211,189,.10)">
+        <span class="mono" style="font-size:11px;color:#565b4b">4</span>
+        <span class="mono" style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8b9179">Manzeo</span>
+        <span class="disp" style="font-size:16px;color:#565b4b;font-style:italic;letter-spacing:.01em">no leg yet</span>
+        <span class="mono" style="font-size:16px;font-weight:700;color:#565b4b;text-align:right">—</span>
+        <span class="mono" style="font-size:11px;color:#565b4b;text-align:right">—</span>
+      </div>
+      <div style="display:grid;grid-template-columns:22px 128px minmax(0,1fr) 96px 116px;gap:12px;align-items:center;padding:11px 0;border-top:1px solid rgba(207,211,189,.10)">
+        <span class="mono" style="font-size:11px;color:#565b4b">5</span>
+        <span class="mono" style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8b9179">Squatch</span>
+        <span class="disp" style="font-size:16px;color:#565b4b;font-style:italic;letter-spacing:.01em">no leg yet</span>
+        <span class="mono" style="font-size:16px;font-weight:700;color:#565b4b;text-align:right">—</span>
+        <span class="mono" style="font-size:11px;color:#565b4b;text-align:right">—</span>
+      </div>
+      <div style="display:grid;grid-template-columns:22px 128px minmax(0,1fr) 96px 116px;gap:12px;align-items:center;padding:11px 0;border-top:1px solid rgba(207,211,189,.10)">
+        <span class="mono" style="font-size:11px;color:#565b4b">6</span>
+        <span class="mono" style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8b9179">The Kid</span>
+        <span class="disp" style="font-size:16px;color:#565b4b;font-style:italic;letter-spacing:.01em">no leg yet</span>
+        <span class="mono" style="font-size:16px;font-weight:700;color:#565b4b;text-align:right">—</span>
+        <span class="mono" style="font-size:11px;color:#565b4b;text-align:right">—</span>
+      </div>
+      <div style="display:grid;grid-template-columns:22px 128px minmax(0,1fr) 96px 116px;gap:12px;align-items:center;padding:11px 0;border-top:1px solid rgba(207,211,189,.10)">
+        <span class="mono" style="font-size:11px;color:#565b4b">7</span>
+        <span class="mono" style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8b9179">Tony</span>
+        <span class="disp" style="font-size:16px;color:#565b4b;font-style:italic;letter-spacing:.01em">no leg yet</span>
+        <span class="mono" style="font-size:16px;font-weight:700;color:#565b4b;text-align:right">—</span>
+        <span class="mono" style="font-size:11px;color:#565b4b;text-align:right">—</span>
+      </div>
+      <div style="display:grid;grid-template-columns:22px 128px minmax(0,1fr) 96px 116px;gap:12px;align-items:center;padding:11px 0;border-top:1px solid rgba(207,211,189,.10)">
+        <span class="mono" style="font-size:11px;color:#565b4b">8</span>
+        <span class="mono" style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8b9179">Tucholski</span>
+        <span class="disp" style="font-size:16px;color:#565b4b;font-style:italic;letter-spacing:.01em">no leg yet</span>
+        <span class="mono" style="font-size:16px;font-weight:700;color:#565b4b;text-align:right">—</span>
+        <span class="mono" style="font-size:11px;color:#565b4b;text-align:right">—</span>
+      </div>
+      <p style="margin:16px 0 0;padding:10px 12px;border-left:3px solid #b6421a;background:rgba(182,66,26,.08);font-size:11.5px;line-height:1.55;color:#8b9179">
+        <b class="mono" style="letter-spacing:.1em;text-transform:uppercase;font-size:10px;color:#cfd3bd">Prices are self-reported.</b>
+        Typed by the player who filed it. Nothing here checks it against DraftKings.
+      </p>
+      <div style="margin-top:16px;border:1px solid #b6421a;background:rgba(182,66,26,.09);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap">
+        <div>
+          <p class="mono" style="font-size:9.5px;letter-spacing:.28em;text-transform:uppercase;color:#b6421a;margin:0 0 6px">If it busted tonight</p>
+          <p style="margin:0;font-size:13px;line-height:1.5;color:#8b9179;max-width:54ch">Yours is the chalkiest leg on the card. Lever I reads the chalk first, and the lever does not know who you are.</p>
+        </div>
+        <div style="text-align:right">
+          <div class="disp" style="font-size:30px;line-height:1;color:#b6421a">KAP</div>
+          <div class="mono" style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#565b4b;margin-top:5px">Hypothetical &middot; nothing graded</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RAIL -->
+    <div style="display:grid;gap:24px">
+      <div class="rust" style="padding:20px 22px 22px">
+        <p class="mono" style="font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;color:#b6421a;margin:0 0 14px">Still running &middot; unattended</p>
+        <div style="display:grid;gap:10px">
+          <div style="display:flex;align-items:center;gap:12px;border:1px solid rgba(207,211,189,.16);padding:11px 13px"><span class="mono" style="font-size:9px;letter-spacing:.2em;color:#b6421a">1ST</span><span class="disp" style="font-size:15px;color:#cfd3bd">Shortest odds</span></div>
+          <div style="display:flex;align-items:center;gap:12px;border:1px solid rgba(207,211,189,.16);padding:11px 13px"><span class="mono" style="font-size:9px;letter-spacing:.2em;color:#b6421a">2ND</span><span class="disp" style="font-size:15px;color:#cfd3bd">Worst beat</span></div>
+          <div style="display:flex;align-items:center;gap:12px;border:1px solid rgba(207,211,189,.16);padding:11px 13px"><span class="mono" style="font-size:9px;letter-spacing:.2em;color:#b6421a">3RD</span><span class="disp" style="font-size:15px;color:#cfd3bd">Last in</span></div>
+          <div style="display:flex;align-items:center;gap:12px;border:1px dashed rgba(207,211,189,.10);padding:11px 13px;opacity:.45"><span class="mono" style="font-size:9px;letter-spacing:.2em">4TH</span><span class="disp" style="font-size:15px;color:#8b9179">Worst CLV</span></div>
+        </div>
+        <p style="margin:14px 0 0;font-size:12.5px;line-height:1.6;color:#8b9179">Drawn fresh every week, before anyone loses. Nothing in your browser can re-roll it.</p>
+      </div>
+
+      <div class="rust" style="padding:20px 22px 22px">
+        <p class="mono" style="font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;color:#b6421a;margin:0 0 10px">Every league on the card</p>
+        <p style="margin:0 0 14px;font-size:13px;line-height:1.55;color:#8b9179">Boards are public whether or not you are in them.</p>
+        <div style="display:grid;gap:9px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;border-bottom:1px solid rgba(207,211,189,.10);padding-bottom:8px"><span class="disp" style="font-size:15px;color:#cfd3bd">Bozo Boyz</span><span class="mono" style="font-size:10px;color:#b6421a">3 / 8 &middot; open</span></div>
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;border-bottom:1px solid rgba(207,211,189,.10);padding-bottom:8px"><span class="disp" style="font-size:15px;color:#cfd3bd">Demo &middot; simulated</span><span class="mono" style="font-size:10px;color:#565b4b">8 / 8 &middot; locked</span></div>
+        </div>
+        <a href="#" class="mono" style="display:block;margin-top:16px;text-align:center;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#cfd3bd;border:1px solid rgba(207,211,189,.16);padding:13px 16px">Open a board</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- THE FOUR LEVERS -->
+  <div class="rust" style="width:1260px;margin:24px auto 0;padding:24px 34px 26px">
+    <div style="text-align:center;margin-bottom:6px">
+      <p class="mono" style="font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;color:#b6421a;margin:0 0 5px">Four levers &middot; a fresh order every week</p>
+      <h2 class="disp" style="font-size:30px;line-height:1.05;margin:0 0 6px;color:#cfd3bd">How the bozo is named</h2>
+      <p style="font-style:italic;font-size:15px;line-height:1.5;color:#8b9179;margin:0 auto 10px;max-width:70ch">Only legs that lost are eligible &mdash; cash yours and you walk, however ugly the price was. Among the losers, the levers below decide, in an order that is drawn fresh every single week.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 40px;border-top:1px solid rgba(207,211,189,.10)">
+      <div style="display:grid;grid-template-columns:44px minmax(0,1fr);gap:16px;align-items:start;padding:15px 4px;border-bottom:1px solid rgba(207,211,189,.10);">
+        <span class="disp" style="font-size:19px;color:#b6421a;text-align:right">I</span>
+        <div>
+          <h3 class="disp" style="font-size:16px;letter-spacing:.02em;margin:0 0 4px;color:#cfd3bd">Shortest odds</h3>
+          <p style="margin:0;font-size:14.5px;line-height:1.55;color:#8b9179">The biggest favorite in the pool. The chalkiest leg on the ticket, if it lost, is the first one anybody looks at.</p>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:44px minmax(0,1fr);gap:16px;align-items:start;padding:15px 4px;border-bottom:1px solid rgba(207,211,189,.10);">
+        <span class="disp" style="font-size:19px;color:#b6421a;text-align:right">II</span>
+        <div>
+          <h3 class="disp" style="font-size:16px;letter-spacing:.02em;margin:0 0 4px;color:#cfd3bd">Worst beat</h3>
+          <p style="margin:0;font-size:14.5px;line-height:1.55;color:#8b9179">Finished furthest under its number, measured in standard deviations — so a blowout in a low-variance market counts for more than a blowout anywhere.</p>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:44px minmax(0,1fr);gap:16px;align-items:start;padding:15px 4px;border-bottom:1px solid rgba(207,211,189,.10);">
+        <span class="disp" style="font-size:19px;color:#b6421a;text-align:right">III</span>
+        <div>
+          <h3 class="disp" style="font-size:16px;letter-spacing:.02em;margin:0 0 4px;color:#cfd3bd">Last in</h3>
+          <p style="margin:0;font-size:14.5px;line-height:1.55;color:#8b9179">The final leg submitted. The only lever you can move by acting: it belongs to whoever files last, and it moves to the next person the moment they enter.</p>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:44px minmax(0,1fr);gap:16px;align-items:start;padding:15px 4px;border-bottom:1px solid rgba(207,211,189,.10);opacity:.5">
+        <span class="disp" style="font-size:19px;color:#b6421a;text-align:right">IV</span>
+        <div>
+          <h3 class="disp" style="font-size:16px;letter-spacing:.02em;margin:0 0 4px;color:#cfd3bd">Worst CLV</h3>
+          <p style="margin:0;font-size:14.5px;line-height:1.55;color:#8b9179">The price that moved most against it between submission and close. <span class="mono" style="font-size:.75em;letter-spacing:.12em;text-transform:uppercase;color:#b6421a;border:1px solid currentColor;padding:1px 5px;margin-left:6px;white-space:nowrap">Not measured yet</span></p>
+        </div>
+      </div>
+    </div>
+    <div class="mono" style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(207,211,189,.10);font-size:10.5px;line-height:1.75;color:#565b4b;columns:2;column-gap:40px;column-rule:1px solid rgba(207,211,189,.10)">
+        <p style="margin:0 0 11px"><b class="mono" style="color:#8b9179;letter-spacing:.08em;text-transform:uppercase;font-size:9.5px">Prices are self-reported.</b> Every number on a board is typed in by the player who filed it. Nothing here checks it against DraftKings or any other book, and nothing here ever will vouch for one.</p>
+        <p style="margin:0 0 11px"><b class="mono" style="color:#8b9179;letter-spacing:.08em;text-transform:uppercase;font-size:9.5px">Bozo odds are simulation.</b> Anywhere this site quotes a chance of wearing it, that is Monte Carlo output, not an observation, and the simulation draws every leg independently.</p>
+        <p style="margin:0 0 11px"><b class="mono" style="color:#8b9179;letter-spacing:.08em;text-transform:uppercase;font-size:9.5px">CLV is not measured yet.</b> No closing prices are captured, so Worst CLV names nobody and no CLV figure on this site is real. The lever stays in the draw and falls through to the next one.</p>
+        <p style="margin:0 0 11px"><b class="mono" style="color:#8b9179;letter-spacing:.08em;text-transform:uppercase;font-size:9.5px">The draw is the server&rsquo;s.</b> The running order is one permutation, drawn at the moment the ticket locks and written once. Nothing in your browser can re-roll it.</p>
+    </div>
+  </div>
+
+  <div class="fog"></div>
+</div></div>
+</section>
+
+<section>
+  <div class="ref-hd">
+    <h2>Phone &mdash; 390</h2>
+    <p>All eight legs clear the 844 fold. Nav fits 390 with nothing overhanging &mdash; the live page is 438px wide here, which is the bug fixed in commit 1. The torn stub bar is pinned.</p>
+  </div>
+  <div class="ref-frame" style="width:390px"><div style="width:390px;height:1520px;position:relative;overflow:hidden;background:#070a08">
+  <div style="display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;background:#050706;border-bottom:2px solid #b6421a">
+    <span class="disp" style="font-size:14px;color:#cfd3bd">DATA <span style="color:#b6421a">DAWGS</span></span>
+    <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+      <span style="width:30px;height:30px;border:1px solid rgba(207,211,189,.16);border-radius:999px;display:flex;align-items:center;justify-content:center;color:#cfd3bd;font-family:system-ui,sans-serif;font-size:11px">K</span>
+      <span style="width:30px;height:30px;border:1px solid rgba(207,211,189,.16);border-radius:999px;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffe9a8" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg></span>
+      <span style="width:30px;height:30px;border:1px solid rgba(207,211,189,.16);border-radius:999px;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#cfd3bd" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span>
+    </div>
+  </div>
+
+
+  <div class="rust" style="margin:0;border-left:0;border-right:0;position:relative;overflow:hidden">
+    <div class="deadbulbs"></div>
+    <span class="livebulb" style="left:62px;top:4px"></span>
+    <span class="livebulb" style="right:78px;top:4px;opacity:.55"></span>
+    <div style="padding:18px 16px 22px;text-align:center;position:relative">
+      <p class="mono" style="font-size:8.5px;letter-spacing:.3em;text-transform:uppercase;color:#565b4b;margin:0 0 14px">Nobody took the sign down &middot; week 1</p>
+      <h1 class="disp" style="font-size:72px;line-height:.94;color:#8b9179;margin:0;letter-spacing:.02em;text-shadow:2px 2px 0 rgba(182,66,26,.55),0 0 40px rgba(0,0,0,.9)">BOZO</h1>
+      <p class="mono" style="font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:#565b4b;margin:14px 0 0">Eight souls <span style="color:#3f4437">&#10022;</span> one ticket <span style="color:#b6421a">&#10022; no escape but winning</span></p>
+      <p style="font-size:15px;line-height:1.5;color:#8b9179;margin:14px 0 0">The ride still runs on a timer. At the end of the week it still picks somebody.</p>
+    </div>
+    <div class="deadbulbs" style="transform:rotate(180deg)"></div>
+  </div>
+
+  <div style="padding:12px 10px 0">
+    <div class="rust" style="padding:14px 14px 16px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding-bottom:10px;border-bottom:1px solid rgba(207,211,189,.10)">
+        <h2 class="disp" style="font-size:22px;line-height:1;margin:0;color:#cfd3bd">The house ticket</h2>
+        <span class="mono" style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#b6421a">3 of 8</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 14px;margin:12px 0 2px">
+        <div><div class="k">Stake</div><div class="mono" style="font-size:17px;font-weight:700;color:#cfd3bd">$16</div></div>
+        <div><div class="k">Band</div><div class="mono" style="font-size:17px;font-weight:700;color:#cfd3bd">-100 / -500</div></div>
+        <div><div class="k">Price so far</div><div class="mono" style="font-size:17px;font-weight:700;color:#cfd3bd">+412</div></div>
+        <div><div class="k">Legs to file</div><div class="mono" style="font-size:17px;font-weight:700;color:#b6421a">5</div></div>
+      </div>
+        <div style="display:grid;grid-template-columns:16px minmax(0,1fr) auto;gap:8px;align-items:baseline;padding:9px 0;border-top:1px solid rgba(207,211,189,.10)">
+          <span class="mono" style="font-size:10px;color:#565b4b">1</span>
+          <div><span class="k" style="display:block;font-size:9px">Kap &middot; Thu 6:54 PM <span style="color:#b6421a">&middot; chalkiest</span></span><span class="disp" style="font-size:15px;color:#cfd3bd;">Tennessee ML</span></div>
+          <span class="mono" style="font-size:14px;font-weight:700;color:#cfd3bd">-245</span>
+        </div>
+        <div style="display:grid;grid-template-columns:16px minmax(0,1fr) auto;gap:8px;align-items:baseline;padding:9px 0;border-top:1px solid rgba(207,211,189,.10)">
+          <span class="mono" style="font-size:10px;color:#565b4b">2</span>
+          <div><span class="k" style="display:block;font-size:9px">Butts &middot; Thu 7:02 PM</span><span class="disp" style="font-size:15px;color:#cfd3bd;">Ravens −6.5</span></div>
+          <span class="mono" style="font-size:14px;font-weight:700;color:#cfd3bd">-118</span>
+        </div>
+        <div style="display:grid;grid-template-columns:16px minmax(0,1fr) auto;gap:8px;align-items:baseline;padding:9px 0;border-top:1px solid rgba(207,211,189,.10)">
+          <span class="mono" style="font-size:10px;color:#565b4b">3</span>
+          <div><span class="k" style="display:block;font-size:9px">JWhite &middot; Thu 7:15 PM <span style="color:#b6421a">&middot; last in</span></span><span class="disp" style="font-size:15px;color:#cfd3bd;">Georgia −13.5</span></div>
+          <span class="mono" style="font-size:14px;font-weight:700;color:#cfd3bd">-135</span>
+        </div>
+        <div style="display:grid;grid-template-columns:16px minmax(0,1fr) auto;gap:8px;align-items:baseline;padding:9px 0;border-top:1px solid rgba(207,211,189,.10)">
+          <span class="mono" style="font-size:10px;color:#565b4b">4</span>
+          <div><span class="k" style="display:block;font-size:9px">Manzeo</span><span class="disp" style="font-size:15px;color:#565b4b;font-style:italic;">no leg yet</span></div>
+          <span class="mono" style="font-size:14px;font-weight:700;color:#565b4b">—</span>
+        </div>
+        <div style="display:grid;grid-template-columns:16px minmax(0,1fr) auto;gap:8px;align-items:baseline;padding:9px 0;border-top:1px solid rgba(207,211,189,.10)">
+          <span class="mono" style="font-size:10px;color:#565b4b">5</span>
+          <div><span class="k" style="display:block;font-size:9px">Squatch</span><span class="disp" style="font-size:15px;color:#565b4b;font-style:italic;">no leg yet</span></div>
+          <span class="mono" style="font-size:14px;font-weight:700;color:#565b4b">—</span>
+        </div>
+        <div style="display:grid;grid-template-columns:16px minmax(0,1fr) auto;gap:8px;align-items:baseline;padding:9px 0;border-top:1px solid rgba(207,211,189,.10)">
+          <span class="mono" style="font-size:10px;color:#565b4b">6</span>
+          <div><span class="k" style="display:block;font-size:9px">The Kid</span><span class="disp" style="font-size:15px;color:#565b4b;font-style:italic;">no leg yet</span></div>
+          <span class="mono" style="font-size:14px;font-weight:700;color:#565b4b">—</span>
+        </div>
+        <div style="display:grid;grid-template-columns:16px minmax(0,1fr) auto;gap:8px;align-items:baseline;padding:9px 0;border-top:1px solid rgba(207,211,189,.10)">
+          <span class="mono" style="font-size:10px;color:#565b4b">7</span>
+          <div><span class="k" style="display:block;font-size:9px">Tony</span><span class="disp" style="font-size:15px;color:#565b4b;font-style:italic;">no leg yet</span></div>
+          <span class="mono" style="font-size:14px;font-weight:700;color:#565b4b">—</span>
+        </div>
+        <div style="display:grid;grid-template-columns:16px minmax(0,1fr) auto;gap:8px;align-items:baseline;padding:9px 0;border-top:1px solid rgba(207,211,189,.10)">
+          <span class="mono" style="font-size:10px;color:#565b4b">8</span>
+          <div><span class="k" style="display:block;font-size:9px">Tucholski</span><span class="disp" style="font-size:15px;color:#565b4b;font-style:italic;">no leg yet</span></div>
+          <span class="mono" style="font-size:14px;font-weight:700;color:#565b4b">—</span>
+        </div>
+      <div style="margin-top:14px;border:1px solid #b6421a;background:rgba(182,66,26,.09);padding:12px 13px">
+        <p class="mono" style="font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:#b6421a;margin:0 0 6px">If it busted tonight</p>
+        <div class="disp" style="font-size:26px;line-height:1;color:#b6421a">KAP</div>
+        <p style="margin:7px 0 0;font-size:12.5px;line-height:1.5;color:#8b9179">Yours is the chalkiest leg on the card. Lever I reads the chalk first.</p>
+        <p class="mono" style="margin:7px 0 0;font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:#565b4b">Hypothetical &middot; nothing graded</p>
+      </div>
+      <p style="margin:12px 0 0;padding:8px 10px;border-left:3px solid #b6421a;background:rgba(182,66,26,.07);font-size:11.5px;line-height:1.5;color:#8b9179">
+        <b class="mono" style="letter-spacing:.1em;text-transform:uppercase;font-size:9.5px;color:#cfd3bd">Prices are self-reported.</b> Typed by the player who filed. Nothing checks them against DraftKings.
+      </p>
+    </div>
+
+    <div class="rust" style="margin-top:12px;padding:4px 14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 0;border-bottom:1px solid rgba(207,211,189,.10)">
+        <div><h3 class="disp" style="font-size:15px;margin:0 0 2px;color:#cfd3bd">How it works</h3><p style="margin:0;font-size:12.5px;color:#8b9179;line-height:1.4">One leg each, one real parlay, funded by last week&rsquo;s bozo.</p></div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b6421a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div style="padding:14px 0 6px;border-bottom:1px solid rgba(207,211,189,.10)">
+        <h3 class="disp" style="font-size:15px;margin:0 0 10px;color:#cfd3bd">This week&rsquo;s running order</h3>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
+          <div style="border:1px solid rgba(207,211,189,.16);padding:9px 10px"><div class="mono" style="font-size:8.5px;letter-spacing:.2em;color:#b6421a">1ST</div><div class="disp" style="font-size:12.5px;color:#cfd3bd;margin-top:3px">Shortest odds</div></div>
+          <div style="border:1px solid rgba(207,211,189,.16);padding:9px 10px"><div class="mono" style="font-size:8.5px;letter-spacing:.2em;color:#b6421a">2ND</div><div class="disp" style="font-size:12.5px;color:#cfd3bd;margin-top:3px">Worst beat</div></div>
+          <div style="border:1px solid rgba(207,211,189,.16);padding:9px 10px"><div class="mono" style="font-size:8.5px;letter-spacing:.2em;color:#b6421a">3RD</div><div class="disp" style="font-size:12.5px;color:#cfd3bd;margin-top:3px">Last in</div></div>
+          <div style="border:1px dashed rgba(207,211,189,.10);padding:9px 10px;opacity:.45"><div class="mono" style="font-size:8.5px;letter-spacing:.2em;color:#8b9179">4TH</div><div class="disp" style="font-size:12.5px;color:#8b9179;margin-top:3px">Worst CLV</div></div>
+        </div>
+        <p style="margin:10px 0 12px;font-size:12.5px;line-height:1.5;color:#8b9179">Drawn before anyone loses. Nothing in your browser can re-roll it.</p>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 0 16px">
+        <div><h3 class="disp" style="font-size:15px;margin:0 0 2px;color:#cfd3bd">The small print</h3><p style="margin:0;font-size:12.5px;color:#8b9179;line-height:1.4">What this site does and does not check.</p></div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b6421a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+    </div>
+    <div style="height:86px"></div>
+  </div>
+
+  <div style="position:absolute;right:12px;bottom:96px;width:48px;height:48px;border-radius:999px;background:#b6421a;box-shadow:0 0 26px rgba(182,66,26,.5);display:flex;align-items:center;justify-content:center">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0d100c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.5 9.5 0 0 1-3.2-.5L3 21l1.7-4.4A8.1 8.1 0 0 1 3 11.5C3 6.8 7 3 12 3s9 3.8 9 8.5z"/></svg>
+  </div>
+
+  <div style="position:absolute;left:0;right:0;bottom:0;background:#0d100c;border-top:1px solid rgba(207,211,189,.16);box-shadow:0 -10px 30px rgba(0,0,0,.7);padding:11px 14px 18px">
+    <div class="deadbulbs" style="position:absolute;left:0;right:0;top:-16px;opacity:.7"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div>
+        <span class="mono" style="display:block;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#565b4b">Bozo Boyz &middot; week 1 &middot; open</span>
+        <span class="disp" style="display:block;font-size:15px;color:#cfd3bd;line-height:1.25;margin-top:2px">Your leg is in</span>
+      </div>
+      <a href="#" class="disp" style="font-size:14px;letter-spacing:.03em;color:#0d100c;background:#b6421a;padding:14px 18px;box-shadow:0 0 22px rgba(182,66,26,.45)">Change it</a>
+    </div>
+  </div>
+
+  <div style="position:absolute;left:0;right:0;top:844px;border-top:1px dashed rgba(207,211,189,.22);pointer-events:none"></div>
+  <div class="mono" style="position:absolute;right:8px;top:827px;font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:#565b4b">Fold &middot; 390&times;844</div>
+  <div class="fog"></div>
+</div></div>
+</section>
+
+<section>
+  <div class="ref-hd">
+    <h2>Season sheet &mdash; the per-member tab</h2>
+    <p>Replaces the six-zeroes sheet. Chart colours are CVD-validated against this surface. Every figure shown is simulated.</p>
+  </div>
+  <div class="ref-frame" style="width:1440px"><div style="width:1440px;height:1010px;position:relative;overflow:hidden;background:#070a08">
+  <div style="display:flex;align-items:center;gap:22px;height:46px;padding:0 26px;background:#050706;border-bottom:2px solid #b6421a">
+    <div style="display:flex;align-items:baseline;gap:8px">
+      <span class="disp" style="font-size:15px;color:#cfd3bd">DATA <span style="color:#b6421a">DAWGS</span></span>
+      <span class="mono" style="font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:#565b4b">The midway is closed</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:18px;margin-left:auto;font-family:system-ui,-apple-system,sans-serif;font-size:12.5px;color:#8b9179">
+      <span style="color:#b6421a">Arena</span><span>Markets</span><span>A.I.</span><span>NFL</span><span>CFB</span><span>Data</span><span>Dawgs</span>
+      <span style="border:1px solid rgba(207,211,189,.16);border-radius:999px;padding:4px 11px;color:#cfd3bd">Kap</span>
+      <span style="border:1px solid #b6421a;color:#b6421a;border-radius:999px;padding:4px 11px">Day mode</span>
+    </div>
+  </div>
+
+  <div style="width:1300px;margin:20px auto 0">
+    <div style="display:flex;border-bottom:1px solid rgba(207,211,189,.10);margin-bottom:18px"><span class="mono" style="font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#565b4b;background:transparent;padding:10px 16px">The board</span><span class="mono" style="font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#0d100c;background:#b6421a;padding:10px 16px">Kap — you</span><span class="mono" style="font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#565b4b;background:transparent;padding:10px 16px">Butts</span><span class="mono" style="font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#565b4b;background:transparent;padding:10px 16px">JWhite</span><span class="mono" style="font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#565b4b;background:transparent;padding:10px 16px">Manzeo</span><span class="mono" style="font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#565b4b;background:transparent;padding:10px 16px">Squatch</span><span class="mono" style="font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#565b4b;background:transparent;padding:10px 16px">The Kid</span><span class="mono" style="font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#565b4b;background:transparent;padding:10px 16px">Tony</span><span class="mono" style="font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#565b4b;background:transparent;padding:10px 16px">Tucholski</span><span class="mono" style="font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#565b4b;background:transparent;padding:10px 16px">League</span></div>
+
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:16px">
+      <div>
+        <p class="mono" style="font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;color:#b6421a;margin:0 0 5px">Every leg, on the record</p>
+        <h1 class="disp" style="font-size:36px;line-height:1;margin:0;color:#cfd3bd">Kap &mdash; the season sheet</h1>
+      </div>
+      <span class="mono" style="font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#b6421a;border:1px solid #b6421a;padding:5px 10px">Simulated &middot; 18 invented weeks</span>
+    </div>
+
+    <div class="rust" style="padding:20px 24px;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:22px;margin-bottom:16px">
+      <div style="padding:0 20px 0 0;border-right:1px solid rgba(207,211,189,.10)">
+      <div class="k">Legs filed</div>
+      <div class="mono" style="font-size:29px;font-weight:700;line-height:1.15;color:#cfd3bd;margin-top:4px">18</div>
+      <div class="mono" style="font-size:10px;color:#565b4b;margin-top:3px">one per week, week 1&ndash;18</div></div>
+      <div style="padding:0 20px 0 0;border-right:1px solid rgba(207,211,189,.10)">
+      <div class="k">Record</div>
+      <div class="mono" style="font-size:29px;font-weight:700;line-height:1.15;color:#cfd3bd;margin-top:4px">11&ndash;7</div>
+      <div class="mono" style="font-size:10px;color:#565b4b;margin-top:3px">61.1% of your own legs</div></div>
+      <div style="padding:0 20px 0 0;border-right:1px solid rgba(207,211,189,.10)">
+      <div class="k">Bozos worn</div>
+      <div class="mono" style="font-size:29px;font-weight:700;line-height:1.15;color:#b6421a;margin-top:4px">3</div>
+      <div class="mono" style="font-size:10px;color:#565b4b;margin-top:3px">weeks 5, 11, 16</div></div>
+      <div style="padding:0 20px 0 0;border-right:1px solid rgba(207,211,189,.10)">
+      <div class="k">Avg price filed</div>
+      <div class="mono" style="font-size:29px;font-weight:700;line-height:1.15;color:#cfd3bd;margin-top:4px">-223</div>
+      <div class="mono" style="font-size:10px;color:#565b4b;margin-top:3px">league median -168</div></div>
+      <div style="padding:0 20px 0 0;border-right:1px solid rgba(207,211,189,.10)">
+      <div class="k">Chalkiest in pool</div>
+      <div class="mono" style="font-size:29px;font-weight:700;line-height:1.15;color:#cfd3bd;margin-top:4px">5&times;</div>
+      <div class="mono" style="font-size:10px;color:#565b4b;margin-top:3px">lever I exposure</div></div>
+      <div style="padding:0 20px 0 0;border-right:1px solid rgba(207,211,189,.10)">
+      <div class="k">Median lead time</div>
+      <div class="mono" style="font-size:29px;font-weight:700;line-height:1.15;color:#cfd3bd;margin-top:4px">41h</div>
+      <div class="mono" style="font-size:10px;color:#565b4b;margin-top:3px">before the card locked</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:16px">
+      <div class="rust" style="padding:20px 24px 22px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px">
+          <div><h2 class="disp" style="font-size:20px;margin:0;color:#cfd3bd">Did the prices you paid come in?</h2>
+            <p style="margin:5px 0 0;font-size:13px;line-height:1.5;color:#8b9179">Win rate your filed prices implied, against the win rate the games delivered.</p></div>
+          <div style="display:flex;gap:16px;flex-shrink:0">
+            <span style="display:flex;align-items:center;gap:7px"><span style="width:11px;height:11px;background:#c2851f"></span><span class="mono" style="font-size:10.5px;color:#8b9179">Implied</span></span>
+            <span style="display:flex;align-items:center;gap:7px"><span style="width:11px;height:11px;background:#0f9f7e"></span><span class="mono" style="font-size:10.5px;color:#8b9179">Actual</span></span>
+          </div>
+        </div>
+        <div style="margin-top:12px">
+          <div style="display:grid;grid-template-columns:132px minmax(0,1fr);gap:16px;align-items:center;padding:11px 0;border-top:1px solid rgba(207,211,189,.10)">
+      <div><div class="mono" style="font-size:12px;color:#cfd3bd">-100 to -150</div>
+        <div class="mono" style="font-size:10px;color:#565b4b;margin-top:2px">5 legs &middot; 3 won</div></div>
+      <div style="display:grid;gap:6px">
+        <div style="display:flex;align-items:center;gap:10px"><div style="height:11px;width:176.70000000000002px;background:#c2851f;border-radius:0 4px 4px 0"></div><span class="mono" style="font-size:11.5px;color:#8b9179">62.0%</span></div>
+        <div style="display:flex;align-items:center;gap:10px"><div style="height:11px;width:171.0px;background:#0f9f7e;border-radius:0 4px 4px 0"></div><span class="mono" style="font-size:11.5px;color:#8b9179">60.0%</span></div>
+      </div></div>
+          <div style="display:grid;grid-template-columns:132px minmax(0,1fr);gap:16px;align-items:center;padding:11px 0;border-top:1px solid rgba(207,211,189,.10)">
+      <div><div class="mono" style="font-size:12px;color:#cfd3bd">-150 to -250</div>
+        <div class="mono" style="font-size:10px;color:#565b4b;margin-top:2px">8 legs &middot; 5 won</div></div>
+      <div style="display:grid;gap:6px">
+        <div style="display:flex;align-items:center;gap:10px"><div style="height:11px;width:196.365px;background:#c2851f;border-radius:0 4px 4px 0"></div><span class="mono" style="font-size:11.5px;color:#8b9179">68.9%</span></div>
+        <div style="display:flex;align-items:center;gap:10px"><div style="height:11px;width:178.125px;background:#0f9f7e;border-radius:0 4px 4px 0"></div><span class="mono" style="font-size:11.5px;color:#8b9179">62.5%</span></div>
+      </div></div>
+          <div style="display:grid;grid-template-columns:132px minmax(0,1fr);gap:16px;align-items:center;padding:11px 0;border-top:1px solid rgba(207,211,189,.10)">
+      <div><div class="mono" style="font-size:12px;color:#cfd3bd">-250 to -500</div>
+        <div class="mono" style="font-size:10px;color:#565b4b;margin-top:2px">5 legs &middot; 3 won</div></div>
+      <div style="display:grid;gap:6px">
+        <div style="display:flex;align-items:center;gap:10px"><div style="height:11px;width:217.17000000000002px;background:#c2851f;border-radius:0 4px 4px 0"></div><span class="mono" style="font-size:11.5px;color:#8b9179">76.2%</span></div>
+        <div style="display:flex;align-items:center;gap:10px"><div style="height:11px;width:171.0px;background:#0f9f7e;border-radius:0 4px 4px 0"></div><span class="mono" style="font-size:11.5px;color:#8b9179">60.0%</span></div>
+      </div></div>
+          <div style="display:grid;grid-template-columns:132px minmax(0,1fr);gap:16px;align-items:center;padding:11px 0;border-top:1px solid rgba(207,211,189,.10)">
+      <div><div class="mono" style="font-size:12px;color:#cfd3bd">All 18 legs</div>
+        <div class="mono" style="font-size:10px;color:#565b4b;margin-top:2px">18 legs &middot; 11 won</div></div>
+      <div style="display:grid;gap:6px">
+        <div style="display:flex;align-items:center;gap:10px"><div style="height:11px;width:196.65px;background:#c2851f;border-radius:0 4px 4px 0"></div><span class="mono" style="font-size:11.5px;color:#8b9179">69.0%</span></div>
+        <div style="display:flex;align-items:center;gap:10px"><div style="height:11px;width:174.13500000000002px;background:#0f9f7e;border-radius:0 4px 4px 0"></div><span class="mono" style="font-size:11.5px;color:#8b9179">61.1%</span></div>
+      </div></div>
+        </div>
+        <p style="margin:16px 0 0;padding:10px 12px;border-left:3px solid #b6421a;background:rgba(182,66,26,.08);font-size:12.5px;line-height:1.6;color:#8b9179">
+          <b class="mono" style="letter-spacing:.1em;text-transform:uppercase;font-size:10px;color:#cfd3bd">Read this before you conclude anything.</b><br>
+          The 7.9-point gap on all 18 legs has a standard error of <span class="mono">&plusmn;10.9</span> points. It is inside noise: this sheet cannot yet tell &ldquo;you overpay for chalk&rdquo; from &ldquo;you had a normal season.&rdquo; At one leg a week, separating a 5-point bias from luck takes roughly <span class="mono">90</span> legs.
+        </p>
+      </div>
+
+      <div style="display:grid;gap:16px;align-content:start">
+        <div class="rust" style="padding:20px 22px">
+          <h2 class="disp" style="font-size:20px;margin:0 0 4px;color:#cfd3bd">Why you wore it</h2>
+          <p style="margin:0 0 14px;font-size:13px;line-height:1.5;color:#8b9179">Of your 7 losing legs, the lever that named you.</p>
+          <div style="display:grid;gap:11px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px solid rgba(207,211,189,.10);padding-bottom:9px"><span class="mono" style="font-size:12.5px;color:#cfd3bd">Shortest odds</span><span class="mono" style="font-size:14px;font-weight:700;color:#b6421a">2</span></div>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px solid rgba(207,211,189,.10);padding-bottom:9px"><span class="mono" style="font-size:12.5px;color:#cfd3bd">Worst beat</span><span class="mono" style="font-size:14px;font-weight:700;color:#565b4b">0</span></div>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px solid rgba(207,211,189,.10);padding-bottom:9px"><span class="mono" style="font-size:12.5px;color:#cfd3bd">Last in</span><span class="mono" style="font-size:14px;font-weight:700;color:#b6421a">1</span></div>
+            <div style="display:flex;align-items:baseline;justify-content:space-between"><span class="mono" style="font-size:12.5px;color:#565b4b">Lost, someone else wore it</span><span class="mono" style="font-size:14px;font-weight:700;color:#565b4b">4</span></div>
+          </div>
+          <p style="margin:14px 0 0;font-size:12.5px;line-height:1.55;color:#8b9179">Both Shortest-odds bozos came from legs at <span class="mono">-320</span> or worse. That is the one pattern here with a lever attached to it.</p>
+        </div>
+        <div class="rust" style="padding:20px 22px;opacity:.72">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+            <h2 class="disp" style="font-size:20px;margin:0;color:#cfd3bd">Closing line value</h2>
+            <span class="mono" style="font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#cf4a2e;border:1px solid #cf4a2e;padding:2px 7px">Not measured</span>
+          </div>
+          <p style="margin:8px 0 0;font-size:12.5px;line-height:1.6;color:#8b9179">No closing prices are captured, so there is no CLV figure and Worst CLV never fires. This panel stays empty until capture ships &mdash; it does not get filled with a proxy.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="rust" style="padding:18px 24px 20px;margin-top:16px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:14px">
+        <h2 class="disp" style="font-size:20px;margin:0;color:#cfd3bd">The season, leg by leg</h2>
+        <div style="display:flex;gap:18px">
+          <span style="display:flex;align-items:center;gap:7px"><span class="mono" style="font-size:11px;font-weight:700;color:#6f9e57">W</span><span class="mono" style="font-size:10.5px;color:#565b4b">your leg cashed</span></span>
+          <span style="display:flex;align-items:center;gap:7px"><span class="mono" style="font-size:11px;font-weight:700;color:#cf4a2e">L</span><span class="mono" style="font-size:10.5px;color:#565b4b">your leg lost</span></span>
+          <span style="display:flex;align-items:center;gap:7px"><span style="width:11px;height:11px;box-shadow:0 0 0 2px #b6421a inset"></span><span class="mono" style="font-size:10.5px;color:#565b4b">you were the bozo</span></span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(18,minmax(0,1fr));gap:8px">
+        <div style="display:grid;gap:5px;justify-items:center">
+      <span class="mono" style="font-size:9px;color:#565b4b">1</span>
+      <div style="width:46px;height:46px;background:rgba(111,158,87,.14);border:1px solid #6f9e57;display:flex;align-items:center;justify-content:center">
+        <span class="mono" style="font-size:17px;font-weight:700;color:#6f9e57">W</span></div>
+      <span class="mono" style="font-size:8.5px;color:transparent;letter-spacing:.1em">BOZO</span>
+      <span class="mono" style="font-size:9px;color:#565b4b">-245</span>
+    </div><div style="display:grid;gap:5px;justify-items:center">
+      <span class="mono" style="font-size:9px;color:#565b4b">2</span>
+      <div style="width:46px;height:46px;background:rgba(207,74,46,.14);border:1px solid #cf4a2e;display:flex;align-items:center;justify-content:center">
+        <span class="mono" style="font-size:17px;font-weight:700;color:#cf4a2e">L</span></div>
+      <span class="mono" style="font-size:8.5px;color:transparent;letter-spacing:.1em">BOZO</span>
+      <span class="mono" style="font-size:9px;color:#565b4b">-155</span>
+    </div><div style="display:grid;gap:5px;justify-items:center">
+      <span class="mono" style="font-size:9px;color:#565b4b">3</span>
+      <div style="width:46px;height:46px;background:rgba(111,158,87,.14);border:1px solid #6f9e57;display:flex;align-items:center;justify-content:center">
+        <span class="mono" style="font-size:17px;font-weight:700;color:#6f9e57">W</span></div>
+      <span class="mono" style="font-size:8.5px;color:transparent;letter-spacing:.1em">BOZO</span>
+      <span class="mono" style="font-size:9px;color:#565b4b">-320</span>
+    </div><div style="display:grid;gap:5px;justify-items:center">
+      <span class="mono" style="font-size:9px;color:#565b4b">4</span>
+      <div style="width:46px;height:46px;background:rgba(111,158,87,.14);border:1px solid #6f9e57;display:flex;align-items:center;justify-content:center">
+        <span class="mono" style="font-size:17px;font-weight:700;color:#6f9e57">W</span></div>
+      <span class="mono" style="font-size:8.5px;color:transparent;letter-spacing:.1em">BOZO</span>
+      <span class="mono" style="font-size:9px;color:#565b4b">-118</span>
+    </div><div style="display:grid;gap:5px;justify-items:center">
+      <span class="mono" style="font-size:9px;color:#565b4b">5</span>
+      <div style="width:46px;height:46px;background:rgba(207,74,46,.14);border:1px solid #cf4a2e;box-shadow:0 0 0 2px #0d100c,0 0 0 4px #b6421a,0 0 22px rgba(182,66,26,.45);display:flex;align-items:center;justify-content:center">
+        <span class="mono" style="font-size:17px;font-weight:700;color:#cf4a2e">L</span></div>
+      <span class="mono" style="font-size:8.5px;color:#b6421a;letter-spacing:.1em">BOZO</span>
+      <span class="mono" style="font-size:9px;color:#565b4b">-410</span>
+    </div><div style="display:grid;gap:5px;justify-items:center">
+      <span class="mono" style="font-size:9px;color:#565b4b">6</span>
+      <div style="width:46px;height:46px;background:rgba(111,158,87,.14);border:1px solid #6f9e57;display:flex;align-items:center;justify-content:center">
+        <span class="mono" style="font-size:17px;font-weight:700;color:#6f9e57">W</span></div>
+      <span class="mono" style="font-size:8.5px;color:transparent;letter-spacing:.1em">BOZO</span>
+      <span class="mono" style="font-size:9px;color:#565b4b">-135</span>
+    </div><div style="display:grid;gap:5px;justify-items:center">
+      <span class="mono" style="font-size:9px;color:#565b4b">7</span>
+      <div style="width:46px;height:46px;background:rgba(207,74,46,.14);border:1px solid #cf4a2e;display:flex;align-items:center;justify-content:center">
+        <span class="mono" style="font-size:17px;font-weight:700;color:#cf4a2e">L</span></div>
+      <span class="mono" style="font-size:8.5px;color:transparent;letter-spacing:.1em">BOZO</span>
+      <span class="mono" style="font-size:9px;color:#565b4b">-142</span>
+    </div><div style="display:grid;gap:5px;justify-items:center">
+      <span class="mono" style="font-size:9px;color:#565b4b">8</span>
+      <div style="width:46px;height:46px;background:rgba(111,158,87,.14);border:1px solid #6f9e57;display:flex;align-items:center;justify-content:center">
+        <span class="mono" style="font-size:17px;font-weight:700;color:#6f9e57">W</span></div>
+      <span class="mono" style="font-size:8.5px;color:transparent;letter-spacing:.1em">BOZO</span>
+      <span class="mono" style="font-size:9px;color:#565b4b">-265</span>
+    </div><div style="display:grid;gap:5px;justify-items:center">
+      <span class="mono" style="font-size:9px;color:#565b4b">9</span>
+      <div style="width:46px;height:46px;background:rgba(111,158,87,.14);border:1px solid #6f9e57;display:flex;align-items:center;justify-content:center">
+        <span class="mono" style="font-size:17px;font-weight:700;color:#6f9e57">W</span></div>
+      <span class="mono" style="font-size:8.5px;color:transparent;letter-spacing:.1em">BOZO</span>
+      <span class="mono" style="font-size:9px;color:#565b4b">-112</span>
+    </div><div style="display:grid;gap:5px;justify-items:center">
+      <span class="mono" style="font-size:9px;color:#565b4b">10</span>
+      <div style="width:46px;height:46px;background:rgba(111,158,87,.14);border:1px solid #6f9e57;display:flex;align-items:center;justify-content:center">
+        <span class="mono" style="font-size:17px;font-weight:700;color:#6f9e57">W</span></div>
+      <span class="mono" style="font-size:8.5px;color:transparent;letter-spacing:.1em">BOZO</span>
+      <span class="mono" style="font-size:9px;color:#565b4b">-180</span>
+    </div><div style="display:grid;gap:5px;justify-items:center">
+      <span class="mono" style="font-size:9px;color:#565b4b">11</span>
+      <div style="width:46px;height:46px;background:rgba(207,74,46,.14);border:1px solid #cf4a2e;box-shadow:0 0 0 2px #0d100c,0 0 0 4px #b6421a,0 0 22px rgba(182,66,26,.45);display:flex;align-items:center;justify-content:center">
+        <span class="mono" style="font-size:17px;font-weight:700;color:#cf4a2e">L</span></div>
+      <span class="mono" style="font-size:8.5px;color:#b6421a;letter-spacing:.1em">BOZO</span>
+      <span class="mono" style="font-size:9px;color:#565b4b">-225</span>
+    </div><div style="display:grid;gap:5px;justify-items:center">
+      <span class="mono" style="font-size:9px;color:#565b4b">12</span>
+      <div style="width:46px;height:46px;background:rgba(111,158,87,.14);border:1px solid #6f9e57;display:flex;align-items:center;justify-content:center">
+        <span class="mono" style="font-size:17px;font-weight:700;color:#6f9e57">W</span></div>
+      <span class="mono" style="font-size:8.5px;color:transparent;letter-spacing:.1em">BOZO</span>
+      <span class="mono" style="font-size:9px;color:#565b4b">-195</span>
+    </div><div style="display:grid;gap:5px;justify-items:center">
+      <span class="mono" style="font-size:9px;color:#565b4b">13</span>
+      <div style="width:46px;height:46px;background:rgba(207,74,46,.14);border:1px solid #cf4a2e;display:flex;align-items:center;justify-content:center">
+        <span class="mono" style="font-size:17px;font-weight:700;color:#cf4a2e">L</span></div>
+      <span class="mono" style="font-size:8.5px;color:transparent;letter-spacing:.1em">BOZO</span>
+      <span class="mono" style="font-size:9px;color:#565b4b">-128</span>
+    </div><div style="display:grid;gap:5px;justify-items:center">
+      <span class="mono" style="font-size:9px;color:#565b4b">14</span>
+      <div style="width:46px;height:46px;background:rgba(111,158,87,.14);border:1px solid #6f9e57;display:flex;align-items:center;justify-content:center">
+        <span class="mono" style="font-size:17px;font-weight:700;color:#6f9e57">W</span></div>
+      <span class="mono" style="font-size:8.5px;color:transparent;letter-spacing:.1em">BOZO</span>
+      <span class="mono" style="font-size:9px;color:#565b4b">-350</span>
+    </div><div style="display:grid;gap:5px;justify-items:center">
+      <span class="mono" style="font-size:9px;color:#565b4b">15</span>
+      <div style="width:46px;height:46px;background:rgba(111,158,87,.14);border:1px solid #6f9e57;display:flex;align-items:center;justify-content:center">
+        <span class="mono" style="font-size:17px;font-weight:700;color:#6f9e57">W</span></div>
+      <span class="mono" style="font-size:8.5px;color:transparent;letter-spacing:.1em">BOZO</span>
+      <span class="mono" style="font-size:9px;color:#565b4b">-165</span>
+    </div><div style="display:grid;gap:5px;justify-items:center">
+      <span class="mono" style="font-size:9px;color:#565b4b">16</span>
+      <div style="width:46px;height:46px;background:rgba(207,74,46,.14);border:1px solid #cf4a2e;box-shadow:0 0 0 2px #0d100c,0 0 0 4px #b6421a,0 0 22px rgba(182,66,26,.45);display:flex;align-items:center;justify-content:center">
+        <span class="mono" style="font-size:17px;font-weight:700;color:#cf4a2e">L</span></div>
+      <span class="mono" style="font-size:8.5px;color:#b6421a;letter-spacing:.1em">BOZO</span>
+      <span class="mono" style="font-size:9px;color:#565b4b">-295</span>
+    </div><div style="display:grid;gap:5px;justify-items:center">
+      <span class="mono" style="font-size:9px;color:#565b4b">17</span>
+      <div style="width:46px;height:46px;background:rgba(111,158,87,.14);border:1px solid #6f9e57;display:flex;align-items:center;justify-content:center">
+        <span class="mono" style="font-size:17px;font-weight:700;color:#6f9e57">W</span></div>
+      <span class="mono" style="font-size:8.5px;color:transparent;letter-spacing:.1em">BOZO</span>
+      <span class="mono" style="font-size:9px;color:#565b4b">-148</span>
+    </div><div style="display:grid;gap:5px;justify-items:center">
+      <span class="mono" style="font-size:9px;color:#565b4b">18</span>
+      <div style="width:46px;height:46px;background:rgba(207,74,46,.14);border:1px solid #cf4a2e;display:flex;align-items:center;justify-content:center">
+        <span class="mono" style="font-size:17px;font-weight:700;color:#cf4a2e">L</span></div>
+      <span class="mono" style="font-size:8.5px;color:transparent;letter-spacing:.1em">BOZO</span>
+      <span class="mono" style="font-size:9px;color:#565b4b">-210</span>
+    </div>
+      </div>
+    </div>
+  </div>
+  <div class="fog"></div>
+</div></div>
+</section>
+
+
+</body>
+</html>

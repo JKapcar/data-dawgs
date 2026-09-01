@@ -1512,6 +1512,7 @@ CREATE LEAGUE: name, season, teams, draft type (Auction or Snake), auction budge
 CONNECT LEAGUE: paste a Sleeper league URL and press "Recognize League" to import teams and settings. Yahoo and ESPN are not imported this way and are set up by hand. There is a separate "Connect ESPN" form taking an ESPN league id, season and the espn_s2 / SWID cookies.
 OPENING A RIG PAGE with leagues on the shelf but no draft on the device sends you here to pick one first — that is the picker, not an error.
 OTHER PAGES: Big Board is the projector view — it is deliberately not in the nav, open it by URL on the projector machine, and what it displays is set from "Projector shows". The read-only board for everyone else is the Fantasy Draft Dashboard → Live tab; board.html?view=live opens that same view directly. There is no LIVE DRAFT item in the nav — it was retired 8/1. Draft Data Viz, Report Card, Cheat Sheet and Master Data are read-only views of the same draft.
+BOZO HYPOTHETICAL (bozo.html): "As it stands" reports Shortest Odds and Last In separately before lock. "If every leg lost" walks the written order after lock and shows the first computable lever. Both are read-only hypotheticals, assume every filed leg loses, and never name a bozo.
 STATE: everything saves in the browser on that device, under its own key per league — so two leagues on one browser never see each other, and a different device shows a different draft unless it opens the same league link or the live mirror is switched on. Pages are cached for offline so the draft survives losing wifi — but Toto itself needs the network, so say so if someone asks for help while offline.
 DATEDAWG (datedawg.html): a local-only Hinge export analyzer in the Dawgs section. It measures reciprocal acceptance, excludes immature likes from adjusted analysis, labels Hinge ranks as assumptions, and never uploads the export.`;
 
@@ -1524,7 +1525,7 @@ index.html — the manifesto: what Data Dawgs is for, "Data, not dogma", Bring Y
 receipts.html — every pre-registered forecast, the grading, calibration, the model scoreboard, 538 Classic, provenance, the tier audit.
 dawghouse.html — the shelf: work that was stopped, each item with its blocker and the condition that would reopen it.
 arena.html — the hub for games played against other people; links to all of the below.
-bozo.html — the weekly one-leg parlay game: board, ledger, closing-line value, standings, the belt.
+bozo.html — the weekly one-leg parlay game: board, ledger, closing-line value, standings, the belt, and a read-only "as it stands / if every leg lost" hypothetical that never names a bozo.
 challenge.html — the NFL Forecasting Challenge: put a probability on a game before kickoff, get graded after.
 survivor.html — survivor pool: this week's board, pick popularity, an optimal path, a season simulation, model settings.
 guillotine.html — guillotine league companion. dfs.html — DFS solver, contest simulator, exposure, bankroll. The projections there are the USER'S OWN.
