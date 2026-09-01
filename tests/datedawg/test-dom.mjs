@@ -66,6 +66,7 @@ const rankTo=Math.max(R.minT,R.maxT-w.DD.RESOLVE_DAYS*864e5);
 const rankFrom=Math.max(R.minT,rankTo-364*864e5);
 const rankM=w.DD.metrics(R,rankFrom);
 ok('verdict renders first',!!V&&out.firstElementChild===V);
+ok('arrival screen is removed once results exist',w.document.body.classList.contains('results-ready')&&w.getComputedStyle(w.document.getElementById('arrival')).display==='none');
 ok('verdict leads with a percentile',/^\s*\d{1,3}/.test(V.querySelector('.vnum').textContent));
 ok('verdict percentile matches its selected ranking window',Math.round((rankM.rankStd.band||rankM.rankStd.all).p)===parseInt(V.querySelector('.vnum').textContent,10));
 ok('verdict names the age cohort',/AMONG MEN \d+–\d+/.test(V.textContent));
@@ -216,6 +217,14 @@ ok('no exploratory slider can mutate declaration',!w.document.getElementById('cu
 ok('no way to declare after seeing results',!w.document.getElementById('dGo'));
 const fp2=await w.eval('DD.fingerprint(window.__R)');
 ok('page fingerprint stable across calls',/^sha256-[0-9a-f]{64}$/.test(String(fp2)));
+out.querySelector('#again').click();
+await new Promise(r=>setTimeout(r,20));
+ok('read-another-export restores the arrival screen',!w.document.body.classList.contains('results-ready')&&w.getComputedStyle(w.document.getElementById('arrival')).display!=='none'&&out.classList.contains('hide'));
+const badDrop=new w.Event('drop',{bubbles:true});
+Object.defineProperty(badDrop,'dataTransfer',{value:{files:[new File(['{}'],'user.json',{type:'application/json'})]}});
+w.document.getElementById('drop').dispatchEvent(badDrop);
+await new Promise(r=>setTimeout(r,50));
+ok('failed import leaves the arrival screen visible',!w.document.body.classList.contains('results-ready')&&w.getComputedStyle(w.document.getElementById('arrival')).display!=='none'&&/matches\.json is required/i.test(out.textContent));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail?1:0);

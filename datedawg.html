@@ -54,6 +54,7 @@ button{font:inherit;cursor:pointer}
   color:var(--accent);margin-bottom:12px}
 .hero h1{font:400 clamp(25px,5.4vw,38px)/1.08 var(--display);margin-bottom:14px}
 .lead{color:var(--ink-2);font-size:16px;line-height:1.6;margin:0}
+.results-ready #arrival{display:none}
 
 /* The first post-import screen: a visual answer before the workings. */
 .verdict{position:relative;left:50%;width:100vw;translate:-50% 0;background:#0a0806;color:#f7f3ea;
@@ -430,6 +431,7 @@ footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--border);
   </div>
 </div>
 
+<div id="arrival">
 <header class="hero">
   <div class="eyebrow">Reads a Hinge export · nothing leaves this page</div>
   <h1>Of the women you liked, how many liked you back — and where does that rank?</h1>
@@ -475,6 +477,7 @@ opened, and your email, phone, device IPs and photo links are discarded as the f
              placeholder="e.g. supplied by the subject for this analysis">
     </div>
   </details>
+</div>
 </div>
 
 <div id="out" class="hide"></div>
@@ -1381,7 +1384,7 @@ var DD = (function(){
         {type:"application/json"}),a=document.createElement("a");
       a.href=URL.createObjectURL(b); a.download="datedawg-snapshot.json"; a.click();
       setTimeout(function(){URL.revokeObjectURL(a.href);},1000); };
-    $("#again").onclick=function(){ R=null; VFROM=VTO=null;RANGE="all";GRAIN="month";$("#out").className="hide";
+    $("#again").onclick=function(){ R=null; VFROM=VTO=null;RANGE="all";GRAIN="month";document.body.classList.remove("results-ready");$("#out").className="hide";
       $("#out").innerHTML=""; if($("#drop").scrollIntoView) $("#drop").scrollIntoView({behavior:"smooth"}); };
   }
 
@@ -1429,7 +1432,7 @@ var DD = (function(){
       VFROM=new Date(a+"T00:00:00Z").getTime();VTO=new Date(z+"T00:00:00Z").getTime()+864e5-1;RANGE="custom";paint();}};
     $("#snap").onclick=function(){var data=DD.snapshot(R,M,{subject:SUBJ&&SUBJ.subject||null,consent:SUBJ&&SUBJ.consent||null,consentAt:SUBJ&&SUBJ.at||null,declaration:declValid()?DECL:null,boundaryMoves:0});
       data.dashboard_range={from:iso(S.from),to:iso(S.to),grain:S.grain};data.rank_window={id:RW.id,from:iso(RW.from),to:iso(RW.to)};var b=new Blob([JSON.stringify(data,null,1)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="datedawg-snapshot.json";a.click();setTimeout(function(){URL.revokeObjectURL(a.href);},1000);};
-    $("#again").onclick=function(){R=null;VFROM=VTO=null;RANGE="all";RANK_RANGE="1y";GRAIN="month";VIEW="overview";SHOW_LIKES=SHOW_MATCHES=SHOW_BENCHMARKS=SHOW_VALUES=true;ACTIVITY_SCALE="sqrt";$("#out").className="hide";$("#out").innerHTML="";if($("#drop").scrollIntoView)$("#drop").scrollIntoView({behavior:"smooth"});};
+    $("#again").onclick=function(){R=null;VFROM=VTO=null;RANGE="all";RANK_RANGE="1y";GRAIN="month";VIEW="overview";SHOW_LIKES=SHOW_MATCHES=SHOW_BENCHMARKS=SHOW_VALUES=true;ACTIVITY_SCALE="sqrt";document.body.classList.remove("results-ready");$("#out").className="hide";$("#out").innerHTML="";if($("#drop").scrollIntoView)$("#drop").scrollIntoView({behavior:"smooth"});};
   }
 
   function capturePre(){
@@ -1461,7 +1464,7 @@ var DD = (function(){
     var res=DD.parse(payload);
     if(res.error){ $("#out").className="";
       $("#out").innerHTML='<div class="note stop">'+esc(res.error)+'</div>'; return; }
-    R=res;
+    R=res;document.body.classList.add("results-ready");
     if(bad.length) R.filesMissing=R.filesMissing.concat(bad.map(function(b){return b+" (unreadable)";}));
     VFROM=R.minT;VTO=R.maxT;RANGE="all";RANK_RANGE="1y";GRAIN="month";
     var yr=R.maxT-365*864e5;
@@ -1472,7 +1475,7 @@ var DD = (function(){
     }
     MOVES=0;
     Promise.resolve(DD.fingerprint(R)).catch(function(){ return null; }).then(function(){ paint();
-      if($("#out").scrollIntoView) $("#out").scrollIntoView({behavior:"smooth",block:"start"}); }); }
+      document.documentElement.scrollTop=0;document.body.scrollTop=0; }); }
 
   var drop=$("#drop"),input=$("#file");
   $("#pickBtn").onclick=function(){input.click();};
