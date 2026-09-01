@@ -43,7 +43,7 @@ ok('page states a later declaration is impossible',/no\s+way to declare a test a
 ok('subject and consent captured pre-parse',/preSubject/.test(html)&&/preConsent/.test(html));
 ok('declaration voids on boundary change',/was voided when you moved/.test(html));
 ok('significance withheld while exploring',/significance withheld/.test(html));
-ok('derived not observed percentile stated',/derived reference/.test(html)&&/not observed Hinge cohort/.test(html));
+ok('empirical Tinder reference is not mislabelled as a Hinge cohort',/published empirical table/i.test(html)&&/not an observed Hinge cohort/i.test(html));
 ok('stratification language softened',/partially<\/i> holds|<i>partially<\/i>/.test(html)||/does\s*'\+\s*'not isolate the profile|not isolate the profile/.test(html));
 
 console.log('\n=== windowed metrics ===');
@@ -101,35 +101,30 @@ ok('comment split reconciles to matured likes',
 ok('filtered inbound decisions are exposed',allSeries.inbound.n===R.ins.length);
 
 console.log('\n=== ranking math ===');
-const fit=DD.fitFromQuantiles(0.0204,0.125,0.90);
-t('two-quantile sigma',fit.sigma.toFixed(4),'1.4145');
-const q=(L)=>100*fit.median*Math.exp(DD.Phinv(L)*fit.sigma);
-t('refits p75 (published 5.39)',q(0.75).toFixed(2),'5.30');
-t('refits p90 (fitted anchor)',q(0.90).toFixed(2),'12.50');
-t('refits p95 (published 20.37)',q(0.95).toFixed(2),'20.90');
-ok('p75 within 0.2pp of published',Math.abs(q(0.75)-5.39)<0.2);
-ok('p95 within 0.6pp of published',Math.abs(q(0.95)-20.37)<0.6);
-ok('no Gini borrowed from another variable',!/sigmaFromGini\s*\(/.test(html.split('PARSER_END')[0].split('BENCHMARKS')[1]||''));
-t('benchmarks graded',DD.BENCHMARKS.filter(b=>b.grade==='A').length,1);
-ok('every benchmark carries provenance',DD.BENCHMARKS.every(b=>b.source&&b.source.publisher&&b.source.verified));
-ok('male sample size corrected',/6,233/.test(DD.BENCHMARKS.find(b=>b.grade==='A').source.sample));
-ok('bias direction stated as unknown',
-   /DIRECTION of the selection bias is unknown/i.test(DD.BENCHMARKS.find(b=>b.grade==='A').source.bias));
-ok('hinge rows labelled ASSUMPTION',DD.BENCHMARKS.filter(b=>b.grade==='C').every(b=>/^ASSUMPTION/.test(b.name)));
-ok('conversion note says v1.2',/v1\.2/.test(R.conversionPipes.note));
-ok('grade-A carries a url',!!DD.BENCHMARKS.find(b=>b.grade==='A').source.url);
-ok('grade-C rows admit no measured median',DD.BENCHMARKS.filter(b=>b.grade==='C')
-   .every(b=>/never been published|NO measured/i.test(b.source.verified)));
-ok('parser version is 1.3',DD.PARSER_VERSION==='1.3.0');
-const rk=DD.rank(0.099);
-t('5 reference distributions',rk.rows.length,5);
-ok('band spans a real range',rk.hi-rk.lo>3);
-ok('mid inside band',rk.mid>=rk.lo&&rk.mid<=rk.hi);
-ok('higher rate ranks higher',DD.rank(0.15).mid>DD.rank(0.05).mid);
-ok('grade-A p90 lands on its anchor',Math.abs(rk.rows[0].p90*100-12.5)<0.05);
-ok('band drawn from Hinge rows only',rk.hi<=Math.max(...rk.rows.filter(r=>r.id.startsWith('hinge')).map(r=>r.pct))+0.01);
+ok('parser version is 1.4',DD.PARSER_VERSION==='1.4.0');
+t('published male CDF has 8 anchors',DD.MALE_QUANTILES.length,8);
+t('median anchor is 2.04%',DD.maleRateAt(50),0.0204);
+t('p90 anchor is 12.50%',DD.maleRateAt(90),0.125);
+ok('published anchors are monotonic',DD.MALE_QUANTILES.every((a,i,x)=>!i||(a.p>x[i-1].p&&a.rate>x[i-1].rate)));
+ok('interpolation reproduces every published anchor',DD.MALE_QUANTILES.every(a=>Math.abs(DD.pctOn(a.rate,DD.MALE_QUANTILES.map(x=>[x.p,x.rate])).p-a.p)<1e-8));
+const rk=DD.rank(0.099,40);
+ok('9.9% lands between p75 and p90',rk.all.p>75&&rk.all.p<90);
+t('8.23% is the 83rd-percentile all-men reference',Math.round(DD.rank(.0823).all.p),83);
+ok('not extrapolated inside published range',rk.all.extrapolated===false);
+ok('extremes flagged as extrapolated',DD.rank(.0005).all.extrapolated&&DD.rank(.8).all.extrapolated);
+ok('age 40 selects the 40–44 band',rk.bandLabel==='40–44');
+ok('age band changes the reference percentile',Math.abs(rk.band.p-rk.all.p)>0.1);
+t('band scale is band mean over male mean',rk.bandScale,0.0387/DD.MALE_AVG);
+ok('no age means no age band',DD.rank(.099).band===null);
+ok('higher rate ranks higher',DD.rank(.15).all.p>DD.rank(.05).all.p);
+ok('source is the published empirical table',/published directly|published empirical/i.test(DD.BENCH_SOURCE.verified));
+ok('denominator alignment documented',/outbound-conditional/i.test(DD.BENCH_SOURCE.measure));
+ok('bias direction stated as unknown',/direction.+unknown/i.test(DD.BENCH_SOURCE.bias));
+ok('male sample size stated',/6,233/.test(DD.BENCH_SOURCE.sample));
+ok('nothing is fitted in the shipped copy',/not a fitted model/i.test(html));
+ok('age-band shape assumption disclosed',/assumes its shape is constant/i.test(html));
+ok('Tinder versus Hinge caveat present',/this is Tinder, not Hinge/i.test(html));
 t('rank(0) is null',DD.rank(0),null);
-t('published male median reference',DD.maleRateAt(50),0.0204);
 ok('P20 is log-interpolated between published P10 and P25',DD.maleRateAt(20)>0.003&&DD.maleRateAt(20)<0.0076);
 ok('P80 is log-interpolated between published P75 and P90',DD.maleRateAt(80)>0.0539&&DD.maleRateAt(80)<0.125);
 t('three visible male reference levels',DD.MALE_REFERENCES.map(r=>r.p).join(','),'20,50,80');
@@ -153,7 +148,8 @@ const snap=JSON.stringify(DD.snapshot(R,M));
 ok('no message bodies',!/synthetic message/.test(snap));
 ok('no comment text',!/synthetic comment/.test(snap));
 ok('no email',!/@/.test(snap));
-ok('no urls',!/http/.test(snap));
+ok('snapshot urls are benchmark provenance only',
+   (snap.match(/https?:\/\//g)||[]).length<=1&&/swipestats\.io/.test(snap));
 ok('conversion pipes present for later phase',/conversion_pipes/.test(snap));
 const S=DD.snapshot(R,M,{subject:'subject-a',consent:'supplied for this project',consentAt:'2026-08-30'});
 ok('snapshot v3',S.datedawg_snapshot===3);
