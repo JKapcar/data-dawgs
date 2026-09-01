@@ -2372,15 +2372,15 @@ function niceTicks(lo,hi,n){
   return out;
 }
 
-// ---------- positional strength: stacked starting value by team ----------
+// ---------- positional strength: stacked full-roster value by team ----------
 function posStrengthChart(container, T){
   container.textContent="";
   const W=container.clientWidth||900, narrow=W<620;
   const rowH=narrow?22:24, m={t:22,r:56,b:22,l:narrow?90:104};
   const H=m.t+m.b+T.length*rowH;
   const groups=["QB","RB","WR","TE","DST"];
-  const vals=T.map(t=>({name:t.name, g:posValues(t), total:t.startValue}))
-              .sort((a,b)=>b.total-a.total);           // strongest lineup at the top
+  const vals=T.map(t=>({name:t.name, g:rosterPosValues(t), total:t.value}))
+              .sort((a,b)=>b.total-a.total);           // deepest full roster at the top
   const max=Math.max(1,...vals.map(v=>v.total));
   const avgTotal=vals.length?vals.reduce((a,v)=>a+v.total,0)/vals.length:0;
   const iw=W-m.l-m.r;
@@ -2402,7 +2402,7 @@ function posStrengthChart(container, T){
       if(w>0.4){
         const r=svgEl("rect",{x,y,width:w,height:h,fill:POS_COLOR[g],rx:2});
         r.addEventListener("pointermove",e=>showTT(e.clientX,e.clientY,v.name,
-          [[g==="DST"?"D/ST":g,"$"+Math.round(v.g[g])],["Starters total","$"+Math.round(v.total)]]));
+          [[g==="DST"?"D/ST":g,"$"+Math.round(v.g[g])],["Roster total","$"+Math.round(v.total)]]));
         r.addEventListener("pointerleave",hideTT);
         svg.appendChild(r);
       }
@@ -2420,6 +2420,14 @@ function posStrengthChart(container, T){
     stroke:css("--surface-1"),"stroke-width":3,"paint-order":"stroke"});
   al.textContent="avg $"+Math.round(avgTotal); svg.appendChild(al);
   container.appendChild(svg);
+}
+
+// Full-roster value split by position. This feeds the strength bars, where bench depth
+// belongs in the comparison even though the separate Roster grade remains starter-only.
+function rosterPosValues(t){
+  const g={QB:0,RB:0,WR:0,TE:0,DST:0};
+  t.picks.forEach(pk=>{ const P=norm(pk.pos); if(g[P]!==undefined) g[P]+=etrOf(pk); });
+  return g;
 }
 
 // starting-lineup market value split by position (flex players count at their real position)
@@ -2603,7 +2611,7 @@ function render(){
   <div class="vizgrid">
     <div class="vcard">
       <h2>Where the strength is</h2>
-      <p class="note">${MONEY_LABEL} of each team's <b>starting lineup only</b>, split by position. Bench depth is excluded on purpose — it doesn't score points.</p>
+      <p class="note">${MONEY_LABEL} of each team's <b>entire roster</b>, split by position. Bench value is included because depth matters.</p>
       <div id="chartPos"></div>
       <div class="legend2">${POS_ORDER.map(p=>`<span><span class="sw" style="background:${POS_COLOR[p]}"></span>${p==="DST"?"D/ST":p}</span>`).join("")}</div>
     </div>
