@@ -132,8 +132,16 @@ ok('fingerprint rendered on receipt',/sha256-/.test(w.document.getElementById('o
 ok('censoring applied to standardization',M.std.matured===true);
 ok('dashboard date inputs rendered',!!w.document.getElementById('viewFrom')&&!!w.document.getElementById('viewTo'));
 ok('both time-series charts rendered',out.querySelectorAll('svg.chart').length===2);
+const initialSeries=w.DD.timeSeries(R,R.minT,R.maxT,'month');
+ok('observed match totals agree across KPI, insight, and activity chart',
+  parseInt(out.querySelector('.match-kpi .value').textContent.replace(/,/g,''),10)===initialSeries.matches&&
+  parseInt(out.querySelector('.match-insight .big').textContent.replace(/,/g,''),10)===initialSeries.matches&&
+  +out.querySelector('svg[data-observed-matches]').getAttribute('data-observed-matches')===initialSeries.matches);
+ok('scoreable result is explicitly separated from observed total',
+  new RegExp(initialSeries.matureMatches+' scoreable matches from '+initialSeries.matureLikes+' matured likes','i').test(out.textContent)&&
+  new RegExp(initialSeries.matureMatches+' are attached to the '+initialSeries.matureLikes+' matured likes','i').test(out.textContent));
 ok('import receipt is collapsed by default',!!out.querySelector('details.receipt')&&!out.querySelector('details.receipt').open);
-ok('chart copy explains matches are dated to the sent like',/grouped by the date you sent each like/i.test(text));
+ok('chart copy explains observed matches are dated to the sent like',/known match outcome, dated to when you sent each like/i.test(text));
 ok('maturity note appears beside trend',/too recent to score/i.test(text));
 ok('trend explains why monthly dots cannot be averaged',/Monthly dots have different sample sizes/i.test(text));
 ok('likes and matches have distinct color tokens',/--likes:#006ee6/.test(html)&&/--matches:#d91f4e/.test(html));
@@ -192,12 +200,14 @@ ok('activity terrain renders all four volume habitats',out.querySelectorAll('.te
 ok('comment comparison is pictured as two speech pools',out.querySelectorAll('.comment-scene .speech').length===2&&/observed gap/.test(out.textContent));
 out.querySelector('[data-view="momentum"]').click();
 await new Promise(r=>setTimeout(r,50));
-ok('momentum view shows a filterable cumulative chart',/Your cumulative likes and matches/.test(out.textContent)&&out.querySelectorAll('svg.chart').length===1&&out.querySelectorAll('.charttools').length===1);
+ok('momentum view shows a filterable cumulative chart',/Your cumulative likes and observed matches/.test(out.textContent)&&out.querySelectorAll('svg.chart').length===1&&out.querySelectorAll('.charttools').length===1);
+ok('momentum total agrees with the shared observed-match KPI',out.querySelector('svg[data-observed-matches]').getAttribute('data-observed-matches')===out.querySelector('.match-kpi .value').textContent.replace(/,/g,''));
 ok('momentum includes volume-normalized median and benchmark band',out.querySelectorAll('svg .benchmarkline.median').length===1&&out.querySelectorAll('svg .benchmarkband').length===1);
 out.querySelector('[data-view="compare"]').click();
 await new Promise(r=>setTimeout(r,50));
 ok('compare view explains one export and two scopes',/overall history versus your selected snapshot/i.test(out.textContent)&&/One uploaded export, shown at two scopes/i.test(out.textContent));
 ok('compare view fixes overall history against selected snapshot',/Overall history/.test(out.textContent)&&/Selected snapshot/.test(out.textContent));
+ok('compare distinguishes observed totals from scoreable rates',/Observed matches/.test(out.textContent)&&/Scoreable match-back rate/.test(out.textContent));
 ok('compare chart includes median and 20th–80th benchmark band',out.querySelectorAll('svg .benchmarkline.median').length===1&&out.querySelectorAll('svg .benchmarkband').length===1);
 ok('compare warns that unequal-window counts are not comparable',/compare their rates.not their raw totals/i.test(out.textContent));
 out.querySelector('[data-view="overview"]').click();

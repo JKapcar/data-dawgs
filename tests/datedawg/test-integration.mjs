@@ -31,6 +31,7 @@ ok('Toto is told the metric is reciprocal acceptance, not cold discovery',/prima
 ok('Toto is told the benchmark is empirical Tinder data, not a Hinge cohort',/published Tinder male percentile table/.test(date)&&/not from an observed Hinge cohort/.test(date));
 ok('Toto is told the age-band shape assumption',/assumes the distribution shape is constant across age bands/.test(date));
 ok('Toto is told ranking windows are maturity-aligned',/Overall, 1 year, 6 months, or 1 month ranking window[\s\S]*latest scoreable date/.test(date));
+ok('Toto is told observed and scoreable match counts are different contracts',/“observed matches” always means every known match outcome[\s\S]*“Scoreable matches” always means the subset/.test(date));
 ok('Toto is told the Verdict and detail use one scope and method',/Verdict and the detailed ranking panel always use the same selected[\s\S]*same primary ranking method/.test(date));
 ok('Toto is told Patterns period switches update the whole story',/Overall, Last year, Last 6 months, and Last month switch the entire illustrated story together/.test(date));
 ok('Toto is told benchmark selection bias has unknown direction',/direction of that bias is unknown/.test(date));
