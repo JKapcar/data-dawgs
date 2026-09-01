@@ -259,8 +259,19 @@ button{font:inherit;cursor:pointer}
 .market-node{position:absolute;top:25px;translate:-50% 0;text-align:center}.market-node i{display:block;width:42px;height:42px;margin:auto;border-radius:50%;background:var(--ink-3);border:5px solid var(--surface-1)}
 .market-node.current i{background:var(--accent);box-shadow:0 0 22px color-mix(in srgb,var(--accent) 60%,transparent)}
 .market-node b{display:block;margin-top:5px;font:800 10px var(--mono)}.market-arrow{position:absolute;top:7px;left:20%;right:20%;text-align:center;color:var(--accent);font:900 11px var(--mono)}
-.market-boundary{margin-top:18px;padding-top:15px;border-top:1px solid var(--border)}.market-boundary .boundary-head{display:flex;justify-content:space-between;gap:12px;align-items:center;color:var(--ink-2);font-size:12px}.market-boundary .boundary-head b{color:var(--ink-1)}
-.market-boundary input{width:100%;height:34px;accent-color:var(--accent);touch-action:pan-y}.market-boundary .ends{display:flex;justify-content:space-between;color:var(--ink-3);font:700 10px var(--mono)}
+.market-boundary{margin-top:18px;padding:18px;border:1px solid var(--border);border-radius:16px;background:color-mix(in srgb,var(--surface-1) 78%,var(--page))}
+.market-boundary .boundary-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;color:var(--ink-2);font-size:12px}.market-boundary .boundary-head h3{margin:0 0 4px;font:400 18px/1.15 var(--display);color:var(--ink-1)}
+.market-boundary .boundary-head p{margin:0;max-width:66ch}.market-boundary .boundary-head b{color:var(--ink-1)}
+.boundary-presets{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:14px 0 12px}.boundary-presets>span{font:800 9px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.boundary-presets button{border:1px solid var(--border);background:var(--surface-1);color:var(--ink-2);border-radius:999px;padding:7px 10px;font:800 10px var(--mono)}.boundary-presets button:hover{border-color:var(--accent);color:var(--accent)}
+.boundary-rail{position:relative;padding-top:30px}.boundary-sides{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;font:900 10px var(--mono);letter-spacing:.08em}.boundary-sides .before{color:var(--ink-2)}.boundary-sides .after{color:var(--accent)}
+.market-boundary input{appearance:none;width:100%;height:12px;margin:7px 0;border-radius:999px;touch-action:pan-y;cursor:ew-resize;background:linear-gradient(90deg,var(--ink-3) 0,var(--ink-3) var(--split),var(--accent) var(--split),var(--accent) 100%);box-shadow:inset 0 0 0 1px var(--border)}
+.market-boundary input::-webkit-slider-thumb{appearance:none;width:30px;height:30px;border-radius:50%;background:var(--surface-1);border:7px solid var(--accent);box-shadow:0 3px 14px color-mix(in srgb,var(--accent) 35%,transparent)}
+.market-boundary input::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--surface-1);border:7px solid var(--accent);box-shadow:0 3px 14px color-mix(in srgb,var(--accent) 35%,transparent)}
+.market-boundary input:disabled{cursor:not-allowed;opacity:.45}.market-boundary .ends{display:flex;justify-content:space-between;color:var(--ink-3);font:700 10px var(--mono);margin-top:5px}
+.boundary-samples{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.boundary-sample{padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--surface-1)}.boundary-sample b{display:block;font:400 22px/1 var(--display)}.boundary-sample span{display:block;margin-top:5px;color:var(--ink-3);font:800 9px var(--mono);text-transform:uppercase;letter-spacing:.08em}.boundary-sample.after b{color:var(--accent)}
+.boundary-guard{display:flex;gap:9px;align-items:flex-start;margin:12px 0 0;padding:10px 12px;border-radius:11px;background:color-mix(in srgb,var(--good) 8%,var(--surface-1));color:var(--ink-2);font-size:11.5px}.boundary-guard:before{content:"✓";display:grid;place-items:center;flex:0 0 20px;height:20px;border-radius:50%;background:var(--good);color:#fff;font-weight:900}.boundary-guard.warn:before{content:"!";background:var(--warn)}
+.market-stat b.word{font:700 15px/1.15 var(--display)}
 .floorhead{display:flex;align-items:end;justify-content:space-between;gap:18px;margin:36px 0 12px}.floorhead p{font-size:13px}.floor-count{font:800 10px var(--mono);letter-spacing:.1em;color:var(--ink-3)}
 .companion{position:fixed;z-index:20;right:18px;bottom:18px;width:min(350px,calc(100vw - 36px));background:#100c08;color:#f6efe5;border:1px solid #443527;border-radius:18px;box-shadow:0 22px 70px rgba(0,0,0,.42);overflow:hidden}
 .companion summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:14px 16px;font-weight:800}.companion summary::-webkit-details-marker{display:none}.companion summary:before{content:"D";display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;font:400 15px var(--display)}
@@ -500,7 +511,7 @@ footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--border);
   .story-art{padding:15px}.comment-scene{grid-template-columns:1fr}.comment-gap{padding:12px 0}.speech{min-height:150px}
   .inbound-flow{grid-template-columns:1fr}.inbound-vs{text-align:center}.compare-bar-row{grid-template-columns:1fr}.shift-row{grid-template-columns:52px 1fr 88px}
   .rate-storyline{grid-template-columns:1fr 1fr}.rate-beat{min-height:82px;padding:14px}
-  .market-story{padding:18px}.market-grid{grid-template-columns:1fr}.market-stat{padding:13px}.market-stat b{font-size:21px}.floorhead{align-items:flex-start;flex-direction:column}.companion{left:8px;right:8px;bottom:8px;width:auto}}
+  .market-story{padding:18px}.market-grid{grid-template-columns:1fr}.market-stat{padding:13px}.market-stat b{font-size:21px}.boundary-samples{grid-template-columns:1fr}.market-boundary{padding:14px}.market-boundary .boundary-head{flex-direction:column}.market-boundary .ends{gap:12px}.market-boundary .ends span{max-width:48%}.market-boundary .ends span:last-child{text-align:right}.floorhead{align-items:flex-start;flex-direction:column}.companion{left:8px;right:8px;bottom:8px;width:auto}}
 </style>
 </head>
 <body>
@@ -1053,16 +1064,32 @@ var DD = (function(){
       (M.rankHeavy&&M.heavyAfter&&M.heavyAfter.n>=DD.MIN_N?'<span class="vchip">HEAVY-DAY CHECK <b>p'+Math.round((M.rankHeavy.band||M.rankHeavy.all).p)+'</b></span>':'')+
       '<span class="vchip">PERIOD <b>'+esc(period)+'</b> · '+iso(W.from)+' → '+iso(W.to)+'</span><span class="vchip">n <b>6,233</b> · SWIPESTATS</span><div class="vcue" id="vcue">↓ ENTER THE ANALYSIS FLOOR</div></div></section>';}
 
-  function marketStory(M){
+  function marketBoundaryGuide(){
+    var resolveBefore=R.maxT-DD.RESOLVE_DAYS*864e5,mature=R.outs.filter(function(o){return o.t<=resolveBefore;}).sort(function(a,b){return a.t-b.t;}),seen={},days=[];
+    mature.forEach(function(o){var d=new Date(o.t),t=Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate());if(!seen[t]){seen[t]=1;days.push(t);}});
+    function counts(c){var before=0,after=0;mature.forEach(function(o){if(o.t<c)before++;else after++;});return {before:before,after:after};}
+    var valid=days.filter(function(c){var n=counts(c);return n.before>=DD.MIN_N&&n.after>=DD.MIN_N;});
+    if(!valid.length)return {ready:false,min:R.minT,max:resolveBefore,balanced:Math.round((R.minT+resolveBefore)/2),counts:counts};
+    var balanced=valid[0],gap=Infinity;valid.forEach(function(c){var n=counts(c),g=Math.abs(n.before-n.after);if(g<gap){gap=g;balanced=c;}});
+    return {ready:true,min:valid[0],max:valid[valid.length-1],balanced:balanced,counts:counts};
+  }
+  function marketStory(M,G){
     var before=M.beforeAdj,after=M.afterAdj,std=M.std,
         beforeRate=before&&before.n?before.p:null,afterRate=after&&after.n?after.p:null,
         rawLift=beforeRate&&afterRate?(afterRate/beforeRate-1):null,
         adjLift=std&&std.valid?std.lift:null,heavy=M.zHeavy&&M.zHeavy.lift!=null?M.zHeavy.lift:null,
-        max=Math.max(.001,beforeRate||0,afterRate||0),bp=beforeRate?12+31*beforeRate/max:12,ap=afterRate?58+31*afterRate/max:58;
+        max=Math.max(.001,beforeRate||0,afterRate||0),bp=beforeRate?12+31*beforeRate/max:12,ap=afterRate?58+31*afterRate/max:58,
+        span=Math.max(1,G.max-G.min),split=Math.max(0,Math.min(100,(CUT-G.min)/span*100)),safeCopy=G.ready?'The guardrails keep at least '+DD.MIN_N+' matured likes on both sides, so dragging cannot erase a comparison.':'This export does not contain enough matured likes to create two reliable sides yet.',
+        oneYear=Math.max(G.min,Math.min(G.max,R.maxT-DD.RESOLVE_DAYS*864e5-365*864e5)),twoYear=Math.max(G.min,Math.min(G.max,R.maxT-DD.RESOLVE_DAYS*864e5-730*864e5));
     return '<section class="market-story" id="market-story"><span class="room-kicker">The Market · change story</span><h2>'+
       (adjLift==null?'Your change is still being resolved':adjLift>0?'Your results moved up':'Your results moved down')+'</h2><p>'+
       (declValid()?'Your declared change on <b>'+iso(DECL.cut)+'</b> is held fixed.':'The comparison boundary is exploratory. It describes the pattern; it does not claim the change caused it.')+
-      '</p><div class="market-grid"><div class="market-stat"><b>'+(beforeRate==null?'—':pct(beforeRate))+'</b><span>Before · matured rate</span></div><div class="market-stat current"><b>'+(afterRate==null?'—':pct(afterRate))+'</b><span>Current · matured rate</span></div><div class="market-stat change"><b>'+(adjLift==null?'—':(adjLift>0?'+':'')+(100*adjLift).toFixed(1)+'%')+'</b><span>Volume-standardized change</span></div><div class="market-stat"><b>'+(heavy==null?'—':(heavy>0?'+':'')+(100*heavy).toFixed(1)+'%')+'</b><span>Heavy-day diagnostic</span></div></div><div class="market-track" aria-label="Before and current matured rates"><span class="market-arrow">'+(rawLift==null?'Maturity-aligned comparison':(rawLift>0?'IMPROVEMENT →':'← DECLINE')+' '+Math.abs(100*rawLift).toFixed(0)+'% RAW')+'</span><span class="market-node" style="left:'+bp+'%"><i></i><b>BEFORE</b></span><span class="market-node current" style="left:'+ap+'%"><i></i><b>CURRENT</b></span></div><div class="market-boundary"><div class="boundary-head"><span><b>Comparison date · '+iso(CUT)+'</b><br>'+(declValid()?'Declared before import. Moving it permanently makes this session exploratory.':'Exploratory view · no significance claim')+'</span><span class="tag '+(declValid()?'ok':'')+'">'+(declValid()?'DECLARED':'EXPLORATORY'+(MOVES?' · '+MOVES+' MOVE'+(MOVES===1?'':'S'):''))+'</span></div><input type="range" id="cut" min="'+R.minT+'" max="'+(R.maxT-DD.RESOLVE_DAYS*864e5)+'" step="86400000" value="'+CUT+'" aria-label="Exploratory comparison date"><div class="ends"><span>'+iso(R.minT)+'</span><span>'+iso(R.maxT-DD.RESOLVE_DAYS*864e5)+'</span></div></div></section>';
+      '</p><div class="market-grid"><div class="market-stat"><b>'+(beforeRate==null?'—':pct(beforeRate))+'</b><span>Before · matured rate</span></div><div class="market-stat current"><b>'+(afterRate==null?'—':pct(afterRate))+'</b><span>After · matured rate</span></div><div class="market-stat change"><b'+(adjLift==null?' class="word"':'')+'>'+(adjLift==null?'Not enough overlap':(adjLift>0?'+':'')+(100*adjLift).toFixed(1)+'%')+'</b><span>Change after balancing daily activity</span></div><div class="market-stat"><b'+(heavy==null?' class="word"':'')+'>'+(heavy==null?'Not enough heavy days':(heavy>0?'+':'')+(100*heavy).toFixed(1)+'%')+'</b><span>Heavy-day check</span></div></div><div class="market-track" aria-label="Before and after matured rates"><span class="market-arrow">'+(rawLift==null?'Maturity-aligned comparison':(rawLift>0?'IMPROVEMENT →':'← DECLINE')+' '+Math.abs(100*rawLift).toFixed(0)+'% RAW')+'</span><span class="market-node" style="left:'+bp+'%"><i></i><b>BEFORE</b></span><span class="market-node current" style="left:'+ap+'%"><i></i><b>AFTER</b></span></div>'+
+      '<div class="market-boundary"><div class="boundary-head"><div><h3>Choose the moment your story changed</h3><p>Everything to the left becomes <b>Before</b>. Everything to the right becomes <b>After</b>. Drag the marker—or try a starting point.</p></div><span class="tag '+(declValid()?'ok':'')+'">'+(declValid()?'DECLARED':'EXPLORATORY'+(MOVES?' · '+MOVES+' MOVE'+(MOVES===1?'':'S'):''))+'</span></div>'+
+      '<div class="boundary-presets"><span>Try a split</span><button data-cut-preset="'+G.balanced+'">Balanced history</button><button data-cut-preset="'+twoYear+'">2 years ago</button><button data-cut-preset="'+oneYear+'">1 year ago</button></div>'+
+      '<div class="boundary-rail"><div class="boundary-sides"><span class="before">← BEFORE</span><b id="cutLabel">'+iso(CUT)+'</b><span class="after">AFTER →</span></div><input type="range" id="cut" min="'+G.min+'" max="'+G.max+'" step="86400000" value="'+CUT+'" style="--split:'+split.toFixed(1)+'%" '+(G.ready?'':'disabled')+' aria-label="Choose the date that divides before from after" aria-valuetext="'+iso(CUT)+'"><div class="ends"><span>Earliest safe split · '+iso(G.min)+'</span><span>Latest safe split · '+iso(G.max)+'</span></div></div>'+
+      '<div class="boundary-samples"><div class="boundary-sample"><b id="cutBeforeN">'+num(before.n)+'</b><span>Matured likes kept before</span></div><div class="boundary-sample after"><b id="cutAfterN">'+num(after.n)+'</b><span>Matured likes kept after</span></div></div>'+
+      '<p class="boundary-guard '+(G.ready?'':'warn')+'">'+safeCopy+(declValid()?' Your declared date is preserved unless you move it.':' Moving this exploratory marker does not prove the date caused the change.')+'</p></div></section>';
   }
 
   function chartSpec(x){return {id:x[0],question:x[1],required_fields:x[2].split(', '),available:!!x[3],numerator:x[4]||'chart-specific aggregate',denominator:x[5]||'eligible records in active window',filters:['window','benchmark scope','grain where applicable'],caveats:[x[6]||'Descriptive association; exported fields limit interpretation.'],minimum_sample:DD.MIN_N,render:x[3]?'interactive dashboard renderer':'feature-detected omission',snapshot:'aggregate text summary',ai_context:'Question: '+x[1]+'; cite numerator, denominator, filters and caveat.'};}
@@ -1601,9 +1628,11 @@ var DD = (function(){
   }
 
   function paint(){
+    var G=marketBoundaryGuide();
+    if(!declValid()&&G.ready)CUT=Math.max(G.min,Math.min(G.max,CUT));
     var S=DD.timeSeries(R,VFROM,VTO,GRAIN),M=DD.metrics(R,CUT),RW=rankWindow(),h=[];
     h.push(verdict(RW.M,R,RW));
-    h.push(marketStory(M));
+    h.push(marketStory(M,G));
     h.push('<div id="workings"><details class="receipt"><summary>Import details & privacy receipt</summary>'+receipt()+'</details>');
     h.push('<div class="sec"><h2>Where your result sits</h2><p class="sub">Your reciprocal-acceptance rate placed directly on SwipeStats’ published male Tinder percentile table. Dashboard date changes automatically rank that same visible rate; the other buttons are independent comparison windows. Likes too recent to have resolved are excluded.</p>'+rankPanel(RW)+'</div>');
     h.push('<div class="floorhead"><div><span class="room-kicker">The Analysis Floor</span><h2>Every light answers a real question</h2><p>Choose a room, then use the shared rail to move the entire story through time. Unsupported views stay hidden instead of drawing empty axes.</p></div><span class="floor-count">'+AVAILABLE_CHARTS+' AVAILABLE · '+CHART_REGISTRY.length+' CATALOGUED</span></div>');
@@ -1661,7 +1690,12 @@ var DD = (function(){
     if($("#vcue"))$("#vcue").onclick=function(){if($("#workings").scrollIntoView)$("#workings").scrollIntoView({behavior:"smooth",block:"start"});};
     $("#applyRange").onclick=function(){var a=$("#viewFrom").value,z=$("#viewTo").value;if(a&&z){
       VFROM=new Date(a+"T00:00:00Z").getTime();VTO=new Date(z+"T00:00:00Z").getTime()+864e5-1;YEAR_FROM=YEAR_TO=null;RANGE="custom";RANK_RANGE="selected";paint();}};
-    var cutControl=$("#cut");if(cutControl)cutControl.onchange=function(){var next=+cutControl.value;if(next!==CUT){CUT=next;MOVES++;}paint();};
+    var cutControl=$("#cut");if(cutControl){cutControl.oninput=function(){
+      var next=+cutControl.value,preview=DD.metrics(R,next),p=(next-G.min)/Math.max(1,G.max-G.min)*100;
+      cutControl.style.setProperty('--split',Math.max(0,Math.min(100,p)).toFixed(1)+'%');cutControl.setAttribute('aria-valuetext',iso(next));
+      if($("#cutLabel"))$("#cutLabel").textContent=iso(next);if($("#cutBeforeN"))$("#cutBeforeN").textContent=num(preview.beforeAdj.n);if($("#cutAfterN"))$("#cutAfterN").textContent=num(preview.afterAdj.n);
+    };cutControl.onchange=function(){var next=Math.max(G.min,Math.min(G.max,+cutControl.value));if(next!==CUT){CUT=next;MOVES++;}paint();};}
+    Array.prototype.forEach.call(document.querySelectorAll('[data-cut-preset]'),function(b){b.onclick=function(){var next=Math.max(G.min,Math.min(G.max,+b.getAttribute('data-cut-preset')));if(next!==CUT){CUT=next;MOVES++;}paint();};});
     $("#snap").onclick=function(){var data=DD.snapshot(R,M,{subject:SUBJ&&SUBJ.subject||null,consent:SUBJ&&SUBJ.consent||null,consentAt:SUBJ&&SUBJ.at||null,declaration:declValid()?DECL:null,boundaryMoves:0});
       data.dashboard_range={from:iso(S.from),to:iso(S.to),grain:S.grain};data.rank_window={id:RW.id,from:iso(RW.from),to:iso(RW.to)};var b=new Blob([JSON.stringify(data,null,1)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="datedawg-snapshot.json";a.click();setTimeout(function(){URL.revokeObjectURL(a.href);},1000);};
     $("#scout").onclick=function(){
@@ -1809,6 +1843,7 @@ window.DD_BOTCTX = {
 - The subtle dotted median and shaded 20th–80th benchmark band are external Tinder male references from SwipeStats. On count and cumulative charts they are converted to expected matches at the subject's actual like volume; on rate charts they remain rates. The all-men 2.04% median is published directly; P20 and P80 are log-interpolated between published anchors. Users can hide the benchmark layer.
 - Charts and illustrated dashboard views default to the subject’s age cohort when age is available because that is the more relevant ecosystem. “Your cohort” rescales the published all-men percentile curve by the cohort’s published mean; it is modelled because SwipeStats does not publish age-specific distribution shapes. “All men” is an explicit comparison toggle. The selected benchmark scope must be named when explaining any dotted line, band, chart percentile, ecosystem position, or Market Value card.
 - The Combine is the compact opening answer; The Market is the maturity-aligned change story; the Analysis Floor holds the linked chart views; and the Scout Report is an aggregate-only local download. Do not describe the Scout Report as a public share link.
+- The Market’s comparison control divides matured likes into Before and After. Its safe endpoints preserve at least 30 matured likes on both sides, its sample cards preview the counts while dragging, and its Balanced history / 2 years ago / 1 year ago buttons are exploratory starting points. Guardrails prevent an empty side but do not create significance, common volume support, or causality.
 - ZIP import reads the archive directory locally, rejects unsafe paths, duplicate canonical basenames, excessive expansion and implausible compression, and extracts only allowlisted JSON. The selfie-verification entry is detected but never decompressed, extracted, decoded, or parsed. Unknown entries are named in the receipt without reading their contents.
 - The chart companion receives windowed aggregate counts, active filters, the selected benchmark label and caveats only. It never receives raw messages, comment text, identity, media, devices or biometric data. Its memory status is explicitly inactive; do not imply anything was saved.
 - The page does not upload, store, log, or transmit the export. Do not ask for raw exports, messages, identity data, or verification media.
