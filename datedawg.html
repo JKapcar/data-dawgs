@@ -277,6 +277,7 @@ button{font:inherit;cursor:pointer}
 .companion summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:14px 16px;font-weight:800}.companion summary::-webkit-details-marker{display:none}.companion summary:before{content:"D";display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;font:400 15px var(--display)}
 .companion summary span{margin-left:auto;color:#8f8377;font:700 10px var(--mono)}.companion-body{padding:0 16px 16px}.companion-context{font:700 10px/1.5 var(--mono);color:#9d9184;border-top:1px solid #34291f;padding-top:12px}.companion-answer{font-size:14px;line-height:1.55;margin:12px 0;color:#efe7dc}.companion-actions{display:flex;gap:6px;flex-wrap:wrap}.companion-actions button{border:1px solid #4b3b2c;background:#1b140e;color:#eee4d7;border-radius:999px;padding:8px 11px;font:800 10px var(--mono)}
 .scout-actions{display:flex;gap:8px;flex-wrap:wrap}.scout-actions .btn{margin:0}.privacy-chip{font:800 9px var(--mono);color:var(--good);letter-spacing:.08em}
+.local-memory{margin-top:16px;border:1px solid var(--border);border-radius:14px;background:color-mix(in srgb,var(--surface-1) 82%,var(--page));overflow:hidden}.local-memory summary{cursor:pointer;list-style:none;padding:15px 16px;font:800 12px var(--mono);letter-spacing:.04em}.local-memory summary::-webkit-details-marker{display:none}.local-memory summary:after{content:"+";float:right;color:var(--accent)}.local-memory[open] summary:after{content:"−"}.local-memory-body{padding:0 16px 16px}.local-memory-body p{font-size:12px;color:var(--ink-2);max-width:82ch}.local-memory-facts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.local-memory-facts span{padding:10px;border-radius:10px;background:var(--surface-1);border:1px solid var(--border);font:700 10px/1.35 var(--mono)}.local-consent{display:flex;align-items:flex-start;gap:9px;margin:12px 0;font-size:12px}.local-consent input{margin-top:2px;accent-color:var(--accent)}.local-memory-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.local-memory-status{font:800 10px var(--mono);color:var(--good)}.saved-return{margin:14px auto 0;padding:13px 15px;max-width:520px;border:1px solid var(--border);border-radius:12px;background:var(--surface-1);font-size:12px}.saved-return b{display:block;margin-bottom:4px}.saved-return .btn{margin:9px 0 0}
 .chartgrid{display:grid;grid-template-columns:1fr;gap:14px}
 .chartpair{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .chartcard{background:var(--surface-1);border:1px solid var(--border);border-radius:18px;
@@ -511,7 +512,7 @@ footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--border);
   .story-art{padding:15px}.comment-scene{grid-template-columns:1fr}.comment-gap{padding:12px 0}.speech{min-height:150px}
   .inbound-flow{grid-template-columns:1fr}.inbound-vs{text-align:center}.compare-bar-row{grid-template-columns:1fr}.shift-row{grid-template-columns:52px 1fr 88px}
   .rate-storyline{grid-template-columns:1fr 1fr}.rate-beat{min-height:82px;padding:14px}
-  .market-story{padding:18px}.market-grid{grid-template-columns:1fr}.market-stat{padding:13px}.market-stat b{font-size:21px}.boundary-samples{grid-template-columns:1fr}.market-boundary{padding:14px}.market-boundary .boundary-head{flex-direction:column}.market-boundary .ends{gap:12px}.market-boundary .ends span{max-width:48%}.market-boundary .ends span:last-child{text-align:right}.floorhead{align-items:flex-start;flex-direction:column}.companion{left:8px;right:8px;bottom:8px;width:auto}}
+  .market-story{padding:18px}.market-grid{grid-template-columns:1fr}.market-stat{padding:13px}.market-stat b{font-size:21px}.boundary-samples{grid-template-columns:1fr}.market-boundary{padding:14px}.market-boundary .boundary-head{flex-direction:column}.market-boundary .ends{gap:12px}.market-boundary .ends span{max-width:48%}.market-boundary .ends span:last-child{text-align:right}.local-memory-facts{grid-template-columns:1fr}.floorhead{align-items:flex-start;flex-direction:column}.companion{left:8px;right:8px;bottom:8px;width:auto}}
 </style>
 </head>
 <body>
@@ -550,6 +551,7 @@ opened, and your email, phone, device IPs and photo links are discarded as the f
   <input type="file" id="jsonFile" multiple accept=".json,application/json">
   <span class="privacy-line">NETWORK DISABLED BY POLICY · PROCESSING STAYS LOCAL</span>
   <div class="import-status" id="importStatus" role="status" aria-live="polite"></div>
+  <div id="savedReturn"></div>
 
   <details class="pre" id="preBox">
     <summary>Optional advanced test — declare a change date before loading <span>(and label the subject)</span></summary>
@@ -1017,10 +1019,36 @@ var DD = (function(){
      exploring is not a declaration, so there is no toggle. */
   var R=null,CUT=null,MOVES=0,DECL=null,SUBJ=null,VFROM=null,VTO=null,YEAR_FROM=null,YEAR_TO=null,GRAIN="month",RANGE="all",RANK_RANGE="1y",BENCHMARK_SCOPE="cohort",
       VIEW="overview",SHOW_LIKES=true,SHOW_MATCHES=true,SHOW_BENCHMARKS=true,SHOW_VALUES=true,
-      ACTIVITY_SCALE="sqrt",RATE_MODE="story",ZIP_META=null;
+      ACTIVITY_SCALE="sqrt",RATE_MODE="story",ZIP_META=null,
+      SAVE_SCHEMA=1,SAVE_DB="datedawg-local",SAVE_STORE="dashboard",SAVE_KEY="current",
+      SAVE_CAPABLE=typeof indexedDB!=="undefined",SAVED_RECORD=null,HAS_SAVED=false,REMEMBERED=false;
   /* DECL is captured BEFORE parse and can only ever be invalidated, never created later.
      prospective:true means it was recorded before any result was rendered. */
   function declValid(){ return DECL && DECL.cut===CUT && !MOVES; }
+
+  /* Optional cross-session memory. IndexedDB receives only the already-sanitized chart
+     model, never the ZIP, JSON source, message bodies, media, identity, device or location
+     fields. It remains sensitive event-level behavioral data and is opt-in only. */
+  function savedShape(x){
+    var keys=["parser","fingerprint","refused","unknown","filesSeen","filesMissing","records","events","outs","ins","dayCount","minT","maxT","blocksByYear","blockGapYears","weMetConnections","weMet","conversionPipes","days","userDropped","profile","filters","photoLinks"],o={};
+    keys.forEach(function(k){if(x[k]!==undefined)o[k]=x[k];});return o; }
+  function openSaveDb(){return new Promise(function(resolve,reject){
+    if(!SAVE_CAPABLE){reject(Error("Local browser storage is unavailable."));return;}
+    var q;try{q=indexedDB.open(SAVE_DB,1);}catch(e){reject(e);return;}
+    q.onupgradeneeded=function(){var db=q.result;if(!db.objectStoreNames.contains(SAVE_STORE))db.createObjectStore(SAVE_STORE);};
+    q.onsuccess=function(){resolve(q.result);};q.onerror=function(){reject(q.error||Error("Could not open local storage."));}; });}
+  function saveRequest(kind,value){return openSaveDb().then(function(db){return new Promise(function(resolve,reject){
+    var tx=db.transaction(SAVE_STORE,"readwrite"),store=tx.objectStore(SAVE_STORE),q=kind==="delete"?store.delete(SAVE_KEY):store.put(value,SAVE_KEY);
+    q.onerror=function(){reject(q.error||Error("Local storage failed."));};
+    tx.oncomplete=function(){db.close();resolve(value||null);};tx.onerror=function(){reject(tx.error||Error("Local storage transaction failed."));}; });});}
+  function loadSaved(){return openSaveDb().then(function(db){return new Promise(function(resolve,reject){
+    var tx=db.transaction(SAVE_STORE,"readonly"),q=tx.objectStore(SAVE_STORE).get(SAVE_KEY);
+    q.onsuccess=function(){db.close();var x=q.result,valid=x&&x.schema===SAVE_SCHEMA&&x.R&&x.R.parser===DD.PARSER_VERSION&&Array.isArray(x.R.outs)&&Array.isArray(x.R.ins)&&x.R.minT&&x.R.maxT;resolve(valid?x:null);};
+    q.onerror=function(){db.close();reject(q.error||Error("Could not read saved dashboard."));}; });}).catch(function(){return null;});}
+  function saveDashboard(){var record={schema:SAVE_SCHEMA,savedAt:new Date().toISOString(),kind:"sanitized-chart-data",R:savedShape(R)};
+    return saveRequest("put",record).then(function(){SAVED_RECORD=record;HAS_SAVED=REMEMBERED=true;
+      if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(function(){});return record;});}
+  function forgetDashboard(){return saveRequest("delete").then(function(){SAVED_RECORD=null;HAS_SAVED=REMEMBERED=false;});}
 
   function setTheme(t){
     document.documentElement.dataset.theme=t;
@@ -1118,9 +1146,29 @@ var DD = (function(){
     return '<details class="companion" id="companion"><summary>Rollo · chart companion <span>LOCAL · NO MEMORY</span></summary><div class="companion-body"><div class="companion-context">ACTIVE VIEW · '+esc(VIEW.toUpperCase())+'<br>'+iso(S.from)+' → '+iso(S.to)+' · '+esc(c.label.toUpperCase())+'</div><p class="companion-answer" id="companionAnswer">I only receive the aggregate numbers visible in this view—never message bodies, comment text, identity, photos, or selfie data. Pick a question and I’ll explain the evidence on screen.</p><div class="companion-actions"><button data-companion="change">What changed?</button><button data-companion="caveat">Conservative read</button><button data-companion="next">What next?</button></div></div></details>';
   }
 
+  function memoryPanel(){
+    if(!SAVE_CAPABLE)return '<details class="local-memory"><summary>Remember this dashboard on this device</summary><div class="local-memory-body"><p>This browser does not make private local database storage available here. Download the aggregate snapshot if you need a portable backup.</p></div></details>';
+    var same=REMEMBERED&&SAVED_RECORD&&R&&SAVED_RECORD.R.fingerprint===R.fingerprint,
+        saved=SAVED_RECORD&&SAVED_RECORD.savedAt?new Date(SAVED_RECORD.savedAt).toLocaleString():'';
+    return '<details class="local-memory"'+(same?' open':'')+'><summary>'+(same?'Saved on this device':'Remember this dashboard on this device')+'</summary><div class="local-memory-body">'+
+      '<p><b>Optional and off by default.</b> DateDawg can keep the sanitized chart data in this browser so the dashboard opens automatically next time. It does not keep your ZIP, message text, photos, email, phone, devices, location, or selfie data.</p>'+
+      '<div class="local-memory-facts"><span>STAYS IN THIS BROWSER<br>No account or cloud sync</span><span>SENSITIVE EVENT HISTORY<br>Dates, outcomes, comments, age, gender and filters</span><span>NOT A GUARANTEED BACKUP<br>Private mode or clearing site data removes it</span></div>'+
+      '<p>It is not separately encrypted from your browser profile. Anyone who can use this browser profile can reopen it, and the browser may remove local data under storage pressure.</p>'+
+      (same?'<div class="local-memory-actions"><span class="local-memory-status">✓ SAVED'+(saved?' · '+esc(saved):'')+'</span><button class="btn ghost" id="forgetLocal">Forget saved dashboard</button></div>':
+      '<label class="local-consent"><input type="checkbox" id="rememberConsent"><span>I understand what is retained and want this sanitized dashboard saved on this device.</span></label><div class="local-memory-actions"><button class="btn" id="saveLocal" disabled>'+(HAS_SAVED?'Replace saved dashboard':'Remember on this device')+'</button><span class="local-memory-status" id="saveLocalStatus" role="status" aria-live="polite"></span></div>')+
+      '</div></details>';
+  }
+  function showSavedReturn(){var n=$("#savedReturn");if(!n)return;
+    n.innerHTML=(!R&&SAVED_RECORD)?'<div class="saved-return"><b>Saved dashboard found on this device</b>No upload needed. This restores the sanitized chart history saved in this browser.<button class="btn ghost" id="restoreLocal">Open saved dashboard</button></div>':'';
+    if($("#restoreLocal"))$("#restoreLocal").onclick=function(){activateResult(SAVED_RECORD.R,false);}; }
+  function bindMemory(){var consent=$("#rememberConsent"),save=$("#saveLocal"),forget=$("#forgetLocal"),status=$("#saveLocalStatus");
+    if(consent&&save){consent.onchange=function(){save.disabled=!consent.checked;};save.onclick=function(){
+      save.disabled=true;if(status)status.textContent="SAVING LOCALLY…";saveDashboard().then(function(){paint();}).catch(function(e){save.disabled=false;if(status)status.textContent="COULD NOT SAVE · "+(e.message||e);});};}
+    if(forget)forget.onclick=function(){forget.disabled=true;forgetDashboard().then(function(){paint();showSavedReturn();}).catch(function(){forget.disabled=false;forget.textContent="Could not delete — try again";});}; }
+
   function scoutReport(S,RW){
     var rank=S.rate&&S.rate.n>=DD.MIN_N?DD.rank(S.rate.p,R.profile&&R.profile.age):null,c=benchmarkContext(),head=rank&&(c.useCohort&&rank.band?rank.band:rank.all);
-    return '<section class="sec" id="scout-report"><span class="room-kicker">The Scout Report</span><h2>Your aggregate result, ready to keep</h2><p class="sub">A premium one-page summary with counts, caveats, provenance and fingerprint—never raw messages or third-party details.</p><div class="card"><div class="grid"><div class="stat"><b>'+(head?ordinal(head.p):'—')+'</b><span>'+esc(c.label)+' reference</span></div><div class="stat"><b>'+(S.rate?pct(S.rate.p):'—')+'</b><span>Mature match-back rate</span></div><div class="stat"><b>'+num(S.matureMatches)+' / '+num(S.matureLikes)+'</b><span>Matches / matured likes</span></div><div class="stat"><b>'+num(S.likes)+'</b><span>Likes sent</span></div></div><p class="chartnote">SwipeStats comparison; not a measured Hinge population. Missing impressions mean cold-discovery odds cannot be calculated.</p><div class="scout-actions"><button class="btn" id="scout">Download Scout Report</button><button class="btn ghost" id="snap">Download data snapshot</button><button class="btn ghost" id="again">Read a different export</button><span class="privacy-chip">AGGREGATES ONLY · LOCAL</span></div></div></section>';
+    return '<section class="sec" id="scout-report"><span class="room-kicker">The Scout Report</span><h2>Your aggregate result, ready to keep</h2><p class="sub">A premium one-page summary with counts, caveats, provenance and fingerprint—never raw messages or third-party details.</p><div class="card"><div class="grid"><div class="stat"><b>'+(head?ordinal(head.p):'—')+'</b><span>'+esc(c.label)+' reference</span></div><div class="stat"><b>'+(S.rate?pct(S.rate.p):'—')+'</b><span>Mature match-back rate</span></div><div class="stat"><b>'+num(S.matureMatches)+' / '+num(S.matureLikes)+'</b><span>Matches / matured likes</span></div><div class="stat"><b>'+num(S.likes)+'</b><span>Likes sent</span></div></div><p class="chartnote">SwipeStats comparison; not a measured Hinge population. Missing impressions mean cold-discovery odds cannot be calculated.</p><div class="scout-actions"><button class="btn" id="scout">Download Scout Report</button><button class="btn ghost" id="snap">Download data snapshot</button><button class="btn ghost" id="again">Read a different export</button><span class="privacy-chip">AGGREGATES ONLY · LOCAL</span></div>'+memoryPanel()+'</div></section>';
   }
 
   function rankWindow(){
@@ -1660,6 +1708,7 @@ var DD = (function(){
     h.push(companion(S));
     h.push('</div>');
     $("#out").className="";$("#out").innerHTML=h.join("");
+    bindMemory();
 
     Array.prototype.forEach.call(document.querySelectorAll("[data-range]"),function(b){b.onclick=function(){
       var DAY=864e5,id=b.getAttribute("data-range"),y=new Date(R.maxT).getUTCFullYear();VTO=R.maxT;RANK_RANGE="selected";
@@ -1711,9 +1760,9 @@ var DD = (function(){
     };
     Array.prototype.forEach.call(document.querySelectorAll('[data-companion]'),function(b){b.onclick=function(){
       var a=$("#companionAnswer"),kind=b.getAttribute('data-companion'),rate=S.rate?pct(S.rate.p):'not yet scoreable';
-      a.textContent=kind==='change'?'In this view, '+S.matureMatches+' of '+S.matureLikes+' matured likes became matches: '+rate+'. Compare the weighted period rate, not the average height of monthly dots.':kind==='caveat'?'The conservative read is descriptive: Tinder is only an external anchor, recent likes are censored, and volume standardization does not isolate profile attractiveness or causation.':'Next, open Patterns to compare weekday, activity-volume, and comment associations—or narrow the shared date rail to test whether the story persists.';
+      a.textContent=kind==='change'?'In this view, '+S.matureMatches+' of '+S.matureLikes+' matured likes became matches: '+rate+'. Compare the weighted period rate, not the average height of the chart dots.':kind==='caveat'?'The conservative read is descriptive: Tinder is only an external anchor, recent likes are censored, and volume standardization does not isolate profile attractiveness or causation.':'Next, open Patterns to compare weekday, activity-volume, and comment associations—or narrow the shared date rail to test whether the story persists.';
     };});
-    $("#again").onclick=function(){R=null;VFROM=VTO=YEAR_FROM=YEAR_TO=null;RANGE="all";RANK_RANGE="1y";BENCHMARK_SCOPE="cohort";GRAIN="month";VIEW="overview";SHOW_LIKES=SHOW_MATCHES=SHOW_BENCHMARKS=SHOW_VALUES=true;ACTIVITY_SCALE="sqrt";RATE_MODE="story";document.body.classList.remove("results-ready");$("#out").className="hide";$("#out").innerHTML="";if($("#drop").scrollIntoView)$("#drop").scrollIntoView({behavior:"smooth"});};
+    $("#again").onclick=function(){R=null;REMEMBERED=false;VFROM=VTO=YEAR_FROM=YEAR_TO=null;RANGE="all";RANK_RANGE="1y";BENCHMARK_SCOPE="cohort";GRAIN="month";VIEW="overview";SHOW_LIKES=SHOW_MATCHES=SHOW_BENCHMARKS=SHOW_VALUES=true;ACTIVITY_SCALE="sqrt";RATE_MODE="story";document.body.classList.remove("results-ready");$("#out").className="hide";$("#out").innerHTML="";showSavedReturn();if($("#drop").scrollIntoView)$("#drop").scrollIntoView({behavior:"smooth"});};
   }
 
   function capturePre(){
@@ -1787,6 +1836,14 @@ var DD = (function(){
     }catch(err){zipStatus(err.message||String(err),true);}
   }
 
+  function activateResult(res,fresh){
+    R=res;REMEMBERED=!!(SAVED_RECORD&&R.fingerprint&&SAVED_RECORD.R.fingerprint===R.fingerprint);document.body.classList.add("results-ready");zipStatus('');
+    VFROM=R.minT;VTO=R.maxT;YEAR_FROM=YEAR_TO=null;RANGE="all";RANK_RANGE="1y";BENCHMARK_SCOPE="cohort";GRAIN="month";
+    var yr=R.maxT-365*864e5;CUT=yr>R.minT?yr:Math.round((R.minT+R.maxT)/2);MOVES=0;
+    if(fresh&&DECL){if(DECL.cut>R.minT&&DECL.cut<R.maxT-30*864e5)CUT=DECL.cut;else{DECL.outOfRange=true;DECL=null;}}
+    if(!fresh){DECL=null;SUBJ=null;ZIP_META=null;paint();document.documentElement.scrollTop=0;document.body.scrollTop=0;return;}
+    Promise.resolve(DD.fingerprint(R)).catch(function(){return null;}).then(function(){REMEMBERED=!!(SAVED_RECORD&&R.fingerprint&&SAVED_RECORD.R.fingerprint===R.fingerprint);paint();document.documentElement.scrollTop=0;document.body.scrollTop=0;});
+  }
   function done(bag,bad){
     var payload={};
     Object.keys(bag).forEach(function(k){ if(bag[k]!==null) payload[k]=bag[k]; });
@@ -1794,19 +1851,9 @@ var DD = (function(){
     var res=DD.parse(payload);
     if(res.error){ $("#out").className="";
       $("#out").innerHTML='<div class="note stop">'+esc(res.error)+'</div>'; return; }
-    R=res;document.body.classList.add("results-ready");zipStatus('');
-    if(ZIP_META&&ZIP_META.unknown.length)R.filesMissing=R.filesMissing.concat(ZIP_META.unknown.map(function(x){return x+' (unknown, not extracted)';}));
-    if(bad.length) R.filesMissing=R.filesMissing.concat(bad.map(function(b){return b+" (unreadable)";}));
-    VFROM=R.minT;VTO=R.maxT;YEAR_FROM=YEAR_TO=null;RANGE="all";RANK_RANGE="1y";BENCHMARK_SCOPE="cohort";GRAIN="month";
-    var yr=R.maxT-365*864e5;
-    CUT = yr>R.minT ? yr : Math.round((R.minT+R.maxT)/2);
-    if(DECL){
-      if(DECL.cut>R.minT && DECL.cut<R.maxT-30*864e5) CUT=DECL.cut;
-      else { DECL.outOfRange=true; DECL=null; }
-    }
-    MOVES=0;
-    Promise.resolve(DD.fingerprint(R)).catch(function(){ return null; }).then(function(){ paint();
-      document.documentElement.scrollTop=0;document.body.scrollTop=0; }); }
+    if(ZIP_META&&ZIP_META.unknown.length)res.filesMissing=res.filesMissing.concat(ZIP_META.unknown.map(function(x){return x+' (unknown, not extracted)';}));
+    if(bad.length)res.filesMissing=res.filesMissing.concat(bad.map(function(b){return b+" (unreadable)";}));
+    activateResult(res,true); }
 
   var drop=$("#drop"),input=$("#file"),jsonInput=$("#jsonFile");
   $("#pickBtn").onclick=function(){input.click();};
@@ -1819,6 +1866,7 @@ var DD = (function(){
     drop.addEventListener(ev,function(e){e.preventDefault();drop.classList.remove("over");});});
   drop.addEventListener("drop",function(e){
     if(e.dataTransfer&&e.dataTransfer.files) read(e.dataTransfer.files); });
+  loadSaved().then(function(record){SAVED_RECORD=record;HAS_SAVED=!!record;if(record)activateResult(record.R,false);else showSavedReturn();});
 })();
 </script>
 <script>
@@ -1842,7 +1890,7 @@ window.DD_BOTCTX = {
 - The full-width Verdict and detailed ranking panel always use the same active scope and primary method. Never quote them as different results.
 - Compare is a linked visual playground using one export at two scopes: fixed overall history versus the date-filtered snapshot. It compares scoreable rate, 30-day-normalized recorded activity pace, incoming decisions reviewed, weekday activity mix, daily-volume mix, and comment/no-comment associations. Raw totals cover different spans, so never compare them without normalization.
 - Overview includes incoming likes reviewed and accepted over time. Call these processed or reviewed inbound decisions, not arrivals, impressions, profile views, or total people who liked the subject. Hinge omits pending queues and records decision timestamps.
-- The scoreable match-back-rate timeline defaults to Story view. Its performance zones, peak/breakout/latest callouts, dot sizes, and whole-window story cards are visual explanations of the same matured-like data; they do not change the calculation. Analyst view adds Wilson uncertainty whiskers for each period. The whole-window weighted rate—not an average of monthly or weekly point heights—is the rate used for Market Value.
+- The scoreable match-back-rate timeline defaults to Story view. Its performance zones, peak/breakout/latest callouts, dot sizes, and whole-window story cards are visual explanations of the same matured-like data; they do not change the calculation. Analyst view adds Wilson uncertainty whiskers for each period. The whole-window weighted rate—not an average of weekly, monthly, quarterly or yearly point heights—is the rate used for Market Value.
 - Percentiles come from direct log-linear interpolation of SwipeStats' published Tinder male percentile table (6,233 complete male profiles), not from a fitted model and not from an observed Hinge cohort. No cohort of real Hinge men exists here.
 - If the export includes the subject's age, the age-band reference rescales the published all-men curve by that band's published mean. It assumes the distribution shape is constant across age bands; SwipeStats does not publish age-specific shapes.
 - Hinge caps free likes at 8/day versus Tinder's much larger allowance, so platform mechanics differ and a Hinge like is scarcer. Benchmark uploaders also self-selected; the direction of that bias is unknown.
@@ -1852,7 +1900,8 @@ window.DD_BOTCTX = {
 - The Market’s comparison control divides matured likes into Before and After. Its safe endpoints preserve at least 30 matured likes on both sides, its sample cards preview the counts while dragging, and its Balanced history / 2 years ago / 1 year ago buttons are exploratory starting points. Guardrails prevent an empty side but do not create significance, common volume support, or causality.
 - ZIP import reads the archive directory locally, rejects unsafe paths, duplicate canonical basenames, excessive expansion and implausible compression, and extracts only allowlisted JSON. The selfie-verification entry is detected but never decompressed, extracted, decoded, or parsed. Unknown entries are named in the receipt without reading their contents.
 - The chart companion receives windowed aggregate counts, active filters, the selected benchmark label and caveats only. It never receives raw messages, comment text, identity, media, devices or biometric data. Its memory status is explicitly inactive; do not imply anything was saved.
-- The page does not upload, store, log, or transmit the export. Do not ask for raw exports, messages, identity data, or verification media.
+- Saving is optional and off by default. If the user explicitly opts in, IndexedDB stores only DateDawg’s sanitized chart model on that browser profile: event dates, match/comment flags, inbound decision counts, age/gender/filter fields and provenance counts. It never stores the ZIP, source JSON, message text, photos, email, phone, devices, location or selfie data. It is not cloud sync, not a guaranteed backup and not separately encrypted from the browser profile; private browsing, clearing site data or browser eviction can remove it. “Forget saved dashboard” deletes it.
+- The page never uploads, logs, or transmits the export or saved chart model. Do not ask for raw exports, messages, identity data, or verification media.
 - The export does not identify who liked the subject, their attributes, profiles passed without action, or received-message outcomes. Reply rate and true ghosting are not computable.
 - Unprocessed incoming likes do not appear: Hinge records the subject's decision, not the arrival, so inbound counts undercount when a queue is pending.
 - Message/date/we_met conversion pipes are retained only in the sanitized snapshot for later work and are deliberately not shown as results.
@@ -1860,10 +1909,10 @@ window.DD_BOTCTX = {
   ctx: () => `DateDawg parser/schema version: ${DD.PARSER_VERSION}.
 Analysis runs entirely in this browser under a connect-src 'none' content-security policy.
 Volume strata are 1–3, 4–8, 9–20 and 21+ outbound likes per day; both eras are standardized to pooled common-support weights. Missing support is disclosed and can suppress standardization.
-Overview, Patterns, Momentum and Compare are rooms on the Analysis Floor and alternate views of the same selected date range. The calendar-year chips can select one year or a continuous span of years. Each main chart also exposes window, year, monthly/weekly, benchmark-scope, layer and label controls; its full-density timeline is horizontally swipeable. The scoreable-rate timeline adds Story and Analyst modes: Story emphasizes the emotional arc and turning points, while Analyst exposes binomial uncertainty intervals. The benchmark scope defaults to the subject’s age cohort and can be toggled to all men across the complete dashboard. Compare holds overall export history fixed against the selected snapshot.
+Overview, Patterns, Momentum and Compare are rooms on the Analysis Floor and alternate views of the same selected date range. The calendar-year chips can select one year or a continuous span of years. Each main chart also exposes window, year, weekly/monthly/quarterly/yearly grouping, benchmark-scope, layer and label controls; its full-density timeline is horizontally swipeable. The scoreable-rate timeline adds Story and Analyst modes: Story emphasizes the emotional arc and turning points, while Analyst exposes binomial uncertainty intervals. The benchmark scope defaults to the subject’s age cohort and can be toggled to all men across the complete dashboard. Compare holds overall export history fixed against the selected snapshot.
 Patterns is an illustrated story: the 100-person ecosystem shows the selected-range percentile, the weekly orbit encodes like volume by distance and circle size while printing match-back rate, and the activity terrain shows rates across daily like-volume habitats. Overall, Last year, Last 6 months, and Last month switch the entire illustrated story together. These remain descriptive views of the same filtered export.
 The import receipt reports the maturity anchor and a SHA-256 fingerprint over canonical sanitized events when Web Crypto is available.
-Snapshots contain counts and lineage only. They are downloaded by the user and are not automatic cross-session memory.`
+Downloaded snapshots contain counts and lineage only. Separately, an explicit “Remember on this device” opt-in can keep the sanitized chart model in that browser’s IndexedDB for automatic local restoration.`
 };
 </script>
 </body>
