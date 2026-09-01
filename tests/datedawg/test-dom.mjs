@@ -187,8 +187,16 @@ ok('clicking a selected endpoint shrinks the multi-year range',
   /2025-01-01 → 2025-12-20/.test(out.querySelector('.range-readout').textContent)&&
   !out.querySelector('[data-range="year-2024"]').classList.contains('on')&&
   out.querySelector('[data-range="year-2025"]').classList.contains('on'));
-ok('year view labels acceptance points',out.querySelectorAll('.pointlabel').length>0);
-ok('rate chart labels the weighted selected-period result against the default cohort',!!out.querySelector('.selectedline')&&/SELECTED PERIOD/.test(out.querySelector('.selectedlabel').textContent)&&/PERCENTILE MEN 40–44/.test(out.querySelector('.selectedlabel').textContent));
+ok('rate chart defaults to a story-first view',out.querySelector('[data-rate-mode="story"]').classList.contains('on')&&out.querySelector('svg[data-rate-mode="story"]'));
+ok('rate story summarizes the whole arc in four human beats',out.querySelectorAll('.rate-storyline .rate-beat').length===4&&/Your whole window/.test(out.querySelector('.rate-storyline').textContent)&&/Peak chapter/.test(out.querySelector('.rate-storyline').textContent)&&/Biggest jump/.test(out.querySelector('.rate-storyline').textContent));
+ok('rate story gives the timeline four named performance zones',out.querySelectorAll('.ratechart rect[class^="rate-zone-"]').length===4&&/LONG SHOT/.test(out.querySelector('.ratechart').textContent)&&/RARE AIR/.test(out.querySelector('.ratechart').textContent));
+ok('rate story marks significant chapters while preserving requested point values',out.querySelectorAll('.ratechart .story-label').length>0&&out.querySelectorAll('.ratechart .pointlabel').length>0);
+ok('rate chart labels the weighted whole-window result',!!out.querySelector('.selectedline')&&/YOUR WHOLE WINDOW/.test(out.querySelector('.selectedlabel').textContent)&&new RegExp(out.querySelectorAll('.kpi')[2].querySelector('.value').textContent.replace('%','\\%')).test(out.querySelector('.selectedlabel').textContent));
+out.querySelector('[data-rate-mode="analyst"]').click();
+await new Promise(r=>setTimeout(r,50));
+ok('analyst view adds uncertainty whiskers and dense values',out.querySelector('[data-rate-mode="analyst"]').classList.contains('on')&&out.querySelector('svg[data-rate-mode="analyst"]')&&out.querySelectorAll('.ratechart .uncertainty').length>0&&out.querySelectorAll('.ratechart .pointlabel').length>0);
+out.querySelector('[data-rate-mode="story"]').click();
+await new Promise(r=>setTimeout(r,50));
 ok('all three overview charts have their own filters',out.querySelectorAll('.charttools').length===3&&out.querySelectorAll('[data-chart-year]').length===3);
 ok('all three overview charts expose six-month and one-month slices',out.querySelectorAll('.charttools [data-range="6m"]').length===3&&out.querySelectorAll('.charttools [data-range="1m"]').length===3);
 ok('inbound chart does not invent an external cohort benchmark',out.querySelector('.inbound-chart').closest('.chartcard').querySelectorAll('[data-benchmark-scope]').length===0);

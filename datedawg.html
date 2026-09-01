@@ -307,6 +307,29 @@ button{font:inherit;cursor:pointer}
 .chart .matchdot{fill:var(--matches);stroke:var(--surface-1);stroke-width:2}
 .chart .rateline{fill:none;stroke:var(--rate);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
 .chart .ratedot{fill:var(--rate);stroke:var(--surface-1);stroke-width:2}
+.rate-stage{position:relative;overflow:hidden;border:1px solid var(--border);border-radius:18px;
+  background:radial-gradient(circle at 76% 16%,color-mix(in srgb,var(--rate) 12%,transparent),transparent 34%),var(--surface-1)}
+.rate-stage .chart-scroll{border:0;border-radius:0;background:transparent}
+.rate-storyline{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;margin:0 0 12px;
+  border:1px solid var(--border);border-radius:16px;overflow:hidden;background:var(--border)}
+.rate-beat{position:relative;min-height:92px;padding:16px 17px;background:var(--surface-1);overflow:hidden}
+.rate-beat:after{content:"";position:absolute;right:-22px;bottom:-34px;width:84px;height:84px;border-radius:50%;
+  background:color-mix(in srgb,var(--rate) 9%,transparent)}
+.rate-beat.hero{background:linear-gradient(135deg,color-mix(in srgb,var(--rate) 15%,var(--surface-1)),var(--surface-1))}
+.rate-beat b{position:relative;z-index:1;display:block;font:400 clamp(23px,2.7vw,31px)/1 var(--display);color:var(--ink-1)}
+.rate-beat.hero b,.rate-beat.positive b{color:var(--rate)}.rate-beat span{position:relative;z-index:1;display:block;margin-top:7px;
+  font:800 9px/1.35 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.chart .rate-zone-low{fill:color-mix(in srgb,var(--ink-3) 4%,transparent)}
+.chart .rate-zone-pack{fill:color-mix(in srgb,var(--likes) 5%,transparent)}
+.chart .rate-zone-high{fill:color-mix(in srgb,var(--rate) 6%,transparent)}
+.chart .rate-zone-rare{fill:color-mix(in srgb,var(--matches) 6%,transparent)}
+.chart .rate-zone-label{font-size:9px;font-weight:950;letter-spacing:.12em;opacity:.62;paint-order:stroke;stroke:var(--surface-1);stroke-width:4px}
+.chart .ratearea{fill:url(#rateArea);opacity:.82}.chart .rateglow{fill:none;stroke:var(--rate);stroke-width:12;opacity:.11;stroke-linecap:round;stroke-linejoin:round}
+.chart .ratedot.halo{fill:var(--surface-1);stroke:color-mix(in srgb,var(--rate) 28%,transparent);stroke-width:8}
+.chart .ratedot.peak{fill:var(--matches);filter:drop-shadow(0 0 8px color-mix(in srgb,var(--matches) 65%,transparent))}
+.chart .ratedot.latest{stroke:var(--ink-1);stroke-width:4}.chart .story-stem{stroke:var(--ink-3);stroke-width:1;stroke-dasharray:3 3}
+.chart .story-label{font-size:10px;font-weight:950;letter-spacing:.08em;fill:var(--ink-1);paint-order:stroke;stroke:var(--surface-1);stroke-width:5px}
+.chart .uncertainty{stroke:var(--rate);stroke-width:1.5;opacity:.48}.chart .uncertainty-cap{stroke:var(--rate);stroke-width:1.5;opacity:.48}
 .chart .pointlabel{font-weight:900;fill:var(--rate);paint-order:stroke;stroke:var(--surface-1);stroke-width:4px}
 .chart .barlabel{font-weight:900;fill:var(--likes);paint-order:stroke;stroke:var(--surface-1);stroke-width:4px}
 .chart .matchlabel{font-weight:900;fill:var(--matches);paint-order:stroke;stroke:var(--surface-1);stroke-width:4px}
@@ -476,6 +499,7 @@ footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--border);
   .ecosystem{min-height:0;padding-top:220px}.eco-copy{left:18px;right:18px}.ecosystem svg{min-height:0;translate:none}
   .story-art{padding:15px}.comment-scene{grid-template-columns:1fr}.comment-gap{padding:12px 0}.speech{min-height:150px}
   .inbound-flow{grid-template-columns:1fr}.inbound-vs{text-align:center}.compare-bar-row{grid-template-columns:1fr}.shift-row{grid-template-columns:52px 1fr 88px}
+  .rate-storyline{grid-template-columns:1fr 1fr}.rate-beat{min-height:82px;padding:14px}
   .market-story{padding:18px}.market-grid{grid-template-columns:1fr}.market-stat{padding:13px}.market-stat b{font-size:21px}.floorhead{align-items:flex-start;flex-direction:column}.companion{left:8px;right:8px;bottom:8px;width:auto}}
 </style>
 </head>
@@ -976,7 +1000,7 @@ var DD = (function(){
      exploring is not a declaration, so there is no toggle. */
   var R=null,CUT=null,MOVES=0,DECL=null,SUBJ=null,VFROM=null,VTO=null,YEAR_FROM=null,YEAR_TO=null,GRAIN="month",RANGE="all",RANK_RANGE="1y",BENCHMARK_SCOPE="cohort",
       VIEW="overview",SHOW_LIKES=true,SHOW_MATCHES=true,SHOW_BENCHMARKS=true,SHOW_VALUES=true,
-      ACTIVITY_SCALE="sqrt",ZIP_META=null;
+      ACTIVITY_SCALE="sqrt",RATE_MODE="story",ZIP_META=null;
   /* DECL is captured BEFORE parse and can only ever be invalidated, never created later.
      prospective:true means it was recorded before any result was rendered. */
   function declValid(){ return DECL && DECL.cut===CUT && !MOVES; }
@@ -1165,7 +1189,8 @@ var DD = (function(){
     var inbound=kind==='inbound',layers=inbound?'':(kind==='activity'||kind==='momentum')?'<div class="toolgroup"><span>Show</span><button data-series="likes" class="'+(SHOW_LIKES?'on':'')+'">Likes sent</button><button data-series="matches" class="'+(SHOW_MATCHES?'on':'')+'">Observed matches</button><button data-layer="benchmarks" class="'+(SHOW_BENCHMARKS?'on':'')+'">Median + band</button></div>':
       '<div class="toolgroup"><span>Show</span><button data-layer="benchmarks" class="'+(SHOW_BENCHMARKS?'on':'')+'">Median + band</button><button data-layer="labels" class="'+(SHOW_VALUES?'on':'')+'">Point values</button></div>';
     var scale=kind==='activity'?'<div class="toolgroup"><span>Scale</span><button data-activity-scale="sqrt" class="'+(ACTIVITY_SCALE==='sqrt'?'on':'')+'" title="Spreads smaller months apart while preserving zero and the order of every value">Readable</button><button data-activity-scale="linear" class="'+(ACTIVITY_SCALE==='linear'?'on':'')+'" title="Shows equal numeric distances on the vertical axes">Full scale</button></div>':'';
-    return '<div class="charttools" aria-label="Chart filters"><div class="toolgroup"><span>Window</span>'+rb('all','All')+rb('1y','1 year')+rb('6m','6 months')+rb('1m','1 month')+rb('90d','90 days')+rb('ytd','YTD')+'<select data-chart-year aria-label="Jump to a calendar year">'+opts+'</select></div><div class="toolgroup"><span>Detail</span><button data-grain="month" class="'+(GRAIN==='month'?'on':'')+'">Monthly</button><button data-grain="week" class="'+(GRAIN==='week'?'on':'')+'">Weekly</button></div>'+(inbound?'':benchmarkScopeTools())+scale+layers+'</div>'; }
+    var rateMode=kind==='rate'?'<div class="toolgroup"><span>View</span><button data-rate-mode="story" class="'+(RATE_MODE==='story'?'on':'')+'" aria-pressed="'+(RATE_MODE==='story')+'">Story</button><button data-rate-mode="analyst" class="'+(RATE_MODE==='analyst'?'on':'')+'" aria-pressed="'+(RATE_MODE==='analyst')+'">Analyst</button></div>':'';
+    return '<div class="charttools" aria-label="Chart filters"><div class="toolgroup"><span>Window</span>'+rb('all','All')+rb('1y','1 year')+rb('6m','6 months')+rb('1m','1 month')+rb('90d','90 days')+rb('ytd','YTD')+'<select data-chart-year aria-label="Jump to a calendar year">'+opts+'</select></div><div class="toolgroup"><span>Detail</span><button data-grain="month" class="'+(GRAIN==='month'?'on':'')+'">Monthly</button><button data-grain="week" class="'+(GRAIN==='week'?'on':'')+'">Weekly</button></div>'+(inbound?'':benchmarkScopeTools())+rateMode+scale+layers+'</div>'; }
   function patternTools(S){
     function rb(id,label){return '<button data-range="'+id+'" class="'+(RANGE===id?'on':'')+'" aria-pressed="'+(RANGE===id)+'">'+label+'</button>';}
     return '<div class="charttools patternfilters" aria-label="Patterns date window"><div class="toolgroup"><span>Story window</span>'+rb('all','Overall')+rb('1y','Last year')+rb('6m','Last 6 months')+rb('1m','Last month')+'</div>'+benchmarkScopeTools()+'<span class="slice-readout">Showing '+iso(S.from)+' → '+iso(S.to)+'</span></div>'; }
@@ -1199,31 +1224,53 @@ var DD = (function(){
     return '<svg class="chart" data-scale-mode="'+ACTIVITY_SCALE+'" data-observed-matches="'+S.matches+'" style="width:'+W+'px" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Your likes sent and observed matches over time">'+
       '<text x="'+L+'" y="11">LIKES SENT</text><text x="'+(W-RR)+'" y="11" text-anchor="end">OBSERVED MATCHES</text>'+g.join("")+band+bars.join("")+
       (SHOW_MATCHES?'<polyline class="matchline" points="'+pts.join(" ")+'"/>':'')+dots+valueLabels.join("")+'</svg>'; }
+  function rateStory(S){
+    var valid=S.bins.filter(function(b){return b.rate!=null;}),bc=benchmarkContext(),md=maleRef(50),
+        peak=valid.reduce(function(a,b){return !a||b.rate>a.rate?b:a;},null),latest=valid.length?valid[valid.length-1]:null,
+        above=valid.filter(function(b){return b.rate>md.rate;}).length,jump=null,previous=null;
+    valid.forEach(function(b){if(previous){var d=b.rate-previous.rate;if(!jump||d>jump.delta)jump={from:previous,to:b,delta:d};}previous=b;});
+    var rank=S.rate&&S.rate.n>=DD.MIN_N?DD.rank(S.rate.p,R.profile&&R.profile.age):null,
+        head=rank&&(bc.useCohort&&rank.band?rank.band:rank.all);
+    return '<div class="rate-storyline" aria-label="The story in this match-back-rate chart">'+
+      '<div class="rate-beat hero"><span>Your whole window</span><b>'+(S.rate?pct(S.rate.p):'—')+'</b><small>'+(head?ordinal(head.p)+' percentile · ':'')+num(S.matureMatches)+' of '+num(S.matureLikes)+' matured likes</small></div>'+
+      '<div class="rate-beat"><span>Peak chapter</span><b>'+(peak?pct(peak.rate):'—')+'</b><small>'+(peak?esc(peak.label)+' · '+num(peak.matureMatches)+' of '+num(peak.matureLikes):'No scoreable period')+'</small></div>'+
+      '<div class="rate-beat positive"><span>Above your cohort median</span><b>'+above+' of '+valid.length+'</b><small>scoreable periods above '+pct(md.rate)+'</small></div>'+
+      '<div class="rate-beat"><span>Biggest jump</span><b>'+(jump?(jump.delta>=0?'+':'')+(jump.delta*100).toFixed(1)+' pts':'—')+'</b><small>'+(jump?esc(jump.from.label)+' → '+esc(jump.to.label):(latest?'Latest · '+pct(latest.rate):'Not enough periods'))+'</small></div></div>'; }
   function rateChart(S){
     var B=S.bins,W=Math.max(1040,B.length*(S.grain==="week"?34:72)+120),H=430,L=68,RR=35,T=42,BT=62,PW=W-L-RR,PH=H-T-BT,
         vals=B.filter(function(b){return b.rate!=null;}).map(function(b){return b.rate;}),
         selected=S.rate&&S.rate.p!=null?S.rate.p:null,
         selectedRank=selected?DD.rank(selected,R.profile&&R.profile.age):null,selectedContext=benchmarkContext(),
         selectedHead=selectedRank&&(selectedContext.useCohort&&selectedRank.band?selectedRank.band:selectedRank.all),
-        top=Math.max(.10,Math.ceil(Math.max.apply(null,[0].concat(vals,selected==null?[]:[selected]))*20)/20),
+        top=Math.max(.10,Math.ceil(Math.max.apply(null,[0].concat(vals,selected==null?[]:[selected],[maleRef(80).rate]))*20)/20),
         step=PW/Math.max(1,B.length),g=[];
+    function yy(v){return T+PH-PH*Math.max(0,Math.min(top,v))/top;}
     for(var q=0;q<=4;q++){var y=T+PH-PH*q/4;
       g.push('<line class="gridline" x1="'+L+'" y1="'+y+'" x2="'+(W-RR)+'" y2="'+y+'"/>'+
         '<text x="'+(L-8)+'" y="'+(y+4)+'" text-anchor="end">'+Math.round(top*q/4*100)+'%</text>');}
-    var path=[],dots=[],open=false,labels=[],showValues=SHOW_VALUES&&B.length<=36;
+    var lo=maleRef(20).rate,md=maleRef(50).rate,hi=maleRef(80).rate,zones='',zoneLabels=[['RARE AIR',hi,top,'rare'],['ABOVE THE PACK',md,hi,'high'],['IN THE MIX',lo,md,'pack'],['LONG SHOT',0,lo,'low']];
+    zoneLabels.forEach(function(z){var y1=yy(z[2]),y2=yy(z[1]),h=Math.max(0,y2-y1);zones+='<rect class="rate-zone-'+z[3]+'" x="'+L+'" y="'+y1+'" width="'+PW+'" height="'+h+'"><title>'+z[0]+' performance zone</title></rect>'+(h>=18?'<text class="rate-zone-label" x="'+(W-RR-8)+'" y="'+(y1+Math.min(17,Math.max(12,h/2)))+'" text-anchor="end">'+z[0]+'</text>':'');});
+    var paths=[],current=[],dots=[],labels=[],uncertainty=[],showValues=SHOW_VALUES&&B.length<=36,valid=[],maxN=Math.max.apply(null,[1].concat(B.map(function(b){return b.matureLikes||0;})));
+    function flush(){if(current.length){paths.push(current);current=[];}}
     B.forEach(function(b,i){var x=L+step*(i+.5);
-      if(b.rate==null){open=false;}else{var y=T+PH-PH*b.rate/top;
-        path.push((open?'L':'M')+x+' '+y);open=true;
-        dots.push('<circle class="ratedot" cx="'+x+'" cy="'+y+'" r="5"><title>'+esc(b.label)+': '+pct(b.rate)+' · '+b.matureMatches+' of '+b.matureLikes+' matured likes</title></circle>'+
-          (showValues?'<text class="pointlabel" x="'+x+'" y="'+Math.max(15,y-11)+'" text-anchor="middle">'+(b.rate*100).toFixed(1)+'%</text>':''));}
+      if(b.rate==null){flush();}else{var y=yy(b.rate),r=4+4*Math.sqrt((b.matureLikes||0)/maxN),point={b:b,x:x,y:y,index:i};current.push(point);valid.push(point);
+        dots.push('<circle class="ratedot" cx="'+x+'" cy="'+y+'" r="'+r.toFixed(1)+'"><title>'+esc(b.label)+': '+pct(b.rate)+' · '+b.matureMatches+' of '+b.matureLikes+' matured likes</title></circle>');
+        if(RATE_MODE==='analyst'&&b.interval){var uy=yy(b.interval.hi),ly=yy(b.interval.lo);uncertainty.push('<g class="uncertainty"><line x1="'+x+'" y1="'+uy+'" x2="'+x+'" y2="'+ly+'"/><line class="uncertainty-cap" x1="'+(x-5)+'" y1="'+uy+'" x2="'+(x+5)+'" y2="'+uy+'"/><line class="uncertainty-cap" x1="'+(x-5)+'" y1="'+ly+'" x2="'+(x+5)+'" y2="'+ly+'"/></g>');}
+        if(showValues)labels.push('<text class="pointlabel" x="'+x+'" y="'+Math.max(15,y-11)+'" text-anchor="middle">'+(b.rate*100).toFixed(1)+'%</text>');}
       if(i%Math.max(1,Math.ceil(B.length/14))===0||i===B.length-1)
-        labels.push('<text x="'+x+'" y="'+(H-15)+'" text-anchor="middle">'+esc(b.label)+'</text>');});
+        labels.push('<text x="'+x+'" y="'+(H-15)+'" text-anchor="middle">'+esc(b.label)+'</text>');});flush();
+    var linePaths='',areas='',annotations=[],defs='<defs><linearGradient id="rateArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--rate)" stop-opacity=".35"/><stop offset="1" stop-color="var(--rate)" stop-opacity=".02"/></linearGradient></defs>';
+    paths.forEach(function(seg){if(!seg.length)return;var d=seg.map(function(p,i){return (i?'L':'M')+p.x+' '+p.y;}).join(' ');linePaths+='<path class="rateglow" d="'+d+'"/><path class="rateline" d="'+d+'"/>';areas+='<path class="ratearea" d="'+d+' L'+seg[seg.length-1].x+' '+(T+PH)+' L'+seg[0].x+' '+(T+PH)+' Z"/>';});
+    if(RATE_MODE==='story'&&valid.length){var peak=valid.reduce(function(a,p){return !a||p.b.rate>a.b.rate?p:a;},null),latest=valid[valid.length-1],jump=null;
+      valid.forEach(function(p,i){if(i){var d=p.b.rate-valid[i-1].b.rate;if(!jump||d>jump.delta)jump={p:p,delta:d};}});
+      function callout(p,text,cls,offset){if(!p)return;annotations.push('<line class="story-stem" x1="'+p.x+'" y1="'+(p.y-6)+'" x2="'+p.x+'" y2="'+Math.max(T+14,p.y-offset+8)+'"/><circle class="ratedot '+cls+'" cx="'+p.x+'" cy="'+p.y+'" r="9"/><text class="story-label" x="'+p.x+'" y="'+Math.max(T+12,p.y-offset)+'" text-anchor="middle">'+text+'</text>');}
+      callout(peak,'PEAK · '+esc(peak.b.label).toUpperCase(),'peak',28);
+      if(jump&&jump.p!==peak)callout(jump.p,'BREAKOUT · +'+(jump.delta*100).toFixed(1)+' PTS','',27);
+      if(latest!==peak&&(!jump||latest!==jump.p))callout(latest,'LATEST · '+(latest.b.rate*100).toFixed(1)+'%','latest',25);
+    }
     var selectedLayer='';if(selected!=null){var sy=T+PH-PH*selected/top,
-      sl='SELECTED PERIOD · '+pct(selected)+' · '+num(S.matureMatches)+' OF '+num(S.matureLikes)+
-        ' · '+(selectedHead?ordinal(selectedHead.p).toUpperCase()+' PERCENTILE '+selectedContext.label.toUpperCase():'');
-      selectedLayer='<line class="selectedline" x1="'+L+'" y1="'+sy+'" x2="'+(W-RR)+'" y2="'+sy+'"><title>Weighted selected-period result: '+pct(selected)+' from '+num(S.matureMatches)+' of '+num(S.matureLikes)+' matured likes</title></line><text class="selectedlabel" x="'+(W-RR-5)+'" y="'+Math.max(T+12,sy-8)+'" text-anchor="end">'+sl+'</text>';}
-    return '<svg class="chart ratechart" style="width:'+W+'px" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Your scoreable match-back rate over time, including the weighted selected-period result">'+
-      g.join("")+horizontalBenchmarkBand(L,W-RR,T,T+PH,top,true)+selectedLayer+'<path class="rateline" d="'+path.join(" ")+'"/>'+dots.join("")+labels.join("")+'</svg>'; }
+      selectedLayer='<line class="selectedline" x1="'+L+'" y1="'+sy+'" x2="'+(W-RR)+'" y2="'+sy+'"><title>Weighted whole-window result: '+pct(selected)+' from '+num(S.matureMatches)+' of '+num(S.matureLikes)+' matured likes</title></line><text class="selectedlabel" x="'+(L+8)+'" y="'+Math.max(T+13,sy-8)+'">YOUR WHOLE WINDOW · '+pct(selected)+(selectedHead?' · '+ordinal(selectedHead.p).toUpperCase():'')+'</text>';}
+    return '<svg class="chart ratechart" data-rate-mode="'+RATE_MODE+'" style="width:'+W+'px" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+(RATE_MODE==='story'?'Story view':'Analyst view')+' of your scoreable match-back rate over time, including the weighted whole-window result">'+defs+zones+g.join("")+(SHOW_BENCHMARKS?horizontalBenchmarkBand(L,W-RR,T,T+PH,top,true):'')+areas+selectedLayer+uncertainty.join('')+linePaths+dots.join("")+annotations.join('')+labels.join("")+'</svg>'; }
 
   function cumulativeChart(S){
     var B=S.bins,W=Math.max(1040,B.length*(S.grain==="week"?34:62)+120),H=390,L=68,RR=62,T=34,BT=58,
@@ -1344,7 +1391,7 @@ var DD = (function(){
         '<section class="story-art wide"><h3>Comment versus no-comment, across scopes</h3><p>Compare the observed association in your full history with the same split inside the selected snapshot.</p>'+commentShift(P,S)+'<p class="story-caption">Association only. Profile choice, recipient, timing, and exposure remain confounded.</p></section></div>'+insightCards(S);
     }
     return '<div class="chartgrid"><div class="chartcard feature"><div class="charttop"><div><h3>Likes you sent and observed matches</h3><p>Blue bars are likes you sent. Pink shows every known match outcome, dated to when you sent each like.</p></div></div>'+chartTools('activity')+'<div class="chart-scroll" tabindex="0" aria-label="Scrollable likes and observed matches chart">'+activityChart(S)+'</div>'+scrollHint()+'<p class="chartnote">Readable scale spreads smaller months apart so the activity pattern stays visible; Full scale restores equal numeric spacing. Every axis label and peak label is the actual observed count. Match-back rates use only matured likes.</p>'+(SHOW_BENCHMARKS?benchmarkKey(true):'')+'</div>'+
-      '<div class="chartcard feature"><div class="charttop"><div><h3>Your scoreable match-back rate over time</h3><p>Of the matured likes you sent in each '+S.grain+', the percentage that became matches. The dashed purple line is the weighted result for the entire selected window.</p></div><div class="legend"><span><i style="background:var(--rate)"></i>Your scoreable match-back rate</span></div></div>'+chartTools('rate')+'<div class="chart-scroll" tabindex="0" aria-label="Scrollable scoreable match-back-rate chart">'+rateChart(S)+'</div>'+scrollHint()+(SHOW_BENCHMARKS?benchmarkKey(false):'')+'<p class="chartnote"><b>Read the dashed selected-period line for your Market Value percentile.</b> Monthly dots have different sample sizes, so averaging their heights gives the wrong answer. Likes after '+iso(S.resolveBefore)+' are too recent to score. Empty periods are gaps, not zeroes.</p></div>'+
+      '<div class="chartcard feature"><div class="charttop"><div><h3>Your scoreable match-back rate over time</h3><p>Every rise, fall, peak, and comeback is a chapter. Story view highlights the arc; Analyst view adds uncertainty for every period.</p></div><div class="legend"><span><i style="background:var(--rate)"></i>Your scoreable match-back rate</span></div></div>'+rateStory(S)+chartTools('rate')+'<div class="rate-stage"><div class="chart-scroll" tabindex="0" aria-label="Scrollable scoreable match-back-rate chart">'+rateChart(S)+'</div></div>'+scrollHint()+(SHOW_BENCHMARKS?benchmarkKey(false):'')+'<p class="chartnote"><b>Your whole-window card and dashed line are the weighted result used for Market Value.</b> Dot size reflects the number of matured likes behind that period. Monthly dots have different sample sizes, so averaging their heights gives the wrong answer. Likes after '+iso(S.resolveBefore)+' are too recent to score. Empty periods are gaps, not zeroes.</p></div>'+
       '<div class="chartcard feature"><div class="charttop"><div><h3>Incoming likes you reviewed</h3><p>Wide bars are incoming decisions recorded by Hinge; purple is the subset you accepted. This is processed inbound activity, not profile views or true arrival time.</p></div><div class="legend"><span><i style="background:color-mix(in srgb,var(--likes) 50%,var(--surface-1))"></i>Reviewed</span><span><i style="background:var(--rate)"></i>Accepted</span></div></div>'+chartTools('inbound')+'<div class="chart-scroll" tabindex="0" aria-label="Scrollable incoming likes reviewed chart">'+inboundChart(S)+'</div>'+scrollHint()+'<p class="chartnote"><b>'+num(S.inbound.n)+' incoming likes reviewed; '+num(S.inbound.accepted)+' accepted.</b> Unprocessed queues are absent, and clearing a backlog can place many decisions on one date.</p></div>'+insightCards(S)+'</div>'; }
   function timelinePanel(S){
     var rw=S.rate,preset=function(id,label){return '<button data-range="'+id+'" class="'+(RANGE===id?'on':'')+'" aria-pressed="'+(RANGE===id)+'">'+label+'</button>';},
@@ -1607,6 +1654,8 @@ var DD = (function(){
       BENCHMARK_SCOPE=b.getAttribute("data-benchmark-scope");paint();};});
     Array.prototype.forEach.call(document.querySelectorAll("[data-activity-scale]"),function(b){b.onclick=function(){
       ACTIVITY_SCALE=b.getAttribute("data-activity-scale");paint();};});
+    Array.prototype.forEach.call(document.querySelectorAll("[data-rate-mode]"),function(b){b.onclick=function(){
+      RATE_MODE=b.getAttribute("data-rate-mode");paint();};});
     Array.prototype.forEach.call(document.querySelectorAll("[data-chart-year]"),function(s){s.onchange=function(){
       if(!s.value)return;YEAR_FROM=YEAR_TO=null;RANGE="all";var b=document.querySelector('[data-range="year-'+s.value+'"]');if(b)b.click();};});
     if($("#vcue"))$("#vcue").onclick=function(){if($("#workings").scrollIntoView)$("#workings").scrollIntoView({behavior:"smooth",block:"start"});};
@@ -1624,7 +1673,7 @@ var DD = (function(){
       var a=$("#companionAnswer"),kind=b.getAttribute('data-companion'),rate=S.rate?pct(S.rate.p):'not yet scoreable';
       a.textContent=kind==='change'?'In this view, '+S.matureMatches+' of '+S.matureLikes+' matured likes became matches: '+rate+'. Compare the weighted period rate, not the average height of monthly dots.':kind==='caveat'?'The conservative read is descriptive: Tinder is only an external anchor, recent likes are censored, and volume standardization does not isolate profile attractiveness or causation.':'Next, open Patterns to compare weekday, activity-volume, and comment associations—or narrow the shared date rail to test whether the story persists.';
     };});
-    $("#again").onclick=function(){R=null;VFROM=VTO=YEAR_FROM=YEAR_TO=null;RANGE="all";RANK_RANGE="1y";BENCHMARK_SCOPE="cohort";GRAIN="month";VIEW="overview";SHOW_LIKES=SHOW_MATCHES=SHOW_BENCHMARKS=SHOW_VALUES=true;ACTIVITY_SCALE="sqrt";document.body.classList.remove("results-ready");$("#out").className="hide";$("#out").innerHTML="";if($("#drop").scrollIntoView)$("#drop").scrollIntoView({behavior:"smooth"});};
+    $("#again").onclick=function(){R=null;VFROM=VTO=YEAR_FROM=YEAR_TO=null;RANGE="all";RANK_RANGE="1y";BENCHMARK_SCOPE="cohort";GRAIN="month";VIEW="overview";SHOW_LIKES=SHOW_MATCHES=SHOW_BENCHMARKS=SHOW_VALUES=true;ACTIVITY_SCALE="sqrt";RATE_MODE="story";document.body.classList.remove("results-ready");$("#out").className="hide";$("#out").innerHTML="";if($("#drop").scrollIntoView)$("#drop").scrollIntoView({behavior:"smooth"});};
   }
 
   function capturePre(){
@@ -1753,6 +1802,7 @@ window.DD_BOTCTX = {
 - The full-width Verdict and detailed ranking panel always use the same active scope and primary method. Never quote them as different results.
 - Compare is a linked visual playground using one export at two scopes: fixed overall history versus the date-filtered snapshot. It compares scoreable rate, 30-day-normalized recorded activity pace, incoming decisions reviewed, weekday activity mix, daily-volume mix, and comment/no-comment associations. Raw totals cover different spans, so never compare them without normalization.
 - Overview includes incoming likes reviewed and accepted over time. Call these processed or reviewed inbound decisions, not arrivals, impressions, profile views, or total people who liked the subject. Hinge omits pending queues and records decision timestamps.
+- The scoreable match-back-rate timeline defaults to Story view. Its performance zones, peak/breakout/latest callouts, dot sizes, and whole-window story cards are visual explanations of the same matured-like data; they do not change the calculation. Analyst view adds Wilson uncertainty whiskers for each period. The whole-window weighted rate—not an average of monthly or weekly point heights—is the rate used for Market Value.
 - Percentiles come from direct log-linear interpolation of SwipeStats' published Tinder male percentile table (6,233 complete male profiles), not from a fitted model and not from an observed Hinge cohort. No cohort of real Hinge men exists here.
 - If the export includes the subject's age, the age-band reference rescales the published all-men curve by that band's published mean. It assumes the distribution shape is constant across age bands; SwipeStats does not publish age-specific shapes.
 - Hinge caps free likes at 8/day versus Tinder's much larger allowance, so platform mechanics differ and a Hinge like is scarcer. Benchmark uploaders also self-selected; the direction of that bias is unknown.
@@ -1769,7 +1819,7 @@ window.DD_BOTCTX = {
   ctx: () => `DateDawg parser/schema version: ${DD.PARSER_VERSION}.
 Analysis runs entirely in this browser under a connect-src 'none' content-security policy.
 Volume strata are 1–3, 4–8, 9–20 and 21+ outbound likes per day; both eras are standardized to pooled common-support weights. Missing support is disclosed and can suppress standardization.
-Overview, Patterns, Momentum and Compare are rooms on the Analysis Floor and alternate views of the same selected date range. The calendar-year chips can select one year or a continuous span of years. Each main chart also exposes window, year, monthly/weekly, benchmark-scope, layer and label controls; its full-density timeline is horizontally swipeable. The benchmark scope defaults to the subject’s age cohort and can be toggled to all men across the complete dashboard. Compare holds overall export history fixed against the selected snapshot.
+Overview, Patterns, Momentum and Compare are rooms on the Analysis Floor and alternate views of the same selected date range. The calendar-year chips can select one year or a continuous span of years. Each main chart also exposes window, year, monthly/weekly, benchmark-scope, layer and label controls; its full-density timeline is horizontally swipeable. The scoreable-rate timeline adds Story and Analyst modes: Story emphasizes the emotional arc and turning points, while Analyst exposes binomial uncertainty intervals. The benchmark scope defaults to the subject’s age cohort and can be toggled to all men across the complete dashboard. Compare holds overall export history fixed against the selected snapshot.
 Patterns is an illustrated story: the 100-person ecosystem shows the selected-range percentile, the weekly orbit encodes like volume by distance and circle size while printing match-back rate, and the activity terrain shows rates across daily like-volume habitats. Overall, Last year, Last 6 months, and Last month switch the entire illustrated story together. These remain descriptive views of the same filtered export.
 The import receipt reports the maturity anchor and a SHA-256 fingerprint over canonical sanitized events when Web Crypto is available.
 Snapshots contain counts and lineage only. They are downloaded by the user and are not automatic cross-session memory.`
