@@ -1432,8 +1432,8 @@ table.survtbl td:first-child{text-align:left;font-weight:650}
   --pb-night-ornaments:1; --pb-fog-alpha:.08;
   --pb-dead-bulb-rail:radial-gradient(circle at 13px 8px,var(--bulb-off) 0 3.4px,transparent 4.2px) 0 0/26px 16px repeat-x;
   /* dark = the bill printed on dark stock */
-  --pb-stock:#0d100c; --pb-ink:#cfd3bd; --pb-ink2:#8b9179; --pb-ink3:#5d6251;
-  --pb-red:#b6421a; --pb-rule:rgba(207,211,189,.10); --pb-edge:#241a0d;
+  --pb-stock:#211508; --pb-ink:#ead9bb; --pb-ink2:#b69a72; --pb-ink3:#806544;
+  --pb-red:#cf4a16; --pb-rule:rgba(234,217,187,.14); --pb-edge:#4a2b10;
   --pb-shadow:rgba(0,0,0,.46);
   /* the slip stays paper in both themes — a real receipt on a dark table */
   --slip-stock:#efe6d3; --slip-ink:#1d1509; --slip-ink2:#6d5f48; --slip-rule:#c6b99f;
@@ -1472,8 +1472,9 @@ table.survtbl td:first-child{text-align:left;font-weight:650}
    variables to zero, so its rendering remains unchanged. */
 body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:min(42vh,420px);
   z-index:39;pointer-events:none;background:
-    radial-gradient(ellipse 72% 68% at bottom left,rgb(139 145 121 / var(--pb-fog-alpha)) 0,transparent 68%),
-    radial-gradient(ellipse 72% 68% at bottom right,rgb(139 145 121 / var(--pb-fog-alpha)) 0,transparent 68%)}
+    radial-gradient(ellipse 72% 68% at bottom left,rgb(128 86 45 / var(--pb-fog-alpha)) 0,transparent 68%),
+    radial-gradient(ellipse 72% 68% at bottom right,rgb(128 86 45 / var(--pb-fog-alpha)) 0,transparent 68%)}
+body.pb-hub{background:#120b05}
 /* the printed area sits inside a hairline frame, like a real broadside's plate */
 .pb-bill .pb-plate{position:relative;z-index:1;border:1px solid var(--pb-rule);margin:clamp(9px,1.6vw,15px);
   padding:clamp(16px,3.4vw,38px) clamp(14px,3.6vw,44px)}
@@ -1530,6 +1531,7 @@ body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:min(42vh,42
 @media(prefers-reduced-motion:reduce){.pb-bill .pb-btn{transition:none}}
 /* ---- act headings ---- */
 .pb-bill .pb-act{margin-top:clamp(26px,4vw,44px)}
+.pb-bill .pb-leagues-first{margin-top:clamp(18px,2.6vw,28px)}
 .pb-bill .pb-kicker{font:700 clamp(8.5px,1.5vw,10px)/1.6 var(--pb-mono);letter-spacing:.3em;
   text-transform:uppercase;color:var(--pb-red);text-align:center;margin:0 0 5px}
 .pb-bill .pb-h2{font-family:var(--pb-display);font-weight:900;text-transform:uppercase;
@@ -1787,6 +1789,36 @@ body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:min(42vh,42
 .linkout code{display:block;font:12px ui-monospace,monospace;word-break:break-all;
   margin:7px 0;color:var(--ink-1)}
 @media(max-width:640px){ .ros{grid-template-columns:1fr auto;row-gap:6px} .ros .who{grid-column:1/-1} }
+
+/* ---- streamlined Bozo sheets ---- */
+#bozoApp{display:flex;flex-direction:column}
+#bozoApp>.playbill{order:0}
+.playbill .snav{position:sticky;top:0;z-index:18}
+.playbill .snav button{flex:1 1 25%;justify-content:center;min-width:130px;text-align:center}
+.playbill .snav button .who{font-size:11px;letter-spacing:.065em}
+.hier-grid{overflow:auto;margin-top:10px}
+.hier-table{min-width:620px;width:100%;border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums}
+.hier-table th,.hier-table td{padding:10px 12px;border-right:1px solid var(--grid);border-bottom:1px solid var(--grid);text-align:left}
+.hier-table th{font:750 10px/1 ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.hier-table td:first-child,.hier-table th:first-child{position:sticky;left:0;background:var(--surface-1);z-index:1;font-weight:800}
+.hier-table td:last-child,.hier-table th:last-child{border-right:0}
+.hier-table tr:last-child td{border-bottom:0}
+.hier-rank{display:inline-grid;place-items:center;width:20px;height:20px;margin-right:7px;border-radius:50%;background:var(--grid);font:800 10px/1 ui-monospace,monospace;color:var(--ink-2)}
+.dash-controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:12px 0 16px}
+.dash-controls label{font:700 10px/1.2 ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.dash-controls select{display:block;width:100%;margin-top:6px}
+.dash-chart{display:grid;gap:7px;margin:12px 0 18px}
+.dash-bar{display:grid;grid-template-columns:minmax(100px,180px) 1fr 62px;align-items:center;gap:10px;font-size:12px}
+.dash-bar .track{height:11px;background:var(--grid);border-radius:999px;overflow:hidden;position:relative}
+.dash-bar .track i{display:block;height:100%;background:var(--accent);border-radius:inherit}
+.dash-bar.bad .track i{background:var(--bad)}
+.dash-bar .val{text-align:right;font:750 11px/1 ui-monospace,monospace}
+.dash-empty{padding:28px;text-align:center;color:var(--ink-3);border:1px dashed var(--grid);border-radius:8px}
+@media(max-width:760px){
+  .dash-controls{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .playbill .snav button{min-width:112px}
+  .dash-bar{grid-template-columns:92px 1fr 52px}
+}
 
 .nav-section{padding:9px 13px 3px;color:var(--accent);font:800 10px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase}.nav-section:not(:first-child){margin-top:5px;border-top:1px solid var(--grid);padding-top:10px}.grpmenu a[class*="kennel-"]{font-family:ui-rounded,"Trebuchet MS",system-ui,sans-serif;font-weight:800;letter-spacing:.01em}.grpmenu a.kennel-scoreboard{color:#8ed6ff}.grpmenu a.kennel-nfeloml{color:#c9b3ff}.grpmenu a.kennel-qb{color:#ffc06a}.grpmenu a.kennel-wepa{color:#7ce7b0}.grpmenu a.kennel-srs{color:#ff9bb4}.grpmenu a.kennel-hfa{color:#ffe082}.grpmenu a.kennel-units{color:#8ee8e3}.grpmenu a.kennel-receipts{color:#f2c4ff}.grpmenu a.kennel-regimes{color:#a8d88c}</style>
 </head>
@@ -2737,7 +2769,7 @@ index.html — the manifesto: what Data Dawgs is for, "Data, not dogma", Bring Y
 receipts.html — every pre-registered forecast, the grading, calibration, the model scoreboard, 538 Classic, provenance, the tier audit.
 dawghouse.html — the shelf: work that was stopped, each item with its blocker and the condition that would reopen it.
 arena.html — the hub for games played against other people; links to all of the below.
-bozo.html — the weekly one-leg parlay game: board, ledger, closing-line value, standings, the belt, and a read-only "as it stands / if every leg lost" hypothetical that never names a bozo.
+bozo.html — the weekly one-leg parlay game with four sheets: Overview (season Bozo Count, CLV chart, current-week diagnostics and weekly hierarchy grid), This Week (hierarchy machine, ticket and personal entry), Diagnostics (filterable league ledger), and League Settings.
 challenge.html — the NFL Forecasting Challenge: put a probability on a game before kickoff, get graded after.
 survivor.html — survivor pool: this week's board, pick popularity, an optimal path, a season simulation, model settings.
 guillotine.html — guillotine league companion. dfs.html — DFS solver, contest simulator, exposure, bankroll. The projections there are the USER'S OWN.
@@ -3416,7 +3448,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
 </script>
 
-<div class="bz">
+<div class="bz" id="bozoApp">
 
 <!-- ---------- the playbill ----------
      One header instead of six stacked blocks. It replaced a generic title + chip + sub,
@@ -3454,6 +3486,33 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div class="sheetbar" id="sheetBar" style="display:none"></div>
 </header>
 
+<!-- Overview receipt: one row per locked week, preserving the server-drawn order. -->
+<div class="card" id="hierHistoryCard" style="display:none">
+  <div class="bz-hdr"><h2 class="bz" style="margin:0">Tiebreaker hierarchy by week</h2><span class="tm" id="hierHistoryMeta"></span></div>
+  <p class="note" style="margin:6px 0 0">Each row is the server-drawn order for that week. The first lever that isolates one losing leg names the bozo.</p>
+  <div class="hier-grid" id="hierHistory"></div>
+</div>
+
+<!-- Diagnostics sheet: filterable season ledger. The current-week simulation remains
+     on Overview; this is the longitudinal slice-and-dice surface. -->
+<div class="card" id="diagExploreCard" style="display:none">
+  <div class="bz-hdr"><h2 class="bz" style="margin:0">Diagnostics dashboard</h2><span class="tm" id="dxMeta"></span></div>
+  <p class="note" style="margin:6px 0 0">Filter the league ledger to separate price quality from results. Expected wins use the de-vigged closing line; CLV needs both sides at entry and close.</p>
+  <div class="dash-controls">
+    <label>Player<select id="dxPlayer"><option value="all">All players</option></select></label>
+    <label>Window<select id="dxWindow"><option value="all">All picks</option><option value="last5">Last 5 weeks</option><option value="last24">Last 24 picks</option><option value="custom">Custom weeks</option></select></label>
+    <label>From week<select id="dxFrom"></select></label>
+    <label>Through week<select id="dxTo"></select></label>
+    <label>Sport<select id="dxSport"><option value="all">All sports</option></select></label>
+    <label>Break down by<select id="dxGroup"><option value="player">Player</option><option value="sport">Sport</option><option value="market">Market</option><option value="week">Week</option></select></label>
+  </div>
+  <div class="stat-grid" id="dxTiles"></div>
+  <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink-3);margin:20px 0 8px">Results vs. the closing line</h3>
+  <div class="dash-chart" id="dxChart"></div>
+  <div class="tscroll"><table class="bz" id="dxTable"><tbody></tbody></table></div>
+  <p class="note" id="dxNote"></p>
+</div>
+
 <!-- ---------- the hub: THE BILL ----------
      The directory used to be three cards and an admin form: it never said what Bozo
      was, never taught the levers, and hid the live week behind a click. It is now a
@@ -3474,6 +3533,38 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <h1 class="pb-word">Bozo</h1>
   <p class="pb-souls"><span id="pbSouls">Eight souls</span><span class="sep">&#10022;</span>One ticket<span class="sep">&#10022;</span>Real money<span class="sep">&#10022;</span><em>No escape but winning</em></p>
   <hr class="pb-rule2">
+
+  <!-- ---- pick a league before the long-form explainer ---- -->
+  <section class="pb-act pb-leagues-first" id="pbBill">
+    <p class="pb-kicker">Choose your league</p>
+    <h2 class="pb-h2">Every league on the card</h2>
+    <p class="pb-sub"><span class="tm" id="hubCount"></span> running. Open one to see its board;
+      the boards are public whether or not you are in them.</p>
+    <div class="hub" id="hubList"></div>
+  <div id="mkLeague" class="pb-book" style="display:none">
+    <h3>Book a new bill</h3>
+    <p class="tm">A separate group with its own roster size, band, week and ledger. You pick who runs it.</p>
+    <div class="frm">
+      <div class="f w2"><label>Name</label><input id="nlName" placeholder="Sunday Crew"></div>
+      <div class="f"><label>Id (for the link)</label><input id="nlId" placeholder="sunday"></div>
+      <div class="f"><label>Manager</label><select id="nlMgr"></select></div>
+      <!-- ⚠️ Format is chosen once and frozen at the first lock. Changing a ruleset
+           mid-season retroactively changes who should have been eliminated, which is the
+           same class of error as editing a published forecast. -->
+      <div class="f w2"><label>Format</label>
+        <select id="nlFormat">
+          <option value="standard">Standard — everyone plays every week, worst busts and wears it</option>
+          <option value="royale">Bozo Royale — one chopped a week, one re-deploy each, last one standing takes the pot</option>
+        </select></div>
+      <div class="f" id="nlBuybackWrap" style="display:none"><label>Re-deploy cost ($)</label>
+        <input id="nlBuyback" type="number" min="0" step="5" value="25" placeholder="0 = free"></div>
+      <div class="f w4"><div class="row" style="justify-content:flex-end">
+        <button class="btn sm" id="nlGo">Create league</button></div></div>
+    </div>
+    <div class="err" id="nlErr"></div>
+  </div>
+  <p class="note" id="hubNote"></p>
+  </section>
 
   <p class="pb-lede">One favorite each. One big parlay.<b>Whoever busts it worst wears it.</b></p>
   <p class="pb-body">Every member of the league files <b>one leg</b> &mdash; a favorite, priced inside the
@@ -3522,38 +3613,6 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       <button class="pb-btn ghost" id="riffleGo" type="button">Draw a running order</button>
       <p class="riffle-note" id="riffleNote"></p>
     </div>
-  </section>
-
-  <!-- ---- the bill: every league as a ticket stub ---- -->
-  <section class="pb-act" id="pbBill">
-    <p class="pb-kicker">The bill</p>
-    <h2 class="pb-h2">Every league on the card</h2>
-    <p class="pb-sub"><span class="tm" id="hubCount"></span> running. Open one to see its board;
-      the boards are public whether or not you are in them.</p>
-    <div class="hub" id="hubList"></div>
-  <div id="mkLeague" class="pb-book" style="display:none">
-    <h3>Book a new bill</h3>
-    <p class="tm">A separate group with its own roster size, band, week and ledger. You pick who runs it.</p>
-    <div class="frm">
-      <div class="f w2"><label>Name</label><input id="nlName" placeholder="Sunday Crew"></div>
-      <div class="f"><label>Id (for the link)</label><input id="nlId" placeholder="sunday"></div>
-      <div class="f"><label>Manager</label><select id="nlMgr"></select></div>
-      <!-- ⚠️ Format is chosen once and frozen at the first lock. Changing a ruleset
-           mid-season retroactively changes who should have been eliminated, which is the
-           same class of error as editing a published forecast. -->
-      <div class="f w2"><label>Format</label>
-        <select id="nlFormat">
-          <option value="standard">Standard — everyone plays every week, worst busts and wears it</option>
-          <option value="royale">Bozo Royale — one chopped a week, one re-deploy each, last one standing takes the pot</option>
-        </select></div>
-      <div class="f" id="nlBuybackWrap" style="display:none"><label>Re-deploy cost ($)</label>
-        <input id="nlBuyback" type="number" min="0" step="5" value="25" placeholder="0 = free"></div>
-      <div class="f w4"><div class="row" style="justify-content:flex-end">
-        <button class="btn sm" id="nlGo">Create league</button></div></div>
-    </div>
-    <div class="err" id="nlErr"></div>
-  </div>
-  <p class="note" id="hubNote"></p>
   </section>
 
   <!-- ---- the small print. Set as small print, which is both the joke and the point:
@@ -3650,9 +3709,9 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <p class="note" id="shNote"></p>
 </div>
 
-<!-- ---------- league sheet: the rules, and the manager's dials ---------- -->
+<!-- ---------- league settings: the rules, and the manager's dials ---------- -->
 <div class="card" id="leagueCard" style="display:none">
-  <h2 class="bz">League — the rules</h2>
+  <h2 class="bz">League Settings</h2>
   <div id="lgRules"></div>
   <div id="lgAdmin" style="display:none;margin-top:16px">
     <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:0 0 10px">Manager controls</h3>
@@ -3894,7 +3953,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
 <!-- ---------- season ---------- -->
 <div class="card bz-carnival" id="seasonCard">
-  <div class="bz-hdr"><h2 class="bz" style="margin:0">Season</h2><span class="tm" id="lbMeta"></span></div>
+  <div class="bz-hdr"><h2 class="bz" style="margin:0">Season Bozo Count</h2><span class="tm" id="lbMeta"></span></div>
   <div class="tboard" id="lb"></div>
   <div class="row" style="margin-top:14px" id="adminRow" style="display:none">
     <button class="btn ghost sm" id="next">Start next week</button>
@@ -5004,40 +5063,31 @@ async function loadLeagues(){
   }
 }
 
-/* ---------------- sheets: board / one per player / league ---------------- */
-// Hash-routed so a sheet is linkable: #s=Kap, #league, nothing = the board.
+/* ---------------- sheets: overview / this week / diagnostics / settings ---------------- */
+// Hash-routed so every streamlined sheet is linkable. Old #board/#league and player
+// sheet links land on their closest new home instead of breaking shared bookmarks.
 function view(){
   const h = decodeURIComponent(location.hash.slice(1));
-  if(h === 'league') return 'league';
-  if(h.startsWith('s=') && names().includes(h.slice(2))) return h.slice(2);
-  return 'board';
+  if(h === 'week' || h === 'this-week') return 'week';
+  if(h === 'diagnostics') return 'diagnostics';
+  if(h === 'league' || h === 'league-settings') return 'league';
+  if(h.startsWith('s=')) return 'diagnostics';
+  return 'overview';
 }
 function goto(v){
-  location.hash = v==='board' ? '' : v==='league' ? 'league' : 's='+encodeURIComponent(v);
+  location.hash = v==='overview' ? '' : v==='league' ? 'league-settings' : v;
 }
-/* The cast strip. One scrolling row, and the only rendering of who is in this league —
-   including, in Royale, who is out and in which week. */
+/* Four page-level destinations. Player identity is now a diagnostics filter and the
+   entry form lives at the bottom of This Week, so roster-sized navigation is gone. */
 let snavActive = null;
 function paintSnav(v){
   const el = document.getElementById('snav');
   const btn = (id,label,extra,cls) =>
     `<button data-v="${esc(id)}" class="${cls||''}${v===id?' on':''}"><span class="who">${esc(label)}</span>${extra||''}</button>`;
-  // Board pins first and your own sheet pins second. Everyone else keeps roster order —
-  // the strip scrolls, and the two cells a reader wants most must not be off-screen.
-  const roster = names();
-  const ordered = (ME && roster.includes(ME.name))
-    ? [ME.name, ...roster.filter(p => p !== ME.name)] : roster;
-  el.innerHTML = btn('board','The Board')
-    + ordered.map(p=>{
-        const r = royaleOf(p);
-        const dead = !!(r && r.alive === false);
-        return btn(p, teamOf(p),
-          chute(p)
-          + (dead ? `<span class="out">out · wk ${esc(String(r.eliminatedWeek ?? '?'))}</span>` : '')
-          + ((ME && p===ME.name) ? '<span class="yu">— you</span>' : ''),
-          dead ? 'dead ' : '');
-      }).join('')
-    + btn('league','League');
+  el.innerHTML = btn('overview','Overview')
+    + btn('week','This Week')
+    + btn('diagnostics','Diagnostics')
+    + btn('league','League Settings');
 
   /* ⚠️ Scroll the active cell into view ONLY when the active view actually changed.
      paintSnav runs on every 15s poll and on every hashchange, and an unconditional
@@ -5201,6 +5251,7 @@ function render(){
   const live = players.map(p=>({p, ...(picks[kEnc(p)]||{})})).filter(x=>x.price!=null);
   const hub = onHub();
   paintHub();
+  document.body.classList.toggle('pb-hub', hub);
   // The band reports one league's week, status and roster — nonsense on a directory of
   // several. The title, eyebrow and dek are the site's, not a league's, and stay.
   document.getElementById('bzBand').style.display = hub ? 'none' : '';
@@ -5213,14 +5264,16 @@ function render(){
   document.getElementById('statusChip').style.display = hub ? 'none' : '';
   document.getElementById('backHub').style.display = (hub || LEAGUES.length<2) ? 'none' : '';
   // On the hub every league-scoped card is hidden; the directory is the whole page.
-  for(const id of ['snav','lgbar','sheetBar','royaleAlert','submitCard','ticketCard','seasonCard','sheetCard','leagueCard','drawCard','royaleCard','clvCard','survCard','diagCard','gradeCard','verdict'])
+  for(const id of ['snav','lgbar','sheetBar','royaleAlert','submitCard','ticketCard','seasonCard','sheetCard','leagueCard','drawCard','royaleCard','clvCard','survCard','diagCard','hierHistoryCard','diagExploreCard','gradeCard','verdict'])
     { const el=document.getElementById(id); if(el && hub) el.style.display='none'; }
   if(hub) return;
   document.getElementById('snav').style.display = '';
-  document.getElementById('royaleAlert').style.display = '';
+  document.getElementById('royaleAlert').style.display = view()==='week' ? '' : 'none';
 
   const v = view();
-  const onBoard = v==='board';
+  const onOverview = v==='overview';
+  const onWeek = v==='week';
+  const onDiagnostics = v==='diagnostics';
   paintLeagueBar();
   paintSnav(v);
 
@@ -5241,10 +5294,10 @@ function render(){
   const open = status==='open';
   const mine = ME ? picks[kEnc(ME.name)] : null;
   const bd = band();
-  // The bet form lives on YOUR sheet — that's the "place their bet" surface.
-  // A chopped Royale player doesn't get one: they fund the ticket, they don't bet on it.
+  // Personal entry is the last surface on This Week. A chopped Royale player doesn't
+  // get one: they fund the ticket, they don't bet on it.
   const meAlive = !ME || !isRoyale() || (royaleOf(ME.name)?.alive !== false);
-  document.getElementById('submitCard').style.display = (ME && open && v===ME.name && meAlive) ? '' : 'none';
+  document.getElementById('submitCard').style.display = (ME && open && onWeek && meAlive) ? '' : 'none';
   document.getElementById('submitH').textContent = mine ? 'Your leg — editing resets your clock and price' : 'Your leg';
   document.getElementById('bandNote').textContent =
     `Favorites only, ${bd.ceil} to ${bd.floor}. No exact duplicates. Editing resets your clock and your price. The ticket locks the moment the last leg lands.`;
@@ -5260,22 +5313,22 @@ function render(){
   // telling you it is available.
   if(document.getElementById('submitCard').style.display !== 'none'){ prefillFromMyLeg(mine); paintLegPreview(); }
   else if(!mine) prefilledFor = null;
-  // The chart sits under the hierarchy on the board view only — it is a season-long
-  // read, and it has no meaning on one player's sheet.
-  if(onBoard){ clvLoad(); paintSurvival(); }
+  // Overview carries the season-long chart; Diagnostics loads the same ledger for its
+  // filters without duplicating a data source.
+  if(onOverview || onDiagnostics){ clvLoad();
+    if(onOverview) paintSurvival();
+    else { document.getElementById('clvCard').style.display='none'; document.getElementById('survCard').style.display='none'; }
+  }
   else { document.getElementById('clvCard').style.display='none';
          document.getElementById('survCard').style.display='none'; }
 
   // the sheets themselves
-  document.getElementById('ticketCard').style.display = onBoard ? '' : 'none';
-  if(onBoard) paintSlipBar();
-  document.getElementById('seasonCard').style.display = onBoard ? '' : 'none';
-  document.getElementById('sheetCard').style.display = players.includes(v) ? '' : 'none';
-  // The sheet bar is part of the header, so it is cleared here rather than left stale
-  // on the way back to the board. paintSheet fills it — it reads what #sheetCard already
-  // computes, so there is no second source for these numbers.
-  document.getElementById('sheetBar').style.display = players.includes(v) ? '' : 'none';
-  if(players.includes(v)) paintSheet(v);
+  document.getElementById('ticketCard').style.display = onWeek ? '' : 'none';
+  if(onWeek) paintSlipBar();
+  document.getElementById('authCard').style.display = (onWeek && !ME) ? '' : 'none';
+  document.getElementById('seasonCard').style.display = onOverview ? '' : 'none';
+  document.getElementById('sheetCard').style.display = 'none';
+  document.getElementById('sheetBar').style.display = 'none';
   document.getElementById('leagueCard').style.display = v==='league' ? '' : 'none';
   if(v==='league'){ paintLeague();
     // Manager-only, and it reaches every week rather than just this one.
@@ -5301,20 +5354,32 @@ function render(){
   // idles (armed); the reels STOP only when the server has actually drawn, so a
   // stopped reel always means a real, written-once result.
   const ord = S.order;
-  document.getElementById('drawCard').style.display = onBoard ? '' : 'none';
-  if(onBoard) paintMachine(ord);
+  document.getElementById('drawCard').style.display = onWeek ? '' : 'none';
+  if(onWeek) paintMachine(ord);
 
-  // diagnostics
-  if(onBoard) paintDiag(live, players, status);
+  // Overview gets the current-week diagnostic snapshot; the Diagnostics sheet gets
+  // the filterable season ledger below.
+  if(onOverview) paintDiag(live, players, status);
   else document.getElementById('diagCard').style.display='none';
+  document.getElementById('hierHistoryCard').style.display = onOverview ? '' : 'none';
+  if(onOverview) paintHierarchyHistory();
+  document.getElementById('diagExploreCard').style.display = onDiagnostics ? '' : 'none';
+  if(onDiagnostics && CLV.data && CLV.lid===LID) paintDiagnosticsExplorer();
+  else if(onDiagnostics){
+    document.getElementById('dxMeta').textContent='loading ledger…';
+    document.getElementById('dxTiles').innerHTML='';
+    document.getElementById('dxChart').innerHTML='<div class="dash-empty">Loading the season ledger…</div>';
+    document.querySelector('#dxTable tbody').innerHTML='';
+    document.getElementById('dxNote').textContent='';
+  }
 
   // grading — the Worker is the authority; this only decides what to show
-  document.getElementById('gradeCard').style.display = (isManager() && status==='placed' && onBoard) ? '' : 'none';
-  if(isManager() && status==='placed' && onBoard) paintManual(live);
+  document.getElementById('gradeCard').style.display = (isManager() && status==='placed' && onWeek) ? '' : 'none';
+  if(isManager() && status==='placed' && onWeek) paintManual(live);
   const ar=document.getElementById('adminRow');
   if(ar) ar.style.display = (isManager() && status==='graded') ? '' : 'none';
 
-  document.getElementById('verdict').style.display = (S.bozo && onBoard) ? '' : 'none';
+  document.getElementById('verdict').style.display = (S.bozo && onWeek) ? '' : 'none';
   if(S.bozo){
     document.getElementById('vName').textContent = teamOf(playerName(S.bozo));
     document.getElementById('vWhy').textContent = S.bozoWhy||'';
@@ -5333,6 +5398,14 @@ function render(){
      (The plaque reads "funds this week" while being computed from the max count. That
      mismatch predates this and is left alone rather than quietly redefined.) */
   paintTicker(players, t, mx, beltHolder());
+
+  // Flex order makes the requested hierarchy explicit without duplicating any card.
+  const order = (id,n)=>{ const el=document.getElementById(id); if(el) el.style.order=String(n); };
+  order('seasonCard',2); order('clvCard',3); order('diagCard',4);
+  order('hierHistoryCard',5); order('survCard',6); order('royaleCard',7);
+  order('drawCard',2); order('ticketCard',3); order('royaleAlert',4); order('verdict',5);
+  order('gradeCard',6); order('authCard',7); order('submitCard',8);
+  order('diagExploreCard',2); order('leagueCard',2);
 }
 
 /* ---------------- player sheet ---------------- */
@@ -6049,6 +6122,97 @@ const simKeyFor = (live, levers, status) =>
 const pct = v => (v*100).toFixed(v>=.1?0:1)+'%';
 function meter(v, risk){
   return `<span class="meter${risk?' risk':''}"><i style="width:${Math.max(2,Math.min(100,v*100)).toFixed(1)}%"></i></span>`;
+}
+
+/* One server-written hierarchy per locked week. Every ledger row for a week carries
+   the same order; taking the first is a receipt lookup, not a reconstruction. */
+function paintHierarchyHistory(){
+  const out=document.getElementById('hierHistory'), meta=document.getElementById('hierHistoryMeta');
+  const byWeek=new Map();
+  Object.values(S.ledger||{}).forEach(r=>{
+    if(r && Number.isFinite(+r.week) && Array.isArray(r.tiebreak) && !byWeek.has(+r.week))
+      byWeek.set(+r.week, r.tiebreak);
+  });
+  if(Array.isArray(S.order)) byWeek.set(+(S.week||1), S.order);
+  const rows=[...byWeek.entries()].sort((a,b)=>b[0]-a[0]);
+  meta.textContent=rows.length ? rows.length+' locked week'+(rows.length===1?'':'s') : '';
+  if(!rows.length){ out.innerHTML='<div class="dash-empty">The first locked ticket will write the first hierarchy here.</div>'; return; }
+  out.innerHTML=`<table class="hier-table"><thead><tr><th>Week</th><th>1st lever</th><th>2nd lever</th><th>3rd lever</th><th>4th lever</th></tr></thead><tbody>`
+    + rows.map(([wk,ord])=>`<tr><td>Week ${wk}</td>`
+      + [0,1,2,3].map(i=>`<td><span class="hier-rank">${i+1}</span>${esc((LEVERS[ord[i]]||{}).name||'—')}</td>`).join('')
+      + `</tr>`).join('') + `</tbody></table>`;
+}
+
+const DX={lid:null,wired:false};
+function dxInit(){
+  if(!CLV.data) return;
+  const player=document.getElementById('dxPlayer'), sport=document.getElementById('dxSport');
+  const from=document.getElementById('dxFrom'), to=document.getElementById('dxTo');
+  if(DX.lid!==LID){
+    DX.lid=LID;
+    player.innerHTML='<option value="all">All players</option>'+CLV.players.map(p=>`<option value="${esc(p)}">${esc(teamOf(p))}</option>`).join('');
+    sport.innerHTML='<option value="all">All sports</option>'+CLV.sports.map(s=>`<option value="${esc(s)}">${esc(String(s).toUpperCase())}</option>`).join('');
+    const weeks=[...new Set((CLV.data.legs||[]).map(l=>+l.week))].sort((a,b)=>a-b);
+    const opts=weeks.map(w=>`<option value="${w}">Week ${w}</option>`).join('');
+    from.innerHTML=opts; to.innerHTML=opts;
+    if(weeks.length){ from.value=weeks[0]; to.value=weeks[weeks.length-1]; }
+    document.getElementById('dxWindow').value='all';
+  }
+  if(!DX.wired){
+    DX.wired=true;
+    ['dxPlayer','dxWindow','dxFrom','dxTo','dxSport','dxGroup'].forEach(id=>{
+      document.getElementById(id).addEventListener('change',()=>{
+        if(id==='dxFrom'||id==='dxTo') document.getElementById('dxWindow').value='custom';
+        paintDiagnosticsExplorer();
+      });
+    });
+  }
+}
+function dxRows(){
+  const player=document.getElementById('dxPlayer').value, sport=document.getElementById('dxSport').value;
+  const win=document.getElementById('dxWindow').value;
+  let rows=(CLV.data.legs||[]).filter(l=>(player==='all'||l.player===player)&&(sport==='all'||l.sport===sport));
+  const max=Math.max(0,...rows.map(l=>+l.week||0));
+  if(win==='last5') rows=rows.filter(l=>+l.week>=max-4);
+  if(win==='custom'){
+    const a=+document.getElementById('dxFrom').value, b=+document.getElementById('dxTo').value;
+    rows=rows.filter(l=>+l.week>=Math.min(a,b)&&+l.week<=Math.max(a,b));
+  }
+  rows.sort((a,b)=>(+a.week-+b.week)||String(a.entrySubmittedAt||'').localeCompare(String(b.entrySubmittedAt||'')));
+  if(win==='last24') rows=rows.slice(-24);
+  return rows;
+}
+function dxSummary(rows){
+  const graded=rows.filter(l=>l.result==='win'||l.result==='loss');
+  const measurable=graded.filter(clvGraded);
+  const wins=graded.filter(l=>l.result==='win').length;
+  const expected=measurable.reduce((s,l)=>s+clvDevig(l.closePrice,l.closePriceOpp),0);
+  const clv=measurable.reduce((s,l)=>s+clvDevig(l.closePrice,l.closePriceOpp)-clvDevig(l.entryPrice,l.entryPriceOpp),0);
+  return {picks:rows.length,graded,wins,losses:graded.length-wins,measurable,
+    expected,delta:wins-expected,clv:measurable.length?clv/measurable.length:null};
+}
+function paintDiagnosticsExplorer(){
+  if(!CLV.data || view()!=='diagnostics') return;
+  dxInit();
+  const rows=dxRows(), s=dxSummary(rows), tile=(l,b,sub)=>`<div><div class="lil">${l}</div><div class="big">${b}</div><div class="tm">${sub||''}</div></div>`;
+  document.getElementById('dxMeta').textContent=`${rows.length} pick${rows.length===1?'':'s'} in this slice`;
+  document.getElementById('dxTiles').innerHTML=
+    tile('Picks',s.picks,`${s.graded.length} graded`)+tile('Record',`${s.wins}–${s.losses}`,s.graded.length?`${(s.wins/s.graded.length*100).toFixed(1)}% won`:'nothing graded')+
+    tile('Expected wins',s.measurable.length?s.expected.toFixed(1):'—',`${s.measurable.length} with usable closes`)+
+    tile('Over / under expected',s.measurable.length?`${s.delta>=0?'+':''}${s.delta.toFixed(1)}`:'—','wins minus closing-line expectation')+
+    tile('Average CLV',s.clv==null?'—':`${s.clv>=0?'+':''}${(s.clv*100).toFixed(2)}pp`,'de-vigged close minus entry')+
+    tile('CLV coverage',s.picks?`${s.measurable.length} / ${s.picks}`:'—','missing data is never filled as zero');
+  if(!rows.length){ document.getElementById('dxChart').innerHTML='<div class="dash-empty">No picks match these filters.</div>'; document.querySelector('#dxTable tbody').innerHTML=''; return; }
+  const group=document.getElementById('dxGroup').value;
+  const key=l=>group==='player'?teamOf(l.player):group==='sport'?String(l.sport||'Unknown').toUpperCase():group==='market'?String(l.mkt||'other').toUpperCase():'Week '+l.week;
+  const buckets=new Map(); rows.forEach(l=>{ const k=key(l); if(!buckets.has(k)) buckets.set(k,[]); buckets.get(k).push(l); });
+  const sums=[...buckets].map(([k,v])=>({k,...dxSummary(v)})).sort((a,b)=>b.picks-a.picks||a.k.localeCompare(b.k));
+  const maxDelta=Math.max(1,...sums.map(x=>Math.abs(x.delta)));
+  document.getElementById('dxChart').innerHTML=sums.map(x=>`<div class="dash-bar${x.delta<0?' bad':''}"><span>${esc(x.k)}</span><span class="track"><i style="width:${Math.max(3,Math.abs(x.delta)/maxDelta*100).toFixed(1)}%"></i></span><span class="val">${x.measurable.length?(x.delta>=0?'+':'')+x.delta.toFixed(1):'—'}</span></div>`).join('');
+  document.querySelector('#dxTable tbody').innerHTML=`<tr><th>${esc(group)}</th><th>Picks</th><th>W–L</th><th>Expected W</th><th>vs expected</th><th>Avg CLV</th><th>CLV n</th></tr>`+
+    sums.map(x=>`<tr><td class="who">${esc(x.k)}</td><td>${x.picks}</td><td>${x.wins}–${x.losses}</td><td>${x.measurable.length?x.expected.toFixed(1):'—'}</td><td class="px">${x.measurable.length?(x.delta>=0?'+':'')+x.delta.toFixed(1):'—'}</td><td class="px ${x.clv==null?'':x.clv>=0?'clvup':'clvdn'}">${x.clv==null?'—':(x.clv>=0?'+':'')+(x.clv*100).toFixed(2)+'pp'}</td><td>${x.measurable.length}</td></tr>`).join('');
+  const losers=rows.filter(l=>l.result==='loss'), badClv=losers.filter(l=>clvGraded(l)&&clvDevig(l.closePrice,l.closePriceOpp)<clvDevig(l.entryPrice,l.entryPriceOpp)).length;
+  document.getElementById('dxNote').innerHTML=`${losers.length} loss${losers.length===1?'':'es'} in this slice${losers.length?`; ${badClv} also had negative measured CLV`:''}. Positive result delta with flat CLV is more consistent with good luck than proven skill; positive CLV with ordinary results is the stronger price-quality signal. Entry prices are self-reported; closes are captured from DraftKings through a licensed aggregator.`;
 }
 
 function paintDiag(live, players, status){
@@ -7347,7 +7511,7 @@ function royaleStatus_page(){
 function paintRoyaleAlert(){
   const el = document.getElementById('royaleAlert');
   el.innerHTML = '';
-  if(!isRoyale() || onHub() || view()!=='board' || !ME) return;
+  if(!isRoyale() || onHub() || view()!=='week' || !ME) return;
 
   const R = S.royale || {};
   // ⚠️ filter(c=>c && c.week) — Firebase turns an object keyed by sequential week
@@ -7372,7 +7536,7 @@ function paintRoyaleAlert(){
 /* ---- the receipt: the epitaph, the chop log and the rules ---- */
 function paintRoyaleLog(){
   const card = document.getElementById('royaleCard');
-  if(!isRoyale() || onHub() || view()!=='board'){ card.style.display='none'; return; }
+  if(!isRoyale() || onHub() || view()!=='overview'){ card.style.display='none'; return; }
   card.style.display='';
 
   const R = S.royale || {};
@@ -7885,7 +8049,7 @@ let SURV = null, survKey = '';
 function paintSurvival(){
   const card = document.getElementById('survCard');
   if(!card) return;
-  if(!CLV.data || CLV.data.format !== 'royale' || onHub() || view()!=='board'){
+  if(!CLV.data || CLV.data.format !== 'royale' || onHub() || view()!=='overview'){
     card.style.display='none'; return;
   }
   // ⚠️ Re-run only when the inputs actually change. This is 4,000 seasons of resampling;
@@ -7981,7 +8145,11 @@ async function clvLoad(force){
   const card = document.getElementById('clvCard');
   if(onHub()){ card.style.display='none'; return; }
   if(CLV.loading) return;
-  if(CLV.lid===LID && CLV.data && !force){ card.style.display=''; return; }
+  if(CLV.lid===LID && CLV.data && !force){
+    card.style.display=view()==='overview' ? '' : 'none';
+    if(view()==='diagnostics') paintDiagnosticsExplorer();
+    return;
+  }
   CLV.loading = true;
   try{
     const j = await wGet('/bozo/clv?league='+encodeURIComponent(LID));
@@ -7998,8 +8166,8 @@ async function clvLoad(force){
 
     // Nothing graded yet is a real state, not an error. Say so instead of drawing an
     // empty axis frame, which reads as "broken".
-    if(!j.legs.length){ card.style.display='none'; return; }
-    card.style.display='';
+    if(!j.legs.length){ card.style.display='none'; if(view()==='diagnostics') paintDiagnosticsExplorer(); return; }
+    card.style.display=view()==='overview' ? '' : 'none';
 
     const wk=document.getElementById('clvWeek');
     wk.max = CLV.maxWeek; wk.value = CLV.maxWeek;
@@ -8010,9 +8178,14 @@ async function clvLoad(force){
     document.getElementById('clvSim').style.display = CLV.data.synthetic ? '' : 'none';
     document.getElementById('clvFoot').innerHTML = clvFootLive() + clvMethod();
     clvRender();
-    paintSurvival();
+    if(view()==='overview') paintSurvival();
+    if(view()==='diagnostics') paintDiagnosticsExplorer();
   }catch(e){
     card.style.display='none';
+    if(view()==='diagnostics'){
+      document.getElementById('dxMeta').textContent='ledger unavailable';
+      document.getElementById('dxChart').innerHTML='<div class="dash-empty">The diagnostics ledger could not be reached. Try this sheet again in a moment.</div>';
+    }
   }finally{ CLV.loading=false; }
 }
 
