@@ -159,6 +159,20 @@ ok('weekly grouping becomes active',out.querySelector('[data-grain="week"]').cla
 out.querySelector('[data-range="year-2025"]').click();
 await new Promise(r=>setTimeout(r,50));
 ok('year shortcut isolates that calendar year',/2025-01-01 → 2025-12-20/.test(out.querySelector('.range-readout').textContent));
+out.querySelector('[data-range="year-2024"]').click();
+await new Promise(r=>setTimeout(r,50));
+const multiYearLikes=w.DD.timeSeries(R,Date.UTC(2024,0,1),Date.UTC(2026,0,1)-1,'month').likes;
+ok('year chips select a continuous multi-year range',
+  /2024-01-10 → 2025-12-20/.test(out.querySelector('.range-readout').textContent)&&
+  out.querySelector('[data-range="year-2024"]').classList.contains('on')&&
+  out.querySelector('[data-range="year-2025"]').classList.contains('on')&&
+  Number(out.querySelector('.kpi .value').textContent.replace(/\D/g,''))===multiYearLikes);
+out.querySelector('[data-range="year-2024"]').click();
+await new Promise(r=>setTimeout(r,50));
+ok('clicking a selected endpoint shrinks the multi-year range',
+  /2025-01-01 → 2025-12-20/.test(out.querySelector('.range-readout').textContent)&&
+  !out.querySelector('[data-range="year-2024"]').classList.contains('on')&&
+  out.querySelector('[data-range="year-2025"]').classList.contains('on'));
 ok('year view labels acceptance points',out.querySelectorAll('.pointlabel').length>0);
 ok('rate chart labels the weighted selected-period result',!!out.querySelector('.selectedline')&&/SELECTED PERIOD/.test(out.querySelector('.selectedlabel').textContent)&&/PERCENTILE ALL MEN/.test(out.querySelector('.selectedlabel').textContent));
 ok('both main charts have their own filters',out.querySelectorAll('.charttools').length===2&&out.querySelectorAll('[data-chart-year]').length===2);

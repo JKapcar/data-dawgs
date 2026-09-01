@@ -207,7 +207,9 @@ button{font:inherit;cursor:pointer}
   color:var(--ink-3)}
 .rangebar .range-readout{font:700 12px var(--mono);color:var(--ink-2)}
 .controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.yearstrip{display:flex;gap:5px;overflow-x:auto;padding:2px 0;scrollbar-width:thin}
+.yearstrip{display:flex;align-items:center;gap:5px;overflow-x:auto;padding:7px 0 2px;scrollbar-width:thin}
+.yearstrip .yearhint{flex:0 0 auto;margin-right:4px;font:800 9px var(--mono);letter-spacing:.09em;
+  text-transform:uppercase;color:var(--ink-3)}
 .yearstrip button{border:1px solid var(--border);background:var(--page);color:var(--ink-2);
   border-radius:999px;padding:6px 10px;font:800 10px var(--mono);white-space:nowrap}
 .yearstrip button.on{background:var(--ink-1);color:var(--page)}
@@ -904,7 +906,7 @@ var DD = (function(){
      boundary. It is captured with the number of exploratory moves that preceded it and
      is invalidated the moment the boundary changes. A toggle you can flip after
      exploring is not a declaration, so there is no toggle. */
-  var R=null,CUT=null,MOVES=0,DECL=null,SUBJ=null,VFROM=null,VTO=null,GRAIN="month",RANGE="all",RANK_RANGE="1y",
+  var R=null,CUT=null,MOVES=0,DECL=null,SUBJ=null,VFROM=null,VTO=null,YEAR_FROM=null,YEAR_TO=null,GRAIN="month",RANGE="all",RANK_RANGE="1y",
       VIEW="overview",SHOW_LIKES=true,SHOW_MATCHES=true,SHOW_BENCHMARKS=true,SHOW_VALUES=true,
       ACTIVITY_SCALE="sqrt";
   /* DECL is captured BEFORE parse and can only ever be invalidated, never created later.
@@ -1037,7 +1039,7 @@ var DD = (function(){
       (labels?'<text class="benchmarklabel" x="'+(RX-5)+'" y="'+Math.max(T+11,yMd-6)+'" text-anchor="end">MEDIAN MAN · '+pct(md.rate)+'</text><text class="benchmarklabel" x="'+(RX-5)+'" y="'+Math.max(T+11,yHi+12)+'" text-anchor="end">20TH–80TH BENCHMARK</text>':''); }
   function chartTools(kind){
     var y0=new Date(R.minT).getUTCFullYear(),y1=new Date(R.maxT).getUTCFullYear(),opts='<option value="">Jump to year…</option>';
-    for(var y=y0;y<=y1;y++)opts+='<option value="'+y+'" '+(RANGE==='year-'+y?'selected':'')+'>'+y+'</option>';
+    for(var y=y0;y<=y1;y++)opts+='<option value="'+y+'" '+(RANGE==='years'&&YEAR_FROM===y&&YEAR_TO===y?'selected':'')+'>'+y+'</option>';
     function rb(id,label){return '<button data-range="'+id+'" class="'+(RANGE===id?'on':'')+'">'+label+'</button>';}
     var layers=(kind==='activity'||kind==='momentum')?'<div class="toolgroup"><span>Show</span><button data-series="likes" class="'+(SHOW_LIKES?'on':'')+'">Likes sent</button><button data-series="matches" class="'+(SHOW_MATCHES?'on':'')+'">Observed matches</button><button data-layer="benchmarks" class="'+(SHOW_BENCHMARKS?'on':'')+'">Median + band</button></div>':
       '<div class="toolgroup"><span>Show</span><button data-layer="benchmarks" class="'+(SHOW_BENCHMARKS?'on':'')+'">Median + band</button><button data-layer="labels" class="'+(SHOW_VALUES?'on':'')+'">Point values</button></div>';
@@ -1190,7 +1192,10 @@ var DD = (function(){
   function timelinePanel(S){
     var rw=S.rate,preset=function(id,label){return '<button data-range="'+id+'" class="'+(RANGE===id?'on':'')+'" aria-pressed="'+(RANGE===id)+'">'+label+'</button>';},
         y0=new Date(R.minT).getUTCFullYear(),y1=new Date(R.maxT).getUTCFullYear(),years=[];
-    for(var y=y0;y<=y1;y++)years.push(preset('year-'+y,String(y)));
+    for(var y=y0;y<=y1;y++){
+      var chosen=RANGE==='years'&&y>=YEAR_FROM&&y<=YEAR_TO;
+      years.push('<button data-range="year-'+y+'" class="'+(chosen?'on':'')+'" aria-pressed="'+chosen+'" aria-label="'+y+(chosen?' selected':'')+'">'+y+'</button>');
+    }
     return '<div class="dashhead"><div><h2>Your dating dashboard</h2><p>Choose a range once. Every card, chart, and comparison below follows it.</p></div>'+
       '<span class="tag">UTC · local only</span></div>'+
       '<div class="rangebar"><div class="topline"><span class="range-title">Analysis range</span>'+
@@ -1198,7 +1203,7 @@ var DD = (function(){
       '<div class="seg" role="group" aria-label="Date range">'+preset('all','All')+preset('1y','Last year')+preset('6m','Last 6 months')+preset('1m','Last month')+preset('90d','90 days')+preset('ytd','YTD')+'</div>'+
       '<div class="seg" role="group" aria-label="Chart grouping"><button data-grain="month" aria-pressed="'+(GRAIN==='month')+'" class="'+(GRAIN==='month'?'on':'')+'">Monthly</button><button data-grain="week" aria-pressed="'+(GRAIN==='week')+'" class="'+(GRAIN==='week'?'on':'')+'">Weekly</button></div>'+
       '<div class="datefields"><input type="date" id="viewFrom" value="'+iso(S.from)+'" min="'+iso(R.minT)+'" max="'+iso(R.maxT)+'" aria-label="Range start"><span>to</span>'+
-      '<input type="date" id="viewTo" value="'+iso(S.to)+'" min="'+iso(R.minT)+'" max="'+iso(R.maxT)+'" aria-label="Range end"><button class="apply" id="applyRange">Apply</button></div></div><div class="yearstrip" aria-label="Choose a year">'+years.join('')+'</div></div>'+
+      '<input type="date" id="viewTo" value="'+iso(S.to)+'" min="'+iso(R.minT)+'" max="'+iso(R.maxT)+'" aria-label="Range end"><button class="apply" id="applyRange">Apply</button></div></div><div class="yearstrip" role="group" aria-label="Select one year or a continuous range of years"><span class="yearhint">Years · choose one or a range</span>'+years.join('')+'</div></div>'+
       '<div class="kpis"><div class="kpi"><span class="value">'+num(S.likes)+'</span><span class="label">Likes you sent</span><span class="detail">in your selected date range</span></div>'+
       '<div class="kpi match-kpi"><span class="value">'+num(S.matches)+'</span><span class="label">Your observed matches</span><span class="detail">'+num(S.matureMatches)+' are scoreable in this range</span></div>'+
       '<div class="kpi"><span class="value">'+(rw?pct(rw.p):'—')+'</span><span class="label">Your scoreable match-back rate</span><span class="detail">'+(rw?num(rw.k)+' scoreable matches from '+num(rw.n)+' matured likes':'no matured likes')+'</span></div>'+
@@ -1411,9 +1416,20 @@ var DD = (function(){
     $("#out").className="";$("#out").innerHTML=h.join("");
 
     Array.prototype.forEach.call(document.querySelectorAll("[data-range]"),function(b){b.onclick=function(){
-      var DAY=864e5,id=b.getAttribute("data-range"),y=new Date(R.maxT).getUTCFullYear();RANGE=id;VTO=R.maxT;
-      if(id.indexOf("year-")===0){y=+id.slice(5);GRAIN="month";VFROM=Math.max(R.minT,Date.UTC(y,0,1));VTO=Math.min(R.maxT,Date.UTC(y+1,0,1)-1);}
-      else VFROM=id==="90d"?Math.max(R.minT,R.maxT-89*DAY):id==="1m"?Math.max(R.minT,R.maxT-29*DAY):id==="6m"?Math.max(R.minT,R.maxT-182*DAY):id==="1y"?Math.max(R.minT,R.maxT-364*DAY):id==="ytd"?Math.max(R.minT,Date.UTC(y,0,1)):R.minT;
+      var DAY=864e5,id=b.getAttribute("data-range"),y=new Date(R.maxT).getUTCFullYear();VTO=R.maxT;
+      if(id.indexOf("year-")===0){
+        y=+id.slice(5);GRAIN="month";
+        if(RANGE!=="years"||YEAR_FROM===null||YEAR_TO===null){YEAR_FROM=YEAR_TO=y;}
+        else if(y<YEAR_FROM)YEAR_FROM=y;
+        else if(y>YEAR_TO)YEAR_TO=y;
+        else if(y===YEAR_FROM&&YEAR_FROM<YEAR_TO)YEAR_FROM++;
+        else if(y===YEAR_TO&&YEAR_TO>YEAR_FROM)YEAR_TO--;
+        else if(y>YEAR_FROM&&y<YEAR_TO)YEAR_FROM=YEAR_TO=y;
+        RANGE="years";VFROM=Math.max(R.minT,Date.UTC(YEAR_FROM,0,1));VTO=Math.min(R.maxT,Date.UTC(YEAR_TO+1,0,1)-1);
+      } else {
+        YEAR_FROM=YEAR_TO=null;RANGE=id;
+        VFROM=id==="90d"?Math.max(R.minT,R.maxT-89*DAY):id==="1m"?Math.max(R.minT,R.maxT-29*DAY):id==="6m"?Math.max(R.minT,R.maxT-182*DAY):id==="1y"?Math.max(R.minT,R.maxT-364*DAY):id==="ytd"?Math.max(R.minT,Date.UTC(y,0,1)):R.minT;
+      }
       paint();};});
     Array.prototype.forEach.call(document.querySelectorAll("[data-grain]"),function(b){b.onclick=function(){GRAIN=b.getAttribute("data-grain");paint();};});
     Array.prototype.forEach.call(document.querySelectorAll("[data-view]"),function(b){b.onclick=function(){VIEW=b.getAttribute("data-view");paint();};});
@@ -1426,13 +1442,13 @@ var DD = (function(){
     Array.prototype.forEach.call(document.querySelectorAll("[data-activity-scale]"),function(b){b.onclick=function(){
       ACTIVITY_SCALE=b.getAttribute("data-activity-scale");paint();};});
     Array.prototype.forEach.call(document.querySelectorAll("[data-chart-year]"),function(s){s.onchange=function(){
-      if(!s.value)return;var b=document.querySelector('[data-range="year-'+s.value+'"]');if(b)b.click();};});
+      if(!s.value)return;YEAR_FROM=YEAR_TO=null;RANGE="all";var b=document.querySelector('[data-range="year-'+s.value+'"]');if(b)b.click();};});
     if($("#vcue"))$("#vcue").onclick=function(){if($("#workings").scrollIntoView)$("#workings").scrollIntoView({behavior:"smooth",block:"start"});};
     $("#applyRange").onclick=function(){var a=$("#viewFrom").value,z=$("#viewTo").value;if(a&&z){
-      VFROM=new Date(a+"T00:00:00Z").getTime();VTO=new Date(z+"T00:00:00Z").getTime()+864e5-1;RANGE="custom";paint();}};
+      VFROM=new Date(a+"T00:00:00Z").getTime();VTO=new Date(z+"T00:00:00Z").getTime()+864e5-1;YEAR_FROM=YEAR_TO=null;RANGE="custom";paint();}};
     $("#snap").onclick=function(){var data=DD.snapshot(R,M,{subject:SUBJ&&SUBJ.subject||null,consent:SUBJ&&SUBJ.consent||null,consentAt:SUBJ&&SUBJ.at||null,declaration:declValid()?DECL:null,boundaryMoves:0});
       data.dashboard_range={from:iso(S.from),to:iso(S.to),grain:S.grain};data.rank_window={id:RW.id,from:iso(RW.from),to:iso(RW.to)};var b=new Blob([JSON.stringify(data,null,1)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="datedawg-snapshot.json";a.click();setTimeout(function(){URL.revokeObjectURL(a.href);},1000);};
-    $("#again").onclick=function(){R=null;VFROM=VTO=null;RANGE="all";RANK_RANGE="1y";GRAIN="month";VIEW="overview";SHOW_LIKES=SHOW_MATCHES=SHOW_BENCHMARKS=SHOW_VALUES=true;ACTIVITY_SCALE="sqrt";document.body.classList.remove("results-ready");$("#out").className="hide";$("#out").innerHTML="";if($("#drop").scrollIntoView)$("#drop").scrollIntoView({behavior:"smooth"});};
+    $("#again").onclick=function(){R=null;VFROM=VTO=YEAR_FROM=YEAR_TO=null;RANGE="all";RANK_RANGE="1y";GRAIN="month";VIEW="overview";SHOW_LIKES=SHOW_MATCHES=SHOW_BENCHMARKS=SHOW_VALUES=true;ACTIVITY_SCALE="sqrt";document.body.classList.remove("results-ready");$("#out").className="hide";$("#out").innerHTML="";if($("#drop").scrollIntoView)$("#drop").scrollIntoView({behavior:"smooth"});};
   }
 
   function capturePre(){
@@ -1466,7 +1482,7 @@ var DD = (function(){
       $("#out").innerHTML='<div class="note stop">'+esc(res.error)+'</div>'; return; }
     R=res;document.body.classList.add("results-ready");
     if(bad.length) R.filesMissing=R.filesMissing.concat(bad.map(function(b){return b+" (unreadable)";}));
-    VFROM=R.minT;VTO=R.maxT;RANGE="all";RANK_RANGE="1y";GRAIN="month";
+    VFROM=R.minT;VTO=R.maxT;YEAR_FROM=YEAR_TO=null;RANGE="all";RANK_RANGE="1y";GRAIN="month";
     var yr=R.maxT-365*864e5;
     CUT = yr>R.minT ? yr : Math.round((R.minT+R.maxT)/2);
     if(DECL){
@@ -1504,6 +1520,7 @@ window.DD_BOTCTX = {
 - Likes newer than 30 days are immature and excluded from every censoring-adjusted current result, including volume standardization and the displayed z-test.
 - Across the interface, “observed matches” always means every known match outcome in the selected dates. “Scoreable matches” always means the subset attached to likes at least 30 days old; only scoreable matches and matured likes are used for match-back rates and percentiles. Never substitute one count for the other.
 - Dashboard date filters control every visible summary, chart, Dating App MV / Market Value reference, and selected snapshot. They never alter or reinstate a declared before/after test. Timeline matches are grouped by the date the subject sent the like; the trend rate uses matured likes only.
+- Calendar-year chips form one continuous multi-year range: the first click selects a year, clicking outside that selection extends it, clicking an endpoint shrinks it, and clicking inside restarts the selection. The resulting dates control the entire dashboard like every other date filter.
 - The full-width Verdict and the detailed ranking panel always use the same selected Overall, 1 year, 6 months, or 1 month ranking window and the same primary ranking method. Those windows end on the latest scoreable date, 30 days before the newest export event, and do not change the dashboard range or the declared before/after test. Never quote the Verdict and detailed panel as different scopes.
 - Compare uses one export at two scopes: fixed overall history versus the date-filtered snapshot. Raw totals cover different spans, so compare acceptance rates rather than totals.
 - Percentiles come from direct log-linear interpolation of SwipeStats' published Tinder male percentile table (6,233 complete male profiles), not from a fitted model and not from an observed Hinge cohort. No cohort of real Hinge men exists here.
@@ -1518,7 +1535,7 @@ window.DD_BOTCTX = {
   ctx: () => `DateDawg parser/schema version: ${DD.PARSER_VERSION}.
 Analysis runs entirely in this browser under a connect-src 'none' content-security policy.
 Volume strata are 1–3, 4–8, 9–20 and 21+ outbound likes per day; both eras are standardized to pooled common-support weights. Missing support is disclosed and can suppress standardization.
-Overview, Patterns, Momentum and Compare are alternate views of the same selected date range. Each main chart also exposes window, year, monthly/weekly, layer and label controls; its full-density timeline is horizontally swipeable. Compare holds overall export history fixed against the selected snapshot.
+Overview, Patterns, Momentum and Compare are alternate views of the same selected date range. The calendar-year chips can select one year or a continuous span of years. Each main chart also exposes window, year, monthly/weekly, layer and label controls; its full-density timeline is horizontally swipeable. Compare holds overall export history fixed against the selected snapshot.
 Patterns is an illustrated story: the 100-person ecosystem shows the selected-range percentile, the weekly orbit encodes like volume by distance and circle size while printing match-back rate, and the activity terrain shows rates across daily like-volume habitats. Overall, Last year, Last 6 months, and Last month switch the entire illustrated story together. These remain descriptive views of the same filtered export.
 The import receipt reports the maturity anchor and a SHA-256 fingerprint over canonical sanitized events when Web Crypto is available.
 Snapshots contain counts and lineage only. They are downloaded by the user and are not automatic cross-session memory.`
