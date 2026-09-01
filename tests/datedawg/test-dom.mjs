@@ -152,7 +152,7 @@ ok('scoreable result is explicitly separated from observed total',
 ok('import receipt is collapsed by default',!!out.querySelector('details.receipt')&&!out.querySelector('details.receipt').open);
 ok('chart copy explains observed matches are dated to the sent like',/known match outcome, dated to when you sent each like/i.test(text));
 ok('maturity note appears beside trend',/too recent to score/i.test(text));
-ok('trend explains why monthly dots cannot be averaged',/Monthly dots have different sample sizes/i.test(text));
+ok('trend explains why period dots cannot be averaged',/Periods have different sample sizes/i.test(text));
 ok('likes and matches have distinct color tokens',/--likes:#006ee6/.test(html)&&/--matches:#d91f4e/.test(html));
 ok('Combine is compact and carries the five-second answer',!!out.querySelector('#verdict .vtier')&&out.querySelectorAll('#verdict .vmetric').length===3&&/outperform about/i.test(out.querySelector('#verdict').textContent));
 ok('Market change story follows the Combine',out.children[1]&&out.children[1].id==='market-story'&&/Change after balancing daily activity/.test(out.children[1].textContent));
@@ -170,6 +170,15 @@ ok('90-day preset changes displayed range',out.querySelector('.range-readout').t
 out.querySelector('[data-grain="week"]').click();
 await new Promise(r=>setTimeout(r,50));
 ok('weekly grouping becomes active',out.querySelector('[data-grain="week"]').classList.contains('on'));
+ok('quarterly and yearly grouping controls are available',!!out.querySelector('[data-grain="quarter"]')&&!!out.querySelector('[data-grain="year"]'));
+out.querySelector('[data-grain="quarter"]').click();
+await new Promise(r=>setTimeout(r,50));
+ok('quarterly grouping becomes active and labels quarters',out.querySelector('[data-grain="quarter"]').classList.contains('on')&&/Q[1-4] \d{4}/.test(out.querySelector('.rate-stage').innerHTML));
+out.querySelector('[data-grain="year"]').click();
+await new Promise(r=>setTimeout(r,50));
+ok('yearly grouping becomes active',out.querySelector('[data-grain="year"]').classList.contains('on'));
+out.querySelector('[data-grain="week"]').click();
+await new Promise(r=>setTimeout(r,50));
 out.querySelector('[data-range="year-2025"]').click();
 await new Promise(r=>setTimeout(r,50));
 ok('year shortcut isolates that calendar year',/2025-01-01 → 2025-12-20/.test(out.querySelector('.range-readout').textContent));

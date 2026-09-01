@@ -869,20 +869,26 @@ var DD = (function(){
     var DAY=864e5, resolveBefore=R.maxT-RESOLVE_DAYS*DAY;
     from=Math.max(R.minT,+from||R.minT); to=Math.min(R.maxT,+to||R.maxT);
     if(from>to){ var swap=from;from=to;to=swap; }
-    grain=grain==="week"?"week":"month";
+    grain=["week","month","quarter","year"].indexOf(grain)>=0?grain:"month";
     function start(t){
       var d=new Date(t);
+      if(grain==="year") return Date.UTC(d.getUTCFullYear(),0,1);
+      if(grain==="quarter") return Date.UTC(d.getUTCFullYear(),Math.floor(d.getUTCMonth()/3)*3,1);
       if(grain==="month") return Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),1);
       var x=Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()),
           dow=new Date(x).getUTCDay();
       return x-((dow+6)%7)*DAY; }
     function next(t){
       if(grain==="week") return t+7*DAY;
-      var d=new Date(t); return Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,1); }
+      var d=new Date(t);
+      if(grain==="year") return Date.UTC(d.getUTCFullYear()+1,0,1);
+      return Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+(grain==="quarter"?3:1),1); }
     function label(t){
       var d=new Date(t);
-      return grain==="week"?d.toISOString().slice(0,10):
-        d.toLocaleDateString("en-US",{timeZone:"UTC",month:"short",year:"numeric"}); }
+      if(grain==="week")return d.toISOString().slice(0,10);
+      if(grain==="year")return String(d.getUTCFullYear());
+      if(grain==="quarter")return "Q"+(Math.floor(d.getUTCMonth()/3)+1)+" "+d.getUTCFullYear();
+      return d.toLocaleDateString("en-US",{timeZone:"UTC",month:"short",year:"numeric"}); }
     var bins=[],by={},t=start(from),end=start(to);
     while(t<=end){ var b={t:t,label:label(t),likes:0,matches:0,matureLikes:0,
         matureMatches:0,inboundProcessed:0,inboundAccepted:0,active:{}}; bins.push(b);by[t]=b;t=next(t); }
@@ -1217,7 +1223,7 @@ var DD = (function(){
       '<div class="toolgroup"><span>Show</span><button data-layer="benchmarks" class="'+(SHOW_BENCHMARKS?'on':'')+'">Median + band</button><button data-layer="labels" class="'+(SHOW_VALUES?'on':'')+'">Point values</button></div>';
     var scale=kind==='activity'?'<div class="toolgroup"><span>Scale</span><button data-activity-scale="sqrt" class="'+(ACTIVITY_SCALE==='sqrt'?'on':'')+'" title="Spreads smaller months apart while preserving zero and the order of every value">Readable</button><button data-activity-scale="linear" class="'+(ACTIVITY_SCALE==='linear'?'on':'')+'" title="Shows equal numeric distances on the vertical axes">Full scale</button></div>':'';
     var rateMode=kind==='rate'?'<div class="toolgroup"><span>View</span><button data-rate-mode="story" class="'+(RATE_MODE==='story'?'on':'')+'" aria-pressed="'+(RATE_MODE==='story')+'">Story</button><button data-rate-mode="analyst" class="'+(RATE_MODE==='analyst'?'on':'')+'" aria-pressed="'+(RATE_MODE==='analyst')+'">Analyst</button></div>':'';
-    return '<div class="charttools" aria-label="Chart filters"><div class="toolgroup"><span>Window</span>'+rb('all','All')+rb('1y','1 year')+rb('6m','6 months')+rb('1m','1 month')+rb('90d','90 days')+rb('ytd','YTD')+'<select data-chart-year aria-label="Jump to a calendar year">'+opts+'</select></div><div class="toolgroup"><span>Detail</span><button data-grain="month" class="'+(GRAIN==='month'?'on':'')+'">Monthly</button><button data-grain="week" class="'+(GRAIN==='week'?'on':'')+'">Weekly</button></div>'+(inbound?'':benchmarkScopeTools())+rateMode+scale+layers+'</div>'; }
+    return '<div class="charttools" aria-label="Chart filters"><div class="toolgroup"><span>Window</span>'+rb('all','All')+rb('1y','1 year')+rb('6m','6 months')+rb('1m','1 month')+rb('90d','90 days')+rb('ytd','YTD')+'<select data-chart-year aria-label="Jump to a calendar year">'+opts+'</select></div><div class="toolgroup"><span>Group by</span><button data-grain="week" class="'+(GRAIN==='week'?'on':'')+'">Week</button><button data-grain="month" class="'+(GRAIN==='month'?'on':'')+'">Month</button><button data-grain="quarter" class="'+(GRAIN==='quarter'?'on':'')+'">Quarter</button><button data-grain="year" class="'+(GRAIN==='year'?'on':'')+'">Year</button></div>'+(inbound?'':benchmarkScopeTools())+rateMode+scale+layers+'</div>'; }
   function patternTools(S){
     function rb(id,label){return '<button data-range="'+id+'" class="'+(RANGE===id?'on':'')+'" aria-pressed="'+(RANGE===id)+'">'+label+'</button>';}
     return '<div class="charttools patternfilters" aria-label="Patterns date window"><div class="toolgroup"><span>Story window</span>'+rb('all','Overall')+rb('1y','Last year')+rb('6m','Last 6 months')+rb('1m','Last month')+'</div>'+benchmarkScopeTools()+'<span class="slice-readout">Showing '+iso(S.from)+' → '+iso(S.to)+'</span></div>'; }
@@ -1418,7 +1424,7 @@ var DD = (function(){
         '<section class="story-art wide"><h3>Comment versus no-comment, across scopes</h3><p>Compare the observed association in your full history with the same split inside the selected snapshot.</p>'+commentShift(P,S)+'<p class="story-caption">Association only. Profile choice, recipient, timing, and exposure remain confounded.</p></section></div>'+insightCards(S);
     }
     return '<div class="chartgrid"><div class="chartcard feature"><div class="charttop"><div><h3>Likes you sent and observed matches</h3><p>Blue bars are likes you sent. Pink shows every known match outcome, dated to when you sent each like.</p></div></div>'+chartTools('activity')+'<div class="chart-scroll" tabindex="0" aria-label="Scrollable likes and observed matches chart">'+activityChart(S)+'</div>'+scrollHint()+'<p class="chartnote">Readable scale spreads smaller months apart so the activity pattern stays visible; Full scale restores equal numeric spacing. Every axis label and peak label is the actual observed count. Match-back rates use only matured likes.</p>'+(SHOW_BENCHMARKS?benchmarkKey(true):'')+'</div>'+
-      '<div class="chartcard feature"><div class="charttop"><div><h3>Your scoreable match-back rate over time</h3><p>Every rise, fall, peak, and comeback is a chapter. Story view highlights the arc; Analyst view adds uncertainty for every period.</p></div><div class="legend"><span><i style="background:var(--rate)"></i>Your scoreable match-back rate</span></div></div>'+rateStory(S)+chartTools('rate')+'<div class="rate-stage"><div class="chart-scroll" tabindex="0" aria-label="Scrollable scoreable match-back-rate chart">'+rateChart(S)+'</div></div>'+scrollHint()+(SHOW_BENCHMARKS?benchmarkKey(false):'')+'<p class="chartnote"><b>Your whole-window card and dashed line are the weighted result used for Market Value.</b> Dot size reflects the number of matured likes behind that period. Monthly dots have different sample sizes, so averaging their heights gives the wrong answer. Likes after '+iso(S.resolveBefore)+' are too recent to score. Empty periods are gaps, not zeroes.</p></div>'+
+      '<div class="chartcard feature"><div class="charttop"><div><h3>Your scoreable match-back rate over time</h3><p>Every rise, fall, peak, and comeback is a chapter. Story view highlights the arc; Analyst view adds uncertainty for every period.</p></div><div class="legend"><span><i style="background:var(--rate)"></i>Your scoreable match-back rate</span></div></div>'+rateStory(S)+chartTools('rate')+'<div class="rate-stage"><div class="chart-scroll" tabindex="0" aria-label="Scrollable scoreable match-back-rate chart">'+rateChart(S)+'</div></div>'+scrollHint()+(SHOW_BENCHMARKS?benchmarkKey(false):'')+'<p class="chartnote"><b>Your whole-window card and dashed line are the weighted result used for Market Value.</b> Dot size reflects the number of matured likes behind each '+S.grain+'. Periods have different sample sizes, so averaging their heights gives the wrong answer. Likes after '+iso(S.resolveBefore)+' are too recent to score. Empty periods are gaps, not zeroes.</p></div>'+
       '<div class="chartcard feature"><div class="charttop"><div><h3>Incoming likes you reviewed</h3><p>Wide bars are incoming decisions recorded by Hinge; purple is the subset you accepted. This is processed inbound activity, not profile views or true arrival time.</p></div><div class="legend"><span><i style="background:color-mix(in srgb,var(--likes) 50%,var(--surface-1))"></i>Reviewed</span><span><i style="background:var(--rate)"></i>Accepted</span></div></div>'+chartTools('inbound')+'<div class="chart-scroll" tabindex="0" aria-label="Scrollable incoming likes reviewed chart">'+inboundChart(S)+'</div>'+scrollHint()+'<p class="chartnote"><b>'+num(S.inbound.n)+' incoming likes reviewed; '+num(S.inbound.accepted)+' accepted.</b> Unprocessed queues are absent, and clearing a backlog can place many decisions on one date.</p></div>'+insightCards(S)+'</div>'; }
   function timelinePanel(S){
     var rw=S.rate,preset=function(id,label){return '<button data-range="'+id+'" class="'+(RANGE===id?'on':'')+'" aria-pressed="'+(RANGE===id)+'">'+label+'</button>';},
@@ -1434,7 +1440,7 @@ var DD = (function(){
       '<div class="rangebar"><div class="topline"><span class="range-title">Analysis range</span>'+
       '<span class="range-readout">'+iso(S.from)+' → '+iso(S.to)+'</span></div><div class="controls">'+
       '<div class="seg" role="group" aria-label="Date range">'+preset('all','All')+preset('1y','Last year')+preset('6m','Last 6 months')+preset('1m','Last month')+preset('90d','90 days')+preset('ytd','YTD')+'</div>'+
-      '<div class="seg" role="group" aria-label="Chart grouping"><button data-grain="month" aria-pressed="'+(GRAIN==='month')+'" class="'+(GRAIN==='month'?'on':'')+'">Monthly</button><button data-grain="week" aria-pressed="'+(GRAIN==='week')+'" class="'+(GRAIN==='week'?'on':'')+'">Weekly</button></div>'+
+      '<div class="seg" role="group" aria-label="Group charts by time period"><button data-grain="week" aria-pressed="'+(GRAIN==='week')+'" class="'+(GRAIN==='week'?'on':'')+'">Week</button><button data-grain="month" aria-pressed="'+(GRAIN==='month')+'" class="'+(GRAIN==='month'?'on':'')+'">Month</button><button data-grain="quarter" aria-pressed="'+(GRAIN==='quarter')+'" class="'+(GRAIN==='quarter'?'on':'')+'">Quarter</button><button data-grain="year" aria-pressed="'+(GRAIN==='year')+'" class="'+(GRAIN==='year'?'on':'')+'">Year</button></div>'+
       '<div class="datefields"><input type="date" id="viewFrom" value="'+iso(S.from)+'" min="'+iso(R.minT)+'" max="'+iso(R.maxT)+'" aria-label="Range start"><span>to</span>'+
       '<input type="date" id="viewTo" value="'+iso(S.to)+'" min="'+iso(R.minT)+'" max="'+iso(R.maxT)+'" aria-label="Range end"><button class="apply" id="applyRange">Apply</button></div></div><div class="yearstrip" role="group" aria-label="Select one year or a continuous range of years"><span class="yearhint">Years · choose one or a range</span>'+years.join('')+'</div></div>'+
       '<div class="kpis"><div class="kpi"><span class="value">'+num(S.likes)+'</span><span class="label">Likes you sent</span><span class="detail">in your selected date range</span></div>'+
