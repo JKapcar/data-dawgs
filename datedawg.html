@@ -57,26 +57,35 @@ button{font:inherit;cursor:pointer}
 .results-ready #arrival{display:none}
 
 /* The first post-import screen: a visual answer before the workings. */
-.verdict{position:relative;left:50%;width:100vw;translate:-50% 0;background:#0a0806;color:#f7f3ea;
-  overflow:hidden;min-height:min(82vh,700px);display:flex;flex-direction:column;margin:0 0 34px}
-.verdict.insufficient{min-height:360px;justify-content:flex-start}
-.verdict .vtop{padding:20px 26px 0;font:700 9.5px var(--mono);letter-spacing:.2em;color:#6f665a}
-.verdict .vtop b{color:#ff6a02}.verdict .vcore{padding:28px 26px 0;text-align:center}
+.verdict{position:relative;background:#0b0906;color:#f7f3ea;overflow:hidden;min-height:460px;
+  display:grid;grid-template-columns:minmax(280px,.82fr) minmax(380px,1.18fr);gap:22px;
+  margin:18px 0 30px;border:1px solid #31271d;border-radius:26px;padding:38px 38px 26px;
+  box-shadow:0 28px 70px rgba(10,7,3,.28)}
+.verdict:before{content:"";position:absolute;inset:-30% -18% 18% 35%;pointer-events:none;
+  background:radial-gradient(circle,rgba(255,106,2,.15),transparent 62%)}
+.verdict>*{min-width:0}
+.verdict.insufficient{min-height:330px;display:block}
+.verdict .vtop{position:absolute;left:38px;top:20px;font:700 9.5px var(--mono);letter-spacing:.16em;color:#807568}
+.verdict .vtop b{color:#ff6a02}.verdict .vcore{position:relative;z-index:2;padding:34px 0 0;text-align:left;align-self:center}
 .verdict .vlede{font:700 10.5px var(--mono);letter-spacing:.22em;color:#8c8173;margin-bottom:20px}
-.verdict .vnum{font:400 clamp(76px,15vw,168px)/.82 var(--display);letter-spacing:-.03em;color:#fff}
+.verdict .vnum{font:400 clamp(72px,9vw,126px)/.82 var(--display);letter-spacing:-.03em;color:#fff}
 .verdict .vnum i{font-style:normal;font-size:.24em;color:#ff6a02;vertical-align:.9em;margin-left:4px}
-.verdict .vsub{font:700 11.5px var(--mono);letter-spacing:.15em;color:#b8ae9e;margin-top:14px}
-.verdict .vsub em{font-style:normal;color:#fff}.verdict .vridge{position:relative;flex:1 1 auto;min-height:180px;margin-top:22px}
-.verdict .vridge svg{position:absolute;inset:0;width:100%;height:100%}.verdict .vpin{position:absolute;bottom:38px;width:2px;background:#ff6a02;box-shadow:0 0 18px rgba(255,106,2,.85)}
+.verdict .vsub{font:700 11.5px var(--mono);letter-spacing:.11em;color:#b8ae9e;margin-top:14px;line-height:1.6}
+.verdict .vsub em{font-style:normal;color:#fff}.verdict .vtier{font:400 clamp(24px,3vw,38px)/1.05 var(--display);margin:15px 0 8px;color:#fff}
+.verdict .vplain{margin:0;max-width:40ch;color:#b8ae9e;font-size:14px;line-height:1.55}
+.verdict .vfield{position:relative;z-index:2;align-self:center;padding-top:40px}.verdict .vridge{position:relative;height:210px;margin-top:0;border-bottom:1px solid #4a3c2e}
+.verdict .vridge svg{position:absolute;inset:0;width:100%;height:100%}.verdict .vpin{position:absolute;bottom:0;width:2px;background:#ff6a02;box-shadow:0 0 18px rgba(255,106,2,.85)}
 .verdict .vpin b{position:absolute;left:50%;bottom:100%;translate:-50% -8px;white-space:nowrap;font:400 12px var(--display);color:#140a02;background:#ff6a02;padding:4px 10px;border-radius:5px}
 .verdict .vpin:after{content:"";position:absolute;left:50%;bottom:-5px;translate:-50% 0;width:11px;height:11px;border-radius:50%;background:#ff6a02;box-shadow:0 0 16px rgba(255,106,2,.9)}
-.verdict.play .vpin{animation:vdrop .9s cubic-bezier(.34,1.28,.4,1) both}@keyframes vdrop{0%{bottom:78%;opacity:0}35%{opacity:1}72%{bottom:28px}100%{bottom:38px}}
-.verdict.play .vnum{animation:vpop .5s cubic-bezier(.2,1.4,.35,1) .6s both}@keyframes vpop{from{opacity:0;scale:.86}to{opacity:1;scale:1}}
-.verdict.play .vsub,.verdict.play .vchips{animation:vfade .5s ease .95s both}@keyframes vfade{from{opacity:0;translate:0 8px}to{opacity:1;translate:0}}
-.verdict .vaxl{display:flex;justify-content:space-between;padding:0 26px;font:700 9px var(--mono);color:#756b5e;letter-spacing:.08em}
-.verdict .vchips{padding:18px 26px 0;display:flex;gap:9px;justify-content:center;flex-wrap:wrap}
-.verdict .vchip{font:700 9.5px var(--mono);letter-spacing:.1em;color:#b8ae9e;border:1px solid #2a241d;border-radius:999px;padding:7px 12px}.verdict .vchip b{color:#fff}
-.verdict .vcue{text-align:center;padding:20px 0 22px;font:700 9.5px var(--mono);letter-spacing:.2em;color:#756b5e;cursor:pointer}.verdict .vcue:hover{color:#ff6a02}
+.verdict.play .vpin{animation:vdrop .65s cubic-bezier(.34,1.28,.4,1)}@keyframes vdrop{0%{transform:translateY(-70px);opacity:.35}100%{transform:translateY(0);opacity:1}}
+.verdict.play .vnum{animation:vpop .38s cubic-bezier(.2,1.4,.35,1)}@keyframes vpop{from{scale:.92}to{scale:1}}
+.verdict.play .vsub,.verdict.play .vchips{animation:vfade .4s ease}@keyframes vfade{from{translate:0 5px}to{translate:0}}
+.verdict .vaxl{display:flex;justify-content:space-between;padding:8px 0 0;font:700 9px var(--mono);color:#8e8375;letter-spacing:.06em}
+.verdict .vchips{grid-column:1/-1;padding:8px 0 0;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.verdict .vchip{font:700 9.5px var(--mono);letter-spacing:.1em;color:#b8ae9e;border:1px solid #2a241d;border-radius:999px;padding:7px 12px;overflow-wrap:anywhere}.verdict .vchip b{color:#fff}
+.verdict .vmetric{border-top:1px solid #31271d;padding:13px 3px 0}.verdict .vmetric b{display:block;color:#fff;font:400 22px var(--display)}
+.verdict .vmetric span{font:700 9px var(--mono);letter-spacing:.09em;color:#8f8577;text-transform:uppercase}
+.verdict .vcue{grid-column:1/-1;text-align:center;padding:8px 0 0;font:700 9.5px var(--mono);letter-spacing:.18em;color:#8a7f71;cursor:pointer}.verdict .vcue:hover{color:#ff6a02}
 
 .slip{background:var(--slip-stock);color:var(--slip-ink);border-radius:3px;
   padding:16px 18px;margin:0 0 16px;position:relative;
@@ -224,7 +233,7 @@ button{font:inherit;cursor:pointer}
 .datefields span{color:var(--ink-3);font:700 10px var(--mono)}
 .apply{border:1px solid var(--border);border-radius:8px;padding:7px 11px;background:var(--surface-1);
   color:var(--ink-1);font:700 11px var(--mono)}
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:14px}
 .kpi{background:var(--surface-1);border:1px solid var(--border);border-radius:16px;
   padding:17px 18px;min-width:0}
 .kpi .value{display:block;font:400 clamp(24px,3vw,34px)/1 var(--display);margin-bottom:7px}
@@ -237,6 +246,26 @@ button{font:inherit;cursor:pointer}
 .viewtabs button{border:0;background:transparent;color:var(--ink-2);border-radius:10px;padding:9px 14px;
   font:800 11px var(--mono);white-space:nowrap}
 .viewtabs button.on{background:var(--surface-1);color:var(--ink-1);box-shadow:0 3px 12px rgba(20,12,4,.12)}
+.market-story{margin:0 0 32px;padding:26px;border:1px solid var(--border);border-radius:22px;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--surface-1) 94%,var(--accent)),var(--surface-1));box-shadow:0 18px 50px rgba(20,12,4,.1)}
+.room-kicker{font:800 10px var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+.market-story h2,.floorhead h2{font:400 clamp(26px,4vw,38px)/1.05 var(--display);margin:6px 0 8px}
+.market-story>p,.floorhead p{color:var(--ink-2);margin:0;max-width:68ch}
+.market-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin:20px 0;border-radius:14px;overflow:hidden}
+.market-stat{background:var(--surface-1);padding:17px;min-width:0}.market-stat b{display:block;font:400 26px/1 var(--display);margin-bottom:7px}.market-stat span{display:block;font:800 9px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.market-stat.current b,.market-stat.change b{color:var(--accent)}
+.market-track{position:relative;height:92px;margin:12px 0 2px;border-bottom:1px solid var(--border)}
+.market-track:before{content:"";position:absolute;left:0;right:0;top:45px;border-top:2px solid var(--ink-3);opacity:.45}
+.market-node{position:absolute;top:25px;translate:-50% 0;text-align:center}.market-node i{display:block;width:42px;height:42px;margin:auto;border-radius:50%;background:var(--ink-3);border:5px solid var(--surface-1)}
+.market-node.current i{background:var(--accent);box-shadow:0 0 22px color-mix(in srgb,var(--accent) 60%,transparent)}
+.market-node b{display:block;margin-top:5px;font:800 10px var(--mono)}.market-arrow{position:absolute;top:7px;left:20%;right:20%;text-align:center;color:var(--accent);font:900 11px var(--mono)}
+.market-boundary{margin-top:18px;padding-top:15px;border-top:1px solid var(--border)}.market-boundary .boundary-head{display:flex;justify-content:space-between;gap:12px;align-items:center;color:var(--ink-2);font-size:12px}.market-boundary .boundary-head b{color:var(--ink-1)}
+.market-boundary input{width:100%;height:34px;accent-color:var(--accent);touch-action:pan-y}.market-boundary .ends{display:flex;justify-content:space-between;color:var(--ink-3);font:700 10px var(--mono)}
+.floorhead{display:flex;align-items:end;justify-content:space-between;gap:18px;margin:36px 0 12px}.floorhead p{font-size:13px}.floor-count{font:800 10px var(--mono);letter-spacing:.1em;color:var(--ink-3)}
+.companion{position:fixed;z-index:20;right:18px;bottom:18px;width:min(350px,calc(100vw - 36px));background:#100c08;color:#f6efe5;border:1px solid #443527;border-radius:18px;box-shadow:0 22px 70px rgba(0,0,0,.42);overflow:hidden}
+.companion summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:14px 16px;font-weight:800}.companion summary::-webkit-details-marker{display:none}.companion summary:before{content:"D";display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;font:400 15px var(--display)}
+.companion summary span{margin-left:auto;color:#8f8377;font:700 10px var(--mono)}.companion-body{padding:0 16px 16px}.companion-context{font:700 10px/1.5 var(--mono);color:#9d9184;border-top:1px solid #34291f;padding-top:12px}.companion-answer{font-size:14px;line-height:1.55;margin:12px 0;color:#efe7dc}.companion-actions{display:flex;gap:6px;flex-wrap:wrap}.companion-actions button{border:1px solid #4b3b2c;background:#1b140e;color:#eee4d7;border-radius:999px;padding:8px 11px;font:800 10px var(--mono)}
+.scout-actions{display:flex;gap:8px;flex-wrap:wrap}.scout-actions .btn{margin:0}.privacy-chip{font:800 9px var(--mono);color:var(--good);letter-spacing:.08em}
 .chartgrid{display:grid;grid-template-columns:1fr;gap:14px}
 .chartpair{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .chartcard{background:var(--surface-1);border:1px solid var(--border);border-radius:18px;
@@ -278,6 +307,29 @@ button{font:inherit;cursor:pointer}
 .chart .matchdot{fill:var(--matches);stroke:var(--surface-1);stroke-width:2}
 .chart .rateline{fill:none;stroke:var(--rate);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
 .chart .ratedot{fill:var(--rate);stroke:var(--surface-1);stroke-width:2}
+.rate-stage{position:relative;overflow:hidden;border:1px solid var(--border);border-radius:18px;
+  background:radial-gradient(circle at 76% 16%,color-mix(in srgb,var(--rate) 12%,transparent),transparent 34%),var(--surface-1)}
+.rate-stage .chart-scroll{border:0;border-radius:0;background:transparent}
+.rate-storyline{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;margin:0 0 12px;
+  border:1px solid var(--border);border-radius:16px;overflow:hidden;background:var(--border)}
+.rate-beat{position:relative;min-height:92px;padding:16px 17px;background:var(--surface-1);overflow:hidden}
+.rate-beat:after{content:"";position:absolute;right:-22px;bottom:-34px;width:84px;height:84px;border-radius:50%;
+  background:color-mix(in srgb,var(--rate) 9%,transparent)}
+.rate-beat.hero{background:linear-gradient(135deg,color-mix(in srgb,var(--rate) 15%,var(--surface-1)),var(--surface-1))}
+.rate-beat b{position:relative;z-index:1;display:block;font:400 clamp(23px,2.7vw,31px)/1 var(--display);color:var(--ink-1)}
+.rate-beat.hero b,.rate-beat.positive b{color:var(--rate)}.rate-beat span{position:relative;z-index:1;display:block;margin-top:7px;
+  font:800 9px/1.35 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.chart .rate-zone-low{fill:color-mix(in srgb,var(--ink-3) 4%,transparent)}
+.chart .rate-zone-pack{fill:color-mix(in srgb,var(--likes) 5%,transparent)}
+.chart .rate-zone-high{fill:color-mix(in srgb,var(--rate) 6%,transparent)}
+.chart .rate-zone-rare{fill:color-mix(in srgb,var(--matches) 6%,transparent)}
+.chart .rate-zone-label{font-size:9px;font-weight:950;letter-spacing:.12em;opacity:.62;paint-order:stroke;stroke:var(--surface-1);stroke-width:4px}
+.chart .ratearea{fill:url(#rateArea);opacity:.82}.chart .rateglow{fill:none;stroke:var(--rate);stroke-width:12;opacity:.11;stroke-linecap:round;stroke-linejoin:round}
+.chart .ratedot.halo{fill:var(--surface-1);stroke:color-mix(in srgb,var(--rate) 28%,transparent);stroke-width:8}
+.chart .ratedot.peak{fill:var(--matches);filter:drop-shadow(0 0 8px color-mix(in srgb,var(--matches) 65%,transparent))}
+.chart .ratedot.latest{stroke:var(--ink-1);stroke-width:4}.chart .story-stem{stroke:var(--ink-3);stroke-width:1;stroke-dasharray:3 3}
+.chart .story-label{font-size:10px;font-weight:950;letter-spacing:.08em;fill:var(--ink-1);paint-order:stroke;stroke:var(--surface-1);stroke-width:5px}
+.chart .uncertainty{stroke:var(--rate);stroke-width:1.5;opacity:.48}.chart .uncertainty-cap{stroke:var(--rate);stroke-width:1.5;opacity:.48}
 .chart .pointlabel{font-weight:900;fill:var(--rate);paint-order:stroke;stroke:var(--surface-1);stroke-width:4px}
 .chart .barlabel{font-weight:900;fill:var(--likes);paint-order:stroke;stroke:var(--surface-1);stroke-width:4px}
 .chart .matchlabel{font-weight:900;fill:var(--matches);paint-order:stroke;stroke:var(--surface-1);stroke-width:4px}
@@ -365,6 +417,28 @@ button{font:inherit;cursor:pointer}
 .periodstats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.periodstats b{display:block;font:400 24px/1 var(--display)}
 .periodstats span{display:block;margin-top:6px;font:800 8px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
 .vs{align-self:center;font:400 18px var(--display);color:var(--ink-3)}
+.compare-story-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.compare-story-grid .wide{grid-column:1/-1}
+.compare-legend{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0 0;font:800 9px var(--mono);
+  letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.compare-legend i{display:inline-block;width:20px;height:4px;border-radius:9px;margin-right:6px;vertical-align:middle}
+.compare-legend .overall i{background:var(--ink-3)}.compare-legend .snapshot i{background:var(--rate)}
+.compare-bars{display:grid;gap:14px;margin-top:18px}.compare-bar-row{display:grid;grid-template-columns:120px 1fr;gap:12px;align-items:center}
+.compare-bar-label b{display:block;font:800 10px var(--mono);text-transform:uppercase}.compare-bar-label span{font:700 9px var(--mono);color:var(--ink-3)}
+.compare-bar-track{position:relative;height:34px;border-radius:10px;background:var(--page);overflow:hidden}
+.compare-bar-track i{position:absolute;left:0;height:10px;border-radius:0 999px 999px 0}.compare-bar-track i.overall{top:6px;background:var(--ink-3);opacity:.55}.compare-bar-track i.snapshot{bottom:6px;background:var(--rate)}
+.compare-bar-track em{position:absolute;right:7px;top:9px;font:900 9px var(--mono);font-style:normal;color:var(--ink-2)}
+.inbound-flow{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;margin-top:18px}
+.inbound-pool{border-radius:22px;padding:22px;text-align:center;background:color-mix(in srgb,var(--likes) 9%,var(--page));border:1px solid var(--border)}
+.inbound-pool.current{background:color-mix(in srgb,var(--rate) 10%,var(--page));border-color:color-mix(in srgb,var(--rate) 45%,var(--border))}
+.inbound-pool b{display:block;font:400 34px/1 var(--display)}.inbound-pool strong{display:block;margin:8px 0 3px;font:800 10px var(--mono);letter-spacing:.1em;text-transform:uppercase}.inbound-pool span{font-size:11px;color:var(--ink-3)}
+.inbound-split{height:12px;display:flex;overflow:hidden;border-radius:999px;margin:15px 0 8px;background:var(--border)}.inbound-split .accepted{background:var(--rate)}.inbound-split .declined{background:var(--ink-3);opacity:.45}
+.inbound-vs{font:400 18px var(--display);color:var(--ink-3)}
+.shift-grid{display:grid;gap:11px;margin-top:16px}.shift-row{display:grid;grid-template-columns:62px 1fr 100px;gap:10px;align-items:center;font:800 10px var(--mono)}
+.shift-track{position:relative;height:18px;border-radius:999px;background:var(--page)}.shift-track:before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1px solid var(--border)}
+.shift-track i{position:absolute;top:50%;height:4px;background:var(--border);translate:0 -50%}.shift-track b{position:absolute;top:50%;width:12px;height:12px;border-radius:50%;translate:-50% -50%;background:var(--ink-3);border:2px solid var(--surface-1)}.shift-track b.snapshot{background:var(--rate);width:15px;height:15px}
+.shift-values{text-align:right;color:var(--ink-3)}.shift-values strong{color:var(--rate)}
+.inbound-chart .inboundbar{fill:color-mix(in srgb,var(--likes) 50%,var(--surface-1))}.inbound-chart .acceptedbar{fill:var(--rate)}
 .advanced{margin-top:20px}.advanced>summary{cursor:pointer;font:800 10px var(--mono);letter-spacing:.12em;
   text-transform:uppercase;color:var(--ink-3)}
 .receipt{margin:14px 0 0}.receipt>summary{cursor:pointer;list-style:none;display:flex;
@@ -395,6 +469,9 @@ table.t{width:100%;border-collapse:collapse;font-size:13px}
 .drop.over{background:color-mix(in srgb,var(--accent) 9%,var(--surface-1))}
 .drop h3{font:400 19px/1.2 var(--display);margin-bottom:8px}
 .drop p{color:var(--ink-2);font-size:13.5px;margin:0 auto 16px;max-width:44ch}
+.drop .privacy-line{display:block;margin:12px auto 0;color:var(--good);font:800 10px var(--mono);letter-spacing:.08em}
+.drop .fallback{display:block;margin:12px auto 0;color:var(--ink-3);font:700 11px var(--mono);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.import-status{max-width:520px;margin:16px auto 0;text-align:left;font:800 11px/1.55 var(--mono);color:var(--ink-2)}
 .btn{display:inline-block;border:2px solid #c04e00;border-radius:999px;padding:11px 26px;
   background:linear-gradient(180deg,#ff8a4d,#ff6a02);color:#fff;
   font:400 13px var(--display);letter-spacing:.06em;box-shadow:0 4px 0 #c04e00;
@@ -409,16 +486,21 @@ footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--border);
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media(max-width:900px){.chartgrid,.chartpair{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}
   .insightgrid{grid-template-columns:1fr 1fr}.comparegrid{grid-template-columns:1fr}.vs{text-align:center}
-  .datefields{margin-left:0}.controls{align-items:flex-start}.chartcard{padding:15px}.pattern-story-grid{grid-template-columns:1fr}}
+  .datefields{margin-left:0}.controls{align-items:flex-start}.chartcard{padding:15px}.pattern-story-grid,.compare-story-grid{grid-template-columns:1fr}
+  .compare-story-grid .wide{grid-column:auto}
+  .verdict{grid-template-columns:1fr;gap:8px;padding:34px 24px 22px}.verdict .vcore{text-align:center}.verdict .vplain{margin-inline:auto}.verdict .vfield{padding-top:6px}.verdict .vridge{height:170px}.market-grid{grid-template-columns:1fr 1fr}.companion{right:10px;bottom:10px}}
 @media(max-width:600px){.wrap{padding:0 14px 60px}.hero{padding-top:34px}.split{grid-template-columns:1fr}
-  .verdict{left:auto;width:auto;translate:none;margin-left:-14px;margin-right:-14px}
+  .top{flex-wrap:wrap}.modepill button{padding:5px 7px}.verdict{margin-left:-7px;margin-right:-7px;border-radius:18px;padding:32px 16px 18px;min-height:0}.verdict .vtop{left:16px;right:16px;top:14px;white-space:normal}.verdict .vnum{font-size:78px}.verdict .vtier{font-size:25px}.verdict .vfield{padding-top:0}.verdict .vridge{height:145px}.verdict .vchips{grid-template-columns:1fr}.verdict .vcue{grid-column:1/-1}
   .dashhead{align-items:flex-start;flex-direction:column}.rangebar .topline{align-items:flex-start;flex-direction:column}
   .kpis{grid-template-columns:1fr 1fr;gap:8px}.kpi{padding:14px}.datefields{width:100%;flex-wrap:wrap}
   .datefields input{flex:1;min-width:125px}.seg{max-width:100%;overflow-x:auto}
   .charttools{padding:9px}.toolgroup+.toolgroup{padding-left:0;border-left:0}.chart,.chart.ratechart{min-width:640px}.insightgrid{grid-template-columns:1fr}.barrow{grid-template-columns:44px 1fr 78px}
   .periodstats{grid-template-columns:repeat(3,1fr)}.scen th:nth-child(2),.scen td:nth-child(2){display:none}
   .ecosystem{min-height:0;padding-top:220px}.eco-copy{left:18px;right:18px}.ecosystem svg{min-height:0;translate:none}
-  .story-art{padding:15px}.comment-scene{grid-template-columns:1fr}.comment-gap{padding:12px 0}.speech{min-height:150px}}
+  .story-art{padding:15px}.comment-scene{grid-template-columns:1fr}.comment-gap{padding:12px 0}.speech{min-height:150px}
+  .inbound-flow{grid-template-columns:1fr}.inbound-vs{text-align:center}.compare-bar-row{grid-template-columns:1fr}.shift-row{grid-template-columns:52px 1fr 88px}
+  .rate-storyline{grid-template-columns:1fr 1fr}.rate-beat{min-height:82px;padding:14px}
+  .market-story{padding:18px}.market-grid{grid-template-columns:1fr}.market-stat{padding:13px}.market-stat b{font-size:21px}.floorhead{align-items:flex-start;flex-direction:column}.companion{left:8px;right:8px;bottom:8px;width:auto}}
 </style>
 </head>
 <body>
@@ -449,10 +531,14 @@ your network and load your export anyway — it still works. The verification se
 opened, and your email, phone, device IPs and photo links are discarded as the file is read.</div>
 
 <div class="drop" id="drop">
-  <h3>Drop your export files here</h3>
-  <p><b>matches.json</b> is the only one required. Adding <b>user.json</b> shows your filters.</p>
-  <label class="btn" tabindex="0" role="button" id="pickBtn">Choose files</label>
-  <input type="file" id="file" multiple accept=".json,application/json">
+  <h3>Drop the ZIP Hinge sent you</h3>
+  <p>Your ZIP never leaves this browser. The selfie-verification entry is detected but never extracted or parsed.</p>
+  <label class="btn" tabindex="0" role="button" id="pickBtn">Choose Hinge ZIP</label>
+  <input type="file" id="file" accept=".zip,application/zip">
+  <label class="fallback" for="jsonFile">Advanced: choose individual JSON files</label>
+  <input type="file" id="jsonFile" multiple accept=".json,application/json">
+  <span class="privacy-line">NETWORK DISABLED BY POLICY · PROCESSING STAYS LOCAL</span>
+  <div class="import-status" id="importStatus" role="status" aria-live="polite"></div>
 
   <details class="pre" id="preBox">
     <summary>Optional advanced test — declare a change date before loading <span>(and label the subject)</span></summary>
@@ -788,12 +874,16 @@ var DD = (function(){
         d.toLocaleDateString("en-US",{timeZone:"UTC",month:"short",year:"numeric"}); }
     var bins=[],by={},t=start(from),end=start(to);
     while(t<=end){ var b={t:t,label:label(t),likes:0,matches:0,matureLikes:0,
-        matureMatches:0,active:{}}; bins.push(b);by[t]=b;t=next(t); }
+        matureMatches:0,inboundProcessed:0,inboundAccepted:0,active:{}}; bins.push(b);by[t]=b;t=next(t); }
     R.outs.forEach(function(o){
       if(o.t<from||o.t>to) return;
       var b=by[start(o.t)]; if(!b) return;
       b.likes++;b.matches+=o.matched;b.active[o.d||String(o.t)]=1;
-      if(o.t<=resolveBefore){b.matureLikes++;b.matureMatches+=o.matched;} });
+       if(o.t<=resolveBefore){b.matureLikes++;b.matureMatches+=o.matched;} });
+    R.ins.forEach(function(i){
+      if(i.t<from||i.t>to)return;
+      var b=by[start(i.t)];if(!b)return;
+      b.inboundProcessed++;b.inboundAccepted+=i.acc; });
     bins.forEach(function(b){
       b.activeDays=Object.keys(b.active).length;delete b.active;
       b.rate=b.matureLikes?b.matureMatches/b.matureLikes:null;
@@ -818,14 +908,16 @@ var DD = (function(){
       return {label:rg[0]+"–"+(rg[1]>1e8?"+":rg[1]),days:rows.length,likes:n,matches:k,
         rate:n?k/n:null}; });
     var inbound=R.ins.filter(function(i){return i.t>=from&&i.t<=to;}),
-        comments={with:{n:0,k:0},bare:{n:0,k:0}};
+         comments={with:{n:0,k:0},bare:{n:0,k:0}};
     matured.forEach(function(o){var c=o.com?comments.with:comments.bare;c.n++;c.k+=o.matched;});
     var mk=matured.reduce(function(a,o){return a+o.matched;},0);
     return {from:from,to:to,grain:grain,resolveBefore:resolveBefore,bins:bins,
       likes:selected.length,matches:selected.reduce(function(a,o){return a+o.matched;},0),
       matureLikes:matured.length,matureMatches:mk,activeDays:Object.keys(days).length,
       rate:matured.length?wilson(mk,matured.length):null,weekday:weekday,volume:volume,
-      inbound:{n:inbound.length,accepted:inbound.reduce(function(a,i){return a+i.acc;},0)},
+      days:Math.max(1,Math.floor((to-from)/DAY)+1),
+      inbound:{n:inbound.length,accepted:inbound.reduce(function(a,i){return a+i.acc;},0),
+        declined:inbound.reduce(function(a,i){return a+(i.acc?0:1);},0)},
       comments:comments}; }
 
   function snapshot(R,M,opts){
@@ -908,7 +1000,7 @@ var DD = (function(){
      exploring is not a declaration, so there is no toggle. */
   var R=null,CUT=null,MOVES=0,DECL=null,SUBJ=null,VFROM=null,VTO=null,YEAR_FROM=null,YEAR_TO=null,GRAIN="month",RANGE="all",RANK_RANGE="1y",BENCHMARK_SCOPE="cohort",
       VIEW="overview",SHOW_LIKES=true,SHOW_MATCHES=true,SHOW_BENCHMARKS=true,SHOW_VALUES=true,
-      ACTIVITY_SCALE="sqrt";
+      ACTIVITY_SCALE="sqrt",RATE_MODE="story",ZIP_META=null;
   /* DECL is captured BEFORE parse and can only ever be invalidated, never created later.
      prospective:true means it was recorded before any result was rendered. */
   function declValid(){ return DECL && DECL.cut===CUT && !MOVES; }
@@ -947,20 +1039,56 @@ var DD = (function(){
         svgW=1000,svgH=200,rp=DD.ridgePath(anchors,svgW,svgH),xPct=Math.max(1,Math.min(99,
           (Math.log(primary.rate)-rp.lo)/rp.span*100));
     function ax(p){var a=anchors.filter(function(x){return x[0]===p;})[0];return a?pct(a[1]):"—";}
-    return '<section class="verdict play" id="verdict"><div class="vtop">READ '+num(R.records)+
+    var tier=head.p>=95?'Elite tier':head.p>=90?'Top 10%':head.p>=80?'Top 20%':head.p>=60?'Above the pack':head.p>=40?'In the pack':'Long-shot territory',
+        out=Math.max(0,Math.min(99,Math.round(head.p)-1)),lift=M.std&&M.std.valid&&M.std.lift!=null?(M.std.lift>0?'+':'')+(100*M.std.lift).toFixed(0)+'%':'Not available';
+    return '<section class="verdict play" id="verdict"><div class="vtop">THE COMBINE · READ '+num(R.records)+
       ' CONNECTIONS · '+iso(R.minT).slice(0,4)+'–'+iso(R.maxT).slice(0,4)+
       ' · <b>NOTHING LEFT THIS PAGE</b></div><div class="vcore"><div class="vlede">'+
-      (primary.band?'AMONG MEN '+esc(primary.bandLabel):'AMONG ALL MEN')+', YOUR SWIPESTATS REFERENCE IS</div>'+
-      '<div class="vnum">'+Math.round(head.p)+'<i>th</i></div><div class="vsub">PERCENTILE · <em>'+
-      pct(primary.rate)+'</em> '+method+' RECIPROCAL ACCEPTANCE</div></div><div class="vridge">'+
+      (primary.band?'AMONG MEN '+esc(primary.bandLabel)+' · YOUR COHORT':'OVERALL · ALL MEN')+'</div>'+
+      '<div class="vnum">'+Math.round(head.p)+'<i>th</i></div><div class="vtier">'+tier+'</div><p class="vplain">You outperform about <b>'+out+' of every 100</b> men in this external reference ecosystem.</p><div class="vsub"><em>'+pct(primary.rate)+'</em> '+method+' RECIPROCAL ACCEPTANCE</div></div><div class="vfield"><div class="vridge">'+
       '<svg viewBox="0 0 '+svgW+' '+svgH+'" preserveAspectRatio="none" aria-label="Published male match-rate distribution"><defs><linearGradient id="vrg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2118"/><stop offset="1" stop-color="#12100c"/></linearGradient></defs><path d="'+rp.d+'" fill="url(#vrg)" stroke="#3a3026" stroke-width="1.5"/></svg><div class="vpin" style="left:'+xPct.toFixed(1)+'%;height:46%"><b>YOU</b></div></div>'+
-      '<div class="vaxl"><span>p5 · '+ax(5)+'</span><span>MEDIAN · '+ax(50)+'</span><span>p90 · '+ax(90)+'</span><span>p99 · '+ax(99)+'</span></div><div class="vchips">'+
+      '<div class="vaxl"><span>p5 · '+ax(5)+'</span><span>MEDIAN · '+ax(50)+'</span><span>p90 · '+ax(90)+'</span><span>p99 · '+ax(99)+'</span></div></div><div class="vchips">'+
+      '<div class="vmetric"><b>'+pct(primary.rate)+'</b><span>Mature match-back rate</span></div><div class="vmetric"><b>'+num(W.S.matureMatches)+' / '+num(W.S.matureLikes)+'</b><span>Matches / matured likes</span></div><div class="vmetric"><b>'+lift+'</b><span>Volume-standardized change</span></div>'+
       (primary.band?'<span class="vchip">ALL MEN <b>p'+Math.round(primary.all.p)+'</b></span>':'')+
-      (M.rankHeavy&&M.heavyAfter&&M.heavyAfter.n>=DD.MIN_N?'<span class="vchip">HEAVY-DAY CHECK <b>p'+
-        Math.round((M.rankHeavy.band||M.rankHeavy.all).p)+'</b></span>':'')+
-      (M.std&&M.std.valid&&M.std.lift!=null?'<span class="vchip">VS PRIOR <b>'+(M.std.lift>0?'+':'')+
-        (100*M.std.lift).toFixed(0)+'%</b></span>':'')+
-      '<span class="vchip">PERIOD <b>'+esc(period)+'</b></span><span class="vchip">'+iso(W.from)+' → '+iso(W.to)+'</span><span class="vchip">n <b>6,233</b> · SWIPESTATS</span></div><div class="vcue" id="vcue">↓ THE WORKINGS</div></section>';}
+      (M.rankHeavy&&M.heavyAfter&&M.heavyAfter.n>=DD.MIN_N?'<span class="vchip">HEAVY-DAY CHECK <b>p'+Math.round((M.rankHeavy.band||M.rankHeavy.all).p)+'</b></span>':'')+
+      '<span class="vchip">PERIOD <b>'+esc(period)+'</b> · '+iso(W.from)+' → '+iso(W.to)+'</span><span class="vchip">n <b>6,233</b> · SWIPESTATS</span><div class="vcue" id="vcue">↓ ENTER THE ANALYSIS FLOOR</div></div></section>';}
+
+  function marketStory(M){
+    var before=M.beforeAdj,after=M.afterAdj,std=M.std,
+        beforeRate=before&&before.n?before.p:null,afterRate=after&&after.n?after.p:null,
+        rawLift=beforeRate&&afterRate?(afterRate/beforeRate-1):null,
+        adjLift=std&&std.valid?std.lift:null,heavy=M.zHeavy&&M.zHeavy.lift!=null?M.zHeavy.lift:null,
+        max=Math.max(.001,beforeRate||0,afterRate||0),bp=beforeRate?12+31*beforeRate/max:12,ap=afterRate?58+31*afterRate/max:58;
+    return '<section class="market-story" id="market-story"><span class="room-kicker">The Market · change story</span><h2>'+
+      (adjLift==null?'Your change is still being resolved':adjLift>0?'Your results moved up':'Your results moved down')+'</h2><p>'+
+      (declValid()?'Your declared change on <b>'+iso(DECL.cut)+'</b> is held fixed.':'The comparison boundary is exploratory. It describes the pattern; it does not claim the change caused it.')+
+      '</p><div class="market-grid"><div class="market-stat"><b>'+(beforeRate==null?'—':pct(beforeRate))+'</b><span>Before · matured rate</span></div><div class="market-stat current"><b>'+(afterRate==null?'—':pct(afterRate))+'</b><span>Current · matured rate</span></div><div class="market-stat change"><b>'+(adjLift==null?'—':(adjLift>0?'+':'')+(100*adjLift).toFixed(1)+'%')+'</b><span>Volume-standardized change</span></div><div class="market-stat"><b>'+(heavy==null?'—':(heavy>0?'+':'')+(100*heavy).toFixed(1)+'%')+'</b><span>Heavy-day diagnostic</span></div></div><div class="market-track" aria-label="Before and current matured rates"><span class="market-arrow">'+(rawLift==null?'Maturity-aligned comparison':(rawLift>0?'IMPROVEMENT →':'← DECLINE')+' '+Math.abs(100*rawLift).toFixed(0)+'% RAW')+'</span><span class="market-node" style="left:'+bp+'%"><i></i><b>BEFORE</b></span><span class="market-node current" style="left:'+ap+'%"><i></i><b>CURRENT</b></span></div><div class="market-boundary"><div class="boundary-head"><span><b>Comparison date · '+iso(CUT)+'</b><br>'+(declValid()?'Declared before import. Moving it permanently makes this session exploratory.':'Exploratory view · no significance claim')+'</span><span class="tag '+(declValid()?'ok':'')+'">'+(declValid()?'DECLARED':'EXPLORATORY'+(MOVES?' · '+MOVES+' MOVE'+(MOVES===1?'':'S'):''))+'</span></div><input type="range" id="cut" min="'+R.minT+'" max="'+(R.maxT-DD.RESOLVE_DAYS*864e5)+'" step="86400000" value="'+CUT+'" aria-label="Exploratory comparison date"><div class="ends"><span>'+iso(R.minT)+'</span><span>'+iso(R.maxT-DD.RESOLVE_DAYS*864e5)+'</span></div></div></section>';
+  }
+
+  function chartSpec(x){return {id:x[0],question:x[1],required_fields:x[2].split(', '),available:!!x[3],numerator:x[4]||'chart-specific aggregate',denominator:x[5]||'eligible records in active window',filters:['window','benchmark scope','grain where applicable'],caveats:[x[6]||'Descriptive association; exported fields limit interpretation.'],minimum_sample:DD.MIN_N,render:x[3]?'interactive dashboard renderer':'feature-detected omission',snapshot:'aggregate text summary',ai_context:'Question: '+x[1]+'; cite numerator, denominator, filters and caveat.'};}
+  var CHART_REGISTRY=[
+    ['market-percentile','Where do I rank?','rank, benchmark',1],['estimand-percentiles','How do standardized and conservative estimates compare?','rank',1],['scenario-comparison','How sensitive is my rank to assumptions?','rank',1],['sampling-uncertainty','How much could sampling noise move the estimate?','rank',0],
+    ['monthly-rate','How did scoreable results move over time?','outbound',1],['monthly-volume','When did I send likes and get matches?','outbound',1],['yearly-rate','How did full calendar years compare?','outbound',0],['change-timeline','What happened around declared changes?','declaration',0],['rolling-boundary','How does a pinned exploratory boundary change the story?','outbound',0],
+    ['volume-response','How did activity intensity relate to results?','outbound',1],['stratum-change','How did four daily-volume strata change?','outbound',0],['rate-decomposition','What changed between raw, matured and standardized estimates?','outbound',0],['heavy-threshold','Does the conclusion survive other heavy-day thresholds?','outbound',0],['active-day-volume','What did active-day volume look like?','outbound',0],
+    ['latency-cdf','How long did known matches take to resolve?','match timestamps',0],['maturity-gauge','How much of the selected period is resolved?','outbound',0],['resolution-age','Why does the maturity rule exist?','match timestamps',0],
+    ['weekday-outcomes','Which weekdays performed differently?','outbound',1],['month-heatmap','Which months of the year differed?','outbound',0],['hour-outcomes','Which UTC hours differed?','timestamps',0],
+    ['comment-rate','Did commented likes perform differently?','comments',1],['comment-era','Did the comment association change by era?','comments',0],['comment-volume','When did comment usage change?','comments',0],
+    ['inbound-decisions','How many incoming decisions did I process?','inbound',1],['inbound-composition','How were processed decisions split?','inbound',0],['inbound-gaps','Where are inbound retention gaps?','inbound',0],
+    ['message-connections','How many connections contain a sent message?','messages',0],['thread-depth','How deep were subject-sent message threads?','messages',0],['message-activity','When did the subject send messages?','messages',0],['we-met','What deduplicated we-met statuses exist?','we_met',0],
+    ['profile-versions','When did profile interventions change?','profile history',0],['experiment-scoreboard','How are prospective experiments accumulating?','declaration',0],['coverage-matrix','What did the export actually contain?','files',1],['data-quality','Where are the known gaps?','files',1]
+  ].map(chartSpec);
+  var AVAILABLE_CHARTS=CHART_REGISTRY.filter(function(x){return x.available;}).length;
+
+  function companion(S){
+    var c=benchmarkContext(),ctx={subject_id:SUBJ&&SUBJ.subject||'local-subject',dataset_fingerprint:R.fingerprint||'unavailable',active_chart:VIEW,active_filters:{from:iso(S.from),to:iso(S.to),grain:S.grain,benchmark:c.label},selected_marks:[],displayed_metrics:{likes:S.likes,observed_matches:S.matches,mature_likes:S.matureLikes,scoreable_matches:S.matureMatches,match_back_rate:S.rate?S.rate.p:null,incoming_likes_reviewed:S.inbound.n,incoming_likes_accepted:S.inbound.accepted},applicable_caveats:['Tinder is an external reference, not Hinge','Inbound means decisions reviewed; pending incoming likes and true arrival times are absent','Impressions are absent','Timestamps are treated as UTC'],approved_memory_ids:[]};
+    window.DD_VIEW_CONTEXT=ctx;
+    return '<details class="companion" id="companion"><summary>Rollo · chart companion <span>LOCAL · NO MEMORY</span></summary><div class="companion-body"><div class="companion-context">ACTIVE VIEW · '+esc(VIEW.toUpperCase())+'<br>'+iso(S.from)+' → '+iso(S.to)+' · '+esc(c.label.toUpperCase())+'</div><p class="companion-answer" id="companionAnswer">I only receive the aggregate numbers visible in this view—never message bodies, comment text, identity, photos, or selfie data. Pick a question and I’ll explain the evidence on screen.</p><div class="companion-actions"><button data-companion="change">What changed?</button><button data-companion="caveat">Conservative read</button><button data-companion="next">What next?</button></div></div></details>';
+  }
+
+  function scoutReport(S,RW){
+    var rank=S.rate&&S.rate.n>=DD.MIN_N?DD.rank(S.rate.p,R.profile&&R.profile.age):null,c=benchmarkContext(),head=rank&&(c.useCohort&&rank.band?rank.band:rank.all);
+    return '<section class="sec" id="scout-report"><span class="room-kicker">The Scout Report</span><h2>Your aggregate result, ready to keep</h2><p class="sub">A premium one-page summary with counts, caveats, provenance and fingerprint—never raw messages or third-party details.</p><div class="card"><div class="grid"><div class="stat"><b>'+(head?ordinal(head.p):'—')+'</b><span>'+esc(c.label)+' reference</span></div><div class="stat"><b>'+(S.rate?pct(S.rate.p):'—')+'</b><span>Mature match-back rate</span></div><div class="stat"><b>'+num(S.matureMatches)+' / '+num(S.matureLikes)+'</b><span>Matches / matured likes</span></div><div class="stat"><b>'+num(S.likes)+'</b><span>Likes sent</span></div></div><p class="chartnote">SwipeStats comparison; not a measured Hinge population. Missing impressions mean cold-discovery odds cannot be calculated.</p><div class="scout-actions"><button class="btn" id="scout">Download Scout Report</button><button class="btn ghost" id="snap">Download data snapshot</button><button class="btn ghost" id="again">Read a different export</button><span class="privacy-chip">AGGREGATES ONLY · LOCAL</span></div></div></section>';
+  }
 
   function rankWindow(){
     var DAY=864e5,to=Math.max(R.minT,R.maxT-DD.RESOLVE_DAYS*DAY),from=R.minT,S,primary;
@@ -1005,7 +1133,10 @@ var DD = (function(){
     var f=R.filters||{};
     return '<div class="slip"><h3>Import receipt</h3>'+
       kv("Parser",R.parser)+
+      (ZIP_META?kv("ZIP safety",ZIP_META.entries+" entries · "+ZIP_META.limits):"")+
+      (ZIP_META?kv("Archive size",shortNum(ZIP_META.compressed)+" compressed · "+shortNum(ZIP_META.extracted)+" declared extracted"):"")+
       kv("Files read",R.filesSeen.join(", ")||"—")+
+      (ZIP_META&&ZIP_META.unknown.length?kv("Unknown, not extracted",ZIP_META.unknown.join(", ")):"")+
       kv("Not present",R.filesMissing.join(", ")||"none")+
       (R.refused.length?kv("Refused, never opened",R.refused.join(", ")):"")+
       kv("Records",num(R.records)+" · "+num(R.events)+" events")+
@@ -1055,10 +1186,11 @@ var DD = (function(){
     var y0=new Date(R.minT).getUTCFullYear(),y1=new Date(R.maxT).getUTCFullYear(),opts='<option value="">Jump to year…</option>';
     for(var y=y0;y<=y1;y++)opts+='<option value="'+y+'" '+(RANGE==='years'&&YEAR_FROM===y&&YEAR_TO===y?'selected':'')+'>'+y+'</option>';
     function rb(id,label){return '<button data-range="'+id+'" class="'+(RANGE===id?'on':'')+'">'+label+'</button>';}
-    var layers=(kind==='activity'||kind==='momentum')?'<div class="toolgroup"><span>Show</span><button data-series="likes" class="'+(SHOW_LIKES?'on':'')+'">Likes sent</button><button data-series="matches" class="'+(SHOW_MATCHES?'on':'')+'">Observed matches</button><button data-layer="benchmarks" class="'+(SHOW_BENCHMARKS?'on':'')+'">Median + band</button></div>':
+    var inbound=kind==='inbound',layers=inbound?'':(kind==='activity'||kind==='momentum')?'<div class="toolgroup"><span>Show</span><button data-series="likes" class="'+(SHOW_LIKES?'on':'')+'">Likes sent</button><button data-series="matches" class="'+(SHOW_MATCHES?'on':'')+'">Observed matches</button><button data-layer="benchmarks" class="'+(SHOW_BENCHMARKS?'on':'')+'">Median + band</button></div>':
       '<div class="toolgroup"><span>Show</span><button data-layer="benchmarks" class="'+(SHOW_BENCHMARKS?'on':'')+'">Median + band</button><button data-layer="labels" class="'+(SHOW_VALUES?'on':'')+'">Point values</button></div>';
     var scale=kind==='activity'?'<div class="toolgroup"><span>Scale</span><button data-activity-scale="sqrt" class="'+(ACTIVITY_SCALE==='sqrt'?'on':'')+'" title="Spreads smaller months apart while preserving zero and the order of every value">Readable</button><button data-activity-scale="linear" class="'+(ACTIVITY_SCALE==='linear'?'on':'')+'" title="Shows equal numeric distances on the vertical axes">Full scale</button></div>':'';
-    return '<div class="charttools" aria-label="Chart filters"><div class="toolgroup"><span>Window</span>'+rb('all','All')+rb('1y','1 year')+rb('6m','6 months')+rb('1m','1 month')+rb('90d','90 days')+rb('ytd','YTD')+'<select data-chart-year aria-label="Jump to a calendar year">'+opts+'</select></div><div class="toolgroup"><span>Detail</span><button data-grain="month" class="'+(GRAIN==='month'?'on':'')+'">Monthly</button><button data-grain="week" class="'+(GRAIN==='week'?'on':'')+'">Weekly</button></div>'+benchmarkScopeTools()+scale+layers+'</div>'; }
+    var rateMode=kind==='rate'?'<div class="toolgroup"><span>View</span><button data-rate-mode="story" class="'+(RATE_MODE==='story'?'on':'')+'" aria-pressed="'+(RATE_MODE==='story')+'">Story</button><button data-rate-mode="analyst" class="'+(RATE_MODE==='analyst'?'on':'')+'" aria-pressed="'+(RATE_MODE==='analyst')+'">Analyst</button></div>':'';
+    return '<div class="charttools" aria-label="Chart filters"><div class="toolgroup"><span>Window</span>'+rb('all','All')+rb('1y','1 year')+rb('6m','6 months')+rb('1m','1 month')+rb('90d','90 days')+rb('ytd','YTD')+'<select data-chart-year aria-label="Jump to a calendar year">'+opts+'</select></div><div class="toolgroup"><span>Detail</span><button data-grain="month" class="'+(GRAIN==='month'?'on':'')+'">Monthly</button><button data-grain="week" class="'+(GRAIN==='week'?'on':'')+'">Weekly</button></div>'+(inbound?'':benchmarkScopeTools())+rateMode+scale+layers+'</div>'; }
   function patternTools(S){
     function rb(id,label){return '<button data-range="'+id+'" class="'+(RANGE===id?'on':'')+'" aria-pressed="'+(RANGE===id)+'">'+label+'</button>';}
     return '<div class="charttools patternfilters" aria-label="Patterns date window"><div class="toolgroup"><span>Story window</span>'+rb('all','Overall')+rb('1y','Last year')+rb('6m','Last 6 months')+rb('1m','Last month')+'</div>'+benchmarkScopeTools()+'<span class="slice-readout">Showing '+iso(S.from)+' → '+iso(S.to)+'</span></div>'; }
@@ -1092,31 +1224,53 @@ var DD = (function(){
     return '<svg class="chart" data-scale-mode="'+ACTIVITY_SCALE+'" data-observed-matches="'+S.matches+'" style="width:'+W+'px" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Your likes sent and observed matches over time">'+
       '<text x="'+L+'" y="11">LIKES SENT</text><text x="'+(W-RR)+'" y="11" text-anchor="end">OBSERVED MATCHES</text>'+g.join("")+band+bars.join("")+
       (SHOW_MATCHES?'<polyline class="matchline" points="'+pts.join(" ")+'"/>':'')+dots+valueLabels.join("")+'</svg>'; }
+  function rateStory(S){
+    var valid=S.bins.filter(function(b){return b.rate!=null;}),bc=benchmarkContext(),md=maleRef(50),
+        peak=valid.reduce(function(a,b){return !a||b.rate>a.rate?b:a;},null),latest=valid.length?valid[valid.length-1]:null,
+        above=valid.filter(function(b){return b.rate>md.rate;}).length,jump=null,previous=null;
+    valid.forEach(function(b){if(previous){var d=b.rate-previous.rate;if(!jump||d>jump.delta)jump={from:previous,to:b,delta:d};}previous=b;});
+    var rank=S.rate&&S.rate.n>=DD.MIN_N?DD.rank(S.rate.p,R.profile&&R.profile.age):null,
+        head=rank&&(bc.useCohort&&rank.band?rank.band:rank.all);
+    return '<div class="rate-storyline" aria-label="The story in this match-back-rate chart">'+
+      '<div class="rate-beat hero"><span>Your whole window</span><b>'+(S.rate?pct(S.rate.p):'—')+'</b><small>'+(head?ordinal(head.p)+' percentile · ':'')+num(S.matureMatches)+' of '+num(S.matureLikes)+' matured likes</small></div>'+
+      '<div class="rate-beat"><span>Peak chapter</span><b>'+(peak?pct(peak.rate):'—')+'</b><small>'+(peak?esc(peak.label)+' · '+num(peak.matureMatches)+' of '+num(peak.matureLikes):'No scoreable period')+'</small></div>'+
+      '<div class="rate-beat positive"><span>Above your cohort median</span><b>'+above+' of '+valid.length+'</b><small>scoreable periods above '+pct(md.rate)+'</small></div>'+
+      '<div class="rate-beat"><span>Biggest jump</span><b>'+(jump?(jump.delta>=0?'+':'')+(jump.delta*100).toFixed(1)+' pts':'—')+'</b><small>'+(jump?esc(jump.from.label)+' → '+esc(jump.to.label):(latest?'Latest · '+pct(latest.rate):'Not enough periods'))+'</small></div></div>'; }
   function rateChart(S){
     var B=S.bins,W=Math.max(1040,B.length*(S.grain==="week"?34:72)+120),H=430,L=68,RR=35,T=42,BT=62,PW=W-L-RR,PH=H-T-BT,
         vals=B.filter(function(b){return b.rate!=null;}).map(function(b){return b.rate;}),
         selected=S.rate&&S.rate.p!=null?S.rate.p:null,
         selectedRank=selected?DD.rank(selected,R.profile&&R.profile.age):null,selectedContext=benchmarkContext(),
         selectedHead=selectedRank&&(selectedContext.useCohort&&selectedRank.band?selectedRank.band:selectedRank.all),
-        top=Math.max(.10,Math.ceil(Math.max.apply(null,[0].concat(vals,selected==null?[]:[selected]))*20)/20),
+        top=Math.max(.10,Math.ceil(Math.max.apply(null,[0].concat(vals,selected==null?[]:[selected],[maleRef(80).rate]))*20)/20),
         step=PW/Math.max(1,B.length),g=[];
+    function yy(v){return T+PH-PH*Math.max(0,Math.min(top,v))/top;}
     for(var q=0;q<=4;q++){var y=T+PH-PH*q/4;
       g.push('<line class="gridline" x1="'+L+'" y1="'+y+'" x2="'+(W-RR)+'" y2="'+y+'"/>'+
         '<text x="'+(L-8)+'" y="'+(y+4)+'" text-anchor="end">'+Math.round(top*q/4*100)+'%</text>');}
-    var path=[],dots=[],open=false,labels=[],showValues=SHOW_VALUES&&B.length<=36;
+    var lo=maleRef(20).rate,md=maleRef(50).rate,hi=maleRef(80).rate,zones='',zoneLabels=[['RARE AIR',hi,top,'rare'],['ABOVE THE PACK',md,hi,'high'],['IN THE MIX',lo,md,'pack'],['LONG SHOT',0,lo,'low']];
+    zoneLabels.forEach(function(z){var y1=yy(z[2]),y2=yy(z[1]),h=Math.max(0,y2-y1);zones+='<rect class="rate-zone-'+z[3]+'" x="'+L+'" y="'+y1+'" width="'+PW+'" height="'+h+'"><title>'+z[0]+' performance zone</title></rect>'+(h>=18?'<text class="rate-zone-label" x="'+(W-RR-8)+'" y="'+(y1+Math.min(17,Math.max(12,h/2)))+'" text-anchor="end">'+z[0]+'</text>':'');});
+    var paths=[],current=[],dots=[],labels=[],uncertainty=[],showValues=SHOW_VALUES&&B.length<=36,valid=[],maxN=Math.max.apply(null,[1].concat(B.map(function(b){return b.matureLikes||0;})));
+    function flush(){if(current.length){paths.push(current);current=[];}}
     B.forEach(function(b,i){var x=L+step*(i+.5);
-      if(b.rate==null){open=false;}else{var y=T+PH-PH*b.rate/top;
-        path.push((open?'L':'M')+x+' '+y);open=true;
-        dots.push('<circle class="ratedot" cx="'+x+'" cy="'+y+'" r="5"><title>'+esc(b.label)+': '+pct(b.rate)+' · '+b.matureMatches+' of '+b.matureLikes+' matured likes</title></circle>'+
-          (showValues?'<text class="pointlabel" x="'+x+'" y="'+Math.max(15,y-11)+'" text-anchor="middle">'+(b.rate*100).toFixed(1)+'%</text>':''));}
+      if(b.rate==null){flush();}else{var y=yy(b.rate),r=4+4*Math.sqrt((b.matureLikes||0)/maxN),point={b:b,x:x,y:y,index:i};current.push(point);valid.push(point);
+        dots.push('<circle class="ratedot" cx="'+x+'" cy="'+y+'" r="'+r.toFixed(1)+'"><title>'+esc(b.label)+': '+pct(b.rate)+' · '+b.matureMatches+' of '+b.matureLikes+' matured likes</title></circle>');
+        if(RATE_MODE==='analyst'&&b.interval){var uy=yy(b.interval.hi),ly=yy(b.interval.lo);uncertainty.push('<g class="uncertainty"><line x1="'+x+'" y1="'+uy+'" x2="'+x+'" y2="'+ly+'"/><line class="uncertainty-cap" x1="'+(x-5)+'" y1="'+uy+'" x2="'+(x+5)+'" y2="'+uy+'"/><line class="uncertainty-cap" x1="'+(x-5)+'" y1="'+ly+'" x2="'+(x+5)+'" y2="'+ly+'"/></g>');}
+        if(showValues)labels.push('<text class="pointlabel" x="'+x+'" y="'+Math.max(15,y-11)+'" text-anchor="middle">'+(b.rate*100).toFixed(1)+'%</text>');}
       if(i%Math.max(1,Math.ceil(B.length/14))===0||i===B.length-1)
-        labels.push('<text x="'+x+'" y="'+(H-15)+'" text-anchor="middle">'+esc(b.label)+'</text>');});
+        labels.push('<text x="'+x+'" y="'+(H-15)+'" text-anchor="middle">'+esc(b.label)+'</text>');});flush();
+    var linePaths='',areas='',annotations=[],defs='<defs><linearGradient id="rateArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--rate)" stop-opacity=".35"/><stop offset="1" stop-color="var(--rate)" stop-opacity=".02"/></linearGradient></defs>';
+    paths.forEach(function(seg){if(!seg.length)return;var d=seg.map(function(p,i){return (i?'L':'M')+p.x+' '+p.y;}).join(' ');linePaths+='<path class="rateglow" d="'+d+'"/><path class="rateline" d="'+d+'"/>';areas+='<path class="ratearea" d="'+d+' L'+seg[seg.length-1].x+' '+(T+PH)+' L'+seg[0].x+' '+(T+PH)+' Z"/>';});
+    if(RATE_MODE==='story'&&valid.length){var peak=valid.reduce(function(a,p){return !a||p.b.rate>a.b.rate?p:a;},null),latest=valid[valid.length-1],jump=null;
+      valid.forEach(function(p,i){if(i){var d=p.b.rate-valid[i-1].b.rate;if(!jump||d>jump.delta)jump={p:p,delta:d};}});
+      function callout(p,text,cls,offset){if(!p)return;annotations.push('<line class="story-stem" x1="'+p.x+'" y1="'+(p.y-6)+'" x2="'+p.x+'" y2="'+Math.max(T+14,p.y-offset+8)+'"/><circle class="ratedot '+cls+'" cx="'+p.x+'" cy="'+p.y+'" r="9"/><text class="story-label" x="'+p.x+'" y="'+Math.max(T+12,p.y-offset)+'" text-anchor="middle">'+text+'</text>');}
+      callout(peak,'PEAK · '+esc(peak.b.label).toUpperCase(),'peak',28);
+      if(jump&&jump.p!==peak)callout(jump.p,'BREAKOUT · +'+(jump.delta*100).toFixed(1)+' PTS','',27);
+      if(latest!==peak&&(!jump||latest!==jump.p))callout(latest,'LATEST · '+(latest.b.rate*100).toFixed(1)+'%','latest',25);
+    }
     var selectedLayer='';if(selected!=null){var sy=T+PH-PH*selected/top,
-      sl='SELECTED PERIOD · '+pct(selected)+' · '+num(S.matureMatches)+' OF '+num(S.matureLikes)+
-        ' · '+(selectedHead?ordinal(selectedHead.p).toUpperCase()+' PERCENTILE '+selectedContext.label.toUpperCase():'');
-      selectedLayer='<line class="selectedline" x1="'+L+'" y1="'+sy+'" x2="'+(W-RR)+'" y2="'+sy+'"><title>Weighted selected-period result: '+pct(selected)+' from '+num(S.matureMatches)+' of '+num(S.matureLikes)+' matured likes</title></line><text class="selectedlabel" x="'+(W-RR-5)+'" y="'+Math.max(T+12,sy-8)+'" text-anchor="end">'+sl+'</text>';}
-    return '<svg class="chart ratechart" style="width:'+W+'px" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Your scoreable match-back rate over time, including the weighted selected-period result">'+
-      g.join("")+horizontalBenchmarkBand(L,W-RR,T,T+PH,top,true)+selectedLayer+'<path class="rateline" d="'+path.join(" ")+'"/>'+dots.join("")+labels.join("")+'</svg>'; }
+      selectedLayer='<line class="selectedline" x1="'+L+'" y1="'+sy+'" x2="'+(W-RR)+'" y2="'+sy+'"><title>Weighted whole-window result: '+pct(selected)+' from '+num(S.matureMatches)+' of '+num(S.matureLikes)+' matured likes</title></line><text class="selectedlabel" x="'+(L+8)+'" y="'+Math.max(T+13,sy-8)+'">YOUR WHOLE WINDOW · '+pct(selected)+(selectedHead?' · '+ordinal(selectedHead.p).toUpperCase():'')+'</text>';}
+    return '<svg class="chart ratechart" data-rate-mode="'+RATE_MODE+'" style="width:'+W+'px" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+(RATE_MODE==='story'?'Story view':'Analyst view')+' of your scoreable match-back rate over time, including the weighted whole-window result">'+defs+zones+g.join("")+(SHOW_BENCHMARKS?horizontalBenchmarkBand(L,W-RR,T,T+PH,top,true):'')+areas+selectedLayer+uncertainty.join('')+linePaths+dots.join("")+annotations.join('')+labels.join("")+'</svg>'; }
 
   function cumulativeChart(S){
     var B=S.bins,W=Math.max(1040,B.length*(S.grain==="week"?34:62)+120),H=390,L=68,RR=62,T=34,BT=58,
@@ -1148,6 +1302,34 @@ var DD = (function(){
         nearEdge=px>W-RR-72,tx=nearEdge?px-14:px+14;
       return '<text x="'+(L-12)+'" y="'+(y+4)+'" text-anchor="end">'+esc(label)+'</text><line class="compareline" x1="'+L+'" y1="'+y+'" x2="'+px+'" y2="'+y+'"/><circle class="comparepoint '+cls+'" cx="'+px+'" cy="'+y+'" r="8"><title>'+esc(label)+': '+(rate==null?'unavailable':pct(rate))+'</title></circle><text class="pointlabel" x="'+tx+'" y="'+(y+4)+'" text-anchor="'+(nearEdge?'end':'start')+'">'+(rate==null?'—':pct(rate))+'</text>';}
     return '<svg class="chart ratechart" style="width:'+W+'px" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Overall history and selected snapshot acceptance rates against male Tinder references">'+g.join('')+refs+row(overall,'Overall history',82,'overall')+row(snapshot,'Selected snapshot',145,'snapshot')+'</svg>'; }
+  function inboundChart(S){
+    var B=S.bins,W=Math.max(1040,B.length*(S.grain==="week"?34:62)+120),H=350,L=62,RR=34,T=38,BT=58,
+        PW=W-L-RR,PH=H-T-BT,step=PW/Math.max(1,B.length),max=Math.max.apply(null,[1].concat(B.map(function(b){return b.inboundProcessed;}))),g=[],marks=[];
+    for(var q=0;q<=4;q++){var y=T+PH-PH*q/4;g.push('<line class="gridline" x1="'+L+'" y1="'+y+'" x2="'+(W-RR)+'" y2="'+y+'"/><text x="'+(L-8)+'" y="'+(y+4)+'" text-anchor="end">'+Math.round(max*q/4)+'</text>');}
+    B.forEach(function(b,i){var x=L+step*(i+.5),bw=Math.max(7,Math.min(36,step*.62)),py=T+PH-PH*b.inboundProcessed/max,ay=T+PH-PH*b.inboundAccepted/max;
+      marks.push('<rect class="inboundbar" x="'+(x-bw/2)+'" y="'+py+'" width="'+bw+'" height="'+(T+PH-py)+'" rx="3"><title>'+esc(b.label)+': '+b.inboundProcessed+' incoming likes reviewed</title></rect><rect class="acceptedbar" x="'+(x-bw/2)+'" y="'+ay+'" width="'+bw+'" height="'+(T+PH-ay)+'" rx="3"><title>'+esc(b.label)+': '+b.inboundAccepted+' accepted from '+b.inboundProcessed+' reviewed</title></rect>');
+      if(b.inboundProcessed>=max*.35&&b.inboundProcessed)marks.push('<text class="barlabel" x="'+x+'" y="'+Math.max(16,py-8)+'" text-anchor="middle">'+b.inboundProcessed+' reviewed</text>');
+      if(i%Math.max(1,Math.ceil(B.length/14))===0||i===B.length-1)marks.push('<text x="'+x+'" y="'+(H-15)+'" text-anchor="middle">'+esc(b.label)+'</text>');});
+    return '<svg class="chart inbound-chart" style="width:'+W+'px" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Incoming likes reviewed and accepted over time"><text x="'+L+'" y="13">INCOMING LIKES REVIEWED</text>'+g.join('')+marks.join('')+'</svg>'; }
+  function paceComparison(P,S){
+    var rows=[['Likes sent',P.likes,S.likes],['Observed matches',P.matches,S.matches],['Incoming reviewed',P.inbound.n,S.inbound.n],['Incoming accepted',P.inbound.accepted,S.inbound.accepted]];
+    return '<div class="compare-bars">'+rows.map(function(r){var a=r[1]/P.days*30,b=r[2]/S.days*30,max=Math.max(1,a,b),d=a?((b/a-1)*100):null;
+      return '<div class="compare-bar-row"><div class="compare-bar-label"><b>'+r[0]+'</b><span>per 30 calendar days</span></div><div class="compare-bar-track"><i class="overall" style="width:'+(a/max*100)+'%"></i><i class="snapshot" style="width:'+(b/max*100)+'%"></i><em>'+a.toFixed(1)+' → '+b.toFixed(1)+(d==null?'':' · '+(d>=0?'+':'')+d.toFixed(0)+'%')+'</em></div></div>';}).join('')+'</div>'; }
+  function inboundComparison(P,S){
+    function pool(x,title,cls){var share=x.inbound.n?x.inbound.accepted/x.inbound.n:null,accepted=x.inbound.accepted,declined=x.inbound.declined;
+      return '<div class="inbound-pool '+cls+'"><b>'+num(x.inbound.n)+'</b><strong>'+title+' · reviewed</strong><span>'+((x.inbound.n/x.days)*30).toFixed(1)+' per 30 days</span><div class="inbound-split"><i class="accepted" style="width:'+(share==null?0:share*100)+'%"></i><i class="declined" style="width:'+(share==null?100:(1-share)*100)+'%"></i></div><span>'+num(accepted)+' accepted · '+num(declined)+' declined'+(share==null?'':' · '+pct(share)+' accepted')+'</span></div>';}
+    return '<div class="inbound-flow">'+pool(P,'Overall','')+'<div class="inbound-vs">VS</div>'+pool(S,'Snapshot','current')+'</div>'; }
+  function weekdayShift(P,S){
+    var totalP=Math.max(1,P.likes),totalS=Math.max(1,S.likes),max=Math.max.apply(null,[.01].concat(P.weekday.map(function(r){return r.likes/totalP;}),S.weekday.map(function(r){return r.likes/totalS;})));
+    return '<div class="shift-grid">'+S.weekday.map(function(r,i){var a=P.weekday[i].likes/totalP,b=r.likes/totalS,lo=Math.min(a,b),hi=Math.max(a,b);
+      return '<div class="shift-row"><span>'+r.label+'</span><div class="shift-track"><i style="left:'+(lo/max*100)+'%;width:'+((hi-lo)/max*100)+'%"></i><b style="left:'+(a/max*100)+'%"><title>Overall: '+pct(a)+' of sent likes</title></b><b class="snapshot" style="left:'+(b/max*100)+'%"><title>Snapshot: '+pct(b)+' of sent likes</title></b></div><span class="shift-values">'+(a*100).toFixed(1)+'% → <strong>'+(b*100).toFixed(1)+'%</strong></span></div>';}).join('')+'</div>'; }
+  function volumeShift(P,S){
+    var totalP=Math.max(1,P.volume.reduce(function(a,r){return a+r.days;},0)),totalS=Math.max(1,S.volume.reduce(function(a,r){return a+r.days;},0)),max=Math.max.apply(null,[.01].concat(P.volume.map(function(r){return r.days/totalP;}),S.volume.map(function(r){return r.days/totalS;})));
+    return '<div class="shift-grid">'+S.volume.map(function(r,i){var a=P.volume[i].days/totalP,b=r.days/totalS,lo=Math.min(a,b),hi=Math.max(a,b);
+      return '<div class="shift-row"><span>'+r.label+'/day</span><div class="shift-track"><i style="left:'+(lo/max*100)+'%;width:'+((hi-lo)/max*100)+'%"></i><b style="left:'+(a/max*100)+'%"><title>Overall: '+pct(a)+' of active days</title></b><b class="snapshot" style="left:'+(b/max*100)+'%"><title>Snapshot: '+pct(b)+' of active days</title></b></div><span class="shift-values">'+(a*100).toFixed(1)+'% → <strong>'+(b*100).toFixed(1)+'%</strong></span></div>';}).join('')+'</div>'; }
+  function commentShift(P,S){
+    function rate(x){return x.n?x.k/x.n:null;}function val(x){return rate(x)==null?'—':pct(rate(x));}
+    return '<div class="comparegrid"><div class="periodcard"><h4>Overall history</h4><div class="periodstats"><div><b>'+val(P.comments.with)+'</b><span>With comment · '+P.comments.with.k+'/'+P.comments.with.n+'</span></div><div><b>'+val(P.comments.bare)+'</b><span>Without · '+P.comments.bare.k+'/'+P.comments.bare.n+'</span></div><div><b>'+((rate(P.comments.with)!=null&&rate(P.comments.bare)!=null)?((rate(P.comments.with)-rate(P.comments.bare))*100).toFixed(2)+' pts':'—')+'</b><span>Observed gap</span></div></div></div><div class="vs">VS</div><div class="periodcard current"><h4>Selected snapshot</h4><div class="periodstats"><div><b>'+val(S.comments.with)+'</b><span>With comment · '+S.comments.with.k+'/'+S.comments.with.n+'</span></div><div><b>'+val(S.comments.bare)+'</b><span>Without · '+S.comments.bare.k+'/'+S.comments.bare.n+'</span></div><div><b>'+((rate(S.comments.with)!=null&&rate(S.comments.bare)!=null)?((rate(S.comments.with)-rate(S.comments.bare))*100).toFixed(2)+' pts':'—')+'</b><span>Observed gap</span></div></div></div></div>'; }
   function insightCards(S){
     var rk=S.rate&&S.rate.n>=DD.MIN_N?DD.rank(S.rate.p,R.profile&&R.profile.age):null,
         unmatched=Math.max(0,S.matureLikes-S.matureMatches),
@@ -1199,12 +1381,18 @@ var DD = (function(){
       var P=DD.timeSeries(R,R.minT,R.maxT,S.grain),same=S.from===P.from&&S.to===P.to,
           delta=S.rate&&P.rate?(S.rate.p-P.rate.p)*100:null;
       function pc(x,title,cls){return '<div class="periodcard '+cls+'"><h4>'+title+' · '+iso(x.from)+' → '+iso(x.to)+'</h4><div class="periodstats"><div><b>'+num(x.likes)+'</b><span>Likes you sent</span></div><div><b>'+num(x.matches)+'</b><span>Observed matches</span></div><div><b>'+(x.rate?pct(x.rate.p):'—')+'</b><span>Scoreable match-back rate · '+num(x.matureMatches)+' of '+num(x.matureLikes)+'</span></div></div></div>';}
-      return '<div class="chartcard feature"><div class="charttop"><div><h3>Your overall history versus your selected snapshot</h3><p>One uploaded export, shown at two scopes. Change the snapshot with the date controls above; your overall history stays fixed.</p></div></div><div class="comparegrid">'+pc(P,'Overall history','')+'<div class="vs">VS</div>'+pc(S,'Selected snapshot','current')+'</div>'+
+      return patternTools(S)+'<div class="chartcard feature"><div class="charttop"><div><h3>Your overall history versus your selected snapshot</h3><p>One uploaded export, shown at two scopes. The gray marks are your full history; purple is the selected snapshot. Every comparison below follows the same story window.</p></div><div class="compare-legend"><span class="overall"><i></i>Overall history</span><span class="snapshot"><i></i>Selected snapshot</span></div></div><div class="comparegrid">'+pc(P,'Overall history','')+'<div class="vs">VS</div>'+pc(S,'Selected snapshot','current')+'</div>'+
         (same?'<p class="chartnote"><b>Your snapshot currently is your full history.</b> Choose a year, preset, or custom dates above to make a narrower snapshot.</p>':'<p class="chartnote">Snapshot acceptance is <b>'+(delta==null?'unavailable':(delta>=0?'+':'')+delta.toFixed(2)+' percentage points')+'</b> versus your overall history. Counts cover different lengths of time, so compare their rates—not their raw totals.</p>')+
-        chartTools('rate')+'<div class="chart-scroll" tabindex="0" aria-label="Scrollable comparison chart">'+compareRateChart(P,S)+'</div>'+scrollHint()+(SHOW_BENCHMARKS?benchmarkKey(false):'')+'</div>'+insightCards(S);
+        '<div class="chart-scroll" tabindex="0" aria-label="Scrollable comparison chart">'+compareRateChart(P,S)+'</div>'+scrollHint()+(SHOW_BENCHMARKS?benchmarkKey(false):'')+'</div>'+
+        '<div class="compare-story-grid"><section class="story-art wide"><h3>Your pace changed—or it didn’t</h3><p>Raw totals punish short snapshots. These four lanes normalize both periods to 30 calendar days so activity can be compared honestly.</p>'+paceComparison(P,S)+'<p class="story-caption">Pace describes recorded activity, not exposure. A quiet month may mean less app use, a relationship, a paused profile, or missing export coverage.</p></section>'+
+        '<section class="story-art"><h3>Incoming likes you reviewed</h3><p>This is the inbound view worth seeing: processed decisions, acceptance mix, and 30-day pace. It is not everyone who saw or liked you.</p>'+inboundComparison(P,S)+'<p class="story-caption">Decision timestamps can bunch when you clear a backlog. Unprocessed incoming likes are absent, so this is a lower bound.</p></section>'+
+        '<section class="story-art"><h3>Where your week moved</h3><p>Each row is the share of your sent likes on that weekday. Gray is overall; purple is the selected snapshot.</p>'+weekdayShift(P,S)+'<p class="story-caption">This shows behavioral mix, not which weekday caused better outcomes.</p></section>'+
+        '<section class="story-art"><h3>Your activity mix shifted</h3><p>The share of active days spent in each daily liking-volume habitat. This reveals whether a “better” snapshot was simply more selective.</p>'+volumeShift(P,S)+'<p class="story-caption">Use this beside match-back rate: changing volume changes the pool of profiles you chose.</p></section>'+
+        '<section class="story-art wide"><h3>Comment versus no-comment, across scopes</h3><p>Compare the observed association in your full history with the same split inside the selected snapshot.</p>'+commentShift(P,S)+'<p class="story-caption">Association only. Profile choice, recipient, timing, and exposure remain confounded.</p></section></div>'+insightCards(S);
     }
     return '<div class="chartgrid"><div class="chartcard feature"><div class="charttop"><div><h3>Likes you sent and observed matches</h3><p>Blue bars are likes you sent. Pink shows every known match outcome, dated to when you sent each like.</p></div></div>'+chartTools('activity')+'<div class="chart-scroll" tabindex="0" aria-label="Scrollable likes and observed matches chart">'+activityChart(S)+'</div>'+scrollHint()+'<p class="chartnote">Readable scale spreads smaller months apart so the activity pattern stays visible; Full scale restores equal numeric spacing. Every axis label and peak label is the actual observed count. Match-back rates use only matured likes.</p>'+(SHOW_BENCHMARKS?benchmarkKey(true):'')+'</div>'+
-      '<div class="chartcard feature"><div class="charttop"><div><h3>Your scoreable match-back rate over time</h3><p>Of the matured likes you sent in each '+S.grain+', the percentage that became matches. The dashed purple line is the weighted result for the entire selected window.</p></div><div class="legend"><span><i style="background:var(--rate)"></i>Your scoreable match-back rate</span></div></div>'+chartTools('rate')+'<div class="chart-scroll" tabindex="0" aria-label="Scrollable scoreable match-back-rate chart">'+rateChart(S)+'</div>'+scrollHint()+(SHOW_BENCHMARKS?benchmarkKey(false):'')+'<p class="chartnote"><b>Read the dashed selected-period line for your Market Value percentile.</b> Monthly dots have different sample sizes, so averaging their heights gives the wrong answer. Likes after '+iso(S.resolveBefore)+' are too recent to score. Empty periods are gaps, not zeroes.</p></div>'+insightCards(S)+'</div>'; }
+      '<div class="chartcard feature"><div class="charttop"><div><h3>Your scoreable match-back rate over time</h3><p>Every rise, fall, peak, and comeback is a chapter. Story view highlights the arc; Analyst view adds uncertainty for every period.</p></div><div class="legend"><span><i style="background:var(--rate)"></i>Your scoreable match-back rate</span></div></div>'+rateStory(S)+chartTools('rate')+'<div class="rate-stage"><div class="chart-scroll" tabindex="0" aria-label="Scrollable scoreable match-back-rate chart">'+rateChart(S)+'</div></div>'+scrollHint()+(SHOW_BENCHMARKS?benchmarkKey(false):'')+'<p class="chartnote"><b>Your whole-window card and dashed line are the weighted result used for Market Value.</b> Dot size reflects the number of matured likes behind that period. Monthly dots have different sample sizes, so averaging their heights gives the wrong answer. Likes after '+iso(S.resolveBefore)+' are too recent to score. Empty periods are gaps, not zeroes.</p></div>'+
+      '<div class="chartcard feature"><div class="charttop"><div><h3>Incoming likes you reviewed</h3><p>Wide bars are incoming decisions recorded by Hinge; purple is the subset you accepted. This is processed inbound activity, not profile views or true arrival time.</p></div><div class="legend"><span><i style="background:color-mix(in srgb,var(--likes) 50%,var(--surface-1))"></i>Reviewed</span><span><i style="background:var(--rate)"></i>Accepted</span></div></div>'+chartTools('inbound')+'<div class="chart-scroll" tabindex="0" aria-label="Scrollable incoming likes reviewed chart">'+inboundChart(S)+'</div>'+scrollHint()+'<p class="chartnote"><b>'+num(S.inbound.n)+' incoming likes reviewed; '+num(S.inbound.accepted)+' accepted.</b> Unprocessed queues are absent, and clearing a backlog can place many decisions on one date.</p></div>'+insightCards(S)+'</div>'; }
   function timelinePanel(S){
     var rw=S.rate,preset=function(id,label){return '<button data-range="'+id+'" class="'+(RANGE===id?'on':'')+'" aria-pressed="'+(RANGE===id)+'">'+label+'</button>';},
         selectedRank=rw&&rw.n>=DD.MIN_N?DD.rank(rw.p,R.profile&&R.profile.age):null,
@@ -1225,6 +1413,7 @@ var DD = (function(){
       '<div class="kpis"><div class="kpi"><span class="value">'+num(S.likes)+'</span><span class="label">Likes you sent</span><span class="detail">in your selected date range</span></div>'+
       '<div class="kpi match-kpi"><span class="value">'+num(S.matches)+'</span><span class="label">Your observed matches</span><span class="detail">'+num(S.matureMatches)+' are scoreable in this range</span></div>'+
       '<div class="kpi"><span class="value">'+(rw?pct(rw.p):'—')+'</span><span class="label">Your scoreable match-back rate</span><span class="detail">'+(rw?num(rw.k)+' scoreable matches from '+num(rw.n)+' matured likes'+(selectedHead?' · '+ordinal(selectedHead.p)+' percentile among '+esc(selectedCohort):''):'no matured likes')+'</span></div>'+
+      '<div class="kpi inbound-kpi"><span class="value">'+num(S.inbound.n)+'</span><span class="label">Incoming likes reviewed</span><span class="detail">'+num(S.inbound.accepted)+' accepted · decision time, not arrival time</span></div>'+
       '<div class="kpi"><span class="value">'+num(S.activeDays)+'</span><span class="label">Days you were active</span><span class="detail">days when you sent at least one like</span></div></div>'+
       '<div class="viewtabs" role="tablist" aria-label="Dashboard view">'+[['overview','Overview'],['patterns','Patterns'],['momentum','Momentum'],['compare','Compare']].map(function(v){return '<button data-view="'+v[0]+'" class="'+(VIEW===v[0]?'on':'')+'" aria-selected="'+(VIEW===v[0])+'">'+v[1]+'</button>';}).join('')+'</div>'+viewPanel(S); }
 
@@ -1414,8 +1603,10 @@ var DD = (function(){
   function paint(){
     var S=DD.timeSeries(R,VFROM,VTO,GRAIN),M=DD.metrics(R,CUT),RW=rankWindow(),h=[];
     h.push(verdict(RW.M,R,RW));
+    h.push(marketStory(M));
     h.push('<div id="workings"><details class="receipt"><summary>Import details & privacy receipt</summary>'+receipt()+'</details>');
     h.push('<div class="sec"><h2>Where your result sits</h2><p class="sub">Your reciprocal-acceptance rate placed directly on SwipeStats’ published male Tinder percentile table. Dashboard date changes automatically rank that same visible rate; the other buttons are independent comparison windows. Likes too recent to have resolved are excluded.</p>'+rankPanel(RW)+'</div>');
+    h.push('<div class="floorhead"><div><span class="room-kicker">The Analysis Floor</span><h2>Every light answers a real question</h2><p>Choose a room, then use the shared rail to move the entire story through time. Unsupported views stay hidden instead of drawing empty axes.</p></div><span class="floor-count">'+AVAILABLE_CHARTS+' AVAILABLE · '+CHART_REGISTRY.length+' CATALOGUED</span></div>');
     h.push(timelinePanel(S));
     if(declValid()) h.push('<details class="advanced"><summary>Declared before/after test · '+
       iso(DECL.cut)+' · '+esc(DECL.reason)+'</summary><div class="chartcard" style="margin-top:12px">'+
@@ -1430,7 +1621,9 @@ var DD = (function(){
       ["Your best photo or prompt","Nothing links an individual asset to an individual outcome."],
       ["A precise Hinge percentile","The Hinge male median exists only as a published range. Dotted P20, median, and P80 lines are external Tinder references; P20 and P80 are interpolated."]
       ].map(function(r){return '<tr><td><b>'+esc(r[0])+'</b></td><td>'+esc(r[1])+'</td></tr>';}).join('')+'</tbody></table></div></div>');
-    h.push('<div class="sec"><h2>Save this view</h2><p class="sub">Counts and lineage only. The selected dashboard range is included.</p><button class="btn ghost" id="snap">Download snapshot</button> <button class="btn ghost" id="again">Read a different export</button></div></div>');
+    h.push(scoutReport(S,RW));
+    h.push(companion(S));
+    h.push('</div>');
     $("#out").className="";$("#out").innerHTML=h.join("");
 
     Array.prototype.forEach.call(document.querySelectorAll("[data-range]"),function(b){b.onclick=function(){
@@ -1461,14 +1654,26 @@ var DD = (function(){
       BENCHMARK_SCOPE=b.getAttribute("data-benchmark-scope");paint();};});
     Array.prototype.forEach.call(document.querySelectorAll("[data-activity-scale]"),function(b){b.onclick=function(){
       ACTIVITY_SCALE=b.getAttribute("data-activity-scale");paint();};});
+    Array.prototype.forEach.call(document.querySelectorAll("[data-rate-mode]"),function(b){b.onclick=function(){
+      RATE_MODE=b.getAttribute("data-rate-mode");paint();};});
     Array.prototype.forEach.call(document.querySelectorAll("[data-chart-year]"),function(s){s.onchange=function(){
       if(!s.value)return;YEAR_FROM=YEAR_TO=null;RANGE="all";var b=document.querySelector('[data-range="year-'+s.value+'"]');if(b)b.click();};});
     if($("#vcue"))$("#vcue").onclick=function(){if($("#workings").scrollIntoView)$("#workings").scrollIntoView({behavior:"smooth",block:"start"});};
     $("#applyRange").onclick=function(){var a=$("#viewFrom").value,z=$("#viewTo").value;if(a&&z){
       VFROM=new Date(a+"T00:00:00Z").getTime();VTO=new Date(z+"T00:00:00Z").getTime()+864e5-1;YEAR_FROM=YEAR_TO=null;RANGE="custom";RANK_RANGE="selected";paint();}};
+    var cutControl=$("#cut");if(cutControl)cutControl.onchange=function(){var next=+cutControl.value;if(next!==CUT){CUT=next;MOVES++;}paint();};
     $("#snap").onclick=function(){var data=DD.snapshot(R,M,{subject:SUBJ&&SUBJ.subject||null,consent:SUBJ&&SUBJ.consent||null,consentAt:SUBJ&&SUBJ.at||null,declaration:declValid()?DECL:null,boundaryMoves:0});
       data.dashboard_range={from:iso(S.from),to:iso(S.to),grain:S.grain};data.rank_window={id:RW.id,from:iso(RW.from),to:iso(RW.to)};var b=new Blob([JSON.stringify(data,null,1)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="datedawg-snapshot.json";a.click();setTimeout(function(){URL.revokeObjectURL(a.href);},1000);};
-    $("#again").onclick=function(){R=null;VFROM=VTO=YEAR_FROM=YEAR_TO=null;RANGE="all";RANK_RANGE="1y";BENCHMARK_SCOPE="cohort";GRAIN="month";VIEW="overview";SHOW_LIKES=SHOW_MATCHES=SHOW_BENCHMARKS=SHOW_VALUES=true;ACTIVITY_SCALE="sqrt";document.body.classList.remove("results-ready");$("#out").className="hide";$("#out").innerHTML="";if($("#drop").scrollIntoView)$("#drop").scrollIntoView({behavior:"smooth"});};
+    $("#scout").onclick=function(){
+      var rk=S.rate&&S.rate.n>=DD.MIN_N?DD.rank(S.rate.p,R.profile&&R.profile.age):null,c=benchmarkContext(),head=rk&&(c.useCohort&&rk.band?rk.band:rk.all),
+          report='<!doctype html><meta charset="utf-8"><title>DateDawg Scout Report</title><style>body{font:16px/1.5 system-ui;background:#f3ecdf;color:#25170b;margin:0}.sheet{max-width:820px;margin:32px auto;background:#fffdf7;padding:54px;border:1px solid #cdbfa8}.ey{font:700 12px ui-monospace;color:#c43c00;letter-spacing:.14em}.score{font:900 92px/1 Arial Black;margin:18px 0}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:#cdbfa8;margin:28px 0}.grid div{background:#fffdf7;padding:18px}.grid b{display:block;font-size:30px}.fine{font-size:12px;color:#6c5b48;border-top:1px solid #cdbfa8;padding-top:18px}@media print{body{background:white}.sheet{margin:0;border:0}}@media(max-width:600px){.sheet{margin:0;padding:24px}.grid{grid-template-columns:1fr}.score{font-size:64px}}</style><main class="sheet"><div class="ey">DATEDAWG · SCOUT REPORT · AGGREGATES ONLY</div><h1>Your evidence-first dating data report</h1><div class="score">'+(head?ordinal(head.p):'—')+'</div><p>External '+esc(c.label)+' Tinder reference for the selected period, not an observed Hinge cohort.</p><div class="grid"><div><b>'+(S.rate?pct(S.rate.p):'—')+'</b>Mature reciprocal acceptance</div><div><b>'+num(S.matureMatches)+' / '+num(S.matureLikes)+'</b>Matches / matured likes</div><div><b>'+num(S.likes)+'</b>Likes sent</div><div><b>'+num(S.activeDays)+'</b>Active days</div></div><h2>What this can say</h2><p>The export records likes you sent and whether each became a match. Likes from the newest '+DD.RESOLVE_DAYS+' days are excluded from rate scoring.</p><h2>What it cannot say</h2><p>No impressions, left-swipes, pending inbound likes, reply rate, ghosting rate, best photo, or best prompt can be recovered from this export.</p><p class="fine">Period '+iso(S.from)+' → '+iso(S.to)+' UTC · Parser '+DD.PARSER_VERSION+' · Fingerprint '+esc(R.fingerprint||'unavailable')+' · Generated locally '+new Date().toISOString()+'. Tinder reference: SwipeStats, 6,233 complete male profiles, 2020–2025. No raw messages, comments, media, identity, or third-party details are included.</p></main>',
+          b=new Blob([report],{type:'text/html'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='datedawg-scout-report.html';a.click();setTimeout(function(){URL.revokeObjectURL(a.href);},1000);
+    };
+    Array.prototype.forEach.call(document.querySelectorAll('[data-companion]'),function(b){b.onclick=function(){
+      var a=$("#companionAnswer"),kind=b.getAttribute('data-companion'),rate=S.rate?pct(S.rate.p):'not yet scoreable';
+      a.textContent=kind==='change'?'In this view, '+S.matureMatches+' of '+S.matureLikes+' matured likes became matches: '+rate+'. Compare the weighted period rate, not the average height of monthly dots.':kind==='caveat'?'The conservative read is descriptive: Tinder is only an external anchor, recent likes are censored, and volume standardization does not isolate profile attractiveness or causation.':'Next, open Patterns to compare weekday, activity-volume, and comment associations—or narrow the shared date rail to test whether the story persists.';
+    };});
+    $("#again").onclick=function(){R=null;VFROM=VTO=YEAR_FROM=YEAR_TO=null;RANGE="all";RANK_RANGE="1y";BENCHMARK_SCOPE="cohort";GRAIN="month";VIEW="overview";SHOW_LIKES=SHOW_MATCHES=SHOW_BENCHMARKS=SHOW_VALUES=true;ACTIVITY_SCALE="sqrt";RATE_MODE="story";document.body.classList.remove("results-ready");$("#out").className="hide";$("#out").innerHTML="";if($("#drop").scrollIntoView)$("#drop").scrollIntoView({behavior:"smooth"});};
   }
 
   function capturePre(){
@@ -1481,8 +1686,13 @@ var DD = (function(){
       at:new Date().toISOString(),prospective:true} : null;
   }
   function read(list){
+    var files=Array.prototype.slice.call(list);if(!files.length)return;
+    if(files.length===1&&/\.zip$/i.test(files[0].name)){capturePre();readZip(files[0]);return;}
+    readJson(files);
+  }
+  function readJson(list){
     capturePre();
-    var files=Array.prototype.slice.call(list),bag={},left=files.length,bad=[];
+    ZIP_META=null;var files=Array.prototype.slice.call(list),bag={},left=files.length,bad=[];
     if(!left) return;
     files.forEach(function(f){
       var name=f.name.split(/[\\/]/).pop();
@@ -1493,6 +1703,50 @@ var DD = (function(){
       r.onerror=function(){ bad.push(name); if(!--left) done(bag,bad); };
       r.readAsText(f); }); }
 
+  function zipStatus(s,bad){var n=$("#importStatus");if(n){n.textContent=s;n.style.color=bad?'var(--bad)':'';}}
+  function zipName(raw){
+    var n=raw.replace(/\\/g,'/').replace(/^\.\//,'');
+    if(!n||n[0]==='/'||/^[A-Za-z]:/.test(n)||n.split('/').some(function(x){return x==='..';}))throw Error('Unsafe path in archive');
+    return n;
+  }
+  async function inflateZip(bytes,entry){
+    var start=entry.offset,dv=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+    if(dv.getUint32(start,true)!==0x04034b50)throw Error('Invalid ZIP local header');
+    var nameLen=dv.getUint16(start+26,true),extraLen=dv.getUint16(start+28,true),dataStart=start+30+nameLen+extraLen,
+        packed=bytes.slice(dataStart,dataStart+entry.compressed);
+    if(entry.method===0)return packed;
+    if(entry.method!==8||typeof DecompressionStream==='undefined')throw Error('This browser cannot safely open this ZIP compression method. Use the JSON fallback.');
+    var stream=new Blob([packed]).stream().pipeThrough(new DecompressionStream('deflate-raw')),
+        out=new Uint8Array(await new Response(stream).arrayBuffer());
+    if(out.length!==entry.size)throw Error('ZIP size check failed');return out;
+  }
+  async function readZip(file){
+    try{
+      zipStatus('Reading archive directory…');
+      var bytes=new Uint8Array(await file.arrayBuffer()),dv=new DataView(bytes.buffer),eocd=-1,min=Math.max(0,bytes.length-65557);
+      for(var i=bytes.length-22;i>=min;i--)if(dv.getUint32(i,true)===0x06054b50){eocd=i;break;}
+      if(eocd<0)throw Error('Not a readable ZIP archive');
+      var count=dv.getUint16(eocd+10,true),cd=dv.getUint32(eocd+16,true);if(count>200)throw Error('Archive has too many entries (maximum 200)');
+      var entries=[],seen={},unknown=[],refused=[],total=0,decoder=new TextDecoder();
+      for(i=0;i<count;i++){
+        if(dv.getUint32(cd,true)!==0x02014b50)throw Error('Invalid ZIP directory');
+        var method=dv.getUint16(cd+10,true),compressed=dv.getUint32(cd+20,true),size=dv.getUint32(cd+24,true),nl=dv.getUint16(cd+28,true),xl=dv.getUint16(cd+30,true),cl=dv.getUint16(cd+32,true),offset=dv.getUint32(cd+42,true),path=zipName(decoder.decode(bytes.slice(cd+46,cd+46+nl))),base=path.split('/').pop().toLowerCase();
+        cd+=46+nl+xl+cl;if(!base)continue;if(seen[base])throw Error('Duplicate filename in archive: '+base);seen[base]=1;
+        if(size>20*1024*1024)throw Error('Archive entry is too large: '+base);if(compressed&&size/compressed>250)throw Error('Implausible compression ratio: '+base);total+=size;if(total>45*1024*1024)throw Error('Archive expands beyond the 45 MB safety limit');
+        entries.push({path:path,base:base,method:method,compressed:compressed,size:size,offset:offset});
+      }
+      var allow=['matches.json','user.json','media.json','prompt_feedback.json','prompts.json','subscriptions.json','convo_starters.json','fresh_starts.json','match_notes.json'],bag={},bad=[];
+      for(i=0;i<entries.length;i++){
+        var en=entries[i];if(en.base==='selfie_verification.json'){refused.push(en.path);bag[en.base]=null;continue;}
+        if(allow.indexOf(en.base)<0){unknown.push(en.path);continue;}
+        zipStatus('Extracting allowlisted data '+(i+1)+' of '+entries.length+'…');
+        try{bag[en.base]=JSON.parse(decoder.decode(await inflateZip(bytes,en)));}catch(err){bad.push(en.base);}
+      }
+      ZIP_META={entries:entries.length,unknown:unknown,refused:refused,compressed:file.size,extracted:total,limits:'200 entries · 45 MB extracted · 250:1 ratio'};
+      zipStatus('Building normalized charts…');done(bag,bad);bytes=null;bag=null;
+    }catch(err){zipStatus(err.message||String(err),true);}
+  }
+
   function done(bag,bad){
     var payload={};
     Object.keys(bag).forEach(function(k){ if(bag[k]!==null) payload[k]=bag[k]; });
@@ -1500,7 +1754,8 @@ var DD = (function(){
     var res=DD.parse(payload);
     if(res.error){ $("#out").className="";
       $("#out").innerHTML='<div class="note stop">'+esc(res.error)+'</div>'; return; }
-    R=res;document.body.classList.add("results-ready");
+    R=res;document.body.classList.add("results-ready");zipStatus('');
+    if(ZIP_META&&ZIP_META.unknown.length)R.filesMissing=R.filesMissing.concat(ZIP_META.unknown.map(function(x){return x+' (unknown, not extracted)';}));
     if(bad.length) R.filesMissing=R.filesMissing.concat(bad.map(function(b){return b+" (unreadable)";}));
     VFROM=R.minT;VTO=R.maxT;YEAR_FROM=YEAR_TO=null;RANGE="all";RANK_RANGE="1y";BENCHMARK_SCOPE="cohort";GRAIN="month";
     var yr=R.maxT-365*864e5;
@@ -1513,10 +1768,11 @@ var DD = (function(){
     Promise.resolve(DD.fingerprint(R)).catch(function(){ return null; }).then(function(){ paint();
       document.documentElement.scrollTop=0;document.body.scrollTop=0; }); }
 
-  var drop=$("#drop"),input=$("#file");
+  var drop=$("#drop"),input=$("#file"),jsonInput=$("#jsonFile");
   $("#pickBtn").onclick=function(){input.click();};
   $("#pickBtn").onkeydown=function(e){ if(e.key==="Enter"||e.key===" "){e.preventDefault();input.click();} };
   input.onchange=function(){read(input.files);};
+  jsonInput.onchange=function(){readJson(jsonInput.files);};
   ["dragenter","dragover"].forEach(function(ev){
     drop.addEventListener(ev,function(e){e.preventDefault();drop.classList.add("over");});});
   ["dragleave","drop"].forEach(function(ev){
@@ -1544,12 +1800,17 @@ window.DD_BOTCTX = {
 - Changing a dashboard date filter automatically switches the Verdict and detailed ranking panel to Dashboard range, where both rank the exact observed scoreable rate printed in the dashboard KPI. For example, 13.39% maps to about p91 against all men and p94 among men 40–44 in the published reference.
 - The ranking panel also offers independent Overall, 1 year, 6 months, and 1 month comparison windows. Those use the same volume-standardized ranking method, end on the latest scoreable date 30 days before the newest export event, and do not change the dashboard range or declared before/after test. The active period and method must be named when quoting a rank.
 - The full-width Verdict and detailed ranking panel always use the same active scope and primary method. Never quote them as different results.
-- Compare uses one export at two scopes: fixed overall history versus the date-filtered snapshot. Raw totals cover different spans, so compare acceptance rates rather than totals.
+- Compare is a linked visual playground using one export at two scopes: fixed overall history versus the date-filtered snapshot. It compares scoreable rate, 30-day-normalized recorded activity pace, incoming decisions reviewed, weekday activity mix, daily-volume mix, and comment/no-comment associations. Raw totals cover different spans, so never compare them without normalization.
+- Overview includes incoming likes reviewed and accepted over time. Call these processed or reviewed inbound decisions, not arrivals, impressions, profile views, or total people who liked the subject. Hinge omits pending queues and records decision timestamps.
+- The scoreable match-back-rate timeline defaults to Story view. Its performance zones, peak/breakout/latest callouts, dot sizes, and whole-window story cards are visual explanations of the same matured-like data; they do not change the calculation. Analyst view adds Wilson uncertainty whiskers for each period. The whole-window weighted rate—not an average of monthly or weekly point heights—is the rate used for Market Value.
 - Percentiles come from direct log-linear interpolation of SwipeStats' published Tinder male percentile table (6,233 complete male profiles), not from a fitted model and not from an observed Hinge cohort. No cohort of real Hinge men exists here.
 - If the export includes the subject's age, the age-band reference rescales the published all-men curve by that band's published mean. It assumes the distribution shape is constant across age bands; SwipeStats does not publish age-specific shapes.
 - Hinge caps free likes at 8/day versus Tinder's much larger allowance, so platform mechanics differ and a Hinge like is scarcer. Benchmark uploaders also self-selected; the direction of that bias is unknown.
 - The subtle dotted median and shaded 20th–80th benchmark band are external Tinder male references from SwipeStats. On count and cumulative charts they are converted to expected matches at the subject's actual like volume; on rate charts they remain rates. The all-men 2.04% median is published directly; P20 and P80 are log-interpolated between published anchors. Users can hide the benchmark layer.
 - Charts and illustrated dashboard views default to the subject’s age cohort when age is available because that is the more relevant ecosystem. “Your cohort” rescales the published all-men percentile curve by the cohort’s published mean; it is modelled because SwipeStats does not publish age-specific distribution shapes. “All men” is an explicit comparison toggle. The selected benchmark scope must be named when explaining any dotted line, band, chart percentile, ecosystem position, or Market Value card.
+- The Combine is the compact opening answer; The Market is the maturity-aligned change story; the Analysis Floor holds the linked chart views; and the Scout Report is an aggregate-only local download. Do not describe the Scout Report as a public share link.
+- ZIP import reads the archive directory locally, rejects unsafe paths, duplicate canonical basenames, excessive expansion and implausible compression, and extracts only allowlisted JSON. The selfie-verification entry is detected but never decompressed, extracted, decoded, or parsed. Unknown entries are named in the receipt without reading their contents.
+- The chart companion receives windowed aggregate counts, active filters, the selected benchmark label and caveats only. It never receives raw messages, comment text, identity, media, devices or biometric data. Its memory status is explicitly inactive; do not imply anything was saved.
 - The page does not upload, store, log, or transmit the export. Do not ask for raw exports, messages, identity data, or verification media.
 - The export does not identify who liked the subject, their attributes, profiles passed without action, or received-message outcomes. Reply rate and true ghosting are not computable.
 - Unprocessed incoming likes do not appear: Hinge records the subject's decision, not the arrival, so inbound counts undercount when a queue is pending.
@@ -1558,7 +1819,7 @@ window.DD_BOTCTX = {
   ctx: () => `DateDawg parser/schema version: ${DD.PARSER_VERSION}.
 Analysis runs entirely in this browser under a connect-src 'none' content-security policy.
 Volume strata are 1–3, 4–8, 9–20 and 21+ outbound likes per day; both eras are standardized to pooled common-support weights. Missing support is disclosed and can suppress standardization.
-Overview, Patterns, Momentum and Compare are alternate views of the same selected date range. The calendar-year chips can select one year or a continuous span of years. Each main chart also exposes window, year, monthly/weekly, benchmark-scope, layer and label controls; its full-density timeline is horizontally swipeable. The benchmark scope defaults to the subject’s age cohort and can be toggled to all men across the complete dashboard. Compare holds overall export history fixed against the selected snapshot.
+Overview, Patterns, Momentum and Compare are rooms on the Analysis Floor and alternate views of the same selected date range. The calendar-year chips can select one year or a continuous span of years. Each main chart also exposes window, year, monthly/weekly, benchmark-scope, layer and label controls; its full-density timeline is horizontally swipeable. The scoreable-rate timeline adds Story and Analyst modes: Story emphasizes the emotional arc and turning points, while Analyst exposes binomial uncertainty intervals. The benchmark scope defaults to the subject’s age cohort and can be toggled to all men across the complete dashboard. Compare holds overall export history fixed against the selected snapshot.
 Patterns is an illustrated story: the 100-person ecosystem shows the selected-range percentile, the weekly orbit encodes like volume by distance and circle size while printing match-back rate, and the activity terrain shows rates across daily like-volume habitats. Overall, Last year, Last 6 months, and Last month switch the entire illustrated story together. These remain descriptive views of the same filtered export.
 The import receipt reports the maturity anchor and a SHA-256 fingerprint over canonical sanitized events when Web Crypto is available.
 Snapshots contain counts and lineage only. They are downloaded by the user and are not automatic cross-session memory.`

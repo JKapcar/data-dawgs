@@ -41,6 +41,12 @@ ok('Toto is told charts default to cohort with an all-men toggle',/default to th
 ok('Toto is told pending inbound queues undercount',/inbound counts undercount when a queue is pending/.test(date));
 ok('Toto is told reply rate and ghosting are not computable',/Reply rate and true ghosting are not computable/.test(date));
 ok('Toto is told conversion pipes are deliberately not surfaced',/conversion pipes are retained only in the sanitized snapshot/.test(date));
+ok('Toto knows the new product hierarchy',/The Combine is the compact opening answer[\s\S]*The Market[\s\S]*Analysis Floor[\s\S]*Scout Report/.test(date));
+ok('Toto knows ZIP entries are allowlisted and selfie data is never decompressed',/extracts only allowlisted JSON[\s\S]*never decompressed, extracted, decoded, or parsed/.test(date));
+ok('Toto knows companion memory is inactive and context is sanitized',/chart companion receives windowed aggregate counts[\s\S]*memory status is explicitly inactive/.test(date));
+ok('Toto knows Compare is a normalized multi-story playground',/Compare is a linked visual playground[\s\S]*30-day-normalized recorded activity pace[\s\S]*comment\/no-comment associations/.test(date));
+ok('Toto names inbound as reviewed decisions rather than arrivals',/Overview includes incoming likes reviewed and accepted over time[\s\S]*not arrivals, impressions, profile views/.test(date));
+ok('Toto distinguishes the rate chart story from its analyst uncertainty view',/scoreable match-back-rate timeline defaults to Story view[\s\S]*Analyst view adds Wilson uncertainty whiskers[\s\S]*not an average of monthly or weekly point heights/.test(date));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail?1:0);

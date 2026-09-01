@@ -123,7 +123,7 @@ ok('z shown for a pre-parse declaration',/z = /.test(text));
 ok('declaration reason rendered',/lost 90 lbs/.test(text));
 ok('declared test is fixed and filter-independent',/fixed; dashboard filters do not alter it/i.test(text));
 ok('no in-dashboard declare button',!w.document.getElementById('dGo'));
-ok('exploratory boundary slider is not rendered',!w.document.getElementById('cut'));
+ok('Market offers an explicitly labelled comparison-date slider',!!w.document.getElementById('cut')&&/Moving it permanently makes this session exploratory/.test(out.querySelector('#market-story').textContent));
 ok('old pick-your-window panel is not rendered',!/Pick your window/i.test(text));
 ok('selfie refused shown on receipt',/Refused, never opened/.test(text));
 const fpv=await w.eval('DD.fingerprint(window.__R)');
@@ -131,7 +131,9 @@ ok('fingerprint is sha256',/^sha256-[0-9a-f]{64}$/.test(String(fpv)));
 ok('fingerprint rendered on receipt',/sha256-/.test(w.document.getElementById('out').textContent));
 ok('censoring applied to standardization',M.std.matured===true);
 ok('dashboard date inputs rendered',!!w.document.getElementById('viewFrom')&&!!w.document.getElementById('viewTo'));
-ok('both time-series charts rendered',out.querySelectorAll('svg.chart').length===2);
+ok('three overview time-series charts rendered',out.querySelectorAll('svg.chart').length===3);
+ok('overview promotes incoming likes reviewed',/Incoming likes reviewed/i.test(out.querySelector('.kpis').textContent)&&!!out.querySelector('svg.inbound-chart'));
+ok('overview inbound totals reconcile',out.querySelector('.inbound-kpi .value').textContent.trim()===String(R.ins.length)&&out.querySelector('svg.inbound-chart').getAttribute('aria-label').includes('Incoming likes reviewed'));
 const initialSeries=w.DD.timeSeries(R,R.minT,R.maxT,'month');
 ok('observed match totals agree across KPI, insight, and activity chart',
   parseInt(out.querySelector('.match-kpi .value').textContent.replace(/,/g,''),10)===initialSeries.matches&&
@@ -145,6 +147,11 @@ ok('chart copy explains observed matches are dated to the sent like',/known matc
 ok('maturity note appears beside trend',/too recent to score/i.test(text));
 ok('trend explains why monthly dots cannot be averaged',/Monthly dots have different sample sizes/i.test(text));
 ok('likes and matches have distinct color tokens',/--likes:#006ee6/.test(html)&&/--matches:#d91f4e/.test(html));
+ok('Combine is compact and carries the five-second answer',!!out.querySelector('#verdict .vtier')&&out.querySelectorAll('#verdict .vmetric').length===3&&/outperform about/i.test(out.querySelector('#verdict').textContent));
+ok('Market change story follows the Combine',out.children[1]&&out.children[1].id==='market-story'&&/Volume-standardized change/.test(out.children[1].textContent));
+ok('Analysis Floor identifies the feature-detected chart registry',/The Analysis Floor/.test(out.textContent)&&/11 AVAILABLE · 34 CATALOGUED/.test(out.textContent));
+ok('local companion exposes no active memory claim',!!out.querySelector('#companion')&&/LOCAL · NO MEMORY/.test(out.querySelector('#companion').textContent));
+ok('Scout Report is aggregate-only',!!out.querySelector('#scout-report')&&/AGGREGATES ONLY · LOCAL/.test(out.querySelector('#scout-report').textContent));
 
 console.log('\n=== dashboard filters ===');
 const allReadout=out.querySelector('.range-readout').textContent;
@@ -180,10 +187,19 @@ ok('clicking a selected endpoint shrinks the multi-year range',
   /2025-01-01 → 2025-12-20/.test(out.querySelector('.range-readout').textContent)&&
   !out.querySelector('[data-range="year-2024"]').classList.contains('on')&&
   out.querySelector('[data-range="year-2025"]').classList.contains('on'));
-ok('year view labels acceptance points',out.querySelectorAll('.pointlabel').length>0);
-ok('rate chart labels the weighted selected-period result against the default cohort',!!out.querySelector('.selectedline')&&/SELECTED PERIOD/.test(out.querySelector('.selectedlabel').textContent)&&/PERCENTILE MEN 40–44/.test(out.querySelector('.selectedlabel').textContent));
-ok('both main charts have their own filters',out.querySelectorAll('.charttools').length===2&&out.querySelectorAll('[data-chart-year]').length===2);
-ok('both main charts expose six-month and one-month slices',out.querySelectorAll('.charttools [data-range="6m"]').length===2&&out.querySelectorAll('.charttools [data-range="1m"]').length===2);
+ok('rate chart defaults to a story-first view',out.querySelector('[data-rate-mode="story"]').classList.contains('on')&&out.querySelector('svg[data-rate-mode="story"]'));
+ok('rate story summarizes the whole arc in four human beats',out.querySelectorAll('.rate-storyline .rate-beat').length===4&&/Your whole window/.test(out.querySelector('.rate-storyline').textContent)&&/Peak chapter/.test(out.querySelector('.rate-storyline').textContent)&&/Biggest jump/.test(out.querySelector('.rate-storyline').textContent));
+ok('rate story gives the timeline four named performance zones',out.querySelectorAll('.ratechart rect[class^="rate-zone-"]').length===4&&/LONG SHOT/.test(out.querySelector('.ratechart').textContent)&&/RARE AIR/.test(out.querySelector('.ratechart').textContent));
+ok('rate story marks significant chapters while preserving requested point values',out.querySelectorAll('.ratechart .story-label').length>0&&out.querySelectorAll('.ratechart .pointlabel').length>0);
+ok('rate chart labels the weighted whole-window result',!!out.querySelector('.selectedline')&&/YOUR WHOLE WINDOW/.test(out.querySelector('.selectedlabel').textContent)&&new RegExp(out.querySelectorAll('.kpi')[2].querySelector('.value').textContent.replace('%','\\%')).test(out.querySelector('.selectedlabel').textContent));
+out.querySelector('[data-rate-mode="analyst"]').click();
+await new Promise(r=>setTimeout(r,50));
+ok('analyst view adds uncertainty whiskers and dense values',out.querySelector('[data-rate-mode="analyst"]').classList.contains('on')&&out.querySelector('svg[data-rate-mode="analyst"]')&&out.querySelectorAll('.ratechart .uncertainty').length>0&&out.querySelectorAll('.ratechart .pointlabel').length>0);
+out.querySelector('[data-rate-mode="story"]').click();
+await new Promise(r=>setTimeout(r,50));
+ok('all three overview charts have their own filters',out.querySelectorAll('.charttools').length===3&&out.querySelectorAll('[data-chart-year]').length===3);
+ok('all three overview charts expose six-month and one-month slices',out.querySelectorAll('.charttools [data-range="6m"]').length===3&&out.querySelectorAll('.charttools [data-range="1m"]').length===3);
+ok('inbound chart does not invent an external cohort benchmark',out.querySelector('.inbound-chart').closest('.chartcard').querySelectorAll('[data-benchmark-scope]').length===0);
 let chartYear=out.querySelector('[data-chart-year]');chartYear.value='2024';chartYear.dispatchEvent(new w.Event('change'));
 await new Promise(r=>setTimeout(r,50));
 ok('chart-local year filter changes the shared view',/2024-01-10 → 2024-12-31/.test(out.querySelector('.range-readout').textContent));
@@ -241,6 +257,10 @@ out.querySelector('[data-view="compare"]').click();
 await new Promise(r=>setTimeout(r,50));
 ok('compare view explains one export and two scopes',/overall history versus your selected snapshot/i.test(out.textContent)&&/One uploaded export, shown at two scopes/i.test(out.textContent));
 ok('compare view fixes overall history against selected snapshot',/Overall history/.test(out.textContent)&&/Selected snapshot/.test(out.textContent));
+ok('compare is a multi-story playground',/Your pace changed/.test(out.textContent)&&/Incoming likes you reviewed/.test(out.textContent)&&/Where your week moved/.test(out.textContent)&&/Your activity mix shifted/.test(out.textContent)&&/Comment versus no-comment/.test(out.textContent));
+ok('compare normalizes count pace to 30 days',out.querySelectorAll('.compare-bar-row').length===4&&/per 30 calendar days/i.test(out.textContent));
+ok('compare exposes inbound composition without calling it arrival',!!out.querySelector('.inbound-flow')&&/decision timestamps/i.test(out.textContent)&&/Unprocessed incoming likes are absent/i.test(out.textContent));
+ok('compare uses one story-wide period switch',out.querySelectorAll('.patternfilters').length===1&&out.querySelectorAll('.compare-story-grid').length===1);
 ok('compare distinguishes observed totals from scoreable rates',/Observed matches/.test(out.textContent)&&/Scoreable match-back rate/.test(out.textContent));
 ok('compare chart includes median and 20th–80th benchmark band',out.querySelectorAll('svg .benchmarkline.median').length===1&&out.querySelectorAll('svg .benchmarkband').length===1);
 ok('compare benchmark remains cohort-scoped',/Men 40–44 median · 1\.50%/.test(out.textContent));
@@ -258,7 +278,13 @@ ok('custom date range is applied',/2025-01-01 → 2025-03-31/.test(out.querySele
 console.log('\n=== declaration mechanics ===');
 let t3=w.document.getElementById('out').textContent;
 ok('declared comparison survives dashboard filtering',/Your declared comparison/.test(t3)&&/lost 90 lbs/.test(t3));
-ok('no exploratory slider can mutate declaration',!w.document.getElementById('cut'));
+let cut=w.document.getElementById('cut'),declaredCut=cut.value;
+cut.value=String(+declaredCut+86400000);cut.dispatchEvent(new w.Event('change'));
+await new Promise(r=>setTimeout(r,50));
+ok('moving the comparison date permanently invalidates declaration',/EXPLORATORY · 1 MOVE/.test(out.querySelector('#market-story').textContent)&&!/Your declared comparison/.test(out.textContent));
+cut=w.document.getElementById('cut');cut.value=declaredCut;cut.dispatchEvent(new w.Event('change'));
+await new Promise(r=>setTimeout(r,50));
+ok('returning to the declared date does not restore significance',/EXPLORATORY · 2 MOVES/.test(out.querySelector('#market-story').textContent)&&!/Your declared comparison/.test(out.textContent));
 ok('no way to declare after seeing results',!w.document.getElementById('dGo'));
 const fp2=await w.eval('DD.fingerprint(window.__R)');
 ok('page fingerprint stable across calls',/^sha256-[0-9a-f]{64}$/.test(String(fp2)));
