@@ -4,6 +4,18 @@ import { createRequire } from 'node:module';
 const require=createRequire(import.meta.url);
 let pass=0,fail=0;
 const ok=(l,c)=>{console.log(`${c?'  ok  ':'  FAIL'} ${l}`);c?pass++:fail++;};
+const savedDb=new Map();
+function installFakeIDB(win){
+  const db={objectStoreNames:{contains:()=>true},createObjectStore(){},close(){},transaction(){
+    const tx={oncomplete:null,onerror:null,objectStore(){return {
+      get(key){return request(()=>savedDb.get(key),tx);},
+      put(value,key){return request(()=>{savedDb.set(key,JSON.parse(JSON.stringify(value)));return key;},tx);},
+      delete(key){return request(()=>{savedDb.delete(key);return undefined;},tx);}
+    };}};return tx;}};
+  function request(work,tx){const q={result:undefined,error:null,onsuccess:null,onerror:null};setTimeout(()=>{try{q.result=work();q.onsuccess&&q.onsuccess();setTimeout(()=>tx.oncomplete&&tx.oncomplete(),0);}catch(e){q.error=e;q.onerror&&q.onerror();}},0);return q;}
+  win.indexedDB={open(){const q={result:db,error:null,onupgradeneeded:null,onsuccess:null,onerror:null};setTimeout(()=>{q.onsuccess&&q.onsuccess();},0);return q;}};
+  Object.defineProperty(win.navigator,'storage',{value:{persist:async()=>true,persisted:async()=>true},configurable:true});
+}
 
 const html=fs.readFileSync('../../datedawg.html','utf8');
 const dom=new JSDOM(html,{runScripts:"dangerously",url:"http://localhost/",
@@ -16,6 +28,7 @@ const dom=new JSDOM(html,{runScripts:"dangerously",url:"http://localhost/",
       Object.defineProperty(win,'crypto',{value:webcrypto,configurable:true});
     if(!win.TextEncoder) win.TextEncoder=TextEncoder;
     if(!win.TextDecoder) win.TextDecoder=TextDecoder;
+    installFakeIDB(win);
   }});
 const w=dom.window;
 // jsdom has no FileReader-from-disk; drive the render path directly
@@ -159,6 +172,21 @@ ok('Market change story follows the Combine',out.children[1]&&out.children[1].id
 ok('Analysis Floor identifies the feature-detected chart registry',/The Analysis Floor/.test(out.textContent)&&/11 AVAILABLE · 34 CATALOGUED/.test(out.textContent));
 ok('local companion exposes no active memory claim',!!out.querySelector('#companion')&&/LOCAL · NO MEMORY/.test(out.querySelector('#companion').textContent));
 ok('Scout Report is aggregate-only',!!out.querySelector('#scout-report')&&/AGGREGATES ONLY · LOCAL/.test(out.querySelector('#scout-report').textContent));
+ok('local memory is explicit and off by default',!!out.querySelector('#rememberConsent')&&out.querySelector('#saveLocal').disabled&&/Optional and off by default/.test(out.querySelector('.local-memory').textContent));
+ok('local memory discloses retained event history and browser-profile access',/Dates, outcomes, comments, age, gender and filters/.test(out.querySelector('.local-memory').textContent)&&/not separately encrypted from your browser profile/i.test(out.querySelector('.local-memory').textContent));
+out.querySelector('#rememberConsent').click();out.querySelector('#saveLocal').click();
+await new Promise(r=>setTimeout(r,120));
+ok('opt-in stores a sanitized chart model without the raw canonical sequence',savedDb.has('current')&&savedDb.get('current').kind==='sanitized-chart-data'&&!('_canon' in savedDb.get('current').R));
+const restoredDom=new JSDOM(html,{runScripts:"dangerously",url:"http://localhost/",beforeParse(win){
+  const {webcrypto}=require('node:crypto');const {TextEncoder,TextDecoder}=require('node:util');
+  if(!win.crypto||!win.crypto.subtle)Object.defineProperty(win,'crypto',{value:webcrypto,configurable:true});
+  if(!win.TextEncoder)win.TextEncoder=TextEncoder;if(!win.TextDecoder)win.TextDecoder=TextDecoder;installFakeIDB(win);
+}});
+await new Promise(r=>setTimeout(r,220));
+ok('saved dashboard restores automatically on the next visit',restoredDom.window.document.body.classList.contains('results-ready')&&/540/.test(restoredDom.window.document.querySelector('.kpi').textContent));
+restoredDom.window.close();
+out.querySelector('#forgetLocal').click();await new Promise(r=>setTimeout(r,80));
+ok('forget saved dashboard deletes local memory',!savedDb.has('current'));
 
 console.log('\n=== dashboard filters ===');
 const allReadout=out.querySelector('.range-readout').textContent;

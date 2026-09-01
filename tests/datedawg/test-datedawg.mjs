@@ -193,7 +193,9 @@ ok('identical input -> identical fingerprint',
 ok('standardized rank in snapshot',!!S.rank_standardized);
 
 console.log('\n=== page hygiene ===');
-ok('no storage APIs',!/localStorage|sessionStorage|indexedDB/.test(html));
+ok('storage is IndexedDB-only and requires an explicit opt-in',/indexedDB\.open/.test(html)&&/rememberConsent/.test(html)&&!/localStorage|sessionStorage/.test(html));
+ok('saved shape excludes raw ZIP and canonical fingerprint material',/function savedShape/.test(html)&&!/var keys=\[[^\]]*"_canon"/.test(html));
+ok('local persistence disclaimer names sensitivity, deletion and no cloud sync',/SENSITIVE EVENT HISTORY/.test(html)&&/Forget saved dashboard/.test(html)&&/No account or cloud sync/.test(html));
 // the only URLs permitted are provenance citations rendered as TEXT, never fetched
 const urls=[...html.matchAll(/https?:\/\/[^\s"'<)]+/g)].map(m=>m[0]);
 ok('no fetchable external refs',
@@ -201,7 +203,7 @@ ok('no fetchable external refs',
 ok('urls present are citations only',urls.every(u=>/swipestats\.io|example\.invalid/.test(u)));
 ok('CSP present',/connect-src 'none'/.test(html));
 ok('fingerprint degrades instead of throwing',/typeof TextEncoder!=="undefined"/.test(html));
-ok('render survives a null fingerprint',/catch\(function\(\)\{ return null; \}\)/.test(html));
+ok('render survives a null fingerprint',/catch\(function\(\)\{\s*return null;\s*\}\)/.test(html));
 ok('reduced motion respected',/prefers-reduced-motion/.test(html));
 t('missing matches.json errors',!!DD.parse({}).error,true);
 t('empty list parses',DD.parse({'matches.json':[]}).records,0);
