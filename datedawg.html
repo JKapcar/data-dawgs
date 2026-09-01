@@ -935,9 +935,9 @@ var DD = (function(){
       (caveat?'<div class="warn">'+esc(caveat)+'</div>':'')+'</div>'; }
 
   function verdict(M,R,W){
-    var period={all:"OVERALL", "1y":"1 YEAR", "6m":"6 MONTHS", "1m":"1 MONTH"}[W.id]||W.id,
-        primary=W.S.matureLikes>=DD.MIN_N&&(M.rankStd||M.rankAdj),
-        method=M.rankStd?"VOLUME-STANDARDIZED":"OBSERVED";
+    var period={selected:"DASHBOARD RANGE",all:"OVERALL", "1y":"1 YEAR", "6m":"6 MONTHS", "1m":"1 MONTH"}[W.id]||W.id,
+        primary=W.S.matureLikes>=DD.MIN_N&&(W.primary||M.rankStd||M.rankAdj),
+        method=W.primary?"OBSERVED":M.rankStd?"VOLUME-STANDARDIZED":"OBSERVED";
     if(!primary)return '<section class="verdict insufficient" id="verdict"><div class="vtop">READ '+num(R.records)+
       ' CONNECTIONS · '+iso(R.minT).slice(0,4)+'–'+iso(R.maxT).slice(0,4)+
       ' · <b>NOTHING LEFT THIS PAGE</b></div><div class="vcore"><div class="vlede">'+esc(period)+
@@ -958,12 +958,17 @@ var DD = (function(){
       (primary.band?'<span class="vchip">ALL MEN <b>p'+Math.round(primary.all.p)+'</b></span>':'')+
       (M.rankHeavy&&M.heavyAfter&&M.heavyAfter.n>=DD.MIN_N?'<span class="vchip">HEAVY-DAY CHECK <b>p'+
         Math.round((M.rankHeavy.band||M.rankHeavy.all).p)+'</b></span>':'')+
-      (M.std.valid&&M.std.lift!=null?'<span class="vchip">VS PRIOR <b>'+(M.std.lift>0?'+':'')+
+      (M.std&&M.std.valid&&M.std.lift!=null?'<span class="vchip">VS PRIOR <b>'+(M.std.lift>0?'+':'')+
         (100*M.std.lift).toFixed(0)+'%</b></span>':'')+
       '<span class="vchip">PERIOD <b>'+esc(period)+'</b></span><span class="vchip">'+iso(W.from)+' → '+iso(W.to)+'</span><span class="vchip">n <b>6,233</b> · SWIPESTATS</span></div><div class="vcue" id="vcue">↓ THE WORKINGS</div></section>';}
 
   function rankWindow(){
-    var DAY=864e5,to=Math.max(R.minT,R.maxT-DD.RESOLVE_DAYS*DAY),from=R.minT;
+    var DAY=864e5,to=Math.max(R.minT,R.maxT-DD.RESOLVE_DAYS*DAY),from=R.minT,S,primary;
+    if(RANK_RANGE==="selected"){
+      S=DD.timeSeries(R,VFROM,VTO,"month");
+      primary=S.rate&&S.rate.n>=DD.MIN_N?DD.rank(S.rate.p,R.profile&&R.profile.age):null;
+      return {id:"selected",from:S.from,to:S.to,M:{},S:S,primary:primary,primaryLabel:"observed dashboard match-back rate"};
+    }
     if(RANK_RANGE==="1y")from=Math.max(R.minT,to-364*DAY);
     else if(RANK_RANGE==="6m")from=Math.max(R.minT,to-182*DAY);
     else if(RANK_RANGE==="1m")from=Math.max(R.minT,to-29*DAY);
@@ -972,9 +977,9 @@ var DD = (function(){
   function rankPanel(W){
     var M=W.M,S=W.S,
         controls='<div class="rankwindow" aria-label="Ranking time period"><span class="label">Rank this period</span><div class="choices">'+
-          [['all','Overall'],['1y','1 year'],['6m','6 months'],['1m','1 month']].map(function(x){return '<button data-rank-range="'+x[0]+'" class="'+(W.id===x[0]?'on':'')+'" aria-pressed="'+(W.id===x[0])+'">'+x[1]+'</button>';}).join('')+
-          '</div><div class="dates">'+iso(W.from)+' → '+iso(W.to)+' · through the latest scoreable date · '+num(S.matureMatches)+' scoreable matches from '+num(S.matureLikes)+' matured likes</div></div>',
-        primary=M.rankStd||M.rankAdj,label=M.rankStd?"volume-standardized match rate":"observed match-back rate";
+          [['selected','Dashboard range'],['all','Overall'],['1y','1 year'],['6m','6 months'],['1m','1 month']].map(function(x){return '<button data-rank-range="'+x[0]+'" class="'+(W.id===x[0]?'on':'')+'" aria-pressed="'+(W.id===x[0])+'">'+x[1]+'</button>';}).join('')+
+          '</div><div class="dates">'+iso(W.from)+' → '+iso(W.to)+(W.id==="selected"?' · same dates as the dashboard; immature likes are excluded':' · through the latest scoreable date')+' · '+num(S.matureMatches)+' scoreable matches from '+num(S.matureLikes)+' matured likes</div></div>',
+        primary=W.primary||M.rankStd||M.rankAdj,label=W.primaryLabel||(M.rankStd?"volume-standardized match rate":"observed match-back rate");
     if(!primary||S.matureLikes<DD.MIN_N)return '<div class="slip"><h3>SwipeStats reference — men, match rate on likes sent</h3>'+controls+'<small>Not enough resolved likes in this period to place you reliably. Try a longer window.</small></div>';
     var second=(M.heavyAfter&&M.heavyAfter.n>=DD.MIN_N)?M.rankHeavy:null,
         head=primary.band||primary.all,hasBand=!!primary.band,src=primary.source;
@@ -1137,7 +1142,8 @@ var DD = (function(){
     var rk=S.rate&&S.rate.n>=DD.MIN_N?DD.rank(S.rate.p,R.profile&&R.profile.age):null,
         unmatched=Math.max(0,S.matureLikes-S.matureMatches),
         best=S.bins.filter(function(b){return b.matureLikes>=DD.MIN_N&&b.rate!=null;}).sort(function(a,b){return b.rate-a.rate;})[0];
-    return '<div class="insightgrid"><div class="insight"><span class="ey">Dating App MV / Market Value</span><div class="big rankvalue">'+(rk?ordinal(rk.all.p)+' percentile':'—')+'</div><p>'+(rk?'Against all men in the published SwipeStats Tinder table · '+pct(S.rate.p)+' from '+num(S.matureMatches)+' of '+num(S.matureLikes)+' matured likes.'+(rk.band?'<br><b>Men '+esc(rk.bandLabel)+': '+ordinal(rk.band.p)+' percentile</b> (age comparison shown separately, never blended into a range).':''):'At least '+DD.MIN_N+' matured likes are needed to estimate your standing.')+'</p></div>'+
+    var head=rk&&(rk.band||rk.all),cohort=rk&&rk.band?'men '+rk.bandLabel:'all men';
+    return '<div class="insightgrid"><div class="insight"><span class="ey">Dating App MV / Market Value</span><div class="big rankvalue">'+(head?ordinal(head.p)+' percentile':'—')+'</div><p>'+(rk?'Among '+esc(cohort)+' in the published SwipeStats Tinder reference · '+pct(S.rate.p)+' from '+num(S.matureMatches)+' of '+num(S.matureLikes)+' matured likes.'+(rk.band?'<br><b>Against all men, every age: '+ordinal(rk.all.p)+' percentile.</b>':''):'At least '+DD.MIN_N+' matured likes are needed to estimate your standing.')+'</p></div>'+
       '<div class="insight match-insight"><span class="ey">Your observed matches</span><div class="big">'+num(S.matches)+'</div><p>'+num(S.matureMatches)+' are attached to the '+num(S.matureLikes)+' matured likes used for your scoreable match-back rate'+(S.matches>S.matureMatches?' · '+num(S.matches-S.matureMatches)+' are newer observed matches.':'.')+'</p></div>'+
       '<div class="insight"><span class="ey">Your best '+S.grain+'</span><div class="big">'+(best?pct(best.rate):'—')+'</div><p>'+(best?esc(best.label)+' · '+best.matureMatches+' scoreable matches from '+best.matureLikes+' matured likes':'No period has '+DD.MIN_N+' matured likes yet.')+'</p></div></div>'; }
   function profileGlyph(x,y,cls){return '<g class="eco-person '+cls+'" transform="translate('+x+' '+y+')"><circle cx="0" cy="-7" r="5"/><path d="M-9 10 Q-8 0 0 0 Q8 0 9 10Z"/></g>';}
@@ -1191,6 +1197,8 @@ var DD = (function(){
       '<div class="chartcard feature"><div class="charttop"><div><h3>Your scoreable match-back rate over time</h3><p>Of the matured likes you sent in each '+S.grain+', the percentage that became matches. The dashed purple line is the weighted result for the entire selected window.</p></div><div class="legend"><span><i style="background:var(--rate)"></i>Your scoreable match-back rate</span></div></div>'+chartTools('rate')+'<div class="chart-scroll" tabindex="0" aria-label="Scrollable scoreable match-back-rate chart">'+rateChart(S)+'</div>'+scrollHint()+(SHOW_BENCHMARKS?benchmarkKey(false):'')+'<p class="chartnote"><b>Read the dashed selected-period line for your Market Value percentile.</b> Monthly dots have different sample sizes, so averaging their heights gives the wrong answer. Likes after '+iso(S.resolveBefore)+' are too recent to score. Empty periods are gaps, not zeroes.</p></div>'+insightCards(S)+'</div>'; }
   function timelinePanel(S){
     var rw=S.rate,preset=function(id,label){return '<button data-range="'+id+'" class="'+(RANGE===id?'on':'')+'" aria-pressed="'+(RANGE===id)+'">'+label+'</button>';},
+        selectedRank=rw&&rw.n>=DD.MIN_N?DD.rank(rw.p,R.profile&&R.profile.age):null,
+        selectedHead=selectedRank&&(selectedRank.band||selectedRank.all),selectedCohort=selectedRank&&selectedRank.band?'men '+selectedRank.bandLabel:'all men',
         y0=new Date(R.minT).getUTCFullYear(),y1=new Date(R.maxT).getUTCFullYear(),years=[];
     for(var y=y0;y<=y1;y++){
       var chosen=RANGE==='years'&&y>=YEAR_FROM&&y<=YEAR_TO;
@@ -1206,7 +1214,7 @@ var DD = (function(){
       '<input type="date" id="viewTo" value="'+iso(S.to)+'" min="'+iso(R.minT)+'" max="'+iso(R.maxT)+'" aria-label="Range end"><button class="apply" id="applyRange">Apply</button></div></div><div class="yearstrip" role="group" aria-label="Select one year or a continuous range of years"><span class="yearhint">Years · choose one or a range</span>'+years.join('')+'</div></div>'+
       '<div class="kpis"><div class="kpi"><span class="value">'+num(S.likes)+'</span><span class="label">Likes you sent</span><span class="detail">in your selected date range</span></div>'+
       '<div class="kpi match-kpi"><span class="value">'+num(S.matches)+'</span><span class="label">Your observed matches</span><span class="detail">'+num(S.matureMatches)+' are scoreable in this range</span></div>'+
-      '<div class="kpi"><span class="value">'+(rw?pct(rw.p):'—')+'</span><span class="label">Your scoreable match-back rate</span><span class="detail">'+(rw?num(rw.k)+' scoreable matches from '+num(rw.n)+' matured likes':'no matured likes')+'</span></div>'+
+      '<div class="kpi"><span class="value">'+(rw?pct(rw.p):'—')+'</span><span class="label">Your scoreable match-back rate</span><span class="detail">'+(rw?num(rw.k)+' scoreable matches from '+num(rw.n)+' matured likes'+(selectedHead?' · '+ordinal(selectedHead.p)+' percentile among '+esc(selectedCohort):''):'no matured likes')+'</span></div>'+
       '<div class="kpi"><span class="value">'+num(S.activeDays)+'</span><span class="label">Days you were active</span><span class="detail">days when you sent at least one like</span></div></div>'+
       '<div class="viewtabs" role="tablist" aria-label="Dashboard view">'+[['overview','Overview'],['patterns','Patterns'],['momentum','Momentum'],['compare','Compare']].map(function(v){return '<button data-view="'+v[0]+'" class="'+(VIEW===v[0]?'on':'')+'" aria-selected="'+(VIEW===v[0])+'">'+v[1]+'</button>';}).join('')+'</div>'+viewPanel(S); }
 
@@ -1397,7 +1405,7 @@ var DD = (function(){
     var S=DD.timeSeries(R,VFROM,VTO,GRAIN),M=DD.metrics(R,CUT),RW=rankWindow(),h=[];
     h.push(verdict(RW.M,R,RW));
     h.push('<div id="workings"><details class="receipt"><summary>Import details & privacy receipt</summary>'+receipt()+'</details>');
-    h.push('<div class="sec"><h2>Where your result sits</h2><p class="sub">Your reciprocal-acceptance rate placed directly on SwipeStats’ published male Tinder percentile table. Choose a ranking period below; likes too recent to have resolved are excluded.</p>'+rankPanel(RW)+'</div>');
+    h.push('<div class="sec"><h2>Where your result sits</h2><p class="sub">Your reciprocal-acceptance rate placed directly on SwipeStats’ published male Tinder percentile table. Dashboard date changes automatically rank that same visible rate; the other buttons are independent comparison windows. Likes too recent to have resolved are excluded.</p>'+rankPanel(RW)+'</div>');
     h.push(timelinePanel(S));
     if(declValid()) h.push('<details class="advanced"><summary>Declared before/after test · '+
       iso(DECL.cut)+' · '+esc(DECL.reason)+'</summary><div class="chartcard" style="margin-top:12px">'+
@@ -1416,7 +1424,7 @@ var DD = (function(){
     $("#out").className="";$("#out").innerHTML=h.join("");
 
     Array.prototype.forEach.call(document.querySelectorAll("[data-range]"),function(b){b.onclick=function(){
-      var DAY=864e5,id=b.getAttribute("data-range"),y=new Date(R.maxT).getUTCFullYear();VTO=R.maxT;
+      var DAY=864e5,id=b.getAttribute("data-range"),y=new Date(R.maxT).getUTCFullYear();VTO=R.maxT;RANK_RANGE="selected";
       if(id.indexOf("year-")===0){
         y=+id.slice(5);GRAIN="month";
         if(RANGE!=="years"||YEAR_FROM===null||YEAR_TO===null){YEAR_FROM=YEAR_TO=y;}
@@ -1445,7 +1453,7 @@ var DD = (function(){
       if(!s.value)return;YEAR_FROM=YEAR_TO=null;RANGE="all";var b=document.querySelector('[data-range="year-'+s.value+'"]');if(b)b.click();};});
     if($("#vcue"))$("#vcue").onclick=function(){if($("#workings").scrollIntoView)$("#workings").scrollIntoView({behavior:"smooth",block:"start"});};
     $("#applyRange").onclick=function(){var a=$("#viewFrom").value,z=$("#viewTo").value;if(a&&z){
-      VFROM=new Date(a+"T00:00:00Z").getTime();VTO=new Date(z+"T00:00:00Z").getTime()+864e5-1;YEAR_FROM=YEAR_TO=null;RANGE="custom";paint();}};
+      VFROM=new Date(a+"T00:00:00Z").getTime();VTO=new Date(z+"T00:00:00Z").getTime()+864e5-1;YEAR_FROM=YEAR_TO=null;RANGE="custom";RANK_RANGE="selected";paint();}};
     $("#snap").onclick=function(){var data=DD.snapshot(R,M,{subject:SUBJ&&SUBJ.subject||null,consent:SUBJ&&SUBJ.consent||null,consentAt:SUBJ&&SUBJ.at||null,declaration:declValid()?DECL:null,boundaryMoves:0});
       data.dashboard_range={from:iso(S.from),to:iso(S.to),grain:S.grain};data.rank_window={id:RW.id,from:iso(RW.from),to:iso(RW.to)};var b=new Blob([JSON.stringify(data,null,1)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="datedawg-snapshot.json";a.click();setTimeout(function(){URL.revokeObjectURL(a.href);},1000);};
     $("#again").onclick=function(){R=null;VFROM=VTO=YEAR_FROM=YEAR_TO=null;RANGE="all";RANK_RANGE="1y";GRAIN="month";VIEW="overview";SHOW_LIKES=SHOW_MATCHES=SHOW_BENCHMARKS=SHOW_VALUES=true;ACTIVITY_SCALE="sqrt";document.body.classList.remove("results-ready");$("#out").className="hide";$("#out").innerHTML="";if($("#drop").scrollIntoView)$("#drop").scrollIntoView({behavior:"smooth"});};
@@ -1521,7 +1529,9 @@ window.DD_BOTCTX = {
 - Across the interface, “observed matches” always means every known match outcome in the selected dates. “Scoreable matches” always means the subset attached to likes at least 30 days old; only scoreable matches and matured likes are used for match-back rates and percentiles. Never substitute one count for the other.
 - Dashboard date filters control every visible summary, chart, Dating App MV / Market Value reference, and selected snapshot. They never alter or reinstate a declared before/after test. Timeline matches are grouped by the date the subject sent the like; the trend rate uses matured likes only.
 - Calendar-year chips form one continuous multi-year range: the first click selects a year, clicking outside that selection extends it, clicking an endpoint shrinks it, and clicking inside restarts the selection. The resulting dates control the entire dashboard like every other date filter.
-- The full-width Verdict and the detailed ranking panel always use the same selected Overall, 1 year, 6 months, or 1 month ranking window and the same primary ranking method. Those windows end on the latest scoreable date, 30 days before the newest export event, and do not change the dashboard range or the declared before/after test. Never quote the Verdict and detailed panel as different scopes.
+- Changing a dashboard date filter automatically switches the Verdict and detailed ranking panel to Dashboard range, where both rank the exact observed scoreable rate printed in the dashboard KPI. For example, 13.39% maps to about p91 against all men and p94 among men 40–44 in the published reference.
+- The ranking panel also offers independent Overall, 1 year, 6 months, and 1 month comparison windows. Those use the same volume-standardized ranking method, end on the latest scoreable date 30 days before the newest export event, and do not change the dashboard range or declared before/after test. The active period and method must be named when quoting a rank.
+- The full-width Verdict and detailed ranking panel always use the same active scope and primary method. Never quote them as different results.
 - Compare uses one export at two scopes: fixed overall history versus the date-filtered snapshot. Raw totals cover different spans, so compare acceptance rates rather than totals.
 - Percentiles come from direct log-linear interpolation of SwipeStats' published Tinder male percentile table (6,233 complete male profiles), not from a fitted model and not from an observed Hinge cohort. No cohort of real Hinge men exists here.
 - If the export includes the subject's age, the age-band reference rescales the published all-men curve by that band's published mean. It assumes the distribution shape is constant across age bands; SwipeStats does not publish age-specific shapes.

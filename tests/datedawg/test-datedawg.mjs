@@ -110,6 +110,9 @@ ok('interpolation reproduces every published anchor',DD.MALE_QUANTILES.every(a=>
 const rk=DD.rank(0.099,40);
 ok('9.9% lands between p75 and p90',rk.all.p>75&&rk.all.p<90);
 t('8.23% is the 83rd-percentile all-men reference',Math.round(DD.rank(.0823).all.p),83);
+const rk1339=DD.rank(.1339,40);
+t('13.39% is about p91 against all men',Math.round(rk1339.all.p),91);
+t('13.39% is about p94 among men 40–44',Math.round(rk1339.band.p),94);
 ok('not extrapolated inside published range',rk.all.extrapolated===false);
 ok('extremes flagged as extrapolated',DD.rank(.0005).all.extrapolated&&DD.rank(.8).all.extrapolated);
 ok('age 40 selects the 40–44 band',rk.bandLabel==='40–44');

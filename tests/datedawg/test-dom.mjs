@@ -92,9 +92,9 @@ ok('four dashboard views rendered',out.querySelectorAll('[data-view]').length===
 ok('year shortcuts rendered',!!out.querySelector('[data-range="year-2025"]'));
 ok('market value is scoped to selected range',/Dating App MV \/ Market Value/i.test(text));
 ok('market value uses a human-readable ordinal percentile',/\d+(?:st|nd|rd|th) percentile/i.test(text));
-ok('market value leads with one exact all-men percentile',/Against all men in the published SwipeStats Tinder table/i.test(text));
-ok('age reference is separate rather than blended into a range',/age comparison shown separately, never blended into a range/i.test(text));
-ok('ranking panel has four independent time windows',out.querySelectorAll('[data-rank-range]').length===4);
+ok('market value leads with the matching age cohort when age is present',/Among men 40–44 in the published SwipeStats Tinder reference/i.test(text));
+ok('all-men reference is shown separately rather than blended',/Against all men, every age:/i.test(text));
+ok('ranking panel has dashboard plus four independent time windows',out.querySelectorAll('[data-rank-range]').length===5&&!!out.querySelector('[data-rank-range="selected"]'));
 ok('ranking panel defaults to one year',out.querySelector('[data-rank-range="1y"]').classList.contains('on'));
 const shownRank=()=>parseInt(out.querySelector('.rank .big').textContent,10);
 const verdictRank=()=>parseInt(out.querySelector('.verdict .vnum').textContent,10);
@@ -159,6 +159,13 @@ ok('weekly grouping becomes active',out.querySelector('[data-grain="week"]').cla
 out.querySelector('[data-range="year-2025"]').click();
 await new Promise(r=>setTimeout(r,50));
 ok('year shortcut isolates that calendar year',/2025-01-01 → 2025-12-20/.test(out.querySelector('.range-readout').textContent));
+const selected2025=w.DD.timeSeries(R,Date.UTC(2025,0,1),Date.UTC(2026,0,1)-1,'month');
+const selected2025Rank=w.DD.rank(selected2025.rate.p,R.profile.age);
+ok('changing dashboard dates ranks the visible dashboard rate itself',
+  out.querySelector('[data-rank-range="selected"]').classList.contains('on')&&
+  shownRank()===Math.round((selected2025Rank.band||selected2025Rank.all).p)&&
+  verdictRank()===shownRank()&&
+  new RegExp(Math.round((selected2025Rank.band||selected2025Rank.all).p)+'(?:st|nd|rd|th) percentile among men 40–44','i').test(out.querySelectorAll('.kpi')[2].textContent));
 out.querySelector('[data-range="year-2024"]').click();
 await new Promise(r=>setTimeout(r,50));
 const multiYearLikes=w.DD.timeSeries(R,Date.UTC(2024,0,1),Date.UTC(2026,0,1)-1,'month').likes;
