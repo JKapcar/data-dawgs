@@ -2449,6 +2449,21 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 <div id="sheetBoard">
 <div class="sv-bar" id="svBar"></div>
 
+<div class="card">
+  <h2>Season heatmap</h2>
+  <p class="muted" style="margin-top:0">Every team, every remaining week, shaded by win
+  probability. <span class="sv-k sv-k-path"></span> marks the optimal path &mdash; the
+  assignment of teams to weeks that maximises your chance of running the whole table.
+  <span class="sv-k sv-k-used"></span> is a team you have already spent.</p>
+  <div class="sv-row" style="margin-bottom:10px">
+    <button type="button" class="sv-btn ghost" id="svShowPath" aria-pressed="false">Show optimal path</button>
+    <label class="sv-inline sv-chk2"><input type="checkbox" id="svOnlyPath"> Show only path teams</label>
+    <label class="sv-inline sv-chk2"><input type="checkbox" id="svHideUsed" checked> Hide spent teams</label>
+  </div>
+  <div class="nf-scroll"><div class="sv-heat" id="svHeat"></div></div>
+  <div class="sv-legend" id="svHeatLegend"></div>
+</div>
+
 <div class="card" id="popCard">
   <h2>Pick popularity</h2>
   <div class="sv-row">
@@ -2519,21 +2534,6 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       <dd>No other week needs this team, so spending it costs you effectively nothing later.</dd>
     </dl>
   </details>
-</div>
-
-<div class="card">
-  <h2>Season heatmap</h2>
-  <p class="muted" style="margin-top:0">Every team, every remaining week, shaded by win
-  probability. <span class="sv-k sv-k-path"></span> marks the optimal path &mdash; the
-  assignment of teams to weeks that maximises your chance of running the whole table.
-  <span class="sv-k sv-k-used"></span> is a team you have already spent.</p>
-  <div class="sv-row" style="margin-bottom:10px">
-    <button type="button" class="sv-btn ghost" id="svShowPath" aria-pressed="false">Show optimal path</button>
-    <label class="sv-inline sv-chk2"><input type="checkbox" id="svOnlyPath"> Show only path teams</label>
-    <label class="sv-inline sv-chk2"><input type="checkbox" id="svHideUsed" checked> Hide spent teams</label>
-  </div>
-  <div class="nf-scroll"><div class="sv-heat" id="svHeat"></div></div>
-  <div class="sv-legend" id="svHeatLegend"></div>
 </div>
 
 <div class="card">
