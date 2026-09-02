@@ -24,6 +24,9 @@ than leave a broken Worker on disk.
 
 Tests: `node test-mcp.mjs`.
 
+Yahoo public-league parser tests: `node test-yahoo.mjs`.
+Current seed suite: 14 assertions.
+
 ## The Dog Track (rankings)
 
 `rankings-block.js` is the capture half of the rankings report card — the entrants
