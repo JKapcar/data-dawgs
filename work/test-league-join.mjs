@@ -184,6 +184,9 @@ const NIA  = await sessionFor("Nia");
 
 /* -------------------------------- join --------------------------------- */
 {
+  const managerAdd = await call2("/league/member", { body: { league: "side", player: "Sam", action: "add" }, session: JEFF });
+  ok("a manager cannot pre-add another account", managerAdd.status === 400 && /join.*themselves/i.test(managerAdd.j.error || ""), JSON.stringify(managerAdd.j));
+
   const anon = await call2("/league/join", { body: { league: "side", password: "Side Password!" } });
   ok("joining requires a session", anon.status === 401 && anon.j.needSignIn === true, JSON.stringify(anon.j));
 

@@ -30,7 +30,7 @@
  *   POST /league/search  — signed-in league directory, capped at 20 results
  *   POST /league/join    — signed-in membership via {league, password}
  *   POST /league/access  — manager: password, cap and public/private visibility
- *   POST /league/member  — manager: {league, player, action:"add"|"remove"}  ← the size dial
+ *   POST /league/member  — manager removal only; members add themselves with password
  *   POST /league/lock    — manager: force-place when someone never submits
  *   POST /league/slip    — any member: publish the week's DraftKings betslip link
  *   POST /league/config  — manager: the price band for that league
@@ -4857,9 +4857,9 @@ async function leagueTeam(request, env, cors) {
   return json({ ok: true, player, team: team || null }, 200, cors);
 }
 
-// POST /league/member {league, player, action:"add"|"remove"} — the size dial.
-// Adding requires an existing account. New people sign up themselves, then either the
-// manager adds that account or they search for the league and enter its password.
+// POST /league/member {league, player, action:"remove"} — manager removal only.
+// A manager cannot pre-seat somebody else's account. Every non-manager membership is
+// created by that person's authenticated /league/join request plus the shared password.
 async function leagueMember(request, env, cors) {
   if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
   let body;
@@ -4872,10 +4872,8 @@ async function leagueMember(request, env, cors) {
   if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
 
   const player = String(body.player || "");
-  const remove = body.action === "remove";
-  const users = await loadUsers(env);
-  if (!remove && !userNames(users).includes(player))
-    return json({ error: player + " doesn't have an account yet — have them sign up first, then use the league password." }, 400, cors);
+  if (body.action !== "remove")
+    return json({ error: "Members must sign in and join this league themselves with its shared password." }, 400, cors);
 
   // ⚠️ Changing the roster mid-week moves the lock threshold under a live board.
   // Removing the last person you were waiting on would otherwise silently place the
@@ -4883,13 +4881,13 @@ async function leagueMember(request, env, cors) {
   const lg = auth.league;
   if ((lg.status || "open") !== "open")
     return json({ error: "The ticket is placed — roster changes wait for next week." }, 409, cors);
-  if (remove && (lg.picks || {})[encodeURIComponent(player)])
+  if ((lg.picks || {})[encodeURIComponent(player)])
     return json({ error: player + " already has a leg in this week. Remove the leg first." }, 409, cors);
-  if (remove && lg.manager === player)
+  if (lg.manager === player)
     return json({ error: "The manager can't leave their own league." }, 400, cors);
 
   try {
-    await fbPatch(env, LG(lid) + "/members", { [encodeURIComponent(player)]: remove ? null : true });
+    await fbPatch(env, LG(lid) + "/members", { [encodeURIComponent(player)]: null });
   } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
 
   // Re-read so the caller sees the real size, and so a removal that just completed the
@@ -4897,7 +4895,7 @@ async function leagueMember(request, env, cors) {
   const after = await loadLeague(env, lid);
   const picks = after.picks || {};
   let placed = false;
-  if (!remove ? false : Object.keys(picks).length >= memberNames(after).length && memberNames(after).length > 0)
+  if (Object.keys(picks).length >= memberNames(after).length && memberNames(after).length > 0)
     placed = await placeAndDraw(env, lid, picks, after);
   return json({ ok: true, size: memberNames(after).length, members: memberNames(after), placed }, 200, cors);
 }

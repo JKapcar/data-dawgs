@@ -86,8 +86,8 @@ async function pageAt(file,viewport={width:1280,height:900}){
   const {p,ctx,errs}=await pageAt("bozo.html");
   const ids=await p.evaluate(()=>["lpPass","lpSet","lpOff","lpState","lpCap","lpCapGo","lpVis","lpVisGo"].map(id=>!!document.getElementById(id)));
   ok("League Settings exposes password, cap and visibility controls",ids.every(Boolean),JSON.stringify(ids));
-  const retired=await p.evaluate(()=>["invGo","jlGet","jlRot","jcSet"].some(id=>!!document.getElementById(id)));
-  ok("per-person and reusable-link controls are absent",!retired);
+  const retired=await p.evaluate(()=>["invGo","jlGet","jlRot","jcSet","addPick","addGo"].some(id=>!!document.getElementById(id)));
+  ok("pre-add, per-person and reusable-link controls are absent",!retired);
   const wired=await p.evaluate(()=>!!document.getElementById("lpSet").onclick&&!!document.getElementById("lpVisGo").onclick);
   ok("new manager controls are wired",wired);
   ok("Bozo page has no page errors",errs.length===0,errs[0]);

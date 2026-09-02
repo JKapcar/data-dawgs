@@ -60,4 +60,8 @@ test('manager and member UIs expose search plus shared-password workflow', () =>
     assert.match(signon, new RegExp(`id="${id}"`));
   assert.match(signon, /api\("\/league\/search",\{query:query\}\)/);
   assert.match(signon, /api\("\/league\/join",\{league:selectedLeague\.id,password:password\}\)/);
+  assert.doesNotMatch(bozo, /id="addPick"|id="addGo"|action:'add'/);
+  const member = section('async function leagueMember(request, env, cors)', '// POST /league/lock');
+  assert.match(member, /body\.action !== "remove"/);
+  assert.doesNotMatch(member, /loadUsers\(env\)|action:"add"/);
 });

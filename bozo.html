@@ -3777,20 +3777,15 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <div class="err" id="lgErr"></div>
 
     <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:22px 0 4px">Who's in this league</h3>
-    <p class="tm" style="margin:0 0 8px">The roster <em>is</em> the size — the ticket locks when everyone here has a leg in. New people create their own account, search for this league, and enter its shared password.</p>
+    <p class="tm" style="margin:0 0 8px">The roster <em>is</em> the size — the ticket locks when everyone here has a leg in. Other than the manager, nobody is pre-added: each person creates their own account, chooses this league, and enters its shared password.</p>
     <div id="rosBody"></div>
-    <div class="row" style="margin-top:12px;align-items:flex-end;gap:10px">
-      <div class="f" style="flex:1;min-width:170px"><label>Add someone who already has an account</label>
-        <select id="addPick"></select></div>
-      <button class="btn ghost sm" id="addGo">Add</button>
-    </div>
     <div class="err" id="rosErr"></div>
 
     <!-- One manager-chosen password per league. Authentication says WHO is joining;
          search chooses WHICH league; the password grants membership. The raw value is
          never stored, returned, or placed in the public /bozo tree. -->
     <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:22px 0 4px">League access</h3>
-    <p class="tm" style="margin:0 0 8px">Everyone signs in with their own email, searches for this league under Your Dawgs, then enters the same league password. Private leagues appear only on an exact-name search. A forgotten password is replaced, never revealed.</p>
+    <p class="tm" style="margin:0 0 8px">Everyone signs in with their own email, chooses this league under Your Dawgs, then enters the same league password. League names appear in the signed-in directory; passwords are never shown. A forgotten password is replaced, never revealed.</p>
     <div class="row" style="align-items:flex-end;gap:10px">
       <div class="f" style="flex:1;min-width:180px"><label>Set or replace password</label>
         <input id="lpPass" type="password" maxlength="64" autocomplete="new-password" spellcheck="false" placeholder="6–64 characters"></div>
@@ -5640,8 +5635,8 @@ document.getElementById('lgAdmin').addEventListener('click', e=>{
 document.getElementById('dReset').onclick = ()=>{ lgDirty=false; fillSettings();
   document.getElementById('lgErr').textContent=''; };
 /* ---- roster (admin) ----
-   Identity and league access are separate: this list manages existing members only.
-   New people create their own account, then join through search + league password. */
+   Identity and league access are separate: managers may remove existing members, but
+   every non-manager adds themselves through signed-in search + league password. */
 function paintRoster(){
   const body = document.getElementById('rosBody');
   if(!isManager()){ body.innerHTML=''; return; }
@@ -5657,13 +5652,6 @@ function paintRoster(){
       </span>
     </div>`;
   }).join('') || '<p class="pend">Nobody in this league yet.</p>';
-
-  // Add existing accounts who aren't in this league yet.
-  const spare = allAccounts().filter(n=>!mine.includes(n));
-  const sel = document.getElementById('addPick');
-  sel.innerHTML = spare.length ? spare.map(n=>`<option>${esc(n)}</option>`).join('')
-                               : '<option value="">everyone already has a seat</option>';
-  document.getElementById('addGo').disabled = !spare.length || !open;
 
   // The flake escape hatch — only worth showing when it would actually do something.
   const lockRow = document.getElementById('lockRow');
@@ -5716,17 +5704,6 @@ document.getElementById('rosBody').addEventListener('change', async e=>{
 document.getElementById('rosBody').addEventListener('keydown', e=>{
   if(e.key==='Enter' && e.target.closest('[data-team]')) e.target.blur();
 });
-
-document.getElementById('addGo').onclick = async ()=>{
-  const who=document.getElementById('addPick').value;
-  if(!who) return;
-  rosErr('');
-  try{
-    const r=await wPost('/league/member',{player:who, action:'add'});
-    const e3=rosErr(`${who} added — ${r.size} player${r.size===1?'':'s'} now.`); e3.className='err ok';
-    await reloadLeagues();
-  }catch(e2){ rosErr(e2.message); }
-};
 
 /* ---------------- league password, cap and visibility ---------------- */
 const lpErr = m => { const e=document.getElementById('lpErr'); e.textContent=m||''; e.className='err'; return e; };
