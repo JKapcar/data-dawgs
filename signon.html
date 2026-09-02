@@ -2220,9 +2220,10 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     </div>
     <div class="card" id="leagueAccessCard">
       <h3>Join a Bozo league</h3>
-      <p class="sub">Search by league name. Public leagues can match part of a name; private leagues require the exact name.</p>
-      <label class="fld"><span>League name</span><input class="fi" id="leagueSearch" maxlength="60" autocomplete="off" spellcheck="false" placeholder="Preseason Bozo Boyz"></label>
-      <div class="btnrow"><button class="btn sm" id="leagueSearchGo">Search</button></div>
+      <p class="sub">Choose a league from the directory. Up to 20 are shown; type part of a name to narrow the list.</p>
+      <label class="fld"><span>League directory</span><select class="fi" id="leagueDirectory"><option value="">Loading leagues…</option></select></label>
+      <label class="fld"><span>Filter by name <span class="hint">— optional</span></span><input class="fi" id="leagueSearch" maxlength="60" autocomplete="off" spellcheck="false" placeholder="Preseason Bozo Boyz"></label>
+      <div class="btnrow"><button class="btn sm" id="leagueSearchGo">Filter leagues</button></div>
       <div id="leagueSearchResults"></div>
       <div id="leaguePasswordWrap" hidden>
         <p class="sub">Joining <strong id="leagueSelectedName"></strong></p>
@@ -2346,6 +2347,8 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   if(verifyTok)confirmToken("/auth/verify",verifyTok);if(emailTok)confirmToken("/auth/email-confirm",emailTok);
 
   var selectedLeague=null;
+  var directoryLeagues=[];
+  var directoryLoaded=false;
   function chooseLeague(item){
     selectedLeague=item;$("leagueSelectedName").textContent=item.name;$("leaguePasswordWrap").hidden=false;
     $("leagueOpen").hidden=true;$("leaguePassword").value="";
@@ -2353,17 +2356,18 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     if(item.already){$("leagueOpen").href="bozo.html?l="+encodeURIComponent(item.id);$("leagueOpen").hidden=false;msg("leagueAccessMsg","You already belong to this league.","good");}
     else {msg("leagueAccessMsg","");$("leaguePassword").focus();}
   }
-  function paintLeagueSearch(results){
-    var box=$("leagueSearchResults");box.replaceChildren();selectedLeague=null;$("leaguePasswordWrap").hidden=true;
-    if(!results.length){box.innerHTML='<p class="note">No match. Private leagues require the exact name.</p>';return;}
-    results.forEach(function(item){var b=document.createElement("button");b.type="button";b.className="btn ghost sm";b.style.margin="4px 6px 4px 0";b.textContent=item.name+" · "+item.size+" member"+(item.size===1?"":"s");b.addEventListener("click",function(){chooseLeague(item);});box.appendChild(b);});
-    if(results.length===1)chooseLeague(results[0]);
+  function paintLeagueDirectory(results,total){
+    directoryLeagues=results;var sel=$("leagueDirectory");sel.replaceChildren();selectedLeague=null;$("leaguePasswordWrap").hidden=true;
+    var first=document.createElement("option");first.value="";first.textContent=results.length?("Choose a league · "+results.length+(total>results.length?" of "+total:" shown")):"No matching leagues";sel.appendChild(first);
+    results.forEach(function(item,i){var o=document.createElement("option");o.value=String(i);o.textContent=item.name+" · "+item.size+" member"+(item.size===1?"":"s")+(item.already?" · joined":"");sel.appendChild(o);});
+    $("leagueSearchResults").textContent=results.length?(total>20?"Showing 20 leagues. Filter by name to narrow the list.":""):"No leagues match that filter.";
+    if(results.length===1){sel.value="0";chooseLeague(results[0]);}
   }
   async function searchLeagues(){
     var query=$("leagueSearch").value.trim();msg("leagueAccessMsg","");
-    if(query.length<2){msg("leagueAccessMsg","Enter at least two characters.","bad");return;}
-    msg("leagueAccessMsg","Searching…");
-    try{var j=await api("/league/search",{query:query});paintLeagueSearch(j.results||[]);}
+    if(query.length===1){msg("leagueAccessMsg","Use at least two characters to filter.","bad");return;}
+    msg("leagueAccessMsg",query?"Filtering…":"Loading leagues…");
+    try{var j=await api("/league/search",{query:query}),results=j.results||[];msg("leagueAccessMsg","");paintLeagueDirectory(results,Number(j.total)||0);directoryLoaded=true;}
     catch(e){msg("leagueAccessMsg",e.message,"bad");}
   }
   async function joinSelectedLeague(){
@@ -2375,6 +2379,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     catch(e){msg("leagueAccessMsg",e.message,"bad");}
   }
   $("leagueSearchGo").addEventListener("click",searchLeagues);
+  $("leagueDirectory").addEventListener("change",function(){var i=Number(this.value);if(this.value!==""&&directoryLeagues[i])chooseLeague(directoryLeagues[i]);else{$("leaguePasswordWrap").hidden=true;selectedLeague=null;}});
   $("leagueSearch").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();searchLeagues();}});
   $("leagueJoinGo").addEventListener("click",joinSelectedLeague);
   $("leaguePassword").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();joinSelectedLeague();}});
@@ -2386,7 +2391,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
   function formatDeadline(ms){if(ms==null)return "Nothing needs you right now.";var d=new Date(ms),days=Math.ceil((ms-Date.now())/86400000);return "Closes "+d.toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})+(days>=0?" · "+days+" day"+(days===1?"":"s"):"");}
   function paintRows(rows){var box=$("dawgRows");box.replaceChildren();$("dawgsEmpty").hidden=rows.length>0;$("dawgCount").textContent=rows.length?String(rows.length):"None";$("helloSub").textContent=rows.length?rows.length+" thing"+(rows.length===1?"":"s")+" connected to you.":"Nothing has your name on it yet.";rows.forEach(function(r){var row=document.createElement("div");row.className="dawgrow";row.innerHTML='<div class="body"><p class="ttl"><a></a> <span class="tick idle"></span></p><p class="when"></p><p class="standing"></p></div><div class="act"><a class="btn sm ghost"></a></div>';row.querySelector("a").textContent=r.title;row.querySelector("a").href=r.href;row.querySelector(".tick").textContent=r.status;row.querySelector(".when").textContent=r.deadline==null?r.action:formatDeadline(r.deadline);row.querySelector(".standing").textContent=r.detail;var a=row.querySelector(".act a");a.textContent=r.actionLabel;a.href=r.href;box.appendChild(row);});}
-  async function loadDawgs(){try{var j=await api("/league/mine",null,"GET");paintRows(window.DDSummarize.summarize({leagues:j.leagues,connector:{active:localStorage.getItem(CONNECTOR_KEY)==="1"}}));}catch(e){if(e.status===403){$("dawgRows").innerHTML='<p class="note warn">This is a legacy session. Existing pages still work, but new personal league features require signing up through the new email-first door after the planned account transition.</p>';$("dawgCount").textContent="Legacy";$("helloSub").textContent="Your existing session is still valid.";}else{$("dawgRows").innerHTML='<p class="note bad"></p>';$("dawgRows").firstChild.textContent=e.message;}}}
+  async function loadDawgs(){if(!directoryLoaded)searchLeagues();try{var j=await api("/league/mine",null,"GET");paintRows(window.DDSummarize.summarize({leagues:j.leagues,connector:{active:localStorage.getItem(CONNECTOR_KEY)==="1"}}));}catch(e){if(e.status===403){$("dawgRows").innerHTML='<p class="note warn">This is a legacy session. Existing pages still work, but new personal league features require signing up through the new email-first door after the planned account transition.</p>';$("dawgCount").textContent="Legacy";$("helloSub").textContent="Your existing session is still valid.";}else{$("dawgRows").innerHTML='<p class="note bad"></p>';$("dawgRows").firstChild.textContent=e.message;}}}
 
   var PROV={claude:{add:"Claude → Settings → Connectors → Add custom connector → paste the URL → Save.",proj:"Create a DataDawgs project, paste the instructions below, then in each project chat check that the Data Dawgs connector is enabled — connectors are turned on per conversation."},chatgpt:{add:"ChatGPT custom MCP apps require an eligible Business or Enterprise/Edu workspace and an admin or owner to add the app. Paste the URL during app setup.",proj:"Create a DataDawgs project and paste the instructions below. If your workspace does not offer custom MCP apps, use another supported provider."},gemini:{add:"Gemini Spark on the web → Settings & help → Connected Apps → Custom apps for Spark → add the URL. Spark custom apps currently require a US personal Google account, age 18+, English and Keep Activity on.",proj:"Create a saved DataDawgs chat in Spark and keep the instructions below with it."},other:{add:"Use the URL as a Streamable HTTP MCP endpoint. If supported, send the credential as Authorization: Bearer or X-Dawg-Pass instead of placing it in a URL.",proj:"Paste the instructions below wherever your client keeps standing project instructions."}};
   document.querySelectorAll(".provbtn").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll(".provbtn").forEach(function(x){x.classList.remove("on");});b.classList.add("on");$("stepAddP").textContent=PROV[b.dataset.prov].add;$("stepProjP").textContent=PROV[b.dataset.prov].proj;});});$("stepAddP").textContent=PROV.claude.add;$("stepProjP").textContent=PROV.claude.proj;
@@ -2423,5 +2428,5 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 })();
 
 </script>
-<script>window.DD_BOTCTX={label:"Account",title:"Sign in and Your Dawgs",chrome:{sub:"Identity, league memberships and your personal AI connector.",ph:"Ask about this account page…",chips:["How do I join a league?","How do I connect my AI?","Why is email confirmation required?"]},sys:"Identity controls live only on signon.html. A signed-in person joins a Bozo league under Your Dawgs by searching for its name and entering the shared league password. Private leagues require an exact-name search and are not exposed as a directory. The password grants membership to that authenticated account; it never creates or signs into an account. Never ask for or repeat an account password, league password, session token, reset link, verification link or MCP URL. The capabilities card is a dated static orientation; dd_site_map is the live authority.",ctx:function(){return "This is the identity and personal connector page. It deliberately excludes all form values and credentials from Toto's context."}};</script>
+<script>window.DD_BOTCTX={label:"Account",title:"Sign in and Your Dawgs",chrome:{sub:"Identity, league memberships and your personal AI connector.",ph:"Ask about this account page…",chips:["How do I join a league?","How do I connect my AI?","Why is email confirmation required?"]},sys:"Identity controls live only on signon.html. A signed-in person joins a Bozo league under Your Dawgs by choosing from the league directory or filtering it by name, then entering the shared league password. The directory shows up to 20 league names; a password still grants membership only to that authenticated account and never creates or signs into an account. Never ask for or repeat an account password, league password, session token, reset link, verification link or MCP URL. The capabilities card is a dated static orientation; dd_site_map is the live authority.",ctx:function(){return "This is the identity and personal connector page. It deliberately excludes all form values and credentials from Toto's context."}};</script>
 </body></html>

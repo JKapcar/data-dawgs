@@ -173,10 +173,10 @@ const NIA  = await sessionFor("Nia");
   ok("public league matches a partial name", pub.status === 200 && pub.j.results.some(x => x.id === "main"));
 
   const privatePartial = await call2("/league/search", { body: { query: "Pot" }, session: SAM });
-  ok("private league does not match a stranger's partial search", privatePartial.status === 200 && privatePartial.j.results.length === 0);
+  ok("private league names appear in partial directory search", privatePartial.status === 200 && privatePartial.j.results.some(x => x.id === "side"));
 
-  const privateExact = await call2("/league/search", { body: { query: "Side Pot" }, session: SAM });
-  ok("private league matches its exact name", privateExact.status === 200 && privateExact.j.results.length === 1 && privateExact.j.results[0].id === "side");
+  const directory = await call2("/league/search", { body: { query: "" }, session: SAM });
+  ok("empty search returns the signed-in league directory", directory.status === 200 && directory.j.results.length >= 2 && directory.j.limit === 20);
 
   const ownPartial = await call2("/league/search", { body: { query: "Side" }, session: JEFF });
   ok("a member may partially search their own league", ownPartial.status === 200 && ownPartial.j.results.some(x => x.id === "side"));

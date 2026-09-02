@@ -27,7 +27,7 @@
  * "main", so pre-league callers keep working.
  *   GET  /league/list    — public leagues + signed-in member/manager leagues
  *   POST /league/create  — SITE ADMIN only: {id, name, manager, password}
- *   POST /league/search  — signed-in exact search for private leagues
+ *   POST /league/search  — signed-in league directory, capped at 20 results
  *   POST /league/join    — signed-in membership via {league, password}
  *   POST /league/access  — manager: password, cap and public/private visibility
  *   POST /league/member  — manager: {league, player, action:"add"|"remove"}  ← the size dial
@@ -4198,10 +4198,9 @@ async function leagueList(request, env, cors) {
   return json({ leagues: out, defaultLeague: DEFAULT_LEAGUE, signedIn: !!viewer }, 200, cors);
 }
 
-// POST /league/search {query} — signed-in exact search for private Bozo leagues.
-// Public rooms and the caller's own rooms may match by substring; a private room the
-// caller has never joined is returned only when its full name or id is entered. That
-// makes search useful without turning it into a directory of everybody else's leagues.
+// POST /league/search {query} — signed-in Bozo league directory. League names are not
+// credentials: an empty query returns the first 20 and a query filters the same public
+// directory. Password verification is still the only path into a league.
 async function leagueSearch(request, env, cors) {
   if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
   const auth = await sessionAuth(request, env);
@@ -4210,23 +4209,28 @@ async function leagueSearch(request, env, cors) {
   try { body = await readBody(request); }
   catch { return json({ error: "Bad JSON." }, 400, cors); }
   const query = String(body.query || "").trim().replace(/\s+/g, " ");
-  if (query.length < 2 || query.length > 60)
-    return json({ error: "Enter at least two characters of the league name." }, 400, cors);
+  if ((query.length > 0 && query.length < 2) || query.length > 60)
+    return json({ error: "Use at least two characters to filter the league list." }, 400, cors);
   const q = query.toLocaleLowerCase("en-US");
   let leagues;
   try { leagues = await loadLeagues(env); }
   catch (e) { return json({ error: e.message }, 502, cors); }
-  const results = Object.entries(leagues).filter(([id, lg]) => {
+  const matches = Object.entries(leagues).filter(([id, lg]) => {
     const name = String((lg && lg.name) || id).trim().replace(/\s+/g, " ").toLocaleLowerCase("en-US");
-    const own = lg && (lg.manager === auth.name || isMember(lg, auth.name));
-    return leagueIsPublic(id, lg) || own ? (name.includes(q) || id.includes(q)) : (name === q || id === q);
-  }).slice(0, 10).map(([id, lg]) => ({
+    return !q || name.includes(q) || id.includes(q);
+  }).sort(([aId, a], [bId, b]) => {
+    const aOwn = a && (a.manager === auth.name || isMember(a, auth.name));
+    const bOwn = b && (b.manager === auth.name || isMember(b, auth.name));
+    if (aOwn !== bOwn) return aOwn ? -1 : 1;
+    return String((a && a.name) || aId).localeCompare(String((b && b.name) || bId));
+  });
+  const results = matches.slice(0, 20).map(([id, lg]) => ({
     id, name: lg.name || id, manager: lg.manager || null,
     size: memberNames(lg).length,
     already: isMember(lg, auth.name),
     visibility: leagueIsPublic(id, lg) ? "public" : "private",
   }));
-  return json({ results }, 200, cors);
+  return json({ results, total: matches.length, limit: 20 }, 200, cors);
 }
 
 // POST /league/create {id, name, manager} — SITE ADMIN only. Kap makes leagues and

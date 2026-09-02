@@ -35,9 +35,9 @@ async function pageAt(file,viewport={width:1280,height:900}){
     if(u.pathname==="/auth/roster")return j({players:[{name:"Sam",claimed:true}]});
     if(u.pathname==="/league/mine")return j({leagues:[]});
     if(u.pathname==="/league/search"&&method==="POST"){
-      if(String(body.query||"").toLowerCase()==="preseason bozo boyz")
-        return j({results:[{id:"preseason-bozo-boyz",name:"Preseason Bozo Boyz",manager:"Kap",size:8,already:false,visibility:"private"}]});
-      return j({results:[]});
+      const all=[{id:"main",name:"Bozo Boyz",manager:"Kap",size:8,already:true,visibility:"public"},{id:"preseason-bozo-boyz",name:"Preseason Bozo Boyz",manager:"Kap",size:8,already:false,visibility:"private"}];
+      const q=String(body.query||"").toLowerCase(),results=q?all.filter(x=>x.name.toLowerCase().includes(q)):all;
+      return j({results,total:results.length,limit:20});
     }
     if(u.pathname==="/league/join"&&method==="POST"){
       lastPassword=body.password;
@@ -56,6 +56,8 @@ async function pageAt(file,viewport={width:1280,height:900}){
 {
   joined=false;lastPassword="";
   const {p,ctx,errs}=await pageAt("signon.html#dawgs");
+  await p.waitForTimeout(200);
+  ok("signed-in page fills the league dropdown",await p.locator("#leagueDirectory option").count()===3);
   await p.fill("#leagueSearch","Preseason Bozo Boyz");await p.click("#leagueSearchGo");await p.waitForTimeout(200);
   ok("exact search selects the private league",await p.isVisible("#leaguePasswordWrap")&&(await p.textContent("#leagueSelectedName"))==="Preseason Bozo Boyz");
   await p.fill("#leaguePassword","Correct Horse");await p.click("#leagueJoinGo");await p.waitForTimeout(250);
@@ -68,7 +70,7 @@ async function pageAt(file,viewport={width:1280,height:900}){
 {
   const {p,ctx}=await pageAt("signon.html#dawgs");
   await p.fill("#leagueSearch","unknown");await p.click("#leagueSearchGo");await p.waitForTimeout(150);
-  ok("no match explains exact-name privacy",/exact name/i.test(await p.textContent("#leagueSearchResults")));
+  ok("no match leaves a clear empty dropdown",/no leagues match/i.test(await p.textContent("#leagueSearchResults")));
   await ctx.close();
 }
 

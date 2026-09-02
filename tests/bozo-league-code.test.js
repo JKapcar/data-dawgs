@@ -24,11 +24,12 @@ test('league passwords are case-sensitive, league-scoped and stored only as HMAC
   assert.doesNotMatch(manager, /password:\s*password/);
 });
 
-test('private league search requires a session and exact name while public search may be partial', () => {
+test('league directory requires a session, allows listing, and caps results at 20', () => {
   const search = section('async function leagueSearch(request, env, cors)', '// POST /league/create');
   assert.match(search, /sessionAuth\(request, env\)/);
-  assert.match(search, /leagueIsPublic\(id, lg\) \|\| own/);
-  assert.match(search, /name === q \|\| id === q/);
+  assert.match(search, /!q \|\| name\.includes\(q\) \|\| id\.includes\(q\)/);
+  assert.match(search, /slice\(0, 20\)/);
+  assert.match(search, /total: matches\.length, limit: 20/);
   assert.doesNotMatch(search, /members:/);
 });
 
@@ -55,7 +56,7 @@ test('manager and member UIs expose search plus shared-password workflow', () =>
   for (const id of ['lpPass', 'lpSet', 'lpOff', 'lpState', 'lpCap', 'lpVis'])
     assert.match(bozo, new RegExp(`id="${id}"`));
   assert.match(bozo, /wPost\('\/league\/access'/);
-  for (const id of ['leagueSearch', 'leagueSearchGo', 'leaguePassword', 'leagueJoinGo', 'leagueOpen'])
+  for (const id of ['leagueDirectory', 'leagueSearch', 'leagueSearchGo', 'leaguePassword', 'leagueJoinGo', 'leagueOpen'])
     assert.match(signon, new RegExp(`id="${id}"`));
   assert.match(signon, /api\("\/league\/search",\{query:query\}\)/);
   assert.match(signon, /api\("\/league\/join",\{league:selectedLeague\.id,password:password\}\)/);
