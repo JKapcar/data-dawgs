@@ -4234,9 +4234,36 @@ function validLeagueId(id) {
   return typeof id === "string" && /^[a-z0-9][a-z0-9-]{1,23}$/.test(id);
 }
 
-const memberNames = lg => Object.keys((lg && lg.members) || {}).map(playerName);
-const isMember = (lg, name) =>
-  !!((lg && lg.members) || {})[encodeURIComponent(name)] || !!((lg && lg.members) || {})[name];
+/* ===== member keys =====
+   A member row is keyed by the joiner's immutable uid and carries their display name as
+   a mutable label. Everything that used to key on the name now keys on the uid and reads
+   the label for display. The legacy shapes -- `true` as the value, or the name itself as
+   the key -- are still READ so the demo leagues and any imported season keep rendering;
+   nothing WRITES them any more. */
+const memberRec = (lg, key) => ((lg && lg.members) || {})[key];
+const memberNameAt = (lg, key) => {
+  const v = memberRec(lg, key);
+  return (v && typeof v === "object" && v.name) ? String(v.name) : playerName(key);
+};
+const memberKeys = lg => Object.keys((lg && lg.members) || {});
+const memberNames = lg => memberKeys(lg).map(k => memberNameAt(lg, k));
+
+/* The one resolver. Returns the map key for whoever is asking, or null if they are not
+   in this league. Prefers the uid; falls back to the legacy name shapes so a demo league
+   still resolves. ⚠️ Never invent a key from auth.name -- a miss must be null, or a
+   non-member silently gets a seat under a name-shaped key and the re-key is undone. */
+function memberKeyOf(lg, auth) {
+  const ms = (lg && lg.members) || {};
+  const has = k => k != null && Object.prototype.hasOwnProperty.call(ms, k);
+  if (auth && auth.uid && has(auth.uid)) return auth.uid;
+  const n = auth && auth.name;
+  if (n == null) return null;
+  if (has(encodeURIComponent(n))) return encodeURIComponent(n);
+  if (has(n)) return n;
+  for (const k of Object.keys(ms)) if (memberNameAt(lg, k) === n) return k;
+  return null;
+}
+const isMember = (lg, name) => memberKeyOf(lg, { name }) !== null;
 
 // Everything that existed before leagues belongs to DEFAULT_LEAGUE. It is created on
 // first touch with the whole current /users roster, so the setup that ran yesterday
@@ -5026,13 +5053,17 @@ async function leagueMember(request, env, cors) {
   const lg = auth.league;
   if ((lg.status || "open") !== "open")
     return json({ error: "The ticket is placed — roster changes wait for next week." }, 409, cors);
-  if ((lg.picks || {})[encodeURIComponent(player)])
+  // Resolve the seat by NAME here on purpose: this route's caller is a manager naming
+  // somebody, not the member themselves, so there is no uid in hand.
+  const pkey = memberKeyOf(lg, { name: player });
+  if (!pkey) return json({ error: player + " is not in this league." }, 404, cors);
+  if ((lg.picks || {})[pkey])
     return json({ error: player + " already has a leg in this week. Remove the leg first." }, 409, cors);
   if (lg.manager === player)
     return json({ error: "The manager can't leave their own league." }, 400, cors);
 
   try {
-    await fbPatch(env, LG(lid) + "/members", { [encodeURIComponent(player)]: null });
+    await fbPatch(env, LG(lid) + "/members", { [pkey]: null });
   } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
 
   // Re-read so the caller sees the real size, and so a removal that just completed the
@@ -5067,7 +5098,8 @@ async function leagueLock(request, env, cors) {
   // (A forced lock deliberately ignores lockRule — that is the entire point of it.)
 
   const placed = await placeAndDraw(env, lid, picks, lg);
-  return json({ ok: true, placed, legs: n, waitingOn: memberNames(lg).filter(p => !picks[encodeURIComponent(p)]) }, 200, cors);
+  return json({ ok: true, placed, legs: n,
+                waitingOn: memberKeys(lg).filter(k => !picks[k]).map(k => memberNameAt(lg, k)) }, 200, cors);
 }
 
 /* ============================ the betslip link ============================
@@ -5266,8 +5298,15 @@ async function leagueJoin(request, env, cors) {
   if (memberNames(lg).length >= cap)
     return json({ error: "That league is full (" + cap + " members)." }, 409, cors);
 
+  // ⚠️ A UID IS REQUIRED TO TAKE A SEAT, and the refusal is deliberate rather than a
+  // fallback to the display name. Falling back is exactly how the mutable key got into
+  // league state in the first place; one legacy session would silently undo this commit.
+  if (!auth.uid || !UID_RE.test(String(auth.uid)))
+    return json({ error: "Your sign-in predates the current account system. Create an account on the sign-on page, then join." }, 409, cors);
+
   try {
-    await fbPatch(env, LG(lid) + "/members", { [encodeURIComponent(auth.name)]: true });
+    await fbPatch(env, LG(lid) + "/members",
+                  { [auth.uid]: { name: auth.name, joinedAt: Date.now() } });
   } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
 
   const after = await loadLeague(env, lid);
@@ -6129,8 +6168,12 @@ async function forecastBots(request, env, cors) {
 // close capture.
 // `via` records HOW the leg arrived ("mcp"), not who submitted it — identity is
 // `name`, checked by the caller. Site submissions carry no `via`, exactly as before.
-async function commitBozoLeg(env, lid, state, name, p, via = null) {
+async function commitBozoLeg(env, lid, state, name, p, via = null, mkey = null) {
   const set = settingsOf(state);
+  // The caller has already resolved membership; this is the key that resolution produced.
+  // Refusing a null key rather than falling back to the name keeps one code path.
+  const key = mkey || memberKeyOf(state, { name });
+  if (!key) return { ok: false, error: "You are not in this league." };
 
   // ⚠️ The opposite side is NOT optional. Without it there is no de-vig, and the
   // chart's y-axis baseline is wrong by the whole hold — about two probability
@@ -6178,9 +6221,23 @@ async function commitBozoLeg(env, lid, state, name, p, via = null) {
     // distinguishable from a hand-submitted one forever, without guessing. Only the
     // Worker sets this; no request body may carry it.
     ...(via ? { via } : {}),
+    // ⚠️ The display name AT SUBMISSION TIME, stored on the leg itself. Ledger rows are
+    // immutable receipts that outlive membership: resolving the name through the members
+    // map at render time would turn every row for a departed member into a bare uid.
+    // A later rename changes the live board and leaves settled receipts alone, which is
+    // the correct behaviour for a receipt.
+    who: String(name || ""),
     ts: Date.now(),                 // SERVER time — the reason this route exists
   };
-  await fbPut(env, LG(lid) + "/picks/" + encodeURIComponent(name), pick);
+  await fbPut(env, LG(lid) + "/picks/" + key, pick);
+
+  // ⚠️ THE LABEL IS REFRESHED ON EVERY SUBMISSION, and this is what keeps a rename from
+  // going stale. /auth/rename writes the new name to /users/<uid> and knows nothing about
+  // which leagues that person sits in; without this line the board would keep showing the
+  // old name until they re-joined. Filing a leg re-stamps it, so a rename is visible from
+  // the next submission and no cross-league name index has to exist.
+  try { await fbPatch(env, LG(lid) + "/members/" + key, { name: String(name || "") }); }
+  catch { /* the leg is the write that matters; a stale label is cosmetic and self-heals */ }
 
   const picks = (await fbGet(env, LG(lid) + "/picks")).data || {};
   // ⚠️ THIS league's threshold, never the global roster. Default is "everyone in",
@@ -6226,9 +6283,12 @@ async function bozoPick(request, env, cors) {
     return json({ error: "The ticket is placed. Board is locked." }, 409, cors);
   }
 
+  const mkey = memberKeyOf(state, auth);
+  if (!mkey) return json({ error: "You are not in this league." }, 403, cors);
+
   try {
     if (body.action === "remove") {
-      await fbDelete(env, LG(lid) + "/picks/" + encodeURIComponent(name));
+      await fbDelete(env, LG(lid) + "/picks/" + mkey);
       return json({ ok: true, removed: true }, 200, cors);
     }
 
@@ -6237,19 +6297,19 @@ async function bozoPick(request, env, cors) {
     // "Editing is allowed until the ticket is placed" is the default, not a law. A
     // league can lock a leg the moment it lands — which removes the edit-resets-your-
     // clock dynamic entirely, so it is a real change to how the game plays.
-    if (!set.allowEdit && (state.picks || {})[encodeURIComponent(name)])
+    if (!set.allowEdit && (state.picks || {})[mkey])
       return json({ error: "This league locks your leg once it's in — no edits." }, 409, cors);
 
     // Bozo Royale: a chopped player funds the ticket, they do not bet on it. Their
     // re-deploy puts you straight back the first time; after that this is the end of it.
-    if (set.format === "royale" && !royaleAlive(state, name))
-      return json({ error: "You're out — chopped in week " + (royaleStatus(state)[encodeURIComponent(name)]?.chopped?.slice(-1)[0] ?? "?") + ". You fund this ticket; you don't have a leg on it." }, 409, cors);
+    if (set.format === "royale" && !royaleAliveKey(state, mkey))
+      return json({ error: "You're out — chopped in week " + (royaleStatus(state)[mkey]?.chopped?.slice(-1)[0] ?? "?") + ". You fund this ticket; you don't have a leg on it." }, 409, cors);
 
     const p = body.pick || {};
-    const err = validatePick(p, name, state.picks || {}, bandOf(state), set.format);
+    const err = validatePick(p, name, state.picks || {}, bandOf(state), set.format, mkey);
     if (err) return json({ error: err }, 400, cors);
 
-    const out = await commitBozoLeg(env, lid, state, name, p);
+    const out = await commitBozoLeg(env, lid, state, name, p, null, mkey);
     return json(out, 200, cors);
   } catch (e) {
     return json({ error: "Database write failed: " + e.message }, 502, cors);
@@ -6301,7 +6361,7 @@ const marketKeyOf = p => [
 // it catches the obvious ones and says so. `other` must be a game market.
 const FUTURES_WORDS = /\b(to win (the )?(division|conference|championship|title|super ?bowl|pennant|cup|east|west|north|south)|mvp|award|make (the )?playoffs?|season win|regular[- ]season wins|to be drafted|coach of the year|rookie of the year)\b/i;
 
-function validatePick(p, name, existing, band, format) {
+function validatePick(p, name, existing, band, format, mkey = null) {
   if (!LEAGUE[p.sport]) return "Unknown sport.";
   if (!MARKETS.includes(p.mkt)) return "Unknown market.";
   if (!p.eventId || !p.game) return "Pick a game.";
@@ -6322,18 +6382,20 @@ function validatePick(p, name, existing, band, format) {
   // person to read this file doesn't re-derive the exploit and "fix" it by banning them.
   // See royaleBeatDeficit().
 
-  const meKey = encodeURIComponent(name), meName = playerName(name);
+  const meKey = mkey || encodeURIComponent(name), meName = playerName(name);
   const mySel = selectionKeyOf(p), myMkt = marketKeyOf(p);
 
   for (const [who, x] of Object.entries(existing)) {
     if (!x) continue;
-    if (who === meKey || who === meName || playerName(who) === meName) continue;  // my own leg, being edited
+    // ⚠️ The key comparison is what excludes MY OWN leg while I edit it. The name
+    // comparisons stay as a belt for legacy/demo maps whose keys are still names.
+    if (who === meKey || who === meName || (x.who || playerName(who)) === meName) continue;
     const theirSel = x.selectionKey || selectionKeyOf(x);
     if (theirSel === mySel)
-      return `${playerName(who)} already has that exact selection — DraftKings won't take it twice on one parlay. Pick a different side, number or game.`;
+      return `${x.who || playerName(who)} already has that exact selection — DraftKings won't take it twice on one parlay. Pick a different side, number or game.`;
     const theirMkt = x.marketKey || marketKeyOf(x);
     if (theirMkt === myMkt && String(x.side) !== String(p.side))
-      return `${playerName(who)} has the other side of that same market (${x.label}). Both can't cash, so the ticket could never win — DraftKings blocks the pair.`;
+      return `${x.who || playerName(who)} has the other side of that same market (${x.label}). Both can't cash, so the ticket could never win — DraftKings blocks the pair.`;
   }
   return null;
 }
@@ -6437,7 +6499,7 @@ function ledgerEntries(lid, season, week, picks, order) {
     const x = picks[n];
     rows[ledgerKey(season, week, n)] = {
       league: lid,                              // so a CSV across leagues stays sortable
-      season, week, player: playerName(n),
+      season, week, player: x.who || playerName(n),
       sport: x.sport, eventId: x.eventId, game: x.game,
       mkt: x.mkt, side: x.side, dir: x.dir,
       priceSource: x.priceSource || "self",     // see the note in bozoPick
@@ -7302,7 +7364,7 @@ function royaleDecideChop(state, order) {
   // longest-standing submission wears it — and the fallback is NAMED in the record
   // rather than dressed up as a lever decision.
   const first = losers.slice().sort((a, b) => (picks[a].ts || 0) - (picks[b].ts || 0))[0];
-  out.chopped = playerName(first); out.choppedKey = first;
+  out.chopped = (picks[first] && picks[first].who) || playerName(first); out.choppedKey = first;
   out.decidedBy = "fallback: first submitted";
   return out;
 }
@@ -7358,10 +7420,11 @@ function royaleStatus(state) {
   }
   return out;
 }
-const royaleAlive = (state, name) => {
-  const st = royaleStatus(state)[encodeURIComponent(name)];
+const royaleAliveKey = (state, key) => {
+  const st = royaleStatus(state)[key];
   return !st || st.alive !== false;
 };
+const royaleAlive = (state, name) => royaleAliveKey(state, memberKeyOf(state, { name }));
 const royaleRoster = state => Object.entries(royaleStatus(state))
   .filter(([, s]) => s.alive).map(([k]) => k);
 
@@ -13292,14 +13355,14 @@ const MCP_TOOLS = [
         // that matters.
         format: set.format,
         royale: set.format === "royale" ? {
-          alive: royaleRoster(lg).map(playerName),
+          alive: royaleRoster(lg).map(k => memberNameAt(lg, k)),
           eliminated: Object.entries(royaleStatus(lg)).filter(([, s]) => !s.alive)
-            .map(([k, s]) => ({ player: playerName(k), eliminatedWeek: s.eliminatedWeek })),
+            .map(([k, s]) => ({ player: memberNameAt(lg, k), eliminatedWeek: s.eliminatedWeek })),
           // ⚠️ A parachute means that player has already used their one way back, so the
           // next chop ends them. It is the single most decision-relevant fact about a
           // live Bozo Royale board.
           parachutes: Object.entries(royaleStatus(lg)).filter(([, s]) => s.hasParachute)
-            .map(([k]) => playerName(k)),
+            .map(([k]) => memberNameAt(lg, k)),
           survivor: (lg.royale || {}).survivor || null,
           redeployCost: set.buyback,
           // ⚠️ Automatic, not a choice. Never describe a chopped Royale player as
@@ -13397,8 +13460,11 @@ const MCP_TOOLS = [
       const legs = keys.map((k, i) => {
         const x = picks[k];
         return {
-          order: i + 1, player: playerName(k),
-          you: me ? playerName(k) === me : undefined,
+          // ⚠️ `who` is stamped on the leg at submission. Reading the name off the key
+          // would print a bare uid; reading it off the members map would go blank for
+          // anyone who has since left the league.
+          order: i + 1, player: x.who || playerName(k),
+          you: me ? (x.who || playerName(k)) === me : undefined,
           sport: x.sport, game: x.game, eventId: x.eventId,
           mkt: x.mkt, side: x.side, line: x.mkt === "ml" ? null : x.line,
           price: x.price, priceSource: x.priceSource || "self",
@@ -13418,8 +13484,8 @@ const MCP_TOOLS = [
         season: lg.season || SEASON, week: lg.week || 1, status: lg.status || "open",
         band: bandOf(lg), legs,
         you: me,
-        yourLegIn: me ? keys.some(k => playerName(k) === me) : null,
-        stillWaitingOn: Object.keys(lg.members || {}).filter(n => !keys.some(k => playerName(k) === n)),
+        yourLegIn: me ? keys.some(k => (picks[k].who || playerName(k)) === me) : null,
+        stillWaitingOn: memberKeys(lg).filter(k => !picks[k]).map(k => memberNameAt(lg, k)),
         leverHierarchy: lg.order || null,
         results: lg.results || null, bozo: lg.bozo || null, bozoWhy: lg.bozoWhy || null,
         caveats: [
@@ -13549,7 +13615,7 @@ const MCP_TOOLS = [
 
       const set = settingsOf(lg);
       const picks = lg.picks || {};
-      const mine = picks[encodeURIComponent(name)] || picks[name] || null;
+      const mine = picks[memberKeyOf(lg, caller) || ""] || null;
       if (mine && !set.allowEdit)
         return toolText({
           accepted: false, reason: "edits-locked",
@@ -13612,7 +13678,7 @@ const MCP_TOOLS = [
         },
         band,
         legsIn: already, legsNeeded: need,
-        stillWaitingOn: memberNames(lg).filter(n => !Object.keys(picks).some(k => playerName(k) === n)),
+        stillWaitingOn: memberKeys(lg).filter(k => !picks[k]).map(k => memberNameAt(lg, k)),
         wouldLockTheBoard: wouldLock,
         warning: wouldLock
           ? "⚠️ THIS WOULD BE THE LAST LEG. Submitting it places the ticket, locks the board for all " +
@@ -13717,18 +13783,23 @@ const MCP_TOOLS = [
           return toolText({ status: "board-locked", detail: "The ticket is placed and the board is locked — nothing can be added or changed for week " + (lg.week || 1) + "." });
         const set = settingsOf(lg);
         const picks = lg.picks || {};
-        if (!set.allowEdit && (picks[encodeURIComponent(name)] || picks[name]))
+        // One resolution, reused by every check below and by the write itself, so an
+        // MCP leg can never land under a different key than the site form would use.
+        const mkey = memberKeyOf(lg, caller);
+        if (!mkey)
+          return toolText({ status: "not-a-member", detail: "You are not in this league." });
+        if (!set.allowEdit && picks[mkey])
           return toolText({ status: "edits-locked", detail: "This league locks your leg the moment it lands, and yours is already in." });
-        if (set.format === "royale" && !royaleAlive(lg, name))
+        if (set.format === "royale" && !royaleAliveKey(lg, mkey))
           return toolText({ status: "chopped", detail: "You're out this season — you fund the ticket, you don't have a leg on it." });
-        const err = validatePick(pend.p, name, picks, bandOf(lg), set.format);
+        const err = validatePick(pend.p, name, picks, bandOf(lg), set.format, mkey);
         if (err) {
           try { await env.RL.put(kvKey, "null", { expirationTtl: 60 }); } catch {}
           return toolText({ status: "rejected", detail: "The board changed since this was proposed and the leg no longer passes: " + err + " Propose again." });
         }
 
         // The same single write path the site form uses, stamped as agent-submitted.
-        const out = await commitBozoLeg(env, lid, lg, name, pend.p, "mcp");
+        const out = await commitBozoLeg(env, lid, lg, name, pend.p, "mcp", mkey);
         const result = {
           status: "submitted", league: lid, week: pend.week, you: name,
           leg: { label: pend.p.label, price: pend.p.price, game: pend.p.game },
@@ -13758,7 +13829,7 @@ const MCP_TOOLS = [
 
       const set = settingsOf(lg);
       const picks = lg.picks || {};
-      const mine = picks[encodeURIComponent(name)] || picks[name] || null;
+      const mine = picks[memberKeyOf(lg, caller) || ""] || null;
       if (mine && !set.allowEdit)
         return toolText({ status: "edits-locked", detail: "This league locks your leg the moment it lands, and yours is already in — no edit is possible, by league setting.", yourExistingLeg: { label: mine.label, price: mine.price, ts: mine.ts || null } });
       if (set.format === "royale" && !royaleAlive(lg, name))

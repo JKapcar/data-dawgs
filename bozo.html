@@ -4646,7 +4646,12 @@ const when = ts => !ts ? '' : new Date(ts).toLocaleDateString(undefined,{weekday
 // ⚠️ The chips, the board and the season table are the LEAGUE's members — not every
 // account on the site. A four-person league shows four names next to an eight.
 const league = () => LEAGUES.find(l=>l.id===LID) || null;
-const stateMembers = () => Object.keys((S&&S.members)||{}).map(k=>{try{return decodeURIComponent(k);}catch(e){return k;}});
+const kDec = k => {try{return decodeURIComponent(k);}catch(e){return k;}};
+// A member row is keyed by immutable uid and carries the display name as a label. A row
+// that is still `true` (the demo leagues, and any imported season) falls back to the key,
+// which is where the name lives in that older shape.
+const memberLabel = k => {const v=((S&&S.members)||{})[k]; return (v&&typeof v==='object'&&v.name)?String(v.name):kDec(k);};
+const stateMembers = () => Object.keys((S&&S.members)||{}).map(memberLabel);
 // The live state arrives before the signed-in directory on purpose. Fall back to its
 // member keys so the ticket can paint immediately instead of showing a fake 0-of-8
 // board while account and directory requests finish.
@@ -5266,7 +5271,16 @@ window.addEventListener('hashchange', ()=>render());
 // Worker, so "The Kid" lives under "The%20Kid". Roster names are decoded. This maps
 // a display name onto whichever key the data actually uses. (Pre-existing board bug:
 // a player with a space in their name showed "no leg yet" after submitting.)
-const kEnc = p => (S.picks && S.picks[p]) ? p : encodeURIComponent(p);
+// ⚠️ THE ONE TRANSLATION POINT. Every board surface works in display names; picks and
+// results are keyed by the member's uid. Resolve through the members map first, and only
+// then fall back to the encoded name for the legacy/demo leagues that really are
+// name-keyed. Reversing that order would make a uid league silently paint an empty board.
+const kEnc = p => {
+  if (S.picks && S.picks[p]) return p;                      // already a data key
+  const ms = (S && S.members) || {};
+  for (const k in ms) if (memberLabel(k) === p) return k;
+  return encodeURIComponent(p);
+};
 
 /* ---------------- the shared betslip link ----------------
    One DraftKings link per league per week, posted by any member.

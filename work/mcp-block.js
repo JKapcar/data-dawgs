@@ -2215,14 +2215,14 @@ const MCP_TOOLS = [
         // that matters.
         format: set.format,
         royale: set.format === "royale" ? {
-          alive: royaleRoster(lg).map(playerName),
+          alive: royaleRoster(lg).map(k => memberNameAt(lg, k)),
           eliminated: Object.entries(royaleStatus(lg)).filter(([, s]) => !s.alive)
-            .map(([k, s]) => ({ player: playerName(k), eliminatedWeek: s.eliminatedWeek })),
+            .map(([k, s]) => ({ player: memberNameAt(lg, k), eliminatedWeek: s.eliminatedWeek })),
           // ⚠️ A parachute means that player has already used their one way back, so the
           // next chop ends them. It is the single most decision-relevant fact about a
           // live Bozo Royale board.
           parachutes: Object.entries(royaleStatus(lg)).filter(([, s]) => s.hasParachute)
-            .map(([k]) => playerName(k)),
+            .map(([k]) => memberNameAt(lg, k)),
           survivor: (lg.royale || {}).survivor || null,
           redeployCost: set.buyback,
           // ⚠️ Automatic, not a choice. Never describe a chopped Royale player as
@@ -2320,8 +2320,11 @@ const MCP_TOOLS = [
       const legs = keys.map((k, i) => {
         const x = picks[k];
         return {
-          order: i + 1, player: playerName(k),
-          you: me ? playerName(k) === me : undefined,
+          // ⚠️ `who` is stamped on the leg at submission. Reading the name off the key
+          // would print a bare uid; reading it off the members map would go blank for
+          // anyone who has since left the league.
+          order: i + 1, player: x.who || playerName(k),
+          you: me ? (x.who || playerName(k)) === me : undefined,
           sport: x.sport, game: x.game, eventId: x.eventId,
           mkt: x.mkt, side: x.side, line: x.mkt === "ml" ? null : x.line,
           price: x.price, priceSource: x.priceSource || "self",
@@ -2341,8 +2344,8 @@ const MCP_TOOLS = [
         season: lg.season || SEASON, week: lg.week || 1, status: lg.status || "open",
         band: bandOf(lg), legs,
         you: me,
-        yourLegIn: me ? keys.some(k => playerName(k) === me) : null,
-        stillWaitingOn: Object.keys(lg.members || {}).filter(n => !keys.some(k => playerName(k) === n)),
+        yourLegIn: me ? keys.some(k => (picks[k].who || playerName(k)) === me) : null,
+        stillWaitingOn: memberKeys(lg).filter(k => !picks[k]).map(k => memberNameAt(lg, k)),
         leverHierarchy: lg.order || null,
         results: lg.results || null, bozo: lg.bozo || null, bozoWhy: lg.bozoWhy || null,
         caveats: [
@@ -2472,7 +2475,7 @@ const MCP_TOOLS = [
 
       const set = settingsOf(lg);
       const picks = lg.picks || {};
-      const mine = picks[encodeURIComponent(name)] || picks[name] || null;
+      const mine = picks[memberKeyOf(lg, caller) || ""] || null;
       if (mine && !set.allowEdit)
         return toolText({
           accepted: false, reason: "edits-locked",
@@ -2535,7 +2538,7 @@ const MCP_TOOLS = [
         },
         band,
         legsIn: already, legsNeeded: need,
-        stillWaitingOn: memberNames(lg).filter(n => !Object.keys(picks).some(k => playerName(k) === n)),
+        stillWaitingOn: memberKeys(lg).filter(k => !picks[k]).map(k => memberNameAt(lg, k)),
         wouldLockTheBoard: wouldLock,
         warning: wouldLock
           ? "⚠️ THIS WOULD BE THE LAST LEG. Submitting it places the ticket, locks the board for all " +
@@ -2640,18 +2643,23 @@ const MCP_TOOLS = [
           return toolText({ status: "board-locked", detail: "The ticket is placed and the board is locked — nothing can be added or changed for week " + (lg.week || 1) + "." });
         const set = settingsOf(lg);
         const picks = lg.picks || {};
-        if (!set.allowEdit && (picks[encodeURIComponent(name)] || picks[name]))
+        // One resolution, reused by every check below and by the write itself, so an
+        // MCP leg can never land under a different key than the site form would use.
+        const mkey = memberKeyOf(lg, caller);
+        if (!mkey)
+          return toolText({ status: "not-a-member", detail: "You are not in this league." });
+        if (!set.allowEdit && picks[mkey])
           return toolText({ status: "edits-locked", detail: "This league locks your leg the moment it lands, and yours is already in." });
-        if (set.format === "royale" && !royaleAlive(lg, name))
+        if (set.format === "royale" && !royaleAliveKey(lg, mkey))
           return toolText({ status: "chopped", detail: "You're out this season — you fund the ticket, you don't have a leg on it." });
-        const err = validatePick(pend.p, name, picks, bandOf(lg), set.format);
+        const err = validatePick(pend.p, name, picks, bandOf(lg), set.format, mkey);
         if (err) {
           try { await env.RL.put(kvKey, "null", { expirationTtl: 60 }); } catch {}
           return toolText({ status: "rejected", detail: "The board changed since this was proposed and the leg no longer passes: " + err + " Propose again." });
         }
 
         // The same single write path the site form uses, stamped as agent-submitted.
-        const out = await commitBozoLeg(env, lid, lg, name, pend.p, "mcp");
+        const out = await commitBozoLeg(env, lid, lg, name, pend.p, "mcp", mkey);
         const result = {
           status: "submitted", league: lid, week: pend.week, you: name,
           leg: { label: pend.p.label, price: pend.p.price, game: pend.p.game },
@@ -2681,7 +2689,7 @@ const MCP_TOOLS = [
 
       const set = settingsOf(lg);
       const picks = lg.picks || {};
-      const mine = picks[encodeURIComponent(name)] || picks[name] || null;
+      const mine = picks[memberKeyOf(lg, caller) || ""] || null;
       if (mine && !set.allowEdit)
         return toolText({ status: "edits-locked", detail: "This league locks your leg the moment it lands, and yours is already in — no edit is possible, by league setting.", yourExistingLeg: { label: mine.label, price: mine.price, ts: mine.ts || null } });
       if (set.format === "royale" && !royaleAlive(lg, name))
