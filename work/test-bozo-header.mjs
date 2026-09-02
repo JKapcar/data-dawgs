@@ -241,15 +241,20 @@ for (const theme of ["light", "dark"]) {
   await ctx.close();
 }
 {
-  // The admin marker survived the card it used to live on, and still keys off isAdmin().
+  // The admin marker and the "change ↓" cue are gone from the league line: both sat
+  // beside the name and ate the width the name needed on a phone.
   const { ctx, page } = await open({ me: "Kap", leagues: 2 });
-  ok((await txt(page, "#adminBadge")) === "admin", "admin marker moved onto the league line");
+  ok(await page.$("#adminBadge") === null, "the admin marker is gone from the league line");
+  ok(await page.$("#lgChange") === null, "the change cue is gone from the league line");
   await ctx.close();
 }
 {
   const { ctx, page } = await open({ me: "Tucholski", leagues: 2 });
-  ok((await txt(page, "#adminBadge")) === "", "a non-admin gets no admin marker");
-  ok(await page.isVisible("#backHub"), "the back-link survives on the league line");
+  ok(await page.isVisible("#backHub"), "the back-link survives, in the top rail");
+  const above = await page.$eval("#backHub", n =>
+    n.closest(".toprail") !== null &&
+    n.getBoundingClientRect().bottom <= document.querySelector("#lgbar").getBoundingClientRect().top);
+  ok(above, "the back-link sits at the top of the playbill, above the league line");
   await ctx.close();
 }
 

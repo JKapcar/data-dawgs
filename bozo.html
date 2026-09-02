@@ -491,6 +491,11 @@ footer a{color:var(--accent)}
    reads as a playbill because of the STRUCTURE — star eyebrow, centred dek, double rule,
    mono band, cast strip — not because of the face. */
 .playbill{--bz-display:"Arial Black","Helvetica Neue",Helvetica,Arial,sans-serif;margin:0 0 20px}
+/* Top rail: right-aligned back-link above the wordmark. Empty when #backHub is
+   hidden, and with no padding of its own it collapses to nothing on the hub. */
+.playbill .toprail{display:flex;justify-content:flex-end;align-items:center;min-height:0}
+.playbill .toprail .backlink{margin:0;font:700 10.5px/1 ui-monospace,Menlo,monospace;
+  letter-spacing:.14em;text-transform:uppercase;padding:2px 0 8px}
 .playbill .eyebrow{font:700 10.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.32em;
   text-transform:uppercase;color:var(--accent);text-align:center;margin:0 0 9px}
 /* the bill's double rule, so the header reads as the top of the same broadside */
@@ -522,27 +527,29 @@ footer a{color:var(--accent)}
   font:750 14.5px system-ui;padding:0;width:auto;min-width:0;cursor:pointer;
   -webkit-appearance:none;appearance:none}
 .playbill .league select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-.playbill .league .lgname{font:750 14.5px system-ui;color:var(--ink-1)}
+.playbill .league .lgname{font:750 14.5px system-ui;color:var(--ink-1);
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .playbill .league .lil{font:700 9.5px/1 ui-monospace,monospace;letter-spacing:1.3px;
   text-transform:uppercase;color:var(--ink-3)}
 .playbill .league .demo{font:700 9.5px/1 ui-monospace,monospace;letter-spacing:1.3px;
   text-transform:uppercase;background:var(--warn);color:#1a1206;padding:4px 6px;border-radius:4px}
-.playbill .league .adm{font:700 9.5px/1 ui-monospace,monospace;letter-spacing:1.3px;
-  text-transform:uppercase;color:var(--accent)}
-.playbill .league .backlink{margin:0 0 0 auto;font-size:12.5px}
 /* The league picker and the four page sheets are one navigation decision. Keeping
    them in one rail means changing leagues never requires returning to the directory. */
 .playbill .page-tabs{display:grid;grid-template-columns:minmax(190px,auto) minmax(0,1fr);
   align-items:stretch;margin-top:12px;border-top:1px solid var(--grid);border-bottom:1px solid var(--grid)}
 .playbill .page-tabs > .league,.playbill .page-tabs > .snav{min-width:0}
 .playbill .page-tabs .league{padding:9px 14px 9px 2px;border-right:1px solid var(--grid);flex-wrap:nowrap}
-.playbill .page-tabs .league select{max-width:220px;font-weight:850}
+/* Nothing else shares this line any more, so the name takes the cell it is given
+   and truncates with an ellipsis rather than against a neighbour. */
+.playbill .page-tabs .league select{max-width:100%;flex:0 1 auto;font-weight:850;
+  text-overflow:ellipsis}
+.playbill .page-tabs .league .lgname{flex:0 1 auto}
 .playbill .page-tabs .snav{margin:0;border-top:0;align-self:stretch}
 .playbill .page-tabs .snav button{display:flex;align-items:center;justify-content:center}
 @media(max-width:720px){
   .playbill .page-tabs{grid-template-columns:1fr}
   .playbill .page-tabs .league{border-right:0;border-bottom:1px solid var(--grid);padding:9px 2px}
-  .playbill .page-tabs .league select{max-width:min(65vw,260px)}
+  .playbill .page-tabs .league select{max-width:100%}
 }
 /* ---- the cast strip: board / one cell per player / league ----
    ⚠️ ONE row that scrolls, not a wrapping cloud of pills. Ten pills wrapped to three
@@ -3486,10 +3493,15 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
      What lives where, and why it is not duplicated anywhere else:
        · the BAND is the only place the week, the status and the roster count appear
        · the CAST STRIP is the only place the roster appears, alive or chopped
-       · the LEAGUE LINE is the switcher; the league name IS the affordance
+       · the LEAGUE LINE is the switcher; the league name IS the affordance, and
+         nothing else shares that line — it gets the width
      Every id in here kept its old job — #statusChip, #lgPick, #lgSize, #backHub and
      #snav are all still written by the same functions. Only the containers changed. -->
 <header class="playbill" id="bzHead">
+  <!-- The back-link lives at the very top of the playbill, out of the league line:
+       beside the league name it crowded the one string that matters and pushed the
+       name into an ellipsis on a phone. Same #backHub id, same paintSheets() rule. -->
+  <div class="toprail"><a class="backlink" id="backHub" href="bozo.html" style="display:none">← All leagues</a></div>
   <div class="eyebrow">★ This week only ★</div>
   <h1>Bozo</h1>
   <p class="dek">One favorite each, one big parlay. Whoever busts it worst wears it — and funds next week's ticket.</p>
@@ -3505,10 +3517,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       <label class="lil" for="lgPick">League</label>
       <select id="lgPick"></select>
       <span class="lgname" id="lgName"></span>
-      <span class="lil" id="lgChange" style="display:none">change ↓</span>
       <span class="demo" id="lgDemo" style="display:none">Demo</span>
-      <span class="adm" id="adminBadge"></span>
-      <a class="backlink" id="backHub" href="bozo.html" style="display:none">← All leagues</a>
     </div>
     <div class="snav" id="snav"></div>
   </div>
@@ -5171,9 +5180,10 @@ function paintLeagueBar(){
 
   bar.style.display = onHub() ? 'none' : '';
   // One league is no switcher — the name is a statement, not a control. More than one
-  // and the name IS the affordance: a <select> styled as text with a change cue.
+  // and the name IS the affordance: a <select> styled as text. The old "change ↓" cue
+  // and the admin marker are gone; both sat on the name and truncated it on a phone.
   sel.style.display = one ? 'none' : '';
-  document.getElementById('lgChange').style.display = one ? 'none' : '';
+  sel.title = 'Switch league';
   const nm = document.getElementById('lgName');
   nm.style.display = one ? '' : 'none';
   nm.textContent = one ? (lg ? lg.name : '') : '';
@@ -5181,8 +5191,6 @@ function paintLeagueBar(){
   if(!one)
     sel.innerHTML = LEAGUES.map(l=>`<option value="${esc(l.id)}"${l.id===LID?' selected':''}>${esc(l.name)}</option>`).join('');
   document.getElementById('lgDemo').style.display = isDemo() ? '' : 'none';
-  // The admin marker moved here off the deleted "signed in as" card. Same isAdmin() test.
-  document.getElementById('adminBadge').textContent = isAdmin() ? 'admin' : '';
 }
 document.getElementById('lgPick').onchange = e => {
   // Full reload: the EventSource, the state and every sheet are league-scoped, and a
