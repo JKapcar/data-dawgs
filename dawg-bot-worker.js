@@ -3372,7 +3372,15 @@ async function bozoRoster(env, cors) {
     try { await fbPatch(env, "/users", fix); } catch (e) { /* next read retries */ }
   }
 
-  const players = userNames(users).map(n => ({ name: n, claimed: !!auth[n] }));
+  // ⚠️ /bozoauth IS EMPTY NOW, BY DESIGN. Legacy accounts kept their password hash there;
+  // uid accounts carry it on the user record. Reading only /bozoauth reports every
+  // account as unclaimed -- which empties the sign-in autocomplete and makes the manager
+  // view label people who plainly have passwords as "not claimed yet".
+  const claimedBy = rec => !!(rec && rec.passwordHash && rec.passwordSalt);
+  const players = Object.entries(users).map(([key, rec]) => {
+    const n = accountName(playerName(key), rec);
+    return { name: n, claimed: !!auth[n] || claimedBy(rec) };
+  });
   if (!players.length) return json({ error: "No roster configured." }, 500, cors);
   return json({ players }, 200, cors);
 }
@@ -4257,7 +4265,12 @@ async function loadLeagues(env) {
 
   const users = await loadUsers(env);
   const members = {};
-  for (const key of Object.keys(users)) members[key] = true;
+  // ⚠️ DORMANT BUT NOT HARMLESS. This only fires when /bozo/leagues is entirely empty,
+  // which it is not. It is fixed anyway because /users is now uid-keyed: seeding
+  // `members[uid] = true` would give every seat a uid key with NO name label, and
+  // memberNameAt would fall back to the key -- a board rendering raw u_ strings, from a
+  // path nobody would think to look at because it normally never runs.
+  for (const [key, rec] of Object.entries(users)) members[key] = { name: accountName(playerName(key), rec) };
   const seed = {
     name: "Data Dawgs", manager: env.BOZO_ADMIN || "", members,
     season: SEASON, week: 1, status: "open", createdTs: Date.now(), createdBy: "seed",
@@ -4412,6 +4425,20 @@ async function leagueCreate(request, env, cors) {
   if (!userNames(users).includes(manager))
     return json({ error: manager + " doesn't have an account yet — invite them first." }, 400, cors);
 
+  // ⚠️ THE MANAGER'S SEAT IS KEYED BY UID LIKE EVERY OTHER SEAT. The manager is named by
+  // display name in the request body (an admin naming a person), so their uid has to be
+  // resolved out of /users. Refusing when it cannot be is deliberate: seeding a
+  // name-keyed seat here would put the one shape this codebase no longer writes into a
+  // brand-new league, where every member joining after them is uid-keyed and only the
+  // manager is not.
+  let managerUid = null;
+  for (const [key, rec] of Object.entries(users)) {
+    const k = playerName(key);
+    if (UID_RE.test(k) && accountName(k, rec) === manager) { managerUid = k; break; }
+  }
+  if (!managerUid)
+    return json({ error: manager + " has no account id yet — they need to sign in once before they can manage a league." }, 409, cors);
+
   // ⚠️ FORMAT IS CHOSEN HERE AND NOWHERE ELSE. Standard is the original game; Bozo
   // Royale is the guillotine. It is immutable after the first lock — see leagueSettings —
   // because changing the ruleset mid-season retroactively changes who should have been
@@ -4431,7 +4458,7 @@ async function leagueCreate(request, env, cors) {
     manager,
     // The manager starts as the only member; size grows from here. A league of 4 is
     // just a league whose manager stopped adding people at 4.
-    members: { [encodeURIComponent(manager)]: true },
+    members: { [managerUid]: { name: manager, joinedAt: Date.now() } },
     season: SEASON, week: 1, status: "open",
     format, buyback,
     formatLocked: false,
