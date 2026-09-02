@@ -24,7 +24,10 @@ h = hashlib.md5()
 # set exactly — if you widen one side, widen the other in the same commit.
 files = sorted(REPO.glob("*.html")) + sorted(p for p in REPO.glob("*.js") if p.name != "sw.js")
 for f in files:
-    h.update(f.read_bytes())
+    # Git stores these text assets with LF even when core.autocrlf checks them out as
+    # CRLF on Windows. Hash the canonical form so this script matches verify-sw.mjs,
+    # which reads the staged Git blobs rather than platform-specific working bytes.
+    h.update(f.read_bytes().replace(b"\r\n", b"\n"))
 new = h.hexdigest()[:10]
 
 p = REPO / "sw.js"

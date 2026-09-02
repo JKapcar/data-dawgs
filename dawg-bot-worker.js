@@ -2921,23 +2921,10 @@ async function authLookup(request, env, cors) {
 // legacy wipe no such account exists and this branch is dead; it stays because a stale
 // service-worker copy of an old page can still present a legacy session.
 //
-// ⚠️ REFUSED WHILE A LEG IS ON A BOARD. Bozo picks live at LG(lid)/picks/<display name>
-// (commitBozoLeg). A rename with a leg standing would orphan that row and let the member
-// submit a second leg under the new name. The ledger is append-only, so the answer is to
-// refuse the rename, never to rewrite the pick key.
+// Bozo seats and live picks are keyed by uid. Renaming changes only the display label;
+// commitBozoLeg refreshes the league member label on the next submission and receipts
+// keep the name stamped when the leg was filed. No league-state lookup belongs here.
 const RENAME_CAP = 5;   // per account per day
-
-async function picksHeldBy(env, name) {
-  const key = encodeURIComponent(name);
-  let leagues;
-  try { leagues = await loadLeagues(env); } catch { return null; }
-  const held = [];
-  for (const [lid, lg] of Object.entries(leagues || {})) {
-    if (lg && lg.picks && Object.prototype.hasOwnProperty.call(lg.picks, key)) held.push(lid);
-    else if (lg && lg.picks && Object.prototype.hasOwnProperty.call(lg.picks, name)) held.push(lid);
-  }
-  return held;
-}
 
 async function authName(request, env, cors) {
   if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
@@ -2962,12 +2949,6 @@ async function authName(request, env, cors) {
       return json({ error: "That is enough name changes for one day." }, 429, cors);
     await env.RL.put(rlKey, String(used + 1), { expirationTtl: 172800 });
   }
-
-  const held = await picksHeldBy(env, auth.name);
-  if (held === null) return json({ error: "Database unreachable." }, 502, cors);
-  if (held.length)
-    return json({ error: "You have a leg on the board. Names are locked until that week is graded.",
-                  blockedBy: held }, 409, cors);
 
   const at = Date.now();
   try {
