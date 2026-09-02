@@ -2349,6 +2349,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   function chooseLeague(item){
     selectedLeague=item;$("leagueSelectedName").textContent=item.name;$("leaguePasswordWrap").hidden=false;
     $("leagueOpen").hidden=true;$("leaguePassword").value="";
+    $("leaguePassword").closest("label").hidden=!!item.already;$("leagueJoinGo").hidden=!!item.already;
     if(item.already){$("leagueOpen").href="bozo.html?l="+encodeURIComponent(item.id);$("leagueOpen").hidden=false;msg("leagueAccessMsg","You already belong to this league.","good");}
     else {msg("leagueAccessMsg","");$("leaguePassword").focus();}
   }
@@ -2362,7 +2363,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     var query=$("leagueSearch").value.trim();msg("leagueAccessMsg","");
     if(query.length<2){msg("leagueAccessMsg","Enter at least two characters.","bad");return;}
     msg("leagueAccessMsg","Searching…");
-    try{var j=await api("/league/search",{query:query});paintLeagueSearch(j.results||[]);if((j.results||[]).length)msg("leagueAccessMsg","");}
+    try{var j=await api("/league/search",{query:query});paintLeagueSearch(j.results||[]);}
     catch(e){msg("leagueAccessMsg",e.message,"bad");}
   }
   async function joinSelectedLeague(){
