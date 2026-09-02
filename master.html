@@ -889,7 +889,7 @@ table.md tr.mine td{background:color-mix(in srgb, var(--good) 9%, transparent)}
             '<input id="ddAuthPw" type="password" autocomplete="current-password">' +
             '<button class="go" id="ddAuthGo">Sign in</button>' +
             '<p class="err" id="ddAuthErr"></p>' +
-            '<p class="note">No account yet? Create one with your email, then enter the shared league code under Your Dawgs. ' +
+            '<p class="note">No account yet? Create one with your email, then search for the league under Your Dawgs and enter its shared password. ' +
             'Nothing here is gated on signing in: the boards, the pool and the season tables are public either way.</p>' +
           '</div>' +
           '<div id="ddAuthIn" hidden>' +
@@ -1485,7 +1485,7 @@ index.html — the manifesto: what Data Dawgs is for, "Data, not dogma", Bring Y
 receipts.html — every pre-registered forecast, the grading, calibration, the model scoreboard, 538 Classic, provenance, the tier audit.
 dawghouse.html — the shelf: work that was stopped, each item with its blocker and the condition that would reopen it.
 arena.html — the hub for games played against other people; links to all of the below.
-bozo.html — the weekly one-leg parlay game with four sheets: Overview (season Bozo Count, CLV chart, current-week diagnostics and weekly hierarchy grid), This Week (hierarchy machine, ticket and personal entry), Diagnostics (filterable league ledger), and League Settings (roster, rules, and the manager-controlled shared league code).
+bozo.html — the weekly one-leg parlay game with four sheets: Overview (season Bozo Count, CLV chart, current-week diagnostics and weekly hierarchy grid), This Week (hierarchy machine, ticket and personal entry), Diagnostics (filterable league ledger), and League Settings (roster, rules, shared league password, member cap and public/private visibility).
 challenge.html — the NFL Forecasting Challenge: put a probability on a game before kickoff, get graded after.
 survivor.html — survivor pool: this week's board, pick popularity, an optimal path, a season simulation, model settings.
 guillotine.html — guillotine league companion. dfs.html — DFS solver, contest simulator, exposure, bankroll. The projections there are the USER'S OWN.
@@ -1497,7 +1497,7 @@ nfl.html — the NFL hub. stats.html — the EPA explorer. nfelo.html — nfelo 
 cfb.html — the College Football lab: 2025 results, one retrodictive Elo, a matchup calculator. Its build roadmap is at cfb.html#roadmap and is our own planning surface, not a public destination.
 markets.html — the prediction-markets section, its own top-level group labelled Markets. ai.html — the A.I. Model Board, its own top-level group. Both are deliberately near-empty and say so above the fold; do not imply either has tools yet.
 data.html — the Library: every machine-readable file, shelved by the surface that owns it. connect.html — forwards to the connector card on signon.html#connect, which is where you point your own AI (Claude, ChatGPT, Gemini or any MCP client) at the site.
-signon.html — sign in, sign up, recover an account, and join a Bozo league with its shared code; every other page's sign-in chip lands here. dawgs.html — the Dawg Pound: Rollo, the OG Data Dawg, DDCC Profile, SwoleDawg and DateDawg. swoledawg.html — body and training. datedawg.html — local-only reciprocal-acceptance analysis of a Hinge export; no upload or backend memory. fantasy-warroom.html — the fantasy league war room.
+signon.html — sign in, sign up, recover an account, and join a Bozo league by searching its name and entering its shared password; every other page's sign-in chip lands here. dawgs.html — the Dawg Pound: Rollo, the OG Data Dawg, DDCC Profile, SwoleDawg and DateDawg. swoledawg.html — body and training. datedawg.html — local-only reciprocal-acceptance analysis of a Hinge export; no upload or backend memory. fantasy-warroom.html — the fantasy league war room.
 rankings.html — the Dog Track: ranking services graded against actual finishes. draft-leagues.html — create or join a draft league, and import a Sleeper league (Yahoo and ESPN are manual). cfb-power.html — CFB conference power curves. radar.html — the radar view.
 Machine surfaces: /data/index.json lists every file with its as_of and hash; /llms.txt is the curated index; /data/surfaces.json maps pages to files and MCP tools.
 NAVIGATION: the banner is Sign in/account, then exactly seven groups — Arena, Markets, A.I., NFL, CFB, Data, Dawgs — then the theme button. The wordmark is Home. There is no top-level Sports group and no top-level Receipts group: NFL and CFB are separate groups, and receipts.html is an item under Data.

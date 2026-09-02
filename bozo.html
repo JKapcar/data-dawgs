@@ -2187,7 +2187,7 @@ body.pb-hub{background:#120b05}
             '<input id="ddAuthPw" type="password" autocomplete="current-password">' +
             '<button class="go" id="ddAuthGo">Sign in</button>' +
             '<p class="err" id="ddAuthErr"></p>' +
-            '<p class="note">No account yet? Create one with your email, then enter the shared league code under Your Dawgs. ' +
+            '<p class="note">No account yet? Create one with your email, then search for the league under Your Dawgs and enter its shared password. ' +
             'Nothing here is gated on signing in: the boards, the pool and the season tables are public either way.</p>' +
           '</div>' +
           '<div id="ddAuthIn" hidden>' +
@@ -2783,7 +2783,7 @@ index.html — the manifesto: what Data Dawgs is for, "Data, not dogma", Bring Y
 receipts.html — every pre-registered forecast, the grading, calibration, the model scoreboard, 538 Classic, provenance, the tier audit.
 dawghouse.html — the shelf: work that was stopped, each item with its blocker and the condition that would reopen it.
 arena.html — the hub for games played against other people; links to all of the below.
-bozo.html — the weekly one-leg parlay game with four sheets: Overview (season Bozo Count, CLV chart, current-week diagnostics and weekly hierarchy grid), This Week (hierarchy machine, ticket and personal entry), Diagnostics (filterable league ledger), and League Settings (roster, rules, and the manager-controlled shared league code).
+bozo.html — the weekly one-leg parlay game with four sheets: Overview (season Bozo Count, CLV chart, current-week diagnostics and weekly hierarchy grid), This Week (hierarchy machine, ticket and personal entry), Diagnostics (filterable league ledger), and League Settings (roster, rules, shared league password, member cap and public/private visibility).
 challenge.html — the NFL Forecasting Challenge: put a probability on a game before kickoff, get graded after.
 survivor.html — survivor pool: this week's board, pick popularity, an optimal path, a season simulation, model settings.
 guillotine.html — guillotine league companion. dfs.html — DFS solver, contest simulator, exposure, bankroll. The projections there are the USER'S OWN.
@@ -2795,7 +2795,7 @@ nfl.html — the NFL hub. stats.html — the EPA explorer. nfelo.html — nfelo 
 cfb.html — the College Football lab: 2025 results, one retrodictive Elo, a matchup calculator. Its build roadmap is at cfb.html#roadmap and is our own planning surface, not a public destination.
 markets.html — the prediction-markets section, its own top-level group labelled Markets. ai.html — the A.I. Model Board, its own top-level group. Both are deliberately near-empty and say so above the fold; do not imply either has tools yet.
 data.html — the Library: every machine-readable file, shelved by the surface that owns it. connect.html — forwards to the connector card on signon.html#connect, which is where you point your own AI (Claude, ChatGPT, Gemini or any MCP client) at the site.
-signon.html — sign in, sign up, recover an account, and join a Bozo league with its shared code; every other page's sign-in chip lands here. dawgs.html — the Dawg Pound: Rollo, the OG Data Dawg, DDCC Profile, SwoleDawg and DateDawg. swoledawg.html — body and training. datedawg.html — local-only reciprocal-acceptance analysis of a Hinge export; no upload or backend memory. fantasy-warroom.html — the fantasy league war room.
+signon.html — sign in, sign up, recover an account, and join a Bozo league by searching its name and entering its shared password; every other page's sign-in chip lands here. dawgs.html — the Dawg Pound: Rollo, the OG Data Dawg, DDCC Profile, SwoleDawg and DateDawg. swoledawg.html — body and training. datedawg.html — local-only reciprocal-acceptance analysis of a Hinge export; no upload or backend memory. fantasy-warroom.html — the fantasy league war room.
 rankings.html — the Dog Track: ranking services graded against actual finishes. draft-leagues.html — create or join a draft league, and import a Sleeper league (Yahoo and ESPN are manual). cfb-power.html — CFB conference power curves. radar.html — the radar view.
 Machine surfaces: /data/index.json lists every file with its as_of and hash; /llms.txt is the curated index; /data/surfaces.json maps pages to files and MCP tools.
 NAVIGATION: the banner is Sign in/account, then exactly seven groups — Arena, Markets, A.I., NFL, CFB, Data, Dawgs — then the theme button. The wordmark is Home. There is no top-level Sports group and no top-level Receipts group: NFL and CFB are separate groups, and receipts.html is an item under Data.
@@ -3563,6 +3563,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       <div class="f w2"><label>Name</label><input id="nlName" placeholder="Sunday Crew"></div>
       <div class="f"><label>Id (for the link)</label><input id="nlId" placeholder="sunday"></div>
       <div class="f"><label>Manager</label><select id="nlMgr"></select></div>
+      <div class="f w2"><label>League password</label><input id="nlPassword" type="password" maxlength="64" autocomplete="new-password" placeholder="6–64 characters"></div>
       <!-- ⚠️ Format is chosen once and frozen at the first lock. Changing a ruleset
            mid-season retroactively changes who should have been eliminated, which is the
            same class of error as editing a published forecast. -->
@@ -3776,49 +3777,36 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <div class="err" id="lgErr"></div>
 
     <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:22px 0 4px">Who's in this league</h3>
-    <p class="tm" style="margin:0 0 8px">The roster <em>is</em> the size — the ticket locks when everyone here has a leg in. Accounts authenticate people; the shared league code controls who may add themselves.</p>
+    <p class="tm" style="margin:0 0 8px">The roster <em>is</em> the size — the ticket locks when everyone here has a leg in. New people create their own account, search for this league, and enter its shared password.</p>
     <div id="rosBody"></div>
     <div class="row" style="margin-top:12px;align-items:flex-end;gap:10px">
       <div class="f" style="flex:1;min-width:170px"><label>Add someone who already has an account</label>
         <select id="addPick"></select></div>
       <button class="btn ghost sm" id="addGo">Add</button>
     </div>
-    <div class="row" style="margin-top:10px;align-items:flex-end;gap:10px">
-      <div class="f" style="flex:1;min-width:170px"><label>Or invite someone new</label>
-        <input id="invName" placeholder="Name as it should appear"></div>
-      <button class="btn ghost sm" id="invGo">Create &amp; get link</button>
-    </div>
-    <div id="rosOut"></div>
     <div class="err" id="rosErr"></div>
 
-    <!-- One manager-chosen code per league. Authentication says WHO is joining; this
-         shared code says WHICH private league is allowed to add that account. The raw
-         code is never stored, returned, or placed in the public /bozo tree. -->
-    <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:22px 0 4px">League code</h3>
-    <p class="tm" style="margin:0 0 8px">One shared code for everyone. They sign in with their own email first, then enter this code under Your Dawgs. Use 6–32 letters, numbers or hyphens. The server stores only a protected lookup, so a forgotten code is replaced, never revealed.</p>
+    <!-- One manager-chosen password per league. Authentication says WHO is joining;
+         search chooses WHICH league; the password grants membership. The raw value is
+         never stored, returned, or placed in the public /bozo tree. -->
+    <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:22px 0 4px">League access</h3>
+    <p class="tm" style="margin:0 0 8px">Everyone signs in with their own email, searches for this league under Your Dawgs, then enters the same league password. Private leagues appear only on an exact-name search. A forgotten password is replaced, never revealed.</p>
     <div class="row" style="align-items:flex-end;gap:10px">
-      <div class="f" style="flex:1;min-width:180px"><label>Set or replace code</label>
-        <input id="jcPass" maxlength="32" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Example: PRESEASON-26"></div>
-      <button class="btn sm" id="jcSet">Set code</button>
-      <button class="btn ghost sm" id="jcOff">Turn off</button>
-      <span class="tm" id="jcState">Status checks when you use these controls.</span>
+      <div class="f" style="flex:1;min-width:180px"><label>Set or replace password</label>
+        <input id="lpPass" type="password" maxlength="64" autocomplete="new-password" spellcheck="false" placeholder="6–64 characters"></div>
+      <button class="btn sm" id="lpSet">Set password</button>
+      <button class="btn ghost sm" id="lpOff">Disable joining</button>
     </div>
-    <div class="err" id="jcErr"></div>
-
-    <!-- CEP-7's long random link remains as an optional compatibility path. It grants
-         the same membership and still requires a signed-in account. -->
-    <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:22px 0 4px">Optional join link</h3>
-    <p class="tm" style="margin:0 0 8px">The reusable link is still available for old messages and one-tap joining. It grants the same membership as the league code and still requires each person to sign in. Rotate it and the old link dies instantly. The cap limits both ways in.</p>
-    <div class="row" style="align-items:flex-end;gap:10px">
-      <button class="btn ghost sm" id="jlGet">Show join link</button>
-      <button class="btn ghost sm" id="jlRot">Rotate</button>
+    <div class="row" style="margin-top:10px;align-items:flex-end;gap:10px">
       <div class="f" style="width:120px"><label>Member cap</label>
-        <input id="jlCap" type="number" min="2" max="64" step="1"></div>
-      <button class="btn ghost sm" id="jlCapGo">Set cap</button>
-      <button class="btn ghost sm" id="jlOff">Turn off</button>
+        <input id="lpCap" type="number" min="2" max="64" step="1"></div>
+      <button class="btn ghost sm" id="lpCapGo">Set cap</button>
+      <div class="f" style="min-width:170px"><label>Directory visibility</label>
+        <select id="lpVis"><option value="private">Private — exact search only</option><option value="public">Public — browsable</option></select></div>
+      <button class="btn ghost sm" id="lpVisGo">Save visibility</button>
     </div>
-    <div id="jlOut"></div>
-    <div class="err" id="jlErr"></div>
+    <p class="tm" id="lpState" style="margin:8px 0 0">Status checks when you open these controls.</p>
+    <div class="err" id="lpErr"></div>
 
     <!-- ⚠️ Reaches the LEDGER, not this week's board. The grade card only ever shows the
          current week, so without this a close the capture missed in week 3 becomes
@@ -4022,9 +4010,9 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 const WORKER = 'https://toto.jkapcar4.workers.dev';
 const DB     = 'https://data-dawgs-draft-default-rtdb.firebaseio.com';
 const SESS_K = 'dd-bozo-sess';
-/* Old texted links land here: bozo.html?join=<tok>. The claim card moved to
-   signon.html (one page owns every identity workflow, 8/7) — forward the token
-   whole; signon burns it out of its own URL the moment it loads. */
+/* Legacy account-recovery links may still land here as bozo.html?join=<tok>.
+   They create or recover identity only and never grant league membership. The
+   claim card lives on signon.html, so forward the token there. */
 (function(){
   const tok = new URLSearchParams(location.search).get('join');
   if (tok) location.replace('signon.html?join=' + encodeURIComponent(tok) + '&next=bozo.html');
@@ -4058,7 +4046,7 @@ const LEVER_ICON = {
 let S = {};                 // live state for the SELECTED league, from RTDB
 let LEAGUES = [];           // [{id,name,manager,size,members,week,status}]
 let LID = 'main';           // which league we're looking at (?l=)
-let joinGateStatusLid = null; // manager-only code/link status, loaded once per page
+let joinGateStatusLid = null; // manager-only password/visibility status, loaded once per page
 let ROSTER = [];            // every account on the site, [{name, claimed}]
 let ME = null;              // {name, session}
 let GAMES = {};             // sport -> games[]
@@ -5019,7 +5007,7 @@ async function startDelete(lid){
   const err = document.querySelector(`[data-rnerr="${CSS.escape(lid)}"]`);
   const typed = prompt(
     `Delete "${lg.name}" permanently?\n\n`
-    + `This removes the league and every row in it — picks, closes, grades, the ledger, the join link and the shared league code. `
+    + `This removes the league and every row in it — picks, closes, grades, the ledger and the shared league password. `
     + `It cannot be undone and nothing is kept hidden.\n\n`
     + `Type the league name exactly to confirm:`);
   if(typed === null) return;                       // cancelled, say nothing
@@ -5651,15 +5639,12 @@ document.getElementById('lgAdmin').addEventListener('click', e=>{
 ['dCeil','dFloor'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{ lgDirty=true; }));
 document.getElementById('dReset').onclick = ()=>{ lgDirty=false; fillSettings();
   document.getElementById('lgErr').textContent=''; };
-/* ---- roster & invites (admin) ----
-   The join-link problem this solves: Cloudflare secrets are write-only, so the
-   original token map became unreadable the moment it was saved and there was no way
-   to re-send anyone their link. Tokens now live hashed in /users and are re-issued
-   from here. The raw token is shown ONCE and never stored anywhere we can read. */
+/* ---- roster (admin) ----
+   Identity and league access are separate: this list manages existing members only.
+   New people create their own account, then join through search + league password. */
 function paintRoster(){
   const body = document.getElementById('rosBody');
   if(!isManager()){ body.innerHTML=''; return; }
-  const claimedOf = n => !!(ROSTER.find(p=>p.name===n)||{}).claimed;
   const mine = names(), picks = S.picks||{}, open = (S.status||'open')==='open';
   const mgr = league()?.manager;
   body.innerHTML = mine.map(n=>{
@@ -5667,10 +5652,7 @@ function paintRoster(){
     return `<div class="ros">
       <span class="who">${esc(n)}${n===mgr?' <span class="tm">· manager</span>':''}${hasLeg?' <span class="tm">· leg in</span>':''}
         <br><input class="team" data-team="${esc(n)}" value="${esc((league()?.teams||{})[kEnc(n)]||'')}" placeholder="team name (optional)"></span>
-      <span class="st ${claimedOf(n)?'yes':'no'}">${claimedOf(n)?'claimed':'not claimed'}</span>
       <span class="row">
-        <button class="btn ghost sm" data-invite="${esc(n)}">${claimedOf(n)?'New link':'Get link'}</button>
-        ${(claimedOf(n) && isAdmin()) ? `<button class="btn ghost sm" data-reset="${esc(n)}">Reset</button>` : ''}
         ${n===mgr ? '' : `<button class="btn ghost sm" data-drop="${esc(n)}"${(!open||hasLeg)?' disabled title="Roster changes wait for an open board with no leg in"':''}>Remove</button>`}
       </span>
     </div>`;
@@ -5693,7 +5675,7 @@ function paintRoster(){
 
   if(joinGateStatusLid!==LID){
     joinGateStatusLid=LID;
-    wPost('/league/join-code',{action:'status'}).then(jlPaint).catch(e=>jcErr(e.message));
+    wPost('/league/access',{action:'status'}).then(lpPaint).catch(e=>lpErr(e.message));
   }
 }
 
@@ -5701,45 +5683,9 @@ const rosErr = m => { const e=document.getElementById('rosErr'); e.className='er
 
 async function reloadLeagues(){ await Promise.all([loadRoster(), loadLeagues()]); await refresh(); }
 
-function showLink(who, url, claimed){
-  document.getElementById('rosOut').innerHTML =
-    `<div class="linkout"><b>${esc(who)}</b> — copy this now, it is shown once.
-      <code>${esc(url)}</code>
-      ${claimed?`<span class="tm">⚠️ ${esc(who)} already has a password, so this link does nothing until you hit Reset.</span>`
-               :`<span class="tm">Text it to them. Opening it makes their account and puts them in this league.</span>`}
-      <div class="row" style="margin-top:8px"><button class="btn sm" id="cpLink">Copy</button></div></div>`;
-  document.getElementById('cpLink').onclick=()=>{
-    navigator.clipboard?.writeText(url).then(
-      ()=>{ document.getElementById('cpLink').textContent='Copied'; },
-      ()=>{ rosErr('Clipboard blocked — select the link above and copy it.'); });
-  };
-}
-
 document.getElementById('rosBody').addEventListener('click', async e=>{
-  const inv=e.target.closest('[data-invite]'), drop=e.target.closest('[data-drop]'),
-        rst=e.target.closest('[data-reset]');
+  const drop=e.target.closest('[data-drop]');
   rosErr('');
-  if(rst){
-    // A password is a SITE credential, not a league one — /auth/reset is admin-only,
-    // so the button only renders for the site admin. Two-step: it kills their sessions.
-    const who=rst.dataset.reset;
-    if(rst.dataset.armed!=='1'){ rst.dataset.armed='1'; rst.textContent='Confirm reset';
-      setTimeout(()=>{ rst.dataset.armed='0'; rst.textContent='Reset'; }, 4000); return; }
-    try{ await wPost('/auth/reset',{player:who});
-      const e4=rosErr(`${who} cleared — issue them a new link.`); e4.className='err ok';
-      await reloadLeagues();
-    }catch(e2){ rosErr(e2.message); }
-    return;
-  }
-  if(inv){
-    const who=inv.dataset.invite; inv.disabled=true;
-    try{
-      const r=await wPost('/league/invite',{player:who});
-      showLink(who, location.origin+'/bozo.html?join='+r.token, r.claimed);
-      await reloadLeagues();
-    }catch(e2){ rosErr(e2.message); }
-    inv.disabled=false;
-  }
   if(drop){
     const who=drop.dataset.drop;
     // Two-step: removing someone changes the lock threshold for the whole league.
@@ -5782,102 +5728,53 @@ document.getElementById('addGo').onclick = async ()=>{
   }catch(e2){ rosErr(e2.message); }
 };
 
-/* ---------------- CEP-7 join link (manager controls) ----------------
-   ⚠️ Nothing here is a secret the PAGE keeps. The code comes back from the Worker on
-   demand and is never cached in localStorage — a shared laptop must not leak another
-   league's link, and "Show" is one request away anyway. */
-const jlErr = m => { const e=document.getElementById('jlErr'); e.textContent=m||''; e.className='err'; return e; };
-const jcErr = m => { const e=document.getElementById('jcErr'); e.textContent=m||''; e.className='err'; return e; };
-function jcPaint(r){
-  document.getElementById('jcState').textContent = r?.leagueCodeEnabled
-    ? 'Code is on. Replace it here if it is forgotten or shared too widely.'
-    : 'Code is off. Only existing members and any active join link can enter.';
+/* ---------------- league password, cap and visibility ---------------- */
+const lpErr = m => { const e=document.getElementById('lpErr'); e.textContent=m||''; e.className='err'; return e; };
+function lpPaint(r){
+  const locked = !!r?.visibilityLocked;
+  document.getElementById('lpState').textContent =
+    (r?.passwordEnabled ? 'Password is on.' : 'Joining is disabled until a password is set.') +
+    ` ${r?.size||0} of ${r?.cap||20} seats used.` +
+    (locked ? ' This league is always public.' : ` Directory: ${r?.visibility==='public'?'public':'private'}.`);
+  const cap=document.getElementById('lpCap');
+  if(document.activeElement!==cap && r?.cap) cap.value=r.cap;
+  const vis=document.getElementById('lpVis');
+  vis.value=r?.visibility==='public'?'public':'private';
+  vis.disabled=locked; document.getElementById('lpVisGo').disabled=locked;
 }
-function jlPaint(r){
-  jcPaint(r);
-  const out = document.getElementById('jlOut');
-  if(!r || !r.code){
-    out.innerHTML = `<div class="linkout"><b>No join link.</b>
-      <span class="tm">Nobody can join by link until you make one. The per-person invites above still work.</span></div>`;
-    return;
-  }
-  out.innerHTML =
-    `<div class="linkout"><b>${esc(r.name||r.league)}</b> — reusable, share freely.
-      <code>${esc(r.link)}</code>
-      <span class="tm">${r.size} of ${r.cap} seats used${r.full?' — <b>full</b>, raise the cap to let anyone else in':''}.</span>
-      <div class="row" style="margin-top:8px"><button class="btn sm" id="jlCopy">Copy</button></div></div>`;
-  document.getElementById('jlCopy').onclick=()=>{
-    navigator.clipboard?.writeText(r.link).then(
-      ()=>{ document.getElementById('jlCopy').textContent='Copied'; },
-      ()=>{ jlErr('Clipboard blocked — select the link above and copy it.'); });
-  };
-  const cap=document.getElementById('jlCap');
-  if(document.activeElement!==cap) cap.value = r.cap;
-}
-async function jlDo(action, extra){
-  jlErr('');
+async function lpDo(action, extra, success){
+  lpErr('');
   try{
-    const r = await wPost('/league/join-code', Object.assign({action}, extra||{}));
-    jlPaint(r);
-    if(action==='rotate'){ const e=jlErr('Rotated — the previous link is dead as of now.'); e.className='err ok'; }
-    if(action==='off'){ const e=jlErr('Join link off. Existing members are unaffected.'); e.className='err ok'; }
-    await reloadLeagues();
-  }catch(e){ jlErr(e.message); }
+    const r=await wPost('/league/access',Object.assign({action},extra||{}));
+    lpPaint(r);
+    if(success){ const out=lpErr(success); out.className='err ok'; }
+    return r;
+  }catch(e){ lpErr(e.message); }
 }
-document.getElementById('jlGet').onclick = ()=>jlDo('get');
-document.getElementById('jlOff').onclick = ()=>jlDo('off');
-document.getElementById('jlCapGo').onclick = ()=>{
-  const cap = parseInt(document.getElementById('jlCap').value, 10);
-  if(!Number.isFinite(cap)) return jlErr('Give the cap a number between 2 and 64.');
-  jlDo('cap', {cap});
+document.getElementById('lpSet').onclick=async()=>{
+  const inp=document.getElementById('lpPass'), password=inp.value;
+  if(password.trim().length<6||password.trim().length>64) return lpErr('Use 6–64 characters.');
+  const r=await lpDo('password',{password},'Password set. Members can now search for this league and join.');
+  if(r) inp.value='';
 };
-document.getElementById('jcSet').onclick = async ()=>{
-  const inp=document.getElementById('jcPass');
-  const leagueCode=inp.value.trim().toUpperCase();
-  jcErr('');
-  if(!/^[A-Z0-9][A-Z0-9-]{5,31}$/.test(leagueCode))
-    return jcErr('Use 6–32 letters, numbers or hyphens.');
-  try{
-    const r=await wPost('/league/join-code',{action:'league-code',leagueCode});
-    inp.value=''; jcPaint(r);
-    const e=jcErr('Code set. Share the code itself — members enter it after signing in.'); e.className='err ok';
-  }catch(e){ jcErr(e.message); }
-};
-document.getElementById('jcPass').addEventListener('keydown',e=>{
-  if(e.key==='Enter'){ e.preventDefault(); document.getElementById('jcSet').click(); }
+document.getElementById('lpPass').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){e.preventDefault();document.getElementById('lpSet').click();}
 });
-/* Two-step because disabling strands anyone who has the old code but has not joined. */
-document.getElementById('jcOff').onclick = async e=>{
+document.getElementById('lpCapGo').onclick=()=>{
+  const cap=parseInt(document.getElementById('lpCap').value,10);
+  if(!Number.isFinite(cap)) return lpErr('Give the cap a number between 2 and 64.');
+  lpDo('cap',{cap},'Member cap saved.');
+};
+document.getElementById('lpVisGo').onclick=()=>
+  lpDo('visibility',{visibility:document.getElementById('lpVis').value},'Directory visibility saved.');
+document.getElementById('lpOff').onclick=async e=>{
   const b=e.currentTarget;
   if(b.dataset.armed!=='1'){
-    b.dataset.armed='1'; b.textContent='Confirm turn off';
-    setTimeout(()=>{ b.dataset.armed='0'; b.textContent='Turn off'; },4000); return;
+    b.dataset.armed='1';b.textContent='Confirm disable';
+    setTimeout(()=>{b.dataset.armed='0';b.textContent='Disable joining';},4000);return;
   }
-  b.dataset.armed='0'; b.textContent='Turn off'; jcErr('');
-  try{
-    const r=await wPost('/league/join-code',{action:'league-code-off'}); jcPaint(r);
-    const out=jcErr('League code off. Existing members are unaffected.'); out.className='err ok';
-  }catch(err){ jcErr(err.message); }
-};
-/* Two-step, same as Remove: rotating locks out anyone still holding the old link. */
-document.getElementById('jlRot').onclick = (e)=>{
-  const b=e.target;
-  if(b.dataset.armed!=='1'){ b.dataset.armed='1'; b.textContent='Confirm rotate';
-    setTimeout(()=>{ b.dataset.armed='0'; b.textContent='Rotate'; }, 4000); return; }
-  b.dataset.armed='0'; b.textContent='Rotate';
-  jlDo('rotate');
-};
-
-document.getElementById('invGo').onclick = async ()=>{
-  const who=document.getElementById('invName').value.trim();
-  if(!who) return rosErr('Give them a name first.');
-  rosErr('');
-  try{
-    const r=await wPost('/league/invite',{player:who});
-    showLink(who, location.origin+'/bozo.html?join='+r.token, r.claimed);
-    document.getElementById('invName').value='';
-    await reloadLeagues();
-  }catch(e2){ rosErr(e2.message); }
+  b.dataset.armed='0';b.textContent='Disable joining';
+  await lpDo('password-off',{},'Joining disabled. Existing members are unaffected.');
 };
 
 document.getElementById('forceLock').onclick = async (ev)=>{
@@ -5902,12 +5799,14 @@ document.getElementById('nlGo').onclick = async ()=>{
   const id=document.getElementById('nlId').value.trim().toLowerCase();
   const nm=document.getElementById('nlName').value.trim();
   const mgr=document.getElementById('nlMgr').value;
+  const password=document.getElementById('nlPassword').value;
   const format=document.getElementById('nlFormat').value==='royale'?'royale':'standard';
   const buyback=format==='royale' ? Math.max(0, Math.round(+document.getElementById('nlBuyback').value||0)) : 0;
   if(!id||!nm) { e.textContent='Name and id are both required.'; return; }
+  if(password.trim().length<6) { e.textContent='A league password needs at least 6 characters.'; return; }
   try{
     // ⚠️ league:id, not the currently-viewed league — this call creates rather than edits.
-    await wPost('/league/create',{league:LID, id, name:nm, manager:mgr, format, buyback});
+    await wPost('/league/create',{league:LID, id, name:nm, manager:mgr, format, buyback, password});
     e.className='err ok'; e.textContent=`Created — switching to ${nm}.`;
     const u=new URL(location.href); u.searchParams.set('l', id); u.hash='league';
     setTimeout(()=>{ location.href=u.toString(); }, 600);
@@ -6497,7 +6396,7 @@ function paintTicker(players, t, mx, holder){
 const BOZO_SYS = `RIGHT NOW you are on Bozo, a weekly group betting game inside the Data Dawgs site.
 THE GAME: each member submits ONE leg. Every leg goes on ONE real parlay at DraftKings, funded by last week's bozo. Whoever busts it worst wears it and funds the next ticket.
 - LEAGUE VISIBILITY: Bozo Boyz and the public Royale demo are listed for everyone. A signed-in person additionally sees only leagues they belong to or manage. The league picker beside the four page tabs uses that same filtered list.
-- LEAGUE MEMBERSHIP: accounts authenticate people. A manager may set one shared league code under League Settings; after signing in, a person enters it under Your Dawgs to add their own authenticated account. Never ask for or repeat that code. Old join links remain optional compatibility paths.
+- LEAGUE MEMBERSHIP: accounts authenticate people. A manager sets one shared league password under League Settings; after signing in, a person searches for that league under Your Dawgs and enters the password to add their own authenticated account. Private leagues appear only on an exact-name search. Never ask for or repeat the password. Per-person league invites and reusable join links are retired.
 - Favorites only, inside the league's price band. No exact duplicate legs. The ticket LOCKS the moment the last leg lands; that moment is the close.
 - Only legs that LOST are eligible to be the bozo. Nobody who cashed can wear it, no matter how bad the price was.
 - Each week the tiebreaker hierarchy is a FRESH RANDOM PERMUTATION of the league's live levers, drawn on the server and written once. It is not a weighted score and not a fixed cascade. Walk the drawn order; the first lever that isolates one person names the bozo; ties fall to the next lever down.

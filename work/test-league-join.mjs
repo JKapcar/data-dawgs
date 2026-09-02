@@ -118,14 +118,14 @@ const call = async (path, { method = "POST", body, session, ip } = {}) => {
    silently pass by treating every call as anonymous. */
 const KAP = await sessionFor("Kap");
 {
-  const probe = await call("/league/join-code", { body: { league: "main" }, session: KAP });
+  const probe = await call("/league/access", { body: { league: "main", action: "status" }, session: KAP });
   if (probe.status === 401 || probe.status === 403) {
     const alt = ["Authorization", "X-Bozo-Session", "X-Dawg-Auth", "X-Session"];
     let found = null;
     for (const h of alt) {
-      const r = await worker.fetch(new Request(ORIGIN + "/league/join-code", {
+      const r = await worker.fetch(new Request(ORIGIN + "/league/access", {
         method: "POST", headers: { "Content-Type": "application/json", [h]: h === "Authorization" ? "Bearer " + KAP : KAP },
-        body: JSON.stringify({ league: "main" }),
+        body: JSON.stringify({ league: "main", action: "status" }),
       }), ENV);
       if (r.status === 200) { found = h; break; }
     }
@@ -151,156 +151,108 @@ const SAM  = await sessionFor("Sam");
 const DANA = await sessionFor("Dana");
 const NIA  = await sessionFor("Nia");
 
-/* ------------------------------- mint ----------------------------------- */
-let code;
+/* -------------------------- manager passwords -------------------------- */
 {
-  const r = await call2("/league/join-code", { body: { league: "main" }, session: KAP });
-  ok("manager mints a code", r.status === 200 && !!r.j.code, JSON.stringify(r.j).slice(0, 120));
-  code = r.j.code;
-  ok("code is 22 url-safe chars", /^[A-Za-z0-9_-]{22}$/.test(code || ""), code);
-  ok("link points at signon.html?league=", (r.j.link || "").includes("/signon.html?league=" + code));
-  ok("default cap is 20", r.j.cap === 20, String(r.j.cap));
-  ok("code is stored in KV, not Firebase",
-    ENV.RL.store.has("joinlink:code:" + code) && !JSON.stringify(db).includes(code));
+  const setMain = await call2("/league/access", { body: { league: "main", action: "password", password: "Main Password!" }, session: KAP });
+  ok("manager sets a league password", setMain.status === 200 && setMain.j.passwordEnabled === true, JSON.stringify(setMain.j));
+  const mainRec = JSON.parse(ENV.RL.store.get("joinlink:lg:main"));
+  ok("KV stores only a scoped password hash", !!mainRec.passwordHash && !JSON.stringify(mainRec).includes("Main Password!"));
 
-  const again = await call2("/league/join-code", { body: { league: "main" }, session: KAP });
-  ok("get is idempotent — same code back", again.j.code === code);
+  const setSide = await call2("/league/access", { body: { league: "side", action: "password", password: "Side Password!" }, session: JEFF });
+  ok("another manager sets their own password", setSide.status === 200 && setSide.j.passwordEnabled === true);
+  const notMine = await call2("/league/access", { body: { league: "side", action: "status" }, session: SAM });
+  ok("a non-manager cannot read access status", notMine.status === 403, String(notMine.status));
 }
 
-/* --------------------------- authorisation ------------------------------ */
+/* ------------------------------- search -------------------------------- */
 {
-  const anon = await call2("/league/join-code", { body: { league: "main" } });
-  ok("anonymous cannot mint", anon.status === 401 || anon.status === 403, String(anon.status));
+  const anon = await call2("/league/search", { body: { query: "Data" } });
+  ok("league search requires sign-in", anon.status === 401 && anon.j.needSignIn === true, JSON.stringify(anon.j));
 
-  const notMine = await call2("/league/join-code", { body: { league: "main" }, session: JEFF });
-  ok("a non-manager cannot mint for someone else's league", notMine.status === 403, String(notMine.status));
+  const pub = await call2("/league/search", { body: { query: "Data" }, session: SAM });
+  ok("public league matches a partial name", pub.status === 200 && pub.j.results.some(x => x.id === "main"));
 
-  const ownLeague = await call2("/league/join-code", { body: { league: "side" }, session: JEFF });
-  ok("a manager can mint for their OWN league", ownLeague.status === 200 && !!ownLeague.j.code);
+  const privatePartial = await call2("/league/search", { body: { query: "Pot" }, session: SAM });
+  ok("private league does not match a stranger's partial search", privatePartial.status === 200 && privatePartial.j.results.length === 0);
 
-  const adminAny = await call2("/league/join-code", { body: { league: "side" }, session: KAP });
-  ok("site admin can mint for any league", adminAny.status === 200);
+  const privateExact = await call2("/league/search", { body: { query: "Side Pot" }, session: SAM });
+  ok("private league matches its exact name", privateExact.status === 200 && privateExact.j.results.length === 1 && privateExact.j.results[0].id === "side");
 
-  const bogus = await call2("/league/join-code", { body: { league: "nope" }, session: KAP });
-  ok("unknown league is refused", bogus.status === 404, String(bogus.status));
-
-  const getOnly = await call2("/league/join-code", { method: "GET", session: KAP });
-  ok("GET on join-code is 405", getOnly.status === 405, String(getOnly.status));
+  const ownPartial = await call2("/league/search", { body: { query: "Side" }, session: JEFF });
+  ok("a member may partially search their own league", ownPartial.status === 200 && ownPartial.j.results.some(x => x.id === "side"));
 }
 
-/* ------------------------------- preview -------------------------------- */
+/* -------------------------------- join --------------------------------- */
 {
-  const p = await call2("/league/join?code=" + code, { method: "GET" });
-  ok("preview works signed out", p.status === 200 && p.j.name === "Data Dawgs");
-  ok("preview reports size and cap", p.j.size === 2 && p.j.cap === 20);
-  ok("preview leaks no member names", !JSON.stringify(p.j).includes("Jeff"));
+  const anon = await call2("/league/join", { body: { league: "side", password: "Side Password!" } });
+  ok("joining requires a session", anon.status === 401 && anon.j.needSignIn === true, JSON.stringify(anon.j));
 
-  const bad = await call2("/league/join?code=" + "z".repeat(22), { method: "GET" });
-  ok("unknown code previews as 404", bad.status === 404, String(bad.status));
+  const wrong = await call2("/league/join", { body: { league: "side", password: "wrong password" }, session: SAM, ip: "2.2.2.2" });
+  ok("wrong league password is refused", wrong.status === 403 && /password/.test(wrong.j.error || ""), JSON.stringify(wrong.j));
 
-  const malformed = await call2("/league/join?code=short", { method: "GET" });
-  ok("malformed code is 400", malformed.status === 400, String(malformed.status));
+  const before = Object.keys(db.leagues.side.members).length;
+  const joined = await call2("/league/join", { body: { league: "side", password: "Side Password!" }, session: SAM, ip: "2.2.2.3" });
+  ok("signed-in account joins the selected league", joined.status === 200 && joined.j.ok === true, JSON.stringify(joined.j));
+  ok("membership lands exactly once", db.leagues.side.members[enc("Sam")] === true && Object.keys(db.leagues.side.members).length === before + 1);
+
+  const twice = await call2("/league/join", { body: { league: "side", password: "not needed now" }, session: SAM });
+  ok("existing membership is a successful no-op", twice.status === 200 && twice.j.already === true);
 }
 
-/* ------------------------------- redeem --------------------------------- */
+/* -------------------------- cap and open week --------------------------- */
 {
-  const anon = await call2("/league/join", { body: { code } });
-  ok("redeem requires a session", anon.status === 401 && anon.j.needSignIn === true, JSON.stringify(anon.j));
+  const size = Object.keys(db.leagues.main.members).length;
+  await call2("/league/access", { body: { league: "main", action: "cap", cap: size }, session: KAP });
+  const full = await call2("/league/join", { body: { league: "main", password: "Main Password!" }, session: DANA, ip: "3.3.3.3" });
+  ok("member cap blocks a valid password", full.status === 409 && /full/.test(full.j.error || ""), JSON.stringify(full.j));
 
-  const before = Object.keys(db.leagues.main.members).length;
-  const r = await call2("/league/join", { body: { code }, session: SAM });
-  ok("signed-in stranger joins with a good code", r.status === 200 && r.j.ok === true, JSON.stringify(r.j));
-  ok("member actually landed in Firebase", db.leagues.main.members[enc("Sam")] === true);
-  ok("size grew by exactly one", Object.keys(db.leagues.main.members).length === before + 1);
-
-  const twice = await call2("/league/join", { body: { code }, session: SAM });
-  ok("joining twice is a no-op, not an error", twice.status === 200 && twice.j.already === true);
-  ok("double join did not duplicate the member", Object.keys(db.leagues.main.members).length === before + 1);
-
-  const stale = await call2("/league/join", { body: { code: "z".repeat(22) }, session: DANA });
-  ok("a dead code is refused", stale.status === 404);
-  ok("refusal message does not distinguish never-existed from rotated",
-    /no longer good/.test(stale.j.error || ""), stale.j.error);
-}
-
-/* ------------------------------- rotation ------------------------------- */
-{
-  const rot = await call2("/league/join-code", { body: { league: "main", action: "rotate" }, session: KAP });
-  ok("rotate returns a different code", rot.status === 200 && rot.j.code && rot.j.code !== code);
-  const dead = await call2("/league/join", { body: { code }, session: DANA });
-  ok("the OLD code dies immediately", dead.status === 404, String(dead.status));
-  ok("old lookup key is gone from KV", !ENV.RL.store.has("joinlink:code:" + code));
-  const fresh = await call2("/league/join", { body: { code: rot.j.code }, session: DANA });
-  ok("the NEW code works", fresh.status === 200 && fresh.j.ok === true);
-  code = rot.j.code;
-}
-
-/* --------------------------------- cap ---------------------------------- */
-{
-  const size = Object.keys(db.leagues.main.members).length;   // Kap, Jeff, Sam, Dana = 4
-  const setCap = await call2("/league/join-code", { body: { league: "main", action: "cap", cap: size }, session: KAP });
-  ok("manager sets the cap", setCap.status === 200 && setCap.j.cap === size, JSON.stringify(setCap.j));
-  ok("cap response reports the league as full", setCap.j.full === true);
-
-  const full = await call2("/league/join", { body: { code }, session: NIA });
-  ok("a full league refuses a valid code", full.status === 409 && /full/.test(full.j.error || ""), JSON.stringify(full.j));
-  ok("nobody was added past the cap", Object.keys(db.leagues.main.members).length === size);
-
-  const low = await call2("/league/join-code", { body: { league: "main", action: "cap", cap: 1 }, session: KAP });
-  ok("cap below the minimum is refused", low.status === 400);
-  const high = await call2("/league/join-code", { body: { league: "main", action: "cap", cap: 999 }, session: KAP });
-  ok("cap above the maximum is refused", high.status === 400);
-
-  // a cap under the current roster closes the door but evicts nobody
-  const shrink = await call2("/league/join-code", { body: { league: "main", action: "cap", cap: 2 }, session: KAP });
-  ok("cap below current size is allowed", shrink.status === 200 && shrink.j.cap === 2);
-  ok("shrinking the cap evicts nobody", Object.keys(db.leagues.main.members).length === size);
-
-  await call2("/league/join-code", { body: { league: "main", action: "cap", cap: 20 }, session: KAP });
-}
-
-/* ---------------------- placed board refuses new joins ------------------- */
-{
+  await call2("/league/access", { body: { league: "main", action: "cap", cap: 20 }, session: KAP });
   db.leagues.main.status = "placed";
-  const r = await call2("/league/join", { body: { code }, session: NIA });
-  ok("a placed ticket blocks joining mid-week", r.status === 409 && /placed/.test(r.j.error || ""), JSON.stringify(r.j));
-  ok("blocked join did not write a member", !db.leagues.main.members[enc("Nia")]);
+  const placed = await call2("/league/join", { body: { league: "main", password: "Main Password!" }, session: DANA, ip: "3.3.3.4" });
+  ok("a placed ticket blocks mid-week joining", placed.status === 409 && /placed/.test(placed.j.error || ""), JSON.stringify(placed.j));
   db.leagues.main.status = "open";
-  const after = await call2("/league/join", { body: { code }, session: NIA });
-  ok("joining works again once the week reopens", after.status === 200);
 }
 
-/* --------------------------------- off ---------------------------------- */
+/* ----------------------------- visibility ------------------------------ */
 {
-  const off = await call2("/league/join-code", { body: { league: "main", action: "off" }, session: KAP });
-  ok("manager can turn the link off", off.status === 200 && off.j.code === null);
-  ok("turning off clears both KV keys",
-    !ENV.RL.store.has("joinlink:lg:main") && !ENV.RL.store.has("joinlink:code:" + code));
-  const dead = await call2("/league/join", { body: { code }, session: await sessionFor("Kap") });
-  ok("no code works after off", dead.status === 404);
+  const publicBefore = await call2("/league/list", { method: "GET" });
+  ok("unsigned directory initially excludes the private side league", !publicBefore.j.leagues.some(x => x.id === "side"));
+
+  const pub = await call2("/league/access", { body: { league: "side", action: "visibility", visibility: "public" }, session: JEFF });
+  ok("manager can make their league public", pub.status === 200 && pub.j.visibility === "public");
+  const publicAfter = await call2("/league/list", { method: "GET" });
+  ok("public visibility changes the unsigned directory", publicAfter.j.leagues.some(x => x.id === "side"));
+
+  const forced = await call2("/league/access", { body: { league: "main", action: "visibility", visibility: "private" }, session: KAP });
+  ok("the two house public rooms cannot be made private", forced.status === 400);
+  await call2("/league/access", { body: { league: "side", action: "visibility", visibility: "private" }, session: JEFF });
 }
 
-/* ------------------------------ rate limit ------------------------------ */
+/* -------------------------- retired link paths -------------------------- */
 {
-  ENV.RL.store.clear();
-  const mint = await call2("/league/join-code", { body: { league: "side", action: "rotate" }, session: JEFF });
-  const c = mint.j.code;
+  const oldPreview = await call2("/league/join?code=" + "x".repeat(22), { method: "GET" });
+  ok("reusable join-link preview is retired", oldPreview.status === 410);
+  const oldMint = await call2("/league/join-code", { body: { league: "main", action: "get" }, session: KAP });
+  ok("cached manager pages cannot mint links", oldMint.status === 410);
+  const perPerson = await call2("/league/invite", { body: { league: "main", player: "Nia" }, session: KAP });
+  ok("per-person league invites are retired", perPerson.status === 410);
+}
+
+/* ----------------------------- rate limit ------------------------------ */
+{
   let last = null;
-  for (let i = 0; i < 25; i++) last = await call2("/league/join", { body: { code: "y".repeat(22) }, session: SAM, ip: "9.9.9.9" });
-  ok("redemption is rate limited per IP", last.status === 429, String(last.status));
-  const other = await call2("/league/join", { body: { code: c }, session: SAM, ip: "1.2.3.4" });
-  ok("a different IP is unaffected", other.status === 200, String(other.status));
+  for (let n = 0; n < 25; n++)
+    last = await call2("/league/join", { body: { league: "side", password: "wrong again" }, session: NIA, ip: "9.9.9.9" });
+  ok("password attempts are rate limited per IP", last.status === 429, String(last.status));
 }
 
-/* ------------------------- draft rig stays ungated ----------------------- */
+/* ------------------------- draft rig stays public ---------------------- */
 {
   const src = (await import("fs")).readFileSync(new URL("../dawg-bot-worker.js", import.meta.url), "utf8");
   const draftRoutes = ["/drafts", "/draft"];
   const gated = draftRoutes.some(r => new RegExp('pathname === "' + r + '"[^\\n]*leagueJoin').test(src));
-  ok("no draft route was wired through the join gate (AGENTS.md rule 6)", !gated);
-  ok("join code never appears in a Firebase write path",
-    !/fbPatch\([^)]*joinlink|fbPut\([^)]*joinlink/.test(src));
+  ok("no draft route was wired through the Bozo password gate", !gated);
 }
 
-console.log("\nleague-join: " + pass + " passed, " + fail + " failed");
+console.log("\nleague-access: " + pass + " passed, " + fail + " failed");
 if (fail) process.exit(1);

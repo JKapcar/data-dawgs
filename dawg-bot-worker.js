@@ -26,9 +26,11 @@
  * rule — no rules change). Every Bozo route takes an optional {league}; absent means
  * "main", so pre-league callers keep working.
  *   GET  /league/list    — public leagues + signed-in member/manager leagues
- *   POST /league/create  — SITE ADMIN only: {id, name, manager}
+ *   POST /league/create  — SITE ADMIN only: {id, name, manager, password}
+ *   POST /league/search  — signed-in exact search for private leagues
+ *   POST /league/join    — signed-in membership via {league, password}
+ *   POST /league/access  — manager: password, cap and public/private visibility
  *   POST /league/member  — manager: {league, player, action:"add"|"remove"}  ← the size dial
- *   POST /league/invite  — manager: mints a join link, CREATES the account if new
  *   POST /league/lock    — manager: force-place when someone never submits
  *   POST /league/slip    — any member: publish the week's DraftKings betslip link
  *   POST /league/config  — manager: the price band for that league
@@ -46,7 +48,8 @@
  *   POST /auth/invite  — admin re-issues a join link (returns the raw token ONCE)
  *   POST /auth/signup  — OPEN SIGNUP (8/7): {name, email, password} creates a
  *     site-wide account, no invite. An account is NOT a league seat — membership
- *     stays invite/manager-gated. The only unauthenticated write; IP-capped.
+ *     requires the league password or a manager add. The only unauthenticated write;
+ *     IP-capped.
  *   POST /auth/lookup — bounded email-first account lookup
  *   POST /auth/email-confirm — proves a new primary address before switching login
  *   GET/PUT /auth/draft-state — private UID scratch state with ETag-backed CAS
@@ -1539,19 +1542,21 @@ export default {
     if (url.pathname === "/league/mine")   return universalLeagueMine(request, env, cors);
     if (url.pathname === "/league/gate")   return universalLeagueGate(request, env, cors);
     if (url.pathname === "/league/list")   return leagueList(request, env, cors);
+    if (url.pathname === "/league/search") return leagueSearch(request, env, cors);
     if (url.pathname === "/league/create") return leagueCreateDispatch(request, env, cors);
     if (url.pathname === "/league/delete") return leagueDelete(request, env, cors);
     if (url.pathname === "/league/import") return leagueImport(request, env, cors);
     if (url.pathname === "/league/member") return leagueMember(request, env, cors);
     if (url.pathname === "/league/join")
-      return request.method === "GET" ? leagueJoinPreview(request, url, env, cors) : leagueJoinDispatch(request, env, cors);
-    if (url.pathname === "/league/join-code") return leagueJoinCode(request, env, cors);
+      return request.method === "GET" ? retiredLeagueLink(cors) : leagueJoinDispatch(request, env, cors);
+    if (url.pathname === "/league/access") return leagueAccess(request, env, cors);
+    if (url.pathname === "/league/join-code") return leagueAccessLegacy(request, env, cors);
     if (url.pathname === "/league/lock")   return leagueLock(request, env, cors);
     if (url.pathname === "/league/slip")   return leagueSlip(request, env, cors);
     if (url.pathname === "/league/config") return bozoConfigSet(request, env, cors);
     if (url.pathname === "/league/settings") return leagueSettings(request, env, cors);
     if (url.pathname === "/league/team")   return leagueTeam(request, env, cors);
-    if (url.pathname === "/league/invite") return authInvite(request, env, cors);
+    if (url.pathname === "/league/invite") return retiredLeagueInvite(cors);
 
     // DDCC is account-backed. Every handler derives its user from the signed session;
     // no request body can choose whose attempts or receipts are read or written.
@@ -3175,9 +3180,6 @@ async function authInvite(request, env, cors) {
       // bootstrap secret stops being authoritative for them — otherwise a stale token
       // sitting in BOZO_TOKENS would out-rank the link you just deliberately issued.
       src: "mint",
-      // Consumed by /auth/claim: claiming this link also joins that league, so one
-      // click gets a new person both an account and a seat.
-      pendingLeague: lid,
       // ⚠️ ONLY WHEN THE ACCOUNT IS NEW. Re-inviting an EXISTING person is supported and
       // ordinary (a lost link gets re-minted), and this is a PATCH — so writing the free
       // default unconditionally would silently downgrade a paying member to free the next
@@ -3189,12 +3191,9 @@ async function authInvite(request, env, cors) {
     return json({ error: "Database write failed: " + e.message }, 502, cors);
   }
   const claimed = !!(await fbGet(env, authPath(player))).data;
-  // Someone who already has a password won't go through claim, so seat them now.
-  if (claimed) {
-    try { await fbPatch(env, LG(lid) + "/members", { [encodeURIComponent(player)]: true }); }
-    catch (e) { /* the manager can still add them by hand */ }
-  }
-  return json({ ok: true, player, token, claimed, isNew, league: lid }, 200, cors);
+  // Identity invitations create or recover an account only. League membership always
+  // comes from an authenticated league search plus the shared league password.
+  return json({ ok: true, player, token, claimed, isNew }, 200, cors);
 }
 
 // GET /auth/roster — who exists and who has set a password. No secrets: it is
@@ -3314,19 +3313,13 @@ async function bozoClaim(request, env, cors) {
     const setAt = Date.now();
     await fbPut(env, authPath(name), { v: 1, salt, hash, iters: PBKDF2_ITERS, setAt });
 
-    // The invite was minted FOR a league — claiming it takes the seat. One click gets
-    // a new person an account and membership; without this they would land signed in
-    // to a league they are not in and be told so.
-    const pending = (users[encodeURIComponent(name)] || {}).pendingLeague;
-    let joined = null;
-    if (pending && validLeagueId(pending)) {
-      try {
-        await fbPatch(env, LG(pending) + "/members", { [encodeURIComponent(name)]: true });
-        await fbPatch(env, "/users/" + encodeURIComponent(name), { pendingLeague: null });
-        joined = pending;
-      } catch (e) { /* the manager can add them by hand */ }
+    // Account claim is identity-only. Any stale pendingLeague left by the retired
+    // per-person invite system is cleared without granting membership.
+    if ((users[encodeURIComponent(name)] || {}).pendingLeague) {
+      try { await fbPatch(env, "/users/" + encodeURIComponent(name), { pendingLeague: null }); }
+      catch { /* membership still remains closed; the stale marker is inert */ }
     }
-    return json({ ok: true, name, joined, session: await makeSession(env, name, setAt) }, 200, cors);
+    return json({ ok: true, name, session: await makeSession(env, name, setAt) }, 200, cors);
   } catch (e) {
     return json({ error: "Database write failed: " + e.message }, 502, cors);
   }
@@ -4178,6 +4171,7 @@ async function requireMember(request, env, lid) {
 // `demo-royale` remains visibly labelled DEMO · SIMULATED by its stored settings and
 // the page. It is the public Royale surface until a live Bozo Boyz Royale replaces it.
 const PUBLIC_BOZO_LEAGUES = new Set([DEFAULT_LEAGUE, "demo-royale"]);
+const leagueIsPublic = (id, lg) => PUBLIC_BOZO_LEAGUES.has(id) || (lg && lg.visibility === "public");
 async function leagueList(request, env, cors) {
   let leagues;
   try { leagues = await loadLeagues(env); }
@@ -4190,7 +4184,7 @@ async function leagueList(request, env, cors) {
     if (!auth.err) viewer = auth.name;
   }
 
-  const visible = ([id, lg]) => PUBLIC_BOZO_LEAGUES.has(id)
+  const visible = ([id, lg]) => leagueIsPublic(id, lg)
     || (!!viewer && (lg.manager === viewer || isMember(lg, viewer)));
   const out = Object.entries(leagues).filter(visible).map(([id, lg]) => ({
     id, name: lg.name || id, manager: lg.manager || null,
@@ -4199,8 +4193,40 @@ async function leagueList(request, env, cors) {
     teams: lg.teams || null,
     settings: settingsOf(lg),
     week: lg.week || 1, status: lg.status || "open",
+    visibility: leagueIsPublic(id, lg) ? "public" : "private",
   })).sort((a, b) => a.id === DEFAULT_LEAGUE ? -1 : b.id === DEFAULT_LEAGUE ? 1 : a.name.localeCompare(b.name));
   return json({ leagues: out, defaultLeague: DEFAULT_LEAGUE, signedIn: !!viewer }, 200, cors);
+}
+
+// POST /league/search {query} — signed-in exact search for private Bozo leagues.
+// Public rooms and the caller's own rooms may match by substring; a private room the
+// caller has never joined is returned only when its full name or id is entered. That
+// makes search useful without turning it into a directory of everybody else's leagues.
+async function leagueSearch(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err, needSignIn: true }, auth.code || 401, cors);
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+  const query = String(body.query || "").trim().replace(/\s+/g, " ");
+  if (query.length < 2 || query.length > 60)
+    return json({ error: "Enter at least two characters of the league name." }, 400, cors);
+  const q = query.toLocaleLowerCase("en-US");
+  let leagues;
+  try { leagues = await loadLeagues(env); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+  const results = Object.entries(leagues).filter(([id, lg]) => {
+    const name = String((lg && lg.name) || id).trim().replace(/\s+/g, " ").toLocaleLowerCase("en-US");
+    const own = lg && (lg.manager === auth.name || isMember(lg, auth.name));
+    return leagueIsPublic(id, lg) || own ? (name.includes(q) || id.includes(q)) : (name === q || id === q);
+  }).slice(0, 10).map(([id, lg]) => ({
+    id, name: lg.name || id, manager: lg.manager || null,
+    size: memberNames(lg).length,
+    already: isMember(lg, auth.name),
+    visibility: leagueIsPublic(id, lg) ? "public" : "private",
+  }));
+  return json({ results }, 200, cors);
 }
 
 // POST /league/create {id, name, manager} — SITE ADMIN only. Kap makes leagues and
@@ -4237,6 +4263,11 @@ async function leagueCreate(request, env, cors) {
   const buyback = format === "royale" ? Math.max(0, Math.round(Number(body.buyback) || 0)) : 0;
   if (!Number.isFinite(buyback) || buyback > 100000)
     return json({ error: "Re-deploy cost must be between 0 and 100000." }, 400, cors);
+  const leaguePassword = normLeaguePassword(body.password);
+  if (!validLeaguePassword(leaguePassword))
+    return json({ error: "A new league needs a 6–64 character league password." }, 400, cors);
+  const accessKv = JOIN_KV(env);
+  if (!accessKv) return json({ error: "League access is unavailable right now." }, 503, cors);
 
   const lg = {
     name: String(body.name || id).slice(0, 60),
@@ -4251,6 +4282,18 @@ async function leagueCreate(request, env, cors) {
   };
   try { await fbPatch(env, LG(id), lg); }
   catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  try {
+    await accessKv.put(JOIN_LG(id), JSON.stringify({
+      passwordHash: await leaguePasswordHash(env, id, leaguePassword),
+      cap: JOIN_CAP_DEFAULT, createdTs: Date.now(), createdBy: auth.name,
+      passwordChangedTs: Date.now(), passwordChangedBy: auth.name,
+    }));
+  } catch (e) {
+    // Creation is one operation to the caller. If its password cannot be stored, remove
+    // the brand-new empty league so a retry does not collide with a half-created room.
+    try { await fbPut(env, LG(id), null); } catch { /* report the original access failure */ }
+    return json({ error: "League password write failed: " + e.message }, 502, cors);
+  }
   return json({ ok: true, id, league: lg }, 200, cors);
 }
 
@@ -4811,7 +4854,8 @@ async function leagueTeam(request, env, cors) {
 }
 
 // POST /league/member {league, player, action:"add"|"remove"} — the size dial.
-// Adding requires an existing account; use /league/invite for someone brand new.
+// Adding requires an existing account. New people sign up themselves, then either the
+// manager adds that account or they search for the league and enter its password.
 async function leagueMember(request, env, cors) {
   if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
   let body;
@@ -4827,7 +4871,7 @@ async function leagueMember(request, env, cors) {
   const remove = body.action === "remove";
   const users = await loadUsers(env);
   if (!remove && !userNames(users).includes(player))
-    return json({ error: player + " doesn't have an account yet — have them sign up first, or send them your league's join link." }, 400, cors);
+    return json({ error: player + " doesn't have an account yet — have them sign up first, then use the league password." }, 400, cors);
 
   // ⚠️ Changing the roster mid-week moves the lock threshold under a live board.
   // Removing the last person you were waiting on would otherwise silently place the
@@ -4957,37 +5001,25 @@ async function leagueSlip(request, env, cors) {
   return json({ ok: true, slip }, 200, cors);
 }
 
-/* ============================== league join links ==========================
-   A reusable per-league join secret, handed out either as a link or as a short
-   manager-chosen code:
-   https://datadawgs216.com/signon.html?league=<code>
+/* ============================== league access ==============================
+   Every Bozo league has one manager-controlled password. People authenticate first,
+   search for a league, and submit {league,password}; the password grants membership
+   to that authenticated account. Private rooms appear only on an exact-name search.
 
-   ⚠️ THE CODE LIVES IN KV, NEVER IN FIREBASE. /bozo is world-readable — anything
-   under /bozo/leagues/<id> can be read by anyone with the database URL, so a code
-   stored there would be a public invitation to every league at once. KV is only
-   reachable from inside this Worker, which is the whole security model here.
+   ⚠️ PASSWORD HASHES LIVE IN KV, NEVER FIREBASE. /bozo is world-readable, so access
+   material under /bozo/leagues/<id> would be public. KV is Worker-only. The historical
+   joinlink:* key name remains only to migrate or revoke records created before links
+   were retired; no route mints or redeems those links now.
 
-   Three key shapes, all in KV:
-     joinlink:lg:<lid>       {code, passHash, cap, ...} — manager controls (NO raw pass)
-     joinlink:code:<code>    "<lid>"                    — long-link redemption lookup
-     joinpass:code:<hmac>    "<lid>"                    — typed-code redemption lookup
-
-   Rotation deletes the old code key, so a leaked link dies the moment the manager
-   presses rotate. That is a property a signed token cannot have without a
-   revocation list, which is why this is a stored random secret and not an HMAC:
-   there is no key material in the link, and revocation is a single delete.
-
-   The cap is the blast radius. A leaked link cannot grow a league past it, and it
-   is the manager's number, not a global one.
+   The cap is the blast radius. A shared password cannot grow a league past the
+   manager's chosen ceiling.
 
    ⚠️ This is NOT how the draft rig works and must never become that. AGENTS.md
    rule 6: the draft board is public on purpose. This gates league MEMBERSHIP for
    the Bozo game only. */
 
-// ⚠️ Names RL explicitly — see the survivorKV note. This is the one that bites hardest:
-// these keys ARE the live join links. CEP-7 put them in KV precisely so they would not
-// sit in world-readable /bozo, which means there is no second copy anywhere. Pointing
-// this at an empty namespace invalidates every outstanding invite at once, silently.
+// ⚠️ Names RL explicitly — this namespace holds the only password hashes. Pointing it
+// at an empty namespace disables new joins until managers set passwords again.
 const JOIN_KV = (env) => env.RL || null;
 const JOIN_LG = (lid) => "joinlink:lg:" + lid;
 const JOIN_CODE = (code) => "joinlink:code:" + code;
@@ -4996,64 +5028,42 @@ const JOIN_CAP_DEFAULT = 20;
 const JOIN_CAP_MIN = 2;
 const JOIN_CAP_MAX = 64;
 const JOIN_REDEEM_PER_DAY = 20;
-// base64url of 16 random bytes: 22 chars, ~128 bits. Not guessable, and short
-// enough to survive a text message without wrapping.
-const validJoinCode = (c) => typeof c === "string" && /^[A-Za-z0-9_-]{22}$/.test(c);
-
-// Human-entered league codes are case-insensitive and deliberately boring enough to
-// say or type without ambiguity. KV never receives the raw code. Its lookup key is an
-// HMAC under BOZO_PEPPER, so a KV export alone cannot be used to brute-force short codes.
+// Legacy short-code helpers exist only so the first password join after deployment can
+// honour a code that a manager set immediately before retirement. The next password
+// change deletes this global lookup and writes the league-scoped form below.
 const normJoinPass = (c) => String(c || "").trim().toUpperCase();
-const validJoinPass = (c) => /^[A-Z0-9][A-Z0-9-]{5,31}$/.test(normJoinPass(c));
 const joinPassHash = (env, c) =>
   hmac(env.BOZO_PEPPER, "bozo-league-code" + String.fromCharCode(0) + normJoinPass(c));
 
-function newJoinCode() {
-  const raw = crypto.getRandomValues(new Uint8Array(16));
-  return btoa(String.fromCharCode(...raw)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+// League passwords are case-sensitive and scoped to one league. Scoping means two
+// unrelated friend groups may choose the same password without either becoming a
+// lookup for the other. The raw password never reaches Firebase or KV.
+const normLeaguePassword = (p) => String(p == null ? "" : p).trim();
+const validLeaguePassword = (p) => {
+  const s = normLeaguePassword(p);
+  return s.length >= 6 && s.length <= 64 && !/[\u0000-\u001f\u007f]/.test(s);
+};
+const leaguePasswordHash = (env, lid, password) =>
+  hmac(env.BOZO_PEPPER, "bozo-league-password" + String.fromCharCode(0) + lid + String.fromCharCode(0) + normLeaguePassword(password));
+
+function retiredLeagueLink(cors) {
+  return json({ error: "League join links have been retired. Sign in, search for the league under Your Dawgs, and enter its password." }, 410, cors);
+}
+
+function retiredLeagueInvite(cors) {
+  return json({ error: "Per-person league invites have been retired. The person should create their own account, search for the league, and enter its shared password." }, 410, cors);
 }
 
 const joinCapOf = (rec) =>
   Number.isFinite(rec && rec.cap) ? Math.min(JOIN_CAP_MAX, Math.max(JOIN_CAP_MIN, rec.cap)) : JOIN_CAP_DEFAULT;
 
-// GET /league/join?code=... — deliberately PUBLIC and deliberately thin.
-// Whoever holds the code was given it; showing them which league they are about to
-// join is the difference between a confident click and a suspicious one. It returns
-// no member names, no picks and no ledger — /league/list already publishes the rest.
-async function leagueJoinPreview(request, url, env, cors) {
-  const kv = JOIN_KV(env);
-  if (!kv) return json({ error: "Join links are unavailable right now." }, 503, cors);
-  const code = String(url.searchParams.get("code") || "");
-  if (!validJoinCode(code)) return json({ error: "That is not a join link." }, 400, cors);
-
-  let lid = null;
-  try { lid = await kv.get(JOIN_CODE(code)); }
-  catch { return json({ error: "Join lookup failed." }, 502, cors); }
-  // ⚠️ Same answer for "never existed" and "rotated away". Distinguishing them tells
-  // a stranger which codes were once real.
-  if (!lid) return json({ error: "That join link is no longer good — ask the manager for a new one." }, 404, cors);
-
-  let lg, rec = null;
-  try {
-    lg = await loadLeague(env, lid);
-    rec = JSON.parse((await kv.get(JOIN_LG(lid))) || "null");
-  } catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
-  if (!lg) return json({ error: "That league is gone." }, 404, cors);
-
-  const size = memberNames(lg).length, cap = joinCapOf(rec);
-  return json({
-    league: lid, name: lg.name || lid, manager: lg.manager || null,
-    size, cap, full: size >= cap, open: (lg.status || "open") === "open",
-  }, 200, cors);
-}
-
-// POST /league/join {code} or {leagueCode} — redeem. A SESSION IS REQUIRED: the
-// shared secret says which league, the session says who. There is no path here that
-// creates an account, so a leaked code cannot be used without a signed-in identity.
+// POST /league/join {league,password} — join after an authenticated search. A session
+// says who, the selected id says where, and the shared password proves permission.
+// This route never creates an account and never accepts retired link tokens.
 async function leagueJoin(request, env, cors) {
   if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
   const kv = JOIN_KV(env);
-  if (!kv) return json({ error: "Join links are unavailable right now." }, 503, cors);
+  if (!kv) return json({ error: "League access is unavailable right now." }, 503, cors);
 
   const auth = await sessionAuth(request, env);
   if (auth.err) return json({ error: auth.err, needSignIn: true }, auth.code || 401, cors);
@@ -5061,16 +5071,13 @@ async function leagueJoin(request, env, cors) {
   let body;
   try { body = await readBody(request); }
   catch { return json({ error: "Bad JSON." }, 400, cors); }
-  const code = String(body.code || "");
-  const pass = normJoinPass(body.leagueCode);
-  const byLink = validJoinCode(code);
-  const byPass = validJoinPass(pass);
-  if (!byLink && !byPass)
-    return json({ error: "League codes are 6–32 letters, numbers or hyphens." }, 400, cors);
+  const lid = String(body.league || "");
+  const password = normLeaguePassword(body.password);
+  if (!validLeagueId(lid)) return json({ error: "Choose a league from search first." }, 400, cors);
+  if (!validLeaguePassword(password))
+    return json({ error: "League passwords are 6–64 characters." }, 400, cors);
 
-  // Per-IP daily cap on redemption attempts. The long link has 128 bits of entropy;
-  // the human-entered code does not, so this is its online-guessing boundary as well
-  // as protection against using either form as a league-probing endpoint.
+  // Per-IP daily cap is the online-guessing boundary for shared passwords.
   let rlKey = null, used = 0;
   if (env.RL) {
     const day = new Date().toISOString().slice(0, 10);
@@ -5081,17 +5088,6 @@ async function leagueJoin(request, env, cors) {
     await env.RL.put(rlKey, String(used + 1), { expirationTtl: 172800 });
   }
 
-  let lid = null;
-  try {
-    lid = byLink
-      ? await kv.get(JOIN_CODE(code))
-      : await kv.get(JOIN_PASS(await joinPassHash(env, pass)));
-  }
-  catch { return json({ error: "Join lookup failed." }, 502, cors); }
-  if (!lid) return json({ error: byLink
-    ? "That join link is no longer good — ask the manager for a new one."
-    : "That league code is not valid." }, 404, cors);
-
   let lg, rec = null;
   try {
     lg = await loadLeague(env, lid);
@@ -5099,9 +5095,20 @@ async function leagueJoin(request, env, cors) {
   } catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
   if (!lg) return json({ error: "That league is gone." }, 404, cors);
 
-  // Already in: say so plainly and succeed. Clicking your own link twice is not an error.
+  // Existing membership is already the authorization; no password is needed to keep it.
   if (isMember(lg, auth.name))
     return json({ ok: true, already: true, league: lid, name: lg.name || lid, size: memberNames(lg).length }, 200, cors);
+
+  const currentHash = rec && rec.passwordHash;
+  const legacyHash = rec && rec.passHash;
+  let passwordOkay = false;
+  try {
+    if (currentHash)
+      passwordOkay = timingSafeEqual(currentHash, await leaguePasswordHash(env, lid, password));
+    else if (legacyHash)
+      passwordOkay = timingSafeEqual(legacyHash, await joinPassHash(env, password));
+  } catch { return json({ error: "League password check failed." }, 502, cors); }
+  if (!passwordOkay) return json({ error: "That league password is not valid." }, 403, cors);
 
   // ⚠️ Same rule leagueMember enforces, for the same reason: joining mid-week moves
   // the lock threshold under a live board and could place the ticket early.
@@ -5120,18 +5127,12 @@ async function leagueJoin(request, env, cors) {
   return json({ ok: true, league: lid, name: after.name || lid, size: memberNames(after).length, cap }, 200, cors);
 }
 
-// POST /league/join-code {league, action} — manager only.
-//   action "get"    (default) mint on first use, otherwise return the current code
-//   action "rotate"           new code, old one dead immediately
-//   action "cap"    {cap}     change the member cap
-//   action "off"              disable the long join link
-//   action "league-code" {leagueCode} — set/replace the shared typed code
-//   action "league-code-off"  — disable the shared typed code
-//   action "status"           — manager-only state, never returns the typed code
-async function leagueJoinCode(request, env, cors) {
+// POST /league/access {league, action} — manager-only password, visibility and cap.
+// Passwords are write-only: status reports whether one exists but never returns it.
+async function leagueAccess(request, env, cors) {
   if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
   const kv = JOIN_KV(env);
-  if (!kv) return json({ error: "Join links are unavailable right now." }, 503, cors);
+  if (!kv) return json({ error: "League access is unavailable right now." }, 503, cors);
 
   let body;
   try { body = await readBody(request); }
@@ -5142,8 +5143,8 @@ async function leagueJoinCode(request, env, cors) {
   const auth = await requireManager(request, env, lid);
   if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
 
-  const action = String(body.action || "get");
-  if (!["get", "rotate", "cap", "off", "league-code", "league-code-off", "status"].includes(action))
+  const action = String(body.action || "status");
+  if (!["password", "password-off", "cap", "visibility", "status"].includes(action))
     return json({ error: "Unknown action." }, 400, cors);
 
   let rec = null;
@@ -5151,66 +5152,48 @@ async function leagueJoinCode(request, env, cors) {
   catch { rec = null; }
 
   const size = memberNames(auth.league).length;
-  const reply = (r) => json({
+  const reply = (r, visibility) => json({
     ok: true, league: lid, name: auth.league.name || lid,
-    code: r && r.code ? r.code : null,
-    link: r && r.code ? "https://datadawgs216.com/signon.html?league=" + r.code : null,
-    leagueCodeEnabled: !!(r && r.passHash),
+    passwordEnabled: !!(r && (r.passwordHash || r.passHash)),
     cap: joinCapOf(r), size, full: r ? size >= joinCapOf(r) : false,
-    createdTs: r ? r.createdTs : null, createdBy: r ? r.createdBy : null,
+    visibility: visibility || (leagueIsPublic(lid, auth.league) ? "public" : "private"),
+    visibilityLocked: PUBLIC_BOZO_LEAGUES.has(lid),
+    changedTs: r ? (r.passwordChangedTs || r.passChangedTs || null) : null,
+    changedBy: r ? (r.passwordChangedBy || r.passChangedBy || null) : null,
   }, 200, cors);
 
   if (action === "status") return reply(rec);
 
-  if (action === "league-code") {
-    const pass = normJoinPass(body.leagueCode);
-    if (!validJoinPass(pass))
-      return json({ error: "Use 6–32 letters, numbers or hyphens." }, 400, cors);
-    const passHash = await joinPassHash(env, pass);
-    let occupied = null;
-    try { occupied = await kv.get(JOIN_PASS(passHash)); }
-    catch { return json({ error: "League code lookup failed." }, 502, cors); }
-    if (occupied && occupied !== lid)
-      return json({ error: "That league code is already in use. Pick another." }, 409, cors);
-
+  if (action === "password") {
+    const password = normLeaguePassword(body.password);
+    if (!validLeaguePassword(password))
+      return json({ error: "Use 6–64 characters with no control characters." }, 400, cors);
+    const passwordHash = await leaguePasswordHash(env, lid, password);
     const next = {
       ...(rec || { cap: JOIN_CAP_DEFAULT, createdTs: Date.now(), createdBy: auth.name }),
-      passHash, passChangedTs: Date.now(), passChangedBy: auth.name,
+      passwordHash, passwordChangedTs: Date.now(), passwordChangedBy: auth.name,
     };
+    delete next.code; delete next.passHash; delete next.passChangedTs; delete next.passChangedBy;
     try {
-      // Revoke the previous lookup first. A partial failure therefore closes the door
-      // instead of leaving a forgotten code active.
-      if (rec && rec.passHash && rec.passHash !== passHash)
-        await kv.delete(JOIN_PASS(rec.passHash));
+      if (rec && rec.code) await kv.delete(JOIN_CODE(rec.code));
+      if (rec && rec.passHash) await kv.delete(JOIN_PASS(rec.passHash));
       await kv.put(JOIN_LG(lid), JSON.stringify(next));
-      await kv.put(JOIN_PASS(passHash), lid);
-    } catch (e) { return json({ error: "League code write failed: " + e.message }, 502, cors); }
+    } catch (e) { return json({ error: "League password write failed: " + e.message }, 502, cors); }
     return reply(next);
   }
 
-  if (action === "league-code-off") {
-    if (!rec || !rec.passHash) return reply(rec);
-    const next = { ...rec };
+  if (action === "password-off") {
+    if (!rec || (!rec.passwordHash && !rec.passHash)) return reply(rec);
+    const next = { ...rec, cap: joinCapOf(rec) };
+    delete next.passwordHash; delete next.passwordChangedTs; delete next.passwordChangedBy;
     delete next.passHash; delete next.passChangedTs; delete next.passChangedBy;
-    try {
-      await kv.delete(JOIN_PASS(rec.passHash));
-      if (next.code) await kv.put(JOIN_LG(lid), JSON.stringify(next));
-      else await kv.delete(JOIN_LG(lid));
-    } catch (e) { return json({ error: "League code write failed: " + e.message }, 502, cors); }
-    return reply(next.code ? next : null);
-  }
-
-  if (action === "off") {
+    delete next.code;
     try {
       if (rec && rec.code) await kv.delete(JOIN_CODE(rec.code));
-      if (rec && rec.passHash) {
-        const next = { ...rec }; delete next.code;
-        await kv.put(JOIN_LG(lid), JSON.stringify(next));
-        return reply(next);
-      }
-      await kv.delete(JOIN_LG(lid));
-    } catch (e) { return json({ error: "Join link write failed: " + e.message }, 502, cors); }
-    return reply(null);
+      if (rec && rec.passHash) await kv.delete(JOIN_PASS(rec.passHash));
+      await kv.put(JOIN_LG(lid), JSON.stringify(next));
+    } catch (e) { return json({ error: "League password write failed: " + e.message }, 502, cors); }
+    return reply(next);
   }
 
   if (action === "cap") {
@@ -5219,31 +5202,43 @@ async function leagueJoinCode(request, env, cors) {
       return json({ error: "Cap must be a whole number from " + JOIN_CAP_MIN + " to " + JOIN_CAP_MAX + "." }, 400, cors);
     // ⚠️ A cap below the current roster is allowed and does NOT evict anyone. It just
     // closes the door: existing members stay, nobody new gets in until it is raised.
-    const next = { ...(rec || { code: newJoinCode(), createdTs: Date.now(), createdBy: auth.name }), cap };
+    const next = { ...(rec || { createdTs: Date.now(), createdBy: auth.name }), cap };
     try {
-      if (next.code) await kv.put(JOIN_CODE(next.code), lid);
       await kv.put(JOIN_LG(lid), JSON.stringify(next));
-    } catch (e) { return json({ error: "Join link write failed: " + e.message }, 502, cors); }
+    } catch (e) { return json({ error: "League access write failed: " + e.message }, 502, cors); }
     return reply(next);
   }
 
-  if (action === "get" && rec && rec.code) return reply(rec);
+  if (action === "visibility") {
+    const visibility = body.visibility === "public" ? "public" : "private";
+    if (PUBLIC_BOZO_LEAGUES.has(lid) && visibility !== "public")
+      return json({ error: "Bozo Boyz and Bozo Royale stay public." }, 400, cors);
+    try { await fbPatch(env, LG(lid), { visibility }); }
+    catch (e) { return json({ error: "League visibility write failed: " + e.message }, 502, cors); }
+    return reply(rec, visibility);
+  }
 
-  const next = {
-    ...(rec || {}),
-    code: newJoinCode(),
-    cap: joinCapOf(rec),
-    createdTs: Date.now(),
-    createdBy: auth.name,
-  };
-  try {
-    // Kill the old lookup FIRST. If the second write fails the league is left with no
-    // working link, which is the safe direction to fail — a live orphaned code is not.
-    if (rec && rec.code) await kv.delete(JOIN_CODE(rec.code));
-    await kv.put(JOIN_CODE(next.code), lid);
-    await kv.put(JOIN_LG(lid), JSON.stringify(next));
-  } catch (e) { return json({ error: "Join link write failed: " + e.message }, 502, cors); }
-  return reply(next);
+  return reply(rec);
+}
+
+// Cached pages may still post the names used by the short-lived join-code UI. Keep
+// password/status/cap compatible, but every action that could mint or expose a link is
+// permanently gone. This is a retirement shim, not a second access system.
+async function leagueAccessLegacy(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  let body;
+  try { body = await request.clone().json(); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+  const action = String(body.action || "get");
+  if (["get", "rotate", "off"].includes(action)) return retiredLeagueLink(cors);
+  const mapped = action === "league-code" ? "password"
+    : action === "league-code-off" ? "password-off" : action;
+  const nextBody = { ...body, action: mapped };
+  if (body.leagueCode != null && body.password == null) nextBody.password = body.leagueCode;
+  const forwarded = new Request(request.url, {
+    method: "POST", headers: request.headers, body: JSON.stringify(nextBody),
+  });
+  return leagueAccess(forwarded, env, cors);
 }
 
 /* ========================== the forecasting challenge ======================= */
@@ -15804,7 +15799,7 @@ const MCP_TOOLS = [
           "strategy.html": "Draft strategy digest (dated).",
           "stats.html": "NFL EPA stats explorer.",
           "dataviz.html": "Data visualisations.",
-          "bozo.html": "The Bozo weekly parlay game; signed-in members join with one manager-controlled shared league code under Your Dawgs.",
+          "bozo.html": "The Bozo weekly parlay game; signed-in members search for a league under Your Dawgs and enter its shared password.",
           "survivor.html": "Survivor pool EV tools.",
           "receipts.html": "272 pre-registered 2026 forecasts, SHA-256 locked.",
           "dfs.html": "DFS lineup lab; the exact lineup solver is also callable through dd_solve_dfs_lineup with a bounded caller-supplied slate.",

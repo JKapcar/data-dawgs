@@ -15,37 +15,48 @@ function section(start, end) {
   return worker.slice(a, b);
 }
 
-test('typed league codes are normalized and stored only as peppered HMAC lookups', () => {
-  assert.match(worker, /const normJoinPass = \(c\) => String\(c \|\| ""\)\.trim\(\)\.toUpperCase\(\)/);
-  assert.match(worker, /hmac\(env\.BOZO_PEPPER, "bozo-league-code"/);
-  assert.match(worker, /const JOIN_PASS = \(hash\) => "joinpass:code:" \+ hash/);
-
-  const manager = section('async function leagueJoinCode(request, env, cors)', '/* ========================== the forecasting challenge');
-  assert.match(manager, /passHash, passChangedTs/);
-  assert.match(manager, /kv\.put\(JOIN_PASS\(passHash\), lid\)/);
-  assert.match(manager, /if \(next\.code\) await kv\.put\(JOIN_CODE\(next\.code\), lid\)/);
-  assert.doesNotMatch(manager, /leagueCode:\s*pass/);
+test('league passwords are case-sensitive, league-scoped and stored only as HMACs', () => {
+  assert.match(worker, /bozo-league-password/);
+  assert.match(worker, /lid \+ String\.fromCharCode\(0\) \+ normLeaguePassword\(password\)/);
+  const manager = section('async function leagueAccess(request, env, cors)', '// Cached pages may still post');
+  assert.match(manager, /passwordEnabled:/);
+  assert.match(manager, /kv\.put\(JOIN_LG\(lid\), JSON\.stringify\(next\)\)/);
+  assert.doesNotMatch(manager, /password:\s*password/);
 });
 
-test('joining requires a valid session and resolves the shared code server-side', () => {
-  const join = section('async function leagueJoin(request, env, cors)', '// POST /league/join-code');
-  assert.ok(join.indexOf('sessionAuth(request, env)') < join.indexOf('readBody(request)'), 'auth happens before code redemption');
-  assert.match(join, /body\.leagueCode/);
-  assert.match(join, /JOIN_PASS\(await joinPassHash\(env, pass\)\)/);
+test('private league search requires a session and exact name while public search may be partial', () => {
+  const search = section('async function leagueSearch(request, env, cors)', '// POST /league/create');
+  assert.match(search, /sessionAuth\(request, env\)/);
+  assert.match(search, /leagueIsPublic\(id, lg\) \|\| own/);
+  assert.match(search, /name === q \|\| id === q/);
+  assert.doesNotMatch(search, /members:/);
+});
+
+test('joining authenticates first and verifies the chosen league password server-side', () => {
+  const join = section('async function leagueJoin(request, env, cors)', '// POST /league/access');
+  assert.ok(join.indexOf('sessionAuth(request, env)') < join.indexOf('readBody(request)'), 'auth happens before password redemption');
+  assert.match(join, /body\.league/);
+  assert.match(join, /body\.password/);
+  assert.match(join, /timingSafeEqual\(currentHash, await leaguePasswordHash/);
   assert.match(join, /JOIN_REDEEM_PER_DAY/);
-  assert.match(join, /isMember\(lg, auth\.name\)/);
+  assert.doesNotMatch(join, /body\.code|body\.leagueCode/);
 });
 
-test('manager can replace or disable a code and league deletion revokes it', () => {
-  assert.match(worker, /"league-code", "league-code-off"/);
-  assert.match(worker, /That league code is already in use/);
-  const deletion = section('async function leagueDelete(request, env, cors)', '// League settings');
-  assert.match(deletion, /kv\.delete\(JOIN_PASS\(rec\.passHash\)\)/);
+test('per-person and reusable Bozo join links are retired', () => {
+  assert.match(worker, /url\.pathname === "\/league\/invite"\) return retiredLeagueInvite/);
+  assert.match(worker, /request\.method === "GET" \? retiredLeagueLink/);
+  assert.match(worker, /Identity invitations create or recover an account only/);
+  assert.match(worker, /stale pendingLeague.*cleared without granting membership/s);
+  for (const retired of ['data-invite=', 'id="invGo"', 'id="jlGet"', 'id="jlRot"', 'id="jcSet"'])
+    assert.ok(!bozo.includes(retired), `${retired} is gone from League Settings`);
 });
 
-test('manager and signed-in member UIs expose the code workflow', () => {
-  for (const id of ['jcPass', 'jcSet', 'jcOff', 'jcState']) assert.match(bozo, new RegExp(`id="${id}"`));
-  assert.match(bozo, /action:'league-code',leagueCode/);
-  for (const id of ['leaguePass', 'leaguePassGo', 'leaguePassOpen', 'leaguePassMsg']) assert.match(signon, new RegExp(`id="${id}"`));
-  assert.match(signon, /api\("\/league\/join",\{leagueCode:code\}\)/);
+test('manager and member UIs expose search plus shared-password workflow', () => {
+  for (const id of ['lpPass', 'lpSet', 'lpOff', 'lpState', 'lpCap', 'lpVis'])
+    assert.match(bozo, new RegExp(`id="${id}"`));
+  assert.match(bozo, /wPost\('\/league\/access'/);
+  for (const id of ['leagueSearch', 'leagueSearchGo', 'leaguePassword', 'leagueJoinGo', 'leagueOpen'])
+    assert.match(signon, new RegExp(`id="${id}"`));
+  assert.match(signon, /api\("\/league\/search",\{query:query\}\)/);
+  assert.match(signon, /api\("\/league\/join",\{league:selectedLeague\.id,password:password\}\)/);
 });

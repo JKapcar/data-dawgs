@@ -915,7 +915,7 @@ details.drawer{border:1px solid var(--border);border-radius:11px;margin:0 0 12px
             '<input id="ddAuthPw" type="password" autocomplete="current-password">' +
             '<button class="go" id="ddAuthGo">Sign in</button>' +
             '<p class="err" id="ddAuthErr"></p>' +
-            '<p class="note">No account yet? Create one with your email, then enter the shared league code under Your Dawgs. ' +
+            '<p class="note">No account yet? Create one with your email, then search for the league under Your Dawgs and enter its shared password. ' +
             'Nothing here is gated on signing in: the boards, the pool and the season tables are public either way.</p>' +
           '</div>' +
           '<div id="ddAuthIn" hidden>' +
@@ -1511,7 +1511,7 @@ index.html — the manifesto: what Data Dawgs is for, "Data, not dogma", Bring Y
 receipts.html — every pre-registered forecast, the grading, calibration, the model scoreboard, 538 Classic, provenance, the tier audit.
 dawghouse.html — the shelf: work that was stopped, each item with its blocker and the condition that would reopen it.
 arena.html — the hub for games played against other people; links to all of the below.
-bozo.html — the weekly one-leg parlay game with four sheets: Overview (season Bozo Count, CLV chart, current-week diagnostics and weekly hierarchy grid), This Week (hierarchy machine, ticket and personal entry), Diagnostics (filterable league ledger), and League Settings (roster, rules, and the manager-controlled shared league code).
+bozo.html — the weekly one-leg parlay game with four sheets: Overview (season Bozo Count, CLV chart, current-week diagnostics and weekly hierarchy grid), This Week (hierarchy machine, ticket and personal entry), Diagnostics (filterable league ledger), and League Settings (roster, rules, shared league password, member cap and public/private visibility).
 challenge.html — the NFL Forecasting Challenge: put a probability on a game before kickoff, get graded after.
 survivor.html — survivor pool: this week's board, pick popularity, an optimal path, a season simulation, model settings.
 guillotine.html — guillotine league companion. dfs.html — DFS solver, contest simulator, exposure, bankroll. The projections there are the USER'S OWN.
@@ -1523,7 +1523,7 @@ nfl.html — the NFL hub. stats.html — the EPA explorer. nfelo.html — nfelo 
 cfb.html — the College Football lab: 2025 results, one retrodictive Elo, a matchup calculator. Its build roadmap is at cfb.html#roadmap and is our own planning surface, not a public destination.
 markets.html — the prediction-markets section, its own top-level group labelled Markets. ai.html — the A.I. Model Board, its own top-level group. Both are deliberately near-empty and say so above the fold; do not imply either has tools yet.
 data.html — the Library: every machine-readable file, shelved by the surface that owns it. connect.html — forwards to the connector card on signon.html#connect, which is where you point your own AI (Claude, ChatGPT, Gemini or any MCP client) at the site.
-signon.html — sign in, sign up, recover an account, and join a Bozo league with its shared code; every other page's sign-in chip lands here. dawgs.html — the Dawg Pound: Rollo, the OG Data Dawg, DDCC Profile, SwoleDawg and DateDawg. swoledawg.html — body and training. datedawg.html — local-only reciprocal-acceptance analysis of a Hinge export; no upload or backend memory. fantasy-warroom.html — the fantasy league war room.
+signon.html — sign in, sign up, recover an account, and join a Bozo league by searching its name and entering its shared password; every other page's sign-in chip lands here. dawgs.html — the Dawg Pound: Rollo, the OG Data Dawg, DDCC Profile, SwoleDawg and DateDawg. swoledawg.html — body and training. datedawg.html — local-only reciprocal-acceptance analysis of a Hinge export; no upload or backend memory. fantasy-warroom.html — the fantasy league war room.
 rankings.html — the Dog Track: ranking services graded against actual finishes. draft-leagues.html — create or join a draft league, and import a Sleeper league (Yahoo and ESPN are manual). cfb-power.html — CFB conference power curves. radar.html — the radar view.
 Machine surfaces: /data/index.json lists every file with its as_of and hash; /llms.txt is the curated index; /data/surfaces.json maps pages to files and MCP tools.
 NAVIGATION: the banner is Sign in/account, then exactly seven groups — Arena, Markets, A.I., NFL, CFB, Data, Dawgs — then the theme button. The wordmark is Home. There is no top-level Sports group and no top-level Receipts group: NFL and CFB are separate groups, and receipts.html is an item under Data.
@@ -2195,7 +2195,6 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <h1 class="pgh">Sign in</h1>
     <p class="lab-sub">One account for the Bozo board, the draft room, and your own AI's connection to the site.</p>
 
-    <div class="card" id="sLeague" hidden><h3>Join <span class="rt" id="lgName"></span></h3><p class="sub" id="lgSub"></p><div class="btnrow"><button class="btn" id="lgGo" hidden>Join this league</button></div><p class="note" id="lgMsg"></p></div>
     <div class="card" id="sJoin" hidden><h3>Claim your slot <span class="rt" id="jWho"></span></h3><p class="sub">This one-use link claims the slot Kap sent you.</p><label class="fld"><span>Password <span class="hint">— 8+ characters</span></span><input class="fi" id="jPw" type="password" autocomplete="new-password"></label><label class="fld"><span>Confirm</span><input class="fi" id="jPw2" type="password" autocomplete="new-password"></label><label class="fld"><span>Email <span class="hint">— needed for self-service recovery</span></span><input class="fi" id="jEmail" type="email" autocomplete="email"></label><div class="btnrow"><button class="btn" id="jGo">Claim it</button></div><p class="note" id="jMsg"></p></div>
 
     <div class="card signcard" id="sIn">
@@ -2203,7 +2202,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       <div id="stepKnown" hidden><h3>Welcome back</h3><p class="sub"><span class="mono" id="knownEmail"></span> · <button class="linkbtn" data-email-back>change</button></p><label class="fld"><span>Password</span><input class="fi" id="sPw" type="password" autocomplete="current-password"></label><label class="showpw"><input type="checkbox" data-show="sPw"> Show password</label><div class="btnrow"><button class="btn" id="sGo">Sign in</button><button class="linkbtn" id="forgotOpen">Forgot your password?</button></div><p class="note" id="sMsg"></p></div>
       <div id="stepCreate" hidden><h3>Create your account</h3><p class="account-email"><span>Your sign-in and confirmation email</span><strong class="mono" id="createEmail"></strong></p><button class="linkbtn" data-email-back>Change email</button><label class="fld"><span>Name <span class="hint">— what shows on rosters</span></span><input class="fi" id="nName" maxlength="40" autocomplete="nickname"></label><label class="fld"><span>Password <span class="hint">— 8 characters or more</span></span><input class="fi" id="nPw" type="password" autocomplete="new-password"></label><label class="showpw"><input type="checkbox" data-show="nPw"> Show password</label><div class="btnrow"><button class="btn" id="nGo">Create account</button></div><p class="note" id="nMsg">You can join and play right away. Confirm your email before creating a personal AI credential.</p></div>
     </div>
-    <p class="note signcard">One account per email address. An account alone does not put you in a league. After signing in, enter the manager's shared league code under Your Dawgs.</p>
+    <p class="note signcard">One account per email address. An account alone does not put you in a league. After signing in, search for the league under Your Dawgs and enter its shared password.</p>
     <details class="drawer signcard" id="sHelp"><summary>Locked out?</summary><div class="dbody"><p class="sub">Enter the email on your account. The reset link works once and expires in an hour.</p><label class="fld"><span>Email</span><input class="fi" id="fEmail" type="email" autocomplete="email"></label><div class="btnrow"><button class="btn sm" id="fGo">Send the link</button></div><p class="note" id="fMsg"></p><p class="note">No email on a legacy account? Text Kap.</p></div></details>
   </div>
 
@@ -2219,14 +2218,20 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       <button type="button" role="tab" class="sheet-tab" data-sheet="build" aria-selected="false" tabindex="-1">Build-a-Dawg <span class="sheet-hint">Soon</span></button>
       <button type="button" role="tab" class="sheet-tab" data-sheet="account" aria-selected="false" tabindex="-1">Account</button>
     </div>
-    <div class="card" id="leagueCodeCard">
+    <div class="card" id="leagueAccessCard">
       <h3>Join a Bozo league</h3>
-      <p class="sub">Sign in as yourself, then enter the one shared code from the league manager.</p>
-      <label class="fld"><span>League code</span><input class="fi mono" id="leaguePass" maxlength="32" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="LEAGUE-CODE"></label>
-      <div class="btnrow"><button class="btn sm" id="leaguePassGo">Join league</button><a class="btn sm ghost" id="leaguePassOpen" hidden>Open league</a></div>
-      <p class="note" id="leaguePassMsg"></p>
+      <p class="sub">Search by league name. Public leagues can match part of a name; private leagues require the exact name.</p>
+      <label class="fld"><span>League name</span><input class="fi" id="leagueSearch" maxlength="60" autocomplete="off" spellcheck="false" placeholder="Preseason Bozo Boyz"></label>
+      <div class="btnrow"><button class="btn sm" id="leagueSearchGo">Search</button></div>
+      <div id="leagueSearchResults"></div>
+      <div id="leaguePasswordWrap" hidden>
+        <p class="sub">Joining <strong id="leagueSelectedName"></strong></p>
+        <label class="fld"><span>League password</span><input class="fi" id="leaguePassword" type="password" maxlength="64" autocomplete="current-password" spellcheck="false"></label>
+        <div class="btnrow"><button class="btn sm" id="leagueJoinGo">Join league</button><a class="btn sm ghost" id="leagueOpen" hidden>Open league</a></div>
+      </div>
+      <p class="note" id="leagueAccessMsg"></p>
     </div>
-    <div id="pDawgs" role="tabpanel"><div class="callout warn" id="emailGate"><b id="emailGateHead">Confirm your email to connect your AI</b><p id="emailGateBody">Open the confirmation sent to <strong class="mono" id="emailGateAddress"></strong>. The link works once and expires in an hour.</p><p id="emailGateNone" hidden>This account has no email stored. Without one there is no password reset and no personal connector.</p><button class="btn sm" id="emailGateGo">Confirm email</button></div><div class="card"><h3>What's open</h3><p class="sub">Real league memberships, sorted by what closes first.</p><div id="dawgRows"><p class="note">Checking…</p></div><p class="note">Survivor and DFS are not listed: Survivor ownership is modelled, and DFS slate data never leaves your browser.</p></div><div class="card" id="dawgsEmpty" hidden><h3>You're not in anything yet</h3><div class="pitch"><div class="p"><h4>Bozo</h4><p>One parlay leg each week. Ask the manager for the league code.</p><a class="btn sm" href="bozo.html">See Bozo</a></div><div class="p"><h4>Auction draft rig</h4><p>Live board, budgets and draft-night controls.</p><a class="btn sm ghost" href="draft-leagues.html">Open the rig</a></div><div class="p"><h4>Guillotine</h4><p>Track the last-team-standing league.</p><a class="btn sm ghost" href="guillotine.html">View</a></div></div></div></div>
+    <div id="pDawgs" role="tabpanel"><div class="callout warn" id="emailGate"><b id="emailGateHead">Confirm your email to connect your AI</b><p id="emailGateBody">Open the confirmation sent to <strong class="mono" id="emailGateAddress"></strong>. The link works once and expires in an hour.</p><p id="emailGateNone" hidden>This account has no email stored. Without one there is no password reset and no personal connector.</p><button class="btn sm" id="emailGateGo">Confirm email</button></div><div class="card"><h3>What's open</h3><p class="sub">Real league memberships, sorted by what closes first.</p><div id="dawgRows"><p class="note">Checking…</p></div><p class="note">Survivor and DFS are not listed: Survivor ownership is modelled, and DFS slate data never leaves your browser.</p></div><div class="card" id="dawgsEmpty" hidden><h3>You're not in anything yet</h3><div class="pitch"><div class="p"><h4>Bozo</h4><p>One parlay leg each week. Search for the league and enter its password.</p><a class="btn sm" href="bozo.html">See Bozo</a></div><div class="p"><h4>Auction draft rig</h4><p>Live board, budgets and draft-night controls.</p><a class="btn sm ghost" href="draft-leagues.html">Open the rig</a></div><div class="p"><h4>Guillotine</h4><p>Track the last-team-standing league.</p><a class="btn sm ghost" href="guillotine.html">View</a></div></div></div></div>
     <div id="pConnect" role="tabpanel" hidden>
       <div class="card"><h3>Give your AI a line into Data Dawgs</h3><p class="sub">One personal URL, pasted once. Nothing to install.</p><div class="provrow"><button class="provbtn on" data-prov="claude">Claude</button><button class="provbtn" data-prov="chatgpt">ChatGPT <span class="st">workspace</span></button><button class="provbtn" data-prov="gemini">Gemini <span class="st">Spark only</span></button><button class="provbtn" data-prov="other">Something else</button></div>
         <ol class="steps"><li><h4>Make your personal URL</h4><p>Email confirmation is required because this credential acts as you.</p><div class="urlbox" id="cUrlBox" hidden><input class="fi mono" id="cUrl" readonly><button class="btn sm ghost" id="cCopy">Copy</button></div><div class="btnrow"><button class="btn sm" id="cMint">Create my URL</button><button class="btn sm ghost" id="cRevoke">Turn it off</button></div><p class="note" id="cMintMsg"></p></li><li><h4>Add it as a connector</h4><p id="stepAddP"></p></li><li><h4>Make a project called <span class="mono">DataDawgs</span></h4><p id="stepProjP"></p><div class="instr" id="instrBox">Loading the dated instructions…</div><div class="btnrow"><button class="btn sm" id="copyInstr">Copy instructions</button><a class="btn sm ghost" href="/data/dawg-project-instructions.md">View source</a></div></li><li><h4>Try it</h4><p id="samplePrompts">Ask “What can my credential do?”, “What is open in my leagues?”, or “Show me the latest graded receipts.”</p></li></ol>
@@ -2251,14 +2256,13 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   var qs = new URLSearchParams(location.search);
   var next = qs.get("next") || "";
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]*\.html$/.test(next) || next === "signon.html") next = "";
-  var leagueCode = qs.get("league") || "";
-  if (!/^[A-Za-z0-9_-]{22}$/.test(leagueCode)) leagueCode = "";
+  // Reusable league-link parameters are retired. Remove one before any render so it
+  // cannot look like an active credential; joining now happens through search below.
+  if (qs.has("league")) { qs.delete("league"); history.replaceState(null,"",location.pathname+(qs.toString()?"?"+qs.toString():"")+location.hash); }
   var joinTok = qs.get("join") || "";
   var resetTok = qs.get("reset") || "";
   var verifyTok = qs.get("verify") || "";
   var emailTok = qs.get("email-change") || "";
-  var leaguePending = !!leagueCode;
-  var leagueInfo = null;
 
   function msg(id, text, kind) {
     var el = $(id); if (!el) return;
@@ -2292,7 +2296,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     if (!res.ok) { var e = new Error(json.error || ("Request failed (" + res.status + ").")); e.status=res.status; e.body=json; throw e; }
     return json;
   }
-  function leave() { if (leaguePending) return true; if (next) { location.replace(next); return true; } return false; }
+  function leave() { if (next) { location.replace(next); return true; } return false; }
 
   if (joinTok || resetTok || verifyTok || emailTok) {
     history.replaceState(null, "", location.pathname + (next ? "?next=" + encodeURIComponent(next) : ""));
@@ -2322,14 +2326,14 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     var pw=$("sPw").value;
     if (!selectedEmail || !pw) { msg("sMsg","Email and password, both.","warn"); return; }
     msg("sMsg","Signing in…");
-    try { var j=await api("/auth/login",{email:selectedEmail,password:pw}); $("sPw").value=""; setSession(j,{email:selectedEmail}); if (leagueCode) { render(); await redeemLeague(); } else if (!leave()) render(); }
+    try { var j=await api("/auth/login",{email:selectedEmail,password:pw}); $("sPw").value=""; setSession(j,{email:selectedEmail}); if (!leave()) render(); }
     catch(e){msg("sMsg",e.message,"bad");}
   }
   $("sGo").addEventListener("click",signIn); $("sPw").addEventListener("keydown",function(e){if(e.key==="Enter")signIn();});
   $("nGo").addEventListener("click",async function(){
     var name=$("nName").value.trim(), pw=$("nPw").value;
     if(!name){msg("nMsg","Pick a name — it's what shows on rosters.","warn");return;} if(pw.length<8){msg("nMsg","Password must be at least 8 characters.","warn");return;}
-    msg("nMsg","Creating…"); try{var j=await api("/auth/signup",{name:name,email:selectedEmail,password:pw});$("nPw").value="";setSession(j,{name:name,email:selectedEmail});if(leagueCode){render();await redeemLeague();}else if(!leave())render();}catch(e){msg("nMsg",e.message,"bad");}
+    msg("nMsg","Creating…"); try{var j=await api("/auth/signup",{name:name,email:selectedEmail,password:pw});$("nPw").value="";setSession(j,{name:name,email:selectedEmail});if(!leave())render();}catch(e){msg("nMsg",e.message,"bad");}
   });
   $("forgotOpen").addEventListener("click",function(){ $("sHelp").open=true; $("fEmail").value=selectedEmail; $("fEmail").focus(); });
   $("fGo").addEventListener("click",async function(){var email=$("fEmail").value.trim();if(!email){msg("fMsg","Enter your email.","warn");return;}msg("fMsg","Sending…");try{var j=await api("/auth/forgot",{email:email});msg("fMsg",j.note || "If that address is on an account, the reset link is on its way.","good");}catch(e){msg("fMsg",e.message,"bad");}});
@@ -2341,29 +2345,41 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   async function confirmToken(path, token) { $("sVerify").hidden=false; try{var j=await api(path,{token:token});var p=profile()||{};if(path==="/auth/verify")p.emailVerified=true;if(j.email)p.email=j.email;saveProfile(p);msg("vMsg",path==="/auth/verify"?"Email confirmed. You can now create your personal connector.":"New email confirmed and now used for sign-in.","good");}catch(e){msg("vMsg",e.message,"bad");} }
   if(verifyTok)confirmToken("/auth/verify",verifyTok);if(emailTok)confirmToken("/auth/email-confirm",emailTok);
 
-  function paintLeague(){if(!leagueCode){$("sLeague").hidden=true;return;}$("sLeague").hidden=false;var m=window.DDAuth.me();$("lgName").textContent=leagueInfo?(leagueInfo.name||leagueInfo.league):"";$("lgGo").hidden=!m||!leagueInfo;if(!leagueInfo){$("lgSub").textContent="Checking that link…";return;}if(leagueInfo.full&&!m){$("lgSub").textContent="This league is full ("+leagueInfo.cap+" members). Ask "+(leagueInfo.manager||"the manager")+" to raise the cap.";return;}$("lgSub").textContent=m?"You're signed in as "+m.name+". "+leagueInfo.size+" of "+leagueInfo.cap+" seats used.":"Sign in or create an account and you'll join automatically. "+leagueInfo.size+" of "+leagueInfo.cap+" seats used.";}
-  async function previewLeague(){try{var r=await fetch(WORKER+"/league/join?code="+encodeURIComponent(leagueCode),{cache:"no-store"}),j=await r.json();if(!r.ok)throw new Error(j.error||"That link didn't work.");leagueInfo=j;paintLeague();if(window.DDAuth.me())await redeemLeague();}catch(e){leagueCode="";leaguePending=false;$("sLeague").hidden=false;$("lgName").textContent="";$("lgSub").textContent=e.message;$("lgGo").hidden=true;render();}}
-  async function redeemLeague(){if(!leagueCode)return;msg("lgMsg","Joining…");try{var j=await api("/league/join",{code:leagueCode});var name=j.name||"the league";leagueCode="";leaguePending=false;history.replaceState(null,"",location.pathname+(next?"?next="+encodeURIComponent(next):""));$("lgGo").hidden=true;$("lgSub").textContent=j.already?"You were already in "+name+".":"You're in "+name+" — "+j.size+" members now.";msg("lgMsg",j.already?"":"Joined.","good");if(!leave())render();}catch(e){leaguePending=false;msg("lgMsg",e.message,"bad");if(next)$("meBack").hidden=false;}}
-  $("lgGo").addEventListener("click",redeemLeague);if(leagueCode)previewLeague();
-
-  async function joinByLeagueCode(){
-    var input=$("leaguePass"), code=input.value.trim().toUpperCase(), open=$("leaguePassOpen");
-    open.hidden=true; msg("leaguePassMsg","");
-    if(!/^[A-Z0-9][A-Z0-9-]{5,31}$/.test(code)){
-      msg("leaguePassMsg","Use 6–32 letters, numbers or hyphens.","bad"); return;
-    }
-    msg("leaguePassMsg","Checking…");
-    try{
-      var j=await api("/league/join",{leagueCode:code});
-      input.value=""; open.href="bozo.html?l="+encodeURIComponent(j.league); open.hidden=false;
-      msg("leaguePassMsg",j.already?"You were already in "+j.name+".":"You're in "+j.name+" — "+j.size+" members now.","good");
-    }catch(e){ msg("leaguePassMsg",e.message,"bad"); }
+  var selectedLeague=null;
+  function chooseLeague(item){
+    selectedLeague=item;$("leagueSelectedName").textContent=item.name;$("leaguePasswordWrap").hidden=false;
+    $("leagueOpen").hidden=true;$("leaguePassword").value="";
+    if(item.already){$("leagueOpen").href="bozo.html?l="+encodeURIComponent(item.id);$("leagueOpen").hidden=false;msg("leagueAccessMsg","You already belong to this league.","good");}
+    else {msg("leagueAccessMsg","");$("leaguePassword").focus();}
   }
-  $("leaguePassGo").addEventListener("click",joinByLeagueCode);
-  $("leaguePass").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();joinByLeagueCode();}});
+  function paintLeagueSearch(results){
+    var box=$("leagueSearchResults");box.replaceChildren();selectedLeague=null;$("leaguePasswordWrap").hidden=true;
+    if(!results.length){box.innerHTML='<p class="note">No match. Private leagues require the exact name.</p>';return;}
+    results.forEach(function(item){var b=document.createElement("button");b.type="button";b.className="btn ghost sm";b.style.margin="4px 6px 4px 0";b.textContent=item.name+" · "+item.size+" member"+(item.size===1?"":"s");b.addEventListener("click",function(){chooseLeague(item);});box.appendChild(b);});
+    if(results.length===1)chooseLeague(results[0]);
+  }
+  async function searchLeagues(){
+    var query=$("leagueSearch").value.trim();msg("leagueAccessMsg","");
+    if(query.length<2){msg("leagueAccessMsg","Enter at least two characters.","bad");return;}
+    msg("leagueAccessMsg","Searching…");
+    try{var j=await api("/league/search",{query:query});paintLeagueSearch(j.results||[]);if((j.results||[]).length)msg("leagueAccessMsg","");}
+    catch(e){msg("leagueAccessMsg",e.message,"bad");}
+  }
+  async function joinSelectedLeague(){
+    if(!selectedLeague){msg("leagueAccessMsg","Search for and choose a league first.","bad");return;}
+    var password=$("leaguePassword").value;
+    if(password.trim().length<6){msg("leagueAccessMsg","Enter the league password.","bad");return;}
+    msg("leagueAccessMsg","Joining…");
+    try{var j=await api("/league/join",{league:selectedLeague.id,password:password});$("leaguePassword").value="";$("leagueOpen").href="bozo.html?l="+encodeURIComponent(j.league);$("leagueOpen").hidden=false;msg("leagueAccessMsg",j.already?"You already belonged to "+j.name+".":"You're in "+j.name+" — "+j.size+" members now.","good");loadDawgs();}
+    catch(e){msg("leagueAccessMsg",e.message,"bad");}
+  }
+  $("leagueSearchGo").addEventListener("click",searchLeagues);
+  $("leagueSearch").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();searchLeagues();}});
+  $("leagueJoinGo").addEventListener("click",joinSelectedLeague);
+  $("leaguePassword").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();joinSelectedLeague();}});
 
   var PANELS={dawgs:"pDawgs",connect:"pConnect",build:"pBuild",account:"pAccount"};
-  function showSheet(id){if(!PANELS[id])id="dawgs";$("leagueCodeCard").hidden=id!=="dawgs";document.querySelectorAll(".sheet-tab").forEach(function(t){var on=t.dataset.sheet===id;t.classList.toggle("on",on);t.setAttribute("aria-selected",on?"true":"false");t.tabIndex=on?0:-1;$(PANELS[t.dataset.sheet]).hidden=!on;});history.replaceState(null,"",location.pathname+location.search+"#"+id);}
+  function showSheet(id){if(!PANELS[id])id="dawgs";$("leagueAccessCard").hidden=id!=="dawgs";document.querySelectorAll(".sheet-tab").forEach(function(t){var on=t.dataset.sheet===id;t.classList.toggle("on",on);t.setAttribute("aria-selected",on?"true":"false");t.tabIndex=on?0:-1;$(PANELS[t.dataset.sheet]).hidden=!on;});history.replaceState(null,"",location.pathname+location.search+"#"+id);}
   document.querySelectorAll(".sheet-tab").forEach(function(t){t.addEventListener("click",function(){showSheet(t.dataset.sheet);});t.addEventListener("keydown",function(e){var tabs=[].slice.call(document.querySelectorAll(".sheet-tab")),i=tabs.indexOf(t),n;if(e.key==="ArrowRight")n=tabs[(i+1)%tabs.length];if(e.key==="ArrowLeft")n=tabs[(i-1+tabs.length)%tabs.length];if(n){e.preventDefault();n.focus();showSheet(n.dataset.sheet);}});});
   $("emailGateGo").addEventListener("click",function(){showSheet("account");var drawer=$("eGo").closest("details");drawer.open=true;$("eGo").focus();});
 
@@ -2401,10 +2417,10 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   $("eGo").addEventListener("click",async function(){var b=this,email=$("eEmail").value.trim(),stored=String((profile()||{}).email||""),same=normEmail(email)===normEmail(stored);b.disabled=true;b.setAttribute("aria-busy","true");msg("eMsg","Requesting confirmation from the email provider…","warn");try{if(same){var j=await api("/auth/verify-request",{});if(j.alreadyVerified){var p=profile()||{};p.emailVerified=true;saveProfile(p);msg("eMsg","This email is already confirmed.","good");}else if(j.sent&&j.providerAccepted)msg("eMsg",j.note||"Email provider accepted the confirmation. Check your inbox and spam.","warn");else throw new Error("The server did not confirm that the email provider accepted the request.");}else{var j=await api("/auth/email",{email:email});msg("eMsg",j.note||"Confirmation sent to the new address. Your old address stays active until you open it.","warn");}}catch(e){msg("eMsg","Confirmation email failed: "+e.message,"bad");}finally{b.removeAttribute("aria-busy");refreshEmailAction();}});
   $("meOut").addEventListener("click",function(){window.DDAuth.clear();saveProfile(null);localStorage.removeItem(CONNECTOR_KEY);showEmailStep();render();});
 
-  function render(){var m=window.DDAuth&&window.DDAuth.me(),resetting=!!resetTok;$("sReset").hidden=!resetting;$("signedOut").hidden=!!m||resetting;$("sMe").hidden=!m||resetting;if(resetting)$("sVerify").hidden=true;$("sJoin").hidden=!!m||!joinTok||resetting;$("sIn").hidden=!!joinTok;$("sHelp").hidden=!!joinTok;$("meJoinWarn").hidden=!(m&&joinTok);paintLeague();if(resetting)$("sLeague").hidden=true;if(m){var p=profile()||{},days=Math.max(0,Math.round((m.expires-Date.now())/86400000));$("meName").textContent=p.name||m.name;$("meEmail").textContent=p.email||"No email stored";$("emailGateAddress").textContent=p.email||"";$("emailGateHead").textContent=p.email?"Confirm your email to connect your AI":"Add an email to your account";$("emailGateBody").hidden=!p.email;$("emailGateNone").hidden=!!p.email;$("emailGateGo").textContent=p.email?"Confirm email":"Add email";$("emailGate").hidden=p.emailVerified===true;$("nameNew").value=p.name||m.name||"";refreshNameAction();$("eEmail").value=p.email||"";refreshEmailAction();$("meExp").textContent="Signed in on this device for about "+days+" more day"+(days===1?"":"s")+".";$("hello").textContent="Welcome, "+(p.name||m.name);$("meBack").hidden=!next;if(next)$("meBack").href=next;loadDawgs();showSheet(location.hash.slice(1)||"dawgs");}}
+  function render(){var m=window.DDAuth&&window.DDAuth.me(),resetting=!!resetTok;$("sReset").hidden=!resetting;$("signedOut").hidden=!!m||resetting;$("sMe").hidden=!m||resetting;if(resetting)$("sVerify").hidden=true;$("sJoin").hidden=!!m||!joinTok||resetting;$("sIn").hidden=!!joinTok;$("sHelp").hidden=!!joinTok;$("meJoinWarn").hidden=!(m&&joinTok);if(m){var p=profile()||{},days=Math.max(0,Math.round((m.expires-Date.now())/86400000));$("meName").textContent=p.name||m.name;$("meEmail").textContent=p.email||"No email stored";$("emailGateAddress").textContent=p.email||"";$("emailGateHead").textContent=p.email?"Confirm your email to connect your AI":"Add an email to your account";$("emailGateBody").hidden=!p.email;$("emailGateNone").hidden=!!p.email;$("emailGateGo").textContent=p.email?"Confirm email":"Add email";$("emailGate").hidden=p.emailVerified===true;$("nameNew").value=p.name||m.name||"";refreshNameAction();$("eEmail").value=p.email||"";refreshEmailAction();$("meExp").textContent="Signed in on this device for about "+days+" more day"+(days===1?"":"s")+".";$("hello").textContent="Welcome, "+(p.name||m.name);$("meBack").hidden=!next;if(next)$("meBack").href=next;loadDawgs();showSheet(location.hash.slice(1)||"dawgs");}}
   render();
 })();
 
 </script>
-<script>window.DD_BOTCTX={label:"Account",title:"Sign in and Your Dawgs",chrome:{sub:"Identity, league memberships and your personal AI connector.",ph:"Ask about this account page…",chips:["How do I join with a league code?","How do I connect my AI?","Why is email confirmation required?"]},sys:"Identity controls live only on signon.html. A signed-in person can join a Bozo league under Your Dawgs by entering the one shared league code from its manager. The code grants membership to that authenticated account; it never creates or signs into an account. Never ask for or repeat an account password, league code, session token, reset link, verification link or MCP URL. The capabilities card is a dated static orientation; dd_site_map is the live authority.",ctx:function(){return "This is the identity and personal connector page. It deliberately excludes all form values and credentials from Toto's context."}};</script>
+<script>window.DD_BOTCTX={label:"Account",title:"Sign in and Your Dawgs",chrome:{sub:"Identity, league memberships and your personal AI connector.",ph:"Ask about this account page…",chips:["How do I join a league?","How do I connect my AI?","Why is email confirmation required?"]},sys:"Identity controls live only on signon.html. A signed-in person joins a Bozo league under Your Dawgs by searching for its name and entering the shared league password. Private leagues require an exact-name search and are not exposed as a directory. The password grants membership to that authenticated account; it never creates or signs into an account. Never ask for or repeat an account password, league password, session token, reset link, verification link or MCP URL. The capabilities card is a dated static orientation; dd_site_map is the live authority.",ctx:function(){return "This is the identity and personal connector page. It deliberately excludes all form values and credentials from Toto's context."}};</script>
 </body></html>

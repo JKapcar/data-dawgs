@@ -17,7 +17,7 @@ test('league directory filters on the Worker before serialising', () => {
 test('unsigned or invalid sessions fall back to the public catalog', () => {
   const directory = worker.slice(
     worker.indexOf('async function leagueList(request, env, cors)'),
-    worker.indexOf('// POST /league/create', worker.indexOf('async function leagueList(request, env, cors)')),
+    worker.indexOf('// POST /league/search', worker.indexOf('async function leagueList(request, env, cors)')),
   );
   assert.match(directory, /let viewer = null;/);
   assert.match(directory, /if \(hasSession\) \{[\s\S]*if \(!auth\.err\) viewer = auth\.name;[\s\S]*\}/);
