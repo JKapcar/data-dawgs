@@ -2968,6 +2968,13 @@ body.wr-shared #youLab{display:none!important}
         <div class="wr-legend" id="mnLegend3"></div>
       </article>
 
+      <article class="wr-card wr-full wr-hide" id="mnCapCard">
+        <h3>Draft capital <span class="wr-note" style="font-weight:400">Dynasty · beside roster value, not added to it</span></h3>
+        <p class="wr-note" id="mnCapLead"></p>
+        <div id="mnCapTab"></div>
+        <p class="wr-note" id="mnCapNote"></p>
+      </article>
+
       <article class="wr-card wr-full">
         <h3>Where the money is</h3>
         <p class="wr-note">Roster dollars by position, with the bench pooled as one segment. Dashed = league average.</p>
@@ -3353,7 +3360,9 @@ async function ddFromWorker(provider,leagueId,pool,horizon){
     if(!j||!j.values||!j.dd)return null;
     const by=new Map();
     for(const k in j.values){const v=Number(j.values[k]&&j.values[k].v);if(Number.isFinite(v))by.set(k,v);}
-    return by.size?{by,meta:j.dd}:null;
+    /* the Worker has always returned these; the page just never took them */
+    const picks=Array.isArray(j.picks)?j.picks:[];
+    return by.size?{by,meta:j.dd,picks}:null;
   }catch(e){ return null; }
 }
 async function loadDD(st=state){
@@ -3382,6 +3391,66 @@ function ddActive(h){const b=ddBoard(h);return !!(b&&b.by&&b.by.size);}
 function ddAsOf(h){const b=ddBoard(h);return (b&&b.meta&&b.meta.as_of)||null;}
 function ddUnpriced(players,h){const b=ddBoard(h);
   return b?(players||[]).filter(p=>!b.by.has(ddKey(p))).length:0;}
+/* ---- draft capital -------------------------------------------------------
+   Dynasty only, Sleeper only (no other provider exposes pick ownership). Sleeper gives
+   just the TRADES, so ownership is: every roster owns its own picks, then traded_picks
+   reassigns. Priced by ROUND from the board, because that is how the source prices them. */
+let DDPICKS=null;
+async function loadDraftCapital(st=state){
+  if(st===state)DDPICKS=null;
+  const b=(st&&st.ddValues&&st.ddValues.dynasty)||(st===state?ddBoard('dynasty'):null);
+  if(!st||!st.ref||st.ref.provider!=='sleeper'||!b||!Array.isArray(b.picks)||!b.picks.length){
+    if(st)st.ddPicks=null;return null;
+  }
+  let traded=[];
+  try{
+    const r=await fetch(API+'/league/'+encodeURIComponent(st.ref.id)+'/traded_picks',{cache:'no-store'});
+    if(!r.ok)return null;
+    traded=await r.json(); if(!Array.isArray(traded))return null;
+  }catch(e){ return null; }
+  const price=new Map(), pricedSeasons=new Set(), pricedRounds=new Set();
+  b.picks.forEach(p=>{const s=Number(p.season),rd=Number(p.round);
+    if(!Number.isFinite(s)||!Number.isFinite(rd))return;
+    const v=Number(p.v);if(!Number.isFinite(v))return;
+    price.set(s+':'+rd,v); pricedSeasons.add(s); pricedRounds.add(rd);});
+  /* Ownership has to include UNPRICED picks too. Use every priced future season plus any
+     later season Sleeper says has traded picks; otherwise 2029 assets vanish. Rounds come
+     from the league setting, not the board's coverage, so round 5 remains visible. */
+  const thisSeason=Number(st.league&&st.league.season)||new Date().getFullYear();
+  const tradedSeasons=traded.map(t=>Number(t.season)).filter(s=>Number.isFinite(s)&&s>thisSeason);
+  const futures=[...new Set([...pricedSeasons,...tradedSeasons])].filter(s=>s>thisSeason).sort();
+  const maxPriced=Math.max(0,...pricedRounds);
+  const leagueRounds=Number(st.league&&st.league.settings&&st.league.settings.draft_rounds)||maxPriced;
+  const roundList=Array.from({length:Math.max(leagueRounds,maxPriced)},(_,i)=>i+1);
+  const ids=st.teams.map(t=>String(t.id));
+  const own=new Map(ids.map(id=>[id,[]]));
+  futures.forEach(s=>roundList.forEach(rd=>ids.forEach(id=>own.get(id).push({s,rd,from:id}))));
+  /* apply trades: remove from the originating roster's holder, give to the new owner */
+  traded.forEach(t=>{
+    const s=Number(t.season),rd=Number(t.round),from=String(t.roster_id),to=String(t.owner_id);
+    if(!futures.includes(s)||!roundList.includes(rd))return;
+    for(const [id,list] of own){
+      const i=list.findIndex(x=>x.s===s&&x.rd===rd&&x.from===from);
+      if(i>=0){list.splice(i,1);break;}
+    }
+    if(own.has(to))own.get(to).push({s,rd,from});
+  });
+  /* Count OWNED unpriced assets after reassignment—not trade rows. One 2029 trade proves
+     that season exists for every roster; all of those picks must remain visible. */
+  let unpriced=0;
+  const byTeam=new Map();
+  for(const [id,list] of own){
+    let v=0,missing=0; list.forEach(p=>{const k=p.s+':'+p.rd;
+      if(price.has(k))v+=price.get(k);else{missing++;unpriced++;}});
+    byTeam.set(id,{v,n:list.length,unpriced:missing,list});
+  }
+  const got={byTeam,seasons:futures,rounds:roundList,unpricedPicks:unpriced,
+             asOf:(b.meta&&b.meta.as_of)||null};
+  st.ddPicks=got;
+  if(st===state)DDPICKS=got;
+  return got;
+}
+function ddCapital(teamId){const c=DDPICKS&&DDPICKS.byTeam.get(String(teamId));return c?c.v:null;}
 
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fnv=s=>{let h=2166136261;for(let i=0;i<s.length;i++)h=Math.imul(h^s.charCodeAt(i),16777619);return h>>>0};
@@ -3860,8 +3929,36 @@ function mnDollarSvg(pts,opts){
 }
 function mnMe(){return state.teams[+$('teamPicker').value||0]}
 
+function paintDraftCapital(){
+  const card=$('mnCapCard'); if(!card)return;
+  if(!DDPICKS||!DDPICKS.byTeam||!DDPICKS.byTeam.size){card.classList.add('wr-hide');return;}
+  card.classList.remove('wr-hide');
+  const rows=state.teams.map(t=>({name:t.name,id:String(t.id),
+      cap:ddCapital(t.id)||0,n:(DDPICKS.byTeam.get(String(t.id))||{}).n||0,
+      unpriced:(DDPICKS.byTeam.get(String(t.id))||{}).unpriced||0}))
+    .sort((a,b)=>b.cap-a.cap);
+  const tot=rows.reduce((a,r)=>a+r.cap,0), avg=rows.length?tot/rows.length:0;
+  const me=mnMe();
+  $('mnCapLead').textContent='Future picks each team holds, priced by round. '
+    +'Seasons '+DDPICKS.seasons.join(' and ')+', rounds '+DDPICKS.rounds.join('–')
+    +'. League average '+fmt$(Math.round(avg))+'.';
+  $('mnCapTab').innerHTML='<table class="wr-tab"><thead><tr><th>Team</th><th>Picks</th>'
+    +'<th>Draft capital</th><th>vs average</th></tr></thead><tbody>'
+    +rows.map(r=>'<tr'+(me&&r.name===me.name?' class="wr-me"':'')+'><td>'+esc(r.name)+'</td><td>'+r.n
+      +(r.unpriced?' · '+r.unpriced+' unpriced':'')
+      +'</td><td>'+fmt$(r.cap)+'</td><td>'+(r.cap-avg>=0?'+':'−')+fmt$(Math.abs(Math.round(r.cap-avg)))
+      +'</td></tr>').join('')+'</tbody></table>';
+  $('mnCapNote').innerHTML='⚠️ Priced by ROUND, not by slot — a rebuilding team\u2019s first is worth more '
+    +'than a contender\u2019s and this cannot tell them apart. Deliberately NOT added to roster value: a team '
+    +'can be mid-table on roster and first on capital, and that gap is the point. '
+    +(DDPICKS.unpricedPicks?DDPICKS.unpricedPicks+' owned picks fall outside the priced seasons or rounds and are '
+      +'counted, not valued — unpriced is not the same as worthless. ':'')
+    +'DataDawg$ dynasty board, '+(DDPICKS.asOf||'undated')+', ungraded.';
+}
+
 function renderMoney(){
   if(!state)return;
+  paintDraftCapital();
   /* ⚠️ This was state.teams.map(teamMoney), which handed Array.map's INDEX to the
      horizon parameter. It only worked because mvOf silently fell back to the page
      toggle. It does not fall back any more. */
@@ -4291,7 +4388,7 @@ function renderDynastyLens(){
 /* ============================ THE PORTFOLIO ================================
    Every row is computed inside its own league state. Unloaded leagues stay explicit
    rather than inheriting numbers from whichever league happens to be active. */
-function withState(st,fn){const keep=state,keepDD=DD;state=st;DD=st.ddValues||null;try{return fn()}finally{state=keep;DD=keepDD}}
+function withState(st,fn){const keep=state,keepDD=DD,keepPicks=DDPICKS;state=st;DD=st.ddValues||null;DDPICKS=st.ddPicks||null;try{return fn()}finally{state=keep;DD=keepDD;DDPICKS=keepPicks}}
 function leagueRow(entry){
   return withState(entry.state,()=>{
     const st=entry.state,mi=pickMyTeam(st.teams,st.ref,st.users||null);
@@ -4310,7 +4407,7 @@ async function loadAllSaved(){
   let done=0;
   for(const x of todo){
     $('pfStatus').textContent='Reading '+x.name+'… ('+(++done)+' of '+todo.length+')';
-    try{const st=await fetchLeague(x.leagueId);await loadDD(st);LOADED.set(keyOf('sleeper',x.leagueId),{state:st,sim:null})}
+    try{const st=await fetchLeague(x.leagueId);await loadDD(st);await loadDraftCapital(st);LOADED.set(keyOf('sleeper',x.leagueId),{state:st,sim:null})}
     catch(e){$('pfStatus').textContent='Could not read '+x.name+': '+e.message}
   }
   btn.disabled=false;renderPortfolio();
@@ -4771,6 +4868,7 @@ async function connect(input){
      loading the dynasty board lazily off one global would strand the others. */
   await loadMV();if(isDynastyLeague())await loadDynastyMV();
   await loadDD();   /* DataDawg$ if this league has a board; otherwise PMV stands */
+  await loadDraftCapital();   /* dynasty only; picks are assets, not roster value */
   rememberLeague(ref,state.league.name);
   setLoaded(true);
   render();
@@ -4787,7 +4885,7 @@ async function connect(input){
 function restore(key){
   const entry=LOADED.get(key);
   if(!entry)return false;
-  state=entry.state;DD=state.ddValues||null;sim=entry.sim||null;tradeFilter=null;
+  state=entry.state;DD=state.ddValues||null;DDPICKS=state.ddPicks||null;sim=entry.sim||null;tradeFilter=null;
   $('playoffSpots').value=state.settings.playoffSpots;
   $('playoffStart').value=state.settings.playoffStart;
   $('sigma').value=state.settings.sigma;
@@ -4852,6 +4950,7 @@ async function openShared(token){
   LOADED.set(keyOf('espn',state.ref.id),{state,sim:null});
   await loadMV();if(isDynastyLeague())await loadDynastyMV();
   await loadDD();   /* DataDawg$ if this league has a board; otherwise PMV stands */
+  await loadDraftCapital();   /* dynasty only; picks are assets, not roster value */
   setLoaded(true);
   shareBar('<b>Shared league \u00b7 read-only.</b> '+esc(state.league.name||'ESPN league')
     +' \u2014 every team\u2019s grade and roster, computed from the league owner\u2019s connection. '

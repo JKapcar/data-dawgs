@@ -59,7 +59,7 @@ const pmv = (rows) => ({ by: new Map(rows), asOf: "2026-08-24" });
 /* --- DataDawg$ is league state, never a cross-league global leak --- */
 ok("loadDD caches the resolved boards on its league state", /st\.ddValues=boards/.test(src));
 ok("restoring a league restores its own DataDawg$ board", /state=entry\.state;DD=state\.ddValues\|\|null/.test(src));
-ok("portfolio calculations swap DataDawg$ with state", /keepDD=DD;state=st;DD=st\.ddValues\|\|null/.test(src));
+ok("portfolio calculations swap DataDawg$ with state", /keepDD=DD,keepPicks=DDPICKS;state=st;DD=st\.ddValues\|\|null;DDPICKS=st\.ddPicks\|\|null/.test(src));
 ok("portfolio loading resolves each Sleeper league board", /fetchLeague\(x\.leagueId\);await loadDD\(st\)/.test(src));
 
 /* --- DataDawg$ wins when a board is loaded --- */
