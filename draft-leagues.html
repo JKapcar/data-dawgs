@@ -178,12 +178,26 @@ body.embed .grid>section:not(#settingsCard){display:none}
     </section>
 
     <section class="card">
+      <h2>Connect Yahoo</h2>
+      <form id="yahooForm">
+        <div class="form-grid">
+          <div><label for="yahooLeagueId">Yahoo league id</label><input id="yahooLeagueId" inputmode="numeric" placeholder="773763" required></div>
+          <div><label for="yahooTeamId">Your team id <span class="muted">(optional)</span></label><input id="yahooTeamId" inputmode="numeric" placeholder="1"></div>
+        </div>
+        <p class="notice">Public leagues only. The Worker reads Yahoo's server-rendered pages without a cookie or API key. A private league is refused rather than partially imported.</p>
+        <p><button class="primary" type="submit">Connect Yahoo</button>
+           <button type="button" id="yahooDisconnect" hidden>Disconnect</button></p>
+        <div class="notice" id="yahooMsg" aria-live="polite">Yahoo is connected to your Data Dawgs account, not to this device, so sign in first.</div>
+      </form>
+    </section>
+
+    <section class="card">
       <h2>Connect League</h2>
       <form id="connectForm">
         <label for="providerUrl">Paste your fantasy league URL</label>
-        <input id="providerUrl" inputmode="url" placeholder="Sleeper league URL (Yahoo and ESPN: set up manually)">
+        <input id="providerUrl" inputmode="url" placeholder="Sleeper or public Yahoo league URL (ESPN: form above)">
         <p><button type="submit">Recognize League</button></p>
-        <div class="notice" id="connectMsg">Sleeper leagues import through its public read-only API — teams, roster slots, scoring and live picks. Yahoo and ESPN have no public read API we can use, so a link from either is recognised but not imported: build those leagues manually above.</div>
+        <div class="notice" id="connectMsg">Sleeper imports into the draft rig. A public Yahoo URL connects the live War Room; Yahoo write access and private-league reads are not available. ESPN uses the form above.</div>
       </form>
     </section>
   </div>
@@ -551,8 +565,13 @@ body.embed .grid>section:not(#settingsCard){display:none}
     const value=$("providerUrl").value.trim();
     const ref=DDProviders.parse(value);
     if(!ref){ $("connectMsg").className="notice err"; $("connectMsg").textContent="That does not look like a supported fantasy league URL."; return; }
-    if(ref.provider==="yahoo"){ $("connectMsg").className="notice"; $("connectMsg").textContent="Yahoo connection isn't configured on this deployment yet."; return; }
-    if(ref.provider==="espn"){ $("connectMsg").className="notice"; $("connectMsg").textContent="ESPN automatic import is unavailable for this league. Create this league manually for now."; return; }
+    if(ref.provider==="yahoo"){
+      $("connectMsg").className="notice"; $("connectMsg").textContent="Checking Yahoo's public league page…";
+      try{await DDProviders.yahoo.connect({leagueId:ref.id});location.href="fantasy-warroom.html?provider=yahoo&league="+encodeURIComponent(ref.id)}
+      catch(error){$("connectMsg").className="notice err";$("connectMsg").textContent=error&&error.message?error.message:"Yahoo is unavailable right now."}
+      return;
+    }
+    if(ref.provider==="espn"){ $("connectMsg").className="notice"; $("connectMsg").textContent="Use the Connect ESPN form above; it supports public and private ESPN leagues."; return; }
     const button=event.submitter; button.disabled=true;
     $("connectMsg").className="notice"; $("connectMsg").textContent="Importing league, teams, scoring, roster settings, draft order, and picks from Sleeper…";
     try{
@@ -572,6 +591,28 @@ body.embed .grid>section:not(#settingsCard){display:none}
     }
   });
 
+
+  /* ---- Yahoo -------------------------------------------------------------- */
+  const yahooMsg=(text,kind)=>{const el=$("yahooMsg");el.className="notice"+(kind?" "+kind:"");el.textContent=text};
+  async function yahooRefreshStatus(){
+    if(!(window.DDProviders&&DDProviders.yahoo&&DDProviders.yahoo.status))return;
+    try{const st=await DDProviders.yahoo.status();if(st.connected){
+      $("yahooDisconnect").hidden=false;$("yahooLeagueId").value=st.leagueId||"";$("yahooTeamId").value=st.teamId||"";
+      yahooMsg(`Connected to public Yahoo league ${st.leagueId}. Press Connect Yahoo to open its live War Room.`,"ok");
+    }else $("yahooDisconnect").hidden=true}catch(e){}
+  }
+  $("yahooForm").addEventListener("submit",async event=>{
+    event.preventDefault();const button=event.submitter;button.disabled=true;yahooMsg("Checking Yahoo's public league page…");
+    try{const st=await DDProviders.yahoo.connect({leagueId:$("yahooLeagueId").value,teamId:$("yahooTeamId").value});
+      $("yahooDisconnect").hidden=false;yahooMsg(`Connected to Yahoo league ${st.leagueId}. Opening the live War Room…`,"ok");
+      location.href="fantasy-warroom.html?provider=yahoo&league="+encodeURIComponent(st.leagueId)
+    }catch(error){yahooMsg(error&&error.message?error.message:"Yahoo is unavailable right now.","err");button.disabled=false}
+  });
+  $("yahooDisconnect").addEventListener("click",async()=>{
+    try{await DDProviders.yahoo.disconnect();$("yahooDisconnect").hidden=true;yahooMsg("Disconnected. The saved Yahoo league and its share link were removed.","ok")}
+    catch(e){yahooMsg(e&&e.message?e.message:"Could not disconnect.","err")}
+  });
+  yahooRefreshStatus();
 
   /* ---- ESPN ---------------------------------------------------------------
      The credentials the human types go straight to the Worker and are not kept

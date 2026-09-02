@@ -64,7 +64,7 @@ for(const [label, map] of [["Toto", totos], ["DDMe", ddmes]]){
 /* ---- 2. a DD_POOL page is a league page ---------------------------------- */
 ok(withPool.length >= 7, `expected the draft rig to set DD_POOL (found ${withPool.length})`);
 for(const f of withPool){
-  ok(read(f).includes('src="draft-league.js"'),
+  ok(/src="draft-league\.js(?:\?[^\"]*)?"/.test(read(f)),
     `${f} sets DD_POOL, so Toto and the "Who are you?" chip take the draft surface there — ` +
     `without draft-league.js they resolve against unscoped keys and a league instance sees nothing`);
 }
@@ -284,7 +284,7 @@ ok(!/\n` \+ \(window\.DDBotScan/.test(wr),
 const files = [...fs.readdirSync(ROOT).filter(f => f.endsWith(".html")).sort(),
                ...fs.readdirSync(ROOT).filter(f => f.endsWith(".js") && f !== "sw.js").sort()];
 const h = createHash("md5");
-for(const f of files) h.update(fs.readFileSync(new URL(f, ROOT)));
+for(const f of files) h.update(fs.readFileSync(new URL(f, ROOT)).toString().replace(/\r\n/g, "\n"));
 const want = h.digest("hex").slice(0, 10);
 const got = /const VERSION = "([^"]+)"/.exec(read("sw.js"))[1];
 ok(got === want, `sw.js VERSION is ${got}, should be ${want} — run work/stamp-sw-version.py`);

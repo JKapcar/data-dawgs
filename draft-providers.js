@@ -284,6 +284,50 @@
   function espnShareCreate(options){ return espnCall("/espn/share",{method:"POST",body:{},fetch:options&&options.fetch}); }
   function espnShareRevoke(options){ return espnCall("/espn/share",{method:"DELETE",fetch:options&&options.fetch}); }
 
+  /* ---------------- Yahoo public leagues ---------------------------------
+     Yahoo's browser API is not used. The Worker reads only server-rendered PUBLIC
+     league pages; private leagues fail closed with a clear refusal. */
+  async function yahooCall(path, init){
+    const fetchImpl=(init&&init.fetch)||root.fetch;
+    if(typeof fetchImpl!=="function") throw new Error("Fetch is unavailable.");
+    const token=espnSession();
+    if(!token) throw new Error("Sign in first — Yahoo is connected to your account, not to this device.");
+    const res=await fetchImpl(ESPN_WORKER+path,{
+      method:(init&&init.method)||"GET",
+      headers:Object.assign({"X-Bozo-Session":token},(init&&init.body)?{"Content-Type":"application/json"}:{}),
+      body:(init&&init.body)?JSON.stringify(init.body):undefined
+    });
+    let data={}; try{data=await res.json()}catch(e){}
+    if(!res.ok){const err=new Error(data.error||`Yahoo request failed (${res.status}).`);err.status=res.status;throw err}
+    return data;
+  }
+  function connectYahoo(input,options){
+    const leagueId=clean(input&&input.leagueId),teamId=clean(input&&input.teamId);
+    if(!/^\d{1,12}$/.test(leagueId)) return Promise.reject(new Error("That does not look like a Yahoo league id."));
+    if(teamId&&!/^\d{1,4}$/.test(teamId)) return Promise.reject(new Error("That does not look like a Yahoo team id."));
+    return yahooCall("/yahoo/connect",{method:"POST",body:{leagueId,teamId:teamId||null},fetch:options&&options.fetch});
+  }
+  function yahooStatus(options){return yahooCall("/yahoo/connect",{fetch:options&&options.fetch})}
+  function disconnectYahoo(options){return yahooCall("/yahoo/connect",{method:"DELETE",fetch:options&&options.fetch})}
+  /* A share token is deliberately public. Never send the session header here: doing so
+     makes a link work for its owner and fail for every person it was made for. */
+  async function yahooPublicCall(path,init){
+    const fetchImpl=(init&&init.fetch)||root.fetch;
+    if(typeof fetchImpl!=="function") throw new Error("Fetch is unavailable.");
+    const res=await fetchImpl(ESPN_WORKER+path,{method:"GET"});
+    let data={}; try{data=await res.json()}catch(e){}
+    if(!res.ok){const err=new Error(data.error||`Shared Yahoo league request failed (${res.status}).`);err.status=res.status;throw err}
+    return data;
+  }
+  function fetchYahooWarroom(options){
+    const share=options&&options.share;
+    if(share)return yahooPublicCall("/yahoo/share/"+encodeURIComponent(share),{fetch:options&&options.fetch});
+    return yahooCall("/yahoo/warroom",{fetch:options&&options.fetch});
+  }
+  function yahooShareStatus(options){return yahooCall("/yahoo/share",{fetch:options&&options.fetch})}
+  function yahooShareCreate(options){return yahooCall("/yahoo/share",{method:"POST",body:{},fetch:options&&options.fetch})}
+  function yahooShareRevoke(options){return yahooCall("/yahoo/share",{method:"DELETE",fetch:options&&options.fetch})}
+
   /* The Worker already returns the site's league shape, so importing is a rename
      into the envelope the rest of the rig expects rather than a second parse. */
   /* ESPN tells us reception points and whether a superflex/OP slot exists; turning that
@@ -333,7 +377,9 @@
   const providers={
     parse:parseProvider,
     sleeper:{detect:input=>!!parseSleeper(input),parse:parseSleeper,importLeague:importSleeper,fetchDraft:fetchSleeperDraft,fetchPicks:fetchSleeperPicks,normalize:normalizeImport,mapPlayer,normalizePick,rosterSlots,scoringConfig},
-    yahoo:{detect:input=>!!parseYahoo(input),parse:parseYahoo},
+    yahoo:{detect:input=>!!parseYahoo(input),parse:parseYahoo,connect:connectYahoo,status:yahooStatus,
+      disconnect:disconnectYahoo,warroom:fetchYahooWarroom,
+      shareStatus:yahooShareStatus,shareCreate:yahooShareCreate,shareRevoke:yahooShareRevoke},
     espn:{detect:input=>!!parseEspn(input),parse:parseEspn,connect:connectEspn,status:espnStatus,
       disconnect:disconnectEspn,fetchLeague:fetchEspnLeague,fetchPicks:fetchEspnPicks,warroom:fetchEspnWarroom,importLeague:importEspn,
       shareStatus:espnShareStatus,shareCreate:espnShareCreate,shareRevoke:espnShareRevoke}

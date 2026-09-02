@@ -1674,7 +1674,7 @@ ON THE CLOCK is shown in the page header. "Advance nomination" moves it to the n
 LEAGUES (draft-leagues.html) — the front door. Every room is one league, and the league id travels in the URL as ?league=<id>; a page opened without it falls back to the legacy room.
 YOUR LEAGUES: the shelf at the top lists the leagues opened on this browser. Each row has Open, "Copy league link" and "Remove from this device". The link is a capability link — anyone holding it can open that room and no Data Dawgs account is needed — and removing a league only forgets it on that device.
 CREATE LEAGUE: name, season, teams, draft type (Auction or Snake), auction budget, roster configuration, scoring, points per reception, and a team/owner list. A snake league has no budget and no bidding.
-CONNECT LEAGUE: paste a Sleeper league URL and press "Recognize League" to import teams and settings. Yahoo and ESPN are not imported this way and are set up by hand. There is a separate "Connect ESPN" form taking an ESPN league id, season and the espn_s2 / SWID cookies.
+CONNECT LEAGUE: paste a Sleeper league URL to import teams and settings. A PUBLIC Yahoo league can connect to the live War Room from its numeric league URL with no cookie or API key; private Yahoo leagues are refused. ESPN has a separate form for its league id, season and optional espn_s2 / SWID cookies.
 OPENING A RIG PAGE with leagues on the shelf but no draft on the device sends you here to pick one first — that is the picker, not an error.
 OTHER PAGES: Big Board is the projector view — it is deliberately not in the nav, open it by URL on the projector machine, and what it displays is set from "Projector shows". The read-only board for everyone else is the Fantasy Draft Dashboard → Live tab; board.html?view=live opens that same view directly. There is no LIVE DRAFT item in the nav — it was retired 8/1. Draft Data Viz, Report Card, Cheat Sheet and Master Data are read-only views of the same draft.
 BOZO HYPOTHETICAL (bozo.html): "As it stands" reports Shortest Odds and Last In separately before lock. "If every leg lost" walks the written order after lock and shows the first computable lever. Both are read-only hypotheticals, assume every filed leg loses, and never name a bozo.
@@ -1703,7 +1703,7 @@ cfb.html — the College Football lab: 2025 results, one retrodictive Elo, a mat
 markets.html — the prediction-markets section, its own top-level group labelled Markets. ai.html — the A.I. Model Board, its own top-level group. Both are deliberately near-empty and say so above the fold; do not imply either has tools yet.
 data.html — the Library: every machine-readable file, shelved by the surface that owns it. connect.html — forwards to the connector card on signon.html#connect, which is where you point your own AI (Claude, ChatGPT, Gemini or any MCP client) at the site.
 signon.html — sign in, sign up, recover an account, and join a Bozo league by searching its name and entering its shared password; every other page's sign-in chip lands here. dawgs.html — the Dawg Pound: Rollo, the OG Data Dawg, DDCC Profile, SwoleDawg and DateDawg. swoledawg.html — body and training. datedawg.html — local-only reciprocal-acceptance analysis of a Hinge export; no upload or backend memory. fantasy-warroom.html — the fantasy league war room.
-rankings.html — the Dog Track: ranking services graded against actual finishes. draft-leagues.html — create or join a draft league, and import a Sleeper league (Yahoo and ESPN are manual). cfb-power.html — CFB conference power curves. radar.html — the radar view.
+rankings.html — the Dog Track: ranking services graded against actual finishes. draft-leagues.html — create or join a draft league, import Sleeper, connect public Yahoo, or connect ESPN. cfb-power.html — CFB conference power curves. radar.html — the radar view.
 Machine surfaces: /data/index.json lists every file with its as_of and hash; /llms.txt is the curated index; /data/surfaces.json maps pages to files and MCP tools.
 NAVIGATION: the banner is Sign in/account, then exactly seven groups — Arena, Markets, A.I., NFL, CFB, Data, Dawgs — then the theme button. The wordmark is Home. There is no top-level Sports group and no top-level Receipts group: NFL and CFB are separate groups, and receipts.html is an item under Data.
 TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a standard declared in advance. DawgHouse = stopped, with the blocker still attached.`;
@@ -2791,11 +2791,12 @@ body.wr-shared #youLab{display:none!important}
     </div>
     <div class="wr-connect">
       <form id="connectForm">
-        <input id="leagueInput" inputmode="url" autocomplete="url" placeholder="Sleeper league URL or ID, or an ESPN league URL" aria-label="League URL or Sleeper ID">
+        <input id="leagueInput" inputmode="url" autocomplete="url" placeholder="Sleeper, ESPN, or public Yahoo league URL" aria-label="Fantasy league URL or Sleeper ID">
         <button class="wr-btn">Add league</button>
       </form>
-      <p class="wr-status" id="connectionStatus">Sleeper leagues connect without a Sleeper login. ESPN reads the league you already connected in the <a href="draft-league.html">draft room</a>.</p>
+      <p class="wr-status" id="connectionStatus">Sleeper connects directly. Public Yahoo leagues are read without a cookie; their projections come from Sleeper's season feed. ESPN uses the connection in the <a href="draft-leagues.html">draft room</a>.</p>
     </div>
+    <div class="wr-saved" id="seededLeague"></div>
     <div class="wr-saved" id="savedList"></div>
     <div class="wr-share" id="shareBox" hidden>
       <h3>Share this league</h3>
@@ -3191,7 +3192,7 @@ body.wr-shared #youLab{display:none!important}
         the two teams in a matchup. Before three completed weeks, σ is a stated generic assumption, not an estimate
         from your league.</dd>
         <dt>Not built yet</dt>
-        <dd>Rest-of-season or per-week projections · ESPN and Yahoo authenticated reads · the man-games replacement
+        <dd>Rest-of-season or per-week projections · private Yahoo league reads · the man-games replacement
         baseline · multi-player and 2-for-1 trades · playoff-odds re-simulation of a proposed trade.</dd>
         <dt>Receipts</dt>
         <dd>This tool issues none. Its odds are recomputed live from current inputs and are never logged before
@@ -3567,6 +3568,8 @@ function valueLabel(mod){return labelFor(hz(mod))}
 /* Whose projection sits on the far side of the disagreement panel. The board it is
    measured against is OURS, so the provider has to be named or the chart reads as a
    verdict on the player instead of a disagreement between two sources. */
+/* Yahoo supplies rosters and paid prices, not projections. The far side of the
+   disagreement chart is Sleeper's season projection for a Yahoo league. */
 function provName(){return state&&state.ref&&state.ref.provider==='espn'?'ESPN':'Sleeper'}
 function valueAsOf(mod){return asOfFor(hz(mod))}
 /* Which auction column this league actually drafts in. */
@@ -4412,25 +4415,27 @@ function leagueRow(entry){
     const me=st.teams[mi],money=teamMoney(me,'season'),z=zOf(me.total,st.teams.map(t=>t.total));
     const rk=st.teams.slice().sort((a,b)=>b.total-a.total).indexOf(me)+1;
     const odds=entry.sim?entry.sim.odds[me.id]:null;
-    return {name:st.league.name,id:st.ref.id,teamName:me.name,teams:st.teams.length,
+    return {name:st.league.name,id:st.ref.id,provider:st.ref.provider,teamName:me.name,teams:st.teams.length,
       grade:letter(z),vor:me.total,rank:rk,odds,st:money.st,bn:money.bn,total:money.total,players:me.players.slice()};
   });
 }
 async function loadAllSaved(){
   const btn=$('pfLoadAll');btn.disabled=true;await Promise.all([loadMV(),loadDynastyMV()]);
-  const todo=readShelf().filter(x=>x.provider==='sleeper'&&!LOADED.has(keyOf(x.provider,x.leagueId)));
+  const todo=readShelf().filter(x=>!LOADED.has(keyOf(x.provider,x.leagueId)));
   let done=0;
   for(const x of todo){
     $('pfStatus').textContent='Reading '+x.name+'… ('+(++done)+' of '+todo.length+')';
-    try{const st=await fetchLeague(x.leagueId);await loadDD(st);await loadDraftCapital(st);LOADED.set(keyOf('sleeper',x.leagueId),{state:st,sim:null})}
-    catch(e){$('pfStatus').textContent='Could not read '+x.name+': '+e.message}
+    try{
+      const st=x.provider==='espn'?await fetchLeagueEspn(x.leagueId):x.provider==='yahoo'?await fetchLeagueYahoo(x.leagueId):await fetchLeague(x.leagueId);
+      await loadDD(st);await loadDraftCapital(st);LOADED.set(keyOf(x.provider,x.leagueId),{state:st,sim:null});
+    }catch(e){$('pfStatus').textContent='Could not read '+x.name+': '+e.message}
   }
   btn.disabled=false;renderPortfolio();
 }
 function renderPortfolio(){
   if(!$('pfStatus'))return;
   const saved=readShelf(),rows=saved.map(x=>{
-    const e=LOADED.get(keyOf(x.provider,x.leagueId));return e?leagueRow(e):{name:x.name,id:x.leagueId,unloaded:true};
+    const e=LOADED.get(keyOf(x.provider,x.leagueId));return e?leagueRow(e):{name:x.name,id:x.leagueId,provider:x.provider,unloaded:true};
   });
   const loaded=rows.filter(r=>!r.unloaded),pending=rows.filter(r=>r.unloaded);
   $('pfLoadAll').classList.toggle('wr-hide',!pending.length);
@@ -4446,10 +4451,10 @@ function renderPortfolio(){
   ].map(([l,v,d])=>'<div class="wr-tile"><div class="tl">'+l+'</div><div class="tv">'+v+'</div><div class="td">'+d+'</div></div>').join('')
   :'<p class="wr-note">Load a league to see the combined picture.</p>';
   $('pfTable').innerHTML='<thead><tr><th>League</th><th>Your team</th><th>Grade</th><th>Rank</th><th>VOR / wk</th><th>Playoff</th><th>Roster $</th></tr></thead><tbody>'
-    +rows.map(r=>r.unloaded?'<tr><td>'+esc(r.name)+'</td><td colspan="5" style="text-align:left;color:var(--ink-3)">not loaded this session</td><td><button class="wr-mini" data-load="'+esc(r.id)+'" data-provider="sleeper">Load</button></td></tr>'
+    +rows.map(r=>r.unloaded?'<tr><td>'+esc(r.name)+'</td><td colspan="5" style="text-align:left;color:var(--ink-3)">not loaded this session</td><td><button class="wr-mini" data-load="'+esc(r.id)+'" data-provider="'+esc(r.provider)+'">Load</button></td></tr>'
       :'<tr><td>'+esc(r.name)+'</td><td style="text-align:left">'+esc(r.teamName)+'</td><td>'+r.grade+'</td><td>'+r.rank+' / '+r.teams+'</td><td class="'+(r.vor>=0?'wr-up':'wr-down')+'">'+(r.vor>=0?'+':'')+r.vor.toFixed(1)+'</td><td>'+(r.odds!=null?Math.round(r.odds*100)+'%':'—')+'</td><td>'+fmt$(r.total)+'</td></tr>').join('')+'</tbody>';
   const held=new Map();
-  loaded.forEach(r=>r.players.forEach(p=>{const k=mvKey(p.name)+'|'+p.pos;if(!held.has(k))held.set(k,{name:p.name,pos:p.pos,mv:withState(LOADED.get(keyOf('sleeper',r.id)).state,()=>mvOf(p,'season')),leagues:[]});held.get(k).leagues.push(r.name)}));
+  loaded.forEach(r=>r.players.forEach(p=>{const k=mvKey(p.name)+'|'+p.pos;if(!held.has(k))held.set(k,{name:p.name,pos:p.pos,mv:withState(LOADED.get(keyOf(r.provider,r.id)).state,()=>mvOf(p,'season')),leagues:[]});held.get(k).leagues.push(r.name)}));
   const multi=[...held.values()].filter(x=>x.leagues.length>1).sort((a,b)=>b.leagues.length-a.leagues.length||(b.mv||0)-(a.mv||0));
   $('pfExposure').innerHTML=multi.length?multi.slice(0,15).map(x=>'<div class="sr"><span class="p">'+esc(x.name)+' <span class="t">('+x.pos+')</span></span><span class="t">'+(x.mv!=null?fmt$(x.mv)+' · ':'')+x.leagues.length+' leagues</span><span class="t">'+esc(x.leagues.join(' · ')).slice(0,60)+'</span></div>').join('')
     :(loaded.length>1?'<p class="wr-note">No player appears on more than one of your rosters.</p>':'<p class="wr-note">Exposure needs at least two loaded leagues.</p>');
@@ -4500,7 +4505,7 @@ function cleanShelf(raw){
     /* provider used to be hardcoded to sleeper, which silently rewrote every ESPN
        row into a Sleeper one. Rows saved before this default to sleeper, and the
        key is provider+id: the same number can be a league on both services. */
-    const prov=x.provider==='espn'?'espn':'sleeper';
+    const prov=x.provider==='espn'?'espn':x.provider==='yahoo'?'yahoo':'sleeper';
     const row={provider:prov,leagueId:String(x.leagueId),name:String(x.name||x.leagueId),
       focusRosterId:Number.isFinite(focus)?focus:null,horizon,savedAt:Number(x.savedAt)||0};
     const hit=out.find(y=>y.leagueId===row.leagueId&&y.provider===row.provider);
@@ -4609,17 +4614,20 @@ function paintSwitch(){
   });
   paintTeamMenu();
 }
-/* ⚠️ Sharing is ESPN-only and owner-only. The link reads through the owner's sealed ESPN
-   credential, so there is nothing to share for a Sleeper league (its API is already public)
-   and nothing to share from inside a shared view. */
+/* ESPN and Yahoo share through the current account connection. Sleeper needs no token;
+   its upstream is already public. Shared readers never receive a session header. */
+function shareAdapter(){
+  const p=state&&state.ref&&state.ref.provider;
+  return p&&(p==='espn'||p==='yahoo')&&window.DDProviders?DDProviders[p]:null;
+}
 async function paintShare(){
-  const box=$('shareBox');
+  const box=$('shareBox'),adapter=shareAdapter();
   if(!box)return;
-  const eligible=!SHARED&&state&&state.ref.provider==='espn'&&window.DDProviders?.espn?.shareStatus;
+  const eligible=!SHARED&&adapter&&adapter.shareStatus;
   box.hidden=!eligible;
   if(!eligible)return;
   let st=null;
-  try{ st=await DDProviders.espn.shareStatus(); }catch(e){ return }
+  try{ st=await adapter.shareStatus(); }catch(e){ return }
   paintShareUrl(st&&st.url?st.url:null);
 }
 function paintShareUrl(url){
@@ -4632,7 +4640,7 @@ document.addEventListener('click',async ev=>{
   const t=ev.target;
   if(t&&t.id==='shareMake'){
     t.disabled=true;
-    try{ const r=await DDProviders.espn.shareCreate(); paintShareUrl(r.url); }
+    try{ const r=await shareAdapter().shareCreate(); paintShareUrl(r.url); }
     catch(e){ $('shareNote').textContent='Could not create the link: '+(e.message||e); }
     t.disabled=false;
   }
@@ -4642,7 +4650,7 @@ document.addEventListener('click',async ev=>{
   if(t&&t.id==='shareKill'){
     /* revoking is immediate and total: every link already handed out stops resolving */
     if(!confirm('Revoke the share link? Anyone holding it loses access immediately.'))return;
-    try{ await DDProviders.espn.shareRevoke(); paintShareUrl(null); }
+    try{ await shareAdapter().shareRevoke(); paintShareUrl(null); }
     catch(e){ $('shareNote').textContent='Could not revoke: '+(e.message||e); }
   }
 });
@@ -4666,20 +4674,20 @@ function paintShelf(){
   $('savedList').innerHTML=list.length?list.map(x=>{
     const on=state&&state.ref.provider===x.provider&&String(state.ref.id)===String(x.leagueId);
     return `<div class="wr-row${on?' on':''}"><div class="wr-grow"><b>${esc(x.name)}</b>
-      <small>${x.provider==='espn'?'ESPN':'Sleeper'} · ${esc(x.leagueId)}${on?' · open now':''}</small></div><div class="wr-league-actions">
+      <small>${x.provider==='espn'?'ESPN':x.provider==='yahoo'?'Yahoo':'Sleeper'} · ${esc(x.leagueId)}${on?' · open now':''}</small></div><div class="wr-league-actions">
       <button class="wr-mini" data-load="${esc(x.leagueId)}" data-provider="${esc(x.provider)}">${on?'Refresh':'Open league'}</button>
       <button class="wr-mini" data-forget="${esc(x.leagueId)}" data-provider="${esc(x.provider)}">Remove</button></div></div>`;
   }).join(''):'<div class="wr-empty-shelf"><b>No leagues saved yet.</b><br>Paste your first Sleeper league URL or ID above. It will stay here for one-tap access.</div>';
 }
 
-/* ⚠️ THE YAHOO ROW IS DELIBERATELY GONE. It rendered the seeded league as
-   "settings captured 8/25 · rosters: not connected" beside four working Sleeper leagues and
-   a working ESPN one, next to controls that lead nowhere — Yahoo has no read API we can use,
-   so it can never produce a roster, a grade or odds. A row that cannot do the thing the page
-   is for reads as broken rather than unsupported, so it is not shown at all.
-   The league itself is untouched: data/leagues/pepperoninipples.json still exists and
-   dashboard.html?league=<dd_id> still opens the rig for anyone holding the link. If Yahoo
-   ever gains a read path, restore the row rather than reviving this placeholder. */
+/* The measured public Yahoo room is a permanent starting row, backed by its canonical
+   settings file. It opens the live Worker read; the draft rig remains a separate surface. */
+fetch('data/leagues/pepperoninipples.json').then(r=>r.ok?r.json():null).then(x=>{
+  if(!x||!$('seededLeague'))return;
+  $('seededLeague').innerHTML=`<div class="wr-row"><div class="wr-grow"><b>${esc(x.name)}</b>
+    <small>Yahoo · ${esc(x.provider_league_id)} · public live read · settings checked ${esc(x.source&&x.source.captured_at?x.source.captured_at.slice(0,10):'')}</small></div>
+    <div class="wr-league-actions"><button class="wr-mini" data-load="${esc(x.provider_league_id)}" data-provider="yahoo">Open league</button></div></div>`;
+}).catch(()=>{});
 
 /* ------------------------------------------------------- connection ------- */
 /* One card, every team in the league, one tap. Painted only while the team is
@@ -4863,14 +4871,53 @@ async function fetchLeagueEspn(id,share){
   return st;
 }
 
+async function fetchLeagueYahoo(id,share){
+  if(!(window.DDProviders&&DDProviders.yahoo&&DDProviders.yahoo.warroom))
+    throw Error('This build has no Yahoo War Room adapter.');
+  if(!share)await DDProviders.yahoo.connect({leagueId:String(id)});
+  const feed=await DDProviders.yahoo.warroom(share?{share:share}:undefined);
+  const L=feed.league||{};
+  const ref={provider:'yahoo',id:String(id!=null?id:(L.id||''))};
+  const pool=(feed.pool||[]).map(p=>({id:String(p.id),name:p.name,pos:p.pos,
+    p:(p.p==null||!isFinite(p.p))?null:Number(p.p),
+    paid:(p.paid==null||!isFinite(p.paid))?null:Number(p.paid),team:p.team,dd:p.dd}));
+  const byId=Object.fromEntries(pool.map(p=>[p.id,p]));
+  const teams=(feed.teams||[]).map(t=>({
+    id:String(t.id),ownerId:String(t.owner||''),name:t.name,
+    players:(t.players||[]).map(pid=>byId[String(pid)]).filter(Boolean),
+    starters:new Set((t.starters||[]).map(String))
+  }));
+  const positions=[];
+  (L.slots||[]).forEach(x=>{for(let i=0;i<x.count;i++)positions.push(x.slot==='BENCH'?'BN':x.slot)});
+  const ppr=Number(L.scoring&&L.scoring.ppr);
+  const league={
+    name:L.name||'Yahoo league',league_id:String(L.id||id),season:L.season,
+    roster_positions:positions,
+    /* Feed fixtures deliberately do not supply scoring_settings. This mapping is the
+       source of truth for mvColumn(); losing rec silently unprices the Money tab. */
+    scoring_settings:Number.isFinite(ppr)?{rec:ppr}:{},
+    settings:{type:0,playoff_teams:L.playoffTeams,playoff_week_start:L.playoffStart}
+  };
+  const st={ref,league,users:[],slots:slots(positions),pool,teams,schedule:feed.schedule||[],
+    horizon:(()=>{
+      const saved=(readShelf().find(x=>x.provider==='yahoo'&&x.leagueId===String(id))||{}).horizon||{};
+      const ok=v=>v==='season'?v:'season';
+      return {report:ok(saved.report),money:ok(saved.money),trades:ok(saved.trades)};
+    })(),
+    settings:{playoffSpots:Number(L.playoffTeams)||Math.max(2,Math.round(teams.length/3)),
+      playoffStart:Number(L.playoffStart)||15,sigma:20},
+    defaults:null,diagnostics:feed.diagnostics||null,dd:feed.dd||null};
+  st.defaults=JSON.stringify(st.settings);
+  return st;
+}
+
 async function connect(input){
   const ref=window.DDProviders?.parse(input);
   if(!ref)throw Error('Paste a Sleeper ID or a Sleeper, ESPN, or Yahoo league URL.');
-  if(ref.provider==='yahoo')throw Error('Yahoo was recognized (league '+ref.id+'), but it has no read API we can use. Sleeper and ESPN are live.');
-  if(ref.provider!=='sleeper'&&ref.provider!=='espn')throw Error(ref.provider.toUpperCase()+' is not connected yet.');
-  const svc=ref.provider==='espn'?'ESPN':'Sleeper';
+  if(!['sleeper','espn','yahoo'].includes(ref.provider))throw Error(ref.provider.toUpperCase()+' is not connected yet.');
+  const svc=ref.provider==='espn'?'ESPN':ref.provider==='yahoo'?'Yahoo':'Sleeper';
   $('connectionStatus').className='wr-status';$('connectionStatus').textContent='Reading '+svc+' league '+ref.id+'…';
-  state=ref.provider==='espn'?await fetchLeagueEspn(ref.id):await fetchLeague(ref.id);
+  state=ref.provider==='espn'?await fetchLeagueEspn(ref.id):ref.provider==='yahoo'?await fetchLeagueYahoo(ref.id):await fetchLeague(ref.id);
   state.defaults=JSON.stringify(state.settings);
   sim=null;tradeFilter=null;
   $('playoffSpots').value=state.settings.playoffSpots;
@@ -4930,12 +4977,13 @@ function shareBar(html,bad){
   el.className='wr-sharebar'+(bad?' bad':'');
   el.innerHTML=html;
 }
-async function openShared(token){
+async function openShared(token,provider){
   SHARED=token;
+  const sharedProvider=provider==='yahoo'?'yahoo':'espn';
   document.body.classList.add('wr-shared');
   shareBar('<b>Shared league \u00b7 read-only.</b> Opening\u2026');
   try{
-    state=await fetchLeagueEspn(null,token);
+    state=sharedProvider==='yahoo'?await fetchLeagueYahoo(null,token):await fetchLeagueEspn(null,token);
   }catch(e){
     document.body.classList.remove('wr-shared');
     shareBar('<b>This shared link did not open.</b> '+esc(e.message||String(e)),true);
@@ -4962,12 +5010,12 @@ async function openShared(token){
   }catch(e){}
   $('teamPicker').value=String(want);
   state.focusGuessed=false;
-  LOADED.set(keyOf('espn',state.ref.id),{state,sim:null});
+  LOADED.set(keyOf(state.ref.provider,state.ref.id),{state,sim:null});
   await loadMV();if(isDynastyLeague())await loadDynastyMV();
   await loadDD();   /* DataDawg$ if this league has a board; otherwise PMV stands */
   await loadDraftCapital();   /* dynasty only; picks are assets, not roster value */
   setLoaded(true);
-  shareBar('<b>Shared league \u00b7 read-only.</b> '+esc(state.league.name||'ESPN league')
+  shareBar('<b>Shared league \u00b7 read-only.</b> '+esc(state.league.name||'Fantasy league')
     +' \u2014 every team\u2019s grade and roster, computed from the league owner\u2019s connection. '
     +(named?'Showing <b>'+esc(state.teams[want].name)+'</b>. ':'')
     +'Use the team picker to look at anyone else. Nothing you do here is saved.');
@@ -4986,6 +5034,7 @@ async function openLeague(provider,id,opts){
 }
 function providerInput(provider,id){
   if(provider==='espn')return 'https://fantasy.espn.com/football/league?leagueId='+id;
+  if(provider==='yahoo')return 'https://football.fantasysports.yahoo.com/f1/'+id;
   return String(id);
 }
 
@@ -5013,7 +5062,7 @@ function render(){
   const changed=JSON.stringify(state.settings)!==state.defaults;
   $('overrideStatus').className='wr-status'+(changed?' bad':'');
   $('overrideStatus').textContent=changed?'What-if: these are your overrides, not the settings this league actually uses.':'Reading this league exactly as the provider reports it. No overrides in effect.';
-  $('provenance').textContent='Rosters and settings: '+state.ref.provider+' · Projections: '+(state.ref.provider==='espn'?'ESPN season total':'Sleeper season total')+', 2026, spread over the league’s regular season · Seed: '+(sim?.seed??'not run')+' · σ: '+state.settings.sigma+' (generic preseason assumption) · injuries not modeled.';
+  $('provenance').textContent='Rosters and settings: '+state.ref.provider+' · Projections: '+(state.ref.provider==='espn'?'ESPN season total':'Sleeper season total')+(state.ref.provider==='yahoo'?' (Yahoo supplies no projection)':'')+', 2026, spread over the league’s regular season · Seed: '+(sim?.seed??'not run')+' · σ: '+state.settings.sigma+' (generic preseason assumption) · injuries not modeled.';
 }
 
 /* ⚠️ REWRITTEN TWICE. Read both notes before changing this.
@@ -5443,7 +5492,7 @@ function writeLast(provider,leagueId){
   /* ⚠️ Checked FIRST and returns unconditionally. A shared reader has no shelf and no
      account: falling through to "open your last league" would hand them the empty state
      of a page that was supposed to show them their draft grade. */
-  if(share){ if(SHEETS.current==='leagues')SHEETS.show('report'); openShared(share); return }
+  if(share){ if(SHEETS.current==='leagues')SHEETS.show('report'); openShared(share,deepProv); return }
   if(deep){
     /* Recover the provider: from the URL if it says, otherwise from the saved shelf row.
        Without this a saved ESPN league opens through the Sleeper path and 404s. */
@@ -5475,9 +5524,9 @@ window.DD_BOTCTX = {
   sys: `RIGHT NOW you are on the Fantasy League War Room — a calculator that prices one connected fantasy league against its own replacement level and simulates its schedule.
 - IT IS A CALCULATOR, NOT A FORECASTER. Nothing on this page is logged before kickoff, so nothing here is a receipt and none of it appears on the model scoreboard. Never describe an odds number here as a graded or tracked forecast.
 - ⚠️ IF NO LEAGUE IS CONNECTED THERE ARE NO NUMBERS AT ALL. The sheets show empty states that explain the method. Do not invent standings, odds or trades for a league that is not loaded, and do not fall back to generic 12-team defaults.
-- INPUTS ARE THIRD-PARTY AND FROZEN. Rosters, scoring and schedule come from the provider at the moment of connection. Projections are the provider's own full-season numbers — ESPN's season split, or Sleeper's season projection — unaudited, spread evenly over the league's regular season, and this page produces none of its own. ⚠️ EVERY SIMULATED WEEK REUSES THAT ONE SEASON AVERAGE — no byes, no opponent adjustment, no rest-of-season curve. Say so whenever anyone asks how much the playoff odds are worth.
+- INPUTS ARE THIRD-PARTY AND FROZEN. Rosters, scoring and schedule come from the provider at the moment of connection. Projections are ESPN's own season split for ESPN, and Sleeper's season projection for both Sleeper and Yahoo — Yahoo supplies no projections. On a Yahoo disagreement chart the far side is therefore SLEEPER, never Yahoo. Those inputs are unaudited, spread evenly over the league's regular season, and this page produces none of its own. ⚠️ EVERY SIMULATED WEEK REUSES THAT ONE SEASON AVERAGE — no byes, no opponent adjustment, no rest-of-season curve. Say so whenever anyone asks how much the playoff odds are worth.
 - NOT MODELED: injuries, byes, trades, waivers, lineup decisions, in-season projection updates, and correlation between the two teams in a matchup. Before three completed weeks, σ is a stated generic assumption rather than an estimate from the league.
-- NOT BUILT: ESPN and Yahoo authenticated reads, the man-games baseline, multi-player trades, and Stage 2 playoff re-simulation. Say so plainly rather than describing how to use them.
+- NOT BUILT: private Yahoo league reads, Yahoo write access, the man-games baseline, multi-player trades, and Stage 2 playoff re-simulation. Say so plainly rather than describing how to use them.
 - AN EDITED SETTING IS A WHAT-IF and is marked pool_eligible false. Do not present an overridden run as the league's own number.
 - THE TRADE FINDER IS A CANDIDATE SCREEN, NOT A FAIRNESS ORACLE. It cannot see acceptance probability, manager preferences, depth needs, injury risk, or multi-player construction; never present a surviving proposal as one the rival would accept. IT PROPOSES, IT DOES NOT ACT. It never accepts, sends or executes anything. A proposal must pass THREE tests: both lineups improve when recomputed after the swap, neither side is left unable to fill a starting slot, AND the two players are within max($4, 35% of the dearer) in THE TRADE SHEET'S OWN auction-value horizon. ⚠️ THERE IS NO PAGE-WIDE ACTIVE HORIZON: the report card, the Money sheet and the Trade finder each carry their own control and can disagree, so always name WHICH SHEET'S horizon you are quoting. Redraft and keeper leagues use /data/pool.json and have no control at all. Sleeper dynasty leagues let the user set each of those three sheets independently between this-season values and /data/dynasty-ranks.json; the dynasty side automatically selects 1QB or Superflex / TE-premium values from roster slots. A swap that would leave either side short a startable player at some slot is refused whatever the points say. It will often return nothing, and returning nothing is a real answer rather than a failure.
 - ⚠️ NEVER PRESENT A LINEUP GAIN AS A REASON A RIVAL WOULD ACCEPT. A benched player adds zero to a starting-lineup total, so lineup gain alone would price a benched WR1 at a kicker. If anyone asks why a lopsided swap is not listed, that is the reason. Always name which sheet's value horizon you are quoting, and its capture date. This-season dollars are a dated market snapshot; overall dynasty dollars are independent analyst estimates. Neither is a live offer price. If a player has no published value the row falls back to model value over replacement and says so; never quote a fallback row as a market price or dynasty rank.

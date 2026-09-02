@@ -31,10 +31,10 @@ ok(html.includes("{id:'all',label:'All Leagues',panel:'#sheetAll'}"), "portfolio
 ok(html.includes('function pickMyTeam(teams,ref,users)'), "team identity resolution is explicit");
 ok(/function pickMyTeam[\s\S]*focusRosterId[\s\S]*display_name[\s\S]*return 0/.test(html),
   "team resolution prefers saved roster, then identity, then fallback");
-ok(html.includes("SHEETS.show(s==='all'?'all':lastLeagueSheet)"),
-  "the scope toggle opens the portfolio and returns to the view you left");
-ok(html.includes("$('flowNav').classList.toggle('wr-hide',s==='all')"),
-  "scope 'all' hides the per-league tabs rather than leaving dead ones on screen");
+ok(html.includes('data-sheet="all"'),
+  "the league menu exposes the All Leagues portfolio");
+ok(html.includes("if(id==='all')renderPortfolio()"),
+  "opening the All Leagues view refreshes the portfolio");
 ok(html.includes('data-open="') && html.includes('openLeague(b.dataset.provider,b.dataset.open)'),
   "the league menu opens a league by provider+id, never by parsing a composite value");
 ok(html.includes('function withState(st,fn)'), "portfolio isolates each league calculation state");
