@@ -18,13 +18,14 @@ const ok = (n, c) => c ? pass++ : (fail++, console.log("  FAIL " + n));
 
 const mk = ({ dd, mv, horizonDynasty = false, slots = {}, teams = 12, rec = 0.5 }) => {
   const ctx = {
-    DD: dd, MV: mv, DYNASTY_MV: null,
+    /* DD is a per-horizon map now; these fixtures are season boards. */
+    DD: (dd && dd.by) ? { season: dd, dynasty: null } : dd, MV: mv, DYNASTY_MV: null,
     state: { teams: Array.from({ length: teams }), slots, league: { scoring_settings: { rec } } },
   };
   const body = `${mvKeySrc[0]}
     const DD_KEY_TEAM_ALIAS={LAR:'LA',JAC:'JAX',WSH:'WAS',OAK:'LV',SD:'LAC',STL:'LA'};
     const DD_KEY_NAME_ALIAS={'kenneth gainwell':'kenny gainwell','cameron ward':'cam ward'};
-    ${lift("ddKey")} ${lift("ddActive")} ${lift("ddAsOf")} ${lift("mvColumn")} ${lift("labelFor")} ${lift("mvOf")}
+    ${lift("ddKey")} ${lift("ddBoard")} ${lift("ddActive")} ${lift("ddAsOf")} ${lift("mvColumn")} ${lift("labelFor")} ${lift("mvOf")}
     return {mvOf, labelFor, ddActive, ddKey};`;
   return new Function("DD", "MV", "DYNASTY_MV", "state", body)(ctx.DD, ctx.MV, ctx.DYNASTY_MV, ctx.state);
 };
@@ -56,7 +57,7 @@ const pmv = (rows) => ({ by: new Map(rows), asOf: "2026-08-24" });
 }
 
 /* --- DataDawg$ is league state, never a cross-league global leak --- */
-ok("loadDD caches the resolved board on its league state", /st\.ddValues=got/.test(src));
+ok("loadDD caches the resolved boards on its league state", /st\.ddValues=boards/.test(src));
 ok("restoring a league restores its own DataDawg$ board", /state=entry\.state;DD=state\.ddValues\|\|null/.test(src));
 ok("portfolio calculations swap DataDawg$ with state", /keepDD=DD;state=st;DD=st\.ddValues\|\|null/.test(src));
 ok("portfolio loading resolves each Sleeper league board", /fetchLeague\(x\.leagueId\);await loadDD\(st\)/.test(src));

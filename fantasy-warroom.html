@@ -3315,7 +3315,10 @@ const LOADED=new Map(),keyOf=(provider,id)=>provider+':'+id;
 let MV=null,DYNASTY_MV=null;
 /* DataDawg$ — private, league-specific, served by the Worker. Never a static file, never
    in the repo. Null until a board is found for the open league; the page then runs on PMV. */
-let DD=null;
+/* ⚠️ ONE BOARD PER HORIZON, not one board. A dynasty league has a season board AND a
+   dynasty board and the War Room can show either per module, so a single global would
+   answer the wrong question for whichever module it was not loaded for. */
+let DD={season:null,dynasty:null};
 const DD_WORKER='https://toto.jkapcar4.workers.dev';
 /* Mirrors the Worker's ddPlayerKey(). Defenses key by team because they share no id across
    sources; everyone else by the same normalised name PMV already joins on. */
@@ -3336,7 +3339,7 @@ function ddFromFeed(pool){
   return by.size?{by,meta}:null;
 }
 /* Sleeper never touches the Worker, so ask for exactly the keys this page holds. */
-async function ddFromWorker(provider,leagueId,pool){
+async function ddFromWorker(provider,leagueId,pool,horizon){
   const tok=(window.DDAuth&&DDAuth.token&&DDAuth.token())||'';
   if(!tok)return null;                       /* signed out: PMV, silently and correctly */
   const keys=[...new Set((pool||[]).map(ddKey).filter(Boolean))];
@@ -3344,7 +3347,7 @@ async function ddFromWorker(provider,leagueId,pool){
   try{
     const r=await fetch(DD_WORKER+'/dd/values',{method:'POST',
       headers:{'Content-Type':'application/json','X-Bozo-Session':tok},
-      body:JSON.stringify({provider,leagueId:String(leagueId),keys})});
+      body:JSON.stringify({provider,leagueId:String(leagueId),keys,horizon:horizon==='dynasty'?'dynasty':'season'})});
     if(!r.ok)return null;
     const j=await r.json();
     if(!j||!j.values||!j.dd)return null;
@@ -3354,18 +3357,31 @@ async function ddFromWorker(provider,leagueId,pool){
   }catch(e){ return null; }
 }
 async function loadDD(st=state){
-  if(!st||!st.ref){if(st===state)DD=null;return null;}
+  if(!st||!st.ref){if(st===state)DD={season:null,dynasty:null};return null;}
   const prov=st.ref.provider;
-  const got=(prov==='espn'||prov==='yahoo')?ddFromFeed(st.pool):await ddFromWorker(prov,st.ref.id,st.pool);
+  const feed=(prov==='espn'||prov==='yahoo');
+  /* ⚠️ A dynasty league needs BOTH boards: the horizon is per module, so a manager can be
+     looking at season money and dynasty trades in the same session. The feed path carries
+     only the season board — ESPN and Yahoo dynasty rooms would need the Worker path too,
+     and neither exists today, so that stays a lookup rather than an assumption. */
+  /* Use the state being loaded, not global `state`: portfolio loading resolves saved
+     leagues off-screen, and the active league may have a different type. */
+  const wantDyn=Number(st&&st.league&&st.league.settings&&st.league.settings.type)===2&&!feed;
+  const dyn=wantDyn?await ddFromWorker(prov,st.ref.id,st.pool,'dynasty'):null;
+  const got=feed?ddFromFeed(st.pool):await ddFromWorker(prov,st.ref.id,st.pool,'season');
   /* the feed path carries no meta block of its own, so take it off the feed body */
   if(got&&!got.meta&&st.dd)got.meta=st.dd;
-  st.ddValues=got;
-  if(st===state)DD=got;
-  return got;
+  if(dyn&&!dyn.meta&&st.dd)dyn.meta=st.dd;
+  const boards={season:got||null,dynasty:dyn||null};
+  st.ddValues=boards;
+  if(st===state)DD=boards;
+  return boards;
 }
-function ddActive(){return !!(DD&&DD.by&&DD.by.size);}
-function ddAsOf(){return (DD&&DD.meta&&DD.meta.as_of)||null;}
-function ddUnpriced(players){return (players||[]).filter(p=>!DD.by.has(ddKey(p))).length;}
+function ddBoard(h){return (DD&&DD[h==='dynasty'?'dynasty':'season'])||null;}
+function ddActive(h){const b=ddBoard(h);return !!(b&&b.by&&b.by.size);}
+function ddAsOf(h){const b=ddBoard(h);return (b&&b.meta&&b.meta.as_of)||null;}
+function ddUnpriced(players,h){const b=ddBoard(h);
+  return b?(players||[]).filter(p=>!b.by.has(ddKey(p))).length:0;}
 
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fnv=s=>{let h=2166136261;for(let i=0;i<s.length;i++)h=Math.imul(h^s.charCodeAt(i),16777619);return h>>>0};
@@ -3443,12 +3459,25 @@ function usesDynasty(mod){return hz(mod)==='dynasty'}
    14-team league 12-team prices: right arithmetic, wrong question, and unfalsifiable from
    the outside. DataDawg$ is ungraded (tier: labs) and the copy says so. */
 function labelFor(h){
-  if(h!=='dynasty'&&ddActive())return 'DataDawg$';
+  if(ddActive(h))return 'DataDawg$';
   return h==='dynasty'?'Overall dynasty value':'PMV (Public Market Value)';
 }
 function asOfFor(h){
-  if(h!=='dynasty'&&ddActive())return ddAsOf();
+  if(ddActive(h))return ddAsOf(h);
   return (h==='dynasty'?DYNASTY_MV:MV)?.asOf||null;
+}
+/* ⚠️ The format qualifier belongs to PMV and only to PMV. pool.json ships one column per
+   league shape, so "(SFHALF12)" names WHICH public column was read — real information. A
+   DataDawg$ board is built for one room: there is no column to cite, and printing one
+   implies a source that was not used. And mvColumn() returns null for a room with no
+   published column (Commit 1's abstention), so the old expression called .toUpperCase() on
+   null and threw while painting the caveat that explains the abstention. */
+function basisQualifier(mod){
+  const h=hz(mod);
+  if(ddActive(h))return '';
+  if(usesDynasty(mod))return ' ('+(state.slots.SUPERFLEX?'SF / 2QB':'1QB')+')';
+  const c=mvColumn();
+  return c?' ('+String(c).toUpperCase()+')':'';
 }
 function valueLabel(mod){return labelFor(hz(mod))}
 /* Whose projection sits on the far side of the disagreement panel. The board it is
@@ -3482,6 +3511,16 @@ function mvOf(p,horizon){
   if(horizon!=='season'&&horizon!=='dynasty')
     throw Error('mvOf requires an explicit horizon: "season" or "dynasty".');
   const dynasty=horizon==='dynasty';
+  /* ⚠️ THE BOARD FOR THE HORIZON ASKED FOR, BEFORE ANY PMV PATH. This used to sit AFTER the
+     dynasty block, which returned unconditionally — so a dynasty league could never reach
+     its own DataDawg$ board and every value surface (trade finder, radars, surplus) ran on
+     generic public market value while a purpose-built board went unread. */
+  const board=ddBoard(horizon);
+  if(board&&board.by&&board.by.size){
+    const k=ddKey(p);
+    if(k&&board.by.has(k))return board.by.get(k);
+    return null;                       /* on the board's basis or unpriced — never mixed */
+  }
   if(dynasty){
     if(!DYNASTY_MV||!DYNASTY_MV.by.size)return null;
     const row=DYNASTY_MV.by.get(mvKey(p.name));if(!row)return null;
@@ -3493,11 +3532,6 @@ function mvOf(p,horizon){
      "below the last roster spot", which is a real statement, not a missing value. A player
      the board does NOT carry is unpriced rather than quietly priced from PMV: one number
      built from two bases is neither, and it would be invisible on the page. */
-  if(ddActive()){
-    const k=ddKey(p);
-    if(k&&DD.by.has(k))return DD.by.get(k);
-    return null;
-  }
   if(!MV||!MV.by.size)return null;
   const row=p.pos==='DST'?MV.by.get('dst:'+String(p.team||'').toUpperCase()):MV.by.get(mvKey(p.name));
   if(!row)return null;
@@ -4119,7 +4153,7 @@ function renderMoney(){
     +'<div class="rf">Starting '+fmt$(r.st)+'</div></div>').join('');
 
   const priced=all.length, held=state.teams.reduce((a,t)=>a+t.players.length,0);
-  $('mnCaveat').textContent='Prices are '+valueLabel('money')+(usesDynasty('money')?' ('+(state.slots.SUPERFLEX?'SF / 2QB':'1QB')+')':' ('+mvColumn().toUpperCase()+')')+' captured '
+  $('mnCaveat').textContent='Prices are '+valueLabel('money')+basisQualifier('money')+' captured '
     +(valueAsOf('money')||'unknown date')+'. '+priced+' of '+held
     +' rostered players carry a published price; the rest are counted as $0 in these totals and shown in the "No price" column, '
     +'so a team full of deep waiver adds will read leaner than it is. Per-axis scaling on the radars is relative to this league, '
@@ -4985,7 +5019,7 @@ function trades(me){
   if($('clearFilter'))$('clearFilter').onclick=()=>{tradeFilter=null;trades(me)};
   const source=(usesDynasty('trades')?DYNASTY_MV:MV);
   const asOf=source&&source.by.size
-    ? '<span class="wr-mv">Prices are '+esc(valueLabel('trades'))+' auction dollars'+(usesDynasty('trades')?' ('+(state.slots.SUPERFLEX?'SF / 2QB':'1QB')+')':' ('+esc(mvColumn().toUpperCase())+')')+', captured '+esc(valueAsOf('trades')||'unknown date')+'. '+(usesDynasty('trades')?'These are independent analyst estimates, not a live market or projection.':'A market price is not a projection, and a stale one is not a current price.')+'</span>'
+    ? '<span class="wr-mv">Prices are '+esc(valueLabel('trades'))+' auction dollars'+esc(basisQualifier('trades'))+', captured '+esc(valueAsOf('trades')||'unknown date')+'. '+(usesDynasty('trades')?'These are independent analyst estimates, not a live market or projection.':'A market price is not a projection, and a stale one is not a current price.')+'</span>'
     : '<span class="wr-mv">⚠️ No market prices loaded, so candidate filtering falls back to model value over replacement instead. That is the weaker test — it cannot see name value.</span>';
   const bits=[];
   if(lopsided)bits.push(lopsided+' improved both starting lineups but '+(lopsided===1?'was':'were')+' rejected as lopsided in player value');
