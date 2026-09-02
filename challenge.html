@@ -137,6 +137,11 @@ body{margin:0;background:var(--page);color:var(--ink-1);
   color:var(--accent);font-weight:750;box-shadow:none;border-radius:7px}
 .grpmenu a.hot{color:var(--accent);font-weight:750}
 .grpmenu a.hot::before{content:"●";font-size:9px;margin-right:7px;vertical-align:1px;animation:ddpulse 1.6s ease-in-out infinite}
+.grpmenu a.arena-item{display:flex;align-items:center;gap:9px;font-family:inherit;font-weight:650}
+.grpmenu a.arena-item .arena-icon{display:inline-grid;place-items:center;width:23px;height:23px;
+  border:1px solid color-mix(in srgb,var(--accent) 24%,var(--border));border-radius:7px;
+  background:color-mix(in srgb,var(--accent) 10%,var(--surface-2));
+  font:15px/1 "Segoe UI Emoji","Apple Color Emoji",sans-serif;box-shadow:inset 0 1px 0 rgba(255,255,255,.08);flex:none}
 @keyframes ddpulse{0%,100%{opacity:1}50%{opacity:.3}}
 /* The one live control — status light and route to the board in a single button.
    Selectors must out-specify `.sitenav .links a`, which otherwise reclaims padding,
@@ -1289,12 +1294,13 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
      ⚠️ Machine values did not move: tier is still "pound" and the keys below keep their
         historical spellings.
      Keep this array identical on every page; the flattened HTML is the source. */
+  const ARENA_ICONS = Object.freeze({arena:"🎪",dashboard:"🏈",bozo:"🤡",challenge:"🔮",teamdraft:"🧢",dfs:"🧩","fantasy-warroom":"🗺️",guillotine:"🪓",survivor:"🏝️",rankings:"🐕"});
   const NAV = [
-    /* Arena is split so games can have a little casino character without making tools noisy. */
+    /* Every Arena destination gets its own small character badge; section labels stay quiet. */
     {label:"Arena", href:"arena.html", key:"arena", items:[
       ["arena.html","Arena home","arena"],
       ["#","Games","nav-section"],
-      ["dashboard.html","Fantasy Draft Dashboard","dashboard","hot"],
+      ["dashboard.html","Fantasy Draft Dashboard","dashboard"],
       ["bozo.html","Bozo","bozo"],
       ["challenge.html","NFL Forecasting Challenge","challenge"],
       ["teamdraft.html","NFL Team Draft","teamdraft"],
@@ -1602,7 +1608,14 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
         menu.appendChild(h); return;
       }
       const a = document.createElement("a");
-      a.href = href; a.textContent = label;
+      a.href = href;
+      if(entry.key==="arena"){
+        a.classList.add("arena-item");
+        const icon=document.createElement("span"); icon.className="arena-icon";
+        icon.setAttribute("aria-hidden","true"); icon.textContent=ARENA_ICONS[key]||"🎟️";
+        const copy=document.createElement("span"); copy.textContent=label;
+        a.append(icon,copy);
+      }else a.textContent = label;
       if(key===page) a.classList.add("on");
       if(key && key.indexOf("kennel-")===0) a.classList.add(key);
       if(hot) a.classList.add("hot");

@@ -23,12 +23,17 @@ const b64url=s=>Buffer.from(s,"utf8").toString("base64").replace(/\+/g,"-").repl
 const SESSION=b64url(JSON.stringify({n:"Sam",e:Date.now()+864e5,p:0}))+".sig";
 let joined=false, lastPassword="";
 
-async function pageAt(file,viewport={width:1280,height:900}){
+async function pageAt(file,viewport={width:1280,height:900},delayLeagueList=0){
   const ctx=await b.newContext({viewport});
-  const p=await ctx.newPage(), errs=[];
+  const p=await ctx.newPage(), errs=[];let dbReads=0,dbUrls=[];
   p.on("pageerror",e=>errs.push(e.message));
-  await p.addInitScript(sess=>{localStorage.setItem("dd-bozo-sess",sess);localStorage.setItem("dd-auth-profile-v1",JSON.stringify({name:"Sam",email:"sam@example.com",emailVerified:true}));},SESSION);
-  await p.route("https://toto.jkapcar4.workers.dev/**",route=>{
+  await p.addInitScript(sess=>{localStorage.setItem("dd-bozo-sess",sess);localStorage.setItem("dd-auth-profile-v1",JSON.stringify({name:"Sam",email:"sam@example.com",emailVerified:true}));window.EventSource=undefined;},SESSION);
+  await p.route("https://data-dawgs-draft-default-rtdb.firebaseio.com/**",route=>{
+    dbReads++;dbUrls.push(route.request().url());
+    const state={week:1,status:"open",config:{},members:{Butts:true,JWhite:true,Kap:true,Manzeo:true,Squatch:true,"The%20Kid":true,Tony:true,Tucholski:true},picks:{Butts:{label:"CLE moneyline",price:-140,ts:1},Kap:{label:"PHI -3",price:-125,ts:2},Tony:{label:"KC moneyline",price:-150,ts:3}},results:{}};
+    return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(state)});
+  });
+  await p.route("https://toto.jkapcar4.workers.dev/**",async route=>{
     const u=new URL(route.request().url()), method=route.request().method();
     const body=route.request().postDataJSON?.()||{};
     const j=(o,status=200)=>route.fulfill({status,contentType:"application/json",body:JSON.stringify(o)});
@@ -44,13 +49,32 @@ async function pageAt(file,viewport={width:1280,height:900}){
       if(body.password!=="Correct Horse")return j({error:"That league password is not valid."},403);
       joined=true;return j({ok:true,league:"preseason-bozo-boyz",name:"Preseason Bozo Boyz",size:9});
     }
-    if(u.pathname==="/league/list")return j({leagues:[],defaultLeague:"main",signedIn:true});
+    if(u.pathname==="/league/list"){
+      if(delayLeagueList)await new Promise(r=>setTimeout(r,delayLeagueList));
+      return j({leagues:[{id:"main",name:"Bozo Boyz",manager:"Kap",size:8,members:["Butts","JWhite","Kap","Manzeo","Squatch","The Kid","Tony","Tucholski"],week:1,status:"open",settings:{}}],defaultLeague:"main",signedIn:true});
+    }
     if(u.pathname==="/league/access")return j({ok:true,passwordEnabled:true,cap:20,size:8,visibility:"private",visibilityLocked:false});
     return j({error:"unexpected "+u.pathname},500);
   });
   await p.goto("http://127.0.0.1:8921/"+file,{waitUntil:"load"});
   await p.waitForTimeout(800);
-  return {p,ctx,errs};
+  return {p,ctx,errs,getDbReads:()=>dbReads,getDbUrls:()=>dbUrls};
+}
+
+{
+  const {p,ctx,errs,getDbReads,getDbUrls}=await pageAt("bozo.html?l=main#week",undefined,3000);
+  await p.waitForTimeout(500);
+  const ticket=await p.textContent("#ticketCard");
+  ok("live legs render before the slower league directory returns",getDbReads()>0&&/3 of 8 in/i.test(ticket)&&/CLE moneyline/.test(ticket)&&/PHI -3/.test(ticket)&&/KC moneyline/.test(ticket),`db reads ${getDbReads()} ${getDbUrls().join(', ')} · `+ticket.replace(/\s+/g," ").slice(0,300)+" | "+errs.join(" | "));
+  ok("three-leg board has no initialization error",errs.length===0,errs[0]);
+  await ctx.close();
+}
+
+{
+  const {ctx,getDbReads}=await pageAt("bozo.html?l=some-private-league#week",undefined,3000);
+  await new Promise(r=>setTimeout(r,500));
+  ok("member-only boards wait for the access-filtered league list",getDbReads()===0,`early database reads ${getDbReads()}`);
+  await ctx.close();
 }
 
 {

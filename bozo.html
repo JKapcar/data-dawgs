@@ -120,6 +120,11 @@ body{margin:0;background:var(--page);color:var(--ink-1);
   color:var(--accent);font-weight:750;box-shadow:none;border-radius:7px}
 .grpmenu a.hot{color:var(--accent);font-weight:750}
 .grpmenu a.hot::before{content:"●";font-size:9px;margin-right:7px;vertical-align:1px;animation:ddpulse 1.6s ease-in-out infinite}
+.grpmenu a.arena-item{display:flex;align-items:center;gap:9px;font-family:inherit;font-weight:650}
+.grpmenu a.arena-item .arena-icon{display:inline-grid;place-items:center;width:23px;height:23px;
+  border:1px solid color-mix(in srgb,var(--accent) 24%,var(--border));border-radius:7px;
+  background:color-mix(in srgb,var(--accent) 10%,var(--surface-2));
+  font:15px/1 "Segoe UI Emoji","Apple Color Emoji",sans-serif;box-shadow:inset 0 1px 0 rgba(255,255,255,.08);flex:none}
 @keyframes ddpulse{0%,100%{opacity:1}50%{opacity:.3}}
 /* The one live control — status light and route to the board in a single button.
    Selectors must out-specify `.sitenav .links a`, which otherwise reclaims padding,
@@ -2009,12 +2014,13 @@ body.pb-hub{background:#120b05}
      ⚠️ Machine values did not move: tier is still "pound" and the keys below keep their
         historical spellings.
      Keep this array identical on every page; the flattened HTML is the source. */
+  const ARENA_ICONS = Object.freeze({arena:"🎪",dashboard:"🏈",bozo:"🤡",challenge:"🔮",teamdraft:"🧢",dfs:"🧩","fantasy-warroom":"🗺️",guillotine:"🪓",survivor:"🏝️",rankings:"🐕"});
   const NAV = [
-    /* Arena is split so games can have a little casino character without making tools noisy. */
+    /* Every Arena destination gets its own small character badge; section labels stay quiet. */
     {label:"Arena", href:"arena.html", key:"arena", items:[
       ["arena.html","Arena home","arena"],
       ["#","Games","nav-section"],
-      ["dashboard.html","Fantasy Draft Dashboard","dashboard","hot"],
+      ["dashboard.html","Fantasy Draft Dashboard","dashboard"],
       ["bozo.html","Bozo","bozo"],
       ["challenge.html","NFL Forecasting Challenge","challenge"],
       ["teamdraft.html","NFL Team Draft","teamdraft"],
@@ -2322,7 +2328,14 @@ body.pb-hub{background:#120b05}
         menu.appendChild(h); return;
       }
       const a = document.createElement("a");
-      a.href = href; a.textContent = label;
+      a.href = href;
+      if(entry.key==="arena"){
+        a.classList.add("arena-item");
+        const icon=document.createElement("span"); icon.className="arena-icon";
+        icon.setAttribute("aria-hidden","true"); icon.textContent=ARENA_ICONS[key]||"🎟️";
+        const copy=document.createElement("span"); copy.textContent=label;
+        a.append(icon,copy);
+      }else a.textContent = label;
       if(key===page) a.classList.add("on");
       if(key && key.indexOf("kennel-")===0) a.classList.add(key);
       if(hot) a.classList.add("hot");
@@ -4624,7 +4637,11 @@ const when = ts => !ts ? '' : new Date(ts).toLocaleDateString(undefined,{weekday
 // ⚠️ The chips, the board and the season table are the LEAGUE's members — not every
 // account on the site. A four-person league shows four names next to an eight.
 const league = () => LEAGUES.find(l=>l.id===LID) || null;
-const names = () => (league()?.members) || [];
+const stateMembers = () => Object.keys((S&&S.members)||{}).map(k=>{try{return decodeURIComponent(k);}catch(e){return k;}});
+// The live state arrives before the signed-in directory on purpose. Fall back to its
+// member keys so the ticket can paint immediately instead of showing a fake 0-of-8
+// board while account and directory requests finish.
+const names = () => (league()?.members) || stateMembers();
 const allAccounts = () => ROSTER.map(p=>p.name);
 
 // Two different powers. isAdmin is the site owner (creates leagues, can act anywhere);
@@ -8295,9 +8312,21 @@ async function clvLoad(force){
 
 (async function init(){
   ME = loadSession();
+  // Start the two deliberately public boards immediately. They must not wait behind
+  // account roster or league-directory calls: those can be slow, while the ticket is
+  // the point of the page. Member-only leagues still wait for /league/list to confirm
+  // that this signed-in account may see them.
+  const requested=new URLSearchParams(location.search).get('l');
+  if(requested && /^[a-z0-9-]{2,24}$/.test(requested)) LID=requested;
+  const watchedLid=LID;
+  const eagerPublic = LID==='main' || LID==='demo-royale';
+  if(eagerPublic) watchState();
   await Promise.all([loadRoster(), loadLeagues()]);
+  // A bad or inaccessible ?l= may be normalized by loadLeagues. The interval created
+  // above reads the current LID, but its EventSource was opened for the old one.
+  if(!eagerPublic) watchState();
+  else if(LID!==watchedLid){ if(esHandle) esHandle.close(); refresh(); }
   renderAuth();
-  watchState();
   loadGames('nfl');
 })();
 </script>

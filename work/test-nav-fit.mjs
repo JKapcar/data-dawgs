@@ -115,6 +115,10 @@ const MEASURE = () => {
   const brandTagR = nav.querySelector(".brand .tag")?.getBoundingClientRect();
   const activeDropdown = links?.querySelector(".grpmenu a.on");
   const activeDropdownStyle = activeDropdown ? getComputedStyle(activeDropdown) : null;
+  const arenaItems = [...(links?.querySelectorAll('.navgrp:first-child .grpmenu a.arena-item') || [])];
+  // Dashboard preserves the current draft room in its query string after nav creation.
+  const dashboardItem = arenaItems.find(a => (a.getAttribute('href') || '').includes('dashboard.html'));
+  const bozoItem = arenaItems.find(a => a.getAttribute('href') === 'bozo.html');
   const brandToDomains = brandR && domainRects.length ? domainRects[0].left - brandR.right : Infinity;
   const domainsToAuth = authR && domainRects.length ? authR.left - domainRects.at(-1).right : -Infinity;
   const authToTheme = authR && themeR ? themeR.left - authR.right : -Infinity;
@@ -128,6 +132,11 @@ const MEASURE = () => {
     authLabel, authWidth: authR?.width || 0,
     activeDropdownShadow: activeDropdownStyle?.boxShadow || "none",
     activeDropdownWeight: parseInt(activeDropdownStyle?.fontWeight || "0", 10),
+    arenaItemCount: arenaItems.length,
+    arenaIconCount: arenaItems.filter(a => a.querySelector('.arena-icon')).length,
+    dashboardIsHot: dashboardItem?.classList.contains('hot') || false,
+    dashboardFont: dashboardItem ? getComputedStyle(dashboardItem).fontFamily : "",
+    bozoFont: bozoItem ? getComputedStyle(bozoItem).fontFamily : "",
     brandLogoVisible:!!brandLogoR?.width, brandTagVisible:!!brandTagR?.width,
     minDomainGap: domainGaps.length ? Math.min(...domainGaps) : -Infinity,
     groups: links ? [...links.querySelectorAll(".navgrp")].length : 0,
@@ -151,6 +160,12 @@ for (const page of PAGES) {
        split. See the EIGHT IS THE CEILING note above — seven is inside it, but only just,
        and only because the Markets label is the short form. */
     ok(tag + " all seven groups are present", m.groups === 7, String(m.groups));
+    ok(tag + " every Arena destination has a cartoon badge",
+       m.arenaItemCount === 10 && m.arenaIconCount === 10,
+       `${m.arenaIconCount}/${m.arenaItemCount}`);
+    ok(tag + " Fantasy Draft Dashboard uses the same menu face as Bozo",
+       !m.dashboardIsHot && m.dashboardFont === m.bozoFont,
+       `${m.dashboardFont} vs ${m.bozoFont}; hot=${m.dashboardIsHot}`);
     /* the belt to the braces: this is what USED to pass while the bar was unreadable */
     ok(tag + " and the document still does not scroll sideways", m.docOverflow === false);
     ok(tag + " the bar is no taller than its six-group baseline", m.navH <= MAX_H[W] + 0.5,
