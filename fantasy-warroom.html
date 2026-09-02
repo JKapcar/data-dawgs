@@ -3395,9 +3395,22 @@ function provName(){return state&&state.ref&&state.ref.provider==='espn'?'ESPN':
 function valueAsOf(mod){return asOfFor(hz(mod))}
 /* Which auction column this league actually drafts in. */
 function mvColumn(){
-  if(state.slots.SUPERFLEX)return 'sf';
+  /* ⚠️ Eight columns exist in pool.json; this used to pick from three, so a superflex
+     HALF league silently read the superflex FULL column and a 14-team half league read the
+     12-team one. Measured on PFL: +$6 on the top roster and four teams swapping rank.
+     Only an EXACT format match returns a column. Anything else returns null, which mvOf()
+     already reports as unpriced - a wrong price disappears into replacement level and VOR
+     where nobody can see it, so abstain instead. DataDawg$ is the primary basis anyway;
+     PMV is the documented fallback. */
+  const teams=(state.teams&&state.teams.length)||0;
   const rec=Number(state.league?.scoring_settings?.rec);
-  return rec>=1?'full':'half';
+  const sf=!!state.slots.SUPERFLEX;
+  if(!Number.isFinite(rec))return null;
+  if(sf)return (rec===0.5&&teams===12)?'sfhalf12':(rec===1&&teams===12)?'sf':null;
+  if(rec===1)return teams===10?'ppr10':teams===12?'full':teams===14?'ppr14':null;
+  if(rec===0.5)return teams===12?'half':teams===14?'half14':null;
+  if(rec===0)return teams===12?'std':null;
+  return null;
 }
 function mvOf(p,horizon){
   /* ⚠️ NO SILENT DEFAULT. A missing horizon used to fall through to the page-level
@@ -4606,7 +4619,16 @@ async function fetchLeagueEspn(id,share){
   (L.slots||[]).forEach(x=>{ for(let i=0;i<x.count;i++) positions.push(x.slot==='BENCH'?'BN':x.slot); });
   const league={
     name:L.name||'ESPN league', league_id:String(L.id||id), season:L.season,
-    roster_positions:positions, scoring_settings:{},
+    roster_positions:positions,
+    /* ⚠️ NOT {} - mvColumn() resolves the PMV column from the reception value, and an empty
+       scoring_settings made every ESPN league read as unpriced. The Worker already sends this
+       as feed.league.scoring.ppr (espnScoring(), statId 53); map it onto Sleeper's `rec` key,
+       which is the vocabulary the rest of this page speaks. Left undefined only when ESPN
+       genuinely did not say - in which case abstaining is the right answer. */
+    scoring_settings:(()=>{
+      const ppr=Number(L.scoring&&L.scoring.ppr);
+      return Number.isFinite(ppr)?{rec:ppr}:{};
+    })(),
     settings:{ type:0, playoff_teams:L.playoffTeams, playoff_week_start:L.playoffStart }
   };
   const st={ref,league,users:[],slots:slots(positions),pool,teams,schedule:feed.schedule||[],
