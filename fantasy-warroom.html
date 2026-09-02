@@ -3346,16 +3346,31 @@ function ddFromFeed(pool){
   return by.size?{by,meta}:null;
 }
 /* Sleeper never touches the Worker, so ask for exactly the keys this page holds. */
-async function ddFromWorker(provider,leagueId,pool,horizon){
+async function ddFromWorker(provider,leagueId,pool,horizon,teams){
   const tok=(window.DDAuth&&DDAuth.token&&DDAuth.token())||'';
   if(!tok)return null;                       /* signed out: PMV, silently and correctly */
-  const keys=[...new Set((pool||[]).map(ddKey).filter(Boolean))];
+  /* ⚠️ CAP, AND PRIORITISE. A Sleeper pool is the whole NFL (~3,200), the Worker accepts 700,
+     and it answers 413 — which ddFromWorker turns into a silent PMV fallback. That is how
+     every Sleeper league ran on PMV while ESPN worked: ESPN's pool is ~500 and fits.
+     Rostered players from the TARGET league go first because they are what the money and
+     trade surfaces price; the rest of the pool fills the remaining budget by projection. */
+  const DD_MAX_KEYS=700;
+  const rostered=new Set();
+  (teams||[]).forEach(t=>(t.players||[]).forEach(p=>{const k=ddKey(p);if(k)rostered.add(k);}));
+  const rest=[...(pool||[])].filter(p=>{const k=ddKey(p);return k&&!rostered.has(k);})
+    .sort((a,b)=>(Number(b&&b.p)||0)-(Number(a&&a.p)||0));
+  const keys=[...rostered];
+  for(const p of rest){ if(keys.length>=DD_MAX_KEYS)break; const k=ddKey(p); if(k&&!keys.includes(k))keys.push(k); }
   if(!keys.length)return null;
+  if(keys.length>DD_MAX_KEYS)keys.length=DD_MAX_KEYS;
   try{
     const r=await fetch(DD_WORKER+'/dd/values',{method:'POST',
       headers:{'Content-Type':'application/json','X-Bozo-Session':tok},
       body:JSON.stringify({provider,leagueId:String(leagueId),keys,horizon:horizon==='dynasty'?'dynasty':'season'})});
-    if(!r.ok)return null;
+    /* A refusal used to look exactly like a league with no board. Keep the fallback, but
+       leave an actionable diagnostic instead of swallowing the reason. */
+    if(!r.ok){ try{ console.warn('[DataDawg$] /dd/values '+r.status+' for '+provider+':'+leagueId
+      +' ('+keys.length+' keys, '+(horizon||'season')+') — falling back to PMV'); }catch(e){} return null; }
     const j=await r.json();
     if(!j||!j.values||!j.dd)return null;
     const by=new Map();
@@ -3376,8 +3391,8 @@ async function loadDD(st=state){
   /* Use the state being loaded, not global `state`: portfolio loading resolves saved
      leagues off-screen, and the active league may have a different type. */
   const wantDyn=Number(st&&st.league&&st.league.settings&&st.league.settings.type)===2&&!feed;
-  const dyn=wantDyn?await ddFromWorker(prov,st.ref.id,st.pool,'dynasty'):null;
-  const got=feed?ddFromFeed(st.pool):await ddFromWorker(prov,st.ref.id,st.pool,'season');
+  const dyn=wantDyn?await ddFromWorker(prov,st.ref.id,st.pool,'dynasty',st.teams):null;
+  const got=feed?ddFromFeed(st.pool):await ddFromWorker(prov,st.ref.id,st.pool,'season',st.teams);
   /* the feed path carries no meta block of its own, so take it off the feed body */
   if(got&&!got.meta&&st.dd)got.meta=st.dd;
   if(dyn&&!dyn.meta&&st.dd)dyn.meta=st.dd;

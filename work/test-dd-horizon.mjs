@@ -70,7 +70,7 @@ const dynMv = { by: new Map([["ada lovelace", { one_qb_auction: 11, two_qb_aucti
 ok("no bare mvColumn().toUpperCase() remains", !/mvColumn\(\)\.toUpperCase\(\)/.test(src));
 ok("DD is a per-horizon map", /let DD=\{season:null,dynasty:null\}/.test(src));
 ok("worker request carries the horizon", /horizon:horizon==='dynasty'\?'dynasty':'season'/.test(src));
-ok("dynasty board is requested for dynasty leagues", /ddFromWorker\(prov,st\.ref\.id,st\.pool,'dynasty'\)/.test(src));
+ok("dynasty board is requested with the target league's teams", /ddFromWorker\(prov,st\.ref\.id,st\.pool,'dynasty',st\.teams\)/.test(src));
 ok("off-screen loads use the target league type, not global state",
    /Number\(st&&st\.league&&st\.league\.settings&&st\.league\.settings\.type\)===2&&!feed/.test(src)
    && !/isDynastyLeague\.call\(null\)/.test(src));
