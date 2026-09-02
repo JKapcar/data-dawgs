@@ -61,6 +61,10 @@ test('manager and member UIs expose search plus shared-password workflow', () =>
   assert.match(signon, /api\("\/league\/search",\{query:query\}\)/);
   assert.match(signon, /api\("\/league\/join",\{league:selectedLeague\.id,password:password\}\)/);
   assert.doesNotMatch(bozo, /id="addPick"|id="addGo"|action:'add'/);
+  for (const id of ['joinLeague', 'jlDirectory', 'jlFilter', 'jlPassword', 'jlJoinGo', 'jlOpen'])
+    assert.match(bozo, new RegExp(`id="${id}"`));
+  assert.match(bozo, />Create a Bozo league</);
+  assert.doesNotMatch(bozo, />Book a new bill</);
   const member = section('async function leagueMember(request, env, cors)', '// POST /league/lock');
   assert.match(member, /body\.action !== "remove"/);
   assert.doesNotMatch(member, /loadUsers\(env\)|action:"add"/);

@@ -1712,21 +1712,22 @@ body.pb-hub{background:#120b05}
 #hubCard .hcard .fill i{width:11px;height:11px;border:1px solid var(--slip-rule);border-radius:1px;
   font-style:normal;display:block}
 #hubCard .hcard .fill i.on{background:var(--pb-red);border-color:var(--pb-red)}
-/* ---- admin: booking a new bill ---- */
-#mkLeague.pb-book{margin-top:clamp(26px,4vw,40px);border:1px dashed var(--pb-rule);
+/* ---- join/create league actions ---- */
+.pb-book{margin-top:clamp(26px,4vw,40px);border:1px dashed var(--pb-rule);
   padding:clamp(14px,2.4vw,22px);background:rgba(0,0,0,.06)}
-:root[data-theme="light"] #mkLeague.pb-book{background:rgba(49,29,0,.03)}
-#mkLeague.pb-book h3{font-family:var(--pb-display);font-weight:900;text-transform:uppercase;
+:root[data-theme="light"] .pb-book{background:rgba(49,29,0,.03)}
+.pb-book h3{font-family:var(--pb-display);font-weight:900;text-transform:uppercase;
   font-size:13px;letter-spacing:.06em;color:var(--pb-red);margin:0 0 4px}
-#mkLeague.pb-book .tm{font-family:var(--pb-serif);font-size:14px;color:var(--pb-ink2);margin:0 0 12px}
-#mkLeague.pb-book label{font:700 9.5px/1.6 var(--pb-mono);letter-spacing:.15em;text-transform:uppercase;
+.pb-book .tm{font-family:var(--pb-serif);font-size:14px;color:var(--pb-ink2);margin:0 0 12px}
+.pb-book label{font:700 9.5px/1.6 var(--pb-mono);letter-spacing:.15em;text-transform:uppercase;
   color:var(--pb-ink3)}
-#mkLeague.pb-book input,
-#mkLeague.pb-book select{background:var(--pb-stock);color:var(--pb-ink);
+.pb-book input,
+.pb-book select{background:var(--pb-stock);color:var(--pb-ink);
   border:1px solid var(--pb-rule);border-radius:2px}
-#mkLeague.pb-book .btn{font-family:var(--pb-display);font-weight:900;text-transform:uppercase;
+.pb-book .btn{font-family:var(--pb-display);font-weight:900;text-transform:uppercase;
   letter-spacing:.06em;background:var(--pb-red);color:#fff8ef;border:2px solid var(--pb-red);
   border-radius:2px;padding:9px 16px;box-shadow:2px 2px 0 var(--pb-shadow)}
+#joinLeague.pb-book{border-style:solid}
 /* ---- the small print: the caveats, set as small print, which is the joke ---- */
 .pb-bill .pb-fine{margin:clamp(22px,3.4vw,34px) 0 0;padding-top:14px;border-top:1px solid var(--pb-rule);
   font-family:var(--pb-mono);font-size:10.5px;line-height:1.75;color:var(--pb-ink3);
@@ -3556,12 +3557,27 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <p class="pb-sub"><span class="tm" id="hubCount"></span> running. Open one to see its board;
       the boards are public whether or not you are in them.</p>
     <div class="hub" id="hubList"></div>
+  <div id="joinLeague" class="pb-book">
+    <h3>Join existing league</h3>
+    <p class="tm" id="jlIntro">Sign in with your own account, choose the league, and enter its shared password.</p>
+    <div id="jlSignedOut" class="row"><a class="btn sm" href="signon.html?next=bozo.html">Sign in or create account</a></div>
+    <div id="jlSignedIn" style="display:none">
+      <div class="frm">
+        <div class="f w2"><label>League directory</label><select id="jlDirectory"><option value="">Loading leagues…</option></select></div>
+        <div class="f"><label>Filter by name</label><input id="jlFilter" maxlength="60" autocomplete="off" spellcheck="false" placeholder="Preseason Bozo Boyz"></div>
+        <div class="f"><div class="row" style="height:100%;align-items:flex-end"><button class="btn sm" id="jlFilterGo">Filter leagues</button></div></div>
+        <div class="f w2" id="jlPasswordWrap" style="display:none"><label>League password</label><input id="jlPassword" type="password" maxlength="64" autocomplete="current-password" spellcheck="false" placeholder="6–64 characters"></div>
+        <div class="f w2" id="jlActionWrap" style="display:none"><div class="row" style="height:100%;align-items:flex-end;justify-content:flex-end"><button class="btn sm" id="jlJoinGo">Join league</button><a class="btn sm" id="jlOpen" style="display:none">Open league</a></div></div>
+      </div>
+      <div class="err" id="jlErr"></div>
+    </div>
+  </div>
   <div id="mkLeague" class="pb-book" style="display:none">
-    <h3>Book a new bill</h3>
-    <p class="tm">A separate group with its own roster size, band, week and ledger. You pick who runs it.</p>
+    <h3>Create a Bozo league</h3>
+    <p class="tm">A separate group with its own band, week and ledger. It starts with its manager only; everyone else joins with the shared password.</p>
     <div class="frm">
       <div class="f w2"><label>Name</label><input id="nlName" placeholder="Sunday Crew"></div>
-      <div class="f"><label>Id (for the link)</label><input id="nlId" placeholder="sunday"></div>
+      <div class="f"><label>League ID</label><input id="nlId" placeholder="sunday"></div>
       <div class="f"><label>Manager</label><select id="nlMgr"></select></div>
       <div class="f w2"><label>League password</label><input id="nlPassword" type="password" maxlength="64" autocomplete="new-password" placeholder="6–64 characters"></div>
       <!-- ⚠️ Format is chosen once and frozen at the first lock. Changing a ruleset
@@ -4042,6 +4058,8 @@ let S = {};                 // live state for the SELECTED league, from RTDB
 let LEAGUES = [];           // [{id,name,manager,size,members,week,status}]
 let LID = 'main';           // which league we're looking at (?l=)
 let joinGateStatusLid = null; // manager-only password/visibility status, loaded once per page
+let JOIN_DIRECTORY = [];    // signed-in directory used by Join Existing League on the hub
+let joinDirectoryLoaded = false, joinDirectoryLoading = false, joinSelected = null;
 let ROSTER = [];            // every account on the site, [{name, claimed}]
 let ME = null;              // {name, session}
 let GAMES = {};             // sport -> games[]
@@ -4067,10 +4085,12 @@ function loadSession(){
 function setSession(tok){
   if(window.DDAuth) window.DDAuth.set(tok); else localStorage.setItem(SESS_K, tok);
   ME = loadSession();
+  joinDirectoryLoaded = false; joinSelected = null;
 }
 function clearSession(){
   if(window.DDAuth) window.DDAuth.clear(); else localStorage.removeItem(SESS_K);
   ME = null;
+  joinDirectoryLoaded = false; joinSelected = null;
 }
 
 // Every Worker GET gets a cache-buster. The Worker sends no-store now, but a
@@ -4648,6 +4668,93 @@ const onHub = () => !new URLSearchParams(location.search).get('l');
 // Who may edit a given league: the site admin anywhere, a manager in their own.
 const canManage = l => !!ME && (isAdmin() || l.manager === ME.name);
 
+/* ---------------- join an existing league ----------------
+   Discovery belongs on Bozo. Identity setup still belongs on signon.html, but once a
+   person is signed in they choose the league and prove access here with its password. */
+const jlErr = (m, ok=false) => {
+  const e=document.getElementById('jlErr'); e.textContent=m||''; e.className='err'+(ok?' ok':''); return e;
+};
+function chooseJoinLeague(item){
+  joinSelected=item;
+  const passwordWrap=document.getElementById('jlPasswordWrap');
+  const actionWrap=document.getElementById('jlActionWrap');
+  const joinGo=document.getElementById('jlJoinGo');
+  const open=document.getElementById('jlOpen');
+  actionWrap.style.display=''; document.getElementById('jlPassword').value='';
+  if(item.already){
+    passwordWrap.style.display='none'; joinGo.style.display='none';
+    open.href='bozo.html?l='+encodeURIComponent(item.id); open.style.display='';
+    jlErr('You already belong to this league.', true);
+  }else{
+    passwordWrap.style.display=''; joinGo.style.display=''; open.style.display='none';
+    jlErr(''); document.getElementById('jlPassword').focus();
+  }
+}
+function paintJoinDirectory(results,total){
+  JOIN_DIRECTORY=results; joinSelected=null;
+  const sel=document.getElementById('jlDirectory'); sel.innerHTML='';
+  const first=document.createElement('option'); first.value='';
+  first.textContent=results.length
+    ? `Choose a league · ${results.length}${total>results.length?' of '+total:' shown'}`
+    : 'No matching leagues';
+  sel.appendChild(first);
+  results.forEach((item,i)=>{
+    const o=document.createElement('option'); o.value=String(i);
+    o.textContent=`${item.name} · ${item.size} member${item.size===1?'':'s'}${item.already?' · joined':''}`;
+    sel.appendChild(o);
+  });
+  document.getElementById('jlPasswordWrap').style.display='none';
+  document.getElementById('jlActionWrap').style.display='none';
+  if(!results.length) jlErr('No leagues match that filter.');
+  else if(total>20) jlErr('Showing 20 leagues. Filter by name to narrow the list.');
+  else jlErr('');
+  if(results.length===1){ sel.value='0'; chooseJoinLeague(results[0]); }
+}
+async function loadJoinDirectory(query=''){
+  if(!ME || joinDirectoryLoading) return;
+  query=String(query||'').trim();
+  if(query.length===1) return jlErr('Use at least two characters to filter.');
+  joinDirectoryLoading=true; jlErr(query?'Filtering…':'Loading leagues…');
+  try{
+    const r=await wPost('/league/search',{query});
+    paintJoinDirectory(r.results||[],Number(r.total)||0); joinDirectoryLoaded=true;
+  }catch(e){ jlErr(e.message); }
+  finally{ joinDirectoryLoading=false; }
+}
+function paintJoinLeague(){
+  document.getElementById('jlSignedOut').style.display=ME?'none':'';
+  document.getElementById('jlSignedIn').style.display=ME?'':'none';
+  document.getElementById('jlIntro').textContent=ME
+    ? 'Choose a league, then enter its shared password. Your account—not a premade roster name—gets the seat.'
+    : 'Sign in or create your own account first. Then return here to choose the league and enter its shared password.';
+  if(ME && !joinDirectoryLoaded && !joinDirectoryLoading) loadJoinDirectory();
+}
+
+document.getElementById('jlDirectory').onchange=e=>{
+  const i=Number(e.target.value);
+  if(e.target.value!=='' && JOIN_DIRECTORY[i]) chooseJoinLeague(JOIN_DIRECTORY[i]);
+  else{
+    joinSelected=null; document.getElementById('jlPasswordWrap').style.display='none';
+    document.getElementById('jlActionWrap').style.display='none'; jlErr('');
+  }
+};
+document.getElementById('jlFilterGo').onclick=()=>loadJoinDirectory(document.getElementById('jlFilter').value);
+document.getElementById('jlFilter').onkeydown=e=>{ if(e.key==='Enter'){e.preventDefault();loadJoinDirectory(e.target.value);} };
+document.getElementById('jlJoinGo').onclick=async()=>{
+  if(!joinSelected) return jlErr('Choose a league first.');
+  const password=document.getElementById('jlPassword').value;
+  if(password.trim().length<6) return jlErr('Enter the league password.');
+  jlErr('Joining…');
+  try{
+    const r=await wPost('/league/join',{league:joinSelected.id,password});
+    document.getElementById('jlPassword').value=''; joinSelected.already=true;
+    chooseJoinLeague(joinSelected);
+    jlErr(r.already?`You already belong to ${r.name}.`:`You’re in ${r.name} — ${r.size} members now.`, true);
+    await loadLeagues(); paintHub();
+  }catch(e){ jlErr(e.message); }
+};
+document.getElementById('jlPassword').onkeydown=e=>{ if(e.key==='Enter'){e.preventDefault();document.getElementById('jlJoinGo').click();} };
+
 function paintHub(){
   const card = document.getElementById('hubCard');
   if(!onHub()){ card.style.display='none'; return; }
@@ -4689,6 +4796,8 @@ function paintHub(){
     </div>`;
   }).join('') || '<p class="pend">No leagues yet.</p>';
 
+  paintJoinLeague();
+
   // Site admin only: spinning up a whole new group. Lives on the hub, because that is
   // where you go to manage leagues rather than to play in one.
   const mk = document.getElementById('mkLeague');
@@ -4698,9 +4807,9 @@ function paintHub(){
       allAccounts().map(n=>`<option${n===ME?.name?' selected':''}>${esc(n)}</option>`).join('');
 
   document.getElementById('hubNote').textContent = ME
-    ? (isAdmin() ? 'You can rename any league here, or open one to manage its roster and rules.'
-                 : 'Public leagues plus the leagues you belong to are shown here.')
-    : 'The two public Bozo rooms are shown here. Sign in to see your own leagues.';
+    ? (isAdmin() ? 'Join an existing league above, or create and manage leagues below.'
+                 : 'Board cards show public leagues and leagues you belong to. Use Join Existing League for the full directory.')
+    : 'The public Bozo rooms are shown here. Sign in above to join another league.';
 
   // The bill's live surfaces. Both are cheap and idempotent; paintHub runs on every
   // poll, so neither may do anything that accumulates.
@@ -6373,7 +6482,7 @@ function paintTicker(players, t, mx, holder){
 const BOZO_SYS = `RIGHT NOW you are on Bozo, a weekly group betting game inside the Data Dawgs site.
 THE GAME: each member submits ONE leg. Every leg goes on ONE real parlay at DraftKings, funded by last week's bozo. Whoever busts it worst wears it and funds the next ticket.
 - LEAGUE VISIBILITY: Bozo Boyz and the public Royale demo are listed for everyone. A signed-in person additionally sees only leagues they belong to or manage. The league picker beside the four page tabs uses that same filtered list.
-- LEAGUE MEMBERSHIP: accounts authenticate people. A manager sets one shared league password under League Settings; after signing in, a person searches for that league under Your Dawgs and enters the password to add their own authenticated account. Private leagues appear only on an exact-name search. Never ask for or repeat the password. Per-person league invites and reusable join links are retired.
+- LEAGUE MEMBERSHIP: accounts authenticate people. A manager sets one shared league password under League Settings; after signing in, a person uses Join Existing League on the Bozo hub (or the duplicate control under Your Dawgs), chooses from up to 20 league names, and enters the password to add their own authenticated account. Never ask for or repeat the password. Per-person league invites, manager pre-adds and reusable join links are retired.
 - Favorites only, inside the league's price band. No exact duplicate legs. The ticket LOCKS the moment the last leg lands; that moment is the close.
 - Only legs that LOST are eligible to be the bozo. Nobody who cashed can wear it, no matter how bad the price was.
 - Each week the tiebreaker hierarchy is a FRESH RANDOM PERMUTATION of the league's live levers, drawn on the server and written once. It is not a weighted score and not a fixed cascade. Walk the drawn order; the first lever that isolates one person names the bozo; ties fall to the next lever down.

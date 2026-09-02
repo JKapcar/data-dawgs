@@ -83,7 +83,12 @@ async function pageAt(file,viewport={width:1280,height:900}){
 }
 
 {
+  joined=false;lastPassword="";
   const {p,ctx,errs}=await pageAt("bozo.html");
+  ok("Bozo hub puts Join Existing League above Create a Bozo League",await p.locator("#joinLeague").count()===1&&await p.locator("#mkLeague h3").innerText()==="Create a Bozo league"&&await p.evaluate(()=>!!(document.querySelector("#joinLeague").compareDocumentPosition(document.querySelector("#mkLeague"))&Node.DOCUMENT_POSITION_FOLLOWING)));
+  await p.fill("#jlFilter","Preseason Bozo Boyz");await p.click("#jlFilterGo");await p.waitForTimeout(150);
+  await p.fill("#jlPassword","Correct Horse");await p.click("#jlJoinGo");await p.waitForTimeout(250);
+  ok("Bozo hub joins the selected league with its password",joined&&lastPassword==="Correct Horse"&&(await p.getAttribute("#jlOpen","href"))==="bozo.html?l=preseason-bozo-boyz");
   const ids=await p.evaluate(()=>["lpPass","lpSet","lpOff","lpState","lpCap","lpCapGo","lpVis","lpVisGo"].map(id=>!!document.getElementById(id)));
   ok("League Settings exposes password, cap and visibility controls",ids.every(Boolean),JSON.stringify(ids));
   const retired=await p.evaluate(()=>["invGo","jlGet","jlRot","jcSet","addPick","addGo"].some(id=>!!document.getElementById(id)));
