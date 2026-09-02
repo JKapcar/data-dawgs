@@ -28,7 +28,7 @@ ok('machine inventory keeps private memory disabled',Array.isArray(surface?.mach
 ok('page retains a zero-connect CSP',/default-src 'self'/.test(date)&&/connect-src 'none'/.test(date));
 ok('page source has no network API call',!/(?:fetch|XMLHttpRequest|WebSocket|sendBeacon)\s*\(/.test(date));
 ok('Toto is told the metric is reciprocal acceptance, not cold discovery',/primary observable is reciprocal acceptance/.test(date)&&/cold-discover/.test(date));
-ok('Toto is told the benchmark is empirical Tinder data, not a Hinge cohort',/published Tinder male percentile table/.test(date)&&/not from an observed Hinge cohort/.test(date));
+ok('Toto is told the benchmarks are empirical women and men Tinder data, not Hinge cohorts',/6,233 complete male profiles or 842 complete female profiles/.test(date)&&/not observed Hinge cohorts/.test(date));
 ok('Toto is told the age-band shape assumption',/assumes the distribution shape is constant across age bands/.test(date));
 ok('Toto is told independent ranking windows are maturity-aligned',/Overall, 1 year, 6 months, and 1 month comparison windows[\s\S]*latest scoreable date/.test(date));
 ok('Toto is told observed and scoreable match counts are different contracts',/“observed matches” always means every known match outcome[\s\S]*“Scoreable matches” always means the subset/.test(date));
@@ -37,7 +37,8 @@ ok('Toto is told dashboard filters rank the exact visible dashboard rate',/autom
 ok('Toto is told the Verdict and detail use one scope and method',/Verdict and detailed ranking panel always use the same active scope and primary method/.test(date));
 ok('Toto is told Patterns period switches update the whole story',/Overall, Last year, Last 6 months, and Last month switch the entire illustrated story together/.test(date));
 ok('Toto is told benchmark selection bias has unknown direction',/direction of that bias is unknown/.test(date));
-ok('Toto is told charts default to cohort with an all-men toggle',/default to the subject’s age cohort[\s\S]*“All men” is an explicit comparison toggle/.test(date));
+ok('Toto is told benchmark sex is detected or explicitly chosen and never guessed',/detects “woman\/female” or “man\/male”[\s\S]*must never guess/.test(date));
+ok('Toto is told charts default to matching sex-and-age cohort',/default to the subject’s matching sex-and-age cohort[\s\S]*“All women” or “All men”/.test(date));
 ok('Toto is told pending inbound queues undercount',/inbound counts undercount when a queue is pending/.test(date));
 ok('Toto is told reply rate and ghosting are not computable',/Reply rate and true ghosting are not computable/.test(date));
 ok('Toto is told conversion pipes are deliberately not surfaced',/conversion pipes are retained only in the sanitized snapshot/.test(date));

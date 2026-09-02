@@ -107,6 +107,15 @@ ok('market value is scoped to selected range',/Dating App MV \/ Market Value/i.t
 ok('market value uses a human-readable ordinal percentile',/\d+(?:st|nd|rd|th) percentile/i.test(text));
 ok('market value leads with the matching age cohort when age is present',/Among men 40–44 in the published SwipeStats Tinder reference/i.test(text));
 ok('all-men reference is shown separately rather than blended',/Against all men, every age:/i.test(text));
+ok('benchmark sex is detected and remains visibly changeable',/Detected from export/.test(out.querySelector('.benchmark-sex').textContent)&&out.querySelector('[data-benchmark-sex="men"]').classList.contains('on'));
+const maleRankBefore=parseInt(out.querySelector('.rank .big').textContent,10);
+out.querySelector('[data-benchmark-sex="women"]').click();
+await new Promise(r=>setTimeout(r,30));
+ok('women toggle switches every ranking surface to the female ecosystem',out.querySelector('[data-benchmark-sex="women"]').classList.contains('on')&&/AMONG WOMEN 40–44/.test(out.querySelector('.verdict').textContent)&&/All women/.test(out.querySelector('.scen').textContent));
+ok('female benchmark uses its own sample and produces a different percentile',/842/.test(out.querySelector('.verdict').textContent)&&parseInt(out.querySelector('.rank .big').textContent,10)!==maleRankBefore);
+ok('female chart reference uses the published female median',/Women 40–44 median/.test(out.textContent)&&!/Women 40–44 median · 1\.50%/.test(out.textContent));
+out.querySelector('[data-benchmark-sex="men"]').click();
+await new Promise(r=>setTimeout(r,30));
 ok('ranking panel has dashboard plus four independent time windows',out.querySelectorAll('[data-rank-range]').length===5&&!!out.querySelector('[data-rank-range="selected"]'));
 ok('ranking panel defaults to one year',out.querySelector('[data-rank-range="1y"]').classList.contains('on'));
 const shownRank=()=>parseInt(out.querySelector('.rank .big').textContent,10);
@@ -340,6 +349,14 @@ Object.defineProperty(badDrop,'dataTransfer',{value:{files:[new File(['{}'],'use
 w.document.getElementById('drop').dispatchEvent(badDrop);
 await new Promise(r=>setTimeout(r,50));
 ok('failed import leaves the arrival screen visible',!w.document.body.classList.contains('results-ready')&&w.getComputedStyle(w.document.getElementById('arrival')).display!=='none'&&/matches\.json is required/i.test(out.textContent));
+const unknownUser=JSON.parse(JSON.stringify(F['user.json']));delete unknownUser.profile.gender;
+const unknownFiles=[new File([JSON.stringify(F['matches.json'])],'matches.json',{type:'application/json'}),new File([JSON.stringify(unknownUser)],'user.json',{type:'application/json'})];
+const unknownDrop=new w.Event('drop',{bubbles:true});Object.defineProperty(unknownDrop,'dataTransfer',{value:{files:unknownFiles}});w.document.getElementById('drop').dispatchEvent(unknownDrop);
+await new Promise(r=>setTimeout(r,250));
+ok('missing export gender pauses before any percentile is shown',!!out.querySelector('.benchmark-choice')&&!out.querySelector('#verdict')&&/guessing would give you a misleading percentile/i.test(out.textContent));
+ok('missing export gender offers an explicit women or men choice',out.querySelectorAll('[data-choose-sex]').length===2);
+out.querySelector('[data-choose-sex="women"]').click();await new Promise(r=>setTimeout(r,40));
+ok('unknown-gender choice opens the complete women benchmark dashboard',!!out.querySelector('#verdict')&&/WOMEN/.test(out.querySelector('#verdict').textContent)&&out.querySelector('[data-benchmark-sex="women"]').classList.contains('on'));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail?1:0);
