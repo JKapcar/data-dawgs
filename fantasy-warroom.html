@@ -2956,7 +2956,7 @@ body.wr-shared #youLab{display:none!important}
       </article>
 
       <article class="wr-card wr-full wr-hide" id="mnPaidCard">
-        <h3>What you paid vs what the market says now</h3>
+        <h3>What you paid vs the active price board</h3>
         <p class="wr-note" id="mnPaidNote"></p>
         <div class="wr-filter">
           <select class="wr-mini" id="mnPaidTeam" aria-label="Filter by team"></select>
@@ -3169,9 +3169,10 @@ body.wr-shared #youLab{display:none!important}
         <dd>Three gates. Both starting lineups must improve when the slot assignment is re-run after the swap. A swap
         that would leave either side unable to fill a starting slot it could fill before is refused outright, whatever
         the points say — that is how you get offered your only quarterback for a wideout. And the two players must be
-        within <code>max($4, 35% of the dearer player)</code> of each other in <b>Public Market Value</b> — the
-        auction dollars in <a href="/data/pool.json"><code>/data/pool.json</code></a>, maintained by hand each week,
-        in whichever column matches this league (full PPR, half, or superflex). If either player has no published
+        within <code>max($4, 35% of the dearer player)</code> of each other on the active price board. Yahoo 773763 uses
+        <b>DataDawg$</b> from <a href="/data/datadawg-dollars-values.json"><code>/data/datadawg-dollars-values.json</code></a>;
+        other redraft rooms use the matching <b>Public Market Value</b> column in <a href="/data/pool.json"><code>/data/pool.json</code></a>.
+        If either player has no published
         price, that pairing falls back to <code>max(1.0, 35%)</code> in projected value over replacement and the row
         is labelled as model-based.</dd>
         <dt>Why market value and not points</dt>
@@ -3321,8 +3322,9 @@ const LOADED=new Map(),keyOf=(provider,id)=>provider+':'+id;
    kicker, the market says $23 against $1. Loaded once per session and shared by every
    league. If it fails to load the finder falls back to model value and says so per row. */
 let MV=null,DYNASTY_MV=null;
-/* DataDawg$ — private, league-specific, served by the Worker. Never a static file, never
-   in the repo. Null until a board is found for the open league; the page then runs on PMV. */
+/* DataDawg$ is league-specific. Most boards are private Worker responses, but Yahoo
+   773763 has a published, reproducible board in /data because it was built for that exact
+   room. Null until a matching board is found; only then may the page fall back to PMV. */
 /* ⚠️ ONE BOARD PER HORIZON, not one board. A dynasty league has a season board AND a
    dynasty board and the War Room can show either per module, so a single global would
    answer the wrong question for whichever module it was not loaded for. */
@@ -3339,6 +3341,26 @@ function ddKey(p){
     const t=String(p.team||'').toUpperCase();return t?'dst:'+(DD_KEY_TEAM_ALIAS[t]||t):null;
   }
   const k=mvKey(p.name);return k?'name:'+(DD_KEY_NAME_ALIAS[k]||k):null;
+}
+/* The published 2026 board belongs to exactly one room. It must not leak into another
+   Yahoo league merely because the players look alike. Commit 5 replaces this temporary
+   name join with Yahoo id -> Sleeper id -> GSIS id; the room gate stays. */
+async function ddFromYahooPublic(provider,leagueId){
+  if(provider!=='yahoo'||String(leagueId)!=='773763')return null;
+  try{
+    const r=await fetch('data/datadawg-dollars-values.json',{cache:'no-cache'});
+    if(!r.ok)return null;
+    const j=await r.json(),rows=j&&j.data&&Array.isArray(j.data.players)?j.data.players:[];
+    const by=new Map();
+    rows.forEach(x=>{
+      const v=Number(x&&x.target),k=ddKey({name:x&&x.player,pos:x&&x.pos,team:x&&x.team});
+      if(k&&Number.isFinite(v))by.set(k,v);
+    });
+    if(!by.size)return null;
+    return {by,meta:{as_of:j.as_of||j.data.as_of||null,tier:j.tier||j.data.tier||null,
+      graded:j.graded===true,model_id:j.data.model_id||null,note:j.note||'',
+      interval_meaning:j.data.interval_meaning||'',validation:j.data.validation||null},public:true};
+  }catch(e){return null}
 }
 /* ESPN and Yahoo arrive with values already attached by the Worker. */
 function ddFromFeed(pool){
@@ -3393,7 +3415,8 @@ async function loadDD(st=state){
      leagues off-screen, and the active league may have a different type. */
   const wantDyn=Number(st&&st.league&&st.league.settings&&st.league.settings.type)===2&&!feed;
   const dyn=wantDyn?await ddFromWorker(prov,st.ref.id,st.pool,'dynasty',st.teams):null;
-  const got=feed?ddFromFeed(st.pool):await ddFromWorker(prov,st.ref.id,st.pool,'season',st.teams);
+  const published=await ddFromYahooPublic(prov,st.ref.id);
+  const got=published||(feed?ddFromFeed(st.pool):await ddFromWorker(prov,st.ref.id,st.pool,'season',st.teams));
   /* the feed path carries no meta block of its own, so take it off the feed body */
   if(got&&!got.meta&&st.dd)got.meta=st.dd;
   if(dyn&&!dyn.meta&&st.dd)dyn.meta=st.dd;
@@ -3405,6 +3428,15 @@ async function loadDD(st=state){
 function ddBoard(h){return (DD&&DD[h==='dynasty'?'dynasty':'season'])||null;}
 function ddActive(h){const b=ddBoard(h);return !!(b&&b.by&&b.by.size);}
 function ddAsOf(h){const b=ddBoard(h);return (b&&b.meta&&b.meta.as_of)||null;}
+function ddDisclosure(h){
+  const b=ddBoard(h),m=b&&b.meta;
+  if(!m||m.model_id!=='datadawgs-datadawg-dollars-2026-v4')return '';
+  return 'DataDawg$ dated '+(m.as_of||'unknown')+' · tier labs · graded: false. '
+    +'It is an opening-state auction target, not a clearing price and not a max bid. '
+    +'Low/high are conversion-sensitivity bands, not bid ceilings or player-outcome intervals. '
+    +'Keeper inflation is unmodelled (keeper deadline 2026-09-08). '
+    +'A share of the priced board is not a share of what was spent.';
+}
 function ddUnpriced(players,h){const b=ddBoard(h);
   return b?(players||[]).filter(p=>!b.by.has(ddKey(p))).length:0;}
 /* ---- draft capital -------------------------------------------------------
@@ -3994,7 +4026,7 @@ function renderMoney(){
     ['League average',fmt$(avgTotal),(mine.total>=avgTotal?'+':'−')+fmt$(Math.abs(mine.total-avgTotal))+' for you'],
     /* Before a draft every roster is empty, so leagueTotal is 0 and the share is 0/0.
        Say "no priced players yet" rather than printing NaN%. */
-    ['Your rank',rank+' of '+M.length,leagueTotal>0?(mine.total/leagueTotal*100).toFixed(1)+'% of all money':'no priced players yet'],
+    ['Your rank',rank+' of '+M.length,leagueTotal>0?(mine.total/leagueTotal*100).toFixed(1)+(ddActive(mnH)?'% share of priced board held':'% of all money'):'no priced players yet'],
     ['Starting / bench',fmt$(mine.st)+' / '+fmt$(mine.bn),Math.round(mine.st/(mine.total||1)*100)+'% of it starts'],
     ['Richest roster','<span class="tname">'+esc(richest.t.name)+'</span>',fmt$(richest.total)],
     ['Leanest roster','<span class="tname">'+esc(leanest.t.name)+'</span>',fmt$(leanest.total)],
@@ -4007,7 +4039,7 @@ function renderMoney(){
   $('mnDynasty').innerHTML=type===2
     ? '<div class="wr-status good"><b>'+esc(valueLabel('money'))+' is active on this sheet.</b> Each pricing sheet carries its own horizon control, so this one can read long-term asset value while the trade screen stays on this season. Dynasty uses '+
       (state.slots.SUPERFLEX?'Superflex / TE-premium ranks with 2QB auction dollars.':'1QB ranks and 1QB auction dollars.')+'</div>'
-    :type===1?'<div class="wr-warn"><b>Keeper league detected.</b> Keeper duration and cost rules are unavailable, so this view remains this-season market value rather than pretending to know the keeper horizon.</div>':'';
+    :type===1?'<div class="wr-warn"><b>Keeper league detected.</b> '+(ddActive(mnH)?'This room uses its dated DataDawg$ opening-state target, but keeper inflation is unmodelled; the keeper deadline is 2026-09-08.':'Keeper duration and cost rules are unavailable, so this view remains this-season market value rather than pretending to know the keeper horizon.')+'</div>':'';
 
   $('mnHorizonCard').classList.toggle('wr-hide',!isDynastyLeague());
   if(isDynastyLeague()){
@@ -4074,7 +4106,8 @@ function renderMoney(){
       +'Values are '+esc(valueLabel('money').toLowerCase())+'; the price is what this league actually paid.'
       +(unpriced?' <b>'+unpriced+'</b> rostered player'+(unpriced===1?' has':'s have')+' no auction price (keeper, waiver or free agent) and '+(unpriced===1?'is':'are')+' left out rather than drawn at $0.':'')
       +(mnPaidPos.size<posHere.length?' Showing '+[...mnPaidPos].filter(P=>posHere.includes(P)).join(', ')+' only.':'')
-      +(mnPaidLab==='top'?' The '+MN_LABEL_TOP+' biggest gaps are labelled \u2014 switch to Label all for the rest.':'');
+      +(mnPaidLab==='top'?' The '+MN_LABEL_TOP+' biggest gaps are labelled \u2014 switch to Label all for the rest.':'')
+      +(ddActive(mnH)?' Pick grade is DataDawg$ minus paid: positive is value bought below target; negative is cost above target.':'');
   }
 
   /* ---- what the projection implies a player should cost, against the market ----
@@ -4272,7 +4305,8 @@ function renderMoney(){
     +(valueAsOf('money')||'unknown date')+'. '+priced+' of '+held
     +' rostered players carry a published price; the rest are counted as $0 in these totals and shown in the "No price" column, '
     +'so a team full of deep waiver adds will read leaner than it is. Per-axis scaling on the radars is relative to this league, '
-    +'so a shape maxed at a position only means nobody else spent there either.';
+    +'so a shape maxed at a position only means nobody else spent there either.'
+    +(ddDisclosure(mnH)?' '+ddDisclosure(mnH):'');
 }
 
 /* ============================ DYNASTY LENS ===============================
@@ -5526,6 +5560,7 @@ window.DD_BOTCTX = {
 - ⚠️ IF NO LEAGUE IS CONNECTED THERE ARE NO NUMBERS AT ALL. The sheets show empty states that explain the method. Do not invent standings, odds or trades for a league that is not loaded, and do not fall back to generic 12-team defaults.
 - INPUTS ARE THIRD-PARTY AND FROZEN. Rosters, scoring and schedule come from the provider at the moment of connection. Projections are ESPN's own season split for ESPN, and Sleeper's season projection for both Sleeper and Yahoo — Yahoo supplies no projections. On a Yahoo disagreement chart the far side is therefore SLEEPER, never Yahoo. Those inputs are unaudited, spread evenly over the league's regular season, and this page produces none of its own. ⚠️ EVERY SIMULATED WEEK REUSES THAT ONE SEASON AVERAGE — no byes, no opponent adjustment, no rest-of-season curve. Say so whenever anyone asks how much the playoff odds are worth.
 - NOT MODELED: injuries, byes, trades, waivers, lineup decisions, in-season projection updates, and correlation between the two teams in a matchup. Before three completed weeks, σ is a stated generic assumption rather than an estimate from the league.
+- YAHOO 773763 PRICING uses DataDawg$ dated 2026-08-28, tier labs, graded: false. It is an OPENING-STATE AUCTION TARGET, not a clearing price and not a max bid. Low/high are conversion-sensitivity bands, never bid ceilings or player-outcome intervals. Keeper inflation is unmodelled; the keeper deadline is 2026-09-08. The chart grades a buy as DataDawg$ minus paid. A roster's share of the priced board is NOT the share of what the league spent.
 - NOT BUILT: private Yahoo league reads, Yahoo write access, the man-games baseline, multi-player trades, and Stage 2 playoff re-simulation. Say so plainly rather than describing how to use them.
 - AN EDITED SETTING IS A WHAT-IF and is marked pool_eligible false. Do not present an overridden run as the league's own number.
 - THE TRADE FINDER IS A CANDIDATE SCREEN, NOT A FAIRNESS ORACLE. It cannot see acceptance probability, manager preferences, depth needs, injury risk, or multi-player construction; never present a surviving proposal as one the rival would accept. IT PROPOSES, IT DOES NOT ACT. It never accepts, sends or executes anything. A proposal must pass THREE tests: both lineups improve when recomputed after the swap, neither side is left unable to fill a starting slot, AND the two players are within max($4, 35% of the dearer) in THE TRADE SHEET'S OWN auction-value horizon. ⚠️ THERE IS NO PAGE-WIDE ACTIVE HORIZON: the report card, the Money sheet and the Trade finder each carry their own control and can disagree, so always name WHICH SHEET'S horizon you are quoting. Redraft and keeper leagues use /data/pool.json and have no control at all. Sleeper dynasty leagues let the user set each of those three sheets independently between this-season values and /data/dynasty-ranks.json; the dynasty side automatically selects 1QB or Superflex / TE-premium values from roster slots. A swap that would leave either side short a startable player at some slot is refused whatever the points say. It will often return nothing, and returning nothing is a real answer rather than a failure.
