@@ -3313,6 +3313,59 @@ const LOADED=new Map(),keyOf=(provider,id)=>provider+':'+id;
    kicker, the market says $23 against $1. Loaded once per session and shared by every
    league. If it fails to load the finder falls back to model value and says so per row. */
 let MV=null,DYNASTY_MV=null;
+/* DataDawg$ — private, league-specific, served by the Worker. Never a static file, never
+   in the repo. Null until a board is found for the open league; the page then runs on PMV. */
+let DD=null;
+const DD_WORKER='https://toto.jkapcar4.workers.dev';
+/* Mirrors the Worker's ddPlayerKey(). Defenses key by team because they share no id across
+   sources; everyone else by the same normalised name PMV already joins on. */
+const DD_KEY_TEAM_ALIAS={LAR:'LA',JAC:'JAX',WSH:'WAS',OAK:'LV',SD:'LAC',STL:'LA'};
+const DD_KEY_NAME_ALIAS={'kenneth gainwell':'kenny gainwell','cameron ward':'cam ward'};
+function ddKey(p){
+  if(!p)return null;
+  const pos=String(p.pos||'').toUpperCase();
+  if(pos==='DST'||pos==='DEF'){
+    const t=String(p.team||'').toUpperCase();return t?'dst:'+(DD_KEY_TEAM_ALIAS[t]||t):null;
+  }
+  const k=mvKey(p.name);return k?'name:'+(DD_KEY_NAME_ALIAS[k]||k):null;
+}
+/* ESPN and Yahoo arrive with values already attached by the Worker. */
+function ddFromFeed(pool){
+  const by=new Map();let meta=null;
+  (pool||[]).forEach(p=>{if(p&&p.dd&&Number.isFinite(Number(p.dd.v))){const k=ddKey(p);if(k)by.set(k,Number(p.dd.v));}});
+  return by.size?{by,meta}:null;
+}
+/* Sleeper never touches the Worker, so ask for exactly the keys this page holds. */
+async function ddFromWorker(provider,leagueId,pool){
+  const tok=(window.DDAuth&&DDAuth.token&&DDAuth.token())||'';
+  if(!tok)return null;                       /* signed out: PMV, silently and correctly */
+  const keys=[...new Set((pool||[]).map(ddKey).filter(Boolean))];
+  if(!keys.length)return null;
+  try{
+    const r=await fetch(DD_WORKER+'/dd/values',{method:'POST',
+      headers:{'Content-Type':'application/json','X-Bozo-Session':tok},
+      body:JSON.stringify({provider,leagueId:String(leagueId),keys})});
+    if(!r.ok)return null;
+    const j=await r.json();
+    if(!j||!j.values||!j.dd)return null;
+    const by=new Map();
+    for(const k in j.values){const v=Number(j.values[k]&&j.values[k].v);if(Number.isFinite(v))by.set(k,v);}
+    return by.size?{by,meta:j.dd}:null;
+  }catch(e){ return null; }
+}
+async function loadDD(st=state){
+  if(!st||!st.ref){if(st===state)DD=null;return null;}
+  const prov=st.ref.provider;
+  const got=(prov==='espn'||prov==='yahoo')?ddFromFeed(st.pool):await ddFromWorker(prov,st.ref.id,st.pool);
+  /* the feed path carries no meta block of its own, so take it off the feed body */
+  if(got&&!got.meta&&st.dd)got.meta=st.dd;
+  st.ddValues=got;
+  if(st===state)DD=got;
+  return got;
+}
+function ddActive(){return !!(DD&&DD.by&&DD.by.size);}
+function ddAsOf(){return (DD&&DD.meta&&DD.meta.as_of)||null;}
+function ddUnpriced(players){return (players||[]).filter(p=>!DD.by.has(ddKey(p))).length;}
 
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fnv=s=>{let h=2166136261;for(let i=0;i<s.length;i++)h=Math.imul(h^s.charCodeAt(i),16777619);return h>>>0};
@@ -3385,8 +3438,18 @@ function isDynastyLeague(){return Number(state?.league?.settings?.type)===2}
    A league with one board resolves every module to 'season'. */
 function hz(mod){return isDynastyLeague()?(state.horizon&&state.horizon[mod]||'dynasty'):'season'}
 function usesDynasty(mod){return hz(mod)==='dynasty'}
-function labelFor(h){return h==='dynasty'?'Overall dynasty value':'Public Market Value'}
-function asOfFor(h){return (h==='dynasty'?DYNASTY_MV:MV)?.asOf||null}
+/* ⚠️ The label must name the basis that actually resolved, with its date. A page showing
+   DataDawg$ under a "Public Market Value" heading is the same class of error as showing a
+   14-team league 12-team prices: right arithmetic, wrong question, and unfalsifiable from
+   the outside. DataDawg$ is ungraded (tier: labs) and the copy says so. */
+function labelFor(h){
+  if(h!=='dynasty'&&ddActive())return 'DataDawg$';
+  return h==='dynasty'?'Overall dynasty value':'PMV (Public Market Value)';
+}
+function asOfFor(h){
+  if(h!=='dynasty'&&ddActive())return ddAsOf();
+  return (h==='dynasty'?DYNASTY_MV:MV)?.asOf||null;
+}
 function valueLabel(mod){return labelFor(hz(mod))}
 /* Whose projection sits on the far side of the disagreement panel. The board it is
    measured against is OURS, so the provider has to be named or the chart reads as a
@@ -3424,6 +3487,16 @@ function mvOf(p,horizon){
     const row=DYNASTY_MV.by.get(mvKey(p.name));if(!row)return null;
     const v=Number(state.slots.SUPERFLEX?row.two_qb_auction:row.one_qb_auction);
     return Number.isFinite(v)?v:null;
+  }
+  /* ⚠️ DataDawg$ FIRST, and exclusively, when a board is loaded for this league. A player
+     the board carries uses that price even when it is $0 - in a floored board $0 means
+     "below the last roster spot", which is a real statement, not a missing value. A player
+     the board does NOT carry is unpriced rather than quietly priced from PMV: one number
+     built from two bases is neither, and it would be invisible on the page. */
+  if(ddActive()){
+    const k=ddKey(p);
+    if(k&&DD.by.has(k))return DD.by.get(k);
+    return null;
   }
   if(!MV||!MV.by.size)return null;
   const row=p.pos==='DST'?MV.by.get('dst:'+String(p.team||'').toUpperCase()):MV.by.get(mvKey(p.name));
@@ -4184,7 +4257,7 @@ function renderDynastyLens(){
 /* ============================ THE PORTFOLIO ================================
    Every row is computed inside its own league state. Unloaded leagues stay explicit
    rather than inheriting numbers from whichever league happens to be active. */
-function withState(st,fn){const keep=state;state=st;try{return fn()}finally{state=keep}}
+function withState(st,fn){const keep=state,keepDD=DD;state=st;DD=st.ddValues||null;try{return fn()}finally{state=keep;DD=keepDD}}
 function leagueRow(entry){
   return withState(entry.state,()=>{
     const st=entry.state,mi=pickMyTeam(st.teams,st.ref,st.users||null);
@@ -4203,7 +4276,7 @@ async function loadAllSaved(){
   let done=0;
   for(const x of todo){
     $('pfStatus').textContent='Reading '+x.name+'… ('+(++done)+' of '+todo.length+')';
-    try{const st=await fetchLeague(x.leagueId);LOADED.set(keyOf('sleeper',x.leagueId),{state:st,sim:null})}
+    try{const st=await fetchLeague(x.leagueId);await loadDD(st);LOADED.set(keyOf('sleeper',x.leagueId),{state:st,sim:null})}
     catch(e){$('pfStatus').textContent='Could not read '+x.name+': '+e.message}
   }
   btn.disabled=false;renderPortfolio();
@@ -4606,7 +4679,7 @@ async function fetchLeagueEspn(id,share){
      own draft detail, and it is what every surplus number on this page needs. */
   const pool=(feed.pool||[]).map(p=>({id:String(p.id),name:p.name,pos:p.pos,
     p:(p.p==null||!isFinite(p.p))?null:Number(p.p),
-    paid:(p.paid==null||!isFinite(p.paid))?null:Number(p.paid),team:p.team}));
+    paid:(p.paid==null||!isFinite(p.paid))?null:Number(p.paid),team:p.team,dd:p.dd}));
   const byId=Object.fromEntries(pool.map(p=>[p.id,p]));
   const teams=(feed.teams||[]).map(t=>({
     id:String(t.id), ownerId:String(t.owner||''), name:t.name,
@@ -4639,7 +4712,7 @@ async function fetchLeagueEspn(id,share){
     })(),
     settings:{playoffSpots:Number(L.playoffTeams)||Math.max(2,Math.round(teams.length/3)),
       playoffStart:Number(L.playoffStart)||15,sigma:20},
-    defaults:null, diagnostics:feed.diagnostics||null};
+    defaults:null, diagnostics:feed.diagnostics||null,dd:feed.dd||null};
   st.defaults=JSON.stringify(st.settings);
   return st;
 }
@@ -4663,6 +4736,7 @@ async function connect(input){
   /* Both boards load up front now: any card can ask for either at any time, so
      loading the dynasty board lazily off one global would strand the others. */
   await loadMV();if(isDynastyLeague())await loadDynastyMV();
+  await loadDD();   /* DataDawg$ if this league has a board; otherwise PMV stands */
   rememberLeague(ref,state.league.name);
   setLoaded(true);
   render();
@@ -4679,7 +4753,7 @@ async function connect(input){
 function restore(key){
   const entry=LOADED.get(key);
   if(!entry)return false;
-  state=entry.state;sim=entry.sim||null;tradeFilter=null;
+  state=entry.state;DD=state.ddValues||null;sim=entry.sim||null;tradeFilter=null;
   $('playoffSpots').value=state.settings.playoffSpots;
   $('playoffStart').value=state.settings.playoffStart;
   $('sigma').value=state.settings.sigma;
@@ -4743,6 +4817,7 @@ async function openShared(token){
   state.focusGuessed=false;
   LOADED.set(keyOf('espn',state.ref.id),{state,sim:null});
   await loadMV();if(isDynastyLeague())await loadDynastyMV();
+  await loadDD();   /* DataDawg$ if this league has a board; otherwise PMV stands */
   setLoaded(true);
   shareBar('<b>Shared league \u00b7 read-only.</b> '+esc(state.league.name||'ESPN league')
     +' \u2014 every team\u2019s grade and roster, computed from the league owner\u2019s connection. '
