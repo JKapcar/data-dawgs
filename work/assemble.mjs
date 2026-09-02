@@ -40,6 +40,16 @@ const R_ROUTE =
   '    if (url.pathname.startsWith("/rankings/")) return handleRankings(request, url, env, cors);';
 const R_ANCHOR = '    if (url.pathname.startsWith("/api/swoledawg")) return handleSwole(request, url, env, cors);';
 
+/* Yahoo's public-league HTML adapter. Its parser remains a separately tested source file,
+ * while yahoo-worker.js owns fetches, caching, refusals, and route handling. */
+const Y_START = "/* ===== DD-YAHOO-BLOCK START — generated from work/yahoo-parse.js + work/yahoo-worker.js; edit THERE ===== */";
+const Y_END   = "/* ===== DD-YAHOO-BLOCK END ===== */";
+const Y_ROUTE =
+  '    // DD-YAHOO-ROUTE — public share read first; every other Yahoo route is session-gated in handleYahoo.\n' +
+  '    if (url.pathname.startsWith("/yahoo/share/") && request.method === "GET") return handleYahooShareRead(request, url, env, cors);\n' +
+  '    if (url.pathname === "/yahoo" || url.pathname.startsWith("/yahoo/")) return handleYahoo(request, url, env, cors);';
+const Y_ANCHOR = '    if (url.pathname === "/espn" || url.pathname.startsWith("/espn/")) return handleEspn(request, url, env, cors);';
+
 let src = readFileSync(TARGET, "utf8");
 const before = src;
 
@@ -65,6 +75,8 @@ const block =
  * capture first, then the grading engine that consumes what it captured. */
 const rankings = readFileSync("rankings-block.js", "utf8").replace(/\s+$/, "")
   + "\n" + readFileSync("rankings-grade.js", "utf8").replace(/\s+$/, "");
+const yahoo = readFileSync("yahoo-parse.js", "utf8").replace(/\s+$/, "")
+  + "\n\n" + readFileSync("yahoo-worker.js", "utf8").replace(/\s+$/, "");
 
 /* ---- the whole pipeline, so the build and its idempotency proof cannot diverge ---- */
 function transform(input) {
@@ -84,7 +96,11 @@ function transform(input) {
   const rs = t.indexOf(R_START), re = t.indexOf(R_END);
   if (rs >= 0 && re > rs) t = t.slice(0, rs) + t.slice(re + R_END.length);
 
-  /* 3. strip any previously injected route (marked or legacy) */
+  /* 3. strip any previously injected Yahoo block */
+  const ys = t.indexOf(Y_START), ye = t.indexOf(Y_END);
+  if (ys >= 0 && ye > ys) t = t.slice(0, ys) + t.slice(ye + Y_END.length);
+
+  /* 4. strip any previously injected route (marked or legacy) */
   t = t
     .split("\n")
     .filter(line => {
@@ -94,28 +110,36 @@ function transform(input) {
       if (/\/\/ \/mcp is matched before ANY Origin-gated handler/.test(line)) return false;
       if (line.includes("DD-RANKINGS-ROUTE")) return false;
       if (/if \(url\.pathname\.startsWith\("\/rankings\/"\)\)/.test(line)) return false;
+      if (line.includes("DD-YAHOO-ROUTE")) return false;
+      if (/if \(url\.pathname\.startsWith\("\/yahoo\/share\/"\)/.test(line)) return false;
+      if (/if \(url\.pathname === "\/yahoo"/.test(line)) return false;
       return true;
     })
     .join("\n");
 
-  /* 4. nothing generated may survive the strip */
+  /* 5. nothing generated may survive the strip */
   if (t.includes("handleMcp"))
     fail("strip left a handleMcp reference behind — the markers did not cover everything");
   if (t.includes("handleRankings"))
     fail("strip left a handleRankings reference behind — the markers did not cover everything");
+  if (t.includes("handleYahoo"))
+    fail("strip left a handleYahoo reference behind — the markers did not cover everything");
 
-  /* 5. inject the routes. Each anchor must appear EXACTLY once: an anchor that has drifted
+  /* 6. inject the routes. Each anchor must appear EXACTLY once: an anchor that has drifted
    * into two places would put a live route somewhere nobody is looking, which is the same
    * failure the sitewide nav edits guard with assert s.count(old) == 1. */
-  for (const [anchor, what] of [[ANCHOR, "MCP route anchor"], [R_ANCHOR, "rankings route anchor"]]) {
+  for (const [anchor, what] of [[ANCHOR, "MCP route anchor"], [R_ANCHOR, "rankings route anchor"],
+                                [Y_ANCHOR, "Yahoo route anchor"]]) {
     if (!t.includes(anchor)) fail(what + " not found in " + TARGET);
     if (t.split(anchor).length - 1 !== 1) fail(what + " is ambiguous — appears more than once");
   }
   t = t.replace(ANCHOR, ANCHOR + "\n" + ROUTE);
   t = t.replace(R_ANCHOR, R_ANCHOR + "\n" + R_ROUTE);
+  t = t.replace(Y_ANCHOR, Y_ANCHOR + "\n" + Y_ROUTE);
 
-  /* 6. inject the blocks, rankings first so it lands above the MCP block */
+  /* 7. inject the blocks, Yahoo and rankings before MCP's write-scope boundary */
   return t.replace(/\s+$/, "")
+    + "\n\n" + Y_START + "\n" + yahoo + "\n" + Y_END
     + "\n\n" + R_START + "\n" + rankings + "\n" + R_END
     + "\n\n" + START + "\n" + block + "\n" + END + "\n";
 }
@@ -150,14 +174,21 @@ once("function rankingsMidRanks", "mid-rank helper");
 once("function rankingsWeightedTau", "weighted Kendall tau");
 once("const RANKINGS_BOOTSTRAP_DRAWS", "bootstrap draw count");
 once("const RANKINGS_G ", "capture-rate group sizes");
+once(Y_START, "Yahoo block start marker");
+once(Y_END, "Yahoo block end marker");
+once("DD-YAHOO-ROUTE", "injected Yahoo route");
+once("async function handleYahoo(", "handleYahoo definition");
+once("async function handleYahooShareRead(", "Yahoo public share handler");
+once("async function yahooWarroomFeed(", "Yahoo War Room feed");
+once("function yahooParseSettings(", "Yahoo settings parser");
 
 /* ⚠️ ORDERING IS LOAD-BEARING, NOT COSMETIC.
  * The write-scope invariant below scans from the MCP START marker to end of file. The
  * rankings block is a capture ledger and legitimately calls fbPut/fbPost, so if it ever
  * slid below that marker it would fail a guard written about a completely different
  * concern — and the obvious "fix" would be to weaken the guard. Assert the order instead. */
-if (!(out.indexOf(R_START) < out.indexOf(START)))
-  fail("the rankings block must be injected ABOVE the MCP block — see the write-scope invariant");
+if (!(out.indexOf(Y_START) < out.indexOf(R_START) && out.indexOf(R_START) < out.indexOf(START)))
+  fail("the Yahoo and rankings blocks must be injected ABOVE the MCP block — see the write-scope invariant");
 
 // The write-scope invariant, enforced by the build rather than by memory.
 // History: this block was fully read-only until dd_submit_bozo_leg (2026-08-13), the
@@ -220,5 +251,6 @@ if (transform(readFileSync(TARGET, "utf8")) !== out)
 console.log(`assembled ${TARGET}: ${out.split("\n").length} lines, ${(out.length / 1024).toFixed(1)} KB`);
 console.log("  shared DFS + survivor sources · single declarations · parses · idempotent · write scope pinned to dd_submit_bozo_leg → commitBozoLeg ×1");
 console.log(`  rankings block above the MCP block · ${RANKINGS_PUBLIC.length} public route (${RANKINGS_PUBLIC.join(", ")}) · all others admin-gated`);
+console.log("  Yahoo parser + fetch layer above MCP · public share read isolated · all other routes session-gated");
 
 function fail(msg) { console.error("BUILD FAILED: " + msg); process.exit(1); }

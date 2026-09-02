@@ -82,15 +82,21 @@ function ypid(fragment) {
 /* "Matthew Stafford (LAR - QB)" / "Ravens (Bal - DEF)" / "--empty-- ( - )" */
 function ynamePos(cellHtml) {
   const raw = ystrip(cellHtml);
-  const m = /^(.*?)\s*\(([^)]*)\)\s*$/.exec(raw);
-  const name = ydecode(m ? m[1] : raw);
-  const parts = (m ? m[2] : "").split("-").map(s => s.trim());
-  const posRaw = parts.length > 1 ? parts[parts.length - 1] : "";
-  const team = parts.length > 1 ? parts[0] : "";
+  const compact = /^(.*?)\s*\(([^)]*)\)\s*$/.exec(raw);
+  /* Draft rows use the compact text above. Roster rows wrap the name, status icons,
+     opponent, and notes in the same cell; use the canonical name anchor and the explicit
+     "TEAM - POS" detail instead of treating all of that chrome as the player's name. */
+  const nameAnchor = /<a\b(?=[^>]*class="[^"]*\bname\b)[^>]*>([\s\S]*?)<\/a>/i.exec(String(cellHtml));
+  const playerAnchor = /<a\b[^>]*href="https?:\/\/sports\.yahoo\.com\/nfl\/players\/\d+"[^>]*>([\s\S]*?)<\/a>/i.exec(String(cellHtml));
+  const name = ydecode(playerAnchor ? ystrip(playerAnchor[1]) : nameAnchor ? ystrip(nameAnchor[1]) : compact ? compact[1] : raw);
+  const detail = /\b([A-Za-z]{2,3})\s*-\s*(QB|RB|WR|TE|K|DEF|D\/ST)\b/i.exec(raw);
+  const parts = (compact ? compact[2] : "").split("-").map(s => s.trim());
+  const posRaw = detail ? detail[2] : parts.length > 1 ? parts[parts.length - 1] : "";
+  const team = detail ? detail[1] : parts.length > 1 ? parts[0] : "";
   return {
     name, team: team.toUpperCase(), posRaw,
     pos: YAHOO_POS[posRaw.toUpperCase()] || "",
-    empty: /^--?\s*empty\s*--?$/i.test(name) || !name,
+    empty: /^--?\s*empty\s*--?$/i.test(name) || /^\(?\s*empty\s*\)?$/i.test(name) || !name,
   };
 }
 /* The join key the rest of the site uses. Defenses have no Yahoo player id, and

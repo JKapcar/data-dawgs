@@ -1661,6 +1661,9 @@ export default {
       return handleEspnShareRead(request, url, env, cors);
     if (url.pathname === "/dd/values") return handleDdValues(request, env, cors);
     if (url.pathname === "/espn" || url.pathname.startsWith("/espn/")) return handleEspn(request, url, env, cors);
+    // DD-YAHOO-ROUTE — public share read first; every other Yahoo route is session-gated in handleYahoo.
+    if (url.pathname.startsWith("/yahoo/share/") && request.method === "GET") return handleYahooShareRead(request, url, env, cors);
+    if (url.pathname === "/yahoo" || url.pathname.startsWith("/yahoo/")) return handleYahoo(request, url, env, cors);
 
     // ⚠️ Identity is SITE-WIDE, not Bozo's. /auth/* is canonical; the /bozo/* spellings
     // are permanent aliases because bozo.html in the wild (and any phone with a cached
@@ -8234,6 +8237,711 @@ async function handleSwole(request, url, env, cors) {
   if (path === "/measurement") return wrap(await swoleLogMeasurement(env, uid, body, "web"));
   return json({ error: "Unknown SwoleDawg route." }, 404, cors);
 }
+
+/* ===== DD-YAHOO-BLOCK START — generated from work/yahoo-parse.js + work/yahoo-worker.js; edit THERE ===== */
+/* ===================== Yahoo public-league HTML adapter ====================
+ * Yahoo's Fantasy API is access-gated behind a manual application review with
+ * no published turnaround. A PUBLIC Yahoo league renders every input this site
+ * needs on pages that require no cookie at all, and the Worker can read them
+ * server-side where CORS does not apply. These are the pure parsers over that
+ * HTML. Verified against league 773763 on 2026-09-02.
+ *
+ * ⚠️ THIS IS A SCRAPER AND IT WILL EVENTUALLY BREAK. Yahoo owes us no markup
+ * stability. The design premise is that it breaks LOUDLY: every parser reports
+ * what it found alongside what it expected, and the feed refuses to serve a
+ * partial league. A half-read league that renders anyway is worse than an
+ * error — it would put wrong replacement level and wrong money on a page whose
+ * entire claim is that its numbers are checkable.
+ *
+ * Swap target: when the API application is approved only the fetch layer
+ * changes. Everything downstream reads the same body shape as espnWarroomFeed.
+ *
+ * ---- What is and is not available server-side (measured, not assumed) ------
+ *  /f1/<lg>/draftresults   210 rows, Pick | Player | Salary | Team.      ✅
+ *  /f1/<lg>/<teamId>       lineup table, slot + player, incl. empty slots ✅
+ *  /f1/<lg>?week=N         that week's matchups, week echoed in header    ✅
+ *  /f1/<lg>/settings       scoring + playoffs + team count                ✅
+ *      ⚠️ EXCEPT "Roster Positions", which that page builds in JavaScript and
+ *      is therefore absent from the HTML a Worker sees. The lineup shape is
+ *      taken from a roster page instead, where it is present as real rows.
+ *      Do not "fix" this by adding a settings-page regex; there is nothing
+ *      there to match.
+ * ========================================================================= */
+
+/* Yahoo slot label -> this site's slot vocabulary (Sleeper's, which the War
+   Room speaks everywhere). W/R/T is Yahoo's flex; Q/W/R/T its superflex. */
+const YAHOO_SLOT = {
+  "QB": "QB", "RB": "RB", "WR": "WR", "TE": "TE", "K": "K",
+  "DEF": "DST", "D/ST": "DST", "DL": "DL", "LB": "LB", "DB": "DB",
+  "W/R": "FLEX", "W/T": "FLEX", "R/W": "FLEX", "W/R/T": "FLEX", "R/W/T": "FLEX",
+  "Q/W/R/T": "SUPERFLEX", "QB/WR/RB/TE": "SUPERFLEX",
+  "BN": "BN", "IR": "IR", "IR+": "IR", "NA": "IR",
+};
+const YAHOO_POS = { QB: "QB", RB: "RB", WR: "WR", TE: "TE", K: "K", DEF: "DST", "D/ST": "DST" };
+
+/* ---- tiny HTML helpers ---------------------------------------------------
+ * Deliberately NOT a general HTML parser. Each keys off a semantic class token
+ * or an href shape Yahoo must keep for its own page to work — a far better bet
+ * than nesting depth or attribute order. */
+function ydecode(s) {
+  return String(s == null ? "" : s)
+    .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#0?39;|&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
+    .replace(/\s+/g, " ").trim();
+}
+function ystrip(html) { return ydecode(String(html).replace(/<[^>]*>/g, " ")); }
+function yrows(html) { return String(html).split(/<tr\b/i).slice(1); }
+
+/* ⚠️ Match the class ATTRIBUTE, then test its tokens. The first version of this
+   tried to match the token inside the attribute with a `(?:^|\s|")` prefix and
+   silently returned null for `class="player"` — a token with nothing before it —
+   while still working for `class="Alt Ta-start player"`. The result was a draft
+   page that parsed to zero picks and a roster page that parsed perfectly, which
+   is exactly the kind of half-success this file exists to prevent. */
+function ycells(rowHtml) {
+  const re = /<t([dh])\b([^>]*)>([\s\S]*?)<\/t\1>/gi;
+  const out = [];
+  let m;
+  while ((m = re.exec(rowHtml))) out.push({ attrs: m[2], html: m[3] });
+  return out;
+}
+function ycell(rowHtml, token) {
+  for (const c of ycells(rowHtml)) {
+    const cls = (/class="([^"]*)"/i.exec(c.attrs) || [])[1] || "";
+    if (cls.split(/\s+/).indexOf(token) >= 0) return c.html;
+  }
+  return null;
+}
+/* Every player anchor on every Yahoo fantasy page points at the same canonical
+   NFL player page. That numeric id is the most stable identifier on the page.
+   Defenses carry no such link — see ynamePos. */
+function ypid(fragment) {
+  const m = /sports\.yahoo\.com\/nfl\/players\/(\d+)/.exec(String(fragment || ""));
+  return m ? m[1] : null;
+}
+/* "Matthew Stafford (LAR - QB)" / "Ravens (Bal - DEF)" / "--empty-- ( - )" */
+function ynamePos(cellHtml) {
+  const raw = ystrip(cellHtml);
+  const compact = /^(.*?)\s*\(([^)]*)\)\s*$/.exec(raw);
+  /* Draft rows use the compact text above. Roster rows wrap the name, status icons,
+     opponent, and notes in the same cell; use the canonical name anchor and the explicit
+     "TEAM - POS" detail instead of treating all of that chrome as the player's name. */
+  const nameAnchor = /<a\b(?=[^>]*class="[^"]*\bname\b)[^>]*>([\s\S]*?)<\/a>/i.exec(String(cellHtml));
+  const playerAnchor = /<a\b[^>]*href="https?:\/\/sports\.yahoo\.com\/nfl\/players\/\d+"[^>]*>([\s\S]*?)<\/a>/i.exec(String(cellHtml));
+  const name = ydecode(playerAnchor ? ystrip(playerAnchor[1]) : nameAnchor ? ystrip(nameAnchor[1]) : compact ? compact[1] : raw);
+  const detail = /\b([A-Za-z]{2,3})\s*-\s*(QB|RB|WR|TE|K|DEF|D\/ST)\b/i.exec(raw);
+  const parts = (compact ? compact[2] : "").split("-").map(s => s.trim());
+  const posRaw = detail ? detail[2] : parts.length > 1 ? parts[parts.length - 1] : "";
+  const team = detail ? detail[1] : parts.length > 1 ? parts[0] : "";
+  return {
+    name, team: team.toUpperCase(), posRaw,
+    pos: YAHOO_POS[posRaw.toUpperCase()] || "",
+    empty: /^--?\s*empty\s*--?$/i.test(name) || /^\(?\s*empty\s*\)?$/i.test(name) || !name,
+  };
+}
+/* The join key the rest of the site uses. Defenses have no Yahoo player id, and
+   the site's Market Value table already keys them by team abbreviation, so a
+   defense becomes "dst:SEA" on both sides rather than being dropped. */
+function yahooPlayerKey(pid, np) {
+  if (np.pos === "DST") return np.team ? "dst:" + np.team : null;
+  return pid ? "y:" + pid : null;
+}
+
+/* ---- team ids and names --------------------------------------------------
+ * Team links are /f1/<leagueId>/<teamId>. Yahoo prints each team many times per
+ * page (avatar, name, matchup), so order-preserving dedupe is the whole trick.
+ * "My Team" is Yahoo's nav label for the viewer's own team, never a team name. */
+function yahooTeamIds(html, leagueId) {
+  const re = new RegExp('/f1/' + String(leagueId) + '/(\\d+)"', 'g');
+  const ids = [];
+  let m;
+  while ((m = re.exec(html))) if (ids.indexOf(m[1]) < 0) ids.push(m[1]);
+  return ids;
+}
+function yahooParseTeams(html, leagueId) {
+  const re = new RegExp('href="(?:https?://[^"]*)?/f1/' + String(leagueId) + '/(\\d+)"[^>]*>([\\s\\S]{0,200}?)</a>', 'gi');
+  const byId = new Map();
+  let m;
+  while ((m = re.exec(html))) {
+    const name = ystrip(m[2]);
+    if (!name || /^my team$/i.test(name)) continue;
+    if (!byId.has(m[1])) byId.set(m[1], name);
+  }
+  const teams = [...byId.entries()].map(([id, name]) => ({ id, name }))
+    .sort((a, b) => Number(a.id) - Number(b.id));
+  return { teams, found: teams.length };
+}
+
+/* ---- draft results -------------------------------------------------------
+ * ⚠️ Undrafted slots render as "--empty-- ( - )" at $0. A $0 here is NOT a
+ * price, it is the absence of one, and letting it through would hand a free
+ * player to every surplus number on the Money tab. Skipped and counted.
+ * Measured on 773763: 210 rows = 149 linked players + defenses + empties. */
+function yahooParseDraft(html) {
+  const picks = [];
+  let empty = 0, unkeyed = 0, ownerless = 0, rows = 0;
+  for (const row of yrows(html)) {
+    const playerCell = ycell(row, "player");
+    const costCell = ycell(row, "cost");
+    if (playerCell == null || costCell == null) continue;
+    rows++;
+    const np = ynamePos(playerCell);
+    if (np.empty) { empty++; continue; }
+    const key = yahooPlayerKey(ypid(playerCell), np);
+    if (!key) { unkeyed++; continue; }
+    const teamCell = ycell(row, "team-name");
+    const owner = teamCell == null ? null : ystrip(teamCell);
+    if (!owner) { ownerless++; continue; }
+    const cm = /\$\s*([\d,]+)/.exec(ystrip(costCell));
+    picks.push({
+      key, pid: ypid(playerCell), name: np.name, pos: np.pos, team: np.team,
+      cost: cm ? Number(cm[1].replace(/,/g, "")) : null, owner,
+    });
+  }
+  return { picks, rows, found: picks.length, empty, unkeyed, ownerless };
+}
+
+/* ---- one team's roster ---------------------------------------------------
+ * ⚠️ The SLOT decides starter vs bench and it is the only place that
+ * information exists — a player's own position cannot tell you whether he is
+ * starting. BN and IR are the bench; everything else starts.
+ * Empty slots are recorded, not skipped: they are how the league's lineup shape
+ * is recovered without the settings page (see the header note). */
+function yahooParseRoster(html, teamId) {
+  const players = [];
+  const shape = {};
+  const unknownSlots = [];
+  let emptySlots = 0;
+  for (const row of yrows(html)) {
+    const posCell = ycell(row, "pos");
+    if (posCell == null) continue;
+    const slotRaw = ystrip(posCell).toUpperCase();
+    if (!slotRaw || slotRaw === "POS") continue;
+    const slot = YAHOO_SLOT[slotRaw];
+    if (!slot) { unknownSlots.push(slotRaw); continue; }   // report, never guess
+    shape[slot] = (shape[slot] || 0) + 1;
+    const playerCell = ycell(row, "player");
+    const np = playerCell ? ynamePos(playerCell) : null;
+    const key = np ? yahooPlayerKey(ypid(playerCell), np) : null;
+    if (!np || np.empty || !key) { emptySlots++; continue; }
+    players.push({
+      key, pid: ypid(playerCell), name: np.name, pos: np.pos, team: np.team,
+      slot, starter: slot !== "BN" && slot !== "IR",
+    });
+  }
+  /* "<league> - <team> | Fantasy Football | Yahoo! Sports" */
+  const tm = /<title>\s*(.*?)\s+-\s+(.*?)\s*\|/i.exec(html);
+  return {
+    teamId: String(teamId),
+    leagueName: tm ? ydecode(tm[1]) : "",
+    teamName: tm ? ydecode(tm[2]) : "",
+    players, shape, unknownSlots,
+    found: players.length, emptySlots, slotCount: players.length + emptySlots,
+  };
+}
+
+/* ---- schedule ------------------------------------------------------------
+ * /f1/<lg>?week=N. Team ids appear inside the matchups module in pair order,
+ * so distinct-ids-in-document-order chunked by two IS the week's matchups.
+ *
+ * ⚠️ TWO TRAPS, BOTH OF WHICH PRODUCE CONFIDENT WRONG ANSWERS:
+ *  1. The browser will happily serve every ?week=N from cache, making all 17
+ *     weeks identical while every sanity check still passes. Fetch with
+ *     cache: "no-store", and
+ *  2. verify the week Yahoo actually rendered against the week asked for. The
+ *     module prints "Week N Matchups"; if that N disagrees, the page is not the
+ *     page requested and the week must be discarded, not stored under the
+ *     wrong index. */
+function yahooParseWeek(html, leagueId, expectWeek) {
+  const i = html.search(/Tst-matchups-body/i);
+  if (i < 0) return { ok: false, reason: "no-matchups-module", pairs: [] };
+  const j = html.indexOf("Tst-standings", i);
+  const mod = html.slice(i, j > i ? j : i + 120000);
+
+  const hdr = /Week\s+(\d+)\s+Matchups/i.exec(mod);
+  const saw = hdr ? Number(hdr[1]) : null;
+  if (expectWeek != null && saw != null && saw !== Number(expectWeek))
+    return { ok: false, reason: "week-mismatch", asked: Number(expectWeek), saw, pairs: [] };
+
+  const ids = yahooTeamIds(mod, leagueId);
+  const pairs = [];
+  for (let k = 0; k + 1 < ids.length; k += 2) pairs.push([ids[k], ids[k + 1]]);
+  return { ok: true, week: saw, teams: ids.length, pairs };
+}
+/* A week is only usable if every team appears exactly once. Anything else means
+   the module held something other than a clean round of matchups. */
+function yahooWeekIsSane(week, teamCount) {
+  if (!week.ok) return false;
+  const flat = week.pairs.reduce((a, p) => a.concat(p), []);
+  return flat.length === teamCount && new Set(flat).size === teamCount;
+}
+
+/* ---- settings ------------------------------------------------------------
+ * A plain label/value table plus the stat-modifier rows. Only what the War Room
+ * consumes is read; nothing else is half-modelled. Roster Positions is NOT here
+ * (see header) — take the shape from yahooParseRoster().shape. */
+/* ⚠️ Splitting a row on "</td>" and stripping tags leaves the opening <tr>'s
+   own attributes glued to the first cell (" class=\"...\">Max Teams:"), so the
+   label never matches and every setting silently reads null — which is how this
+   returned an all-null settings object against the real page while looking
+   fine. Cells come from ycells(), which matches whole <td>…</td> elements. */
+function yahooSettingRow(html, label) {
+  const re = new RegExp("^" + label + "\\s*:?$", "i");
+  for (const row of yrows(html)) {
+    const cells = ycells(row).map(c => ystrip(c.html));
+    const first = cells.findIndex(c => c);
+    if (first < 0) continue;
+    if (re.test(cells[first])) return cells[first + 1] == null ? "" : cells[first + 1];
+  }
+  return null;
+}
+function yahooParseSettings(html) {
+  const playoffs = yahooSettingRow(html, "Playoffs");
+  const maxTeams = yahooSettingRow(html, "Max Teams");
+  const fractional = yahooSettingRow(html, "Fractional Points");
+  const rec = yahooSettingRow(html, "Receptions");
+
+  /* "6 teams - Week 15, 16 and 17 (ends Monday, Jan 4)" */
+  const pt = /(\d+)\s*teams?/i.exec(playoffs || "");
+  const pw = /Week\s+(\d+)/i.exec(playoffs || "");
+  const recPts = rec == null ? null : Number(String(rec).replace(/[^0-9.]/g, ""));
+
+  return {
+    teams: maxTeams ? Number(maxTeams) : null,
+    playoffTeams: pt ? Number(pt[1]) : null,
+    playoffStart: pw ? Number(pw[1]) : null,
+    fractional: fractional == null ? null : /^yes$/i.test(fractional),
+    /* reception points is what picks this site's Market Value column */
+    rec: Number.isFinite(recPts) ? recPts : null,
+    playoffsRaw: playoffs,
+  };
+}
+
+if (typeof module !== "undefined" && module.exports) module.exports = {
+  YAHOO_SLOT, YAHOO_POS, ydecode, ystrip, yrows, ycells, ycell, ypid, ynamePos,
+  yahooPlayerKey, yahooTeamIds, yahooParseTeams, yahooParseDraft,
+  yahooParseRoster, yahooParseWeek, yahooWeekIsSane, yahooParseSettings,
+};
+
+/* ================= Yahoo public-league Worker adapter ====================
+ * The pure HTML parsers above are generated verbatim from work/yahoo-parse.js.
+ * This layer owns network I/O, refusal rules, projection joins, caching, and routes.
+ * Public Yahoo pages require no cookie; a private league is refused explicitly.
+ */
+const YAHOO_READ = "https://football.fantasysports.yahoo.com/f1";
+const YAHOO_KV_PREFIX = "yahoo:league:";
+const YAHOO_SHARE_PREFIX = "yahoo:share:";
+const YAHOO_SHARE_OF_PREFIX = "yahoo:shareof:";
+const YAHOO_SCHEDULE_PREFIX = "yahoo:schedule:";
+const YAHOO_RECORD_TTL = 60 * 60 * 24 * 180;
+const YAHOO_MAX_HTML = 2 * 1024 * 1024;
+const YAHOO_PROJ_POS = ["QB", "RB", "WR", "TE", "K", "DEF"];
+
+function yahooKvKey(uid) { return YAHOO_KV_PREFIX + uid; }
+function yahooScheduleKey(leagueId, season, weeks) {
+  return YAHOO_SCHEDULE_PREFIX + season + ":" + leagueId + ":" + weeks;
+}
+
+function yahooShareToken() {
+  const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+  const bytes = crypto.getRandomValues(new Uint8Array(28));
+  let token = "";
+  for (const byte of bytes) token += alphabet[byte % alphabet.length];
+  return token;
+}
+
+function yahooPrivateReason() {
+  return "This Yahoo league is not public. Yahoo must expose it without a sign-in for Data Dawgs to read it.";
+}
+
+async function yahooFetchPage(leagueId, suffix, noStore) {
+  const url = YAHOO_READ + "/" + encodeURIComponent(leagueId) + String(suffix || "");
+  const init = { redirect: "follow", headers: { Accept: "text/html,application/xhtml+xml" } };
+  if (noStore) init.cache = "no-store";
+  let response;
+  try { response = await fetch(url, init); }
+  catch { return { ok: false, status: 0, reason: "Yahoo could not be reached from the Worker." }; }
+  const finalUrl = String(response.url || url);
+  const finalHost = (() => { try { return new URL(finalUrl).hostname; } catch { return ""; } })();
+  if (response.status === 401 || response.status === 403 || response.status === 404 ||
+      /(^|\.)login\.yahoo\.com$/i.test(finalHost))
+    return { ok: false, status: response.status || 403, reason: yahooPrivateReason() };
+  if (!response.ok) return { ok: false, status: response.status, reason: "Yahoo answered " + response.status + "." };
+  const announced = Number(response.headers.get("content-length"));
+  if (Number.isFinite(announced) && announced > YAHOO_MAX_HTML)
+    return { ok: false, status: 502, reason: "Yahoo's page was too large to parse safely." };
+  let html;
+  try { html = await response.text(); }
+  catch { return { ok: false, status: 502, reason: "Yahoo's page could not be read." }; }
+  if (html.length > YAHOO_MAX_HTML)
+    return { ok: false, status: 502, reason: "Yahoo's page was too large to parse safely." };
+  if (/id=["']login-username["']|name=["']signin["']/i.test(html))
+    return { ok: false, status: 403, reason: yahooPrivateReason() };
+  return { ok: true, status: response.status, html };
+}
+
+/* Slice the one table/module a parser needs before walking rows. Yahoo pages are close to
+   1 MB; retaining or repeatedly scanning whole documents would waste the Worker's CPU. */
+function yahooTableAround(html, pattern, maxLength) {
+  const at = typeof pattern === "string" ? html.indexOf(pattern) : html.search(pattern);
+  if (at < 0) return "";
+  const start = html.lastIndexOf("<table", at);
+  const end = html.indexOf("</table>", at);
+  if (start < 0 || end < at) return "";
+  const out = html.slice(start, end + 8);
+  return out.length <= maxLength ? out : "";
+}
+function yahooMatchupsModule(html) {
+  const start = html.search(/Tst-matchups-body/i);
+  if (start < 0) return "";
+  const end = html.indexOf("Tst-standings", start);
+  const out = html.slice(start, end > start ? end : start + 160000);
+  return out.length <= 180000 ? out : "";
+}
+function yahooRosterModule(html) {
+  const first = html.search(/class="[^"]*\bpos\b[^"]*\bheadcol\b/i);
+  if (first < 0) return "";
+  const start = html.lastIndexOf('<section class="stat-target"', first);
+  const last = (() => {
+    const matches = [...html.matchAll(/class="[^"]*\bpos\b[^"]*\bheadcol\b/gi)];
+    return matches.length ? matches[matches.length - 1].index : first;
+  })();
+  const end = html.indexOf("</section>", last);
+  if (start < 0 || end < last) return "";
+  const out = html.slice(start, end + 10);
+  return out.length <= 400000 ? out : "";
+}
+
+async function yahooCanonicalSettings(leagueId) {
+  if (String(leagueId) !== "773763") return null;
+  let response;
+  try {
+    response = await fetch(SITE + "/data/leagues/pepperoninipples.json", {
+      headers: { Accept: "application/json" },
+      cf: { cacheEverything: true, cacheTtl: 86400 },
+    });
+  } catch { return null; }
+  if (!response.ok) return null;
+  try {
+    const body = await response.json();
+    return body && body.settings ? body : null;
+  } catch { return null; }
+}
+
+function yahooReconcileSettings(live, canonical) {
+  if (!canonical) return { ok: true, canonical: null };
+  const expected = canonical.settings || {};
+  const disagreements = [];
+  if (Number(live.teams) !== Number(expected.team_count)) disagreements.push("team count");
+  if (Number(live.playoffTeams) !== Number(expected.playoff_teams)) disagreements.push("playoff teams");
+  if (Number(live.playoffStart) !== Number(expected.playoff_start_week)) disagreements.push("playoff start");
+  if (Number(live.rec) !== Number((expected.scoring || {}).ppr)) disagreements.push("reception scoring");
+  return disagreements.length
+    ? { ok: false, reason: "Yahoo's live settings disagree with the canonical league file: " + disagreements.join(", ") + "." }
+    : { ok: true, canonical };
+}
+
+function yahooProjectionValue(row, rec, weeks) {
+  const stats = row && row.stats || {};
+  const key = Number(rec) === 1 ? "pts_ppr" : Number(rec) === 0 ? "pts_std" :
+    Number(rec) === 0.5 ? "pts_half_ppr" : null;
+  if (!key || !Number.isFinite(Number(stats[key]))) return null;
+  const total = Number(stats[key]);
+  return Math.round((total / Math.max(1, Number(weeks) || 1)) * 100) / 100;
+}
+
+function yahooProjectionIndex(rows, rec, weeks) {
+  const by = new Map(), pool = [];
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const player = row && row.player || {};
+    const rawPos = String(player.position || "").toUpperCase();
+    if (!YAHOO_PROJ_POS.includes(rawPos)) continue;
+    const pos = rawPos === "DEF" ? "DST" : rawPos;
+    const name = String(player.full_name || ((player.first_name || "") + " " + (player.last_name || "")).trim());
+    if (!name) continue;
+    const team = player.team ? String(player.team).toUpperCase() : "";
+    const key = ddPlayerKey({ name, pos, team });
+    if (!key || by.has(key)) continue;
+    const item = {
+      id: "s:" + String(row.player_id == null ? key : row.player_id),
+      sleeperId: row.player_id == null ? null : String(row.player_id),
+      name, pos, team, p: yahooProjectionValue(row, rec, weeks), key,
+    };
+    by.set(key, item);
+    /* Null projections are useful only as a join result for a rostered/drafted player.
+       They are not a replacement-level pool and would otherwise ship thousands of retired
+       Sleeper index rows to the browser as if they were current free agents. */
+    if (item.p != null) pool.push(item);
+  }
+  return { by, pool };
+}
+
+async function yahooFetchProjections(season, rec, weeks) {
+  const query = "?season_type=regular&order_by=pts_half_ppr" +
+    YAHOO_PROJ_POS.map(pos => "&position[]=" + encodeURIComponent(pos)).join("");
+  let response;
+  try { response = await fetch("https://api.sleeper.app/projections/nfl/" + season + query); }
+  catch { return { ok: false, reason: "Sleeper's projection feed could not be reached." }; }
+  if (!response.ok) return { ok: false, reason: "Sleeper's projection feed answered " + response.status + "." };
+  let rows;
+  try { rows = await response.json(); }
+  catch { return { ok: false, reason: "Sleeper's projection feed was not JSON." }; }
+  return { ok: true, ...yahooProjectionIndex(rows, rec, weeks) };
+}
+
+async function yahooReadSchedule(leagueId, season, weeks, teamCount, homeModule, env) {
+  const kv = env && env.RL || null;
+  const key = yahooScheduleKey(leagueId, season, weeks);
+  if (kv) {
+    try {
+      const cached = JSON.parse((await kv.get(key)) || "null");
+      if (cached && cached.teamCount === teamCount && Array.isArray(cached.schedule) &&
+          cached.schedule.length === weeks)
+        return { ok: true, schedule: cached.schedule, weeksOk: weeks, cached: true };
+    } catch { /* a corrupt cache is a miss */ }
+  }
+  const schedule = [];
+  for (let weekNo = 1; weekNo <= weeks; weekNo++) {
+    let module = weekNo === 1 ? homeModule : "";
+    if (!module) {
+      const page = await yahooFetchPage(leagueId, "?week=" + weekNo, true);
+      if (!page.ok) return page;
+      module = yahooMatchupsModule(page.html);
+      page.html = "";
+    }
+    const parsed = yahooParseWeek(module, leagueId, weekNo);
+    if (!parsed.ok || Number(parsed.week) !== weekNo || !yahooWeekIsSane(parsed, teamCount))
+      return { ok: false, status: 502, reason: "Yahoo's Week " + weekNo + " matchup page failed its echoed-week or team-count check." };
+    schedule.push(parsed.pairs);
+  }
+  if (kv) {
+    try { await kv.put(key, JSON.stringify({ teamCount, schedule }), { expirationTtl: YAHOO_RECORD_TTL }); }
+    catch { /* the verified schedule can still be served */ }
+  }
+  return { ok: true, schedule, weeksOk: weeks, cached: false };
+}
+
+async function yahooWarroomFeed(cred, env) {
+  const leagueId = String(cred && cred.leagueId || "");
+  const season = Number(cred && cred.season) || new Date().getUTCFullYear();
+  if (!/^\d{1,12}$/.test(leagueId)) return { ok: false, status: 400, reason: "That does not look like a Yahoo league id." };
+
+  let page = await yahooFetchPage(leagueId, "/settings", false);
+  if (!page.ok) return page;
+  const settingsTable = yahooTableAround(page.html, "Max Teams", 160000) +
+    yahooTableAround(page.html, "Receptions", 160000);
+  page.html = "";
+  if (!settingsTable) return { ok: false, status: 502, reason: "Yahoo's settings table could not be isolated." };
+  const settings = yahooParseSettings(settingsTable);
+  if (!settings.teams || settings.rec == null || !settings.playoffTeams || !settings.playoffStart)
+    return { ok: false, status: 502, reason: "Yahoo's settings page was incomplete, so this league was not loaded." };
+  const canonical = await yahooCanonicalSettings(leagueId);
+  const reconciled = yahooReconcileSettings(settings, canonical);
+  if (!reconciled.ok) return { ok: false, status: 409, reason: reconciled.reason };
+
+  page = await yahooFetchPage(leagueId, "?week=1", true);
+  if (!page.ok) return page;
+  const homeModule = yahooMatchupsModule(page.html);
+  page.html = "";
+  if (!homeModule) return { ok: false, status: 502, reason: "Yahoo's league-home matchup module could not be isolated." };
+  const teamResult = yahooParseTeams(homeModule, leagueId);
+  if (teamResult.found !== Number(settings.teams))
+    return { ok: false, status: 502, reason: "Yahoo returned " + teamResult.found + " teams; settings require " + settings.teams + "." };
+
+  page = await yahooFetchPage(leagueId, "/draftresults", false);
+  if (!page.ok) return page;
+  const draftTable = yahooTableAround(page.html, /class="player"/i, 400000);
+  page.html = "";
+  if (!draftTable) return { ok: false, status: 502, reason: "Yahoo's draft-results table could not be isolated." };
+  const draft = yahooParseDraft(draftTable);
+  if (draft.rows > 0 && draft.found === 0 && draft.empty !== draft.rows)
+    return { ok: false, status: 502, reason: "Yahoo lists a drafted league but no draft picks could be read." };
+
+  const rosterReads = [];
+  const observedShape = {};
+  const unknownSlots = [];
+  for (const team of teamResult.teams) {
+    page = await yahooFetchPage(leagueId, "/" + encodeURIComponent(team.id), false);
+    if (!page.ok) return page;
+    const rosterTable = yahooRosterModule(page.html);
+    const title = (/<title>[\s\S]*?<\/title>/i.exec(page.html) || [""])[0];
+    page.html = "";
+    if (!rosterTable) return { ok: false, status: 502, reason: "Yahoo's roster table for team " + team.id + " could not be isolated." };
+    const roster = yahooParseRoster(title + rosterTable, team.id);
+    if (!roster.found) return { ok: false, status: 502, reason: "Yahoo returned zero readable players for team " + team.id + "." };
+    /* Empty IR slots are not rendered, and an occupied IR slot can replace a displayed BN
+       row. Merge maxima across teams; the canonical file wins when this is the known room. */
+    for (const [slot, count] of Object.entries(roster.shape))
+      observedShape[slot] = Math.max(observedShape[slot] || 0, Number(count) || 0);
+    unknownSlots.push(...roster.unknownSlots);
+    rosterReads.push({ team, roster });
+  }
+
+  const regularWeeks = Math.max(1, Number(settings.playoffStart) - 1);
+  const scheduleResult = await yahooReadSchedule(leagueId, season, regularWeeks,
+    Number(settings.teams), homeModule, env);
+  if (!scheduleResult.ok) return scheduleResult;
+
+  const projections = await yahooFetchProjections(season, settings.rec, regularWeeks);
+  if (!projections.ok) return { ok: false, status: 502, reason: projections.reason };
+  const paidBy = new Map(draft.picks.map(pick => [pick.key, pick.cost]));
+  const poolById = new Map(), usedProjectionKeys = new Set();
+  const addYahooPlayer = row => {
+    const id = String(row.key);
+    if (poolById.has(id)) return poolById.get(id);
+    const projectionKey = ddPlayerKey({ name: row.name, pos: row.pos, team: row.team });
+    const projection = projectionKey ? projections.by.get(projectionKey) : null;
+    if (projectionKey) usedProjectionKeys.add(projectionKey);
+    const out = { id, yahooId: row.pid || null, name: row.name, pos: row.pos, team: row.team,
+      p: projection ? projection.p : null, paid: paidBy.has(row.key) ? paidBy.get(row.key) : null };
+    poolById.set(id, out);
+    return out;
+  };
+  const teams = rosterReads.map(({ team, roster }) => {
+    const ids = [], starters = [];
+    for (const player of roster.players) {
+      const row = addYahooPlayer(player);
+      ids.push(row.id);
+      if (player.starter) starters.push(row.id);
+    }
+    return { id: String(team.id), name: roster.teamName || team.name,
+      owner: null, players: ids, starters };
+  });
+  for (const pick of draft.picks) addYahooPlayer(pick);
+  for (const projection of projections.pool) {
+    if (usedProjectionKeys.has(projection.key)) continue;
+    poolById.set(projection.id, { id: projection.id, yahooId: null, name: projection.name,
+      pos: projection.pos, team: projection.team, p: projection.p, paid: null });
+  }
+  const shape = canonical && canonical.settings && canonical.settings.roster_slots || observedShape;
+  const slots = Object.entries(shape).map(([slot, count]) => ({ slot: slot === "BN" ? "BENCH" : slot, count }));
+  const superflex = Number(shape.SUPERFLEX || 0) > 0;
+  const scoringMode = superflex ? "sf" : settings.rec === 1 ? "full" : settings.rec === 0.5 ? "half" : settings.rec === 0 ? "std" : "custom";
+  const leagueName = rosterReads[0] && rosterReads[0].roster.leagueName ||
+    canonical && canonical.name || "Yahoo league";
+  return { ok: true, body: {
+    league: {
+      id: leagueId, name: leagueName, season, size: Number(settings.teams), dynasty: false,
+      playoffTeams: Number(settings.playoffTeams), playoffStart: Number(settings.playoffStart),
+      scoring: { mode: scoringMode, ppr: Number(settings.rec), superflex }, slots,
+      draftType: canonical && canonical.settings && canonical.settings.draft_type || null,
+      budget: canonical && canonical.settings && canonical.settings.budget || null,
+      keepers: !!(canonical && canonical.settings && canonical.settings.keepers),
+    },
+    teams, pool: [...poolById.values()], schedule: scheduleResult.schedule,
+    diagnostics: {
+      teamsFound: teamResult.found, rostersFound: rosterReads.length,
+      picksFound: draft.found, weeksOk: scheduleResult.weeksOk,
+      unmatched: [...poolById.values()].filter(player => player.p == null).map(player => player.name),
+      unknownSlots: [...new Set(unknownSlots)], scheduleCached: scheduleResult.cached,
+      canonicalReconciled: !!canonical,
+    },
+  } };
+}
+
+async function yahooStored(kv, uid) {
+  try { return JSON.parse((await kv.get(yahooKvKey(uid))) || "null"); }
+  catch { return null; }
+}
+
+async function handleYahooShareRead(request, url, env, cors) {
+  const kv = env.RL || null;
+  if (!kv) return json({ error: "share storage is unavailable" }, 503, cors);
+  const token = url.pathname.replace(/^\/yahoo\/share\//, "").replace(/\/+$/, "");
+  if (!/^[A-Za-z0-9]{16,64}$/.test(token)) return json({ error: "That is not a share link." }, 404, cors);
+  let link = null;
+  try { link = JSON.parse((await kv.get(YAHOO_SHARE_PREFIX + token)) || "null"); } catch { link = null; }
+  if (!link || !link.uid) return json({ error: "That share link is not valid, or the league owner revoked it." }, 404, cors);
+  const cred = await yahooStored(kv, link.uid);
+  if (!cred || String(cred.leagueId) !== String(link.leagueId))
+    return json({ error: "The league owner is no longer connected to this Yahoo league." }, 409, cors);
+  const result = await yahooWarroomFeed(cred, env);
+  if (!result.ok) return json({ error: result.reason }, result.status || 502, cors);
+  if (DD_SHARE_INCLUDE) ddDecorateBody(await ddLoadBoard(env, "yahoo", cred.leagueId, "season"), result.body);
+  return json({ ok: true, shared: true, readOnly: true, sharedAt: link.at || null, ...result.body }, 200, cors);
+}
+
+async function handleYahoo(request, url, env, cors) {
+  const kv = env.RL || null;
+  if (!kv) return json({ error: "Yahoo connection storage is unavailable" }, 503, cors);
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 401, cors);
+  const uid = auth.uid || auth.user && auth.user.uid || null;
+  if (!uid) return json({ error: "This account has no durable uid. Sign in again to connect Yahoo." }, 409, cors);
+  const path = url.pathname.replace(/^\/yahoo\/?/, "");
+
+  if (path === "connect" && request.method === "DELETE") {
+    try { await kv.delete(yahooKvKey(uid)); } catch {}
+    try {
+      const token = await kv.get(YAHOO_SHARE_OF_PREFIX + uid);
+      if (token) await kv.delete(YAHOO_SHARE_PREFIX + token);
+      await kv.delete(YAHOO_SHARE_OF_PREFIX + uid);
+    } catch {}
+    return json({ ok: true, connected: false }, 200, cors);
+  }
+  if (path === "connect" && request.method === "GET") {
+    const cred = await yahooStored(kv, uid);
+    return json({ ok: true, connected: !!cred, leagueId: cred && cred.leagueId || null,
+      teamId: cred && cred.teamId || null, connectedAt: cred && cred.at || null }, 200, cors);
+  }
+  if (path === "connect" && request.method === "POST") {
+    let body = {};
+    try { body = await request.json(); } catch { return json({ error: "Send JSON." }, 400, cors); }
+    const leagueId = String(body.leagueId || "").trim();
+    const teamId = body.teamId == null || body.teamId === "" ? null : String(body.teamId).trim();
+    if (!/^\d{1,12}$/.test(leagueId)) return json({ error: "That does not look like a Yahoo league id." }, 400, cors);
+    if (teamId != null && !/^\d{1,4}$/.test(teamId)) return json({ error: "That does not look like a Yahoo team id." }, 400, cors);
+    const probe = await yahooFetchPage(leagueId, "?week=1", true);
+    if (!probe.ok) return json({ error: probe.reason }, probe.status || 400, cors);
+    const module = yahooMatchupsModule(probe.html);
+    const teams = yahooParseTeams(module, leagueId).teams;
+    if (!teams.length) return json({ error: "Yahoo's public league page contained no readable teams." }, 502, cors);
+    if (teamId != null && !teams.some(team => String(team.id) === teamId))
+      return json({ error: "That team id is not in this Yahoo league." }, 400, cors);
+    const record = { leagueId, teamId, season: new Date().getUTCFullYear(), at: new Date().toISOString() };
+    try { await kv.put(yahooKvKey(uid), JSON.stringify(record), { expirationTtl: YAHOO_RECORD_TTL }); }
+    catch { return json({ error: "Could not save the Yahoo connection." }, 500, cors); }
+    return json({ ok: true, connected: true, public: true, leagueId, teamId,
+      teams: teams.map(team => ({ id: team.id, name: team.name })) }, 200, cors);
+  }
+  if (path === "warroom" && request.method === "GET") {
+    const cred = await yahooStored(kv, uid);
+    if (!cred) return json({ error: "No Yahoo league connected for this account." }, 404, cors);
+    const result = await yahooWarroomFeed(cred, env);
+    if (!result.ok) return json({ error: result.reason }, result.status || 502, cors);
+    ddDecorateBody(await ddLoadBoard(env, "yahoo", cred.leagueId, "season"), result.body);
+    return json({ ok: true, ...result.body }, 200, cors);
+  }
+  if (path === "share" && request.method === "GET") {
+    let token = null;
+    try { token = await kv.get(YAHOO_SHARE_OF_PREFIX + uid); } catch { token = null; }
+    return json({ ok: true, shared: !!token,
+      url: token ? SITE + "/fantasy-warroom.html?provider=yahoo&share=" + token : null }, 200, cors);
+  }
+  if (path === "share" && request.method === "POST") {
+    const cred = await yahooStored(kv, uid);
+    if (!cred) return json({ error: "Connect a Yahoo league before sharing it." }, 404, cors);
+    let token = null;
+    try { token = await kv.get(YAHOO_SHARE_OF_PREFIX + uid); } catch { token = null; }
+    if (!token) {
+      token = yahooShareToken();
+      const link = { uid, leagueId: String(cred.leagueId), at: Date.now() };
+      await kv.put(YAHOO_SHARE_PREFIX + token, JSON.stringify(link), { expirationTtl: YAHOO_RECORD_TTL });
+      await kv.put(YAHOO_SHARE_OF_PREFIX + uid, token, { expirationTtl: YAHOO_RECORD_TTL });
+    }
+    return json({ ok: true, url: SITE + "/fantasy-warroom.html?provider=yahoo&share=" + token }, 200, cors);
+  }
+  if (path === "share" && request.method === "DELETE") {
+    let token = null;
+    try { token = await kv.get(YAHOO_SHARE_OF_PREFIX + uid); } catch { token = null; }
+    if (token) { try { await kv.delete(YAHOO_SHARE_PREFIX + token); } catch {} }
+    try { await kv.delete(YAHOO_SHARE_OF_PREFIX + uid); } catch {}
+    return json({ ok: true, shared: false }, 200, cors);
+  }
+  return json({ error: "Unknown Yahoo route." }, 404, cors);
+}
+/* ===== DD-YAHOO-BLOCK END ===== */
 
 /* ===== DD-RANKINGS-BLOCK START — generated from work/rankings-block.js; edit THERE ===== */
 /* The Dog Track — capture half (Stage A): entrants registry + Thursday snapshots.
