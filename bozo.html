@@ -1380,6 +1380,20 @@ table.gaptbl input{width:82px}
   font:800 15px/1 ui-monospace,monospace;cursor:pointer}
 .pxin .sgn:hover{border-color:var(--accent);color:var(--ink-1)}
 .pxin .sgn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+/* ⚠️ THE MINUS IS NOT TYPED. Every legal Price is a favourite, so the sign carries no
+   information — it is pure tax, and on the keypad that ships with most Android phones it
+   costs a double-tap on a shared ".−" key. So it is painted into the box as a fixed
+   prefix and the input holds digits only. Nothing to hunt for, nothing to get wrong, and
+   the whole price is legible from the first keystroke instead of on blur.
+   ⚠️ The wrapper carries the border and the focus ring, because the input inside it has
+   neither — the two have to read as one field or the prefix looks like stray text. */
+.bz .pxfix{display:flex;align-items:center;background:var(--page);border:1px solid var(--grid);
+  border-radius:7px;padding-left:10px;min-width:0}
+.bz .pxfix:focus-within{outline:2px solid var(--accent);outline-offset:-1px}
+.bz .pxfix .sgnfix{font:15px system-ui;color:var(--ink-1);user-select:none}
+.bz .pxfix input{background:none;border:0;border-radius:0;padding:9px 10px 9px 1px;
+  flex:1 1 auto;width:auto;min-width:0}
+.bz .pxfix input:focus{outline:none}
 .gr.close .pxin{width:134px}
 table.gaptbl .pxin{width:120px}
 table.gaptbl .gwhy{font-size:11px;color:var(--ink-3);margin-top:2px;max-width:46ch;line-height:1.45}
@@ -3757,8 +3771,10 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <div class="f w2"><label>Side</label><select id="fSide"></select></div>
     <div class="f" id="lineWrap"><label id="lineLbl">Number</label><input id="fLine" type="number" step="0.5" placeholder="6.5"></div>
     <div class="f"><label>Price</label>
-      <input id="fPrice" type="text" inputmode="numeric" pattern="-?[0-9]*" autocomplete="off"
-        placeholder="-175" title="Favorites only — a bare number like 238 is read as -238."></div>
+      <span class="pxfix"><span class="sgnfix" aria-hidden="true">−</span><input id="fPrice"
+        type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="175"
+        aria-label="Price — favorites only, so the minus is already there. Type the number."
+        title="Favorites only, so the minus is fixed. Just type the number."></span></div>
     <!-- ⚠️ Not decoration, and not optional if you ever want your CLV to mean anything.
          The other side is what makes the de-vig possible; without it the price can only
          be read raw, which overstates every favourite by roughly the whole hold. A leg
@@ -3777,7 +3793,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div class="legprev" id="legPrev" style="display:none"></div>
   <div class="warnbox" id="priceWarn" style="display:none"></div>
   <div class="err" id="err"></div>
-  <p class="note" id="bandNote">Favorites only — the minus is optional, a bare 238 is read as -238. No exact duplicates. Editing resets your clock <em>and</em> your price. The ticket locks the moment the last leg lands.</p>
+  <p class="note" id="bandNote">Favorites only — the minus is already in the box, just type the number. No exact duplicates. Editing resets your clock <em>and</em> your price. The ticket locks the moment the last leg lands.</p>
 </div>
 
 <!-- ---------- player sheet (view: one per player; the bet form docks here on YOUR sheet) ---------- -->
@@ -4285,12 +4301,11 @@ function flaggedRows(){
    priceNum() is the strict read: a signed integer or nothing. It returns NaN for a
    half-typed "-" or "+", which is what a caller mid-keystroke should see.
 
-   favPrice() is the Price box only. That box is bound by a favourites-only band, so a
-   positive number is not a second possible bet — it is the same bet missing its sign,
-   which is exactly what a member gets when the keypad won't give them one. Reading it
-   as the favourite is the only meaning it can have. The OTHER SIDE box is deliberately
-   NOT coerced: a pick'em prices both sides negative, so its sign is real information
-   and guessing it would change the de-vig. */
+   favPrice() is the Price box only. That box shows its minus as a painted prefix and
+   holds digits alone, so "238" IS the favourite -238 — and a pasted "-238" or "+238"
+   reads the same, because the favourites-only band leaves no second bet those could
+   mean. The OTHER SIDE box is deliberately NOT coerced: a pick'em prices both sides
+   negative, so its sign is real information and guessing it would change the de-vig. */
 function priceNum(raw){
   const s = String(raw ?? '').trim().replace(/[\s,]/g, '');
   return /^[+-]?\d+$/.test(s) ? Number(s) : NaN;
@@ -5513,7 +5528,7 @@ function render(){
   document.getElementById('submitCard').style.display = (ME && open && onWeek && meAlive) ? '' : 'none';
   document.getElementById('submitH').textContent = mine ? 'Your leg — editing resets your clock and price' : 'Your leg';
   document.getElementById('bandNote').textContent =
-    `Favorites only, ${bd.ceil} to ${bd.floor} — the minus is optional, a bare 238 is read as -238. No exact duplicates. Editing resets your clock and your price. The ticket locks the moment the last leg lands.`;
+    `Favorites only, ${bd.ceil} to ${bd.floor} — the minus is already in the box, just type the number. No exact duplicates. Editing resets your clock and your price. The ticket locks the moment the last leg lands.`;
   const cm=document.getElementById('clearMine'); if(cm) cm.style.display = mine ? '' : 'none';
 
   // Two destinations, one source. The banner is news and sits under the header; the log
@@ -7426,18 +7441,16 @@ document.getElementById('fSport').innerHTML =
 document.getElementById('fSport').onchange = ()=>loadGames(fSport.value);
 document.getElementById('fGame').onchange = paintSides;
 document.getElementById('fMkt').onchange = ()=>{ paintSides(); paintPriceWarn(); };
+/* ⚠️ Registered BEFORE paintPriceWarn, so the warning never reads a half-cleaned box.
+   Strips anything that isn't a digit — a pasted "-238", a stray "." from that same
+   double-duty keypad key — because the sign is painted beside the box, not typed into
+   it, and a second minus in the value would be read straight past by favPrice(). */
+document.getElementById('fPrice').addEventListener('input', ()=>{
+  const el = document.getElementById('fPrice'), clean = el.value.replace(/[^0-9]/g, '');
+  if(clean !== el.value) el.value = clean;
+});
 document.getElementById('fPrice').addEventListener('input', paintPriceWarn);
 document.getElementById('fPrice').addEventListener('change', maybeSwitchToMl);
-/* ⚠️ Normalise on blur, not on input. Rewriting the box mid-keystroke would fight
-   someone typing "-1" by turning it into "-1" then "-17"→ fine, but a caret jump on
-   every character is how a field becomes unusable on a phone. On leaving the field the
-   box is made to show the price that will actually be submitted — a member who typed
-   238 sees -238 before they hit Submit, rather than discovering the sign afterwards on
-   the slip. */
-document.getElementById('fPrice').addEventListener('blur', ()=>{
-  const el = document.getElementById('fPrice'), n = favPrice(el.value);
-  if(Number.isFinite(n) && String(n) !== el.value){ el.value = String(n); paintPriceWarn(); paintLegPreview(); }
-});
 document.getElementById('fPriceOpp').addEventListener('blur', ()=>{
   const el = document.getElementById('fPriceOpp'), n = priceNum(el.value);
   if(Number.isFinite(n)) el.value = fmtPrice(n);
