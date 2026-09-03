@@ -14764,10 +14764,17 @@ const MCP_TOOLS = [
       "account; a Sleeper league is read in the browser by public URL and is not stored here, so it cannot be " +
       "resolved by this tool. Needs a personal connection: the shared league connector is not signed in as " +
       "anybody and has no league. The `dd` block reports how many of the league's players the board matched — " +
-      "an unmatched player has no DataDawg$, which is a gap in the join and never a valuation of zero.",
+      "an unmatched player has no DataDawg$, which is a gap in the join and never a valuation of zero. " +
+      "Returns ROSTERED players only by default — pass scope:\"full\" for free agents, which roughly triples " +
+      "the payload and is worth it only for a waiver-wire question.",
     inputSchema: {
       type: "object",
       properties: {
+        scope: {
+          type: "string",
+          enum: ["rosters", "full"],
+          description: "How much of the player pool to return. \"rosters\" (the default) returns only players somebody actually holds — that is 161 of 629 rows in a typical 14-team league and about a quarter of the payload. \"full\" adds every free agent, which is what a waiver-wire or best-available question needs and nothing else does. Ask for full deliberately; it is large enough to crowd out the reasoning it was fetched for.",
+        },
         provider: {
           type: "string",
           enum: ["yahoo", "espn", "sleeper"],
@@ -14822,11 +14829,59 @@ const MCP_TOOLS = [
       // number here can never disagree with the number on screen.
       ddDecorateBody(await ddLoadBoard(env, provider, cred.leagueId, "season"), feed.body);
 
+      /* ⚠️ THE FREE AGENTS ARE DROPPED BY DEFAULT, and that is a usability fix, not a
+         cosmetic one. This returned the whole feed once: 93 KB, of which the pool was
+         86 KB — 629 player rows for a league where 161 are rostered. That is roughly
+         23k tokens, which overflows a tool-result budget outright, so the answer a
+         caller wanted never arrived and the context it needed to reason with was gone.
+         A tool nobody can afford to call is not a live tool.
+         ⚠️ THE POOL CANNOT SIMPLY BE OMITTED. teams[].players holds IDS ("y:40896"),
+         and every name, position, projection and DataDawg$ lives in the pool rows they
+         point at. Drop the pool and the rosters become unreadable id lists. So it is
+         FILTERED to the ids the rosters reference, never removed.
+         ⚠️ The counts below describe WHAT WAS RETURNED. ddDecorateBody's own matched /
+         unmatched are league-wide and would contradict a trimmed pool on their face —
+         reporting 406 matched beside 161 rows invites exactly the wrong conclusion. */
+      const full = (args && args.scope) === "full";
+      const body = feed.body || {};
+      const allPool = Array.isArray(body.pool) ? body.pool : [];
+      let pool = allPool, omitted = 0;
+      if (!full && allPool.length) {
+        const held = new Set();
+        for (const t of (Array.isArray(body.teams) ? body.teams : []))
+          for (const id of (t && Array.isArray(t.players) ? t.players : [])) held.add(id);
+        // A league that reports no rosters at all would filter to nothing and look empty,
+        // which is a worse answer than a big one. Keep the whole pool in that case.
+        if (held.size) { pool = allPool.filter(x => x && held.has(x.id)); omitted = allPool.length - pool.length; }
+      }
+      const withDd = pool.filter(x => x && x.dd).length;
+
       return toolText({
         provider,
         leagueId: cred.leagueId,
         you: cred.teamId != null ? String(cred.teamId) : null,
-        ...feed.body,
+        ...body,
+        pool,
+        dd: {
+          ...(body.dd || {}),
+          // ⚠️ Named for the rows actually in this payload. `matched`/`unmatched` on the
+          // spread-in dd block stay league-wide; these two are the ones that describe
+          // what the caller is holding.
+          returnedRows: pool.length,
+          returnedWithDollars: withDd,
+          note: withDd < pool.length
+            ? (pool.length - withDd) + " of the returned players have no DataDawg$ — the board did not match "
+              + "them. That is a gap in the join, never a valuation of zero."
+            : "Every returned player carries DataDawg$.",
+        },
+        scope: {
+          returned: full ? "full" : "rosters",
+          rosteredRows: full ? undefined : pool.length,
+          freeAgentsOmitted: full ? 0 : omitted,
+          howToGetThem: full || !omitted ? undefined
+            : "Call again with scope:\"full\" for the " + omitted + " free agents. It is roughly three times "
+              + "this payload, so ask for it only when the question is about who is available.",
+        },
         method: {
           dollars: SITE + "/data/datadawg-dollars-method.md",
           page: SITE + "/fantasy-warroom.html",
