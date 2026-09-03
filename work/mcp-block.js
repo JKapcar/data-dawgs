@@ -4967,6 +4967,7 @@ const MCP_TOOLS = [
         pages: {
           "index.html": "Home — what Data Dawgs is and the working-dawg taxonomy (Pup / Dawgs / The DawgHouse).",
           "bigboard.html": "Draft big board over the MV pool.",
+          "fantasy-warroom.html": "Fantasy War Room — a connected Sleeper, public Yahoo or ESPN league with every roster priced in DataDawg$ against THAT league's own replacement level. The rows are one account's league and have no public JSON; dd_war_room reads the caller's own Yahoo or ESPN connection. A Sleeper league is read in the browser and is not stored here.",
           "datadawg-dollars.html": "DataDawg$ — our own converted auction dollars for one league room: Target $, conversion-sensitivity bands, ETR delta. Not MV; MV is the market snapshot this converts.",
           "auction.html": "Auction draft operator (league passphrase gate).",
           "board.html": "Live draft board — mirrors the auction via Firebase.",
