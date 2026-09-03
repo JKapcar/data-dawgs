@@ -685,15 +685,21 @@ console.log("\ndisplay name");
   const same = await W.authName(renameAs(s2, "Zedediah"), ENV, CORS);
   ok("renaming to the name you already have is a clean no-op", same.status === 200 && (await jbody(same)).unchanged === true);
 
-  /* ⚠️ The guard that keeps the ledger honest. LEAGUE.picks is keyed by display name. */
-  LEAGUE.picks["Zedediah"] = { label: "BUF -3.5", ts: 400 };
-  const blocked = await W.authName(renameAs(s2, "Somebody Else"), ENV, CORS);
-  const bj = await jbody(blocked);
-  ok("⚠️ a rename is REFUSED while a leg is standing", blocked.status === 409 && /leg on the board/i.test(bj.error || ""),
-     blocked.status + " " + JSON.stringify(bj));
-  ok("…and the stored pick key is untouched", !!LEAGUE.picks["Zedediah"] && !LEAGUE.picks["Somebody Else"]);
-  ok("…and the account still carries the old name", USERS[uid].name === "Zedediah");
-  delete LEAGUE.picks["Zedediah"];
+  /* Current Bozo writes key both the member seat and standing leg by immutable uid.
+     The deliberately name-keyed demo/history leagues are graded and never produce a
+     standing leg. A rename therefore changes the account label without moving the pick. */
+  LEAGUE.members[uid] = { name: "Zedediah" };
+  LEAGUE.picks[uid] = { who: "Zedediah", label: "BUF -3.5", ts: 400 };
+  const renamed = await W.authName(renameAs(s2, "Somebody Else"), ENV, CORS);
+  const rj = await jbody(renamed);
+  ok("⚠️ a rename is allowed while a uid-keyed leg is standing",
+     renamed.status === 200 && rj.name === "Somebody Else",
+     renamed.status + " " + JSON.stringify(rj));
+  ok("…and the standing leg stays under the caller's immutable uid",
+     LEAGUE.picks[uid]?.label === "BUF -3.5" && !LEAGUE.picks["Somebody Else"]);
+  ok("…and the account carries the new display name", USERS[uid].name === "Somebody Else");
+  delete LEAGUE.picks[uid];
+  delete LEAGUE.members[uid];
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);

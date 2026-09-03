@@ -1,0 +1,39 @@
+name: Worker validation
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/worker-validate.yml"
+      - "dawg-bot-worker.js"
+      - "wrangler.jsonc"
+      - "work/**"
+      - "tools/validate-data.js"
+      - "data/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: worker-validation-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Verify the committed Worker is assembled
+        run: |
+          cd work && node assemble.mjs && cd ..
+          git diff --exit-code -- dawg-bot-worker.js
+      - run: node --check dawg-bot-worker.js
+      - run: node work/test-cfb-market-capture.mjs
+      - run: node work/test-backup.mjs
+      - run: node work/test-identity.mjs
+      - run: node work/test-mcp.mjs
+      - run: node work/test-swoledawg.mjs
+      - run: node tools/validate-data.js
