@@ -1,9 +1,10 @@
-/* The cascade decides who wears it, and the board used to show only its output — a
-   simulated percentage. Two of the four levers are readable straight off an open board
-   (Shortest Odds from the prices, Last In from the timestamps); the other two cannot be
-   computed before the games run and have to hold their place rather than vanish. These
-   pin that, and pin the two ways the section could quietly lie: ranking on a different
-   quantity than the grader, and reading like a verdict instead of a standing. */
+/* The cascade decides who wears it, and #dgTable used to show only its output — two
+   simulated percentages per player. Four lever columns carry the standings now: two are
+   readable off an open board (Shortest odds from the prices, Last in from the
+   timestamps), and the two that cannot be computed before the games run keep their
+   column rather than vanishing. These pin that, and pin the three ways the columns could
+   quietly lie: ranking on a different quantity than the grader, numbering Last in from
+   the wrong end, and reading like a verdict instead of a standing. */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -18,189 +19,168 @@ function lift(name) {
   assert.ok(m, `${name} is defined in bozo.html`);
   return m[1];
 }
+
+// leverStandings() reads S/ME and the page's odds helpers; nothing else.
+function standings(picks, results) {
+  const sandbox = { S: { results }, kEnc: n => n, sdOf: () => 10, dirOf: () => 'over',
+    beatDeficit: (m, d, line, margin) => (margin - line) / -10 };
+  const c = vm.createContext(sandbox);
+  vm.runInContext(['imp', 'devigP', 'rankRows', 'leverStandings'].map(lift).join('\n')
+    + '\nthis.RESULT = leverStandings(PICKS);', Object.assign(c, { PICKS: picks }));
+  return sandbox.RESULT;
+}
 const ctx = vm.createContext({});
 vm.runInContext(['imp', 'devigP', 'ordinal', 'rankRows'].map(lift).join('\n')
-  + '\nthis.imp = imp; this.devigP = devigP; this.ordinal = ordinal; this.rankRows = rankRows;', ctx);
+  + '\nthis.imp=imp; this.devigP=devigP; this.ordinal=ordinal; this.rankRows=rankRows;', ctx);
 const { imp, devigP, ordinal, rankRows } = ctx;
 
-test('every lever keeps a block, including the two that cannot compute yet', () => {
-  const fn = bozo.slice(bozo.indexOf('function paintLeverStandings('));
-  const body = fn.slice(0, fn.indexOf('\n/* Who is holding the belt'));
-  // The two knowable now
-  assert.match(body, /levers\.includes\(0\)/, 'Shortest Odds is read off the prices');
-  assert.match(body, /levers\.includes\(2\)/, 'Last In is read off the timestamps');
-  // The two that hold a spot rather than disappearing
-  assert.match(body, /'needs a final score'/, 'Worst Beat says what it is waiting for');
-  assert.match(body, /'closes land at kickoff'/, 'Worst CLV says what it is waiting for');
-  // and all four are concatenated into the output, unconditionally
-  assert.match(body, /shortest \+ worst \+ lastIn \+ clv/);
-  // a lever the league dropped is shown as dropped, not omitted
-  assert.match(body, /'not in the draw'/);
+const ML = (p, price, opp, ts) => ({ p, price, entryPriceOpp: opp, ts, mkt: 'ml', line: 0 });
+
+test('it is one table with one row per person — no second stacked surface', () => {
+  assert.doesNotMatch(bozo, /id="dgLevers"/, 'the standalone block is gone');
+  assert.doesNotMatch(bozo, /paintLeverStandings/);
+  const head = bozo.match(/<th>Who<\/th>[\s\S]*?<th>Usually named by<\/th>/)[0];
+  for (const col of ['I · Shortest odds', 'II · Worst beat', 'III · Last in', 'IV · Worst CLV'])
+    assert.ok(head.includes(`<th>${col}</th>`), `${col} is a column`);
 });
 
-test('the section says it is a standing, not a verdict', () => {
-  const fn = bozo.slice(bozo.indexOf('function paintLeverStandings('));
-  const body = fn.slice(0, fn.indexOf('\n/* Who is holding the belt'));
-  assert.match(body, /Only legs that <b>lost<\/b> are eligible/,
-    'a ranked list with your name on top reads as an accusation unless told otherwise');
-  assert.match(body, /not a forecast of who wears it/);
+test('the seam and the mobile drops are renumbered together', () => {
+  // nth-child counts DOM position, so hiding columns must not move the seam.
+  assert.match(bozo, /#dgTable td:nth-child\(6\),#dgTable th:nth-child\(6\)\{border-left/);
+  const mob = bozo.match(/#dgTable td:nth-child\(2\)[\s\S]*?display:none\}/)[0];
+  assert.match(mob, /nth-child\(5\)/, 'killed it alone drops on a phone');
+  assert.match(mob, /nth-child\(10\)/, 'usually named by drops on a phone');
+  assert.doesNotMatch(mob, /nth-child\(7\)/, 'the old index would now hide a lever column');
 });
 
-test('Shortest Odds places on the grader’s rule and prints the de-vigged number', () => {
-  // The grader (simulate + decide) ranks this lever on RAW implied probability.
+test('the reported board: Kap 1st on odds at its de-vigged 67.5%, 3rd in on Last in', () => {
+  // Kap, BUTTS, Tony from the screenshot — filed BUTTS, Tony, Kap in that order.
+  const picks = [ML('Kap', -238, 195, 300), ML('BUTTS', -198, 165, 100), ML('Tony', -135, null, 200)];
+  const L = standings(picks, {});
+
+  assert.deepEqual([L.rank[0][0], L.rank[0][1], L.rank[0][2]], [1, 2, 3], 'chalkiest first');
+  assert.ok(L.holds[0][0], 'Kap holds Shortest odds');
+  assert.ok(Math.abs(L.d[0].shown - 0.6750) < 0.001, 'Kap -238/+195 de-vigs to ~67.5%');
+  assert.equal(L.d[2].shown, null, 'Tony filed no other side');
+  assert.equal(L.noOpp, 1);
+
+  // Last in is numbered in submission order, and the badge is at the other end.
+  assert.deepEqual([L.rank[2][1], L.rank[2][2], L.rank[2][0]], [1, 2, 3], 'BUTTS 1st in, Kap 3rd');
+  assert.ok(L.holds[2][0], 'Kap filed last, so Kap holds Last in');
+  assert.ok(!L.holds[2][1], '1st in does not hold it');
+
+  // The two that cannot compute rank nobody at all — which is not "ranked last".
+  assert.equal(Object.keys(L.rank[1]).length, 0, 'Worst beat ranks nobody with no scores');
+  assert.equal(Object.keys(L.rank[3]).length, 0, 'Worst CLV ranks nobody with no closes');
+  assert.equal(L.scored, 0);
+  assert.equal(L.withClv, 0);
+});
+
+test('Shortest odds places on the grader’s rule and prints the de-vigged number', () => {
   const sim = bozo.slice(bozo.indexOf('function simulate('));
   assert.match(sim.slice(0, sim.indexOf('\n// One definition of')), /k==='odds' \? \(i=>L\[i\]\.odds\)/);
   assert.match(bozo, /odds: imp\(x\.price\)/, 'the sim ranks on imp()');
-  const fn = bozo.slice(bozo.indexOf('function paintLeverStandings('));
-  assert.match(fn, /rankRows\(rows\.map\(d=>\(\{\.\.\.d\}\)\), d=>d\.raw\)/, 'so the standings rank on imp() too');
+  const fn = bozo.slice(bozo.indexOf('function leverStandings('));
+  assert.match(fn, /place\(0, d\.slice\(\), r=>r\.raw,/, 'so the column places on imp() too');
   assert.match(fn, /raw: imp\(x\.price\)/);
-  assert.match(fn, /shown: pE/, 'and print the de-vigged figure');
-  assert.match(fn, /These two disagree on this board/, 'and say so when the two orders differ');
-});
-
-test('the reported leg de-vigs to a real win probability', () => {
-  // Kap's leg from the board: GT ML at -238, other side +195.
-  const p = devigP(-238, 195);
-  assert.ok(Math.abs(p - 0.6750) < 0.001, `expected ~67.5%, got ${(p * 100).toFixed(2)}%`);
-  // Raw implied over-counts it by roughly the hold — which is why the printed number
-  // is the de-vigged one and not this.
-  assert.ok(imp(-238) > p);
+  // Raw implied over-counts the favourite; that is why the printed figure is de-vigged.
+  assert.ok(imp(-238) > devigP(-238, 195));
   assert.equal(devigP(-238, null), null, 'no opposite price is no de-vig, never a guess');
 });
 
-test('placements are competition-ranked — a tie is a real tie', () => {
-  const rows = [{ v: 3 }, { v: 5 }, { v: 5 }, { v: 1 }];
-  const out = rankRows(rows, d => d.v);
-  assert.deepEqual(out.map(d => d.rank), [1, 1, 3, 4], 'equal values share a place, the next skips');
-  assert.deepEqual(out.map(d => d.v), [5, 5, 3, 1], 'sorted descending');
+test('when de-vigging would reorder the pool, a flag says so', () => {
+  // A shorter raw price in a fat market vs a longer one in a tight market.
+  const L = standings([ML('A', -260, 200, 1), ML('B', -250, 280, 2)], {});
+  assert.deepEqual([L.rank[0][0], L.rank[0][1]], [1, 2], 'placement follows the grader');
+  assert.ok(L.d[1].shown > L.d[0].shown, 'but B prints the higher probability');
+  assert.equal(L.disagree, true);
+  assert.match(bozo, /De-vigging would reorder Shortest odds on this board/);
+  assert.match(bozo, /levers\.includes\(0\) && LV\.disagree/, 'and only when it actually does');
+
+  const agree = standings([ML('A', -310, 250, 1), ML('B', -150, 125, 2)], {});
+  assert.equal(agree.disagree, false, 'no flag on a board where they agree');
 });
 
-test('Last In is numbered in submission order, and the badge marks the other end', () => {
-  const fn = bozo.slice(bozo.indexOf('function paintLeverStandings('));
-  const lastIn = fn.slice(fn.indexOf('III · Last In'), fn.indexOf('IV · Worst CLV'));
-  assert.match(lastIn, /sort\(\(a,b\)=>a\.ts-b\.ts\)/, 'earliest filed is 1st in');
-  assert.match(lastIn, /d\.ts===latest/, 'the badge goes to the newest leg, the end the lever reads');
-  assert.match(lastIn, /reads the <b>bottom<\/b> of that list/);
-  // same wording the leg preview uses, so one list under one name can't mean two orders
-  assert.match(bozo, /You'd be <b>\$\{ordinal\(wouldBe\)\}<\/b> of \$\{size\} in\./);
-  assert.equal(ordinal(3), '3rd');
-  assert.equal(ordinal(1), '1st');
-  assert.equal(ordinal(11), '11th');
+test('placements are competition-ranked — a tie is a real tie', () => {
+  const out = rankRows([{ v: 3 }, { v: 5 }, { v: 5 }, { v: 1 }], d => d.v);
+  assert.deepEqual(out.map(d => d.rank), [1, 1, 3, 4], 'equal values share a place, the next skips');
+  const tied = standings([ML('A', -200, 170, 1), ML('B', -200, 170, 2)], {});
+  assert.deepEqual([tied.rank[0][0], tied.rank[0][1]], [1, 1], 'two legs at one price tie the lever');
+});
+
+test('Worst beat ranks once a score lands, and does not rank what it cannot score', () => {
+  const picks = [
+    { p: 'Kap', price: -200, entryPriceOpp: 170, ts: 1, mkt: 'spread', line: 3 },
+    { p: 'BUTTS', price: -180, entryPriceOpp: 150, ts: 2, mkt: 'spread', line: 3 },
+  ];
+  const L = standings(picks, { Kap: { actual: -17 } });
+  assert.equal(L.scored, 1);
+  assert.equal(L.rank[1][0], 1, 'the scored leg places');
+  assert.equal(L.rank[1][1], undefined, 'the unscored one is absent, not last');
+  assert.ok(L.holds[1][0]);
+  assert.equal(L.d[0].beat, 2);
 });
 
 test('Worst CLV drops a leg it cannot de-vig rather than scoring it zero', () => {
-  const fn = bozo.slice(bozo.indexOf('function paintLeverStandings('));
-  assert.match(fn, /clv: \(pC==null\|\|pE==null\) \? null : \(pC-pE\)/);
-  assert.match(fn, /no de-viggable close/);
-  assert.match(fn, /rather than\s+scoring it zero/);
+  const picks = [ML('A', -200, 170, 1), ML('B', -180, 150, 2), ML('C', -150, 130, 3)];
+  const L = standings(picks, {
+    A: { close: -150, closeOpp: 130 },   // drifted longer: the market moved against A
+    B: { close: -260, closeOpp: 210 },   // shortened: the market moved toward B
+    C: { close: -150 },                  // one side only: not de-viggable
+  });
+  assert.equal(L.withClv, 2);
+  assert.ok(L.d[0].clv < 0 && L.d[1].clv > 0);
+  assert.equal(L.rank[3][0], 1, 'the most negative CLV is first');
+  assert.ok(L.holds[3][0]);
+  assert.equal(L.rank[3][2], undefined, 'one side alone is unrankable, never zero');
+  assert.match(bozo, /clv: \(pC==null\|\|pE==null\) \? null : \(pC-pE\)/);
 });
 
-/* The tests above read the source. This one RUNS paintLeverStandings against the board
-   from the bug report, with the page's own imp/devigP/ordinal/rankRows and a DOM stub
-   standing in for the four things it touches. Source assertions cannot catch a throw. */
-function renderStandings(picks, results, levers, me) {
-  const sandbox = {
-    S: { results },
-    ME: me ? { name: me } : null,
-    LEVERS: [{ k: 'odds', name: 'Shortest Odds' }, { k: 'beat', name: 'Worst Beat' },
-             { k: 'last', name: 'Last In' }, { k: 'clv', name: 'Worst CLV' }],
-    esc: v => String(v),
-    teamOf: n => n,
-    kEnc: n => n,
-    when: ts => 'filed@' + ts,
-    sdOf: () => 10,
-    dirOf: () => 'over',
-    beatDeficit: (m, d, line, margin) => (margin - line) / -10,
-    out: null,
-    document: { getElementById: () => ({ set innerHTML(v) { sandbox.out = v; } }) },
-  };
-  const c = vm.createContext(sandbox);
-  vm.runInContext(['imp', 'devigP', 'ordinal', 'rankRows', 'ROMAN', 'paintLeverStandings']
-    .map(lift).join('\n') + '\npaintLeverStandings(PICKS, LEVERS_IN);', 
-    Object.assign(c, { PICKS: picks, LEVERS_IN: levers }));
-  return sandbox.out;
+test('a lever out of the draw gets a column saying so, not a blank', () => {
+  const fn = bozo.slice(bozo.indexOf('function paintDiag('));
+  assert.match(fn, /const outCell = \(\) =>[\s\S]*?not in the draw/);
+  for (const k of [0, 1, 2, 3])
+    assert.match(fn, new RegExp(`levers\\.includes\\(${k}\\) \\? lvCell\\(${k},[\\s\\S]*?: outCell\\(\\)`));
+});
+
+test('the note calls the columns a standing, not a verdict', () => {
+  const note = bozo.slice(bozo.indexOf('The four lever columns are standings'));
+  assert.match(note, /Only legs that <b>lost<\/b> are eligible/);
+  assert.match(note, /if your leg loses and the draw\s+reaches that lever, it stops on you/);
+  assert.match(note, /the highlight sits at the\s+<em>bottom<\/em> of that column/, 'Last in is explained');
+  assert.match(note, /dormant, not absent/);
+  assert.equal(ordinal(3), '3rd');
+  assert.equal(ordinal(11), '11th');
+});
+
+/* The data layer above is executed for real. This runs the cell renderer too, lifted out
+   of paintDiag, so a placement that prints the wrong ordinal or loses its highlight is
+   caught here rather than on somebody's phone. */
+function renderCell(LV, k, i, val, muted) {
+  const src = bozo.match(/  const lvCell = \(k, i, val, muted\) => \{[\s\S]*?\n  \};/)[0]
+            + '\n' + bozo.match(/  const outCell = \(\) => [\s\S]*?;\n/)[0];
+  const c = vm.createContext({ LV, ordinal });
+  vm.runInContext(src + '\nthis.OUT = ARG === null ? outCell() : lvCell(K, I, V, M);',
+    Object.assign(c, { ARG: k, K: k, I: i, V: val, M: muted }));
+  return c.OUT;
 }
 
-test('it renders the reported board: Kap 3rd in, −238 shown as its de-vigged 67.5%', () => {
-  // Tony, Kap, BUTTS — filed in that order, exactly as the board showed them.
-  const picks = [
-    { p: 'Tony',  price: -310, entryPriceOpp: 250, ts: 100, mkt: 'ml', line: 0 },
-    { p: 'Kap',   price: -238, entryPriceOpp: 195, ts: 200, mkt: 'ml', line: 0 },
-    { p: 'BUTTS', price: -150, entryPriceOpp: 125, ts: 300, mkt: 'ml', line: 0 },
-  ];
-  const html = renderStandings(picks, {}, [0, 1, 2, 3], 'Kap');
+test('a cell prints its placement, and only the lever’s current stop is highlighted', () => {
+  const LV = { rank: [{ 0: 1, 1: 3 }, {}, {}, {}], holds: [{ 0: true }, {}, {}, {}] };
+  const first = renderCell(LV, 0, 0, '67.5%', false);
+  assert.match(first, /<b class="lvr hot" title="This is where the lever stops right now\.">1st<\/b>/);
+  assert.match(first, /<span class="lvv">67\.5%<\/span>/);
 
-  // I · Shortest Odds — biggest favourite first, with the de-vigged percentage
-  assert.match(html, /Shortest Odds/);
-  assert.match(html, /-238 · 67\.5%/, 'the de-vigged number, not raw implied 70.4%');
-  const short = html.slice(html.indexOf('Shortest Odds'), html.indexOf('Worst Beat'));
-  assert.deepEqual(short.match(/>(Tony|Kap|BUTTS)</g).map(s => s.slice(1, -1)),
-    ['Tony', 'Kap', 'BUTTS'], 'chalkiest leg is 1st');
-  assert.match(short, /<span class="pos">1st<\/span><span class="nm">Tony/);
-  assert.match(short, /Tony<\/span><span class="holds">holds it<\/span>/, 'the badge is on the leader');
+  const third = renderCell(LV, 0, 1, '58.0%', false);
+  assert.match(third, /<b class="lvr">3rd<\/b>/, 'placed, but not the stop');
+  assert.doesNotMatch(third, /hot/);
+  assert.doesNotMatch(third, /title=/, 'no misleading tooltip on a row the lever passes over');
 
-  // III · Last In — submission order, Kap 2nd of 3 here; the badge is at the other end
-  const last = html.slice(html.indexOf('Last In'), html.indexOf('Worst CLV'));
-  assert.match(last, /<span class="pos">1st<\/span><span class="nm">Tony/);
-  assert.match(last, /<span class="pos">3rd<\/span><span class="nm">BUTTS/);
-  assert.match(last, /BUTTS<\/span><span class="holds">holds it<\/span>/, 'newest leg holds Last In');
-  assert.doesNotMatch(last, /Tony<\/span><span class="holds">/, '1st in does NOT hold it');
+  // A leg this lever cannot rank takes an em dash — a different claim from placing last.
+  const unranked = renderCell(LV, 1, 0, 'awaiting kickoff', true);
+  assert.match(unranked, /^<td class="lv unr">/);
+  assert.match(unranked, /<b class="lvr">—<\/b>/);
+  assert.doesNotMatch(unranked, /\d(st|nd|rd|th)/);
 
-  // the viewer's own row is marked
-  assert.match(html, /<div class="lvrow me"><span class="pos">2nd<\/span><span class="nm">Kap/);
-
-  // II and IV hold their place and say what they are waiting for
-  assert.match(html, /needs a final score/);
-  assert.match(html, /awaiting kickoff/);
-  assert.match(html, /closes land at kickoff/);
-  assert.match(html, /awaiting close/);
-});
-
-test('a lever the league dropped is shown as dropped, not silently missing', () => {
-  const picks = [{ p: 'Kap', price: -200, entryPriceOpp: 170, ts: 1, mkt: 'ml', line: 0 }];
-  const html = renderStandings(picks, {}, [0, 2], 'Kap');
-  assert.equal((html.match(/not in the draw/g) || []).length, 2, 'Worst Beat and Worst CLV');
-  assert.match(html, /running 2 of 4 levers/);
-  assert.match(html, /Shortest Odds/);
-  assert.match(html, /Last In/);
-});
-
-test('Worst Beat ranks once a score lands, and still lists the legs it cannot score', () => {
-  const picks = [
-    { p: 'Kap',   price: -200, entryPriceOpp: 170, ts: 1, mkt: 'spread', line: 3 },
-    { p: 'BUTTS', price: -180, entryPriceOpp: 150, ts: 2, mkt: 'spread', line: 3 },
-  ];
-  const html = renderStandings(picks, { Kap: { actual: -17 } }, [0, 1, 2, 3], 'Kap');
-  const beat = html.slice(html.indexOf('Worst Beat'), html.indexOf('Last In'));
-  assert.match(beat, /1 of 2/, 'the chip says how much is measurable');
-  assert.match(beat, /2\.00 SD/, 'the scored leg gets a real number');
-  assert.match(beat, /BUTTS<\/span><span class="val">no final score yet/, 'the rest are still listed');
-});
-
-test('when de-vigging would reorder the pool, the block says so', () => {
-  // A shorter raw price in a fat market against a longer one in a tight market: raw
-  // implied puts A first, de-vigging puts B first. The printed number and the placement
-  // genuinely disagree here, and the placement follows the grader.
-  const picks = [
-    { p: 'A', price: -260, entryPriceOpp: 200, ts: 1, mkt: 'ml', line: 0 },
-    { p: 'B', price: -250, entryPriceOpp: 280, ts: 2, mkt: 'ml', line: 0 },
-  ];
-  const html = renderStandings(picks, {}, [0, 1, 2, 3], 'A');
-  const short = html.slice(html.indexOf('Shortest Odds'), html.indexOf('Worst Beat'));
-  assert.deepEqual(short.match(/>(A|B)</g).map(s => s.slice(1, -1)), ['A', 'B'],
-    'placement follows raw implied, which is what the grader ranks on');
-  assert.match(short, /-260 · 68\.4%/);
-  assert.match(short, /-250 · 73\.1%/, 'B prints the higher probability while placing 2nd');
-  assert.match(short, /These two disagree on this board/, 'and that is stated, not hidden');
-});
-
-test('a leg with no opposite price still places, and says why it has no percentage', () => {
-  const picks = [
-    { p: 'A', price: -300, entryPriceOpp: 240, ts: 1, mkt: 'ml', line: 0 },
-    { p: 'B', price: -200, entryPriceOpp: null, ts: 2, mkt: 'ml', line: 0 },
-  ];
-  const short = renderStandings(picks, {}, [0, 1, 2, 3], 'A');
-  assert.match(short, /-200 · —/, 'no de-vig is shown as nothing, never as a raw number');
-  assert.match(short, /1 leg has no opposite price filed/);
-  assert.match(short, /the placement still stands/);
+  assert.match(renderCell(LV, null, 0, '', false), /not in the draw/);
 });
