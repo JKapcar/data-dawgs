@@ -1,5 +1,5 @@
 {
- "as_of": "2026-08-31",
+ "as_of": "2026-09-03",
  "source": "Generated from the site itself. Tier is read from each page's live chip.",
  "tier": "labs",
  "graded": false,
@@ -67,7 +67,9 @@
    "dd_guillotine_odds",
    "dd_site_map"
   ],
-  "tools_staged": [],
+  "tools_staged": [
+   "dd_war_room"
+  ],
   "catalogs": {
    "status": "LIVE since 2026-08-09. Both /mcp/core/<credential> and /mcp/full/<credential> answer, and GET /mcp/ advertises them. The bare /mcp/<credential> is unchanged and still full. A leading `core`/`full` is only read as a catalog when a credential follows it, or when the credential arrived in a header — so no passphrase can be stranded by its own name. NOT VERIFIED IN PRODUCTION: the per-catalog tools/list counts, which need a credential.",
    "why": "Forty-three tool schemas cost 10-25k context tokens in every conversation that connects. core is the everyday league surface; full is everything and stays the default, so the bare /mcp/<credential> URL keeps serving every tool a live connector may already be calling.",
@@ -103,6 +105,7 @@
     "dd_draft_bozo_leg",
     "dd_submit_bozo_leg",
     "dd_draft_board",
+    "dd_war_room",
     "dd_draft_pool",
     "dd_survivor_week",
     "dd_survivor_ev",
@@ -151,6 +154,7 @@
     "dd_draft_bozo_leg": "Draft a Bozo leg",
     "dd_submit_bozo_leg": "Submit your Bozo leg (two-phase)",
     "dd_draft_board": "Live auction board",
+    "dd_war_room": "Your connected fantasy league",
     "dd_draft_pool": "Draft player pool",
     "dd_survivor_week": "Survivor ownership snapshot",
     "dd_survivor_ev": "Survivor pick EV",
@@ -190,12 +194,12 @@
   }
  },
  "counts": {
-  "surfaces": 22,
-  "with_live_machine_access": 17,
+  "surfaces": 23,
+  "with_live_machine_access": 18,
   "with_no_machine_access": 5,
-  "mcp_tools_registered": 43,
+  "mcp_tools_registered": 44,
   "mcp_tools_live": 43,
-  "mcp_tools_staged": 0,
+  "mcp_tools_staged": 1,
   "mcp_tools_core": 17,
   "mcp_tools_planned": 6
  },
@@ -264,6 +268,42 @@
     }
    ],
    "planned": [],
+   "tier": "labs"
+  },
+  {
+   "id": "war-room",
+   "domain": "data",
+   "name": "Fantasy War Room — your league at its own replacement level",
+   "page": "/fantasy-warroom.html",
+   "machine": [
+    {
+     "kind": "mcp",
+     "tool": "dd_war_room",
+     "status": "planned",
+     "covers": "the caller's OWN connected Yahoo or ESPN league: teams, rosters, projections and DataDawg$ per player, with a match count for the join"
+    },
+    {
+     "kind": "json",
+     "url": "/data/datadawg-dollars-method.json",
+     "status": "live",
+     "covers": "how DataDawg$ is converted — method only, no league data"
+    },
+    {
+     "kind": "markdown",
+     "url": "/data/datadawg-dollars-method.md",
+     "status": "live",
+     "covers": "the same method in prose"
+    }
+   ],
+   "reading": [
+    {
+     "url": "/fantasy-warroom.html",
+     "title": "Your league, priced against its own replacement level",
+     "covers": "Connect a Sleeper, public Yahoo or ESPN league and see every roster priced in DataDawg$ for that league's own settings — replacement level moves with roster shape, so two leagues with the same team count can price the same player differently. Carries the disagreement view against the provider's own projections."
+    }
+   ],
+   "planned": [],
+   "gap": "dd_war_room is written and committed but NOT yet on the deployed Worker, so it answers nothing until the next deploy — that is why its status is planned. League rows are per-account and deliberately have no public JSON. A Sleeper league is read client-side from its public URL and is not stored server-side, so dd_war_room cannot resolve one even while the page is showing it.",
    "tier": "labs"
   },
   {
@@ -1006,6 +1046,6 @@
   }
  ],
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-08-31",
+ "built": "2026-09-03",
  "canonical_url": "https://datadawgs216.com/data/surfaces.json"
 }

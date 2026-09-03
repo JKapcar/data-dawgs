@@ -1217,7 +1217,14 @@ const MCP_REGISTRY = (() => {
 // endpoint served 43: the map under-claims and every caller of a retired name keeps
 // working. Deploying first and failing to commit would leave this file claiming two tools
 // are live that answer -32602, which is the one thing it exists to prevent.
-const MCP_STAGED = [];
+/* ⚠️ dd_war_room IS STAGED, NOT LIVE, and that is a statement about the DEPLOYED
+   endpoint rather than about this repo. The tool is in work/mcp-block.js and in the
+   committed Worker source; the Worker itself has not been redeployed, so a caller
+   asking the live endpoint for it gets nothing. surfaces.json therefore records its
+   status as `planned`. Move it out of this list in the same change that deploys the
+   Worker — docs/mcp-catalogs.md has the order — and flip the surface to `live` then.
+   Claiming it now is the exact failure the registry exists to prevent. */
+const MCP_STAGED = ['dd_war_room'];
 const MCP_LIVE = MCP_REGISTRY.map(t => t.name).filter(n => !MCP_STAGED.includes(n));
 for (const n of MCP_STAGED)
   if (!MCP_REGISTRY.some(t => t.name === n)) throw new Error(`${n} is listed as staged but is not in the registry`);
@@ -1310,6 +1317,28 @@ const SURFACES = [
     reading: [{ url: '/datadawg-dollars.html', title: 'DataDawg$ auction board',
                 covers: 'Our own target auction dollars, converted from a dated ETR half-PPR snapshot into one league room (14 teams, $200, no kicker, 2 flex) by a VOR-based pass-through and Hamilton-rounded to $2,800. Not MV: MV is the market snapshot, this is the site\'s conversion of it. Carries conversion-sensitivity bands and the delta against the ETR price. Reproducible and red-teamed, not outcome-validated.' }],
     planned: [] },
+  /* ⚠️ NO PUBLIC JSON HERE, AND THAT IS THE HONEST STATUS, NOT A TODO. The War Room's
+     numbers are one signed-in person's own connected league — rosters, team names and
+     DataDawg$ priced against THAT league's replacement level. A /data/ file would publish
+     every connected league's valuations, and the Worker route behind the page is key-capped
+     specifically so it cannot be walked. The machine surface is therefore an authenticated
+     MCP tool, which is a real surface and is recorded as one; the method beside it is public
+     because the method is not anybody's data.
+     ⚠️ Sleeper is named in the gap on purpose. It is read in the browser from a public URL
+     with nothing stored server-side, so dd_war_room genuinely cannot reach it — a reader who
+     assumes "connected league" means all three providers would be wrong about one. */
+  { id: 'war-room', domain: 'data', name: 'Fantasy War Room — your league at its own replacement level',
+    page: '/fantasy-warroom.html',
+    machine: [{ kind: 'mcp', tool: 'dd_war_room', status: 'planned',
+                covers: "the caller's OWN connected Yahoo or ESPN league: teams, rosters, projections and DataDawg$ per player, with a match count for the join" },
+              { kind: 'json', url: '/data/datadawg-dollars-method.json', status: 'live',
+                covers: 'how DataDawg$ is converted — method only, no league data' },
+              { kind: 'markdown', url: '/data/datadawg-dollars-method.md', status: 'live',
+                covers: 'the same method in prose' }],
+    reading: [{ url: '/fantasy-warroom.html', title: 'Your league, priced against its own replacement level',
+                covers: 'Connect a Sleeper, public Yahoo or ESPN league and see every roster priced in DataDawg$ for that league\'s own settings — replacement level moves with roster shape, so two leagues with the same team count can price the same player differently. Carries the disagreement view against the provider\'s own projections.' }],
+    planned: [],
+    gap: 'dd_war_room is written and committed but NOT yet on the deployed Worker, so it answers nothing until the next deploy — that is why its status is planned. League rows are per-account and deliberately have no public JSON. A Sleeper league is read client-side from its public URL and is not stored server-side, so dd_war_room cannot resolve one even while the page is showing it.' },
   { id: 'draft-strategy', domain: 'data', name: '2026 draft strategy', page: '/strategy.html',
     machine: [{ kind: 'markdown', url: '/data/strategy.md', status: 'live' }],
     reading: [{ url: '/strategy.html', title: '2026 draft strategy',
