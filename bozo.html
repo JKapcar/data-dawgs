@@ -1100,15 +1100,35 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
             radial-gradient(circle at 11px 100%,transparent 0 10px,#000 10.6px) 0 100%/22px 13px repeat-x}
   .card.bz-carnival > .bz-hdr h2.bz{font-size:12.5px;letter-spacing:1.4px;padding:6px 11px}
   table.bz td,table.bz th{padding-left:5px;padding-right:5px}
-  /* The leg is already spelled out on the slip above; "killed it alone" and "usually
-     named by" are the least load-bearing columns. Drop those three rather than shrink
-     everything — what is left is Who, the two simulated odds, and all four levers, which
-     is the comparison this table exists to make. The rest scrolls.
-     ⚠️ nth-child counts DOM position, not visible position, so hiding these does NOT
-     shift the seam on child 6. Renumber both rules together if a column is ever added. */
-  #dgTable td:nth-child(2),#dgTable th:nth-child(2),
-  #dgTable td:nth-child(5),#dgTable th:nth-child(5),
-  #dgTable td:nth-child(10),#dgTable th:nth-child(10){display:none}
+  /* ---- diagnostics: one card per person, not ten columns ----
+     ⚠️ TEN COLUMNS DO NOT FIT A PHONE, and hiding three of them did not fix it — what
+     was left still scrolled sideways, and the header scrolled away with it, so a number
+     ended up on screen with no way to tell which column it belonged to. Same DOM and
+     still one row per person; the row just stops being a strip and becomes a card, each
+     value labelled from its own data-l. Nothing is dropped and nothing scrolls sideways.
+     ⚠️ Every cell needs a data-l for this to work. A cell without one renders a value
+     with no label, which is the exact failure this replaced. */
+  #dgTable,#dgTable tbody,#dgTable tr,#dgTable td{display:block}
+  #dgTable tr:first-child{display:none}
+  #dgTable tr{border:1px solid var(--grid);border-radius:10px;padding:12px 13px;margin-bottom:10px}
+  #dgTable tr.me{border-color:var(--accent)}
+  #dgTable tr.me td{background:none}
+  #dgTable td{padding:6px 0;border:0;border-top:1px solid var(--grid);
+    display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center}
+  #dgTable td::before{content:attr(data-l);
+    font:700 9.5px/1.4 ui-monospace,monospace;letter-spacing:.9px;text-transform:uppercase;
+    color:var(--ink-3);text-align:left}
+  /* the name and the leg lead the card: no label, no rule, full width */
+  #dgTable td.who,#dgTable td.pk{display:block;border-top:0;padding:0}
+  #dgTable td.who::before,#dgTable td.pk::before{content:none}
+  #dgTable td.who{font:750 16.5px system-ui;color:var(--ink-1)}
+  #dgTable td.pk{margin:1px 0 7px;font-size:13px;color:var(--ink-2)}
+  /* the seam between simulation output and the levers turns horizontal */
+  #dgTable td:nth-child(6){border-top:2px solid var(--grid);margin-top:5px;padding-top:9px}
+  #dgTable td.lv{white-space:normal}
+  #dgTable td.lv .lvv{text-align:right}
+  #dgTable .mcell{flex-direction:row;align-items:center;justify-content:flex-end;gap:8px;min-width:0}
+  #dgTable .mcell .meter{flex:0 0 62px;width:62px;min-width:62px}
   .mcell{min-width:54px}
   .slip-ft{gap:16px;padding-right:96px}
   .stamp{font-size:12px;top:auto;right:10px;bottom:14px;padding:5px 8px;letter-spacing:2px}
@@ -6486,16 +6506,6 @@ function paintDiag(live, players, status){
         de-vigged, so it is not a CLV. In the simulation this lever ranks the legs it can and passes when it can't;
         it never guesses at the others.</span></div>`);
   }
-  /* ⚠️ The Shortest odds column PLACES on raw implied and PRINTS the de-vigged figure,
-     and on most boards those agree about the order. When they don't, the column is
-     showing one thing and ranking by another, and that has to be said out loud — a
-     reader comparing two rows would otherwise conclude the placement was simply wrong. */
-  if(levers.includes(0) && LV.disagree)
-    flags.push(`<div class="flag"><span>⚠</span><span><b>De-vigging would reorder Shortest odds on this board.</b>
-      The column places legs exactly as the grader does — on raw implied probability — but prints the de-vigged
-      win probability, which is the honest read of each leg. Here those two disagree about the order, so a row
-      with the higher percentage can still place below one with the lower. The placement is what the lever
-      would actually do.</span></div>`);
   if(levers.length<4)
     flags.push(`<div class="flag"><span>⚠</span><span><b>Only ${levers.length} of 4 levers are in the draw.</b>
       Fewer levers is a more deterministic objective, which is the thing the randomised hierarchy exists to prevent.</span></div>`);
@@ -6529,22 +6539,29 @@ function paintDiag(live, players, status){
      leg; where it can't, the cell says what it is waiting for and takes an em dash, which
      is a different statement from ranking last. `hot` marks the leg the lever currently
      stops on — for Last In that is the BOTTOM of the printed order, not the top. */
-  const lvCell = (k, i, val, muted) => {
+  const lvCell = (k, i, lbl, val, muted) => {
     const r = LV.rank[k][i];
-    return `<td class="lv${muted?' unr':''}">`
+    return `<td class="lv${muted?' unr':''}" data-l="${lbl}">`
       + (r ? `<b class="lvr${LV.holds[k][i]?' hot':''}"${LV.holds[k][i]
               ? ' title="This is where the lever stops right now."' : ''}>${ordinal(r)}</b>` : `<b class="lvr">—</b>`)
       + `<span class="lvv">${val}</span></td>`;
   };
   // A lever the league has taken out of the draw still gets its column — knowing it is
   // NOT in play is as load-bearing as knowing where you stand on one that is.
-  const outCell = () => `<td class="lv unr"><b class="lvr">—</b><span class="lvv">not in the draw</span></td>`;
+  const outCell = lbl => `<td class="lv unr" data-l="${lbl}"><b class="lvr">—</b><span class="lvv">not in the draw</span></td>`;
 
   // ---- per-player table ----
+  /* ⚠️ ONE list of column headings, written into the <th> AND into every cell's data-l.
+     On a phone this table is not a table — the header row is hidden and each cell draws
+     its own label from data-l (see the #dgTable rules in the ≤640px block), because ten
+     columns scrolled sideways with the header gone is a value on screen with no way to
+     tell what it is. Two copies of these strings would drift, and the drifted one would
+     be the label a phone reads. */
+  const LVL = ['I · Shortest odds','II · Worst beat','III · Last in','IV · Worst CLV'];
   const order = live.map((x,i)=>i).sort((a,b)=>R.bozo[b]-R.bozo[a]);
   document.querySelector('#dgTable tbody').innerHTML =
     `<tr><th>Who</th><th>Leg</th><th>Leg wins</th><th>Bozo odds</th><th>Killed it alone</th>`
-    + `<th>I · Shortest odds</th><th>II · Worst beat</th><th>III · Last in</th><th>IV · Worst CLV</th>`
+    + LVL.map(l=>`<th>${l}</th>`).join('')
     + `<th>Usually named by</th></tr>`
     + order.map(i=>{
       const x=live[i], v=LV.d[i];
@@ -6552,14 +6569,14 @@ function paintDiag(live, players, status){
       const by = R.by[i];
       return `<tr${mine}><td class="who">${esc(teamOf(x.p))}</td>
         <td class="pk">${esc(x.label)} <span class="px">${x.price>0?'+':''}${x.price}</span>${(x.mkt==='prop'||x.mkt==='other')?` <span class="tm">· ${x.mkt}</span>`:''}</td>
-        <td><span class="mcell"><span class="v">${pct(R.win[i])}</span>${meter(R.win[i])}</span></td>
-        <td><span class="mcell"><span class="v">${pct(R.bozo[i])}</span>${meter(R.bozo[i],true)}</span></td>
-        <td class="px">${pct(R.solo[i])}</td>
-        ${levers.includes(0) ? lvCell(0, i, v.shown!=null ? (v.shown*100).toFixed(1)+'%' : 'no other side', v.shown==null) : outCell()}
-        ${levers.includes(1) ? lvCell(1, i, v.beat!=null ? v.beat.toFixed(2)+' SD' : 'awaiting kickoff', v.beat==null) : outCell()}
-        ${levers.includes(2) ? lvCell(2, i, v.ts ? when(v.ts) : '—', !v.ts) : outCell()}
-        ${levers.includes(3) ? lvCell(3, i, clvText(x), v.clv==null) : outCell()}
-        <td class="tm">${by ? esc(by.name)+' · '+pct(by.share) : '—'}</td></tr>`;
+        <td data-l="Leg wins"><span class="mcell"><span class="v">${pct(R.win[i])}</span>${meter(R.win[i])}</span></td>
+        <td data-l="Bozo odds"><span class="mcell"><span class="v">${pct(R.bozo[i])}</span>${meter(R.bozo[i],true)}</span></td>
+        <td class="px" data-l="Killed it alone">${pct(R.solo[i])}</td>
+        ${levers.includes(0) ? lvCell(0, i, LVL[0], (x.price>0?'+':'')+x.price) : outCell(LVL[0])}
+        ${levers.includes(1) ? lvCell(1, i, LVL[1], v.beat!=null ? v.beat.toFixed(2)+' SD' : 'awaiting kickoff', v.beat==null) : outCell(LVL[1])}
+        ${levers.includes(2) ? lvCell(2, i, LVL[2], v.ts ? when(v.ts) : '—', !v.ts) : outCell(LVL[2])}
+        ${levers.includes(3) ? lvCell(3, i, LVL[3], clvText(x), v.clv==null) : outCell(LVL[3])}
+        <td class="tm" data-l="Usually named by">${by ? esc(by.name)+' · '+pct(by.share) : '—'}</td></tr>`;
     }).join('');
 
   document.getElementById('dgNote').innerHTML =
@@ -6576,11 +6593,9 @@ function paintDiag(live, players, status){
      <b>The four lever columns are standings, not a forecast.</b> Only legs that <b>lost</b> are eligible, and on an
      open board nothing has lost yet — placing first on a lever means only this: if your leg loses and the draw
      reaches that lever, it stops on you. The highlighted placement in each column is where that lever stops right
-     now. <b>Shortest odds</b> places the biggest favorite first, ranked exactly as the grader ranks it — on raw
-     implied probability — while printing the <b>de-vigged</b> win probability beside it, because raw implied
-     over-counts every favourite by roughly the book's whole hold${LV.noOpp?`; ${LV.noOpp} leg${LV.noOpp===1?'':'s'} on this board
-     ${LV.noOpp===1?'has':'have'} no opposite price filed and so ${LV.noOpp===1?'shows':'show'} no percentage, though the placement still
-     stands`:''}. <b>Last in</b> is numbered in the order the legs were filed, so the highlight sits at the
+     now. <b>Shortest odds</b> places the biggest favorite first and prints the submitted price, which is the
+     same number it ranks on — a shorter price is a bigger favorite, always, so the column and its order can
+     never come apart. <b>Last in</b> is numbered in the order the legs were filed, so the highlight sits at the
      <em>bottom</em> of that column — it is the only lever you can move by acting, and editing a leg refiles it.
      <b>Worst beat</b> and <b>Worst CLV</b> keep their columns while they wait: beat needs a final score, CLV needs
      a close with both sides at both ends. Both stay in the draw and pass while they cannot measure, which is
@@ -6601,14 +6616,15 @@ function paintDiag(live, players, status){
    note under the table says so, because a column of placements with your name at the top
    reads as a verdict unless it is told not to.
 
-   ⚠️ RANKED ON THE GRADER'S RULE, NOT ON THE NUMBER PRINTED. simulate() and decide()
-   both rank Shortest Odds on RAW implied probability, so this does too — a placement
-   computed off some other quantity would be a confident lie about which leg the lever
-   reaches first. The de-vigged probability is what gets PRINTED, because raw implied
-   over-counts every favourite by roughly the book's whole hold and is nobody's real
-   chance of winning. Where the two would order the pool differently, `disagree` is set
-   and paintDiag raises it as a flag rather than letting the number and the placement
-   quietly contradict each other. */
+   ⚠️ THE COLUMN PRINTS THE PRICE IT RANKS ON. simulate() and decide() both rank Shortest
+   Odds on imp(), and imp() is monotonic in the American price — shorter price, higher
+   implied, every time — so the submitted price and the placement are the same ordering
+   and cannot come apart. That is the whole reason to print it. A de-vigged probability
+   was shown here first: it is the better read of one leg in isolation, but it is NOT
+   what the lever ranks on, so it could place a row below another that printed a smaller
+   number, and it went blank on any leg filed without an opposite price. Both of those
+   were the display disagreeing with the thing being displayed. The de-vig still does the
+   work it is actually right for, one column over, where CLV needs it. */
 
 // Competition ranking, descending on key: equal values share a placement and the next
 // one skips. Ties are real here — two legs at the same price genuinely tie the lever,
@@ -6634,7 +6650,9 @@ function leverStandings(live){
       else beat = beatDeficit(x.mkt, dirOf(x), x.mkt==='ml'?0:x.line,
                               x.mkt==='total'?null:r.actual, x.mkt==='total'?r.actual:null, sd);
     }
-    return { i, raw: imp(x.price), shown: pE, ts: x.ts||0, beat,
+    // ⚠️ pE is the ENTRY de-vig, and it exists here only to make CLV — the Shortest odds
+    // column ranks and prints the raw price. Do not route it back to that column.
+    return { i, raw: imp(x.price), ts: x.ts||0, beat,
              clv: (pC==null||pE==null) ? null : (pC-pE) };
   });
 
@@ -6658,13 +6676,7 @@ function leverStandings(live){
   const withClv = d.filter(r=>r.clv!=null);
   place(3, withClv, r=>-r.clv, rows=>rows.reduce((a,b)=>b.clv<a.clv?b:a, rows[0]));
 
-  // Would the printed number order the pool differently from the grader's rule?
-  const shown = d.filter(r=>r.shown!=null);
-  const byShown = shown.slice().sort((a,b)=>b.shown-a.shown).map(r=>r.i).join('|');
-  const byRaw   = shown.slice().sort((a,b)=>b.raw-a.raw).map(r=>r.i).join('|');
-
-  return { d, rank, holds, disagree: byShown !== byRaw,
-           noOpp: d.length - shown.length, scored: scored.length, withClv: withClv.length };
+  return { d, rank, holds, scored: scored.length, withClv: withClv.length };
 }
 
 /* Who is holding the belt right now.
