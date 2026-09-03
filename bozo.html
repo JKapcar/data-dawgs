@@ -1100,15 +1100,35 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
             radial-gradient(circle at 11px 100%,transparent 0 10px,#000 10.6px) 0 100%/22px 13px repeat-x}
   .card.bz-carnival > .bz-hdr h2.bz{font-size:12.5px;letter-spacing:1.4px;padding:6px 11px}
   table.bz td,table.bz th{padding-left:5px;padding-right:5px}
-  /* The leg is already spelled out on the slip above; "killed it alone" and "usually
-     named by" are the least load-bearing columns. Drop those three rather than shrink
-     everything — what is left is Who, the two simulated odds, and all four levers, which
-     is the comparison this table exists to make. The rest scrolls.
-     ⚠️ nth-child counts DOM position, not visible position, so hiding these does NOT
-     shift the seam on child 6. Renumber both rules together if a column is ever added. */
-  #dgTable td:nth-child(2),#dgTable th:nth-child(2),
-  #dgTable td:nth-child(5),#dgTable th:nth-child(5),
-  #dgTable td:nth-child(10),#dgTable th:nth-child(10){display:none}
+  /* ---- diagnostics: one card per person, not ten columns ----
+     ⚠️ TEN COLUMNS DO NOT FIT A PHONE, and hiding three of them did not fix it — what
+     was left still scrolled sideways, and the header scrolled away with it, so a number
+     ended up on screen with no way to tell which column it belonged to. Same DOM and
+     still one row per person; the row just stops being a strip and becomes a card, each
+     value labelled from its own data-l. Nothing is dropped and nothing scrolls sideways.
+     ⚠️ Every cell needs a data-l for this to work. A cell without one renders a value
+     with no label, which is the exact failure this replaced. */
+  #dgTable,#dgTable tbody,#dgTable tr,#dgTable td{display:block}
+  #dgTable tr:first-child{display:none}
+  #dgTable tr{border:1px solid var(--grid);border-radius:10px;padding:12px 13px;margin-bottom:10px}
+  #dgTable tr.me{border-color:var(--accent)}
+  #dgTable tr.me td{background:none}
+  #dgTable td{padding:6px 0;border:0;border-top:1px solid var(--grid);
+    display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center}
+  #dgTable td::before{content:attr(data-l);
+    font:700 9.5px/1.4 ui-monospace,monospace;letter-spacing:.9px;text-transform:uppercase;
+    color:var(--ink-3);text-align:left}
+  /* the name and the leg lead the card: no label, no rule, full width */
+  #dgTable td.who,#dgTable td.pk{display:block;border-top:0;padding:0}
+  #dgTable td.who::before,#dgTable td.pk::before{content:none}
+  #dgTable td.who{font:750 16.5px system-ui;color:var(--ink-1)}
+  #dgTable td.pk{margin:1px 0 7px;font-size:13px;color:var(--ink-2)}
+  /* the seam between simulation output and the levers turns horizontal */
+  #dgTable td:nth-child(6){border-top:2px solid var(--grid);margin-top:5px;padding-top:9px}
+  #dgTable td.lv{white-space:normal}
+  #dgTable td.lv .lvv{text-align:right}
+  #dgTable .mcell{flex-direction:row;align-items:center;justify-content:flex-end;gap:8px;min-width:0}
+  #dgTable .mcell .meter{flex:0 0 62px;width:62px;min-width:62px}
   .mcell{min-width:54px}
   .slip-ft{gap:16px;padding-right:96px}
   .stamp{font-size:12px;top:auto;right:10px;bottom:14px;padding:5px 8px;letter-spacing:2px}
@@ -6519,22 +6539,29 @@ function paintDiag(live, players, status){
      leg; where it can't, the cell says what it is waiting for and takes an em dash, which
      is a different statement from ranking last. `hot` marks the leg the lever currently
      stops on — for Last In that is the BOTTOM of the printed order, not the top. */
-  const lvCell = (k, i, val, muted) => {
+  const lvCell = (k, i, lbl, val, muted) => {
     const r = LV.rank[k][i];
-    return `<td class="lv${muted?' unr':''}">`
+    return `<td class="lv${muted?' unr':''}" data-l="${lbl}">`
       + (r ? `<b class="lvr${LV.holds[k][i]?' hot':''}"${LV.holds[k][i]
               ? ' title="This is where the lever stops right now."' : ''}>${ordinal(r)}</b>` : `<b class="lvr">—</b>`)
       + `<span class="lvv">${val}</span></td>`;
   };
   // A lever the league has taken out of the draw still gets its column — knowing it is
   // NOT in play is as load-bearing as knowing where you stand on one that is.
-  const outCell = () => `<td class="lv unr"><b class="lvr">—</b><span class="lvv">not in the draw</span></td>`;
+  const outCell = lbl => `<td class="lv unr" data-l="${lbl}"><b class="lvr">—</b><span class="lvv">not in the draw</span></td>`;
 
   // ---- per-player table ----
+  /* ⚠️ ONE list of column headings, written into the <th> AND into every cell's data-l.
+     On a phone this table is not a table — the header row is hidden and each cell draws
+     its own label from data-l (see the #dgTable rules in the ≤640px block), because ten
+     columns scrolled sideways with the header gone is a value on screen with no way to
+     tell what it is. Two copies of these strings would drift, and the drifted one would
+     be the label a phone reads. */
+  const LVL = ['I · Shortest odds','II · Worst beat','III · Last in','IV · Worst CLV'];
   const order = live.map((x,i)=>i).sort((a,b)=>R.bozo[b]-R.bozo[a]);
   document.querySelector('#dgTable tbody').innerHTML =
     `<tr><th>Who</th><th>Leg</th><th>Leg wins</th><th>Bozo odds</th><th>Killed it alone</th>`
-    + `<th>I · Shortest odds</th><th>II · Worst beat</th><th>III · Last in</th><th>IV · Worst CLV</th>`
+    + LVL.map(l=>`<th>${l}</th>`).join('')
     + `<th>Usually named by</th></tr>`
     + order.map(i=>{
       const x=live[i], v=LV.d[i];
@@ -6542,14 +6569,14 @@ function paintDiag(live, players, status){
       const by = R.by[i];
       return `<tr${mine}><td class="who">${esc(teamOf(x.p))}</td>
         <td class="pk">${esc(x.label)} <span class="px">${x.price>0?'+':''}${x.price}</span>${(x.mkt==='prop'||x.mkt==='other')?` <span class="tm">· ${x.mkt}</span>`:''}</td>
-        <td><span class="mcell"><span class="v">${pct(R.win[i])}</span>${meter(R.win[i])}</span></td>
-        <td><span class="mcell"><span class="v">${pct(R.bozo[i])}</span>${meter(R.bozo[i],true)}</span></td>
-        <td class="px">${pct(R.solo[i])}</td>
-        ${levers.includes(0) ? lvCell(0, i, (x.price>0?'+':'')+x.price) : outCell()}
-        ${levers.includes(1) ? lvCell(1, i, v.beat!=null ? v.beat.toFixed(2)+' SD' : 'awaiting kickoff', v.beat==null) : outCell()}
-        ${levers.includes(2) ? lvCell(2, i, v.ts ? when(v.ts) : '—', !v.ts) : outCell()}
-        ${levers.includes(3) ? lvCell(3, i, clvText(x), v.clv==null) : outCell()}
-        <td class="tm">${by ? esc(by.name)+' · '+pct(by.share) : '—'}</td></tr>`;
+        <td data-l="Leg wins"><span class="mcell"><span class="v">${pct(R.win[i])}</span>${meter(R.win[i])}</span></td>
+        <td data-l="Bozo odds"><span class="mcell"><span class="v">${pct(R.bozo[i])}</span>${meter(R.bozo[i],true)}</span></td>
+        <td class="px" data-l="Killed it alone">${pct(R.solo[i])}</td>
+        ${levers.includes(0) ? lvCell(0, i, LVL[0], (x.price>0?'+':'')+x.price) : outCell(LVL[0])}
+        ${levers.includes(1) ? lvCell(1, i, LVL[1], v.beat!=null ? v.beat.toFixed(2)+' SD' : 'awaiting kickoff', v.beat==null) : outCell(LVL[1])}
+        ${levers.includes(2) ? lvCell(2, i, LVL[2], v.ts ? when(v.ts) : '—', !v.ts) : outCell(LVL[2])}
+        ${levers.includes(3) ? lvCell(3, i, LVL[3], clvText(x), v.clv==null) : outCell(LVL[3])}
+        <td class="tm" data-l="Usually named by">${by ? esc(by.name)+' · '+pct(by.share) : '—'}</td></tr>`;
     }).join('');
 
   document.getElementById('dgNote').innerHTML =

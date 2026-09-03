@@ -39,18 +39,46 @@ const ML = (p, price, opp, ts) => ({ p, price, entryPriceOpp: opp, ts, mkt: 'ml'
 test('it is one table with one row per person — no second stacked surface', () => {
   assert.doesNotMatch(bozo, /id="dgLevers"/, 'the standalone block is gone');
   assert.doesNotMatch(bozo, /paintLeverStandings/);
-  const head = bozo.match(/<th>Who<\/th>[\s\S]*?<th>Usually named by<\/th>/)[0];
+  // One list of headings feeds both the <th> row and every cell's data-l. Two copies
+  // would drift, and the drifted one is the label a phone reads.
+  const LVL = bozo.match(/const LVL = \[([^\]]*)\]/)[1];
   for (const col of ['I · Shortest odds', 'II · Worst beat', 'III · Last in', 'IV · Worst CLV'])
-    assert.ok(head.includes(`<th>${col}</th>`), `${col} is a column`);
+    assert.ok(LVL.includes(`'${col}'`), `${col} is in LVL`);
+  assert.match(bozo, /\+ LVL\.map\(l=>`<th>\$\{l\}<\/th>`\)\.join\(''\)/, 'the header row is built from it');
+  assert.match(bozo, /lvCell\(0, i, LVL\[0\]/, 'and so is each cell label');
 });
 
-test('the seam and the mobile drops are renumbered together', () => {
-  // nth-child counts DOM position, so hiding columns must not move the seam.
+test('every cell carries a label, because on a phone that is all there is', () => {
+  // The header row is hidden at ≤640px and each cell draws its own label from data-l.
+  // A cell without one renders a value with nothing saying what it is.
+  const a = bozo.indexOf('return `<tr${mine}><td class="who">');
+  const rowTpl = bozo.slice(a, bozo.indexOf('</tr>`;', a));
+  const cells = rowTpl.match(/<td[^>]*>/g) || [];
+  assert.ok(cells.length >= 6, `found the row template (${cells.length} cells)`);
+  for (const td of cells) {
+    if (/class="(who|pk)"/.test(td)) continue;      // name and leg lead the card unlabelled
+    assert.match(td, /data-l=/, `unlabelled cell: ${td}`);
+  }
+  assert.match(bozo, /data-l="Leg wins"/);
+  assert.match(bozo, /data-l="Bozo odds"/);
+  assert.match(bozo, /data-l="Killed it alone"/);
+  assert.match(bozo, /data-l="Usually named by"/);
+  assert.match(bozo, /lvCell = \(k, i, lbl, val, muted\)[\s\S]*?data-l="\$\{lbl\}"/, 'lever cells too');
+  assert.match(bozo, /outCell = lbl =>[\s\S]*?data-l="\$\{lbl\}"/, 'including a dropped lever');
+});
+
+test('on a phone the row becomes a labelled card instead of scrolling sideways', () => {
+  const mob = bozo.slice(bozo.indexOf('---- diagnostics: one card per person'));
+  assert.match(mob, /#dgTable,#dgTable tbody,#dgTable tr,#dgTable td\{display:block\}/);
+  assert.match(mob, /#dgTable tr:first-child\{display:none\}/, 'the header row is hidden');
+  assert.match(mob, /#dgTable td::before\{content:attr\(data-l\)/, 'so each cell draws its own');
+  assert.match(mob, /#dgTable td:nth-child\(6\)\{border-top:2px/, 'the seam turns horizontal');
+  // Nothing is dropped any more — hiding columns was the fix that did not work, and the
+  // only display:none left in here is the header row.
+  assert.doesNotMatch(bozo, /#dgTable td:nth-child\(\d+\),#dgTable th:nth-child\(\d+\)\{display:none\}/,
+    'no column is hidden on a phone');
+  // and the wide layout still has its vertical seam
   assert.match(bozo, /#dgTable td:nth-child\(6\),#dgTable th:nth-child\(6\)\{border-left/);
-  const mob = bozo.match(/#dgTable td:nth-child\(2\)[\s\S]*?display:none\}/)[0];
-  assert.match(mob, /nth-child\(5\)/, 'killed it alone drops on a phone');
-  assert.match(mob, /nth-child\(10\)/, 'usually named by drops on a phone');
-  assert.doesNotMatch(mob, /nth-child\(7\)/, 'the old index would now hide a lever column');
 });
 
 test('the reported board: Kap 1st on odds at its de-vigged 67.5%, 3rd in on Last in', () => {
@@ -84,7 +112,7 @@ test('Shortest odds prints the price it ranks on, so the two cannot come apart',
   const fn = bozo.slice(bozo.indexOf('function leverStandings('));
   assert.match(fn, /place\(0, d\.slice\(\), r=>r\.raw,/, 'so the column places on imp() too');
   // and the cell prints x.price itself, not a derived figure
-  assert.match(bozo, /lvCell\(0, i, \(x\.price>0\?'\+':''\)\+x\.price\)/);
+  assert.match(bozo, /lvCell\(0, i, LVL\[0\], \(x\.price>0\?'\+':''\)\+x\.price\)/);
 
   // The claim that makes this safe: imp() is monotonic in the American price, across the
   // sign boundary too. Shorter price, higher implied — so price order IS lever order.
@@ -142,9 +170,9 @@ test('Worst CLV drops a leg it cannot de-vig rather than scoring it zero', () =>
 
 test('a lever out of the draw gets a column saying so, not a blank', () => {
   const fn = bozo.slice(bozo.indexOf('function paintDiag('));
-  assert.match(fn, /const outCell = \(\) =>[\s\S]*?not in the draw/);
+  assert.match(fn, /const outCell = lbl =>[\s\S]*?not in the draw/);
   for (const k of [0, 1, 2, 3])
-    assert.match(fn, new RegExp(`levers\\.includes\\(${k}\\) \\? lvCell\\(${k},[\\s\\S]*?: outCell\\(\\)`));
+    assert.match(fn, new RegExp(`levers\\.includes\\(${k}\\) \\? lvCell\\(${k},[\\s\\S]*?: outCell\\(LVL\\[${k}\\]\\)`));
 });
 
 test('the note calls the columns a standing, not a verdict', () => {
@@ -163,11 +191,11 @@ test('the note calls the columns a standing, not a verdict', () => {
    of paintDiag, so a placement that prints the wrong ordinal or loses its highlight is
    caught here rather than on somebody's phone. */
 function renderCell(LV, k, i, val, muted) {
-  const src = bozo.match(/  const lvCell = \(k, i, val, muted\) => \{[\s\S]*?\n  \};/)[0]
-            + '\n' + bozo.match(/  const outCell = \(\) => [\s\S]*?;\n/)[0];
+  const src = bozo.match(/  const lvCell = \(k, i, lbl, val, muted\) => \{[\s\S]*?\n  \};/)[0]
+            + '\n' + bozo.match(/  const outCell = lbl => [\s\S]*?;\n/)[0];
   const c = vm.createContext({ LV, ordinal });
-  vm.runInContext(src + '\nthis.OUT = ARG === null ? outCell() : lvCell(K, I, V, M);',
-    Object.assign(c, { ARG: k, K: k, I: i, V: val, M: muted }));
+  vm.runInContext(src + '\nthis.OUT = ARG === null ? outCell(LBL) : lvCell(K, I, LBL, V, M);',
+    Object.assign(c, { ARG: k, K: k, I: i, LBL: 'I · Shortest odds', V: val, M: muted }));
   return c.OUT;
 }
 
@@ -176,6 +204,7 @@ test('a cell prints its placement, and only the lever’s current stop is highli
   const first = renderCell(LV, 0, 0, '-238', false);
   assert.match(first, /<b class="lvr hot" title="This is where the lever stops right now\.">1st<\/b>/);
   assert.match(first, /<span class="lvv">-238<\/span>/);
+  assert.match(first, /data-l="I · Shortest odds"/, 'the label travels with the cell');
 
   const third = renderCell(LV, 0, 1, '-150', false);
   assert.match(third, /<b class="lvr">3rd<\/b>/, 'placed, but not the stop');
@@ -185,7 +214,7 @@ test('a cell prints its placement, and only the lever’s current stop is highli
 
   // A leg this lever cannot rank takes an em dash — a different claim from placing last.
   const unranked = renderCell(LV, 1, 0, 'awaiting kickoff', true);
-  assert.match(unranked, /^<td class="lv unr">/);
+  assert.match(unranked, /^<td class="lv unr" data-l="/);
   assert.match(unranked, /<b class="lvr">—<\/b>/);
   assert.doesNotMatch(unranked, /\d(st|nd|rd|th)/);
 
