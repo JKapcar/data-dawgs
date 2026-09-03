@@ -1100,35 +1100,29 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
             radial-gradient(circle at 11px 100%,transparent 0 10px,#000 10.6px) 0 100%/22px 13px repeat-x}
   .card.bz-carnival > .bz-hdr h2.bz{font-size:12.5px;letter-spacing:1.4px;padding:6px 11px}
   table.bz td,table.bz th{padding-left:5px;padding-right:5px}
-  /* ---- diagnostics: one card per person, not ten columns ----
-     ⚠️ TEN COLUMNS DO NOT FIT A PHONE, and hiding three of them did not fix it — what
-     was left still scrolled sideways, and the header scrolled away with it, so a number
-     ended up on screen with no way to tell which column it belonged to. Same DOM and
-     still one row per person; the row just stops being a strip and becomes a card, each
-     value labelled from its own data-l. Nothing is dropped and nothing scrolls sideways.
-     ⚠️ Every cell needs a data-l for this to work. A cell without one renders a value
-     with no label, which is the exact failure this replaced. */
-  #dgTable,#dgTable tbody,#dgTable tr,#dgTable td{display:block}
-  #dgTable tr:first-child{display:none}
-  #dgTable tr{border:1px solid var(--grid);border-radius:10px;padding:12px 13px;margin-bottom:10px}
-  #dgTable tr.me{border-color:var(--accent)}
-  #dgTable tr.me td{background:none}
-  #dgTable td{padding:6px 0;border:0;border-top:1px solid var(--grid);
-    display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center}
-  #dgTable td::before{content:attr(data-l);
-    font:700 9.5px/1.4 ui-monospace,monospace;letter-spacing:.9px;text-transform:uppercase;
-    color:var(--ink-3);text-align:left}
-  /* the name and the leg lead the card: no label, no rule, full width */
-  #dgTable td.who,#dgTable td.pk{display:block;border-top:0;padding:0}
-  #dgTable td.who::before,#dgTable td.pk::before{content:none}
-  #dgTable td.who{font:750 16.5px system-ui;color:var(--ink-1)}
-  #dgTable td.pk{margin:1px 0 7px;font-size:13px;color:var(--ink-2)}
-  /* the seam between simulation output and the levers turns horizontal */
-  #dgTable td:nth-child(6){border-top:2px solid var(--grid);margin-top:5px;padding-top:9px}
-  #dgTable td.lv{white-space:normal}
-  #dgTable td.lv .lvv{text-align:right}
-  #dgTable .mcell{flex-direction:row;align-items:center;justify-content:flex-end;gap:8px;min-width:0}
-  #dgTable .mcell .meter{flex:0 0 62px;width:62px;min-width:62px}
+  /* ---- diagnostics on a phone: ONE table, scrolled sideways ----
+     ⚠️ IT STAYS A TABLE. This was cards for one release and that was the wrong read of
+     "hard to tell which column is which" — the complaint was that the columns were
+     illegible, not that columns were the wrong shape. Comparing two people on one lever
+     is the job, and a column does that for free while a stack of cards makes you hold
+     one card in your head and scroll to the next.
+     ⚠️ What actually made it unreadable was losing your place while scrolling right, so
+     the name column is PINNED to the left edge and rides along. That is the fix: a value
+     is never on screen without the name it belongs to.
+     ⚠️ The header is NOT sticky, deliberately. .tscroll sets overflow-x, which makes
+     overflow-y compute to auto — so a `position:sticky; top:0` there anchors to a
+     container that never scrolls vertically and simply does nothing. It would be a rule
+     that looks like it works and doesn't. The column rules below do that job instead. */
+  #dgTable{min-width:640px}
+  /* the name column rides along — without it you scroll to Worst CLV and no longer know
+     whose row you are on, which is the whole failure this replaces */
+  #dgTable td.who,#dgTable th:first-child{position:sticky;left:0;z-index:2;
+    background:var(--surface-1);box-shadow:1px 0 0 var(--grid)}
+  #dgTable tr.me td.who{background:color-mix(in srgb,var(--accent) 12%,var(--surface-1))}
+  #dgTable td,#dgTable th{white-space:nowrap}
+  /* a rule between every column: at this width the eye needs the edge, not just the gap */
+  #dgTable td+td,#dgTable th+th{border-left:1px solid var(--grid)}
+  .tscroll{position:relative}
   .mcell{min-width:54px}
   .slip-ft{gap:16px;padding-right:96px}
   .stamp{font-size:12px;top:auto;right:10px;bottom:14px;padding:5px 8px;letter-spacing:2px}

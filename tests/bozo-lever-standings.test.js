@@ -67,18 +67,26 @@ test('every cell carries a label, because on a phone that is all there is', () =
   assert.match(bozo, /outCell = lbl =>[\s\S]*?data-l="\$\{lbl\}"/, 'including a dropped lever');
 });
 
-test('on a phone the row becomes a labelled card instead of scrolling sideways', () => {
-  const mob = bozo.slice(bozo.indexOf('---- diagnostics: one card per person'));
-  assert.match(mob, /#dgTable,#dgTable tbody,#dgTable tr,#dgTable td\{display:block\}/);
-  assert.match(mob, /#dgTable tr:first-child\{display:none\}/, 'the header row is hidden');
-  assert.match(mob, /#dgTable td::before\{content:attr\(data-l\)/, 'so each cell draws its own');
-  assert.match(mob, /#dgTable td:nth-child\(6\)\{border-top:2px/, 'the seam turns horizontal');
-  // Nothing is dropped any more — hiding columns was the fix that did not work, and the
-  // only display:none left in here is the header row.
-  assert.doesNotMatch(bozo, /#dgTable td:nth-child\(\d+\),#dgTable th:nth-child\(\d+\)\{display:none\}/,
-    'no column is hidden on a phone');
-  // and the wide layout still has its vertical seam
-  assert.match(bozo, /#dgTable td:nth-child\(6\),#dgTable th:nth-child\(6\)\{border-left/);
+test('on a phone it stays ONE table and pins the name column', () => {
+  // It was cards for one release. That was the wrong read of "hard to tell which column
+  // is which": the columns were illegible, not the wrong shape. Comparing two people on
+  // one lever is the job, and a column does that for free.
+  const mob = bozo.slice(bozo.indexOf('---- diagnostics on a phone: ONE table'));
+  assert.doesNotMatch(bozo, /#dgTable,#dgTable tbody,#dgTable tr,#dgTable td\{display:block\}/,
+    'the row is not turned into a card');
+  assert.doesNotMatch(bozo, /#dgTable td::before\{content:attr\(data-l\)/,
+    'labels do not replace the header row');
+  assert.match(mob, /#dgTable\{min-width:640px\}/, 'the table keeps its width and scrolls');
+  // Losing your place while scrolling right was the actual failure: the name rides along.
+  assert.match(mob, /#dgTable td\.who,#dgTable th:first-child\{position:sticky;left:0/);
+  assert.match(mob, /#dgTable td\+td,#dgTable th\+th\{border-left/, 'columns get an edge, not just a gap');
+  // A sticky header would be a rule that looks like it works and doesn't — .tscroll sets
+  // overflow-x, so overflow-y computes to auto and top:0 anchors to a container that
+  // never scrolls vertically.
+  assert.doesNotMatch(mob, /#dgTable th\{position:sticky;top:0/, 'no sticky header that cannot stick');
+  assert.match(mob, /The header is NOT sticky, deliberately/, 'and the reason is written down');
+  // Nothing is hidden: one table, every column, scrolled.
+  assert.doesNotMatch(bozo, /#dgTable td:nth-child\(\d+\),#dgTable th:nth-child\(\d+\)\{display:none\}/);
 });
 
 test('the reported board: Kap 1st on odds at its de-vigged 67.5%, 3rd in on Last in', () => {
