@@ -636,7 +636,15 @@ console.log('\nWorker deployment contract');
     try { w = JSON.parse(fs.readFileSync(configPath, 'utf8')); }
     catch (e) { fail(`wrangler.jsonc: unparseable — ${e.message}`); }
     if (w) {
-      const expectedSecrets = ['BOZO_PEPPER', 'BOZO_TOKENS', 'DAWG_PASS', 'DDCC_IMPORT_TOKEN', 'ELEVEN_KEY', 'FB_SECRET', 'RESEND_KEY', 'SGO_KEY', 'XAI_KEY'];
+      /* ⚠️ BOZO_TOKENS IS NOT HERE, AND ITS ABSENCE IS THE POINT. ed62d8d retired the
+         bootstrap secret and deleted it from wrangler.jsonc, but touched only that file —
+         this list kept demanding it, so every run since has failed on a manifest that was
+         correct. The Worker settled the question itself: bozoConfig() requires FB_SECRET
+         and BOZO_PEPPER only, and the comment above it says BOZO_TOKENS is deliberately
+         not required now that /users is the roster of record. A required-secret list that
+         outlives the requirement turns this check into noise, which is worse than not
+         having it — a red build nobody believes is a red build nobody reads. */
+      const expectedSecrets = ['BOZO_PEPPER', 'DAWG_PASS', 'DDCC_IMPORT_TOKEN', 'ELEVEN_KEY', 'FB_SECRET', 'RESEND_KEY', 'SGO_KEY', 'XAI_KEY'];
       const required = [...((w.secrets && w.secrets.required) || [])].sort();
       const crons = [...((w.triggers && w.triggers.crons) || [])].sort();
       const rl = (w.kv_namespaces || []).find(x => x.binding === 'RL');
