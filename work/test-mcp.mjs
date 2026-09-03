@@ -15,7 +15,9 @@ const makeSlate = require("./mkslate.js");
 
 // Counts are pinned deliberately: a tool appearing or vanishing should break a test, not
 // slip through. They live here so adding a tool is one edit, not nine.
-const N_TOOLS = 55, N_CORE = 25;
+// ⚠️ COUNTS, NOT A GUESS — bump these in the same commit that adds or retires a tool.
+// 56 = 25 core + 31 full. dd_war_room took full from 30 to 31.
+const N_TOOLS = 56, N_CORE = 25;
 const WRITE_TOOLS = ["dd_submit_bozo_leg", "sd_start_session", "sd_log_set", "sd_log_sets",
                      "sd_finish_session", "sd_log_measurement", "sd_log_nutrition"];
 let pass = 0, fail = 0;
