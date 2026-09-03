@@ -2334,6 +2334,10 @@ ok((assembled.match(/function solveLineups/g) || []).length === 1 && assembled.i
    "assembled Worker contains one private copy of the shared DFS engine");
 ok((assembled.match(/function solvePath/g) || []).length === 1 && assembled.includes("const mcpSurvivorPathRoot = {}"),
    "assembled Worker contains one private copy of the shared survivor path engine");
+ok(blockSrc.includes('enum: ["yahoo", "espn", "sleeper"]') &&
+   blockSrc.includes('"Sleeper is UNREACHABLE from dd_war_room.') &&
+   blockSrc.indexOf('if (want === "sleeper")') < blockSrc.indexOf('const yahoo = (!want || want === "yahoo")'),
+   "dd_war_room names browser-only Sleeper as UNREACHABLE before checking stored connections");
 ok(!assembled.includes(PASS), "no hardcoded secrets in the source");
 
 console.log(`\n${pass} passed, ${fail} failed`);

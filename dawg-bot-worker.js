@@ -14770,8 +14770,8 @@ const MCP_TOOLS = [
       properties: {
         provider: {
           type: "string",
-          enum: ["yahoo", "espn"],
-          description: "Which connection to read. Omit it and the tool resolves the one that exists, or names both and refuses to guess when the caller has connected two.",
+          enum: ["yahoo", "espn", "sleeper"],
+          description: "Which provider to read. Yahoo and ESPN use the caller's stored connection. Sleeper is accepted only so the tool can report that browser-only leagues are unreachable. Omit it and the tool resolves the one stored connection that exists, or names both and refuses to guess when the caller has connected two.",
         },
       },
       additionalProperties: false,
@@ -14786,6 +14786,10 @@ const MCP_TOOLS = [
       const uid = caller.uid || caller.name;
 
       const want = args && args.provider ? String(args.provider).toLowerCase() : null;
+      if (want === "sleeper")
+        return toolErr(
+          "Sleeper is UNREACHABLE from dd_war_room. A Sleeper league is read only in your browser from its " +
+          "public URL and is not stored server-side, so this tool cannot read it even while the War Room page is showing it.");
       const yahoo = (!want || want === "yahoo") ? await yahooStored(kv, uid) : null;
       let espn = null;
       if (!want || want === "espn") {
