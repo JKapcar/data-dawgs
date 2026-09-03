@@ -4337,9 +4337,11 @@ async function requireMember(request, env, lid) {
 // missing, expired or forged session simply receives the public catalog; it never
 // turns a read-only directory request into an auth error.
 //
-// `demo-royale` remains visibly labelled DEMO · SIMULATED by its stored settings and
-// the page. It is the public Royale surface until a live Bozo Boyz Royale replaces it.
-const PUBLIC_BOZO_LEAGUES = new Set([DEFAULT_LEAGUE, "demo-royale"]);
+// ⚠️ ONE hardcoded public room, not two. `demo-royale` was the second — the seeded
+// Royale demo, kept listed so the format had a public surface before a real Royale
+// league existed. It has been deleted, and a hardcoded id for a league that is gone
+// would publish a 404 to every unsigned browser that reads the directory.
+const PUBLIC_BOZO_LEAGUES = new Set([DEFAULT_LEAGUE]);
 const leagueIsPublic = (id, lg) => PUBLIC_BOZO_LEAGUES.has(id) || (lg && lg.visibility === "public");
 async function leagueList(request, env, cors) {
   let leagues;
@@ -5409,7 +5411,7 @@ async function leagueAccess(request, env, cors) {
   if (action === "visibility") {
     const visibility = body.visibility === "public" ? "public" : "private";
     if (PUBLIC_BOZO_LEAGUES.has(lid) && visibility !== "public")
-      return json({ error: "Bozo Boyz and Bozo Royale stay public." }, 400, cors);
+      return json({ error: "Bozo Boyz stays public." }, 400, cors);
     try { await fbPatch(env, LG(lid), { visibility }); }
     catch (e) { return json({ error: "League visibility write failed: " + e.message }, 502, cors); }
     return reply(rec, visibility);
@@ -14734,6 +14736,102 @@ const MCP_TOOLS = [
       });
     },
   },
+  /* ⚠️ THE ONLY TOOL HERE THAT READS A LEAGUE OUTSIDE THIS SITE, and the only reason it
+     can is that the caller signed in and connected one. Yahoo and ESPN connections are
+     stored per account (yahooKvKey / espnKvKey, both keyed by uid), so this resolves the
+     SAME credential the page uses and returns the SAME feed — it is not a second read of
+     the provider with its own idea of the league.
+
+     ⚠️ NO leagueId ARGUMENT, ON PURPOSE. Accepting one would turn a per-account tool into
+     a way to read any league id somebody can guess, and both providers hand back rosters
+     and team names. The credential decides which league this answers about. A caller who
+     wants a different league connects it on the site.
+
+     ⚠️ SLEEPER IS NOT HERE, and the tool says so rather than reporting "not connected".
+     Sleeper is read straight from the browser by public URL and no connection is stored
+     server-side, so there is nothing for this to resolve. Reporting it as unconnected
+     would be a wrong answer to a question the user can see the answer to on screen. */
+  {
+    name: "dd_war_room",
+    title: "Your connected fantasy league",
+    catalog: "full",
+    readOnlyHint: true,
+    description:
+      "The caller's OWN connected fantasy league as the War Room reads it: teams, rosters, each player's " +
+      "position and projection, and DataDawg$ where a board exists for that league. DataDawg$ is this site's " +
+      "converted auction dollars for THAT league's settings — priced against its own replacement level, not a " +
+      "generic board and not what anybody paid. Covers the Yahoo and ESPN connections, which are stored per " +
+      "account; a Sleeper league is read in the browser by public URL and is not stored here, so it cannot be " +
+      "resolved by this tool. Needs a personal connection: the shared league connector is not signed in as " +
+      "anybody and has no league. The `dd` block reports how many of the league's players the board matched — " +
+      "an unmatched player has no DataDawg$, which is a gap in the join and never a valuation of zero.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        provider: {
+          type: "string",
+          enum: ["yahoo", "espn"],
+          description: "Which connection to read. Omit it and the tool resolves the one that exists, or names both and refuses to guess when the caller has connected two.",
+        },
+      },
+      additionalProperties: false,
+    },
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user")
+        return toolErr(
+          "This reads the league YOU connected, and the shared league connector is not signed in as anybody. " +
+          "Mint a personal URL at " + SITE + "/connect.html and this works.");
+      const kv = env && env.RL;
+      if (!kv) return toolErr("League connections are not configured on this deployment.");
+      const uid = caller.uid || caller.name;
+
+      const want = args && args.provider ? String(args.provider).toLowerCase() : null;
+      const yahoo = (!want || want === "yahoo") ? await yahooStored(kv, uid) : null;
+      let espn = null;
+      if (!want || want === "espn") {
+        let blob = null;
+        try { blob = await kv.get(espnKvKey(uid)); } catch { blob = null; }
+        if (blob) { try { espn = await espnOpen(env, uid, blob); } catch { espn = null; } }
+      }
+
+      /* ⚠️ REFUSE, DO NOT PICK. Two connected leagues and no `provider` is genuinely
+         ambiguous, and answering about the wrong one is worse than answering about
+         neither — every number below would be right about a league nobody asked about. */
+      if (!want && yahoo && espn)
+        return toolErr(
+          "You have both a Yahoo and an ESPN league connected. Say which one: " +
+          'provider "yahoo" (league ' + yahoo.leagueId + ') or provider "espn" (league ' + espn.leagueId + ").");
+
+      const provider = yahoo ? "yahoo" : espn ? "espn" : null;
+      if (!provider)
+        return toolErr(
+          (want ? "No " + want + " league is connected to this account." : "No Yahoo or ESPN league is connected to this account.") +
+          " Connect one at " + SITE + "/fantasy-warroom.html. A Sleeper league is read in your browser from its " +
+          "public URL and is not stored here, so it cannot be read by this tool even while the page is showing it.");
+
+      const cred = provider === "yahoo" ? yahoo : espn;
+      const feed = provider === "yahoo" ? await yahooWarroomFeed(cred, env) : await espnWarroomFeed(cred);
+      if (!feed.ok)
+        return toolErr("Could not read the " + provider + " league: " + (feed.reason || "upstream refused"));
+
+      // The same decoration the page's own /warroom route applies — one code path, so a
+      // number here can never disagree with the number on screen.
+      ddDecorateBody(await ddLoadBoard(env, provider, cred.leagueId, "season"), feed.body);
+
+      return toolText({
+        provider,
+        leagueId: cred.leagueId,
+        you: cred.teamId != null ? String(cred.teamId) : null,
+        ...feed.body,
+        method: {
+          dollars: SITE + "/data/datadawg-dollars-method.md",
+          page: SITE + "/fantasy-warroom.html",
+          note: "DataDawg$ is converted for THIS league's settings against its own replacement level. It is not " +
+                "Market Value, not what anyone paid, and not comparable across leagues with different rosters.",
+        },
+      });
+    },
+  },
   {
     name: "dd_draft_pool",
     title: "Draft player pool",
@@ -16727,6 +16825,7 @@ const MCP_TOOLS = [
         pages: {
           "index.html": "Home — what Data Dawgs is and the working-dawg taxonomy (Pup / Dawgs / The DawgHouse).",
           "bigboard.html": "Draft big board over the MV pool.",
+          "fantasy-warroom.html": "Fantasy War Room — a connected Sleeper, public Yahoo or ESPN league with every roster priced in DataDawg$ against THAT league's own replacement level. The rows are one account's league and have no public JSON; dd_war_room reads the caller's own Yahoo or ESPN connection. A Sleeper league is read in the browser and is not stored here.",
           "datadawg-dollars.html": "DataDawg$ — our own converted auction dollars for one league room: Target $, conversion-sensitivity bands, ETR delta. Not MV; MV is the market snapshot this converts.",
           "auction.html": "Auction draft operator (league passphrase gate).",
           "board.html": "Live draft board — mirrors the auction via Firebase.",

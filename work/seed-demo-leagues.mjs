@@ -2,7 +2,7 @@
 /* Seed the two demo leagues from the simulator's output.
  *
  *   node seed-demo-leagues.mjs --session <X-Dawg-Session> \
- *        --standard ../tmp/demo-season.json --royale ../tmp/demo-royale-season.json
+ *        --standard ../tmp/demo-season.json
  *
  * ⚠️ THIS IS A HAND-RUN SEEDING SCRIPT AND IS NOT WIRED INTO ANY PRODUCTION PATH.
  * The simulator that produced these files isn't either. Both exist so a league can see
@@ -148,14 +148,17 @@ if (fromFile) {
   }
 }
 
+/* ⚠️ THE ROYALE JOB IS GONE, DELIBERATELY. `demo-royale` ("Bozo Royale (DEMO)") was
+   deleted from the live site, and this script is create-only — leaving its job here
+   meant the next hand-run of the seeder would put the deleted league straight back,
+   which is not a mistake anyone would catch until it was public again. Bozo Royale is
+   still a live format; what went was one seeded, synthetic league. Restoring it is a
+   deliberate act: re-add a job with format "royale" and buyback 25, and note that the
+   Royale payload's own `leagueName` reads "Bozo Boyz (DEMO)" — it predates the format
+   having a name — so the name has to be set here rather than trusted from the file. */
 const JOBS = [
   { file: args.standard ? String(args.standard) : rel("../tmp/demo-season.json"),
     id: "demo-2026",   name: "Bozo Boyz (DEMO)",   format: "standard" },
-  // ⚠️ The Royale file's own `leagueName` still says "Bozo Boyz (DEMO)" — it was
-  // generated before the format had a name. Kap named it Bozo Royale, so the name is
-  // set here rather than trusting the payload.
-  { file: args.royale ? String(args.royale) : rel("../tmp/demo-royale-season.json"),
-    id: "demo-royale", name: "Bozo Royale (DEMO)", format: "royale", buyback: 25 },
 ];
 
 for (const job of JOBS) {
