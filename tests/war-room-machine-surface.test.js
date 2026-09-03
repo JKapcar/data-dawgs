@@ -81,3 +81,67 @@ test('the page itself tells a machine where to go', () => {
   assert.match(method, /surfaces\.json/, 'and the registry that grades every surface');
   assert.match(method, /no public JSON/, 'the gap is stated, so a model stops hunting');
 });
+
+/* dd_war_room returned the whole feed on its first live call: 93 KB, of which the pool
+   was 86 KB — 629 player rows for a league where 161 are rostered. That is ~23k tokens,
+   which overflows a tool-result budget outright, so the answer never arrived and the
+   context needed to reason with it was gone. A tool nobody can afford to call is not a
+   live tool. These pin the trim, and pin the thing that breaks if the trim is done
+   carelessly: teams[].players holds IDS, so every rostered id must still resolve. */
+function trimPool(body, args) {
+  // The exact block from work/mcp-block.js, lifted rather than retyped.
+  const src = read('work/mcp-block.js');
+  const a = src.indexOf('      const full = (args && args.scope) === "full";');
+  const b = src.indexOf('      const withDd =', a);
+  assert.ok(a > 0 && b > a, 'the trim block is where the test thinks it is');
+  const fn = new Function('args', 'feed', src.slice(a, b) + '\n return {pool, omitted};');
+  return fn(args, { body });
+}
+
+test('the pool is trimmed to rostered players by default', () => {
+  const body = {
+    teams: [{ id: '1', players: ['p1', 'p2'] }, { id: '2', players: ['p3'] }],
+    pool: [{ id: 'p1', dd: { v: 9 } }, { id: 'p2', dd: { v: 4 } }, { id: 'p3', dd: { v: 1 } },
+           { id: 'fa1' }, { id: 'fa2' }, { id: 'fa3' }, { id: 'fa4' }],
+  };
+  const def = trimPool(body, {});
+  assert.equal(def.pool.length, 3, 'only the rostered players come back');
+  assert.equal(def.omitted, 4, 'and the free agents are counted, not silently dropped');
+
+  // THE invariant: teams[].players are ids, so a roster is unreadable if its ids do not
+  // resolve. This is what a careless filter breaks.
+  const ids = new Set(def.pool.map(p => p.id));
+  for (const t of body.teams)
+    for (const id of t.players)
+      assert.ok(ids.has(id), `roster id ${id} no longer resolves`);
+
+  const full = trimPool(body, { scope: 'full' });
+  assert.equal(full.pool.length, 7, 'scope:"full" is untouched');
+  assert.equal(full.omitted, 0);
+});
+
+test('a league that reports no rosters keeps its whole pool', () => {
+  // Filtering on an empty roster set would return an empty pool and read as "your league
+  // is empty", which is a worse answer than a large one.
+  const body = { teams: [], pool: [{ id: 'a' }, { id: 'b' }] };
+  const out = trimPool(body, {});
+  assert.equal(out.pool.length, 2, 'no rosters means no filtering');
+  assert.equal(out.omitted, 0);
+});
+
+test('the trim is declared where a caller decides, and the counts describe what came back', () => {
+  const block = read('work/mcp-block.js');
+  const i = block.indexOf('name: "dd_war_room"');
+  const tool = block.slice(i, block.indexOf('name: "dd_draft_pool"', i));
+  assert.match(tool, /scope: \{[\s\S]*?enum: \["rosters", "full"\]/, 'scope is a declared argument');
+  assert.match(tool, /Returns ROSTERED players only by default/, 'and the description says so');
+  // League-wide matched/unmatched beside a trimmed pool invites the wrong conclusion, so
+  // the payload carries counts named for what it actually contains.
+  assert.match(tool, /returnedRows: pool\.length/);
+  assert.match(tool, /returnedWithDollars: withDd/);
+  assert.match(tool, /freeAgentsOmitted/);
+  assert.match(tool, /howToGetThem/, 'and says how to get the rest');
+  // The generated Worker must carry it too — dawg-bot-worker.js is assembled, not edited.
+  assert.match(read('dawg-bot-worker.js'), /returnedWithDollars: withDd/,
+    'run `cd work && node assemble.mjs` — the Worker is generated from mcp-block.js');
+});
