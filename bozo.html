@@ -1380,10 +1380,50 @@ table.gaptbl input{width:82px}
   font:800 15px/1 ui-monospace,monospace;cursor:pointer}
 .pxin .sgn:hover{border-color:var(--accent);color:var(--ink-1)}
 .pxin .sgn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+/* ⚠️ THE MINUS IS NOT TYPED. Every legal Price is a favourite, so the sign carries no
+   information — it is pure tax, and on the keypad that ships with most Android phones it
+   costs a double-tap on a shared ".−" key. So it is painted into the box as a fixed
+   prefix and the input holds digits only. Nothing to hunt for, nothing to get wrong, and
+   the whole price is legible from the first keystroke instead of on blur.
+   ⚠️ The wrapper carries the border and the focus ring, because the input inside it has
+   neither — the two have to read as one field or the prefix looks like stray text. */
+.bz .pxfix{display:flex;align-items:center;background:var(--page);border:1px solid var(--grid);
+  border-radius:7px;padding-left:10px;min-width:0}
+.bz .pxfix:focus-within{outline:2px solid var(--accent);outline-offset:-1px}
+.bz .pxfix .sgnfix{font:15px system-ui;color:var(--ink-1);user-select:none}
+.bz .pxfix input{background:none;border:0;border-radius:0;padding:9px 10px 9px 1px;
+  flex:1 1 auto;width:auto;min-width:0}
+.bz .pxfix input:focus{outline:none}
 .gr.close .pxin{width:134px}
 table.gaptbl .pxin{width:120px}
 table.gaptbl .gwhy{font-size:11px;color:var(--ink-3);margin-top:2px;max-width:46ch;line-height:1.45}
 /* CLV in the diagnostics table. Own names on purpose — see the note at clvCell. */
+/* ---- where the levers stand ----
+   ⚠️ A LIST, NOT MORE COLUMNS. #dgTable is already seven wide and drops two of them on a
+   phone; four more would make the one surface that answers "why me" unreadable on the
+   device the board is actually read on. Each lever gets its own block, and the two that
+   cannot compute yet keep their block rather than vanishing — a lever that is invisible
+   until it bites is the whole complaint this section exists to answer. */
+.lvst{border:1px solid var(--grid);border-radius:9px;padding:10px 12px;margin:10px 0}
+.lvst.held{border-style:dashed;background:color-mix(in srgb,var(--ink-3) 4%,transparent)}
+.lvst.out{opacity:.62}
+.lvst-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px}
+.lvst-h .no{font:700 10px/1 ui-monospace,monospace;letter-spacing:1px;color:var(--ink-3);
+  border:1px solid var(--grid);border-radius:4px;padding:3px 5px;min-width:22px;text-align:center}
+.lvst-h b{font:750 14px system-ui;color:var(--ink-1)}
+.lvst-h .chip{margin-left:auto;font:700 9.5px/1 ui-monospace,monospace;letter-spacing:.8px;
+  text-transform:uppercase;padding:4px 7px;border-radius:4px;background:var(--grid);color:var(--ink-3)}
+.lvst-h .chip.live{background:color-mix(in srgb,var(--good) 20%,transparent);color:var(--good)}
+.lvst .why{font-size:12.5px;color:var(--ink-3);line-height:1.55;margin:4px 0 0}
+.lvrow{display:flex;align-items:baseline;gap:9px;padding:5px 0;border-top:1px solid var(--grid);font-size:13.5px}
+.lvrow:first-of-type{border-top:0}
+.lvrow .pos{font:700 11px ui-monospace,monospace;color:var(--ink-3);min-width:30px}
+.lvrow .nm{font-weight:650;color:var(--ink-1);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lvrow .val{margin-left:auto;font:600 13px ui-monospace,monospace;color:var(--ink-2);white-space:nowrap}
+.lvrow .holds{font:700 9px/1 ui-monospace,monospace;letter-spacing:.7px;text-transform:uppercase;
+  background:var(--accent);color:var(--accent-ink);padding:3px 5px;border-radius:4px}
+.lvrow.me .nm{color:var(--accent)}
+.lvrow.unr .val{color:var(--ink-3);font-style:italic}
 #dgTable td.clvup{color:var(--good);font-weight:700}
 #dgTable td.clvdn{color:var(--bad);font-weight:700}
 #diagCard.bz-carnival #dgTable td.clvup{color:#7ef0a8}
@@ -3757,8 +3797,10 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <div class="f w2"><label>Side</label><select id="fSide"></select></div>
     <div class="f" id="lineWrap"><label id="lineLbl">Number</label><input id="fLine" type="number" step="0.5" placeholder="6.5"></div>
     <div class="f"><label>Price</label>
-      <input id="fPrice" type="text" inputmode="numeric" pattern="-?[0-9]*" autocomplete="off"
-        placeholder="-175" title="Favorites only — a bare number like 238 is read as -238."></div>
+      <span class="pxfix"><span class="sgnfix" aria-hidden="true">−</span><input id="fPrice"
+        type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="175"
+        aria-label="Price — favorites only, so the minus is already there. Type the number."
+        title="Favorites only, so the minus is fixed. Just type the number."></span></div>
     <!-- ⚠️ Not decoration, and not optional if you ever want your CLV to mean anything.
          The other side is what makes the de-vig possible; without it the price can only
          be read raw, which overstates every favourite by roughly the whole hold. A leg
@@ -3777,7 +3819,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div class="legprev" id="legPrev" style="display:none"></div>
   <div class="warnbox" id="priceWarn" style="display:none"></div>
   <div class="err" id="err"></div>
-  <p class="note" id="bandNote">Favorites only — the minus is optional, a bare 238 is read as -238. No exact duplicates. Editing resets your clock <em>and</em> your price. The ticket locks the moment the last leg lands.</p>
+  <p class="note" id="bandNote">Favorites only — the minus is already in the box, just type the number. No exact duplicates. Editing resets your clock <em>and</em> your price. The ticket locks the moment the last leg lands.</p>
 </div>
 
 <!-- ---------- player sheet (view: one per player; the bet form docks here on YOUR sheet) ---------- -->
@@ -4006,6 +4048,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div class="bz-hdr"><h2 class="bz" style="margin:0">Diagnostics</h2><span class="tm" id="dgMeta"></span></div>
   <div class="stat-grid" id="dgTiles"></div>
   <div id="dgFlags"></div>
+  <div id="dgLevers"></div>
   <div class="tscroll"><table class="bz" id="dgTable"><tbody></tbody></table></div>
   <p class="note" id="dgNote"></p>
 </div>
@@ -4285,12 +4328,11 @@ function flaggedRows(){
    priceNum() is the strict read: a signed integer or nothing. It returns NaN for a
    half-typed "-" or "+", which is what a caller mid-keystroke should see.
 
-   favPrice() is the Price box only. That box is bound by a favourites-only band, so a
-   positive number is not a second possible bet — it is the same bet missing its sign,
-   which is exactly what a member gets when the keypad won't give them one. Reading it
-   as the favourite is the only meaning it can have. The OTHER SIDE box is deliberately
-   NOT coerced: a pick'em prices both sides negative, so its sign is real information
-   and guessing it would change the de-vig. */
+   favPrice() is the Price box only. That box shows its minus as a painted prefix and
+   holds digits alone, so "238" IS the favourite -238 — and a pasted "-238" or "+238"
+   reads the same, because the favourites-only band leaves no second bet those could
+   mean. The OTHER SIDE box is deliberately NOT coerced: a pick'em prices both sides
+   negative, so its sign is real information and guessing it would change the de-vig. */
 function priceNum(raw){
   const s = String(raw ?? '').trim().replace(/[\s,]/g, '');
   return /^[+-]?\d+$/.test(s) ? Number(s) : NaN;
@@ -5513,7 +5555,7 @@ function render(){
   document.getElementById('submitCard').style.display = (ME && open && onWeek && meAlive) ? '' : 'none';
   document.getElementById('submitH').textContent = mine ? 'Your leg — editing resets your clock and price' : 'Your leg';
   document.getElementById('bandNote').textContent =
-    `Favorites only, ${bd.ceil} to ${bd.floor} — the minus is optional, a bare 238 is read as -238. No exact duplicates. Editing resets your clock and your price. The ticket locks the moment the last leg lands.`;
+    `Favorites only, ${bd.ceil} to ${bd.floor} — the minus is already in the box, just type the number. No exact duplicates. Editing resets your clock and your price. The ticket locks the moment the last leg lands.`;
   const cm=document.getElementById('clearMine'); if(cm) cm.style.display = mine ? '' : 'none';
 
   // Two destinations, one source. The banner is news and sits under the header; the log
@@ -6373,6 +6415,7 @@ function paintDiag(live, players, status){
     document.getElementById('dgTiles').innerHTML='';
     document.getElementById('dgFlags').innerHTML='';
     document.querySelector('#dgTable tbody').innerHTML='';
+    document.getElementById('dgLevers').innerHTML='';
     document.getElementById('dgNote').textContent =
       'Nothing to measure yet. The first leg in turns this on.';
     return;
@@ -6477,6 +6520,8 @@ function paintDiag(live, players, status){
     return `<td><span class="tbd" title="Closes are captured at kickoff.">awaiting close</span></td>`;
   };
 
+  paintLeverStandings(live, levers);
+
   // ---- per-player table ----
   const order = live.map((x,i)=>i).sort((a,b)=>R.bozo[b]-R.bozo[a]);
   document.querySelector('#dgTable tbody').innerHTML =
@@ -6504,6 +6549,161 @@ function paintDiag(live, players, status){
      empty list on an open board means nothing has been checked yet, not that everything is clean.
      <b>CLV</b> is the de-vigged close minus the de-vigged entry, in probability points, and it needs both sides
      of both prices; a leg missing any of them reads “no close”, never zero.`;
+}
+
+/* ---------------- where the levers stand ----------------
+   The cascade is the one thing on this page that decides who wears it, and until now
+   the board showed only its OUTPUT — a simulated Bozo odds percentage. Two of the four
+   levers can already be read straight off an open board: Shortest Odds is in the prices
+   and Last In is in the timestamps. Those are printed, in order, with everyone's
+   placement. The other two cannot be computed before the games run, and they keep their
+   block anyway, saying what they are waiting for. A lever nobody can see until it bites
+   is exactly the thing this section exists to fix.
+
+   ⚠️ THESE ARE STANDINGS OVER THE WHOLE POOL, NOT A PREDICTION. The cascade only ever
+   looks at legs that LOST, and on an open board nobody has lost yet. Placing 1st here is
+   not "you are the bozo" — it is "if your leg loses and this lever is reached, it stops
+   on you". The block says so out loud, because a ranked list with your name at the top
+   reads like a verdict unless it is told not to.
+
+   ⚠️ RANKED ON THE GRADER'S RULE, NOT ON THE NUMBER PRINTED. simulate() and decide()
+   both rank Shortest Odds on RAW implied probability, so this list does too — an ordinal
+   computed off some other quantity would be a confident lie about which leg the lever
+   reaches first. The de-vigged probability is what gets printed, because raw implied
+   over-counts every favourite by roughly the whole hold and is not anybody's real chance
+   of winning. Where the two would order the pool differently, the block says so instead
+   of letting the printed number and the placement quietly disagree. */
+const ROMAN = ['I','II','III','IV'];
+
+// Competition ranking, descending on key: equal values share a placement and the next
+// one skips. Ties are real here — two legs at the same price genuinely tie the lever,
+// which is why the cascade has more than one rung.
+function rankRows(rows, key){
+  const out = rows.slice().sort((a,b)=>key(b)-key(a));
+  let prev=null, r=0;
+  out.forEach((row,i)=>{ const v=key(row); if(prev===null || v!==prev){ r=i+1; prev=v; } row.rank=r; });
+  return out;
+}
+
+function paintLeverStandings(live, levers){
+  const el = document.getElementById('dgLevers'); if(!el) return;
+  const res = S.results || {};
+  const rows = live.map(x=>{
+    const r = res[kEnc(x.p)] || {};
+    const pE = devigP(x.price, x.entryPriceOpp), pC = devigP(r.close, r.closeOpp);
+    let beat = null;
+    if(r.actual != null){
+      const sd = sdOf(x);
+      if(r.actual===0 && (x.mkt==='prop'||x.mkt==='total'||x.mkt==='other') && dirOf(x)==='over') beat = 999;
+      else beat = beatDeficit(x.mkt, dirOf(x), x.mkt==='ml'?0:x.line,
+                              x.mkt==='total'?null:r.actual, x.mkt==='total'?r.actual:null, sd);
+    }
+    return { who: teamOf(x.p), mine: !!(ME && x.p===ME.name), price: x.price,
+             raw: imp(x.price), shown: pE, ts: x.ts||0, beat,
+             clv: (pC==null||pE==null) ? null : (pC-pE) };
+  });
+
+  const row = (d, val, holds, unranked) => `<div class="lvrow${d.mine?' me':''}${unranked?' unr':''}">`
+    + `<span class="pos">${unranked?'—':ordinal(d.rank)}</span>`
+    + `<span class="nm">${esc(d.who)}</span>`
+    + (holds?`<span class="holds">holds it</span>`:'')
+    + `<span class="val">${val}</span></div>`;
+
+  const block = (li, state, chip, body, why) =>
+    `<div class="lvst ${state}"><div class="lvst-h"><span class="no">${ROMAN[li]}</span>`
+    + `<b>${esc(LEVERS[li].name)}</b><span class="chip${state==='live'?' live':''}">${chip}</span></div>`
+    + body + (why?`<p class="why">${why}</p>`:'') + `</div>`;
+
+  // A lever the league has taken out of the draw still gets its block — knowing it is
+  // NOT in play is as load-bearing as knowing where you stand on one that is.
+  const out = li => block(li, 'out', 'not in the draw', '',
+    `This league's draw is running ${levers.length} of 4 levers and this is not one of them.`);
+
+  /* ---- I · Shortest Odds: readable from the prices alone ---- */
+  let shortest;
+  if(levers.includes(0)){
+    const ranked = rankRows(rows.map(d=>({...d})), d=>d.raw);
+    // Does the honest number disagree with the grader's rule about the ORDER?
+    const byShown = rows.filter(d=>d.shown!=null).slice().sort((a,b)=>b.shown-a.shown).map(d=>d.who);
+    const byRaw   = rows.filter(d=>d.shown!=null).slice().sort((a,b)=>b.raw-a.raw).map(d=>d.who);
+    const disagree = byShown.join('|') !== byRaw.join('|');
+    const noOpp = rows.filter(d=>d.shown==null).length;
+    shortest = block(0, 'live', 'ranked now',
+      ranked.map(d=>row(d,
+        `${d.price>0?'+':''}${d.price} · ${d.shown!=null ? (d.shown*100).toFixed(1)+'%' : '—'}`,
+        d.rank===1)).join(''),
+      `Placement is the biggest favorite first, ranked exactly as the grader ranks it — on raw implied
+       probability. The percentage beside each price is the <b>de-vigged</b> win probability, which is the
+       honest read of the same leg: raw implied over-counts every favourite by roughly the book's whole hold.`
+      + (noOpp ? ` ${noOpp} leg${noOpp===1?' has':'s have'} no opposite price filed, so ${noOpp===1?'it shows':'they show'}
+         no de-vigged figure — the placement still stands, it is computed from the price itself.` : '')
+      + (disagree ? ` <b>These two disagree on this board.</b> De-vigging would reorder the pool, and the
+         placement follows the grader, not the percentage.` : ''));
+  } else shortest = out(0);
+
+  /* ---- II · Worst Beat: holds its place until there are scores ---- */
+  let worst;
+  if(!levers.includes(1)) worst = out(1);
+  else {
+    const scored = rows.filter(d=>d.beat!=null);
+    worst = scored.length
+      ? block(1, scored.length===rows.length?'live':'held',
+          scored.length===rows.length ? 'ranked now' : `${scored.length} of ${rows.length}`,
+          rankRows(scored.map(d=>({...d})), d=>d.beat).map(d=>row(d, d.beat.toFixed(2)+' SD', d.rank===1)).join('')
+          + rows.filter(d=>d.beat==null).map(d=>row(d,'no final score yet',false,true)).join(''),
+          `Standard deviations under the number, the same figure the grader computes. A blowout in a
+           low-variance market outranks a blowout anywhere.`)
+      : block(1, 'held', 'needs a final score',
+          rows.map(d=>row(d,'awaiting kickoff',false,true)).join(''),
+          `Nothing can be ranked here until the games finish — this lever measures how far a leg landed under
+           its number, and no leg has landed. It stays in the draw and passes while it cannot measure, which is
+           dormant, not absent.`);
+  }
+
+  /* ---- III · Last In: readable from the timestamps ---- */
+  let lastIn;
+  if(levers.includes(2)){
+    // ⚠️ Placement here is SUBMISSION ORDER — 1st in, 2nd in — not the lever's leader,
+    // which is the OPPOSITE end. The same wording the leg preview uses ("you'd be 3rd of
+    // 4 in"), because two orderings of one list under one name is how a reader ends up
+    // sure of the wrong thing. The badge marks who the lever currently stops on.
+    const asc = rows.map(d=>({...d})).sort((a,b)=>a.ts-b.ts);
+    asc.forEach((d,i)=>{ d.rank=i+1; });
+    const latest = asc.length ? asc[asc.length-1].ts : null;
+    lastIn = block(2, 'live', 'ranked now',
+      asc.map(d=>row(d, d.ts?when(d.ts):'—', d.ts===latest && d.ts>0)).join(''),
+      `Placement is the order the legs were filed, so ${ordinal(asc.length)} of ${asc.length} is the newest leg
+       on the board. This lever reads the <b>bottom</b> of that list, and it moves the moment anybody else
+       files — it is the only one of the four you can change by acting. Editing a leg refiles it.`);
+  } else lastIn = out(2);
+
+  /* ---- IV · Worst CLV: holds its place until the closes land ---- */
+  let clv;
+  if(!levers.includes(3)) clv = out(3);
+  else {
+    const known = rows.filter(d=>d.clv!=null);
+    clv = known.length
+      ? block(3, known.length===rows.length?'live':'held',
+          known.length===rows.length ? 'ranked now' : `${known.length} of ${rows.length}`,
+          rankRows(known.map(d=>({...d})), d=>-d.clv)
+            .map(d=>row(d, (d.clv>0?'+':'')+(d.clv*100).toFixed(2)+' pts', d.rank===1)).join('')
+          + rows.filter(d=>d.clv==null).map(d=>row(d,'no de-viggable close',false,true)).join(''),
+          `De-vigged close minus de-vigged entry, in probability points; the most negative is first. A leg
+           needs both sides at both ends, so a missing opposite price drops it from this lever rather than
+           scoring it zero.`)
+      : block(3, 'held', 'closes land at kickoff',
+          rows.map(d=>row(d,'awaiting close',false,true)).join(''),
+          `No leg on this board has a close that can be de-vigged yet, so this lever ranks nobody. In the
+           simulation it falls through to a uniform pick among whoever is still tied, which is what "no
+           information" actually means — not a pass, and not a guess dressed as a measurement.`);
+  }
+
+  el.innerHTML = `<div class="lil" style="margin:16px 0 2px">Where the levers stand</div>`
+    + `<p class="why" style="margin:0 0 4px">Only legs that <b>lost</b> are eligible, and on an open board
+       nothing has lost yet — so these are standings over the whole pool, not a forecast of who wears it.
+       Placing first on a lever means only this: if your leg loses and the draw reaches that lever, it stops
+       on you.</p>`
+    + shortest + worst + lastIn + clv;
 }
 
 /* Who is holding the belt right now.
@@ -7426,18 +7626,16 @@ document.getElementById('fSport').innerHTML =
 document.getElementById('fSport').onchange = ()=>loadGames(fSport.value);
 document.getElementById('fGame').onchange = paintSides;
 document.getElementById('fMkt').onchange = ()=>{ paintSides(); paintPriceWarn(); };
+/* ⚠️ Registered BEFORE paintPriceWarn, so the warning never reads a half-cleaned box.
+   Strips anything that isn't a digit — a pasted "-238", a stray "." from that same
+   double-duty keypad key — because the sign is painted beside the box, not typed into
+   it, and a second minus in the value would be read straight past by favPrice(). */
+document.getElementById('fPrice').addEventListener('input', ()=>{
+  const el = document.getElementById('fPrice'), clean = el.value.replace(/[^0-9]/g, '');
+  if(clean !== el.value) el.value = clean;
+});
 document.getElementById('fPrice').addEventListener('input', paintPriceWarn);
 document.getElementById('fPrice').addEventListener('change', maybeSwitchToMl);
-/* ⚠️ Normalise on blur, not on input. Rewriting the box mid-keystroke would fight
-   someone typing "-1" by turning it into "-1" then "-17"→ fine, but a caret jump on
-   every character is how a field becomes unusable on a phone. On leaving the field the
-   box is made to show the price that will actually be submitted — a member who typed
-   238 sees -238 before they hit Submit, rather than discovering the sign afterwards on
-   the slip. */
-document.getElementById('fPrice').addEventListener('blur', ()=>{
-  const el = document.getElementById('fPrice'), n = favPrice(el.value);
-  if(Number.isFinite(n) && String(n) !== el.value){ el.value = String(n); paintPriceWarn(); paintLegPreview(); }
-});
 document.getElementById('fPriceOpp').addEventListener('blur', ()=>{
   const el = document.getElementById('fPriceOpp'), n = priceNum(el.value);
   if(Number.isFinite(n)) el.value = fmtPrice(n);

@@ -25,6 +25,20 @@ vm.runInContext(lift('priceNum') + '\n' + lift('favPrice') + '\n' + lift('fmtPri
   + '\nthis.priceNum = priceNum; this.favPrice = favPrice; this.fmtPrice = fmtPrice;', ctx);
 const { priceNum, favPrice, fmtPrice } = ctx;
 
+test('the Price box wears its minus — the sign is never typed', () => {
+  // The keypad most Android phones ship shares "." and "-" on one key: a double-tap for
+  // a character that carries no information, because the band is favourites-only. So the
+  // minus is painted beside the box and the box takes digits alone.
+  const field = bozo.match(/<span class="pxfix">[\s\S]*?<\/span><\/div>/)[0];
+  assert.match(field, /<span class="sgnfix" aria-hidden="true">−<\/span>/, 'the minus is painted on');
+  assert.match(field, /id="fPrice"/);
+  assert.match(field, /pattern="\[0-9\]\*"/, 'no sign is accepted in the value');
+  assert.match(field, /aria-label="Price[^"]*minus/, 'the prefix is announced, not just drawn');
+  // and something has to keep it that way as characters arrive
+  assert.match(bozo, /el\.value\.replace\(\/\[\^0-9\]\/g, ''\)/, 'input is stripped to digits');
+  assert.doesNotMatch(bozo, /placeholder="-175"/, 'the placeholder no longer shows a sign to copy');
+});
+
 test('the price boxes are text with a numeric inputmode, never type="number"', () => {
   const price = bozo.match(/<input id="fPrice"[^>]*>/)[0];
   const opp = bozo.match(/<input id="fPriceOpp"[^>]*/)[0];
@@ -56,7 +70,7 @@ test('priceNum takes signed whole numbers and refuses everything else', () => {
 });
 
 test('the Price box reads a bare number as the favourite — the band leaves no other reading', () => {
-  assert.equal(favPrice('238'), -238);   // the bug, as reported: no minus on the keypad
+  assert.equal(favPrice('238'), -238);   // what the box now holds: digits, no sign
   assert.equal(favPrice('-238'), -238);
   assert.equal(favPrice('+238'), -238);
   assert.ok(Number.isNaN(favPrice('-')));
