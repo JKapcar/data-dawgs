@@ -6697,6 +6697,20 @@ const BOZO_CLOSE_BOOK = "draftkings";
 // letter or digit and compare on that — "St. Louis" / "St Louis" / "ST-LOUIS" collapse.
 const bzNorm = s => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
+// Week 1 floor: SGO returned only `names.long` for North Texas and Indiana, while the
+// filed leg stores UNT and IU. Keep these two aliases in code even after the ESPN-backed
+// registry lands: they are the guaranteed path for the Saturday 2026-09-05 close.
+const BOZO_TEAM_ALIASES = Object.freeze({
+  unt: "northtexas",
+  iu: "indiana",
+});
+const bozoTeamNorm = s => {
+  const key = bzNorm(s);
+  return Object.prototype.hasOwnProperty.call(BOZO_TEAM_ALIASES, key)
+    ? BOZO_TEAM_ALIASES[key]
+    : key;
+};
+
 // The two sides of each game-level market.
 const BOZO_ODD_IDS = {
   ml:     ["points-home-game-ml-home", "points-away-game-ml-away"],
@@ -6795,9 +6809,11 @@ function bozoDkQuote(event, pick) {
     const over = (pick.dir || pick.side) !== "under";
     mine = over ? pa : pb; theirs = over ? pb : pa;
   } else {
-    const home = bzNorm(((event.teams || {}).home || {}).names?.short || ((event.teams || {}).home || {}).names?.medium);
-    const away = bzNorm(((event.teams || {}).away || {}).names?.short || ((event.teams || {}).away || {}).names?.medium);
-    const side = bzNorm(pick.side);
+    const homeNames = (((event.teams || {}).home || {}).names || {});
+    const awayNames = (((event.teams || {}).away || {}).names || {});
+    const home = bozoTeamNorm(homeNames.short || homeNames.medium || homeNames.long);
+    const away = bozoTeamNorm(awayNames.short || awayNames.medium || awayNames.long);
+    const side = bozoTeamNorm(pick.side);
     if (side && side === home)      { mine = pa; theirs = pb; }
     else if (side && side === away) { mine = pb; theirs = pa; }
     else return { reason: "could not tell which side of the market the leg was on" };
@@ -6931,16 +6947,16 @@ async function bozoFetchEvents(env, sport, startMs, needProps) {
 // Join an ESPN-sourced pick to an aggregator event. The pick's `game` is "AWAY VS HOME"
 // as the page rendered it, so both abbreviations are available even though the ids are not.
 function bozoMatchEvent(events, pick) {
-  const parts = String(pick.game || "").split(/\s+vs\.?\s+/i);
-  const want = parts.map(bzNorm).filter(Boolean);
+  const parts = String(pick.game || "").split(/\s+(?:@|vs\.?)\s+/i);
+  const want = parts.map(bozoTeamNorm).filter(Boolean);
   if (want.length < 2) return null;
   for (const ev of events) {
     const t = ev.teams || {};
     const names = [t.home, t.away].map(x => {
       const n = (x && x.names) || {};
-      return [n.short, n.medium, n.long].map(bzNorm).filter(Boolean);
+      return [n.short, n.medium, n.long].map(bozoTeamNorm).filter(Boolean);
     });
-    const hit = want.every(w => names.some(list => list.some(n => n === w || n.endsWith(w) || w.endsWith(n))));
+    const hit = want.every(w => names.some(list => list.includes(w)));
     if (hit) return ev;
   }
   return null;
