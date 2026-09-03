@@ -6486,16 +6486,6 @@ function paintDiag(live, players, status){
         de-vigged, so it is not a CLV. In the simulation this lever ranks the legs it can and passes when it can't;
         it never guesses at the others.</span></div>`);
   }
-  /* ⚠️ The Shortest odds column PLACES on raw implied and PRINTS the de-vigged figure,
-     and on most boards those agree about the order. When they don't, the column is
-     showing one thing and ranking by another, and that has to be said out loud — a
-     reader comparing two rows would otherwise conclude the placement was simply wrong. */
-  if(levers.includes(0) && LV.disagree)
-    flags.push(`<div class="flag"><span>⚠</span><span><b>De-vigging would reorder Shortest odds on this board.</b>
-      The column places legs exactly as the grader does — on raw implied probability — but prints the de-vigged
-      win probability, which is the honest read of each leg. Here those two disagree about the order, so a row
-      with the higher percentage can still place below one with the lower. The placement is what the lever
-      would actually do.</span></div>`);
   if(levers.length<4)
     flags.push(`<div class="flag"><span>⚠</span><span><b>Only ${levers.length} of 4 levers are in the draw.</b>
       Fewer levers is a more deterministic objective, which is the thing the randomised hierarchy exists to prevent.</span></div>`);
@@ -6555,7 +6545,7 @@ function paintDiag(live, players, status){
         <td><span class="mcell"><span class="v">${pct(R.win[i])}</span>${meter(R.win[i])}</span></td>
         <td><span class="mcell"><span class="v">${pct(R.bozo[i])}</span>${meter(R.bozo[i],true)}</span></td>
         <td class="px">${pct(R.solo[i])}</td>
-        ${levers.includes(0) ? lvCell(0, i, v.shown!=null ? (v.shown*100).toFixed(1)+'%' : 'no other side', v.shown==null) : outCell()}
+        ${levers.includes(0) ? lvCell(0, i, (x.price>0?'+':'')+x.price) : outCell()}
         ${levers.includes(1) ? lvCell(1, i, v.beat!=null ? v.beat.toFixed(2)+' SD' : 'awaiting kickoff', v.beat==null) : outCell()}
         ${levers.includes(2) ? lvCell(2, i, v.ts ? when(v.ts) : '—', !v.ts) : outCell()}
         ${levers.includes(3) ? lvCell(3, i, clvText(x), v.clv==null) : outCell()}
@@ -6576,11 +6566,9 @@ function paintDiag(live, players, status){
      <b>The four lever columns are standings, not a forecast.</b> Only legs that <b>lost</b> are eligible, and on an
      open board nothing has lost yet — placing first on a lever means only this: if your leg loses and the draw
      reaches that lever, it stops on you. The highlighted placement in each column is where that lever stops right
-     now. <b>Shortest odds</b> places the biggest favorite first, ranked exactly as the grader ranks it — on raw
-     implied probability — while printing the <b>de-vigged</b> win probability beside it, because raw implied
-     over-counts every favourite by roughly the book's whole hold${LV.noOpp?`; ${LV.noOpp} leg${LV.noOpp===1?'':'s'} on this board
-     ${LV.noOpp===1?'has':'have'} no opposite price filed and so ${LV.noOpp===1?'shows':'show'} no percentage, though the placement still
-     stands`:''}. <b>Last in</b> is numbered in the order the legs were filed, so the highlight sits at the
+     now. <b>Shortest odds</b> places the biggest favorite first and prints the submitted price, which is the
+     same number it ranks on — a shorter price is a bigger favorite, always, so the column and its order can
+     never come apart. <b>Last in</b> is numbered in the order the legs were filed, so the highlight sits at the
      <em>bottom</em> of that column — it is the only lever you can move by acting, and editing a leg refiles it.
      <b>Worst beat</b> and <b>Worst CLV</b> keep their columns while they wait: beat needs a final score, CLV needs
      a close with both sides at both ends. Both stay in the draw and pass while they cannot measure, which is
@@ -6601,14 +6589,15 @@ function paintDiag(live, players, status){
    note under the table says so, because a column of placements with your name at the top
    reads as a verdict unless it is told not to.
 
-   ⚠️ RANKED ON THE GRADER'S RULE, NOT ON THE NUMBER PRINTED. simulate() and decide()
-   both rank Shortest Odds on RAW implied probability, so this does too — a placement
-   computed off some other quantity would be a confident lie about which leg the lever
-   reaches first. The de-vigged probability is what gets PRINTED, because raw implied
-   over-counts every favourite by roughly the book's whole hold and is nobody's real
-   chance of winning. Where the two would order the pool differently, `disagree` is set
-   and paintDiag raises it as a flag rather than letting the number and the placement
-   quietly contradict each other. */
+   ⚠️ THE COLUMN PRINTS THE PRICE IT RANKS ON. simulate() and decide() both rank Shortest
+   Odds on imp(), and imp() is monotonic in the American price — shorter price, higher
+   implied, every time — so the submitted price and the placement are the same ordering
+   and cannot come apart. That is the whole reason to print it. A de-vigged probability
+   was shown here first: it is the better read of one leg in isolation, but it is NOT
+   what the lever ranks on, so it could place a row below another that printed a smaller
+   number, and it went blank on any leg filed without an opposite price. Both of those
+   were the display disagreeing with the thing being displayed. The de-vig still does the
+   work it is actually right for, one column over, where CLV needs it. */
 
 // Competition ranking, descending on key: equal values share a placement and the next
 // one skips. Ties are real here — two legs at the same price genuinely tie the lever,
@@ -6634,7 +6623,9 @@ function leverStandings(live){
       else beat = beatDeficit(x.mkt, dirOf(x), x.mkt==='ml'?0:x.line,
                               x.mkt==='total'?null:r.actual, x.mkt==='total'?r.actual:null, sd);
     }
-    return { i, raw: imp(x.price), shown: pE, ts: x.ts||0, beat,
+    // ⚠️ pE is the ENTRY de-vig, and it exists here only to make CLV — the Shortest odds
+    // column ranks and prints the raw price. Do not route it back to that column.
+    return { i, raw: imp(x.price), ts: x.ts||0, beat,
              clv: (pC==null||pE==null) ? null : (pC-pE) };
   });
 
@@ -6658,13 +6649,7 @@ function leverStandings(live){
   const withClv = d.filter(r=>r.clv!=null);
   place(3, withClv, r=>-r.clv, rows=>rows.reduce((a,b)=>b.clv<a.clv?b:a, rows[0]));
 
-  // Would the printed number order the pool differently from the grader's rule?
-  const shown = d.filter(r=>r.shown!=null);
-  const byShown = shown.slice().sort((a,b)=>b.shown-a.shown).map(r=>r.i).join('|');
-  const byRaw   = shown.slice().sort((a,b)=>b.raw-a.raw).map(r=>r.i).join('|');
-
-  return { d, rank, holds, disagree: byShown !== byRaw,
-           noOpp: d.length - shown.length, scored: scored.length, withClv: withClv.length };
+  return { d, rank, holds, scored: scored.length, withClv: withClv.length };
 }
 
 /* Who is holding the belt right now.
