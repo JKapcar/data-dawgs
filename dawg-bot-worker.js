@@ -4337,9 +4337,11 @@ async function requireMember(request, env, lid) {
 // missing, expired or forged session simply receives the public catalog; it never
 // turns a read-only directory request into an auth error.
 //
-// `demo-royale` remains visibly labelled DEMO · SIMULATED by its stored settings and
-// the page. It is the public Royale surface until a live Bozo Boyz Royale replaces it.
-const PUBLIC_BOZO_LEAGUES = new Set([DEFAULT_LEAGUE, "demo-royale"]);
+// ⚠️ ONE hardcoded public room, not two. `demo-royale` was the second — the seeded
+// Royale demo, kept listed so the format had a public surface before a real Royale
+// league existed. It has been deleted, and a hardcoded id for a league that is gone
+// would publish a 404 to every unsigned browser that reads the directory.
+const PUBLIC_BOZO_LEAGUES = new Set([DEFAULT_LEAGUE]);
 const leagueIsPublic = (id, lg) => PUBLIC_BOZO_LEAGUES.has(id) || (lg && lg.visibility === "public");
 async function leagueList(request, env, cors) {
   let leagues;
@@ -5409,7 +5411,7 @@ async function leagueAccess(request, env, cors) {
   if (action === "visibility") {
     const visibility = body.visibility === "public" ? "public" : "private";
     if (PUBLIC_BOZO_LEAGUES.has(lid) && visibility !== "public")
-      return json({ error: "Bozo Boyz and Bozo Royale stay public." }, 400, cors);
+      return json({ error: "Bozo Boyz stays public." }, 400, cors);
     try { await fbPatch(env, LG(lid), { visibility }); }
     catch (e) { return json({ error: "League visibility write failed: " + e.message }, 502, cors); }
     return reply(rec, visibility);

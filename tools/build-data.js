@@ -651,8 +651,9 @@ write('bozo-rules.json', {
         'Bozo Royale that would be elimination-dodging, so a binary leg is given a margin from its own ' +
         'de-vigged closing probability. Under Standard the lever simply passes.',
       'A spread or total priced past about -145 is off market. A moneyline has no internal cross-check at all.',
-      'Demo leagues (demo-2026, demo-royale) are SIMULATED. Every leg, price, close and result in them is ' +
-        'fabricated, they use the real player names on purpose, and they count toward nothing.',
+      'The demo league (demo-2026) is SIMULATED. Every leg, price, close and result in it is fabricated, ' +
+        'it uses the real player names on purpose, and it counts toward nothing. The Royale demo ' +
+        '(demo-royale) was deleted; Bozo Royale remains a live format.',
     ],
   },
 });

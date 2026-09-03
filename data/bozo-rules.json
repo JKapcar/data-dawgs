@@ -75,10 +75,10 @@
    "CLV is computable only for a leg that has a captured close AND both sides of both prices. Say it is unmeasured for any leg that does not, and never average the two together.",
    "The Worst Beat lever has no margin to work with on a prop or an \"other\" leg — they are binary. Under Bozo Royale that would be elimination-dodging, so a binary leg is given a margin from its own de-vigged closing probability. Under Standard the lever simply passes.",
    "A spread or total priced past about -145 is off market. A moneyline has no internal cross-check at all.",
-   "Demo leagues (demo-2026, demo-royale) are SIMULATED. Every leg, price, close and result in them is fabricated, they use the real player names on purpose, and they count toward nothing."
+   "The demo league (demo-2026) is SIMULATED. Every leg, price, close and result in it is fabricated, it uses the real player names on purpose, and it counts toward nothing. The Royale demo (demo-royale) was deleted; Bozo Royale remains a live format."
   ]
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-08-28",
+ "built": "2026-09-03",
  "canonical_url": "https://datadawgs216.com/data/bozo-rules.json"
 }

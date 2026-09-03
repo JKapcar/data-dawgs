@@ -9,7 +9,15 @@ const page = fs.readFileSync(path.join(root, 'bozo.html'), 'utf8');
 
 test('league directory filters on the Worker before serialising', () => {
   assert.match(worker, /leagueList\(request, env, cors\)/);
-  assert.match(worker, /PUBLIC_BOZO_LEAGUES = new Set\(\[DEFAULT_LEAGUE, "demo-royale"\]\)/);
+  // ⚠️ ONE hardcoded public room. The seeded Royale demo was the second and is deleted;
+  // a hardcoded id for a league that no longer exists publishes a 404 to every unsigned
+  // browser that reads the directory.
+  assert.match(worker, /PUBLIC_BOZO_LEAGUES = new Set\(\[DEFAULT_LEAGUE\]\)/);
+  // The id must be gone from the CODE, not from the file — the comment above the set
+  // explains why the second room went, and that note is worth keeping. Strip comments
+  // and require nothing executable still names it.
+  const code = worker.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  assert.doesNotMatch(code, /demo-royale/, 'no live reference to the deleted league');
   assert.match(worker, /Object\.entries\(leagues\)\.filter\(visible\)\.map/);
   assert.match(worker, /lg\.manager === viewer \|\| isMember\(lg, viewer\)/);
 });
