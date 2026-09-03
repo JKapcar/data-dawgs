@@ -1,3 +1,5 @@
+import { BOZO_ESPN_TEAM_SEED } from "./bozo-team-registry.mjs";
+
 /**
  * toto Worker — Dawg Bot proxy + Bozo trust layer
  * -----------------------------------------------
@@ -6698,17 +6700,71 @@ const BOZO_CLOSE_BOOK = "draftkings";
 const bzNorm = s => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
 // Week 1 floor: SGO returned only `names.long` for North Texas and Indiana, while the
-// filed leg stores UNT and IU. Keep these two aliases in code even after the ESPN-backed
-// registry lands: they are the guaranteed path for the Saturday 2026-09-05 close.
-const BOZO_TEAM_ALIASES = Object.freeze({
+// filed leg stores UNT and IU. Keep these aliases even with the ESPN registry: they are
+// the guaranteed path for the Saturday 2026-09-05 close if KV is unavailable.
+const BOZO_TEAM_FALLBACK_ALIASES = Object.freeze({
   unt: "northtexas",
   iu: "indiana",
 });
-const bozoTeamNorm = s => {
+const BOZO_TEAM_REGISTRY_VERSION = 1;
+const BOZO_TEAM_REGISTRY_TTL = 7 * 24 * 60 * 60;
+
+function bozoBuildTeamRegistry(sport) {
+  const rows = ((BOZO_ESPN_TEAM_SEED.sports || {})[sport] || []);
+  const aliases = Object.create(null);
+  const ambiguous = new Set();
+  const add = (value, canonical) => {
+    const alias = bzNorm(value);
+    if (!alias || ambiguous.has(alias)) return;
+    if (aliases[alias] && aliases[alias] !== canonical) {
+      delete aliases[alias];
+      ambiguous.add(alias);
+      return;
+    }
+    aliases[alias] = canonical;
+  };
+
+  for (const team of rows) {
+    const canonical = bzNorm(team.displayName || team.shortDisplayName || team.location);
+    if (!canonical) continue;
+    // SGO's `long` is usually ESPN's shortDisplayName/location for college teams and
+    // ESPN's displayName for NFL teams. Index all observed stable vocabularies; mascot
+    // name alone is deliberately excluded because dozens of teams share it.
+    for (const value of [team.abbreviation, team.displayName, team.shortDisplayName, team.location]) {
+      add(value, canonical);
+    }
+  }
+  return {
+    schemaVersion: BOZO_TEAM_REGISTRY_VERSION,
+    sourceAsOf: BOZO_ESPN_TEAM_SEED.asOf,
+    sport,
+    teamCount: rows.length,
+    aliases,
+  };
+}
+
+async function bozoTeamRegistry(env, sport) {
+  const built = bozoBuildTeamRegistry(sport);
+  const kv = env && env.RL;
+  if (!kv || !built.teamCount) return built.aliases;
+  const key = `bozo:team-registry:v${BOZO_TEAM_REGISTRY_VERSION}:${built.sourceAsOf}:${sport}`;
+  try {
+    const cached = await kv.get(key, "json");
+    if (cached && cached.schemaVersion === BOZO_TEAM_REGISTRY_VERSION &&
+        cached.sourceAsOf === built.sourceAsOf && cached.sport === sport && cached.aliases) {
+      return cached.aliases;
+    }
+  } catch { /* the embedded ESPN snapshot remains usable */ }
+  try { await kv.put(key, JSON.stringify(built), { expirationTtl: BOZO_TEAM_REGISTRY_TTL }); }
+  catch { /* matching must not depend on cache availability */ }
+  return built.aliases;
+}
+
+const bozoTeamNorm = (s, registry) => {
   const key = bzNorm(s);
-  return Object.prototype.hasOwnProperty.call(BOZO_TEAM_ALIASES, key)
-    ? BOZO_TEAM_ALIASES[key]
-    : key;
+  if (registry && typeof registry[key] === "string") return registry[key];
+  return Object.prototype.hasOwnProperty.call(BOZO_TEAM_FALLBACK_ALIASES, key)
+    ? BOZO_TEAM_FALLBACK_ALIASES[key] : key;
 };
 
 // The two sides of each game-level market.
@@ -6788,7 +6844,7 @@ const bzAmerican = v => {
 
 // Pull DraftKings' two sides for one market off an aggregator event.
 // Returns { price, opp } in the orientation of the leg, or a reason it could not.
-function bozoDkQuote(event, pick) {
+function bozoDkQuote(event, pick, registry) {
   if (pick.mkt === "prop") return bozoDkPropQuote(event, pick);
   const ids = BOZO_ODD_IDS[pick.mkt];
   if (!ids) return { reason: "market-not-matchable" };
@@ -6811,11 +6867,13 @@ function bozoDkQuote(event, pick) {
   } else {
     const homeNames = (((event.teams || {}).home || {}).names || {});
     const awayNames = (((event.teams || {}).away || {}).names || {});
-    const home = bozoTeamNorm(homeNames.short || homeNames.medium || homeNames.long);
-    const away = bozoTeamNorm(awayNames.short || awayNames.medium || awayNames.long);
-    const side = bozoTeamNorm(pick.side);
-    if (side && side === home)      { mine = pa; theirs = pb; }
-    else if (side && side === away) { mine = pb; theirs = pa; }
+    const home = [homeNames.short, homeNames.medium, homeNames.long]
+      .map(name => bozoTeamNorm(name, registry)).filter(Boolean);
+    const away = [awayNames.short, awayNames.medium, awayNames.long]
+      .map(name => bozoTeamNorm(name, registry)).filter(Boolean);
+    const side = bozoTeamNorm(pick.side, registry);
+    if (side && home.includes(side))      { mine = pa; theirs = pb; }
+    else if (side && away.includes(side)) { mine = pb; theirs = pa; }
     else return { reason: "could not tell which side of the market the leg was on" };
   }
 
@@ -6946,15 +7004,15 @@ async function bozoFetchEvents(env, sport, startMs, needProps) {
 
 // Join an ESPN-sourced pick to an aggregator event. The pick's `game` is "AWAY VS HOME"
 // as the page rendered it, so both abbreviations are available even though the ids are not.
-function bozoMatchEvent(events, pick) {
+function bozoMatchEvent(events, pick, registry) {
   const parts = String(pick.game || "").split(/\s+(?:@|vs\.?)\s+/i);
-  const want = parts.map(bozoTeamNorm).filter(Boolean);
+  const want = parts.map(part => bozoTeamNorm(part, registry)).filter(Boolean);
   if (want.length < 2) return null;
   for (const ev of events) {
     const t = ev.teams || {};
     const names = [t.home, t.away].map(x => {
       const n = (x && x.names) || {};
-      return [n.short, n.medium, n.long].map(bozoTeamNorm).filter(Boolean);
+      return [n.short, n.medium, n.long].map(name => bozoTeamNorm(name, registry)).filter(Boolean);
     });
     const hit = want.every(w => names.some(list => list.includes(w)));
     if (hit) return ev;
@@ -6989,6 +7047,7 @@ async function runBozoCloseCapture(env, nowMs) {
     const needProps = bucket.legs.some(t => t.pick.mkt === "prop");
     try { events = await bozoFetchEvents(env, bucket.sport, bucket.startMs, needProps); }
     catch (e) { fetchErr = String((e && e.message) || e); }
+    const registry = await bozoTeamRegistry(env, bucket.sport);
 
     for (const t of bucket.legs) {
       const base = `results/${t.key}`;
@@ -7003,10 +7062,10 @@ async function runBozoCloseCapture(env, nowMs) {
         reason = "No closing price captured: an “other” leg describes an arbitrary game market in free text, "
                + "with no stat, player or number to match on at the odds source.";
       } else {
-        const ev = bozoMatchEvent(events, t.pick);
+        const ev = bozoMatchEvent(events, t.pick, registry);
         if (!ev) reason = "No closing price captured: this game couldn't be matched at the odds source.";
         else {
-          const q = bozoDkQuote(ev, t.pick);
+          const q = bozoDkQuote(ev, t.pick, registry);
           if (q.reason) reason = "No closing price captured: " + q.reason + ".";
           else quote = q;
         }
