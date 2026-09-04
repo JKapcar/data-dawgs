@@ -120,5 +120,5 @@ jobs:
               --base main \
               --head "$REFRESH_BRANCH" \
               --title "Refresh canonical NFL model data" \
-              --body "Automated nfelodcm and 538 Classic refresh. This PR failed closed on schema, freshness, row-count, team, week, historical-reproduction, manifest and receipt-history validation before it was opened. Review and merge manually; this workflow never writes directly to production."
+              --body "Automated schedule refresh (nfelodcm loader) and 538 Classic recompute. This is NOT a nfelo model refresh — see nfelo-refresh.yml. This PR failed closed on schema, freshness, row-count, team, week, historical-reproduction, manifest and receipt-history validation before it was opened. Review and merge manually; this workflow never writes directly to production."
           fi

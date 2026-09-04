@@ -13,14 +13,17 @@ name: survivor-receipt
 # dispatch and nothing else. A capture triggered by an unrelated commit would stamp
 # captured_at with whenever someone happened to push.
 #
-# Thursday 15:00 UTC is 11:00 ET — comfortably before the Thursday night kickoff that
-# opens most weeks, and after Wednesday's injury reports have moved the lines. The
-# script refuses on its own if that ever stops being true, so a schedule slip fails
-# loudly rather than recording a late call.
+# Run daily and capture only inside 24 hours of the week's earliest kickoff. A fixed
+# Thursday cron misses Wednesday Week 1, and the same edge recurs on Thanksgiving,
+# Christmas and Saturday slates. A successful nfelo refresh also triggers this workflow
+# so checkout sees the fresh survivor snapshot before it decides whether to capture.
 
 on:
   schedule:
-    - cron: "0 15 * * 4"          # Thursdays, 15:00 UTC, in season
+    - cron: "0 15 * * *"          # daily 15:00 UTC (11:00 ET); kickoff gate is below
+  workflow_run:
+    workflows: ["nfelo refresh"]
+    types: [completed]
   workflow_dispatch:
     inputs:
       week:
@@ -41,6 +44,7 @@ concurrency:
 
 jobs:
   receipt:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -58,18 +62,26 @@ jobs:
         run: |
           set -euo pipefail
           WEEK="${{ inputs.week }}"
-          if [ -z "$WEEK" ]; then
-            # the earliest week whose first kickoff is still in the future
-            WEEK=$(node -e '
+          if [ -n "$WEEK" ]; then
+            echo "week=$WEEK" >> "$GITHUB_OUTPUT"
+            echo "hours_to_kickoff=override" >> "$GITHUB_OUTPUT"
+            echo "capture=true" >> "$GITHUB_OUTPUT"
+          else
+            # Capture only when the next kickoff is in (0, 24] hours. Manual week input
+            # bypasses this proximity gate, but never the script's own late refusal.
+            node -e '
               const s=require("./data/nfl-schedule.json").data.games;
               const now=Date.now();
-              const next=s.filter(g=>g.season_type==="REG"&&new Date(g.kickoff_at)>now)
-                          .sort((a,b)=>new Date(a.kickoff_at)-new Date(b.kickoff_at))[0];
-              process.stdout.write(next?String(next.week):"");
-            ')
+              const firstByWeek=new Map();
+              for(const g of s.filter(g=>g.season_type==="REG")){
+                const kick=new Date(g.kickoff_at).getTime();
+                if(!firstByWeek.has(g.week)||kick<firstByWeek.get(g.week)) firstByWeek.set(g.week,kick);
+              }
+              const next=[...firstByWeek].filter(([,kick])=>kick>now).sort((a,b)=>a[1]-b[1])[0];
+              const hrs=next?(next[1]-now)/36e5:null;
+              process.stdout.write(`week=${next?next[0]:""}\nhours_to_kickoff=${hrs==null?"":hrs.toFixed(1)}\ncapture=${hrs!=null&&hrs>0&&hrs<=24}\n`);
+            ' >> "$GITHUB_OUTPUT"
           fi
-          echo "week=$WEEK" >> "$GITHUB_OUTPUT"
-          if [ -z "$WEEK" ]; then echo "no upcoming week — nothing to capture"; fi
 
       # ⚠️ continue-on-error, and ONLY here. capture refuses on purpose in states that
       # are not errors: the week is already captured (write-once), or the season has not
@@ -77,7 +89,7 @@ jobs:
       # someone looking for a bug. A genuine failure still shows in the log, and the
       # commit step below simply finds nothing to commit.
       - name: Capture the upcoming week
-        if: ${{ !inputs.resolve_only && steps.pick.outputs.week != '' }}
+        if: ${{ !inputs.resolve_only && steps.pick.outputs.week != '' && steps.pick.outputs.capture == 'true' }}
         continue-on-error: true
         run: node work/survivor-receipt.mjs capture --week ${{ steps.pick.outputs.week }}
 

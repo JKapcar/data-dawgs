@@ -122,6 +122,18 @@ Forecasts from [nfelo](https://github.com/greerreNFL/nfelo) (MIT), snapshot `0d3
 Schedule and closing lines from [nflverse/nfldata](https://github.com/nflverse/nfldata).
 Finals from ESPN. Call sheet locked 2026-08-06.
 
+## Survivor inputs
+
+**2026-09-04 amendment — live survivor market derivation changed.** The 51 market rows
+captured on 2026-08-06 used devigged moneyline probabilities. Beginning 2026-09-04, the
+mutable survivor snapshot reads spread-implied home win probabilities from the daily nfelo
+mirror, preferring its close and then its open. This changes the derivation, not the quantity:
+`mk` remains a market-implied home win probability. The mirror records the upstream
+observation time but upstream does not identify the book, so `mk_book` is null rather than
+an invented attribution. The original 51 rows are retained as dated carry-forwards where a
+fresh row is unavailable and are not back-converted. Published receipts and graded rows are
+unchanged.
+
 ## Material changes
 
 Changes to how this site names or frames its claims, recorded rather than applied

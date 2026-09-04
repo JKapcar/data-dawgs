@@ -45,17 +45,22 @@ jobs:
       - name: Refresh from upstream
         run: node tools/nfelo-refresh.mjs
 
+      - name: Rebuild survivor snapshot from the fresh mirror
+        run: |
+          node work/build-survivor-snapshot.mjs
+          node tools/build-data.js survivor.json models.json
+
       - name: Stamp service worker, republish manifest, validate
         run: |
           set -euo pipefail
-          if git diff --quiet -- nfelo.html data/nfelo.json; then
+          if git diff --quiet -- nfelo.html survivor.html data/nfelo.json data/survivor.json data/models.json; then
             echo "nfelo unchanged — nothing to commit"
             exit 0
           fi
           python3 work/stamp-sw-version.py
           node tools/data-manifest.js
           node tools/validate-data.js
-          git add nfelo.html sw.js data/nfelo.json data/index.json
+          git add nfelo.html survivor.html sw.js data/nfelo.json data/survivor.json data/models.json data/index.json
           node work/verify-sw.mjs
 
       - name: Commit if anything moved
@@ -76,7 +81,7 @@ jobs:
           if ! git diff --quiet -- sw.js; then
             git add sw.js && git commit --amend --no-edit
           fi
-          git add -A nfelo.html sw.js data/nfelo.json data/index.json
+          git add -A nfelo.html survivor.html sw.js data/nfelo.json data/survivor.json data/models.json data/index.json
           node work/verify-sw.mjs
           node tools/validate-data.js
           git push origin HEAD:main

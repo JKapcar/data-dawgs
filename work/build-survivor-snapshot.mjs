@@ -12,18 +12,17 @@
  * do: the JSON was downstream of a paste, the paste had no upstream, and the snapshot
  * sat at as_of 2026-08-06 with nothing in the repo able to move it.
  *
- * Everything except one field is derivable from data the repo already publishes:
+ * Every live input is derivable from data the repo already publishes:
  *   elo   <- data/nfelo.json          data.ratings[].nfelo
  *   games <- data/nfl-schedule.json   data.games[]
  *   mm    <- (elo_home - elo_away) / elo_per_pt + hfa
+ *   mk    <- data/nfelo.json          data.games[].market spread-implied probability
  *
- * ⚠️ THE ONE FIELD THIS CANNOT PRODUCE IS `mk`, the devigged market probability.
- * data/nfl-schedule.json excludes market prices on purpose — its own note says the
- * upstream table "does not identify their book and observation timestamp", which is the
- * same standard the CFB market surface holds itself to. So captured market prices are
- * PRESERVED from the existing snapshot by game id and never invented. A refresh that
- * silently dropped 51 captured lines back to model-only would make every week-1 number
- * worse while looking like an update.
+ * nfelo identifies when it observed each market row but not the book. That limitation is
+ * carried explicitly as mk_book=null. Where the current mirror has no row, the original
+ * 2026-08-06 probability is preserved with its own source and observation date. A refresh
+ * that silently dropped captured lines back to model-only would make the board worse while
+ * looking like an update, so market coverage may stay flat or rise but never fall.
  *
  * ============================================================================
  * TWO THINGS THIS FOUND IN THE SHIPPED SNAPSHOT, neither of which it changes
@@ -74,8 +73,10 @@ try { OLD = JSON.parse(oldRaw); } catch (e) { die("existing window.SV is not JSO
 const nfelo = readJSON("data/nfelo.json");
 const sched = readJSON("data/nfl-schedule.json");
 const ratings = nfelo.data && nfelo.data.ratings;
+const nfeloGames = nfelo.data && nfelo.data.games;
 const games = sched.data && sched.data.games;
 if (!Array.isArray(ratings) || !ratings.length) die("data/nfelo.json has no data.ratings");
+if (!Array.isArray(nfeloGames) || !nfeloGames.length) die("data/nfelo.json has no data.games");
 if (!Array.isArray(games) || !games.length) die("data/nfl-schedule.json has no data.games");
 if (sched.data.season !== OLD.meta.season)
   die(`schedule season ${sched.data.season} != snapshot season ${OLD.meta.season} — refusing to mix seasons`);
@@ -88,6 +89,7 @@ if (sched.data.season !== OLD.meta.season)
 const meta = {
   ...OLD.meta,
   captured: (nfelo.data.meta && nfelo.data.meta.captured) || nfelo.as_of || OLD.meta.captured,
+  market_observed_at: (nfelo.data.meta && nfelo.data.meta.upstream_committed_at) || null,
   nfelo_sha: (nfelo.data.meta && nfelo.data.meta.sha) || OLD.meta.nfelo_sha,
 };
 
@@ -114,16 +116,37 @@ if (unrated.length)
   die(`the schedule plays ${unrated.join(", ")} but nfelo has no rating under that code — `
     + `check RATING_ALIAS against data/nfelo.json's team codes`);
 
-/* ---- market prices carried forward ---------------------------------------- */
-/* Joined on the canonical id AND on (week, home, away), because the snapshot's ids use
-   LA where the schedule uses LAR. Either key finding a match is enough; a game that
-   matches neither simply has no captured line, which is the honest default. */
+/* ---- market prices: fresh nfelo mirror first, dated carry-forward second --- */
+/* The fresh mirror joins to the canonical schedule id. The OLD snapshot still joins on
+   canonical id AND on (week, home, away), because its ids use LA where the schedule uses
+   LAR. Do not fuzzy-match either side. */
 const oldByCanon = new Map(), oldByTeams = new Map();
 for (const g of OLD.games) {
   oldByCanon.set(g.id, g);
   oldByTeams.set(`${g.wk}|${g.h}|${g.a}`, g);
 }
 const canonId = g => `${g.season}_${String(g.week).padStart(2, "0")}_${g.away_team}_${g.home_team}`;
+const scheduleByCanon = new Map();
+for (const g of games) {
+  if (g.season_type && g.season_type !== "REG") continue;
+  const id = canonId(g);
+  if (scheduleByCanon.has(id)) die(`duplicate canonical schedule id ${id}`);
+  scheduleByCanon.set(id, g);
+}
+const nfeloByCanon = new Map();
+const NFELO_GAME_ALIAS = { OAK: "LV" };
+const canonicalNfeloId = id => {
+  const [season, week, away, home, ...rest] = id.split("_");
+  if (rest.length || !season || !week || !away || !home) die(`malformed nfelo game id ${id}`);
+  return `${season}_${week}_${NFELO_GAME_ALIAS[away] || away}_${NFELO_GAME_ALIAS[home] || home}`;
+};
+for (const g of nfeloGames) {
+  if (!g || typeof g.id !== "string") die("a nfelo game row is missing id");
+  const id = canonicalNfeloId(g.id);
+  if (!scheduleByCanon.has(id)) die(`nfelo game id ${g.id} did not match the schedule`);
+  if (nfeloByCanon.has(id)) die(`duplicate nfelo game id ${g.id}`);
+  nfeloByCanon.set(id, g);
+}
 
 /* ⚠️ The game DATE is the Eastern local date, not a slice of the UTC timestamp.
    A Thursday 8:20pm ET kickoff is 00:20Z the NEXT day, so slicing the ISO string moves
@@ -143,7 +166,7 @@ function etDate(iso) {
 if (etDate("2026-09-10T00:20:00Z") !== "2026-09-09")
   die("this Node has no America/New_York timezone data — install full ICU before rebuilding");
 
-let carried = 0, dropped = 0, neutralAdjusted = 0;
+let fresh = 0, carried = 0, neutralAdjusted = 0;
 const out = [];
 for (const g of games) {
   if (g.season_type && g.season_type !== "REG") continue;
@@ -155,10 +178,20 @@ for (const g of games) {
   if (g.neutral_site && NEUTRAL_HFA !== null) neutralAdjusted++;
   const mm = Math.round(((elo[h] - elo[a]) / meta.elo_per_pt + hfa) * 1000) / 1000;
 
-  const prior = oldByTeams.get(`${g.week}|${h}|${a}`) || oldByCanon.get(canonId(g));
-  const mk = prior && prior.mk != null ? prior.mk : null;
-  if (mk != null) carried++;
-  else if (prior && prior.mk != null) dropped++;
+  const canonical = canonId(g);
+  const prior = oldByTeams.get(`${g.week}|${h}|${a}`) || oldByCanon.get(canonical);
+  const mirrored = nfeloByCanon.get(canonical);
+  const mirrorMk = mirrored && mirrored.market &&
+    (mirrored.market.p_home_implied_close ?? mirrored.market.p_home_implied_open);
+  const mk = mirrorMk ?? (prior && prior.mk != null ? prior.mk : null);
+  const mk_src = mirrorMk != null
+    ? "nfelo-mirror"
+    : (mk != null ? (prior.mk_src || `carried:${String(prior.mk_obs || OLD.meta.captured).slice(0, 10)}`) : null);
+  const mk_obs = mirrorMk != null
+    ? (mirrored.market.observed_at || meta.market_observed_at)
+    : (mk != null ? (prior.mk_obs || OLD.meta.captured) : null);
+  if (mirrorMk != null) fresh++;
+  else if (mk != null) carried++;
 
   out.push({
     // keep the snapshot's own id where one exists, so nothing quoting an id changes
@@ -167,6 +200,9 @@ for (const g of games) {
     d: etDate(g.kickoff_at),
     mm,
     mk,
+    mk_src,
+    mk_obs,
+    mk_book: null,
     // p and src are what the PAGE recomputes at the configured blend; the stored values
     // are the 0.75 default, which is what /data/survivor.json publishes.
     p: null, src: mk == null ? "model" : "market",
@@ -199,9 +235,16 @@ const SV = { meta, elo, teams: OLD.teams, games: out };
 
 /* ---- report and guard ------------------------------------------------------ */
 const oldMarket = OLD.games.filter(g => g.mk != null).length;
+const marketTotal = out.filter(g => g.mk != null).length;
+const sourceCounts = out.reduce((acc, g) => {
+  const key = g.mk_src === null ? "null" : g.mk_src;
+  acc[key] = (acc[key] || 0) + 1;
+  return acc;
+}, {});
 console.log(`teams        ${teamCount}`);
 console.log(`games        ${out.length} (was ${OLD.games.length})`);
-console.log(`market lines ${carried} carried forward (snapshot had ${oldMarket})`);
+console.log(`market lines ${marketTotal}: ${fresh} nfelo mirror, ${carried} carried (snapshot had ${oldMarket})`);
+console.log(`mk sources   ${Object.entries(sourceCounts).map(([k, v]) => `${k}=${v}`).join(" ")}`);
 console.log(`captured     ${OLD.meta.captured} -> ${meta.captured}`);
 if (neutralAdjusted) console.log(`neutral      ${neutralAdjusted} games rebuilt with hfa=0`);
 
@@ -209,9 +252,17 @@ if (out.length !== OLD.games.length)
   console.warn(`⚠️  game count changed — the schedule moved, which is real but worth eyeballing`);
 /* ⚠️ A refresh must never LOSE captured market prices. That is the one way this script
    could quietly make the board worse while reporting success. */
-if (carried < oldMarket)
-  die(`${oldMarket - carried} captured market lines would be lost — refusing to write. `
+if (marketTotal < oldMarket)
+  die(`${oldMarket - marketTotal} captured market lines would be lost — refusing to write. `
     + `A schedule change moved a game the snapshot had a price for; reconcile by hand.`);
+
+const upcomingWeek = nfelo.data.upcoming_week ?? Math.min(...nfeloGames.map(g => g.week));
+console.log(`\nweek ${upcomingWeek} market/blend changes:`);
+for (const g of out.filter(g => g.wk === upcomingWeek)) {
+  const prior = oldByTeams.get(`${g.wk}|${g.h}|${g.a}`) || oldByCanon.get(g.id);
+  console.log(`  ${g.a}@${g.h} mk ${prior && prior.mk != null ? prior.mk : "null"} -> ${g.mk ?? "null"}; `
+    + `p ${prior && prior.p != null ? prior.p : "null"} -> ${g.p}; ${g.mk_src ?? "null"}`);
+}
 
 /* ---- diff against what is on the page -------------------------------------- */
 /* ⚠️ EVERY field, exactly, and counted by field. The first version of this compared
@@ -223,7 +274,7 @@ const note = (f, msg) => { byField[f] = (byField[f] || 0) + 1; diffs.push(msg); 
 for (const g of out) {
   const prior = oldByTeams.get(`${g.wk}|${g.h}|${g.a}`);
   if (!prior) { note("new", `NEW ${g.id}`); continue; }
-  for (const f of ["id", "wk", "h", "a", "d", "src"])
+  for (const f of ["id", "wk", "h", "a", "d", "src", "mk_src", "mk_obs", "mk_book"])
     if (prior[f] !== g[f]) note(f, `${f} ${g.id}: ${JSON.stringify(prior[f])} -> ${JSON.stringify(g[f])}`);
   if (Math.abs((prior.mm ?? 0) - (g.mm ?? 0)) > 0.005) note("mm", `mm ${g.id}: ${prior.mm} -> ${g.mm}`);
   if ((prior.mk ?? null) !== (g.mk ?? null)) note("mk", `mk ${g.id}: ${prior.mk} -> ${g.mk}`);
