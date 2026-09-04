@@ -134,7 +134,7 @@ def accept_results(upstream_path):
             (source_inputs / filename).write_bytes(elo.normalize_csv_bytes(elo.download(url)))
         # Prove candidate finals correspond to the cited source commit, not arbitrary JSON.
         source_rows = b.canonicalize_source_rows(elo.csv_rows((source_inputs / "history.csv").read_bytes()), upstream["data"]["season"])
-        if source_rows != upstream["data"]["games"]:
+        if not b.same_source_games(source_rows, upstream["data"]["games"]):
             raise b.ContractError("Upstream schedule does not equal its pinned source bytes")
         for attempt in range(3):
             run(ROOT, "git", "fetch", "origin", "main")

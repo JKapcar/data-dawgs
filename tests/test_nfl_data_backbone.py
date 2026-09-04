@@ -65,6 +65,19 @@ def valid_receipt(snapshot_id, game, model_id="nfelo"):
 
 
 class CanonicalizationTests(unittest.TestCase):
+    def test_csv_empty_scores_equal_typed_missing_scores(self):
+        for value in ["", " ", None, float("nan")]:
+            self.assertIsNone(backbone.nullable_int(value))
+
+    def test_csv_integral_scores(self):
+        self.assertEqual(backbone.nullable_int("20.0"), 20)
+        self.assertEqual(backbone.nullable_int("0"), 0)
+
+    def test_invalid_integer_is_not_truncated(self):
+        for value in ["20.5", float("inf"), True, "invalid"]:
+            with self.assertRaises(backbone.ContractError):
+                backbone.nullable_int(value)
+
     def test_team_aliases_and_game_id(self):
         self.assertEqual(backbone.canonical_team("JAC"), "JAX")
         self.assertEqual(backbone.canonical_team("LA"), "LAR")

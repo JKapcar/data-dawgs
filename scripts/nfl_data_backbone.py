@@ -117,14 +117,17 @@ def kickoff_utc(gameday: Any, gametime: Any) -> str:
 
 
 def nullable_int(value: Any) -> int | None:
-    if value is None:
+    if value is None or (isinstance(value, str) and not value.strip()):
         return None
     try:
-        if math.isnan(float(value)):
-            return None
-    except (TypeError, ValueError):
-        pass
-    return int(value)
+        number = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ContractError(f"invalid integer: {value!r}") from exc
+    if math.isnan(number):
+        return None
+    if isinstance(value, bool) or not math.isfinite(number) or not number.is_integer():
+        raise ContractError(f"invalid integer: {value!r}")
+    return int(number)
 
 
 def canonicalize_source_rows(rows: Iterable[dict[str, Any]], season: int) -> list[dict[str, Any]]:
@@ -446,6 +449,14 @@ def append_receipts(
     return result
 
 
+def same_source_games(left, right):
+    # nfelodcm normalizes aliases inside game_id (including LA/LAR and LV/OAK).
+    # Both lists have already validated that upstream_game_id resolves to game_id.
+    # Compare every canonical fact; keep the published loader ID unchanged.
+    return [{k: v for k, v in row.items() if k != "upstream_game_id"} for row in left] == [
+        {k: v for k, v in row.items() if k != "upstream_game_id"} for row in right]
+
+
 def cmd_refresh(args: argparse.Namespace) -> None:
     try:
         import nfelodcm  # type: ignore
@@ -465,7 +476,7 @@ def cmd_refresh(args: argparse.Namespace) -> None:
     pinned_url = f"https://raw.githubusercontent.com/{SOURCE_REPOSITORY}/{source_commit['sha']}/data/games.csv"
     with urllib.request.urlopen(pinned_url, timeout=60) as response:
         pinned_rows = list(csv.DictReader(io.StringIO(response.read().decode("utf-8-sig"))))
-    if canonicalize_source_rows(pinned_rows, args.season) != games:
+    if not same_source_games(canonicalize_source_rows(pinned_rows, args.season), games):
         raise ContractError("typed schedule differs from pinned source commit; retry the refresh")
     captured_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     envelope = make_schedule_envelope(games, args.season, source_commit, captured_at)

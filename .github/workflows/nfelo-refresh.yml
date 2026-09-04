@@ -41,6 +41,9 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
 
+      - name: Exercise concurrent publication recovery
+        run: python3 work/test-survivor-publish.py
+
       - name: Refresh from upstream
         run: node tools/nfelo-refresh.mjs
 
