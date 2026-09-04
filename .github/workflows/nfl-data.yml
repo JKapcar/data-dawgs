@@ -12,6 +12,8 @@ on:
       - "requirements-data.txt"
       - "scripts/elo_538_classic.py"
       - "scripts/nfl_data_backbone.py"
+      - "scripts/nfl_results_automation.py"
+      - "tests/test_nfl_results_automation.py"
       - "tests/test_elo_538_classic.py"
       - "tests/test_nfl_data_backbone.py"
       - "tools/data-manifest.js"
@@ -46,7 +48,7 @@ jobs:
         env:
           BASE_REF: origin/${{ github.base_ref }}
         run: |
-          python -m unittest tests.test_nfl_data_backbone
+          python -m unittest tests.test_nfl_data_backbone tests.test_nfl_results_automation
           python -m unittest tests.test_elo_538_classic
           python scripts/nfl_data_backbone.py validate
           python scripts/elo_538_classic.py validate
@@ -59,6 +61,8 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      statuses: write
+      pages: write
     steps:
       - uses: actions/checkout@v7
         with:
@@ -75,6 +79,19 @@ jobs:
           package-manager-cache: false
       - name: Install pinned loader
         run: python -m pip install --requirement requirements-data.txt
+      - name: Accept only verified new finals
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python scripts/nfl_data_backbone.py refresh --season 2026 --output "$RUNNER_TEMP/nfl-upstream.json"
+          python scripts/nfl_results_automation.py --upstream "$RUNNER_TEMP/nfl-upstream.json"
+          # The results merge was performed in an isolated worktree. Review remaining
+          # full-source changes from the new main, never from our pre-merge checkout.
+          git fetch origin main
+          git reset --hard origin/main
+
       - name: Refresh and validate
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -83,7 +100,7 @@ jobs:
           python scripts/elo_538_classic.py refresh
           if git diff --quiet -- data/nfl-schedule.json data/538-classic.json data/model-receipts.json; then
             echo "Canonical rows, model state and receipts are unchanged."
-            python -m unittest tests.test_nfl_data_backbone
+            python -m unittest tests.test_nfl_data_backbone tests.test_nfl_results_automation
             python -m unittest tests.test_elo_538_classic
             python scripts/nfl_data_backbone.py validate
             python scripts/elo_538_classic.py validate
@@ -93,7 +110,7 @@ jobs:
           fi
           node tools/build-data.js receipts-inventory.json
           node tools/data-manifest.js
-          python -m unittest tests.test_nfl_data_backbone
+          python -m unittest tests.test_nfl_data_backbone tests.test_nfl_results_automation
           python -m unittest tests.test_elo_538_classic
           python scripts/nfl_data_backbone.py validate
           python scripts/elo_538_classic.py validate
@@ -120,5 +137,10 @@ jobs:
               --base main \
               --head "$REFRESH_BRANCH" \
               --title "Refresh canonical NFL model data" \
-              --body "Automated schedule refresh (nfelodcm loader) and 538 Classic recompute. This is NOT a nfelo model refresh — see nfelo-refresh.yml. This PR failed closed on schema, freshness, row-count, team, week, historical-reproduction, manifest and receipt-history validation before it was opened. Review and merge manually; this workflow never writes directly to production."
+              --body "Automated schedule refresh (nfelodcm loader) and 538 Classic recompute. This is NOT a nfelo model refresh — see nfelo-refresh.yml. This PR failed closed on schema, freshness, row-count, team, week, historical-reproduction, manifest and receipt-history validation before it was opened. This full-source PR remains manual. A separate automation/nfl-results PR can merge only new finals for unchanged games under the approved 2026-09-04 rule."
           fi
+
+      - name: Publish canonical results
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash work/request-survivor-pages-build.sh

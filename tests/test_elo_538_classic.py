@@ -84,11 +84,12 @@ class PublishedClassicTests(unittest.TestCase):
 
     def test_all_2026_games_have_prospective_forecasts(self):
         forecasts = self.model["data"]["forecasts"]
-        self.assertEqual(len(forecasts), 272)
-        self.assertEqual(
-            {row["game_id"] for row in forecasts},
-            {row["game_id"] for row in self.schedule["data"]["games"]},
-        )
+        generated = elo.backbone.parse_timestamp(self.model["provenance"]["generated_at"], "generated_at")
+        expected = {g["game_id"] for g in self.schedule["data"]["games"]
+                    if g["status"] == "scheduled" and
+                    elo.backbone.parse_timestamp(g["kickoff_at"], "kickoff_at") > generated}
+        self.assertEqual(len(forecasts), len(expected))
+        self.assertEqual({row["game_id"] for row in forecasts}, expected)
 
     def test_public_receipts_are_four_complete_model_sets(self):
         elo.validate_public(self.model, self.ledger, self.legacy, self.schedule)

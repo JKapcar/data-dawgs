@@ -70,6 +70,8 @@ if (!["capture", "resolve", "init"].includes(CMD))
    feature with a privacy conversation attached. Adding an entry here is adding a thing
    we promise to grade forever — the ledger's value is that nothing is dropped when it
    starts going badly. */
+// Approved 2026-09-04: modelled ownership for public receipts; no weekly POST task.
+// Reader-supplied ownership in the board never silently changes this configuration.
 const ENTRIES = {
   default: {
     label: "Public default — 200 entries, single life, no reuse, winnings objective",

@@ -22,7 +22,7 @@ on:
   schedule:
     - cron: "0 15 * * *"          # daily 15:00 UTC (11:00 ET); kickoff gate is below
   workflow_run:
-    workflows: ["nfelo refresh"]
+    workflows: ["nfelo refresh", "NFL data backbone"]
     types: [completed]
     branches: [main]
   workflow_dispatch:
@@ -39,6 +39,7 @@ on:
 permissions:
   contents: write
   pages: write
+  actions: write
 
 concurrency:
   group: survivor-receipt
@@ -61,6 +62,9 @@ jobs:
           git rev-parse HEAD
           sha256sum data/survivor.json data/survivor-receipts.json
 
+      - name: Verify results acceptance contract
+        run: python3 -m unittest tests.test_nfl_results_automation
+
       # Resolve first. Last week's games are final by Thursday, and resolving before
       # capturing means a failed capture still lands the grading it was owed.
       - name: Resolve anything that has finished
@@ -68,7 +72,7 @@ jobs:
         run: node work/survivor-receipt.mjs resolve
 
       - name: Work out which week to capture
-        if: ${{ !inputs.resolve_only }}
+        if: ${{ !inputs.resolve_only && github.event.workflow_run.name != 'NFL data backbone' }}
         id: pick
         env:
           CAPTURE_WEEK: ${{ inputs.week }}
@@ -125,6 +129,24 @@ jobs:
             process.stdout.write(`${c.registered} registered, ${c.resolved} resolved`);
           ')"
           bash work/publish-survivor-pipeline.sh
+
+      - name: Continue the current pipeline after canonical NFL update
+        if: ${{ success() && github.event_name == 'workflow_run' && github.event.workflow_run.name == 'NFL data backbone' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          # GitHub reruns retain the old workflow definition. If that definition
+          # changed, run the current NFL workflow once before refreshing the model.
+          # Normal runs use the same definition, so this cannot create a cycle.
+          git show "$SOURCE_SHA:.github/workflows/nfl-data.yml" > "$RUNNER_TEMP/triggering-nfl-workflow.yml"
+          if cmp -s "$RUNNER_TEMP/triggering-nfl-workflow.yml" .github/workflows/nfl-data.yml; then
+            gh workflow run nfelo-refresh.yml --ref main
+          else
+            echo "Trigger used an older NFL workflow; dispatching the current definition"
+            gh workflow run nfl-data.yml --ref main
+          fi
 
       - name: Publish through GitHub Pages
         if: ${{ always() && steps.commit.outcome == 'success' }}

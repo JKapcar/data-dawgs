@@ -588,7 +588,15 @@ def update_ledger(
     model: dict[str, Any],
     schedule: dict[str, Any],
 ) -> dict[str, Any]:
-    additions = migrate_nfelo_receipts(legacy, schedule) + model_receipts(model)
+    # Legacy receipt IDs are fixed, so re-migration must not rebind their original
+    # schedule snapshot when new final scores change today's schedule hash.
+    existing = {r["forecast_id"]: r for r in ledger["data"]}
+    migrated = migrate_nfelo_receipts(legacy, schedule)
+    for expected in migrated:
+        prior = existing.get(expected["forecast_id"])
+        if prior and {**expected, "schedule_snapshot_id": prior["schedule_snapshot_id"]} != prior:
+            raise ModelError(f"locked legacy prediction changed: {expected['forecast_id']}")
+    additions = [r for r in migrated if r["forecast_id"] not in existing] + model_receipts(model)
     updated = backbone.append_receipts(ledger, additions, schedule)
     source = (
         "Data Dawgs normalized append-only multi-model receipt ledger: locked nfelo "
@@ -625,6 +633,8 @@ def validate_public(
     covered = {(row["model_id"], row["game_id"]) for row in ledger["data"]}
     for expected in expected_nfelo + expected_538:
         prior = by_id.get(expected["forecast_id"])
+        if prior is not None and expected["model_id"] == "nfelo":
+            expected = {**expected, "schedule_snapshot_id": prior["schedule_snapshot_id"]}
         if prior is not None:
             if prior != expected:
                 raise ModelError(f"normalized receipt changed: {expected['forecast_id']}")
@@ -648,8 +658,10 @@ def cmd_refresh(args: argparse.Namespace) -> None:
     candidate = build_envelope(schedule, official_games, official_initial, history, captured_at)
     if args.output.exists():
         existing = backbone.read_json(args.output)
-        validate_envelope(existing, schedule)
+        # An old valid envelope necessarily names the old schedule. Only validate
+        # for reuse when its inputs match; the rebuilt candidate is validated above.
         if existing["integrity"]["input_snapshot_id"] == candidate["integrity"]["input_snapshot_id"]:
+            validate_envelope(existing, schedule)
             model = existing
         else:
             model = candidate

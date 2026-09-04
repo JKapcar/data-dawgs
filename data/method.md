@@ -1,6 +1,6 @@
 ---
 title: House rules for reasoning
-as_of: 2026-08-06
+as_of: 2026-09-04
 source: The Data Dawgs manifesto (index.html) and the site's standing method rules
 canonical_url: https://datadawgs216.com/data/method.md
 ---
@@ -72,3 +72,31 @@ can be useful. Only one of them has a track record.
   evaluate it anyway. Both halves.
 - Prefer "I don't have that" to a plausible reconstruction. A confident wrong number here
   costs someone real money.
+
+
+## Amendment — NFL automation and survivor ownership, 2026-09-04
+
+Kap approved automatic acceptance of **new final results only** for already-scheduled NFL
+games. The candidate retains every game, its order, teams, kickoff, season/week, venue and
+rest fields. Only `status`, `home_score` and `away_score` may change: scheduled with two null
+scores becomes final with two nonnegative integer scores after kickoff. Existing finals
+are never corrected automatically. Schedule edits and new/removed games remain review work;
+results for unrelated unchanged games need not wait behind them.
+
+A separate bot-authored results PR carries the candidate. Exact pinned-source agreement,
+deterministic dependent-file rebuilds, model reproduction, immutable receipt history,
+manifest checks and tests must pass. The merge uses a normal non-force push from the exact
+validated main parent; a concurrent main update requires a fresh candidate and validation.
+Repository protections are not bypassed. Full schedule/model refresh PRs still require
+review. Pages publication is explicitly requested after automation writes.
+
+**2026 survivor ownership is modelled by default.** Neither Kap nor a reader needs to post
+weekly ownership. The public receipt configuration uses the declared modelled weights;
+optional sourced pick submissions can inform a reader's own board but do not silently
+replace the public receipt's inputs. No actual league-pick collector is claimed.
+
+Receipts must be captured before the week's first game. A missed deadline stays a hole;
+existing claims and completed grades cannot be rewritten. The weekly public recommendation
+is a calibration record, not one entry's season with its used teams tracked automatically.
+Routine unchanged-schedule weeks require no planned operator action; changed schedules,
+source failures and failed validation still need attention.

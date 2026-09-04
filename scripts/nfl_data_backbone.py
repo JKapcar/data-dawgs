@@ -10,6 +10,8 @@ pull requests without network access.
 from __future__ import annotations
 
 import argparse
+import csv
+import io
 import hashlib
 import json
 import math
@@ -458,6 +460,13 @@ def cmd_refresh(args: argparse.Namespace) -> None:
     rows = frame.to_dict(orient="records")
     games = canonicalize_source_rows(rows, args.season)
     source_commit = fetch_source_commit(args.max_source_age_days)
+    # Bind the typed loader output to the exact cited commit. A moving branch
+    # between the load and provenance lookup must fail, never acquire a false SHA.
+    pinned_url = f"https://raw.githubusercontent.com/{SOURCE_REPOSITORY}/{source_commit['sha']}/data/games.csv"
+    with urllib.request.urlopen(pinned_url, timeout=60) as response:
+        pinned_rows = list(csv.DictReader(io.StringIO(response.read().decode("utf-8-sig"))))
+    if canonicalize_source_rows(pinned_rows, args.season) != games:
+        raise ContractError("typed schedule differs from pinned source commit; retry the refresh")
     captured_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     envelope = make_schedule_envelope(games, args.season, source_commit, captured_at)
     validate_schedule_envelope(envelope)
