@@ -2,7 +2,7 @@
 
 **Prepared for:** Codex, working on `github.com/JKapcar/data-dawgs`
 **Owner:** Kap (commissioner / god admin)
-**Date:** 2026-09-01 · Week 1 board open, 2 of 8 legs in, first kickoff **Sat 2026-09-05 12:00 ET — UNT @ IND** (Tony's leg)
+**Date:** 2026-09-01 · Week 1 board open · roster in flux (see D18) · first kickoff **Sat 2026-09-05 12:00 ET — UNT @ IND**
 **Status of this doc:** decisions locked; nothing below is open unless marked `OPEN`
 
 > **This file supersedes `claude_bozo-fix-prompt.md`.** That document was written without reading the source and states two things that are now known to be wrong: that the close feed "is fine" and that no new odds provider should be added. Do not follow it. Its constraints that survive are reproduced in §0.2.
@@ -38,6 +38,14 @@ What is *not* built is the layer that makes it a product: submit-time price capt
 | D15 | SGP | Ticket-level price only. **No per-leg CLV is derived from an SGP price.** Per-leg CLV uses each leg's straight-market DK price. | DK never exposes SGP leg prices; they cannot be untangled. |
 | D16 | Scope | **Build as public, ship to the 8, then invite-only, then open.** Native app is out; PWA is the "app store." No money ever moves on-platform. | Apple rejects gambling-adjacent apps from individual developers. Keeping money off-platform keeps it out of licensing. |
 | D17 | Player keys | **Migrate from `encodeURIComponent(displayName)` to auth `uid`.** Display name becomes an attribute. | Multi-tenant correctness; also the root of Bug C's cousin (`The%20Kid`). |
+| D18 | Roster size | **Variable per league. `lockCount` derives from `members.length` unless the manager overrides it.** Eight is not a constant anywhere in code, copy, or math. | Bozo Boyz is nine. Every league will differ, and a hard-coded 8 becomes a migration the first time someone joins a tenth. |
+
+**D18 consequences to check during implementation**
+
+- Grep for the literal `8` in leg-count, lock, and placement contexts. Any survivor is a bug.
+- Budget scales with N: `N × 10 credits × 4.3 weeks`. N=9 is ~390/mo, still inside the free 500, but a tenth member (~430) and an eleventh (~475) walk the cap. The credit meter (3.4) must warn on N, not on a fixed threshold.
+- Parlay length is a product decision, not a side-effect of the roster. Nine legs is materially longer odds than eight; the Bozo gets named more often on a ticket that was never likely to cash. If a league wants a shorter ticket than its roster, `lockCount < members.length` must be legal, with the surplus members sitting out or rotating. Do not assume `lockCount === members.length`.
+- Placement (3.6) and the slip form render N rows, read from the league, never a constant.
 
 ### 0.2 Constraints carried forward from the fix-prompt (unchanged)
 
@@ -164,7 +172,7 @@ Result / Row {
 stateDiagram-v2
   direction LR
   [*] --> open
-  open --> locked : 8th leg lands → placeAndDraw()
+  open --> locked : Nth leg lands (N = lockCount) → placeAndDraw()
   locked --> placed : manager enters slip prices (ticket.placed)
   locked --> open : commissioner re-open (free)
   placed --> locked : commissioner re-open (OVERRIDE + reason)
@@ -202,12 +210,12 @@ flowchart TD
   B --> C{Thursday 13:00?}
   C -- before --> B
   C -- after --> D[Late legs flagged<br/>still accepted]
-  D --> E{8th leg in?}
+  D --> E{Nth leg in?<br/>N = lockCount}
   B --> E
   E -- no --> B
   E -- yes --> F[LOCK<br/>permutation drawn, server-side, once]
   F --> G[Manager places real DK parlay]
-  G --> H[PLACEMENT<br/>manager types 8 slip prices → ticket.placed]
+  G --> H[PLACEMENT<br/>manager types N slip prices → ticket.placed]
   H --> I[Games kick off Thu–Mon]
   I --> J[KICKOFF cron per leg<br/>T-7 SGO candidate, T+3 archive close]
   J --> K[Last game settles]
@@ -237,7 +245,7 @@ flowchart TD
   S8 -- out --> S8a[Reject: out of band at DK]
   S8 -- in --> S9[Phase 2: confirm_code]
   S9 --> S10[Write Pick with priceSource=captured,<br/>providerEventIds pinned, late flag if past deadline]
-  S10 --> S11{8th leg?}
+  S10 --> S11{Nth leg?}
   S11 -- yes --> S12[placeAndDraw]
 ```
 
@@ -334,7 +342,7 @@ Server-side auth: session → `uid`; require `league.managerUid === uid` on `/bo
 ```mermaid
 flowchart TD
   P0[Board locked] --> P1[Manager places real parlay in DK app]
-  P1 --> P2[Manage → Placement: 8 rows, one price each<br/>+ SGP total price]
+  P1 --> P2[Manage → Placement: N rows, one price each<br/>+ SGP total price]
   P2 --> P3[Phase 1 echo:<br/>each placedPrice vs captured entry, Δ in prob pts]
   P3 --> P4{Any Δ > 3 pts?}
   P4 -- yes --> P5[Flag row: line moved between file and placement]
@@ -387,7 +395,7 @@ Additive changes only; existing callers keep working.
 | Tool | Change |
 |---|---|
 | `dd_bozo_week` | Each leg gains `priceSource`, `clvEligible`, `late`, `commissionerModified`, `closeState`, `basis`. Add `deadline` and `ticket:{locked,placed}` at the top level. |
-| `dd_bozo_clv` | Add `closeState`, `basis`, `closeSource`, `closeCandidate`. Keep the refusal to compute CLV server-side. Add `coverage:"n/8"`. |
+| `dd_bozo_clv` | Add `closeState`, `basis`, `closeSource`, `closeCandidate`. Keep the refusal to compute CLV server-side. Add `coverage:"n/N"` where N is the league's `lockCount`. |
 | `dd_bozo_standings` | Key by `uid`; include `displayName`. Fix the `undefined` row. |
 | `dd_draft_bozo_leg` | Returns the **captured** price and `priceOpp` in the echo, plus `agreement` if a typed price was supplied. |
 | `dd_submit_bozo_leg` | Unchanged contract; Phase 2 stores captured values. |
@@ -439,7 +447,7 @@ Ship order: fixture → 1.1 → 1.4 → 1.5 → 1.6. 1.1 must be **deployed**, n
 | 3.2 | Odds API archive at T+3…T+20 writes `close`; promotion rule from `closeCandidate` (written since 2.7) on terminal archive failure; SGO's direct close write is retired here, not before | `basis` is `draftkings` when archive succeeds, `draftkings_live` when promoted; no leg loses a close in the switchover |
 | 3.3 | Alt-line retry: on `line_mismatch` for spread/total, retry `alternate_spreads`/`alternate_totals` | A bought-down number captures |
 | 3.4 | Credit meter in KV: count per league per month; warn at 400 (free) / 16K (paid) | Manage page shows credits used |
-| 3.5 | Gate: after two Sundays, if Phase-1 SGO capture ≥ 7/8 and stale-close tolerable, Phase 3 stays on free tier; else enable $30 | Decision recorded in `docs/` |
+| 3.5 | Gate: after two Sundays, if Phase-1 SGO capture ≥ 87% of eligible legs and stale-close tolerable, Phase 3 stays on free tier; else enable $30 | Decision recorded in `docs/` |
 
 ### Phase 4 — Worst Beat unification · Week 3 · ~6h
 
@@ -507,6 +515,7 @@ Invite-only cohort of 5 leagues → credit meter data → budget decision (D6) �
 | Placement | Δ flag; `ticket.placed` set; props promoted to verified entry but not `clvEligible` |
 | Re-open | non-manager 403; no reason 400; `ts` unchanged; `draw.order` unchanged; three close branches; action rendered |
 | Keys | `uid` everywhere; decode never leaks; standings has no `undefined` |
+| Roster size (D18) | Board locks at `lockCount`, not 8; N=2, 8, 9, 12 all lock correctly; placement form renders N rows; `coverage` reads `n/N`; a member joining mid-week does not retroactively change an already-locked board; `lockCount < members.length` is legal |
 | Machine surface | every `dd_*` tool returns the new fields; two-phase intact |
 
 ---
@@ -517,7 +526,7 @@ The Odds API credits: events list = 0; live event odds = 1 per region per market
 
 | Load | Entry (SGO, free) | Close (Odds API) | Credits / month |
 |---|---|---|---|
-| 1 league, 8 legs, ~4.3 weeks | 0 | 8 × 10 × 4.3 | **~345** → fits free 500 |
+| 1 league, N legs, ~4.3 weeks | 0 | N × 10 × 4.3 | N=8 → ~345 · **N=9 → ~390** · both fit free 500 |
 | 5 leagues | 0 | | ~1,700 → needs $30 (20K) |
 | 50 leagues | 0 | | ~17,000 → ceiling of $30 |
 | 51+ leagues | | | budget must scale with leagues → revenue |
