@@ -1605,6 +1605,9 @@ export default {
   // sensitive auth material and exists for disaster recovery, not polling.
   async scheduled(controller, env, ctx) {
     const cron = (controller && controller.cron) || "";
+    // Temporary, exact-shape/ETag-guarded Week 1 repair. Removed after it records
+    // completion; see cleanupBozoKapW1Orphans.
+    await cleanupBozoKapW1Orphans(env);
     // Bozo closes: fires every five minutes and does nothing on a tick with no game
     // about to start, which is the overwhelming majority of them. One RTDB read.
     if (cron === BOZO_CLOSE_CRON) {
@@ -2139,6 +2142,45 @@ async function fbDelete(env, path, etag) {
   if (r.status === 412) return false;
   if (!r.ok) throw new Error("RTDB delete " + r.status);
   return true;
+}
+
+/* One-shot repair for the pre-identity Week 1 close failure. This is deliberately
+ * narrower than a general maintenance route: both rows must still contain exactly
+ * the two fields echoed to Kap, and each delete is conditional on the ETag read in
+ * the same invocation. Remove this helper after production records completion in KV. */
+const BOZO_KAP_W1_CLEANUP_KEY = "bozo:migration:2026-w1-kap-orphans:v1";
+const BOZO_KAP_W1_FAILURE = "No closing price captured: this game couldn't be matched at the odds source.";
+
+function isBozoKapW1Orphan(row) {
+  if (!row || typeof row !== "object" || Array.isArray(row)) return false;
+  const keys = Object.keys(row).sort();
+  return keys.length === 2 && keys[0] === "closeSource" && keys[1] === "closeUnavailableReason"
+    && row.closeSource === "sgo" && row.closeUnavailableReason === BOZO_KAP_W1_FAILURE;
+}
+
+async function cleanupBozoKapW1Orphans(env) {
+  const kv = cfbMarketKV(env);
+  if (!kv || await kv.get(BOZO_KAP_W1_CLEANUP_KEY)) return { status: "already-complete" };
+  const paths = [
+    "/bozo/leagues/main/results/Kap",
+    "/bozo/leagues/main/ledger/2026-w1-Kap",
+  ];
+  const rows = [];
+  for (const path of paths) rows.push({ path, ...(await fbGet(env, path, true)) });
+  const changed = rows.find(x => x.data != null && !isBozoKapW1Orphan(x.data));
+  if (changed) {
+    console.error(JSON.stringify({ event: "bozo.cleanup.blocked", path: changed.path,
+                                   reason: "row changed after echo" }));
+    return { status: "blocked", path: changed.path };
+  }
+  for (const row of rows) {
+    if (row.data == null) continue;
+    if (!row.etag || !(await fbDelete(env, row.path, row.etag))) return { status: "etag-changed", path: row.path };
+  }
+  const done = { status: "complete", at: new Date().toISOString(), paths };
+  await kv.put(BOZO_KAP_W1_CLEANUP_KEY, JSON.stringify(done));
+  console.log(JSON.stringify({ event: "bozo.cleanup.complete", ...done }));
+  return done;
 }
 
 async function fbPost(env, path, value) {
@@ -7054,6 +7096,36 @@ function bozoMatchEvent(events, pick, registry) {
   return null;
 }
 
+/* Build one close mutation without touching shared state. A target is writeable only
+ * while it still carries the pick and both identity fields. That makes a stale target
+ * (pick removed after discovery) and an unresolved legacy UID retryable no-ops instead
+ * of allowing either to manufacture a close-only ledger row. */
+function bozoCloseMutation(t, quote, reason, observedAt) {
+  if (!t || !t.pick || !t.key || !t.player || !t.uid) return null;
+  const patch = {};
+  const base = `results/${t.key}`;
+  const lrow = `ledger/${ledgerKey(t.season, t.week, t.key)}`;
+  patch[`${lrow}/player`] = t.player;
+  patch[`${lrow}/uid`] = t.uid;
+  const both = (field, val) => { patch[`${base}/${field}`] = val; patch[`${lrow}/${field}`] = val; };
+  if (quote) {
+    both("close", quote.price);
+    both("closeOpp", quote.opp);
+    both("closeBook", BOZO_CLOSE_BOOK);
+    both("closeSource", "sgo");
+    both("closeObservedAt", observedAt);
+    both("closeUnavailableReason", null);
+  } else {
+    both("close", null);
+    both("closeOpp", null);
+    both("closeBook", null);
+    both("closeObservedAt", null);
+    both("closeUnavailableReason", reason);
+    both("closeSource", "sgo");
+  }
+  return patch;
+}
+
 /* The cron body. Writes at most one close per leg, ever. */
 async function runBozoCloseCapture(env, nowMs) {
   const targets = await bozoCloseTargets(env, nowMs);
@@ -7084,7 +7156,6 @@ async function runBozoCloseCapture(env, nowMs) {
     const registry = await bozoTeamRegistry(env, bucket.sport);
 
     for (const t of bucket.legs) {
-      const base = `results/${t.key}`;
       if (fetchErr) { skipped++; continue; }                  // no reason written — retry next tick
 
       let reason = null, quote = null;
@@ -7106,33 +7177,12 @@ async function runBozoCloseCapture(env, nowMs) {
       }
 
       // ⚠️ Written in TWO places, on purpose. `results/<key>` is this week's live board
-      // and gets cleared by bozoNext; the ledger row is the permanent receipt. The
-      // ledger's four-stage comment has reserved KICKOFF for exactly this since it was
-      // written. A week that locks and never gets graded still ends up with its close.
-      const lrow = `ledger/${ledgerKey(t.season, t.week, t.key)}`;
-      add(t.lid, `${lrow}/player`, t.player);
-      if (t.uid) add(t.lid, `${lrow}/uid`, t.uid);
-      const both = (field, val) => { add(t.lid, `${base}/${field}`, val); add(t.lid, `${lrow}/${field}`, val); };
-
-      if (quote) {
-        both("close", quote.price);
-        both("closeOpp", quote.opp);
-        both("closeBook", BOZO_CLOSE_BOOK);
-        both("closeSource", "sgo");            // the reseller, not the book
-        both("closeObservedAt", observedAt);   // SERVER clock, never backfilled
-        both("closeUnavailableReason", null);
-        captured++;
-      } else {
-        // ⚠️ The reason is the record. A null with no explanation is indistinguishable
-        // from a capture that never ran, and the chart has to be able to say which.
-        both("close", null);
-        both("closeOpp", null);
-        both("closeBook", null);
-        both("closeObservedAt", null);
-        both("closeUnavailableReason", reason);
-        both("closeSource", "sgo");
-        skipped++;
-      }
+      // and gets cleared by bozoNext; the ledger row is the permanent receipt. Refuse
+      // an incomplete/stale target before adding EITHER path to the shared patch.
+      const mutation = bozoCloseMutation(t, quote, reason, observedAt);
+      if (!mutation) { skipped++; continue; }
+      for (const [path, value] of Object.entries(mutation)) add(t.lid, path, value);
+      if (quote) captured++; else skipped++;
     }
   }
 
