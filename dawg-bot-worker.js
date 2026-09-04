@@ -6229,13 +6229,10 @@ async function commitBozoLeg(env, lid, state, name, p, via = null, mkey = null) 
     price: Math.round(Number(p.price)),
     label: String(p.label).slice(0, 90),
     prop: p.prop ? String(p.prop).slice(0, 80) : null,
-    // ⚠️ Where the PRICE came from, not where the pick came from. "self" means a
-    // human typed it and nothing checked it; "market" is reserved for the day a
-    // licensed odds source writes it server-side. Recorded now, before any such
-    // source exists, so that legs entered under the honour system stay honestly
-    // labelled forever instead of becoming indistinguishable from verified ones.
-    // The client cannot assert "market" — only this file may ever set that.
-    priceSource: "self",
+    // ⚠️ Where the PRICE came from, not where the pick came from. "captured" is
+    // server-only and carries the SGO/DraftKings receipt fields below. "self" is limited
+    // to props whose capture failed and `other`; both are visibly excluded from CLV.
+    priceSource: p.priceSource === "captured" ? "captured" : "self",
     // ⚠️ Stored so the uniqueness and contradiction checks never have to re-derive a
     // key from a row written under an older version of the rules. A key that drifts
     // between write time and read time silently stops catching collisions.
@@ -6246,8 +6243,20 @@ async function commitBozoLeg(env, lid, state, name, p, via = null, mkey = null) 
     // odds source, so this timestamp is what schedules the whole thing. A leg without
     // it is never captured — see bozoCloseTargets.
     startsAt: typeof p.startsAt === "string" && !isNaN(Date.parse(p.startsAt)) ? p.startsAt : null,
+    priceOpp: entryPriceOpp,
     entryPriceOpp,
     entryBook: "draftkings",        // league rule: there is no other book at either end
+    entryProvider: p.entryProvider || null,
+    entrySnapshotAt: p.entrySnapshotAt || null,
+    fairEntry: Number.isFinite(Number(p.fairEntry)) ? Number(p.fairEntry) : null,
+    entryHold: Number.isFinite(Number(p.entryHold)) ? Number(p.entryHold) : null,
+    clvEligible: p.clvEligible === true,
+    canonicalKey: p.canonicalKey || null,
+    commenceTime: p.commenceTime || p.startsAt || null,
+    espnEventId: p.espnEventId || String(p.eventId),
+    providerEventIds: p.providerEventIds || {},
+    closeState: p.closeState || "pending",
+    submissionId: p.submissionId || null,
     // ⚠️ "asserted", not "verified". DK has no public API, so this records that the
     // player is claiming an SGP-legal selection and that it passed the structural
     // checks — nothing has asked DraftKings.
@@ -6314,7 +6323,7 @@ async function bozoPick(request, env, cors) {
   if (!isMember(state, name))
     return json({ error: "You're not in this league." }, 403, cors);
 
-  if ((state.status || "open") !== "open") {
+  if ((state.status || "open") !== "open" && body.confirm === undefined) {
     return json({ error: "The ticket is placed. Board is locked." }, 409, cors);
   }
 
@@ -6329,26 +6338,82 @@ async function bozoPick(request, env, cors) {
     }
 
     const set = settingsOf(state);
+    if (!env.RL) return json({ error: "The confirmation store is not configured." }, 503, cors);
+    const kvKey = "bozoconfirm:" + (auth.uid || name) + ":" + lid;
 
     // "Editing is allowed until the ticket is placed" is the default, not a law. A
     // league can lock a leg the moment it lands — which removes the edit-resets-your-
     // clock dynamic entirely, so it is a real change to how the game plays.
-    if (!set.allowEdit && (state.picks || {})[mkey])
+    if (body.confirm === undefined && !set.allowEdit && (state.picks || {})[mkey])
       return json({ error: "This league locks your leg once it's in — no edits." }, 409, cors);
 
     // Bozo Royale: a chopped player funds the ticket, they do not bet on it. Their
     // re-deploy puts you straight back the first time; after that this is the end of it.
-    if (set.format === "royale" && !royaleAliveKey(state, mkey))
+    if (body.confirm === undefined && set.format === "royale" && !royaleAliveKey(state, mkey))
       return json({ error: "You're out — chopped in week " + (royaleStatus(state)[mkey]?.chopped?.slice(-1)[0] ?? "?") + ". You fund this ticket; you don't have a leg on it." }, 409, cors);
 
-    const p = body.pick || {};
-    const err = validatePick(p, name, state.picks || {}, bandOf(state), set.format, mkey);
-    if (err) return json({ error: err }, 400, cors);
+    // Phase two commits the quote frozen in KV. It deliberately does not call SGO again:
+    // confirmation is approval of the exact price printed in phase one's echo.
+    if (body.confirm !== undefined) {
+      const code = String(body.confirm || "").trim().toUpperCase();
+      let pend;
+      try { pend = JSON.parse((await env.RL.get(kvKey)) || "null"); } catch { pend = null; }
+      if (!pend) return json({ error: "No proposal is waiting for confirmation. It may have expired." }, 409, cors);
+      if (pend.code !== code) return json({ error: pend.consumed ? "That confirmation was already used." : "Wrong confirmation code." }, 409, cors);
+      if (pend.consumed) return json(pend.result, 200, cors);
+      if (pend.week !== (state.week || 1)) return json({ error: "The league advanced. Propose the leg again." }, 409, cors);
+      const landed = (state.picks || {})[mkey];
+      if (landed && landed.submissionId === code)
+        return json({ ok: true, status: "submitted", replayed: true, ts: landed.ts,
+          placed: (state.status || "open") !== "open",
+          leg: { label: landed.label, line: landed.line, price: landed.price,
+            priceOpp: landed.entryPriceOpp, priceSource: landed.priceSource } }, 200, cors);
+      if ((state.status || "open") !== "open")
+        return json({ error: "The ticket is placed. Board is locked." }, 409, cors);
+      if (!set.allowEdit && landed)
+        return json({ error: "This league locks your leg once it's in — no edits." }, 409, cors);
+      if (set.format === "royale" && !royaleAliveKey(state, mkey))
+        return json({ error: "You're out of this Royale league." }, 409, cors);
+      const err = validatePick(pend.p, name, state.picks || {}, bandOf(state), set.format, mkey);
+      if (err) return json({ error: "The leg no longer passes validation: " + err }, 409, cors);
+      const out = await commitBozoLeg(env, lid, state, name, pend.p, null, mkey);
+      const result = { ...out, status: "submitted", leg: {
+        label: pend.p.label, line: pend.p.line, price: pend.p.price,
+        priceOpp: pend.p.priceOpp, priceSource: pend.p.priceSource,
+      } };
+      try { await env.RL.put(kvKey, JSON.stringify({ code, consumed: true, result }), { expirationTtl: 3600 }); } catch {}
+      return json(result, 200, cors);
+    }
 
-    const out = await commitBozoLeg(env, lid, state, name, p, null, mkey);
-    return json(out, 200, cors);
+    // A stale cached page used to interpret a phase-one 200 as "Submitted". Require the
+    // new protocol marker so an old client gets a visible reload error and writes nothing.
+    if (body.captureVersion !== 1)
+      return json({ error: "Price capture is now two-phase. Reload this page before submitting." }, 409, cors);
+    const input = { ...(body.pick || {}) };
+    if (input.price !== undefined && input.typedPrice === undefined) input.typedPrice = input.price;
+    const captured = await bozoCaptureEntry(env, input);
+    if (!captured.ok) return json({ error: captured.error }, 400, cors);
+    const p = captured.p;
+    const err = validatePick(p, name, state.picks || {}, bandOf(state), set.format, mkey);
+    if (err) return json({ error: `Captured DraftKings ${p.price} / ${p.priceOpp ?? "no opposite"} at line ${p.line}. ${err}`,
+      captured: { line: p.line, price: p.price, priceOpp: p.priceOpp } }, 400, cors);
+
+    const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789", rnd = new Uint32Array(6);
+    crypto.getRandomValues(rnd);
+    let code = ""; for (const n of rnd) code += alphabet[n % alphabet.length];
+    p.submissionId = code;
+    const mine = (state.picks || {})[mkey] || null;
+    const echo = p.label + " — " + p.game + ", " + (p.mkt === "ml" ? "moneyline" : p.mkt + " " + p.line) +
+      " at " + p.price + " (other side " + (p.priceOpp == null ? "not captured" : p.priceOpp) + "), " +
+      (p.priceSource === "captured" ? "captured from DraftKings via SGO" : "self-priced; not CLV-eligible") + "." +
+      (mine ? " This replaces your current leg and resets your submission clock." : "");
+    await env.RL.put(kvKey, JSON.stringify({ code, lid, week: state.week || 1, p, echo, ts: Date.now() }), { expirationTtl: 300 });
+    return json({ status: "confirm_required", echo, confirm_code: code, expires_in: 300,
+      captured: { line: p.line, price: p.price, priceOpp: p.priceOpp, priceSource: p.priceSource,
+        clvEligible: p.clvEligible, entrySnapshotAt: p.entrySnapshotAt },
+      agreement: captured.agreement || null, warning: captured.captureWarning || null }, 200, cors);
   } catch (e) {
-    return json({ error: "Database write failed: " + e.message }, 502, cors);
+    return json({ error: "Submission failed: " + e.message }, 502, cors);
   }
 }
 
@@ -6404,10 +6469,23 @@ function validatePick(p, name, existing, band, format, mkey = null) {
   if (!p.label || !p.side) return "Incomplete pick.";
   if (p.mkt === "other" && !String(p.prop || "").trim())
     return "Describe the bet — an \"other\" leg needs to say what it actually is.";
+  if (!p.startsAt || isNaN(Date.parse(p.startsAt)))
+    return "Kickoff time (startsAt) is required.";
   const price = Number(p.price);
   if (!isFinite(price) || price > band.ceil || price < band.floor)
     return `${p.price} is outside the ${band.ceil} to ${band.floor} band.`;
   if (p.mkt !== "ml" && !isFinite(Number(p.line))) return "Number is required for that market.";
+  const gameMarket = p.mkt === "spread" || p.mkt === "ml" || p.mkt === "total";
+  if (gameMarket && p.priceSource !== "captured")
+    return "Spread, moneyline and total prices must be captured from DraftKings.";
+  if (gameMarket && bzAmerican(p.priceOpp) === null)
+    return "The captured opposite-side DraftKings price is required for that market.";
+  if (p.priceSource === "captured" && (!p.entrySnapshotAt || !p.providerEventIds?.sgo))
+    return "The captured quote is missing its source receipt.";
+  if (p.priceSource === "captured" && assertQuote({ price: p.price, opp: p.priceOpp, line: p.line }, p))
+    return "The captured quote is incomplete or does not match the selected number.";
+  if (p.mkt === "other" && (p.priceSource !== "self" || p.clvEligible !== false))
+    return "Other markets must be self-priced and excluded from CLV.";
 
   if ((p.mkt === "other" || p.mkt === "prop") && FUTURES_WORDS.test(String(p.prop || "")))
     return "That reads like a future, and DraftKings won't parlay a future with game legs. Bozo takes SGP-legal game markets only.";
@@ -6863,8 +6941,21 @@ const bzAmerican = v => {
   return Number.isFinite(n) && Math.abs(n) >= 100 ? Math.round(n) : null;
 };
 
+// One DraftKings outcome can have a main number plus dozens of alternate numbers. Pick
+// the exact market instance the member selected; requesting alt lines and then silently
+// reading the main line would price a different bet.
+function bozoDkOutcome(odd, field, wanted) {
+  const book = (((odd || {}).byBookmaker || {})[BOZO_CLOSE_BOOK]);
+  if (!book) return null;
+  const rows = [book, ...((book.altLines || []))];
+  return rows.find(row => {
+    if (!row || row.available === false || bzAmerican(row.odds) === null) return false;
+    return field === null || (Number.isFinite(Number(row[field])) && Math.abs(Number(row[field]) - wanted) < 0.001);
+  }) || null;
+}
+
 // Pull DraftKings' two sides for one market off an aggregator event.
-// Returns { price, opp } in the orientation of the leg, or a reason it could not.
+// Returns { price, opp, line, snapshotAt } in the orientation of the leg, or a reason.
 function bozoDkQuote(event, pick, registry) {
   if (pick.mkt === "prop") return bozoDkPropQuote(event, pick);
   const ids = BOZO_ODD_IDS[pick.mkt];
@@ -6872,19 +6963,13 @@ function bozoDkQuote(event, pick, registry) {
   const odds = (event && event.odds) || {};
   const a = odds[ids[0]], b = odds[ids[1]];
   if (!a || !b) return { reason: "market-absent-at-source" };
-  const ba = (a.byBookmaker || {})[BOZO_CLOSE_BOOK], bb = (b.byBookmaker || {})[BOZO_CLOSE_BOOK];
-  if (!ba || !bb) return { reason: "DraftKings had no standing market at kickoff" };
-  if (ba.available === false || bb.available === false)
-    return { reason: "DraftKings suspended the market before kickoff" };
-  const pa = bzAmerican(ba.odds), pb = bzAmerican(bb.odds);
-  if (pa === null || pb === null) return { reason: "no usable price at source" };
 
   // Orient to the side the player actually took. For a total that is over/under; for a
   // moneyline or spread it is home/away, and the pick stores a team abbreviation.
-  let mine, theirs;
+  let mineOdd, theirOdd;
   if (pick.mkt === "total") {
     const over = (pick.dir || pick.side) !== "under";
-    mine = over ? pa : pb; theirs = over ? pb : pa;
+    mineOdd = over ? a : b; theirOdd = over ? b : a;
   } else {
     const homeNames = (((event.teams || {}).home || {}).names || {});
     const awayNames = (((event.teams || {}).away || {}).names || {});
@@ -6893,15 +6978,31 @@ function bozoDkQuote(event, pick, registry) {
     const away = [awayNames.short, awayNames.medium, awayNames.long]
       .map(name => bozoTeamNorm(name, registry)).filter(Boolean);
     const side = bozoTeamNorm(pick.side, registry);
-    if (side && home.includes(side))      { mine = pa; theirs = pb; }
-    else if (side && away.includes(side)) { mine = pb; theirs = pa; }
+    if (side && home.includes(side))      { mineOdd = a; theirOdd = b; }
+    else if (side && away.includes(side)) { mineOdd = b; theirOdd = a; }
     else return { reason: "could not tell which side of the market the leg was on" };
   }
 
+  const field = pick.mkt === "spread" ? "spread" : pick.mkt === "total" ? "overUnder" : null;
+  const storedLine = Number(pick.line);
+  if (field && !Number.isFinite(storedLine)) return { reason: "the leg has no number to price" };
+  // Bozo stores the handicap as points this side GIVES UP: +39.5 renders Indiana -39.5.
+  // SGO stores the sportsbook display number, so spreads cross this boundary inverted.
+  const wanted = pick.mkt === "spread" ? -storedLine : storedLine;
+  const mine = bozoDkOutcome(mineOdd, field, wanted);
+  const opposingNumber = pick.mkt === "spread" ? -wanted : wanted;
+  const theirs = bozoDkOutcome(theirOdd, field, opposingNumber);
+  if (!mine || !theirs)
+    return { reason: `DraftKings had no two-sided ${pick.mkt} market at ${wanted}` };
+  const minePrice = bzAmerican(mine.odds), theirPrice = bzAmerican(theirs.odds);
+
   // ⚠️ Both sides or nothing. Without the opposite side there is no de-vig, and the
   // chart's expected-win baseline is off by the entire hold.
-  if (mine === null || theirs === null) return { reason: "only one side of the market was priced" };
-  return { price: mine, opp: theirs };
+  if (minePrice === null || theirPrice === null) return { reason: "only one side of the market was priced" };
+  const observed = [mine.lastUpdatedAt, theirs.lastUpdatedAt].filter(x => !isNaN(Date.parse(x || ""))).sort();
+  return { price: minePrice, opp: theirPrice, line: pick.mkt === "ml" ? 0 : storedLine,
+           bookLine: pick.mkt === "ml" ? 0 : wanted,
+           snapshotAt: observed.length ? observed[observed.length - 1] : null };
 }
 
 /* Resolve one free-text prop against every market the aggregator has on that event.
@@ -6955,7 +7056,9 @@ function bozoDkPropQuote(event, pick) {
     if (mine.available === false || theirs.available === false) continue;
     const a = bzAmerican(mine.odds), b = bzAmerican(theirs.odds);
     if (a === null || b === null) continue;
-    best = { price: a, opp: b };
+    const observed = [mine.lastUpdatedAt, theirs.lastUpdatedAt].filter(x => !isNaN(Date.parse(x || ""))).sort();
+    best = { price: a, opp: b, line: wantLine,
+             snapshotAt: observed.length ? observed[observed.length - 1] : null };
     break;
   }
   if (best) return best;
@@ -7042,6 +7145,8 @@ function bozoMatchEvent(events, pick, registry) {
   const parts = String(pick.game || "").split(/\s+(?:@|vs\.?)\s+/i);
   const want = parts.map(part => bozoTeamNorm(part, registry)).filter(Boolean);
   if (want.length < 2) return null;
+  const wantedStart = Date.parse(pick.startsAt || "");
+  const matches = [];
   for (const ev of events) {
     const t = ev.teams || {};
     const names = [t.home, t.away].map(x => {
@@ -7049,9 +7154,104 @@ function bozoMatchEvent(events, pick, registry) {
       return [n.short, n.medium, n.long].map(name => bozoTeamNorm(name, registry)).filter(Boolean);
     });
     const hit = want.every(w => names.some(list => list.includes(w)));
-    if (hit) return ev;
+    if (hit) matches.push(ev);
   }
-  return null;
+  if (!matches.length) return null;
+  if (!Number.isFinite(wantedStart)) return matches[0];
+  matches.sort((a, b) => Math.abs(Date.parse(a.status?.startsAt || "") - wantedStart) -
+                         Math.abs(Date.parse(b.status?.startsAt || "") - wantedStart));
+  const nearest = matches[0], delta = Math.abs(Date.parse(nearest.status?.startsAt || "") - wantedStart);
+  return Number.isFinite(delta) && delta <= 6 * 3600 * 1000 ? nearest : null;
+}
+
+const bozoRawImplied = price => price < 0 ? -price / (-price + 100) : 100 / (price + 100);
+
+function bozoDevigPair(price, opp) {
+  const a = bzAmerican(price), b = bzAmerican(opp);
+  if (a === null || b === null) return null;
+  const pa = bozoRawImplied(a), pb = bozoRawImplied(b), sum = pa + pb;
+  if (!Number.isFinite(sum) || sum <= 0) return null;
+  return { fair: pa / sum, hold: sum - 1 };
+}
+
+function assertQuote(quote, pick) {
+  if (!quote || quote.reason) return (quote && quote.reason) || "no quote returned";
+  if (bzAmerican(quote.price) === null || bzAmerican(quote.opp) === null)
+    return "the quote did not contain two real American prices";
+  if (pick.mkt !== "ml" && (!Number.isFinite(Number(quote.line)) ||
+      Math.abs(Number(quote.line) - Number(pick.line)) > 0.001))
+    return "the quote was for a different number";
+  return bozoDevigPair(quote.price, quote.opp) ? null : "the two-sided quote could not be de-vigged";
+}
+
+function bozoCanonicalKey(sport, event, registry) {
+  const teams = [event?.teams?.away, event?.teams?.home].map(team => {
+    const n = (team && team.names) || {};
+    return bozoTeamNorm(n.long || n.medium || n.short, registry);
+  }).filter(Boolean).sort();
+  const startsAt = event?.status?.startsAt;
+  return teams.length === 2 && !isNaN(Date.parse(startsAt || ""))
+    ? [sport, teams.join("~"), startsAt.slice(0, 10)].join("|") : null;
+}
+
+function bozoSelfPricedEntry(p, reason) {
+  const typed = bzAmerican(p.typedPrice ?? p.price);
+  if (typed === null) return { ok: false, error: reason + " A real American price is required for the self-priced fallback." };
+  return { ok: true, p: { ...p, price: typed, priceOpp: null, priceSource: "self",
+    entryBook: BOZO_CLOSE_BOOK, entryProvider: null, entrySnapshotAt: null,
+    fairEntry: null, entryHold: null, clvEligible: false,
+    closeState: p.mkt === "other" ? "unmatched" : "pending" },
+    captureWarning: reason };
+}
+
+// Resolve and freeze the submit-time quote. This function never writes RTDB. Callers may
+// stage its returned object in short-lived KV, but phase two must commit this exact object
+// without fetching SGO again.
+async function bozoCaptureEntry(env, input) {
+  const p = { ...input };
+  const startMs = Date.parse(p.startsAt || "");
+  if (!Number.isFinite(startMs)) return { ok: false, error: "Kickoff time (startsAt) is required." };
+  if (p.mkt === "other") return bozoSelfPricedEntry(p, "Other markets are always self-priced and not CLV-eligible.");
+
+  let events, registry;
+  try {
+    [events, registry] = await Promise.all([
+      bozoFetchEvents(env, p.sport, startMs, p.mkt === "prop"),
+      bozoTeamRegistry(env, p.sport),
+    ]);
+  } catch (e) {
+    if (p.mkt === "prop") return bozoSelfPricedEntry(p, "DraftKings capture failed: " + e.message + ".");
+    return { ok: false, error: "DraftKings capture failed: " + e.message + ". Nothing was submitted." };
+  }
+  const event = bozoMatchEvent(events, p, registry);
+  if (!event) {
+    if (p.mkt === "prop") return bozoSelfPricedEntry(p, "The game could not be matched at the odds source.");
+    return { ok: false, error: "The game could not be matched at the odds source. Nothing was submitted." };
+  }
+  const quote = bozoDkQuote(event, p, registry);
+  const quoteError = assertQuote(quote, p);
+  if (quoteError) {
+    if (p.mkt === "prop") return bozoSelfPricedEntry(p, "DraftKings capture failed: " + quoteError + ".");
+    return { ok: false, error: "DraftKings capture failed: " + quoteError + ". Nothing was submitted." };
+  }
+  const facts = bozoDevigPair(quote.price, quote.opp);
+  const commenceTime = event.status?.startsAt || p.startsAt;
+  const typed = bzAmerican(p.typedPrice ?? p.price);
+  const agreement = typed === null ? null : {
+    typedPrice: typed,
+    capturedPrice: quote.price,
+    probabilityPointDifference: Math.abs(bozoRawImplied(typed) - bozoRawImplied(quote.price)) * 100,
+  };
+  if (agreement) agreement.needsConfirmation = agreement.probabilityPointDifference > 1.5;
+  return { ok: true, p: { ...p,
+    line: quote.line, price: quote.price, priceOpp: quote.opp,
+    priceSource: "captured", entryBook: BOZO_CLOSE_BOOK, entryProvider: "sgo",
+    entrySnapshotAt: quote.snapshotAt || new Date().toISOString(),
+    fairEntry: facts.fair, entryHold: facts.hold, clvEligible: true,
+    canonicalKey: bozoCanonicalKey(p.sport, event, registry), commenceTime,
+    startsAt: commenceTime, espnEventId: String(p.eventId),
+    providerEventIds: { sgo: String(event.eventID) }, closeState: "pending",
+  }, agreement };
 }
 
 /* Build one close mutation without touching shared state. A target is writeable only
@@ -14270,7 +14470,7 @@ const MCP_TOOLS = [
           "Use ONLY legs where clvMeasurable is true. A leg missing either side of either price cannot be de-vigged, and mixing a de-vigged number with a raw implied one is wrong by roughly the whole hold.",
           "Never substitute the entry price for a missing close.",
           "Pushes and voids carry no information about the number and belong in neither the average nor the count.",
-          "The close is DraftKings' price obtained through a licensed aggregator; the entry is self-reported by the player. Any CLV figure mixes a checked number with an unchecked one.",
+          "Measured CLV uses captured DraftKings prices at both entry and close. Self-priced legs are not measurable and must stay out of aggregates.",
           lg.synthetic === true ? "SIMULATED LEAGUE — every price here is fabricated. Never quote it as evidence of anyone's skill." : null,
         ].filter(Boolean),
       });
@@ -14305,9 +14505,12 @@ const MCP_TOOLS = [
           you: me ? (x.who || playerName(k)) === me : undefined,
           sport: x.sport, game: x.game, eventId: x.eventId,
           mkt: x.mkt, side: x.side, line: x.mkt === "ml" ? null : x.line,
-          price: x.price, priceSource: x.priceSource || "self",
+          price: x.price, priceSource: x.priceSource || "self", clvEligible: x.clvEligible === true,
           priceOpp: x.entryPriceOpp ?? null, entryBook: x.entryBook || null,
-          label: x.label, prop: x.prop || null, ts: x.ts || null,
+          entryProvider: x.entryProvider || null, entrySnapshotAt: x.entrySnapshotAt || null,
+          fairEntry: x.fairEntry ?? null, entryHold: x.entryHold ?? null,
+          canonicalKey: x.canonicalKey || null, providerEventIds: x.providerEventIds || {},
+          startsAt: x.startsAt || null, label: x.label, prop: x.prop || null, ts: x.ts || null,
           // The close, once the kickoff cron has snapped it. Null until then, and null
           // FOREVER for legs it could not match — with the reason attached, so a missing
           // close is never mistaken for a leg that did not move.
@@ -14333,11 +14536,11 @@ const MCP_TOOLS = [
           // ⚠️ This caveat changed the day the capture shipped, and the change is narrow
           // on purpose. CLV is now computable — but only for a leg that has BOTH a
           // captured close and both sides of both prices, and the entry is still a
-          // number a human typed. State CLV for a leg that has one; say it is
+          // server-captured DK quote. State CLV for a leg that has one; say it is
           // unmeasured for a leg that does not; never average across the two.
           "CLV is computable only where closeObservedAt is set AND both priceOpp and closeOpp are present — de-vig proportionally, and report probability points, not cents.",
           "A leg with closeUnavailableReason has NO CLV. Do not substitute the entry price for a missing close: that fabricates a zero and drags any average toward it.",
-          "Entry prices are still self-reported (priceSource: self). The close is DraftKings' price via a licensed aggregator (closeBook: draftkings, closeSource: sgo) — so a CLV figure mixes a checked number with an unchecked one, and should be quoted that way.",
+          "priceSource=captured means both entry sides came from DraftKings through SGO. priceSource=self is excluded from CLV; never mix those legs into a CLV average.",
           "Every leg goes on a real DraftKings bet slip, so every market — props included — exists and closes. A missing close means the capture could not resolve the typed description onto the right market, and closeUnavailableReason says which of stat, player or number failed. \"Other\" legs are the exception: free text for an arbitrary market, with nothing to match on. Either way it is a matching gap, never evidence about a player.",
           "If two legs share an eventId the ticket is a same-game parlay and the displayed parlay price is INDICATIVE — DraftKings reprices correlated legs, so the product of the leg prices is an upper bound, not the payout.",
         ],
@@ -14400,10 +14603,10 @@ const MCP_TOOLS = [
     catalog: "core",
     readOnlyHint: true,
     description:
-      "Check a proposed Bozo leg against the LIVE board and return the exact body /bozo/pick wants, " +
-      "or the reason it would be rejected. ⚠️ READ-ONLY: this submits nothing, writes nothing and " +
-      "changes nothing. The member still submits it themselves on bozo.html — that is deliberate, not a " +
-      "limitation to work around. Runs the server's own validator, so a pass here is a pass there.",
+      "Capture the live DraftKings quote for a proposed Bozo leg, check it against the LIVE board, " +
+      "or the reason it would be rejected. ⚠️ READ-ONLY: this submits nothing and changes no board " +
+      "state. Runs the server's own capture and validator; use dd_submit_bozo_leg to " +
+      "make a separately captured, two-phase submission.",
     inputSchema: {
       type: "object",
       properties: {
@@ -14413,12 +14616,13 @@ const MCP_TOOLS = [
         mkt: { type: "string", description: "spread | ml | total | prop | other" },
         side: { type: "string", description: "Team abbreviation, or over / under" },
         line: { type: "number", description: "The number. Required for everything except ml." },
-        price: { type: "number", description: "American odds, e.g. -180. Favourites only; the band is league-set." },
+        price: { type: "number", description: "Optional typed DraftKings price tripwire. The Worker captures and stores the live quote; this value is never trusted as the entry price." },
         label: { type: "string", description: "How the leg reads on the ticket, e.g. \"BUF -6.5\"" },
         prop: { type: "string", description: "Required when mkt is \"other\": what the bet actually is" },
+        startsAt: { type: "string", description: "Kickoff ISO timestamp. Required so the event and closing capture can be resolved." },
         league: { type: "string", description: "League id (default: main)" },
       },
-      required: ["sport", "eventId", "game", "mkt", "side", "price", "label"],
+      required: ["sport", "eventId", "game", "mkt", "side", "label", "startsAt"],
       additionalProperties: false,
     },
     async run(args, env, caller) {
@@ -14462,18 +14666,23 @@ const MCP_TOOLS = [
           yourExistingLeg: { label: mine.label, price: mine.price, ts: mine.ts || null },
         });
 
-      // The proposal, shaped the way /bozo/pick reads it.
-      const p = {
+      // Shape the selection and run the same read-only SGO capture as phase one.
+      const input = {
         sport: String(args.sport || "").toLowerCase(),
         eventId: String(args.eventId || ""),
         game: String(args.game || "").slice(0, 80),
         mkt: String(args.mkt || "").toLowerCase(),
         side: String(args.side || "").slice(0, 40),
-        line: args.mkt === "ml" ? 0 : Number(args.line),
-        price: Math.round(Number(args.price)),
+        line: String(args.mkt || "").toLowerCase() === "ml" ? 0 : Number(args.line),
+        typedPrice: args.price,
         label: String(args.label || "").slice(0, 90),
         prop: args.prop ? String(args.prop).slice(0, 80) : null,
+        startsAt: typeof args.startsAt === "string" ? args.startsAt : null,
       };
+      const captured = await bozoCaptureEntry(env, input);
+      if (!captured.ok)
+        return toolText({ accepted: false, reason: "capture-failed", detail: captured.error });
+      const p = captured.p;
 
       // ⚠️ THE SERVER'S OWN VALIDATOR, not a copy of its rules. A second copy would drift
       // and start passing legs /bozo/pick rejects, which is worse than no check at all.
@@ -14482,7 +14691,7 @@ const MCP_TOOLS = [
       if (err)
         return toolText({
           accepted: false, reason: "rejected-by-the-same-validator-the-server-runs",
-          detail: err, band,
+          detail: err, band, captured: { line: p.line, price: p.price, priceOpp: p.priceOpp },
           note: "That is the literal string POST /bozo/pick would return. Fix it and ask again.",
         });
 
@@ -14504,16 +14713,18 @@ const MCP_TOOLS = [
         // decides Last In — so an edit is not free even when it is allowed.
         editResetsYourClock: !!mine || undefined,
         submit: {
-          how: "POST " + SITE.replace("https://datadawgs216.com", "https://toto.jkapcar4.workers.dev") +
-               "/bozo/pick — or just press submit on " + SITE + "/bozo.html, which is the intended path.",
-          body: { league: lid, pick: p },
+          how: "Use dd_submit_bozo_leg with the same selection fields. It performs its own fresh phase-one capture and returns a confirmation code.",
         },
         willBeStoredAs: {
           ...p,
           dir: (p.side === "over" || p.side === "under") ? p.side : "over",
-          priceSource: "self",
+          priceSource: p.priceSource,
           ts: "set by the server when you actually submit, not now",
         },
+        captured: { line: p.line, price: p.price, priceOpp: p.priceOpp,
+          priceSource: p.priceSource, clvEligible: p.clvEligible,
+          entrySnapshotAt: p.entrySnapshotAt, providerEventIds: p.providerEventIds },
+        agreement: captured.agreement || null,
         band,
         legsIn: already, legsNeeded: need,
         stillWaitingOn: memberKeys(lg).filter(k => !picks[k]).map(k => memberNameAt(lg, k)),
@@ -14525,7 +14736,7 @@ const MCP_TOOLS = [
           : undefined,
         caveats: [
           "Nothing was submitted. This tool cannot submit — it reads the board and runs the validator.",
-          "The price is whatever you typed. Nothing here checks it against a book, and it is recorded as self-reported.",
+          p.priceSource === "captured" ? "Both prices were captured from DraftKings through SGO." : "This market is self-priced and excluded from CLV.",
           "A pass here is a pass at this instant. Someone else can take your exact leg, or fill the board, before you press submit.",
         ],
       });
@@ -14561,15 +14772,18 @@ const MCP_TOOLS = [
         mkt: { type: "string", description: "spread | ml | total | prop | other" },
         side: { type: "string", description: "Team abbreviation, or over / under" },
         line: { type: "number", description: "The number. Required for everything except ml." },
-        price: { type: "number", description: "American odds, e.g. -180. Favourites only; the band is league-set." },
+        price: { type: "number", description: "Optional typed DraftKings price tripwire. The Worker captures and stores the quote; use this only to detect a mismatch. Required only for self-priced other markets or a prop fallback." },
         label: { type: "string", description: "How the leg reads on the ticket, e.g. \"BUF -6.5\"" },
         prop: { type: "string", description: "Required when mkt is \"other\": what the bet actually is" },
-        priceOpp: { type: "number", description: "American odds of the OPPOSITE side, for de-vig. Optional but strongly encouraged — without it the leg has no CLV baseline." },
-        startsAt: { type: "string", description: "Kickoff ISO timestamp from dd_scores. Optional but strongly encouraged — without it the closing line is never captured." },
+        priceOpp: { type: "number", description: "Deprecated input; the Worker captures the opposite DraftKings side itself." },
+        startsAt: { type: "string", description: "Kickoff ISO timestamp. Required when proposing a leg; phase two needs only confirm." },
         league: { type: "string", description: "League id (default: main)" },
         confirm: { type: "string", description: "PHASE TWO ONLY: the confirm_code returned by phase one, after the human approved the echo. Sends the bet." },
       },
-      required: [],
+      anyOf: [
+        { required: ["confirm"] },
+        { required: ["sport", "eventId", "game", "mkt", "side", "label", "startsAt"] },
+      ],
       additionalProperties: false,
     },
     async run(args, env, caller) {
@@ -14617,8 +14831,6 @@ const MCP_TOOLS = [
           try { await env.RL.put(kvKey, "null", { expirationTtl: 60 }); } catch {}
           return toolText({ status: "stale", detail: "The league moved to week " + (lg.week || 1) + " since this was proposed for week " + pend.week + ". Propose again on the current board." });
         }
-        if ((lg.status || "open") !== "open")
-          return toolText({ status: "board-locked", detail: "The ticket is placed and the board is locked — nothing can be added or changed for week " + (lg.week || 1) + "." });
         const set = settingsOf(lg);
         const picks = lg.picks || {};
         // One resolution, reused by every check below and by the write itself, so an
@@ -14626,6 +14838,14 @@ const MCP_TOOLS = [
         const mkey = memberKeyOf(lg, caller);
         if (!mkey)
           return toolText({ status: "not-a-member", detail: "You are not in this league." });
+        const landed = picks[mkey];
+        if (landed && landed.submissionId === code)
+          return toolText({ status: "submitted", replayed: true, league: lid, week: pend.week,
+            you: name, leg: { label: landed.label, line: landed.line, price: landed.price,
+              priceOpp: landed.entryPriceOpp, priceSource: landed.priceSource }, ts: landed.ts,
+            detail: "This exact confirmation already landed; replay wrote nothing." });
+        if ((lg.status || "open") !== "open")
+          return toolText({ status: "board-locked", detail: "The ticket is placed and the board is locked — nothing can be added or changed for week " + (lg.week || 1) + "." });
         if (!set.allowEdit && picks[mkey])
           return toolText({ status: "edits-locked", detail: "This league locks your leg the moment it lands, and yours is already in." });
         if (set.format === "royale" && !royaleAliveKey(lg, mkey))
@@ -14640,7 +14860,8 @@ const MCP_TOOLS = [
         const out = await commitBozoLeg(env, lid, lg, name, pend.p, "mcp", mkey);
         const result = {
           status: "submitted", league: lid, week: pend.week, you: name,
-          leg: { label: pend.p.label, price: pend.p.price, game: pend.p.game },
+          leg: { label: pend.p.label, line: pend.p.line, price: pend.p.price,
+                 priceOpp: pend.p.priceOpp, priceSource: pend.p.priceSource, game: pend.p.game },
           ts: out.ts, via: "mcp",
           boardLocked: !!out.placed,
           legsIn: null,   // read dd_bozo_week for the live board; this result is frozen for replay
@@ -14673,26 +14894,31 @@ const MCP_TOOLS = [
       if (set.format === "royale" && !royaleAlive(lg, name))
         return toolText({ status: "chopped", detail: "You're out this season — you fund the ticket, you don't have a leg on it." });
 
-      // Shaped exactly the way /bozo/pick reads it, priceOpp and startsAt included —
-      // this object is what gets frozen into the pending record and later committed.
-      const p = {
+      // Shape the selection, then resolve and freeze its live DraftKings quote. No RTDB
+      // write occurs in this phase; the pending KV record is the confirmation envelope.
+      const input = {
         sport: String(args.sport || "").toLowerCase(),
         eventId: String(args.eventId || ""),
         game: String(args.game || "").slice(0, 80),
         mkt: String(args.mkt || "").toLowerCase(),
         side: String(args.side || "").slice(0, 40),
-        line: args.mkt === "ml" ? 0 : Number(args.line),
-        price: Math.round(Number(args.price)),
+        line: String(args.mkt || "").toLowerCase() === "ml" ? 0 : Number(args.line),
+        typedPrice: args.price,
         label: String(args.label || "").slice(0, 90),
         prop: args.prop ? String(args.prop).slice(0, 80) : null,
-        priceOpp: args.priceOpp,
         startsAt: typeof args.startsAt === "string" ? args.startsAt : null,
       };
+      const captured = await bozoCaptureEntry(env, input);
+      if (!captured.ok)
+        return toolText({ status: "rejected", detail: captured.error, note: "Nothing was submitted." });
+      const p = captured.p;
       // ⚠️ The server's own validator, same as the site form and dd_draft_bozo_leg.
       const band = bandOf(lg);
       const err = validatePick(p, name, picks, band, set.format);
       if (err)
-        return toolText({ status: "rejected", detail: err, band, note: "That is the literal string the server would reject with. Fix it and propose again." });
+        return toolText({ status: "rejected", detail: err, band,
+          captured: { line: p.line, price: p.price, priceOpp: p.priceOpp },
+          note: "That is the literal validation failure after capture. Nothing was submitted." });
 
       const size = set.format === "royale" ? royaleRoster(lg).length : memberNames(lg).length;
       const need = set.lockRule === "count" ? Math.min(set.lockCount || size, size || set.lockCount) : size;
@@ -14703,7 +14929,10 @@ const MCP_TOOLS = [
       // plain English before anything can happen. Consequences ride in the same sentence.
       const echo =
         p.label + " — " + p.game + ", " + (p.mkt === "ml" ? "moneyline" : p.mkt + " " + p.line) +
-        " at " + p.price + ", for " + name + ", week " + (lg.week || 1) + " in league " + lid + "." +
+        " at " + p.price + " (opposite side " + (p.priceOpp == null ? "not captured" : p.priceOpp) + "), for " + name + ", week " + (lg.week || 1) + " in league " + lid + "." +
+        (captured.agreement ? " Typed check " + captured.agreement.typedPrice + " vs captured " + captured.agreement.capturedPrice +
+          " (" + captured.agreement.probabilityPointDifference.toFixed(2) + " probability points apart" +
+          (captured.agreement.needsConfirmation ? "; explicit confirmation required" : "") + ")." : "") +
         (mine ? " ⚠️ This REPLACES your current leg (" + mine.label + " at " + mine.price + ") and resets your submission clock — that moves you in the Last In lever." : "") +
         (wouldLock ? " ⚠️ THIS IS THE LAST LEG: confirming places the ticket, locks the board for all " + size + " and draws the lever hierarchy. No undo." : "");
 
@@ -14712,6 +14941,7 @@ const MCP_TOOLS = [
       crypto.getRandomValues(rnd);
       let code = "";
       for (const r of rnd) code += alphabet[r % alphabet.length];
+      p.submissionId = code;
 
       // ⚠️ The pending record is the ONLY thing written in phase one, it lives in KV —
       // never Firebase — and it expires on its own. Nothing on the board changes here.
@@ -14726,10 +14956,11 @@ const MCP_TOOLS = [
         expires_in: 300,
         editingAnExistingLeg: !!mine,
         wouldLockTheBoard: wouldLock,
-        missing: [
-          ...(p.priceOpp == null ? ["priceOpp — without the opposite side's price this leg has no de-vig baseline and no CLV"] : []),
-          ...(p.startsAt ? [] : ["startsAt — without kickoff time the closing line is never captured for this leg"]),
-        ],
+        captured: { line: p.line, price: p.price, priceOpp: p.priceOpp,
+          priceSource: p.priceSource, clvEligible: p.clvEligible,
+          entrySnapshotAt: p.entrySnapshotAt, providerEventIds: p.providerEventIds },
+        agreement: captured.agreement || null,
+        warning: captured.captureWarning || null,
         note: "NOTHING has been submitted. Show the human the echo verbatim; only after they approve, call this tool again with {confirm: \"" + code + "\"}.",
       });
     },

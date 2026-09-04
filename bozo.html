@@ -3747,17 +3747,16 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
        puts what it cannot stand behind. Everything here is also in Toto's sys block,
        because a caveat that lives only in page prose is one he gets talked past. -->
   <div class="pb-fine">
-    <p><b>Prices are self-reported.</b> Every number on a board is typed in by the player who
-      filed it. Nothing here checks it against DraftKings or any other book, and nothing here
-      ever will vouch for one. A spread or total priced past about &minus;145 is off market and
-      worth a second look; a moneyline has no internal cross-check at all.</p>
+    <p><b>Game-market prices are captured.</b> At submit, the Worker reads both sides from
+      DraftKings through SGO and freezes that quote for confirmation. A prop that cannot be
+      resolved, and every Other leg, is visibly marked self-priced and excluded from CLV.</p>
     <p><b>Bozo odds are simulation.</b> Anywhere this site quotes a chance of wearing it, that is
       Monte Carlo output, not an observation, and the simulation draws every leg independently.
       Two legs on the same game are not independent, so a ticket carrying a stack is wrong in a
       direction nobody has measured.</p>
-    <p><b>CLV is not measured yet.</b> No closing prices are captured, so Worst CLV names nobody
-      and no CLV figure on this site is real. The lever stays in the draw and falls through to
-      the next one. It is dormant, not passing.</p>
+    <p><b>CLV needs four real prices.</b> It is measured only when both sides of the captured
+      DraftKings entry and both sides of the kickoff close exist. A missing side is unmeasured,
+      never estimated and never treated as zero.</p>
     <p><b>Demo leagues are invented.</b> Every leg, price, close and result in a league badged
       DEMO&#160;&#183;&#160;SIMULATED was fabricated to exercise the interface. They use the real
       eight names on purpose, which is exactly why the badge is load-bearing rather than
@@ -3806,20 +3805,11 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       <option value="other">Other</option></select></div>
     <div class="f w2"><label>Side</label><select id="fSide"></select></div>
     <div class="f" id="lineWrap"><label id="lineLbl">Number</label><input id="fLine" type="number" step="0.5" placeholder="6.5"></div>
-    <div class="f"><label>Price</label>
+    <div class="f" id="priceWrap"><label id="priceLbl">Price check <span class="opt">optional</span></label>
       <span class="pxfix"><span class="sgnfix" aria-hidden="true">−</span><input id="fPrice"
         type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="175"
-        aria-label="Price — favorites only, so the minus is already there. Type the number."
-        title="Favorites only, so the minus is fixed. Just type the number."></span></div>
-    <!-- ⚠️ Not decoration, and not optional if you ever want your CLV to mean anything.
-         The other side is what makes the de-vig possible; without it the price can only
-         be read raw, which overstates every favourite by roughly the whole hold. A leg
-         submitted without it is charted as "no de-vig" rather than silently averaged in
-         beside legs that have one. -->
-    <div class="f"><label>Other side <span class="opt">for CLV</span></label>
-      <span class="pxin"><input id="fPriceOpp" type="text" inputmode="numeric" pattern="[+-]?[0-9]*"
-        autocomplete="off" placeholder="+145"><button type="button" class="sgn"
-        aria-label="Flip the sign on the other side">±</button></span></div>
+        aria-label="Optional DraftKings price check. The Worker captures the price itself."
+        title="Optional check only. The captured DraftKings quote is the stored price."></span></div>
     <div class="f w2" id="propWrap" style="display:none"><label>Player &amp; stat</label><input id="fProp" placeholder="Kelce receiving yards"></div>
     <div class="f w4"><div class="row" style="justify-content:flex-end">
       <button class="btn ghost sm" id="clearMine" style="display:none">Remove my leg</button>
@@ -3829,7 +3819,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div class="legprev" id="legPrev" style="display:none"></div>
   <div class="warnbox" id="priceWarn" style="display:none"></div>
   <div class="err" id="err"></div>
-  <p class="note" id="bandNote">Favorites only — the minus is already in the box, just type the number. No exact duplicates. Editing resets your clock <em>and</em> your price. The ticket locks the moment the last leg lands.</p>
+  <p class="note" id="bandNote">DraftKings price and the opposite side are captured when you submit. The price box is only an optional typo check; it is required for Other and as a prop fallback. No exact duplicates. Editing resets your clock <em>and</em> captures a fresh price.</p>
 </div>
 
 <!-- ---------- player sheet (view: one per player; the bet form docks here on YOUR sheet) ---------- -->
@@ -4348,65 +4338,16 @@ function priceNum(raw){
 }
 const favPrice = raw => { const n = priceNum(raw); return Number.isFinite(n) ? -Math.abs(n) : NaN; };
 const fmtPrice = n => (n > 0 ? '+' : '') + n;
+const priceSourceBadge = x => x && x.priceSource === 'captured'
+  ? '<span class="cst ok" title="Both sides captured from DraftKings through SGO">DK captured</span>'
+  : '<span class="cst warn" title="Self-priced; no two-sided captured entry, so this leg is excluded from CLV">self · no CLV</span>';
 
-/* ---------------- price/line sanity ----------------
-   ⚠️ THIS IS NOT VERIFICATION. Nothing here talks to a book. DraftKings has no
-   public odds API — no developer portal, no key programme — so the only compliant
-   sources are licensed aggregators (SGO is scoped in bozo-ledger.md and blocked on
-   a key). Until one is wired in, every price on this board is SELF-REPORTED.
-
-   What this DOES catch: a price that contradicts the number typed beside it.
-   Books move the NUMBER, not the price — a real spread or total goes off near even
-   money, -110 typically, -125 often, past -145 rarely. A spread claiming -300 is
-   not a market that exists; either the line or the price is wrong. That covers the
-   honest mistake (a moneyline price pasted onto a spread leg) and the lazy lie.
-
-   ⚠️ MONEYLINES GET NO CHECK, and that is not an oversight. line is 0 and the price
-   carries the entire expectation, so there is nothing internal to contradict. A
-   deliberate misreport hides exactly there. Never present this as a safety net.
-   ⚠️ Props get no check either — prop pricing is genuinely wide. */
-const SANE_FLAT_PRICE = -160;
-function priceWarning(mkt, price){
-  if(!Number.isFinite(price) || price >= SANE_FLAT_PRICE) return '';
-  if(mkt !== 'spread' && mkt !== 'total') return '';
-  const what = mkt === 'spread' ? 'spread' : 'total';
-  return `⚠️ ${price} is far off market for a ${what}. Books move the number, not the price — `
-    + `a real ${what} prices near -110 and rarely past -145. Check you haven't put a `
-    + `moneyline price on a ${what} leg. You can still submit; nothing here is verified against a book.`;
-}
+// Server capture replaced the old browser-side price guesswork. The warning slot stays
+// because old markup and the live prefill call it, but only the server decides whether a
+// captured quote matches the line and league band.
 function paintPriceWarn(){
   const el = document.getElementById('priceWarn'); if(!el) return;
-  const mk = document.getElementById('fMkt'), px = document.getElementById('fPrice');
-  const w = (mk && px) ? priceWarning(mk.value, favPrice(px.value)) : '';
-  el.textContent = w; el.style.display = w ? '' : 'none';
-}
-/* ⚠️ SWITCH THE MARKET ONLY WHERE NOTHING IS THROWN AWAY. A moneyline-shaped price on a
-   spread with NO number typed cannot be submitted as a spread at all — validatePick
-   rejects it with "Number is required for that market" — so there is exactly one bet
-   the entry can mean, and converting destroys nothing.
-
-   ⚠️ IF A NUMBER IS TYPED, LEAVE THE LEG ALONE. A bought-down alternate line is a real
-   spread at a real price, so that entry is genuinely ambiguous, and silently dropping
-   the number to make the price fit would change WHICH BET the member is making. That
-   case keeps the warning priceWarning() already writes and changes nothing. Guessing
-   between two live bets is not a convenience, it is a wrong ticket.
-
-   ⚠️ Bound to `change`, not `input`. On every keystroke, someone typing -165 into a
-   spread they had not numbered yet would be switched to Moneyline mid-entry and watch
-   the Number field vanish under them. */
-function maybeSwitchToMl(){
-  const mk = document.getElementById('fMkt'), px = document.getElementById('fPrice'),
-        ln = document.getElementById('fLine'), el = document.getElementById('priceWarn');
-  if(!mk || !px || !ln || !el) return;
-  const p = favPrice(px.value);
-  if(mk.value !== 'spread' || ln.value !== '' || !Number.isFinite(p) || p >= SANE_FLAT_PRICE)
-    return paintPriceWarn();
-  mk.value = 'ml';
-  paintSides();                       // rebuilds Side, hides the now-meaningless Number
-  el.textContent = `Switched to Moneyline — ${p} is a moneyline price and no spread number was typed. `
-    + `Set the market back to Spread if you meant one, and type the number.`;
-  el.style.display = '';
-  paintLegPreview();
+  el.textContent = ''; el.style.display = 'none';
 }
 
 /* ---------------- scores: the page calls ESPN itself ---------------- */
@@ -4524,7 +4465,7 @@ function prefillFromMyLeg(mine = myLegNow()){
   if(mine.side) fSd.value = mine.side;
   if(mine.mkt !== 'ml' && mine.line != null) fL.value = mine.line;
   if(mine.prop) fPr.value = mine.prop;
-  // fPrice and fPriceOpp stay empty on purpose — see the note above.
+  // The optional price check stays empty: every edit captures a fresh quote.
   paintLegPreview(); paintPriceWarn();
 }
 
@@ -4703,6 +4644,11 @@ function paintSides(){
   const pl=document.getElementById('fProp');
   document.querySelector('#propWrap label').textContent = mk==='other' ? 'Describe the bet' : 'Player & stat';
   pl.placeholder = mk==='other' ? 'ARI 1H team total · alt line · whatever it is' : 'Kelce receiving yards';
+  document.getElementById('priceLbl').innerHTML = mk==='other'
+    ? 'Price <span class="opt">required · self-priced</span>'
+    : mk==='prop'
+      ? 'Fallback price <span class="opt">optional</span>'
+      : 'Price check <span class="opt">optional · DK captured</span>';
 }
 
 /* ---------------- live state ---------------- */
@@ -5136,8 +5082,8 @@ function paintHouseTicket(){
     `<div class="sl-rows">${rowHtml}</div>` + tot + exp + hubSlip +
     `<p class="sl-note">Favorites only, inside the band. No exact duplicate legs. ` +
     `<b>The ticket locks the moment the last leg lands</b> &mdash; that instant is the close, ` +
-    `and there are no edits after it. Prices above are <b>self-reported</b> and are not ` +
-    `checked against any book.</p>`;
+    `and there are no edits after it. Game-market prices above are captured from ` +
+    `<b>DraftKings through SGO</b>; self-priced exceptions are badged and excluded from CLV.</p>`;
 
   paintBozoTonight(players, picks, status, res);
 
@@ -6071,26 +6017,18 @@ document.getElementById('dSave').onclick = async ()=>{
 async function submitLeg(){
   const e=document.getElementById('err'); e.className='err'; e.textContent='';
   const sp=fSport.value, id=fGame.value, mk=fMkt.value, side=fSide.value;
-  const price=favPrice(fPrice.value), line=+fLine.value;
+  const typedPrice=fPrice.value.trim() ? favPrice(fPrice.value) : null, line=+fLine.value;
   const g=(GAMES[sp]||[]).find(x=>x.id===id);
   if(!g) return e.textContent='Pick a game.';
-  if(!fPrice.value.trim()) return e.textContent='Price is required.';
-  // ⚠️ A text box can hold "-", "1-2" or "abc". Say so plainly rather than letting a
-  // NaN fall through to the band check and come back as "NaN is outside the band".
-  if(!Number.isFinite(price)) return e.textContent='Price has to be a whole American number, like -175.';
-  const bd=band();
-  if(price>bd.ceil||price<bd.floor) return e.textContent=`${price} is outside the ${bd.ceil} to ${bd.floor} band.`;
+  if(typedPrice!==null && !Number.isFinite(typedPrice)) return e.textContent='The optional price check has to be a whole American number, like -175.';
+  if(mk==='other' && typedPrice===null) return e.textContent='Other markets are self-priced, so enter the DraftKings price.';
   if(mk!=='ml' && !fLine.value) return e.textContent='Number is required for that market.';
   // mirrors the Worker: an "other" leg that doesn't say what it is cannot be graded
   if(mk==='other' && !fProp.value.trim())
     return e.textContent='Describe the bet — an "other" leg needs to say what it actually is.';
   const label = legLabel(mk, side, line, fProp.value, g.short);
-  const oppRaw = document.getElementById('fPriceOpp').value;
-  const priceOpp = oppRaw.trim() === '' ? null : priceNum(oppRaw);
-  if(priceOpp !== null && (!Number.isFinite(priceOpp) || Math.abs(priceOpp) < 100))
-    return e.textContent='The other side has to be a real American price (±100 or wider), or leave it blank.';
   const pick = {sport:sp, eventId:id, game:g.short, mkt:mk, side, line: mk==='ml'?0:line,
-    price, priceOpp, label, prop: fProp.value||null,
+    ...(typedPrice===null?{}:{typedPrice}), label, prop: fProp.value||null,
     // ⚠️ Kickoff, straight off the ESPN game you picked. This is what schedules the
     // closing-price capture — event ids don't line up between ESPN and the odds source,
     // so this timestamp is the only thing that tells the cron WHEN to snap. A leg
@@ -6098,7 +6036,14 @@ async function submitLeg(){
     startsAt: g.start || null};
   const btn=document.getElementById('save'); btn.disabled=true;
   try{
-    const res = await wPost('/bozo/pick', {pick});
+    const proposal = await wPost('/bozo/pick', {captureVersion:1, pick});
+    const agreement = proposal.agreement && proposal.agreement.needsConfirmation
+      ? `\n\nYour check was ${fmtPrice(proposal.agreement.typedPrice)}; the captured price is ${fmtPrice(proposal.agreement.capturedPrice)} (${proposal.agreement.probabilityPointDifference.toFixed(2)} probability points apart).`
+      : '';
+    if(!window.confirm(proposal.echo + agreement + '\n\nNothing has been submitted yet. Submit this exact captured quote?')){
+      e.textContent='Nothing submitted.'; btn.disabled=false; return;
+    }
+    const res = await wPost('/bozo/pick', {confirm:proposal.confirm_code});
     e.className='err ok';
     e.textContent = res.placed ? 'In — and that was the last leg. Ticket is locked.' : 'Submitted.';
     await refresh();
@@ -6165,7 +6110,7 @@ function paintSlip(players, picks, status, live){
     return `<li class="${cls}"><span class="mk">${mark}</span>
       <span><span class="who2">${esc(teamOf(p))}${chute(p)}${belt===p?'<span class="beltcrest" role="img" aria-label="Wearing the belt"></span>':''}</span>
       <span class="sel">${esc(x.label)}${isLastIn?'<span class="lastin">last in</span>':''}</span>
-      <span class="mkt">${sub}</span></span>
+      <span class="mkt">${sub} · ${priceSourceBadge(x)}</span></span>
       <span class="rt"><span class="pxv">${x.price>0?'+':''}${x.price}</span>
       <span class="tin">${when(x.ts)}</span></span></li>`;
   }).join('');
@@ -6412,7 +6357,7 @@ function paintDiagnosticsExplorer(){
   document.querySelector('#dxTable tbody').innerHTML=`<tr><th>${esc(group)}</th><th>Picks</th><th>W–L</th><th>Expected W</th><th>vs expected</th><th>Avg CLV</th><th>CLV n</th></tr>`+
     sums.map(x=>`<tr><td class="who">${esc(x.k)}</td><td>${x.picks}</td><td>${x.wins}–${x.losses}</td><td>${x.measurable.length?x.expected.toFixed(1):'—'}</td><td class="px">${x.measurable.length?(x.delta>=0?'+':'')+x.delta.toFixed(1):'—'}</td><td class="px ${x.clv==null?'':x.clv>=0?'clvup':'clvdn'}">${x.clv==null?'—':(x.clv>=0?'+':'')+(x.clv*100).toFixed(2)+'pp'}</td><td>${x.measurable.length}</td></tr>`).join('');
   const losers=rows.filter(l=>l.result==='loss'), badClv=losers.filter(l=>clvGraded(l)&&clvDevig(l.closePrice,l.closePriceOpp)<clvDevig(l.entryPrice,l.entryPriceOpp)).length;
-  document.getElementById('dxNote').innerHTML=`${losers.length} loss${losers.length===1?'':'es'} in this slice${losers.length?`; ${badClv} also had negative measured CLV`:''}. Positive result delta with flat CLV is more consistent with good luck than proven skill; positive CLV with ordinary results is the stronger price-quality signal. Entry prices are self-reported; closes are captured from DraftKings through a licensed aggregator.`;
+  document.getElementById('dxNote').innerHTML=`${losers.length} loss${losers.length===1?'':'es'} in this slice${losers.length?`; ${badClv} also had negative measured CLV`:''}. Positive result delta with flat CLV is more consistent with good luck than proven skill; positive CLV with ordinary results is the stronger price-quality signal. Measured CLV uses captured DraftKings prices at entry and close; self-priced legs are excluded.`;
 }
 
 function paintDiag(live, players, status){
@@ -6563,7 +6508,7 @@ function paintDiag(live, players, status){
       const mine = ME && x.p===ME.name ? ' class="me"' : '';
       const by = R.by[i];
       return `<tr${mine}><td class="who">${esc(teamOf(x.p))}</td>
-        <td class="pk">${esc(x.label)} <span class="px">${x.price>0?'+':''}${x.price}</span>${(x.mkt==='prop'||x.mkt==='other')?` <span class="tm">· ${x.mkt}</span>`:''}</td>
+        <td class="pk">${esc(x.label)} <span class="px">${x.price>0?'+':''}${x.price}</span> ${priceSourceBadge(x)}${(x.mkt==='prop'||x.mkt==='other')?` <span class="tm">· ${x.mkt}</span>`:''}</td>
         <td data-l="Leg wins"><span class="mcell"><span class="v">${pct(R.win[i])}</span>${meter(R.win[i])}</span></td>
         <td data-l="Bozo odds"><span class="mcell"><span class="v">${pct(R.bozo[i])}</span>${meter(R.bozo[i],true)}</span></td>
         <td class="px" data-l="Killed it alone">${pct(R.solo[i])}</td>
@@ -6752,9 +6697,8 @@ HOW TO TALK ABOUT THE NUMBERS:
 - "Bozo odds" and "leg wins" are SIMULATION output, not observation. Say so whenever you quote them.
 - The simulation draws every leg INDEPENDENTLY. Two legs on the same game are not independent. If the state flags correlated legs, mention it rather than quoting the cash probability as if it were clean.
 - Prop legs use a placeholder standard deviation (line x 0.55) that is openly a guess. Flag a prop before leaning on its Worst Beat exposure.
-- Worst CLV is UNMEASURED — no closing prices are captured yet. Never state anyone's CLV. If asked, say it is not measured yet and that the simulation treats it as a coin flip among whoever is still tied.
-- ⚠️ EVERY PRICE ON THIS BOARD IS SELF-REPORTED. Nothing verifies it against DraftKings or any book. If asked whether a price is right, say plainly that the system does not check prices and you cannot confirm one — never vouch for a number, and never accuse anyone either. Report what was entered, flag what looks off market, and stop there.
-- A spread or total priced past about -145 is off market and worth mentioning if you see one. A moneyline has no internal cross-check at all.
+- Worst CLV is measured only when both sides of the DraftKings entry and both sides of the kickoff close were captured. A missing side is unmeasured, never zero, and the lever passes it.
+- priceSource=captured means the Worker fetched both DraftKings sides through SGO at submit and froze them for confirmation. priceSource=self is limited to unresolved props and Other legs; those are visibly badged and clvEligible=false. Never mix self-priced legs into CLV.
 - The "As it stands / If every leg lost" panel is a read-only hypothetical over currently filed legs. It assumes every filed leg loses, does not know results, and never names a bozo. Before the card locks there is no running order at all. Never present the panel as a prediction, a probability, or a graded outcome.
 - You may NOT place, edit or remove anyone's leg, and you must never tell someone their bet is guaranteed. Prices and probabilities, never certainties.`;
 
@@ -7604,11 +7548,6 @@ document.getElementById('fPrice').addEventListener('input', ()=>{
   if(clean !== el.value) el.value = clean;
 });
 document.getElementById('fPrice').addEventListener('input', paintPriceWarn);
-document.getElementById('fPrice').addEventListener('change', maybeSwitchToMl);
-document.getElementById('fPriceOpp').addEventListener('blur', ()=>{
-  const el = document.getElementById('fPriceOpp'), n = priceNum(el.value);
-  if(Number.isFinite(n)) el.value = fmtPrice(n);
-});
 /* ± flips the sign of the box beside it, and primes a bare "-" when the box is empty so
    the sign can be set before the digits. Delegated from the document because the
    closing-price rows are re-rendered on every refresh and would lose a bound handler.
@@ -7627,7 +7566,7 @@ document.addEventListener('click', ev=>{
 // ⚠️ Any touch of the form means the reader owns it from here — prefillFromMyLeg() must
 // never write over what they are in the middle of typing. Price fields count: clearing
 // the price and walking away is a deliberate state, not an empty form to be refilled.
-['fLine','fSide','fProp','fGame','fMkt','fSport','fPrice','fPriceOpp'].forEach(id=>{
+['fLine','fSide','fProp','fGame','fMkt','fSport','fPrice'].forEach(id=>{
   const el=document.getElementById(id); if(!el) return;
   const touch = ()=>{ formTouched = true; };
   el.addEventListener('input', touch);
@@ -8360,7 +8299,7 @@ function clvFootLive(){
   return `<p class="live"><b>${c.noClose} of ${c.legs}</b> legs have no capturable close and are excluded`
     + ` · <b>${c.pushes}</b> push${c.pushes===1?'':'es'} dropped`
     + (band ? ` · ${band}` : '')
-    + ` · entry prices are self-reported</p>`;
+    + ` · captured entries only; self-priced legs are excluded</p>`;
 }
 
 function clvMethod(){
@@ -8377,9 +8316,8 @@ function clvMethod(){
     + `Pushes and voids are dropped from both. Same unit on both axes, so the quadrants are comparable.<br><br>`
     + `<b>One book, both ends.</b> Every Bozo leg has to be a real DraftKings selection that is legal in an SGP, `
     + `so DK is the book at entry <i>and</i> at close — the price you got and the price it closed at are `
-    + `like-for-like rather than a cross-book artifact. The close reaches us through a licensed aggregator, `
-    + `because DraftKings has no public odds API; the entry price is still typed in by the player and checked `
-    + `against nothing. <b>A CLV figure here mixes one checked number with one unchecked one.</b><br><br>`
+    + `like-for-like rather than a cross-book artifact. Both reach us through licensed aggregators because `
+    + `DraftKings has no public odds API. <b>Self-priced props and Other legs are excluded from this chart.</b><br><br>`
     + `<b>What is not on the chart.</b> ${c.noClose} of ${c.legs} legs have no capturable close and are excluded `
     + `from both axes and from <code>n</code> — never back-filled from the entry price, and still counted in the `
     + `ledger. Every leg goes on a real bet slip, so the market always existed and always closed; a gap here means `

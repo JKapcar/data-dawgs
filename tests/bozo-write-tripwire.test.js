@@ -25,6 +25,7 @@ test('kickoff capture creates an attributable ledger receipt', () => {
   assert.match(worker, /uidByName\.set\(accountName\(uid, rec\), uid\)/);
   assert.match(worker, /const player = p\.who \|\| memberNameAt\(lg, key\) \|\| playerName\(key\)/);
   assert.match(worker, /const uid = UID_RE\.test\(key\) \? key : \(uidByName\.get\(player\) \|\| null\)/);
-  assert.match(worker, /add\(t\.lid, `\$\{lrow\}\/player`, t\.player\)/);
-  assert.match(worker, /if \(t\.uid\) add\(t\.lid, `\$\{lrow\}\/uid`, t\.uid\)/);
+  assert.match(worker, /if \(!t \|\| !t\.pick \|\| !t\.key \|\| !t\.player \|\| !t\.uid\) return null/);
+  assert.match(worker, /patch\[`\$\{lrow\}\/player`\] = t\.player/);
+  assert.match(worker, /patch\[`\$\{lrow\}\/uid`\] = t\.uid/);
 });
