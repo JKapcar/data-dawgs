@@ -69,7 +69,7 @@ receipt rows are not modified by this policy declaration.
 
 ## Verification on 2026-09-04
 
-The approved rule has 42 combined loader, model and results-policy tests. The isolated
+The approved rule has 45 combined loader, model and results-policy tests. The isolated
 roundtrip test accepted a synthetic LAC final, rebuilt the current model to 256 still-future
 forecasts, reproduced all 16,810 historical reference probabilities, preserved 1,088 model
 receipt rows, and graded the survivor prediction once (Brier 0.046264). A repeat resolution
@@ -79,3 +79,5 @@ wrote nothing. Synthetic games were never published.
 `DIR` and a temporary clone. The normal cron remains 10:17 UTC. A follow-up receipt run
 recognizes an older rerun's NFL workflow definition and dispatches the current definition
 before continuing to nfelo; unchanged workflow definitions follow the normal acyclic chain.
+
+Live approval and execution evidence: [Survivor automation verification, September 4](survivor-automation-verification-2026-09-04.md).

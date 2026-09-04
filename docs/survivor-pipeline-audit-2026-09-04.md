@@ -1,5 +1,7 @@
 # Survivor pipeline audit — 2026-09-04
 
+> Follow-up: Kap approved the two policy conditions; implementation and live Actions evidence are recorded in [the automation verification](survivor-automation-verification-2026-09-04.md). The findings below preserve the earlier audit state.
+
 Audited `main` at `a7af108439ffafd9f4215097bc43fc53b7ff0c8e`, with API and live HTTP observations through 19:58 UTC. This report accompanies the authorized hardening changes. New Actions execution remains **unverified**: both dispatch API calls returned HTTP 401, and the connected GitHub tools expose reruns but no dispatch operation. Local Git push also lacks a credential. The connected GitHub API successfully published the authorized changes as `85c57ea817038a1d7f8b4e5fbc247e400a37ff94`. [Pages deployment 33913835318](https://github.com/JKapcar/data-dawgs/actions/runs/33913835318) succeeded at **19:58:26Z**. Live survivor JSON matched tested SHA-256 `80469d0eaea9d9eb35a54dd67f5151020c548c185d6935d7c40aae6e780d9cc6`; the live ledger retained `727edc866620ad5e23c9a0c1f1d71252ffad87be79b865fde780c7ad42b7fc29`. This verifies this deployment, not future `GITHUB_TOKEN` build requests.
 
 ## Finding that determines the answer
