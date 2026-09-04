@@ -1,0 +1,82 @@
+name: nfelo refresh
+
+# Daily mirror of greerreNFL/nfelo published output into nfelo.html + data/nfelo.json.
+#
+# ⚠️ This is the ONLY thing in the repo that moves nfelo ratings and lines. nfl-data.yml
+# installs `nfelodcm`, which is the schedule loader, not the model — do not read that
+# workflow as a nfelo refresh. It is not one.
+#
+# ⚠️ Commits straight to main. data/nfelo.json is a dated mirror of a third party's
+# output, not a receipt or a graded row, so the review-PR ceremony nfl-data.yml uses
+# for canonical rows is not owed here. Every write is validated first and every row
+# carries upstream commit sha + time, so a bad day is diffable and revertable.
+#
+# ⚠️ NEVER on push. Refresh on a schedule or by explicit dispatch only.
+#
+# 11:00 UTC = 07:00 ET. Upstream auto-commits every ~3h; the morning pull picks up the
+# overnight state. Dispatch manually before a Wednesday/Thursday kickoff if a same-day
+# line matters. Week 1 2026 opens WEDNESDAY Sep 9 (NE@SEA, 8:20 PM ET).
+
+on:
+  schedule:
+    - cron: "0 11 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nfelo-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+
+      - name: Refresh from upstream
+        run: node tools/nfelo-refresh.mjs
+
+      - name: Stamp service worker, republish manifest, validate
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- nfelo.html data/nfelo.json; then
+            echo "nfelo unchanged — nothing to commit"
+            exit 0
+          fi
+          python3 work/stamp-sw-version.py
+          node tools/data-manifest.js
+          node tools/validate-data.js
+          git add nfelo.html sw.js data/nfelo.json data/index.json
+          node work/verify-sw.mjs
+
+      - name: Commit if anything moved
+        run: |
+          set -euo pipefail
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "nfelo mirror: $(node -e '
+            const m=require("./data/nfelo.json").data.meta;
+            process.stdout.write(`upstream ${m.sha} @ ${m.upstream_committed_at}`);
+          ')"
+          # Concurrent writers exist. Rebase and push an explicit ref, same shape as
+          # survivor-receipt.yml. If a root html/js landed meanwhile the sw VERSION is
+          # stale after rebase — re-stamp, re-verify, amend, then push.
+          git pull --rebase origin main
+          python3 work/stamp-sw-version.py
+          if ! git diff --quiet -- sw.js; then
+            git add sw.js && git commit --amend --no-edit
+          fi
+          git add -A nfelo.html sw.js data/nfelo.json data/index.json
+          node work/verify-sw.mjs
+          node tools/validate-data.js
+          git push origin HEAD:main
