@@ -4222,6 +4222,21 @@ async function universalLeagueMine(request, env, cors) {
 const DEFAULT_LEAGUE = "main";
 const LG = lid => "/bozo/leagues/" + lid;
 
+// Loud, structured evidence for the handful of writes that can make a live Bozo board
+// disappear. Workers Observability retains these console records even though RTDB itself
+// has no node history. Log only after the database write succeeds, so every record means
+// the destructive change actually landed rather than merely being attempted.
+function bozoNullWriteTripwire(route, auth, lid, nulled) {
+  console.log(JSON.stringify({
+    event: "bozo-null-write",
+    route,
+    callerUid: (auth && auth.uid) || null,
+    league: lid,
+    nulled,
+    at: new Date().toISOString(),
+  }));
+}
+
 // Firebase keys cannot contain . $ # [ ] / — and these ids show up in URLs, so keep
 // them boring on purpose.
 function validLeagueId(id) {
@@ -4482,7 +4497,10 @@ async function leagueCreate(request, env, cors) {
   } catch (e) {
     // Creation is one operation to the caller. If its password cannot be stored, remove
     // the brand-new empty league so a retry does not collide with a half-created room.
-    try { await fbPut(env, LG(id), null); } catch { /* report the original access failure */ }
+    try {
+      await fbPut(env, LG(id), null);
+      bozoNullWriteTripwire("/league/create rollback", auth, id, ["members", "picks", "results"]);
+    } catch { /* report the original access failure */ }
     return json({ error: "League password write failed: " + e.message }, 502, cors);
   }
   return json({ ok: true, id, league: lg }, 200, cors);
@@ -4853,6 +4871,7 @@ async function leagueDelete(request, env, cors) {
 
   try { await fbDelete(env, LG(lid)); }
   catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  bozoNullWriteTripwire("/league/delete", auth, lid, ["members", "picks", "results"]);
   return json({ ok: true, deleted: lid, name: want }, 200, cors);
 }
 
@@ -5080,6 +5099,7 @@ async function leagueMember(request, env, cors) {
   try {
     await fbPatch(env, LG(lid) + "/members", { [pkey]: null });
   } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  bozoNullWriteTripwire("/league/member", auth, lid, ["members/" + pkey]);
 
   // Re-read so the caller sees the real size, and so a removal that just completed the
   // board can lock immediately rather than waiting for someone to resubmit.
@@ -6304,6 +6324,7 @@ async function bozoPick(request, env, cors) {
   try {
     if (body.action === "remove") {
       await fbDelete(env, LG(lid) + "/picks/" + mkey);
+      bozoNullWriteTripwire("/bozo/pick remove", auth, lid, ["picks/" + mkey]);
       return json({ ok: true, removed: true }, 200, cors);
     }
 
@@ -6953,6 +6974,17 @@ function bozoDkPropQuote(event, pick) {
 async function bozoCloseTargets(env, nowMs) {
   let leagues;
   try { leagues = await loadLeagues(env); } catch { return []; }
+  // Legacy seats and in-flight picks can still be name-keyed. Resolve their immutable
+  // account id now, while the users table is available, so a kickoff-stage ledger row is
+  // a complete receipt even when the lock-stage row was never written.
+  const uidByName = new Map();
+  try {
+    const users = await loadUsers(env);
+    for (const [key, rec] of Object.entries(users || {})) {
+      const uid = playerName(key);
+      if (UID_RE.test(uid)) uidByName.set(accountName(uid, rec), uid);
+    }
+  } catch { /* player remains useful evidence even if identity lookup is unavailable */ }
   const out = [];
   for (const [lid, lg] of Object.entries(leagues || {})) {
     // ⚠️ Synthetic leagues are skipped outright. Their closes are fabricated by design
@@ -6968,7 +7000,9 @@ async function bozoCloseTargets(env, nowMs) {
       if (!Number.isFinite(start)) continue;                       // no kickoff, no window
       if (start > nowMs + BOZO_CLOSE_LEAD_MS) continue;            // too early
       if (start < nowMs - BOZO_CLOSE_STALE_MS) continue;           // too late to be a close
-      out.push({ lid, key, pick: p, startMs: start,
+      const player = p.who || memberNameAt(lg, key) || playerName(key);
+      const uid = UID_RE.test(key) ? key : (uidByName.get(player) || null);
+      out.push({ lid, key, pick: p, player, uid, startMs: start,
                  season: lg.season || SEASON, week: lg.week || 1 });
     }
   }
@@ -7076,6 +7110,8 @@ async function runBozoCloseCapture(env, nowMs) {
       // ledger's four-stage comment has reserved KICKOFF for exactly this since it was
       // written. A week that locks and never gets graded still ends up with its close.
       const lrow = `ledger/${ledgerKey(t.season, t.week, t.key)}`;
+      add(t.lid, `${lrow}/player`, t.player);
+      if (t.uid) add(t.lid, `${lrow}/uid`, t.uid);
       const both = (field, val) => { add(t.lid, `${base}/${field}`, val); add(t.lid, `${lrow}/${field}`, val); };
 
       if (quote) {
@@ -7861,6 +7897,7 @@ async function bozoNext(request, env, cors) {
       // week's ticket, still clickable. Archived into `history` just above.
       slip: null,
     });
+    bozoNullWriteTripwire("/bozo/next", auth, lid, ["picks", "results"]);
     return json({ ok: true, week: (state.week || 1) + 1 }, 200, cors);
   } catch (e) {
     return json({ error: "Database write failed: " + e.message }, 502, cors);
