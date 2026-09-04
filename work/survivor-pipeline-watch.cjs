@@ -6,6 +6,7 @@ module.exports = async ({github, context, core}) => {
   const now = Date.now();
   const read = f => JSON.parse(fs.readFileSync('data/' + f + '.json'));
   const problems = [];
+  if (context.payload.inputs?.failure) problems.push(context.payload.inputs.failure);
   const event = context.payload.workflow_run;
   if (event && !['success', 'skipped'].includes(event.conclusion))
     problems.push(`${event.name}: ${event.conclusion}. ${event.html_url}`);

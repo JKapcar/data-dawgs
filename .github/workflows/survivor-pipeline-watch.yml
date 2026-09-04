@@ -7,6 +7,11 @@ on:
   schedule:
     - cron: "35 6,12,18,23 * * *"
   workflow_dispatch:
+    inputs:
+      failure:
+        description: "Failure evidence from a bot-dispatched producer"
+        required: false
+        default: ""
 permissions:
   contents: read
   actions: read

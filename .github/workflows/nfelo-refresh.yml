@@ -23,6 +23,7 @@ on:
 permissions:
   contents: write
   pages: write
+  actions: write
 
 concurrency:
   group: nfelo-refresh
@@ -84,3 +85,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: bash work/request-survivor-pages-build.sh
+
+      - name: Resolve and capture after bot-dispatched refresh
+        if: ${{ success() && github.actor == 'github-actions[bot]' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run survivor-receipt.yml --ref main
+
+      - name: Check pipeline health after bot dispatch
+        if: ${{ always() && github.actor == 'github-actions[bot]' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WATCH_FAILURE: >-
+            ${{ job.status != 'success' && format('{0}: {1}. {2}/{3}/actions/runs/{4}', github.workflow, job.status, github.server_url, github.repository, github.run_id) || '' }}
+        run: gh workflow run survivor-pipeline-watch.yml --ref main --raw-field "failure=$WATCH_FAILURE"
