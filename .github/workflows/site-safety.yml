@@ -1,0 +1,35 @@
+name: Site cache and live-state checks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "sw.js"
+      - "dd-live-state.js"
+      - "bozo.html"
+      - "tests/service-worker.test.js"
+      - "tests/live-state.test.js"
+      - ".github/workflows/site-safety.yml"
+  pull_request:
+    paths:
+      - "sw.js"
+      - "dd-live-state.js"
+      - "bozo.html"
+      - "tests/service-worker.test.js"
+      - "tests/live-state.test.js"
+      - ".github/workflows/site-safety.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node --check sw.js
+      - run: node --check dd-live-state.js
+      - run: node --test tests/service-worker.test.js tests/live-state.test.js

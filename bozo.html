@@ -3578,6 +3578,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <!-- and #lgSize prints the COUNT only now — the week used to be printed twice. -->
     <span class="sz" id="lgSize"></span>
   </div>
+  <p id="connectionNote" role="status" aria-live="polite" hidden style="padding:8px 12px;font:14px/1.4 system-ui;color:#291b00;background:#fff1c2"></p>
   <div class="page-tabs">
     <div class="league" id="lgbar" style="display:none">
       <label class="lil" for="lgPick">League</label>
@@ -4100,6 +4101,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 </div>
 
 </div>
+<script src="dd-live-state.js"></script>
 <script>
 /* ============================================================
    Bozo — the trust layer lives in the Worker, not here.
@@ -4653,35 +4655,32 @@ function paintSides(){
 /* ---------------- live state ---------------- */
 // /bozo is world-readable, so the board streams straight from RTDB with no
 // credential. EventSource = push; the poll is only a safety net.
-let esHandle = null;
+let stateReader = null;
+let stateConnection = {state:'loading',lastSuccessAt:null,reason:null};
+function paintConnection(status){
+  stateConnection=status;
+  const el=document.getElementById('connectionNote');
+  if(!el) return;
+  const messages={loading:'Checking for updates…',fresh:'Connected',
+    stale:'Updates delayed — displayed information may be out of date.',
+    offline:'Offline — displayed information may be out of date.',
+    error:'Could not load current information. Retrying automatically.'};
+  el.hidden=onHub() || status.state==='fresh';
+  const message=messages[status.state] || messages.error;
+  if(el.textContent!==message) el.textContent=message;
+  el.title=status.lastSuccessAt ? 'Last checked '+new Date(status.lastSuccessAt).toLocaleString() : '';
+}
 function watchState(){
-  let es=null;
-  try{
-    es = new EventSource(DB + '/bozo/leagues/' + LID + '.json');
-    esHandle = es;
-    es.addEventListener('put', ev=>{
-      try{
-        const m=JSON.parse(ev.data);
-        if(m.path === '/') { S = m.data || {}; render(); }
-        else refresh();
-      }catch(e){ refresh(); }
-    });
-    es.addEventListener('patch', refresh);
-    es.onerror = ()=>{ /* browser retries on its own; the poll covers gaps */ };
-  }catch(e){ /* no EventSource — poll only */ }
-  setInterval(refresh, 15000);
-  refresh();
+  stateReader?.stop();
+  stateReader=DDLiveState.create({
+    url:DB + '/bozo/leagues/' + LID + '.json',
+    onData:value=>{ S=value; render(); },
+    onStatus:paintConnection
+  });
+  stateReader.start();
 }
 async function refresh(){
-  try{
-    const r = await fetch(DB + '/bozo/leagues/' + LID + '.json?' + bust());
-    S = (await r.json()) || {};
-  }catch(e){ return; /* transient network — the next tick retries */ }
-  // ⚠️ render() is OUTSIDE the catch on purpose. It used to sit inside, which meant
-  // a plain ReferenceError in a paint function looked exactly like a dropped fetch:
-  // no console error, no visual break, just some cards quietly not updating. That
-  // hid a dead function call through an entire build. Let paint bugs be loud.
-  render();
+  return stateReader?.refresh();
 }
 
 /* ---------------- render ---------------- */
@@ -6683,6 +6682,7 @@ function paintTicker(players, t, mx, holder){
    odds come out of a 20k-run simulation with known-soft inputs, so the caveats travel
    WITH the numbers rather than sitting in a footnote he can ignore. */
 const BOZO_SYS = `RIGHT NOW you are on Bozo, a weekly group betting game inside the Data Dawgs site.
+DATA FRESHNESS: If CONNECTION is loading, delayed, offline or failed, the displayed state is not verified current. Disclose that limit; never describe a retained snapshot as a live confirmation. A connected read does not independently certify the freshness of upstream records.
 THE GAME: each member submits ONE leg. Every leg goes on ONE real parlay at DraftKings, funded by last week's bozo. Whoever busts it worst wears it and funds the next ticket.
 - LEAGUE VISIBILITY: Bozo Boyz is listed for everyone; there is no longer a public Royale demo.
   Bozo Royale is still a live format any league can be created in — the demo league that showcased it was deleted. A signed-in person additionally sees only leagues they belong to or manage. The league picker beside the four page tabs uses that same filtered list.
@@ -6713,6 +6713,7 @@ function bozoCtx(){
   const levers = (st.levers && st.levers.length) ? st.levers : [0,1,2,3];
   const L=[];
 
+  L.push(`CONNECTION: ${stateConnection.state}; last successful read ${stateConnection.lastSuccessAt ? new Date(stateConnection.lastSuccessAt).toISOString() : 'none'}. This timestamps the read, not the source records.`);
   L.push(`LEAGUE: ${lg?lg.name:LID} — ${players.length} members, season ${S.season||2026}, week ${S.week||1}, status ${status}.`);
   L.push(`WHO IS ASKING: ${ME ? teamOf(ME.name)+(isManager()?' (league manager)':'') : 'not signed in — they can read the board but cannot submit'}.`);
   L.push(`RULES IN FORCE: price band ${bd.ceil} to ${bd.floor}; stake $${st.stake??50} on the ticket; duplicate selections and contradicting sides are ALWAYS refused (the ticket is one real DraftKings parlay); editing a leg ${st.allowEdit?'stays open until the ticket is placed (and resets your timestamp AND your price)':'is locked once your leg is in'}; the ticket places ${st.lockRule==='count'?`at ${st.lockCount} legs`:'when every member is in'}.`);
@@ -8523,10 +8524,10 @@ async function clvLoad(force){
   const eagerPublic = LID==='main';
   if(eagerPublic) watchState();
   await Promise.all([loadRoster(), loadLeagues()]);
-  // A bad or inaccessible ?l= may be normalized by loadLeagues. The interval created
-  // above reads the current LID, but its EventSource was opened for the old one.
+  // A bad or inaccessible ?l= may be normalized by loadLeagues. Replace the entire
+  // reader so late responses from the former subscription cannot paint this league.
   if(!eagerPublic) watchState();
-  else if(LID!==watchedLid){ if(esHandle) esHandle.close(); refresh(); }
+  else if(LID!==watchedLid){ watchState(); }
   renderAuth();
   loadGames('nfl');
 })();
