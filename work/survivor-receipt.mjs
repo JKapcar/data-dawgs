@@ -39,6 +39,7 @@
  * ============================================================================
  */
 import fs from "fs";
+import { firstKickoffs } from "./survivor-capture-gate.mjs";
 import path from "path";
 import crypto from "crypto";
 import { dirname, resolve as presolve } from "path";
@@ -218,11 +219,13 @@ if (CMD === "capture") {
   if (!legs.length) die("the leading card has no leg for this week");
   if (dbl && legs.length < 2) die("this is a double-pick week and only one leg solved — refusing to record half an entry");
 
-  /* ⚠️ The gate. Earliest kickoff across the legs, because the entry is dead the moment
-     the first of them starts. Refuse, never store-and-flag. */
+  /* Freeze before the earliest REGULAR-SEASON game of the week, even when
+     the recommendation plays later. Never backfill after seeing an earlier result. */
   const kicks = legs.map(t => kickoffOf(week, t));
   if (kicks.some(k => !k)) die(`no kickoff time for ${legs[kicks.findIndex(k => !k)]} in week ${week}`);
-  const kickoffAt = kicks.slice().sort()[0];
+  const first = firstKickoffs(schedule, SEASON).get(week);
+  if (!Number.isFinite(first)) die(`no weekly kickoff for week ${week}`);
+  const kickoffAt = new Date(first).toISOString();
   const now = new Date();
   if (now >= new Date(kickoffAt))
     die(`week ${week} kicked off at ${kickoffAt} and it is now ${now.toISOString()}. `
@@ -279,6 +282,7 @@ if (CMD === "capture") {
   console.log(`captured_at ${receipt.captured_at} < kickoff_at ${kickoffAt}  ✓`);
   console.log(`ownership ${receipt.ownership_source}${receipt.ownership_source === "modelled"
     ? "  ⚠️  a modelled ranking is close to a win-probability sort — the receipt records that" : ""}`);
+  console.log(`input_snapshot_id ${snapshotId}`);
   rows.push(receipt);
   writeLedger(rows, `week ${week} captured`);
 }

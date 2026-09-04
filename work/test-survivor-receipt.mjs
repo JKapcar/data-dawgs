@@ -20,6 +20,7 @@
  */
 import { execFileSync } from "child_process";
 import fs from "fs";
+import { createHash } from "node:crypto";
 import path from "path";
 import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
@@ -93,7 +94,8 @@ try {
   ok(rec.forecast_status === "prospective" && rec.resolved === null,
      "a fresh row is prospective and unresolved");
   ok(rec.alternatives.length >= 1, "the other cards are recorded, so the pick can be judged against them");
-  ok(/^sha256:/.test(rec.input_snapshot_id), "the input snapshot is pinned", rec.input_snapshot_id);
+  ok(rec.input_snapshot_id === "sha256:" + createHash("sha256").update(fs.readFileSync(path.join(ROOT,"data/survivor.json"))).digest("hex"),
+     "the input snapshot hash equals the exact bytes read", rec.input_snapshot_id);
   ok(L.graded === false, "one prospective row still does not make the ledger graded");
 
   /* ---------- 3. write-once ---------- */
@@ -122,6 +124,18 @@ try {
   ok(r.code !== 0 && /not prospective/i.test(r.out),
      "a capture AFTER kickoff is refused — not stored-and-flagged", r.out.trim().slice(0, 110));
   ok(ledger().data.length === 0, "…and the ledger stays empty");
+  fs.writeFileSync(SCHED, schedBackup);
+
+  // A different game has started, while the recommendation's game is still future.
+  setSchedule(games => {
+    const other = games.find(g => g.season_type === 'REG' && g.week === 1 &&
+      !rec.recommended.includes(g.home_team) && !rec.recommended.includes(g.away_team));
+    other.kickoff_at = '2020-01-01T00:00:00Z';
+  });
+  r = run('capture', '--week', '1');
+  ok(r.code !== 0 && /not prospective/i.test(r.out),
+     'manual capture refuses after ANY game in the week starts', r.out.slice(0,120));
+  ok(ledger().data.length === 0, 'weekly deadline refusal writes nothing');
   fs.writeFileSync(SCHED, schedBackup);
 
   /* ---------- 5. resolve ---------- */

@@ -1,6 +1,6 @@
 name: nfelo refresh
 
-# Daily mirror of greerreNFL/nfelo published output into nfelo.html + data/nfelo.json.
+# Scheduled mirror of greerreNFL/nfelo published output into nfelo.html + data/nfelo.json.
 #
 # ⚠️ This is the ONLY thing in the repo that moves nfelo ratings and lines. nfl-data.yml
 # installs `nfelodcm`, which is the schedule loader, not the model — do not read that
@@ -13,17 +13,16 @@ name: nfelo refresh
 #
 # ⚠️ NEVER on push. Refresh on a schedule or by explicit dispatch only.
 #
-# 11:00 UTC = 07:00 ET. Upstream auto-commits every ~3h; the morning pull picks up the
-# overnight state. Dispatch manually before a Wednesday/Thursday kickoff if a same-day
-# line matters. Week 1 2026 opens WEDNESDAY Sep 9 (NE@SEA, 8:20 PM ET).
+# Four pulls daily; every successful run wakes the receipt gate. No manual line pull.
 
 on:
   schedule:
-    - cron: "0 11 * * *"
+    - cron: "0 5,11,17,23 * * *"
   workflow_dispatch:
 
 permissions:
   contents: write
+  pages: write
 
 concurrency:
   group: nfelo-refresh
@@ -44,6 +43,9 @@ jobs:
 
       - name: Refresh from upstream
         run: node tools/nfelo-refresh.mjs
+
+      - name: Verify upstream team aliases
+        run: node work/test-nfelo-aliases.mjs
 
       - name: Rebuild survivor snapshot from the fresh mirror
         run: |
@@ -73,15 +75,9 @@ jobs:
             const m=require("./data/nfelo.json").data.meta;
             process.stdout.write(`upstream ${m.sha} @ ${m.upstream_committed_at}`);
           ')"
-          # Concurrent writers exist. Rebase and push an explicit ref, same shape as
-          # survivor-receipt.yml. If a root html/js landed meanwhile the sw VERSION is
-          # stale after rebase — re-stamp, re-verify, amend, then push.
-          git pull --rebase origin main
-          python3 work/stamp-sw-version.py
-          if ! git diff --quiet -- sw.js; then
-            git add sw.js && git commit --amend --no-edit
-          fi
-          git add -A nfelo.html survivor.html sw.js data/nfelo.json data/survivor.json data/models.json data/index.json
-          node work/verify-sw.mjs
-          node tools/validate-data.js
-          git push origin HEAD:main
+          bash work/publish-survivor-pipeline.sh
+
+      - name: Publish through GitHub Pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash work/request-survivor-pages-build.sh

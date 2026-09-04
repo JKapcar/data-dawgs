@@ -1,0 +1,28 @@
+name: survivor pipeline watch
+on:
+  workflow_run:
+    workflows: ["nfelo refresh", "survivor-receipt", "NFL data backbone"]
+    types: [completed]
+    branches: [main]
+  schedule:
+    - cron: "35 6,12,18,23 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+  issues: write
+concurrency:
+  group: survivor-pipeline-watch
+  cancel-in-progress: false
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const watch = require('./work/survivor-pipeline-watch.cjs');
+            await watch({github, context, core});

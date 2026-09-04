@@ -173,7 +173,7 @@ const NF = {
     model_version: modelVersion,
     ratings_as_of: { season: ratingsSeason, week: ratingsWeek },
     backtest_captured: prev.meta && prev.meta.backtest_captured || prev.meta && prev.meta.captured || null,
-    refresh: "tools/nfelo-refresh.mjs, scheduled daily by .github/workflows/nfelo-refresh.yml",
+    refresh: "tools/nfelo-refresh.mjs, scheduled at 05,11,17,23 UTC by .github/workflows/nfelo-refresh.yml",
   },
 };
 
@@ -204,8 +204,9 @@ out = out.replace(/(<h2>Power ratings &mdash; )\d{4} Week \d+(<\/h2>)/,
 /* idempotent copy fix: the page used to describe itself as a frozen snapshot */
 out = out.replace(
   "- ⚠️ IT IS A SNAPSHOT, NOT A FEED. Ratings are frozen at capture and will not move for an injury or a transaction until the next pull.",
-  "- ⚠️ IT IS A DAILY MIRROR, NOT A LIVE FEED. tools/nfelo-refresh.mjs pulls upstream output once a day (meta.captured_at says when); lines can move after that, and ratings move only after games are played.",
+  "- ⚠️ IT IS A DAILY MIRROR, NOT A LIVE FEED. tools/nfelo-refresh.mjs pulls upstream output four times daily (meta.captured_at says when); lines can move after that, and ratings move only after games are played.",
 );
+out = out.replace("tools/nfelo-refresh.mjs pulls upstream output once a day", "tools/nfelo-refresh.mjs pulls upstream output four times daily");
 fs.writeFileSync(PAGE, out);
 console.log("wrote nfelo.html blob");
 

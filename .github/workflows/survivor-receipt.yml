@@ -24,6 +24,7 @@ on:
   workflow_run:
     workflows: ["nfelo refresh"]
     types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       week:
@@ -37,6 +38,7 @@ on:
 
 permissions:
   contents: write
+  pages: write
 
 concurrency:
   group: survivor-receipt
@@ -48,58 +50,67 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with: { node-version: "22" }
+
+      - name: Record exact snapshot read
+        run: |
+          git rev-parse HEAD
+          sha256sum data/survivor.json data/survivor-receipts.json
 
       # Resolve first. Last week's games are final by Thursday, and resolving before
       # capturing means a failed capture still lands the grading it was owed.
       - name: Resolve anything that has finished
+        id: resolve
         run: node work/survivor-receipt.mjs resolve
 
       - name: Work out which week to capture
         if: ${{ !inputs.resolve_only }}
         id: pick
-        run: |
-          set -euo pipefail
-          WEEK="${{ inputs.week }}"
-          if [ -n "$WEEK" ]; then
-            echo "week=$WEEK" >> "$GITHUB_OUTPUT"
-            echo "hours_to_kickoff=override" >> "$GITHUB_OUTPUT"
-            echo "capture=true" >> "$GITHUB_OUTPUT"
-          else
-            # Capture only when the next kickoff is in (0, 24] hours. Manual week input
-            # bypasses this proximity gate, but never the script's own late refusal.
-            node -e '
-              const s=require("./data/nfl-schedule.json").data.games;
-              const now=Date.now();
-              const firstByWeek=new Map();
-              for(const g of s.filter(g=>g.season_type==="REG")){
-                const kick=new Date(g.kickoff_at).getTime();
-                if(!firstByWeek.has(g.week)||kick<firstByWeek.get(g.week)) firstByWeek.set(g.week,kick);
-              }
-              const next=[...firstByWeek].filter(([,kick])=>kick>now).sort((a,b)=>a[1]-b[1])[0];
-              const hrs=next?(next[1]-now)/36e5:null;
-              process.stdout.write(`week=${next?next[0]:""}\nhours_to_kickoff=${hrs==null?"":hrs.toFixed(1)}\ncapture=${hrs!=null&&hrs>0&&hrs<=24}\n`);
-            ' >> "$GITHUB_OUTPUT"
-          fi
+        env:
+          CAPTURE_WEEK: ${{ inputs.week }}
+        run: node work/survivor-capture-gate.mjs >> "$GITHUB_OUTPUT"
 
-      # ⚠️ continue-on-error, and ONLY here. capture refuses on purpose in states that
-      # are not errors: the week is already captured (write-once), or the season has not
-      # started, or kickoff has passed. None of those should paint the run red and send
-      # someone looking for a bug. A genuine failure still shows in the log, and the
-      # commit step below simply finds nothing to commit.
       - name: Capture the upcoming week
+        id: capture
         if: ${{ !inputs.resolve_only && steps.pick.outputs.week != '' && steps.pick.outputs.capture == 'true' }}
         continue-on-error: true
-        run: node work/survivor-receipt.mjs capture --week ${{ steps.pick.outputs.week }}
+        env:
+          CAPTURE_WEEK: ${{ steps.pick.outputs.week }}
+        run: |
+          set +e
+          node work/survivor-receipt.mjs capture --week "$CAPTURE_WEEK" > "$RUNNER_TEMP/survivor-capture.log" 2>&1
+          code=$?
+          cat "$RUNNER_TEMP/survivor-capture.log"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          exit "$code"
+
+      - name: Reject unexpected capture failures
+        if: ${{ always() && steps.capture.outcome != 'skipped' && steps.capture.outcome != '' }}
+        env:
+          CAPTURE_CODE: ${{ steps.capture.outputs.code }}
+        run: |
+          test -n "$CAPTURE_CODE"
+          node work/check-survivor-capture.mjs "$CAPTURE_CODE" "$RUNNER_TEMP/survivor-capture.log"
 
       - name: Republish the manifest
-        run: node tools/data-manifest.js
+        if: ${{ always() && steps.resolve.outcome == 'success' }}
+        run: |
+          if ! git diff --quiet -- data/survivor-receipts.json; then
+            node tools/data-manifest.js
+          fi
 
       - name: Validate before committing anything
+        id: validate
+        if: ${{ always() && steps.resolve.outcome == 'success' }}
         run: node tools/validate-data.js
 
       - name: Commit if the ledger moved
+        id: commit
+        if: ${{ always() && steps.validate.outcome == 'success' }}
         run: |
           set -euo pipefail
           if git diff --quiet -- data/survivor-receipts.json data/index.json; then
@@ -113,11 +124,10 @@ jobs:
             const c=require("./data/survivor-receipts.json").counts;
             process.stdout.write(`${c.registered} registered, ${c.resolved} resolved`);
           ')"
-          # ⚠️ Rebase before pushing, and push an EXPLICIT ref. This repo has concurrent
-          # writers, so somebody may have pushed while the solve ran — a clobber here
-          # would eat their work. And a bare `git push` relies on checkout having left us
-          # on a branch rather than a detached HEAD, which is true today and is not a
-          # thing to depend on. Same shape draft-picks.yml already uses.
-          git pull --rebase origin main
-          node tools/validate-data.js
-          git push origin HEAD:main
+          bash work/publish-survivor-pipeline.sh
+
+      - name: Publish through GitHub Pages
+        if: ${{ always() && steps.commit.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash work/request-survivor-pages-build.sh
