@@ -1605,9 +1605,6 @@ export default {
   // sensitive auth material and exists for disaster recovery, not polling.
   async scheduled(controller, env, ctx) {
     const cron = (controller && controller.cron) || "";
-    // Temporary, exact-shape/ETag-guarded Week 1 repair. Removed after it records
-    // completion; see cleanupBozoKapW1Orphans.
-    await cleanupBozoKapW1Orphans(env);
     // Bozo closes: fires every five minutes and does nothing on a tick with no game
     // about to start, which is the overwhelming majority of them. One RTDB read.
     if (cron === BOZO_CLOSE_CRON) {
@@ -2142,45 +2139,6 @@ async function fbDelete(env, path, etag) {
   if (r.status === 412) return false;
   if (!r.ok) throw new Error("RTDB delete " + r.status);
   return true;
-}
-
-/* One-shot repair for the pre-identity Week 1 close failure. This is deliberately
- * narrower than a general maintenance route: both rows must still contain exactly
- * the two fields echoed to Kap, and each delete is conditional on the ETag read in
- * the same invocation. Remove this helper after production records completion in KV. */
-const BOZO_KAP_W1_CLEANUP_KEY = "bozo:migration:2026-w1-kap-orphans:v1";
-const BOZO_KAP_W1_FAILURE = "No closing price captured: this game couldn't be matched at the odds source.";
-
-function isBozoKapW1Orphan(row) {
-  if (!row || typeof row !== "object" || Array.isArray(row)) return false;
-  const keys = Object.keys(row).sort();
-  return keys.length === 2 && keys[0] === "closeSource" && keys[1] === "closeUnavailableReason"
-    && row.closeSource === "sgo" && row.closeUnavailableReason === BOZO_KAP_W1_FAILURE;
-}
-
-async function cleanupBozoKapW1Orphans(env) {
-  const kv = cfbMarketKV(env);
-  if (!kv || await kv.get(BOZO_KAP_W1_CLEANUP_KEY)) return { status: "already-complete" };
-  const paths = [
-    "/bozo/leagues/main/results/Kap",
-    "/bozo/leagues/main/ledger/2026-w1-Kap",
-  ];
-  const rows = [];
-  for (const path of paths) rows.push({ path, ...(await fbGet(env, path, true)) });
-  const changed = rows.find(x => x.data != null && !isBozoKapW1Orphan(x.data));
-  if (changed) {
-    console.error(JSON.stringify({ event: "bozo.cleanup.blocked", path: changed.path,
-                                   reason: "row changed after echo" }));
-    return { status: "blocked", path: changed.path };
-  }
-  for (const row of rows) {
-    if (row.data == null) continue;
-    if (!row.etag || !(await fbDelete(env, row.path, row.etag))) return { status: "etag-changed", path: row.path };
-  }
-  const done = { status: "complete", at: new Date().toISOString(), paths };
-  await kv.put(BOZO_KAP_W1_CLEANUP_KEY, JSON.stringify(done));
-  console.log(JSON.stringify({ event: "bozo.cleanup.complete", ...done }));
-  return done;
 }
 
 async function fbPost(env, path, value) {
