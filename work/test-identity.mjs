@@ -18,7 +18,9 @@ const ok = (n, c, x) => { c ? (pass++, console.log("  ok   " + n)) : (fail++, co
 const WORK = dirname(fileURLToPath(import.meta.url));
 const SRC = fs.readFileSync(resolve(WORK, "..", "dawg-bot-worker.js"), "utf8");
 const BUNDLE = join(tmpdir(), "worker-identity.mjs");
-fs.writeFileSync(BUNDLE, SRC + "\nexport { handleMcp, MCP_TOOLS, mcpAuth, mcpTokenHash, newMcpToken, emailToName, bozoSignup, bozoLogin, readSession, loadUsers, bozoRoster, authInvite, makeSession, entitlementOf, freeEntitlement , authName };\n");
+const BUNDLED_SRC = SRC.replace('"./bozo-team-registry.mjs"',
+  JSON.stringify(pathToFileURL(resolve(WORK, "..", "bozo-team-registry.mjs")).href));
+fs.writeFileSync(BUNDLE, BUNDLED_SRC + "\nexport { handleMcp, MCP_TOOLS, mcpAuth, mcpTokenHash, newMcpToken, emailToName, bozoSignup, bozoLogin, readSession, loadUsers, bozoRoster, authInvite, makeSession, entitlementOf, freeEntitlement , authName };\n");
 
 const DB = "https://data-dawgs-draft-default-rtdb.firebaseio.com";
 const PEPPER = "test-pepper-value";

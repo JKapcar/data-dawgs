@@ -4,8 +4,15 @@
    Run:  cd work && node test-cfb-market-capture.mjs
 */
 import { webcrypto } from "crypto";
+import { readFileSync } from "fs";
+import { dirname, resolve } from "path";
+import { fileURLToPath } from "url";
 if (!globalThis.crypto) globalThis.crypto = webcrypto;
 import worker from "../dawg-bot-worker.js";
+
+const WORK = dirname(fileURLToPath(import.meta.url));
+const nflScheduleCsv = readFileSync(resolve(WORK, "../tests/fixtures/nflverse-games-sample.csv"), "utf8");
+const cfbScheduleCsv = readFileSync(resolve(WORK, "../tests/fixtures/cfbfastr-schedule-2026-sample.csv"), "utf8");
 
 let pass = 0, fail = 0;
 const ok = (name, condition, detail) => {
@@ -72,6 +79,11 @@ let calls = [];
 let currentEvents = [event()];
 globalThis.fetch = async (input, init = {}) => {
   const url = new URL(String(input instanceof URL ? input.href : (input && input.url) || input));
+  if (url.origin === "https://raw.githubusercontent.com") {
+    if (init.headers && init.headers["If-None-Match"] === '"fixture"') return new Response(null, { status: 304 });
+    const body = url.pathname.includes("nflverse/") ? nflScheduleCsv : cfbScheduleCsv;
+    return new Response(body, { status: 200, headers: { ETag: '"fixture"' } });
+  }
   calls.push({ url, init });
   if (url.origin !== "https://api.sportsgameodds.com") throw new Error("unexpected fetch: " + url);
   if (mode === "rate-limit") {

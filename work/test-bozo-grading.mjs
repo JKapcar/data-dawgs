@@ -61,10 +61,12 @@ ok(typeof grade === "function", "gradeLeg is liftable from the page");
 const beatDeficit = lift("beatDeficit", "legEdge");
 ok(typeof beatDeficit === "function", "beatDeficit is liftable too");
 
-ok(/results\[p\]\.result = outcome;/.test(page), "autoGrade stores the three-state result");
-ok(/results\[p\]\.won\s+= outcome==='won' \? true : outcome==='lost' \? false : null;/.test(page),
-   "…and `won` is NULL on a push, so nothing downstream reads it as a loss");
-ok(/outcome = gradeLeg\(/.test(page), "autoGrade calls the same function this test does");
+ok(/wPost\('\/bozo\/grade', \{action:'preview'\}\)/.test(page),
+   "autoGrade asks the Worker for its schedule-backed preview");
+ok(/won: result === "won" \? true : result === "lost" \? false : null/.test(worker),
+   "the Worker keeps `won` NULL on a push, so nothing downstream reads it as a loss");
+ok(/function bozoScheduledOutcome\(/.test(worker) && /body\.results = automatic\.results/.test(worker),
+   "the Worker computes and replaces every game-market outcome before a write");
 
 ok(grade("spread", "over", 8.5, 9) === "won",  "DET -8.5 winning by 9 covers");
 ok(grade("spread", "over", 8.5, 8) === "lost", "…by 8 does not");

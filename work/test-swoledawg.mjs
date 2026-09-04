@@ -25,7 +25,9 @@ const ok = (n, c, x) => { c ? (pass++, console.log("  ok   " + n)) : (fail++, co
 const WORK = dirname(fileURLToPath(import.meta.url));
 const SRC = fs.readFileSync(resolve(WORK, "..", "dawg-bot-worker.js"), "utf8");
 const BUNDLE = join(tmpdir(), "worker-swoledawg.mjs");
-fs.writeFileSync(BUNDLE, SRC +
+const BUNDLED_SRC = SRC.replace('"./bozo-team-registry.mjs"',
+  JSON.stringify(pathToFileURL(resolve(WORK, "..", "bozo-team-registry.mjs")).href));
+fs.writeFileSync(BUNDLE, BUNDLED_SRC +
   "\nexport { MCP_TOOLS, swoleWeekOf, swoleEffortFor, swoleSetsFor, swoleStartSession," +
   " swoleLogSet, swoleFinishSession, swoleLogMeasurement, swoleLogNutrition, swoleNutrition, swoleSummary," +
   " swoleMeasurementHistory, swoleLogRecovery, swoleRecovery," +

@@ -22,7 +22,9 @@ const sandbox = { FIXTURE: fixture.data };
 vm.createContext(sandbox);
 vm.runInContext([
   'const BOZO_CLOSE_BOOK = "draftkings";',
+  'const SEASON = 2026;',
   `const BOZO_ESPN_TEAM_SEED = ${seedMatch[1]};`,
+  between('const BOZO_GRADEABLE_SPORTS', 'const ledgerKey'),
   between('const bzNorm =', '/* ---------------- player props'),
   between('const BOZO_STAT_WORDS =', 'const bzAmerican ='),
   between('const bzAmerican =', '/* Resolve one free-text prop'),
@@ -137,6 +139,25 @@ test('strict game markets reject capture failure while prop fallback is visibly 
   assert.equal(prop.p.priceOpp, null);
 });
 
+test('unsupported sports reject clearly and an event id can resolve kickoff from KV', async () => {
+  const nba = await bozoCaptureEntry({}, { sport: 'nba', eventId: '1', game: 'A @ B', mkt: 'spread' });
+  assert.equal(nba.ok, false);
+  assert.equal(nba.reason, 'sport_not_gradeable');
+
+  const game = { espnEventId: '401858425', startsAt: '2026-09-05T16:00:00.000Z',
+    canonicalKey: 'cfb|indianahoosiers~northtexasmeangreen|2026-09-05' };
+  const env = { RL: { async get(_key, type) {
+    const doc = { games: [game] };
+    return type === 'json' ? doc : JSON.stringify(doc);
+  } } };
+  const resolved = await bozoCaptureEntry(env, { sport: 'cfb', eventId: '401858425',
+    game: 'UNT @ IU', mkt: 'other', side: 'over', line: 1, label: 'coin toss', price: -110 });
+  assert.equal(resolved.ok, true);
+  assert.equal(resolved.p.startsAt, game.startsAt);
+  assert.equal(resolved.p.espnEventId, game.espnEventId);
+  assert.equal(resolved.p.canonicalKey, game.canonicalKey);
+});
+
 test('assertQuote rejects a one-sided quote instead of assuming hold', () => {
   assert.match(assertQuote({ price: -120, opp: null, line: -3.5 }, { mkt: 'spread', line: -3.5 }), /two real/);
 });
@@ -145,7 +166,8 @@ test('every write path is pinned to kickoff and a captured opposite side', () =>
   assert.match(worker, /if \(!p\.startsAt \|\| isNaN\(Date\.parse\(p\.startsAt\)\)\)/);
   assert.match(worker, /if \(gameMarket && bzAmerican\(p\.priceOpp\) === null\)/);
   assert.match(worker, /priceOpp: entryPriceOpp,\s*entryPriceOpp,/);
-  assert.match(worker, /\{ required: \["sport", "eventId", "game", "mkt", "side", "label", "startsAt"\] \}/);
+  assert.match(worker, /startsAt: \{ type: "string", description: "Kickoff ISO timestamp\. Optional when eventId resolves from the Worker schedule cache/);
+  assert.doesNotMatch(worker, /\{ required: \["sport", "eventId", "game", "mkt", "side", "label", "startsAt"\] \}/);
   assert.match(worker, /Phase two commits the quote frozen in KV/);
 });
 
