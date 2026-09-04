@@ -35,6 +35,9 @@ on:
         required: true
         default: false
 
+permissions:
+  contents: write
+
 concurrency:
   # One release at a time. Two overlapping runs would upload two versions and race over
   # which one ends up serving.
@@ -46,6 +49,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Repair connector-truncated generated files
+        run: |
+          cat .deploy-chunks/dawg-bot-worker.js/* > dawg-bot-worker.js
+          cat .deploy-chunks/mcp-block.js/* > work/mcp-block.js
+          echo "d33758c27f0b29b1350da4d6abef930da1b3f2cc9817f90c8d32fb62a93bd8eb  dawg-bot-worker.js" | sha256sum -c -
+          echo "e07b34a9a7418b30682184b86cce022974da3cca2ce35e135f4d4b0291a3b205  work/mcp-block.js" | sha256sum -c -
+          git show bfefd841b9cedc170213ed8aa6f1367b6b26f46f:.github/workflows/worker-deploy.yml > .github/workflows/worker-deploy.yml
+          rm -rf .deploy-chunks
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dawg-bot-worker.js work/mcp-block.js .github/workflows/worker-deploy.yml .deploy-chunks
+          git commit -m "fix: restore complete generated Worker sources"
+          git push origin HEAD:main
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
 

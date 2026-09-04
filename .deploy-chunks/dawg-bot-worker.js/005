@@ -1,0 +1,936 @@
+n a −110 missing by
+     three. Replaying the seeded Royale season under the site's rule reproduces 12 of 13
+     chops and disagrees on week 6. The chop log wins there, because it is the season the
+     legs were dealt for.
+
+     A Standard league has no chop log — nobody is eliminated, so nothing downstream
+     depends on last week's verdict — and its history is replayed under the live cascade,
+     which is the rule that will decide real weeks. */
+  const chops = (lg.royale || {}).chops || {};
+  const chopByWeek = {};
+  for (const c of Object.values(chops)) if (c && c.week && c.chopped) chopByWeek[c.week] = c.chopped;
+  const fromChops = Object.keys(chopByWeek).length > 0;
+
+  const history = [];
+  for (const wk of weeks) {
+    if (fromChops) {
+      const who = chopByWeek[wk];
+      history.push({ week: wk, bozo: who ? encodeURIComponent(who) : null });
+      continue;
+    }
+    const { picks, results } = shape(wk);
+    const d = royaleDecideChop({ picks, results }, orders[wk] || [0, 1, 2, 3]);
+    history.push({ week: wk, bozo: d.choppedKey || null });
+  }
+
+  // The last week stays loaded on the board, so the ticket, hierarchy, diagnostics and
+  // verdict all have something real to draw.
+  const last = weeks[weeks.length - 1];
+  const { picks, results } = shape(last);
+  const order = orders[last] || [0, 1, 2, 3];
+  // Same rule as the history above: a Royale week's verdict is its chop record.
+  const decided = fromChops && chopByWeek[last]
+    ? { choppedKey: encodeURIComponent(chopByWeek[last]), chopped: chopByWeek[last],
+        decidedBy: (Object.values(chops).find(c => c && c.week === last) || {}).decidedBy || "the drawn hierarchy" }
+    : royaleDecideChop({ picks, results }, order);
+  const bozoLeg = decided.choppedKey ? picks[decided.choppedKey] : null;
+
+  const patch = {
+    week: last, season, status: "graded",
+    picks, results, order,
+    history: history.slice(0, -1),        // the current week is `bozo`, not history
+    bozo: decided.choppedKey || null,
+    bozoWhy: decided.choppedKey
+      ? `${decided.decidedBy} · lost ${bozoLeg ? bozoLeg.label : ""}${bozoLeg ? " at " + bozoLeg.price : ""} · funds next week`
+      : "Ticket cashed. Nobody wears it.",
+    closeTs: Math.max(0, ...Object.values(picks).map(p => p.ts || 0)) || null,
+  };
+  await fbPatch(env, LG(id), patch);
+  return { week: last, legs: Object.keys(picks).length, bozo: decided.chopped,
+           decidedBy: decided.decidedBy, weeksReplayed: weeks.length };
+}
+
+async function leagueImport(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const auth = await requireAdmin(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  let body;
+  try { body = await readBody(request); }
+  catch (e) {
+    // ⚠️ Say WHICH failure it was. These were one message until an import hit the size
+    // ceiling and reported "Bad JSON", which is a completely different problem and sent
+    // the reader looking at their payload's syntax instead of its length.
+    return /too large/.test(String(e && e.message))
+      ? json({ error: `That request body is over the ${MAX_BODY / 1000} KB limit. Send the legs in batches — see /league/import.` }, 413, cors)
+      : json({ error: "Bad JSON." }, 400, cors);
+  }
+
+  const id = String(body.id || body.league || "").toLowerCase().trim();
+  if (!validLeagueId(id)) return json({ error: "League id must be 2–24 chars: lowercase letters, numbers and dashes." }, 400, cors);
+
+  const legs = Array.isArray(body.legs) ? body.legs : [];
+  const append = body.append === true;
+
+  let leagues;
+  try { leagues = await loadLeagues(env); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+
+  /* ---------- appending to an import already in progress ---------- */
+  if (append) {
+    const lg = leagues[id];
+    if (!lg) return json({ error: "No such league — send the first batch without append." }, 404, cors);
+    // ⚠️ Both conditions, every time. Synthetic alone would let a finished demo be
+    // topped up months later; importing alone would be a way into a real league.
+    if (lg.synthetic !== true || lg.importing !== true)
+      return json({ error: "That league isn't mid-import. Import never merges into an existing league." }, 409, cors);
+
+    const rows = leagueImportRows(id, Number(lg.season) || SEASON, legs);
+    if (Object.keys(rows).length) {
+      try { await fbPatch(env, LG(id) + "/ledger", rows); }
+      catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+    }
+    if (body.done === true) {
+      // Everything is in — now make it a BOARD, not just a ledger. See the note there.
+      let live = null;
+      try { live = await leagueImportFinalise(env, id, lg); }
+      catch (e) { console.log("import: finalise failed — " + e.message); }
+      // ⚠️ The flag clears LAST, after every row has landed. An import interrupted
+      // halfway leaves `importing: true` — visibly unfinished, and still appendable —
+      // rather than a league that looks complete and silently isn't.
+      try { await fbPatch(env, LG(id), { importing: null }); }
+      catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+      return json({ ok: true, id, appended: legs.length, done: true, live }, 200, cors);
+    }
+    return json({ ok: true, id, appended: legs.length, done: false }, 200, cors);
+  }
+
+  /* ---------- the first batch, which creates the league ---------- */
+  if (leagues[id]) return json({ error: "A league with that id already exists. Delete it first — import never merges." }, 409, cors);
+  if (!legs.length) return json({ error: "Nothing to import — no legs in the payload." }, 400, cors);
+
+  const season = Number(body.season) || SEASON;
+  const format = body.format === "royale" ? "royale" : "standard";
+  // ⚠️ The roster comes from body.players, NOT from this batch's legs. Under batching the
+  // first slice is a few weeks of one league and would name only whoever happened to bet
+  // in them — and in Bozo Royale, where the roster shrinks, the last slice names almost
+  // nobody. Falling back to the legs is only for a single-shot import.
+  const players = Array.isArray(body.players) && body.players.length
+    ? [...new Set(body.players.map(String))].sort()
+    : [...new Set(legs.map(l => String(l.player || "")).filter(Boolean))].sort();
+  const members = {};
+  for (const p of players) members[encodeURIComponent(p)] = true;
+
+  const ledger = leagueImportRows(id, season, legs);
+
+  const weekLabels = {}, weekPhases = {};
+  for (const w of (Array.isArray(body.weeks) ? body.weeks : [])) {
+    if (w && w.week) { weekLabels[w.week] = w.label || ("Week " + w.week); weekPhases[w.week] = w.phase || "regular"; }
+  }
+
+  /* ⚠️ The drawn hierarchy per week, converted from the simulator's lever NAMES to the
+     indices the page's LEVERS array uses. Stored on the first batch because the finalise
+     step runs on the last one and needs all of them — and without it every replayed week
+     would resolve under a default 0,1,2,3 order that was never actually drawn, quietly
+     naming different bozos than the season it claims to be. */
+  const weekOrders = {};
+  for (const h of (Array.isArray(body.hierarchies) ? body.hierarchies : [])) {
+    if (!h || !h.week || !Array.isArray(h.order)) continue;
+    const ix = h.order.map(n => IMPORT_LEVER_IX[n]).filter(n => Number.isInteger(n));
+    if (ix.length) weekOrders[h.week] = ix;
+  }
+
+  const lg = {
+    name: String(body.name || id).slice(0, 60),
+    manager: auth.name,
+    members, season,
+    week: Number(body.weeksPlayed) || Math.max(...legs.map(l => Number(l.week) || 1)),
+    status: "graded",
+    format, buyback: format === "royale" ? (Number(body.buyback) || 25) : 0,
+    formatLocked: true,
+    synthetic: true,
+    // Cleared by the final batch. Until then the league is visibly mid-import rather
+    // than looking complete while missing most of its season.
+    importing: body.done === true ? null : true,
+    demoNote: String(body.note || "SIMULATED SEASON — every leg, price, close and result is fabricated."),
+    weekLabels, weekPhases, weekOrders,
+    ledger,
+    createdTs: Date.now(), createdBy: auth.name, importedTs: Date.now(),
+  };
+
+  // Royale state travels with the season so the DEAD badges and the chop log are right
+  // the moment the league opens.
+  if (format === "royale") {
+    const status = {};
+    for (const [name, s] of Object.entries(body.playersStatus || {})) {
+      status[encodeURIComponent(name)] = {
+        alive: s.alive === true,
+        buybacksLeft: Number(s.buybacksLeft) || 0,
+        chopped: Array.isArray(s.chopped) ? s.chopped : [],
+        boughtBack: Array.isArray(s.boughtBack) ? s.boughtBack : [],
+        eliminatedWeek: s.alive === true ? null : (Array.isArray(s.chopped) ? s.chopped[s.chopped.length - 1] ?? null : null),
+      };
+    }
+    const chops = {};
+    for (const c of (Array.isArray(body.chops) ? body.chops : [])) {
+      if (c && c.week) chops[`w${c.week}`] = { ...c, season, resolvedTs: null, simulated: true };
+    }
+    lg.royale = { status, chops, offers: {}, survivor: body.survivor || null };
+  }
+
+  try { await fbPatch(env, LG(id), lg); }
+  catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  return json({ ok: true, id, legs: legs.length, players: players.length, format, synthetic: true }, 200, cors);
+}
+
+// POST /league/delete {league, confirm} — MANAGER or site admin. A HARD delete: the
+// whole league node goes, which takes its picks, ledger, closes, grades, order,
+// results, history, config, members and teams with it.
+//
+// ⚠️ Hard, not soft, and that is the point. A soft-hidden league is a synthetic-data
+// leak waiting to happen — the demo seasons in here are fabricated closes and
+// fabricated results, and a hidden-but-present demo row is exactly the thing that
+// eventually gets counted by a query someone writes next month. If it is deleted it
+// cannot be counted.
+//
+// ⚠️ The default league cannot be deleted. loadLeagues() re-seeds it from /users on the
+// next read, so "deleting" it would silently resurrect an empty shell — worse than
+// refusing, because it looks like it worked.
+async function leagueDelete(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const lid = leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+  if (lid === DEFAULT_LEAGUE)
+    return json({ error: "The default league can't be deleted — it is recreated on the next read." }, 400, cors);
+
+  const auth = await requireManager(request, env, lid);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  // Typing the name is the confirmation. A modal alone is a reflex; this is not.
+  const want = String(auth.league.name || lid);
+  if (String(body.confirm || "").trim() !== want)
+    return json({ error: 'Type the league name exactly — "' + want + '" — to confirm.' }, 400, cors);
+
+  // The join code lives in KV, not in the league node, so it has to be reaped
+  // separately or a live link keeps pointing at a league that no longer exists.
+  const kv = JOIN_KV(env);
+  if (kv) {
+    try {
+      const rec = JSON.parse((await kv.get(JOIN_LG(lid))) || "null");
+      if (rec && rec.code) await kv.delete(JOIN_CODE(rec.code));
+      if (rec && rec.passHash) await kv.delete(JOIN_PASS(rec.passHash));
+      await kv.delete(JOIN_LG(lid));
+    } catch (e) { /* a stale code resolves to "no such league" below; not worth failing on */ }
+  }
+
+  try { await fbDelete(env, LG(lid)); }
+  catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  bozoNullWriteTripwire("/league/delete", auth, lid, ["members", "picks", "results"]);
+  return json({ ok: true, deleted: lid, name: want }, 200, cors);
+}
+
+
+// League settings, one patch route. Everything here is a MANAGER'S PREFERENCE — the
+// site admin can edit any league, a manager only their own (requireManager handles both).
+//
+// ⚠️ One of these is not like the others. `levers` decides which of the four tiebreakers
+// go into the weekly draw, and the randomisation is what keeps the game unsolvable: the
+// brief rejected a composite score because "any weighted blend of the four is just a new
+// deterministic objective with a new optimum someone will solve". Cut to one lever and
+// you have rebuilt exactly that — under pure shortest-odds-loses, undercutting to the
+// floor is strictly dominant and the whole league converges there. It is allowed, it is
+// warned about in the UI, and it is the only setting here with a game-theory cost.
+//
+// ⚠️ `allowDupes` IS RETIRED AND IS NO LONGER READ. It used to let a manager permit two
+// players on the identical selection. The league rule now says every leg must be a real
+// DraftKings selection that is legal in an SGP, and DK will not accept the same
+// selection twice in one parlay — so a league with dupes on could not build its own
+// ticket. That is a physical constraint on the bet, not a house preference, and a
+// setting that cannot be honoured is worse than no setting. The stored field is left
+// alone rather than migrated: it is inert, and rewriting history to hide that a league
+// once ran differently is not this codebase's habit. settingsOf reports it as
+// `dupesRetired` so the panel can say why the control vanished.
+const LEVER_COUNT = 4;
+const SETTING_DEFAULTS = {
+  stake: 50, allowEdit: true, lockRule: "all", lockCount: 0,
+};
+const settingsOf = lg => ({
+  stake: Number.isFinite(lg?.stake) ? lg.stake : SETTING_DEFAULTS.stake,
+  allowEdit: lg?.allowEdit !== false,
+  lockRule: lg?.lockRule === "count" ? "count" : "all",
+  lockCount: Number.isFinite(lg?.lockCount) ? lg.lockCount : 0,
+  levers: Array.isArray(lg?.levers) && lg.levers.length ? lg.levers : [0, 1, 2, 3],
+  format: lg?.format === "royale" ? "royale" : "standard",
+  buyback: Number.isFinite(lg?.buyback) ? lg.buyback : 0,
+  formatLocked: lg?.formatLocked === true,
+  synthetic: lg?.synthetic === true,
+  dupesRetired: lg?.allowDupes === true,
+});
+
+async function leagueSettings(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const lid = leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+  const auth = await requireManager(request, env, lid);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  const lg = auth.league;
+  const patch = {};
+  const has = k => Object.prototype.hasOwnProperty.call(body, k);
+
+  if (has("name")) {
+    const n = String(body.name).trim();
+    if (!n || n.length > 60) return json({ error: "Name must be 1–60 characters." }, 400, cors);
+    patch.name = n;
+  }
+
+  if (has("manager")) {
+    const m = String(body.manager);
+    let users;
+    try { users = await loadUsers(env); }
+    catch (e) { return json({ error: e.message }, 502, cors); }
+    if (!userNames(users).includes(m))
+      return json({ error: m + " doesn't have an account yet." }, 400, cors);
+    patch.manager = m;
+    // A manager who isn't in their own league can't submit a leg and can't be counted
+    // toward the lock. Seat them rather than leaving that inconsistency lying around.
+    if (!isMember(lg, m)) patch["members/" + encodeURIComponent(m)] = true;
+  }
+
+  if (has("stake")) {
+    const v = Math.round(Number(body.stake));
+    if (!Number.isFinite(v) || v < 1 || v > 100000)
+      return json({ error: "Stake must be between 1 and 100000." }, 400, cors);
+    patch.stake = v;
+  }
+
+  /* allowDupes is retired — see the note above settingsOf. It is DROPPED rather than
+     rejected, and `dupesRetired` in the response says so.
+
+     ⚠️ Rejecting the whole save would have been the more talkative choice and the wrong
+     one. bozo.html is served network-first with a cache fallback, so a phone that has not
+     revalidated is still posting the old settings body — and failing its Save because it
+     mentioned a setting we retired punishes a manager for our schema change, on the one
+     panel where the error would look like their edit was invalid. The field is inert
+     either way; the ticket is one real DraftKings parlay and DK will not take the same
+     selection twice, whatever any league once preferred. */
+  const dupesRetired = has("allowDupes");
+  if (has("allowEdit"))  patch.allowEdit  = body.allowEdit !== false;
+
+  // ⚠️ Format is immutable once the league has locked a ticket. Before that it is just a
+  // choice on a league nobody has played yet, so let a manager fix a mis-click.
+  if (has("format")) {
+    const f = body.format === "royale" ? "royale" : "standard";
+    if (settingsOf(lg).formatLocked && f !== settingsOf(lg).format)
+      return json({ error: "This league has already locked a ticket — the format is fixed for the season. Changing it now would retroactively change who should have been eliminated." }, 409, cors);
+    patch.format = f;
+    if (f === "standard") patch.buyback = 0;
+  }
+  if (has("buyback")) {
+    const b = Math.round(Number(body.buyback));
+    if (!Number.isFinite(b) || b < 0 || b > 100000)
+      return json({ error: "Re-deploy cost must be between 0 and 100000." }, 400, cors);
+    const f = patch.format || settingsOf(lg).format;
+    if (f !== "royale") return json({ error: "Re-deploys only exist in Bozo Royale." }, 400, cors);
+    patch.buyback = b;
+  }
+
+  if (has("lockRule")) {
+    const r = body.lockRule === "count" ? "count" : "all";
+    patch.lockRule = r;
+    if (r === "count") {
+      const c = Math.round(Number(body.lockCount));
+      if (!Number.isFinite(c) || c < 2 || c > 64)
+        return json({ error: "Lock count must be between 2 and 64." }, 400, cors);
+      patch.lockCount = c;
+    } else {
+      patch.lockCount = null;
+    }
+  }
+
+  if (has("levers")) {
+    const raw = Array.isArray(body.levers) ? body.levers : [];
+    const set = [...new Set(raw.map(Number))].filter(n => Number.isInteger(n) && n >= 0 && n < LEVER_COUNT);
+    if (!set.length) return json({ error: "At least one tiebreaker has to stay in the draw." }, 400, cors);
+    patch.levers = set.sort();
+  }
+
+  // The band lives here too, so one Save covers the whole rules panel.
+  if (has("bandCeil") || has("bandFloor")) {
+    const cur = bandOf(lg);
+    const ceil = has("bandCeil") ? Math.round(Number(body.bandCeil)) : cur.ceil;
+    const floor = has("bandFloor") ? Math.round(Number(body.bandFloor)) : cur.floor;
+    if (!Number.isFinite(ceil) || !Number.isFinite(floor))
+      return json({ error: "Band values must be numbers." }, 400, cors);
+    if (ceil > -100) return json({ error: "Ceiling can't be shorter than −100 — favorites only." }, 400, cors);
+    if (floor >= ceil) return json({ error: "Floor must be deeper (more negative) than the ceiling." }, 400, cors);
+    if (floor < -2000) return json({ error: "Floor below −2000? That's not a band, that's a typo." }, 400, cors);
+    patch["config/bandCeil"] = ceil;
+    patch["config/bandFloor"] = floor;
+    patch["config/updatedTs"] = Date.now();
+    patch["config/updatedBy"] = auth.name;
+  }
+
+  if (!Object.keys(patch).length) return json({ error: "Nothing to change." }, 400, cors);
+  patch.settingsTs = Date.now();
+  patch.settingsBy = auth.name;
+
+  try { await fbPatch(env, LG(lid), patch); }
+  catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  const after = await loadLeague(env, lid);
+  return json({
+    ok: true, league: lid, settings: settingsOf(after), name: after.name, manager: after.manager,
+    dupesRetired: dupesRetired || undefined,
+    note: dupesRetired
+      ? "Duplicate legs aren't a setting any more and that part of your save was ignored. Every leg has to be a real DraftKings selection that's legal in an SGP, and DK rejects the same selection twice on one parlay — so duplicates and contradicting sides are refused on every league now. Reload the page to see the current panel."
+      : undefined,
+  }, 200, cors);
+}
+
+// POST /league/team {league, player, team} — the display name inside THIS league.
+// ⚠️ Deliberately not a rename. The account name stays the identity key everywhere —
+// /users, the password record, pick keys, ledger rows — so changing what the board
+// calls someone costs nothing and can never orphan a receipt. The same person can be
+// one thing here and another in a different league.
+async function leagueTeam(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const lid = leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+  const auth = await requireManager(request, env, lid);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  const player = String(body.player || "");
+  if (!isMember(auth.league, player)) return json({ error: player + " isn't in this league." }, 400, cors);
+  const team = String(body.team == null ? "" : body.team).trim().slice(0, 40);
+
+  try {
+    await fbPatch(env, LG(lid) + "/teams", { [encodeURIComponent(player)]: team || null });
+  } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  return json({ ok: true, player, team: team || null }, 200, cors);
+}
+
+// POST /league/member {league, player, action:"remove"} — manager removal only.
+// A manager cannot pre-seat somebody else's account. Every non-manager membership is
+// created by that person's authenticated /league/join request plus the shared password.
+async function leagueMember(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const lid = leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+  const auth = await requireManager(request, env, lid);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  const player = String(body.player || "");
+  if (body.action !== "remove")
+    return json({ error: "Members must sign in and join this league themselves with its shared password." }, 400, cors);
+
+  // ⚠️ Changing the roster mid-week moves the lock threshold under a live board.
+  // Removing the last person you were waiting on would otherwise silently place the
+  // ticket; refuse while picks are in and the board is open, and say why.
+  const lg = auth.league;
+  if ((lg.status || "open") !== "open")
+    return json({ error: "The ticket is placed — roster changes wait for next week." }, 409, cors);
+  // Resolve the seat by NAME here on purpose: this route's caller is a manager naming
+  // somebody, not the member themselves, so there is no uid in hand.
+  const pkey = memberKeyOf(lg, { name: player });
+  if (!pkey) return json({ error: player + " is not in this league." }, 404, cors);
+  if ((lg.picks || {})[pkey])
+    return json({ error: player + " already has a leg in this week. Remove the leg first." }, 409, cors);
+  if (lg.manager === player)
+    return json({ error: "The manager can't leave their own league." }, 400, cors);
+
+  try {
+    await fbPatch(env, LG(lid) + "/members", { [pkey]: null });
+  } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  bozoNullWriteTripwire("/league/member", auth, lid, ["members/" + pkey]);
+
+  // Re-read so the caller sees the real size, and so a removal that just completed the
+  // board can lock immediately rather than waiting for someone to resubmit.
+  const after = await loadLeague(env, lid);
+  const picks = after.picks || {};
+  let placed = false;
+  if (Object.keys(picks).length >= memberNames(after).length && memberNames(after).length > 0)
+    placed = await placeAndDraw(env, lid, picks, after);
+  return json({ ok: true, size: memberNames(after).length, members: memberNames(after), placed }, 200, cors);
+}
+
+// POST /league/lock {league} — the escape hatch. The board otherwise waits forever for
+// a member who never submits, which with eight friends is a matter of when, not if.
+// Legs that are in make the ticket; anyone who didn't submit simply isn't on it.
+async function leagueLock(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const lid = leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+  const auth = await requireManager(request, env, lid);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  const lg = auth.league;
+  if ((lg.status || "open") !== "open") return json({ error: "Already placed." }, 409, cors);
+  const picks = lg.picks || {};
+  const n = Object.keys(picks).length;
+  if (n < 2) return json({ error: "Need at least two legs to make a parlay." }, 400, cors);
+  // (A forced lock deliberately ignores lockRule — that is the entire point of it.)
+
+  const placed = await placeAndDraw(env, lid, picks, lg);
+  return json({ ok: true, placed, legs: n,
+                waitingOn: memberKeys(lg).filter(k => !picks[k]).map(k => memberNameAt(lg, k)) }, 200, cors);
+}
+
+/* ============================ the betslip link ============================
+   One DraftKings link per league per week, posted by any member, so that seven
+   people do not retype an eight-leg parlay by hand.
+
+   ⚠️ This is the only place on the site where one member hands the other seven a
+   link to click. Two rules follow from that, and neither is negotiable:
+
+   1. DRAFTKINGS HOSTS ONLY, ENFORCED HERE. The page checks too, but the page is a
+      convenience and this function is the authority. The league books one place
+      and one place only — every pick is written with entryBook "draftkings" — so
+      a link pointing anywhere else is either a mistake or an attack, and both get
+      the same answer.
+
+   2. SUBDOMAIN-SCOPED, NEVER A WHOLE SHORTENER. `*.draftkings.com` is DraftKings.
+      A link shortener is by definition an open redirect: allowlisting one would
+      let anybody with an account there aim this button wherever they liked. The
+      two share hosts below are pinned as EXACT hosts for exactly that reason.
+
+   ⚠️ Those two share hosts are what the DraftKings app is BELIEVED to emit. They
+   have not been checked against a real shared link — no sample was available when
+   this shipped. A rejection names the host it saw, so if the app emits something
+   else the error message is the bug report: add that exact host to this set. Do
+   not answer a rejected paste by loosening the rule. */
+const DK_SHARE_HOSTS = new Set(["dksb.sng.link", "draftkings.onelink.me"]);
+const MAX_SLIP_URL = 600;
+
+function dkSlipUrl(raw) {
+  if (typeof raw !== "string") return { err: "Send the link as text." };
+  const s = raw.trim();
+  if (!s) return { err: "Paste a link first." };
+  if (s.length > MAX_SLIP_URL) return { err: "That link is over " + MAX_SLIP_URL + " characters." };
+  let u;
+  try { u = new URL(s); } catch { return { err: "That is not a link." }; }
+  if (u.protocol !== "https:") return { err: "The link has to be https." };
+  // A URL carrying credentials can render as one host and resolve to another.
+  if (u.username || u.password) return { err: "That link carries credentials. Paste the plain share link." };
+  const host = u.hostname.toLowerCase();
+  const dk = host === "draftkings.com" || host.endsWith(".draftkings.com") || DK_SHARE_HOSTS.has(host);
+  if (!dk) return { err: "Only DraftKings links go on the ticket — that one points at " + host + "." };
+  return { url: u.toString(), host };
+}
+
+// POST /league/slip {league, url} — ANY MEMBER. An empty url takes it down.
+//
+// Deliberately NOT manager-gated. Whoever actually placed the parlay is whoever
+// placed it, and making them chase the manager to publish the link is how the
+// link never gets published. Attribution is the check instead: the row records
+// who put it up and when, and the ticket prints that next to the button.
+async function leagueSlip(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const lid = leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+  const auth = await requireMember(request, env, lid);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  // ⚠️ A graded week is a record. The link is archived into the history row on
+  // rollover, so editing it afterwards rewrites a receipt that is already filed.
+  if ((auth.league.status || "open") === "graded")
+    return json({ error: "That week is graded. Its ticket is a receipt now." }, 409, cors);
+
+  const raw = body.url == null ? "" : String(body.url);
+  if (!raw.trim()) {
+    await fbPut(env, LG(lid) + "/slip", null);
+    return json({ ok: true, slip: null }, 200, cors);
+  }
+  const v = dkSlipUrl(raw);
+  if (v.err) return json({ error: v.err }, 400, cors);
+
+  // by/ts come from the SESSION and the SERVER, never from the body.
+  const slip = { url: v.url, host: v.host, by: auth.name, ts: Date.now() };
+  await fbPut(env, LG(lid) + "/slip", slip);
+  return json({ ok: true, slip }, 200, cors);
+}
+
+/* ============================== league access ==============================
+   Every Bozo league has one manager-controlled password. People authenticate first,
+   search for a league, and submit {league,password}; the password grants membership
+   to that authenticated account. Private rooms appear only on an exact-name search.
+
+   ⚠️ PASSWORD HASHES LIVE IN KV, NEVER FIREBASE. /bozo is world-readable, so access
+   material under /bozo/leagues/<id> would be public. KV is Worker-only. The historical
+   joinlink:* key name remains only to migrate or revoke records created before links
+   were retired; no route mints or redeems those links now.
+
+   The cap is the blast radius. A shared password cannot grow a league past the
+   manager's chosen ceiling.
+
+   ⚠️ This is NOT how the draft rig works and must never become that. AGENTS.md
+   rule 6: the draft board is public on purpose. This gates league MEMBERSHIP for
+   the Bozo game only. */
+
+// ⚠️ Names RL explicitly — this namespace holds the only password hashes. Pointing it
+// at an empty namespace disables new joins until managers set passwords again.
+const JOIN_KV = (env) => env.RL || null;
+const JOIN_LG = (lid) => "joinlink:lg:" + lid;
+const JOIN_CODE = (code) => "joinlink:code:" + code;
+const JOIN_PASS = (hash) => "joinpass:code:" + hash;
+const JOIN_CAP_DEFAULT = 20;
+const JOIN_CAP_MIN = 2;
+const JOIN_CAP_MAX = 64;
+const JOIN_REDEEM_PER_DAY = 20;
+// Legacy short-code helpers exist only so the first password join after deployment can
+// honour a code that a manager set immediately before retirement. The next password
+// change deletes this global lookup and writes the league-scoped form below.
+const normJoinPass = (c) => String(c || "").trim().toUpperCase();
+const joinPassHash = (env, c) =>
+  hmac(env.BOZO_PEPPER, "bozo-league-code" + String.fromCharCode(0) + normJoinPass(c));
+
+// League passwords are case-sensitive and scoped to one league. Scoping means two
+// unrelated friend groups may choose the same password without either becoming a
+// lookup for the other. The raw password never reaches Firebase or KV.
+const normLeaguePassword = (p) => String(p == null ? "" : p).trim();
+const validLeaguePassword = (p) => {
+  const s = normLeaguePassword(p);
+  return s.length >= 6 && s.length <= 64 && !/[\u0000-\u001f\u007f]/.test(s);
+};
+const leaguePasswordHash = (env, lid, password) =>
+  hmac(env.BOZO_PEPPER, "bozo-league-password" + String.fromCharCode(0) + lid + String.fromCharCode(0) + normLeaguePassword(password));
+
+function retiredLeagueLink(cors) {
+  return json({ error: "League join links have been retired. Sign in, search for the league under Your Dawgs, and enter its password." }, 410, cors);
+}
+
+function retiredLeagueInvite(cors) {
+  return json({ error: "Per-person league invites have been retired. The person should create their own account, search for the league, and enter its shared password." }, 410, cors);
+}
+
+const joinCapOf = (rec) =>
+  Number.isFinite(rec && rec.cap) ? Math.min(JOIN_CAP_MAX, Math.max(JOIN_CAP_MIN, rec.cap)) : JOIN_CAP_DEFAULT;
+
+// POST /league/join {league,password} — join after an authenticated search. A session
+// says who, the selected id says where, and the shared password proves permission.
+// This route never creates an account and never accepts retired link tokens.
+async function leagueJoin(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const kv = JOIN_KV(env);
+  if (!kv) return json({ error: "League access is unavailable right now." }, 503, cors);
+
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err, needSignIn: true }, auth.code || 401, cors);
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+  const lid = String(body.league || "");
+  const password = normLeaguePassword(body.password);
+  if (!validLeagueId(lid)) return json({ error: "Choose a league from search first." }, 400, cors);
+  if (!validLeaguePassword(password))
+    return json({ error: "League passwords are 6–64 characters." }, 400, cors);
+
+  // Per-IP daily cap is the online-guessing boundary for shared passwords.
+  let rlKey = null, used = 0;
+  if (env.RL) {
+    const day = new Date().toISOString().slice(0, 10);
+    rlKey = "joinrl:" + day + ":" + (request.headers.get("CF-Connecting-IP") || "noip");
+    used = parseInt((await env.RL.get(rlKey)) || "0", 10);
+    if (used >= JOIN_REDEEM_PER_DAY)
+      return json({ error: "Too many join attempts from here today. Try tomorrow." }, 429, cors);
+    await env.RL.put(rlKey, String(used + 1), { expirationTtl: 172800 });
+  }
+
+  let lg, rec = null;
+  try {
+    lg = await loadLeague(env, lid);
+    rec = JSON.parse((await kv.get(JOIN_LG(lid))) || "null");
+  } catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+  if (!lg) return json({ error: "That league is gone." }, 404, cors);
+
+  // Existing membership is already the authorization; no password is needed to keep it.
+  if (isMember(lg, auth.name))
+    return json({ ok: true, already: true, league: lid, name: lg.name || lid, size: memberNames(lg).length }, 200, cors);
+
+  const currentHash = rec && rec.passwordHash;
+  const legacyHash = rec && rec.passHash;
+  let passwordOkay = false;
+  try {
+    if (currentHash)
+      passwordOkay = timingSafeEqual(currentHash, await leaguePasswordHash(env, lid, password));
+    else if (legacyHash)
+      passwordOkay = timingSafeEqual(legacyHash, await joinPassHash(env, password));
+  } catch { return json({ error: "League password check failed." }, 502, cors); }
+  if (!passwordOkay) return json({ error: "That league password is not valid." }, 403, cors);
+
+  // ⚠️ Same rule leagueMember enforces, for the same reason: joining mid-week moves
+  // the lock threshold under a live board and could place the ticket early.
+  if ((lg.status || "open") !== "open")
+    return json({ error: "This week's ticket is already placed — you can join once next week opens." }, 409, cors);
+
+  const cap = joinCapOf(rec);
+  if (memberNames(lg).length >= cap)
+    return json({ error: "That league is full (" + cap + " members)." }, 409, cors);
+
+  // ⚠️ A UID IS REQUIRED TO TAKE A SEAT, and the refusal is deliberate rather than a
+  // fallback to the display name. Falling back is exactly how the mutable key got into
+  // league state in the first place; one legacy session would silently undo this commit.
+  if (!auth.uid || !UID_RE.test(String(auth.uid)))
+    return json({ error: "Your sign-in predates the current account system. Create an account on the sign-on page, then join." }, 409, cors);
+
+  try {
+    await fbPatch(env, LG(lid) + "/members",
+                  { [auth.uid]: { name: auth.name, joinedAt: Date.now() } });
+  } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+
+  const after = await loadLeague(env, lid);
+  return json({ ok: true, league: lid, name: after.name || lid, size: memberNames(after).length, cap }, 200, cors);
+}
+
+// POST /league/access {league, action} — manager-only password, visibility and cap.
+// Passwords are write-only: status reports whether one exists but never returns it.
+async function leagueAccess(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const kv = JOIN_KV(env);
+  if (!kv) return json({ error: "League access is unavailable right now." }, 503, cors);
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const lid = leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+  const auth = await requireManager(request, env, lid);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  const action = String(body.action || "status");
+  if (!["password", "password-off", "cap", "visibility", "status"].includes(action))
+    return json({ error: "Unknown action." }, 400, cors);
+
+  let rec = null;
+  try { rec = JSON.parse((await kv.get(JOIN_LG(lid))) || "null"); }
+  catch { rec = null; }
+
+  const size = memberNames(auth.league).length;
+  const reply = (r, visibility) => json({
+    ok: true, league: lid, name: auth.league.name || lid,
+    passwordEnabled: !!(r && (r.passwordHash || r.passHash)),
+    cap: joinCapOf(r), size, full: r ? size >= joinCapOf(r) : false,
+    visibility: visibility || (leagueIsPublic(lid, auth.league) ? "public" : "private"),
+    visibilityLocked: PUBLIC_BOZO_LEAGUES.has(lid),
+    changedTs: r ? (r.passwordChangedTs || r.passChangedTs || null) : null,
+    changedBy: r ? (r.passwordChangedBy || r.passChangedBy || null) : null,
+  }, 200, cors);
+
+  if (action === "status") return reply(rec);
+
+  if (action === "password") {
+    const password = normLeaguePassword(body.password);
+    if (!validLeaguePassword(password))
+      return json({ error: "Use 6–64 characters with no control characters." }, 400, cors);
+    const passwordHash = await leaguePasswordHash(env, lid, password);
+    const next = {
+      ...(rec || { cap: JOIN_CAP_DEFAULT, createdTs: Date.now(), createdBy: auth.name }),
+      passwordHash, passwordChangedTs: Date.now(), passwordChangedBy: auth.name,
+    };
+    delete next.code; delete next.passHash; delete next.passChangedTs; delete next.passChangedBy;
+    try {
+      if (rec && rec.code) await kv.delete(JOIN_CODE(rec.code));
+      if (rec && rec.passHash) await kv.delete(JOIN_PASS(rec.passHash));
+      await kv.put(JOIN_LG(lid), JSON.stringify(next));
+    } catch (e) { return json({ error: "League password write failed: " + e.message }, 502, cors); }
+    return reply(next);
+  }
+
+  if (action === "password-off") {
+    if (!rec || (!rec.passwordHash && !rec.passHash)) return reply(rec);
+    const next = { ...rec, cap: joinCapOf(rec) };
+    delete next.passwordHash; delete next.passwordChangedTs; delete next.passwordChangedBy;
+    delete next.passHash; delete next.passChangedTs; delete next.passChangedBy;
+    delete next.code;
+    try {
+      if (rec && rec.code) await kv.delete(JOIN_CODE(rec.code));
+      if (rec && rec.passHash) await kv.delete(JOIN_PASS(rec.passHash));
+      await kv.put(JOIN_LG(lid), JSON.stringify(next));
+    } catch (e) { return json({ error: "League password write failed: " + e.message }, 502, cors); }
+    return reply(next);
+  }
+
+  if (action === "cap") {
+    const cap = parseInt(body.cap, 10);
+    if (!Number.isFinite(cap) || cap < JOIN_CAP_MIN || cap > JOIN_CAP_MAX)
+      return json({ error: "Cap must be a whole number from " + JOIN_CAP_MIN + " to " + JOIN_CAP_MAX + "." }, 400, cors);
+    // ⚠️ A cap below the current roster is allowed and does NOT evict anyone. It just
+    // closes the door: existing members stay, nobody new gets in until it is raised.
+    const next = { ...(rec || { createdTs: Date.now(), createdBy: auth.name }), cap };
+    try {
+      await kv.put(JOIN_LG(lid), JSON.stringify(next));
+    } catch (e) { return json({ error: "League access write failed: " + e.message }, 502, cors); }
+    return reply(next);
+  }
+
+  if (action === "visibility") {
+    const visibility = body.visibility === "public" ? "public" : "private";
+    if (PUBLIC_BOZO_LEAGUES.has(lid) && visibility !== "public")
+      return json({ error: "Bozo Boyz stays public." }, 400, cors);
+    try { await fbPatch(env, LG(lid), { visibility }); }
+    catch (e) { return json({ error: "League visibility write failed: " + e.message }, 502, cors); }
+    return reply(rec, visibility);
+  }
+
+  return reply(rec);
+}
+
+// Cached pages may still post the names used by the short-lived join-code UI. Keep
+// password/status/cap compatible, but every action that could mint or expose a link is
+// permanently gone. This is a retirement shim, not a second access system.
+async function leagueAccessLegacy(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  let body;
+  try { body = await request.clone().json(); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+  const action = String(body.action || "get");
+  if (["get", "rotate", "off"].includes(action)) return retiredLeagueLink(cors);
+  const mapped = action === "league-code" ? "password"
+    : action === "league-code-off" ? "password-off" : action;
+  const nextBody = { ...body, action: mapped };
+  if (body.leagueCode != null && body.password == null) nextBody.password = body.leagueCode;
+  const forwarded = new Request(request.url, {
+    method: "POST", headers: request.headers, body: JSON.stringify(nextBody),
+  });
+  return leagueAccess(forwarded, env, cors);
+}
+
+/* ========================== the forecasting challenge ======================= */
+/* Storage for the 538-style challenge. Entries only — no scores, no standings, no
+ * running totals of any kind. Points, Brier, ranks and slices are all queries over
+ * the entry table, and a stored total would be the one copy that could go stale.
+ *
+ *   /forecast/entries/<sport>/<season>/<week>/<user>/<game_id>   one entry
+ *   /forecast/sealed/<sport>/<season>/<week>/<game_id>           one crowd consensus
+ *
+ * ⚠️ WHY /forecast AND NOT /users, WHICH IS WHERE THIS WAS FIRST AIMED.
+ * loadUsers() reads the ENTIRE /users node in one fbGet, and sessionAuth() calls it on
+ * every authenticated request. A season of entries nested under /users/<name>/ would put
+ * every user's whole history on the wire for every signed-in click, against a hard 10 ms
+ * CPU ceiling on the free plan. /forecast is a sibling root with identical protection.
+ *
+ * ⚠️ THE PROTECTION IS THE RTDB RULES, AND IT WAS MEASURED, NOT ASSUMED. On 2026-08-10 an
+ * unauthenticated browser GET returned 200 for /bozo (world-readable, by design) and 401
+ * Permission denied for /users, /bozoauth, / and /forecast. No rules change is needed here
+ * and none should be made. Re-run that probe before deploying: if someone widens the rules,
+ * these routes become the leak.
+ *
+ * This is the same reasoning CEP-7 used to put join codes in KV rather than under /bozo.
+ * The conclusion differs only because /forecast, unlike /bozo/leagues/<id>, is closed.
+ */
+
+const FC_ROOT = "/forecast";
+const FC_SPORTS = { nfl: "/data/nfl-schedule.json", cfb: "/data/cfb-schedule.json" };
+const FC_MIN_TOUCH = 3;       // fewer than three touched entries is not a crowd
+const FC_TRIM = 0.1;          // dropped from EACH end, by logit, once n >= 5
+const FC_CLAMP_LO = 0.01;     // sliders reach 0 and 100; an unclamped logit is infinite
+const FC_CLAMP_HI = 0.99;
+const FC_WRITE_CAP = 2000;    // entry writes per HUMAN per day
+// ⚠️ Agents get their own cap and their own key. FC_WRITE_CAP was sized for a person
+// dragging sliders; a bot resubmitting on every model refresh burns that in an afternoon
+// through no fault of its own. Sharing one counter would let a busy bot lock its owner
+// out of the website, which is the wrong failure. Repeat submissions carrying the same
+// idempotency_key cost nothing against either counter — see forecastEntry.
+const FC_AGENT_WRITE_CAP = 5000;
+const FC_BOTS_PER_OWNER = 3;
+const FC_BOT_REG_CAP = 10;    // registrations per IP per day
+const FC_CROWD_VERSION = "crowd-1.0.0";
+
+const fcEntryPath = (sport, season, week, entrant, gameId) =>
+  `${FC_ROOT}/entries/${sport}/${season}/${week}/${encodeURIComponent(entrant)}` +
+  (gameId ? "/" + encodeURIComponent(gameId) : "");
+const fcBotPath = (botName) =>
+  `${FC_ROOT}/bots` + (botName ? "/" + encodeURIComponent(botName) : "");
+const fcSealPath = (sport, season, week, gameId) =>
+  `${FC_ROOT}/sealed/${sport}/${season}/${week}` + (gameId ? "/" + encodeURIComponent(gameId) : "");
+
+/* ------------------------------ bot entrants ----------------------------- */
+/* ⚠️ A BOT IS A RESERVED NAME IN THE ACCOUNT NAMESPACE, NOT A SUFFIX ON ITS OWNER'S.
+ * The tempting shape is `owner~slug`, and it is wrong: account names have no enforced
+ * charset at signup, so any separator that can be chosen can also appear inside a real
+ * name, and the parse becomes ambiguous exactly once — silently, on somebody's receipt.
+ * Registration instead refuses a name that already exists in /users OR in /forecast/bots,
+ * so humans and bots share ONE namespace. That is correct on its own terms — leaderboard
+ * names have to be unique anyway — and it means the entry path shape does not change:
+ * .../<entrant>/<game_id> works whoever the entrant is.
+ *
+ * ⚠️ WHY BOTS DO NOT WRITE UNDER THEIR OWNER'S ACCOUNT. One entry per entrant per game
+ * means an agent writing as its owner would overwrite the owner's own slider, last write
+ * wins, with no way to tell afterwards which was which. It would also make the single
+ * most interesting comparison in the whole project — you against your own bot —
+ * impossible to express. */
+
+// Domain-separated from MCP tokens and invite hashes: same pepper, different prefix, so a
+// stolen credential of one kind can never be replayed as another.
+const fcBotTokenHash = (env, token) => hmac(env.BOZO_PEPPER, "fcbot|" + token);
+
+function newFcBotToken() {
+  const raw = crypto.getRandomValues(new Uint8Array(24));
+  let s = ""; for (const b of raw) s += String.fromCharCode(b);
+  return "b_" + btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+// Bot names are charset-controlled even though account names are not. We own this
+// namespace's creation path, so there is no reason to inherit the looseness that forced
+// the no-separator decision above.
+const FC_BOT_NAME_RE = /^[A-Za-z0-9][A-Za-z0-9 ._-]{1,39}$/;
+const fcNameKey = (s) => String(s || "").trim().toLowerCase();
+
+/* Case-insensitive collision check across BOTH namespaces. "Kap" and "kap" as two
+ * separate leaderboard rows would be a support problem and an impersonation vector. */
+async function fcNameTaken(env, wanted) {
+  const want = fcNameKey(wanted);
+  let users = {};
+  try { users = await loadUsers(env); } catch (e) { throw new Error("roster unreadable: " + e.message); }
+  for (const k of Object.keys(users)) if (fcNameKey(playerName(k)) === want) return "an account";
+  let bots = {};
+  try { bots = (await fbGet(env, fcBotPath(null))).data || {}; }
+  catch (e) { throw new Error("bot registry unreadable: " + e.message); }
+  for (const [k, b] of Object.entries(bots))
+    if (fcNameKey((b && b.bot_name) || decodeURIComponent(k)) === want) return "a bot";
+  return null;
+}
+
+/* ⚠️ Resolves a bot credential to an entrant. This is sessionAuth's SIBLING, not a branch
+ * inside it: the two credential kinds authorise different things, and folding them into
+ * one function is how a bot token eventually gets accepted somewhere nobody intended.
+ * A bot token is honoured on POST /forecast/entry and nowhere else. */
+async function fcBotAuth(env, token) {
+  const cfg = bozoConfig(env);
+  if (cfg) return { err: cfg, code: 500 };
+  if (!token) return { err: "Missing bot token.", code: 401 };
+  const hash = await fcBotTokenHash(env, token);
+
+  let bots;
+  try { bots = (await fbGet(env, fcBotPath(null))).data || {}; }
+  catch (e) { return { err: "Database unreachable: " + e.message, code: 502 }; }
+
+  for (const [k, b] of Object.entries(bots)) {
+    if (!b || b.token_hash !== hash) continue;
+    if (b.revoked === true) return { err: "That bot token was revoked.", code: 403 };
+    const botName = b.b

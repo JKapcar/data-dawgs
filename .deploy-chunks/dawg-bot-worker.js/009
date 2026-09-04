@@ -1,0 +1,899 @@
+
+        echo: `Grade week ${proposal.week}: ${resultCount} results; Bozo ${proposal.body.bozo || "none"}. ` +
+          `Confirm to write ${targets.join(", ")}.`,
+        confirm_code: confirmCode, expires_in: 300, writeTargets: targets,
+        results: proposal.body.results, bozo: proposal.body.bozo, bozoWhy: proposal.body.bozoWhy,
+        note: "Nothing was written. Phase two stores these signed values without re-fetching scores." }, 200, cors);
+    }
+
+    /* ⚠️ ONE EVENT, ONE OUTCOME. A game's margin and total are read once per eventId, so
+       moneylines, spreads and totals cannot disagree with themselves. Props and `other`
+       are hand-graded per player, and nothing stopped two people on the SAME selection
+       from being marked differently — one wins, one loses, off a single real-world fact.
+       That is not a display glitch: it decides who wears it, and in Bozo Royale who is
+       eliminated. The simulator caught this by grading legs independently and getting
+       eight answers for one Super Bowl.
+
+       Keyed on (eventId, prop) rather than on the leg, exactly as the handoff specifies.
+       Refused rather than auto-reconciled — picking a winner between two hand-entered
+       answers would be inventing the result, and the manager knows which is right. */
+    if (body.results && typeof body.results === "object") {
+      const picks = state.picks || {};
+      const byMarket = new Map();
+      for (const [key, p] of Object.entries(picks)) {
+        if (!p || (p.mkt !== "prop" && p.mkt !== "other")) continue;
+        const r = body.results[key] || body.results[playerName(key)];
+        if (!r) continue;
+        const outcome = r.result || (r.won === true ? "won" : r.won === false ? "lost" : null);
+        if (outcome == null) continue;
+        const mk = [p.eventId, p.mkt, p.prop || "", p.line ?? "", p.side ?? ""].join("|");
+        if (!byMarket.has(mk)) byMarket.set(mk, []);
+        byMarket.get(mk).push({ who: playerName(key), outcome, label: p.label });
+      }
+      for (const [, group] of byMarket) {
+        if (group.length < 2) continue;
+        const distinct = [...new Set(group.map(g => g.outcome))];
+        if (distinct.length > 1)
+          return json({ error:
+            `${group.map(g => g.who + " = " + g.outcome).join(", ")} — but that's the same selection `
+            + `(${group[0].label}) on the same game, so it can only have one outcome. Fix the odd one out and grade again.`
+          }, 409, cors);
+      }
+      await fbPut(env, LG(lid) + "/results", body.results);
+    }
+    if (body.bozo !== undefined) await fbPut(env, LG(lid) + "/bozo", body.bozo);
+    if (body.bozoWhy !== undefined) await fbPut(env, LG(lid) + "/bozoWhy", String(body.bozoWhy).slice(0, 200));
+
+    // Ledger last, before the status flip: if it fails the manager gets a 502, status is
+    // still "placed", and hitting Decide again replays the whole thing idempotently.
+    const backfilled = await ledgerBackfill(env, lid, state);
+    // Read the ledger once so the grade stage can see which rows already carry a close
+    // the cron captured at kickoff, and leave those alone.
+    let have = {};
+    try { have = (await fbGet(env, LG(lid) + "/ledger")).data || {}; }
+    catch (e) { console.log("ledger: grade-stage read failed — " + e.message); }
+    const upd = ledgerGradeUpdate(state.season || SEASON, state.week || 1, body.results, body.bozo, state.picks, have);
+    if (Object.keys(upd).length) {
+      // gradedAt is per row, not per league — a re-grade that only fixes one player's
+      // result should not restamp everyone else's.
+      const pickKeys = Object.keys(state.picks || {});
+      const gradedAt = new Date().toISOString();
+      for (const k of Object.keys(body.results || {})) {
+        const rowKey = pickKeys.includes(k) ? k
+          : pickKeys.includes(encodeURIComponent(k)) ? encodeURIComponent(k)
+          : (pickKeys.find(x => playerName(x) === k) || k);
+        upd[`${ledgerKey(state.season || SEASON, state.week || 1, rowKey)}/gradedAt`] = gradedAt;
+      }
+      await fbPatch(env, LG(lid) + "/ledger", upd);
+    }
+
+    // ⚠️ Bozo Royale resolves the chop HERE, on the server, from the results just
+    // written — not from anything the client sent. See the note above royaleDecideChop.
+    // It runs only on the transition into "graded", so re-grading a week to correct a
+    // typo cannot chop a second person or double-spend a buy-back.
+    let chop = null;
+    if (body.graded && settingsOf(state).format === "royale" && status !== "graded") {
+      const fresh = await loadLeague(env, lid);          // read back the results we just wrote
+      chop = await royaleResolveWeek(env, lid, fresh || state);
+    }
+
+    if (body.graded) await fbPut(env, LG(lid) + "/status", "graded");
+    return json({ ok: true, backfilled, chop }, 200, cors);
+  } catch (e) {
+    return json({ error: "Database write failed: " + e.message }, 502, cors);
+  }
+}
+
+async function bozoNext(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const lid = leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+  const auth = await requireManager(request, env, lid);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  try {
+    const state = auth.league;
+    const history = Array.isArray(state.history) ? state.history : [];
+    history.push({ week: state.week || 1, bozo: state.bozo || null, slip: state.slip || null });
+
+    // ⚠️ PATCH, not PUT. A wholesale PUT of the league node would delete its ledger,
+    // members and config every single week — the site whose thesis is "the receipts
+    // stay up" quietly shredding its receipts. The nulls clear this week's children
+    // explicitly; anything not named here survives, so a node added later can't be
+    // silently destroyed the same way.
+    await fbPatch(env, LG(lid), {
+      season: state.season || SEASON,
+      week: (state.week || 1) + 1,
+      status: "open",
+      history,
+      picks: null, order: null, results: null,
+      bozo: null, bozoWhy: null, closeTs: null,
+      // ⚠️ Named on purpose. Anything NOT named here survives the rollover, and a
+      // betslip link surviving means last week's settled parlay stays on the new
+      // week's ticket, still clickable. Archived into `history` just above.
+      slip: null,
+    });
+    bozoNullWriteTripwire("/bozo/next", auth, lid, ["picks", "results"]);
+    return json({ ok: true, week: (state.week || 1) + 1 }, 200, cors);
+  } catch (e) {
+    return json({ error: "Database write failed: " + e.message }, 502, cors);
+  }
+}
+
+/* ================================= util =================================== */
+
+function timingSafeEqual(a, b) {
+  if (typeof a !== "string" || typeof b !== "string") return false;
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+/* ============================ SwoleDawg — D1 layer ============================ */
+// Training data for the signed-in athlete. Identity is NOT re-invented here: it is the
+// same uid Firebase already keys /users/{uid} by, resolved by sessionAuth() for the
+// browser and by the per-user MCP token for Claude. D1 holds the training rows; the uid
+// is the only join between the two stores.
+//
+// ⚠️ EVERY function here takes a uid and every statement binds it. There is one athlete
+// today and the code must not assume one — a dropped uid filter is one member reading or
+// overwriting another's log. This is the single place that reads or writes those tables:
+// the browser routes below and the sd_* MCP tools both come through these functions, so
+// there is exactly one implementation of what a valid write is.
+
+const SWOLE_DAYS = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
+
+function swoleDb(env) { return env && env.SWOLE_DB ? env.SWOLE_DB : null; }
+function swoleNoDb() { return { error: "SwoleDawg storage is not configured on this deployment (no SWOLE_DB binding)." }; }
+const swoleNow = () => new Date().toISOString();
+
+function swoleValidDate(s) { return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s); }
+function swoleDayKeyFor(dateISO) { return SWOLE_DAYS[new Date(dateISO + "T12:00:00Z").getUTCDay()]; }
+function swoleSessionId(uid, dateISO, dayKey) { return uid + ":" + dateISO + ":" + dayKey; }
+
+// Week is DERIVED from block_start_date, never stored in the program and never typed by
+// hand — then frozen onto the session row at write time. Weeks turn over on Monday so
+// they line up with the day list; a date before the block starts reads week 1, not 0.
+function swoleMondayOf(dateISO) {
+  const d = new Date(dateISO + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+  return d;
+}
+function swoleWeekOf(programDoc, dateISO) {
+  const start = programDoc && programDoc.block_start_date;
+  if (!swoleValidDate(start) || !swoleValidDate(dateISO)) return 1;
+  const n = Math.floor((swoleMondayOf(dateISO) - swoleMondayOf(start)) / 604800000) + 1;
+  return Math.max(1, n);
+}
+// The effort schedule is keyed by that derived week. Week 1 carries sets_override, which
+// WINS over the per-exercise sets in the day tables — anything that prescribes or renders
+// sets must apply it. Only fall through to the open-ended "4+" row when the week really is
+// >= 4; never fall through to it for an unmatched low week, which would hand the most
+// aggressive setting to a block that has not started.
+function swoleEffortFor(programDoc, week) {
+  const sched = (programDoc && programDoc.effort_schedule) || [];
+  const exact = sched.find(e => e.week === week);
+  if (exact) return exact;
+  const open = sched.find(e => typeof e.week === "string" && e.week.endsWith("+"));
+  if (open && week >= parseInt(open.week, 10)) return open;
+  return sched[0] || null;
+}
+function swoleSetsFor(exercise, effort) {
+  const o = effort && effort.sets_override;
+  return o == null ? exercise.sets : Math.min(o, exercise.sets);
+}
+
+async function swoleGetProgram(env, uid) {
+  const db = swoleDb(env); if (!db) return null;
+  const row = await db.prepare(
+    "SELECT doc, version FROM program WHERE uid = ? AND active = 1 ORDER BY version DESC LIMIT 1"
+  ).bind(uid).first();
+  if (!row) return null;
+  try { return { doc: JSON.parse(row.doc), version: row.version }; } catch { return null; }
+}
+
+// Seeding is an explicit write of a supplied document, not a copy baked into this file.
+// A second copy of program.json living in the Worker would drift from the one in the repo
+// and there would be no way to tell which was authoritative.
+async function swolePutProgram(env, uid, doc, note) {
+  const db = swoleDb(env); if (!db) return { error: swoleNoDb().error };
+  if (!doc || typeof doc !== "object" || !Array.isArray(doc.days))
+    return { error: "That does not look like a program document (no days array)." };
+  const cur = await db.prepare("SELECT MAX(version) v FROM program WHERE uid = ?").bind(uid).first();
+  const version = ((cur && cur.v) || 0) + 1;
+  await db.batch([
+    db.prepare("UPDATE program SET active = 0 WHERE uid = ?").bind(uid),
+    db.prepare("INSERT INTO program (uid, version, doc, active, created_at, note) VALUES (?, ?, ?, 1, ?, ?)")
+      .bind(uid, version, JSON.stringify(doc), swoleNow(), note || null),
+  ]);
+  return { ok: true, version };
+}
+
+function swoleDayOf(programDoc, dayKey) {
+  return ((programDoc && programDoc.days) || []).find(d => d.day === dayKey) || null;
+}
+
+async function swoleStartSession(env, uid, dateISO, dayKey, source) {
+  const db = swoleDb(env); if (!db) return swoleNoDb();
+  if (!swoleValidDate(dateISO)) return { error: "Date must be YYYY-MM-DD." };
+  const prog = await swoleGetProgram(env, uid);
+  if (!prog) return { error: "No program is seeded for this account yet. Seed program.json first." };
+  const key = dayKey || swoleDayKeyFor(dateISO);
+  const day = swoleDayOf(prog.doc, key);
+  if (!day) return { error: "No day '" + key + "' in the program." };
+  const id = swoleSessionId(uid, dateISO, key);
+  const week = swoleWeekOf(prog.doc, dateISO);
+  const type = (day.exercises && day.exercises.length) ? "lift" : (day.name || "").toLowerCase().includes("ruck") ? "ruck" : "rest";
+  const existing = await db.prepare("SELECT id, started_at, completed_at FROM sessions WHERE id = ? AND uid = ?").bind(id, uid).first();
+  if (existing) return { ok: true, id, week, day: key, already_open: !existing.completed_at, reopened: false };
+  await db.prepare(
+    "INSERT INTO sessions (id, uid, date, day_key, session_type, block, week, started_at) VALUES (?,?,?,?,?,?,?,?)"
+  ).bind(id, uid, dateISO, key, type, prog.doc.block || 1, week, swoleNow()).run();
+  return { ok: true, id, week, day: key, name: day.name, source };
+}
+
+// One write path for a set, shared by the browser and by sd_log_set. UPSERT on
+// (session, exercise, set_number) so "that was 11 not 10" corrects the row instead of
+// appending a second, contradictory one.
+async function swoleLogSet(env, uid, a, source) {
+  const db = swoleDb(env); if (!db) return swoleNoDb();
+  const dateISO = a.date;
+  if (!swoleValidDate(dateISO)) return { error: "Date must be YYYY-MM-DD." };
+  const prog = await swoleGetProgram(env, uid);
+  if (!prog) return { error: "No program is seeded for this account yet." };
+  const dayKey = a.day_key || swoleDayKeyFor(dateISO);
+  const day = swoleDayOf(prog.doc, dayKey);
+  if (!day) return { error: "No day '" + dayKey + "' in the program." };
+
+  // id, then exact name, then substring, then every token present — "flat bench" has to
+  // reach "Flat DB bench press", which no substring match does. AMBIGUITY IS A REFUSAL at
+  // every stage: two candidates mean the caller gets the list back, never the first one.
+  const wanted = String(a.exercise || "").toLowerCase().trim();
+  const list = day.exercises || [];
+  const narrow = () => {
+    const byId = list.filter(e => e.id.toLowerCase() === wanted);
+    if (byId.length) return byId;
+    const exact = list.filter(e => e.name.toLowerCase() === wanted);
+    if (exact.length) return exact;
+    const sub = list.filter(e => e.name.toLowerCase().includes(wanted));
+    if (sub.length) return sub;
+    const toks = wanted.split(/[^a-z0-9]+/).filter(Boolean);
+    if (!toks.length) return [];
+    return list.filter(e => { const n = e.name.toLowerCase(); return toks.every(t => n.includes(t)); });
+  };
+  const hits = narrow();
+  const ex = hits.length === 1 ? hits[0] : null;
+  if (hits.length > 1) {
+    return { error: "'" + a.exercise + "' matches more than one exercise on " + dayKey + " — say which.",
+             candidates: hits.map(e => ({ id: e.id, name: e.name })) };
+  }
+  if (!ex) {
+    // ⚠️ Refuse rather than guess. A wrong exercise match corrupts the history of two
+    // lifts at once and will not be noticed for weeks.
+    return { error: "No exercise matching '" + a.exercise + "' on " + dayKey + ".",
+             candidates: list.map(e => ({ id: e.id, name: e.name })) };
+  }
+  const started = await swoleStartSession(env, uid, dateISO, dayKey, source);
+  if (started.error) return started;
+
+  const effort = swoleEffortFor(prog.doc, started.week);
+  const prescribed = swoleSetsFor(ex, effort);
+  let n = Number(a.set_number);
+  if (!Number.isFinite(n) || n < 1) {
+    const done = await db.prepare(
+      "SELECT COUNT(*) c FROM sets WHERE uid = ? AND session_id = ? AND exercise_id = ?"
+    ).bind(uid, started.id, ex.id).first();
+    n = ((done && done.c) || 0) + 1;
+  }
+  const reps = Number(a.reps), weight = Number(a.weight_lb);
+  if (!Number.isFinite(reps) || reps < 1) return { error: "reps is required." };
+  if (!Number.isFinite(weight)) return { error: "weight_lb is required." };
+
+  await db.prepare(
+    "INSERT INTO sets (uid, session_id, exercise_id, exercise_name, set_number, weight_lb, reps, rir, rest_prescribed_s, rest_taken_s, source, logged_at) " +
+    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?) " +
+    "ON CONFLICT(session_id, exercise_id, set_number) DO UPDATE SET " +
+    "weight_lb=excluded.weight_lb, reps=excluded.reps, rir=excluded.rir, " +
+    "rest_taken_s=excluded.rest_taken_s, source=excluded.source, logged_at=excluded.logged_at"
+  ).bind(uid, started.id, ex.id, ex.name, n, weight, reps,
+         Number.isFinite(Number(a.rir)) ? Number(a.rir) : null,
+         ex.rest_between_sets == null ? null : ex.rest_between_sets,
+         Number.isFinite(Number(a.rest_taken_s)) ? Number(a.rest_taken_s) : null,
+         source, swoleNow()).run();
+
+  const rows = await db.prepare(
+    "SELECT set_number, weight_lb, reps FROM sets WHERE uid = ? AND session_id = ? AND exercise_id = ? ORDER BY set_number"
+  ).bind(uid, started.id, ex.id).all();
+  const logged = (rows && rows.results) || [];
+  const belowRange = reps < ex.rep_min;
+  return {
+    ok: true, session: started.id, week: started.week,
+    exercise: { id: ex.id, name: ex.name },
+    set: n, weight_lb: weight, reps,
+    prescribed_sets: prescribed, sets_logged: logged.length,
+    remaining: Math.max(0, prescribed - logged.length),
+    rep_range: [ex.rep_min, ex.rep_max],
+    rest_s: ex.rest_between_sets,
+    // Flagged, never auto-applied. The program's calibration_override fires on "can't hit
+    // bottom of range CLEAN" — and in a week whose RIR cap is high, stopping short of the
+    // bottom is obedience to the cap, not a failed set. Only the human knows which it was.
+    below_rep_range: belowRange,
+    note: belowRange
+      ? "Below the bottom of the " + ex.rep_min + "-" + ex.rep_max + " range. Program rule: can't hit bottom clean -> drop 5. " +
+        "Do not apply it without asking whether the set was cut short by the week's RIR cap (" +
+        (effort && effort.reps_in_reserve != null ? effort.reps_in_reserve + " RIR" : "see effort_schedule") +
+        ") rather than by failure — those imply opposite actions."
+      : null,
+  };
+}
+
+async function swoleFinishSession(env, uid, dateISO, notes) {
+  const db = swoleDb(env); if (!db) return swoleNoDb();
+  if (!swoleValidDate(dateISO)) return { error: "Date must be YYYY-MM-DD." };
+  const row = await db.prepare("SELECT id, day_key, week FROM sessions WHERE uid = ? AND date = ? ORDER BY started_at DESC LIMIT 1").bind(uid, dateISO).first();
+  if (!row) return { error: "No session on " + dateISO + "." };
+  await db.prepare("UPDATE sessions SET completed_at = ?, notes = COALESCE(?, notes) WHERE id = ? AND uid = ?")
+    .bind(swoleNow(), notes || null, row.id, uid).run();
+  const agg = await db.prepare(
+    "SELECT COUNT(*) sets, SUM(weight_lb * reps) volume, COUNT(DISTINCT exercise_id) exercises FROM sets WHERE uid = ? AND session_id = ?"
+  ).bind(uid, row.id).first();
+  return { ok: true, session: row.id, day: row.day_key, week: row.week,
+           sets: (agg && agg.sets) || 0, exercises: (agg && agg.exercises) || 0,
+           volume_lb: (agg && agg.volume) || 0 };
+}
+
+async function swoleSession(env, uid, dateISO) {
+  const db = swoleDb(env); if (!db) return swoleNoDb();
+  const s = await db.prepare("SELECT * FROM sessions WHERE uid = ? AND date = ? ORDER BY started_at DESC LIMIT 1").bind(uid, dateISO).first();
+  if (!s) return { error: "No session on " + dateISO + "." };
+  const rows = await db.prepare(
+    "SELECT exercise_id, exercise_name, set_number, weight_lb, reps, rir, rest_taken_s, source FROM sets WHERE uid = ? AND session_id = ? ORDER BY exercise_id, set_number"
+  ).bind(uid, s.id).all();
+  return { session: s, sets: (rows && rows.results) || [] };
+}
+
+async function swoleRecentSessions(env, uid, n) {
+  const db = swoleDb(env); if (!db) return swoleNoDb();
+  const rows = await db.prepare(
+    "SELECT s.id, s.date, s.day_key, s.week, s.completed_at, COUNT(x.id) sets, SUM(x.weight_lb * x.reps) volume " +
+    "FROM sessions s LEFT JOIN sets x ON x.session_id = s.id AND x.uid = s.uid " +
+    "WHERE s.uid = ? GROUP BY s.id ORDER BY s.date DESC LIMIT ?"
+  ).bind(uid, Math.min(Math.max(Number(n) || 10, 1), 50)).all();
+  return { sessions: (rows && rows.results) || [] };
+}
+
+// A null value is a RECORDED GAP, not a zero and not a reason to interpolate. Storing the
+// raw reads beside the value is what makes an averaged number auditable later.
+async function swoleLogMeasurement(env, uid, m, source) {
+  const db = swoleDb(env); if (!db) return swoleNoDb();
+  const field = String(m.field || "").trim();
+  if (!field) return { error: "field is required." };
+  const date = m.date || swoleNow().slice(0, 10);
+  if (!swoleValidDate(date)) return { error: "Date must be YYYY-MM-DD." };
+  const known = await db.prepare("SELECT field, label, direction, tag FROM measurement_fields WHERE uid = ? AND field = ?").bind(uid, field).first();
+  if (!known) return { error: "Unknown measurement field '" + field + "'. Seed measurement_fields first." };
+  const value = m.value === null || m.value === undefined || m.value === "" ? null : Number(m.value);
+  if (value !== null && !Number.isFinite(value)) return { error: "value must be a number or null." };
+  const reads = Array.isArray(m.reads) && m.reads.length ? JSON.stringify(m.reads.map(Number)) : null;
+  await db.prepare(
+    "INSERT INTO measurements (uid, field, date, value, reads, source, note, logged_at) VALUES (?,?,?,?,?,?,?,?) " +
+    "ON CONFLICT(uid, field, date) DO UPDATE SET value=excluded.value, reads=excluded.reads, source=excluded.source, note=excluded.note, logged_at=excluded.logged_at"
+  ).bind(uid, field, date, value, reads, source, m.note || null, swoleNow()).run();
+  return { ok: true, field, label: known.label, date, value, direction: known.direction, tag: known.tag };
+}
+
+async function swoleMeasurementHistory(env, uid, field, n) {
+  const db = swoleDb(env); if (!db) return swoleNoDb();
+  const rows = await db.prepare(
+    "SELECT date, value, reads, source, note FROM measurements WHERE uid = ? AND field = ? ORDER BY date DESC LIMIT ?"
+  ).bind(uid, field, Math.min(Math.max(Number(n) || 20, 1), 200)).all();
+  return { field, readings: (rows && rows.results) || [] };
+}
+
+async function swoleLogNutrition(env, uid, d, source) {
+  const db = swoleDb(env); if (!db) return swoleNoDb();
+  const date = d.date || swoleNow().slice(0, 10);
+  if (!swoleValidDate(date)) return { error: "Date must be YYYY-MM-DD." };
+  const kcal = d.kcal == null || d.kcal === "" ? null : Number(d.kcal);
+  const pro  = d.protein_g == null || d.protein_g === "" ? null : Number(d.protein_g);
+  if (kcal === null && pro === null && !d.note)
+    return { error: "Nothing to log: give kcal, protein_g, or a note. 'Hit target' is not a number." };
+  await db.prepare(
+    "INSERT INTO nutrition (uid, date, kcal, protein_g, note, source, logged_at) VALUES (?,?,?,?,?,?,?) " +
+    "ON CONFLICT(uid, date) DO UPDATE SET kcal=excluded.kcal, protein_g=excluded.protein_g, note=excluded.note, source=excluded.source, logged_at=excluded.logged_at"
+  ).bind(uid, date, kcal, pro, d.note || null, source, swoleNow()).run();
+  return { ok: true, date, kcal, protein_g: pro };
+}
+
+// ⚠️ Nutrition was WRITE-ONLY until this existed. swoleLogNutrition could store a day's
+// kcal and protein and nothing in the Worker — no route, no tool, no query — could read
+// one back. A store you cannot read is not a log; it is a hole that accepts input.
+async function swoleNutrition(env, uid, a) {
+  const db = swoleDb(env); if (!db) return swoleNoDb();
+  if (a && a.date) {
+    if (!swoleValidDate(a.date)) return { error: "Date must be YYYY-MM-DD." };
+    const row = await db.prepare(
+      "SELECT date, kcal, protein_g, note, source, logged_at FROM nutrition WHERE uid = ? AND date = ?"
+    ).bind(uid, a.date).first();
+    return row ? { date: a.date, day: row } : { date: a.date, day: null, note: "Nothing logged on " + a.date + "." };
+  }
+  const rows = await db.prepare(
+    "SELECT date, kcal, protein_g, note, source FROM nutrition WHERE uid = ? ORDER BY date DESC LIMIT ?"
+  ).bind(uid, Math.min(Math.max(Number(a && a.n) || 14, 1), 200)).all();
+  const days = (rows && rows.results) || [];
+  // Averages over the days that CARRY a number, and the count is reported beside them —
+  // a mean over 3 logged days out of 14 is not a 14-day average and must not read as one.
+  const withKcal = days.filter(d => d.kcal != null), withPro = days.filter(d => d.protein_g != null);
+  const mean = (list, k) => list.length ? Math.round(list.reduce((a2, d) => a2 + d[k], 0) / list.length) : null;
+  return { days, days_returned: days.length,
+           mean_kcal: mean(withKcal, "kcal"), kcal_days: withKcal.length,
+           mean_protein_g: mean(withPro, "protein_g"), protein_days: withPro.length };
+}
+
+// What the page and radar.html read. OBSERVED and DERIVED only — nothing MODELLED is
+// plotted here, because a modelled number rendered beside a measured one is treated as
+// measured within a month.
+async function swoleSummary(env, uid) {
+  const db = swoleDb(env); if (!db) return swoleNoDb();
+  const fields = await db.prepare("SELECT field, label, direction, tag, baseline, target_lo, target_hi FROM measurement_fields WHERE uid = ?").bind(uid).all();
+  const out = {};
+  for (const f of (fields && fields.results) || []) {
+    const latest = await db.prepare("SELECT date, value FROM measurements WHERE uid = ? AND field = ? AND value IS NOT NULL ORDER BY date DESC LIMIT 1").bind(uid, f.field).first();
+    out[f.field] = {
+      label: f.label, unit: null, dir: f.direction, tag: f.tag,
+      baseline: f.baseline, current: latest ? latest.value : null,
+      target: f.target_lo != null && f.target_hi != null && f.target_lo !== f.target_hi
+        ? [f.target_lo, f.target_hi] : (f.target_lo != null ? f.target_lo : null),
+      as_of: latest ? latest.date : null,
+    };
+  }
+  const recent = await db.prepare(
+    "SELECT COUNT(*) n FROM sessions WHERE uid = ? AND completed_at IS NOT NULL AND date >= date('now','-7 day')"
+  ).bind(uid).first();
+  return { fields: out, sessions_last_7d: (recent && recent.n) || 0, as_of: swoleNow() };
+}
+
+/* ------------------------------- recovery -------------------------------------
+   ⚠️ This closes a hole that read as missing data and was actually a missing
+   feature. The Recovery sheet has carried a ten-field form since v0.3, and
+   `saveRec` only ever mutated the in-memory day object and toasted "Recovery
+   saved" — there was no table, no route, and `sdHydrateDays` hardcoded
+   `recovery:{}`. So the value was gone on reload, the Overview sleep KPI could
+   never populate, and the Sleep and HRV charts could never draw. Nothing about
+   that was visible on screen: it looked like Kap had not logged anything.
+
+   The whole day is one row. The form posts every field at once and says on
+   screen that a blank stays null, so an absent value here means "not measured",
+   NOT "leave whatever was there". The upsert overwrites accordingly — that is
+   the promise the UI already makes, and the two must not disagree.
+
+   A null is a recorded gap, not a zero, exactly as in `measurements`. Nothing
+   here is derived from the DEVICE sleep fields: a watch's estimate and a number
+   Kap typed are different claims, and merging them would launder one into the
+   other. */
+const SWOLE_RECOVERY_FIELDS = ["sleep_hours", "sleep_score", "hrv", "resting_hr",
+  "readiness", "soreness", "energy", "mood", "joint_feel"];
+
+async function swoleLogRecovery(env, uid, d, source) {
+  const db = swoleDb(env); if (!db) return swoleNoDb();
+  const date = (d && d.date) || swoleNow().slice(0, 10);
+  if (!swoleValidDate(date)) return { error: "Date must be YYYY-MM-DD." };
+
+  const vals = {};
+  for (const f of SWOLE_RECOVERY_FIELDS) {
+    const raw = d ? d[f] : null;
+    if (raw == null || raw === "") { vals[f] = null; continue; }
+    const n = Number(raw);
+    if (!Number.isFinite(n)) return { error: f + " must be a number, or blank for not measured." };
+    vals[f] = n;
+  }
+  if (SWOLE_RECOVERY_FIELDS.every(f => vals[f] === null) && !(d && d.note))
+    return { error: "Nothing to log: give at least one reading, or a note. A blank day is not a zero day." };
+
+  await db.prepare(
+    "INSERT INTO recovery (uid, date, sleep_hours, sleep_score, hrv, resting_hr, readiness, soreness, energy, mood, joint_feel, note, source, logged_at) " +
+    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) " +
+    "ON CONFLICT(uid, date) DO UPDATE SET sleep_hours=excluded.sleep_hours, sleep_score=excluded.sleep_score, " +
+    "hrv=excluded.hrv, resting_hr=excluded.resting_hr, readiness=excluded.readiness, soreness=excluded.soreness, " +
+    "energy=excluded.energy, mood=excluded.mood, joint_feel=excluded.joint_feel, note=excluded.note, " +
+    "source=excluded.source, logged_at=excluded.logged_at"
+  ).bind(uid, date, vals.sleep_hours, vals.sleep_score, vals.hrv, vals.resting_hr, vals.readiness,
+         vals.soreness, vals.energy, vals.mood, vals.joint_feel,
+         (d && d.note) || null, source, swoleNow()).run();
+  return Object.assign({ ok: true, date }, vals);
+}
+
+async function swoleRecovery(env, uid, a) {
+  const db = swoleDb(env); if (!db) return swoleNoDb();
+  const cols = "date, " + SWOLE_RECOVERY_FIELDS.join(", ") + ", note, source, logged_at";
+  if (a && a.date) {
+    if (!swoleValidDate(a.date)) return { error: "Date must be YYYY-MM-DD." };
+    const row = await db.prepare(
+      "SELECT " + cols + " FROM recovery WHERE uid = ? AND date = ?"
+    ).bind(uid, a.date).first();
+    return row ? { date: a.date, day: row }
+               : { date: a.date, day: null, note: "Nothing logged on " + a.date + "." };
+  }
+  const rows = await db.prepare(
+    "SELECT " + cols + " FROM recovery WHERE uid = ? ORDER BY date DESC LIMIT ?"
+  ).bind(uid, Math.min(Math.max(Number(a && a.n) || 30, 1), 200)).all();
+  const days = (rows && rows.results) || [];
+  // Same rule as nutrition: a mean is taken over the days that CARRY the number,
+  // and the count travels beside it so 3-of-30 cannot read as a 30-day average.
+  const slept = days.filter(x => x.sleep_hours != null);
+  return { days, days_returned: days.length,
+           mean_sleep_hours: slept.length
+             ? Math.round((slept.reduce((t, x) => t + x.sleep_hours, 0) / slept.length) * 10) / 10
+             : null,
+           sleep_days: slept.length };
+}
+
+/* ------------------------- SwoleDawg — browser routes ------------------------- */
+// Session-authenticated, uid-scoped. The same functions the sd_* MCP tools call, so a
+// set tapped in the browser and a set spoken to Claude are the same write with a
+// different `source` stamp.
+async function handleSwole(request, url, env, cors) {
+  const path = url.pathname.replace(/^\/api\/swoledawg/, "") || "/";
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 401, cors);
+  const uid = auth.uid || ("name:" + auth.name);
+  if (!swoleDb(env)) return json(swoleNoDb(), 503, cors);
+
+  const body = request.method === "POST"
+    ? await request.json().catch(() => ({}))
+    : {};
+  const q = url.searchParams;
+  const wrap = r => json(r && r.error ? r : r, r && r.error ? 400 : 200, cors);
+
+  if (request.method === "GET") {
+    if (path === "/summary")  return wrap(await swoleSummary(env, uid));
+    if (path === "/program")  { const p = await swoleGetProgram(env, uid); return wrap(p ? { version: p.version, program: p.doc } : { error: "No program seeded." }); }
+    if (path === "/sessions") return wrap(await swoleRecentSessions(env, uid, q.get("n")));
+    if (path === "/session")  return wrap(await swoleSession(env, uid, q.get("date") || ""));
+    if (path === "/measurements") return wrap(await swoleMeasurementHistory(env, uid, q.get("field") || "", q.get("n")));
+    if (path === "/nutrition") return wrap(await swoleNutrition(env, uid, { date: q.get("date"), n: q.get("n") }));
+    if (path === "/recovery") return wrap(await swoleRecovery(env, uid, { date: q.get("date"), n: q.get("n") }));
+    return json({ error: "Unknown SwoleDawg route." }, 404, cors);
+  }
+  if (request.method !== "POST") return json({ error: "GET or POST only." }, 405, cors);
+
+  if (path === "/program")   return wrap(await swolePutProgram(env, uid, body.program, body.note));
+  if (path === "/session/start")  return wrap(await swoleStartSession(env, uid, body.date, body.day_key, "web"));
+  if (path === "/session/finish") return wrap(await swoleFinishSession(env, uid, body.date, body.notes));
+  if (path === "/set")       return wrap(await swoleLogSet(env, uid, body, "web"));
+  if (path === "/nutrition") return wrap(await swoleLogNutrition(env, uid, body, "web"));
+  if (path === "/recovery")  return wrap(await swoleLogRecovery(env, uid, body, "web"));
+  if (path === "/measurement") return wrap(await swoleLogMeasurement(env, uid, body, "web"));
+  return json({ error: "Unknown SwoleDawg route." }, 404, cors);
+}
+
+/* ===== DD-YAHOO-BLOCK START — generated from work/yahoo-parse.js + work/yahoo-worker.js; edit THERE ===== */
+/* ===================== Yahoo public-league HTML adapter ====================
+ * Yahoo's Fantasy API is access-gated behind a manual application review with
+ * no published turnaround. A PUBLIC Yahoo league renders every input this site
+ * needs on pages that require no cookie at all, and the Worker can read them
+ * server-side where CORS does not apply. These are the pure parsers over that
+ * HTML. Verified against league 773763 on 2026-09-02.
+ *
+ * ⚠️ THIS IS A SCRAPER AND IT WILL EVENTUALLY BREAK. Yahoo owes us no markup
+ * stability. The design premise is that it breaks LOUDLY: every parser reports
+ * what it found alongside what it expected, and the feed refuses to serve a
+ * partial league. A half-read league that renders anyway is worse than an
+ * error — it would put wrong replacement level and wrong money on a page whose
+ * entire claim is that its numbers are checkable.
+ *
+ * Swap target: when the API application is approved only the fetch layer
+ * changes. Everything downstream reads the same body shape as espnWarroomFeed.
+ *
+ * ---- What is and is not available server-side (measured, not assumed) ------
+ *  /f1/<lg>/draftresults   210 rows, Pick | Player | Salary | Team.      ✅
+ *  /f1/<lg>/<teamId>       lineup table, slot + player, incl. empty slots ✅
+ *  /f1/<lg>?week=N         that week's matchups, week echoed in header    ✅
+ *  /f1/<lg>/settings       scoring + playoffs + team count                ✅
+ *      ⚠️ EXCEPT "Roster Positions", which that page builds in JavaScript and
+ *      is therefore absent from the HTML a Worker sees. The lineup shape is
+ *      taken from a roster page instead, where it is present as real rows.
+ *      Do not "fix" this by adding a settings-page regex; there is nothing
+ *      there to match.
+ * ========================================================================= */
+
+/* Yahoo slot label -> this site's slot vocabulary (Sleeper's, which the War
+   Room speaks everywhere). W/R/T is Yahoo's flex; Q/W/R/T its superflex. */
+const YAHOO_SLOT = {
+  "QB": "QB", "RB": "RB", "WR": "WR", "TE": "TE", "K": "K",
+  "DEF": "DST", "D/ST": "DST", "DL": "DL", "LB": "LB", "DB": "DB",
+  "W/R": "FLEX", "W/T": "FLEX", "R/W": "FLEX", "W/R/T": "FLEX", "R/W/T": "FLEX",
+  "Q/W/R/T": "SUPERFLEX", "QB/WR/RB/TE": "SUPERFLEX",
+  "BN": "BN", "IR": "IR", "IR+": "IR", "NA": "IR",
+};
+const YAHOO_POS = { QB: "QB", RB: "RB", WR: "WR", TE: "TE", K: "K", DEF: "DST", "D/ST": "DST" };
+
+/* ---- tiny HTML helpers ---------------------------------------------------
+ * Deliberately NOT a general HTML parser. Each keys off a semantic class token
+ * or an href shape Yahoo must keep for its own page to work — a far better bet
+ * than nesting depth or attribute order. */
+function ydecode(s) {
+  return String(s == null ? "" : s)
+    .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#0?39;|&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
+    .replace(/\s+/g, " ").trim();
+}
+function ystrip(html) { return ydecode(String(html).replace(/<[^>]*>/g, " ")); }
+function yrows(html) { return String(html).split(/<tr\b/i).slice(1); }
+
+/* ⚠️ Match the class ATTRIBUTE, then test its tokens. The first version of this
+   tried to match the token inside the attribute with a `(?:^|\s|")` prefix and
+   silently returned null for `class="player"` — a token with nothing before it —
+   while still working for `class="Alt Ta-start player"`. The result was a draft
+   page that parsed to zero picks and a roster page that parsed perfectly, which
+   is exactly the kind of half-success this file exists to prevent. */
+function ycells(rowHtml) {
+  const re = /<t([dh])\b([^>]*)>([\s\S]*?)<\/t\1>/gi;
+  const out = [];
+  let m;
+  while ((m = re.exec(rowHtml))) out.push({ attrs: m[2], html: m[3] });
+  return out;
+}
+function ycell(rowHtml, token) {
+  for (const c of ycells(rowHtml)) {
+    const cls = (/class="([^"]*)"/i.exec(c.attrs) || [])[1] || "";
+    if (cls.split(/\s+/).indexOf(token) >= 0) return c.html;
+  }
+  return null;
+}
+/* Every player anchor on every Yahoo fantasy page points at the same canonical
+   NFL player page. That numeric id is the most stable identifier on the page.
+   Defenses carry no such link — see ynamePos. */
+function ypid(fragment) {
+  const m = /sports\.yahoo\.com\/nfl\/players\/(\d+)/.exec(String(fragment || ""));
+  return m ? m[1] : null;
+}
+/* "Matthew Stafford (LAR - QB)" / "Ravens (Bal - DEF)" / "--empty-- ( - )" */
+function ynamePos(cellHtml) {
+  const raw = ystrip(cellHtml);
+  const compact = /^(.*?)\s*\(([^)]*)\)\s*$/.exec(raw);
+  /* Draft rows use the compact text above. Roster rows wrap the name, status icons,
+     opponent, and notes in the same cell; use the canonical name anchor and the explicit
+     "TEAM - POS" detail instead of treating all of that chrome as the player's name. */
+  const nameAnchor = /<a\b(?=[^>]*class="[^"]*\bname\b)[^>]*>([\s\S]*?)<\/a>/i.exec(String(cellHtml));
+  const playerAnchor = /<a\b[^>]*href="https?:\/\/sports\.yahoo\.com\/nfl\/players\/\d+"[^>]*>([\s\S]*?)<\/a>/i.exec(String(cellHtml));
+  const name = ydecode(playerAnchor ? ystrip(playerAnchor[1]) : nameAnchor ? ystrip(nameAnchor[1]) : compact ? compact[1] : raw);
+  const detail = /\b([A-Za-z]{2,3})\s*-\s*(QB|RB|WR|TE|K|DEF|D\/ST)\b/i.exec(raw);
+  const parts = (compact ? compact[2] : "").split("-").map(s => s.trim());
+  const posRaw = detail ? detail[2] : parts.length > 1 ? parts[parts.length - 1] : "";
+  const team = detail ? detail[1] : parts.length > 1 ? parts[0] : "";
+  return {
+    name, team: team.toUpperCase(), posRaw,
+    pos: YAHOO_POS[posRaw.toUpperCase()] || "",
+    empty: /^--?\s*empty\s*--?$/i.test(name) || /^\(?\s*empty\s*\)?$/i.test(name) || !name,
+  };
+}
+/* The join key the rest of the site uses. Defenses have no Yahoo player id, and
+   the site's Market Value table already keys them by team abbreviation, so a
+   defense becomes "dst:SEA" on both sides rather than being dropped. */
+function yahooPlayerKey(pid, np) {
+  if (np.pos === "DST") return np.team ? "dst:" + np.team : null;
+  return pid ? "y:" + pid : null;
+}
+
+/* ---- team ids and names --------------------------------------------------
+ * Team links are /f1/<leagueId>/<teamId>. Yahoo prints each team many times per
+ * page (avatar, name, matchup), so order-preserving dedupe is the whole trick.
+ * "My Team" is Yahoo's nav label for the viewer's own team, never a team name. */
+function yahooTeamIds(html, leagueId) {
+  const re = new RegExp('/f1/' + String(leagueId) + '/(\\d+)"', 'g');
+  const ids = [];
+  let m;
+  while ((m = re.exec(html))) if (ids.indexOf(m[1]) < 0) ids.push(m[1]);
+  return ids;
+}
+function yahooParseTeams(html, leagueId) {
+  const re = new RegExp('href="(?:https?://[^"]*)?/f1/' + String(leagueId) + '/(\\d+)"[^>]*>([\\s\\S]{0,200}?)</a>', 'gi');
+  const byId = new Map();
+  let m;
+  while ((m = re.exec(html))) {
+    const name = ystrip(m[2]);
+    if (!name || /^my team$/i.test(name)) continue;
+    if (!byId.has(m[1])) byId.set(m[1], name);
+  }
+  const teams = [...byId.entries()].map(([id, name]) => ({ id, name }))
+    .sort((a, b) => Number(a.id) - Number(b.id));
+  return { teams, found: teams.length };
+}
+
+/* ---- draft results -------------------------------------------------------
+ * ⚠️ Undrafted slots render as "--empty-- ( - )" at $0. A $0 here is NOT a
+ * price, it is the absence of one, and letting it through would hand a free
+ * player to every surplus number on the Money tab. Skipped and counted.
+ * Measured on 773763: 210 rows = 149 linked players + defenses + empties. */
+function yahooParseDraft(html) {
+  const picks = [];
+  let empty = 0, unkeyed = 0, ownerless = 0, rows = 0;
+  for (const row of yrows(html)) {
+    const playerCell = ycell(row, "player");
+    const costCell = ycell(row, "cost");
+    if (playerCell == null || costCell == null) continue;
+    rows++;
+    const np = ynamePos(playerCell);
+    if (np.empty) { empty++; continue; }
+    const key = yahooPlayerKey(ypid(playerCell), np);
+    if (!key) { unkeyed++; continue; }
+    const teamCell = ycell(row, "team-name");
+    const owner = teamCell == null ? null : ystrip(teamCell);
+    if (!owner) { ownerless++; continue; }
+    const cm = /\$\s*([\d,]+)/.exec(ystrip(costCell));
+    picks.push({
+      key, pid: ypid(playerCell), name: np.name, pos: np.pos, team: np.team,
+      cost: cm ? Number(cm[1].replace(/,/g, "")) : null, owner,
+    });
+  }
+  return { picks, rows, found: picks.length, empty, unkeyed, ownerless };
+}
+
+/* ---- one team's roster ---------------------------------------------------
+ * ⚠️ The SLOT decides starter vs bench and it is the only place that
+ * information exists — a player's own position cannot tell you whether he is
+ * starting. BN and IR are the bench; everything else starts.
+ * Empty slots are recorded, not skipped: they are how the league's lineup shape
+ * is recovered without the settings page (see the header note). */
+function yahooParseRoster(html, teamId) {
+  const players = [];
+  const shape = {};
+  const unknownSlots = [];
+  let emptySlots = 0;
+  for (const row of yrows(html)) {
+    const posCell = ycell(row, "pos");
+    if (posCell == null) continue;
+    const slotRaw = ystrip(posCell).toUpperCase();
+    if (!slotRaw || slotRaw === "POS") continue;
+    const slot = YAHOO_SLOT[slotRaw];
+    if (!slot) { unknownSlots.push(slotRaw); continue; }   // report, never guess
+    shape[slot] = (shape[slot] || 0) + 1;
+    const playerCell = ycell(row, "player");
+    const np = playerCell ? ynamePos(playerCell) : null;
+    const key = np ? yahooPlayerKey(ypid(playerCell), np) : null;
+    if (!np || np.empty || !key) { emptySlots++; continue; }
+    players.push({
+      key, pid: ypid(playerCell), name: np.name, pos: np.pos, team: np.team,
+      slot, starter: slot !== "BN" && slot !== "IR",
+    });
+  }
+  /* "<league> - <team> | Fantasy Football | Yahoo! Sports" */
+  const tm = /<title>\s*(.*?)\s+-\s+(.*?)\s*\|/i.exec(html);
+  return {
+    teamId: String(teamId),
+    leagueName: tm ? ydecode(tm[1]) : "",
+    teamName: tm ? ydecode(tm[2]) : "",
+    players, shape, unknownSlots,
+    found: players.length, emptySlots, slotCount: players.length + emptySlots,
+  };
+}
+
+/* ---- schedule ------------------------------------------------------------
+ * /f1/<lg>?week=N. Team ids appear inside the matchups module in pair order,
+ * so distinct-ids-in-document-order chunked by two IS the week's matchups.
+ *
+ * ⚠️ TWO TRAPS, BOTH OF WHICH PRODUCE CONFIDENT WRONG ANSWERS:
+ *  1. The browser will happily serve every ?week=N from cache, making all 17
+ *     weeks identical while every sanity check still passes. Fetch with
+ *     cache: "no-store", and
+ *  2. verify the week Yahoo actually rendered against the week asked for. The
+ *     module prints "Week N Matchups"; if that N disagrees, the page is not the
+ *     page requested and the week must be discarded, not stored under the
+ *     wrong index. */
+function yahooParseWeek(html, leagueId, expectWeek) {
+  const i = html.search(/Tst-matchups-body/i);
+  if (i < 0) return { ok: false, reason: "no-matchups-module", pairs: [] };
+  const j = html.indexOf("Tst-standings", i);
+  const mod = html.slice(i, j > i ? j : i + 120000);
+
+  const hdr = /Week\s+(\d+)\s+Matchups/i.exec(mod);
+  const saw = hdr ? Number(hdr[1]) : null;
+  if (expectWeek != null && saw != null && saw !== Number(expectWeek))
+    return { ok: false, reason: "week-mismatch", asked: Number(expectWeek), saw, pairs: [] };
+
+  const ids = yahooTeamIds(mod, leagueId);
+  const pairs = [];
+  for (let k = 0; k + 1 < ids.length; k += 2) pairs.push([ids[k], ids[k + 1]]);
+  return { ok: true, week: saw, teams: ids.length, pairs };
+}
+/* A week is only usable if every team appears exactly once. Anything else means
+   the module held something other than a clean round of matchups. */
+function yahooWeekIsSane(week, teamCount) {
+  if (!week.ok) return false;
+  const flat = week.pairs.reduce((a, p) => a.concat(p), []);
+  return flat.length === teamCount && new Set(flat).size === teamCount;
+}
+
+/* ---- settings ------------------------------------------------------------
+ * A plain label/value table plus the stat-modifier rows. Only what the War Room
+ * consumes is read; nothing else is half-modelled. Roster Positions is NOT here
+ * (see header) — take the shape from yahooParseRoster().shape. */
+/* ⚠️ Splitting a row on "</td>" and stripping tags leaves the opening <tr>'s
+   own attributes glued to the first cell (" class=\"...\">Max Teams:"), so the
+   label never matches and every setting silently reads null — which is how this
+   returned an all-null settings object against the real page while looking
+   fine. Cells come from ycells(), which matches whole <td>…</td> elements. */
+function yahooSettingRow(html, label) {
+  const re = new RegExp("^" + label + "\\s*:?$", "i");
+  for (const row of yrows(html)) {
+    const cells = ycells(row).map(c => ystrip(c.html));
+    const first = cells.findIndex(c => c);
+    if (first < 0) continue;
+    if (re.test(cells[first])) return cells[first + 1] == null ? "" : cells[first + 1];
+  }
+  return null;
+}
+function yahooParseSettings(html) {
+  const playoffs = yahooSettingRow(html, "Playoffs");
+  const maxTeams = yahooSettingRow(html, "Max Teams");
+  const fractional = yahooSettingRow(html, "Fractional Points");
+  const rec = yahooSettingRow(html, "Receptions");
+
+  /* "6 teams - Week 15, 16 and 17 (ends Monday, Jan 4)" */
+  const pt = /(\d+)\s*teams?/i.exec(playoffs || "");
+  const pw = /Week\s+(\d+)/i.exec(playoffs || "");
+  const recPts = rec == null ? null : Number(String(rec).replace(/[^0-9.]/g, ""));
+
+  return {
+    teams: maxTeams ? Number(maxTeams) : null,
+    playoffTeams: pt ? Number(pt[1]) : null,
+    playoffStart: pw ? Number(pw[1]) : null,
+    fractional: fractional == null ? null : /^yes$/i.test(fractional),
+    /* reception points is what picks this site's Market Value column */
+    rec: Number.isFinite(recPts) ? recPts : null,
+    playoffsRaw: playoffs,
+  };
+}
+
+if (typeof module !== "undefined" && module.exports) module.exports = {
+  YAHOO_SLOT, YAHOO_POS, ydecode, ystrip, yrows, ycells, ycell, ypid, ynamePos,
+  yahooPlayerKey, yahooTeamIds, yahooParseTeams, yahooParseDraft,
+  yahooParseRoster, yahooParseWeek, yahooWeekIsSane, yahooParseSettings,
+};
+
+/* ================= Yahoo public-league Worker adapter ====================
+ * The pure HTML parsers above are generated verbatim from work/yahoo-parse.js.
+ * This layer owns network I/O, refusal rules, projection joins, caching, and routes.
+ * Public Yahoo pages require no cookie; a private league is refused explicitly.
+ */
+const YAHOO_READ = "https://football.fantasysports.yahoo.com/f1";
+const YAHOO_KV_PREFIX = "yahoo:league:";
+const YAHOO_SHARE_PREFIX = "yahoo:share:";
+const YAHOO_SHARE_OF_PREFIX = "yahoo:shareof:";
+const YAHOO_SCHEDULE_PREFIX = "yahoo:schedule:";
+const YAHOO_RECORD_TTL = 60 * 60 * 24 * 180;
+const YAHOO_MAX_HTML = 2 * 1024 * 1024;
+const YAHOO_PROJ_POS = ["QB", "RB", "WR", "TE", "K", "DEF"];
+
+function yahooKvKey(uid) { return YAHOO_KV_PREFIX + uid; }
+function yahooScheduleKey(leagueId, season, weeks) {
+  return YAHOO_SCHEDULE_PREFIX + season + ":" + leagueId + ":" + weeks;
+}
+
+function yahooShareToken() {
+  const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+  const bytes = crypto.getRandomValues(new Uint8Array(28));
+  let token = "";
+  for (const byte of bytes) token += alphabet[byte % alphabet.length];
+  return token;
+}
+
+function yahooPrivateReason() {
+  return "This Yahoo league is not public. Yahoo must expose it without a sign-in for Data Dawgs to read it.";
+}
+
+async function yahooFetchPage(leagueId, suffix, noStore) {
+  const url = YAHOO_READ + "/" + encodeURIComponent(leagueId) + String(suffix || "");
+  const init = { redirect: "follow", headers: { Accept: "text/html,application/xhtml+xml" } };
+  if (noStore) init.cache = "no-store";
+  let response;
+  try { response = await fetch(url, init); }
+  catch { return { ok: false, status

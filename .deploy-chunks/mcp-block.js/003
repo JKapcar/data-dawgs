@@ -1,0 +1,810 @@
+be known BEFORE any of them are
+      // summarised. A demo league uses the real player names on purpose, so a standings
+      // table off one is indistinguishable from a real one unless it says so itself.
+      const lgRec = await loadLeague(env, lid);
+      const synthetic = !!(lgRec && lgRec.synthetic === true);
+      let ledger;
+      try { ledger = (await fbGet(env, LG(lid) + "/ledger")).data || {}; }
+      catch (e) { return toolErr("Database unreachable: " + e.message); }
+      const rows = Object.values(ledger);
+      if (!rows.length) return toolText({ league: lid, note: "The ledger is empty — no week has locked yet." });
+      const per = {};
+      let graded = 0;
+      for (const r of rows) {
+        const p = per[r.player] || (per[r.player] = { legs: 0, lastIn: 0, shortestOdds: 0, results: {} });
+        p.legs++;
+        if (r.shortestOdds) p.shortestOdds++;
+        if (r.result !== undefined && r.result !== null) { p.results[String(r.result)] = (p.results[String(r.result)] || 0) + 1; graded++; }
+      }
+      // Last In = highest rank within each season-week.
+      const byWeek = {};
+      for (const r of rows) (byWeek[`${r.season}-w${r.week}`] = byWeek[`${r.season}-w${r.week}`] || []).push(r);
+      for (const wk of Object.values(byWeek)) {
+        const last = wk.reduce((a, b) => (b.rank > a.rank ? b : a));
+        if (per[last.player]) per[last.player].lastIn++;
+      }
+      const me = caller && caller.kind === "user" ? caller.name : null;
+      if (me && per[me]) per[me].you = true;
+      return toolText({
+        league: lid, weeksOnLedger: Object.keys(byWeek).length, gradedRows: graded,
+        you: me, players: per,
+        synthetic,
+        syntheticNote: synthetic
+          ? "SIMULATED LEAGUE. Every leg, price, close and result behind this table is fabricated by a seeding "
+            + "script — it exists to show what a populated board looks like. It counts toward no standing, no "
+            + "receipt and no aggregate. Say so in any answer that quotes it, and never combine it with a real league."
+          : undefined,
+        note: graded ? undefined : "No graded results yet — everything above is bookkeeping, not performance.",
+      });
+    },
+  },
+  {
+    name: "dd_draft_bozo_leg",
+    title: "Draft a Bozo leg",
+    catalog: "core",
+    readOnlyHint: true,
+    description:
+      "Capture the live DraftKings quote for a proposed Bozo leg, check it against the LIVE board, " +
+      "or the reason it would be rejected. ⚠️ READ-ONLY: this submits nothing and changes no board " +
+      "state. Runs the server's own capture and validator; use dd_submit_bozo_leg to " +
+      "make a separately captured, two-phase submission.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        sport: { type: "string", description: "nfl | cfb | nba | cbb | mlb | nhl" },
+        eventId: { type: "string", description: "The game's id, from dd_scores" },
+        game: { type: "string", description: "Human-readable matchup, e.g. \"BUF @ MIA\"" },
+        mkt: { type: "string", description: "spread | ml | total | prop | other" },
+        side: { type: "string", description: "Team abbreviation, or over / under" },
+        line: { type: "number", description: "The number. Required for everything except ml." },
+        price: { type: "number", description: "Optional typed DraftKings price tripwire. The Worker captures and stores the live quote; this value is never trusted as the entry price." },
+        label: { type: "string", description: "How the leg reads on the ticket, e.g. \"BUF -6.5\"" },
+        prop: { type: "string", description: "Required when mkt is \"other\": what the bet actually is" },
+        startsAt: { type: "string", description: "Kickoff ISO timestamp. Optional when eventId resolves from the Worker schedule cache; otherwise required." },
+        league: { type: "string", description: "League id (default: main)" },
+      },
+      required: ["sport", "eventId", "game", "mkt", "side", "label"],
+      additionalProperties: false,
+    },
+    async run(args, env, caller) {
+      // ⚠️ REFUSALS FIRST, and identity before anything else. Membership, the duplicate
+      // rule and "have you already got a leg in" are all questions about who is asking.
+      if (!caller || caller.kind !== "user")
+        return toolErr(
+          "This one needs to know who you are, and the shared league connector cannot tell. " +
+          "Every check below — are you in this league, do you already have a leg in, has someone " +
+          "else taken this exact bet — depends on your name. Mint a personal URL at " +
+          SITE + "/connect.html and it works.");
+      const name = caller.name;
+
+      const lid = validLeagueId(args.league || DEFAULT_LEAGUE) ? (args.league || DEFAULT_LEAGUE) : null;
+      if (!lid) return toolErr("Bad league id.");
+      let lg;
+      try { lg = await loadLeague(env, lid); }
+      catch (e) { return toolErr("Database unreachable: " + e.message); }
+      if (!lg) return toolErr("No such league: " + lid);
+
+      if (!isMember(lg, name))
+        return toolErr("You are not in " + lid + ", so nothing can go on that board under your name.");
+
+      const status = lg.status || "open";
+      if (status !== "open")
+        return toolText({
+          accepted: false, reason: "board-closed",
+          detail: "The ticket is placed and the board is locked — nothing can be added or changed for week " +
+                  (lg.week || 1) + ". The lever hierarchy has already been drawn.",
+          week: lg.week || 1, status,
+        });
+
+      const set = settingsOf(lg);
+      const picks = lg.picks || {};
+      const mine = picks[memberKeyOf(lg, caller) || ""] || null;
+      if (mine && !set.allowEdit)
+        return toolText({
+          accepted: false, reason: "edits-locked",
+          detail: "This league locks your leg the moment it lands, and yours is already in. " +
+                  "No edit is possible, by league setting rather than by timing.",
+          yourExistingLeg: { label: mine.label, price: mine.price, ts: mine.ts || null },
+        });
+
+      // Shape the selection and run the same read-only SGO capture as phase one.
+      const input = {
+        sport: String(args.sport || "").toLowerCase(),
+        eventId: String(args.eventId || ""),
+        game: String(args.game || "").slice(0, 80),
+        mkt: String(args.mkt || "").toLowerCase(),
+        side: String(args.side || "").slice(0, 40),
+        line: String(args.mkt || "").toLowerCase() === "ml" ? 0 : Number(args.line),
+        typedPrice: args.price,
+        label: String(args.label || "").slice(0, 90),
+        prop: args.prop ? String(args.prop).slice(0, 80) : null,
+        startsAt: typeof args.startsAt === "string" ? args.startsAt : null,
+      };
+      const captured = await bozoCaptureEntry(env, input);
+      if (!captured.ok)
+        return toolText({ accepted: false, reason: captured.reason || "capture-failed", detail: captured.error });
+      const p = captured.p;
+
+      // ⚠️ THE SERVER'S OWN VALIDATOR, not a copy of its rules. A second copy would drift
+      // and start passing legs /bozo/pick rejects, which is worse than no check at all.
+      const band = bandOf(lg);
+      const err = validatePick(p, name, picks, band, set.format);
+      if (err)
+        return toolText({
+          accepted: false, reason: "rejected-by-the-same-validator-the-server-runs",
+          detail: err, band, captured: { line: p.line, price: p.price, priceOpp: p.priceOpp },
+          note: "That is the literal string POST /bozo/pick would return. Fix it and ask again.",
+        });
+
+      // ⚠️ Say when submitting would END THE WEEK for everyone. The last leg locks the
+      // board and draws the lever hierarchy, and there is no undo — the only route back to
+      // open advances the week and discards this one. Whoever is about to press the button
+      // should know that is what the button does this time.
+      const size = memberNames(lg).length;
+      const need = set.lockRule === "count" ? Math.min(set.lockCount || size, size || set.lockCount) : size;
+      const already = Object.keys(picks).length;
+      const wouldBeNth = mine ? already : already + 1;
+      const wouldLock = need > 0 && wouldBeNth >= need;
+
+      return toolText({
+        accepted: true,
+        league: lid, week: lg.week || 1, you: name,
+        editingAnExistingLeg: !!mine,
+        // ⚠️ Editing resets your clock. The server stamps a fresh ts, and ts is what
+        // decides Last In — so an edit is not free even when it is allowed.
+        editResetsYourClock: !!mine || undefined,
+        submit: {
+          how: "Use dd_submit_bozo_leg with the same selection fields. It performs its own fresh phase-one capture and returns a confirmation code.",
+        },
+        willBeStoredAs: {
+          ...p,
+          dir: (p.side === "over" || p.side === "under") ? p.side : "over",
+          priceSource: p.priceSource,
+          ts: "set by the server when you actually submit, not now",
+        },
+        captured: { line: p.line, price: p.price, priceOpp: p.priceOpp,
+          priceSource: p.priceSource, clvEligible: p.clvEligible,
+          entrySnapshotAt: p.entrySnapshotAt, providerEventIds: p.providerEventIds,
+          startsAt: p.startsAt, espnEventId: p.espnEventId, canonicalKey: p.canonicalKey },
+        agreement: captured.agreement || null,
+        band,
+        legsIn: already, legsNeeded: need,
+        stillWaitingOn: memberKeys(lg).filter(k => !picks[k]).map(k => memberNameAt(lg, k)),
+        wouldLockTheBoard: wouldLock,
+        warning: wouldLock
+          ? "⚠️ THIS WOULD BE THE LAST LEG. Submitting it places the ticket, locks the board for all " +
+            size + " and draws the lever hierarchy. That draw happens once and is never redone; there is " +
+            "no undo short of a manager advancing the week, which discards it for everyone."
+          : undefined,
+        caveats: [
+          "Nothing was submitted. This tool cannot submit — it reads the board and runs the validator.",
+          p.priceSource === "captured" ? "Both prices were captured from DraftKings through SGO." : "This market is self-priced and excluded from CLV.",
+          "A pass here is a pass at this instant. Someone else can take your exact leg, or fill the board, before you press submit.",
+        ],
+      });
+    },
+  },
+  {
+    // ⚠️ THE ONE WRITE TOOL. Spec: claude/data-dawgs-cep-identity.md §4 — two-phase
+    // commit, idempotent replay, server-enforced blast radius, audit stamp. The blast
+    // radius is absolute: this tool can touch the CALLER'S OWN LEG, in the CURRENT
+    // week, while the board is OPEN — never another member's pick, league config, the
+    // hierarchy draw, grading, or the draft. Nothing in the arguments can widen that.
+    name: "dd_submit_bozo_leg",
+    title: "Submit your Bozo leg (two-phase)",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: true,   // an edit overwrites your existing leg and resets your clock
+    description:
+      "Submit (or replace) YOUR OWN leg on the live Bozo board. TWO-PHASE, and phase one writes " +
+      "nothing: call with the bet fields and it validates against the live board, then returns a " +
+      "plain-English echo of the parsed bet plus a confirm_code. ⚠️ SHOW THE HUMAN THE ECHO and only " +
+      "call again with {confirm: code} after they have approved it — the echo is what stops a " +
+      "misparsed team, line or price from becoming a real bet. The code expires in 5 minutes; " +
+      "replaying a used code is a no-op that returns the original result. Editing an existing leg " +
+      "resets its server timestamp AND price, which moves you in the Last In lever. If the response " +
+      "says the submission would lock the board, say so out loud before confirming: the last leg " +
+      "places the ticket for everyone and draws the lever hierarchy, and there is no undo.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        sport: { type: "string", description: "nfl | cfb | nba | cbb | mlb | nhl" },
+        eventId: { type: "string", description: "The game's id, from dd_scores" },
+        game: { type: "string", description: "Human-readable matchup, e.g. \"BUF @ MIA\"" },
+        mkt: { type: "string", description: "spread | ml | total | prop | other" },
+        side: { type: "string", description: "Team abbreviation, or over / under" },
+        line: { type: "number", description: "The number. Required for everything except ml." },
+        price: { type: "number", description: "Optional typed DraftKings price tripwire. The Worker captures and stores the quote; use this only to detect a mismatch. Required only for self-priced other markets or a prop fallback." },
+        label: { type: "string", description: "How the leg reads on the ticket, e.g. \"BUF -6.5\"" },
+        prop: { type: "string", description: "Required when mkt is \"other\": what the bet actually is" },
+        priceOpp: { type: "number", description: "Deprecated input; the Worker captures the opposite DraftKings side itself." },
+        startsAt: { type: "string", description: "Kickoff ISO timestamp. Optional when eventId resolves from the Worker schedule cache; phase two needs only confirm." },
+        league: { type: "string", description: "League id (default: main)" },
+        confirm: { type: "string", description: "PHASE TWO ONLY: the confirm_code returned by phase one, after the human approved the echo. Sends the bet." },
+      },
+      anyOf: [
+        { required: ["confirm"] },
+        { required: ["sport", "eventId", "game", "mkt", "side", "label"] },
+      ],
+      additionalProperties: false,
+    },
+    async run(args, env, caller) {
+      // Identity first, same reasoning as dd_draft_bozo_leg — every check below is a
+      // question about who is asking, and a WRITE with no identity is unattributable.
+      if (!caller || caller.kind !== "user")
+        return toolErr(
+          "Submitting needs to know who you are, and the shared league connector cannot tell. " +
+          "Mint a personal URL at " + SITE + "/connect.html and this works.");
+      if (!env.RL)
+        return toolErr("The confirmation store is not configured on this deployment.");
+      const name = caller.name;
+      const uid = caller.uid || caller.name;
+      // ⚠️ Keyed by uid, not display name: display names are mutable, and a rename
+      // between propose and confirm must not orphan (or worse, cross-match) a pending bet.
+      const kvKey = "mcpconfirm:" + uid;
+
+      /* -------------------------- phase two: confirm -------------------------- */
+      if (args.confirm !== undefined) {
+        const code = String(args.confirm || "").trim().toUpperCase();
+        if (!code) return toolErr("Empty confirm code.");
+        let pend;
+        try { pend = JSON.parse((await env.RL.get(kvKey)) || "null"); } catch { pend = null; }
+        if (!pend)
+          return toolText({ status: "nothing_pending", detail: "No proposal is waiting on a confirmation — it may have expired (codes live 5 minutes). Propose the leg again." });
+        if (pend.code !== code)
+          return toolErr(pend.consumed
+            ? "That code was already used for a different submission. Propose again if you want to change the leg."
+            : "Wrong confirm code. The pending proposal is: " + pend.echo);
+        // ⚠️ Idempotent replay, spec §4.2: the same code returns the ORIGINAL result and
+        // writes nothing. An agent retry must not become a second submission.
+        if (pend.consumed) return toolText(pend.result);
+
+        // Re-check EVERYTHING against the live board. The confirm may arrive minutes
+        // after the propose; someone can have taken the selection, filled the board, or
+        // locked it in between. A stale pass must not write.
+        const lid = pend.lid;
+        let lg;
+        try { lg = await loadLeague(env, lid); }
+        catch (e) { return toolErr("Database unreachable: " + e.message); }
+        if (!lg) return toolErr("No such league: " + lid);
+        if (!isMember(lg, name))
+          return toolErr("You are not in " + lid + " any more, so nothing can go on that board under your name.");
+        if ((lg.week || 1) !== pend.week) {
+          try { await env.RL.put(kvKey, "null", { expirationTtl: 60 }); } catch {}
+          return toolText({ status: "stale", detail: "The league moved to week " + (lg.week || 1) + " since this was proposed for week " + pend.week + ". Propose again on the current board." });
+        }
+        const set = settingsOf(lg);
+        const picks = lg.picks || {};
+        // One resolution, reused by every check below and by the write itself, so an
+        // MCP leg can never land under a different key than the site form would use.
+        const mkey = memberKeyOf(lg, caller);
+        if (!mkey)
+          return toolText({ status: "not-a-member", detail: "You are not in this league." });
+        const landed = picks[mkey];
+        if (landed && landed.submissionId === code)
+          return toolText({ status: "submitted", replayed: true, league: lid, week: pend.week,
+            you: name, leg: { label: landed.label, line: landed.line, price: landed.price,
+              priceOpp: landed.entryPriceOpp, priceSource: landed.priceSource }, ts: landed.ts,
+            detail: "This exact confirmation already landed; replay wrote nothing." });
+        if ((lg.status || "open") !== "open")
+          return toolText({ status: "board-locked", detail: "The ticket is placed and the board is locked — nothing can be added or changed for week " + (lg.week || 1) + "." });
+        if (!set.allowEdit && picks[mkey])
+          return toolText({ status: "edits-locked", detail: "This league locks your leg the moment it lands, and yours is already in." });
+        if (set.format === "royale" && !royaleAliveKey(lg, mkey))
+          return toolText({ status: "chopped", detail: "You're out this season — you fund the ticket, you don't have a leg on it." });
+        const err = validatePick(pend.p, name, picks, bandOf(lg), set.format, mkey);
+        if (err) {
+          try { await env.RL.put(kvKey, "null", { expirationTtl: 60 }); } catch {}
+          return toolText({ status: "rejected", detail: "The board changed since this was proposed and the leg no longer passes: " + err + " Propose again." });
+        }
+
+        // The same single write path the site form uses, stamped as agent-submitted.
+        const out = await commitBozoLeg(env, lid, lg, name, pend.p, "mcp", mkey);
+        const result = {
+          status: "submitted", league: lid, week: pend.week, you: name,
+          leg: { label: pend.p.label, line: pend.p.line, price: pend.p.price,
+                 priceOpp: pend.p.priceOpp, priceSource: pend.p.priceSource, game: pend.p.game },
+          ts: out.ts, via: "mcp",
+          boardLocked: !!out.placed,
+          legsIn: null,   // read dd_bozo_week for the live board; this result is frozen for replay
+          detail: out.placed
+            ? "That was the last leg. The ticket is placed, the board is locked and the lever hierarchy has been drawn."
+            : "Your leg is on the board. Others can still see and react to it; the board locks when the last leg lands.",
+        };
+        // Consumed marker, kept 1 hour so a retry storm keeps getting the same answer.
+        try { await env.RL.put(kvKey, JSON.stringify({ code, consumed: true, result }), { expirationTtl: 3600 }); } catch {}
+        return toolText(result);
+      }
+
+      /* -------------------------- phase one: propose -------------------------- */
+      const lid = validLeagueId(args.league || DEFAULT_LEAGUE) ? (args.league || DEFAULT_LEAGUE) : null;
+      if (!lid) return toolErr("Bad league id.");
+      let lg;
+      try { lg = await loadLeague(env, lid); }
+      catch (e) { return toolErr("Database unreachable: " + e.message); }
+      if (!lg) return toolErr("No such league: " + lid);
+      if (!isMember(lg, name))
+        return toolErr("You are not in " + lid + ", so nothing can go on that board under your name.");
+      if ((lg.status || "open") !== "open")
+        return toolText({ status: "board-locked", detail: "The ticket is placed and the board is locked — nothing can be added or changed for week " + (lg.week || 1) + ". The lever hierarchy has already been drawn." });
+
+      const set = settingsOf(lg);
+      const picks = lg.picks || {};
+      const mine = picks[memberKeyOf(lg, caller) || ""] || null;
+      if (mine && !set.allowEdit)
+        return toolText({ status: "edits-locked", detail: "This league locks your leg the moment it lands, and yours is already in — no edit is possible, by league setting.", yourExistingLeg: { label: mine.label, price: mine.price, ts: mine.ts || null } });
+      if (set.format === "royale" && !royaleAlive(lg, name))
+        return toolText({ status: "chopped", detail: "You're out this season — you fund the ticket, you don't have a leg on it." });
+
+      // Shape the selection, then resolve and freeze its live DraftKings quote. No RTDB
+      // write occurs in this phase; the pending KV record is the confirmation envelope.
+      const input = {
+        sport: String(args.sport || "").toLowerCase(),
+        eventId: String(args.eventId || ""),
+        game: String(args.game || "").slice(0, 80),
+        mkt: String(args.mkt || "").toLowerCase(),
+        side: String(args.side || "").slice(0, 40),
+        line: String(args.mkt || "").toLowerCase() === "ml" ? 0 : Number(args.line),
+        typedPrice: args.price,
+        label: String(args.label || "").slice(0, 90),
+        prop: args.prop ? String(args.prop).slice(0, 80) : null,
+        startsAt: typeof args.startsAt === "string" ? args.startsAt : null,
+      };
+      const captured = await bozoCaptureEntry(env, input);
+      if (!captured.ok)
+        return toolText({ status: "rejected", reason: captured.reason || "capture-failed",
+          detail: captured.error, note: "Nothing was submitted." });
+      const p = captured.p;
+      // ⚠️ The server's own validator, same as the site form and dd_draft_bozo_leg.
+      const band = bandOf(lg);
+      const err = validatePick(p, name, picks, band, set.format);
+      if (err)
+        return toolText({ status: "rejected", detail: err, band,
+          captured: { line: p.line, price: p.price, priceOpp: p.priceOpp },
+          note: "That is the literal validation failure after capture. Nothing was submitted." });
+
+      const size = set.format === "royale" ? royaleRoster(lg).length : memberNames(lg).length;
+      const need = set.lockRule === "count" ? Math.min(set.lockCount || size, size || set.lockCount) : size;
+      const already = Object.keys(picks).length;
+      const wouldLock = need > 0 && (mine ? already : already + 1) >= need;
+
+      // The echo IS the safety mechanism (spec §4.1): the human reads the parsed bet in
+      // plain English before anything can happen. Consequences ride in the same sentence.
+      const echo =
+        p.label + " — " + p.game + ", " + (p.mkt === "ml" ? "moneyline" : p.mkt + " " + p.line) +
+        " at " + p.price + " (opposite side " + (p.priceOpp == null ? "not captured" : p.priceOpp) + "), for " + name + ", week " + (lg.week || 1) + " in league " + lid + "." +
+        (captured.agreement ? " Typed check " + captured.agreement.typedPrice + " vs captured " + captured.agreement.capturedPrice +
+          " (" + captured.agreement.probabilityPointDifference.toFixed(2) + " probability points apart" +
+          (captured.agreement.needsConfirmation ? "; explicit confirmation required" : "") + ")." : "") +
+        (mine ? " ⚠️ This REPLACES your current leg (" + mine.label + " at " + mine.price + ") and resets your submission clock — that moves you in the Last In lever." : "") +
+        (wouldLock ? " ⚠️ THIS IS THE LAST LEG: confirming places the ticket, locks the board for all " + size + " and draws the lever hierarchy. No undo." : "");
+
+      const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+      const rnd = new Uint32Array(6);
+      crypto.getRandomValues(rnd);
+      let code = "";
+      for (const r of rnd) code += alphabet[r % alphabet.length];
+      p.submissionId = code;
+
+      // ⚠️ The pending record is the ONLY thing written in phase one, it lives in KV —
+      // never Firebase — and it expires on its own. Nothing on the board changes here.
+      try {
+        await env.RL.put(kvKey, JSON.stringify({ code, lid, week: lg.week || 1, p, echo, ts: Date.now() }), { expirationTtl: 300 });
+      } catch (e) { return toolErr("Could not stage the confirmation: " + e.message); }
+
+      return toolText({
+        status: "confirm_required",
+        echo,
+        confirm_code: code,
+        expires_in: 300,
+        editingAnExistingLeg: !!mine,
+        wouldLockTheBoard: wouldLock,
+        captured: { line: p.line, price: p.price, priceOpp: p.priceOpp,
+          priceSource: p.priceSource, clvEligible: p.clvEligible,
+          entrySnapshotAt: p.entrySnapshotAt, providerEventIds: p.providerEventIds,
+          startsAt: p.startsAt, espnEventId: p.espnEventId, canonicalKey: p.canonicalKey },
+        agreement: captured.agreement || null,
+        warning: captured.captureWarning || null,
+        note: "NOTHING has been submitted. Show the human the echo verbatim; only after they approve, call this tool again with {confirm: \"" + code + "\"}.",
+      });
+    },
+  },
+  {
+    name: "dd_draft_board",
+    title: "Live auction board",
+    catalog: "core",
+    readOnlyHint: true,
+    description: "Live auction draft state from the league's Firebase mirror: budgets, open roster spots, and each team's max bid. Max bid equals dollars remaining because this league allows $0 bids; data/league.json `bid_rule` is the source of that rule. Also returns who is on the clock, what is on the block, and recent sales. The payload always carries a `simulated` flag: when it is true the rows are test picks entered to exercise the rig, not completed sales.",
+    inputSchema: { type: "object", properties: { room: { type: "string", description: "Draft room id, which IS the site league id (the `league` parameter in the auction URL, e.g. dd_b689f18c46a2534bb10b8ba4f62e5bd0) — not the league's display name. `pepperoninipples` is the pre-league-system legacy room and is almost never the league being asked about. Omit this and the tool resolves the room when there is only one, or lists the rooms and refuses to guess." } }, additionalProperties: false },
+    async run(args, env) {
+      /* ⚠️ THIS DEFAULTED TO `pepperoninipples`, AND THAT COST AN AGENT AN HOUR.
+         readSyncConfig() (draft-league.js) has keyed the room to the league id since the
+         league system shipped, so the legacy default sent every no-argument caller to a
+         stale 14-team, zero-pick shell — during a live draft in a different room. The
+         caller cannot tell a wrong room from an empty league, so it reported the league
+         as empty and was right to refuse to go on.
+         A confidently wrong room is worse than no answer. When the room is not named and
+         cannot be resolved to exactly one, this LISTS the rooms and reads nothing. Do not
+         reintroduce a default here — "most recently updated" is a guess too, and a guess
+         is what this is here to stop. */
+      let room = args.room ? String(args.room).replace(/[.#$\[\]\/]/g, "-") : null;
+      let resolvedBy = null;
+      if (!room) {
+        let keys = [];
+        try {
+          const r = await fetch(`${DB}/drafts.json?shallow=true`);
+          if (!r.ok) return toolErr("Draft mirror unavailable: HTTP " + r.status);
+          keys = Object.keys((await r.json()) || {});
+        } catch (e) { return toolErr("Draft mirror unavailable: " + e.message); }
+        if (!keys.length) return toolErr("There are no draft rooms in the mirror.");
+        if (keys.length === 1) { room = keys[0]; resolvedBy = "the only room in the mirror"; }
+        else {
+          /* One cheap read per room — enough to tell them apart, never the picks. */
+          const cards = await Promise.all(keys.slice(0, 12).map(async k => {
+            const card = { room: k, legacy: k === "pepperoninipples" };
+            try {
+              const [tsR, setR] = await Promise.all([
+                fetch(`${DB}/drafts/${encodeURIComponent(k)}/ts.json`),
+                fetch(`${DB}/drafts/${encodeURIComponent(k)}/state/settings.json`),
+              ]);
+              card.updated_at = tsR.ok ? await tsR.json() : null;
+              const st = setR.ok ? await setR.json() : null;
+              if (st) {
+                card.teams = (st.teams || []).length;
+                card.rosterSpots = Number.isFinite(st.spots) ? st.spots : null;
+                card.scoring = st.scoring || null;
+                card.draftType = st.draftType || null;
+              }
+            } catch { /* a room that will not describe itself still gets listed */ }
+            return card;
+          }));
+          cards.sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0));
+          return toolText({
+            status: "room_required",
+            rooms: cards,
+            truncated: keys.length > 12 ? keys.length - 12 : 0,
+            note: "NOTHING WAS READ. More than one draft room exists and this connection cannot tell which one belongs to the person asking. " +
+                  "The room id is the site league id — the `league` parameter in that league's auction URL. Ask the user which league they mean, then call this tool again with `room`. " +
+                  "Rooms are listed most-recently-updated first, but recency is not ownership: do not pick one on their behalf. " +
+                  "`legacy: true` marks `pepperoninipples`, the pre-league-system room, which is almost certainly not the league being asked about.",
+          });
+        }
+      }
+      let rec;
+      try {
+        const r = await fetch(`${DB}/drafts/${room}.json`);
+        if (!r.ok) return toolErr("Draft mirror unavailable: HTTP " + r.status);
+        rec = await r.json();
+      } catch (e) { return toolErr("Draft mirror unavailable: " + e.message); }
+      if (!rec || !rec.state) return toolErr("The draft room is empty.");
+      const st = rec.state, set = st.settings || {};
+      const budget = set.budget || 200;
+      /* ⚠️ NEVER HARDCODE THE ROSTER SIZE. This read `set.spots || 15`, which reported a
+         17-spot league as 15 and made every openSpots count wrong by two. The room's own
+         settings are the only source of truth; when they do not carry it, say null rather
+         than invent a number that looks authoritative. */
+      const spots = Number.isFinite(set.spots) ? set.spots : null;
+
+      /* ⚠️ The mirror already holds ESPN account GUIDs in `owner` for rooms written before
+         the rig stopped storing them. Strip them on the way out too: this payload is read by
+         assistants, and a GUID identifies a real person's ESPN account. A Sleeper display
+         name is a name and passes through. */
+      const opaqueId = /^\{?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\}?$/i;
+      const teams = (set.teams || []).map(t => ({
+        name: t.name,
+        owner: t.owner && !opaqueId.test(String(t.owner).trim()) ? t.owner : null,
+        spent: 0, count: 0,
+      }));
+      const picks = st.picks || [];
+      for (const pk of picks) { const t = teams[pk.ti]; if (t) { t.spent += pk.price || 0; t.count++; } }
+      for (const t of teams) {
+        t.left = budget - t.spent;
+        t.openSpots = spots == null ? null : spots - t.count;
+        // League rule: $0 bids are legal, so no $1-per-open-slot reserve applies.
+        t.maxBid = t.left;
+      }
+      const recent = picks.slice(-10).map(pk => ({
+        player: pk.player, pos: pk.pos, price: pk.price,
+        team: (teams[pk.ti] || {}).name || null, keeper: !!pk.keeper,
+      }));
+      // C6 — this room is reused for testing between real drafts. A payload that cannot
+      // tell a test pick from a completed sale reads as a finished auction to any assistant
+      // that calls it ("Josh Allen $55 to Mark"). Read the flag from the top-level room node
+      // AND from settings: the draft app rewrites `state`, so a flag stored inside it can be
+      // clobbered mid-session. An absent flag means false — so it MUST be set on a test room
+      // before anyone is handed a connector URL.
+      const simulated = rec.simulated === true || set.simulated === true;
+      return toolText({
+        room, resolvedBy, as_of: rec.ts || null, scoring: set.scoring || "half",
+        simulated,
+        budget, rosterSpots: spots,
+        rosterSpotsNote: spots == null
+          ? "This room's settings carry no roster size, so openSpots is null. Do not assume a default — ask, or read the league page."
+          : undefined,
+
+        onTheClock: (teams[st.nomIdx] || {}).name || null,
+        onBlock: st.onBlock || null,
+        teams, picksMade: picks.length, recentSales: recent,
+        note: simulated
+          ? "SIMULATED — these picks were entered to test the league rig. They are NOT completed sales: no money moved, no player is rostered, and nobody is really on the clock. Do not report any of it as a real draft result."
+          : undefined,
+      });
+    },
+  },
+  /* ⚠️ THE ONLY TOOL HERE THAT READS A LEAGUE OUTSIDE THIS SITE, and the only reason it
+     can is that the caller signed in and connected one. Yahoo and ESPN connections are
+     stored per account (yahooKvKey / espnKvKey, both keyed by uid), so this resolves the
+     SAME credential the page uses and returns the SAME feed — it is not a second read of
+     the provider with its own idea of the league.
+
+     ⚠️ NO leagueId ARGUMENT, ON PURPOSE. Accepting one would turn a per-account tool into
+     a way to read any league id somebody can guess, and both providers hand back rosters
+     and team names. The credential decides which league this answers about. A caller who
+     wants a different league connects it on the site.
+
+     ⚠️ SLEEPER IS NOT HERE, and the tool says so rather than reporting "not connected".
+     Sleeper is read straight from the browser by public URL and no connection is stored
+     server-side, so there is nothing for this to resolve. Reporting it as unconnected
+     would be a wrong answer to a question the user can see the answer to on screen. */
+  {
+    name: "dd_war_room",
+    title: "Your connected fantasy league",
+    catalog: "full",
+    readOnlyHint: true,
+    description:
+      "The caller's OWN connected fantasy league as the War Room reads it: teams, rosters, each player's " +
+      "position and projection, and DataDawg$ where a board exists for that league. DataDawg$ is this site's " +
+      "converted auction dollars for THAT league's settings — priced against its own replacement level, not a " +
+      "generic board and not what anybody paid. Covers the Yahoo and ESPN connections, which are stored per " +
+      "account; a Sleeper league is read in the browser by public URL and is not stored here, so it cannot be " +
+      "resolved by this tool. Needs a personal connection: the shared league connector is not signed in as " +
+      "anybody and has no league. The `dd` block reports how many of the league's players the board matched — " +
+      "an unmatched player has no DataDawg$, which is a gap in the join and never a valuation of zero. " +
+      "Returns ROSTERED players only by default — pass scope:\"full\" for free agents, which roughly triples " +
+      "the payload and is worth it only for a waiver-wire question.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        scope: {
+          type: "string",
+          enum: ["rosters", "full"],
+          description: "How much of the player pool to return. \"rosters\" (the default) returns only players somebody actually holds — that is 161 of 629 rows in a typical 14-team league and about a quarter of the payload. \"full\" adds every free agent, which is what a waiver-wire or best-available question needs and nothing else does. Ask for full deliberately; it is large enough to crowd out the reasoning it was fetched for.",
+        },
+        provider: {
+          type: "string",
+          enum: ["yahoo", "espn", "sleeper"],
+          description: "Which provider to read. Yahoo and ESPN use the caller's stored connection. Sleeper is accepted only so the tool can report that browser-only leagues are unreachable. Omit it and the tool resolves the one stored connection that exists, or names both and refuses to guess when the caller has connected two.",
+        },
+      },
+      additionalProperties: false,
+    },
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user")
+        return toolErr(
+          "This reads the league YOU connected, and the shared league connector is not signed in as anybody. " +
+          "Mint a personal URL at " + SITE + "/connect.html and this works.");
+      const kv = env && env.RL;
+      if (!kv) return toolErr("League connections are not configured on this deployment.");
+      const uid = caller.uid || caller.name;
+
+      const want = args && args.provider ? String(args.provider).toLowerCase() : null;
+      if (want === "sleeper")
+        return toolErr(
+          "Sleeper is UNREACHABLE from dd_war_room. A Sleeper league is read only in your browser from its " +
+          "public URL and is not stored server-side, so this tool cannot read it even while the War Room page is showing it.");
+      const yahoo = (!want || want === "yahoo") ? await yahooStored(kv, uid) : null;
+      let espn = null;
+      if (!want || want === "espn") {
+        let blob = null;
+        try { blob = await kv.get(espnKvKey(uid)); } catch { blob = null; }
+        if (blob) { try { espn = await espnOpen(env, uid, blob); } catch { espn = null; } }
+      }
+
+      /* ⚠️ REFUSE, DO NOT PICK. Two connected leagues and no `provider` is genuinely
+         ambiguous, and answering about the wrong one is worse than answering about
+         neither — every number below would be right about a league nobody asked about. */
+      if (!want && yahoo && espn)
+        return toolErr(
+          "You have both a Yahoo and an ESPN league connected. Say which one: " +
+          'provider "yahoo" (league ' + yahoo.leagueId + ') or provider "espn" (league ' + espn.leagueId + ").");
+
+      const provider = yahoo ? "yahoo" : espn ? "espn" : null;
+      if (!provider)
+        return toolErr(
+          (want ? "No " + want + " league is connected to this account." : "No Yahoo or ESPN league is connected to this account.") +
+          " Connect one at " + SITE + "/fantasy-warroom.html. A Sleeper league is read in your browser from its " +
+          "public URL and is not stored here, so it cannot be read by this tool even while the page is showing it.");
+
+      const cred = provider === "yahoo" ? yahoo : espn;
+      const feed = provider === "yahoo" ? await yahooWarroomFeed(cred, env) : await espnWarroomFeed(cred);
+      if (!feed.ok)
+        return toolErr("Could not read the " + provider + " league: " + (feed.reason || "upstream refused"));
+
+      // The same decoration the page's own /warroom route applies — one code path, so a
+      // number here can never disagree with the number on screen.
+      ddDecorateBody(await ddLoadBoard(env, provider, cred.leagueId, "season"), feed.body);
+
+      /* ⚠️ THE FREE AGENTS ARE DROPPED BY DEFAULT, and that is a usability fix, not a
+         cosmetic one. This returned the whole feed once: 93 KB, of which the pool was
+         86 KB — 629 player rows for a league where 161 are rostered. That is roughly
+         23k tokens, which overflows a tool-result budget outright, so the answer a
+         caller wanted never arrived and the context it needed to reason with was gone.
+         A tool nobody can afford to call is not a live tool.
+         ⚠️ THE POOL CANNOT SIMPLY BE OMITTED. teams[].players holds IDS ("y:40896"),
+         and every name, position, projection and DataDawg$ lives in the pool rows they
+         point at. Drop the pool and the rosters become unreadable id lists. So it is
+         FILTERED to the ids the rosters reference, never removed.
+         ⚠️ The counts below describe WHAT WAS RETURNED. ddDecorateBody's own matched /
+         unmatched are league-wide and would contradict a trimmed pool on their face —
+         reporting 406 matched beside 161 rows invites exactly the wrong conclusion. */
+      const full = (args && args.scope) === "full";
+      const body = feed.body || {};
+      const allPool = Array.isArray(body.pool) ? body.pool : [];
+      let pool = allPool, omitted = 0;
+      if (!full && allPool.length) {
+        const held = new Set();
+        for (const t of (Array.isArray(body.teams) ? body.teams : []))
+          for (const id of (t && Array.isArray(t.players) ? t.players : [])) held.add(id);
+        // A league that reports no rosters at all would filter to nothing and look empty,
+        // which is a worse answer than a big one. Keep the whole pool in that case.
+        if (held.size) { pool = allPool.filter(x => x && held.has(x.id)); omitted = allPool.length - pool.length; }
+      }
+      const withDd = pool.filter(x => x && x.dd).length;
+
+      return toolText({
+        provider,
+        leagueId: cred.leagueId,
+        you: cred.teamId != null ? String(cred.teamId) : null,
+        ...body,
+        pool,
+        dd: {
+          ...(body.dd || {}),
+          // ⚠️ Named for the rows actually in this payload. `matched`/`unmatched` on the
+          // spread-in dd block stay league-wide; these two are the ones that describe
+          // what the caller is holding.
+          returnedRows: pool.length,
+          returnedWithDollars: withDd,
+          note: withDd < pool.length
+            ? (pool.length - withDd) + " of the returned players have no DataDawg$ — the board did not match "
+              + "them. That is a gap in the join, never a valuation of zero."
+            : "Every returned player carries DataDawg$.",
+        },
+        scope: {
+          returned: full ? "full" : "rosters",
+          rosteredRows: full ? undefined : pool.length,
+          freeAgentsOmitted: full ? 0 : omitted,
+          howToGetThem: full || !omitted ? undefined
+            : "Call again with scope:\"full\" for the " + omitted + " free agents. It is roughly three times "
+              + "this payload, so ask for it only when the question is about who is available.",
+        },
+        method: {
+          dollars: SITE + "/data/datadawg-dollars-method.md",
+          page: SITE + "/fantasy-warroom.html",
+          note: "DataDawg$ is converted for THIS league's settings against its own replacement level. It is not " +
+                "Market Value, not what anyone paid, and not comparable across leagues with different rosters.",
+        },
+      });
+    },
+  },
+  {
+    name: "dd_draft_pool",
+    title: "Draft player pool",
+    catalog: "core",
+    readOnlyHint: true,
+    description: "The published Market Value (MV) auction-dollar pool the site drafts from, filterable by position. MV is a dated snapshot, NOT a points projection — quote the as_of date out loud when quoting dollars.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        pos: { type: "string", enum: ["QB", "RB", "WR", "TE", "K", "DST"], description: "Filter to one position" },
+        limit: { type: "integer", minimum: 1, maximum: 100, description: "Rows to return (default 25)" },
+      },
+      additionalProperties: false,
+    },
+    async run(args) {
+      if (!mcpPoolCache.data || Date.now() - mcpPoolCache.at > 3600e3) {
+        const r = await fetch(`${SITE}/data/pool.json`, { cf: { cacheTtlByStatus: { "200-299": 3600, "404": 1, "500-599": 0 }, cacheEverything: true } });
+        if (!r.ok) return toolErr("pool.json unavailable: HTTP " + r.status);
+        mcpPoolCache = { at: Date.now(), data: await r.json() };
+      }
+      const env2 = mcpPoolCache.data;
+      let rows = env2.data || [];
+      if (args.pos) rows = rows.filter(p => p.pos === args.pos);
+      const limit = Math.min(Math.max(args.limit || 25, 1), 100);
+      return toolText({
+        as_of: env2.as_of, source: env2.source, note: env2.note,
+        scoring_keys: env2.scoring_keys, tier: env2.tier, graded: env2.graded,
+        count: rows.length, players: rows.slice(0, limit),
+      });
+    },
+  },
+  {
+    name: "dd_survivor_week",
+    title: "Survivor ownership snapshot",
+    catalog: "core",
+    readOnlyHint: true,
+    description: "Stored survivor pick-ownership snapshot for a week. Ownership moves all week: a snapshot over 72 hours old is flagged stale and is directional-only.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        season: { type: "integer", description: "Season (default: current)" },
+        week: { type: "integer", minimum: 1, maximum: 18, description: "NFL week" },
+      },
+      required: ["week"],
+      additionalProperties: false,
+    },
+    async run(args, env) {
+      // Names RL explicitly, matching survivorKV — see its note in the Worker.
+      const kv = env.RL;
+      if (!kv) return toolErr("No KV namespace bound — survivor data unavailable.");
+      const season = args.season || SEASON, week = args.week;
+      if (!(week >= 1 && week <= 18)) return toolErr("week must be 1-18");
+      const hit = await kv.get(survivorKey(season, week));
+      if (!hit) return toolErr("No pick data stored for this week.");
+      const rec = JSON.parse(hit);
+      const ageH = (Date.now() - rec.stored) / 3.6e6;
+      return toolText({ ...rec, ageHours: Math.round(ageH * 10) / 10, stale: ageH > 72,
+        note: ageH > 72 ? "Snapshot is over 72h old — treat as directional-only." : undefined });
+    },
+  },
+  {
+    name: "dd_survivor_ev",
+    title: "Survivor pick EV",
+    catalog: "core",
+    readOnlyHint: true,
+    description: "Ranks every legal survivor pick for a week by closed-form expected value: win probability × expected share of the surviving field (one-week leverage). Ownership comes from the posted weekly snapshot when one exists, otherwise a chalk-softmax MODEL — and a modelled ranking is a structured guess, which the payload says in words.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        week: { type: "integer", minimum: 1, maximum: 18, description: "NFL week" },
+        entries: { type: "integer", minimum: 2, description: "Pool size (default 200). Drives how much fading the chalk is worth." },
+        used: { type: "array", items: { type: "string" }, description: "Teams you have already spent (abbreviations)" },
+      },
+      required: ["week"],
+      additionalProperties: false,
+    },
+    async run(args, env) {
+      const D = await mcpSurvivor();
+      const week = args.week;
+      if (!(week >= 1 && week <= 18)) return toolErr("week must be 1-18");
+      // Per-team table for the week, from the shipped blend (market 0.75 where a
+      // line existed at capture — the same numbers survivor.html renders by default).
+      const tab = {};
+      for (const g of D.games) {
+        if (g.wk !== week) continue;
+        tab[g.h] = { opp: g.a, home: true, p: g.p, src: g.src };
+        tab[g.a] = { opp: g.h, home: false, p: 1 - g.p, src: g.src };
+      }
+      if (!Object.keys(tab).length) return toolErr("No games found for week " + week + ".");
+
+      // Ownership: the posted snapshot when Kap has stored one, else chalk softmax.
+      // The field's distribution deliberately ignores YOUR used list — the field is not you.
+      let pop = null, ownership = "modelled", ageHours, stale;
+      const kv = env.RL;   // names RL explicitly, matching survivorKV
+      if (kv) {
+        const hit = await kv.get(survivorKey(D.meta.season, week));
+        if (hit) {
+          const rec = JSON.parse(hit);
+          const w = {}; let tot = 0;
+          for (const t in (rec.picks || {})) { if (tab[t]) { w[t] = Math.max(0, rec.picks[t]); tot += w[t]; } }
+          if (tot > 0) {
+            for (const t in w) w[t] /= tot;
+            pop = w; ownership = "posted";
+            ageHours = Math.round((Date.now() - rec.stored) / 3.6e5) / 10;
+            stale = ageHours > 72;
+          }
+        }
+      }
+      if (!pop) {
+        const CHALK = 2.4;                      // survivor.html's default dial
+        pop = {}; let tot = 0;
+        for (const t in tab) { const v = Math.pow(Math.max(tab[t].p, 0.01), CHALK); pop[t] = v; tot += v; }
+        for (const t in pop) pop[t] /= tot;
+      }
+
+      const entries = Math.max(2, Number(args.entries) || 200);
+      const E = entries - 1;                    // the field is everyone but you
+      const used = new Set((args.used || []).map(t => String(t).toUpperCase()));
+
+      // Per-GAME surviving-mass contribution. Games are independent; within a game the
+      // two sides are perfectly anti-correlated, so a game contributes
+      // pop_a + (pop_h − pop_a)�

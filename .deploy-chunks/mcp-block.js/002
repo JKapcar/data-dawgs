@@ -1,0 +1,749 @@
+ && typeof args.priced_only !== "boolean")
+    throw new Error("priced_only must be true or false");
+  if (!["kickoff-asc", "kickoff-desc"].includes(out.sort))
+    throw new Error("sort must be kickoff-asc or kickoff-desc");
+  if (!Number.isInteger(out.limit) || out.limit < 1 || out.limit > 25)
+    throw new Error("limit must be a whole number from 1 through 25");
+  return out;
+}
+
+function mcpCfbMarketTeam(games, input) {
+  const teams = new Map();
+  for (const game of games) {
+    teams.set(mcpCfbTeamSlug(game.home_team), game.home_team);
+    teams.set(mcpCfbTeamSlug(game.away_team), game.away_team);
+  }
+  const exact = [...teams].filter(([slug, name]) => slug === input.slug || mcpCfbTeamSlug(name) === input.slug);
+  if (exact.length === 1) return { team_slug: exact[0][0], team: exact[0][1] };
+  if (exact.length > 1) throw new Error("cfb-market.json has duplicate normalized team names for " + input.query);
+  const partial = [...teams].filter(([slug, name]) => slug.includes(input.slug) || mcpCfbTeamSlug(name).includes(input.slug));
+  if (partial.length) {
+    const choices = partial.slice(0, 10).map(([slug, name]) => name + " (" + slug + ")").join(", ");
+    throw new Error("team is not an exact historical market name or slug" + (partial.length > 1 ? " and is ambiguous" : "") + "; try: " + choices);
+  }
+  throw new Error("team is not present in the dated historical CFB market surface: " + input.query);
+}
+
+function mcpCfbModelCardArgs(args) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+  const extra = Object.keys(args).filter(k => k !== "model_id");
+  if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+  if (args.model_id === undefined) return { modelId: null };
+  if (typeof args.model_id !== "string" || !args.model_id.trim() || args.model_id.trim().length > 80)
+    throw new Error("model_id must be a non-empty string of at most 80 characters");
+  const modelId = args.model_id.trim().toLowerCase();
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(modelId)) throw new Error("model_id must be a lowercase slug");
+  return { modelId };
+}
+
+function mcpCfbRatingSystemArgs(args) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+  const extra = Object.keys(args).filter(k => k !== "system_id");
+  if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+  if (args.system_id === undefined) return { systemId: null };
+  if (typeof args.system_id !== "string" || !args.system_id.trim() || args.system_id.trim().length > 80)
+    throw new Error("system_id must be a non-empty string of at most 80 characters");
+  const systemId = args.system_id.trim().toLowerCase();
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(systemId)) throw new Error("system_id must be a lowercase slug");
+  return { systemId };
+}
+
+function mcpCfbRankingArgs(args) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+  const allowed = ["system_id", "conference", "offset", "limit"];
+  const extra = Object.keys(args).filter(k => !allowed.includes(k));
+  if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+  const out = {
+    systemId: null,
+    conference: null,
+    offset: args.offset === undefined ? 0 : args.offset,
+    limit: args.limit === undefined ? 25 : args.limit,
+  };
+  if (args.system_id !== undefined) {
+    if (typeof args.system_id !== "string" || !args.system_id.trim() || args.system_id.trim().length > 80)
+      throw new Error("system_id must be a non-empty string of at most 80 characters");
+    out.systemId = args.system_id.trim().toLowerCase();
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(out.systemId)) throw new Error("system_id must be a lowercase slug");
+  }
+  if (args.conference !== undefined) {
+    if (typeof args.conference !== "string" || !args.conference.trim() || args.conference.trim().length > 80)
+      throw new Error("conference must be a non-empty string of at most 80 characters");
+    out.conference = args.conference.trim();
+  }
+  if (!Number.isInteger(out.offset) || out.offset < 0 || out.offset > 199)
+    throw new Error("offset must be a whole number from 0 through 199");
+  if (!Number.isInteger(out.limit) || out.limit < 1 || out.limit > 50)
+    throw new Error("limit must be a whole number from 1 through 50");
+  return out;
+}
+
+function mcpCfbCompareArgs(args) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+  const extra = Object.keys(args).filter(k => !["team_a", "team_b"].includes(k));
+  if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+  const teamA = mcpCfbTeamArgs({ team: args.team_a });
+  const teamB = mcpCfbTeamArgs({ team: args.team_b });
+  if (teamA.slug === teamB.slug) throw new Error("team_a and team_b must name different teams");
+  return { teamA, teamB };
+}
+
+function mcpCfbProjectionArgs(args) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+  const extra = Object.keys(args).filter(k => !["home_team", "away_team", "neutral_site"].includes(k));
+  if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+  const homeTeam = mcpCfbTeamArgs({ team: args.home_team });
+  const awayTeam = mcpCfbTeamArgs({ team: args.away_team });
+  if (homeTeam.slug === awayTeam.slug) throw new Error("home_team and away_team must name different teams");
+  if (args.neutral_site !== undefined && typeof args.neutral_site !== "boolean")
+    throw new Error("neutral_site must be true or false");
+  return { homeTeam, awayTeam, neutralSite: args.neutral_site === true };
+}
+
+function mcpCfbScheduleArgs(args) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+  const extra = Object.keys(args).filter(k => !["team", "games", "minimum_wins"].includes(k));
+  if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+  const team = mcpCfbTeamArgs({ team: args.team });
+  if (!Array.isArray(args.games) || !args.games.length) throw new Error("games must contain at least one hypothetical matchup");
+  if (args.games.length > 20) throw new Error("games is limited to 20 hypothetical matchups");
+  const games = args.games.map((raw, i) => {
+    const label = "games[" + i + "]";
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error(label + " must be an object");
+    const gameExtra = Object.keys(raw).filter(k => !["opponent", "venue", "label"].includes(k));
+    if (gameExtra.length) throw new Error(label + " has unsupported field" + (gameExtra.length > 1 ? "s" : "") + ": " + gameExtra.join(", "));
+    const opponent = mcpCfbTeamArgs({ team: raw.opponent });
+    const venue = raw.venue === undefined ? "neutral" : raw.venue;
+    if (!["home", "away", "neutral"].includes(venue)) throw new Error(label + ".venue must be home, away or neutral");
+    if (raw.label !== undefined && (typeof raw.label !== "string" || !raw.label.trim() || raw.label.trim().length > 80))
+      throw new Error(label + ".label must be a non-empty string of at most 80 characters");
+    return { opponent, venue, label: raw.label === undefined ? null : raw.label.trim() };
+  });
+  const minimumWins = args.minimum_wins === undefined ? null : args.minimum_wins;
+  if (minimumWins !== null && (!Number.isInteger(minimumWins) || minimumWins < 0 || minimumWins > games.length))
+    throw new Error("minimum_wins must be a whole number from 0 through the number of games");
+  return { team, games, minimumWins };
+}
+
+function mcpCfbMatchupProbability(system, focalRating, opponentRating, venue) {
+  const transform = system.matchup_probability;
+  if (!transform || transform.available !== true) return null;
+  if (!focalRating || !opponentRating || !Number.isFinite(focalRating.team_strength) || !Number.isFinite(opponentRating.team_strength))
+    throw new Error("team strength is missing for registered system " + system.system_id);
+  if (!Number.isFinite(transform.elo_scale) || transform.elo_scale <= 0 ||
+      !Number.isFinite(transform.home_field_elo) || !Number.isFinite(transform.neutral_site_home_field_elo))
+    throw new Error("invalid matchup transform for registered system " + system.system_id);
+  const hfa = venue === "neutral" ? transform.neutral_site_home_field_elo : transform.home_field_elo;
+  const homeStrength = venue === "away" ? opponentRating.team_strength : focalRating.team_strength;
+  const awayStrength = venue === "away" ? focalRating.team_strength : opponentRating.team_strength;
+  const pHome = 1 / (1 + 10 ** (-(homeStrength - awayStrength + hfa) / transform.elo_scale));
+  return {
+    focal_win_probability: venue === "away" ? 1 - pHome : pHome,
+    venue_adjustment_elo: hfa,
+    focal_is_formula_home_team: venue !== "away",
+  };
+}
+
+function mcpCfbPoissonBinomial(probabilities) {
+  let distribution = [1];
+  for (const p of probabilities) {
+    const next = new Array(distribution.length + 1).fill(0);
+    for (let wins = 0; wins < distribution.length; wins++) {
+      next[wins] += distribution[wins] * (1 - p);
+      next[wins + 1] += distribution[wins] * p;
+    }
+    distribution = next;
+  }
+  return distribution;
+}
+
+function mcpCfbProbabilityAtLeast(distribution, wins) {
+  if (wins <= 0) return 1;
+  if (wins >= distribution.length) return 0;
+  return distribution.slice(wins).reduce((sum, probability) => sum + probability, 0);
+}
+
+function mcpCfbObservedView(team) {
+  const observed = team.observed_results || {};
+  return {
+    season: observed.season,
+    through_at: observed.through_at,
+    record: observed.record,
+    games: observed.games,
+    wins: observed.wins,
+    losses: observed.losses,
+    ties: observed.ties,
+    win_percentage: observed.win_percentage,
+    points_for_per_game: observed.points_for_per_game,
+    points_against_per_game: observed.points_against_per_game,
+    point_differential_per_game: observed.point_differential_per_game,
+  };
+}
+
+function mcpModelScoreboardString(v, label, max) {
+  if (typeof v !== "string" || !v.trim()) throw new Error(label + " must be a non-empty string");
+  const s = v.trim();
+  if (s.length > max) throw new Error(label + " is limited to " + max + " characters");
+  return s;
+}
+
+function mcpModelScoreboardInt(v, label, lo, hi) {
+  if (!Number.isInteger(v) || v < lo || v > hi) throw new Error(label + " must be a whole number from " + lo + " to " + hi);
+  return v;
+}
+
+function mcpModelScoreboardArgs(args) {
+  const allowed = ["season", "week", "team", "game_id", "model_ids", "limit", "sort"];
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+  const extra = Object.keys(args).filter(k => !allowed.includes(k));
+  if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+  const out = {};
+  if (args.season !== undefined) out.season = mcpModelScoreboardInt(args.season, "season", 2000, 2100);
+  if (args.week !== undefined) out.week = mcpModelScoreboardInt(args.week, "week", 1, 22);
+  if (args.team !== undefined) {
+    out.team = mcpModelScoreboardString(args.team, "team", 5).toUpperCase();
+    if (!/^[A-Z]{2,5}$/.test(out.team)) throw new Error("team must be a 2-5 letter abbreviation");
+  }
+  if (args.game_id !== undefined) {
+    out.game_id = mcpModelScoreboardString(args.game_id, "game_id", 80).toUpperCase();
+    if (!/^\d{4}_\d{2}_[A-Z]{2,5}_[A-Z]{2,5}$/.test(out.game_id))
+      throw new Error("game_id must use season_week_away_home, for example 2026_01_CLE_PIT");
+  }
+  if (args.model_ids !== undefined) {
+    if (!Array.isArray(args.model_ids) || !args.model_ids.length || args.model_ids.length > 10)
+      throw new Error("model_ids must contain 1-10 model ids");
+    out.model_ids = args.model_ids.map((v, i) => {
+      const s = mcpModelScoreboardString(v, "model_ids[" + i + "]", 40).toLowerCase();
+      if (!/^[a-z0-9][a-z0-9-]*$/.test(s)) throw new Error("model_ids must be lowercase slugs");
+      return s;
+    });
+    if (new Set(out.model_ids).size !== out.model_ids.length) throw new Error("model_ids must not contain duplicates");
+  }
+  out.limit = args.limit === undefined ? 25 : mcpModelScoreboardInt(args.limit, "limit", 1, 50);
+  out.sort = args.sort === undefined ? "disagreement" : args.sort;
+  if (!['disagreement', 'kickoff'].includes(out.sort)) throw new Error("sort must be disagreement or kickoff");
+  return out;
+}
+
+function mcpModelScoreboardRows(envelope, input) {
+  const prospective = envelope.data.filter(r => r && r.forecast_status === "prospective");
+  if (!prospective.length) throw new Error("model-receipts.json has no prospective receipts");
+  const latestSeason = prospective.reduce((n, r) => Math.max(n, Number(r.season) || 0), 0);
+  const season = input.season === undefined ? latestSeason : input.season;
+  // No-argument calls intentionally match the human Week 1 board. A caller who
+  // supplies any locator can omit week to search the full selected season.
+  const defaultWeek = input.season === undefined && input.week === undefined && !input.team && !input.game_id && !input.model_ids;
+  const week = defaultWeek ? 1 : input.week;
+  const preferredModelOrder = new Map([["nfelo", 0], ["538-classic", 1]]);
+  const allModelIds = Array.from(new Set(prospective.filter(r => r.season === season).map(r => r.model_id)))
+    .sort((a, b) => (preferredModelOrder.get(a) ?? 999) - (preferredModelOrder.get(b) ?? 999) || a.localeCompare(b));
+  const requestedModels = input.model_ids || allModelIds;
+  const requestedSet = new Set(requestedModels);
+  const latest = new Map();
+  for (const r of prospective) {
+    if (r.season !== season || (week !== undefined && r.week !== week)) continue;
+    if (input.team && r.home_team !== input.team && r.away_team !== input.team) continue;
+    if (input.game_id && r.game_id !== input.game_id) continue;
+    if (!requestedSet.has(r.model_id)) continue;
+    if (typeof r.home_win_probability !== "number" || !Number.isFinite(r.home_win_probability) || r.home_win_probability < 0 || r.home_win_probability > 1)
+      throw new Error("receipt " + (r.forecast_id || "unknown") + " has an invalid home_win_probability");
+    const capturedMs = Date.parse(r.captured_at);
+    if (!Number.isFinite(capturedMs)) throw new Error("receipt " + (r.forecast_id || "unknown") + " has an invalid captured_at");
+    const key = r.game_id + "|" + r.model_id;
+    const prior = latest.get(key);
+    if (!prior || capturedMs > Date.parse(prior.captured_at)) latest.set(key, r);
+  }
+  const grouped = new Map();
+  for (const r of latest.values()) {
+    if (!grouped.has(r.game_id)) grouped.set(r.game_id, []);
+    grouped.get(r.game_id).push(r);
+  }
+  const modelOrder = new Map(requestedModels.map((id, i) => [id, i]));
+  const games = Array.from(grouped.values()).map(receipts => {
+    receipts.sort((a, b) => (modelOrder.get(a.model_id) ?? 999) - (modelOrder.get(b.model_id) ?? 999) || a.model_id.localeCompare(b.model_id));
+    const first = receipts[0];
+    for (const r of receipts) {
+      if (r.season !== first.season || r.week !== first.week || r.kickoff_at !== first.kickoff_at ||
+          r.home_team !== first.home_team || r.away_team !== first.away_team || r.schedule_snapshot_id !== first.schedule_snapshot_id)
+        throw new Error("receipt game facts disagree for " + first.game_id);
+    }
+    const summary = mcpCalcBeliefSummary(receipts.map(r => r.home_win_probability));
+    return {
+      game_id: first.game_id, season: first.season, week: first.week, kickoff_at: first.kickoff_at,
+      away_team: first.away_team, home_team: first.home_team,
+      models: receipts.map(r => ({
+        model_id: r.model_id, model_name: r.model_name, model_version: r.model_version,
+        home_win_probability: r.home_win_probability, forecast_id: r.forecast_id,
+        captured_at: r.captured_at, source_repo: r.source_repo, source_commit: r.source_commit,
+        source_capture_at: r.source_capture_at, input_snapshot_id: r.input_snapshot_id,
+        schedule_snapshot_id: r.schedule_snapshot_id, methodology_url: r.methodology_url,
+        license_status: r.license_status,
+      })),
+      descriptive_summary: summary,
+      requested_models: requestedModels.length,
+      models_present: receipts.length,
+      complete_comparable_set: requestedModels.every(id => receipts.some(r => r.model_id === id)),
+      graded: false, outcome: null,
+    };
+  });
+  games.sort(input.sort === "kickoff"
+    ? (a, b) => String(a.kickoff_at).localeCompare(String(b.kickoff_at)) || a.game_id.localeCompare(b.game_id)
+    : (a, b) => b.descriptive_summary.range - a.descriptive_summary.range || String(a.kickoff_at).localeCompare(String(b.kickoff_at)) || a.game_id.localeCompare(b.game_id));
+  return { season, week: week === undefined ? null : week, availableModelIds: allModelIds, requestedModels, matched: games.length, games: games.slice(0, input.limit) };
+}
+
+// Resolve the credential in the URL (or header) to a caller.
+//   { kind:"user", name, uid }  — a per-user token, matched by HASH against /users
+//   { kind:"shared" }           — the legacy league passphrase; anonymous
+//   null                        — no match; the caller gets a 401
+// ⚠️ Matched by hash and compared timing-safely against EVERY row, so a wrong token
+// leaks no timing signal about which member it nearly matched — the same discipline
+// bozoClaim already applies to invite tokens.
+// ⚠️ `name` is the DISPLAY name — rec.name when the account has one, the /users key
+// otherwise. Greenfield accounts are keyed by immutable uid (u_…), and before this
+// resolution every `you:` marker and membership check compared that raw uid against
+// league rosters keyed by display name, so a uid-keyed member's own leg showed
+// you:false. sessionAuth already resolves rec.name the same way; this mirrors it.
+// `uid` is the /users key and is what anything durable (KV keys, audit fields) must
+// use — display names are mutable.
+async function mcpAuth(request, url, env) {
+  const supplied = mcpPassOf(request, url);
+  if (!supplied) return null;
+
+  if (supplied.startsWith("u_")) {
+    if (!env.BOZO_PEPPER) return null;          // per-user tokens need the pepper to hash
+    let users;
+    try { users = await loadUsers(env); } catch { return null; }
+    const h = await mcpTokenHash(env, supplied);
+    let hit = null, hitUser = null;
+    for (const [key, u] of Object.entries(users))
+      if (u && u.mcpToken && timingSafeEqual(h, u.mcpToken)) { hit = playerName(key); hitUser = u; }
+    // The caller's own entitlement rides along. Their record is already in hand here, so it
+    // costs no extra read, and it is what a future gate on the solver or the simulator will
+    // check instead of re-fetching /users on every tool call.
+    // ⚠️ THIS IS A READ. entitlementOf() never writes, and the backfill that persists the
+    // field deliberately lives on /auth/roster instead of in loadUsers, so that no MCP call
+    // can ever trigger a Firebase write. Every tool except dd_submit_bozo_leg is read-only,
+    // and that one writes only at its confirm step — never during auth.
+    if (!hit) return null;
+    const display = hitUser && typeof hitUser.name === "string" && hitUser.name.trim()
+      ? hitUser.name.trim() : hit;
+    return { kind: "user", name: display, uid: hit, entitlement: entitlementOf(hitUser) };
+  }
+
+  if (env.DAWG_PASS && timingSafeEqual(supplied, env.DAWG_PASS)) return { kind: "shared" };
+  return null;
+}
+
+// ⚠️ THE CATALOG IS A PATH SEGMENT, STRIPPED BEFORE THE CREDENTIAL IS READ.
+//   /mcp/<credential>        full — UNCHANGED, so no connector already in the wild loses a tool
+//   /mcp/full/<credential>   full, named explicitly
+//   /mcp/core/<credential>   core — the everyday league surface, for conversations that should
+//                            not spend 41 tool schemas of context on tools they never call
+// The default stayed `full` on purpose: switching it would silently remove tool names a live
+// connector may already be calling, which is the same breaking change as renaming one.
+// ⚠️ A CATALOG NAME IS ONLY A CATALOG IF SOMETHING FOLLOWS IT. This one condition is what
+// makes the split safe to deploy without anyone auditing the secret first. The earlier
+// version consumed a leading "core"/"full" unconditionally, which meant a DAWG_PASS that
+// happened to BE one of those words became unreachable: /mcp/core parsed as "catalog core,
+// no credential" and there was no URL left that could carry it. That was defended with a
+// comment telling a human not to let it happen, which is not a defence — it fails silently,
+// at deploy time, and locks out the whole league rather than one member.
+// Requiring a following segment closes it by construction:
+//   /mcp/<credential>            full — UNCHANGED, so no connector in the wild loses a tool
+//   /mcp/full/<credential>       full, named explicitly
+//   /mcp/core/<credential>       core — the everyday league surface, for conversations that
+//                                should not spend 41 tool schemas of context on tools they
+//                                never call
+//   /mcp/core     (nothing after) credential "core" — NOT a catalog selection
+// ⚠️ UNLESS THE CREDENTIAL ARRIVED IN A HEADER. A header-authenticated caller does not need
+// the URL to carry a credential, so for them a lone /mcp/core IS a catalog selection and
+// nothing is ambiguous. Leaving that out silently broke header auth + catalog in the first
+// draft of this guard: /mcp/core consumed "core" as the credential, never read the header,
+// and returned 401 to a caller who had authenticated correctly. The existing suite caught it.
+// The only residue is harmless and worth stating: a URL credential that literally is "core"
+// or "full" still authenticates, it just always gets the default catalog, because its own
+// name occupies the slot a catalog would use. Nobody is ever locked out. Per-user tokens
+// start with u_ and could never collide in the first place.
+// The default stayed `full` on purpose: switching it would silently remove tool names a live
+// connector may already be calling, which is the same breaking change as renaming one.
+const MCP_CATALOGS = ["core", "full"];
+const MCP_DEFAULT_CATALOG = "full";
+
+function mcpHasHeaderPass(request) {
+  if (!request) return false;
+  if (request.headers.get("X-Dawg-Pass")) return true;
+  return (request.headers.get("Authorization") || "").startsWith("Bearer ");
+}
+
+function mcpRoute(url, request) {
+  const seg = url.pathname.split("/").filter(Boolean);          // ["mcp", ("core"|"full")?, "<pass>"]
+  let rest = seg.slice(1), catalog = MCP_DEFAULT_CATALOG;
+  const named = rest.length && MCP_CATALOGS.includes(rest[0]);
+  if (named && (rest.length > 1 || mcpHasHeaderPass(request))) { catalog = rest[0]; rest = rest.slice(1); }
+  return { catalog, rest };
+}
+
+function mcpPassOf(request, url) {
+  const { rest } = mcpRoute(url, request);
+  if (rest.length) { try { return decodeURIComponent(rest.join("/")); } catch { return rest.join("/"); } }
+  const h = request.headers.get("X-Dawg-Pass");
+  if (h) return h;
+  const a = request.headers.get("Authorization") || "";
+  if (a.startsWith("Bearer ")) return a.slice(7);
+  return "";
+}
+
+const mcpJson = (obj, status) =>
+  new Response(JSON.stringify(obj), { status: status || 200, headers: { "Content-Type": "application/json", ...MCP_CORS } });
+const rpcErr = (id, code, message) => ({ jsonrpc: "2.0", id: id === undefined ? null : id, error: { code, message } });
+const rpcOk  = (id, result) => ({ jsonrpc: "2.0", id, result });
+const toolText = obj => ({ content: [{ type: "text", text: typeof obj === "string" ? obj : JSON.stringify(obj, null, 1) }] });
+const toolErr  = msg => ({ content: [{ type: "text", text: msg }], isError: true });
+
+async function handleMcp(request, url, env) {
+  if (request.method === "OPTIONS") return new Response(null, { headers: MCP_CORS });
+  if (request.method === "GET")
+    return mcpJson({
+      name: "data-dawgs", transport: "streamable-http",
+      catalogs: {
+        core: "/mcp/core/<credential> — the everyday league surface",
+        full: "/mcp/full/<credential> — every tool; the bare /mcp/<credential> is also full",
+      },
+      hint: "POST JSON-RPC 2.0 here.",
+    }, 405);
+  if (request.method !== "POST") return mcpJson(rpcErr(null, -32600, "POST only"), 405);
+
+  // ⚠️ Either mechanism is enough on its own: BOZO_PEPPER for per-user tokens, DAWG_PASS
+  // for the legacy shared one. Demanding both would have taken shared access down the
+  // moment per-user shipped, for no reason.
+  if (!env.BOZO_PEPPER && !env.DAWG_PASS)
+    return mcpJson(rpcErr(null, -32000, "Worker misconfigured: neither BOZO_PEPPER nor DAWG_PASS is set."), 500);
+  const { catalog } = mcpRoute(url, request);
+  const caller = await mcpAuth(request, url, env);
+  if (!caller)
+    return new Response(JSON.stringify(rpcErr(null, -32001, "unauthorised — get your personal connector URL from " + SITE + "/connect.html")),
+      { status: 401, headers: { "Content-Type": "application/json", "WWW-Authenticate": 'Bearer realm="data-dawgs"', ...MCP_CORS } });
+
+  let body;
+  try { body = await request.json(); }
+  catch { return mcpJson(rpcErr(null, -32700, "Parse error"), 400); }
+
+  const batch = Array.isArray(body);
+  const msgs = batch ? body : [body];
+  if (!msgs.length) return mcpJson(rpcErr(null, -32600, "Invalid Request"), 400);
+
+  const replies = [];
+  for (const m of msgs) {
+    const r = await mcpDispatch(m, env, caller, catalog);
+    if (r !== undefined) replies.push(r);        // notifications contribute nothing
+  }
+  if (!replies.length) return new Response(null, { status: 202, headers: MCP_CORS });
+  return mcpJson(batch ? replies : replies[0]);
+}
+
+// ⚠️ THE CATALOG IS THE SURFACE, NOT A LISTING HINT. A tool outside the catalog is not
+// callable either. Filtering only tools/list would make `core` a suggestion a model can
+// step around by remembering a name it saw in another conversation.
+const mcpCatalogTools = catalog => catalog === "full" ? MCP_TOOLS : MCP_TOOLS.filter(t => t.catalog === catalog);
+
+async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG) {
+  if (!m || typeof m !== "object" || m.jsonrpc !== "2.0" || typeof m.method !== "string")
+    return rpcErr(m && m.id, -32600, "Invalid Request");
+  const id = m.id;
+  if (id === undefined) return undefined;        // a notification: acknowledge by silence
+
+  switch (m.method) {
+    case "initialize": {
+      const want = m.params && m.params.protocolVersion;
+      // Echo a known protocolVersion; fall back rather than guess forward.
+      const proto = MCP_PROTOS.includes(want) ? want : "2025-06-18";
+      return rpcOk(id, {
+        protocolVersion: proto,
+        capabilities: { tools: {} },
+        serverInfo: { name: "data-dawgs", version: "1.7.0" },
+        instructions:
+          "Catalog `" + catalog + "`: " + mcpCatalogTools(catalog).length + " of " + MCP_TOOLS.length + " tools are callable here. " +
+          (catalog === "core"
+            ? "The rest — college football evidence, the DFS and survivor solvers, the model scoreboard and the less common price math — " +
+              "are on the same URL with `full` in place of `core`. Calling one of them from here is an error, not a silent fallback.\n"
+            : "A smaller `core` catalog is served at the same URL with `core` before the credential; it costs less context.\n") +
+          (caller && caller.kind === "user"
+            ? "You are connected as " + caller.name + ". When a tool marks a row `you: true`, that is them.\n"
+            : "⚠️ This is the SHARED league connector — you do NOT know which member you are talking to. " +
+              "Never assume whose team, leg or ledger is whose; ask. A personal URL from " + SITE + "/connect.html fixes this.\n") +
+          "Every tool here is read-only except dd_submit_bozo_leg, which can write exactly one thing — " +
+          "the caller's own Bozo leg, in an open week, and only after the human has read back the parsed bet and " +
+          "confirmed with the code it returns. Never call its confirm step without showing the human the echo first. " +
+          "Everything else is the league's own data, public play-by-play, " +
+          "or a deterministic calculation over caller-supplied inputs. Calculator inputs and results are not stored. " +
+          "The model scoreboard reads dated prospective receipts and returns descriptive disagreement only; it is ungraded and is not a validated consensus or ranking. " +
+          "The CFB reads separate observed 2025 results from one end-of-2025 retrodictive Elo row. Compact profiles also expose non-ranked expected-versus-observed Elo diagnostics; these are not luck, team-quality labels, forecasts or grades. dd_find_cfb_games reads the actual canonical 2025 schedule/results surface; it is historical and not the unpublished 2026 schedule. dd_find_cfb_team_games and dd_find_cfb_team_periods return schedule-derived results only, for one exact team by default or for every team's most recent game or period under scope=latest-per-team; latest means latest within the 2025 FBS-involved surface, not current 2026 form, and FCS records are partial. dd_find_cfb_historical_market returns book-identified prices whose observation time is unknown: never call them closing lines, compute CLV or cite them as prospective inputs. dd_get_cfb_model_card returns generated governance and retrodictive evidence, not a current forecast or leaderboard. dd_get_cfb_rating_system describes registered methods and output availability; registration is not evidence of prospective skill. dd_rank_cfb_teams returns one declared system's dated ranking, not a consensus or current power ranking. dd_project_cfb_matchup and dd_project_cfb_schedule_path are hypothetical rating-period calculations, not scheduled 2026 forecasts. dd_find_cfb_record_divergence returns descriptive record-versus-scoring gaps whose small held-out lift does not authorize current-team labels. dd_get_cfb_model_disagreement returns a blocked study whose untimestamped market input prevents a winner or blend conclusion. dd_get_cfb_model_receipt_status reports the append-only prospective ledger honestly; receipt rows remain ungraded and outcomes belong in a separate surface. All CFB outputs are ungraded, not market-adjusted and are not a consensus. " +
+          "There is no built-in DFS projection or ownership feed: dd_solve_dfs_lineup requires the caller to supply every value per call, and stores none of them. dd_optimize_survivor_path is an ungraded ceiling over a dated snapshot; it models double-pick weeks exactly, as two assignment slots spending two distinct teams. When quoting bozo odds, survivor odds " +
+          "or the correlation matrix, say it is model output or a measured historical average, never a forecast " +
+          "of a specific game. Team names, weeks and league ids come from dd_league_overview — do not guess them.",
+      });
+    }
+    case "ping":
+      return rpcOk(id, {});
+    case "tools/list":
+      // ⚠️ ONLY THE TWO HINTS WE CAN STAND BEHIND. destructiveHint is defined only when
+      // readOnlyHint is false, and idempotentHint/openWorldHint would be a guess per tool.
+      // A client trusts these; an annotation nobody checked is worse than no annotation.
+      // `catalog` is ours and stays server-side — it is not part of the Tool wire shape.
+      return rpcOk(id, { tools: mcpCatalogTools(catalog).map(t => ({
+        name: t.name, title: t.title, description: t.description, inputSchema: t.inputSchema,
+        annotations: {
+          title: t.title, readOnlyHint: t.readOnlyHint === true,
+          // Defined ONLY for the write tool, per the rule above: an edit overwrites the
+          // caller's existing leg, so destructive is the honest value.
+          ...(t.readOnlyHint === true ? {} : { destructiveHint: t.destructiveHint === true }),
+        },
+      })) });
+    case "tools/call": {
+      const name = m.params && m.params.name;
+      const tool = mcpCatalogTools(catalog).find(t => t.name === name);
+      if (!tool)
+        return rpcErr(id, -32602, MCP_TOOLS.some(t => t.name === name)
+          ? name + " exists but is not in the `" + catalog + "` catalog. Reconnect with /mcp/full/<your token> to use it."
+          : "Unknown tool: " + name);
+      try { return rpcOk(id, await tool.run((m.params && m.params.arguments) || {}, env, caller)); }
+      catch (e) { return rpcOk(id, toolErr(String((e && e.message) || e))); }
+    }
+    default:
+      return rpcErr(id, -32601, "Method not found: " + m.method);
+  }
+}
+
+/* ------------------------------- the tools ------------------------------- */
+// All read-only except dd_submit_bozo_leg (two-phase, own leg only — see the tool).
+// Data tools use the same Firebase paths, KV keys and published pages
+// the site itself uses; calculator tools mirror work/pound-core.js and are parity-tested.
+
+const MCP_NO_ARGS = { type: "object", properties: {}, additionalProperties: false };
+
+// The one sentence every sd_* tool gives an unidentified caller. A training log is
+// personal: without a uid there is no correct log to read or write.
+const SWOLE_NEEDS_USER = "SwoleDawg needs to know who you are, and the shared league connector cannot tell. Mint a personal URL at " + SITE + "/connect.html and this works.";
+
+const MCP_TOOLS = [
+  {
+    name: "dd_whoami",
+    title: "Who am I",
+    catalog: "core",
+    readOnlyHint: true,
+    description: "Who this connection is authenticated as. Call it when a question says 'my' or 'I' — my leg, my budget, my ledger — so you resolve that to the right person instead of guessing. If it reports anonymous:true you do NOT know who you are talking to and must ask.",
+    inputSchema: MCP_NO_ARGS,
+    async run(args, env, caller) {
+      if (caller && caller.kind === "user")
+        return toolText({
+          player: caller.name, anonymous: false,
+          // Read everything, write one thing: your own Bozo leg, two-phase. Stated here
+          // because "read-only" was a published claim and its retirement should be too.
+          access: "read-only, except your own Bozo leg via dd_submit_bozo_leg (two-phase confirm)",
+          // This caller's own subscription state, from their own record. Everything on the
+          // site is free today: plan is "free" for every account and NOTHING is gated on
+          // it, so never tell a user a tool is being withheld from them on this basis.
+          entitlement: caller.entitlement || null,
+          note: "Rows belonging to this player are marked `you: true` by the other tools.",
+        });
+      return toolText({
+        player: null, anonymous: true, access: "read-only (shared league connector)",
+        // ⚠️ NULL, NOT THE FREE DEFAULT. A shared connection is not an account, so it has
+        // no entitlement to report. Handing back a free-looking one would invite a model to
+        // describe somebody's plan from a connection that cannot identify anybody.
+        entitlement: null,
+        note: "This connection uses the shared league passphrase, so the server cannot tell which member is asking. " +
+              "Do not assume whose team, leg or ledger is whose — ask the user. They can get a personal URL at " + SITE + "/connect.html. " +
+              "It is not an account and has no entitlement: do not describe anyone's plan or subscription from this connection.",
+      });
+    },
+  },
+  {
+    name: "dd_league_overview",
+    title: "League overview",
+    catalog: "core",
+    readOnlyHint: true,
+    description: "Who is in the Data Dawgs Bozo league, what season/week it is on, and whether the current board is open, placed or graded.",
+    inputSchema: { type: "object", properties: { league: { type: "string", description: "League id (default: main)" } }, additionalProperties: false },
+    async run(args, env) {
+      const lid = validLeagueId(args.league || DEFAULT_LEAGUE) ? (args.league || DEFAULT_LEAGUE) : null;
+      if (!lid) return toolErr("Bad league id.");
+      const lg = await loadLeague(env, lid);
+      if (!lg) return toolErr("No such league: " + lid);
+      const set = settingsOf(lg);
+      return toolText({
+        id: lid, name: lg.name || lid, manager: lg.manager || null,
+        season: lg.season || SEASON, week: lg.week || 1, status: lg.status || "open",
+        members: memberNames(lg),
+        legsIn: Object.keys(lg.picks || {}).length,
+        // ⚠️ Two rulesets now run on the same rows. Standard names a bozo who plays
+        // again; Bozo Royale ELIMINATES them. Never describe a Royale league's weekly
+        // loser as "wearing it" — they are out, and who is still alive is the state
+        // that matters.
+        format: set.format,
+        royale: set.format === "royale" ? {
+          alive: royaleRoster(lg).map(k => memberNameAt(lg, k)),
+          eliminated: Object.entries(royaleStatus(lg)).filter(([, s]) => !s.alive)
+            .map(([k, s]) => ({ player: memberNameAt(lg, k), eliminatedWeek: s.eliminatedWeek })),
+          // ⚠️ A parachute means that player has already used their one way back, so the
+          // next chop ends them. It is the single most decision-relevant fact about a
+          // live Bozo Royale board.
+          parachutes: Object.entries(royaleStatus(lg)).filter(([, s]) => s.hasParachute)
+            .map(([k]) => memberNameAt(lg, k)),
+          survivor: (lg.royale || {}).survivor || null,
+          redeployCost: set.buyback,
+          // ⚠️ Automatic, not a choice. Never describe a chopped Royale player as
+          // "deciding whether to buy back" — there is no decision to make.
+          redeployRule: "A chopped player with a re-deploy left comes straight back on the next ticket, automatically. One each. After that the parachute stays next to their name and the next chop is final.",
+        } : null,
+        // ⚠️ SAY SO IN EVERY ANSWER ABOUT THIS LEAGUE. A simulated season uses the real
+        // eight names on purpose, which is exactly why it must never be quoted as a
+        // result. Nothing here counts toward receipts, standings or any aggregate.
+        synthetic: lg.synthetic === true,
+        syntheticNote: lg.synthetic === true
+          ? "SIMULATED LEAGUE. Every leg, price, close and result is fabricated. Label it as simulated in any answer that quotes it, and never let it into a total."
+          : undefined,
+      });
+    },
+  },
+  {
+    name: "dd_bozo_clv",
+    title: "Bozo closing line value",
+    catalog: "full",
+    readOnlyHint: true,
+    description: "Per-leg entry and closing prices for a Bozo league, with both sides of each market so the caller can de-vig. Returns RAW PRICES ONLY — it does not compute CLV, a delta or a ranking. Legs with no capturable close are returned with the reason and must be excluded from any average, never back-filled from the entry price.",
+    inputSchema: { type: "object", properties: {
+      league: { type: "string", description: "League id (default: main)" },
+      player: { type: "string", description: "Restrict to one player (optional)" },
+      week: { type: "number", description: "Restrict to one week (optional)" },
+    }, additionalProperties: false },
+    async run(args, env) {
+      const lid = validLeagueId(args.league || DEFAULT_LEAGUE) ? (args.league || DEFAULT_LEAGUE) : null;
+      if (!lid) return toolErr("Bad league id.");
+      const lg = await loadLeague(env, lid);
+      if (!lg) return toolErr("No such league: " + lid);
+      let ledger = {};
+      try { ledger = (await fbGet(env, LG(lid) + "/ledger")).data || {}; }
+      catch (e) { return toolErr("Database unreachable: " + e.message); }
+
+      const want = args.player ? String(args.player) : null;
+      const wk = Number.isFinite(Number(args.week)) ? Number(args.week) : null;
+      const rows = Object.values(ledger)
+        .filter(r => r && r.player && (!want || r.player === want) && (wk == null || r.week === wk))
+        .sort((a, b) => (a.week - b.week) || String(a.player).localeCompare(String(b.player)))
+        .map(r => ({
+          week: r.week, player: r.player, sport: r.sport, eventId: r.eventId,
+          mkt: r.mkt, label: r.label, result: r.result || null,
+          entryPrice: r.price ?? null, entryPriceOpp: r.priceOpp ?? null,
+          entryBook: r.entryBook || null, entrySubmittedAt: r.ts ? new Date(r.ts).toISOString() : null,
+          closePrice: r.close ?? null, closePriceOpp: r.closeOpp ?? null,
+          closeBook: r.closeBook || null, closeObservedAt: r.closeObservedAt || null,
+          closeSource: r.closeSource || null,
+          closeUnavailableReason: r.closeUnavailableReason || null,
+          // The one derived field, and it is a boolean rather than a number: whether
+          // this leg is eligible to be in a CLV calculation at all.
+          clvMeasurable: r.close != null && r.closeOpp != null && r.price != null && r.priceOpp != null
+            && (r.result === "won" || r.result === "lost"),
+        }));
+
+      const measurable = rows.filter(r => r.clvMeasurable).length;
+      return toolText({
+        league: lid, name: lg.name || lid, season: lg.season || SEASON,
+        synthetic: lg.synthetic === true,
+        devig: "proportional",
+        formula: "imp(o) = o<0 ? -o/(-o+100) : 100/(o+100); p = imp(price)/(imp(price)+imp(oppPrice)); clv = p_close - p_entry, in probability points.",
+        counts: { legs: rows.length, clvMeasurable: measurable, notMeasurable: rows.length - measurable },
+        legs: rows,
+        caveats: [
+          "This tool returns prices. It deliberately does not return a CLV number, a per-player average or a ranking — the de-vig method is declared so the caller derives those and stays reproducible if the method ever changes.",
+          "Use ONLY legs where clvMeasurable is true. A leg missing either side of either price cannot be de-vigged, and mixing a de-vigged number with a raw implied one is wrong by roughly the whole hold.",
+          "Never substitute the entry price for a missing close.",
+          "Pushes and voids carry no information about the number and belong in neither the average nor the count.",
+          "Measured CLV uses captured DraftKings prices at both entry and close. Self-priced legs are not measurable and must stay out of aggregates.",
+          lg.synthetic === true ? "SIMULATED LEAGUE — every price here is fabricated. Never quote it as evidence of anyone's skill." : null,
+        ].filter(Boolean),
+      });
+    },
+  },
+  {
+    name: "dd_bozo_week",
+    title: "Bozo board this week",
+    catalog: "core",
+    readOnlyHint: true,
+    description: "The current Bozo board: every leg IN SUBMISSION ORDER (whoever went last saw every other leg first — that is the social point), plus the drawn lever hierarchy once the ticket is placed. Read the caveats field before analysing.",
+    inputSchema: { type: "object", properties: { league: { type: "string", description: "League id (default: main)" } }, additionalProperties: false },
+    async run(args, env, caller) {
+      const lid = validLeagueId(args.league || DEFAULT_LEAGUE) ? (args.league || DEFAULT_LEAGUE) : null;
+      if (!lid) return toolErr("Bad league id.");
+      const lg = await loadLeague(env, lid);
+      if (!lg) return toolErr("No such league: " + lid);
+      const picks = lg.picks || {};
+      const keys = Object.keys(picks);
+      if (!keys.length)
+        return toolText({ season: lg.season || SEASON, week: lg.week || 1, status: lg.status || "open", legs: [], note: "No legs are in yet this week." });
+      // ⚠️ SUBMISSION ORDER, not object-key order.
+      keys.sort((a, b) => (picks[a].ts || 0) - (picks[b].ts || 0));
+      const me = caller && caller.kind === "user" ? caller.name : null;
+      const legs = keys.map((k, i) => {
+        const x = picks[k];
+        return {
+          // ⚠️ `who` is stamped on the leg at submission. Reading the name off the key
+          // would print a bare uid; reading it off the members map would go blank for
+          // anyone who has since left the league.
+          order: i + 1, player: x.who || playerName(k),
+          you: me ? (x.who || playerName(k)) === me : undefined,
+          sport: x.sport, game: x.game, eventId: x.eventId,
+          mkt: x.mkt, side: x.side, line: x.mkt === "ml" ? null : x.line,
+          price: x.price, priceSource: x.priceSource || "self", clvEligible: x.clvEligible === true,
+          priceOpp: x.entryPriceOpp ?? null, entryBook: x.entryBook || null,
+          entryProvider: x.entryProvider || null, entrySnapshotAt: x.entrySnapshotAt || null,
+          fairEntry: x.fairEntry ?? null, entryHold: x.entryHold ?? null,
+          canonicalKey: x.canonicalKey || null, providerEventIds: x.providerEventIds || {},
+          startsAt: x.startsAt || null, label: x.label, prop: x.prop || null, ts: x.ts || null,
+          // The close, once the kickoff cron has snapped it. Null until then, and null
+          // FOREVER for legs it could not match — with the reason attached, so a missing
+          // close is never mistaken for a leg that did not move.
+          close: (lg.results || {})[k]?.close ?? null,
+          closeOpp: (lg.results || {})[k]?.closeOpp ?? null,
+          closeBook: (lg.results || {})[k]?.closeBook ?? null,
+          closeObservedAt: (lg.results || {})[k]?.closeObservedAt ?? null,
+          closeUnavailableReason: (lg.results || {})[k]?.closeUnavailableReason ?? null,
+        };
+      });
+      return toolText({
+        season: lg.season || SEASON, week: lg.week || 1, status: lg.status || "open",
+        band: bandOf(lg), legs,
+        you: me,
+        yourLegIn: me ? keys.some(k => (picks[k].who || playerName(k)) === me) : null,
+        stillWaitingOn: memberKeys(lg).filter(k => !picks[k]).map(k => memberNameAt(lg, k)),
+        leverHierarchy: lg.order || null,
+        results: lg.results || null, bozo: lg.bozo || null, bozoWhy: lg.bozoWhy || null,
+        caveats: [
+          "Bozo odds anywhere on the site are simulation output, not market prices.",
+          "The simulator draws legs independently; correlated legs (same game, same side of a number) must be flagged by the reader.",
+          "The lever hierarchy is a server-side random permutation drawn at lock — it is not chosen by anyone.",
+          // ⚠️ This caveat changed the day the capture shipped, and the change is narrow
+          // on purpose. CLV is now computable — but only for a leg that has BOTH a
+          // captured close and both sides of both prices, and the entry is still a
+          // server-captured DK quote. State CLV for a leg that has one; say it is
+          // unmeasured for a leg that does not; never average across the two.
+          "CLV is computable only where closeObservedAt is set AND both priceOpp and closeOpp are present — de-vig proportionally, and report probability points, not cents.",
+          "A leg with closeUnavailableReason has NO CLV. Do not substitute the entry price for a missing close: that fabricates a zero and drags any average toward it.",
+          "priceSource=captured means both entry sides came from DraftKings through SGO. priceSource=self is excluded from CLV; never mix those legs into a CLV average.",
+          "Every leg goes on a real DraftKings bet slip, so every market — props included — exists and closes. A missing close means the capture could not resolve the typed description onto the right market, and closeUnavailableReason says which of stat, player or number failed. \"Other\" legs are the exception: free text for an arbitrary market, with nothing to match on. Either way it is a matching gap, never evidence about a player.",
+          "If two legs share an eventId the ticket is a same-game parlay and the displayed parlay price is INDICATIVE — DraftKings reprices correlated legs, so the product of the leg prices is an upper bound, not the payout.",
+        ],
+      });
+    },
+  },
+  {
+    name: "dd_bozo_standings",
+    title: "Bozo season ledger",
+    catalog: "core",
+    readOnlyHint: true,
+    description: "Season-to-date Bozo ledger summary per player: legs submitted, Last In count, Shortest Odds count, and any graded results present. Early season this will honestly say nothing has resolved.",
+    inputSchema: { type: "object", properties: { league: { type: "string", description: "League id (default: main)" } }, additionalProperties: false },
+    async run(args, env, caller) {
+      const lid = validLeagueId(args.league || DEFAULT_LEAGUE) ? (args.league || DEFAULT_LEAGUE) : null;
+      if (!lid) return toolErr("Bad league id.");
+      // ⚠️ Whether this league's rows are real has to 

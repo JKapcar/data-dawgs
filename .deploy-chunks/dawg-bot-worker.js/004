@@ -1,0 +1,936 @@
+sha256hex(normEmail(email)));
+}
+
+// RTDB has no unique index. Reserve the normalized-email hash with an ETag before the
+// user write, then keep that immutable UID as the index value. A failed user write
+// releases only the reservation carrying the same ETag, so it cannot delete a winner.
+async function reserveEmail(env, email, uid) {
+  const path = await emailIndexPath(email);
+  for (let tries = 0; tries < 3; tries++) {
+    const got = await fbGet(env, path, true);
+    if (!got.etag) throw new Error("email index returned no ETag");
+    if (got.data && got.data.uid === uid)
+      return { ok: true, path, email: normEmail(email), etag: got.etag, existing: true };
+    if (got.data) return { ok: false, conflict: true };
+    const value = { uid, email: normEmail(email), reservedAt: Date.now() };
+    if (await fbPut(env, path, value, got.etag)) {
+      const confirmed = await fbGet(env, path, true);
+      return { ok: true, path, email: normEmail(email), etag: confirmed.etag };
+    }
+  }
+  return { ok: false, conflict: true };
+}
+
+
+async function releaseEmailReservation(env, reservation, uid) {
+  if (!reservation || !reservation.path) return;
+  try {
+    // A fetch can fail after Firebase committed the user write. Never release the
+    // uniqueness row if the account now owns that address; that would permit a duplicate.
+    const user = (await fbGet(env, uidUserPath(uid))).data;
+    if (user && normEmail(user.email) === reservation.email) return;
+    const got = await fbGet(env, reservation.path, true);
+    if (got.data && got.data.uid === uid && got.etag) await fbDelete(env, reservation.path, got.etag);
+  } catch { /* a cleanup failure leaves a safe conflict, never a duplicate account */ }
+}
+
+
+// Every account holding this address. /auth/email and /auth/signup both refuse
+// duplicates, so this should never return more than one — but reset has to resolve an
+// address to exactly one account, and guessing which one would be the wrong kind of
+// helpful. If the invariant has broken, say so and stop.
+async function emailOwners(env, email) {
+  const want = normEmail(email);
+  if (!want || want.indexOf("@") < 1) return [];
+  let users;
+  try { users = await loadUsers(env); } catch { return []; }
+  const out = [];
+  for (const [k, u] of Object.entries(users))
+    if (u && typeof u.email === "string" && normEmail(u.email) === want) out.push(playerName(k));
+  return out;
+}
+
+async function mailQuota(env, request, email) {
+  if (!env.RL) return { err: "Rate limiting is not configured, so no mail will be sent.", code: 503 };
+  const day = new Date().toISOString().slice(0, 10);
+  const ip = request.headers.get("CF-Connecting-IP") || "noip";
+  const eh = await sha256hex(normEmail(email));
+  const addrKey = "mailaddr:" + day + ":" + eh;
+  const ipKey = "mailip:" + day + ":" + ip;
+  const coolKey = "mailcool:" + eh;
+  if (await env.RL.get(coolKey))
+    return { err: "A link was just sent to that address. Give it a minute.", code: 429 };
+  const addrUsed = parseInt((await env.RL.get(addrKey)) || "0", 10);
+  if (addrUsed >= MAIL_ADDR_CAP)
+    return { err: "That address has had its links for today.", code: 429 };
+  const ipUsed = parseInt((await env.RL.get(ipKey)) || "0", 10);
+  if (ipUsed >= MAIL_IP_CAP)
+    return { err: "Too many emails from this connection today.", code: 429 };
+  // Counted only when the caller actually commits to sending, so a refusal further
+  // down (no such account, database down) does not burn somebody's daily allowance.
+  return { ok: true, bump: async () => {
+    await env.RL.put(addrKey, String(addrUsed + 1), { expirationTtl: 172800 });
+    await env.RL.put(ipKey, String(ipUsed + 1), { expirationTtl: 172800 });
+    await env.RL.put(coolKey, "1", { expirationTtl: MAIL_COOLDOWN_S });
+  } };
+}
+
+async function mintMailToken(env, kind, name, email, uid, extra) {
+  const raw = new Uint8Array(32);
+  crypto.getRandomValues(raw);
+  const tok = b64(raw).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const tokenKey = "mailtok:" + (await hmac(env.BOZO_PEPPER, "mail|" + kind + "|" + tok));
+  await env.RL.put(tokenKey,
+                   JSON.stringify({ k: kind, n: name, ...(uid ? { u: uid } : {}),
+                                    e: normEmail(email), iat: Date.now(), ...(extra || {}) }),
+                   { expirationTtl: MAIL_TOKEN_TTL });
+  return tok;
+}
+
+async function consumeMailToken(env, kind, tok) {
+  if (!env.RL) return { err: "Token storage is not configured.", code: 503 };
+  if (typeof tok !== "string" || tok.length < 20 || tok.length > 200)
+    return { err: "That link is not valid.", code: 400 };
+  // New links use a peppered, purpose-separated HMAC. The SHA fallback only lets
+  // one-hour links minted by the previous deployed Worker finish their lifecycle.
+  const key = "mailtok:" + (await hmac(env.BOZO_PEPPER, "mail|" + kind + "|" + tok));
+  const legacyKey = "mailtok:" + (await sha256hex(tok));
+  let usedKey = key;
+  let raw = await env.RL.get(key);
+  if (!raw) { raw = await env.RL.get(legacyKey); usedKey = legacyKey; }
+  if (!raw) return { err: "That link has expired or has already been used.", code: 410 };
+  await env.RL.delete(usedKey);              // single use; delete before authorized work
+  let o;
+  try { o = JSON.parse(raw); } catch { return { err: "That link is not valid.", code: 400 }; }
+  if (!o || o.k !== kind) return { err: "That link is not valid for this.", code: 400 };
+  return o;
+}
+
+// ⚠️ The key travels in a header and NEVER in a URL, a log line or a response. The
+// provider's error body is truncated and returned without it.
+async function sendMail(env, to, subject, text) {
+  const r = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: "Bearer " + env.RESEND_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ from: env.MAIL_FROM, to: [to], subject, text }),
+  });
+  if (!r.ok) {
+    let detail = "";
+    try { detail = (await r.text()).slice(0, 180); } catch { /* body is optional */ }
+    throw new Error("mail provider returned " + r.status + (detail ? ": " + detail : ""));
+  }
+  let accepted = null;
+  try { accepted = await r.json(); } catch { /* a successful provider response should still carry an id */ }
+  if (!accepted || typeof accepted.id !== "string" || !accepted.id)
+    throw new Error("mail provider accepted the request without a delivery id");
+  return { id: accepted.id };
+}
+
+// POST /auth/verify-request — session required. Sends a verification link to the
+// address already on the caller's own account. It cannot be pointed anywhere else,
+// which is what keeps this from being an open relay.
+async function authVerifyRequest(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  if (!mailReady(env)) return json({ error: MAIL_OFF }, 503, cors);
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 401, cors);
+
+  let rec = auth.user || null;
+  if (!rec) {
+    let users;
+    try { users = await loadUsers(env); }
+    catch (e) { return json({ error: e.message }, 502, cors); }
+    rec = users[auth.name] || users[encodeURIComponent(auth.name)] || null;
+  }
+  const email = rec && typeof rec.email === "string" ? rec.email.trim() : "";
+  if (!email) return json({ error: "There is no address on your account to verify." }, 409, cors);
+  if (rec.emailVerified === true)
+    return json({ ok: true, player: auth.name, email, alreadyVerified: true }, 200, cors);
+
+  const q = await mailQuota(env, request, email);
+  if (q.err) return json({ error: q.err }, q.code || 429, cors);
+
+  const tok = await mintMailToken(env, "verify", auth.name, email, auth.uid);
+  let delivery;
+  try {
+    delivery = await sendMail(env, email, "Confirm your Data Dawgs address",
+      "Someone asked to confirm this address for the Data Dawgs account \"" + auth.name + "\".\n\n" +
+      MAIL_BASE + "/signon.html?verify=" + tok + "\n\n" +
+      "The link works once and expires in an hour. If this wasn't you, ignore it — " +
+      "nothing changes and nobody can sign in as you from this message.\n");
+  } catch (e) {
+    try { await env.RL.delete("mailtok:" + (await hmac(env.BOZO_PEPPER, "mail|verify|" + tok))); }
+    catch { /* expiry remains the safe fallback if cleanup itself fails */ }
+    console.error(JSON.stringify({ event: "mail.verify.rejected", account: auth.uid || auth.name,
+                                   reason: String(e && e.message || e).slice(0, 220) }));
+    return json({ error: "Could not send that email: " + e.message }, 502, cors);
+  }
+  console.log(JSON.stringify({ event: "mail.verify.accepted", account: auth.uid || auth.name,
+                               deliveryId: delivery.id }));
+  await q.bump();
+  return json({ ok: true, player: auth.name, sent: true, providerAccepted: true,
+                note: "Email provider accepted the confirmation. Check that inbox and spam; the link works once and expires in an hour." }, 200, cors);
+}
+
+// POST /auth/verify {token} — no session; the token IS the proof.
+async function authVerify(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  let body;
+  try { body = await readBody(request); } catch { return json({ error: "Bad JSON." }, 400, cors); }
+  const t = await consumeMailToken(env, "verify", body && body.token);
+  if (t.err) return json({ error: t.err }, t.code || 400, cors);
+
+  // The address may have been changed after the link was sent. Verifying the OLD
+  // address against the NEW one would mark an unverified address verified.
+  let rec;
+  try {
+    if (t.u) rec = (await fbGet(env, uidUserPath(t.u))).data;
+    else {
+      const users = await loadUsers(env);
+      rec = users[t.n] || users[encodeURIComponent(t.n)] || null;
+    }
+  } catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+  if (!rec) return json({ error: "That account no longer exists." }, 410, cors);
+  if (normEmail(rec.email) !== t.e)
+    return json({ error: "That address has changed since the link was sent. Ask for a new one." }, 409, cors);
+
+  try { await fbPatch(env, t.u ? uidUserPath(t.u) : "/users/" + encodeURIComponent(t.n),
+                      { emailVerified: true, emailVerifiedAt: Date.now() }); }
+  catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  return json({ ok: true, player: t.n, email: t.e, verified: true }, 200, cors);
+}
+
+// POST /auth/forgot {email} — NO session, by definition.
+// ⚠️ The success response is IDENTICAL whether or not the address exists, whether or
+// not it has one account, and whether or not the send worked. Any other shape turns
+// this into a "does this person play?" oracle for anyone with a list of addresses.
+const FORGOT_SAID = "If that address has an account, a reset link is on its way. " +
+                    "It works once and expires in an hour.";
+
+async function authForgot(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  // Not an enumeration leak: this says nothing about any address, and it is the honest
+  // answer to somebody who would otherwise wait forever for a message.
+  if (!mailReady(env)) return json({ error: MAIL_OFF }, 503, cors);
+
+  let body;
+  try { body = await readBody(request); } catch { return json({ error: "Bad JSON." }, 400, cors); }
+  const email = normEmail(body && body.email);
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))
+    return json({ error: "That does not look like an email address." }, 400, cors);
+
+  // The caps are the one thing allowed to answer differently, because a rate limit is
+  // about the CALLER, not about whether the address is real.
+  const q = await mailQuota(env, request, email);
+  if (q.err) return json({ error: q.err }, q.code || 429, cors);
+
+  let owners = [];
+  try { owners = await accountsForEmail(env, email); } catch { owners = []; }
+  if (owners.length === 1) {
+    try {
+      const owner = owners[0];
+      const tok = await mintMailToken(env, "reset", owner.name, email, owner.uid);
+      await sendMail(env, email, "Reset your Data Dawgs password",
+        "Someone asked to reset the password for the Data Dawgs account \"" + owner.name + "\".\n\n" +
+        MAIL_BASE + "/signon.html?reset=" + tok + "\n\n" +
+        "The link works once and expires in an hour. If this wasn't you, ignore it — " +
+        "your password does not change until that link is used.\n");
+      await q.bump();
+    } catch (e) {
+      // Swallowed on purpose: a provider outage must not become a signal about the
+      // address. It is still visible in the Worker's own logs.
+      console.log("forgot: send failed:", e.message);
+    }
+  }
+  // owners.length > 1 means /auth/email's duplicate guard has been bypassed somehow.
+  // Resolving it by picking one would be a guess about whose account to reset.
+  return json({ ok: true, note: FORGOT_SAID }, 200, cors);
+}
+
+// POST /auth/reset {token, password} — the token is the proof; no session needed.
+async function authReset(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const cfg = bozoConfig(env);
+  if (cfg) return json({ error: cfg }, 500, cors);
+
+  let body;
+  try { body = await readBody(request); } catch { return json({ error: "Bad JSON." }, 400, cors); }
+  const pw = String((body && body.password) || "");
+  if (pw.length < MIN_PW) return json({ error: `Password must be at least ${MIN_PW} characters.` }, 400, cors);
+
+  const t = await consumeMailToken(env, "reset", body && body.token);
+  if (t.err) return json({ error: t.err }, t.code || 400, cors);
+
+  let rec;
+  try {
+    if (t.u) rec = (await fbGet(env, uidUserPath(t.u))).data;
+    else {
+      const users = await loadUsers(env);
+      rec = users[t.n] || users[encodeURIComponent(t.n)] || null;
+    }
+  } catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+  if (!rec) return json({ error: "That account no longer exists." }, 410, cors);
+  // Same reason as verify: the address may have moved since the link was sent, and a
+  // link sent to an address that is no longer on the account must not still open it.
+  if (normEmail(rec.email) !== t.e)
+    return json({ error: "That address has changed since the link was sent. Ask for a new one." }, 409, cors);
+
+  try {
+    const saltBytes = new Uint8Array(16);
+    crypto.getRandomValues(saltBytes);
+    const salt = b64(saltBytes);
+    const hash = await pbkdf2(pw, env.BOZO_PEPPER, salt, PBKDF2_ITERS);
+    // ⚠️ A fresh setAt is what kills every session that existed before the reset — the
+    // session payload pins `p` to it. Without this, whoever prompted the reset keeps
+    // their stolen session and the reset accomplishes nothing.
+    const setAt = Date.now();
+    if (t.u) await fbPatch(env, uidUserPath(t.u), {
+      passwordHash: hash, passwordSalt: salt, passwordIters: PBKDF2_ITERS, passwordSetAt: setAt,
+    });
+    else await fbPut(env, authPath(t.n), { v: 1, salt, hash, iters: PBKDF2_ITERS, setAt });
+    return json({ ok: true, player: t.n, session: await makeSession(env, t.n, setAt, t.u),
+                  note: "Password changed. Every other sign-in was ended." }, 200, cors);
+  } catch (e) {
+    return json({ error: "Database write failed: " + e.message }, 502, cors);
+  }
+}
+/* =================== end CEP-6 =================== */
+
+// POST /bozo/config — league-manager dials. v1: the price band. Lives at
+// /bozo/config (world-readable like the rest of /bozo — the page reads it straight
+// from Firebase to mirror the check client-side; the Worker is the enforcer).
+// PATCHed, and deliberately NOT in bozoNext's null list, so it survives rollovers.
+async function bozoConfigSet(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const lid = leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+  // Each league sets its own band — this is a league manager's dial, not a site one.
+  const auth = await requireManager(request, env, lid);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  const ceil = Math.round(Number(body.bandCeil));
+  const floor = Math.round(Number(body.bandFloor));
+  // Favorites only: the ceiling can never rise above −100. Floor below the ceiling,
+  // and bounded so a typo (−50000) can't turn the band meaningless.
+  if (!Number.isFinite(ceil) || !Number.isFinite(floor))
+    return json({ error: "Band values must be numbers." }, 400, cors);
+  if (ceil > -100) return json({ error: "Ceiling can't be shorter than −100 — favorites only." }, 400, cors);
+  if (floor >= ceil) return json({ error: "Floor must be deeper (more negative) than the ceiling." }, 400, cors);
+  if (floor < -2000) return json({ error: "Floor below −2000? That's not a band, that's a typo." }, 400, cors);
+
+  try {
+    await fbPatch(env, LG(lid) + "/config", { bandCeil: ceil, bandFloor: floor, updatedTs: Date.now(), updatedBy: auth.name });
+    return json({ ok: true, league: lid, bandCeil: ceil, bandFloor: floor }, 200, cors);
+  } catch (e) {
+    return json({ error: "Database write failed: " + e.message }, 502, cors);
+  }
+}
+
+/* ================================ Leagues ================================= */
+// Universal account-backed leagues live outside the public legacy /bozo tree. Firebase
+// rules must default-deny this branch; clients receive projections from these routes.
+const UNIVERSAL_GAMES = ["bozo", "guillotine", "draft"];
+const UNIVERSAL_SETTINGS_MAX_BYTES = 12_000;
+
+function validUniversalLeagueId(id) { return DRAFT_LEAGUE_ID_RE.test(String(id || "")); }
+function validGateCode(code) {
+  return typeof code === "string" && Array.from(code.trim()).length >= 6 &&
+    Array.from(code.trim()).length <= 64 && !/[\u0000-\u001f\u007f]/.test(code);
+}
+function validLeagueSettings(settings) {
+  if (settings == null) return {};
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) return null;
+  if (Object.keys(settings).some(k => ["__proto__", "prototype", "constructor"].includes(k))) return null;
+  try {
+    if (te.encode(JSON.stringify(settings)).byteLength > UNIVERSAL_SETTINGS_MAX_BYTES) return null;
+  } catch { return null; }
+  return settings;
+}
+function universalLeagueView(id, league, auth) {
+  const members = league && league.members && typeof league.members === "object" ? league.members : {};
+  return {
+    id, game: league.game, name: league.name, visibility: league.visibility,
+    managerUid: league.managerUid, managed: !!auth && league.managerUid === auth.uid,
+    member: !!auth && !!members[auth.uid], memberCount: Object.values(members).filter(m => m && m.status === "active").length,
+    settings: league.settings || {}, createdAt: league.createdAt,
+  };
+}
+function universalEvent(type, auth, payload) {
+  return { type, uid: auth.uid, at: new Date().toISOString(), payload: payload || {} };
+}
+async function requireUniversalManager(request, env, leagueId) {
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return auth;
+  if (!auth.uid) return { err: "This action requires a UID account.", code: 403 };
+  let league;
+  try { league = (await fbGet(env, "/leagues/" + leagueId)).data; }
+  catch (e) { return { err: "Database unreachable: " + e.message, code: 502 }; }
+  if (!league) return { err: "No such league.", code: 404 };
+  const siteAdmin = auth.user && auth.user.roles && auth.user.roles.site_admin === true;
+  if (!siteAdmin && league.managerUid !== auth.uid)
+    return { err: "That league is managed by another account.", code: 403 };
+  return { ...auth, league, leagueId, siteAdmin };
+}
+
+async function universalLeagueCreate(request, env, cors, body) {
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 401, cors);
+  if (!auth.uid) return json({ error: "League creation requires a UID account." }, 403, cors);
+  const game = String(body.game || "").trim().toLowerCase();
+  if (!UNIVERSAL_GAMES.includes(game))
+    return json({ error: "game must be bozo, guillotine, or draft" }, 400, cors);
+  const name = String(body.name || "").trim();
+  if (!name || Array.from(name).length > 100 || /[\u0000-\u001f\u007f]/.test(name))
+    return json({ error: "League name must be 1-100 printable characters." }, 400, cors);
+  const gateCode = String(body.gateCode || "").trim();
+  if (!validGateCode(gateCode)) return json({ error: "Gate code must be 6-64 printable characters." }, 400, cors);
+  const settings = validLeagueSettings(body.settings);
+  if (settings == null) return json({ error: "settings must be an object no larger than 12,000 UTF-8 bytes." }, 400, cors);
+
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const id = mintDraftLeagueId();
+    if (!validUniversalLeagueId(id)) return json({ error: "League ID generation failed." }, 500, cors);
+    const now = new Date().toISOString();
+    const league = {
+      game, name, managerUid: auth.uid, gate: { mode: "code", code: gateCode }, settings,
+      visibility: game === "draft" ? "public" : "members",
+      members: { [auth.uid]: { joinedAt: now, status: "active" } },
+      events: { ["league_created_" + auth.uid]: universalEvent("league_created", auth, { game, name }) },
+      createdAt: now,
+    };
+    let got;
+    try { got = await fbGet(env, "/leagues/" + id, true); }
+    catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+    if (got.data) continue;
+    try {
+      if (await fbPut(env, "/leagues/" + id, league, got.etag))
+        return json({ ok: true, league: universalLeagueView(id, league, auth) }, 201, cors);
+    } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  }
+  return json({ error: "Could not allocate a unique league ID." }, 503, cors);
+}
+
+async function leagueCreateDispatch(request, env, cors) {
+  let body = null;
+  try { body = await request.clone().json(); } catch { /* legacy handler owns its error */ }
+  if (body && Object.prototype.hasOwnProperty.call(body, "game"))
+    return universalLeagueCreate(request, env, cors, body);
+  return leagueCreate(request, env, cors);
+}
+
+async function universalLeagueJoin(request, env, cors, body) {
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err, needSignIn: true }, auth.code || 401, cors);
+  if (!auth.uid) return json({ error: "League joining requires a UID account." }, 403, cors);
+  const id = String(body.leagueId || "");
+  if (!validUniversalLeagueId(id)) return json({ error: "Invalid leagueId." }, 400, cors);
+  let league;
+  try { league = (await fbGet(env, "/leagues/" + id)).data; }
+  catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+  if (!league) return json({ error: "No such league." }, 404, cors);
+  if (!league.gate || league.gate.mode !== "code" ||
+      !timingSafeEqual(String(body.gateCode || ""), String(league.gate.code || "")))
+    return json({ error: "That league code is not valid." }, 403, cors);
+  const memberPath = "/leagues/" + id + "/members/" + auth.uid;
+  const eventPath = "/leagues/" + id + "/events/member_joined_" + auth.uid;
+  let existing;
+  try { existing = await fbGet(env, eventPath, true); }
+  catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+  const now = new Date().toISOString();
+  try {
+    if (!existing.data) {
+      const wrote = await fbPut(env, eventPath, universalEvent("member_joined", auth, {}), existing.etag);
+      if (!wrote) existing = await fbGet(env, eventPath, true);
+    }
+    await fbPut(env, memberPath, { joinedAt: (existing.data && existing.data.at) || now, status: "active" });
+  } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  league.members = league.members || {};
+  const already = !!league.members[auth.uid];
+  league.members[auth.uid] = { joinedAt: now, status: "active" };
+  return json({ ok: true, already, league: universalLeagueView(id, league, auth) }, 200, cors);
+}
+
+async function leagueJoinDispatch(request, env, cors) {
+  let body = null;
+  try { body = await request.clone().json(); } catch { /* legacy handler owns its error */ }
+  if (body && Object.prototype.hasOwnProperty.call(body, "leagueId"))
+    return universalLeagueJoin(request, env, cors, body);
+  return leagueJoin(request, env, cors);
+}
+
+async function universalLeagueGate(request, env, cors) {
+  if (request.method !== "PUT") return json({ error: "PUT only" }, 405, cors);
+  let body;
+  try { body = await readBody(request); } catch { return json({ error: "Bad JSON." }, 400, cors); }
+  const id = String(body.leagueId || "");
+  if (!validUniversalLeagueId(id)) return json({ error: "Invalid leagueId." }, 400, cors);
+  const code = String(body.gateCode || "").trim();
+  if (!validGateCode(code)) return json({ error: "Gate code must be 6-64 printable characters." }, 400, cors);
+  const auth = await requireUniversalManager(request, env, id);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+  try {
+    // /leagues is default-deny, so the event may carry the code needed to reconstruct
+    // the manager setting. The projection returned to clients never includes it.
+    await fbPost(env, "/leagues/" + id + "/events",
+                 universalEvent("gate_changed", auth, { mode: "code", code }));
+    await fbPut(env, "/leagues/" + id + "/gate", { mode: "code", code });
+  } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  return json({ ok: true, leagueId: id, gate: { mode: "code" } }, 200, cors);
+}
+
+async function universalLeagueMine(request, env, cors) {
+  if (request.method !== "GET") return json({ error: "GET only" }, 405, cors);
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 401, cors);
+  if (!auth.uid) return json({ error: "League membership requires a UID account." }, 403, cors);
+  let leagues;
+  try { leagues = (await fbGet(env, "/leagues")).data || {}; }
+  catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+  const out = Object.entries(leagues).filter(([, lg]) => lg &&
+    (lg.managerUid === auth.uid || (lg.members && lg.members[auth.uid] && lg.members[auth.uid].status === "active")))
+    .map(([id, lg]) => universalLeagueView(id, lg, auth))
+    .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  return json({ ok: true, leagues: out }, 200, cors);
+}
+
+// Bozo is multi-tenant: several groups, each with its own roster size, band, week,
+// picks and ledger. A league of 8 and a league of 4 run side by side.
+//
+// Leagues live at /bozo/leagues/<id> — deliberately UNDER /bozo so they inherit its
+// {".read":true,".write":false} rule. Reads stream straight to the page for free;
+// every write still goes through this Worker. No rules change was needed.
+//
+// ⚠️ Identity stays GLOBAL. One account per person at /users + /bozoauth, and
+// membership is per league. The same human in two leagues is one login, not two.
+//
+// ⚠️ THE LOCK THRESHOLD IS THE LEAGUE'S MEMBER COUNT, never the global roster. That
+// is the whole point of per-league size: an 8-person league locks on the 8th leg, a
+// 4-person league on the 4th.
+
+const DEFAULT_LEAGUE = "main";
+const LG = lid => "/bozo/leagues/" + lid;
+
+// Loud, structured evidence for the handful of writes that can make a live Bozo board
+// disappear. Workers Observability retains these console records even though RTDB itself
+// has no node history. Log only after the database write succeeds, so every record means
+// the destructive change actually landed rather than merely being attempted.
+function bozoNullWriteTripwire(route, auth, lid, nulled) {
+  console.log(JSON.stringify({
+    event: "bozo-null-write",
+    route,
+    callerUid: (auth && auth.uid) || null,
+    league: lid,
+    nulled,
+    at: new Date().toISOString(),
+  }));
+}
+
+// Firebase keys cannot contain . $ # [ ] / — and these ids show up in URLs, so keep
+// them boring on purpose.
+function validLeagueId(id) {
+  return typeof id === "string" && /^[a-z0-9][a-z0-9-]{1,23}$/.test(id);
+}
+
+/* ===== member keys =====
+   A member row is keyed by the joiner's immutable uid and carries their display name as
+   a mutable label. Everything that used to key on the name now keys on the uid and reads
+   the label for display. The legacy shapes -- `true` as the value, or the name itself as
+   the key -- are still READ so the demo leagues and any imported season keep rendering;
+   nothing WRITES them any more. */
+const memberRec = (lg, key) => ((lg && lg.members) || {})[key];
+const memberNameAt = (lg, key) => {
+  const v = memberRec(lg, key);
+  return (v && typeof v === "object" && v.name) ? String(v.name) : playerName(key);
+};
+const memberKeys = lg => Object.keys((lg && lg.members) || {});
+const memberNames = lg => memberKeys(lg).map(k => memberNameAt(lg, k));
+
+/* The one resolver. Returns the map key for whoever is asking, or null if they are not
+   in this league. Prefers the uid; falls back to the legacy name shapes so a demo league
+   still resolves. ⚠️ Never invent a key from auth.name -- a miss must be null, or a
+   non-member silently gets a seat under a name-shaped key and the re-key is undone. */
+function memberKeyOf(lg, auth) {
+  const ms = (lg && lg.members) || {};
+  const has = k => k != null && Object.prototype.hasOwnProperty.call(ms, k);
+  if (auth && auth.uid && has(auth.uid)) return auth.uid;
+  const n = auth && auth.name;
+  if (n == null) return null;
+  if (has(encodeURIComponent(n))) return encodeURIComponent(n);
+  if (has(n)) return n;
+  for (const k of Object.keys(ms)) if (memberNameAt(lg, k) === n) return k;
+  return null;
+}
+const isMember = (lg, name) => memberKeyOf(lg, { name }) !== null;
+
+// Everything that existed before leagues belongs to DEFAULT_LEAGUE. It is created on
+// first touch with the whole current /users roster, so the setup that ran yesterday
+// keeps running today without a migration step anyone has to remember.
+async function loadLeagues(env) {
+  let leagues = null;
+  try { leagues = (await fbGet(env, "/bozo/leagues")).data; }
+  catch (e) { throw new Error("Database unreachable: " + e.message); }
+  if (leagues && Object.keys(leagues).length) return leagues;
+
+  const users = await loadUsers(env);
+  const members = {};
+  // ⚠️ DORMANT BUT NOT HARMLESS. This only fires when /bozo/leagues is entirely empty,
+  // which it is not. It is fixed anyway because /users is now uid-keyed: seeding
+  // `members[uid] = true` would give every seat a uid key with NO name label, and
+  // memberNameAt would fall back to the key -- a board rendering raw u_ strings, from a
+  // path nobody would think to look at because it normally never runs.
+  for (const [key, rec] of Object.entries(users)) members[key] = { name: accountName(playerName(key), rec) };
+  const seed = {
+    name: "Data Dawgs", manager: env.BOZO_ADMIN || "", members,
+    season: SEASON, week: 1, status: "open", createdTs: Date.now(), createdBy: "seed",
+  };
+  try { await fbPatch(env, LG(DEFAULT_LEAGUE), seed); } catch (e) { /* next read retries */ }
+  return { [DEFAULT_LEAGUE]: seed };
+}
+
+async function loadLeague(env, lid) {
+  const leagues = await loadLeagues(env);
+  return leagues[lid] || null;
+}
+
+// The league id a request is talking about. Absent = the default, so every pre-league
+// caller (including a cached copy of the page) keeps working untouched.
+const leagueOf = body => {
+  const id = (body && body.league) || DEFAULT_LEAGUE;
+  return validLeagueId(id) ? id : null;
+};
+
+// A league manager runs their own league and nobody else's. The site admin can act in
+// any league — they created them.
+async function requireManager(request, env, lid) {
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return auth;
+  let lg;
+  try { lg = await loadLeague(env, lid); }
+  catch (e) { return { err: e.message, code: 502 }; }
+  if (!lg) return { err: "No such league.", code: 404 };
+  const siteAdmin = env.BOZO_ADMIN && auth.name === env.BOZO_ADMIN;
+  if (!siteAdmin && lg.manager !== auth.name)
+    return { err: "That's not your league to manage.", code: 403 };
+  return { ...auth, league: lg, lid, siteAdmin };
+}
+
+// Anyone whose name is on THIS league's roster. The betslip link is the first
+// write a plain member can make about the WHOLE ticket rather than about their
+// own leg, so it needed a power that did not exist yet: not the manager, not the
+// site admin, just "you are in this league".
+//
+// ⚠️ Membership is checked against the STORED roster and identity comes from the
+// session. Neither is ever read from the request body — a body that could name
+// its own author is a body that can post as anybody.
+async function requireMember(request, env, lid) {
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return auth;
+  let lg;
+  try { lg = await loadLeague(env, lid); }
+  catch (e) { return { err: e.message, code: 502 }; }
+  if (!lg) return { err: "No such league.", code: 404 };
+  const siteAdmin = env.BOZO_ADMIN && auth.name === env.BOZO_ADMIN;
+  if (!siteAdmin && !memberNames(lg).includes(auth.name))
+    return { err: "You're not in this league.", code: 403 };
+  return { ...auth, league: lg, lid, siteAdmin };
+}
+
+// GET /league/list — two named public rooms plus the signed-in person's rooms.
+//
+// ⚠️ THIS FILTER LIVES HERE, BEFORE SERIALISATION. Hiding cards in bozo.html would
+// still hand every private league and every roster name to an unsigned browser. A
+// missing, expired or forged session simply receives the public catalog; it never
+// turns a read-only directory request into an auth error.
+//
+// ⚠️ ONE hardcoded public room, not two. `demo-royale` was the second — the seeded
+// Royale demo, kept listed so the format had a public surface before a real Royale
+// league existed. It has been deleted, and a hardcoded id for a league that is gone
+// would publish a 404 to every unsigned browser that reads the directory.
+const PUBLIC_BOZO_LEAGUES = new Set([DEFAULT_LEAGUE]);
+const leagueIsPublic = (id, lg) => PUBLIC_BOZO_LEAGUES.has(id) || (lg && lg.visibility === "public");
+async function leagueList(request, env, cors) {
+  let leagues;
+  try { leagues = await loadLeagues(env); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+
+  let viewer = null;
+  const hasSession = request.headers.has("X-Dawg-Session") || request.headers.has("X-Bozo-Session");
+  if (hasSession) {
+    const auth = await sessionAuth(request, env);
+    if (!auth.err) viewer = auth.name;
+  }
+
+  const visible = ([id, lg]) => leagueIsPublic(id, lg)
+    || (!!viewer && (lg.manager === viewer || isMember(lg, viewer)));
+  const out = Object.entries(leagues).filter(visible).map(([id, lg]) => ({
+    id, name: lg.name || id, manager: lg.manager || null,
+    size: memberNames(lg).length,
+    members: memberNames(lg),
+    teams: lg.teams || null,
+    settings: settingsOf(lg),
+    week: lg.week || 1, status: lg.status || "open",
+    visibility: leagueIsPublic(id, lg) ? "public" : "private",
+  })).sort((a, b) => a.id === DEFAULT_LEAGUE ? -1 : b.id === DEFAULT_LEAGUE ? 1 : a.name.localeCompare(b.name));
+  return json({ leagues: out, defaultLeague: DEFAULT_LEAGUE, signedIn: !!viewer }, 200, cors);
+}
+
+// POST /league/search {query} — signed-in Bozo league directory. League names are not
+// credentials: an empty query returns the first 20 and a query filters the same public
+// directory. Password verification is still the only path into a league.
+async function leagueSearch(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err, needSignIn: true }, auth.code || 401, cors);
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+  const query = String(body.query || "").trim().replace(/\s+/g, " ");
+  if ((query.length > 0 && query.length < 2) || query.length > 60)
+    return json({ error: "Use at least two characters to filter the league list." }, 400, cors);
+  const q = query.toLocaleLowerCase("en-US");
+  let leagues;
+  try { leagues = await loadLeagues(env); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+  const matches = Object.entries(leagues).filter(([id, lg]) => {
+    const name = String((lg && lg.name) || id).trim().replace(/\s+/g, " ").toLocaleLowerCase("en-US");
+    return !q || name.includes(q) || id.includes(q);
+  }).sort(([aId, a], [bId, b]) => {
+    const aOwn = a && (a.manager === auth.name || isMember(a, auth.name));
+    const bOwn = b && (b.manager === auth.name || isMember(b, auth.name));
+    if (aOwn !== bOwn) return aOwn ? -1 : 1;
+    return String((a && a.name) || aId).localeCompare(String((b && b.name) || bId));
+  });
+  const results = matches.slice(0, 20).map(([id, lg]) => ({
+    id, name: lg.name || id, manager: lg.manager || null,
+    size: memberNames(lg).length,
+    already: isMember(lg, auth.name),
+    visibility: leagueIsPublic(id, lg) ? "public" : "private",
+  }));
+  return json({ results, total: matches.length, limit: 20 }, 200, cors);
+}
+
+// POST /league/create {id, name, manager} — SITE ADMIN only. Kap makes leagues and
+// names who runs each one; managers cannot mint more leagues on his Firebase.
+async function leagueCreate(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const auth = await requireAdmin(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const id = String(body.id || "").toLowerCase().trim();
+  if (!validLeagueId(id))
+    return json({ error: "League id must be 2–24 chars: lowercase letters, numbers and dashes." }, 400, cors);
+
+  let leagues;
+  try { leagues = await loadLeagues(env); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+  if (leagues[id]) return json({ error: "A league with that id already exists." }, 409, cors);
+
+  // The manager must be a real account, or nobody can administer the league.
+  const manager = String(body.manager || auth.name);
+  const users = await loadUsers(env);
+  if (!userNames(users).includes(manager))
+    return json({ error: manager + " doesn't have an account yet — invite them first." }, 400, cors);
+
+  // ⚠️ THE MANAGER'S SEAT IS KEYED BY UID LIKE EVERY OTHER SEAT. The manager is named by
+  // display name in the request body (an admin naming a person), so their uid has to be
+  // resolved out of /users. Refusing when it cannot be is deliberate: seeding a
+  // name-keyed seat here would put the one shape this codebase no longer writes into a
+  // brand-new league, where every member joining after them is uid-keyed and only the
+  // manager is not.
+  let managerUid = null;
+  for (const [key, rec] of Object.entries(users)) {
+    const k = playerName(key);
+    if (UID_RE.test(k) && accountName(k, rec) === manager) { managerUid = k; break; }
+  }
+  if (!managerUid)
+    return json({ error: manager + " has no account id yet — they need to sign in once before they can manage a league." }, 409, cors);
+
+  // ⚠️ FORMAT IS CHOSEN HERE AND NOWHERE ELSE. Standard is the original game; Bozo
+  // Royale is the guillotine. It is immutable after the first lock — see leagueSettings —
+  // because changing the ruleset mid-season retroactively changes who should have been
+  // eliminated, which is the same class of error as mutating a published forecast.
+  const format = body.format === "royale" ? "royale" : "standard";
+  const buyback = format === "royale" ? Math.max(0, Math.round(Number(body.buyback) || 0)) : 0;
+  if (!Number.isFinite(buyback) || buyback > 100000)
+    return json({ error: "Re-deploy cost must be between 0 and 100000." }, 400, cors);
+  const leaguePassword = normLeaguePassword(body.password);
+  if (!validLeaguePassword(leaguePassword))
+    return json({ error: "A new league needs a 6–64 character league password." }, 400, cors);
+  const accessKv = JOIN_KV(env);
+  if (!accessKv) return json({ error: "League access is unavailable right now." }, 503, cors);
+
+  const lg = {
+    name: String(body.name || id).slice(0, 60),
+    manager,
+    // The manager starts as the only member; size grows from here. A league of 4 is
+    // just a league whose manager stopped adding people at 4.
+    members: { [managerUid]: { name: manager, joinedAt: Date.now() } },
+    season: SEASON, week: 1, status: "open",
+    format, buyback,
+    formatLocked: false,
+    createdTs: Date.now(), createdBy: auth.name,
+  };
+  try { await fbPatch(env, LG(id), lg); }
+  catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  try {
+    await accessKv.put(JOIN_LG(id), JSON.stringify({
+      passwordHash: await leaguePasswordHash(env, id, leaguePassword),
+      cap: JOIN_CAP_DEFAULT, createdTs: Date.now(), createdBy: auth.name,
+      passwordChangedTs: Date.now(), passwordChangedBy: auth.name,
+    }));
+  } catch (e) {
+    // Creation is one operation to the caller. If its password cannot be stored, remove
+    // the brand-new empty league so a retry does not collide with a half-created room.
+    try {
+      await fbPut(env, LG(id), null);
+      bozoNullWriteTripwire("/league/create rollback", auth, id, ["members", "picks", "results"]);
+    } catch { /* report the original access failure */ }
+    return json({ error: "League password write failed: " + e.message }, 502, cors);
+  }
+  return json({ ok: true, id, league: lg }, 200, cors);
+}
+
+/* POST /league/import — SITE ADMIN only. Loads a simulated season from the seeding
+   script into a brand-new league, so the group can see what a populated Bozo looks like
+   before a single real leg is graded.
+
+   ⚠️ `synthetic: true` IS FORCED ON HERE AND CANNOT BE TURNED OFF BY THE CALLER. It is
+   the only thing standing between a fabricated close and the evidence layer. Every
+   surface that aggregates — receipts, the model scoreboard, any cross-league total —
+   filters on it, and the close-capture cron skips these leagues outright so an invented
+   price is never confused with an observed one.
+
+   ⚠️ Import is create-only. It refuses an existing id rather than merging, because a
+   half-simulated real league is not a state anyone could reason about afterwards.
+
+   ⚠️ IT ARRIVES IN BATCHES, because a season does not fit in one request. MAX_BODY is
+   24 KB and the standard demo season is 112 KB of JSON. That limit is a shared defence
+   on every route in this Worker, so it is NOT raised for one admin convenience — the
+   caller sends the metadata plus a first slice, then appends the rest.
+
+   The first call creates the league with `importing: true`. Appends are only accepted
+   onto a league that is BOTH synthetic and still importing, which is what stops this
+   route from being a way to inject fabricated rows into a real league's ledger. The
+   final call clears the flag.
+
+   ⚠️ The simulator that produces this payload is NOT wired into any production path. It
+   is run by hand and its output posted here once. */
+/* Turn simulator legs into ledger rows. Shared by the create call and every append, so
+   a row written in batch 1 and a row written in batch 7 are built by the same code. */
+function leagueImportRows(id, season, legs) {
+  const RESULT = { win: "won", loss: "lost", push: "push" };
+  const rows = {};
+  for (const l of (legs || [])) {
+    if (!l || !l.player) continue;
+    const key = encodeURIComponent(String(l.player));
+    const week = Number(l.week) || 1;
+    rows[ledgerKey(season, week, key)] = {
+      league: id, season, week, player: String(l.player),
+      sport: l.sport, eventId: String(l.eventId || ""), game: l.game || "",
+      mkt: l.mkt, side: String(l.side ?? ""), dir: (l.side === "over" || l.side === "under") ? l.side : "over",
+      priceSource: "simulated",                 // never "self" — nobody typed this
+      line: l.line ?? null, label: l.label || "", prop: l.prop || null,
+      price: l.entryPrice ?? null, priceOpp: l.entryPriceOpp ?? null,
+      entryBook: l.entryBook || "draftkings",
+      selectionKey: l.selectionKey || null,
+      startsAt: null,                           // no capture will ever run on these
+      dkSgpEligible: l.dkSgpEligible === true ? "asserted" : (l.dkSgpEligible || null),
+      mainLine: null,
+      ts: Date.parse(l.entrySubmittedAt || "") || null,
+      close: l.closePrice ?? null, closeOpp: l.closePriceOpp ?? null,
+      closeBook: l.closeBook || null,
+      closeObservedAt: l.closeObservedAt || null,
+      // ⚠️ Not "sgo" and not "manual". A fabricated close must be distinguishable from
+      // an observed one in the column that records where closes come from, forever.
+      closeSource: l.closePrice == null ? null : "simulated",
+      closeUnavailableReason: l.closeUnavailableReason || null,
+      result: RESULT[l.result] || null,
+      won: l.result === "win" ? true : l.result === "loss" ? false : null,
+      gradedAt: l.gradedAt || null,
+      synthetic: true,
+    };
+  }
+  return rows;
+}
+
+/* Turn an imported ledger into a BOARD.
+   ⚠️ WITHOUT THIS THE DEMO DEMOS ALMOST NOTHING. The first version wrote 176 ledger rows
+   and stopped, which is everything the CLV chart needs and nothing the rest of the page
+   reads: the ticket renders from /picks, the hierarchy from /order, the verdict from
+   /bozo, and the season counts from /history. All four were empty, so a league with a
+   full simulated season showed "0 legs" and eight rows of "no leg yet" — the exact
+   surfaces the demo exists to populate.
+
+   So the last batch replays the season out of the ledger: every week's legs become picks
+   and results, each week's drawn hierarchy names its bozo, and the final week is left
+   loaded on the board.
+
+   ⚠️ The bozo is named by royaleDecideChop — the SAME cascade the live grader runs — not
+   by a second implementation written for the demo. A demo that resolved weeks by
+   different rules than the real thing would be worse than no demo. */
+const IMPORT_LEVER_IX = { "Shortest Odds": 0, "Worst Beat": 1, "Last In": 2, "Worst CLV": 3 };
+
+async function leagueImportFinalise(env, id, lg) {
+  let ledger = {};
+  try { ledger = (await fbGet(env, LG(id) + "/ledger")).data || {}; }
+  catch (e) { throw new Error("ledger read failed: " + e.message); }
+
+  const rows = Object.values(ledger).filter(r => r && r.week && r.player);
+  if (!rows.length) return null;
+
+  const byWeek = new Map();
+  for (const r of rows) {
+    if (!byWeek.has(r.week)) byWeek.set(r.week, []);
+    byWeek.get(r.week).push(r);
+  }
+  const weeks = [...byWeek.keys()].sort((a, b) => a - b);
+  const season = lg.season || SEASON;
+  const orders = lg.weekOrders || {};
+
+  // One week's legs, in the shape /picks and /results actually hold.
+  const shape = (wk) => {
+    const picks = {}, results = {};
+    for (const r of byWeek.get(wk) || []) {
+      const k = encodeURIComponent(r.player);
+      picks[k] = {
+        sport: r.sport, eventId: r.eventId, game: r.game, mkt: r.mkt, side: r.side,
+        line: r.line ?? 0, dir: r.dir || "over", price: r.price, label: r.label,
+        prop: r.prop || null, ts: r.ts || null, priceSource: r.priceSource || "simulated",
+        entryPriceOpp: r.priceOpp ?? null, entryBook: r.entryBook || null,
+        selectionKey: r.selectionKey || null, marketKey: null, startsAt: null,
+        dkSgpEligible: r.dkSgpEligible || null,
+      };
+      results[k] = {
+        result: r.result || null,
+        won: r.result === "won" ? true : r.result === "lost" ? false : null,
+        actual: r.actual ?? null,
+        close: r.close ?? null, closeOpp: r.closeOpp ?? null,
+        closeBook: r.closeBook || null, closeSource: r.closeSource || null,
+        closeObservedAt: r.closeObservedAt || null,
+        closeUnavailableReason: r.closeUnavailableReason || null,
+      };
+    }
+    return { picks, results };
+  };
+
+  /* Build the history the season board counts from.
+
+     ⚠️ A ROYALE SEASON'S HISTORY COMES FROM ITS CHOP LOG, NOT FROM A REPLAY, and the
+     reason is causal rather than tidy. The chop decides who is on the roster the
+     following week, so the legs that were generated after it only make sense under the
+     chops that actually happened. Re-deciding week 6 under different rules would give
+     week 7 a roster that never bet those legs — a season that contradicts its own rows.
+
+     ⚠️ It matters because the two DO disagree. The simulator scores Worst Beat as raw
+     distance past the line; the site scores it as distance from the price-implied
+     expectation in standard deviations, which is what data/bozo-rules.json describes and
+     which makes a −400 favourite missing by three a worse beat tha

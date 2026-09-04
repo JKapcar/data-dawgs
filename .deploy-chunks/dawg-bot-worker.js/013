@@ -1,0 +1,899 @@
+onst qb = pick(byPos.QB, w, rand, used, r.max, players, r.min);
+    if (qb < 0) return null;
+    take(qb); want.QB = 0;
+
+    if (rand() < stackRate) {
+      const mates = byPos.WR.concat(byPos.TE).filter(i => players[i].team === players[qb].team);
+      const n = rand() < 0.45 ? 2 : 1;
+      for (let k = 0; k < n; k++) {
+        const pool = mates.filter(i => !used[i] && want[players[i].pos] > 0);
+        if (!pool.length) break;
+        const pos = players[pool[0]].pos;
+        r = roomFor(pos);
+        const m = pick(pool, w, rand, used, r.max, players, r.min);
+        if (m < 0) break;
+        take(m); want[players[m].pos]--;
+      }
+    }
+
+    for (const pos of ["RB", "WR", "TE", "DST"]) {
+      while (want[pos] > 0) {
+        r = roomFor(pos);
+        const p = pick(byPos[pos], w, rand, used, r.max, players, r.min);
+        if (p < 0) { ok = false; break; }
+        take(p); want[pos]--;
+      }
+      if (!ok) break;
+    }
+    if (!ok) continue;
+
+    const fx = pick(FLEX, w, rand, used, cap - sal, players, floor ? floor - sal : null);
+    if (fx < 0) continue;
+    take(fx); flexLeft = 0;
+
+    if (ids.length !== 9 || sal > cap) continue;
+    let ng = 0; const games = {};
+    for (const id of ids) if (!games[players[id].gid]) { games[players[id].gid] = 1; ng++; }
+    if (ng >= 2) { ids.sal = sal; return ids; }
+  }
+  return null;
+}
+
+function sampleShowdown(players, byPos, w, cap, rand, site, eligible, floor) {
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const used = {}, ids = [];
+    let left = site.size - 1;
+    const cptRoom = cap - cheapestK(eligible, left, used, players);
+    const cpt = pick(eligible, w, rand, used, cptRoom / site.cptSalMult, players, null);
+    if (cpt < 0) return null;
+    used[cpt] = 1; ids.push(cpt);
+    let sal = Math.round(players[cpt].sal * site.cptSalMult), ok = true;
+    while (left > 0) {
+      const max = cap - sal - cheapestK(eligible, left - 1, used, players);
+      const min = floor ? floor - sal - costliestK(eligible, left - 1, used, players) : null;
+      const p = pick(eligible, w, rand, used, max, players, min);
+      if (p < 0) { ok = false; break; }
+      used[p] = 1; ids.push(p); sal += players[p].sal; left--;
+    }
+    if (!ok || sal > cap) continue;
+    const teams = {}; let nt = 0;
+    for (const id of ids) if (!teams[players[id].team]) { teams[players[id].team] = 1; nt++; }
+    if (nt < 2) continue;
+    ids.cpt = cpt; ids.sal = sal;
+    return ids;
+  }
+  return null;
+}
+
+/* ---- payouts ------------------------------------------------------------- */
+
+function payoutFn(spec, fieldSize, entryFee) {
+  if (spec.kind === "table" && spec.rows && spec.rows.length) {
+    const rows = spec.rows.slice().sort((a, b) => a.from - b.from);
+    return function (rank) {
+      const r = Math.round(rank);
+      for (const row of rows) if (r >= row.from && r <= row.to) return row.prize;
+      return 0;
+    };
+  }
+  // parametric: prize(r) proportional to r^-alpha over the paid places.
+  // alpha is "how top-heavy" — 1.15 puts roughly 15-18% of the pool on first in a
+  // large field, which is about where DraftKings' big tournaments sit.
+  const paidFrac = spec.paidFrac == null ? 0.2 : spec.paidFrac;
+  const alpha = spec.alpha == null ? 1.15 : spec.alpha;
+  const rake = spec.rake == null ? 0.15 : spec.rake;
+  const paid = Math.max(1, Math.round(fieldSize * paidFrac));
+  const pool = fieldSize * entryFee * (1 - rake);
+  if (spec.kind === "flat") {
+    const prize = pool / paid;
+    return rank => (rank <= paid ? prize : 0);
+  }
+  let H = 0;
+  const step = paid > 5000 ? Math.ceil(paid / 5000) : 1;
+  for (let r = 1; r <= paid; r += step) H += Math.pow(r, -alpha) * step;
+  return function (rank) {
+    if (rank > paid || rank < 1) return 0;
+    return pool * Math.pow(rank, -alpha) / H;
+  };
+}
+
+root.DDFS.simulate = simulate;
+root.DDFS.CORR = CORR;
+root.DDFS.assignRoles = assignRoles;
+root.DDFS.payoutFn = payoutFn;
+
+})(mcpDdfsRoot);
+
+/* Shared survivor path engine — generated verbatim from work/survivor-path-engine.js except for its private root. */
+const mcpSurvivorPathRoot = {};
+/* ============================================================================
+   Survivor path engine — bounded exact assignment over weekly win probabilities.
+
+   Pure computation. No DOM, network, storage or randomness. Loaded three ways:
+     1. Node, for correctness and parity tests
+     2. inlined into survivor.html for the human path board
+     3. injected into the Cloudflare Worker under a private root for MCP
+
+   The ordinary survivor rule is one distinct team per week. That is a rectangular
+   maximum-product assignment, solved as minimum -log(probability) with Hungarian.
+   If a pool explicitly allows reuse, each week is independent and the exact solution
+   is simply that week's highest-probability team; the same team may appear repeatedly.
+
+   DOUBLE-PICK WEEKS are the same problem with more columns. A week that requires two
+   picks is two SLOTS, and the assignment formulation already forbids a team from
+   taking two slots when reuse is off — the distinct-team rule falls out of the
+   assignment rather than being bolted on. `slotsPerWeek` carries that; absent, every
+   week is one slot and the maths is bit-for-bit what it always was.
+   ========================================================================== */
+(function (root) {
+"use strict";
+
+const MAX_WEEKS = 18;
+const MAX_TEAMS = 64;
+const MAX_SLOTS_PER_WEEK = 4;   // no real pool asks for more; the cap bounds the matrix
+/* ⚠️ BIG must dominate PER CELL, not per path. The Hungarian minimises a sum, so the
+   only thing that matters is that swapping a BIG cell for any legal cell always lowers
+   the total — i.e. BIG > the most expensive legal cell, which is -log(1e-6) = 13.8155.
+   It is tempting to reason "a full path is ~19 slots so BIG must beat 19 × 1.6 = 30",
+   and that comparison is not the binding one: a path's total cost is never weighed
+   against a single BIG. test-survivor-path.js asserts the per-cell inequality instead
+   of trusting either sentence. */
+const BIG = 25;
+
+function finiteProbability(value, label) {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 1)
+    throw new Error((label || "probability") + " must be null or a finite number from 0 to 1");
+  return value;
+}
+
+function validateInput(input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("path input must be an object");
+  const weeks = input.weeks, teams = input.teams, probabilities = input.probabilities;
+  if (!Array.isArray(weeks) || !weeks.length || weeks.length > MAX_WEEKS)
+    throw new Error("weeks must contain 1-" + MAX_WEEKS + " entries");
+  if (!weeks.every(w => Number.isInteger(w) && w >= 1 && w <= 18) || new Set(weeks).size !== weeks.length)
+    throw new Error("weeks must be unique whole numbers from 1 to 18");
+  if (!Array.isArray(teams) || !teams.length || teams.length > MAX_TEAMS)
+    throw new Error("teams must contain 1-" + MAX_TEAMS + " entries");
+  if (!teams.every(t => typeof t === "string" && t.length > 0 && t.length <= 20) || new Set(teams).size !== teams.length)
+    throw new Error("teams must be unique non-empty strings of at most 20 characters");
+  if (!Array.isArray(probabilities) || probabilities.length !== teams.length)
+    throw new Error("probabilities must have one row per team");
+  const matrix = probabilities.map((row, i) => {
+    if (!Array.isArray(row) || row.length !== weeks.length)
+      throw new Error("probabilities row " + (i + 1) + " must have one cell per week");
+    return row.map((p, j) => finiteProbability(p, "probability for " + teams[i] + " week " + weeks[j]));
+  });
+  /* ⚠️ Slots are validated SEPARATELY and AFTER the caller-facing shape, on purpose.
+     The distinct-weeks rule above is what stops a caller passing week 3 twice and
+     silently getting a double-pick week it never asked for; weakening it so that
+     "weeks" could carry duplicates would make the double-pick rule unstateable and
+     the accidental-duplicate bug unreportable at the same time. A week appears once
+     in `weeks` and says how many picks it wants in `slotsPerWeek`. */
+  return {
+    weeks: weeks.slice(), teams: teams.slice(), probabilities: matrix,
+    reuse: input.reuse === true,
+    slotCounts: validateSlots(weeks, input.slotsPerWeek),
+  };
+}
+
+/* slotsPerWeek: { [week]: count }. Absent, or absent for a given week, means one pick —
+   so every existing caller keeps the exact matrix it had before slots existed. */
+function validateSlots(weeks, slotsPerWeek) {
+  if (slotsPerWeek === null || slotsPerWeek === undefined) return weeks.map(() => 1);
+  if (typeof slotsPerWeek !== "object" || Array.isArray(slotsPerWeek))
+    throw new Error("slotsPerWeek must be an object keyed by week");
+  for (const key of Object.keys(slotsPerWeek)) {
+    const week = Number(key);
+    if (!Number.isInteger(week) || week < 1 || week > 18)
+      throw new Error("slotsPerWeek keys must be whole weeks from 1 to 18");
+  }
+  return weeks.map(week => {
+    const raw = slotsPerWeek[week] !== undefined ? slotsPerWeek[week] : slotsPerWeek[String(week)];
+    if (raw === undefined || raw === null) return 1;
+    if (!Number.isInteger(raw) || raw < 1 || raw > MAX_SLOTS_PER_WEEK)
+      throw new Error("slotsPerWeek for week " + week + " must be a whole number from 1 to " + MAX_SLOTS_PER_WEEK);
+    return raw;
+  });
+}
+
+function hungarian(cost) { // square matrix, minimizes
+  if (!Array.isArray(cost)) throw new Error("cost must be a square matrix");
+  const n = cost.length, INF = 1e18;
+  if (!n) return new Int32Array(0);
+  if (!cost.every(row => row && row.length === n)) throw new Error("cost must be a square matrix");
+  const u = new Float64Array(n + 1), v = new Float64Array(n + 1);
+  const p = new Int32Array(n + 1), way = new Int32Array(n + 1);
+  for (let i = 1; i <= n; i++) {
+    p[0] = i; let j0 = 0;
+    const minv = new Float64Array(n + 1).fill(INF);
+    const used = new Uint8Array(n + 1);
+    do {
+      used[j0] = 1; const i0 = p[j0]; let delta = INF, j1 = 0;
+      for (let j = 1; j <= n; j++) if (!used[j]) {
+        const cell = cost[i0 - 1][j - 1];
+        if (typeof cell !== "number" || !Number.isFinite(cell)) throw new Error("cost cells must be finite numbers");
+        const cur = cell - u[i0] - v[j];
+        if (cur < minv[j]) { minv[j] = cur; way[j] = j0; }
+        if (minv[j] < delta) { delta = minv[j]; j1 = j; }
+      }
+      for (let j = 0; j <= n; j++) {
+        if (used[j]) { u[p[j]] += delta; v[j] -= delta; }
+        else minv[j] -= delta;
+      }
+      j0 = j1;
+    } while (p[j0] !== 0);
+    do { const j1 = way[j0]; p[j0] = p[j1]; j0 = j1; } while (j0);
+  }
+  const result = new Int32Array(n).fill(-1);
+  for (let j = 1; j <= n; j++) if (p[j] > 0) result[p[j] - 1] = j - 1;
+  return result; // result[row] = column
+}
+
+/* ⚠️ `covered` COUNTS SLOTS, not weeks. With one pick a week those are the same number,
+   which is why every pre-slots caller is unaffected; with a double-pick week they are
+   not, and a "covered N of M" string built on weeks would under-report a half-filled
+   double week as fully covered. `weeksCovered` and `slots` are alongside it so a
+   consumer that genuinely wants weeks does not have to derive it — and the MCP payload
+   names which one it is returning. */
+function finish(input, assignments) {
+  assignments.sort((a, b) => a.weekIndex - b.weekIndex || a.slotIndex - b.slotIndex
+    || a.teamIndex - b.teamIndex);
+  let logSurvival = 0;
+  for (const pick of assignments) logSurvival += Math.log(pick.probability);
+  const slots = input.slotCounts.reduce((sum, n) => sum + n, 0);
+  return {
+    weeks: input.weeks.slice(), assignments,
+    survival: assignments.length ? Math.exp(logSurvival) : 0,
+    covered: assignments.length,
+    weeksCovered: new Set(assignments.map(a => a.week)).size,
+    slots,
+    slotsPerWeek: input.weeks.reduce((out, w, j) => { out[w] = input.slotCounts[j]; return out; }, {}),
+    complete: assignments.length === slots,
+    reuse: input.reuse,
+  };
+}
+
+/* Expand weeks into slots: week index j appears slotCounts[j] times. One pick a week
+   gives back exactly the old column order, so the cost matrix is unchanged. */
+function expandSlots(input) {
+  const weekOf = [], nth = [];
+  for (let j = 0; j < input.weeks.length; j++)
+    for (let k = 0; k < input.slotCounts[j]; k++) { weekOf.push(j); nth.push(k); }
+  return { weekOf, nth };
+}
+
+function solvePath(rawInput) {
+  const input = validateInput(rawInput);
+  const R = input.teams.length;
+  const { weekOf, nth } = expandSlots(input);
+  const C = weekOf.length;
+
+  if (input.reuse) {
+    /* Reuse mode: weeks are independent, so each week just takes its best teams.
+       ⚠️ With two slots that is the top TWO DISTINCT teams, not the best team twice.
+       Nothing in this branch forbids a repeat — the assignment's distinct-team rule is
+       what does that when reuse is off, and this branch never builds an assignment.
+       Taking the top k distinct teams is both the fix and the exact optimum: within a
+       week you need k different teams and the product is maximised by the k largest
+       probabilities. (An earlier plan was to solve, detect a same-team collision, mark
+       that cell impossible and re-solve in a bounded loop. That works, but it is a
+       search for something this branch can read straight off a sort.) */
+    const assignments = [];
+    for (let j = 0; j < input.weeks.length; j++) {
+      const ranked = [];
+      for (let i = 0; i < R; i++) {
+        const p = input.probabilities[i][j];
+        if (p !== null) ranked.push({ i, p });
+      }
+      ranked.sort((a, b) => b.p - a.p || a.i - b.i);
+      for (let k = 0; k < input.slotCounts[j] && k < ranked.length; k++) assignments.push({
+        week: input.weeks[j], team: input.teams[ranked[k].i], probability: ranked[k].p,
+        teamIndex: ranked[k].i, weekIndex: j, slotIndex: k,
+      });
+    }
+    return finish(input, assignments);
+  }
+
+  const N = Math.max(R, C);
+  const cost = Array.from({ length: N }, () => new Float64Array(N).fill(BIG));
+  for (let i = 0; i < R; i++) for (let s = 0; s < C; s++) {
+    const p = input.probabilities[i][weekOf[s]];
+    if (p !== null) cost[i][s] = -Math.log(Math.max(p, 1e-6));
+  }
+  const assignment = hungarian(cost), picks = [];
+  for (let i = 0; i < R; i++) {
+    const s = assignment[i];
+    if (s >= 0 && s < C && cost[i][s] < BIG) picks.push({
+      week: input.weeks[weekOf[s]], team: input.teams[i],
+      probability: input.probabilities[i][weekOf[s]],
+      teamIndex: i, weekIndex: weekOf[s], slotIndex: nth[s],
+    });
+  }
+  return finish(input, picks);
+}
+
+root.DDSurvivorPath = { MAX_WEEKS, MAX_TEAMS, MAX_SLOTS_PER_WEEK, BIG, hungarian, solvePath };
+
+})(mcpSurvivorPathRoot);
+
+/* ================================== /mcp ================================== */
+// The league's remote MCP server. One URL, pasted once into Claude's custom-
+// connector box, gives any leaguemate's own Claude READ access to the league:
+//
+//   https://toto.jkapcar4.workers.dev/mcp/<DAWG_PASS>
+//
+// TWO WAYS IN, and they are not equivalent:
+//
+//   /mcp/u_<token>     PER-USER. Minted at /connect.html, stored HASHED, revocable
+//                      individually. The call knows WHO is asking, which is what makes
+//                      attribution — and eventually writes — possible.
+//   /mcp/<DAWG_PASS>   SHARED, legacy, read-only. Anonymous: the server cannot tell one
+//                      caller from another. Kept working so nobody is cut off mid-season;
+//                      retire it once all 14 hold personal URLs.
+//
+// ⚠️ The URL IS the credential either way. Claude's connector UI takes a URL and has no
+// field for a custom header, so the secret rides in the path. It leaks through
+// screenshots and history. Per-user makes a leak CONTAINABLE — rotate one row, nobody
+// else is disturbed — it does not make it secure, and it must never be described as
+// security. Rotating DAWG_PASS by contrast re-onboards all 14 AND breaks the website's
+// Toto/TTS auth, since that secret is shared.
+// Header X-Dawg-Pass and Authorization: Bearer are also accepted for clients
+// that can send them (Claude Code, Desktop config).
+//
+// ⚠️ NOTHING WRITES. No fbPut, no fbPatch, no fbDelete, no KV writes anywhere
+// in this block — asserted by test against the source. An agent cannot place a
+// Bozo leg, edit a draft or grade a week through this endpoint.
+//
+// Protocol: JSON-RPC 2.0 over Streamable HTTP, STATELESS — every POST is
+// self-contained, no session, no SSE. A Worker is not a long-lived process.
+// ⚠️ A notification must return 202 with an EMPTY body. notifications/initialized
+//   carries no id; replying with an envelope and a null id breaks strict clients
+//   during the handshake.
+// ⚠️ Tool failures are results with isError:true, not JSON-RPC errors. A protocol
+//   error aborts the turn; a tool error is something the model reads and recovers
+//   from. "The draft room is empty" is an answer, not a crash.
+// ⚠️ This route is matched BEFORE the Origin-gated handlers. Anthropic calls the
+//   Worker server-to-server with no Origin; anything consulting ORIGINS would
+//   reject it. /mcp carries its own permissive CORS — the URL secret authorises.
+
+const MCP_PROTOS = ["2025-03-26", "2025-06-18", "2026-07-28"];
+const MCP_CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Dawg-Pass, Mcp-Session-Id, MCP-Protocol-Version",
+};
+const SITE = "https://datadawgs216.com";
+
+// Module-scope caches: the pool and the correlation matrix change on deploy, not
+// per request. An hour is generous; a Worker isolate rarely lives that long anyway.
+let mcpPoolCache = { at: 0, data: null };
+let mcpCorrCache = { at: 0, data: null };
+let mcpSurvCache = { at: 0, data: null };
+let mcpModelReceiptsCache = { at: 0, data: null };
+let mcpCfbProfilesCache = { at: 0, data: null };
+let mcpCfbDivergenceCache = { at: 0, data: null };
+let mcpCfbDisagreementCache = { at: 0, data: null };
+let mcpCfbReceiptCache = { at: 0, data: null };
+let mcpCfbScheduleCache = { at: 0, data: null };
+let mcpCfbTeamPeriodsCache = { at: 0, data: null };
+let mcpCfbLatestPeriodsCache = { at: 0, data: null };
+let mcpCfbLatestGamesCache = { at: 0, data: null };
+let mcpCfbTeamGamesCache = { at: 0, data: null };
+let mcpCfbMarketCache = { at: 0, data: null };
+let mcpCfbModelCardsCache = { at: 0, data: null };
+
+// Abramowitz–Stegun normal CDF — the SAME approximation survivor.html ships, so the
+// tool and the page cannot disagree about a probability by more than float dust.
+function mcpNcdf(z) {
+  const s = z < 0 ? -1 : 1; z = Math.abs(z) / Math.SQRT2;
+  const t = 1 / (1 + 0.3275911 * z);
+  const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-z * z);
+  return 0.5 * (1 + s * y);
+}
+
+// Pure Pound calculator primitives. These intentionally mirror work/pound-core.js,
+// and test-mcp.mjs checks the MCP results against that source. MCP schemas describe
+// the inputs, but the server validates again because not every client enforces schemas.
+// No value is stored, no external service is called and no result is represented as a
+// forecast unless the caller supplied a probability explicitly.
+function mcpCalcFinite(v, name) {
+  if (typeof v !== "number" || !Number.isFinite(v))
+    throw new Error((name || "value") + " must be a finite number");
+  return v;
+}
+function mcpCalcProbability(v, name) {
+  const n = mcpCalcFinite(v, name || "probability");
+  if (n < 0 || n > 1) throw new Error((name || "probability") + " must be between 0 and 1");
+  return n;
+}
+function mcpCalcAmerican(v) {
+  const n = mcpCalcFinite(v, "American odds");
+  if (n === 0 || Math.abs(n) < 100) throw new Error("American odds must be <= -100 or >= +100");
+  return n;
+}
+const mcpCalcClamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+function mcpCalcAmericanToDecimal(v) {
+  const a = mcpCalcAmerican(v);
+  return a > 0 ? 1 + a / 100 : 1 + 100 / Math.abs(a);
+}
+function mcpCalcDecimalToAmerican(v) {
+  const d = mcpCalcFinite(v, "decimal odds");
+  if (d <= 1) throw new Error("decimal odds must be greater than 1");
+  return d >= 2 ? (d - 1) * 100 : -100 / (d - 1);
+}
+function mcpCalcImplied(v) { return 1 / mcpCalcAmericanToDecimal(v); }
+function mcpCalcParlay(values) {
+  if (!Array.isArray(values) || !values.length) throw new Error("enter at least one leg");
+  if (values.length > 20) throw new Error("a parlay is limited to 20 legs per call");
+  const legs = values.map(mcpCalcAmerican);
+  const decimal = legs.reduce((p, v) => p * mcpCalcAmericanToDecimal(v), 1);
+  if (!Number.isFinite(decimal)) throw new Error("combined parlay price is outside the supported numeric range");
+  return { legs, decimal, american: mcpCalcDecimalToAmerican(decimal), implied_probability: 1 / decimal };
+}
+function mcpCalcHoldVig(a, b) {
+  const raw = [mcpCalcImplied(a), mcpCalcImplied(b)];
+  const sum = raw[0] + raw[1];
+  return { raw_implied: raw, hold: sum - 1, devig_probability: raw.map(p => p / sum) };
+}
+function mcpCalcBetEv(winProbability, price) {
+  const p = mcpCalcProbability(winProbability, "win probability");
+  const decimal = mcpCalcAmericanToDecimal(price);
+  const breakEven = 1 / decimal;
+  const expected = p * (decimal - 1) - (1 - p);
+  return { break_even_probability: breakEven, expected_profit_per_unit: expected, roi: expected };
+}
+function mcpCalcHedge(originalStake, originalPrice, hedgePrice) {
+  const stake = mcpCalcFinite(originalStake, "original stake");
+  if (stake <= 0) throw new Error("original stake must be greater than zero");
+  const d1 = mcpCalcAmericanToDecimal(originalPrice), d2 = mcpCalcAmericanToDecimal(hedgePrice);
+  const hedgeStake = stake * d1 / d2;
+  const profit = stake * (d1 - 1) - hedgeStake;
+  return { hedge_stake: hedgeStake, locked_profit: profit, original_decimal: d1, hedge_decimal: d2 };
+}
+function mcpCalcPasserRating(attempts, completions, yards, touchdowns, interceptions) {
+  const att = mcpCalcFinite(attempts, "attempts"), cmp = mcpCalcFinite(completions, "completions");
+  const yds = mcpCalcFinite(yards, "yards"), td = mcpCalcFinite(touchdowns, "touchdowns");
+  const interceptionsN = mcpCalcFinite(interceptions, "interceptions");
+  if (att <= 0) throw new Error("attempts must be greater than zero");
+  if (![att, cmp, yds, td, interceptionsN].every(Number.isInteger)) throw new Error("passing statistics must be whole numbers");
+  if ([cmp, td, interceptionsN].some(v => v < 0) || cmp > att || td > att || interceptionsN > att)
+    throw new Error("enter a valid passing line");
+  const parts = [
+    mcpCalcClamp((cmp / att - 0.3) * 5, 0, 2.375),
+    mcpCalcClamp((yds / att - 3) * 0.25, 0, 2.375),
+    mcpCalcClamp((td / att) * 20, 0, 2.375),
+    mcpCalcClamp(2.375 - (interceptionsN / att) * 25, 0, 2.375),
+  ];
+  return { rating: parts.reduce((s, v) => s + v, 0) / 6 * 100, components: parts };
+}
+function mcpCalcEloGame(homeElo, awayElo, homeFieldElo) {
+  const homeRating = mcpCalcFinite(homeElo, "home Elo");
+  const awayRating = mcpCalcFinite(awayElo, "away Elo");
+  const homeField = mcpCalcFinite(homeFieldElo, "home-field Elo");
+  const adjusted = homeRating + homeField - awayRating;
+  const home = 1 / (1 + Math.pow(10, -adjusted / 400));
+  return { home_win_probability: home, away_win_probability: 1 - home, adjusted_elo_difference: adjusted };
+}
+// Peter J. Acklam's inverse-normal rational approximation and the matching
+// browser CDF. Keeping these coefficients in parity with work/pound-core.js
+// prevents the MCP and human calculator from producing different answers.
+function mcpCalcNormalInv(v) {
+  const p = mcpCalcProbability(v);
+  if (p === 0) return -Infinity;
+  if (p === 1) return Infinity;
+  const a = [-39.69683028665376, 220.9460984245205, -275.9285104469687, 138.357751867269,
+    -30.66479806614716, 2.506628277459239];
+  const b = [-54.47609879822406, 161.5858368580409, -155.6989798598866,
+    66.80131188771972, -13.28068155288572];
+  const c = [-0.007784894002430293, -0.3223964580411365, -2.400758277161838,
+    -2.549732539343734, 4.374664141464968, 2.938163982698783];
+  const d = [0.007784695709041462, 0.3224671290700398, 2.445134137142996, 3.754408661907416];
+  const lo = 0.02425, hi = 1 - lo;
+  if (p < lo) {
+    const q = Math.sqrt(-2 * Math.log(p));
+    return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+      ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
+  }
+  if (p > hi) {
+    const q = Math.sqrt(-2 * Math.log(1 - p));
+    return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+      ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
+  }
+  const q = p - 0.5, r = q * q;
+  return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q /
+    (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
+}
+function mcpCalcNormalCdf(x) {
+  const z = mcpCalcFinite(x, "z");
+  const t = 1 / (1 + 0.2316419 * Math.abs(z));
+  const density = 0.3989422804014327 * Math.exp(-z * z / 2);
+  const poly = t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+  const cdf = 1 - density * poly;
+  return z >= 0 ? cdf : 1 - cdf;
+}
+function mcpCalcNormalTranslation(homeWinProbability, residualSdPoints, homeLine) {
+  const p = mcpCalcProbability(homeWinProbability, "home win probability");
+  if (p <= 0 || p >= 1) throw new Error("translation probability must be strictly between 0 and 1");
+  const sd = mcpCalcFinite(residualSdPoints, "residual SD");
+  if (sd <= 0) throw new Error("residual SD must be greater than zero");
+  const margin = 0.5 + sd * mcpCalcNormalInv(p);
+  if (!Number.isFinite(margin)) throw new Error("translated margin is outside the supported numeric range");
+  const out = { expected_margin_home: margin, model_spread_home: margin, residual_sd_points: sd };
+  if (homeLine !== undefined && homeLine !== null && homeLine !== "") {
+    const line = mcpCalcFinite(homeLine, "home line");
+    const threshold = -line;
+    out.home_line = line;
+    out.cover_threshold_home_margin = threshold;
+    out.home_cover_probability = 1 - mcpCalcNormalCdf((threshold - margin) / sd);
+    out.push_probability = 0;
+  }
+  return out;
+}
+function mcpCalcForecastGrade(forecastProbability, outcome) {
+  const p = mcpCalcProbability(forecastProbability, "forecast probability");
+  const y = mcpCalcFinite(outcome, "outcome");
+  if (y !== 0 && y !== 1) throw new Error("outcome must be 0 or 1");
+  const safe = mcpCalcClamp(p, 1e-15, 1 - 1e-15);
+  return { brier: (p - y) ** 2, log_loss: -(y * Math.log(safe) + (1 - y) * Math.log(1 - safe)), sample_size: 1 };
+}
+function mcpCalcBeliefSummary(values) {
+  if (!Array.isArray(values) || !values.length) throw new Error("enter at least one probability");
+  if (values.length > 100) throw new Error("belief summary is limited to 100 probabilities per call");
+  const xs = values.map((v, i) => mcpCalcProbability(v, "probability " + (i + 1))).sort((a, b) => a - b);
+  const mean = xs.reduce((s, v) => s + v, 0) / xs.length;
+  const median = xs.length % 2 ? xs[(xs.length - 1) / 2] : (xs[xs.length / 2 - 1] + xs[xs.length / 2]) / 2;
+  const variance = xs.reduce((s, v) => s + (v - mean) ** 2, 0) / xs.length;
+  return { count: xs.length, mean, median, min: xs[0], max: xs[xs.length - 1], range: xs[xs.length - 1] - xs[0],
+    standard_deviation: Math.sqrt(variance), crosses_50: xs[0] < 0.5 && xs[xs.length - 1] > 0.5 };
+}
+
+// DFS solver adapter. The optimizer itself is injected from work/dfs-engine.js by
+// assemble.mjs, so the browser and MCP execute one source. This layer only validates a
+// bounded caller-supplied slate, maps public ids to engine indexes and makes every
+// constraint/result inspectable. Inputs and results are never stored.
+const MCP_DFS_MAX_PLAYERS = 220;
+const MCP_DFS_MAX_LINEUPS = 20;
+const MCP_DFS_MAX_TIME_MS = 3000;
+const MCP_DFS_POSITIONS = ["QB", "RB", "WR", "TE", "DST"];
+
+function mcpDfsHas(obj, key) { return Object.prototype.hasOwnProperty.call(obj, key); }
+function mcpDfsKnown(obj, allowed, label) {
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) throw new Error(label + " must be an object");
+  const extra = Object.keys(obj).filter(k => !allowed.includes(k));
+  if (extra.length) throw new Error(label + " has unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+}
+function mcpDfsString(v, label, max) {
+  if (typeof v !== "string" || !v.trim()) throw new Error(label + " must be a non-empty string");
+  const s = v.trim();
+  if (s.length > max) throw new Error(label + " is limited to " + max + " characters");
+  return s;
+}
+function mcpDfsNumber(v, label, lo, hi) {
+  if (typeof v !== "number" || !Number.isFinite(v)) throw new Error(label + " must be a finite number");
+  if (v < lo || v > hi) throw new Error(label + " must be between " + lo + " and " + hi);
+  return v;
+}
+function mcpDfsInteger(v, label, lo, hi) {
+  const n = mcpDfsNumber(v, label, lo, hi);
+  if (!Number.isInteger(n)) throw new Error(label + " must be a whole number");
+  return n;
+}
+function mcpDfsOptionalInteger(args, key, label, lo, hi, fallback) {
+  return mcpDfsHas(args, key) ? mcpDfsInteger(args[key], label, lo, hi) : fallback;
+}
+function mcpDfsOptionalNumber(args, key, label, lo, hi, fallback) {
+  return mcpDfsHas(args, key) ? mcpDfsNumber(args[key], label, lo, hi) : fallback;
+}
+function mcpDfsSlots(lineup, players, site) {
+  if (site === "dk_showdown") {
+    const rest = lineup.ids.filter(i => i !== lineup.cpt);
+    return [{ slot: "CPT", i: lineup.cpt }].concat(rest.map(i => ({ slot: "FLEX", i })));
+  }
+  const by = { QB: [], RB: [], WR: [], TE: [], DST: [] };
+  lineup.ids.forEach(i => by[players[i].pos].push(i));
+  for (const pos of MCP_DFS_POSITIONS)
+    by[pos].sort((a, b) => players[b].proj - players[a].proj || players[a].id.localeCompare(players[b].id));
+  const flex = by.RB[2] !== undefined ? by.RB[2] : by.WR[3] !== undefined ? by.WR[3] : by.TE[1];
+  return [
+    { slot: "QB", i: by.QB[0] },
+    { slot: "RB", i: by.RB[0] }, { slot: "RB", i: by.RB[1] },
+    { slot: "WR", i: by.WR[0] }, { slot: "WR", i: by.WR[1] }, { slot: "WR", i: by.WR[2] },
+    { slot: "TE", i: by.TE[0] }, { slot: "FLEX", i: flex }, { slot: "DST", i: by.DST[0] },
+  ];
+}
+function mcpDfsSolve(args) {
+  mcpDfsKnown(args, ["players", "site", "count", "min_salary", "max_salary", "unique_players",
+    "randomness", "seed", "max_per_team", "max_per_game", "time_limit_ms", "stack"], "arguments");
+  if (!Array.isArray(args.players) || !args.players.length)
+    throw new Error("players must be a non-empty array");
+  if (args.players.length > MCP_DFS_MAX_PLAYERS)
+    throw new Error("players is limited to " + MCP_DFS_MAX_PLAYERS + " rows per call");
+
+  const site = args.site === undefined ? "dk_classic" : args.site;
+  if (site !== "dk_classic" && site !== "dk_showdown")
+    throw new Error("site must be dk_classic or dk_showdown");
+  const siteSpec = mcpDdfsRoot.DDFS.SITES[site];
+  const count = mcpDfsOptionalInteger(args, "count", "count", 1, MCP_DFS_MAX_LINEUPS, 1);
+  const minSalary = mcpDfsOptionalInteger(args, "min_salary", "min_salary", 0, siteSpec.cap, 0);
+  const maxSalary = mcpDfsOptionalInteger(args, "max_salary", "max_salary", 100, siteSpec.cap, siteSpec.cap);
+  if (minSalary > maxSalary) throw new Error("min_salary cannot exceed max_salary");
+  if (minSalary % 100 || maxSalary % 100) throw new Error("salary limits must be multiples of 100");
+  const uniques = mcpDfsOptionalInteger(args, "unique_players", "unique_players", 0, siteSpec.size, count > 1 ? (siteSpec.showdown ? 1 : 2) : 0);
+  const randomness = mcpDfsOptionalNumber(args, "randomness", "randomness", 0, 0.6, 0);
+  const seed = mcpDfsOptionalInteger(args, "seed", "seed", 1, 2147483647, 1);
+  const maxPerTeam = mcpDfsHas(args, "max_per_team")
+    ? mcpDfsInteger(args.max_per_team, "max_per_team", 1, siteSpec.size) : undefined;
+  const maxPerGame = mcpDfsHas(args, "max_per_game")
+    ? mcpDfsInteger(args.max_per_game, "max_per_game", 1, siteSpec.size) : undefined;
+  const timeLimitMs = mcpDfsOptionalInteger(args, "time_limit_ms", "time_limit_ms", 100, MCP_DFS_MAX_TIME_MS, 2000);
+
+  const stackIn = args.stack === undefined ? {} : args.stack;
+  mcpDfsKnown(stackIn, ["qb_min", "qb_positions", "bring_back", "no_rb_vs_dst", "no_opp_dst"], "stack");
+  const qbMin = mcpDfsOptionalInteger(stackIn, "qb_min", "stack.qb_min", 0, 3, 0);
+  const bringBack = mcpDfsOptionalInteger(stackIn, "bring_back", "stack.bring_back", 0, 3, 0);
+  const qbPos = stackIn.qb_positions === undefined ? ["WR", "TE"] : stackIn.qb_positions;
+  if (!Array.isArray(qbPos) || !qbPos.length || qbPos.length > 3 ||
+      qbPos.some(p => !["RB", "WR", "TE"].includes(p)) || new Set(qbPos).size !== qbPos.length)
+    throw new Error("stack.qb_positions must contain one to three unique values from RB, WR, TE");
+  for (const key of ["no_rb_vs_dst", "no_opp_dst"])
+    if (mcpDfsHas(stackIn, key) && typeof stackIn[key] !== "boolean")
+      throw new Error("stack." + key + " must be true or false");
+  if (siteSpec.showdown && (qbMin || bringBack || stackIn.no_rb_vs_dst || stackIn.no_opp_dst))
+    throw new Error("QB-stack and DST-opponent constraints apply only to dk_classic");
+
+  const ids = new Set();
+  const players = args.players.map((raw, i) => {
+    const label = "players[" + i + "]";
+    mcpDfsKnown(raw, ["id", "name", "position", "team", "opponent", "game_id", "salary",
+      "projection", "ownership", "lock", "exclude", "max_exposure"], label);
+    const id = mcpDfsString(raw.id, label + ".id", 80);
+    if (ids.has(id)) throw new Error("player id appears more than once: " + id);
+    ids.add(id);
+    const pos = mcpDfsString(raw.position, label + ".position", 3).toUpperCase();
+    if (!MCP_DFS_POSITIONS.includes(pos)) throw new Error(label + ".position must be QB, RB, WR, TE or DST");
+    const sal = mcpDfsInteger(raw.salary, label + ".salary", 100, siteSpec.cap);
+    if (sal % 100) throw new Error(label + ".salary must be a multiple of 100");
+    const lock = raw.lock === undefined ? false : raw.lock;
+    const excl = raw.exclude === undefined ? false : raw.exclude;
+    if (typeof lock !== "boolean" || typeof excl !== "boolean") throw new Error(label + ".lock and .exclude must be true or false");
+    if (lock && excl) throw new Error(label + " cannot be both locked and excluded");
+    const maxExp = raw.max_exposure === undefined ? null
+      : mcpDfsNumber(raw.max_exposure, label + ".max_exposure", 0, 1);
+    if (lock && maxExp === 0) throw new Error(label + " cannot be locked with max_exposure 0");
+    return {
+      id,
+      name: mcpDfsString(raw.name, label + ".name", 100),
+      pos,
+      team: mcpDfsString(raw.team, label + ".team", 12).toUpperCase(),
+      opp: mcpDfsString(raw.opponent, label + ".opponent", 12).toUpperCase(),
+      gid: mcpDfsString(raw.game_id, label + ".game_id", 80),
+      sal,
+      proj: mcpDfsNumber(raw.projection, label + ".projection", 0, 100),
+      own: raw.ownership === undefined ? null : mcpDfsNumber(raw.ownership, label + ".ownership", 0, 100),
+      lock, excl: excl || maxExp === 0, maxExp,
+    };
+  });
+
+  const cfg = {
+    site, count, minSalary, maxSalary, uniques, randomness, seed,
+    maxPerTeam, maxPerGame, timeLimitMs,
+    stack: { qbMin, qbPos: qbPos.slice(), bringBack,
+      noRbVsDst: stackIn.no_rb_vs_dst === true, noOppDst: stackIn.no_opp_dst === true },
+  };
+  const started = Date.now();
+  const solved = mcpDdfsRoot.DDFS.solveLineups(players, cfg);
+  const elapsedMs = Date.now() - started;
+  const locked = players.filter(p => p.lock).map(p => p.id);
+  const excluded = new Set(players.filter(p => p.excl).map(p => p.id));
+  const output = solved.lineups.map((lineup, n) => {
+    const slots = mcpDfsSlots(lineup, players, site).map(({ slot, i }) => {
+      const p = players[i], captain = slot === "CPT";
+      return {
+        slot, id: p.id, name: p.name, position: p.pos, team: p.team,
+        opponent: p.opp, game_id: p.gid, salary: p.sal,
+        slot_salary: captain ? Math.round(p.sal * siteSpec.cptSalMult) : p.sal,
+        projection: p.proj,
+        slot_projection: captain ? p.proj * siteSpec.cptMult : p.proj,
+        ownership: p.own, locked: p.lock,
+      };
+    });
+    const lineupIds = new Set(slots.map(p => p.id));
+    const ownershipComplete = slots.every(p => p.ownership !== null);
+    const audit = {
+      roster_size: slots.length,
+      unique_players: lineupIds.size,
+      salary_within_range: lineup.sal >= minSalary && lineup.sal <= maxSalary,
+      all_locks_present: locked.every(id => lineupIds.has(id)),
+      no_excluded_players: ![...lineupIds].some(id => excluded.has(id)),
+    };
+    audit.satisfied = audit.roster_size === siteSpec.size && audit.unique_players === siteSpec.size &&
+      audit.salary_within_range && audit.all_locks_present && audit.no_excluded_players;
+    return {
+      rank: n + 1, salary: lineup.sal, projection: lineup.proj,
+      drawn_projection: randomness ? lineup.drawnProj : null,
+      ownership_sum: ownershipComplete ? slots.reduce((sum, p) => sum + p.ownership, 0) : null,
+      ownership_complete: ownershipComplete,
+      captain_id: lineup.cpt === undefined ? null : players[lineup.cpt].id,
+      players: slots, constraint_audit: audit,
+    };
+  });
+  const exposure = players.map((p, i) => ({
+    id: p.id, name: p.name,
+    lineups: Number(solved.exposure[i] || 0),
+    rate: output.length ? Number(solved.exposure[i] || 0) / output.length : 0,
+  })).filter(row => row.lineups > 0);
+  const status = output.length === count && !solved.timedOut && !solved.infeasible ? "complete"
+    : output.length ? "partial" : solved.timedOut ? "time_limit_no_lineup" : "infeasible";
+  const warnings = [
+    "Every projection, salary and ownership value came from this call. Data Dawgs did not supply or verify them.",
+    "The optimizer maximizes the supplied projection under the declared constraints; optimized does not mean likely or profitable.",
+  ];
+  if (randomness) warnings.push("Seeded randomness perturbed the optimization objective per lineup; projection reports the unperturbed caller-supplied total.");
+  if (solved.timedOut) warnings.push("The bounded Worker time limit was reached. Every returned lineup is valid, but the requested set did not finish.");
+  if (output.some(l => !l.ownership_complete)) warnings.push("Ownership was missing for at least one selected player, so ownership_sum is null for that lineup.");
+  return {
+    status, read_only: true, stored: false, site,
+    method: "Exact branch-and-bound per accepted lineup using the same source as dfs.html.",
+    methodology_url: SITE + "/dfs.html#method",
+    requested_lineups: count, returned_lineups: output.length,
+    elapsed_ms: elapsedMs, timed_out: !!solved.timedOut,
+    infeasible_reason: solved.infeasible || null,
+    constraints: {
+      min_salary: minSalary, max_salary: maxSalary, unique_players: uniques,
+      randomness, seed, max_per_team: maxPerTeam || null, max_per_game: maxPerGame || null,
+      time_limit_ms: timeLimitMs,
+      stack: { qb_min: qbMin, qb_positions: qbPos, bring_back: bringBack,
+        no_rb_vs_dst: stackIn.no_rb_vs_dst === true, no_opp_dst: stackIn.no_opp_dst === true },
+    },
+    input_summary: { players: players.length, locked: locked.length, excluded: excluded.size },
+    lineups: output, exposure, warnings,
+  };
+}
+
+/* ⚠️ EVERY /data fetch below uses cacheTtlByStatus, never a bare cacheTtl, and the
+   difference is not cosmetic. `cacheTtl` forces the response into Cloudflare's edge
+   cache REGARDLESS of its status, so one transient 5xx from Pages is pinned for the
+   full TTL and every caller in that window is told the file is unavailable while the
+   file sits there, valid, on the origin. That is a self-inflicted outage lasting as
+   long as the success TTL.
+
+   Success caches for the helper's own TTL; 404 caches for one second so a genuinely
+   missing file is still noticed quickly; 5xx caches for zero, so the next call retries.
+
+   This shape came out of the 2026-08-23 survivor.json incident, where both survivor
+   tools returned "unavailable: HTTP 503" against a healthy file. That diagnosis was
+   never confirmed — the tools had recovered before it could be reproduced — but the
+   defect is real independent of whether it caused that outage, and it was identical in
+   all sixteen helpers rather than unique to one. */
+
+// survivor.json carries the whole 2026 schedule with blended win probabilities,
+// the nfelo Elo table and the margin-model constants — one fetch feeds both the
+// survivor EV tool and the matchup tool. 15 min cache: it changes on data pushes,
+// not per request, but weekly ownership context makes an hour feel stale.
+//
+// ⚠️ cacheTtlByStatus, NOT a bare cacheTtl. `cacheTtl` forces the response into the
+// edge cache REGARDLESS of its status, so a single transient 503 from Pages gets
+// pinned for the full 15 minutes and every caller in that window is told the file is
+// unavailable while the file is sitting there, valid, on the origin. That is the
+// shape of the outage reported 2026-08-23: both survivor tools returning
+// "survivor.json unavailable: HTTP 503" against a file that was fine.
+// Success caches for 15 minutes; a 404 caches for one second so a genuinely missing
+// file is still noticed quickly; 5xx caches for zero, so the next call retries.
+//
+// ⚠️ This fix is UNFALSIFIED. By the time it was written the tools had recovered on
+// their own and the origin was unreachable from the dev container (network policy),
+// so the 503 could not be reproduced to confirm the cause. The change is correct
+// regardless — pinning an error response for 15 minutes is a defect whether or not it
+// is firing right now — but if 503s return, this was not the (only) cause.
+async function mcpSurvivor() {
+  if (!mcpSurvCache.data || Date.now() - mcpSurvCache.at > 900e3) {
+    const r = await fetch(`${SITE}/data/survivor.json`, {
+      cf: { cacheTtlByStatus: { "200-299": 900, "404": 1, "500-599": 0 }, cacheEverything: true },
+    });
+    if (!r.ok) throw new Error("survivor.json unavailable: HTTP " + r.status);
+    mcpSurvCache = { at: Date.now(), data: (await r.json()).data };
+  }
+  return mcpSurvCache.data;
+}
+
+// Exact survivor path adapter. The optimizer is injected from
+// work/survivor-path-engine.js, the same source inlined into survivor.html.
+function mcpSurvivorWeekTable(D, week) {
+  const table = {};
+  for (const g of D.games) {
+    if (g.wk !== week) continue;
+    table[g.h] = { opponent: g.a, home: true, probability: g.p, source: g.src, game_id: g.id, date: g.d };
+    table[g.a] = { opponent: g.h, home: false, probability: 1 - g.p, source: g.src, game_id: g.id, date: g.d };
+  }
+  return table;
+}
+
+// doubleWeeks: a Set of weeks requiring two picks. Empty means one pick a week and the
+// cost matrix is exactly what it was before slots existed.
+function mcpSolveSurvivorPath(D, fromWeek, used, reuse, doubleWeeks) {
+  const weeks = [];
+  for (let week = fromWeek; week <= 18; week++) weeks.push(week);
+  const dbl = doubleWeeks || new Set();
+  const slotsPerWeek = {};
+  for (const week of weeks) if (dbl.has(week)) slotsPerWeek[week] = 2;
+  const slots = weeks.reduce((n, w) => n + (slotsPerWeek[w] || 1), 0);
+  if (!weeks.length) return { weeks, assignments: [], survival: 1, covered: 0, slots: 0, weeksCovered: 0, complete: true, reuse };
+  const tables = weeks.map(week => mcpSurvivorWeekTable(D, week));
+  const teams = Object.keys(D.elo).filter(team => reuse || !used.has(team));
+  if (!teams.length) return { weeks, assignments: [], survival: 0, covered: 0, slots, weeksCovered: 0, complete: false, reuse };
+  const solved = mcpSurvivorPathRoot.DDSurvivorPath.solvePath({
+    weeks, teams, reuse, slotsPerWeek,
+    probabilities: teams.map(team => tables.map(table => table[team] ? table[team].probability : null)),
+  });
+  solved.assignments = solved.assignments.map(pick => ({
+    week: pick.week, team: pick.team, probability: pick.probability,
+    ...tables[pick.weekIndex][pick.team],
+  }));
+  return solved;
+}
+
+// The public receipt ledger is append-only and changes only when a new dated model
+// snapshot is published. Keep the envelope (not just data) so every response can carry
+// its source date and integrity receipt. The returned rows are always bounded by the tool.
+async function mcpModelReceipts() {
+  if (!mcpModelReceiptsCache.data || Date.now() - mcpModelReceiptsCache.at > 900e3) {
+    const r = await fetch(`${SITE}/data/model-receipts.json`, { cf: { cacheTtlByStatus: { "200-299": 900, "404": 1, "500-599": 0 }, cacheEverything: true } });
+    if (!r.ok) throw new Error("model-receipts.json unavailable: HTTP " + r.status);
+    const envelope = await r.json();
+    if (!envelope || !Array.isArray(envelope.data)) throw new Error("model-receipts.json has an invalid envelope");
+    if (!envelope.as_of || !envelope.source) throw new Error("model-receipts.json is missing required provenance");
+    if (envelope.integrity && Number.isInteger(envelope.integrity.rows) && envelope.integrity.rows !== envelope.data.length)
+      throw new Error("model-receipts.json row count does not match its integrity receipt");
+    mcpModelReceiptsCache = { at: Date.now(), data: envelope };
+  }
+  return mcpModelReceiptsCache.data;
+}
+
+// The registry is a compact, public, dated normalization boundary rather than a
+// live upstream query. Retain its envelope so callers receive the exact source and
+// snapshot receipt that produced every rating. The tool below returns one team only.
+async function mcpCfbTeamProfiles() {
+  if (!mcpCfbProfilesCache.data || Date.now() - mcpCfbProfilesCache.at > 900e3) {
+    const r = await fetch(`${SITE}/data/cfb-teams.json`, { cf: { cacheTtlByStatus: { "200-299": 900, "404": 1, "500-599": 0 }, cacheEverything: true } });
+    if (!r.ok) throw new Error("cfb-teams.json unavailable: HTTP " + r.status);
+    const envelope = await r.json();
+    const data = envelope && envelope.data;
+    if (!envelope || !envelope.as_of || !envelope.source || !data ||
+        !Array.isArray(data.systems) || !Array.isArray(data.teams))
+      throw new Error("cfb-teams.json has an invalid envelope");
+    if (!data.systems.length || data.systems.length > 20)
+      throw new Error("cfb-teams.json must contain 1-20 registered systems");
+    if (!data.teams.length || data.teams.length > 200)
+      throw new Error("cfb-teams.json must contain 1-200 teams");
+    if (data.scope !== "observed-results-plus-retrodictive-rating" ||
+        !data.consensus || typeof data.consensus.status !== "string" || !data.rating_period)
+      throw new Error("cfb-teams.json is missing rating-period or consensus metadata");
+    if (envelope.integrity && Number.isInteger(envelope.integrity.teams) && envelope.integrity.teams !== data.teams.length)
+      throw new Error("cfb-teams.json team count does not match its integrity receipt");
+    if (envelope.integrity && Number.isInteger(envelope.integrity.systems) && envelope.integrity.systems !== data.systems.length)
+      throw new Error("cfb-teams.json system count does not match its integrity receipt");
+    const systemIds = new Set();
+    for (const system of data.systems) {
+      if (!system || typeof system.system_id !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(system.system_id) ||
+          systemIds.has(system.system_id) || typeof system.name !== "string" || !system.name ||
+          typeof system.provider !== "string" || !system.provider || typeof system.kind !== "string" || !system.kind ||
+          typeof system.feature_family !== "string" || !system.feature_family ||
+          typeof system.source_snapshot_id !== "string" || !system.source_snapshot_id ||
+          typeof system.source_url !== "string" || !system.source_url ||
+          typeof system.model_card_url !== "string" || !system.model_card_url ||
+          !system.outputs || typeof system.outputs !== "object" || Array.isArray(system.outputs) ||
+          !system.team_diagnostics || typeof system.team_diagnostics.available !== "boolean" ||
+          (system.team_diagnostics.available === true &&
+            (system.team_diagnostics.kind !== "retrodictive-team-aggregate" ||
+             system.team_diagnostics.prospective !== false || system.team_diagnostics.graded !== false ||
+             system.team_diagnostics.rankings_published !== false)) ||
+          typeof system.prospective_forecasts_exist !== "boolean" || typeof system.graded !== "boolean")
+        throw new Error("cfb-teams.json has an invalid or duplicate system_id");
+      systemIds.add(system.system_id);
+    }
+    for (const team of data.teams) {
+      if (!team || typeof team.team_slug !== "string" || typeof team.team !== "string" ||
+          !team.observed_results || typeof team.observed_results !== "object" ||
+          !team.systems || typeof team.systems !== "object" || Array.

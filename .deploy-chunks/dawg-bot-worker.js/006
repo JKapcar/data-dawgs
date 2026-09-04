@@ -1,0 +1,903 @@
+ot_name || decodeURIComponent(k);
+    // Mirrors sessionAuth's roster check: if the owner is removed from /users, their
+    // bots stop writing on the next request rather than outliving the human indefinitely.
+    let players;
+    try { players = userNames(await loadUsers(env)); }
+    catch (e) { return { err: e.message, code: 502 }; }
+    if (!players.includes(b.owner)) return { err: "That bot's owner is no longer a player.", code: 403 };
+    return { entrant: botName, kind: "agent", owner: b.owner };
+  }
+  return { err: "Unknown bot token.", code: 401 };
+}
+
+/* The one place the two credential kinds meet. Header presence picks the path; a request
+ * carrying both is treated as the human, because a session is the stronger claim and
+ * silently preferring the bot would let a stolen token ride a real browser session. */
+async function fcEntrantAuth(request, env) {
+  const sessTok = request.headers.get("X-Dawg-Session") || request.headers.get("X-Bozo-Session") || "";
+  if (sessTok) {
+    const auth = await sessionAuth(request, env);
+    if (auth.err) return auth;
+    return { entrant: auth.name, kind: "human", owner: auth.name, source: "web" };
+  }
+  const botTok = request.headers.get("X-DD-Bot") || "";
+  if (botTok) {
+    const bot = await fcBotAuth(env, botTok);
+    if (bot.err) return bot;
+    return { entrant: bot.entrant, kind: "agent", owner: bot.owner, source: "api" };
+  }
+  return { err: "Sign in first, or send a bot token.", code: 401 };
+}
+
+/* ---------------------------- the schedule ------------------------------- */
+/* kickoff_at comes from the canonical schedule surface and NEVER from the request.
+ * A client that could name its own kickoff could name one in the future and write a
+ * "prospective" forecast after the game had started. */
+const fcScheduleCache = {};
+
+async function fcSchedule(sport) {
+  const url = FC_SPORTS[sport];
+  if (!url) throw new Error("Unknown sport.");
+  const hit = fcScheduleCache[sport];
+  if (hit && Date.now() - hit.at < 900e3) return hit.games;
+
+  const r = await fetch(SITE + url, { cf: { cacheTtl: 900, cacheEverything: true } });
+  if (!r.ok) throw new Error(url + " unavailable: HTTP " + r.status);
+  const envelope = await r.json();
+  const data = envelope && envelope.data;
+  const rows = data && data.games;
+  if (!envelope || !envelope.as_of || !envelope.source || !Array.isArray(rows) || !rows.length)
+    throw new Error(url + " has an invalid envelope");
+
+  const games = new Map();
+  for (const g of rows) {
+    const kickoff = Date.parse(g && g.kickoff_at);
+    if (!g || typeof g.game_id !== "string" || !g.game_id || !Number.isFinite(kickoff) ||
+        typeof g.home_team !== "string" || typeof g.away_team !== "string" ||
+        !Number.isInteger(g.season) || !Number.isInteger(g.week)) continue;
+    games.set(g.game_id, {
+      game_id: g.game_id, season: g.season, week: g.week, kickoff_ms: kickoff,
+      kickoff_at: new Date(kickoff).toISOString(),
+      home_team: g.home_team, away_team: g.away_team,
+    });
+  }
+  if (!games.size) throw new Error(url + " produced no usable games");
+  fcScheduleCache[sport] = { at: Date.now(), games };
+  return games;
+}
+
+/* ----------------------------- aggregation ------------------------------- */
+/* Average in LOG-ODDS, never in probabilities. Probability averaging is systematically
+ * underconfident and costs most where forecasters agree — which is exactly where points
+ * are earned. Do NOT extremize: the literature's case for it assumes partially
+ * independent forecasters, and ours are not. Model numbers are on the site before you
+ * pick, so copying is expected and is handled by MEASURING correlation against each
+ * model rather than by hiding numbers. */
+const fcLogit = p => {
+  const q = Math.min(FC_CLAMP_HI, Math.max(FC_CLAMP_LO, Number(p)));
+  return Math.log(q / (1 - q));
+};
+const fcSigmoid = z => 1 / (1 + Math.exp(-z));
+
+/* ⚠️ `touched === true` is an EXPLICIT filter and must never become
+ * `slider_value !== 50`. An untouched slider and a deliberate 50 have the same value and
+ * opposite meanings — both score zero, but the first is an ABSENCE. Let untouched games
+ * into the consensus at 50% and every lurker drags the crowd to the middle, which
+ * destroys the only thing the human line is for: independence from the models. */
+/* ⚠️ AGENTS ARE EXCLUDED FROM THE CROWD LINE. FC-C introduced bot entrants, which forces
+ * a question stage FC-A did not have to answer: does dd-crowd-<sport> average humans, or
+ * everyone? It has to be humans. The crowd line's entire reason to exist is being an
+ * INDEPENDENT signal to grade the models against — and bots are model-driven by
+ * construction, so admitting them turns "Data Dawgs Crowd" into a weighted average of the
+ * same models it is supposed to be independent of. It would still be a legitimate line;
+ * it would just no longer be the line the contract pre-registered.
+ *
+ * This is the same argument the `touched` filter already makes, one level up: untouched
+ * sliders drag the crowd toward 50, and model-following bots drag it toward the models.
+ * Both destroy independence, which is the only thing the human line is for.
+ *
+ * Agents still compete, still score, still get a leaderboard row. They just are not the
+ * crowd. A v1 row has no entrant_kind, so `!== "agent"` treats it as human — which is
+ * exactly right, because v1 predates bots existing at all. */
+function fcAggregate(rows) {
+  const contributors = rows
+    .filter(r => r && r.touched === true && r.entrant_kind !== "agent" &&
+                 Number.isFinite(Number(r.home_win_probability)))
+    .sort((a, b) => String(a.entrant).localeCompare(String(b.entrant)));
+  const n = contributors.length;
+  if (n < FC_MIN_TOUCH) return null;
+
+  const zs = contributors.map(r => fcLogit(r.home_win_probability)).sort((a, b) => a - b);
+  let keep;
+  if (n >= 5) {
+    const k = Math.ceil(FC_TRIM * n);
+    keep = zs.slice(k, n - k);
+  } else {
+    // Too few to trim meaningfully; the median is the robust statistic that remains.
+    keep = n % 2 ? [zs[(n - 1) / 2]] : [zs[n / 2 - 1], zs[n / 2]];
+  }
+  const mean = keep.reduce((a, b) => a + b, 0) / keep.length;
+  return {
+    home_win_probability: Math.round(fcSigmoid(mean) * 1e6) / 1e6,
+    n_touched: n,
+    n_used: keep.length,
+    n_trimmed: n - keep.length,
+    contributors,
+  };
+}
+
+/* The canonical row form the contributors hash is taken over — same device the receipt
+ * ledger uses, so the consensus is recomputable by anyone once entries become readable. */
+const fcCanonicalRow = r => JSON.stringify({
+  game_id: r.game_id, home_win_probability: r.home_win_probability,
+  submitted_at: r.submitted_at, touched: r.touched, entrant: r.entrant,
+});
+
+/* ------------------------- POST /forecast/entry -------------------------- */
+async function forecastEntry(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  // The ONE route that accepts a bot credential. Everywhere else still calls sessionAuth.
+  const auth = await fcEntrantAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code, cors);
+  const { entrant, kind, owner, source } = auth;
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const sport = String(body.sport || "");
+  if (!FC_SPORTS[sport]) return json({ error: "Unknown sport." }, 400, cors);
+  const gameId = String(body.game_id || "");
+  if (!gameId) return json({ error: "Which game?" }, 400, cors);
+
+  let games;
+  try { games = await fcSchedule(sport); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+  const game = games.get(gameId);
+  if (!game) return json({ error: "No such game in the canonical schedule." }, 404, cors);
+
+  // ⚠️ SERVER TIME, ALWAYS. This refusal is what makes forecast_status "prospective"
+  // (captured_at < kickoff_at) true by construction instead of true by audit.
+  const now = Date.now();
+  if (now >= game.kickoff_ms)
+    return json({ error: "That game has kicked off. Forecasts are locked." }, 409, cors);
+
+  const slider = Number(body.slider_value);
+  if (!Number.isInteger(slider) || slider < 0 || slider > 100)
+    return json({ error: "slider_value must be a whole number from 0 to 100." }, 400, cors);
+  const side = String(body.slider_side || "");
+  if (side !== "home" && side !== "away")
+    return json({ error: "slider_side must be home or away." }, 400, cors);
+  if (typeof body.touched !== "boolean")
+    return json({ error: "touched must be true or false." }, 400, cors);
+  // ⚠️ The client may not assert the canonical probability. Deriving it here is what makes
+  // it impossible for the raw slider and the number everything scores to disagree.
+  if ("home_win_probability" in body)
+    return json({ error: "home_win_probability is derived, not submitted." }, 400, cors);
+
+  const pNaive = body.p_naive == null ? null : Number(body.p_naive);
+  if (pNaive !== null && (!Number.isInteger(pNaive) || pNaive < 0 || pNaive > 100))
+    return json({ error: "p_naive must be null or a whole number from 0 to 100." }, 400, cors);
+  const entryMethod = body.entry_method == null ? "legacy" : String(body.entry_method);
+  if (entryMethod !== "legacy" && entryMethod !== "drive")
+    return json({ error: "entry_method must be legacy or drive." }, 400, cors);
+  if (body.hints_revealed != null && typeof body.hints_revealed !== "boolean")
+    return json({ error: "hints_revealed must be true or false." }, 400, cors);
+
+  const idemKey = body.idempotency_key == null ? null : String(body.idempotency_key);
+  if (idemKey !== null && (!idemKey || idemKey.length > 128))
+    return json({ error: "idempotency_key must be a string of 1 to 128 characters." }, 400, cors);
+
+  const path = fcEntryPath(sport, game.season, game.week, entrant, gameId);
+  let prior = null;
+  try { prior = (await fbGet(env, path)).data; }
+  catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+
+  // ⚠️ IDEMPOTENCY IS CHECKED BEFORE THE CAP, AND THAT ORDER IS THE WHOLE POINT. A repeat
+  // carrying a key we have already stored is a no-op, not a revision: it must not bump
+  // `revision`, must not move `submitted_at`, and must not cost a write against the cap.
+  // An agent that retries after a timeout it never saw the response to would otherwise be
+  // punished for the network's failure, and its revision history would record edits that
+  // never happened. Reading `prior` first is what makes this possible, which is why the
+  // cap moved below the read.
+  if (idemKey !== null && prior && prior.idempotency_key === idemKey)
+    return json({ ok: true, entry: prior, idempotent: true }, 200, cors);
+
+  if (env.RL) {
+    const day = new Date().toISOString().slice(0, 10);
+    const agent = kind === "agent";
+    const key = agent ? `fc:b:${day}:${encodeURIComponent(entrant)}`
+                      : `fc:w:${day}:${encodeURIComponent(entrant)}`;
+    const cap = agent ? FC_AGENT_WRITE_CAP : FC_WRITE_CAP;
+    const used = parseInt((await env.RL.get(key)) || "0", 10);
+    if (used >= cap)
+      return json({ error: `Daily forecast write cap reached (${cap}).` }, 429, cors);
+    await env.RL.put(key, String(used + 1), { expirationTtl: 172800 });
+  }
+
+  const entry = {
+    // ⚠️ v2 RENAMES `user` TO `entrant`, AND IT IS A CLEAN BREAK, NOT A DUPLICATE FIELD.
+    // Nothing had ever read `user` — no page called these routes — so carrying both would
+    // have bought compatibility with no reader, at the price of two names for one thing
+    // and a permanent question about which is authoritative. `entrant` is the leaderboard
+    // key and may be a person or a bot; `owner` is the human answerable for it, and equals
+    // `entrant` for humans.
+    v: 2,
+    sport, season: game.season, week: game.week, game_id: gameId,
+    entrant, entrant_kind: kind, owner,
+    home_team: game.home_team, away_team: game.away_team, kickoff_at: game.kickoff_at,
+    // The canonical number is ALWAYS P(home). Scoring is symmetric under
+    // p -> 1-p, r -> 1-r, so the side the user expressed it on cannot change a score.
+    home_win_probability: (side === "home" ? slider : 100 - slider) / 100,
+    slider_value: slider,
+    slider_side: side,
+    // ⚠️ CLIENT-ASSERTED, like priceSource "self" on a Bozo leg — the Worker cannot observe
+    // a drag. Stored anyway, and stored SEPARATELY from the value: "was here and left this
+    // one alone" is real coverage information, and discarding it would make an absent
+    // record ambiguous between two states that mean opposite things.
+    touched: body.touched,
+    p_naive: pNaive,
+    entry_method: entryMethod,
+    hints_revealed: body.hints_revealed === true,
+    submitted_at: now,
+    revision: (prior && Number.isInteger(prior.revision) ? prior.revision : 0) + 1,
+    // Where the write came from, decided by which credential authenticated it — never
+    // read from the body, so a caller cannot dress an API write up as a human one.
+    source,
+    idempotency_key: idemKey,
+  };
+
+  try { await fbPut(env, path, entry); }
+  catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  return json({ ok: true, entry }, 200, cors);
+}
+
+/* ------------------------ GET /forecast/entries -------------------------- */
+/* Your own week, and nothing else. This route reads exactly one node containing exactly
+ * your own data, so the request that runs most often never holds another person's
+ * pre-lock forecast in memory at all. */
+async function forecastMine(request, url, env, cors) {
+  if (request.method !== "GET") return json({ error: "GET only" }, 405, cors);
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code, cors);
+
+  const sport = String(url.searchParams.get("sport") || "");
+  if (!FC_SPORTS[sport]) return json({ error: "Unknown sport." }, 400, cors);
+  const season = parseInt(url.searchParams.get("season") || "", 10);
+  const week = parseInt(url.searchParams.get("week") || "", 10);
+  if (!Number.isInteger(season) || !Number.isInteger(week))
+    return json({ error: "season and week are required." }, 400, cors);
+
+  let mine, sealed;
+  try {
+    mine = (await fbGet(env, fcEntryPath(sport, season, week, auth.name, null))).data || {};
+    sealed = (await fbGet(env, fcSealPath(sport, season, week, null))).data || {};
+  } catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+
+  return json({
+    ok: true, sport, season, week,
+    entries: Object.values(mine),
+    // The sealed rows are for games that have already locked, so publishing them here
+    // discloses nothing that was private a moment ago.
+    sealed: Object.values(sealed),
+  }, 200, cors);
+}
+
+/* -------------------------- GET /forecast/game --------------------------- */
+/* Every entry for one game — AFTER kickoff and never before. This is the route the
+ * privacy assertion attacks. */
+async function forecastGame(request, url, env, cors) {
+  if (request.method !== "GET") return json({ error: "GET only" }, 405, cors);
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code, cors);
+
+  const sport = String(url.searchParams.get("sport") || "");
+  if (!FC_SPORTS[sport]) return json({ error: "Unknown sport." }, 400, cors);
+  const gameId = String(url.searchParams.get("game_id") || "");
+  if (!gameId) return json({ error: "Which game?" }, 400, cors);
+
+  let games;
+  try { games = await fcSchedule(sport); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+  const game = games.get(gameId);
+  if (!game) return json({ error: "No such game in the canonical schedule." }, 404, cors);
+
+  // ⚠️ THE ONE THAT MATTERS. Nobody but the owner reads an entry until the game locks.
+  // Refuse BEFORE any read, so a bug in the shaping code below cannot leak anything.
+  if (Date.now() < game.kickoff_ms)
+    return json({ error: "Forecasts stay private until kickoff." }, 409, cors);
+
+  let byEntrant;
+  try { byEntrant = (await fbGet(env, `${FC_ROOT}/entries/${sport}/${game.season}/${game.week}`)).data || {}; }
+  catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+
+  const key = encodeURIComponent(gameId);
+  const entries = [];
+  for (const perEntrant of Object.values(byEntrant)) {
+    const row = perEntrant && perEntrant[key];
+    if (row) entries.push(row);
+  }
+  entries.sort((a, b) => String(a.entrant).localeCompare(String(b.entrant)));
+
+  let sealed = null;
+  try { sealed = (await fbGet(env, fcSealPath(sport, game.season, game.week, gameId))).data || null; }
+  catch { /* the entries are the answer; a missing seal is not an error */ }
+
+  return json({ ok: true, sport, game_id: gameId, kickoff_at: game.kickoff_at, entries, sealed }, 200, cors);
+}
+
+/* ------------------------- POST /forecast/seal --------------------------- */
+/* Freeze the crowd consensus for every game in a week that has kicked off and has no
+ * sealed row yet. Idempotent: an existing row is NEVER overwritten, not even a wrong one.
+ * A ledger that can be corrected in place is not a ledger.
+ *
+ * ⚠️ captured_at AND sealed_at ARE TWO DIFFERENT FACTS AND BOTH ARE PUBLISHED.
+ * A consensus can only be computed once its inputs stop changing, which is kickoff — so
+ * captured_at = now would be at or after kickoff and the row could never be prospective.
+ *   captured_at = the latest submitted_at among contributors. The instant the forecast
+ *                 became fully determined. < kickoff_at by construction, because
+ *                 /forecast/entry refuses every later write.
+ *   sealed_at   = when this row was written. >= kickoff_at, always.
+ * captured_at alone is true but invites "we computed this before kickoff", which is false.
+ * Publishing both makes the claim exact: every input predates kickoff, the arithmetic
+ * does not. */
+async function forecastSeal(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const auth = await requireAdmin(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const sport = String(body.sport || "");
+  if (!FC_SPORTS[sport]) return json({ error: "Unknown sport." }, 400, cors);
+  const season = parseInt(body.season, 10);
+  const week = parseInt(body.week, 10);
+  if (!Number.isInteger(season) || !Number.isInteger(week))
+    return json({ error: "season and week are required." }, 400, cors);
+
+  let games;
+  try { games = await fcSchedule(sport); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+
+  let byEntrant, already;
+  try {
+    byEntrant = (await fbGet(env, `${FC_ROOT}/entries/${sport}/${season}/${week}`)).data || {};
+    already = (await fbGet(env, fcSealPath(sport, season, week, null))).data || {};
+  } catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+
+  const perGame = new Map();
+  for (const entries of Object.values(byEntrant)) {
+    for (const row of Object.values(entries || {})) {
+      if (!row || typeof row.game_id !== "string") continue;
+      if (!perGame.has(row.game_id)) perGame.set(row.game_id, []);
+      perGame.get(row.game_id).push(row);
+    }
+  }
+
+  const now = Date.now();
+  const sealed = [], skipped = [];
+  for (const [gameId, rows] of perGame) {
+    const game = games.get(gameId);
+    if (!game) { skipped.push({ game_id: gameId, why: "not in the canonical schedule" }); continue; }
+    if (now < game.kickoff_ms) { skipped.push({ game_id: gameId, why: "not kicked off" }); continue; }
+    if (already[encodeURIComponent(gameId)]) {
+      skipped.push({ game_id: gameId, why: "already sealed" }); continue;
+    }
+    const agg = fcAggregate(rows);
+    if (!agg) { skipped.push({ game_id: gameId, why: `fewer than ${FC_MIN_TOUCH} touched entries` }); continue; }
+
+    const capturedMs = Math.max(...agg.contributors.map(r => Number(r.submitted_at) || 0));
+    // Belt and braces: an entry that somehow predates nothing, or postdates kickoff, must
+    // never be laundered into a prospective row by the aggregator.
+    if (!(capturedMs > 0 && capturedMs < game.kickoff_ms)) {
+      skipped.push({ game_id: gameId, why: "a contributing entry is not prospective" });
+      continue;
+    }
+
+    const row = {
+      v: 1,
+      model_id: "dd-crowd-" + sport,
+      model_name: "Data Dawgs Crowd",
+      model_version: FC_CROWD_VERSION,
+      sport, season, week, game_id: gameId,
+      home_team: game.home_team, away_team: game.away_team,
+      kickoff_at: game.kickoff_at,
+      home_win_probability: agg.home_win_probability,
+      aggregation: "trimmed-mean-logit",
+      trim_fraction: FC_TRIM,
+      clamp: [FC_CLAMP_LO, FC_CLAMP_HI],
+      extremized: false,
+      min_touch: FC_MIN_TOUCH,
+      n_touched: agg.n_touched,
+      n_used: agg.n_used,
+      n_trimmed: agg.n_trimmed,
+      captured_at: new Date(capturedMs).toISOString(),
+      sealed_at: new Date(now).toISOString(),
+      forecast_status: "prospective",
+      contributors: agg.contributors.map(r => r.entrant),
+      contributors_sha256: await sha256hex(agg.contributors.map(fcCanonicalRow).join("\n")),
+    };
+    try { await fbPut(env, fcSealPath(sport, season, week, gameId), row); }
+    catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+    sealed.push(row);
+  }
+
+  return json({ ok: true, sport, season, week, sealed, skipped }, 200, cors);
+}
+
+/* -------------------------- GET /forecast/week --------------------------- */
+/* Every entry for one week, admin only. This is the grader's read: scripts/forecast_grade.py
+ * joins these against the canonical schedule's finals, out here rather than in the Worker,
+ * because outcomes and grades are evidence ABOUT forecasts and must be produced by a
+ * different process from a different source. Keeping them together would let a bug in
+ * scoring rewrite a forecast, which is the one thing the storage layer exists to prevent.
+ *
+ * ⚠️ IT REFUSES A WEEK THAT IS NOT FULLY KICKED OFF, AND THAT IS NOT A CONVENIENCE CHECK.
+ * The whole privacy guarantee is that nobody but the owner reads an entry before that
+ * game locks. An admin route returning a week with one unkicked game in it would be a
+ * hole straight through that promise — and the person holding the admin credential is
+ * also an entrant. The refusal is checked BEFORE any read, so a bug in the shaping code
+ * below cannot leak what the guard would have refused. */
+async function forecastWeek(request, url, env, cors) {
+  if (request.method !== "GET") return json({ error: "GET only" }, 405, cors);
+  const auth = await requireAdmin(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  const sport = String(url.searchParams.get("sport") || "");
+  if (!FC_SPORTS[sport]) return json({ error: "Unknown sport." }, 400, cors);
+  const season = parseInt(url.searchParams.get("season") || "", 10);
+  const week = parseInt(url.searchParams.get("week") || "", 10);
+  if (!Number.isInteger(season) || !Number.isInteger(week))
+    return json({ error: "season and week are required." }, 400, cors);
+
+  let games;
+  try { games = await fcSchedule(sport); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+
+  const now = Date.now();
+  const pending = [];
+  for (const g of games.values()) {
+    if (g.season !== season || g.week !== week) continue;
+    if (now < g.kickoff_ms) pending.push(g.game_id);
+  }
+  if (!games.size) return json({ error: "The schedule produced no games." }, 502, cors);
+  if (pending.length)
+    return json({ error: "That week still has games that have not kicked off.", pending }, 409, cors);
+
+  let byEntrant, sealed;
+  try {
+    byEntrant = (await fbGet(env, `${FC_ROOT}/entries/${sport}/${season}/${week}`)).data || {};
+    sealed = (await fbGet(env, fcSealPath(sport, season, week, null))).data || {};
+  } catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+
+  const entries = [];
+  for (const perEntrant of Object.values(byEntrant))
+    for (const row of Object.values(perEntrant || {})) if (row) entries.push(row);
+  entries.sort((a, b) => String(a.game_id).localeCompare(String(b.game_id)) ||
+                         String(a.entrant).localeCompare(String(b.entrant)));
+
+  return json({ ok: true, sport, season, week, entries, sealed: Object.values(sealed) }, 200, cors);
+}
+
+/* -------------------------- POST /forecast/bot --------------------------- */
+/* Register, rotate or revoke a bot entrant. Session required, and it acts ONLY on bots
+ * the caller owns — the same "acts only on SELF" discipline /auth/mcp-token has.
+ *
+ * ⚠️ REGISTRATION REQUIRES A CONFIRMED EMAIL, AND FORECAST ENTRY DOES NOT. That asymmetry
+ * is deliberate. A slider is a person playing a game; a verification wall in front of it
+ * would cost conversion and protect nothing. A bot token is a different object: it writes
+ * attributable prospective receipts, unattended, at volume, and it is the thing that would
+ * be abused first. Requiring a reachable human behind it is proportionate to what it can
+ * do — and unlike a slider, nobody is standing there waiting on it. */
+async function forecastBot(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 401, cors);
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const action = String((body && body.action) || "");
+  if (!["register", "rotate", "revoke"].includes(action))
+    return json({ error: "action must be register, rotate or revoke." }, 400, cors);
+  const botName = String((body && body.bot_name) || "").trim();
+  if (!botName) return json({ error: "bot_name is required." }, 400, cors);
+
+  let users;
+  try { users = await loadUsers(env); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+  const me = users[auth.name] || users[encodeURIComponent(auth.name)] || null;
+
+  /* ---------------------------- register ---------------------------- */
+  if (action === "register") {
+    if (!me || me.emailVerified !== true)
+      return json({ error: "Confirm your email address before registering a bot." }, 403, cors);
+    if (!FC_BOT_NAME_RE.test(botName))
+      return json({ error: "bot_name must be 2 to 40 characters: letters, digits, spaces, dot, underscore or hyphen, starting with a letter or digit." }, 400, cors);
+
+    if (env.RL) {
+      const ip = request.headers.get("CF-Connecting-IP") || "0.0.0.0";
+      const key = `fcbotreg:${new Date().toISOString().slice(0, 10)}:${ip}`;
+      const used = parseInt((await env.RL.get(key)) || "0", 10);
+      if (used >= FC_BOT_REG_CAP)
+        return json({ error: "Too many bot registrations from this address today." }, 429, cors);
+      await env.RL.put(key, String(used + 1), { expirationTtl: 172800 });
+    }
+
+    let bots;
+    try { bots = (await fbGet(env, fcBotPath(null))).data || {}; }
+    catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+    const mine = Object.values(bots).filter(b => b && b.owner === auth.name && b.revoked !== true);
+    if (mine.length >= FC_BOTS_PER_OWNER)
+      return json({ error: `You already have ${FC_BOTS_PER_OWNER} active bots.` }, 409, cors);
+
+    let taken;
+    try { taken = await fcNameTaken(env, botName); }
+    catch (e) { return json({ error: e.message }, 502, cors); }
+    if (taken) return json({ error: `That name is already ${taken}. Bots and people share one namespace.` }, 409, cors);
+
+    const token = newFcBotToken();
+    const rec = {
+      v: 1,
+      owner: auth.name,
+      bot_name: botName,
+      created_at: Date.now(),
+      token_hash: await fcBotTokenHash(env, token),
+      token_set_at: Date.now(),
+      revoked: false,
+      agent_note: String((body && body.agent_note) || "").slice(0, 280),
+    };
+    try { await fbPut(env, fcBotPath(botName), rec); }
+    catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+    // ⚠️ Shown ONCE. Only the hash is stored, so it cannot be redisplayed — same discipline
+    // as invite tokens and MCP tokens. Losing it means rotating.
+    return json({ ok: true, bot: fcPublicBot(botName, rec), token,
+                  note: "Copy this token now. It is shown once and only its hash is stored. Send it as the X-DD-Bot header on POST /forecast/entry." }, 200, cors);
+  }
+
+  /* ------------------------ rotate / revoke ------------------------- */
+  let rec;
+  try { rec = (await fbGet(env, fcBotPath(botName))).data; }
+  catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+  // Same answer for "does not exist" and "is not yours", so this cannot be used to probe
+  // which bot names other people have registered.
+  if (!rec || rec.owner !== auth.name) return json({ error: "No such bot of yours." }, 404, cors);
+
+  if (action === "revoke") {
+    // ⚠️ REVOKE DOES NOT DELETE THE RECORD. The name must stay reserved: its entries are
+    // already attributed to it, and freeing the name would let someone else register it
+    // and inherit a leaderboard row full of somebody else's forecasts.
+    try { await fbPatch(env, fcBotPath(botName), { revoked: true, revoked_at: Date.now() }); }
+    catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+    return json({ ok: true, bot: fcPublicBot(botName, { ...rec, revoked: true }), revoked: true }, 200, cors);
+  }
+
+  const token = newFcBotToken();
+  try {
+    await fbPatch(env, fcBotPath(botName),
+      { token_hash: await fcBotTokenHash(env, token), token_set_at: Date.now(), revoked: false });
+  } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  return json({ ok: true, bot: fcPublicBot(botName, rec), token,
+                note: "Rotated. The previous token stopped working immediately." }, 200, cors);
+}
+
+// The public shape of a bot. ⚠️ token_hash is never in it — not because the hash is
+// usable, but because publishing it invites someone to try.
+const fcPublicBot = (name, b) => ({
+  bot_name: b.bot_name || name,
+  owner: b.owner,
+  created_at: b.created_at || null,
+  token_set_at: b.token_set_at || null,
+  revoked: b.revoked === true,
+  agent_note: b.agent_note || "",
+});
+
+/* -------------------------- GET /forecast/bots --------------------------- */
+async function forecastBots(request, env, cors) {
+  if (request.method !== "GET") return json({ error: "GET only" }, 405, cors);
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 401, cors);
+
+  let bots;
+  try { bots = (await fbGet(env, fcBotPath(null))).data || {}; }
+  catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+
+  const mine = Object.entries(bots)
+    .filter(([, b]) => b && b.owner === auth.name)
+    .map(([k, b]) => fcPublicBot(decodeURIComponent(k), b))
+    .sort((a, b) => a.bot_name.localeCompare(b.bot_name));
+  return json({ ok: true, owner: auth.name, bots: mine, cap: FC_BOTS_PER_OWNER }, 200, cors);
+}
+
+/* =============================== /bozo/pick =============================== */
+// One leg per person. Favorites only, band from /bozo/config. No exact duplicates.
+// Editing is allowed while the board is open — the Worker stamps a fresh server
+// timestamp, which is what "editing resets your clock and your price" means.
+// When the last leg lands, the board locks and the permutation is drawn.
+
+// The single place a Bozo leg is written. Both entry paths — the site form via
+// bozoPick below, and the MCP two-phase tool dd_submit_bozo_leg — land here AFTER
+// their own auth, membership, status and validatePick checks have passed. Extracted
+// so the stored pick shape can never drift between the two: a second copy of this
+// object is how an MCP leg would silently stop carrying startsAt and fall out of the
+// close capture.
+// `via` records HOW the leg arrived ("mcp"), not who submitted it — identity is
+// `name`, checked by the caller. Site submissions carry no `via`, exactly as before.
+async function commitBozoLeg(env, lid, state, name, p, via = null, mkey = null) {
+  const set = settingsOf(state);
+  // The caller has already resolved membership; this is the key that resolution produced.
+  // Refusing a null key rather than falling back to the name keeps one code path.
+  const key = mkey || memberKeyOf(state, { name });
+  if (!key) return { ok: false, error: "You are not in this league." };
+
+  // ⚠️ The opposite side is NOT optional. Without it there is no de-vig, and the
+  // chart's y-axis baseline is wrong by the whole hold — about two probability
+  // points, which is comparable to the entire spread of CLV across the league. A leg
+  // that arrives without it is stored with null and flagged, never quietly de-vigged
+  // against nothing. See handoff §4 rule 6.
+  const oppRaw = Number(p.priceOpp);
+  const entryPriceOpp = Number.isFinite(oppRaw) && Math.abs(oppRaw) >= 100 ? Math.round(oppRaw) : null;
+
+  const pick = {
+    sport: p.sport, eventId: String(p.eventId), game: String(p.game).slice(0, 80),
+    mkt: p.mkt, side: String(p.side).slice(0, 40),
+    line: p.mkt === "ml" ? 0 : Number(p.line),
+    // market-agnostic: a side of over/under sets the direction, anything else
+    // (a team abbreviation on a spread or ML) resolves to "over", which is the
+    // branch expected() has always wanted for those.
+    dir: (p.side === "over" || p.side === "under") ? p.side : "over",
+    price: Math.round(Number(p.price)),
+    label: String(p.label).slice(0, 90),
+    prop: p.prop ? String(p.prop).slice(0, 80) : null,
+    // ⚠️ Where the PRICE came from, not where the pick came from. "captured" is
+    // server-only and carries the SGO/DraftKings receipt fields below. "self" is limited
+    // to props whose capture failed and `other`; both are visibly excluded from CLV.
+    priceSource: p.priceSource === "captured" ? "captured" : "self",
+    // ⚠️ Stored so the uniqueness and contradiction checks never have to re-derive a
+    // key from a row written under an older version of the rules. A key that drifts
+    // between write time and read time silently stops catching collisions.
+    selectionKey: selectionKeyOf(p),
+    marketKey: marketKeyOf(p),
+    // ⚠️ Kickoff, carried from the ESPN game the player picked. The close capture has
+    // no other way to know WHEN to snap: event ids don't line up between ESPN and the
+    // odds source, so this timestamp is what schedules the whole thing. A leg without
+    // it is never captured — see bozoCloseTargets.
+    startsAt: typeof p.startsAt === "string" && !isNaN(Date.parse(p.startsAt)) ? p.startsAt : null,
+    priceOpp: entryPriceOpp,
+    entryPriceOpp,
+    entryBook: "draftkings",        // league rule: there is no other book at either end
+    entryProvider: p.entryProvider || null,
+    entrySnapshotAt: p.entrySnapshotAt || null,
+    fairEntry: Number.isFinite(Number(p.fairEntry)) ? Number(p.fairEntry) : null,
+    entryHold: Number.isFinite(Number(p.entryHold)) ? Number(p.entryHold) : null,
+    clvEligible: p.clvEligible === true,
+    canonicalKey: p.canonicalKey || null,
+    commenceTime: p.commenceTime || p.startsAt || null,
+    espnEventId: p.espnEventId || String(p.eventId),
+    providerEventIds: p.providerEventIds || {},
+    closeState: p.closeState || "pending",
+    submissionId: p.submissionId || null,
+    // ⚠️ "asserted", not "verified". DK has no public API, so this records that the
+    // player is claiming an SGP-legal selection and that it passed the structural
+    // checks — nothing has asked DraftKings.
+    dkSgpEligible: "asserted",
+    // ⚠️ Audit, spec'd in cep-identity §4.4: an agent-submitted leg must be
+    // distinguishable from a hand-submitted one forever, without guessing. Only the
+    // Worker sets this; no request body may carry it.
+    ...(via ? { via } : {}),
+    // ⚠️ The display name AT SUBMISSION TIME, stored on the leg itself. Ledger rows are
+    // immutable receipts that outlive membership: resolving the name through the members
+    // map at render time would turn every row for a departed member into a bare uid.
+    // A later rename changes the live board and leaves settled receipts alone, which is
+    // the correct behaviour for a receipt.
+    who: String(name || ""),
+    ts: Date.now(),                 // SERVER time — the reason this route exists
+  };
+  await fbPut(env, LG(lid) + "/picks/" + key, pick);
+
+  // ⚠️ THE LABEL IS REFRESHED ON EVERY SUBMISSION, and this is what keeps a rename from
+  // going stale. /auth/rename writes the new name to /users/<uid> and knows nothing about
+  // which leagues that person sits in; without this line the board would keep showing the
+  // old name until they re-joined. Filing a leg re-stamps it, so a rename is visible from
+  // the next submission and no cross-league name index has to exist.
+  try { await fbPatch(env, LG(lid) + "/members/" + key, { name: String(name || "") }); }
+  catch { /* the leg is the write that matters; a stale label is cosmetic and self-heals */ }
+
+  const picks = (await fbGet(env, LG(lid) + "/picks")).data || {};
+  // ⚠️ THIS league's threshold, never the global roster. Default is "everyone in",
+  // where the size IS the member count — an 8-person league locks on the 8th leg and
+  // a 4-person league on the 4th. A league can instead lock at a fixed count, which
+  // turns Last In into a race with a real risk of not making the ticket at all.
+  // ⚠️ In Bozo Royale the threshold is the ALIVE roster, not the member count. A
+  // chopped player never submits again, so waiting for "everyone in" would mean the
+  // ticket could never lock once the first elimination landed — the board would just
+  // sit open forever with the league unable to play.
+  const size = set.format === "royale" ? royaleRoster(state).length : memberNames(state).length;
+  const need = set.lockRule === "count" ? Math.min(set.lockCount || size, size || set.lockCount) : size;
+  let placed = false;
+  if (need > 0 && Object.keys(picks).length >= need) {
+    placed = await placeAndDraw(env, lid, picks, state);
+  }
+  return { ok: true, ts: pick.ts, placed, size, need };
+}
+
+async function bozoPick(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code, cors);
+  const { name } = auth;
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const lid = leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+
+  let state;
+  try { state = await loadLeague(env, lid); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+  if (!state) return json({ error: "No such league." }, 404, cors);
+
+  // Having an account is not the same as being in THIS league.
+  if (!isMember(state, name))
+    return json({ error: "You're not in this league." }, 403, cors);
+
+  if ((state.status || "open") !== "open" && body.confirm === undefined) {
+    return json({ error: "The ticket is placed. Board is locked." }, 409, cors);
+  }
+
+  const mkey = memberKeyOf(state, auth);
+  if (!mkey) return json({ error: "You are not in this league." }, 403, cors);
+
+  try {
+    if (body.action === "remove") {
+      await fbDelete(env, LG(lid) + "/picks/" + mkey);
+      bozoNullWriteTripwire("/bozo/pick remove", auth, lid, ["picks/" + mkey]);
+      return json({ ok: true, removed: true }, 200, cors);
+    }
+
+    const set = settingsOf(state);
+    if (!env.RL) return json({ error: "The confirmation store is not configured." }, 503, cors);
+    const kvKey = "bozoconfirm:" + (auth.uid || name) + ":" + lid;
+
+    // "Editing is allowed until the ticket is placed" is the default, not a law. A
+    // league can lock a leg the moment it lands — which removes the edit-resets-your-
+    // clock dynamic entirely, so it is a real change to how the game plays.
+    if (body.confirm === undefined && !set.allowEdit && (state.picks || {})[mkey])
+      return json({ error: "This league locks your leg once it's in — no edits." }, 409, cors);
+
+    // Bozo Royale: a chopped player funds the ticket, they do not bet on it. Their
+    // re-deploy puts you straight back the first time; after that this is the end of it.
+    if (body.confirm === undefined && set.format === "royale" && !royaleAliveKey(state, mkey))
+      return json({ error: "You're out — chopped in week " + (royaleStatus(state)[mkey]?.chopped?.slice(-1)[0] ?? "?") + ". You fund this ticket; you don't have a leg on it." }, 409, cors);
+
+    // Phase two commits the quote frozen in KV. It deliberately does not call SGO again:
+    // confirmation is approval of the exact price printed in phase one's echo.
+    if (body.confirm !== undefined) {
+      const code = String(body.confirm || "").trim().toUpperCase();
+      let pend;
+      try { pend = JSON.parse((await env.RL.get(kvKey)) || "null"); } catch { pend = null; }
+      if (!pend) return json({ error: "No proposal is waiting for confirmation. It may have expired." }, 409, cors);
+      if (pend.code !== code) return json({ error: pend.consumed ? "That confirmation was already used." : "Wrong confirmation code." }, 409, cors);
+      if (pend.consumed) return json(pend.result, 200, cors);
+      if (pend.week !== (state.week || 1)) return json({ error: "The league advanced. Propose the leg again." }, 409, cors);
+      const landed = (state.picks || {})[mkey];
+      if (landed && landed.submissionId === code)
+        return json({ ok: true, status: "submitted", replayed: true, ts: landed.ts,
+          placed: (state.status || "open") !== "open",
+          leg: { label: landed.label, line: landed.line, price: landed.price,
+            priceOpp: landed.entryPriceOpp, priceSource: landed.priceSource } }, 200, cors);
+      if ((state.status || "open") !== "open")
+        return json({ error: "The ticket is placed. Board is locked." }, 409, cors);
+      if (!set.allowEdit && landed)
+        return json({ error: "This league locks your leg once it's in — no edits." }, 409, cors);
+      if (set.format === "royale" && !royaleAliveKey(state, mkey))
+        return json({ error: "You're out of this Royale league." }, 409, cors);
+      const err = validatePick(pend.p, name, state.picks || {}, bandOf(state), set.format, mkey);
+      if (err) return json({ error: "The leg no longer passes validation: " + err }, 409, cors);
+      const out = await commitBozoLeg(env, lid, state, name, pend.p, null, mkey);
+      const result = { ...out, status: "submitted", leg: {
+        label: pend.p.label, line: pend.p.line, price: pend.p.price,
+        priceOpp: pend.p.priceOpp, priceSource: pend.p.priceSource,
+      } };
+      try { await env.RL.put(kvKey, JSON.stringify({ code, consumed: true, result }), { expirationTtl: 3600 }); } catch {}
+      return json(result, 200, cors);
+    }
+
+    // A stale cached page used to interpret a phase-one 200 as "Submitted". Require the
+    // new protocol marker so an old client gets a visible reload error and writes nothing.
+    if (body.captureVersion !== 1)
+      return json({ error: "Price capture is now two-phase. Reload this page before submitting." }, 409, cors);
+    const input = { ...(body.pick || {}) };
+    if (input.price !== undefined && input.typedPrice === undefined) input.typedPrice = input.price;
+    const captured = await bozoCaptureEntry(env, input);
+    if (!captured.ok) return json({ error: captured.error }, 400, cors);
+    const p = captured.p;
+    const err = validatePick(p, name, state.picks || {}, bandOf(state), set.format, mkey);
+    if (err) return json({ error: `Captured DraftKings ${p.price} / ${p.priceOpp ?? "no opposite"} at line ${p.line}. ${err}`,
+      captured: { line: p.line, price: p.price, priceOpp: p.priceOpp } }, 400, cors);
+
+    const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789", rnd = new Uint32Array(6);
+    crypto.getRandomValues(rnd);
+    let code = ""; for (const n of rnd) code += alphabet[n % alphabet.length];
+    p.submissionId = code;
+    const mine = (state.picks || {})[mkey] || null;
+    const echo = p.label + " — " + p.game + ", " + (p.mkt === "ml" ? "moneyline" : p.mkt + " " + p.line) +
+      " at " + p.price + " (other side " + (p.priceOpp == null ? "not captured" : p.priceOpp) + "), " +
+      (p.priceSource === "captured" ? "captured from DraftKings via SGO" : "self-priced; not CLV-eligible") + "." +
+      (mine ? " This replaces your current leg and resets your submission clock." : "");
+    await env.RL.put(kvKey, JSON.stringify({ code, lid, week: state.week || 1, p, echo, ts: Date.now() }), { expirationTtl: 300 });
+    return json({ status: "confirm_required", echo, confirm_code: code, expires_in: 300,
+      captured: { line: p.line, price: p.price, priceOpp: p.priceOpp, priceSource: p.priceSource,
+        clvEligible: p.clvEligible, entrySnapshotAt: p.entrySnapshotAt },
+      agreement: captured.agreement || null, warning: captured.captureWarning || null }, 200, cors);
+  } catch (e) {
+    return json({ error: "Submission failed: " + e.message }, 502, cors);
+  }
+}
+
+/* ---------- the DraftKings SGP rule, enforced at submission ----------
+   Every leg must be a real DraftKings selection that is legal in a same-game parlay.
+   If it can't go on the ticket, it isn't a Bozo leg. Three checks follow from that, and
+   they run on EVERY league — none of them is a manager preference, because none of them
+   is about what the league wants. They are about what the bet physically is.
+
+   ⚠️ NONE OF THIS IS VERIFICATION AGAINST DRAFTKINGS. DK has no public odds API — no
+   developer portal, no key programme — so nothing here has asked DK whether the
+   selection exists. What these checks catch is a ticket that could not be built even if
+   every leg were real: the same selection twice, or two selections that cannot both win.
+   Never present this as "checked against the book". */
+
+// The selection: what you'd tap on the DK bet slip. Two players cannot both have it,
+// because DK will not put the same selection on one parlay twice.
+const selectionKeyOf = p => [
+  String(p.eventId), p.mkt, String(p.side),
+  p.mkt === "ml" ? "" : String(p.line ?? ""),
+  String(p.prop || ""),
+].join("|");
+
+// The MARKET INSTANCE: the question, without the answer. Two different sides of one
+// market instance can never both cash, so DK blocks the pair and so do we.
+//
+// ⚠️ Uniqueness does NOT catch this. "over 45.5" and "under 45.5" are distinct
+// selections — different sides — so they pass the duplicate check and still make a
+// ticket that cannot win.
+//
+// ⚠️ Spread keys on the ABSOLUTE line, so DET −8.5 and DEN +8.5 collide (they are the
+// two sides of one instance) while DET −8.5 and DEN +10.5 do not (both can cash if DET
+// wins by nine). Props key on text AND number, because "over 199.5 yards" and "over
+// 249.5 yards" are two different markets that happen to share a name.
+const marketKeyOf = p => [
+  String(p.eventId), p.mkt,
+  p.mkt === "total"  ? String(p.line ?? "")
+  : p.mkt === "spread" ? String(Math.abs(Number(p.line) || 0))
+  : p.mkt === "prop" ? String(p.prop || "") + "|" + String(p.line ?? "")
+  : p.mkt === "other" ? String(p.prop || "")
+  : "",
+].join("|");
+
+// A future is not an SGP-legal leg — DK will not parlay "to win the division" with game
+// markets. This is a WORD MATCH, not a market lookup, and it is deliberately narrow:
+// it catches the obvious ones and says so. `other` must be a game market.
+const FUTURES_WORDS = /\b(to win (the )?(division|conference|championship|title|super ?bowl|pennant|cup|east|west|north|south)|mvp|award|make (the )?playoffs?|season win|regular[- ]season wins|to be drafted|coach of the year|rookie of the year)\b/i;
+
+function validatePick(p, name, existing, band, format, mkey = null) {
+  if (!LEAGUE[p.sport]) return "Unknown sport.";
+  if (!BOZO_GRADEABLE_SPORTS.has(p.sport)) return "sport_not_gradeable";
+  if (!MARKETS.includes(p.mkt)) return "Unknown market.";
+  if (!p.eventId || !p.game) return "Pick a game.";
+  if (!p.label || !p.side) return "Incomplete pick.";
+  if (p.mkt === "other" && !String(p.prop || "").trim())
+    return "Describe the bet — an \"other\" leg needs to say what it actually is.";
+  if (!p.startsAt || isNaN(Date.parse(p.startsAt)))
+    return "Kickoff time (startsAt) is required.";
+  const price = Number(p.price);
+  if (!isFinite(price) || price > band.ceil || price < band.floor)
+    return `${p.price} is outside the ${band.ceil} to ${band.floor} band.`;
+  if (p.mkt !== "ml" && !isFinite(Number(p.line))) return "Number is required for that market.";
+  const gameMarket = p.mkt === "spread" || p.mkt === "ml" || p.mkt === "total";
+  if (gameMarket &

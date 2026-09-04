@@ -1,0 +1,919 @@
+0)
+      return json({ error: "Results stay sealed until all 40 answers are complete." }, 409, cors);
+    const responses = attempt.questionOrder.map(qid => attempt.responses[qid]).map(r => ({ ...r,
+      brierLoss: ddccBrier(r.probability, r.truthValueSnapshot) }));
+    return json({ ok: true, attempt: { id: attempt.id, completedAt: attempt.completedAt,
+      scoringVersion: attempt.scoringVersion, metrics: ddccAggregate(responses), responses } }, 200, cors);
+  } catch (e) { return json({ error: "DDCC storage is unavailable: " + e.message }, 502, cors); }
+}
+
+/* ============================ the /users roster =========================== */
+// The roster used to live ONLY inside the BOZO_TOKENS secret. Cloudflare secrets are
+// write-only — Kap lost the token map on 8/5 and had no way to read it back, so eight
+// people could not be invited without minting a whole new set. That is the bug this
+// node fixes.
+//
+// /users/<name> = { invite: <hash|null>, invitedTs, apps: {bozo:true,…} }
+// ⚠️ No RTDB rule covers /users, so it default-DENIES every browser. Only the Worker
+// (which authenticates with FB_SECRET) can read or write it. Nothing here is exposed
+// by /bozo being world-readable, and no rules change is needed.
+//
+// ⚠️ The stored `invite` is an HMAC of the token, never the token. A database dump
+// therefore hands nobody a working join link. The cost is that a lost link cannot be
+// recovered — only re-minted, which is what POST /auth/invite is for. That is the
+// right trade: re-issuing is a button, and the raw secret exists in exactly one place
+// (Kap's text message) instead of two.
+
+const inviteHash = (env, token) => hmac(env.BOZO_PEPPER, "invite|" + token);
+
+/* -------------------------- the entitlement field ------------------------- */
+// /users/<name>/entitlement = { plan, status, period_end }
+//
+// Added 2026-08-10, before anyone can subscribe and while every account will hold the same
+// value for a year, because an ABSENT entitlement is AMBIGUOUS: nothing can distinguish a
+// free account from one that predates the field. Adding it after money has changed hands
+// means migrating live accounts. `stripe_customer_id` deliberately does NOT go in yet — an
+// absent one is not ambiguous, it means "not a customer", so it costs nothing to add on the
+// day the webhook lands. That asymmetry is the whole reason this field is early and that
+// one is not.
+//
+// ⚠️ STATUS IS NOT A BOOLEAN. Subscriptions lapse and cards fail, so there has to be a
+// state that is neither on nor off. A boolean forces "off" the instant a renewal payment is
+// retried, which locks a paying member out of the thing they just paid for.
+//
+// ⚠️ THE PLAN VOCABULARY IS DELIBERATELY NOT THE TIER VOCABULARY. Pup / Working Dawg /
+// DawgHouse grade whether a TOOL has been validated. A person's billing state is not a
+// validation verdict, and once access is sold, reusing those words would make a paying user
+// read as a validated tool and the tier labels stop meaning anything.
+//
+// ⚠️ THE SERVER IS THE ONLY WRITER. No request body anywhere may carry an entitlement.
+// Today the sole writer is the free default below; when Stripe lands, the sole addition is
+// its webhook. work/test-identity.mjs asserts both halves, including that a signup body
+// carrying an entitlement cannot set one.
+const ENTITLEMENT_PLANS = ["free", "member"];
+const ENTITLEMENT_STATUSES = ["none", "active", "past_due", "canceled", "grace"];
+const freeEntitlement = () => ({ plan: "free", status: "none", period_end: null });
+
+// The read side. An absent or malformed field reads as the free default, so no caller ever
+// sees undefined and no corrupt record ever reads as paid.
+// ⚠️ IT FAILS CLOSED ON PURPOSE. An unrecognised plan or status degrades to free/none
+// rather than being passed through, because the alternative is a garbled record granting
+// access. A record that cannot be understood must not be treated as a customer.
+function entitlementOf(user) {
+  const e = user && typeof user === "object" ? user.entitlement : null;
+  if (!e || typeof e !== "object") return freeEntitlement();
+  return {
+    plan: ENTITLEMENT_PLANS.includes(e.plan) ? e.plan : "free",
+    status: ENTITLEMENT_STATUSES.includes(e.status) ? e.status : "none",
+    period_end: Number.isFinite(e.period_end) ? e.period_end : null,
+  };
+}
+
+/* ----------------------- per-user MCP credentials ------------------------ */
+// One personal connector URL per member: https://<worker>/mcp/u_<token>
+//
+// ⚠️ WHY A SEPARATE TOKEN AND NOT THE SESSION. Claude's custom-connector UI accepts a
+// URL and nothing else — no header field — so a credential must ride in the path. A
+// makeSession token would work for exactly 60 days and then silently stop, which is a
+// support problem nobody diagnoses. An MCP token ends only when it is rotated.
+//
+// ⚠️ DOMAIN-SEPARATED from invite tokens: same pepper, different prefix, so a stolen
+// join link can never be replayed as an MCP credential or the reverse.
+const mcpTokenHash = (env, token) => hmac(env.BOZO_PEPPER, "mcp|" + token);
+
+function newMcpToken() {
+  const raw = crypto.getRandomValues(new Uint8Array(24));
+  let s = ""; for (const b of raw) s += String.fromCharCode(b);
+  return "u_" + btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+// Resolve an email to a player name. Email is an ALTERNATE SIGN-IN IDENTIFIER, and since
+// CEP-6 it is also the address a reset link goes to.
+//
+// ⚠️ THIS LOOKUP IS DELIBERATELY INDIFFERENT TO emailVerified. Every account predates the
+// mail sender, so gating sign-in on confirmation would lock existing players out of their
+// own names for a property none of them could have had. Verification is additive and
+// opt-in (POST /auth/verify-request); it proves an address is reachable, and it is never
+// a precondition for signing in with it.
+async function emailToName(env, email) {
+  try {
+    const owners = await accountsForEmail(env, email);
+    return owners.length === 1 ? owners[0].name : null;
+  } catch { return null; }
+}
+
+// POST /auth/lookup {email} — intentional, disclosed enumeration for email-first UX.
+// It is bounded per IP and returns no name, UID, verification, or membership data.
+async function authLookup(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  if (!env.RL) return json({ error: "Rate limiting is not configured." }, 503, cors);
+  let body;
+  try { body = await readBody(request); } catch { return json({ error: "Bad JSON." }, 400, cors); }
+  const email = normEmail(body && body.email);
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))
+    return json({ error: "That does not look like an email address." }, 400, cors);
+  const hour = Math.floor(Date.now() / 3600000);
+  const ip = request.headers.get("CF-Connecting-IP") || "noip";
+  const key = "lookup:" + hour + ":" + ip;
+  const used = parseInt((await env.RL.get(key)) || "0", 10);
+  if (used >= LOOKUP_IP_CAP) return json({ error: "Too many account lookups. Try again in an hour." }, 429, cors);
+  await env.RL.put(key, String(used + 1), { expirationTtl: 7200 });
+  let owners;
+  try { owners = await accountsForEmail(env, email); }
+  catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+  return json({ ok: true, known: owners.length === 1 }, 200, cors);
+}
+
+// POST /auth/name {name} — change the display name. Session required, acts only on SELF.
+//
+// ⚠️ DISPLAY NAMES ARE DELIBERATELY NOT UNIQUE. Email is the uniqueness key: one account
+// per address, enforced by accountsForEmail plus the ETag reservation on /emailIndex.
+// Five members may all be "John". Nothing here checks /users for a collision, and adding
+// such a check later would be a regression, not a fix — test-identity asserts a duplicate
+// display name is ALLOWED at signup, and this route holds the same line.
+//
+// ⚠️ UID ACCOUNTS ONLY. A legacy record IS its name — /users/<name> and /bozoauth/<name>
+// are both keyed by it — so renaming one is a migration, not a field write. After the
+// legacy wipe no such account exists and this branch is dead; it stays because a stale
+// service-worker copy of an old page can still present a legacy session.
+//
+// Bozo seats and live picks are keyed by uid. Renaming changes only the display label;
+// commitBozoLeg refreshes the league member label on the next submission and receipts
+// keep the name stamped when the leg was filed. No league-state lookup belongs here.
+const RENAME_CAP = 5;   // per account per day
+
+async function authName(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 401, cors);
+  if (!auth.uid)
+    return json({ error: "This account predates renaming and cannot be renamed." }, 409, cors);
+
+  let body;
+  try { body = await readBody(request); } catch { return json({ error: "Bad JSON." }, 400, cors); }
+  const name = String(body.name || "").trim();
+  if (!name) return json({ error: "Pick a name - it is what shows on rosters." }, 400, cors);
+  if (Array.from(name).length > 60 || /[\u0000-\u001f\u007f]/.test(name))
+    return json({ error: "That display name is not valid." }, 400, cors);
+  if (name === auth.name) return json({ ok: true, name, unchanged: true }, 200, cors);
+
+  if (env.RL) {
+    const day = new Date().toISOString().slice(0, 10);
+    const rlKey = "rename:" + day + ":" + auth.uid;
+    const used = parseInt((await env.RL.get(rlKey)) || "0", 10);
+    if (used >= RENAME_CAP)
+      return json({ error: "That is enough name changes for one day." }, 429, cors);
+    await env.RL.put(rlKey, String(used + 1), { expirationTtl: 172800 });
+  }
+
+  const at = Date.now();
+  try {
+    // The log is append-only and written FIRST: a rename that is not recorded is worse
+    // than a rename that is recorded twice.
+    await fbPut(env, uidUserPath(auth.uid) + "/nameLog/" + at, { from: auth.name, to: name, at });
+    await fbPatch(env, uidUserPath(auth.uid), { name, nameSetAt: at });
+  } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+
+  // sessionAuth prefers rec.name over the token's n, so the old session keeps working.
+  // A fresh one is returned anyway so every page stops showing the stale label at once.
+  return json({ ok: true, name, previous: auth.name,
+                session: await makeSession(env, name, auth.passwordSetAt || 0, auth.uid) }, 200, cors);
+}
+
+// POST /auth/mcp-token {action:"mint"|"revoke"} — session required, acts only on SELF.
+async function authMcpToken(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 401, cors);
+  if (auth.uid && auth.user.emailVerified !== true)
+    return json({ error: "Confirm your email before creating a personal connector credential.",
+                  verificationRequired: true }, 403, cors);
+
+  let body;
+  try { body = await readBody(request); } catch { return json({ error: "Bad JSON." }, 400, cors); }
+  const action = String((body && body.action) || "mint");
+  const key = encodeURIComponent(auth.uid || auth.name);
+
+  if (action === "revoke") {
+    try { await fbPatch(env, "/users/" + key, { mcpToken: null, mcpTokenTs: null }); }
+    catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+    return json({ ok: true, player: auth.name, revoked: true }, 200, cors);
+  }
+  if (action !== "mint") return json({ error: "action must be mint or revoke" }, 400, cors);
+
+  const token = newMcpToken();
+  try {
+    await fbPatch(env, "/users/" + key, { mcpToken: await mcpTokenHash(env, token), mcpTokenTs: Date.now() });
+  } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+
+  // ⚠️ Shown ONCE. Only the hash is stored — the same discipline invite tokens already
+  // get — so it cannot be redisplayed. Losing it means rotating, which is the right
+  // trade for a credential that will eventually authorise writes.
+  const origin = new URL(request.url).origin;
+  return json({
+    ok: true, player: auth.name, token, url: origin + "/mcp/" + token,
+    note: "Save this now. Only a hash is stored, so it can never be shown again — rotate if you lose it.",
+  }, 200, cors);
+}
+
+// POST /auth/email {email} — session required, sets the alternate login identifier.
+async function authEmail(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 401, cors);
+  let body;
+  try { body = await readBody(request); } catch { return json({ error: "Bad JSON." }, 400, cors); }
+  const email = String((body && body.email) || "").trim();
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))
+    return json({ error: "That does not look like an email address." }, 400, cors);
+  if (auth.uid) {
+    const next = normEmail(email);
+    if (!next) return json({ error: "A UID account must keep a primary email address." }, 400, cors);
+    if (next === normEmail(auth.user.email))
+      return json({ ok: true, player: auth.name, email: next,
+                    alreadyCurrent: true, verified: auth.user.emailVerified === true }, 200, cors);
+    if (!mailReady(env)) return json({ error: MAIL_OFF }, 503, cors);
+    let owners;
+    try { owners = await accountsForEmail(env, next); }
+    catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+    if (owners.length) return json({ error: "Another account already uses that address." }, 409, cors);
+    const q = await mailQuota(env, request, next);
+    if (q.err) return json({ error: q.err }, q.code || 429, cors);
+    const tok = await mintMailToken(env, "email-change", auth.name, next, auth.uid,
+                                    { o: normEmail(auth.user.email) });
+    try {
+      await sendMail(env, next, "Confirm your new Data Dawgs address",
+        "Confirm this new address for the Data Dawgs account \"" + auth.name + "\".\n\n" +
+        MAIL_BASE + "/signon.html?email-change=" + tok + "\n\n" +
+        "The current sign-in address stays active until this one-time link is used. The link expires in an hour.\n");
+      await q.bump();
+    } catch (e) { return json({ error: "Could not send that email: " + e.message }, 502, cors); }
+    return json({ ok: true, player: auth.name, pendingEmail: next,
+                  note: "The current address stays active until the new address is confirmed." }, 202, cors);
+  }
+  const taken = email ? await emailToName(env, email) : null;
+  if (taken && taken !== auth.name) return json({ error: "Another player already uses that address." }, 409, cors);
+  try { await fbPatch(env, "/users/" + encodeURIComponent(auth.name), { email: email || null }); }
+  catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  return json({ ok: true, player: auth.name, email: email || null,
+                note: "Saved but unconfirmed. It lets you sign in, and a reset link goes here." }, 200, cors);
+}
+
+// POST /auth/email-confirm {token} — proves the new address before changing login.
+async function authEmailConfirm(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  let body;
+  try { body = await readBody(request); } catch { return json({ error: "Bad JSON." }, 400, cors); }
+  const t = await consumeMailToken(env, "email-change", body && body.token);
+  if (t.err) return json({ error: t.err }, t.code || 400, cors);
+  if (!t.u || !UID_RE.test(t.u)) return json({ error: "That link is not valid for a UID account." }, 400, cors);
+  let user;
+  try { user = (await fbGet(env, uidUserPath(t.u))).data; }
+  catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+  if (!user) return json({ error: "That account no longer exists." }, 410, cors);
+  if (normEmail(user.email) !== normEmail(t.o))
+    return json({ error: "The account address changed after this link was sent. Ask for a new one." }, 409, cors);
+  let owners;
+  try { owners = await accountsForEmail(env, t.e); }
+  catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+  if (owners.some(o => o.uid !== t.u)) return json({ error: "Another account now uses that address." }, 409, cors);
+  let reservation;
+  try {
+    reservation = await reserveEmail(env, t.e, t.u);
+    if (!reservation.ok) return json({ error: "Another account now uses that address." }, 409, cors);
+    await fbPatch(env, uidUserPath(t.u), {
+      email: normEmail(t.e), emailVerified: true, emailVerifiedAt: Date.now(), emailChangedAt: Date.now(),
+    });
+    if (t.o && normEmail(t.o) !== normEmail(t.e)) {
+      const oldPath = await emailIndexPath(t.o);
+      const old = await fbGet(env, oldPath, true);
+      if (old.data && old.data.uid === t.u && old.etag) await fbDelete(env, oldPath, old.etag);
+    }
+    return json({ ok: true, player: user.name || t.n, email: normEmail(t.e), verified: true }, 200, cors);
+  } catch (e) {
+    if (normEmail(user.email) !== normEmail(t.e)) await releaseEmailReservation(env, reservation, t.u);
+    return json({ error: "Database write failed: " + e.message }, 502, cors);
+  }
+}
+
+// POST /auth/signup {name, email, password} — TRUE OPEN SIGNUP (Kap's call, 8/7).
+// Anyone may create a site-wide account, like any normal website. What signup does
+// NOT grant is a league seat: membership stays invite/manager-gated, so an open door
+// on accounts costs the leagues nothing. The data model is unchanged — name stays the
+// roster key, exactly as claim/invite create it, so every existing surface that is
+// keyed by name keeps working without a migration.
+//
+// ⚠️ The email is an UNCONFIRMED alternate sign-in identifier, same as /auth/email.
+// Signup neither verifies it nor sends anything: CEP-6 made verification additive and
+// opt-in (POST /auth/verify-request), because every existing account predates mail and
+// gating sign-in on confirmation would lock those people out of their own names.
+// Required here — it is the identifier a stranger signs in with, and the only address a
+// reset link could ever reach. First come, first served.
+//
+// ⚠️ This is the ONLY unauthenticated write on the Worker. Everything else behind a
+// write is session- or token-gated; this endpoint by design is not, so it gets the
+// hardest cap: SIGNUP_CAP fresh accounts per IP per day via the RL binding. The cap
+// is checked BEFORE any database work so a flood costs KV reads, not RTDB writes.
+const SIGNUP_CAP = 5;
+
+async function bozoSignup(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const cfg = bozoConfig(env);
+  if (cfg) return json({ error: cfg }, 500, cors);
+
+  let used = 0, rlKey = null;
+  if (env.RL) {
+    const ip = request.headers.get("CF-Connecting-IP") || "noip";
+    const day = new Date().toISOString().slice(0, 10);
+    rlKey = "signup:" + day + ":" + ip;
+    used = parseInt((await env.RL.get(rlKey)) || "0", 10);
+    if (used >= SIGNUP_CAP)
+      return json({ error: "Too many new accounts from this connection today. Try again tomorrow." }, 429, cors);
+  }
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+  const name = String(body.name || "").trim();
+  if (!name) return json({ error: "Pick a name - it is what shows on rosters." }, 400, cors);
+  if (Array.from(name).length > 60 || /[\u0000-\u001f\u007f]/.test(name))
+    return json({ error: "That display name is not valid." }, 400, cors);
+  const email = normEmail(body.email);
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))
+    return json({ error: "That does not look like an email address." }, 400, cors);
+  const pw = String(body.password || "");
+  if (pw.length < MIN_PW)
+    return json({ error: `Password must be at least ${MIN_PW} characters.` }, 400, cors);
+  if (rlKey) await env.RL.put(rlKey, String(used + 1), { expirationTtl: 172800 });
+
+  let owners;
+  try { owners = await accountsForEmail(env, email); }
+  catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+  if (owners.length)
+    return json({ error: "An account already uses that address. Sign in with it instead." }, 409, cors);
+  const uid = newUid();
+  if (!UID_RE.test(uid)) return json({ error: "Account ID generation failed." }, 500, cors);
+  let reservation;
+  try {
+    reservation = await reserveEmail(env, email, uid);
+    if (!reservation.ok)
+      return json({ error: "An account already uses that address. Sign in with it instead." }, 409, cors);
+    const saltBytes = new Uint8Array(16);
+    crypto.getRandomValues(saltBytes);
+    const salt = b64(saltBytes);
+    const hash = await pbkdf2(pw, env.BOZO_PEPPER, salt, PBKDF2_ITERS);
+    const setAt = Date.now();
+    const user = {
+      uid, email, emailVerified: false, name,
+      passwordHash: hash, passwordSalt: salt, passwordIters: PBKDF2_ITERS,
+      passwordSetAt: setAt, roles: {}, apps: {}, entitlement: freeEntitlement(),
+      createdAt: new Date(setAt).toISOString(), src: "signup-v2",
+    };
+    await fbPut(env, uidUserPath(uid), user);
+    return json({ ok: true, uid, name, email, emailVerified: false,
+                  session: await makeSession(env, name, setAt, uid),
+                  note: "Account created. Confirm the address before creating a personal connector credential." }, 201, cors);
+  } catch (e) {
+    await releaseEmailReservation(env, reservation, uid);
+    return json({ error: "Database write failed: " + e.message }, 502, cors);
+  }
+}
+
+// Retained as executable compatibility documentation until the post-draft wipe. No
+// route calls it: all new signups use immutable UID records above.
+async function legacyBozoSignup(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const cfg = bozoConfig(env);
+  if (cfg) return json({ error: cfg }, 500, cors);
+
+  let used = 0, rlKey = null;
+  if (env.RL) {
+    const ip = request.headers.get("CF-Connecting-IP") || "noip";
+    const day = new Date().toISOString().slice(0, 10);
+    rlKey = "signup:" + day + ":" + ip;
+    used = parseInt((await env.RL.get(rlKey)) || "0", 10);
+    if (used >= SIGNUP_CAP)
+      return json({ error: "Too many new accounts from this connection today. Try again tomorrow." }, 429, cors);
+  }
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  // Same name rules as /auth/invite — the name is a Firebase key and a roster label.
+  const name = String(body.name || "").trim();
+  if (!name) return json({ error: "Pick a name — it's what shows on rosters." }, 400, cors);
+  if (name.length > 40) return json({ error: "That name is too long." }, 400, cors);
+  if (/[.#$\[\]\/]/.test(name)) return json({ error: "Name can't contain . # $ [ ] or /" }, 400, cors);
+
+  const email = String(body.email || "").trim();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))
+    return json({ error: "That does not look like an email address." }, 400, cors);
+
+  const pw = String(body.password || "");
+  if (pw.length < MIN_PW) return json({ error: `Password must be at least ${MIN_PW} characters.` }, 400, cors);
+
+  // Count the attempt only NOW: a typo'd email must not burn one of the day's five,
+  // but anything that reaches the database — even a "name taken" probe — does.
+  if (rlKey) await env.RL.put(rlKey, String(used + 1), { expirationTtl: 172800 });
+
+  let users;
+  try { users = await loadUsers(env); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+  if (userNames(users).includes(name))
+    return json({ error: "That name is taken. If it's yours, sign in instead." }, 409, cors);
+  const emailOwner = await emailToName(env, email);
+  if (emailOwner)
+    return json({ error: "Another account already uses that address. Sign in with it instead." }, 409, cors);
+
+  try {
+    // Belt and braces: an auth record means the name is live even if /users
+    // momentarily disagrees (the same pair of nodes claim writes).
+    const existing = (await fbGet(env, authPath(name))).data;
+    if (existing) return json({ error: "That name is taken. If it's yours, sign in instead." }, 409, cors);
+
+    const saltBytes = new Uint8Array(16);
+    crypto.getRandomValues(saltBytes);
+    const salt = b64(saltBytes);
+    const hash = await pbkdf2(pw, env.BOZO_PEPPER, salt, PBKDF2_ITERS);
+    const setAt = Date.now();
+    // PATCH, not PUT: /users/<name> must not clobber anything if a concurrent
+    // invite landed first — though the name checks above make that a razor edge.
+    // ⚠️ The entitlement is built HERE, from the server's own constant. It is never read
+    // out of the request body, which is why a signup posting {entitlement:{plan:"member"}}
+    // creates a free account like everyone else.
+    await fbPatch(env, "/users/" + encodeURIComponent(name),
+                  { email, src: "signup", signupTs: setAt, apps: {}, entitlement: freeEntitlement() });
+    await fbPut(env, authPath(name), { v: 1, salt, hash, iters: PBKDF2_ITERS, setAt });
+    return json({ ok: true, name, email, session: await makeSession(env, name, setAt),
+                  note: "Email saved but unconfirmed. It lets you sign in, and a reset link goes here." }, 200, cors);
+  } catch (e) {
+    return json({ error: "Database write failed: " + e.message }, 502, cors);
+  }
+}
+
+// BOZO_TOKENS is the bootstrap, not the truth. First read seeds /users from it and
+// from then on /users wins — so the secret can be left alone forever after setup.
+async function loadUsers(env) {
+  let users = null;
+  try { users = (await fbGet(env, "/users")).data; }
+  catch (e) { throw new Error("Database unreachable: " + e.message); }
+  if (users && Object.keys(users).length) return users;
+
+  const map = tokenMap(env);
+  if (!map) return {};
+  const seed = {};
+  for (const [tok, name] of Object.entries(map)) {
+    seed[encodeURIComponent(name)] = {
+      entitlement: freeEntitlement(),
+      invite: await inviteHash(env, tok),
+      invitedTs: Date.now(),
+      apps: { bozo: true },
+      src: "seed",
+    };
+  }
+  try { await fbPatch(env, "/users", seed); } catch (e) { /* next read retries */ }
+  return seed;
+}
+
+const userNames = users => Object.entries(users).map(([key, rec]) => accountName(key, rec));
+
+// POST /auth/invite {player} — admin mints a FRESH join token for one player and
+// returns it ONCE. Replaces "edit an encrypted secret you cannot read".
+// ⚠️ Minting does not clear an existing password. Re-inviting someone who has already
+// claimed is a no-op for them until an admin /auth/reset clears their hash — otherwise
+// anyone who saw an old text could re-claim a live account.
+async function authInvite(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const lid = leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+  // A league manager invites into their own league; the site admin into any.
+  const auth = await requireManager(request, env, lid);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  const player = String(body.player || "").trim();
+  if (!player) return json({ error: "Which player?" }, 400, cors);
+  if (player.length > 40) return json({ error: "That name is too long." }, 400, cors);
+  // Firebase keys are the encoded name; these characters break the path even encoded.
+  if (/[.#$\[\]\/]/.test(player)) return json({ error: "Name can't contain . # $ [ ] or /" }, 400, cors);
+
+  let users;
+  try { users = await loadUsers(env); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+
+  // Inviting someone brand new CREATES the account. That is how a second league full
+  // of different people gets off the ground without editing a secret.
+  const isNew = !userNames(users).includes(player);
+
+  const raw = new Uint8Array(16);
+  crypto.getRandomValues(raw);
+  const token = btoa(String.fromCharCode(...raw))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+  try {
+    await fbPatch(env, "/users/" + encodeURIComponent(player), {
+      invite: await inviteHash(env, token), invitedTs: Date.now(),
+      // ⚠️ Provenance decides precedence. Once an admin has minted for someone, the
+      // bootstrap secret stops being authoritative for them — otherwise a stale token
+      // sitting in BOZO_TOKENS would out-rank the link you just deliberately issued.
+      src: "mint",
+      // ⚠️ ONLY WHEN THE ACCOUNT IS NEW. Re-inviting an EXISTING person is supported and
+      // ordinary (a lost link gets re-minted), and this is a PATCH — so writing the free
+      // default unconditionally would silently downgrade a paying member to free the next
+      // time an admin re-sent them a join link. That is a billing bug with no error
+      // message, so the guard is load-bearing and has its own assertion.
+      ...(isNew ? { entitlement: freeEntitlement() } : {}),
+    });
+  } catch (e) {
+    return json({ error: "Database write failed: " + e.message }, 502, cors);
+  }
+  const claimed = !!(await fbGet(env, authPath(player))).data;
+  // Identity invitations create or recover an account only. League membership always
+  // comes from an authenticated league search plus the shared league password.
+  return json({ ok: true, player, token, claimed, isNew }, 200, cors);
+}
+
+// GET /auth/roster — who exists and who has set a password. No secrets: it is
+// exactly what the login screen needs to decide "claim" vs "sign in".
+async function bozoRoster(env, cors) {
+  const cfg = bozoConfig(env);
+  if (cfg) return json({ error: cfg }, 500, cors);
+  let users, auth = {};
+  try {
+    users = await loadUsers(env);
+    auth = (await fbGet(env, "/bozoauth")).data || {};
+  } catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+
+  // ⚠️ Rotation has to actually revoke. /users holds hashes, so once seeded it would
+  // happily keep honouring a token you rotated the secret to kill. This reconciles the
+  // two on every roster read (i.e. every page load): for anyone who has NOT claimed,
+  // the bootstrap secret is authoritative — its token is re-armed and the previous one
+  // dies. Claimed accounts are never touched; their password is the credential now.
+  // This is the only place both /users and /bozoauth are already in hand, so it costs
+  // no extra read.
+  const map = tokenMap(env) || {};
+  const fix = {};
+  for (const [tok, name] of Object.entries(map)) {
+    if (auth[name]) continue;                       // claimed — hands off
+    const key = encodeURIComponent(name);
+    if (users[key] && users[key].src === "mint") continue;   // admin-issued link wins
+    const h = await inviteHash(env, tok);
+    if (!users[key] || users[key].invite !== h)
+      fix[key + "/invite"] = h, fix[key + "/invitedTs"] = Date.now();
+  }
+
+  /* ⚠️ THE ENTITLEMENT BACKFILL RIDES THE SAME PATCH, AND IT LIVES HERE RATHER THAN IN
+     loadUsers ON PURPOSE. loadUsers is the funnel every path uses — including mcpAuth —
+     so putting a write there would mean an MCP read-only tool could trigger a Firebase
+     write on its first call. "Every tool is read-only, asserted by test against the
+     source" is a published claim on connect.html and in surfaces.json, and a self-healing
+     migration is not a good enough reason to make it need an asterisk.
+     Nothing is lost by backfilling here instead: entitlementOf() already returns the free
+     default for an absent field, so every read is unambiguous whether or not the record
+     has caught up, and this route runs on every sign-on page load. Accounts converge in
+     minutes and no read depends on that having happened. */
+  for (const [key, user] of Object.entries(users)) {
+    if (user && typeof user === "object" && user.entitlement && typeof user.entitlement === "object") continue;
+    const seeded = freeEntitlement();
+    fix[key + "/entitlement"] = seeded;
+    if (user && typeof user === "object") user.entitlement = seeded;   // this request sees it too
+  }
+
+  if (Object.keys(fix).length) {
+    try { await fbPatch(env, "/users", fix); } catch (e) { /* next read retries */ }
+  }
+
+  // ⚠️ /bozoauth IS EMPTY NOW, BY DESIGN. Legacy accounts kept their password hash there;
+  // uid accounts carry it on the user record. Reading only /bozoauth reports every
+  // account as unclaimed -- which empties the sign-in autocomplete and makes the manager
+  // view label people who plainly have passwords as "not claimed yet".
+  const claimedBy = rec => !!(rec && rec.passwordHash && rec.passwordSalt);
+  const players = Object.entries(users).map(([key, rec]) => {
+    const n = accountName(playerName(key), rec);
+    return { name: n, claimed: !!auth[n] || claimedBy(rec) };
+  });
+  if (!players.length) return json({ error: "No roster configured." }, 500, cors);
+  return json({ players }, 200, cors);
+}
+
+async function bozoClaim(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const cfg = bozoConfig(env);
+  if (cfg) return json({ error: cfg }, 500, cors);
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const token = String(body.token || "");
+  if (!token) return json({ error: "That claim link isn't valid." }, 403, cors);
+
+  // The token is matched by HASH — /users never holds the raw value. Hash once, then
+  // timing-safe compare against every row so a wrong token leaks no timing signal
+  // about which player it nearly matched.
+  let users, name = null;
+  try { users = await loadUsers(env); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+  const h = await inviteHash(env, token);
+  for (const [key, u] of Object.entries(users))
+    if (u && u.invite && timingSafeEqual(h, u.invite)) name = playerName(key);
+
+  // ⚠️ BREAK-GLASS. /users seeds itself from BOZO_TOKENS on first read — which happens
+  // on any page load — so if the secret is updated AFTER that first read, the new
+  // tokens would be ignored forever and nobody could claim. Since claiming is the only
+  // route to admin, and admin is the only route to minting invites, that deadlocks the
+  // whole roster with no way out.
+  //
+  // So: a token straight out of the bootstrap secret is ALWAYS honoured for a player
+  // who has not claimed yet, and heals the stored hash on the way through. The secret
+  // can re-arm unclaimed slots at any time; it can never touch a claimed account
+  // (bozoClaim 409s below on an existing password, same as any other path).
+  if (!name) {
+    const map = tokenMap(env) || {};
+    for (const [t, n] of Object.entries(map)) if (timingSafeEqual(token, t)) name = n;
+    // An admin-minted link supersedes the secret for that player — don't let a stale
+    // bootstrap token walk in behind it.
+    if (name && (users[encodeURIComponent(name)] || {}).src === "mint") name = null;
+    if (name) {
+      try { await fbPatch(env, "/users/" + encodeURIComponent(name), { invite: h, invitedTs: Date.now() }); }
+      catch (e) { /* the claim below still stands; the heal retries next time */ }
+    }
+  }
+  if (!name) return json({ error: "That claim link isn't valid." }, 403, cors);
+
+  const pw = String(body.password || "");
+  if (pw.length < MIN_PW) return json({ error: `Password must be at least ${MIN_PW} characters.` }, 400, cors);
+
+  try {
+    const existing = (await fbGet(env, authPath(name))).data;
+    if (existing) {
+      return json({
+        error: `${name} has already set a password. Sign in instead — or ask Kap to reset it.`,
+      }, 409, cors);
+    }
+    const saltBytes = new Uint8Array(16);
+    crypto.getRandomValues(saltBytes);
+    const salt = b64(saltBytes);
+    const hash = await pbkdf2(pw, env.BOZO_PEPPER, salt, PBKDF2_ITERS);
+    const setAt = Date.now();
+    await fbPut(env, authPath(name), { v: 1, salt, hash, iters: PBKDF2_ITERS, setAt });
+
+    // Account claim is identity-only. Any stale pendingLeague left by the retired
+    // per-person invite system is cleared without granting membership.
+    if ((users[encodeURIComponent(name)] || {}).pendingLeague) {
+      try { await fbPatch(env, "/users/" + encodeURIComponent(name), { pendingLeague: null }); }
+      catch { /* membership still remains closed; the stale marker is inert */ }
+    }
+    return json({ ok: true, name, session: await makeSession(env, name, setAt) }, 200, cors);
+  } catch (e) {
+    return json({ error: "Database write failed: " + e.message }, 502, cors);
+  }
+}
+
+async function bozoLogin(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const cfg = bozoConfig(env);
+  if (cfg) return json({ error: cfg }, 500, cors);
+  if (!env.RL) return json({ error: "Rate limiting is not configured." }, 503, cors);
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const identifier = String(body.email || body.name || "").trim();
+  const password = String(body.password || "");
+  if (!identifier || !password) return json({ error: "Email and password are required." }, 400, cors);
+  const normalized = identifier.indexOf("@") > 0 ? normEmail(identifier) : identifier;
+  const hour = Math.floor(Date.now() / 3600000);
+  const ip = request.headers.get("CF-Connecting-IP") || "noip";
+  const identKey = "loginid:" + hour + ":" + (await sha256hex(normalized));
+  const ipKey = "loginip:" + hour + ":" + ip;
+  const identFails = parseInt((await env.RL.get(identKey)) || "0", 10);
+  const ipFails = parseInt((await env.RL.get(ipKey)) || "0", 10);
+  if (identFails >= LOGIN_FAIL_CAP || ipFails >= LOGIN_FAIL_CAP)
+    return json({ error: "Too many wrong passwords. Try again in an hour." }, 429, cors);
+
+  let account = null, users;
+  try {
+    users = await loadUsers(env);
+    if (normalized.indexOf("@") > 0) {
+      const found = await accountsForEmail(env, normalized);
+      if (found.length === 1) account = found[0];
+    } else {
+      const rec = users[encodeURIComponent(normalized)] || users[normalized];
+      if (rec) account = { key: normalized, uid: null, name: normalized, user: rec };
+    }
+  } catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+
+  let authRec = null;
+  try {
+    authRec = account && account.uid ? {
+      hash: account.user.passwordHash, salt: account.user.passwordSalt,
+      iters: account.user.passwordIters, setAt: account.user.passwordSetAt,
+    } : account ? (await fbGet(env, authPath(account.name))).data : null;
+  } catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+
+  let valid = false;
+  if (authRec && authRec.hash && authRec.salt) {
+    const hash = await pbkdf2(password, env.BOZO_PEPPER, authRec.salt, authRec.iters || PBKDF2_ITERS);
+    valid = timingSafeEqual(hash, authRec.hash);
+  }
+  if (!valid) {
+    await env.RL.put(identKey, String(identFails + 1), { expirationTtl: 7200 });
+    await env.RL.put(ipKey, String(ipFails + 1), { expirationTtl: 7200 });
+    return json({ error: "Email or password not recognized." }, 401, cors);
+  }
+
+  return json({ ok: true, ...(account.uid ? { uid: account.uid } : {}), name: account.name,
+                email: account.user.email || null, emailVerified: account.user.emailVerified === true,
+                session: await makeSession(env, account.name, authRec.setAt || 0, account.uid) }, 200, cors);
+}
+
+async function legacyBozoLogin(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const cfg = bozoConfig(env);
+  if (cfg) return json({ error: cfg }, 500, cors);
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  // An email is accepted anywhere a name is. It resolves to the name BEFORE anything
+  // else happens, so the rate-limit bucket, the auth record and the session are all
+  // keyed the same way whichever identifier was typed.
+  let name = String(body.name || body.email || "").trim();
+  if (name.indexOf("@") > 0) name = (await emailToName(env, name)) || name;
+  const pw = String(body.password || "");
+  let players;
+  try { players = userNames(await loadUsers(env)); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+  if (!players.includes(name)) return json({ error: "Unknown player." }, 403, cors);
+
+  // Online brute force is the only realistic attack on an 8-person password.
+  // The RL binding makes this real; without it the cap is inert.
+  const bucket = "bozofail:" + name + ":" + Math.floor(Date.now() / 3600000);
+  if (env.RL) {
+    const fails = parseInt((await env.RL.get(bucket)) || "0", 10);
+    if (fails >= LOGIN_FAIL_CAP) {
+      return json({ error: "Too many wrong passwords. Try again in an hour." }, 429, cors);
+    }
+  }
+
+  try {
+    const rec = (await fbGet(env, authPath(name))).data;
+    if (!rec) return json({ error: `${name} hasn't set a password yet — use the join link Kap texted you.` }, 409, cors);
+    const hash = await pbkdf2(pw, env.BOZO_PEPPER, rec.salt, rec.iters || PBKDF2_ITERS);
+    if (!timingSafeEqual(hash, rec.hash)) {
+      if (env.RL) {
+        const fails = parseInt((await env.RL.get(bucket)) || "0", 10);
+        await env.RL.put(bucket, String(fails + 1), { expirationTtl: 7200 });
+      }
+      return json({ error: "Wrong password." }, 401, cors);
+    }
+    // `email` rides along so connect.html can prefill the field without a second call.
+    const urec = (await loadUsers(env))[encodeURIComponent(name)] || {};
+    return json({ ok: true, name, email: urec.email || null,
+                  session: await makeSession(env, name, rec.setAt || 0) }, 200, cors);
+  } catch (e) {
+    return json({ error: "Database unreachable: " + e.message }, 502, cors);
+  }
+}
+
+async function bozoPasswd(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code, cors);
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const oldPw = String(body.oldPassword || "");
+  const newPw = String(body.newPassword || "");
+  if (newPw.length < MIN_PW) return json({ error: `Password must be at least ${MIN_PW} characters.` }, 400, cors);
+
+  if (auth.uid) {
+    const rec = auth.user;
+    if (!rec.passwordHash || !rec.passwordSalt) return json({ error: "No password on file." }, 409, cors);
+    const check = await pbkdf2(oldPw, env.BOZO_PEPPER, rec.passwordSalt, rec.passwordIters || PBKDF2_ITERS);
+    if (!timingSafeEqual(check, rec.passwordHash)) return json({ error: "Current password is wrong." }, 401, cors);
+    try {
+      const saltBytes = new Uint8Array(16); crypto.getRandomValues(saltBytes);
+      const salt = b64(saltBytes);
+      const hash = await pbkdf2(newPw, env.BOZO_PEPPER, salt, PBKDF2_ITERS);
+      const setAt = Date.now();
+      await fbPatch(env, uidUserPath(auth.uid), {
+        passwordHash: hash, passwordSalt: salt, passwordIters: PBKDF2_ITERS, passwordSetAt: setAt,
+      });
+      return json({ ok: true, session: await makeSession(env, auth.name, setAt, auth.uid),
+                    note: "Password changed. Every other sign-in was ended." }, 200, cors);
+    } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  }
+
+  try {
+    const rec = (await fbGet(env, authPath(auth.name))).data;
+    if (!rec) return json({ error: "No password on file." }, 409, cors);
+    const check = await pbkdf2(oldPw, env.BOZO_PEPPER, rec.salt, rec.iters || PBKDF2_ITERS);
+    if (!timingSafeEqual(check, rec.hash)) return json({ error: "Current password is wrong." }, 401, cors);
+
+    const saltBytes = new Uint8Array(16);
+    crypto.getRandomValues(saltBytes);
+    const salt = b64(saltBytes);
+    const hash = await pbkdf2(newPw, env.BOZO_PEPPER, salt, PBKDF2_ITERS);
+    const setAt = Date.now();
+    await fbPut(env, authPath(auth.name), { v: 1, salt, hash, iters: PBKDF2_ITERS, setAt });
+    return json({ ok: true, session: await makeSession(env, auth.name, setAt) }, 200, cors);
+  } catch (e) {
+    return json({ error: "Database write failed: " + e.message }, 502, cors);
+  }
+}
+
+// Admin-only recovery. Clearing the hash re-arms that player's original join
+// link, so the fix is "Kap resets you, then re-open the text I sent you."
+async function bozoReset(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  const auth = await requireAdmin(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const player = String(body.player || "");
+  if (!auth.players.includes(player)) return json({ error: "Unknown player." }, 400, cors);
+  try {
+    await fbDelete(env, authPath(player));
+    return json({ ok: true, reset: player }, 200, cors);
+  } catch (e) {
+    return json({ error: "Database write failed: " + e.message }, 502, cors);
+  }
+}
+
+/* ===================== CEP-6 — email verification and reset =====================
+   ⚠️ INERT BY DEFAULT. mailReady() is false until BOTH the RESEND_KEY secret and the
+   MAIL_FROM plain-text var exist. Every route below checks it FIRST and returns 503
+   without minting a token, without touching the database and without calling out.
+
+   WHY A HARD GATE RATHER THAN A BEST EFFORT. The failure mode of "try to send, carry
+   on if it fails" is a reset token sitting in KV, valid for an hour, that the account
+   owner never receives. The only safe partial state is no state at all.
+
+   TOKENS. 32 random bytes, base64url. KV stores the SHA-256 of the token, never the
+   token, so read access to KV does not hand over an account — the same discipline as
+   the per-user MCP tokens. KV's own expirationTtl is the expiry; there is no sweeper
+   to forget to run.
+
+   ⚠️ A TOKEN IS DELETED BEFORE THE WORK IT AUTHORIZES, NOT AFTER. If the database
+   write then fails, the user has to ask for a new link. That is the correct direction
+   to fail: the alternative leaves a replayable password-reset token alive after an
+   error, and "the reset didn't take, try again" is a much smaller problem than that.
+
+   CAPS. Three, all checked before any work: per address per day, per IP per day, and
+   a cooldown per address. Mail is the one endpoint here that costs money and can be
+   pointed at a stranger's inbox, so it gets the tightest limits on the Worker.
+
+   ENUMERATION. /auth/forgot answers identically whether or not the address exists.
+   The single exception is "email is not configured on this site", which leaks nothing
+   about any address and is the honest answer to someone who would otherwise wait for
+   a message that is never coming. */
+const MAIL_TOKEN_TTL  = 3600;   // seconds; one hour is enough to walk to a laptop
+const MAIL_ADDR_CAP   = 3;      // links per address per day
+const MAIL_IP_CAP     = 10;     // links per connection per day
+const MAIL_COOLDOWN_S = 60;     // seconds between links to one address
+const MAIL_BASE       = "https://datadawgs216.com";
+
+function mailReady(env) { return !!(env && env.RESEND_KEY && env.MAIL_FROM); }
+const MAIL_OFF = "Email is not switched on for this site yet, so no link can be sent. " +
+                 "Ask Kap to reset you by hand in the meantime.";
+
+async function sha256hex(str) {
+  const buf = await crypto.subtle.digest("SHA-256", te.encode(String(str)));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+const normEmail = e => String(e || "").trim().toLowerCase();
+
+function newUid() {
+  const raw = crypto.getRandomValues(new Uint8Array(18));
+  let s = ""; for (const b of raw) s += String.fromCharCode(b);
+  return "u_" + btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+const uidUserPath = uid => "/users/" + encodeURIComponent(uid);
+const accountName = (key, rec) => String((rec && rec.name) || playerName(key) || "");
+
+async function accountsForEmail(env, email) {
+  const want = normEmail(email);
+  if (!want || want.indexOf("@") < 1) return [];
+  const users = await loadUsers(env);
+  return Object.entries(users).filter(([, rec]) => rec && typeof rec === "object" && normEmail(rec.email) === want)
+    .map(([key, rec]) => ({ key: playerName(key), uid: UID_RE.test(playerName(key)) ? playerName(key) : null,
+                           name: accountName(key, rec), user: rec }));
+}
+
+async function emailIndexPath(email) {
+  return "/emailIndex/" + (await 

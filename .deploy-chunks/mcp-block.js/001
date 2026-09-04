@@ -1,0 +1,837 @@
+ata.rows;
+    if (!envelope || !envelope.as_of || !envelope.source || envelope.graded !== false || !data ||
+        data.scope !== "results-only" || !Number.isInteger(data.season) || !data.coverage ||
+        typeof data.coverage.fcs_team_records !== "string" || !/not complete FCS/i.test(data.coverage.fcs_team_records) ||
+        typeof data.conference_record_definition !== "string" || !/not an official standing/i.test(data.conference_record_definition) ||
+        typeof data.input_team_week_snapshot_id !== "string" || !Array.isArray(data.unavailable_metrics) ||
+        !Array.isArray(rows) || !rows.length || rows.length > 400)
+      throw new Error("cfb-team-week-latest.json has an invalid results-only envelope");
+    if (envelope.integrity && Number.isInteger(envelope.integrity.rows) && envelope.integrity.rows !== rows.length)
+      throw new Error("cfb-team-week-latest.json row count does not match its integrity receipt");
+    const slugs = new Set();
+    for (const row of rows) {
+      const latest = row && row.latest_period;
+      const period = latest && latest.observed_result;
+      const season = row && row.season_to_date;
+      const conference = row && row.conference_regular_season_to_date;
+      if (!row || typeof row.team_slug !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(row.team_slug) ||
+          slugs.has(row.team_slug) || typeof row.team !== "string" || !row.team || !["fbs", "fcs"].includes(row.division) ||
+          !Number.isFinite(Date.parse(row.through_at)) || !latest || !["regular", "postseason"].includes(latest.season_type) ||
+          !Number.isInteger(latest.week) || latest.week < 1 || latest.week > 20 || !period || !season || !conference)
+        throw new Error("cfb-team-week-latest.json has an invalid or duplicate team row");
+      for (const summary of [period, season, conference]) {
+        if (![summary.games, summary.wins, summary.losses, summary.ties, summary.points_for,
+              summary.points_against, summary.point_differential].every(Number.isInteger) ||
+            summary.games !== summary.wins + summary.losses + summary.ties ||
+            summary.point_differential !== summary.points_for - summary.points_against)
+          throw new Error("cfb-team-week-latest.json has an arithmetically invalid result summary");
+      }
+      if (typeof season.record !== "string" || !/^\d+-\d+-\d+$/.test(season.record))
+        throw new Error("cfb-team-week-latest.json has an invalid season-to-date record");
+      slugs.add(row.team_slug);
+    }
+    mcpCfbLatestPeriodsCache = { at: Date.now(), data: envelope };
+  }
+  return mcpCfbLatestPeriodsCache.data;
+}
+
+async function mcpCfbLatestGames() {
+  if (!mcpCfbLatestGamesCache.data || Date.now() - mcpCfbLatestGamesCache.at > 900e3) {
+    const response = await fetch(`${SITE}/data/cfb-games-latest.json`, { cf: { cacheTtlByStatus: { "200-299": 900, "404": 1, "500-599": 0 }, cacheEverything: true } });
+    if (!response.ok) throw new Error("cfb-games-latest.json unavailable: HTTP " + response.status);
+    const envelope = await response.json();
+    const data = envelope && envelope.data;
+    const rows = data && data.rows;
+    const coverage = data && data.coverage;
+    if (!envelope || !envelope.as_of || !envelope.source || envelope.graded !== false || !data ||
+        data.scope !== "observed-final-results-only" || !Number.isInteger(data.season) ||
+        typeof data.input_team_game_snapshot_id !== "string" || !coverage || coverage.final_games_only !== true ||
+        coverage.one_row_per_represented_team !== true || !Array.isArray(data.unavailable_metrics) ||
+        !Array.isArray(rows) || !rows.length || rows.length > 200)
+      throw new Error("cfb-games-latest.json has an invalid observed-results envelope");
+    if (envelope.integrity && Number.isInteger(envelope.integrity.rows) && envelope.integrity.rows !== rows.length)
+      throw new Error("cfb-games-latest.json row count does not match its integrity receipt");
+    const slugs = new Set();
+    for (const row of rows) {
+      const game = row && row.latest_completed_game;
+      if (!row || typeof row.team_slug !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(row.team_slug) ||
+          slugs.has(row.team_slug) || typeof row.team !== "string" || !row.team ||
+          typeof row.conference !== "string" || !row.conference || !game ||
+          typeof game.team_game_id !== "string" || !game.team_game_id || typeof game.game_id !== "string" || !game.game_id ||
+          !["regular", "postseason"].includes(game.season_type) || !Number.isInteger(game.week) ||
+          game.week < 1 || game.week > 20 || !Number.isFinite(Date.parse(game.kickoff_at)) ||
+          typeof game.opponent_slug !== "string" || !game.opponent_slug || typeof game.opponent !== "string" || !game.opponent ||
+          !["fbs", "fcs"].includes(game.opponent_division) || !["home", "away"].includes(game.team_side) ||
+          !["home", "away", "neutral"].includes(game.site) || typeof game.neutral_site !== "boolean" ||
+          (game.site === "neutral") !== game.neutral_site || typeof game.conference_game !== "boolean" ||
+          !Number.isInteger(game.points_for) || !Number.isInteger(game.points_against) ||
+          game.point_differential !== game.points_for - game.points_against || !["win", "loss", "tie"].includes(game.result) ||
+          (game.result === "win") !== (game.points_for > game.points_against) ||
+          (game.result === "loss") !== (game.points_for < game.points_against) ||
+          (game.result === "tie") !== (game.points_for === game.points_against))
+        throw new Error("cfb-games-latest.json has an invalid or duplicate team row");
+      slugs.add(row.team_slug);
+    }
+    if (coverage.represented_teams !== rows.length)
+      throw new Error("cfb-games-latest.json coverage count does not match its rows");
+    mcpCfbLatestGamesCache = { at: Date.now(), data: envelope };
+  }
+  return mcpCfbLatestGamesCache.data;
+}
+
+async function mcpCfbTeamGames() {
+  if (!mcpCfbTeamGamesCache.data || Date.now() - mcpCfbTeamGamesCache.at > 900e3) {
+    const response = await fetch(`${SITE}/data/cfb-team-game.json`, { cf: { cacheTtlByStatus: { "200-299": 900, "404": 1, "500-599": 0 }, cacheEverything: true } });
+    if (!response.ok) throw new Error("cfb-team-game.json unavailable: HTTP " + response.status);
+    const envelope = await response.json();
+    const data = envelope && envelope.data;
+    const teams = data && data.teams;
+    const rows = data && data.rows;
+    if (!envelope || !envelope.as_of || !envelope.source || !data || !Number.isInteger(data.season) ||
+        data.scope !== "results-only" || !teams || typeof teams !== "object" || Array.isArray(teams) ||
+        !Array.isArray(rows) || !rows.length || rows.length > 4000 || rows.length % 2 !== 0 ||
+        !Array.isArray(data.unavailable_metrics))
+      throw new Error("cfb-team-game.json has an invalid results-only envelope");
+    if (envelope.integrity && Number.isInteger(envelope.integrity.rows) && envelope.integrity.rows !== rows.length)
+      throw new Error("cfb-team-game.json row count does not match its integrity receipt");
+    for (const [slug, team] of Object.entries(teams)) {
+      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || !team || typeof team.team !== "string" || !team.team ||
+          !["fbs", "fcs"].includes(team.division))
+        throw new Error("cfb-team-game.json has an invalid team registry");
+    }
+    const ids = new Set();
+    const gameCounts = new Map();
+    for (const row of rows) {
+      if (!row || typeof row.team_game_id !== "string" || !row.team_game_id || ids.has(row.team_game_id) ||
+          typeof row.game_id !== "string" || !row.game_id || row.season !== data.season ||
+          !["regular", "postseason"].includes(row.season_type) || !Number.isInteger(row.week) ||
+          row.week < 1 || row.week > 20 || !Number.isFinite(Date.parse(row.kickoff_at)) || row.status !== "final" ||
+          !teams[row.team_slug] || !teams[row.opponent_slug] || row.team_slug === row.opponent_slug ||
+          !["home", "away"].includes(row.team_side) || !["home", "away", "neutral"].includes(row.site) ||
+          typeof row.neutral_site !== "boolean" || (row.site === "neutral") !== row.neutral_site ||
+          !Number.isInteger(row.points_for) || !Number.isInteger(row.points_against) ||
+          row.point_differential !== row.points_for - row.points_against ||
+          !["win", "loss", "tie"].includes(row.result) ||
+          (row.result === "win") !== (row.points_for > row.points_against) ||
+          (row.result === "loss") !== (row.points_for < row.points_against) ||
+          (row.result === "tie") !== (row.points_for === row.points_against))
+        throw new Error("cfb-team-game.json has an invalid or duplicate team-game row");
+      ids.add(row.team_game_id);
+      gameCounts.set(row.game_id, (gameCounts.get(row.game_id) || 0) + 1);
+    }
+    if ([...gameCounts.values()].some(count => count !== 2))
+      throw new Error("cfb-team-game.json does not contain exactly two mirrored rows per game");
+    mcpCfbTeamGamesCache = { at: Date.now(), data: envelope };
+  }
+  return mcpCfbTeamGamesCache.data;
+}
+
+async function mcpCfbHistoricalMarket() {
+  if (!mcpCfbMarketCache.data || Date.now() - mcpCfbMarketCache.at > 900e3) {
+    const response = await fetch(`${SITE}/data/cfb-market.json`, { cf: { cacheTtlByStatus: { "200-299": 900, "404": 1, "500-599": 0 }, cacheEverything: true } });
+    if (!response.ok) throw new Error("cfb-market.json unavailable: HTTP " + response.status);
+    const envelope = await response.json();
+    const data = envelope && envelope.data;
+    const games = data && data.games;
+    const provenance = envelope && envelope.provenance;
+    if (!envelope || !envelope.as_of || !envelope.source || !data || !Number.isInteger(data.season) ||
+        !Array.isArray(games) || !games.length || games.length > 2000 || !provenance ||
+        provenance.observation_timestamp_available !== false || provenance.price_timing !== "unknown")
+      throw new Error("cfb-market.json does not preserve the unknown-timing historical market contract");
+    if (envelope.integrity && Number.isInteger(envelope.integrity.games) && envelope.integrity.games !== games.length)
+      throw new Error("cfb-market.json game count does not match its integrity receipt");
+    const ids = new Set();
+    for (const game of games) {
+      if (!game || typeof game.game_id !== "string" || !game.game_id || ids.has(game.game_id) ||
+          game.season !== data.season || !Number.isInteger(game.week) || game.week < 1 || game.week > 20 ||
+          !Number.isFinite(Date.parse(game.kickoff_at)) || typeof game.home_team !== "string" ||
+          typeof game.away_team !== "string" || !Array.isArray(game.books) || game.books.length > 50)
+        throw new Error("cfb-market.json has an invalid or duplicate game row");
+      const books = new Set();
+      for (const quote of game.books) {
+        if (!quote || typeof quote.book !== "string" || !quote.book || books.has(quote.book) ||
+            !(quote.devig_home_win_probability === null ||
+              (typeof quote.devig_home_win_probability === "number" && Number.isFinite(quote.devig_home_win_probability) &&
+               quote.devig_home_win_probability >= 0 && quote.devig_home_win_probability <= 1)))
+          throw new Error("cfb-market.json has an invalid or duplicate bookmaker quote");
+        books.add(quote.book);
+      }
+      ids.add(game.game_id);
+    }
+    mcpCfbMarketCache = { at: Date.now(), data: envelope };
+  }
+  return mcpCfbMarketCache.data;
+}
+
+async function mcpCfbModelCards() {
+  if (!mcpCfbModelCardsCache.data || Date.now() - mcpCfbModelCardsCache.at > 900e3) {
+    const response = await fetch(`${SITE}/data/cfb-model-cards.json`, { cf: { cacheTtlByStatus: { "200-299": 900, "404": 1, "500-599": 0 }, cacheEverything: true } });
+    if (!response.ok) throw new Error("cfb-model-cards.json unavailable: HTTP " + response.status);
+    const envelope = await response.json();
+    const cards = envelope && envelope.data && envelope.data.cards;
+    if (!envelope || !envelope.as_of || !envelope.source || envelope.graded !== false ||
+        !Array.isArray(cards) || !cards.length || cards.length > 50)
+      throw new Error("cfb-model-cards.json has an invalid governance envelope");
+    if (envelope.integrity && Number.isInteger(envelope.integrity.cards) && envelope.integrity.cards !== cards.length)
+      throw new Error("cfb-model-cards.json card count does not match its integrity receipt");
+    const ids = new Set();
+    for (const card of cards) {
+      if (!card || typeof card.model_id !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(card.model_id) ||
+          ids.has(card.model_id) || typeof card.model_name !== "string" || !card.model_name ||
+          typeof card.model_version !== "string" || !card.model_version || typeof card.purpose !== "string" ||
+          typeof card.target !== "string" || !Array.isArray(card.features) || !card.features.length ||
+          !card.validation_design || typeof card.validation_design.kind !== "string" ||
+          !card.performance || !Array.isArray(card.known_limitations) || !card.known_limitations.length ||
+          !Array.isArray(card.failure_modes) || !card.failure_modes.length || !card.receipts ||
+          typeof card.receipts.prospective_receipts_exist !== "boolean")
+        throw new Error("cfb-model-cards.json has an invalid or duplicate model card");
+      ids.add(card.model_id);
+    }
+    mcpCfbModelCardsCache = { at: Date.now(), data: envelope };
+  }
+  return mcpCfbModelCardsCache.data;
+}
+
+function mcpCfbTeamSlug(v) {
+  return String(v || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/&/g, " and ").replace(/[\u2018\u2019']/g, "")
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+function mcpCfbTeamArgs(args) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+  const extra = Object.keys(args).filter(k => k !== "team");
+  if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+  if (typeof args.team !== "string" || !args.team.trim()) throw new Error("team must be a non-empty name or slug");
+  if (args.team.trim().length > 80) throw new Error("team is limited to 80 characters");
+  const slug = mcpCfbTeamSlug(args.team);
+  if (!slug) throw new Error("team must contain letters or numbers");
+  return { query: args.team.trim(), slug };
+}
+
+function mcpCfbTeamMatch(envelope, input) {
+  const teams = envelope.data.teams;
+  const exact = teams.filter(team => team.team_slug === input.slug || mcpCfbTeamSlug(team.team) === input.slug);
+  if (exact.length === 1) return exact[0];
+  if (exact.length > 1) throw new Error("cfb-teams.json has duplicate normalized team names for " + input.query);
+  const partial = teams.filter(team => team.team_slug.includes(input.slug) || mcpCfbTeamSlug(team.team).includes(input.slug));
+  if (partial.length) {
+    const choices = partial.slice(0, 10).map(team => team.team + " (" + team.team_slug + ")").join(", ");
+    throw new Error("team is not an exact registry name or slug" + (partial.length > 1 ? " and is ambiguous" : "") + "; try: " + choices);
+  }
+  throw new Error("team is not present in the dated CFB ratings registry: " + input.query);
+}
+
+function mcpCfbDivergenceArgs(args) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+  const allowed = ["team", "direction", "conference", "minimum_absolute_rank_gap", "limit"];
+  const extra = Object.keys(args).filter(k => !allowed.includes(k));
+  if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+  const out = {
+    team: args.team === undefined ? null : mcpCfbTeamArgs({ team: args.team }),
+    direction: args.direction === undefined ? "all" : args.direction,
+    conference: null,
+    minimumAbsoluteRankGap: args.minimum_absolute_rank_gap === undefined ? 0 : args.minimum_absolute_rank_gap,
+    limit: args.limit === undefined ? 10 : args.limit,
+  };
+  if (!["all", "record-ahead-of-scoring", "scoring-ahead-of-record", "aligned"].includes(out.direction))
+    throw new Error("direction must be all, record-ahead-of-scoring, scoring-ahead-of-record or aligned");
+  if (args.conference !== undefined) {
+    if (typeof args.conference !== "string" || !args.conference.trim() || args.conference.trim().length > 80)
+      throw new Error("conference must be a non-empty string of at most 80 characters");
+    out.conference = args.conference.trim();
+  }
+  if (!Number.isInteger(out.minimumAbsoluteRankGap) || out.minimumAbsoluteRankGap < 0 || out.minimumAbsoluteRankGap > 135)
+    throw new Error("minimum_absolute_rank_gap must be a whole number from 0 through 135");
+  if (!Number.isInteger(out.limit) || out.limit < 1 || out.limit > 25)
+    throw new Error("limit must be a whole number from 1 through 25");
+  return out;
+}
+
+function mcpCfbDivergenceTeamMatch(rows, input) {
+  const exact = rows.filter(row => row.team_slug === input.slug || mcpCfbTeamSlug(row.team) === input.slug);
+  if (exact.length === 1) return exact[0];
+  if (exact.length > 1) throw new Error("cfb-record-divergence.json has duplicate normalized team names for " + input.query);
+  const partial = rows.filter(row => row.team_slug.includes(input.slug) || mcpCfbTeamSlug(row.team).includes(input.slug));
+  if (partial.length) {
+    const choices = partial.slice(0, 10).map(row => row.team + " (" + row.team_slug + ")").join(", ");
+    throw new Error("team is not an exact record-divergence name or slug" + (partial.length > 1 ? " and is ambiguous" : "") + "; try: " + choices);
+  }
+  throw new Error("team is not present in the dated CFB record-divergence surface: " + input.query);
+}
+
+function mcpCfbTeamPeriodArgs(args) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+  const allowed = ["team", "week", "season_type", "sort", "limit"];
+  const extra = Object.keys(args).filter(k => !allowed.includes(k));
+  if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+  const out = {
+    team: mcpCfbTeamArgs({ team: args.team }),
+    week: args.week === undefined ? null : args.week,
+    seasonType: args.season_type === undefined ? "all" : args.season_type,
+    sort: args.sort === undefined ? "period-asc" : args.sort,
+    limit: args.limit === undefined ? 20 : args.limit,
+  };
+  if (out.week !== null && (!Number.isInteger(out.week) || out.week < 1 || out.week > 20))
+    throw new Error("week must be a whole number from 1 through 20");
+  if (!["all", "regular", "postseason"].includes(out.seasonType))
+    throw new Error("season_type must be all, regular or postseason");
+  if (!["period-asc", "period-desc"].includes(out.sort))
+    throw new Error("sort must be period-asc or period-desc");
+  if (!Number.isInteger(out.limit) || out.limit < 1 || out.limit > 25)
+    throw new Error("limit must be a whole number from 1 through 25");
+  return out;
+}
+
+function mcpCfbTeamPeriodMatch(teams, input) {
+  const entries = Object.entries(teams);
+  const exact = entries.filter(([slug, team]) => slug === input.slug || mcpCfbTeamSlug(team.team) === input.slug);
+  if (exact.length === 1) return { team_slug: exact[0][0], ...exact[0][1] };
+  if (exact.length > 1) throw new Error("cfb-team-week.json has duplicate normalized team names for " + input.query);
+  const partial = entries.filter(([slug, team]) => slug.includes(input.slug) || mcpCfbTeamSlug(team.team).includes(input.slug));
+  if (partial.length) {
+    const choices = partial.slice(0, 10).map(([slug, team]) => team.team + " (" + slug + ")").join(", ");
+    throw new Error("team is not an exact team-period name or slug" + (partial.length > 1 ? " and is ambiguous" : "") + "; try: " + choices);
+  }
+  throw new Error("team is not present in the dated CFB team-period surface: " + input.query);
+}
+
+function mcpCfbLatestPeriodArgs(args) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+  const allowed = ["team", "division", "conference", "season_type", "period_outcome", "sort", "offset", "limit"];
+  const extra = Object.keys(args).filter(k => !allowed.includes(k));
+  if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+  const out = {
+    team: args.team === undefined ? null : mcpCfbTeamArgs({ team: args.team }),
+    division: args.division === undefined ? "all" : args.division,
+    conference: null,
+    seasonType: args.season_type === undefined ? "all" : args.season_type,
+    periodOutcome: args.period_outcome === undefined ? "all" : args.period_outcome,
+    sort: args.sort === undefined ? "team-asc" : args.sort,
+    offset: args.offset === undefined ? 0 : args.offset,
+    limit: args.limit === undefined ? 25 : args.limit,
+  };
+  if (!["all", "fbs", "fcs"].includes(out.division)) throw new Error("division must be all, fbs or fcs");
+  if (args.conference !== undefined) {
+    if (typeof args.conference !== "string" || !args.conference.trim() || args.conference.trim().length > 80)
+      throw new Error("conference must be a non-empty string of at most 80 characters");
+    out.conference = args.conference.trim();
+  }
+  if (!["all", "regular", "postseason"].includes(out.seasonType))
+    throw new Error("season_type must be all, regular or postseason");
+  if (!["all", "positive", "negative", "even"].includes(out.periodOutcome))
+    throw new Error("period_outcome must be all, positive, negative or even");
+  if (!["team-asc", "through-desc", "conference-record-desc"].includes(out.sort))
+    throw new Error("sort must be team-asc, through-desc or conference-record-desc");
+  if (!Number.isInteger(out.offset) || out.offset < 0 || out.offset > 399)
+    throw new Error("offset must be a whole number from 0 through 399");
+  if (!Number.isInteger(out.limit) || out.limit < 1 || out.limit > 50)
+    throw new Error("limit must be a whole number from 1 through 50");
+  return out;
+}
+
+function mcpCfbLatestPeriodTeam(rows, input) {
+  const exact = rows.filter(row => row.team_slug === input.slug || mcpCfbTeamSlug(row.team) === input.slug);
+  if (exact.length === 1) return exact[0];
+  if (exact.length > 1) throw new Error("cfb-team-week-latest.json has duplicate normalized team names for " + input.query);
+  const partial = rows.filter(row => row.team_slug.includes(input.slug) || mcpCfbTeamSlug(row.team).includes(input.slug));
+  if (partial.length) {
+    const choices = partial.slice(0, 10).map(row => row.team + " (" + row.team_slug + ")").join(", ");
+    throw new Error("team is not an exact latest-period name or slug" + (partial.length > 1 ? " and is ambiguous" : "") + "; try: " + choices);
+  }
+  throw new Error("team is not present in the dated CFB latest-period surface: " + input.query);
+}
+
+function mcpCfbLatestGameArgs(args) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+  const allowed = ["team", "conference", "opponent_division", "season_type", "result", "site", "sort", "offset", "limit"];
+  const extra = Object.keys(args).filter(k => !allowed.includes(k));
+  if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+  const out = {
+    team: args.team === undefined ? null : mcpCfbTeamArgs({ team: args.team }),
+    conference: null,
+    opponentDivision: args.opponent_division === undefined ? "all" : args.opponent_division,
+    seasonType: args.season_type === undefined ? "all" : args.season_type,
+    result: args.result === undefined ? "all" : args.result,
+    site: args.site === undefined ? "all" : args.site,
+    sort: args.sort === undefined ? "team-asc" : args.sort,
+    offset: args.offset === undefined ? 0 : args.offset,
+    limit: args.limit === undefined ? 25 : args.limit,
+  };
+  if (args.conference !== undefined) {
+    if (typeof args.conference !== "string" || !args.conference.trim() || args.conference.trim().length > 80)
+      throw new Error("conference must be a non-empty string of at most 80 characters");
+    out.conference = args.conference.trim();
+  }
+  if (!["all", "fbs", "fcs"].includes(out.opponentDivision))
+    throw new Error("opponent_division must be all, fbs or fcs");
+  if (!["all", "regular", "postseason"].includes(out.seasonType))
+    throw new Error("season_type must be all, regular or postseason");
+  if (!["all", "win", "loss", "tie"].includes(out.result))
+    throw new Error("result must be all, win, loss or tie");
+  if (!["all", "home", "away", "neutral"].includes(out.site))
+    throw new Error("site must be all, home, away or neutral");
+  if (!["team-asc", "kickoff-desc"].includes(out.sort))
+    throw new Error("sort must be team-asc or kickoff-desc");
+  if (!Number.isInteger(out.offset) || out.offset < 0 || out.offset > 199)
+    throw new Error("offset must be a whole number from 0 through 199");
+  if (!Number.isInteger(out.limit) || out.limit < 1 || out.limit > 50)
+    throw new Error("limit must be a whole number from 1 through 50");
+  return out;
+}
+
+function mcpCfbLatestGameTeam(rows, input) {
+  const exact = rows.filter(row => row.team_slug === input.slug || mcpCfbTeamSlug(row.team) === input.slug);
+  if (exact.length === 1) return exact[0];
+  if (exact.length > 1) throw new Error("cfb-games-latest.json has duplicate normalized team names for " + input.query);
+  const partial = rows.filter(row => row.team_slug.includes(input.slug) || mcpCfbTeamSlug(row.team).includes(input.slug));
+  if (partial.length) {
+    const choices = partial.slice(0, 10).map(row => row.team + " (" + row.team_slug + ")").join(", ");
+    throw new Error("team is not an exact latest-game name or slug" + (partial.length > 1 ? " and is ambiguous" : "") + "; try: " + choices);
+  }
+  throw new Error("team is not present in the dated CFB latest-game surface: " + input.query);
+}
+
+function mcpCfbTeamGameArgs(args) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+  const allowed = ["team", "opponent", "week", "season_type", "result", "site", "sort", "limit"];
+  const extra = Object.keys(args).filter(k => !allowed.includes(k));
+  if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+  const out = {
+    team: mcpCfbTeamArgs({ team: args.team }),
+    opponent: args.opponent === undefined ? null : mcpCfbTeamArgs({ team: args.opponent }),
+    week: args.week === undefined ? null : args.week,
+    seasonType: args.season_type === undefined ? "all" : args.season_type,
+    result: args.result === undefined ? "all" : args.result,
+    site: args.site === undefined ? "all" : args.site,
+    sort: args.sort === undefined ? "kickoff-asc" : args.sort,
+    limit: args.limit === undefined ? 25 : args.limit,
+  };
+  if (out.opponent && out.opponent.slug === out.team.slug) throw new Error("team and opponent must name different teams");
+  if (out.week !== null && (!Number.isInteger(out.week) || out.week < 1 || out.week > 20))
+    throw new Error("week must be a whole number from 1 through 20");
+  if (!["all", "regular", "postseason"].includes(out.seasonType))
+    throw new Error("season_type must be all, regular or postseason");
+  if (!["all", "win", "loss", "tie"].includes(out.result))
+    throw new Error("result must be all, win, loss or tie");
+  if (!["all", "home", "away", "neutral"].includes(out.site))
+    throw new Error("site must be all, home, away or neutral");
+  if (!["kickoff-asc", "kickoff-desc"].includes(out.sort))
+    throw new Error("sort must be kickoff-asc or kickoff-desc");
+  if (!Number.isInteger(out.limit) || out.limit < 1 || out.limit > 50)
+    throw new Error("limit must be a whole number from 1 through 50");
+  return out;
+}
+
+function mcpCfbTeamGameMatch(teams, input) {
+  const entries = Object.entries(teams);
+  const exact = entries.filter(([slug, team]) => slug === input.slug || mcpCfbTeamSlug(team.team) === input.slug);
+  if (exact.length === 1) return { team_slug: exact[0][0], ...exact[0][1] };
+  if (exact.length > 1) throw new Error("cfb-team-game.json has duplicate normalized team names for " + input.query);
+  const partial = entries.filter(([slug, team]) => slug.includes(input.slug) || mcpCfbTeamSlug(team.team).includes(input.slug));
+  if (partial.length) {
+    const choices = partial.slice(0, 10).map(([slug, team]) => team.team + " (" + slug + ")").join(", ");
+    throw new Error("team is not an exact team-game name or slug" + (partial.length > 1 ? " and is ambiguous" : "") + "; try: " + choices);
+  }
+  throw new Error("team is not present in the dated CFB team-game surface: " + input.query);
+}
+
+/* ==================== the two merged CFB find surfaces ====================
+ * `dd_find_cfb_team_games` and `dd_find_cfb_team_periods` each cover a PARENT surface
+ * (one team, longitudinal) and its DERIVED cross-sectional view (every team's latest).
+ * They used to be four tools. Two names a model has to choose between, whose difference
+ * is one word, is a discovery hazard: `latest_games` got picked for questions that wanted
+ * `team_games`.
+ *
+ * ⚠️ A PARAMETER BELONGING TO THE OTHER SCOPE MUST BE REFUSED, NOT IGNORED. Ignoring it
+ * answers a question the caller did not ask and looks like success. The refusal is not new
+ * code: each scope DELEGATES to its original unchanged parser, and those already reject
+ * unknown fields by name against their own `allowed` list. The list below is only a
+ * first-pass check that can name the scope in the message; the delegated parser is the
+ * backstop, so a drift between them can make an error message worse and can never let an
+ * invalid field through.
+ *
+ * ⚠️ `required: ["team"]` LEFT THE JSON SCHEMA because the requirement is now conditional
+ * on the scope, and a schema that cannot express a rule must not pretend to. It is
+ * enforced below with an error that says which scope needs it and which one does not.
+ */
+const MCP_CFB_SCOPE_FIELDS = {
+  "dd_find_cfb_team_games": {
+    "team-games": ["team", "opponent", "week", "season_type", "result", "site", "sort", "limit"],
+    "latest-per-team": ["team", "conference", "opponent_division", "season_type", "result", "site", "sort", "offset", "limit"],
+  },
+  "dd_find_cfb_team_periods": {
+    "team-periods": ["team", "week", "season_type", "sort", "limit"],
+    "latest-per-team": ["team", "division", "conference", "season_type", "period_outcome", "sort", "offset", "limit"],
+  },
+};
+
+function mcpCfbScopeArgs(tool, args) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+  const scopes = MCP_CFB_SCOPE_FIELDS[tool];
+  const names = Object.keys(scopes);
+  const scope = args.scope === undefined ? names[0] : args.scope;
+  if (!names.includes(scope)) throw new Error("scope must be " + names.join(" or "));
+  const allowed = scopes[scope];
+  const extra = Object.keys(args).filter(k => k !== "scope" && !allowed.includes(k));
+  if (extra.length)
+    throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + " for scope " + scope + ": " + extra.join(", ") +
+      " (supported: " + allowed.join(", ") + ")");
+  // The default scope wants one exact team; the derived scope is cross-team by design.
+  if (scope !== "latest-per-team" && args.team === undefined)
+    throw new Error("team is required when scope is " + scope + "; use scope latest-per-team for bounded cross-team discovery");
+  const rest = { ...args };
+  delete rest.scope;
+  return { scope, rest };
+}
+
+async function mcpCfbTeamGamesScoped(args) {
+  const { scope, rest } = mcpCfbScopeArgs("dd_find_cfb_team_games", args);
+  if (scope === "latest-per-team") return mcpCfbLatestGamesRun({ scope, ...mcpCfbLatestGameArgs(rest) });
+  return mcpCfbTeamGamesRun({ scope, ...mcpCfbTeamGameArgs(rest) });
+}
+
+async function mcpCfbTeamPeriodsScoped(args) {
+  const { scope, rest } = mcpCfbScopeArgs("dd_find_cfb_team_periods", args);
+  if (scope === "latest-per-team") return mcpCfbLatestPeriodsRun({ scope, ...mcpCfbLatestPeriodArgs(rest) });
+  return mcpCfbTeamPeriodsRun({ scope, ...mcpCfbTeamPeriodArgs(rest) });
+}
+
+async function mcpCfbTeamGamesRun(input) {
+  const envelope = await mcpCfbTeamGames();
+  const team = mcpCfbTeamGameMatch(envelope.data.teams, input.team);
+  const opponent = input.opponent ? mcpCfbTeamGameMatch(envelope.data.teams, input.opponent) : null;
+  const direction = input.sort === "kickoff-asc" ? 1 : -1;
+  const matches = envelope.data.rows.filter(row =>
+    row.team_slug === team.team_slug &&
+    (!opponent || row.opponent_slug === opponent.team_slug) &&
+    (input.week === null || row.week === input.week) &&
+    (input.seasonType === "all" || row.season_type === input.seasonType) &&
+    (input.result === "all" || row.result === input.result) &&
+    (input.site === "all" || row.site === input.site)
+  ).sort((a, b) => direction * (a.kickoff_at.localeCompare(b.kickoff_at) || a.team_game_id.localeCompare(b.team_game_id)));
+  const games = matches.slice(0, input.limit).map(row => ({
+    team_game_id: row.team_game_id,
+    game_id: row.game_id,
+    upstream_game_id: row.upstream_game_id,
+    season: row.season,
+    season_type: row.season_type,
+    week: row.week,
+    kickoff_at: row.kickoff_at,
+    status: row.status,
+    opponent: { team_slug: row.opponent_slug, team: envelope.data.teams[row.opponent_slug].team },
+    team_side: row.team_side,
+    site: row.site,
+    neutral_site: row.neutral_site,
+    conference_game: row.conference_game,
+    points_for: row.points_for,
+    points_against: row.points_against,
+    point_differential: row.point_differential,
+    result: row.result,
+  }));
+  return toolText({
+    query: {
+      scope: input.scope,
+      team: team.team,
+      opponent: opponent ? opponent.team : null,
+      week: input.week,
+      season_type: input.seasonType,
+      result: input.result,
+      site: input.site,
+      sort: input.sort,
+      limit: input.limit,
+    },
+    team,
+    season: envelope.data.season,
+    scope: envelope.data.scope,
+    response_shape: "team-game-rows",
+    matched_before_limit: matches.length,
+    returned: games.length,
+    games,
+    unavailable_metrics: envelope.data.unavailable_metrics,
+    as_of: envelope.as_of,
+    source: envelope.source,
+    built: envelope.built || null,
+    integrity: envelope.integrity || null,
+    observed_results_only: true,
+    modelled: false,
+    opponent_adjusted: false,
+    market_adjusted: false,
+    forecast: false,
+    graded: false,
+    read_only: true,
+    stored: false,
+    warnings: [
+      "These are observed schedule-derived 2025 team-game facts, not current 2026 form or a forecast.",
+      "The same canonical game has one mirrored row per team; points and result are returned from the selected team's perspective.",
+      "EPA, success, explosiveness, havoc, garbage-time, opponent-adjusted and market-performance fields are unavailable in this results-only layer.",
+    ],
+  });
+}
+
+async function mcpCfbLatestGamesRun(input) {
+  const envelope = await mcpCfbLatestGames();
+  const allRows = envelope.data.rows;
+  const team = input.team ? mcpCfbLatestGameTeam(allRows, input.team) : null;
+  let conference = null;
+  if (input.conference) {
+    const conferences = [...new Set(allRows.map(row => row.conference))].sort((a, b) => a.localeCompare(b));
+    conference = conferences.find(name => name.toLowerCase() === input.conference.toLowerCase()) || null;
+    if (!conference) throw new Error("conference is not present in the dated CFB latest-game surface; available: " + conferences.join(", "));
+  }
+  const matches = allRows.filter(row => {
+    const game = row.latest_completed_game;
+    return (!team || row.team_slug === team.team_slug) && (!conference || row.conference === conference) &&
+      (input.opponentDivision === "all" || game.opponent_division === input.opponentDivision) &&
+      (input.seasonType === "all" || game.season_type === input.seasonType) &&
+      (input.result === "all" || game.result === input.result) &&
+      (input.site === "all" || game.site === input.site);
+  }).sort((a, b) => input.sort === "team-asc"
+    ? a.team.localeCompare(b.team) || a.team_slug.localeCompare(b.team_slug)
+    : b.latest_completed_game.kickoff_at.localeCompare(a.latest_completed_game.kickoff_at) || a.team.localeCompare(b.team));
+  const rows = matches.slice(input.offset, input.offset + input.limit);
+  return toolText({
+    query: { scope: input.scope, team: team ? team.team : null, conference, opponent_division: input.opponentDivision,
+      season_type: input.seasonType, result: input.result, site: input.site,
+      sort: input.sort, offset: input.offset, limit: input.limit },
+    season: envelope.data.season,
+    scope: envelope.data.scope,
+    coverage: envelope.data.coverage,
+    selection: envelope.data.selection,
+    response_shape: "latest-per-team-rows",
+    matched_before_pagination: matches.length,
+    returned: rows.length,
+    rows,
+    unavailable_metrics: envelope.data.unavailable_metrics,
+    as_of: envelope.as_of,
+    source: envelope.source,
+    integrity: envelope.integrity || null,
+    observed_results_only: true,
+    current_2026_form: false,
+    forecast: false,
+    modelled: false,
+    graded: false,
+    read_only: true,
+    stored: false,
+    warnings: [
+      "Latest means each FBS team's last completed game in the dated 2025 surface, not current 2026 form.",
+      "The same canonical game can appear once for each FBS participant; scores and results use each team's perspective.",
+      "EPA, opponent-adjusted and market-performance metrics are unavailable in this observed-results surface.",
+    ],
+  });
+}
+
+async function mcpCfbTeamPeriodsRun(input) {
+  const envelope = await mcpCfbTeamPeriods();
+  const team = mcpCfbTeamPeriodMatch(envelope.data.teams, input.team);
+  const direction = input.sort === "period-asc" ? 1 : -1;
+  const matches = envelope.data.rows.filter(row =>
+    row.team_slug === team.team_slug &&
+    (input.week === null || row.week === input.week) &&
+    (input.seasonType === "all" || row.season_type === input.seasonType)
+  ).sort((a, b) => direction * (a.through_at.localeCompare(b.through_at) || a.team_period_id.localeCompare(b.team_period_id)));
+  const periods = matches.slice(0, input.limit).map(row => ({
+    team_period_id: row.team_period_id,
+    season: row.season,
+    season_type: row.season_type,
+    week: row.week,
+    period_key: row.period_key,
+    through_at: row.through_at,
+    scheduled_games_this_period: row.scheduled_games_this_period,
+    opponent_slugs: row.opponent_slugs,
+    venue_counts: { home: row.home_games, away: row.away_games, neutral: row.neutral_games },
+    fbs_opponents: row.fbs_opponents,
+    period: row.period,
+    season_to_date: row.season_to_date,
+    conference_regular_season_to_date: row.conference_regular_season_to_date,
+  }));
+  return toolText({
+    query: {
+      scope: input.scope,
+      team: team.team,
+      week: input.week,
+      season_type: input.seasonType,
+      sort: input.sort,
+      limit: input.limit,
+    },
+    team,
+    season: envelope.data.season,
+    scope: envelope.data.scope,
+    period_definition: envelope.data.period_definition,
+    conference_record_definition: envelope.data.conference_record_definition,
+    response_shape: "team-period-rows",
+    matched_before_limit: matches.length,
+    returned: periods.length,
+    periods,
+    unavailable_metrics: envelope.data.unavailable_metrics,
+    as_of: envelope.as_of,
+    source: envelope.source,
+    built: envelope.built || null,
+    integrity: envelope.integrity || null,
+    observed_results_only: true,
+    modelled: false,
+    opponent_adjusted: false,
+    market_adjusted: false,
+    forecast: false,
+    graded: false,
+    read_only: true,
+    stored: false,
+    warnings: [
+      "These are observed schedule-derived 2025 results, not current 2026 form or a forecast.",
+      "Regular-season week 1 and postseason week 1 are distinct periods; use season_type when filtering a repeated week number.",
+      "Conference records include only final regular-season rows marked conference_game and are not official standings, ranks or tiebreakers.",
+      "EPA, success, explosiveness, havoc, garbage-time, opponent-adjusted and market-performance fields are unavailable in this results-only layer.",
+      "Period rows can contain more than one scheduled game; scheduled_games_this_period is explicit.",
+    ],
+  });
+}
+
+async function mcpCfbLatestPeriodsRun(input) {
+  const envelope = await mcpCfbLatestPeriods();
+  const allRows = envelope.data.rows;
+  const team = input.team ? mcpCfbLatestPeriodTeam(allRows, input.team) : null;
+  let conference = null;
+  if (input.conference) {
+    const conferences = [...new Set(allRows.map(row => row.conference).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    conference = conferences.find(name => name.toLowerCase() === input.conference.toLowerCase()) || null;
+    if (!conference) throw new Error("conference is not present in the dated CFB latest-period surface; available: " + conferences.join(", "));
+  }
+  const outcomeMatches = row => {
+    const differential = row.latest_period.observed_result.point_differential;
+    return input.periodOutcome === "all" || (input.periodOutcome === "positive" && differential > 0) ||
+      (input.periodOutcome === "negative" && differential < 0) || (input.periodOutcome === "even" && differential === 0);
+  };
+  const conferenceWinPercentage = row => {
+    const record = row.conference_regular_season_to_date;
+    return record.games ? (record.wins + 0.5 * record.ties) / record.games : -1;
+  };
+  const matches = allRows.filter(row =>
+    (!team || row.team_slug === team.team_slug) &&
+    (input.division === "all" || row.division === input.division) &&
+    (!conference || row.conference === conference) &&
+    (input.seasonType === "all" || row.latest_period.season_type === input.seasonType) && outcomeMatches(row)
+  ).sort((a, b) => {
+    if (input.sort === "team-asc") return a.team.localeCompare(b.team) || a.team_slug.localeCompare(b.team_slug);
+    if (input.sort === "through-desc") return b.through_at.localeCompare(a.through_at) || a.team.localeCompare(b.team);
+    const aRecord = a.conference_regular_season_to_date;
+    const bRecord = b.conference_regular_season_to_date;
+    return conferenceWinPercentage(b) - conferenceWinPercentage(a) || bRecord.wins - aRecord.wins ||
+      bRecord.point_differential - aRecord.point_differential || a.team.localeCompare(b.team);
+  });
+  const rows = matches.slice(input.offset, input.offset + input.limit);
+  return toolText({
+    query: { scope: input.scope, team: team ? team.team : null, division: input.division, conference, season_type: input.seasonType,
+      period_outcome: input.periodOutcome, sort: input.sort, offset: input.offset, limit: input.limit },
+    season: envelope.data.season,
+    scope: envelope.data.scope,
+    coverage: envelope.data.coverage,
+    selection: envelope.data.selection,
+    conference_record_definition: envelope.data.conference_record_definition,
+    response_shape: "latest-per-team-rows",
+    matched_before_pagination: matches.length,
+    returned: rows.length,
+    rows,
+    unavailable_metrics: envelope.data.unavailable_metrics,
+    as_of: envelope.as_of,
+    source: envelope.source,
+    integrity: envelope.integrity || null,
+    observed_results_only: true,
+    current_2026_form: false,
+    forecast: false,
+    modelled: false,
+    graded: false,
+    read_only: true,
+    stored: false,
+    warnings: [
+      "Latest means the last covered period in the dated 2025 FBS-involved schedule, not current 2026 form.",
+      "FCS season-to-date records include only games against FBS opponents and are not complete FCS season records.",
+      "Conference records include only final regular-season rows marked conference_game and are not official standings, ranks or tiebreakers.",
+      "conference-record-desc is a descriptive arithmetic order only; it does not apply conference-specific standings rules.",
+      "period_outcome is the sign of the aggregate observed point differential; one period can contain multiple games.",
+      "EPA, opponent-adjusted and market-performance metrics are unavailable in this results-only surface.",
+    ],
+  });
+}
+
+function mcpCfbGameArgs(args) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+  const allowed = ["game_id", "team", "week", "season_type", "status", "conference", "sort", "limit"];
+  const extra = Object.keys(args).filter(k => !allowed.includes(k));
+  if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+  const out = {
+    gameId: null,
+    team: args.team === undefined ? null : mcpCfbTeamArgs({ team: args.team }),
+    week: args.week === undefined ? null : args.week,
+    seasonType: args.season_type === undefined ? "all" : args.season_type,
+    status: args.status === undefined ? "all" : args.status,
+    conference: null,
+    sort: args.sort === undefined ? "kickoff-desc" : args.sort,
+    limit: args.limit === undefined ? 20 : args.limit,
+  };
+  if (args.game_id !== undefined) {
+    if (typeof args.game_id !== "string" || !args.game_id.trim() || args.game_id.trim().length > 150)
+      throw new Error("game_id must be a non-empty string of at most 150 characters");
+    out.gameId = args.game_id.trim();
+  }
+  if (out.week !== null && (!Number.isInteger(out.week) || out.week < 1 || out.week > 20))
+    throw new Error("week must be a whole number from 1 through 20");
+  if (!["all", "regular", "postseason"].includes(out.seasonType))
+    throw new Error("season_type must be all, regular or postseason");
+  if (!["all", "scheduled", "final"].includes(out.status))
+    throw new Error("status must be all, scheduled or final");
+  if (args.conference !== undefined) {
+    if (typeof args.conference !== "string" || !args.conference.trim() || args.conference.trim().length > 80)
+      throw new Error("conference must be a non-empty string of at most 80 characters");
+    out.conference = args.conference.trim();
+  }
+  if (!["kickoff-asc", "kickoff-desc"].includes(out.sort))
+    throw new Error("sort must be kickoff-asc or kickoff-desc");
+  if (!Number.isInteger(out.limit) || out.limit < 1 || out.limit > 50)
+    throw new Error("limit must be a whole number from 1 through 50");
+  return out;
+}
+
+function mcpCfbScheduleTeam(games, input) {
+  const teams = new Map();
+  for (const game of games) {
+    teams.set(game.home_team_slug, game.home_team);
+    teams.set(game.away_team_slug, game.away_team);
+  }
+  const exact = [...teams].filter(([slug, name]) => slug === input.slug || mcpCfbTeamSlug(name) === input.slug);
+  if (exact.length === 1) return { team_slug: exact[0][0], team: exact[0][1] };
+  if (exact.length > 1) throw new Error("cfb-schedule.json has duplicate normalized team names for " + input.query);
+  const partial = [...teams].filter(([slug, name]) => slug.includes(input.slug) || mcpCfbTeamSlug(name).includes(input.slug));
+  if (partial.length) {
+    const choices = partial.slice(0, 10).map(([slug, name]) => name + " (" + slug + ")").join(", ");
+    throw new Error("team is not an exact canonical schedule name or slug" + (partial.length > 1 ? " and is ambiguous" : "") + "; try: " + choices);
+  }
+  throw new Error("team is not present in the dated canonical CFB schedule: " + input.query);
+}
+
+function mcpCfbMarketArgs(args) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+  const allowed = ["game_id", "team", "week", "book", "priced_only", "sort", "limit"];
+  const extra = Object.keys(args).filter(k => !allowed.includes(k));
+  if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+  const out = {
+    gameId: null,
+    team: args.team === undefined ? null : mcpCfbTeamArgs({ team: args.team }),
+    week: args.week === undefined ? null : args.week,
+    book: null,
+    pricedOnly: args.priced_only === true,
+    sort: args.sort === undefined ? "kickoff-desc" : args.sort,
+    limit: args.limit === undefined ? 20 : args.limit,
+  };
+  if (args.game_id !== undefined) {
+    if (typeof args.game_id !== "string" || !args.game_id.trim() || args.game_id.trim().length > 150)
+      throw new Error("game_id must be a non-empty string of at most 150 characters");
+    out.gameId = args.game_id.trim();
+  }
+  if (out.week !== null && (!Number.isInteger(out.week) || out.week < 1 || out.week > 20))
+    throw new Error("week must be a whole number from 1 through 20");
+  if (args.book !== undefined) {
+    if (typeof args.book !== "string" || !args.book.trim() || args.book.trim().length > 80)
+      throw new Error("book must be a non-empty string of at most 80 characters");
+    out.book = args.book.trim();
+  }
+  if (args.priced_only !== undefined

@@ -1,0 +1,912 @@
+& p.priceSource !== "captured")
+    return "Spread, moneyline and total prices must be captured from DraftKings.";
+  if (gameMarket && bzAmerican(p.priceOpp) === null)
+    return "The captured opposite-side DraftKings price is required for that market.";
+  if (p.priceSource === "captured" && (!p.entrySnapshotAt || !p.providerEventIds?.sgo))
+    return "The captured quote is missing its source receipt.";
+  if (p.priceSource === "captured" && assertQuote({ price: p.price, opp: p.priceOpp, line: p.line }, p))
+    return "The captured quote is incomplete or does not match the selected number.";
+  if (p.mkt === "other" && (p.priceSource !== "self" || p.clvEligible !== false))
+    return "Other markets must be self-priced and excluded from CLV.";
+
+  if ((p.mkt === "other" || p.mkt === "prop") && FUTURES_WORDS.test(String(p.prop || "")))
+    return "That reads like a future, and DraftKings won't parlay a future with game legs. Bozo takes SGP-legal game markets only.";
+
+  // ⚠️ Bozo Royale only: a prop or `other` leg is binary and Worst Beat needs a margin.
+  // Kap's call was to give binary legs a margin from the de-vigged close rather than
+  // restrict the markets, so this is NOT a rejection — the note is here so the next
+  // person to read this file doesn't re-derive the exploit and "fix" it by banning them.
+  // See royaleBeatDeficit().
+
+  const meKey = mkey || encodeURIComponent(name), meName = playerName(name);
+  const mySel = selectionKeyOf(p), myMkt = marketKeyOf(p);
+
+  for (const [who, x] of Object.entries(existing)) {
+    if (!x) continue;
+    // ⚠️ The key comparison is what excludes MY OWN leg while I edit it. The name
+    // comparisons stay as a belt for legacy/demo maps whose keys are still names.
+    if (who === meKey || who === meName || (x.who || playerName(who)) === meName) continue;
+    const theirSel = x.selectionKey || selectionKeyOf(x);
+    if (theirSel === mySel)
+      return `${x.who || playerName(who)} already has that exact selection — DraftKings won't take it twice on one parlay. Pick a different side, number or game.`;
+    const theirMkt = x.marketKey || marketKeyOf(x);
+    if (theirMkt === myMkt && String(x.side) !== String(p.side))
+      return `${x.who || playerName(who)} has the other side of that same market (${x.label}). Both can't cash, so the ticket could never win — DraftKings blocks the pair.`;
+  }
+  return null;
+}
+
+// Server-side Fisher–Yates over the four levers, crypto-seeded, written once.
+// The ETag guard means two simultaneous final submissions can't both draw.
+async function placeAndDraw(env, lid, picks, state) {
+  const cur = await fbGet(env, LG(lid) + "/order", true);
+  if (cur.data != null) return true;                 // already drawn — never redraw
+
+  // Only the levers this league kept in the draw. With all four this is the original
+  // behaviour; with fewer the hierarchy is shorter and the meta gets easier to solve.
+  const order = settingsOf(state).levers.slice();
+  const rnd = new Uint32Array(Math.max(order.length, 1));
+  crypto.getRandomValues(rnd);
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = rnd[i] % (i + 1);
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+
+  const wrote = await fbPut(env, LG(lid) + "/order", order, cur.etag);
+  if (!wrote) return true;                           // lost the race — other draw stands
+
+  const closeTs = Math.max(...Object.values(picks).map(x => x.ts || 0));
+  await fbPut(env, LG(lid) + "/status", "placed");
+  await fbPut(env, LG(lid) + "/closeTs", closeTs);
+
+  // ⚠️ THE FIRST LOCK FREEZES THE FORMAT. Up to here the ruleset is a choice on a league
+  // nobody has played; from here it is the thing everyone's week was played under.
+  // Switching it now would retroactively change who should have been eliminated — the
+  // same class of error as mutating a published forecast.
+  const lockPatch = { formatLocked: true };
+
+  // ⚠️ There used to be buy-back offers to expire here. There aren't any: the re-deploy
+  // is automatic and resolves at the chop, so nothing is ever left pending at a lock. Any
+  // offers still stored are from before that change and are cleared once, so a league
+  // mid-season doesn't carry a prompt nothing will ever answer.
+  const offers = ((state && state.royale) || {}).offers || {};
+  if (Object.keys(offers).length) lockPatch["royale/offers"] = null;
+  try { await fbPatch(env, LG(lid), lockPatch); }
+  catch (e) { console.log("royale: lock patch failed — " + e.message); }
+
+  // ⚠️ The ledger is written HERE, at lock — not at grade, and not in bozoNext. A week
+  // that locks but never gets graded must still leave a complete record of the entry.
+  await ledgerWriteEntries(env, lid, (state && state.season) || SEASON, (state && state.week) || 1, picks, order);
+  return true;
+}
+
+/* =============================== Bozo ledger ============================== */
+// A flat, one-row-per-leg record of the season, keyed <season>-w<week>-<player>.
+// ~8 players × ~18 weeks ≈ 150 rows ≈ 45 KB by season's end.
+//
+// Lives at /bozo/ledger — deliberately INSIDE /bozo, which is already
+// {".read":true,".write":false}, so it needs no Firebase rules change. A sibling node
+// would have no rule at all and default to deny.
+//
+// Keyed object, never an array: each stage PATCHes only the fields it owns, retries are
+// idempotent, and no stage has to read-modify-write 150 rows to change 8.
+//
+// Four write stages:
+//   LOCK       entry, drawn hierarchy, submission timing   → placeAndDraw
+//   KICKOFF    close, closeTs, closeSource                 → cron (not built)
+//   PLACEMENT  placedPrice, mainLine                       → slip parse (not built)
+//   GRADE      actual, result, won, bozo                   → bozoGrade
+//
+// ⚠️ Raw inputs only. imp, clv, beat and altLine are pure functions of price, close,
+// actual, line, mainLine and the sport SD. The SD table is flagged as needing
+// calibration, so persisting derivatives would freeze today's formulas into last
+// year's rows. Derive them in the page and in the CSV export.
+//
+// ⚠️ mainLine (the market's main number, e.g. −6.5 when someone bought down to −9.5) is
+// reserved and stays null until the odds-API spike lands. A stored altLine BOOLEAN was
+// rejected: the band forces almost every spread and total to be an alt line,
+// and moneylines can't be one, so the flag would be constant wherever it's derivable.
+// The distance from the main number is the part that actually varies between players.
+
+const SEASON = 2026;
+
+/* ======================== Bozo schedule + score cache ======================
+   ESPN rejects Cloudflare egress, so game facts are pulled on the existing hourly
+   scheduled tick from two GitHub-hosted static sources and compacted into RL KV:
+
+     schedule:nfl:<season>  — nflverse/nfldata data/games.csv
+     schedule:cfb:<season>  — cfbfastR-data processed schedule (never raw)
+
+   Foreign ids remain attributes. The ESPN id is useful for resolving old/browser picks,
+   but the normalized row also carries a canonical team/date key. No odds column is copied
+   out of either source. Blank/NA scores stay null all the way through grading. */
+const BOZO_GRADEABLE_SPORTS = new Set(["nfl", "cfb"]);
+const BOZO_SCHEDULE_SOURCE = Object.freeze({
+  nfl: "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+  cfb: "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+});
+const bozoScheduleKey = (sport, season) => `schedule:${sport}:${season}`;
+
+// RFC-4180 enough for both captured sources: quoted commas, escaped quotes and CRLF.
+// Returns arrays rather than allocating an object for every historical nflverse row.
+function bozoCsvTable(text) {
+  const rows = [];
+  let row = [], field = "", quoted = false;
+  const pushField = () => { row.push(field); field = ""; };
+  const pushRow = () => {
+    pushField();
+    if (row.length > 1 || row[0] !== "") rows.push(row);
+    row = [];
+  };
+  const s = String(text || "");
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (quoted) {
+      if (c === '"' && s[i + 1] === '"') { field += '"'; i++; }
+      else if (c === '"') quoted = false;
+      else field += c;
+    } else if (c === '"') quoted = true;
+    else if (c === ",") pushField();
+    else if (c === "\n") pushRow();
+    else if (c !== "\r") field += c;
+  }
+  if (field || row.length) pushRow();
+  if (!rows.length) throw new Error("schedule CSV is empty");
+  const header = rows.shift();
+  const index = Object.fromEntries(header.map((name, i) => [name, i]));
+  return { index, rows };
+}
+
+const bozoCsvValue = (table, row, name) => {
+  const i = table.index[name];
+  return i == null ? "" : String(row[i] ?? "");
+};
+const bozoCsvNumber = value => {
+  const s = String(value ?? "").trim();
+  if (!s || /^na$/i.test(s)) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+};
+
+// nflverse documents gametime as US Eastern regardless of venue. Convert that wall time
+// under America/New_York; appending Z would shift every close by four or five hours.
+function bozoEasternKickoff(gameday, gametime) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(gameday || "")) || !/^\d{1,2}:\d{2}$/.test(String(gametime || ""))) return null;
+  const [y, m, d] = gameday.split("-").map(Number);
+  const [hh, mm] = gametime.split(":").map(Number);
+  const target = Date.UTC(y, m - 1, d, hh, mm);
+  let guess = target;
+  const fmt = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hourCycle: "h23",
+    year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+  for (let n = 0; n < 2; n++) {
+    const p = Object.fromEntries(fmt.formatToParts(new Date(guess)).filter(x => x.type !== "literal").map(x => [x.type, Number(x.value)]));
+    const shown = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute);
+    guess += target - shown;
+  }
+  return new Date(guess).toISOString();
+}
+
+function bozoCanonicalScheduleKey(sport, away, home, startsAt) {
+  const registry = bozoBuildTeamRegistry(sport).aliases;
+  const teams = [away, home].map(x => bozoTeamNorm(x, registry)).filter(Boolean).sort();
+  return teams.length === 2 && !isNaN(Date.parse(startsAt || ""))
+    ? [sport, teams.join("~"), startsAt.slice(0, 10)].join("|") : null;
+}
+
+function bozoEspnSeedTeam(sport, id, name) {
+  const rows = ((BOZO_ESPN_TEAM_SEED.sports || {})[sport] || []);
+  return rows.find(t => String(t.id) === String(id))
+    || rows.find(t => [t.displayName, t.shortDisplayName, t.location].some(v => bzNorm(v) === bzNorm(name)))
+    || null;
+}
+
+function bozoNormalizeNflSchedule(text, season) {
+  const table = bozoCsvTable(text), games = [];
+  for (const row of table.rows) {
+    if (Number(bozoCsvValue(table, row, "season")) !== Number(season)) continue;
+    const espnEventId = bozoCsvValue(table, row, "espn");
+    if (!espnEventId) continue;
+    const away = bozoCsvValue(table, row, "away_team"), home = bozoCsvValue(table, row, "home_team");
+    const localDate = bozoCsvValue(table, row, "gameday");
+    const startsAt = bozoEasternKickoff(localDate, bozoCsvValue(table, row, "gametime"));
+    const awayScore = bozoCsvNumber(bozoCsvValue(table, row, "away_score"));
+    const homeScore = bozoCsvNumber(bozoCsvValue(table, row, "home_score"));
+    games.push({
+      espnEventId, canonicalKey: bozoCanonicalScheduleKey("nfl", away, home, startsAt), startsAt, localDate,
+      week: bozoCsvNumber(bozoCsvValue(table, row, "week")), seasonType: bozoCsvValue(table, row, "game_type"),
+      completed: awayScore !== null && homeScore !== null,
+      away: { name: away, abbr: away }, home: { name: home, abbr: home }, awayScore, homeScore,
+    });
+  }
+  return games;
+}
+
+function bozoNormalizeCfbSchedule(text, season) {
+  const table = bozoCsvTable(text), games = [];
+  for (const row of table.rows) {
+    if (Number(bozoCsvValue(table, row, "season")) !== Number(season)) continue;
+    const espnEventId = bozoCsvValue(table, row, "game_id");
+    if (!espnEventId) continue;
+    const awayName = bozoCsvValue(table, row, "away_team"), homeName = bozoCsvValue(table, row, "home_team");
+    const awayId = bozoCsvValue(table, row, "away_id"), homeId = bozoCsvValue(table, row, "home_id");
+    const awaySeed = bozoEspnSeedTeam("cfb", awayId, awayName), homeSeed = bozoEspnSeedTeam("cfb", homeId, homeName);
+    const startsAt = bozoCsvValue(table, row, "start_date") || null;
+    const awayScore = bozoCsvNumber(bozoCsvValue(table, row, "away_points"));
+    const homeScore = bozoCsvNumber(bozoCsvValue(table, row, "home_points"));
+    games.push({
+      espnEventId, canonicalKey: bozoCanonicalScheduleKey("cfb", awayName, homeName, startsAt), startsAt,
+      localDate: startsAt ? startsAt.slice(0, 10) : null,
+      week: bozoCsvNumber(bozoCsvValue(table, row, "week")), seasonType: bozoCsvValue(table, row, "season_type"),
+      completed: /^true$/i.test(bozoCsvValue(table, row, "completed")) && awayScore !== null && homeScore !== null,
+      away: { id: awayId, name: awayName, abbr: awaySeed?.abbreviation || awayName },
+      home: { id: homeId, name: homeName, abbr: homeSeed?.abbreviation || homeName },
+      awayScore, homeScore,
+    });
+  }
+  return games;
+}
+
+async function bozoScheduleDoc(env, sport, season) {
+  if (!env || !env.RL) throw new Error("schedule KV is not configured");
+  try { return await env.RL.get(bozoScheduleKey(sport, season), "json"); }
+  catch (e) { throw new Error("schedule KV read failed: " + e.message); }
+}
+
+async function bozoRefreshOneSchedule(env, sport, season, nowMs, fetcher = fetch) {
+  if (!BOZO_GRADEABLE_SPORTS.has(sport)) throw new Error("unsupported schedule sport: " + sport);
+  if (!env || !env.RL) throw new Error("schedule KV is not configured");
+  const key = bozoScheduleKey(sport, season), previous = await bozoScheduleDoc(env, sport, season);
+  const headers = previous?.etag ? { "If-None-Match": previous.etag } : {};
+  const response = await fetcher(BOZO_SCHEDULE_SOURCE[sport], { headers });
+  if (response.status === 304) return { sport, season, key, status: "not_modified", games: (previous.games || []).length };
+  if (!response.ok) throw new Error(`${sport} schedule HTTP ${response.status}`);
+  const csv = await response.text();
+  const games = sport === "nfl" ? bozoNormalizeNflSchedule(csv, season) : bozoNormalizeCfbSchedule(csv, season);
+  if (!games.length) throw new Error(`${sport} schedule contained no ${season} games`);
+  const doc = { schemaVersion: 1, sport, season, etag: response.headers.get("ETag") || null,
+    fetchedAt: new Date(nowMs).toISOString(), source: BOZO_SCHEDULE_SOURCE[sport], games };
+  await env.RL.put(key, JSON.stringify(doc));
+  return { sport, season, key, status: "updated", games: games.length, etag: doc.etag };
+}
+
+async function runBozoScheduleRefresh(env, nowMs = Date.now()) {
+  return Promise.all(["nfl", "cfb"].map(sport => bozoRefreshOneSchedule(env, sport, SEASON, nowMs)));
+}
+
+function bozoPublicScheduleGames(doc, dates) {
+  const m = String(dates || "").match(/^(\d{8})(?:-(\d{8}))?$/);
+  const compact = s => String(s || "").replace(/-/g, "");
+  const lo = m ? m[1] : null, hi = m ? (m[2] || m[1]) : null;
+  return ((doc && doc.games) || []).filter(g => {
+    const d = compact(g.localDate || (g.startsAt || "").slice(0, 10));
+    return !lo || (d >= lo && d <= hi);
+  }).map(g => ({
+    id: String(g.espnEventId), short: `${g.away.abbr} @ ${g.home.abbr}`, start: g.startsAt,
+    state: g.completed ? "post" : "pre", final: g.completed === true,
+    teams: [
+      { abbr: g.away.abbr, name: g.away.name, home: false, score: g.awayScore },
+      { abbr: g.home.abbr, name: g.home.name, home: true, score: g.homeScore },
+    ],
+  }));
+}
+
+function bozoScheduleFindGame(doc, pick) {
+  const games = Array.isArray(doc?.games) ? doc.games : Object.values(doc?.games || {});
+  if (pick.canonicalKey) {
+    const canonical = games.find(g => g.canonicalKey === pick.canonicalKey);
+    if (canonical) return canonical;
+  }
+  // Foreign ids are attributes, never storage keys. This compatibility lookup supports
+  // browser and MCP submissions that know only ESPN's id while the canonical key is filled.
+  const foreignId = String(pick.espnEventId || pick.eventId || "");
+  if (foreignId) {
+    const attributed = games.find(g => String(g.espnEventId || "") === foreignId);
+    if (attributed) return attributed;
+  }
+  const parts = String(pick.game || "").split(/\s+(?:@|vs\.?)\s+/i);
+  const startsAt = pick.startsAt || pick.commenceTime;
+  if (parts.length !== 2 || isNaN(Date.parse(startsAt || ""))) return null;
+  const wanted = bozoCanonicalScheduleKey(pick.sport, parts[0], parts[1], startsAt);
+  return games.find(g => g.canonicalKey === wanted) || null;
+}
+
+const ledgerKey = (season, week, playerKey) => `${season}-w${week}-${playerKey}`;
+
+// ⚠️ /bozo/picks and /bozoauth are keyed with encodeURIComponent(name), so "The Kid"
+// is stored as "The%20Kid" and nothing on the page decodes it. The ledger KEY keeps
+// that encoding — it stays URL-safe for a targeted row read and for deep-path PATCH
+// keys — but the player COLUMN is decoded, because that column is what lands in the CSV.
+const playerName = k => { try { return decodeURIComponent(k); } catch { return k; } };
+
+// Entry-stage rows. Everything here is known the instant the board locks.
+function ledgerEntries(lid, season, week, picks, order) {
+  const names = Object.keys(picks);
+  const byTs = names.slice().sort((a, b) => (picks[a].ts || 0) - (picks[b].ts || 0));
+  const closeTs = Math.max(...names.map(n => picks[n].ts || 0));
+
+  // Shortest odds = the biggest favorite = the MOST negative price. This has to match
+  // decide(), which takes max(imp(price)): −300 is chalkier than −110.
+  // ⚠️ An earlier spec snippet sorted the other way and called −100 "chalkiest".
+  let chalk = null;
+  for (const n of names) if (chalk === null || picks[n].price < picks[chalk].price) chalk = n;
+
+  const rows = {};
+  for (const n of names) {
+    const x = picks[n];
+    rows[ledgerKey(season, week, n)] = {
+      league: lid,                              // so a CSV across leagues stays sortable
+      season, week, player: x.who || playerName(n),
+      sport: x.sport, eventId: x.eventId, game: x.game,
+      mkt: x.mkt, side: x.side, dir: x.dir,
+      priceSource: x.priceSource || "self",     // see the note in bozoPick
+      line: x.line == null ? null : x.line,     // numeric, and separate from the label,
+      label: x.label,                           // or the Bozo Index can't be computed
+      prop: x.prop || null,
+      price: x.price,
+      // ⚠️ The opposite side of the entry, and the book both ends came from. Without
+      // priceOpp there is no de-vig, so the CLV chart's y-axis baseline is wrong by the
+      // hold. A null here is a flagged gap, never a silent raw-implied substitution.
+      priceOpp: x.entryPriceOpp ?? null,
+      entryBook: x.entryBook || null,
+      selectionKey: x.selectionKey || null,
+      startsAt: x.startsAt || null,             // what schedules the close capture
+      dkSgpEligible: x.dkSgpEligible || null,   // "asserted" — see bozoPick
+      mainLine: null,                           // reserved — see the note above
+      ts: x.ts || null,                         // server time, the reason /bozo/pick exists
+      rank: byTs.indexOf(n) + 1,                // 1 = first in, N = Last In
+      secToClose: x.ts && closeTs ? Math.round((closeTs - x.ts) / 1000) : null,
+      tiebreak: order || null,                  // the week's drawn lever hierarchy
+      shortestOdds: n === chalk,
+      slipKey: x.slipKey || null,
+    };
+  }
+  return rows;
+}
+
+// ⚠️ Never throws into the caller. At lock the ticket is already placed and the
+// permutation already drawn; failing the last submitter's request over a bookkeeping
+// write would be worse than a missing row. bozoGrade backfills anything that didn't land.
+async function ledgerWriteEntries(env, lid, season, week, picks, order) {
+  try {
+    await fbPatch(env, LG(lid) + "/ledger", ledgerEntries(lid, season, week, picks, order));
+    return true;
+  } catch (e) {
+    console.log("ledger: entry write failed — " + e.message);
+    return false;
+  }
+}
+
+// Idempotent by construction: writes only rows that are absent, so it can never clobber
+// a field a later stage already patched in.
+async function ledgerBackfill(env, lid, state) {
+  const picks = state.picks || {};
+  if (!Object.keys(picks).length) return false;
+  let have = {};
+  try { have = (await fbGet(env, LG(lid) + "/ledger")).data || {}; }
+  catch (e) { console.log("ledger: backfill read failed — " + e.message); return false; }
+
+  const rows = ledgerEntries(lid, state.season || SEASON, state.week || 1, picks, state.order || null);
+  const missing = {};
+  for (const k of Object.keys(rows)) if (!have[k]) missing[k] = rows[k];
+  if (!Object.keys(missing).length) return false;
+
+  try { await fbPatch(env, LG(lid) + "/ledger", missing); return true; }
+  catch (e) { console.log("ledger: backfill write failed — " + e.message); return false; }
+}
+
+// Grade-stage deep-path update. Keys carry slashes, so each field is written on its own
+// and nothing written at lock is touched.
+function ledgerGradeUpdate(season, week, results, bozo, picks, have) {
+  // ⚠️ Results arrive keyed however the page keyed them, and the page keys off
+  // Object.keys(picks) — which is URL-encoded. Map any decoded name back onto the
+  // stored key, or the day someone fixes the "The%20Kid" display bug the grade stage
+  // starts writing a SECOND, orphaned row per player instead of patching the real one.
+  const keys = Object.keys(picks || {});
+  const norm = k => keys.includes(k) ? k
+    : keys.includes(encodeURIComponent(k)) ? encodeURIComponent(k)
+    : (keys.find(x => playerName(x) === k) || k);
+  const bozoKey = bozo === undefined || bozo === null ? bozo : norm(bozo);
+
+  const upd = {};
+  for (const [p0, r] of Object.entries(results || {})) {
+    if (!r || typeof r !== "object") continue;
+    const p = norm(p0);
+    const k = ledgerKey(season, week, p);
+
+    // result is the four-state truth; won is the boolean derived from it, and null on
+    // push/void so a push can never silently count as a loss.
+    const result = r.result || (r.won === true ? "won" : r.won === false ? "lost" : null);
+    if (result) {
+      upd[`${k}/result`] = result;
+      upd[`${k}/won`] = result === "won" ? true : result === "lost" ? false : null;
+    }
+    if (r.actual !== undefined) upd[`${k}/actual`] = r.actual ?? null;
+
+    /* ⚠️ A CAPTURED CLOSE IS IMMUTABLE AND OUTRANKS ANYTHING TYPED IN LATER. The cron
+       snapped it at kickoff off a licensed feed and stamped a server clock; a manager
+       grading on Monday is recalling a number, at best. Once closeObservedAt exists the
+       grade stage does not touch the close columns — so re-grading a week to fix a
+       result can never silently rewrite its prices.
+
+       ⚠️ BUT "UNAVAILABLE" IS NOT "CAPTURED", and conflating the two locked out the one
+       case that most needs a human: the cron couldn't match the market, so the leg has a
+       reason and no price, and a manager reading it off the placed ticket is the ONLY
+       way it will ever have one. A row with a reason and no observation is fillable.
+       Filling it clears the reason, because the reason described a gap that no longer
+       exists — and closeSource keeps the two provenances apart forever. */
+    const row = (have || {})[k] || {};
+    const capturedAlready = row.closeObservedAt != null;
+
+    if (!capturedAlready) {
+      if (r.close !== undefined) {
+        upd[`${k}/close`] = r.close ?? null;
+        // ⚠️ Record WHERE a close came from. Hand-entered and cron-captured closes must
+        // never end up silently mixed in the same column.
+        upd[`${k}/closeSource`] = r.close == null ? null : (r.closeSource || "manual");
+        // A hand-entered close is still DraftKings' number — it is read off the placed
+        // ticket — so the book is the same. What differs is who observed it, and that is
+        // what closeSource carries.
+        if (r.close != null) {
+          upd[`${k}/closeBook`] = r.closeBook || "draftkings";
+          // The gap is filled, so the note describing the gap goes.
+          upd[`${k}/closeUnavailableReason`] = null;
+        }
+      }
+      // ⚠️ The opposite side travels with the close or the close is useless. Without it
+      // there is no de-vig, and the chart drops the leg exactly as if nothing had been
+      // entered — which looks like the manual fill silently failed.
+      if (r.closeOpp !== undefined) upd[`${k}/closeOpp`] = r.closeOpp ?? null;
+      if (r.closeBook !== undefined) upd[`${k}/closeBook`] = r.closeBook ?? null;
+      if (r.closeObservedAt !== undefined) upd[`${k}/closeObservedAt`] = r.closeObservedAt ?? null;
+      if (r.closeUnavailableReason !== undefined)
+        upd[`${k}/closeUnavailableReason`] = r.closeUnavailableReason ?? null;
+    }
+    if (bozoKey !== undefined) upd[`${k}/bozo`] = p === bozoKey;
+  }
+  return upd;
+}
+
+/* ========================= Bozo closing-price capture ======================
+   The x-axis of the CLV chart. Without this there is nothing to compare an entry price
+   to, and `dd_bozo_week` is right to say the site cannot compute anyone's CLV.
+
+   ⚠️ WHERE THE PRICE ACTUALLY COMES FROM, said plainly. The league rule is that every
+   leg is a real DraftKings selection, and the handoff says to capture from DraftKings at
+   both ends. DRAFTKINGS HAS NO PUBLIC ODDS API — no developer portal, no key programme —
+   which bozo.html has said in a comment for months. The only compliant route to a DK
+   number is a licensed aggregator, and this Worker already has one wired up with a key:
+   SportsGameOdds, whose payloads carry `byBookmaker.draftkings`.
+
+   So: the price IS DraftKings' price, and `closeBook` is honestly "draftkings". But it
+   reached us through a reseller, and that is recorded separately in `closeSource:
+   "sgo"`. Those are two different facts and they get two different fields. Anything
+   that quotes a close should be able to say which book set it AND how we came to have
+   it, without having to guess.
+
+   ⚠️ WHAT THIS CANNOT DO, so nobody discovers it as a surprise:
+     · Nothing here joins on an id, because there is no shared id to join on. Picks carry
+       ESPN event ids (the page reads ESPN's scoreboard) and the aggregator has its own,
+       so events are matched on sport + kickoff + team name, and props on stat + player +
+       number parsed out of the free text a player typed. Every one of those joins can
+       miss. A miss writes a null WITH THE REASON IT MISSED — never a guess, and never
+       the entry price.
+     · A prop IS always priced: every Bozo leg goes on a real DraftKings bet slip, so the
+       market exists and closes. What can fail is the text-to-market resolution, and
+       bozoDkPropQuote reports which of stat / player / number it could not line up so
+       the fix is obvious rather than a shrug.
+     · `other` legs are the real hole. They describe an arbitrary game market in free
+       text with no player, no stat and no number to join on, so they stay null.
+     · DK's real SGP price for a correlated ticket is not obtainable at all. See
+       ticketPricing() — the displayed parlay price is labelled indicative instead.
+
+   Rows are immutable: a close is written once, and every write below is guarded on the
+   field being absent. Nulls stay null and are NEVER back-filled from the entry price —
+   an entry price copied into the close column is a fabricated zero-movement reading,
+   which is worse than a visible gap because it silently drags every average toward zero.
+   ========================================================================== */
+
+const BOZO_CLOSE_CRON = "*/5 * * * *";
+const BOZO_CLOSE_API = "https://api.sportsgameodds.com/v2/events";
+// Fire when kickoff is inside this window ahead of now. One cron tick wide, plus slack,
+// so a game cannot slip between two runs.
+const BOZO_CLOSE_LEAD_MS = 7 * 60 * 1000;
+// How far back we will still accept a capture. Past this the number is not a close any
+// more, it is an in-play price, and writing it into the close column would be a lie.
+const BOZO_CLOSE_STALE_MS = 20 * 60 * 1000;
+const BOZO_SGO_LEAGUE = { nfl: "NFL", cfb: "NCAAF", nba: "NBA", cbb: "NCAAB", mlb: "MLB", nhl: "NHL" };
+const BOZO_CLOSE_BOOK = "draftkings";
+
+// Team names arrive spelled differently at each end. Strip everything that is not a
+// letter or digit and compare on that — "St. Louis" / "St Louis" / "ST-LOUIS" collapse.
+const bzNorm = s => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+// Week 1 floor: SGO returned only `names.long` for North Texas and Indiana, while the
+// filed leg stores UNT and IU. Keep these aliases even with the ESPN registry: they are
+// the guaranteed path for the Saturday 2026-09-05 close if KV is unavailable.
+const BOZO_TEAM_FALLBACK_ALIASES = Object.freeze({
+  unt: "northtexas",
+  iu: "indiana",
+  ind: "indiana",
+});
+const BOZO_TEAM_REGISTRY_VERSION = 1;
+const BOZO_TEAM_REGISTRY_TTL = 7 * 24 * 60 * 60;
+
+function bozoBuildTeamRegistry(sport) {
+  const rows = ((BOZO_ESPN_TEAM_SEED.sports || {})[sport] || []);
+  const aliases = Object.create(null);
+  const ambiguous = new Set();
+  const add = (value, canonical) => {
+    const alias = bzNorm(value);
+    if (!alias || ambiguous.has(alias)) return;
+    if (aliases[alias] && aliases[alias] !== canonical) {
+      delete aliases[alias];
+      ambiguous.add(alias);
+      return;
+    }
+    aliases[alias] = canonical;
+  };
+
+  for (const team of rows) {
+    const canonical = bzNorm(team.displayName || team.shortDisplayName || team.location);
+    if (!canonical) continue;
+    // SGO's `long` is usually ESPN's shortDisplayName/location for college teams and
+    // ESPN's displayName for NFL teams. Index all observed stable vocabularies; mascot
+    // name alone is deliberately excluded because dozens of teams share it.
+    for (const value of [team.abbreviation, team.displayName, team.shortDisplayName, team.location]) {
+      add(value, canonical);
+    }
+  }
+  return {
+    schemaVersion: BOZO_TEAM_REGISTRY_VERSION,
+    sourceAsOf: BOZO_ESPN_TEAM_SEED.asOf,
+    sport,
+    teamCount: rows.length,
+    aliases,
+  };
+}
+
+async function bozoTeamRegistry(env, sport) {
+  const built = bozoBuildTeamRegistry(sport);
+  const kv = env && env.RL;
+  if (!kv || !built.teamCount) return built.aliases;
+  const key = `bozo:team-registry:v${BOZO_TEAM_REGISTRY_VERSION}:${built.sourceAsOf}:${sport}`;
+  try {
+    const cached = await kv.get(key, "json");
+    if (cached && cached.schemaVersion === BOZO_TEAM_REGISTRY_VERSION &&
+        cached.sourceAsOf === built.sourceAsOf && cached.sport === sport && cached.aliases) {
+      return cached.aliases;
+    }
+  } catch { /* the embedded ESPN snapshot remains usable */ }
+  try { await kv.put(key, JSON.stringify(built), { expirationTtl: BOZO_TEAM_REGISTRY_TTL }); }
+  catch { /* matching must not depend on cache availability */ }
+  return built.aliases;
+}
+
+const bozoTeamNorm = (s, registry) => {
+  const key = bzNorm(s);
+  if (registry && typeof registry[key] === "string") return registry[key];
+  if (!Object.prototype.hasOwnProperty.call(BOZO_TEAM_FALLBACK_ALIASES, key)) return key;
+  const fallback = BOZO_TEAM_FALLBACK_ALIASES[key];
+  return registry && typeof registry[fallback] === "string" ? registry[fallback] : fallback;
+};
+
+// The two sides of each game-level market.
+const BOZO_ODD_IDS = {
+  ml:     ["points-home-game-ml-home", "points-away-game-ml-away"],
+  spread: ["points-home-game-sp-home", "points-away-game-sp-away"],
+  total:  ["points-all-game-ou-over",  "points-all-game-ou-under"],
+};
+
+/* ---------------- player props ----------------
+   ⚠️ A PROP IS ALWAYS PRICED. Every Bozo leg goes on a real DraftKings bet slip, so by
+   construction DraftKings has a market for it and quotes both sides at kickoff. The
+   difficulty was never whether the price exists — it was resolving the free text a
+   player typed ("Kelce receiving yards") onto the odds source's market identifier.
+   That is a MATCHING problem, and it gets a real attempt rather than an assumed null.
+
+   The aggregator keys props as {statID}-{playerEntityID}-{period}-{betType}-{side}, so a
+   match needs three things to line up: the stat, the player, and the number. All three
+   come out of what is already on the leg — the prop text carries the first two and
+   `line` is the third.
+
+   ⚠️ When it still fails, the reason says WHICH of the three failed. "Couldn't resolve
+   the stat" and "DraftKings pulled the market" are different problems with different
+   fixes, and a blanket "no close" hides both. */
+const BOZO_STAT_WORDS = [
+  // NFL / CFB
+  [/pass(ing)?\s*(yds|yards)/i,            ["passing_yards"]],
+  [/pass(ing)?\s*(td|touchdown)/i,         ["passing_touchdowns"]],
+  [/completion/i,                          ["passing_completions"]],
+  [/interception|\bint\b/i,                ["passing_interceptions"]],
+  [/rush(ing)?\s*(yds|yards)/i,            ["rushing_yards"]],
+  [/rush(ing)?\s*(td|touchdown)/i,         ["rushing_touchdowns"]],
+  [/receiv(ing)?\s*(yds|yards)/i,          ["receiving_yards"]],
+  [/reception|\brec\b(?!eiving)/i,         ["receptions"]],
+  [/receiv(ing)?\s*(td|touchdown)/i,       ["receiving_touchdowns"]],
+  [/anytime\s*(td|touchdown)|scores?\s*a\s*(td|touchdown)/i, ["touchdowns"]],
+  // NBA / CBB
+  [/\bpoints?\b|\bpts\b/i,                 ["points"]],
+  [/rebound|\breb\b/i,                     ["rebounds"]],
+  [/assist|\bast\b/i,                      ["assists"]],
+  [/three|\b3pt|3-point/i,                 ["threePointersMade"]],
+  [/\bsteal/i,                             ["steals"]],
+  [/\bblock/i,                             ["blocks"]],
+  // MLB
+  [/strikeout|\bks?\b|punchout/i,          ["strikeouts"]],
+  [/\bhits?\b/i,                           ["hits"]],
+  [/total\s*bases/i,                       ["totalBases"]],
+  [/home\s*run|\bhr\b/i,                   ["homeRuns"]],
+  [/\brbi/i,                               ["RBIs"]],
+  // NHL
+  [/shots?\s*on\s*goal|\bsog\b/i,          ["shotsOnGoal"]],
+  [/\bgoals?\b/i,                          ["goals"]],
+  [/\bsaves?\b/i,                          ["saves"]],
+  [/\bassists?\b/i,                        ["assists"]],
+  [/\bpoints?\b/i,                         ["points"]],
+];
+
+// Words that are never part of a player's name, so they can be stripped before what is
+// left is treated as one.
+const BOZO_PROP_NOISE = /\b(over|under|o|u|the|a|an|to|record|total|\d+\+?|yards?|yds|pts|points?|rebounds?|reb|assists?|ast|receptions?|rec|receiving|rushing|passing|touchdowns?|tds?|strikeouts?|hits?|bases|home|runs?|rbi|shots?|on|goal|sog|goals?|saves?|steals?|blocks?|three|3pt|pointers?|made|anytime|scores?|completions?|interceptions?|ints?|first|longest|alt)\b/gi;
+
+function bozoPropStats(text) {
+  const out = [];
+  for (const [re, ids] of BOZO_STAT_WORDS) if (re.test(text)) out.push(...ids);
+  return [...new Set(out)];
+}
+// Whatever is left once the stat vocabulary is removed is the player's name.
+function bozoPropNameTokens(text) {
+  return String(text || "").replace(BOZO_PROP_NOISE, " ")
+    .split(/[^A-Za-z'.-]+/).map(bzNorm).filter(t => t.length >= 3);
+}
+
+const bzAmerican = v => {
+  const n = Number(v);
+  return Number.isFinite(n) && Math.abs(n) >= 100 ? Math.round(n) : null;
+};
+
+// One DraftKings outcome can have a main number plus dozens of alternate numbers. Pick
+// the exact market instance the member selected; requesting alt lines and then silently
+// reading the main line would price a different bet.
+function bozoDkOutcome(odd, field, wanted) {
+  const book = (((odd || {}).byBookmaker || {})[BOZO_CLOSE_BOOK]);
+  if (!book) return null;
+  const rows = [book, ...((book.altLines || []))];
+  return rows.find(row => {
+    if (!row || row.available === false || bzAmerican(row.odds) === null) return false;
+    return field === null || (Number.isFinite(Number(row[field])) && Math.abs(Number(row[field]) - wanted) < 0.001);
+  }) || null;
+}
+
+// Pull DraftKings' two sides for one market off an aggregator event.
+// Returns { price, opp, line, snapshotAt } in the orientation of the leg, or a reason.
+function bozoDkQuote(event, pick, registry) {
+  if (pick.mkt === "prop") return bozoDkPropQuote(event, pick);
+  const ids = BOZO_ODD_IDS[pick.mkt];
+  if (!ids) return { reason: "market-not-matchable" };
+  const odds = (event && event.odds) || {};
+  const a = odds[ids[0]], b = odds[ids[1]];
+  if (!a || !b) return { reason: "market-absent-at-source" };
+
+  // Orient to the side the player actually took. For a total that is over/under; for a
+  // moneyline or spread it is home/away, and the pick stores a team abbreviation.
+  let mineOdd, theirOdd;
+  if (pick.mkt === "total") {
+    const over = (pick.dir || pick.side) !== "under";
+    mineOdd = over ? a : b; theirOdd = over ? b : a;
+  } else {
+    const homeNames = (((event.teams || {}).home || {}).names || {});
+    const awayNames = (((event.teams || {}).away || {}).names || {});
+    const home = [homeNames.short, homeNames.medium, homeNames.long]
+      .map(name => bozoTeamNorm(name, registry)).filter(Boolean);
+    const away = [awayNames.short, awayNames.medium, awayNames.long]
+      .map(name => bozoTeamNorm(name, registry)).filter(Boolean);
+    const side = bozoTeamNorm(pick.side, registry);
+    if (side && home.includes(side))      { mineOdd = a; theirOdd = b; }
+    else if (side && away.includes(side)) { mineOdd = b; theirOdd = a; }
+    else return { reason: "could not tell which side of the market the leg was on" };
+  }
+
+  const field = pick.mkt === "spread" ? "spread" : pick.mkt === "total" ? "overUnder" : null;
+  const storedLine = Number(pick.line);
+  if (field && !Number.isFinite(storedLine)) return { reason: "the leg has no number to price" };
+  // Bozo stores the handicap as points this side GIVES UP: +39.5 renders Indiana -39.5.
+  // SGO stores the sportsbook display number, so spreads cross this boundary inverted.
+  const wanted = pick.mkt === "spread" ? -storedLine : storedLine;
+  const mine = bozoDkOutcome(mineOdd, field, wanted);
+  const opposingNumber = pick.mkt === "spread" ? -wanted : wanted;
+  const theirs = bozoDkOutcome(theirOdd, field, opposingNumber);
+  if (!mine || !theirs)
+    return { reason: `DraftKings had no two-sided ${pick.mkt} market at ${wanted}` };
+  const minePrice = bzAmerican(mine.odds), theirPrice = bzAmerican(theirs.odds);
+
+  // ⚠️ Both sides or nothing. Without the opposite side there is no de-vig, and the
+  // chart's expected-win baseline is off by the entire hold.
+  if (minePrice === null || theirPrice === null) return { reason: "only one side of the market was priced" };
+  const observed = [mine.lastUpdatedAt, theirs.lastUpdatedAt].filter(x => !isNaN(Date.parse(x || ""))).sort();
+  return { price: minePrice, opp: theirPrice, line: pick.mkt === "ml" ? 0 : storedLine,
+           bookLine: pick.mkt === "ml" ? 0 : wanted,
+           snapshotAt: observed.length ? observed[observed.length - 1] : null };
+}
+
+/* Resolve one free-text prop against every market the aggregator has on that event.
+   Returns the DraftKings price for the side the player took, plus the other side.
+
+   ⚠️ The number is part of the identity, not a detail. "Kelce over 62.5" and "Kelce over
+   74.5" are two different DraftKings markets that close at different prices, so a match
+   that ignores the line would be confidently wrong rather than absent. Alt lines are
+   requested for exactly this reason: Bozo's favourites-only band pushes players onto
+   bought-down numbers constantly, and the main line is often not the one they took. */
+function bozoDkPropQuote(event, pick) {
+  const odds = (event && event.odds) || {};
+  const wantStats = bozoPropStats(pick.prop || "");
+  const wantName = bozoPropNameTokens(pick.prop || "");
+  const wantLine = Number(pick.line);
+  const over = (pick.dir || pick.side) !== "under";
+
+  if (!wantStats.length)
+    return { reason: 'couldn\'t work out which stat "' + String(pick.prop || "").slice(0, 40) + '" refers to' };
+  if (!wantName.length)
+    return { reason: 'couldn\'t work out which player "' + String(pick.prop || "").slice(0, 40) + '" refers to' };
+  if (!Number.isFinite(wantLine)) return { reason: "the leg has no number to match a prop market on" };
+
+  let sawStat = false, sawPlayer = false, sawLine = false, best = null;
+  for (const [oddID, o] of Object.entries(odds)) {
+    // {statID}-{playerEntityID}-{period}-{betType}-{side}
+    const parts = String(oddID).split("-");
+    if (parts.length < 5) continue;
+    const side = parts[parts.length - 1];
+    const betType = parts[parts.length - 2];
+    if (betType !== "ou") continue;                       // props are over/under markets
+    const statID = parts[0], entity = parts.slice(1, parts.length - 3).join("-");
+    if (!wantStats.includes(statID)) continue;
+    sawStat = true;
+
+    const ent = bzNorm(entity);
+    if (!wantName.some(t => ent.includes(t))) continue;
+    sawPlayer = true;
+
+    // The line the book is offering on this particular market instance.
+    const ln = Number(o.bookOverUnder ?? o.overUnder ?? o.fairOverUnder);
+    if (!Number.isFinite(ln) || Math.abs(ln - wantLine) > 0.001) continue;
+    sawLine = true;
+
+    if (side !== (over ? "over" : "under")) continue;
+    const opp = odds[parts.slice(0, -1).join("-") + "-" + (over ? "under" : "over")];
+    if (!opp) continue;
+    const mine = (o.byBookmaker || {})[BOZO_CLOSE_BOOK];
+    const theirs = (opp.byBookmaker || {})[BOZO_CLOSE_BOOK];
+    if (!mine || !theirs) continue;
+    if (mine.available === false || theirs.available === false) continue;
+    const a = bzAmerican(mine.odds), b = bzAmerican(theirs.odds);
+    if (a === null || b === null) continue;
+    const observed = [mine.lastUpdatedAt, theirs.lastUpdatedAt].filter(x => !isNaN(Date.parse(x || ""))).sort();
+    best = { price: a, opp: b, line: wantLine,
+             snapshotAt: observed.length ? observed[observed.length - 1] : null };
+    break;
+  }
+  if (best) return best;
+
+  // ⚠️ Say which of the three joins failed. "The stat resolved but the player didn't"
+  // and "DraftKings pulled the market" need different fixes, and one shared message
+  // would hide both behind whichever someone guessed at first.
+  if (!sawStat)   return { reason: "the odds source had no " + wantStats[0].replace(/_/g, " ") + " market on this game" };
+  if (!sawPlayer) return { reason: 'no market for "' + wantName.join(" ") + '" on this game — check the spelling against the bet slip' };
+  if (!sawLine)   return { reason: "DraftKings had that player and stat but not the number " + wantLine + " at kickoff" };
+  return { reason: "DraftKings wasn't pricing that selection at kickoff" };
+}
+
+// Every leg across every league that is still waiting on a close and whose game is
+// about to start. One RTDB read; on a quiet tick this returns nothing and we stop.
+async function bozoCloseTargets(env, nowMs) {
+  let leagues;
+  try { leagues = await loadLeagues(env); } catch { return []; }
+  // Legacy seats and in-flight picks can still be name-keyed. Resolve their immutable
+  // account id now, while the users table is available, so a kickoff-stage ledger row is
+  // a complete receipt even when the lock-stage row was never written.
+  const uidByName = new Map();
+  try {
+    const users = await loadUsers(env);
+    for (const [key, rec] of Object.entries(users || {})) {
+      const uid = playerName(key);
+      if (UID_RE.test(uid)) uidByName.set(accountName(uid, rec), uid);
+    }
+  } catch { /* player remains useful evidence even if identity lookup is unavailable */ }
+  const out = [];
+  for (const [lid, lg] of Object.entries(leagues || {})) {
+    // ⚠️ Synthetic leagues are skipped outright. Their closes are fabricated by design
+    // and must never be overwritten with, or mistaken for, an observed market price.
+    if (lg && lg.synthetic === true) continue;
+    const picks = (lg && lg.picks) || {};
+    const results = (lg && lg.results) || {};
+    for (const [key, p] of Object.entries(picks)) {
+      if (!p || !p.eventId) continue;
+      const r = results[key] || {};
+      if (r.close != null || r.closeUnavailableReason) continue;   // immutable once written
+      const start = Date.parse(p.startsAt || "");
+      if (!Number.isFinite(start)) continue;                       // no kickoff, no window
+      if (start > nowMs + BOZO_CLOSE_LEAD_MS) continue;            // too early
+      if (start < nowMs - BOZO_CLOSE_STALE_MS) continue;           // too late to be a close
+      const player = p.who || memberNameAt(lg, key) || playerName(key);
+      const uid = UID_RE.test(key) ? key : (uidByName.get(player) || null);
+      out.push({ lid, key, pick: p, player, uid, startMs: start,
+                 season: lg.season || SEASON, week: lg.week || 1 });
+    }
+  }
+  return out;
+}
+
+async function bozoFetchEvents(env, sport, startMs, needProps) {
+  if (!env.SGO_KEY) throw new Error("Worker misconfigured: SGO_KEY secret not set");
+  const leagueID = BOZO_SGO_LEAGUE[sport];
+  if (!leagueID) return [];
+  const url = new URL(BOZO_CLOSE_API);
+  url.searchParams.set("leagueID", leagueID);
+  // A generous window around the kickoff — the join is on teams, not on this.
+  url.searchParams.set("startsAfter", new Date(startMs - 6 * 3600 * 1000).toISOString());
+  url.searchParams.set("startsBefore", new Date(startMs + 6 * 3600 * 1000).toISOString());
+  // ⚠️ The oddID filter is dropped when any leg in this bucket is a prop. A prop's market
+  // id contains the player's entity id, which we don't know until we've seen the event's
+  // markets — so filtering by id first would rule out the very rows we need to search.
+  // Game-only buckets keep the narrow filter, because most ticks are game-only and
+  // pulling every prop on a full NFL Sunday for no reason is wasteful.
+  if (!needProps) url.searchParams.set("oddID", [...new Set(Object.values(BOZO_ODD_IDS).flat())].join(","));
+  url.searchParams.set("includeOpposingOdds", "true");
+  // ⚠️ Alt lines are NOT optional here. Bozo's favourites-only band pushes players onto
+  // bought-down numbers constantly, so the number they took is frequently not the main
+  // line — and a close snapped off the main line would be a different market's price.
+  url.searchParams.set("includeAltLines", "true");
+  url.searchParams.set("limit", needProps ? "25" : "100");
+  const res = await fetch(url, { headers: { "x-api-key": env.SGO_KEY } });
+  if (!res.ok) throw new Error("SGO " + res.status);
+  const body = await res.json();
+  return (body && body.data) || [];
+}
+
+// Join an ESPN-sourced pick to an aggregator event. The pick's `game` is "AWAY VS HOME"
+// as the page rendered it, so both abbreviations are available even though the ids are not.
+function bozoMatchEvent(events, pick, registry) {
+  const parts = String(pick.game || "").split(/\s+(?:@|vs\.?)\s+/i);
+  const want = parts.map(part => bozoTeamNorm(part, registry)).filter(Boolean);
+  if (want.length < 2) return null;
+  const wantedStart = Date.parse(pick.startsAt || "");
+  const matches = [];
+  for (const ev of events) {
+    const t = ev.teams || {};
+    const names = [t.home, t.away].map(x => {
+      const n = (x && x.names) || {};
+      return [n.short, n.medium, n.long].map(name => bozoTeamNorm(name, registry)).filter(Boolean);
+    });
+    const hit = want.every(w => names.some(list => list.includes(w)));
+    if (hit) matches.push(ev);
+  }
+  if (!matches.length) return null;
+  if (!Number.isFinite(wantedStart)) return matches[0];
+  matches.sort((a, b) => Math.abs(Date.parse(a.status?.startsAt || "") - wantedStart) -
+                         Math.abs(Date.parse(b.status?.startsAt || "") - wantedStart));
+  const nearest = matches[0], delta = Math.abs(Date.parse(nearest.status?.startsAt || "") - wantedStart);
+  return Number.isFinite(delta) && delta <= 6 * 3600 * 1000 ? nearest : null;
+}
+
+const bozoRawImplied = price => price < 0 ? -price / (-price + 100) : 100 / (price + 100);
+
+function bozoDevigPair(price, opp) {
+  const a = bzAmerican(price), b = bzAmerican(opp);
+  if (a === null || b === null) return null;
+  const pa = bozoRawImplied(a), pb = bozoRawImplied(b), sum = pa + pb;
+  if (!Number.isFinite(sum) || sum <= 0) return null;
+  return { fair: pa / sum, hold: sum - 1 };
+}
+
+function assertQuote(quote, pick) {
+  if (!quote || quote.reason) return (quote && quote.reason) || "no quote returned";
+  if (bzAmerican(quote.price) === null || bzAmerican(quote.opp) === null)
+    return "the quote did not contain two real American prices";
+  if (pick.mkt !== "ml" && (!Number.isFinite(Number(quote.line)) ||
+      Math.abs(Number(quote.line) - Number(pick.line)) > 0.001))
+    return "the quote was for a different number";
+  return bozoDevigPair(quote.price, quote.opp) ? null : "the two-sided quote could not be de-vigged";
+}
+
+function bozoCanonicalKey(sport, event, registry) {
+  const teams = [event?.teams?.awa

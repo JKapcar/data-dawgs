@@ -1,0 +1,833 @@
+robabilities.push(projection.focal_win_probability);
+          return {
+            index: game.index, label: game.label, venue: game.venue,
+            opponent: { team_slug: game.opponent.team_slug, name: game.opponent.team, conference: game.opponent.conference || null },
+            available: true,
+            focal_win_probability: projection.focal_win_probability,
+            focal_loss_probability: 1 - projection.focal_win_probability,
+            venue_adjustment_elo: projection.venue_adjustment_elo,
+          };
+        });
+        if (probabilities.length !== games.length) return {
+          system_id: system.system_id, name: system.name, available: false,
+          reason: "This registered system has no declared matchup transform for every game.",
+        };
+        const exact = mcpCfbPoissonBinomial(probabilities);
+        const expectedWins = probabilities.reduce((sum, p) => sum + p, 0);
+        const variance = probabilities.reduce((sum, p) => sum + p * (1 - p), 0);
+        let mostLikelyWins = 0;
+        for (let wins = 1; wins < exact.length; wins++) if (exact[wins] > exact[mostLikelyWins]) mostLikelyWins = wins;
+        const thresholdGameLeverage = input.minimumWins === null ? null : projectedGames.map((game, index) => {
+          const withoutGame = mcpCfbPoissonBinomial(probabilities.filter((_, j) => j !== index));
+          const ifWin = mcpCfbProbabilityAtLeast(withoutGame, input.minimumWins - 1);
+          const ifLoss = mcpCfbProbabilityAtLeast(withoutGame, input.minimumWins);
+          return {
+            index: game.index,
+            label: game.label,
+            opponent: game.opponent,
+            venue: game.venue,
+            probability_at_least_minimum_wins_if_forced_win: ifWin,
+            probability_at_least_minimum_wins_if_forced_loss: ifLoss,
+            threshold_probability_swing: ifWin - ifLoss,
+          };
+        }).sort((a, b) => b.threshold_probability_swing - a.threshold_probability_swing || a.index - b.index);
+        return {
+          system_id: system.system_id,
+          name: system.name,
+          available: true,
+          method: "Exact Poisson-binomial distribution over fixed independent game probabilities; no Monte Carlo.",
+          games: projectedGames,
+          expected_wins: expectedWins,
+          expected_losses: games.length - expectedWins,
+          win_count_standard_deviation: Math.sqrt(variance),
+          most_likely_wins: mostLikelyWins,
+          undefeated_probability: exact[games.length],
+          winless_probability: exact[0],
+          minimum_wins: input.minimumWins,
+          probability_at_least_minimum_wins: input.minimumWins === null
+            ? null : mcpCfbProbabilityAtLeast(exact, input.minimumWins),
+          threshold_game_leverage: thresholdGameLeverage,
+          threshold_leverage_definition: input.minimumWins === null ? null :
+            "Exact change in P(wins >= minimum_wins) when one supplied game's result is forced from loss to win, with all other independent fixed-rating probabilities unchanged.",
+          exact_win_distribution: exact.map((probability, wins) => ({ wins, probability })),
+          graded: system.graded === true,
+          prospective_forecasts_exist: system.prospective_forecasts_exist === true,
+        };
+      });
+      if (!systems.some(system => system.available))
+        throw new Error("no registered CFB system can project every game in this schedule path");
+      return toolText({
+        projection_kind: "caller-supplied hypothetical schedule path at the published rating period",
+        team: { team_slug: focal.team_slug, name: focal.team, conference: focal.conference || null },
+        games_supplied: games.length,
+        rating_period: envelope.data.rating_period,
+        systems,
+        consensus: envelope.data.consensus,
+        as_of: envelope.as_of,
+        source: envelope.source,
+        integrity: envelope.integrity || null,
+        modelled: true,
+        retrodictive: true,
+        prospective: false,
+        actual_schedule: false,
+        playoff_or_conference_rules_modelled: false,
+        graded: false,
+        read_only: true,
+        stored: false,
+        assumptions: [
+          "Ratings are fixed at the published end-of-2025 values for every game; wins and losses do not update later matchup probabilities.",
+          "Game outcomes are independent conditional on the fixed probabilities.",
+          "The caller supplied every opponent and venue; Data Dawgs did not assert that this is a real schedule.",
+          "Threshold leverage, when requested, changes only one supplied game's forced result and leaves every other fixed probability unchanged.",
+        ],
+        warnings: [
+          "This is an exact distribution over a hypothetical path, not a prospective 2026 season forecast or receipt.",
+          "Conference standings, tiebreakers, championship qualification, playoff selection and seed rules are not modelled.",
+          "Win-threshold leverage is not conference or playoff leverage unless the caller's threshold independently represents that event, which this tool does not establish.",
+          "The registry currently contains one retrodictive, ungraded Elo system; one system is not a consensus.",
+          "Current rosters, injuries, availability, talent, portal, market and matchup-style inputs are absent.",
+        ],
+      });
+    },
+  },
+  {
+    name: "dd_find_cfb_record_divergence",
+    title: "CFB record divergence",
+    catalog: "full",
+    readOnlyHint: true,
+    description: "Explore dated 2025 differences between each team's observed record rank and scoring-margin rank, optionally by exact team, direction, conference or minimum absolute gap. Returns the aggregate held-out validation receipt too. Descriptive only: it does not label teams overrated/underrated, claim prospective value, use timestamped market prices or make a betting recommendation.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        team: { type: "string", minLength: 1, maxLength: 80, description: "Optional exact team name or slug, case-insensitive." },
+        direction: {
+          type: "string",
+          enum: ["all", "record-ahead-of-scoring", "scoring-ahead-of-record", "aligned"],
+          default: "all",
+          description: "Descriptive direction of the record rank relative to scoring-margin rank.",
+        },
+        conference: { type: "string", minLength: 1, maxLength: 80, description: "Optional exact conference name, case-insensitive." },
+        minimum_absolute_rank_gap: { type: "integer", minimum: 0, maximum: 135, default: 0 },
+        limit: { type: "integer", minimum: 1, maximum: 25, default: 10 },
+      },
+      additionalProperties: false,
+    },
+    async run(args) {
+      const input = mcpCfbDivergenceArgs(args);
+      const evidence = await mcpCfbRecordDivergenceEvidence();
+      const baseline = evidence.baseline;
+      const validation = evidence.validation;
+      const sourceRows = input.team
+        ? [mcpCfbDivergenceTeamMatch(baseline.data.rows, input.team)]
+        : baseline.data.rows.slice();
+      let conference = null;
+      if (input.conference) {
+        const conferences = [...new Set(baseline.data.rows.map(row => row.conference))].sort((a, b) => a.localeCompare(b));
+        conference = conferences.find(name => name.toLowerCase() === input.conference.toLowerCase()) || null;
+        if (!conference) throw new Error("conference is not present in the dated record-divergence surface; available: " + conferences.join(", "));
+      }
+      const matches = sourceRows.filter(row =>
+        (input.direction === "all" || row.descriptive_direction === input.direction) &&
+        (!conference || row.conference === conference) &&
+        Math.abs(row.record_scoring_rank_gap) >= input.minimumAbsoluteRankGap
+      ).sort((a, b) =>
+        Math.abs(b.record_scoring_rank_gap) - Math.abs(a.record_scoring_rank_gap) ||
+        a.team.localeCompare(b.team)
+      );
+      const rows = matches.slice(0, input.limit).map(row => ({
+        team_slug: row.team_slug,
+        team: row.team,
+        conference: row.conference,
+        through_at: row.through_at,
+        games: row.games,
+        record: row.record,
+        win_percentage: row.win_percentage,
+        record_rank: row.record_rank,
+        point_differential_per_game: row.point_differential_per_game,
+        scoring_rank: row.scoring_rank,
+        record_scoring_rank_gap: row.record_scoring_rank_gap,
+        absolute_rank_gap: Math.abs(row.record_scoring_rank_gap),
+        descriptive_direction: row.descriptive_direction,
+        one_score_games: row.one_score_games,
+      }));
+      const result = validation.data.result;
+      return toolText({
+        query: {
+          team: input.team ? input.team.query : null,
+          direction: input.direction,
+          conference,
+          minimum_absolute_rank_gap: input.minimumAbsoluteRankGap,
+          limit: input.limit,
+        },
+        season: baseline.data.season,
+        ranking_basis: baseline.data.definitions,
+        matched_before_limit: matches.length,
+        returned: rows.length,
+        rows,
+        validation: {
+          status: validation.data.status,
+          finding: result.finding,
+          qualified_games: result.qualified_games,
+          holdout_games: result.holdout.n_games,
+          holdout_brier_improvement_over_elo: result.holdout.brier_improvement_over_elo,
+          holdout_log_loss_improvement_over_elo: result.holdout.log_loss_improvement_over_elo,
+          promotion_gate_passed: result.promotion_gate && result.promotion_gate.passed === true,
+          design: validation.data.design,
+          roadmap_decision: validation.data.roadmap_decision,
+          published_granularity: validation.data.published_granularity,
+          as_of: validation.as_of,
+          source: validation.source,
+          integrity: validation.integrity || null,
+        },
+        as_of: baseline.as_of,
+        source: baseline.source,
+        integrity: baseline.integrity || null,
+        observed_descriptive_rows: true,
+        modelled_fields: ["validation"],
+        current_team_labels_permitted: false,
+        prospective: false,
+        market_adjusted: false,
+        graded: false,
+        read_only: true,
+        stored: false,
+        warnings: [
+          "Rank gaps describe completed 2025 results; schedule strength is not adjusted in the team rows.",
+          "A single-season chronological holdout showed a small incremental signal beyond Elo, but this has not been validated prospectively or against timestamped market prices.",
+          "The validation receipt is aggregate-only and explicitly prohibits current-team predictive labels.",
+          "Do not convert these rows into overrated, underrated, fraud, betting-edge or recommendation claims.",
+        ],
+      });
+    },
+  },
+  {
+    name: "dd_get_cfb_model_disagreement",
+    title: "CFB model disagreement",
+    catalog: "full",
+    readOnlyHint: true,
+    description: "Read the dated aggregate 2025 CFB Elo-versus-market disagreement probe, including bucket measurements and the exact data blocker. The study is blocked because market observations have no capture timestamp; it does not identify a better model, authorize a blend or provide game-level edges.",
+    inputSchema: MCP_NO_ARGS,
+    async run(args) {
+      if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+      const extra = Object.keys(args);
+      if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+      const envelope = await mcpCfbModelDisagreementEvidence();
+      const data = envelope.data;
+      return toolText({
+        question: data.question,
+        finding: data.finding,
+        conclusion_withheld: true,
+        why_blocked: data.why_blocked,
+        what_would_unblock_it: data.what_would_unblock_it,
+        measured_anyway: data.measured_anyway,
+        governance: data.governance || [],
+        as_of: envelope.as_of,
+        source: envelope.source,
+        built: envelope.built || null,
+        integrity: envelope.integrity || null,
+        market_observation_timestamp_available: false,
+        market_price_timing: "unknown",
+        better_model_identified: false,
+        consensus_or_blend_authorized: false,
+        game_level_edges_available: false,
+        prospective: false,
+        graded: false,
+        read_only: true,
+        stored: false,
+        warnings: [
+          "The bucket measurements are reproducible, but the headline comparison is confounded by unknown market observation timing.",
+          "A larger market advantage in wider-gap buckets cannot distinguish a better method from a later information set.",
+          "Do not infer a model winner, consensus weight, current-game edge or recommendation from this blocked study.",
+        ],
+      });
+    },
+  },
+  {
+    name: "dd_get_cfb_model_receipt_status",
+    title: "CFB receipt ledger status",
+    catalog: "full",
+    readOnlyHint: true,
+    description: "Report the dated append-only CFB prospective forecast receipt ledger status and bounded counts by model. The ledger is currently empty by design; immutable receipt rows remain ungraded and outcomes belong in a separate future grading surface. This tool does not return backtest results or invent a leaderboard.",
+    inputSchema: MCP_NO_ARGS,
+    async run(args) {
+      if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("arguments must be an object");
+      const extra = Object.keys(args);
+      if (extra.length) throw new Error("unsupported field" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", "));
+      const envelope = await mcpCfbModelReceipts();
+      const rows = envelope.data;
+      const byModel = new Map();
+      for (const row of rows) {
+        if (!byModel.has(row.model_id)) byModel.set(row.model_id, {
+          model_id: row.model_id, receipts: 0, seasons: new Set(), first_issued_at: null,
+          last_issued_at: null, with_timestamped_market_context: 0,
+        });
+        const summary = byModel.get(row.model_id);
+        summary.receipts++;
+        summary.seasons.add(row.season);
+        if (!summary.first_issued_at || row.issued_at < summary.first_issued_at) summary.first_issued_at = row.issued_at;
+        if (!summary.last_issued_at || row.issued_at > summary.last_issued_at) summary.last_issued_at = row.issued_at;
+        if (row.market_context && row.market_context.captured_at) summary.with_timestamped_market_context++;
+      }
+      const models = [...byModel.values()].map(summary => ({
+        ...summary,
+        seasons: [...summary.seasons].sort((a, b) => a - b),
+      })).sort((a, b) => a.model_id.localeCompare(b.model_id));
+      return toolText({
+        status: rows.length ? "prospective-receipts-exist-ungraded" : "empty-by-design",
+        prospective_receipts: rows.length,
+        model_count: models.length,
+        models,
+        first_actual_forecast_exists: rows.length > 0,
+        graded_forecasts: 0,
+        receipt_ledger_is_grading_surface: false,
+        grading_surface_available: false,
+        leaderboard_available: false,
+        as_of: envelope.as_of,
+        source: envelope.source,
+        built: envelope.built || null,
+        integrity: envelope.integrity || null,
+        prospective: rows.length > 0,
+        graded: false,
+        read_only: true,
+        stored: false,
+        next_unlock: rows.length
+          ? "Join immutable forecast receipts to completed canonical outcomes in a separate derived grading surface without mutating the receipt rows."
+          : "Publish a canonical scheduled 2026 game, then freeze a model forecast before kickoff against exact schedule, ratings-registry and model-card snapshots.",
+        warnings: [
+          "A zero-row ledger is evidence that no CFB forecast has yet been frozen prospectively, not evidence of model performance.",
+          "Retrodictive 2025 backtests are intentionally excluded from this prospective receipt ledger.",
+          "Do not report CFB model grades, calibration, a leaderboard or a track record until prospective receipts and a separate outcome-derived grading surface exist.",
+        ],
+      });
+    },
+  },
+  {
+    name: "dd_find_cfb_team_games",
+    title: "CFB team games",
+    catalog: "full",
+    readOnlyHint: true,
+    description: "Query bounded schedule-derived 2025 CFB game results from a team's perspective. scope=team-games returns every covered game for one exact required team, optionally by opponent, week, regular/postseason, result or site. scope=latest-per-team returns one compact latest completed game per FBS team for bounded cross-team discovery, where team is optional and conference and opponent_division apply instead. Observed score and outcome facts only: latest means the last completed game in the dated 2025 surface, not current 2026 form, a forecast or a model grade. No EPA, opponent adjustment or market performance is available. A parameter belonging to the other scope is refused by name rather than ignored.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        scope: { type: "string", enum: ["team-games", "latest-per-team"], default: "team-games", description: "team-games needs one exact team and returns that team's covered games. latest-per-team returns each FBS team's last completed game and makes team optional." },
+        team: { type: "string", minLength: 1, maxLength: 80, description: "Exact canonical team name or slug, case-insensitive. REQUIRED when scope is team-games; optional when scope is latest-per-team." },
+        opponent: { type: "string", minLength: 1, maxLength: 80, description: "Optional exact canonical opponent name or slug, case-insensitive. scope=team-games only." },
+        week: { type: "integer", minimum: 1, maximum: 20, description: "scope=team-games only." },
+        conference: { type: "string", minLength: 1, maxLength: 80, description: "Optional exact FBS conference name, case-insensitive. scope=latest-per-team only." },
+        opponent_division: { type: "string", enum: ["all", "fbs", "fcs"], default: "all", description: "scope=latest-per-team only." },
+        season_type: { type: "string", enum: ["all", "regular", "postseason"], default: "all" },
+        result: { type: "string", enum: ["all", "win", "loss", "tie"], default: "all" },
+        site: { type: "string", enum: ["all", "home", "away", "neutral"], default: "all" },
+        sort: { type: "string", enum: ["kickoff-asc", "kickoff-desc", "team-asc"], default: "kickoff-asc", description: "kickoff-asc or kickoff-desc under scope=team-games, default kickoff-asc. team-asc or kickoff-desc under scope=latest-per-team, default team-asc. A value belonging to the other scope is refused." },
+        offset: { type: "integer", minimum: 0, maximum: 199, default: 0, description: "scope=latest-per-team only." },
+        limit: { type: "integer", minimum: 1, maximum: 50, default: 25 },
+      },
+      additionalProperties: false,
+    },
+    async run(args) {
+      return mcpCfbTeamGamesScoped(args);
+    },
+  },
+  {
+    name: "dd_find_cfb_team_periods",
+    title: "CFB team periods",
+    catalog: "full",
+    readOnlyHint: true,
+    description: "Query bounded schedule-derived 2025 CFB team-period results, with regular and postseason week labels kept distinct. scope=team-periods returns every covered period for one exact required team, optionally by week or season type. scope=latest-per-team returns each team's latest covered period for bounded cross-team discovery, where team is optional and division, conference and period_outcome apply instead. Period and season-to-date record and scoring facts only: latest means the last covered 2025 period, not current 2026 form. FCS records include only games against FBS opponents. No EPA, success rate, explosiveness, havoc, garbage-time, opponent adjustment or market performance is available. A parameter belonging to the other scope is refused by name rather than ignored.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        scope: { type: "string", enum: ["team-periods", "latest-per-team"], default: "team-periods", description: "team-periods needs one exact team and returns that team's covered periods. latest-per-team returns each team's latest period and makes team optional." },
+        team: { type: "string", minLength: 1, maxLength: 80, description: "Exact canonical team name or slug, case-insensitive. REQUIRED when scope is team-periods; optional when scope is latest-per-team." },
+        week: { type: "integer", minimum: 1, maximum: 20, description: "scope=team-periods only." },
+        division: { type: "string", enum: ["all", "fbs", "fcs"], default: "all", description: "scope=latest-per-team only." },
+        conference: { type: "string", minLength: 1, maxLength: 80, description: "Optional exact conference name, case-insensitive. scope=latest-per-team only." },
+        season_type: { type: "string", enum: ["all", "regular", "postseason"], default: "all" },
+        period_outcome: { type: "string", enum: ["all", "positive", "negative", "even"], default: "all", description: "Filter the latest period by the sign of its observed point differential; a period can contain multiple games. scope=latest-per-team only." },
+        sort: { type: "string", enum: ["period-asc", "period-desc", "team-asc", "through-desc", "conference-record-desc"], default: "period-asc", description: "period-asc or period-desc under scope=team-periods, default period-asc. team-asc, through-desc or conference-record-desc under scope=latest-per-team, default team-asc. conference-record-desc orders by observed regular-season conference win percentage, then wins and point differential; it is not an official standing. A value belonging to the other scope is refused." },
+        offset: { type: "integer", minimum: 0, maximum: 399, default: 0, description: "scope=latest-per-team only." },
+        limit: { type: "integer", minimum: 1, maximum: 50, default: 25, description: "scope=team-periods accepts 1 through 25 and defaults to 20; scope=latest-per-team accepts 1 through 50 and defaults to 25. The lower ceiling is a payload bound, not an oversight." },
+      },
+      additionalProperties: false,
+    },
+    async run(args) {
+      return mcpCfbTeamPeriodsScoped(args);
+    },
+  },
+  {
+    name: "dd_find_cfb_games",
+    title: "CFB schedule search",
+    catalog: "full",
+    readOnlyHint: true,
+    description: "Query the current dated canonical CFB schedule/results surface by exact game id, exact team, week, regular/postseason, status or conference. Returns bounded schedule and observed-result facts only, with the covered season declared. It includes no model, market, forecast or recommendation.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        game_id: { type: "string", minLength: 1, maxLength: 150, description: "Optional exact canonical game id." },
+        team: { type: "string", minLength: 1, maxLength: 80, description: "Optional exact canonical team name or slug, case-insensitive." },
+        week: { type: "integer", minimum: 1, maximum: 20 },
+        season_type: { type: "string", enum: ["all", "regular", "postseason"], default: "all" },
+        status: { type: "string", enum: ["all", "scheduled", "final"], default: "all" },
+        conference: { type: "string", minLength: 1, maxLength: 80, description: "Optional exact home-or-away conference name, case-insensitive." },
+        sort: { type: "string", enum: ["kickoff-asc", "kickoff-desc"], default: "kickoff-desc" },
+        limit: { type: "integer", minimum: 1, maximum: 50, default: 20 },
+      },
+      additionalProperties: false,
+    },
+    async run(args) {
+      const input = mcpCfbGameArgs(args);
+      const envelope = await mcpCfbSchedule();
+      const allGames = envelope.data.games;
+      const team = input.team ? mcpCfbScheduleTeam(allGames, input.team) : null;
+      let conference = null;
+      if (input.conference) {
+        const conferences = [...new Set(allGames.flatMap(game => [game.home_conference, game.away_conference]).filter(Boolean))]
+          .sort((a, b) => a.localeCompare(b));
+        conference = conferences.find(name => name.toLowerCase() === input.conference.toLowerCase()) || null;
+        if (!conference) throw new Error("conference is not present in the dated canonical CFB schedule; available: " + conferences.join(", "));
+      }
+      if (input.gameId && !allGames.some(game => game.game_id === input.gameId))
+        throw new Error("game_id is not present in the dated canonical CFB schedule: " + input.gameId);
+      const matches = allGames.filter(game =>
+        (!input.gameId || game.game_id === input.gameId) &&
+        (!team || game.home_team_slug === team.team_slug || game.away_team_slug === team.team_slug) &&
+        (input.week === null || game.week === input.week) &&
+        (input.seasonType === "all" || game.season_type === input.seasonType) &&
+        (input.status === "all" || game.status === input.status) &&
+        (!conference || game.home_conference === conference || game.away_conference === conference)
+      ).sort((a, b) => input.sort === "kickoff-asc"
+        ? a.kickoff_at.localeCompare(b.kickoff_at) || a.game_id.localeCompare(b.game_id)
+        : b.kickoff_at.localeCompare(a.kickoff_at) || a.game_id.localeCompare(b.game_id));
+      const games = matches.slice(0, input.limit).map(game => ({
+        game_id: game.game_id,
+        upstream_game_id: game.upstream_game_id,
+        season: game.season,
+        week: game.week,
+        season_type: game.season_type,
+        kickoff_at: game.kickoff_at,
+        status: game.status,
+        neutral_site: game.neutral_site,
+        conference_game: game.conference_game,
+        away_team: { name: game.away_team, team_slug: game.away_team_slug, division: game.away_division, conference: game.away_conference },
+        home_team: { name: game.home_team, team_slug: game.home_team_slug, division: game.home_division, conference: game.home_conference },
+        observed_result: game.status === "final" ? {
+          away_points: game.away_points,
+          home_points: game.home_points,
+          home_margin: game.home_points - game.away_points,
+          winner_team_slug: game.home_points === game.away_points ? null
+            : game.home_points > game.away_points ? game.home_team_slug : game.away_team_slug,
+          tie: game.home_points === game.away_points,
+        } : null,
+      }));
+      return toolText({
+        query: {
+          game_id: input.gameId,
+          team: team ? team.team : null,
+          week: input.week,
+          season_type: input.seasonType,
+          status: input.status,
+          conference,
+          sort: input.sort,
+          limit: input.limit,
+        },
+        season: envelope.data.season,
+        matched_before_limit: matches.length,
+        returned: games.length,
+        games,
+        as_of: envelope.as_of,
+        source: envelope.source,
+        built: envelope.built || null,
+        integrity: envelope.integrity || null,
+        actual_canonical_schedule: true,
+        completed_schedule: allGames.every(game => game.status === "final"),
+        scheduled_games_in_surface: allGames.filter(game => game.status === "scheduled").length,
+        prospective_model_output: false,
+        forecast: false,
+        modelled: false,
+        graded: false,
+        read_only: true,
+        stored: false,
+        warnings: [
+          allGames.every(game => game.status === "final")
+            ? "This surface covers a completed FBS-involved season; it contains no upcoming games."
+            : "Scheduled rows are schedule facts only and do not imply a forecast.",
+          "Scores and schedule fields are observed facts. No rating, probability, market price, roster context or forecast is included.",
+          "Week numbers repeat between regular season and postseason; use season_type when that distinction matters.",
+        ],
+      });
+    },
+  },
+  {
+    name: "dd_find_cfb_historical_market",
+    title: "CFB historical prices",
+    catalog: "full",
+    readOnlyHint: true,
+    description: "Query bounded book-identified 2025 CFB prices by exact game id, exact team, week or book. Observation time is unknown: these are historical reference prices, not verified closing lines or prospective inputs, and the tool does not support CLV, an edge or a recommendation.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        game_id: { type: "string", minLength: 1, maxLength: 150, description: "Optional exact canonical game id." },
+        team: { type: "string", minLength: 1, maxLength: 80, description: "Optional exact team name or slug, case-insensitive." },
+        week: { type: "integer", minimum: 1, maximum: 20 },
+        book: { type: "string", minLength: 1, maxLength: 80, description: "Optional exact bookmaker name, case-insensitive." },
+        priced_only: { type: "boolean", default: false, description: "Require a finite median devigged home win probability." },
+        sort: { type: "string", enum: ["kickoff-asc", "kickoff-desc"], default: "kickoff-desc" },
+        limit: { type: "integer", minimum: 1, maximum: 25, default: 20 },
+      },
+      additionalProperties: false,
+    },
+    async run(args) {
+      const input = mcpCfbMarketArgs(args);
+      const envelope = await mcpCfbHistoricalMarket();
+      const allGames = envelope.data.games;
+      const team = input.team ? mcpCfbMarketTeam(allGames, input.team) : null;
+      let book = null;
+      if (input.book) {
+        const books = [...new Set(allGames.flatMap(game => game.books.map(quote => quote.book)))]
+          .sort((a, b) => a.localeCompare(b));
+        book = books.find(name => name.toLowerCase() === input.book.toLowerCase()) || null;
+        if (!book) throw new Error("book is not present in the dated historical CFB market surface; available: " + books.join(", "));
+      }
+      if (input.gameId && !allGames.some(game => game.game_id === input.gameId))
+        throw new Error("game_id is not present in the dated historical CFB market surface: " + input.gameId);
+      const matches = allGames.filter(game =>
+        (!input.gameId || game.game_id === input.gameId) &&
+        (!team || mcpCfbTeamSlug(game.home_team) === team.team_slug || mcpCfbTeamSlug(game.away_team) === team.team_slug) &&
+        (input.week === null || game.week === input.week) &&
+        (!book || game.books.some(quote => quote.book === book)) &&
+        (!input.pricedOnly || Number.isFinite(game.median_devig_home_win_probability))
+      ).sort((a, b) => input.sort === "kickoff-asc"
+        ? a.kickoff_at.localeCompare(b.kickoff_at) || a.game_id.localeCompare(b.game_id)
+        : b.kickoff_at.localeCompare(a.kickoff_at) || a.game_id.localeCompare(b.game_id));
+      const games = matches.slice(0, input.limit).map(game => ({
+        game_id: game.game_id,
+        upstream_game_id: game.upstream_game_id,
+        season: game.season,
+        week: game.week,
+        kickoff_at: game.kickoff_at,
+        away_team: game.away_team,
+        home_team: game.home_team,
+        books: game.books.filter(quote => !book || quote.book === book).map(quote => ({
+          book: quote.book,
+          spread_home: quote.spread_home,
+          source_labelled_open_spread_home: quote.spread_open_home,
+          total: quote.total,
+          source_labelled_open_total: quote.total_open,
+          moneyline_home: quote.moneyline_home,
+          moneyline_away: quote.moneyline_away,
+          devig_home_win_probability: quote.devig_home_win_probability,
+          hold: quote.hold,
+        })),
+        median_spread_home: game.median_spread_home,
+        median_total: game.median_total,
+        median_devig_home_win_probability: game.median_devig_home_win_probability,
+        books_quoting_all: game.books_quoting,
+      }));
+      return toolText({
+        query: {
+          game_id: input.gameId,
+          team: team ? team.team : null,
+          week: input.week,
+          book,
+          priced_only: input.pricedOnly,
+          sort: input.sort,
+          limit: input.limit,
+        },
+        season: envelope.data.season,
+        matched_before_limit: matches.length,
+        returned: games.length,
+        games,
+        rejected_quote_count: Array.isArray(envelope.data.rejected_quotes) ? envelope.data.rejected_quotes.length : null,
+        as_of: envelope.as_of,
+        source: envelope.source,
+        built: envelope.built || null,
+        integrity: envelope.integrity || null,
+        provenance: envelope.provenance,
+        observation_timestamp_available: false,
+        price_timing: "unknown",
+        verified_closing_lines: false,
+        clv_supported: false,
+        prospective_input_eligible: false,
+        current_market: false,
+        modelled: false,
+        graded: false,
+        read_only: true,
+        stored: false,
+        warnings: [
+          "The upstream date_time field is kickoff, not price capture time; no quote has a verified observation timestamp.",
+          "The source-labelled open fields are retained as upstream labels, not as a verified line history or timing claim.",
+          "Never call these closing lines, compute CLV from them, cite them in a prospective forecast receipt or treat them as a current betting market.",
+          "Prices are historical reference observations only and do not establish an edge or recommendation.",
+        ],
+      });
+    },
+  },
+  {
+    name: "dd_get_cfb_model_card",
+    title: "CFB model card",
+    catalog: "full",
+    readOnlyHint: true,
+    description: "List available generated CFB model cards or return one exact model card with purpose, target, features, parameters, validation, performance, calibration, limitations, failure modes, receipts and provenance. Model-card status is governance, not proof of a current forecast, prospective track record, consensus or recommendation.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        model_id: { type: "string", minLength: 1, maxLength: 80, description: "Optional exact model slug. Omit to list compact card summaries." },
+      },
+      additionalProperties: false,
+    },
+    async run(args) {
+      const input = mcpCfbModelCardArgs(args);
+      const envelope = await mcpCfbModelCards();
+      const cards = envelope.data.cards;
+      const summaries = cards.map(card => ({
+        model_id: card.model_id,
+        model_name: card.model_name,
+        model_version: card.model_version,
+        roadmap_idea: card.roadmap_idea || null,
+        roadmap_step: card.roadmap_step || null,
+        lifecycle_status: card.lifecycle_status || null,
+        retirement_status: card.retirement_status || null,
+        purpose: card.purpose,
+        target: card.target,
+        validation_kind: card.validation_design.kind,
+        prospective_receipts_exist: card.receipts.prospective_receipts_exist,
+        methodology_url: card.methodology_url || null,
+      })).sort((a, b) => a.model_id.localeCompare(b.model_id));
+      let card = null;
+      if (input.modelId) {
+        card = cards.find(row => row.model_id === input.modelId) || null;
+        if (!card) throw new Error("model_id is not present in the dated CFB model-card registry; available: " + summaries.map(row => row.model_id).join(", "));
+      }
+      const selected = card ? [card] : cards;
+      const anyProspective = selected.some(row => row.receipts.prospective_receipts_exist === true);
+      const allProspectiveValidation = selected.every(row => row.validation_design.kind === "prospective");
+      return toolText({
+        mode: card ? "model-card" : "model-card-index",
+        query: { model_id: input.modelId },
+        available_models: summaries,
+        card,
+        as_of: envelope.as_of,
+        source: envelope.source,
+        built: envelope.built || null,
+        integrity: envelope.integrity || null,
+        cards_are_generated_from_model_output: true,
+        prospective_receipts_exist: anyProspective,
+        prospective_validation: allProspectiveValidation,
+        graded: false,
+        consensus: false,
+        current_forecast: false,
+        read_only: true,
+        stored: false,
+        warnings: [
+          "A lifecycle value documents roadmap state; it does not prove forecast skill or a live prospective track record.",
+          "Retrodictive performance and calibration are evaluation evidence, not current-season forecasts or betting recommendations.",
+          "Read each card's known_limitations, failure_modes and receipts fields before interpreting its performance.",
+          "The current registry is not a consensus and no model card appears on a CFB leaderboard without prospective receipts and separate grading.",
+        ],
+      });
+    },
+  },
+  {
+    name: "dd_model_scoreboard",
+    title: "NFL model scoreboard",
+    catalog: "full",
+    readOnlyHint: true,
+    description: "Query the dated prospective nfelo and 538 Classic receipt ledger by season, week, team, game or model. Returns receipt provenance plus descriptive mean/range/standard deviation; it is ungraded and is not a validated consensus, ensemble or leaderboard.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        season: { type: "integer", minimum: 2000, maximum: 2100, description: "Season. Defaults to the latest season in the ledger." },
+        week: { type: "integer", minimum: 1, maximum: 22, description: "NFL week. With no filters at all, the tool defaults to Week 1; otherwise omission searches the selected season." },
+        team: { type: "string", minLength: 2, maxLength: 5, description: "Exact home or away team abbreviation, case-insensitive." },
+        game_id: { type: "string", maxLength: 80, description: "Exact canonical season_week_away_home id, for example 2026_01_CLE_PIT." },
+        model_ids: { type: "array", minItems: 1, maxItems: 10, uniqueItems: true, items: { type: "string", minLength: 1, maxLength: 40 }, description: "Optional stable model slugs, currently nfelo and 538-classic." },
+        limit: { type: "integer", minimum: 1, maximum: 50, default: 25 },
+        sort: { type: "string", enum: ["disagreement", "kickoff"], default: "disagreement" },
+      },
+      additionalProperties: false,
+    },
+    async run(args) {
+      const input = mcpModelScoreboardArgs(args);
+      const envelope = await mcpModelReceipts();
+      const out = mcpModelScoreboardRows(envelope, input);
+      return toolText({
+        as_of: envelope.as_of, source: envelope.source, built: envelope.built || null,
+        ledger_integrity: envelope.integrity || null,
+        filters: {
+          season: out.season, week: out.week, team: input.team || null,
+          game_id: input.game_id || null, model_ids: out.requestedModels,
+          sort: input.sort, limit: input.limit,
+        },
+        matched_games: out.matched, returned_games: out.games.length,
+        available_model_ids: out.availableModelIds,
+        games: out.games,
+        read_only: true, stored: false, graded: false,
+        comparison_type: "equal-weight descriptive statistics only",
+        note: out.matched ? undefined : "No prospective receipt games matched these filters.",
+        warnings: [
+          "No outcomes are joined to this ledger, so nothing in this response is graded and no model is ranked.",
+          "The equal-weight mean and disagreement statistics are descriptive only, not a validated consensus, ensemble, confidence score or predictive edge.",
+          "Two model columns are not independent confirmation of one another.",
+          "No market probability is included: legacy values without a named book and observation timestamp are deliberately not normalized.",
+        ],
+      });
+    },
+  },
+  {
+    name: "dd_scores",
+    title: "Live scores",
+    catalog: "core",
+    readOnlyHint: true,
+    description: "NFL/CFB schedule and scores from the Worker's scheduled nflverse/cfbfastR cache (sport + optional YYYYMMDD dates). Other sports fail until an adapter exists.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        sport: { type: "string", enum: ["nfl", "cfb", "nba", "cbb", "mlb", "nhl"], description: "Sport key" },
+        dates: { type: "string", description: "YYYYMMDD or YYYYMMDD-YYYYMMDD (optional)" },
+      },
+      required: ["sport"],
+      additionalProperties: false,
+    },
+    async run(args, env) {
+      if (!LEAGUE[args.sport]) return toolErr("unknown sport");
+      // ⚠️ handleScores takes sport and dates via searchParams — not season/week.
+      const u = new URL("https://mcp.internal/scores");
+      u.searchParams.set("sport", args.sport);
+      if (args.dates) u.searchParams.set("dates", args.dates);
+      const resp = await handleScores(u, env, {});
+      const data = await resp.json();
+      if (!resp.ok) return toolErr("Scores unavailable from this Worker's schedule cache (" + (data.detail || data.error || resp.status) + ").");
+      return toolText(data);
+    },
+  },
+  {
+    name: "dd_dfs_correlations",
+    title: "DFS correlations",
+    catalog: "full",
+    readOnlyHint: true,
+    description: "The site's within-game DFS correlation structure (same-team and opponent role×role matrices plus CV-by-projection tables), estimated from public nflverse data, 2019-2025 regular seasons. League-average structure — not this specific game.",
+    inputSchema: MCP_NO_ARGS,
+    async run() {
+      if (!mcpCorrCache.data || Date.now() - mcpCorrCache.at > 3600e3) {
+        const r = await fetch(`${SITE}/dfs.html`, { cf: { cacheTtlByStatus: { "200-299": 3600, "404": 1, "500-599": 0 }, cacheEverything: true } });
+        if (!r.ok) return toolErr("dfs.html unavailable: HTTP " + r.status);
+        const html = await r.text();
+        const tag = "const CORR = ";
+        const i = html.indexOf(tag);
+        if (i < 0) return toolErr("Correlation matrix not found in dfs.html — the page layout changed.");
+        const j = html.indexOf("};", i);
+        if (j < 0) return toolErr("Correlation matrix not parseable — the page layout changed.");
+        let corr;
+        try { corr = JSON.parse(html.slice(i + tag.length, j + 1)); }
+        catch (e) { return toolErr("Correlation matrix not parseable: " + e.message); }
+        mcpCorrCache = { at: Date.now(), data: corr };
+      }
+      return toolText(mcpCorrCache.data);
+    },
+  },
+  {
+    name: "dd_solve_dfs_lineup",
+    title: "DFS lineup solver",
+    catalog: "full",
+    readOnlyHint: true,
+    description: "Build one to twenty DraftKings Classic or Showdown lineups with the exact branch-and-bound solver used by dfs.html. Every salary, projection and ownership value must be supplied in this call; Data Dawgs has no projection feed, stores nothing, and returns the applied constraints plus explicit infeasibility or timeout state.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        players: {
+          type: "array", minItems: 1, maxItems: MCP_DFS_MAX_PLAYERS,
+          description: "Caller-supplied slate. Omit players with no usable projection or set exclude=true.",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "string", minLength: 1, maxLength: 80, description: "Unique stable player id for this call." },
+              name: { type: "string", minLength: 1, maxLength: 100 },
+              position: { type: "string", enum: ["QB", "RB", "WR", "TE", "DST"] },
+              team: { type: "string", minLength: 1, maxLength: 12 },
+              opponent: { type: "string", minLength: 1, maxLength: 12 },
+              game_id: { type: "string", minLength: 1, maxLength: 80, description: "Same value for every player in one game." },
+              salary: { type: "integer", minimum: 100, maximum: 50000, multipleOf: 100 },
+              projection: { type: "number", minimum: 0, maximum: 100, description: "Caller-supplied DraftKings points projection." },
+              ownership: { type: "number", minimum: 0, maximum: 100, description: "Optional caller-supplied projected ownership percentage." },
+              lock: { type: "boolean", description: "Force into every lineup." },
+              exclude: { type: "boolean", description: "Remove from the eligible pool." },
+              max_exposure: { type: "number", minimum: 0, maximum: 1, description: "Maximum lineup share from 0 to 1." },
+            },
+            required: ["id", "name", "position", "team", "opponent", "game_id", "salary", "projection"],
+            additionalProperties: false,
+          },
+        },
+        site: { type: "string", enum: ["dk_classic", "dk_showdown"], description: "Default dk_classic." },
+        count: { type: "integer", minimum: 1, maximum: MCP_DFS_MAX_LINEUPS, description: "Lineups requested; default 1." },
+        min_salary: { type: "integer", minimum: 0, maximum: 50000, multipleOf: 100, description: "Default 0." },
+        max_salary: { type: "integer", minimum: 100, maximum: 50000, multipleOf: 100, description: "Default 50000." },
+        unique_players: { type: "integer", minimum: 0, maximum: 9, description: "Minimum differing players between returned lineups; default 2 for multi-lineup Classic and 1 for Showdown." },
+        randomness: { type: "number", minimum: 0, maximum: 0.6, description: "Seeded projection jitter as a decimal. Default 0 for a deterministic optimum." },
+        seed: { type: "integer", minimum: 1, maximum: 2147483647, description: "Reproducible random seed; default 1." },
+        max_per_team: { type: "integer", minimum: 1, maximum: 9 },
+        max_per_game: { type: "integer", minimum: 1, maximum: 9 },
+        time_limit_ms: { type: "integer", minimum: 100, maximum: MCP_DFS_MAX_TIME_MS, description: "Bounded solve deadline; default 2000, maximum 3000." },
+        stack: {
+          type: "object",
+          properties: {
+            qb_min: { type: "integer", minimum: 0, maximum: 3, description: "Required QB teammates from qb_positions." },
+            qb_positions: { type: "array", minItems: 1, maxItems: 3, uniqueItems: true, items: { type: "string", enum: ["RB", "WR", "TE"] } },
+            bring_back: { type: "integer", minimum: 0, maximum: 3, description: "Required non-DST opponent players with the QB." },
+            no_rb_vs_dst: { type: "boolean" },
+            no_opp_dst: { type: "boolean" },
+          },
+          additionalProperties: false,
+        },
+      },
+      required: ["players"],
+      additionalProperties: false,
+    },
+    async run(args) {
+      return toolText(mcpDfsSolve(args));
+    },
+  },
+  {
+    name: "dd_guillotine_odds",
+    title: "Last Dawg Standing odds",
+    catalog: "core",
+    readOnlyHint: true,
+    description: "Modeled weekly survival odds for every team in a Sleeper guillotine league, plus the projected chop line. Built ONLY from completed weeks; it does not ingest live in-game scores. ⚠️ Needs at least two completed weeks; with fewer it returns the roster and says so rather than inventing a probability.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        league_id: { type: "string", description: "Sleeper league id — the long number in the league URL." },
+        team: { type: "string", description: "Optional: a team or manager name to highlight." },
+        sims: { type: "integer", description: "Monte Carlo runs. Default 20000, max 50000." },
+      },
+      required: ["league_id"],
+      additionalProperties: false,
+    },
+    async run(args, env, caller) {
+      const id = String(args.league_id || "").replace(/[^0-9]/g, "");
+      if (!id) return toolErr("A Sleeper league id is required — it is the long number in the league URL.");
+      const SIMS = Math.min(Math.max(parseInt(args.sims, 10) || 20000, 1000), 50000);
+      const API = "https://api.sleeper.app/v1";
+
+      // ⚠️ /players/nfl is deliberately NOT fetched — ~5MB, and Sleeper's own docs say to
+      // pull it at most once a day. Names come from /users + /rosters, scores from
+      // /matchups. The page has always worked this way and so does this.
+      const get = async (path) => {
+        const r = await fetch(API + path, { cf: { cacheTtlByStatus: { "200-299": 300, "404": 1, "500-599": 0 }, cacheEverything: true } });
+        if (!r.ok) throw new Error("Sleeper " + path + " returned " + r.status);
+        return r.json();
+      };
+
+      let state, league, users, rosters;
+      try {
+        [state, league, users, rosters] = await Promise.all([
+          get("/state/nfl"), get("/league/" + id), get("/league/" + id + "/users"), get("/league/" + id + "/rosters"),
+        ]);
+      } catch (e) { return toolErr("Could not read that league from Sleeper: " + e.message); }
+      if (!league || !league.name) return toolErr("No Sleeper league with id " + id + ".");
+
+      const uname = {};
+      for (const u of users || []) uname[u.user_id] = (u.metadata && u.metadata.team_name) || u.display_name || "?";
+      const owner = {};
+      for (const u of users || []) owner[u.user_id] = u.display_name || "?";
+
+      // Sleep
